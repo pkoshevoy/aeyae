@@ -1,0 +1,188 @@
+// File         : OpenGLCapabilities.cpp
+// Author       : Paul A. Koshevoy
+// Created      : Tue Aug 1 23:14:00 MDT 2006
+// Copyright    : (C) 2006
+// License      : GPL.
+// Description  : 
+
+// local includes:
+#include "opengl/OpenGLCapabilities.h"
+#include "opengl/the_view.hxx"
+#include "ui/the_document_ui.hxx"
+#include "utils/the_dynamic_array.hxx"
+
+// system includes:
+#include <iostream>
+#include <string>
+#include <vector>
+#include <list>
+
+
+// namespace access:
+using std::cerr;
+using std::endl;
+
+
+//----------------------------------------------------------------
+// OpenGLCapabilities::OpenGLCapabilities
+// 
+OpenGLCapabilities::OpenGLCapabilities()
+{
+  const GLubyte * vendor = glGetString(GL_VENDOR);
+  assert(vendor != NULL);
+  vendor_.assign((const char *)(vendor));
+  
+  const GLubyte * version = glGetString(GL_VERSION);
+  assert(version != NULL);
+  version_.assign((const char *)(version));
+  
+  const GLubyte * renderer = glGetString(GL_RENDERER);
+  assert(renderer != NULL);
+  renderer_.assign((const char *)(renderer));
+  
+  const GLubyte * extensions = glGetString(GL_EXTENSIONS);
+  assert(extensions != NULL);
+  extensions_.assign((const char *)extensions);
+  
+  std::list<char> char_list;
+  std::list<std::string> ext_list;
+  for (unsigned int i = 0;; i++)
+  {
+    const char c = char(extensions_[i]);
+    if (c == ' ' || c == '\0')
+    {
+      std::string ext(char_list.begin(), char_list.end());
+      char_list.clear();
+      ext_list.push_back(ext);
+      if (c == '\0') break;
+    }
+    else
+    {
+      char_list.push_back(c);
+    }
+  }
+  extension_array_.assign(ext_list.begin(), ext_list.end());
+  
+  max_texture_ = 64;
+  hardware_mipmap_ = checkExtension("GL_SGIS_generate_mipmap");
+  compressed_textures_ = checkExtension("GL_ARB_texture_compression");
+}
+
+//----------------------------------------------------------------
+// OpenGLCapabilities::checkExtension
+// 
+bool
+OpenGLCapabilities::checkExtension(const char * query) const
+{
+  if (query != NULL)
+  {
+    std::string extension(query);
+    for (unsigned int i = 0; i < extension_array_.size(); i++)
+    {
+      if (extension_array_[i] == extension)
+      {
+	return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+//----------------------------------------------------------------
+// OpenGLCapabilities::maxTextureSize
+// 
+unsigned int
+OpenGLCapabilities::maxTextureSize(GLenum internal_format,
+				   GLenum format,
+				   GLenum type,
+				   GLint border)
+{
+  GLuint size = 64;
+  for (int i = 0; i < 8; i++, size *= 2)
+  {
+    glTexImage2D(GL_PROXY_TEXTURE_2D,
+		 0, // level
+		 internal_format,
+		 size * 2, // width
+		 size * 2, // height
+		 border,
+		 format,
+		 type,
+		 NULL);// texels
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) break;
+    
+    GLint width = 0;
+    glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D,
+			     0, // level
+			     GL_TEXTURE_WIDTH,
+			     &width);
+    if (width != GLint(size * 2)) break;
+  }
+  
+  return size;
+}
+
+//----------------------------------------------------------------
+// OpenGLCapabilities::dump
+// 
+void
+OpenGLCapabilities::dump() const
+{
+  cerr << "OpenGL vendor: " << vendor_ << endl
+       << "OpenGL version: " << version_ << endl
+       << "OpenGL renderer: " << renderer_ << endl
+       << "OpenGL extensions: " << endl;
+  for (unsigned int i = 0; i < extension_array_.size(); i++)
+  {
+    cerr << extension_array_[i] << endl;
+  }
+  
+  cerr << endl
+       << "MAX TILE SIZE: " << max_texture_ << endl
+       << "HARDWARE MIPMAP: " << hardware_mipmap_ << endl
+       << "COMPRESSED TEXTURES: " << compressed_textures_ << endl;
+}
+
+//----------------------------------------------------------------
+// OpenGL
+// 
+OpenGLCapabilities & OpenGL()
+{
+  static OpenGLCapabilities * open_gl_ = NULL;
+  if (open_gl_ == NULL)
+  {
+    // FIXME: this should probably be done somewhere else:
+    the_document_ui_t::doc_ui()->shared()->gl_make_current();
+    
+    open_gl_ = new OpenGLCapabilities();
+  }
+  
+  return *open_gl_;
+}
+
+//----------------------------------------------------------------
+// OpenGL
+// 
+OpenGLCapabilities &
+OpenGL(unsigned int view_id, the_view_t * view)
+{
+  static the_dynamic_array_t<OpenGLCapabilities *> open_gl_(16, 16, NULL);
+  
+  if (view != NULL)
+  {
+    if (open_gl_.size() <= view_id)
+    {
+      open_gl_.resize(view_id + 1);
+    }
+    
+    view->gl_make_current();
+    delete open_gl_[view_id];
+    open_gl_[view_id] = new OpenGLCapabilities();
+  }
+  
+  assert(open_gl_.size() > view_id);
+  assert(open_gl_[view_id] != NULL);
+  return *(open_gl_[view_id]);
+}
