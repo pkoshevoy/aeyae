@@ -16,6 +16,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <list>
 
 
 //----------------------------------------------------------------
@@ -24,23 +25,11 @@
 class the_text_t
 {
 public:
-  the_text_t(const char * text = ""):
-    text_(NULL),
-    size_(0)
-  { assign(text); }
-  
-  the_text_t(const char * text, const size_t & size):
-    text_(NULL),
-    size_(0)
-  { assign(text, size); }
-  
-  the_text_t(const the_text_t & text):
-    text_(NULL),
-    size_(0)
-  { assign(text.text_, text.size_); }
-  
-  ~the_text_t()
-  { clear(); }
+  the_text_t(const char * text = "");
+  the_text_t(const char * text, const size_t & size);
+  the_text_t(const the_text_t & text);
+  the_text_t(const std::list<char> & text);
+  ~the_text_t();
   
   // assignment operator:
   inline the_text_t & operator = (const the_text_t & text)

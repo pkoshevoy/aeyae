@@ -19,6 +19,60 @@
 
 
 //----------------------------------------------------------------
+// the_text_t::the_text_t
+// 
+the_text_t::the_text_t(const char * text):
+  text_(NULL),
+  size_(0)
+{
+  assign(text);
+}
+
+//----------------------------------------------------------------
+// the_text_t::the_text_t
+// 
+the_text_t::the_text_t(const char * text, const size_t & size):
+  text_(NULL),
+  size_(0)
+{
+  assign(text, size);
+}
+
+//----------------------------------------------------------------
+// the_text_t::the_text_t
+// 
+the_text_t::the_text_t(const the_text_t & text):
+  text_(NULL),
+  size_(0)
+{
+  assign(text.text_, text.size_);
+}
+
+//----------------------------------------------------------------
+// the_text_t::the_text_t
+// 
+the_text_t::the_text_t(const std::list<char> & text):
+  text_(NULL),
+  size_(text.size())
+{
+  text_ = new char [size_ + 1];
+  unsigned int j = 0;
+  for (std::list<char>::const_iterator i = text.begin();
+       i != text.end(); ++i, ++j)
+  {
+    text_[j] = *i;
+  }
+}
+
+//----------------------------------------------------------------
+// the_text_t::~the_text_t
+// 
+the_text_t::~the_text_t()
+{
+  clear();
+}
+
+//----------------------------------------------------------------
 // the_text_t::assign
 // 
 void
