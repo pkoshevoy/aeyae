@@ -109,6 +109,8 @@ bool
 the_view_mgr_eh_t::
 processor(the_input_device_eh_t::the_event_type_t event_type)
 {
+  the_view_mgr_eh_state_t prev_state = view_mgr_eh_state_;
+  
   // viewing is done via keyboard and mouse, ignore any other events:
   if (event_type != THE_MOUSE_EVENT_E &&
       event_type != THE_KEYBD_EVENT_E &&
@@ -465,6 +467,10 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
       
     default:
       view().change_cursor(THE_DEFAULT_CURSOR_E);
+      if (view_mgr_eh_state_ == prev_state)
+      {
+	return false;
+      }
       break;
   }
   
