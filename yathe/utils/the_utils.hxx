@@ -209,17 +209,27 @@ remove_head(std::list<data_t> & container)
 }
 
 //----------------------------------------------------------------
-// contains_only_one_item
+// is_size_two_or_larger
 // 
 template <typename container_t>
-bool
-contains_only_one_item(const container_t & c)
+inline bool
+is_size_two_or_larger(const container_t & c)
 {
   typename container_t::const_iterator i = c.begin();
-  if (i == c.end()) return false;
-  
-  ++i;
-  return i == c.end();
+  typename container_t::const_iterator e = c.end();
+  return (i != e) && (++i != e);
+}
+
+//----------------------------------------------------------------
+// is_size_one
+// 
+template <typename container_t>
+inline bool
+is_size_one(const container_t & c)
+{
+  typename container_t::const_iterator i = c.begin();
+  typename container_t::const_iterator e = c.end();
+  return (i != e) && (++i == e);
 }
 
 //----------------------------------------------------------------
