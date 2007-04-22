@@ -107,7 +107,9 @@ if [ -n "${BOOST_DIR}" ]; then
 fi
 
 # determine where THE lives:
-if [ -e "${HOME}"/source_code/cxx/the ]; then
+if [ -e "${HOME}"/src/the ]; then
+    export THE_DIR="${HOME}"/src/the
+elif [ -e "${HOME}"/source_code/cxx/the ]; then
     export THE_DIR="${HOME}"/source_code/cxx/the
 elif [ -e /home/sci/koshevoy/source_code/cxx/the ]; then
     export THE_DIR=/home/sci/koshevoy/source_code/cxx/the
