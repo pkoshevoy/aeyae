@@ -188,7 +188,7 @@ public:
     
     assert(!(bbox_left.is_empty() || bbox_right.is_empty()));
     
-    if (contains_only_one_item(geom_left))
+    if (is_size_one(geom_left))
     {
       node_[0] = new the_leaf_bvh_node_t<geom_t>(bbox_left,
 						 *(geom_left.begin()));
@@ -199,7 +199,7 @@ public:
 						     geom_left);
     }
     
-    if (contains_only_one_item(geom_right))
+    if (is_size_one(geom_right))
     {
       node_[1] =
 	new the_leaf_bvh_node_t<geom_t>(bbox_right,
@@ -376,7 +376,7 @@ public:
   {
     clear();
     
-    if (contains_only_one_item(geom_list))
+    if (is_size_one(geom_list))
     {
       root_ = new the_leaf_bvh_node_t<geom_t>(bbox, *(geom_list.begin()));
     }
