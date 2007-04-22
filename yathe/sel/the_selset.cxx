@@ -5,87 +5,62 @@
 // License      : GPL.
 // Description  : 
 
-// local includes:
-#include "sel/the_selset.hxx"
-#include "doc/the_graph.hxx"
+// the includes:
+#include <sel/the_selset.hxx>
+#include <ui/the_document_ui.hxx>
+#include <doc/the_document.hxx>
 
 
 //----------------------------------------------------------------
-// the_selset_t::may_activate
+// the_selset_traits_t::registry
 // 
-bool
-the_selset_t::may_activate(const unsigned int & id) const
+the_registry_t *
+the_selset_traits_t::registry() const
 {
-  if (registry()->elem(id) == NULL) return false;
-  return !::has(records_, id);
+  the_document_ui_t * doc_ui = the_document_ui_t::doc_ui();
+  if (doc_ui == NULL) return NULL;
+  
+  the_document_t * doc = doc_ui->document();
+  if (doc == NULL) return NULL;
+  
+  return &(doc->registry());
 }
 
 //----------------------------------------------------------------
-// the_selset_t::activate
+// the_selset_traits_t::is_valid
 // 
 bool
-the_selset_t::activate(const unsigned int & id)
+the_selset_traits_t::is_valid(const unsigned int & id) const
 {
-  if (may_activate(id) == false) return false;
+  return registry()->elem(id) != NULL;
+}
+
+//----------------------------------------------------------------
+// the_selset_traits_t::activate
+// 
+bool
+the_selset_traits_t::activate(const unsigned int & id) const
+{
+  if (!is_valid(id))
+  {
+    return false;
+  }
   
-  records_.push_back(id);
   registry()->elem(id)->set_current_state(THE_SELECTED_STATE_E);
   return true;
 }
 
 //----------------------------------------------------------------
-// the_selset_t::deactivate
+// the_selset_traits_t::deactivate
 // 
 bool
-the_selset_t::deactivate(const unsigned int & id)
+the_selset_traits_t::deactivate(const unsigned int & id) const
 {
-  if (!::has(records_, id)) return false;
+  if (!is_valid(id))
+  {
+    return false;
+  }
   
-  records_.remove(id);
   registry()->elem(id)->clear_state(THE_SELECTED_STATE_E);
   return true;
-}
-
-//----------------------------------------------------------------
-// the_selset_t::deactivate_all
-// 
-void
-the_selset_t::deactivate_all()
-{
-  while (!records_.empty())
-  {
-    const unsigned int id = records_.front();
-    deactivate(id);
-  }
-}
-
-//----------------------------------------------------------------
-// the_selset_t::set_active
-// 
-bool
-the_selset_t::set_active(const unsigned int & id)
-{
-  deactivate_all();
-  return activate(id);
-}
-
-//----------------------------------------------------------------
-// the_selset_t::toggle_active
-// 
-void
-the_selset_t::toggle_active(const unsigned int & id)
-{
-  if (!deactivate(id))
-  {
-    activate(id);
-  }
-}
-
-//----------------------------------------------------------------
-// the_selset_t::graph
-// 
-void
-the_selset_t::graph(the_graph_t & graph) const
-{
-  graph.set_roots(registry(), records_);
 }
