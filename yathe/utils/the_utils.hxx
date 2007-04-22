@@ -232,6 +232,23 @@ is_size_one(const container_t & c)
   return (i != e) && (++i == e);
 }
 
+
+//----------------------------------------------------------------
+// replace
+// 
+template <class container_t, typename data_t>
+bool
+replace(container_t & container, const data_t & a, const data_t & b)
+{
+  typename container_t::iterator end = container.end();
+  typename container_t::iterator i = std::find(container.begin(), end, a);
+  if (i == end) return false;
+  
+  *i = b;
+  return true;
+}
+
+
 //----------------------------------------------------------------
 // iterator_at_index
 // 
