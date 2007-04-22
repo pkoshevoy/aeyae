@@ -268,7 +268,7 @@ the_intcurve_t::insert(const unsigned int & pt_id)
   // Go through the list of points, and find two adjacent
   // points closest to the new point. Insert the new
   // point in between of these two points.
-  if (pts_.size() < 2) return add(pt_id);
+  if (!has_at_least_two_points()) return add(pt_id);
   
   the_point_t * pt = point(pt_id);
   const p3x1_t & wcs_pt = pt->value();
@@ -323,7 +323,7 @@ the_intcurve_t::add(const unsigned int & pt_id)
 {
   // add a point to the list (pick the closest end of the curve
   // and add either to the tail or the head):
-  if (pts_.size() < 2) return add_tail(pt_id);
+  if (!has_at_least_two_points()) return add_tail(pt_id);
   
   // decide wether to add to the tail or head:
   the_point_t * point_0 = point(pts_.front().id_);
@@ -424,22 +424,22 @@ the_intcurve_t::dump(ostream & strm, unsigned int indent) const
 void
 the_intcurve_t::setup_parameterization()
 {
-  if (pts_.size() < 2) return;
+  if (!has_at_least_two_points()) return;
   float length = 0.0;
   
-  std::list<the_knot_point_t>::iterator ia = pts_.begin();
-  p3x1_t pa = point((*ia).id_)->value();
-  (*ia).param_ = 0.0;
+  the_knot_point_t & ka = pts_.front();
+  p3x1_t pa = point(ka.id_)->value();
+  ka.param_ = 0;
   
-  for (unsigned int i = 1; i < pts_.size(); i++)
+  for (std::list<the_knot_point_t>::iterator ib = ++(pts_.begin());
+       ib != pts_.end(); ++ib)
   {
-    std::list<the_knot_point_t>::iterator ib = next(ia);
-    p3x1_t pb = point((*ib).id_)->value();
+    the_knot_point_t & kb = *ib;
+    p3x1_t pb = point(kb.id_)->value();
     length += (pb - pa).norm();
-    (*ib).param_ = length;
+    kb.param_ = length;
     
     pa = pb;
-    ia = ib;
   }
   
   if (length == 0.0)
@@ -452,7 +452,8 @@ the_intcurve_t::setup_parameterization()
   for (std::list<the_knot_point_t>::iterator i = ++(pts_.begin());
        i != pts_.end(); ++i)
   {
-    (*i).param_ /= length;
+    the_knot_point_t & kb = *i;
+    kb.param_ /= length;
   }
 }
 
@@ -462,8 +463,15 @@ the_intcurve_t::setup_parameterization()
 unsigned int
 the_intcurve_t::segment(const float & param) const
 {
-  if (pts_.size() < 1) return UINT_MAX;
-  if (param > pts_.back().param_) return pts_.size();
+  if (pts_.empty())
+  {
+    return UINT_MAX;
+  }
+  
+  if (param > pts_.back().param_)
+  {
+    return pts_.size();
+  }
   
   unsigned int index = 0;
   for (std::list<the_knot_point_t>::const_iterator i = pts_.begin();
@@ -484,7 +492,7 @@ the_intcurve_t::point_values(std::vector<p3x1_t> & wcs_pts,
 			     std::vector<float> & weights,
 			     std::vector<float> & params) const
 {
-  if (pts_.size() == 0) return;
+  if (pts_.empty()) return;
   
   std::list<p3x1_t> pt_list;
   std::list<float> wt_list;

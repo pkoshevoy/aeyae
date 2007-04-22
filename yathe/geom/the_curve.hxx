@@ -23,6 +23,7 @@
 #include "doc/the_primitive.hxx"
 #include "doc/the_reference.hxx"
 #include "sel/the_pick_filter.hxx"
+#include "utils/the_utils.hxx"
 
 // forward declarations:
 class the_bbox_t;
@@ -476,9 +477,12 @@ public:
   inline const std::list<the_knot_point_t> & pts() const { return pts_; }
   inline       std::list<the_knot_point_t> & pts()       { return pts_; }
   
-  // helper:
+  // helpers:
   inline the_point_t * point(const unsigned int & id) const
   { return dynamic_cast<the_point_t *>(primitive(id)); }
+  
+  inline bool has_at_least_two_points() const
+  { return is_size_two_or_larger(pts_); }
   
 protected:
   // update the parameters associated with the interpolation points;
