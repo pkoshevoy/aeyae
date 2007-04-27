@@ -69,9 +69,11 @@ the_mouse_event(Fl_Widget * widget, const int & event)
 the_wheel_event_t
 the_wheel_event(Fl_Widget * widget, const int & event)
 {
-  p2x1_t scs_pt(float(Fl::event_x()) / float(widget->w()),
-		float(Fl::event_y()) / float(widget->h()));
-
+  int ex = Fl::event_x();
+  int ey = Fl::event_y();
+  p2x1_t scs_pt(float(ex) / float(widget->w()),
+		float(ey) / float(widget->h()));
+  
   bool vertical = true;
   int delta = Fl::event_dy();
   if (delta == 0)
