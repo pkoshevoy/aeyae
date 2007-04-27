@@ -174,11 +174,11 @@ public:
 //----------------------------------------------------------------
 // the_selset_t
 //
-template <typename traits_t>
-class the_selset_t : public the_base_selset_t<unsigned int, traits_t>
+template <typename TTraits>
+class the_selset_t : public the_base_selset_t<unsigned int, TTraits>
 {
 public:
-  typedef the_base_selset_t<unsigned int, traits_t> super_t;
+  typedef the_base_selset_t<unsigned int, TTraits> super_t;
   
   // shortcut conversion from an ID to a primitive pointer of a given type:
   template <class prim_t>
