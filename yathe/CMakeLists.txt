@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 2.4.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
-  $ENV{HOME}/RA/the
-  /home/sci/koshevoy/RA/the
-  H:/RA/the
+  $ENV{THE_SRC_DIR}
 )
 #MESSAGE("CMAKE_MODULE_PATH=[${CMAKE_MODULE_PATH}]")
 
@@ -16,9 +14,7 @@ find_package(ITK)
 find_package(FFTW)
 
 include_directories(AFTER
-  /home/sci/koshevoy/source_code/cxx/the
-  $ENV{HOME}/source_code/cxx/the
-  H:/source_code/cxx/the
+  $ENV{THE_SRC_DIR}
   ${Boost_INCLUDE_DIRS}
   )
 

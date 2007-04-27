@@ -12,12 +12,12 @@ IF (APPLE)
 ELSE (APPLE)
 
   FIND_LIBRARY(Cg_LIBRARY Cg 
-    $ENV{CG_DIR}/lib 
+    $ENV{CG_LIB_DIR}
     DOC "Cg lib"
     )
 
   FIND_LIBRARY(CgGL_LIBRARY CgGL
-    $ENV{CG_DIR}/lib 
+    $ENV{CG_LIB_DIR} 
     DOC "CgGL lib"
     )
 
