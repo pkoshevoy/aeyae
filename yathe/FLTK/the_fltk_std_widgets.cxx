@@ -1,31 +1,43 @@
+/*
+Copyright 2004-2007 University of Utah
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+
 // File         : the_fltk_std_widgets.cxx
-// Author       : Paul A. Koshevoy
+// Author       : Pavel Aleksandrovich Koshevoy
 // Created      : Mon Oct 04 15:07:10 MDT 2004
 // Copyright    : (C) 2004
-// License      : GPL.
-// Description  : 
+// License      : MIT
+// Description  : Convinence functions for laying out standard FLTK widgets.
 
 // local includes:
 #include "FLTK/the_fltk_std_widgets.hxx"
 #include "utils/the_text.hxx"
 
 // some constant dimensions common to all dialogs:
-#if 0
-const unsigned int FS = 11; // font size
-const unsigned int BH = 20; // button height
-const unsigned int BW = 60; // button width
-const unsigned int PD = 10; // padding
-const unsigned int PH = 5;  // smaller padding
-#else
 const unsigned int FS = 11; // font size
 const unsigned int BH = FS + 8; // button height
 const unsigned int BW = FS * 6; // button width
 const unsigned int PD = FS - 1; // padding
 const unsigned int PH = PD / 2; // smaller padding
-#endif
-
-// FIXME:
-// #define DEBUG_LAYOUT
 
 
 //----------------------------------------------------------------

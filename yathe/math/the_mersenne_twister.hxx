@@ -1,5 +1,5 @@
 // File         : the_mersenne_twister.hxx
-// Author       : Paul A. Koshevoy
+// Author       : Pavel Aleksandrovich Koshevoy
 // Created      : Fri Jun 04 13:28:00 MDT 2004
 // License      : BSD.
 // Description  : C++ adaptation of the Mersenne Twister uniform random
@@ -11,11 +11,11 @@
 //       are other C++ adaptations of this algorithm available that are faster
 //       and more feature-rich (Richard J. Wagner MersenneTwister.h).
 //       This version preserves the interface of the original C implementation,
-//       and has been altered slightly to conform with my coding standards.
+//       and has been altered slightly to conform to my coding standards.
 //
-//       To use in a multithreaded application, each thread needs to own it's
-//       own instance of the_mersenne_twister_t class, and has to initialize
-//       it in a thread safe manner - mutex lock, seed, mutex unlock.
+//       To use in a multithreaded application, each thread needs to create
+//       it's own instance of the_mersenne_twister_t class, and has to
+//       initialize it in a thread safe manner - lock, seed, unlock.
 
 // the following is an excerpt from mt19937ar.c:
 /* 
