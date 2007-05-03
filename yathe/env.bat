@@ -26,7 +26,7 @@ set ITK_BINARY_DIR=C:\scratch\itk301p.bin
 set ITK_DIR=%ITK_BINARY_DIR%
 echo ITK_DIR set to %ITK_DIR%
 
-set THE_SRC_DIR=H:\src\CRCNS\the
+set THE_SRC_DIR=H:\src\the
 set THE_BIN_DIR=C:\scratch\the
 
 set PATH=%THE_BIN_DIR%;%PATH%
