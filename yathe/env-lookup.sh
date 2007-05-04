@@ -60,8 +60,8 @@ elif [ -e /usr/sci/crcnsdata/"${CPU}"/BOOST/include/boost-1_33_1 ]; then
 fi
 
 # determine where THE libraries live:
-if [ -e "${HOME}"/src/CRCNS/the ]; then
-    export THE_SRC_DIR="${HOME}"/src/CRCNS/the
+if [ -e "${HOME}"/src/the ]; then
+    export THE_SRC_DIR="${HOME}"/src/the
 fi
 
 if [ -e /scratch/"${CPU}"/the ]; then
