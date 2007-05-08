@@ -92,9 +92,25 @@ public:
     size_ = (size_ + 1) - (size_ + 1) / (cap + 1);
   }
   
-  // current number of element in the queue:
+  // push a new element into the queue:
+  inline the_fifo_t<data_t> & operator << (const data_t & d)
+  {
+    shift();
+    data_[head_] = d;
+    return *this;
+  }
+  
+  // raw data accessor:
+  inline const std::vector<data_t> & data() const
+  { return data_; }
+  
+  // accessor to the current number of elements in the fifo queue:
   inline const unsigned int & size() const
   { return size_; }
+  
+  // the maximum number of elements this fifo queue can store:
+  inline const unsigned int capacity() const
+  { return data_.size(); }
   
   // for debugging, dumps this list into a stream:
   void dump(std::ostream & strm, unsigned int indent = 0) const
@@ -108,10 +124,6 @@ public:
   }
   
 private:
-  // the maximum number of elements this fifo queue can store:
-  inline const unsigned int capacity() const
-  { return data_.size(); }
-  
   // the fifo elements:
   std::vector<data_t> data_;
   
