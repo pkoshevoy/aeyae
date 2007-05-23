@@ -122,6 +122,7 @@ if (GLEW_FOUND)
     sel/the_pick_list.cxx
     sel/the_pick_rec.cxx
     sel/the_selset.cxx
+    sel/the_curve_selset.cxx
     ui/the_cursor.cxx
     ui/the_desktop_metrics.cxx
     ui/the_document_ui.cxx
