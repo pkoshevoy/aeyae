@@ -37,21 +37,78 @@ THE SOFTWARE.
 // the includes:
 #include <doc/the_registry.hxx>
 #include <doc/the_graph.hxx>
+#include <doc/the_document.hxx>
 #include <utils/the_utils.hxx>
+#include <ui/the_document_ui.hxx>
 
 
 //----------------------------------------------------------------
 // the_base_selset_t
 // 
-template <typename TRecord, typename TTraits>
+template <typename TRecord>
 class the_base_selset_t
 {
 public:
   typedef TRecord record_t;
-  typedef TTraits traits_t;
-  typedef the_base_selset_t<TRecord, TTraits> self_t;
+  typedef the_base_selset_t<TRecord> self_t;
   
-  virtual ~the_base_selset_t() {}
+  // selection set traits class:
+  class traits_t
+  {
+  public:
+    virtual ~traits_t() {}
+
+    virtual traits_t * clone() const = 0;
+    
+    virtual bool is_valid(const record_t & record) const = 0;
+    virtual bool activate(record_t & record) const = 0;
+    virtual bool deactivate(record_t & record) const = 0;
+  };
+  
+  // NOTE: the selection set will take over ownership of the traits:
+  the_base_selset_t(traits_t * traits = NULL):
+    traits_(traits)
+  {}
+  
+  the_base_selset_t(const self_t & selset):
+    traits_(NULL)
+  {
+    *this = selset;
+  }
+  
+  // destroy the traits:
+  virtual ~the_base_selset_t()
+  {
+    delete traits_;
+  }
+  
+  self_t & operator = (const self_t & selset)
+  {
+    if (&selset != this)
+    {
+      records_ = selset.records_;
+      delete traits_;
+      traits_ = selset.traits_ ? selset.traits_->clone() : NULL;
+    }
+    
+    return *this;
+  }
+  
+  // traits accessors:
+  inline void set_traits(traits_t * traits)
+  {
+    if (traits == traits_) return;
+    
+    delete traits_;
+    traits_ = traits;
+  }
+  
+  inline traits_t * traits() const
+  { return traits_; }
+  
+  template <typename TTraits>
+  inline TTraits * traits() const
+  { return dynamic_cast<TTraits *>(traits_); }
   
   // check whether the selection set contains a given primitive:
   record_t * has(const record_t & rec)
@@ -100,7 +157,7 @@ public:
   // check whether a primitive may be successfully added to the selection set:
   bool may_activate(const record_t & rec) const
   {
-    if (!traits_.is_valid(rec))
+    if (!traits_->is_valid(rec))
     {
       return false;
     }
@@ -117,7 +174,7 @@ public:
     }
     
     records_.push_back(rec);
-    traits_.activate(records_.back());
+    traits_->activate(records_.back());
     return true;
   }
   
@@ -130,7 +187,7 @@ public:
       return false;
     }
     
-    traits_.deactivate(*rec_ptr);
+    traits_->deactivate(*rec_ptr);
     records_.remove(rec);
     return true;
   }
@@ -172,42 +229,61 @@ protected:
   // selection records:
   std::list<record_t> records_;
   
-public:
   // the selection set traits:
-  traits_t traits_;
+  traits_t * traits_;
 };
 
 
 //----------------------------------------------------------------
 // the_selset_traits_t
 // 
-class the_selset_traits_t
+class the_selset_traits_t :
+  public the_base_selset_t<unsigned int>::traits_t
 {
 public:
-  virtual ~the_selset_traits_t() {}
+  typedef the_base_selset_t<unsigned int>::traits_t super_t;
   
-  the_registry_t * registry() const;
+  the_selset_traits_t(const the_document_ui_t & doc_ui):
+    doc_ui_(doc_ui)
+  {}
   
-  virtual bool is_valid(const unsigned int & id) const;
-  virtual bool activate(const unsigned int & id) const;
-  virtual bool deactivate(const unsigned int & id) const;
+  // virtual:
+  super_t * clone() const;
+  bool is_valid(const unsigned int & id) const;
+  bool activate(unsigned int & id) const;
+  bool deactivate(unsigned int & id) const;
+  
+  inline the_registry_t * registry() const
+  {
+    the_document_t * doc = doc_ui_.document();
+    return doc ? &(doc->registry()) : NULL;
+  }
+  
+private:
+  const the_document_ui_t & doc_ui_;
 };
 
 
 //----------------------------------------------------------------
 // the_selset_t
 //
-template <typename TTraits>
-class the_selset_t : public the_base_selset_t<unsigned int, TTraits>
+class the_selset_t : public the_base_selset_t<unsigned int>
 {
 public:
-  typedef the_base_selset_t<unsigned int, TTraits> super_t;
+  typedef the_base_selset_t<unsigned int> super_t;
+  typedef super_t::traits_t traits_t;
+  
+  the_selset_t(traits_t * traits):
+    super_t(traits)
+  {}
   
   // shortcut conversion from an ID to a primitive pointer of a given type:
   template <class prim_t>
   inline prim_t * prim(const unsigned int & id) const
   {
-    return super_t::traits_.registry()->template elem<prim_t>(id);
+    return
+      super_t::traits<the_selset_traits_t>()->
+      registry()->template elem<prim_t>(id);
   }
   
   // check whether the selection set contains a given primitive:
@@ -242,7 +318,8 @@ public:
   // put together a dependency graph using the selection for the roots:
   inline void graph(the_graph_t & graph) const
   {
-    graph.set_roots(super_t::traits_.registry(), super_t::records_);
+    graph.set_roots(super_t::traits<the_selset_traits_t>()->registry(),
+		    super_t::records_);
   }
 };
 

@@ -35,18 +35,12 @@ THE SOFTWARE.
 
 
 //----------------------------------------------------------------
-// the_selset_traits_t::registry
+// the_selset_traits_t::clone
 // 
-the_registry_t *
-the_selset_traits_t::registry() const
+the_selset_traits_t::super_t *
+the_selset_traits_t::clone() const
 {
-  the_document_ui_t * doc_ui = the_document_ui_t::doc_ui();
-  if (doc_ui == NULL) return NULL;
-  
-  the_document_t * doc = doc_ui->document();
-  if (doc == NULL) return NULL;
-  
-  return &(doc->registry());
+  return new the_selset_traits_t(*this);
 }
 
 //----------------------------------------------------------------
@@ -62,7 +56,7 @@ the_selset_traits_t::is_valid(const unsigned int & id) const
 // the_selset_traits_t::activate
 // 
 bool
-the_selset_traits_t::activate(const unsigned int & id) const
+the_selset_traits_t::activate(unsigned int & id) const
 {
   if (!is_valid(id))
   {
@@ -77,7 +71,7 @@ the_selset_traits_t::activate(const unsigned int & id) const
 // the_selset_traits_t::deactivate
 // 
 bool
-the_selset_traits_t::deactivate(const unsigned int & id) const
+the_selset_traits_t::deactivate(unsigned int & id) const
 {
   if (!is_valid(id))
   {
