@@ -6,13 +6,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 #MESSAGE("CMAKE_MODULE_PATH=[${CMAKE_MODULE_PATH}]")
 
 find_package(Boost REQUIRED)
-find_package(Qt4)
-find_package(FLTK)
-find_package(Cg)
-find_package(GLEW)
-find_package(ITK)
-find_package(FFTW)
-
 include_directories(AFTER
   $ENV{THE_SRC_DIR}
   ${Boost_INCLUDE_DIRS}
@@ -50,6 +43,8 @@ add_library(the_core STATIC
   utils/histogram.cxx
   )
 
+find_package(ITK)
+find_package(FFTW)
 if (ITK_FOUND AND FFTW_FOUND)
   include(${ITK_USE_FILE})
   include_directories(AFTER ${FFTW_INCLUDE_DIR})
@@ -69,9 +64,11 @@ if (ITK_FOUND AND FFTW_FOUND)
     )
 endif (ITK_FOUND AND FFTW_FOUND)
 
+find_package(GLEW)
 if (GLEW_FOUND)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 
+  find_package(Cg)
   if (Cg_FOUND)
     add_definitions(-DUSE_CG)
     include_directories(AFTER ${Cg_INCLUDE_DIR})
@@ -130,6 +127,7 @@ if (GLEW_FOUND)
     )
 endif (GLEW_FOUND)
 
+find_package(Qt4)
 if (QT4_FOUND)
   include(${QT_USE_FILE})
   
@@ -159,6 +157,7 @@ if (QT4_FOUND)
     )
 endif (QT4_FOUND)
 
+find_package(FLTK)
 if (FLTK_FOUND)
   include_directories(AFTER ${FLTK_INCLUDE_DIR})
   
@@ -170,3 +169,29 @@ if (FLTK_FOUND)
     FLTK/the_fltk_view.cxx
     )
 endif (FLTK_FOUND)
+
+find_package(Qt3)
+if (QT3_FOUND)
+  add_definitions(-DQT_THREAD_SUPPORT)
+  
+  include_directories(BEFORE
+    ${QT3_INCLUDE_DIR}
+    )
+  
+  set(moc3_hxx
+    Qt3/the_qt_trail.hxx	
+    Qt3/the_qt_view.hxx
+    )
+  
+  qt3_wrap_cpp(moc3_cxx ${moc3_hxx})
+  
+  add_library(the_ui_qt3 STATIC
+    ${moc3_cxx}
+    Qt3/qimage_pixel_converter.cxx
+    Qt3/the_qt_input_device_event.cxx
+    Qt3/the_qt_thread.cxx
+    Qt3/the_qt_trail.cxx
+    Qt3/the_qt_view.cxx
+    Qt3/the_qt_mutex.cxx
+    )
+endif (QT3_FOUND)
