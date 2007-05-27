@@ -24,6 +24,11 @@ elif [ -e /usr/sci/crcnsdata/"${CPU}"/ITK ]; then
     export ITK_BINARY_DIR=/usr/sci/crcnsdata/"${CPU}"/ITK
 fi
 
+# determine where Qt3 lives:
+if [ -e /usr/lib/qt3 ]; then
+    export QT3_DIR=/usr/lib/qt3
+fi
+
 # determine where Qt4 lives:
 if [ -e /scratch/"${CPU}"/Qt ]; then
     export QT4_DIR=/scratch/"${CPU}"/Qt
