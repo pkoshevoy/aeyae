@@ -64,7 +64,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
     const the_slope_sign_t & a = *i;
     const the_slope_sign_t & b = *next(i);
     
-    // if this interval starts with increase in function, so the solution
+    // if this interval starts with increase in function, then the solution
     // can only be a maxima, not minima, so skip it:
     if (a[1] > 0.0) continue;
     
@@ -84,6 +84,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
   
   // now that we have all the local minima bracketed, isolate them:
   const float tolerance = 1E-3 * ((s1 - s0) / float(segments));
+  float minR = FLT_MAX;
   for (unsigned int i = 0; i < brackets.size(); i += 3)
   {
     the_slope_sign_t & a = brackets[i];
@@ -93,6 +94,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
     if (isolate_minima(a, b, c, tolerance))
     {
       solution.push_back(the_deviation_min_t(b[0], b[1]));
+      minR = std::min(minR, b[0]);
     }
   }
   
@@ -101,17 +103,19 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
   float dR;
   
   eval_R(s0, R, dR);
-  if (dR >= 0.0)
+  if (solution.empty() || R <= minR || dR >= 0)
   {
     // function is increasing, must be a boundary minima:
     solution.push_back(the_deviation_min_t(s0, R));
+    minR = std::min(minR, R);
   }
   
   eval_R(s1, R, dR);
-  if (dR <= 0.0)
+  if (solution.empty() || R <= minR || dR <= 0)
   {
     // function is decreasing, must be a boundary minima:
     solution.push_back(the_deviation_min_t(s1, R));
+    minR = std::min(minR, R);
   }
   
   return (solution.empty() == false);

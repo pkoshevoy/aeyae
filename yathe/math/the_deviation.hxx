@@ -110,8 +110,12 @@ public:
   inline void eval_R(const float & s, float & R, float & dR) const
   {
     eval_Z(s, R, dR);
-    R = sqrt(R);
-    dR /= (2.0 * sqrt(R));
+    if (R > 0)
+    {
+      float sqrt_Z = sqrt(R);
+      R = sqrt_Z;
+      dR /= (2.0 * sqrt_Z);
+    }
   }
   
   inline float R(const float & s) const
