@@ -229,7 +229,8 @@ the_curve_ref_t::move(the_registry_t * registry,
   if (deviation.find_local_minima(solution) == false) return false;
   
   solution.sort();
-  param_ = solution.front().s_;
+  const the_deviation_min_t & best = solution.front();
+  param_ = best.s_;
   return true;
 }
 
