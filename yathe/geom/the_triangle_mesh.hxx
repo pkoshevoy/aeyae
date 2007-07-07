@@ -38,10 +38,10 @@ THE SOFTWARE.
 #include <limits.h>
 #include <sys/types.h>
 
-// local includes:
+// the includes:
 #include "math/v3x1p3x1.hxx"
-#include "utils/the_array.hxx"
 #include "utils/the_dynamic_array.hxx"
+#include "utils/the_text.hxx"
 
 // forward declarations:
 class the_triangle_mesh_t;
@@ -236,12 +236,19 @@ public:
   the_triangle_mesh_t();
   the_triangle_mesh_t(const the_triangle_mesh_t & mesh);
   
+  // load a model from file:
+  bool load(const the_text_t & filepath,
+	    const bool & remove_duplicates,
+	    const bool & calculate_normals,
+	    const bool & discard_existing_normals,
+	    const unsigned int & maximum_angle_between_normals);
+  
   // accessors:
   inline const the_dynamic_array_t<p3x1_t> & vx() const { return vx_; }
   inline const the_dynamic_array_t<v3x1_t> & vn() const { return vn_; }
   inline const the_dynamic_array_t<p2x1_t> & vt() const { return vt_; }
   
-  inline const the_array_t<the_mesh_triangle_t> & triangles() const
+  inline const std::vector<the_mesh_triangle_t> & triangles() const
   { return triangles_; }
   
   // calculate the bounding box of the mesh:
@@ -273,6 +280,17 @@ public:
   // this function will transform the vertices so that the center of their
   // bounding box would coincide with the origin:
   v3x1_t shift_to_center();
+  
+  // load a mesh file (.m):
+  bool load_m(const the_text_t & filepath,
+	      const bool & remove_duplicates);
+  
+  // load a Wavefront Alias obj file:
+  bool load_obj(const the_text_t & filepath,
+		const bool & remove_duplicates);
+  
+  // load a Wavefront Alias material file, called by load_obj:
+  bool load_mtl(const the_text_t & filepath);
   
   // setup a closed surface mesh based on a set of contours:
   template <typename point_t>
@@ -357,13 +375,13 @@ public:
   }
   
   // array of mesh triangles:
-  the_array_t<the_mesh_triangle_t> triangles_;
+  std::vector<the_mesh_triangle_t> triangles_;
   
   // array of mesh vertices:
   the_dynamic_array_t<p3x1_t> vx_;
   the_dynamic_array_t<v3x1_t> vn_;
   the_dynamic_array_t<p2x1_t> vt_;
 };
-  
+
 
 #endif // THE_TRIANGLE_MESH_HXX_

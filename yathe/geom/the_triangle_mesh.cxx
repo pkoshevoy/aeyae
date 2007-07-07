@@ -38,6 +38,7 @@ THE SOFTWARE.
 
 // system includes:
 #include <iostream>
+#include <fstream>
 
 // namespace access:
 using std::cerr;
@@ -688,6 +689,60 @@ the_triangle_mesh_t::the_triangle_mesh_t(const the_triangle_mesh_t & mesh):
 }
 
 //----------------------------------------------------------------
+// the_triangle_mesh_t::load
+// 
+bool
+the_triangle_mesh_t::load(const the_text_t & filename,
+			  const bool & remove_duplicates,
+			  const bool & calculate_normals,
+			  const bool & discard_existing_normals,
+			  const unsigned int & maximum_angle_between_normals)
+{
+  if (filename.match_tail(".m", true))
+  {
+    if (!load_m(filename, remove_duplicates))
+    {
+      return false;
+    }
+  }
+  else if (filename.match_tail(".obj", true))
+  {
+    if (!load_obj(filename, remove_duplicates))
+    {
+      return false;
+    }
+  }
+  else
+  {
+    // default:
+    return false;
+  }
+  
+  // move all vertices so that the center of the bounding box
+  // coincides with the origin:
+  shift_to_center();
+  
+  // fix up the normal vectors wherever they are missing:
+  if (calculate_normals)
+  {
+    float minimum_normal_dot_product =
+      cos(float(maximum_angle_between_normals) / M_PI);
+    
+    calc_vertex_normals(discard_existing_normals,
+			minimum_normal_dot_product);
+  }
+  else
+  {
+    calc_face_normals(false);
+  }
+  
+  // make sure we have texture coordinates:
+  calc_texture_coords(false);
+  
+  return true;
+}
+
+//----------------------------------------------------------------
 // the_triangle_mesh_t::calc_area
 // 
 float
@@ -906,4 +961,594 @@ the_triangle_mesh_t::shift_to_center()
   }
   
   return shift;
+}
+
+//----------------------------------------------------------------
+// find_first_match
+// 
+static unsigned int
+find_first_match(const the_dynamic_array_t<p3x1_t> & vx_array,
+		 const p3x1_t & vx)
+{
+  const unsigned int & size = vx_array.size();
+  for (unsigned int i = 0; i < size; i++)
+  {
+    if (vx_array[i] == vx) return i;
+  }
+  
+  return UINT_MAX;
+}
+
+//----------------------------------------------------------------
+// the_load_m_state_t
+// 
+typedef enum
+{
+  THE_LOAD_M_HAS_NOTHING_E, // initial state
+  THE_LOAD_M_HAS_COMMENT_E, // comment (starts with # character)
+  THE_LOAD_M_HAS_Vertex_E,  // vertex data
+  THE_LOAD_M_HAS_Face_E     // face data
+} the_load_m_state_t;
+
+//----------------------------------------------------------------
+// the_triangle_mesh_t::load_m
+// 
+bool
+the_triangle_mesh_t::load_m(const the_text_t & filepath,
+			    const bool & remove_duplicates)
+{
+  // open the file:
+  std::ifstream file;
+  file.open(filepath, ios::in);
+  if (!file.is_open()) return false;
+  
+  // reinitialize the vertex arrays:
+  vx_.clear();
+  vn_.clear();
+  vt_.clear();
+  
+  // array of faces:
+  the_dynamic_array_t<the_face_info_t> f_array(4096);
+  
+  // a map from old vertex id to new vertex id:
+  the_dynamic_array_t<unsigned int> vx_map(4096);
+  
+  // a map from old face id to new face id:
+  the_dynamic_array_t<unsigned int> fc_map(4096);
+  
+  // setup the initial state of the parser:
+  the_load_m_state_t state = THE_LOAD_M_HAS_NOTHING_E;
+  
+  // parse the file:
+  while (file.eof() == false)
+  {
+    the_text_t token_line;
+    getline(file, token_line);
+    token_line = token_line.simplify_ws();
+    
+    // parse the line:
+    std::istringstream stream(token_line.text());
+    while (stream.eof() == false)
+    {
+      the_text_t token;
+      
+      // process the token:
+      if (state == THE_LOAD_M_HAS_NOTHING_E)
+      {
+	stream >> token;
+	
+	if (token[0] == '#')
+	{
+	  state = THE_LOAD_M_HAS_COMMENT_E;
+	}
+	else if (token == "Vertex")
+	{
+	  state = THE_LOAD_M_HAS_Vertex_E;
+	}
+	else if (token == "Face")
+	{
+	  // create room for the new face:
+	  f_array.resize(f_array.size() + 1);
+	  state = THE_LOAD_M_HAS_Face_E;
+	}
+      }
+      else if (state == THE_LOAD_M_HAS_COMMENT_E)
+      {
+	// comment, skip the rest of the line:
+	state = THE_LOAD_M_HAS_NOTHING_E;
+	break;
+      }
+      else if (state == THE_LOAD_M_HAS_Vertex_E)
+      {
+	// load vertex index:
+	stream >> token;
+	bool token_ok = true;
+	unsigned int vertex_index = token.toUInt(&token_ok);
+	if (token_ok == false)
+	{
+	  cerr << "warning: bad vertex ID: " << token << endl
+	       << "line: " << token_line << endl << endl;
+	  continue;
+	}
+	
+	// load three floats:
+	p3x1_t vertex;
+	for (unsigned int i = 0; i < 3; i++)
+	{
+	  stream >> token;
+	  bool token_ok = true;
+	  vertex[i] = token.toFloat(&token_ok);
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad vertex coordinate: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	  }
+	}
+	
+	// setup the last vertex in the array:
+	unsigned int id =
+	  remove_duplicates ?
+	  find_first_match(vx_, vertex) :
+	  UINT_MAX;
+	
+	if (id == UINT_MAX)
+	{
+	  vx_map[vertex_index] = vx_.size();
+	  vx_.resize(vx_.size() + 1);
+	  vx_.end_elem(1) = vertex;
+	}
+	else
+	{
+	  cerr << "found duplicate point, remapping..." << endl;
+	  vx_map[vertex_index] = id;
+	}
+	
+	state = THE_LOAD_M_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_M_HAS_Face_E)
+      {
+	// consume the face index toke:
+	stream >> token;
+	bool token_ok = true;
+	token.toUInt(&token_ok);
+	if (token_ok == false)
+	{
+	  cerr << "warning: bad face ID: " << token << endl
+	       << "line: " << token_line << endl << endl;
+	  continue;
+	}
+	
+	// load three vertex IDs:
+	for (unsigned int i = 0; i < 3; i++)
+	{
+	  stream >> token;
+	  bool token_ok = true;
+	  unsigned int vertex_index = token.toUInt(&token_ok);
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad vertex ID: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	  }
+	  
+	  // append the vertex index to the face:
+	  f_array.end_elem(1).add(vertex_index);
+	}
+	
+	state = THE_LOAD_M_HAS_NOTHING_E;
+      }
+    }
+    
+    // end of line, reset the state:
+    state = THE_LOAD_M_HAS_NOTHING_E;
+  }
+  
+  file.close();
+  
+  // put everything into a list for now:
+  std::list<the_mesh_triangle_t> triangles;
+  
+  const unsigned int & num_faces = f_array.size();
+  for (unsigned int i = 0; i < num_faces; i++)
+  {
+    const the_face_info_t & face = f_array[i];
+    const unsigned int & num_vertices = face.vertices.size();
+    
+    if (num_vertices < 3)
+    {
+      cerr << "face with less then 3 vertices, skipping..." << endl;
+      continue;
+    }
+    
+    std::vector<the_vertex_ids_t> vertices;
+    copy_a_to_b(face.vertices, vertices);
+    
+    for (unsigned int j = 2; j < num_vertices; j++)
+    {
+      const the_vertex_ids_t & a = vertices[0];
+      const the_vertex_ids_t & b = vertices[j - 1];
+      const the_vertex_ids_t & c = vertices[j];
+      
+      the_mesh_triangle_t triangle(this,
+				   vx_map[a.vx],
+				   vx_map[b.vx],
+				   vx_map[c.vx],
+				   a.vn,
+				   b.vn,
+				   c.vn,
+				   a.vt,
+				   b.vt,
+				   c.vt);
+      
+      // check for degeneracies:
+      v3x1_t normal = triangle.calc_normal();
+      if (normal == v3x1_t(0.0, 0.0, 0.0))
+      {
+	cerr << "degenerate triangle, skipping..." << endl;
+	continue;
+      }
+      
+      triangles.push_back(triangle);
+    }
+  }
+  
+  copy_a_to_b(triangles, triangles_);
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_load_obj_state_t
+// 
+typedef enum
+{
+  THE_LOAD_OBJ_HAS_NOTHING_E, // initial state
+  THE_LOAD_OBJ_HAS_COMMENT_E, // comment (starts with # character)
+  THE_LOAD_OBJ_HAS_mtllib_E,  // name of the material library used
+  THE_LOAD_OBJ_HAS_v_E,       // vertex data
+  THE_LOAD_OBJ_HAS_vt_E,      // texture coordinate data
+  THE_LOAD_OBJ_HAS_vn_E,      // normal data
+  THE_LOAD_OBJ_HAS_g_E,       // group name
+  THE_LOAD_OBJ_HAS_usemtl_E,  // name of the material used
+  THE_LOAD_OBJ_HAS_f_E        // face data
+} the_load_obj_state_t;
+
+//----------------------------------------------------------------
+// the_triangle_mesh_t::load_obj
+// 
+bool
+the_triangle_mesh_t::load_obj(const the_text_t & filepath,
+			      const bool & remove_duplicates)
+{
+  // open the file:
+  std::ifstream file;
+  file.open(filepath, ios::in);
+  if (!file.is_open()) return false;
+  
+  // reinitialize the vertex arrays:
+  vx_.clear();
+  vn_.clear();
+  vt_.clear();
+  
+  // array of faces:
+  the_dynamic_array_t<the_face_info_t> f_array(4096);
+  
+  // a map from old vertex id to new vertex id:
+  the_dynamic_array_t<unsigned int> vx_map(4096);
+  
+  // setup the initial state of the parser:
+  the_load_obj_state_t state = THE_LOAD_OBJ_HAS_NOTHING_E;
+  
+  // parse the file:
+  while (file.eof() == false)
+  {
+    the_text_t token_line;
+    getline(file, token_line);
+    token_line = token_line.simplify_ws();
+    
+    // parse the line:
+    std::istringstream stream(token_line.text());
+    while (stream.eof() == false)
+    {
+      the_text_t token;
+      
+      // process the token:
+      if (state == THE_LOAD_OBJ_HAS_NOTHING_E)
+      {
+	stream >> token;
+	
+	if (token[0] == '#')
+	{
+	  state = THE_LOAD_OBJ_HAS_COMMENT_E;
+	}
+	else if (token == "mtllib")
+	{
+	  state = THE_LOAD_OBJ_HAS_mtllib_E;
+	}
+	else if (token == "v")
+	{
+	  vx_map.resize(vx_map.size() + 1);
+	  state = THE_LOAD_OBJ_HAS_v_E;
+	}
+	else if (token == "vt")
+	{
+	  vt_.resize(vt_.size() + 1);
+	  state = THE_LOAD_OBJ_HAS_vt_E;
+	}
+	else if (token == "vn")
+	{
+	  vn_.resize(vn_.size() + 1);
+	  state = THE_LOAD_OBJ_HAS_vn_E;
+	}
+	else if (token == "g")
+	{
+	  state = THE_LOAD_OBJ_HAS_g_E;
+	}
+	else if (token == "usemtl")
+	{
+	  state = THE_LOAD_OBJ_HAS_usemtl_E;
+	}
+	else if (token == "f")
+	{
+	  // create room for the new face:
+	  f_array.resize(f_array.size() + 1);
+	  state = THE_LOAD_OBJ_HAS_f_E;
+	}
+      }
+      else if (state == THE_LOAD_OBJ_HAS_COMMENT_E)
+      {
+	// comment, skip the rest of the line:
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+	break;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_mtllib_E)
+      {
+	// FIXME: pkoshevoy: load the material library:
+	stream >> token;
+	
+	if (load_mtl(token.text()) == false)
+	{
+	  cerr << "warning: could not load material: " << token << endl
+	       << "line: " << token_line << endl << endl;
+	}
+	
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_v_E)
+      {
+	// load three floats:
+	p3x1_t vertex;
+	for (unsigned int i = 0; i < 3; i++)
+	{
+	  stream >> token;
+	  bool token_ok = true;
+	  vertex[i] = token.toFloat(&token_ok);
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad vertex coordinate: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	  }
+	}
+	
+	// setup the last vertex in the array:
+	unsigned int id =
+	  remove_duplicates ?
+	  find_first_match(vx_, vertex) :
+	  UINT_MAX;
+	
+	if (id == UINT_MAX)
+	{
+	  vx_map.end_elem(1) = vx_.size();
+	  vx_.resize(vx_.size() + 1);
+	  vx_.end_elem(1) = vertex;
+	}
+	else
+	{
+	  cerr << "found duplicate point, remapping..." << endl;
+	  vx_map.end_elem(1) = id;
+	}
+	
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_vt_E)
+      {
+	// load two floats:
+	p2x1_t uv;
+	for (unsigned int i = 0; i < 2; i++)
+	{
+	  stream >> token;
+	  bool token_ok = true;
+	  uv[i] = token.toFloat(&token_ok);
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad texture coordinate: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	  }
+	}
+	
+	// setup the last texture coordinate in the array:
+	vt_.end_elem(1) = uv;
+	
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_vn_E)
+      {
+	// load three floats:
+	v3x1_t normal;
+	for (unsigned int i = 0; i < 3; i++)
+	{
+	  stream >> token;
+	  bool token_ok = true;
+	  normal[i] = token.toFloat(&token_ok);
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad vertex normal component: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	  }
+	}
+	
+	// setup the last vertex normal in the array:
+	vn_.end_elem(1) = normal;
+	
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_g_E)
+      {
+	// FIXME: pkoshevoy: start a new group:
+	stream >> token;
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_usemtl_E)
+      {
+	// FIXME: pkoshevoy: setup current material:
+	stream >> token;
+	state = THE_LOAD_OBJ_HAS_NOTHING_E;
+      }
+      else if (state == THE_LOAD_OBJ_HAS_f_E)
+      {
+	// load an unsigned integer (or three unsigned integers
+	// separated by two '/' character):
+	stream >> token;
+	
+	unsigned int array_index[] =
+	{ UINT_MAX, UINT_MAX, UINT_MAX };
+	unsigned int num_separators = token.contains('/');
+	
+	if (num_separators == 0)
+	{
+	  bool token_ok = true;
+	  array_index[0] = token.toUInt(&token_ok) - 1;
+	  if (token_ok == false)
+	  {
+	    cerr << "warning: bad vertex ID: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	    continue;
+	  }
+	}
+	else if (num_separators == 2)
+	{
+	  std::vector<the_text_t> token_list;
+	  if (token.split(token_list, '/', true) != 3)
+	  {
+	    cerr << "warning: wrong number of vertex IDs: " << token << endl
+		 << "line: " << token_line << endl << endl;
+	    continue;
+	  }
+	  
+	  bool token_ok = true;
+	  for (unsigned int i = 0; i < 3; i++)
+	  {
+	    array_index[i] = token_list[i].toUInt(&token_ok) - 1;
+	    if (token_ok == false)
+	    {
+	      if (i == 0)
+	      {
+		cerr << "warning: bad vertex IDs: " << token << endl
+		     << "line: " << token_line << endl << endl;
+		break;
+	      }
+	      
+	      array_index[i] = UINT_MAX;
+	    }
+	  }
+	  
+	  if (token_ok == false)
+	  {
+	    continue;
+	  }
+	}
+	else
+	{
+	  cerr << "warning: wrong number of vertex ID separators: "
+	       << token << endl
+	       << "line: " << token_line << endl << endl;
+	  continue;
+	}
+	
+	// append the vertex index to the last face in the array:
+	f_array.end_elem(1).add(array_index[0],
+				array_index[2],
+				array_index[1]);
+      }
+    }
+    
+    // end of line, reset the state:
+    state = THE_LOAD_OBJ_HAS_NOTHING_E;
+  }
+  
+  file.close();
+  
+  // put everything into a list for now:
+  std::list<the_mesh_triangle_t> triangles;
+  
+  const unsigned int & num_faces = f_array.size();
+  for (unsigned int i = 0; i < num_faces; i++)
+  {
+    const the_face_info_t & face = f_array[i];
+    const unsigned int & num_vertices = face.vertices.size();
+    
+    if (num_vertices < 3)
+    {
+      cerr << "face with less then 3 vertices, skipping..." << endl;
+      continue;
+    }
+    
+    std::vector<the_vertex_ids_t> vertices;
+    copy_a_to_b(face.vertices, vertices);
+    
+    for (unsigned int j = 2; j < num_vertices; j++)
+    {
+      const the_vertex_ids_t & a = vertices[0];
+      const the_vertex_ids_t & b = vertices[j - 1];
+      const the_vertex_ids_t & c = vertices[j];
+      
+      the_mesh_triangle_t triangle(this,
+				   vx_map[a.vx],
+				   vx_map[b.vx],
+				   vx_map[c.vx],
+				   a.vn,
+				   b.vn,
+				   c.vn,
+				   a.vt,
+				   b.vt,
+				   c.vt);
+      
+      // check for degeneracies:
+      v3x1_t normal = triangle.calc_normal();
+      if (normal == v3x1_t(0.0, 0.0, 0.0))
+      {
+	cerr << "degenerate triangle, skipping..." << endl;
+	continue;
+      }
+      
+      triangles.push_back(triangle);
+    }
+  }
+  
+  copy_a_to_b(triangles, triangles_);
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_load_mtl_state_t
+// 
+typedef enum
+{
+  THE_LOAD_MTL_HAS_NOTHING_E, // initial state
+  THE_LOAD_MTL_HAS_newmtl_E,  // name of the material
+  THE_LOAD_MTL_HAS_Ka_E,      // ambient color
+  THE_LOAD_MTL_HAS_Kd_E,      // diffuse color
+  THE_LOAD_MTL_HAS_Ks_E,      // specular color
+  THE_LOAD_MTL_HAS_Ns_E,      // specular highlight color
+  THE_LOAD_MTL_HAS_Tr_E,      // transparenct, d is sometimes used
+  THE_LOAD_MTL_HAS_illum_E    // illumination model
+} the_load_mtl_state_t;
+
+//----------------------------------------------------------------
+// the_triangle_mesh_t::load_mtl
+// 
+bool
+the_triangle_mesh_t::load_mtl(const the_text_t & /* filepath */)
+{
+  return false;
 }
