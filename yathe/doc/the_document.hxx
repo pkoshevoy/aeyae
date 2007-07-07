@@ -46,20 +46,21 @@ class the_bbox_t;
 // 
 class the_document_t
 {
-public:
+public: 
   the_document_t(const the_text_t & name);
-  
-  inline the_document_t * clone() const
+  virtual ~the_document_t() {}
+ 
+  virtual the_document_t * clone() const
   { return new the_document_t(*this); }
   
   // regenerate the unrolled procedures geometry:
-  bool regenerate();
+  virtual bool regenerate();
   
   // draw the unrolled procedures geometry:
-  void draw(const the_view_t & view) const;
+  virtual void draw(const the_view_t & view) const;
   
   // calculate the bounding box of unrolled procedures geometry:
-  void calc_bbox(const the_view_t & view, the_bbox_t & bbox) const;
+  virtual void calc_bbox(const the_view_t & view, the_bbox_t & bbox) const;
   
   // this function splits procedures into active and rolled back:
   void unroll(the_procedure_t * proc);
