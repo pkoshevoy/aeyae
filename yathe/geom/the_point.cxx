@@ -37,6 +37,16 @@ THE SOFTWARE.
 // system includes:
 #include <assert.h>
 
+//----------------------------------------------------------------
+// USE_SMART_SOFT_POINTS
+// 
+#define USE_SMART_SOFT_POINTS
+
+#ifdef USE_SMART_SOFT_POINTS
+#include <geom/the_curve.hxx>
+#include <math/the_deviation.hxx>
+#endif
+
 
 //----------------------------------------------------------------
 // the_point_t::intersect
@@ -193,6 +203,11 @@ the_soft_point_t::added_to_the_registry(the_registry_t * registry,
   
   // update the graph:
   establish_supporter_dependent(registry, ref_->id(), id);
+  
+#ifdef USE_SMART_SOFT_POINTS
+  ref_->eval(registry, value_);
+  anchor_ = value_;
+#endif
 }
 
 //----------------------------------------------------------------
@@ -201,9 +216,59 @@ the_soft_point_t::added_to_the_registry(the_registry_t * registry,
 bool
 the_soft_point_t::regenerate()
 {
+  the_registry_t * r = registry();
+  
+#ifdef USE_SMART_SOFT_POINTS
+  the_curve_t * curve = ref_->references<the_curve_t>(r);
+  if (curve)
+  {
+    /*
+    if (has_state(THE_SELECTED_STATE_E))
+    {
+      cout << "regenerating an active soft point" << endl;
+    }
+    */
+    the_point_curve_deviation_t deviation(value_, curve->geom());
+    std::list<the_deviation_min_t> solution;
+    if (deviation.find_local_minima(solution))
+    {
+      solution.sort();
+      /*
+      if (has_state(THE_SELECTED_STATE_E))
+      {
+	for (std::list<the_deviation_min_t>::const_iterator
+	       i = solution.begin(); i != solution.end(); ++i)
+	{
+	  const the_deviation_min_t & sr = *i;
+	  cout << sr.s_ << '\t' << sr.r_ << endl;
+	}
+	cout << endl;
+      }
+      */
+      
+      const the_deviation_min_t & srs = solution.front();
+      the_curve_ref_t * crv_ref = dynamic_cast<the_curve_ref_t *>(ref_);
+      assert(crv_ref);
+      /*
+      float delta = fabs(srs.s_ - crv_ref->param());
+      if (has_state(THE_SELECTED_STATE_E))
+      {
+	cout << srs.s_ << " - " << crv_ref->param() << " = " << delta << endl;
+	if (delta > 0.9)
+	{
+	  std::list<the_deviation_min_t> tmp;
+	  deviation.find_local_minima(tmp);
+	}
+      }
+      */
+      crv_ref->set_param(srs.s_);
+    }
+  }
+#endif
+  
   // look up the reference, evaluate the paramater with
   // respect to the reference, return the value:
-  regenerated_ = ref_->eval(registry(), value_);
+  regenerated_ = ref_->eval(r, value_);
   return regenerated_;
 }
 
@@ -216,8 +281,7 @@ the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
 {
   the_registry_t * r = registry();
   bool ok = ref_->move(r, view_mgr, wcs_pt);
-  p3x1_t fixme_pt;
-  ref_->eval(r, fixme_pt);
+  ref_->eval(r, value_);
   
   if (ok) request_regeneration();
   return ok;
