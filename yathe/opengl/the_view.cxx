@@ -374,6 +374,8 @@ the_view_t::gl_resize(int w, int h)
 void
 the_view_t::gl_paint()
 {
+  if (width() == 0 || height() == 0) return;
+  
   the_scoped_variable_t<the_view_t *> latest_view(latest_view_, this, NULL);
   
   // disable view manager callbacks when repainting -- we don't
