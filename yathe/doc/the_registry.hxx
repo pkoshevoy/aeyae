@@ -209,15 +209,17 @@ public:
     prims.clear();
     
     const unsigned int registry_size = size();
+    unsigned int num_collected = 0;
     for (unsigned int i = 0; i < registry_size; i++)
     {
       prim_t * prim = dynamic_cast<prim_t *>(elem(i));
       if (prim == NULL) continue;
       
-      prims.append(prim);
+      prims.push_back(prim);
+      num_collected++;
     }
     
-    return prims.size();
+    return num_collected;
   }
   
   // For debugging, dumps this model primitive table:
