@@ -245,6 +245,18 @@ is_size_two_or_larger(const container_t & c)
 }
 
 //----------------------------------------------------------------
+// is_size_three_or_larger
+// 
+template <typename container_t>
+inline bool
+is_size_three_or_larger(const container_t & c)
+{
+  typename container_t::const_iterator i = c.begin();
+  typename container_t::const_iterator e = c.end();
+  return (i != e) && (++i != e) && (++i != e);
+}
+
+//----------------------------------------------------------------
 // is_size_one
 // 
 template <typename container_t>
@@ -619,7 +631,7 @@ void
 copy_a_to_b(const std::list<T> & container_a,
 	    the_dynamic_array_t<T> & container_b)
 {
-  container_b.resize(container_a.size);
+  container_b.resize(container_a.size());
   
   const unsigned int size = container_a.size();
   typename std::list<T>::const_iterator iter = container_a.begin();
