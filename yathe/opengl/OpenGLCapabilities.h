@@ -145,6 +145,23 @@ OpenGL(unsigned int view_id, the_view_t * view = NULL);
 #else // NDEBUG
 #define FIXME_OPENGL(x)
 #endif // NDEBUG
+
+#undef PERROR_OPENGL
+#define PERROR_OPENGL(x) \
+{ \
+  int i = 0; \
+  while (true) \
+  { \
+    GLenum err = glGetError(); \
+    if (err == GL_NO_ERROR) break; \
+    const GLubyte * str = gluErrorString(err); \
+    std::cerr << x << std::setw(3) << i << ". FIXME: " \
+              << __FILE__ << ':' << __LINE__ \
+              << ", OPENGL: " << str << std::endl; \
+    i++; \
+  } \
+}
+
 #endif // 0
 
 

@@ -142,12 +142,14 @@ image_tile_dl_elem_t::setup_textures() const
   // number of available texture units:
   GLint num_texture_units = 0;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units);
+  PERROR_OPENGL("number of texture units");
   
   // upload the texture data as necessary:
   if (must_init)
   {
     // store the context:
     context_ = the_gl_context_t::current();
+    FIXME_OPENGL("switch context");
     
     // allocate the texture objects:
     glGenTextures(num_tiles, texture_ids);
@@ -261,6 +263,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
   // number of available texture units:
   GLint num_texture_units = 0;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units);
+  PERROR_OPENGL("number of texture units");
   
   // draw the tiles:
   for (unsigned int i = 0; i < num_tiles; i++)
