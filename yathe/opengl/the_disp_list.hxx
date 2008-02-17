@@ -203,31 +203,10 @@ public:
    const p3x1_t & b = p3x1_t(1.0, 1.0, 1.0),
    const the_color_t & c = the_color_t(0.0, 0.0, 0.0, 1.0),
    const the_color_t & d = the_color_t(1.0, 1.0, 1.0, 1.0),
-   const float & line_width = 1.0):
-    the_line_dl_elem_t(a, b, c, line_width),
-    end_color_(d)
-  {}
+   const float & line_width = 1.0);
   
   // virtual:
-  void draw() const
-  {
-    glPushAttrib(GL_LINE_BIT);
-    glPushAttrib(GL_ENABLE_BIT);
-    {
-      glLineWidth(line_width_);
-      glDisable(GL_LIGHTING);
-      glBegin(GL_LINES);
-      {
-	glColor4fv(color_.rgba());
-	glVertex3fv(pt_a_.data());
-	glColor4fv(end_color_.rgba());
-	glVertex3fv(pt_b_.data());
-      }
-      glEnd();
-    }
-    glPopAttrib();
-    glPopAttrib();
-  }
+  void draw() const;
   
   // accessors:
   inline const the_color_t & end_color() const

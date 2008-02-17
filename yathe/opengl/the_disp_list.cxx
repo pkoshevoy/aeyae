@@ -120,7 +120,7 @@ the_line_strip_dl_elem_t::draw() const
 {
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(std::max<GLfloat>(1, line_width_));
+    glLineWidth(line_width_);
     glDisable(GL_LIGHTING);
     glDisable(GL_LINE_SMOOTH);
     glBegin(GL_LINE_STRIP);
@@ -172,7 +172,7 @@ the_line_dl_elem_t::draw() const
 {
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(std::max<GLfloat>(1, line_width_));
+    glLineWidth(line_width_);
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
     glBegin(GL_LINES);
@@ -231,6 +231,40 @@ the_line_dl_elem_t::pick(const the_view_volume_t & pick_volume,
   distance_to_volume_axis = cyl_pt.x();
   
   return (distance_to_volume_axis <= 1.0);
+}
+
+
+//----------------------------------------------------------------
+// the_gradient_line_dl_elem_t::the_gradient_line_dl_elem_t
+// 
+the_gradient_line_dl_elem_t::
+the_gradient_line_dl_elem_t(const p3x1_t & a,
+			    const p3x1_t & b,
+			    const the_color_t & c,
+			    const the_color_t & d,
+			    const float & line_width):
+  the_line_dl_elem_t(a, b, c, line_width),
+  end_color_(d)
+{}
+
+//----------------------------------------------------------------
+// the_gradient_line_dl_elem_t::draw
+// 
+void the_gradient_line_dl_elem_t::draw() const
+{
+  the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
+  {
+    glLineWidth(line_width_);
+    glDisable(GL_LIGHTING);
+    glBegin(GL_LINES);
+    {
+      glColor4fv(color_.rgba());
+      glVertex3fv(pt_a_.data());
+      glColor4fv(end_color_.rgba());
+      glVertex3fv(pt_b_.data());
+    }
+    glEnd();
+  }
 }
 
 
@@ -583,7 +617,7 @@ the_arrow_dl_elem_t::draw() const
   
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(std::max<GLfloat>(1, the_line_dl_elem_t::line_width_));
+    glLineWidth(the_line_dl_elem_t::line_width_);
     glDisable(GL_LIGHTING);
     glEnable(GL_POLYGON_SMOOTH);
     
