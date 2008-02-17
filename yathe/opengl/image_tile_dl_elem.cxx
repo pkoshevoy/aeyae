@@ -364,7 +364,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
 	       GL_POLYGON_BIT |
 	       GL_COLOR_BUFFER_BIT);
   */
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
   {
     // if (use_textures)
     {
@@ -436,7 +436,6 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
     
     draw_tile_cb(draw_tile_cb_data, tile_index);
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------

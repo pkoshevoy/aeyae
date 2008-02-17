@@ -44,7 +44,7 @@ THE SOFTWARE.
 void
 the_appearance_t::draw_background(the_view_t & view) const
 {
-  glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_POLYGON_BIT);
   {
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
@@ -70,7 +70,6 @@ the_appearance_t::draw_background(the_view_t & view) const
     }
     glEnd();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -101,7 +100,7 @@ the_appearance_t::draw_coordinate_system(the_view_t & view) const
 void
 the_appearance_t::draw_view_label(the_view_t & view) const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_DEPTH_TEST);
     // draw the view label:
@@ -118,7 +117,6 @@ the_appearance_t::draw_view_label(the_view_t & view) const
 			      palette_.mask(),
 			      view.name()).draw();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------

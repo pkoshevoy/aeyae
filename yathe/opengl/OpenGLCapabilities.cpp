@@ -47,6 +47,121 @@ using std::endl;
 
 
 //----------------------------------------------------------------
+// the_scoped_gl_attrib_t::the_scoped_gl_attrib_t
+// 
+the_scoped_gl_attrib_t::the_scoped_gl_attrib_t(GLbitfield mask):
+  applied_(false)
+{
+  // return;
+  
+  mask = mask ^ GL_LINE_BIT;
+  mask = mask ^ GL_ENABLE_BIT;
+  if (!mask) return;
+  
+  GLenum err = glGetError();
+  if (err == GL_NO_ERROR)
+  {
+    glPushAttrib(mask);
+    err = glGetError();
+    
+    if (err == GL_NO_ERROR)
+    {
+      applied_ = true;
+    }
+    else
+    {
+      const GLubyte * str = gluErrorString(err);
+      cerr << "GL_ERROR: " << str << endl;
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// the_scoped_gl_attrib_t::~the_scoped_gl_attrib_t
+// 
+the_scoped_gl_attrib_t::~the_scoped_gl_attrib_t()
+{
+  if (applied_)
+  {
+    glPopAttrib();
+  }
+}
+
+
+//----------------------------------------------------------------
+// the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t
+// 
+the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t(GLbitfield mask):
+  applied_(false)
+{
+  GLenum err = glGetError();
+  if (err == GL_NO_ERROR)
+  {
+    glPushClientAttrib(mask);
+    err = glGetError();
+    
+    if (err == GL_NO_ERROR)
+    {
+      applied_ = true;
+    }
+    else
+    {
+      const GLubyte * str = gluErrorString(err);
+      cerr << "GL_ERROR: " << str << endl;
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// the_scoped_gl_client_attrib_t::~the_scoped_gl_client_attrib_t
+// 
+the_scoped_gl_client_attrib_t::~the_scoped_gl_client_attrib_t()
+{
+  if (applied_)
+  {
+    glPopClientAttrib();
+  }
+}
+
+
+//----------------------------------------------------------------
+// the_scoped_gl_matrix_t::the_scoped_gl_matrix_t
+// 
+the_scoped_gl_matrix_t::the_scoped_gl_matrix_t(GLenum mode):
+  applied_(false)
+{
+  GLenum err = glGetError();
+  if (err == GL_NO_ERROR)
+  {
+    glMatrixMode(mode);
+    glPushMatrix();
+    err = glGetError();
+    
+    if (err == GL_NO_ERROR)
+    {
+      applied_ = true;
+    }
+    else
+    {
+      const GLubyte * str = gluErrorString(err);
+      cerr << "GL_ERROR: " << str << endl;
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// the_scoped_gl_matrix_t::
+// 
+the_scoped_gl_matrix_t::~the_scoped_gl_matrix_t()
+{
+  if (applied_)
+  {
+    glPopMatrix();
+  }
+}
+
+
+//----------------------------------------------------------------
 // OpenGLCapabilities::OpenGLCapabilities
 // 
 OpenGLCapabilities::OpenGLCapabilities()

@@ -39,6 +39,7 @@ THE SOFTWARE.
 // system includes:
 #include <assert.h>
 #include <math.h>
+#include <algorithm>
 
 
 //----------------------------------------------------------------
@@ -57,7 +58,7 @@ the_point_dl_elem_t::the_point_dl_elem_t(const p3x1_t & p,
 void
 the_point_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
@@ -65,7 +66,6 @@ the_point_dl_elem_t::draw() const
     glVertex3fv(pt_.data());
     glEnd();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -118,10 +118,9 @@ the_line_strip_dl_elem_t::the_line_strip_dl_elem_t(const the_color_t & c0,
 void
 the_line_strip_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_LINE_BIT);
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(line_width_);
+    glLineWidth(std::max<GLfloat>(1, line_width_));
     glDisable(GL_LIGHTING);
     glDisable(GL_LINE_SMOOTH);
     glBegin(GL_LINE_STRIP);
@@ -136,8 +135,6 @@ the_line_strip_dl_elem_t::draw() const
     }
     glEnd();
   }
-  glPopAttrib();
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -173,10 +170,9 @@ the_line_dl_elem_t::the_line_dl_elem_t(const p3x1_t & a,
 void
 the_line_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_LINE_BIT);
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(line_width_);
+    glLineWidth(std::max<GLfloat>(1, line_width_));
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
     glBegin(GL_LINES);
@@ -186,8 +182,6 @@ the_line_dl_elem_t::draw() const
     }
     glEnd();
   }
-  glPopAttrib();
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -517,12 +511,11 @@ the_color_polygon_dl_elem_t::draw() const
 void
 the_text_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     THE_ASCII_FONT.print(text_, pt_, color_);
   }
-  glPopAttrib();
 }
 
 
@@ -532,12 +525,11 @@ the_text_dl_elem_t::draw() const
 void
 the_masked_text_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     THE_ASCII_FONT.print(text_, pt_, color_, mask_color_);
   }
-  glPopAttrib();
 }
 
 
@@ -547,13 +539,12 @@ the_masked_text_dl_elem_t::draw() const
 void
 the_symbol_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     symbols_->draw(color_, pt_, symbol_id_);
     // cerr << "draw: " << pt_ << endl;
   }
-  glPopAttrib();
 }
 
 
@@ -563,12 +554,11 @@ the_symbol_dl_elem_t::draw() const
 void
 the_masked_symbol_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     symbols_->draw(symbol_id_, pt_, color_, mask_color_);
   }
-  glPopAttrib();
 }
 
 
@@ -591,10 +581,9 @@ the_arrow_dl_elem_t::draw() const
     &color_
   };
   
-  glPushAttrib(GL_LINE_BIT);
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
-    glLineWidth(the_line_dl_elem_t::line_width_);
+    glLineWidth(std::max<GLfloat>(1, the_line_dl_elem_t::line_width_));
     glDisable(GL_LIGHTING);
     glEnable(GL_POLYGON_SMOOTH);
     
@@ -650,8 +639,6 @@ the_arrow_dl_elem_t::draw() const
       glEnd();
     }
   }
-  glPopAttrib();
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -714,7 +701,7 @@ the_scs_arrow_dl_elem_t::draw() const
   p3x1_t blade_b = cyl_cs.to_wcs(p3x1_t(radius, M_PI, blade_length_));
   
   // draw the arrow:
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
@@ -729,7 +716,6 @@ the_scs_arrow_dl_elem_t::draw() const
     }
     glEnd();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -768,52 +754,47 @@ the_height_map_dl_elem_t::draw() const
   unsigned int rows = vertex_.size();
   unsigned int cols = vertex_[0].size();
   
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_POLYGON_BIT);
   {
     glDisable(GL_LIGHTING);
     glEnable(GL_POLYGON_OFFSET_FILL);
     
-    glPushAttrib(GL_POLYGON_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glPolygonOffset(1.0, 1.0);
+    
+    for (unsigned int i = 1; i < rows; i++)
     {
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glPolygonOffset(1.0, 1.0);
-      
-      for (unsigned int i = 1; i < rows; i++)
+      glBegin(GL_QUAD_STRIP);
+      for (unsigned int j = 0; j < cols; j++)
       {
-	glBegin(GL_QUAD_STRIP);
-	for (unsigned int j = 0; j < cols; j++)
-	{
-	  const p3x1_t & a = vertex_[i - 1][j];
-	  float ta = (a.z() - z_min) / z_range;
-	  glColor4fv(color_blend_(ta).rgba());
-	  glVertex3fv(a.data());
-	  
-	  const p3x1_t & b = vertex_[i][j];
-	  float tb = (b.z() - z_min) / z_range;
-	  glColor4fv(color_blend_(tb).rgba());
-	  glVertex3fv(b.data());
-	}
-	glEnd();
+	const p3x1_t & a = vertex_[i - 1][j];
+	float ta = (a.z() - z_min) / z_range;
+	glColor4fv(color_blend_(ta).rgba());
+	glVertex3fv(a.data());
+	
+	const p3x1_t & b = vertex_[i][j];
+	float tb = (b.z() - z_min) / z_range;
+	glColor4fv(color_blend_(tb).rgba());
+	glVertex3fv(b.data());
       }
-      
-      glColor4fv(the_color_t::BLACK.rgba());
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      glDisable(GL_POLYGON_OFFSET_FILL);
-      
-      for (unsigned int i = 1; i < rows; i++)
-      {
-	glBegin(GL_QUAD_STRIP);
-	for (unsigned int j = 0; j < cols; j++)
-	{
-	  glVertex3fv(vertex_[i - 1][j].data());
-	  glVertex3fv(vertex_[i][j].data());
-	}
-	glEnd();
-      }
+      glEnd();
     }
-    glPopAttrib();
+    
+    glColor4fv(the_color_t::BLACK.rgba());
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    
+    for (unsigned int i = 1; i < rows; i++)
+    {
+      glBegin(GL_QUAD_STRIP);
+      for (unsigned int j = 0; j < cols; j++)
+      {
+	glVertex3fv(vertex_[i - 1][j].data());
+	glVertex3fv(vertex_[i][j].data());
+      }
+      glEnd();
+    }
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -852,8 +833,8 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
   {
     color_[i] = the_rgba_word_t(color[i]);
   }
-  
-  glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+
+  the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glGenTextures(1, &texture_id_);
@@ -873,7 +854,6 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
     
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
   }
-  glPopClientAttrib();
 }
 
 //----------------------------------------------------------------
@@ -901,7 +881,7 @@ the_tex_surf_data_dl_elem_t::draw() const
   glMaterialfv(GL_FRONT, GL_DIFFUSE, the_color_t::WHITE.rgba());
   glMaterialfv(GL_BACK,  GL_DIFFUSE, the_color_t::WHITE.rgba());
   
-  glPushAttrib(GL_TEXTURE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_TEXTURE_BIT);
   {
     glEnable(GL_TEXTURE_1D);
     for (unsigned int i = 1; i < rows; i++)
@@ -928,7 +908,6 @@ the_tex_surf_data_dl_elem_t::draw() const
       glEnd();
     }
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -1056,14 +1035,13 @@ the_coord_sys_dl_elem_t::draw() const
   v3x1_t y_axis = scale * (y_arrow_.pt_b() - origin);
   v3x1_t z_axis = scale * (z_arrow_.pt_b() - origin);
   
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     THE_ASCII_FONT.print(x_label_, origin + x_axis, color_);
     THE_ASCII_FONT.print(y_label_, origin + y_axis, color_);
     THE_ASCII_FONT.print(z_label_, origin + z_axis, color_);
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -1097,7 +1075,7 @@ the_bbox_dl_elem_t::draw() const
   p3x1_t corner[8];
   bbox_.wcs_corners(corner);
   
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
@@ -1133,7 +1111,6 @@ the_bbox_dl_elem_t::draw() const
     }
     glEnd();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -1277,19 +1254,15 @@ the_instance_dl_elem_t(const the_disp_list_t & display_list,
 void
 the_instance_dl_elem_t::draw() const
 {
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glEnable(GL_NORMALIZE);
-    
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
+    the_scoped_gl_matrix_t push_matrix(GL_MODELVIEW);
     {
       glMultMatrixf(lcs_to_wcs_.data());
       the_disp_list_dl_elem_t::draw();
     }
-    glPopMatrix();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------

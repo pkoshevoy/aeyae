@@ -485,7 +485,7 @@ the_ep_grid_csys_t::draw() const
   // display list that will contain the edit plane primitives:
   the_disp_list_t dl(view_mgr_.near_far_bbox());
   
-  glPushAttrib(GL_ENABLE_BIT);
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_LINE_BIT);
   {
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
@@ -507,14 +507,8 @@ the_ep_grid_csys_t::draw() const
 				      dl_bbox.lcs_max().z());
     
     // execute the display list:
-    glPushAttrib(GL_LINE_BIT);
-    {
-      glLineWidth(2.0);
-      dl.draw();
-    }
-    glPopAttrib();
+    dl.draw();
   }
-  glPopAttrib();
 }
 
 //----------------------------------------------------------------
@@ -542,7 +536,10 @@ the_ep_grid_csys_t::draw_csys(const the_coord_sys_t & cs,
     {
       the_color_t color = palette_.cs()[s % 2];
       color[3] = alpha;
-      dl.push_back(new the_line_dl_elem_t(axis_pt[s], axis_pt[s + 1], color));
+      dl.push_back(new the_line_dl_elem_t(axis_pt[s],
+					  axis_pt[s + 1],
+					  color,
+					  2));
     }
     
     p3x1_t lcs_pt(0.0, 0.0, 0.0);

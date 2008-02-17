@@ -159,7 +159,7 @@ the_symbols_t::draw_bitmap(const unsigned int & id,
   unsigned char * bmp = bitmap(id);
   if (bmp == NULL) return;
   
-  glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+  the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glBitmap(width(),
@@ -172,7 +172,6 @@ the_symbols_t::draw_bitmap(const unsigned int & id,
     
     FIXME_OPENGL("the_symbols_t::draw_bitmap");
   }
-  glPopClientAttrib();
 }
 
 //----------------------------------------------------------------
@@ -184,7 +183,7 @@ the_symbols_t::draw_bitmap_mask(const unsigned int & id) const
   unsigned char * bmp = bitmap_mask(id);
   if (bmp == NULL) return;
   
-  glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+  the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glBitmap(width() + 2,
@@ -197,5 +196,4 @@ the_symbols_t::draw_bitmap_mask(const unsigned int & id) const
     
     FIXME_OPENGL("the_symbols_t::draw_bitmap_mask");
   }
-  glPopClientAttrib();
 }

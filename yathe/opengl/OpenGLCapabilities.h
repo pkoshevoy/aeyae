@@ -61,6 +61,43 @@ class the_view_t;
 
 
 //----------------------------------------------------------------
+// the_scoped_gl_attrib_t
+// 
+class the_scoped_gl_attrib_t
+{
+public:
+  the_scoped_gl_attrib_t(GLbitfield mask);
+  ~the_scoped_gl_attrib_t();
+  
+  bool applied_;
+};
+
+//----------------------------------------------------------------
+// the_scoped_gl_client_attrib_t
+// 
+class the_scoped_gl_client_attrib_t
+{
+public:
+  the_scoped_gl_client_attrib_t(GLbitfield mask);
+  ~the_scoped_gl_client_attrib_t();
+  
+  bool applied_;
+};
+
+//----------------------------------------------------------------
+// the_scoped_gl_matrix_t
+// 
+class the_scoped_gl_matrix_t
+{
+public:
+  the_scoped_gl_matrix_t(GLenum mode);
+  ~the_scoped_gl_matrix_t();
+  
+  bool applied_;
+};
+
+
+//----------------------------------------------------------------
 // OpenGLCapabilities
 // 
 class OpenGLCapabilities

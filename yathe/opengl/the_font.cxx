@@ -48,12 +48,11 @@ the_font_t::print(const the_text_t & str,
   const unsigned int str_len = str.size();
   if (dl_offset_ != 0)
   {
-    glPushAttrib(GL_LIST_BIT);
+    the_scoped_gl_attrib_t push_attr(GL_LIST_BIT);
     {
       glListBase(dl_offset_);
       glCallLists(str_len, GL_UNSIGNED_BYTE, (GLubyte *)(str.text()));
     }
-    glPopAttrib();
   }
   else
   {
