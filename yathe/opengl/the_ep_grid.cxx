@@ -219,7 +219,20 @@ the_ep_grid_t::draw() const
 				    dl_bbox.lcs_max().z());
   
   // execute the display list:
-  dl.draw();
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_LINE_BIT);
+  {
+#if 0
+    glEnable(GL_BLEND);
+    glEnable(GL_LINE_SMOOTH);
+#else
+    glDisable(GL_BLEND);
+    glDisable(GL_LINE_SMOOTH);
+#endif
+    
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    dl.draw();
+  }
 }
 
 
