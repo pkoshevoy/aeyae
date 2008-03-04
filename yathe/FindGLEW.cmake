@@ -5,13 +5,15 @@
 #  GLEW_INCLUDE_DIR  - the GLEW include directory
 #  GLEW_LIBRARIES    - Link these to use GLEW
 
+FILE(TO_CMAKE_PATH "$ENV{GLEW_DIR}" GLEW_DIR)
+
 FIND_LIBRARY(GLEW_LIBRARY GLEW 
-  $ENV{GLEW_DIR}/lib 
+  ${GLEW_DIR}/lib 
   DOC "GLEW lib"
 )
 
 FIND_PATH(GLEW_INCLUDE_DIR GL/glew.h 
-  $ENV{GLEW_DIR}/include 
+  ${GLEW_DIR}/include 
   DOC "Include for GLEW"
 )
 

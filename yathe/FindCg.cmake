@@ -11,18 +11,22 @@ IF (APPLE)
 
 ELSE (APPLE)
 
+FILE(TO_CMAKE_PATH "$ENV{CG_LIB_DIR}" CG_LIB_DIR)
+FILE(TO_CMAKE_PATH "$ENV{CG_DIR}" CG_DIR)
+
+
   FIND_LIBRARY(Cg_LIBRARY Cg 
-    $ENV{CG_LIB_DIR}
+    ${CG_LIB_DIR}
     DOC "Cg lib"
     )
 
   FIND_LIBRARY(CgGL_LIBRARY CgGL
-    $ENV{CG_LIB_DIR} 
+    ${CG_LIB_DIR} 
     DOC "CgGL lib"
     )
 
   FIND_PATH(Cg_INCLUDE_DIR Cg/cgGL.h 
-    $ENV{CG_DIR}/include 
+    ${CG_DIR}/include 
     DOC "Include for Cg"
     )
 ENDIF (APPLE)

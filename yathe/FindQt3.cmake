@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 2.4.0)
+
 # - Locate Qt include paths and libraries
 # This module defines:
 #  QT3_INCLUDE_DIR - where to find qt.h, etc.
@@ -20,13 +22,17 @@
 #  QT3_WRAP_CPP, set true if QT3_MOC_EXECUTABLE is found
 #  QT3_WRAP_UI set true if QT3_UIC_EXECUTABLE is found
 
+FILE(TO_CMAKE_PATH "$ENV{QT3_DIR}" QT3_DIR)
+FILE(TO_CMAKE_PATH "$ENV{QTDIR}" QTDIR)
+FILE(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles)
+
 FILE(GLOB GLOB_PATHS_BIN /usr/lib/qt-3*/bin/)
 FIND_PATH(QT3_INCLUDE_DIR qt.h
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/include/Qt"
-  $ENV{QT3_DIR}/include
-  $ENV{QTDIR}/include
+  ${QT3_DIR}/include
+  ${QTDIR}/include
   ${GLOB_PATHS_BIN}
   /usr/local/qt/include
   /usr/lib/qt/include
@@ -66,8 +72,8 @@ IF (QT3_MT_REQUIRED)
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/lib"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/lib"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/lib"
-    $ENV{QT3_DIR}/lib
-    $ENV{QTDIR}/lib
+    ${QT3_DIR}/lib
+    ${QTDIR}/lib
     ${GLOB_PATHS_LIB}
     /usr/local/qt/lib
     /usr/lib/qt/lib
@@ -88,9 +94,9 @@ ELSE (QT3_MT_REQUIRED)
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/lib"
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/lib"
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/lib"
-    $ENV{QT3_DIR}/lib
-    $ENV{QT3_DIR}/lib64
-    $ENV{QTDIR}/lib
+    ${QT3_DIR}/lib
+    ${QT3_DIR}/lib64
+    ${QTDIR}/lib
     ${GLOB_PATHS_LIB}
     /usr/local/qt/lib
     /usr/lib/qt/lib
@@ -113,9 +119,9 @@ FIND_LIBRARY(QT3_QASSISTANTCLIENT_LIBRARY
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/lib"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/lib"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/lib"
-  $ENV{QT3_DIR}/lib
-  $ENV{QT3_DIR}/lib64
-  $ENV{QTDIR}/lib
+  ${QT3_DIR}/lib
+  ${QT3_DIR}/lib64
+  ${QTDIR}/lib
   ${GLOB_PATHS_LIB}
   /usr/local/qt/lib
   /usr/lib/qt3/lib
@@ -129,8 +135,8 @@ FIND_LIBRARY(QT3_QASSISTANTCLIENT_LIBRARY
 FIND_PROGRAM(QT3_MOC_EXECUTABLE 
   NAMES moc moc-qt3
   PATHS 
-  $ENV{QT3_DIR}/bin 
-  $ENV{QTDIR}/bin 
+  ${QT3_DIR}/bin 
+  ${QTDIR}/bin 
   NO_DEFAULT_PATH
 )
 
@@ -140,8 +146,8 @@ FIND_PROGRAM(QT3_MOC_EXECUTABLE
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/include/Qt"
-  $ENV{QT3_DIR}/bin 
-  $ENV{QTDIR}/bin 
+  ${QT3_DIR}/bin 
+  ${QTDIR}/bin 
   ${GLOB_PATHS_BIN}
   /usr/local/qt/bin
   /usr/lib/qt/bin
@@ -159,16 +165,16 @@ ENDIF(QT3_MOC_EXECUTABLE)
 # qt 3 should prefer QTDIR over the PATH
 FIND_PROGRAM(QT3_UIC_EXECUTABLE uic
   PATHS 
-  $ENV{QT3_DIR}/bin 
-  $ENV{QTDIR}/bin 
+  ${QT3_DIR}/bin 
+  ${QTDIR}/bin 
   NO_DEFAULT_PATH
 )
 FIND_PROGRAM(QT3_UIC_EXECUTABLE uic
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/include/Qt"
   "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/include/Qt"
-  $ENV{QT3_DIR}/bin 
-  $ENV{QTDIR}/bin 
+  ${QT3_DIR}/bin 
+  ${QTDIR}/bin 
   ${GLOB_PATHS_BIN}
   /usr/local/qt/bin
   /usr/lib/qt/bin
@@ -188,9 +194,9 @@ IF (WIN32)
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.1;InstallDir]/lib"
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.2.0;InstallDir]/lib"
     "[HKEY_CURRENT_USER\\Software\\Trolltech\\Qt3Versions\\3.1.0;InstallDir]/lib"
-    "$ENV{ProgramFiles}/qt/lib"
-    $ENV{QT3_DIR}/lib
-    $ENV{QTDIR}/lib "C:/Program Files/qt/lib"
+    "${ProgramFiles}/qt/lib"
+    ${QT3_DIR}/lib
+    ${QTDIR}/lib "C:/Program Files/qt/lib"
     DOC "This Library is only needed by and included with Qt3 on MSWindows. It should be NOTFOUND, undefined or IGNORE otherwise."
     )
 ENDIF (WIN32)

@@ -5,13 +5,16 @@
 #  FFTW_INCLUDE_DIR  - the FFTW include directory
 #  FFTW_LIBRARIES    - Link these to use FFTW
 
+
+FILE(TO_CMAKE_PATH "$ENV{FFTW_DIR}" FFTW_DIR)
+
 FIND_LIBRARY(FFTW_LIBRARY fftw3
-  $ENV{FFTW_DIR}/lib 
+  ${FFTW_DIR}/lib 
   DOC "FFTW lib"
 )
 
 FIND_PATH(FFTW_INCLUDE_DIR fftw3.h 
-  $ENV{FFTW_DIR}/include 
+  ${FFTW_DIR}/include 
   DOC "Include for FFTW"
 )
 
