@@ -10,7 +10,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 )
 #MESSAGE("CMAKE_MODULE_PATH=[${CMAKE_MODULE_PATH}]")
 
-find_package(OpenGL REQUIRED)
 find_package(Boost REQUIRED)
 include_directories(AFTER
   ${THE_SRC_DIR}
@@ -49,6 +48,8 @@ add_library(the_core STATIC
   utils/histogram.cxx
   )
 
+install(TARGETS the_core DESTINATION lib)
+
 find_package(ITK)
 find_package(FFTW)
 if (ITK_FOUND AND FFTW_FOUND)
@@ -68,10 +69,15 @@ if (ITK_FOUND AND FFTW_FOUND)
     itk/mosaic_layout_common.cxx
     itk/the_grid_transform.cxx
     )
+
+  install(TARGETS the_itk DESTINATION lib)
+
 endif (ITK_FOUND AND FFTW_FOUND)
 
 find_package(GLEW)
 if (GLEW_FOUND)
+  find_package(OpenGL REQUIRED)
+
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 
   find_package(Cg)
@@ -131,6 +137,8 @@ if (GLEW_FOUND)
     ui/the_document_ui.cxx
     ui/the_trail.cxx
     )
+
+  install(TARGETS the_ui DESTINATION lib)
 endif (GLEW_FOUND)
 
 find_package(Qt4)
@@ -161,6 +169,8 @@ if (QT4_FOUND)
     Qt/the_qt_view.cxx
     Qt/the_qt_mutex.cxx
     )
+
+  install(TARGETS the_ui_qt DESTINATION lib)
 endif (QT4_FOUND)
 
 find_package(FLTK)
@@ -174,6 +184,8 @@ if (FLTK_FOUND)
     FLTK/the_fltk_trail.cxx
     FLTK/the_fltk_view.cxx
     )
+
+  install(TARGETS the_ui_fltk DESTINATION lib)
 endif (FLTK_FOUND)
 
 find_package(Qt3)
@@ -200,4 +212,6 @@ if (QT3_FOUND)
     Qt3/the_qt_view.cxx
     Qt3/the_qt_mutex.cxx
     )
+
+  install(TARGETS the_ui_qt3 DESTINATION lib)
 endif (QT3_FOUND)
