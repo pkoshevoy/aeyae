@@ -214,6 +214,7 @@ operator << (ostream & sout, const the_mouse_t & mouse)
   sout << "l_btn: " << mouse.l_btn()
        << "m_btn: " << mouse.m_btn()
        << "r_btn: " << mouse.r_btn() << endl;
+  return sout;
 }
 
 //----------------------------------------------------------------

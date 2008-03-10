@@ -331,6 +331,7 @@ operator << (ostream & sout, const the_keybd_t & keybd)
     sout << *iter;
   }
   sout << endl;
+  return sout;
 }
 
 //----------------------------------------------------------------
