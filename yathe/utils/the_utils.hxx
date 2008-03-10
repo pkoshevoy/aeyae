@@ -33,6 +33,8 @@ THE SOFTWARE.
 #define THE_UTILS_HXX_
 
 // system includes:
+#define _USE_MATH_DEFINES
+//#define NOMINMAX
 #include <list>
 #include <vector>
 #include <algorithm>
