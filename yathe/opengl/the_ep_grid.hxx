@@ -65,7 +65,7 @@ public:
   
   // size of the default grid step measured in WCS units:
   virtual float default_step_size() const
-  { return 0.2; }
+  { return 0.2f; }
   
   // the edit plane radius scale:
   virtual float ep_radius_scale() const;
@@ -118,11 +118,11 @@ public:
   
   // virtual: size of the default grid step measured in WCS units:
   float default_step_size() const
-  { return 0.25; }
+  { return 0.25f; }
   
   // virtual: the edit plane radius scale:
   float ep_radius_scale() const
-  { return 0.7 * the_ep_grid_t::ep_radius_scale(); }
+  { return 0.7f * the_ep_grid_t::ep_radius_scale(); }
   
 protected:
   // disable the default constructor:

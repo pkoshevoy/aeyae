@@ -616,7 +616,7 @@ the_mesh_triangle_t::calc_area() const
   v3x1_t ab = get_vx(1) - get_vx(0);
   v3x1_t bc = get_vx(2) - get_vx(1);
   float twice_area_abc = (ab % bc).norm();
-  return 0.5 * twice_area_abc;
+  return 0.5f * twice_area_abc;
 }
 
 //----------------------------------------------------------------
@@ -631,7 +631,7 @@ the_mesh_triangle_t::intersect(const the_ray_t & ray,
 			       float & v,
 			       float & w) const
 {
-  static const float eps = 1e-7;
+  static const float eps = 1e-7f;
   
   const p3x1_t & o = ray.p();
   const v3x1_t & d = ray.v();
@@ -647,15 +647,15 @@ the_mesh_triangle_t::intersect(const the_ray_t & ray,
   float a = e1 * p;
   if (a > -eps && a < eps) return false;
   
-  float f = 1.0 / a;
+  float f = 1 / a;
   
   v3x1_t s = o - v0;
   v = f * (s * p);
-  if (v < 0.0 || v > 1.0) return false;
+  if (v < 0 || v > 1) return false;
   
   v3x1_t q = s % e1;
   w = f * (d * q);
-  if (w < 0.0 || (v + w) > 1.0) return false;
+  if (w < 0 || (v + w) > 1) return false;
   
   t = f * (e2 * q);
   return true;
@@ -726,7 +726,7 @@ the_triangle_mesh_t::load(const the_text_t & filename,
   if (calculate_normals)
   {
     float minimum_normal_dot_product =
-      cos(float(maximum_angle_between_normals) / M_PI);
+      float(cos(double(maximum_angle_between_normals) / M_PI));
     
     calc_vertex_normals(discard_existing_normals,
 			minimum_normal_dot_product);
@@ -924,7 +924,7 @@ the_triangle_mesh_t::calc_texture_coords(const bool & discard_current_coords)
   vt_.resize(num_vx);
   
   // iterate over the vertices, and calculate corresponding texture coordinate:
-  float scale = 1.0 / M_PI;
+  float scale = float(1 / M_PI);
   for (unsigned int i = 0; i < num_vx; i++)
   {
     p3x1_t sph_pt;

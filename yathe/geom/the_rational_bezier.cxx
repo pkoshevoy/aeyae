@@ -73,7 +73,7 @@ the_rational_bezier_geom_t::eval(const float & t,
   if (num_pts == 0) return false;
   
   const float n = float(num_pts);
-  const float t1 = 1.0 - t;
+  const float t1 = 1 - t;
   
   the_fifo_t< std::vector<p3x1_t> > p(4);
   the_fifo_t< std::vector<float> > w(4);
@@ -118,10 +118,10 @@ the_rational_bezier_geom_t::eval(const float & t,
   
   if (num_pts == 1)
   {
-    P1.assign(0.0, 0.0, 0.0);
-    P2.assign(0.0, 0.0, 0.0);
-    curvature = 0.0;
-    torsion = 0.0;
+    P1.assign(0, 0, 0);
+    P2.assign(0, 0, 0);
+    curvature = 0;
+    torsion = 0;
     return true;
   }
   
@@ -138,9 +138,9 @@ the_rational_bezier_geom_t::eval(const float & t,
   
   if (num_pts == 2)
   {
-    P2.assign(0.0, 0.0, 0.0);
-    curvature = 0.0;
-    torsion = 0.0;
+    P2.assign(0, 0, 0);
+    curvature = 0;
+    torsion = 0;
     return true;
   }
   
@@ -156,12 +156,12 @@ the_rational_bezier_geom_t::eval(const float & t,
   const v3x1_t p22_p12 = p22 - p12;
   const v3x1_t p12_p02 = p12 - p02;
   
-  const float n1 = n - 1.0;
+  const float n1 = n - 1;
   
   P2 =
     (n / (w00 * w00 * w00)) *
-    ((w22 * (2.0 * w01 * (n * w01 - w00) - n1 * w02 * w00)) * p22_p12 -
-     (w02 * (2.0 * w11 * (n * w11 - w00) - n1 * w22 * w00)) * p12_p02);
+    ((w22 * (2 * w01 * (n * w01 - w00) - n1 * w02 * w00)) * p22_p12 -
+     (w02 * (2 * w11 * (n * w11 - w00) - n1 * w22 * w00)) * p12_p02);
   
   // calculate the curvature:
   const v3x1_t x1202_2212(p12_p02 % p22_p12);
@@ -178,7 +178,7 @@ the_rational_bezier_geom_t::eval(const float & t,
   
   if (num_pts == 3)
   {
-    torsion = 0.0;
+    torsion = 0;
     return true;
   }
   
@@ -193,7 +193,7 @@ the_rational_bezier_geom_t::eval(const float & t,
   const p3x1_t & p23 = p[3][2];
   const p3x1_t & p33 = p[3][3];
   
-  const float n2 = n - 2.0;
+  const float n2 = n - 2;
   
   const float R2 =
     (w03 * w13 * w23 * w33 * w00 * w00) /
@@ -238,7 +238,7 @@ init_slope_signs(const the_curve_deviation_t & deviation,
     for (unsigned int j = 0; j < steps_per_segment; j++)
     {
       float s =
-	k[0] + (((0.5 + float(j)) / float(steps_per_segment)) *
+	k[0] + (((0.5f + float(j)) / float(steps_per_segment)) *
 		(k[1] - k[0]));
       deviation.store_slope_sign(slope_signs, s);
     }

@@ -331,7 +331,7 @@ public:
   
   // view sphere dimensions:
   inline float view_radius() const   { return view_radius_; }
-  inline float view_diameter() const { return 2.0 * view_radius_; }
+  inline float view_diameter() const { return 2 * view_radius_; }
   
   // scene sphere dimensions:
   inline float scene_radius() const { return scene_radius_; }
@@ -344,12 +344,12 @@ public:
   inline float scale_x() const
   {
     if (width_ > height_) return width_ / height_;
-    return 1.0;
+    return 1;
   }
   
   inline float scale_y() const
   {
-    if (width_ > height_) return 1.0;
+    if (width_ > height_) return 1;
     return height_ / width_;
   }
   

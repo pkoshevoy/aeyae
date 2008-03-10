@@ -70,7 +70,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
     
     const float & ax = a[0];
     const float & cx = b[0];
-    const float   bx = ax + 0.5 * (cx - ax);
+    const float   bx = ax + 0.5f * (cx - ax);
     
     unsigned int pos = brackets.size();
     brackets[pos] = the_slope_sign_t(ax, R(ax));
@@ -83,7 +83,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
   }
   
   // now that we have all the local minima bracketed, isolate them:
-  const float tolerance = 1E-3 * ((s1 - s0) / float(segments));
+  const float tolerance = 1E-3f * ((s1 - s0) / float(segments));
   float minR = FLT_MAX;
   for (unsigned int i = 0; i < brackets.size(); i += 3)
   {
@@ -243,7 +243,7 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
 	ax = bx;
 	fa = fb;
 	
-	bx = bx + 0.5 * (cx - bx);
+	bx = bx + 0.5f * (cx - bx);
 	fb = R(bx);
       }
       else
@@ -251,7 +251,7 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
 	cx = bx;
 	fc = fb;
 	
-	bx = ax + 0.5 * (bx - ax);
+	bx = ax + 0.5f * (bx - ax);
 	fb = R(bx);
       }
     }

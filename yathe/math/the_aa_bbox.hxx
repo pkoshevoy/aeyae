@@ -162,17 +162,17 @@ public:
   
   // calculate the center of the bounding box:
   inline const p3x1_t center() const
-  { return 0.5 * (max_ + min_); }
+  { return 0.5f * (max_ + min_); }
   
   // calculate the radius of the bounding box (sphere):
   float radius(const p3x1_t & center) const;
   
   inline float radius() const
-  { return 0.5 * diameter(); }
+  { return 0.5f * diameter(); }
   
   inline float diameter() const
   {
-    if (is_empty()) return 0.0;
+    if (is_empty()) return 0;
     return (min_ - max_).norm();
   }
   

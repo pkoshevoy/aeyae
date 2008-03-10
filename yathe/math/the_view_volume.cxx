@@ -39,16 +39,16 @@ THE SOFTWARE.
 // the_view_volume_t::the_view_volume_t
 // 
 the_view_volume_t::the_view_volume_t():
-  w_axis_orthogonal_(0.0, 0.0, 1.0)
+  w_axis_orthogonal_(0, 0, 1)
 {
-  origin_[0] = p3x1_t(0.0, 0.0, 0.0);
-  origin_[1] = p3x1_t(0.0, 0.0, 1.0);
+  origin_[0] = p3x1_t(0, 0, 0);
+  origin_[1] = p3x1_t(0, 0, 1);
   
-  u_axis_[0] = v3x1_t(1.0, 0.0, 0.0);
-  u_axis_[1] = v3x1_t(1.0, 0.0, 0.0);
+  u_axis_[0] = v3x1_t(1, 0, 0);
+  u_axis_[1] = v3x1_t(1, 0, 0);
   
-  v_axis_[0] = v3x1_t(0.0, 1.0, 0.0);
-  v_axis_[1] = v3x1_t(0.0, 1.0, 0.0);
+  v_axis_[0] = v3x1_t(0, 1, 0);
+  v_axis_[1] = v3x1_t(0, 1, 0);
 }
 
 //----------------------------------------------------------------
@@ -172,39 +172,39 @@ the_view_volume_t::setup(// look-from point, look-at point, and up vector
   
   // near face:
   face[0][0] = (center[0] -
-		unit_x * (wcs_width / 2.0) -
-		unit_y * (wcs_height / 2.0));
+		unit_x * (wcs_width / 2) -
+		unit_y * (wcs_height / 2));
   
   face[0][1] = (center[0] +
-		unit_x * (wcs_width / 2.0) -
-		unit_y * (wcs_height / 2.0));
+		unit_x * (wcs_width / 2) -
+		unit_y * (wcs_height / 2));
   
   face[0][2] = (center[0] +
-		unit_x * (wcs_width / 2.0) +
-		unit_y * (wcs_height / 2.0));
+		unit_x * (wcs_width / 2) +
+		unit_y * (wcs_height / 2));
   
   face[0][3] = (center[0] -
-		unit_x * (wcs_width / 2.0) +
-		unit_y * (wcs_height / 2.0));
+		unit_x * (wcs_width / 2) +
+		unit_y * (wcs_height / 2));
   
   // far face:
-  float scale = perspective ? (far_plane / near_plane) : 1.0;
+  float scale = perspective ? (far_plane / near_plane) : 1;
   
   face[1][0] = (center[1] -
-		unit_x * scale * (wcs_width / 2.0) -
-		unit_y * scale * (wcs_height / 2.0));
+		unit_x * scale * (wcs_width / 2) -
+		unit_y * scale * (wcs_height / 2));
   
   face[1][1] = (center[1] +
-		unit_x * scale * (wcs_width / 2.0) -
-		unit_y * scale * (wcs_height / 2.0));
+		unit_x * scale * (wcs_width / 2) -
+		unit_y * scale * (wcs_height / 2));
   
   face[1][2] = (center[1] +
-		unit_x * scale * (wcs_width / 2.0) +
-		unit_y * scale * (wcs_height / 2.0));
+		unit_x * scale * (wcs_width / 2) +
+		unit_y * scale * (wcs_height / 2));
   
   face[1][3] = (center[1] -
-		unit_x * scale * (wcs_width / 2.0) +
-		unit_y * scale * (wcs_height / 2.0));
+		unit_x * scale * (wcs_width / 2) +
+		unit_y * scale * (wcs_height / 2));
   
   // setup the volume:
   setup(face[0], face[1]);

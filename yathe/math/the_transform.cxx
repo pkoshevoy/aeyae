@@ -228,7 +228,7 @@ the_transform_t::get_rotation(// rotation axis azimuth (longitude):
 			      // the rotation angle:
 			      float & alpha) const
 {
-  static const float angle_eps = 1e-7;
+  static const float angle_eps = 1e-7f;
   
   const float r[3][3] =
   {
@@ -252,35 +252,35 @@ the_transform_t::get_rotation(// rotation axis azimuth (longitude):
   };
   
   const float trace_r = r[0][0] + r[1][1] + r[2][2];
-  const float cos_alpha = (trace_r - 1.0) / 2.0;
+  const float cos_alpha = (trace_r - 1) / 2;
   
   const float r3223 = r[2][1] - r[1][2];
   const float r1331 = r[0][2] - r[2][0];
   const float r2112 = r[1][0] - r[0][1];
-  const float sin_alpha = 0.5 * sqrt(r3223 * r3223 +
-				     r1331 * r1331 +
-				     r2112 * r2112);
+  const float sin_alpha = 0.5f * sqrt(r3223 * r3223 +
+				      r1331 * r1331 +
+				      r2112 * r2112);
   
   alpha = atan2(sin_alpha, cos_alpha);
   
   if (fabs(alpha) < angle_eps)
   {
-    alpha = 0.0;
-    azimuth = 0.0;
-    polar = 0.0;
+    alpha = 0;
+    azimuth = 0;
+    polar = 0;
   }
   else
   {
     v3x1_t rot_axis(r3223, r1331, r2112);
-    rot_axis /= (2.0 * sin_alpha);
+    rot_axis /= (2 * sin_alpha);
     
     v3x1_t sph_axis;
     the_coord_sys_t::xyz_to_sph(rot_axis, sph_axis);
     
-    polar = std::min(M_PI, std::max(0.0, double(sph_axis.z())));
+    polar = float(std::min(M_PI, std::max(0.0, double(sph_axis.z()))));
     if (polar < angle_eps || fabs(polar - M_PI) < angle_eps)
     {
-      azimuth = 0.0;
+      azimuth = 0;
     }
     else
     {

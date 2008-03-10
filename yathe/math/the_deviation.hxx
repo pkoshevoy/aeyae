@@ -114,7 +114,7 @@ public:
     {
       float sqrt_Z = sqrt(R);
       R = sqrt_Z;
-      dR /= (2.0 * sqrt_Z);
+      dR /= (2 * sqrt_Z);
     }
   }
   
@@ -243,7 +243,7 @@ public:
     float dY = (H * dF - dH * F) / (H * H);
     
     Z = X * X + Y * Y;
-    dZ = 2.0 * (X * dX + Y * dY);
+    dZ = 2 * (X * dX + Y * dY);
   }
   
 protected:

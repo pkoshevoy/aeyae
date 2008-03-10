@@ -393,10 +393,10 @@ public:
   // return color in format 0xAARRGGBB, where RGB are scaled by AA/255:
   inline unsigned int bgra_premultiplied() const
   {
-    double a_ = double(a()) / 255.0;
-    double r_ = a_ * double(r()) / 255.0;
-    double g_ = a_ * double(g()) / 255.0;
-    double b_ = a_ * double(b()) / 255.0;
+    float a_ = float(a()) / 255;
+    float r_ = a_ * float(r()) / 255;
+    float g_ = a_ * float(g()) / 255;
+    float b_ = a_ * float(b()) / 255;
     return the_rgba_word_t(the_color_t(r_, g_, b_, a_)).bgra();
   }
   

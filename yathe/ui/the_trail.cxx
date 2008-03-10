@@ -43,6 +43,7 @@ THE SOFTWARE.
 #include <assert.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <limits>
 
 
 //----------------------------------------------------------------
@@ -256,7 +257,7 @@ save_address(ostream & so, uint64_t address)
 {
   std::list<char> txt;
   do {
-    uint64_t d = address % 10;
+    unsigned char d = (unsigned char)(address % 10);
     txt.push_back(d + '0');
     address /= 10;
     

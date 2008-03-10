@@ -65,12 +65,12 @@ public:
 			     const float & j, const float & s, // s = f(j)
 			     const float & k, const float & t) // t = f'(k)
   {
-    float denom = j * j + 2.0 * k * (i - j) - i * i;
+    float denom = j * j + 2 * k * (i - j) - i * i;
     if (denom == 0.0) return false;
     
     a_ = (s - r + t * (i - j)) / denom;
-    b_ = t - 2.0 * a_ * k;
-    c_ = r - i * (a_ * (i + 2.0 * k) - t);
+    b_ = t - 2 * a_ * k;
+    c_ = r - i * (a_ * (i + 2 * k) - t);
     
     return true;
   }
@@ -82,15 +82,15 @@ public:
   {
     // solve via gaussian elimination:
     the_quadruplet_t<float> m[3];
-    m[0].assign(i * i, i, 1.0, r);
-    m[1].assign(j * j, j, 1.0, s);
-    m[2].assign(k * k, k, 1.0, t);
+    m[0].assign(i * i, i, 1, r);
+    m[1].assign(j * j, j, 1, s);
+    m[2].assign(k * k, k, 1, t);
     
     gauss_sort(m);
-    if (m[0][0] == 0.0) return false;
+    if (m[0][0] == 0) return false;
     
     // eliminate first column of the second row:
-    if (m[1][0] != 0.0)
+    if (m[1][0] != 0)
     {
       the_quadruplet_t<float> d(m[0]);
       d.scale(m[1][0] / m[0][0]);
@@ -98,7 +98,7 @@ public:
     }
     
     // eliminate first column of the third row:
-    if (m[2][0] != 0.0)
+    if (m[2][0] != 0)
     {
       the_quadruplet_t<float> d(m[0]);
       d.scale(m[2][0] / m[0][0]);
@@ -106,20 +106,20 @@ public:
     }
     
     gauss_sort(m);
-    if (m[1][1] == 0.0) return false;
+    if (m[1][1] == 0) return false;
     
     // eliminate second column of the third row:
-    if (m[2][1] != 0.0)
+    if (m[2][1] != 0)
     {
       the_quadruplet_t<float> d(m[1]);
       d.scale(m[2][1] / m[1][1]);
       m[2].decrement(d);
     }
     
-    if (m[2][2] == 0.0) return false;
+    if (m[2][2] == 0) return false;
     
     // eliminate third column of the second row:
-    if (m[1][2] != 0.0)
+    if (m[1][2] != 0)
     {
       the_quadruplet_t<float> d(m[2]);
       d.scale(m[1][2] / m[2][2]);
@@ -127,7 +127,7 @@ public:
     }
     
     // eliminate third column of the first row:
-    if (m[0][2] != 0.0)
+    if (m[0][2] != 0)
     {
       the_quadruplet_t<float> d(m[2]);
       d.scale(m[0][2] / m[2][2]);
@@ -135,7 +135,7 @@ public:
     }
     
     // eliminate second column of the first row:
-    if (m[0][1] != 0.0)
+    if (m[0][1] != 0)
     {
       the_quadruplet_t<float> d(m[1]);
       d.scale(m[0][1] / m[1][1]);
@@ -151,7 +151,7 @@ public:
   
   // this is the parameter at which the parabola is either minimum or maximum:
   inline float stationary_point() const
-  { return (-b_) / (2.0 * a_); }
+  { return (-b_) / (2 * a_); }
   
   // avaluate the parabola:
   inline float eval(const float & x) const

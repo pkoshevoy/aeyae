@@ -320,7 +320,7 @@ public:
     float dY = (H * dF - dH * F) / (H * H);
     
     Z = X * X + Y * Y;
-    dZ = 2.0 * (X * dX + Y * dY);
+    dZ = 2 * (X * dX + Y * dY);
   }
   
 protected:

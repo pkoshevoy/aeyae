@@ -478,7 +478,7 @@ public:
   { scale(s); return *this; }
   
   inline v2x1_t & operator /= (const float & s)
-  { scale(1.0 / s); return *this; }
+  { scale(1 / s); return *this; }
   
   // return a copy of this vector scaled by a given factor:
   inline const v2x1_t operator * (const float & s) const
@@ -519,11 +519,11 @@ public:
     float n = norm();
     if (n < THE_NEAR_ZERO_VECTOR_LENGTH)
     {
-      scale(0.0);
+      scale(0);
       return false;
     }
     
-    scale(1.0 / n);
+    scale(1 / n);
     return true;
   }
   
@@ -598,7 +598,7 @@ public:
   { scale(s); return *this; }
   
   inline v3x1_t & operator /= (const float & s)
-  { scale(1.0 / s); return *this; }
+  { scale(1 / s); return *this; }
   
   // return a copy of this vector scaled by a given factor:
   inline const v3x1_t operator * (const float & s) const
@@ -647,11 +647,11 @@ public:
     float n = norm();
     if (n < THE_NEAR_ZERO_VECTOR_LENGTH)
     {
-      scale(0.0);
+      scale(0);
       return false;
     }
     
-    scale(1.0 / n);
+    scale(1 / n);
     return true;
   }
   
@@ -755,7 +755,7 @@ public:
   { scale(s); return *this; }
   
   inline p2x1_t & operator /= (const float & s)
-  { scale(1.0 / s); return *this; }
+  { scale(1 / s); return *this; }
   
   // return a copy of this point scaled by a given factor:
   inline const p2x1_t operator * (const float & s) const
@@ -852,7 +852,7 @@ public:
   { scale(s); return *this; }
   
   inline p3x1_t & operator /= (const float & s)
-  { scale(1.0 / s); return *this; }
+  { scale(1 / s); return *this; }
   
   // return a copy of this point scaled by a given factor:
   inline const p3x1_t operator * (const float & s) const

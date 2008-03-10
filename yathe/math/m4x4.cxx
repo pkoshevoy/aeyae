@@ -112,12 +112,12 @@ m4x4_t::m4x4_t(const v3x1_t & axis, const float & radians)
   
   const float ct = cos(radians);
   const float st = sin(radians);
-  const float vt = 1.0 - ct; // versine of theta
+  const float vt = 1 - ct; // versine of theta
   
-  assign(x * x * vt + ct,     x * y * vt - z * st, x * z * vt + y * st, 0.0,
-	 x * y * vt + z * st, y * y * vt + ct,     y * z * vt - x * st, 0.0,
-	 x * z * vt - y * st, y * z * vt + x * st, z * z * vt + ct,     0.0,
-	 0.0,                 0.0,                 0.0,                 1.0);
+  assign(x * x * vt + ct,     x * y * vt - z * st, x * z * vt + y * st, 0,
+	 x * y * vt + z * st, y * y * vt + ct,     y * z * vt - x * st, 0,
+	 x * z * vt - y * st, y * z * vt + x * st, z * z * vt + ct,     0,
+	 0,                   0,                   0,                   1);
 }
 
 //----------------------------------------------------------------
@@ -412,7 +412,7 @@ m4x4_t::multiply(const p3x1_t & a, p3x1_t & b) const
   b.Y_ = M10_ * a.X_ + M11_ * a.Y_ + M12_ * a.Z_ + M13_;
   b.Z_ = M20_ * a.X_ + M21_ * a.Y_ + M22_ * a.Z_ + M23_;
   float w = M30_ * a.X_ + M31_ * a.Y_ + M32_ * a.Z_ + M33_;
-  b *= (1.0 / w);
+  b *= (1 / w);
 }
 
 //----------------------------------------------------------------
@@ -448,7 +448,7 @@ m4x4_t::transpose_multiply(const p3x1_t & a, p3x1_t & b) const
   b.Y_ = M01_ * a.X_ + M11_ * a.Y_ + M21_ * a.Z_ + M31_;
   b.Z_ = M02_ * a.X_ + M12_ * a.Y_ + M22_ * a.Z_ + M32_;
   float w = M03_ * a.X_ + M13_ * a.Y_ + M23_ * a.Z_ + M33_;
-  b *= (1.0 / w);
+  b *= (1 / w);
 }
 
 //----------------------------------------------------------------
@@ -487,17 +487,17 @@ m4x4_t::screen(const float & nx,
 	       const float & xmax,
 	       const float & ymax)
 {
-  m4x4_t translate_1 = m4x4_t::translate((nx - 1.0) / 2.0,
-					 (ny - 1.0) / 2.0,
-					 0.0);
+  m4x4_t translate_1 = m4x4_t::translate((nx - 1) / 2,
+					 (ny - 1) / 2,
+					 0);
   float sx = -nx / (xmax - xmin);
   float sy = -ny / (ymax - ymin);
   float s_max = (sy > sx) ? sy : sx;
-  m4x4_t scale = m4x4_t::scale(s_max, s_max, 1.0);
+  m4x4_t scale = m4x4_t::scale(s_max, s_max, 1);
   
-  m4x4_t translate_2 = m4x4_t::translate(-(xmax + xmin) / 2.0,
-					 -(ymax + ymin) / 2.0,
-					 0.0);
+  m4x4_t translate_2 = m4x4_t::translate(-(xmax + xmin) / 2,
+					 -(ymax + ymin) / 2,
+					 0);
   
   return (translate_1 * scale * translate_2);
 }
@@ -513,17 +513,17 @@ m4x4_t::screen_inverse(const float & nx,
 		       const float & xmax,
 		       const float & ymax)
 {
-  m4x4_t translate_1_inv = m4x4_t::translate((1.0 - nx) / 2.0,
-					     (1.0 - ny) / 2.0,
-					     0.0);
+  m4x4_t translate_1_inv = m4x4_t::translate((1 - nx) / 2,
+					     (1 - ny) / 2,
+					     0);
   float sx = (xmin - xmax) / nx;
   float sy = (ymin - ymax) / ny;
   float s_min = (sy < sx) ? sy : sx;
-  m4x4_t scale_inv = m4x4_t::scale(s_min, s_min, 1.0);
+  m4x4_t scale_inv = m4x4_t::scale(s_min, s_min, 1);
   
-  m4x4_t translate_2_inv = m4x4_t::translate((xmax + xmin) / 2.0,
-					     (ymax + ymin) / 2.0,
-					     0.0);
+  m4x4_t translate_2_inv = m4x4_t::translate((xmax + xmin) / 2,
+					     (ymax + ymin) / 2,
+					     0);
   
   return (translate_2_inv * scale_inv * translate_1_inv);
 }
@@ -535,11 +535,11 @@ const m4x4_t
 m4x4_t::perspective(const float & near_plane, const float & far_plane)
 {
   m4x4_t m;
-  m.M00_ = 1.0;
-  m.M11_ = 1.0;
+  m.M00_ = 1;
+  m.M11_ = 1;
   m.M22_ = (near_plane + far_plane) / near_plane;
   m.M23_ = -far_plane;
-  m.M32_ = 1.0 / near_plane;
+  m.M32_ = 1 / near_plane;
   return m;
 }
 
@@ -659,10 +659,10 @@ const m4x4_t
 m4x4_t::scale_inverse(const float & sx, const float & sy, const float & sz)
 {
   m4x4_t r;
-  r.M00_ = 1.0 / sx;
-  r.M11_ = 1.0 / sy;
-  r.M22_ = 1.0 / sz;
-  r.M33_ = 1.0;
+  r.M00_ = 1 / sx;
+  r.M11_ = 1 / sy;
+  r.M22_ = 1 / sz;
+  r.M33_ = 1;
   return r;
 }
 

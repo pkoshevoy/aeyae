@@ -322,19 +322,19 @@ public:
 	glColor4fv(tri_color_.mul3(0.75).rgba());
 	
 	the_color_t bgcolor =
-	  0.3 * the_color_t::AMPAD_DARK +
-	  0.7 * the_color_t::AMPAD_LIGHT;
+	  0.3f * the_color_t::AMPAD_DARK +
+	  0.7f * the_color_t::AMPAD_LIGHT;
 	
 	the_color_t diffuse =
-	  0.6 * tri_color_.mul3(bgcolor) +
-	  0.4 * bgcolor;
+	  0.6f * tri_color_.mul3(bgcolor) +
+	  0.4f * bgcolor;
 	
 	glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
 	glColor4fv(diffuse.rgba());
 	
 	the_color_t specular =
-	  0.36 * bgcolor +
-	  0.64 * the_color_t::WHITE;
+	  0.36f * bgcolor +
+	  0.64f * the_color_t::WHITE;
 	
 	glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
 	glColor4fv(specular.rgba());
