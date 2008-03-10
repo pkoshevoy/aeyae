@@ -1,3 +1,5 @@
+project(THE)
+
 cmake_minimum_required(VERSION 2.4.0)
 
 FILE(TO_CMAKE_PATH "$ENV{THE_SRC_DIR}" THE_SRC_DIR)
@@ -8,6 +10,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 )
 #MESSAGE("CMAKE_MODULE_PATH=[${CMAKE_MODULE_PATH}]")
 
+find_package(OpenGL REQUIRED)
 find_package(Boost REQUIRED)
 include_directories(AFTER
   ${THE_SRC_DIR}
