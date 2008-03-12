@@ -107,6 +107,12 @@ the_document_ui_t::setup(the_view_t * shared,
     THE_POINT_SYMBOLS.compile();
     THE_ASCII_FONT.compile();
   }
+  else if (num_views)
+  {
+    view_[0]->gl_make_current();
+    THE_POINT_SYMBOLS.compile();
+    THE_ASCII_FONT.compile();
+  }
 }
 
 //----------------------------------------------------------------
