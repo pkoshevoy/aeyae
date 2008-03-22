@@ -94,7 +94,7 @@ public:
   
   // The registry will call these functions whenever this primitive is
   // added to or removed from the registry. These functions should be
-  // overriden by the classes that require dependence graph updates:
+  // overridden by the classes that require dependence graph updates:
   virtual void added_to_the_registry(the_registry_t * registry,
 				     const unsigned int & id);
   virtual void removed_from_the_registry();
