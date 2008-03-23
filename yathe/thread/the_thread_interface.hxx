@@ -41,7 +41,7 @@ THE SOFTWARE.
 class the_mutex_interface_t;
 class the_terminators_t;
 class the_thread_pool_t;
-class the_thread_pool_data_t;
+struct the_thread_pool_data_t;
 
 
 //----------------------------------------------------------------
