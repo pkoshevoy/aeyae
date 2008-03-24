@@ -751,6 +751,8 @@ the_bspline_geom_dl_elem_t(const the_bspline_geom_t & curve,
 void
 the_bspline_geom_dl_elem_t::draw() const
 {
+  if (geom_.pt().empty()) return;
+
   GLUnurbsObj * glu_nurbs_obj = gluNewNurbsRenderer();
   if (glu_nurbs_obj == NULL) return;
   
