@@ -64,6 +64,9 @@ public:
 	     the_view_t ** views,
 	     const unsigned int & num_views);
   
+  // compile font and point symbol display lists:
+  void compile_display_lists();
+  
   // ui update mechanism:
   virtual void sync_ui() = 0;
   

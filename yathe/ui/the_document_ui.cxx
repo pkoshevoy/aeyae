@@ -100,14 +100,21 @@ the_document_ui_t::setup(the_view_t * shared,
     view_mgr_eh_[i]->attach_view(view_[i]);
     view_mgr_eh_[i]->install();
   }
-  
+}
+
+//----------------------------------------------------------------
+// the_document_ui_t::compile_display_lists
+// 
+void
+the_document_ui_t::compile_display_lists()
+{
   if (shared_ != NULL)
   {
     shared_->gl_make_current();
     THE_POINT_SYMBOLS.compile();
     THE_ASCII_FONT.compile();
   }
-  else if (num_views)
+  else if (!view_.empty())
   {
     view_[0]->gl_make_current();
     THE_POINT_SYMBOLS.compile();
