@@ -115,6 +115,8 @@ the_keybd_event(QWidget * widget, const QKeyEvent * e)
 the_wacom_event_t
 the_wacom_event(QWidget * widget, const QTabletEvent * e)
 {
+  // cout << "the_wacom_event: " << e << endl;
+  
   p2x1_t scs_pt(float(e->x()) / float(widget->width()),
 		float(e->y()) / float(widget->height()));
   
@@ -149,5 +151,15 @@ the_wacom_event(QWidget * widget, const QTabletEvent * e)
 		       e->tangentialPressure(),
 		       e->rotation(),
 		       float(e->z()));
+#if 0
+  cout << tool
+       << ", uniqueId: " << te.tool_id_ << endl
+       << ", pressure: " << te.pressure_ << endl
+       << ", tangential: " << te.tangential_pressure_ << endl
+       << ", rotation: " << te.rotation_ << endl
+       << ", tilt: " << te.tilt_[0] << ", " << te.tilt_[1] << endl
+       << ", z: " << te.z_position_ << endl << endl;
+#endif
+  
   return te;
 }
