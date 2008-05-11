@@ -29,16 +29,6 @@ if [ -n "${ITK_BINARY_DIR}" ]; then
     export LD_LIBRARY_PATH=${ITK_BINARY_DIR}/bin:${LD_LIBRARY_PATH}
 fi
 
-# add Qt to the search paths:
-if [ -n "${QT4_DIR}" ]; then
-    export QTDIR=${QT4_DIR}
-    export PATH=${QT4_DIR}/bin:${PATH}
-    export CPATH=${QT4_DIR}/include:${CPATH}
-    export MANPATH=${QT4_DIR}/share/man:${MANPATH}
-    export LIBRARY_PATH=${QT4_DIR}/lib:${LIBRARY_PATH}
-    export LD_LIBRARY_PATH=${QT4_DIR}/lib:${LD_LIBRARY_PATH}
-fi
-
 # add GLEW to the search paths:
 if [ -n "${GLEW_DIR}" ]; then
     export PATH=${GLEW_DIR}/bin:${PATH}
@@ -76,6 +66,16 @@ if [ -n "${BOOST_ROOT}" ]; then
     export CPATH=${BOOST_ROOT}/include/boost-1_33_1:${CPATH}
     export LIBRARY_PATH=${BOOST_ROOT}/lib:${LIBRARY_PATH}
     export LD_LIBRARY_PATH=${BOOST_ROOT}/lib:${LD_LIBRARY_PATH}
+fi
+
+# add Qt to the search paths:
+if [ -n "${QT4_DIR}" ]; then
+    export QTDIR=${QT4_DIR}
+    export PATH=${QT4_DIR}/bin:${PATH}
+    export CPATH=${QT4_DIR}/include:${CPATH}
+    export MANPATH=${QT4_DIR}/share/man:${MANPATH}
+    export LIBRARY_PATH=${QT4_DIR}/lib:${LIBRARY_PATH}
+    export LD_LIBRARY_PATH=${QT4_DIR}/lib:${LD_LIBRARY_PATH}
 fi
 
 # add THE libraries to the search paths:
