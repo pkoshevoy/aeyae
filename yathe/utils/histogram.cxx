@@ -227,8 +227,6 @@ update_orientation_histogram(double * orientation,
 			     const double & angle,
 			     const double & value)
 {
-  assert(value >= 0.0);
-  
   static unsigned int bin[3];
   static double w[3];
   calc_orientation_histogram_donations(bins, angle, bin, w);
