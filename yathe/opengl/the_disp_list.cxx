@@ -118,11 +118,15 @@ the_line_strip_dl_elem_t::the_line_strip_dl_elem_t(const the_color_t & c0,
 void
 the_line_strip_dl_elem_t::draw() const
 {
+  if (pt_.empty()) return;
+  
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
     glLineWidth(line_width_);
     glDisable(GL_LIGHTING);
     glDisable(GL_LINE_SMOOTH);
+    
+#if 1
     glBegin(GL_LINE_STRIP);
     {
       unsigned int index = 0;
@@ -133,6 +137,23 @@ the_line_strip_dl_elem_t::draw() const
 	glVertex3fv((*i).data());
       }
     }
+#else
+    glBegin(GL_LINES);
+    {
+      unsigned int index = 0;
+      const p3x1_t * prev = &(pt_.front());
+      for (std::list<p3x1_t>::const_iterator
+	     i = ++(pt_.begin()); i != pt_.end(); ++i, index++)
+      {
+	const p3x1_t & next = *i;
+	
+	glColor4fv(color_[index % 2].rgba());
+	glVertex3fv(prev->data());
+	glVertex3fv(next.data());
+	prev = &next;
+      }
+    }
+#endif
     glEnd();
   }
 }
