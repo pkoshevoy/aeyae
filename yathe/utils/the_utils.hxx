@@ -229,9 +229,45 @@ template <typename data_t>
 data_t
 remove_head(std::list<data_t> & container)
 {
-  data_t head = *(container.begin());
+  data_t head = container.front();
   container.pop_front();
   return head;
+}
+
+//----------------------------------------------------------------
+// remove_tail
+// 
+template <typename data_t>
+data_t
+remove_tail(std::list<data_t> & container)
+{
+  data_t tail = container.back();
+  container.pop_back();
+  return tail;
+}
+
+//----------------------------------------------------------------
+// remove_head
+// 
+template <typename data_t>
+data_t
+remove_head(std::vector<data_t> & container)
+{
+  data_t head = container.front();
+  container.erase(container.begin());
+  return head;
+}
+
+//----------------------------------------------------------------
+// remove_tail
+// 
+template <typename data_t>
+data_t
+remove_tail(std::vector<data_t> & container)
+{
+  data_t tail = container.back();
+  container.pop_back();
+  return tail;
 }
 
 //----------------------------------------------------------------
