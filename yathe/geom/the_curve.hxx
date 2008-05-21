@@ -474,6 +474,10 @@ public:
   // and decide where it belongs among the other points):
   bool insert(const unsigned int & id);
   
+  // insert a point in the list at the given parameter value
+  // on the current curve:
+  bool insert(const unsigned int & id, float param);
+  
   // add a point to the head of the list:
   bool add_head(const unsigned int & id);
   

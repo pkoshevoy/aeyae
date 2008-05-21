@@ -300,7 +300,22 @@ the_intcurve_t::insert(const unsigned int & pt_id)
   std::list<the_deviation_min_t> s_rs;
   if (!geom().intersect(wcs_pt, s_rs)) return false;
   
-  const float & param = s_rs.front().s_;
+  float param = s_rs.front().s_;
+  return insert(pt_id, param);
+}
+
+
+//----------------------------------------------------------------
+// the_intcurve_t::insert
+// 
+bool
+the_intcurve_t::insert(const unsigned int & pt_id, float param)
+{
+  // Go through the list of points, and find two adjacent
+  // points closest to the new point. Insert the new
+  // point in between of these two points.
+  if (!has_at_least_two_points()) return add(pt_id);
+  
   unsigned int seg_id = segment(param);
   assert(seg_id != UINT_MAX);
   pts_.insert(iterator_at_index(pts_, seg_id), the_knot_point_t(pt_id));
