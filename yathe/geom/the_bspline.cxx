@@ -1265,8 +1265,11 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   knot[num_seg + 2] = kts[num_seg];
   knot[num_seg + 3] = kts[num_seg] + THE_EPSILON; // FIXME: 2006/03/16
   
-  // calculate the knot vector (centripetal parametrization):
-  for (unsigned int i = 0; i <= num_seg; i++) knot[i] = kts[i];
+  // copy the interpolation point parameterization into the knot vector:
+  for (unsigned int i = 0; i <= num_seg; i++)
+  {
+    knot[i] = kts[i];
+  }
   
   // build the tridagonal matrix:
   std::vector<float> ai(num_seg + 1);
@@ -1375,6 +1378,8 @@ the_interpolation_bspline_t::setup_parameterization()
   p3x1_t pa = point((*ia).id_)->value();
   (*ia).param_ = 0.0;
   
+#if 1
+  // centripetal parameterization:
   for (unsigned int i = 1; i < pts_.size(); i++)
   {
     std::list<the_knot_point_t>::iterator ib = next(ia);
@@ -1385,6 +1390,9 @@ the_interpolation_bspline_t::setup_parameterization()
     pa = pb;
     ia = ib;
   }
+#else
+  // G. Nielson T. Foley parameterization:
+#endif
   
   for (std::list<the_knot_point_t>::iterator i = ++(pts_.begin());
        i != pts_.end(); ++i)
