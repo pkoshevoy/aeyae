@@ -70,8 +70,8 @@ estimate_text_pixels(const char * text, const unsigned int & font_size)
   int saved_fs = fl_size();
   fl_font(saved_ff, font_size);
   
-  int w;
-  int h;
+  int w = 0;
+  int h = 0;
   fl_measure(text, w, h);
   
   fl_font(saved_ff, saved_fs);

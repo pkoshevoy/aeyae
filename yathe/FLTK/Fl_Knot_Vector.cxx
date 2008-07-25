@@ -59,8 +59,8 @@ Fl_Knot_Vector::Fl_Knot_Vector(int x,
 // calculate the left/right margins:
 static float margin()
 {
-  int lw;
-  int lh;
+  int lw = 0;
+  int lh = 0;
   fl_measure("-1.0000", lw, lh);
   return 0.5 * float(lw + 2);
 }
@@ -286,8 +286,8 @@ Fl_Knot_Vector::draw()
       {
 	sprintf(label, "%.2f", t);
 	
-	int lw;
-	int lh;
+	int lw = 0;
+	int lh = 0;
 	fl_measure(label, lw, lh);
 	fl_draw(label, int(tx) - lw / 2, int(y_ref - 2));
       }
