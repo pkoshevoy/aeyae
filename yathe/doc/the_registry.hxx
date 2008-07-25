@@ -34,6 +34,7 @@ THE SOFTWARE.
 // system includes:
 #include <list>
 #include <assert.h>
+#include <limits.h>
 
 // local includes:
 #include "utils/the_utils.hxx"
