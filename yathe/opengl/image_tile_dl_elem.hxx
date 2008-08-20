@@ -62,11 +62,14 @@ class image_tile_dl_elem_t : public the_dl_elem_t
 public:
   image_tile_dl_elem_t(const image_tile_generator_t & data,
 		       GLenum min_filter = GL_NEAREST,
-		       GLenum mag_filter = GL_NEAREST
-		       #ifdef USE_CG
-		       ,const CGprogram * fragment_program = NULL
-		       #endif
-		       );
+		       GLenum mag_filter = GL_NEAREST);
+  
+#ifdef USE_CG
+  image_tile_dl_elem_t(const image_tile_generator_t & data,
+		       GLenum min_filter,
+		       GLenum mag_filter,
+		       const CGprogram * fragment_program);
+#endif
   
   // virtual:
   ~image_tile_dl_elem_t();

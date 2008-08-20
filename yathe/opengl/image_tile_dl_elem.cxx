@@ -53,22 +53,37 @@ extern CGprofile cg_profile;
 // 
 image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
 					   GLenum min_filter,
-					   GLenum mag_filter
-					   #ifdef USE_CG
-					   , const CGprogram * fragment_program
-					   #endif
-					   ):
+					   GLenum mag_filter):
   data_(data),
   min_filter_(min_filter),
   mag_filter_(mag_filter)
-  #ifdef USE_CG
-  ,fragment_program_(fragment_program)
-  #endif
+#ifdef USE_CG
+  ,fragment_program_(NULL)
+#endif
 {
   p3x1_t min(data_.origin_x_, data_.origin_y_, 0);
   v3x1_t ext(data_.spacing_x_ * data_.w_, data_.spacing_y_ * data_.h_, 0);
   bbox_ << min << min + ext;
 }
+
+#ifdef USE_CG
+//----------------------------------------------------------------
+// image_tile_dl_elem_t::image_tile_dl_elem_t
+// 
+image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
+					   GLenum min_filter,
+					   GLenum mag_filter,
+					   const CGprogram * fragment_program):
+  data_(data),
+  min_filter_(min_filter),
+  mag_filter_(mag_filter),
+  fragment_program_(fragment_program)
+{
+  p3x1_t min(data_.origin_x_, data_.origin_y_, 0);
+  v3x1_t ext(data_.spacing_x_ * data_.w_, data_.spacing_y_ * data_.h_, 0);
+  bbox_ << min << min + ext;
+}
+#endif
 
 //----------------------------------------------------------------
 // image_tile_dl_elem_t::~image_tile_dl_elem_t
