@@ -84,16 +84,20 @@ protected:
   
   // close the replay stream:
   virtual void replay_done();
-
+  
+  // milestone accessor:
+  void next_milestone_achieved();
+  
+  // dialog bypass handling:
+  virtual bool bypass_prolog(const char * /* name */) { return false; }
+  virtual void bypass_epilog() {}
+  
 public:
   // stop the event trail replay:
   virtual void stop()
   {
     replay_done();
   }
-  
-  // milestone accessor:
-  void next_milestone_achieved();
   
   //----------------------------------------------------------------
   // milestone_t
@@ -111,6 +115,34 @@ public:
       THE_TRAIL.next_milestone_achieved();
     }
   };
+  
+  //----------------------------------------------------------------
+  // bypass_t
+  // 
+  class bypass_t
+  {
+  public:
+    bypass_t(const char * name):
+      ok_(false)
+    {
+      ok_ = THE_TRAIL.bypass_prolog(name);
+    }
+    
+    virtual ~bypass_t()
+    {
+      THE_TRAIL.bypass_epilog();
+    }
+    
+    bool ok_;
+  };
+  
+  // check whether trail records is enabled:
+  inline bool is_recording() const
+  { return record_stream.rdbuf()->is_open(); }
+  
+  // check whether trail playback is enabled:
+  inline bool is_replaying() const
+  { return replay_stream.rdbuf()->is_open(); }
   
   // This flag controls whether the event recording will be done
   // even when the user didn't ask for it with the -record switch.
@@ -136,6 +168,7 @@ public:
   bool single_step_replay_;
   
   // these flags will be set to true periodically:
+  bool dont_load_events_;
   bool dont_save_events_;
   bool dont_post_events_;
   
@@ -143,6 +176,11 @@ public:
   // a matching milestone marker before declaring a trail out of sequence;
   // default wait time indefinite (max unsigned int value):
   unsigned int seconds_to_wait_;
+  
+  // bypass names used to synchronize trail reading and
+  // application execution:
+  std::string replay_bypass_name_;
+  std::string record_bypass_name_;
   
   // A single instance of the trail object:
   static the_trail_t * trail_;
@@ -168,6 +206,20 @@ extern istream & operator >> (istream & si, uint64_t & address);
 // operator <<
 // 
 extern ostream & operator << (ostream & so, const uint64_t & address);
+
+
+//----------------------------------------------------------------
+// encode_special_chars
+// 
+extern const std::string
+encode_special_chars(const std::string & text_plain,
+		     const char * special_chars = "");
+
+//----------------------------------------------------------------
+// decode_special_chars
+// 
+extern const std::string
+decode_special_chars(const std::string & text_encoded);
 
 
 #endif // THE_TRAIL_HXX_

@@ -59,6 +59,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   line_num_(0),
   milestone_(0),
   single_step_replay_(false),
+  dont_load_events_(false),
   dont_save_events_(false),
   dont_post_events_(false),
   seconds_to_wait_(std::numeric_limits<unsigned int>::max())
@@ -288,4 +289,69 @@ operator << (ostream & so, const uint64_t & address)
 {
   save_address(so, address);
   return so;
+}
+
+
+//----------------------------------------------------------------
+// encode_special_chars
+// 
+const std::string
+encode_special_chars(const std::string & text_plain,
+		     const char * special_chars)
+{
+  static const char escape_char = '\\';
+
+  std::string result;
+  for (int i = 0; i < text_plain.size(); i++)
+  {
+    const char c = text_plain[i];
+    if (c <= 32 ||
+	c >= 127 ||
+	c == escape_char ||
+	strchr(special_chars, c))
+    {
+      result += escape_char;
+      result += ('0' + char(int(c) / 100));
+      result += ('0' + char((int(c) / 10) % 10));
+      result += ('0' + char(int(c) % 10));
+    }
+    else
+    {
+      result += c;
+    }
+  }
+  
+  return result;
+}
+
+//----------------------------------------------------------------
+// decode_special_chars
+// 
+const std::string
+decode_special_chars(const std::string & text_encoded)
+{
+  static const char escape_char = '\\';
+  
+  std::string result;
+  for (int i = 0; i < text_encoded.size(); i++)
+  {
+    char c = text_encoded[i];
+    
+    // skip the escape character:
+    if (c == escape_char)
+    {
+      char x = text_encoded[i + 1];
+      char y = text_encoded[i + 2];
+      char z = text_encoded[i + 3];
+      
+      c = char(int(x - '0') * 100 +
+	       int(y - '0') * 10 +
+	       int(z - '0'));
+      i += 3;
+    }
+    
+    result += c;
+  }
+  
+  return result;
 }

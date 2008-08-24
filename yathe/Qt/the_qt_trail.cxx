@@ -75,7 +75,7 @@ operator >> (istream & in, QString & str)
 {
   std::string tmp;
   in >> tmp;
-  str = QString(tmp.c_str());
+  str = QString::fromUtf8(tmp.c_str());
   return in;
 }
 
@@ -85,8 +85,8 @@ operator >> (istream & in, QString & str)
 static ostream &
 operator << (ostream & out, const QString & str)
 {
-  std::string tmp(str.toAscii().data());
-  out << tmp;
+  std::string tmp(str.toUtf8().constData());
+  out << tmp.c_str();
   return out;
 }
 
@@ -485,35 +485,16 @@ dump_children_tree(ostream & so, const QObject * parent, unsigned int indent)
   }
 }
 
-
 //----------------------------------------------------------------
 // encode_special_chars
 // 
 static const QString
 encode_special_chars(const QString & text,
-		     const std::list<char> & special_chars)
+		     const char * special_chars)
 {
-  static const char escape_char = '\\';
-  
-  QString result;
-  for (int i = 0; i < text.length(); i++)
-  {
-    char c = text.operator[](i).toAscii();
-    if ((c == escape_char) || has(special_chars, c))
-    {
-      QString special_str;
-      special_str += escape_char;
-      special_str += ('0' + char(int(c) / 100));
-      special_str += ('0' + char((int(c) / 10) % 10));
-      special_str += ('0' + char(int(c) % 10));
-      result += special_str;
-    }
-    else
-    {
-      result += c;
-    }
-  }
-  
+  std::string text_utf8(text.toUtf8().constData());
+  std::string result_utf8 = encode_special_chars(text_utf8, special_chars);
+  QString result = QString::fromUtf8(result_utf8.c_str());
   return result;
 }
 
@@ -523,29 +504,9 @@ encode_special_chars(const QString & text,
 static const QString
 decode_special_chars(const QString & text)
 {
-  static const char escape_char = '\\';
-  
-  QString result;
-  for (int i = 0; i < text.length(); i++)
-  {
-    char c = text.operator[](i).toAscii();
-    
-    // skip the escape character:
-    if (c == escape_char)
-    {
-      char x = text.operator[](i + 1).toAscii();
-      char y = text.operator[](i + 2).toAscii();
-      char z = text.operator[](i + 3).toAscii();
-      
-      c = char(int(x - '0') * 100 +
-	       int(y - '0') * 10 +
-	       int(z - '0'));
-      i += 3;
-    }
-    
-    result += c;
-  }
-  
+  std::string text_utf8(text.toUtf8().constData());
+  std::string result_utf8 = decode_special_chars(text_utf8);
+  QString result = QString::fromUtf8(result_utf8.c_str());
   return result;
 }
 
@@ -585,6 +546,12 @@ find_object_from_path(QObject * root,
   }
 }
 
+
+//----------------------------------------------------------------
+// QObjectTraits::special_chars_
+// 
+const char *
+QObjectTraits::special_chars_ = "/ \t\n";
 
 //----------------------------------------------------------------
 // QObjectTraits::QObjectTraits
@@ -731,7 +698,7 @@ QObjectTraits::convert_object_ptr_to_full_path(const QObject * object,
     }
     
     full_path = ('/' +
-		 encode_special_chars(name, special_chars()) +
+		 encode_special_chars(name, special_chars_) +
 		 full_path);
     
     object = object->parent();
@@ -747,26 +714,29 @@ QObjectTraits::split_the_path_into_components(const QString & full_path,
 {
   static const char escape = '\\';
   static const char separator = '/';
+
+  std::string utf8_path(full_path.toUtf8().constData());
+  std::string utf8_name;
   
-  QString name;
-  
-  for (int i = 1; i < full_path.length(); i++)
+  unsigned int path_len = utf8_path.size();
+  for (int i = 1; i < path_len; i++)
   {
-    char p = full_path.operator[](i - 1).toAscii(); // previous character.
-    char c = full_path.operator[](i).toAscii();     // current character.
+    char p = utf8_path[i - 1]; // previous character.
+    char c = utf8_path[i];     // current character.
     
     if (((p != escape) && (c == separator)) ||
-	((i + 1) == full_path.length()))
+	((i + 1) == path_len))
     {
-      name += p;
-      if ((i + 1) == full_path.length()) name += c;
-      path_names.append(decode_special_chars(name));
-      name = "";
+      utf8_name += p;
+      if ((i + 1) == path_len) utf8_name += c;
+      std::string decoded = decode_special_chars(utf8_name);
+      path_names.append(QString::fromUtf8(utf8_name.c_str()));
+      utf8_name.clear();
       i++;
     }
     else if (i > 1)
     {
-      name += p;
+      utf8_name += p;
     }
   }
 }
@@ -779,7 +749,7 @@ QObjectTraits::save(ostream & ostr) const
 {
   for (unsigned int i = 0; i < path_size_; i++)
   {
-    ostr << '/' << encode_special_chars(path_[i], special_chars());
+    ostr << '/' << encode_special_chars(path_[i], special_chars_);
   }
   
   ostr << ' '
@@ -802,25 +772,6 @@ QObjectTraits::load(istream & istr)
   istr >> is_visible_;
   
   init_path(full_path);
-}
-
-//----------------------------------------------------------------
-// QObjectTraits::special_chars
-// 
-const std::list<char> &
-QObjectTraits::special_chars()
-{
-  static std::list<char> special_chars_;
-  
-  if (special_chars_.empty())
-  {
-    special_chars_.push_back('/');
-    special_chars_.push_back(' ');
-    special_chars_.push_back('\t');
-    special_chars_.push_back('\n');
-  }
-  
-  return special_chars_;
 }
 
 //----------------------------------------------------------------
@@ -1009,8 +960,9 @@ operator >> (istream & istr, QSize & s)
 // 
 typedef enum
 {
-  OBJECT_ID_E,
-  EVENT_E
+  OBJECT_ID_E = 0,
+  EVENT_E = 1,
+  BYPASS_E = 2,
 } the_trail_line_id_t;
 
 
@@ -1376,9 +1328,7 @@ void
 the_qt_trail_t::replay_one()
 {
   static bool stop_replay = false;
-  static bool dont_load_events = false;
-  
-  if (dont_load_events) return;
+  if (dont_load_events_) return;
   
   QObject * object = NULL;
   QEvent  * event  = NULL;
@@ -1415,7 +1365,7 @@ the_qt_trail_t::replay_one()
 	}
 	else
 	{
-	  dont_load_events = true;
+	  dont_load_events_ = true;
 	  dont_save_events_ = true;
 	  dont_post_events_ = false;
 	  
@@ -1434,7 +1384,7 @@ the_qt_trail_t::replay_one()
 	     << "Current trail line number is " << line_num_
 	     << ", current milestone is " << milestone_ << "." << endl
 	     << "Click [Stop] to stop trail playback immediately." << endl
-	     << "Click [Skip] to bypass this milestone." << endl
+	     << "Click [Skip] to ignore this milestone." << endl
 	     << "Click [Wait] to continue waiting for the milestone." << endl;
 	  mb.setDetailedText(QString(os.str().c_str()));
 	  
@@ -1478,10 +1428,51 @@ the_qt_trail_t::replay_one()
     waiting_for_milestone = false;
   }
   
-  // try to load an event from the trail file:
-  if (load_event(replay_stream, object, event) == false)
+  unsigned int line_id = ~0;
+  bool ok = true;
+  while (ok)
+  {
+    // read the line id:
+    if ((replay_stream >> line_id).eof())
+    {
+      // end of trail:
+      ok = false;
+      break;
+    }
+    
+    if (line_id == OBJECT_ID_E)
+    {
+      ok = load_object(replay_stream);
+    }
+    else if (line_id == EVENT_E)
+    {
+      ok = load_event(replay_stream, object, event);
+      break;
+    }
+    else if (line_id == BYPASS_E)
+    {
+      ok = load_bypass(replay_stream);
+      break;
+    }
+    else
+    {
+      cerr << "ERROR: invalid line id: " << line_id
+	   << ", line: " << line_num_
+	   << ", current milestone: " << milestone_
+	   << ", trail milestone: " << MILESTONE << endl;
+      ok = false;
+      break;
+    }
+  }
+  
+  if (!ok)
   {
     replay_done();
+    return;
+  }
+  
+  if (line_id == BYPASS_E)
+  {
     return;
   }
   
@@ -1501,7 +1492,7 @@ the_qt_trail_t::replay_one()
     {
       cerr << "SS0 -----------------------------------" << endl;
       
-      dont_load_events = true;
+      dont_load_events_ = true;
       dont_save_events_ = true;
       dont_post_events_ = false;
       
@@ -1620,7 +1611,115 @@ the_qt_trail_t::replay_one()
   // FIXME: is this safe?
   delete event;
   dont_post_events_ = true;
-  dont_load_events = false;
+  dont_load_events_ = false;
+}
+
+//----------------------------------------------------------------
+// the_qt_trail_t::bypass_prolog
+// 
+bool
+the_qt_trail_t::bypass_prolog(const char * name)
+{
+  if (is_recording())
+  {
+    // save the milestone marker:
+    record_stream << milestone_ << '\t'
+		  << BYPASS_E << ' '
+		  << "bypass_prolog" << ' '
+		  << encode_special_chars(std::string(name)).c_str()
+		  << endl;
+    dont_save_events_ = true;
+    record_bypass_name_ = name;
+  }
+  
+  if (is_replaying())
+  {
+    // wait for the bypass_prolog marker:
+    QTime timer;
+    timer.start();
+    
+    while (replay_bypass_name_.empty())
+    {
+      unsigned seconds_waiting = timer.elapsed() / 1000;
+      if (seconds_waiting > seconds_to_wait_)
+      {
+	QMessageBox mb;
+	mb.setIcon(QMessageBox::Question);	
+	mb.setWindowTitle(QString("trail may be out of sequence"));
+	
+	std::ostringstream os;
+	os << "bypass_prolog " << name << " hasn't arrived within "
+	   << seconds_to_wait_ << " seconds." << endl;
+	mb.setText(QString(os.str().c_str()));
+	
+	os.str("");
+	os << seconds_waiting
+	   << " seconds passed -- trail may be out of sequence." << endl
+	   << "Current trail line number is " << line_num_
+	   << ", current milestone is " << milestone_ << "." << endl
+	   << "Click [Stop] to stop trail playback immediately." << endl
+	   << "Click [Skip] to ignore this problem." << endl
+	   << "Click [Wait] to continue waiting for the milestone." << endl;
+	mb.setDetailedText(QString(os.str().c_str()));
+	
+	QAbstractButton * btn_stop =
+	  mb.addButton(tr("Stop"), QMessageBox::ActionRole);
+	
+	QAbstractButton * btn_skip =
+	  mb.addButton(tr("Skip"), QMessageBox::ActionRole);
+	
+	QAbstractButton * btn_wait =
+	mb.addButton(tr("Wait"), QMessageBox::ActionRole);
+	
+	mb.exec();
+	
+	if (mb.clickedButton() == btn_stop)
+	{
+	  replay_done();
+	  return false;
+	}
+	else if (mb.clickedButton() == btn_skip)
+	{
+	  // fall through -- skip the milestone
+	  return false;
+	}
+	else if (mb.clickedButton() == btn_wait)
+	{
+	  // wait some more:
+	  timer.start();
+	}
+      }
+      
+      usleep(10);
+      QCoreApplication::processEvents();
+    }
+  }
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_qt_trail_t::bypass_epilog
+// 
+void
+the_qt_trail_t::bypass_epilog()
+{
+  if (is_replaying())
+  {
+    replay_bypass_name_.clear();
+    dont_load_events_ = false;
+  }
+  
+  if (is_recording())
+  {
+    // save the milestone marker:
+    record_stream << milestone_ << '\t'
+		  << BYPASS_E << ' '
+		  << "bypass_epilog"
+		  << endl;
+    dont_save_events_ = false;
+    record_bypass_name_.clear();
+  }
 }
 
 //----------------------------------------------------------------
@@ -1699,8 +1798,8 @@ the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
 // 
 void
 the_qt_trail_t::save_event(ostream &       ostr,
-			const QObject * object,
-			const QEvent *  event)
+			   const QObject * object,
+			   const QEvent *  event)
 {
   if ((event == NULL) || (object == NULL)) return;
   
@@ -1810,95 +1909,89 @@ the_qt_trail_t::save_event(ostream &       ostr,
 }
 
 //----------------------------------------------------------------
+// the_qt_trail_t::load_bypass
+// 
+bool
+the_qt_trail_t::load_bypass(istream & istr)
+{
+  std::string bypass;
+  istr >> bypass;
+  
+  if (bypass == "bypass_prolog")
+  {
+    std::string name;
+    istr >> name;
+    
+    replay_bypass_name_ = decode_special_chars(name);
+    dont_load_events_ = true;
+  }
+  else if (bypass != "bypass_epilog")
+  {
+    return false;
+  }
+  
+  bool ok = !istr.eof();
+  return ok;
+}
+
+//----------------------------------------------------------------
+// the_qt_trail_t::load_object
+// 
+bool
+the_qt_trail_t::load_object(istream & istr)
+{
+  uint64_t old_ptr = 0;
+  if (!load_address(istr, old_ptr))
+  {
+    cerr << "ERROR: line: " << line_num_
+	 << ", can not load old widget pointer"
+	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+    return false;
+  }
+  
+  QObjectTraits traits;
+  istr >> traits;
+  
+  QObject * new_ptr = traits.object();
+  
+  if (new_ptr == NULL)
+  {
+    cerr << "ERROR: line: " << line_num_
+	 << ", can not find corresponding object: " << endl
+	 << traits
+	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+    traits.object();
+    
+#if 0
+    QWidgetList top_level_widgets = QApplication::topLevelWidgets();
+    for (QWidgetList::iterator i = top_level_widgets.begin();
+	 i != top_level_widgets.end(); ++i)
+    {
+      dump_children_tree(cerr, *i, 0);
+    }
+#endif
+    
+    return false;
+  }
+  
+  the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
+    tree_load_.add(old_ptr);
+  leaf->elem.init(new_ptr, traits);
+  
+  line_num_++;
+  return true;
+}
+
+//----------------------------------------------------------------
 // the_qt_trail_t::load_event
 // 
 bool
 the_qt_trail_t::load_event(istream &  istr,
-			QObject *& object,
-			QEvent *&  event)
+			   QObject *& object,
+			   QEvent *&  event)
 {
   object = NULL;
   event = NULL;
-  
-  // std::string line;
-  // std::istringstream sstr;
-  
-  while (true)
-  {
-    /*
-    getline(istr, line);
-    if (istr.eof())
-    {
-      // end of trail:
-      return false;
-    }
-    
-    sstr.clear();
-    sstr.str(line);
-    */
-    
-    // read the line id:
-    unsigned int line_id = ~0;
-    if ((istr >> line_id).eof())
-    {
-      // end of trail:
-      return false;
-    }
-    
-    if (line_id == OBJECT_ID_E)
-    {
-      uint64_t old_ptr = 0;
-      if (!load_address(istr, old_ptr))
-      {
-	cerr << "ERROR: line: " << line_num_
-	     << ", can not load old widget pointer"
-	     << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
-	return false;
-      }
-      
-      QObjectTraits traits;
-      istr >> traits;
-      
-      QObject * new_ptr = traits.object();
-      
-      if (new_ptr == NULL)
-      {
-	cerr << "ERROR: line: " << line_num_
-	     << ", can not find corresponding object: " << endl
-	     << traits
-	     << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
-	traits.object();
-	
-#if 0
-	QWidgetList top_level_widgets = QApplication::topLevelWidgets();
-	for (QWidgetList::iterator i = top_level_widgets.begin();
-	     i != top_level_widgets.end(); ++i)
-	{
-	  dump_children_tree(cerr, *i, 0);
-	}
-#endif
-	
-	return false;
-      }
-      
-      the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
-	tree_load_.add(old_ptr);
-      leaf->elem.init(new_ptr, traits);
-      
-      line_num_++;
-    }
-    else if (line_id == EVENT_E)
-    {
-      break;
-    }
-    else
-    {
-      cerr << "ERROR: invalid line id: " << line_id
-	   << ", line: " << line_num_
-	   << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
-      return false;
-    }
-  }
   
   uint64_t old_object = 0;
   load_address(istr, old_object);
@@ -2095,7 +2188,7 @@ the_qt_trail_t::saveQKeyEvent(ostream & ostr,
   
   if (event->text().size() > 0)
   {
-    ostr << true << ' ' << event->text().toAscii().toBase64().data() << endl;
+    ostr << true << ' ' << event->text().toUtf8().toBase64().data() << endl;
   }
   else
   {
@@ -2276,7 +2369,7 @@ the_qt_trail_t::loadQKeyEvent(istream & istr, QEvent::Type t)
     QString txt_base64;
     istr >> txt_base64;
     
-    txt = QString(QByteArray::fromBase64(txt_base64.toAscii()));
+    txt = QString(QByteArray::fromBase64(txt_base64.toUtf8()));
   }
   
   event = new QKeyEvent(t,
