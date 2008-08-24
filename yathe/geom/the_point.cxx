@@ -166,6 +166,15 @@ the_hard_point_t::dump(ostream & strm, unsigned int indent) const
        << INDSCP << "}" << endl << endl;
 }
 
+
+//----------------------------------------------------------------
+// the_soft_point_t::the_soft_point_t
+// 
+the_soft_point_t::the_soft_point_t():
+  the_point_t(),
+  ref_(NULL)
+{}
+
 //----------------------------------------------------------------
 // the_soft_point_t::the_soft_point_t
 // 
@@ -337,7 +346,7 @@ the_soft_point_t::dump(ostream & strm, unsigned int indent) const
 //----------------------------------------------------------------
 // the_point_ref_t::the_point_ref_t
 // 
-the_point_ref_t::the_point_ref_t(const unsigned int & id):
+the_point_ref_t::the_point_ref_t(unsigned int id):
   the_reference_t(id)
 {}
 

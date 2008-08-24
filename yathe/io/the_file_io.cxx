@@ -36,6 +36,7 @@ THE SOFTWARE.
 #include "doc/the_primitive.hxx"
 #include "doc/the_reference.hxx"
 #include "geom/the_point.hxx"
+#include "geom/the_curve.hxx"
 #include "utils/the_text.hxx"
 
 
@@ -226,6 +227,25 @@ load(std::istream & stream, the_text_t & data)
 // save
 // 
 bool
+save(std::ostream & stream, const the_knot_point_t & k)
+{
+  return k.save(stream);
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, the_knot_point_t & k)
+{
+  return k.load(stream);
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
 save(std::ostream & stream, const the_registry_t & registry)
 {
   // save the magic word:
@@ -246,12 +266,26 @@ load(std::istream & stream, the_registry_t & registry)
 {
   // verify the magic word:
   the_text_t magic_word;
-  load(stream, magic_word);
-  if (magic_word != "the_registry_t") return false;
+  if (!load(stream, magic_word))
+  {
+    return false;
+  }
+  
+  if (magic_word != "the_registry_t")
+  {
+    return false;
+  }
   
   // load the registry:
-  load(stream, registry.dispatcher_);
-  load(stream, registry.table_);
+  if (!load(stream, registry.dispatcher_))
+  {
+    return false;
+  }
+  
+  if (!load(stream, registry.table_))
+  {
+    return false;
+  }
   
   const unsigned int & size = registry.table_.size();
   for (unsigned int i = 0; i < size; i++)
@@ -321,25 +355,7 @@ save(std::ostream & stream, const the_reference_t * ref)
 bool
 load(std::istream & stream, the_reference_t *& ref)
 {
-  bool ok = false;
-  ref = NULL;
-  
-  // verify the magic word:
-  the_text_t magic_word;
-  load(stream, magic_word);
-  
-  if (magic_word == "NULL")
-  {
-    ok = true;
-  }
-  else if (magic_word == "the_point_ref_t")
-  {
-    the_point_ref_t * pt_ref = new the_point_ref_t(0);
-    ok = pt_ref->load(stream);
-    ref = pt_ref;
-  }
-    
-  return ok;
+  return the_reference_file_io().load(stream, ref);
 }
 
 
@@ -369,13 +385,21 @@ load(std::istream & stream, the_primitive_t *& primitive)
   return the_primitive_file_io().load(stream, primitive);
 }
 
-
 //----------------------------------------------------------------
 // the_primitive_file_io
 // 
 the_file_io_t<the_primitive_t> & the_primitive_file_io()
 {
   static the_file_io_t<the_primitive_t> io;
+  return io;
+}
+
+//----------------------------------------------------------------
+// the_reference_file_io
+// 
+the_file_io_t<the_reference_t> & the_reference_file_io()
+{
+  static the_file_io_t<the_reference_t> io;
   return io;
 }
 

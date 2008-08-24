@@ -163,6 +163,7 @@ private:
 class the_soft_point_t : public the_point_t
 {
 public:
+  the_soft_point_t();
   the_soft_point_t(const the_reference_t & ref);
   the_soft_point_t(const the_soft_point_t & point);
   ~the_soft_point_t();
@@ -204,8 +205,6 @@ public:
   void dump(ostream & strm, unsigned int indent = 0) const;
   
 private:
-  the_soft_point_t();
-  
   // the reference (the part that makes this point soft):
   the_reference_t * ref_;
   
@@ -221,7 +220,7 @@ private:
 class the_point_ref_t : public the_reference_t
 {
 public:
-  the_point_ref_t(const unsigned int & id);
+  the_point_ref_t(unsigned int id = ~0);
   
   // virtual: a method for cloning references (potential memory leak):
   the_reference_t * clone() const
@@ -246,9 +245,6 @@ public:
   
   // virtual: For debugging, dumps the seg:
   void dump(ostream & strm, unsigned int indent = 0) const;
-  
-private:
-  the_point_ref_t();
 };
 
 

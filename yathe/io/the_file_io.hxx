@@ -66,6 +66,10 @@ extern bool save(std::ostream & stream, const char * data);
 extern bool save(std::ostream & stream, const the_text_t & data);
 extern bool load(std::istream & stream, the_text_t & data);
 
+class the_knot_point_t;
+extern bool save(std::ostream & stream, const the_knot_point_t & d);
+extern bool load(std::istream & stream, the_knot_point_t & d);
+
 class the_registry_t;
 extern bool save(std::ostream & stream, const the_registry_t & registry);
 extern bool load(std::istream & stream, the_registry_t & registry);
@@ -114,12 +118,13 @@ template <typename data_t>
 bool
 load(std::istream & stream, data_t * data, const unsigned int & size)
 {
-  for (unsigned int i = 0; i < size; i++)
+  bool ok = true;
+  for (unsigned int i = 0; i < size && ok; i++)
   {
-    load(stream, data[i]);
+    ok = load(stream, data[i]);
   }
   
-  return true;
+  return ok;
 }
 
 
@@ -212,14 +217,14 @@ bool
 load(std::istream & stream, the_dynamic_array_t<data_t> & array)
 {
   unsigned int size = 0;
-  load(stream, size);
+  bool ok = load(stream, size);
   
-  for (unsigned int i = 0; i < size; i++)
+  for (unsigned int i = 0; i < size && ok; i++)
   {
-    load(stream, array[i]);
+    ok = load(stream, array[i]);
   }
   
-  return true;
+  return ok;
 }
 
 
@@ -279,15 +284,15 @@ load(std::istream & stream, std::list<data_t> & l)
   l.clear();
   
   unsigned int size = 0;
-  load(stream, size);
-  for (unsigned int i = 0; i < size; i++)
+  bool ok = load(stream, size);
+  for (unsigned int i = 0; i < size && ok; i++)
   {
     data_t data;
-    load(stream, data);
+    ok = load(stream, data);
     l.push_back(data);
   }
   
-  return true;
+  return ok;
 }
 
 
@@ -398,15 +403,23 @@ public:
     data = NULL;
     
     the_text_t magic_word;
-    ::load(stream, magic_word);
+    bool ok = ::load(stream, magic_word);
+    if (!ok)
+    {
+      return false;
+    }
     
     if (magic_word == "NULL")
     {
       return true;
     }
     
+    std::cout << "loading " << magic_word << endl;
     unsigned int i = loaders_.index_of(loader_t(magic_word, NULL));
-    if (i == ~0u) return false;
+    if (i == ~0u)
+    {
+      return false;
+    }
     
     const loader_t & loader = loaders_[i];
     return loader.load(stream, data);
@@ -420,6 +433,11 @@ private:
 // the_primitive_file_io
 // 
 extern the_file_io_t<the_primitive_t> & the_primitive_file_io();
+
+//----------------------------------------------------------------
+// the_reference_file_io
+// 
+extern the_file_io_t<the_reference_t> & the_reference_file_io();
 
 
 //----------------------------------------------------------------

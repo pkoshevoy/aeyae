@@ -359,7 +359,7 @@ public:
 class the_curve_ref_t : public the_reference_t
 {
 public:
-  the_curve_ref_t(const unsigned int & id, const float & param);
+  the_curve_ref_t(unsigned int id = ~0, float param = 0);
   
   // virtual: a method for cloning references (potential memory leak):
   the_curve_ref_t * clone() const
@@ -399,8 +399,6 @@ public:
   { param_ = new_param; }
   
 protected:
-  the_curve_ref_t();
-  
   // the parameter at which the curve is being referenced
   float param_;
 };
@@ -428,7 +426,7 @@ public:
 // 
 // Knot point, break point, interpolation point:
 // 
-class the_knot_point_t
+class the_knot_point_t : public the_point_ref_t
 {
 public:
   the_knot_point_t(const unsigned int & id = UINT_MAX,
@@ -442,6 +440,10 @@ public:
   
   inline bool operator < (const the_knot_point_t & kp) const
   { return (param_ < kp.param_); }
+  
+  // file io:
+  bool save(std::ostream & stream) const;
+  bool load(std::istream & stream);
   
   // id of the point primitive:
   unsigned int id_;
@@ -496,6 +498,10 @@ public:
   // Too close means that the squared distance between the points is
   // less then or equal to the threshold:
   void remove_duplicates(const float & threshold = THE_EPSILON);
+  
+  // virtual: file io:
+  bool save(std::ostream & stream) const;
+  bool load(std::istream & stream);
   
   // virtual: For debugging, dumps all segments
   void dump(ostream & strm, unsigned int indent = 0) const;

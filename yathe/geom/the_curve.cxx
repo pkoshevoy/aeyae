@@ -189,8 +189,8 @@ intersect(const the_view_volume_t & volume,
 //----------------------------------------------------------------
 // the_curve_ref_t::the_curve_ref_t
 // 
-the_curve_ref_t::the_curve_ref_t(const unsigned int & id,
-				 const float & param):
+the_curve_ref_t::the_curve_ref_t(unsigned int id,
+				 float param):
   the_reference_t(id),
   param_(param)
 {}
@@ -280,6 +280,25 @@ the_curve_ref_t::dump(ostream & strm, unsigned int indent) const
   the_reference_t::dump(strm, INDNXT);
   strm << INDSTR << "param_ = " << param_ << ";" << endl
        << INDSCP << "}" << endl << endl;
+}
+
+
+//----------------------------------------------------------------
+// the_knot_point_t::save
+// 
+bool
+the_knot_point_t::save(std::ostream & stream) const
+{
+  return (::save(stream, id_) && ::save(stream, param_));
+}
+
+//----------------------------------------------------------------
+// the_knot_point_t::load
+// 
+bool
+the_knot_point_t::load(std::istream & stream)
+{
+  return (::load(stream, id_) && ::load(stream, param_));
 }
 
 
@@ -440,6 +459,26 @@ the_intcurve_t::remove_duplicates(const float & threshold)
     
     ib = ic;
   }
+}
+
+//----------------------------------------------------------------
+// the_intcurve_t::save
+// 
+bool
+the_intcurve_t::save(std::ostream & stream) const
+{
+  return (::save<the_knot_point_t>(stream, pts_) &&
+	  the_curve_t::save(stream));
+}
+
+//----------------------------------------------------------------
+// the_intcurve_t::load
+// 
+bool
+the_intcurve_t::load(std::istream & stream)
+{
+  return (::load<the_knot_point_t>(stream, pts_) &&
+	  the_curve_t::load(stream));
 }
 
 //----------------------------------------------------------------
