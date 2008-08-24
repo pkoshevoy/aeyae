@@ -243,10 +243,6 @@ class the_selset_traits_t :
 public:
   typedef the_base_selset_t<unsigned int>::traits_t super_t;
   
-  the_selset_traits_t(const the_document_ui_t & doc_ui):
-    doc_ui_(doc_ui)
-  {}
-  
   // virtual:
   super_t * clone() const;
   bool is_valid(const unsigned int & id) const;
@@ -255,12 +251,9 @@ public:
   
   inline the_registry_t * registry() const
   {
-    the_document_t * doc = doc_ui_.document();
+    the_document_t * doc = the_document_ui_t::doc_ui()->document();
     return doc ? &(doc->registry()) : NULL;
   }
-  
-private:
-  const the_document_ui_t & doc_ui_;
 };
 
 

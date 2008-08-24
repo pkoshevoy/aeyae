@@ -143,9 +143,15 @@ the_curve_selset_traits_t::deactivate(the_curve_selrec_t & rec) const
 //----------------------------------------------------------------
 // the_curve_selset_t::the_curve_selset_t
 // 
-the_curve_selset_t::the_curve_selset_t(the_document_ui_t & doc_ui):
-  the_curve_selset_t::super_t(new the_curve_selset_traits_t(*this)),
-  doc_ui_(doc_ui)
+the_curve_selset_t::the_curve_selset_t():
+  the_curve_selset_t::super_t(new the_curve_selset_traits_t(*this))
+{}
+
+//----------------------------------------------------------------
+// the_curve_selset_t::the_curve_selset_t
+// 
+the_curve_selset_t::the_curve_selset_t(const the_curve_selset_t & selset):
+  the_curve_selset_t::super_t(selset)
 {}
 
 //----------------------------------------------------------------
@@ -155,7 +161,7 @@ bool
 the_curve_selset_t::
 append_active_curve(const unsigned int & curve_id)
 {
-  return activate(the_curve_selrec_t(doc_ui_, curve_id));
+  return activate(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------
@@ -165,7 +171,7 @@ bool
 the_curve_selset_t::
 remove_active_curve(const unsigned int & curve_id)
 {
-  return deactivate(the_curve_selrec_t(doc_ui_, curve_id));
+  return deactivate(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------
@@ -174,7 +180,7 @@ remove_active_curve(const unsigned int & curve_id)
 bool
 the_curve_selset_t::set_active_curve(const unsigned int & curve_id)
 {
-  return set_active(the_curve_selrec_t(doc_ui_, curve_id));
+  return set_active(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------
@@ -184,7 +190,7 @@ void
 the_curve_selset_t::
 toggle_active_curve(const unsigned int & curve_id)
 {
-  return toggle_active(the_curve_selrec_t(doc_ui_, curve_id));
+  return toggle_active(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------
@@ -281,7 +287,7 @@ record_with_points(const unsigned int & num_points) const
 const the_curve_selrec_t *
 the_curve_selset_t::record(const unsigned int & curve_id) const
 {
-  return has(the_curve_selrec_t(doc_ui_, curve_id));
+  return has(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------
@@ -290,7 +296,7 @@ the_curve_selset_t::record(const unsigned int & curve_id) const
 the_curve_selrec_t *
 the_curve_selset_t::record(const unsigned int & curve_id)
 {
-  return has(the_curve_selrec_t(doc_ui_, curve_id));
+  return has(the_curve_selrec_t(curve_id));
 }
 
 //----------------------------------------------------------------

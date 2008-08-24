@@ -45,9 +45,8 @@ class the_curve_selrec_t : public the_selset_t
 public:
   typedef the_selset_t super_t;
   
-  the_curve_selrec_t(the_document_ui_t & doc_ui,
-		     const unsigned int & curve_id):
-    the_selset_t(new the_selset_traits_t(doc_ui)),
+  the_curve_selrec_t(const unsigned int & curve_id):
+    the_selset_t(new the_selset_traits_t()),
     id_(curve_id)
   {}
   
@@ -115,7 +114,10 @@ public:
   typedef the_base_selset_t<the_curve_selrec_t> super_t;
   
   // this will setup the traits:
-  the_curve_selset_t(the_document_ui_t & doc_ui);
+  the_curve_selset_t();
+  
+  // copy constructor (for undo/redo):
+  the_curve_selset_t(const the_curve_selset_t & selset);
   
   // return the first/last selected curve:
   template <typename curve_t>
@@ -167,7 +169,7 @@ public:
   template <typename curve_t>
   inline curve_t * has_active_curve(const unsigned int & id) const
   {
-    const the_curve_selrec_t * selrec = has(the_curve_selrec_t(doc_ui_, id));
+    const the_curve_selrec_t * selrec = has(the_curve_selrec_t(id));
     return selrec ? selrec->get<curve_t>() : NULL;
   }
   
@@ -186,23 +188,16 @@ public:
   { return registry()->elem<curve_t>(curve_id); }
   
   inline the_registry_t * registry() const
-  { return &(doc_ui_.document()->registry()); }
+  { return &(the_document_ui_t::doc_ui()->document()->registry()); }
   
   inline the_procedure_t * proc() const
-  { return doc_ui_.document()->active_procedure(); }
+  { return the_document_ui_t::doc_ui()->document()->active_procedure(); }
   
   template <typename proc_t>
   inline proc_t * proc() const
-  { return doc_ui_.document()->active_procedure<proc_t>(); }
-  
-  // accessors:
-  inline the_document_ui_t & doc_ui() const
-  { return doc_ui_; }
-  
-private:
-  // reference to the document ui that manages the document which owns
-  // the primitives referenced in this selection set:
-  the_document_ui_t & doc_ui_;
+  {
+    return the_document_ui_t::doc_ui()->document()->active_procedure<proc_t>();
+  }
 };
 
 
