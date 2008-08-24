@@ -227,6 +227,39 @@ load(std::istream & stream, the_text_t & data)
 // save
 // 
 bool
+save(std::ostream & stream, const std::string & data)
+{
+  stream << data.size() << ' ' << data.data() << endl;
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, std::string & data)
+{
+  size_t size = 0;
+  stream >> size;
+  data.resize(size);
+  
+  // eat the whitespace:
+  stream.get();
+  
+  char * dst = &(data[0]);
+  for (size_t i = 0; i < size; i++)
+  {
+    stream.get(dst[i]);
+  }
+  
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
 save(std::ostream & stream, const the_knot_point_t & k)
 {
   return k.save(stream);

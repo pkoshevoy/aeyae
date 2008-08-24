@@ -66,6 +66,9 @@ extern bool save(std::ostream & stream, const char * data);
 extern bool save(std::ostream & stream, const the_text_t & data);
 extern bool load(std::istream & stream, the_text_t & data);
 
+extern bool save(std::ostream & stream, const std::string & data);
+extern bool load(std::istream & stream, std::string & data);
+
 class the_knot_point_t;
 extern bool save(std::ostream & stream, const the_knot_point_t & d);
 extern bool load(std::istream & stream, the_knot_point_t & d);
