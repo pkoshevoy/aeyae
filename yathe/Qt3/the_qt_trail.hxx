@@ -111,8 +111,6 @@ public:
   void save(ostream & ostr) const;
   void load(istream & istr);
   
-  static const std::list<char> & special_chars();
-  
 private:
   // helper functions:
   void init_path(const QString & full_path);
@@ -124,6 +122,8 @@ private:
   QString      class_name_;
   unsigned int index_;
   bool         is_visible_;
+  
+  static const char * special_chars_;
 };
 
 //----------------------------------------------------------------
@@ -198,6 +198,11 @@ public slots:
   void replay_done();
   void replay_one();
 
+protected:
+  // virtual:
+  bool bypass_prolog(const char * name);
+  void bypass_epilog();
+  
 public:
   // virtual:
   void stop();
@@ -209,6 +214,8 @@ public:
 		  const QObject * object,
 		  const QEvent *  event);
   
+  bool load_bypass(istream & istr);
+  bool load_object(istream & istr);
   bool load_event(istream &  istr,
 		  QObject *& object,
 		  QEvent *&  event);
