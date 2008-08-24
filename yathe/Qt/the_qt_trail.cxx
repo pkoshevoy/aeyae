@@ -603,7 +603,7 @@ QObjectTraits::QObjectTraits(const char * full_path,
   index_(index),
   is_visible_(is_visible)
 {
-  init_path(QString(full_path));
+  init_path(QString::fromUtf8(full_path));
 }
 
 //----------------------------------------------------------------
@@ -959,11 +959,11 @@ operator >> (istream & istr, QSize & s)
 // the parsing of the line.
 // 
 typedef enum
-{
-  OBJECT_ID_E = 0,
-  EVENT_E = 1,
-  BYPASS_E = 2,
-} the_trail_line_id_t;
+  {
+    OBJECT_ID_E = 0,
+    EVENT_E = 1,
+    BYPASS_E = 2
+  } the_trail_line_id_t;
 
 
 //----------------------------------------------------------------
@@ -1371,12 +1371,12 @@ the_qt_trail_t::replay_one()
 	  
 	  QMessageBox mb;
 	  mb.setIcon(QMessageBox::Question);	
-	  mb.setWindowTitle(QString("trail may be out of sequence"));
+	  mb.setWindowTitle(QString::fromUtf8("trail may be out of sequence"));
 	  
 	  std::ostringstream os;
 	  os << "Milestone " << MILESTONE << " hasn't arrived within "
 	     << seconds_to_wait_ << " seconds." << endl;
-	  mb.setText(QString(os.str().c_str()));
+	  mb.setText(QString::fromUtf8(os.str().c_str()));
 	  
 	  os.str("");
 	  os << seconds_waiting
@@ -1386,7 +1386,7 @@ the_qt_trail_t::replay_one()
 	     << "Click [Stop] to stop trail playback immediately." << endl
 	     << "Click [Skip] to ignore this milestone." << endl
 	     << "Click [Wait] to continue waiting for the milestone." << endl;
-	  mb.setDetailedText(QString(os.str().c_str()));
+	  mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
 	  
 	  QAbstractButton * btn_stop =
 	    mb.addButton(tr("Stop"), QMessageBox::ActionRole);
@@ -1498,11 +1498,11 @@ the_qt_trail_t::replay_one()
       
       QMessageBox mb;
       mb.setIcon(QMessageBox::Question);	
-      mb.setWindowTitle(QString("trail arrived at a critical event"));
+      mb.setWindowTitle(QString::fromUtf8("trail arrived at a critical event"));
       
       std::ostringstream os;
       os << qevent_type_to_str(event->type()) << endl;
-      mb.setText(QString(os.str().c_str()));
+      mb.setText(QString::fromUtf8(os.str().c_str()));
       
       os.str("");
       os << "Critical event \"" << qevent_type_to_str(event->type()) << "\""
@@ -1511,7 +1511,7 @@ the_qt_trail_t::replay_one()
 	 << "Click [Don't ask] to execute all future critical events." << endl
 	 << "Click [Stop] to stop trail playback immediately "
 	 << "without executing the next event." << endl;
-      mb.setDetailedText(QString(os.str().c_str()));
+      mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
       
       QAbstractButton * btn_next =
 	mb.addButton(tr("Next"), QMessageBox::ActionRole);
@@ -1645,12 +1645,12 @@ the_qt_trail_t::bypass_prolog(const char * name)
       {
 	QMessageBox mb;
 	mb.setIcon(QMessageBox::Question);	
-	mb.setWindowTitle(QString("trail may be out of sequence"));
+	mb.setWindowTitle(QString::fromUtf8("trail may be out of sequence"));
 	
 	std::ostringstream os;
 	os << "bypass_prolog " << name << " hasn't arrived within "
 	   << seconds_to_wait_ << " seconds." << endl;
-	mb.setText(QString(os.str().c_str()));
+	mb.setText(QString::fromUtf8(os.str().c_str()));
 	
 	os.str("");
 	os << seconds_waiting
@@ -1660,7 +1660,7 @@ the_qt_trail_t::bypass_prolog(const char * name)
 	   << "Click [Stop] to stop trail playback immediately." << endl
 	   << "Click [Skip] to ignore this problem." << endl
 	   << "Click [Wait] to continue waiting for the milestone." << endl;
-	mb.setDetailedText(QString(os.str().c_str()));
+	mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
 	
 	QAbstractButton * btn_stop =
 	  mb.addButton(tr("Stop"), QMessageBox::ActionRole);
@@ -1669,7 +1669,7 @@ the_qt_trail_t::bypass_prolog(const char * name)
 	  mb.addButton(tr("Skip"), QMessageBox::ActionRole);
 	
 	QAbstractButton * btn_wait =
-	mb.addButton(tr("Wait"), QMessageBox::ActionRole);
+	  mb.addButton(tr("Wait"), QMessageBox::ActionRole);
 	
 	mb.exec();
 	
@@ -1690,7 +1690,11 @@ the_qt_trail_t::bypass_prolog(const char * name)
 	}
       }
       
+#ifdef WIN32
+      Sleep(10);
+#else
       usleep(10);
+#endif
       QCoreApplication::processEvents();
     }
   }
@@ -2122,8 +2126,8 @@ the_qt_trail_t::load_event(istream &  istr,
 // 
 void
 the_qt_trail_t::saveQEvent(ostream & ostr,
-			const QObject * object,
-			const QEvent * event)
+			   const QObject * object,
+			   const QEvent * event)
 {
   // this line will contain event information:
   ostr << EVENT_E << ' '
@@ -2136,8 +2140,8 @@ the_qt_trail_t::saveQEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQMouseEvent(ostream & ostr,
-			     const QObject * object,
-			     const QMouseEvent * event)
+				const QObject * object,
+				const QMouseEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2154,8 +2158,8 @@ the_qt_trail_t::saveQMouseEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQWheelEvent(ostream & ostr,
-			     const QObject * object,
-			     const QWheelEvent * event)
+				const QObject * object,
+				const QWheelEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2173,8 +2177,8 @@ the_qt_trail_t::saveQWheelEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQKeyEvent(ostream & ostr,
-			   const QObject * object,
-			   const QKeyEvent * event)
+			      const QObject * object,
+			      const QKeyEvent * event)
 {
   assert(event->key() != -1);
   
@@ -2201,8 +2205,8 @@ the_qt_trail_t::saveQKeyEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQTabletEvent(ostream & ostr,
-			      const QObject * object,
-			      const QTabletEvent * event)
+				 const QObject * object,
+				 const QTabletEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2227,8 +2231,8 @@ the_qt_trail_t::saveQTabletEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQMoveEvent(ostream & ostr,
-			    const QObject * object,
-			    const QMoveEvent * event)
+			       const QObject * object,
+			       const QMoveEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2242,8 +2246,8 @@ the_qt_trail_t::saveQMoveEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQResizeEvent(ostream & ostr,
-			      const QObject * object,
-			      const QResizeEvent * event)
+				 const QObject * object,
+				 const QResizeEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2257,8 +2261,8 @@ the_qt_trail_t::saveQResizeEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQCloseEvent(ostream & ostr,
-			     const QObject * object,
-			     const QCloseEvent * event)
+				const QObject * object,
+				const QCloseEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2270,8 +2274,8 @@ the_qt_trail_t::saveQCloseEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQTimerEvent(ostream & ostr,
-			     const QObject * object,
-			     const QTimerEvent * event)
+				const QObject * object,
+				const QTimerEvent * event)
 {
   ostr << EVENT_E << ' '
        << object << ' '
@@ -2284,8 +2288,8 @@ the_qt_trail_t::saveQTimerEvent(ostream & ostr,
 // 
 void
 the_qt_trail_t::saveQShortcutEvent(ostream & ostr,
-				const QObject * object,
-				const QShortcutEvent * event)
+				   const QObject * object,
+				   const QShortcutEvent * event)
 {
   QShortcutEvent * fake = const_cast<QShortcutEvent *>(event);
   ostr << EVENT_E << ' '
