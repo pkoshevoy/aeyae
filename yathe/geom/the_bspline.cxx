@@ -756,9 +756,14 @@ the_bspline_geom_dl_elem_t::draw() const
   GLUnurbsObj * glu_nurbs_obj = gluNewNurbsRenderer();
   if (glu_nurbs_obj == NULL) return;
   
-  glPushAttrib(GL_ENABLE_BIT);
+  glPushAttrib(GL_ENABLE_BIT | GL_LINE_BIT);
   {
     glDisable(GL_LIGHTING);
+    
+    glEnable(GL_BLEND);
+    glEnable(GL_LINE_SMOOTH);
+    glLineWidth(2.0);
+    
     glColor4fv(color_.rgba());
     
     gluNurbsProperty(glu_nurbs_obj, GLU_AUTO_LOAD_MATRIX, GLU_TRUE);
