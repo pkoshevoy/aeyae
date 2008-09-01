@@ -1164,8 +1164,9 @@ the_qt_trail_t::replay_one()
     {
       if (!waiting_for_milestone)
       {
-	cerr << "current milestone " << milestone_
-	     << ", trail milestone " << MILESTONE << endl;
+	cerr << "NOTE: current milestone " << milestone_
+	     << ", trail milestone " << MILESTONE
+	     << ", waiting..." << endl;
 	waiting_for_milestone = true;
 	timer.start();
       }
@@ -1176,7 +1177,7 @@ the_qt_trail_t::replay_one()
 	if (!single_step_replay_)
 	{
 	  // don't ask any questions -- terminate trail playback:
-	  cerr << seconds_waiting
+	  cerr << "NOTE: " << seconds_waiting
 	       << " seconds passed -- trail may be out of sequence" << endl;
 	  
 	  stop_replay = true;
