@@ -36,6 +36,7 @@ THE SOFTWARE.
 #define _USE_MATH_DEFINES
 //#define NOMINMAX
 #include <list>
+#include <stack>
 #include <vector>
 #include <algorithm>
 #include <stdlib.h>
@@ -136,6 +137,18 @@ divide(const data_t & numerator, const data_t & denominator)
   return (denominator != zero) ? (numerator / denominator) : zero;
 }
 
+//----------------------------------------------------------------
+// clear_stack
+// 
+template <typename data_t>
+void
+clear_stack(std::stack<data_t> & s)
+{
+  while (!s.empty())
+  {
+    s.pop();
+  }
+}
 
 //----------------------------------------------------------------
 // resize
