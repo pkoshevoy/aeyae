@@ -189,7 +189,8 @@ the_soft_point_t::the_soft_point_t(const the_reference_t & ref):
 // 
 the_soft_point_t::the_soft_point_t(const the_soft_point_t & point):
   the_point_t(point),
-  ref_(point.ref_->clone())
+  ref_(point.ref_->clone()),
+  value_(point.value_)
 {}
 
 //----------------------------------------------------------------
