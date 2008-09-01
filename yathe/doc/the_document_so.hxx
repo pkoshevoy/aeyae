@@ -33,12 +33,13 @@ THE SOFTWARE.
 
 // local includes:
 #include "utils/the_text.hxx"
+#include "doc/the_document.hxx"
 
 // system includes:
 #include <stack>
 
-// forward declarations:
-class the_document_t;
+// Boost includes:
+#include <boost/shared_ptr.hpp>
 
 
 //----------------------------------------------------------------
@@ -50,28 +51,29 @@ class the_document_t;
 class the_document_so_t
 {
 public:
-  // helper class:
-  class the_document_stack_t : public std::stack<the_document_t *>
-  {
-  public:
-    virtual ~the_document_stack_t()
-    { the_document_stack_t::clear(); }
-    
-    // remove and delete each document on the stack:
-    void clear();
-  };
-  
   the_document_so_t(const char * magic);
   ~the_document_so_t();
   
   // accessor to the document:
   inline the_document_t * document() const
-  { return document_; }
+  { return document_.get(); }
   
   // accessor to the document of a given type:
   template <class doc_t>
   inline doc_t * document() const
-  { return dynamic_cast<doc_t *>(document_); }
+  { return dynamic_cast<doc_t *>(document_.get()); }
+  
+  // document change cancellation record manipulation methods:
+  struct restore_t
+  {
+    boost::shared_ptr<the_document_t> document_;
+    std::stack<boost::shared_ptr<the_document_t> > undo_;
+    std::stack<boost::shared_ptr<the_document_t> > redo_;
+  };
+  
+  void cancel_stack_save();
+  bool cancel_stack_restore();
+  bool cancel_stack_dismiss();
   
   // undo/redo manipulation methods:
   void save_undo_record();
@@ -80,8 +82,8 @@ public:
   void redo();
   
   // undo/redo stack status accessors:
-  inline bool undo_stack_empty() { return undo_stack_.empty(); }
-  inline bool redo_stack_empty() { return redo_stack_.empty(); }
+  inline bool undo_stack_empty() { return undo_.empty(); }
+  inline bool redo_stack_empty() { return redo_.empty(); }
   
   // start a new document:
   void new_document(the_document_t * document);
@@ -121,11 +123,7 @@ public:
     changes_saved_ = false;
   }
   
-  inline void clear_undo_redo()
-  {
-    undo_stack_.clear();
-    redo_stack_.clear();
-  }
+  void clear_undo_redo();
   
 private:
   // disable copy constructor and assignment operator:
@@ -133,11 +131,14 @@ private:
   the_document_so_t & operator = (const the_document_so_t & so);
   
   // the document:
-  the_document_t * document_;
+  boost::shared_ptr<the_document_t> document_;
+  
+  // document change cancellation stack:
+  std::stack<restore_t> cancel_;
   
   // undo/redo stacks:
-  the_document_stack_t undo_stack_;
-  the_document_stack_t redo_stack_;
+  std::stack<boost::shared_ptr<the_document_t> > undo_;
+  std::stack<boost::shared_ptr<the_document_t> > redo_;
   
   // this flag indicates whether all the modifications to the document
   // have been saved:

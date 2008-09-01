@@ -36,25 +36,9 @@ THE SOFTWARE.
 
 
 //----------------------------------------------------------------
-// the_document_so_t::the_document_stack_t::clear
-// 
-void
-the_document_so_t::the_document_stack_t::clear()
-{
-  while (!empty())
-  {
-    the_document_t * doc = top();
-    delete doc;
-    pop();
-  }
-}
-
-
-//----------------------------------------------------------------
 // the_document_so_t::the_document_so_t
 // 
 the_document_so_t::the_document_so_t(const char * magic):
-  document_(NULL),
   changes_saved_(true),
   magic_(magic)
 {}
@@ -68,14 +52,66 @@ the_document_so_t::~the_document_so_t()
 }
 
 //----------------------------------------------------------------
+// the_document_so_t::cancel_stack_save
+// 
+void
+the_document_so_t::cancel_stack_save()
+{
+  assert(document_);
+  if (!document_) return;
+  
+  the_document_so_t::restore_t saved;
+  save_undo_record();
+  saved.document_ = boost::shared_ptr<the_document_t>(document_->clone());
+  saved.undo_ = undo_;
+  saved.redo_ = redo_;
+  ::clear_stack(undo_);
+  ::clear_stack(redo_);
+  cancel_.push(saved);
+}
+
+//----------------------------------------------------------------
+// the_document_so_t::cancel_stack_restore
+// 
+bool
+the_document_so_t::cancel_stack_restore()
+{
+  if (cancel_.empty()) return false;
+  
+  the_document_so_t::restore_t saved = cancel_.top();
+  cancel_.pop();
+  saved.undo_.pop();
+  undo_ = saved.undo_;
+  redo_ = saved.redo_;
+  document_ = saved.document_;
+  document_->regenerate();
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_document_so_t::cancel_stack_pop
+// 
+bool
+the_document_so_t::cancel_stack_dismiss()
+{
+  if (cancel_.empty()) return false;
+  
+  the_document_so_t::restore_t saved = cancel_.top();
+  cancel_.pop();
+  undo_ = saved.undo_;
+  redo_ = saved.redo_;
+  return true;
+}
+
+//----------------------------------------------------------------
 // the_document_so_t::save_undo_record
 // 
 void
 the_document_so_t::save_undo_record()
 {
   assert(document_ != NULL);
-  undo_stack_.push(document_->clone());
-  redo_stack_.clear();
+  undo_.push(boost::shared_ptr<the_document_t>(document_->clone()));
+  ::clear_stack(redo_);
   
   // the state of the document is about to change,
   // the file will probably be out of sync:
@@ -88,13 +124,13 @@ the_document_so_t::save_undo_record()
 void
 the_document_so_t::undo()
 {
-  if (undo_stack_.empty()) return;
+  if (undo_.empty()) return;
   
-  the_document_t * undo_document = undo_stack_.top();
-  undo_stack_.pop();
+  boost::shared_ptr<the_document_t> undo_document = undo_.top();
+  undo_.pop();
   
-  the_document_t * curr_document = document_;
-  redo_stack_.push(curr_document);
+  boost::shared_ptr<the_document_t> curr_document = document_;
+  redo_.push(curr_document);
   
   document_ = undo_document;
   document_->regenerate();
@@ -109,13 +145,13 @@ the_document_so_t::undo()
 void
 the_document_so_t::redo()
 {
-  if (redo_stack_.empty()) return;
+  if (redo_.empty()) return;
   
-  the_document_t * redo_document = redo_stack_.top();
-  redo_stack_.pop();
+  boost::shared_ptr<the_document_t> redo_document = redo_.top();
+  redo_.pop();
   
-  the_document_t * curr_document = document_;
-  undo_stack_.push(curr_document);
+  boost::shared_ptr<the_document_t> curr_document = document_;
+  undo_.push(curr_document);
   
   document_ = redo_document;
   document_->regenerate();
@@ -131,7 +167,7 @@ void
 the_document_so_t::new_document(the_document_t * document)
 {
   close_document();
-  document_ = document;
+  document_ = boost::shared_ptr<the_document_t>(document);
   changes_saved_ = true;
 }
 
@@ -141,9 +177,9 @@ the_document_so_t::new_document(the_document_t * document)
 void
 the_document_so_t::close_document()
 {
-  delete document_;
-  document_ = NULL;
+  document_ = boost::shared_ptr<the_document_t>();
   
+  ::clear_stack(cancel_);
   clear_undo_redo();
   filename_.clear();
 }
@@ -177,7 +213,7 @@ bool
 the_document_so_t::save_document(const the_text_t & filename)
 {
   assert(document_ != NULL);
-  changes_saved_ = ::save(magic_, filename, document_);
+  changes_saved_ = ::save(magic_, filename, document_.get());
   
   if (changes_saved_)
   {
@@ -185,4 +221,14 @@ the_document_so_t::save_document(const the_text_t & filename)
   }
   
   return changes_saved_;
+}
+
+//----------------------------------------------------------------
+// the_document_so_t::clear_undo_redo
+// 
+void
+the_document_so_t::clear_undo_redo()
+{
+  ::clear_stack(undo_);
+  ::clear_stack(redo_);
 }
