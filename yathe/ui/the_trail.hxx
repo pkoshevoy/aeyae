@@ -198,6 +198,11 @@ extern bool load_address(istream & si, uint64_t & address);
 extern void save_address(ostream & so, uint64_t address);
 
 //----------------------------------------------------------------
+// save_address
+// 
+extern void save_address(ostream & so, const void * address);
+
+//----------------------------------------------------------------
 // operator >>
 // 
 extern istream & operator >> (istream & si, uint64_t & address);

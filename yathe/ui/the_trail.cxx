@@ -213,6 +213,83 @@ the_trail_t::next_milestone_achieved()
 }
 
 //----------------------------------------------------------------
+// load_address_hex
+// 
+static bool
+load_address_hex(const std::string & txt, uint64_t & address)
+{
+  address = uint64_t(0);
+  uint64_t sixteen_to_i = 1;
+  
+  unsigned int digits = txt.size();
+  for (unsigned int i = 0; i < digits; i++)
+  {
+    unsigned int pos = digits - 1 - i;
+    char c = txt[pos];
+
+    uint64_t d = 0;
+    if (c >= '0' && c <= '9')
+    {
+      d = uint64_t(c) - uint64_t('0');
+    }
+    else if (c >= 'A' && c <= 'F')
+    {
+      d = uint64_t(c) - uint64_t('A') + 10;
+    }
+    else if (c >= 'a' && c <= 'f')
+    {
+      d = uint64_t(c) - uint64_t('a') + 10;
+    }
+    else if ((c == 'x' || c == 'X') && (pos == 1) && (txt[0] == '0'))
+    {
+      // ignore 0x:
+      continue;
+    }
+    else
+    {
+      return false;
+    }
+    
+    address += d * sixteen_to_i;
+    sixteen_to_i *= 16;
+  }
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// load_address_dec
+// 
+static bool
+load_address_dec(const std::string & txt, uint64_t & address)
+{
+  address = uint64_t(0);
+  uint64_t ten_to_i = 1;
+  
+  unsigned int digits = txt.size();
+  for (unsigned int i = 0; i < digits; i++)
+  {
+    unsigned int pos = digits - 1 - i;
+    char c = txt[pos];
+    
+    uint64_t d = 0;
+    if (c >= '0' && c <= '9')
+    {
+      d = uint64_t(c) - uint64_t('0');
+    }
+    else
+    {
+      return false;
+    }
+    
+    address += d * ten_to_i;
+    ten_to_i *= 10;
+  }
+  
+  return true;
+}
+
+//----------------------------------------------------------------
 // load_address
 // 
 bool
@@ -221,33 +298,92 @@ load_address(istream & si, uint64_t & address)
   std::string txt;
   si >> txt;
   
-  address = uint64_t(0);
-  uint64_t ten_to_i = 1;
-  int sign = 1;
-  
-  unsigned int digits = txt.size();
-  for (unsigned int i = 0; i < digits; i++)
+  if (txt.size() > 1 && txt[0] == '0' &&
+      (txt[1] == 'x' || txt[1] == 'X'))
   {
-    char c = txt[digits - 1 - i];
-    
-    if (c >= '0' && c <= '9')
-    {
-      uint64_t d = uint64_t(c) - uint64_t('0');
-      address += d * ten_to_i;
-      ten_to_i *= 10;
-    }
-    else if (c == '-')
-    {
-      sign = -1;
-    }
-    else
-    {
-      return false;
-    }
+    return load_address_hex(txt, address);
   }
-  
-  address *= sign;
-  return true;
+
+  return load_address_dec(txt, address);
+}
+
+//----------------------------------------------------------------
+// save_address_byte
+// 
+inline void
+save_address_byte(ostream & so, const unsigned char byte)
+{
+  static const char * hex = "0123456789abcdef";
+  unsigned char hi = (byte >> 4) & 0xf;
+  unsigned char lo = byte & 0xf;
+  so << hex[hi] << hex[lo];
+}
+
+//----------------------------------------------------------------
+// save_address_big_endian
+// 
+static void
+save_address_big_endian(ostream & so,
+			const unsigned char * bytes,
+			unsigned int num_bytes)
+{
+  so << "0x";
+  for (unsigned int i = 0; i < num_bytes; i++)
+  {
+    const unsigned char byte = bytes[i];
+    save_address_byte(so, byte);
+  }
+}
+
+//----------------------------------------------------------------
+// save_address_swap_bytes
+// 
+static void
+save_address_swap_bytes(ostream & so,
+			const unsigned char * bytes,
+			unsigned int num_bytes)
+{
+  so << "0x";
+  for (int i = num_bytes - 1; i >= 0; i--)
+  {
+    const unsigned char byte = bytes[i];
+    save_address_byte(so, byte);
+  }
+}
+
+//----------------------------------------------------------------
+// is_little_endian
+// 
+static bool
+is_little_endian()
+{
+  const unsigned char endian[] = { 1, 0 };
+  short x = *(const short *)endian;
+  return (x == 1);
+}
+
+//----------------------------------------------------------------
+// save_addr_func_t
+// 
+typedef void(*save_addr_func_t)(ostream &,
+				const unsigned char *,
+				unsigned int);
+
+//----------------------------------------------------------------
+// save_addr_func
+// 
+static const save_addr_func_t
+save_addr_func = (is_little_endian() ?
+		  save_address_swap_bytes : 
+		  save_address_big_endian);
+
+//----------------------------------------------------------------
+// save_address
+// 
+void
+save_address(ostream & so, const void * address)
+{
+  save_addr_func(so, (unsigned char *)(&address), sizeof(void *));
 }
 
 //----------------------------------------------------------------
@@ -256,19 +392,7 @@ load_address(istream & si, uint64_t & address)
 void
 save_address(ostream & so, uint64_t address)
 {
-  std::list<char> txt;
-  do {
-    unsigned char d = (unsigned char)(address % 10);
-    txt.push_back(d + '0');
-    address /= 10;
-    
-  } while (address != 0);
-  
-  std::list<char>::const_iterator iter;
-  for (iter = txt.begin(); iter != txt.end(); ++iter)
-  {
-    so << *iter;
-  }
+  save_addr_func(so, (unsigned char *)(&address), sizeof(uint64_t));
 }
 
 //----------------------------------------------------------------
@@ -302,7 +426,8 @@ encode_special_chars(const std::string & text_plain,
   static const char escape_char = '\\';
 
   std::string result;
-  for (int i = 0; i < text_plain.size(); i++)
+  size_t text_size = text_plain.size();
+  for (size_t i = 0; i < text_size; i++)
   {
     const char c = text_plain[i];
     if (c <= 32 ||
@@ -333,7 +458,8 @@ decode_special_chars(const std::string & text_encoded)
   static const char escape_char = '\\';
   
   std::string result;
-  for (int i = 0; i < text_encoded.size(); i++)
+  size_t text_size = text_encoded.size();
+  for (size_t i = 0; i < text_size; i++)
   {
     char c = text_encoded[i];
     
