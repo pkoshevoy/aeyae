@@ -498,18 +498,6 @@ encode_special_chars(const QString & text,
   return result;
 }
 
-//----------------------------------------------------------------
-// decode_special_chars
-// 
-static const QString
-decode_special_chars(const QString & text)
-{
-  std::string text_utf8(text.toUtf8().constData());
-  std::string result_utf8 = decode_special_chars(text_utf8);
-  QString result = QString::fromUtf8(result_utf8.c_str());
-  return result;
-}
-
 
 //----------------------------------------------------------------
 // find_object_from_path
@@ -633,6 +621,8 @@ QObjectTraits::~QObjectTraits()
 QObjectTraits &
 QObjectTraits::operator = (const QObjectTraits & traits)
 {
+  if (&traits == this) return *this;
+  
   delete [] path_;
   path_ = NULL;
   
@@ -719,7 +709,7 @@ QObjectTraits::split_the_path_into_components(const QString & full_path,
   std::string utf8_name;
   
   unsigned int path_len = utf8_path.size();
-  for (int i = 1; i < path_len; i++)
+  for (unsigned int i = 1; i < path_len; i++)
   {
     char p = utf8_path[i - 1]; // previous character.
     char c = utf8_path[i];     // current character.
@@ -897,7 +887,7 @@ operator << (ostream & ostr, const QSize & s)
 static ostream &
 operator << (ostream & ostr, const QObject * object)
 {
-  save_address(ostr, (uint64_t)object);
+  save_address(ostr, object);
   return ostr;
 }
 
@@ -1347,7 +1337,8 @@ the_qt_trail_t::replay_one()
     {
       if (!waiting_for_milestone)
       {
-	cerr << "milestone: " << milestone_ << " vs " << MILESTONE << endl;
+	cerr << "current milestone " << milestone_
+	     << ", trail milestone " << MILESTONE << endl;
 	waiting_for_milestone = true;
 	timer.start();
       }
@@ -1553,59 +1544,62 @@ the_qt_trail_t::replay_one()
   
   dont_post_events_ = false;
   
+  if (object)
+  {
 #if 0
-  {
-    static unsigned int prev_milestone = ~0;
-    if (prev_milestone != milestone_)
     {
-      prev_milestone = milestone_;
-      cerr << milestone_ << '\t' << QObjectTraits(object)
-	   << ", event: " << qevent_type_to_str(event->type())
-	   << endl;
+      static unsigned int prev_milestone = ~0;
+      if (prev_milestone != milestone_)
+      {
+	prev_milestone = milestone_;
+	cerr << milestone_ << '\t' << QObjectTraits(object)
+	     << ", event: " << qevent_type_to_str(event->type())
+	     << endl;
+      }
     }
-  }
 #endif
-  
-  // FIXME: not safe:
-  QWidget * widget = dynamic_cast<QWidget *>(object);
-  
-  switch (event->type())
-  {
-    case QEvent::Move:
-    {
-      QMoveEvent * e_move = (QMoveEvent *)event;
-      widget->setGeometry(QRect(e_move->pos().x(),
-				e_move->pos().y(),
-				widget->size().width(),
-				widget->size().height()));
-    }
-    break;
     
-    case QEvent::Resize:
-    {
-      QResizeEvent * e_resize = (QResizeEvent *)event;
-      widget->resize(e_resize->size().width(),
-		     e_resize->size().height());
-    }
-    break;
+    // FIXME: not safe:
+    QWidget * widget = dynamic_cast<QWidget *>(object);
     
-    case QEvent::Close:
-      widget->close();
+    switch (event->type())
+    {
+      case QEvent::Move:
+      {
+	QMoveEvent * e_move = (QMoveEvent *)event;
+	widget->setGeometry(QRect(e_move->pos().x(),
+				  e_move->pos().y(),
+				  widget->size().width(),
+				  widget->size().height()));
+      }
       break;
       
-    case QEvent::ShortcutOverride:
-    case QEvent::KeyPress:
-    case QEvent::KeyRelease:
-      // NOTE: apparently, the QApplication::notify will deliver
-      // an event to a disabled widget, so this is a workaround:
-      // FIXME: actually, if this ever happens, it means the trail has
-      // gone out of sequence:
-      if (widget->isEnabled()) notify(object, event);
+      case QEvent::Resize:
+      {
+	QResizeEvent * e_resize = (QResizeEvent *)event;
+	widget->resize(e_resize->size().width(),
+		       e_resize->size().height());
+      }
       break;
       
-    default:
-      notify(object, event);
-      break;
+      case QEvent::Close:
+	widget->close();
+	break;
+	
+      case QEvent::ShortcutOverride:
+      case QEvent::KeyPress:
+      case QEvent::KeyRelease:
+	// NOTE: apparently, the QApplication::notify will deliver
+	// an event to a disabled widget, so this is a workaround:
+	// FIXME: actually, if this ever happens, it means the trail has
+	// gone out of sequence:
+	if (widget->isEnabled()) notify(object, event);
+	break;
+	
+      default:
+	notify(object, event);
+	break;
+    }
   }
   
   // FIXME: is this safe?
@@ -1824,7 +1818,7 @@ the_qt_trail_t::save_event(ostream &       ostr,
   // save the milestone marker:
   ostr << milestone_ << '\t';
   
-  // save the destination object:
+  // save the destination object if necessary:
   QObjectTraits traits(object);
   the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
     tree_save_.get(object);
@@ -1836,8 +1830,8 @@ the_qt_trail_t::save_event(ostream &       ostr,
     
     // this line will contain object information:
     ostr << OBJECT_ID_E << ' ';
-    save_address(ostr, uint64_t(object));
-    ostr << ' ' << traits << endl;
+    save_address(ostr, object);
+    ostr << ' ' << traits << endl << '\t';
   }
   
   // save the event:
@@ -1920,6 +1914,7 @@ the_qt_trail_t::load_bypass(istream & istr)
 {
   std::string bypass;
   istr >> bypass;
+  line_num_++;
   
   if (bypass == "bypass_prolog")
   {
@@ -1949,21 +1944,24 @@ the_qt_trail_t::load_object(istream & istr)
   {
     cerr << "ERROR: line: " << line_num_
 	 << ", can not load old widget pointer"
-	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+	 << ", current milestone " << milestone_
+	 << ", trail milestone " << MILESTONE << endl;
     return false;
   }
   
   QObjectTraits traits;
   istr >> traits;
+  line_num_++;
   
   QObject * new_ptr = traits.object();
   
   if (new_ptr == NULL)
   {
-    cerr << "ERROR: line: " << line_num_
+    cerr << "WARNING: line: " << line_num_
 	 << ", can not find corresponding object: " << endl
 	 << traits
-	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+	 << ", current milestone " << milestone_
+	 << ", trail milestone " << MILESTONE << endl;
     traits.object();
     
 #if 0
@@ -1975,14 +1973,13 @@ the_qt_trail_t::load_object(istream & istr)
     }
 #endif
     
-    return false;
+    return true;
   }
   
   the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
     tree_load_.add(old_ptr);
   leaf->elem.init(new_ptr, traits);
   
-  line_num_++;
   return true;
 }
 
@@ -1999,28 +1996,35 @@ the_qt_trail_t::load_event(istream &  istr,
   
   uint64_t old_object = 0;
   load_address(istr, old_object);
-  object = (QObject *)(tree_load_.get(old_object)->elem.addr());
-  if (object == NULL)
+  
+  object = NULL;
+  the_bit_tree_leaf_t<the_traits_mapping_t> * old_object_traits =
+    tree_load_.get(old_object);
+  
+  if (!old_object_traits)
   {
-    cerr << "ERROR: unknown object pointer: ";
+    cerr << "WARNING: unknown object pointer: ";
     save_address(cerr, old_object);
     cerr << ", line: " << line_num_
-	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
-    return false;
+	 << ", current milestone " << milestone_
+	 << ", trail milestone " << MILESTONE << endl;
   }
   else
   {
-    const QObjectTraits & traits = tree_load_.get(old_object)->elem.traits();
+    object = (QObject *)(old_object_traits->elem.addr());
+    
+    const QObjectTraits & traits = old_object_traits->elem.traits();
     QObject * new_object = traits.object();
     
     if (new_object == NULL)
     {
-      cerr << "ERROR: line: " << line_num_
+      cerr << "WARNING: line: " << line_num_
 	   << ", object no longer exists: " << endl
 	   << traits
-	   << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
-      tree_load_.get(old_object)->elem.init(NULL, traits);
-      return false;
+	   << ", current milestone " << milestone_
+	   << ", trail milestone " << MILESTONE << endl;
+      old_object_traits->elem.init(NULL, traits);
+      object = NULL;
     }
     
     if (new_object != object)
@@ -2028,11 +2032,12 @@ the_qt_trail_t::load_event(istream &  istr,
       cerr << "WARNING: line: " << line_num_
 	   << ", outdated object pointer: " << endl
 	   << traits
-	   << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+	   << ", current milestone " << milestone_
+	   << ", trail milestone " << MILESTONE << endl;
       
-      if (tree_load_.get(old_object)->elem.addr() == NULL)
+      if (old_object_traits->elem.addr() == NULL)
       {
-	tree_load_.get(old_object)->elem.init(new_object, traits);
+	old_object_traits->elem.init(new_object, traits);
       }
       
       object = new_object;
@@ -2043,7 +2048,8 @@ the_qt_trail_t::load_event(istream &  istr,
   if ((istr >> event_type).eof())
   {
     cerr << "ERROR: missing event type, line: " << line_num_
-	 << ", milestone: " << milestone_ << " vs " << MILESTONE << endl;
+	 << ", current milestone " << milestone_
+	 << ", trail milestone " << MILESTONE << endl;
     return false;
   }
   
