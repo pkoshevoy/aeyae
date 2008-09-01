@@ -61,9 +61,9 @@ the_document_so_t::cancel_stack_save()
   if (!document_) return;
   
   the_document_so_t::restore_t saved;
-  save_undo_record();
   saved.document_ = boost::shared_ptr<the_document_t>(document_->clone());
   saved.undo_ = undo_;
+  saved.undo_.push(boost::shared_ptr<the_document_t>(document_->clone()));
   saved.redo_ = redo_;
   ::clear_stack(undo_);
   ::clear_stack(redo_);
@@ -99,7 +99,7 @@ the_document_so_t::cancel_stack_dismiss()
   the_document_so_t::restore_t saved = cancel_.top();
   cancel_.pop();
   undo_ = saved.undo_;
-  redo_ = saved.redo_;
+  ::clear_stack(redo_);
   return true;
 }
 
