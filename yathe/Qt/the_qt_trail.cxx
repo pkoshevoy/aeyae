@@ -649,8 +649,8 @@ QObjectTraits::object() const
   std::list<QObject *> objects;
   matching_objects(objects);
   
-  if (objects.size() == 0) return NULL;
-  if (objects.size() == 1) return objects.front();
+  if (objects.empty()) return NULL;
+  if (is_size_one(objects)) return objects.front();
   
   // try to disambiguate between the duplicates:
   std::list<QObject *>::iterator iter = iterator_at_index(objects, index_);
@@ -682,7 +682,7 @@ QObjectTraits::convert_object_ptr_to_full_path(const QObject * object,
   while (object != NULL)
   {
     QString name = object->objectName();
-    if (name.size() == 0)
+    if (name.isEmpty())
     {
       name = object->metaObject()->className();
     }
@@ -800,8 +800,8 @@ QObjectTraits::matching_objects(std::list<QObject *> & objects) const
     find_object_from_path(*i, path_, path_size_, objects);
   }
   
-  if (objects.size() == 0) return;
-  if (objects.size() == 1) return;
+  if (objects.empty()) return;
+  if (is_size_one(objects)) return;
   
   // try to disambiguate between the duplicates:
   std::list<QObject *> unique;
