@@ -62,7 +62,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   dont_load_events_(false),
   dont_save_events_(false),
   dont_post_events_(false),
-  seconds_to_wait_(std::numeric_limits<unsigned int>::max())
+  seconds_to_wait_(7)
 {
   // It only makes sence to have single instance of this class,
   // so I will enforce it here:
@@ -201,6 +201,11 @@ the_trail_t::replay_done()
   }
   
   dont_post_events_ = false;
+  dont_load_events_ = true;
+  
+  // this is in case the trail ends in a state
+  // where some key is pressed down:
+  keybd_.forget_pressed_keys();
 }
 
 //----------------------------------------------------------------
