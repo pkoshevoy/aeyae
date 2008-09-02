@@ -1467,17 +1467,19 @@ the_qt_trail_t::replay_one()
   {
     return;
   }
+
+#ifndef NDEBUG
+  cout << line_num_ << ", " << qevent_type_to_str(event->type()) << endl;
+#endif
   
   if (event->type() == QEvent::MouseButtonPress ||
       event->type() == QEvent::MouseButtonDblClick ||
-      event->type() == QEvent::KeyPress ||
-      event->type() == QEvent::TabletPress ||
-      event->type() == QEvent::ShortcutOverride ||
-      event->type() == QEvent::Shortcut)
+      event->type() == QEvent::TabletPress)
   {
-#if 1
+#ifndef NDEBUG
     static unsigned int critical_event_counter = 0;
     critical_event_counter++;
+    cout << critical_event_counter << " critical event --------------" << endl;
 #endif
     
     if (single_step_replay_ && !stop_replay)
