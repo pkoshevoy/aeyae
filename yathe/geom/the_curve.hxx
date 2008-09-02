@@ -436,7 +436,7 @@ public:
   {}
   
   inline bool operator == (const the_knot_point_t & kp) const
-  { return ((param_ == kp.param_) || (id_ == kp.id_)); }
+  { return (id_ == kp.id_); }
   
   inline bool operator < (const the_knot_point_t & kp) const
   { return (param_ < kp.param_); }
