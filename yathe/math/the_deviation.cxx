@@ -190,8 +190,10 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
 					      cx, fc,
 					      bx, dR) == false)
       {
-	cerr << "ERROR: could not fit a parabola" << endl;
-	return false;
+#ifndef NDEBUG
+	cout << "WARNING: isolate_minima: could not fit a parabola" << endl;
+#endif
+	return true;
       }
     }
     
@@ -228,7 +230,9 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
       }
       else
       {
-	cerr << "warning: STUCK? or DONE!" << endl;
+#ifndef NDEBUG
+	cout << "WARNING: isolate_minima: either stuck or done" << endl;
+#endif
 	break;
       }
     }
