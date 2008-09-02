@@ -1299,8 +1299,6 @@ the_qt_trail_t::replay_one()
     
     if (single_step_replay_ && !stop_replay)
     {
-      cerr << "SS0 -----------------------------------" << endl;
-      
       dont_load_events_ = true;
       dont_save_events_ = true;
       dont_post_events_ = false;
@@ -1340,8 +1338,6 @@ the_qt_trail_t::replay_one()
 	  // fall through -- execute the event
 	  break;
       }
-      
-      cerr << "SS1 -----------------------------------" << endl;
     }
   }
   
