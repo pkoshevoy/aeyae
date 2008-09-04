@@ -64,7 +64,7 @@ public:
   // accessor to the curve:
   template <typename curve_t>
   inline curve_t * get() const
-  { return registry()->elem<curve_t>(id_); }
+  { return registry()->template elem<curve_t>(id_); }
   
   // reset anchors on all points of the active curve:
   void reset_anchors() const;
@@ -185,7 +185,7 @@ public:
   // helpers:
   template <typename curve_t>
   inline curve_t * get(const unsigned int & curve_id) const
-  { return registry()->elem<curve_t>(curve_id); }
+  { return registry()->template elem<curve_t>(curve_id); }
   
   inline the_registry_t * registry() const
   { return &(the_document_ui_t::doc_ui()->document()->registry()); }
@@ -196,7 +196,8 @@ public:
   template <typename proc_t>
   inline proc_t * proc() const
   {
-    return the_document_ui_t::doc_ui()->document()->active_procedure<proc_t>();
+    return (the_document_ui_t::doc_ui()->document()->
+	    template active_procedure<proc_t>());
   }
 };
 
