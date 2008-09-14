@@ -108,6 +108,8 @@ the_mouse_event_t::load(std::istream & si, const std::string & magic)
     return false;
   }
   
+  widget_ = (the_view_t *)(instance.address());
+  
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
@@ -187,6 +189,8 @@ the_wheel_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
+  
+  widget_ = (the_view_t *)(instance.address());
   
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
@@ -273,6 +277,8 @@ the_keybd_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
+  
+  widget_ = (the_view_t *)(instance.address());
   
   bool ok = (::load(si, key_) &&
 	     ::load(si, tran_) &&
@@ -375,7 +381,9 @@ the_wacom_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-
+  
+  widget_ = (the_view_t *)(instance.address());
+  
   int tool = 0;
   uint64_t tool_id = 0;
   bool ok = (::load(si, tool) &&
