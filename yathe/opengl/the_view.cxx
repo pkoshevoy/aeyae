@@ -40,6 +40,8 @@ THE SOFTWARE.
 #include "doc/the_document.hxx"
 #include "doc/the_procedure.hxx"
 #include "eh/the_input_device_eh.hxx"
+#include "ui/the_trail.hxx"
+
 
 //----------------------------------------------------------------
 // the_view_t::latest_view_
@@ -87,6 +89,9 @@ the_view_t::the_view_t(const char * name,
   eh_stack_(NULL),
   doc_so_(NULL)
 {
+  SCOPED_INSTANCE_INIT(the_view_t);
+  RECORD_INSTANCE(instance_);
+  
   // create a view manager:
   if (local_pp_)
   {

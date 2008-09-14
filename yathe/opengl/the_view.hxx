@@ -41,6 +41,7 @@ THE SOFTWARE.
 #include "math/the_plane.hxx"
 #include "math/the_bbox.hxx"
 #include "math/the_coord_sys.hxx"
+#include "utils/instance_method_call.hxx"
 
 // system includes:
 #include <iostream>
@@ -261,6 +262,8 @@ protected:
   // a list of primitives displayed in this view; the list is updated by
   // the_procedure_t::draw(..) function:
   std::list<the_primitive_t *> primitives_;
+  
+  SCOPED_INSTANCE_DECLARE(the_view_t);
 };
 
 
