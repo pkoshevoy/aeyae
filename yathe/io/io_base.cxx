@@ -467,6 +467,36 @@ load(std::istream & stream, std::string & data)
 
 
 //----------------------------------------------------------------
+// save
+// 
+bool
+save(std::ostream & stream, const io_base_t & data)
+{
+  stream << "io_base_t ";
+  data.save(stream);
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, io_base_t & data)
+{
+  std::string magic;
+  stream >> magic;
+  if (magic != "io_base_t")
+  {
+    return false;
+  }
+  
+  stream >> magic;
+  bool ok = data.load(stream, magic);
+  return ok;
+}
+
+
+//----------------------------------------------------------------
 // io_base_t::loaders_
 // 
 std::map<std::string, io_base_t::creator_t> io_base_t::loaders_;

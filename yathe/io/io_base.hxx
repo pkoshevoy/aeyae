@@ -39,6 +39,9 @@ THE SOFTWARE.
 #include <iostream>
 #include <algorithm>
 
+// forward declarations:
+class io_base_t;
+
 
 //----------------------------------------------------------------
 // is_open
@@ -105,6 +108,9 @@ extern bool load(std::istream & stream, float & data);
 
 extern bool save(std::ostream & stream, const std::string & data);
 extern bool load(std::istream & stream, std::string & data);
+
+extern bool save(std::ostream & stream, const io_base_t & data);
+extern bool load(std::istream & stream, io_base_t & data);
 
 
 //----------------------------------------------------------------
