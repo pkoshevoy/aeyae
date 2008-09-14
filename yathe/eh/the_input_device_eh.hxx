@@ -53,6 +53,7 @@ THE SOFTWARE.
 #include "math/the_ray.hxx"
 #include "opengl/the_disp_list.hxx"
 #include "utils/the_unique_list.hxx"
+#include "utils/instance_method_call.hxx"
 
 // forward declarations:
 class the_input_device_eh_t;
@@ -150,6 +151,8 @@ protected:
   
   // pointer to the most recent event:
   the_input_device_event_t * most_recent_event_;
+  
+  SCOPED_INSTANCE_DECLARE(the_eh_stack_t);
 };
 
 

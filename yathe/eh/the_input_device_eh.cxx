@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include "opengl/the_view.hxx"
 #include "utils/the_indentation.hxx"
 #include "utils/the_utils.hxx"
+#include "utils/instance_method_call.hxx"
 
 
 //----------------------------------------------------------------
@@ -70,6 +71,18 @@ the_eh_stack_t::the_eh_stack_t():
   most_recent_event_(NULL)
 {
   // cerr << "eh_stack constructor called: " << this << endl;
+  SCOPED_INSTANCE_INIT(the_eh_stack_t);
+  RECORD_INSTANCE(instance_);
+  
+  static bool methods_registered = false;
+  if (!methods_registered)
+  {
+    METHOD_REGISTER_ARG1(the_eh_stack_t, mouse_cb, the_mouse_event_t);
+    METHOD_REGISTER_ARG1(the_eh_stack_t, wheel_cb, the_wheel_event_t);
+    METHOD_REGISTER_ARG1(the_eh_stack_t, keybd_cb, the_keybd_event_t);
+    METHOD_REGISTER_ARG1(the_eh_stack_t, wacom_cb, the_wacom_event_t);
+    methods_registered = true;
+  }
 }
 
 //----------------------------------------------------------------
@@ -116,8 +129,8 @@ the_eh_stack_t::pop()
 bool
 the_eh_stack_t::mouse_cb(const the_mouse_event_t & e)
 {
-  // setup the milestone markers:
-  the_trail_t::milestone_t milestone;
+  // save the call to the trail file:
+  RECORD_CALL_ARG1(instance_, the_eh_stack_t, mouse_cb, the_mouse_event_t, e);
   
   e.widget()->set_focus();
   
@@ -140,8 +153,8 @@ the_eh_stack_t::mouse_cb(const the_mouse_event_t & e)
 bool
 the_eh_stack_t::wheel_cb(const the_wheel_event_t & e)
 {
-  // setup the milestone markers:
-  the_trail_t::milestone_t milestone;
+  // save the call to the trail file:
+  RECORD_CALL_ARG1(instance_, the_eh_stack_t, wheel_cb, the_wheel_event_t, e);
   
   e.widget()->set_focus();
   
@@ -164,8 +177,8 @@ the_eh_stack_t::wheel_cb(const the_wheel_event_t & e)
 bool
 the_eh_stack_t::keybd_cb(const the_keybd_event_t & e)
 {
-  // setup the milestone markers:
-  the_trail_t::milestone_t milestone;
+  // save the call to the trail file:
+  RECORD_CALL_ARG1(instance_, the_eh_stack_t, keybd_cb, the_keybd_event_t, e);
   
   // save the view pointer:
   save_keybd_event(e);
@@ -187,8 +200,8 @@ the_eh_stack_t::keybd_cb(const the_keybd_event_t & e)
 bool
 the_eh_stack_t::wacom_cb(const the_wacom_event_t & e)
 {
-  // setup the milestone markers:
-  the_trail_t::milestone_t milestone;
+  // save the call to the trail file:
+  RECORD_CALL_ARG1(instance_, the_eh_stack_t, wacom_cb, the_wacom_event_t, e);
   
   e.widget()->set_focus();
   
