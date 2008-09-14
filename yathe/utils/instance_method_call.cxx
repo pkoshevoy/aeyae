@@ -76,16 +76,16 @@ instance_t::instance_t(const std::string & signature):
 //----------------------------------------------------------------
 // instance_t::instance_t
 // 
-instance_t::instance_t(const std::string & signature, void * address):
+instance_t::instance_t(const std::string & signature, const void * address):
   signature_(signature),
-  address_(address)
+  address_(const_cast<void *>(address))
 {}
 
 //----------------------------------------------------------------
 // instance_t::instance_t
 // 
-instance_t::instance_t(void * address):
-  address_(address)
+instance_t::instance_t(const void * address):
+  address_(const_cast<void *>(address))
 {
   std::map<void *, std::string>::iterator i = map_signature_.find(address_);
   if (i != map_signature_.end())

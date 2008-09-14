@@ -44,7 +44,7 @@ THE SOFTWARE.
 // local includes:
 #include "io/io_base.hxx"
 
-  
+
 //----------------------------------------------------------------
 // instance_t
 // 
@@ -53,8 +53,8 @@ class instance_t : public io_base_t
 public:
   instance_t();
   instance_t(const std::string & signature);
-  instance_t(const std::string & signature, void * address);
-  instance_t(void * address);
+  instance_t(const std::string & signature, const void * address);
+  instance_t(const void * address);
   
   static io_base_t * create()
   { return new instance_t(); }
@@ -109,14 +109,14 @@ public:
     address_ = addr;
   }
   
-  static unsigned int index_;
+  static size_t index_;
 };
 
 //----------------------------------------------------------------
 // scoped_instance_t::index_
 // 
 template <typename class_t>
-unsigned int
+size_t
 scoped_instance_t<class_t>::index_ = 0;
 
 //----------------------------------------------------------------
@@ -216,10 +216,16 @@ class method_void_t : public method_t
 {
 public:
   typedef void (class_t::*func_t)();
+  typedef void (class_t::*const_func_t)() const;
   
   method_void_t(const char * signature, func_t func):
     method_t(signature),
     func_(func)
+  {}
+  
+  method_void_t(const char * signature, const_func_t func):
+    method_t(signature),
+    const_func_(func)
   {}
   
   // virtual:
@@ -234,7 +240,14 @@ public:
     }
     
     // call the member function:
-    (c->*func_)();
+    if (func_)
+    {
+      (c->*func_)();
+    }
+    else if (const_func_)
+    {
+      (c->*const_func_)();
+    }
   }
   
   // virtual:
@@ -246,6 +259,7 @@ public:
   
 protected:
   func_t func_;
+  const_func_t const_func_;
 };
 
 
@@ -267,10 +281,22 @@ class method_arg1_t : public method_t
 {
 public:
   typedef void (class_t::*func_t)(arg_t);
+  typedef void (class_t::*func_cref_t)(const arg_t &);
+  typedef void (class_t::*const_func_t)(arg_t) const;
   
   method_arg1_t(const char * signature, func_t func):
     method_t(signature),
     func_(func)
+  {}
+  
+  method_arg1_t(const char * signature, func_cref_t func):
+    method_t(signature),
+    func_cref_(func)
+  {}
+  
+  method_arg1_t(const char * signature, const_func_t func):
+    method_t(signature),
+    const_func_(func)
   {}
   
   // virtual:
@@ -286,7 +312,18 @@ public:
     
     // call the member function:
     const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
-    (c->*func_)(arg1->arg_);
+    if (func_)
+    {
+      (c->*func_)(arg1->arg_);
+    }
+    else if (func_cref_)
+    {
+      (c->*func_cref_)(arg1->arg_);
+    }
+    else if (const_func_)
+    {
+      (c->*const_func_)(arg1->arg_);
+    }
   }
   
   // virtual:
@@ -304,6 +341,8 @@ public:
   
 protected:
   func_t func_;
+  func_cref_t func_cref_;
+  const_func_t const_func_;
 };
 
 
@@ -351,7 +390,7 @@ public:
   }
   
   template <typename arg_t>
-  call_t & init(void * address,
+  call_t & init(const void * address,
 		const char * method_signature,
 		const arg_t & arg)
   {
