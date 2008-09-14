@@ -1795,6 +1795,9 @@ the_qt_trail_t::save_event(ostream &       ostr,
 			   const QObject * object,
 			   const QEvent *  event)
 {
+  // FIXME:
+  return;
+  
   if ((event == NULL) || (object == NULL)) return;
   
 #if 0
