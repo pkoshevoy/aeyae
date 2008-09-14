@@ -1,0 +1,378 @@
+/*
+Copyright 2008 Pavel Koshevoy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+
+// File         : instance_method_call.hxx
+// Author       : Pavel Aleksandrovich Koshevoy
+// Created      : Sun Sep 14 11:17:00 MDT 2008
+// Copyright    : (C) 2008
+// License      : MIT
+// Description  : Generic trail record/replay API.
+
+#ifndef INSTANCE_METHOD_CALL_HXX_
+#define INSTANCE_METHOD_CALL_HXX_
+
+// system includes:
+#include <map>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <assert.h>
+
+// boost includes:
+#include <boost/shared_ptr.hpp>
+
+// local includes:
+#include "io/io_base.hxx"
+
+  
+//----------------------------------------------------------------
+// instance_t
+// 
+class instance_t : public io_base_t
+{
+public:
+  instance_t();
+  instance_t(const std::string & signature);
+  instance_t(const std::string & signature, void * address);
+  instance_t(void * address);
+  
+  static io_base_t * create()
+  { return new instance_t(); }
+  
+  // instance pointer accessor:
+  inline void * address() const
+  { return address_; }
+  
+  // instance signature accessor:
+  inline const std::string & signature() const
+  { return signature_; }
+  
+  // virtual:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
+  
+protected:
+  // instance signature:
+  std::string signature_;
+  
+  // current address of the instance:
+  void * address_;
+  
+  // map from loaded signature to loaded address:
+  static std::map<std::string, uint64_t> map_load_;
+  
+  // map from instance signature to current address:
+  static std::map<std::string, void *> map_save_;
+  
+  // map from the current address to instance signature:
+  static std::map<void *, std::string> map_signature_;
+  
+  // map from loaded address to current address:
+  static std::map<uint64_t, void *> map_address_;
+};
+
+
+//----------------------------------------------------------------
+// scoped_instance_t
+// 
+template <typename class_t>
+class scoped_instance_t : public instance_t
+{
+public:
+  void init(const char * sig, class_t * addr)
+  {
+    std::ostringstream oss;
+    oss << sig << ".v" << index_;
+    index_++;
+    instance_t::signature_ = oss.str().c_str();
+    
+    address_ = addr;
+  }
+  
+  static unsigned int index_;
+};
+
+//----------------------------------------------------------------
+// scoped_instance_t::index_
+// 
+template <typename class_t>
+unsigned int
+scoped_instance_t<class_t>::index_ = 0;
+
+//----------------------------------------------------------------
+// INSTANCE
+// 
+#ifndef SCOPED_INSTANCE_DECLARE
+#define SCOPED_INSTANCE_DECLARE( CLASS )	\
+  scoped_instance_t<CLASS> instance_
+#endif
+
+//----------------------------------------------------------------
+// SCOPED_INSTANCE_INIT
+// 
+#ifndef SCOPED_INSTANCE_INIT
+#define SCOPED_INSTANCE_INIT( CLASS )		\
+  instance_.init(#CLASS, this)
+#endif
+
+//----------------------------------------------------------------
+// args_t
+// 
+class args_t : public io_base_t
+{
+public:
+  // virtual:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
+};
+
+
+//----------------------------------------------------------------
+// arg1_t
+// 
+template <typename arg_t>
+class arg1_t : public args_t
+{
+public:
+  arg1_t() {}
+  arg1_t(arg_t arg): arg_(arg) {}
+  
+  // virtual:
+  void save(std::ostream & so) const
+  {
+    so << "arg1_t ";
+    ::save(so, arg_);
+  }
+  
+  bool load(std::istream & si, const std::string & magic)
+  {
+    if (magic != "arg1_t")
+    {
+      return false;
+    }
+    
+    bool ok = ::load(si, arg_);
+    return ok;
+  }
+  
+  arg_t arg_;
+};
+
+
+//----------------------------------------------------------------
+// method_t
+// 
+class method_t
+{
+public:
+  method_t(const char * signature);
+  
+  // lookup a method by its signature:
+  static const method_t * lookup(const std::string & signature);
+  
+  // instance signature accessor:
+  inline const std::string & signature() const
+  { return signature_; }
+  
+  // API for executing a loaded method call:
+  virtual void execute(const instance_t & instance,
+		       const boost::shared_ptr<args_t> & args) const = 0;
+  
+  // each method must know how to load its arguments:
+  virtual bool load(std::istream & si,
+		    boost::shared_ptr<args_t> & args) const = 0;
+  
+protected:
+  const std::string signature_;
+  static std::map<std::string, const method_t *> methods_;
+};
+
+
+//----------------------------------------------------------------
+// method_void_t
+// 
+template <typename class_t>
+class method_void_t : public method_t
+{
+public:
+  typedef void (class_t::*func_t)();
+  
+  method_void_t(const char * signature, func_t func):
+    method_t(signature),
+    func_(func)
+  {}
+  
+  // virtual:
+  void execute(const instance_t & instance,
+	       const boost::shared_ptr<args_t> & /* args */) const
+  {
+    class_t * c = (class_t *)(instance.address());
+    if (!c)
+    {
+      assert(false);
+      return;
+    }
+    
+    // call the member function:
+    (c->*func_)();
+  }
+  
+  // virtual:
+  bool load(std::istream & /* si */, boost::shared_ptr<args_t> & args) const
+  {
+    args = boost::shared_ptr<args_t>();
+    return true;
+  }
+  
+protected:
+  func_t func_;
+};
+
+
+//----------------------------------------------------------------
+// METHOD_REGISTER_VOID
+//
+#ifndef METHOD_REGISTER_VOID
+#define METHOD_REGISTER_VOID( CLASS, METHOD )	\
+  static method_void_t<CLASS> \
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
+#endif
+
+
+//----------------------------------------------------------------
+// method_arg1_t
+// 
+template <typename class_t, typename arg_t>
+class method_arg1_t : public method_t
+{
+public:
+  typedef void (class_t::*func_t)(arg_t);
+  
+  method_arg1_t(const char * signature, func_t func):
+    method_t(signature),
+    func_(func)
+  {}
+  
+  // virtual:
+  void execute(const instance_t & instance,
+	       const boost::shared_ptr<args_t> & args) const
+  {
+    class_t * c = (class_t *)(instance.address());
+    if (!c)
+    {
+      assert(false);
+      return;
+    }
+    
+    // call the member function:
+    const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
+    (c->*func_)(arg1->arg_);
+  }
+  
+  // virtual:
+  bool load(std::istream & si, boost::shared_ptr<args_t> & args) const
+  {
+    std::string magic;
+    si >> magic;
+    
+    arg1_t<arg_t> * arg1 = new arg1_t<arg_t>();
+    bool ok = arg1->load(si, magic);
+    
+    args = boost::shared_ptr<args_t>(arg1);
+    return ok;
+  }
+  
+protected:
+  func_t func_;
+};
+
+
+//----------------------------------------------------------------
+// METHOD_REGISTER_ARG1
+//
+#ifndef METHOD_REGISTER_ARG1
+#define METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )		\
+  static method_arg1_t<CLASS, ARG>				\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
+#endif
+
+
+//----------------------------------------------------------------
+// call_t
+// 
+class call_t : public io_base_t
+{
+public:
+  call_t(const instance_t & instance = instance_t(),
+	 const char * method_signature = NULL,
+	 const boost::shared_ptr<args_t> & args = boost::shared_ptr<args_t>());
+  
+  call_t(void * address,
+	 const char * method_signature);
+  
+  // helpers:
+  template <typename arg_t>
+  call_t & init(const instance_t & instance,
+		const char * method_signature,
+		const arg_t & arg)
+  {
+    instance_ = instance;
+    
+    // lookup the method:
+    if (method_signature)
+    {
+      method_ = method_t::lookup(method_signature);
+      assert(method_);
+    }
+    
+    typedef arg1_t<arg_t> one_arg_t;
+    args_ = boost::shared_ptr<one_arg_t>(new one_arg_t(arg));
+    return *this;
+  }
+  
+  template <typename arg_t>
+  call_t & init(void * address,
+		const char * method_signature,
+		const arg_t & arg)
+  {
+    return init<arg_t>(instance_t(address), method_signature, arg);
+  }
+  
+  // virtual:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
+  
+  // execute the call:
+  void execute() const;
+  
+  static io_base_t * create()
+  { return new call_t(); }
+  
+protected:
+  instance_t instance_;
+  const method_t * method_;
+  boost::shared_ptr<args_t> args_;
+};
+
+
+#endif // INSTANCE_METHOD_CALL_HXX_
