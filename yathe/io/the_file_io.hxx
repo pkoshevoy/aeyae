@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include "math/v3x1p3x1.hxx"
 #include "utils/the_dynamic_array.hxx"
 #include "utils/the_text.hxx"
+#include "io/io_base.hxx"
 
 // system includes:
 #include <vector>
@@ -44,30 +45,9 @@ THE SOFTWARE.
 #include <fstream>
 
 
-extern bool save(std::ostream & stream, const unsigned int & data);
-extern bool load(std::istream & stream, unsigned int & data);
-
-extern bool save(std::ostream & stream, const int & data);
-extern bool load(std::istream & stream, int & data);
-
-extern bool save(std::ostream & stream, const char & data);
-extern bool load(std::istream & stream, char & data);
-
-extern bool save(std::ostream & stream, const bool & data);
-extern bool load(std::istream & stream, bool & data);
-
-extern bool save(std::ostream & stream, const double & data);
-extern bool load(std::istream & stream, double & data);
-
-extern bool save(std::ostream & stream, const float & data);
-extern bool load(std::istream & stream, float & data);
-
 extern bool save(std::ostream & stream, const char * data);
 extern bool save(std::ostream & stream, const the_text_t & data);
 extern bool load(std::istream & stream, the_text_t & data);
-
-extern bool save(std::ostream & stream, const std::string & data);
-extern bool load(std::istream & stream, std::string & data);
 
 class the_knot_point_t;
 extern bool save(std::ostream & stream, const the_knot_point_t & d);
@@ -96,39 +76,6 @@ extern bool save(const the_text_t & magic,
 extern bool load(const the_text_t & magic,
 		 const the_text_t & filename,
 		 the_document_t *& doc);
-
-//----------------------------------------------------------------
-// save
-// 
-template <typename data_t>
-bool
-save(std::ostream & stream,
-     const data_t * data,
-     const unsigned int & size)
-{
-  for (unsigned int i = 0; i < size; i++)
-  {
-    save(stream, data[i]);
-  }
-  
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-template <typename data_t>
-bool
-load(std::istream & stream, data_t * data, const unsigned int & size)
-{
-  bool ok = true;
-  for (unsigned int i = 0; i < size && ok; i++)
-  {
-    ok = load(stream, data[i]);
-  }
-  
-  return ok;
-}
 
 
 //----------------------------------------------------------------
@@ -221,112 +168,6 @@ load(std::istream & stream, the_dynamic_array_t<data_t> & array)
 {
   unsigned int size = 0;
   bool ok = load(stream, size);
-  
-  for (unsigned int i = 0; i < size && ok; i++)
-  {
-    ok = load(stream, array[i]);
-  }
-  
-  return ok;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-template <typename first_t, typename second_t>
-bool
-save(std::ostream & stream, const std::pair<first_t, second_t> & pair)
-{
-  bool ok = save(stream, pair.first);
-  if (!ok) return false;
-  
-  return save(stream, pair.second);
-}
-
-//----------------------------------------------------------------
-// load
-// 
-template <typename first_t, typename second_t>
-bool
-load(std::istream & stream, std::pair<first_t, second_t> & pair)
-{
-  bool ok = load(stream, pair.first);
-  if (!ok) return false;
-  
-  return load(stream, pair.second);
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-template <typename data_t>
-bool
-save(std::ostream & stream, const std::list<data_t> & l)
-{
-  // save the list:
-  save(stream, (unsigned int)(l.size()));
-  for (typename std::list<data_t>::const_iterator i = l.begin();
-       i != l.end();
-       ++i)
-  {
-    save(stream, *i);
-  }
-  
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-template <typename data_t>
-bool
-load(std::istream & stream, std::list<data_t> & l)
-{
-  l.clear();
-  
-  unsigned int size = 0;
-  bool ok = load(stream, size);
-  for (unsigned int i = 0; i < size && ok; i++)
-  {
-    data_t data;
-    ok = load(stream, data);
-    l.push_back(data);
-  }
-  
-  return ok;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-template <typename data_t>
-bool
-save(std::ostream & stream, const std::vector<data_t> & array)
-{
-  const unsigned int & size = array.size();
-  bool ok = save(stream, size);
-  
-  for (unsigned int i = 0; i < size && ok; i++)
-  {
-    ok = save(stream, array[i]);
-  }
-  
-  return ok;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-template <typename data_t>
-bool
-load(std::istream & stream, std::vector<data_t> & array)
-{
-  unsigned int size = 0;
-  bool ok = load(stream, size);
-  array.resize(size);
   
   for (unsigned int i = 0; i < size && ok; i++)
   {

@@ -30,6 +30,7 @@ THE SOFTWARE.
 
 // local includes:
 #include "io/the_file_io.hxx"
+#include "io/io_base.hxx"
 #include "doc/the_document.hxx"
 #include "doc/the_registry.hxx"
 #include "doc/the_graph.hxx"
@@ -38,137 +39,6 @@ THE SOFTWARE.
 #include "geom/the_point.hxx"
 #include "geom/the_curve.hxx"
 #include "utils/the_text.hxx"
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const unsigned int & data)
-{
-  stream << data << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, unsigned int & data)
-{
-  stream >> data;
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const int & data)
-{
-  stream << data << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, int & data)
-{
-  stream >> data;
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const char & data)
-{
-  stream << int(data) << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, char & data)
-{
-  int ch;
-  stream >> ch;
-  data = char(ch);
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const bool & data)
-{
-  unsigned int tmp = data;
-  stream << tmp << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, bool & data)
-{
-  unsigned int tmp = 0;
-  stream >> tmp;
-  data = (tmp != 0);
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const double & data)
-{
-  stream << data << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, double & data)
-{
-  stream >> data;
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const float & data)
-{
-  stream << data << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, float & data)
-{
-  stream >> data;
-  return true;
-}
 
 
 //----------------------------------------------------------------
@@ -218,39 +88,6 @@ load(std::istream & stream, the_text_t & data)
   data.assign(text, size);
   delete [] text;
   text = NULL;
-  
-  return true;
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(std::ostream & stream, const std::string & data)
-{
-  stream << data.size() << ' ' << data.data() << endl;
-  return true;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, std::string & data)
-{
-  size_t size = 0;
-  stream >> size;
-  data.resize(size);
-  
-  // eat the whitespace:
-  stream.get();
-  
-  char * dst = &(data[0]);
-  for (size_t i = 0; i < size; i++)
-  {
-    stream.get(dst[i]);
-  }
   
   return true;
 }
