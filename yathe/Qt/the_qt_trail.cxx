@@ -1317,7 +1317,6 @@ unsigned int MILESTONE = ~0;
 void
 the_qt_trail_t::replay_one()
 {
-  static bool stop_replay = false;
   if (dont_load_events_) return;
   
   QObject * object = NULL;
@@ -1347,13 +1346,14 @@ the_qt_trail_t::replay_one()
       unsigned seconds_waiting = timer.elapsed() / 1000;
       if (seconds_waiting > seconds_to_wait_)
       {
-	if (!single_step_replay_)
+	if (!ask_the_user_)
 	{
 	  // don't ask any questions -- terminate trail playback:
 	  cerr << "NOTE: " << seconds_waiting
 	       << " seconds passed -- trail may be out of sequence" << endl;
 	  
-	  stop_replay = true;
+	  replay_done();
+	  return;
 	}
 	else
 	{
@@ -1396,7 +1396,8 @@ the_qt_trail_t::replay_one()
 	  
 	  if (mb.clickedButton() == btn_stop)
 	  {
-	    stop_replay = true;
+	    replay_done();
+	    return;
 	  }
 	  else if (mb.clickedButton() == btn_skip)
 	  {
@@ -1482,7 +1483,7 @@ the_qt_trail_t::replay_one()
     cout << critical_event_counter << " critical event --------------" << endl;
 #endif
     
-    if (single_step_replay_ && !stop_replay)
+    if (single_step_replay_)
     {
       dont_load_events_ = true;
       dont_save_events_ = true;
@@ -1529,16 +1530,11 @@ the_qt_trail_t::replay_one()
       }
       else if (mb.clickedButton() == btn_stop)
       {
-	stop_replay = true;
+	delete event;
+	replay_done();
+	return;
       }
     }
-  }
-  
-  if (stop_replay)
-  {
-    delete event;
-    replay_done();
-    return;
   }
   
   dont_post_events_ = false;
