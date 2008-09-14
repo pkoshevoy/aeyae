@@ -60,9 +60,9 @@ using std::ofstream;
 // RECORD_CALL
 //
 #ifndef RECORD_CALL
-#define RECORD_CALL( CLASS, METHOD )			\
+#define RECORD_CALL( INSTANCE, CLASS, METHOD )		\
   if (the_trail_t::trail_->record_stream.is_open())	\
-    call_t(this, #CLASS"::"#METHOD"()").		\
+    call_t(INSTANCE, #CLASS"::"#METHOD"()").		\
       save(the_trail_t::trail_->record_stream)
 #endif
 
@@ -70,11 +70,20 @@ using std::ofstream;
 // RECORD_CALL_ARG1
 // 
 #ifndef RECORD_CALL_ARG1
-#define RECORD_CALL_ARG1( CLASS, METHOD, TARG, ARG1 )	\
+#define RECORD_CALL_ARG1( INSTANCE, CLASS, METHOD, TARG, ARG1 )	\
   if (the_trail_t::trail_->record_stream.is_open())	\
     call_t().init<TARG>					\
-      (this, #CLASS"::"#METHOD"("#TARG")", ARG1).	\
+      (INSTANCE, #CLASS"::"#METHOD"("#TARG")", ARG1).	\
       save(the_trail_t::trail_->record_stream)
+#endif
+
+//----------------------------------------------------------------
+// RECORD_INSTANCE
+// 
+#ifndef RECORD_INSTANCE
+#define RECORD_INSTANCE( INSTANCE )			\
+  if (the_trail_t::trail_->record_stream.is_open())	\
+    INSTANCE.save(the_trail_t::trail_->record_stream)
 #endif
 
 
