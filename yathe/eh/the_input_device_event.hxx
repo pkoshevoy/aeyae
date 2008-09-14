@@ -39,6 +39,7 @@ THE SOFTWARE.
 
 // local includes:
 #include "math/v3x1p3x1.hxx"
+#include "io/io_base.hxx"
 
 // forward declarations:
 class the_view_t;
@@ -49,7 +50,7 @@ class the_view_t;
 // 
 // the base class for mouse/keybd/etc... events:
 // 
-class the_input_device_event_t
+class the_input_device_event_t : public io_base_t
 {
 public:
   the_input_device_event_t(the_view_t * widget = NULL):
@@ -78,6 +79,10 @@ public:
 		    bool double_click = false,
 		    bool moving = false,
 		    const p2x1_t & scs_pt = p2x1_t(0, 0));
+  
+  // virtual: file I/O API:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
   
   inline unsigned int btns() const { return btns_; }
   inline unsigned int tran() const { return tran_; }
@@ -121,6 +126,10 @@ public:
 		    const p2x1_t & scs_pt = p2x1_t(0, 0),
 		    double degrees_rotated = 0,
 		    bool vertical = true);
+  
+  // virtual: file I/O API:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
   
   // accessors:
   inline unsigned int btns() const { return btns_; }
@@ -167,6 +176,10 @@ public:
 		    unsigned int mods = 0,
 		    bool autorepeat = false);
   
+  // virtual: file I/O API:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
+  
   inline unsigned int key()  const { return key_; }
   inline unsigned int tran() const { return tran_; }
   inline unsigned int mods() const { return mods_; }
@@ -175,7 +188,7 @@ public:
   
   // this must be called in order to let the keyboard key class
   // know how it can detect the down and up key transitions:
-   static void setup_transition_detectors(int tran_down,
+  static void setup_transition_detectors(int tran_down,
 					 int tran_up);
   
   // transition ids:
@@ -218,6 +231,10 @@ public:
 		    float tangential_pressure = 0,
 		    float rotation = 0,
 		    float z_position = 0);
+  
+  // virtual: file I/O API:
+  void save(std::ostream & so) const;
+  bool load(std::istream & si, const std::string & magic);
   
   // the type of tool that generated the event:
   inline the_tablet_tool_t tool() const

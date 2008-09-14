@@ -32,6 +32,9 @@ THE SOFTWARE.
 #include "eh/the_input_device_event.hxx"
 #include "ui/the_trail.hxx"
 #include "utils/the_indentation.hxx"
+#include "utils/instance_method_call.hxx"
+#include "io/io_base.hxx"
+#include "io/the_file_io.hxx"
 
 
 //----------------------------------------------------------------
@@ -66,6 +69,55 @@ the_mouse_event_t::the_mouse_event_t(the_view_t * widget,
 {}
 
 //----------------------------------------------------------------
+// the_mouse_event_t::save
+// 
+void
+the_mouse_event_t::save(std::ostream & so) const
+{
+  if (!is_open(so)) return;
+  
+  so << "the_mouse_event_t ";
+  instance_t instance(widget_);
+  instance.save(so);
+  
+  ::save(so, btns_);
+  ::save(so, tran_);
+  ::save(so, mods_);
+  ::save(so, double_click_);
+  ::save(so, moving_);
+  ::save(so, scs_pt_);
+}
+
+//----------------------------------------------------------------
+// the_mouse_event_t::load
+// 
+bool
+the_mouse_event_t::load(std::istream & si, const std::string & magic)
+{
+  if (magic != "the_mouse_event_t")
+  {
+    return false;
+  }
+  
+  std::string token;
+  si >> token;
+  
+  instance_t instance;
+  if (!instance.load(si, token))
+  {
+    return false;
+  }
+  
+  bool ok = (::load(si, btns_) &&
+	     ::load(si, tran_) &&
+	     ::load(si, mods_) &&
+	     ::load(si, double_click_) &&
+	     ::load(si, moving_) &&
+	     ::load(si, scs_pt_));
+  return ok;
+}
+
+//----------------------------------------------------------------
 // the_mouse_event_t::setup_transition_detectors
 // 
 void
@@ -95,6 +147,55 @@ the_wheel_event_t::the_wheel_event_t(the_view_t * widget,
   degrees_rotated_(degrees_rotated),
   vertical_(vertical)
 {}
+
+//----------------------------------------------------------------
+// the_wheel_event_t::save
+// 
+void
+the_wheel_event_t::save(std::ostream & so) const
+{
+  if (!is_open(so)) return;
+  
+  so << "the_wheel_event_t ";
+  instance_t instance(widget_);
+  instance.save(so);
+  
+  ::save(so, btns_);
+  ::save(so, tran_);
+  ::save(so, mods_);
+  ::save(so, scs_pt_);
+  ::save(so, degrees_rotated_);
+  ::save(so, vertical_);
+}
+
+//----------------------------------------------------------------
+// the_wheel_event_t::load
+// 
+bool
+the_wheel_event_t::load(std::istream & si, const std::string & magic)
+{
+  if (magic != "the_wheel_event_t")
+  {
+    return false;
+  }
+  
+  std::string token;
+  si >> token;
+  
+  instance_t instance;
+  if (!instance.load(si, token))
+  {
+    return false;
+  }
+  
+  bool ok = (::load(si, btns_) &&
+	     ::load(si, tran_) &&
+	     ::load(si, mods_) &&
+	     ::load(si, scs_pt_) &&
+	     ::load(si, degrees_rotated_) &&
+	     ::load(si, vertical_));
+  return ok;
+}
 
 
 //----------------------------------------------------------------
@@ -134,6 +235,51 @@ the_keybd_event_t::the_keybd_event_t(the_view_t * widget,
   mods_(mods),
   autorepeat_(autorepeat)
 {}
+
+//----------------------------------------------------------------
+// the_keybd_event_t::save
+// 
+void
+the_keybd_event_t::save(std::ostream & so) const
+{
+  if (!is_open(so)) return;
+  
+  so << "the_keybd_event_t ";
+  instance_t instance(widget_);
+  instance.save(so);
+  
+  ::save(so, key_);
+  ::save(so, tran_);
+  ::save(so, mods_);
+  ::save(so, autorepeat_);
+}
+
+//----------------------------------------------------------------
+// the_keybd_event_t::load
+// 
+bool
+the_keybd_event_t::load(std::istream & si, const std::string & magic)
+{
+  if (magic != "the_keybd_event_t")
+  {
+    return false;
+  }
+  
+  std::string token;
+  si >> token;
+  
+  instance_t instance;
+  if (!instance.load(si, token))
+  {
+    return false;
+  }
+  
+  bool ok = (::load(si, key_) &&
+	     ::load(si, tran_) &&
+	     ::load(si, mods_) &&
+	     ::load(si, autorepeat_));
+  return ok;
+}
 
 //----------------------------------------------------------------
 // operator <<
@@ -183,6 +329,67 @@ the_wacom_event_t::the_wacom_event_t(the_view_t * widget,
   rotation_(rotation),
   z_position_(z_position)
 {}
+
+//----------------------------------------------------------------
+// the_wacom_event_t::save
+// 
+void
+the_wacom_event_t::save(std::ostream & so) const
+{
+  if (!is_open(so)) return;
+  
+  so << "the_wacom_event_t ";
+  instance_t instance(widget_);
+  instance.save(so);
+
+  int tool = tool_;
+  ::save(so, tool);
+  
+  uint64_t tool_id = tool_id_;
+  ::save_address(so, tool_id);
+  
+  ::save(so, scs_pt_);
+  ::save(so, tilt_);
+  ::save(so, pressure_);
+  ::save(so, tangential_pressure_);
+  ::save(so, rotation_);
+  ::save(so, z_position_);
+}
+
+//----------------------------------------------------------------
+// the_wacom_event_t::load
+// 
+bool
+the_wacom_event_t::load(std::istream & si, const std::string & magic)
+{
+  if (magic != "the_wacom_event_t")
+  {
+    return false;
+  }
+  
+  std::string token;
+  si >> token;
+  
+  instance_t instance;
+  if (!instance.load(si, token))
+  {
+    return false;
+  }
+
+  int tool = 0;
+  uint64_t tool_id = 0;
+  bool ok = (::load(si, tool) &&
+	     ::load_address(si, tool_id) &&
+	     ::load(si, scs_pt_) &&
+	     ::load(si, tilt_) &&
+	     ::load(si, pressure_) &&
+	     ::load(si, tangential_pressure_) &&
+	     ::load(si, rotation_) &&
+	     ::load(si, z_position_));
+  tool_ = (the_tablet_tool_t)tool;
+  tool_id_ = tool_id;
+  return ok;
+}
 
 //----------------------------------------------------------------
 // the_wacom_event_t::dump
