@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include "utils/the_bit_tree.hxx"
 
 // system includes:
+#include <list>
+#include <string>
 #include <fstream>
 #include <iostream>
 
@@ -166,6 +168,7 @@ public:
   
   // this flag controls the trail playback interactivity:
   bool single_step_replay_;
+  bool ask_the_user_;
   
   // these flags will be set to true periodically:
   bool dont_load_events_;

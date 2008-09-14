@@ -59,6 +59,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   line_num_(0),
   milestone_(0),
   single_step_replay_(false),
+  ask_the_user_(false),
   dont_load_events_(false),
   dont_save_events_(false),
   dont_post_events_(false),
@@ -81,6 +82,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
     if (strcmp(argv[i], "-ask") == 0)
     {
       single_step_replay_ = true;
+      ask_the_user_ = true;
     }
     else if (strcmp(argv[i], "-replay") == 0)
     {
