@@ -220,11 +220,13 @@ public:
   
   method_void_t(const char * signature, func_t func):
     method_t(signature),
-    func_(func)
+    func_(func),
+    const_func_(NULL)
   {}
   
   method_void_t(const char * signature, const_func_t func):
     method_t(signature),
+    func_(NULL),
     const_func_(func)
   {}
   
@@ -286,16 +288,22 @@ public:
   
   method_arg1_t(const char * signature, func_t func):
     method_t(signature),
-    func_(func)
+    func_(func),
+    func_cref_(NULL),
+    const_func_(NULL)
   {}
   
   method_arg1_t(const char * signature, func_cref_t func):
     method_t(signature),
-    func_cref_(func)
+    func_(NULL),
+    func_cref_(func),
+    const_func_(NULL)
   {}
   
   method_arg1_t(const char * signature, const_func_t func):
     method_t(signature),
+    func_(NULL),
+    func_cref_(NULL),
     const_func_(func)
   {}
   
