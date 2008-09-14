@@ -46,6 +46,8 @@ add_library(the_core STATIC
   utils/the_text.cxx
   utils/debug.cxx
   utils/histogram.cxx
+  utils/instance_method_call.hxx
+  utils/instance_method_call.cxx
   )
 
 install(TARGETS the_core DESTINATION lib)
@@ -108,6 +110,9 @@ if (GLEW_FOUND)
     geom/the_rational_bezier.cxx
     geom/the_tensurf.cxx
     geom/the_triangle_mesh.cxx
+    io/io_base.hxx
+    io/io_base.cxx
+    io/the_file_io.hxx
     io/the_file_io.cxx
     image/image_tile.cxx
     image/image_tile_generator.cxx
