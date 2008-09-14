@@ -126,8 +126,7 @@ the_fltk_view_t::handle(int event)
       the_mouse_event_t me = the_mouse_event(this, event);
       THE_MOUSE.update(me);
       THE_KEYBD.update(me);
-      bool ok = eh_stack_->mouse_cb(me);
-      // if (ok) redraw();
+      eh_stack_->mouse_cb(me);
       
       if (event != FL_MOVE)
       {
@@ -142,8 +141,7 @@ the_fltk_view_t::handle(int event)
    {
       the_input_device_t::advance_time_stamp();
       the_wheel_event_t we = the_wheel_event(this, event);
-      bool ok = eh_stack_->wheel_cb(we);
-      // if (ok) redraw();
+      eh_stack_->wheel_cb(we);
       // dump(THE_MOUSE);
       // dump(THE_KEYBD);
       return 1;

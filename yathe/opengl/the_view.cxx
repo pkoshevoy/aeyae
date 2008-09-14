@@ -84,8 +84,8 @@ the_view_t::the_view_t(const char * name,
   local_dq_(false),
   local_pp_(false),
   active_ep_id_(THE_TOP_EDIT_PLANE_E),
-  doc_so_(NULL),
-  eh_stack_(NULL)
+  eh_stack_(NULL),
+  doc_so_(NULL)
 {
   // create a view manager:
   if (local_pp_)

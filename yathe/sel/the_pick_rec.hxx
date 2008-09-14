@@ -92,16 +92,16 @@ public:
   
   // helper: distance between the point on the object that was picked
   // and the axis of the selection volume:
-  inline const float & radius() const
+  inline float radius() const
   { return vol_pt_.x(); }
   
   // helper: distance from the near clipping face of the selection volume
   // to the far clipping face:
-  inline const float & depth() const
+  inline float depth() const
   { return vol_pt_.z(); }
   
   // helper accessor to the id of the primitive that was picked:
-  inline const unsigned int id() const
+  inline unsigned int id() const
   { return (ref_ == NULL) ? UINT_MAX : ref_->id(); }
   
   // helper accessor to the primitive:

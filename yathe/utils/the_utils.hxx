@@ -119,8 +119,8 @@ closest_power_of_two_larger_than_given(const scalar_t & given)
   unsigned int n = sizeof(given) * 8;
   scalar_t closest = scalar_t(1);
   for (unsigned int i = 0;
-       i < n && closest < given;
-       i++, closest *= scalar_t(2));
+       (i < n) && (closest < given);
+       i++, closest *= scalar_t(2)) {}
   
   return closest;
 }
@@ -345,7 +345,7 @@ iterator_at_index(const std::list<data_t> & container,
 		  const unsigned int & index)
 {
   typename std::list<data_t>::const_iterator iter = container.begin();
-  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter);
+  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter) ;
   return iter;
 }
 
@@ -358,7 +358,7 @@ iterator_at_index(std::list<data_t> & container,
 		  const unsigned int & index)
 {
   typename std::list<data_t>::iterator iter = container.begin();
-  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter);
+  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter) ;
   return iter;
 }
 

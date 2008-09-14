@@ -134,7 +134,7 @@ the_qt_thread_t::run()
   }
   
   // process the transactions:
-  bool all_transactions_completed = work();
+  work();
   
   // clean up the thread storage:
   THREAD_STORAGE.setLocalData(NULL);

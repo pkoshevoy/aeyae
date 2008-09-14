@@ -157,11 +157,11 @@ public:
   bool is_spacial() const;
   
   // calculate the edge length of the bounding box:
-  inline const float length(const unsigned int & axis_id) const
+  inline float length(const unsigned int & axis_id) const
   { return (max_[axis_id] - min_[axis_id]); }
   
   // calculate the center of the bounding box:
-  inline const p3x1_t center() const
+  inline p3x1_t center() const
   { return 0.5f * (max_ + min_); }
   
   // calculate the radius of the bounding box (sphere):
