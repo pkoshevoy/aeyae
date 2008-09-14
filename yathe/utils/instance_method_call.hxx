@@ -135,6 +135,7 @@ scoped_instance_t<class_t>::index_ = 0;
   instance_.init(#CLASS, this)
 #endif
 
+
 //----------------------------------------------------------------
 // args_t
 // 
@@ -211,23 +212,13 @@ protected:
 //----------------------------------------------------------------
 // method_void_t
 // 
-template <typename class_t>
+template <typename class_t, typename func_t>
 class method_void_t : public method_t
 {
 public:
-  typedef void (class_t::*func_t)();
-  typedef void (class_t::*const_func_t)() const;
-  
   method_void_t(const char * signature, func_t func):
     method_t(signature),
-    func_(func),
-    const_func_(NULL)
-  {}
-  
-  method_void_t(const char * signature, const_func_t func):
-    method_t(signature),
-    func_(NULL),
-    const_func_(func)
+    func_(func)
   {}
   
   // virtual:
@@ -242,13 +233,10 @@ public:
     }
     
     // call the member function:
+    assert(func_);
     if (func_)
     {
       (c->*func_)();
-    }
-    else if (const_func_)
-    {
-      (c->*const_func_)();
     }
   }
   
@@ -261,7 +249,6 @@ public:
   
 protected:
   func_t func_;
-  const_func_t const_func_;
 };
 
 
@@ -269,8 +256,8 @@ protected:
 // METHOD_REGISTER_VOID
 //
 #ifndef METHOD_REGISTER_VOID
-#define METHOD_REGISTER_VOID( CLASS, METHOD )	\
-  static method_void_t<CLASS> \
+#define METHOD_REGISTER_VOID( CLASS, METHOD )				\
+  static method_void_t<CLASS, typeof(&CLASS::METHOD) >			\
   method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
 #endif
 
@@ -278,33 +265,13 @@ protected:
 //----------------------------------------------------------------
 // method_arg1_t
 // 
-template <typename class_t, typename arg_t>
+template <typename class_t, typename func_t, typename arg_t>
 class method_arg1_t : public method_t
 {
 public:
-  typedef void (class_t::*func_t)(arg_t);
-  typedef void (class_t::*func_cref_t)(const arg_t &);
-  typedef void (class_t::*const_func_t)(arg_t) const;
-  
   method_arg1_t(const char * signature, func_t func):
     method_t(signature),
-    func_(func),
-    func_cref_(NULL),
-    const_func_(NULL)
-  {}
-  
-  method_arg1_t(const char * signature, func_cref_t func):
-    method_t(signature),
-    func_(NULL),
-    func_cref_(func),
-    const_func_(NULL)
-  {}
-  
-  method_arg1_t(const char * signature, const_func_t func):
-    method_t(signature),
-    func_(NULL),
-    func_cref_(NULL),
-    const_func_(func)
+    func_(func)
   {}
   
   // virtual:
@@ -320,17 +287,10 @@ public:
     
     // call the member function:
     const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
+    assert(func_);
     if (func_)
     {
       (c->*func_)(arg1->arg_);
-    }
-    else if (func_cref_)
-    {
-      (c->*func_cref_)(arg1->arg_);
-    }
-    else if (const_func_)
-    {
-      (c->*const_func_)(arg1->arg_);
     }
   }
   
@@ -349,8 +309,6 @@ public:
   
 protected:
   func_t func_;
-  func_cref_t func_cref_;
-  const_func_t const_func_;
 };
 
 
@@ -358,8 +316,8 @@ protected:
 // METHOD_REGISTER_ARG1
 //
 #ifndef METHOD_REGISTER_ARG1
-#define METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )		\
-  static method_arg1_t<CLASS, ARG>				\
+#define METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )			\
+  static method_arg1_t<CLASS, typeof(&CLASS::METHOD), ARG>		\
   method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
 #endif
 
