@@ -190,44 +190,4 @@ public:
 };
 
 
-//----------------------------------------------------------------
-// load_address
-// 
-extern bool load_address(istream & si, uint64_t & address);
-
-//----------------------------------------------------------------
-// save_address
-// 
-extern void save_address(ostream & so, uint64_t address);
-
-//----------------------------------------------------------------
-// save_address
-// 
-extern void save_address(ostream & so, const void * address);
-
-//----------------------------------------------------------------
-// operator >>
-// 
-extern istream & operator >> (istream & si, uint64_t & address);
-
-//----------------------------------------------------------------
-// operator <<
-// 
-extern ostream & operator << (ostream & so, const uint64_t & address);
-
-
-//----------------------------------------------------------------
-// encode_special_chars
-// 
-extern const std::string
-encode_special_chars(const std::string & text_plain,
-		     const char * special_chars = "");
-
-//----------------------------------------------------------------
-// decode_special_chars
-// 
-extern const std::string
-decode_special_chars(const std::string & text_encoded);
-
-
 #endif // THE_TRAIL_HXX_

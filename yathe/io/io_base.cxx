@@ -31,6 +31,9 @@ THE SOFTWARE.
 // local includes:
 #include "io/io_base.hxx"
 
+// system includes:
+#include <string.h>
+
 
 //----------------------------------------------------------------
 // is_open
@@ -235,29 +238,73 @@ save_address(std::ostream & so, uint64_t address)
   save_addr_func(so, (unsigned char *)(&address), sizeof(uint64_t));
 }
 
-#if 0
-/*
+
 //----------------------------------------------------------------
-// operator >>
+// encode_special_chars
 // 
-std::istream &
-operator >> (std::istream & si, uint64_t & address)
+const std::string
+encode_special_chars(const std::string & text_plain,
+		     const char * special_chars)
 {
-  load_address(si, address);
-  return si;
+  static const char escape_char = '\\';
+
+  std::string result;
+  size_t text_size = text_plain.size();
+  for (size_t i = 0; i < text_size; i++)
+  {
+    const char c = text_plain[i];
+    if (c <= 32 ||
+	c >= 127 ||
+	c == escape_char ||
+	strchr(special_chars, c))
+    {
+      result += escape_char;
+      result += ('0' + char(int(c) / 100));
+      result += ('0' + char((int(c) / 10) % 10));
+      result += ('0' + char(int(c) % 10));
+    }
+    else
+    {
+      result += c;
+    }
+  }
+  
+  return result;
 }
 
 //----------------------------------------------------------------
-// operator <<
+// decode_special_chars
 // 
-std::ostream &
-operator << (std::ostream & so, const uint64_t & address)
+const std::string
+decode_special_chars(const std::string & text_encoded)
 {
-  save_address(so, address);
-  return so;
+  static const char escape_char = '\\';
+  
+  std::string result;
+  size_t text_size = text_encoded.size();
+  for (size_t i = 0; i < text_size; i++)
+  {
+    char c = text_encoded[i];
+    
+    // skip the escape character:
+    if (c == escape_char)
+    {
+      char x = text_encoded[i + 1];
+      char y = text_encoded[i + 2];
+      char z = text_encoded[i + 3];
+      
+      c = char(int(x - '0') * 100 +
+	       int(y - '0') * 10 +
+	       int(z - '0'));
+      i += 3;
+    }
+    
+    result += c;
+  }
+  
+  return result;
 }
-*/
-#endif
+
 
 //----------------------------------------------------------------
 // save

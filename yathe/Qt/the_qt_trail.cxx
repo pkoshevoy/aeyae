@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include "Qt/the_qt_input_device_event.hxx"
 #include "utils/the_utils.hxx"
 #include "utils/the_text.hxx"
+#include "io/io_base.hxx"
 
 // Qt includes:
 #include <QtGlobal>

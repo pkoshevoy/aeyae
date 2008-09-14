@@ -70,21 +70,20 @@ save_address(std::ostream & so, const void * address);
 extern void
 save_address(std::ostream & so, uint64_t address);
 
-#if 0
-/*
-//----------------------------------------------------------------
-// operator >>
-// 
-extern std::istream &
-operator >> (std::istream & si, uint64_t & address);
 
 //----------------------------------------------------------------
-// operator <<
+// encode_special_chars
 // 
-extern std::ostream &
-operator << (std::ostream & so, const uint64_t & address);
-*/
-#endif
+extern const std::string
+encode_special_chars(const std::string & text_plain,
+		     const char * special_chars = " \t\n");
+
+//----------------------------------------------------------------
+// decode_special_chars
+// 
+extern const std::string
+decode_special_chars(const std::string & text_encoded);
+
 
 extern bool save(std::ostream & stream, const unsigned int & data);
 extern bool load(std::istream & stream, unsigned int & data);
