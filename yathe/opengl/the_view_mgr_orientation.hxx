@@ -76,5 +76,9 @@ operator << (ostream & s, const the_view_mgr_orientation_t & orientation)
 extern const v3x1_t THE_ORIENTATION_LF[];
 extern const v3x1_t THE_ORIENTATION_UP[];
 
+// io:
+extern bool save(std::ostream & stream, the_view_mgr_orientation_t d);
+extern bool load(std::istream & stream, the_view_mgr_orientation_t & d);
+
 
 #endif // THE_VIEW_MGR_ORIENTATION_HXX_

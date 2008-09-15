@@ -33,6 +33,7 @@ THE SOFTWARE.
 
 // local includes:
 #include "opengl/the_view_mgr_orientation.hxx"
+#include "io/io_base.hxx"
 
 
 //----------------------------------------------------------------
@@ -92,3 +93,25 @@ THE_ORIENTATION_UP[] =
   v3x1_t(  0.0,  0.0, 1.0), // back
   v3x1_t(  0.0,  1.0, 0.0)  // xy
 };
+
+//----------------------------------------------------------------
+// save
+// 
+bool
+save(std::ostream & stream, the_view_mgr_orientation_t o)
+{
+  int i = (int)o;
+  return ::save(stream, i);
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, the_view_mgr_orientation_t & o)
+{
+  int i = 0;
+  bool ok = ::load(stream, i);
+  o = (the_view_mgr_orientation_t)i;
+  return ok;
+}
