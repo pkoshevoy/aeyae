@@ -374,11 +374,6 @@ call_t::load(std::istream & si, const std::string & magic)
   
   // load method call arguments:
   bool ok = method_->load(si, args_);
-  if (ok)
-  {
-    execute();
-  }
-  
   return ok;
 }
 
