@@ -93,47 +93,58 @@ protected:
 
 
 //----------------------------------------------------------------
-// scoped_instance_t
+// type_instance_t
 // 
 template <typename class_t>
-class scoped_instance_t : public instance_t
+class type_instance_t : public instance_t
 {
 public:
-  void init(const char * sig, class_t * addr)
+  type_instance_t(): instance_t() {}
+  
+  type_instance_t(const char * sig, const void * addr, bool increment = true)
   {
+    init(sig, addr, increment);
+  }
+  
+  inline type_instance_t<class_t> &
+  init(const char * sig, const void * addr, bool increment = true)
+  {
+    if (increment) index_++;
     std::ostringstream oss;
     oss << sig << ".v" << index_;
-    index_++;
     instance_t::signature_ = oss.str().c_str();
     
-    address_ = addr;
+    address_ = const_cast<void *>(addr);
+    return *this;
   }
   
   static size_t index_;
 };
 
+
 //----------------------------------------------------------------
-// scoped_instance_t::index_
+// DECLARE_INSTANCE
+// 
+#ifndef DECLARE_INSTANCE
+#define DECLARE_INSTANCE( CLASS, INSTANCE )	\
+  type_instance_t<CLASS> INSTANCE
+#endif
+
+//----------------------------------------------------------------
+// DECLARED_INSTANCE_INIT
+// 
+#ifndef DEFINE_INSTANCE
+#define DEFINE_INSTANCE( INSTANCE, CLASS, ADDRESS )	\
+  INSTANCE.init(#CLASS, ADDRESS)
+#endif
+
+
+//----------------------------------------------------------------
+// type_instance_t::index_
 // 
 template <typename class_t>
 size_t
-scoped_instance_t<class_t>::index_ = 0;
-
-//----------------------------------------------------------------
-// INSTANCE
-// 
-#ifndef SCOPED_INSTANCE_DECLARE
-#define SCOPED_INSTANCE_DECLARE( CLASS )	\
-  scoped_instance_t<CLASS> instance_
-#endif
-
-//----------------------------------------------------------------
-// SCOPED_INSTANCE_INIT
-// 
-#ifndef SCOPED_INSTANCE_INIT
-#define SCOPED_INSTANCE_INIT( CLASS )		\
-  instance_.init(#CLASS, this)
-#endif
+type_instance_t<class_t>::index_ = 0;
 
 
 //----------------------------------------------------------------
@@ -323,6 +334,101 @@ protected:
 
 
 //----------------------------------------------------------------
+// overloaded_method_arg1_t
+// 
+template <typename class_t, typename arg_t>
+class overloaded_method_arg1_t : public method_t
+{
+public:
+  typedef void (class_t::*func_t)(arg_t);
+  typedef void (class_t::*func_cref_t)(const arg_t &);
+  typedef void (class_t::*const_func_t)(arg_t) const;
+  typedef void (class_t::*const_func_cref_t)(const arg_t &) const;
+  
+  overloaded_method_arg1_t(const char * signature, func_t func):
+    method_t(signature),
+    func_(func)
+  {}
+  
+  overloaded_method_arg1_t(const char * signature, func_cref_t func):
+    method_t(signature),
+    func_cref_(func)
+  {}
+  
+  overloaded_method_arg1_t(const char * signature, const_func_t func):
+    method_t(signature),
+    const_func_(func)
+  {}
+  
+  overloaded_method_arg1_t(const char * signature, const_func_cref_t func):
+    method_t(signature),
+    const_func_cref_(func)
+  {}
+  
+  // virtual:
+  void execute(const instance_t & instance,
+	       const boost::shared_ptr<args_t> & args) const
+  {
+    class_t * c = (class_t *)(instance.address());
+    if (!c)
+    {
+      assert(false);
+      return;
+    }
+    
+    // call the member function:
+    const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
+    if (func_)
+    {
+      (c->*func_)(arg1->arg_);
+    }
+    else if (func_cref_)
+    {
+      (c->*func_cref_)(arg1->arg_);
+    }
+    else if (const_func_)
+    {
+      (c->*const_func_)(arg1->arg_);
+    }
+    else if (const_func_cref_)
+    {
+      (c->*const_func_cref_)(arg1->arg_);
+    }
+  }
+  
+  // virtual:
+  bool load(std::istream & si, boost::shared_ptr<args_t> & args) const
+  {
+    std::string magic;
+    si >> magic;
+    
+    arg1_t<arg_t> * arg1 = new arg1_t<arg_t>();
+    bool ok = arg1->load(si, magic);
+    
+    args = boost::shared_ptr<args_t>(arg1);
+    return ok;
+  }
+  
+protected:
+  func_t func_;
+  func_cref_t func_cref_;
+  const_func_t const_func_;
+  const_func_cref_t const_func_cref_;
+};
+
+
+//----------------------------------------------------------------
+// OVERLOADED_METHOD_REGISTER_ARG1
+// 
+#ifndef OVERLOADED_METHOD_REGISTER_ARG1
+#define OVERLOADED_METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )		\
+  static overloaded_method_arg1_t<CLASS, ARG>				\
+  overloaded_method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")",	\
+				       &CLASS::METHOD)
+#endif
+
+
+//----------------------------------------------------------------
 // call_t
 // 
 class call_t : public io_base_t
@@ -341,6 +447,7 @@ public:
 		const char * method_signature,
 		const arg_t & arg)
   {
+    assert(instance.signature().size());
     instance_ = instance;
     
     // lookup the method:
