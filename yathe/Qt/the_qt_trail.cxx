@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include "utils/the_utils.hxx"
 #include "utils/the_text.hxx"
 #include "io/io_base.hxx"
+#include "utils/instance_method_call.hxx"
 
 // Qt includes:
 #include <QtGlobal>
@@ -1281,12 +1282,35 @@ the_qt_trail_t::customEvent(QEvent * event)
 }
 
 //----------------------------------------------------------------
+// io_base_handler
+// 
+static void
+io_base_handler(io_base_t *& loaded)
+{
+  call_t * call = dynamic_cast<call_t *>(loaded);
+  if (call)
+  {
+    call->execute();
+    QCoreApplication::processEvents();
+  }
+}
+
+//----------------------------------------------------------------
 // the_qt_trail_t::replay
 // 
 void
 the_qt_trail_t::replay()
 {
-  REPLAY_THREAD.start();
+  // FIXME: REPLAY_THREAD.start();
+  
+  // register loaders:
+  QCoreApplication::processEvents();
+  io_base_t::loaders_["instance_t"] = &instance_t::create;
+  io_base_t::loaders_["call_t"] = &call_t::create;
+  io_base_t::load(replay_stream, &io_base_handler);
+  replay_done();
+  
+  // FIXME:  ::exit(0);
 }
 
 //----------------------------------------------------------------
@@ -1732,6 +1756,9 @@ the_qt_trail_t::stop()
 void
 the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
 {
+  // FIXME:
+  return;
+  
   if ((object == NULL) || (event == NULL)) return;
   
   // process events originating from direct manipulation devices,
