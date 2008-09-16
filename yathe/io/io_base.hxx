@@ -266,10 +266,22 @@ public:
   virtual void save(std::ostream & so) const = 0;
   virtual bool load(std::istream & si, const std::string & magic) = 0;
   
-  // Load registered objects from a source stream, store them in the
-  // destination list. If the destination list is NULL the loaded
-  // object is deleted instead.
-  static bool load(std::istream & src, std::list<io_base_t *> * dst = NULL);
+  // typedef for function handling loaded io_base_t objects:
+  typedef void (*handler_t)(io_base_t *&);
+  
+  // default handler for loaded io_base_t object simply deletes them:
+  static void disposer(io_base_t *& io);
+  
+  // Load registered objects from a source stream.
+  // Loaded objects are passed to a hanler if one is specified.
+  // The handler may delete the loaded object, in which case
+  // the loaded object pointer will be set to NULL.
+  // If the handler did not NULL-out the loaded object pointer
+  // the object may be stored in a destination list if one was specified.
+  // If the destination list is NULL the loaded object is deleted.
+  static bool load(std::istream & src,
+		   handler_t handler = &io_base_t::disposer,
+		   std::list<io_base_t *> * dst = NULL);
   
   static std::map<std::string, creator_t> loaders_;
 };

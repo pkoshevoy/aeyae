@@ -502,10 +502,30 @@ load(std::istream & stream, io_base_t & data)
 std::map<std::string, io_base_t::creator_t> io_base_t::loaders_;
 
 //----------------------------------------------------------------
+// io_base_t::disposer
+// 
+void
+io_base_t::disposer(io_base_t *& io)
+{
+  delete io;
+  io = NULL;
+}
+
+//----------------------------------------------------------------
 // io_base_t::load
 // 
+// Load registered objects from a source stream.
+// 
+// Loaded objects are passed to a hanler if one is specified.
+// The handler may delete the loaded object, in which case
+// the loaded object pointer will be set to NULL.
+// If the handler did not NULL-out the loaded object pointer
+// the object may be stored in a destination list if one was specified.
+// If the destination list is NULL the loaded object is deleted.
 bool
-io_base_t::load(std::istream & src, std::list<io_base_t *> * dst)
+io_base_t::load(std::istream & src,
+		handler_t handler,
+		std::list<io_base_t *> * dst)
 {
   if (!is_open(src))
   {
@@ -529,13 +549,18 @@ io_base_t::load(std::istream & src, std::list<io_base_t *> * dst)
     if (!io) return false;
     
     bool ok = io->load(src, magic);
-    if (dst)
+    if (ok && handler)
+    {
+      handler(io);
+    }
+    
+    if (ok && dst && io)
     {
       dst->push_back(io);
     }
     else
     {
-      std::cout << "io_base_t::load -- deleting " << magic << std::endl;
+      // std::cout << "io_base_t::load -- deleting " << magic << std::endl;
       delete io;
     }
     
