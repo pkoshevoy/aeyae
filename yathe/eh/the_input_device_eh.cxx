@@ -70,8 +70,7 @@ the_eh_stack_t::the_eh_stack_t():
   std::list<the_input_device_eh_t *>(),
   most_recent_event_(NULL)
 {
-  // cerr << "eh_stack constructor called: " << this << endl;
-  SCOPED_INSTANCE_INIT(the_eh_stack_t);
+  DEFINE_INSTANCE(instance_, the_eh_stack_t, this);
   RECORD_INSTANCE(instance_);
   
   static bool methods_registered = false;

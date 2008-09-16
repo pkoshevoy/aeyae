@@ -152,7 +152,7 @@ protected:
   // pointer to the most recent event:
   the_input_device_event_t * most_recent_event_;
   
-  SCOPED_INSTANCE_DECLARE(the_eh_stack_t);
+  DECLARE_INSTANCE(the_eh_stack_t, instance_);
 };
 
 

@@ -263,7 +263,7 @@ protected:
   // the_procedure_t::draw(..) function:
   std::list<the_primitive_t *> primitives_;
   
-  SCOPED_INSTANCE_DECLARE(the_view_t);
+  DECLARE_INSTANCE(the_view_t, instance_);
 };
 
 

@@ -41,6 +41,7 @@ THE SOFTWARE.
 #include "doc/the_procedure.hxx"
 #include "eh/the_input_device_eh.hxx"
 #include "ui/the_trail.hxx"
+#include "utils/instance_method_call.hxx"
 
 
 //----------------------------------------------------------------
@@ -89,7 +90,7 @@ the_view_t::the_view_t(const char * name,
   eh_stack_(NULL),
   doc_so_(NULL)
 {
-  SCOPED_INSTANCE_INIT(the_view_t);
+  DEFINE_INSTANCE(instance_, the_view_t, this);
   RECORD_INSTANCE(instance_);
   
   // create a view manager:
