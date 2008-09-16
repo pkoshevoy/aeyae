@@ -129,6 +129,10 @@ the_eh_stack_t::pop()
 bool
 the_eh_stack_t::mouse_cb(const the_mouse_event_t & e)
 {
+  the_input_device_t::advance_time_stamp();
+  THE_MOUSE.update(e);
+  THE_KEYBD.update(e);
+  
   // save the call to the trail file:
   RECORD_CALL_ARG1(instance_, the_eh_stack_t, mouse_cb, the_mouse_event_t, e);
   
@@ -153,6 +157,8 @@ the_eh_stack_t::mouse_cb(const the_mouse_event_t & e)
 bool
 the_eh_stack_t::wheel_cb(const the_wheel_event_t & e)
 {
+  the_input_device_t::advance_time_stamp();
+  
   // save the call to the trail file:
   RECORD_CALL_ARG1(instance_, the_eh_stack_t, wheel_cb, the_wheel_event_t, e);
   
@@ -177,6 +183,9 @@ the_eh_stack_t::wheel_cb(const the_wheel_event_t & e)
 bool
 the_eh_stack_t::keybd_cb(const the_keybd_event_t & e)
 {
+  the_input_device_t::advance_time_stamp();
+  THE_KEYBD.update(e);
+  
   // save the call to the trail file:
   RECORD_CALL_ARG1(instance_, the_eh_stack_t, keybd_cb, the_keybd_event_t, e);
   
@@ -200,6 +209,9 @@ the_eh_stack_t::keybd_cb(const the_keybd_event_t & e)
 bool
 the_eh_stack_t::wacom_cb(const the_wacom_event_t & e)
 {
+  the_input_device_t::advance_time_stamp();
+  THE_WACOM.update(e);
+  
   // save the call to the trail file:
   RECORD_CALL_ARG1(instance_, the_eh_stack_t, wacom_cb, the_wacom_event_t, e);
   
