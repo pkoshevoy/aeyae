@@ -86,6 +86,26 @@ using std::ofstream;
     INSTANCE.save(the_trail_t::trail_->record_stream)
 #endif
 
+//----------------------------------------------------------------
+// RECORD_NEW_INSTANCE
+// 
+#ifndef RECORD_NEW_INSTANCE
+#define RECORD_NEW_INSTANCE( CLASS, THIS )			\
+  if (the_trail_t::trail_->record_stream.is_open())	\
+    type_instance_t<CLASS>(#CLASS, THIS).		\
+      save(the_trail_t::trail_->record_stream)
+#endif
+
+//----------------------------------------------------------------
+// RECORD_INSTANCE_MEMBER
+// 
+#ifndef RECORD_INSTANCE_MEMBER
+#define RECORD_INSTANCE_MEMBER( CLASS, MEMBER )			\
+  if (the_trail_t::trail_->record_stream.is_open())		\
+    type_instance_t<CLASS>(#CLASS"::"#MEMBER, MEMBER, false).	\
+      save(the_trail_t::trail_->record_stream)
+#endif
+
 
 //----------------------------------------------------------------
 // the_trail_t
