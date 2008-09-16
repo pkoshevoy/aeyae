@@ -39,9 +39,7 @@ THE SOFTWARE.
 #include <QApplication>
 #include <QObject>
 #include <QEvent>
-#include <QRect>
 #include <QPoint>
-#include <QSize>
 #include <QTimer>
 #include <QMouseEvent>
 #include <QTabletEvent>
@@ -307,6 +305,14 @@ public:
   the_bit_tree_t<the_traits_mapping_t> tree_load_;
   the_bit_tree_t<the_traits_mapping_t> tree_save_;
 };
+
+class QSize;
+extern bool save(ostream & stream, const QSize & data);
+extern bool load(istream & stream, QSize & data);
+
+class QRect;
+extern bool save(ostream & stream, const QRect & data);
+extern bool load(istream & stream, QRect & data);
 
 
 #endif // THE_QT_TRAIL_HXX_

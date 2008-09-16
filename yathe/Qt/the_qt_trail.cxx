@@ -58,6 +58,8 @@ THE SOFTWARE.
 #include <QThread>
 #include <QTime>
 #include <QPushButton>
+#include <QSize>
+#include <QRect>
 
 // system includes:
 #include <iostream>
@@ -2531,4 +2533,52 @@ the_qt_trail_t::loadQShortcutEvent(istream & istr, QEvent::Type)
   QKeySequence key = QKeySequence::fromString(shortcut);
   QShortcutEvent * event = new QShortcutEvent(key, shortcut_id, ambiguous);
   return event;
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
+save(ostream & stream, const QSize & data)
+{
+  stream << data.width() << ' ' << data.height() << ' ';
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(istream & stream, QSize & data)
+{
+  int w, h;
+  stream >> w >> h;
+  data = QSize(w, h);
+  return true;
+}
+
+//----------------------------------------------------------------
+// save
+// 
+bool
+save(ostream & stream, const QRect & data)
+{
+  stream << data.x() << ' '
+	 << data.y() << ' '
+	 << data.width() << ' '
+	 << data.height() << ' ';
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(istream & stream, QRect & data)
+{
+  int x, y, w, h;
+  stream >> x >> y >> w >> h;
+  data = QRect(x, y, w, h);
+  return true;
 }
