@@ -138,8 +138,8 @@ public:
   split_the_path_into_components(const QString & full_path,
 				 QList<QString> & path_names);
   
-  void save(ostream & ostr) const;
-  void load(istream & istr);
+  void save(std::ostream & ostr) const;
+  void load(std::istream & istr);
   
 private:
   // helper functions:
@@ -159,14 +159,14 @@ private:
 //----------------------------------------------------------------
 // operator <<
 // 
-extern ostream &
-operator << (ostream & ostr, const QObjectTraits & traits);
+extern std::ostream &
+operator << (std::ostream & ostr, const QObjectTraits & traits);
 
 //----------------------------------------------------------------
 // operator >>
 // 
-extern istream &
-operator >> (istream & istr, QObjectTraits & traits);
+extern std::istream &
+operator >> (std::istream & istr, QObjectTraits & traits);
 
 
 //----------------------------------------------------------------
@@ -240,66 +240,66 @@ public:
   // update the input devices (mouse, keyboard, tablet, etc...):
   void update_devices(QObject * object, const QEvent * event);
   
-  void save_event(ostream &       ostr,
+  void save_event(std::ostream &  ostr,
 		  const QObject * object,
 		  const QEvent *  event);
   
-  bool load_bypass(istream & istr);
-  bool load_object(istream & istr);
-  bool load_event(istream &  istr,
+  bool load_bypass(std::istream & istr);
+  bool load_object(std::istream & istr);
+  bool load_event(std::istream &  istr,
 		  QObject *& object,
 		  QEvent *&  event);
   
-  void saveQEvent(ostream & ostr,
+  void saveQEvent(std::ostream & ostr,
 		  const QObject * object,
 		  const QEvent * event);
   
-  void saveQMouseEvent(ostream & ostr,
+  void saveQMouseEvent(std::ostream & ostr,
 		       const QObject * object,
 		       const QMouseEvent * event);
   
-  void saveQWheelEvent(ostream & ostr,
+  void saveQWheelEvent(std::ostream & ostr,
 		       const QObject * object,
 		       const QWheelEvent * event);
   
-  void saveQKeyEvent(ostream & ostr,
+  void saveQKeyEvent(std::ostream & ostr,
 		     const QObject * object,
 		     const QKeyEvent * event);
   
-  void saveQTabletEvent(ostream & ostr,
+  void saveQTabletEvent(std::ostream & ostr,
 			const QObject * object,
 			const QTabletEvent * event);
   
-  void saveQMoveEvent(ostream & ostr,
+  void saveQMoveEvent(std::ostream & ostr,
 		      const QObject * object,
 		      const QMoveEvent * event);
   
-  void saveQResizeEvent(ostream & ostr,
+  void saveQResizeEvent(std::ostream & ostr,
 			const QObject * object,
 			const QResizeEvent * event);
   
-  void saveQCloseEvent(ostream & ostr,
+  void saveQCloseEvent(std::ostream & ostr,
 		       const QObject * object,
 		       const QCloseEvent * event);
   
-  void saveQTimerEvent(ostream & ostr,
+  void saveQTimerEvent(std::ostream & ostr,
 		       const QObject * object,
 		       const QTimerEvent * event);
   
-  void saveQShortcutEvent(ostream & ostr,
+  void saveQShortcutEvent(std::ostream & ostr,
 			  const QObject * object,
 			  const QShortcutEvent * event);
   
-  QEvent *         loadQEvent(istream & istr,         QEvent::Type t);
-  QMouseEvent *    loadQMouseEvent(istream & istr,    QEvent::Type t);
-  QWheelEvent *    loadQWheelEvent(istream & istr,    QEvent::Type t);
-  QKeyEvent *      loadQKeyEvent(istream & istr,      QEvent::Type t);
-  QTabletEvent *   loadQTabletEvent(istream & istr,   QEvent::Type t);
-  QMoveEvent *     loadQMoveEvent(istream & istr,     QEvent::Type t);
-  QResizeEvent *   loadQResizeEvent(istream & istr,   QEvent::Type t);
-  QCloseEvent *    loadQCloseEvent(istream & istr,    QEvent::Type t);
-  QTimerEvent *    loadQTimerEvent(istream & istr,    QEvent::Type t);
-  QShortcutEvent * loadQShortcutEvent(istream & istr, QEvent::Type t);
+  QEvent *         loadQEvent(std::istream & istr,         QEvent::Type t);
+  QMouseEvent *    loadQMouseEvent(std::istream & istr,    QEvent::Type t);
+  QWheelEvent *    loadQWheelEvent(std::istream & istr,    QEvent::Type t);
+  QKeyEvent *      loadQKeyEvent(std::istream & istr,      QEvent::Type t);
+  QTabletEvent *   loadQTabletEvent(std::istream & istr,   QEvent::Type t);
+  QMoveEvent *     loadQMoveEvent(std::istream & istr,     QEvent::Type t);
+  QResizeEvent *   loadQResizeEvent(std::istream & istr,   QEvent::Type t);
+  QCloseEvent *    loadQCloseEvent(std::istream & istr,    QEvent::Type t);
+  QTimerEvent *    loadQTimerEvent(std::istream & istr,    QEvent::Type t);
+  QShortcutEvent * loadQShortcutEvent(std::istream & istr, QEvent::Type t);
   
   // trees used to map pointers to QObjects during trail playback/recording:
   the_bit_tree_t<the_traits_mapping_t> tree_load_;
@@ -307,12 +307,12 @@ public:
 };
 
 class QSize;
-extern bool save(ostream & stream, const QSize & data);
-extern bool load(istream & stream, QSize & data);
+extern bool save(std::ostream & stream, const QSize & data);
+extern bool load(std::istream & stream, QSize & data);
 
 class QRect;
-extern bool save(ostream & stream, const QRect & data);
-extern bool load(istream & stream, QRect & data);
+extern bool save(std::ostream & stream, const QRect & data);
+extern bool load(std::istream & stream, QRect & data);
 
 
 #endif // THE_QT_TRAIL_HXX_

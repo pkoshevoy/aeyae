@@ -70,6 +70,12 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <algorithm>
 
+// namespace stuff:
+using std::istream;
+using std::ostream;
+using std::ifstream;
+using std::ofstream;
+
 
 //----------------------------------------------------------------
 // operator >>

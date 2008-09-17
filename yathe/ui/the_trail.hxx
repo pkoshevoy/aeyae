@@ -44,12 +44,6 @@ THE SOFTWARE.
 #include <fstream>
 #include <iostream>
 
-// namespace stuff:
-using std::istream;
-using std::ostream;
-using std::ifstream;
-using std::ofstream;
-
 
 //----------------------------------------------------------------
 // THE_TRAIL
@@ -202,8 +196,8 @@ public:
   bool record_by_default_;
   
   // The in/out stream used for trail replay/record:
-  ifstream replay_stream;
-  ofstream record_stream;
+  std::ifstream replay_stream;
+  std::ofstream record_stream;
   
   // the input devices (reflect the current state of the device):
   the_mouse_t mouse_;
