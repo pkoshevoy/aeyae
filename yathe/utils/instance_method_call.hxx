@@ -198,6 +198,7 @@ class method_t
 {
 public:
   method_t(const char * signature);
+  virtual ~method_t() {}
   
   // lookup a method by its signature:
   static const method_t * lookup(const std::string & signature);
