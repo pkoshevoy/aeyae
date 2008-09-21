@@ -76,10 +76,22 @@ the_eh_stack_t::the_eh_stack_t():
   static bool methods_registered = false;
   if (!methods_registered)
   {
-    METHOD_REGISTER_ARG1(the_eh_stack_t, mouse_cb, the_mouse_event_t);
-    METHOD_REGISTER_ARG1(the_eh_stack_t, wheel_cb, the_wheel_event_t);
-    METHOD_REGISTER_ARG1(the_eh_stack_t, keybd_cb, the_keybd_event_t);
-    METHOD_REGISTER_ARG1(the_eh_stack_t, wacom_cb, the_wacom_event_t);
+    typedef bool(the_eh_stack_t::*me_t)(const the_mouse_event_t &);
+    REGISTER_METHOD_ARG1_EXPLICITLY
+      (the_eh_stack_t, mouse_cb, the_mouse_event_t, me_t);
+    
+    typedef bool(the_eh_stack_t::*we_t)(const the_wheel_event_t &);
+    REGISTER_METHOD_ARG1_EXPLICITLY
+      (the_eh_stack_t, wheel_cb, the_wheel_event_t, we_t);
+    
+    typedef bool(the_eh_stack_t::*ke_t)(const the_keybd_event_t &);
+    REGISTER_METHOD_ARG1_EXPLICITLY
+      (the_eh_stack_t, keybd_cb, the_keybd_event_t, ke_t);
+    
+    typedef bool(the_eh_stack_t::*te_t)(const the_wacom_event_t &);
+    REGISTER_METHOD_ARG1_EXPLICITLY
+      (the_eh_stack_t, wacom_cb, the_wacom_event_t, te_t);
+    
     methods_registered = true;
   }
 }

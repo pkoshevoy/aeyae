@@ -263,15 +263,65 @@ protected:
   func_t func_;
 };
 
-
 //----------------------------------------------------------------
-// METHOD_REGISTER_VOID
-//
-#ifndef METHOD_REGISTER_VOID
-#define METHOD_REGISTER_VOID( CLASS, METHOD )				\
-  static method_void_t<CLASS, typeof(&CLASS::METHOD) >			\
-  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
-#endif
+// void_method_void_t
+// 
+template <typename class_t>
+class void_method_void_t : public method_t
+{
+public:
+  typedef void (class_t::*func_t)();
+  typedef void (class_t::*const_func_t)() const;
+  
+  void_method_void_t(const char * signature, func_t func):
+    method_t(signature),
+    func_(func),
+    const_func_(NULL)
+  {}
+  
+  void_method_void_t(const char * signature, const_func_t func):
+    method_t(signature),
+    func_(NULL),
+    const_func_(func)
+  {}
+  
+  // virtual:
+  void execute(const instance_t & instance,
+	       const boost::shared_ptr<args_t> & /* args */) const
+  {
+    class_t * c = (class_t *)(instance.address());
+    if (!c)
+    {
+      assert(false);
+      return;
+    }
+    
+    // call the member function:
+    if (func_)
+    {
+      (c->*func_)();
+    }
+    else if (const_func_)
+    {
+      (c->*const_func_)();
+    }
+    else
+    {
+      assert(false);
+    }
+  }
+  
+  // virtual:
+  bool load(std::istream & /* si */, boost::shared_ptr<args_t> & args) const
+  {
+    args = boost::shared_ptr<args_t>();
+    return true;
+  }
+  
+protected:
+  func_t func_;
+  const_func_t const_func_;
+};
 
 
 //----------------------------------------------------------------
@@ -325,20 +375,10 @@ protected:
 
 
 //----------------------------------------------------------------
-// METHOD_REGISTER_ARG1
-//
-#ifndef METHOD_REGISTER_ARG1
-#define METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )			\
-  static method_arg1_t<CLASS, typeof(&CLASS::METHOD), ARG>		\
-  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
-#endif
-
-
-//----------------------------------------------------------------
-// overloaded_method_arg1_t
+// void_method_arg1_t
 // 
 template <typename class_t, typename arg_t>
-class overloaded_method_arg1_t : public method_t
+class void_method_arg1_t : public method_t
 {
 public:
   typedef void (class_t::*func_t)(arg_t);
@@ -346,23 +386,35 @@ public:
   typedef void (class_t::*const_func_t)(arg_t) const;
   typedef void (class_t::*const_func_cref_t)(const arg_t &) const;
   
-  overloaded_method_arg1_t(const char * signature, func_t func):
+  void_method_arg1_t(const char * signature, func_t func):
     method_t(signature),
-    func_(func)
+    func_(func),
+    func_cref_(NULL),
+    const_func_(NULL),
+    const_func_cref_(NULL)
   {}
   
-  overloaded_method_arg1_t(const char * signature, func_cref_t func):
+  void_method_arg1_t(const char * signature, func_cref_t func):
     method_t(signature),
-    func_cref_(func)
+    func_(NULL),
+    func_cref_(func),
+    const_func_(NULL),
+    const_func_cref_(NULL)
   {}
   
-  overloaded_method_arg1_t(const char * signature, const_func_t func):
+  void_method_arg1_t(const char * signature, const_func_t func):
     method_t(signature),
-    const_func_(func)
+    func_(NULL),
+    func_cref_(NULL),
+    const_func_(func),
+    const_func_cref_(NULL)
   {}
   
-  overloaded_method_arg1_t(const char * signature, const_func_cref_t func):
+  void_method_arg1_t(const char * signature, const_func_cref_t func):
     method_t(signature),
+    func_(NULL),
+    func_cref_(NULL),
+    const_func_(NULL),
     const_func_cref_(func)
   {}
   
@@ -395,6 +447,10 @@ public:
     {
       (c->*const_func_cref_)(arg1->arg_);
     }
+    else
+    {
+      assert(false);
+    }
   }
   
   // virtual:
@@ -419,13 +475,65 @@ protected:
 
 
 //----------------------------------------------------------------
-// OVERLOADED_METHOD_REGISTER_ARG1
+// REGISTER_METHOD_VOID
+//
+#ifndef REGISTER_METHOD_VOID
+#ifdef WIN32
+#define REGISTER_METHOD_VOID( CLASS, METHOD )				\
+  static void_method_void_t<CLASS>					\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
+#else
+#define REGISTER_METHOD_VOID( CLASS, METHOD )				\
+  static method_void_t<CLASS, typeof(&CLASS::METHOD) >			\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
+#endif
+#endif
+
+
+//----------------------------------------------------------------
+// REGISTER_METHOD_ARG1
+//
+#ifndef REGISTER_METHOD_ARG1
+#ifdef WIN32
+#define REGISTER_METHOD_ARG1( CLASS, METHOD, ARG )			\
+  static void_method_arg1_t<CLASS, ARG>					\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
+#else
+#define REGISTER_METHOD_ARG1( CLASS, METHOD, ARG )			\
+  static method_arg1_t<CLASS, typeof(&CLASS::METHOD), ARG>		\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
+#endif
+#endif
+
+
+//----------------------------------------------------------------
+// REGISTER_OVERLOADED_METHOD_ARG1
 // 
-#ifndef OVERLOADED_METHOD_REGISTER_ARG1
-#define OVERLOADED_METHOD_REGISTER_ARG1( CLASS, METHOD, ARG )		\
-  static overloaded_method_arg1_t<CLASS, ARG>				\
-  overloaded_method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")",	\
-				       &CLASS::METHOD)
+#ifndef REGISTER_OVERLOADED_METHOD_ARG1
+#define REGISTER_OVERLOADED_METHOD_ARG1( CLASS, METHOD, ARG )		\
+  static void_method_arg1_t<CLASS, ARG>					\
+  void_method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")",		\
+				 &CLASS::METHOD)
+#endif
+
+
+//----------------------------------------------------------------
+// REGISTER_METHOD_VOID_EXPLICITLY
+// 
+#ifndef REGISTER_METHOD_VOID_EXPLICITLY
+#define REGISTER_METHOD_VOID_EXPLICITLY( CLASS, METHOD, TYPE )		\
+  static method_void_t<CLASS, TYPE>					\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"()", &CLASS::METHOD)
+#endif
+
+
+//----------------------------------------------------------------
+// REGISTER_METHOD_ARG1_EXPLICITLY
+// 
+#ifndef REGISTER_METHOD_ARG1_EXPLICITLY
+#define REGISTER_METHOD_ARG1_EXPLICITLY( CLASS, METHOD, ARG, TYPE )    	\
+  static method_arg1_t<CLASS, TYPE, ARG>	       			\
+  method_##CLASS##_##METHOD(#CLASS"::"#METHOD"("#ARG")", &CLASS::METHOD)
 #endif
 
 
