@@ -74,18 +74,12 @@ THE SOFTWARE.
 #include <windows.h>
 #endif
 
-// namespace stuff:
-using std::istream;
-using std::ostream;
-using std::ifstream;
-using std::ofstream;
-
 
 //----------------------------------------------------------------
 // operator >>
 // 
-static istream &
-operator >> (istream & in, QString & str)
+static std::istream &
+operator >> (std::istream & in, QString & str)
 {
   std::string tmp;
   in >> tmp;
@@ -96,8 +90,8 @@ operator >> (istream & in, QString & str)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & out, const QString & str)
+static std::ostream &
+operator << (std::ostream & out, const QString & str)
 {
   std::string tmp(str.toUtf8().constData());
   out << tmp.c_str();
@@ -478,7 +472,7 @@ dump_children(QObject * parent)
 // dump_children_tree
 // 
 static void
-dump_children_tree(ostream & so, const QObject * parent, unsigned int indent)
+dump_children_tree(std::ostream & so, const QObject * parent, unsigned int indent)
 {
   for (unsigned int i = 0; i < indent; i++) so << ' ';
   so << parent->metaObject()->className() << ':' << parent->objectName();
@@ -749,7 +743,7 @@ QObjectTraits::split_the_path_into_components(const QString & full_path,
 // QObjectTraits::save
 // 
 void
-QObjectTraits::save(ostream & ostr) const
+QObjectTraits::save(std::ostream & ostr) const
 {
   for (unsigned int i = 0; i < path_size_; i++)
   {
@@ -766,7 +760,7 @@ QObjectTraits::save(ostream & ostr) const
 // QObjectTraits::load
 // 
 void
-QObjectTraits::load(istream & istr)
+QObjectTraits::load(std::istream & istr)
 {
   QString full_path;
   istr >> full_path;
@@ -841,8 +835,8 @@ QObjectTraits::matching_objects(std::list<QObject *> & objects) const
 //----------------------------------------------------------------
 // operator <<
 // 
-ostream &
-operator << (ostream & ostr, const QObjectTraits & traits)
+std::ostream &
+operator << (std::ostream & ostr, const QObjectTraits & traits)
 {
   traits.save(ostr);
   return ostr;
@@ -851,8 +845,8 @@ operator << (ostream & ostr, const QObjectTraits & traits)
 //----------------------------------------------------------------
 // operator >>
 // 
-istream &
-operator >> (istream & istr, QObjectTraits & traits)
+std::istream &
+operator >> (std::istream & istr, QObjectTraits & traits)
 {
   traits.load(istr);
   return istr;
@@ -862,8 +856,8 @@ operator >> (istream & istr, QObjectTraits & traits)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & ostr, const QEvent::Type & t)
+static std::ostream &
+operator << (std::ostream & ostr, const QEvent::Type & t)
 {
   return ostr << (int)t;
 }
@@ -871,8 +865,8 @@ operator << (ostream & ostr, const QEvent::Type & t)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & ostr, const QPoint & p)
+static std::ostream &
+operator << (std::ostream & ostr, const QPoint & p)
 {
   return ostr << p.x() << ' ' << p.y();
 }
@@ -880,8 +874,8 @@ operator << (ostream & ostr, const QPoint & p)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & ostr, const QPointF & p)
+static std::ostream &
+operator << (std::ostream & ostr, const QPointF & p)
 {
   return ostr << p.x() << ' ' << p.y();
 }
@@ -889,8 +883,8 @@ operator << (ostream & ostr, const QPointF & p)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & ostr, const QSize & s)
+static std::ostream &
+operator << (std::ostream & ostr, const QSize & s)
 {
   return ostr << s.width() << ' ' << s.height();
 }
@@ -898,8 +892,8 @@ operator << (ostream & ostr, const QSize & s)
 //----------------------------------------------------------------
 // operator <<
 // 
-static ostream &
-operator << (ostream & ostr, const QObject * object)
+static std::ostream &
+operator << (std::ostream & ostr, const QObject * object)
 {
   save_address(ostr, object);
   return ostr;
@@ -908,8 +902,8 @@ operator << (ostream & ostr, const QObject * object)
 //----------------------------------------------------------------
 // operator >>
 // 
-static istream &
-operator >> (istream & istr, QEvent::Type & t)
+static std::istream &
+operator >> (std::istream & istr, QEvent::Type & t)
 {
   int temp;
   istr >> temp;
@@ -920,8 +914,8 @@ operator >> (istream & istr, QEvent::Type & t)
 //----------------------------------------------------------------
 // operator >>
 // 
-static istream &
-operator >> (istream & istr, QPoint & p)
+static std::istream &
+operator >> (std::istream & istr, QPoint & p)
 {
   int x;
   int y;
@@ -934,8 +928,8 @@ operator >> (istream & istr, QPoint & p)
 //----------------------------------------------------------------
 // operator >>
 // 
-static istream &
-operator >> (istream & istr, QPointF & p)
+static std::istream &
+operator >> (std::istream & istr, QPointF & p)
 {
   istr >> p.rx() >> p.ry();
   return istr;
@@ -944,8 +938,8 @@ operator >> (istream & istr, QPointF & p)
 //----------------------------------------------------------------
 // operator >>
 // 
-static istream &
-operator >> (istream & istr, QSize & s)
+static std::istream &
+operator >> (std::istream & istr, QSize & s)
 {
   int width = 0;
   int height = 0;
@@ -1833,7 +1827,7 @@ the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
 // the_qt_trail_t::save_event
 // 
 void
-the_qt_trail_t::save_event(ostream &       ostr,
+the_qt_trail_t::save_event(std::ostream &       ostr,
 			   const QObject * object,
 			   const QEvent *  event)
 {
@@ -1951,7 +1945,7 @@ the_qt_trail_t::save_event(ostream &       ostr,
 // the_qt_trail_t::load_bypass
 // 
 bool
-the_qt_trail_t::load_bypass(istream & istr)
+the_qt_trail_t::load_bypass(std::istream & istr)
 {
   std::string bypass;
   istr >> bypass;
@@ -1978,7 +1972,7 @@ the_qt_trail_t::load_bypass(istream & istr)
 // the_qt_trail_t::load_object
 // 
 bool
-the_qt_trail_t::load_object(istream & istr)
+the_qt_trail_t::load_object(std::istream & istr)
 {
   uint64_t old_ptr = 0;
   if (!load_address(istr, old_ptr))
@@ -2028,7 +2022,7 @@ the_qt_trail_t::load_object(istream & istr)
 // the_qt_trail_t::load_event
 // 
 bool
-the_qt_trail_t::load_event(istream &  istr,
+the_qt_trail_t::load_event(std::istream &  istr,
 			   QObject *& object,
 			   QEvent *&  event)
 {
@@ -2172,7 +2166,7 @@ the_qt_trail_t::load_event(istream &  istr,
 // the_qt_trail_t::saveQEvent
 // 
 void
-the_qt_trail_t::saveQEvent(ostream & ostr,
+the_qt_trail_t::saveQEvent(std::ostream & ostr,
 			   const QObject * object,
 			   const QEvent * event)
 {
@@ -2186,7 +2180,7 @@ the_qt_trail_t::saveQEvent(ostream & ostr,
 // the_qt_trail_t::saveQMouseEvent
 // 
 void
-the_qt_trail_t::saveQMouseEvent(ostream & ostr,
+the_qt_trail_t::saveQMouseEvent(std::ostream & ostr,
 				const QObject * object,
 				const QMouseEvent * event)
 {
@@ -2204,7 +2198,7 @@ the_qt_trail_t::saveQMouseEvent(ostream & ostr,
 // the_qt_trail_t::saveQWheelEvent
 // 
 void
-the_qt_trail_t::saveQWheelEvent(ostream & ostr,
+the_qt_trail_t::saveQWheelEvent(std::ostream & ostr,
 				const QObject * object,
 				const QWheelEvent * event)
 {
@@ -2223,7 +2217,7 @@ the_qt_trail_t::saveQWheelEvent(ostream & ostr,
 // the_qt_trail_t::saveQKeyEvent
 // 
 void
-the_qt_trail_t::saveQKeyEvent(ostream & ostr,
+the_qt_trail_t::saveQKeyEvent(std::ostream & ostr,
 			      const QObject * object,
 			      const QKeyEvent * event)
 {
@@ -2251,7 +2245,7 @@ the_qt_trail_t::saveQKeyEvent(ostream & ostr,
 // the_qt_trail_t::saveQTabletEvent
 // 
 void
-the_qt_trail_t::saveQTabletEvent(ostream & ostr,
+the_qt_trail_t::saveQTabletEvent(std::ostream & ostr,
 				 const QObject * object,
 				 const QTabletEvent * event)
 {
@@ -2277,7 +2271,7 @@ the_qt_trail_t::saveQTabletEvent(ostream & ostr,
 // the_qt_trail_t::saveQMoveEvent
 // 
 void
-the_qt_trail_t::saveQMoveEvent(ostream & ostr,
+the_qt_trail_t::saveQMoveEvent(std::ostream & ostr,
 			       const QObject * object,
 			       const QMoveEvent * event)
 {
@@ -2292,7 +2286,7 @@ the_qt_trail_t::saveQMoveEvent(ostream & ostr,
 // the_qt_trail_t::saveQResizeEvent
 // 
 void
-the_qt_trail_t::saveQResizeEvent(ostream & ostr,
+the_qt_trail_t::saveQResizeEvent(std::ostream & ostr,
 				 const QObject * object,
 				 const QResizeEvent * event)
 {
@@ -2307,7 +2301,7 @@ the_qt_trail_t::saveQResizeEvent(ostream & ostr,
 // the_qt_trail_t::saveQCloseEvent
 // 
 void
-the_qt_trail_t::saveQCloseEvent(ostream & ostr,
+the_qt_trail_t::saveQCloseEvent(std::ostream & ostr,
 				const QObject * object,
 				const QCloseEvent * event)
 {
@@ -2320,7 +2314,7 @@ the_qt_trail_t::saveQCloseEvent(ostream & ostr,
 // the_qt_trail_t::saveQTimerEvent
 // 
 void
-the_qt_trail_t::saveQTimerEvent(ostream & ostr,
+the_qt_trail_t::saveQTimerEvent(std::ostream & ostr,
 				const QObject * object,
 				const QTimerEvent * event)
 {
@@ -2334,7 +2328,7 @@ the_qt_trail_t::saveQTimerEvent(ostream & ostr,
 // the_qt_trail_t::saveQShortcutEvent
 // 
 void
-the_qt_trail_t::saveQShortcutEvent(ostream & ostr,
+the_qt_trail_t::saveQShortcutEvent(std::ostream & ostr,
 				   const QObject * object,
 				   const QShortcutEvent * event)
 {
@@ -2351,7 +2345,7 @@ the_qt_trail_t::saveQShortcutEvent(ostream & ostr,
 // the_qt_trail_t::loadQEvent
 // 
 QEvent *
-the_qt_trail_t::loadQEvent(istream &, QEvent::Type t)
+the_qt_trail_t::loadQEvent(std::istream &, QEvent::Type t)
 {
   QEvent * event = new QEvent(t);
   return event;
@@ -2361,7 +2355,7 @@ the_qt_trail_t::loadQEvent(istream &, QEvent::Type t)
 // the_qt_trail_t::loadQMouseEvent
 // 
 QMouseEvent *
-the_qt_trail_t::loadQMouseEvent(istream & istr, QEvent::Type t)
+the_qt_trail_t::loadQMouseEvent(std::istream & istr, QEvent::Type t)
 {
   QPoint p;
   QPoint g;
@@ -2382,7 +2376,7 @@ the_qt_trail_t::loadQMouseEvent(istream & istr, QEvent::Type t)
 // the_qt_trail_t::loadQWheelEvent
 // 
 QWheelEvent *
-the_qt_trail_t::loadQWheelEvent(istream & istr, QEvent::Type)
+the_qt_trail_t::loadQWheelEvent(std::istream & istr, QEvent::Type)
 {
   QPoint p;
   QPoint g;
@@ -2404,7 +2398,7 @@ the_qt_trail_t::loadQWheelEvent(istream & istr, QEvent::Type)
 // the_qt_trail_t::loadQKeyEvent
 // 
 QKeyEvent *
-the_qt_trail_t::loadQKeyEvent(istream & istr, QEvent::Type t)
+the_qt_trail_t::loadQKeyEvent(std::istream & istr, QEvent::Type t)
 {
   int    k;
   int    mods;
@@ -2437,7 +2431,7 @@ the_qt_trail_t::loadQKeyEvent(istream & istr, QEvent::Type t)
 // the_qt_trail_t::loadQTabletEvent
 // 
 QTabletEvent *
-the_qt_trail_t::loadQTabletEvent(istream & istr, QEvent::Type event_type)
+the_qt_trail_t::loadQTabletEvent(std::istream & istr, QEvent::Type event_type)
 {
   QPoint position;
   QPoint global_position;
@@ -2489,7 +2483,7 @@ the_qt_trail_t::loadQTabletEvent(istream & istr, QEvent::Type event_type)
 // the_qt_trail_t::loadQMoveEvent
 // 
 QMoveEvent *
-the_qt_trail_t::loadQMoveEvent(istream & istr, QEvent::Type)
+the_qt_trail_t::loadQMoveEvent(std::istream & istr, QEvent::Type)
 {
   QPoint p;
   QPoint oldp;
@@ -2502,7 +2496,7 @@ the_qt_trail_t::loadQMoveEvent(istream & istr, QEvent::Type)
 // the_qt_trail_t::loadQResizeEvent
 // 
 QResizeEvent *
-the_qt_trail_t::loadQResizeEvent(istream & istr, QEvent::Type)
+the_qt_trail_t::loadQResizeEvent(std::istream & istr, QEvent::Type)
 {
   QSize s;
   QSize olds;
@@ -2515,7 +2509,7 @@ the_qt_trail_t::loadQResizeEvent(istream & istr, QEvent::Type)
 // the_qt_trail_t::loadQCloseEvent
 // 
 QCloseEvent *
-the_qt_trail_t::loadQCloseEvent(istream &, QEvent::Type)
+the_qt_trail_t::loadQCloseEvent(std::istream &, QEvent::Type)
 {
   QCloseEvent * event = new QCloseEvent();
   return event;
@@ -2525,7 +2519,7 @@ the_qt_trail_t::loadQCloseEvent(istream &, QEvent::Type)
 // the_qt_trail_t::loadQTimerEvent
 // 
 QTimerEvent *
-the_qt_trail_t::loadQTimerEvent(istream & istr, QEvent::Type)
+the_qt_trail_t::loadQTimerEvent(std::istream & istr, QEvent::Type)
 {
   int timer_id = 0;
   istr >> timer_id;
@@ -2537,7 +2531,7 @@ the_qt_trail_t::loadQTimerEvent(istream & istr, QEvent::Type)
 // the_qt_trail_t::loadQShortcutEvent
 // 
 QShortcutEvent *
-the_qt_trail_t::loadQShortcutEvent(istream & istr, QEvent::Type)
+the_qt_trail_t::loadQShortcutEvent(std::istream & istr, QEvent::Type)
 {
   int shortcut_id = 0;
   bool ambiguous = false;
@@ -2553,7 +2547,7 @@ the_qt_trail_t::loadQShortcutEvent(istream & istr, QEvent::Type)
 // save
 // 
 bool
-save(ostream & stream, const QSize & data)
+save(std::ostream & stream, const QSize & data)
 {
   stream << data.width() << ' ' << data.height() << ' ';
   return true;
@@ -2563,7 +2557,7 @@ save(ostream & stream, const QSize & data)
 // load
 // 
 bool
-load(istream & stream, QSize & data)
+load(std::istream & stream, QSize & data)
 {
   int w, h;
   stream >> w >> h;
@@ -2575,7 +2569,7 @@ load(istream & stream, QSize & data)
 // save
 // 
 bool
-save(ostream & stream, const QRect & data)
+save(std::ostream & stream, const QRect & data)
 {
   stream << data.x() << ' '
 	 << data.y() << ' '
@@ -2588,7 +2582,7 @@ save(ostream & stream, const QRect & data)
 // load
 // 
 bool
-load(istream & stream, QRect & data)
+load(std::istream & stream, QRect & data)
 {
   int x, y, w, h;
   stream >> x >> y >> w >> h;
