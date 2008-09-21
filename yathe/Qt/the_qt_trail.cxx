@@ -70,6 +70,10 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <algorithm>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 // namespace stuff:
 using std::istream;
 using std::ostream;
@@ -999,8 +1003,11 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_key(the_keybd_t::HOME, Qt::Key_Home);
   keybd_.init_key(the_keybd_t::END, Qt::Key_End);
   
-  keybd_.init_key(the_keybd_t::INSERT, Qt::Key_Insert);
+# ifdef DELETE
+# undef DELETE
+# endif
   keybd_.init_key(the_keybd_t::DELETE, Qt::Key_Delete);
+  keybd_.init_key(the_keybd_t::INSERT, Qt::Key_Insert);
   
   keybd_.init_key(the_keybd_t::ESCAPE, Qt::Key_Escape);
   keybd_.init_key(the_keybd_t::TAB, Qt::Key_Tab);

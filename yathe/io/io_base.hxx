@@ -39,6 +39,15 @@ THE SOFTWARE.
 #include <iostream>
 #include <algorithm>
 
+// uint64_t:
+#ifndef uint64_t
+#  ifdef WIN32
+typedef unsigned __int64 uint64_t;
+#  else
+#    include <inttypes.h>
+#  endif
+#endif
+
 // forward declarations:
 class io_base_t;
 
