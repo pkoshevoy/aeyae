@@ -133,7 +133,9 @@ instance_t::save(std::ostream & so) const
   // save the instance address:
   if (ok_to_save)
   {
-    so << "address_ " << address_;
+    so << "address_ ";
+    ::save_address(so, address_);
+    
     if (update_map)
     {
       so << std::endl;
