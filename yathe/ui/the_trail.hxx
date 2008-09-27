@@ -102,6 +102,58 @@ THE SOFTWARE.
 
 
 //----------------------------------------------------------------
+// the_bypass_t
+// 
+template <typename payload_t>
+class the_bypass_t : public io_base_t
+{
+public:
+  the_bypass_t(const char * name):
+    name_(name)
+  {}
+
+  // virtual:
+  void save(std::ostream & so) const
+  {
+    so << "the_bypass_t ";
+    ::save(so, name_);
+    ::save(so, payload_);
+    so << std::endl;
+  }
+
+  // virtual:
+  bool load(std::istream & si, const std::string & magic)
+  {
+    if (magic != "the_bypass_t")
+    {
+      return false;
+    }
+    
+    std::string name;
+    bool ok = ::load(si, name);
+    if (!ok || name != name_)
+    {
+      return false;
+    }
+    
+    ok = ::load(si, payload_);
+    return ok;
+  }
+  
+  // helper:
+  bool load(std::istream & si)
+  {
+    std::string magic;
+    si >> magic;
+    return load(si, magic);
+  }
+  
+  std::string name_;
+  payload_t payload_;
+};
+
+
+//----------------------------------------------------------------
 // the_trail_t
 //
 class the_trail_t
