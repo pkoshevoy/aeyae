@@ -150,10 +150,12 @@ save(std::ostream & stream, const the_dynamic_array_t<data_t> & array)
 {
   const unsigned int & size = array.size();
   save(stream, size);
+  stream << std::endl;
   
   for (unsigned int i = 0; i < size; i++)
   {
     save(stream, array[i]);
+    stream << std::endl;
   }
   
   return true;

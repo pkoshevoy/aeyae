@@ -192,11 +192,14 @@ save(std::ostream & stream, const std::list<data_t> & l)
 {
   // save the list:
   save(stream, (unsigned int)(l.size()));
+  stream << std::endl;
+  
   for (typename std::list<data_t>::const_iterator i = l.begin();
        i != l.end();
        ++i)
   {
     save(stream, *i);
+    stream << std::endl;
   }
   
   return true;
@@ -237,6 +240,7 @@ save(std::ostream & stream, const std::vector<data_t> & array)
   for (unsigned int i = 0; i < size && ok; i++)
   {
     ok = save(stream, array[i]);
+    stream << std::endl;
   }
   
   return ok;

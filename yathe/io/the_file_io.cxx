@@ -58,7 +58,7 @@ save(std::ostream & stream, const char * data)
 bool
 save(std::ostream & stream, const the_text_t & data)
 {
-  stream << data.size() << ' ' << data.text() << endl;
+  stream << data.size() << ' ' << data.text() << ' ';
   return true;
 }
 
