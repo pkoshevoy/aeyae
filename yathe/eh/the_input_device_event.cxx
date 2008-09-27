@@ -38,6 +38,58 @@ THE SOFTWARE.
 
 
 //----------------------------------------------------------------
+// the_input_device_event_t::save_widget
+// 
+void
+the_input_device_event_t::save(std::ostream & so, const char * magic) const
+{
+  if (!is_open(so)) return;
+  
+  instance_t instance(widget_);
+  if (!instance.was_saved())
+  {
+    // save the instance:
+    instance.save(so);
+  }
+  
+  so << magic << ' ';
+  save_address(so, instance.address());
+  so << ' ';
+}
+
+//----------------------------------------------------------------
+// the_input_device_event_t::load_widget
+// 
+bool
+the_input_device_event_t::load(std::istream & si,
+			       const std::string & loaded_magic,
+			       const char * magic)
+{
+  if (loaded_magic != magic)
+  {
+    return false;
+  }
+  
+  // load the instance pointer:
+  uint64_t addr = 0;
+  if (!load_address(si, addr))
+  {
+    return false;
+  }
+  
+  // the loaded address should be known to us by now:
+  instance_t instance;
+  if (!instance.init(addr))
+  {
+    return false;
+  }
+  
+  widget_ = (the_view_t *)(instance.address());
+  return true;
+}
+
+
+//----------------------------------------------------------------
 // the_mouse_btn_t::tran_down_
 // 
 unsigned int
@@ -75,11 +127,8 @@ void
 the_mouse_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
-  
-  so << "the_mouse_event_t ";
-  instance_t instance(widget_);
-  instance.save(so);
-  
+
+  the_input_device_event_t::save(so, "the_mouse_event_t");
   ::save(so, btns_);
   ::save(so, tran_);
   ::save(so, mods_);
@@ -94,21 +143,10 @@ the_mouse_event_t::save(std::ostream & so) const
 bool
 the_mouse_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (magic != "the_mouse_event_t")
+  if (!the_input_device_event_t::load(si, magic, "the_mouse_event_t"))
   {
     return false;
   }
-  
-  std::string token;
-  si >> token;
-  
-  instance_t instance;
-  if (!instance.load(si, token))
-  {
-    return false;
-  }
-  
-  widget_ = (the_view_t *)(instance.address());
   
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
@@ -158,10 +196,7 @@ the_wheel_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
   
-  so << "the_wheel_event_t ";
-  instance_t instance(widget_);
-  instance.save(so);
-  
+  the_input_device_event_t::save(so, "the_wheel_event_t");
   ::save(so, btns_);
   ::save(so, tran_);
   ::save(so, mods_);
@@ -176,21 +211,10 @@ the_wheel_event_t::save(std::ostream & so) const
 bool
 the_wheel_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (magic != "the_wheel_event_t")
+  if (!the_input_device_event_t::load(si, magic, "the_wheel_event_t"))
   {
     return false;
   }
-  
-  std::string token;
-  si >> token;
-  
-  instance_t instance;
-  if (!instance.load(si, token))
-  {
-    return false;
-  }
-  
-  widget_ = (the_view_t *)(instance.address());
   
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
@@ -248,10 +272,7 @@ the_keybd_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
   
-  so << "the_keybd_event_t ";
-  instance_t instance(widget_);
-  instance.save(so);
-  
+  the_input_device_event_t::save(so, "the_keybd_event_t");
   ::save(so, key_);
   ::save(so, tran_);
   ::save(so, mods_);
@@ -264,21 +285,10 @@ the_keybd_event_t::save(std::ostream & so) const
 bool
 the_keybd_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (magic != "the_keybd_event_t")
+  if (!the_input_device_event_t::load(si, magic, "the_keybd_event_t"))
   {
     return false;
   }
-  
-  std::string token;
-  si >> token;
-  
-  instance_t instance;
-  if (!instance.load(si, token))
-  {
-    return false;
-  }
-  
-  widget_ = (the_view_t *)(instance.address());
   
   bool ok = (::load(si, key_) &&
 	     ::load(si, tran_) &&
@@ -344,9 +354,7 @@ the_wacom_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
   
-  so << "the_wacom_event_t ";
-  instance_t instance(widget_);
-  instance.save(so);
+  the_input_device_event_t::save(so, "the_wacom_event_t");
 
   int tool = tool_;
   ::save(so, tool);
@@ -368,21 +376,10 @@ the_wacom_event_t::save(std::ostream & so) const
 bool
 the_wacom_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (magic != "the_wacom_event_t")
+  if (!the_input_device_event_t::load(si, magic, "the_wacom_event_t"))
   {
     return false;
   }
-  
-  std::string token;
-  si >> token;
-  
-  instance_t instance;
-  if (!instance.load(si, token))
-  {
-    return false;
-  }
-  
-  widget_ = (the_view_t *)(instance.address());
   
   int tool = 0;
   uint64_t tool_id = 0;

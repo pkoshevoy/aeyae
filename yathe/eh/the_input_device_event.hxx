@@ -62,6 +62,14 @@ public:
   { return widget_; }
   
   the_view_t * widget_;
+  
+protected:
+  void save(std::ostream & so,
+	    const char * magic) const;
+  
+  bool load(std::istream & si,
+	    const std::string & loaded_magic,
+	    const char * magic);
 };
 
 

@@ -223,6 +223,49 @@ instance_t::load(std::istream & si, const std::string & magic)
   return true;
 }
 
+//----------------------------------------------------------------
+// instance_t::was_saved
+// 
+bool
+instance_t::was_saved() const
+{
+  // check whether you've already been saved before:
+  std::map<std::string, void *>::iterator i = map_save_.find(signature_);
+  bool saved = (i != map_save_.end()) && (i->second == address_);
+  return saved;
+}
+
+//----------------------------------------------------------------
+// instance_t::init
+// 
+bool
+instance_t::init(uint64_t addr)
+{
+  signature_.clear();
+  address_ = NULL;
+  
+  std::map<uint64_t, void *>::iterator i = map_address_.find(addr);
+  if (i == map_address_.end())
+  {
+    // unrecognized address:
+    return false;
+  }
+  
+  address_ = i->second;
+  
+  std::map<void *, std::string>::iterator j = map_signature_.find(address_);
+  if (j == map_signature_.end())
+  {
+    // this shouldn't happen, ever:
+    assert(false);
+    address_ = NULL;
+    return false;
+  }
+  
+  signature_ = j->second;
+  return true;
+}
+
 
 //----------------------------------------------------------------
 // args_t::save
@@ -318,13 +361,20 @@ call_t::save(std::ostream & so) const
   bool ok_to_save = is_open(so);
   
   // save the magic token:
-  if (ok_to_save)
+  if (!ok_to_save)
   {
-    so << "call_t ";
+    return;
   }
   
-  // save the instance:
-  instance_.save(so);
+  if (!instance_.was_saved())
+  {
+    // save the instance:
+    instance_.save(so);
+  }
+
+  so << "call_t ";
+  ::save_address(so, instance_.address());
+  so << ' ';
   
   if (ok_to_save)
   {
@@ -354,11 +404,15 @@ call_t::load(std::istream & si, const std::string & magic)
     return false;
   }
   
-  std::string token;
-  si >> token;
-  
   // load the instance pointer:
-  if (!instance_.load(si, token))
+  uint64_t addr = 0;
+  if (!load_address(si, addr))
+  {
+    return false;
+  }
+  
+  // the loaded address should be known to us by now:
+  if (!instance_.init(addr))
   {
     return false;
   }

@@ -70,6 +70,13 @@ public:
   // virtual:
   void save(std::ostream & so) const;
   bool load(std::istream & si, const std::string & magic);
+
+  // check whether the instance has been saved before:
+  bool was_saved() const;
+  
+  // initialize this instance from an old address by looking up
+  // a matching signature and new address in the maps:
+  bool init(uint64_t old_address);
   
 protected:
   // instance signature:
