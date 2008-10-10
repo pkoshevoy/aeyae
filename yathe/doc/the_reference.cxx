@@ -32,6 +32,7 @@ THE SOFTWARE.
 // local includes:
 #include "doc/the_reference.hxx"
 #include "utils/the_indentation.hxx"
+#include "io/the_file_io.hxx"
 
 
 //----------------------------------------------------------------
@@ -47,7 +48,7 @@ the_reference_t::the_reference_t(const unsigned int & id):
 bool
 the_reference_t::save(std::ostream & stream) const
 {
-  stream << id_ << endl;
+  ::save(stream, id_);
   return true;
 }
 
@@ -57,8 +58,7 @@ the_reference_t::save(std::ostream & stream) const
 bool
 the_reference_t::load(std::istream & stream)
 {
-  stream >> id_;
-  return true;
+  return ::load(stream, id_);
 }
 
 //----------------------------------------------------------------
