@@ -308,8 +308,9 @@ wrap(the_transaction_t * transaction,
   
   if (multithreaded)
   {
-    the_transaction_wrapper_t * wrapper =
-      new the_transaction_wrapper_t(pool->pool_size(), transaction);
+    // silence the compiler warning:
+    // the_transaction_wrapper_t * wrapper =
+    new the_transaction_wrapper_t(pool->pool_size(), transaction);
   }
 }
 
