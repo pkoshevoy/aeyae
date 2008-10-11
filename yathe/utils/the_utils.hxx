@@ -33,8 +33,14 @@ THE SOFTWARE.
 #define THE_UTILS_HXX_
 
 // system includes:
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
-//#define NOMINMAX
+#endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <list>
 #include <stack>
 #include <vector>
@@ -45,6 +51,7 @@ THE SOFTWARE.
 
 // local includes:
 #include "utils/the_dynamic_array.hxx"
+
 
 //----------------------------------------------------------------
 // array2d
@@ -60,6 +67,7 @@ THE SOFTWARE.
 // TWO_PI
 // 
 static const double TWO_PI = 2.0 * M_PI;
+
 
 //----------------------------------------------------------------
 // clamp_angle
