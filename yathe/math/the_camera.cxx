@@ -63,8 +63,10 @@ the_camera_t::the_camera_t(const p3x1_t & eye,
   pixels_v_(pixels_v),
   sampling_method_(NULL)
 {
+#ifndef NDEBUG
   float dot = fabs(gaze_ * up_);
   assert(dot < 0.0001);
+#endif
   
   v3x1_t u = !(gaze_ % up_);
   v3x1_t v = -up;

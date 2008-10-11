@@ -923,15 +923,16 @@ the_triangle_mesh_t::calc_texture_coords(const bool & discard_current_coords)
   const unsigned int & num_vx = vx_.size();
   vt_.resize(num_vx);
   
+#if 0
   // iterate over the vertices, and calculate corresponding texture coordinate:
   float scale = float(1 / M_PI);
   for (unsigned int i = 0; i < num_vx; i++)
   {
     p3x1_t sph_pt;
-    // the_coord_sys_t::xyz_to_sph(vx_[i], sph_pt);
-    assert(0);
+    the_coord_sys_t::xyz_to_sph(vx_[i], sph_pt);
     vt_[i].assign(sph_pt.y() * scale, sph_pt.z() * scale);
   }
+#endif
   
   // iterate over the triangles and setup texture coordinates:
   const unsigned int & num_triangles = triangles_.size();

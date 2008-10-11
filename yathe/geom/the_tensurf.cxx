@@ -100,7 +100,7 @@ the_tensurf_t::regenerate()
       for (unsigned int j = 0; j < rows; j++)
       {
 	bool ok = geom_row[j].position(u, temp_pt[j]);
-	assert(ok);
+	if (!ok) assert(false);
       }
       
       geom_col.reset(temp_pt, knot_vector_v_.knots());
@@ -110,7 +110,7 @@ the_tensurf_t::regenerate()
       {
 	const float v = float(j) / float(quads_v);
 	bool ok = geom_col.position(v, pt[i][j].vx);
-	assert(ok);
+	if (!ok) assert(false);
       }
     }
     
