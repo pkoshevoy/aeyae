@@ -956,12 +956,10 @@ operator >> (std::istream & istr, QSize & s)
 // Each line of the trail file will have an ID, which will simplify
 // the parsing of the line.
 // 
-typedef enum
-  {
-    OBJECT_ID_E = 0,
-    EVENT_E = 1,
-    BYPASS_E = 2
-  } the_trail_line_id_t;
+typedef enum {
+  OBJECT_ID_E = 0,
+  EVENT_E = 1
+} the_trail_line_id_t;
 
 
 //----------------------------------------------------------------
@@ -1476,11 +1474,6 @@ the_qt_trail_t::replay_one()
       ok = load_event(replay_stream, object, event);
       break;
     }
-    else if (line_id == BYPASS_E)
-    {
-      ok = load_bypass(replay_stream);
-      break;
-    }
     else
     {
       cerr << "ERROR: invalid line id: " << line_id
@@ -1498,11 +1491,6 @@ the_qt_trail_t::replay_one()
     return;
   }
   
-  if (line_id == BYPASS_E)
-  {
-    return;
-  }
-
 #ifndef NDEBUG
   cout << line_num_ << ", " << qevent_type_to_str(event->type()) << endl;
 #endif
@@ -1635,118 +1623,6 @@ the_qt_trail_t::replay_one()
   delete event;
   dont_post_events_ = true;
   dont_load_events_ = false;
-}
-
-//----------------------------------------------------------------
-// the_qt_trail_t::bypass_prolog
-// 
-bool
-the_qt_trail_t::bypass_prolog(const char * name)
-{
-  if (is_recording())
-  {
-    // save the milestone marker:
-    record_stream << milestone_ << '\t'
-		  << BYPASS_E << ' '
-		  << "bypass_prolog" << ' '
-		  << encode_special_chars(std::string(name)).c_str()
-		  << endl;
-    dont_save_events_ = true;
-    record_bypass_name_ = name;
-  }
-  
-  if (is_replaying())
-  {
-    // wait for the bypass_prolog marker:
-    QTime timer;
-    timer.start();
-    
-    while (replay_bypass_name_.empty())
-    {
-      unsigned seconds_waiting = timer.elapsed() / 1000;
-      if (seconds_waiting > seconds_to_wait_)
-      {
-	QMessageBox mb;
-	mb.setIcon(QMessageBox::Question);	
-	mb.setWindowTitle(QString::fromUtf8("trail may be out of sequence"));
-	
-	std::ostringstream os;
-	os << "bypass_prolog " << name << " hasn't arrived within "
-	   << seconds_to_wait_ << " seconds." << endl;
-	mb.setText(QString::fromUtf8(os.str().c_str()));
-	
-	os.str("");
-	os << seconds_waiting
-	   << " seconds passed -- trail may be out of sequence." << endl
-	   << "Current trail line number is " << line_num_
-	   << ", current milestone is " << milestone_ << "." << endl
-	   << "Click [Stop] to stop trail playback immediately." << endl
-	   << "Click [Skip] to ignore this problem." << endl
-	   << "Click [Wait] to continue waiting for the milestone." << endl;
-	mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
-	
-	QAbstractButton * btn_stop =
-	  mb.addButton(tr("Stop"), QMessageBox::ActionRole);
-	
-	QAbstractButton * btn_skip =
-	  mb.addButton(tr("Skip"), QMessageBox::ActionRole);
-	
-	QAbstractButton * btn_wait =
-	  mb.addButton(tr("Wait"), QMessageBox::ActionRole);
-	
-	mb.exec();
-	
-	if (mb.clickedButton() == btn_stop)
-	{
-	  replay_done();
-	  return false;
-	}
-	else if (mb.clickedButton() == btn_skip)
-	{
-	  // fall through -- skip the milestone
-	  return false;
-	}
-	else if (mb.clickedButton() == btn_wait)
-	{
-	  // wait some more:
-	  timer.start();
-	}
-      }
-      
-#ifdef WIN32
-      Sleep(10);
-#else
-      usleep(10);
-#endif
-      QCoreApplication::processEvents();
-    }
-  }
-  
-  return true;
-}
-
-//----------------------------------------------------------------
-// the_qt_trail_t::bypass_epilog
-// 
-void
-the_qt_trail_t::bypass_epilog()
-{
-  if (is_replaying())
-  {
-    replay_bypass_name_.clear();
-    dont_load_events_ = false;
-  }
-  
-  if (is_recording())
-  {
-    // save the milestone marker:
-    record_stream << milestone_ << '\t'
-		  << BYPASS_E << ' '
-		  << "bypass_epilog"
-		  << endl;
-    dont_save_events_ = false;
-    record_bypass_name_.clear();
-  }
 }
 
 //----------------------------------------------------------------
@@ -1939,33 +1815,6 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
     }
     break;
   }
-}
-
-//----------------------------------------------------------------
-// the_qt_trail_t::load_bypass
-// 
-bool
-the_qt_trail_t::load_bypass(std::istream & istr)
-{
-  std::string bypass;
-  istr >> bypass;
-  line_num_++;
-  
-  if (bypass == "bypass_prolog")
-  {
-    std::string name;
-    istr >> name;
-    
-    replay_bypass_name_ = decode_special_chars(name);
-    dont_load_events_ = true;
-  }
-  else if (bypass != "bypass_epilog")
-  {
-    return false;
-  }
-  
-  bool ok = !istr.eof();
-  return ok;
 }
 
 //----------------------------------------------------------------

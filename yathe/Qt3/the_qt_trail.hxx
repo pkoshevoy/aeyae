@@ -198,11 +198,6 @@ public slots:
   void replay_done();
   void replay_one();
 
-protected:
-  // virtual:
-  bool bypass_prolog(const char * name);
-  void bypass_epilog();
-  
 public:
   // virtual:
   void stop();

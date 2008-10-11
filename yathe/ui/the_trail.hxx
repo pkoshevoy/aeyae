@@ -171,14 +171,30 @@ public:
   inline the_keybd_t & keybd() { return keybd_; }
   inline the_wacom_t & wacom() { return wacom_; }
   
+  // record a trail event, set the recorded_something flag to true:
+  void record(const io_base_t & trail_event);
+  
   // a timer will call this periodically to let the trail know to load
   // the next event from the trail:
-  virtual void timeout() {}
+  virtual void timeout();
   
 protected:
+  // check whether something was recorded since last call
+  // to clear_recorded_something:
+  inline bool check_recorded_something() const
+  { return recorded_something_; }
+  
+  // clear the recorded_something flag:
+  inline void clear_recorded_something()
+  { recorded_something_ = false; }
+  
+  // check whether the trail is blocked (an event is replaying):
+  inline bool is_trail_blocked() const
+  { return trail_is_blocked_; }
+  
   // default implementations are no-op:
-  virtual void replay() {}
-  virtual void replay_one() {}
+  virtual void replay();
+  virtual void replay_one();
   
   // close the replay stream:
   virtual void replay_done();
@@ -186,16 +202,9 @@ protected:
   // milestone accessor:
   void next_milestone_achieved();
   
-  // dialog bypass handling:
-  virtual bool bypass_prolog(const char * /* name */) { return false; }
-  virtual void bypass_epilog() {}
-  
 public:
   // stop the event trail replay:
-  virtual void stop()
-  {
-    replay_done();
-  }
+  virtual void stop();
   
   //----------------------------------------------------------------
   // milestone_t
@@ -212,26 +221,6 @@ public:
     {
       THE_TRAIL.next_milestone_achieved();
     }
-  };
-  
-  //----------------------------------------------------------------
-  // bypass_t
-  // 
-  class bypass_t
-  {
-  public:
-    bypass_t(const char * name):
-      ok_(false)
-    {
-      ok_ = THE_TRAIL.bypass_prolog(name);
-    }
-    
-    virtual ~bypass_t()
-    {
-      THE_TRAIL.bypass_epilog();
-    }
-    
-    bool ok_;
   };
   
   // check whether trail records is enabled:
@@ -256,6 +245,9 @@ public:
   the_keybd_t keybd_;
   the_wacom_t wacom_;
   
+  bool recorded_something_;
+  bool trail_is_blocked_;
+  
   // the trail line number that is currently being read/executed:
   unsigned int line_num_;
   
@@ -275,11 +267,6 @@ public:
   // a matching milestone marker before declaring a trail out of sequence;
   // default wait time indefinite (max unsigned int value):
   unsigned int seconds_to_wait_;
-  
-  // bypass names used to synchronize trail reading and
-  // application execution:
-  std::string replay_bypass_name_;
-  std::string record_bypass_name_;
   
   // A single instance of the trail object:
   static the_trail_t * trail_;

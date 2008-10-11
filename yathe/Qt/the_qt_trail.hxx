@@ -228,11 +228,6 @@ public slots:
   void replay_done();
   void replay_one();
 
-protected:
-  // virtual:
-  bool bypass_prolog(const char * name);
-  void bypass_epilog();
-  
 public:
   // virtual:
   void stop();
@@ -244,7 +239,6 @@ public:
 		  const QObject * object,
 		  const QEvent *  event);
   
-  bool load_bypass(std::istream & istr);
   bool load_object(std::istream & istr);
   bool load_event(std::istream &  istr,
 		  QObject *& object,

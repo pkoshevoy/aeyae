@@ -56,6 +56,8 @@ the_trail_t * the_trail_t::trail_ = NULL;
 // 
 the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   record_by_default_(record_by_default),
+  recorded_something_(false),
+  trail_is_blocked_(false),
   line_num_(0),
   milestone_(0),
   single_step_replay_(false),
@@ -191,6 +193,40 @@ the_trail_t::~the_trail_t()
 }
 
 //----------------------------------------------------------------
+// the_trail_t::record
+// 
+void
+the_trail_t::record(const io_base_t & trail_event)
+{
+  if (record_stream.is_open())
+  {
+    trail_event.save(record_stream);
+    recorded_something_ = true;
+  }
+}
+
+//----------------------------------------------------------------
+// the_trail_t::timeout
+// 
+void
+the_trail_t::timeout()
+{}
+
+//----------------------------------------------------------------
+// the_trail_t::replay
+// 
+void
+the_trail_t::replay()
+{}
+
+//----------------------------------------------------------------
+// the_trail_t::replay_one
+// 
+void
+the_trail_t::replay_one()
+{}
+
+//----------------------------------------------------------------
 // the_trail_t::replay_done
 // 
 void
@@ -217,4 +253,13 @@ void
 the_trail_t::next_milestone_achieved()
 {
   milestone_++;
+}
+
+//----------------------------------------------------------------
+// the_trail_t::stop
+// 
+void
+the_trail_t::stop()
+{
+  replay_done();
 }
