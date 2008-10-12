@@ -37,55 +37,49 @@ THE SOFTWARE.
 #include <iomanip>
 #include <sstream>
 
+// local includes:
+#include "thread/the_mutex_interface.hxx"
+#include "utils/the_utils.hxx"
+
 
 //----------------------------------------------------------------
 // the_log_t
 // 
 class the_log_t
 {
+protected:
+  void log_no_lock(std::ostream & (*f)(std::ostream &));
+  
 public:
-  virtual ~the_log_t() {}
+  the_log_t();
+  virtual ~the_log_t();
   
   virtual the_log_t &
-  operator << (std::ostream & (*f)(std::ostream &))
-  {
-    f(line_);
-    return *this;
-  }
+  operator << (std::ostream & (*f)(std::ostream &));
   
   template <typename data_t>
   the_log_t &
   operator << (const data_t & data)
   {
+    the_lock_t<the_mutex_interface_t> lock(mutex_);
     line_ << data;
     return *this;
   }
   
-  inline int precision()
-  { return line_.precision(); }
+  int precision();
+  int precision(int n);
   
-  inline int precision(int n)
-  { return line_.precision(n); }
+  std::ios::fmtflags flags() const;
+  std::ios::fmtflags flags(std::ios::fmtflags fmt);
   
-  inline std::ios::fmtflags flags() const
-  { return line_.flags(); }
+  void setf(std::ios::fmtflags fmt);
+  void setf(std::ios::fmtflags fmt, std::ios::fmtflags msk);
+  void unsetf(std::ios::fmtflags fmt);
   
-  inline std::ios::fmtflags flags(std::ios::fmtflags fmt)
-  { return line_.flags(fmt); }
-  
-  inline void setf(std::ios::fmtflags fmt)
-  { line_.setf(fmt); }
-  
-  inline void setf(std::ios::fmtflags fmt, std::ios::fmtflags msk)
-  { line_.setf(fmt, msk); }
-  
-  inline void unsetf(std::ios::fmtflags fmt)
-  { line_.unsetf(fmt); }
-  
-  inline void copyfmt(std::ostream & ostm)
-  { line_.copyfmt(ostm); }
+  void copyfmt(std::ostream & ostm);
   
   std::ostringstream line_;
+  mutable the_mutex_interface_t * mutex_;
 };
 
 
@@ -117,7 +111,8 @@ public:
   // virtual:
   the_log_t & operator << (std::ostream & (*f)(std::ostream &))
   {
-    the_log_t::operator << (f);
+    the_lock_t<the_mutex_interface_t> lock(the_log_t::mutex_);
+    the_log_t::log_no_lock(f);
     ostm_ << the_log_t::line_.str();
     the_log_t::line_.str("");
     return *this;
@@ -140,7 +135,8 @@ public:
   // virtual:
   the_log_t & operator << (std::ostream & (*f)(std::ostream &))
   {
-    the_log_t::operator << (f);
+    the_lock_t<the_mutex_interface_t> lock(the_log_t::mutex_);
+    the_log_t::log_no_lock(f);
     text_ += the_log_t::line_.str();
     the_log_t::line_.str("");
     return *this;
