@@ -37,8 +37,19 @@ THE SOFTWARE.
 // 
 class the_mutex_interface_t
 {
+protected:
+  // the destructor is protected on purpose,
+  // see delete_this for details:
+  virtual ~the_mutex_interface_t();
+  
 public:
-  virtual ~the_mutex_interface_t() {}
+  // In order to avoid memory management problems with shared libraries,
+  // whoever provides this interface instance (via it's creator), has to
+  // provide a way to delete the instance as well.  This will avoid
+  // issues with multiple-instances of C runtime libraries being
+  // used by the app and whatever libraries it links against that
+  // either use or provide this interface:
+  virtual void delete_this() = 0;
   
   // mutex controls:
   virtual void lock() = 0;
@@ -48,7 +59,7 @@ public:
   //----------------------------------------------------------------
   // creator_t
   // 
-  typedef the_mutex_interface_t*(*creator_t)();
+  typedef the_mutex_interface_t *(*creator_t)();
   
   // specify a thread creation method:
   static void set_creator(creator_t creator);

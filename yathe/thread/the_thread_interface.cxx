@@ -93,7 +93,7 @@ the_thread_interface_t::the_thread_interface_t(the_mutex_interface_t * mutex):
 // 
 the_thread_interface_t::~the_thread_interface_t()
 {
-  delete mutex_;
+  mutex_->delete_this();
 }
 
 //----------------------------------------------------------------
@@ -121,7 +121,7 @@ the_thread_interface_t::create()
 void
 the_thread_interface_t::set_mutex(the_mutex_interface_t * mutex)
 {
-  delete mutex_;
+  mutex_->delete_this();
   mutex_ = mutex;
 }
 

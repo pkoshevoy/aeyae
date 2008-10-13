@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 
 
-// File         : the_thread_interface.hxx
+// File         : the_threa_interface.hxx
 // Author       : Pavel Aleksandrovich Koshevoy
 // Created      : Fri Feb 16 09:20:00 MST 2007
 // Copyright    : (C) 2007
@@ -53,15 +53,29 @@ struct the_thread_pool_data_t;
 class the_thread_interface_t : public the_transaction_handler_t
 {
   friend class the_thread_pool_t;
+
+protected:
+  // the destructor is protected on purpose,
+  // see delete_this for details:
+  virtual ~the_thread_interface_t();
   
 public:
+  // In order to avoid memory management problems with shared libraries,
+  // whoever provides this interface instance (via it's creator), has to
+  // provide a way to delete the instance as well.  This will avoid
+  // issues with multiple-instances of C runtime libraries being
+  // used by the app and whatever libraries it links against that
+  // either use or provide this interface:
+  virtual void delete_this() = 0;
+  
+  // the thread will own the mutex passed down to it,
+  // it will delete the mutex when the thread is deleted:
   the_thread_interface_t(the_mutex_interface_t * mutex = NULL);
-  virtual ~the_thread_interface_t();
   
   //----------------------------------------------------------------
   // creator_t
   // 
-  typedef the_thread_interface_t*(*creator_t)();
+  typedef the_thread_interface_t *(*creator_t)();
   
   // specify a thread creation method:
   static void set_creator(creator_t creator);

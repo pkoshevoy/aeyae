@@ -43,7 +43,22 @@ THE SOFTWARE.
 // 
 class the_qt_mutex_t : public QMutex, public the_mutex_interface_t
 {
+protected:
+  the_qt_mutex_t();
+  
+  // the destructor is protected on purpose,
+  // see delete_this for details:
+  virtual ~the_qt_mutex_t();
+  
 public:
+  // In order to avoid memory management problems with shared libraries,
+  // whoever provides this interface instance (via it's creator), has to
+  // provide a way to delete the instance as well.  This will avoid
+  // issues with multiple-instances of C runtime libraries being
+  // used by the app and whatever libraries it links against that
+  // either use or provide this interface:
+  virtual void delete_this();
+  
   // the creation method:
   static the_mutex_interface_t * create();
   

@@ -46,7 +46,7 @@ the_log_t::the_log_t():
 // 
 the_log_t::~the_log_t()
 {
-  delete mutex_;
+  mutex_->delete_this();
 }
 
 //----------------------------------------------------------------

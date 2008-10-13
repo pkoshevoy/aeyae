@@ -42,6 +42,12 @@ the_mutex_interface_t::creator_t
 the_mutex_interface_t::creator_ = NULL;
 
 //----------------------------------------------------------------
+// the_mutex_interface_t::~the_mutex_interface_t
+// 
+the_mutex_interface_t::~the_mutex_interface_t()
+{}
+
+//----------------------------------------------------------------
 // the_mutex_interface_t::set_creator
 // 
 void

@@ -73,7 +73,7 @@ the_transaction_wrapper_t(const unsigned int & num_parts,
 // 
 the_transaction_wrapper_t::~the_transaction_wrapper_t()
 {
-  delete mutex_;
+  mutex_->delete_this();
   mutex_ = NULL;
 }
 
@@ -188,7 +188,7 @@ the_thread_pool_t::the_thread_pool_t(unsigned int num_threads):
 // 
 the_thread_pool_t::~the_thread_pool_t()
 {
-  delete mutex_;
+  mutex_->delete_this();
   mutex_ = NULL;
   
   delete [] pool_;

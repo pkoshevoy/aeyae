@@ -22,6 +22,29 @@ using std::endl;
 
 
 //----------------------------------------------------------------
+// the_qt_mutex_t::the_qt_mutex_t
+// 
+the_qt_mutex_t::the_qt_mutex_t():
+  QMutex(),
+  the_mutex_interface_t()
+{}
+
+//----------------------------------------------------------------
+// the_qt_mutex_t::~the_qt_mutex_t
+// 
+the_qt_mutex_t::~the_qt_mutex_t()
+{}
+
+//----------------------------------------------------------------
+// the_qt_mutex_t::delete_this
+// 
+void
+the_qt_mutex_t::delete_this()
+{
+  delete this;
+}
+
+//----------------------------------------------------------------
 // the_qt_mutex_t::create
 // 
 the_mutex_interface_t *

@@ -87,7 +87,7 @@ struct the_thread_pool_data_t
   {}
   
   ~the_thread_pool_data_t()
-  { delete thread_; }
+  { thread_->delete_this(); }
   
   the_thread_pool_t * parent_;
   the_thread_interface_t * thread_;

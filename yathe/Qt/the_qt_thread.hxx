@@ -74,9 +74,22 @@ class the_qt_thread_t : public QThread,
 			public the_thread_interface_t
 {
   Q_OBJECT
+
+protected:
+  the_qt_thread_t();
+  
+  // the destructor is protected on purpose,
+  // see delete_this for details:
+  virtual ~the_qt_thread_t();
   
 public:
-  the_qt_thread_t();
+  // In order to avoid memory management problems with shared libraries,
+  // whoever provides this interface instance (via it's creator), has to
+  // provide a way to delete the instance as well.  This will avoid
+  // issues with multiple-instances of C runtime libraries being
+  // used by the app and whatever libraries it links against that
+  // either use or provide this interface:
+  virtual void delete_this();
   
   // the creation method:
   static the_thread_interface_t * create()

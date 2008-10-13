@@ -37,12 +37,27 @@ static the_qt_thread_storage_t THREAD_STORAGE;
 // 
 the_qt_thread_t::the_qt_thread_t():
   QThread(),
-  the_thread_interface_t(new the_qt_mutex_t)
+  the_thread_interface_t(the_qt_mutex_t::create())
 {
   if (THREAD_STORAGE.localData() == NULL)
   {
     THREAD_STORAGE.setLocalData(new the_thread_observer_t(*this));
   }
+}
+
+//----------------------------------------------------------------
+// the_qt_thread_t::~the_qt_thread_t
+// 
+the_qt_thread_t::~the_qt_thread_t()
+{}
+
+//----------------------------------------------------------------
+// the_qt_thread_t::delete_this
+// 
+void
+the_qt_thread_t::delete_this()
+{
+  delete this;
 }
 
 //----------------------------------------------------------------
