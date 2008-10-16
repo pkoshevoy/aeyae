@@ -43,14 +43,13 @@ THE SOFTWARE.
 // 
 class the_qt_mutex_t : public QMutex, public the_mutex_interface_t
 {
-protected:
+public:
   the_qt_mutex_t();
   
   // the destructor is protected on purpose,
   // see delete_this for details:
   virtual ~the_qt_mutex_t();
   
-public:
   // In order to avoid memory management problems with shared libraries,
   // whoever provides this interface instance (via it's creator), has to
   // provide a way to delete the instance as well.  This will avoid
