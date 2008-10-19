@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 
 
-// File         : the_threa_interface.hxx
+// File         : the_thread_interface.hxx
 // Author       : Pavel Aleksandrovich Koshevoy
 // Created      : Fri Feb 16 09:20:00 MST 2007
 // Copyright    : (C) 2007
