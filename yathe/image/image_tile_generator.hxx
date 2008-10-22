@@ -1,3 +1,4 @@
+/* -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: t -*- */ 
 /*
 Copyright 2004-2007 University of Utah
 
