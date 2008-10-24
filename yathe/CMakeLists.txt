@@ -40,6 +40,11 @@ add_library(the_core STATIC
   thread/the_thread_pool.cxx
   thread/the_thread_storage.cxx
   thread/the_transaction.cxx
+  thread/the_boost_mutex.hxx
+  thread/the_boost_mutex.cxx
+  thread/the_boost_thread.hxx
+  thread/the_boost_thread.cxx
+  thread/the_boost_thread_storage.hxx
   utils/the_bit_tree.cxx
   utils/the_indentation.cxx
   utils/the_log.cxx
