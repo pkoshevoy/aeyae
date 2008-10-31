@@ -376,7 +376,7 @@ ELSE (_boost_IN_CACHE)
         ARGS -dumpversion
         OUTPUT_VARIABLE _boost_COMPILER_VERSION
         )
-      STRING(REGEX REPLACE "([0-9])\\.([0-9])\\.*" "\\1\\2"
+      STRING(REGEX REPLACE "([0-9])\\.([0-9])(\\.[0-9])*" "\\1\\2"
         _boost_COMPILER_VERSION ${_boost_COMPILER_VERSION})
       IF(APPLE)
         IF(Boost_MINOR_VERSION)

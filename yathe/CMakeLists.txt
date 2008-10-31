@@ -13,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 find_package(Boost REQUIRED)
 include_directories(AFTER
   ${THE_SRC_DIR}
-  ${Boost_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIR}
   )
 
 #add_definitions(-DDEBUG_THREAD)
