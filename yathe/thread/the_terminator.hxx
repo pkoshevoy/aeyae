@@ -31,10 +31,11 @@ THE SOFTWARE.
 #ifndef THE_TERMINATOR_HXX_
 #define THE_TERMINATOR_HXX_
 
-#if !defined(USE_THE_TERMINATORS) && !defined(USE_ITK_TERMINATORS)
-#define WRAP(x)
-#else
+#if defined(USE_THE_TERMINATORS) || defined(USE_ITK_TERMINATORS)
 #define WRAP(x) x
+#else
+#define WRAP(x)
+#endif
 
 // system includes:
 #include <string>
@@ -128,5 +129,4 @@ private:
 };
 
 
-#endif // USE_THE_TERMINATORS
 #endif // THE_TERMINATOR_HXX_

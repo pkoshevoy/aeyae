@@ -28,8 +28,6 @@ THE SOFTWARE.
 // License      : MIT
 // Description  : a thread terminator convenience class
 
-#if defined(USE_THE_TERMINATORS) || defined(USE_ITK_TERMINATORS)
-
 
 // local includes:
 #include "thread/the_terminator.hxx"
@@ -40,12 +38,6 @@ THE SOFTWARE.
 #include <sstream>
 #include <iostream>
 #include <assert.h>
-
-// ITK includes:
-#if 0
-//#ifdef USE_ITK_TERMINATORS
-#include <itkExceptionObject.h>
-#endif
 
 // namespace access:
 using std::cerr;
@@ -99,14 +91,7 @@ the_terminator_t::throw_exception() const
   std::ostringstream os;
   os << id_ << " interrupted" << endl;
   
-#if 0
-  //#ifdef USE_ITK_TERMINATORS
-  itk::ProcessAborted e(__FILE__, __LINE__);
-  e.SetDescription(os.str().c_str());
-#else
   the_exception_t e(os.str().c_str());
-#endif
-  
   throw e;
 }
 
@@ -246,6 +231,3 @@ the_terminators_t::del(the_terminator_t * terminator)
        << " terminator, addr " << terminator << endl;
 #endif // DEBUG_TERMINATORS
 }
-
-
-#endif // USE_THE_TERMINATORS
