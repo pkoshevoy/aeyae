@@ -537,8 +537,17 @@ the_thread_pool_t::handle_thread(the_thread_pool_data_t * data)
 #ifdef DEBUG_THREAD
     cerr << "thread has stopped: " << t << endl;
 #endif
-    idle_.push_back(id);
-    busy_.remove(id);
+    
+    if (!has(idle_, id))
+    {
+      idle_.push_back(id);
+    }
+    
+    if (has(busy_, id))
+    {
+      busy_.remove(id);
+    }
+    
     return;
   }
   
@@ -552,8 +561,16 @@ the_thread_pool_t::handle_thread(the_thread_pool_data_t * data)
   
   if (transactions_.empty())
   {
-    idle_.push_back(id);
-    busy_.remove(id);
+    if (!has(idle_, id))
+    {
+      idle_.push_back(id);
+    }
+    
+    if (has(busy_, id))
+    {
+      busy_.remove(id);
+    }
+    
 #ifdef DEBUG_THREAD
     cerr << "no more work for thread: " << t << endl;
     
