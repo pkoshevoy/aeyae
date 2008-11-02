@@ -1,3 +1,7 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: t -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
 // File         : the_qt_trail.hxx
 // Author       : Pavel Aleksandrovich Koshevoy
 // Created      : 2001/06/24 16:47:24

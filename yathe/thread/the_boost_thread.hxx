@@ -1,3 +1,7 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: t -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
 // File         : the_boost_thread.hxx
 // Author       : Pavel Aleksandrovich Koshevoy
 // Created      : Thu Oct 23 20:43:00 MDT 2008
