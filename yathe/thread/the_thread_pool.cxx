@@ -530,6 +530,12 @@ the_thread_pool_t::blab(const char * message) const
 //----------------------------------------------------------------
 // the_thread_pool_t::handle_thread
 // 
+// prior to calling this function the thread interface locks
+// the pool mutex and it's own mutex -- don't try locking these
+// again while inside this callback, and don't call any other
+// pool or thread member functions which lock either of these
+// because that would result in a deadlock
+// 
 void
 the_thread_pool_t::handle_thread(the_thread_pool_data_t * data)
 {
@@ -565,6 +571,9 @@ the_thread_pool_t::handle_thread(the_thread_pool_data_t * data)
   
   if (transactions_.empty())
   {
+    // tell the thread to stop:
+    t->stopped_ = true;
+    
     if (!has(idle_, id))
     {
       idle_.push_back(id);

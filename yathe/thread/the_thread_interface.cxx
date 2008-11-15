@@ -372,7 +372,7 @@ the_thread_interface_t::work()
       
       if (transactions_.empty())
       {
-	if (sleep_when_idle_)
+	if (sleep_when_idle_ && !stopped_)
 	{
 	  lock_this.disarm();
 	  lock_pool.disarm();
