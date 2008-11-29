@@ -161,6 +161,16 @@ the_thread_interface_t::push_front(the_transaction_t * transaction)
 }
 
 //----------------------------------------------------------------
+// the_thread_interface_t::push_back
+// 
+void
+the_thread_interface_t::push_back(std::list<the_transaction_t *> & schedule)
+{
+  the_lock_t<the_mutex_interface_t> locker(mutex_);
+  transactions_.splice(transactions_.end(), schedule);
+}
+
+//----------------------------------------------------------------
 // the_thread_interface_t::has_work
 // 
 bool

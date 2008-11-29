@@ -116,6 +116,9 @@ public:
   void push_back(the_transaction_t * transaction);
   void push_front(the_transaction_t * transaction);
   
+  // add transactions to the list:
+  void push_back(std::list<the_transaction_t *> & schedule);
+  
   // NOTE: it is the responsibility of the caller to secure a mutex lock
   // on this thread prior to checking whether the thread has any work left:
   bool has_work() const;
