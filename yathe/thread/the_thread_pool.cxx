@@ -206,52 +206,67 @@ the_thread_pool_t::~the_thread_pool_t()
 void
 the_thread_pool_t::start()
 {
-  while (true)
+  if (!transactions_.empty())
   {
-    the_lock_t<the_mutex_interface_t> locker(mutex_);
-    if (transactions_.empty()) return;
-    
-    if (idle_.empty())
+    while (true)
     {
-#ifdef DEBUG_THREAD
-      // sanity test:
-      for (unsigned int i = 0; i < pool_size_; i++)
+      the_lock_t<the_mutex_interface_t> locker(mutex_);
+      if (transactions_.empty()) return;
+      
+      if (idle_.empty())
       {
-	the_lock_t<the_mutex_interface_t> locker(pool_[i].thread_->mutex());
-	if (!pool_[i].thread_->has_work())
+#ifdef DEBUG_THREAD
+	// sanity test:
+	for (unsigned int i = 0; i < pool_size_; i++)
 	{
-	  cerr << "WARNING: thread " << i << ", " << pool_[i].thread_
-	       << " is actually idle" << endl;
+	  the_lock_t<the_mutex_interface_t> locker(pool_[i].thread_->mutex());
+	  if (!pool_[i].thread_->has_work())
+	  {
+	    cerr << "WARNING: thread " << i << ", " << pool_[i].thread_
+		 << " is actually idle" << endl;
+	  }
 	}
+#endif
+	return;
+      }
+      
+      // get the next worker thread:
+      unsigned int id = remove_head(idle_);
+      busy_.push_back(id);
+      
+      // get the next transaction:
+      the_transaction_t * t = remove_head(transactions_);
+      
+      // start the thread:
+      thread(id)->start(t);
+      
+#ifdef DEBUG_THREAD
+      cerr << "starting thread " << id << ", " << thread(id) << ", " << t
+	   << endl;
+      
+      for (std::list<unsigned int>::const_iterator i = idle_.begin();
+	   i != idle_.end(); ++i)
+      {
+	cerr << "idle: thread " << *i << ", " << thread(*i) << endl;
+      }
+      
+      for (std::list<unsigned int>::const_iterator i = busy_.begin();
+	   i != busy_.end(); ++i)
+      {
+	cerr << "busy: thread " << *i << ", " << thread(*i) << endl;
       }
 #endif
-      return;
     }
-    
-    // get the next worker thread:
-    unsigned int id = remove_head(idle_);
-    busy_.push_back(id);
-    
-    // get the next transaction:
-    the_transaction_t * t = remove_head(transactions_);
-    
-    // start the thread:
-    thread(id)->start(t);
-    
-#ifdef DEBUG_THREAD
-    cerr << "starting thread " << id << ", " << thread(id) << ", " << t << endl;
-    for (std::list<unsigned int>::const_iterator i = idle_.begin();
-	 i != idle_.end(); ++i)
+  }
+  else
+  {
+    // Transaction list is empty, perhaps they've already
+    // been distributed to the threads? Just start the threads
+    // and let them figure it out for themselves.
+    for (unsigned int i = 0; i < pool_size_; i++)
     {
-      cerr << "idle: thread " << *i << ", " << thread(*i) << endl;
+      pool_[i].thread_->start();
     }
-    
-    for (std::list<unsigned int>::const_iterator i = busy_.begin();
-	 i != busy_.end(); ++i)
-    {
-      cerr << "busy: thread " << *i << ", " << thread(*i) << endl;
-    }
-#endif
   }
 }
 
@@ -349,6 +364,30 @@ the_thread_pool_t::push_back(std::list<the_transaction_t *> & schedule,
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
   no_lock_push_back(schedule, multithreaded);
+}
+
+//----------------------------------------------------------------
+// the_thread_pool_t::pre_distribute_work
+// 
+void
+the_thread_pool_t::pre_distribute_work()
+{
+  the_lock_t<the_mutex_interface_t> locker(mutex_);
+  std::vector<std::list<the_transaction_t *> > split_schedule_(pool_size_);
+
+  while (!transactions_.empty())
+  {
+    for (unsigned int i = 0; i < pool_size_ && !transactions_.empty(); i++)
+    {
+      the_transaction_t * job = remove_head(transactions_);
+      split_schedule_[i].push_back(job);
+    }
+  }
+  
+  for (unsigned int i = 0; i < pool_size_; i++)
+  {
+    pool_[i].thread_->push_back(split_schedule_[i]);
+  }
 }
 
 //----------------------------------------------------------------

@@ -131,7 +131,10 @@ public:
   virtual void push_back(std::list<the_transaction_t *> & schedule,
 			 bool multithreaded = false);
   
-  // check whether the thread has any work left:
+  // split the work among the threads:
+  void pre_distribute_work();
+  
+  // check whether the thread pool has any work left:
   bool has_work() const;
   
   // schedule a transaction and start the thread:
