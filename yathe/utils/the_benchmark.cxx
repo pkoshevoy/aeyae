@@ -30,6 +30,12 @@
 
 
 //----------------------------------------------------------------
+// SAVE_TO
+// 
+static std::string SAVE_TO;
+
+
+//----------------------------------------------------------------
 // the_walltime_t
 // 
 struct the_walltime_t
@@ -107,59 +113,159 @@ public:
   the_walltime_t start_;
 };
 
+
 //----------------------------------------------------------------
 // the_benchmarks_t
 // 
 class the_benchmarks_t
 {
 public:
-  the_benchmarks_t():
-    level_(0)
-  {}
+  the_benchmarks_t();
+  ~the_benchmarks_t();
 
-  ~the_benchmarks_t()
-  {
-    clear();
-  }
+  void clear();
   
-  void clear()
-  {
-    const std::size_t num_benchmarks = benchmarks_.size();
-    for (std::size_t i = 0; i < num_benchmarks; i++)
-    {
-      delete benchmarks_[i];
-      benchmarks_[i] = NULL;
-    }
-    
-    benchmarks_.clear();
-  }
+  the_benchmark_record_t * add(const std::string & name);
+  the_benchmark_record_t * lookup(const std::string & name) const;
   
-  the_benchmark_record_t * add(const std::string & name)
-  {
-    the_benchmark_record_t * benchmark = new the_benchmark_record_t(level_,
-								    name);
-    benchmarks_.push_back(benchmark);
-    return benchmark;
-  }
-
-  the_benchmark_record_t * lookup(const std::string & name)
-  {
-    const std::size_t num_benchmarks = benchmarks_.size();
-    for (std::size_t i = 0; i < num_benchmarks; i++)
-    {
-      the_benchmark_record_t * benchmark = benchmarks_[i];
-      if (benchmark->level_ == level_ && benchmark->name_ == name)
-      {
-	return benchmark;
-      }
-    }
-    
-    return NULL;
-  }
+  void dump(std::ostream & so) const;
+  void save(const std::string & fn) const;
   
+  // data members:
   std::vector<the_benchmark_record_t *> benchmarks_;
   unsigned int level_;
+  std::string save_to_;
 };
+
+
+//----------------------------------------------------------------
+// the_benchmarks_t::the_benchmarks_t
+// 
+the_benchmarks_t::the_benchmarks_t():
+  level_(0),
+  save_to_(SAVE_TO)
+{}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::~the_benchmarks_t
+// 
+the_benchmarks_t::~the_benchmarks_t()
+{
+  if (save_to_.empty())
+  {
+    dump(std::cout);
+  }
+  else
+  {
+    save(save_to_);
+  }
+  
+  clear();
+}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::clear
+// 
+void
+the_benchmarks_t::clear()
+{
+  const std::size_t num_benchmarks = benchmarks_.size();
+  for (std::size_t i = 0; i < num_benchmarks; i++)
+  {
+    delete benchmarks_[i];
+    benchmarks_[i] = NULL;
+  }
+  
+  benchmarks_.clear();
+}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::add
+// 
+the_benchmark_record_t *
+the_benchmarks_t::add(const std::string & name)
+{
+  the_benchmark_record_t * benchmark = new the_benchmark_record_t(level_,
+								  name);
+  benchmarks_.push_back(benchmark);
+  return benchmark;
+}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::lookup
+// 
+the_benchmark_record_t *
+the_benchmarks_t::lookup(const std::string & name) const
+{
+  const std::size_t num_benchmarks = benchmarks_.size();
+  for (std::size_t i = 0; i < num_benchmarks; i++)
+  {
+    the_benchmark_record_t * benchmark = benchmarks_[i];
+    if (benchmark->level_ == level_ && benchmark->name_ == name)
+    {
+      return benchmark;
+    }
+  }
+  
+  return NULL;
+}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::dump
+// 
+void
+the_benchmarks_t::dump(std::ostream & so) const
+{
+  std::ios::fmtflags old_flags = so.setf(std::ios::dec);
+  int old_precision = so.precision();
+  so.precision(10);
+  
+  so << "\n------------------------------- "
+     << this
+     << " -------------------------------\n";
+  
+  const std::size_t num_benchmarks = benchmarks_.size();
+  for (std::size_t i = 0; i < num_benchmarks; i++)
+  {
+    const the_benchmark_record_t * benchmark = benchmarks_[i];
+    double elapsed = (double(benchmark->total_.sec_) +
+		      double(benchmark->total_.usec_) * 1e-6);
+    
+    so << std::setw(6) << benchmark->total_.sec_ << "s "
+       << std::setw(6) << benchmark->total_.usec_ << "us ("
+       << std::setw(6) << benchmark->calls_ << " calls, "
+       << std::setw(10) << elapsed / double(benchmark->calls_)
+       << " sec avg)\t";
+    
+    // indent for readability:
+    for (std::size_t j = 0; j < benchmark->level_; j++)
+    {
+      so << "  ";
+    }
+    
+    so << benchmark->name_ << std::endl;
+  }
+  
+  so.setf(old_flags);
+  so.precision(old_precision);
+}
+
+//----------------------------------------------------------------
+// the_benchmarks_t::save
+// 
+void
+the_benchmarks_t::save(const std::string & fn) const
+{
+  std::fstream fo(fn.c_str(), (std::ios::out |
+			       std::ios::app |
+			       std::ios::binary));
+  
+  if (fo.is_open())
+  {
+    dump(fo);
+    fo.close();
+  }
+}
 
 
 //----------------------------------------------------------------
@@ -218,6 +324,21 @@ the_benchmark_t::~the_benchmark_t()
 }
 
 //----------------------------------------------------------------
+// the_benchmark_t::setup
+// 
+void
+the_benchmark_t::setup(const char * saveto_filename_utf8)
+{
+  SAVE_TO.assign(saveto_filename_utf8);
+  
+  the_benchmarks_t * tss = TSS.get();
+  if (tss)
+  {
+    tss->save_to_ = SAVE_TO;
+  }
+}
+
+//----------------------------------------------------------------
 // the_benchmark_t::reset
 // 
 void
@@ -227,68 +348,5 @@ the_benchmark_t::reset()
   if (!tss)
   {
     tss->clear();
-  }
-}
-
-//----------------------------------------------------------------
-// the_benchmark_t::dump
-// 
-void
-the_benchmark_t::dump(std::ostream & so)
-{
-  the_benchmarks_t * tss = TSS.get();
-  if (!tss)
-  {
-    assert(false);
-    return;
-  }
-  
-  // std::ios::fmtflags old_flags = so.setf(std::ios::scientific);
-  int old_precision = so.precision();
-  so.precision(6);
-  
-  so << "\n-------------------------------"
-     << tss
-     << "-------------------------------\n";
-  
-  const std::size_t num_benchmarks = tss->benchmarks_.size();
-  for (std::size_t i = 0; i < num_benchmarks; i++)
-  {
-    const the_benchmark_record_t * benchmark = tss->benchmarks_[i];
-    double elapsed = (double(benchmark->total_.sec_) +
-		      double(benchmark->total_.usec_) * 1e-6);
-    
-    so << std::setw(10) << elapsed << " sec. ("
-       << std::setw(8) << benchmark->calls_ << " calls, "
-       << std::setw(10) << elapsed / double(benchmark->calls_)
-       << " per call)";
-    
-    // indent for readability:
-    for (std::size_t j = 0; j < benchmark->level_; j++)
-    {
-      so << "  ";
-    }
-    
-    so << benchmark->name_ << std::endl;
-  }
-  
-  // so.setf(old_flags);
-  so.precision(old_precision);
-}
-
-//----------------------------------------------------------------
-// the_benchmark_t::dump
-// 
-void
-the_benchmark_t::dump(const char * filename_utf8)
-{
-  std::fstream fo(filename_utf8, (std::ios::out |
-				  std::ios::app |
-				  std::ios::binary));
-  
-  if (fo.is_open())
-  {
-    dump(fo);
-    fo.close();
   }
 }
