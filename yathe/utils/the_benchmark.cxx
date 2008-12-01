@@ -216,9 +216,9 @@ the_benchmarks_t::lookup(const std::string & name) const
 void
 the_benchmarks_t::dump(std::ostream & so) const
 {
-  std::ios::fmtflags old_flags = so.setf(std::ios::dec);
+  std::ios::fmtflags old_flags = so.setf(std::ios::dec | std::ios::scientific);
   int old_precision = so.precision();
-  so.precision(10);
+  so.precision(6);
   
   so << "\n------------------------------- "
      << this
@@ -228,14 +228,17 @@ the_benchmarks_t::dump(std::ostream & so) const
   for (std::size_t i = 0; i < num_benchmarks; i++)
   {
     const the_benchmark_record_t * benchmark = benchmarks_[i];
-    double elapsed = (double(benchmark->total_.sec_) +
-		      double(benchmark->total_.usec_) * 1e-6);
+    double elapsed = (double(benchmark->total_.sec_ +
+			     benchmark->total_.usec_ / 1000000) +
+		      double(benchmark->total_.usec_ % 1000000) * 1e-6);
     
-    so << std::setw(6) << benchmark->total_.sec_ << "s "
-       << std::setw(6) << benchmark->total_.usec_ << "us ("
-       << std::setw(6) << benchmark->calls_ << " calls, "
-       << std::setw(10) << elapsed / double(benchmark->calls_)
-       << " sec avg)\t";
+    so << std::setw(13) << std::fixed
+       << elapsed << " ("
+       << std::setw(6)
+       << benchmark->calls_ << " x "
+       << std::setw(10) << std::scientific
+       << elapsed / double(benchmark->calls_)
+       << ")\t";
     
     // indent for readability:
     for (std::size_t j = 0; j < benchmark->level_; j++)
