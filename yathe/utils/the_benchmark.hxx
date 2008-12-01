@@ -53,8 +53,8 @@ private:
 //----------------------------------------------------------------
 // BENCHMARK
 // 
-#define BENCHMARK(name)							\
-  the_benchmark_t CAT2(benchmark_, CAT2(name, CAT2(_, __LINE__)))	\
+#define BENCHMARK(name)				\
+  the_benchmark_t CAT2(benchmark_, __LINE__)	\
     (#name ", " __FILE__ ":" STR1(__LINE__))
 
 
