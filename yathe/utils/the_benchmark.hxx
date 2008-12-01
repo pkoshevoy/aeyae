@@ -35,10 +35,27 @@ private:
 
 
 //----------------------------------------------------------------
-// THE_BENCHMARK
+// STR1
 // 
-#define THE_BENCHMARK(name) \
-  the_benchmark_t(name ## " (" ## __FILE__ ## ":" ## __LINE__)
+// macro for converting its parameter to a string literal
+// 
+#define STR1(a) STR1_HIDDEN(a)
+#define STR1_HIDDEN(a) #a
+
+//----------------------------------------------------------------
+// CAT2
+//
+// macro for concatenating 2 parameters together
+// 
+#define CAT2(a, b) CAT2_HIDDEN(a, b)
+#define CAT2_HIDDEN(a, b) a ## b
+
+//----------------------------------------------------------------
+// BENCHMARK
+// 
+#define BENCHMARK(name)							\
+  the_benchmark_t CAT2(benchmark_, CAT2(name, CAT2(_, __LINE__)))	\
+    (#name ", " __FILE__ ":" STR1(__LINE__))
 
 
 #endif // THE_BENCHMARK_HXX_
