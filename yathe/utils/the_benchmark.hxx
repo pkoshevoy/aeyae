@@ -25,9 +25,8 @@ public:
   the_benchmark_t(const char * name_utf8);
   ~the_benchmark_t();
   
+  static void setup(const char * saveto_filename_utf8);
   static void reset();
-  static void dump(std::ostream & os);
-  static void dump(const char * filename_utf8);
   
 private:
   void * record_;
