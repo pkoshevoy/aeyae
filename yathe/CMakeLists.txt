@@ -53,6 +53,8 @@ add_library(the_core STATIC
   utils/histogram.cxx
   utils/instance_method_call.hxx
   utils/instance_method_call.cxx
+  utils/the_benchmark.hxx
+  utils/the_benchmark.cxx
   )
 
 install(TARGETS the_core DESTINATION lib)
