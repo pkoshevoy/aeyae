@@ -58,15 +58,10 @@ the_document_t::regenerate()
        i != procs_.end(); ++i)
   {
     the_procedure_t * procedure = registry().elem<the_procedure_t>(*i);
-    
-    // handle the regeneration failure:
-    if (procedure->regenerate() == false)
+    if (!procedure->regenerate())
     {
-      procedure->set_current_state(THE_FAILED_STATE_E);
       return false;
     }
-    
-    procedure->clear_state(THE_FAILED_STATE_E);
   }
   
   return true;
@@ -174,4 +169,83 @@ the_document_t::load(std::istream & stream)
   }
   
   return ok;
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
+save(const the_text_t & magic,
+     const the_text_t & filename,
+     const the_document_t * doc)
+{
+  assert(doc != NULL);
+  
+  std::ofstream file;
+  file.open(filename, ios::out);
+  if (!file.is_open()) return false;
+  
+  // save the right magic word:
+  file << magic << endl;
+  
+  // update the document name:
+  the_document_t * document = const_cast<the_document_t *>(doc);
+  the_text_t old_name(doc->name());
+  {
+    std::vector<the_text_t> tokens;
+    unsigned int num_tokens = filename.split(tokens, '/');
+    document->name().assign(tokens[num_tokens - 1]);
+  }
+  
+  // save the document:
+  bool ok = document->save(file);
+  if (!ok)
+  {
+    document->name().assign(old_name);
+  }
+  
+  // done:
+  file.close();
+  return ok;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(const the_text_t & magic,
+     const the_text_t & filename,
+     the_document_t *& doc)
+{
+  assert(doc == NULL);
+  
+  std::ifstream file;
+  file.open(filename, ios::in);
+  if (!file.is_open()) return false;
+  
+  // make sure this is not a bogus file:
+  the_text_t magic_word;
+  file >> magic_word;
+  
+  if (magic_word == magic)
+  {
+    std::vector<the_text_t> tokens;
+    unsigned int num_tokens = filename.split(tokens, '/');
+    
+    // update the document name:
+    the_document_t * document = new the_document_t(filename);
+    
+    // load the document:
+    if (document->load(file))
+    {
+      document->name().assign(tokens[num_tokens - 1]);
+      doc = document;
+    }
+  }
+  
+  // done:
+  file.close();
+  
+  return doc != NULL;
 }

@@ -128,5 +128,12 @@ private:
   std::list<unsigned int> rolled_back_procs_;
 };
 
+extern bool save(const the_text_t & magic,
+		 const the_text_t & filename,
+		 const the_document_t * doc);
+extern bool load(const the_text_t & magic,
+		 const the_text_t & filename,
+		 the_document_t *& doc);
+
 
 #endif // THE_DOCUMENT_HXX_
