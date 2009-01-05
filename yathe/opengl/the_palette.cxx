@@ -93,13 +93,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -131,13 +129,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0x525439)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x0000ff); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -169,13 +165,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0x494c5a)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -207,13 +201,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0x504d30)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -245,13 +237,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0x8a8662)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -283,13 +273,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0x4f585e)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
@@ -321,13 +309,11 @@ the_palette_t::change(the_palette_id_t id)
       // colors of the model primitives:
       point_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
       
       curve_ << the_color_t(0xffffff)  // regular
 	     << the_color_t(0x00ff00)  // hilited
-	     << the_color_t(0xff0000)  // selected
-	     << the_color_t(0x000000); // failed
+	     << the_color_t(0xff0000); // selected
     }
     break;
     
