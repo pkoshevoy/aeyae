@@ -20,6 +20,10 @@ include_directories(AFTER
 #add_definitions(-DDEBUG_MUTEX)
 
 add_definitions(-DUSE_THE_TERMINATORS)
+if (WIN32)
+  ADD_DEFINITIONS(-D_USE_MATH_DEFINES)
+  ADD_DEFINITIONS(-DNOMINMAX)
+endif (WIN32)
 
 add_library(the_core STATIC
   math/m4x4.cxx
@@ -45,16 +49,44 @@ add_library(the_core STATIC
   thread/the_boost_thread.hxx
   thread/the_boost_thread.cxx
   thread/the_boost_thread_storage.hxx
-  utils/the_bit_tree.cxx
-  utils/the_indentation.cxx
-  utils/the_log.cxx
-  utils/the_text.cxx
   utils/debug.cxx
+  utils/debug.hxx
   utils/histogram.cxx
+  utils/histogram.hxx
+  utils/the_array.hxx
+  utils/the_bit_tree.cxx
+  utils/the_bit_tree.hxx
+  utils/the_dlink.hxx
+  utils/the_dloop.hxx
+  utils/the_domain_array.hxx
+  utils/the_dynamic_array.hxx
+  utils/the_exception.hxx
+  utils/the_fifo.hxx
+  utils/the_indentation.cxx
+  utils/the_indentation.hxx
+  utils/the_log.cxx
+  utils/the_log.hxx
+  utils/the_text.cxx
+  utils/the_text.hxx
+  utils/the_unique_list.hxx
+  utils/the_utils.cxx
+  utils/the_utils.hxx
+  utils/the_benchmark.cxx
+  utils/the_benchmark.hxx
   utils/instance_method_call.hxx
   utils/instance_method_call.cxx
-  utils/the_benchmark.hxx
-  utils/the_benchmark.cxx
+  io/io_base.hxx
+  io/io_base.cxx
+  io/the_file_io.hxx
+  io/the_file_io.cxx
+  doc/the_registry.hxx
+  doc/the_registry.cxx
+  doc/the_graph.hxx
+  doc/the_graph.cxx
+  doc/the_graph_node.hxx
+  doc/the_graph_node.cxx
+  doc/the_graph_node_ref.hxx
+  doc/the_graph_node_ref.cxx
   )
 
 install(TARGETS the_core DESTINATION lib)
@@ -68,15 +100,45 @@ if (ITK_FOUND AND FFTW_FOUND)
   
   add_library(the_itk STATIC
     itk/cluster.cxx
+    itk/cluster.hxx
     itk/common.cxx
+    itk/common.hxx
+    itk/draw.hxx
     itk/fft.cxx
+    itk/fft.hxx
     itk/fft_common.cxx
-    itk/itkRBFTransform.cxx
-    itk/itkRegularStepGradientDescentOptimizer2.cxx
-    itk/stos_common.cxx
+    itk/fft_common.hxx
     itk/grid_common.cxx
+    itk/grid_common.hxx
+    itk/itkCascadedTransform.h
+    itk/itkGridTransform.h
+    itk/itkImageMosaicVarianceMetric.h
+    itk/itkImageMosaicVarianceMetric.txx
+    itk/itkInverseTransform.h
+    itk/itkLegendrePolynomialTransform.h
+    itk/itkLegendrePolynomialTransform.txx
+    itk/itkNormalizeImageFilterWithMask.h
+    itk/itkNormalizeImageFilterWithMask.txx
+    itk/itkNumericInverse.h
+    itk/itkRBFTransform.cxx
+    itk/itkRBFTransform.h
+    itk/itkRadialDistortionTransform.h
+    itk/itkRadialDistortionTransform.txx
+    itk/itkRegularStepGradientDescentOptimizer2.cxx
+    itk/itkRegularStepGradientDescentOptimizer2.h
+    itk/itkStatisticsImageFilterWithMask.h
+    itk/itkStatisticsImageFilterWithMask.txx
+    itk/itk_terminator.hxx
     itk/mosaic_layout_common.cxx
+    itk/mosaic_layout_common.hxx
+    itk/mosaic_refinement_common.hxx
+    itk/optimizer_observer.hxx
+    itk/stos.hxx
+    itk/stos_common.cxx
+    itk/stos_common.hxx
     itk/the_grid_transform.cxx
+    itk/the_grid_transform.hxx
+    itk/threshold.hxx
     )
 
   install(TARGETS the_itk DESTINATION lib)
@@ -98,10 +160,8 @@ if (GLEW_FOUND)
   add_library(the_ui STATIC
     doc/the_document.cxx
     doc/the_document_so.cxx
-    doc/the_graph.cxx
     doc/the_primitive.cxx
     doc/the_reference.cxx
-    doc/the_registry.cxx
     eh/the_input_device.cxx
     eh/the_input_device_eh.cxx
     eh/the_input_device_event.cxx
@@ -117,10 +177,6 @@ if (GLEW_FOUND)
     geom/the_rational_bezier.cxx
     geom/the_tensurf.cxx
     geom/the_triangle_mesh.cxx
-    io/io_base.hxx
-    io/io_base.cxx
-    io/the_file_io.hxx
-    io/the_file_io.cxx
     image/image_tile.cxx
     image/image_tile_generator.cxx
     image/texture.cxx
