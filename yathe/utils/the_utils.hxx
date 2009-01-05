@@ -96,6 +96,10 @@ calc_angle(const double & x,
 		     fmod(reference_angle, TWO_PI));
 }
 
+//----------------------------------------------------------------
+// sleep_msec
+// 
+extern void sleep_msec(size_t msec);
 
 //----------------------------------------------------------------
 // drand
@@ -212,6 +216,28 @@ resize(array3d(data_t) & array,
     for (unsigned int j = 0; j < rows; j++)
     {
       array[i][j].resize(cols);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// assign
+// 
+template <class data_t>
+void
+assign(array3d(data_t) & array,
+       const unsigned int & slices,
+       const unsigned int & rows,
+       const unsigned int & cols,
+       const data_t & value)
+{
+  array.resize(slices);
+  for (unsigned int i = 0; i < slices; i++)
+  {
+    array[i].resize(rows);
+    for (unsigned int j = 0; j < rows; j++)
+    {
+      array[i][j].assign(cols, value);
     }
   }
 }
