@@ -307,6 +307,25 @@ the_knot_point_t::load(std::istream & stream)
 
 
 //----------------------------------------------------------------
+// save
+// 
+bool
+save(std::ostream & stream, const the_knot_point_t & k)
+{
+  return k.save(stream);
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, the_knot_point_t & k)
+{
+  return k.load(stream);
+}
+
+
+//----------------------------------------------------------------
 // the_intcurve_t::insert
 // 
 bool

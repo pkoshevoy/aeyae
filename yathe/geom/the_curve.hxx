@@ -417,9 +417,7 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
-    the_curve_t * curve = dynamic_cast<the_curve_t *>(primitive);
-    
+    the_curve_t * curve = registry->elem<the_curve_t>(id);
     return (curve != NULL);
   }
 };
@@ -462,6 +460,9 @@ operator << (ostream & s, const the_knot_point_t & kp)
   s << kp.id_ << ':' << kp.param_;
   return s;
 }
+
+extern bool save(std::ostream & stream, const the_knot_point_t & d);
+extern bool load(std::istream & stream, the_knot_point_t & d);
 
 
 //----------------------------------------------------------------
@@ -553,9 +554,7 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
-    the_intcurve_t * curve = dynamic_cast<the_intcurve_t *>(primitive);
-    
+    the_intcurve_t * curve = registry->elem<the_intcurve_t>(id);
     return (curve != NULL);
   }
 };
