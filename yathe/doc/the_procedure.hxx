@@ -54,6 +54,9 @@ class the_procedure_t : public the_primitive_t
 public:
   the_procedure_t(): the_primitive_t() {}
   
+  // a procedure may regenerate its dependents directly:
+  virtual bool regenerate() = 0;
+  
   // display the geometry:
   virtual void draw(const the_view_t & view) const = 0;
   
