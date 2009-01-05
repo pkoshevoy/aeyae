@@ -35,6 +35,7 @@ THE SOFTWARE.
 // local includes:
 #include "sel/the_pick_list.hxx"
 #include "doc/the_document.hxx"
+#include "doc/the_graph.hxx"
 #include "math/the_view_volume.hxx"
 #include "opengl/the_view.hxx"
 #include "utils/the_indentation.hxx"
@@ -97,7 +98,9 @@ the_pick_list_t::pick(the_view_t & view,
     if (filter.allow(registry, id) == false) continue;
     
     std::list<the_pick_data_t> solution;
-    registry->elem(id)->intersect(pick_vol, solution);
+    the_primitive_t * prim = registry->elem<the_primitive_t>(id);
+    prim->intersect(pick_vol, solution);
+    
     for (std::list<the_pick_data_t>::iterator i = solution.begin();
 	 i != solution.end(); ++i)
     {
@@ -203,4 +206,24 @@ the_pick_list_t::contains(const unsigned int & id) const
   }
   
   return false;
+}
+
+
+//----------------------------------------------------------------
+// setup_graph
+// 
+void
+setup_graph(const the_registry_t * registry,
+	    const the_pick_list_t & root_picks,
+	    the_graph_t & graph)
+{
+  std::list<unsigned int> roots;
+  for (the_pick_list_t::const_iterator i = root_picks.begin();
+       i != root_picks.end(); ++i)
+  {
+    const unsigned int & root_id = (*i).data().id();
+    roots.push_back(root_id);
+  }
+  
+  graph.set_roots(registry, roots);
 }

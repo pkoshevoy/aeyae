@@ -29,7 +29,7 @@ delete_point(the_registry_t * registry,
   registry->del(point);
   delete point;
   
-  proc->request_regeneration();
+  the_graph_node_t::request_regeneration(proc);
 }
 
 //----------------------------------------------------------------
@@ -49,7 +49,7 @@ delete_curve(the_registry_t * registry,
     unsigned int point_id = curve->pts().front().id_;
     curve->del(point_id);
     
-    the_primitive_t * point = registry->elem(point_id);
+    the_graph_node_t * point = registry->elem(point_id);
     breakdown_supporter_dependent(registry, proc->id(), point_id);
     registry->del(point);
     delete point;
@@ -60,7 +60,7 @@ delete_curve(the_registry_t * registry,
   registry->del(curve);
   delete curve;
   
-  proc->request_regeneration();
+  the_graph_node_t::request_regeneration(proc);
 }
 
 

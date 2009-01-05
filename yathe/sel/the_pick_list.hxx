@@ -43,6 +43,9 @@ THE SOFTWARE.
 // system includes:
 #include <assert.h>
 
+// forward declarations:
+class the_graph_t;
+
 
 //----------------------------------------------------------------
 // the_pick_list_t
@@ -88,6 +91,16 @@ public:
   // an instance of the default filter:
   static const the_pick_filter_t default_filter_;
 };
+
+
+//----------------------------------------------------------------
+// setup_graph
+// 
+extern void
+setup_graph(const the_registry_t * registry,
+	    const the_pick_list_t & roots,
+	    the_graph_t & graph);
+  
 
 
 #endif // THE_PICK_LIST_HXX_
