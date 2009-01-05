@@ -133,7 +133,7 @@ the_hard_point_t::set_value(const the_view_mgr_t & /* view_mgr */,
 			    const p3x1_t & wcs_pt)
 {
   value_ = wcs_pt;
-  request_regeneration();
+  the_graph_node_t::request_regeneration(this);
   return true;
 }
 
@@ -282,8 +282,7 @@ the_soft_point_t::regenerate()
   
   // look up the reference, evaluate the paramater with
   // respect to the reference, return the value:
-  regenerated_ = ref_->eval(r, value_);
-  return regenerated_;
+  return ref_->eval(r, value_);
 }
 
 //----------------------------------------------------------------
@@ -297,7 +296,10 @@ the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
   bool ok = ref_->move(r, view_mgr, wcs_pt);
   ref_->eval(r, value_);
   
-  if (ok) request_regeneration();
+  if (ok)
+  {
+    the_graph_node_t::request_regeneration(this);
+  }
   return ok;
 }
 
@@ -327,7 +329,10 @@ the_soft_point_t::save(std::ostream & stream) const
 bool
 the_soft_point_t::load(std::istream & stream)
 {
-  ::load(stream, ref_);
+  the_graph_node_ref_t * ref = NULL;
+  ::load(stream, ref);
+  ref_ = dynamic_cast<the_reference_t *>(ref);
+  
   ::load(stream, value_);
   return the_point_t::load(stream);
 }

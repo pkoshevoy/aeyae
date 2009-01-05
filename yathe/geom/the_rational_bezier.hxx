@@ -133,10 +133,8 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
     the_rational_bezier_t * rational_bezier =
-      dynamic_cast<the_rational_bezier_t *>(primitive);
-    
+      registry->elem<the_rational_bezier_t>(id);
     return (rational_bezier != NULL);
   }
 };

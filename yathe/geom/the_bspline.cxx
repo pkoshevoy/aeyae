@@ -815,7 +815,7 @@ the_knot_vector_t::init(const unsigned int & degree,
   
   degree_ = k;
   knots_ = knots;
-  request_regeneration();
+  the_graph_node_t::request_regeneration(this);
   return true;
 }
 
@@ -866,7 +866,7 @@ the_knot_vector_t::init(const unsigned int & degree,
   }
   
   degree_ = k;
-  request_regeneration();
+  the_graph_node_t::request_regeneration(this);
   return true;
 }
 
@@ -877,7 +877,7 @@ void
 the_knot_vector_t::set_target_degree(const unsigned int & target_degree)
 {
   target_degree_ = std::max(1u, target_degree);
-  request_regeneration();
+  the_graph_node_t::request_regeneration(this);
 }
 
 //----------------------------------------------------------------
@@ -886,14 +886,11 @@ the_knot_vector_t::set_target_degree(const unsigned int & target_degree)
 bool
 the_knot_vector_t::regenerate()
 {
-  regenerated_ = false;
-  
   const the_polyline_t * p = polyline();
   if (p == NULL) return false;
   if (!p->regenerated()) return false;
   
-  regenerated_ = update(p->geom().pt().size());
-  return regenerated_;
+  return update(p->geom().pt().size());
 }
 
 //----------------------------------------------------------------
@@ -1162,8 +1159,6 @@ the_knot_vector_t::remove_point()
 bool
 the_bspline_t::regenerate()
 {
-  regenerated_ = false;
-  
   const the_knot_vector_t * v = knot_vector();
   if (v == NULL) return false;
   if (!v->regenerated()) return false;
@@ -1176,8 +1171,6 @@ the_bspline_t::regenerate()
   if (geom.pt().size() < 2) return false;
   
   geom_.reset(geom.pt(), v->knots());
-  
-  regenerated_ = true;
   return true;
 }
 
@@ -1233,8 +1226,6 @@ delta(const the_domain_array_t<float> & knot, const int & i)
 bool
 the_interpolation_bspline_t::regenerate()
 {
-  regenerated_ = false;
-  
   setup_parameterization();
   
   std::vector<p3x1_t> pts(pts_.size());
@@ -1242,8 +1233,7 @@ the_interpolation_bspline_t::regenerate()
   std::vector<float> kts(pts_.size());
   point_values(pts, wts, kts);
   
-  regenerated_ = update_geom(pts, wts, kts);
-  return regenerated_;
+  return update_geom(pts, wts, kts);
 }
 
 //----------------------------------------------------------------

@@ -258,10 +258,7 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
-    the_bspline_t * bspline =
-      dynamic_cast<the_bspline_t *>(primitive);
-    
+    the_bspline_t * bspline = registry->elem<the_bspline_t>(id);
     return (bspline != NULL);
   }
 };

@@ -272,8 +272,6 @@ the_rational_bezier_geom_t::calc_bbox(the_bbox_t & bbox) const
 bool
 the_rational_bezier_t::regenerate()
 {
-  regenerated_ = false;
-  
   const the_polyline_t * p = polyline();
   if (p == NULL) return false;
   
@@ -281,7 +279,6 @@ the_rational_bezier_t::regenerate()
   if (geom.pt().size() < 2) return false;
   
   geom_.reset(geom.pt(), geom.wt());
-  regenerated_ = true;
   return true;
 }
 

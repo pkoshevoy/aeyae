@@ -263,8 +263,6 @@ the_polyline_t::color() const
 bool
 the_polyline_t::regenerate()
 {
-  regenerated_ = false;
-  
   // the polyline must have at least two points to regenerate properly:
   if (pts_.size() < 1) return false;
   
@@ -276,8 +274,6 @@ the_polyline_t::regenerate()
   point_values(pts, wts, kts);
   
   geom_.reset(pts, wts, kts);
-  
-  regenerated_ = true;
   return true;
 }
 

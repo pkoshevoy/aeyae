@@ -174,8 +174,7 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
-    the_polyline_t * polyline = dynamic_cast<the_polyline_t *>(primitive);
+    the_polyline_t * polyline = registry->elem<the_polyline_t>(id);
     return (polyline != NULL);
   }
 };

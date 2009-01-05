@@ -47,15 +47,11 @@ extern bool DRAW_SURFACE;
 bool
 the_tensurf_t::regenerate()
 {
-  regenerated_ = false;
-  
   const the_grid_t * g = grid();
   if (g == NULL) return false;
-  
-  regenerated_ = g->regenerated();
-  if (!regenerated_) return false;
-  
+  if (!g->regenerated()) return false;
   if (g->is_singular()) return false;
+  
   /*
   the_aa_bbox_t bbox;
   g->calc_bbox(bbox);
@@ -260,7 +256,7 @@ the_tensurf_t::regenerate()
     }
   }
   
-  return regenerated_;
+  return true;
 }
 
 //----------------------------------------------------------------

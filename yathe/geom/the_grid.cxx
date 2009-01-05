@@ -55,8 +55,7 @@ the_grid_t::the_grid_t():
 bool
 the_grid_t::regenerate()
 {
-  regenerated_ = true;
-  return regenerated_;
+  return true;
 }
 
 //----------------------------------------------------------------
@@ -265,7 +264,7 @@ the_grid_t::init(const p3x1_t & ul, const p3x1_t & lr)
   active_[1][0] = false;
   active_[1][1] = false;
   
-  regenerated_ = false;
+  the_graph_node_t::request_regeneration(this);
 }
 
 //----------------------------------------------------------------

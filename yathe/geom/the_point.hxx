@@ -65,7 +65,7 @@ public:
   inline void set_weight(const float & weight)
   {
     weight_ = weight;
-    request_regeneration();
+    the_graph_node_t::request_regeneration(this);
   }
   
   // accessor to the Euclidian coordinates of this point:
@@ -132,10 +132,7 @@ public:
   
   // virtual:
   bool regenerate()
-  {
-    regenerated_ = true;
-    return true;
-  }
+  { return true; }
   
   const p3x1_t & value() const
   { return value_; }
@@ -261,8 +258,7 @@ public:
   // virtual:
   bool allow(const the_registry_t * registry, const unsigned int & id) const
   {
-    the_primitive_t * primitive = registry->elem(id);
-    the_point_t * point = dynamic_cast<the_point_t *>(primitive);
+    the_point_t * point = registry->elem<the_point_t>(id);
     return (point != NULL);
   }
 };
