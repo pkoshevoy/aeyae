@@ -30,22 +30,20 @@ THE SOFTWARE.
 // Created      : Mon Jul  1 21:53:36 MDT 2002
 // Copyright    : (C) 2002
 // License      : MIT
-// Description  : Wrapper class for a dependency-sorted list of primitives:
+// Description  : Wrapper class for a dependency-sorted list of graph nodes:
 
 // local includes:
 #include "doc/the_graph.hxx"
 #include "doc/the_registry.hxx"
-#include "doc/the_primitive.hxx"
-
-#ifndef NOUI
-#include "sel/the_pick_list.hxx"
-#endif // NOUI
+#include "doc/the_graph_node.hxx"
+#include "utils/the_indentation.hxx"
 
 
 //----------------------------------------------------------------
 // the_graph_t::the_graph_t
 // 
 the_graph_t::the_graph_t():
+  std::list<unsigned int>(),
   registry_(NULL)
 {}
 
@@ -53,6 +51,7 @@ the_graph_t::the_graph_t():
 // the_graph_t::the_graph_t
 // 
 the_graph_t::the_graph_t(const the_registry_t * registry):
+  std::list<unsigned int>(),
   registry_(registry)
 {
   registry_->graph(*this);
@@ -68,7 +67,7 @@ the_graph_t::the_graph_t(const the_registry_t * registry,
   std::list<unsigned int>(),
   registry_(registry)
 {
-  push_back(root_id);
+  std::list<unsigned int>::push_back(root_id);
   registry->elem(root_id)->dependents(*this);
   
   dependency_sort();
@@ -85,39 +84,19 @@ the_graph_t::the_graph_t(const the_registry_t * registry,
   set_roots(registry, roots);
 }
 
-#ifndef NOUI
-//----------------------------------------------------------------
-// the_graph_t::the_graph_t
-// 
-the_graph_t::the_graph_t(const the_registry_t * registry,
-			 const the_pick_list_t & root_picks):
-  std::list<unsigned int>(),
-  registry_(NULL)
-{
-  std::list<unsigned int> roots;
-  for (the_pick_list_t::const_iterator i = root_picks.begin();
-       i != root_picks.end(); ++i)
-  {
-    const unsigned int & root_id = (*i).data().id();
-    roots.push_back(root_id);
-  }
-  
-  set_roots(registry, roots);
-}
-#endif // NOUI
-
 //----------------------------------------------------------------
 // the_graph_t::set_graph
 // 
 void
 the_graph_t::set_graph(const the_registry_t * registry,
-		       const the::unique_list<unsigned int> & graph)
+		       const std::list<unsigned int> & graph)
 {
   registry_ = registry;
   
   clear();
   insert(end(), graph.begin(), graph.end());
   
+  remove_duplicates();
   dependency_sort();
 }
 
@@ -130,12 +109,12 @@ the_graph_t::set_roots(const the_registry_t * registry,
 {
   registry_ = registry;
   
-  clear();
+  std::list<unsigned int>::clear();
   for (std::list<unsigned int>::const_iterator i = roots.begin();
        i != roots.end(); ++i)
   {
     const unsigned int & root_id = *i;
-    push_back(root_id);
+    std::list<unsigned int>::push_back(root_id);
     registry->elem(root_id)->dependents(*this);
   }
   
@@ -148,6 +127,8 @@ the_graph_t::set_roots(const the_registry_t * registry,
 void
 the_graph_t::dependency_sort()
 {
+  // FIXME: this is very inefficient:
+  
   for (std::list<unsigned int>::iterator i = begin(); i != end(); ++i)
   {
     for (std::list<unsigned int>::iterator j = next(i); j != end(); ++j)
@@ -168,14 +149,23 @@ the_graph_t::dependency_sort()
 bool
 the_graph_t::regenerate() const
 {
-  for (std::list<unsigned int>::const_iterator i = begin(); i != end(); ++i)
+  if (!registry_)
   {
-    the_primitive_t * prim = registry_->elem(*i);
-    if (prim->regenerated()) continue;
-    if (!prim->regenerate()) return false;
+    assert(false);
+    return false;
   }
   
-  return true;
+  bool all_ok = true;
+  std::list<unsigned int>::const_iterator i = std::list<unsigned int>::begin();
+  for (; i != std::list<unsigned int>::end(); ++i)
+  {
+    unsigned int id = *i;
+    the_graph_node_t * prim = registry_->elem(id);
+    bool ok = the_graph_node_t::regenerate_recursive(prim);
+    all_ok = all_ok && ok;
+  }
+  
+  return all_ok;
 }
 
 //----------------------------------------------------------------
@@ -185,14 +175,16 @@ void
 the_graph_t::dump(ostream & strm, unsigned int indent) const
 {
   strm << INDSCP << "the_graph_t(" << (void *)this << ")" << endl
-       << INDSCP << "{" << endl
-       << INDSTR << "dispatcher_ =" << endl;
+       << INDSCP << "{" << endl;
   unsigned int index = 0;
-  for (std::list<unsigned int>::const_iterator i = begin(); i != end(); ++i)
+  std::list<unsigned int>::const_iterator i = std::list<unsigned int>::begin();
+  for (; i != std::list<unsigned int>::end(); ++i)
   {
-    strm << INDSTR << "node " << index++ << ". id " << *i << ": ";
-    the_primitive_t * prim = registry_->elem(*i);
-    prim->dump(strm, INDNXT);
+    strm << INDSTR << "root " << index++ << ", ";
+    
+    unsigned int id = *i;
+    the_graph_node_t * node = registry_->elem(id);
+    node->dump(strm, INDNXT);
   }
   strm << INDSCP << "}" << endl << endl;
 }

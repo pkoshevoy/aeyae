@@ -30,7 +30,7 @@ THE SOFTWARE.
 // Created      : Mon Jul  1 21:53:36 MDT 2002
 // Copyright    : (C) 2002
 // License      : MIT
-// Description  : The registry -- used to keep track of document primitives.
+// Description  : The registry -- used to keep track of document graph nodes.
 
 #ifndef THE_REGISTRY_HXX_
 #define THE_REGISTRY_HXX_
@@ -46,7 +46,7 @@ THE SOFTWARE.
 #include "utils/the_dynamic_array.hxx"
 
 // forward declarations:
-class the_primitive_t;
+class the_graph_node_t;
 
 
 //----------------------------------------------------------------
@@ -80,8 +80,7 @@ public:
   inline unsigned int last_id() const
   { return id_ - 1; }
   
-  // Insert the ID into the reuse list, the Model Primitive
-  // does not need it anymore.
+  // add an ID to the reuse list, the graph node does not need it anymore:
   inline void release(const unsigned int & id)
   {
     reuse_.push_front(id);
@@ -101,7 +100,7 @@ public:
   const unsigned int & id() const
   { return id_; }
   
-  // For debugging, dumps this model primitive id dispatcher:
+  // For debugging, dumps this id dispatcher:
   void dump(ostream & strm, unsigned int indent = 0) const;
   
 private:
@@ -115,7 +114,7 @@ private:
 //----------------------------------------------------------------
 // the_registry_t
 // 
-// The master table for all primitives in existence:
+// The master table for all graph nodes in existence:
 class the_registry_t
 {
   friend bool save(std::ostream & stream, const the_registry_t & registry);
@@ -128,7 +127,7 @@ public:
   
   void clear();
   
-  inline the_primitive_t * elem(const unsigned int & id) const
+  inline the_graph_node_t * elem(const unsigned int & id) const
   {
 #ifndef NDEBUG
     assert(id != UINT_MAX);
@@ -148,7 +147,7 @@ public:
 #endif
   }
   
-  inline the_primitive_t *& elem(const unsigned int & id)
+  inline the_graph_node_t *& elem(const unsigned int & id)
   {
 #ifndef NDEBUG
     assert(id != UINT_MAX);
@@ -171,23 +170,23 @@ public:
   template <class prim_t> prim_t * elem(const unsigned int & id) const
   { return dynamic_cast<prim_t *>(elem(id)); }
   
-  inline the_primitive_t * operator[] (const unsigned int & id) const
+  inline the_graph_node_t * operator[] (const unsigned int & id) const
   { return elem(id); }
   
-  inline the_primitive_t *& operator[] (const unsigned int & id)
+  inline the_graph_node_t *& operator[] (const unsigned int & id)
   { return elem(id); }
   
   // current size of the registry (not actual size):
   inline unsigned int size() const
   { return dispatcher_.last_id() + 1; }
   
-  void add(the_primitive_t * prim);
-  void del(the_primitive_t * prim);
+  void add(the_graph_node_t * prim);
+  void del(the_graph_node_t * prim);
   
-  // create a dependency-sorted list of all primitives in the registry:
+  // gather a list of all graph nodes in the registry:
   void graph(std::list<unsigned int> & graph) const;
   
-  // collect primitives of a certain type into an array:
+  // collect graph nodes of a certain type into an array:
   template <class prim_t>
   unsigned int
   collect(the_dynamic_array_t<prim_t *> & prims) const
@@ -227,7 +226,7 @@ public:
     return num_collected;
   }
   
-  // For debugging, dumps this model primitive table:
+  // For debugging, dumps this registry table:
   void dump(std::ostream & strm, unsigned int indent = 0) const;
   
   // for debugging:
@@ -236,15 +235,15 @@ public:
 private:
   // An instance of an ID dispatcher. This way the table will
   // know when it's time to grow. The IDs are taken from the
-  // dispatcher and assigned to the primitives being inserted
-  // into the table. The ID is returned when a primitive is
+  // dispatcher and assigned to the graph nodes being inserted
+  // into the table. The ID is returned when a graph node is
   // removed from the table:
   the_id_dispatcher_t dispatcher_;
   
   // The table itself (it's nothing more than a set of pointers
-  // directly referencing the primitives; the id of a primitive
+  // directly referencing the graph nodes; the id of a graph node
   // is used as the index into the table):
-  the_dynamic_array_t<the_primitive_t *> table_;
+  the_dynamic_array_t<the_graph_node_t *> table_;
 };
 
 

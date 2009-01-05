@@ -30,21 +30,20 @@ THE SOFTWARE.
 // Created      : Mon Jul  1 21:53:36 MDT 2002
 // Copyright    : (C) 2002
 // License      : MIT
-// Description  : Wrapper class for a dependency-sorted list of primitives:
+// Description  : Wrapper class for a dependency-sorted list of root graph nodes
 
 #ifndef THE_GRAPH_HXX_
 #define THE_GRAPH_HXX_
 
 // system includes:
 #include <list>
+#include <iostream>
 
 // local includes:
 #include "utils/the_unique_list.hxx"
-#include "utils/the_indentation.hxx"
 
 // forward declarations:
 class the_registry_t;
-class the_pick_list_t;
 
 
 //----------------------------------------------------------------
@@ -63,40 +62,30 @@ public:
   the_graph_t(const the_registry_t * registry,
 	      const std::list<unsigned int> & roots);
   
-#ifndef NOUI
-  the_graph_t(const the_registry_t * registry,
-	      const the_pick_list_t & roots);
-#endif // NOUI
-  
-  inline void set_context(const the_registry_t * registry)
-  {
-    registry_ = registry;
-    dependency_sort();
-  }
-  
   void set_graph(const the_registry_t * registry,
-		 const the::unique_list<unsigned int> & graph);
+		 const std::list<unsigned int> & graph);
   
+  // set root nodes to regenerate:
   void set_roots(const the_registry_t * registry,
 		 const std::list<unsigned int> & roots);
   
   void dependency_sort();
   
-  // regenerate the primitives according to their pecking order
-  // (supporter before dependent) if any of the primitives fail
-  // to regenerate return false and don't bother regenerating the
-  // remaining primitives:
+  // regenerate the graph nodes according to their pecking order
+  // (supporter before dependent) if any of the graph nodes fail
+  // to regenerate return false, but not before completing
+  // regeneration of the remaining graph nodes:
   bool regenerate() const;
   
-  // For debugging, dumps this model primitive id dispatcher:
-  void dump(ostream & strm, unsigned int indent = 0) const;
+  // For debugging, dumps this model graph node id dispatcher:
+  void dump(std::ostream & strm, unsigned int indent = 0) const;
   
 private:
   // this will be called after sorting the graph:
   inline void remove_duplicates()
   { if (!empty()) unique(); }
   
-  // the registry that owns the primitives stored in this graph:
+  // the registry that owns the graph nodes stored in this graph:
   const the_registry_t * registry_;
 };
 

@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 // local includes:
 #include "doc/the_registry.hxx"
-#include "doc/the_primitive.hxx"
+#include "doc/the_graph_node.hxx"
 #include "utils/the_indentation.hxx"
 #include "utils/the_unique_list.hxx"
 
@@ -80,7 +80,7 @@ the_registry_t::the_registry_t(const the_registry_t & registry):
   const unsigned int size = the_registry_t::size();
   for (unsigned int i = 0; i < size; i++)
   {
-    the_primitive_t *& prim = elem(i);
+    the_graph_node_t *& prim = elem(i);
     if (prim == NULL) continue;
     
     prim = prim->clone();
@@ -105,7 +105,7 @@ the_registry_t::clear()
   unsigned int size = the_registry_t::size();
   for (unsigned int i = 0; i < size; i++)
   {
-    the_primitive_t * prim = table_[size - i - 1];
+    the_graph_node_t * prim = table_[size - i - 1];
     if (prim == NULL) continue;
     
     del(prim);
@@ -119,7 +119,7 @@ the_registry_t::clear()
 // the_registry_t::add
 // 
 void
-the_registry_t::add(the_primitive_t * prim)
+the_registry_t::add(the_graph_node_t * prim)
 {
   unsigned int id = dispatcher_.dispatch_id();
   table_[id] = prim;
@@ -130,32 +130,13 @@ the_registry_t::add(the_primitive_t * prim)
 // the_registry_t::del
 // 
 void
-the_registry_t::del(the_primitive_t * prim)
+the_registry_t::del(the_graph_node_t * prim)
 {
   unsigned int id = prim->id();
   prim->removed_from_the_registry();
   dispatcher_.release(id);
   table_[id] = NULL;
 }
-
-//----------------------------------------------------------------
-// graph_sorter_t
-// 
-class graph_sorter_t
-{
-public:
-  graph_sorter_t(const the_registry_t * registry):
-    registry_(registry)
-  {}
-  
-  bool operator()(const unsigned int & id_a,
-		  const unsigned int & id_b) const
-  {
-    return !registry_->elem(id_b)->supports(id_a);
-  }
-  
-  const the_registry_t * registry_;
-};
 
 //----------------------------------------------------------------
 // the_registry_t::graph
@@ -172,9 +153,6 @@ the_registry_t::graph(std::list<unsigned int> & graph) const
     if (table_[i] == NULL) continue;
     graph.push_back(i);
   }
-  
-  // sort it:
-  graph.sort(graph_sorter_t(this));
 }
 
 //----------------------------------------------------------------
@@ -190,7 +168,7 @@ the_registry_t::dump(ostream & strm, unsigned int indent) const
   unsigned int size = table_.size();
   for (unsigned int i = 0; i < size; i++)
   {
-    the_primitive_t * prim = table_[i];
+    the_graph_node_t * prim = table_[i];
     if (prim == NULL) continue;
     
     strm << INDSTR << "table_[" << i << "] =" << endl;
@@ -206,33 +184,33 @@ the_registry_t::dump(ostream & strm, unsigned int indent) const
 static void
 assert_sanity(const the_registry_t * registry, const unsigned int & id)
 {
-  const the_primitive_t * p = registry->elem(id);
+  const the_graph_node_t * p = registry->elem(id);
   if (p == NULL) return;
   
-  // make sure the primitive knows it is in the registry:
+  // make sure the graph node knows it is in the registry:
   assert(p->id() == id);
   
-  // make sure the direct dependents of this primitive are in the
-  // registry and know that they are supported by this primitive:
+  // make sure the direct dependents of this graph node are in the
+  // registry and know that they are supported by this graph node:
   const the::unique_list<unsigned int> & deps = p->direct_dependents();
   for (std::list<unsigned int>::const_iterator
 	 i = deps.begin(); i != deps.end(); ++i)
   {
     const unsigned int & dep_id = *i;
-    const the_primitive_t * d = registry->elem(dep_id);
+    const the_graph_node_t * d = registry->elem(dep_id);
     assert(d != NULL);
     bool ok = d->direct_dependent_of(id);
     assert(ok);
   }
   
-  // make sure the direct supporters of this primitive are in the
-  // registry and know that they are supporting this primitive:
+  // make sure the direct supporters of this graph node are in the
+  // registry and know that they are supporting this graph node:
   const the::unique_list<unsigned int> & sups = p->direct_supporters();
   for (std::list<unsigned int>::const_iterator
 	 i = sups.begin(); i != sups.end(); ++i)
   {
     const unsigned int & sup_id = *i;
-    const the_primitive_t * s = registry->elem(sup_id);
+    const the_graph_node_t * s = registry->elem(sup_id);
     assert(s != NULL);
     bool ok = s->direct_supporter_of(id);
     assert(ok);
@@ -250,7 +228,7 @@ the_registry_t::assert_sanity() const
   dump(cout);
   
   // make sure dispatcher is sane:
-  the_primitive_t * p = elem(dispatcher_.id());
+  the_graph_node_t * p = elem(dispatcher_.id());
   assert(p == NULL);
   const std::list<unsigned int> & reuse = dispatcher_.reuse();
   for (std::list<unsigned int>::const_iterator
@@ -270,7 +248,7 @@ the_registry_t::assert_sanity() const
     }
   }
   
-  // make sure every primitive in the registry knows it is in the registry,
+  // make sure every graph node in the registry knows it is in the registry,
   // and so are all of its dependents and supporters:
   const unsigned int size = table_.size();
   for (unsigned int i = 0; i < size; i++)

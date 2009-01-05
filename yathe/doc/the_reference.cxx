@@ -36,34 +36,14 @@ THE SOFTWARE.
 // local includes:
 #include "doc/the_reference.hxx"
 #include "utils/the_indentation.hxx"
-#include "io/the_file_io.hxx"
 
 
 //----------------------------------------------------------------
 // the_reference_t::the_reference_t
 // 
 the_reference_t::the_reference_t(const unsigned int & id):
-  id_(id)
+  the_graph_node_ref_t(id)
 {}
-
-//----------------------------------------------------------------
-// the_reference_t::save
-// 
-bool
-the_reference_t::save(std::ostream & stream) const
-{
-  ::save(stream, id_);
-  return true;
-}
-
-//----------------------------------------------------------------
-// the_reference_t::load
-// 
-bool
-the_reference_t::load(std::istream & stream)
-{
-  return ::load(stream, id_);
-}
 
 //----------------------------------------------------------------
 // the_reference_t::dump
@@ -72,7 +52,7 @@ void
 the_reference_t::dump(ostream & strm, unsigned int indent) const
 {
   strm << INDSCP << "the_reference_t(" << (void *)this << ")" << endl
-       << INDSCP << "{" << endl
-       << INDSTR << "id_ = " << id_ << endl
-       << INDSCP << "}" << endl << endl;
+       << INDSCP << "{" << endl;
+  the_graph_node_ref_t::dump(strm, INDNXT);
+  strm << INDSCP << "}" << endl << endl;
 }
