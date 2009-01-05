@@ -53,10 +53,6 @@ extern bool save(std::ostream & stream, const char * data);
 extern bool save(std::ostream & stream, const the_text_t & data);
 extern bool load(std::istream & stream, the_text_t & data);
 
-class the_knot_point_t;
-extern bool save(std::ostream & stream, const the_knot_point_t & d);
-extern bool load(std::istream & stream, the_knot_point_t & d);
-
 class the_registry_t;
 extern bool save(std::ostream & stream, const the_registry_t & registry);
 extern bool load(std::istream & stream, the_registry_t & registry);
@@ -65,21 +61,13 @@ class the_id_dispatcher_t;
 extern bool save(std::ostream & stream, const the_id_dispatcher_t & d);
 extern bool load(std::istream & stream, the_id_dispatcher_t & d);
 
-class the_reference_t;
-extern bool save(std::ostream & stream, const the_reference_t * ref);
-extern bool load(std::istream & stream, the_reference_t *& ref);
+class the_graph_node_ref_t;
+extern bool save(std::ostream & stream, const the_graph_node_ref_t * ref);
+extern bool load(std::istream & stream, the_graph_node_ref_t *& ref);
 
-class the_primitive_t;
-extern bool save(std::ostream & stream, const the_primitive_t * primitive);
-extern bool load(std::istream & stream, the_primitive_t *& primitive);
-
-class the_document_t;
-extern bool save(const the_text_t & magic,
-		 const the_text_t & filename,
-		 const the_document_t * doc);
-extern bool load(const the_text_t & magic,
-		 const the_text_t & filename,
-		 the_document_t *& doc);
+class the_graph_node_t;
+extern bool save(std::ostream & stream, const the_graph_node_t * graph_node);
+extern bool load(std::istream & stream, the_graph_node_t *& graph_node);
 
 
 //----------------------------------------------------------------
@@ -280,14 +268,14 @@ private:
 };
 
 //----------------------------------------------------------------
-// the_primitive_file_io
+// the_graph_node_file_io
 // 
-extern the_file_io_t<the_primitive_t> & the_primitive_file_io();
+extern the_file_io_t<the_graph_node_t> & the_graph_node_file_io();
 
 //----------------------------------------------------------------
-// the_reference_file_io
+// the_graph_node_ref_file_io
 // 
-extern the_file_io_t<the_reference_t> & the_reference_file_io();
+extern the_file_io_t<the_graph_node_ref_t> & the_graph_node_ref_file_io();
 
 
 //----------------------------------------------------------------

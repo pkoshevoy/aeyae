@@ -35,13 +35,10 @@ THE SOFTWARE.
 // local includes:
 #include "io/the_file_io.hxx"
 #include "io/io_base.hxx"
-#include "doc/the_document.hxx"
 #include "doc/the_registry.hxx"
 #include "doc/the_graph.hxx"
-#include "doc/the_primitive.hxx"
-#include "doc/the_reference.hxx"
-#include "geom/the_point.hxx"
-#include "geom/the_curve.hxx"
+#include "doc/the_graph_node.hxx"
+#include "doc/the_graph_node_ref.hxx"
 #include "utils/the_text.hxx"
 
 
@@ -101,25 +98,6 @@ load(std::istream & stream, the_text_t & data)
 // save
 // 
 bool
-save(std::ostream & stream, const the_knot_point_t & k)
-{
-  return k.save(stream);
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(std::istream & stream, the_knot_point_t & k)
-{
-  return k.load(stream);
-}
-
-
-//----------------------------------------------------------------
-// save
-// 
-bool
 save(std::ostream & stream, const the_registry_t & registry)
 {
   // save the magic word:
@@ -164,7 +142,7 @@ load(std::istream & stream, the_registry_t & registry)
   const unsigned int & size = registry.table_.size();
   for (unsigned int i = 0; i < size; i++)
   {
-    the_primitive_t * p = registry[i];
+    the_graph_node_t * p = registry[i];
     if (p == NULL) continue;
     
     p->registry_ = &registry;
@@ -211,7 +189,7 @@ load(std::istream & stream, the_id_dispatcher_t & dispatcher)
 // save
 // 
 bool
-save(std::ostream & stream, const the_reference_t * ref)
+save(std::ostream & stream, const the_graph_node_ref_t * ref)
 {
   if (ref == NULL)
   {
@@ -227,9 +205,9 @@ save(std::ostream & stream, const the_reference_t * ref)
 // load
 // 
 bool
-load(std::istream & stream, the_reference_t *& ref)
+load(std::istream & stream, the_graph_node_ref_t *& ref)
 {
-  return the_reference_file_io().load(stream, ref);
+  return the_graph_node_ref_file_io().load(stream, ref);
 }
 
 
@@ -237,120 +215,44 @@ load(std::istream & stream, the_reference_t *& ref)
 // save
 // 
 bool
-save(std::ostream & stream, const the_primitive_t * primitive)
+save(std::ostream & stream, const the_graph_node_t * graph_node)
 {
   // save the magic word:
-  if (primitive == NULL)
+  if (graph_node == NULL)
   {
     save(stream, "NULL");
     return true;
   }
   
-  save(stream, primitive->name());
-  return primitive->save(stream);
+  save(stream, graph_node->name());
+  return graph_node->save(stream);
 }
 
 //----------------------------------------------------------------
 // load
 // 
 bool
-load(std::istream & stream, the_primitive_t *& primitive)
+load(std::istream & stream, the_graph_node_t *& graph_node)
 {
-  return the_primitive_file_io().load(stream, primitive);
+  return the_graph_node_file_io().load(stream, graph_node);
 }
 
 //----------------------------------------------------------------
-// the_primitive_file_io
+// the_graph_node_file_io
 // 
-the_file_io_t<the_primitive_t> & the_primitive_file_io()
+the_file_io_t<the_graph_node_t> &
+the_graph_node_file_io()
 {
-  static the_file_io_t<the_primitive_t> io;
+  static the_file_io_t<the_graph_node_t> io;
   return io;
 }
 
 //----------------------------------------------------------------
-// the_reference_file_io
+// the_graph_node_ref_file_io
 // 
-the_file_io_t<the_reference_t> & the_reference_file_io()
+the_file_io_t<the_graph_node_ref_t> &
+the_graph_node_ref_file_io()
 {
-  static the_file_io_t<the_reference_t> io;
+  static the_file_io_t<the_graph_node_ref_t> io;
   return io;
-}
-
-//----------------------------------------------------------------
-// save
-// 
-bool
-save(const the_text_t & magic,
-     const the_text_t & filename,
-     const the_document_t * doc)
-{
-  assert(doc != NULL);
-  
-  std::ofstream file;
-  file.open(filename, ios::out);
-  if (!file.is_open()) return false;
-  
-  // save the right magic word:
-  file << magic << endl;
-  
-  // update the document name:
-  the_document_t * document = const_cast<the_document_t *>(doc);
-  the_text_t old_name(doc->name());
-  {
-    std::vector<the_text_t> tokens;
-    unsigned int num_tokens = filename.split(tokens, '/');
-    document->name().assign(tokens[num_tokens - 1]);
-  }
-  
-  // save the document:
-  bool ok = document->save(file);
-  if (!ok)
-  {
-    document->name().assign(old_name);
-  }
-  
-  // done:
-  file.close();
-  return ok;
-}
-
-//----------------------------------------------------------------
-// load
-// 
-bool
-load(const the_text_t & magic,
-     const the_text_t & filename,
-     the_document_t *& doc)
-{
-  assert(doc == NULL);
-  
-  std::ifstream file;
-  file.open(filename, ios::in);
-  if (!file.is_open()) return false;
-  
-  // make sure this is not a bogus file:
-  the_text_t magic_word;
-  file >> magic_word;
-  
-  if (magic_word == magic)
-  {
-    std::vector<the_text_t> tokens;
-    unsigned int num_tokens = filename.split(tokens, '/');
-    
-    // update the document name:
-    the_document_t * document = new the_document_t(filename);
-    
-    // load the document:
-    if (document->load(file))
-    {
-      document->name().assign(tokens[num_tokens - 1]);
-      doc = document;
-    }
-  }
-  
-  // done:
-  file.close();
-  
-  return doc != NULL;
 }
