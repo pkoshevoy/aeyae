@@ -91,7 +91,11 @@ template<class T>
 class the_duplet_t
 {
 public:
-  the_duplet_t() {}
+  the_duplet_t()
+  {
+    X_ = static_cast<T>(0);
+    Y_ = static_cast<T>(0);
+  }
   
   the_duplet_t(const T * data)
   {
@@ -204,7 +208,12 @@ class the_triplet_t
   friend class m4x4_t;
   
 public:
-  the_triplet_t() {}
+  the_triplet_t()
+  {
+    X_ = static_cast<T>(0);
+    Y_ = static_cast<T>(0);
+    Z_ = static_cast<T>(0);
+  }
   
   the_triplet_t(const T * data)
   {
@@ -337,7 +346,13 @@ class the_quadruplet_t
   friend class m4x4_t;
   
 public:
-  the_quadruplet_t() {}
+  the_quadruplet_t()
+  {
+    X_ = static_cast<T>(0);
+    Y_ = static_cast<T>(0);
+    Z_ = static_cast<T>(0);
+    W_ = static_cast<T>(0);
+  }
   
   the_quadruplet_t(const T * data)
   {
