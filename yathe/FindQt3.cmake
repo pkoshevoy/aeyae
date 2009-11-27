@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.4.0)
-
 # - Locate Qt include paths and libraries
 # This module defines:
 #  QT3_INCLUDE_DIR - where to find qt.h, etc.
