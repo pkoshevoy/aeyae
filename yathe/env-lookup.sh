@@ -25,7 +25,9 @@ fi
 #fi
 
 # determine where Qt3 lives:
-if [ -e /usr/lib/qt3 ]; then
+if [ -e /usr/lib64/qt3 ]; then
+    export QT3_DIR=/usr/lib64/qt3
+elif [ -e /usr/lib/qt3 ]; then
     export QT3_DIR=/usr/lib/qt3
 fi
 
@@ -35,6 +37,8 @@ if [ -e /scratch/"${CPU}"/Qt ]; then
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/Qt ]; then
     export QT4_DIR=/usr/sci/crcnsdata/"${CPU}"/Qt
 elif [ -e /usr/include/QtCore ]; then
+    export QT4_DIR=/usr
+elif [ -e /usr/lib64/libQtCore.so ]; then
     export QT4_DIR=/usr
 elif [ -e /usr/lib/libQtCore.so ]; then
     export QT4_DIR=/usr
@@ -47,6 +51,8 @@ elif [ -e /usr/sci/crcnsdata/"${CPU}"/GLEW ]; then
     export GLEW_DIR=/usr/sci/crcnsdata/"${CPU}"/GLEW
 elif [ -e /usr/include/GL/glew.h ]; then
     export GLEW_DIR=/usr
+elif [ -e /usr/lib64/libGLEW.so ]; then
+    export GLEW_DIR=/usr
 elif [ -e /usr/lib/libGLEW.so ]; then
     export GLEW_DIR=/usr
 fi
@@ -58,6 +64,8 @@ elif [ -e /usr/sci/crcnsdata/"${CPU}"/Cg ]; then
     export CG_DIR=/usr/sci/crcnsdata/"${CPU}"/Cg
 elif [ -e /usr/include/Cg/cgGL.h ]; then
     export CG_DIR=/usr
+elif [ -e /usr/lib64/libCg.so ]; then
+    export CG_DIR=/usr
 elif [ -e /usr/lib/libCg.so ]; then
     export CG_DIR=/usr
 fi
@@ -68,6 +76,8 @@ if [ -e /scratch/"${CPU}"/FFTW ]; then
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/FFTW ]; then
     export FFTW_DIR=/usr/sci/crcnsdata/"${CPU}"/FFTW
 elif [ -e /usr/include/fftw3.h ]; then
+    export FFTW_DIR=/usr
+elif [ -e /usr/lib64/libfftw3.so ]; then
     export FFTW_DIR=/usr
 elif [ -e /usr/lib/libfftw3.so ]; then
     export FFTW_DIR=/usr
