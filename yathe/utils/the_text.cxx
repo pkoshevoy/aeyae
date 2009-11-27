@@ -465,6 +465,17 @@ getline(std::istream & in, the_text_t & text)
 {
   std::string tmp;
   getline(in, tmp);
+  
+  if (!tmp.empty())
+  {
+    std::size_t len = tmp.size();
+    if (tmp[len - 1] == '\r')
+    {
+      // truncate the \r character
+      tmp.resize(len - 1);
+    }
+  }
+  
   text.assign(tmp.data(), tmp.size());
   return in;
 }
