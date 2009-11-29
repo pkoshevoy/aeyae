@@ -175,6 +175,19 @@ public:
   inline const bool & pan_allowed() const
   { return allow_pan_; }
   
+  // spin constraints:
+  typedef enum
+  {
+    SPIN_UNCONSTRAINED_E,
+    SPIN_EDIT_PLANE_E
+  } spin_constraint_t;
+  
+  inline void set_spin_constraint(spin_constraint_t constraint)
+  { spin_constraint_ = constraint; }
+  
+  inline spin_constraint_t spin_constraint() const
+  { return spin_constraint_; }
+  
   // linked view accessors:
   inline void add_linked_view(the_view_t * v)
   { linked_views_.push_back(view_mgr_helper_t(v)); }
@@ -199,9 +212,6 @@ private:
   // a wrapper used to simplify internal interaction with the view manager:
   view_mgr_helper_t helper_;
   
-  // SPIN: previous point on the near plane:
-  p3x1_t prev_pt_;
-  
   // ZOOM: which axis is to be used to decide the zoom in/out:
   axis_t which_axis_;
   
@@ -223,6 +233,7 @@ private:
   bool allow_spin_;
   bool allow_zoom_;
   bool allow_pan_;
+  spin_constraint_t spin_constraint_;
   
   // a list of views linked to the view controlled by this view manager
   // event handler:

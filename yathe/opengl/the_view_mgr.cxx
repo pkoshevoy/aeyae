@@ -182,7 +182,7 @@ void
 the_view_mgr_t::restore_zoom(const the_bbox_t & bbox)
 {
   scene_bbox_ = bbox;
-  scene_radius_ = calc_scene_radius(scene_bbox_, width_, height_);
+  scene_radius_ = float(calc_scene_radius(scene_bbox_, width_, height_));
   view_radius_ = initial_zoom_ * scene_radius_;
   
   lf_ = la_ + (lfla_vr_ratio() * view_radius_ *
@@ -237,7 +237,7 @@ the_view_mgr_t::update_scene_radius(const the_bbox_t & bbox)
   float sr = scene_bbox_.radius(la_);
 #else
   float shift = ~(scene_bbox_.wcs_center() - la_);
-  float sr = shift + calc_scene_radius(scene_bbox_, width_, height_);
+  float sr = shift + float(calc_scene_radius(scene_bbox_, width_, height_));
 #endif
   
   set_scene_radius(sr);
@@ -328,10 +328,10 @@ void
 the_view_mgr_t::set_view_radius(const float & vr)
 {
   static float vr_limit_min =
-    ::sqrt(std::numeric_limits<float>::min() * 1.01) / lfla_vr_ratio();
+    ::sqrt(std::numeric_limits<float>::min() * 1.01f) / lfla_vr_ratio();
   
   static float vr_limit_max =
-    ::sqrt(std::numeric_limits<float>::max() * 0.99) / lfla_vr_ratio();
+    ::sqrt(std::numeric_limits<float>::max() * 0.99f) / lfla_vr_ratio();
   
   if (view_radius_ != vr /* && vr >= vr_limit_min && vr <= vr_limit_max */)
   {
@@ -418,15 +418,15 @@ the_view_mgr_t::near_plane() const
   float lfla_dist = ~(la_ - lf_);
   float temp = lfla_dist - scene_radius_;
   
-  if (temp <= 0.0)
+  if (temp <= 0.0f)
   {
     // make sure the clipping plane stays in front of the nose:
-    temp = lfla_dist * 0.02;
+    temp = lfla_dist * 0.02f;
   }
   else if (temp == lfla_dist)
   {
     // avoid numerical precision problems:
-    temp = lfla_dist * 0.99;
+    temp = lfla_dist * 0.99f;
   }
   
   return temp;
@@ -444,7 +444,7 @@ the_view_mgr_t::far_plane() const
   if (temp == lfla_dist)
   {
     // avoid numerical precision problems:
-    temp = lfla_dist * 1.01;
+    temp = lfla_dist * 1.01f;
   }
   
   return temp;
@@ -457,14 +457,14 @@ bool
 the_view_mgr_t::salvage_near_far(float & near_plane, float & far_plane)
 {
   // make sure that the near clipping is salvageable:
-  if (far_plane <= 0.0) return false;
+  if (far_plane <= 0.0f) return false;
   if (far_plane < near_plane) return false;
   
   // try to salvage the near clipping plane:
-  if (near_plane <= 0.0) near_plane = 0.01 * far_plane;
+  if (near_plane <= 0.0f) near_plane = 0.01f * far_plane;
   
   // separate the clipping planes:
-  float offset = 0.01 * near_plane;
+  float offset = 0.01f * near_plane;
   far_plane  += offset;
   near_plane -= offset;
   
@@ -606,8 +606,8 @@ the_persp_view_mgr_t::setup_view_volume(the_view_volume_t & view_volume) const
 		    up_,
 		    near_plane(),
 		    far_plane(),
-		    viewport_plane_radius(near_plane()) * scale_x() * 2.0,
-		    viewport_plane_radius(near_plane()) * scale_y() * 2.0,
+		    viewport_plane_radius(near_plane()) * scale_x() * 2.0f,
+		    viewport_plane_radius(near_plane()) * scale_y() * 2.0f,
 		    true);
 }
 
@@ -702,8 +702,8 @@ the_ortho_view_mgr_t::setup_view_volume(the_view_volume_t & view_volume) const
   float n = near_plane();
   float f = far_plane();
   float r = viewport_plane_radius(n);
-  float w = r * (scale_x() * 2.0);
-  float h = r * (scale_y() * 2.0);
+  float w = r * (scale_x() * 2.0f);
+  float h = r * (scale_y() * 2.0f);
   view_volume.setup(lf_, la_, up_, n, f, w, h, false);
 }
 

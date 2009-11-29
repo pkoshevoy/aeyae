@@ -260,7 +260,7 @@ the_view_t::select_ep()
   the_edit_plane_id_t best_ep_id = prev_ep_id;
   
   float best_result = -FLT_MAX;
-  float result[] = { 0.0, 0.0, 0.0 };
+  float result[] = { 0.0f, 0.0f, 0.0f };
   
   for (unsigned int i = 0; i <= THE_TOP_EDIT_PLANE_E; i++)
   {
@@ -269,7 +269,7 @@ the_view_t::select_ep()
     // find the vector from the edit plane toward the top-center point:
     v3x1_t ep_lf = !(ep - lf);
     float a = -(ep_lf * la);
-    float b = 0.5 * (1.0 + fabs(a)) * (ep_lf * up);
+    float b = 0.5f * (1.0f + fabsf(a)) * (ep_lf * up);
     result[i] = a + b;
     
     if (best_result > result[i]) continue;
@@ -331,9 +331,9 @@ the_view_t::gl_setup()
   glClearColor(0, 0, 0, 1);
   
   // common material properties:
-  static const float mat_ambient[]   = { 0.1, 0.1, 0.1, 1.0 };
-  static const float mat_specular[]  = { 0.7, 0.7, 0.7, 1.0 };
-  static const float mat_shininess[] = { 7.0 };
+  static const float mat_ambient[]   = { 0.1f, 0.1f, 0.1f, 1.0f };
+  static const float mat_specular[]  = { 0.7f, 0.7f, 0.7f, 1.0f };
+  static const float mat_shininess[] = { 7.0f };
   glMaterialfv(GL_FRONT, GL_AMBIENT,   mat_ambient);
   glMaterialfv(GL_BACK,  GL_AMBIENT,   mat_ambient);
   glMaterialfv(GL_FRONT, GL_SPECULAR,  mat_specular);
@@ -343,15 +343,15 @@ the_view_t::gl_setup()
   FIXME_OPENGL("the_view_t::initializeGL A");
   
   // light properties:
-  static const float light_diffuse[]  = { 1.0, 1.0, 1.0, 1.0 };
-  static const float light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
-  static const float light_ambient[]  = { 0.5, 0.5, 0.5, 1.0 };
+  static const float light_diffuse[]  = { 1.0f, 1.0f, 1.0f, 1.0f };
+  static const float light_specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+  static const float light_ambient[]  = { 0.5f, 0.5f, 0.5f, 1.0f };
   glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_diffuse);
   glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
   glLightfv(GL_LIGHT0, GL_AMBIENT,  light_ambient);
   FIXME_OPENGL("the_view_t::initializeGL B");
   
-  static const float global_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
+  static const float global_ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
   glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
   FIXME_OPENGL("the_view_t::initializeGL C");
@@ -359,12 +359,12 @@ the_view_t::gl_setup()
   glEnable(GL_LIGHT0);
   FIXME_OPENGL("the_view_t::initializeGL D");
   
-  static const float fog_color[4] = { 0.0, 0.0, 0.0, 1.0 };
+  static const float fog_color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
   glFogi(GL_FOG_MODE, GL_LINEAR);
   glFogfv(GL_FOG_COLOR, fog_color);
   glHint(GL_FOG_HINT, GL_NICEST);
   glDepthFunc(GL_LESS);
-  glLineWidth(1.0);
+  glLineWidth(1.0f);
 }
 
 //----------------------------------------------------------------
@@ -466,7 +466,7 @@ the_view_t::gl_paint()
       float b = view_ray * bbox.wcs_max();
       
       glFogf(GL_FOG_START, a);
-      glFogf(GL_FOG_END,   a + 3.0 * (b - a));
+      glFogf(GL_FOG_END, a + 3.0f * (b - a));
       glEnable(GL_FOG);
     }
   }
@@ -527,8 +527,8 @@ the_view_t::gl_paint()
   // draw whatever (2D) is needed by the event handler:
   {
     view_mgr().reset_opengl_viewing();
-    view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0, height()),
-				       p2x1_t(width(), 0.0));
+    view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0f, float(height())),
+				       p2x1_t(float(width()), 0.0f));
     FIXME_OPENGL("the_view_t::paintGL J");
     
     // draw:

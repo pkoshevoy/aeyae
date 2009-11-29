@@ -260,6 +260,12 @@ public:
   void lcs_to_wcs(const v3x1_t & lcs_vec, v3x1_t & wcs_vec) const;
   void wcs_to_lcs(const v3x1_t & wcs_vec, v3x1_t & lcs_vec) const;
   
+  // NOTE: cylindrical coordinates should be interpreted as follows:
+  // 
+  // 0: radius, distance from the Z origin
+  // 1: angle, measured in XY plane from X axis
+  // 2: height, measured from XY plane along the Z axis
+  
   // transform a point expressed in the cylindrical coordinate system
   // system to the cartesian coordinate system:
   template <class pv3x1_t>
@@ -295,6 +301,26 @@ public:
     the_uv_csys_t::cartesian_to_polar(x, y, radius, angle);
     height = z;
   }
+  
+  inline void wcs_to_cyl(const p3x1_t & wcs, p3x1_t & cyl)
+  {
+    p3x1_t lcs;
+    wcs_to_lcs(wcs, lcs);
+    xyz_to_cyl(lcs, cyl);
+  }
+  
+  inline void cyl_to_wcs(const p3x1_t & cyl, p3x1_t & wcs)
+  {
+    p3x1_t lcs;
+    cyl_to_xyz(cyl, lcs);
+    lcs_to_wcs(lcs, wcs);
+  }
+  
+  // NOTE: spherical coordinates should be interpreted as follows:
+  // 
+  // 0: radius, distance from the origin
+  // 1: azimuth (longitude) range [0, 2 * Pi], measured in XY plane from X axis
+  // 2: polar (zenith, colatitude), range [0, Pi], measured from Z axis
   
   // transform a point expressed in the spherical coordinate system
   // system to the cartesian coordinate system:
@@ -332,6 +358,20 @@ public:
     radius  = sqrt(x * x + y * y + z * z);
     azimuth = atan2(y, x);
     polar   = atan2(sqrt(x * x + y * y), z);
+  }
+  
+  inline void wcs_to_sph(const p3x1_t & wcs, p3x1_t & sph)
+  {
+    p3x1_t lcs;
+    wcs_to_lcs(wcs, lcs);
+    xyz_to_sph(lcs, sph);
+  }
+  
+  inline void sph_to_wcs(const p3x1_t & sph, p3x1_t & wcs)
+  {
+    p3x1_t lcs;
+    sph_to_xyz(sph, lcs);
+    lcs_to_wcs(lcs, wcs);
   }
   
   // convenience functions:

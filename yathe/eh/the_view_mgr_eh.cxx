@@ -57,7 +57,8 @@ the_view_mgr_eh_t::the_view_mgr_eh_t():
   pick_depth_(0.0),
   allow_spin_(true),
   allow_zoom_(true),
-  allow_pan_(true)
+  allow_pan_(true),
+  spin_constraint_(SPIN_UNCONSTRAINED_E)
 {}
 
 //----------------------------------------------------------------
@@ -176,20 +177,20 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
       
       if (dr > 0.0)
       {
-	vr *= (180.0 - we.degrees_rotated()) / 180.0;
+	vr *= float((180.0 - dr) / 180.0);
       }
       else
       {
-	vr *= 180.0 / (180.0 + we.degrees_rotated());
+	vr *= float(180.0 / (180.0 + dr));
       }
       
-      float vr_threshold = ~(view_mgr.lf() - view_mgr.la()) / 100.0;
+      float vr_threshold = ~(view_mgr.lf() - view_mgr.la()) / 100.0f;
       if (vr > vr_threshold)
       {
 	view_mgr.set_view_radius(vr);
 	
 	// make sure we did not move the look-from through the near plane:
-	if (view_mgr.near_plane() == 0.0)
+	if (view_mgr.near_plane() == 0.0f)
 	{
 	  cerr << "WARNING: impossible viewing, restoring previous state:"
 	       << endl
@@ -268,8 +269,6 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
 				 helper_.anchor().la()));
       pick_depth_ =
 	helper_.anchor().view_volume().depth_of_wcs_pt(view_radius_pt);
-      prev_pt_ =
-	helper_.anchor().view_volume().to_wcs(p3x1_t(a_scs(), pick_depth_));
     }
     else if (zoom_allowed() &&
 	     is_modifier_active(this, THE_EH_MOD_VIEW_ZOOM_E) &&
@@ -316,35 +315,119 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
     {
       the_trail_t::milestone_t milestone;
       
-      // FIXME: rewrite this to support linked views:
+      // handle the linked views:
+      std::list<view_mgr_helper_t> views = linked_views_;
+      views.push_front(helper_);
       
-      const p3x1_t & la = view_mgr.la();
-      const p3x1_t & lf = view_mgr.lf();
+      for (std::list<view_mgr_helper_t>::iterator i = views.begin();
+	   i != views.end(); ++i)
+      {
+	view_mgr_helper_t & helper = *i;
+	the_view_mgr_t & view_mgr = helper.view_mgr();
+	the_view_mgr_t & anchor = helper.anchor();
+	
+	the_view_volume_t view_vol;
+	view_mgr.setup_view_volume(view_vol);
+	
+	the_view_t & view = helper.view();
+	const the_plane_t & ep = view.active_ep();
+	
+	if (spin_constraint() == SPIN_EDIT_PLANE_E)
+	{
+	  const the_ray_t a_ray(view_vol.to_ray(a_scs()));
+	  const the_ray_t b_ray(view_vol.to_ray(b_scs()));
+	  float ta = FLT_MAX;
+	  float tb = FLT_MAX;
+	  if (!ep.intersect(a_ray, ta) ||
+	      !ep.intersect(b_ray, tb))
+	  {
+	    continue;
+	  }
+	  
+	  p3x1_t pa_wcs = a_ray * ta;
+	  p3x1_t pb_wcs = b_ray * tb;
+	  
+	  // find center of rotation on the edit plane:
+	  const the_ray_t lfla_ray = view_mgr.lfla_ray();
+	  
+	  float ray_ep_param = FLT_MAX;
+	  if (!ep.intersect(lfla_ray, ray_ep_param))
+	  {
+	    continue;
+	  }
+
+	  the_coord_sys_t cs(ep.cs());
+	  cs.origin() = lfla_ray * ray_ep_param;
+	  
+	  // NOTE: cylindrical coordinates should be interpreted as follows:
+	  // 
+	  // 0: radius, distance from the Z origin
+	  // 1: angle, measured in XY plane from X axis
+	  // 2: height, measured from XY plane along the Z axis
+	  
+	  p3x1_t a_cyl;
+	  p3x1_t b_cyl;
+	  cs.wcs_to_cyl(pa_wcs, a_cyl);
+	  cs.wcs_to_cyl(pb_wcs, b_cyl);
+	  
+	  float rotation_angle = b_cyl[1] - a_cyl[1];
+	  
+	  // update look from point and up vector:
+	  p3x1_t lf_cyl;
+	  cs.wcs_to_cyl(anchor.lf(), lf_cyl);
+	  lf_cyl[1] -= rotation_angle;
+	  
+	  p3x1_t up_cyl;
+	  cs.wcs_to_cyl(anchor.lf() + anchor.up(), up_cyl);
+	  up_cyl[1] -= rotation_angle;
+	  
+	  p3x1_t lf_wcs;
+	  cs.cyl_to_wcs(lf_cyl, lf_wcs);
+	  
+	  p3x1_t up_wcs;
+	  cs.cyl_to_wcs(up_cyl, up_wcs);
+	  
+	  v3x1_t up_vec = !(up_wcs - lf_wcs);
+	  
+	  view_mgr.set_lf(lf_wcs);
+	  view_mgr.set_up(up_vec);
+	  view.select_ep();
+	}
+	else if (spin_constraint() == SPIN_UNCONSTRAINED_E)
+	{
+	  const p3x1_t & la = view_mgr.la();
+	  const p3x1_t & lf = view_mgr.lf();
+	  
+	  p3x1_t a = view_vol.to_wcs(p3x1_t(a_scs(), pick_depth_));
+	  p3x1_t b = view_vol.to_wcs(p3x1_t(b_scs(), pick_depth_));
+	  v3x1_t d = b - a;
+	  
+	  float lfla_dist =
+	    ~(anchor.la() - anchor.lf());
+	  
+	  p3x1_t new_lf =
+	    lf - 3.0f * (lfla_dist / anchor.view_radius()) * d;
+	  
+	  new_lf = la + lfla_dist * (!(new_lf - la));
+	  
+	  // calculate new up vector:
+	  v3x1_t u = !(la - lf);
+	  v3x1_t v = view_mgr.up();
+	  v3x1_t w = !(u % v);
+	  u = !(la - new_lf);
+	  v = !(w % u);
+	  
+	  // apply the changes:
+	  view_mgr.set_lf(new_lf);
+	  view_mgr.set_up(v);
+	  view.select_ep();
+	}
+      }
       
-      p3x1_t b = view_mgr.view_volume().to_wcs(p3x1_t(b_scs(), pick_depth_));
-      v3x1_t d = b - prev_pt_;
-      
-      float lfla_dist =
-	~(helper_.anchor().la() - helper_.anchor().lf());
-      
-      p3x1_t new_lf =
-	lf - 3.0 * (lfla_dist / helper_.anchor().view_radius()) * d;
-      
-      new_lf = la + lfla_dist * (!(new_lf - la));
-      
-      // calculate new up vector:
-      v3x1_t u = !(la - lf);
-      v3x1_t v = view_mgr.up();
-      v3x1_t w = !(u % v);
-      u = !(la - new_lf);
-      v = !(w % u);
-      
-      // apply the changes:
-      view_mgr.set_lf(new_lf);
-      view_mgr.set_up(v);
-      view().select_ep();
-      
-      prev_pt_ = view_mgr.view_volume().to_wcs(p3x1_t(b_scs(), pick_depth_));
+      if (spin_constraint() == SPIN_UNCONSTRAINED_E)
+      {
+	reset_anchor();
+      }
     }
     else
     {
@@ -426,11 +509,6 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
     {
       the_trail_t::milestone_t milestone;
       
-      // calculate the displacement vector:
-      ray_b_ = helper_.anchor().view_volume().to_ray(b_scs());
-      p3x1_t finish_pnt = ray_b_ * pick_depth_;
-      v3x1_t v = (start_pnt_ - finish_pnt);
-      
       // handle the linked views:
       std::list<view_mgr_helper_t> views = linked_views_;
       views.push_front(helper_);
@@ -442,8 +520,28 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
 	the_view_mgr_t & view_mgr = helper.view_mgr();
 	the_view_mgr_t & anchor = helper.anchor();
 	
-	view_mgr.set_lf(anchor.lf() + v);
-	view_mgr.set_la(anchor.la() + v);
+	the_view_volume_t vol;
+	anchor.setup_view_volume(vol);
+	
+	the_view_t & view = helper.view();
+	const the_plane_t & ep = view.active_ep();
+	
+	const the_ray_t a_ray(vol.to_ray(a_scs()));
+	const the_ray_t b_ray(vol.to_ray(b_scs()));
+	float ta = FLT_MAX;
+	float tb = FLT_MAX;
+	if (!ep.intersect(a_ray, ta) ||
+	    !ep.intersect(b_ray, tb))
+	{
+	  continue;
+	}
+	
+	p3x1_t a = a_ray * ta;
+	p3x1_t b = b_ray * tb;
+	v3x1_t v = b - a;
+	
+	view_mgr.set_lf(anchor.lf() - v);
+	view_mgr.set_la(anchor.la() - v);
 	
 	the_bbox_t documents_bbox;
 	helper.view().calc_bbox(documents_bbox);
@@ -460,7 +558,7 @@ processor(the_input_device_eh_t::the_event_type_t event_type)
 	  helper.restore();
 	}
 	
-	helper.view().select_ep();
+	view.select_ep();
       }
     }
     else

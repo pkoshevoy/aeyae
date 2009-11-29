@@ -408,7 +408,7 @@ the_coord_sys_t::get_transform(// the axis scales:
 			       // the rotation angle:
 			       float & alpha) const
 {
-  static const float angle_eps = 1e-7;
+  static const float angle_eps = 1e-7f;
   
   scale[0] = x_axis_.norm();
   scale[1] = y_axis_.norm();
@@ -440,33 +440,35 @@ the_coord_sys_t::get_transform(// the axis scales:
   };
   
   float trace_r = r[0][0] + r[1][1] + r[2][2];
-  float cos_alpha = (trace_r - 1.0) / 2.0;
+  float cos_alpha = (trace_r - 1.0f) / 2.0f;
   
   float r3223 = r[2][1] - r[1][2];
   float r1331 = r[0][2] - r[2][0];
   float r2112 = r[1][0] - r[0][1];
-  float sin_alpha = 0.5 * sqrt(r3223 * r3223 + r1331 * r1331 + r2112 * r2112);
+  float sin_alpha = float(0.5 * sqrt(r3223 * r3223 + 
+				     r1331 * r1331 +
+				     r2112 * r2112));
   
   alpha = atan2(sin_alpha, cos_alpha);
   
   if (fabs(alpha) < angle_eps)
   {
-    alpha = 0.0;
-    azimuth = 0.0;
-    polar = 0.0;
+    alpha = 0.0f;
+    azimuth = 0.0f;
+    polar = 0.0f;
   }
   else
   {
     v3x1_t rot_axis(r3223, r1331, r2112);
-    rot_axis /= (2.0 * sin_alpha);
+    rot_axis /= (2.0f * sin_alpha);
     
     v3x1_t sph_axis;
     xyz_to_sph(rot_axis, sph_axis);
     
-    polar = std::min(M_PI, std::max(0.0, double(sph_axis.z())));
-    if (polar < angle_eps || fabs(polar - M_PI) < angle_eps)
+    polar = std::min(float(M_PI), std::max(0.0f, sph_axis.z()));
+    if (polar < angle_eps || fabsf(polar - float(M_PI)) < angle_eps)
     {
-      azimuth = 0.0;
+      azimuth = 0.0f;
     }
     else
     {
@@ -485,10 +487,10 @@ normalize(const float a[3], float b[3])
   b[1] = a[1];
   b[2] = a[2];
   
-  float norm = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-  if (norm != 0.0)
+  float norm = sqrtf(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+  if (norm != 0.0f)
   {
-    float scale = 1.0 / norm;
+    float scale = 1.0f / norm;
     b[0] *= scale;
     b[1] *= scale;
     b[2] *= scale;
