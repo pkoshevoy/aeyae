@@ -52,6 +52,8 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include <fstream>
+#include <stdio.h>
 
 // local includes:
 #include "utils/the_dynamic_array.hxx"
@@ -112,7 +114,7 @@ inline static double drand()
 // 
 template <typename scalar_t>
 inline scalar_t
-integer_power(scalar_t x, unsigned int p)
+integer_power(scalar_t x, size_t p)
 {
   scalar_t result = scalar_t(1);
   while (p != 0u)
@@ -132,9 +134,9 @@ template <typename scalar_t>
 inline scalar_t
 closest_power_of_two_larger_than_given(const scalar_t & given)
 {
-  unsigned int n = sizeof(given) * 8;
+  size_t n = sizeof(given) * 8;
   scalar_t closest = scalar_t(1);
-  for (unsigned int i = 0;
+  for (size_t i = 0;
        (i < n) && (closest < given);
        i++, closest *= scalar_t(2)) {}
   
@@ -172,11 +174,11 @@ clear_stack(std::stack<data_t> & s)
 template <class data_t>
 void
 resize(array2d(data_t) & array,
-       const unsigned int & rows,
-       const unsigned int & cols)
+       const size_t & rows,
+       const size_t & cols)
 {
   array.resize(rows);
-  for (unsigned int j = 0; j < rows; j++)
+  for (size_t j = 0; j < rows; j++)
   {
     array[j].resize(cols);
   }
@@ -188,12 +190,12 @@ resize(array2d(data_t) & array,
 template <class data_t>
 void
 assign(array2d(data_t) & array,
-       const unsigned int & rows,
-       const unsigned int & cols,
+       const size_t & rows,
+       const size_t & cols,
        const data_t & value)
 {
   array.resize(rows);
-  for (unsigned int j = 0; j < rows; j++)
+  for (size_t j = 0; j < rows; j++)
   {
     array[j].assign(cols, value);
   }
@@ -205,15 +207,15 @@ assign(array2d(data_t) & array,
 template <class data_t>
 void
 resize(array3d(data_t) & array,
-       const unsigned int & slices,
-       const unsigned int & rows,
-       const unsigned int & cols)
+       const size_t & slices,
+       const size_t & rows,
+       const size_t & cols)
 {
   array.resize(slices);
-  for (unsigned int i = 0; i < slices; i++)
+  for (size_t i = 0; i < slices; i++)
   {
     array[i].resize(rows);
-    for (unsigned int j = 0; j < rows; j++)
+    for (size_t j = 0; j < rows; j++)
     {
       array[i][j].resize(cols);
     }
@@ -380,10 +382,10 @@ replace(container_t & container, const data_t & a, const data_t & b)
 template <typename data_t>
 typename std::list<data_t>::const_iterator
 iterator_at_index(const std::list<data_t> & container,
-		  const unsigned int & index)
+		  const size_t & index)
 {
   typename std::list<data_t>::const_iterator iter = container.begin();
-  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter) ;
+  for (size_t i = 0; i < index && iter != container.end(); i++, ++iter) ;
   return iter;
 }
 
@@ -393,10 +395,10 @@ iterator_at_index(const std::list<data_t> & container,
 template <typename data_t>
 typename std::list<data_t>::iterator
 iterator_at_index(std::list<data_t> & container,
-		  const unsigned int & index)
+		  const size_t & index)
 {
   typename std::list<data_t>::iterator iter = container.begin();
-  for (unsigned int i = 0; i < index && iter != container.end(); i++, ++iter) ;
+  for (size_t i = 0; i < index && iter != container.end(); i++, ++iter) ;
   return iter;
 }
 
@@ -404,11 +406,11 @@ iterator_at_index(std::list<data_t> & container,
 // index_of
 // 
 template <typename data_t>
-unsigned int
+size_t
 index_of(const std::list<data_t> & container, const data_t & data)
 {
   typename std::list<data_t>::const_iterator iter = container.begin();
-  for (unsigned int i = 0; iter != container.end(); i++, ++iter)
+  for (size_t i = 0; iter != container.end(); i++, ++iter)
   {
     if (data == *iter) return i;
   }
@@ -609,13 +611,13 @@ operator << (std::list<data_t> & container, const data_t & data)
 //----------------------------------------------------------------
 // calc_euclidian_distance_sqrd
 // 
-template <unsigned int dimensions, typename data_t>
+template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
 			     const std::vector<data_t> & b)
 {
   data_t distance_sqrd = data_t(0);
-  for (unsigned int i = 0; i < dimensions; i++)
+  for (size_t i = 0; i < dimensions; i++)
   {
     data_t d = a[i] - b[i];
     distance_sqrd += d * d;
@@ -627,7 +629,7 @@ calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
 //----------------------------------------------------------------
 // calc_euclidian_distance
 // 
-template <unsigned int dimensions, typename data_t>
+template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance(const std::vector<data_t> & a,
 			const std::vector<data_t> & b)
@@ -646,8 +648,8 @@ calc_frobenius_norm_sqrd(const std::vector<data_t> & vec)
 {
   data_t L2_norm_sqrd = data_t(0);
   
-  const unsigned int len = vec.size();
-  for (unsigned int i = 0; i < len; i++)
+  const size_t len = vec.size();
+  for (size_t i = 0; i < len; i++)
   {
     L2_norm_sqrd += vec[i] * vec[i];
   }
@@ -676,8 +678,8 @@ normalize(std::vector<data_t> & vec)
 {
   data_t norm = calc_frobenius_norm<data_t>(vec);
   
-  const unsigned int len = vec.size();
-  for (unsigned int i = 0; i < len; i++)
+  const size_t len = vec.size();
+  for (size_t i = 0; i < len; i++)
   {
     vec[i] /= norm;
   }
@@ -722,9 +724,9 @@ copy_a_to_b(const std::list<T> & container_a,
 {
   container_b.resize(container_a.size());
   
-  const unsigned int size = container_a.size();
+  const size_t size = container_a.size();
   typename std::list<T>::const_iterator iter = container_a.begin();
-  for (unsigned int i = 0; i < size; i++, ++iter)
+  for (size_t i = 0; i < size; i++, ++iter)
   {
     container_b[i] = *iter;
   }
@@ -742,8 +744,8 @@ copy_a_to_b(const the_dynamic_array_t<T> & container_a,
 {
   container_b.resize(container_a.size());
   
-  const unsigned int & size = container_a.size();
-  for (unsigned int i = 0; i < size; i++)
+  const size_t & size = container_a.size();
+  for (size_t i = 0; i < size; i++)
   {
     container_b[i] = container_a[i];
   }
@@ -893,6 +895,71 @@ private:
   
   T & var_;
 };
+
+//----------------------------------------------------------------
+// THROW_ARG2_IF_FALSE
+// 
+#ifndef THROW_ARG2_IF_FALSE
+#define THROW_ARG2_IF_FALSE(predicate, arg2) \
+if (predicate) {} else throw arg2
+#endif
+
+//----------------------------------------------------------------
+// restore_console_stdio
+//
+// Reopen stdin, stdout, stderr on windows, no-op everywhere else
+// 
+extern bool
+restore_console_stdio();
+
+
+//----------------------------------------------------------------
+// off_t
+// 
+#ifdef _WIN32
+#define off_t __int64
+#endif
+
+namespace the
+{
+  extern int open_utf8(const char * filename_utf8,
+		       int oflag,
+		       int pmode);
+  
+  extern void open_utf8(std::fstream & fstream_to_open,
+			const char * filename_utf8,
+			std::ios_base::openmode mode);
+  
+  extern FILE * fopen_utf8(const char * filename_utf8,
+			   const char * mode);
+  
+  extern int rename_utf8(const char * old_utf8, const char * new_utf8);
+  extern int remove_utf8(const char * filename_utf8);
+  
+  extern int rmdir_utf8(const char * path_utf8);
+  extern int mkdir_utf8(const char * path_utf8);
+  
+  extern int fseek64(FILE * file, off_t offset, int whence);
+  extern off_t ftell64(const FILE * file);
+  
+  inline static bool
+  close_enough(const float & ref,
+	       const float & given,
+	       const float tolerance = 1e-6f)
+  {
+    float err = fabsf(given - ref);
+    return err < tolerance;
+  }
+  
+  inline static bool
+  close_enough(const double & ref,
+	       const double & given,
+	       const double tolerance = 1e-6)
+  {
+    double err = fabs(given - ref);
+    return err < tolerance;
+  }
+}
 
 
 #endif // THE_UTILS_HXX_
