@@ -228,12 +228,13 @@ the_view_t::pp_enable()
 void
 the_view_t::restore_orientation()
 {
+  the_view_mgr_t::callback_buffer_t buffer(&view_mgr());
+  
   // restore the view manager:
   the_bbox_t documents_bbox;
   calc_bbox(documents_bbox);
   view_mgr().reset(documents_bbox);
   select_ep();
-  refresh();
 }
 
 //----------------------------------------------------------------
