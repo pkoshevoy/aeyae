@@ -84,14 +84,17 @@ elif [ -e /usr/lib/libfftw3.so ]; then
 fi
 
 # determine where BOOST lives:
-if [ -e /scratch/"${CPU}"/BOOST/include/boost-1_33_1 ]; then
-    export BOOST_ROOT=/scratch/"${CPU}"/BOOST
-elif [ -e /usr/sci/crcnsdata/"${CPU}"/BOOST/include/boost-1_33_1 ]; then
-    export BOOST_ROOT=/usr/sci/crcnsdata/"${CPU}"/BOOST
+if [ -e /scratch/"${CPU}"/include/boost ]; then
+    export BOOST_ROOT=/scratch/"${CPU}"
 elif [ -e /usr/include/boost ]; then
     export BOOST_ROOT=/usr
 elif [ -e /usr/include/boost ]; then
     export BOOST_ROOT=/usr/include
+fi
+
+if [ -n "${BOOST_ROOT}" ]; then
+    export BOOST_LIBRARYDIR=${BOOST_ROOT}/lib
+    export BOOST_INCLUDEDIR=${BOOST_ROOT}/include
 fi
 
 # determine where FLTK lives:
