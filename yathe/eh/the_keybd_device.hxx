@@ -102,6 +102,9 @@ public:
   inline const unsigned int & mask() const
   { return mask_; }
   
+  inline bool auto_repeat() const
+  { return auto_repeat_; }
+  
 private:
   the_btn_state_t prev_state_;
   the_btn_state_t curr_state_;
@@ -111,6 +114,9 @@ private:
   
   // key mask (modifier keys only - Alt, Ctrl, Shift):
   unsigned int mask_;
+  
+  // auto repeat flag:
+  bool auto_repeat_;
 };
 
 //----------------------------------------------------------------
@@ -181,12 +187,12 @@ public:
   the_keybd_t();
   
   // generic key accessors:
-  the_keybd_key_t & key(size_t id);
+  the_keybd_key_t & key(unsigned int id);
   
-  inline const the_keybd_key_t & key(size_t id) const
+  inline const the_keybd_key_t & key(unsigned int id) const
   { return const_cast<the_keybd_t *>(this)->key(id); }
   
-  inline const the_keybd_key_t & operator [] (size_t id) const
+  inline const the_keybd_key_t & operator [] (unsigned int id) const
   { return key(id); }
   
   // common modifier key accessors:
@@ -208,12 +214,15 @@ public:
   inline the_keybd_key_t & ctl()
   { return *key_[the_keybd_t::CONTROL]; }
   
+  inline the_keybd_key_t * by_id(key_id_t id)
+  { return (id < INVALID_KEY) ? key_[id] : NULL; }
+  
   void update(const the_keybd_event_t & e);
   void update(const the_mouse_event_t & e);
   
   // find all keys that are currently pressed,
   // return false if no keys are pressed:
-  unsigned int collect_pressed_keys(std::list<the_keybd_key_t> & keys) const;
+  size_t collect_pressed_keys(std::list<the_keybd_key_t> & keys) const;
   
   // verify that the passed in list of keys matches the
   // currently pressed keys:

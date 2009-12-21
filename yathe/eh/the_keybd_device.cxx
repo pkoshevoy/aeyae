@@ -44,7 +44,8 @@ the_keybd_key_t::the_keybd_key_t():
   prev_state_(THE_BTN_UP_E),
   curr_state_(THE_BTN_UP_E),
   key_(0x0),
-  mask_(0x0)
+  mask_(0x0),
+  auto_repeat_(false)
 {}
 
 //----------------------------------------------------------------
@@ -67,6 +68,7 @@ the_keybd_key_t::reset()
 {
   prev_state_ = THE_BTN_UP_E;
   curr_state_ = THE_BTN_UP_E;
+  auto_repeat_ = false;
 }
 
 //----------------------------------------------------------------
@@ -98,9 +100,13 @@ the_keybd_key_t::update(const the_keybd_event_t & e)
   
   update_time_stamp();
   prev_state_ = curr_state_;
+  auto_repeat_ = e.autorepeat();
   
-  // ignore the oscillations:
-  if (e.autorepeat()) return;
+  if (auto_repeat_)
+  {
+    // ignore the oscillations:
+    return;
+  }
   
   if (e.tran() == the_keybd_event_t::tran_up_)
   {
@@ -127,7 +133,9 @@ operator << (ostream & sout, const the_keybd_key_t & key)
     sout << key.key();
   }
   
-  sout << " { " << key.mask() << ", ";
+  sout << " { " << key.mask()
+       << ", autorepeat: " << std::boolalpha << key.auto_repeat()
+       << ", ";
   
   if (key.curr_state() == THE_BTN_DN_E)
   {
@@ -178,7 +186,7 @@ the_keybd_t::the_keybd_t():
 // the_keybd_t::key
 // 
 the_keybd_key_t &
-the_keybd_t::key(size_t id)
+the_keybd_t::key(unsigned int id)
 {
   the_bit_tree_leaf_t<the_keybd_key_t> * leaf = key_tree_.get(id);
   if (leaf != NULL) return leaf->elem;
@@ -212,7 +220,7 @@ the_keybd_t::update(const the_mouse_event_t & e)
 //----------------------------------------------------------------
 // the_keybd_t::collect_pressed_keys
 // 
-unsigned int
+size_t
 the_keybd_t::collect_pressed_keys(std::list<the_keybd_key_t> & keys) const
 {
   std::list<the_keybd_key_t> known_keys;
