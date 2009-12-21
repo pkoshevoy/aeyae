@@ -47,7 +47,7 @@ template <class data_t>
 class the_fifo_t
 {
 public:
-  the_fifo_t(const unsigned int & size = 0):
+  the_fifo_t(const size_t & size = 0):
     data_(size),
     head_(0),
     size_(0)
@@ -63,27 +63,27 @@ public:
   // accessors to the element first added to the fifo (first in):
   inline const data_t & tail() const
   {
-    const unsigned int & cap = capacity();
+    const size_t & cap = capacity();
     return data_[(head_ + size_ - 1) % cap];
   }
   
   inline data_t & tail()
   {
-    const unsigned int & cap = capacity();
+    const size_t & cap = capacity();
     return data_[(head_ + size_ - 1) % cap];
   }
   
   // accessors to the fifo queue elements (0 is most recently added):
-  inline const data_t & operator [] (const unsigned int & i) const
+  inline const data_t & operator [] (const size_t & i) const
   {
-    const unsigned int & cap = capacity();
+    const size_t & cap = capacity();
     assert(i < size_);
     return data_[(head_ + i) % cap];
   }
   
-  inline data_t & operator [] (const unsigned int & i)
+  inline data_t & operator [] (const size_t & i)
   {
-    const unsigned int & cap = capacity();
+    const size_t & cap = capacity();
     assert(i < size_);
     return data_[(head_ + i) % cap];
   }
@@ -91,7 +91,7 @@ public:
   // shift the fifo queue by one (most recent becomes 2nd most recent):
   inline void shift()
   {
-    const unsigned int & cap = capacity();
+    const size_t & cap = capacity();
     head_ = (head_ + (cap - 1)) % cap;
     size_ = (size_ + 1) - (size_ + 1) / (cap + 1);
   }
@@ -109,11 +109,11 @@ public:
   { return data_; }
   
   // accessor to the current number of elements in the fifo queue:
-  inline const unsigned int & size() const
+  inline const size_t & size() const
   { return size_; }
   
   // the maximum number of elements this fifo queue can store:
-  inline const unsigned int capacity() const
+  inline const size_t capacity() const
   { return data_.size(); }
   
   // for debugging, dumps this list into a stream:
@@ -132,10 +132,10 @@ private:
   std::vector<data_t> data_;
   
   // index of the most recently added queue element (last in):
-  unsigned int head_;
+  size_t head_;
   
   // at most this will be equal to the maximum capacity of the queue:
-  unsigned int size_;
+  size_t size_;
 };
 
 //----------------------------------------------------------------

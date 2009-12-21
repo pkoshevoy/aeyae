@@ -60,21 +60,21 @@ duplicate(const the_vertex_ids_t & in, the_triangle_mesh_t & mesh)
   // duplicate the vertex:
   if (in.vx != UINT_MAX)
   {
-    dup.vx = mesh.vx_.size();
+    dup.vx = (unsigned int)(mesh.vx_.size());
     mesh.vx_.append(mesh.vx_[in.vx]);
   }
   
   // duplicate the texture coordinate:
   if (in.vt != UINT_MAX)
   {
-    dup.vt = mesh.vt_.size();
+    dup.vt = (unsigned int)(mesh.vt_.size());
     mesh.vt_.append(mesh.vt_[in.vt]);
   }
   
   // duplicate the vertex normal:
   if (in.vn != UINT_MAX)
   {
-    dup.vn = mesh.vn_.size();
+    dup.vn = (unsigned int)(mesh.vn_.size());
     mesh.vn_.append(mesh.vn_[in.vn]);
   }
   
@@ -242,8 +242,8 @@ the_face_info_t::add_hole(const std::list<the_vertex_ids_t> & hole,
   std::vector<the_vertex_ids_t> hv(hole.begin(), hole.end());
   
   // shortcuts:
-  unsigned int fn = fv.size();
-  unsigned int hn = hv.size();
+  unsigned int fn = (unsigned int)(fv.size());
+  unsigned int hn = (unsigned int)(hv.size());
   
   // assemble the outline edges:
   std::vector<the_ray_t> fe(fn);
@@ -372,7 +372,7 @@ the_face_info_t::tesselate(std::list<the_mesh_triangle_t> & triangles,
   std::vector<the_vertex_ids_t> fv;
   copy_a_to_b(vertices, fv);
   
-  unsigned int num_vertices = fv.size();
+  unsigned int num_vertices = (unsigned int)(fv.size());
   if (num_vertices < 3)
   {
     cerr << "face with less then 3 vertices, skipping..." << endl;
@@ -684,8 +684,8 @@ the_triangle_mesh_t::the_triangle_mesh_t(const the_triangle_mesh_t & mesh):
   vn_(mesh.vn_),
   vt_(mesh.vt_)
 {
-  const unsigned int & num_triangles = triangles_.size();
-  for (unsigned int i = 0; i < num_triangles; i++)
+  const size_t & num_triangles = triangles_.size();
+  for (size_t i = 0; i < num_triangles; i++)
   {
     the_mesh_triangle_t & ti = triangles_[i];
     ti.mesh_ = this;
@@ -753,10 +753,10 @@ float
 the_triangle_mesh_t::calc_area() const
 {
   // shortcut:
-  const unsigned int & num_triangles = triangles_.size();
+  const size_t & num_triangles = triangles_.size();
   float area = float(0);
   
-  for (unsigned int i = 0; i < num_triangles; i++)
+  for (size_t i = 0; i < num_triangles; i++)
   {
     const the_mesh_triangle_t & ti = triangles_[i];
     area += ti.calc_area();
@@ -774,7 +774,7 @@ calc_vertex_normals(const bool & discard_current_normals,
 		    const float & minimum_normal_dot_product)
 {
   // shortcut:
-  const unsigned int & num_triangles = triangles_.size();
+  const size_t num_triangles = triangles_.size();
   
   if (discard_current_normals)
   {
@@ -790,7 +790,7 @@ calc_vertex_normals(const bool & discard_current_normals,
   }
   
   // iterate over the triangles, and calculate the vertex normals as necessary:
-  for (unsigned int i = 0; i < num_triangles; i++)
+  for (size_t i = 0; i < num_triangles; i++)
   {
     the_mesh_triangle_t & ti = triangles_[i];
     v3x1_t ni = ti.calc_normal();
@@ -807,7 +807,7 @@ calc_vertex_normals(const bool & discard_current_normals,
 	
 	// find all triangles that share this vertex, and calculate their
 	// normal vector:
-	for (unsigned int k = 0; k < num_triangles; k++)
+	for (size_t k = 0; k < num_triangles; k++)
 	{
 	  the_mesh_triangle_t & tk = triangles_[k];
 	  for (unsigned int l = 0; l < 3; l++)
@@ -820,7 +820,7 @@ calc_vertex_normals(const bool & discard_current_normals,
 	    if (dot_jk <= minimum_normal_dot_product) continue;
 	    
 	    normal += nk;
-	    good_neighbors[num_good_neighbors] = k;
+	    good_neighbors[num_good_neighbors] = (unsigned int)k;
 	    good_neighbors_v[num_good_neighbors] = l;
 	    num_good_neighbors++;
 	  }
@@ -843,7 +843,7 @@ calc_vertex_normals(const bool & discard_current_normals,
 	  // add a new normal to the table:
 	  vn_.resize(vn_.size() + 1);
 	  vn_.end_elem(1) = normal;
-	  normal_id = vn_.size() - 1;
+	  normal_id = (unsigned int)(vn_.size()) - 1;
 	}
 	
 	// make sure the good neigbors that share this vertex also
@@ -867,11 +867,11 @@ void
 the_triangle_mesh_t::calc_face_normals(const bool & discard_current_normals)
 {
   // shortcut:
-  const unsigned int & num_triangles = triangles_.size();
+  const size_t & num_triangles = triangles_.size();
   
   if (discard_current_normals)
   {
-    for (unsigned int i = 0; i < num_triangles; i++)
+    for (size_t i = 0; i < num_triangles; i++)
     {
       the_mesh_triangle_t & ti = triangles_[i];
       ti.vn_[0] = UINT_MAX;
@@ -883,7 +883,7 @@ the_triangle_mesh_t::calc_face_normals(const bool & discard_current_normals)
   }
   
   // iterate over the triangles, and calculate the face normals as necessary:
-  for (unsigned int i = 0; i < num_triangles; i++)
+  for (size_t i = 0; i < num_triangles; i++)
   {
     the_mesh_triangle_t & ti = triangles_[i];
     
@@ -892,7 +892,7 @@ the_triangle_mesh_t::calc_face_normals(const bool & discard_current_normals)
       if (ti.vn_[j] == UINT_MAX)
       {
 	// add a new normal to the table:
-	unsigned int normal_id = vn_.size();
+	unsigned int normal_id = (unsigned int)(vn_.size());
 	vn_.resize(vn_.size() + 1);
 	vn_.end_elem(1) = !ti.calc_normal();
 	
@@ -924,13 +924,13 @@ the_triangle_mesh_t::calc_texture_coords(const bool & discard_current_coords)
     return;
   }
   
-  const unsigned int & num_vx = vx_.size();
+  const size_t & num_vx = vx_.size();
   vt_.resize(num_vx);
   
 #if 0
   // iterate over the vertices, and calculate corresponding texture coordinate:
   float scale = float(1 / M_PI);
-  for (unsigned int i = 0; i < num_vx; i++)
+  for (size_t i = 0; i < num_vx; i++)
   {
     p3x1_t sph_pt;
     the_coord_sys_t::xyz_to_sph(vx_[i], sph_pt);
@@ -939,8 +939,8 @@ the_triangle_mesh_t::calc_texture_coords(const bool & discard_current_coords)
 #endif
   
   // iterate over the triangles and setup texture coordinates:
-  const unsigned int & num_triangles = triangles_.size();
-  for (unsigned int i = 0; i < num_triangles; i++)
+  const size_t & num_triangles = triangles_.size();
+  for (size_t i = 0; i < num_triangles; i++)
   {
     the_mesh_triangle_t & ti = triangles_[i];
     ti.vt_[0] = ti.vx_[0];
@@ -959,8 +959,8 @@ the_triangle_mesh_t::shift_to_center()
   calc_bbox(lcs_bbox);
   
   v3x1_t shift(lcs_bbox.center().data());
-  const unsigned int & num_vertices = vx_.size();
-  for (unsigned int i = 0; i < num_vertices; i++)
+  const size_t & num_vertices = vx_.size();
+  for (size_t i = 0; i < num_vertices; i++)
   {
     vx_[i] -= shift;
   }
@@ -975,10 +975,13 @@ static unsigned int
 find_first_match(const the_dynamic_array_t<p3x1_t> & vx_array,
 		 const p3x1_t & vx)
 {
-  const unsigned int & size = vx_array.size();
-  for (unsigned int i = 0; i < size; i++)
+  const size_t & size = vx_array.size();
+  for (size_t i = 0; i < size; i++)
   {
-    if (vx_array[i] == vx) return i;
+    if (vx_array[i] == vx)
+    {
+      return (unsigned int)i;
+    }
   }
   
   return UINT_MAX;
@@ -1098,7 +1101,7 @@ the_triangle_mesh_t::load_m(const the_text_t & filepath,
 	
 	if (id == UINT_MAX)
 	{
-	  vx_map[vertex_index] = vx_.size();
+	  vx_map[vertex_index] = (unsigned int)(vx_.size());
 	  vx_.resize(vx_.size() + 1);
 	  vx_.end_elem(1) = vertex;
 	}
@@ -1152,11 +1155,11 @@ the_triangle_mesh_t::load_m(const the_text_t & filepath,
   // put everything into a list for now:
   std::list<the_mesh_triangle_t> triangles;
   
-  const unsigned int & num_faces = f_array.size();
-  for (unsigned int i = 0; i < num_faces; i++)
+  const size_t & num_faces = f_array.size();
+  for (size_t i = 0; i < num_faces; i++)
   {
     const the_face_info_t & face = f_array[i];
-    const unsigned int & num_vertices = face.vertices.size();
+    const size_t & num_vertices = face.vertices.size();
     
     if (num_vertices < 3)
     {
@@ -1167,7 +1170,7 @@ the_triangle_mesh_t::load_m(const the_text_t & filepath,
     std::vector<the_vertex_ids_t> vertices;
     copy_a_to_b(face.vertices, vertices);
     
-    for (unsigned int j = 2; j < num_vertices; j++)
+    for (size_t j = 2; j < num_vertices; j++)
     {
       const the_vertex_ids_t & a = vertices[0];
       const the_vertex_ids_t & b = vertices[j - 1];
@@ -1342,7 +1345,7 @@ the_triangle_mesh_t::load_obj(const the_text_t & filepath,
 	
 	if (id == UINT_MAX)
 	{
-	  vx_map.end_elem(1) = vx_.size();
+	  vx_map.end_elem(1) = (unsigned int)(vx_.size());
 	  vx_.resize(vx_.size() + 1);
 	  vx_.end_elem(1) = vertex;
 	}
@@ -1416,7 +1419,7 @@ the_triangle_mesh_t::load_obj(const the_text_t & filepath,
 	
 	unsigned int array_index[] =
 	{ UINT_MAX, UINT_MAX, UINT_MAX };
-	unsigned int num_separators = token.contains('/');
+	size_t num_separators = token.contains('/');
 	
 	if (num_separators == 0)
 	{
@@ -1485,11 +1488,11 @@ the_triangle_mesh_t::load_obj(const the_text_t & filepath,
   // put everything into a list for now:
   std::list<the_mesh_triangle_t> triangles;
   
-  const unsigned int & num_faces = f_array.size();
-  for (unsigned int i = 0; i < num_faces; i++)
+  const size_t & num_faces = f_array.size();
+  for (size_t i = 0; i < num_faces; i++)
   {
     const the_face_info_t & face = f_array[i];
-    const unsigned int & num_vertices = face.vertices.size();
+    const size_t & num_vertices = face.vertices.size();
     
     if (num_vertices < 3)
     {
@@ -1500,7 +1503,7 @@ the_triangle_mesh_t::load_obj(const the_text_t & filepath,
     std::vector<the_vertex_ids_t> vertices;
     copy_a_to_b(face.vertices, vertices);
     
-    for (unsigned int j = 2; j < num_vertices; j++)
+    for (size_t j = 2; j < num_vertices; j++)
     {
       const the_vertex_ids_t & a = vertices[0];
       const the_vertex_ids_t & b = vertices[j - 1];

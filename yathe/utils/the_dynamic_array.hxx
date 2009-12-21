@@ -56,7 +56,7 @@ class the_dynamic_array_ref_t
 {
 public:
   the_dynamic_array_ref_t(the_dynamic_array_t<T> & array,
-			  unsigned int index = 0):
+			  size_t index = 0):
     array_(array),
     index_(index)
   {}
@@ -72,7 +72,7 @@ private:
   the_dynamic_array_t<T> & array_;
   
   // current index into the array:
-  unsigned int index_;
+  size_t index_;
 };
 
 
@@ -90,15 +90,15 @@ public:
     init_value_()
   {}
   
-  the_dynamic_array_t(const unsigned int & init_size):
+  the_dynamic_array_t(const size_t & init_size):
     array_(NULL),
     page_size_(init_size),
     size_(0),
     init_value_()
   {}
   
-  the_dynamic_array_t(const unsigned int & init_size,
-		      const unsigned int & page_size,
+  the_dynamic_array_t(const size_t & init_size,
+		      const size_t & page_size,
 		      const T & init_value):
     array_(NULL),
     page_size_(page_size),
@@ -127,8 +127,8 @@ public:
   // remove all contents of this array:
   void clear()
   {
-    unsigned int num = num_pages();
-    for (unsigned int i = 0; i < num; i++)
+    size_t num = num_pages();
+    for (size_t i = 0; i < num; i++)
     {
       delete (*array_)[i];
     }
@@ -148,7 +148,7 @@ public:
     init_value_ = array.init_value_;
     
     resize(array.size_);
-    for (unsigned int i = 0; i < size_; i++)
+    for (size_t i = 0; i < size_; i++)
     {
       (*this)[i] = array[i];
     }
@@ -157,7 +157,7 @@ public:
   }
   
   // resize the array, all contents will be preserved:
-  void resize(const unsigned int & new_size)
+  void resize(const size_t & new_size)
   {
     // bump the current size value:
     size_ = new_size;
@@ -166,26 +166,26 @@ public:
     if (size_ <= max_size()) return;
     
     // we'll have to do something about the existing data:
-    unsigned int old_num_pages = num_pages();
-    unsigned int new_num_pages =
-      std::max((unsigned int)(2 * old_num_pages),
-	       (unsigned int)(1 + size_ / page_size_));
+    size_t old_num_pages = num_pages();
+    size_t new_num_pages =
+      std::max((size_t)(2 * old_num_pages),
+	       (size_t)(1 + size_ / page_size_));
     
     // create a new array:
     std::vector< std::vector<T> * > * new_array =
       new std::vector< std::vector<T> * >(new_num_pages);
     
     // shallow-copy the old content:
-    for (unsigned int i = 0; i < old_num_pages; i++)
+    for (size_t i = 0; i < old_num_pages; i++)
     {
       (*new_array)[i] = (*array_)[i];
     }
     
     // initialize the new pages:
-    for (unsigned int i = old_num_pages; i < new_num_pages; i++)
+    for (size_t i = old_num_pages; i < new_num_pages; i++)
     {
       (*new_array)[i] = new std::vector<T>(page_size_);
-      for (unsigned int j = 0; j < page_size_; j++)
+      for (size_t j = 0; j < page_size_; j++)
       {
 	(*(*new_array)[i])[j] = init_value_;
       }
@@ -199,28 +199,28 @@ public:
   }
   
   // the size of this array:
-  inline const unsigned int & size() const
+  inline const size_t & size() const
   { return size_; }
   
-  inline const unsigned int & page_size() const
+  inline const size_t & page_size() const
   { return page_size_; }
   
   // maximum usable size of the array that does not require resizing the array:
-  inline unsigned int max_size() const
+  inline size_t max_size() const
   { return num_pages() * page_size_; }
   
   // number of pages currently allocated:
-  inline unsigned int num_pages() const
+  inline size_t num_pages() const
   { return (array_ == NULL) ? 0 : array_->size(); }
   
-  inline const T * page(const unsigned int & page_index) const
+  inline const T * page(const size_t & page_index) const
   { return &((*(*array_)[page_index])[0]); }
   
-  inline T * page(const unsigned int & page_index)
+  inline T * page(const size_t & page_index)
   { return &((*(*array_)[page_index])[0]); }
   
   // return either first or last index into the array:
-  inline unsigned int end_index(bool last) const
+  inline size_t end_index(bool last) const
   {
     if (last == false) return 0;
     return size_ - 1;
@@ -246,20 +246,20 @@ public:
   { return end_elem(true); }
   
   // non-const accessors:
-  inline T & elem(const unsigned int i)
+  inline T & elem(const size_t i)
   {
     if (i >= size_) resize(i + 1);
     return (*(*array_)[i / page_size_])[i % page_size_];
   }
   
-  inline T & operator [] (const unsigned int & i)
+  inline T & operator [] (const size_t & i)
   { return elem(i); }
   
   // const accessors:
-  inline const T & elem(const unsigned int & i) const
+  inline const T & elem(const size_t & i) const
   { return (*(*array_)[i / page_size_])[i % page_size_]; }
   
-  inline const T & operator [] (const unsigned int & i) const
+  inline const T & operator [] (const size_t & i) const
   { return elem(i); }
   
   // this is usefull for filling-in the array:
@@ -277,9 +277,9 @@ public:
   { push_back(elem); }
   
   // return the index of the first occurrence of a given element in the array:
-  unsigned int index_of(const T & element) const
+  size_t index_of(const T & element) const
   {
-    for (unsigned int i = 0; i < size_; i++)
+    for (size_t i = 0; i < size_; i++)
     {
       if (!(elem(i) == element)) continue;
       return i;
@@ -295,10 +295,10 @@ public:
   // remove an element from the array:
   bool remove(const T & element)
   {
-    unsigned int idx = index_of(element);
+    size_t idx = index_of(element);
     if (idx == ~0u) return false;
     
-    for (unsigned int i = idx + 1; i < size_; i++)
+    for (size_t i = idx + 1; i < size_; i++)
     {
       elem(i - 1) = elem(i);
     }
@@ -307,10 +307,10 @@ public:
     return true;
   }
   
-  void assign(const unsigned int & size, const T & element)
+  void assign(const size_t & size, const T & element)
   {
     resize(size);
-    for (unsigned int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
     {
       elem(i) = element;
     }
@@ -320,7 +320,7 @@ public:
   void dump(std::ostream & strm) const
   {
     strm << "the_dynamic_array_t(" << (void *)this << ") {\n";
-    for (unsigned int i = 0; i < size_; i++)
+    for (size_t i = 0; i < size_; i++)
     {
       strm << elem(i) << std::endl;
     }
@@ -332,10 +332,10 @@ protected:
   std::vector< std::vector<T> *> * array_;
   
   // page size:
-  unsigned int page_size_;
+  size_t page_size_;
   
   // current array size:
-  unsigned int size_;
+  size_t size_;
   
   // init value used when resizing the array:
   T init_value_;

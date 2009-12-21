@@ -302,8 +302,8 @@ extern the_color_t rgb_to_hsv(const the_color_t & RGB);
 extern void
 make_rainbow(const unsigned int & num_colors,
 	     the_color_t * colors,
-	     const bool & scrambled = true,
-	     const double & scale = 1.0);
+	     const bool scrambled = true,
+	     const float scale = 1.0);
 
 
 //----------------------------------------------------------------

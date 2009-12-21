@@ -50,13 +50,13 @@ THE SOFTWARE.
 //----------------------------------------------------------------
 // pot_less_than_or_equal
 // 
-static unsigned int
-pot_less_than_or_equal(unsigned int in)
+static size_t
+pot_less_than_or_equal(size_t in)
 {
-  static const unsigned char bits = sizeof(unsigned int) << 3;
+  static const unsigned char bits = sizeof(size_t) << 3;
   
-  unsigned int prev = 0;
-  unsigned int curr = 1;
+  size_t prev = 0;
+  size_t curr = 1;
   
   for (unsigned char i = 1; i < bits && curr < in; i++)
   {
@@ -101,8 +101,8 @@ image_tile_generator_t::~image_tile_generator_t()
 // calculate the image padding and generate the tile layout
 // 
 void
-image_tile_generator_t::layout(const unsigned int w,
-			       const unsigned int h,
+image_tile_generator_t::layout(const size_t w,
+			       const size_t h,
 			       const double origin_x,
 			       const double origin_y,
 			       const double spacing_x,
@@ -113,8 +113,8 @@ image_tile_generator_t::layout(const unsigned int w,
   h_ = h;
   
   // additional padding due to odd image dimensions:
-  w_odd_ = (unsigned int)(w_ & 0x01);
-  h_odd_ = (unsigned int)(h_ & 0x01);
+  w_odd_ = (size_t)(w_ & 0x01);
+  h_odd_ = (size_t)(h_ & 0x01);
   
   // padded image dimensions:
   w_pad_ = w_ + 2 + w_odd_;
@@ -128,11 +128,11 @@ image_tile_generator_t::layout(const unsigned int w,
   
   // update the bounding box:
   bbox_.clear();
-  bbox_ << p3x1_t(origin_x_,
-		  origin_y_,
+  bbox_ << p3x1_t(float(origin_x_),
+		  float(origin_y_),
 		  0)
-	<< p3x1_t(origin_x_ + spacing_x_ * double(w_),
-		  origin_y_ + spacing_y_ * double(h_),
+	<< p3x1_t(float(origin_x_ + spacing_x_ * double(w_)),
+		  float(origin_y_ + spacing_y_ * double(h_)),
 		  0);
 }
 
@@ -208,7 +208,7 @@ image_tile_generator_t::pad()
   }
   
   // take care of the center of the image:
-  for (unsigned int j = 0; j < h_; j++)
+  for (size_t j = 0; j < h_; j++)
   {
     terminator.terminate_on_request();
     size_t line_addr = bytes_per_line * (j + 1);
@@ -260,14 +260,14 @@ convert_and_pad(const unsigned char * src,
 {
   the_terminator_t terminator("image_tile_generator_t::convert_and_pad");
   
-  const unsigned int src_padding_bytes =
+  const size_t src_padding_bytes =
     (src_alignment - (src_bytes_per_pixel * w_) % src_alignment) %
     src_alignment;
   
-  const unsigned int src_bytes_per_line =
+  const size_t src_bytes_per_line =
     src_bytes_per_pixel * w_ + src_padding_bytes;
   
-  const unsigned int dst_bytes_per_line =
+  const size_t dst_bytes_per_line =
     dst_bytes_per_pixel * w_pad_;
   
   allocate(dst_bytes_per_pixel);
@@ -302,7 +302,7 @@ convert_and_pad(const unsigned char * src,
   }
   
   // take care of the center of the image:
-  for (unsigned int j = 0; j < h_; j++)
+  for (size_t j = 0; j < h_; j++)
   {
     terminator.terminate_on_request();
     
@@ -354,7 +354,7 @@ void
 image_tile_generator_t::make_tiles(const GLenum & data_type,
 				   const GLenum & format_internal,
 				   const GLenum & format,
-				   const unsigned int max_texture,
+				   const size_t max_texture,
 				   double min_x,
 				   double min_y,
 				   double max_x,
@@ -379,19 +379,17 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
   min_y = std::max(origin_y_, std::min(image_max_y, min_y));
   max_y = std::max(origin_y_, std::min(image_max_y, max_y));
   
-  unsigned int w =
-    std::min(w_, (unsigned int)(ceil((max_x - min_x) / spacing_x_)));
-  unsigned int h =
-    std::min(h_, (unsigned int)(ceil((max_y - min_y) / spacing_y_)));
+  size_t w = std::min(w_, (size_t)(ceil((max_x - min_x) / spacing_x_)));
+  size_t h = std::min(h_, (size_t)(ceil((max_y - min_y) / spacing_y_)));
   
-  unsigned int w_odd = (unsigned int)(w & 0x01);
-  unsigned int h_odd = (unsigned int)(h & 0x01);
+  size_t w_odd = (size_t)(w & 0x01);
+  size_t h_odd = (size_t)(h & 0x01);
   
-  unsigned int w_pad = w + 2 + w_odd;
-  unsigned int h_pad = h + 2 + h_odd;
+  size_t w_pad = w + 2 + w_odd;
+  size_t h_pad = h + 2 + h_odd;
   
-  unsigned int x_offset = int(floor((min_x - origin_x_) / spacing_x_));
-  unsigned int y_offset = int(floor((min_y - origin_y_) / spacing_y_));
+  size_t x_offset = int(floor((min_x - origin_x_) / spacing_x_));
+  size_t y_offset = int(floor((min_y - origin_y_) / spacing_y_));
   
   int x_shift = std::max(0, int(x_offset + w_pad - w_pad_));
   int y_shift = std::max(0, int(y_offset + h_pad - h_pad_));
@@ -436,13 +434,13 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
   y_offset -= y_shift;
   
   // calculate x_min, x_max image coordinates for each tile:
-  the_dynamic_array_t<the_duplet_t<unsigned int> > x;
+  the_dynamic_array_t<the_duplet_t<size_t> > x;
   if (min_x <= max_x)
   {
-    unsigned int w0 = w_pad;
+    size_t w0 = w_pad;
     while (true)
     {
-      the_duplet_t<unsigned int> xw;
+      the_duplet_t<size_t> xw;
       xw[0] = x_offset;
       xw[1] = std::min(max_texture, pot_less_than_or_equal(w0));
       x.append(xw);
@@ -454,13 +452,13 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
   }
   
   // calculate y_min, y_max image coordinates for each tile:
-  the_dynamic_array_t<the_duplet_t<unsigned int> > y;
+  the_dynamic_array_t<the_duplet_t<size_t> > y;
   if (min_y <= max_y)
   {
-    unsigned int h0 = h_pad;
+    size_t h0 = h_pad;
     while (true)
     {
-      the_duplet_t<unsigned int> yh;
+      the_duplet_t<size_t> yh;
       yh[0] = y_offset;
       yh[1] = std::min(max_texture, pot_less_than_or_equal(h0));
       y.append(yh);
@@ -475,8 +473,8 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
   const unsigned char * data = buffer_->data();
   
   // setup the tiles:
-  const unsigned int rows = y.size();
-  const unsigned int cols = x.size();
+  const size_t rows = y.size();
+  const size_t cols = x.size();
   tiles_.resize(rows * cols);
   /*
   cerr << endl
@@ -504,9 +502,9 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
     alignment = 1;
   }
   
-  for (unsigned int j = 0; j < rows; j++)
+  for (size_t j = 0; j < rows; j++)
   {
-    for (unsigned int i = 0; i < cols; i++)
+    for (size_t i = 0; i < cols; i++)
     {
       image_tile_t & tile = tiles_[j * cols + i];
 
@@ -515,37 +513,37 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
       double x1 = x0 + spacing_x_ * double(x[i][1] - 2);
       double y1 = y0 + spacing_y_ * double(y[j][1] - 2);
       
-      tile.s0_ = double(1) / double(x[i][1]);
-      tile.s1_ = 1.0 - double(1) / double(x[i][1]);
-      tile.t0_ = 1.0 / double(y[j][1]);
-      tile.t1_ = 1.0 - 1.0 / double(y[j][1]);
+      tile.s0_ = GLfloat(double(1) / double(x[i][1]));
+      tile.s1_ = GLfloat(1.0 - double(1) / double(x[i][1]));
+      tile.t0_ = GLfloat(1.0 / double(y[j][1]));
+      tile.t1_ = GLfloat(1.0 - 1.0 / double(y[j][1]));
       
       if (x_shift == 0 && i + 1 == cols)
       {
 	x1 -= spacing_x_ * double(w_odd);
-	tile.s1_ = 1.0 - double(1 * (1 + w_odd)) / double(x[i][1]);
+	tile.s1_ = GLfloat(1.0 - double(1 * (1 + w_odd)) / double(x[i][1]));
       }
       else if (x_shift > 0 && i == 0)
       {
 	x0 += spacing_x_ * double(x_shift);
-	tile.s0_ = double(1 * (1 + x_shift)) / double(x[i][1]);
+	tile.s0_ = GLfloat(double(1 * (1 + x_shift)) / double(x[i][1]));
       }
       
       if (y_shift == 0 && j + 1 == rows)
       {
 	y1 -= spacing_y_ * double(h_odd);
-	tile.t1_ = 1.0 - double(1 + h_odd) / double(y[j][1]);
+	tile.t1_ = GLfloat(1.0 - double(1 + h_odd) / double(y[j][1]));
       }
       else if (y_shift > 0 && j == 0)
       {
 	y0 += spacing_y_ * double(y_shift);
-	tile.t0_ = double(1 + y_shift) / double(y[j][1]);
+	tile.t0_ = GLfloat(double(1 + y_shift) / double(y[j][1]));
       }
       
-      tile.corner_[0].assign(x0, y0, 0);
-      tile.corner_[1].assign(x1, y0, 0);
-      tile.corner_[2].assign(x1, y1, 0);
-      tile.corner_[3].assign(x0, y1, 0);
+      tile.corner_[0].assign(float(x0), float(y0), 0);
+      tile.corner_[1].assign(float(x1), float(y0), 0);
+      tile.corner_[2].assign(float(x1), float(y1), 0);
+      tile.corner_[3].assign(float(x0), float(y1), 0);
       
       typedef boost::shared_ptr<const_texture_data_t> data_ptr_t;
       data_ptr_t texture_data(new const_texture_data_t(data));
@@ -557,15 +555,15 @@ image_tile_generator_t::make_tiles(const GLenum & data_type,
 				   format_internal,	// OpenGL internal fmt
 				   format,		// external data fmt
 				   scale *
-				   x[i][1],		// width
-				   y[j][1],		// height
+				   (GLsizei)(x[i][1]),	// width
+				   (GLsizei)(y[j][1]),	// height
 				   0,			// border
 				   alignment,		// alignment
+				   (GLint)
+				   (scale * w_pad_),	// row_length
 				   scale *
-				   w_pad_,		// row_length
-				   scale *
-				   x[i][0],		// skip_pixels
-				   y[j][0]));		// skip_rows
+				   (GLint)(x[i][0]),	// skip_pixels
+				   (GLint)(y[j][0])));	// skip_rows
     }
   }
 }
@@ -581,14 +579,14 @@ image_tile_generator_t::set_origin(double ox, double oy)
   if (dx == 0.0 && dy == 0.0) return;
   
   layout(w_, h_, ox, oy, spacing_x_, spacing_y_);
-  unsigned int num_tiles = tiles_.size();
-  for (unsigned int i = 0; i < num_tiles; i++)
+  size_t num_tiles = tiles_.size();
+  for (size_t i = 0; i < num_tiles; i++)
   {
     image_tile_t & tile = tiles_[i];
-    for (unsigned int j = 0; j < 4; j++)
+    for (size_t j = 0; j < 4; j++)
     {
-      tile.corner_[j][0] += dx;
-      tile.corner_[j][1] += dy;
+      tile.corner_[j][0] += float(dx);
+      tile.corner_[j][1] += float(dy);
     }
   }
 }
@@ -601,8 +599,8 @@ image_tile_generator_t::flip()
 {
   the_terminator_t terminator("image_tile_generator_t::flip");
   
-  unsigned int tmp_h = (h_ + 2);
-  unsigned int tmp_w = (w_ + 2) / 2;
+  size_t tmp_h = (h_ + 2);
+  size_t tmp_w = (w_ + 2) / 2;
   
   size_t bytes_per_line = w_pad_ * bytes_per_pixel_;
   size_t addr_0 = 0;
@@ -612,12 +610,12 @@ image_tile_generator_t::flip()
   unsigned char * pixel_bytes = pixel.data();
   unsigned char * data = buffer_->data();
   
-  for (unsigned int j = 0; j < tmp_h; j++)
+  for (size_t j = 0; j < tmp_h; j++)
   {
     terminator.terminate_on_request();
     size_t line_addr = bytes_per_line * j;
     
-    for (unsigned int i = 0; i < tmp_w; i++)
+    for (size_t i = 0; i < tmp_w; i++)
     {
       size_t shift = i * bytes_per_pixel_;
       memcpy(pixel_bytes,

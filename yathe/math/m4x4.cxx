@@ -114,8 +114,8 @@ m4x4_t::m4x4_t(const v3x1_t & axis, const float & radians)
   const float & y = axis.y();
   const float & z = axis.z();
   
-  const float ct = cos(radians);
-  const float st = sin(radians);
+  const float ct = cosf(radians);
+  const float st = sinf(radians);
   const float vt = 1 - ct; // versine of theta
   
   assign(x * x * vt + ct,     x * y * vt - z * st, x * z * vt + y * st, 0,

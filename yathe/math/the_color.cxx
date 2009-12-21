@@ -99,9 +99,9 @@ const the_color_t the_color_t::BLANK(0x000000, 0.0);
 // 
 the_color_t::the_color_t(unsigned int rgb, float alpha)
 {
-  rgba_[0] = float((rgb >> 16) & 0xFF) / 255.0;
-  rgba_[1] = float((rgb >> 8) & 0xFF) / 255.0;
-  rgba_[2] = float(rgb & 0xFF) / 255.0;
+  rgba_[0] = float((rgb >> 16) & 0xFF) / 255.0f;
+  rgba_[1] = float((rgb >> 8) & 0xFF) / 255.0f;
+  rgba_[2] = float(rgb & 0xFF) / 255.0f;
   rgba_[3] = alpha;
 }
 
@@ -112,9 +112,9 @@ void
 the_color_t::normalize()
 {
   float s = std::max(rgba_[0], std::max(rgba_[1], rgba_[2]));
-  if (s == 0.0) return;
+  if (s == 0.0f) return;
 
-  float inv_s = 1.0 / s;
+  float inv_s = 1.0f / s;
   rgba_[0] *= inv_s;
   rgba_[1] *= inv_s;
   rgba_[2] *= inv_s;
@@ -126,12 +126,12 @@ the_color_t::normalize()
 void
 the_color_t::dielectric_attenuation_to_color(the_color_t & color) const
 {
-  static const float offset = 0.001;
-  static const float scale = 1.0 + offset;
+  static const float offset = 0.001f;
+  static const float scale = 1.0f + offset;
   
-  color.rgba_[0] = exp(rgba_[0] * scale - offset);
-  color.rgba_[1] = exp(rgba_[1] * scale - offset);
-  color.rgba_[2] = exp(rgba_[2] * scale - offset);
+  color.rgba_[0] = expf(rgba_[0] * scale - offset);
+  color.rgba_[1] = expf(rgba_[1] * scale - offset);
+  color.rgba_[2] = expf(rgba_[2] * scale - offset);
 }
 
 //----------------------------------------------------------------
@@ -140,12 +140,12 @@ the_color_t::dielectric_attenuation_to_color(the_color_t & color) const
 void
 the_color_t::color_to_dielectric_attenuation(the_color_t & attenuation) const
 {
-  static const float offset = 0.001;
-  static const float scale_inverse = 1.0 / (1.0 + offset);
+  static const float offset = 0.001f;
+  static const float scale_inverse = 1.0f / (1.0f + offset);
   
-  attenuation.rgba_[0] = log((rgba_[0] + offset) * scale_inverse);
-  attenuation.rgba_[1] = log((rgba_[1] + offset) * scale_inverse);
-  attenuation.rgba_[2] = log((rgba_[2] + offset) * scale_inverse);
+  attenuation.rgba_[0] = logf((rgba_[0] + offset) * scale_inverse);
+  attenuation.rgba_[1] = logf((rgba_[1] + offset) * scale_inverse);
+  attenuation.rgba_[2] = logf((rgba_[2] + offset) * scale_inverse);
 }
 
 //----------------------------------------------------------------
@@ -177,7 +177,7 @@ hsv_to_rgb(const the_color_t & HSV)
   float & G = RGB[1];
   float & B = RGB[2];
   
-  if (S == 0.0)
+  if (S == 0.0f)
   {
     // monochromatic:
     R = V;
@@ -190,35 +190,35 @@ hsv_to_rgb(const the_color_t & HSV)
   float i = floor(H);
   float f = H - i;
   
-  float p = V * (1.0 - S);
-  float q = V * (1.0 - S * f);
-  float t = V * (1.0 - S * (1 - f));
+  float p = V * (1.0f - S);
+  float q = V * (1.0f - S * f);
+  float t = V * (1.0f - S * (1.0f - f));
   
-  if (i == 0.0)
+  if (i == 0.0f)
   {
     R = V;
     G = t;
     B = p;
   }
-  else if (i == 1.0)
+  else if (i == 1.0f)
   {
     R = q;
     G = V;
     B = p;
   }
-  else if (i == 2.0)
+  else if (i == 2.0f)
   {
     R = p;
     G = V;
     B = t;
   }
-  else if (i == 3.0)
+  else if (i == 3.0f)
   {
     R = p;
     G = q;
     B = V;
   }
-  else if (i == 4.0)
+  else if (i == 4.0f)
   {
     R = t;
     G = p;
@@ -226,7 +226,7 @@ hsv_to_rgb(const the_color_t & HSV)
   }
   else
   { 
-    // i == 5.0
+    // i == 5.0f
     R = V;
     G = p;
     B = q;
@@ -285,11 +285,11 @@ rgb_to_hsv(const the_color_t & RGB)
       H = (R - G) / delta + 4;
     }
     
-    H /= 6.0;
+    H /= 6.0f;
     
-    if (H < 0.0)
+    if (H < 0.0f)
     { 
-      H = H + 1.0;
+      H = H + 1.0f;
     }
   }
   
@@ -302,8 +302,8 @@ rgb_to_hsv(const the_color_t & RGB)
 void
 make_rainbow(const unsigned int & num_colors,
 	     the_color_t * colors,
-	     const bool & scrambled,
-	     const double & scale)
+	     const bool scrambled,
+	     const float scale)
 {
   static const the_color_t EAST  = the_color_t(1, 0, 0);
   static const the_color_t NORTH = the_color_t(0, 1, 0);
@@ -314,20 +314,20 @@ make_rainbow(const unsigned int & num_colors,
   {
     for (unsigned int i = 0; i < num_colors; i++)
     {
-      double t = fmod(double(i % 2) / 2.0 +
-		      double(i) / double(num_colors - 1), 1.0);
+      float t = fmodf(float(i % 2) / 2.0f +
+		      float(i) / float(num_colors - 1), 1.0f);
       
-      double s = 0.5 + 0.5 * fmod(double((i + 1) % 3) / 3.0 +
-				  double(i) / double(num_colors - 1), 1.0);
-      colors[i] = hsv_to_rgb(the_color_t(t, s, 1.0)) * scale;
+      float s = 0.5f + 0.5f * fmodf(float((i + 1) % 3) / 3.0f +
+				    float(i) / float(num_colors - 1), 1.0f);
+      colors[i] = hsv_to_rgb(the_color_t(t, s, 1.0f)) * scale;
     }
   }
   else
   {
     for (unsigned int i = 0; i < num_colors; i++)
     {
-      double t = double(i) / double(num_colors);
-      colors[i] = hsv_to_rgb(the_color_t(t, 1.0, 1.0)) * scale;
+      float t = float(i) / float(num_colors);
+      colors[i] = hsv_to_rgb(the_color_t(t, 1.0f, 1.0f)) * scale;
     }
   }
 }

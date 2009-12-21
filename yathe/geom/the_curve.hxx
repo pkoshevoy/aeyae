@@ -107,9 +107,9 @@ public:
   }
   
   // returns number of segments:
-  virtual unsigned int
+  virtual size_t
   init_slope_signs(const the_curve_deviation_t & deviation,
-		   const unsigned int & steps_per_segment,
+		   const size_t & steps_per_segment,
 		   std::list<the_slope_sign_t> & ss,
 		   float & s0,
 		   float & s1) const = 0;
@@ -140,12 +140,12 @@ class the_curve_geom_dl_elem_t : public the_dl_elem_t
 public:
   the_curve_geom_dl_elem_t(const the_curve_geom_t & geom,
 			   const the_color_t & color,
-			   const unsigned int & segments = 100);
+			   const size_t & segments = 100);
   
   the_curve_geom_dl_elem_t(const the_curve_geom_t & geom,
 			   const the_color_t & zebra_a,
 			   const the_color_t & zebra_b,
-			   const unsigned int & segments = 100);
+			   const size_t & segments = 100);
   
   // virtual:
   void draw() const;
@@ -159,7 +159,7 @@ protected:
   const the_curve_geom_t & geom_;
   
   // number of segments approximating the curve:
-  unsigned int segments_;
+  size_t segments_;
   
   // the segment colors:
   the_color_t zebra_[2];
@@ -188,10 +188,10 @@ public:
   }
   
   // virtual:
-  unsigned int init_slope_signs(const unsigned int & steps_per_segment,
-				std::list<the_slope_sign_t> & ss,
-				float & s0,
-				float & s1) const
+  size_t init_slope_signs(const size_t & steps_per_segment,
+			  std::list<the_slope_sign_t> & ss,
+			  float & s0,
+			  float & s1) const
   { return P_.init_slope_signs(*this, steps_per_segment, ss, s0, s1); }
   
 protected:
@@ -530,7 +530,7 @@ protected:
   
   // lookup the segment corresponding to a given parameter,
   // return UINT_MAX on failure:
-  unsigned int segment(const float & param) const;
+  size_t segment(const float & param) const;
   
   // get the 3D point values for each point primitive:
   void point_values(std::vector<p3x1_t> & wcs_pts,

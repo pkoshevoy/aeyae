@@ -73,7 +73,7 @@ the_rational_bezier_geom_t::eval(const float & t,
 				 float & torsion) const
 {
   // shortcut:
-  const unsigned int & num_pts = pt_.size();
+  const size_t & num_pts = pt_.size();
   if (num_pts == 0) return false;
   
   const float n = float(num_pts);
@@ -88,7 +88,7 @@ the_rational_bezier_geom_t::eval(const float & t,
   p[0] = pt_;
   w[0] = wt_;
   
-  for (unsigned int i = 1; i < num_pts; i++)
+  for (size_t i = 1; i < num_pts; i++)
   {
     // shift the fifo (1st becomes 2nd):
     p.shift();
@@ -100,11 +100,11 @@ the_rational_bezier_geom_t::eval(const float & t,
     std::vector<p3x1_t> & p1 = p[0];
     std::vector<float> & w1 = w[0];
     
-    unsigned int n1 = p0.size() - 1;
+    size_t n1 = p0.size() - 1;
     p1.resize(n1);
     w1.resize(n1);
     
-    for (unsigned int i = 0; i < n1; i++)
+    for (size_t i = 0; i < n1; i++)
     {
       // de Casteljau algorithm for Rational Bezier:
       float wa = w0[i] * t1;
@@ -214,10 +214,10 @@ the_rational_bezier_geom_t::eval(const float & t,
 //----------------------------------------------------------------
 // the_rational_bezier_geom_t::init_slope_signs
 // 
-unsigned int
+size_t
 the_rational_bezier_geom_t::
 init_slope_signs(const the_curve_deviation_t & deviation,
-		 const unsigned int & steps_per_segment,
+		 const size_t & steps_per_segment,
 		 std::list<the_slope_sign_t> & slope_signs,
 		 float & s0,
 		 float & s1) const
@@ -230,8 +230,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
   
   deviation.store_slope_sign(slope_signs, s0);
 
-  unsigned int segments = 2 * (pt_.size() - 1);
-  for (unsigned int i = 0; i < segments; i++)
+  size_t segments = 2 * (pt_.size() - 1);
+  for (size_t i = 0; i < segments; i++)
   {
     const float k[] =
     {
@@ -239,7 +239,7 @@ init_slope_signs(const the_curve_deviation_t & deviation,
       float(i + 1) / float(segments)
     };
     
-    for (unsigned int j = 0; j < steps_per_segment; j++)
+    for (size_t j = 0; j < steps_per_segment; j++)
     {
       float s =
 	k[0] + (((0.5f + float(j)) / float(steps_per_segment)) *
@@ -258,8 +258,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
 void
 the_rational_bezier_geom_t::calc_bbox(the_bbox_t & bbox) const
 {
-  const unsigned int & num_pts = pt_.size();
-  for (unsigned int i = 0; i < num_pts; i++)
+  const size_t & num_pts = pt_.size();
+  for (size_t i = 0; i < num_pts; i++)
   {
     bbox << pt_[i];
   }

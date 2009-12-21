@@ -99,8 +99,8 @@ public:
   // derived class; the function returns the number of segments in the
   // domain of the deviation curve that may contain the curve minima;
   // s0 and s1 are the start/end parameters of the curve:
-  virtual unsigned int
-  init_slope_signs(const unsigned int & steps_per_segment,
+  virtual size_t
+  init_slope_signs(const size_t & steps_per_segment,
 		   std::list<the_slope_sign_t> & ss,
 		   float & s0,
 		   float & s1) const = 0;
@@ -134,7 +134,7 @@ public:
   // put them into a list as pairs "s, r(s)":
   bool
   find_local_minima(std::list<the_deviation_min_t> & solution,
-		    const unsigned int & steps_per_segment = 10) const;
+		    const size_t & steps_per_segment = 10) const;
   
   void
   store_slope_sign(std::list<the_slope_sign_t> & slope_signs,
@@ -171,10 +171,10 @@ public:
   {}
   
   // virtual:
-  unsigned int init_slope_signs(const unsigned int & /* steps_per_segment */,
-				std::list<the_slope_sign_t> & ss,
-				float & s0,
-				float & s1) const;
+  size_t init_slope_signs(const size_t & /* steps_per_segment */,
+			  std::list<the_slope_sign_t> & ss,
+			  float & s0,
+			  float & s1) const;
   
   // P(s), dP(s)/ds:
   inline void eval_P(const float & s, p3x1_t & P, v3x1_t & dP) const

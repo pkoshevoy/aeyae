@@ -91,7 +91,7 @@ public:
   // draw_tile_cb_t
   // 
   typedef void(*draw_tile_cb_t)(const void * data,
-				const unsigned int & tile_index);
+				const size_t & tile_index);
   
   void draw(draw_tile_cb_t draw_tile_cb,
 	    const void * draw_tile_cb_data,
@@ -100,7 +100,7 @@ public:
   
   void draw(draw_tile_cb_t draw_tile_cb,
 	    const void * draw_tile_cb_data,
-	    const unsigned int & tile_index,
+	    const size_t & tile_index,
 	    const the_color_t & color,
 	    const bool & use_textures,
 	    const GLuint & texture_id,
@@ -108,7 +108,7 @@ public:
 	    const GLint & min_filter) const;
   
   static void draw_tile(const void * data,
-			const unsigned int & tile_index);
+			const size_t & tile_index);
   
   // virtual:
   void update_bbox(the_bbox_t & bbox) const;
@@ -151,7 +151,7 @@ private:
   image_tile_dl_elem_t();
   
 #ifndef NDEBUG
-  unsigned int id_;
+  size_t id_;
 #endif
 };
 

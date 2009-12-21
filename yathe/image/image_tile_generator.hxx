@@ -96,8 +96,8 @@ public:
   ~image_tile_generator_t();
   
   // calculate the image padding and generate the tile layout:
-  void layout(const unsigned int w,
-	      const unsigned int h,
+  void layout(const size_t w,
+	      const size_t h,
 	      const double origin_x = 0,
 	      const double origin_y = 0,
 	      const double spacing_x = 1,
@@ -131,7 +131,7 @@ public:
   inline void make_tiles(const GLenum & data_type,
 			 const GLenum & format_internal,
 			 const GLenum & format,
-			 const unsigned int max_texture)
+			 const size_t max_texture)
   {
     return make_tiles(data_type,
 		      format_internal,
@@ -147,7 +147,7 @@ public:
   void make_tiles(const GLenum & data_type,
 		  const GLenum & format_internal,
 		  const GLenum & format,
-		  const unsigned int max_texture,
+		  const size_t max_texture,
 		  double min_x,
 		  double min_y,
 		  double max_x,
@@ -223,21 +223,21 @@ public:
 		const unsigned char * pixel[4],
 		double contributions[4]) const;
   
-  inline bool valid_pixel_coords(unsigned int ix, unsigned int iy) const
+  inline bool valid_pixel_coords(size_t ix, size_t iy) const
   { return ix < w_ && iy < h_; }
   
   // width, height of the original image:
-  unsigned int w_;
-  unsigned int h_;
+  size_t w_;
+  size_t h_;
   
   // width, height of the padded image:
-  unsigned int w_pad_;
-  unsigned int h_pad_;
+  size_t w_pad_;
+  size_t h_pad_;
   
   // additional padding (included in the padded image dimensions) required
   // for proper power-of-two texture tiling of the original image:
-  unsigned int w_odd_;
-  unsigned int h_odd_;
+  size_t w_odd_;
+  size_t h_odd_;
   
   // image origin:
   double origin_x_;
@@ -251,7 +251,7 @@ public:
   the_aa_bbox_t bbox_;
   
   // bytes per pixel:
-  size_t bytes_per_pixel_;
+  unsigned int bytes_per_pixel_;
   
   // the padded image buffer:
   boost::shared_ptr<texture_data_t> buffer_;

@@ -109,8 +109,8 @@ the_appearance_t::draw_view_label(the_view_t & view) const
     glDisable(GL_DEPTH_TEST);
     // draw the view label:
     view.view_mgr().reset_opengl_viewing();
-    view.view_mgr().setup_opengl_2d_viewing(p2x1_t(0, view.height()),
-					    p2x1_t(view.width(), 0));
+    view.view_mgr().setup_opengl_2d_viewing(p2x1_t(0, float(view.height())),
+					    p2x1_t(float(view.width()), 0));
     
     p3x1_t pos(THE_ASCII_FONT.x_step(),
 	       1.2f * float(THE_ASCII_FONT.height()),

@@ -68,12 +68,12 @@ the_polyline_geom_t::eval(p3x1_t & result,
 			  const float & param) const
 {
   // shortcut:
-  const unsigned int & num_pts = pt_.size();
+  const size_t & num_pts = pt_.size();
   
   if (num_pts == 0) return false;
   if ((param < kt_[0]) || (param > kt_[num_pts - 1])) return false;
   
-  for (unsigned int i = 1; i < num_pts; i++)
+  for (size_t i = 1; i < num_pts; i++)
   {
     if (param > kt_[i]) continue;
     
@@ -91,13 +91,13 @@ the_polyline_geom_t::eval(p3x1_t & result,
 //----------------------------------------------------------------
 // the_polyline_geom_t::segment
 // 
-unsigned int
+size_t
 the_polyline_geom_t::segment(const float & param) const
 {
   if (param >= 0.0)
   {
-    const unsigned int & num_pts = pt_.size();
-    for (unsigned int i = 1; i < num_pts; i++)
+    const size_t & num_pts = pt_.size();
+    for (size_t i = 1; i < num_pts; i++)
     {
       if (param <= kt_[i]) return i - 1;
     }
@@ -140,7 +140,7 @@ the_polyline_geom_t::position(const float & t, p3x1_t & p) const
 bool
 the_polyline_geom_t::derivative(const float & t, v3x1_t & d) const
 {
-  unsigned int s = segment(t);
+  size_t s = segment(t);
   if (s >= pt_.size())
   {
     d.assign(0.0, 0.0, 0.0);
@@ -154,10 +154,10 @@ the_polyline_geom_t::derivative(const float & t, v3x1_t & d) const
 //----------------------------------------------------------------
 // the_polyline_geom_t::init_slope_signs
 // 
-unsigned int
+size_t
 the_polyline_geom_t::
 init_slope_signs(const the_curve_deviation_t & deviation,
-		 const unsigned int & steps_per_segment,
+		 const size_t & steps_per_segment,
 		 std::list<the_slope_sign_t> & slope_signs,
 		 float & s0,
 		 float & s1) const
@@ -169,8 +169,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
   
   deviation.store_slope_sign(slope_signs, s0);
   
-  unsigned int segments = pt_.size() - 1;
-  for (unsigned int i = 0; i < segments; i++)
+  size_t segments = pt_.size() - 1;
+  for (size_t i = 0; i < segments; i++)
   {
     const float k[] =
     {
@@ -178,10 +178,10 @@ init_slope_signs(const the_curve_deviation_t & deviation,
       kt_[i + 1]
     };
     
-    for (unsigned int j = 0; j < steps_per_segment; j++)
+    for (size_t j = 0; j < steps_per_segment; j++)
     {
       float s =
-	k[0] + (((0.5 + float(j)) / float(steps_per_segment)) *
+	k[0] + (((0.5f + float(j)) / float(steps_per_segment)) *
 		(k[1] - k[0]));
       deviation.store_slope_sign(slope_signs, s);
     }
@@ -197,8 +197,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
 void
 the_polyline_geom_t::calc_bbox(the_bbox_t & bbox) const
 {
-  const unsigned int & num_pts = pt_.size();
-  for (unsigned int i = 0; i < num_pts; i++)
+  const size_t & num_pts = pt_.size();
+  for (size_t i = 0; i < num_pts; i++)
   {
     bbox << pt_[i];
   }
@@ -222,10 +222,10 @@ void
 the_polyline_geom_dl_elem_t::draw() const
 {
   const std::vector<p3x1_t> & pts = geom_.pt();
-  const unsigned int & num_pts = pts.size();
+  const size_t & num_pts = pts.size();
   if (num_pts < 2) return;
   
-  for (unsigned int i = 1; i < num_pts; i++)
+  for (size_t i = 1; i < num_pts; i++)
   {
     const p3x1_t & a = pts[i - 1];
     const p3x1_t & b = pts[i];

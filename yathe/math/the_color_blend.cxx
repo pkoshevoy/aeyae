@@ -59,6 +59,6 @@ the_color_blend_t::eval(float t) const
   const the_color_t & color_a = color_[color_a_index];
   const the_color_t & color_b = color_[color_b_index];
   
-  return the_color_t((1.0 - color_param) * color_a +
+  return the_color_t((1.0f - color_param) * color_a +
 		     color_param * color_b);
 }

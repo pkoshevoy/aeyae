@@ -208,8 +208,8 @@ the_thinlens_camera_t::rays(const the_mersenne_twister_t & rng,
       */
       
       // (a, b) on [-1, 1] x [-1, 1]:
-      const float a = 2.0 * sample_u(rng, pi);
-      const float b = 2.0 * sample_v(rng, pj);
+      const float a = 2.0f * sample_u(rng, pi);
+      const float b = 2.0f * sample_v(rng, pj);
       
       float phi;
       float r;
@@ -221,13 +221,13 @@ the_thinlens_camera_t::rays(const the_mersenne_twister_t & rng,
 	{
 	  // region 1, also |a| > |b|
 	  r = a;
-	  phi = (M_PI / 4) * (b / a);
+	  phi = float(M_PI / 4.0) * (b / a);
 	}
 	else
 	{
 	  // region 2, also |b| > |a|
 	  r = b;
-	  phi = (M_PI / 4) * (2 - (a / b));
+	  phi = float(M_PI / 4.0) * (2 - (a / b));
 	}
       }
       else
@@ -237,7 +237,7 @@ the_thinlens_camera_t::rays(const the_mersenne_twister_t & rng,
 	{
 	  // region 3, also |a| >= |b|, a != 0
 	  r = -a;
-	  phi = (M_PI / 4) * (4 + (b / a));
+	  phi = float(M_PI / 4.0) * (4 + (b / a));
 	}
 	else
 	{
@@ -245,7 +245,7 @@ the_thinlens_camera_t::rays(const the_mersenne_twister_t & rng,
 	  r = -b;
 	  if (b != 0)
 	  {
-	    phi = (M_PI / 4) * (6 - (a / b));
+	    phi = float(M_PI / 4.0) * (6 - (a / b));
 	  }
 	  else
 	  {

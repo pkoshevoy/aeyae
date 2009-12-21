@@ -44,6 +44,7 @@ THE SOFTWARE.
 #include <assert.h>
 #include <math.h>
 #include <algorithm>
+#include <limits>
 
 
 //----------------------------------------------------------------
@@ -387,18 +388,18 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 {
   if (calc_normal)
   {
-    unsigned int pt_index[] =
+    size_t pt_index[] =
     {
       0,
-      UINT_MAX,
-      UINT_MAX
+      std::numeric_limits<size_t>::max(),
+      std::numeric_limits<size_t>::max()
     };
     
     // shortcut to the array size:
-    const unsigned int & num_pts = pt_.size();
+    const size_t & num_pts = pt_.size();
     
     // find a point such that it is not coincident with the initial point:
-    for (unsigned int i = pt_index[0] + 1; i < num_pts; i++)
+    for (size_t i = pt_index[0] + 1; i < num_pts; i++)
     {
       float dist_sqrd = (pt_[i].vx - pt_[pt_index[0]].vx).norm_sqrd();
       if (dist_sqrd > 0.0)
@@ -409,7 +410,7 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
     }
     
     // sanity check:
-    if (pt_index[1] == UINT_MAX)
+    if (pt_index[1] == std::numeric_limits<size_t>::max())
     {
       dump();
       assert(false);
@@ -420,7 +421,7 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
     // find a point that would have the smallest dot product with the vector
     // formed by the first two points:
     float min_cos_theta = FLT_MAX;
-    for (unsigned int j = pt_index[1] + 1; j < num_pts; j++)
+    for (size_t j = pt_index[1] + 1; j < num_pts; j++)
     {
       v3x1_t vec = !(pt_[j].vx - pt_[pt_index[1]].vx);
       float cos_theta = fabs(vec * x_axis);
@@ -432,7 +433,7 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
     }
     
     // sanity check:
-    if (pt_index[2] == UINT_MAX)
+    if (pt_index[2] == std::numeric_limits<size_t>::max())
     {
       dump();
       assert(false);
@@ -441,7 +442,7 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
     v3x1_t y_axis_candidate = !(pt_[pt_index[2]].vx - pt_[pt_index[1]].vx);
     v3x1_t normal = !(x_axis % y_axis_candidate);
     
-    for (unsigned int k = 0; k < num_pts; k++)
+    for (size_t k = 0; k < num_pts; k++)
     {
       pt_[k].vn = normal;
     }
@@ -456,8 +457,8 @@ the_polygon_dl_elem_t::draw() const
 {
   glBegin(GL_POLYGON);
   
-  const unsigned int & num_pts = pt_.size();
-  for (unsigned int i = 0; i < num_pts; i++)
+  const size_t & num_pts = pt_.size();
+  for (size_t i = 0; i < num_pts; i++)
   {
     draw_vertex(pt_[i]);
   }
@@ -471,8 +472,8 @@ the_polygon_dl_elem_t::draw() const
 void
 the_polygon_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
-  const unsigned int & num_pts = pt_.size();
-  for (unsigned int i = 0; i < num_pts; i++)
+  const size_t & num_pts = pt_.size();
+  for (size_t i = 0; i < num_pts; i++)
   {
     bbox << pt_[i].vx;
   }
@@ -486,18 +487,18 @@ the_polygon_dl_elem_t::split(const the_plane_t & plane,
 			     std::list<the_vertex_t> & neg_list,
 			     std::list<the_vertex_t> & pos_list)
 {
-  const unsigned int & num_points = pt_.size();
+  const size_t & num_points = pt_.size();
   
   // find distance from each point to the plane:
   std::vector<float> point_plane_dist(num_points);
-  for (unsigned int i = 0; i < num_points; i++)
+  for (size_t i = 0; i < num_points; i++)
   {
     point_plane_dist[i] = plane.dist(pt_[i].vx);
   }
   
-  for (unsigned int i = 0; i < num_points; i++)
+  for (size_t i = 0; i < num_points; i++)
   {
-    unsigned int j = (i + 1) % num_points;
+    size_t j = (i + 1) % num_points;
     
     const float & di = point_plane_dist[i];
     const float & dj = point_plane_dist[j];
@@ -533,7 +534,7 @@ the_polygon_dl_elem_t::split(const the_plane_t & plane,
 void
 the_polygon_dl_elem_t::dump() const
 {
-  for (unsigned int i = 0; i < pt_.size(); i++)
+  for (size_t i = 0; i < pt_.size(); i++)
   {
     cerr << pt_[i].vx << endl;
   }
@@ -627,10 +628,10 @@ the_masked_symbol_dl_elem_t::draw() const
 void
 the_arrow_dl_elem_t::draw() const
 {
-  static const float two_pi = M_PI * 2.0;
+  static const float two_pi = float(M_PI * 2.0);
   if ((pt_a_ - pt_b_).norm_sqrd() <= THE_EPSILON) return;
   
-  p3x1_t pt_c = (pt_b_ + ((0.78 * stripe_len_) /
+  p3x1_t pt_c = (pt_b_ + ((0.78f * stripe_len_) /
 			  (~(pt_a_ - pt_b_)) * (pt_a_ - pt_b_)));
   
   // use a color zebra to draw the arrow blades:
@@ -680,7 +681,7 @@ the_arrow_dl_elem_t::draw() const
     v3x1_t cs_x = !(cs_y % cs_z);
     the_cyl_coord_sys_t cyl_cs(cs_x, cs_y, cs_z, pt_b_);
     
-    float radius = 0.3 * stripe_len_;
+    float radius = 0.3f * stripe_len_;
     
     for (unsigned int i = 0; i < num_blades_; i++)
     {
@@ -710,7 +711,7 @@ the_arrow_dl_elem_t::set_stripe_len(const the_view_volume_t & view_volume,
 {
   float diagonal = sqrt(window_width * window_width +
 			 window_height * window_height);
-  float scs_stripe_size = 16.0 / diagonal;
+  float scs_stripe_size = 16.0f / diagonal;
   p2x1_t scs_pt_a = view_volume.to_scs(pt_a_);
   p2x1_t scs_pt_b = scs_pt_a + v2x1_t(scs_stripe_size, scs_stripe_size);
   float depth = std::max(view_volume.depth_of_wcs_pt(pt_a_), float(0));
@@ -755,9 +756,9 @@ the_scs_arrow_dl_elem_t::draw() const
   v3x1_t cs_x = !(cs_y % cs_z);
   the_cyl_coord_sys_t cyl_cs(cs_x, cs_y, cs_z, pt_b);
   
-  float radius = 0.3 * blade_length_;
+  float radius = 0.3f * blade_length_;
   p3x1_t blade_a = cyl_cs.to_wcs(p3x1_t(radius, 0, blade_length_));
-  p3x1_t blade_b = cyl_cs.to_wcs(p3x1_t(radius, M_PI, blade_length_));
+  p3x1_t blade_b = cyl_cs.to_wcs(p3x1_t(radius, float(M_PI), blade_length_));
   
   // draw the arrow:
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
@@ -810,8 +811,8 @@ the_height_map_dl_elem_t::draw() const
   float z_max = max.z();
   float z_range = (z_max - z_min);
   
-  unsigned int rows = vertex_.size();
-  unsigned int cols = vertex_[0].size();
+  size_t rows = vertex_.size();
+  size_t cols = vertex_[0].size();
   
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_POLYGON_BIT);
   {
@@ -821,10 +822,10 @@ the_height_map_dl_elem_t::draw() const
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glPolygonOffset(1.0, 1.0);
     
-    for (unsigned int i = 1; i < rows; i++)
+    for (size_t i = 1; i < rows; i++)
     {
       glBegin(GL_QUAD_STRIP);
-      for (unsigned int j = 0; j < cols; j++)
+      for (size_t j = 0; j < cols; j++)
       {
 	const p3x1_t & a = vertex_[i - 1][j];
 	float ta = (a.z() - z_min) / z_range;
@@ -843,10 +844,10 @@ the_height_map_dl_elem_t::draw() const
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_POLYGON_OFFSET_FILL);
     
-    for (unsigned int i = 1; i < rows; i++)
+    for (size_t i = 1; i < rows; i++)
     {
       glBegin(GL_QUAD_STRIP);
-      for (unsigned int j = 0; j < cols; j++)
+      for (size_t j = 0; j < cols; j++)
       {
 	glVertex3fv(vertex_[i - 1][j].data());
 	glVertex3fv(vertex_[i][j].data());
@@ -862,11 +863,11 @@ the_height_map_dl_elem_t::draw() const
 void
 the_height_map_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
-  unsigned int rows = vertex_.size();
-  unsigned int cols = vertex_[0].size();
-  for (unsigned int i = 0; i < rows; i++)
+  size_t rows = vertex_.size();
+  size_t cols = vertex_[0].size();
+  for (size_t i = 0; i < rows; i++)
   {
-    for (unsigned int j = 0; j < cols; j++)
+    for (size_t j = 0; j < cols; j++)
     {
       bbox << vertex_[i][j];
     }
@@ -888,7 +889,7 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
   color_(color.size()),
   texture_id_(UINT_MAX)
 {
-  for (unsigned int i = 0; i < color.size(); i++)
+  for (size_t i = 0; i < color.size(); i++)
   {
     color_[i] = the_rgba_word_t(color[i]);
   }
@@ -905,7 +906,7 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
     glTexImage1D(GL_TEXTURE_1D,
 		 0,
 		 GL_RGBA8,
-		 color_.size(),
+		 (GLsizei)(color_.size()),
 		 0,
 		 GL_RGBA,
 		 GL_UNSIGNED_INT,
@@ -934,8 +935,8 @@ the_tex_surf_data_dl_elem_t::draw() const
   float z_max = bbox_.wcs_max().z();
   float z_range = (z_max - z_min);
   
-  unsigned int rows = vertex_.size();
-  unsigned int cols = vertex_[0].size();
+  size_t rows = vertex_.size();
+  size_t cols = vertex_[0].size();
   
   glMaterialfv(GL_FRONT, GL_DIFFUSE, the_color_t::WHITE.rgba());
   glMaterialfv(GL_BACK,  GL_DIFFUSE, the_color_t::WHITE.rgba());
@@ -943,10 +944,10 @@ the_tex_surf_data_dl_elem_t::draw() const
   the_scoped_gl_attrib_t push_attr(GL_TEXTURE_BIT);
   {
     glEnable(GL_TEXTURE_1D);
-    for (unsigned int i = 1; i < rows; i++)
+    for (size_t i = 1; i < rows; i++)
     {
       glBegin(GL_QUAD_STRIP);
-      for (unsigned int j = 0; j < cols; j++)
+      for (size_t j = 0; j < cols; j++)
       {
 	const p3x1_t & va = vertex_[i - 1][j];
 	const v3x1_t & na = normal_[i - 1][j];
@@ -975,11 +976,11 @@ the_tex_surf_data_dl_elem_t::draw() const
 void
 the_tex_surf_data_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
-  unsigned int rows = vertex_.size();
-  unsigned int cols = vertex_[0].size();
-  for (unsigned int i = 0; i < rows; i++)
+  size_t rows = vertex_.size();
+  size_t cols = vertex_[0].size();
+  for (size_t i = 0; i < rows; i++)
   {
-    for (unsigned int j = 0; j < cols; j++)
+    for (size_t j = 0; j < cols; j++)
     {
       bbox << vertex_[i][j];
     }
@@ -1089,7 +1090,7 @@ the_coord_sys_dl_elem_t::draw() const
   z_arrow_.draw();
   
   const p3x1_t & origin = x_arrow_.pt_a();
-  float scale = 1.05;
+  float scale = 1.05f;
   v3x1_t x_axis = scale * (x_arrow_.pt_b() - origin);
   v3x1_t y_axis = scale * (y_arrow_.pt_b() - origin);
   v3x1_t z_axis = scale * (z_arrow_.pt_b() - origin);
@@ -1238,9 +1239,9 @@ the_view_volume_dl_elem_t::draw() const
     the_color_t::WHITE
   };
   
-  const float two_pi = 2.0 * M_PI;
+  const float two_pi = float(2.0 * M_PI);
   const unsigned int num_seg = 10;
-  const float half_seg = 1.0 / float(num_seg) * M_PI;
+  const float half_seg = 1.0f / float(num_seg) * float(M_PI);
   
   for (unsigned int i = 0; i < num_seg; i++)
   {

@@ -59,8 +59,8 @@ the_tensurf_t::regenerate()
   if (bbox.is_empty() || bbox.is_singular()) return false;
   */
   
-  const unsigned int & rows = g->v().size();
-  const unsigned int & cols = g->u().size();
+  const size_t & rows = g->v().size();
+  const size_t & cols = g->u().size();
   
   // update the knot vectors:
   knot_vector_u_.set_target_degree(3);
@@ -71,8 +71,8 @@ the_tensurf_t::regenerate()
   knot_vector_v_.init(1, rows);
   if (!knot_vector_v_.update(rows)) return false;
   
-  unsigned int quads_u = std::min(rows * 10u, 100u);
-  unsigned int quads_v = std::min(cols * 10u, 100u);
+  size_t quads_u = std::min<size_t>(rows * 10, 100);
+  size_t quads_v = std::min<size_t>(cols * 10, 100);
   
   // calculate the mesh:
   {
@@ -83,7 +83,7 @@ the_tensurf_t::regenerate()
     resize(tri_mesh_, quads_u + 1, quads_v + 1);
     std::vector<the_bspline_geom_t> geom_row(rows);
     
-    for (unsigned int i = 0; i < rows; i++)
+    for (size_t i = 0; i < rows; i++)
     {
       geom_row[i].reset(mesh[i], knot_vector_u_.knots());
     }
@@ -92,12 +92,12 @@ the_tensurf_t::regenerate()
     the_bspline_geom_t geom_col;
     
     // sample along the u direction:
-    for (unsigned int i = 0; i <= quads_u; i++)
+    for (size_t i = 0; i <= quads_u; i++)
     {
       const float u = float(i) / float(quads_u);
       
       // construct a bspline on the fly:
-      for (unsigned int j = 0; j < rows; j++)
+      for (size_t j = 0; j < rows; j++)
       {
 	bool ok = geom_row[j].position(u, temp_pt[j]);
 	if (!ok) assert(false);
@@ -106,7 +106,7 @@ the_tensurf_t::regenerate()
       geom_col.reset(temp_pt, knot_vector_v_.knots());
       
       // sample along the v direction:
-      for (unsigned int j = 0; j <= quads_v; j++)
+      for (size_t j = 0; j <= quads_v; j++)
       {
 	const float v = float(j) / float(quads_v);
 	bool ok = geom_col.position(v, pt[i][j].vx);
@@ -118,9 +118,9 @@ the_tensurf_t::regenerate()
     std::vector< std::vector<v3x1_t> > qn;
     resize(qn, quads_u, quads_v);
     
-    for (unsigned int i = 0; i < quads_u; i++)
+    for (size_t i = 0; i < quads_u; i++)
     {
-      for (unsigned int j = 0; j < quads_v; j++)
+      for (size_t j = 0; j < quads_v; j++)
       {
 	qn[i][j] = !((pt[i + 1][j + 1].vx - pt[i][j].vx) %
 		     (pt[i][j + 1].vx - pt[i + 1][j].vx));
@@ -128,9 +128,9 @@ the_tensurf_t::regenerate()
     }
     
     // assign the normals on the inside:
-    for (unsigned int i = 1; i < quads_u; i++)
+    for (size_t i = 1; i < quads_u; i++)
     {
-      for (unsigned int j = 1; j < quads_v; j++)
+      for (size_t j = 1; j < quads_v; j++)
       {
 	pt[i][j].vn =
 	  !(qn[i - 1][j - 1] + qn[i - 1][j] + qn[i][j - 1] + qn[i][j]);
@@ -138,7 +138,7 @@ the_tensurf_t::regenerate()
     }
     
     // assign the normals along the boundaries (excluding the corners):
-    for (unsigned int i = 1; i < quads_u; i++)
+    for (size_t i = 1; i < quads_u; i++)
     {
       float d2 = (pt[i][0].vx - pt[i][quads_v].vx).norm_sqrd();
       if (d2 <= THE_EPSILON)
@@ -157,7 +157,7 @@ the_tensurf_t::regenerate()
       }
     }
     
-    for (unsigned int j = 1; j < quads_v; j++)
+    for (size_t j = 1; j < quads_v; j++)
     {
       float d2 = (pt[0][j].vx - pt[quads_u][j].vx).norm_sqrd();
       if (d2 <= THE_EPSILON)
@@ -267,7 +267,7 @@ class the_tensurf_dl_elem_t : public the_dl_elem_t
 public:
   the_tensurf_dl_elem_t(const std::vector< std::vector<the_vertex_t> > &
 			tri_mesh,
-			const unsigned int & iso_skip = 4,
+			const size_t & iso_skip = 4,
 			const the_color_t & tri_color = the_color_t::WHITE,
 			const the_color_t & iso_color = the_color_t::BLACK,
 			const the_color_t & crv_color = the_color_t::RED):
@@ -281,10 +281,10 @@ public:
   // virtual:
   void draw() const
   {
-    unsigned int rows = tri_mesh_.size();
+    size_t rows = tri_mesh_.size();
     if (rows == 0) return;
     
-    unsigned int cols = tri_mesh_[0].size();
+    size_t cols = tri_mesh_[0].size();
     /*
     const std::vector<std::vector<the_vertex_t> > & pt = tri_mesh_;
     const the_vertex_t & a = pt[0][0];
@@ -340,10 +340,10 @@ public:
 	glColor4fv(specular.rgba());
 	
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 7e+1);
-	for (unsigned int i = 1; i < rows; i++)
+	for (size_t i = 1; i < rows; i++)
 	{
 	  glBegin(GL_QUAD_STRIP);
-	  for (unsigned int j = 0; j < cols; j++)
+	  for (size_t j = 0; j < cols; j++)
 	  {
 	    const the_vertex_t & a = tri_mesh_[i - 1][j];
 	    const the_vertex_t & b = tri_mesh_[i][j];
@@ -364,14 +364,14 @@ public:
     glDisable(GL_LIGHTING);
     glColor4fv(iso_color_.rgba());
     
-    unsigned int iso_incr = iso_skip_ + 1;
+    size_t iso_incr = iso_skip_ + 1;
     
     // FIXME: 20051024: if (!DRAW_POLYLINE)
     {
-      for (unsigned int j = 0; j < cols; j += iso_incr)
+      for (size_t j = 0; j < cols; j += iso_incr)
       {
 	glBegin(GL_LINE_STRIP);
-	for (unsigned int i = 0; i < rows; i++)
+	for (size_t i = 0; i < rows; i++)
 	{
 	  const the_vertex_t & a = tri_mesh_[i][j];
 	  glNormal3fv(a.vn.data());
@@ -380,10 +380,10 @@ public:
 	glEnd();
       }
       
-      for (unsigned int i = 0; i < rows; i += iso_incr)
+      for (size_t i = 0; i < rows; i += iso_incr)
       {
 	glBegin(GL_LINE_STRIP);
-	for (unsigned int j = 0; j < cols; j++)
+	for (size_t j = 0; j < cols; j++)
 	{
 	  const the_vertex_t & a = tri_mesh_[i][j];
 	  glNormal3fv(a.vn.data());
@@ -398,13 +398,13 @@ public:
   
   void update_bbox(the_bbox_t & bbox) const
   {
-    unsigned int rows = tri_mesh_.size();
+    size_t rows = tri_mesh_.size();
     if (rows == 0) return;
     
-    unsigned int cols = tri_mesh_[0].size();
-    for (unsigned int i = 0; i < rows; i++)
+    size_t cols = tri_mesh_[0].size();
+    for (size_t i = 0; i < rows; i++)
     {
-      for (unsigned int j = 0; j < cols; j++)
+      for (size_t j = 0; j < cols; j++)
       {
 	bbox << tri_mesh_[i][j].vx;
       }
@@ -420,7 +420,7 @@ protected:
   const std::vector< std::vector<the_vertex_t> > & tri_mesh_;
   
   // how many rows/columns to skip between isolines:
-  const unsigned int iso_skip_;
+  const size_t iso_skip_;
   
   // surface colors (going from low point color to high point color):
   const the_color_t tri_color_;

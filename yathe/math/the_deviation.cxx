@@ -48,12 +48,12 @@ THE SOFTWARE.
 bool
 the_deviation_t::
 find_local_minima(std::list<the_deviation_min_t> & solution,
-		  const unsigned int & steps_per_segment) const
+		  const size_t & steps_per_segment) const
 {
   std::list<the_slope_sign_t> slope_signs;
   float s0;
   float s1;
-  unsigned int segments = init_slope_signs(steps_per_segment,
+  size_t segments = init_slope_signs(steps_per_segment,
 					   slope_signs,
 					   s0,
 					   s1);
@@ -76,7 +76,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
     const float & cx = b[0];
     const float   bx = ax + 0.5f * (cx - ax);
     
-    unsigned int pos = brackets.size();
+    size_t pos = brackets.size();
     brackets[pos] = the_slope_sign_t(ax, R(ax));
     
     pos++;
@@ -89,7 +89,7 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
   // now that we have all the local minima bracketed, isolate them:
   const float tolerance = 1E-3f * ((s1 - s0) / float(segments));
   float minR = FLT_MAX;
-  for (unsigned int i = 0; i < brackets.size(); i += 3)
+  for (size_t i = 0; i < brackets.size(); i += 3)
   {
     the_slope_sign_t & a = brackets[i];
     the_slope_sign_t & b = brackets[i + 1];
@@ -167,7 +167,7 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
   const float min_x = a[0];
   const float max_x = c[0];
   
-  for (unsigned int i = 0; i < 20; i++)
+  for (size_t i = 0; i < 20; i++)
   {
     float & ax = a[0];
     float & bx = b[0];
@@ -272,9 +272,9 @@ the_deviation_t::isolate_minima(the_slope_sign_t & a,
 //----------------------------------------------------------------
 // the_volume_ray_deviation_t::init_slope_signs
 // 
-unsigned int
+size_t
 the_volume_ray_deviation_t::
-init_slope_signs(const unsigned int & /* steps_per_segment */,
+init_slope_signs(const size_t & /* steps_per_segment */,
 		 std::list<the_slope_sign_t> & slope_signs,
 		 float & s0,
 		 float & s1) const

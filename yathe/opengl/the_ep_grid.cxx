@@ -118,8 +118,8 @@ the_ep_grid_t::zoom_exact() const
 float
 the_ep_grid_t::zoom_prev() const
 {
-  float a = floor(log(zoom_exact()) / log(2.0));
-  return pow((float)2.0, a);
+  float a = floorf(logf(zoom_exact()) / logf(2.0f));
+  return powf(2.0f, a);
 }
 
 //----------------------------------------------------------------
@@ -128,7 +128,7 @@ the_ep_grid_t::zoom_prev() const
 float
 the_ep_grid_t::zoom_next() const
 {
-  return (2.0 * zoom_prev());
+  return (2.0f * zoom_prev());
 }
 
 //----------------------------------------------------------------
@@ -167,7 +167,7 @@ the_ep_grid_t::fixed_step_size() const
 float
 the_ep_grid_t::number_of_exact_steps() const
 {
-  return floor(0.5 + view_mgr_.view_diameter() /
+  return floorf(0.5f + view_mgr_.view_diameter() /
 	       (view_mgr_.wcs_units_per_inch() * default_step_size()));
 }
 
@@ -177,7 +177,7 @@ the_ep_grid_t::number_of_exact_steps() const
 float
 the_ep_grid_t::number_of_fixed_steps() const
 {
-  return floor(0.5 + view_mgr_.view_diameter() / fixed_step_size());
+  return floorf(0.5f + view_mgr_.view_diameter() / fixed_step_size());
 }
 
 //----------------------------------------------------------------
@@ -287,7 +287,7 @@ the_original_ep_grid_t::populate_disp_list(the_disp_list_t & dl) const
     for (int j = domain_v[0]; j <= domain_v[1]; j++)
     {
       float r = float(steps);
-      float t = (r == 0.0) ? 0.0 : float(j) / r;
+      float t = (r == 0.0f) ? 0.0f : float(j) / r;
       p3x1_t x = a + t * ab;
       
       float c = blend;
@@ -514,8 +514,8 @@ the_ep_grid_csys_t::draw() const
     // setup the display list:
     // const the_coord_sys_t & plane_cs = plane_.cs();
     const the_coord_sys_t plane_cs;
-    draw_csys(plane_cs, step_size, 1.0 - blend, dl);
-    draw_csys(plane_cs, step_size * 2.0, blend, dl);
+    draw_csys(plane_cs, step_size, 1.0f - blend, dl);
+    draw_csys(plane_cs, step_size * 2.0f, blend, dl);
     
     // setup OpenGL near/far clipping planes:
     const the_bbox_t & dl_bbox = dl.bbox();
@@ -559,8 +559,8 @@ the_ep_grid_csys_t::draw_csys(const the_coord_sys_t & cs,
 					  2));
     }
     
-    p3x1_t lcs_pt(0.0, 0.0, 0.0);
-    lcs_pt.data()[i] = (float(axis_pt.size() - 1) + 0.25) * step_size;
+    p3x1_t lcs_pt(0.0f, 0.0f, 0.0f);
+    lcs_pt.data()[i] = (float(axis_pt.size() - 1) + 0.25f) * step_size;
     the_color_t color = palette_.cs()[0];
     color[3] = alpha;
     dl.push_back(new the_text_dl_elem_t(cs.to_wcs(lcs_pt),

@@ -243,7 +243,15 @@ texture_base_t::upload(const GLuint & texture_id,
 void
 texture_base_t::apply(const GLuint & texture_id) const
 {
-  if (!is_valid(texture_id)) return;
+  if (!is_valid(texture_id))
+  {
+#if !defined(NDEBUG) || defined(_DEBUG)
+    FIXME_OPENGL("texture_base_t::apply");
+    cerr << "ERROR: texture_base_t::apply: invalid texture id: " 
+	 << texture_id << endl;
+    return;
+#endif
+  }
   
   // setup texture clamping:
   if (border_ != 0)

@@ -69,7 +69,7 @@ public:
   inline float pixels_per_millimeter() const
   {
     // 1 inch == 25.4 millimeters:
-    return pixels_per_inch() / 25.4;
+    return pixels_per_inch() / 25.4f;
   }
 };
 

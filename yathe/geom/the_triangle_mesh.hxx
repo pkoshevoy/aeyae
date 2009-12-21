@@ -259,8 +259,8 @@ public:
   template <class bbox_t>
   void calc_bbox(bbox_t & bbox) const
   {
-    const unsigned int & num_vertices = vx_.size();
-    for (unsigned int i = 0; i < num_vertices; i++)
+    const size_t & num_vertices = vx_.size();
+    for (size_t i = 0; i < num_vertices; i++)
     {
       bbox << vx_[i];
     }
@@ -299,27 +299,27 @@ public:
   // setup a closed surface mesh based on a set of contours:
   template <typename point_t>
   void setup(const std::vector<point_t> & points,
-	     unsigned int points_per_contour)
+	     size_t points_per_contour)
   {
-    unsigned int num_points = points.size();
+    size_t num_points = points.size();
     vx_.resize(num_points);
-    for (unsigned int i = 0; i < num_points; i++)
+    for (size_t i = 0; i < num_points; i++)
     {
       const point_t & xyz = points[i];
       vx_[i] = p3x1_t(xyz[0], xyz[1], xyz[2]);
     }
     
-    unsigned int num_contours = points.size() / points_per_contour;
+    size_t num_contours = points.size() / points_per_contour;
     
-    unsigned int num_triangles =
+    size_t num_triangles =
       (num_contours - 1) * points_per_contour * 2 +
       (points_per_contour - 2) * 2;
     
     triangles_.resize(num_triangles);
-    for (unsigned int i = 1; i < num_contours; i++)
+    for (size_t i = 1; i < num_contours; i++)
     {
-      unsigned int offset = (i - 1) * points_per_contour;
-      for (unsigned int j = 0; j < points_per_contour; j++)
+      size_t offset = (i - 1) * points_per_contour;
+      for (size_t j = 0; j < points_per_contour; j++)
       {
 	the_mesh_triangle_t & tri_a = triangles_[(offset + j) * 2];
 	the_mesh_triangle_t & tri_b = triangles_[(offset + j) * 2 + 1];
@@ -342,8 +342,8 @@ public:
     // and tesselate them:
     {
       the_face_info_t cap[2];
-      unsigned int offset = num_points - points_per_contour;
-      for (unsigned int i = 0; i < points_per_contour; i++)
+      size_t offset = num_points - points_per_contour;
+      for (size_t i = 0; i < points_per_contour; i++)
       {
 	cap[0].add(i);
 	cap[1].add(i + offset);
@@ -358,7 +358,7 @@ public:
 	for (std::list<the_mesh_triangle_t>::const_iterator iter =
 	       tri.begin(); iter != tri.end(); ++iter, j++)
 	{
-	  unsigned int k =
+	  size_t k =
 	    (num_contours - 1) * points_per_contour * 2 +
 	    (points_per_contour - 2) * i + j;
 	  triangles_[k] = *iter;
@@ -366,7 +366,7 @@ public:
       }
     }
     
-    for (unsigned int i = 0; i < num_triangles; i++)
+    for (size_t i = 0; i < num_triangles; i++)
     {
       const the_mesh_triangle_t & tri = triangles_[i];
       assert(tri.mesh_);

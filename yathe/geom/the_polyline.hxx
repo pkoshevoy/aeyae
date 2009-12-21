@@ -66,7 +66,7 @@ public:
   
   // lookup the segment corresponding to a given parameter,
   // return UINT_MAX on failure:
-  unsigned int segment(const float & param) const;
+  size_t segment(const float & param) const;
   
   // virtual:
   bool eval(const float & t,
@@ -83,9 +83,9 @@ public:
   bool derivative(const float & t, v3x1_t & d) const;
   
   // virtual: returns number of segments:
-  unsigned int
+  size_t
   init_slope_signs(const the_curve_deviation_t & deviation,
-		   const unsigned int & steps_per_segment,
+		   const size_t & steps_per_segment,
 		   std::list<the_slope_sign_t> & slope_signs,
 		   float & s0,
 		   float & s1) const;

@@ -67,7 +67,7 @@ glsl_init()
 bool
 glsl_has_vertex_program()
 {
-  return GLEW_VERSION_2_0;
+  return GLEW_VERSION_2_0 == GL_TRUE;
 }
 
 //----------------------------------------------------------------
@@ -76,7 +76,7 @@ glsl_has_vertex_program()
 bool
 glsl_has_fragment_program()
 {
-  return GLEW_VERSION_2_0;
+  return GLEW_VERSION_2_0 == GL_TRUE;
 }
 
 //----------------------------------------------------------------
@@ -304,12 +304,12 @@ glsl_log(std::ostream & so, GLuint handle, bool shader)
   
   if (shader)
   {
-    glGetShaderInfoLog(handle, info.size(), NULL, &(info[0]));
+    glGetShaderInfoLog(handle, buffer_size, NULL, &(info[0]));
     so << "shader log: " << endl << info << endl;
   }
   else
   {
-    glGetProgramInfoLog(handle, info.size(), NULL, &(info[0]));
+    glGetProgramInfoLog(handle, buffer_size, NULL, &(info[0]));
     so << "program log: " << endl << info << endl;
   }
 }

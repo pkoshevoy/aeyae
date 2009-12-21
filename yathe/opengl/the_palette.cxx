@@ -114,7 +114,7 @@ the_palette_t::change(the_palette_id_t id)
 	  << the_color_t(0xe2efba);
       
       // edit plane grid color:
-      ep_ << 0.3 * the_color_t(0x55af7f) + 0.7 * the_color_t(0xe2efba)
+      ep_ << 0.3f * the_color_t(0x55af7f) + 0.7f * the_color_t(0xe2efba)
 	  << the_color_t(0x55af7f);
       
       // coordinate system colors:
@@ -258,7 +258,7 @@ the_palette_t::change(the_palette_id_t id)
 	  << the_color_t(0xc0dedd);
       
       // edit plane grid color:
-      ep_ << 0.3 * the_color_t(0x6ec8ee) + 0.7 * the_color_t(0xc0dedd)
+      ep_ << 0.3f * the_color_t(0x6ec8ee) + 0.7f * the_color_t(0xc0dedd)
 	  << the_color_t(0x6ec8ee);
       
       // coordinate system colors:
@@ -294,7 +294,7 @@ the_palette_t::change(the_palette_id_t id)
 	  << the_color_t(0x828282);
       
       // edit plane grid color:
-      ep_ << 0.3 * the_color_t(0x494949) + 0.7 * the_color_t(0x828282)
+      ep_ << 0.3f * the_color_t(0x494949) + 0.7f * the_color_t(0x828282)
 	  << the_color_t(0x494949);
       
       // coordinate system colors:

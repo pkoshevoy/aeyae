@@ -50,7 +50,7 @@ THE SOFTWARE.
 //----------------------------------------------------------------
 // row_col_t
 // 
-typedef the_duplet_t<unsigned int> row_col_t;
+typedef the_duplet_t<size_t> row_col_t;
 
 
 //----------------------------------------------------------------
@@ -89,11 +89,11 @@ public:
   bool insert_row(const float & v);
   bool insert_col(const float & u);
   
-  bool remove_row(const unsigned int & row);
-  bool remove_col(const unsigned int & col);
+  bool remove_row(const size_t & row);
+  bool remove_col(const size_t & col);
   
-  unsigned int closest_row(const float & v) const;
-  unsigned int closest_col(const float & u) const;
+  size_t closest_row(const float & v) const;
+  size_t closest_col(const float & u) const;
   
   // double the number of quads per row/column:
   void row_more_quads();

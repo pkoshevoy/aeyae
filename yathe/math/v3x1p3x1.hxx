@@ -556,7 +556,7 @@ public:
   
   // return the norm (length, magnitude) of this vector:
   inline float norm() const
-  { return sqrt(norm_sqrd()); }
+  { return sqrtf(norm_sqrd()); }
 };
 
 //----------------------------------------------------------------
@@ -684,7 +684,7 @@ public:
   
   // return the norm (length, magnitude) of this vector:
   inline float norm() const
-  { return sqrt(norm_sqrd()); }
+  { return sqrtf(norm_sqrd()); }
   
   // return a vector normal to this vector:
   inline const v3x1_t normal() const
@@ -699,7 +699,7 @@ public:
     v3x1_t unit_vec = !(*this);
     for (unsigned int i = 0; i < 3; i++)
     {
-      if (fabs(unit_vec * xyz[i]) > 0.7) continue;
+      if (fabsf(unit_vec * xyz[i]) > 0.7f) continue;
       return !(unit_vec % xyz[i]);
     }
     

@@ -69,9 +69,9 @@ public:
 	    float & torsion) const;
   
   // virtual:
-  unsigned int
+  size_t
   init_slope_signs(const the_curve_deviation_t & deviation,
-		   const unsigned int & steps_per_segment,
+		   const size_t & steps_per_segment,
 		   std::list<the_slope_sign_t> & slope_signs,
 		   float & s0,
 		   float & s1) const;

@@ -159,11 +159,11 @@ public:
   void reset_anchors();
   
   // calculate the total number of active points:
-  unsigned int count_active_points() const;
+  size_t count_active_points() const;
   
   // lookup the first selection record with a given number of active points:
   const the_curve_selrec_t *
-  record_with_points(const unsigned int & num_points) const;
+  record_with_points(const size_t & num_points) const;
   
   // lookup selection record by curve id:
   const the_curve_selrec_t * record(const unsigned int & id) const;

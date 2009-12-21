@@ -100,7 +100,7 @@ the_curve_geom_t::intersect(const the_view_volume_t & volume,
 the_curve_geom_dl_elem_t::
 the_curve_geom_dl_elem_t(const the_curve_geom_t & geom,
 			 const the_color_t & color,
-			 const unsigned int & segments):
+			 const size_t & segments):
   geom_(geom),
   segments_(segments)
 {
@@ -115,7 +115,7 @@ the_curve_geom_dl_elem_t::
 the_curve_geom_dl_elem_t(const the_curve_geom_t & geom,
 			 const the_color_t & zebra_a,
 			 const the_color_t & zebra_b,
-			 const unsigned int & segments):
+			 const size_t & segments):
   geom_(geom),
   segments_(segments)
 {
@@ -136,12 +136,12 @@ the_curve_geom_dl_elem_t::draw() const
   std::vector<p3x1_t> p(segments_ + 1);
   if (!geom_.position(t0, p[0])) return;
   
-  for (unsigned int i = 0; i <= segments_; i++)
+  for (size_t i = 0; i <= segments_; i++)
   {
     geom_.position(t0 + dt * (float(i) / float(segments_)), p[i]);
   }
   
-  for (unsigned int i = 1; i <= segments_; i++)
+  for (size_t i = 1; i <= segments_; i++)
   {
     const p3x1_t & a = p[i - 1];
     const p3x1_t & b = p[i];
@@ -227,7 +227,7 @@ the_curve_ref_t::move(the_registry_t * registry,
   view_mgr.setup_pick_volume(volume,
 			     scs_pt,
 			     std::max(view_mgr.width(),
-				      view_mgr.height()) * 0.5);
+				      view_mgr.height()) * 0.5f);
   the_volume_curve_deviation_t deviation(volume, curve->geom());
   std::list<the_deviation_min_t> solution;
   if (deviation.find_local_minima(solution) == false) return false;
@@ -358,7 +358,7 @@ the_intcurve_t::insert(const unsigned int & pt_id, float param)
   // point in between of these two points.
   if (!has_at_least_two_points()) return add(pt_id);
   
-  unsigned int seg_id = segment(param);
+  size_t seg_id = segment(param);
   assert(seg_id != UINT_MAX);
   pts_.insert(iterator_at_index(pts_, seg_id), the_knot_point_t(pt_id));
   
@@ -440,7 +440,7 @@ bool
 the_intcurve_t::del(const unsigned int & pt_id)
 {
   // Find the affected segments:
-  unsigned int idx = index_of(pts_, the_knot_point_t(pt_id));
+  size_t idx = index_of(pts_, the_knot_point_t(pt_id));
   if (idx == UINT_MAX) return false;
   
   // remove the point from this curve:
@@ -561,7 +561,7 @@ the_intcurve_t::setup_parameterization()
 //----------------------------------------------------------------
 // the_intcurve_t::segment1
 // 
-unsigned int
+size_t
 the_intcurve_t::segment(const float & param) const
 {
   if (pts_.empty())
@@ -574,7 +574,7 @@ the_intcurve_t::segment(const float & param) const
     return pts_.size();
   }
   
-  unsigned int index = 0;
+  size_t index = 0;
   for (std::list<the_knot_point_t>::const_iterator i = pts_.begin();
        i != pts_.end(); ++i)
   {

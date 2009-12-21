@@ -252,10 +252,10 @@ the_curve_selset_t::reset_anchors()
 //----------------------------------------------------------------
 // the_curve_selset_t::count_active_points
 // 
-unsigned int
+size_t
 the_curve_selset_t::count_active_points() const
 {
-  unsigned int num_pts = 0;
+  size_t num_pts = 0;
   for (std::list<the_curve_selrec_t>::const_iterator
 	 iter = records_.begin(); iter != records_.end(); ++iter)
   {
@@ -271,7 +271,7 @@ the_curve_selset_t::count_active_points() const
 // 
 const the_curve_selrec_t *
 the_curve_selset_t::
-record_with_points(const unsigned int & num_points) const
+record_with_points(const size_t & num_points) const
 {
   for (std::list<the_curve_selrec_t>::const_iterator i = records_.begin();
        i != records_.end(); ++i)

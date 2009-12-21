@@ -158,11 +158,11 @@ public:
   // virtual:
   float sample_u(const the_mersenne_twister_t & /* rng */,
 		 const unsigned int & u_index) const
-  { return (0.5 + float(u_index)) / float(samples_u_); }
+  { return (0.5f + float(u_index)) / float(samples_u_); }
   
   float sample_v(const the_mersenne_twister_t & /* rng */,
 		 const unsigned int & v_index) const
-  { return (0.5 + float(v_index)) / float(samples_v_); }
+  { return (0.5f + float(v_index)) / float(samples_v_); }
 };
 
 //----------------------------------------------------------------
@@ -179,11 +179,11 @@ public:
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & u_index) const
-  { return (rng.genrand_real2() + float(u_index)) / float(samples_u_); }
+  { return float(rng.genrand_real2() + float(u_index)) / float(samples_u_); }
   
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & v_index) const
-  { return (rng.genrand_real2() + float(v_index)) / float(samples_v_); }
+  { return float(rng.genrand_real2() + float(v_index)) / float(samples_v_); }
 };
 
 //----------------------------------------------------------------
@@ -200,11 +200,11 @@ public:
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
-  { return rng.genrand_real2(); }
+  { return float(rng.genrand_real2()); }
   
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
-  { return rng.genrand_real2(); }
+  { return float(rng.genrand_real2()); }
 };
 
 //----------------------------------------------------------------
@@ -221,22 +221,22 @@ public:
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
-  { return 0.5 + rnd_B3_PDF(rng); }
+  { return 0.5f + rnd_B3_PDF(rng); }
   
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
-  { return 0.5 + rnd_B3_PDF(rng); }
+  { return 0.5f + rnd_B3_PDF(rng); }
   
 private:
   // generate a random number with unstratified probability density function
   // (PDF) matching cubic b-spline basis function:
   inline float rnd_B3_PDF(const the_mersenne_twister_t & rng) const
   {
-    return (-3.0 / 2.0 +
-	    rng.genrand_real2() +
-	    rng.genrand_real2() +
-	    rng.genrand_real2() +
-	    rng.genrand_real2());
+    return float(-3.0 / 2.0 +
+		 rng.genrand_real2() +
+		 rng.genrand_real2() +
+		 rng.genrand_real2() +
+		 rng.genrand_real2());
   }
 };
 
@@ -254,11 +254,11 @@ public:
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
-  { return 0.5 + rnd_B3_PDF_stratified(rng); }
+  { return 0.5f + rnd_B3_PDF_stratified(rng); }
   
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
-  { return 0.5 + rnd_B3_PDF_stratified(rng); }
+  { return 0.5f + rnd_B3_PDF_stratified(rng); }
   
 private:
   // helper:
@@ -267,8 +267,8 @@ private:
     float u = r;
     for (unsigned int i = 0; i < 5; i++)
     {
-      u = ((11.0 * r + u * u * (6.0 + u * (8.0 - 9.0 * u))) /
-	   (4.0 + 12.0 * u * (1.0 + u * (1.0 - u))));
+      u = float((11.0 * r + u * u * (6.0 + u * (8.0 - 9.0 * u))) /
+		(4.0 + 12.0 * u * (1.0 + u * (1.0 - u))));
     }
     
     return u;
@@ -277,20 +277,20 @@ private:
   // helper:
   inline float D(const float & r) const
   {
-    static const float r1 = 1.0 / 24.0;
-    static const float r2 = 1.0 - r1;
-    static const float s = 24.0 / 11.0;
+    static const float r1 = 1.0f / 24.0f;
+    static const float r2 = 1.0f - r1;
+    static const float s = 24.0f / 11.0f;
     
-    if (r <  r1) return (pow(24.0 * r, 0.25) - 2.0);
-    if (r >= r2) return (2.0 - pow(24.0 * (1.0 - r), 0.25));
-    if (r < 0.5) return (distb1(s * (r - r1)) - 1.0);
-    return (1.0 - distb1(s * (r2 - r)));
+    if (r <  r1) return (powf(24.0f * r, 0.25f) - 2.0f);
+    if (r >= r2) return (2.0f - powf(24.0f * (1.0f - r), 0.25f));
+    if (r < 0.5f) return (distb1(s * (r - r1)) - 1.0f);
+    return (1.0f - distb1(s * (r2 - r)));
   }
   
   // generate a random number with stratified probability density function
   // (PDF) matching cubic b-spline basis function:
   inline float rnd_B3_PDF_stratified(const the_mersenne_twister_t & rng) const
-  { return D(rng.genrand_real2()); }
+  { return D(float(rng.genrand_real2())); }
 };
 
 

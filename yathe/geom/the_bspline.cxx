@@ -56,9 +56,9 @@ THE SOFTWARE.
 // are the same:
 // 
 static bool
-the_same(const float * a, const unsigned int & n, const float & tol = 1e-6)
+the_same(const float * a, const size_t & n, const float & tol = 1e-6)
 {
-  for (unsigned int i = 1; i < n; i++)
+  for (size_t i = 1; i < n; i++)
   {
     float d = fabs(a[i - 1] - a[i]);
     if (d > tol) return false;
@@ -72,11 +72,11 @@ the_same(const float * a, const unsigned int & n, const float & tol = 1e-6)
 // 
 inline static void
 copy(const std::vector<float> & a, // array to copy from
-     const unsigned int & ai,       // where to copy from in array a
+     const size_t & ai,       // where to copy from in array a
      std::vector<float> & b,       // array to copy to
-     const unsigned int & bi,       // where to copy to in array b
-     const unsigned int & n)        // how many items should be copied
-{ for (unsigned int i = 0; i < n; i++) b[bi + i] = a[ai + i]; }
+     const size_t & bi,       // where to copy to in array b
+     const size_t & n)        // how many items should be copied
+{ for (size_t i = 0; i < n; i++) b[bi + i] = a[ai + i]; }
 
 //----------------------------------------------------------------
 // uniform
@@ -84,13 +84,13 @@ copy(const std::vector<float> & a, // array to copy from
 inline static void
 uniform(std::vector<float> & T,
 	const float & a,
-	const unsigned int & ai,
+	const size_t & ai,
 	const float & b,
-	const unsigned int & bi)
+	const size_t & bi)
 {
   float n = float(bi - ai);
   
-  for (unsigned int i = ai; i <= bi; i++)
+  for (size_t i = ai; i <= bi; i++)
   {
     float t = a + (b - a) * (float(i - ai) / n);
     T[i] = t;
@@ -103,10 +103,10 @@ uniform(std::vector<float> & T,
 inline static void
 fill(std::vector<float> & T,
      const float & a,
-     const unsigned int & ai,
-     const unsigned int & n)
+     const size_t & ai,
+     const size_t & n)
 {
-  for (unsigned int i = 0; i < n; i++) T[ai + i] = a;
+  for (size_t i = 0; i < n; i++) T[ai + i] = a;
 }
 
 
@@ -132,10 +132,10 @@ the_bspline_geom_t::eval(const float & t,
 			 float & curvature,
 			 float & torsion) const
 {
-  const unsigned int J = find_segment_index(t);
+  const size_t J = find_segment_index(t);
   if (J == UINT_MAX) return false;
   
-  unsigned int K = degree();
+  size_t K = degree();
   assert(K <= J);
   
   // initialize Bi,k:
@@ -148,7 +148,7 @@ the_bspline_geom_t::eval(const float & t,
   B[0][0] = 1.0;
   
   // k = 1, ... K:
-  for (unsigned int k = 1; k <= K; k++)
+  for (size_t k = 1; k <= K; k++)
   {
     // shift the fifo (1st becomes 2nd):
     B.shift();
@@ -181,7 +181,7 @@ the_bspline_geom_t::eval(const float & t,
       Bk[k] = 0.0;
     }
     
-    for (unsigned int i = 1; i < k; i++)
+    for (size_t i = 1; i < k; i++)
     {
       // B,J-k+i,k:
       Bk[i] = 0.0;
@@ -204,11 +204,11 @@ the_bspline_geom_t::eval(const float & t,
   const std::vector<float> & Bk = B[0]; // Bi,k
   const p3x1_t * P = &(pt_[J - K]);
   
-  // FIXME: unsigned int offset = J - K;
-  K = std::min(K, (unsigned int)(pt_.size() - J + K - 1));
+  // FIXME: size_t offset = J - K;
+  K = std::min(K, (size_t)(pt_.size() - J + K - 1));
   
   P0.assign(0.0, 0.0, 0.0);
-  for (unsigned int m = 0; m <= K; m++)
+  for (size_t m = 0; m <= K; m++)
   {
     P0 += P[m] * Bk[m];
   }
@@ -221,36 +221,36 @@ the_bspline_geom_t::eval(const float & t,
       v3x1_t(0.0, 0.0, 0.0)
     };
   
-  for (unsigned int d = 1; d <= 3 && d <= K; d++)
+  for (size_t d = 1; d <= 3 && d <= K; d++)
   {
     the_fifo_t< std::vector<v3x1_t> > Q(2);
     Q.shift();
     
     Q[0].resize(K + 1);
-    for (unsigned int m = 0; m <= K; m++)
+    for (size_t m = 0; m <= K; m++)
     {
       Q[0][m].assign(P[m].data());
     }
     
-    for (unsigned int j = 1; j <= d; j++)
+    for (size_t j = 1; j <= d; j++)
     {
       Q.shift();
       Q[0].resize(K + 1 - j);
       
       const float * S = &(T[J - K + j]);
-      for (unsigned int m = 0; m <= K - j; m++)
+      for (size_t m = 0; m <= K - j; m++)
       {
 	Q[0][m] = (Q[1][m + 1] - Q[1][m]) / (S[m + K - j + 1] - S[m]);
       }
     }
     
-    for (unsigned int m = 0; m <= K - d; m++)
+    for (size_t m = 0; m <= K - d; m++)
     {
       derivative[d - 1] += Q[0][m] * B[d][m];
     }
     
     float scale = float(K);
-    for (unsigned int j = 2; j <= d; j++)
+    for (size_t j = 2; j <= d; j++)
     {
       scale *= float(K - j + 1);
     }
@@ -289,10 +289,10 @@ the_bspline_geom_t::eval(const float & t,
 bool
 the_bspline_geom_t::position(const float & t, p3x1_t & P0) const
 {
-  const unsigned int J = find_segment_index(t);
+  const size_t J = find_segment_index(t);
   if (J == UINT_MAX) return false;
   
-  unsigned int K = degree();
+  size_t K = degree();
   assert(K <= J);
   
   // initialize Bi,k:
@@ -305,7 +305,7 @@ the_bspline_geom_t::position(const float & t, p3x1_t & P0) const
   B[0][0] = 1.0;
   
   // k = 1, ... K:
-  for (unsigned int k = 1; k <= K; k++)
+  for (size_t k = 1; k <= K; k++)
   {
     // shift the fifo (1st becomes 2nd):
     B.shift();
@@ -338,7 +338,7 @@ the_bspline_geom_t::position(const float & t, p3x1_t & P0) const
       Bk[k] = 0.0;
     }
     
-    for (unsigned int i = 1; i < k; i++)
+    for (size_t i = 1; i < k; i++)
     {
       // B,J-k+i,k:
       Bk[i] = 0.0;
@@ -361,11 +361,11 @@ the_bspline_geom_t::position(const float & t, p3x1_t & P0) const
   const std::vector<float> & Bk = B[0]; // Bi,k
   const p3x1_t * P = &(pt_[J - K]);
   
-  // FIXME: unsigned int offset = J - K;
-  K = std::min(K, (unsigned int)(pt_.size() - J + K - 1));
+  // FIXME: size_t offset = J - K;
+  K = std::min(K, (size_t)(pt_.size() - J + K - 1));
   
   P0.assign(0.0, 0.0, 0.0);
-  for (unsigned int m = 0; m <= K; m++)
+  for (size_t m = 0; m <= K; m++)
   {
     P0 += P[m] * Bk[m];
   }
@@ -379,10 +379,10 @@ the_bspline_geom_t::position(const float & t, p3x1_t & P0) const
 bool
 the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
 {
-  const unsigned int J = find_segment_index(t);
+  const size_t J = find_segment_index(t);
   if (J == UINT_MAX) return false;
   
-  unsigned int K = degree();
+  size_t K = degree();
   assert(K <= J);
   
   // initialize Bi,k:
@@ -395,7 +395,7 @@ the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
   B[0][0] = 1.0;
   
   // k = 1, ... K:
-  for (unsigned int k = 1; k <= K; k++)
+  for (size_t k = 1; k <= K; k++)
   {
     // shift the fifo (1st becomes 2nd):
     B.shift();
@@ -428,7 +428,7 @@ the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
       Bk[k] = 0.0;
     }
     
-    for (unsigned int i = 1; i < k; i++)
+    for (size_t i = 1; i < k; i++)
     {
       // B,J-k+i,k:
       Bk[i] = 0.0;
@@ -447,8 +447,8 @@ the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
     }
   }
   
-  // FIXME: unsigned int offset = J - K;
-  K = std::min(K, (unsigned int)(pt_.size() - J + K - 1));
+  // FIXME: size_t offset = J - K;
+  K = std::min(K, (size_t)(pt_.size() - J + K - 1));
   
   // evaluate the first derivative:
   if (K < 1)
@@ -463,7 +463,7 @@ the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
   Q.shift();
   
   Q[0].resize(K + 1);
-  for (unsigned int m = 0; m <= K; m++)
+  for (size_t m = 0; m <= K; m++)
   {
     Q[0][m].assign(P[m].data());
   }
@@ -472,13 +472,13 @@ the_bspline_geom_t::derivative(const float & t, v3x1_t & derivative) const
   Q[0].resize(K);
   
   const float * S = &(T[J - K + 1]);
-  for (unsigned int m = 0; m < K; m++)
+  for (size_t m = 0; m < K; m++)
   {
     Q[0][m] = (Q[1][m + 1] - Q[1][m]) / (S[m + K] - S[m]);
   }
   
   derivative.assign(0.0, 0.0, 0.0);
-  for (unsigned int m = 0; m < K; m++)
+  for (size_t m = 0; m < K; m++)
   {
     derivative += Q[0][m] * B[1][m];
   }
@@ -498,10 +498,10 @@ the_bspline_geom_t::position_and_derivative(const float & t,
 					    p3x1_t & position,
 					    v3x1_t & derivative) const
 {
-  const unsigned int J = find_segment_index(t);
+  const size_t J = find_segment_index(t);
   if (J == UINT_MAX) return false;
   
-  unsigned int K = degree();
+  size_t K = degree();
   assert(K <= J);
   
   // initialize Bi,k:
@@ -514,7 +514,7 @@ the_bspline_geom_t::position_and_derivative(const float & t,
   B[0][0] = 1.0;
   
   // k = 1, ... K:
-  for (unsigned int k = 1; k <= K; k++)
+  for (size_t k = 1; k <= K; k++)
   {
     // shift the fifo (1st becomes 2nd):
     B.shift();
@@ -547,7 +547,7 @@ the_bspline_geom_t::position_and_derivative(const float & t,
       Bk[k] = 0.0;
     }
     
-    for (unsigned int i = 1; i < k; i++)
+    for (size_t i = 1; i < k; i++)
     {
       // B,J-k+i,k:
       Bk[i] = 0.0;
@@ -570,12 +570,12 @@ the_bspline_geom_t::position_and_derivative(const float & t,
   const std::vector<float> & Bk = B[0]; // Bi,k
   const p3x1_t * P = &(pt_[J - K]);
   
-  // FIXME: unsigned int offset = J - K;
-  K = std::min(K, (unsigned int)(pt_.size() - J + K - 1));
+  // FIXME: size_t offset = J - K;
+  K = std::min(K, (size_t)(pt_.size() - J + K - 1));
   
   // evaluate the position:
   position.assign(0.0, 0.0, 0.0);
-  for (unsigned int m = 0; m <= K; m++)
+  for (size_t m = 0; m <= K; m++)
   {
     position += P[m] * Bk[m];
   }
@@ -591,7 +591,7 @@ the_bspline_geom_t::position_and_derivative(const float & t,
   Q.shift();
   
   Q[0].resize(K + 1);
-  for (unsigned int m = 0; m <= K; m++)
+  for (size_t m = 0; m <= K; m++)
   {
     Q[0][m].assign(P[m].data());
   }
@@ -600,13 +600,13 @@ the_bspline_geom_t::position_and_derivative(const float & t,
   Q[0].resize(K);
   
   const float * S = &(T[J - K + 1]);
-  for (unsigned int m = 0; m < K; m++)
+  for (size_t m = 0; m < K; m++)
   {
     Q[0][m] = (Q[1][m + 1] - Q[1][m]) / (S[m + K] - S[m]);
   }
   
   derivative.assign(0.0, 0.0, 0.0);
-  for (unsigned int m = 0; m < K; m++)
+  for (size_t m = 0; m < K; m++)
   {
     derivative += Q[0][m] * B[1][m];
   }
@@ -620,10 +620,10 @@ the_bspline_geom_t::position_and_derivative(const float & t,
 //----------------------------------------------------------------
 // the_bspline_geom_t::init_slope_signs
 // 
-unsigned int
+size_t
 the_bspline_geom_t::
 init_slope_signs(const the_curve_deviation_t & deviation,
-		 const unsigned int & steps_per_segment,
+		 const size_t & steps_per_segment,
 		 std::list<the_slope_sign_t> & slope_signs,
 		 float & s0,
 		 float & s1) const
@@ -637,8 +637,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
   deviation.store_slope_sign(slope_signs, s0);
   
   // There can be at most 2 * degree minima:
-  unsigned int segments = 2 * degree() + 1;
-  for (unsigned int i = 0; i < segments; i++)
+  size_t segments = 2 * degree() + 1;
+  for (size_t i = 0; i < segments; i++)
   {
     const float k[] =
       {
@@ -646,10 +646,10 @@ init_slope_signs(const the_curve_deviation_t & deviation,
 	s0 + ds * (float(i + 1) / float(segments))
       };
     
-    for (unsigned int j = 0; j < steps_per_segment; j++)
+    for (size_t j = 0; j < steps_per_segment; j++)
     {
       float s =
-	k[0] + (((0.5 + float(j)) / float(steps_per_segment)) *
+	k[0] + (((0.5f + float(j)) / float(steps_per_segment)) *
 		(k[1] - k[0]));
       deviation.store_slope_sign(slope_signs, s);
     }
@@ -665,8 +665,8 @@ init_slope_signs(const the_curve_deviation_t & deviation,
 void
 the_bspline_geom_t::calc_bbox(the_bbox_t & bbox) const
 {
-  const unsigned int & num_pts = pt_.size();
-  for (unsigned int i = 0; i < num_pts; i++)
+  const size_t & num_pts = pt_.size();
+  for (size_t i = 0; i < num_pts; i++)
   {
     bbox << pt_[i];
   }
@@ -678,7 +678,7 @@ the_bspline_geom_t::calc_bbox(the_bbox_t & bbox) const
 float
 the_bspline_geom_t::t_min() const
 {
-  const unsigned int k = degree();
+  const size_t k = degree();
   return kt_[k];
 }
 
@@ -688,14 +688,14 @@ the_bspline_geom_t::t_min() const
 float
 the_bspline_geom_t::t_max() const
 {
-  const unsigned int k = degree();
-  const unsigned int m = kt_.size();
-  const unsigned int n = m - k - 2;
+  const size_t k = degree();
+  const size_t m = kt_.size();
+  const size_t n = m - k - 2;
 
   float t0 = kt_[k];
   float t1 = kt_[n + 1];
   float d = fabs(kt_[m - 1] - t1);
-  float e = (THE_EPSILON * (t1 - t0)) / 2.0;
+  float e = (THE_EPSILON * (t1 - t0)) / 2.0f;
   if (d <= e) t1 -= e;
   
   return t1;
@@ -704,13 +704,13 @@ the_bspline_geom_t::t_max() const
 //----------------------------------------------------------------
 // the_bspline_geom_t::find_segment_index
 // 
-unsigned int
+size_t
 the_bspline_geom_t::find_segment_index(const float & t) const
 {
-  const unsigned int & m = kt_.size();
+  const size_t & m = kt_.size();
   
 #if 0
-  for (unsigned int i = 1; i < m; i++)
+  for (size_t i = 1; i < m; i++)
   {
     if (kt_[i - 1] <= t && t < kt_[i]) return i - 1;
   }
@@ -718,8 +718,8 @@ the_bspline_geom_t::find_segment_index(const float & t) const
   return UINT_MAX;
 #else
   // binary search:
-  unsigned int a = 0;
-  unsigned int b = m - 1;
+  size_t a = 0;
+  size_t b = m - 1;
   
   // check for out of bounds:
   if (kt_[a] > t) return UINT_MAX;
@@ -728,7 +728,7 @@ the_bspline_geom_t::find_segment_index(const float & t) const
   // perform a binary search:
   while (b - a > 1)
   {
-    unsigned int c = (a + b) / 2;
+    size_t c = (a + b) / 2;
     if (kt_[c] <= t) a = c;
     else b = c;
   }
@@ -777,11 +777,11 @@ the_bspline_geom_dl_elem_t::draw() const
     
     gluBeginCurve(glu_nurbs_obj);
     gluNurbsCurve(glu_nurbs_obj,
-		  geom_.kt().size(),
+		  (GLint)(geom_.kt().size()),
 		  (float *)(&(geom_.kt()[0])),
 		  sizeof(p3x1_t) / sizeof(float),
 		  (float *)(&(geom_.pt()[0])),
-		  geom_.order(),
+		  (GLint)(geom_.order()),
 		  GL_MAP1_VERTEX_3);
     gluEndCurve(glu_nurbs_obj);
   }
@@ -804,12 +804,12 @@ the_bspline_geom_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 // the_knot_vector_t::init
 // 
 bool
-the_knot_vector_t::init(const unsigned int & degree,
+the_knot_vector_t::init(const size_t & degree,
 			const std::vector<float> & knots)
 {
-  const unsigned int k = degree;
-  const unsigned int m = knots.size();
-  const unsigned int n = m - 2 - k;
+  const size_t k = degree;
+  const size_t m = knots.size();
+  const size_t n = m - 2 - k;
   
   if (k > n) return false;
   
@@ -823,16 +823,16 @@ the_knot_vector_t::init(const unsigned int & degree,
 // the_knot_vector_t::init
 // 
 bool
-the_knot_vector_t::init(const unsigned int & degree,
-			const unsigned int & num_pt,
+the_knot_vector_t::init(const size_t & degree,
+			const size_t & num_pt,
 			const float & t0,
 			const float & t1,
 			const bool & a_floating,
 			const bool & b_floating)
 {
-  const unsigned int k = degree;
-  const unsigned int n = num_pt - 1;
-  const unsigned int m = n + 2 + k;
+  const size_t k = degree;
+  const size_t n = num_pt - 1;
+  const size_t m = n + 2 + k;
   
   if (k > n) return false;
   
@@ -874,9 +874,9 @@ the_knot_vector_t::init(const unsigned int & degree,
 // the_knot_vector_t::set_target_degree
 // 
 void
-the_knot_vector_t::set_target_degree(const unsigned int & target_degree)
+the_knot_vector_t::set_target_degree(const size_t & target_degree)
 {
-  target_degree_ = std::max(1u, target_degree);
+  target_degree_ = std::max<size_t>(1u, target_degree);
   the_graph_node_t::request_regeneration(this);
 }
 
@@ -897,15 +897,15 @@ the_knot_vector_t::regenerate()
 // the_knot_vector_t::update
 // 
 bool
-the_knot_vector_t::update(const unsigned int & polyline_pts)
+the_knot_vector_t::update(const size_t & polyline_pts)
 {
   // adjust the knot vector in case the number of points in the
   // polyline has changed:
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
-  const unsigned int n = m - 2 - k;
+  const size_t k = degree_;
+  const size_t m = knots_.size();
+  const size_t n = m - 2 - k;
   
-  int dn = (n + 1) - polyline_pts;
+  int dn = int((n + 1) - polyline_pts);
   for (int i = dn; i < 0; i++)
   {
     if (!insert_point()) return false;
@@ -921,7 +921,7 @@ the_knot_vector_t::update(const unsigned int & polyline_pts)
   }
   
   // try to match the degree to the target:
-  int dk = degree_ - target_degree_;
+  int dk = int(degree_ - target_degree_);
   for (int i = dk; i < 0; i++) raise_degree();
   for (int i = 0; i < dk; i++) lower_degree();
   
@@ -962,18 +962,18 @@ the_knot_vector_t::dump(ostream & strm, unsigned int /* indent */) const
   // ios::fmtflags prev_flags = strm.flags();
   // strm.setf(ios::fixed);
   
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
-  const unsigned int n = m - 2 - k;
+  const size_t k = degree_;
+  const size_t m = knots_.size();
+  const size_t n = m - 2 - k;
   strm << "id " << id() << endl
        << "k: " << k << endl
        << "m: " << m << endl
        << "n: " << n << endl;
   
-  int prev_precision = strm.precision(3);
-  int width = strm.precision() + 3;
+  std::streamsize prev_precision = strm.precision(3);
+  std::streamsize width = strm.precision() + 3;
   
-  for (unsigned int i = 0; i < m; i++)
+  for (size_t i = 0; i < m; i++)
   {
     strm << setw(width) << knots_[i] << ' ';
   }
@@ -988,9 +988,9 @@ the_knot_vector_t::dump(ostream & strm, unsigned int /* indent */) const
 bool
 the_knot_vector_t::raise_degree()
 {
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
-  const unsigned int n = m - 2 - k;
+  const size_t k = degree_;
+  const size_t m = knots_.size();
+  const size_t n = m - 2 - k;
   if (k >= n) return false;
   
   bool a_floating = !the_same(&(knots_[0]), k + 1);
@@ -1038,8 +1038,8 @@ the_knot_vector_t::lower_degree()
 {
   if (degree_ == 0) return false;
   
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
+  const size_t k = degree_;
+  const size_t m = knots_.size();
   
   bool a_floating = !the_same(&(knots_[0]), k + 1);
   bool b_floating = !the_same(&(knots_[m - k - 1]), k);
@@ -1081,8 +1081,8 @@ the_knot_vector_t::lower_degree()
 bool
 the_knot_vector_t::insert_point()
 {
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
+  const size_t k = degree_;
+  const size_t m = knots_.size();
   
   bool a_floating = !the_same(&(knots_[0]), k + 1);
   bool b_floating = !the_same(&(knots_[m - k - 1]), k);
@@ -1119,9 +1119,9 @@ the_knot_vector_t::insert_point()
 bool
 the_knot_vector_t::remove_point()
 {
-  const unsigned int k = degree_;
-  const unsigned int m = knots_.size();
-  const unsigned int n = m - 2 - k;
+  const size_t k = degree_;
+  const size_t m = knots_.size();
+  const size_t n = m - 2 - k;
   
   if (k >= n) return false;
   
@@ -1248,7 +1248,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   if (kts.size() < 2) return false;
   
   // number of segments:
-  unsigned int num_seg = kts.size() - 1;
+  int num_seg = int(kts.size()) - 1;
   
   // solve for tangent control points:
   p3x1_t head_tangent_pt = bessel_pt(pts, kts, THE_HEAD_TANGENT_E);
@@ -1256,7 +1256,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   
   // setup the end knots:
   the_domain_array_t<float> knot;
-  knot.set_domain(-3, num_seg + 3);
+  knot.set_domain(-3, int(num_seg + 3));
   knot[-3] = kts[0];
   knot[-2] = kts[0];
   knot[-1] = kts[0];
@@ -1265,7 +1265,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   knot[num_seg + 3] = kts[num_seg] + THE_EPSILON; // FIXME: 2006/03/16
   
   // copy the interpolation point parameterization into the knot vector:
-  for (unsigned int i = 0; i <= num_seg; i++)
+  for (int i = 0; i <= num_seg; i++)
   {
     knot[i] = kts[i];
   }
@@ -1287,7 +1287,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   ri[num_seg] = tail_tangent_pt;
   ri[num_seg + 1] = pts[num_seg];
   
-  for (unsigned int i = 1; i < num_seg; i++)
+  for (int i = 1; i < num_seg; i++)
   {
     float delta_im2 = delta(knot, i - 2);
     float delta_im1 = delta(knot, i - 1);
@@ -1315,7 +1315,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   
   LU[1][0] = bi[0];
   
-  for (unsigned int i = 1; i < num_seg + 1; i++)
+  for (int i = 1; i < num_seg + 1; i++)
   {
     LU[0][i] = ai[i] / LU[1][i - 1];
     LU[1][i] = bi[i] - LU[0][i] * gi[i - 1];
@@ -1326,7 +1326,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   
   // forward substitution:
   tmp[0] = ri[0];
-  for (unsigned int i = 1; i < num_seg + 1; i++)
+  for (int i = 1; i < num_seg + 1; i++)
   {
     v3x1_t v = ri[i] - LU[0][i] * tmp[i - 1];
     tmp[i].assign(v.data());
@@ -1338,7 +1338,7 @@ the_interpolation_bspline_t::update_geom(const std::vector<p3x1_t> & pts,
   ctl_pt[-1] = ri[-1];
   ctl_pt[0] = ri[0];
   ctl_pt[num_seg] = tmp[num_seg] / LU[1][num_seg];
-  for (int i = (int)num_seg - 1; i > 0; i--)
+  for (int i = num_seg - 1; i > 0; i--)
   {
     v3x1_t v = (tmp[i] - gi[i] * ctl_pt[i + 1]) / LU[1][i];
     ctl_pt[i].assign(v.data());
@@ -1379,7 +1379,7 @@ the_interpolation_bspline_t::setup_parameterization()
   
 #if 1
   // centripetal parameterization:
-  for (unsigned int i = 1; i < pts_.size(); i++)
+  for (size_t i = 1; i < pts_.size(); i++)
   {
     std::list<the_knot_point_t>::iterator ib = next(ia);
     p3x1_t pb = point((*ib).id_)->value();
@@ -1429,7 +1429,7 @@ the_interpolation_bspline_t::bessel_pt(const std::vector<p3x1_t> & pts,
 				       const std::vector<float> & kts,
 				       const the_tangent_id_t & tan_id) const
 {
-  unsigned int num_seg = pts.size() - 1;
+  size_t num_seg = pts.size() - 1;
   if (num_seg == 0) return pts[0];
   
   if (num_seg == 1)

@@ -65,8 +65,12 @@ image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
   ,fragment_program_(NULL)
 #endif
 {
-  p3x1_t min(data_.origin_x_, data_.origin_y_, 0);
-  v3x1_t ext(data_.spacing_x_ * data_.w_, data_.spacing_y_ * data_.h_, 0);
+  p3x1_t min(float(data_.origin_x_),
+	     float(data_.origin_y_),
+	     0);
+  v3x1_t ext(float(data_.spacing_x_ * data_.w_),
+	     float(data_.spacing_y_ * data_.h_),
+	     0);
   bbox_ << min << min + ext;
 }
 
@@ -83,8 +87,12 @@ image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
   mag_filter_(mag_filter),
   fragment_program_(fragment_program)
 {
-  p3x1_t min(data_.origin_x_, data_.origin_y_, 0);
-  v3x1_t ext(data_.spacing_x_ * data_.w_, data_.spacing_y_ * data_.h_, 0);
+  p3x1_t min(float(data_.origin_x_),
+	     float(data_.origin_y_),
+	     0);
+  v3x1_t ext(float(data_.spacing_x_ * data_.w_),
+	     float(data_.spacing_y_ * data_.h_),
+	     0);
   bbox_ << min << min + ext;
 }
 #endif
@@ -94,7 +102,7 @@ image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
 // 
 image_tile_dl_elem_t::~image_tile_dl_elem_t()
 {
-  unsigned int num_textures = texture_id_.size();
+  size_t num_textures = texture_id_.size();
   if (num_textures == 0) return;
   
   the_gl_context_t current(the_gl_context_t::current());
@@ -109,7 +117,7 @@ image_tile_dl_elem_t::~image_tile_dl_elem_t()
   cerr << this << ", deleting textures:";
 #endif // DEBUG_TEXTURE_IDS
   
-  for (unsigned int i = 0; i < num_textures; i++)
+  for (size_t i = 0; i < num_textures; i++)
   {
 #ifdef DEBUG_TEXTURE_IDS
     cerr << ' ' << texture_ids[i];
@@ -117,16 +125,14 @@ image_tile_dl_elem_t::~image_tile_dl_elem_t()
     
     if (!glIsTexture(texture_ids[i]))
     {
-      // FIXME: force a crash
-      static char * null = 0;
-      null[0] = 0xFF;
+      assert(false);
     }
   }
 #ifdef DEBUG_TEXTURE_IDS
   cerr << endl;
 #endif // DEBUG_TEXTURE_IDS
   
-  glDeleteTextures(num_textures, texture_ids);
+  glDeleteTextures((GLsizei)num_textures, texture_ids);
   FIXME_OPENGL("image_tile_dl_elem_t::~image_tile_dl_elem_t");
   
   if (current.is_valid())
@@ -146,7 +152,7 @@ image_tile_dl_elem_t::setup_textures() const
 {
   // shortcuts:
   const image_tile_t * tiles = &(data_.tiles_[0]);
-  const unsigned int num_tiles = data_.tiles_.size();
+  const size_t num_tiles = data_.tiles_.size();
   
   bool must_init = texture_id_.empty() && num_tiles > 0;
   if (must_init)
@@ -171,13 +177,13 @@ image_tile_dl_elem_t::setup_textures() const
     FIXME_OPENGL("switch context");
     
     // allocate the texture objects:
-    glGenTextures(num_tiles, texture_ids);
+    glGenTextures((GLsizei)num_tiles, texture_ids);
     FIXME_OPENGL("image_tile_dl_elem_t::draw");
     
     // FIXME:
 #ifdef DEBUG_TEXTURE_IDS
     cerr << this << ", generating textures:";
-    for (unsigned int i = 0; i < num_tiles; i++)
+    for (size_t i = 0; i < num_tiles; i++)
     {
       cerr << ' ' << texture_ids[i];
     }
@@ -185,7 +191,7 @@ image_tile_dl_elem_t::setup_textures() const
 #endif
     
     // setup the textures:
-    for (unsigned int i = 0; i < num_tiles; i++)
+    for (size_t i = 0; i < num_tiles; i++)
     {
 #ifdef USE_CG
       if (has_fragment_program())
@@ -201,7 +207,7 @@ image_tile_dl_elem_t::setup_textures() const
     // upload the texture data:
     if (upload_.empty())
     {
-      for (unsigned int i = 0; i < num_tiles; i++)
+      for (size_t i = 0; i < num_tiles; i++)
       {
 	if (!texture_ok_[i]) continue;
 	
@@ -216,7 +222,7 @@ image_tile_dl_elem_t::setup_textures() const
     while (!upload_.empty())
     {
       image_tile_t::quad_t quad = remove_head(upload_);
-      for (unsigned int i = 0; i < num_tiles; i++)
+      for (size_t i = 0; i < num_tiles; i++)
       {
 	if (!texture_ok_[i]) continue;
 	
@@ -252,7 +258,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
 {
   // shortcuts:
   const image_tile_t * tiles = &(data_.tiles_[0]);
-  const unsigned int num_tiles = data_.tiles_.size();
+  const size_t num_tiles = data_.tiles_.size();
   
   setup_textures();
   
@@ -285,7 +291,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
   PERROR_OPENGL("number of texture units");
   
   // draw the tiles:
-  for (unsigned int i = 0; i < num_tiles; i++)
+  for (size_t i = 0; i < num_tiles; i++)
   {
     if (!texture_ok_[i]) continue;
     
@@ -370,7 +376,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
 void
 image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
 			   const void * draw_tile_cb_data,
-			   const unsigned int & tile_index,
+			   const size_t & tile_index,
 			   const the_color_t & color,
 			   const bool & use_textures,
 			   const GLuint & texture_id,
@@ -462,7 +468,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
 // 
 void
 image_tile_dl_elem_t::draw_tile(const void * data,
-				const unsigned int & tile_index)
+				const size_t & tile_index)
 {
   const image_tile_dl_elem_t * image = (const image_tile_dl_elem_t *)(data);
   const image_tile_t & tile = image->data_.tiles_[tile_index];

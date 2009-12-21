@@ -305,8 +305,8 @@ the_aa_bbox_t::intersects_ray(const p3x1_t & o,
   
   for (unsigned int i = 0; i < 3; i++)
   {
-    float inv_d = 1.0 / d[i];
-    unsigned int e = inv_d < 0.0;
+    float inv_d = 1.0f / d[i];
+    unsigned int e = inv_d < 0.0f;
     
     t[i][e]           = (min_[i] - o[i]) * inv_d;
     t[i][(e + 1) % 2] = (max_[i] - o[i]) * inv_d;

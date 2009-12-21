@@ -81,9 +81,9 @@ public:
 			       v3x1_t & derivative) const;
   
   // virtual:
-  unsigned int
+  size_t
   init_slope_signs(const the_curve_deviation_t & deviation,
-		   const unsigned int & steps_per_segment,
+		   const size_t & steps_per_segment,
 		   std::list<the_slope_sign_t> & slope_signs,
 		   float & s0,
 		   float & s1) const;
@@ -96,10 +96,10 @@ public:
   float t_max() const;
   
   // order of this curve:
-  inline unsigned int order() const  { return kt_.size() - pt_.size(); }
+  inline size_t order() const  { return kt_.size() - pt_.size(); }
   
   // degree of this curve:
-  inline unsigned int degree() const { return kt_.size() - pt_.size() - 1; }
+  inline size_t degree() const { return kt_.size() - pt_.size() - 1; }
   
   // accessors:
   inline const std::vector<p3x1_t> & pt() const { return pt_; }
@@ -108,7 +108,7 @@ public:
 private:
   // find the first knot vector that bounds the parameter t on the
   // interval [tau i, tau i+1) - J in Elane Cohens' book:
-  unsigned int find_segment_index(const float & t) const;
+  size_t find_segment_index(const float & t) const;
   
   std::vector<p3x1_t> pt_; // control points
   std::vector<float> kt_; // knot vector
@@ -151,23 +151,23 @@ public:
   { return "knot vector"; }
   
   // initialize the knot vector:
-  bool init(const unsigned int & degree,
+  bool init(const size_t & degree,
 	    const std::vector<float> & knots);
   
-  bool init(const unsigned int & degree,
-	    const unsigned int & num_pt,
+  bool init(const size_t & degree,
+	    const size_t & num_pt,
 	    const float & t0 = 0.0,
 	    const float & t1 = 1.0,
 	    const bool & a_floating = false,
 	    const bool & b_floating = false);
   
-  void set_target_degree(const unsigned int & target_degree);
+  void set_target_degree(const size_t & target_degree);
   
   // virtual:
   bool regenerate();
   
   // helper:
-  bool update(const unsigned int & polyline_pts);
+  bool update(const size_t & polyline_pts);
   
   // accessor to the polyline that supports (defines) this curve:
   the_polyline_t * polyline() const;
@@ -176,10 +176,10 @@ public:
   void dump(ostream & strm, unsigned int indent = 0) const;
   
   // accessors:
-  inline const unsigned int & target_degree() const
+  inline const size_t & target_degree() const
   { return target_degree_; }
   
-  inline const unsigned int & degree() const
+  inline const size_t & degree() const
   { return degree_; }
   
   inline const std::vector<float> & knots() const
@@ -194,10 +194,10 @@ private:
   bool remove_point();
   
   // the highest degree of the bspline curve:
-  unsigned int target_degree_;
+  size_t target_degree_;
   
   // the degree of the bspline curve:
-  unsigned int degree_;
+  size_t degree_;
   
   // the knots:
   std::vector<float> knots_;

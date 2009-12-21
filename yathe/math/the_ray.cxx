@@ -107,8 +107,8 @@ the_ray_t::intersect(const the_ray_t & rb,
   
   double numer = d1343 * d4321 - d1321 * d4343;
   
-  ta = numer / denom;
-  tb = (d1343 + (d4321 * ta)) / d4343;
+  ta = float(numer / denom);
+  tb = float((d1343 + (d4321 * ta)) / d4343);
   
   p3x1_t pa = p1 + ta * v21;
   p3x1_t pb = p3 + tb * v43;
