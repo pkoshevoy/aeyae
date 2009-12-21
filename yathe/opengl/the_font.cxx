@@ -46,23 +46,26 @@ the_font_t::print(const the_text_t & str,
 		  const p3x1_t & pos,
 		  const the_color_t & color) const
 {
+  the_text_t tmp(str);
+  tmp.to_ascii();
+  
   glColor4fv(color.rgba());
   glRasterPos3fv(pos.data());
   
-  const unsigned int str_len = str.size();
+  const size_t str_len = str.size();
   if (dl_offset_ != 0)
   {
     the_scoped_gl_attrib_t push_attr(GL_LIST_BIT);
     {
       glListBase(dl_offset_);
-      glCallLists(str_len, GL_UNSIGNED_BYTE, (GLubyte *)(str.text()));
+      glCallLists((GLsizei)str_len, GL_UNSIGNED_BYTE, (GLubyte *)(tmp.text()));
     }
   }
   else
   {
-    for (unsigned int i = 0; i < str_len; i++)
+    for (size_t i = 0; i < str_len; i++)
     {
-      draw_bitmap(int(str.operator[](i)));
+      draw_bitmap(int(tmp.operator[](i)));
     }
   }
 }
@@ -76,8 +79,11 @@ the_font_t::print(const the_text_t & str,
 		  const the_color_t & font_color,
 		  const the_color_t & mask_color) const
 {
-  print_mask(str, pos, mask_color);
-  print(str, pos, font_color);
+  the_text_t tmp(str);
+  tmp.to_ascii();
+  
+  print_mask(tmp, pos, mask_color);
+  print(tmp, pos, font_color);
 }
 
 //----------------------------------------------------------------
@@ -88,12 +94,15 @@ the_font_t::print_mask(const the_text_t & str,
 		       const p3x1_t & pos,
 		       const the_color_t & color) const
 {
+  the_text_t tmp(str);
+  tmp.to_ascii();
+  
   glColor4fv(color.rgba());
   glRasterPos3fv(pos.data());
   
-  const unsigned int str_len = str.size();
-  for (unsigned int i = 0; i < str_len; i++)
+  const size_t str_len = str.size();
+  for (size_t i = 0; i < str_len; i++)
   {
-    draw_bitmap_mask(int(str.operator[](i)));
+    draw_bitmap_mask(int(tmp.operator[](i)));
   }
 }
