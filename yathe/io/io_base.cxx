@@ -314,6 +314,48 @@ decode_special_chars(const std::string & text_encoded)
 // save
 // 
 bool
+save(std::ostream & stream, const long long unsigned int & data)
+{
+  stream << data << ' ';
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, long long unsigned int & data)
+{
+  stream >> data;
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
+save(std::ostream & stream, const long unsigned int & data)
+{
+  stream << data << ' ';
+  return true;
+}
+
+//----------------------------------------------------------------
+// load
+// 
+bool
+load(std::istream & stream, long unsigned int & data)
+{
+  stream >> data;
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// save
+// 
+bool
 save(std::ostream & stream, const unsigned int & data)
 {
   stream << data << ' ';

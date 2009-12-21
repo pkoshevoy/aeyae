@@ -101,6 +101,12 @@ extern const std::string
 decode_special_chars(const std::string & text_encoded);
 
 
+extern bool save(std::ostream & stream, const long long unsigned int & data);
+extern bool load(std::istream & stream, long long unsigned int & data);
+
+extern bool save(std::ostream & stream, const long unsigned int & data);
+extern bool load(std::istream & stream, long unsigned int & data);
+
 extern bool save(std::ostream & stream, const unsigned int & data);
 extern bool load(std::istream & stream, unsigned int & data);
 
