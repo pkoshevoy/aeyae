@@ -331,7 +331,7 @@ public:
   void wdg_enable(Fl_Widget * widget, const bool & enable)
   {
     if (widget == NULL) return;
-    if (enable == bool(widget->active())) return;
+    if (enable == (widget->active() != 0)) return;
     
     if (enable)
     {

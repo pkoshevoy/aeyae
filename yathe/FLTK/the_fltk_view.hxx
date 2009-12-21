@@ -72,7 +72,7 @@ public:
   
   // virtual:
   bool gl_context_is_valid() const
-  { return Fl_Gl_Window::valid(); }
+  { return Fl_Gl_Window::valid() != 0; }
   
   // virtual:
   void gl_make_current()

@@ -44,6 +44,10 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <algorithm>
 
+#ifdef _WIN32
+#define sprintf sprintf_s
+#endif
+
 
 //----------------------------------------------------------------
 // Fl_Knot_Vector::Fl_Knot_Vector
@@ -66,7 +70,7 @@ static float margin()
   int lw = 0;
   int lh = 0;
   fl_measure("-1.0000", lw, lh);
-  return 0.5 * float(lw + 2);
+  return 0.5f * float(lw + 2);
 }
 
 //----------------------------------------------------------------
@@ -123,7 +127,7 @@ Fl_Knot_Vector::handle(int event)
 	
 	float M = margin();
 	float X = float(x()) + M;
-	float W = float(w()) - 2.0 * M;
+	float W = float(w()) - 2.0f * M;
 	
 	float tx = float(mx - ox);
 	float t = t0 + (t1 - t0) * (tx - X) / W;
@@ -203,7 +207,7 @@ Fl_Knot_Vector::draw()
   float F = float(fl_size());
   float X = float(x()) + M;
   float Y = float(y() + PH - 2);
-  float W = float(w()) - 2.0 * M;
+  float W = float(w()) - 2.0f * M;
   
   // clear the widget:
   fl_draw_box(FL_FLAT_BOX, x(), y(), w(), h(), color());
@@ -221,7 +225,7 @@ Fl_Knot_Vector::draw()
       float t = float(i) / float(n_notches);
       float tx = t * W + X;
       
-      float df = 0.25 * F + 0.25 * F * float(i % 5 == 0);
+      float df = 0.25f * F + 0.25f * F * float(i % 5 == 0);
       
       fl_yxline(int(tx), int(y_ref), int(y_ref + df));
     }
@@ -252,8 +256,8 @@ Fl_Knot_Vector::draw()
       }
     }
     
-    float y_ref = Y + 0.75 * F;
-    float df = 0.75 * F;
+    float y_ref = Y + 0.75f * F;
+    float df = 0.75f * F;
     
     std::list<unsigned int>::const_iterator mi = multiplicity_.begin();
     std::list<float>::const_iterator pi = parameter_.begin();

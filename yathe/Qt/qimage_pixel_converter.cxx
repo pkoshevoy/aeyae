@@ -91,8 +91,8 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
     unsigned char * dst = dst_addr + i * dst_bytes_per_pixel_;
     
     size_t src_offset = src - src_origin_;
-    int y = src_offset / src_bytes_per_line_;
-    int x = (src_offset % src_bytes_per_line_) / src_bytes_per_pixel_;
+    int y = (int)(src_offset / src_bytes_per_line_);
+    int x = (int)((src_offset % src_bytes_per_line_) / src_bytes_per_pixel_);
     
     QRgb argb = image_.pixel(x, y);
     switch (format_)
