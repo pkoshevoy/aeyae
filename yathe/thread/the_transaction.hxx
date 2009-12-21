@@ -97,7 +97,12 @@ public:
   //----------------------------------------------------------------
   // status_cb_t
   // 
-  typedef void(*status_cb_t)(void *, the_transaction_t *, const char *);
+  // NOTE: if status is NULL, it means the transaction is requesting
+  // a callback from the main thread.  This could be used by the
+  // transaction for some GUI user interaction (such as finding replacement
+  // tiles for a mosaic, etc...)
+  // 
+  typedef void(*status_cb_t)(void *, the_transaction_t *, const char * status);
   
   inline status_cb_t status_cb() const
   { return status_cb_; }
@@ -124,7 +129,34 @@ public:
   inline static const the_text_t & tr(const the_text_t & text)
   { return text; }
   
+  // if a transaction needs to have something executed in the main thread
+  // context it should call callback_request. This requires that a valid
+  // status callback is set for this transaction, and that the status
+  // callback will acknowledge the main thread callback request.  This
+  // call will block until the callback is executed in the main thread,
+  // and the request is removed:
+  bool callback_request();
+  
+  // if a transaction needs to have something executed in the main thread
+  // context it should override this callback. This method will be executed
+  // in the main thread context.  The default implementation will simply
+  // remove the request:
+  virtual void callback();
+  
 protected:
+  // when requesting a callback from the main thread
+  // the status of request will be set to WAITING_E:
+  typedef enum {
+    NOTHING_E,
+    WAITING_E
+  } request_t;
+  
+  // synchronization control:
+  the_mutex_interface_t * mutex_;
+  
+  // status of callback request:
+  request_t request_;
+  
   // current state of the transaction:
   state_t state_;
   

@@ -39,12 +39,15 @@ THE SOFTWARE.
 // local includes:
 #include "thread/the_transaction.hxx"
 #include "thread/the_thread_interface.hxx"
+#include "thread/the_mutex_interface.hxx"
 
 
 //----------------------------------------------------------------
 // the_transaction_t::the_transaction_t
 // 
 the_transaction_t::the_transaction_t():
+  mutex_(the_mutex_interface_t::create()),
+  request_(NOTHING_E),
   state_(PENDING_E),
   notify_cb_(NULL),
   notify_cb_data_(NULL),
@@ -56,7 +59,13 @@ the_transaction_t::the_transaction_t():
 // the_transaction_t::~the_transaction_t
 // 
 the_transaction_t::~the_transaction_t()
-{}
+{
+  if (mutex_ != NULL)
+  {
+    mutex_->delete_this();
+    mutex_ = NULL;
+  }
+}
 
 //----------------------------------------------------------------
 // the_transaction_t::notify
@@ -98,6 +107,51 @@ the_transaction_t::blab(the_transaction_handler_t * handler,
   }
 }
 
+//----------------------------------------------------------------
+// the_transaction_t::callback_request
+// 
+bool
+the_transaction_t::callback_request()
+{
+  if (status_cb_ == NULL)
+  {
+    return false;
+  }
+  
+  // change the request state:
+  {
+    the_lock_t<the_mutex_interface_t> locker(mutex_);
+    request_ = WAITING_E;
+  }
+  
+  // execute the status callback:
+  status_cb_(status_cb_data_, this, NULL);
+  
+  while (true)
+  {
+    sleep_msec(100);
+    
+    // check the request state:
+    the_lock_t<the_mutex_interface_t> locker(mutex_);
+    if (request_ == NOTHING_E)
+    {
+      break;
+    }
+  }
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_transaction_t::callback
+// 
+void
+the_transaction_t::callback()
+{
+  // remove the callback request:
+  the_lock_t<the_mutex_interface_t> locker(mutex_);
+  request_ = NOTHING_E;
+}
 
 //----------------------------------------------------------------
 // operator <<
