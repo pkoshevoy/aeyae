@@ -195,7 +195,7 @@ the_qt_thread_t::blab(const char * message) const
 {
   if (thread_pool_ == NULL)
   {
-    emit status_update(QString(message));
+    emit status_update(QString::fromUtf8(message));
   }
   else
   {

@@ -59,18 +59,6 @@ the_qt_view_t::the_qt_view_t(QWidget * parent,
   the_view_t(name, orientation)
 {
   setObjectName(name);
-  
-  if (shared == NULL)
-  {
-    // FIXME: this may not be necessary:
-    setFocus();
-  }
-  else
-  {
-    // FIXME: is this redundant?
-    setFormat(shared->context()->format());
-  }
-  
   setAttribute(Qt::WA_NoSystemBackground);
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
