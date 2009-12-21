@@ -149,7 +149,7 @@ public:
   { if (pp) pp_enable(); else pp_disable(); }
   
   // restore view manager orientation to the default:
-  void restore_orientation();
+  virtual void restore_orientation();
   
   // select an edit plane base on current viewpoint orientation:
   bool select_ep();
