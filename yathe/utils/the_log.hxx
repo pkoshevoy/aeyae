@@ -70,8 +70,8 @@ public:
     return *this;
   }
   
-  int precision();
-  int precision(int n);
+  std::streamsize precision();
+  std::streamsize precision(std::streamsize n);
   
   std::ios::fmtflags flags() const;
   std::ios::fmtflags flags(std::ios::fmtflags fmt);
@@ -165,6 +165,11 @@ extern the_null_log_t * null_log();
 // cerr_log
 // 
 extern the_stream_log_t * cerr_log();
+
+//----------------------------------------------------------------
+// cout_log
+// 
+extern the_stream_log_t * cout_log();
 
 
 #endif // THE_LOG_HXX_

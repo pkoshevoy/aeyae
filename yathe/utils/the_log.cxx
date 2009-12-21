@@ -76,22 +76,22 @@ the_log_t::operator << (std::ostream & (*f)(std::ostream &))
 //----------------------------------------------------------------
 // the_log_t::precision
 // 
-int
+std::streamsize
 the_log_t::precision()
 {
   the_lock_t<the_mutex_interface_t> lock(mutex_);
-  int p = line_.precision();
+  std::streamsize p = line_.precision();
   return p;
 }
 
 //----------------------------------------------------------------
 // the_log_t::precision
 // 
-int
-the_log_t::precision(int n)
+std::streamsize
+the_log_t::precision(std::streamsize n)
 {
   the_lock_t<the_mutex_interface_t> lock(mutex_);
-  int p = line_.precision(n);
+  std::streamsize p = line_.precision(n);
   return p;
 }
 
@@ -184,6 +184,22 @@ cerr_log()
   if (log == NULL)
   {
     log = new the_stream_log_t(std::cerr);
+  }
+  
+  return log;
+}
+
+
+//----------------------------------------------------------------
+// cout_log
+// 
+the_stream_log_t *
+cout_log()
+{
+  static the_stream_log_t * log = NULL;
+  if (log == NULL)
+  {
+    log = new the_stream_log_t(std::cout);
   }
   
   return log;
