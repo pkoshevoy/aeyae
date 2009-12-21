@@ -43,6 +43,7 @@ THE SOFTWARE.
 #include <ctype.h>
 #include <iostream>
 #include <list>
+#include <limits>
 
 
 //----------------------------------------------------------------
@@ -83,7 +84,7 @@ the_text_t::the_text_t(const std::list<char> & text):
   size_(text.size())
 {
   text_ = new char [size_ + 1];
-  unsigned int j = 0;
+  size_t j = 0;
   for (std::list<char>::const_iterator i = text.begin();
        i != text.end(); ++i, ++j)
   {
@@ -106,7 +107,7 @@ void
 the_text_t::assign(const char * text, const size_t & text_size)
 {
   char * text_copy = new char [text_size + 1];
-  for (unsigned int i = 0; i < text_size; i++)
+  for (size_t i = 0; i < text_size; i++)
   {
     text_copy[i] = text[i];
   }
@@ -126,12 +127,12 @@ the_text_t::append(const char * text, const size_t & text_size)
 {
   char * text_copy = new char [size_ + text_size + 1];
   
-  for (unsigned int i = 0; i < size_; i++)
+  for (size_t i = 0; i < size_; i++)
   {
     text_copy[i] = text_[i];
   }
   
-  for (unsigned int i = 0; i < text_size; i++)
+  for (size_t i = 0; i < text_size; i++)
   {
     text_copy[i + size_] = text[i];
   }
@@ -151,7 +152,7 @@ the_text_t::toShort(bool * ok, int base) const
 {
   long int num = toULong(ok, base);
   if (ok != NULL) *ok &= ((num >= SHRT_MIN) && (num <= SHRT_MAX));
-  return num;
+  return (short int)(num);
 }
 
 //----------------------------------------------------------------
@@ -162,7 +163,7 @@ the_text_t::toUShort(bool * ok, int base) const
 {
   unsigned long int num = toULong(ok, base);
   if (ok != NULL) *ok &= (num <= USHRT_MAX);
-  return num;
+  return (unsigned short int)(num);
 }
 
 //----------------------------------------------------------------
@@ -173,7 +174,7 @@ the_text_t::toInt(bool * ok, int base) const
 {
   long int num = toULong(ok, base);
   if (ok != NULL) *ok &= ((num >= INT_MIN) && (num <= INT_MAX));
-  return num;
+  return int(num);
 }
 
 //----------------------------------------------------------------
@@ -184,7 +185,7 @@ the_text_t::toUInt(bool * ok, int base) const
 {
   unsigned long int num = toULong(ok, base);
   if (ok != NULL) *ok &= (num <= UINT_MAX);
-  return num;
+  return (unsigned int)(num);
 }
 
 //----------------------------------------------------------------
@@ -217,10 +218,8 @@ the_text_t::toULong(bool * ok, int base) const
 float
 the_text_t::toFloat(bool * ok) const
 {
-  char * endptr = NULL;
-  float num = strtod(text_, &endptr);
-  if (ok != NULL) *ok = !(text_ == endptr || errno == ERANGE);
-  return num;
+  double num = toDouble(ok);
+  return float(num);
 }
 
 //----------------------------------------------------------------
@@ -236,12 +235,24 @@ the_text_t::toDouble(bool * ok) const
 }
 
 //----------------------------------------------------------------
+// the_text_t::to_ascii
+// 
+void
+the_text_t::to_ascii()
+{
+  for (size_t i = 0; i < size_; i++)
+  {
+    text_[i] = ((size_t)(text_[i]) < 128) ? text_[i] : '?';
+  }
+}
+
+//----------------------------------------------------------------
 // the_text_t::to_lower
 // 
 void
 the_text_t::to_lower()
 {
-  for (unsigned int i = 0; i < size_; i++)
+  for (size_t i = 0; i < size_; i++)
   {
     text_[i] = tolower(text_[i]);
   }
@@ -253,7 +264,7 @@ the_text_t::to_lower()
 void
 the_text_t::to_upper()
 {
-  for (unsigned int i = 0; i < size_; i++)
+  for (size_t i = 0; i < size_; i++)
   {
     text_[i] = toupper(text_[i]);
   }
@@ -263,10 +274,10 @@ the_text_t::to_upper()
 // the_text_t::fill
 // 
 void
-the_text_t::fill(const char & c, const unsigned int size)
+the_text_t::fill(const char & c, const size_t size)
 {
   char * text = new char [size + 1];
-  for (unsigned int i = 0; i < size; i++)
+  for (size_t i = 0; i < size; i++)
   {
     text[i] = c;
   }
@@ -302,13 +313,13 @@ the_text_t::match_tail(const the_text_t & t, bool ignore_case) const
 // 
 bool
 the_text_t::match_text(const the_text_t & t,
-		       const unsigned int & start,
+		       const size_t & start,
 		       bool ignore_case) const
 {
-  unsigned int end = start + t.size_;
+  size_t end = start + t.size_;
   if (end > size_) return false;
   
-  for (unsigned int i = start; i < end; i++)
+  for (size_t i = start; i < end; i++)
   {
     char a = text_[i];
     char b = t.text_[i - start];
@@ -333,20 +344,26 @@ the_text_t::simplify_ws() const
 {
   // find the first non-whitespace character:
   int start = 0;
-  for (; start < int(size_) && isspace(text_[start]); start++);
+  for (; start < int(size_) && isspace(text_[start]); start++)
+  {
+    // skipping whitespace...
+  }
   
   // NOTE: an all-whitespace string will simplify to an empty string:
-  if (start == int(size_)) return the_text_t("");
+  if (start == int(size_))
+  {
+    return the_text_t("");
+  }
   
   // find the last non-whitespace character:
-  int finish = size_ - 1;
+  int finish = int(size_) - 1;
   for (; finish >= start && isspace(text_[finish]); finish--);
   
   // intermediate storage:
   the_text_t tmp;
-  tmp.fill('\0', (finish + 1) - start);
+  tmp.fill('\0', size_t((finish + 1) - start));
   
-  unsigned int j = 0;
+  size_t j = 0;
   bool prev_ws = false;
   for (int i = start; i <= finish; i++)
   {
@@ -365,7 +382,7 @@ the_text_t::simplify_ws() const
 //----------------------------------------------------------------
 // the_text_t::split
 // 
-unsigned int
+size_t
 the_text_t::split(std::vector<the_text_t> & tokens,
 		  const char & separator,
 		  const bool & empty_ok) const
@@ -377,9 +394,9 @@ the_text_t::split(std::vector<the_text_t> & tokens,
   }
   
   // find the separators:
-  typedef std::list<unsigned int> list_t;
+  typedef std::list<size_t> list_t;
   list_t separators;
-  for (unsigned int i = 0; i < size_; i++)
+  for (size_t i = 0; i < size_; i++)
   {
     if (text_[i] != separator) continue;
     separators.push_back(i);
@@ -388,11 +405,11 @@ the_text_t::split(std::vector<the_text_t> & tokens,
   
   std::list<the_text_t> tmp;
   
-  typedef std::list<unsigned int>::iterator iter_t;
-  unsigned int a = 0;
+  typedef std::list<size_t>::iterator iter_t;
+  size_t a = 0;
   for (iter_t i = separators.begin(); i != separators.end(); ++i)
   {
-    unsigned int b = *i;
+    size_t b = *i;
     
     if (b - a == 0 && empty_ok)
     {
@@ -420,11 +437,11 @@ the_text_t::split(std::vector<the_text_t> & tokens,
 //----------------------------------------------------------------
 // the_text_t::contains
 // 
-unsigned int
+size_t
 the_text_t::contains(const char & symbol) const
 {
-  unsigned int count = 0;
-  for (unsigned int i = 0; i < size_; i++)
+  size_t count = 0;
+  for (size_t i = 0; i < size_; i++)
   {
     if (text_[i] != symbol) continue;
     count++;
@@ -484,7 +501,7 @@ getline(std::istream & in, the_text_t & text)
 // to_binary
 // 
 the_text_t
-to_binary(const unsigned char & byte, unsigned int lsb_first)
+to_binary(const unsigned char & byte, bool lsb_first)
 {
   the_text_t str;
   str.fill('0', 8);

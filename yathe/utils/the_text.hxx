@@ -39,6 +39,7 @@ THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -146,27 +147,51 @@ public:
   inline operator const char * () const
   { return text_; }
   
+  inline static the_text_t pad(const char * str,
+                               const size_t width = 0,
+                               const char pad_char = ' ',
+                               const bool pad_left = true)
+  {
+    the_text_t txt(str);
+    
+    if (width > txt.size())
+    {
+      the_text_t padding;
+      padding.fill(pad_char, width - txt.size());
+      txt = pad_left ? padding + txt : txt + padding;
+    }
+    
+    return txt;
+  }
+  
   // helpers:
   template <class number_t>
   static the_text_t number(const number_t & number,
-			   const unsigned int width = 0,
-			   const char pad = ' ',
-			   const bool pad_left = true)
+                           const size_t width = 0,
+                           const char pad_char = ' ',
+                           const bool pad_left = true)
   {
     std::ostringstream os;
     os << number;
     
     std::string str = os.str();
-    the_text_t num_txt(str.data(), str.size());
+    return pad(str.c_str(), width, pad_char, pad_left);
+  }
+  
+  inline static the_text_t number(const size_t & number,
+                                  const size_t width = 0,
+                                  const char pad_char = ' ',
+                                  const bool pad_left = true)
+  {
+#ifdef _WIN32
+#ifndef snprintf
+#define snprintf _snprintf_s
+#endif
+#endif
     
-    if (width > num_txt.size())
-    {
-      the_text_t padding;
-      padding.fill(pad, width - num_txt.size());
-      num_txt = pad_left ? padding + num_txt : num_txt + padding;
-    }
-    
-    return num_txt;
+    static char buffer[256];
+    snprintf(buffer, sizeof(buffer), "%llu", (long long unsigned int)(number));
+    return pad(buffer, width, pad_char, pad_left);
   }
   
   short int		toShort(bool * ok = 0, int base = 10) const;
@@ -181,9 +206,10 @@ public:
   float			toFloat(bool * ok = NULL) const;
   double		toDouble(bool * ok = NULL) const;
   
+  void to_ascii();
   void to_lower();
   void to_upper();
-  void fill(const char & c, const unsigned int size);
+  void fill(const char & c, const size_t size);
   
   void fill(const char & c)
   { fill(c, size_); }
@@ -193,32 +219,32 @@ public:
   bool match_tail(const the_text_t & t, bool ignore_case = false) const;
   
   bool match_text(const the_text_t & t,
-		  const unsigned int & index,
-		  bool ignore_case = false) const;
+                  const size_t & index,
+                  bool ignore_case = false) const;
   
   // remove leading/tailing white space, replace internal white space
   // with a single space:
   the_text_t simplify_ws() const;
   
   // split the text into a set of tokens, return the number of tokens:
-  unsigned int split(std::vector<the_text_t> & tokens,
-		     const char & separator,
-		     const bool & empty_ok = false) const;
-  
+  size_t split(std::vector<the_text_t> & tokens,
+               const char & separator,
+               const bool & empty_ok = false) const;
+
   // count the number of occurrences of a given symbol in the text:
-  unsigned int contains(const char & symbol) const;
+  size_t contains(const char & symbol) const;
   
   // extract a portion of the string:
   void extract(the_text_t & to,
-	       const unsigned int & from,
-	       const unsigned int & size) const
+               const size_t & from,
+               const size_t & size) const
   {
     assert(from + size < size_);
     to.assign(&text_[from], size);
   }
   
-  inline the_text_t extract(const unsigned int & from,
-			    const unsigned int & size) const
+  inline the_text_t extract(const size_t & from,
+                            const size_t & size) const
   {
     the_text_t to;
     extract(to, from, size);
@@ -228,7 +254,7 @@ public:
   inline the_text_t reverse() const
   {
     the_text_t rev(*this);
-    for (unsigned int i = 0; i < size_; i++)
+    for (size_t i = 0; i < size_; i++)
     {
       rev.text_[i] = text_[size_ - i - 1];
     }
@@ -237,14 +263,14 @@ public:
   }
   
   inline the_text_t cut(const char & separator,
-			unsigned int f0,
-			unsigned int f1 = 0) const
+                        size_t f0,
+                        size_t f1 = 0) const
   {
     const char sep_str[2] = { separator, '\0' };
     
     std::vector<the_text_t> fields;
     split(fields, separator, true);
-    unsigned int num_fields = fields.size();
+    size_t num_fields = fields.size();
     
     if (f1 < f0)
     {
@@ -256,12 +282,12 @@ public:
     }
     
     the_text_t out;
-    for (unsigned int f = f0; f <= f1; f++)
+    for (size_t f = f0; f <= f1; f++)
     {
       out += fields[f];
       if (f + 1 <= f1)
       {
-	out += sep_str;
+        out += sep_str;
       }
     }
     
@@ -291,7 +317,7 @@ getline(std::istream & in, the_text_t & text);
 // return a 0 and 1 string representation of a byte
 // 
 extern the_text_t
-to_binary(const unsigned char & byte, unsigned int lsb_first = true);
+to_binary(const unsigned char & byte, bool lsb_first = true);
 
 
 #endif // THE_TEXT_HXX_
