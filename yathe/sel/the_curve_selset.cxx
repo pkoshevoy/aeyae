@@ -110,7 +110,7 @@ the_curve_selset_traits_t::clone() const
 bool
 the_curve_selset_traits_t::is_valid(const the_curve_selrec_t & rec) const
 {
-  return rec.get<the_intcurve_t>();
+  return rec.get<the_intcurve_t>() != NULL;
 }
 
 //----------------------------------------------------------------
@@ -148,8 +148,10 @@ the_curve_selset_traits_t::deactivate(the_curve_selrec_t & rec) const
 // the_curve_selset_t::the_curve_selset_t
 // 
 the_curve_selset_t::the_curve_selset_t():
-  the_curve_selset_t::super_t(new the_curve_selset_traits_t(*this))
-{}
+  the_curve_selset_t::super_t()
+{
+  set_traits(new the_curve_selset_traits_t(*this));
+}
 
 //----------------------------------------------------------------
 // the_curve_selset_t::the_curve_selset_t

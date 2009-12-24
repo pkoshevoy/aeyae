@@ -446,10 +446,10 @@ qevent_type_to_str(QEvent::Type event_type)
   }
   
   static char buffer[256];
-#ifdef WIN32
-#define snprintf _snprintf
+#if defined(_WIN32) && !defined(snprintf)
+#define snprintf _snprintf_s
 #endif
-  snprintf(buffer, 256, "%i", event_type);
+  snprintf(buffer, sizeof(buffer), "%i", event_type);
   return buffer;
 }
 

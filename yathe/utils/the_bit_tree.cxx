@@ -44,7 +44,7 @@ THE SOFTWARE.
 //----------------------------------------------------------------
 // the_bit_tree_node_t::node_size
 // 
-const uint64_t
+const unsigned int
 the_bit_tree_node_t::node_size[] =
 {
   0,   // 0 bits
@@ -61,7 +61,7 @@ the_bit_tree_node_t::node_size[] =
 //----------------------------------------------------------------
 // the_bit_tree_node_t::node_mask
 // 
-const uint64_t
+const unsigned int
 the_bit_tree_node_t::node_mask[] =
 {
   0x00, // 0 bits

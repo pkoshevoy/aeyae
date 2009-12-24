@@ -396,7 +396,7 @@ the_wacom_event_t::load(std::istream & si, const std::string & magic)
 	     ::load(si, rotation_) &&
 	     ::load(si, z_position_));
   tool_ = (the_tablet_tool_t)tool;
-  tool_id_ = tool_id;
+  tool_id_ = (unsigned long int)tool_id;
   return ok;
 }
 

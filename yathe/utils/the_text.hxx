@@ -183,13 +183,11 @@ public:
                                   const char pad_char = ' ',
                                   const bool pad_left = true)
   {
-#ifdef _WIN32
-#ifndef snprintf
+#if defined(_WIN32) && !defined(snprintf)
 #define snprintf _snprintf_s
 #endif
-#endif
     
-    static char buffer[256];
+    char buffer[256];
     snprintf(buffer, sizeof(buffer), "%llu", (long long unsigned int)(number));
     return pad(buffer, width, pad_char, pad_left);
   }

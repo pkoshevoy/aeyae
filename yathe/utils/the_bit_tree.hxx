@@ -46,12 +46,12 @@ THE SOFTWARE.
 #include "utils/the_indentation.hxx"
 
 // uint64_t:
+#ifdef _WIN32
 #ifndef uint64_t
-#ifdef WIN32
 typedef unsigned __int64 uint64_t;
+#endif
 #else
 #include <inttypes.h>
-#endif
 #endif
 
 
@@ -72,8 +72,8 @@ public:
   bool leaf;
   
   // some global constants used when adding and looking up nodes:
-  static const uint64_t node_size[];
-  static const uint64_t node_mask[];
+  static const unsigned int node_size[];
+  static const unsigned int node_mask[];
   
 private:
   // disable default constructor:
@@ -118,7 +118,7 @@ public:
   the_bit_tree_leaf_t<T> *
   add(uint64_t addr, unsigned int offset, unsigned int bits_per_node)
   {
-    uint64_t z = branch_id(addr, offset, bits_per_node);
+    unsigned int z = branch_id(addr, offset, bits_per_node);
     
     if (offset == 0)
     {
@@ -137,7 +137,7 @@ public:
   the_bit_tree_leaf_t<T> *
   get(uint64_t addr, unsigned int offset, unsigned int bits_per_node)
   {
-    uint64_t z = branch_id(addr, offset, bits_per_node);
+    unsigned int z = branch_id(addr, offset, bits_per_node);
     if (bits_[z] == NULL) return NULL;
     if (offset == 0) return leaf(z);
     return node(z)->get(addr, offset - bits_per_node, bits_per_node);
@@ -197,19 +197,19 @@ public:
   
 private:
   // helper function for looking up local branch id:
-  inline uint64_t
+  inline unsigned int
   branch_id(uint64_t addr,
 	    unsigned int offset,
 	    unsigned int bits_per_node) const
   {
-    uint64_t mask = node_mask[bits_per_node] << offset;
+    uint64_t mask = uint64_t(node_mask[bits_per_node]) << offset;
     uint64_t z = (addr & mask) >> offset;
-    return z;
+    return (unsigned int)(z);
   }
   
   // helper functions for distinguishing between tree nodes and leaves:
   inline the_bit_tree_branch_t<T> *
-  node(uint64_t branch)
+  node(unsigned int branch)
   {
     the_bit_tree_node_t * base = bits_[branch];
     if (base == NULL) return NULL;
@@ -218,7 +218,7 @@ private:
   }
   
   inline the_bit_tree_leaf_t<T> *
-  leaf(uint64_t branch)
+  leaf(unsigned int branch)
   {
     the_bit_tree_node_t * base = bits_[branch];
     if (base == NULL) return NULL;
