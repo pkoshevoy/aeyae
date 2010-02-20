@@ -4,7 +4,6 @@
 #  THE_LIBS_FOUND	- system has THE libraries
 #  THE_INCLUDE_DIR	- THE include directory
 #  THE_CORE_LIBRARY	- the core library
-#  THE_ITK_LIBRARY	- the itk library
 #  THE_UI_LIBRARY	- the abstract ui library
 #  THE_UI_QT_LIBRARY	- the Qt ui library
 #  THE_UI_FLTK_LIBRARY	- the FLTK ui library
@@ -17,13 +16,6 @@ find_library(THE_CORE_LIBRARY the_core
   /scratch/$ENV{CPU}/the
   /usr/sci/crcnsdata/$ENV{CPU}/the
   DOC "the_core library"
-  )
-
-find_library(THE_ITK_LIBRARY the_itk
-  ${THE_BIN_DIR} 
-  /scratch/$ENV{CPU}/the
-  /usr/sci/crcnsdata/$ENV{CPU}/the
-  DOC "the_itk library"
   )
 
 find_library(THE_UI_LIBRARY the_ui
