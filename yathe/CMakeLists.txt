@@ -91,60 +91,6 @@ add_library(the_core STATIC
 
 install(TARGETS the_core DESTINATION lib)
 
-find_package(ITK)
-find_package(FFTW)
-if (ITK_FOUND AND FFTW_FOUND)
-  include(${ITK_USE_FILE})
-  include_directories(AFTER ${FFTW_INCLUDE_DIR})
-  add_definitions(-DUSE_ITK_TERMINATORS)
-  
-  add_library(the_itk STATIC
-    itk/cluster.cxx
-    itk/cluster.hxx
-    itk/common.cxx
-    itk/common.hxx
-    itk/draw.hxx
-    itk/fft.cxx
-    itk/fft.hxx
-    itk/fft_common.cxx
-    itk/fft_common.hxx
-    itk/grid_common.cxx
-    itk/grid_common.hxx
-    itk/itkCascadedTransform.h
-    itk/itkGridTransform.h
-    itk/itkImageMosaicVarianceMetric.h
-    itk/itkImageMosaicVarianceMetric.txx
-    itk/itkInverseTransform.h
-    itk/itkLegendrePolynomialTransform.h
-    itk/itkLegendrePolynomialTransform.txx
-    itk/itkNormalizeImageFilterWithMask.h
-    itk/itkNormalizeImageFilterWithMask.txx
-    itk/itkNumericInverse.h
-    itk/itkRBFTransform.cxx
-    itk/itkRBFTransform.h
-    itk/itkRadialDistortionTransform.h
-    itk/itkRadialDistortionTransform.txx
-    itk/itkRegularStepGradientDescentOptimizer2.cxx
-    itk/itkRegularStepGradientDescentOptimizer2.h
-    itk/itkStatisticsImageFilterWithMask.h
-    itk/itkStatisticsImageFilterWithMask.txx
-    itk/itk_terminator.hxx
-    itk/mosaic_layout_common.cxx
-    itk/mosaic_layout_common.hxx
-    itk/mosaic_refinement_common.hxx
-    itk/optimizer_observer.hxx
-    itk/stos.hxx
-    itk/stos_common.cxx
-    itk/stos_common.hxx
-    itk/the_grid_transform.cxx
-    itk/the_grid_transform.hxx
-    itk/threshold.hxx
-    )
-
-  install(TARGETS the_itk DESTINATION lib)
-
-endif (ITK_FOUND AND FFTW_FOUND)
-
 find_package(GLEW)
 if (GLEW_FOUND)
   find_package(OpenGL REQUIRED)
