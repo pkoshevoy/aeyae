@@ -9,6 +9,9 @@
 // yamka includes:
 #include <yamkaPayload.h>
 
+// system includes:
+#include <assert.h>
+
 
 namespace Yamka
 {

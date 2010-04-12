@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <string>
 #include <ctime>
+#include <assert.h>
 
 
 namespace Yamka
@@ -114,7 +115,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // VDate
   // 
-  // 64-bit signed integer, expressinf elapsed time
+  // 64-bit signed integer expressing elapsed time
   // in nanoseconds since 2001-01-01 T00:00:00,000000000 UTC
   // 
   struct VDate : public Payload<int64>

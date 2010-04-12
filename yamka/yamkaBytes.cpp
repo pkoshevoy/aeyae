@@ -14,6 +14,7 @@
 
 // system includes:
 #include <iomanip>
+#include <assert.h>
 
 
 namespace Yamka
