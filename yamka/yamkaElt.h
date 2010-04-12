@@ -13,21 +13,24 @@
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
 
+// system includes:
+#include <deque>
+
 
 namespace Yamka
 {
   
   //----------------------------------------------------------------
-  // Elt
+  // TElt
   // 
   template <typename payload_t,
             unsigned int EltId,
-            const char * EltName>
-  struct Elt
+            typename elt_name_t>
+  struct TElt
   {
     typedef payload_t TPayload;
-    typedef Elt<TPayload, EltId, EltName> TSelf;
-
+    typedef TElt<TPayload, EltId, elt_name_t> TSelf;
+    
     //----------------------------------------------------------------
     // EbmlID
     // 
@@ -41,9 +44,9 @@ namespace Yamka
     { return EltId; }
     
     static const char * name()
-    { return EltName; }
+    { return elt_name_t::getName(); }
     
-    Elt():
+    TElt():
       alwaysSave_(false),
       computeCrc32_(false)
     {}
@@ -172,6 +175,39 @@ namespace Yamka
     mutable IStorage::IReceiptPtr receipt_;
     mutable IStorage::IReceiptPtr receiptPayload_;
   };
+  
+  
+  //----------------------------------------------------------------
+  // TElts
+  // 
+  template <typename payload_t,
+            unsigned int EltId,
+            typename elt_name_t>
+  struct TElts : public std::deque<TElt<payload_t, EltId, elt_name_t> >
+  {};
+  
+  //----------------------------------------------------------------
+  // Elt
+  // 
+  // Helper macro used to declare an element.
+  // 
+  // EXAMPLE: Elt(VUInt, 0x4286, "EBMLVersion") version_;
+  //       
+# define Elt(EltType, EbmlId, Name)                                    \
+  struct EltName##EbmlId { static const char * getName() { return Name; } }; \
+  TElt<EltType, EbmlId, EltName##EbmlId>
+  
+  //----------------------------------------------------------------
+  // Elts
+  //
+  // Helper macro used to declare an element list
+  // 
+  // EXAMPLE: Elts(VUInt, 0x4286, "EBMLVersion") version_;
+  //       
+# define Elts(EltType, EbmlId, Name)                                   \
+  struct EltType##EbmlId { static const char * getName() { return Name; } }; \
+  TElts<EltType, EbmlId, EltType##EbmlId>
+  
 }
 
 

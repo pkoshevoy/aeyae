@@ -49,6 +49,9 @@ namespace Yamka
     Bytes(std::size_t size = 0);
     explicit Bytes(const TByteVec & byteVec);
     
+    // reset the size and copy all given data:
+    Bytes & deepCopy(const Bytes & bytes);
+    
     // append via shallow copy of given bytes:
     Bytes & operator += (const Bytes & bytes);
     

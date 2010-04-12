@@ -342,4 +342,48 @@ namespace Yamka
     return intEncode(si, nbytes);
   }
   
+  //----------------------------------------------------------------
+  // floatEncode
+  // 
+  TByteVec
+  floatEncode(float f)
+  {
+    const unsigned char * b = (const unsigned char *)&f;
+    TByteVec v(b, b + 4);
+    return v;
+  }
+  
+  //----------------------------------------------------------------
+  // floatDecode
+  // 
+  float
+  floatDecode(const TByteVec & v)
+  {
+    float f = 0;
+    memcpy(&f, &(v[0]), 4);
+    return f;
+  }
+  
+  //----------------------------------------------------------------
+  // doubleEncode
+  // 
+  TByteVec
+  doubleEncode(double d)
+  {
+    const unsigned char * b = (const unsigned char *)&d;
+    TByteVec v(b, b + 8);
+    return v;
+  }
+  
+  //----------------------------------------------------------------
+  // doubleDecode
+  // 
+  double
+  doubleDecode(const TByteVec & v)
+  {
+    double d = 0;
+    memcpy(&d, &(v[0]), 8);
+    return d;
+  }
+  
 }

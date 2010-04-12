@@ -35,6 +35,11 @@ main(int argc, char ** argv)
 	    << "0x" << vsizeEncode(0x8000) << std::endl
 	    << "0x" << vsizeEncode(1) << std::endl
 	    << "0x" << vsizeEncode(0) << std::endl
+            << "0x" << floatEncode(-11.1)
+            << " = " << floatDecode(floatEncode(-11.1)) << std::endl
+            << "0x" << doubleEncode(-11.1)
+            << " = " << doubleDecode(doubleEncode(-11.1)) << std::endl
+            << "0x" << intEncode(VDate().data_, 8) << std::endl
 	    << std::endl;
   
   FileStorage fs(std::string("testYamka.bin"), File::READ_WRITE);

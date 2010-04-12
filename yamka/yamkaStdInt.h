@@ -32,68 +32,92 @@ namespace Yamka
   //----------------------------------------------------------------
   // vsizeNumBytes
   // 
-  unsigned int
+  extern unsigned int
   vsizeNumBytes(uint64 i);
   
   //----------------------------------------------------------------
   // vsizeDecode
   // 
-  uint64
+  extern uint64
   vsizeDecode(const TByteVec & v);
   
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  TByteVec
+  extern TByteVec
   vsizeEncode(uint64 vsize);
   
   //----------------------------------------------------------------
   // uintDecode
   // 
-  uint64
+  extern uint64
   uintDecode(const TByteVec & v, unsigned int nbytes);
   
   //----------------------------------------------------------------
   // uintEncode
   // 
-  TByteVec
+  extern TByteVec
   uintEncode(uint64 ui, unsigned int nbytes);
   
   //----------------------------------------------------------------
   // uintNumBytes
   // 
-  unsigned int
+  extern unsigned int
   uintNumBytes(uint64 ui);
   
   //----------------------------------------------------------------
   // uintEncode
   // 
-  TByteVec
+  extern TByteVec
   uintEncode(uint64 ui);
   
   //----------------------------------------------------------------
   // intDecode
   // 
-  int64
+  extern int64
   intDecode(const TByteVec & v, unsigned int len);
   
   //----------------------------------------------------------------
   // intEncode
   // 
-  TByteVec
+  extern TByteVec
   intEncode(int64 si, unsigned int nbytes);
   
   //----------------------------------------------------------------
   // intNumBytes
   // 
-  unsigned int
+  extern unsigned int
   intNumBytes(int64 si);
   
   //----------------------------------------------------------------
   // intEncode
   // 
-  TByteVec
+  extern TByteVec
   intEncode(int64 si);
+
+  //----------------------------------------------------------------
+  // floatEncode
+  // 
+  extern TByteVec
+  floatEncode(float f);
+
+  //----------------------------------------------------------------
+  // floatDecode
+  // 
+  extern float
+  floatDecode(const TByteVec & v);
+  
+  //----------------------------------------------------------------
+  // doubleEncode
+  // 
+  extern TByteVec
+  doubleEncode(double d);
+  
+  //----------------------------------------------------------------
+  // doubleDecode
+  // 
+  extern double
+  doubleDecode(const TByteVec & v);
   
 }
 

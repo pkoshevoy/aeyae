@@ -21,6 +21,7 @@
 // system includes:
 #include <algorithm>
 #include <string>
+#include <ctime>
 
 
 namespace Yamka
@@ -57,6 +58,9 @@ namespace Yamka
     bool isDefault() const
     { return data_ == dataDefault_; }
     
+    void setSize(uint64 size) const
+    { size_ = size; }
+    
     TData dataDefault_;
     TData data_;
     uint64 size_;
@@ -91,7 +95,44 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
   };
+  
+  //----------------------------------------------------------------
+  // VFloat
+  // 
+  struct VFloat : public Payload<double>
+  {
+    typedef Payload<double> TSuper;
 
+    VFloat();
+    
+    uint64 calcSize() const;
+    
+    IStorage::IReceiptPtr
+    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+  };
+
+  //----------------------------------------------------------------
+  // VDate
+  // 
+  // 64-bit signed integer, expressinf elapsed time
+  // in nanoseconds since 2001-01-01 T00:00:00,000000000 UTC
+  // 
+  struct VDate : public Payload<int64>
+  {
+    typedef Payload<int64> TSuper;
+    
+    // constructor stores current time:
+    VDate();
+    
+    void setTime(std::time_t t);
+    std::time_t getTime() const;
+    
+    uint64 calcSize() const;
+    
+    IStorage::IReceiptPtr
+    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+  };
+  
   //----------------------------------------------------------------
   // VString
   // 
@@ -141,6 +182,51 @@ namespace Yamka
     
     // IO storage:
     mutable IStorage::IReceiptPtr receipt_;
+  };
+  
+  //----------------------------------------------------------------
+  // VBytes
+  // 
+  template <unsigned int fixedSize>
+  struct VBytes
+  {
+    typedef VBytes<fixedSize> TSelf;
+    typedef Bytes TData;
+    
+    TSelf & set(const Bytes & bytes)
+    {
+      if (bytes.size() == fixedSize)
+      {
+        data_.deepCopy(bytes);
+      }
+      else
+      {
+        assert(false);
+      }
+      
+      return *this;
+    }
+    
+    bool isDefault() const
+    { return data_.empty(); }
+    
+    uint64 calcSize() const
+    { return fixedSize; }
+    
+    IStorage::IReceiptPtr
+    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const
+    {
+      uint64 size = calcSize();
+      
+      Bytes bytes;
+      bytes << vsizeEncode(size);
+      bytes += data_;
+      
+      return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    }
+    
+    // data storage:
+    Bytes data_;
   };
   
 }

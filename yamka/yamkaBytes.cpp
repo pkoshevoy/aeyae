@@ -34,6 +34,31 @@ namespace Yamka
   {}
   
   //----------------------------------------------------------------
+  // Bytes::deepCopy
+  // 
+  Bytes &
+  Bytes::deepCopy(const Bytes & bytes)
+  {
+    const std::size_t newSize = bytes.size();
+    
+    TByteVecDec & dstDeq = *bytes_;
+    dstDeq.resize(1);
+    
+    TByteVec & dstVec = dstDeq.back();
+    dstVec.reserve(newSize);
+    dstVec.clear();
+    
+    const TByteVecDec & deq = *(bytes.bytes_);
+    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
+    {
+      const TByteVec & vec = *i;
+      dstVec.insert(dstVec.end(), vec.begin(), vec.end());
+    }
+    
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
   // Bytes::operator +=
   // 
   // NOTE: this is a deep copy of data (not shared with source):

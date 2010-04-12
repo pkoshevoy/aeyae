@@ -11,7 +11,6 @@
 
 // yamka includes:
 #include <yamkaElt.h>
-#include <yamkaEltNames.h>
 #include <yamkaPayload.h>
 #include <yamkaCrc32.h>
 
@@ -35,13 +34,13 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
     
-    Elt<VUInt, 0x4286, kEBMLVersion> version_;
-    Elt<VUInt, 0x42F7, kEBMLReadVersion> readVersion_;
-    Elt<VUInt, 0x42F2, kEBMLMaxIDLength> maxIdLength_;
-    Elt<VUInt, 0x42F3, kEBMLMaxSizeLength> maxSizeLength_;
-    Elt<VString, 0x4282, kDocType> docType_;
-    Elt<VUInt, 0x4287, kDocTypeVersion> docTypeVersion_;
-    Elt<VUInt, 0x4285, kDocTypeReadVersion> docTypeReadVersion_;
+    Elt(VUInt, 0x4286, "EBMLVersion") version_;
+    Elt(VUInt, 0x42F7, "EBMLReadVersion") readVersion_;
+    Elt(VUInt, 0x42F2, "EBMLMaxIDLength") maxIdLength_;
+    Elt(VUInt, 0x42F3, "EBMLMaxSizeLength") maxSizeLength_;
+    Elt(VString, 0x4282, "DocType") docType_;
+    Elt(VUInt, 0x4287, "DocTypeVersion") docTypeVersion_;
+    Elt(VUInt, 0x4285, "DocTypeReadVersion") docTypeReadVersion_;
   };
   
   //----------------------------------------------------------------
@@ -57,9 +56,10 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
     
-    Elt<EbmlHead, 0x1A45DFA3, kEBML> head_;
-    std::deque<Elt<VBinary, 0xEC, kVoid> > voids_;
+    Elt(EbmlHead, 0x1A45DFA3, "EBML") head_;
+    Elts(VBinary, 0xEC, "Void") voids_;
   };
+  
 }
 
 

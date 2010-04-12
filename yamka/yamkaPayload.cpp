@@ -80,6 +80,110 @@ namespace Yamka
     return storage.saveAndCalcCrc32(bytes, computeCrc32);
   }
 
+
+  //----------------------------------------------------------------
+  // VFloat::VFloat
+  // 
+  VFloat::VFloat():
+    TSuper(4)
+  {
+    setDefault(0.0);
+  }
+
+  //----------------------------------------------------------------
+  // VFloat::calcSize
+  // 
+  uint64
+  VFloat::calcSize() const
+  {
+    // only 32-bit floats and 64-bit doubles are allowed:
+    return (TSuper::size_ > 4) ? 8 : 4;
+  }
+  
+  //----------------------------------------------------------------
+  // VFloat::save
+  // 
+  IStorage::IReceiptPtr
+  VFloat::save(IStorage & storage, Crc32 * computeCrc32) const
+  {
+    uint64 size = calcSize();
+    
+    Bytes bytes;
+    bytes << vsizeEncode(size);
+    
+    if (size == 4)
+    {
+      bytes << floatEncode(float(TSuper::data_));
+    }
+    else
+    {
+      bytes << doubleEncode(TSuper::data_);
+    }
+    
+    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+  }
+
+  //----------------------------------------------------------------
+  // kVDateMilleniumUTC
+  // 
+  // 2001/01/01 00:00:00 UTC
+  static const std::time_t kVDateMilleniumUTC = 978307200;
+  
+  //----------------------------------------------------------------
+  // VDate::VDate
+  // 
+  VDate::VDate():
+    TSuper(8)
+  {
+    setDefault(0);
+    
+    std::time_t currentTime = std::time(NULL);
+    setTime(currentTime);
+  }
+  
+  //----------------------------------------------------------------
+  // VDate::setTime
+  // 
+  void
+  VDate::setTime(std::time_t t)
+  {
+    TSuper::data_ = int64(t - kVDateMilleniumUTC) * 1000000000;
+  }
+  
+  //----------------------------------------------------------------
+  // getTime
+  // 
+  std::time_t
+  VDate::getTime() const
+  {
+    std::time_t t = kVDateMilleniumUTC + TSuper::data_ / 1000000000;
+    return t;
+  }
+  
+  //----------------------------------------------------------------
+  // TSuper::calcSize
+  // 
+  uint64
+  VDate::calcSize() const
+  {
+    return 8;
+  }
+  
+  //----------------------------------------------------------------
+  // VDate::save
+  // 
+  IStorage::IReceiptPtr
+  VDate::save(IStorage & storage, Crc32 * computeCrc32) const
+  {
+    uint64 size = calcSize();
+    
+    Bytes bytes;
+    bytes << vsizeEncode(size)
+          << intEncode(TSuper::data_, size);
+    
+    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+}
+  
   
   //----------------------------------------------------------------
   // VString::calcSize
