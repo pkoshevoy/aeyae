@@ -11,6 +11,7 @@
 
 // yamka includes:
 #include <yamkaElt.h>
+#include <yamkaEltNames.h>
 #include <yamkaPayload.h>
 #include <yamkaEBML.h>
 
@@ -378,9 +379,9 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
-  // Target
+  // Targets
   // 
-  struct Target
+  struct Targets
   {
     Elt<Target, VUInt, 0x68CA, "TargetTypeValue"> typeValue_;
     Elt<Target, VString, 0x63CA, "TargetType"> type_;
@@ -407,8 +408,8 @@ namespace Yamka
   // 
   struct Tag
   {
-    Elt<Tag, Target, 0x63C0, "Target"> target_;
-    std::deque<Elt<Tag, SimpleTag, 0x67C8, "SimpleTags"> simpleTag_;
+    Elt<Tag, TagTargets, 0x63C0, "Targets"> targets_;
+    std::deque<Elt<Tag, SimpleTag, 0x67C8, "SimpleTags"> > simpleTags_;
   };
   
   //----------------------------------------------------------------

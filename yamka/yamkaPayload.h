@@ -116,21 +116,28 @@ namespace Yamka
   //
   struct VBinary
   {
+    typedef Bytes TData;
+    
     VBinary();
     
     VBinary & setStorage(const IStoragePtr & binStorage);
     VBinary & set(const Bytes & bytes);
     
-    uint64 calcSize() const;
+    VBinary & setDefault(const Bytes & bytes);
     bool isDefault() const;
+    
+    uint64 calcSize() const;
     
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
     
     // data storage:
+    static IStoragePtr defaultStorage_;
     IStoragePtr binStorage_;
     IStorage::IReceiptPtr binReceipt_;
+    IStorage::IReceiptPtr binReceiptDefault_;
     std::size_t binSize_;
+    std::size_t binSizeDefault_;
     
     // IO storage:
     mutable IStorage::IReceiptPtr receipt_;

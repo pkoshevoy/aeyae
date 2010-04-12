@@ -35,13 +35,13 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
     
-    Elt<EbmlHead, VUInt, 0x4286, kEBMLVersion> version_;
-    Elt<EbmlHead, VUInt, 0x42F7, kEBMLReadVersion> readVersion_;
-    Elt<EbmlHead, VUInt, 0x42F2, kEBMLMaxIDLength> maxIdLength_;
-    Elt<EbmlHead, VUInt, 0x42F3, kEBMLMaxSizeLength> maxSizeLength_;
-    Elt<EbmlHead, VString, 0x4282, kDocType> docType_;
-    Elt<EbmlHead, VUInt, 0x4287, kDocTypeVersion> docTypeVersion_;
-    Elt<EbmlHead, VUInt, 0x4285, kDocTypeReadVersion> docTypeReadVersion_;
+    Elt<VUInt, 0x4286, kEBMLVersion> version_;
+    Elt<VUInt, 0x42F7, kEBMLReadVersion> readVersion_;
+    Elt<VUInt, 0x42F2, kEBMLMaxIDLength> maxIdLength_;
+    Elt<VUInt, 0x42F3, kEBMLMaxSizeLength> maxSizeLength_;
+    Elt<VString, 0x4282, kDocType> docType_;
+    Elt<VUInt, 0x4287, kDocTypeVersion> docTypeVersion_;
+    Elt<VUInt, 0x4285, kDocTypeReadVersion> docTypeReadVersion_;
   };
   
   //----------------------------------------------------------------
@@ -57,8 +57,8 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
     
-    Elt<EbmlDoc, EbmlHead, 0x1A45DFA3, kEBML> head_;
-    std::deque<Elt<EbmlDoc, VBinary, 0xEC, kVoid> > voids_;
+    Elt<EbmlHead, 0x1A45DFA3, kEBML> head_;
+    std::deque<Elt<VBinary, 0xEC, kVoid> > voids_;
   };
 }
 

@@ -104,15 +104,23 @@ namespace Yamka
     
     return storage.saveAndCalcCrc32(bytes, computeCrc32);
   }
-
-
+  
+  
+  //----------------------------------------------------------------
+  // VBinary::defaultStorage_
+  // 
+  IStoragePtr
+  VBinary::defaultStorage_;
+  
   //----------------------------------------------------------------
   // VBinary::VBinary
   // 
   VBinary::VBinary():
-    binSize_(0)
+    binStorage_(defaultStorage_),
+    binSize_(0),
+    binSizeDefault_(0)
   {}
-
+  
   //----------------------------------------------------------------
   // VBinary::setStorage
   // 
@@ -141,7 +149,65 @@ namespace Yamka
     
     return *this;
   }
-
+  
+  //----------------------------------------------------------------
+  // VBinary::setDefault
+  // 
+  VBinary &
+  VBinary::setDefault(const Bytes & bytes)
+  {
+    if (binStorage_)
+    {
+      binReceiptDefault_ = binStorage_->save(bytes);
+      binSizeDefault_ = bytes.size();
+    }
+    else
+    {
+      assert(false);
+    }
+    
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VBinary::isDefault
+  // 
+  bool
+  VBinary::isDefault() const
+  {
+    if (binReceiptDefault_ && binReceipt_)
+    {
+      if (binSizeDefault_ != binSize_)
+      {
+        return false;
+      }
+      
+      Bytes bytesDefault(binSizeDefault_);
+      Bytes bytes(binSize_);
+      
+      if (binReceiptDefault_->load(bytesDefault))
+      {
+        // default payload can't be read:
+        return false;
+      }
+      
+      if (!binReceipt_->load(bytes))
+      {
+        // payload can't be read:
+        return true;
+      }
+      
+      // compare the bytes:
+      bool same = (bytesDefault.bytes_->front() ==
+                   bytes.bytes_->front());
+      return same;
+    }
+    
+    bool same = (binReceiptDefault_ == binReceipt_ &&
+                 binSizeDefault_ == binSize_);
+    return same;
+  }
+  
   //----------------------------------------------------------------
   // VBinary::calcSize
   // 
@@ -150,16 +216,7 @@ namespace Yamka
   {
     return binSize_;
   }
-
-  //----------------------------------------------------------------
-  // VBinary::isDefault
-  // 
-  bool
-  VBinary::isDefault() const
-  {
-    return binSize_ == 0;
-  }
-
+  
   //----------------------------------------------------------------
   // VBinary::save
   // 

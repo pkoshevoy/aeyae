@@ -38,20 +38,20 @@ namespace Yamka
     {
       return 4;
     }
-    else if (i < 0x7FFFFFFFF)
+    else if (i < 0x7FFFFFFFFLLU)
     {
       return 5;
     }
-    else if (i < 0x3FFFFFFFFFF)
+    else if (i < 0x3FFFFFFFFFFLLU)
     {
       return 6;
     }
-    else if (i < 0x1FFFFFFFFFFFF)
+    else if (i < 0x1FFFFFFFFFFFFLLU)
     {
       return 7;
     }
     
-    assert(i < 0xFFFFFFFFFFFFFF);
+    assert(i < 0xFFFFFFFFFFFFFFLLU);
     return 8;
   }
   
@@ -181,10 +181,10 @@ namespace Yamka
     0xFFFF,
     0xFFFFFF,
     0xFFFFFFFF,
-    0xFFFFFFFFFF,
-    0xFFFFFFFFFFFF,
-    0xFFFFFFFFFFFFFF,
-    0xFFFFFFFFFFFFFFFF
+    0xFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFFFFFLLU
   };
   
   //----------------------------------------------------------------
@@ -239,15 +239,15 @@ namespace Yamka
     {
       return 4;
     }
-    else if (ui <= 0xFFFFFFFFFF)
+    else if (ui <= 0xFFFFFFFFFFLLU)
     {
       return 5;
     }
-    else if (ui <= 0xFFFFFFFFFFFF)
+    else if (ui <= 0xFFFFFFFFFFFFLLU)
     {
       return 6;
     }
-    else if (ui <= 0xFFFFFFFFFFFFFF)
+    else if (ui <= 0xFFFFFFFFFFFFFFLLU)
     {
       return 7;
     }
@@ -316,15 +316,15 @@ namespace Yamka
     {
       return 4;
     }
-    else if (si >= -0x8000000000 && si <= 0x7FFFFFFFFF)
+    else if (si >= -0x8000000000LL && si <= 0x7FFFFFFFFFLL)
     {
       return 5;
     }
-    else if (si >= -0x800000000000 && si <= 0x7FFFFFFFFFFF)
+    else if (si >= -0x800000000000LL && si <= 0x7FFFFFFFFFFFLL)
     {
       return 6;
     }
-    else if (si >= -0x80000000000000 && si <= 0x7FFFFFFFFFFFFF)
+    else if (si >= -0x80000000000000LL && si <= 0x7FFFFFFFFFFFFFLL)
     {
       return 7;
     }

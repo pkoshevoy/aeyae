@@ -20,15 +20,13 @@ namespace Yamka
   //----------------------------------------------------------------
   // Elt
   // 
-  template <typename parent_t,
-            typename payload_t,
+  template <typename payload_t,
             unsigned int EltId,
             const char * EltName>
   struct Elt
   {
     typedef payload_t TPayload;
-    typedef parent_t TParent;
-    typedef Elt<TParent, TPayload, EltId, EltName> TSelf;
+    typedef Elt<TPayload, EltId, EltName> TSelf;
 
     //----------------------------------------------------------------
     // EbmlID
@@ -46,15 +44,9 @@ namespace Yamka
     { return EltName; }
     
     Elt():
-      parent_(NULL),
+      alwaysSave_(false),
       computeCrc32_(false)
     {}
-    
-    TSelf & setParent(TParent * parent)
-    {
-      parent_ = parent;
-      return *this;
-    }
     
     TSelf & enableCrc32(bool enable)
     {
@@ -141,7 +133,25 @@ namespace Yamka
       return false;
     }
     
-    TParent * parent_;
+    // check whether this element payload holds a default value:
+    bool mustSave() const
+    {
+      return alwaysSave_ || payload_.isDefault();
+    }
+    
+    // set the flag indicating that this element must be saved
+    // even when it holds a default value:
+    TSelf & alwaysSave()
+    {
+      alwaysSave_ = true;
+      return *this;
+    }
+    
+    // this flag indicates that this element must be saved
+    // even when it holds a default value:
+    bool alwaysSave_;
+    
+    // the contents of this element:
     TPayload payload_;
     
     // The CRC32 container can be placed around any EBML element or

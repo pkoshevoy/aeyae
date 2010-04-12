@@ -18,16 +18,12 @@ namespace Yamka
   // 
   EbmlHead::EbmlHead()
   {
-    version_.setParent(this).payload_.set(1);
-    readVersion_.setParent(this).payload_.set(1);
-    maxIdLength_.setParent(this).payload_.setDefault(4);
-    maxSizeLength_.setParent(this).payload_.setDefault(8);
-    
-    docType_.setParent(this);
-    docTypeVersion_.setParent(this);
-    docTypeReadVersion_.setParent(this);
+    version_.alwaysSave().payload_.setDefault(1);
+    readVersion_.alwaysSave().payload_.setDefault(1);
+    maxIdLength_.payload_.setDefault(4);
+    maxSizeLength_.payload_.setDefault(8);
   }
-
+  
   //----------------------------------------------------------------
   // EbmlHead::calcSize
   // 
@@ -41,12 +37,12 @@ namespace Yamka
       docTypeVersion_.calcSize() +
       docTypeReadVersion_.calcSize();
     
-    if (!maxIdLength_.payload_.isDefault())
+    if (!maxIdLength_.mustSave())
     {
       size += maxIdLength_.calcSize();
     }
     
-    if (!maxSizeLength_.payload_.isDefault())
+    if (!maxSizeLength_.mustSave())
     {
       size += maxSizeLength_.calcSize();
     }
@@ -75,12 +71,12 @@ namespace Yamka
     version_.save(storage, computeCrc32);
     readVersion_.save(storage, computeCrc32);
     
-    if (!maxIdLength_.payload_.isDefault())
+    if (!maxIdLength_.mustSave())
     {
       maxIdLength_.save(storage, computeCrc32);
     }
     
-    if (!maxSizeLength_.payload_.isDefault())
+    if (!maxSizeLength_.mustSave())
     {
       maxSizeLength_.save(storage, computeCrc32);
     }
@@ -97,9 +93,7 @@ namespace Yamka
   // EbmlDoc::EbmlDoc
   // 
   EbmlDoc::EbmlDoc()
-  {
-    head_.setParent(this);
-  }
+  {}
 
   //----------------------------------------------------------------
   // EbmlDoc::calcSize
