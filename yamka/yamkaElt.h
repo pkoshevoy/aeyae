@@ -59,9 +59,14 @@ namespace Yamka
     
     uint64 calcSize() const
     {
+      if (!mustSave())
+      {
+        return 0;
+      }
+      
       // the payload size:
       uint64 payloadSize = payload_.calcSize();
-
+      
       // the EBML ID, payload size descriptor, and payload size:
       uint64 size =
         uintNumBytes(EltId) +
@@ -83,7 +88,7 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * parentCrc32 = NULL) const
     {
-      if (payload_.isDefault())
+      if (!mustSave())
       {
         return storage.receipt();
       }
@@ -139,7 +144,7 @@ namespace Yamka
     // check whether this element payload holds a default value:
     bool mustSave() const
     {
-      return alwaysSave_ || payload_.isDefault();
+      return alwaysSave_ || !payload_.isDefault();
     }
     
     // set the flag indicating that this element must be saved

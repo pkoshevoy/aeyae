@@ -33,19 +33,11 @@ namespace Yamka
     uint64 size =
       version_.calcSize() +
       readVersion_.calcSize() +
+      maxIdLength_.calcSize() +
+      maxSizeLength_.calcSize() +
       docType_.calcSize() +
       docTypeVersion_.calcSize() +
       docTypeReadVersion_.calcSize();
-    
-    if (!maxIdLength_.mustSave())
-    {
-      size += maxIdLength_.calcSize();
-    }
-    
-    if (!maxSizeLength_.mustSave())
-    {
-      size += maxSizeLength_.calcSize();
-    }
     
     return size;
   }
@@ -70,17 +62,8 @@ namespace Yamka
     
     version_.save(storage, computeCrc32);
     readVersion_.save(storage, computeCrc32);
-    
-    if (!maxIdLength_.mustSave())
-    {
-      maxIdLength_.save(storage, computeCrc32);
-    }
-    
-    if (!maxSizeLength_.mustSave())
-    {
-      maxSizeLength_.save(storage, computeCrc32);
-    }
-    
+    maxIdLength_.save(storage, computeCrc32);
+    maxSizeLength_.save(storage, computeCrc32);
     docType_.save(storage, computeCrc32);
     docTypeVersion_.save(storage, computeCrc32);
     docTypeReadVersion_.save(storage, computeCrc32);
