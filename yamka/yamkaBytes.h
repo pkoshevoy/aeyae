@@ -49,6 +49,9 @@ namespace Yamka
     Bytes(std::size_t size = 0);
     explicit Bytes(const TByteVec & byteVec);
     
+    // convert to a byte vector (deep copy of data):
+    operator TByteVec() const;
+    
     // reset the size and copy all given data:
     Bytes & deepCopy(const Bytes & bytes);
     

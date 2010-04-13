@@ -12,16 +12,53 @@
 // yamka includes:
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
+#include <yamkaFileStorage.h>
 
 // system includes:
 #include <deque>
+#include <stdexcept>
+
+
+//----------------------------------------------------------------
+// THROW_ARG2_IF_FALSE
+// 
+# ifndef THROW_ARG2_IF_FALSE
+# define THROW_ARG2_IF_FALSE(predicate, arg2)   \
+  if (predicate) {} else throw arg2
+#endif
+
+//----------------------------------------------------------------
+// THROW_ERR_IF_FALSE
+// 
+# ifndef THROW_ERR_IF_FALSE
+# define THROW_ERR_IF_FALSE(predicate, errStr)   \
+  if (predicate) {} else throw std::runtime_error(std::string(errStr))
+#endif
 
 
 namespace Yamka
 {
+  //----------------------------------------------------------------
+  // EbmlGlobalID
+  // 
+  // Void and CRC-32 elements may occur at any level in an EBML
+  // document, therefore every element should know these IDs.
+  // 
+  enum EbmlGlobalID
+  {
+    kIdCrc32 = 0xBF,
+    kIdVoid = 0xEC
+  };
   
   //----------------------------------------------------------------
   // TElt
+  //
+  // This is a template class representing an EBML element
+  // The template is parametarized by
+  // 
+  //   element payload type,
+  //   unique element ID
+  //   element name type that provides T::getName() API
   // 
   template <typename payload_t,
             unsigned int EltId,
@@ -30,15 +67,6 @@ namespace Yamka
   {
     typedef payload_t TPayload;
     typedef TElt<TPayload, EltId, elt_name_t> TSelf;
-    
-    //----------------------------------------------------------------
-    // EbmlID
-    // 
-    enum EbmlID
-    {
-      EbmlIdCrc32 = 0xBF,
-      EbmlIdVoid = 0xEC
-    };
     
     static unsigned int id()
     { return EltId; }
@@ -77,7 +105,7 @@ namespace Yamka
       {
         // CRC-32 element size:
         size +=
-          uintNumBytes(EbmlIdCrc32) +
+          uintNumBytes(kIdCrc32) +
           vsizeNumBytes(4) +
           4;
       }
@@ -96,7 +124,7 @@ namespace Yamka
       if (computeCrc32_)
       {
         Bytes bytes;
-        bytes << uintEncode(EbmlIdCrc32)
+        bytes << uintEncode(kIdCrc32)
               << vsizeEncode(4)
               << uintEncode(0, 4);
         
@@ -134,11 +162,59 @@ namespace Yamka
       return receipt_;
     }
     
-    bool load(IStorage & storage)
+    uint64
+    load(FileStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
     {
-      // FIXME: write me:
-      // load the payload size, load the payload:
-      return false;
+      // save current seek position, so it can be restored if necessary:
+      File::Seek storageStart(storage.file_);
+      
+      // keep track of the number of bytes read successfully:
+      uint64 bytesRead = 0;
+      Bytes bytesCrc32(4);
+      
+      uint64 eltId = loadEbmlId(storage, crc);
+      if (eltId == kIdCrc32)
+      {
+        uint64 vsize = vsizeDecode(storage, crc);
+        if (vsize != 4)
+        {
+          // wrong CRC-32 payload size:
+          return 0;
+        }
+        
+        if (!storage.loadAndCalcCrc32(bytesCrc32))
+        {
+          // failed to load CRC-32 checksum:
+          return 0;
+        }
+        
+        // move on to the real element:
+        bytesRead += (uintNumBytes(eltId) +
+                      uintNumBytes(vsize) +
+                      4);
+        
+        eltId = loadEbmlId(storage, crc);
+      }
+      
+      if (eltId != id())
+      {
+        // element id wrong for my type:
+        return 0;
+      }
+      
+      // this appears to be a good payload:
+      storageStart.doNotRestore();
+      
+      // store the checksum:
+      computeCrc32_ = true;
+      checksumCrc32_ = uintDecode(TByteVec(bytesCrc32), 4);
+      
+      bytesRead += uintNumBytes(eltId);
+      uint64 payloadSize = payload_.load(storage,
+                                         storageSize - bytesRead,
+                                         crc);
+      bytesRead += payloadSize;
+      return bytesRead;
     }
     
     // check whether this element payload holds a default value:
@@ -190,6 +266,29 @@ namespace Yamka
             typename elt_name_t>
   struct TElts : public std::deque<TElt<payload_t, EltId, elt_name_t> >
   {};
+
+  //----------------------------------------------------------------
+  // 
+  // NOTE: Currently (2010) C++ templates can not be parameterized
+  // with const string literal constants:
+  // 
+  //   TElt<int, 0x1, "One"> one; // does not compiles
+  //
+  // 
+  // Therefore I added helper C preprocessor macro(s) that
+  // works around this limitation by creating a wrapper class
+  // to return the string literal, and passing the wrapper
+  // class as a template parameter to TElt:
+  //
+  //   struct EltName0x1 { static const char * getName() { return "One" } };
+  //   TElt<int, 0x1, EltName0x1> one; // compiles just fine
+  //
+  // 
+  // The wrapper macros are used like this:
+  // 
+  //   Elt(int, 0x1, "One") one;
+  //   Elts(int, 0x2, "Two") twos;
+  //
   
   //----------------------------------------------------------------
   // Elt
@@ -197,21 +296,33 @@ namespace Yamka
   // Helper macro used to declare an element.
   // 
   // EXAMPLE: Elt(VUInt, 0x4286, "EBMLVersion") version_;
-  //       
+  // 
 # define Elt(EltType, EbmlId, Name)                                    \
   struct EltName##EbmlId { static const char * getName() { return Name; } }; \
   TElt<EltType, EbmlId, EltName##EbmlId>
   
   //----------------------------------------------------------------
   // Elts
-  //
+  // 
   // Helper macro used to declare an element list
   // 
-  // EXAMPLE: Elts(VUInt, 0x4286, "EBMLVersion") version_;
+  // EXAMPLE: Elts(VUInt, 0xEC, "Void") voids_;
   //       
 # define Elts(EltType, EbmlId, Name)                                   \
-  struct EltType##EbmlId { static const char * getName() { return Name; } }; \
-  TElts<EltType, EbmlId, EltType##EbmlId>
+  struct EltName##EbmlId { static const char * getName() { return Name; } }; \
+  TElts<EltType, EbmlId, EltName##EbmlId>
+
+  //----------------------------------------------------------------
+  // TypeOfElt
+  // 
+# define TypeOfElt(EltType, EbmlId, Name)       \
+  TElt<EltType, EbmlId, EltName##EbmlId>
+
+  //----------------------------------------------------------------
+  // TypeOfElts
+  // 
+# define TypeOfElts(EltType, EbmlId, Name)      \
+  TElts<EltType, EbmlId, EltName##EbmlId>
   
 }
 

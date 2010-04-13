@@ -79,38 +79,30 @@ namespace Yamka
     // 
     struct Seek
     {
+      // save current seek position:
+      Seek(File & file);
+      
       // save current seek position,
       // then seek to a given offset,
       // throw exception if seek fails:
-      Seek(File & file,
-           TOff offset,
-           PositionReference relativeTo = ABSOLUTE):
-        file_(file),
-        prev_(file.absolutePosition())
-      {
-        if (!file_.seek(offset, relativeTo))
-        {
-          std::runtime_error e(std::string("failed to seek"));
-          throw e;
-        }
-      }
+      Seek(File & file, TOff offset, PositionReference relativeTo = ABSOLUTE);
       
-      // restore saved seek position:
-      ~Seek()
-      {
-        if (!file_.seek(prev_, ABSOLUTE))
-        {
-          std::runtime_error e(std::string("failed to seek back"));
-          throw e;
-        }
-      }
+      // if required, then restore saved seek position:
+      ~Seek();
+      
+      // call this to disable restoring the previos file position:
+      void doNotRestore();
       
     private:
       Seek(const Seek &);
       Seek & operator = (const Seek &);
+
+      // helper
+      void seek(TOff offset, PositionReference relativeTo);
       
       File & file_;
       TOff prev_;
+      bool restoreOnExit_;
     };
     
     // helper to get current file size:

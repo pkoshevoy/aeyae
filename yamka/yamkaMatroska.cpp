@@ -40,14 +40,102 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
+  // Segment::calcSize
+  // 
+  uint64
+  Segment::calcSize() const
+  {
+    uint64 size =
+      info_.calcSize() +
+      tracks_.calcSize() +
+      chapters_.calcSize() +
+      
+      eltsCalcSize(seekHeads_) +
+      eltsCalcSize(cues_) +
+      eltsCalcSize(attachments_) +
+      eltsCalcSize(tags_) +
+      eltsCalcSize(clusters_);
+    
+    return size;
+  }
+  
+  
+  //----------------------------------------------------------------
   // MatroskaDoc::MatroskaDoc
   // 
   MatroskaDoc::MatroskaDoc():
-    EbmlDoc()
+    EbmlDoc("matroska", 1, 1)
+  {}
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::isDefault
+  // 
+  bool
+  MatroskaDoc::isDefault() const
   {
-    EbmlDoc::head_.payload_.docType_.payload_.set(std::string("matroska"));
-    EbmlDoc::head_.payload_.docTypeVersion_.payload_.set(1);
-    EbmlDoc::head_.payload_.docTypeReadVersion_.payload_.set(1);
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::calcSize
+  // 
+  // calculate payload size:
+  uint64
+  MatroskaDoc::calcSize() const
+  {
+    uint64 size =
+      EbmlDoc::head_.calcSize() +
+      eltsCalcSize(segments_);
+    
+    return size;  
+  }
+
+  //----------------------------------------------------------------
+  // MatroskaDoc::save
+  // 
+  IStorage::IReceiptPtr
+  MatroskaDoc::save(IStorage & storage, Crc32 * crc) const
+  {
+    IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage, crc);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::load
+  // 
+  uint64
+  MatroskaDoc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    Bytes oneByte(1);
+    uint64 bytesRead = 0;
+    
+    // skip forward until we load EBML head element:
+    while (storageSize)
+    {
+      uint64 headSize = EbmlDoc::head_.load(storage, storageSize, crc);
+      if (headSize)
+      {
+        storageSize -= headSize;
+        bytesRead += headSize;
+        break;
+      }
+      
+      storage.load(oneByte);
+      storageSize--;
+    }
+    
+    // read Segments:
+    uint64 segmentsSize = eltsLoad(segments_, storage, storageSize, crc);
+    storageSize -= segmentsSize;
+    bytesRead += segmentsSize;
+    
+    // read whatever is left:
+    uint64 voidSize = EbmlPayload::load(storage, storageSize, crc);
+    storageSize -= voidSize;
+    bytesRead += voidSize;
+    
+    return bytesRead;
   }
   
 }

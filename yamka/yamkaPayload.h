@@ -43,24 +43,24 @@ namespace Yamka
     
     ~Payload() {}
     
+    // check whether payload holds default value:
+    bool isDefault() const
+    { return data_ == dataDefault_; }
+
+    // set default value and payload value:
     TSelf & setDefault(const TData & dataDefault)
     {
       dataDefault_ = dataDefault;
       data_ = dataDefault_;
       return *this;
     }
-    
+
+    // set payload value
     TSelf & set(const TData & data)
     {
       data_ = data;
       return *this;
     }
-    
-    bool isDefault() const
-    { return data_ == dataDefault_; }
-    
-    void setSize(uint64 size) const
-    { size_ = size; }
     
     TData dataDefault_;
     TData data_;
@@ -76,10 +76,16 @@ namespace Yamka
     
     VInt();
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
   };
   
   //----------------------------------------------------------------
@@ -91,10 +97,16 @@ namespace Yamka
     
     VUInt();
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
   };
   
   //----------------------------------------------------------------
@@ -106,10 +118,16 @@ namespace Yamka
 
     VFloat();
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
   };
 
   //----------------------------------------------------------------
@@ -124,14 +142,20 @@ namespace Yamka
     
     // constructor stores current time:
     VDate();
-    
+
     void setTime(std::time_t t);
     std::time_t getTime() const;
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
   };
   
   //----------------------------------------------------------------
@@ -143,10 +167,16 @@ namespace Yamka
   {
     typedef Payload<std::string> TSuper;
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
   };
   
   //----------------------------------------------------------------
@@ -163,15 +193,22 @@ namespace Yamka
     VBinary();
     
     VBinary & setStorage(const IStoragePtr & binStorage);
+    VBinary & setDefault(const Bytes & bytes);
     VBinary & set(const Bytes & bytes);
     
-    VBinary & setDefault(const Bytes & bytes);
+    // check whether payload holds default value:
     bool isDefault() const;
     
+    // calculate payload size:
     uint64 calcSize() const;
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    save(IStorage & storage, Crc32 * crc = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
     
     // data storage:
     static IStoragePtr defaultStorage_;
@@ -208,14 +245,17 @@ namespace Yamka
       return *this;
     }
     
+    // check whether payload holds default value:
     bool isDefault() const
     { return data_.empty(); }
     
+    // calculate payload size:
     uint64 calcSize() const
     { return fixedSize; }
     
+    // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const
+    save(IStorage & storage, Crc32 * crc = NULL) const
     {
       uint64 size = calcSize();
       
@@ -223,7 +263,15 @@ namespace Yamka
       bytes << vsizeEncode(size);
       bytes += data_;
       
-      return storage.saveAndCalcCrc32(bytes, computeCrc32);
+      return storage.saveAndCalcCrc32(bytes, crc);
+    }
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
+    {
+      // FIXME:
+      return 0;
     }
     
     // data storage:

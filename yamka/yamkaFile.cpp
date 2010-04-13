@@ -140,8 +140,62 @@ namespace Yamka
     
     TSharedFilePtr shared_;
   };
-
   
+  
+  //----------------------------------------------------------------
+  // File::Seek::Seek
+  // 
+  File::Seek::Seek(File & file):
+    file_(file),
+    prev_(file.absolutePosition()),
+    restoreOnExit_(true)
+  {}
+  
+  //----------------------------------------------------------------
+  // File::Seek::Seek
+  // 
+  File::Seek::Seek(File & file, TOff offset, PositionReference relativeTo):
+    file_(file),
+    prev_(file.absolutePosition()),
+    restoreOnExit_(true)
+  {
+    seek(offset, relativeTo);
+  }
+  
+  //----------------------------------------------------------------
+  // File::Seek::~Seek
+  // 
+  File::Seek::~Seek()
+  {
+    if (restoreOnExit_)
+    {
+      seek(prev_, ABSOLUTE);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // File::Seek::doNotRestore
+  // 
+  void
+  File::Seek::doNotRestore()
+  {
+    restoreOnExit_ = false;
+  }
+  
+  //----------------------------------------------------------------
+  // File::Seek::seek
+  // 
+  void
+  File::Seek::seek(TOff offset, PositionReference relativeTo)
+  {
+    if (!file_.seek(offset, relativeTo))
+    {
+      std::runtime_error e(std::string("failed to seek"));
+      throw e;
+    }
+  }
+  
+    
   //----------------------------------------------------------------
   // File::~File
   // 
@@ -241,7 +295,10 @@ namespace Yamka
   bool
   File::read(void * destination, std::size_t numBytes)
   {
-    size_t bytesRead = fread(destination, 1, numBytes, private_->shared_->file_);
+    size_t bytesRead = fread(destination,
+                             1,
+                             numBytes,
+                             private_->shared_->file_);
     return bytesRead == numBytes;
   }
   

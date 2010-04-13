@@ -11,6 +11,8 @@
 
 // yamka includes:
 #include <yamkaBytes.h>
+#include <yamkaCrc32.h>
+#include <yamkaIStorage.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -46,6 +48,21 @@ namespace Yamka
   // 
   extern TByteVec
   vsizeEncode(uint64 vsize);
+  
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  // helper function for loading and decoding a payload size
+  // descriptor from a storage stream
+  // 
+  extern uint64
+  vsizeDecode(IStorage & storage, Crc32 * computeCrc32 = NULL);
+  
+  //----------------------------------------------------------------
+  // loadEbmlId
+  // 
+  extern uint64
+  loadEbmlId(IStorage & storage, Crc32 * crc = NULL);
   
   //----------------------------------------------------------------
   // uintDecode

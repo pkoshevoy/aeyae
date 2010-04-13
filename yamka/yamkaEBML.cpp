@@ -14,6 +14,76 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
+  // EbmlPayload::isDefault
+  // 
+  bool
+  EbmlPayload::isDefault() const
+  {
+    uint64 size = calcSize();
+    return size == 0;
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlPayload::calcSize
+  // 
+  // calculate payload size:
+  uint64
+  EbmlPayload::calcSize() const
+  {
+    // shortcuts -- I wish I could use typeof(..) or decltype(..) instead
+    typedef TypeOfElts(VBinary, kIdVoid, "Void") TVoids;
+    typedef TVoids::value_type TVoid;
+    
+    return eltsCalcSize(voids_);
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlPayload::save
+  // 
+  IStorage::IReceiptPtr
+  EbmlPayload::save(IStorage & storage, Crc32 * crc) const
+  {
+    return eltsSave(voids_, storage, crc);
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlPayload::load
+  // 
+  uint64
+  EbmlPayload::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    // shortcut:
+    typedef TypeOfElt(VBinary, kIdVoid, "Void") TVoid;
+    
+    voids_.clear();
+    aliens_.clear();
+    
+    uint64 bytesRead = 0;
+    while (storageSize)
+    {
+      TVoid eltVoid;
+      uint64 voidSize = eltVoid.load(storage, storageSize, crc);
+      
+      if (voidSize)
+      {
+        voids_.push_back(eltVoid);
+        bytesRead += voidSize;
+        storageSize -= voidSize;
+      }
+      else
+      {
+        VBinary alien;
+        alien.load(storage, storageSize, crc);
+        bytesRead += storageSize;
+        storageSize = 0;
+      }
+    }
+    
+    return bytesRead;
+  }
+  
+  
+  //----------------------------------------------------------------
   // EbmlHead::EbmlHead
   // 
   EbmlHead::EbmlHead()
@@ -22,6 +92,9 @@ namespace Yamka
     readVersion_.alwaysSave().payload_.setDefault(1);
     maxIdLength_.payload_.setDefault(4);
     maxSizeLength_.payload_.setDefault(8);
+    version_.alwaysSave();
+    docTypeVersion_.alwaysSave();
+    docTypeReadVersion_.alwaysSave();
   }
   
   //----------------------------------------------------------------
@@ -71,12 +144,18 @@ namespace Yamka
     return receipt;
   }
   
-
+  
   //----------------------------------------------------------------
   // EbmlDoc::EbmlDoc
   // 
-  EbmlDoc::EbmlDoc()
-  {}
+  EbmlDoc::EbmlDoc(const char * docType,
+                   uint64 docTypeVersion,
+                   uint64 docTypeReadVersion)
+  {
+    head_.payload_.docType_.payload_.set(std::string(docType));
+    head_.payload_.docTypeVersion_.payload_.set(docTypeVersion);
+    head_.payload_.docTypeReadVersion_.payload_.set(docTypeReadVersion);
+  }
 
   //----------------------------------------------------------------
   // EbmlDoc::calcSize
@@ -84,7 +163,8 @@ namespace Yamka
   uint64
   EbmlDoc::calcSize() const
   {
-    uint64 size = head_.calcSize();
+    uint64 size = head_.calcSize() + EbmlPayload::calcSize();
+    
     return size;
   }
   

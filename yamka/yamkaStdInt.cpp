@@ -17,6 +17,21 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
+  // maxUInt
+  // 
+  static const uint64 maxUInt[] = {
+    0x0,
+    0xFF,
+    0xFFFF,
+    0xFFFFFF,
+    0xFFFFFFFF,
+    0xFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFFFLLU,
+    0xFFFFFFFFFFFFFFFFLLU
+  };
+  
+  //----------------------------------------------------------------
   // vsizeNumBytes
   // 
   unsigned int
@@ -171,21 +186,90 @@ namespace Yamka
     
     return v;
   }
+
+  //----------------------------------------------------------------
+  // vsizeLoad
+  // 
+  // helper function for loading a vsize unsigned integer
+  // from a storage stream
+  // 
+  static bool
+  vsizeLoad(TByteVec & v,
+            IStorage & storage,
+            Crc32 * crc,
+            unsigned int maxBytes)
+  {
+    Bytes vsize(1);
+    if (!storage.loadAndCalcCrc32(vsize, crc))
+    {
+      return false;
+    }
+    
+    // find how many bytes remain to be read:
+    const TByte firstByte = vsize[0];
+    TByte leadingBitsMask = 1 << 7;
+    unsigned int numBytesToLoad = 0;
+    for (; numBytesToLoad < maxBytes; numBytesToLoad++)
+    {
+      if (firstByte & leadingBitsMask)
+      {
+        break;
+      }
+      
+      leadingBitsMask >>= 1;
+    }
+    
+    if (numBytesToLoad > maxBytes - 1)
+    {
+      return false;
+    }
+    
+    // load the remaining vsize bytes:
+    Bytes bytes(numBytesToLoad);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
+    {
+      return false;
+    }
+    
+    v = TByteVec(vsize + bytes);
+    return true;
+  }
   
   //----------------------------------------------------------------
-  // maxInt
+  // vsizeDecode
   // 
-  static const uint64 maxUInt[] = {
-    0x0,
-    0xFF,
-    0xFFFF,
-    0xFFFFFF,
-    0xFFFFFFFF,
-    0xFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFFFFFLLU
-  };
+  // helper function for loading and decoding a payload size
+  // descriptor from a storage stream
+  // 
+  uint64
+  vsizeDecode(IStorage & storage, Crc32 * crc)
+  {
+    TByteVec v;
+    if (vsizeLoad(v, storage, crc, 8))
+    {
+      return vsizeDecode(v);
+    }
+
+    // invalid vsize or vsize insufficient storage:
+    return maxUInt[8];
+  }
+  
+  //----------------------------------------------------------------
+  // loadEbmlId
+  // 
+  uint64
+  loadEbmlId(IStorage & storage, Crc32 * crc)
+  {
+    TByteVec v;
+    if (vsizeLoad(v, storage, crc, 4))
+    {
+      return uintDecode(v, v.size());
+    }
+    
+    // invalid EBML ID or insufficient storage:
+    return 0;
+  }
+  
   
   //----------------------------------------------------------------
   // uintDecode

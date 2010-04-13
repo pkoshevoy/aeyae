@@ -13,6 +13,7 @@
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
 #include <yamkaCrc32.h>
+#include <yamkaFileStorage.h>
 
 // system includes:
 #include <deque>
@@ -22,17 +23,135 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // declareEbmlPayloadAPI
+  /*
+    
+    // check whether payload holds default value:
+    bool isDefault() const;
+    
+    // calculate payload size:
+    uint64 calcSize() const;
+    
+    // save the payload and return storage receipt:
+    IStorage::IReceiptPtr
+    save(IStorage & storage, Crc32 * crc32 = NULL) const;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    uint64
+    load(FileStorage & storage, uint64 storageSize, Crc32 * crc32 = NULL);
+    
+  */
+# define declareEbmlPayloadAPI()                                        \
+  bool isDefault() const;                                               \
+  uint64 calcSize() const;                                              \
+  IStorage::IReceiptPtr save(IStorage & storage,                        \
+                             Crc32 * computeCrc32 = NULL) const;        \
+  uint64 load(FileStorage & storage,                                    \
+              uint64 storageSize,                                       \
+              Crc32 * computeCrc32 = NULL)
+  
+  //----------------------------------------------------------------
+  // eltsCalcSize
+  // 
+  // A helper function for calculating payload size of a set of elements
+  // 
+  template <typename elts_t>
+  uint64
+  eltsCalcSize(const elts_t & elts)
+  {
+    typedef typename elts_t::value_type elt_t;
+    typedef typename elts_t::const_iterator const_iter_t;
+    
+    uint64 size = 0;
+    for (const_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      const elt_t & elt = *i;
+      size += elt.calcSize();
+    }
+    
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // eltsSave
+  // 
+  // A helper function for saving a set of elements
+  // 
+  template <typename elts_t>
+  IStorage::IReceiptPtr
+  eltsSave(const elts_t & elts,
+           IStorage & storage,
+           Crc32 * crc)
+  {
+    typedef typename elts_t::value_type elt_t;
+    typedef typename elts_t::const_iterator const_iter_t;
+    
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    for (const_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      const elt_t & elt = *i;
+      elt.save(storage, crc);
+    }
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // eltsLoad
+  // 
+  // A helper function for loading a set of elements
+  // 
+  template <typename elts_t>
+  uint64
+  eltsLoad(elts_t & elts,
+           FileStorage & storage,
+           uint64 storageSize,
+           Crc32 * crc)
+  {
+    typedef typename elts_t::value_type elt_t;
+    
+    elts.clear();
+    uint64 bytesRead = 0;
+    while (storageSize)
+    {
+      elt_t elt;
+      uint64 eltSize = elt.load(storage, storageSize, crc);
+      if (!eltSize)
+      {
+        break;
+      }
+      
+      elts.push_back(elt);
+      bytesRead += eltSize;
+      storageSize -= eltSize;
+    }
+    
+    return bytesRead;
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlPayload
+  // 
+  // A helper base class used by all container elements
+  // to store Void elements and unrecognized alien data
+  // 
+  struct EbmlPayload
+  {
+    Elts(VBinary, kIdVoid, "Void") voids_;
+    std::deque<VBinary> aliens_;
+    
+  protected:
+    declareEbmlPayloadAPI();
+  };
+  
+  //----------------------------------------------------------------
   // EbmlHead
   // 
-  struct EbmlHead
+  struct EbmlHead : public EbmlPayload
   {
     EbmlHead();
     
-    uint64 calcSize() const;
-    bool isDefault() const;
-    
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    declareEbmlPayloadAPI();
     
     Elt(VUInt, 0x4286, "EBMLVersion") version_;
     Elt(VUInt, 0x42F7, "EBMLReadVersion") readVersion_;
@@ -46,18 +165,15 @@ namespace Yamka
   //----------------------------------------------------------------
   // EbmlDoc
   // 
-  struct EbmlDoc
+  struct EbmlDoc : public EbmlPayload
   {
-    EbmlDoc();
+    EbmlDoc(const char * docType = "",
+            uint64 docTypeVersion = 1,
+            uint64 docTypeReadVersion = 1);
     
-    uint64 calcSize() const;
-    bool isDefault() const;
-    
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * computeCrc32 = NULL) const;
+    declareEbmlPayloadAPI();
     
     Elt(EbmlHead, 0x1A45DFA3, "EBML") head_;
-    Elts(VBinary, 0xEC, "Void") voids_;
   };
   
 }

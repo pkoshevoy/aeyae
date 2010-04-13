@@ -38,7 +38,7 @@ namespace Yamka
   // VInt::save
   // 
   IStorage::IReceiptPtr
-  VInt::save(IStorage & storage, Crc32 * computeCrc32) const
+  VInt::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
     
@@ -46,7 +46,7 @@ namespace Yamka
     bytes << vsizeEncode(size)
 	  << intEncode(TSuper::data_);
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
   }
 
 
@@ -72,7 +72,7 @@ namespace Yamka
   // VUInt::save
   // 
   IStorage::IReceiptPtr
-  VUInt::save(IStorage & storage, Crc32 * computeCrc32) const
+  VUInt::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
     
@@ -80,7 +80,22 @@ namespace Yamka
     bytes << vsizeEncode(size)
 	  << uintEncode(TSuper::data_);
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
+  }
+  
+  //----------------------------------------------------------------
+  // VUInt::load
+  // 
+  uint64
+  VUInt::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 numBytes = vsizeDecode(storage, crc);
+    
+    Bytes bytes(numBytes);
+    storage.loadAndCalcCrc32(bytes, crc);
+    
+    uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
+    return bytesRead;
   }
 
 
@@ -107,7 +122,7 @@ namespace Yamka
   // VFloat::save
   // 
   IStorage::IReceiptPtr
-  VFloat::save(IStorage & storage, Crc32 * computeCrc32) const
+  VFloat::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
     
@@ -123,7 +138,7 @@ namespace Yamka
       bytes << doubleEncode(TSuper::data_);
     }
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
   }
 
   //----------------------------------------------------------------
@@ -176,7 +191,7 @@ namespace Yamka
   // VDate::save
   // 
   IStorage::IReceiptPtr
-  VDate::save(IStorage & storage, Crc32 * computeCrc32) const
+  VDate::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
     
@@ -184,7 +199,7 @@ namespace Yamka
     bytes << vsizeEncode(size)
           << intEncode(TSuper::data_, size);
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
 }
   
   
@@ -201,7 +216,7 @@ namespace Yamka
   // VString::save
   // 
   IStorage::IReceiptPtr
-  VString::save(IStorage & storage, Crc32 * computeCrc32) const
+  VString::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
     
@@ -209,7 +224,7 @@ namespace Yamka
     bytes << vsizeEncode(size)
 	  << TSuper::data_;
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
   }
   
   
@@ -328,7 +343,7 @@ namespace Yamka
   // VBinary::save
   // 
   IStorage::IReceiptPtr
-  VBinary::save(IStorage & storage, Crc32 * computeCrc32) const
+  VBinary::save(IStorage & storage, Crc32 * crc) const
   {
     if (!binReceipt_)
     {
@@ -348,7 +363,7 @@ namespace Yamka
     bytes << vsizeEncode(size);
     bytes += data;
     
-    return storage.saveAndCalcCrc32(bytes, computeCrc32);
+    return storage.saveAndCalcCrc32(bytes, crc);
   }
   
 }

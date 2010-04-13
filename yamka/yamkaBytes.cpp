@@ -33,6 +33,24 @@ namespace Yamka
   Bytes::Bytes(const TByteVec & byteVec):
     bytes_(new TByteVecDec(1, byteVec))
   {}
+
+  //----------------------------------------------------------------
+  // Bytes::operator TByteVec
+  // 
+  Bytes::operator TByteVec() const
+  {
+    TByteVec dstVec;
+    dstVec.reserve(size());
+    
+    const TByteVecDec & deq = *bytes_;
+    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
+    {
+      const TByteVec & vec = *i;
+      dstVec.insert(dstVec.end(), vec.begin(), vec.end());
+    }
+    
+    return dstVec;
+  }
   
   //----------------------------------------------------------------
   // Bytes::deepCopy
@@ -40,21 +58,11 @@ namespace Yamka
   Bytes &
   Bytes::deepCopy(const Bytes & bytes)
   {
-    const std::size_t newSize = bytes.size();
+    TByteVecDec & deq = *bytes_;
+    deq.resize(1);
     
-    TByteVecDec & dstDeq = *bytes_;
-    dstDeq.resize(1);
-    
-    TByteVec & dstVec = dstDeq.back();
-    dstVec.reserve(newSize);
-    dstVec.clear();
-    
-    const TByteVecDec & deq = *(bytes.bytes_);
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      const TByteVec & vec = *i;
-      dstVec.insert(dstVec.end(), vec.begin(), vec.end());
-    }
+    TByteVec & vec = deq.back();
+    vec = TByteVec(bytes);
     
     return *this;
   }
