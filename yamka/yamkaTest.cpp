@@ -140,6 +140,36 @@ main(int argc, char ** argv)
               << crc32.checksum()
               << std::dec
               << std::endl;
+    
+    FileStorage mkvOut(std::string("testYamkaOut.mkv"), File::kReadWrite);
+    if (!mkvOut.file_.isOpen())
+    {
+      std::cerr << "ERROR: failed to open " << mkvOut.file_.filename()
+                << " to read/write"
+                << std::endl;
+      ::exit(1);
+    }
+    else
+    {
+      uint64 mkvOutSize = mkvOut.file_.size();
+      std::cout << "opened (rw) " << mkvOut.file_.filename()
+              << ", file size: " << mkvOutSize
+                << std::endl;
+      
+      Crc32 crc32out;
+      FileStorage::IReceiptPtr receipt = doc.save(mkvOut, &crc32out);
+      
+      if (receipt)
+      {
+        std::cout << "stored " << doc.calcSize()
+                  << " bytes, checksum: "
+                  << std::hex
+                  << std::uppercase
+                  << crc32out.checksum()
+                  << std::dec
+                  << std::endl;
+      }
+    }
   }
   
   return 0;
