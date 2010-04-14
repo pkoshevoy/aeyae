@@ -60,6 +60,8 @@ namespace Yamka
   uint64
   ChapTranslate::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -67,19 +69,20 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= editionUID_.load(storage, storageSize, crc);
-      storageSize -= chapTransCodec_.load(storage, storageSize, crc);
-      storageSize -= chapTransID_.load(storage, storageSize, crc);
+      bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= chapTransCodec_.load(storage, bytesToRead, crc);
+      bytesToRead -= chapTransID_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -175,6 +178,8 @@ namespace Yamka
   uint64
   SegInfo::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -182,30 +187,31 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= segUID_.load(storage, storageSize, crc);
-      storageSize -= segFilename_.load(storage, storageSize, crc);
-      storageSize -= prevUID_.load(storage, storageSize, crc);
-      storageSize -= prevFilename_.load(storage, storageSize, crc);
-      storageSize -= nextUID_.load(storage, storageSize, crc);
-      storageSize -= nextFilename_.load(storage, storageSize, crc);
-      storageSize -= familyUID_.load(storage, storageSize, crc);
-      storageSize -= chapTranslate_.load(storage, storageSize, crc);
-      storageSize -= timecodeScale_.load(storage, storageSize, crc);
-      storageSize -= duration_.load(storage, storageSize, crc);
-      storageSize -= date_.load(storage, storageSize, crc);
-      storageSize -= title_.load(storage, storageSize, crc);
-      storageSize -= muxingApp_.load(storage, storageSize, crc);
-      storageSize -= writingApp_.load(storage, storageSize, crc);
+      bytesToRead -= segUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= segFilename_.load(storage, bytesToRead, crc);
+      bytesToRead -= prevUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= prevFilename_.load(storage, bytesToRead, crc);
+      bytesToRead -= nextUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= nextFilename_.load(storage, bytesToRead, crc);
+      bytesToRead -= familyUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= chapTranslate_.load(storage, bytesToRead, crc);
+      bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
+      bytesToRead -= duration_.load(storage, bytesToRead, crc);
+      bytesToRead -= date_.load(storage, bytesToRead, crc);
+      bytesToRead -= title_.load(storage, bytesToRead, crc);
+      bytesToRead -= muxingApp_.load(storage, bytesToRead, crc);
+      bytesToRead -= writingApp_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -259,6 +265,8 @@ namespace Yamka
   uint64
   TrackTranslate::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -266,19 +274,20 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= editionUID_.load(storage, storageSize, crc);
-      storageSize -= trackTransCodec_.load(storage, storageSize, crc);
-      storageSize -= trackTransID_.load(storage, storageSize, crc);
+      bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackTransCodec_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackTransID_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -376,6 +385,8 @@ namespace Yamka
   uint64
   Video::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -383,31 +394,32 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= flagInterlaced_.load(storage, storageSize, crc);
-      storageSize -= stereoMode_.load(storage, storageSize, crc);
-      storageSize -= pixelWidth_.load(storage, storageSize, crc);
-      storageSize -= pixelHeight_.load(storage, storageSize, crc);
-      storageSize -= pixelCropBottom_.load(storage, storageSize, crc);
-      storageSize -= pixelCropTop_.load(storage, storageSize, crc);
-      storageSize -= pixelCropLeft_.load(storage, storageSize, crc);
-      storageSize -= pixelCropRight_.load(storage, storageSize, crc);
-      storageSize -= displayWidth_.load(storage, storageSize, crc);
-      storageSize -= displayHeight_.load(storage, storageSize, crc);
-      storageSize -= displayUnits_.load(storage, storageSize, crc);
-      storageSize -= aspectRatioType_.load(storage, storageSize, crc);
-      storageSize -= colorSpace_.load(storage, storageSize, crc);
-      storageSize -= gammaValue_.load(storage, storageSize, crc);
-      storageSize -= frameRate_.load(storage, storageSize, crc);
+      bytesToRead -= flagInterlaced_.load(storage, bytesToRead, crc);
+      bytesToRead -= stereoMode_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelWidth_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelHeight_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelCropBottom_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelCropTop_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelCropLeft_.load(storage, bytesToRead, crc);
+      bytesToRead -= pixelCropRight_.load(storage, bytesToRead, crc);
+      bytesToRead -= displayWidth_.load(storage, bytesToRead, crc);
+      bytesToRead -= displayHeight_.load(storage, bytesToRead, crc);
+      bytesToRead -= displayUnits_.load(storage, bytesToRead, crc);
+      bytesToRead -= aspectRatioType_.load(storage, bytesToRead, crc);
+      bytesToRead -= colorSpace_.load(storage, bytesToRead, crc);
+      bytesToRead -= gammaValue_.load(storage, bytesToRead, crc);
+      bytesToRead -= frameRate_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -476,6 +488,8 @@ namespace Yamka
   uint64
   Audio::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -483,21 +497,22 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= sampFreq_.load(storage, storageSize, crc);
-      storageSize -= sampFreqOut_.load(storage, storageSize, crc);
-      storageSize -= channels_.load(storage, storageSize, crc);
-      storageSize -= channelPositions_.load(storage, storageSize, crc);
-      storageSize -= bitDepth_.load(storage, storageSize, crc);
+      bytesToRead -= sampFreq_.load(storage, bytesToRead, crc);
+      bytesToRead -= sampFreqOut_.load(storage, bytesToRead, crc);
+      bytesToRead -= channels_.load(storage, bytesToRead, crc);
+      bytesToRead -= channelPositions_.load(storage, bytesToRead, crc);
+      bytesToRead -= bitDepth_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -548,6 +563,8 @@ namespace Yamka
   uint64
   ContentCompr::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -555,18 +572,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= algo_.load(storage, storageSize, crc);
-      storageSize -= settings_.load(storage, storageSize, crc);
+      bytesToRead -= algo_.load(storage, bytesToRead, crc);
+      bytesToRead -= settings_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -629,6 +647,8 @@ namespace Yamka
   uint64
   ContentEncrypt::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -636,22 +656,23 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= encAlgo_.load(storage, storageSize, crc);
-      storageSize -= encKeyID_.load(storage, storageSize, crc);
-      storageSize -= signature_.load(storage, storageSize, crc);
-      storageSize -= sigKeyID_.load(storage, storageSize, crc);
-      storageSize -= sigAlgo_.load(storage, storageSize, crc);
-      storageSize -= sigHashAlgo_.load(storage, storageSize, crc);
+      bytesToRead -= encAlgo_.load(storage, bytesToRead, crc);
+      bytesToRead -= encKeyID_.load(storage, bytesToRead, crc);
+      bytesToRead -= signature_.load(storage, bytesToRead, crc);
+      bytesToRead -= sigKeyID_.load(storage, bytesToRead, crc);
+      bytesToRead -= sigAlgo_.load(storage, bytesToRead, crc);
+      bytesToRead -= sigHashAlgo_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -711,6 +732,8 @@ namespace Yamka
   uint64
   ContentEnc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -718,21 +741,22 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= order_.load(storage, storageSize, crc);
-      storageSize -= scope_.load(storage, storageSize, crc);
-      storageSize -= type_.load(storage, storageSize, crc);
-      storageSize -= compression_.load(storage, storageSize, crc);
-      storageSize -= encryption_.load(storage, storageSize, crc);
+      bytesToRead -= order_.load(storage, bytesToRead, crc);
+      bytesToRead -= scope_.load(storage, bytesToRead, crc);
+      bytesToRead -= type_.load(storage, bytesToRead, crc);
+      bytesToRead -= compression_.load(storage, bytesToRead, crc);
+      bytesToRead -= encryption_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -770,9 +794,33 @@ namespace Yamka
   // ContentEncodings::load
   // 
   uint64
-  ContentEncodings::load(FileStorage & storage, uint64 storageSz, Crc32 * crc)
+  ContentEncodings::
+  load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(encodings_, storage, storageSz, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(encodings_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -898,6 +946,8 @@ namespace Yamka
   uint64
   Track::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -905,44 +955,45 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= trackNumber_.load(storage, storageSize, crc);
-      storageSize -= trackUID_.load(storage, storageSize, crc);
-      storageSize -= trackType_.load(storage, storageSize, crc);
-      storageSize -= flagEnabled_.load(storage, storageSize, crc);
-      storageSize -= flagDefault_.load(storage, storageSize, crc);
-      storageSize -= flagForced_.load(storage, storageSize, crc);
-      storageSize -= flagLacing_.load(storage, storageSize, crc);
-      storageSize -= minCache_.load(storage, storageSize, crc);
-      storageSize -= maxCache_.load(storage, storageSize, crc);
-      storageSize -= frameDuration_.load(storage, storageSize, crc);
-      storageSize -= timecodeScale_.load(storage, storageSize, crc);
-      storageSize -= trackOffset_.load(storage, storageSize, crc);
-      storageSize -= maxBlockAddID_.load(storage, storageSize, crc);
-      storageSize -= name_.load(storage, storageSize, crc);
-      storageSize -= language_.load(storage, storageSize, crc);
-      storageSize -= codecID_.load(storage, storageSize, crc);
-      storageSize -= codecPrivate_.load(storage, storageSize, crc);
-      storageSize -= codecName_.load(storage, storageSize, crc);
-      storageSize -= attachmentLink_.load(storage, storageSize, crc);
-      storageSize -= codecSettings_.load(storage, storageSize, crc);
-      storageSize -= codecInfoURL_.load(storage, storageSize, crc);
-      storageSize -= codecDownloadURL_.load(storage, storageSize, crc);
-      storageSize -= codecDecodeAll_.load(storage, storageSize, crc);
-      storageSize -= trackOverlay_.load(storage, storageSize, crc);
-      storageSize -= trackTranslate_.load(storage, storageSize, crc);
-      storageSize -= video_.load(storage, storageSize, crc);
-      storageSize -= audio_.load(storage, storageSize, crc);
-      storageSize -= contentEncs_.load(storage, storageSize, crc);
+      bytesToRead -= trackNumber_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackType_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagEnabled_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagForced_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagLacing_.load(storage, bytesToRead, crc);
+      bytesToRead -= minCache_.load(storage, bytesToRead, crc);
+      bytesToRead -= maxCache_.load(storage, bytesToRead, crc);
+      bytesToRead -= frameDuration_.load(storage, bytesToRead, crc);
+      bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackOffset_.load(storage, bytesToRead, crc);
+      bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, crc);
+      bytesToRead -= name_.load(storage, bytesToRead, crc);
+      bytesToRead -= language_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecID_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecPrivate_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecName_.load(storage, bytesToRead, crc);
+      bytesToRead -= attachmentLink_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecSettings_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecInfoURL_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackOverlay_.load(storage, bytesToRead, crc);
+      bytesToRead -= trackTranslate_.load(storage, bytesToRead, crc);
+      bytesToRead -= video_.load(storage, bytesToRead, crc);
+      bytesToRead -= audio_.load(storage, bytesToRead, crc);
+      bytesToRead -= contentEncs_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -982,7 +1033,30 @@ namespace Yamka
   uint64
   Tracks::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(tracks_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -1036,6 +1110,8 @@ namespace Yamka
   uint64
   CueRef::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1043,20 +1119,21 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= time_.load(storage, storageSize, crc);
-      storageSize -= cluster_.load(storage, storageSize, crc);
-      storageSize -= block_.load(storage, storageSize, crc);
-      storageSize -= codecState_.load(storage, storageSize, crc);
+      bytesToRead -= time_.load(storage, bytesToRead, crc);
+      bytesToRead -= cluster_.load(storage, bytesToRead, crc);
+      bytesToRead -= block_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1116,6 +1193,8 @@ namespace Yamka
   uint64
   CueTrkPos::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1123,21 +1202,22 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= track_.load(storage, storageSize, crc);
-      storageSize -= cluster_.load(storage, storageSize, crc);
-      storageSize -= block_.load(storage, storageSize, crc);
-      storageSize -= codecState_.load(storage, storageSize, crc);
-      storageSize -= ref_.load(storage, storageSize, crc);
+      bytesToRead -= track_.load(storage, bytesToRead, crc);
+      bytesToRead -= cluster_.load(storage, bytesToRead, crc);
+      bytesToRead -= block_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+      bytesToRead -= ref_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1188,6 +1268,8 @@ namespace Yamka
   uint64
   CuePoint::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1195,18 +1277,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= time_.load(storage, storageSize, crc);
-      storageSize -= eltsLoad(trkPosns_, storage, storageSize, crc);
+      bytesToRead -= time_.load(storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1246,7 +1329,30 @@ namespace Yamka
   uint64
   Cues::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(points_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(points_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -1294,6 +1400,8 @@ namespace Yamka
   uint64
   SeekEntry::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1301,18 +1409,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= id_.load(storage, storageSize, crc);
-      storageSize -= position_.load(storage, storageSize, crc);
+      bytesToRead -= id_.load(storage, bytesToRead, crc);
+      bytesToRead -= position_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1352,7 +1461,30 @@ namespace Yamka
   uint64
   SeekHead::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(seek_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(seek_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -1412,6 +1544,8 @@ namespace Yamka
   uint64
   AttdFile::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1419,22 +1553,23 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= description_.load(storage, storageSize, crc);
-      storageSize -= filename_.load(storage, storageSize, crc);
-      storageSize -= mimeType_.load(storage, storageSize, crc);
-      storageSize -= data_.load(storage, storageSize, crc);
-      storageSize -= fileUID_.load(storage, storageSize, crc);
-      storageSize -= referral_.load(storage, storageSize, crc);
+      bytesToRead -= description_.load(storage, bytesToRead, crc);
+      bytesToRead -= filename_.load(storage, bytesToRead, crc);
+      bytesToRead -= mimeType_.load(storage, bytesToRead, crc);
+      bytesToRead -= data_.load(storage, bytesToRead, crc);
+      bytesToRead -= fileUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= referral_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1474,7 +1609,30 @@ namespace Yamka
   uint64
   Attachments::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(files_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(files_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -1511,7 +1669,30 @@ namespace Yamka
   uint64
   ChapTrk::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(tracks_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -1562,6 +1743,8 @@ namespace Yamka
   uint64
   ChapDisp::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1569,19 +1752,20 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= string_.load(storage, storageSize, crc);
-      storageSize -= language_.load(storage, storageSize, crc);
-      storageSize -= country_.load(storage, storageSize, crc);
+      bytesToRead -= string_.load(storage, bytesToRead, crc);
+      bytesToRead -= language_.load(storage, bytesToRead, crc);
+      bytesToRead -= country_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1632,6 +1816,8 @@ namespace Yamka
   uint64
   ChapProcCmd::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1639,18 +1825,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= time_.load(storage, storageSize, crc);
-      storageSize -= data_.load(storage, storageSize, crc);
+      bytesToRead -= time_.load(storage, bytesToRead, crc);
+      bytesToRead -= data_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1705,6 +1892,8 @@ namespace Yamka
   uint64
   ChapProc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1712,20 +1901,21 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= codecID_.load(storage, storageSize, crc);
-      storageSize -= procPrivate_.load(storage, storageSize, crc);
+      bytesToRead -= codecID_.load(storage, bytesToRead, crc);
+      bytesToRead -= procPrivate_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(cmds_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(cmds_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1804,6 +1994,8 @@ namespace Yamka
   uint64
   ChapAtom::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1811,28 +2003,29 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= UID_.load(storage, storageSize, crc);
-      storageSize -= timeStart_.load(storage, storageSize, crc);
-      storageSize -= timeEnd_.load(storage, storageSize, crc);
-      storageSize -= hidden_.load(storage, storageSize, crc);
-      storageSize -= enabled_.load(storage, storageSize, crc);
-      storageSize -= segUID_.load(storage, storageSize, crc);
-      storageSize -= segEditionUID_.load(storage, storageSize, crc);
-      storageSize -= physEquiv_.load(storage, storageSize, crc);
-      storageSize -= tracks_.load(storage, storageSize, crc);
+      bytesToRead -= UID_.load(storage, bytesToRead, crc);
+      bytesToRead -= timeStart_.load(storage, bytesToRead, crc);
+      bytesToRead -= timeEnd_.load(storage, bytesToRead, crc);
+      bytesToRead -= hidden_.load(storage, bytesToRead, crc);
+      bytesToRead -= enabled_.load(storage, bytesToRead, crc);
+      bytesToRead -= segUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= segEditionUID_.load(storage, bytesToRead, crc);
+      bytesToRead -= physEquiv_.load(storage, bytesToRead, crc);
+      bytesToRead -= tracks_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(display_, storage, storageSize, crc);
-      storageSize -= eltsLoad(process_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(display_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(process_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1893,6 +2086,8 @@ namespace Yamka
   uint64
   Edition::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -1900,22 +2095,23 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= UID_.load(storage, storageSize, crc);
-      storageSize -= flagHidden_.load(storage, storageSize, crc);
-      storageSize -= flagDefault_.load(storage, storageSize, crc);
-      storageSize -= flagOrdered_.load(storage, storageSize, crc);
+      bytesToRead -= UID_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagHidden_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
+      bytesToRead -= flagOrdered_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(chapAtoms_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -1955,7 +2151,30 @@ namespace Yamka
   uint64
   Chapters::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(editions_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(editions_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -2016,6 +2235,8 @@ namespace Yamka
   uint64
   TagTargets::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2023,23 +2244,24 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= typeValue_.load(storage, storageSize, crc);
-      storageSize -= type_.load(storage, storageSize, crc);
+      bytesToRead -= typeValue_.load(storage, bytesToRead, crc);
+      bytesToRead -= type_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(trackUIDs_, storage, storageSize, crc);
-      storageSize -= eltsLoad(editionUIDs_, storage, storageSize, crc);
-      storageSize -= eltsLoad(chapterUIDs_, storage, storageSize, crc);
-      storageSize -= eltsLoad(attachmentUIDs_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2099,6 +2321,8 @@ namespace Yamka
   uint64
   SimpleTag::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2106,21 +2330,22 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= name_.load(storage, storageSize, crc);
-      storageSize -= lang_.load(storage, storageSize, crc);
-      storageSize -= default_.load(storage, storageSize, crc);
-      storageSize -= string_.load(storage, storageSize, crc);
-      storageSize -= binary_.load(storage, storageSize, crc);
+      bytesToRead -= name_.load(storage, bytesToRead, crc);
+      bytesToRead -= lang_.load(storage, bytesToRead, crc);
+      bytesToRead -= default_.load(storage, bytesToRead, crc);
+      bytesToRead -= string_.load(storage, bytesToRead, crc);
+      bytesToRead -= binary_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2171,6 +2396,8 @@ namespace Yamka
   uint64
   Tag::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2178,18 +2405,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= targets_.load(storage, storageSize, crc);
-      storageSize -= eltsLoad(simpleTags_, storage, storageSize, crc);
+      bytesToRead -= targets_.load(storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2229,7 +2457,30 @@ namespace Yamka
   uint64
   Tags::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(tags_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -2266,7 +2517,30 @@ namespace Yamka
   uint64
   SilentTracks::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(tracks_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -2314,6 +2588,8 @@ namespace Yamka
   uint64
   BlockMore::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2321,18 +2597,19 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= blockAddID_.load(storage, storageSize, crc);
-      storageSize -= blockAdditional_.load(storage, storageSize, crc);
+      bytesToRead -= blockAddID_.load(storage, bytesToRead, crc);
+      bytesToRead -= blockAdditional_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2372,7 +2649,30 @@ namespace Yamka
   uint64
   BlockAdditions::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    return eltsLoad(more_, storage, storageSize, crc);
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(more_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -2430,6 +2730,8 @@ namespace Yamka
   uint64
   BlockGroup::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2437,25 +2739,26 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= duration_.load(storage, storageSize, crc);
-      storageSize -= block_.load(storage, storageSize, crc);
-      storageSize -= eltsLoad(blockVirtual_, storage, storageSize, crc);
-      storageSize -= additions_.load(storage, storageSize, crc);
-      storageSize -= refPriority_.load(storage, storageSize, crc);
-      storageSize -= eltsLoad(refBlock_, storage, storageSize, crc);
-      storageSize -= refVirtual_.load(storage, storageSize, crc);
-      storageSize -= codecState_.load(storage, storageSize, crc);
-      storageSize -= eltsLoad(slices_, storage, storageSize, crc);
+      bytesToRead -= duration_.load(storage, bytesToRead, crc);
+      bytesToRead -= block_.load(storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead, crc);
+      bytesToRead -= additions_.load(storage, bytesToRead, crc);
+      bytesToRead -= refPriority_.load(storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, crc);
+      bytesToRead -= refVirtual_.load(storage, bytesToRead, crc);
+      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(slices_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2513,6 +2816,8 @@ namespace Yamka
   uint64
   Cluster::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2520,24 +2825,25 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
       
-      storageSize -= timecode_.load(storage, storageSize, crc);
-      storageSize -= silent_.load(storage, storageSize, crc);
-      storageSize -= position_.load(storage, storageSize, crc);
-      storageSize -= prevSize_.load(storage, storageSize, crc);
+      bytesToRead -= timecode_.load(storage, bytesToRead, crc);
+      bytesToRead -= silent_.load(storage, bytesToRead, crc);
+      bytesToRead -= position_.load(storage, bytesToRead, crc);
+      bytesToRead -= prevSize_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(blockGroups_, storage, storageSize, crc);
-      storageSize -= eltsLoad(simpleBlocks_, storage, storageSize, crc);
-      storageSize -= eltsLoad(encryptedBlocks_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2609,6 +2915,8 @@ namespace Yamka
   uint64
   Segment::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -2616,25 +2924,26 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevBytesToRead = bytesToRead;
 
-      storageSize -= info_.load(storage, storageSize, crc);
-      storageSize -= tracks_.load(storage, storageSize, crc);
-      storageSize -= chapters_.load(storage, storageSize, crc);
+      bytesToRead -= info_.load(storage, bytesToRead, crc);
+      bytesToRead -= tracks_.load(storage, bytesToRead, crc);
+      bytesToRead -= chapters_.load(storage, bytesToRead, crc);
       
-      storageSize -= eltsLoad(seekHeads_, storage, storageSize, crc);
-      storageSize -= eltsLoad(cues_, storage, storageSize, crc);
-      storageSize -= eltsLoad(attachments_, storage, storageSize, crc);
-      storageSize -= eltsLoad(tags_, storage, storageSize, crc);
-      storageSize -= eltsLoad(clusters_, storage, storageSize, crc);
+      bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(cues_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(attachments_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+
       if (!bytesRead)
       {
         break;
       }
-      
-      bytesReadTotal += bytesRead;
     }
     
     return bytesReadTotal;
@@ -2688,35 +2997,44 @@ namespace Yamka
   uint64
   MatroskaDoc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = storageSize;
+    
     Bytes oneByte(1);
-    uint64 bytesRead = 0;
+    uint64 bytesReadTotal = 0;
     
     // skip forward until we load EBML head element:
-    while (storageSize)
+    while (bytesToRead)
     {
-      uint64 headSize = EbmlDoc::head_.load(storage, storageSize, crc);
+      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead, crc);
       if (headSize)
       {
-        storageSize -= headSize;
-        bytesRead += headSize;
+        bytesToRead -= headSize;
+        bytesReadTotal += headSize;
         break;
       }
       
       storage.load(oneByte);
-      storageSize--;
+      bytesToRead--;
     }
     
     // read Segments:
-    uint64 segmentsSize = eltsLoad(segments_, storage, storageSize, crc);
-    storageSize -= segmentsSize;
-    bytesRead += segmentsSize;
+    while (true)
+    {
+      uint64 prevBytesToRead = bytesToRead;
+      
+      bytesToRead -= eltsLoad(segments_, storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
+      
+      uint64 bytesRead = prevBytesToRead - bytesToRead;
+      bytesReadTotal += bytesRead;
+      
+      if (!bytesRead)
+      {
+        break;
+      }
+    }
     
-    // read whatever is left:
-    uint64 voidSize = EbmlPayload::load(storage, storageSize, crc);
-    storageSize -= voidSize;
-    bytesRead += voidSize;
-    
-    return bytesRead;
+    return bytesReadTotal;
   }
   
 }

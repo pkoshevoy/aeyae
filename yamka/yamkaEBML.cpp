@@ -82,6 +82,25 @@ namespace Yamka
     return bytesRead;
   }
   
+  //----------------------------------------------------------------
+  // EbmlPayload::loadVoid
+  // 
+  uint64
+  EbmlPayload::loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    // shortcut:
+    typedef TypeOfElt(VBinary, kIdVoid, "Void") TVoid;
+    
+    TVoid eltVoid;
+    uint64 bytesRead = eltVoid.load(storage, storageSize, crc);
+    if (bytesRead)
+    {
+      voids_.push_back(eltVoid);
+    }
+    
+    return bytesRead;
+  }
+  
   
   //----------------------------------------------------------------
   // EbmlHead::EbmlHead
@@ -150,6 +169,8 @@ namespace Yamka
   uint64
   EbmlHead::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
+    uint64 bytesToRead = vsizeDecode(storage, crc);
+    
     // container elements may be present in any order, therefore
     // not every load will succeed -- keep trying until all
     // load attempts fail:
@@ -157,17 +178,17 @@ namespace Yamka
     uint64 bytesReadTotal = 0;
     while (true)
     {
-      uint64 prevStorageSize = storageSize;
+      uint64 prevStorageSize = bytesToRead;
 
-      storageSize -= version_.load(storage, storageSize, crc);
-      storageSize -= readVersion_.load(storage, storageSize, crc);
-      storageSize -= maxIdLength_.load(storage, storageSize, crc);
-      storageSize -= maxSizeLength_.load(storage, storageSize, crc);
-      storageSize -= docType_.load(storage, storageSize, crc);
-      storageSize -= docTypeVersion_.load(storage, storageSize, crc);
-      storageSize -= docTypeReadVersion_.load(storage, storageSize, crc);
+      bytesToRead -= version_.load(storage, bytesToRead, crc);
+      bytesToRead -= readVersion_.load(storage, bytesToRead, crc);
+      bytesToRead -= maxIdLength_.load(storage, bytesToRead, crc);
+      bytesToRead -= maxSizeLength_.load(storage, bytesToRead, crc);
+      bytesToRead -= docType_.load(storage, bytesToRead, crc);
+      bytesToRead -= docTypeVersion_.load(storage, bytesToRead, crc);
+      bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead, crc);
       
-      uint64 bytesRead = prevStorageSize - storageSize;
+      uint64 bytesRead = prevStorageSize - bytesToRead;
       if (!bytesRead)
       {
         break;

@@ -76,7 +76,8 @@ namespace Yamka
     
     TElt():
       alwaysSave_(false),
-      computeCrc32_(false)
+      computeCrc32_(false),
+      checksumCrc32_(0)
     {}
     
     TSelf & enableCrc32(bool enable)
@@ -170,7 +171,7 @@ namespace Yamka
       
       // keep track of the number of bytes read successfully:
       uint64 bytesRead = 0;
-      Bytes bytesCrc32(4);
+      Bytes bytesCrc32;
       
       uint64 eltId = loadEbmlId(storage, crc);
       if (eltId == kIdCrc32)
@@ -182,6 +183,7 @@ namespace Yamka
           return 0;
         }
         
+        bytesCrc32 = Bytes(4);
         if (!storage.loadAndCalcCrc32(bytesCrc32))
         {
           // failed to load CRC-32 checksum:
@@ -206,8 +208,11 @@ namespace Yamka
       storageStart.doNotRestore();
       
       // store the checksum:
-      computeCrc32_ = true;
-      checksumCrc32_ = uintDecode(TByteVec(bytesCrc32), 4);
+      if (!bytesCrc32.empty())
+      {
+        computeCrc32_ = true;
+        checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
+      }
       
       bytesRead += uintNumBytes(eltId);
       uint64 payloadSize = payload_.load(storage,

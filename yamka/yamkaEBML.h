@@ -142,6 +142,9 @@ namespace Yamka
     
   protected:
     declareEbmlPayloadAPI();
+    
+    // attempt to load a void element:
+    uint64 loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc);
   };
   
   //----------------------------------------------------------------
