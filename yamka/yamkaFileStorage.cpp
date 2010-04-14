@@ -17,7 +17,7 @@ namespace Yamka
   // FileStorage::FileStorage
   // 
   FileStorage::FileStorage(const std::string & pathUTF8,
-			   File::AccessMode fileMode):
+                           File::AccessMode fileMode):
     file_(pathUTF8, fileMode)
   {}
 

@@ -50,7 +50,10 @@ namespace Yamka
     for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
     {
       const TByteVec & vec = *i;
-      compute(&(vec[0]), vec.size());
+      if (!vec.empty())
+      {
+        compute(&(vec[0]), vec.size());
+      }
     }
   }
   

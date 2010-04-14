@@ -45,7 +45,7 @@ namespace Yamka
     
     Bytes bytes;
     bytes << vsizeEncode(size)
-	  << intEncode(TSuper::data_);
+          << intEncode(TSuper::data_);
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -97,7 +97,7 @@ namespace Yamka
     
     Bytes bytes;
     bytes << vsizeEncode(size)
-	  << uintEncode(TSuper::data_);
+          << uintEncode(TSuper::data_);
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -282,7 +282,7 @@ namespace Yamka
     
     Bytes bytes;
     bytes << vsizeEncode(size)
-	  << TSuper::data_;
+          << TSuper::data_;
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }

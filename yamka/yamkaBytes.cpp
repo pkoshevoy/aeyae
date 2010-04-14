@@ -78,8 +78,8 @@ namespace Yamka
     TByteVecDec & dst = *bytes_;
     
     dst.insert(dst.end(),
-	       src.begin(),
-	       src.end());
+               src.begin(),
+               src.end());
     
     return *this;
   }
@@ -130,7 +130,7 @@ namespace Yamka
       const TByteVec & byteVec = *i;
       if (!byteVec.empty())
       {
-	return false;
+        return false;
       }
     }
     
@@ -169,7 +169,7 @@ namespace Yamka
       
       if (i < byteVecSize)
       {
-	return byteVec[i];
+        return byteVec[i];
       }
       
       i -= byteVecSize;
@@ -203,8 +203,8 @@ namespace Yamka
     {
       const TByte & byte = *j;
       os << std::setw(2)
-	 << std::setfill('0')
-	 << int(byte);
+         << std::setfill('0')
+         << int(byte);
     }
     
     os << std::dec;
