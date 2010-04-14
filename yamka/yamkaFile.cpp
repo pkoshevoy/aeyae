@@ -327,9 +327,9 @@ namespace Yamka
     for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
     {
       const TByteVec & vec = *i;
-      if (!write(&vec[0], vec.size()))
+      if (!vec.empty() && !write(&vec[0], vec.size()))
       {
-	return false;
+        return false;
       }
     }
     
@@ -346,9 +346,9 @@ namespace Yamka
     for (TByteVecDec::iterator i = deq.begin(); i != deq.end(); ++i)
     {
       TByteVec & vec = *i;
-      if (!write(&vec[0], vec.size()))
+      if (!vec.empty() && !read(&vec[0], vec.size()))
       {
-	return false;
+        return false;
       }
     }
     
