@@ -159,7 +159,7 @@ namespace Yamka
   {
     declareEbmlPayloadAPI();
     
-    Elts(ContentEnc, 0x6240, "ContentEnc") encoding_;
+    Elts(ContentEnc, 0x6240, "ContentEnc") encodings_;
   };
   
   //----------------------------------------------------------------
@@ -258,9 +258,9 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
-  // Seek
+  // SeekEntry
   // 
-  struct Seek : public EbmlPayload
+  struct SeekEntry : public EbmlPayload
   {
     declareEbmlPayloadAPI();
     
@@ -275,7 +275,7 @@ namespace Yamka
   {
     declareEbmlPayloadAPI();
     
-    Elt(Seek, 0x4DBB, "Seek") seek_;
+    Elts(SeekEntry, 0x4DBB, "Seek") seek_;
   };
   
   //----------------------------------------------------------------
@@ -344,7 +344,7 @@ namespace Yamka
     declareEbmlPayloadAPI();
     
     Elt(VUInt, 0x6955, "ChapProcessCodecID") codecID_;
-    Elt(VBinary, 0x450D, "ChapProcessPrivate") procPivate_;
+    Elt(VBinary, 0x450D, "ChapProcessPrivate") procPrivate_;
     Elts(ChapProcCmd, 0x6911, "ChapProcCommands") cmds_;
   };
   
@@ -439,7 +439,7 @@ namespace Yamka
   {
     declareEbmlPayloadAPI();
     
-    Elts(Tag, 0x7373, "Tag") tags_;;
+    Elts(Tag, 0x7373, "Tag") tags_;
   };
   
   //----------------------------------------------------------------
@@ -494,10 +494,10 @@ namespace Yamka
   {
     declareEbmlPayloadAPI();
     
-    Elt(Block, 0xA1, "Block") block_;
-    Elts(BlockVirtual, 0xA2, "BlockVirtual") vblock_;
-    Elt(BlockAdditions, 0x75A1, "BlockAdditions") additions_;
     Elt(VUInt, 0x9B, "BlockDuration") duration_;
+    Elt(Block, 0xA1, "Block") block_;
+    Elts(BlockVirtual, 0xA2, "BlockVirtual") blockVirtual_;
+    Elt(BlockAdditions, 0x75A1, "BlockAdditions") additions_;
     Elt(VUInt, 0xFA, "ReferencePriority") refPriority_;
     Elts(VInt, 0xFB, "ReferenceBlock") refBlock_;
     Elt(VInt, 0xFD, "ReferenceVirtual") refVirtual_;
