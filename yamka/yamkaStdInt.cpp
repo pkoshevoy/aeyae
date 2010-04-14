@@ -11,6 +11,7 @@
 
 // system includes:
 #include <assert.h>
+#include <string.h>
 
 
 namespace Yamka

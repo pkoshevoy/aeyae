@@ -11,6 +11,7 @@
 
 // system includes:
 #include <assert.h>
+#include <string.h>
 
 
 namespace Yamka
@@ -375,7 +376,7 @@ namespace Yamka
     bytes = Bytes(numBytes);
     
     uint64 skipBytes = vsizeNumBytes(numBytes);
-    std::memcpy(&bytes[0], &data[0] + skipBytes, numBytes);
+    memcpy(&bytes[0], &data[0] + skipBytes, numBytes);
     
     return true;
   }
