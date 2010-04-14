@@ -47,7 +47,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapTranslate::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = editionUID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    editionUID_.save(storage, crc);
     chapTransCodec_.save(storage, crc);
     chapTransID_.save(storage, crc);
     
@@ -154,7 +158,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   SegInfo::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = segUID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    segUID_.save(storage, crc);
     segFilename_.save(storage, crc);
     prevUID_.save(storage, crc);
     prevFilename_.save(storage, crc);
@@ -252,7 +260,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   TrackTranslate::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = editionUID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    editionUID_.save(storage, crc);
     trackTransCodec_.save(storage, crc);
     trackTransID_.save(storage, crc);
     
@@ -360,7 +372,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Video::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = flagInterlaced_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    flagInterlaced_.save(storage, crc);
     stereoMode_.save(storage, crc);
     pixelWidth_.save(storage, crc);
     pixelHeight_.save(storage, crc);
@@ -473,7 +489,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Audio::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = sampFreq_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    sampFreq_.save(storage, crc);
     sampFreqOut_.save(storage, crc);
     channels_.save(storage, crc);
     channelPositions_.save(storage, crc);
@@ -551,7 +571,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentCompr::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = algo_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    algo_.save(storage, crc);
     settings_.save(storage, crc);
     
     return receipt;
@@ -631,7 +655,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentEncrypt::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = encAlgo_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    encAlgo_.save(storage, crc);
     encKeyID_.save(storage, crc);
     signature_.save(storage, crc);
     sigKeyID_.save(storage, crc);
@@ -717,7 +745,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentEnc::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = order_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    order_.save(storage, crc);
     scope_.save(storage, crc);
     type_.save(storage, crc);
     compression_.save(storage, crc);
@@ -908,7 +940,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Track::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = trackNumber_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    trackNumber_.save(storage, crc);
     trackUID_.save(storage, crc);
     trackType_.save(storage, crc);
     flagEnabled_.save(storage, crc);
@@ -1024,7 +1060,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tracks::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(tracks_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(tracks_, storage, crc);
+    
+    return receipt;
   }
 
   //----------------------------------------------------------------
@@ -1096,7 +1138,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   CueRef::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = time_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    time_.save(storage, crc);
     cluster_.save(storage, crc);
     block_.save(storage, crc);
     codecState_.save(storage, crc);
@@ -1178,7 +1224,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   CueTrkPos::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = track_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    track_.save(storage, crc);
     cluster_.save(storage, crc);
     block_.save(storage, crc);
     codecState_.save(storage, crc);
@@ -1256,7 +1306,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   CuePoint::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = time_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    time_.save(storage, crc);
     eltsSave(trkPosns_, storage, crc);
     
     return receipt;
@@ -1320,7 +1374,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Cues::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(points_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(points_, storage, crc);
+    
+    return receipt;
   }
 
   //----------------------------------------------------------------
@@ -1388,7 +1448,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   SeekEntry::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = id_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    id_.save(storage, crc);
     position_.save(storage, crc);
     
     return receipt;
@@ -1452,7 +1516,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   SeekHead::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(seek_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(seek_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -1528,7 +1598,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   AttdFile::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = description_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    description_.save(storage, crc);
     filename_.save(storage, crc);
     mimeType_.save(storage, crc);
     data_.save(storage, crc);
@@ -1600,7 +1674,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Attachments::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(files_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(files_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -1660,7 +1740,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapTrk::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(tracks_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(tracks_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -1730,7 +1816,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapDisp::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = string_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    string_.save(storage, crc);
     language_.save(storage, crc);
     country_.save(storage, crc);
     
@@ -1804,7 +1894,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapProcCmd::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = time_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    time_.save(storage, crc);
     data_.save(storage, crc);
     
     return receipt;
@@ -1878,7 +1972,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapProc::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = codecID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    codecID_.save(storage, crc);
     procPrivate_.save(storage, crc);
     
     eltsSave(cmds_, storage, crc);
@@ -1972,7 +2070,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapAtom::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = UID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    UID_.save(storage, crc);
     timeStart_.save(storage, crc);
     timeEnd_.save(storage, crc);
     hidden_.save(storage, crc);
@@ -2070,7 +2172,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Edition::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = UID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    UID_.save(storage, crc);
     flagHidden_.save(storage, crc);
     flagDefault_.save(storage, crc);
     flagOrdered_.save(storage, crc);
@@ -2142,7 +2248,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Chapters::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(editions_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(editions_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -2218,7 +2330,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   TagTargets::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = typeValue_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    typeValue_.save(storage, crc);
     type_.save(storage, crc);
     
     eltsSave(trackUIDs_, storage, crc);
@@ -2306,7 +2422,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   SimpleTag::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = name_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    name_.save(storage, crc);
     lang_.save(storage, crc);
     default_.save(storage, crc);
     string_.save(storage, crc);
@@ -2384,7 +2504,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tag::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = targets_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    targets_.save(storage, crc);
     eltsSave(simpleTags_, storage, crc);
     
     return receipt;
@@ -2448,7 +2572,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tags::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(tags_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(tags_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -2508,7 +2638,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   SilentTracks::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(tracks_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(tracks_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -2576,7 +2712,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockMore::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = blockAddID_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    blockAddID_.save(storage, crc);
     blockAdditional_.save(storage, crc);
     
     return receipt;
@@ -2640,7 +2780,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockAdditions::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(more_, storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    eltsSave(more_, storage, crc);
+    
+    return receipt;
   }
 
   //----------------------------------------------------------------
@@ -2711,7 +2857,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockGroup::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = duration_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    duration_.save(storage, crc);
     block_.save(storage, crc);
     eltsSave(blockVirtual_, storage, crc);
     additions_.save(storage, crc);
@@ -2798,7 +2948,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Cluster::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = timecode_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    timecode_.save(storage, crc);
     silent_.save(storage, crc);
     position_.save(storage, crc);
     prevSize_.save(storage, crc);
@@ -2896,7 +3050,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   Segment::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = info_.save(storage, crc);
+    uint64 totalBytesToSave = calcSize();
+    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
+    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    
+    info_.save(storage, crc);
     tracks_.save(storage, crc);
     chapters_.save(storage, crc);
     
