@@ -110,7 +110,6 @@ namespace Yamka
   {
     typedef typename elts_t::value_type elt_t;
     
-    elts.clear();
     uint64 bytesRead = 0;
     while (storageSize)
     {
