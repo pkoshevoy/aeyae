@@ -6,6 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// windows includes:
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
+
 // yamka includes:
 #include <yamkaFile.h>
 
@@ -95,12 +101,12 @@ namespace Yamka
       path_(path)
     {
       const char * mode =
-        (fileMode == File::READ_WRITE) ?
+        (fileMode == File::kReadWrite) ?
         "rb+" :
         "rb";
       
       file_ = fopen_utf8(path.c_str(), mode);
-      if (!file_ && fileMode == File::READ_WRITE)
+      if (!file_ && fileMode == File::kReadWrite)
       {
         // try creating the file:
         file_ = fopen_utf8(path.c_str(), "wb+");
@@ -169,7 +175,7 @@ namespace Yamka
   {
     if (restoreOnExit_)
     {
-      seek(prev_, ABSOLUTE);
+      seek(prev_, kAbsolutePosition);
     }
   }
   
@@ -270,7 +276,7 @@ namespace Yamka
   {
     try
     {
-      Seek tmp(*this, 0, FROM_END);
+      Seek tmp(*this, 0, kOffsetFromEnd);
       return absolutePosition();
     }
     catch (...)

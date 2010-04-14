@@ -36,12 +36,12 @@ namespace Yamka
     // 
     enum AccessMode
     {
-      READ_ONLY,
-      READ_WRITE
+      kReadOnly,
+      kReadWrite
     };
     
     File(const std::string & pathUTF8 = std::string(),
-         AccessMode fileMode = READ_ONLY);
+         AccessMode fileMode = kReadOnly);
     
     // shallow copy (file handle is shared):
     File(const File & f);
@@ -60,14 +60,14 @@ namespace Yamka
     // 
     enum PositionReference
     {
-      ABSOLUTE = SEEK_SET,
-      RELATIVE = SEEK_CUR,
-      FROM_END = SEEK_END
+      kAbsolutePosition = SEEK_SET,
+      kRelativeToCurrent = SEEK_CUR,
+      kOffsetFromEnd = SEEK_END
     };
 
     // seek to a specified file position:
     virtual bool seek(TOff offset,
-                      PositionReference relativeTo = ABSOLUTE);
+                      PositionReference relativeTo = kAbsolutePosition);
     
     // return current absolute file position:
     virtual TOff absolutePosition() const;
@@ -85,7 +85,8 @@ namespace Yamka
       // save current seek position,
       // then seek to a given offset,
       // throw exception if seek fails:
-      Seek(File & file, TOff offset, PositionReference relativeTo = ABSOLUTE);
+      Seek(File & file, TOff offset,
+           PositionReference relativeTo = kAbsolutePosition);
       
       // if required, then restore saved seek position:
       ~Seek();

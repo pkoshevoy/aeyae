@@ -12,6 +12,7 @@
 #include <yamkaStdInt.h>
 #include <yamkaFileStorage.h>
 #include <yamkaEBML.h>
+#include <yamkaMatroska.h>
 
 // system includes:
 #include <iostream>
@@ -42,7 +43,7 @@ main(int argc, char ** argv)
             << "0x" << intEncode(VDate().data_, 8) << std::endl
 	    << std::endl;
   
-  FileStorage fs(std::string("testYamka.bin"), File::READ_WRITE);
+  FileStorage fs(std::string("testYamka.bin"), File::kReadWrite);
   if (!fs.file_.isOpen())
   {
     std::cerr << "ERROR: failed to open " << fs.file_.filename()
@@ -79,7 +80,7 @@ main(int argc, char ** argv)
     }
   }
   
-  FileStorage fs2(std::string("testYamka.ebml"), File::READ_WRITE);
+  FileStorage fs2(std::string("testYamka.ebml"), File::kReadWrite);
   if (!fs2.file_.isOpen())
   {
     std::cerr << "ERROR: failed to open " << fs2.file_.filename()
@@ -110,6 +111,35 @@ main(int argc, char ** argv)
 		<< std::dec
 		<< std::endl;
     }
+  }
+  
+  FileStorage mkvSrc(std::string("testYamkaSrc.mkv"), File::kReadOnly);
+  if (!mkvSrc.file_.isOpen())
+  {
+    std::cerr << "ERROR: failed to open " << mkvSrc.file_.filename()
+	      << " to read"
+	      << std::endl;
+    ::exit(1);
+  }
+  else
+  {
+    uint64 mkvSrcSize = mkvSrc.file_.size();
+    std::cout << "opened (ro) " << mkvSrc.file_.filename()
+	      << ", file size: " << mkvSrcSize
+	      << std::endl;
+    
+    Crc32 crc32;
+    MatroskaDoc doc;
+    uint64 bytesRead = doc.load(mkvSrc, mkvSrcSize, &crc32);
+    
+    std::cout << "read " << bytesRead << " bytes, "
+              << "doc size is " << doc.calcSize() << " bytes, "
+              << "checksum: "
+              << std::hex
+              << std::uppercase
+              << crc32.checksum()
+              << std::dec
+              << std::endl;
   }
   
   return 0;

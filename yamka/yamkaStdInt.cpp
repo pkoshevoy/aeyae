@@ -18,18 +18,36 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
+  // UI64
+  // 
+# ifdef _WIN32
+# define UI64(i) int64(i)
+# else
+# define UI64(i) i##LLU
+# endif
+  
+  //----------------------------------------------------------------
+  // SI64
+  // 
+# ifdef _WIN32
+# define SI64(i) int64(i)
+# else
+# define SI64(i) i##LL
+# endif
+  
+  //----------------------------------------------------------------
   // maxUInt
   // 
   static const uint64 maxUInt[] = {
-    0x0,
-    0xFF,
-    0xFFFF,
-    0xFFFFFF,
-    0xFFFFFFFF,
-    0xFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFFFLLU,
-    0xFFFFFFFFFFFFFFFFLLU
+    UI64(0x0),
+    UI64(0xFF),
+    UI64(0xFFFF),
+    UI64(0xFFFFFF),
+    UI64(0xFFFFFFFF),
+    UI64(0xFFFFFFFFFF),
+    UI64(0xFFFFFFFFFFFF),
+    UI64(0xFFFFFFFFFFFFFF),
+    UI64(0xFFFFFFFFFFFFFFFF)
   };
   
   //----------------------------------------------------------------
@@ -42,32 +60,32 @@ namespace Yamka
     {
       return 1;
     }
-    else if (i < 0x3FFF)
+    else if (i < UI64(0x3FFF))
     {
       return 2;
     }
-    else if (i < 0x1FFFFF)
+    else if (i < UI64(0x1FFFFF))
     {
       return 3;
     }
-    else if (i < 0xFFFFFFF)
+    else if (i < UI64(0xFFFFFFF))
     {
       return 4;
     }
-    else if (i < 0x7FFFFFFFFLLU)
+    else if (i < UI64(0x7FFFFFFFF))
     {
       return 5;
     }
-    else if (i < 0x3FFFFFFFFFFLLU)
+    else if (i < UI64(0x3FFFFFFFFFF))
     {
       return 6;
     }
-    else if (i < 0x1FFFFFFFFFFFFLLU)
+    else if (i < UI64(0x1FFFFFFFFFFFF))
     {
       return 7;
     }
     
-    assert(i < 0xFFFFFFFFFFFFFFLLU);
+    assert(i < UI64(0xFFFFFFFFFFFFFF));
     return 8;
   }
   
@@ -285,7 +303,7 @@ namespace Yamka
     TByteVec v;
     if (vsizeLoad(v, storage, crc, 4))
     {
-      return uintDecode(v, v.size());
+      return uintDecode(v, (unsigned int)v.size());
     }
     
     // invalid EBML ID or insufficient storage:
@@ -329,31 +347,31 @@ namespace Yamka
   unsigned int
   uintNumBytes(uint64 ui)
   {
-    if (ui <= 0xFF)
+    if (ui <= UI64(0xFF))
     {
       return 1;
     }
-    else if (ui <= 0xFFFF)
+    else if (ui <= UI64(0xFFFF))
     {
       return 2;
     }
-    else if (ui <= 0xFFFFFF)
+    else if (ui <= UI64(0xFFFFFF))
     {
       return 3;
     }
-    else if (ui <= 0xFFFFFFFF)
+    else if (ui <= UI64(0xFFFFFFFF))
     {
       return 4;
     }
-    else if (ui <= 0xFFFFFFFFFFLLU)
+    else if (ui <= UI64(0xFFFFFFFFFF))
     {
       return 5;
     }
-    else if (ui <= 0xFFFFFFFFFFFFLLU)
+    else if (ui <= UI64(0xFFFFFFFFFFFF))
     {
       return 6;
     }
-    else if (ui <= 0xFFFFFFFFFFFFFFLLU)
+    else if (ui <= UI64(0xFFFFFFFFFFFFFF))
     {
       return 7;
     }
@@ -406,31 +424,31 @@ namespace Yamka
   unsigned int
   intNumBytes(int64 si)
   {
-    if (si >= -0x80 && si <= 0x7F)
+    if (si >= -SI64(0x80) && si <= SI64(0x7F))
     {
       return 1;
     }
-    else if (si >= -0x8000 && si <= 0x7FFF)
+    else if (si >= -SI64(0x8000) && si <= SI64(0x7FFF))
     {
       return 2;
     }
-    else if (si >= -0x800000 && si <= 0x7FFFFF)
+    else if (si >= -SI64(0x800000) && si <= SI64(0x7FFFFF))
     {
       return 3;
     }
-    else if (si >= -0x80000000 && si <= 0x7FFFFFFF)
+    else if (si >= -SI64(0x80000000) && si <= SI64(0x7FFFFFFF))
     {
       return 4;
     }
-    else if (si >= -0x8000000000LL && si <= 0x7FFFFFFFFFLL)
+    else if (si >= -SI64(0x8000000000) && si <= SI64(0x7FFFFFFFFF))
     {
       return 5;
     }
-    else if (si >= -0x800000000000LL && si <= 0x7FFFFFFFFFFFLL)
+    else if (si >= -SI64(0x800000000000) && si <= SI64(0x7FFFFFFFFFFF))
     {
       return 6;
     }
-    else if (si >= -0x80000000000000LL && si <= 0x7FFFFFFFFFFFFFLL)
+    else if (si >= -SI64(0x80000000000000) && si <= SI64(0x7FFFFFFFFFFFFF))
     {
       return 7;
     }

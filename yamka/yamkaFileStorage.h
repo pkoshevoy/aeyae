@@ -23,7 +23,7 @@ namespace Yamka
   struct FileStorage : public IStorage
   {
     FileStorage(const std::string & pathUTF8 = std::string(),
-                File::AccessMode fileMode = File::READ_WRITE);
+                File::AccessMode fileMode = File::kReadWrite);
     
     // virtual:
     IReceiptPtr receipt() const;
