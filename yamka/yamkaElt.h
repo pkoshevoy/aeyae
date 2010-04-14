@@ -17,6 +17,8 @@
 // system includes:
 #include <deque>
 #include <stdexcept>
+#include <iostream>
+#include <iomanip>
 
 
 //----------------------------------------------------------------
@@ -204,6 +206,18 @@ namespace Yamka
         return 0;
       }
       
+#if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+      // FIXME:
+      {
+        File::Seek restore(storage.file_);
+        uint64 vsize = vsizeDecode(storage);
+        std::cout << std::setw(8) << uintEncode(id()) << " @ " << std::hex
+                  << "0x" << storageStart.absolutePosition() << std::dec
+                  << " -- " << name()
+                  << ", size " << vsize << std::endl;
+      }
+#endif
+      
       // this appears to be a good payload:
       storageStart.doNotRestore();
       
@@ -219,6 +233,24 @@ namespace Yamka
                                          storageSize - bytesRead,
                                          crc);
       bytesRead += payloadSize;
+      
+#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+      // FIXME:
+      {
+        uint64 newSize = calcSize();
+        if (newSize != bytesRead)
+        {
+          std::cout << std::setw(8) << uintEncode(id()) << " @ " << std::hex
+                    << "0x" << storageStart.absolutePosition() << std::dec
+                    << " -- " << name()
+                    << ", load size " << bytesRead
+                    << ", stored size " << newSize
+                    << std::endl;
+          newSize = calcSize();
+        }
+      }
+#endif
+      
       return bytesRead;
     }
     
