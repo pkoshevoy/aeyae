@@ -128,20 +128,55 @@ namespace Yamka
   // EbmlHead::save
   // 
   IStorage::IReceiptPtr
-  EbmlHead::save(IStorage & storage, Crc32 * computeCrc32) const
+  EbmlHead::save(IStorage & storage, Crc32 * crc) const
   {
     IStorage::IReceiptPtr receipt =
       storage.save(Bytes(vsizeEncode(calcSize())));
     
-    version_.save(storage, computeCrc32);
-    readVersion_.save(storage, computeCrc32);
-    maxIdLength_.save(storage, computeCrc32);
-    maxSizeLength_.save(storage, computeCrc32);
-    docType_.save(storage, computeCrc32);
-    docTypeVersion_.save(storage, computeCrc32);
-    docTypeReadVersion_.save(storage, computeCrc32);
+    version_.save(storage, crc);
+    readVersion_.save(storage, crc);
+    maxIdLength_.save(storage, crc);
+    maxSizeLength_.save(storage, crc);
+    docType_.save(storage, crc);
+    docTypeVersion_.save(storage, crc);
+    docTypeReadVersion_.save(storage, crc);
     
     return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlHead::load
+  // 
+  uint64
+  EbmlHead::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    // container elements may be present in any order, therefore
+    // not every load will succeed -- keep trying until all
+    // load attempts fail:
+    
+    uint64 bytesReadTotal = 0;
+    while (true)
+    {
+      uint64 prevStorageSize = storageSize;
+
+      storageSize -= version_.load(storage, storageSize, crc);
+      storageSize -= readVersion_.load(storage, storageSize, crc);
+      storageSize -= maxIdLength_.load(storage, storageSize, crc);
+      storageSize -= maxSizeLength_.load(storage, storageSize, crc);
+      storageSize -= docType_.load(storage, storageSize, crc);
+      storageSize -= docTypeVersion_.load(storage, storageSize, crc);
+      storageSize -= docTypeReadVersion_.load(storage, storageSize, crc);
+      
+      uint64 bytesRead = prevStorageSize - storageSize;
+      if (!bytesRead)
+      {
+        break;
+      }
+      
+      bytesReadTotal += bytesRead;
+    }
+    
+    return bytesReadTotal;
   }
   
   
@@ -181,9 +216,9 @@ namespace Yamka
   // EbmlDoc::save
   // 
   IStorage::IReceiptPtr
-  EbmlDoc::save(IStorage & storage, Crc32 * computeCrc32) const
+  EbmlDoc::save(IStorage & storage, Crc32 * crc) const
   {
-    IStorage::IReceiptPtr receipt = head_.save(storage, computeCrc32);
+    IStorage::IReceiptPtr receipt = head_.save(storage, crc);
     return receipt;
   }
   
