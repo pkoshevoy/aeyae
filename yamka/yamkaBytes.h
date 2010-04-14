@@ -81,9 +81,9 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
-  // operator
+  // operator +
   // 
-  Bytes operator + (const Bytes & a, const Bytes & b);
+  extern Bytes operator + (const Bytes & a, const Bytes & b);
   
   //----------------------------------------------------------------
   // operator <<

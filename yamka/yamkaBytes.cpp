@@ -178,7 +178,18 @@ namespace Yamka
     assert(false);
     return *(TByte *)NULL;
   }
-
+  
+  //----------------------------------------------------------------
+  // operator +
+  // 
+  Bytes
+  operator + (const Bytes & a, const Bytes & b)
+  {
+    Bytes ab(a);
+    ab += b;
+    return ab;
+  }
+  
   //----------------------------------------------------------------
   // operator <<
   // 
