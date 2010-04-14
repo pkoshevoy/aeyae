@@ -21,7 +21,7 @@ namespace Yamka
   // UI64
   // 
 # ifdef _WIN32
-# define UI64(i) int64(i)
+# define UI64(i) uint64(i)
 # else
 # define UI64(i) i##LLU
 # endif
