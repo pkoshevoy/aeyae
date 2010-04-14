@@ -173,10 +173,16 @@ namespace Yamka
     
     Bytes bytes(numBytes);
     storage.loadAndCalcCrc32(bytes, crc);
-    TSuper::data_ =
-      numBytes > 4 ?
-      doubleDecode(bytes) :
-      double(floatDecode(bytes));
+    if (numBytes > 4)
+    {
+      TSuper::data_ = doubleDecode(bytes);
+      TSuper::size_ = 8;
+    }
+    else
+    {
+      TSuper::data_ = double(floatDecode(bytes));
+      TSuper::size_ = 4;
+    }
     
     uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
     return bytesRead;

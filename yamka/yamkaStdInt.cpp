@@ -470,11 +470,12 @@ namespace Yamka
   // floatEncode
   // 
   TByteVec
-  floatEncode(float f)
+  floatEncode(float d)
   {
-    const unsigned char * b = (const unsigned char *)&f;
-    TByteVec v(b, b + 4);
-    return v;
+    const unsigned char * b = (const unsigned char *)&d;
+    uint64 i = 0;
+    memcpy(&i, b, 4);
+    return uintEncode(i, 4);
   }
   
   //----------------------------------------------------------------
@@ -483,9 +484,10 @@ namespace Yamka
   float
   floatDecode(const TByteVec & v)
   {
-    float f = 0;
-    memcpy(&f, &(v[0]), 4);
-    return f;
+    float d = 0;
+    uint64 i = uintDecode(v, 4);
+    memcpy(&d, &i, 4);
+    return d;
   }
   
   //----------------------------------------------------------------
@@ -495,8 +497,9 @@ namespace Yamka
   doubleEncode(double d)
   {
     const unsigned char * b = (const unsigned char *)&d;
-    TByteVec v(b, b + 8);
-    return v;
+    uint64 i = 0;
+    memcpy(&i, b, 8);
+    return uintEncode(i, 8);
   }
   
   //----------------------------------------------------------------
@@ -506,7 +509,8 @@ namespace Yamka
   doubleDecode(const TByteVec & v)
   {
     double d = 0;
-    memcpy(&d, &(v[0]), 8);
+    uint64 i = uintDecode(v, 8);
+    memcpy(&d, &i, 8);
     return d;
   }
   
