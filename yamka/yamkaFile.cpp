@@ -187,6 +187,15 @@ namespace Yamka
   {
     restoreOnExit_ = false;
   }
+
+  //----------------------------------------------------------------
+  // File::Seek::absolutePosition
+  // 
+  File::TOff
+  File::Seek::absolutePosition() const
+  {
+    return prev_;
+  }
   
   //----------------------------------------------------------------
   // File::Seek::seek

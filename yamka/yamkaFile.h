@@ -94,6 +94,10 @@ namespace Yamka
       // call this to disable restoring the previos file position:
       void doNotRestore();
       
+      // accessor to the absolute position of the file
+      // at the moment a Seek instance was created:
+      TOff absolutePosition() const;
+      
     private:
       Seek(const Seek &);
       Seek & operator = (const Seek &);
