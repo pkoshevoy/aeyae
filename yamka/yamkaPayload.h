@@ -195,6 +195,7 @@ namespace Yamka
     VBinary & setStorage(const IStoragePtr & binStorage);
     VBinary & setDefault(const Bytes & bytes);
     VBinary & set(const Bytes & bytes);
+    bool get(Bytes & bytes) const;
     
     // check whether payload holds default value:
     bool isDefault() const;
@@ -270,8 +271,20 @@ namespace Yamka
     uint64
     load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
     {
-      // FIXME:
-      return 0;
+      uint64 numBytes = vsizeDecode(storage, crc);
+      if (numBytes != fixedSize)
+      {
+        return 0;
+      }
+      
+      Bytes bytes(fixedSize);
+      if (storage.loadAndCalcCrc32(bytes, crc))
+      {
+        data_ = bytes;
+      };
+      
+      uint64 bytesRead = vsizeNumBytes(fixedSize) + fixedSize;
+      return bytesRead;
     }
     
     // data storage:

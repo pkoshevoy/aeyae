@@ -48,6 +48,24 @@ namespace Yamka
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
+  
+  //----------------------------------------------------------------
+  // VInt::load
+  // 
+  uint64
+  VInt::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 numBytes = vsizeDecode(storage, crc);
+    
+    Bytes bytes(numBytes);
+    if (storage.loadAndCalcCrc32(bytes, crc))
+    {
+      TSuper::data_ = intDecode(bytes, numBytes);
+    }
+    
+    uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
+    return bytesRead;
+  }
 
 
   //----------------------------------------------------------------
@@ -92,13 +110,16 @@ namespace Yamka
     uint64 numBytes = vsizeDecode(storage, crc);
     
     Bytes bytes(numBytes);
-    storage.loadAndCalcCrc32(bytes, crc);
+    if (storage.loadAndCalcCrc32(bytes, crc))
+    {
+      TSuper::data_ = uintDecode(bytes, numBytes);
+    }
     
     uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
     return bytesRead;
   }
-
-
+  
+  
   //----------------------------------------------------------------
   // VFloat::VFloat
   // 
@@ -107,7 +128,7 @@ namespace Yamka
   {
     setDefault(0.0);
   }
-
+  
   //----------------------------------------------------------------
   // VFloat::calcSize
   // 
@@ -140,7 +161,27 @@ namespace Yamka
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
-
+  
+  //----------------------------------------------------------------
+  // VFloat::load
+  // 
+  uint64
+  VFloat::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 numBytes = vsizeDecode(storage, crc);
+    
+    Bytes bytes(numBytes);
+    storage.loadAndCalcCrc32(bytes, crc);
+    TSuper::data_ =
+      numBytes > 4 ?
+      doubleDecode(bytes) :
+      double(floatDecode(bytes));
+    
+    uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
+    return bytesRead;
+  }
+  
+  
   //----------------------------------------------------------------
   // kVDateMilleniumUTC
   // 
@@ -200,7 +241,25 @@ namespace Yamka
           << intEncode(TSuper::data_, size);
     
     return storage.saveAndCalcCrc32(bytes, crc);
-}
+  }
+  
+  //----------------------------------------------------------------
+  // VDate::load
+  // 
+  uint64
+  VDate::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 numBytes = vsizeDecode(storage, crc);
+    
+    Bytes bytes(numBytes);
+    if (storage.loadAndCalcCrc32(bytes, crc))
+    {
+      TSuper::data_ = intDecode(bytes, numBytes);
+    }
+    
+    uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
+    return bytesRead;
+  }
   
   
   //----------------------------------------------------------------
@@ -225,6 +284,25 @@ namespace Yamka
 	  << TSuper::data_;
     
     return storage.saveAndCalcCrc32(bytes, crc);
+  }
+  
+  //----------------------------------------------------------------
+  // VString::load
+  // 
+  uint64
+  VString::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 numBytes = vsizeDecode(storage, crc);
+    
+    Bytes bytes(numBytes);
+    if (storage.loadAndCalcCrc32(bytes, crc))
+    {
+      TByteVec chars = TByteVec(bytes);
+      TSuper::data_.assign((const char *)&chars[0], chars.size());
+    }
+    
+    uint64 bytesRead = vsizeNumBytes(numBytes) + numBytes;
+    return bytesRead;
   }
   
   
@@ -252,7 +330,7 @@ namespace Yamka
     binStorage_ = binStorage;
     return *this;
   }
-
+  
   //----------------------------------------------------------------
   // VBinary::set
   // 
@@ -261,8 +339,11 @@ namespace Yamka
   {
     if (binStorage_)
     {
-      binReceipt_ = binStorage_->save(bytes);
-      binSize_ = bytes.size();
+      uint64 numBytes = bytes.size();
+      Bytes data = Bytes(vsizeEncode(numBytes)) + bytes;
+      
+      binReceipt_ = binStorage_->save(data);
+      binSize_ = data.size();
     }
     else
     {
@@ -270,6 +351,33 @@ namespace Yamka
     }
     
     return *this;
+  }
+
+  //----------------------------------------------------------------
+  // VBinary::get
+  // 
+  bool
+  VBinary::get(Bytes & bytes) const
+  {
+    if (!binReceipt_)
+    {
+      return false;
+    }
+    
+    uint64 size = calcSize();
+    Bytes data(size);
+    if (!binReceipt_->load(data))
+    {
+      return false;
+    }
+    
+    uint64 numBytes = vsizeDecode(data);
+    bytes = Bytes(numBytes);
+    
+    uint64 skipBytes = vsizeNumBytes(numBytes);
+    std::memcpy(&bytes[0], &data[0] + skipBytes, numBytes);
+    
+    return true;
   }
   
   //----------------------------------------------------------------
@@ -280,8 +388,11 @@ namespace Yamka
   {
     if (binStorage_)
     {
-      binReceiptDefault_ = binStorage_->save(bytes);
-      binSizeDefault_ = bytes.size();
+      uint64 numBytes = bytes.size();
+      Bytes data = Bytes(vsizeEncode(numBytes)) + bytes;
+      
+      binReceiptDefault_ = binStorage_->save(data);
+      binSizeDefault_ = data.size();
     }
     else
     {
@@ -359,11 +470,27 @@ namespace Yamka
       return IStorage::IReceiptPtr();
     }
     
-    Bytes bytes;
-    bytes << vsizeEncode(size);
-    bytes += data;
-    
-    return storage.saveAndCalcCrc32(bytes, crc);
+    return storage.saveAndCalcCrc32(data, crc);
   }
   
+  //----------------------------------------------------------------
+  // VBinary::load
+  // 
+  uint64
+  VBinary::load(IStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    uint64 numBytes = vsizeDecode(storage, crc);
+    Bytes bytes(numBytes);
+    
+    binSize_ = 0;
+    if (storage.loadAndCalcCrc32(bytes, crc))
+    {
+      binSize_ = vsizeNumBytes(numBytes) + numBytes;
+      binReceipt_ = receipt;
+    }
+    
+    return binSize_;
+  }
 }

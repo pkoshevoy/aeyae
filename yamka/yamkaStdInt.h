@@ -41,6 +41,12 @@ namespace Yamka
   // vsizeDecode
   // 
   extern uint64
+  vsizeDecode(const Bytes & bytes);
+  
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  extern uint64
   vsizeDecode(const TByteVec & v);
   
   //----------------------------------------------------------------

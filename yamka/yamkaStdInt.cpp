@@ -86,10 +86,11 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
-  // vsizeDecode
-  // 
+  // vsizeDecodeBytes
+  //
+  template <typename bytes_t>
   uint64
-  vsizeDecode(const TByteVec & v)
+  vsizeDecodeBytes(const bytes_t & v)
   {
     uint64 i = 0;
     
@@ -165,6 +166,26 @@ namespace Yamka
       assert(false);
     }
     
+    return i;
+  }
+
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  uint64
+  vsizeDecode(const Bytes & bytes)
+  {
+    uint64 i = vsizeDecodeBytes(bytes);
+    return i;
+  }
+
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  uint64
+  vsizeDecode(const TByteVec & bytes)
+  {
+    uint64 i = vsizeDecodeBytes(bytes);
     return i;
   }
   
