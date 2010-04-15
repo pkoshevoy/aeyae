@@ -21,6 +21,7 @@ namespace Yamka
   // VEltPosition::VEltPosition
   // 
   VEltPosition::VEltPosition():
+    origin_(NULL),
     elt_(NULL),
     pos_(uintMax[8]),
     unknownPositionSize_(8)
@@ -53,7 +54,8 @@ namespace Yamka
   bool
   VEltPosition::isDefault() const
   {
-    return false;
+    // no point is saving an unresolved invalid reference:
+    return !elt_;
   }
   
   //----------------------------------------------------------------
@@ -75,7 +77,7 @@ namespace Yamka
     
     if (receipt_)
     {
-      // use previous size:
+      // must use the same size as before:
       Bytes savedPosition;
       if (!receipt_->load(savedPosition))
       {
@@ -88,8 +90,15 @@ namespace Yamka
       return bytesUsed;
     }
     
-    uint64 storagePosition = eltReceipt->position();
-    uint64 bytesNeeded = uintNumBytes(storagePosition);
+    // NOTE:
+    // 1. The origin position may not be known when this is called,
+    // 2. We can assume that the relative position will not require
+    //    any more bytes than the absolute position would.
+    // 3. We'll use the absolute position to calculate the required
+    //    number of bytes
+    // 
+    uint64 absolutePosition = eltReceipt->position();
+    uint64 bytesNeeded = uintNumBytes(absolutePosition);
     return bytesNeeded;
   }
   
@@ -100,21 +109,23 @@ namespace Yamka
   VEltPosition::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 numBytes = calcSize();
-    uint64 storagePosition = uintMax[numBytes];
+    uint64 eltPosition = uintMax[numBytes];
+    uint64 originPosition = getOriginPosition();
     
     if (elt_)
     {
       IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
       if (eltReceipt)
       {
-        storagePosition = eltReceipt->position();
+        eltPosition = eltReceipt->position();
       }
     }
     
     // let VUInt do the rest:
+    uint64 relativePosition = eltPosition - originPosition;
     VUInt data;
     data.setSize(numBytes);
-    data.set(storagePosition);
+    data.set(relativePosition);
     
     receipt_ = data.save(storage, crc);
     return receipt_;
@@ -130,6 +141,7 @@ namespace Yamka
     uint64 bytesRead = data.load(storage, storageSize, crc);
     if (bytesRead)
     {
+      origin_ = NULL;
       elt_ = NULL;
       pos_ = data.get();
     }
@@ -138,12 +150,21 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // VEltPosition::position
+  // VEltPosition::setOrigin
   // 
-  uint64
-  VEltPosition::position() const
+  void
+  VEltPosition::setOrigin(const IElement * origin)
   {
-    return pos_;
+    origin_ = origin;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::getOrigin
+  // 
+  const IElement *
+  VEltPosition::getOrigin() const
+  {
+    return origin_;
   }
   
   //----------------------------------------------------------------
@@ -162,6 +183,15 @@ namespace Yamka
   VEltPosition::getElt() const
   {
     return elt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::position
+  // 
+  uint64
+  VEltPosition::position() const
+  {
+    return pos_;
   }
   
   //----------------------------------------------------------------
@@ -193,11 +223,13 @@ namespace Yamka
       return false;
     }
     
+    uint64 originPosition = getOriginPosition();
+    uint64 eltPosition = eltReceipt->position();
+    uint64 relativePosition = eltPosition - originPosition;
+    
     uint64 vsizeSize = 0;
     uint64 bytesUsed = vsizeDecode(savedPosition, vsizeSize);
-    
-    uint64 storagePosition = eltReceipt->position();
-    uint64 bytesNeeded = uintNumBytes(storagePosition);
+    uint64 bytesNeeded = uintNumBytes(relativePosition);
     
     if (bytesUsed < bytesNeeded)
     {
@@ -206,10 +238,31 @@ namespace Yamka
     
     Bytes bytes;
     bytes << vsizeEncode(bytesUsed)
-          << uintEncode(storagePosition);
+          << uintEncode(relativePosition);
     
     bool saved = receipt_->save(bytes);
     return saved;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::getOriginPosition
+  // 
+  uint64
+  VEltPosition::getOriginPosition() const
+  {
+    if (!origin_)
+    {
+      return 0;
+    }
+    
+    IStorage::IReceiptPtr originReceipt = origin_->payloadReceipt();
+    if (!originReceipt)
+    {
+      return 0;
+    }
+    
+    uint64 originPosition = originReceipt->position();
+    return originPosition;
   }
   
   

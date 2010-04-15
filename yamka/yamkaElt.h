@@ -101,6 +101,12 @@ namespace Yamka
     // NOTE: storage receipt is set only after an element
     // is saved successfully
     virtual IStorage::IReceiptPtr storageReceipt() const = 0;
+    
+    // accessor to this elements payload storage receipt.
+    // 
+    // NOTE: payload storage receipt is set only after
+    // an element payload is saved successfully
+    virtual IStorage::IReceiptPtr payloadReceipt() const = 0;
   };
   
   //----------------------------------------------------------------
@@ -334,6 +340,10 @@ namespace Yamka
     // virtual:
     IStorage::IReceiptPtr storageReceipt() const
     { return receipt_; }
+    
+    // virtual:
+    IStorage::IReceiptPtr payloadReceipt() const
+    { return receiptPayload_; }
     
     // this flag indicates that this element must be saved
     // even when it holds a default value:

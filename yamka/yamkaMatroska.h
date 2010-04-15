@@ -217,9 +217,9 @@ namespace Yamka
     ImplementsPayloadAPI();
     
     Elt(VUInt, 0x96, "CueRefTime") time_;
-    Elt(VUInt, 0x97, "CueRefCluster") cluster_;
+    Elt(VEltPosition, 0x97, "CueRefCluster") cluster_;
     Elt(VUInt, 0x535F, "CueRefNumber") block_;
-    Elt(VUInt, 0xEB, "CueRefCodecState") codecState_;
+    Elt(VEltPosition, 0xEB, "CueRefCodecState") codecState_;
   };
   
   //----------------------------------------------------------------
@@ -232,7 +232,7 @@ namespace Yamka
     Elt(VUInt, 0xF7, "Track") track_;
     Elt(VEltPosition, 0xF1, "ClusterPosition") cluster_;
     Elt(VUInt, 0x5378, "CueBlockNumber") block_;
-    Elt(VUInt, 0xEA, "CueCodecState") codecState_;
+    Elt(VEltPosition, 0xEA, "CueCodecState") codecState_;
     Elt(CueRef, 0xDB, "CueReference") ref_;
   };
   
@@ -265,7 +265,7 @@ namespace Yamka
     ImplementsPayloadAPI();
     
     Elt(VBinary, 0x53AB, "SeekID") id_;
-    Elt(VUInt, 0x53AC, "SeekPosition") position_;
+    Elt(VEltPosition, 0x53AC, "SeekPosition") position_;
   };
   
   //----------------------------------------------------------------
@@ -521,7 +521,7 @@ namespace Yamka
     
     Elt(VUInt, 0xE7, "Timecode") timecode_;
     Elt(SilentTracks, 0x5854, "SilentTracks") silent_;
-    Elt(VUInt, 0xA7, "Position") position_;
+    Elt(VEltPosition, 0xA7, "Position") position_;
     Elt(VUInt, 0xAB, "PrevSize") prevSize_;
     Elts(BlockGroup, 0xA0, "BlockGroup") blockGroups_;
     Elts(SimpleBlock, 0xA3, "SimpleBlock") simpleBlocks_;

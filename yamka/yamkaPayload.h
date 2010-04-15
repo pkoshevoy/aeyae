@@ -93,12 +93,16 @@ namespace Yamka
     // the position is not known yet. The default is 8 bytes
     void setUnknownPositionSize(uint64 vsize);
     
-    // accessor to the reference element storage receipt position:
-    uint64 position() const;
+    // origin element accessors (position is relative to this element):
+    void setOrigin(const IElement * origin);
+    const IElement * getOrigin() const;
     
     // reference element accessors:
     void setElt(const IElement * elt);
     const IElement * getElt() const;
+    
+    // accessor to the reference element storage receipt position:
+    uint64 position() const;
     
     // Rewrite reference element storage receipt position.
     // 
@@ -111,6 +115,12 @@ namespace Yamka
     bool rewrite() const;
     
   protected:
+    // helper for getting the origin position:
+    virtual uint64 getOriginPosition() const;
+    
+    // origin reference element:
+    const IElement * origin_;
+    
     // reference element:
     const IElement * elt_;
     
