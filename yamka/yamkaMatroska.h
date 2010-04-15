@@ -24,9 +24,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapTranslate
   // 
-  struct ChapTranslate : public EbmlPayload
+  struct ChapTranslate : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x69fc, "EditionUID") editionUID_;
     Elt(VUInt, 0x69bf, "ChapTransCodec") chapTransCodec_;
@@ -36,11 +36,11 @@ namespace Yamka
   //----------------------------------------------------------------
   // SegInfo
   // 
-  struct SegInfo : public EbmlPayload
+  struct SegInfo : public EbmlMaster
   {
     SegInfo();
     
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VBytes<16>, 0x73a4, "SegmentUID") segUID_;
     Elt(VString, 0x7384, "SegmentFilename") segFilename_;
@@ -61,9 +61,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // TrackTranslate
   // 
-  struct TrackTranslate : public EbmlPayload
+  struct TrackTranslate : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x66fc, "EditionUID") editionUID_;
     Elt(VUInt, 0x66bf, "TrackTransCodec") trackTransCodec_;
@@ -73,11 +73,11 @@ namespace Yamka
   //----------------------------------------------------------------
   // Video
   // 
-  struct Video : public EbmlPayload
+  struct Video : public EbmlMaster
   {
     Video();
     
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x9A, "FlagInterlaced") flagInterlaced_;
     Elt(VUInt, 0x53B8, "StereoMode") stereoMode_;
@@ -99,11 +99,11 @@ namespace Yamka
   //----------------------------------------------------------------
   // Audio
   // 
-  struct Audio : public EbmlPayload
+  struct Audio : public EbmlMaster
   {
     Audio();
     
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VFloat, 0xB5, "SamplingFrequency") sampFreq_;
     Elt(VFloat, 0x78B5, "OutputSamplingFrequency") sampFreqOut_;
@@ -115,9 +115,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ContentCompr
   // 
-  struct ContentCompr : public EbmlPayload
+  struct ContentCompr : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x4254, "ContentCompAlgo") algo_;
     Elt(VBinary, 0x4255, "ContentCompSettings") settings_;
@@ -126,9 +126,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ContentEncrypt
   // 
-  struct ContentEncrypt : public EbmlPayload
+  struct ContentEncrypt : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x47E1, "ContentEncAlgo") encAlgo_;
     Elt(VBinary, 0x47E2, "ContentEncKeyID") encKeyID_;
@@ -141,9 +141,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ContentEnc
   // 
-  struct ContentEnc : public EbmlPayload
+  struct ContentEnc : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x5031, "ContentEncodingOrder") order_;
     Elt(VUInt, 0x5032, "ContentEncodingScope") scope_;
@@ -155,9 +155,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ContentEncodings
   // 
-  struct ContentEncodings : public EbmlPayload
+  struct ContentEncodings : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(ContentEnc, 0x6240, "ContentEnc") encodings_;
   };
@@ -165,9 +165,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Track
   // 
-  struct Track : public EbmlPayload
+  struct Track : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0xD7, "TrackNumber") trackNumber_;
     Elt(VUInt, 0x73C5, "TrackUID") trackUID_;
@@ -202,9 +202,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Tracks
   // 
-  struct Tracks : public EbmlPayload
+  struct Tracks : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(Track, 0xae, "TrackEntry") tracks_;
   };
@@ -212,9 +212,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // CueRef
   // 
-  struct CueRef : public EbmlPayload
+  struct CueRef : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x96, "CueRefTime") time_;
     Elt(VUInt, 0x97, "CueRefCluster") cluster_;
@@ -225,12 +225,12 @@ namespace Yamka
   //----------------------------------------------------------------
   // CueTrkPos
   // 
-  struct CueTrkPos : public EbmlPayload
+  struct CueTrkPos : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0xF7, "Track") track_;
-    Elt(VUInt, 0xF1, "ClusterPosition") cluster_;
+    Elt(VEltPosition, 0xF1, "ClusterPosition") cluster_;
     Elt(VUInt, 0x5378, "CueBlockNumber") block_;
     Elt(VUInt, 0xEA, "CueCodecState") codecState_;
     Elt(CueRef, 0xDB, "CueReference") ref_;
@@ -239,9 +239,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // CuePoint
   // 
-  struct CuePoint : public EbmlPayload
+  struct CuePoint : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0xB3, "CueTime") time_;
     Elts(CueTrkPos, 0xB7, "CueTrackPosition") trkPosns_;
@@ -250,9 +250,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Cues
   // 
-  struct Cues : public EbmlPayload
+  struct Cues : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(CuePoint, 0xBB, "CuePoint") points_;
   };
@@ -260,9 +260,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // SeekEntry
   // 
-  struct SeekEntry : public EbmlPayload
+  struct SeekEntry : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VBinary, 0x53AB, "SeekID") id_;
     Elt(VUInt, 0x53AC, "SeekPosition") position_;
@@ -271,9 +271,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // SeekHead
   // 
-  struct SeekHead : public EbmlPayload
+  struct SeekHead : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(SeekEntry, 0x4DBB, "Seek") seek_;
   };
@@ -281,9 +281,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // AttdFile
   // 
-  struct AttdFile : public EbmlPayload
+  struct AttdFile : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VString, 0x467E, "FileDescription") description_;
     Elt(VString, 0x466E, "FileName") filename_;
@@ -296,9 +296,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Attachments
   // 
-  struct Attachments : public EbmlPayload
+  struct Attachments : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(AttdFile, 0x61A7, "AttachedFile") files_;
   };
@@ -306,9 +306,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapTrk
   // 
-  struct ChapTrk : public EbmlPayload
+  struct ChapTrk : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(VUInt, 0x89, "ChapterTrackNumber") tracks_;
   };
@@ -316,9 +316,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapDisp
   // 
-  struct ChapDisp : public EbmlPayload
+  struct ChapDisp : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VString, 0x85, "ChapString") string_;
     Elt(VString, 0x437C, "ChapLanguage") language_;
@@ -328,9 +328,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapProcCmd
   // 
-  struct ChapProcCmd : public EbmlPayload
+  struct ChapProcCmd : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x6922, "ChapProcessTime") time_;
     Elt(VBinary, 0x6933, "ChapProcessData") data_;
@@ -339,9 +339,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapProc
   // 
-  struct ChapProc : public EbmlPayload
+  struct ChapProc : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x6955, "ChapProcessCodecID") codecID_;
     Elt(VBinary, 0x450D, "ChapProcessPrivate") procPrivate_;
@@ -351,9 +351,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // ChapAtom
   // 
-  struct ChapAtom : public EbmlPayload
+  struct ChapAtom : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x73C4, "ChapterUID") UID_;
     Elt(VUInt, 0x91, "ChapterTimeStart") timeStart_;
@@ -371,9 +371,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Edition
   // 
-  struct Edition : public EbmlPayload
+  struct Edition : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x45BC, "EditionUID") UID_;
     Elt(VUInt, 0x45BD, "EditionFlagHidden") flagHidden_;
@@ -385,9 +385,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Chapters
   // 
-  struct Chapters : public EbmlPayload
+  struct Chapters : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(Edition, 0x45B9, "EditionEntry") editions_;
   };
@@ -395,9 +395,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // TagTargets
   // 
-  struct TagTargets : public EbmlPayload
+  struct TagTargets : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x68CA, "TargetTypeValue") typeValue_;
     Elt(VString, 0x63CA, "TargetType") type_;
@@ -410,9 +410,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // SimpleTag
   // 
-  struct SimpleTag : public EbmlPayload
+  struct SimpleTag : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VString, 0x45A3, "TagName") name_;
     Elt(VString, 0x447A, "TagLanguage") lang_;
@@ -424,9 +424,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Tag
   // 
-  struct Tag : public EbmlPayload
+  struct Tag : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(TagTargets, 0x63C0, "Targets") targets_;
     Elts(SimpleTag, 0x67C8, "SimpleTags") simpleTags_;
@@ -435,9 +435,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Tags
   // 
-  struct Tags : public EbmlPayload
+  struct Tags : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(Tag, 0x7373, "Tag") tags_;
   };
@@ -445,9 +445,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // SilentTracks
   // 
-  struct SilentTracks : public EbmlPayload
+  struct SilentTracks : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(VUInt, 0x58D7, "SilentTrackNumber") tracks_;
   };
@@ -469,9 +469,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // BlockMore
   // 
-  struct BlockMore : public EbmlPayload
+  struct BlockMore : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0xEE, "BlockAddID") blockAddID_;
     Elt(VBinary, 0xA5, "BlockAdditional") blockAdditional_;
@@ -480,9 +480,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // BlockAdditions
   // 
-  struct BlockAdditions : public EbmlPayload
+  struct BlockAdditions : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(BlockMore, 0xA6, "BlockMore") more_;
   };
@@ -490,9 +490,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // BlockGroup
   // 
-  struct BlockGroup : public EbmlPayload
+  struct BlockGroup : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0x9B, "BlockDuration") duration_;
     Elt(Block, 0xA1, "Block") block_;
@@ -515,9 +515,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Cluster
   // 
-  struct Cluster : public EbmlPayload
+  struct Cluster : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(VUInt, 0xE7, "Timecode") timecode_;
     Elt(SilentTracks, 0x5854, "SilentTracks") silent_;
@@ -531,9 +531,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // Segment
   // 
-  struct Segment : public EbmlPayload
+  struct Segment : public EbmlMaster
   {
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elt(SegInfo, 0x1549A966, "SegInfo") info_;
     Elt(Tracks, 0x1654AE6b, "Tracks") tracks_;
@@ -552,7 +552,7 @@ namespace Yamka
   {
     MatroskaDoc();
     
-    declareEbmlPayloadAPI();
+    ImplementsPayloadAPI();
     
     Elts(Segment, 0x18538067, "Segment") segments_;
   };

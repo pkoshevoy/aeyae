@@ -59,6 +59,15 @@ namespace Yamka
   {}
   
   //----------------------------------------------------------------
+  // FileStorage::Receipt::position
+  // 
+  uint64
+  FileStorage::Receipt::position() const
+  {
+    return addr_;
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::Receipt::save
   // 
   bool

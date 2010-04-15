@@ -12,6 +12,7 @@
 // yamka includes:
 #include <yamkaBytes.h>
 #include <yamkaCrc32.h>
+#include <yamkaStdInt.h>
 
 // boost includes:
 #include <boost/shared_ptr.hpp>
@@ -33,7 +34,10 @@ namespace Yamka
     struct IReceipt
     {
       virtual ~IReceipt() {}
-
+      
+      // NOTE: position interpretation is implementation specific:
+      virtual uint64 position() const = 0;
+      
       // return false if load/save fails:
       virtual bool save(const Bytes & data) = 0;
       virtual bool load(Bytes & data) = 0;

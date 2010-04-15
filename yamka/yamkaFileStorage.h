@@ -40,6 +40,9 @@ namespace Yamka
       Receipt(const File & file);
       
       // virtual:
+      uint64 position() const;
+      
+      // virtual:
       bool save(const Bytes & data);
       bool load(Bytes & data);
       

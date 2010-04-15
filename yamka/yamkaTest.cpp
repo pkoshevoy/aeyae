@@ -40,7 +40,7 @@ main(int argc, char ** argv)
             << " = " << floatDecode(floatEncode(-11.1f)) << std::endl
             << "0x" << doubleEncode(-11.1)
             << " = " << doubleDecode(doubleEncode(-11.1)) << std::endl
-            << "0x" << intEncode(VDate().data_, 8) << std::endl
+            << "0x" << intEncode(VDate().get(), 8) << std::endl
             << std::endl;
   
   FileStorage fs(std::string("testYamka.bin"), File::kReadWrite);

@@ -14,6 +14,7 @@
 #include <yamkaStdInt.h>
 #include <yamkaCrc32.h>
 #include <yamkaBytes.h>
+#include <yamkaElt.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -27,157 +28,225 @@
 
 namespace Yamka
 {
+
+  //----------------------------------------------------------------
+  // IPayload
+  // 
+  // EBML element payload interface
+  // 
+  struct IPayload
+  {
+    virtual ~IPayload() {}
+    
+    // check whether payload holds default value:
+    virtual bool isDefault() const = 0;
+    
+    // calculate payload size:
+    virtual uint64 calcSize() const = 0;
+    
+    // save the payload and return storage receipt:
+    virtual IStorage::IReceiptPtr
+    save(IStorage & storage, Crc32 * crc32 = NULL) const = 0;
+    
+    // attempt to load the payload, return number of bytes read successfully:
+    virtual uint64
+    load(FileStorage & storage, uint64 storageSize, Crc32 * crc32 = NULL) = 0;
+  };
+  
   
   //----------------------------------------------------------------
-  // Payload
+  // ImplementsPayloadAPI
+  // 
+  // A helper macro used to implement the payload interface API
+  // 
+# define ImplementsPayloadAPI()                                         \
+  bool isDefault() const;                                               \
+  uint64 calcSize() const;                                              \
+  IStorage::IReceiptPtr save(IStorage & storage,                        \
+                             Crc32 * computeCrc32 = NULL) const;        \
+  uint64 load(FileStorage & storage,                                    \
+              uint64 storageSize,                                       \
+              Crc32 * computeCrc32 = NULL)
+  
+  
+  //----------------------------------------------------------------
+  // VEltPosition
+  // 
+  // NOTE: when this element is saved the reference element
+  // storage receipt position is used.  If the
+  // referenced element doesn't have a storage receipt, then
+  // a default position (max uint64 for a given vsize) will be saved.
+  // Once all elements are saved this position will have
+  // to be corrected (saved again with correct storage receipt):
+  // 
+  // NOTE: once this element and all other elements are loaded,
+  // a second pass is required to map loaded storage receipt
+  // position to an actual element pointer.
+  // 
+  struct VEltPosition : public IPayload
+  {
+    VEltPosition();
+    
+    ImplementsPayloadAPI();
+    
+    // set default number of bytes to use when exact size of
+    // the position is not known yet. The default is 8 bytes
+    void setUnknownPositionSize(uint64 vsize);
+    
+    // accessor to the reference element storage receipt position:
+    uint64 position() const;
+    
+    // reference element accessors:
+    void setElt(const IElement * elt);
+    const IElement * getElt() const;
+    
+    // Rewrite reference element storage receipt position.
+    // 
+    // 1. This will fail if the position hasn't been saved yet.
+    // 2. This will fail if the reference element is not set.
+    // 3. This will fail if the new position doesn't fit within the
+    //    number of bytes used to save the position previously.
+    // 4. The size of the previously saved position will be preserved.
+    // 
+    bool rewrite() const;
+    
+  protected:
+    // reference element:
+    const IElement * elt_;
+    
+    // reference element storage receipt position:
+    uint64 pos_;
+    
+    // number of bytes used to save unknown position:
+    uint64 unknownPositionSize_;
+    
+    // position storage receipt is kept so that referenced element
+    // storage receipt position can be rewritten once it is known:
+    mutable IStorage::IReceiptPtr receipt_;
+  };
+  
+  
+  //----------------------------------------------------------------
+  // VPayload
+  // 
+  // Helper base class for simple payload types
+  // such as int, float, date, string...
   // 
   template <typename data_t>
-  struct Payload
+  struct VPayload : public IPayload
   {
     typedef data_t TData;
-    typedef Payload<TData> TSelf;
+    typedef VPayload<TData> TSelf;
     
-    Payload(uint64 size = 0):
+    VPayload(uint64 size = 0):
       size_(size)
     {}
     
-    ~Payload() {}
+    // set payload size:
+    TSelf & setSize(uint64 size)
+    {
+      size_ = size;
+      return *this;
+    }
     
-    // check whether payload holds default value:
-    bool isDefault() const
-    { return data_ == dataDefault_; }
-
-    // set default value and payload value:
+    // set default value and payload data:
     TSelf & setDefault(const TData & dataDefault)
     {
       dataDefault_ = dataDefault;
       data_ = dataDefault_;
       return *this;
     }
-
-    // set payload value
+    
+    // set payload data:
     TSelf & set(const TData & data)
     {
       data_ = data;
       return *this;
     }
     
+    // payload data accessor:
+    const TData & get() const
+    { return data_; }
+    
+  protected:
+    uint64 size_;
+    
     TData dataDefault_;
     TData data_;
-    uint64 size_;
   };
+  
   
   //----------------------------------------------------------------
   // VInt
   // 
-  struct VInt : public Payload<int64>
+  struct VInt : public VPayload<int64>
   {
-    typedef Payload<int64> TSuper;
+    typedef VPayload<int64> TSuper;
     
     VInt();
     
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
   };
+  
   
   //----------------------------------------------------------------
   // VUInt
   // 
-  struct VUInt : public Payload<uint64>
+  struct VUInt : public VPayload<uint64>
   {
-    typedef Payload<uint64> TSuper;
+    typedef VPayload<uint64> TSuper;
     
     VUInt();
     
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
   };
+  
   
   //----------------------------------------------------------------
   // VFloat
   // 
-  struct VFloat : public Payload<double>
+  struct VFloat : public VPayload<double>
   {
-    typedef Payload<double> TSuper;
-
+    typedef VPayload<double> TSuper;
+    
     VFloat();
     
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
   };
-
+  
+  
   //----------------------------------------------------------------
   // VDate
   // 
   // 64-bit signed integer expressing elapsed time
   // in nanoseconds since 2001-01-01 T00:00:00,000000000 UTC
   // 
-  struct VDate : public Payload<int64>
+  struct VDate : public VPayload<int64>
   {
-    typedef Payload<int64> TSuper;
+    typedef VPayload<int64> TSuper;
     
     // constructor stores current time:
     VDate();
-
+    
     void setTime(std::time_t t);
     std::time_t getTime() const;
     
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
   };
+  
   
   //----------------------------------------------------------------
   // VString
   // 
   // ASCII or UTF-8 encoded string (ASCII is a subset of UTF-8)
   // 
-  struct VString : public Payload<std::string>
+  struct VString : public VPayload<std::string>
   {
-    typedef Payload<std::string> TSuper;
+    typedef VPayload<std::string> TSuper;
     
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
   };
+  
   
   //----------------------------------------------------------------
   // VBinary
@@ -186,7 +255,7 @@ namespace Yamka
   // interface. This allows a simple implementation for off-line
   // storage of binary blobs (which may be fairly large):
   //
-  struct VBinary
+  struct VBinary : public IPayload
   {
     typedef Bytes TData;
     
@@ -197,19 +266,7 @@ namespace Yamka
     VBinary & set(const Bytes & bytes);
     bool get(Bytes & bytes) const;
     
-    // check whether payload holds default value:
-    bool isDefault() const;
-    
-    // calculate payload size:
-    uint64 calcSize() const;
-    
-    // save the payload and return storage receipt:
-    IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const;
-    
-    // attempt to load the payload, return number of bytes read successfully:
-    uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL);
+    ImplementsPayloadAPI();
     
     // data storage:
     static IStoragePtr defaultStorage_;
@@ -220,11 +277,12 @@ namespace Yamka
     std::size_t sizeDefault_;
   };
   
+  
   //----------------------------------------------------------------
   // VBytes
   // 
   template <unsigned int fixedSize>
-  struct VBytes
+  struct VBytes : public IPayload
   {
     typedef VBytes<fixedSize> TSelf;
     typedef Bytes TData;
@@ -266,7 +324,7 @@ namespace Yamka
     
     // attempt to load the payload, return number of bytes read successfully:
     uint64
-    load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
+    load(FileStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
     {
       uint64 vsizeSize = 0;
       uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);

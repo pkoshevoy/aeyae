@@ -8,6 +8,8 @@
 
 // yamka includes:
 #include <yamkaStdInt.h>
+#include <yamkaIStorage.h>
+#include <yamkaCrc32.h>
 
 // system includes:
 #include <assert.h>
@@ -36,9 +38,11 @@ namespace Yamka
 # endif
   
   //----------------------------------------------------------------
-  // maxUInt
+  // uintMax
   // 
-  static const uint64 maxUInt[] = {
+  // Constant max unsigned int for each byte size:
+  // 
+  const uint64 uintMax[9] = {
     UI64(0x0),
     UI64(0xFF),
     UI64(0xFFFF),
@@ -294,7 +298,7 @@ namespace Yamka
     }
 
     // invalid vsize or vsize insufficient storage:
-    return maxUInt[8];
+    return uintMax[8];
   }
   
   //----------------------------------------------------------------
@@ -399,7 +403,7 @@ namespace Yamka
   intDecode(const TByteVec & v, uint64 numBytes)
   {
     uint64 ui = uintDecode(v, numBytes);
-    uint64 mu = maxUInt[numBytes];
+    uint64 mu = uintMax[numBytes];
     uint64 mi = mu >> 1;
     int64 i = (ui > mi) ? (ui - mu) - 1 : ui;
     return i;

@@ -11,8 +11,6 @@
 
 // yamka includes:
 #include <yamkaBytes.h>
-#include <yamkaCrc32.h>
-#include <yamkaIStorage.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -20,16 +18,28 @@
 
 namespace Yamka
 {
-
+  
+  // forward declarations:
+  struct IStorage;
+  struct Crc32;
+  
   //----------------------------------------------------------------
   // uint64
   // 
   typedef boost::uint64_t uint64;
-
+  
   //----------------------------------------------------------------
   // int64
   // 
   typedef boost::int64_t int64;
+  
+  
+  //----------------------------------------------------------------
+  // uintMax
+  // 
+  // Constant max unsigned int for each byte size:
+  // 
+  extern const uint64 uintMax[9];
   
   //----------------------------------------------------------------
   // vsizeNumBytes

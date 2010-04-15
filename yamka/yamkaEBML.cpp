@@ -14,10 +14,10 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
-  // EbmlPayload::loadVoid
+  // EbmlMaster::loadVoid
   // 
   uint64
-  EbmlPayload::loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  EbmlMaster::loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
     // shortcut:
     typedef TypeOfElt(VBinary, kIdVoid, "Void") TVoid;
@@ -185,6 +185,35 @@ namespace Yamka
     eltsSave(voids_, storage, crc);
     
     return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlDoc::load
+  // 
+  uint64
+  EbmlDoc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  {
+    uint64 bytesToRead = storageSize;
+    
+    Bytes oneByte(1);
+    uint64 bytesReadTotal = 0;
+    
+    // skip forward until we load EBML head element:
+    while (bytesToRead)
+    {
+      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead, crc);
+      if (headSize)
+      {
+        bytesToRead -= headSize;
+        bytesReadTotal += headSize;
+        break;
+      }
+      
+      storage.load(oneByte);
+      bytesToRead--;
+    }
+    
+    return bytesReadTotal;
   }
   
 }
