@@ -59,7 +59,7 @@ namespace Yamka
     uint64 vsizeSize = 0;
     uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
     
-    Bytes bytes(numBytes);
+    Bytes bytes((std::size_t)numBytes);
     if (storage.loadAndCalcCrc32(bytes, crc))
     {
       TSuper::data_ = intDecode(bytes, numBytes);
@@ -112,7 +112,7 @@ namespace Yamka
     uint64 vsizeSize = 0;
     uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
     
-    Bytes bytes(numBytes);
+    Bytes bytes((std::size_t)numBytes);
     if (storage.loadAndCalcCrc32(bytes, crc))
     {
       TSuper::data_ = uintDecode(bytes, numBytes);
@@ -174,7 +174,7 @@ namespace Yamka
     uint64 vsizeSize = 0;
     uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
     
-    Bytes bytes(numBytes);
+    Bytes bytes((std::size_t)numBytes);
     storage.loadAndCalcCrc32(bytes, crc);
     if (numBytes > 4)
     {
@@ -262,7 +262,7 @@ namespace Yamka
     uint64 vsizeSize = 0;
     uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
     
-    Bytes bytes(numBytes);
+    Bytes bytes((std::size_t)numBytes);
     if (storage.loadAndCalcCrc32(bytes, crc))
     {
       TSuper::data_ = intDecode(bytes, numBytes);
@@ -306,7 +306,7 @@ namespace Yamka
     uint64 vsizeSize = 0;
     uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
     
-    Bytes bytes(numBytes);
+    Bytes bytes((std::size_t)numBytes);
     if (storage.loadAndCalcCrc32(bytes, crc))
     {
       TByteVec chars = TByteVec(bytes);
@@ -479,7 +479,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.receipt();
     
     uint64 vsizeSize = 0;
-    size_ = vsizeDecode(storage, vsizeSize, crc);
+    size_ = (std::size_t)vsizeDecode(storage, vsizeSize, crc);
     
     Bytes bytes(size_);
     if (storage.loadAndCalcCrc32(bytes, crc))

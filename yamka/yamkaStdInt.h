@@ -76,13 +76,13 @@ namespace Yamka
   // uintDecode
   // 
   extern uint64
-  uintDecode(const TByteVec & v, unsigned int nbytes);
+  uintDecode(const TByteVec & v, uint64 nbytes);
   
   //----------------------------------------------------------------
   // uintEncode
   // 
   extern TByteVec
-  uintEncode(uint64 ui, unsigned int nbytes);
+  uintEncode(uint64 ui, uint64 nbytes);
   
   //----------------------------------------------------------------
   // uintNumBytes
@@ -100,13 +100,13 @@ namespace Yamka
   // intDecode
   // 
   extern int64
-  intDecode(const TByteVec & v, unsigned int len);
+  intDecode(const TByteVec & v, uint64 len);
   
   //----------------------------------------------------------------
   // intEncode
   // 
   extern TByteVec
-  intEncode(int64 si, unsigned int nbytes);
+  intEncode(int64 si, uint64 nbytes);
   
   //----------------------------------------------------------------
   // intNumBytes

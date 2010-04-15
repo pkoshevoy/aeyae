@@ -215,15 +215,15 @@ namespace Yamka
   TByteVec
   vsizeEncode(uint64 vsize)
   {
-    unsigned int nbytes = vsizeNumBytes(vsize);
-    TByteVec v(nbytes);
+    unsigned int numBytes = vsizeNumBytes(vsize);
+    TByteVec v(numBytes);
     
-    for (unsigned int j = 0; j < nbytes; j++)
+    for (unsigned int j = 0; j < numBytes; j++)
     {
       unsigned char n = 0xFF & (vsize >> (j * 8));
-      v[nbytes - j - 1] = n;
+      v[numBytes - j - 1] = n;
     }
-    v[0] |= (1 << (8 - nbytes));
+    v[0] |= (1 << (8 - numBytes));
     
     return v;
   }
@@ -306,7 +306,7 @@ namespace Yamka
     TByteVec v;
     if (vsizeLoad(v, storage, crc, 4))
     {
-      return uintDecode(v, (unsigned int)v.size());
+      return uintDecode(v, v.size());
     }
     
     // invalid EBML ID or insufficient storage:
@@ -318,10 +318,10 @@ namespace Yamka
   // uintDecode
   // 
   uint64
-  uintDecode(const TByteVec & v, unsigned int nbytes)
+  uintDecode(const TByteVec & v, uint64 numBytes)
   {
     uint64 ui = 0;
-    for (unsigned int j = 0; j < nbytes; j++)
+    for (unsigned int j = 0; j < numBytes; j++)
     {
       ui = (ui << 8) | v[j];
     }
@@ -332,14 +332,14 @@ namespace Yamka
   // uintEncode
   // 
   TByteVec
-  uintEncode(uint64 ui, unsigned int nbytes)
+  uintEncode(uint64 ui, uint64 numBytes)
   {
-    TByteVec v(nbytes);
-    for (unsigned int j = 0, k = nbytes - 1; j < nbytes; j++, k--)
+    TByteVec v((std::size_t)numBytes);
+    for (uint64 j = 0, k = numBytes - 1; j < numBytes; j++, k--)
     {
       unsigned char n = 0xFF & ui;
       ui >>= 8;
-      v[k] = n;
+      v[(std::size_t)k] = n;
     }
     return v;
   }
@@ -388,18 +388,18 @@ namespace Yamka
   TByteVec
   uintEncode(uint64 ui)
   {
-    unsigned int nbytes = uintNumBytes(ui);
-    return uintEncode(ui, nbytes);
+    unsigned int numBytes = uintNumBytes(ui);
+    return uintEncode(ui, numBytes);
   }
   
   //----------------------------------------------------------------
   // intDecode
   // 
   int64
-  intDecode(const TByteVec & v, unsigned int nbytes)
+  intDecode(const TByteVec & v, uint64 numBytes)
   {
-    uint64 ui = uintDecode(v, nbytes);
-    uint64 mu = maxUInt[nbytes];
+    uint64 ui = uintDecode(v, numBytes);
+    uint64 mu = maxUInt[numBytes];
     uint64 mi = mu >> 1;
     int64 i = (ui > mi) ? (ui - mu) - 1 : ui;
     return i;
@@ -409,14 +409,14 @@ namespace Yamka
   // intEncode
   // 
   TByteVec
-  intEncode(int64 si, unsigned int nbytes)
+  intEncode(int64 si, uint64 numBytes)
   {
-    TByteVec v(nbytes);
-    for (unsigned int j = 0, k = nbytes - 1; j < nbytes; j++, k--)
+    TByteVec v((std::size_t)numBytes);
+    for (uint64 j = 0, k = numBytes - 1; j < numBytes; j++, k--)
     {
       unsigned char n = 0xFF & si;
       si >>= 8;
-      v[k] = n;
+      v[(std::size_t)k] = n;
     }
     return v;
   }
@@ -465,8 +465,8 @@ namespace Yamka
   TByteVec
   intEncode(int64 si)
   {
-    unsigned int nbytes = intNumBytes(si);
-    return intEncode(si, nbytes);
+    unsigned int numBytes = intNumBytes(si);
+    return intEncode(si, numBytes);
   }
   
   //----------------------------------------------------------------
