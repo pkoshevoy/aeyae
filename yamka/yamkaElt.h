@@ -207,8 +207,7 @@ namespace Yamka
         return 0;
       }
       
-#if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-      // FIXME:
+#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
       {
         File::Seek restore(storage.file_);
         uint64 vsizeSize = 0;
@@ -216,7 +215,7 @@ namespace Yamka
         std::cout << std::setw(8) << uintEncode(id()) << " @ " << std::hex
                   << "0x" << storageStart.absolutePosition() << std::dec
                   << " -- " << name()
-                  << ", size " << vsize << std::endl;
+                  << ", payload " << vsize << " bytes" << std::endl;
       }
 #endif
       
@@ -237,15 +236,14 @@ namespace Yamka
       bytesRead += payloadSize;
       
 #if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-      // FIXME:
       {
         uint64 newSize = calcSize();
         if (newSize != bytesRead)
         {
           std::cout << std::setw(8) << uintEncode(id()) << " @ " << std::hex
                     << "0x" << storageStart.absolutePosition() << std::dec
-                    << " -- " << name()
-                    << ", load size " << bytesRead
+                    << " -- WARNING: " << name()
+                    << ", loaded size " << bytesRead
                     << ", stored size " << newSize
                     << std::endl;
           newSize = calcSize();
