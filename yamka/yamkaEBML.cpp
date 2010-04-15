@@ -60,7 +60,8 @@ namespace Yamka
       maxSizeLength_.calcSize() +
       docType_.calcSize() +
       docTypeVersion_.calcSize() +
-      docTypeReadVersion_.calcSize();
+      docTypeReadVersion_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -90,6 +91,7 @@ namespace Yamka
     docType_.save(storage, crc);
     docTypeVersion_.save(storage, crc);
     docTypeReadVersion_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -119,6 +121,7 @@ namespace Yamka
       bytesToRead -= docType_.load(storage, bytesToRead, crc);
       bytesToRead -= docTypeVersion_.load(storage, bytesToRead, crc);
       bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead, crc);
+      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
       uint64 bytesRead = prevStorageSize - bytesToRead;
       if (!bytesRead)
@@ -156,7 +159,9 @@ namespace Yamka
   uint64
   EbmlDoc::calcSize() const
   {
-    uint64 size = head_.calcSize();
+    uint64 size =
+      head_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -177,6 +182,8 @@ namespace Yamka
   EbmlDoc::save(IStorage & storage, Crc32 * crc) const
   {
     IStorage::IReceiptPtr receipt = head_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
+    
     return receipt;
   }
   

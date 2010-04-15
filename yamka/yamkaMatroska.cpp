@@ -22,7 +22,8 @@ namespace Yamka
     bool allDefault =
       !editionUID_.mustSave() &&
       !chapTransCodec_.mustSave() &&
-      !chapTransID_.mustSave();
+      !chapTransID_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -36,7 +37,8 @@ namespace Yamka
     uint64 size =
       editionUID_.calcSize() +
       chapTransCodec_.calcSize() +
-      chapTransID_.calcSize();
+      chapTransID_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -54,6 +56,7 @@ namespace Yamka
     editionUID_.save(storage, crc);
     chapTransCodec_.save(storage, crc);
     chapTransID_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -128,7 +131,8 @@ namespace Yamka
       !date_.mustSave() &&
       !title_.mustSave() &&
       !muxingApp_.mustSave() &&
-      !writingApp_.mustSave();
+      !writingApp_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -153,7 +157,8 @@ namespace Yamka
       date_.calcSize() +
       title_.calcSize() +
       muxingApp_.calcSize() +
-      writingApp_.calcSize();
+      writingApp_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -182,6 +187,7 @@ namespace Yamka
     title_.save(storage, crc);
     muxingApp_.save(storage, crc);
     writingApp_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -247,7 +253,8 @@ namespace Yamka
     bool allDefault =
       !editionUID_.mustSave() &&
       !trackTransCodec_.mustSave() &&
-      !trackTransID_.mustSave();
+      !trackTransID_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -261,7 +268,8 @@ namespace Yamka
     uint64 size =
       editionUID_.calcSize() +
       trackTransCodec_.calcSize() +
-      trackTransID_.calcSize();
+      trackTransID_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -279,6 +287,7 @@ namespace Yamka
     editionUID_.save(storage, crc);
     trackTransCodec_.save(storage, crc);
     trackTransID_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -353,7 +362,8 @@ namespace Yamka
       !aspectRatioType_.mustSave() &&
       !colorSpace_.mustSave() &&
       !gammaValue_.mustSave() &&
-      !frameRate_.mustSave();
+      !frameRate_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -379,7 +389,8 @@ namespace Yamka
       aspectRatioType_.calcSize() +
       colorSpace_.calcSize() +
       gammaValue_.calcSize() +
-      frameRate_.calcSize();
+      frameRate_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -409,6 +420,7 @@ namespace Yamka
     colorSpace_.save(storage, crc);
     gammaValue_.save(storage, crc);
     frameRate_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -486,7 +498,8 @@ namespace Yamka
       !sampFreqOut_.mustSave() &&
       !channels_.mustSave() &&
       !channelPositions_.mustSave() &&
-      !bitDepth_.mustSave();
+      !bitDepth_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -502,7 +515,8 @@ namespace Yamka
       sampFreqOut_.calcSize() +
       channels_.calcSize() +
       channelPositions_.calcSize() +
-      bitDepth_.calcSize();
+      bitDepth_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -522,6 +536,7 @@ namespace Yamka
     channels_.save(storage, crc);
     channelPositions_.save(storage, crc);
     bitDepth_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -577,7 +592,8 @@ namespace Yamka
   {
     bool allDefault =
       !algo_.mustSave() &&
-      !settings_.mustSave();
+      !settings_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -590,7 +606,8 @@ namespace Yamka
   {
     uint64 size =
       algo_.calcSize() +
-      settings_.calcSize();
+      settings_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -607,6 +624,7 @@ namespace Yamka
     
     algo_.save(storage, crc);
     settings_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -663,7 +681,8 @@ namespace Yamka
       !signature_.mustSave() &&
       !sigKeyID_.mustSave() &&
       !sigAlgo_.mustSave() &&
-      !sigHashAlgo_.mustSave();
+      !sigHashAlgo_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -680,7 +699,8 @@ namespace Yamka
       signature_.calcSize() +
       sigKeyID_.calcSize() +
       sigAlgo_.calcSize() +
-      sigHashAlgo_.calcSize();
+      sigHashAlgo_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -701,6 +721,7 @@ namespace Yamka
     sigKeyID_.save(storage, crc);
     sigAlgo_.save(storage, crc);
     sigHashAlgo_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -760,7 +781,8 @@ namespace Yamka
       !scope_.mustSave() &&
       !type_.mustSave() &&
       !compression_.mustSave() &&
-      !encryption_.mustSave();
+      !encryption_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -776,7 +798,8 @@ namespace Yamka
       scope_.calcSize() +
       type_.calcSize() +
       compression_.calcSize() +
-      encryption_.calcSize();
+      encryption_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -796,6 +819,7 @@ namespace Yamka
     type_.save(storage, crc);
     compression_.save(storage, crc);
     encryption_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -849,7 +873,11 @@ namespace Yamka
   bool
   ContentEncodings::isDefault() const
   {
-    return encodings_.empty();
+    bool allDefault =
+      encodings_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -858,7 +886,11 @@ namespace Yamka
   uint64
   ContentEncodings::calcSize() const
   {
-    return eltsCalcSize(encodings_);
+    uint64 size =
+      eltsCalcSize(encodings_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -944,7 +976,8 @@ namespace Yamka
       !trackTranslate_.mustSave() &&
       !video_.mustSave() &&
       !audio_.mustSave() &&
-      !contentEncs_.mustSave();
+      !contentEncs_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -983,7 +1016,8 @@ namespace Yamka
       trackTranslate_.calcSize() +
       video_.calcSize() +
       audio_.calcSize() +
-      contentEncs_.calcSize();
+      contentEncs_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1026,6 +1060,7 @@ namespace Yamka
     video_.save(storage, crc);
     audio_.save(storage, crc);
     contentEncs_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1102,7 +1137,11 @@ namespace Yamka
   bool
   Tracks::isDefault() const
   {
-    return tracks_.empty();
+    bool allDefault =
+      tracks_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -1111,7 +1150,11 @@ namespace Yamka
   uint64
   Tracks::calcSize() const
   {
-    return eltsCalcSize(tracks_);
+    uint64 size =
+      eltsCalcSize(tracks_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -1125,6 +1168,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(tracks_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1178,7 +1222,8 @@ namespace Yamka
       !time_.mustSave() &&
       !cluster_.mustSave() &&
       !block_.mustSave() &&
-      !codecState_.mustSave();
+      !codecState_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1193,7 +1238,8 @@ namespace Yamka
       time_.calcSize() +
       cluster_.calcSize() +
       block_.calcSize() +
-      codecState_.calcSize();
+      codecState_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1212,6 +1258,7 @@ namespace Yamka
     cluster_.save(storage, crc);
     block_.save(storage, crc);
     codecState_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1269,7 +1316,8 @@ namespace Yamka
       !cluster_.mustSave() &&
       !block_.mustSave() &&
       !codecState_.mustSave() &&
-      !ref_.mustSave();
+      !ref_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1285,7 +1333,8 @@ namespace Yamka
       cluster_.calcSize() +
       block_.calcSize() +
       codecState_.calcSize() +
-      ref_.calcSize();
+      ref_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1305,6 +1354,7 @@ namespace Yamka
     block_.save(storage, crc);
     codecState_.save(storage, crc);
     ref_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1360,7 +1410,8 @@ namespace Yamka
   {
     bool allDefault =
       !time_.mustSave() &&
-      trkPosns_.empty();
+      trkPosns_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1373,7 +1424,8 @@ namespace Yamka
   {
     uint64 size =
       time_.calcSize() +
-      eltsCalcSize(trkPosns_);
+      eltsCalcSize(trkPosns_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1390,6 +1442,7 @@ namespace Yamka
     
     time_.save(storage, crc);
     eltsSave(trkPosns_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1440,7 +1493,11 @@ namespace Yamka
   bool
   Cues::isDefault() const
   {
-    return points_.empty();
+    bool allDefault =
+      points_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -1449,7 +1506,11 @@ namespace Yamka
   uint64
   Cues::calcSize() const
   {
-    return eltsCalcSize(points_);
+    uint64 size =
+      eltsCalcSize(points_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
 
   //----------------------------------------------------------------
@@ -1463,6 +1524,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(points_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1514,7 +1576,8 @@ namespace Yamka
   {
     bool allDefault =
       !id_.mustSave() &&
-      !position_.mustSave();
+      !position_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1527,7 +1590,8 @@ namespace Yamka
   {
     uint64 size =
       id_.calcSize() +
-      position_.calcSize();
+      position_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1544,6 +1608,7 @@ namespace Yamka
     
     id_.save(storage, crc);
     position_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1594,7 +1659,11 @@ namespace Yamka
   bool
   SeekHead::isDefault() const
   {
-    return seek_.empty();
+    bool allDefault =
+      seek_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -1603,7 +1672,11 @@ namespace Yamka
   uint64
   SeekHead::calcSize() const
   {
-    return eltsCalcSize(seek_);
+    uint64 size =
+      eltsCalcSize(seek_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -1617,6 +1690,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(seek_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1672,7 +1746,8 @@ namespace Yamka
       !mimeType_.mustSave() &&
       !data_.mustSave() &&
       !fileUID_.mustSave() &&
-      !referral_.mustSave();
+      !referral_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1689,7 +1764,8 @@ namespace Yamka
       mimeType_.calcSize() +
       data_.calcSize() +
       fileUID_.calcSize() +
-      referral_.calcSize();
+      referral_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1710,6 +1786,7 @@ namespace Yamka
     data_.save(storage, crc);
     fileUID_.save(storage, crc);
     referral_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1764,7 +1841,11 @@ namespace Yamka
   bool
   Attachments::isDefault() const
   {
-    return files_.empty();
+    bool allDefault =
+      files_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -1773,7 +1854,11 @@ namespace Yamka
   uint64
   Attachments::calcSize() const
   {
-    return eltsCalcSize(files_);
+    uint64 size =
+      eltsCalcSize(files_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -1787,6 +1872,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(files_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1836,7 +1922,11 @@ namespace Yamka
   bool
   ChapTrk::isDefault() const
   {
-    return tracks_.empty();
+    bool allDefault =
+      tracks_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -1845,7 +1935,11 @@ namespace Yamka
   uint64
   ChapTrk::calcSize() const
   {
-    return eltsCalcSize(tracks_);
+    uint64 size =
+      eltsCalcSize(tracks_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
 
   //----------------------------------------------------------------
@@ -1859,6 +1953,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(tracks_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1911,7 +2006,8 @@ namespace Yamka
     bool allDefault =
       !string_.mustSave() &&
       !language_.mustSave() &&
-      !country_.mustSave();
+      !country_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -1925,7 +2021,8 @@ namespace Yamka
     uint64 size =
       string_.calcSize() +
       language_.calcSize() +
-      country_.calcSize();
+      country_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -1943,6 +2040,7 @@ namespace Yamka
     string_.save(storage, crc);
     language_.save(storage, crc);
     country_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -1996,7 +2094,8 @@ namespace Yamka
   {
     bool allDefault =
       !time_.mustSave() &&
-      !data_.mustSave();
+      !data_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2009,7 +2108,8 @@ namespace Yamka
   {
     uint64 size =
       time_.calcSize() +
-      data_.calcSize();
+      data_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2026,6 +2126,7 @@ namespace Yamka
     
     time_.save(storage, crc);
     data_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2079,7 +2180,8 @@ namespace Yamka
     bool allDefault =
       !codecID_.mustSave() &&
       !procPrivate_.mustSave() &&
-      cmds_.empty();
+      cmds_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2093,7 +2195,8 @@ namespace Yamka
     uint64 size =
       codecID_.calcSize() +
       procPrivate_.calcSize() +
-      eltsCalcSize(cmds_);
+      eltsCalcSize(cmds_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2112,6 +2215,7 @@ namespace Yamka
     procPrivate_.save(storage, crc);
     
     eltsSave(cmds_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2175,7 +2279,8 @@ namespace Yamka
       !physEquiv_.mustSave() &&
       !tracks_.mustSave() &&
       display_.empty() &&
-      process_.empty();
+      process_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2197,7 +2302,8 @@ namespace Yamka
       physEquiv_.calcSize() +
       tracks_.calcSize() +
       eltsCalcSize(display_) +
-      eltsCalcSize(process_);
+      eltsCalcSize(process_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2224,6 +2330,7 @@ namespace Yamka
     
     eltsSave(display_, storage, crc);
     eltsSave(process_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2289,7 +2396,8 @@ namespace Yamka
       !flagHidden_.mustSave() &&
       !flagDefault_.mustSave() &&
       !flagOrdered_.mustSave() &&
-      chapAtoms_.empty();
+      chapAtoms_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2305,7 +2413,8 @@ namespace Yamka
       flagHidden_.calcSize() +
       flagDefault_.calcSize() +
       flagOrdered_.calcSize() +
-      eltsCalcSize(chapAtoms_);
+      eltsCalcSize(chapAtoms_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2326,6 +2435,7 @@ namespace Yamka
     flagOrdered_.save(storage, crc);
     
     eltsSave(chapAtoms_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2380,7 +2490,11 @@ namespace Yamka
   bool
   Chapters::isDefault() const
   {
-    return editions_.empty();
+    bool allDefault =
+      editions_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -2389,7 +2503,11 @@ namespace Yamka
   uint64
   Chapters::calcSize() const
   {
-    return eltsCalcSize(editions_);
+    uint64 size =
+      eltsCalcSize(editions_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -2403,6 +2521,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(editions_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2458,7 +2577,8 @@ namespace Yamka
       trackUIDs_.empty() &&
       editionUIDs_.empty() &&
       chapterUIDs_.empty() &&
-      attachmentUIDs_.empty();
+      attachmentUIDs_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2475,7 +2595,8 @@ namespace Yamka
       eltsCalcSize(trackUIDs_) +
       eltsCalcSize(editionUIDs_) +
       eltsCalcSize(chapterUIDs_) +
-      eltsCalcSize(attachmentUIDs_);
+      eltsCalcSize(attachmentUIDs_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2497,6 +2618,7 @@ namespace Yamka
     eltsSave(editionUIDs_, storage, crc);
     eltsSave(chapterUIDs_, storage, crc);
     eltsSave(attachmentUIDs_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2557,7 +2679,8 @@ namespace Yamka
       !lang_.mustSave() &&
       !default_.mustSave() &&
       !string_.mustSave() &&
-      !binary_.mustSave();
+      !binary_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2573,7 +2696,8 @@ namespace Yamka
       lang_.calcSize() +
       default_.calcSize() +
       string_.calcSize() +
-      binary_.calcSize();
+      binary_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2593,6 +2717,7 @@ namespace Yamka
     default_.save(storage, crc);
     string_.save(storage, crc);
     binary_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2648,7 +2773,8 @@ namespace Yamka
   {
     bool allDefault =
       !targets_.mustSave() &&
-      simpleTags_.empty();
+      simpleTags_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2661,7 +2787,8 @@ namespace Yamka
   {
     uint64 size =
       targets_.calcSize() +
-      eltsCalcSize(simpleTags_);
+      eltsCalcSize(simpleTags_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2678,6 +2805,7 @@ namespace Yamka
     
     targets_.save(storage, crc);
     eltsSave(simpleTags_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2728,7 +2856,11 @@ namespace Yamka
   bool
   Tags::isDefault() const
   {
-    return tags_.empty();
+    bool allDefault =
+      tags_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -2737,7 +2869,11 @@ namespace Yamka
   uint64
   Tags::calcSize() const
   {
-    return eltsCalcSize(tags_);
+    uint64 size =
+      eltsCalcSize(tags_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -2751,6 +2887,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(tags_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2800,7 +2937,11 @@ namespace Yamka
   bool
   SilentTracks::isDefault() const
   {
-    return tracks_.empty();
+    bool allDefault =
+      tracks_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -2809,7 +2950,11 @@ namespace Yamka
   uint64
   SilentTracks::calcSize() const
   {
-    return eltsCalcSize(tracks_);
+    uint64 size =
+      eltsCalcSize(tracks_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
   
   //----------------------------------------------------------------
@@ -2823,6 +2968,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(tracks_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2874,7 +3020,8 @@ namespace Yamka
   {
     bool allDefault =
       !blockAddID_.mustSave() &&
-      !blockAdditional_.mustSave();
+      !blockAdditional_.mustSave() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -2887,7 +3034,8 @@ namespace Yamka
   {
     uint64 size =
       blockAddID_.calcSize() +
-      blockAdditional_.calcSize();
+      blockAdditional_.calcSize() +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -2904,6 +3052,7 @@ namespace Yamka
     
     blockAddID_.save(storage, crc);
     blockAdditional_.save(storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -2954,7 +3103,11 @@ namespace Yamka
   bool
   BlockAdditions::isDefault() const
   {
-    return more_.empty();
+    bool allDefault =
+      more_.empty() &&
+      voids_.empty();
+    
+    return allDefault;
   }
   
   //----------------------------------------------------------------
@@ -2963,7 +3116,11 @@ namespace Yamka
   uint64
   BlockAdditions::calcSize() const
   {
-    return eltsCalcSize(more_);
+    uint64 size =
+      eltsCalcSize(more_) +
+      eltsCalcSize(voids_);
+    
+    return size;
   }
 
   //----------------------------------------------------------------
@@ -2977,6 +3134,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
     eltsSave(more_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -3044,7 +3202,8 @@ namespace Yamka
       eltsCalcSize(refBlock_) +
       refVirtual_.calcSize() +
       codecState_.calcSize() +
-      eltsCalcSize(slices_);
+      eltsCalcSize(slices_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -3068,6 +3227,7 @@ namespace Yamka
     refVirtual_.save(storage, crc);
     codecState_.save(storage, crc);
     eltsSave(slices_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -3141,7 +3301,8 @@ namespace Yamka
       prevSize_.calcSize() +
       eltsCalcSize(blockGroups_) +
       eltsCalcSize(simpleBlocks_) +
-      eltsCalcSize(encryptedBlocks_);
+      eltsCalcSize(encryptedBlocks_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -3164,6 +3325,7 @@ namespace Yamka
     eltsSave(blockGroups_, storage, crc);
     eltsSave(simpleBlocks_, storage, crc);
     eltsSave(encryptedBlocks_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -3229,7 +3391,8 @@ namespace Yamka
       cues_.empty() &&
       attachments_.empty() &&
       tags_.empty() &&
-      clusters_.empty();
+      clusters_.empty() &&
+      voids_.empty();
     
     return allDefault;
   }
@@ -3249,7 +3412,8 @@ namespace Yamka
       eltsCalcSize(cues_) +
       eltsCalcSize(attachments_) +
       eltsCalcSize(tags_) +
-      eltsCalcSize(clusters_);
+      eltsCalcSize(clusters_) +
+      eltsCalcSize(voids_);
     
     return size;
   }
@@ -3273,6 +3437,7 @@ namespace Yamka
     eltsSave(attachments_, storage, crc);
     eltsSave(tags_, storage, crc);
     eltsSave(clusters_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
@@ -3348,7 +3513,8 @@ namespace Yamka
   {
     uint64 size =
       EbmlDoc::head_.calcSize() +
-      eltsCalcSize(segments_);
+      eltsCalcSize(segments_) +
+      eltsCalcSize(voids_);
     
     return size;  
   }
@@ -3361,6 +3527,7 @@ namespace Yamka
   {
     IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage, crc);
     eltsSave(segments_, storage, crc);
+    eltsSave(voids_, storage, crc);
     
     return receipt;
   }
