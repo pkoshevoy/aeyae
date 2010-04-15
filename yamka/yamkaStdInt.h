@@ -41,13 +41,13 @@ namespace Yamka
   // vsizeDecode
   // 
   extern uint64
-  vsizeDecode(const Bytes & bytes);
+  vsizeDecode(const Bytes & bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeDecode
   // 
   extern uint64
-  vsizeDecode(const TByteVec & v);
+  vsizeDecode(const TByteVec & v, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeEncode
@@ -62,7 +62,9 @@ namespace Yamka
   // descriptor from a storage stream
   // 
   extern uint64
-  vsizeDecode(IStorage & storage, Crc32 * computeCrc32 = NULL);
+  vsizeDecode(IStorage & storage,
+              uint64 & vsizeSize,
+              Crc32 * computeCrc32 = NULL);
   
   //----------------------------------------------------------------
   // loadEbmlId

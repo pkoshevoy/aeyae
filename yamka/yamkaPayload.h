@@ -213,14 +213,11 @@ namespace Yamka
     
     // data storage:
     static IStoragePtr defaultStorage_;
-    IStoragePtr binStorage_;
-    IStorage::IReceiptPtr binReceipt_;
-    IStorage::IReceiptPtr binReceiptDefault_;
-    std::size_t binSize_;
-    std::size_t binSizeDefault_;
-    
-    // IO storage:
-    mutable IStorage::IReceiptPtr receipt_;
+    IStoragePtr storage_;
+    IStorage::IReceiptPtr receipt_;
+    IStorage::IReceiptPtr receiptDefault_;
+    std::size_t size_;
+    std::size_t sizeDefault_;
   };
   
   //----------------------------------------------------------------
@@ -271,7 +268,8 @@ namespace Yamka
     uint64
     load(IStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
     {
-      uint64 numBytes = vsizeDecode(storage, crc);
+      uint64 vsizeSize = 0;
+      uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
       if (numBytes != fixedSize)
       {
         return 0;
@@ -283,7 +281,7 @@ namespace Yamka
         data_ = bytes;
       };
       
-      uint64 bytesRead = vsizeNumBytes(fixedSize) + fixedSize;
+      uint64 bytesRead = vsizeSize + fixedSize;
       return bytesRead;
     }
     

@@ -178,7 +178,8 @@ namespace Yamka
       uint64 eltId = loadEbmlId(storage, crc);
       if (eltId == kIdCrc32)
       {
-        uint64 vsize = vsizeDecode(storage, crc);
+        uint64 vsizeSize = 0;
+        uint64 vsize = vsizeDecode(storage, vsizeSize, crc);
         if (vsize != 4)
         {
           // wrong CRC-32 payload size:
@@ -194,7 +195,7 @@ namespace Yamka
         
         // move on to the real element:
         bytesRead += (uintNumBytes(eltId) +
-                      uintNumBytes(vsize) +
+                      vsizeSize +
                       4);
         
         eltId = loadEbmlId(storage, crc);
@@ -210,7 +211,8 @@ namespace Yamka
       // FIXME:
       {
         File::Seek restore(storage.file_);
-        uint64 vsize = vsizeDecode(storage);
+        uint64 vsizeSize = 0;
+        uint64 vsize = vsizeDecode(storage, vsizeSize);
         std::cout << std::setw(8) << uintEncode(id()) << " @ " << std::hex
                   << "0x" << storageStart.absolutePosition() << std::dec
                   << " -- " << name()

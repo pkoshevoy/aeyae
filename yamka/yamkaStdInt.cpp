@@ -109,31 +109,31 @@ namespace Yamka
   //
   template <typename bytes_t>
   uint64
-  vsizeDecodeBytes(const bytes_t & v)
+  vsizeDecodeBytes(const bytes_t & v, uint64 & vsizeSize)
   {
     uint64 i = 0;
     
     if (v[0] & LeadingBits1)
     {
-      // 1 byte:
+      vsizeSize = 1;
       i = (v[0] - LeadingBits1);
     }
     else if (v[0] & LeadingBits2)
     {
-      // 2 bytes:
+      vsizeSize = 2;
       i = ((uint64(v[0] - LeadingBits2) << 8) |
            v[1]);
     }
     else if (v[0] & LeadingBits3)
     {
-      // 3 bytes:
+      vsizeSize = 3;
       i = ((uint64(v[0] - LeadingBits3) << 16) |
            (uint64(v[1]) << 8) |
            v[2]);
     }
     else if (v[0] & LeadingBits4)
     {
-      // 4 bytes:
+      vsizeSize = 4;
       i = ((uint64(v[0] - LeadingBits4) << 24) |
            (uint64(v[1]) << 16) |
            (uint64(v[2]) << 8) |
@@ -141,7 +141,7 @@ namespace Yamka
     }
     else if (v[0] & LeadingBits5)
     {
-      // 5 bytes:
+      vsizeSize = 5;
       i = ((uint64(v[0] - LeadingBits5) << 32) |
            (uint64(v[1]) << 24) |
            (uint64(v[2]) << 16) |
@@ -150,7 +150,7 @@ namespace Yamka
     }
     else if (v[0] & LeadingBits6)
     {
-      // 6 bytes:
+      vsizeSize = 6;
       i = ((uint64(v[0] - LeadingBits6) << 40) |
            (uint64(v[1]) << 32) |
            (uint64(v[2]) << 24) |
@@ -160,7 +160,7 @@ namespace Yamka
     }
     else if (v[0] & LeadingBits7)
     {
-      // 7 bytes:
+      vsizeSize = 7;
       i = ((uint64(v[0] - LeadingBits7) << 48) |
            (uint64(v[1]) << 40) |
            (uint64(v[2]) << 32) |
@@ -171,7 +171,7 @@ namespace Yamka
     }
     else if (v[0] & LeadingBits8)
     {
-      // 8 bytes:
+      vsizeSize = 8;
       i = ((uint64(v[1]) << 48) |
            (uint64(v[2]) << 40) |
            (uint64(v[3]) << 32) |
@@ -183,6 +183,7 @@ namespace Yamka
     else
     {
       assert(false);
+      vsizeSize = 0;
     }
     
     return i;
@@ -192,9 +193,9 @@ namespace Yamka
   // vsizeDecode
   // 
   uint64
-  vsizeDecode(const Bytes & bytes)
+  vsizeDecode(const Bytes & bytes, uint64 & vsizeSize)
   {
-    uint64 i = vsizeDecodeBytes(bytes);
+    uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
   }
 
@@ -202,9 +203,9 @@ namespace Yamka
   // vsizeDecode
   // 
   uint64
-  vsizeDecode(const TByteVec & bytes)
+  vsizeDecode(const TByteVec & bytes, uint64 & vsizeSize)
   {
-    uint64 i = vsizeDecodeBytes(bytes);
+    uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
   }
   
@@ -282,12 +283,14 @@ namespace Yamka
   // descriptor from a storage stream
   // 
   uint64
-  vsizeDecode(IStorage & storage, Crc32 * crc)
+  vsizeDecode(IStorage & storage,
+              uint64 & vsizeSize,
+              Crc32 * crc)
   {
     TByteVec v;
     if (vsizeLoad(v, storage, crc, 8))
     {
-      return vsizeDecode(v);
+      return vsizeDecode(v, vsizeSize);
     }
 
     // invalid vsize or vsize insufficient storage:
