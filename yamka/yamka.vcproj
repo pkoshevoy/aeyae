@@ -1,11 +1,12 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="yamka-vc9"
-	ProjectGUID="{400290B3-2083-4B05-8B4C-ECB9E3E580F0}"
+	Name="yamka"
+	ProjectGUID="{9718051E-929C-49A2-8464-5138945F7676}"
+	RootNamespace="yamka"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="0"
+	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform
@@ -17,9 +18,10 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="Debug"
-			IntermediateDirectory="Debug"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -40,13 +42,12 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".;..\..\..\..\BeachfrontSDK\ThirdParty\boost\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -60,7 +61,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\yamkaTest.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -90,9 +90,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="Release"
-			IntermediateDirectory="Release"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
+			CharacterSet="1"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -111,12 +113,14 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="2"
+				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=".;..\..\..\..\BeachfrontSDK\ThirdParty\boost\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -130,8 +134,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\yamkaTest.exe"
-				LinkIncremental="2"
+				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -164,6 +167,52 @@
 	<References>
 	</References>
 	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
+			>
+			<File
+				RelativePath=".\yamkaBytes.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaCrc32.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaEBML.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaFile.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaFileStorage.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaIStorage.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaMatroska.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaPayload.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaStdInt.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\yamkaTest.cpp"
+				>
+			</File>
+		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -211,58 +260,6 @@
 			</File>
 			<File
 				RelativePath=".\yamkaStdInt.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
-		</Filter>
-		<Filter
-			Name="Source Files"
-			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
-			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
-			>
-			<File
-				RelativePath=".\yamkaBytes.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaCrc32.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaEBML.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaFile.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaFileStorage.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaIStorage.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaMatroska.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaPayload.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaStdInt.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yamkaTest.cpp"
 				>
 			</File>
 		</Filter>
