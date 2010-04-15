@@ -141,23 +141,83 @@ main(int argc, char ** argv)
               << std::dec
               << std::endl;
     
-    FileStorage mkvOut(std::string("testYamkaOut.mkv"), File::kReadWrite);
-    if (!mkvOut.file_.isOpen())
+    FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadWrite);
+    if (!mkvSrcOut.file_.isOpen())
     {
-      std::cerr << "ERROR: failed to open " << mkvOut.file_.filename()
+      std::cerr << "ERROR: failed to open " << mkvSrcOut.file_.filename()
                 << " to read/write"
                 << std::endl;
       ::exit(1);
     }
     else
     {
-      uint64 mkvOutSize = mkvOut.file_.size();
-      std::cout << "opened (rw) " << mkvOut.file_.filename()
-              << ", file size: " << mkvOutSize
+      uint64 mkvSrcOutSize = mkvSrcOut.file_.size();
+      std::cout << "opened (rw) " << mkvSrcOut.file_.filename()
+              << ", file size: " << mkvSrcOutSize
                 << std::endl;
       
       Crc32 crc32out;
-      FileStorage::IReceiptPtr receipt = doc.save(mkvOut, &crc32out);
+      FileStorage::IReceiptPtr receipt = doc.save(mkvSrcOut, &crc32out);
+      
+      if (receipt)
+      {
+        std::cout << "stored " << doc.calcSize()
+                  << " bytes, checksum: "
+                  << std::hex
+                  << std::uppercase
+                  << crc32out.checksum()
+                  << std::dec
+                  << std::endl;
+      }
+    }
+  }
+  
+  FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadOnly);
+  if (!mkvSrcOut.file_.isOpen())
+  {
+    std::cerr << "ERROR: failed to open " << mkvSrcOut.file_.filename()
+              << " to read"
+              << std::endl;
+    ::exit(1);
+  }
+  else
+  {
+    uint64 mkvSrcOutSize = mkvSrcOut.file_.size();
+    std::cout << "opened (ro) " << mkvSrcOut.file_.filename()
+              << ", file size: " << mkvSrcOutSize
+              << std::endl;
+    
+    Crc32 crc32;
+    MatroskaDoc doc;
+    uint64 bytesRead = doc.load(mkvSrcOut, mkvSrcOutSize, &crc32);
+    
+    std::cout << "read " << bytesRead << " bytes, "
+              << "doc size is " << doc.calcSize() << " bytes, "
+              << "checksum: "
+              << std::hex
+              << std::uppercase
+              << crc32.checksum()
+              << std::dec
+              << std::endl;
+    
+    FileStorage mkvSrcOutOut(std::string("testYamkaOutOut.mkv"),
+                             File::kReadWrite);
+    if (!mkvSrcOutOut.file_.isOpen())
+    {
+      std::cerr << "ERROR: failed to open " << mkvSrcOutOut.file_.filename()
+                << " to read/write"
+                << std::endl;
+      ::exit(1);
+    }
+    else
+    {
+      uint64 mkvSrcOutOutSize = mkvSrcOutOut.file_.size();
+      std::cout << "opened (rw) " << mkvSrcOutOut.file_.filename()
+              << ", file size: " << mkvSrcOutOutSize
+                << std::endl;
+      
+      Crc32 crc32out;
+      FileStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut, &crc32out);
       
       if (receipt)
       {
