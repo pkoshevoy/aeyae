@@ -126,6 +126,7 @@ namespace Yamka
   {
     // type accessors:
     typedef payload_t TPayload;
+    typedef elt_name_t TName;
     typedef TElt<TPayload, EltId, elt_name_t> TSelf;
     
     // by default CRC-32 is disabled:
@@ -251,6 +252,11 @@ namespace Yamka
     uint64
     load(FileStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
     {
+      // save a storage receipt so that element position references
+      // can be resolved later:
+      IStorage::IReceiptPtr storageReceipt = storage.receipt();
+      IStorage::IReceiptPtr crc32Receipt;
+      
       // save current seek position, so it can be restored if necessary:
       File::Seek storageStart(storage.file_);
       
@@ -261,6 +267,8 @@ namespace Yamka
       uint64 eltId = loadEbmlId(storage, crc);
       if (eltId == kIdCrc32)
       {
+        crc32Receipt = storageReceipt;
+        
         uint64 vsizeSize = 0;
         uint64 vsize = vsizeDecode(storage, vsizeSize, crc);
         if (vsize != 4)
@@ -277,6 +285,7 @@ namespace Yamka
         }
         
         // move on to the real element:
+        storageReceipt = storage.receipt();
         bytesRead += (uintNumBytes(eltId) +
                       vsizeSize +
                       4);
@@ -291,11 +300,13 @@ namespace Yamka
       }
       
 #if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+      Indent::More indentMore;
       {
         File::Seek restore(storage.file_);
         uint64 vsizeSize = 0;
         uint64 vsize = vsizeDecode(storage, vsizeSize);
-        std::cout << std::setw(8) << uintEncode(kId) << " @ " << std::hex
+        std::cout << indent()
+                  << std::setw(8) << uintEncode(kId) << " @ " << std::hex
                   << "0x" << storageStart.absolutePosition() << std::dec
                   << " -- " << name()
                   << ", payload " << vsize << " bytes" << std::endl;
@@ -305,17 +316,30 @@ namespace Yamka
       // this appears to be a good payload:
       storageStart.doNotRestore();
       
+      // store the storage receipt:
+      receipt_ = storageReceipt;
+      
       // store the checksum:
       if (!bytesCrc32.empty())
       {
+        receiptCrc32_ = crc32Receipt;
         computeCrc32_ = true;
         checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
       }
+      
+      // save the payload storage receipt so that element position references
+      // can be resolved later:
+      IStorage::IReceiptPtr payloadReceipt = storage.receipt();
       
       bytesRead += uintNumBytes(eltId);
       uint64 payloadSize = payload_.load(storage,
                                          storageSize - bytesRead,
                                          crc);
+      if (payloadSize)
+      {
+        receiptPayload_ = payloadReceipt;
+      }
+      
       bytesRead += payloadSize;
       
 #if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
@@ -323,7 +347,8 @@ namespace Yamka
         uint64 newSize = calcSize();
         if (newSize != bytesRead)
         {
-          std::cout << std::setw(8) << uintEncode(kId) << " @ " << std::hex
+          std::cout << indent()
+                    << std::setw(8) << uintEncode(kId) << " @ " << std::hex
                     << "0x" << storageStart.absolutePosition() << std::dec
                     << " -- WARNING: " << name()
                     << ", loaded size " << bytesRead
@@ -437,6 +462,12 @@ namespace Yamka
   // 
 # define TypeOfElts(EltType, EbmlId, Name)      \
   TElts<EltType, EbmlId, EltName##EbmlId>
+
+  //----------------------------------------------------------------
+  // TypeOfElts
+  // 
+# define TypeOfEltsInNamespace(NameSpace, EltType, EbmlId, Name)   \
+  TElts<EltType, EbmlId, NameSpace::EltName##EbmlId>
   
 }
 
