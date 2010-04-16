@@ -88,6 +88,15 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // VEltPosition::eval
+  // 
+  bool
+  VEltPosition::eval(IElementCrawler &)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // VEltPosition::isDefault
   // 
   bool
@@ -124,7 +133,7 @@ namespace Yamka
         return unknownPositionSize_;
       }
       
-      Bytes savedPosition(vsizeSize);
+      Bytes savedPosition((std::size_t)vsizeSize);
       if (!receipt_->load(savedPosition))
       {
         assert(false);
@@ -268,7 +277,7 @@ namespace Yamka
       return false;
     }
     
-    Bytes savedPosition(vsizeSize);
+    Bytes savedPosition((std::size_t)vsizeSize);
     if (!receipt_->load(savedPosition))
     {
       return false;
@@ -328,6 +337,15 @@ namespace Yamka
     TSuper()
   {
     setDefault(0);
+  }
+  
+  //----------------------------------------------------------------
+  // VInt::eval
+  // 
+  bool
+  VInt::eval(IElementCrawler &)
+  {
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -396,6 +414,15 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // VUInt::eval
+  // 
+  bool
+  VUInt::eval(IElementCrawler &)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // VUInt::isDefault
   // 
   bool
@@ -458,6 +485,15 @@ namespace Yamka
     TSuper(4)
   {
     setDefault(0.0);
+  }
+  
+  //----------------------------------------------------------------
+  // VFloat::eval
+  // 
+  bool
+  VFloat::eval(IElementCrawler &)
+  {
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -551,6 +587,15 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // VDate::eval
+  // 
+  bool
+  VDate::eval(IElementCrawler &)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // VDate::isDefault
   // 
   bool
@@ -624,6 +669,15 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // VString::eval
+  // 
+  bool
+  VString::eval(IElementCrawler &)
+  {
+    return false;
+  }
   
   //----------------------------------------------------------------
   // VString::isDefault
@@ -758,6 +812,15 @@ namespace Yamka
     }
     
     return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VBinary::eval
+  // 
+  bool
+  VBinary::eval(IElementCrawler &)
+  {
+    return false;
   }
   
   //----------------------------------------------------------------

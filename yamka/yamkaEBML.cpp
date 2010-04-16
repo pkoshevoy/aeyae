@@ -46,6 +46,32 @@ namespace Yamka
     docTypeVersion_.alwaysSave();
     docTypeReadVersion_.alwaysSave();
   }
+
+  //----------------------------------------------------------------
+  // EbmlHead::eval
+  // 
+  bool
+  EbmlHead::eval(IElementCrawler & crawler)
+  {
+    return
+      version_.eval(crawler) ||
+      readVersion_.eval(crawler) ||
+      maxIdLength_.eval(crawler) ||
+      maxSizeLength_.eval(crawler) ||
+      docType_.eval(crawler) ||
+      docTypeVersion_.eval(crawler) ||
+      docTypeReadVersion_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlHead::isDefault
+  // 
+  bool
+  EbmlHead::isDefault() const
+  {
+    return false;
+  }
   
   //----------------------------------------------------------------
   // EbmlHead::calcSize
@@ -66,15 +92,6 @@ namespace Yamka
     return size;
   }
 
-  //----------------------------------------------------------------
-  // EbmlHead::isDefault
-  // 
-  bool
-  EbmlHead::isDefault() const
-  {
-    return false;
-  }
-  
   //----------------------------------------------------------------
   // EbmlHead::save
   // 
@@ -152,7 +169,27 @@ namespace Yamka
     head_.payload_.docTypeVersion_.payload_.set(docTypeVersion);
     head_.payload_.docTypeReadVersion_.payload_.set(docTypeReadVersion);
   }
-
+  
+  //----------------------------------------------------------------
+  // EbmlDoc::eval
+  // 
+  bool
+  EbmlDoc::eval(IElementCrawler & crawler)
+  {
+    return
+      head_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
+  // EbmlDoc::isDefault
+  // 
+  bool
+  EbmlDoc::isDefault() const
+  {
+    return false;
+  }
+  
   //----------------------------------------------------------------
   // EbmlDoc::calcSize
   // 
@@ -164,15 +201,6 @@ namespace Yamka
       eltsCalcSize(voids_);
     
     return size;
-  }
-  
-  //----------------------------------------------------------------
-  // EbmlDoc::isDefault
-  // 
-  bool
-  EbmlDoc::isDefault() const
-  {
-    return false;
   }
   
   //----------------------------------------------------------------

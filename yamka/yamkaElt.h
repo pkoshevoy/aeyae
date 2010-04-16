@@ -40,6 +40,29 @@
 
 namespace Yamka
 {
+  
+  // forward declarations:
+  struct IElement;
+  struct IPayload;
+
+  //----------------------------------------------------------------
+  // IElementCrawler
+  // 
+  // Interface for an element tree crawling functor.
+  // 
+  struct IElementCrawler
+  {
+    virtual ~IElementCrawler() {}
+    
+    // NOTE: the crawler should return true when it's done
+    // in order to stop:
+    virtual bool evalElement(IElement & elt) = 0;
+    
+    // NOTE: the crawler should return true when it's done
+    // in order to stop:
+    virtual bool evalPayload(IPayload & payload) = 0;
+  };
+  
   //----------------------------------------------------------------
   // EbmlGlobalID
   // 
@@ -107,6 +130,12 @@ namespace Yamka
     // NOTE: payload storage receipt is set only after
     // an element payload is saved successfully
     virtual IStorage::IReceiptPtr payloadReceipt() const = 0;
+    
+    // dispose of storage receipts:
+    virtual IElement & discardReceipts() = 0;
+    
+    // perform crawler computation on this element and its payload:
+    virtual bool eval(IElementCrawler & crawler) = 0;
   };
   
   //----------------------------------------------------------------
@@ -369,6 +398,23 @@ namespace Yamka
     // virtual:
     IStorage::IReceiptPtr payloadReceipt() const
     { return receiptPayload_; }
+    
+    // virtual:
+    TSelf & discardReceipts()
+    {
+      receiptCrc32_ = IStorage::IReceiptPtr();
+      receipt_ = IStorage::IReceiptPtr();
+      receiptPayload_ = IStorage::IReceiptPtr();
+      return *this;
+    }
+    
+    // virtual:
+    bool eval(IElementCrawler & crawler)
+    {
+      return
+        crawler.evalElement(*this) ||
+        crawler.evalPayload(payload_);
+    }
     
     // this flag indicates that this element must be saved
     // even when it holds a default value:

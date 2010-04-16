@@ -23,6 +23,30 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // eltsEval
+  // 
+  // A helper function for calculating payload size of a set of elements
+  // 
+  template <typename elts_t>
+  bool
+  eltsEval(elts_t & elts, IElementCrawler & crawler)
+  {
+    typedef typename elts_t::value_type elt_t;
+    typedef typename elts_t::iterator elt_iter_t;
+    
+    for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      elt_t & elt = *i;
+      if (elt.eval(crawler))
+      {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // eltsCalcSize
   // 
   // A helper function for calculating payload size of a set of elements

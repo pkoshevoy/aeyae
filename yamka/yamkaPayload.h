@@ -38,6 +38,9 @@ namespace Yamka
   {
     virtual ~IPayload() {}
     
+    // perform crawler computation on this payload:
+    virtual bool eval(IElementCrawler & crawler) = 0;
+    
     // check whether payload holds default value:
     virtual bool isDefault() const = 0;
     
@@ -60,6 +63,7 @@ namespace Yamka
   // A helper macro used to implement the payload interface API
   // 
 # define ImplementsPayloadAPI()                                         \
+  bool eval(IElementCrawler & crawler);                                 \
   bool isDefault() const;                                               \
   uint64 calcSize() const;                                              \
   IStorage::IReceiptPtr save(IStorage & storage,                        \
@@ -321,6 +325,10 @@ namespace Yamka
       
       return *this;
     }
+    
+    // virtual:
+    bool eval(IElementCrawler &)
+    { return false; }
     
     // check whether payload holds default value:
     bool isDefault() const

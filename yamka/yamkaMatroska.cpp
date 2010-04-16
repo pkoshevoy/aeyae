@@ -14,6 +14,19 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // ChapTranslate::eval
+  // 
+  bool
+  ChapTranslate::eval(IElementCrawler & crawler)
+  {
+    return 
+      editionUID_.eval(crawler) ||
+      chapTransCodec_.eval(crawler) ||
+      chapTransID_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // ChapTranslate::isDefault
   // 
   bool
@@ -111,7 +124,31 @@ namespace Yamka
     duration_.alwaysSave().payload_.setDefault(0.0);
     muxingApp_.alwaysSave().payload_.setDefault(std::string("yamka"));
   }
-  
+
+  //----------------------------------------------------------------
+  // SegInfo::eval
+  // 
+  bool
+  SegInfo::eval(IElementCrawler & crawler)
+  {
+    return
+      segUID_.eval(crawler) ||
+      segFilename_.eval(crawler) ||
+      prevUID_.eval(crawler) ||
+      prevFilename_.eval(crawler) ||
+      nextUID_.eval(crawler) ||
+      nextFilename_.eval(crawler) ||
+      familyUID_.eval(crawler) ||
+      chapTranslate_.eval(crawler) ||
+      timecodeScale_.eval(crawler) ||
+      duration_.eval(crawler) ||
+      date_.eval(crawler) ||
+      title_.eval(crawler) ||
+      muxingApp_.eval(crawler) ||
+      writingApp_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
   //----------------------------------------------------------------
   // SegInfo::isDefault
   // 
@@ -246,6 +283,19 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // TrackTranslate::eval
+  // 
+  bool
+  TrackTranslate::eval(IElementCrawler & crawler)
+  {
+    return 
+      editionUID_.eval(crawler) ||
+      trackTransCodec_.eval(crawler) ||
+      trackTransID_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
+  //----------------------------------------------------------------
   // TrackTranslate::isDefault
   // 
   bool
@@ -340,6 +390,31 @@ namespace Yamka
   Video::Video()
   {
     aspectRatioType_.payload_.setDefault(0);
+  }
+  
+  //----------------------------------------------------------------
+  // Video::eval
+  // 
+  bool
+  Video::eval(IElementCrawler & crawler)
+  {
+    return
+      flagInterlaced_.eval(crawler) ||
+      stereoMode_.eval(crawler) ||
+      pixelWidth_.eval(crawler) ||
+      pixelHeight_.eval(crawler) ||
+      pixelCropBottom_.eval(crawler) ||
+      pixelCropTop_.eval(crawler) ||
+      pixelCropLeft_.eval(crawler) ||
+      pixelCropRight_.eval(crawler) ||
+      displayWidth_.eval(crawler) ||
+      displayHeight_.eval(crawler) ||
+      displayUnits_.eval(crawler) ||
+      aspectRatioType_.eval(crawler) ||
+      colorSpace_.eval(crawler) ||
+      gammaValue_.eval(crawler) ||
+      frameRate_.eval(crawler) ||
+      eltsEval(voids_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -487,7 +562,22 @@ namespace Yamka
     sampFreq_.payload_.setDefault(8000.0);
     channels_.payload_.setDefault(1);
   }
-
+  
+  //----------------------------------------------------------------
+  // Audio::eval
+  // 
+  bool
+  Audio::eval(IElementCrawler & crawler)
+  {
+    return
+      sampFreq_.eval(crawler) ||
+      sampFreqOut_.eval(crawler) ||
+      channels_.eval(crawler) ||
+      channelPositions_.eval(crawler) ||
+      bitDepth_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
   //----------------------------------------------------------------
   // Audio::isDefault
   // 
@@ -584,7 +674,19 @@ namespace Yamka
     return bytesReadTotal;
   }
   
-  
+
+  //----------------------------------------------------------------
+  // ContentCompr::eval
+  // 
+  bool
+  ContentCompr::eval(IElementCrawler & crawler)
+  {
+    return
+      algo_.eval(crawler) ||
+      settings_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
   //----------------------------------------------------------------
   // ContentCompr::isDefault
   // 
@@ -669,6 +771,22 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // ContentEncrypt::eval
+  // 
+  bool
+  ContentEncrypt::eval(IElementCrawler & crawler)
+  {
+    return
+      encAlgo_.eval(crawler) ||
+      encKeyID_.eval(crawler) ||
+      signature_.eval(crawler) ||
+      sigKeyID_.eval(crawler) ||
+      sigAlgo_.eval(crawler) ||
+      sigHashAlgo_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // ContentEncrypt::isDefault
@@ -772,6 +890,21 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ContentEnc::eval
+  // 
+  bool
+  ContentEnc::eval(IElementCrawler & crawler)
+  {
+    return
+      order_.eval(crawler) ||
+      scope_.eval(crawler) ||
+      type_.eval(crawler) ||
+      compression_.eval(crawler) ||
+      encryption_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
+  //----------------------------------------------------------------
   // ContentEnc::isDefault
   // 
   bool
@@ -869,6 +1002,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ContentEncodings::eval
+  // 
+  bool
+  ContentEncodings::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(encodings_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // ContentEncodings::isDefault
   // 
   bool
@@ -942,6 +1086,44 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // Track::eval
+  // 
+  bool
+  Track::eval(IElementCrawler & crawler)
+  {
+    return
+      trackNumber_.eval(crawler) ||
+      trackUID_.eval(crawler) ||
+      trackType_.eval(crawler) ||
+      flagEnabled_.eval(crawler) ||
+      flagDefault_.eval(crawler) ||
+      flagForced_.eval(crawler) ||
+      flagLacing_.eval(crawler) ||
+      minCache_.eval(crawler) ||
+      maxCache_.eval(crawler) ||
+      frameDuration_.eval(crawler) ||
+      timecodeScale_.eval(crawler) ||
+      trackOffset_.eval(crawler) ||
+      maxBlockAddID_.eval(crawler) ||
+      name_.eval(crawler) ||
+      language_.eval(crawler) ||
+      codecID_.eval(crawler) ||
+      codecPrivate_.eval(crawler) ||
+      codecName_.eval(crawler) ||
+      attachmentLink_.eval(crawler) ||
+      codecSettings_.eval(crawler) ||
+      codecInfoURL_.eval(crawler) ||
+      codecDownloadURL_.eval(crawler) ||
+      codecDecodeAll_.eval(crawler) ||
+      trackOverlay_.eval(crawler) ||
+      trackTranslate_.eval(crawler) ||
+      video_.eval(crawler) ||
+      audio_.eval(crawler) ||
+      contentEncs_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // Track::isDefault
@@ -1133,6 +1315,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Tracks::eval
+  // 
+  bool
+  Tracks::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(tracks_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Tracks::isDefault
   // 
   bool
@@ -1212,6 +1405,20 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // CueRef::eval
+  // 
+  bool
+  CueRef::eval(IElementCrawler & crawler)
+  {
+    return
+      time_.eval(crawler) ||
+      cluster_.eval(crawler) ||
+      block_.eval(crawler) ||
+      codecState_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // CueRef::isDefault
@@ -1302,6 +1509,21 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // CueTrkPos::eval
+  // 
+  bool
+  CueTrkPos::eval(IElementCrawler & crawler)
+  {
+    return
+      track_.eval(crawler) ||
+      cluster_.eval(crawler) ||
+      block_.eval(crawler) ||
+      codecState_.eval(crawler) ||
+      ref_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // CueTrkPos::isDefault
@@ -1397,6 +1619,18 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // CuePoint::eval
+  // 
+  bool
+  CuePoint::eval(IElementCrawler & crawler)
+  {
+    return
+      time_.eval(crawler) ||
+      eltsEval(trkPosns_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // CuePoint::isDefault
   // 
   bool
@@ -1482,6 +1716,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Cues::eval
+  // 
+  bool
+  Cues::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(points_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Cues::isDefault
   // 
   bool
@@ -1561,6 +1806,18 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // SeekEntry::eval
+  // 
+  bool
+  SeekEntry::eval(IElementCrawler & crawler)
+  {
+    return
+      id_.eval(crawler) ||
+      position_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // SeekEntry::isDefault
@@ -1646,6 +1903,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // SeekHead::eval
+  // 
+  bool
+  SeekHead::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(seek_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // SeekHead::isDefault
   // 
   bool
@@ -1725,6 +1993,22 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // AttdFile::eval
+  // 
+  bool
+  AttdFile::eval(IElementCrawler & crawler)
+  {
+    return
+      description_.eval(crawler) ||
+      filename_.eval(crawler) ||
+      mimeType_.eval(crawler) ||
+      data_.eval(crawler) ||
+      fileUID_.eval(crawler) ||
+      referral_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // AttdFile::isDefault
@@ -1828,6 +2112,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Attachments::eval
+  // 
+  bool
+  Attachments::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(files_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
+  //----------------------------------------------------------------
   // Attachments::isDefault
   // 
   bool
@@ -1909,6 +2204,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ChapTrk::eval
+  // 
+  bool
+  ChapTrk::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(tracks_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // ChapTrk::isDefault
   // 
   bool
@@ -1988,6 +2294,19 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // ChapDisp::eval
+  // 
+  bool
+  ChapDisp::eval(IElementCrawler & crawler)
+  {
+    return
+      string_.eval(crawler) ||
+      language_.eval(crawler) ||
+      country_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // ChapDisp::isDefault
@@ -2079,6 +2398,18 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ChapProcCmd::eval
+  // 
+  bool
+  ChapProcCmd::eval(IElementCrawler & crawler)
+  {
+    return
+      time_.eval(crawler) ||
+      data_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // ChapProcCmd::isDefault
   // 
   bool
@@ -2161,7 +2492,20 @@ namespace Yamka
     
     return bytesReadTotal;
   }
-
+  
+  
+  //----------------------------------------------------------------
+  // ChapProc::eval
+  // 
+  bool
+  ChapProc::eval(IElementCrawler & crawler)
+  {
+    return
+      codecID_.eval(crawler) ||
+      procPrivate_.eval(crawler) ||
+      eltsEval(cmds_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // ChapProc::isDefault
@@ -2254,6 +2598,27 @@ namespace Yamka
   }
   
   
+  //----------------------------------------------------------------
+  // ChapAtom::eval
+  // 
+  bool
+  ChapAtom::eval(IElementCrawler & crawler)
+  {
+    return
+      UID_.eval(crawler) ||
+      timeStart_.eval(crawler) ||
+      timeEnd_.eval(crawler) ||
+      hidden_.eval(crawler) ||
+      enabled_.eval(crawler) ||
+      segUID_.eval(crawler) ||
+      segEditionUID_.eval(crawler) ||
+      physEquiv_.eval(crawler) ||
+      tracks_.eval(crawler) ||
+      eltsEval(display_, crawler) ||
+      eltsEval(process_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
   //----------------------------------------------------------------
   // ChapAtom::isDefault
   // 
@@ -2378,6 +2743,21 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Edition::eval
+  // 
+  bool
+  Edition::eval(IElementCrawler & crawler)
+  {
+    return
+      UID_.eval(crawler) ||
+      flagHidden_.eval(crawler) ||
+      flagDefault_.eval(crawler) ||
+      flagOrdered_.eval(crawler) ||
+      eltsEval(chapAtoms_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Edition::isDefault
   // 
   bool
@@ -2477,6 +2857,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Chapters::eval
+  // 
+  bool
+  Chapters::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(editions_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Chapters::isDefault
   // 
   bool
@@ -2556,7 +2947,23 @@ namespace Yamka
     return bytesReadTotal;
   }
   
-  
+
+  //----------------------------------------------------------------
+  // TagTargets::eval
+  // 
+  bool
+  TagTargets::eval(IElementCrawler & crawler)
+  {
+    return
+      typeValue_.eval(crawler) ||
+      type_.eval(crawler) ||
+      eltsEval(trackUIDs_, crawler) ||
+      eltsEval(editionUIDs_, crawler) ||
+      eltsEval(chapterUIDs_, crawler) ||
+      eltsEval(attachmentUIDs_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
   //----------------------------------------------------------------
   // TagTargets::isDefault
   // 
@@ -2661,6 +3068,21 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // SimpleTag::eval
+  // 
+  bool
+  SimpleTag::eval(IElementCrawler & crawler)
+  {
+    return
+      name_.eval(crawler) ||
+      lang_.eval(crawler) ||
+      default_.eval(crawler) ||
+      string_.eval(crawler) ||
+      binary_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // SimpleTag::isDefault
   // 
   bool
@@ -2758,6 +3180,18 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Tag::eval
+  // 
+  bool
+  Tag::eval(IElementCrawler & crawler)
+  {
+    return
+      targets_.eval(crawler) ||
+      eltsEval(simpleTags_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Tag::isDefault
   // 
   bool
@@ -2843,6 +3277,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Tags::eval
+  // 
+  bool
+  Tags::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(tags_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+    
+  //----------------------------------------------------------------
   // Tags::isDefault
   // 
   bool
@@ -2924,6 +3369,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // SilentTracks::eval
+  // 
+  bool
+  SilentTracks::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(tracks_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // SilentTracks::isDefault
   // 
   bool
@@ -3003,6 +3459,18 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // BlockMore::eval
+  // 
+  bool
+  BlockMore::eval(IElementCrawler & crawler)
+  {
+    return
+      blockAddID_.eval(crawler) ||
+      blockAdditional_.eval(crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // BlockMore::isDefault
@@ -3090,6 +3558,17 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // BlockAdditions::eval
+  // 
+  bool
+  BlockAdditions::eval(IElementCrawler & crawler)
+  {
+    return
+      eltsEval(more_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // BlockAdditions::isDefault
   // 
   bool
@@ -3169,6 +3648,25 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // BlockGroup::eval
+  // 
+  bool
+  BlockGroup::eval(IElementCrawler & crawler)
+  {
+    return
+      duration_.eval(crawler) ||
+      block_.eval(crawler) ||
+      eltsEval(blockVirtual_, crawler) ||
+      additions_.eval(crawler) ||
+      refPriority_.eval(crawler) ||
+      eltsEval(refBlock_, crawler) ||
+      refVirtual_.eval(crawler) ||
+      codecState_.eval(crawler) ||
+      eltsEval(slices_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // BlockGroup::isDefault
@@ -3280,6 +3778,23 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // Cluster::eval
+  // 
+  bool
+  Cluster::eval(IElementCrawler & crawler)
+  {
+    return
+      timecode_.eval(crawler) ||
+      silent_.eval(crawler) ||
+      position_.eval(crawler) ||
+      prevSize_.eval(crawler) ||
+      eltsEval(blockGroups_, crawler) ||
+      eltsEval(simpleBlocks_, crawler) ||
+      eltsEval(encryptedBlocks_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
+  
+  //----------------------------------------------------------------
   // Cluster::isDefault
   // 
   bool
@@ -3375,6 +3890,25 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // Segment::eval
+  // 
+  bool
+  Segment::eval(IElementCrawler & crawler)
+  {
+    return
+      info_.eval(crawler) ||
+      tracks_.eval(crawler) ||
+      chapters_.eval(crawler) ||
+      
+      eltsEval(seekHeads_, crawler) ||
+      eltsEval(cues_, crawler) ||
+      eltsEval(attachments_, crawler) ||
+      eltsEval(tags_, crawler) ||
+      eltsEval(clusters_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // Segment::isDefault
@@ -3499,14 +4033,16 @@ namespace Yamka
     typedef TSeekHeads::iterator TSeekHeadIter;
     typedef TSeekHeads::value_type TSeekHead;
     
-    typedef TypeOfEltsInNamespace(SeekHead, SeekEntry, 0x4DBB, "Seek") TSeeks;
-    typedef TSeeks::iterator TSeekEntryIter;
-    typedef TSeeks::value_type TSeek;
+    typedef TypeOfElts(Cues, 0x1C53BB6B, "Cues") TCues;
+    typedef TCues::iterator TCueIter;
+    typedef TCues::value_type TCue;
     
-    typedef TypeOfElt(Cues, 0x1C53BB6B, "Cues") TCue;
+    typedef TypeOfElts(Cluster, 0x1f43b675, "Cluster") TClusters;
+    typedef TClusters::iterator TClusterIter;
+    typedef TClusters::value_type TCluster;
+    
     typedef TypeOfElt(Attachments, 0x1941A469, "Attachments") TAttachment;
     typedef TypeOfElt(Tags, 0x1254C367, "Tags") TTag;
-    typedef TypeOfElt(Cluster, 0x1f43b675, "Cluster") TCluster;
     
     if (!origin)
     {
@@ -3526,6 +4062,10 @@ namespace Yamka
     originPosition += vsizeNumBytes(originReceipt);
     
     // resolve seek position references:
+    typedef TypeOfEltsInNamespace(SeekHead, SeekEntry, 0x4DBB, "Seek") TSeeks;
+    typedef TSeeks::iterator TSeekEntryIter;
+    typedef TSeeks::value_type TSeek;
+    
     for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
     {
       TSeekHead & seekHead = *i;
@@ -3588,7 +4128,52 @@ namespace Yamka
       }
     }
     
+    // resolve cue track position references:
+    typedef TypeOfEltsInNamespace(Cues, CuePoint, 0xBB, "CuePoint") TCuePoints;
+    typedef TCuePoints::iterator TCuePointIter;
+    typedef TCuePoints::value_type TCuePoint;
     
+    typedef
+      TypeOfEltsInNamespace(CuePoint, CueTrkPos, 0xB7, "CueTrackPosition")
+      TCueTrkPositions;
+    
+    typedef TCueTrkPositions::iterator TCueTrkPosIter;
+    typedef TCueTrkPositions::value_type TCueTrkPos;
+    
+    for (TCueIter i = cues_.begin(); i != cues_.end(); ++i)
+    {
+      TCue & cue = *i;
+      TCuePoints & cuePoints = cue.payload_.points_;
+      
+      for (TCuePointIter j = cuePoints.begin(); j != cuePoints.end(); ++j)
+      {
+        TCuePoint & cuePoint = *j;
+        TCueTrkPositions & cueTrkPns = cuePoint.payload_.trkPosns_;
+        
+        for (TCueTrkPosIter k = cueTrkPns.begin(); k != cueTrkPns.end(); ++k)
+        {
+          TCueTrkPos & cueTrkPos = *k;
+          VEltPosition & clusterRef = cueTrkPos.payload_.cluster_.payload_;
+          
+          uint64 relativePosition = clusterRef.position();
+          uint64 absolutePosition = originPosition + relativePosition;
+          
+          const TCluster * cluster = eltsFind(clusters_, absolutePosition);
+          clusterRef.setElt(cluster);
+          clusterRef.setOrigin(origin);
+        }
+      }
+    }
+    
+    // resolve cluster position references:
+    for (TClusterIter i = clusters_.begin(); i != clusters_.end(); ++i)
+    {
+      TCluster & cluster = *i;
+      
+      VEltPosition & clusterRef = cluster.payload_.position_.payload_;
+      clusterRef.setElt(&cluster);
+      clusterRef.setOrigin(origin);
+    }
   }
   
   
@@ -3598,6 +4183,18 @@ namespace Yamka
   MatroskaDoc::MatroskaDoc():
     EbmlDoc("matroska", 1, 1)
   {}
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::eval
+  // 
+  bool
+  MatroskaDoc::eval(IElementCrawler & crawler)
+  {
+    return
+      EbmlDoc::head_.eval(crawler) ||
+      eltsEval(segments_, crawler) ||
+      eltsEval(voids_, crawler);
+  }
   
   //----------------------------------------------------------------
   // MatroskaDoc::isDefault
@@ -3623,6 +4220,28 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // RewriteReferences
+  // 
+  struct RewriteReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalElement(IElement & elt)
+    { return false; }
+    
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+      if (eltRef)
+      {
+        eltRef->rewrite();
+      }
+      
+      return false;
+    }
+  };
+  
+  //----------------------------------------------------------------
   // MatroskaDoc::save
   // 
   IStorage::IReceiptPtr
@@ -3632,8 +4251,29 @@ namespace Yamka
     eltsSave(segments_, storage, crc);
     eltsSave(voids_, storage, crc);
     
+    // rewrite element position references (second pass):
+    RewriteReferences crawler;
+    const_cast<MatroskaDoc *>(this)->eval(crawler);
+    
     return receipt;
   }
+  
+  //----------------------------------------------------------------
+  // DiscardReceipts
+  // 
+  struct DiscardReceipts : public IElementCrawler
+  {
+    // virtual:
+    bool evalElement(IElement & elt)
+    {
+      elt.discardReceipts();
+      return false;
+    }
+    
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    { return false; }
+  };
   
   //----------------------------------------------------------------
   // MatroskaDoc::load
@@ -3666,6 +4306,10 @@ namespace Yamka
     
     // resolve positional references (seeks, cues, clusters, etc...):
     resolveReferences();
+    
+    // discard loaded storage receipts so they wouldn't screw up saving later:
+    DiscardReceipts crawler;
+    eval(crawler);
     
     return bytesReadTotal;
   }
