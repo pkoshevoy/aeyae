@@ -68,6 +68,17 @@ namespace Yamka
               uint64 storageSize,                                       \
               Crc32 * computeCrc32 = NULL)
   
+
+  //----------------------------------------------------------------
+  // vsizeNumBytes
+  // 
+  // Returns the number of bytes used to store a payload size.
+  // 
+  // NOTE: This requires loading one byte.
+  // 
+  extern uint64
+  vsizeNumBytes(IStorage::IReceiptPtr payloadReceipt);
+  
   
   //----------------------------------------------------------------
   // VEltPosition
