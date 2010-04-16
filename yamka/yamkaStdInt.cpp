@@ -231,7 +231,7 @@ namespace Yamka
     
     return v;
   }
-
+  
   //----------------------------------------------------------------
   // vsizeLoad
   // 
@@ -519,6 +519,58 @@ namespace Yamka
     uint64 i = uintDecode(v, 8);
     memcpy(&d, &i, 8);
     return d;
+  }
+  
+  namespace Indent
+  {
+    
+    //----------------------------------------------------------------
+    // More::More
+    // 
+    More::More()
+    {
+      ++depth_;
+    }
+    
+    //----------------------------------------------------------------
+    // More::~More
+    // 
+    More::~More()
+    {
+      --depth_;
+    };
+
+    //----------------------------------------------------------------
+    // depth_
+    // 
+    unsigned int depth_ = 0;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // indent::indent
+  // 
+  indent::indent(unsigned int depth):
+    depth_(Indent::depth_ + depth)
+  {}
+  
+  
+  //----------------------------------------------------------------
+  // operator <<
+  // 
+  std::ostream &
+  operator << (std::ostream & s, const indent & ind)
+  {
+    static const char * tab = "        \0";
+    for (unsigned int i = 0; i < ind.depth_ / 8; i++)
+    {
+      s << tab;
+    }
+    
+    const char * trailing_spaces = tab + (8 - ind.depth_ % 8);
+    s << trailing_spaces;
+    
+    return s;
   }
   
 }

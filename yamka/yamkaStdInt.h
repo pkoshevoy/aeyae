@@ -15,6 +15,9 @@
 // boost includes:
 #include <boost/cstdint.hpp>
 
+// system includes:
+#include <iostream>
+
 
 namespace Yamka
 {
@@ -153,6 +156,37 @@ namespace Yamka
   // 
   extern double
   doubleDecode(const TByteVec & v);
+  
+  
+  //----------------------------------------------------------------
+  // Indent
+  // 
+  namespace Indent
+  {
+    struct More
+    {
+      More();
+      ~More();
+    };
+    
+    extern unsigned int depth_;
+  }
+  
+  //----------------------------------------------------------------
+  // indent
+  // 
+  struct indent
+  {
+    indent(unsigned int depth = 0);
+    
+    const unsigned int depth_;
+  };
+  
+  //----------------------------------------------------------------
+  // operator <<
+  // 
+  extern std::ostream &
+  operator << (std::ostream & s, const indent & ind);
   
 }
 
