@@ -18,6 +18,45 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // vsizeNumBytes
+  // 
+  uint64
+  vsizeNumBytes(IStorage::IReceiptPtr payloadReceipt)
+  {
+    Bytes oneByte(1);
+    if (!payloadReceipt->load(oneByte))
+    {
+      // bad receipt:
+      return 0;
+    }
+    
+    // find how many bytes were used to encode vsize:
+    const TByte firstByte = oneByte[0];
+    TByte leadingBitsMask = 1 << 7;
+    
+    unsigned int numBytesToLoad = 0;
+    for (; numBytesToLoad < 8; numBytesToLoad++)
+    {
+      if (firstByte & leadingBitsMask)
+      {
+        break;
+      }
+      
+      leadingBitsMask >>= 1;
+    }
+    
+    uint64 vsizeSize = 1 + numBytesToLoad;
+    if (vsizeSize > 8)
+    {
+      // not a valid vsize:
+      return 0;
+    }
+    
+    return vsizeSize;
+  }
+  
+  
+  //----------------------------------------------------------------
   // VEltPosition::VEltPosition
   // 
   VEltPosition::VEltPosition():
@@ -78,14 +117,20 @@ namespace Yamka
     if (receipt_)
     {
       // must use the same size as before:
-      Bytes savedPosition;
+      uint64 vsizeSize = vsizeNumBytes(receipt_);
+      if (!vsizeSize)
+      {
+        assert(false);
+        return unknownPositionSize_;
+      }
+      
+      Bytes savedPosition(vsizeSize);
       if (!receipt_->load(savedPosition))
       {
         assert(false);
         return unknownPositionSize_;
       }
       
-      uint64 vsizeSize = 0;
       uint64 bytesUsed = vsizeDecode(savedPosition, vsizeSize);
       return bytesUsed;
     }
@@ -216,8 +261,14 @@ namespace Yamka
       return false;
     }
     
-    // must use previous size:
-    Bytes savedPosition;
+    // must use the same size as before:
+    uint64 vsizeSize = vsizeNumBytes(receipt_);
+    if (!vsizeSize)
+    {
+      return false;
+    }
+    
+    Bytes savedPosition(vsizeSize);
     if (!receipt_->load(savedPosition))
     {
       return false;
@@ -227,7 +278,6 @@ namespace Yamka
     uint64 eltPosition = eltReceipt->position();
     uint64 relativePosition = eltPosition - originPosition;
     
-    uint64 vsizeSize = 0;
     uint64 bytesUsed = vsizeDecode(savedPosition, vsizeSize);
     uint64 bytesNeeded = uintNumBytes(relativePosition);
     
@@ -261,7 +311,12 @@ namespace Yamka
       return 0;
     }
     
+    // get the payload position:
     uint64 originPosition = originReceipt->position();
+    
+    // skip payload size:
+    originPosition += vsizeNumBytes(originReceipt);
+    
     return originPosition;
   }
   
@@ -785,10 +840,10 @@ namespace Yamka
   uint64
   VBinary::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    IStorage::IReceiptPtr receipt = storage.receipt();
-    
     uint64 vsizeSize = 0;
     size_ = (std::size_t)vsizeDecode(storage, vsizeSize, crc);
+    
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
     Bytes bytes(size_);
     if (storage.loadAndCalcCrc32(bytes, crc))
