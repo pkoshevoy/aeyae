@@ -4237,7 +4237,7 @@ namespace Yamka
         eltRef->rewrite();
       }
       
-      return false;
+      return payload.eval(*this);
     }
   };
   
@@ -4272,7 +4272,7 @@ namespace Yamka
     
     // virtual:
     bool evalPayload(IPayload & payload)
-    { return false; }
+    { return payload.eval(*this); }
   };
   
   //----------------------------------------------------------------
