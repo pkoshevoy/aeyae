@@ -99,6 +99,37 @@ namespace Yamka
     
     return bytesRead;
   }
+
+  //----------------------------------------------------------------
+  // eltsFind
+  // 
+  // Find an element with storage receipt positiong
+  // matching a given position:
+  // 
+  template <typename elts_t>
+  typename elts_t::value_type *
+  eltsFind(elts_t & elts, uint64 position)
+  {
+    typedef typename elts_t::value_type elt_t;
+    typedef typename elts_t::iterator elt_iter_t;
+    
+    for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      elt_t & elt = *i;
+      IStorage::IReceiptPtr receipt = elt.storageReceipt();
+      if (receipt)
+      {
+        uint64 eltPosition = receipt->position();
+        if (eltPosition == position)
+        {
+          return &elt;
+        }
+      }
+    }
+    
+    return NULL;
+  }
+  
   
   //----------------------------------------------------------------
   // EbmlMaster
