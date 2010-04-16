@@ -517,6 +517,8 @@ namespace Yamka
   // 
   struct Cluster : public EbmlMaster
   {
+    Cluster();
+    
     ImplementsPayloadAPI();
     
     Elt(VUInt, 0xE7, "Timecode") timecode_;
@@ -534,6 +536,9 @@ namespace Yamka
   struct Segment : public EbmlMaster
   {
     ImplementsPayloadAPI();
+    
+    // resolve positional references (seeks, cues, etc...)
+    void resolveReferences(const IElement * origin);
     
     Elt(SegInfo, 0x1549A966, "SegInfo") info_;
     Elt(Tracks, 0x1654AE6b, "Tracks") tracks_;
@@ -553,6 +558,10 @@ namespace Yamka
     MatroskaDoc();
     
     ImplementsPayloadAPI();
+    
+    // resolve positional references (seeks, cues, etc...)
+    // for each segment:
+    void resolveReferences();
     
     Elts(Segment, 0x18538067, "Segment") segments_;
   };

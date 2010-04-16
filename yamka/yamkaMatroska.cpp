@@ -1220,11 +1220,8 @@ namespace Yamka
   CueRef::isDefault() const
   {
     bool allDefault =
-      !time_.mustSave() &&
-      !cluster_.mustSave() &&
-      !block_.mustSave() &&
-      !codecState_.mustSave() &&
-      voids_.empty();
+      !cluster_.mustSave() ||
+      !codecState_.mustSave();
     
     return allDefault;
   }
@@ -1313,12 +1310,8 @@ namespace Yamka
   CueTrkPos::isDefault() const
   {
     bool allDefault =
-      !track_.mustSave() &&
-      !cluster_.mustSave() &&
-      !block_.mustSave() &&
-      !codecState_.mustSave() &&
-      !ref_.mustSave() &&
-      voids_.empty();
+      !cluster_.mustSave() ||
+      !codecState_.mustSave();
     
     return allDefault;
   }
@@ -1576,9 +1569,7 @@ namespace Yamka
   SeekEntry::isDefault() const
   {
     bool allDefault =
-      !id_.mustSave() &&
-      !position_.mustSave() &&
-      voids_.empty();
+      !position_.mustSave();
     
     return allDefault;
   }
@@ -3281,6 +3272,14 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // Cluster::Cluster
+  // 
+  Cluster::Cluster()
+  {
+    timecode_.alwaysSave();
+  }
+  
+  //----------------------------------------------------------------
   // Cluster::isDefault
   // 
   bool
@@ -3489,6 +3488,109 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  //----------------------------------------------------------------
+  // Segment::resolveReferences
+  // 
+  void
+  Segment::resolveReferences(const IElement * origin)
+  {
+    // shortcuts:
+    typedef TypeOfElts(SeekHead, 0x114D9B74, "SeekHead") TSeekHeads;
+    typedef TSeekHeads::iterator TSeekHeadIter;
+    typedef TSeekHeads::value_type TSeekHead;
+    
+    typedef TypeOfEltsInNamespace(SeekHead, SeekEntry, 0x4DBB, "Seek") TSeeks;
+    typedef TSeeks::iterator TSeekEntryIter;
+    typedef TSeeks::value_type TSeek;
+    
+    typedef TypeOfElt(Cues, 0x1C53BB6B, "Cues") TCue;
+    typedef TypeOfElt(Attachments, 0x1941A469, "Attachments") TAttachment;
+    typedef TypeOfElt(Tags, 0x1254C367, "Tags") TTag;
+    typedef TypeOfElt(Cluster, 0x1f43b675, "Cluster") TCluster;
+    
+    if (!origin)
+    {
+      return;
+    }
+    
+    IStorage::IReceiptPtr originReceipt = origin->payloadReceipt();
+    if (!originReceipt)
+    {
+      return;
+    }
+    
+    // get the payload position:
+    uint64 originPosition = originReceipt->position();
+    
+    // skip payload size:
+    originPosition += vsizeNumBytes(originReceipt);
+    
+    // resolve seek position references:
+    for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
+    {
+      TSeekHead & seekHead = *i;
+      TSeeks & seeks = seekHead.payload_.seek_;
+      
+      for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)
+      {
+        TSeek & seek = *j;
+        
+        VEltPosition & eltReference = seek.payload_.position_.payload_;
+        eltReference.setOrigin(origin);
+        
+        Bytes eltIdBytes;
+        if (!seek.payload_.id_.payload_.get(eltIdBytes))
+        {
+          continue;
+        }
+        
+        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        uint64 relativePosition = eltReference.position();
+        uint64 absolutePosition = originPosition + relativePosition;
+        
+        if (eltId == info_.getId())
+        {
+          eltReference.setElt(&info_);
+        }
+        else if (eltId == tracks_.getId())
+        {
+          eltReference.setElt(&tracks_);
+        }
+        else if (eltId == TSeekHead::kId)
+        {
+          const TSeekHead * ref = eltsFind(seekHeads_, absolutePosition);
+          eltReference.setElt(ref);
+        }
+        else if (eltId == TCue::kId)
+        {
+          const TCue * ref = eltsFind(cues_, absolutePosition);
+          eltReference.setElt(ref);
+        }
+        else if (eltId == TAttachment::kId)
+        {
+          const TAttachment * ref = eltsFind(attachments_, absolutePosition);
+          eltReference.setElt(ref);
+        }
+        else if (eltId == chapters_.getId())
+        {
+          eltReference.setElt(&chapters_);
+        }
+        else if (eltId == TTag::kId)
+        {
+          const TTag * ref = eltsFind(tags_, absolutePosition);
+          eltReference.setElt(ref);
+        }
+        else if (eltId == TCluster::kId)
+        {
+          const TCluster * ref = eltsFind(clusters_, absolutePosition);
+          eltReference.setElt(ref);
+        }
+      }
+    }
+    
+    
+  }
+  
   
   //----------------------------------------------------------------
   // MatroskaDoc::MatroskaDoc
@@ -3562,7 +3664,28 @@ namespace Yamka
       }
     }
     
+    // resolve positional references (seeks, cues, clusters, etc...):
+    resolveReferences();
+    
     return bytesReadTotal;
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::resolveReferences
+  // 
+  void
+  MatroskaDoc::resolveReferences()
+  {
+    // shortcuts:
+    typedef TypeOfElts(Segment, 0x18538067, "Segment") TSegments;
+    typedef TSegments::iterator TSegmentIter;
+    typedef TSegments::value_type TSegment;
+    
+    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+    {
+      TSegment & segment = *i;
+      segment.payload_.resolveReferences(&segment);
+    }
   }
   
 }
