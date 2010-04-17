@@ -4052,7 +4052,7 @@ namespace Yamka
   {
     // shortcuts:
     typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
-    typedef std::deque<TCue>::iterator TCueIter;
+    typedef std::deque<TCues>::iterator TCuesIter;
     typedef std::deque<TCluster>::iterator TClusterIter;
     
     typedef SeekHead::TSeekEntry TSeekEntry;
@@ -4117,9 +4117,9 @@ namespace Yamka
           const TSeekHead * ref = eltsFind(seekHeads_, absolutePosition);
           eltReference.setElt(ref);
         }
-        else if (eltId == TCue::kId)
+        else if (eltId == TCues::kId)
         {
-          const TCue * ref = eltsFind(cues_, absolutePosition);
+          const TCues * ref = eltsFind(cues_, absolutePosition);
           eltReference.setElt(ref);
         }
         else if (eltId == TAttachment::kId)
@@ -4145,10 +4145,10 @@ namespace Yamka
     }
     
     // resolve cue track position references:
-    for (TCueIter i = cues_.begin(); i != cues_.end(); ++i)
+    for (TCuesIter i = cues_.begin(); i != cues_.end(); ++i)
     {
-      TCue & cue = *i;
-      std::deque<TCuePoint> & cuePoints = cue.payload_.points_;
+      TCues & cues = *i;
+      std::deque<TCuePoint> & cuePoints = cues.payload_.points_;
       
       for (TCuePointIter j = cuePoints.begin(); j != cuePoints.end(); ++j)
       {

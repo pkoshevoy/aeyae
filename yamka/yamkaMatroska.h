@@ -859,8 +859,8 @@ namespace Yamka
     TypedefYamkaElt(SeekHead, 0x114D9B74, "SeekHead") TSeekHead;
     std::deque<TSeekHead> seekHeads_;
     
-    TypedefYamkaElt(Cues, 0x1C53BB6B, "Cues") TCue;
-    std::deque<TCue> cues_;
+    TypedefYamkaElt(Cues, 0x1C53BB6B, "Cues") TCues;
+    std::deque<TCues> cues_;
     
     TypedefYamkaElt(Attachments, 0x1941A469, "Attachments") TAttachment;
     std::deque<TAttachment> attachments_;
