@@ -24,10 +24,14 @@ namespace Yamka
   //----------------------------------------------------------------
   // IStorage
   // 
+  // NOTE: storage is assumed to be not thread safe, multiple threads
+  // should not attempt to access the same storage simultaneously
+  // and expect well-defined results.
+  // 
   struct IStorage
   {
     virtual ~IStorage() {}
-
+    
     //----------------------------------------------------------------
     // IReceipt
     // 
@@ -73,11 +77,6 @@ namespace Yamka
     IReceiptPtr loadAndCalcCrc32(Bytes & data,
                                  Crc32 * computeCrc32 = NULL);
   };
-  
-  //----------------------------------------------------------------
-  // IStoragePtr
-  // 
-  typedef boost::shared_ptr<IStorage> IStoragePtr;
   
 }
 
