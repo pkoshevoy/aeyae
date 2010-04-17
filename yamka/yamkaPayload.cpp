@@ -735,42 +735,51 @@ namespace Yamka
     return bytesRead;
   }
   
+  //----------------------------------------------------------------
+  // VString::set
+  // 
+  VString &
+  VString::set(const std::string & str)
+  {
+    TSuper::set(str);
+    return *this;
+  }
   
   //----------------------------------------------------------------
-  // VBinary::defaultStorage_
+  // VString::set
   // 
-  IStoragePtr
-  VBinary::defaultStorage_;
+  VString &
+  VString::set(const char * cstr)
+  {
+    std::string str;
+    if (cstr)
+    {
+      str = std::string(cstr);
+    }
+    
+    TSuper::set(str);
+    return *this;
+  }
+  
   
   //----------------------------------------------------------------
   // VBinary::VBinary
   // 
   VBinary::VBinary():
-    storage_(defaultStorage_),
     size_(0),
     sizeDefault_(0)
   {}
   
   //----------------------------------------------------------------
-  // VBinary::setStorage
-  // 
-  VBinary &
-  VBinary::setStorage(const IStoragePtr & storage)
-  {
-    storage_ = storage;
-    return *this;
-  }
-  
-  //----------------------------------------------------------------
   // VBinary::set
   // 
   VBinary &
-  VBinary::set(const Bytes & bytes)
+  VBinary::set(const Bytes & bytes, IStorage & storage)
   {
-    if (storage_)
+    receipt_ = storage.save(bytes);
+    if (receipt_)
     {
       size_ = bytes.size();
-      receipt_ = storage_->save(bytes);
     }
     else
     {
@@ -799,12 +808,12 @@ namespace Yamka
   // VBinary::setDefault
   // 
   VBinary &
-  VBinary::setDefault(const Bytes & bytes)
+  VBinary::setDefault(const Bytes & bytes, IStorage & storage)
   {
-    if (storage_)
+    receiptDefault_ = storage.save(bytes);
+    if (receiptDefault_)
     {
       sizeDefault_ = bytes.size();
-      receiptDefault_ = storage_->save(bytes);
     }
     else
     {

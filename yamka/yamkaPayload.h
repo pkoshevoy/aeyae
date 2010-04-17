@@ -269,6 +269,9 @@ namespace Yamka
   {
     typedef VPayload<std::string> TSuper;
     
+    VString & set(const std::string & str);
+    VString & set(const char * cstr);
+    
     ImplementsPayloadAPI();
   };
   
@@ -286,16 +289,13 @@ namespace Yamka
     
     VBinary();
     
-    VBinary & setStorage(const IStoragePtr & binStorage);
-    VBinary & setDefault(const Bytes & bytes);
-    VBinary & set(const Bytes & bytes);
+    VBinary & setDefault(const Bytes & bytes, IStorage & storage);
+    VBinary & set(const Bytes & bytes, IStorage & storage);
     bool get(Bytes & bytes) const;
     
     ImplementsPayloadAPI();
     
     // data storage:
-    static IStoragePtr defaultStorage_;
-    IStoragePtr storage_;
     IStorage::IReceiptPtr receipt_;
     IStorage::IReceiptPtr receiptDefault_;
     std::size_t size_;
