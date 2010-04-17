@@ -47,6 +47,7 @@ namespace Yamka
   struct Bytes
   {
     Bytes(std::size_t size = 0);
+    Bytes(const void * data, std::size_t size);
     explicit Bytes(const TByteVec & byteVec);
     
     // convert to a byte vector (deep copy of data):

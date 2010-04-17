@@ -19,21 +19,29 @@
 
 namespace Yamka
 {
-
+  
   //----------------------------------------------------------------
   // Bytes::Bytes
   // 
   Bytes::Bytes(std::size_t size):
     bytes_(new TByteVecDec(1, TByteVec(size)))
   {}
-
+  
+  //----------------------------------------------------------------
+  // Bytes::Bytes
+  // 
+  Bytes::Bytes(const void * data, std::size_t size):
+    bytes_(new TByteVecDec(1, TByteVec((const unsigned char *)data,
+                                       (const unsigned char *)data + size)))
+  {}
+  
   //----------------------------------------------------------------
   // Bytes::Bytes
   // 
   Bytes::Bytes(const TByteVec & byteVec):
     bytes_(new TByteVecDec(1, byteVec))
   {}
-
+  
   //----------------------------------------------------------------
   // Bytes::operator TByteVec
   // 
