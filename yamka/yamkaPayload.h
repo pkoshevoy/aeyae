@@ -58,11 +58,11 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
-  // ImplementsPayloadAPI
+  // ImplementsYamkaPayloadAPI
   // 
   // A helper macro used to implement the payload interface API
   // 
-# define ImplementsPayloadAPI()                                         \
+# define ImplementsYamkaPayloadAPI()                                    \
   bool eval(IElementCrawler & crawler);                                 \
   bool isDefault() const;                                               \
   uint64 calcSize() const;                                              \
@@ -102,7 +102,7 @@ namespace Yamka
   {
     VEltPosition();
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
     
     // set default number of bytes to use when exact size of
     // the position is not known yet. The default is 8 bytes
@@ -210,7 +210,7 @@ namespace Yamka
     
     VInt();
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
   };
   
   
@@ -223,7 +223,7 @@ namespace Yamka
     
     VUInt();
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
   };
   
   
@@ -236,7 +236,7 @@ namespace Yamka
     
     VFloat();
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
   };
   
   
@@ -256,7 +256,7 @@ namespace Yamka
     void setTime(std::time_t t);
     std::time_t getTime() const;
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
   };
   
   
@@ -272,7 +272,7 @@ namespace Yamka
     VString & set(const std::string & str);
     VString & set(const char * cstr);
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
   };
   
   
@@ -293,7 +293,7 @@ namespace Yamka
     VBinary & set(const Bytes & bytes, IStorage & storage);
     bool get(Bytes & bytes) const;
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
     
     // data storage:
     IStorage::IReceiptPtr receipt_;

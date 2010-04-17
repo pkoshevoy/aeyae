@@ -20,21 +20,21 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
-  // UI64
+  // YamkaUnsignedInt64
   // 
 # ifdef _WIN32
-# define UI64(i) uint64(i)
+# define YamkaUnsignedInt64(i) uint64(i)
 # else
-# define UI64(i) i##LLU
+# define YamkaUnsignedInt64(i) i##LLU
 # endif
   
   //----------------------------------------------------------------
-  // SI64
+  // YamkaSignedInt64
   // 
 # ifdef _WIN32
-# define SI64(i) int64(i)
+# define YamkaSignedInt64(i) int64(i)
 # else
-# define SI64(i) i##LL
+# define YamkaSignedInt64(i) i##LL
 # endif
   
   //----------------------------------------------------------------
@@ -43,15 +43,15 @@ namespace Yamka
   // Constant max unsigned int for each byte size:
   // 
   const uint64 uintMax[9] = {
-    UI64(0x0),
-    UI64(0xFF),
-    UI64(0xFFFF),
-    UI64(0xFFFFFF),
-    UI64(0xFFFFFFFF),
-    UI64(0xFFFFFFFFFF),
-    UI64(0xFFFFFFFFFFFF),
-    UI64(0xFFFFFFFFFFFFFF),
-    UI64(0xFFFFFFFFFFFFFFFF)
+    YamkaUnsignedInt64(0x0),
+    YamkaUnsignedInt64(0xFF),
+    YamkaUnsignedInt64(0xFFFF),
+    YamkaUnsignedInt64(0xFFFFFF),
+    YamkaUnsignedInt64(0xFFFFFFFF),
+    YamkaUnsignedInt64(0xFFFFFFFFFF),
+    YamkaUnsignedInt64(0xFFFFFFFFFFFF),
+    YamkaUnsignedInt64(0xFFFFFFFFFFFFFF),
+    YamkaUnsignedInt64(0xFFFFFFFFFFFFFFFF)
   };
   
   //----------------------------------------------------------------
@@ -64,32 +64,32 @@ namespace Yamka
     {
       return 1;
     }
-    else if (i < UI64(0x3FFF))
+    else if (i < YamkaUnsignedInt64(0x3FFF))
     {
       return 2;
     }
-    else if (i < UI64(0x1FFFFF))
+    else if (i < YamkaUnsignedInt64(0x1FFFFF))
     {
       return 3;
     }
-    else if (i < UI64(0xFFFFFFF))
+    else if (i < YamkaUnsignedInt64(0xFFFFFFF))
     {
       return 4;
     }
-    else if (i < UI64(0x7FFFFFFFF))
+    else if (i < YamkaUnsignedInt64(0x7FFFFFFFF))
     {
       return 5;
     }
-    else if (i < UI64(0x3FFFFFFFFFF))
+    else if (i < YamkaUnsignedInt64(0x3FFFFFFFFFF))
     {
       return 6;
     }
-    else if (i < UI64(0x1FFFFFFFFFFFF))
+    else if (i < YamkaUnsignedInt64(0x1FFFFFFFFFFFF))
     {
       return 7;
     }
     
-    assert(i < UI64(0xFFFFFFFFFFFFFF));
+    assert(i < YamkaUnsignedInt64(0xFFFFFFFFFFFFFF));
     return 8;
   }
   
@@ -354,31 +354,31 @@ namespace Yamka
   unsigned int
   uintNumBytes(uint64 ui)
   {
-    if (ui <= UI64(0xFF))
+    if (ui <= YamkaUnsignedInt64(0xFF))
     {
       return 1;
     }
-    else if (ui <= UI64(0xFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFF))
     {
       return 2;
     }
-    else if (ui <= UI64(0xFFFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFFFF))
     {
       return 3;
     }
-    else if (ui <= UI64(0xFFFFFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFFFFFF))
     {
       return 4;
     }
-    else if (ui <= UI64(0xFFFFFFFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFFFFFFFF))
     {
       return 5;
     }
-    else if (ui <= UI64(0xFFFFFFFFFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFFFFFFFFFF))
     {
       return 6;
     }
-    else if (ui <= UI64(0xFFFFFFFFFFFFFF))
+    else if (ui <= YamkaUnsignedInt64(0xFFFFFFFFFFFFFF))
     {
       return 7;
     }
@@ -431,31 +431,38 @@ namespace Yamka
   unsigned int
   intNumBytes(int64 si)
   {
-    if (si >= -SI64(0x80) && si <= SI64(0x7F))
+    if (si >= -YamkaSignedInt64(0x80) &&
+        si <= YamkaSignedInt64(0x7F))
     {
       return 1;
     }
-    else if (si >= -SI64(0x8000) && si <= SI64(0x7FFF))
+    else if (si >= -YamkaSignedInt64(0x8000) &&
+             si <= YamkaSignedInt64(0x7FFF))
     {
       return 2;
     }
-    else if (si >= -SI64(0x800000) && si <= SI64(0x7FFFFF))
+    else if (si >= -YamkaSignedInt64(0x800000) &&
+             si <= YamkaSignedInt64(0x7FFFFF))
     {
       return 3;
     }
-    else if (si >= -SI64(0x80000000) && si <= SI64(0x7FFFFFFF))
+    else if (si >= -YamkaSignedInt64(0x80000000) &&
+             si <= YamkaSignedInt64(0x7FFFFFFF))
     {
       return 4;
     }
-    else if (si >= -SI64(0x8000000000) && si <= SI64(0x7FFFFFFFFF))
+    else if (si >= -YamkaSignedInt64(0x8000000000) &&
+             si <= YamkaSignedInt64(0x7FFFFFFFFF))
     {
       return 5;
     }
-    else if (si >= -SI64(0x800000000000) && si <= SI64(0x7FFFFFFFFFFF))
+    else if (si >= -YamkaSignedInt64(0x800000000000) &&
+             si <= YamkaSignedInt64(0x7FFFFFFFFFFF))
     {
       return 6;
     }
-    else if (si >= -SI64(0x80000000000000) && si <= SI64(0x7FFFFFFFFFFFFF))
+    else if (si >= -YamkaSignedInt64(0x80000000000000) &&
+             si <= YamkaSignedInt64(0x7FFFFFFFFFFFFF))
     {
       return 7;
     }

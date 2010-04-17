@@ -19,9 +19,6 @@ namespace Yamka
   uint64
   EbmlMaster::loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc)
   {
-    // shortcut:
-    typedef TypeOfElt(VBinary, kIdVoid, "Void") TVoid;
-    
     TVoid eltVoid;
     uint64 bytesRead = eltVoid.load(storage, storageSize, crc);
     if (bytesRead)

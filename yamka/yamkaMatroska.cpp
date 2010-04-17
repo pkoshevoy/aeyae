@@ -2006,11 +2006,8 @@ namespace Yamka
       return;
     }
     
-    typedef TypeOfElts(SeekEntry, 0x4DBB, "Seek") TSeeks;
-    typedef TSeeks::value_type TSeek;
-    
-    seek_.push_back(TSeek());
-    TSeek & index = seek_.back();
+    seek_.push_back(TSeekEntry());
+    TSeekEntry & index = seek_.back();
     
     Bytes eltId = Bytes(uintEncode(element->getId()));
     index.payload_.id_.payload_.set(eltId, binaryStorage);
@@ -4054,20 +4051,18 @@ namespace Yamka
   Segment::resolveReferences(const IElement * origin)
   {
     // shortcuts:
-    typedef TypeOfElts(SeekHead, 0x114D9B74, "SeekHead") TSeekHeads;
-    typedef TSeekHeads::iterator TSeekHeadIter;
-    typedef TSeekHeads::value_type TSeekHead;
+    typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
+    typedef std::deque<TCue>::iterator TCueIter;
+    typedef std::deque<TCluster>::iterator TClusterIter;
     
-    typedef TypeOfElts(Cues, 0x1C53BB6B, "Cues") TCues;
-    typedef TCues::iterator TCueIter;
-    typedef TCues::value_type TCue;
+    typedef SeekHead::TSeekEntry TSeekEntry;
+    typedef std::deque<TSeekEntry>::iterator TSeekEntryIter;
     
-    typedef TypeOfElts(Cluster, 0x1F43B675, "Cluster") TClusters;
-    typedef TClusters::iterator TClusterIter;
-    typedef TClusters::value_type TCluster;
+    typedef Cues::TCuePoint TCuePoint;
+    typedef std::deque<TCuePoint>::iterator TCuePointIter;
     
-    typedef TypeOfElt(Attachments, 0x1941A469, "Attachments") TAttachment;
-    typedef TypeOfElt(Tags, 0x1254C367, "Tags") TTag;
+    typedef CuePoint::TCueTrkPos TCueTrkPos;
+    typedef std::deque<TCueTrkPos>::iterator TCueTrkPosIter;
     
     if (!origin)
     {
@@ -4087,18 +4082,14 @@ namespace Yamka
     originPosition += vsizeNumBytes(originReceipt);
     
     // resolve seek position references:
-    typedef TypeOfEltsInNamespace(SeekHead, SeekEntry, 0x4DBB, "Seek") TSeeks;
-    typedef TSeeks::iterator TSeekEntryIter;
-    typedef TSeeks::value_type TSeek;
-    
     for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
     {
       TSeekHead & seekHead = *i;
-      TSeeks & seeks = seekHead.payload_.seek_;
+      std::deque<TSeekEntry> & seeks = seekHead.payload_.seek_;
       
       for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)
       {
-        TSeek & seek = *j;
+        TSeekEntry & seek = *j;
         
         VEltPosition & eltReference = seek.payload_.position_.payload_;
         eltReference.setOrigin(origin);
@@ -4154,26 +4145,15 @@ namespace Yamka
     }
     
     // resolve cue track position references:
-    typedef TypeOfEltsInNamespace(Cues, CuePoint, 0xBB, "CuePoint") TCuePoints;
-    typedef TCuePoints::iterator TCuePointIter;
-    typedef TCuePoints::value_type TCuePoint;
-    
-    typedef
-      TypeOfEltsInNamespace(CuePoint, CueTrkPos, 0xB7, "CueTrackPosition")
-      TCueTrkPositions;
-    
-    typedef TCueTrkPositions::iterator TCueTrkPosIter;
-    typedef TCueTrkPositions::value_type TCueTrkPos;
-    
     for (TCueIter i = cues_.begin(); i != cues_.end(); ++i)
     {
       TCue & cue = *i;
-      TCuePoints & cuePoints = cue.payload_.points_;
+      std::deque<TCuePoint> & cuePoints = cue.payload_.points_;
       
       for (TCuePointIter j = cuePoints.begin(); j != cuePoints.end(); ++j)
       {
         TCuePoint & cuePoint = *j;
-        TCueTrkPositions & cueTrkPns = cuePoint.payload_.trkPosns_;
+        std::deque<TCueTrkPos> & cueTrkPns = cuePoint.payload_.trkPosns_;
         
         for (TCueTrkPosIter k = cueTrkPns.begin(); k != cueTrkPns.end(); ++k)
         {
@@ -4345,10 +4325,8 @@ namespace Yamka
   void
   MatroskaDoc::resolveReferences()
   {
-    // shortcuts:
-    typedef TypeOfElts(Segment, 0x18538067, "Segment") TSegments;
-    typedef TSegments::iterator TSegmentIter;
-    typedef TSegments::value_type TSegment;
+    // shortcut:
+    typedef std::deque<TSegment>::iterator TSegmentIter;
     
     for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
     {

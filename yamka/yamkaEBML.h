@@ -163,7 +163,8 @@ namespace Yamka
   // 
   struct EbmlMaster : public IPayload
   {
-    Elts(VBinary, kIdVoid, "Void") voids_;
+    TypedefYamkaElt(VBinary, kIdVoid, "Void") TVoid;
+    std::deque<TVoid> voids_;
     
   protected:
     // attempt to load a void element:
@@ -177,15 +178,28 @@ namespace Yamka
   {
     EbmlHead();
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
     
-    Elt(VUInt, 0x4286, "EBMLVersion") version_;
-    Elt(VUInt, 0x42F7, "EBMLReadVersion") readVersion_;
-    Elt(VUInt, 0x42F2, "EBMLMaxIDLength") maxIdLength_;
-    Elt(VUInt, 0x42F3, "EBMLMaxSizeLength") maxSizeLength_;
-    Elt(VString, 0x4282, "DocType") docType_;
-    Elt(VUInt, 0x4287, "DocTypeVersion") docTypeVersion_;
-    Elt(VUInt, 0x4285, "DocTypeReadVersion") docTypeReadVersion_;
+    TypedefYamkaElt(VUInt, 0x4286, "EBMLVersion") TVersion;
+    TVersion version_;
+    
+    TypedefYamkaElt(VUInt, 0x42F7, "EBMLReadVersion") TReadVersion;
+    TReadVersion readVersion_;
+    
+    TypedefYamkaElt(VUInt, 0x42F2, "EBMLMaxIDLength") TMaxIdLength;
+    TMaxIdLength maxIdLength_;
+    
+    TypedefYamkaElt(VUInt, 0x42F3, "EBMLMaxSizeLength") TMaxSizeLength;
+    TMaxSizeLength maxSizeLength_;
+    
+    TypedefYamkaElt(VString, 0x4282, "DocType") TDocType;
+    TDocType docType_;
+    
+    TypedefYamkaElt(VUInt, 0x4287, "DocTypeVersion") TDocTypeVersion;
+    TDocTypeVersion docTypeVersion_;
+    
+    TypedefYamkaElt(VUInt, 0x4285, "DocTypeReadVersion") TDocTypeReadVersion;
+    TDocTypeReadVersion docTypeReadVersion_;
   };
   
   //----------------------------------------------------------------
@@ -197,9 +211,10 @@ namespace Yamka
             uint64 docTypeVersion = 1,
             uint64 docTypeReadVersion = 1);
     
-    ImplementsPayloadAPI();
+    ImplementsYamkaPayloadAPI();
     
-    Elt(EbmlHead, 0x1A45DFA3, "EBML") head_;
+    TypedefYamkaElt(EbmlHead, 0x1A45DFA3, "EBML") THead;
+    THead head_;
   };
   
 }

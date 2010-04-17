@@ -21,23 +21,6 @@
 #include <iomanip>
 
 
-//----------------------------------------------------------------
-// THROW_ARG2_IF_FALSE
-// 
-# ifndef THROW_ARG2_IF_FALSE
-# define THROW_ARG2_IF_FALSE(predicate, arg2)   \
-  if (predicate) {} else throw arg2
-#endif
-
-//----------------------------------------------------------------
-// THROW_ERR_IF_FALSE
-// 
-# ifndef THROW_ERR_IF_FALSE
-# define THROW_ERR_IF_FALSE(predicate, errStr)   \
-  if (predicate) {} else throw std::runtime_error(std::string(errStr))
-#endif
-
-
 namespace Yamka
 {
   
@@ -444,15 +427,6 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
-  // TElts
-  // 
-  template <typename payload_t,
-            unsigned int EltId,
-            typename elt_name_t>
-  struct TElts : public std::deque<TElt<payload_t, EltId, elt_name_t> >
-  {};
-
-  //----------------------------------------------------------------
   // 
   // NOTE: Currently (2010) C++ templates can not be parameterized
   // with const string literal constants:
@@ -460,66 +434,32 @@ namespace Yamka
   //   TElt<int, 0x1, "One"> one; // does not compiles
   //
   // 
-  // Therefore I added helper C preprocessor macro(s) that
+  // Therefore I added helper C preprocessor macro that
   // works around this limitation by creating a wrapper class
   // to return the string literal, and passing the wrapper
   // class as a template parameter to TElt:
   //
   //   struct EltName0x1 { static const char * getName() { return "One" } };
   //   TElt<int, 0x1, EltName0x1> one; // compiles just fine
-  //
   // 
-  // The wrapper macros are used like this:
   // 
-  //   Elt(int, 0x1, "One") one;
-  //   Elts(int, 0x2, "Two") twos;
-  //
+  // The wrapper macros is used like this:
+  // 
+  //   TypedefElt(int, 0x1, "One") TOne;
+  //   TOne one_;
+  // 
   
   //----------------------------------------------------------------
-  // Elt
+  // TypedefYamkaElt
   // 
-  // Helper macro used to declare an element.
+  // Helper macro used to declare an element type.
   // 
-  // EXAMPLE: Elt(VUInt, 0x4286, "EBMLVersion") version_;
+  // EXAMPLE: TypedefElt(VUInt, 0x4286, "EBMLVersion") TVersion;
   // 
-# define Elt(EltType, EbmlId, Name)                                     \
+# define TypedefYamkaElt(EltType, EbmlId, Name)                         \
   struct EltName##EbmlId { static const char * getName() { return Name; } }; \
-  TElt<EltType, EbmlId, EltName##EbmlId>
+  typedef Yamka::TElt<EltType, EbmlId, EltName##EbmlId>
   
-  //----------------------------------------------------------------
-  // Elts
-  // 
-  // Helper macro used to declare an element list
-  // 
-  // EXAMPLE: Elts(VUInt, 0xEC, "Void") voids_;
-  //       
-# define Elts(EltType, EbmlId, Name)                                    \
-  struct EltName##EbmlId { static const char * getName() { return Name; } }; \
-  Yamka::TElts<EltType, EbmlId, EltName##EbmlId>
-  
-  //----------------------------------------------------------------
-  // TypeOfElt
-  // 
-# define TypeOfElt(EltType, EbmlId, Name)       \
-  Yamka::TElt<EltType, EbmlId, EltName##EbmlId>
-  
-  //----------------------------------------------------------------
-  // TypeOfEltInNamespace
-  // 
-# define TypeOfEltInNamespace(NameSpace, EltType, EbmlId, Name) \
-  Yamka::TElt<EltType, EbmlId, NameSpace::EltName##EbmlId>
-  
-  //----------------------------------------------------------------
-  // TypeOfElts
-  // 
-# define TypeOfElts(EltType, EbmlId, Name)              \
-  Yamka::TElts<EltType, EbmlId, EltName##EbmlId>
-  
-  //----------------------------------------------------------------
-  // TypeOfEltsInNamespace
-  // 
-# define TypeOfEltsInNamespace(NameSpace, EltType, EbmlId, Name)        \
-  Yamka::TElts<EltType, EbmlId, NameSpace::EltName##EbmlId>
 }
 
 
