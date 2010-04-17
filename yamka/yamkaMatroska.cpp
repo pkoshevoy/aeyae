@@ -4062,7 +4062,7 @@ namespace Yamka
     typedef TCues::iterator TCueIter;
     typedef TCues::value_type TCue;
     
-    typedef TypeOfElts(Cluster, 0x1f43b675, "Cluster") TClusters;
+    typedef TypeOfElts(Cluster, 0x1F43B675, "Cluster") TClusters;
     typedef TClusters::iterator TClusterIter;
     typedef TClusters::value_type TCluster;
     

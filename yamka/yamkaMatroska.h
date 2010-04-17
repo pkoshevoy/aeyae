@@ -28,9 +28,9 @@ namespace Yamka
   {
     ImplementsPayloadAPI();
     
-    Elt(VUInt, 0x69fc, "EditionUID") editionUID_;
-    Elt(VUInt, 0x69bf, "ChapTransCodec") chapTransCodec_;
-    Elt(VBinary, 0x69a5, "ChapTransID") chapTransID_;
+    Elt(VUInt, 0x69FC, "EditionUID") editionUID_;
+    Elt(VUInt, 0x69BF, "ChapTransCodec") chapTransCodec_;
+    Elt(VBinary, 0x69A5, "ChapTransID") chapTransID_;
   };
   
   //----------------------------------------------------------------
@@ -42,19 +42,19 @@ namespace Yamka
     
     ImplementsPayloadAPI();
     
-    Elt(VBytes<16>, 0x73a4, "SegmentUID") segUID_;
+    Elt(VBytes<16>, 0x73A4, "SegmentUID") segUID_;
     Elt(VString, 0x7384, "SegmentFilename") segFilename_;
-    Elt(VBytes<16>, 0x3cb923, "PrevUID") prevUID_;
-    Elt(VString, 0x3c83ab, "PrevFilename") prevFilename_;
-    Elt(VBytes<16>, 0x3eb923, "NextUID") nextUID_;
-    Elt(VString, 0x3e83bb, "NextFilename") nextFilename_;
+    Elt(VBytes<16>, 0x3CB923, "PrevUID") prevUID_;
+    Elt(VString, 0x3C83AB, "PrevFilename") prevFilename_;
+    Elt(VBytes<16>, 0x3EB923, "NextUID") nextUID_;
+    Elt(VString, 0x3E83BB, "NextFilename") nextFilename_;
     Elt(VBytes<16>, 0x4444, "FamilyUID") familyUID_;
     Elt(ChapTranslate, 0x6924, "ChapTranslate") chapTranslate_;
-    Elt(VUInt, 0x2ad7b1, "TimecodeScale") timecodeScale_;
+    Elt(VUInt, 0x2AD7B1, "TimecodeScale") timecodeScale_;
     Elt(VFloat, 0x4489, "Duration") duration_;
     Elt(VDate, 0x4461, "DateUTC") date_;
-    Elt(VString, 0x7ba9, "Title") title_;
-    Elt(VString, 0x4d80, "MuxingApp") muxingApp_;
+    Elt(VString, 0x7BA9, "Title") title_;
+    Elt(VString, 0x4D80, "MuxingApp") muxingApp_;
     Elt(VString, 0x5741, "WritingApp") writingApp_;
   };
   
@@ -65,9 +65,9 @@ namespace Yamka
   {
     ImplementsPayloadAPI();
     
-    Elt(VUInt, 0x66fc, "EditionUID") editionUID_;
-    Elt(VUInt, 0x66bf, "TrackTransCodec") trackTransCodec_;
-    Elt(VBinary, 0x66a5, "TrackTransID") trackTransID_;
+    Elt(VUInt, 0x66FC, "EditionUID") editionUID_;
+    Elt(VUInt, 0x66BF, "TrackTransCodec") trackTransCodec_;
+    Elt(VBinary, 0x66A5, "TrackTransID") trackTransID_;
   };
   
   //----------------------------------------------------------------
@@ -135,7 +135,7 @@ namespace Yamka
     Elt(VBinary, 0x47E3, "ContentSignature") signature_;
     Elt(VBinary, 0x47E4, "ContentSigKeyID") sigKeyID_;
     Elt(VUInt, 0x47E5, "ContentSigAlgo") sigAlgo_;
-    Elt(VUInt, 0x47e6, "ContentSigHashAlgo") sigHashAlgo_;
+    Elt(VUInt, 0x47E6, "ContentSigHashAlgo") sigHashAlgo_;
   };
   
   //----------------------------------------------------------------
@@ -217,7 +217,7 @@ namespace Yamka
   {
     ImplementsPayloadAPI();
     
-    Elts(Track, 0xae, "TrackEntry") tracks_;
+    Elts(Track, 0xAE, "TrackEntry") tracks_;
   };
   
   //----------------------------------------------------------------
@@ -556,13 +556,13 @@ namespace Yamka
     void resolveReferences(const IElement * origin);
     
     Elt(SegInfo, 0x1549A966, "SegInfo") info_;
-    Elt(Tracks, 0x1654AE6b, "Tracks") tracks_;
+    Elt(Tracks, 0x1654AE6B, "Tracks") tracks_;
     Elts(SeekHead, 0x114D9B74, "SeekHead") seekHeads_;
     Elts(Cues, 0x1C53BB6B, "Cues") cues_;
     Elts(Attachments, 0x1941A469, "Attachments") attachments_;
-    Elt(Chapters, 0x1043a770, "Chapters") chapters_;
+    Elt(Chapters, 0x1043A770, "Chapters") chapters_;
     Elts(Tags, 0x1254C367, "Tags") tags_;
-    Elts(Cluster, 0x1f43b675, "Cluster") clusters_;
+    Elts(Cluster, 0x1F43B675, "Cluster") clusters_;
   };
   
   //----------------------------------------------------------------
