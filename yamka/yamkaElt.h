@@ -482,7 +482,7 @@ namespace Yamka
   // 
   // EXAMPLE: Elt(VUInt, 0x4286, "EBMLVersion") version_;
   // 
-# define Elt(EltType, EbmlId, Name)                                    \
+# define Elt(EltType, EbmlId, Name)                                     \
   struct EltName##EbmlId { static const char * getName() { return Name; } }; \
   TElt<EltType, EbmlId, EltName##EbmlId>
   
@@ -493,28 +493,33 @@ namespace Yamka
   // 
   // EXAMPLE: Elts(VUInt, 0xEC, "Void") voids_;
   //       
-# define Elts(EltType, EbmlId, Name)                                   \
+# define Elts(EltType, EbmlId, Name)                                    \
   struct EltName##EbmlId { static const char * getName() { return Name; } }; \
-  TElts<EltType, EbmlId, EltName##EbmlId>
-
+  Yamka::TElts<EltType, EbmlId, EltName##EbmlId>
+  
   //----------------------------------------------------------------
   // TypeOfElt
   // 
 # define TypeOfElt(EltType, EbmlId, Name)       \
-  TElt<EltType, EbmlId, EltName##EbmlId>
-
-  //----------------------------------------------------------------
-  // TypeOfElts
-  // 
-# define TypeOfElts(EltType, EbmlId, Name)      \
-  TElts<EltType, EbmlId, EltName##EbmlId>
-
-  //----------------------------------------------------------------
-  // TypeOfElts
-  // 
-# define TypeOfEltsInNamespace(NameSpace, EltType, EbmlId, Name)   \
-  TElts<EltType, EbmlId, NameSpace::EltName##EbmlId>
+  Yamka::TElt<EltType, EbmlId, EltName##EbmlId>
   
+  //----------------------------------------------------------------
+  // TypeOfEltInNamespace
+  // 
+# define TypeOfEltInNamespace(NameSpace, EltType, EbmlId, Name) \
+  Yamka::TElt<EltType, EbmlId, NameSpace::EltName##EbmlId>
+  
+  //----------------------------------------------------------------
+  // TypeOfElts
+  // 
+# define TypeOfElts(EltType, EbmlId, Name)              \
+  Yamka::TElts<EltType, EbmlId, EltName##EbmlId>
+  
+  //----------------------------------------------------------------
+  // TypeOfEltsInNamespace
+  // 
+# define TypeOfEltsInNamespace(NameSpace, EltType, EbmlId, Name)        \
+  Yamka::TElts<EltType, EbmlId, NameSpace::EltName##EbmlId>
 }
 
 
