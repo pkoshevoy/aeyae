@@ -167,6 +167,17 @@ namespace Yamka
   // 
   struct Track : public EbmlMaster
   {
+    enum MatroskaTrackType
+    {
+      kTrackTypeVideo = 1,
+      kTrackTypeAudio = 2,
+      kTrackTypeComplex = 3,
+      kTrackTypeLogo = 0x10,
+      kTrackTypeSubtitle = 0x11,
+      kTrackTypeButtons = 0x12,
+      kTrackTypeControl = 0x20
+    };
+    
     ImplementsPayloadAPI();
     
     Elt(VUInt, 0xD7, "TrackNumber") trackNumber_;
@@ -274,6 +285,10 @@ namespace Yamka
   struct SeekHead : public EbmlMaster
   {
     ImplementsPayloadAPI();
+    
+    void indexThis(const IElement * segment,
+                   const IElement * element,
+                   IStorage & binaryStorage);
     
     Elts(SeekEntry, 0x4DBB, "Seek") seek_;
   };

@@ -1993,6 +1993,31 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  //----------------------------------------------------------------
+  // SeekHead::indexThis
+  // 
+  void
+  SeekHead::indexThis(const IElement * segment,
+                      const IElement * element,
+                      IStorage & binaryStorage)
+  {
+    if (!element)
+    {
+      return;
+    }
+    
+    typedef TypeOfElts(SeekEntry, 0x4DBB, "Seek") TSeeks;
+    typedef TSeeks::value_type TSeek;
+    
+    seek_.push_back(TSeek());
+    TSeek & index = seek_.back();
+    
+    Bytes eltId = Bytes(uintEncode(element->getId()));
+    index.payload_.id_.payload_.set(eltId, binaryStorage);
+    index.payload_.position_.payload_.setOrigin(segment);
+    index.payload_.position_.payload_.setElt(element);
+  }
+  
   
   //----------------------------------------------------------------
   // AttdFile::eval
@@ -4216,7 +4241,7 @@ namespace Yamka
       eltsCalcSize(segments_) +
       eltsCalcSize(voids_);
     
-    return size;  
+    return size;
   }
   
   //----------------------------------------------------------------
