@@ -42,7 +42,7 @@ namespace Yamka
     readVersion_.alwaysSave().payload_.setDefault(1);
     maxIdLength_.alwaysSave().payload_.setDefault(4);
     maxSizeLength_.alwaysSave().payload_.setDefault(8);
-    version_.alwaysSave();
+    docType_.alwaysSave();
     docTypeVersion_.alwaysSave();
     docTypeReadVersion_.alwaysSave();
   }
