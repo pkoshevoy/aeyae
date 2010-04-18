@@ -27,12 +27,20 @@ using namespace Yamka;
 int
 main(int argc, char ** argv)
 {
+  uint64 vsizeSize = 0;
   std::cout << "0x" << uintEncode(0x1A45DFA3) << std::endl
             << "0x" << uintEncode(0xEC) << std::endl
             << "0x" << intEncode(5) << std::endl
             << "0x" << intEncode(-2) << std::endl
             << "0x" << intEncode(5, 3) << std::endl
             << "0x" << intEncode(-2, 3) << std::endl
+            << "0x1456abcf = 0x"
+            << std::hex
+            << vsizeDecode(vsizeEncode(0x1456abcf), vsizeSize)
+            << std::dec << std::endl
+            << "-64 = "
+            << vsizeSignedDecode(vsizeSignedEncode(-64), vsizeSize)
+            << std::endl
             << "0x" << vsizeEncode(0x8000) << std::endl
             << "0x" << vsizeEncode(1) << std::endl
             << "0x" << vsizeEncode(0) << std::endl

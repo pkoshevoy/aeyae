@@ -42,7 +42,8 @@ namespace Yamka
   // 
   // Constant max unsigned int for each byte size:
   // 
-  const uint64 uintMax[9] = {
+  const uint64 uintMax[9] =
+  {
     YamkaUnsignedInt64(0x0),
     YamkaUnsignedInt64(0xFF),
     YamkaUnsignedInt64(0xFFFF),
@@ -55,41 +56,36 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
+  // vsizeRange
+  // 
+  static const uint64 vsizeRange[9] =
+  {
+    YamkaUnsignedInt64(0x0),
+    YamkaUnsignedInt64(0x7E),
+    YamkaUnsignedInt64(0x3FFE),
+    YamkaUnsignedInt64(0x1FFFFE),
+    YamkaUnsignedInt64(0x0FFFFFFE),
+    YamkaUnsignedInt64(0x07FFFFFFFE),
+    YamkaUnsignedInt64(0x03FFFFFFFFFE),
+    YamkaUnsignedInt64(0x01FFFFFFFFFFFE),
+    YamkaUnsignedInt64(0x00FFFFFFFFFFFFFE)
+  };
+  
+  //----------------------------------------------------------------
   // vsizeNumBytes
   // 
   unsigned int
-  vsizeNumBytes(uint64 i)
+  vsizeNumBytes(uint64 vsize)
   {
-    if (i < 0x7F)
+    for (unsigned int j = 1; j < 8; j++)
     {
-      return 1;
-    }
-    else if (i < YamkaUnsignedInt64(0x3FFF))
-    {
-      return 2;
-    }
-    else if (i < YamkaUnsignedInt64(0x1FFFFF))
-    {
-      return 3;
-    }
-    else if (i < YamkaUnsignedInt64(0xFFFFFFF))
-    {
-      return 4;
-    }
-    else if (i < YamkaUnsignedInt64(0x7FFFFFFFF))
-    {
-      return 5;
-    }
-    else if (i < YamkaUnsignedInt64(0x3FFFFFFFFFF))
-    {
-      return 6;
-    }
-    else if (i < YamkaUnsignedInt64(0x1FFFFFFFFFFFF))
-    {
-      return 7;
+      if (vsize <= vsizeRange[j])
+      {
+        return j;
+      }
     }
     
-    assert(i < YamkaUnsignedInt64(0xFFFFFFFFFFFFFF));
+    assert(vsize <= vsizeRange[8]);
     return 8;
   }
   
@@ -192,7 +188,7 @@ namespace Yamka
     
     return i;
   }
-
+  
   //----------------------------------------------------------------
   // vsizeDecode
   // 
@@ -230,6 +226,85 @@ namespace Yamka
     v[0] |= (1 << (8 - numBytes));
     
     return v;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeHalfRange
+  // 
+  static const int64 vsizeHalfRange[9] =
+  {
+    YamkaSignedInt64(0x0),
+    YamkaSignedInt64(0x3F),
+    YamkaSignedInt64(0x1FFF),
+    YamkaSignedInt64(0x0FFFFF),
+    YamkaSignedInt64(0x07FFFFFF),
+    YamkaSignedInt64(0x03FFFFFFFF),
+    YamkaSignedInt64(0x01FFFFFFFFFF),
+    YamkaSignedInt64(0x00FFFFFFFFFFFF),
+    YamkaSignedInt64(0x007FFFFFFFFFFFFF)
+  };
+  
+  //----------------------------------------------------------------
+  // vsizeSignedNumBytes
+  // 
+  unsigned int
+  vsizeSignedNumBytes(int64 vsize)
+  {
+    for (unsigned int j = 1; j < 8; j++)
+    {
+      if (vsize >= -vsizeHalfRange[j] &&
+          vsize <= vsizeHalfRange[j])
+      {
+        return j;
+      }
+    }
+    
+    assert(vsize >= -vsizeHalfRange[8] &&
+           vsize <= vsizeHalfRange[8]);
+    return 8;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecodeBytes
+  // 
+  template <typename bytes_t>
+  int64
+  vsizeSignedDecodeBytes(const bytes_t & v, uint64 & vsizeSize)
+  {
+    uint64 u = vsizeDecodeBytes(v, vsizeSize);
+    int64 i = u - vsizeHalfRange[vsizeSize];
+    return i;
+  }
+
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  int64
+  vsizeSignedDecode(const Bytes & bytes, uint64 & vsizeSize)
+  {
+    int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
+    return i;
+  }
+
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  int64
+  vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize)
+  {
+    int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
+    return i;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeEncode
+  // 
+  TByteVec
+  vsizeSignedEncode(int64 vsize)
+  {
+    unsigned int numBytes = vsizeSignedNumBytes(vsize);
+    uint64 u = vsize + vsizeHalfRange[numBytes];
+    return vsizeEncode(u);
   }
   
   //----------------------------------------------------------------

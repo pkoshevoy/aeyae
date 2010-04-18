@@ -69,6 +69,30 @@ namespace Yamka
   vsizeEncode(uint64 vsize);
   
   //----------------------------------------------------------------
+  // vsizeSignedNumBytes
+  // 
+  extern unsigned int
+  vsizeSignedNumBytes(int64 vsize);
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  extern int64
+  vsizeSignedDecode(const Bytes & bytes, uint64 & vsizeSize);
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  extern int64
+  vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize);
+  
+  //----------------------------------------------------------------
+  // vsizeSignedEncode
+  // 
+  extern TByteVec
+  vsizeSignedEncode(int64 vsize);
+  
+  //----------------------------------------------------------------
   // vsizeDecode
   // 
   // helper function for loading and decoding a payload size
