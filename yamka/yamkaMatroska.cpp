@@ -1427,7 +1427,7 @@ namespace Yamka
   CueRef::isDefault() const
   {
     bool allDefault =
-      !cluster_.mustSave() ||
+      !cluster_.mustSave() &&
       !codecState_.mustSave();
     
     return allDefault;
@@ -1511,6 +1511,14 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // CueTrkPos::CueTrkPos
+  // 
+  CueTrkPos::CueTrkPos()
+  {
+    track_.alwaysSave();
+  }
+  
+  //----------------------------------------------------------------
   // CueTrkPos::eval
   // 
   bool
@@ -1532,7 +1540,7 @@ namespace Yamka
   CueTrkPos::isDefault() const
   {
     bool allDefault =
-      !cluster_.mustSave() ||
+      !cluster_.mustSave() &&
       !codecState_.mustSave();
     
     return allDefault;
@@ -1617,6 +1625,14 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+  
+  //----------------------------------------------------------------
+  // CuePoint::CuePoint
+  // 
+  CuePoint::CuePoint()
+  {
+    time_.alwaysSave();
+  }
   
   //----------------------------------------------------------------
   // CuePoint::eval

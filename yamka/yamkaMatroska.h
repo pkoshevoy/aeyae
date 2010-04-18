@@ -400,6 +400,8 @@ namespace Yamka
   // 
   struct CueTrkPos : public EbmlMaster
   {
+    CueTrkPos();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0xF7, "Track") TTrack;
@@ -423,6 +425,8 @@ namespace Yamka
   // 
   struct CuePoint : public EbmlMaster
   {
+    CuePoint();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0xB3, "CueTime") TTime;
