@@ -3790,6 +3790,291 @@ namespace Yamka
     return bytesReadTotal;
   }
   
+
+  //----------------------------------------------------------------
+  // SimpleBlock::SimpleBlock
+  // 
+  SimpleBlock::SimpleBlock():
+    trackNumber_(0),
+    timeCode_(0),
+    flags_(0)
+  {}
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::getTrackNumber
+  // 
+  uint64
+  SimpleBlock::getTrackNumber() const
+  {
+    return trackNumber_;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setTrackNumber
+  // 
+  void
+  SimpleBlock::setTrackNumber(uint64 trackNumber)
+  {
+    trackNumber_ = trackNumber;
+  }
+
+  //----------------------------------------------------------------
+  // SimpleBlock::relativeTimecode
+  // 
+  short int
+  SimpleBlock::relativeTimecode() const
+  {
+    return timeCode_;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setRelativeTimecode
+  // 
+  void
+  SimpleBlock::setRelativeTimecode(short int timeCode)
+  {
+    timeCode_ = timeCode;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::isKeyframe
+  // 
+  bool
+  SimpleBlock::isKeyframe() const
+  {
+    bool f = (flags_ & kFlagKeyframe) != 0;
+    return f;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setKeyframe
+  // 
+  void
+  SimpleBlock::setKeyframe(bool keyframe)
+  {
+    if (keyframe)
+    {
+      flags_ |= kFlagKeyframe;
+    }
+    else
+    {
+      flags_ &= (0xFF & ~kFlagKeyframe);
+    }
+    
+    // sanity check:
+    assert(keyframe == isKeyframe());
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::isInvisible
+  // 
+  bool
+  SimpleBlock::isInvisible() const
+  {
+    bool f = (flags_ & kFlagFrameInvisible) != 0;
+    return f;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setInvisible
+  // 
+  void
+  SimpleBlock::setInvisible(bool invisible)
+  {
+    if (invisible)
+    {
+      flags_ |= kFlagFrameInvisible;
+    }
+    else
+    {
+      flags_ &= (0xFF & ~kFlagFrameInvisible);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::isDiscardable
+  // 
+  bool
+  SimpleBlock::isDiscardable() const
+  {
+    bool f = flags_ & kFlagFrameDiscardable;
+    return f;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setDiscardable
+  // 
+  void
+  SimpleBlock::setDiscardable(bool discardable)
+  {
+    if (discardable)
+    {
+      flags_ |= kFlagFrameDiscardable;
+    }
+    else
+    {
+      flags_ &= (0xFF & ~kFlagFrameDiscardable);
+    }
+    
+    // sanity check:
+    assert(discardable == isDiscardable());
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::getLacing
+  // 
+  SimpleBlock::Lacing
+  SimpleBlock::getLacing() const
+  {
+    // extract lacing flags:
+    Lacing lacing = (Lacing)((flags_ & kFlagLacingEBML) >> 1);
+    return lacing;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setLacing
+  // 
+  void
+  SimpleBlock::setLacing(Lacing lacing)
+  {
+    // clear previous lacing flags:
+    flags_ &= (0xFF & ~kFlagLacingEBML);
+    flags_ |= lacing << 1;
+    
+    // sanity check:
+    assert(lacing == getLacing());
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::numberOfFrames
+  // 
+  std::size_t
+  SimpleBlock::numberOfFrames() const
+  {
+    return frames_.size();
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::getFrame
+  // 
+  const Bytes &
+  SimpleBlock::getFrame(std::size_t frameNumber) const
+  {
+    return frames_[frameNumber];
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::addFrame
+  // 
+  void
+  SimpleBlock::addFrame(const Bytes & frame)
+  {
+    frames_.push_back(frame);
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::pack
+  // 
+  void
+  SimpleBlock::pack(Bytes & simpleBlock) const
+  {
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::unpack
+  // 
+  bool
+  SimpleBlock::unpack(const Bytes & simpleBlock)
+  {
+    const uint64 blockSize = simpleBlock.size();
+    
+    uint64 bytesRead = 0;
+    trackNumber_ = vsizeDecode(simpleBlock, bytesRead);
+    if (bytesRead == 0)
+    {
+      return false;
+    }
+    
+    if (blockSize - bytesRead < 3)
+    {
+      // need 2 more bytes for timecode, and 1 more for flags:
+      return false;
+    }
+    
+    // convert to contiguous memory to simplify parsing:
+    TByteVec blockByteVec(simpleBlock);
+    const TByte * blockData = &(blockByteVec[0]);
+    
+    // decode the timecode:
+    TByteVec timecode(2);
+    timecode[0] = blockData[bytesRead++];
+    timecode[1] = blockData[bytesRead++];
+    timeCode_ = (short int)(intDecode(timecode, 2));
+    
+    // get the flags:
+    flags_ = blockData[bytesRead++];
+    
+    // get the number of frames:
+    std::size_t lastFrameIndex = 0;
+    
+    Lacing lacing = getLacing();
+    if (lacing != kLacingNone)
+    {
+      if (blockSize - bytesRead < 1)
+      {
+        return false;
+      }
+      
+      lastFrameIndex = blockData[bytesRead++];
+    }
+    
+    // unpack the frame(s):
+    frames_.resize(lastFrameIndex + 1);
+    std::size_t leadingFramesSize = 0;
+    
+    for (std::size_t i = 0; i < lastFrameIndex; i++)
+    {
+      if (lacing == kLacingXiph)
+      {
+        // decode the frame size:
+        std::size_t frameSize = 0;
+        while (true)
+        {
+          if (bytesRead > blockSize)
+          {
+            return false;
+          }
+          
+          std::size_t n = blockData[bytesRead++];
+          frameSize += n;
+          
+          if (n < 0xFF)
+          {
+            break;
+          }
+        }
+        
+        frames_[i] = Bytes(frameSize);
+        leadingFramesSize += frameSize;
+      }
+      else if (lacing == kLacingEBML)
+      {
+      }
+      else if (lacing == kLacingFixedSize)
+      {
+      }
+    }
+    
+    // last frame:
+    std::size_t lastFrameSize = std::size_t(blockSize - bytesRead - leadingFramesSize);
+    frames_[lastFrameIndex] = Bytes(lastFrameSize);
+    
+    for (std::size_t i = 0; i <= lastFrameIndex; i++)
+    {}
+    
+    return true;
+  }
+  
   
   //----------------------------------------------------------------
   // Cluster::Cluster
@@ -3923,9 +4208,9 @@ namespace Yamka
       info_.eval(crawler) ||
       tracks_.eval(crawler) ||
       chapters_.eval(crawler) ||
+      cues_.eval(crawler) ||
       
       eltsEval(seekHeads_, crawler) ||
-      eltsEval(cues_, crawler) ||
       eltsEval(attachments_, crawler) ||
       eltsEval(tags_, crawler) ||
       eltsEval(clusters_, crawler) ||
@@ -3942,9 +4227,9 @@ namespace Yamka
       !info_.mustSave() &&
       !tracks_.mustSave() &&
       !chapters_.mustSave() &&
+      !cues_.mustSave() &&
       
       seekHeads_.empty() &&
-      cues_.empty() &&
       attachments_.empty() &&
       tags_.empty() &&
       clusters_.empty() &&
@@ -3963,9 +4248,9 @@ namespace Yamka
       info_.calcSize() +
       tracks_.calcSize() +
       chapters_.calcSize() +
+      cues_.calcSize() +
       
       eltsCalcSize(seekHeads_) +
-      eltsCalcSize(cues_) +
       eltsCalcSize(attachments_) +
       eltsCalcSize(tags_) +
       eltsCalcSize(clusters_) +
@@ -3977,6 +4262,8 @@ namespace Yamka
   //----------------------------------------------------------------
   // Segment::save
   // 
+  // Save using conventional matroska segment layout
+  // 
   IStorage::IReceiptPtr
   Segment::save(IStorage & storage, Crc32 * crc) const
   {
@@ -3984,15 +4271,35 @@ namespace Yamka
     Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
     IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
     
+    typedef std::deque<TSeekHead>::const_iterator TSeekHeadIter;
+    TSeekHeadIter seekHeadIter = seekHeads_.begin();
+    
+    // save the first seekhead:
+    if (seekHeadIter != seekHeads_.end())
+    {
+      const TSeekHead & seekHead = *seekHeadIter;
+      seekHead.save(storage, crc);
+      ++seekHeadIter;
+    }
+    
     info_.save(storage, crc);
     tracks_.save(storage, crc);
     chapters_.save(storage, crc);
     
-    eltsSave(seekHeads_, storage, crc);
-    eltsSave(cues_, storage, crc);
+    eltsSave(clusters_, storage, crc);
+    
+    // save any remaining seekheads:
+    for (; seekHeadIter != seekHeads_.end(); ++seekHeadIter)
+    {
+      const TSeekHead & seekHead = *seekHeadIter;
+      seekHead.save(storage, crc);
+    }
+    
+    cues_.save(storage, crc);
+    
     eltsSave(attachments_, storage, crc);
     eltsSave(tags_, storage, crc);
-    eltsSave(clusters_, storage, crc);
+    
     eltsSave(voids_, storage, crc);
     
     return receipt;
@@ -4019,9 +4326,9 @@ namespace Yamka
       bytesToRead -= info_.load(storage, bytesToRead, crc);
       bytesToRead -= tracks_.load(storage, bytesToRead, crc);
       bytesToRead -= chapters_.load(storage, bytesToRead, crc);
+      bytesToRead -= cues_.load(storage, bytesToRead, crc);
       
       bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(cues_, storage, bytesToRead, crc);
       bytesToRead -= eltsLoad(attachments_, storage, bytesToRead, crc);
       bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
       bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, crc);
@@ -4104,11 +4411,11 @@ namespace Yamka
         uint64 relativePosition = eltReference.position();
         uint64 absolutePosition = originPosition + relativePosition;
         
-        if (eltId == info_.getId())
+        if (eltId == TInfo::kId)
         {
           eltReference.setElt(&info_);
         }
-        else if (eltId == tracks_.getId())
+        else if (eltId == TTracks::kId)
         {
           eltReference.setElt(&tracks_);
         }
@@ -4119,15 +4426,14 @@ namespace Yamka
         }
         else if (eltId == TCues::kId)
         {
-          const TCues * ref = eltsFind(cues_, absolutePosition);
-          eltReference.setElt(ref);
+          eltReference.setElt(&cues_);
         }
         else if (eltId == TAttachment::kId)
         {
           const TAttachment * ref = eltsFind(attachments_, absolutePosition);
           eltReference.setElt(ref);
         }
-        else if (eltId == chapters_.getId())
+        else if (eltId == TChapters::kId)
         {
           eltReference.setElt(&chapters_);
         }
@@ -4145,28 +4451,23 @@ namespace Yamka
     }
     
     // resolve cue track position references:
-    for (TCuesIter i = cues_.begin(); i != cues_.end(); ++i)
+    std::deque<TCuePoint> & cuePoints = cues_.payload_.points_;
+    for (TCuePointIter i = cuePoints.begin(); i != cuePoints.end(); ++i)
     {
-      TCues & cues = *i;
-      std::deque<TCuePoint> & cuePoints = cues.payload_.points_;
+      TCuePoint & cuePoint = *i;
+      std::deque<TCueTrkPos> & cueTrkPns = cuePoint.payload_.trkPosns_;
       
-      for (TCuePointIter j = cuePoints.begin(); j != cuePoints.end(); ++j)
+      for (TCueTrkPosIter j = cueTrkPns.begin(); j != cueTrkPns.end(); ++j)
       {
-        TCuePoint & cuePoint = *j;
-        std::deque<TCueTrkPos> & cueTrkPns = cuePoint.payload_.trkPosns_;
+        TCueTrkPos & cueTrkPos = *j;
+        VEltPosition & clusterRef = cueTrkPos.payload_.cluster_.payload_;
         
-        for (TCueTrkPosIter k = cueTrkPns.begin(); k != cueTrkPns.end(); ++k)
-        {
-          TCueTrkPos & cueTrkPos = *k;
-          VEltPosition & clusterRef = cueTrkPos.payload_.cluster_.payload_;
-          
-          uint64 relativePosition = clusterRef.position();
-          uint64 absolutePosition = originPosition + relativePosition;
-          
-          const TCluster * cluster = eltsFind(clusters_, absolutePosition);
-          clusterRef.setElt(cluster);
-          clusterRef.setOrigin(origin);
-        }
+        uint64 relativePosition = clusterRef.position();
+        uint64 absolutePosition = originPosition + relativePosition;
+        
+        const TCluster * cluster = eltsFind(clusters_, absolutePosition);
+        clusterRef.setElt(cluster);
+        clusterRef.setOrigin(origin);
       }
     }
     

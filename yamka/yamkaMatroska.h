@@ -805,8 +805,60 @@ namespace Yamka
   //----------------------------------------------------------------
   // SimpleBlock
   // 
-  struct SimpleBlock : public VBinary
+  // Helper class used to pack/unpack a SimpleBlock
+  // 
+  struct SimpleBlock
   {
+    SimpleBlock();
+    
+    uint64 getTrackNumber() const;
+    void setTrackNumber(uint64 trackNumber);
+    
+    short int relativeTimecode() const;
+    void setRelativeTimecode(short int timeCode);
+    
+    bool isKeyframe() const;
+    void setKeyframe(bool keyframe);
+    
+    bool isInvisible() const;
+    void setInvisible(bool invisible);
+    
+    bool isDiscardable() const;
+    void setDiscardable(bool discardable);
+    
+    enum Lacing
+    {
+      kLacingNone      = 0,
+      kLacingXiph      = 1,
+      kLacingFixedSize = 2,
+      kLacingEBML      = 3
+    };
+    
+    Lacing getLacing() const;
+    void setLacing(Lacing lacing);
+    
+    std::size_t numberOfFrames() const;
+    const Bytes & getFrame(std::size_t frameNumber) const;
+    void addFrame(const Bytes & frame);
+    
+    void pack(Bytes & simpleBlock) const;
+    bool unpack(const Bytes & simpleBlock);
+    
+  protected:
+    enum Flags
+    {
+      kFlagKeyframe         = 1 << 7,
+      kFlagFrameInvisible   = 1 << 3,
+      kFlagLacingXiph       = 1 << 1,
+      kFlagLacingFixedSize  = 2 << 1,
+      kFlagLacingEBML       = 3 << 1,
+      kFlagFrameDiscardable = 1
+    };
+    
+    uint64 trackNumber_;
+    short int timeCode_;
+    unsigned char flags_;
+    std::deque<Bytes> frames_;
   };
   
   //----------------------------------------------------------------
@@ -833,7 +885,7 @@ namespace Yamka
     TypedefYamkaElt(BlockGroup, 0xA0, "BlockGroup") TBlockGroup;
     std::deque<TBlockGroup> blockGroups_;
     
-    TypedefYamkaElt(SimpleBlock, 0xA3, "SimpleBlock") TSimpleBlock;
+    TypedefYamkaElt(VBinary, 0xA3, "SimpleBlock") TSimpleBlock;
     std::deque<TSimpleBlock> simpleBlocks_;
     
     TypedefYamkaElt(VBinary, 0xAF, "EncryptedBlock") TEncryptedBlock;
@@ -860,7 +912,7 @@ namespace Yamka
     std::deque<TSeekHead> seekHeads_;
     
     TypedefYamkaElt(Cues, 0x1C53BB6B, "Cues") TCues;
-    std::deque<TCues> cues_;
+    TCues cues_;
     
     TypedefYamkaElt(Attachments, 0x1941A469, "Attachments") TAttachment;
     std::deque<TAttachment> attachments_;
