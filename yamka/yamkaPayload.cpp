@@ -297,7 +297,7 @@ namespace Yamka
     
     Bytes bytes;
     bytes << vsizeEncode(bytesUsed)
-          << uintEncode(relativePosition);
+          << uintEncode(relativePosition, bytesUsed);
     
     bool saved = receipt_->save(bytes);
     return saved;
