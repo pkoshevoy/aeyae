@@ -22,6 +22,30 @@ using namespace Yamka;
 
 
 //----------------------------------------------------------------
+// testSimpleBlockPacking
+// 
+static void
+testSimpleBlockPacking(const Bytes & sbBytes)
+{
+  SimpleBlock sb;
+  assert(sb.unpack(sbBytes));
+  
+  Bytes sbPacked;
+  sb.pack(sbPacked);
+  
+  Crc32 srcCrc;
+  srcCrc.compute(sbBytes);
+  unsigned int srcChecksum = srcCrc.checksum();
+  
+  Crc32 outCrc;
+  outCrc.compute(sbPacked);
+  unsigned int outChecksum = outCrc.checksum();
+  
+  assert(srcChecksum == outChecksum);
+}
+
+
+//----------------------------------------------------------------
 // main
 // 
 int
@@ -44,6 +68,11 @@ main(int argc, char ** argv)
             << "0x" << vsizeEncode(0x8000) << std::endl
             << "0x" << vsizeEncode(1) << std::endl
             << "0x" << vsizeEncode(0) << std::endl
+            << "0x"
+            << vsizeEncode(123, 4)
+            << " = 0x"
+            << vsizeEncode(vsizeDecode(vsizeEncode(123, 4), vsizeSize))
+            << std::endl
             << "0x" << floatEncode(-11.1f)
             << " = " << floatDecode(floatEncode(-11.1f)) << std::endl
             << "0x" << doubleEncode(-11.1)
@@ -170,6 +199,9 @@ main(int argc, char ** argv)
         if (sb.unpack(sbBytes))
         {
           std::cout << sb << std::endl;
+
+          // test packing:
+          testSimpleBlockPacking(sbBytes);
         }
       }
     }
@@ -195,6 +227,9 @@ main(int argc, char ** argv)
         if (sb.unpack(sbBytes))
         {
           std::cout << sb << std::endl;
+
+          // test packing:
+          testSimpleBlockPacking(sbBytes);
         }
       }
     }
