@@ -55,6 +55,7 @@ namespace Yamka
     
     // reset the size and copy all given data:
     Bytes & deepCopy(const Bytes & bytes);
+    Bytes & deepCopy(const TByte * bytes, std::size_t numBytes);
     
     // append via shallow copy of given bytes:
     Bytes & operator += (const Bytes & bytes);

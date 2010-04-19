@@ -76,6 +76,16 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // Bytes::deepCopy
+  // 
+  Bytes &
+  Bytes::deepCopy(const TByte * bytes, std::size_t numBytes)
+  {
+    Bytes tmp(bytes, numBytes);
+    return *this = tmp;
+  }
+  
+  //----------------------------------------------------------------
   // Bytes::operator +=
   // 
   // NOTE: this is a deep copy of data (not shared with source):
