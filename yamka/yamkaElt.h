@@ -390,7 +390,26 @@ namespace Yamka
       
       if (payloadBytesReadTotal)
       {
+        payloadReceipt->add(payloadBytesReadTotal);
         receiptPayload_ = payloadReceipt;
+      }
+      
+      if (payloadBytesReadTotal < payloadSize)
+      {
+        // skip unrecognized alien data:
+        uint64 alienDataSize = payloadSize - payloadBytesReadTotal;
+        
+#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+        std::cout << indent()
+                  << std::setw(8) << uintEncode(kId) << " @ " << std::hex
+                  << "0x" << storageStart.absolutePosition() << std::dec
+                  << " -- WARNING: " << name()
+                  << ", skipping " << alienDataSize
+                  << " bytes of unrecognized alien data"
+                  << std::endl;
+#endif
+        
+        storage.file_.seek(alienDataSize, File::kRelativeToCurrent);
       }
       
       bytesRead += payloadSize;
@@ -403,7 +422,7 @@ namespace Yamka
           std::cout << indent()
                     << std::setw(8) << uintEncode(kId) << " @ " << std::hex
                     << "0x" << storageStart.absolutePosition() << std::dec
-                    << " -- WARNING: " << name()
+                    << " -- NOTICE: " << name()
                     << ", loaded size " << bytesRead
                     << ", stored size " << newSize
                     << std::endl;
@@ -412,6 +431,7 @@ namespace Yamka
       }
 #endif
       
+      assert(bytesRead == bytesToRead);
       return bytesRead;
     }
     
