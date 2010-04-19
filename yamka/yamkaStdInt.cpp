@@ -223,9 +223,8 @@ namespace Yamka
   // vsizeEncode
   // 
   TByteVec
-  vsizeEncode(uint64 vsize)
+  vsizeEncode(uint64 vsize, uint64 numBytes)
   {
-    unsigned int numBytes = vsizeNumBytes(vsize);
     TByteVec v(numBytes);
     
     for (unsigned int j = 0; j < numBytes; j++)
@@ -236,6 +235,16 @@ namespace Yamka
     v[0] |= (1 << (8 - numBytes));
     
     return v;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeEncode
+  // 
+  TByteVec
+  vsizeEncode(uint64 vsize)
+  {
+    unsigned int numBytes = vsizeNumBytes(vsize);
+    return vsizeEncode(vsize, numBytes);
   }
   
   //----------------------------------------------------------------

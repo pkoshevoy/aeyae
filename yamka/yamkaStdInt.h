@@ -72,6 +72,12 @@ namespace Yamka
   // vsizeEncode
   // 
   extern TByteVec
+  vsizeEncode(uint64 vsize, uint64 vsizeSize);
+  
+  //----------------------------------------------------------------
+  // vsizeEncode
+  // 
+  extern TByteVec
   vsizeEncode(uint64 vsize);
   
   //----------------------------------------------------------------
