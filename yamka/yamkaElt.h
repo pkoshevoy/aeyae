@@ -238,20 +238,23 @@ namespace Yamka
         }
       }
       
-      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();;
-      
-      Bytes bytes;
-      bytes << uintEncode(EltId)
-            << vsizeEncode(payloadSize);
-      
       Crc32 eltCrc32;
       Crc32 * crc32 = computeCrc32_ ? &eltCrc32 : parentCrc32;
       
-      receipt_ = storage.saveAndCalcCrc32(bytes, crc32);
+      receipt_ = storage.saveAndCalcCrc32(Bytes(uintEncode(EltId)), crc32);
       if (!receipt_)
       {
         return receipt_;
       }
+      
+      // NOTE: due to VEltPosition the payload size is not actually
+      // known until the payload is written, however we know the
+      // payload size upper limit.  Once the payload is saved it's
+      // exact size will have to be saved again:
+      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();
+      IStorage::IReceiptPtr payloadSizeReceipt =
+        storage.saveAndCalcCrc32(Bytes(vsizeEncode(payloadSize)), crc32);
+      *receipt_ += payloadSizeReceipt;
       
       receiptPayload_ = payload_.save(storage, crc32);
       if (!receiptPayload_)
@@ -268,6 +271,17 @@ namespace Yamka
         *receiptCrc32_ += receipt_;
       }
       
+      uint64 payloadBytesSaved = receiptPayload_->numBytes();
+      assert(payloadBytesSaved <= payloadSize);
+      
+      if (payloadBytesSaved < payloadSize)
+      {
+        // save exact payload size:
+        uint64 vsizeBytesUsed = vsizeNumBytes(payloadSize);
+        TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesUsed);
+        payloadSizeReceipt->save(Bytes(v));
+      }
+      
       return receipt_;
     }
     
@@ -275,6 +289,11 @@ namespace Yamka
     uint64
     load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc = NULL)
     {
+      if (!bytesToRead)
+      {
+        return 0;
+      }
+      
       // save a storage receipt so that element position references
       // can be resolved later:
       IStorage::IReceiptPtr storageReceipt = storage.receipt();
@@ -329,8 +348,10 @@ namespace Yamka
         uint64 vsizeSize = 0;
         uint64 vsize = vsizeDecode(storage, vsizeSize);
         std::cout << indent()
-                  << std::setw(8) << uintEncode(kId) << " @ " << std::hex
-                  << "0x" << storageStart.absolutePosition() << std::dec
+                  << std::setw(8) << uintEncode(kId) << " @ "
+                  << std::hex
+                  << "0x" << storageStart.absolutePosition()
+                  << std::dec
                   << " -- " << name()
                   << ", payload " << vsize << " bytes" << std::endl;
       }
@@ -400,12 +421,13 @@ namespace Yamka
         uint64 alienDataSize = payloadSize - payloadBytesReadTotal;
         
 #if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-        std::cout << indent()
-                  << std::setw(8) << uintEncode(kId) << " @ " << std::hex
-                  << "0x" << storageStart.absolutePosition() << std::dec
-                  << " -- WARNING: " << name()
-                  << ", skipping " << alienDataSize
-                  << " bytes of unrecognized alien data"
+        std::cout << indent() << "WARNING: " << name()
+                  << " 0x" << uintEncode(kId)
+                  << " -- skipping " << alienDataSize
+                  << " bytes of unrecognized alien data @ 0x"
+                  << std::hex
+                  << storage.file_.absolutePosition()
+                  << std::dec
                   << std::endl;
 #endif
         
@@ -413,24 +435,6 @@ namespace Yamka
       }
       
       bytesRead += payloadSize;
-      
-#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-      {
-        uint64 newSize = calcSize();
-        if (newSize != bytesRead)
-        {
-          std::cout << indent()
-                    << std::setw(8) << uintEncode(kId) << " @ " << std::hex
-                    << "0x" << storageStart.absolutePosition() << std::dec
-                    << " -- NOTICE: " << name()
-                    << ", loaded size " << bytesRead
-                    << ", stored size " << newSize
-                    << std::endl;
-          newSize = calcSize();
-        }
-      }
-#endif
-      
       return bytesRead;
     }
     

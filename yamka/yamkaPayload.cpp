@@ -648,7 +648,7 @@ namespace Yamka
     
     if (receipt_)
     {
-      // must use the same size as before:
+      // must use the same number of bytes as before:
       return receipt_->numBytes();
     }
     
