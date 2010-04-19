@@ -10,6 +10,7 @@
 #define YAMKA_PAYLOAD_H_
 
 // yamka includes:
+#include <yamkaFileStorage.h>
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
 #include <yamkaCrc32.h>
@@ -53,7 +54,24 @@ namespace Yamka
     
     // attempt to load the payload, return number of bytes read successfully:
     virtual uint64
-    load(FileStorage & storage, uint64 storageSize, Crc32 * crc32 = NULL) = 0;
+    load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc32 = NULL) = 0;
+    
+    // attempt to load a void element:
+    virtual uint64 loadVoid(FileStorage &, uint64 /* bytesToRead */, Crc32 *)
+    { return 0; }
+    
+    // save void element(s), if there are any:
+    virtual IStorage::IReceiptPtr
+    saveVoid(IStorage & storage, Crc32 * crc) const
+    { return storage.receipt(); }
+    
+    // return true if this element holds a void element:
+    virtual bool hasVoid() const
+    { return false; }
+    
+    // calculate number of bytes taken up by void elements:
+    virtual uint64 calcVoidSize() const
+    { return 0; }
   };
   
   
@@ -69,86 +87,8 @@ namespace Yamka
   IStorage::IReceiptPtr save(IStorage & storage,                        \
                              Crc32 * computeCrc32 = NULL) const;        \
   uint64 load(FileStorage & storage,                                    \
-              uint64 storageSize,                                       \
+              uint64 bytesToRead,                                       \
               Crc32 * computeCrc32 = NULL)
-  
-
-  //----------------------------------------------------------------
-  // vsizeNumBytes
-  // 
-  // Returns the number of bytes used to store a payload size.
-  // 
-  // NOTE: This requires loading one byte.
-  // 
-  extern uint64
-  vsizeNumBytes(IStorage::IReceiptPtr payloadReceipt);
-  
-  
-  //----------------------------------------------------------------
-  // VEltPosition
-  // 
-  // NOTE: when this element is saved the reference element
-  // storage receipt position is used.  If the
-  // referenced element doesn't have a storage receipt, then
-  // a default position (max uint64 for a given vsize) will be saved.
-  // Once all elements are saved this position will have
-  // to be corrected (saved again with correct storage receipt):
-  // 
-  // NOTE: once this element and all other elements are loaded,
-  // a second pass is required to map loaded storage receipt
-  // position to an actual element pointer.
-  // 
-  struct VEltPosition : public IPayload
-  {
-    VEltPosition();
-    
-    ImplementsYamkaPayloadAPI();
-    
-    // set default number of bytes to use when exact size of
-    // the position is not known yet. The default is 8 bytes
-    void setUnknownPositionSize(uint64 vsize);
-    
-    // origin element accessors (position is relative to this element):
-    void setOrigin(const IElement * origin);
-    const IElement * getOrigin() const;
-    
-    // reference element accessors:
-    void setElt(const IElement * elt);
-    const IElement * getElt() const;
-    
-    // accessor to the reference element storage receipt position:
-    uint64 position() const;
-    
-    // Rewrite reference element storage receipt position.
-    // 
-    // 1. This will fail if the position hasn't been saved yet.
-    // 2. This will fail if the reference element is not set.
-    // 3. This will fail if the new position doesn't fit within the
-    //    number of bytes used to save the position previously.
-    // 4. The size of the previously saved position will be preserved.
-    // 
-    bool rewrite() const;
-    
-  protected:
-    // helper for getting the origin position:
-    virtual uint64 getOriginPosition() const;
-    
-    // origin reference element:
-    const IElement * origin_;
-    
-    // reference element:
-    const IElement * elt_;
-    
-    // reference element storage receipt position:
-    uint64 pos_;
-    
-    // number of bytes used to save unknown position:
-    uint64 unknownPositionSize_;
-    
-    // position storage receipt is kept so that referenced element
-    // storage receipt position can be rewritten once it is known:
-    mutable IStorage::IReceiptPtr receipt_;
-  };
   
   
   //----------------------------------------------------------------
@@ -298,8 +238,6 @@ namespace Yamka
     // data storage:
     IStorage::IReceiptPtr receipt_;
     IStorage::IReceiptPtr receiptDefault_;
-    std::size_t size_;
-    std::size_t sizeDefault_;
   };
   
   
@@ -342,22 +280,14 @@ namespace Yamka
     IStorage::IReceiptPtr
     save(IStorage & storage, Crc32 * crc = NULL) const
     {
-      uint64 size = calcSize();
-      
-      Bytes bytes;
-      bytes << vsizeEncode(size);
-      bytes += data_;
-      
-      return storage.saveAndCalcCrc32(bytes, crc);
+      return storage.saveAndCalcCrc32(data_, crc);
     }
     
     // attempt to load the payload, return number of bytes read successfully:
     uint64
-    load(FileStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
+    load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc = NULL)
     {
-      uint64 vsizeSize = 0;
-      uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
-      if (numBytes != fixedSize)
+      if (bytesToRead != fixedSize)
       {
         return 0;
       }
@@ -366,14 +296,80 @@ namespace Yamka
       if (storage.loadAndCalcCrc32(bytes, crc))
       {
         data_ = bytes;
-      };
+      }
       
-      uint64 bytesRead = vsizeSize + fixedSize;
-      return bytesRead;
+      return bytesToRead;
     }
     
     // data storage:
     Bytes data_;
+  };
+  
+  
+  //----------------------------------------------------------------
+  // VEltPosition
+  // 
+  // NOTE: when this element is saved the reference element
+  // storage receipt position is used.  If the
+  // referenced element doesn't have a storage receipt, then
+  // a default position (max uint64 for a given vsize) will be saved.
+  // Once all elements are saved this position will have
+  // to be corrected (saved again with correct storage receipt):
+  // 
+  // NOTE: once this element and all other elements are loaded,
+  // a second pass is required to map loaded storage receipt
+  // position to an actual element pointer.
+  // 
+  struct VEltPosition : public IPayload
+  {
+    VEltPosition();
+    
+    ImplementsYamkaPayloadAPI();
+    
+    // set default number of bytes to use when exact size of
+    // the position is not known yet. The default is 8 bytes
+    void setUnknownPositionSize(uint64 vsize);
+    
+    // origin element accessors (position is relative to this element):
+    void setOrigin(const IElement * origin);
+    const IElement * getOrigin() const;
+    
+    // reference element accessors:
+    void setElt(const IElement * elt);
+    const IElement * getElt() const;
+    
+    // accessor to the reference element storage receipt position:
+    uint64 position() const;
+    
+    // Rewrite reference element storage receipt position.
+    // 
+    // 1. This will fail if the position hasn't been saved yet.
+    // 2. This will fail if the reference element is not set.
+    // 3. This will fail if the new position doesn't fit within the
+    //    number of bytes used to save the position previously.
+    // 4. The size of the previously saved position will be preserved.
+    // 
+    bool rewrite() const;
+    
+  protected:
+    // helper for getting the origin position:
+    virtual uint64 getOriginPosition() const;
+    
+    // origin reference element:
+    const IElement * origin_;
+    
+    // reference element:
+    const IElement * elt_;
+    
+    // reference element storage receipt position:
+    uint64 pos_;
+    
+    // number of bytes used to save unknown position:
+    uint64 unknownPositionSize_;
+    
+    // position storage receipt is kept so that referenced element
+    // storage receipt position can be rewritten once it is known:
+    mutable IStorage::IReceiptPtr receipt_;
   };
   
 }

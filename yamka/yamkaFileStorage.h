@@ -43,12 +43,19 @@ namespace Yamka
       uint64 position() const;
       
       // virtual:
+      uint64 numBytes() const;
+      
+      // virtual:
+      Receipt & add(uint64 numBytes);
+      
+      // virtual:
       bool save(const Bytes & data);
       bool load(Bytes & data);
       
     protected:
       File file_;
       File::TOff addr_;
+      File::TOff numBytes_;
     };
     
     // file used to store data:

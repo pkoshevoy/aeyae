@@ -22,8 +22,7 @@ namespace Yamka
     return 
       editionUID_.eval(crawler) ||
       chapTransCodec_.eval(crawler) ||
-      chapTransID_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      chapTransID_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -35,8 +34,7 @@ namespace Yamka
     bool allDefault =
       !editionUID_.mustSave() &&
       !chapTransCodec_.mustSave() &&
-      !chapTransID_.mustSave() &&
-      voids_.empty();
+      !chapTransID_.mustSave();
     
     return allDefault;
   }
@@ -50,8 +48,7 @@ namespace Yamka
     uint64 size =
       editionUID_.calcSize() +
       chapTransCodec_.calcSize() +
-      chapTransID_.calcSize() +
-      eltsCalcSize(voids_);
+      chapTransID_.calcSize();
     
     return size;
   }
@@ -62,14 +59,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapTranslate::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    editionUID_.save(storage, crc);
-    chapTransCodec_.save(storage, crc);
-    chapTransID_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += editionUID_.save(storage, crc);
+    *receipt += chapTransCodec_.save(storage, crc);
+    *receipt += chapTransID_.save(storage, crc);
     
     return receipt;
   }
@@ -78,40 +72,16 @@ namespace Yamka
   // ChapTranslate::load
   // 
   uint64
-  ChapTranslate::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapTranslate::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= chapTransCodec_.load(storage, bytesToRead, crc);
+    bytesToRead -= chapTransID_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= chapTransCodec_.load(storage, bytesToRead, crc);
-      bytesToRead -= chapTransID_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
 
   
@@ -145,8 +115,7 @@ namespace Yamka
       date_.eval(crawler) ||
       title_.eval(crawler) ||
       muxingApp_.eval(crawler) ||
-      writingApp_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      writingApp_.eval(crawler);
   }
     
   //----------------------------------------------------------------
@@ -169,8 +138,7 @@ namespace Yamka
       !date_.mustSave() &&
       !title_.mustSave() &&
       !muxingApp_.mustSave() &&
-      !writingApp_.mustSave() &&
-      voids_.empty();
+      !writingApp_.mustSave();
     
     return allDefault;
   }
@@ -195,8 +163,7 @@ namespace Yamka
       date_.calcSize() +
       title_.calcSize() +
       muxingApp_.calcSize() +
-      writingApp_.calcSize() +
-      eltsCalcSize(voids_);
+      writingApp_.calcSize();
     
     return size;
   }
@@ -207,25 +174,22 @@ namespace Yamka
   IStorage::IReceiptPtr
   SegInfo::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    segUID_.save(storage, crc);
-    segFilename_.save(storage, crc);
-    prevUID_.save(storage, crc);
-    prevFilename_.save(storage, crc);
-    nextUID_.save(storage, crc);
-    nextFilename_.save(storage, crc);
-    familyUID_.save(storage, crc);
-    chapTranslate_.save(storage, crc);
-    timecodeScale_.save(storage, crc);
-    duration_.save(storage, crc);
-    date_.save(storage, crc);
-    title_.save(storage, crc);
-    muxingApp_.save(storage, crc);
-    writingApp_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += segUID_.save(storage, crc);
+    *receipt += segFilename_.save(storage, crc);
+    *receipt += prevUID_.save(storage, crc);
+    *receipt += prevFilename_.save(storage, crc);
+    *receipt += nextUID_.save(storage, crc);
+    *receipt += nextFilename_.save(storage, crc);
+    *receipt += familyUID_.save(storage, crc);
+    *receipt += chapTranslate_.save(storage, crc);
+    *receipt += timecodeScale_.save(storage, crc);
+    *receipt += duration_.save(storage, crc);
+    *receipt += date_.save(storage, crc);
+    *receipt += title_.save(storage, crc);
+    *receipt += muxingApp_.save(storage, crc);
+    *receipt += writingApp_.save(storage, crc);
     
     return receipt;
   }
@@ -234,51 +198,27 @@ namespace Yamka
   // SegInfo::load
   // 
   uint64
-  SegInfo::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  SegInfo::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= segUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= segFilename_.load(storage, bytesToRead, crc);
+    bytesToRead -= prevUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= prevFilename_.load(storage, bytesToRead, crc);
+    bytesToRead -= nextUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= nextFilename_.load(storage, bytesToRead, crc);
+    bytesToRead -= familyUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= chapTranslate_.load(storage, bytesToRead, crc);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
+    bytesToRead -= duration_.load(storage, bytesToRead, crc);
+    bytesToRead -= date_.load(storage, bytesToRead, crc);
+    bytesToRead -= title_.load(storage, bytesToRead, crc);
+    bytesToRead -= muxingApp_.load(storage, bytesToRead, crc);
+    bytesToRead -= writingApp_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= segUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= segFilename_.load(storage, bytesToRead, crc);
-      bytesToRead -= prevUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= prevFilename_.load(storage, bytesToRead, crc);
-      bytesToRead -= nextUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= nextFilename_.load(storage, bytesToRead, crc);
-      bytesToRead -= familyUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= chapTranslate_.load(storage, bytesToRead, crc);
-      bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
-      bytesToRead -= duration_.load(storage, bytesToRead, crc);
-      bytesToRead -= date_.load(storage, bytesToRead, crc);
-      bytesToRead -= title_.load(storage, bytesToRead, crc);
-      bytesToRead -= muxingApp_.load(storage, bytesToRead, crc);
-      bytesToRead -= writingApp_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -291,8 +231,7 @@ namespace Yamka
     return 
       editionUID_.eval(crawler) ||
       trackTransCodec_.eval(crawler) ||
-      trackTransID_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      trackTransID_.eval(crawler);
   }
     
   //----------------------------------------------------------------
@@ -304,8 +243,7 @@ namespace Yamka
     bool allDefault =
       !editionUID_.mustSave() &&
       !trackTransCodec_.mustSave() &&
-      !trackTransID_.mustSave() &&
-      voids_.empty();
+      !trackTransID_.mustSave();
     
     return allDefault;
   }
@@ -319,8 +257,7 @@ namespace Yamka
     uint64 size =
       editionUID_.calcSize() +
       trackTransCodec_.calcSize() +
-      trackTransID_.calcSize() +
-      eltsCalcSize(voids_);
+      trackTransID_.calcSize();
     
     return size;
   }
@@ -331,14 +268,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   TrackTranslate::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    editionUID_.save(storage, crc);
-    trackTransCodec_.save(storage, crc);
-    trackTransID_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += editionUID_.save(storage, crc);
+    *receipt += trackTransCodec_.save(storage, crc);
+    *receipt += trackTransID_.save(storage, crc);
     
     return receipt;
   }
@@ -347,40 +281,16 @@ namespace Yamka
   // TrackTranslate::load
   // 
   uint64
-  TrackTranslate::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  TrackTranslate::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackTransCodec_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackTransID_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackTransCodec_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackTransID_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
 
   
@@ -413,8 +323,7 @@ namespace Yamka
       aspectRatioType_.eval(crawler) ||
       colorSpace_.eval(crawler) ||
       gammaValue_.eval(crawler) ||
-      frameRate_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      frameRate_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -438,8 +347,7 @@ namespace Yamka
       !aspectRatioType_.mustSave() &&
       !colorSpace_.mustSave() &&
       !gammaValue_.mustSave() &&
-      !frameRate_.mustSave() &&
-      voids_.empty();
+      !frameRate_.mustSave();
     
     return allDefault;
   }
@@ -465,8 +373,7 @@ namespace Yamka
       aspectRatioType_.calcSize() +
       colorSpace_.calcSize() +
       gammaValue_.calcSize() +
-      frameRate_.calcSize() +
-      eltsCalcSize(voids_);
+      frameRate_.calcSize();
     
     return size;
   }
@@ -477,26 +384,23 @@ namespace Yamka
   IStorage::IReceiptPtr
   Video::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    flagInterlaced_.save(storage, crc);
-    stereoMode_.save(storage, crc);
-    pixelWidth_.save(storage, crc);
-    pixelHeight_.save(storage, crc);
-    pixelCropBottom_.save(storage, crc);
-    pixelCropTop_.save(storage, crc);
-    pixelCropLeft_.save(storage, crc);
-    pixelCropRight_.save(storage, crc);
-    displayWidth_.save(storage, crc);
-    displayHeight_.save(storage, crc);
-    displayUnits_.save(storage, crc);
-    aspectRatioType_.save(storage, crc);
-    colorSpace_.save(storage, crc);
-    gammaValue_.save(storage, crc);
-    frameRate_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += flagInterlaced_.save(storage, crc);
+    *receipt += stereoMode_.save(storage, crc);
+    *receipt += pixelWidth_.save(storage, crc);
+    *receipt += pixelHeight_.save(storage, crc);
+    *receipt += pixelCropBottom_.save(storage, crc);
+    *receipt += pixelCropTop_.save(storage, crc);
+    *receipt += pixelCropLeft_.save(storage, crc);
+    *receipt += pixelCropRight_.save(storage, crc);
+    *receipt += displayWidth_.save(storage, crc);
+    *receipt += displayHeight_.save(storage, crc);
+    *receipt += displayUnits_.save(storage, crc);
+    *receipt += aspectRatioType_.save(storage, crc);
+    *receipt += colorSpace_.save(storage, crc);
+    *receipt += gammaValue_.save(storage, crc);
+    *receipt += frameRate_.save(storage, crc);
     
     return receipt;
   }
@@ -505,52 +409,28 @@ namespace Yamka
   // Video::load
   // 
   uint64
-  Video::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Video::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= flagInterlaced_.load(storage, bytesToRead, crc);
+    bytesToRead -= stereoMode_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelWidth_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelHeight_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelCropBottom_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelCropTop_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelCropLeft_.load(storage, bytesToRead, crc);
+    bytesToRead -= pixelCropRight_.load(storage, bytesToRead, crc);
+    bytesToRead -= displayWidth_.load(storage, bytesToRead, crc);
+    bytesToRead -= displayHeight_.load(storage, bytesToRead, crc);
+    bytesToRead -= displayUnits_.load(storage, bytesToRead, crc);
+    bytesToRead -= aspectRatioType_.load(storage, bytesToRead, crc);
+    bytesToRead -= colorSpace_.load(storage, bytesToRead, crc);
+    bytesToRead -= gammaValue_.load(storage, bytesToRead, crc);
+    bytesToRead -= frameRate_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= flagInterlaced_.load(storage, bytesToRead, crc);
-      bytesToRead -= stereoMode_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelWidth_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelHeight_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelCropBottom_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelCropTop_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelCropLeft_.load(storage, bytesToRead, crc);
-      bytesToRead -= pixelCropRight_.load(storage, bytesToRead, crc);
-      bytesToRead -= displayWidth_.load(storage, bytesToRead, crc);
-      bytesToRead -= displayHeight_.load(storage, bytesToRead, crc);
-      bytesToRead -= displayUnits_.load(storage, bytesToRead, crc);
-      bytesToRead -= aspectRatioType_.load(storage, bytesToRead, crc);
-      bytesToRead -= colorSpace_.load(storage, bytesToRead, crc);
-      bytesToRead -= gammaValue_.load(storage, bytesToRead, crc);
-      bytesToRead -= frameRate_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -574,8 +454,7 @@ namespace Yamka
       sampFreqOut_.eval(crawler) ||
       channels_.eval(crawler) ||
       channelPositions_.eval(crawler) ||
-      bitDepth_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      bitDepth_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -589,8 +468,7 @@ namespace Yamka
       !sampFreqOut_.mustSave() &&
       !channels_.mustSave() &&
       !channelPositions_.mustSave() &&
-      !bitDepth_.mustSave() &&
-      voids_.empty();
+      !bitDepth_.mustSave();
     
     return allDefault;
   }
@@ -606,8 +484,7 @@ namespace Yamka
       sampFreqOut_.calcSize() +
       channels_.calcSize() +
       channelPositions_.calcSize() +
-      bitDepth_.calcSize() +
-      eltsCalcSize(voids_);
+      bitDepth_.calcSize();
     
     return size;
   }
@@ -618,16 +495,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   Audio::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    sampFreq_.save(storage, crc);
-    sampFreqOut_.save(storage, crc);
-    channels_.save(storage, crc);
-    channelPositions_.save(storage, crc);
-    bitDepth_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += sampFreq_.save(storage, crc);
+    *receipt += sampFreqOut_.save(storage, crc);
+    *receipt += channels_.save(storage, crc);
+    *receipt += channelPositions_.save(storage, crc);
+    *receipt += bitDepth_.save(storage, crc);
     
     return receipt;
   }
@@ -636,42 +510,18 @@ namespace Yamka
   // Audio::load
   // 
   uint64
-  Audio::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Audio::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= sampFreq_.load(storage, bytesToRead, crc);
+    bytesToRead -= sampFreqOut_.load(storage, bytesToRead, crc);
+    bytesToRead -= channels_.load(storage, bytesToRead, crc);
+    bytesToRead -= channelPositions_.load(storage, bytesToRead, crc);
+    bytesToRead -= bitDepth_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= sampFreq_.load(storage, bytesToRead, crc);
-      bytesToRead -= sampFreqOut_.load(storage, bytesToRead, crc);
-      bytesToRead -= channels_.load(storage, bytesToRead, crc);
-      bytesToRead -= channelPositions_.load(storage, bytesToRead, crc);
-      bytesToRead -= bitDepth_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
 
@@ -683,8 +533,7 @@ namespace Yamka
   {
     return
       algo_.eval(crawler) ||
-      settings_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      settings_.eval(crawler);
   }
     
   //----------------------------------------------------------------
@@ -695,8 +544,7 @@ namespace Yamka
   {
     bool allDefault =
       !algo_.mustSave() &&
-      !settings_.mustSave() &&
-      voids_.empty();
+      !settings_.mustSave();
     
     return allDefault;
   }
@@ -709,8 +557,7 @@ namespace Yamka
   {
     uint64 size =
       algo_.calcSize() +
-      settings_.calcSize() +
-      eltsCalcSize(voids_);
+      settings_.calcSize();
     
     return size;
   }
@@ -721,13 +568,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentCompr::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    algo_.save(storage, crc);
-    settings_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += algo_.save(storage, crc);
+    *receipt += settings_.save(storage, crc);
     
     return receipt;
   }
@@ -736,39 +580,15 @@ namespace Yamka
   // ContentCompr::load
   // 
   uint64
-  ContentCompr::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ContentCompr::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= algo_.load(storage, bytesToRead, crc);
+    bytesToRead -= settings_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= algo_.load(storage, bytesToRead, crc);
-      bytesToRead -= settings_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -784,8 +604,7 @@ namespace Yamka
       signature_.eval(crawler) ||
       sigKeyID_.eval(crawler) ||
       sigAlgo_.eval(crawler) ||
-      sigHashAlgo_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      sigHashAlgo_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -800,8 +619,7 @@ namespace Yamka
       !signature_.mustSave() &&
       !sigKeyID_.mustSave() &&
       !sigAlgo_.mustSave() &&
-      !sigHashAlgo_.mustSave() &&
-      voids_.empty();
+      !sigHashAlgo_.mustSave();
     
     return allDefault;
   }
@@ -818,8 +636,7 @@ namespace Yamka
       signature_.calcSize() +
       sigKeyID_.calcSize() +
       sigAlgo_.calcSize() +
-      sigHashAlgo_.calcSize() +
-      eltsCalcSize(voids_);
+      sigHashAlgo_.calcSize();
     
     return size;
   }
@@ -830,17 +647,14 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentEncrypt::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    encAlgo_.save(storage, crc);
-    encKeyID_.save(storage, crc);
-    signature_.save(storage, crc);
-    sigKeyID_.save(storage, crc);
-    sigAlgo_.save(storage, crc);
-    sigHashAlgo_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += encAlgo_.save(storage, crc);
+    *receipt += encKeyID_.save(storage, crc);
+    *receipt += signature_.save(storage, crc);
+    *receipt += sigKeyID_.save(storage, crc);
+    *receipt += sigAlgo_.save(storage, crc);
+    *receipt += sigHashAlgo_.save(storage, crc);
     
     return receipt;
   }
@@ -849,43 +663,19 @@ namespace Yamka
   // ContentEncrypt::load
   // 
   uint64
-  ContentEncrypt::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ContentEncrypt::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= encAlgo_.load(storage, bytesToRead, crc);
+    bytesToRead -= encKeyID_.load(storage, bytesToRead, crc);
+    bytesToRead -= signature_.load(storage, bytesToRead, crc);
+    bytesToRead -= sigKeyID_.load(storage, bytesToRead, crc);
+    bytesToRead -= sigAlgo_.load(storage, bytesToRead, crc);
+    bytesToRead -= sigHashAlgo_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= encAlgo_.load(storage, bytesToRead, crc);
-      bytesToRead -= encKeyID_.load(storage, bytesToRead, crc);
-      bytesToRead -= signature_.load(storage, bytesToRead, crc);
-      bytesToRead -= sigKeyID_.load(storage, bytesToRead, crc);
-      bytesToRead -= sigAlgo_.load(storage, bytesToRead, crc);
-      bytesToRead -= sigHashAlgo_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -900,8 +690,7 @@ namespace Yamka
       scope_.eval(crawler) ||
       type_.eval(crawler) ||
       compression_.eval(crawler) ||
-      encryption_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      encryption_.eval(crawler);
   }
     
   //----------------------------------------------------------------
@@ -915,8 +704,7 @@ namespace Yamka
       !scope_.mustSave() &&
       !type_.mustSave() &&
       !compression_.mustSave() &&
-      !encryption_.mustSave() &&
-      voids_.empty();
+      !encryption_.mustSave();
     
     return allDefault;
   }
@@ -932,8 +720,7 @@ namespace Yamka
       scope_.calcSize() +
       type_.calcSize() +
       compression_.calcSize() +
-      encryption_.calcSize() +
-      eltsCalcSize(voids_);
+      encryption_.calcSize();
     
     return size;
   }
@@ -944,16 +731,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentEnc::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    order_.save(storage, crc);
-    scope_.save(storage, crc);
-    type_.save(storage, crc);
-    compression_.save(storage, crc);
-    encryption_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += order_.save(storage, crc);
+    *receipt += scope_.save(storage, crc);
+    *receipt += type_.save(storage, crc);
+    *receipt += compression_.save(storage, crc);
+    *receipt += encryption_.save(storage, crc);
     
     return receipt;
   }
@@ -962,42 +746,18 @@ namespace Yamka
   // ContentEnc::load
   // 
   uint64
-  ContentEnc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ContentEnc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= order_.load(storage, bytesToRead, crc);
+    bytesToRead -= scope_.load(storage, bytesToRead, crc);
+    bytesToRead -= type_.load(storage, bytesToRead, crc);
+    bytesToRead -= compression_.load(storage, bytesToRead, crc);
+    bytesToRead -= encryption_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= order_.load(storage, bytesToRead, crc);
-      bytesToRead -= scope_.load(storage, bytesToRead, crc);
-      bytesToRead -= type_.load(storage, bytesToRead, crc);
-      bytesToRead -= compression_.load(storage, bytesToRead, crc);
-      bytesToRead -= encryption_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1007,9 +767,7 @@ namespace Yamka
   bool
   ContentEncodings::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(encodings_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(encodings_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -1018,10 +776,7 @@ namespace Yamka
   bool
   ContentEncodings::isDefault() const
   {
-    bool allDefault =
-      encodings_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = encodings_.empty();
     return allDefault;
   }
   
@@ -1031,10 +786,7 @@ namespace Yamka
   uint64
   ContentEncodings::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(encodings_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(encodings_);
     return size;
   }
   
@@ -1044,7 +796,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ContentEncodings::save(IStorage & storage, Crc32 * crc) const
   {
-    return eltsSave(encodings_, storage, crc);
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    *receipt += eltsSave(encodings_, storage, crc);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -1052,38 +808,14 @@ namespace Yamka
   // 
   uint64
   ContentEncodings::
-  load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(encodings_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(encodings_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1121,8 +853,7 @@ namespace Yamka
       trackTranslate_.eval(crawler) ||
       video_.eval(crawler) ||
       audio_.eval(crawler) ||
-      contentEncs_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      contentEncs_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -1159,8 +890,7 @@ namespace Yamka
       !trackTranslate_.mustSave() &&
       !video_.mustSave() &&
       !audio_.mustSave() &&
-      !contentEncs_.mustSave() &&
-      voids_.empty();
+      !contentEncs_.mustSave();
     
     return allDefault;
   }
@@ -1199,8 +929,7 @@ namespace Yamka
       trackTranslate_.calcSize() +
       video_.calcSize() +
       audio_.calcSize() +
-      contentEncs_.calcSize() +
-      eltsCalcSize(voids_);
+      contentEncs_.calcSize();
     
     return size;
   }
@@ -1211,39 +940,36 @@ namespace Yamka
   IStorage::IReceiptPtr
   Track::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    trackNumber_.save(storage, crc);
-    trackUID_.save(storage, crc);
-    trackType_.save(storage, crc);
-    flagEnabled_.save(storage, crc);
-    flagDefault_.save(storage, crc);
-    flagForced_.save(storage, crc);
-    flagLacing_.save(storage, crc);
-    minCache_.save(storage, crc);
-    maxCache_.save(storage, crc);
-    frameDuration_.save(storage, crc);
-    timecodeScale_.save(storage, crc);
-    trackOffset_.save(storage, crc);
-    maxBlockAddID_.save(storage, crc);
-    name_.save(storage, crc);
-    language_.save(storage, crc);
-    codecID_.save(storage, crc);
-    codecPrivate_.save(storage, crc);
-    codecName_.save(storage, crc);
-    attachmentLink_.save(storage, crc);
-    codecSettings_.save(storage, crc);
-    codecInfoURL_.save(storage, crc);
-    codecDownloadURL_.save(storage, crc);
-    codecDecodeAll_.save(storage, crc);
-    trackOverlay_.save(storage, crc);
-    trackTranslate_.save(storage, crc);
-    video_.save(storage, crc);
-    audio_.save(storage, crc);
-    contentEncs_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += trackNumber_.save(storage, crc);
+    *receipt += trackUID_.save(storage, crc);
+    *receipt += trackType_.save(storage, crc);
+    *receipt += flagEnabled_.save(storage, crc);
+    *receipt += flagDefault_.save(storage, crc);
+    *receipt += flagForced_.save(storage, crc);
+    *receipt += flagLacing_.save(storage, crc);
+    *receipt += minCache_.save(storage, crc);
+    *receipt += maxCache_.save(storage, crc);
+    *receipt += frameDuration_.save(storage, crc);
+    *receipt += timecodeScale_.save(storage, crc);
+    *receipt += trackOffset_.save(storage, crc);
+    *receipt += maxBlockAddID_.save(storage, crc);
+    *receipt += name_.save(storage, crc);
+    *receipt += language_.save(storage, crc);
+    *receipt += codecID_.save(storage, crc);
+    *receipt += codecPrivate_.save(storage, crc);
+    *receipt += codecName_.save(storage, crc);
+    *receipt += attachmentLink_.save(storage, crc);
+    *receipt += codecSettings_.save(storage, crc);
+    *receipt += codecInfoURL_.save(storage, crc);
+    *receipt += codecDownloadURL_.save(storage, crc);
+    *receipt += codecDecodeAll_.save(storage, crc);
+    *receipt += trackOverlay_.save(storage, crc);
+    *receipt += trackTranslate_.save(storage, crc);
+    *receipt += video_.save(storage, crc);
+    *receipt += audio_.save(storage, crc);
+    *receipt += contentEncs_.save(storage, crc);
     
     return receipt;
   }
@@ -1252,65 +978,41 @@ namespace Yamka
   // Track::load
   // 
   uint64
-  Track::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Track::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= trackNumber_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackType_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagEnabled_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagForced_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagLacing_.load(storage, bytesToRead, crc);
+    bytesToRead -= minCache_.load(storage, bytesToRead, crc);
+    bytesToRead -= maxCache_.load(storage, bytesToRead, crc);
+    bytesToRead -= frameDuration_.load(storage, bytesToRead, crc);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackOffset_.load(storage, bytesToRead, crc);
+    bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, crc);
+    bytesToRead -= name_.load(storage, bytesToRead, crc);
+    bytesToRead -= language_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecID_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecPrivate_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecName_.load(storage, bytesToRead, crc);
+    bytesToRead -= attachmentLink_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecSettings_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecInfoURL_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackOverlay_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackTranslate_.load(storage, bytesToRead, crc);
+    bytesToRead -= video_.load(storage, bytesToRead, crc);
+    bytesToRead -= audio_.load(storage, bytesToRead, crc);
+    bytesToRead -= contentEncs_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= trackNumber_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackType_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagEnabled_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagForced_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagLacing_.load(storage, bytesToRead, crc);
-      bytesToRead -= minCache_.load(storage, bytesToRead, crc);
-      bytesToRead -= maxCache_.load(storage, bytesToRead, crc);
-      bytesToRead -= frameDuration_.load(storage, bytesToRead, crc);
-      bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackOffset_.load(storage, bytesToRead, crc);
-      bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, crc);
-      bytesToRead -= name_.load(storage, bytesToRead, crc);
-      bytesToRead -= language_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecID_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecPrivate_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecName_.load(storage, bytesToRead, crc);
-      bytesToRead -= attachmentLink_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecSettings_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecInfoURL_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackOverlay_.load(storage, bytesToRead, crc);
-      bytesToRead -= trackTranslate_.load(storage, bytesToRead, crc);
-      bytesToRead -= video_.load(storage, bytesToRead, crc);
-      bytesToRead -= audio_.load(storage, bytesToRead, crc);
-      bytesToRead -= contentEncs_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1320,9 +1022,7 @@ namespace Yamka
   bool
   Tracks::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(tracks_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(tracks_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -1331,10 +1031,7 @@ namespace Yamka
   bool
   Tracks::isDefault() const
   {
-    bool allDefault =
-      tracks_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = tracks_.empty();
     return allDefault;
   }
   
@@ -1344,10 +1041,7 @@ namespace Yamka
   uint64
   Tracks::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(tracks_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(tracks_);
     return size;
   }
   
@@ -1357,12 +1051,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tracks::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(tracks_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(tracks_, storage, crc);
     
     return receipt;
   }
@@ -1371,38 +1062,14 @@ namespace Yamka
   // Tracks::load
   // 
   uint64
-  Tracks::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Tracks::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1416,8 +1083,7 @@ namespace Yamka
       time_.eval(crawler) ||
       cluster_.eval(crawler) ||
       block_.eval(crawler) ||
-      codecState_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      codecState_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -1443,8 +1109,7 @@ namespace Yamka
       time_.calcSize() +
       cluster_.calcSize() +
       block_.calcSize() +
-      codecState_.calcSize() +
-      eltsCalcSize(voids_);
+      codecState_.calcSize();
     
     return size;
   }
@@ -1455,15 +1120,12 @@ namespace Yamka
   IStorage::IReceiptPtr
   CueRef::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    time_.save(storage, crc);
-    cluster_.save(storage, crc);
-    block_.save(storage, crc);
-    codecState_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += time_.save(storage, crc);
+    *receipt += cluster_.save(storage, crc);
+    *receipt += block_.save(storage, crc);
+    *receipt += codecState_.save(storage, crc);
     
     return receipt;
   }
@@ -1472,41 +1134,17 @@ namespace Yamka
   // CueRef::load
   // 
   uint64
-  CueRef::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  CueRef::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= time_.load(storage, bytesToRead, crc);
+    bytesToRead -= cluster_.load(storage, bytesToRead, crc);
+    bytesToRead -= block_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= time_.load(storage, bytesToRead, crc);
-      bytesToRead -= cluster_.load(storage, bytesToRead, crc);
-      bytesToRead -= block_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1529,8 +1167,7 @@ namespace Yamka
       cluster_.eval(crawler) ||
       block_.eval(crawler) ||
       codecState_.eval(crawler) ||
-      ref_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      ref_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -1557,8 +1194,7 @@ namespace Yamka
       cluster_.calcSize() +
       block_.calcSize() +
       codecState_.calcSize() +
-      ref_.calcSize() +
-      eltsCalcSize(voids_);
+      ref_.calcSize();
     
     return size;
   }
@@ -1569,16 +1205,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   CueTrkPos::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    track_.save(storage, crc);
-    cluster_.save(storage, crc);
-    block_.save(storage, crc);
-    codecState_.save(storage, crc);
-    ref_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += track_.save(storage, crc);
+    *receipt += cluster_.save(storage, crc);
+    *receipt += block_.save(storage, crc);
+    *receipt += codecState_.save(storage, crc);
+    *receipt += ref_.save(storage, crc);
     
     return receipt;
   }
@@ -1587,42 +1220,18 @@ namespace Yamka
   // CueTrkPos::load
   // 
   uint64
-  CueTrkPos::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  CueTrkPos::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= track_.load(storage, bytesToRead, crc);
+    bytesToRead -= cluster_.load(storage, bytesToRead, crc);
+    bytesToRead -= block_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+    bytesToRead -= ref_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= track_.load(storage, bytesToRead, crc);
-      bytesToRead -= cluster_.load(storage, bytesToRead, crc);
-      bytesToRead -= block_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
-      bytesToRead -= ref_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1642,8 +1251,7 @@ namespace Yamka
   {
     return
       time_.eval(crawler) ||
-      eltsEval(trkPosns_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(trkPosns_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -1654,8 +1262,7 @@ namespace Yamka
   {
     bool allDefault =
       !time_.mustSave() &&
-      trkPosns_.empty() &&
-      voids_.empty();
+      trkPosns_.empty();
     
     return allDefault;
   }
@@ -1668,8 +1275,7 @@ namespace Yamka
   {
     uint64 size =
       time_.calcSize() +
-      eltsCalcSize(trkPosns_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(trkPosns_);
     
     return size;
   }
@@ -1680,13 +1286,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   CuePoint::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    time_.save(storage, crc);
-    eltsSave(trkPosns_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += time_.save(storage, crc);
+    *receipt += eltsSave(trkPosns_, storage, crc);
     
     return receipt;
   }
@@ -1695,39 +1298,15 @@ namespace Yamka
   // CuePoint::load
   // 
   uint64
-  CuePoint::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  CuePoint::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= time_.load(storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= time_.load(storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1737,9 +1316,7 @@ namespace Yamka
   bool
   Cues::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(points_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(points_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -1748,10 +1325,7 @@ namespace Yamka
   bool
   Cues::isDefault() const
   {
-    bool allDefault =
-      points_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = points_.empty();
     return allDefault;
   }
   
@@ -1761,10 +1335,7 @@ namespace Yamka
   uint64
   Cues::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(points_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(points_);
     return size;
   }
 
@@ -1774,12 +1345,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   Cues::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(points_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(points_, storage, crc);
     
     return receipt;
   }
@@ -1788,38 +1356,14 @@ namespace Yamka
   // Cues::load
   // 
   uint64
-  Cues::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Cues::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(points_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(points_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1831,8 +1375,7 @@ namespace Yamka
   {
     return
       id_.eval(crawler) ||
-      position_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      position_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -1855,8 +1398,7 @@ namespace Yamka
   {
     uint64 size =
       id_.calcSize() +
-      position_.calcSize() +
-      eltsCalcSize(voids_);
+      position_.calcSize();
     
     return size;
   }
@@ -1867,13 +1409,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   SeekEntry::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    id_.save(storage, crc);
-    position_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += id_.save(storage, crc);
+    *receipt += position_.save(storage, crc);
     
     return receipt;
   }
@@ -1882,39 +1421,15 @@ namespace Yamka
   // SeekEntry::load
   // 
   uint64
-  SeekEntry::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  SeekEntry::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= id_.load(storage, bytesToRead, crc);
+    bytesToRead -= position_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= id_.load(storage, bytesToRead, crc);
-      bytesToRead -= position_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -1924,9 +1439,7 @@ namespace Yamka
   bool
   SeekHead::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(seek_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(seek_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -1935,10 +1448,7 @@ namespace Yamka
   bool
   SeekHead::isDefault() const
   {
-    bool allDefault =
-      seek_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = seek_.empty();
     return allDefault;
   }
   
@@ -1948,10 +1458,7 @@ namespace Yamka
   uint64
   SeekHead::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(seek_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(seek_);
     return size;
   }
   
@@ -1961,12 +1468,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   SeekHead::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(seek_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(seek_, storage, crc);
     
     return receipt;
   }
@@ -1975,38 +1479,14 @@ namespace Yamka
   // SeekHead::load
   // 
   uint64
-  SeekHead::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  SeekHead::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(seek_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(seek_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   //----------------------------------------------------------------
@@ -2044,8 +1524,7 @@ namespace Yamka
       mimeType_.eval(crawler) ||
       data_.eval(crawler) ||
       fileUID_.eval(crawler) ||
-      referral_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      referral_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -2060,8 +1539,7 @@ namespace Yamka
       !mimeType_.mustSave() &&
       !data_.mustSave() &&
       !fileUID_.mustSave() &&
-      !referral_.mustSave() &&
-      voids_.empty();
+      !referral_.mustSave();
     
     return allDefault;
   }
@@ -2078,8 +1556,7 @@ namespace Yamka
       mimeType_.calcSize() +
       data_.calcSize() +
       fileUID_.calcSize() +
-      referral_.calcSize() +
-      eltsCalcSize(voids_);
+      referral_.calcSize();
     
     return size;
   }
@@ -2090,17 +1567,14 @@ namespace Yamka
   IStorage::IReceiptPtr
   AttdFile::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    description_.save(storage, crc);
-    filename_.save(storage, crc);
-    mimeType_.save(storage, crc);
-    data_.save(storage, crc);
-    fileUID_.save(storage, crc);
-    referral_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += description_.save(storage, crc);
+    *receipt += filename_.save(storage, crc);
+    *receipt += mimeType_.save(storage, crc);
+    *receipt += data_.save(storage, crc);
+    *receipt += fileUID_.save(storage, crc);
+    *receipt += referral_.save(storage, crc);
     
     return receipt;
   }
@@ -2109,43 +1583,19 @@ namespace Yamka
   // AttdFile::load
   // 
   uint64
-  AttdFile::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  AttdFile::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= description_.load(storage, bytesToRead, crc);
+    bytesToRead -= filename_.load(storage, bytesToRead, crc);
+    bytesToRead -= mimeType_.load(storage, bytesToRead, crc);
+    bytesToRead -= data_.load(storage, bytesToRead, crc);
+    bytesToRead -= fileUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= referral_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= description_.load(storage, bytesToRead, crc);
-      bytesToRead -= filename_.load(storage, bytesToRead, crc);
-      bytesToRead -= mimeType_.load(storage, bytesToRead, crc);
-      bytesToRead -= data_.load(storage, bytesToRead, crc);
-      bytesToRead -= fileUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= referral_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2155,9 +1605,7 @@ namespace Yamka
   bool
   Attachments::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(files_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(files_, crawler);
   }
     
   //----------------------------------------------------------------
@@ -2166,10 +1614,7 @@ namespace Yamka
   bool
   Attachments::isDefault() const
   {
-    bool allDefault =
-      files_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = files_.empty();
     return allDefault;
   }
   
@@ -2179,10 +1624,7 @@ namespace Yamka
   uint64
   Attachments::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(files_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(files_);
     return size;
   }
   
@@ -2192,12 +1634,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   Attachments::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(files_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(files_, storage, crc);
     
     return receipt;
   }
@@ -2206,38 +1645,14 @@ namespace Yamka
   // Attachments::load
   // 
   uint64
-  Attachments::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Attachments::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(files_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(files_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2247,9 +1662,7 @@ namespace Yamka
   bool
   ChapTrk::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(tracks_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(tracks_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -2258,10 +1671,7 @@ namespace Yamka
   bool
   ChapTrk::isDefault() const
   {
-    bool allDefault =
-      tracks_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = tracks_.empty();
     return allDefault;
   }
   
@@ -2271,10 +1681,7 @@ namespace Yamka
   uint64
   ChapTrk::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(tracks_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(tracks_);
     return size;
   }
 
@@ -2284,12 +1691,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapTrk::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(tracks_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(tracks_, storage, crc);
     
     return receipt;
   }
@@ -2298,38 +1702,14 @@ namespace Yamka
   // ChapTrk::load
   // 
   uint64
-  ChapTrk::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapTrk::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2342,8 +1722,7 @@ namespace Yamka
     return
       string_.eval(crawler) ||
       language_.eval(crawler) ||
-      country_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      country_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -2355,8 +1734,7 @@ namespace Yamka
     bool allDefault =
       !string_.mustSave() &&
       !language_.mustSave() &&
-      !country_.mustSave() &&
-      voids_.empty();
+      !country_.mustSave();
     
     return allDefault;
   }
@@ -2370,8 +1748,7 @@ namespace Yamka
     uint64 size =
       string_.calcSize() +
       language_.calcSize() +
-      country_.calcSize() +
-      eltsCalcSize(voids_);
+      country_.calcSize();
     
     return size;
   }
@@ -2382,14 +1759,11 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapDisp::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    string_.save(storage, crc);
-    language_.save(storage, crc);
-    country_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += string_.save(storage, crc);
+    *receipt += language_.save(storage, crc);
+    *receipt += country_.save(storage, crc);
     
     return receipt;
   }
@@ -2398,40 +1772,16 @@ namespace Yamka
   // ChapDisp::load
   // 
   uint64
-  ChapDisp::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapDisp::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= string_.load(storage, bytesToRead, crc);
+    bytesToRead -= language_.load(storage, bytesToRead, crc);
+    bytesToRead -= country_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= string_.load(storage, bytesToRead, crc);
-      bytesToRead -= language_.load(storage, bytesToRead, crc);
-      bytesToRead -= country_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2443,8 +1793,7 @@ namespace Yamka
   {
     return
       time_.eval(crawler) ||
-      data_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      data_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -2455,8 +1804,7 @@ namespace Yamka
   {
     bool allDefault =
       !time_.mustSave() &&
-      !data_.mustSave() &&
-      voids_.empty();
+      !data_.mustSave();
     
     return allDefault;
   }
@@ -2469,8 +1817,7 @@ namespace Yamka
   {
     uint64 size =
       time_.calcSize() +
-      data_.calcSize() +
-      eltsCalcSize(voids_);
+      data_.calcSize();
     
     return size;
   }
@@ -2481,13 +1828,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapProcCmd::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    time_.save(storage, crc);
-    data_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += time_.save(storage, crc);
+    *receipt += data_.save(storage, crc);
     
     return receipt;
   }
@@ -2496,39 +1840,15 @@ namespace Yamka
   // ChapProcCmd::load
   // 
   uint64
-  ChapProcCmd::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapProcCmd::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= time_.load(storage, bytesToRead, crc);
+    bytesToRead -= data_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= time_.load(storage, bytesToRead, crc);
-      bytesToRead -= data_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2541,8 +1861,7 @@ namespace Yamka
     return
       codecID_.eval(crawler) ||
       procPrivate_.eval(crawler) ||
-      eltsEval(cmds_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(cmds_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -2554,8 +1873,7 @@ namespace Yamka
     bool allDefault =
       !codecID_.mustSave() &&
       !procPrivate_.mustSave() &&
-      cmds_.empty() &&
-      voids_.empty();
+      cmds_.empty();
     
     return allDefault;
   }
@@ -2569,8 +1887,7 @@ namespace Yamka
     uint64 size =
       codecID_.calcSize() +
       procPrivate_.calcSize() +
-      eltsCalcSize(cmds_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(cmds_);
     
     return size;
   }
@@ -2581,15 +1898,12 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapProc::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    codecID_.save(storage, crc);
-    procPrivate_.save(storage, crc);
+    *receipt += codecID_.save(storage, crc);
+    *receipt += procPrivate_.save(storage, crc);
     
-    eltsSave(cmds_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(cmds_, storage, crc);
     
     return receipt;
   }
@@ -2598,41 +1912,17 @@ namespace Yamka
   // ChapProc::load
   // 
   uint64
-  ChapProc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapProc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
+    bytesToRead -= codecID_.load(storage, bytesToRead, crc);
+    bytesToRead -= procPrivate_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= codecID_.load(storage, bytesToRead, crc);
-      bytesToRead -= procPrivate_.load(storage, bytesToRead, crc);
-      
-      bytesToRead -= eltsLoad(cmds_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(cmds_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2653,8 +1943,7 @@ namespace Yamka
       physEquiv_.eval(crawler) ||
       tracks_.eval(crawler) ||
       eltsEval(display_, crawler) ||
-      eltsEval(process_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(process_, crawler);
   }
     
   //----------------------------------------------------------------
@@ -2674,8 +1963,7 @@ namespace Yamka
       !physEquiv_.mustSave() &&
       !tracks_.mustSave() &&
       display_.empty() &&
-      process_.empty() &&
-      voids_.empty();
+      process_.empty();
     
     return allDefault;
   }
@@ -2697,8 +1985,7 @@ namespace Yamka
       physEquiv_.calcSize() +
       tracks_.calcSize() +
       eltsCalcSize(display_) +
-      eltsCalcSize(process_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(process_);
     
     return size;
   }
@@ -2709,23 +1996,20 @@ namespace Yamka
   IStorage::IReceiptPtr
   ChapAtom::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    UID_.save(storage, crc);
-    timeStart_.save(storage, crc);
-    timeEnd_.save(storage, crc);
-    hidden_.save(storage, crc);
-    enabled_.save(storage, crc);
-    segUID_.save(storage, crc);
-    segEditionUID_.save(storage, crc);
-    physEquiv_.save(storage, crc);
-    tracks_.save(storage, crc);
+    *receipt += UID_.save(storage, crc);
+    *receipt += timeStart_.save(storage, crc);
+    *receipt += timeEnd_.save(storage, crc);
+    *receipt += hidden_.save(storage, crc);
+    *receipt += enabled_.save(storage, crc);
+    *receipt += segUID_.save(storage, crc);
+    *receipt += segEditionUID_.save(storage, crc);
+    *receipt += physEquiv_.save(storage, crc);
+    *receipt += tracks_.save(storage, crc);
     
-    eltsSave(display_, storage, crc);
-    eltsSave(process_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(display_, storage, crc);
+    *receipt += eltsSave(process_, storage, crc);
     
     return receipt;
   }
@@ -2734,49 +2018,25 @@ namespace Yamka
   // ChapAtom::load
   // 
   uint64
-  ChapAtom::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  ChapAtom::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
+    bytesToRead -= UID_.load(storage, bytesToRead, crc);
+    bytesToRead -= timeStart_.load(storage, bytesToRead, crc);
+    bytesToRead -= timeEnd_.load(storage, bytesToRead, crc);
+    bytesToRead -= hidden_.load(storage, bytesToRead, crc);
+    bytesToRead -= enabled_.load(storage, bytesToRead, crc);
+    bytesToRead -= segUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= segEditionUID_.load(storage, bytesToRead, crc);
+    bytesToRead -= physEquiv_.load(storage, bytesToRead, crc);
+    bytesToRead -= tracks_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= UID_.load(storage, bytesToRead, crc);
-      bytesToRead -= timeStart_.load(storage, bytesToRead, crc);
-      bytesToRead -= timeEnd_.load(storage, bytesToRead, crc);
-      bytesToRead -= hidden_.load(storage, bytesToRead, crc);
-      bytesToRead -= enabled_.load(storage, bytesToRead, crc);
-      bytesToRead -= segUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= segEditionUID_.load(storage, bytesToRead, crc);
-      bytesToRead -= physEquiv_.load(storage, bytesToRead, crc);
-      bytesToRead -= tracks_.load(storage, bytesToRead, crc);
-      
-      bytesToRead -= eltsLoad(display_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(process_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(display_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(process_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2791,8 +2051,7 @@ namespace Yamka
       flagHidden_.eval(crawler) ||
       flagDefault_.eval(crawler) ||
       flagOrdered_.eval(crawler) ||
-      eltsEval(chapAtoms_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(chapAtoms_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -2806,8 +2065,7 @@ namespace Yamka
       !flagHidden_.mustSave() &&
       !flagDefault_.mustSave() &&
       !flagOrdered_.mustSave() &&
-      chapAtoms_.empty() &&
-      voids_.empty();
+      chapAtoms_.empty();
     
     return allDefault;
   }
@@ -2823,8 +2081,7 @@ namespace Yamka
       flagHidden_.calcSize() +
       flagDefault_.calcSize() +
       flagOrdered_.calcSize() +
-      eltsCalcSize(chapAtoms_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(chapAtoms_);
     
     return size;
   }
@@ -2835,17 +2092,14 @@ namespace Yamka
   IStorage::IReceiptPtr
   Edition::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    UID_.save(storage, crc);
-    flagHidden_.save(storage, crc);
-    flagDefault_.save(storage, crc);
-    flagOrdered_.save(storage, crc);
+    *receipt += UID_.save(storage, crc);
+    *receipt += flagHidden_.save(storage, crc);
+    *receipt += flagDefault_.save(storage, crc);
+    *receipt += flagOrdered_.save(storage, crc);
     
-    eltsSave(chapAtoms_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(chapAtoms_, storage, crc);
     
     return receipt;
   }
@@ -2854,43 +2108,19 @@ namespace Yamka
   // Edition::load
   // 
   uint64
-  Edition::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Edition::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
+    bytesToRead -= UID_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagHidden_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagOrdered_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= UID_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagHidden_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
-      bytesToRead -= flagOrdered_.load(storage, bytesToRead, crc);
-      
-      bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -2900,9 +2130,7 @@ namespace Yamka
   bool
   Chapters::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(editions_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(editions_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -2911,10 +2139,7 @@ namespace Yamka
   bool
   Chapters::isDefault() const
   {
-    bool allDefault =
-      editions_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = editions_.empty();
     return allDefault;
   }
   
@@ -2924,10 +2149,7 @@ namespace Yamka
   uint64
   Chapters::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(editions_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(editions_);
     return size;
   }
   
@@ -2937,12 +2159,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   Chapters::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(editions_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(editions_, storage, crc);
     
     return receipt;
   }
@@ -2951,38 +2170,14 @@ namespace Yamka
   // Chapters::load
   // 
   uint64
-  Chapters::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Chapters::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(editions_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(editions_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
 
@@ -2998,8 +2193,7 @@ namespace Yamka
       eltsEval(trackUIDs_, crawler) ||
       eltsEval(editionUIDs_, crawler) ||
       eltsEval(chapterUIDs_, crawler) ||
-      eltsEval(attachmentUIDs_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(attachmentUIDs_, crawler);
   }
     
   //----------------------------------------------------------------
@@ -3014,8 +2208,7 @@ namespace Yamka
       trackUIDs_.empty() &&
       editionUIDs_.empty() &&
       chapterUIDs_.empty() &&
-      attachmentUIDs_.empty() &&
-      voids_.empty();
+      attachmentUIDs_.empty();
     
     return allDefault;
   }
@@ -3032,8 +2225,7 @@ namespace Yamka
       eltsCalcSize(trackUIDs_) +
       eltsCalcSize(editionUIDs_) +
       eltsCalcSize(chapterUIDs_) +
-      eltsCalcSize(attachmentUIDs_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(attachmentUIDs_);
     
     return size;
   }
@@ -3044,18 +2236,15 @@ namespace Yamka
   IStorage::IReceiptPtr
   TagTargets::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    typeValue_.save(storage, crc);
-    type_.save(storage, crc);
+    *receipt += typeValue_.save(storage, crc);
+    *receipt += type_.save(storage, crc);
     
-    eltsSave(trackUIDs_, storage, crc);
-    eltsSave(editionUIDs_, storage, crc);
-    eltsSave(chapterUIDs_, storage, crc);
-    eltsSave(attachmentUIDs_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(trackUIDs_, storage, crc);
+    *receipt += eltsSave(editionUIDs_, storage, crc);
+    *receipt += eltsSave(chapterUIDs_, storage, crc);
+    *receipt += eltsSave(attachmentUIDs_, storage, crc);
     
     return receipt;
   }
@@ -3064,44 +2253,20 @@ namespace Yamka
   // TagTargets::load
   // 
   uint64
-  TagTargets::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  TagTargets::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
+    bytesToRead -= typeValue_.load(storage, bytesToRead, crc);
+    bytesToRead -= type_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= typeValue_.load(storage, bytesToRead, crc);
-      bytesToRead -= type_.load(storage, bytesToRead, crc);
-      
-      bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3116,8 +2281,7 @@ namespace Yamka
       lang_.eval(crawler) ||
       default_.eval(crawler) ||
       string_.eval(crawler) ||
-      binary_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      binary_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -3131,8 +2295,7 @@ namespace Yamka
       !lang_.mustSave() &&
       !default_.mustSave() &&
       !string_.mustSave() &&
-      !binary_.mustSave() &&
-      voids_.empty();
+      !binary_.mustSave();
     
     return allDefault;
   }
@@ -3148,8 +2311,7 @@ namespace Yamka
       lang_.calcSize() +
       default_.calcSize() +
       string_.calcSize() +
-      binary_.calcSize() +
-      eltsCalcSize(voids_);
+      binary_.calcSize();
     
     return size;
   }
@@ -3160,16 +2322,13 @@ namespace Yamka
   IStorage::IReceiptPtr
   SimpleTag::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    name_.save(storage, crc);
-    lang_.save(storage, crc);
-    default_.save(storage, crc);
-    string_.save(storage, crc);
-    binary_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += name_.save(storage, crc);
+    *receipt += lang_.save(storage, crc);
+    *receipt += default_.save(storage, crc);
+    *receipt += string_.save(storage, crc);
+    *receipt += binary_.save(storage, crc);
     
     return receipt;
   }
@@ -3178,42 +2337,18 @@ namespace Yamka
   // SimpleTag::load
   // 
   uint64
-  SimpleTag::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  SimpleTag::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= name_.load(storage, bytesToRead, crc);
+    bytesToRead -= lang_.load(storage, bytesToRead, crc);
+    bytesToRead -= default_.load(storage, bytesToRead, crc);
+    bytesToRead -= string_.load(storage, bytesToRead, crc);
+    bytesToRead -= binary_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= name_.load(storage, bytesToRead, crc);
-      bytesToRead -= lang_.load(storage, bytesToRead, crc);
-      bytesToRead -= default_.load(storage, bytesToRead, crc);
-      bytesToRead -= string_.load(storage, bytesToRead, crc);
-      bytesToRead -= binary_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3225,8 +2360,7 @@ namespace Yamka
   {
     return
       targets_.eval(crawler) ||
-      eltsEval(simpleTags_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(simpleTags_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -3237,8 +2371,7 @@ namespace Yamka
   {
     bool allDefault =
       !targets_.mustSave() &&
-      simpleTags_.empty() &&
-      voids_.empty();
+      simpleTags_.empty();
     
     return allDefault;
   }
@@ -3251,8 +2384,7 @@ namespace Yamka
   {
     uint64 size =
       targets_.calcSize() +
-      eltsCalcSize(simpleTags_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(simpleTags_);
     
     return size;
   }
@@ -3263,13 +2395,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tag::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    targets_.save(storage, crc);
-    eltsSave(simpleTags_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += targets_.save(storage, crc);
+    *receipt += eltsSave(simpleTags_, storage, crc);
     
     return receipt;
   }
@@ -3278,39 +2407,15 @@ namespace Yamka
   // Tag::load
   // 
   uint64
-  Tag::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Tag::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= targets_.load(storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= targets_.load(storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3320,9 +2425,7 @@ namespace Yamka
   bool
   Tags::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(tags_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(tags_, crawler);
   }
     
   //----------------------------------------------------------------
@@ -3331,10 +2434,7 @@ namespace Yamka
   bool
   Tags::isDefault() const
   {
-    bool allDefault =
-      tags_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = tags_.empty();
     return allDefault;
   }
   
@@ -3344,10 +2444,7 @@ namespace Yamka
   uint64
   Tags::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(tags_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(tags_);
     return size;
   }
   
@@ -3357,12 +2454,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   Tags::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(tags_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(tags_, storage, crc);
     
     return receipt;
   }
@@ -3371,38 +2465,14 @@ namespace Yamka
   // Tags::load
   // 
   uint64
-  Tags::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Tags::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3412,9 +2482,7 @@ namespace Yamka
   bool
   SilentTracks::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(tracks_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(tracks_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -3423,10 +2491,7 @@ namespace Yamka
   bool
   SilentTracks::isDefault() const
   {
-    bool allDefault =
-      tracks_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = tracks_.empty();
     return allDefault;
   }
   
@@ -3436,10 +2501,7 @@ namespace Yamka
   uint64
   SilentTracks::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(tracks_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(tracks_);
     return size;
   }
   
@@ -3449,12 +2511,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   SilentTracks::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(tracks_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(tracks_, storage, crc);
     
     return receipt;
   }
@@ -3463,38 +2522,14 @@ namespace Yamka
   // SilentTracks::load
   // 
   uint64
-  SilentTracks::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  SilentTracks::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3506,8 +2541,7 @@ namespace Yamka
   {
     return
       blockAddID_.eval(crawler) ||
-      blockAdditional_.eval(crawler) ||
-      eltsEval(voids_, crawler);
+      blockAdditional_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -3518,8 +2552,7 @@ namespace Yamka
   {
     bool allDefault =
       !blockAddID_.mustSave() &&
-      !blockAdditional_.mustSave() &&
-      voids_.empty();
+      !blockAdditional_.mustSave();
     
     return allDefault;
   }
@@ -3532,8 +2565,7 @@ namespace Yamka
   {
     uint64 size =
       blockAddID_.calcSize() +
-      blockAdditional_.calcSize() +
-      eltsCalcSize(voids_);
+      blockAdditional_.calcSize();
     
     return size;
   }
@@ -3544,13 +2576,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockMore::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    blockAddID_.save(storage, crc);
-    blockAdditional_.save(storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += blockAddID_.save(storage, crc);
+    *receipt += blockAdditional_.save(storage, crc);
     
     return receipt;
   }
@@ -3559,39 +2588,15 @@ namespace Yamka
   // BlockMore::load
   // 
   uint64
-  BlockMore::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  BlockMore::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= blockAddID_.load(storage, bytesToRead, crc);
+    bytesToRead -= blockAdditional_.load(storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= blockAddID_.load(storage, bytesToRead, crc);
-      bytesToRead -= blockAdditional_.load(storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3601,9 +2606,7 @@ namespace Yamka
   bool
   BlockAdditions::eval(IElementCrawler & crawler)
   {
-    return
-      eltsEval(more_, crawler) ||
-      eltsEval(voids_, crawler);
+    return eltsEval(more_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -3612,10 +2615,7 @@ namespace Yamka
   bool
   BlockAdditions::isDefault() const
   {
-    bool allDefault =
-      more_.empty() &&
-      voids_.empty();
-    
+    bool allDefault = more_.empty();
     return allDefault;
   }
   
@@ -3625,10 +2625,7 @@ namespace Yamka
   uint64
   BlockAdditions::calcSize() const
   {
-    uint64 size =
-      eltsCalcSize(more_) +
-      eltsCalcSize(voids_);
-    
+    uint64 size = eltsCalcSize(more_);
     return size;
   }
 
@@ -3638,12 +2635,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockAdditions::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    eltsSave(more_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(more_, storage, crc);
     
     return receipt;
   }
@@ -3652,38 +2646,14 @@ namespace Yamka
   // BlockAdditions::load
   // 
   uint64
-  BlockAdditions::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  BlockAdditions::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= eltsLoad(more_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= eltsLoad(more_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-      
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -3702,8 +2672,7 @@ namespace Yamka
       eltsEval(refBlock_, crawler) ||
       refVirtual_.eval(crawler) ||
       codecState_.eval(crawler) ||
-      eltsEval(slices_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(slices_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -3730,8 +2699,7 @@ namespace Yamka
       eltsCalcSize(refBlock_) +
       refVirtual_.calcSize() +
       codecState_.calcSize() +
-      eltsCalcSize(slices_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(slices_);
     
     return size;
   }
@@ -3742,20 +2710,17 @@ namespace Yamka
   IStorage::IReceiptPtr
   BlockGroup::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    duration_.save(storage, crc);
-    block_.save(storage, crc);
-    eltsSave(blockVirtual_, storage, crc);
-    additions_.save(storage, crc);
-    refPriority_.save(storage, crc);
-    eltsSave(refBlock_, storage, crc);
-    refVirtual_.save(storage, crc);
-    codecState_.save(storage, crc);
-    eltsSave(slices_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += duration_.save(storage, crc);
+    *receipt += block_.save(storage, crc);
+    *receipt += eltsSave(blockVirtual_, storage, crc);
+    *receipt += additions_.save(storage, crc);
+    *receipt += refPriority_.save(storage, crc);
+    *receipt += eltsSave(refBlock_, storage, crc);
+    *receipt += refVirtual_.save(storage, crc);
+    *receipt += codecState_.save(storage, crc);
+    *receipt += eltsSave(slices_, storage, crc);
     
     return receipt;
   }
@@ -3764,46 +2729,22 @@ namespace Yamka
   // BlockGroup::load
   // 
   uint64
-  BlockGroup::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  BlockGroup::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
+    bytesToRead -= duration_.load(storage, bytesToRead, crc);
+    bytesToRead -= block_.load(storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead, crc);
+    bytesToRead -= additions_.load(storage, bytesToRead, crc);
+    bytesToRead -= refPriority_.load(storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, crc);
+    bytesToRead -= refVirtual_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(slices_, storage, bytesToRead, crc);
     
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-      
-      bytesToRead -= duration_.load(storage, bytesToRead, crc);
-      bytesToRead -= block_.load(storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead, crc);
-      bytesToRead -= additions_.load(storage, bytesToRead, crc);
-      bytesToRead -= refPriority_.load(storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, crc);
-      bytesToRead -= refVirtual_.load(storage, bytesToRead, crc);
-      bytesToRead -= codecState_.load(storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(slices_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
-    
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
 
@@ -4113,8 +3054,7 @@ namespace Yamka
       prevSize_.eval(crawler) ||
       eltsEval(blockGroups_, crawler) ||
       eltsEval(simpleBlocks_, crawler) ||
-      eltsEval(encryptedBlocks_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(encryptedBlocks_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -4139,8 +3079,7 @@ namespace Yamka
       prevSize_.calcSize() +
       eltsCalcSize(blockGroups_) +
       eltsCalcSize(simpleBlocks_) +
-      eltsCalcSize(encryptedBlocks_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(encryptedBlocks_);
     
     return size;
   }
@@ -4151,19 +3090,16 @@ namespace Yamka
   IStorage::IReceiptPtr
   Cluster::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
-    timecode_.save(storage, crc);
-    silent_.save(storage, crc);
-    position_.save(storage, crc);
-    prevSize_.save(storage, crc);
+    *receipt += timecode_.save(storage, crc);
+    *receipt += silent_.save(storage, crc);
+    *receipt += position_.save(storage, crc);
+    *receipt += prevSize_.save(storage, crc);
     
-    eltsSave(blockGroups_, storage, crc);
-    eltsSave(simpleBlocks_, storage, crc);
-    eltsSave(encryptedBlocks_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(blockGroups_, storage, crc);
+    *receipt += eltsSave(simpleBlocks_, storage, crc);
+    *receipt += eltsSave(encryptedBlocks_, storage, crc);
     
     return receipt;
   }
@@ -4172,45 +3108,21 @@ namespace Yamka
   // Cluster::load
   // 
   uint64
-  Cluster::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Cluster::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
+    bytesToRead -= timecode_.load(storage, bytesToRead, crc);
+    bytesToRead -= silent_.load(storage, bytesToRead, crc);
+    bytesToRead -= position_.load(storage, bytesToRead, crc);
+    bytesToRead -= prevSize_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= timecode_.load(storage, bytesToRead, crc);
-      bytesToRead -= silent_.load(storage, bytesToRead, crc);
-      bytesToRead -= position_.load(storage, bytesToRead, crc);
-      bytesToRead -= prevSize_.load(storage, bytesToRead, crc);
-      
-      bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   
@@ -4229,8 +3141,7 @@ namespace Yamka
       eltsEval(seekHeads_, crawler) ||
       eltsEval(attachments_, crawler) ||
       eltsEval(tags_, crawler) ||
-      eltsEval(clusters_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(clusters_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -4248,8 +3159,7 @@ namespace Yamka
       seekHeads_.empty() &&
       attachments_.empty() &&
       tags_.empty() &&
-      clusters_.empty() &&
-      voids_.empty();
+      clusters_.empty();
     
     return allDefault;
   }
@@ -4269,8 +3179,7 @@ namespace Yamka
       eltsCalcSize(seekHeads_) +
       eltsCalcSize(attachments_) +
       eltsCalcSize(tags_) +
-      eltsCalcSize(clusters_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(clusters_);
     
     return size;
   }
@@ -4283,9 +3192,7 @@ namespace Yamka
   IStorage::IReceiptPtr
   Segment::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 totalBytesToSave = calcSize();
-    Bytes vsizeBytes = Bytes(vsizeEncode(totalBytesToSave));
-    IStorage::IReceiptPtr receipt = storage.saveAndCalcCrc32(vsizeBytes);
+    IStorage::IReceiptPtr receipt = storage.receipt();
     
     typedef std::deque<TSeekHead>::const_iterator TSeekHeadIter;
     TSeekHeadIter seekHeadIter = seekHeads_.begin();
@@ -4294,29 +3201,27 @@ namespace Yamka
     if (seekHeadIter != seekHeads_.end())
     {
       const TSeekHead & seekHead = *seekHeadIter;
-      seekHead.save(storage, crc);
+      *receipt += seekHead.save(storage, crc);
       ++seekHeadIter;
     }
     
-    info_.save(storage, crc);
-    tracks_.save(storage, crc);
-    chapters_.save(storage, crc);
+    *receipt += info_.save(storage, crc);
+    *receipt += tracks_.save(storage, crc);
+    *receipt += chapters_.save(storage, crc);
     
-    eltsSave(clusters_, storage, crc);
+    *receipt += eltsSave(clusters_, storage, crc);
     
     // save any remaining seekheads:
     for (; seekHeadIter != seekHeads_.end(); ++seekHeadIter)
     {
       const TSeekHead & seekHead = *seekHeadIter;
-      seekHead.save(storage, crc);
+      *receipt += seekHead.save(storage, crc);
     }
     
-    cues_.save(storage, crc);
+    *receipt += cues_.save(storage, crc);
     
-    eltsSave(attachments_, storage, crc);
-    eltsSave(tags_, storage, crc);
-    
-    eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(attachments_, storage, crc);
+    *receipt += eltsSave(tags_, storage, crc);
     
     return receipt;
   }
@@ -4325,46 +3230,22 @@ namespace Yamka
   // Segment::load
   // 
   uint64
-  Segment::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  Segment::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 bytesToRead = vsizeDecode(storage, vsizeSize, crc);
+    uint64 prevBytesToRead = bytesToRead;
     
-    // container elements may be present in any order, therefore
-    // not every load will succeed -- keep trying until all
-    // load attempts fail:
-    
-    uint64 bytesReadTotal = 0;
-    while (true)
-    {
-      uint64 prevBytesToRead = bytesToRead;
-
-      bytesToRead -= info_.load(storage, bytesToRead, crc);
-      bytesToRead -= tracks_.load(storage, bytesToRead, crc);
-      bytesToRead -= chapters_.load(storage, bytesToRead, crc);
-      bytesToRead -= cues_.load(storage, bytesToRead, crc);
+    bytesToRead -= info_.load(storage, bytesToRead, crc);
+    bytesToRead -= tracks_.load(storage, bytesToRead, crc);
+    bytesToRead -= chapters_.load(storage, bytesToRead, crc);
+    bytesToRead -= cues_.load(storage, bytesToRead, crc);
       
-      bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(attachments_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
-      bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
-      
-      uint64 bytesRead = prevBytesToRead - bytesToRead;
-      bytesReadTotal += bytesRead;
-
-      if (!bytesRead)
-      {
-        break;
-      }
-    }
+    bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(attachments_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, crc);
     
-    if (bytesReadTotal)
-    {
-      bytesReadTotal += vsizeSize;
-    }
-    
-    return bytesReadTotal;
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
   }
   
   //----------------------------------------------------------------
@@ -4400,9 +3281,6 @@ namespace Yamka
     
     // get the payload position:
     uint64 originPosition = originReceipt->position();
-    
-    // skip payload size:
-    originPosition += vsizeNumBytes(originReceipt);
     
     // resolve seek position references:
     for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
@@ -4514,8 +3392,7 @@ namespace Yamka
   {
     return
       EbmlDoc::head_.eval(crawler) ||
-      eltsEval(segments_, crawler) ||
-      eltsEval(voids_, crawler);
+      eltsEval(segments_, crawler);
   }
   
   //----------------------------------------------------------------
@@ -4535,8 +3412,7 @@ namespace Yamka
   {
     uint64 size =
       EbmlDoc::head_.calcSize() +
-      eltsCalcSize(segments_) +
-      eltsCalcSize(voids_);
+      eltsCalcSize(segments_);
     
     return size;
   }
@@ -4570,8 +3446,8 @@ namespace Yamka
   MatroskaDoc::save(IStorage & storage, Crc32 * crc) const
   {
     IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage, crc);
-    eltsSave(segments_, storage, crc);
-    eltsSave(voids_, storage, crc);
+    
+    *receipt += eltsSave(segments_, storage, crc);
     
     // rewrite element position references (second pass):
     RewriteReferences crawler;
@@ -4601,12 +3477,10 @@ namespace Yamka
   // MatroskaDoc::load
   // 
   uint64
-  MatroskaDoc::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  MatroskaDoc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 bytesToRead = storageSize;
-    
     // let the base class load the EBML header:
-    uint64 bytesReadTotal = EbmlDoc::load(storage, storageSize, crc);
+    uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead, crc);
     bytesToRead -= bytesReadTotal;
     
     // read Segments:
@@ -4615,7 +3489,6 @@ namespace Yamka
       uint64 prevBytesToRead = bytesToRead;
       
       bytesToRead -= eltsLoad(segments_, storage, bytesToRead, crc);
-      bytesToRead -= loadVoid(storage, bytesToRead, crc);
       
       uint64 bytesRead = prevBytesToRead - bytesToRead;
       bytesReadTotal += bytesRead;

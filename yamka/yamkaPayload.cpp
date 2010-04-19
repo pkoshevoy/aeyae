@@ -18,319 +18,6 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
-  // vsizeNumBytes
-  // 
-  uint64
-  vsizeNumBytes(IStorage::IReceiptPtr payloadReceipt)
-  {
-    Bytes oneByte(1);
-    if (!payloadReceipt->load(oneByte))
-    {
-      // bad receipt:
-      return 0;
-    }
-    
-    // find how many bytes were used to encode vsize:
-    const TByte firstByte = oneByte[0];
-    TByte leadingBitsMask = 1 << 7;
-    
-    unsigned int numBytesToLoad = 0;
-    for (; numBytesToLoad < 8; numBytesToLoad++)
-    {
-      if (firstByte & leadingBitsMask)
-      {
-        break;
-      }
-      
-      leadingBitsMask >>= 1;
-    }
-    
-    uint64 vsizeSize = 1 + numBytesToLoad;
-    if (vsizeSize > 8)
-    {
-      // not a valid vsize:
-      return 0;
-    }
-    
-    return vsizeSize;
-  }
-  
-  
-  //----------------------------------------------------------------
-  // VEltPosition::VEltPosition
-  // 
-  VEltPosition::VEltPosition():
-    origin_(NULL),
-    elt_(NULL),
-    pos_(uintMax[8]),
-    unknownPositionSize_(8)
-  {}
-  
-  //----------------------------------------------------------------
-  // VEltPosition::setUnknownPositionSize
-  // 
-  void
-  VEltPosition::setUnknownPositionSize(uint64 vsize)
-  {
-    if (vsize > 8)
-    {
-      assert(false);
-      vsize = 8;
-    }
-    
-    if (pos_ == uintMax[unknownPositionSize_])
-    {
-      // adjust the unknown position:
-      pos_ = uintMax[vsize];
-    }
-    
-    unknownPositionSize_ = vsize;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::eval
-  // 
-  bool
-  VEltPosition::eval(IElementCrawler &)
-  {
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::isDefault
-  // 
-  bool
-  VEltPosition::isDefault() const
-  {
-    // no point is saving an unresolved invalid reference:
-    return !elt_;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::calcSize
-  // 
-  uint64
-  VEltPosition::calcSize() const
-  {
-    if (!elt_)
-    {
-      return unknownPositionSize_;
-    }
-    
-    IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
-    if (!eltReceipt)
-    {
-      return unknownPositionSize_;
-    }
-    
-    if (receipt_)
-    {
-      // must use the same size as before:
-      uint64 vsizeSize = vsizeNumBytes(receipt_);
-      if (!vsizeSize)
-      {
-        assert(false);
-        return unknownPositionSize_;
-      }
-      
-      Bytes savedPosition((std::size_t)vsizeSize);
-      if (!receipt_->load(savedPosition))
-      {
-        assert(false);
-        return unknownPositionSize_;
-      }
-      
-      uint64 bytesUsed = vsizeDecode(savedPosition, vsizeSize);
-      return bytesUsed;
-    }
-    
-    // NOTE:
-    // 1. The origin position may not be known when this is called,
-    // 2. We can assume that the relative position will not require
-    //    any more bytes than the absolute position would.
-    // 3. We'll use the absolute position to calculate the required
-    //    number of bytes
-    // 
-    uint64 absolutePosition = eltReceipt->position();
-    uint64 bytesNeeded = uintNumBytes(absolutePosition);
-    return bytesNeeded;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::save
-  // 
-  IStorage::IReceiptPtr
-  VEltPosition::save(IStorage & storage, Crc32 * crc) const
-  {
-    uint64 numBytes = calcSize();
-    uint64 eltPosition = uintMax[numBytes];
-    uint64 originPosition = getOriginPosition();
-    
-    if (elt_)
-    {
-      IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
-      if (eltReceipt)
-      {
-        eltPosition = eltReceipt->position();
-      }
-    }
-    
-    // let VUInt do the rest:
-    uint64 relativePosition = eltPosition - originPosition;
-    VUInt data;
-    data.setSize(numBytes);
-    data.set(relativePosition);
-    
-    receipt_ = data.save(storage, crc);
-    return receipt_;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::load
-  // 
-  uint64
-  VEltPosition::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
-  {
-    VUInt data;
-    uint64 bytesRead = data.load(storage, storageSize, crc);
-    if (bytesRead)
-    {
-      origin_ = NULL;
-      elt_ = NULL;
-      pos_ = data.get();
-    }
-    
-    return bytesRead;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::setOrigin
-  // 
-  void
-  VEltPosition::setOrigin(const IElement * origin)
-  {
-    origin_ = origin;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::getOrigin
-  // 
-  const IElement *
-  VEltPosition::getOrigin() const
-  {
-    return origin_;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::setElt
-  // 
-  void
-  VEltPosition::setElt(const IElement * elt)
-  {
-    elt_ = elt;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::getElt
-  // 
-  const IElement *
-  VEltPosition::getElt() const
-  {
-    return elt_;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::position
-  // 
-  uint64
-  VEltPosition::position() const
-  {
-    return pos_;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::rewrite
-  // 
-  bool
-  VEltPosition::rewrite() const
-  {
-    if (!receipt_)
-    {
-      return false;
-    }
-    
-    if (!elt_)
-    {
-      return false;
-    }
-    
-    IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
-    if (!eltReceipt)
-    {
-      return false;
-    }
-    
-    // must use the same size as before:
-    uint64 vsizeSize = vsizeNumBytes(receipt_);
-    if (!vsizeSize)
-    {
-      return false;
-    }
-    
-    Bytes savedPosition((std::size_t)vsizeSize);
-    if (!receipt_->load(savedPosition))
-    {
-      return false;
-    }
-    
-    uint64 originPosition = getOriginPosition();
-    uint64 eltPosition = eltReceipt->position();
-    uint64 relativePosition = eltPosition - originPosition;
-    
-    uint64 bytesUsed = vsizeDecode(savedPosition, vsizeSize);
-    uint64 bytesNeeded = uintNumBytes(relativePosition);
-    
-    if (bytesUsed < bytesNeeded)
-    {
-      return false;
-    }
-    
-    Bytes bytes;
-    bytes << vsizeEncode(bytesUsed)
-          << uintEncode(relativePosition, bytesUsed);
-    
-    bool saved = receipt_->save(bytes);
-    return saved;
-  }
-  
-  //----------------------------------------------------------------
-  // VEltPosition::getOriginPosition
-  // 
-  uint64
-  VEltPosition::getOriginPosition() const
-  {
-    if (!origin_)
-    {
-      return 0;
-    }
-    
-    IStorage::IReceiptPtr originReceipt = origin_->payloadReceipt();
-    if (!originReceipt)
-    {
-      return 0;
-    }
-    
-    // get the payload position:
-    uint64 originPosition = originReceipt->position();
-    
-    // skip payload size:
-    originPosition += vsizeNumBytes(originReceipt);
-    
-    return originPosition;
-  }
-  
-  
-  //----------------------------------------------------------------
   // VInt::VInt
   // 
   VInt::VInt():
@@ -375,11 +62,8 @@ namespace Yamka
   IStorage::IReceiptPtr
   VInt::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 size = calcSize();
-    
     Bytes bytes;
-    bytes << vsizeEncode(size)
-          << intEncode(TSuper::data_);
+    bytes << intEncode(TSuper::data_);
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -388,19 +72,16 @@ namespace Yamka
   // VInt::load
   // 
   uint64
-  VInt::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VInt::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
-    
-    Bytes bytes((std::size_t)numBytes);
-    if (storage.loadAndCalcCrc32(bytes, crc))
+    Bytes bytes((std::size_t)bytesToRead);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
     {
-      TSuper::data_ = intDecode(bytes, numBytes);
+      return 0;
     }
     
-    uint64 bytesRead = vsizeSize + numBytes;
-    return bytesRead;
+    TSuper::data_ = intDecode(bytes, bytesToRead);
+    return bytesToRead;
   }
 
 
@@ -449,11 +130,8 @@ namespace Yamka
   IStorage::IReceiptPtr
   VUInt::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 size = calcSize();
-    
     Bytes bytes;
-    bytes << vsizeEncode(size)
-          << uintEncode(TSuper::data_);
+    bytes << uintEncode(TSuper::data_);
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -462,19 +140,16 @@ namespace Yamka
   // VUInt::load
   // 
   uint64
-  VUInt::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VUInt::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
-    
-    Bytes bytes((std::size_t)numBytes);
-    if (storage.loadAndCalcCrc32(bytes, crc))
+    Bytes bytes((std::size_t)bytesToRead);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
     {
-      TSuper::data_ = uintDecode(bytes, numBytes);
+      return 0;
     }
     
-    uint64 bytesRead = vsizeSize + numBytes;
-    return bytesRead;
+    TSuper::data_ = uintDecode(bytes, bytesToRead);
+    return bytesToRead;
   }
   
   
@@ -525,9 +200,7 @@ namespace Yamka
   VFloat::save(IStorage & storage, Crc32 * crc) const
   {
     uint64 size = calcSize();
-    
     Bytes bytes;
-    bytes << vsizeEncode(size);
     
     if (size == 4)
     {
@@ -545,14 +218,15 @@ namespace Yamka
   // VFloat::load
   // 
   uint64
-  VFloat::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VFloat::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
+    Bytes bytes((std::size_t)bytesToRead);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
+    {
+      return 0;
+    }
     
-    Bytes bytes((std::size_t)numBytes);
-    storage.loadAndCalcCrc32(bytes, crc);
-    if (numBytes > 4)
+    if (bytesToRead > 4)
     {
       TSuper::data_ = doubleDecode(bytes);
       TSuper::size_ = 8;
@@ -563,8 +237,7 @@ namespace Yamka
       TSuper::size_ = 4;
     }
     
-    uint64 bytesRead = vsizeSize + numBytes;
-    return bytesRead;
+    return bytesToRead;
   }
   
   
@@ -644,8 +317,7 @@ namespace Yamka
     uint64 size = calcSize();
     
     Bytes bytes;
-    bytes << vsizeEncode(size)
-          << intEncode(TSuper::data_, size);
+    bytes << intEncode(TSuper::data_, size);
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -654,19 +326,16 @@ namespace Yamka
   // VDate::load
   // 
   uint64
-  VDate::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VDate::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
-    
-    Bytes bytes((std::size_t)numBytes);
-    if (storage.loadAndCalcCrc32(bytes, crc))
+    Bytes bytes((std::size_t)bytesToRead);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
     {
-      TSuper::data_ = intDecode(bytes, numBytes);
+      return 0;
     }
     
-    uint64 bytesRead = vsizeSize + numBytes;
-    return bytesRead;
+    TSuper::data_ = intDecode(bytes, bytesToRead);
+    return bytesToRead;
   }
   
   
@@ -706,11 +375,8 @@ namespace Yamka
   IStorage::IReceiptPtr
   VString::save(IStorage & storage, Crc32 * crc) const
   {
-    uint64 size = calcSize();
-    
     Bytes bytes;
-    bytes << vsizeEncode(size)
-          << TSuper::data_;
+    bytes << TSuper::data_;
     
     return storage.saveAndCalcCrc32(bytes, crc);
   }
@@ -719,20 +385,17 @@ namespace Yamka
   // VString::load
   // 
   uint64
-  VString::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VString::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    uint64 numBytes = vsizeDecode(storage, vsizeSize, crc);
-    
-    Bytes bytes((std::size_t)numBytes);
-    if (storage.loadAndCalcCrc32(bytes, crc))
+    Bytes bytes((std::size_t)bytesToRead);
+    if (!storage.loadAndCalcCrc32(bytes, crc))
     {
-      TByteVec chars = TByteVec(bytes);
-      TSuper::data_.assign((const char *)&chars[0], chars.size());
+      return 0;
     }
     
-    uint64 bytesRead = vsizeSize + numBytes;
-    return bytesRead;
+    TByteVec chars = TByteVec(bytes);
+    TSuper::data_.assign((const char *)&chars[0], chars.size());
+    return bytesToRead;
   }
   
   //----------------------------------------------------------------
@@ -765,9 +428,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // VBinary::VBinary
   // 
-  VBinary::VBinary():
-    size_(0),
-    sizeDefault_(0)
+  VBinary::VBinary()
   {}
   
   //----------------------------------------------------------------
@@ -777,15 +438,6 @@ namespace Yamka
   VBinary::set(const Bytes & bytes, IStorage & storage)
   {
     receipt_ = storage.save(bytes);
-    if (receipt_)
-    {
-      size_ = bytes.size();
-    }
-    else
-    {
-      assert(false);
-    }
-    
     return *this;
   }
 
@@ -800,7 +452,7 @@ namespace Yamka
       return false;
     }
     
-    bytes = Bytes(size_);
+    bytes = Bytes((std::size_t)receipt_->numBytes());
     return receipt_->load(bytes);
   }
   
@@ -811,15 +463,7 @@ namespace Yamka
   VBinary::setDefault(const Bytes & bytes, IStorage & storage)
   {
     receiptDefault_ = storage.save(bytes);
-    if (receiptDefault_)
-    {
-      sizeDefault_ = bytes.size();
-    }
-    else
-    {
-      assert(false);
-    }
-    
+    receipt_ = receiptDefault_;
     return *this;
   }
   
@@ -840,35 +484,45 @@ namespace Yamka
   {
     if (receiptDefault_ && receipt_)
     {
-      if (sizeDefault_ != size_)
+      std::size_t sizeDefault = (std::size_t)receiptDefault_->numBytes();
+      std::size_t size = (std::size_t)receipt_->numBytes();
+      
+      if (sizeDefault != size)
       {
         return false;
       }
       
-      Bytes bytesDefault(sizeDefault_);
-      Bytes bytes(size_);
+      if (size == 0)
+      {
+        return true;
+      }
       
+      if (receiptDefault_ == receipt_)
+      {
+        return true;
+      }
+      
+      Bytes bytesDefault(sizeDefault);
       if (receiptDefault_->load(bytesDefault))
       {
         // default payload can't be read:
         return false;
       }
       
+      Bytes bytes(size);
       if (!receipt_->load(bytes))
       {
         // payload can't be read:
         return true;
       }
       
-      // compare the bytes:
+      // compare byte vectors:
       bool same = (bytesDefault.bytes_->front() ==
                    bytes.bytes_->front());
       return same;
     }
     
-    bool same = (receiptDefault_ == receipt_ &&
-                 sizeDefault_ == size_);
-    return same;
+    return !receipt_;
   }
   
   //----------------------------------------------------------------
@@ -877,7 +531,12 @@ namespace Yamka
   uint64
   VBinary::calcSize() const
   {
-    return size_;
+    if (!receipt_)
+    {
+      return 0;
+    }
+    
+    return receipt_->numBytes();
   }
   
   //----------------------------------------------------------------
@@ -892,43 +551,273 @@ namespace Yamka
       return IStorage::IReceiptPtr();
     }
     
-    Bytes data(size_);
+    Bytes data((std::size_t)receipt_->numBytes());
     if (!receipt_->load(data))
     {
       assert(false);
       return IStorage::IReceiptPtr();
     }
     
-    Bytes bytes;
-    bytes << vsizeEncode(size_);
-    bytes += data;
-    
-    return storage.saveAndCalcCrc32(bytes, crc);
+    return storage.saveAndCalcCrc32(data, crc);
   }
   
   //----------------------------------------------------------------
   // VBinary::load
   // 
   uint64
-  VBinary::load(FileStorage & storage, uint64 storageSize, Crc32 * crc)
+  VBinary::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
   {
-    uint64 vsizeSize = 0;
-    size_ = (std::size_t)vsizeDecode(storage, vsizeSize, crc);
+    Bytes bytes((std::size_t)bytesToRead);
     
-    IStorage::IReceiptPtr receipt = storage.receipt();
-    
-    Bytes bytes(size_);
-    if (storage.loadAndCalcCrc32(bytes, crc))
+    receipt_ = storage.loadAndCalcCrc32(bytes, crc);
+    if (!receipt_)
     {
-      receipt_ = receipt;
-    }
-    else
-    {
-      receipt_ = IStorage::IReceiptPtr();
-      size_ = 0;
+      return 0;
     }
     
-    uint64 bytesRead = vsizeSize + size_;
+    return receipt_->numBytes();
+  }
+  
+  
+  //----------------------------------------------------------------
+  // VEltPosition::VEltPosition
+  // 
+  VEltPosition::VEltPosition():
+    origin_(NULL),
+    elt_(NULL),
+    pos_(uintMax[8]),
+    unknownPositionSize_(8)
+  {}
+  
+  //----------------------------------------------------------------
+  // VEltPosition::setUnknownPositionSize
+  // 
+  void
+  VEltPosition::setUnknownPositionSize(uint64 vsize)
+  {
+    if (vsize > 8)
+    {
+      assert(false);
+      vsize = 8;
+    }
+    
+    if (pos_ == uintMax[unknownPositionSize_])
+    {
+      // adjust the unknown position:
+      pos_ = uintMax[vsize];
+    }
+    
+    unknownPositionSize_ = vsize;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::eval
+  // 
+  bool
+  VEltPosition::eval(IElementCrawler &)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::isDefault
+  // 
+  bool
+  VEltPosition::isDefault() const
+  {
+    // no point is saving an unresolved invalid reference:
+    return !elt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::calcSize
+  // 
+  uint64
+  VEltPosition::calcSize() const
+  {
+    if (!elt_)
+    {
+      return unknownPositionSize_;
+    }
+    
+    IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
+    if (!eltReceipt)
+    {
+      return unknownPositionSize_;
+    }
+    
+    if (receipt_)
+    {
+      // must use the same size as before:
+      return receipt_->numBytes();
+    }
+    
+    // NOTE:
+    // 1. The origin position may not be known when this is called,
+    // 2. We can assume that the relative position will not require
+    //    any more bytes than the absolute position would.
+    // 3. We'll use the absolute position to calculate the required
+    //    number of bytes
+    // 
+    uint64 absolutePosition = eltReceipt->position();
+    uint64 bytesNeeded = uintNumBytes(absolutePosition);
+    return bytesNeeded;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::save
+  // 
+  IStorage::IReceiptPtr
+  VEltPosition::save(IStorage & storage, Crc32 * crc) const
+  {
+    uint64 bytesNeeded = calcSize();
+    uint64 eltPosition = uintMax[bytesNeeded];
+    uint64 originPosition = getOriginPosition();
+    
+    if (elt_)
+    {
+      IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
+      if (eltReceipt)
+      {
+        eltPosition = eltReceipt->position();
+      }
+    }
+    
+    // let VUInt do the rest:
+    uint64 relativePosition = eltPosition - originPosition;
+    VUInt data;
+    data.setSize(bytesNeeded);
+    data.set(relativePosition);
+    
+    receipt_ = data.save(storage, crc);
+    return receipt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::load
+  // 
+  uint64
+  VEltPosition::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  {
+    VUInt data;
+    uint64 bytesRead = data.load(storage, bytesToRead, crc);
+    if (bytesRead)
+    {
+      origin_ = NULL;
+      elt_ = NULL;
+      pos_ = data.get();
+    }
+    
     return bytesRead;
   }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::setOrigin
+  // 
+  void
+  VEltPosition::setOrigin(const IElement * origin)
+  {
+    origin_ = origin;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::getOrigin
+  // 
+  const IElement *
+  VEltPosition::getOrigin() const
+  {
+    return origin_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::setElt
+  // 
+  void
+  VEltPosition::setElt(const IElement * elt)
+  {
+    elt_ = elt;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::getElt
+  // 
+  const IElement *
+  VEltPosition::getElt() const
+  {
+    return elt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::position
+  // 
+  uint64
+  VEltPosition::position() const
+  {
+    return pos_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::rewrite
+  // 
+  bool
+  VEltPosition::rewrite() const
+  {
+    if (!receipt_)
+    {
+      return false;
+    }
+    
+    if (!elt_)
+    {
+      return false;
+    }
+    
+    IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
+    if (!eltReceipt)
+    {
+      return false;
+    }
+    
+    uint64 originPosition = getOriginPosition();
+    uint64 eltPosition = eltReceipt->position();
+    uint64 relativePosition = eltPosition - originPosition;
+    
+    uint64 bytesNeeded = uintNumBytes(relativePosition);
+    uint64 bytesUsed = receipt_->numBytes();
+    
+    if (bytesNeeded > bytesUsed)
+    {
+      // must use the same size as before:
+      return false;
+    }
+    
+    Bytes bytes;
+    bytes << uintEncode(relativePosition, bytesUsed);
+    
+    bool saved = receipt_->save(bytes);
+    return saved;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::getOriginPosition
+  // 
+  uint64
+  VEltPosition::getOriginPosition() const
+  {
+    if (!origin_)
+    {
+      return 0;
+    }
+    
+    IStorage::IReceiptPtr originReceipt = origin_->payloadReceipt();
+    if (!originReceipt)
+    {
+      return 0;
+    }
+    
+    // get the payload position:
+    uint64 originPosition = originReceipt->position();
+    return originPosition;
+  }
+  
 }

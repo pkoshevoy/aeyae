@@ -86,7 +86,7 @@ namespace Yamka
     for (const_iter_t i = elts.begin(); i != elts.end(); ++i)
     {
       const elt_t & elt = *i;
-      elt.save(storage, crc);
+      *receipt += elt.save(storage, crc);
     }
     
     return receipt;
@@ -101,16 +101,16 @@ namespace Yamka
   uint64
   eltsLoad(elts_t & elts,
            FileStorage & storage,
-           uint64 storageSize,
+           uint64 bytesToRead,
            Crc32 * crc)
   {
     typedef typename elts_t::value_type elt_t;
     
     uint64 bytesRead = 0;
-    while (storageSize)
+    while (bytesToRead)
     {
       elt_t elt;
-      uint64 eltSize = elt.load(storage, storageSize, crc);
+      uint64 eltSize = elt.load(storage, bytesToRead, crc);
       if (!eltSize)
       {
         break;
@@ -118,7 +118,7 @@ namespace Yamka
       
       elts.push_back(elt);
       bytesRead += eltSize;
-      storageSize -= eltSize;
+      bytesToRead -= eltSize;
     }
     
     return bytesRead;
@@ -159,16 +159,24 @@ namespace Yamka
   // EbmlMaster
   // 
   // A helper base class used by all container elements
-  // to store Void elements and unrecognized alien data
+  // to store Void elements
   // 
   struct EbmlMaster : public IPayload
   {
     TypedefYamkaElt(VBinary, kIdVoid, "Void") TVoid;
     std::deque<TVoid> voids_;
     
-  protected:
-    // attempt to load a void element:
-    uint64 loadVoid(FileStorage & storage, uint64 storageSize, Crc32 * crc);
+    // virtual:
+    uint64 loadVoid(FileStorage & storage, uint64 bytesToRead, Crc32 * crc);
+    
+    // virtual:
+    IStorage::IReceiptPtr saveVoid(IStorage & storage, Crc32 * crc) const;
+    
+    // virtual:
+    bool hasVoid() const;
+    
+    // virtual:
+    uint64 calcVoidSize() const;
   };
   
   //----------------------------------------------------------------

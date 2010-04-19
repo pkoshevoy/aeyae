@@ -165,7 +165,12 @@ namespace Yamka
     
     // virtual:
     bool mustSave() const
-    { return alwaysSave_ || !payload_.isDefault(); }
+    {
+      return
+        alwaysSave_ ||
+        !payload_.isDefault() ||
+        payload_.hasVoid();
+    }
     
     // virtual:
     TSelf & alwaysSave()
@@ -190,7 +195,7 @@ namespace Yamka
       }
       
       // the payload size:
-      uint64 payloadSize = payload_.calcSize();
+      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();
       
       // the EBML ID, payload size descriptor, and payload size:
       uint64 size =
@@ -233,8 +238,11 @@ namespace Yamka
         }
       }
       
+      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();;
+      
       Bytes bytes;
-      bytes << uintEncode(EltId);
+      bytes << uintEncode(EltId)
+            << vsizeEncode(payloadSize);
       
       Crc32 eltCrc32;
       Crc32 * crc32 = computeCrc32_ ? &eltCrc32 : parentCrc32;
@@ -251,10 +259,13 @@ namespace Yamka
         return receiptPayload_;
       }
       
+      *receiptPayload_ += payload_.saveVoid(storage, crc32);
+      *receipt_ += receiptPayload_;
+      
       if (computeCrc32_)
       {
         checksumCrc32_ = eltCrc32.checksum();
-        return receiptCrc32_;
+        *receiptCrc32_ += receipt_;
       }
       
       return receipt_;
@@ -262,7 +273,7 @@ namespace Yamka
     
     // virtual:
     uint64
-    load(FileStorage & storage, uint64 storageSize, Crc32 * crc = NULL)
+    load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc = NULL)
     {
       // save a storage receipt so that element position references
       // can be resolved later:
@@ -339,15 +350,45 @@ namespace Yamka
         checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
       }
       
+      // read payload size:
+      uint64 vsizeSize = 0;
+      uint64 payloadSize = vsizeDecode(storage, vsizeSize, crc);
+      
+      bytesRead += uintNumBytes(eltId) + vsizeSize;
+      
       // save the payload storage receipt so that element position references
       // can be resolved later:
       IStorage::IReceiptPtr payloadReceipt = storage.receipt();
       
-      bytesRead += uintNumBytes(eltId);
-      uint64 payloadSize = payload_.load(storage,
-                                         storageSize - bytesRead,
-                                         crc);
-      if (payloadSize)
+      // container elements may be present in any order, therefore
+      // not every load will succeed -- keep trying until all
+      // load attempts fail:
+      uint64 payloadBytesToRead = payloadSize;
+      uint64 payloadBytesReadTotal = 0;
+      while (payloadBytesToRead)
+      {
+        uint64 prevPayloadBytesToRead = payloadBytesToRead;
+        
+        // try to load some part of the payload:
+        payloadBytesToRead -= payload_.load(storage,
+                                            payloadBytesToRead,
+                                            crc);
+        
+        // consume any void elements that may exist:
+        payloadBytesToRead -= payload_.loadVoid(storage,
+                                                payloadBytesToRead,
+                                                crc);
+        
+        uint64 payloadBytesRead = prevPayloadBytesToRead - payloadBytesToRead;
+        payloadBytesReadTotal += payloadBytesRead;
+        
+        if (payloadBytesRead == 0)
+        {
+          break;
+        }
+      }
+      
+      if (payloadBytesReadTotal)
       {
         receiptPayload_ = payloadReceipt;
       }

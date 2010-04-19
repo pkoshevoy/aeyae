@@ -37,7 +37,13 @@ namespace Yamka
   FileStorage::save(const Bytes & data)
   {
     IStorage::IReceiptPtr receipt(new Receipt(file_));
-    return file_.save(data) ? receipt : IStorage::IReceiptPtr();
+    if (!file_.save(data))
+    {
+      return IStorage::IReceiptPtr();
+    }
+    
+    receipt->add(data.size());
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -47,7 +53,13 @@ namespace Yamka
   FileStorage::load(Bytes & data)
   {
     IStorage::IReceiptPtr receipt(new Receipt(file_));
-    return file_.load(data) ? receipt : IStorage::IReceiptPtr();
+    if (!file_.load(data))
+    {
+      return IStorage::IReceiptPtr();
+    }
+    
+    receipt->add(data.size());
+    return receipt;
   }
   
   //----------------------------------------------------------------
@@ -55,7 +67,8 @@ namespace Yamka
   // 
   FileStorage::Receipt::Receipt(const File & file):
     file_(file),
-    addr_(file.absolutePosition())
+    addr_(file.absolutePosition()),
+    numBytes_(0)
   {}
   
   //----------------------------------------------------------------
@@ -68,6 +81,25 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // FileStorage::Receipt::numBytes
+  // 
+  uint64
+  FileStorage::Receipt::numBytes() const
+  {
+    return numBytes_;
+  }
+  
+  //----------------------------------------------------------------
+  // FileStorage::Receipt::add
+  // 
+  FileStorage::Receipt &
+  FileStorage::Receipt::add(uint64 numBytes)
+  {
+    numBytes_ += numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::Receipt::save
   // 
   bool
@@ -76,7 +108,11 @@ namespace Yamka
     try
     {
       File::Seek temp(file_, addr_);
-      return file_.save(data);
+      if (file_.save(data))
+      {
+        numBytes_ = std::max<uint64>(numBytes_, data.size());
+        return true;
+      }
     }
     catch (...)
     {}
@@ -93,7 +129,11 @@ namespace Yamka
     try
     {
       File::Seek temp(file_, addr_);
-      return file_.load(data);
+      if (file_.load(data))
+      {
+        numBytes_ = std::max<uint64>(numBytes_, data.size());
+        return true;
+      }
     }
     catch (...)
     {}

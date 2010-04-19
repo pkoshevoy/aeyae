@@ -32,6 +32,14 @@ namespace Yamka
   {
     virtual ~IStorage() {}
     
+    // forward declaration:
+    struct IReceipt;
+    
+    //----------------------------------------------------------------
+    // IReceiptPtr
+    // 
+    typedef boost::shared_ptr<IReceipt> IReceiptPtr;
+    
     //----------------------------------------------------------------
     // IReceipt
     // 
@@ -41,6 +49,12 @@ namespace Yamka
       
       // NOTE: position interpretation is implementation specific:
       virtual uint64 position() const = 0;
+      
+      // return number of stored bytes for this receipt:
+      virtual uint64 numBytes() const = 0;
+      
+      // increase number of stored bytes for this receipt:
+      virtual IReceipt & add(uint64 numBytes) = 0;
       
       // return false if load/save fails:
       virtual bool save(const Bytes & data) = 0;
@@ -54,12 +68,11 @@ namespace Yamka
       
       bool loadAndCalcCrc32(Bytes & data,
                             Crc32 * computeCrc32 = NULL);
+      
+      // increase number of stored bytes for this receipt
+      // by adding number of stored bytes in a given receipt:
+      IReceipt & operator += (const IReceiptPtr & receipt);
     };
-    
-    //----------------------------------------------------------------
-    // IReceiptPtr
-    // 
-    typedef boost::shared_ptr<IReceipt> IReceiptPtr;
     
     // get a receipt for the current storage state:
     virtual IReceiptPtr receipt() const = 0;

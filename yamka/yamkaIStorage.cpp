@@ -54,6 +54,20 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // IStorage::IReceipt::operator
+  // 
+  IStorage::IReceipt &
+  IStorage::IReceipt::operator += (const IReceiptPtr & receipt)
+  {
+    if (!receipt)
+    {
+      return *this;
+    }
+    
+    return add(receipt->numBytes());
+  }
+  
+  //----------------------------------------------------------------
   // IStorage::saveAndCalcCrc32
   // 
   IStorage::IReceiptPtr
