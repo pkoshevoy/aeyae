@@ -2776,10 +2776,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // SimpleBlock::relativeTimecode
+  // SimpleBlock::getRelativeTimecode
   // 
   short int
-  SimpleBlock::relativeTimecode() const
+  SimpleBlock::getRelativeTimecode() const
   {
     return timeCode_;
   }
@@ -2903,10 +2903,10 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // SimpleBlock::numberOfFrames
+  // SimpleBlock::getNumberOfFrames
   // 
   std::size_t
-  SimpleBlock::numberOfFrames() const
+  SimpleBlock::getNumberOfFrames() const
   {
     return frames_.size();
   }
@@ -2987,14 +2987,13 @@ namespace Yamka
     
     // unpack the frame(s):
     frames_.resize(lastFrameIndex + 1);
-    std::size_t leadingFramesSize = 0;
+    uint64 leadingFramesSize = 0;
     
-    for (std::size_t i = 0; i < lastFrameIndex; i++)
+    if (lacing == kLacingXiph)
     {
-      if (lacing == kLacingXiph)
+      for (std::size_t i = 0; i < lastFrameIndex; i++)
       {
-        // decode the frame size:
-        std::size_t frameSize = 0;
+        uint64 frameSize = 0;
         while (true)
         {
           if (bytesRead > blockSize)
@@ -3002,7 +3001,7 @@ namespace Yamka
             return false;
           }
           
-          std::size_t n = blockData[bytesRead++];
+          uint64 n = blockData[bytesRead++];
           frameSize += n;
           
           if (n < 0xFF)
@@ -3011,25 +3010,110 @@ namespace Yamka
           }
         }
         
-        frames_[i] = Bytes(frameSize);
+        frames_[i] = Bytes((std::size_t)frameSize);
         leadingFramesSize += frameSize;
       }
-      else if (lacing == kLacingEBML)
+    }
+    else if (lacing == kLacingEBML)
+    {
+      uint64 vsizeSize = 0;
+      uint64 frameSize = vsizeDecode(&blockData[bytesRead],
+                                      vsizeSize);
+      bytesRead += vsizeSize;
+      frames_[0] = Bytes((std::size_t)frameSize);
+      leadingFramesSize += frameSize;
+      
+      for (std::size_t i = 1; i < lastFrameIndex; i++)
       {
+        int64 frameSizeDiff = vsizeSignedDecode(&blockData[bytesRead],
+                                                vsizeSize);
+        bytesRead += vsizeSize;
+        frameSize += frameSizeDiff;
+        frames_[i] = Bytes((std::size_t)frameSize);
+        leadingFramesSize += frameSize;
       }
-      else if (lacing == kLacingFixedSize)
+    }
+    else if (lacing == kLacingFixedSize)
+    {
+      uint64 numFrames = lastFrameIndex + 1;
+      uint64 frameSize = (blockSize - bytesRead) / numFrames;
+      
+      for (std::size_t i = 0; i < lastFrameIndex; i++)
       {
+        frames_[i] = Bytes((std::size_t)frameSize);
+        leadingFramesSize += frameSize;
       }
     }
     
     // last frame:
-    std::size_t lastFrameSize = std::size_t(blockSize - bytesRead - leadingFramesSize);
-    frames_[lastFrameIndex] = Bytes(lastFrameSize);
+    uint64 lastFrameSize = (blockSize -
+                            bytesRead -
+                            leadingFramesSize);
+    frames_[lastFrameIndex] = Bytes((std::size_t)lastFrameSize);
     
+    // load the frames:
     for (std::size_t i = 0; i <= lastFrameIndex; i++)
-    {}
+    {
+      std::size_t numBytes = frames_[i].size();
+      frames_[i].deepCopy(&blockData[bytesRead], numBytes);
+      bytesRead += numBytes;
+    }
+    
+    // sanity check:
+    assert(bytesRead == blockSize);
     
     return true;
+  }
+  
+  //----------------------------------------------------------------
+  // operator <<
+  // 
+  std::ostream &
+  operator << (std::ostream & os, const SimpleBlock & sb)
+  {
+    os << "track " << sb.getTrackNumber()
+       << ", ltc " << sb.getRelativeTimecode();
+    
+    if (sb.isKeyframe())
+    {
+      os << ", keyframe";
+    }
+    
+    if (sb.isInvisible())
+    {
+      os << ", invisible";
+    }
+    
+    if (sb.isDiscardable())
+    {
+      os << ", discardable";
+    }
+    
+    std::size_t numFrames = sb.getNumberOfFrames();
+    os << ", " << numFrames << " frame(s)";
+    
+    SimpleBlock::Lacing lacing = sb.getLacing();
+    if (lacing == SimpleBlock::kLacingXiph)
+    {
+      os << ", Xiph lacing";
+    }
+    else if (lacing == SimpleBlock::kLacingFixedSize)
+    {
+      os << ", fixed size lacing";
+    }
+    else if (lacing == SimpleBlock::kLacingEBML)
+    {
+      os << ", EBML lacing";
+    }
+    
+    for (std::size_t j = 0; j < numFrames; j++)
+    {
+      const Bytes & frame = sb.getFrame(j);
+      os << ", f[" << j << "] "
+         << frame.size() << " bytes";
+    }
+    
+    return os;
   }
   
   

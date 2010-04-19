@@ -733,20 +733,6 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
-  // Block
-  // 
-  struct Block : public VBinary
-  {
-  };
-  
-  //----------------------------------------------------------------
-  // BlockVirtual
-  // 
-  struct BlockVirtual : public VBinary
-  {
-  };
-  
-  //----------------------------------------------------------------
   // BlockMore
   // 
   struct BlockMore : public EbmlMaster
@@ -781,10 +767,10 @@ namespace Yamka
     TypedefYamkaElt(VUInt, 0x9B, "BlockDuration") TDuration;
     TDuration duration_;
     
-    TypedefYamkaElt(Block, 0xA1, "Block") TBlock;
+    TypedefYamkaElt(VBinary, 0xA1, "Block") TBlock;
     TBlock block_;
     
-    TypedefYamkaElt(BlockVirtual, 0xA2, "BlockVirtual") TBlockVirtual;
+    TypedefYamkaElt(VBinary, 0xA2, "BlockVirtual") TBlockVirtual;
     std::deque<TBlockVirtual> blockVirtual_;
     
     TypedefYamkaElt(BlockAdditions, 0x75A1, "BlockAdditions") TAdditions;
@@ -818,7 +804,7 @@ namespace Yamka
     uint64 getTrackNumber() const;
     void setTrackNumber(uint64 trackNumber);
     
-    short int relativeTimecode() const;
+    short int getRelativeTimecode() const;
     void setRelativeTimecode(short int timeCode);
     
     bool isKeyframe() const;
@@ -841,7 +827,7 @@ namespace Yamka
     Lacing getLacing() const;
     void setLacing(Lacing lacing);
     
-    std::size_t numberOfFrames() const;
+    std::size_t getNumberOfFrames() const;
     const Bytes & getFrame(std::size_t frameNumber) const;
     void addFrame(const Bytes & frame);
     
@@ -864,6 +850,15 @@ namespace Yamka
     unsigned char flags_;
     std::deque<Bytes> frames_;
   };
+  
+  //----------------------------------------------------------------
+  // operator <<
+  // 
+  // helper function for debugging:
+  // 
+  extern std::ostream &
+  operator << (std::ostream & os, const SimpleBlock & sb);
+  
   
   //----------------------------------------------------------------
   // Cluster
