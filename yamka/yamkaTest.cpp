@@ -149,6 +149,56 @@ main(int argc, char ** argv)
               << std::dec
               << std::endl;
     
+    // dump all simple blocks in the first cluster:
+    typedef std::deque<Cluster::TSimpleBlock>::const_iterator TSimpleBlockIter;
+    for (TSimpleBlockIter i = doc.
+           segments_.front().payload_.
+           clusters_.front().payload_.
+           simpleBlocks_.begin();
+         i != doc.
+           segments_.front().payload_.
+           clusters_.front().payload_.
+           simpleBlocks_.end();
+         ++i)
+    {
+      const Cluster::TSimpleBlock & sbElt = *i;
+      
+      Bytes sbBytes;
+      if (sbElt.payload_.get(sbBytes))
+      {
+        SimpleBlock sb;
+        if (sb.unpack(sbBytes))
+        {
+          std::cout << sb << std::endl;
+        }
+      }
+    }
+    
+    // dump all block groups in the first cluster:
+    typedef std::deque<Cluster::TBlockGroup>::const_iterator TBlockGroupIter;
+    for (TBlockGroupIter i = doc.
+           segments_.front().payload_.
+           clusters_.front().payload_.
+           blockGroups_.begin();
+         i != doc.
+           segments_.front().payload_.
+           clusters_.front().payload_.
+           blockGroups_.end();
+         ++i)
+    {
+      const Cluster::TBlockGroup & bgElt = *i;
+      
+      Bytes sbBytes;
+      if (bgElt.payload_.block_.payload_.get(sbBytes))
+      {
+        SimpleBlock sb;
+        if (sb.unpack(sbBytes))
+        {
+          std::cout << sb << std::endl;
+        }
+      }
+    }
+    
     FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadWrite);
     if (!mkvSrcOut.file_.isOpen())
     {
