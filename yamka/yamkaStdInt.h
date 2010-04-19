@@ -63,6 +63,12 @@ namespace Yamka
   vsizeDecode(const TByteVec & v, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  extern uint64
+  vsizeDecode(const TByte * v, uint64 & vsizeSize);
+  
+  //----------------------------------------------------------------
   // vsizeEncode
   // 
   extern TByteVec
@@ -85,6 +91,12 @@ namespace Yamka
   // 
   extern int64
   vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize);
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  extern int64
+  vsizeSignedDecode(const TByte * bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeSignedEncode

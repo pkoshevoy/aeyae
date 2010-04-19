@@ -198,12 +198,22 @@ namespace Yamka
     uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
   }
-
+  
   //----------------------------------------------------------------
   // vsizeDecode
   // 
   uint64
   vsizeDecode(const TByteVec & bytes, uint64 & vsizeSize)
+  {
+    uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
+    return i;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  uint64
+  vsizeDecode(const TByte * bytes, uint64 & vsizeSize)
   {
     uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
@@ -275,7 +285,7 @@ namespace Yamka
     int64 i = u - vsizeHalfRange[vsizeSize];
     return i;
   }
-
+  
   //----------------------------------------------------------------
   // vsizeSignedDecode
   // 
@@ -285,12 +295,22 @@ namespace Yamka
     int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
     return i;
   }
-
+  
   //----------------------------------------------------------------
   // vsizeSignedDecode
   // 
   int64
   vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize)
+  {
+    int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
+    return i;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  int64
+  vsizeSignedDecode(const TByte * bytes, uint64 & vsizeSize)
   {
     int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
     return i;
