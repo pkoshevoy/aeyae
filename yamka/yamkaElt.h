@@ -431,7 +431,6 @@ namespace Yamka
       }
 #endif
       
-      assert(bytesRead == bytesToRead);
       return bytesRead;
     }
     
