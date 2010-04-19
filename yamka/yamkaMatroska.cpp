@@ -2935,6 +2935,51 @@ namespace Yamka
   void
   SimpleBlock::pack(Bytes & simpleBlock) const
   {
+    simpleBlock << vsizeEncode(trackNumber_)
+                << intEncode(timeCode_, 2)
+                << flags_;
+    
+    std::size_t lastFrameIndex = getNumberOfFrames() - 1;
+    Lacing lacing = getLacing();
+    if (lacing != kLacingNone)
+    {
+      simpleBlock << TByte(lastFrameIndex);
+    }
+    
+    if (lacing == kLacingXiph)
+    {
+      for (std::size_t i = 0; i < lastFrameIndex; i++)
+      {
+        uint64 frameSize = frames_[i].size();
+        while (true)
+        {
+          TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
+          frameSize -= sz;
+          
+          simpleBlock << TByte(sz);
+          if (sz < 0xFF)
+          {
+            break;
+          }
+        }
+      }
+    }
+    else if (lacing == kLacingEBML)
+    {
+      uint64 frameSize = frames_[0].size();
+      simpleBlock << vsizeEncode(frameSize);
+      
+      for (std::size_t i = 1; i < lastFrameIndex; i++)
+      {
+        int64 frameSizeDiff = frames_[i].size() - frames_[i - 1].size();
+        simpleBlock << vsizeSignedEncode(frameSizeDiff);
+      }
+    }
+    
+    for (std::size_t i = 0; i <= lastFrameIndex; i++)
+    {
+      simpleBlock << Bytes(frames_[i]);
+    }
   }
   
   //----------------------------------------------------------------
