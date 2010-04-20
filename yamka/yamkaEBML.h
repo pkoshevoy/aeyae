@@ -25,7 +25,8 @@ namespace Yamka
   //----------------------------------------------------------------
   // eltsEval
   // 
-  // A helper function for calculating payload size of a set of elements
+  // A helper function for evaluating an element tree crawler
+  // over a set of elements
   // 
   template <typename elts_t>
   bool
@@ -127,7 +128,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // eltsFind
   // 
-  // Find an element with storage receipt positiong
+  // Find an element with storage receipt position
   // matching a given position:
   // 
   template <typename elts_t>
@@ -158,8 +159,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // EbmlMaster
   // 
-  // A helper base class used by all container elements
-  // to store Void elements
+  // A base class for all container elements
   // 
   struct EbmlMaster : public IPayload
   {
