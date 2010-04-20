@@ -2930,10 +2930,10 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // SimpleBlock::pack
+  // SimpleBlock::exportData
   // 
   void
-  SimpleBlock::pack(Bytes & simpleBlock) const
+  SimpleBlock::exportData(Bytes & simpleBlock) const
   {
     simpleBlock << vsizeEncode(trackNumber_)
                 << intEncode(timeCode_, 2)
@@ -2956,7 +2956,7 @@ namespace Yamka
           TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
           frameSize -= sz;
           
-          simpleBlock << TByte(sz);
+          simpleBlock << sz;
           if (sz < 0xFF)
           {
             break;
@@ -2983,10 +2983,10 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // SimpleBlock::unpack
+  // SimpleBlock::importData
   // 
   bool
-  SimpleBlock::unpack(const Bytes & simpleBlock)
+  SimpleBlock::importData(const Bytes & simpleBlock)
   {
     const uint64 blockSize = simpleBlock.size();
     

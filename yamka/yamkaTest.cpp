@@ -22,23 +22,23 @@ using namespace Yamka;
 
 
 //----------------------------------------------------------------
-// testSimpleBlockPacking
+// testSimpleBlockSerialization
 // 
 static void
-testSimpleBlockPacking(const Bytes & sbBytes)
+testSimpleBlockSerialization(const Bytes & blockData)
 {
   SimpleBlock sb;
-  assert(sb.unpack(sbBytes));
+  assert(sb.importData(blockData));
   
-  Bytes sbPacked;
-  sb.pack(sbPacked);
+  Bytes exportedData;
+  sb.exportData(exportedData);
   
   Crc32 srcCrc;
-  srcCrc.compute(sbBytes);
+  srcCrc.compute(blockData);
   unsigned int srcChecksum = srcCrc.checksum();
   
   Crc32 outCrc;
-  outCrc.compute(sbPacked);
+  outCrc.compute(exportedData);
   unsigned int outChecksum = outCrc.checksum();
   
   assert(srcChecksum == outChecksum);
@@ -192,16 +192,16 @@ main(int argc, char ** argv)
     {
       const Cluster::TSimpleBlock & sbElt = *i;
       
-      Bytes sbBytes;
-      if (sbElt.payload_.get(sbBytes))
+      Bytes importData;
+      if (sbElt.payload_.get(importData))
       {
         SimpleBlock sb;
-        if (sb.unpack(sbBytes))
+        if (sb.importData(importData))
         {
           std::cout << sb << std::endl;
 
           // test packing:
-          testSimpleBlockPacking(sbBytes);
+          testSimpleBlockSerialization(importData);
         }
       }
     }
@@ -220,16 +220,16 @@ main(int argc, char ** argv)
     {
       const Cluster::TBlockGroup & bgElt = *i;
       
-      Bytes sbBytes;
-      if (bgElt.payload_.block_.payload_.get(sbBytes))
+      Bytes blockData;
+      if (bgElt.payload_.block_.payload_.get(blockData))
       {
         SimpleBlock sb;
-        if (sb.unpack(sbBytes))
+        if (sb.importData(blockData))
         {
           std::cout << sb << std::endl;
-
+          
           // test packing:
-          testSimpleBlockPacking(sbBytes);
+          testSimpleBlockSerialization(blockData);
         }
       }
     }

@@ -831,8 +831,8 @@ namespace Yamka
     const Bytes & getFrame(std::size_t frameNumber) const;
     void addFrame(const Bytes & frame);
     
-    void pack(Bytes & simpleBlock) const;
-    bool unpack(const Bytes & simpleBlock);
+    void exportData(Bytes & simpleBlock) const;
+    bool importData(const Bytes & simpleBlock);
     
   protected:
     enum Flags
