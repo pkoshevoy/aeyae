@@ -225,12 +225,12 @@ namespace Yamka
   TByteVec
   vsizeEncode(uint64 vsize, uint64 numBytes)
   {
-    TByteVec v(numBytes);
+    TByteVec v((std::size_t)numBytes);
     
     for (unsigned int j = 0; j < numBytes; j++)
     {
       unsigned char n = 0xFF & (vsize >> (j * 8));
-      v[numBytes - j - 1] = n;
+      v[(std::size_t)(numBytes - j - 1)] = n;
     }
     v[0] |= (1 << (8 - numBytes));
     
