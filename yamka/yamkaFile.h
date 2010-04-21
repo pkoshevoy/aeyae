@@ -113,6 +113,9 @@ namespace Yamka
     // helper to get current file size:
     virtual TOff size();
     
+    // truncate or extend file to a given size:
+    virtual bool setSize(File::TOff size);
+    
     // write out at current file position a specified number of bytes
     // from the source buffer:
     virtual bool write(const void * source, std::size_t numBytes);

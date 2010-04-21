@@ -104,7 +104,8 @@ main(int argc, char ** argv)
           << uintEncode(1);
     
     Crc32 crc32;
-    FileStorage::IReceiptPtr receipt = fs.saveAndCalcCrc32(bytes, &crc32);
+    fs.file_.setSize(0);
+    IStorage::IReceiptPtr receipt = fs.saveAndCalcCrc32(bytes, &crc32);
     if (receipt)
     {
       std::cout << "stored " << bytes.size()
@@ -136,7 +137,9 @@ main(int argc, char ** argv)
     doc.head_.payload_.docType_.payload_.set(std::string("yamka"));
     doc.head_.payload_.docTypeVersion_.payload_.set(1);
     doc.head_.payload_.docTypeReadVersion_.payload_.set(1);
-    FileStorage::IReceiptPtr receipt = doc.save(fs2, &crc32);
+    
+    fs2.file_.setSize(0);
+    IStorage::IReceiptPtr receipt = doc.save(fs2, &crc32);
     
     if (receipt)
     {
@@ -249,11 +252,12 @@ main(int argc, char ** argv)
     {
       uint64 mkvSrcOutSize = mkvSrcOut.file_.size();
       std::cout << "opened (rw) " << mkvSrcOut.file_.filename()
-              << ", file size: " << mkvSrcOutSize
+                << ", file size: " << mkvSrcOutSize
                 << std::endl;
       
       Crc32 crc32out;
-      FileStorage::IReceiptPtr receipt = doc.save(mkvSrcOut, &crc32out);
+      mkvSrcOut.file_.setSize(0);
+      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOut, &crc32out);
       
       if (receipt)
       {
@@ -309,11 +313,12 @@ main(int argc, char ** argv)
     {
       uint64 mkvSrcOutOutSize = mkvSrcOutOut.file_.size();
       std::cout << "opened (rw) " << mkvSrcOutOut.file_.filename()
-              << ", file size: " << mkvSrcOutOutSize
+                << ", file size: " << mkvSrcOutOutSize
                 << std::endl;
       
       Crc32 crc32out;
-      FileStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut, &crc32out);
+      mkvSrcOutOut.file_.setSize(0);
+      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut, &crc32out);
       
       if (receipt)
       {

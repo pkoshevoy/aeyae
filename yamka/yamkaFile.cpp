@@ -10,6 +10,7 @@
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
+#include <io.h>
 #endif
 
 // yamka includes:
@@ -30,6 +31,8 @@
 #define off_t __int64
 #define fseeko _fseeki64
 #define ftello _ftelli64
+#define ftruncate _chsize_s
+#define fileno _fileno
 
 //----------------------------------------------------------------
 // utf8_to_utf16
@@ -293,6 +296,30 @@ namespace Yamka
     
     return std::numeric_limits<File::TOff>::max();
   }
+  
+  //----------------------------------------------------------------
+  // File::setSize
+  // 
+  bool
+  File::setSize(File::TOff size)
+  {
+    TOff pos = absolutePosition();
+    int fd = fileno(private_->shared_->file_);
+    int error = ftruncate(fd, size);
+    
+    if (error)
+    {
+      return false;
+    }
+    
+    if (pos > size)
+    {
+      seek(size);
+    }
+    
+    return true;
+  }
+    
   
   //----------------------------------------------------------------
   // File::write
