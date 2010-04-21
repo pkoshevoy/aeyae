@@ -178,58 +178,61 @@ main(int argc, char ** argv)
               << std::dec
               << std::endl;
     
-    // dump all simple blocks in the first cluster:
-    typedef std::deque<Cluster::TSimpleBlock>::const_iterator TSimpleBlockIter;
-    for (TSimpleBlockIter i = doc.
-           segments_.front().payload_.
-           clusters_.front().payload_.
-           simpleBlocks_.begin();
-         i != doc.
-           segments_.front().payload_.
-           clusters_.front().payload_.
-           simpleBlocks_.end();
-         ++i)
+    // for each segment:
+    typedef std::deque<MatroskaDoc::TSegment>::const_iterator TSegIter;
+    for (TSegIter i = doc.segments_.begin(); i != doc.segments_.end(); ++i)
     {
-      const Cluster::TSimpleBlock & sbElt = *i;
+      const MatroskaDoc::TSegment & segment = *i;
+      std::cout << std::endl;
       
-      Bytes importData;
-      if (sbElt.payload_.get(importData))
+      // for each cluster:
+      typedef std::deque<Segment::TCluster>::const_iterator TClusterIter;
+      for (TClusterIter j = segment.payload_.clusters_.begin();
+           j != segment.payload_.clusters_.end(); ++j)
       {
-        SimpleBlock sb;
-        if (sb.importData(importData))
+        const Segment::TCluster & cluster = *j;
+        std::cout << std::endl;
+        
+        // for each simple block:
+        typedef std::deque<Cluster::TSimpleBlock>::const_iterator TSimpleBlockIter;
+        for (TSimpleBlockIter k = cluster.payload_.simpleBlocks_.begin();
+             k != cluster.payload_.simpleBlocks_.end(); ++k)
         {
-          std::cout << sb << std::endl;
-
-          // test packing:
-          testSimpleBlockSerialization(importData);
-        }
-      }
-    }
-    
-    // dump all block groups in the first cluster:
-    typedef std::deque<Cluster::TBlockGroup>::const_iterator TBlockGroupIter;
-    for (TBlockGroupIter i = doc.
-           segments_.front().payload_.
-           clusters_.front().payload_.
-           blockGroups_.begin();
-         i != doc.
-           segments_.front().payload_.
-           clusters_.front().payload_.
-           blockGroups_.end();
-         ++i)
-    {
-      const Cluster::TBlockGroup & bgElt = *i;
-      
-      Bytes blockData;
-      if (bgElt.payload_.block_.payload_.get(blockData))
-      {
-        SimpleBlock sb;
-        if (sb.importData(blockData))
-        {
-          std::cout << sb << std::endl;
+          const Cluster::TSimpleBlock & elt = *k;
           
-          // test packing:
-          testSimpleBlockSerialization(blockData);
+          Bytes bin;
+          if (elt.payload_.get(bin))
+          {
+            SimpleBlock sb;
+            if (sb.importData(bin))
+            {
+              std::cout << sb << std::endl;
+              
+              // test packing:
+              testSimpleBlockSerialization(bin);
+            }
+          }
+        }
+        
+        // for each block group:
+        typedef std::deque<Cluster::TBlockGroup>::const_iterator TBlockGroupIter;
+        for (TBlockGroupIter k = cluster.payload_.blockGroups_.begin();
+             k != cluster.payload_.blockGroups_.end(); ++k)
+        {
+          const Cluster::TBlockGroup & elt = *k;
+          
+          Bytes bin;
+          if (elt.payload_.block_.payload_.get(bin))
+          {
+            SimpleBlock sb;
+            if (sb.importData(bin))
+            {
+              std::cout << sb << std::endl;
+              
+              // test packing:
+              testSimpleBlockSerialization(bin);
+            }
+          }
         }
       }
     }
