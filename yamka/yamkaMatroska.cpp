@@ -2971,7 +2971,8 @@ namespace Yamka
       
       for (std::size_t i = 1; i < lastFrameIndex; i++)
       {
-        int64 frameSizeDiff = frames_[i].size() - frames_[i - 1].size();
+        int64 frameSizeDiff = (int64(frames_[i].size()) - 
+                               int64(frames_[i - 1].size()));
         simpleBlock << vsizeSignedEncode(frameSizeDiff);
       }
     }
