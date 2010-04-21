@@ -77,8 +77,10 @@ namespace Yamka
     // get a receipt for the current storage state:
     virtual IReceiptPtr receipt() const = 0;
     
-    // return NULL receipt if load/save fails:
+    // NOTE: IStorage::save always appends at the end of the file:
     virtual IReceiptPtr save(const Bytes & data) = 0;
+    
+    // NOTE: IStorage::load always reads from current storage position:
     virtual IReceiptPtr load(Bytes & data) = 0;
     
     // helpers:
