@@ -341,7 +341,7 @@ namespace Yamka
         return 0;
       }
       
-#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+#if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
       Indent::More indentMore;
       {
         File::Seek restore(storage.file_);
@@ -421,7 +421,7 @@ namespace Yamka
         uint64 alienDataSize = payloadSize - payloadBytesReadTotal;
         
 #if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-        std::cout << indent() << "WARNING: " << name()
+        std::cerr << indent() << "WARNING: " << name()
                   << " 0x" << uintEncode(kId)
                   << " -- skipping " << alienDataSize
                   << " bytes of unrecognized alien data @ 0x"

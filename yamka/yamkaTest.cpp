@@ -24,11 +24,16 @@ using namespace Yamka;
 //----------------------------------------------------------------
 // testSimpleBlockSerialization
 // 
-static void
+static bool
 testSimpleBlockSerialization(const Bytes & blockData)
 {
   SimpleBlock sb;
-  assert(sb.importData(blockData));
+  if (!sb.importData(blockData))
+  {
+    std::cerr << "ERROR: bad block: \n"
+              << blockData << std::endl;
+    return false;
+  }
   
   Bytes exportedData;
   sb.exportData(exportedData);
@@ -41,7 +46,13 @@ testSimpleBlockSerialization(const Bytes & blockData)
   outCrc.compute(exportedData);
   unsigned int outChecksum = outCrc.checksum();
   
-  assert(srcChecksum == outChecksum);
+  bool sameChecksum = srcChecksum == outChecksum;
+  if (!sameChecksum)
+  {
+    std::cerr << "ERROR: couldn't export imported block!" << std::endl;
+  }
+  
+  return sameChecksum;
 }
 
 
@@ -180,7 +191,7 @@ main(int argc, char ** argv)
               << crc32.checksum()
               << std::dec
               << std::endl;
-    
+#if 0
     // for each segment:
     typedef std::deque<MatroskaDoc::TSegment>::const_iterator TSegIter;
     for (TSegIter i = doc.segments_.begin(); i != doc.segments_.end(); ++i)
@@ -239,7 +250,8 @@ main(int argc, char ** argv)
         }
       }
     }
-    
+#endif
+
     FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadWrite);
     if (!mkvSrcOut.file_.isOpen())
     {
@@ -271,7 +283,8 @@ main(int argc, char ** argv)
       }
     }
   }
-  
+
+#if 0
   FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadOnly);
   if (!mkvSrcOut.file_.isOpen())
   {
@@ -332,6 +345,7 @@ main(int argc, char ** argv)
       }
     }
   }
+#endif
   
   return 0;
 }
