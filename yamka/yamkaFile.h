@@ -11,6 +11,7 @@
 
 // yamka includes:
 #include <yamkaBytes.h>
+#include <yamkaCrc32.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -114,7 +115,7 @@ namespace Yamka
     virtual TOff size();
     
     // truncate or extend file to a given size:
-    virtual bool setSize(File::TOff size);
+    virtual bool setSize(TOff size);
     
     // write out at current file position a specified number of bytes
     // from the source buffer:
@@ -130,6 +131,11 @@ namespace Yamka
     // helpers for storing non-contiguous byte sequences:
     virtual bool save(const Bytes & data);
     virtual bool load(Bytes & data);
+    
+    // calculate CRC-32 checksum over a region of this file:
+    virtual bool calcCrc32(TOff seekToPosition,
+                           TOff numBytesToRead,
+                           Crc32 & computeCrc32);
     
   private:
     // private implementation details:

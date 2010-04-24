@@ -13,7 +13,6 @@
 #include <yamkaFileStorage.h>
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
-#include <yamkaCrc32.h>
 #include <yamkaBytes.h>
 #include <yamkaElt.h>
 
@@ -50,19 +49,19 @@ namespace Yamka
     
     // save the payload and return storage receipt:
     virtual IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc32 = NULL) const = 0;
+    save(IStorage & storage) const = 0;
     
     // attempt to load the payload, return number of bytes read successfully:
     virtual uint64
-    load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc32 = NULL) = 0;
+    load(FileStorage & storage, uint64 bytesToRead) = 0;
     
     // attempt to load a void element:
-    virtual uint64 loadVoid(FileStorage &, uint64 /* bytesToRead */, Crc32 *)
+    virtual uint64 loadVoid(FileStorage &, uint64 /* bytesToRead */)
     { return 0; }
     
     // save void element(s), if there are any:
     virtual IStorage::IReceiptPtr
-    saveVoid(IStorage & storage, Crc32 * crc) const
+    saveVoid(IStorage & storage) const
     { return storage.receipt(); }
     
     // return true if this element holds a void element:
@@ -81,14 +80,12 @@ namespace Yamka
   // A helper macro used to implement the payload interface API
   // 
 # define ImplementsYamkaPayloadAPI()                                    \
-  bool eval(IElementCrawler & crawler);                                 \
+  bool eval(Yamka::IElementCrawler & crawler);                          \
   bool isDefault() const;                                               \
-  uint64 calcSize() const;                                              \
-  IStorage::IReceiptPtr save(IStorage & storage,                        \
-                             Crc32 * computeCrc32 = NULL) const;        \
-  uint64 load(FileStorage & storage,                                    \
-              uint64 bytesToRead,                                       \
-              Crc32 * computeCrc32 = NULL)
+  Yamka::uint64 calcSize() const;                                       \
+  Yamka::IStorage::IReceiptPtr save(Yamka::IStorage & storage) const;   \
+  Yamka::uint64 load(Yamka::FileStorage & storage,                      \
+                     Yamka::uint64 bytesToRead)
   
   
   //----------------------------------------------------------------
@@ -278,14 +275,14 @@ namespace Yamka
     
     // save the payload and return storage receipt:
     IStorage::IReceiptPtr
-    save(IStorage & storage, Crc32 * crc = NULL) const
+    save(IStorage & storage) const
     {
-      return storage.saveAndCalcCrc32(data_, crc);
+      return storage.save(data_);
     }
     
     // attempt to load the payload, return number of bytes read successfully:
     uint64
-    load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc = NULL)
+    load(FileStorage & storage, uint64 bytesToRead)
     {
       if (bytesToRead != fixedSize)
       {
@@ -293,7 +290,7 @@ namespace Yamka
       }
       
       Bytes bytes(fixedSize);
-      if (storage.loadAndCalcCrc32(bytes, crc))
+      if (storage.load(bytes))
       {
         data_ = bytes;
       }

@@ -24,7 +24,6 @@ namespace Yamka
   
   // forward declarations:
   struct IStorage;
-  struct Crc32;
   
   //----------------------------------------------------------------
   // uint64
@@ -118,14 +117,13 @@ namespace Yamka
   // 
   extern uint64
   vsizeDecode(IStorage & storage,
-              uint64 & vsizeSize,
-              Crc32 * computeCrc32 = NULL);
+              uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // loadEbmlId
   // 
   extern uint64
-  loadEbmlId(IStorage & storage, Crc32 * crc = NULL);
+  loadEbmlId(IStorage & storage);
   
   //----------------------------------------------------------------
   // uintDecode

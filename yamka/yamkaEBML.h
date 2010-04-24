@@ -12,7 +12,6 @@
 // yamka includes:
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
-#include <yamkaCrc32.h>
 #include <yamkaFileStorage.h>
 
 // system includes:
@@ -76,9 +75,7 @@ namespace Yamka
   // 
   template <typename elts_t>
   IStorage::IReceiptPtr
-  eltsSave(const elts_t & elts,
-           IStorage & storage,
-           Crc32 * crc)
+  eltsSave(const elts_t & elts, IStorage & storage)
   {
     typedef typename elts_t::value_type elt_t;
     typedef typename elts_t::const_iterator const_iter_t;
@@ -87,7 +84,7 @@ namespace Yamka
     for (const_iter_t i = elts.begin(); i != elts.end(); ++i)
     {
       const elt_t & elt = *i;
-      *receipt += elt.save(storage, crc);
+      *receipt += elt.save(storage);
     }
     
     return receipt;
@@ -100,10 +97,7 @@ namespace Yamka
   // 
   template <typename elts_t>
   uint64
-  eltsLoad(elts_t & elts,
-           FileStorage & storage,
-           uint64 bytesToRead,
-           Crc32 * crc)
+  eltsLoad(elts_t & elts, FileStorage & storage, uint64 bytesToRead)
   {
     typedef typename elts_t::value_type elt_t;
     
@@ -111,7 +105,7 @@ namespace Yamka
     while (bytesToRead)
     {
       elt_t elt;
-      uint64 eltSize = elt.load(storage, bytesToRead, crc);
+      uint64 eltSize = elt.load(storage, bytesToRead);
       if (!eltSize)
       {
         break;
@@ -155,6 +149,25 @@ namespace Yamka
     return NULL;
   }
   
+  //----------------------------------------------------------------
+  // eltsEnableCrc32
+  // 
+  // Enable saving element payload CRC-32 checksum
+  // 
+  template <typename elts_t>
+  void
+  eltsEnableCrc32(elts_t & elts)
+  {
+    typedef typename elts_t::value_type elt_t;
+    typedef typename elts_t::iterator elt_iter_t;
+    
+    for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      elt_t & elt = *i;
+      elt.enableCrc32();
+    }
+  }
+  
   
   //----------------------------------------------------------------
   // EbmlMaster
@@ -167,10 +180,10 @@ namespace Yamka
     std::deque<TVoid> voids_;
     
     // virtual:
-    uint64 loadVoid(FileStorage & storage, uint64 bytesToRead, Crc32 * crc);
+    uint64 loadVoid(FileStorage & storage, uint64 bytesToRead);
     
     // virtual:
-    IStorage::IReceiptPtr saveVoid(IStorage & storage, Crc32 * crc) const;
+    IStorage::IReceiptPtr saveVoid(IStorage & storage) const;
     
     // virtual:
     bool hasVoid() const;

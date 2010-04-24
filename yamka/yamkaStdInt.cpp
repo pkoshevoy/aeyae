@@ -9,7 +9,6 @@
 // yamka includes:
 #include <yamkaStdInt.h>
 #include <yamkaIStorage.h>
-#include <yamkaCrc32.h>
 
 // system includes:
 #include <assert.h>
@@ -345,11 +344,10 @@ namespace Yamka
   static bool
   vsizeLoad(TByteVec & v,
             IStorage & storage,
-            Crc32 * crc,
             unsigned int maxBytes)
   {
     Bytes vsize(1);
-    if (!storage.loadAndCalcCrc32(vsize, crc))
+    if (!storage.load(vsize))
     {
       return false;
     }
@@ -375,7 +373,7 @@ namespace Yamka
     
     // load the remaining vsize bytes:
     Bytes bytes(numBytesToLoad);
-    if (!storage.loadAndCalcCrc32(bytes, crc))
+    if (!storage.load(bytes))
     {
       return false;
     }
@@ -392,11 +390,10 @@ namespace Yamka
   // 
   uint64
   vsizeDecode(IStorage & storage,
-              uint64 & vsizeSize,
-              Crc32 * crc)
+              uint64 & vsizeSize)
   {
     TByteVec v;
-    if (vsizeLoad(v, storage, crc, 8))
+    if (vsizeLoad(v, storage, 8))
     {
       return vsizeDecode(v, vsizeSize);
     }
@@ -409,10 +406,10 @@ namespace Yamka
   // loadEbmlId
   // 
   uint64
-  loadEbmlId(IStorage & storage, Crc32 * crc)
+  loadEbmlId(IStorage & storage)
   {
     TByteVec v;
-    if (vsizeLoad(v, storage, crc, 4))
+    if (vsizeLoad(v, storage, 4))
     {
       return uintDecode(v, v.size());
     }

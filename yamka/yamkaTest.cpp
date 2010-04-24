@@ -114,18 +114,11 @@ main(int argc, char ** argv)
           << vsizeEncode(1)
           << uintEncode(1);
     
-    Crc32 crc32;
     fs.file_.setSize(0);
-    IStorage::IReceiptPtr receipt = fs.saveAndCalcCrc32(bytes, &crc32);
+    IStorage::IReceiptPtr receipt = fs.save(bytes);
     if (receipt)
     {
-      std::cout << "stored " << bytes.size()
-                << " bytes, checksum: "
-                << std::hex
-                << std::uppercase
-                << crc32.checksum()
-                << std::dec
-                << std::endl;
+      std::cout << "stored " << bytes.size() << " bytes" << std::endl;
     }
   }
   
@@ -143,24 +136,17 @@ main(int argc, char ** argv)
               << ", current file size: " << fs2.file_.size()
               << std::endl;
     
-    Crc32 crc32;
     EbmlDoc doc;
     doc.head_.payload_.docType_.payload_.set(std::string("yamka"));
     doc.head_.payload_.docTypeVersion_.payload_.set(1);
     doc.head_.payload_.docTypeReadVersion_.payload_.set(1);
     
     fs2.file_.setSize(0);
-    IStorage::IReceiptPtr receipt = doc.save(fs2, &crc32);
+    IStorage::IReceiptPtr receipt = doc.save(fs2);
     
     if (receipt)
     {
-      std::cout << "stored " << doc.calcSize()
-                << " bytes, checksum: "
-                << std::hex
-                << std::uppercase
-                << crc32.checksum()
-                << std::dec
-                << std::endl;
+      std::cout << "stored " << doc.calcSize() << " bytes" << std::endl;
     }
   }
   
@@ -179,17 +165,11 @@ main(int argc, char ** argv)
               << ", file size: " << mkvSrcSize
               << std::endl;
     
-    Crc32 crc32;
     MatroskaDoc doc;
-    uint64 bytesRead = doc.load(mkvSrc, mkvSrcSize, &crc32);
+    uint64 bytesRead = doc.load(mkvSrc, mkvSrcSize);
     
     std::cout << "read " << bytesRead << " bytes, "
-              << "doc size is " << doc.calcSize() << " bytes, "
-              << "checksum: "
-              << std::hex
-              << std::uppercase
-              << crc32.checksum()
-              << std::dec
+              << "doc size is " << doc.calcSize() << " bytes"
               << std::endl;
 #if 0
     // for each segment:
@@ -267,24 +247,18 @@ main(int argc, char ** argv)
                 << ", file size: " << mkvSrcOutSize
                 << std::endl;
       
-      Crc32 crc32out;
       mkvSrcOut.file_.setSize(0);
-      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOut, &crc32out);
+      doc.enableCrc32();
+      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOut);
       
       if (receipt)
       {
-        std::cout << "stored " << doc.calcSize()
-                  << " bytes, checksum: "
-                  << std::hex
-                  << std::uppercase
-                  << crc32out.checksum()
-                  << std::dec
-                  << std::endl;
+        std::cout << "stored " << doc.calcSize() << " bytes" << std::endl;
       }
     }
   }
 
-#if 0
+#if 1
   FileStorage mkvSrcOut(std::string("testYamkaOut.mkv"), File::kReadOnly);
   if (!mkvSrcOut.file_.isOpen())
   {
@@ -300,17 +274,11 @@ main(int argc, char ** argv)
               << ", file size: " << mkvSrcOutSize
               << std::endl;
     
-    Crc32 crc32;
     MatroskaDoc doc;
-    uint64 bytesRead = doc.load(mkvSrcOut, mkvSrcOutSize, &crc32);
+    uint64 bytesRead = doc.load(mkvSrcOut, mkvSrcOutSize);
     
     std::cout << "read " << bytesRead << " bytes, "
-              << "doc size is " << doc.calcSize() << " bytes, "
-              << "checksum: "
-              << std::hex
-              << std::uppercase
-              << crc32.checksum()
-              << std::dec
+              << "doc size is " << doc.calcSize() << " bytes"
               << std::endl;
     
     FileStorage mkvSrcOutOut(std::string("testYamkaOutOut.mkv"),
@@ -329,19 +297,14 @@ main(int argc, char ** argv)
                 << ", file size: " << mkvSrcOutOutSize
                 << std::endl;
       
-      Crc32 crc32out;
       mkvSrcOutOut.file_.setSize(0);
-      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut, &crc32out);
+      doc.enableCrc32();
+      IStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut);
       
       if (receipt)
       {
         std::cout << "stored " << doc.calcSize()
-                  << " bytes, checksum: "
-                  << std::hex
-                  << std::uppercase
-                  << crc32out.checksum()
-                  << std::dec
-                  << std::endl;
+                  << " bytes" << std::endl;
       }
     }
   }

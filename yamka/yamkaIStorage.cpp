@@ -14,47 +14,7 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
-  // IStorage::IReceipt::saveAndCalcCrc32
-  // 
-  bool
-  IStorage::IReceipt::saveAndCalcCrc32(const Bytes & data,
-                                       Crc32 * crc32)
-  {
-    if (save(data))
-    {
-      if (crc32)
-      {
-        crc32->compute(data);
-      }
-      
-      return true;
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // IStorage::IReceipt::loadAndCalcCrc32
-  // 
-  bool
-  IStorage::IReceipt::loadAndCalcCrc32(Bytes & data,
-                                       Crc32 * crc32)
-  {
-    if (load(data))
-    {
-      if (crc32)
-      {
-        crc32->compute(data);
-      }
-      
-      return true;
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // IStorage::IReceipt::operator
+  // IStorage::IReceipt::operator +=
   // 
   IStorage::IReceipt &
   IStorage::IReceipt::operator += (const IReceiptPtr & receipt)
@@ -65,44 +25,6 @@ namespace Yamka
     }
     
     return add(receipt->numBytes());
-  }
-  
-  //----------------------------------------------------------------
-  // IStorage::saveAndCalcCrc32
-  // 
-  IStorage::IReceiptPtr
-  IStorage::saveAndCalcCrc32(const Bytes & data,
-                             Crc32 * crc32)
-  {
-    IStorage::IReceiptPtr receipt = save(data);
-    if (receipt)
-    {
-      if (crc32)
-      {
-        crc32->compute(data);
-      }
-    }
-    
-    return receipt;
-  }
-  
-  //----------------------------------------------------------------
-  // IStorage::loadAndCalcCrc32
-  // 
-  IStorage::IReceiptPtr
-  IStorage::loadAndCalcCrc32(Bytes & data,
-                             Crc32 * crc32)
-  {
-    IStorage::IReceiptPtr receipt = load(data);
-    if (receipt)
-    {
-      if (crc32)
-      {
-        crc32->compute(data);
-      }
-    }
-    
-    return receipt;
   }
   
 }

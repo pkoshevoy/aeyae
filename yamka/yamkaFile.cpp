@@ -390,4 +390,49 @@ namespace Yamka
     
     return true;
   }
+  
+  //----------------------------------------------------------------
+  // File::calcCrc32
+  // 
+  bool
+  File::calcCrc32(File::TOff seekToPosition,
+                  File::TOff totalBytesToRead,
+                  Crc32 & computeCrc32)
+  {
+    if (!totalBytesToRead)
+    {
+      return true;
+    }
+    
+    if (!seek(seekToPosition, File::kAbsolutePosition))
+    {
+      return false;
+    }
+
+    std::size_t bytesPerPass =
+      (std::size_t)(std::min<File::TOff>(4096, totalBytesToRead));
+    
+    std::vector<unsigned char> data(bytesPerPass);
+    unsigned char * dataPtr = &data[0];
+    File::TOff bytesToRead = totalBytesToRead;
+    
+    while (bytesToRead)
+    {
+      std::size_t bytesToReadNow =
+        (bytesPerPass < bytesToRead) ?
+        bytesPerPass :
+        bytesToRead;
+      
+      if (!read(dataPtr, bytesToReadNow))
+      {
+        return false;
+      }
+      
+      computeCrc32.compute(dataPtr, bytesToReadNow);
+      bytesToRead -= bytesToReadNow;
+    }
+    
+    return true;
+  }
+  
 }

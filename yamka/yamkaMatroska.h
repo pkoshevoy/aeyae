@@ -901,6 +901,9 @@ namespace Yamka
     // resolve positional references (seeks, cues, etc...)
     void resolveReferences(const IElement * origin);
     
+    // enable saving CRC-32 checksums for level-1 elements:
+    void enableCrc32();
+    
     TypedefYamkaElt(SegInfo, 0x1549A966, "SegInfo") TInfo;
     TInfo info_;
     
@@ -938,6 +941,9 @@ namespace Yamka
     // resolve positional references (seeks, cues, etc...)
     // for each segment:
     void resolveReferences();
+    
+    // enable saving CRC-32 checksums for level-1 elements:
+    void enableCrc32();
     
     TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
     std::deque<TSegment> segments_;

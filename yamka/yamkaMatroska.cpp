@@ -57,13 +57,13 @@ namespace Yamka
   // ChapTranslate::save
   // 
   IStorage::IReceiptPtr
-  ChapTranslate::save(IStorage & storage, Crc32 * crc) const
+  ChapTranslate::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += editionUID_.save(storage, crc);
-    *receipt += chapTransCodec_.save(storage, crc);
-    *receipt += chapTransID_.save(storage, crc);
+    *receipt += editionUID_.save(storage);
+    *receipt += chapTransCodec_.save(storage);
+    *receipt += chapTransID_.save(storage);
     
     return receipt;
   }
@@ -72,13 +72,13 @@ namespace Yamka
   // ChapTranslate::load
   // 
   uint64
-  ChapTranslate::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapTranslate::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= chapTransCodec_.load(storage, bytesToRead, crc);
-    bytesToRead -= chapTransID_.load(storage, bytesToRead, crc);
+    bytesToRead -= editionUID_.load(storage, bytesToRead);
+    bytesToRead -= chapTransCodec_.load(storage, bytesToRead);
+    bytesToRead -= chapTransID_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -172,24 +172,24 @@ namespace Yamka
   // SegInfo::save
   // 
   IStorage::IReceiptPtr
-  SegInfo::save(IStorage & storage, Crc32 * crc) const
+  SegInfo::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += segUID_.save(storage, crc);
-    *receipt += segFilename_.save(storage, crc);
-    *receipt += prevUID_.save(storage, crc);
-    *receipt += prevFilename_.save(storage, crc);
-    *receipt += nextUID_.save(storage, crc);
-    *receipt += nextFilename_.save(storage, crc);
-    *receipt += familyUID_.save(storage, crc);
-    *receipt += chapTranslate_.save(storage, crc);
-    *receipt += timecodeScale_.save(storage, crc);
-    *receipt += duration_.save(storage, crc);
-    *receipt += date_.save(storage, crc);
-    *receipt += title_.save(storage, crc);
-    *receipt += muxingApp_.save(storage, crc);
-    *receipt += writingApp_.save(storage, crc);
+    *receipt += segUID_.save(storage);
+    *receipt += segFilename_.save(storage);
+    *receipt += prevUID_.save(storage);
+    *receipt += prevFilename_.save(storage);
+    *receipt += nextUID_.save(storage);
+    *receipt += nextFilename_.save(storage);
+    *receipt += familyUID_.save(storage);
+    *receipt += chapTranslate_.save(storage);
+    *receipt += timecodeScale_.save(storage);
+    *receipt += duration_.save(storage);
+    *receipt += date_.save(storage);
+    *receipt += title_.save(storage);
+    *receipt += muxingApp_.save(storage);
+    *receipt += writingApp_.save(storage);
     
     return receipt;
   }
@@ -198,24 +198,24 @@ namespace Yamka
   // SegInfo::load
   // 
   uint64
-  SegInfo::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  SegInfo::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= segUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= segFilename_.load(storage, bytesToRead, crc);
-    bytesToRead -= prevUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= prevFilename_.load(storage, bytesToRead, crc);
-    bytesToRead -= nextUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= nextFilename_.load(storage, bytesToRead, crc);
-    bytesToRead -= familyUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= chapTranslate_.load(storage, bytesToRead, crc);
-    bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
-    bytesToRead -= duration_.load(storage, bytesToRead, crc);
-    bytesToRead -= date_.load(storage, bytesToRead, crc);
-    bytesToRead -= title_.load(storage, bytesToRead, crc);
-    bytesToRead -= muxingApp_.load(storage, bytesToRead, crc);
-    bytesToRead -= writingApp_.load(storage, bytesToRead, crc);
+    bytesToRead -= segUID_.load(storage, bytesToRead);
+    bytesToRead -= segFilename_.load(storage, bytesToRead);
+    bytesToRead -= prevUID_.load(storage, bytesToRead);
+    bytesToRead -= prevFilename_.load(storage, bytesToRead);
+    bytesToRead -= nextUID_.load(storage, bytesToRead);
+    bytesToRead -= nextFilename_.load(storage, bytesToRead);
+    bytesToRead -= familyUID_.load(storage, bytesToRead);
+    bytesToRead -= chapTranslate_.load(storage, bytesToRead);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead);
+    bytesToRead -= duration_.load(storage, bytesToRead);
+    bytesToRead -= date_.load(storage, bytesToRead);
+    bytesToRead -= title_.load(storage, bytesToRead);
+    bytesToRead -= muxingApp_.load(storage, bytesToRead);
+    bytesToRead -= writingApp_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -266,13 +266,13 @@ namespace Yamka
   // TrackTranslate::save
   // 
   IStorage::IReceiptPtr
-  TrackTranslate::save(IStorage & storage, Crc32 * crc) const
+  TrackTranslate::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += editionUID_.save(storage, crc);
-    *receipt += trackTransCodec_.save(storage, crc);
-    *receipt += trackTransID_.save(storage, crc);
+    *receipt += editionUID_.save(storage);
+    *receipt += trackTransCodec_.save(storage);
+    *receipt += trackTransID_.save(storage);
     
     return receipt;
   }
@@ -281,13 +281,13 @@ namespace Yamka
   // TrackTranslate::load
   // 
   uint64
-  TrackTranslate::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  TrackTranslate::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= editionUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackTransCodec_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackTransID_.load(storage, bytesToRead, crc);
+    bytesToRead -= editionUID_.load(storage, bytesToRead);
+    bytesToRead -= trackTransCodec_.load(storage, bytesToRead);
+    bytesToRead -= trackTransID_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -382,25 +382,25 @@ namespace Yamka
   // Video::save
   // 
   IStorage::IReceiptPtr
-  Video::save(IStorage & storage, Crc32 * crc) const
+  Video::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += flagInterlaced_.save(storage, crc);
-    *receipt += stereoMode_.save(storage, crc);
-    *receipt += pixelWidth_.save(storage, crc);
-    *receipt += pixelHeight_.save(storage, crc);
-    *receipt += pixelCropBottom_.save(storage, crc);
-    *receipt += pixelCropTop_.save(storage, crc);
-    *receipt += pixelCropLeft_.save(storage, crc);
-    *receipt += pixelCropRight_.save(storage, crc);
-    *receipt += displayWidth_.save(storage, crc);
-    *receipt += displayHeight_.save(storage, crc);
-    *receipt += displayUnits_.save(storage, crc);
-    *receipt += aspectRatioType_.save(storage, crc);
-    *receipt += colorSpace_.save(storage, crc);
-    *receipt += gammaValue_.save(storage, crc);
-    *receipt += frameRate_.save(storage, crc);
+    *receipt += flagInterlaced_.save(storage);
+    *receipt += stereoMode_.save(storage);
+    *receipt += pixelWidth_.save(storage);
+    *receipt += pixelHeight_.save(storage);
+    *receipt += pixelCropBottom_.save(storage);
+    *receipt += pixelCropTop_.save(storage);
+    *receipt += pixelCropLeft_.save(storage);
+    *receipt += pixelCropRight_.save(storage);
+    *receipt += displayWidth_.save(storage);
+    *receipt += displayHeight_.save(storage);
+    *receipt += displayUnits_.save(storage);
+    *receipt += aspectRatioType_.save(storage);
+    *receipt += colorSpace_.save(storage);
+    *receipt += gammaValue_.save(storage);
+    *receipt += frameRate_.save(storage);
     
     return receipt;
   }
@@ -409,25 +409,25 @@ namespace Yamka
   // Video::load
   // 
   uint64
-  Video::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Video::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= flagInterlaced_.load(storage, bytesToRead, crc);
-    bytesToRead -= stereoMode_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelWidth_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelHeight_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelCropBottom_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelCropTop_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelCropLeft_.load(storage, bytesToRead, crc);
-    bytesToRead -= pixelCropRight_.load(storage, bytesToRead, crc);
-    bytesToRead -= displayWidth_.load(storage, bytesToRead, crc);
-    bytesToRead -= displayHeight_.load(storage, bytesToRead, crc);
-    bytesToRead -= displayUnits_.load(storage, bytesToRead, crc);
-    bytesToRead -= aspectRatioType_.load(storage, bytesToRead, crc);
-    bytesToRead -= colorSpace_.load(storage, bytesToRead, crc);
-    bytesToRead -= gammaValue_.load(storage, bytesToRead, crc);
-    bytesToRead -= frameRate_.load(storage, bytesToRead, crc);
+    bytesToRead -= flagInterlaced_.load(storage, bytesToRead);
+    bytesToRead -= stereoMode_.load(storage, bytesToRead);
+    bytesToRead -= pixelWidth_.load(storage, bytesToRead);
+    bytesToRead -= pixelHeight_.load(storage, bytesToRead);
+    bytesToRead -= pixelCropBottom_.load(storage, bytesToRead);
+    bytesToRead -= pixelCropTop_.load(storage, bytesToRead);
+    bytesToRead -= pixelCropLeft_.load(storage, bytesToRead);
+    bytesToRead -= pixelCropRight_.load(storage, bytesToRead);
+    bytesToRead -= displayWidth_.load(storage, bytesToRead);
+    bytesToRead -= displayHeight_.load(storage, bytesToRead);
+    bytesToRead -= displayUnits_.load(storage, bytesToRead);
+    bytesToRead -= aspectRatioType_.load(storage, bytesToRead);
+    bytesToRead -= colorSpace_.load(storage, bytesToRead);
+    bytesToRead -= gammaValue_.load(storage, bytesToRead);
+    bytesToRead -= frameRate_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -493,15 +493,15 @@ namespace Yamka
   // Audio::save
   // 
   IStorage::IReceiptPtr
-  Audio::save(IStorage & storage, Crc32 * crc) const
+  Audio::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += sampFreq_.save(storage, crc);
-    *receipt += sampFreqOut_.save(storage, crc);
-    *receipt += channels_.save(storage, crc);
-    *receipt += channelPositions_.save(storage, crc);
-    *receipt += bitDepth_.save(storage, crc);
+    *receipt += sampFreq_.save(storage);
+    *receipt += sampFreqOut_.save(storage);
+    *receipt += channels_.save(storage);
+    *receipt += channelPositions_.save(storage);
+    *receipt += bitDepth_.save(storage);
     
     return receipt;
   }
@@ -510,15 +510,15 @@ namespace Yamka
   // Audio::load
   // 
   uint64
-  Audio::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Audio::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= sampFreq_.load(storage, bytesToRead, crc);
-    bytesToRead -= sampFreqOut_.load(storage, bytesToRead, crc);
-    bytesToRead -= channels_.load(storage, bytesToRead, crc);
-    bytesToRead -= channelPositions_.load(storage, bytesToRead, crc);
-    bytesToRead -= bitDepth_.load(storage, bytesToRead, crc);
+    bytesToRead -= sampFreq_.load(storage, bytesToRead);
+    bytesToRead -= sampFreqOut_.load(storage, bytesToRead);
+    bytesToRead -= channels_.load(storage, bytesToRead);
+    bytesToRead -= channelPositions_.load(storage, bytesToRead);
+    bytesToRead -= bitDepth_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -566,12 +566,12 @@ namespace Yamka
   // ContentCompr::save
   // 
   IStorage::IReceiptPtr
-  ContentCompr::save(IStorage & storage, Crc32 * crc) const
+  ContentCompr::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += algo_.save(storage, crc);
-    *receipt += settings_.save(storage, crc);
+    *receipt += algo_.save(storage);
+    *receipt += settings_.save(storage);
     
     return receipt;
   }
@@ -580,12 +580,12 @@ namespace Yamka
   // ContentCompr::load
   // 
   uint64
-  ContentCompr::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ContentCompr::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= algo_.load(storage, bytesToRead, crc);
-    bytesToRead -= settings_.load(storage, bytesToRead, crc);
+    bytesToRead -= algo_.load(storage, bytesToRead);
+    bytesToRead -= settings_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -645,16 +645,16 @@ namespace Yamka
   // ContentEncrypt::save
   // 
   IStorage::IReceiptPtr
-  ContentEncrypt::save(IStorage & storage, Crc32 * crc) const
+  ContentEncrypt::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += encAlgo_.save(storage, crc);
-    *receipt += encKeyID_.save(storage, crc);
-    *receipt += signature_.save(storage, crc);
-    *receipt += sigKeyID_.save(storage, crc);
-    *receipt += sigAlgo_.save(storage, crc);
-    *receipt += sigHashAlgo_.save(storage, crc);
+    *receipt += encAlgo_.save(storage);
+    *receipt += encKeyID_.save(storage);
+    *receipt += signature_.save(storage);
+    *receipt += sigKeyID_.save(storage);
+    *receipt += sigAlgo_.save(storage);
+    *receipt += sigHashAlgo_.save(storage);
     
     return receipt;
   }
@@ -663,16 +663,16 @@ namespace Yamka
   // ContentEncrypt::load
   // 
   uint64
-  ContentEncrypt::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ContentEncrypt::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= encAlgo_.load(storage, bytesToRead, crc);
-    bytesToRead -= encKeyID_.load(storage, bytesToRead, crc);
-    bytesToRead -= signature_.load(storage, bytesToRead, crc);
-    bytesToRead -= sigKeyID_.load(storage, bytesToRead, crc);
-    bytesToRead -= sigAlgo_.load(storage, bytesToRead, crc);
-    bytesToRead -= sigHashAlgo_.load(storage, bytesToRead, crc);
+    bytesToRead -= encAlgo_.load(storage, bytesToRead);
+    bytesToRead -= encKeyID_.load(storage, bytesToRead);
+    bytesToRead -= signature_.load(storage, bytesToRead);
+    bytesToRead -= sigKeyID_.load(storage, bytesToRead);
+    bytesToRead -= sigAlgo_.load(storage, bytesToRead);
+    bytesToRead -= sigHashAlgo_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -729,15 +729,15 @@ namespace Yamka
   // ContentEnc::save
   // 
   IStorage::IReceiptPtr
-  ContentEnc::save(IStorage & storage, Crc32 * crc) const
+  ContentEnc::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += order_.save(storage, crc);
-    *receipt += scope_.save(storage, crc);
-    *receipt += type_.save(storage, crc);
-    *receipt += compression_.save(storage, crc);
-    *receipt += encryption_.save(storage, crc);
+    *receipt += order_.save(storage);
+    *receipt += scope_.save(storage);
+    *receipt += type_.save(storage);
+    *receipt += compression_.save(storage);
+    *receipt += encryption_.save(storage);
     
     return receipt;
   }
@@ -746,15 +746,15 @@ namespace Yamka
   // ContentEnc::load
   // 
   uint64
-  ContentEnc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ContentEnc::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= order_.load(storage, bytesToRead, crc);
-    bytesToRead -= scope_.load(storage, bytesToRead, crc);
-    bytesToRead -= type_.load(storage, bytesToRead, crc);
-    bytesToRead -= compression_.load(storage, bytesToRead, crc);
-    bytesToRead -= encryption_.load(storage, bytesToRead, crc);
+    bytesToRead -= order_.load(storage, bytesToRead);
+    bytesToRead -= scope_.load(storage, bytesToRead);
+    bytesToRead -= type_.load(storage, bytesToRead);
+    bytesToRead -= compression_.load(storage, bytesToRead);
+    bytesToRead -= encryption_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -794,11 +794,11 @@ namespace Yamka
   // ContentEncodings::save
   // 
   IStorage::IReceiptPtr
-  ContentEncodings::save(IStorage & storage, Crc32 * crc) const
+  ContentEncodings::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(encodings_, storage, crc);
+    *receipt += eltsSave(encodings_, storage);
     
     return receipt;
   }
@@ -808,11 +808,11 @@ namespace Yamka
   // 
   uint64
   ContentEncodings::
-  load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(encodings_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(encodings_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -938,38 +938,38 @@ namespace Yamka
   // Track::save
   // 
   IStorage::IReceiptPtr
-  Track::save(IStorage & storage, Crc32 * crc) const
+  Track::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += trackNumber_.save(storage, crc);
-    *receipt += trackUID_.save(storage, crc);
-    *receipt += trackType_.save(storage, crc);
-    *receipt += flagEnabled_.save(storage, crc);
-    *receipt += flagDefault_.save(storage, crc);
-    *receipt += flagForced_.save(storage, crc);
-    *receipt += flagLacing_.save(storage, crc);
-    *receipt += minCache_.save(storage, crc);
-    *receipt += maxCache_.save(storage, crc);
-    *receipt += frameDuration_.save(storage, crc);
-    *receipt += timecodeScale_.save(storage, crc);
-    *receipt += trackOffset_.save(storage, crc);
-    *receipt += maxBlockAddID_.save(storage, crc);
-    *receipt += name_.save(storage, crc);
-    *receipt += language_.save(storage, crc);
-    *receipt += codecID_.save(storage, crc);
-    *receipt += codecPrivate_.save(storage, crc);
-    *receipt += codecName_.save(storage, crc);
-    *receipt += attachmentLink_.save(storage, crc);
-    *receipt += codecSettings_.save(storage, crc);
-    *receipt += codecInfoURL_.save(storage, crc);
-    *receipt += codecDownloadURL_.save(storage, crc);
-    *receipt += codecDecodeAll_.save(storage, crc);
-    *receipt += trackOverlay_.save(storage, crc);
-    *receipt += trackTranslate_.save(storage, crc);
-    *receipt += video_.save(storage, crc);
-    *receipt += audio_.save(storage, crc);
-    *receipt += contentEncs_.save(storage, crc);
+    *receipt += trackNumber_.save(storage);
+    *receipt += trackUID_.save(storage);
+    *receipt += trackType_.save(storage);
+    *receipt += flagEnabled_.save(storage);
+    *receipt += flagDefault_.save(storage);
+    *receipt += flagForced_.save(storage);
+    *receipt += flagLacing_.save(storage);
+    *receipt += minCache_.save(storage);
+    *receipt += maxCache_.save(storage);
+    *receipt += frameDuration_.save(storage);
+    *receipt += timecodeScale_.save(storage);
+    *receipt += trackOffset_.save(storage);
+    *receipt += maxBlockAddID_.save(storage);
+    *receipt += name_.save(storage);
+    *receipt += language_.save(storage);
+    *receipt += codecID_.save(storage);
+    *receipt += codecPrivate_.save(storage);
+    *receipt += codecName_.save(storage);
+    *receipt += attachmentLink_.save(storage);
+    *receipt += codecSettings_.save(storage);
+    *receipt += codecInfoURL_.save(storage);
+    *receipt += codecDownloadURL_.save(storage);
+    *receipt += codecDecodeAll_.save(storage);
+    *receipt += trackOverlay_.save(storage);
+    *receipt += trackTranslate_.save(storage);
+    *receipt += video_.save(storage);
+    *receipt += audio_.save(storage);
+    *receipt += contentEncs_.save(storage);
     
     return receipt;
   }
@@ -978,38 +978,38 @@ namespace Yamka
   // Track::load
   // 
   uint64
-  Track::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Track::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= trackNumber_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackType_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagEnabled_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagForced_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagLacing_.load(storage, bytesToRead, crc);
-    bytesToRead -= minCache_.load(storage, bytesToRead, crc);
-    bytesToRead -= maxCache_.load(storage, bytesToRead, crc);
-    bytesToRead -= frameDuration_.load(storage, bytesToRead, crc);
-    bytesToRead -= timecodeScale_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackOffset_.load(storage, bytesToRead, crc);
-    bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, crc);
-    bytesToRead -= name_.load(storage, bytesToRead, crc);
-    bytesToRead -= language_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecID_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecPrivate_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecName_.load(storage, bytesToRead, crc);
-    bytesToRead -= attachmentLink_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecSettings_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecInfoURL_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackOverlay_.load(storage, bytesToRead, crc);
-    bytesToRead -= trackTranslate_.load(storage, bytesToRead, crc);
-    bytesToRead -= video_.load(storage, bytesToRead, crc);
-    bytesToRead -= audio_.load(storage, bytesToRead, crc);
-    bytesToRead -= contentEncs_.load(storage, bytesToRead, crc);
+    bytesToRead -= trackNumber_.load(storage, bytesToRead);
+    bytesToRead -= trackUID_.load(storage, bytesToRead);
+    bytesToRead -= trackType_.load(storage, bytesToRead);
+    bytesToRead -= flagEnabled_.load(storage, bytesToRead);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead);
+    bytesToRead -= flagForced_.load(storage, bytesToRead);
+    bytesToRead -= flagLacing_.load(storage, bytesToRead);
+    bytesToRead -= minCache_.load(storage, bytesToRead);
+    bytesToRead -= maxCache_.load(storage, bytesToRead);
+    bytesToRead -= frameDuration_.load(storage, bytesToRead);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead);
+    bytesToRead -= trackOffset_.load(storage, bytesToRead);
+    bytesToRead -= maxBlockAddID_.load(storage, bytesToRead);
+    bytesToRead -= name_.load(storage, bytesToRead);
+    bytesToRead -= language_.load(storage, bytesToRead);
+    bytesToRead -= codecID_.load(storage, bytesToRead);
+    bytesToRead -= codecPrivate_.load(storage, bytesToRead);
+    bytesToRead -= codecName_.load(storage, bytesToRead);
+    bytesToRead -= attachmentLink_.load(storage, bytesToRead);
+    bytesToRead -= codecSettings_.load(storage, bytesToRead);
+    bytesToRead -= codecInfoURL_.load(storage, bytesToRead);
+    bytesToRead -= codecDownloadURL_.load(storage, bytesToRead);
+    bytesToRead -= codecDecodeAll_.load(storage, bytesToRead);
+    bytesToRead -= trackOverlay_.load(storage, bytesToRead);
+    bytesToRead -= trackTranslate_.load(storage, bytesToRead);
+    bytesToRead -= video_.load(storage, bytesToRead);
+    bytesToRead -= audio_.load(storage, bytesToRead);
+    bytesToRead -= contentEncs_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1049,11 +1049,11 @@ namespace Yamka
   // Tracks::save
   // 
   IStorage::IReceiptPtr
-  Tracks::save(IStorage & storage, Crc32 * crc) const
+  Tracks::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(tracks_, storage, crc);
+    *receipt += eltsSave(tracks_, storage);
     
     return receipt;
   }
@@ -1062,11 +1062,11 @@ namespace Yamka
   // Tracks::load
   // 
   uint64
-  Tracks::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Tracks::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1118,14 +1118,14 @@ namespace Yamka
   // CueRef::save
   // 
   IStorage::IReceiptPtr
-  CueRef::save(IStorage & storage, Crc32 * crc) const
+  CueRef::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += time_.save(storage, crc);
-    *receipt += cluster_.save(storage, crc);
-    *receipt += block_.save(storage, crc);
-    *receipt += codecState_.save(storage, crc);
+    *receipt += time_.save(storage);
+    *receipt += cluster_.save(storage);
+    *receipt += block_.save(storage);
+    *receipt += codecState_.save(storage);
     
     return receipt;
   }
@@ -1134,14 +1134,14 @@ namespace Yamka
   // CueRef::load
   // 
   uint64
-  CueRef::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  CueRef::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead, crc);
-    bytesToRead -= cluster_.load(storage, bytesToRead, crc);
-    bytesToRead -= block_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
+    bytesToRead -= time_.load(storage, bytesToRead);
+    bytesToRead -= cluster_.load(storage, bytesToRead);
+    bytesToRead -= block_.load(storage, bytesToRead);
+    bytesToRead -= codecState_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1203,15 +1203,15 @@ namespace Yamka
   // CueTrkPos::save
   // 
   IStorage::IReceiptPtr
-  CueTrkPos::save(IStorage & storage, Crc32 * crc) const
+  CueTrkPos::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += track_.save(storage, crc);
-    *receipt += cluster_.save(storage, crc);
-    *receipt += block_.save(storage, crc);
-    *receipt += codecState_.save(storage, crc);
-    *receipt += ref_.save(storage, crc);
+    *receipt += track_.save(storage);
+    *receipt += cluster_.save(storage);
+    *receipt += block_.save(storage);
+    *receipt += codecState_.save(storage);
+    *receipt += ref_.save(storage);
     
     return receipt;
   }
@@ -1220,15 +1220,15 @@ namespace Yamka
   // CueTrkPos::load
   // 
   uint64
-  CueTrkPos::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  CueTrkPos::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= track_.load(storage, bytesToRead, crc);
-    bytesToRead -= cluster_.load(storage, bytesToRead, crc);
-    bytesToRead -= block_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
-    bytesToRead -= ref_.load(storage, bytesToRead, crc);
+    bytesToRead -= track_.load(storage, bytesToRead);
+    bytesToRead -= cluster_.load(storage, bytesToRead);
+    bytesToRead -= block_.load(storage, bytesToRead);
+    bytesToRead -= codecState_.load(storage, bytesToRead);
+    bytesToRead -= ref_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1284,12 +1284,12 @@ namespace Yamka
   // CuePoint::save
   // 
   IStorage::IReceiptPtr
-  CuePoint::save(IStorage & storage, Crc32 * crc) const
+  CuePoint::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += time_.save(storage, crc);
-    *receipt += eltsSave(trkPosns_, storage, crc);
+    *receipt += time_.save(storage);
+    *receipt += eltsSave(trkPosns_, storage);
     
     return receipt;
   }
@@ -1298,12 +1298,12 @@ namespace Yamka
   // CuePoint::load
   // 
   uint64
-  CuePoint::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  CuePoint::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead, crc);
+    bytesToRead -= time_.load(storage, bytesToRead);
+    bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1343,11 +1343,11 @@ namespace Yamka
   // Cues::save
   // 
   IStorage::IReceiptPtr
-  Cues::save(IStorage & storage, Crc32 * crc) const
+  Cues::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(points_, storage, crc);
+    *receipt += eltsSave(points_, storage);
     
     return receipt;
   }
@@ -1356,11 +1356,11 @@ namespace Yamka
   // Cues::load
   // 
   uint64
-  Cues::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Cues::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(points_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(points_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1407,12 +1407,12 @@ namespace Yamka
   // SeekEntry::save
   // 
   IStorage::IReceiptPtr
-  SeekEntry::save(IStorage & storage, Crc32 * crc) const
+  SeekEntry::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += id_.save(storage, crc);
-    *receipt += position_.save(storage, crc);
+    *receipt += id_.save(storage);
+    *receipt += position_.save(storage);
     
     return receipt;
   }
@@ -1421,12 +1421,12 @@ namespace Yamka
   // SeekEntry::load
   // 
   uint64
-  SeekEntry::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  SeekEntry::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= id_.load(storage, bytesToRead, crc);
-    bytesToRead -= position_.load(storage, bytesToRead, crc);
+    bytesToRead -= id_.load(storage, bytesToRead);
+    bytesToRead -= position_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1466,11 +1466,11 @@ namespace Yamka
   // SeekHead::save
   // 
   IStorage::IReceiptPtr
-  SeekHead::save(IStorage & storage, Crc32 * crc) const
+  SeekHead::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(seek_, storage, crc);
+    *receipt += eltsSave(seek_, storage);
     
     return receipt;
   }
@@ -1479,11 +1479,11 @@ namespace Yamka
   // SeekHead::load
   // 
   uint64
-  SeekHead::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  SeekHead::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(seek_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(seek_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1565,16 +1565,16 @@ namespace Yamka
   // AttdFile::save
   // 
   IStorage::IReceiptPtr
-  AttdFile::save(IStorage & storage, Crc32 * crc) const
+  AttdFile::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += description_.save(storage, crc);
-    *receipt += filename_.save(storage, crc);
-    *receipt += mimeType_.save(storage, crc);
-    *receipt += data_.save(storage, crc);
-    *receipt += fileUID_.save(storage, crc);
-    *receipt += referral_.save(storage, crc);
+    *receipt += description_.save(storage);
+    *receipt += filename_.save(storage);
+    *receipt += mimeType_.save(storage);
+    *receipt += data_.save(storage);
+    *receipt += fileUID_.save(storage);
+    *receipt += referral_.save(storage);
     
     return receipt;
   }
@@ -1583,16 +1583,16 @@ namespace Yamka
   // AttdFile::load
   // 
   uint64
-  AttdFile::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  AttdFile::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= description_.load(storage, bytesToRead, crc);
-    bytesToRead -= filename_.load(storage, bytesToRead, crc);
-    bytesToRead -= mimeType_.load(storage, bytesToRead, crc);
-    bytesToRead -= data_.load(storage, bytesToRead, crc);
-    bytesToRead -= fileUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= referral_.load(storage, bytesToRead, crc);
+    bytesToRead -= description_.load(storage, bytesToRead);
+    bytesToRead -= filename_.load(storage, bytesToRead);
+    bytesToRead -= mimeType_.load(storage, bytesToRead);
+    bytesToRead -= data_.load(storage, bytesToRead);
+    bytesToRead -= fileUID_.load(storage, bytesToRead);
+    bytesToRead -= referral_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1632,11 +1632,11 @@ namespace Yamka
   // Attachments::save
   // 
   IStorage::IReceiptPtr
-  Attachments::save(IStorage & storage, Crc32 * crc) const
+  Attachments::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(files_, storage, crc);
+    *receipt += eltsSave(files_, storage);
     
     return receipt;
   }
@@ -1645,11 +1645,11 @@ namespace Yamka
   // Attachments::load
   // 
   uint64
-  Attachments::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Attachments::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(files_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(files_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1689,11 +1689,11 @@ namespace Yamka
   // ChapTrk::save
   // 
   IStorage::IReceiptPtr
-  ChapTrk::save(IStorage & storage, Crc32 * crc) const
+  ChapTrk::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(tracks_, storage, crc);
+    *receipt += eltsSave(tracks_, storage);
     
     return receipt;
   }
@@ -1702,11 +1702,11 @@ namespace Yamka
   // ChapTrk::load
   // 
   uint64
-  ChapTrk::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapTrk::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1757,13 +1757,13 @@ namespace Yamka
   // ChapDisp::save
   // 
   IStorage::IReceiptPtr
-  ChapDisp::save(IStorage & storage, Crc32 * crc) const
+  ChapDisp::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += string_.save(storage, crc);
-    *receipt += language_.save(storage, crc);
-    *receipt += country_.save(storage, crc);
+    *receipt += string_.save(storage);
+    *receipt += language_.save(storage);
+    *receipt += country_.save(storage);
     
     return receipt;
   }
@@ -1772,13 +1772,13 @@ namespace Yamka
   // ChapDisp::load
   // 
   uint64
-  ChapDisp::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapDisp::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= string_.load(storage, bytesToRead, crc);
-    bytesToRead -= language_.load(storage, bytesToRead, crc);
-    bytesToRead -= country_.load(storage, bytesToRead, crc);
+    bytesToRead -= string_.load(storage, bytesToRead);
+    bytesToRead -= language_.load(storage, bytesToRead);
+    bytesToRead -= country_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1826,12 +1826,12 @@ namespace Yamka
   // ChapProcCmd::save
   // 
   IStorage::IReceiptPtr
-  ChapProcCmd::save(IStorage & storage, Crc32 * crc) const
+  ChapProcCmd::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += time_.save(storage, crc);
-    *receipt += data_.save(storage, crc);
+    *receipt += time_.save(storage);
+    *receipt += data_.save(storage);
     
     return receipt;
   }
@@ -1840,12 +1840,12 @@ namespace Yamka
   // ChapProcCmd::load
   // 
   uint64
-  ChapProcCmd::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapProcCmd::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead, crc);
-    bytesToRead -= data_.load(storage, bytesToRead, crc);
+    bytesToRead -= time_.load(storage, bytesToRead);
+    bytesToRead -= data_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1896,14 +1896,14 @@ namespace Yamka
   // ChapProc::save
   // 
   IStorage::IReceiptPtr
-  ChapProc::save(IStorage & storage, Crc32 * crc) const
+  ChapProc::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += codecID_.save(storage, crc);
-    *receipt += procPrivate_.save(storage, crc);
+    *receipt += codecID_.save(storage);
+    *receipt += procPrivate_.save(storage);
     
-    *receipt += eltsSave(cmds_, storage, crc);
+    *receipt += eltsSave(cmds_, storage);
     
     return receipt;
   }
@@ -1912,14 +1912,14 @@ namespace Yamka
   // ChapProc::load
   // 
   uint64
-  ChapProc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapProc::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= codecID_.load(storage, bytesToRead, crc);
-    bytesToRead -= procPrivate_.load(storage, bytesToRead, crc);
+    bytesToRead -= codecID_.load(storage, bytesToRead);
+    bytesToRead -= procPrivate_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(cmds_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(cmds_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1994,22 +1994,22 @@ namespace Yamka
   // ChapAtom::save
   // 
   IStorage::IReceiptPtr
-  ChapAtom::save(IStorage & storage, Crc32 * crc) const
+  ChapAtom::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += UID_.save(storage, crc);
-    *receipt += timeStart_.save(storage, crc);
-    *receipt += timeEnd_.save(storage, crc);
-    *receipt += hidden_.save(storage, crc);
-    *receipt += enabled_.save(storage, crc);
-    *receipt += segUID_.save(storage, crc);
-    *receipt += segEditionUID_.save(storage, crc);
-    *receipt += physEquiv_.save(storage, crc);
-    *receipt += tracks_.save(storage, crc);
+    *receipt += UID_.save(storage);
+    *receipt += timeStart_.save(storage);
+    *receipt += timeEnd_.save(storage);
+    *receipt += hidden_.save(storage);
+    *receipt += enabled_.save(storage);
+    *receipt += segUID_.save(storage);
+    *receipt += segEditionUID_.save(storage);
+    *receipt += physEquiv_.save(storage);
+    *receipt += tracks_.save(storage);
     
-    *receipt += eltsSave(display_, storage, crc);
-    *receipt += eltsSave(process_, storage, crc);
+    *receipt += eltsSave(display_, storage);
+    *receipt += eltsSave(process_, storage);
     
     return receipt;
   }
@@ -2018,22 +2018,22 @@ namespace Yamka
   // ChapAtom::load
   // 
   uint64
-  ChapAtom::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  ChapAtom::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= UID_.load(storage, bytesToRead, crc);
-    bytesToRead -= timeStart_.load(storage, bytesToRead, crc);
-    bytesToRead -= timeEnd_.load(storage, bytesToRead, crc);
-    bytesToRead -= hidden_.load(storage, bytesToRead, crc);
-    bytesToRead -= enabled_.load(storage, bytesToRead, crc);
-    bytesToRead -= segUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= segEditionUID_.load(storage, bytesToRead, crc);
-    bytesToRead -= physEquiv_.load(storage, bytesToRead, crc);
-    bytesToRead -= tracks_.load(storage, bytesToRead, crc);
+    bytesToRead -= UID_.load(storage, bytesToRead);
+    bytesToRead -= timeStart_.load(storage, bytesToRead);
+    bytesToRead -= timeEnd_.load(storage, bytesToRead);
+    bytesToRead -= hidden_.load(storage, bytesToRead);
+    bytesToRead -= enabled_.load(storage, bytesToRead);
+    bytesToRead -= segUID_.load(storage, bytesToRead);
+    bytesToRead -= segEditionUID_.load(storage, bytesToRead);
+    bytesToRead -= physEquiv_.load(storage, bytesToRead);
+    bytesToRead -= tracks_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(display_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(process_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(display_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(process_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2090,16 +2090,16 @@ namespace Yamka
   // Edition::save
   // 
   IStorage::IReceiptPtr
-  Edition::save(IStorage & storage, Crc32 * crc) const
+  Edition::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += UID_.save(storage, crc);
-    *receipt += flagHidden_.save(storage, crc);
-    *receipt += flagDefault_.save(storage, crc);
-    *receipt += flagOrdered_.save(storage, crc);
+    *receipt += UID_.save(storage);
+    *receipt += flagHidden_.save(storage);
+    *receipt += flagDefault_.save(storage);
+    *receipt += flagOrdered_.save(storage);
     
-    *receipt += eltsSave(chapAtoms_, storage, crc);
+    *receipt += eltsSave(chapAtoms_, storage);
     
     return receipt;
   }
@@ -2108,16 +2108,16 @@ namespace Yamka
   // Edition::load
   // 
   uint64
-  Edition::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Edition::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= UID_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagHidden_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagDefault_.load(storage, bytesToRead, crc);
-    bytesToRead -= flagOrdered_.load(storage, bytesToRead, crc);
+    bytesToRead -= UID_.load(storage, bytesToRead);
+    bytesToRead -= flagHidden_.load(storage, bytesToRead);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead);
+    bytesToRead -= flagOrdered_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2157,11 +2157,11 @@ namespace Yamka
   // Chapters::save
   // 
   IStorage::IReceiptPtr
-  Chapters::save(IStorage & storage, Crc32 * crc) const
+  Chapters::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(editions_, storage, crc);
+    *receipt += eltsSave(editions_, storage);
     
     return receipt;
   }
@@ -2170,11 +2170,11 @@ namespace Yamka
   // Chapters::load
   // 
   uint64
-  Chapters::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Chapters::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(editions_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(editions_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2234,17 +2234,17 @@ namespace Yamka
   // TagTargets::save
   // 
   IStorage::IReceiptPtr
-  TagTargets::save(IStorage & storage, Crc32 * crc) const
+  TagTargets::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += typeValue_.save(storage, crc);
-    *receipt += type_.save(storage, crc);
+    *receipt += typeValue_.save(storage);
+    *receipt += type_.save(storage);
     
-    *receipt += eltsSave(trackUIDs_, storage, crc);
-    *receipt += eltsSave(editionUIDs_, storage, crc);
-    *receipt += eltsSave(chapterUIDs_, storage, crc);
-    *receipt += eltsSave(attachmentUIDs_, storage, crc);
+    *receipt += eltsSave(trackUIDs_, storage);
+    *receipt += eltsSave(editionUIDs_, storage);
+    *receipt += eltsSave(chapterUIDs_, storage);
+    *receipt += eltsSave(attachmentUIDs_, storage);
     
     return receipt;
   }
@@ -2253,17 +2253,17 @@ namespace Yamka
   // TagTargets::load
   // 
   uint64
-  TagTargets::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  TagTargets::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= typeValue_.load(storage, bytesToRead, crc);
-    bytesToRead -= type_.load(storage, bytesToRead, crc);
+    bytesToRead -= typeValue_.load(storage, bytesToRead);
+    bytesToRead -= type_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2320,15 +2320,15 @@ namespace Yamka
   // SimpleTag::save
   // 
   IStorage::IReceiptPtr
-  SimpleTag::save(IStorage & storage, Crc32 * crc) const
+  SimpleTag::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += name_.save(storage, crc);
-    *receipt += lang_.save(storage, crc);
-    *receipt += default_.save(storage, crc);
-    *receipt += string_.save(storage, crc);
-    *receipt += binary_.save(storage, crc);
+    *receipt += name_.save(storage);
+    *receipt += lang_.save(storage);
+    *receipt += default_.save(storage);
+    *receipt += string_.save(storage);
+    *receipt += binary_.save(storage);
     
     return receipt;
   }
@@ -2337,15 +2337,15 @@ namespace Yamka
   // SimpleTag::load
   // 
   uint64
-  SimpleTag::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  SimpleTag::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= name_.load(storage, bytesToRead, crc);
-    bytesToRead -= lang_.load(storage, bytesToRead, crc);
-    bytesToRead -= default_.load(storage, bytesToRead, crc);
-    bytesToRead -= string_.load(storage, bytesToRead, crc);
-    bytesToRead -= binary_.load(storage, bytesToRead, crc);
+    bytesToRead -= name_.load(storage, bytesToRead);
+    bytesToRead -= lang_.load(storage, bytesToRead);
+    bytesToRead -= default_.load(storage, bytesToRead);
+    bytesToRead -= string_.load(storage, bytesToRead);
+    bytesToRead -= binary_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2393,12 +2393,12 @@ namespace Yamka
   // Tag::save
   // 
   IStorage::IReceiptPtr
-  Tag::save(IStorage & storage, Crc32 * crc) const
+  Tag::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += targets_.save(storage, crc);
-    *receipt += eltsSave(simpleTags_, storage, crc);
+    *receipt += targets_.save(storage);
+    *receipt += eltsSave(simpleTags_, storage);
     
     return receipt;
   }
@@ -2407,12 +2407,12 @@ namespace Yamka
   // Tag::load
   // 
   uint64
-  Tag::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Tag::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= targets_.load(storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead, crc);
+    bytesToRead -= targets_.load(storage, bytesToRead);
+    bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2452,11 +2452,11 @@ namespace Yamka
   // Tags::save
   // 
   IStorage::IReceiptPtr
-  Tags::save(IStorage & storage, Crc32 * crc) const
+  Tags::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(tags_, storage, crc);
+    *receipt += eltsSave(tags_, storage);
     
     return receipt;
   }
@@ -2465,11 +2465,11 @@ namespace Yamka
   // Tags::load
   // 
   uint64
-  Tags::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Tags::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2509,11 +2509,11 @@ namespace Yamka
   // SilentTracks::save
   // 
   IStorage::IReceiptPtr
-  SilentTracks::save(IStorage & storage, Crc32 * crc) const
+  SilentTracks::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(tracks_, storage, crc);
+    *receipt += eltsSave(tracks_, storage);
     
     return receipt;
   }
@@ -2522,11 +2522,11 @@ namespace Yamka
   // SilentTracks::load
   // 
   uint64
-  SilentTracks::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  SilentTracks::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2574,12 +2574,12 @@ namespace Yamka
   // BlockMore::save
   // 
   IStorage::IReceiptPtr
-  BlockMore::save(IStorage & storage, Crc32 * crc) const
+  BlockMore::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += blockAddID_.save(storage, crc);
-    *receipt += blockAdditional_.save(storage, crc);
+    *receipt += blockAddID_.save(storage);
+    *receipt += blockAdditional_.save(storage);
     
     return receipt;
   }
@@ -2588,12 +2588,12 @@ namespace Yamka
   // BlockMore::load
   // 
   uint64
-  BlockMore::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  BlockMore::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= blockAddID_.load(storage, bytesToRead, crc);
-    bytesToRead -= blockAdditional_.load(storage, bytesToRead, crc);
+    bytesToRead -= blockAddID_.load(storage, bytesToRead);
+    bytesToRead -= blockAdditional_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2633,11 +2633,11 @@ namespace Yamka
   // BlockAdditions::save
   // 
   IStorage::IReceiptPtr
-  BlockAdditions::save(IStorage & storage, Crc32 * crc) const
+  BlockAdditions::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(more_, storage, crc);
+    *receipt += eltsSave(more_, storage);
     
     return receipt;
   }
@@ -2646,11 +2646,11 @@ namespace Yamka
   // BlockAdditions::load
   // 
   uint64
-  BlockAdditions::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  BlockAdditions::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(more_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(more_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2708,19 +2708,19 @@ namespace Yamka
   // BlockGroup::save
   // 
   IStorage::IReceiptPtr
-  BlockGroup::save(IStorage & storage, Crc32 * crc) const
+  BlockGroup::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += duration_.save(storage, crc);
-    *receipt += block_.save(storage, crc);
-    *receipt += eltsSave(blockVirtual_, storage, crc);
-    *receipt += additions_.save(storage, crc);
-    *receipt += refPriority_.save(storage, crc);
-    *receipt += eltsSave(refBlock_, storage, crc);
-    *receipt += refVirtual_.save(storage, crc);
-    *receipt += codecState_.save(storage, crc);
-    *receipt += eltsSave(slices_, storage, crc);
+    *receipt += duration_.save(storage);
+    *receipt += block_.save(storage);
+    *receipt += eltsSave(blockVirtual_, storage);
+    *receipt += additions_.save(storage);
+    *receipt += refPriority_.save(storage);
+    *receipt += eltsSave(refBlock_, storage);
+    *receipt += refVirtual_.save(storage);
+    *receipt += codecState_.save(storage);
+    *receipt += eltsSave(slices_, storage);
     
     return receipt;
   }
@@ -2729,19 +2729,19 @@ namespace Yamka
   // BlockGroup::load
   // 
   uint64
-  BlockGroup::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  BlockGroup::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= duration_.load(storage, bytesToRead, crc);
-    bytesToRead -= block_.load(storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead, crc);
-    bytesToRead -= additions_.load(storage, bytesToRead, crc);
-    bytesToRead -= refPriority_.load(storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, crc);
-    bytesToRead -= refVirtual_.load(storage, bytesToRead, crc);
-    bytesToRead -= codecState_.load(storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(slices_, storage, bytesToRead, crc);
+    bytesToRead -= duration_.load(storage, bytesToRead);
+    bytesToRead -= block_.load(storage, bytesToRead);
+    bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead);
+    bytesToRead -= additions_.load(storage, bytesToRead);
+    bytesToRead -= refPriority_.load(storage, bytesToRead);
+    bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead);
+    bytesToRead -= refVirtual_.load(storage, bytesToRead);
+    bytesToRead -= codecState_.load(storage, bytesToRead);
+    bytesToRead -= eltsLoad(slices_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3218,18 +3218,18 @@ namespace Yamka
   // Cluster::save
   // 
   IStorage::IReceiptPtr
-  Cluster::save(IStorage & storage, Crc32 * crc) const
+  Cluster::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += timecode_.save(storage, crc);
-    *receipt += silent_.save(storage, crc);
-    *receipt += position_.save(storage, crc);
-    *receipt += prevSize_.save(storage, crc);
+    *receipt += timecode_.save(storage);
+    *receipt += silent_.save(storage);
+    *receipt += position_.save(storage);
+    *receipt += prevSize_.save(storage);
     
-    *receipt += eltsSave(blockGroups_, storage, crc);
-    *receipt += eltsSave(simpleBlocks_, storage, crc);
-    *receipt += eltsSave(encryptedBlocks_, storage, crc);
+    *receipt += eltsSave(blockGroups_, storage);
+    *receipt += eltsSave(simpleBlocks_, storage);
+    *receipt += eltsSave(encryptedBlocks_, storage);
     
     return receipt;
   }
@@ -3238,18 +3238,18 @@ namespace Yamka
   // Cluster::load
   // 
   uint64
-  Cluster::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Cluster::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= timecode_.load(storage, bytesToRead, crc);
-    bytesToRead -= silent_.load(storage, bytesToRead, crc);
-    bytesToRead -= position_.load(storage, bytesToRead, crc);
-    bytesToRead -= prevSize_.load(storage, bytesToRead, crc);
+    bytesToRead -= timecode_.load(storage, bytesToRead);
+    bytesToRead -= silent_.load(storage, bytesToRead);
+    bytesToRead -= position_.load(storage, bytesToRead);
+    bytesToRead -= prevSize_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3320,7 +3320,7 @@ namespace Yamka
   // Save using conventional matroska segment layout
   // 
   IStorage::IReceiptPtr
-  Segment::save(IStorage & storage, Crc32 * crc) const
+  Segment::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
@@ -3331,27 +3331,27 @@ namespace Yamka
     if (seekHeadIter != seekHeads_.end())
     {
       const TSeekHead & seekHead = *seekHeadIter;
-      *receipt += seekHead.save(storage, crc);
+      *receipt += seekHead.save(storage);
       ++seekHeadIter;
     }
+
+    *receipt += info_.save(storage);
+    *receipt += tracks_.save(storage);
+    *receipt += chapters_.save(storage);
     
-    *receipt += info_.save(storage, crc);
-    *receipt += tracks_.save(storage, crc);
-    *receipt += chapters_.save(storage, crc);
-    
-    *receipt += eltsSave(clusters_, storage, crc);
+    *receipt += eltsSave(clusters_, storage);
     
     // save any remaining seekheads:
     for (; seekHeadIter != seekHeads_.end(); ++seekHeadIter)
     {
       const TSeekHead & seekHead = *seekHeadIter;
-      *receipt += seekHead.save(storage, crc);
+      *receipt += seekHead.save(storage);
     }
     
-    *receipt += cues_.save(storage, crc);
+    *receipt += cues_.save(storage);
     
-    *receipt += eltsSave(attachments_, storage, crc);
-    *receipt += eltsSave(tags_, storage, crc);
+    *receipt += eltsSave(attachments_, storage);
+    *receipt += eltsSave(tags_, storage);
     
     return receipt;
   }
@@ -3360,19 +3360,19 @@ namespace Yamka
   // Segment::load
   // 
   uint64
-  Segment::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  Segment::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= info_.load(storage, bytesToRead, crc);
-    bytesToRead -= tracks_.load(storage, bytesToRead, crc);
-    bytesToRead -= chapters_.load(storage, bytesToRead, crc);
-    bytesToRead -= cues_.load(storage, bytesToRead, crc);
+    bytesToRead -= info_.load(storage, bytesToRead);
+    bytesToRead -= tracks_.load(storage, bytesToRead);
+    bytesToRead -= chapters_.load(storage, bytesToRead);
+    bytesToRead -= cues_.load(storage, bytesToRead);
       
-    bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(attachments_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, crc);
-    bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, crc);
+    bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(attachments_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(clusters_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3506,6 +3506,22 @@ namespace Yamka
     }
   }
   
+  //----------------------------------------------------------------
+  // Segment::enableCrc32
+  // 
+  void
+  Segment::enableCrc32()
+  {
+    info_.enableCrc32();
+    tracks_.enableCrc32();
+    chapters_.enableCrc32();
+    cues_.enableCrc32();
+    
+    eltsEnableCrc32(seekHeads_);
+    eltsEnableCrc32(clusters_);
+    eltsEnableCrc32(attachments_);
+    eltsEnableCrc32(tags_);
+  }
   
   //----------------------------------------------------------------
   // MatroskaDoc::MatroskaDoc
@@ -3570,18 +3586,62 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
+  // ReplaceCrc32Placeholders
+  // 
+  struct ReplaceCrc32Placeholders : public IElementCrawler
+  {
+    // virtual:
+    bool evalElement(IElement & elt)
+    {
+      IStorage::IReceiptPtr receiptCrc32 = elt.crc32Receipt();
+      if (receiptCrc32)
+      {
+        IStorage::IReceiptPtr receiptPayload = elt.payloadReceipt();
+        
+        // calculate and save CRC-32 checksum:
+        Crc32 crc32;
+        receiptPayload->calcCrc32(crc32, receiptCrc32);
+        unsigned int checksumCrc32 = crc32.checksum();
+        
+        Bytes bytesCrc32;
+        bytesCrc32 << uintEncode(kIdCrc32)
+                   << vsizeEncode(4)
+                   << uintEncode(checksumCrc32, 4);
+        
+        receiptCrc32->save(bytesCrc32);
+      }
+      
+      return false;
+    }
+    
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      return payload.eval(*this);
+    }
+  };
+  
+  //----------------------------------------------------------------
   // MatroskaDoc::save
   // 
   IStorage::IReceiptPtr
-  MatroskaDoc::save(IStorage & storage, Crc32 * crc) const
+  MatroskaDoc::save(IStorage & storage) const
   {
-    IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage, crc);
+    IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage);
     
-    *receipt += eltsSave(segments_, storage, crc);
+    *receipt += eltsSave(segments_, storage);
     
     // rewrite element position references (second pass):
-    RewriteReferences crawler;
-    const_cast<MatroskaDoc *>(this)->eval(crawler);
+    {
+      RewriteReferences crawler;
+      const_cast<MatroskaDoc *>(this)->eval(crawler);
+    }
+    
+    // replace CRC-32 placeholders (final pass):
+    {
+      ReplaceCrc32Placeholders crawler;
+      const_cast<MatroskaDoc *>(this)->eval(crawler);
+    }
     
     return receipt;
   }
@@ -3607,10 +3667,10 @@ namespace Yamka
   // MatroskaDoc::load
   // 
   uint64
-  MatroskaDoc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  MatroskaDoc::load(FileStorage & storage, uint64 bytesToRead)
   {
     // let the base class load the EBML header:
-    uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead, crc);
+    uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead);
     bytesToRead -= bytesReadTotal;
     
     // read Segments:
@@ -3618,7 +3678,7 @@ namespace Yamka
     {
       uint64 prevBytesToRead = bytesToRead;
       
-      bytesToRead -= eltsLoad(segments_, storage, bytesToRead, crc);
+      bytesToRead -= eltsLoad(segments_, storage, bytesToRead);
       
       uint64 bytesRead = prevBytesToRead - bytesToRead;
       bytesReadTotal += bytesRead;
@@ -3652,6 +3712,22 @@ namespace Yamka
     {
       TSegment & segment = *i;
       segment.payload_.resolveReferences(&segment);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::enableCrc32
+  // 
+  void
+  MatroskaDoc::enableCrc32()
+  {
+    // shortcut:
+    typedef std::deque<TSegment>::iterator TSegmentIter;
+    
+    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+    {
+      TSegment & segment = *i;
+      segment.payload_.enableCrc32();
     }
   }
   

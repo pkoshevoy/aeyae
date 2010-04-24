@@ -52,6 +52,9 @@ namespace Yamka
       bool save(const Bytes & data);
       bool load(Bytes & data);
       
+      // virtual:
+      bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
+      
     protected:
       File file_;
       File::TOff addr_;

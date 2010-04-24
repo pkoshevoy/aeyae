@@ -60,14 +60,10 @@ namespace Yamka
       virtual bool save(const Bytes & data) = 0;
       virtual bool load(Bytes & data) = 0;
       
-      // helpers:
-      // load/save and optionally compute CRC-32 checksum on the fly;
-      // checksum is calculated only if save/load succeeded
-      bool saveAndCalcCrc32(const Bytes & data,
-                            Crc32 * computeCrc32 = NULL);
-      
-      bool loadAndCalcCrc32(Bytes & data,
-                            Crc32 * computeCrc32 = NULL);
+      // compute CRC-32 checksum on data covered by this receipt,
+      // skip data in region specied by receiptSkip:
+      virtual bool calcCrc32(Crc32 & computeCrc32,
+                             const IReceiptPtr & receiptSkip) = 0;
       
       // increase number of stored bytes for this receipt
       // by adding number of stored bytes in a given receipt:
@@ -82,15 +78,6 @@ namespace Yamka
     
     // NOTE: IStorage::load always reads from current storage position:
     virtual IReceiptPtr load(Bytes & data) = 0;
-    
-    // helpers:
-    // load/save and optionally compute CRC-32 checksum on the fly;
-    // checksum is calculated only if save/load succeeded
-    IReceiptPtr saveAndCalcCrc32(const Bytes & data,
-                                 Crc32 * computeCrc32 = NULL);
-    
-    IReceiptPtr loadAndCalcCrc32(Bytes & data,
-                                 Crc32 * computeCrc32 = NULL);
   };
   
 }

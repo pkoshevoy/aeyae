@@ -17,10 +17,10 @@ namespace Yamka
   // EbmlMaster::loadVoid
   // 
   uint64
-  EbmlMaster::loadVoid(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  EbmlMaster::loadVoid(FileStorage & storage, uint64 bytesToRead)
   {
     TVoid eltVoid;
-    uint64 bytesRead = eltVoid.load(storage, bytesToRead, crc);
+    uint64 bytesRead = eltVoid.load(storage, bytesToRead);
     if (bytesRead)
     {
       voids_.push_back(eltVoid);
@@ -33,11 +33,11 @@ namespace Yamka
   // EbmlMaster::saveVoid
   // 
   IStorage::IReceiptPtr
-  EbmlMaster::saveVoid(IStorage & storage, Crc32 * crc) const
+  EbmlMaster::saveVoid(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += eltsSave(voids_, storage, crc);
+    *receipt += eltsSave(voids_, storage);
     
     return receipt;
   }
@@ -122,17 +122,17 @@ namespace Yamka
   // EbmlHead::save
   // 
   IStorage::IReceiptPtr
-  EbmlHead::save(IStorage & storage, Crc32 * crc) const
+  EbmlHead::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    *receipt += version_.save(storage, crc);
-    *receipt += readVersion_.save(storage, crc);
-    *receipt += maxIdLength_.save(storage, crc);
-    *receipt += maxSizeLength_.save(storage, crc);
-    *receipt += docType_.save(storage, crc);
-    *receipt += docTypeVersion_.save(storage, crc);
-    *receipt += docTypeReadVersion_.save(storage, crc);
+    *receipt += version_.save(storage);
+    *receipt += readVersion_.save(storage);
+    *receipt += maxIdLength_.save(storage);
+    *receipt += maxSizeLength_.save(storage);
+    *receipt += docType_.save(storage);
+    *receipt += docTypeVersion_.save(storage);
+    *receipt += docTypeReadVersion_.save(storage);
     
     return receipt;
   }
@@ -141,17 +141,17 @@ namespace Yamka
   // EbmlHead::load
   // 
   uint64
-  EbmlHead::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  EbmlHead::load(FileStorage & storage, uint64 bytesToRead)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= version_.load(storage, bytesToRead, crc);
-    bytesToRead -= readVersion_.load(storage, bytesToRead, crc);
-    bytesToRead -= maxIdLength_.load(storage, bytesToRead, crc);
-    bytesToRead -= maxSizeLength_.load(storage, bytesToRead, crc);
-    bytesToRead -= docType_.load(storage, bytesToRead, crc);
-    bytesToRead -= docTypeVersion_.load(storage, bytesToRead, crc);
-    bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead, crc);
+    bytesToRead -= version_.load(storage, bytesToRead);
+    bytesToRead -= readVersion_.load(storage, bytesToRead);
+    bytesToRead -= maxIdLength_.load(storage, bytesToRead);
+    bytesToRead -= maxSizeLength_.load(storage, bytesToRead);
+    bytesToRead -= docType_.load(storage, bytesToRead);
+    bytesToRead -= docTypeVersion_.load(storage, bytesToRead);
+    bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -202,9 +202,9 @@ namespace Yamka
   // EbmlDoc::save
   // 
   IStorage::IReceiptPtr
-  EbmlDoc::save(IStorage & storage, Crc32 * crc) const
+  EbmlDoc::save(IStorage & storage) const
   {
-    IStorage::IReceiptPtr receipt = head_.save(storage, crc);
+    IStorage::IReceiptPtr receipt = head_.save(storage);
     return receipt;
   }
   
@@ -212,7 +212,7 @@ namespace Yamka
   // EbmlDoc::load
   // 
   uint64
-  EbmlDoc::load(FileStorage & storage, uint64 bytesToRead, Crc32 * crc)
+  EbmlDoc::load(FileStorage & storage, uint64 bytesToRead)
   {
     Bytes oneByte(1);
     uint64 bytesReadTotal = 0;
@@ -220,7 +220,7 @@ namespace Yamka
     // skip forward until we load EBML head element:
     while (bytesToRead)
     {
-      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead, crc);
+      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead);
       if (headSize)
       {
         bytesToRead -= headSize;
