@@ -248,7 +248,7 @@ main(int argc, char ** argv)
                 << std::endl;
       
       mkvSrcOut.file_.setSize(0);
-      doc.enableCrc32();
+      doc.setCrc32(true);
       IStorage::IReceiptPtr receipt = doc.save(mkvSrcOut);
       
       if (receipt)
@@ -298,7 +298,7 @@ main(int argc, char ** argv)
                 << std::endl;
       
       mkvSrcOutOut.file_.setSize(0);
-      doc.enableCrc32();
+      doc.optimize();
       IStorage::IReceiptPtr receipt = doc.save(mkvSrcOutOut);
       
       if (receipt)
