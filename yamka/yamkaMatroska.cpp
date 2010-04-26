@@ -2896,16 +2896,20 @@ namespace Yamka
   SimpleBlock::setLacing(Lacing lacing)
   {
     // clear previous lacing flags:
-    autoLacing_ = (lacing == kLacingAuto);
+    autoLacing_ = false;
+    flags_ = setLacingBits(flags_, lacing);
     
-    if (!autoLacing_)
-    {
-      flags_ &= (0xFF & ~kFlagLacingEBML);
-      flags_ |= lacing << 1;
-      
-      // sanity check:
-      assert(lacing == getLacing());
-    }
+    // sanity check:
+    assert(lacing == getLacing());
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setAutoLacing
+  // 
+  void
+  SimpleBlock::setAutoLacing()
+  {
+    autoLacing_ = true;
   }
   
   //----------------------------------------------------------------
@@ -2967,8 +2971,7 @@ namespace Yamka
   {
     simpleBlock = Bytes();
     simpleBlock << vsizeEncode(trackNumber_)
-                << intEncode(timeCode_, 2)
-                << flags_;
+                << intEncode(timeCode_, 2);
     
     std::size_t lastFrameIndex = getNumberOfFrames() - 1;
     Lacing lacing = getLacing();
@@ -2976,9 +2979,9 @@ namespace Yamka
     Bytes laceXiph;
     Bytes laceEBML;
     
-    if (lacing == kLacingAuto)
+    // choose the best lacing method:
+    if (autoLacing_)
     {
-      // choose the best lacing method:
       if (lastFrameIndex == 0)
       {
         // 1 frame -- no lacing:
@@ -3035,6 +3038,10 @@ namespace Yamka
       }
     }
     
+    // save the flag with correct lacing bits set:
+    unsigned char flags = setLacingBits(flags_, lacing);
+    simpleBlock << flags;
+    
     if (lacing != kLacingNone)
     {
       simpleBlock << TByte(lastFrameIndex);
@@ -3087,8 +3094,8 @@ namespace Yamka
     timeCode_ = (short int)(intDecode(timecode, 2));
     
     // get the flags:
-    flags_ = blockData[bytesRead++];
     autoLacing_ = false;
+    flags_ = blockData[bytesRead++];
     
     // get the number of frames:
     std::size_t lastFrameIndex = 0;
@@ -3182,6 +3189,18 @@ namespace Yamka
     assert(bytesRead == blockSize);
     
     return true;
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::setLacingBits
+  // 
+  unsigned char
+  SimpleBlock::setLacingBits(unsigned char flags,
+                             SimpleBlock::Lacing lacing)
+  {
+    flags &= (0xFF & ~kFlagLacingEBML);
+    flags |= lacing << 1;
+    return flags;
   }
   
   //----------------------------------------------------------------
@@ -3820,7 +3839,7 @@ namespace Yamka
       
       SimpleBlock simpleBlock;
       simpleBlock.importData(blockBytes);
-      simpleBlock.setLacing(SimpleBlock::kLacingAuto);
+      simpleBlock.setAutoLacing();
       simpleBlock.exportData(blockBytes);
       const uint64 sizeAfter = blockBytes.size();
       
@@ -3831,7 +3850,7 @@ namespace Yamka
       }
       else if (sizeAfter > sizeBefore)
       {
-        // auto-lacing is only supposed to reduce block size:
+        // auto-lacing is only supposed to make things better, not worse:
         assert(false);
       }
     }

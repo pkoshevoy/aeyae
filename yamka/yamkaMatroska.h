@@ -818,7 +818,6 @@ namespace Yamka
     
     enum Lacing
     {
-      kLacingAuto      = -1,
       kLacingNone      = 0,
       kLacingXiph      = 1,
       kLacingFixedSize = 2,
@@ -827,6 +826,7 @@ namespace Yamka
     
     Lacing getLacing() const;
     void setLacing(Lacing lacing);
+    void setAutoLacing();
     
     std::size_t getNumberOfFrames() const;
     const Bytes & getFrame(std::size_t frameNumber) const;
@@ -836,6 +836,10 @@ namespace Yamka
     bool importData(const Bytes & simpleBlock);
     
   protected:
+    // auto-lacing helper function:
+    static unsigned char
+    setLacingBits(unsigned char flags, Lacing lacing);
+    
     enum Flags
     {
       kFlagKeyframe         = 1 << 7,
@@ -845,7 +849,7 @@ namespace Yamka
       kFlagLacingEBML       = 3 << 1,
       kFlagFrameDiscardable = 1
     };
-
+    
     bool autoLacing_;
     uint64 trackNumber_;
     short int timeCode_;
