@@ -2965,6 +2965,7 @@ namespace Yamka
   void
   SimpleBlock::exportData(Bytes & simpleBlock) const
   {
+    simpleBlock = Bytes();
     simpleBlock << vsizeEncode(trackNumber_)
                 << intEncode(timeCode_, 2)
                 << flags_;
