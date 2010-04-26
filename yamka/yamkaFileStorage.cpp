@@ -96,6 +96,16 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // FileStorage::Receipt::setNumBytes
+  // 
+  FileStorage::Receipt &
+  FileStorage::Receipt::setNumBytes(uint64 numBytes)
+  {
+    numBytes_ = numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::Receipt::add
   // 
   FileStorage::Receipt &

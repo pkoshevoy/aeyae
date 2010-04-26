@@ -53,6 +53,9 @@ namespace Yamka
       // return number of stored bytes for this receipt:
       virtual uint64 numBytes() const = 0;
       
+      // set number of stored bytes for this receipt:
+      virtual IReceipt & setNumBytes(uint64 numBytes) = 0;
+      
       // increase number of stored bytes for this receipt:
       virtual IReceipt & add(uint64 numBytes) = 0;
       

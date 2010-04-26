@@ -46,6 +46,9 @@ namespace Yamka
       uint64 numBytes() const;
       
       // virtual:
+      Receipt & setNumBytes(uint64 numBytes);
+      
+      // virtual:
       Receipt & add(uint64 numBytes);
       
       // virtual:
