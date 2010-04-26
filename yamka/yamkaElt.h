@@ -81,7 +81,7 @@ namespace Yamka
     virtual IElement & alwaysSave() = 0;
     
     // turn on/off CRC-32 wrapper for this element:
-    virtual IElement & enableCrc32() = 0;
+    virtual IElement & setCrc32(bool enable) = 0;
     
     // accessor to total element size (recursive):
     virtual uint64 calcSize() const = 0;
@@ -186,9 +186,9 @@ namespace Yamka
     }
     
     // virtual:
-    TSelf & enableCrc32()
+    TSelf & setCrc32(bool enableCrc32)
     {
-      computeCrc32_ = true;
+      computeCrc32_ = enableCrc32;
       return *this;
     }
     

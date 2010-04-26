@@ -150,13 +150,13 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // eltsEnableCrc32
+  // eltsSetCrc32
   // 
   // Enable saving element payload CRC-32 checksum
   // 
   template <typename elts_t>
   void
-  eltsEnableCrc32(elts_t & elts)
+  eltsSetCrc32(elts_t & elts, bool enableCrc32)
   {
     typedef typename elts_t::value_type elt_t;
     typedef typename elts_t::iterator elt_iter_t;
@@ -164,7 +164,7 @@ namespace Yamka
     for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
     {
       elt_t & elt = *i;
-      elt.enableCrc32();
+      elt.setCrc32(enableCrc32);
     }
   }
   
