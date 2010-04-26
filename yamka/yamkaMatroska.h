@@ -818,6 +818,7 @@ namespace Yamka
     
     enum Lacing
     {
+      kLacingAuto      = -1,
       kLacingNone      = 0,
       kLacingXiph      = 1,
       kLacingFixedSize = 2,
@@ -844,7 +845,8 @@ namespace Yamka
       kFlagLacingEBML       = 3 << 1,
       kFlagFrameDiscardable = 1
     };
-    
+
+    bool autoLacing_;
     uint64 trackNumber_;
     short int timeCode_;
     unsigned char flags_;
@@ -902,7 +904,7 @@ namespace Yamka
     void resolveReferences(const IElement * origin);
     
     // enable saving CRC-32 checksums for level-1 elements:
-    void enableCrc32();
+    void setCrc32(bool enableCrc32);
     
     TypedefYamkaElt(SegInfo, 0x1549A966, "SegInfo") TInfo;
     TInfo info_;
@@ -943,7 +945,10 @@ namespace Yamka
     void resolveReferences();
     
     // enable saving CRC-32 checksums for level-1 elements:
-    void enableCrc32();
+    void setCrc32(bool enableCrc32);
+    
+    // remove all optional elements:
+    void optimize();
     
     TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
     std::deque<TSegment> segments_;

@@ -2752,6 +2752,7 @@ namespace Yamka
   // SimpleBlock::SimpleBlock
   // 
   SimpleBlock::SimpleBlock():
+    autoLacing_(false),
     trackNumber_(0),
     timeCode_(0),
     flags_(0)
@@ -2895,11 +2896,16 @@ namespace Yamka
   SimpleBlock::setLacing(Lacing lacing)
   {
     // clear previous lacing flags:
-    flags_ &= (0xFF & ~kFlagLacingEBML);
-    flags_ |= lacing << 1;
+    autoLacing_ = (lacing == kLacingAuto);
     
-    // sanity check:
-    assert(lacing == getLacing());
+    if (!autoLacing_)
+    {
+      flags_ &= (0xFF & ~kFlagLacingEBML);
+      flags_ |= lacing << 1;
+      
+      // sanity check:
+      assert(lacing == getLacing());
+    }
   }
   
   //----------------------------------------------------------------
@@ -2930,6 +2936,30 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // sameSize
+  // 
+  static bool
+  sameSize(const std::deque<Bytes> & frames)
+  {
+    if (frames.empty())
+    {
+      return true;
+    }
+    
+    const std::size_t frameSize = frames[0].size();
+    const std::size_t numFrames = frames.size();
+    for (std::size_t i = 1; i < numFrames; i++)
+    {
+      if (frames[i].size() != frameSize)
+      {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
   // SimpleBlock::exportData
   // 
   void
@@ -2941,6 +2971,69 @@ namespace Yamka
     
     std::size_t lastFrameIndex = getNumberOfFrames() - 1;
     Lacing lacing = getLacing();
+
+    Bytes laceXiph;
+    Bytes laceEBML;
+    
+    if (lacing == kLacingAuto)
+    {
+      // choose the best lacing method:
+      if (lastFrameIndex == 0)
+      {
+        // 1 frame -- no lacing:
+        lacing = kLacingNone;
+      }
+      else if (sameSize(frames_))
+      {
+        // all frames have the same size, use fixed size lacing:
+        lacing = kLacingFixedSize;
+      }
+      else
+      {
+        // try Xiph lacing
+        {
+          for (std::size_t i = 0; i < lastFrameIndex; i++)
+          {
+            uint64 frameSize = frames_[i].size();
+            while (true)
+            {
+              TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
+              frameSize -= sz;
+              
+              laceXiph << sz;
+              if (sz < 0xFF)
+              {
+                break;
+              }
+            }
+          }
+        }
+        
+        // try EBML lacing
+        {
+          uint64 frameSize = frames_[0].size();
+          laceEBML << vsizeEncode(frameSize);
+          
+          for (std::size_t i = 1; i < lastFrameIndex; i++)
+          {
+            int64 frameSizeDiff = (int64(frames_[i].size()) - 
+                                   int64(frames_[i - 1].size()));
+            laceEBML << vsizeSignedEncode(frameSizeDiff);
+          }
+        }
+        
+        // choose the one with lowest overhead:
+        if (laceXiph.size() < laceEBML.size())
+        {
+          lacing = kLacingXiph;
+        }
+        else
+        {
+          lacing = kLacingEBML;
+        }
+      }
+    }
+    
     if (lacing != kLacingNone)
     {
       simpleBlock << TByte(lastFrameIndex);
@@ -2948,33 +3041,11 @@ namespace Yamka
     
     if (lacing == kLacingXiph)
     {
-      for (std::size_t i = 0; i < lastFrameIndex; i++)
-      {
-        uint64 frameSize = frames_[i].size();
-        while (true)
-        {
-          TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
-          frameSize -= sz;
-          
-          simpleBlock << sz;
-          if (sz < 0xFF)
-          {
-            break;
-          }
-        }
-      }
+      simpleBlock << laceXiph;
     }
     else if (lacing == kLacingEBML)
     {
-      uint64 frameSize = frames_[0].size();
-      simpleBlock << vsizeEncode(frameSize);
-      
-      for (std::size_t i = 1; i < lastFrameIndex; i++)
-      {
-        int64 frameSizeDiff = (int64(frames_[i].size()) - 
-                               int64(frames_[i - 1].size()));
-        simpleBlock << vsizeSignedEncode(frameSizeDiff);
-      }
+      simpleBlock << laceEBML;
     }
     
     for (std::size_t i = 0; i <= lastFrameIndex; i++)
@@ -3016,6 +3087,7 @@ namespace Yamka
     
     // get the flags:
     flags_ = blockData[bytesRead++];
+    autoLacing_ = false;
     
     // get the number of frames:
     std::size_t lastFrameIndex = 0;
@@ -3507,20 +3579,20 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // Segment::enableCrc32
+  // Segment::setCrc32
   // 
   void
-  Segment::enableCrc32()
+  Segment::setCrc32(bool enableCrc32)
   {
-    info_.enableCrc32();
-    tracks_.enableCrc32();
-    chapters_.enableCrc32();
-    cues_.enableCrc32();
+    info_.setCrc32(enableCrc32);
+    tracks_.setCrc32(enableCrc32);
+    chapters_.setCrc32(enableCrc32);
+    cues_.setCrc32(enableCrc32);
     
-    eltsEnableCrc32(seekHeads_);
-    eltsEnableCrc32(clusters_);
-    eltsEnableCrc32(attachments_);
-    eltsEnableCrc32(tags_);
+    eltsSetCrc32(seekHeads_, enableCrc32);
+    eltsSetCrc32(clusters_, enableCrc32);
+    eltsSetCrc32(attachments_, enableCrc32);
+    eltsSetCrc32(tags_, enableCrc32);
   }
   
   //----------------------------------------------------------------
@@ -3716,10 +3788,10 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // MatroskaDoc::enableCrc32
+  // MatroskaDoc::setCrc32
   // 
   void
-  MatroskaDoc::enableCrc32()
+  MatroskaDoc::setCrc32(bool enableCrc32)
   {
     // shortcut:
     typedef std::deque<TSegment>::iterator TSegmentIter;
@@ -3727,8 +3799,95 @@ namespace Yamka
     for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
     {
       TSegment & segment = *i;
-      segment.payload_.enableCrc32();
+      segment.payload_.setCrc32(enableCrc32);
     }
+  }
+  
+  //----------------------------------------------------------------
+  // Optimizer
+  // 
+  struct Optimizer : public IElementCrawler
+  {
+    // helper:
+    template <typename block_t>
+    void
+    optimizeBlock(block_t & block)
+    {
+      Bytes blockBytes;
+      block.payload_.get(blockBytes);
+      const uint64 sizeBefore = blockBytes.size();
+      
+      SimpleBlock simpleBlock;
+      simpleBlock.importData(blockBytes);
+      simpleBlock.setLacing(SimpleBlock::kLacingAuto);
+      simpleBlock.exportData(blockBytes);
+      const uint64 sizeAfter = blockBytes.size();
+      
+      if (sizeAfter < sizeBefore)
+      {
+        block.payload_.receipt_->save(blockBytes);
+        block.payload_.receipt_->setNumBytes(blockBytes.size());
+      }
+      else if (sizeAfter > sizeBefore)
+      {
+        // auto-lacing is only supposed to reduce block size:
+        assert(false);
+      }
+    }
+    
+    // virtual:
+    bool evalElement(IElement & elt)
+    {
+      // remove CRC-32 element:
+      elt.setCrc32(false);
+      
+      if (elt.getId() == Segment::TCluster::kId)
+      {
+        Segment::TCluster & cluster = dynamic_cast<Segment::TCluster &>(elt);
+        
+        // remove cluster position element:
+        cluster.payload_.position_.payload_.setElt(NULL);
+        cluster.payload_.position_.payload_.setOrigin(NULL);
+      }
+      else if (elt.getId() == Cluster::TSimpleBlock::kId)
+      {
+        Cluster::TSimpleBlock & block =
+          dynamic_cast<Cluster::TSimpleBlock &>(elt);
+        optimizeBlock(block);
+      }
+      else if (elt.getId() == BlockGroup::TBlock::kId)
+      {
+        BlockGroup::TBlock & block =
+          dynamic_cast<BlockGroup::TBlock &>(elt);
+        optimizeBlock(block);
+      }
+      
+      return false;
+    }
+    
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      EbmlMaster * container = dynamic_cast<EbmlMaster *>(&payload);
+      if (container)
+      {
+        // remove all void elements:
+        container->voids_.clear();
+      }
+      
+      return payload.eval(*this);
+    }
+  };
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::optimize
+  // 
+  void
+  MatroskaDoc::optimize()
+  {
+    // doc.setCrc32(false);
+    Optimizer optimizer;
+    eval(optimizer);
   }
   
 }
