@@ -15,7 +15,7 @@
 #include <yamkaFileStorage.h>
 
 // system includes:
-#include <deque>
+#include <list>
 
   
 namespace Yamka
@@ -177,7 +177,7 @@ namespace Yamka
   struct EbmlMaster : public IPayload
   {
     TypedefYamkaElt(VBinary, kIdVoid, "Void") TVoid;
-    std::deque<TVoid> voids_;
+    std::list<TVoid> voids_;
     
     // virtual:
     uint64 loadVoid(FileStorage & storage, uint64 bytesToRead);

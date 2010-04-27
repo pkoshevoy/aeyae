@@ -15,7 +15,6 @@
 #include <yamkaFileStorage.h>
 
 // system includes:
-#include <deque>
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
@@ -534,14 +533,10 @@ namespace Yamka
     // the contents of this element:
     TPayload payload_;
     
-    // The CRC32 container can be placed around any EBML element or
-    // elements. The value stored in CRC32Value is the result of the
-    // CRC-32 [CRC32] checksum performed on the other child elements.
-    // 
-    // CRC32 := c3 container [ level:1..; card:*; ] {
-    //   %children;
-    //   CRC32Value := 42fe binary [ size:4; ]
-    // }
+    // The CRC-32 value represents all the data inside the
+    // EBML Master it's contained in, except the CRC32 element itself.
+    // It should be placed as the first element in a Master
+    // so it applies to all the following elements at that level.
     bool computeCrc32_;
     
     // loaded/computed CRC-32 checksum:

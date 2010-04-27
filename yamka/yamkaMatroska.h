@@ -15,6 +15,7 @@
 #include <yamkaEBML.h>
 
 // system includes:
+#include <list>
 #include <deque>
 
 
@@ -258,7 +259,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(ContentEnc, 0x6240, "ContentEnc") TEncoding;
-    std::deque<TEncoding> encodings_;
+    std::list<TEncoding> encodings_;
   };
   
   //----------------------------------------------------------------
@@ -372,7 +373,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(Track, 0xAE, "TrackEntry") TTrack;
-    std::deque<TTrack> tracks_;
+    std::list<TTrack> tracks_;
   };
   
   //----------------------------------------------------------------
@@ -433,7 +434,7 @@ namespace Yamka
     TTime time_;
     
     TypedefYamkaElt(CueTrkPos, 0xB7, "CueTrackPosition") TCueTrkPos;
-    std::deque<TCueTrkPos> trkPosns_;
+    std::list<TCueTrkPos> trkPosns_;
   };
   
   //----------------------------------------------------------------
@@ -444,7 +445,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(CuePoint, 0xBB, "CuePoint") TCuePoint;
-    std::deque<TCuePoint> points_;
+    std::list<TCuePoint> points_;
   };
   
   //----------------------------------------------------------------
@@ -473,7 +474,7 @@ namespace Yamka
                    IStorage & binaryStorage);
     
     TypedefYamkaElt(SeekEntry, 0x4DBB, "Seek") TSeekEntry;
-    std::deque<TSeekEntry> seek_;
+    std::list<TSeekEntry> seek_;
   };
   
   //----------------------------------------------------------------
@@ -510,7 +511,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(AttdFile, 0x61A7, "AttachedFile") TFile;
-    std::deque<TFile> files_;
+    std::list<TFile> files_;
   };
   
   //----------------------------------------------------------------
@@ -521,7 +522,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x89, "ChapterTrackNumber") TTrkNum;
-    std::deque<TTrkNum> tracks_;
+    std::list<TTrkNum> tracks_;
   };
   
   //----------------------------------------------------------------
@@ -569,7 +570,7 @@ namespace Yamka
     TProcPrivate procPrivate_;
     
     TypedefYamkaElt(ChapProcCmd, 0x6911, "ChapProcCommands") TCmd;
-    std::deque<TCmd> cmds_;
+    std::list<TCmd> cmds_;
   };
   
   //----------------------------------------------------------------
@@ -607,10 +608,10 @@ namespace Yamka
     TTracks tracks_;
     
     TypedefYamkaElt(ChapDisp, 0x80, "ChapterDisplay") TDisplay;
-    std::deque<TDisplay> display_;
+    std::list<TDisplay> display_;
     
     TypedefYamkaElt(ChapProc, 0x6944, "ChapProcess") TProcess;
-    std::deque<TProcess> process_;
+    std::list<TProcess> process_;
   };
   
   //----------------------------------------------------------------
@@ -633,7 +634,7 @@ namespace Yamka
     TFlagOrdered flagOrdered_;
     
     TypedefYamkaElt(ChapAtom, 0xB6, "ChapterAtom") TChapAtom;
-    std::deque<TChapAtom> chapAtoms_;
+    std::list<TChapAtom> chapAtoms_;
   };
   
   //----------------------------------------------------------------
@@ -644,7 +645,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(Edition, 0x45B9, "EditionEntry") TEdition;
-    std::deque<TEdition> editions_;
+    std::list<TEdition> editions_;
   };
   
   //----------------------------------------------------------------
@@ -661,16 +662,16 @@ namespace Yamka
     TType type_;
     
     TypedefYamkaElt(VUInt, 0x63C5, "TrackUID") TTrackUID;
-    std::deque<TTrackUID> trackUIDs_;
+    std::list<TTrackUID> trackUIDs_;
     
     TypedefYamkaElt(VUInt, 0x63C9, "EditionUID") TEditionUID;
-    std::deque<TEditionUID> editionUIDs_;
+    std::list<TEditionUID> editionUIDs_;
     
     TypedefYamkaElt(VUInt, 0x63C4, "ChapterUID") TChapterUID;
-    std::deque<TChapterUID> chapterUIDs_;
+    std::list<TChapterUID> chapterUIDs_;
     
     TypedefYamkaElt(VUInt, 0x63C6, "AttachmentUID") TAttachmentUID;
-    std::deque<TAttachmentUID> attachmentUIDs_;
+    std::list<TAttachmentUID> attachmentUIDs_;
   };
   
   //----------------------------------------------------------------
@@ -707,7 +708,7 @@ namespace Yamka
     TTargets targets_;
     
     TypedefYamkaElt(SimpleTag, 0x67C8, "SimpleTags") TSimpleTag;
-    std::deque<TSimpleTag> simpleTags_;
+    std::list<TSimpleTag> simpleTags_;
   };
   
   //----------------------------------------------------------------
@@ -718,7 +719,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(Tag, 0x7373, "Tag") TTag;
-    std::deque<TTag> tags_;
+    std::list<TTag> tags_;
   };
   
   //----------------------------------------------------------------
@@ -729,7 +730,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x58D7, "SilentTrackNumber") TTrack;
-    std::deque<TTrack> tracks_;
+    std::list<TTrack> tracks_;
   };
   
   //----------------------------------------------------------------
@@ -754,7 +755,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(BlockMore, 0xA6, "BlockMore") TMore;
-    std::deque<TMore> more_;
+    std::list<TMore> more_;
   };
   
   //----------------------------------------------------------------
@@ -771,7 +772,7 @@ namespace Yamka
     TBlock block_;
     
     TypedefYamkaElt(VBinary, 0xA2, "BlockVirtual") TBlockVirtual;
-    std::deque<TBlockVirtual> blockVirtual_;
+    std::list<TBlockVirtual> blockVirtual_;
     
     TypedefYamkaElt(BlockAdditions, 0x75A1, "BlockAdditions") TAdditions;
     TAdditions additions_;
@@ -780,7 +781,7 @@ namespace Yamka
     TRefPriority refPriority_;
     
     TypedefYamkaElt(VInt, 0xFB, "ReferenceBlock") TRefBlock;
-    std::deque<TRefBlock> refBlock_;
+    std::list<TRefBlock> refBlock_;
     
     TypedefYamkaElt(VInt, 0xFD, "ReferenceVirtual") TRefVirtual;
     TRefVirtual refVirtual_;
@@ -789,7 +790,7 @@ namespace Yamka
     TCodecState codecState_;
     
     TypedefYamkaElt(VBinary, 0x8E, "Slice") TSlice;
-    std::deque<TSlice> slices_;
+    std::list<TSlice> slices_;
   };
   
   //----------------------------------------------------------------
@@ -888,13 +889,13 @@ namespace Yamka
     TPrevSize prevSize_;
     
     TypedefYamkaElt(BlockGroup, 0xA0, "BlockGroup") TBlockGroup;
-    std::deque<TBlockGroup> blockGroups_;
+    std::list<TBlockGroup> blockGroups_;
     
     TypedefYamkaElt(VBinary, 0xA3, "SimpleBlock") TSimpleBlock;
-    std::deque<TSimpleBlock> simpleBlocks_;
+    std::list<TSimpleBlock> simpleBlocks_;
     
     TypedefYamkaElt(VBinary, 0xAF, "EncryptedBlock") TEncryptedBlock;
-    std::deque<TEncryptedBlock> encryptedBlocks_;
+    std::list<TEncryptedBlock> encryptedBlocks_;
   };
   
   //----------------------------------------------------------------
@@ -917,22 +918,22 @@ namespace Yamka
     TTracks tracks_;
     
     TypedefYamkaElt(SeekHead, 0x114D9B74, "SeekHead") TSeekHead;
-    std::deque<TSeekHead> seekHeads_;
+    std::list<TSeekHead> seekHeads_;
     
     TypedefYamkaElt(Cues, 0x1C53BB6B, "Cues") TCues;
     TCues cues_;
     
     TypedefYamkaElt(Attachments, 0x1941A469, "Attachments") TAttachment;
-    std::deque<TAttachment> attachments_;
+    std::list<TAttachment> attachments_;
     
     TypedefYamkaElt(Chapters, 0x1043A770, "Chapters") TChapters;
     TChapters chapters_;
     
     TypedefYamkaElt(Tags, 0x1254C367, "Tags") TTag;
-    std::deque<TTag> tags_;
+    std::list<TTag> tags_;
     
     TypedefYamkaElt(Cluster, 0x1F43B675, "Cluster") TCluster;
-    std::deque<TCluster> clusters_;
+    std::list<TCluster> clusters_;
   };
   
   //----------------------------------------------------------------
@@ -955,7 +956,7 @@ namespace Yamka
     void optimize();
     
     TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
-    std::deque<TSegment> segments_;
+    std::list<TSegment> segments_;
   };
   
 }

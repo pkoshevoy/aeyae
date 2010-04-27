@@ -3416,7 +3416,7 @@ namespace Yamka
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    typedef std::deque<TSeekHead>::const_iterator TSeekHeadIter;
+    typedef std::list<TSeekHead>::const_iterator TSeekHeadIter;
     TSeekHeadIter seekHeadIter = seekHeads_.begin();
     
     // save the first seekhead:
@@ -3477,18 +3477,18 @@ namespace Yamka
   Segment::resolveReferences(const IElement * origin)
   {
     // shortcuts:
-    typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
-    typedef std::deque<TCues>::iterator TCuesIter;
-    typedef std::deque<TCluster>::iterator TClusterIter;
+    typedef std::list<TSeekHead>::iterator TSeekHeadIter;
+    typedef std::list<TCues>::iterator TCuesIter;
+    typedef std::list<TCluster>::iterator TClusterIter;
     
     typedef SeekHead::TSeekEntry TSeekEntry;
-    typedef std::deque<TSeekEntry>::iterator TSeekEntryIter;
+    typedef std::list<TSeekEntry>::iterator TSeekEntryIter;
     
     typedef Cues::TCuePoint TCuePoint;
-    typedef std::deque<TCuePoint>::iterator TCuePointIter;
+    typedef std::list<TCuePoint>::iterator TCuePointIter;
     
     typedef CuePoint::TCueTrkPos TCueTrkPos;
-    typedef std::deque<TCueTrkPos>::iterator TCueTrkPosIter;
+    typedef std::list<TCueTrkPos>::iterator TCueTrkPosIter;
     
     if (!origin)
     {
@@ -3508,7 +3508,7 @@ namespace Yamka
     for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
     {
       TSeekHead & seekHead = *i;
-      std::deque<TSeekEntry> & seeks = seekHead.payload_.seek_;
+      std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
       
       for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)
       {
@@ -3567,11 +3567,11 @@ namespace Yamka
     }
     
     // resolve cue track position references:
-    std::deque<TCuePoint> & cuePoints = cues_.payload_.points_;
+    std::list<TCuePoint> & cuePoints = cues_.payload_.points_;
     for (TCuePointIter i = cuePoints.begin(); i != cuePoints.end(); ++i)
     {
       TCuePoint & cuePoint = *i;
-      std::deque<TCueTrkPos> & cueTrkPns = cuePoint.payload_.trkPosns_;
+      std::list<TCueTrkPos> & cueTrkPns = cuePoint.payload_.trkPosns_;
       
       for (TCueTrkPosIter j = cueTrkPns.begin(); j != cueTrkPns.end(); ++j)
       {
@@ -3798,7 +3798,7 @@ namespace Yamka
   MatroskaDoc::resolveReferences()
   {
     // shortcut:
-    typedef std::deque<TSegment>::iterator TSegmentIter;
+    typedef std::list<TSegment>::iterator TSegmentIter;
     
     for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
     {
@@ -3814,7 +3814,7 @@ namespace Yamka
   MatroskaDoc::setCrc32(bool enableCrc32)
   {
     // shortcut:
-    typedef std::deque<TSegment>::iterator TSegmentIter;
+    typedef std::list<TSegment>::iterator TSegmentIter;
     
     for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
     {

@@ -173,14 +173,14 @@ main(int argc, char ** argv)
               << std::endl;
 #if 0
     // for each segment:
-    typedef std::deque<MatroskaDoc::TSegment>::const_iterator TSegIter;
+    typedef std::list<MatroskaDoc::TSegment>::const_iterator TSegIter;
     for (TSegIter i = doc.segments_.begin(); i != doc.segments_.end(); ++i)
     {
       const MatroskaDoc::TSegment & segment = *i;
       std::cout << std::endl;
       
       // for each cluster:
-      typedef std::deque<Segment::TCluster>::const_iterator TClusterIter;
+      typedef std::list<Segment::TCluster>::const_iterator TClusterIter;
       for (TClusterIter j = segment.payload_.clusters_.begin();
            j != segment.payload_.clusters_.end(); ++j)
       {
@@ -188,7 +188,7 @@ main(int argc, char ** argv)
         std::cout << std::endl;
         
         // for each simple block:
-        typedef std::deque<Cluster::TSimpleBlock>::const_iterator TSimpleBlockIter;
+        typedef std::list<Cluster::TSimpleBlock>::const_iterator TSimpleBlockIter;
         for (TSimpleBlockIter k = cluster.payload_.simpleBlocks_.begin();
              k != cluster.payload_.simpleBlocks_.end(); ++k)
         {
@@ -209,7 +209,7 @@ main(int argc, char ** argv)
         }
         
         // for each block group:
-        typedef std::deque<Cluster::TBlockGroup>::const_iterator TBlockGroupIter;
+        typedef std::list<Cluster::TBlockGroup>::const_iterator TBlockGroupIter;
         for (TBlockGroupIter k = cluster.payload_.blockGroups_.begin();
              k != cluster.payload_.blockGroups_.end(); ++k)
         {
