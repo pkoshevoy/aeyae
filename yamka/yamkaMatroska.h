@@ -934,6 +934,21 @@ namespace Yamka
     
     TypedefYamkaElt(Cluster, 0x1F43B675, "Cluster") TCluster;
     std::list<TCluster> clusters_;
+    
+    //----------------------------------------------------------------
+    // IDelegateSave
+    // 
+    // Implement this interface if you would like to override
+    // how a Segment should be saved:
+    // 
+    struct IDelegateSave
+    {
+      virtual IStorage::IReceiptPtr
+      save(const Segment & segment, IStorage & storage) = 0;
+    };
+    
+    // set this if you would like to save this segment differently:
+    mutable boost::shared_ptr<IDelegateSave> delegateSave_;
   };
   
   //----------------------------------------------------------------

@@ -3414,6 +3414,12 @@ namespace Yamka
   IStorage::IReceiptPtr
   Segment::save(IStorage & storage) const
   {
+    if (delegateSave_)
+    {
+      // let the delegate handle saving this segment:
+      return delegateSave_->save(*this, storage);
+    }
+    
     IStorage::IReceiptPtr receipt = storage.receipt();
     
     typedef std::list<TSeekHead>::const_iterator TSeekHeadIter;
@@ -3813,14 +3819,7 @@ namespace Yamka
   void
   MatroskaDoc::setCrc32(bool enableCrc32)
   {
-    // shortcut:
-    typedef std::list<TSegment>::iterator TSegmentIter;
-    
-    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
-    {
-      TSegment & segment = *i;
-      segment.payload_.setCrc32(enableCrc32);
-    }
+    eltsSetCrc32(segments_, enableCrc32);
   }
   
   //----------------------------------------------------------------
