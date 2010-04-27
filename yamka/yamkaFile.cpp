@@ -421,7 +421,7 @@ namespace Yamka
       std::size_t bytesToReadNow =
         (bytesPerPass < bytesToRead) ?
         bytesPerPass :
-        bytesToRead;
+        (std::size_t)bytesToRead;
       
       if (!read(dataPtr, bytesToReadNow))
       {
