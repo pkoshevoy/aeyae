@@ -941,9 +941,17 @@ namespace Yamka
   // 
   struct MatroskaDoc : public EbmlDoc
   {
+    TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
+    std::list<TSegment> segments_;
+    
     MatroskaDoc();
     
     ImplementsYamkaPayloadAPI();
+    
+    // override this if you don't like how a segment gets saved
+    // by default (which is to let the segment save itself):
+    virtual IStorage::IReceiptPtr
+    saveSegment(const TSegment & segment, IStorage & storage) const;
     
     // resolve positional references (seeks, cues, etc...)
     // for each segment:
@@ -954,9 +962,6 @@ namespace Yamka
     
     // remove all optional elements:
     void optimize();
-    
-    TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
-    std::list<TSegment> segments_;
   };
   
 }

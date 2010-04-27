@@ -3719,9 +3719,15 @@ namespace Yamka
   IStorage::IReceiptPtr
   MatroskaDoc::save(IStorage & storage) const
   {
-    IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage);
+    // shortcut:
+    typedef std::list<TSegment>::const_iterator TSegmentIter;
     
-    *receipt += eltsSave(segments_, storage);
+    IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage);
+    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+    {
+      const TSegment & segment = *i;
+      *receipt += saveSegment(segment, storage);
+    }
     
     // rewrite element position references (second pass):
     {
@@ -3736,6 +3742,17 @@ namespace Yamka
     }
     
     return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::saveSegment
+  // 
+  IStorage::IReceiptPtr
+  MatroskaDoc::saveSegment(const MatroskaDoc::TSegment & segment,
+                           IStorage & storage) const
+  {
+    // by default let the segment save itself:
+    return segment.save(storage);
   }
   
   //----------------------------------------------------------------
