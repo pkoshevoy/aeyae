@@ -197,6 +197,11 @@ namespace Yamka
   extern double
   doubleDecode(const TByteVec & v);
   
+  //----------------------------------------------------------------
+  // createUID
+  // 
+  extern TByteVec
+  createUID(std::size_t numBytes);
   
   //----------------------------------------------------------------
   // Indent

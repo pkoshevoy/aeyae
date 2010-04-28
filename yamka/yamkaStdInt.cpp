@@ -13,6 +13,7 @@
 // system includes:
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 
 namespace Yamka
@@ -628,6 +629,24 @@ namespace Yamka
     memcpy(&d, &i, 8);
     return d;
   }
+  
+  
+  //----------------------------------------------------------------
+  // createUID
+  // 
+  TByteVec
+  createUID(std::size_t numBytes)
+  {
+    TByteVec v(numBytes);
+    for (std::size_t i = 0; i < numBytes; i++)
+    {
+      double t = double(rand()) / double(RAND_MAX);
+      v[i] = TByte(t * 255.0);
+    }
+    
+    return v;
+  }
+  
   
   namespace Indent
   {
