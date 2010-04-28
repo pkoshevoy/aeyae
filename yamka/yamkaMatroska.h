@@ -373,7 +373,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(Track, 0xAE, "TrackEntry") TTrack;
-    std::list<TTrack> tracks_;
+    std::deque<TTrack> tracks_;
   };
   
   //----------------------------------------------------------------
@@ -889,13 +889,13 @@ namespace Yamka
     TPrevSize prevSize_;
     
     TypedefYamkaElt(BlockGroup, 0xA0, "BlockGroup") TBlockGroup;
-    std::list<TBlockGroup> blockGroups_;
+    std::deque<TBlockGroup> blockGroups_;
     
     TypedefYamkaElt(VBinary, 0xA3, "SimpleBlock") TSimpleBlock;
-    std::list<TSimpleBlock> simpleBlocks_;
+    std::deque<TSimpleBlock> simpleBlocks_;
     
     TypedefYamkaElt(VBinary, 0xAF, "EncryptedBlock") TEncryptedBlock;
-    std::list<TEncryptedBlock> encryptedBlocks_;
+    std::deque<TEncryptedBlock> encryptedBlocks_;
   };
   
   //----------------------------------------------------------------
@@ -918,7 +918,7 @@ namespace Yamka
     TTracks tracks_;
     
     TypedefYamkaElt(SeekHead, 0x114D9B74, "SeekHead") TSeekHead;
-    std::list<TSeekHead> seekHeads_;
+    std::deque<TSeekHead> seekHeads_;
     
     TypedefYamkaElt(Cues, 0x1C53BB6B, "Cues") TCues;
     TCues cues_;

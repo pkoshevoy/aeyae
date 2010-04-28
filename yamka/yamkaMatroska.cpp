@@ -3422,7 +3422,7 @@ namespace Yamka
     
     IStorage::IReceiptPtr receipt = storage.receipt();
     
-    typedef std::list<TSeekHead>::const_iterator TSeekHeadIter;
+    typedef std::deque<TSeekHead>::const_iterator TSeekHeadIter;
     TSeekHeadIter seekHeadIter = seekHeads_.begin();
     
     // save the first seekhead:
@@ -3483,8 +3483,7 @@ namespace Yamka
   Segment::resolveReferences(const IElement * origin)
   {
     // shortcuts:
-    typedef std::list<TSeekHead>::iterator TSeekHeadIter;
-    typedef std::list<TCues>::iterator TCuesIter;
+    typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
     typedef std::list<TCluster>::iterator TClusterIter;
     
     typedef SeekHead::TSeekEntry TSeekEntry;
