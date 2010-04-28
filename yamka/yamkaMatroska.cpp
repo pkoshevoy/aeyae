@@ -3818,7 +3818,14 @@ namespace Yamka
   void
   MatroskaDoc::setCrc32(bool enableCrc32)
   {
-    eltsSetCrc32(segments_, enableCrc32);
+    // shortcut:
+    typedef std::list<TSegment>::iterator TSegmentIter;
+    
+    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+    {
+      TSegment & segment = *i;
+      segment.payload_.setCrc32(enableCrc32);
+    }
   }
   
   //----------------------------------------------------------------
