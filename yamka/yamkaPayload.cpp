@@ -242,12 +242,6 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
-  // kVDateMilleniumUTC
-  // 
-  // 2001/01/01 00:00:00 UTC
-  static const std::time_t kVDateMilleniumUTC = 978307200;
-  
-  //----------------------------------------------------------------
   // VDate::VDate
   // 
   VDate::VDate():
@@ -286,7 +280,7 @@ namespace Yamka
   void
   VDate::setTime(std::time_t t)
   {
-    TSuper::data_ = int64(t - kVDateMilleniumUTC) * 1000000000;
+    TSuper::data_ = int64(t - kDateMilleniumUTC) * 1000000000;
   }
   
   //----------------------------------------------------------------
@@ -295,7 +289,7 @@ namespace Yamka
   std::time_t
   VDate::getTime() const
   {
-    std::time_t t = kVDateMilleniumUTC + TSuper::data_ / 1000000000;
+    std::time_t t = kDateMilleniumUTC + TSuper::data_ / 1000000000;
     return t;
   }
   

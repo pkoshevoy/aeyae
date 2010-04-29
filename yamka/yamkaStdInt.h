@@ -35,6 +35,14 @@ namespace Yamka
   // 
   typedef boost::int64_t int64;
   
+  //----------------------------------------------------------------
+  // TUnixTimeContant
+  // 
+  enum TUnixTimeContant
+  {
+    // 2001/01/01 00:00:00 UTC:
+    kDateMilleniumUTC = 978307200
+  };
   
   //----------------------------------------------------------------
   // uintMax

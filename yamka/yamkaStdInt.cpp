@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctime>
 
 
 namespace Yamka
@@ -637,6 +638,18 @@ namespace Yamka
   TByteVec
   createUID(std::size_t numBytes)
   {
+    static bool seeded = false;
+    if (!seeded)
+    {
+      std::time_t currentTime = std::time(NULL);
+      unsigned int seed =
+        (currentTime - kDateMilleniumUTC) %
+        std::numeric_limits<unsigned int>::max();
+      
+      srand(seed);
+      seeded = true;
+    }
+    
     TByteVec v(numBytes);
     for (std::size_t i = 0; i < numBytes; i++)
     {
