@@ -943,6 +943,8 @@ namespace Yamka
     // 
     struct IDelegateSave
     {
+      virtual ~IDelegateSave() {}
+      
       virtual IStorage::IReceiptPtr
       save(const Segment & segment, IStorage & storage) = 0;
     };

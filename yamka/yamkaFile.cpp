@@ -419,7 +419,7 @@ namespace Yamka
     while (bytesToRead)
     {
       std::size_t bytesToReadNow =
-        (bytesPerPass < bytesToRead) ?
+        (File::TOff(bytesPerPass) < bytesToRead) ?
         bytesPerPass :
         (std::size_t)bytesToRead;
       
