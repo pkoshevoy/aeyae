@@ -2974,8 +2974,8 @@ namespace Yamka
                 << intEncode(timeCode_, 2);
     
     std::size_t lastFrameIndex = getNumberOfFrames() - 1;
-    Lacing lacing = getLacing();
-
+    Lacing lacing = lastFrameIndex ? getLacing() : kLacingNone;
+    
     Bytes laceXiph;
     Bytes laceEBML;
     
