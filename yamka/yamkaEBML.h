@@ -37,7 +37,7 @@ namespace Yamka
     for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
     {
       elt_t & elt = *i;
-      if (elt.eval(crawler))
+      if (crawler.eval(elt))
       {
         return true;
       }
@@ -178,6 +178,9 @@ namespace Yamka
   {
     TypedefYamkaElt(VBinary, kIdVoid, "Void") TVoid;
     std::list<TVoid> voids_;
+    
+    // virtual:
+    bool isComposite() const;
     
     // virtual:
     uint64 loadVoid(FileStorage & storage, uint64 bytesToRead);

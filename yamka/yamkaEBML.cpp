@@ -14,6 +14,15 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // EbmlMaster::isComposite
+  // 
+  bool
+  EbmlMaster::isComposite() const
+  {
+    return true;
+  }
+  
+  //----------------------------------------------------------------
   // EbmlMaster::loadVoid
   // 
   uint64
@@ -82,13 +91,13 @@ namespace Yamka
   EbmlHead::eval(IElementCrawler & crawler)
   {
     return
-      version_.eval(crawler) ||
-      readVersion_.eval(crawler) ||
-      maxIdLength_.eval(crawler) ||
-      maxSizeLength_.eval(crawler) ||
-      docType_.eval(crawler) ||
-      docTypeVersion_.eval(crawler) ||
-      docTypeReadVersion_.eval(crawler);
+      crawler.eval(version_) ||
+      crawler.eval(readVersion_) ||
+      crawler.eval(maxIdLength_) ||
+      crawler.eval(maxSizeLength_) ||
+      crawler.eval(docType_) ||
+      crawler.eval(docTypeVersion_) ||
+      crawler.eval(docTypeReadVersion_);
   }
   
   //----------------------------------------------------------------
@@ -176,7 +185,7 @@ namespace Yamka
   bool
   EbmlDoc::eval(IElementCrawler & crawler)
   {
-    return head_.eval(crawler);
+    return crawler.eval(head_);
   }
   
   //----------------------------------------------------------------

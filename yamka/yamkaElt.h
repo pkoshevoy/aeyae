@@ -24,26 +24,7 @@ namespace Yamka
 {
   
   // forward declarations:
-  struct IElement;
   struct IPayload;
-
-  //----------------------------------------------------------------
-  // IElementCrawler
-  // 
-  // Interface for an element tree crawling functor.
-  // 
-  struct IElementCrawler
-  {
-    virtual ~IElementCrawler() {}
-    
-    // NOTE: the crawler should return true when it's done
-    // in order to stop:
-    virtual bool evalElement(IElement & elt) = 0;
-    
-    // NOTE: the crawler should return true when it's done
-    // in order to stop:
-    virtual bool evalPayload(IPayload & payload) = 0;
-  };
   
   //----------------------------------------------------------------
   // EbmlGlobalID
@@ -69,8 +50,11 @@ namespace Yamka
     // element EBML ID accessor:
     virtual uint64 getId() const = 0;
     
-    // element EBML ID accessor:
+    // element name accessor (for debugging):
     virtual const char * getName() const = 0;
+    
+    // element payload accessor:
+    virtual IPayload & payload() = 0;
     
     // check whether this element payload must be saved (recursive):
     virtual bool mustSave() const = 0;
@@ -104,26 +88,23 @@ namespace Yamka
     // accessor to this elements storage receipt.
     // 
     // NOTE: storage receipt is set only after an element
-    // is saved successfully
+    // is loaded/saved successfully
     virtual const IStorage::IReceiptPtr & storageReceipt() const = 0;
     
     // accessor to this elements payload storage receipt.
     // 
     // NOTE: payload storage receipt is set only after
-    // an element payload is saved successfully
+    // an element payload is loaded/saved successfully
     virtual const IStorage::IReceiptPtr & payloadReceipt() const = 0;
     
     // accessor to this elements payload CRC-32 checksum storage receipt.
     // 
     // NOTE: payload CRC-32 checksum storage receipt is set only after
-    // an element payload is saved successfully
+    // an element payload is loaded/saved successfully
     virtual const IStorage::IReceiptPtr & crc32Receipt() const = 0;
     
     // dispose of storage receipts:
     virtual IElement & discardReceipts() = 0;
-    
-    // perform crawler computation on this element and its payload:
-    virtual bool eval(IElementCrawler & crawler) = 0;
   };
   
   //----------------------------------------------------------------
@@ -169,6 +150,10 @@ namespace Yamka
     { return elt_name_t::getName(); }
     
     // virtual:
+    TPayload & payload()
+    { return payload_; }
+    
+    // virtual:
     bool mustSave() const
     {
       return
@@ -187,8 +172,14 @@ namespace Yamka
     // virtual:
     TSelf & setCrc32(bool enableCrc32)
     {
-      computeCrc32_ = enableCrc32;
+      computeCrc32_ = enableCrc32 && payload_.isComposite();
       return *this;
+    }
+    
+    // helper: only composite elements (EBML Master) may hold a CRC-32 element:
+    inline bool shouldComputeCrc32() const
+    {
+      return computeCrc32_ && payload_.isComposite();
     }
     
     // virtual:
@@ -200,7 +191,11 @@ namespace Yamka
       }
       
       // the payload size:
-      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();
+      uint64 payloadSize = payload_.calcSize();
+      if (payload_.isComposite())
+      {
+        payloadSize += payload_.calcVoidSize();
+      }
       
       // the EBML ID, payload size descriptor, and payload size:
       uint64 size =
@@ -208,7 +203,7 @@ namespace Yamka
         vsizeNumBytes(payloadSize) +
         payloadSize;
       
-      if (computeCrc32_)
+      if (shouldComputeCrc32())
       {
         // CRC-32 element size:
         size +=
@@ -239,10 +234,14 @@ namespace Yamka
       // known until the payload is written, however we know the
       // payload size upper limit.  Once the payload is saved it's
       // exact size will have to be saved again:
-      uint64 payloadSize = payload_.calcSize() + payload_.calcVoidSize();
+      uint64 payloadSize = payload_.calcSize();
+      if (payload_.isComposite())
+      {
+        payloadSize += payload_.calcVoidSize();
+      }
       
       // must account for CRC-32 element as well:
-      if (computeCrc32_)
+      if (shouldComputeCrc32())
       {
         payloadSize += uintNumBytes(kIdCrc32) + vsizeNumBytes(4) + 4;
       }
@@ -256,7 +255,7 @@ namespace Yamka
       receiptCrc32_ = IStorage::IReceiptPtr();
       
       // save CRC-32 element placeholder:
-      if (computeCrc32_)
+      if (shouldComputeCrc32())
       {
         receiptCrc32_ = storage.receipt();
         Bytes bytes;
@@ -281,7 +280,24 @@ namespace Yamka
       }
       
       *receiptPayload_ += payloadReceipt;
-      *receiptPayload_ += payload_.saveVoid(storage);
+      
+      if (payload_.isComposite())
+      {
+        // NOTE: the Void elements always get saved last,
+        // therefore they may shift from the original position
+        // in the file they were loaded from.  However, this is
+        // not considered a bug by me, because any Master element
+        // should contain at most just one Void element,
+        // as the last element.
+        // 
+        // That being said -- I have seen Matroska files with
+        // Void elements scattered throughout the Segment.
+        // Yamka will load such files, but will move all Void elements
+        // to the end of the Segment when saving.
+        // 
+        *receiptPayload_ += payload_.saveVoid(storage);
+      }
+      
       *receipt_ += receiptPayload_;
       
       uint64 payloadBytesSaved = receiptPayload_->numBytes();
@@ -373,9 +389,12 @@ namespace Yamka
         payloadBytesToRead -= payload_.load(storage,
                                             payloadBytesToRead);
         
-        // consume any void elements that may exist:
-        payloadBytesToRead -= payload_.loadVoid(storage,
-                                                payloadBytesToRead);
+        if (payload_.isComposite())
+        {
+          // consume any void elements that may exist:
+          payloadBytesToRead -= payload_.loadVoid(storage,
+                                                  payloadBytesToRead);
+        }
         
         // consume the CRC-32 element if it exists:
         payloadBytesToRead -= loadCrc32(storage,
@@ -414,7 +433,7 @@ namespace Yamka
       *receipt_ += receiptPayload_;
       
       // verify stored payload CRC-32 checksum:
-      if (computeCrc32_)
+      if (shouldComputeCrc32())
       {
         Crc32 crc32;
         receiptPayload_->calcCrc32(crc32, receiptCrc32_);
@@ -516,14 +535,6 @@ namespace Yamka
       receipt_ = IStorage::IReceiptPtr();
       receiptPayload_ = IStorage::IReceiptPtr();
       return *this;
-    }
-    
-    // virtual:
-    bool eval(IElementCrawler & crawler)
-    {
-      return
-        crawler.evalPayload(payload_) ||
-        crawler.evalElement(*this);
     }
     
     // this flag indicates that this element must be saved

@@ -20,9 +20,9 @@ namespace Yamka
   ChapTranslate::eval(IElementCrawler & crawler)
   {
     return 
-      editionUID_.eval(crawler) ||
-      chapTransCodec_.eval(crawler) ||
-      chapTransID_.eval(crawler);
+      crawler.eval(editionUID_) ||
+      crawler.eval(chapTransCodec_) ||
+      crawler.eval(chapTransID_);
   }
   
   //----------------------------------------------------------------
@@ -102,20 +102,20 @@ namespace Yamka
   SegInfo::eval(IElementCrawler & crawler)
   {
     return
-      segUID_.eval(crawler) ||
-      segFilename_.eval(crawler) ||
-      prevUID_.eval(crawler) ||
-      prevFilename_.eval(crawler) ||
-      nextUID_.eval(crawler) ||
-      nextFilename_.eval(crawler) ||
-      familyUID_.eval(crawler) ||
-      chapTranslate_.eval(crawler) ||
-      timecodeScale_.eval(crawler) ||
-      duration_.eval(crawler) ||
-      date_.eval(crawler) ||
-      title_.eval(crawler) ||
-      muxingApp_.eval(crawler) ||
-      writingApp_.eval(crawler);
+      crawler.eval(segUID_) ||
+      crawler.eval(segFilename_) ||
+      crawler.eval(prevUID_) ||
+      crawler.eval(prevFilename_) ||
+      crawler.eval(nextUID_) ||
+      crawler.eval(nextFilename_) ||
+      crawler.eval(familyUID_) ||
+      crawler.eval(chapTranslate_) ||
+      crawler.eval(timecodeScale_) ||
+      crawler.eval(duration_) ||
+      crawler.eval(date_) ||
+      crawler.eval(title_) ||
+      crawler.eval(muxingApp_) ||
+      crawler.eval(writingApp_);
   }
     
   //----------------------------------------------------------------
@@ -229,9 +229,9 @@ namespace Yamka
   TrackTranslate::eval(IElementCrawler & crawler)
   {
     return 
-      editionUID_.eval(crawler) ||
-      trackTransCodec_.eval(crawler) ||
-      trackTransID_.eval(crawler);
+      crawler.eval(editionUID_) ||
+      crawler.eval(trackTransCodec_) ||
+      crawler.eval(trackTransID_);
   }
     
   //----------------------------------------------------------------
@@ -309,21 +309,21 @@ namespace Yamka
   Video::eval(IElementCrawler & crawler)
   {
     return
-      flagInterlaced_.eval(crawler) ||
-      stereoMode_.eval(crawler) ||
-      pixelWidth_.eval(crawler) ||
-      pixelHeight_.eval(crawler) ||
-      pixelCropBottom_.eval(crawler) ||
-      pixelCropTop_.eval(crawler) ||
-      pixelCropLeft_.eval(crawler) ||
-      pixelCropRight_.eval(crawler) ||
-      displayWidth_.eval(crawler) ||
-      displayHeight_.eval(crawler) ||
-      displayUnits_.eval(crawler) ||
-      aspectRatioType_.eval(crawler) ||
-      colorSpace_.eval(crawler) ||
-      gammaValue_.eval(crawler) ||
-      frameRate_.eval(crawler);
+      crawler.eval(flagInterlaced_) ||
+      crawler.eval(stereoMode_) ||
+      crawler.eval(pixelWidth_) ||
+      crawler.eval(pixelHeight_) ||
+      crawler.eval(pixelCropBottom_) ||
+      crawler.eval(pixelCropTop_) ||
+      crawler.eval(pixelCropLeft_) ||
+      crawler.eval(pixelCropRight_) ||
+      crawler.eval(displayWidth_) ||
+      crawler.eval(displayHeight_) ||
+      crawler.eval(displayUnits_) ||
+      crawler.eval(aspectRatioType_) ||
+      crawler.eval(colorSpace_) ||
+      crawler.eval(gammaValue_) ||
+      crawler.eval(frameRate_);
   }
   
   //----------------------------------------------------------------
@@ -450,11 +450,11 @@ namespace Yamka
   Audio::eval(IElementCrawler & crawler)
   {
     return
-      sampFreq_.eval(crawler) ||
-      sampFreqOut_.eval(crawler) ||
-      channels_.eval(crawler) ||
-      channelPositions_.eval(crawler) ||
-      bitDepth_.eval(crawler);
+      crawler.eval(sampFreq_) ||
+      crawler.eval(sampFreqOut_) ||
+      crawler.eval(channels_) ||
+      crawler.eval(channelPositions_) ||
+      crawler.eval(bitDepth_);
   }
   
   //----------------------------------------------------------------
@@ -532,8 +532,8 @@ namespace Yamka
   ContentCompr::eval(IElementCrawler & crawler)
   {
     return
-      algo_.eval(crawler) ||
-      settings_.eval(crawler);
+      crawler.eval(algo_) ||
+      crawler.eval(settings_);
   }
     
   //----------------------------------------------------------------
@@ -599,12 +599,12 @@ namespace Yamka
   ContentEncrypt::eval(IElementCrawler & crawler)
   {
     return
-      encAlgo_.eval(crawler) ||
-      encKeyID_.eval(crawler) ||
-      signature_.eval(crawler) ||
-      sigKeyID_.eval(crawler) ||
-      sigAlgo_.eval(crawler) ||
-      sigHashAlgo_.eval(crawler);
+      crawler.eval(encAlgo_) ||
+      crawler.eval(encKeyID_) ||
+      crawler.eval(signature_) ||
+      crawler.eval(sigKeyID_) ||
+      crawler.eval(sigAlgo_) ||
+      crawler.eval(sigHashAlgo_);
   }
   
   //----------------------------------------------------------------
@@ -686,11 +686,11 @@ namespace Yamka
   ContentEnc::eval(IElementCrawler & crawler)
   {
     return
-      order_.eval(crawler) ||
-      scope_.eval(crawler) ||
-      type_.eval(crawler) ||
-      compression_.eval(crawler) ||
-      encryption_.eval(crawler);
+      crawler.eval(order_) ||
+      crawler.eval(scope_) ||
+      crawler.eval(type_) ||
+      crawler.eval(compression_) ||
+      crawler.eval(encryption_);
   }
     
   //----------------------------------------------------------------
@@ -826,34 +826,34 @@ namespace Yamka
   Track::eval(IElementCrawler & crawler)
   {
     return
-      trackNumber_.eval(crawler) ||
-      trackUID_.eval(crawler) ||
-      trackType_.eval(crawler) ||
-      flagEnabled_.eval(crawler) ||
-      flagDefault_.eval(crawler) ||
-      flagForced_.eval(crawler) ||
-      flagLacing_.eval(crawler) ||
-      minCache_.eval(crawler) ||
-      maxCache_.eval(crawler) ||
-      frameDuration_.eval(crawler) ||
-      timecodeScale_.eval(crawler) ||
-      trackOffset_.eval(crawler) ||
-      maxBlockAddID_.eval(crawler) ||
-      name_.eval(crawler) ||
-      language_.eval(crawler) ||
-      codecID_.eval(crawler) ||
-      codecPrivate_.eval(crawler) ||
-      codecName_.eval(crawler) ||
-      attachmentLink_.eval(crawler) ||
-      codecSettings_.eval(crawler) ||
-      codecInfoURL_.eval(crawler) ||
-      codecDownloadURL_.eval(crawler) ||
-      codecDecodeAll_.eval(crawler) ||
-      trackOverlay_.eval(crawler) ||
-      trackTranslate_.eval(crawler) ||
-      video_.eval(crawler) ||
-      audio_.eval(crawler) ||
-      contentEncs_.eval(crawler);
+      crawler.eval(trackNumber_) ||
+      crawler.eval(trackUID_) ||
+      crawler.eval(trackType_) ||
+      crawler.eval(flagEnabled_) ||
+      crawler.eval(flagDefault_) ||
+      crawler.eval(flagForced_) ||
+      crawler.eval(flagLacing_) ||
+      crawler.eval(minCache_) ||
+      crawler.eval(maxCache_) ||
+      crawler.eval(frameDuration_) ||
+      crawler.eval(timecodeScale_) ||
+      crawler.eval(trackOffset_) ||
+      crawler.eval(maxBlockAddID_) ||
+      crawler.eval(name_) ||
+      crawler.eval(language_) ||
+      crawler.eval(codecID_) ||
+      crawler.eval(codecPrivate_) ||
+      crawler.eval(codecName_) ||
+      crawler.eval(attachmentLink_) ||
+      crawler.eval(codecSettings_) ||
+      crawler.eval(codecInfoURL_) ||
+      crawler.eval(codecDownloadURL_) ||
+      crawler.eval(codecDecodeAll_) ||
+      crawler.eval(trackOverlay_) ||
+      crawler.eval(trackTranslate_) ||
+      crawler.eval(video_) ||
+      crawler.eval(audio_) ||
+      crawler.eval(contentEncs_);
   }
   
   //----------------------------------------------------------------
@@ -1080,10 +1080,10 @@ namespace Yamka
   CueRef::eval(IElementCrawler & crawler)
   {
     return
-      time_.eval(crawler) ||
-      cluster_.eval(crawler) ||
-      block_.eval(crawler) ||
-      codecState_.eval(crawler);
+      crawler.eval(time_) ||
+      crawler.eval(cluster_) ||
+      crawler.eval(block_) ||
+      crawler.eval(codecState_);
   }
   
   //----------------------------------------------------------------
@@ -1163,11 +1163,11 @@ namespace Yamka
   CueTrkPos::eval(IElementCrawler & crawler)
   {
     return
-      track_.eval(crawler) ||
-      cluster_.eval(crawler) ||
-      block_.eval(crawler) ||
-      codecState_.eval(crawler) ||
-      ref_.eval(crawler);
+      crawler.eval(track_) ||
+      crawler.eval(cluster_) ||
+      crawler.eval(block_) ||
+      crawler.eval(codecState_) ||
+      crawler.eval(ref_);
   }
   
   //----------------------------------------------------------------
@@ -1250,7 +1250,7 @@ namespace Yamka
   CuePoint::eval(IElementCrawler & crawler)
   {
     return
-      time_.eval(crawler) ||
+      crawler.eval(time_) ||
       eltsEval(trkPosns_, crawler);
   }
   
@@ -1374,8 +1374,8 @@ namespace Yamka
   SeekEntry::eval(IElementCrawler & crawler)
   {
     return
-      id_.eval(crawler) ||
-      position_.eval(crawler);
+      crawler.eval(id_) ||
+      crawler.eval(position_);
   }
   
   //----------------------------------------------------------------
@@ -1519,12 +1519,12 @@ namespace Yamka
   AttdFile::eval(IElementCrawler & crawler)
   {
     return
-      description_.eval(crawler) ||
-      filename_.eval(crawler) ||
-      mimeType_.eval(crawler) ||
-      data_.eval(crawler) ||
-      fileUID_.eval(crawler) ||
-      referral_.eval(crawler);
+      crawler.eval(description_) ||
+      crawler.eval(filename_) ||
+      crawler.eval(mimeType_) ||
+      crawler.eval(data_) ||
+      crawler.eval(fileUID_) ||
+      crawler.eval(referral_);
   }
   
   //----------------------------------------------------------------
@@ -1720,9 +1720,9 @@ namespace Yamka
   ChapDisp::eval(IElementCrawler & crawler)
   {
     return
-      string_.eval(crawler) ||
-      language_.eval(crawler) ||
-      country_.eval(crawler);
+      crawler.eval(string_) ||
+      crawler.eval(language_) ||
+      crawler.eval(country_);
   }
   
   //----------------------------------------------------------------
@@ -1792,8 +1792,8 @@ namespace Yamka
   ChapProcCmd::eval(IElementCrawler & crawler)
   {
     return
-      time_.eval(crawler) ||
-      data_.eval(crawler);
+      crawler.eval(time_) ||
+      crawler.eval(data_);
   }
   
   //----------------------------------------------------------------
@@ -1859,8 +1859,8 @@ namespace Yamka
   ChapProc::eval(IElementCrawler & crawler)
   {
     return
-      codecID_.eval(crawler) ||
-      procPrivate_.eval(crawler) ||
+      crawler.eval(codecID_) ||
+      crawler.eval(procPrivate_) ||
       eltsEval(cmds_, crawler);
   }
   
@@ -1933,15 +1933,15 @@ namespace Yamka
   ChapAtom::eval(IElementCrawler & crawler)
   {
     return
-      UID_.eval(crawler) ||
-      timeStart_.eval(crawler) ||
-      timeEnd_.eval(crawler) ||
-      hidden_.eval(crawler) ||
-      enabled_.eval(crawler) ||
-      segUID_.eval(crawler) ||
-      segEditionUID_.eval(crawler) ||
-      physEquiv_.eval(crawler) ||
-      tracks_.eval(crawler) ||
+      crawler.eval(UID_) ||
+      crawler.eval(timeStart_) ||
+      crawler.eval(timeEnd_) ||
+      crawler.eval(hidden_) ||
+      crawler.eval(enabled_) ||
+      crawler.eval(segUID_) ||
+      crawler.eval(segEditionUID_) ||
+      crawler.eval(physEquiv_) ||
+      crawler.eval(tracks_) ||
       eltsEval(display_, crawler) ||
       eltsEval(process_, crawler);
   }
@@ -2047,10 +2047,10 @@ namespace Yamka
   Edition::eval(IElementCrawler & crawler)
   {
     return
-      UID_.eval(crawler) ||
-      flagHidden_.eval(crawler) ||
-      flagDefault_.eval(crawler) ||
-      flagOrdered_.eval(crawler) ||
+      crawler.eval(UID_) ||
+      crawler.eval(flagHidden_) ||
+      crawler.eval(flagDefault_) ||
+      crawler.eval(flagOrdered_) ||
       eltsEval(chapAtoms_, crawler);
   }
   
@@ -2188,8 +2188,8 @@ namespace Yamka
   TagTargets::eval(IElementCrawler & crawler)
   {
     return
-      typeValue_.eval(crawler) ||
-      type_.eval(crawler) ||
+      crawler.eval(typeValue_) ||
+      crawler.eval(type_) ||
       eltsEval(trackUIDs_, crawler) ||
       eltsEval(editionUIDs_, crawler) ||
       eltsEval(chapterUIDs_, crawler) ||
@@ -2277,11 +2277,11 @@ namespace Yamka
   SimpleTag::eval(IElementCrawler & crawler)
   {
     return
-      name_.eval(crawler) ||
-      lang_.eval(crawler) ||
-      default_.eval(crawler) ||
-      string_.eval(crawler) ||
-      binary_.eval(crawler);
+      crawler.eval(name_) ||
+      crawler.eval(lang_) ||
+      crawler.eval(default_) ||
+      crawler.eval(string_) ||
+      crawler.eval(binary_);
   }
   
   //----------------------------------------------------------------
@@ -2359,7 +2359,7 @@ namespace Yamka
   Tag::eval(IElementCrawler & crawler)
   {
     return
-      targets_.eval(crawler) ||
+      crawler.eval(targets_) ||
       eltsEval(simpleTags_, crawler);
   }
   
@@ -2540,8 +2540,8 @@ namespace Yamka
   BlockMore::eval(IElementCrawler & crawler)
   {
     return
-      blockAddID_.eval(crawler) ||
-      blockAdditional_.eval(crawler);
+      crawler.eval(blockAddID_) ||
+      crawler.eval(blockAdditional_);
   }
   
   //----------------------------------------------------------------
@@ -2664,14 +2664,14 @@ namespace Yamka
   BlockGroup::eval(IElementCrawler & crawler)
   {
     return
-      duration_.eval(crawler) ||
-      block_.eval(crawler) ||
+      crawler.eval(duration_) ||
+      crawler.eval(block_) ||
       eltsEval(blockVirtual_, crawler) ||
-      additions_.eval(crawler) ||
-      refPriority_.eval(crawler) ||
+      crawler.eval(additions_) ||
+      crawler.eval(refPriority_) ||
       eltsEval(refBlock_, crawler) ||
-      refVirtual_.eval(crawler) ||
-      codecState_.eval(crawler) ||
+      crawler.eval(refVirtual_) ||
+      crawler.eval(codecState_) ||
       eltsEval(slices_, crawler);
   }
   
@@ -3270,10 +3270,10 @@ namespace Yamka
   Cluster::eval(IElementCrawler & crawler)
   {
     return
-      timecode_.eval(crawler) ||
-      silent_.eval(crawler) ||
-      position_.eval(crawler) ||
-      prevSize_.eval(crawler) ||
+      crawler.eval(timecode_) ||
+      crawler.eval(silent_) ||
+      crawler.eval(position_) ||
+      crawler.eval(prevSize_) ||
       eltsEval(blockGroups_, crawler) ||
       eltsEval(simpleBlocks_, crawler) ||
       eltsEval(encryptedBlocks_, crawler);
@@ -3355,10 +3355,10 @@ namespace Yamka
   Segment::eval(IElementCrawler & crawler)
   {
     return
-      info_.eval(crawler) ||
-      tracks_.eval(crawler) ||
-      chapters_.eval(crawler) ||
-      cues_.eval(crawler) ||
+      crawler.eval(info_) ||
+      crawler.eval(tracks_) ||
+      crawler.eval(chapters_) ||
+      crawler.eval(cues_) ||
       
       eltsEval(seekHeads_, crawler) ||
       eltsEval(attachments_, crawler) ||
@@ -3634,7 +3634,7 @@ namespace Yamka
   MatroskaDoc::eval(IElementCrawler & crawler)
   {
     return
-      EbmlDoc::head_.eval(crawler) ||
+      crawler.eval(EbmlDoc::head_) ||
       eltsEval(segments_, crawler);
   }
   
@@ -3666,10 +3666,6 @@ namespace Yamka
   struct RewriteReferences : public IElementCrawler
   {
     // virtual:
-    bool evalElement(IElement & elt)
-    { return false; }
-    
-    // virtual:
     bool evalPayload(IPayload & payload)
     {
       VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
@@ -3678,7 +3674,8 @@ namespace Yamka
         eltRef->rewrite();
       }
       
-      return payload.eval(*this);
+      bool done = payload.eval(*this);
+      return done;
     }
   };
   
@@ -3688,8 +3685,11 @@ namespace Yamka
   struct ReplaceCrc32Placeholders : public IElementCrawler
   {
     // virtual:
-    bool evalElement(IElement & elt)
+    bool eval(IElement & elt)
     {
+      // depth-first traversal:
+      bool done = evalPayload(elt.payload());
+      
       IStorage::IReceiptPtr receiptCrc32 = elt.crc32Receipt();
       if (receiptCrc32)
       {
@@ -3708,13 +3708,7 @@ namespace Yamka
         receiptCrc32->save(bytesCrc32);
       }
       
-      return false;
-    }
-    
-    // virtual:
-    bool evalPayload(IPayload & payload)
-    {
-      return payload.eval(*this);
+      return done;
     }
   };
   
@@ -3749,15 +3743,13 @@ namespace Yamka
   struct DiscardReceipts : public IElementCrawler
   {
     // virtual:
-    bool evalElement(IElement & elt)
+    bool eval(IElement & elt)
     {
       elt.discardReceipts();
-      return false;
+      
+      bool done = evalPayload(elt.payload());
+      return done;
     }
-    
-    // virtual:
-    bool evalPayload(IPayload & payload)
-    { return payload.eval(*this); }
   };
   
   //----------------------------------------------------------------
@@ -3861,7 +3853,7 @@ namespace Yamka
     }
     
     // virtual:
-    bool evalElement(IElement & elt)
+    bool eval(IElement & elt)
     {
       // remove CRC-32 element:
       elt.setCrc32(false);
@@ -3887,20 +3879,22 @@ namespace Yamka
         optimizeBlock(block);
       }
       
-      return false;
+      bool done = evalPayload(elt.payload());
+      return done;
     }
     
     // virtual:
     bool evalPayload(IPayload & payload)
     {
-      EbmlMaster * container = dynamic_cast<EbmlMaster *>(&payload);
-      if (container)
+      if (payload.isComposite())
       {
         // remove all void elements:
-        container->voids_.clear();
+        EbmlMaster * ebmlMaster = dynamic_cast<EbmlMaster *>(&payload);
+        ebmlMaster->voids_.clear();
       }
       
-      return payload.eval(*this);
+      bool done = payload.eval(*this);
+      return done;
     }
   };
   

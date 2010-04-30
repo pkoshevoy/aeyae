@@ -28,7 +28,10 @@
 
 namespace Yamka
 {
-
+  
+  // forward declarations:
+  struct IElementCrawler;
+  
   //----------------------------------------------------------------
   // IPayload
   // 
@@ -55,6 +58,12 @@ namespace Yamka
     virtual uint64
     load(FileStorage & storage, uint64 bytesToRead) = 0;
     
+    // return true if this payload is a composite of one or more
+    // EBML elements (such as an EBML Master Element payload)
+    // 
+    // NOTE: non-composite payload must not contain Void or CRC-32 elements
+    virtual bool isComposite() const = 0;
+    
     // attempt to load a void element:
     virtual uint64 loadVoid(FileStorage &, uint64 /* bytesToRead */)
     { return 0; }
@@ -73,6 +82,31 @@ namespace Yamka
     { return 0; }
   };
   
+  //----------------------------------------------------------------
+  // IElementCrawler
+  // 
+  // Interface for an element tree crawling functor.
+  // 
+  struct IElementCrawler
+  {
+    virtual ~IElementCrawler() {}
+    
+    // NOTE: the crawler should return true when it's done
+    // in order to stop:
+    virtual bool eval(IElement & elt)
+    {
+      bool done = evalPayload(elt.payload());
+      return done;
+    }
+    
+    // NOTE: the crawler should return true when it's done
+    // in order to stop:
+    virtual bool evalPayload(IPayload & payload)
+    {
+      bool done = payload.eval(*this);
+      return done;
+    }
+  };
   
   //----------------------------------------------------------------
   // ImplementsYamkaPayloadAPI
@@ -103,6 +137,10 @@ namespace Yamka
     VPayload(uint64 size = 0):
       size_(size)
     {}
+    
+    // virtual:
+    bool isComposite() const
+    { return false; }
     
     // set payload size:
     TSelf & setSize(uint64 size)
@@ -232,6 +270,10 @@ namespace Yamka
     
     ImplementsYamkaPayloadAPI();
     
+    // virtual:
+    bool isComposite() const
+    { return false; }
+    
     // data storage:
     IStorage::IReceiptPtr receipt_;
     IStorage::IReceiptPtr receiptDefault_;
@@ -263,6 +305,10 @@ namespace Yamka
     
     // virtual:
     bool eval(IElementCrawler &)
+    { return false; }
+    
+    // virtual:
+    bool isComposite() const
     { return false; }
     
     // check whether payload holds default value:
@@ -322,6 +368,10 @@ namespace Yamka
     VEltPosition();
     
     ImplementsYamkaPayloadAPI();
+    
+    // virtual:
+    bool isComposite() const
+    { return false; }
     
     // set default number of bytes to use when exact size of
     // the position is not known yet. The default is 8 bytes
