@@ -95,7 +95,7 @@ namespace Yamka
     // in order to stop:
     virtual bool eval(IElement & elt)
     {
-      bool done = evalPayload(elt.payload());
+      bool done = evalPayload(elt.getPayload());
       return done;
     }
     

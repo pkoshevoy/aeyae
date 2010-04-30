@@ -45,6 +45,9 @@ namespace Yamka
   // 
   struct IElement
   {
+    // by default CRC-32 is disabled:
+    IElement();
+    
     virtual ~IElement() {}
     
     // element EBML ID accessor:
@@ -54,20 +57,21 @@ namespace Yamka
     virtual const char * getName() const = 0;
     
     // element payload accessor:
-    virtual IPayload & payload() = 0;
+    virtual const IPayload & getPayload() const = 0;
+    virtual IPayload & getPayload() = 0;
     
     // check whether this element payload must be saved (recursive):
-    virtual bool mustSave() const = 0;
+    virtual bool mustSave() const;
     
     // set the flag indicating that this element must be saved
     // even when it holds a default value:
-    virtual IElement & alwaysSave() = 0;
+    virtual IElement & alwaysSave();
     
     // turn on/off CRC-32 wrapper for this element:
-    virtual IElement & setCrc32(bool enable) = 0;
+    virtual IElement & setCrc32(bool enable);
     
     // accessor to total element size (recursive):
-    virtual uint64 calcSize() const = 0;
+    virtual uint64 calcSize() const;
     
     // save this element to a storage stream,
     // and return a storage receipt.
@@ -75,7 +79,7 @@ namespace Yamka
     // NOTE: if the element can not be saved due to invalid or
     // insufficient storage, then a NULL storage receipt is returned:
     virtual IStorage::IReceiptPtr
-    save(IStorage & storage) const = 0;
+    save(IStorage & storage) const;
     
     // attempt to load an instance of this element from a file,
     // return the number of bytes consumed successfully.
@@ -83,28 +87,52 @@ namespace Yamka
     // NOTE: the file position is not advanced unless some of the
     // element is loaded successfully:
     virtual uint64
-    load(FileStorage & storage, uint64 storageSize) = 0;
+    load(FileStorage & storage, uint64 storageSize);
     
     // accessor to this elements storage receipt.
     // 
     // NOTE: storage receipt is set only after an element
     // is loaded/saved successfully
-    virtual const IStorage::IReceiptPtr & storageReceipt() const = 0;
+    virtual const IStorage::IReceiptPtr & storageReceipt() const;
     
     // accessor to this elements payload storage receipt.
     // 
     // NOTE: payload storage receipt is set only after
     // an element payload is loaded/saved successfully
-    virtual const IStorage::IReceiptPtr & payloadReceipt() const = 0;
+    virtual const IStorage::IReceiptPtr & payloadReceipt() const;
     
     // accessor to this elements payload CRC-32 checksum storage receipt.
     // 
     // NOTE: payload CRC-32 checksum storage receipt is set only after
     // an element payload is loaded/saved successfully
-    virtual const IStorage::IReceiptPtr & crc32Receipt() const = 0;
+    virtual const IStorage::IReceiptPtr & crc32Receipt() const;
     
     // dispose of storage receipts:
-    virtual IElement & discardReceipts() = 0;
+    virtual IElement & discardReceipts();
+    
+    // helper: only composite elements (EBML Master) may hold a CRC-32 element:
+    bool shouldComputeCrc32() const;
+    
+    // helper for loading CRC-32 checksum element:
+    uint64 loadCrc32(FileStorage & storage, uint64 bytesToRead);
+    
+    // this flag indicates that this element must be saved
+    // even when it holds a default value:
+    bool alwaysSave_;
+    
+    // The CRC-32 value represents all the data inside the
+    // EBML Master it's contained in, except the CRC32 element itself.
+    // It should be placed as the first element in a Master
+    // so it applies to all the following elements at that level.
+    bool computeCrc32_;
+    
+    // loaded/computed CRC-32 checksum:
+    mutable unsigned int checksumCrc32_;
+    
+    // storage receipts for this element and the payload (including CRC-32):
+    mutable IStorage::IReceiptPtr receipt_;
+    mutable IStorage::IReceiptPtr receiptPayload_;
+    mutable IStorage::IReceiptPtr receiptCrc32_;
   };
   
   //----------------------------------------------------------------
@@ -127,13 +155,6 @@ namespace Yamka
     typedef elt_name_t TName;
     typedef TElt<TPayload, EltId, elt_name_t> TSelf;
     
-    // by default CRC-32 is disabled:
-    TElt():
-      alwaysSave_(false),
-      computeCrc32_(false),
-      checksumCrc32_(0)
-    {}
-    
     // static constant for this element type EBML ID:
     enum EbmlEltID { kId =  EltId };
     
@@ -150,413 +171,22 @@ namespace Yamka
     { return elt_name_t::getName(); }
     
     // virtual:
-    TPayload & payload()
+    const TPayload & getPayload() const
     { return payload_; }
     
     // virtual:
-    bool mustSave() const
-    {
-      return
-        alwaysSave_ ||
-        !payload_.isDefault() ||
-        payload_.hasVoid();
-    }
+    TPayload & getPayload()
+    { return payload_; }
     
     // virtual:
     TSelf & alwaysSave()
     {
-      alwaysSave_ = true;
+      IElement::alwaysSave();
       return *this;
     }
-    
-    // virtual:
-    TSelf & setCrc32(bool enableCrc32)
-    {
-      computeCrc32_ = enableCrc32 && payload_.isComposite();
-      return *this;
-    }
-    
-    // helper: only composite elements (EBML Master) may hold a CRC-32 element:
-    inline bool shouldComputeCrc32() const
-    {
-      return computeCrc32_ && payload_.isComposite();
-    }
-    
-    // virtual:
-    uint64 calcSize() const
-    {
-      if (!mustSave())
-      {
-        return 0;
-      }
-      
-      // the payload size:
-      uint64 payloadSize = payload_.calcSize();
-      if (payload_.isComposite())
-      {
-        payloadSize += payload_.calcVoidSize();
-      }
-      
-      // the EBML ID, payload size descriptor, and payload size:
-      uint64 size =
-        uintNumBytes(EltId) +
-        vsizeNumBytes(payloadSize) +
-        payloadSize;
-      
-      if (shouldComputeCrc32())
-      {
-        // CRC-32 element size:
-        size +=
-          uintNumBytes(kIdCrc32) +
-          vsizeNumBytes(4) +
-          4;
-      }
-      
-      return size;
-    }
-    
-    // virtual:
-    IStorage::IReceiptPtr
-    save(IStorage & storage) const
-    {
-      if (!mustSave())
-      {
-        return storage.receipt();
-      }
-      
-      receipt_ = storage.save(Bytes(uintEncode(EltId)));
-      if (!receipt_)
-      {
-        return receipt_;
-      }
-      
-      // NOTE: due to VEltPosition the payload size is not actually
-      // known until the payload is written, however we know the
-      // payload size upper limit.  Once the payload is saved it's
-      // exact size will have to be saved again:
-      uint64 payloadSize = payload_.calcSize();
-      if (payload_.isComposite())
-      {
-        payloadSize += payload_.calcVoidSize();
-      }
-      
-      // must account for CRC-32 element as well:
-      if (shouldComputeCrc32())
-      {
-        payloadSize += uintNumBytes(kIdCrc32) + vsizeNumBytes(4) + 4;
-      }
-      
-      IStorage::IReceiptPtr payloadSizeReceipt =
-        storage.save(Bytes(vsizeEncode(payloadSize)));
-      *receipt_ += payloadSizeReceipt;
-      
-      // save payload receipt:
-      receiptPayload_ = storage.receipt();
-      receiptCrc32_ = IStorage::IReceiptPtr();
-      
-      // save CRC-32 element placeholder:
-      if (shouldComputeCrc32())
-      {
-        receiptCrc32_ = storage.receipt();
-        Bytes bytes;
-        bytes << uintEncode(kIdCrc32)
-              << vsizeEncode(4)
-              << uintEncode(0, 4);
-        
-        receiptCrc32_ = storage.save(bytes);
-        if (!receiptCrc32_)
-        {
-          return receiptCrc32_;
-        }
-        
-        *receiptPayload_ += receiptCrc32_;
-      }
-      
-      // save the payload:
-      IStorage::IReceiptPtr payloadReceipt = payload_.save(storage);
-      if (!payloadReceipt)
-      {
-        return payloadReceipt;
-      }
-      
-      *receiptPayload_ += payloadReceipt;
-      
-      if (payload_.isComposite())
-      {
-        // NOTE: the Void elements always get saved last,
-        // therefore they may shift from the original position
-        // in the file they were loaded from.  However, this is
-        // not considered a bug by me, because any Master element
-        // should contain at most just one Void element,
-        // as the last element.
-        // 
-        // That being said -- I have seen Matroska files with
-        // Void elements scattered throughout the Segment.
-        // Yamka will load such files, but will move all Void elements
-        // to the end of the Segment when saving.
-        // 
-        *receiptPayload_ += payload_.saveVoid(storage);
-      }
-      
-      *receipt_ += receiptPayload_;
-      
-      uint64 payloadBytesSaved = receiptPayload_->numBytes();
-      assert(payloadBytesSaved <= payloadSize);
-      
-      if (payloadBytesSaved < payloadSize)
-      {
-        // save exact payload size:
-        uint64 vsizeBytesUsed = vsizeNumBytes(payloadSize);
-        TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesUsed);
-        payloadSizeReceipt->save(Bytes(v));
-      }
-      
-      return receipt_;
-    }
-    
-    // virtual:
-    uint64
-    load(FileStorage & storage, uint64 bytesToRead)
-    {
-      if (!bytesToRead)
-      {
-        return 0;
-      }
-      
-      // save a storage receipt so that element position references
-      // can be resolved later:
-      IStorage::IReceiptPtr storageReceipt = storage.receipt();
-      
-      // save current seek position, so it can be restored if necessary:
-      File::Seek storageStart(storage.file_);
-      
-      uint64 eltId = loadEbmlId(storage);
-      if (eltId != kId)
-      {
-        // element id wrong for my type:
-        return 0;
-      }
-      
-#if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-      Indent::More indentMore;
-      {
-        File::Seek restore(storage.file_);
-        uint64 vsizeSize = 0;
-        uint64 vsize = vsizeDecode(storage, vsizeSize);
-        std::cout << indent()
-                  << std::setw(8) << uintEncode(kId) << " @ "
-                  << std::hex
-                  << "0x" << storageStart.absolutePosition()
-                  << std::dec
-                  << " -- " << name()
-                  << ", payload " << vsize << " bytes" << std::endl;
-      }
-#endif
-      
-      // this appears to be a good payload:
-      storageStart.doNotRestore();
-      
-      // store the storage receipt:
-      receipt_ = storageReceipt;
-      
-      // read payload size:
-      uint64 vsizeSize = 0;
-      uint64 payloadSize = vsizeDecode(storage, vsizeSize);
-      
-      // keep track of the number of bytes read successfully:
-      receipt_->add(uintNumBytes(eltId));
-      receipt_->add(vsizeSize);
-      
-      // clear the payload checksum:
-      computeCrc32_ = false;
-      checksumCrc32_ = 0;
-      
-      // save the payload storage receipt so that element position references
-      // can be resolved later:
-      receiptPayload_ = storage.receipt();
-      receiptCrc32_ = IStorage::IReceiptPtr();
-      
-      // container elements may be present in any order, therefore
-      // not every load will succeed -- keep trying until all
-      // load attempts fail:
-      uint64 payloadBytesToRead = payloadSize;
-      uint64 payloadBytesReadTotal = 0;
-      while (payloadBytesToRead)
-      {
-        uint64 prevPayloadBytesToRead = payloadBytesToRead;
-        
-        // try to load some part of the payload:
-        payloadBytesToRead -= payload_.load(storage,
-                                            payloadBytesToRead);
-        
-        if (payload_.isComposite())
-        {
-          // consume any void elements that may exist:
-          payloadBytesToRead -= payload_.loadVoid(storage,
-                                                  payloadBytesToRead);
-        }
-        
-        // consume the CRC-32 element if it exists:
-        payloadBytesToRead -= loadCrc32(storage,
-                                        payloadBytesToRead);
-        
-        uint64 payloadBytesRead = prevPayloadBytesToRead - payloadBytesToRead;
-        payloadBytesReadTotal += payloadBytesRead;
-        
-        if (payloadBytesRead == 0)
-        {
-          break;
-        }
-      }
-      
-      if (payloadBytesReadTotal < payloadSize)
-      {
-        // skip unrecognized alien data:
-        uint64 alienDataSize = payloadSize - payloadBytesReadTotal;
-        
-#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-        std::cerr << indent() << "WARNING: " << name()
-                  << " 0x" << uintEncode(kId)
-                  << " -- skipping " << alienDataSize
-                  << " bytes of unrecognized alien data @ 0x"
-                  << std::hex
-                  << storage.file_.absolutePosition()
-                  << std::dec
-                  << std::endl;
-#endif
-        
-        storage.file_.seek(alienDataSize, File::kRelativeToCurrent);
-        payloadBytesReadTotal = payloadSize;
-      }
-      
-      receiptPayload_->add(payloadBytesReadTotal);
-      *receipt_ += receiptPayload_;
-      
-      // verify stored payload CRC-32 checksum:
-      if (shouldComputeCrc32())
-      {
-        Crc32 crc32;
-        receiptPayload_->calcCrc32(crc32, receiptCrc32_);
-        unsigned int freshChecksum = crc32.checksum();
-        
-        if (freshChecksum != checksumCrc32_)
-        {
-#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-          std::cerr << indent() << "WARNING: " << name()
-                    << " 0x" << uintEncode(kId)
-                    << " -- checksum mismatch, loaded "
-                    << std::hex << checksumCrc32_
-                    << ", computed " << freshChecksum
-                    << ", CRC-32 @ 0x" << receiptCrc32_->position()
-                    << ", payload @ 0x" << receiptPayload_->position()
-                    << ":" << receiptPayload_->numBytes()
-                    << std::dec
-                    << std::endl;
-          
-          Crc32 doOverCrc32;
-          receiptPayload_->calcCrc32(doOverCrc32, receiptCrc32_);
-#endif
-        }
-      }
-      
-      return receipt_->numBytes();
-    }
-    
-    // helper for loading CRC-32 checksum element:
-    uint64
-    loadCrc32(FileStorage & storage,
-              uint64 bytesToRead)
-    {
-      if (!bytesToRead)
-      {
-        return 0;
-      }
-      
-      // save current seek position, so it can be restored if necessary:
-      File::Seek storageStart(storage.file_);
-      IStorage::IReceiptPtr receipt = storage.receipt();
-      
-      uint64 eltId = loadEbmlId(storage);
-      if (eltId != kIdCrc32)
-      {
-        return 0;
-      }
-      
-      if (receiptCrc32_)
-      {
-        // only one CRC-32 element is allowed per master element:
-        assert(false);
-        return 0;
-      }
-      
-      uint64 vsizeSize = 0;
-      uint64 vsize = vsizeDecode(storage, vsizeSize);
-      if (vsize != 4)
-      {
-        // wrong CRC-32 payload size:
-        return 0;
-      }
-      
-      Bytes bytesCrc32(4);
-      if (!storage.load(bytesCrc32))
-      {
-        // failed to load CRC-32 checksum:
-        return 0;
-      }
-      
-      // update the receipt:
-      receipt->add(uintNumBytes(kIdCrc32) + vsizeSize + 4);
-      
-      // successfully loaded the CRC-32 element:
-      storageStart.doNotRestore();
-      
-      computeCrc32_ = true;
-      checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
-      receiptCrc32_ = receipt;
-      
-      return receipt->numBytes();
-    }
-    
-    // virtual:
-    const IStorage::IReceiptPtr & storageReceipt() const
-    { return receipt_; }
-    
-    // virtual:
-    const IStorage::IReceiptPtr & payloadReceipt() const
-    { return receiptPayload_; }
-    
-    // virtual:
-    const IStorage::IReceiptPtr & crc32Receipt() const
-    { return receiptCrc32_; }
-    
-    // virtual:
-    TSelf & discardReceipts()
-    {
-      receipt_ = IStorage::IReceiptPtr();
-      receiptPayload_ = IStorage::IReceiptPtr();
-      return *this;
-    }
-    
-    // this flag indicates that this element must be saved
-    // even when it holds a default value:
-    bool alwaysSave_;
     
     // the contents of this element:
     TPayload payload_;
-    
-    // The CRC-32 value represents all the data inside the
-    // EBML Master it's contained in, except the CRC32 element itself.
-    // It should be placed as the first element in a Master
-    // so it applies to all the following elements at that level.
-    bool computeCrc32_;
-    
-    // loaded/computed CRC-32 checksum:
-    mutable unsigned int checksumCrc32_;
-    
-    // storage receipts for this element and the payload (including CRC-32):
-    mutable IStorage::IReceiptPtr receipt_;
-    mutable IStorage::IReceiptPtr receiptPayload_;
-    mutable IStorage::IReceiptPtr receiptCrc32_;
   };
   
   

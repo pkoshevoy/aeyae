@@ -3688,7 +3688,7 @@ namespace Yamka
     bool eval(IElement & elt)
     {
       // depth-first traversal:
-      bool done = evalPayload(elt.payload());
+      bool done = evalPayload(elt.getPayload());
       
       IStorage::IReceiptPtr receiptCrc32 = elt.crc32Receipt();
       if (receiptCrc32)
@@ -3747,7 +3747,7 @@ namespace Yamka
     {
       elt.discardReceipts();
       
-      bool done = evalPayload(elt.payload());
+      bool done = evalPayload(elt.getPayload());
       return done;
     }
   };
@@ -3879,7 +3879,7 @@ namespace Yamka
         optimizeBlock(block);
       }
       
-      bool done = evalPayload(elt.payload());
+      bool done = evalPayload(elt.getPayload());
       return done;
     }
     
