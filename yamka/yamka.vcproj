@@ -185,6 +185,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\yamkaElt.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\yamkaFile.cpp"
 				>
 			</File>
