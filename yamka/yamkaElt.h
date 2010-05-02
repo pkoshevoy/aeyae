@@ -193,21 +193,21 @@ namespace Yamka
   //----------------------------------------------------------------
   // 
   // NOTE: Currently (2010) C++ templates can not be parameterized
-  // with const string literal constants:
+  // with string literal constants:
   // 
-  //   TElt<int, 0x1, "One"> one; // does not compiles
+  //   TElt<int, 0x1, "One"> one; // does not compile
   //
   // 
-  // Therefore I added helper C preprocessor macro that
-  // works around this limitation by creating a wrapper class
+  // Therefore I added a preprocessor macro that works
+  // around this limitation by creating a wrapper class
   // to return the string literal, and passing the wrapper
   // class as a template parameter to TElt:
   //
-  //   struct EltName0x1 { static const char * getName() { return "One" } };
+  //   struct EltName0x1 { static const char * getName() { return "One"; } };
   //   TElt<int, 0x1, EltName0x1> one; // compiles just fine
   // 
   // 
-  // The wrapper macros is used like this:
+  // The wrapper macro is used like this:
   // 
   //   TypedefElt(int, 0x1, "One") TOne;
   //   TOne one_;
