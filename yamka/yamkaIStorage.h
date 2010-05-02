@@ -83,6 +83,57 @@ namespace Yamka
     virtual IReceiptPtr load(Bytes & data) = 0;
   };
   
+  //----------------------------------------------------------------
+  // NullStorage
+  // 
+  // Helper for estimating saved element positions without actually
+  // saving any element data
+  // 
+  struct NullStorage : public IStorage
+  {
+    NullStorage(uint64 currentPostion = 0);
+    
+    // virtual:
+    IReceiptPtr receipt() const;
+    
+    // virtual:
+    IReceiptPtr save(const Bytes & data);
+    
+    // virtual: not supported for null-storage:
+    IReceiptPtr load(Bytes & data);
+    
+    //----------------------------------------------------------------
+    // Receipt
+    // 
+    struct Receipt : public IReceipt
+    {
+      Receipt(uint64 addr);
+      
+      // virtual:
+      uint64 position() const;
+      
+      // virtual:
+      uint64 numBytes() const;
+      
+      // virtual:
+      Receipt & setNumBytes(uint64 numBytes);
+      
+      // virtual:
+      Receipt & add(uint64 numBytes);
+      
+      // virtual: not supported for null-storage:
+      bool save(const Bytes & data);
+      bool load(Bytes & data);
+      bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
+      
+    protected:
+      uint64 addr_;
+      uint64 numBytes_;
+    };
+    
+    uint64 currentPosition_;
+  };
+  
 }
 
 

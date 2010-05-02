@@ -27,4 +27,119 @@ namespace Yamka
     return add(receipt->numBytes());
   }
   
+  
+  //----------------------------------------------------------------
+  // NullStorage::NullStorage
+  // 
+  NullStorage::NullStorage(uint64 currentPosition):
+    currentPosition_(currentPosition)
+  {}
+  
+  //----------------------------------------------------------------
+  // NullStorage::receipt
+  // 
+  IStorage::IReceiptPtr
+  NullStorage::receipt() const
+  {
+    return IStorage::IReceiptPtr(new Receipt(currentPosition_));
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::save
+  // 
+  IStorage::IReceiptPtr
+  NullStorage::save(const Bytes & data)
+  {
+    IStorage::IReceiptPtr receipt(new Receipt(currentPosition_));
+    
+    const std::size_t dataSize = data.size();
+    currentPosition_ += dataSize;
+    receipt->add(dataSize);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::load
+  // 
+  IStorage::IReceiptPtr
+  NullStorage::load(Bytes & data)
+  {
+    return IReceiptPtr();
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::Receipt
+  // 
+  NullStorage::Receipt::Receipt(uint64 addr):
+    addr_(addr),
+    numBytes_(0)
+  {}
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::position
+  // 
+  uint64
+  NullStorage::Receipt::position() const
+  {
+    return addr_;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::numBytes
+  // 
+  uint64
+  NullStorage::Receipt::numBytes() const
+  {
+    return numBytes_;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::setNumBytes
+  // 
+  NullStorage::Receipt &
+  NullStorage::Receipt::setNumBytes(uint64 numBytes)
+  {
+    numBytes_ = numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::add
+  // 
+  NullStorage::Receipt &
+  NullStorage::Receipt::add(uint64 numBytes)
+  {
+    numBytes_ += numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::save
+  // 
+  bool
+  NullStorage::Receipt::save(const Bytes & data)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::load
+  // 
+  bool
+  NullStorage::Receipt::load(Bytes & data)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::calcCrc32
+  // 
+  bool
+  NullStorage::Receipt::calcCrc32(Crc32 & computeCrc32,
+                                  const IStorage::IReceiptPtr & receiptSkip)
+  {
+    return false;
+  }
+  
 }
