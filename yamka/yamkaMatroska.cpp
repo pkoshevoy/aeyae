@@ -3661,6 +3661,76 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // OptimizeReferences
+  // 
+  struct OptimizeReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+      if (eltRef)
+      {
+        eltRef->discardReceipt();
+        
+        uint64 numBytesNeeded = eltRef->calcSize();
+        eltRef->setMaxSize(numBytesNeeded);
+      }
+      
+      bool done = payload.eval(*this);
+      return done;
+    }
+  };
+  
+  //----------------------------------------------------------------
+  // ResetReferences
+  // 
+  struct ResetReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+      if (eltRef)
+      {
+        eltRef->setMaxSize(8);
+        eltRef->discardReceipt();
+      }
+      
+      bool done = payload.eval(*this);
+      return done;
+    }
+  };
+  
+  //----------------------------------------------------------------
+  // DiscardReceipts
+  // 
+  struct DiscardReceipts : public IElementCrawler
+  {
+    // virtual:
+    bool eval(IElement & elt)
+    {
+      elt.discardReceipts();
+      
+      bool done = evalPayload(elt.getPayload());
+      return done;
+    }
+    
+    // virtual:
+    bool evalPayload(IPayload & payload)
+    {
+      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+      if (eltRef)
+      {
+        eltRef->discardReceipt();
+      }
+      
+      bool done = payload.eval(*this);
+      return done;
+    }
+  };
+  
+  //----------------------------------------------------------------
   // RewriteReferences
   // 
   struct RewriteReferences : public IElementCrawler
@@ -3720,37 +3790,54 @@ namespace Yamka
   {
     IStorage::IReceiptPtr receipt = EbmlDoc::head_.save(storage);
     
+    // shortcut:
+    MatroskaDoc & nonConst = const_cast<MatroskaDoc &>(*this);
+    
+    // discard previous storage receipts:
+    {
+      DiscardReceipts crawler;
+      nonConst.eval(crawler);
+    }
+    
+    // reset max number of bytes required to store VEltPosition:
+    {
+      ResetReferences crawler;
+      nonConst.eval(crawler);
+    }
+    
+    // save using NullStorage to estimate reference position sizes:
+    NullStorage nullStorage(storage.receipt()->position());
+    eltsSave(segments_, nullStorage);
+    
+    // reduce number of bytes required to store VEltPosition:
+    {
+      OptimizeReferences crawler;
+      nonConst.eval(crawler);
+    }
+    
+    // discard NullStorage receipts:
+    {
+      DiscardReceipts crawler;
+      nonConst.eval(crawler);
+    }
+    
+    // save the segments, for real this time:
     *receipt += eltsSave(segments_, storage);
     
     // rewrite element position references (second pass):
     {
       RewriteReferences crawler;
-      const_cast<MatroskaDoc *>(this)->eval(crawler);
+      nonConst.eval(crawler);
     }
     
     // replace CRC-32 placeholders (final pass):
     {
       ReplaceCrc32Placeholders crawler;
-      const_cast<MatroskaDoc *>(this)->eval(crawler);
+      nonConst.eval(crawler);
     }
     
     return receipt;
   }
-  
-  //----------------------------------------------------------------
-  // DiscardReceipts
-  // 
-  struct DiscardReceipts : public IElementCrawler
-  {
-    // virtual:
-    bool eval(IElement & elt)
-    {
-      elt.discardReceipts();
-      
-      bool done = evalPayload(elt.getPayload());
-      return done;
-    }
-  };
   
   //----------------------------------------------------------------
   // MatroskaDoc::load
