@@ -580,14 +580,14 @@ namespace Yamka
     origin_(NULL),
     elt_(NULL),
     pos_(uintMax[8]),
-    unknownPositionSize_(8)
+    maxSize_(8)
   {}
   
   //----------------------------------------------------------------
-  // VEltPosition::setUnknownPositionSize
+  // VEltPosition::setMaxSize
   // 
   void
-  VEltPosition::setUnknownPositionSize(uint64 vsize)
+  VEltPosition::setMaxSize(uint64 vsize)
   {
     if (vsize > 8)
     {
@@ -595,13 +595,13 @@ namespace Yamka
       vsize = 8;
     }
     
-    if (pos_ == uintMax[unknownPositionSize_])
+    if (pos_ == uintMax[maxSize_])
     {
       // adjust the unknown position:
       pos_ = uintMax[vsize];
     }
     
-    unknownPositionSize_ = vsize;
+    maxSize_ = vsize;
   }
   
   //----------------------------------------------------------------
@@ -631,13 +631,13 @@ namespace Yamka
   {
     if (!elt_)
     {
-      return unknownPositionSize_;
+      return maxSize_;
     }
     
     IStorage::IReceiptPtr eltReceipt = elt_->storageReceipt();
     if (!eltReceipt)
     {
-      return unknownPositionSize_;
+      return maxSize_;
     }
     
     if (receipt_)
@@ -790,6 +790,15 @@ namespace Yamka
     
     bool saved = receipt_->save(bytes);
     return saved;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::discardReceipt
+  // 
+  void
+  VEltPosition::discardReceipt()
+  {
+    receipt_ = IStorage::IReceiptPtr();
   }
   
   //----------------------------------------------------------------

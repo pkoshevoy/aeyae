@@ -373,9 +373,9 @@ namespace Yamka
     bool isComposite() const
     { return false; }
     
-    // set default number of bytes to use when exact size of
-    // the position is not known yet. The default is 8 bytes
-    void setUnknownPositionSize(uint64 vsize);
+    // set maximum number of bytes to use when exact size of
+    // the position is not known yet. The default is 8 bytes:
+    void setMaxSize(uint64 vsize);
     
     // origin element accessors (position is relative to this element):
     void setOrigin(const IElement * origin);
@@ -398,6 +398,9 @@ namespace Yamka
     // 
     bool rewrite() const;
     
+    // discard position storage receipt:
+    void discardReceipt();
+    
   protected:
     // helper for getting the origin position:
     virtual uint64 getOriginPosition() const;
@@ -411,8 +414,8 @@ namespace Yamka
     // reference element storage receipt position:
     uint64 pos_;
     
-    // number of bytes used to save unknown position:
-    uint64 unknownPositionSize_;
+    // max number of bytes used to save position:
+    uint64 maxSize_;
     
     // position storage receipt is kept so that referenced element
     // storage receipt position can be rewritten once it is known:
