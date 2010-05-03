@@ -22,53 +22,6 @@ namespace Yamka
     return true;
   }
   
-  //----------------------------------------------------------------
-  // EbmlMaster::loadVoid
-  // 
-  uint64
-  EbmlMaster::loadVoid(FileStorage & storage, uint64 bytesToRead)
-  {
-    TVoid eltVoid;
-    uint64 bytesRead = eltVoid.load(storage, bytesToRead);
-    if (bytesRead)
-    {
-      voids_.push_back(eltVoid);
-    }
-    
-    return bytesRead;
-  }
-  
-  //----------------------------------------------------------------
-  // EbmlMaster::saveVoid
-  // 
-  IStorage::IReceiptPtr
-  EbmlMaster::saveVoid(IStorage & storage) const
-  {
-    IStorage::IReceiptPtr receipt = storage.receipt();
-    
-    *receipt += eltsSave(voids_, storage);
-    
-    return receipt;
-  }
-  
-  //----------------------------------------------------------------
-  // EbmlMaster::hasVoid
-  // 
-  bool
-  EbmlMaster::hasVoid() const
-  {
-    return !voids_.empty();
-  }
-  
-  //----------------------------------------------------------------
-  // EbmlMaster::calcVoidSize
-  // 
-  uint64
-  EbmlMaster::calcVoidSize() const
-  {
-    return eltsCalcSize(voids_);
-  }
-  
   
   //----------------------------------------------------------------
   // EbmlHead::EbmlHead

@@ -24,6 +24,7 @@
 #include <string>
 #include <ctime>
 #include <assert.h>
+#include <list>
 
 
 namespace Yamka
@@ -31,6 +32,7 @@ namespace Yamka
   
   // forward declarations:
   struct IElementCrawler;
+  struct VVoid;
   
   //----------------------------------------------------------------
   // IPayload
@@ -61,25 +63,17 @@ namespace Yamka
     // return true if this payload is a composite of one or more
     // EBML elements (such as an EBML Master Element payload)
     // 
-    // NOTE: non-composite payload must not contain Void or CRC-32 elements
+    // NOTE: non-composite payload must not contain CRC-32 elements
     virtual bool isComposite() const = 0;
     
-    // attempt to load a void element:
-    virtual uint64 loadVoid(FileStorage &, uint64 /* bytesToRead */)
-    { return 0; }
+    // attach to this payload a Void element with given payload size:
+    virtual void addVoid(uint64 voidPayloadSize);
     
-    // save void element(s), if there are any:
-    virtual IStorage::IReceiptPtr
-    saveVoid(IStorage & storage) const
-    { return storage.receipt(); }
+    // return true if this element payload has a Void element attached to it:
+    virtual bool hasVoid() const;
     
-    // return true if this element holds a void element:
-    virtual bool hasVoid() const
-    { return false; }
-    
-    // calculate number of bytes taken up by void elements:
-    virtual uint64 calcVoidSize() const
-    { return 0; }
+    TypedefYamkaElt(VVoid, kIdVoid, "Void") TVoid;
+    std::list<TVoid> voids_;
   };
   
   //----------------------------------------------------------------
@@ -250,6 +244,27 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
   };
   
+  
+  //----------------------------------------------------------------
+  // VVoid
+  // 
+  // Void data is ignored
+  //
+  struct VVoid : public IPayload
+  {
+    VVoid();
+    
+    VVoid & set(uint64 size);
+    uint64 get() const;
+    
+    ImplementsYamkaPayloadAPI();
+    
+    // virtual:
+    bool isComposite() const
+    { return false; }
+    
+    uint64 size_;
+  };
   
   //----------------------------------------------------------------
   // VBinary

@@ -176,23 +176,8 @@ namespace Yamka
   // 
   struct EbmlMaster : public IPayload
   {
-    TypedefYamkaElt(VBinary, kIdVoid, "Void") TVoid;
-    std::list<TVoid> voids_;
-    
     // virtual:
     bool isComposite() const;
-    
-    // virtual:
-    uint64 loadVoid(FileStorage & storage, uint64 bytesToRead);
-    
-    // virtual:
-    IStorage::IReceiptPtr saveVoid(IStorage & storage) const;
-    
-    // virtual:
-    bool hasVoid() const;
-    
-    // virtual:
-    uint64 calcVoidSize() const;
   };
   
   //----------------------------------------------------------------

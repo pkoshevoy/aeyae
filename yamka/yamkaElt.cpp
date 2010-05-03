@@ -80,16 +80,12 @@ namespace Yamka
     {
       return 0;
     }
-      
+    
     // shortcut:
     const IPayload & payload = getPayload();
     
     // the payload size:
     uint64 payloadSize = payload.calcSize();
-    if (payload.isComposite())
-    {
-      payloadSize += payload.calcVoidSize();
-    }
     
     if (shouldComputeCrc32())
     {
@@ -105,6 +101,16 @@ namespace Yamka
       uintNumBytes(getId()) +
       vsizeNumBytes(payloadSize) +
       payloadSize;
+    
+    // include attached Void elements:
+    typedef std::list<IPayload::TVoid>::const_iterator TVoidIter;
+    for (TVoidIter i = payload.voids_.begin();
+         i != payload.voids_.end(); ++i)
+    {
+      const IPayload::TVoid & eltVoid = *i;
+      uint64 voidSize = eltVoid.calcSize();
+      size += voidSize;
+    }
     
     return size;
   }
@@ -134,10 +140,6 @@ namespace Yamka
     // payload size upper limit.  Once the payload is saved it's
     // exact size will have to be saved again:
     uint64 payloadSize = payload.calcSize();
-    if (payload.isComposite())
-    {
-      payloadSize += payload.calcVoidSize();
-    }
     
     // must account for CRC-32 element as well:
     if (shouldComputeCrc32())
@@ -179,24 +181,6 @@ namespace Yamka
     }
     
     *receiptPayload_ += payloadReceipt;
-    
-    if (payload.isComposite())
-    {
-      // NOTE: the Void elements always get saved last,
-      // therefore they may shift from the original position
-      // in the file they were loaded from.  However, this is
-      // not considered a bug by me, because any Master element
-      // should contain at most just one Void element,
-      // as the last element.
-      // 
-      // That being said -- I have seen Matroska files with
-      // Void elements scattered throughout the Segment.
-      // Yamka will load such files, but will move all Void elements
-      // to the end of the Segment when saving.
-      // 
-      *receiptPayload_ += payload.saveVoid(storage);
-    }
-    
     *receipt_ += receiptPayload_;
     
     uint64 payloadBytesSaved = receiptPayload_->numBytes();
@@ -210,8 +194,51 @@ namespace Yamka
       payloadSizeReceipt->save(Bytes(v));
     }
     
+    // save attached Void elements:
+    typedef std::list<IPayload::TVoid>::const_iterator TVoidIter;
+    for (TVoidIter i = payload.voids_.begin();
+         i != payload.voids_.end(); ++i)
+    {
+      const IPayload::TVoid & eltVoid = *i;
+      IStorage::IReceiptPtr voidReceipt = eltVoid.save(storage);
+      *receipt_ += voidReceipt;
+    }
+    
     return receipt_;
   }
+  
+  //----------------------------------------------------------------
+  // FindElement
+  // 
+  struct FindElement : public IElementCrawler
+  {
+    FindElement(uint64 position):
+      position_(position),
+      eltFound_(NULL)
+    {}
+    
+    // virtual:
+    bool eval(IElement & elt)
+    {
+      IStorage::IReceiptPtr receipt = elt.storageReceipt();
+      if (receipt)
+      {
+        uint64 eltStart = receipt->position();
+        uint64 eltFinish = eltStart + receipt->numBytes();
+        
+        if ((eltStart <= position_) && (position_ < eltFinish))
+        {
+          eltFound_ = &elt;
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
+    const uint64 position_;
+    IElement * eltFound_;
+  };
   
   //----------------------------------------------------------------
   // IElement::load
@@ -290,14 +317,38 @@ namespace Yamka
       uint64 prevPayloadBytesToRead = payloadBytesToRead;
       
       // try to load some part of the payload:
-      payloadBytesToRead -= payload.load(storage,
-                                         payloadBytesToRead);
-      
-      if (payload.isComposite())
-      {
-        // consume any void elements that may exist:
-        payloadBytesToRead -= payload.loadVoid(storage,
+      uint64 partialPayloadSize = payload.load(storage,
                                                payloadBytesToRead);
+      payloadBytesToRead -= partialPayloadSize;
+      
+      // consume any void elements that may exist:
+      IPayload::TVoid eltVoid;
+      uint64 voidPayloadSize = eltVoid.load(storage,
+                                            payloadBytesToRead);
+      if (voidPayloadSize)
+      {
+        payloadBytesToRead -= voidPayloadSize;
+        
+        // find an element to store the Void element, so that
+        // the relative element order would be preserved:
+        IStorage::IReceiptPtr voidReceipt = eltVoid.storageReceipt();
+        FindElement crawler(voidReceipt->position() - 2);
+        
+        if (partialPayloadSize)
+        {
+          crawler.evalPayload(payload);
+          assert(crawler.eltFound_);
+        }
+        
+        if (crawler.eltFound_)
+        {
+          IPayload & dstPayload = crawler.eltFound_->getPayload();
+          dstPayload.voids_.push_back(eltVoid);
+        }
+        else
+        {
+          payload.voids_.push_back(eltVoid);
+        }
       }
       
       // consume the CRC-32 element if it exists:

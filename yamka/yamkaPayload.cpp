@@ -18,6 +18,27 @@ namespace Yamka
 {
   
   //----------------------------------------------------------------
+  // IPayload::addVoid
+  // 
+  void
+  IPayload::addVoid(uint64 voidPayloadSize)
+  {
+    TVoid eltVoid;
+    eltVoid.payload_.set(voidPayloadSize);
+    voids_.push_back(eltVoid);
+  }
+  
+  //----------------------------------------------------------------
+  // IPayload::hasVoid
+  // 
+  bool
+  IPayload::hasVoid() const
+  {
+    return !voids_.empty();
+  }
+  
+  
+  //----------------------------------------------------------------
   // VInt::VInt
   // 
   VInt::VInt():
@@ -416,6 +437,100 @@ namespace Yamka
     
     TSuper::set(str);
     return *this;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // VVoid::VVoid
+  // 
+  VVoid::VVoid():
+    size_(0)
+  {}
+  
+  //----------------------------------------------------------------
+  // VVoid::set
+  // 
+  VVoid &
+  VVoid::set(uint64 size)
+  {
+    size_ = size;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::get
+  // 
+  uint64
+  VVoid::get() const
+  {
+    return size_;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::eval
+  // 
+  bool
+  VVoid::eval(Yamka::IElementCrawler & crawler)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::isDefault
+  // 
+  bool
+  VVoid::isDefault() const
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::calcSize
+  // 
+  uint64
+  VVoid::calcSize() const
+  {
+    return size_;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::save
+  // 
+  IStorage::IReceiptPtr
+  VVoid::save(Yamka::IStorage & storage) const
+  {
+    static const std::size_t kNumZeros = 1024;
+    Bytes zeros(kNumZeros);
+    
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    uint64 numSteps = size_ / kNumZeros;
+    for (uint64 i = 0; i < numSteps; i++)
+    {
+      storage.save(zeros);
+      receipt->add(kNumZeros);
+    }
+    
+    std::size_t remainder = (std::size_t)(size_ % kNumZeros);
+    storage.save(Bytes(remainder));
+    receipt->add(remainder);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // VVoid::load
+  // 
+  uint64
+  VVoid::load(Yamka::FileStorage & storage, uint64 bytesToRead)
+  {
+    // Void payload is ignored, just skip over it:
+    if (storage.file_.seek(bytesToRead, File::kRelativeToCurrent))
+    {
+      size_ = bytesToRead;
+      return bytesToRead;
+    }
+    
+    return 0;
   }
   
   
