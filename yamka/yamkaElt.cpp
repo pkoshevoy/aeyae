@@ -91,20 +91,20 @@ namespace Yamka
       payloadSize += payload.calcVoidSize();
     }
     
+    if (shouldComputeCrc32())
+    {
+      // CRC-32 element size:
+      payloadSize +=
+        uintNumBytes(kIdCrc32) +
+        vsizeNumBytes(4) +
+        4;
+    }
+    
     // the EBML ID, payload size descriptor, and payload size:
     uint64 size =
       uintNumBytes(getId()) +
       vsizeNumBytes(payloadSize) +
       payloadSize;
-    
-    if (shouldComputeCrc32())
-    {
-      // CRC-32 element size:
-      size +=
-        uintNumBytes(kIdCrc32) +
-        vsizeNumBytes(4) +
-        4;
-    }
     
     return size;
   }
