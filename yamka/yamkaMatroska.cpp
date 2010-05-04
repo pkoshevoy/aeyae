@@ -1943,7 +1943,8 @@ namespace Yamka
       crawler.eval(physEquiv_) ||
       crawler.eval(tracks_) ||
       eltsEval(display_, crawler) ||
-      eltsEval(process_, crawler);
+      eltsEval(process_, crawler) ||
+      eltsEval(subChapAtom_, crawler);
   }
     
   //----------------------------------------------------------------
@@ -1963,7 +1964,8 @@ namespace Yamka
       !physEquiv_.mustSave() &&
       !tracks_.mustSave() &&
       display_.empty() &&
-      process_.empty();
+      process_.empty() &&
+      subChapAtom_.empty();
     
     return allDefault;
   }
@@ -1985,7 +1987,8 @@ namespace Yamka
       physEquiv_.calcSize() +
       tracks_.calcSize() +
       eltsCalcSize(display_) +
-      eltsCalcSize(process_);
+      eltsCalcSize(process_) +
+      eltsCalcSize(subChapAtom_);
     
     return size;
   }
@@ -2010,6 +2013,7 @@ namespace Yamka
     
     *receipt += eltsSave(display_, storage);
     *receipt += eltsSave(process_, storage);
+    *receipt += eltsSave(subChapAtom_, storage);
     
     return receipt;
   }
@@ -2034,6 +2038,7 @@ namespace Yamka
       
     bytesToRead -= eltsLoad(display_, storage, bytesToRead);
     bytesToRead -= eltsLoad(process_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(subChapAtom_, storage, bytesToRead);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;

@@ -612,6 +612,9 @@ namespace Yamka
     
     TypedefYamkaElt(ChapProc, 0x6944, "ChapProcess") TProcess;
     std::list<TProcess> process_;
+    
+    TypedefYamkaElt(ChapAtom, 0xB6, "SubChapterAtom") TSubChapAtom;
+    std::list<TSubChapAtom> subChapAtom_;
   };
   
   //----------------------------------------------------------------
