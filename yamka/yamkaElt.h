@@ -29,7 +29,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // EbmlGlobalID
   // 
-  // Void and CRC-32 elements may occur at any level in an EBML
+  // Void and CRC-32 elements may occur at almost any level in an EBML
   // document, therefore every element should know these IDs.
   // 
   enum EbmlGlobalID
@@ -191,12 +191,15 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // TypedefYamkaElt
+  // 
+  // This is a helper macro used to declare an element type.
   // 
   // NOTE: Currently (2010) C++ templates can not be parameterized
   // with string literal constants:
   // 
   //   TElt<int, 0x1, "One"> one; // does not compile
-  //
+  // 
   // 
   // Therefore I added a preprocessor macro that works
   // around this limitation by creating a wrapper class
@@ -209,16 +212,8 @@ namespace Yamka
   // 
   // The wrapper macro is used like this:
   // 
-  //   TypedefElt(int, 0x1, "One") TOne;
+  //   TypedefYamkaElt(int, 0x1, "One") TOne;
   //   TOne one_;
-  // 
-  
-  //----------------------------------------------------------------
-  // TypedefYamkaElt
-  // 
-  // Helper macro used to declare an element type.
-  // 
-  // EXAMPLE: TypedefElt(VUInt, 0x4286, "EBMLVersion") TVersion;
   // 
 # define TypedefYamkaElt(EltType, EbmlId, Name)                         \
   struct EltName##EbmlId { static const char * getName() { return Name; } }; \
