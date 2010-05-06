@@ -90,9 +90,10 @@ namespace Yamka
   // 
   SegInfo::SegInfo()
   {
+    static const char * yamkaURL = "http://sourceforge.net/projects/yamka";
     timecodeScale_.alwaysSave().payload_.setDefault(1000000);
     duration_.alwaysSave().payload_.setDefault(0.0);
-    muxingApp_.alwaysSave().payload_.setDefault(std::string("yamka"));
+    muxingApp_.alwaysSave().payload_.setDefault(yamkaURL);
   }
 
   //----------------------------------------------------------------
