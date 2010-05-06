@@ -932,8 +932,8 @@ namespace Yamka
     TypedefYamkaElt(Chapters, 0x1043A770, "Chapters") TChapters;
     TChapters chapters_;
     
-    TypedefYamkaElt(Tags, 0x1254C367, "Tags") TTag;
-    std::list<TTag> tags_;
+    TypedefYamkaElt(Tags, 0x1254C367, "Tags") TTags;
+    std::list<TTags> tags_;
     
     TypedefYamkaElt(Cluster, 0x1F43B675, "Cluster") TCluster;
     std::list<TCluster> clusters_;

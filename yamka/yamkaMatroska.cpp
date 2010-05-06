@@ -3564,9 +3564,9 @@ namespace Yamka
         {
           eltReference.setElt(&chapters_);
         }
-        else if (eltId == TTag::kId)
+        else if (eltId == TTags::kId)
         {
-          const TTag * ref = eltsFind(tags_, absolutePosition);
+          const TTags * ref = eltsFind(tags_, absolutePosition);
           eltReference.setElt(ref);
         }
         else if (eltId == TCluster::kId)
