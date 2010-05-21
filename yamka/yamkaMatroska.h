@@ -233,6 +233,8 @@ namespace Yamka
   // 
   struct ContentEnc : public EbmlMaster
   {
+    ContentEnc();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x5031, "ContentEncodingOrder") TOrder;
@@ -267,6 +269,8 @@ namespace Yamka
   // 
   struct Track : public EbmlMaster
   {
+    Track();
+    
     enum MatroskaTrackType
     {
       kTrackTypeVideo = 1,
@@ -381,6 +385,8 @@ namespace Yamka
   // 
   struct CueRef : public EbmlMaster
   {
+    CueRef();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x96, "CueRefTime") TTime;
@@ -530,6 +536,8 @@ namespace Yamka
   // 
   struct ChapDisp : public EbmlMaster
   {
+    ChapDisp();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VString, 0x85, "ChapString") TString;
@@ -578,6 +586,8 @@ namespace Yamka
   // 
   struct ChapAtom : public EbmlMaster
   {
+    ChapAtom();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x73C4, "ChapterUID") TUID;
@@ -656,6 +666,8 @@ namespace Yamka
   // 
   struct TagTargets : public EbmlMaster
   {
+    TagTargets();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x68CA, "TargetTypeValue") TTypeValue;
@@ -682,6 +694,8 @@ namespace Yamka
   // 
   struct SimpleTag : public EbmlMaster
   {
+    SimpleTag();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VString, 0x45A3, "TagName") TName;
@@ -741,6 +755,8 @@ namespace Yamka
   // 
   struct BlockMore : public EbmlMaster
   {
+    BlockMore();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0xEE, "BlockAddID") TBlockAddID;

@@ -300,6 +300,13 @@ namespace Yamka
   // 
   Video::Video()
   {
+    flagInterlaced_.payload_.setDefault(0);
+    stereoMode_.payload_.setDefault(0);
+    pixelCropBottom_.payload_.setDefault(0);
+    pixelCropTop_.payload_.setDefault(0);
+    pixelCropLeft_.payload_.setDefault(0);
+    pixelCropRight_.payload_.setDefault(0);
+    displayUnits_.payload_.setDefault(0);
     aspectRatioType_.payload_.setDefault(0);
   }
   
@@ -681,6 +688,16 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ContentEnc::ContentEnc
+  // 
+  ContentEnc::ContentEnc()
+  {
+    order_.payload_.setDefault(0);
+    scope_.payload_.setDefault(1);
+    type_.payload_.setDefault(0);
+  }
+  
+  //----------------------------------------------------------------
   // ContentEnc::eval
   // 
   bool
@@ -819,6 +836,23 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // Track::Track
+  // 
+  Track::Track()
+  {
+    flagEnabled_.payload_.setDefault(1);
+    flagDefault_.payload_.setDefault(1);
+    flagForced_.payload_.setDefault(0);
+    flagLacing_.payload_.setDefault(1);
+    minCache_.payload_.setDefault(0);
+    timecodeScale_.payload_.setDefault(1.0);
+    trackOffset_.payload_.setDefault(0);
+    maxBlockAddID_.payload_.setDefault(0);
+    language_.payload_.setDefault("eng");
+    codecDecodeAll_.payload_.setDefault(1);
+  }
   
   //----------------------------------------------------------------
   // Track::eval
@@ -1075,6 +1109,14 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // CueRef::CueRef
+  // 
+  CueRef::CueRef()
+  {
+    block_.payload_.setDefault(1);
+  }
+  
+  //----------------------------------------------------------------
   // CueRef::eval
   // 
   bool
@@ -1155,6 +1197,7 @@ namespace Yamka
   CueTrkPos::CueTrkPos()
   {
     track_.alwaysSave();
+    block_.payload_.setDefault(1);
   }
   
   //----------------------------------------------------------------
@@ -1715,6 +1758,14 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // ChapDisp::ChapDisp
+  // 
+  ChapDisp::ChapDisp()
+  {
+    language_.payload_.setDefault("eng");
+  }
+  
+  //----------------------------------------------------------------
   // ChapDisp::eval
   // 
   bool
@@ -1926,6 +1977,14 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // ChapAtom::ChapAtom
+  // 
+  ChapAtom::ChapAtom()
+  {
+    enabled_.payload_.setDefault(1);
+  }
   
   //----------------------------------------------------------------
   // ChapAtom::eval
@@ -2186,7 +2245,15 @@ namespace Yamka
     return bytesRead;
   }
   
-
+  
+  //----------------------------------------------------------------
+  // TagTargets::TagTargets
+  // 
+  TagTargets::TagTargets()
+  {
+    typeValue_.payload_.setDefault(50);
+  }
+  
   //----------------------------------------------------------------
   // TagTargets::eval
   // 
@@ -2275,6 +2342,15 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // SimpleTag::SimpleTag
+  // 
+  SimpleTag::SimpleTag()
+  {
+    lang_.payload_.setDefault("und");
+    default_.payload_.setDefault(1);
+  }
   
   //----------------------------------------------------------------
   // SimpleTag::eval
@@ -2538,6 +2614,14 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // BlockMore::BlockMore
+  // 
+  BlockMore::BlockMore()
+  {
+    blockAddID_.payload_.setDefault(1);
+  }
   
   //----------------------------------------------------------------
   // BlockMore::eval
