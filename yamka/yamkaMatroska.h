@@ -193,6 +193,8 @@ namespace Yamka
   // 
   struct ContentCompr : public EbmlMaster
   {
+    ContentCompr();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x4254, "ContentCompAlgo") TAlgo;

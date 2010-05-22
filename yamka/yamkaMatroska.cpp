@@ -532,7 +532,15 @@ namespace Yamka
     return bytesRead;
   }
   
-
+  
+  //----------------------------------------------------------------
+  // ContentCompr::ContentCompr
+  // 
+  ContentCompr::ContentCompr()
+  {
+    algo_.alwaysSave().payload_.setDefault(0);
+  }
+  
   //----------------------------------------------------------------
   // ContentCompr::eval
   // 
