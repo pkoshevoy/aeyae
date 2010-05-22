@@ -717,14 +717,7 @@ namespace Yamka
   bool
   ContentEnc::isDefault() const
   {
-    bool allDefault =
-      !order_.mustSave() &&
-      !scope_.mustSave() &&
-      !type_.mustSave() &&
-      !compression_.mustSave() &&
-      !encryption_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -897,37 +890,7 @@ namespace Yamka
   bool
   Track::isDefault() const
   {
-    bool allDefault =
-      !trackNumber_.mustSave() &&
-      !trackUID_.mustSave() &&
-      !trackType_.mustSave() &&
-      !flagEnabled_.mustSave() &&
-      !flagDefault_.mustSave() &&
-      !flagForced_.mustSave() &&
-      !flagLacing_.mustSave() &&
-      !minCache_.mustSave() &&
-      !maxCache_.mustSave() &&
-      !frameDuration_.mustSave() &&
-      !timecodeScale_.mustSave() &&
-      !trackOffset_.mustSave() &&
-      !maxBlockAddID_.mustSave() &&
-      !name_.mustSave() &&
-      !language_.mustSave() &&
-      !codecID_.mustSave() &&
-      !codecPrivate_.mustSave() &&
-      !codecName_.mustSave() &&
-      !attachmentLink_.mustSave() &&
-      !codecSettings_.mustSave() &&
-      !codecInfoURL_.mustSave() &&
-      !codecDownloadURL_.mustSave() &&
-      !codecDecodeAll_.mustSave() &&
-      !trackOverlay_.mustSave() &&
-      !trackTranslate_.mustSave() &&
-      !video_.mustSave() &&
-      !audio_.mustSave() &&
-      !contentEncs_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1220,11 +1183,7 @@ namespace Yamka
   bool
   CueTrkPos::isDefault() const
   {
-    bool allDefault =
-      !cluster_.mustSave() &&
-      !codecState_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1304,11 +1263,7 @@ namespace Yamka
   bool
   CuePoint::isDefault() const
   {
-    bool allDefault =
-      !time_.mustSave() &&
-      trkPosns_.empty();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1428,10 +1383,7 @@ namespace Yamka
   bool
   SeekEntry::isDefault() const
   {
-    bool allDefault =
-      !position_.mustSave();
-    
-    return allDefault;
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -1577,15 +1529,7 @@ namespace Yamka
   bool
   AttdFile::isDefault() const
   {
-    bool allDefault =
-      !description_.mustSave() &&
-      !filename_.mustSave() &&
-      !mimeType_.mustSave() &&
-      !data_.mustSave() &&
-      !fileUID_.mustSave() &&
-      !referral_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1783,12 +1727,7 @@ namespace Yamka
   bool
   ChapDisp::isDefault() const
   {
-    bool allDefault =
-      !string_.mustSave() &&
-      !language_.mustSave() &&
-      !country_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1854,11 +1793,7 @@ namespace Yamka
   bool
   ChapProcCmd::isDefault() const
   {
-    bool allDefault =
-      !time_.mustSave() &&
-      !data_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -1922,12 +1857,7 @@ namespace Yamka
   bool
   ChapProc::isDefault() const
   {
-    bool allDefault =
-      !codecID_.mustSave() &&
-      !procPrivate_.mustSave() &&
-      cmds_.empty();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -2013,21 +1943,7 @@ namespace Yamka
   bool
   ChapAtom::isDefault() const
   {
-    bool allDefault =
-      !UID_.mustSave() &&
-      !timeStart_.mustSave() &&
-      !timeEnd_.mustSave() &&
-      !hidden_.mustSave() &&
-      !enabled_.mustSave() &&
-      !segUID_.mustSave() &&
-      !segEditionUID_.mustSave() &&
-      !physEquiv_.mustSave() &&
-      !tracks_.mustSave() &&
-      display_.empty() &&
-      process_.empty() &&
-      subChapAtom_.empty();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -2125,14 +2041,7 @@ namespace Yamka
   bool
   Edition::isDefault() const
   {
-    bool allDefault =
-      !UID_.mustSave() &&
-      !flagHidden_.mustSave() &&
-      !flagDefault_.mustSave() &&
-      !flagOrdered_.mustSave() &&
-      chapAtoms_.empty();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -2372,14 +2281,7 @@ namespace Yamka
   bool
   SimpleTag::isDefault() const
   {
-    bool allDefault =
-      !name_.mustSave() &&
-      !lang_.mustSave() &&
-      !default_.mustSave() &&
-      !string_.mustSave() &&
-      !binary_.mustSave();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -2451,11 +2353,7 @@ namespace Yamka
   bool
   Tag::isDefault() const
   {
-    bool allDefault =
-      !targets_.mustSave() &&
-      simpleTags_.empty();
-    
-    return allDefault;
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -2640,11 +2538,7 @@ namespace Yamka
   bool
   BlockMore::isDefault() const
   {
-    bool allDefault =
-      !blockAddID_.mustSave() &&
-      !blockAdditional_.mustSave();
-    
-    return allDefault;
+    return false;
   }
 
   //----------------------------------------------------------------
