@@ -634,6 +634,8 @@ namespace Yamka
   // 
   struct Edition : public EbmlMaster
   {
+    Edition();
+    
     ImplementsYamkaPayloadAPI();
     
     TypedefYamkaElt(VUInt, 0x45BC, "EditionUID") TUID;

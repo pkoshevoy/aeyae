@@ -1922,6 +1922,9 @@ namespace Yamka
   ChapAtom::ChapAtom()
   {
     enabled_.payload_.setDefault(1);
+    timeStart_.alwaysSave();
+    hidden_.alwaysSave();
+    enabled_.alwaysSave();
   }
   
   //----------------------------------------------------------------
@@ -2028,6 +2031,14 @@ namespace Yamka
     return bytesRead;
   }
   
+  
+  //----------------------------------------------------------------
+  // Edition::Edition
+  // 
+  Edition::Edition()
+  {
+    flagDefault_.alwaysSave();
+  }
   
   //----------------------------------------------------------------
   // Edition::eval
