@@ -20,6 +20,15 @@
 #include <boost/shared_ptr.hpp>
 
 
+namespace fileUtf8
+{
+  //----------------------------------------------------------------
+  // kProtocolName
+  // 
+  extern const char * kProtocolName;
+}
+
+
 namespace yae
 {
 
@@ -35,17 +44,24 @@ namespace yae
     
     //! private implementation details:
     class Private;
-    Private * private_;
+    Private * const private_;
     
   protected:
     ReaderFFMPEG();
     virtual ~ReaderFFMPEG();
     
   public:
+    static ReaderFFMPEG * create();
     virtual void destroy();
     
-    //! return human-readable name for this reader:
+    //! return a human readable name for this reader (preferably unique):
     virtual const char * getName() const;
+    
+    //! open a resource specified by the resourcePath such as filepath or URL:
+    virtual bool open(const char * resourcePathUTF8);
+    
+    //! close currently open resource:
+    virtual void close();
     
     virtual std::size_t getNumberOfVideoTracks() const;
     virtual std::size_t getNumberOfAudioTracks() const;

@@ -38,8 +38,14 @@ namespace yae
   public:
     virtual void destroy() = 0;
     
-    //! return human-readable name for this reader:
+    //! return a human readable name for this reader (preferably unique):
     virtual const char * getName() const = 0;
+    
+    //! open a resource specified by the resourcePath such as filepath or URL:
+    virtual bool open(const char * resourcePathUTF8) = 0;
+    
+    //! close currently open resource:
+    virtual void close() = 0;
     
     virtual std::size_t getNumberOfVideoTracks() const = 0;
     virtual std::size_t getNumberOfAudioTracks() const = 0;

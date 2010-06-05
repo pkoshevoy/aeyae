@@ -25,6 +25,8 @@
 #include <fcntl.h>
 #endif
 #include <errno.h>
+#include <sstream>
+#include <iostream>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -127,7 +129,7 @@ namespace fileUtf8
   //----------------------------------------------------------------
   // kProtocolName
   // 
-  static const char * kProtocolName = "fileUtf8";
+  const char * kProtocolName = "fileUtfEight";
   
   //----------------------------------------------------------------
   // urlGetFileHandle
@@ -156,6 +158,7 @@ namespace fileUtf8
   {
     const char * filename = url;
     av_strstart(url, kProtocolName, &filename);
+    av_strstart(filename, "://", &filename);
     
     int accessMode = 0;
     if (flags & URL_RDWR)
@@ -196,7 +199,7 @@ namespace fileUtf8
   // urlWrite
   // 
   static int
-  urlWrite(URLContext * h, unsigned char * buf, int size)
+  urlWrite(URLContext * h, const unsigned char * buf, int size)
   {
     int fd = urlGetFileHandle(h);
     return write(fd, buf, size);
@@ -257,31 +260,391 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Track
+  // 
+  struct Track
+  {
+    // NOTE: constructor does not open the stream:
+    Track(AVStream * stream);
+    
+    // NOTE: destructor will close the stream:
+    ~Track();
+    
+    // open the stream for decoding:
+    bool open();
+    
+    // close the stream:
+    void close();
+    
+    // get track name:
+    const char * getName() const;
+    
+    // accessor to the codec context:
+    inline AVCodecContext * codecContext() const
+    { return stream_->codec; }
+    
+    // accessor to the codec:
+    inline AVCodec * codec() const
+    { return codec_; }
+    
+  private:
+    // intentionally disabled:
+    Track(const Track &);
+    Track & operator = (const Track &);
+    
+  protected:
+    AVStream * stream_;
+    AVCodec * codec_;
+  };
+  
+  
+  //----------------------------------------------------------------
+  // Track::Track
+  // 
+  Track::Track(AVStream * stream):
+    stream_(stream),
+    codec_(NULL)
+  {}
+  
+  //----------------------------------------------------------------
+  // Track::~Track
+  // 
+  Track::~Track()
+  {
+    close();
+  }
+  
+  //----------------------------------------------------------------
+  // Track::open
+  // 
+  bool
+  Track::open()
+  {
+    if (!stream_)
+    {
+      return false;
+    }
+    
+    close();
+    
+    codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+    if (!codec_)
+    {
+      // unsupported codec:
+      return false;
+    }
+    
+    int err = avcodec_open(stream_->codec, codec_);
+    if (err < 0)
+    {
+      // unsupported codec:
+      close();
+      return false;
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // Track::close
+  // 
+  void
+  Track::close()
+  {
+    if (stream_ && codec_)
+    {
+      avcodec_close(stream_->codec);
+      codec_ = NULL;
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // Track::getName
+  // 
+  const char *
+  Track::getName() const
+  {
+    if (!stream_)
+    {
+      return NULL;
+    }
+    
+    AVMetadataTag * name = av_metadata_get(stream_->metadata,
+                                           "name",
+                                           NULL,
+                                           0);
+    if (name)
+    {
+      return name->value;
+    }
+    
+    AVMetadataTag * title = av_metadata_get(stream_->metadata,
+                                            "title",
+                                            NULL,
+                                            0);
+    if (title)
+    {
+      return title->value;
+    }
+    
+    AVMetadataTag * lang = av_metadata_get(stream_->metadata,
+                                           "language",
+                                           NULL,
+                                           0);
+    if (lang)
+    {
+      return lang->value;
+    }
+    
+    return NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackPtr
+  // 
+  typedef boost::shared_ptr<Track> TrackPtr;
+  
+  
+  //----------------------------------------------------------------
+  // Movie
+  // 
+  struct Movie
+  {
+    Movie();
+    
+    // NOTE: destructor will close the movie:
+    ~Movie();
+    
+    bool open(const char * resourcePath);
+    void close();
+    
+    inline const std::vector<TrackPtr> & getVideoTracks() const
+    { return videoTracks_; }
+    
+    inline const std::vector<TrackPtr> & getAudioTracks() const
+    { return audioTracks_; }
+    
+    inline std::size_t getSelectedVideoTrack() const
+    { return selectedVideoTrack_; }
+    
+    inline std::size_t getSelectedAudioTrack() const
+    { return selectedAudioTrack_; }
+    
+    bool selectVideoTrack(std::size_t i);
+    bool selectAudioTrack(std::size_t i);
+    
+  private:
+    // intentionally disabled:
+    Movie(const Movie &);
+    Movie & operator = (const Movie &);
+    
+  protected:
+    AVFormatContext * formatContext_;
+    
+    std::vector<TrackPtr> videoTracks_;
+    std::vector<TrackPtr> audioTracks_;
+    
+    // index of the selected video/audio track:
+    std::size_t selectedVideoTrack_;
+    std::size_t selectedAudioTrack_;
+  };
+  
+  
+  //----------------------------------------------------------------
+  // Movie::Movie
+  // 
+  Movie::Movie():
+    formatContext_(NULL),
+    selectedVideoTrack_(0),
+    selectedAudioTrack_(0)
+  {}
+  
+  //----------------------------------------------------------------
+  // Movie::~Movie
+  // 
+  Movie::~Movie()
+  {
+    close();
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::open
+  // 
+  bool
+  Movie::open(const char * resourcePath)
+  {
+    // FIXME: avoid closing/reopening the same resource:
+    close();
+    
+    int err = av_open_input_file(&formatContext_,
+                                 resourcePath,
+                                 NULL, // AVInputFormat to force
+                                 0,    // buffer size, 0 if default
+                                 NULL);// additional parameters
+    if (err != 0)
+    {
+      close();
+      return false;
+    }
+    
+    // spend at most 2 seconds trying to analyze the file:
+    formatContext_->max_analyze_duration = 2 * AV_TIME_BASE;
+    
+    err = av_find_stream_info(formatContext_);
+    if (err < 0)
+    {
+      close();
+      return false;
+    }
+    
+    for (unsigned int i = 0; i < formatContext_->nb_streams; i++)
+    {
+      TrackPtr track(new Track(formatContext_->streams[i]));
+      
+      if (!track->open())
+      {
+        // unsupported codec, ignore it:
+        continue;
+      }
+      
+      const AVMediaType codecType = track->codecContext()->codec_type;
+      if (codecType == CODEC_TYPE_VIDEO)
+      {
+        videoTracks_.push_back(track);
+      }
+      else if (codecType == CODEC_TYPE_AUDIO)
+      {
+        audioTracks_.push_back(track);
+      }
+      
+      // close the track:
+      track->close();
+    }
+    
+    if (videoTracks_.empty() &&
+        audioTracks_.empty())
+    {
+      // no decodable video/audio tracks present:
+      close();
+      return false;
+    }
+    
+    // by default do not select any tracks:
+    selectedVideoTrack_ = videoTracks_.size();
+    selectedAudioTrack_ = audioTracks_.size();
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::close
+  // 
+  void
+  Movie::close()
+  {
+    if (formatContext_ == NULL)
+    {
+      return;
+    }
+    
+    videoTracks_.clear();
+    audioTracks_.clear();
+    
+    av_close_input_file(formatContext_);
+    formatContext_ = NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::selectVideoTrack
+  // 
+  bool
+  Movie::selectVideoTrack(std::size_t i)
+  {
+    if (selectedVideoTrack_ == i)
+    {
+      // already selected:
+      return true;
+    }
+
+    const std::size_t numVideoTracks = videoTracks_.size();
+    if (selectedVideoTrack_ < numVideoTracks)
+    {
+      // close currently selected track:
+    }
+    
+    if (i >= numVideoTracks)
+    {
+      return false;
+    }
+    
+    selectedVideoTrack_ = i;
+    return videoTracks_[selectedVideoTrack_]->open();
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::selectAudioTrack
+  // 
+  bool
+  Movie::selectAudioTrack(std::size_t i)
+  {
+    if (selectedAudioTrack_ == i)
+    {
+      // already selected:
+      return true;
+    }
+
+    const std::size_t numAudioTracks = audioTracks_.size();
+    if (selectedAudioTrack_ < numAudioTracks)
+    {
+      // close currently selected track:
+    }
+    
+    if (i >= numAudioTracks)
+    {
+      return false;
+    }
+    
+    selectedAudioTrack_ = i;
+    return audioTracks_[selectedAudioTrack_]->open();
+  }
+  
+  
+  //----------------------------------------------------------------
   // ReaderFFMPEG::Private
   // 
   class ReaderFFMPEG::Private
   {
+  private:
+    // intentionally disabled:
+    Private(const Private &);
+    Private & operator = (const Private &);
+    
+    // flag indicating whether av_register_all has been called already:
     static bool ffmpegInitialized_;
     
   public:
     Private():
-      formatContext_(NULL),
-      codecContext_(NULL),
-      codec_(NULL),
       frame_(NULL)
     {
       if (!ffmpegInitialized_)
       {
-        av_register_protocol(&fileUtf8::urlProtocol);
         av_register_all();
+        av_register_protocol(&fileUtf8::urlProtocol);
+        std::cout << "first_protocol: " << first_protocol << std::endl;
         
         ffmpegInitialized_ = true;
       }
+      
+      // display availabled IO protocols:
+      URLProtocol * up = first_protocol;
+      while (up != NULL)
+      {
+        std::cout << "protocol: " << up->name << std::endl;
+        up = up->next;
+      }
     }
     
-    AVFormatContext * formatContext_;
-    AVCodecContext * codecContext_;
-    AVCodec * codec_;
+    Movie movie_;
     AVFrame * frame_;
     AVPacket packet_;
   };
@@ -307,7 +670,15 @@ namespace yae
   ReaderFFMPEG::~ReaderFFMPEG()
   {
     delete private_;
-    private_ = NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::create
+  // 
+  ReaderFFMPEG *
+  ReaderFFMPEG::create()
+  {
+    return new ReaderFFMPEG();
   }
   
   //----------------------------------------------------------------
@@ -329,12 +700,30 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // ReaderFFMPEG::open
+  // 
+  bool
+  ReaderFFMPEG::open(const char * resourcePathUTF8)
+  {
+    return private_->movie_.open(resourcePathUTF8);
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::close
+  // 
+  void
+  ReaderFFMPEG::close()
+  {
+    return private_->movie_.close();
+  }
+  
+  //----------------------------------------------------------------
   // ReaderFFMPEG::getNumberOfVideoTracks
   // 
   std::size_t
   ReaderFFMPEG::getNumberOfVideoTracks() const
   {
-    return 0;
+    return private_->movie_.getVideoTracks().size();
   }
   
   //----------------------------------------------------------------
@@ -343,7 +732,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getNumberOfAudioTracks() const
   {
-    return 0;
+    return private_->movie_.getAudioTracks().size();
   }
   
   //----------------------------------------------------------------
@@ -352,7 +741,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getSelectedVideoTrackIndex() const
   {
-    return 0;
+    return private_->movie_.getSelectedVideoTrack();
   }
   
   //----------------------------------------------------------------
@@ -361,7 +750,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getSelectedAudioTrackIndex() const
   {
-    return 0;
+    return private_->movie_.getSelectedVideoTrack();
   }
   
   //----------------------------------------------------------------
@@ -370,7 +759,7 @@ namespace yae
   bool
   ReaderFFMPEG::selectVideoTrack(std::size_t i)
   {
-    return false;
+    return private_->movie_.selectVideoTrack(i);
   }
   
   //----------------------------------------------------------------
@@ -379,7 +768,7 @@ namespace yae
   bool
   ReaderFFMPEG::selectAudioTrack(std::size_t i)
   {
-    return false;
+    return private_->movie_.selectAudioTrack(i);
   }
   
   //----------------------------------------------------------------
@@ -388,7 +777,13 @@ namespace yae
   const char *
   ReaderFFMPEG::getSelectedVideoTrackName() const
   {
-    return "no name";
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      return private_->movie_.getVideoTracks()[i]->getName();
+    }
+    
+    return NULL;
   }
   
   //----------------------------------------------------------------
@@ -397,7 +792,13 @@ namespace yae
   const char *
   ReaderFFMPEG::getSelectedAudioTrackName() const
   {
-    return "no name";
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      return private_->movie_.getAudioTracks()[i]->getName();
+    }
+    
+    return NULL;
   }
   
   //----------------------------------------------------------------
