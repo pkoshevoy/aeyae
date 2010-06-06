@@ -79,7 +79,7 @@ namespace yae
   enum TAudioChannelFormat
   {
     kAudioChannelFormatInvalid = 0,
-    kAudioChannelsMuxed  = 1, //!< all channel samples are interleaved
+    kAudioChannelsPacked = 1, //!< all channel samples are interleaved
     kAudioChannelsPlanar = 2  //!< same channel samples are grouped together
   };
   
@@ -96,7 +96,7 @@ namespace yae
     kAudio4Pt1   = 5,
     kAudio5Pt1   = 6, //!< 5.1
     kAudio6Pt1   = 7, //!< 6.1
-    kAuduo7Pt1   = 8  //!< 7.1
+    kAudio7Pt1   = 8  //!< 7.1
   };
   
   //----------------------------------------------------------------
@@ -109,13 +109,13 @@ namespace yae
     //! audio sample rate, Hz:
     unsigned int sampleRate_;
 
-    //! 8-bit, 16-bit, float, etc...
+    //! sample format -- 8-bit, 16-bit, float, etc...
     TAudioSampleFormat sampleFormat_;
     
-    //! muxed, planar:
+    //! sample layout -- packed, planar:
     TAudioChannelFormat channelFormat_;
     
-    //! mono, stereo, etc...
+    //! channel layout -- mono, stereo, etc...
     TAudioChannelLayout channelLayout_;
   };
   
@@ -125,13 +125,33 @@ namespace yae
   enum TVideoColorFormat
   {
     kInvalidColorFormat = 0,
-    kColorFormatRGB  = 1, //!< muxed Red, Green, Blue
-    kColorFormatARGB = 2, //!< muxed Alpha, Red, Green, Blue
-    kColorFormatBGRA = 3, //!< muxed Blue, Green, Red, Alpha
-    kColorFormatI420 = 4, //!< 8-bit Y plane, 2x2 subsampled U plane, 2x2 V
-    kColorFormatYV12 = 5, //!< 8-bit Y plane, 2x2 subsampled V plane, 2x2 U
-    kColorFormatUYVY = 6, //!< muxed, U and V are subsampled 2x horizontally
-    kColorFormatYUYV = 7, //!< same as UYVY but with different ordering
+    
+    //! packed Red, Green, Blue
+    kColorFormatRGB  = 1,
+
+    //! packed Red, Green, Blue
+    kColorFormatBGR  = 2,
+
+    //! packed Alpha, Red, Green, Blue
+    kColorFormatARGB = 3,
+    
+    //! packed Blue, Green, Red, Alpha
+    kColorFormatBGRA = 4,
+
+    //! 8-bit Y plane, 2x2 subsampled U plane, 2x2 V, [16, 235]
+    kColorFormatI420 = 5,
+    
+    //! 8-bit Y plane, 2x2 subsampled V plane, 2x2 U
+    kColorFormatYV12 = 6,
+    
+    //! packed, U and V are subsampled 2x horizontally
+    kColorFormatUYVY = 7,
+    
+    //! same as UYVY but with different ordering
+    kColorFormatYUYV = 8,
+    
+    //! jpeg YUV420P, same as I420 but with full range [0, 255]
+    kColorFormatYUVJ420P = 9
   };
   
   //----------------------------------------------------------------

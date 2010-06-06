@@ -265,10 +265,10 @@ namespace yae
   struct Track
   {
     // NOTE: constructor does not open the stream:
-    Track(AVStream * stream);
+    Track(AVFormatContext * context, AVStream * stream);
     
     // NOTE: destructor will close the stream:
-    ~Track();
+    virtual ~Track();
     
     // open the stream for decoding:
     bool open();
@@ -287,24 +287,44 @@ namespace yae
     inline AVCodec * codec() const
     { return codec_; }
     
+    // get track duration:
+    void getDuration(TTime & t) const;
+    
+    // get current position:
+    bool getPosition(TTime & t) const;
+    
+    // seek to a position:
+    bool setPosition(const TTime & t);
+    
   private:
     // intentionally disabled:
     Track(const Track &);
     Track & operator = (const Track &);
     
   protected:
+    AVFormatContext * context_;
     AVStream * stream_;
     AVCodec * codec_;
   };
   
+  //----------------------------------------------------------------
+  // TrackPtr
+  // 
+  typedef boost::shared_ptr<Track> TrackPtr;
   
   //----------------------------------------------------------------
   // Track::Track
   // 
-  Track::Track(AVStream * stream):
+  Track::Track(AVFormatContext * context, AVStream * stream):
+    context_(context),
     stream_(stream),
     codec_(NULL)
-  {}
+  {
+    if (context_ && stream_)
+    {
+      assert(context_->streams[stream_->index] == stream_);
+    }
+  }
   
   //----------------------------------------------------------------
   // Track::~Track
@@ -338,6 +358,14 @@ namespace yae
     if (err < 0)
     {
       // unsupported codec:
+      close();
+      return false;
+    }
+    
+    if (stream_->duration == int64_t(AV_NOPTS_VALUE) &&
+        context_->duration == int64_t(AV_NOPTS_VALUE))
+    {
+      // unknown duration:
       close();
       return false;
     }
@@ -400,10 +428,284 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // TrackPtr
+  // Track::getDuration
   // 
-  typedef boost::shared_ptr<Track> TrackPtr;
+  void
+  Track::getDuration(TTime & t) const
+  {
+    if (!stream_)
+    {
+      assert(false);
+      return;
+    }
+    
+    if (context_ && stream_->duration == int64_t(AV_NOPTS_VALUE))
+    {
+      // track duration is unknown, return movie duration instead:
+      t.time_ = context_->duration;
+      t.base_ = AV_TIME_BASE;
+      return;
+    }
+    
+    // return track duration:
+    t.time_ = stream_->time_base.num * stream_->duration;
+    t.base_ = stream_->time_base.den;
+  }
   
+  //----------------------------------------------------------------
+  // Track::getPosition
+  // 
+  bool
+  Track::getPosition(TTime & t) const
+  {
+    if (!stream_)
+    {
+      assert(false);
+      return false;
+    }
+    
+    // FIXME: not sure that I am looking at the correct timestamp:
+    if (stream_->cur_pkt.pts == int64_t(AV_NOPTS_VALUE))
+    {
+      return false;
+    }
+    
+    t.time_ = stream_->time_base.num * stream_->cur_pkt.pts;
+    t.base_ = stream_->time_base.den;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // Track::setPosition
+  // 
+  bool
+  Track::setPosition(const TTime & t)
+  {
+    if (!stream_)
+    {
+      assert(false);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // VideoTrack
+  // 
+  struct VideoTrack : public Track
+  {
+    VideoTrack(AVFormatContext * context, AVStream * stream);
+    
+    bool getTraits(VideoTraits & traits) const;
+  };
+  
+  //----------------------------------------------------------------
+  // VideoTrackPtr
+  // 
+  typedef boost::shared_ptr<VideoTrack> VideoTrackPtr;
+  
+  //----------------------------------------------------------------
+  // VideoTrack::VideoTrack
+  // 
+  VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
+    Track(context, stream)
+  {
+    assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::getTraits
+  // 
+  bool
+  VideoTrack::getTraits(VideoTraits & t) const
+  {
+    if (!stream_)
+    {
+      return false;
+    }
+    
+    // shortcut:
+    const AVCodecContext * context = stream_->codec;
+    
+    switch (context->pix_fmt)
+    {
+      case PIX_FMT_YUVA420P:
+        // same as I420, plus alpha plane (same size as Y plane)
+        
+      case PIX_FMT_YUV420P:
+        t.colorFormat_ = kColorFormatI420;
+        break;
+        
+      case PIX_FMT_YUYV422:
+ 	t.colorFormat_ = kColorFormatYUYV;
+        break;
+        
+      case PIX_FMT_RGB24:
+        t.colorFormat_ = kColorFormatRGB;
+        break;
+        
+      case PIX_FMT_BGR24:
+ 	t.colorFormat_ = kColorFormatBGR;
+        break;
+        
+      case PIX_FMT_ARGB:
+        t.colorFormat_ = kColorFormatARGB;
+        break;
+        
+      case PIX_FMT_YUVJ420P:
+ 	t.colorFormat_ = kColorFormatYUVJ420P;
+        break;
+        
+      case PIX_FMT_UYVY422:
+        t.colorFormat_ = kColorFormatUYVY;
+        break;
+        
+      case PIX_FMT_BGRA:
+        t.colorFormat_ = kColorFormatBGRA;
+        break;
+        
+      default:
+        t.colorFormat_ = kInvalidColorFormat;
+    }
+    
+    //! frame rate:
+    t.frameRate_ =
+      stream_->avg_frame_rate.den ?
+      double(stream_->avg_frame_rate.num) /
+      double(stream_->avg_frame_rate.den) :
+      0.0;
+    
+    //! encoded frame size (including any padding):
+    t.encodedWidth_ = context->width;
+    t.encodedHeight_ = context->height;
+    
+    //! top/left corner offset to the visible portion of the encoded frame:
+    t.offsetTop_ = 0;
+    t.offsetLeft_ = 0;
+    
+    //! dimensions of the visible portion of the encoded frame:
+    t.visibleWidth_ = context->width;
+    t.visibleHeight_ = context->height;
+    
+    //! pixel aspect ration, used to calculate visible frame dimensions:
+    t.pixelAspectRatio_ =
+      stream_->sample_aspect_ratio.den ?
+      double(stream_->sample_aspect_ratio.num) /
+      double(stream_->sample_aspect_ratio.den) :
+      1.0;
+    
+    //! a flag indicating whether video is upside-down:
+    t.isUpsideDown_ = false;
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack
+  // 
+  struct AudioTrack : public Track
+  {
+    AudioTrack(AVFormatContext * context, AVStream * stream);
+    
+    bool getTraits(AudioTraits & traits) const;
+  };
+  
+  //----------------------------------------------------------------
+  // AudioTrackPtr
+  // 
+  typedef boost::shared_ptr<AudioTrack> AudioTrackPtr;
+  
+  //----------------------------------------------------------------
+  // AudioTrack::AudioTrack
+  // 
+  AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
+    Track(context, stream)
+  {
+    assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::getTraits
+  // 
+  bool
+  AudioTrack::getTraits(AudioTraits & t) const
+  {
+    if (!stream_)
+    {
+      return false;
+    }
+    
+    // shortcut:
+    const AVCodecContext * context = stream_->codec;
+    
+    switch (context->sample_fmt)
+    {
+      case SAMPLE_FMT_U8:
+        t.sampleFormat_ = kAudio8BitOffsetBinary;
+        break;
+        
+      case SAMPLE_FMT_S16:
+        t.sampleFormat_ = kAudio16BitLittleEndian;
+        break;
+        
+      case SAMPLE_FMT_FLT:
+        t.sampleFormat_ = kAudio32BitFloat;
+        break;
+        
+      default:
+        t.sampleFormat_ = kAudioInvalidFormat;
+        break;
+    }
+    
+    switch (context->channels)
+    {
+      case 1:
+        t.channelLayout_ = kAudioMono;
+        break;
+        
+      case 2:
+        t.channelLayout_ = kAudioStereo;
+        break;
+        
+      case 3:
+        t.channelLayout_ = kAudio2Pt1;
+        break;
+        
+      case 4:
+        t.channelLayout_ = kAudioQuad;
+        break;
+        
+      case 5:
+        t.channelLayout_ = kAudio4Pt1;
+        break;
+        
+      case 6:
+        t.channelLayout_ = kAudio5Pt1;
+        break;
+        
+      case 7:
+        t.channelLayout_ = kAudio6Pt1;
+        break;
+        
+      case 8:
+        t.channelLayout_ = kAudio7Pt1;
+        break;
+        
+      default:
+        t.channelLayout_ = kAudioChannelLayoutInvalid;
+        break;
+    }
+    
+    //! audio sample rate, Hz:
+    t.sampleRate_ = context->sample_rate;
+    
+    //! packed, planar:
+    t.channelFormat_ = kAudioChannelsPacked;
+    
+    return true;
+  }
   
   //----------------------------------------------------------------
   // Movie
@@ -418,10 +720,10 @@ namespace yae
     bool open(const char * resourcePath);
     void close();
     
-    inline const std::vector<TrackPtr> & getVideoTracks() const
+    inline const std::vector<VideoTrackPtr> & getVideoTracks() const
     { return videoTracks_; }
     
-    inline const std::vector<TrackPtr> & getAudioTracks() const
+    inline const std::vector<AudioTrackPtr> & getAudioTracks() const
     { return audioTracks_; }
     
     inline std::size_t getSelectedVideoTrack() const
@@ -439,10 +741,10 @@ namespace yae
     Movie & operator = (const Movie &);
     
   protected:
-    AVFormatContext * formatContext_;
+    AVFormatContext * context_;
     
-    std::vector<TrackPtr> videoTracks_;
-    std::vector<TrackPtr> audioTracks_;
+    std::vector<VideoTrackPtr> videoTracks_;
+    std::vector<AudioTrackPtr> audioTracks_;
     
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
@@ -454,7 +756,7 @@ namespace yae
   // Movie::Movie
   // 
   Movie::Movie():
-    formatContext_(NULL),
+    context_(NULL),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0)
   {}
@@ -476,7 +778,7 @@ namespace yae
     // FIXME: avoid closing/reopening the same resource:
     close();
     
-    int err = av_open_input_file(&formatContext_,
+    int err = av_open_input_file(&context_,
                                  resourcePath,
                                  NULL, // AVInputFormat to force
                                  0,    // buffer size, 0 if default
@@ -488,18 +790,19 @@ namespace yae
     }
     
     // spend at most 2 seconds trying to analyze the file:
-    formatContext_->max_analyze_duration = 2 * AV_TIME_BASE;
+    context_->max_analyze_duration = 30 * AV_TIME_BASE;
     
-    err = av_find_stream_info(formatContext_);
+    err = av_find_stream_info(context_);
     if (err < 0)
     {
       close();
       return false;
     }
     
-    for (unsigned int i = 0; i < formatContext_->nb_streams; i++)
+    for (unsigned int i = 0; i < context_->nb_streams; i++)
     {
-      TrackPtr track(new Track(formatContext_->streams[i]));
+      AVStream * stream = context_->streams[i];
+      TrackPtr track(new Track(context_, stream));
       
       if (!track->open())
       {
@@ -507,18 +810,17 @@ namespace yae
         continue;
       }
       
-      const AVMediaType codecType = track->codecContext()->codec_type;
+      const AVMediaType codecType = stream->codec->codec_type;
       if (codecType == CODEC_TYPE_VIDEO)
       {
-        videoTracks_.push_back(track);
+        videoTracks_.push_back(VideoTrackPtr(new VideoTrack(context_,
+                                                            stream)));
       }
       else if (codecType == CODEC_TYPE_AUDIO)
       {
-        audioTracks_.push_back(track);
+        audioTracks_.push_back(AudioTrackPtr(new AudioTrack(context_,
+                                                            stream)));
       }
-      
-      // close the track:
-      track->close();
     }
     
     if (videoTracks_.empty() &&
@@ -542,7 +844,7 @@ namespace yae
   void
   Movie::close()
   {
-    if (formatContext_ == NULL)
+    if (context_ == NULL)
     {
       return;
     }
@@ -550,8 +852,8 @@ namespace yae
     videoTracks_.clear();
     audioTracks_.clear();
     
-    av_close_input_file(formatContext_);
-    formatContext_ = NULL;
+    av_close_input_file(context_);
+    context_ = NULL;
   }
   
   //----------------------------------------------------------------
@@ -630,11 +932,10 @@ namespace yae
       {
         av_register_all();
         av_register_protocol(&fileUtf8::urlProtocol);
-        std::cout << "first_protocol: " << first_protocol << std::endl;
-        
         ffmpegInitialized_ = true;
       }
       
+#ifdef DEBUG
       // display availabled IO protocols:
       URLProtocol * up = first_protocol;
       while (up != NULL)
@@ -642,6 +943,7 @@ namespace yae
         std::cout << "protocol: " << up->name << std::endl;
         up = up->next;
       }
+#endif
     }
     
     Movie movie_;
@@ -807,9 +1109,14 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoDuration(TTime & t) const
   {
-    t.time_ = 0;
-    t.base_ = 1001;
-    return true;
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      private_->movie_.getVideoTracks()[i]->getDuration(t);
+      return true;
+    }
+    
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -818,17 +1125,13 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioDuration(TTime & t) const
   {
-    t.time_ = 0;
-    t.base_ = 1001;
-    return true;
-  }
-  
-  //----------------------------------------------------------------
-  // ReaderFFMPEG::getAudioTraits
-  // 
-  bool
-  ReaderFFMPEG::getAudioTraits(AudioTraits & traits) const
-  {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      private_->movie_.getAudioTracks()[i]->getDuration(t);
+      return true;
+    }
+    
     return false;
   }
   
@@ -838,22 +1141,62 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoTraits(VideoTraits & traits) const
   {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      return private_->movie_.getVideoTracks()[i]->getTraits(traits);
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getAudioTraits
+  // 
+  bool
+  ReaderFFMPEG::getAudioTraits(AudioTraits & traits) const
+  {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      return private_->movie_.getAudioTracks()[i]->getTraits(traits);
+    }
+    
     return false;
   }
   
   //----------------------------------------------------------------
   // ReaderFFMPEG::getVideoPosition
   // 
-  void
+  bool
   ReaderFFMPEG::getVideoPosition(TTime & t) const
-  {}
+  {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      return private_->movie_.getVideoTracks()[i]->getPosition(t);
+    }
+    
+    return false;
+  }
   
   //----------------------------------------------------------------
   // ReaderFFMPEG::getAudioPosition
   // 
-  void
+  bool
   ReaderFFMPEG::getAudioPosition(TTime & t) const
-  {}
+  {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      // FIXME: if getPosition fails for a track,
+      // perhaps it is possible to look at the format context
+      // or some other track?
+      return private_->movie_.getAudioTracks()[i]->getPosition(t);
+    }
+    
+    return false;
+  }
   
   //----------------------------------------------------------------
   // ReaderFFMPEG::setVideoPosition
@@ -861,6 +1204,12 @@ namespace yae
   bool
   ReaderFFMPEG::setVideoPosition(const TTime & t)
   {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      return private_->movie_.getVideoTracks()[i]->setPosition(t);
+    }
+    
     return false;
   }
   
@@ -870,6 +1219,12 @@ namespace yae
   bool
   ReaderFFMPEG::setAudioPosition(const TTime & t)
   {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      return private_->movie_.getAudioTracks()[i]->setPosition(t);
+    }
+    
     return false;
   }
   

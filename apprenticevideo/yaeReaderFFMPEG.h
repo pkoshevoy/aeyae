@@ -78,11 +78,11 @@ namespace yae
     virtual bool getVideoDuration(TTime & t) const;
     virtual bool getAudioDuration(TTime & t) const;
     
-    virtual bool getAudioTraits(AudioTraits & traits) const;
     virtual bool getVideoTraits(VideoTraits & traits) const;
+    virtual bool getAudioTraits(AudioTraits & traits) const;
     
-    virtual void getVideoPosition(TTime & t) const;
-    virtual void getAudioPosition(TTime & t) const;
+    virtual bool getVideoPosition(TTime & t) const;
+    virtual bool getAudioPosition(TTime & t) const;
     
     virtual bool setVideoPosition(const TTime & t);
     virtual bool setAudioPosition(const TTime & t);

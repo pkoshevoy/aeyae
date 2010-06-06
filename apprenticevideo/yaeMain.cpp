@@ -53,6 +53,39 @@ main(int argc, char ** argv)
 	std::cout << "no name";
       }
       
+      yae::TTime duration;
+      if (reader->getVideoDuration(duration))
+      {
+	std::cout << ", duration: "
+		  << (double(duration.time_) /
+		      double(duration.base_))
+		  << " seconds";
+      }
+      
+      yae::TTime position;
+      if (reader->getVideoPosition(position))
+      {
+	std::cout << ", position: "
+		  << (double(position.time_) /
+		      double(position.base_))
+		  << " seconds";
+      }
+      
+      yae::VideoTraits t;
+      if (reader->getVideoTraits(t))
+      {
+	std::cout << ", frame rate: " << t.frameRate_ << " Hz"
+		  << ", color format: " << t.colorFormat_
+		  << ", encoded frame: " << t.encodedWidth_
+		  << " x " << t.encodedHeight_
+		  << ", visible offset: (" << t.offsetLeft_
+		  << ", " << t.offsetTop_ << ")"
+		  << ", visible frame: " << t.visibleWidth_
+		  << " x " << t.visibleHeight_
+		  << ", pixel aspect ratio: " << t.pixelAspectRatio_
+		  << ", is upside down: " << t.isUpsideDown_;
+      }
+      
       std::cout << std::endl;
     }
     
@@ -69,6 +102,33 @@ main(int argc, char ** argv)
       else
       {
 	std::cout << "no name";
+      }
+      
+      yae::TTime duration;
+      if (reader->getAudioDuration(duration))
+      {
+	std::cout << ", duration: "
+		  << (double(duration.time_) /
+		      double(duration.base_))
+		  << " seconds";
+      }
+      
+      yae::TTime position;
+      if (reader->getAudioPosition(position))
+      {
+	std::cout << ", position: "
+		  << (double(position.time_) /
+		      double(position.base_))
+		  << " seconds";
+      }
+      
+      yae::AudioTraits t;
+      if (reader->getAudioTraits(t))
+      {
+	std::cout << ", sample rate: " << t.sampleRate_ << " Hz"
+		  << ", sample format: " << t.sampleFormat_
+		  << ", channel format: " << t.channelFormat_
+		  << ", channel layout: " << t.channelLayout_;
       }
       
       std::cout << std::endl;
