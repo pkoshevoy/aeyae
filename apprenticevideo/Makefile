@@ -3,12 +3,41 @@
 CC       = gcc
 CXX      = g++
 LINK     = g++
-LFLAGS   = -L/scratch/x86_64/ffmpeg/lib -lavformat -lavcodec -lavutil -lswscale -lz -lbz2
+LFLAGS   = -L/local/lib -lavformat -lavcodec -lavutil -lswscale -lz -lbz2
+#LFLAGS   = -L/scratch/x86_64/ffmpeg/lib -lavformat -lavcodec -lavutil -lswscale -lz
 DEL_FILE = rm -f
 TARGET   = yae
 
+LFLAGS  +=	-lpthread \
+		-lfaad \
+		-lgsm \
+		-lmp3lame \
+		-lnut \
+		-lopencore-amrnb \
+		-lopencore-amrwb \
+		-lopenjpeg \
+		-lschroedinger-1.0 \
+		-lorc-0.4 \
+		-lspeex \
+		-ltheoraenc \
+		-ltheoradec \
+		-logg \
+		-lvorbisenc \
+		-lvorbis \
+		-lvpx \
+		-lx264 \
+		-lxvidcore \
+		-lws2_32 \
+		-lavicap32 \
+		-lavifil32 \
+		-lpsapi \
+		-lz \
+		-lbz2 \
+		-lm
+
 CFLAGS   =	-Wno-long-long \
-		-Wall
+		-Wall \
+		-DYAE_DLL_EXPORTS
 
 ifeq ($(CONFIG), DEBUG)
     CFLAGS +=	-DDEBUG \
@@ -26,7 +55,8 @@ CXXFLAGS =	$(CFLAGS) \
 		-Wctor-dtor-privacy
 
 INCPATH  =	-I. \
-		-I/scratch/x86_64/ffmpeg/include
+		-I/local/include
+#		-I/scratch/x86_64/ffmpeg/include
 
 HEADERS =	yaeAPI.h \
 		yaeReader.h \

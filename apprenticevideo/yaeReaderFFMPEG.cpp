@@ -14,19 +14,18 @@
 #endif
 
 // system includes:
-#include <stdint.h>
-#include <stdlib.h>
-#include <typeinfo>
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <windows.h>
-#else
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#endif
+#include <stdint.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <sstream>
 #include <iostream>
+#include <typeinfo>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -104,7 +103,7 @@ static int64_t
 fileSize64(int fd)
 {
 #ifdef _WIN32
-  struct_stat st;
+  struct _stati64 st;
   __int64 ret = _fstati64(fd, &st);
 #else
   struct stat st;
