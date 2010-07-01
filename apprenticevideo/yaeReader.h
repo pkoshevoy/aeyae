@@ -71,8 +71,8 @@ namespace yae
     virtual bool setVideoPosition(const TTime & t) = 0;
     virtual bool setAudioPosition(const TTime & t) = 0;
     
-    virtual bool readVideo(TVideoFrame & frame) = 0;
-    virtual bool readAudio(TAudioFrame & frame) = 0;
+    virtual bool readVideo(TVideoFramePtr & frame) = 0;
+    virtual bool readAudio(TAudioFramePtr & frame) = 0;
   };
   
 }

@@ -14,6 +14,7 @@
 
 // boost includes:
 #include <boost/cstdint.hpp>
+#include <boost/shared_ptr.hpp>
 
 
 //----------------------------------------------------------------
@@ -193,6 +194,7 @@ namespace yae
   struct YAE_API TFrame
   {
     typedef traits_t TTraits;
+    typedef TFrame<traits_t> TSelf;
     typedef std::vector<unsigned char> TData;
     
     //! frame position:
@@ -211,9 +213,19 @@ namespace yae
   typedef TFrame<VideoTraits> TVideoFrame;
   
   //----------------------------------------------------------------
+  // TVideoFramePtr
+  // 
+  typedef boost::shared_ptr<TVideoFrame> TVideoFramePtr;
+  
+  //----------------------------------------------------------------
   // TAudioFrame
   // 
   typedef TFrame<AudioTraits> TAudioFrame;
+  
+  //----------------------------------------------------------------
+  // TAudioFramePtr
+  // 
+  typedef boost::shared_ptr<TAudioFrame> TAudioFramePtr;
   
 }
 

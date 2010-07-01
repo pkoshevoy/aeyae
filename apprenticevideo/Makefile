@@ -8,11 +8,11 @@ LFLAGS   = -L/local/lib -lavformat -lavcodec -lavutil -lswscale -lz -lbz2
 DEL_FILE = rm -f
 TARGET   = yae
 
-LFLAGS  +=	-lpthread \
+LFLAGS  +=	-lboost_thread \
+		-lpthread \
 		-lfaad \
 		-lgsm \
 		-lmp3lame \
-		-lnut \
 		-lopencore-amrnb \
 		-lopencore-amrwb \
 		-lopenjpeg \
@@ -27,27 +27,31 @@ LFLAGS  +=	-lpthread \
 		-lvpx \
 		-lx264 \
 		-lxvidcore \
-		-lws2_32 \
-		-lavicap32 \
-		-lavifil32 \
-		-lpsapi \
 		-lz \
 		-lbz2 \
 		-lm
+
+ifeq ($(OS), _WIN32)
+    LFLAGS  +=	-lnut \
+		-lws2_32 \
+		-lavicap32 \
+		-lavifil32 \
+		-lpsapi
+endif
 
 CFLAGS   =	-Wno-long-long \
 		-Wall \
 		-DYAE_DLL_EXPORTS
 
-ifeq ($(CONFIG), DEBUG)
+ifeq ($(CONFIG), Release)
+    CFLAGS +=	-DNDEBUG \
+		-finline \
+		-O2
+else
     CFLAGS +=	-DDEBUG \
 		-fno-inline \
 		-g \
 		-O0
-else
-    CFLAGS +=	-DNDEBUG \
-		-finline \
-		-O2
 endif
 
 CXXFLAGS =	$(CFLAGS) \

@@ -27,6 +27,9 @@
 #include <iostream>
 #include <typeinfo>
 
+// boost includes:
+#include <boost/thread.hpp>
+
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeReader.h>
@@ -257,7 +260,251 @@ namespace fileUtf8
 
 namespace yae
 {
+  
+  //----------------------------------------------------------------
+  // Threadable
+  // 
+  // Thread entry point:
+  // 
+  template <typename TContext>
+  struct Threadable
+  {
+    Threadable(TContext * context):
+      context_(context)
+    {}
+    
+    void operator()()
+    {
+      context_->threadLoop();
+    }
+    
+    TContext * context_;
+  };
+  
+  //----------------------------------------------------------------
+  // Thread
+  // 
+  template <typename TContext>
+  struct Thread
+  {
+    Thread(TContext * context):
+      context_(context)
+    {}
+    
+    bool run()
+    {
+      if (!context_)
+      {
+        assert(false);
+        return false;
+      }
+      
+      try
+      {
+        Threadable<TContext> threadable(context_);
+        thread_ = boost::thread(threadable);
+        return true;
+      }
+      catch (std::exception & e)
+      {
+        std::cerr << "Thread::start: " << e.what() << std::endl;
+      }
+      catch (...)
+      {
+        std::cerr << "Thread::start: unexpected exception" << std::endl;
+      }
+      
+      return false;
+    }
+    
+    void stop()
+    {
+      try
+      {
+        thread_.interrupt();
+      }
+      catch (std::exception & e)
+      {
+        std::cerr << "Thread::stop: " << e.what() << std::endl;
+      }
+      catch (...)
+      {
+        std::cerr << "Thread::stop: unexpected exception" << std::endl;
+      }
+    }
+    
+    bool wait()
+    {
+      try
+      {
+        thread_.join();
+        return true;
+      }
+      catch (std::exception & e)
+      {
+        std::cerr << "Thread::wait: " << e.what() << std::endl;
+      }
+      catch (...)
+      {
+        std::cerr << "Thread::wait: unexpected exception" << std::endl;
+      }
+      
+      return false;
+    }
+    
+  protected:
+    boost::thread thread_;
+    TContext * context_;
+  };
+  
+  //----------------------------------------------------------------
+  // Queue
+  //
+  template <typename TData>
+  struct Queue
+  {
+    Queue(std::size_t maxSize = 4):
+      size_(0),
+      maxSize_(maxSize)
+    {}
+    
+    ~Queue()
+    {
+      try
+      {
+        boost::this_thread::disable_interruption disableInterruption;
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        
+        while (!data_.empty())
+        {
+          TData & data = data_.front();
+          data_.pop_front();
+          size_--;
+        }
+        
+        // sanity check:
+        assert(size_ == 0);
+      }
+      catch (...)
+      {}
+    }
+    
+    bool push(const TData & newData)
+    {
+      try
+      {
+        // add to queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          while (size_ >= maxSize_)
+          {
+            cond_.wait(lock);
+          }
+          
+          data_.push_back(newData);
+          TData & data = data_.back();
+          size_++;
+        }
+        
+        cond_.notify_one();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+    
+    bool pop(TData & data)
+    {
+      try
+      {
+        // remove from queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          while (data_.empty())
+          {
+            cond_.wait(lock);
+          }
+          
+          data = data_.front();
+          data_.pop_front();
+          size_--;
+        }
+        
+        cond_.notify_one();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+    
+    bool empty() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      bool isEmpty = data_.empty();
+      return isEmpty;
+    }
+    
+  protected:
+    mutable boost::mutex mutex_;
+    mutable boost::condition_variable cond_;
+    std::list<TData> data_;
+    std::size_t size_;
+    const std::size_t maxSize_;
+  };
 
+  //----------------------------------------------------------------
+  // Packet
+  // 
+  struct Packet
+  {
+    Packet()
+    {
+      memset(&ffmpeg_, 0, sizeof(AVPacket));
+    }
+    
+    ~Packet()
+    {
+      av_free_packet(&ffmpeg_);
+    }
+    
+    bool set(const AVPacket & packet)
+    {
+      ffmpeg_ = packet;
+      
+      int err = av_dup_packet(&ffmpeg_);
+      if (err)
+      {
+        memset(&ffmpeg_, 0, sizeof(AVPacket));
+      }
+      
+      return !err;
+    }
+    
+    // raw ffmpeg packet:
+    AVPacket ffmpeg_;
+
+  private:
+    // intentionally disabled:
+    Packet(const Packet &);
+    Packet & operator = (const Packet &);
+  };
+  
+  //----------------------------------------------------------------
+  // TPacketPtr
+  // 
+  typedef boost::shared_ptr<Packet> TPacketPtr;
+  
+  //----------------------------------------------------------------
+  // TPacketQueue
+  // 
+  typedef Queue<TPacketPtr> TPacketQueue;
+  
+  
+  
   //----------------------------------------------------------------
   // Track
   // 
@@ -278,6 +525,10 @@ namespace yae
     // get track name:
     const char * getName() const;
     
+    // accessor to stream index of this track within AVFormatContext:
+    inline int streamIndex() const
+    { return stream_->index; }
+    
     // accessor to the codec context:
     inline AVCodecContext * codecContext() const
     { return stream_->codec; }
@@ -295,15 +546,26 @@ namespace yae
     // seek to a position:
     bool setPosition(const TTime & t);
     
+    // accessor to the packet queue:
+    inline TPacketQueue & packetQueue()
+    { return packetQueue_; }
+    
+    // packet decoding thread:
+    virtual void threadLoop() {}
+    
   private:
     // intentionally disabled:
     Track(const Track &);
     Track & operator = (const Track &);
     
   protected:
+    // worker thread:
+    Thread<Track> thread_;
+    
     AVFormatContext * context_;
     AVStream * stream_;
     AVCodec * codec_;
+    TPacketQueue packetQueue_;
   };
   
   //----------------------------------------------------------------
@@ -315,6 +577,7 @@ namespace yae
   // Track::Track
   // 
   Track::Track(AVFormatContext * context, AVStream * stream):
+    thread_(this),
     context_(context),
     stream_(stream),
     codec_(NULL)
@@ -369,6 +632,7 @@ namespace yae
       return false;
     }
     
+    thread_.run();
     return true;
   }
   
@@ -380,6 +644,9 @@ namespace yae
   {
     if (stream_ && codec_)
     {
+      thread_.stop();
+      thread_.wait();
+      
       avcodec_close(stream_->codec);
       codec_ = NULL;
     }
@@ -497,7 +764,11 @@ namespace yae
   {
     VideoTrack(AVFormatContext * context, AVStream * stream);
     
+    // virtual:
+    void threadLoop();
+    
     bool getTraits(VideoTraits & traits) const;
+    bool getNextFrame(TVideoFramePtr & frame);
   };
   
   //----------------------------------------------------------------
@@ -512,6 +783,129 @@ namespace yae
     Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+  }
+  
+  //----------------------------------------------------------------
+  // FrameWithAutoCleanup
+  // 
+  struct FrameWithAutoCleanup
+  {
+    FrameWithAutoCleanup():
+      frame_(avcodec_alloc_frame())
+    {}
+    
+    ~FrameWithAutoCleanup()
+    {
+      av_free(frame_);
+    }
+    
+    operator AVFrame * ()
+    {
+      return frame_;
+    }
+    
+    operator AVPicture * ()
+    {
+      return (AVPicture *)frame_;
+    }
+    
+  private:
+    // intentionally disabled:
+    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
+    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
+    
+    AVFrame * frame_;
+  };
+  
+  //----------------------------------------------------------------
+  // VideoTrack::threadLoop
+  // 
+  void
+  VideoTrack::threadLoop()
+  {
+    FrameWithAutoCleanup frameAutoCleanup;
+    struct SwsContext * imgConvertCtx = NULL;
+    
+    TVideoFramePtr vf(new TVideoFrame());
+    TVideoFrame::TTraits & traits = vf->traits_;
+    TVideoFrame::TData & data = vf->data_;
+    
+    getTraits(traits);
+    traits.colorFormat_ = kColorFormatI420;
+    
+    std::size_t yPlaneSize = (traits.encodedWidth_ *
+                              traits.encodedHeight_);
+    data.resize((yPlaneSize * 3) / 2);
+    
+    while (true)
+    {
+      try
+      {
+        TPacketPtr packet;
+        bool ok = packetQueue_.pop(packet);
+        if (!ok)
+        {
+          break;
+        }
+        
+        // Decode video frame
+        int gotPicture = 0;
+        
+        AVFrame * avFrame = frameAutoCleanup;
+        int bytesUsed = avcodec_decode_video2(codecContext(),
+                                              avFrame,
+                                              &gotPicture,
+                                              &packet->ffmpeg_);
+        if (gotPicture)
+        {
+          AVPicture pict;
+          pict.data[0] = &data[0];
+          pict.data[1] = &data[yPlaneSize];
+          pict.data[2] = &data[yPlaneSize + yPlaneSize / 4];
+          pict.linesize[0] = traits.encodedWidth_;
+          pict.linesize[1] = traits.encodedWidth_ / 2;
+          pict.linesize[2] = traits.encodedWidth_ / 2;
+          
+          // Convert the image into YUV format that SDL uses
+          if (imgConvertCtx == NULL)
+          {
+            imgConvertCtx = sws_getContext(// from:
+                                           traits.visibleWidth_,
+                                           traits.visibleHeight_, 
+                                           codecContext()->pix_fmt,
+                                           
+                                           // to:
+                                           traits.visibleWidth_,
+                                           traits.visibleHeight_, 
+                                           PIX_FMT_YUV420P,
+                                           
+                                           SWS_BICUBIC, 
+                                           NULL,
+                                           NULL,
+                                           NULL);
+            if (imgConvertCtx == NULL)
+            {
+              assert(false);
+              break;
+            }
+          }
+          
+          sws_scale(imgConvertCtx,
+                    avFrame->data,
+                    avFrame->linesize,
+                    0, 
+                    codecContext()->height,
+                    pict.data,
+                    pict.linesize);
+          
+          // FIXME: put the decoded/scaled frame into frame queue:
+        }
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
   }
   
   //----------------------------------------------------------------
@@ -602,13 +996,26 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // VideoTrack::getNextFrame
+  // 
+  bool
+  VideoTrack::getNextFrame(TVideoFramePtr & frame)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // AudioTrack
   // 
   struct AudioTrack : public Track
   {
     AudioTrack(AVFormatContext * context, AVStream * stream);
     
+    // virtual:
+    void threadLoop();
+    
     bool getTraits(AudioTraits & traits) const;
+    bool getNextFrame(TAudioFramePtr & frame);
   };
   
   //----------------------------------------------------------------
@@ -623,6 +1030,15 @@ namespace yae
     Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::threadLoop
+  // 
+  void
+  AudioTrack::threadLoop()
+  {
+    // decode packets:
   }
   
   //----------------------------------------------------------------
@@ -707,6 +1123,16 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // AudioTrack::getNextFrame
+  // 
+  bool
+  AudioTrack::getNextFrame(TAudioFramePtr & frame)
+  {
+    return false;
+  }
+  
+  
+  //----------------------------------------------------------------
   // Movie
   // 
   struct Movie
@@ -734,12 +1160,20 @@ namespace yae
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);
     
+    // this will read the file and push audio/video packets to decoding queues:
+    void threadLoop();
+    bool threadStart();
+    bool threadStop();
+    
   private:
     // intentionally disabled:
     Movie(const Movie &);
     Movie & operator = (const Movie &);
     
   protected:
+    // worker thread:
+    Thread<Movie> thread_;
+    
     AVFormatContext * context_;
     
     std::vector<VideoTrackPtr> videoTracks_;
@@ -755,6 +1189,7 @@ namespace yae
   // Movie::Movie
   // 
   Movie::Movie():
+    thread_(this),
     context_(NULL),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0)
@@ -866,11 +1301,12 @@ namespace yae
       // already selected:
       return true;
     }
-
+    
     const std::size_t numVideoTracks = videoTracks_.size();
     if (selectedVideoTrack_ < numVideoTracks)
     {
       // close currently selected track:
+      videoTracks_[selectedVideoTrack_]->close();
     }
     
     if (i >= numVideoTracks)
@@ -893,11 +1329,12 @@ namespace yae
       // already selected:
       return true;
     }
-
+    
     const std::size_t numAudioTracks = audioTracks_.size();
     if (selectedAudioTrack_ < numAudioTracks)
     {
       // close currently selected track:
+      audioTracks_[selectedAudioTrack_]->close();
     }
     
     if (i >= numAudioTracks)
@@ -907,6 +1344,90 @@ namespace yae
     
     selectedAudioTrack_ = i;
     return audioTracks_[selectedAudioTrack_]->open();
+  }
+  
+  //----------------------------------------------------------------
+  // copyPacket
+  // 
+  static TPacketPtr
+  copyPacket(const AVPacket & ffmpeg)
+  {
+    try
+    {
+      TPacketPtr p(new Packet());
+      if (p->set(ffmpeg))
+      {
+        return p;
+      }
+    }
+    catch (...)
+    {}
+
+    return TPacketPtr();
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::threadLoop
+  // 
+  void
+  Movie::threadLoop()
+  {
+    VideoTrackPtr videoTrack;
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      videoTrack = videoTracks_[selectedVideoTrack_];
+    }
+    
+    AudioTrackPtr audioTrack;
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      audioTrack = audioTracks_[selectedAudioTrack_];
+    }
+    
+    // Read frames and save first five frames to disk
+    AVPacket ffmpeg;
+    while (true)
+    {
+      int err = av_read_frame(context_, &ffmpeg);
+      if (err)
+      {
+        break;
+      }
+      
+      TPacketPtr packet = copyPacket(ffmpeg);
+      if (packet)
+      {
+        if (videoTrack && videoTrack->streamIndex() == ffmpeg.stream_index)
+        {
+          videoTrack->packetQueue().push(packet);
+        }
+        else if (audioTrack && audioTrack->streamIndex() == ffmpeg.stream_index)
+        {
+          audioTrack->packetQueue().push(packet);
+        }
+      }
+      
+      av_free_packet(&ffmpeg);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::threadStart
+  // 
+  bool
+  Movie::threadStart()
+  {
+    return thread_.run();
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::threadStop
+  // 
+  bool
+  Movie::threadStop()
+  {
+    thread_.stop();
+    return thread_.wait();
   }
   
   
@@ -930,7 +1451,12 @@ namespace yae
       if (!ffmpegInitialized_)
       {
         av_register_all();
+#if 1
         av_register_protocol(&fileUtf8::urlProtocol);
+#else
+        av_register_protocol2(&fileUtf8::urlProtocol,
+                              sizeof(fileUtf8::urlProtocol));
+#endif
         ffmpegInitialized_ = true;
       }
       
@@ -1231,8 +1757,14 @@ namespace yae
   // ReaderFFMPEG::readVideo
   // 
   bool
-  ReaderFFMPEG::readVideo(TVideoFrame & frame)
+  ReaderFFMPEG::readVideo(TVideoFramePtr & frame)
   {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      return private_->movie_.getVideoTracks()[i]->getNextFrame(frame);
+    }
+    
     return false;
   }
   
@@ -1240,8 +1772,14 @@ namespace yae
   // ReaderFFMPEG::readAudio
   // 
   bool
-  ReaderFFMPEG::readAudio(TAudioFrame & frame)
+  ReaderFFMPEG::readAudio(TAudioFramePtr & frame)
   {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      return private_->movie_.getAudioTracks()[i]->getNextFrame(frame);
+    }
+    
     return false;
   }
   
