@@ -13,6 +13,10 @@
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeReaderFFMPEG.h>
+#include <yaeViewer.h>
+
+// Qt includes:
+#include <QApplication>
 
 
 //----------------------------------------------------------------
@@ -21,6 +25,8 @@
 int
 main(int argc, char ** argv)
 {
+  QApplication app(argc, argv);
+  
   yae::ReaderFFMPEG * reader = yae::ReaderFFMPEG::create();
   
   for (int i = 1; i < argc; i++)
@@ -133,8 +139,24 @@ main(int argc, char ** argv)
       
       std::cout << std::endl;
     }
+    
+    // unselect audio track:
+    reader->selectAudioTrack(numAudioTracks);
   }
   
-  reader->destroy();
+  if (reader)
+  {
+    reader->threadStart();
+    
+    yae::Viewer viewer(reader);
+    viewer.show();
+    viewer.loadFrame();
+    app.exec();
+
+    reader->threadStop();
+    reader->destroy();
+    reader = NULL;
+  }
+  
   return 0;
 }

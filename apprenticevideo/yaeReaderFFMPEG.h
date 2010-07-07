@@ -89,6 +89,9 @@ namespace yae
     
     virtual bool readVideo(TVideoFramePtr & frame);
     virtual bool readAudio(TAudioFramePtr & frame);
+    
+    virtual bool threadStart();
+    virtual bool threadStop();
   };
   
 }

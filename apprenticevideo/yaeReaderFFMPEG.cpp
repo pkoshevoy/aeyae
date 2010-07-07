@@ -252,7 +252,9 @@ namespace fileUtf8
     0, // next
     0, // url_read_pause
     0, // url_read_seek
-    &urlGetFileHandle
+    &urlGetFileHandle,
+    0, // priv_data_size
+    0  // priv_data_class
   };
   
 }
@@ -377,7 +379,6 @@ namespace yae
         
         while (!data_.empty())
         {
-          TData & data = data_.front();
           data_.pop_front();
           size_--;
         }
@@ -402,7 +403,6 @@ namespace yae
           }
           
           data_.push_back(newData);
-          TData & data = data_.back();
           size_++;
         }
         
@@ -502,8 +502,16 @@ namespace yae
   // TPacketQueue
   // 
   typedef Queue<TPacketPtr> TPacketQueue;
+
+  //----------------------------------------------------------------
+  // TVideoFrameQueue
+  // 
+  typedef Queue<TVideoFramePtr> TVideoFrameQueue;
   
-  
+  //----------------------------------------------------------------
+  // TAudioFrameQueue
+  // 
+  typedef Queue<TAudioFramePtr> TAudioFrameQueue;
   
   //----------------------------------------------------------------
   // Track
@@ -745,7 +753,7 @@ namespace yae
   // Track::setPosition
   // 
   bool
-  Track::setPosition(const TTime & t)
+  Track::setPosition(const TTime & /* t */)
   {
     if (!stream_)
     {
@@ -769,6 +777,9 @@ namespace yae
     
     bool getTraits(VideoTraits & traits) const;
     bool getNextFrame(TVideoFramePtr & frame);
+    
+  protected:
+    TVideoFrameQueue frameQueue_;
   };
   
   //----------------------------------------------------------------
@@ -826,16 +837,12 @@ namespace yae
     FrameWithAutoCleanup frameAutoCleanup;
     struct SwsContext * imgConvertCtx = NULL;
     
-    TVideoFramePtr vf(new TVideoFrame());
-    TVideoFrame::TTraits & traits = vf->traits_;
-    TVideoFrame::TData & data = vf->data_;
+    TVideoFrame::TTraits trackTraits;
+    getTraits(trackTraits);
+    trackTraits.colorFormat_ = kColorFormatI420;
     
-    getTraits(traits);
-    traits.colorFormat_ = kColorFormatI420;
-    
-    std::size_t yPlaneSize = (traits.encodedWidth_ *
-                              traits.encodedHeight_);
-    data.resize((yPlaneSize * 3) / 2);
+    std::size_t yPlaneSize = (trackTraits.encodedWidth_ *
+                              trackTraits.encodedHeight_);
     
     while (true)
     {
@@ -852,54 +859,70 @@ namespace yae
         int gotPicture = 0;
         
         AVFrame * avFrame = frameAutoCleanup;
-        int bytesUsed = avcodec_decode_video2(codecContext(),
-                                              avFrame,
-                                              &gotPicture,
-                                              &packet->ffmpeg_);
-        if (gotPicture)
+        /* int bytesUsed = */
+        avcodec_decode_video2(codecContext(),
+                              avFrame,
+                              &gotPicture,
+                              &packet->ffmpeg_);
+        if (!gotPicture)
         {
-          AVPicture pict;
-          pict.data[0] = &data[0];
-          pict.data[1] = &data[yPlaneSize];
-          pict.data[2] = &data[yPlaneSize + yPlaneSize / 4];
-          pict.linesize[0] = traits.encodedWidth_;
-          pict.linesize[1] = traits.encodedWidth_ / 2;
-          pict.linesize[2] = traits.encodedWidth_ / 2;
-          
-          // Convert the image into YUV format that SDL uses
+          continue;
+        }
+        
+        TVideoFramePtr vf(new TVideoFrame());
+        
+        TVideoFrame::TData & vfData = vf->data_;
+        vfData.resize((yPlaneSize * 3) / 2);
+        
+        TVideoFrame::TTraits & vfTraits = vf->traits_;
+        vfTraits = trackTraits;
+        
+        TTime & vfTime = vf->time_;
+        vfTime.time_ = stream_->time_base.num * avFrame->pts;
+        vfTime.base_ = stream_->time_base.den;
+        
+        AVPicture pict;
+        pict.data[0] = &vfData[0];
+        pict.data[1] = &vfData[yPlaneSize];
+        pict.data[2] = &vfData[yPlaneSize + yPlaneSize / 4];
+        pict.linesize[0] = vfTraits.encodedWidth_;
+        pict.linesize[1] = vfTraits.encodedWidth_ / 2;
+        pict.linesize[2] = vfTraits.encodedWidth_ / 2;
+        
+        // Convert the image into YUV format that SDL uses
+        if (imgConvertCtx == NULL)
+        {
+          imgConvertCtx = sws_getContext(// from:
+                                         vfTraits.visibleWidth_,
+                                         vfTraits.visibleHeight_, 
+                                         codecContext()->pix_fmt,
+                                         
+                                         // to:
+                                         vfTraits.visibleWidth_,
+                                         vfTraits.visibleHeight_,
+                                         PIX_FMT_YUV420P,
+                                         
+                                         SWS_BICUBIC,
+                                         NULL,
+                                         NULL,
+                                         NULL);
           if (imgConvertCtx == NULL)
           {
-            imgConvertCtx = sws_getContext(// from:
-                                           traits.visibleWidth_,
-                                           traits.visibleHeight_, 
-                                           codecContext()->pix_fmt,
-                                           
-                                           // to:
-                                           traits.visibleWidth_,
-                                           traits.visibleHeight_, 
-                                           PIX_FMT_YUV420P,
-                                           
-                                           SWS_BICUBIC, 
-                                           NULL,
-                                           NULL,
-                                           NULL);
-            if (imgConvertCtx == NULL)
-            {
-              assert(false);
-              break;
-            }
+            assert(false);
+            break;
           }
-          
-          sws_scale(imgConvertCtx,
-                    avFrame->data,
-                    avFrame->linesize,
-                    0, 
-                    codecContext()->height,
-                    pict.data,
-                    pict.linesize);
-          
-          // FIXME: put the decoded/scaled frame into frame queue:
         }
+        
+        sws_scale(imgConvertCtx,
+                  avFrame->data,
+                  avFrame->linesize,
+                  0, 
+                  codecContext()->height,
+                  pict.data,
+                  pict.linesize);
+        
+        // put the decoded/scaled frame into frame queue:
+        frameQueue_.push(vf);
       }
       catch (...)
       {
@@ -1001,7 +1024,7 @@ namespace yae
   bool
   VideoTrack::getNextFrame(TVideoFramePtr & frame)
   {
-    return false;
+    return frameQueue_.pop(frame);
   }
   
   //----------------------------------------------------------------
@@ -1016,6 +1039,9 @@ namespace yae
     
     bool getTraits(AudioTraits & traits) const;
     bool getNextFrame(TAudioFramePtr & frame);
+    
+  protected:
+    TAudioFrameQueue frameQueue_;
   };
   
   //----------------------------------------------------------------
@@ -1126,7 +1152,7 @@ namespace yae
   // AudioTrack::getNextFrame
   // 
   bool
-  AudioTrack::getNextFrame(TAudioFramePtr & frame)
+  AudioTrack::getNextFrame(TAudioFramePtr & /* frame */)
   {
     return false;
   }
@@ -1309,12 +1335,12 @@ namespace yae
       videoTracks_[selectedVideoTrack_]->close();
     }
     
-    if (i >= numVideoTracks)
+    selectedVideoTrack_ = i;
+    if (selectedVideoTrack_ >= numVideoTracks)
     {
       return false;
     }
     
-    selectedVideoTrack_ = i;
     return videoTracks_[selectedVideoTrack_]->open();
   }
   
@@ -1337,12 +1363,12 @@ namespace yae
       audioTracks_[selectedAudioTrack_]->close();
     }
     
-    if (i >= numAudioTracks)
+    selectedAudioTrack_ = i;
+    if (selectedAudioTrack_ >= numAudioTracks)
     {
       return false;
     }
     
-    selectedAudioTrack_ = i;
     return audioTracks_[selectedAudioTrack_]->open();
   }
   
@@ -1406,8 +1432,10 @@ namespace yae
           audioTrack->packetQueue().push(packet);
         }
       }
-      
-      av_free_packet(&ffmpeg);
+      else
+      {
+        av_free_packet(&ffmpeg);
+      }
     }
   }
   
@@ -1781,6 +1809,24 @@ namespace yae
     }
     
     return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::threadStart
+  // 
+  bool
+  ReaderFFMPEG::threadStart()
+  {
+    return private_->movie_.threadStart();
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::threadStop
+  // 
+  bool
+  ReaderFFMPEG::threadStop()
+  {
+    return private_->movie_.threadStop();
   }
   
 }

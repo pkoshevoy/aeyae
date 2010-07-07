@@ -73,6 +73,9 @@ namespace yae
     
     virtual bool readVideo(TVideoFramePtr & frame) = 0;
     virtual bool readAudio(TAudioFramePtr & frame) = 0;
+    
+    virtual bool threadStart() = 0;
+    virtual bool threadStop() = 0;
   };
   
 }
