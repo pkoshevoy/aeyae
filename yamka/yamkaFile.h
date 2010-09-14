@@ -137,6 +137,9 @@ namespace Yamka
                            TOff numBytesToRead,
                            Crc32 & computeCrc32);
     
+    // remove a given file:
+    static bool remove(const char * filenameUTF8);
+    
   private:
     // private implementation details:
     class Private;

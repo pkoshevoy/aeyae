@@ -435,4 +435,24 @@ namespace Yamka
     return true;
   }
   
+  //----------------------------------------------------------------
+  // File::remove
+  // 
+  bool
+  File::remove(const char * filename_utf8)
+  {
+#ifdef _WIN32
+    wchar_t * filename_utf16 = NULL;
+    utf8_to_utf16(filename_utf8, filename_utf16);
+    
+    int err = _wremove(filename_utf16);
+    delete [] filename_utf16;
+#else
+    
+    int err = ::remove(filename_utf8);
+#endif
+    
+    return err == 0;
+  }
+  
 }
