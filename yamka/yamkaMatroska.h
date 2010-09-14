@@ -947,7 +947,7 @@ namespace Yamka
     TCues cues_;
     
     TypedefYamkaElt(Attachments, 0x1941A469, "Attachments") TAttachment;
-    std::list<TAttachment> attachments_;
+    TAttachment attachments_;
     
     TypedefYamkaElt(Chapters, 0x1043A770, "Chapters") TChapters;
     TChapters chapters_;

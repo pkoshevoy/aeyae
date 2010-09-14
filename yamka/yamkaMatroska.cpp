@@ -3362,9 +3362,9 @@ namespace Yamka
       crawler.eval(tracks_) ||
       crawler.eval(chapters_) ||
       crawler.eval(cues_) ||
+      crawler.eval(attachments_) ||
       
       eltsEval(seekHeads_, crawler) ||
-      eltsEval(attachments_, crawler) ||
       eltsEval(tags_, crawler) ||
       eltsEval(clusters_, crawler);
   }
@@ -3380,9 +3380,9 @@ namespace Yamka
       !tracks_.mustSave() &&
       !chapters_.mustSave() &&
       !cues_.mustSave() &&
+      !attachments_.mustSave() &&
       
       seekHeads_.empty() &&
-      attachments_.empty() &&
       tags_.empty() &&
       clusters_.empty();
     
@@ -3400,9 +3400,9 @@ namespace Yamka
       tracks_.calcSize() +
       chapters_.calcSize() +
       cues_.calcSize() +
+      attachments_.calcSize() +
       
       eltsCalcSize(seekHeads_) +
-      eltsCalcSize(attachments_) +
       eltsCalcSize(tags_) +
       eltsCalcSize(clusters_);
     
@@ -3450,8 +3450,8 @@ namespace Yamka
     }
     
     *receipt += cues_.save(storage);
+    *receipt += attachments_.save(storage);
     
-    *receipt += eltsSave(attachments_, storage);
     *receipt += eltsSave(tags_, storage);
     
     return receipt;
@@ -3469,9 +3469,9 @@ namespace Yamka
     bytesToRead -= tracks_.load(storage, bytesToRead);
     bytesToRead -= chapters_.load(storage, bytesToRead);
     bytesToRead -= cues_.load(storage, bytesToRead);
-      
+    bytesToRead -= attachments_.load(storage, bytesToRead);
+    
     bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(attachments_, storage, bytesToRead);
     bytesToRead -= eltsLoad(tags_, storage, bytesToRead);
     bytesToRead -= eltsLoad(clusters_, storage, bytesToRead);
     
@@ -3554,8 +3554,7 @@ namespace Yamka
         }
         else if (eltId == TAttachment::kId)
         {
-          const TAttachment * ref = eltsFind(attachments_, absolutePosition);
-          eltReference.setElt(ref);
+          eltReference.setElt(&attachments_);
         }
         else if (eltId == TChapters::kId)
         {
@@ -3616,10 +3615,10 @@ namespace Yamka
     tracks_.setCrc32(enableCrc32);
     chapters_.setCrc32(enableCrc32);
     cues_.setCrc32(enableCrc32);
+    attachments_.setCrc32(enableCrc32);
     
     eltsSetCrc32(seekHeads_, enableCrc32);
     eltsSetCrc32(clusters_, enableCrc32);
-    eltsSetCrc32(attachments_, enableCrc32);
     eltsSetCrc32(tags_, enableCrc32);
   }
   
