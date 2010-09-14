@@ -1506,6 +1506,19 @@ namespace Yamka
       return;
     }
     
+    // avoid adding duplicate SeekEntry:
+    for (std::list<TSeekEntry>::const_iterator i = seek_.begin();
+         i != seek_.end(); ++i)
+    {
+      const TSeekEntry & index = *i;
+      if (index.payload_.position_.payload_.getOrigin() == segment &&
+          index.payload_.position_.payload_.getElt() == element)
+      {
+        // this element is already indexed:
+        return;
+      }
+    }
+    
     seek_.push_back(TSeekEntry());
     TSeekEntry & index = seek_.back();
     
