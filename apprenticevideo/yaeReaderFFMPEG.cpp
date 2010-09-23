@@ -16,6 +16,7 @@
 // system includes:
 #if defined(_WIN32)
 #include <windows.h>
+#include <io.h>
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -253,8 +254,8 @@ namespace fileUtf8
     0, // url_read_pause
     0, // url_read_seek
     &urlGetFileHandle,
-    0, // priv_data_size
-    0  // priv_data_class
+    // 0, // priv_data_size
+    // 0  // priv_data_class
   };
   
 }

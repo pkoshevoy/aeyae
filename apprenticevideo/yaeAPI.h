@@ -25,8 +25,10 @@
 #if defined _WIN32
 #  ifdef YAE_DLL_EXPORTS
 #    define YAE_API __declspec(dllexport)
-#  else
+#  elif !defined(YAE_STATIC)
 #    define YAE_API __declspec(dllimport)
+#  else
+#    define YAE_API
 #  endif
 #else
 #  if __GNUC__ >= 4

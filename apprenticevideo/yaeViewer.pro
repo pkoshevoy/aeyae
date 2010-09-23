@@ -11,6 +11,8 @@ CONFIG += debug
 MOC_DIR = moc_dir
 UI_DIR = ui_dir
 
+DEFINES += YAE_STATIC
+
 debug {
 	OBJECTS_DIR = debug
 	DEFINES += _DEBUG
@@ -30,6 +32,14 @@ win32 {
 	QMAKE_CXXFLAGS += -Zc:wchar_t
 	QMAKE_CXXFLAGS_DEBUG += /wd4335 /wd4996 /wd4995 /wd4800
 	QMAKE_CXXFLAGS_RELEASE += /O2 /wd4335 /wd4996 /wd4995
+	INCLUDEPATH += c:\msys\1.0\local\include \
+		       .\msIntTypes
+	LIBS += -Lc:\msys\1.0\local\include \
+	     	-lnut \
+		-lws2_32 \
+		-lavicap32 \
+		-lavifil32 \
+		-lpsapi
 }
 
 macx {
@@ -95,3 +105,6 @@ HEADERS =	yaeAPI.h \
 		yaeReader.h \
 		yaeViewer.h
 
+INCLUDEPATH +=	$$(BOOST_INCLUDEDIR) \
+		.
+		
