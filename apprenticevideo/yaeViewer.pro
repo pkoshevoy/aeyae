@@ -24,7 +24,7 @@ release {
 	DEFINES += NDEBUG
 }
 
-win32 {
+win32-msvc2008 {
 	DEFINES += NOMINMAX
 	DEFINES += __STDC_CONSTANT_MACROS
 	DEFINES -= UNICODE
@@ -32,9 +32,9 @@ win32 {
 	QMAKE_CXXFLAGS += -Zc:wchar_t
 	QMAKE_CXXFLAGS_DEBUG += /wd4335 /wd4996 /wd4995 /wd4800
 	QMAKE_CXXFLAGS_RELEASE += /O2 /wd4335 /wd4996 /wd4995
-	INCLUDEPATH += c:\msys\1.0\local\include \
-		       .\msIntTypes
-	LIBS += -Lc:\msys\1.0\local\include \
+	INCLUDEPATH += c:/msys/1.0/local/include \
+		       ./msIntTypes
+	LIBS += -Lc:/msys/1.0/local/lib \
 	     	-lnut \
 		-lws2_32 \
 		-lavicap32 \
@@ -53,7 +53,7 @@ macx {
 #	QMAKE_CXXFLAGS_DEBUG += -fno-stack-check -Wno-system-headers -Wno-reorder -Wno-unused -Wno-non-virtual-dtor
 }
 
-linux-g++-64 | linux-g++-32 | linux-g++ | win32-g++ {
+linux-g++-64 | linux-g++-32 | linux-g++ {
 	message("Adding libs for g++")
 	LIBS += -L/local/lib \
 	     	-L/scratch/x86_64/ffmpeg/lib \
@@ -82,17 +82,51 @@ linux-g++-64 | linux-g++-32 | linux-g++ | win32-g++ {
 		-lxvidcore \
 		-lz \
 		-lbz2 \
-		-lm \
+		-lm
 }
 
 win32-g++ {
 	message("Adding libs for win32-g++")
-	LIBS  += \
-		-lnut \
+	INCLUDEPATH += /local/include
+
+	LIBS += -L/local/lib \
+	     	-lavformat \
+		-lavcodec \
+		-lavutil \
+		-lswscale \
+		-lpthread \
+		-lfaad \
+		-lgsm \
+		-lmp3lame \
+		-lopencore-amrnb \
+		-lopencore-amrwb \
+		-lopenjpeg \
+		-lschroedinger-1.0 \
+		-lorc-0.4 \
+		-lspeex \
+		-ltheoraenc \
+		-ltheoradec \
+		-logg \
+		-lvorbisenc \
+		-lvorbis \
+		-lvpx \
+		-lx264 \
+		-lxvidcore \
+		-lz \
+		-lbz2 \
+		-lm \
+                -lnut \
 		-lws2_32 \
 		-lavicap32 \
 		-lavifil32 \
 		-lpsapi
+
+	debug {
+		LIBS += -lboost_thread-mgw44-mt-1_43
+        }
+	release {
+		LIBS += lboost_thread-mgw44-mt-d-1_43
+        }
 }
 
 SOURCES =	yaeMain.cpp \
