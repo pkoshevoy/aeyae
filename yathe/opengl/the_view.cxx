@@ -64,6 +64,7 @@ the_view_t::the_view_t(const char * name,
 		       const the_view_mgr_orientation_t & orientation):
   name_(name),
   view_mgr_(NULL),
+  stereoscopic_(false),
   local_aa_(true),
   local_dq_(false),
   local_pp_(false),
@@ -111,6 +112,28 @@ the_view_t::view_mgr_cb(void * data)
 {
   the_view_t * view = (the_view_t *)(data);
   view->eh_stack().view_cb(view);
+}
+
+//----------------------------------------------------------------
+// the_view_t::set_stereoscopic
+// 
+void
+the_view_t::set_stereoscopic(bool stereoscopic)
+{
+  if (stereoscopic_ != stereoscopic)
+  {
+    stereoscopic_ = stereoscopic;
+    refresh();
+  }
+}
+
+//----------------------------------------------------------------
+// the_view_t::is_stereoscopic
+// 
+bool
+the_view_t::is_stereoscopic() const
+{
+  return stereoscopic_;
 }
 
 //----------------------------------------------------------------
@@ -377,146 +400,164 @@ the_view_t::gl_paint()
   
   // update the view manager:
   view_mgr().update_scene_radius(documents_bbox);
-  
-#if 1
-  glDisable(GL_LIGHTING);
-  glDisable(GL_DEPTH_TEST);
-  
-  // draw the background:
-  THE_APPEARANCE.draw_background(*this);
-  FIXME_OPENGL("the_view_t::paintGL A");
-#endif
-  
-  // check whether antialiasing/fog are allowed:
-  bool enable_gfx_effects = true;
-  if (eh_stack().empty() == false)
+
+  std::list<the_view_mgr_t::stereoscopic_t> render_mode;
+  if (!stereoscopic_)
   {
-    enable_gfx_effects = !eh_stack().front()->has_drag();
-  }
-  
-#if 1
-  // setup antialiasing:
-  if (local_aa_ && enable_gfx_effects)
-  {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_LINE_SMOOTH);
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    FIXME_OPENGL("the_view_t::paintGL B");
+    render_mode.push_back(the_view_mgr_t::NOT_STEREOSCOPIC_E);
   }
   else
   {
-    glDisable(GL_BLEND);
-    glDisable(GL_LINE_SMOOTH);
-    FIXME_OPENGL("the_view_t::paintGL C");
+    render_mode.push_back(the_view_mgr_t::STEREOSCOPIC_LEFT_EYE_E);
+    render_mode.push_back(the_view_mgr_t::STEREOSCOPIC_RIGHT_EYE_E);
   }
   
-  // draw the edit plane:
-  THE_APPEARANCE.draw_edit_plane(*this);
-  FIXME_OPENGL("the_view_t::paintGL D");
-#endif
-  
-  // setup 3D viewing:
-  view_mgr().reset_opengl_viewing();
-  view_mgr().setup_opengl_3d_viewing();
-  FIXME_OPENGL("the_view_t::paintGL E");
-  
-  // setup fog (for depth cue):
-  if (local_dq_ && enable_gfx_effects &&
-      !(documents_bbox.is_empty() || documents_bbox.is_singular()))
+  for (std::list<the_view_mgr_t::stereoscopic_t>::const_iterator
+         i = render_mode.begin(); i != render_mode.end(); ++i)
   {
-    the_coord_sys_t vcs(documents_bbox.wcs_center(),
-			!(view_mgr().la() - view_mgr().lf()),
-			!(view_mgr().up()));
+    the_view_mgr_t::stereoscopic_t stereo = *i;
+    view_mgr().set_stereoscopic(stereo);
     
-    the_bbox_t bbox(vcs);
-    bbox += documents_bbox;
-    
-    // don't set up fog when the bounding box is flat:
-    if (bbox.is_spacial())
-    {
-      the_ray_t view_ray(view_mgr().lf(), !(view_mgr().la() -
-					    view_mgr().lf()));
-      
-      float a = view_ray * bbox.wcs_center();
-      float b = view_ray * bbox.wcs_max();
-      
-      glFogf(GL_FOG_START, a);
-      glFogf(GL_FOG_END, a + 3.0f * (b - a));
-      glEnable(GL_FOG);
-    }
-  }
-  else
-  {
-    glDisable(GL_FOG);
-  }
-  FIXME_OPENGL("the_view_t::paintGL F");
-  
-  // setup directional lighting:
-  // NOTE: OpenGL is weird, it wants the light "direction" to be
-  // specified backwards. If you want light along (0, 0, 1) vector,
-  // specify (0, 0, -1, 0) as the light position:
-  v3x1_t light_dir = (view_mgr().lf() - view_mgr().la());
-  p4x1_t light(light_dir.x(), light_dir.y(), light_dir.z(), 0.0);
-  glLightfv(GL_LIGHT0, GL_POSITION, light.data());
-  glEnable(GL_LIGHTING);
-  glEnable(GL_DEPTH_TEST);
-  FIXME_OPENGL("the_view_t::paintGL G");
-  
-  // draw the document:
-  {
-    glClear(GL_DEPTH_BUFFER_BIT);
-    
-    if (document() != NULL)
-    {
-      document()->draw(*this);
-    }
-  }
-  
 #if 1
-  // when drawing event handler geometry depth testing is unnecessary:
-  glClear(GL_DEPTH_BUFFER_BIT);
-  glDisable(GL_DEPTH_TEST);
-  
-  // draw the event handler 3D geometry:
-  {
-    for (std::list<the_input_device_eh_t *>::const_iterator
-	   i = eh_stack_->begin(); i != eh_stack_->end(); ++i)
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    
+    // draw the background:
+    THE_APPEARANCE.draw_background(*this);
+    FIXME_OPENGL("the_view_t::paintGL A");
+#endif
+    
+    // check whether antialiasing/fog are allowed:
+    bool enable_gfx_effects = true;
+    if (eh_stack().empty() == false)
     {
-      (*i)->dl().execute();
+      enable_gfx_effects = !eh_stack().front()->has_drag();
     }
-  }
-  
-  // draw the event handler 3D geometry that is specific to this view:
-  {
-    dl_eh_3d_.draw();
-    dl_eh_3d_.clear();
-  }
-  
-  // disable fog depth queing:
-  glDisable(GL_FOG);
-  
-  // draw the coordinate system:
-  THE_APPEARANCE.draw_coordinate_system(*this);
-  FIXME_OPENGL("the_view_t::paintGL I");
-  
-  // draw whatever (2D) is needed by the event handler:
-  {
+    
+#if 1
+    // setup antialiasing:
+    if (local_aa_ && enable_gfx_effects)
+    {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glEnable(GL_LINE_SMOOTH);
+      glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+      glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
+      glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
+      FIXME_OPENGL("the_view_t::paintGL B");
+    }
+    else
+    {
+      glDisable(GL_BLEND);
+      glDisable(GL_LINE_SMOOTH);
+      FIXME_OPENGL("the_view_t::paintGL C");
+    }
+    
+    // draw the edit plane:
+    THE_APPEARANCE.draw_edit_plane(*this);
+    FIXME_OPENGL("the_view_t::paintGL D");
+#endif
+    
+    // setup 3D viewing:
     view_mgr().reset_opengl_viewing();
-    view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0f, float(height())),
-				       p2x1_t(float(width()), 0.0f));
-    FIXME_OPENGL("the_view_t::paintGL J");
+    view_mgr().setup_opengl_3d_viewing();
+    FIXME_OPENGL("the_view_t::paintGL E");
     
-    // draw:
-    dl_eh_2d_.draw();
-    dl_eh_2d_.clear();
-    FIXME_OPENGL("the_view_t::paintGL K");
-  }
-  
-  // draw the view label:
-  THE_APPEARANCE.draw_view_label(*this);
-  FIXME_OPENGL("the_view_t::paintGL L");
+    // setup fog (for depth cue):
+    if (local_dq_ && enable_gfx_effects &&
+        !(documents_bbox.is_empty() || documents_bbox.is_singular()))
+    {
+      the_coord_sys_t vcs(documents_bbox.wcs_center(),
+                          !(view_mgr().la() - view_mgr().lf()),
+                          !(view_mgr().up()));
+      
+      the_bbox_t bbox(vcs);
+      bbox += documents_bbox;
+      
+      // don't set up fog when the bounding box is flat:
+      if (bbox.is_spacial())
+      {
+        the_ray_t view_ray(view_mgr().lf(), !(view_mgr().la() -
+                                              view_mgr().lf()));
+        
+        float a = view_ray * bbox.wcs_center();
+        float b = view_ray * bbox.wcs_max();
+        
+        glFogf(GL_FOG_START, a);
+        glFogf(GL_FOG_END, a + 3.0f * (b - a));
+        glEnable(GL_FOG);
+      }
+    }
+    else
+    {
+      glDisable(GL_FOG);
+    }
+    FIXME_OPENGL("the_view_t::paintGL F");
+    
+    // setup directional lighting:
+    // NOTE: OpenGL is weird, it wants the light "direction" to be
+    // specified backwards. If you want light along (0, 0, 1) vector,
+    // specify (0, 0, -1, 0) as the light position:
+    v3x1_t light_dir = (view_mgr().lf() - view_mgr().la());
+    p4x1_t light(light_dir.x(), light_dir.y(), light_dir.z(), 0.0);
+    glLightfv(GL_LIGHT0, GL_POSITION, light.data());
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    FIXME_OPENGL("the_view_t::paintGL G");
+    
+    // draw the document:
+    {
+      glClear(GL_DEPTH_BUFFER_BIT);
+      
+      if (document() != NULL)
+      {
+        document()->draw(*this);
+      }
+    }
+    
+#if 1
+    // when drawing event handler geometry depth testing is unnecessary:
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+    
+    // draw the event handler 3D geometry:
+    {
+      for (std::list<the_input_device_eh_t *>::const_iterator
+             i = eh_stack_->begin(); i != eh_stack_->end(); ++i)
+      {
+        (*i)->dl().execute();
+      }
+    }
+    
+    // draw the event handler 3D geometry that is specific to this view:
+    {
+      dl_eh_3d_.draw();
+      dl_eh_3d_.clear();
+    }
+    
+    // disable fog depth queing:
+    glDisable(GL_FOG);
+    
+    // draw the coordinate system:
+    THE_APPEARANCE.draw_coordinate_system(*this);
+    FIXME_OPENGL("the_view_t::paintGL I");
+    
+    // draw whatever (2D) is needed by the event handler:
+    {
+      view_mgr().reset_opengl_viewing();
+      view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0f, float(height())),
+                                         p2x1_t(float(width()), 0.0f));
+      FIXME_OPENGL("the_view_t::paintGL J");
+      
+      // draw:
+      dl_eh_2d_.draw();
+      dl_eh_2d_.clear();
+      FIXME_OPENGL("the_view_t::paintGL K");
+    }
+    
+    // draw the view label:
+    THE_APPEARANCE.draw_view_label(*this);
+    FIXME_OPENGL("the_view_t::paintGL L");
 #endif
+  }
 }

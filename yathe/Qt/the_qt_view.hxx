@@ -15,7 +15,7 @@
 // local includes:
 #include "opengl/the_view.hxx"
 
-// QT includes:
+// Qt includes:
 #include <QtOpenGL>
 #include <QGLWidget>
 #include <QEvent>
@@ -70,7 +70,7 @@ public:
   void change_cursor(const the_cursor_id_t & cursor_id);
   
 protected:
-  // virtual: QT/OpenGL stuff:
+  // virtual: Qt/OpenGL stuff:
   void initializeGL();
   void resizeGL(int width, int height);
   void paintGL();

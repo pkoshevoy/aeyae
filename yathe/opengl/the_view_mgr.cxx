@@ -29,6 +29,7 @@ the_view_mgr_t::the_view_mgr_t(const the_view_mgr_orientation_t & orientation,
   initial_orientation_(orientation),
   initial_zoom_(1.0),
   la_(0.0, 0.0, 0.0),
+  stereo_(NOT_STEREOSCOPIC_E),
   width_(1.0),
   height_(1.0),
   scene_radius_(1.0),
@@ -361,7 +362,21 @@ void
 the_view_mgr_t::setup_opengl_2d_viewing(const p2x1_t & ll,
 					const p2x1_t & ur) const
 {
-  glViewport(0, 0, int(width()), int(height()));
+  if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
+  {
+    int w0 = int(width() / 2.0);
+    glViewport(0, 0, w0, height());
+  }
+  else if (stereo_ == STEREOSCOPIC_RIGHT_EYE_E)
+  {
+    int w0 = int(width() / 2.0);
+    int w1 = int(width()) - w0;
+    glViewport(w0, 0, w1, height());
+  }
+  else
+  {
+    glViewport(0, 0, width(), height());
+  }
   
   glMatrixMode(GL_PROJECTION);
   gluOrtho2D(ll.x(), ur.x(), ll.y(), ur.y());
@@ -543,12 +558,40 @@ the_persp_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
 					      float far_plane) const
 {
   if (salvage_near_far(near_plane, far_plane) == false) return false;
+
+  if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
+  {
+    int w0 = int(width_ / 2.0);
+    glViewport(0, 0, w0, (int)height_);
+    
+    v3x1_t la = !(la_ - lf_);
+    v3x1_t le = !(up_ % la);
+    p3x1_t lf = lf_ + le;
+    gluLookAt(lf.x(), lf.y(), lf.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
+  else if (stereo_ == STEREOSCOPIC_RIGHT_EYE_E)
+  {
+    int w0 = int(width_ / 2.0);
+    int w1 = int(width_) - w0;
+    glViewport(w0, 0, w1, (int)height_);
   
-  glViewport(0, 0, (int)width_, (int)height_);
-  
-  gluLookAt(lf_.x(), lf_.y(), lf_.z(),
-	    la_.x(), la_.y(), la_.z(),
-	    up_.x(), up_.y(), up_.z());
+    v3x1_t la = !(la_ - lf_);
+    v3x1_t le = !(up_ % la);
+    p3x1_t lf = lf_ + le;
+    gluLookAt(lf.x(), lf.y(), lf.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
+  else
+  {
+    glViewport(0, 0, (int)width_, (int)height_);
+    
+    gluLookAt(lf_.x(), lf_.y(), lf_.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
   
   glMatrixMode(GL_PROJECTION);
   glFrustum(-viewport_plane_radius(near_plane) * scale_x(), // left
@@ -642,11 +685,39 @@ the_ortho_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
 {
   if (salvage_near_far(near_plane, far_plane) == false) return false;
   
-  glViewport(0, 0, (int)width_, (int)height_);
-  
-  gluLookAt(lf_.x(), lf_.y(), lf_.z(),
-	    la_.x(), la_.y(), la_.z(),
-	    up_.x(), up_.y(), up_.z());
+  if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
+  {
+    int w0 = int(width_ / 2.0);
+    glViewport(0, 0, w0, (int)height_);
+
+    v3x1_t la = !(la_ - lf_);
+    v3x1_t le = !(up_ % la);
+    p3x1_t lf = lf_ + le;
+    gluLookAt(lf.x(), lf.y(), lf.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
+  else if (stereo_ == STEREOSCOPIC_RIGHT_EYE_E)
+  {
+    int w0 = int(width_ / 2.0);
+    int w1 = int(width_) - w0;
+    glViewport(w0, 0, w1, (int)height_);
+
+    v3x1_t la = !(la_ - lf_);
+    v3x1_t le = !(up_ % la);
+    p3x1_t lf = lf_ - le;
+    gluLookAt(lf.x(), lf.y(), lf.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
+  else
+  {
+    glViewport(0, 0, (int)width_, (int)height_);
+    
+    gluLookAt(lf_.x(), lf_.y(), lf_.z(),
+              la_.x(), la_.y(), la_.z(),
+              up_.x(), up_.y(), up_.z());
+  }
   
   glMatrixMode(GL_PROJECTION);
   glOrtho(-viewport_plane_radius(near_plane) * scale_x(), // left

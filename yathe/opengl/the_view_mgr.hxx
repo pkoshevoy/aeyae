@@ -43,7 +43,7 @@ class the_ortho_view_mgr_t;
   |   ` -.....- '   |
   FAR               NEAR
   clipping          clipping
-  plane             plane (the screen rests on this plane)
+  plane             plane (the view port rests on this plane)
   
   LA - look-at point.
   LF - look-from point.
@@ -66,7 +66,7 @@ class the_ortho_view_mgr_t;
   To zoom in - make VR smaller than MR (move LF towards LA).
   To zoom out - make VR larger than MR (move LF away from LA).
   
-  The screen is laid out as follows:
+  The view port is laid out as follows:
   
       (0, 0)             (1, 0)
 	UL-----------------UR
@@ -89,7 +89,7 @@ class the_ortho_view_mgr_t;
   
   X = UR - UL // to the right.
   Y = LL - UL // down.
-  Z = LA - LF // into the screen.
+  Z = LA - LF // into the view port.
   O = LF      // the look from point.
 */
 
@@ -240,6 +240,24 @@ public:
   // reset OpenGL viewing transformations to identity:
   void reset_opengl_viewing() const;
   
+  //----------------------------------------------------------------
+  // stereoscopic_t
+  // 
+  typedef enum
+  {
+    NOT_STEREOSCOPIC_E = 0,
+    STEREOSCOPIC_LEFT_EYE_E = 1,
+    STEREOSCOPIC_RIGHT_EYE_E = 2
+  } stereoscopic_t;
+  
+  // this affects opengl rendering viewport setup;
+  // this should be called prior to calling setup_opengl_..._viewing(..)
+  void set_stereoscopic(stereoscopic_t mode = NOT_STEREOSCOPIC_E)
+  { stereo_ = mode; }
+  
+  inline stereoscopic_t get_stereoscopic() const
+  { return stereo_; }
+  
   // setup glFrustum for 2D viewing:
   void setup_opengl_2d_viewing(const p2x1_t & ll, const p2x1_t & ur) const;
   
@@ -321,7 +339,7 @@ public:
   // along the normalized (la - lf) vector:
   virtual float viewport_plane_radius(float depth) const = 0;
   
-  // functions calculating the current screen aspect ratio:
+  // functions calculating the current view port aspect ratio:
   inline float scale_x() const
   {
     if (width_ > height_) return width_ / height_;
@@ -368,9 +386,10 @@ public:
   // Viewing setup:
   p3x1_t lf_; // look from point.
   p3x1_t la_; // look at point.
-  v3x1_t up_; // vector up (so we know which way is up).    
-  float width_; // screen width.
-  float height_; // screen height.
+  v3x1_t up_; // vector up (so we know which way is up).
+  stereoscopic_t stereo_; // current stereoscopic rendering mode.
+  float width_; // view port width.
+  float height_; // view port height.
   float view_radius_; // view sphere radius.
   float scene_radius_; // model view sphere radius.
   

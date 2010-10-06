@@ -85,6 +85,10 @@ public:
   // accessor to the edit planes:
   inline static const the_plane_t & edit_plane(the_edit_plane_id_t ep_id)
   { return edit_plane_[ep_id]; }
+
+  // stereoscopic rendering controls:
+  void set_stereoscopic(bool stereoscopic);
+  bool is_stereoscopic() const;
   
   // antialiasing controls:
   void aa_disable();
@@ -215,6 +219,7 @@ protected:
   the_view_mgr_t * view_mgr_;
   
   // display control flags:
+  bool stereoscopic_; // stereoscopic rendering.
   bool local_aa_; // antialiasing.
   bool local_dq_; // fog depth-queing.
   bool local_pp_; // perspective depth-queing.
