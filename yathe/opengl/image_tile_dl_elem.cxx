@@ -421,11 +421,13 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
     glLineWidth(1);
     
 #else // DEBUG_TEXTURES
+#ifdef USE_CG
     if (has_fragment_program() && use_textures)
     {
       glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     }
     else
+#endif
     {
       glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     }
