@@ -169,30 +169,6 @@ the_ep_grid_t::draw() const
   // collect display primitives (specific to each subclass):
   populate_disp_list(dl);
   
-  // FIXME: pkoshevoy: 20040425
-#if 0
-  // point on the edit plane closest to the LA point:
-  p3x1_t wcs_center = wcs_ep_center();
-  
-  // draw an arrow from LA towards the EP center:
-  dl.push_back(new the_arrow_dl_elem_t(view_mgr_.la(),
-				       wcs_center,
-				       palette_.cs()[0],
-				       palette_.cs()[1],
-				       3,
-				       fixed_step_size()));
-  
-  dl.push_back(new the_masked_text_dl_elem_t(view_mgr_.la(),
-					     palette_.text(),
-					     palette_.mask(),
-					     "la"));
-  
-  dl.push_back(new the_masked_text_dl_elem_t(wcs_center,
-					     palette_.text(),
-					     palette_.mask(),
-					     "ep"));
-#endif
-  
   // setup OpenGL near/far clipping planes:
   const the_bbox_t & dl_bbox = dl.bbox();
   view_mgr_.reset_opengl_viewing();
@@ -202,7 +178,7 @@ the_ep_grid_t::draw() const
   // execute the display list:
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_LINE_BIT);
   {
-#if 0
+#if 1
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
 #else
