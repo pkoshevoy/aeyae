@@ -488,14 +488,14 @@ DeployFile()
 				fi
 
 				SRC=`resolve_symlink "${SRC}"`
-				echo resolve_symlink returned \""${SRC}"\"
+#				echo resolve_symlink returned \""${SRC}"\"
 
 				if [ ! -e "${SRC}" ]; then
 					echo "MISSING: ${SRC}"
 					exit 11
 				fi
 
-				echo ${CP} "${SRC}" "${BASEPATH} / ${DST} / ${FN_DST}"
+				echo ${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
 				${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
 
 				# copy resources bundled together with the framework:
@@ -505,6 +505,8 @@ DeployFile()
 					echo mkdir -p "${DST_BASE}/Resources";
 					mkdir -p "${DST_BASE}/Resources";
 					quiet_pushd "${DST_BASE}/Resources"
+						pwd
+						echo COPYING "${SRC_BASE}/Resources"
 					    (cd "${SRC_BASE}/Resources"; tar c .) | tar xv
 					quiet_popd
 				fi
@@ -517,7 +519,9 @@ DeployFile()
 					VERSIONS="${VERTMP}"
 					
 					quiet_pushd "${VERSIONS}"
+						pwd
 						if [ ! -e Current ]; then
+							echo ln -s "${VERSION}" Current
 							ln -s "${VERSION}" Current
 						fi
 					quiet_popd
@@ -525,8 +529,15 @@ DeployFile()
 					VERTMP=`dirname "${VERTMP}"`
 					VERSIONS="${VERTMP}"
 					quiet_pushd "${VERSIONS}"
+						pwd
+
+						if [ -e "Versions/${VERSION}/Resources" ]; then
+							echo ln -s "Versions/${VERSION}/Resources" .
+							ln -s "Versions/${VERSION}/Resources" .
+						fi
+
 						DSTTMP=`basename "${FN_DST}"`
-						ln -s "Versions/${VERSION}/Resources" .
+						echo ln -s "Versions/${VERSION}/${DSTTMP}" .
 						ln -s "Versions/${VERSION}/${DSTTMP}" .
 					quiet_popd
 				fi
