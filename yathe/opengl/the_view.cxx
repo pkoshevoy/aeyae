@@ -530,10 +530,7 @@ the_view_t::gl_paint()
     }
     
     // draw the event handler 3D geometry that is specific to this view:
-    {
-      dl_eh_3d_.draw();
-      dl_eh_3d_.clear();
-    }
+    dl_eh_3d_.draw();
     
     // disable fog depth queing:
     glDisable(GL_FOG);
@@ -543,21 +540,53 @@ the_view_t::gl_paint()
     FIXME_OPENGL("the_view_t::paintGL I");
     
     // draw whatever (2D) is needed by the event handler:
-    {
-      view_mgr().reset_opengl_viewing();
-      view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0f, float(height())),
-                                         p2x1_t(float(width()), 0.0f));
-      FIXME_OPENGL("the_view_t::paintGL J");
-      
-      // draw:
-      dl_eh_2d_.draw();
-      dl_eh_2d_.clear();
-      FIXME_OPENGL("the_view_t::paintGL K");
-    }
+    view_mgr().reset_opengl_viewing();
+    view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0f, float(height())),
+                                       p2x1_t(float(width()), 0.0f));
+    FIXME_OPENGL("the_view_t::paintGL J");
+    
+    dl_eh_2d_.draw();
+    FIXME_OPENGL("the_view_t::paintGL K");
     
     // draw the view label:
     THE_APPEARANCE.draw_view_label(*this);
     FIXME_OPENGL("the_view_t::paintGL L");
+    
+    // draw the pointing device (mouse) cursor, if required:
+    if (view_mgr_->get_cursor_id() != THE_BLANK_CURSOR_E &&
+        eh_stack().most_recent_event() &&
+        eh_stack().most_recent_event()->widget() == this)
+    {
+      const the_input_device_event_t * e =
+        eh_stack().most_recent_event();
+
+      p2x1_t scs_pt = eh_stack().most_recent_mouse_event().scs_pt_;
+      
+      const the_pointer_device_event_t * pe =
+        dynamic_cast<const the_pointer_device_event_t *>(e);
+      if (pe)
+      {
+        scs_pt = pe->scs_pt();
+      }
+      
+      p3x1_t cursor_pos(scs_pt.x() * float(width()),
+                        scs_pt.y() * float(height()),
+                        0.0f);
+      
+      bool data_is_bottom_up = false;
+      the_cursor_t cursor(view_mgr_->get_cursor_id());
+      the_bitmap_dl_elem_t(cursor_pos,
+                           data_is_bottom_up,
+                           cursor.icon_,
+                           cursor.mask_,
+                           cursor.w_,
+                           cursor.h_,
+                           cursor.x_,
+                           cursor.y_).draw();
+    }
 #endif
   }
+  
+  dl_eh_3d_.clear();
+  dl_eh_2d_.clear();
 }
