@@ -77,15 +77,24 @@ the_qt_view_t::paintGL()
 void
 the_qt_view_t::change_cursor(const the_cursor_id_t & cursor_id)
 {
-  the_cursor_t c(cursor_id);
-  setCursor(QCursor(QBitmap::fromData(QSize(c.w_, c.h_),
-				      c.icon_,
-				      QImage::Format_Mono),
-		    QBitmap::fromData(QSize(c.w_, c.h_),
-				      c.mask_,
-				      QImage::Format_Mono),
-		    c.x_,
-		    c.y_));
+  if (view_mgr().get_stereoscopic() == the_view_mgr_t::NOT_STEREOSCOPIC_E)
+  {
+    the_cursor_t c(cursor_id);
+    setCursor(QCursor(QBitmap::fromData(QSize(c.w_, c.h_),
+                                        c.icon_,
+                                        QImage::Format_Mono),
+                      QBitmap::fromData(QSize(c.w_, c.h_),
+                                        c.mask_,
+                                        QImage::Format_Mono),
+                      c.x_,
+                      c.y_));
+    view_mgr().set_cursor_id(THE_BLANK_CURSOR_E);
+  }
+  else
+  {
+    setCursor(QCursor(Qt::BlankCursor));
+    view_mgr().set_cursor_id(cursor_id);
+  }
 }
 
 //----------------------------------------------------------------
