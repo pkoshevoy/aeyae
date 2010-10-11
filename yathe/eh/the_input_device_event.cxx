@@ -71,6 +71,46 @@ the_input_device_event_t::load(std::istream & si,
 
 
 //----------------------------------------------------------------
+// the_pointer_device_event_t::the_pointer_device_event_t
+// 
+the_pointer_device_event_t::the_pointer_device_event_t(the_view_t * widget,
+                                                       const p2x1_t & scs_pt):
+  the_input_device_event_t(widget),
+  scs_pt_(scs_pt)
+{}
+
+//----------------------------------------------------------------
+// the_pointer_device_event_t::save
+// 
+void
+the_pointer_device_event_t::save(std::ostream & so,
+                                 const char * magic) const
+{
+  if (!is_open(so)) return;
+
+  the_input_device_event_t::save(so, "the_mouse_event_t");
+  ::save(so, scs_pt_);
+}
+
+//----------------------------------------------------------------
+// the_pointer_device_event_t::load
+// 
+bool
+the_pointer_device_event_t::load(std::istream & si,
+                                 const std::string & loaded_magic,
+                                 const char * magic)
+{
+  if (!the_input_device_event_t::load(si, loaded_magic, magic))
+  {
+    return false;
+  }
+  
+  bool ok = ::load(si, scs_pt_);
+  return ok;
+}
+
+
+//----------------------------------------------------------------
 // the_mouse_btn_t::tran_down_
 // 
 unsigned int
@@ -92,13 +132,12 @@ the_mouse_event_t::the_mouse_event_t(the_view_t * widget,
 				     bool double_click,
 				     bool moving,
 				     const p2x1_t & scs_pt):
-  the_input_device_event_t(widget),
+  the_pointer_device_event_t(widget, scs_pt),
   btns_(btns),
   tran_(tran),
   mods_(mods),
   double_click_(double_click),
-  moving_(moving),
-  scs_pt_(scs_pt)
+  moving_(moving)
 {}
 
 //----------------------------------------------------------------
@@ -109,13 +148,12 @@ the_mouse_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
 
-  the_input_device_event_t::save(so, "the_mouse_event_t");
+  the_pointer_device_event_t::save(so, "the_mouse_event_t");
   ::save(so, btns_);
   ::save(so, tran_);
   ::save(so, mods_);
   ::save(so, double_click_);
   ::save(so, moving_);
-  ::save(so, scs_pt_);
 }
 
 //----------------------------------------------------------------
@@ -124,7 +162,7 @@ the_mouse_event_t::save(std::ostream & so) const
 bool
 the_mouse_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (!the_input_device_event_t::load(si, magic, "the_mouse_event_t"))
+  if (!the_pointer_device_event_t::load(si, magic, "the_mouse_event_t"))
   {
     return false;
   }
@@ -133,8 +171,7 @@ the_mouse_event_t::load(std::istream & si, const std::string & magic)
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
 	     ::load(si, double_click_) &&
-	     ::load(si, moving_) &&
-	     ::load(si, scs_pt_));
+	     ::load(si, moving_));
   return ok;
 }
 
@@ -160,11 +197,10 @@ the_wheel_event_t::the_wheel_event_t(the_view_t * widget,
 				     const p2x1_t & scs_pt,
 				     double degrees_rotated,
 				     bool vertical):
-  the_input_device_event_t(widget),
+  the_pointer_device_event_t(widget, scs_pt),
   btns_(btns),
   tran_(tran),
   mods_(mods),
-  scs_pt_(scs_pt),
   degrees_rotated_(degrees_rotated),
   vertical_(vertical)
 {}
@@ -177,11 +213,10 @@ the_wheel_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
   
-  the_input_device_event_t::save(so, "the_wheel_event_t");
+  the_pointer_device_event_t::save(so, "the_wheel_event_t");
   ::save(so, btns_);
   ::save(so, tran_);
   ::save(so, mods_);
-  ::save(so, scs_pt_);
   ::save(so, degrees_rotated_);
   ::save(so, vertical_);
 }
@@ -192,7 +227,7 @@ the_wheel_event_t::save(std::ostream & so) const
 bool
 the_wheel_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (!the_input_device_event_t::load(si, magic, "the_wheel_event_t"))
+  if (!the_pointer_device_event_t::load(si, magic, "the_wheel_event_t"))
   {
     return false;
   }
@@ -200,7 +235,6 @@ the_wheel_event_t::load(std::istream & si, const std::string & magic)
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
-	     ::load(si, scs_pt_) &&
 	     ::load(si, degrees_rotated_) &&
 	     ::load(si, vertical_));
   return ok;
@@ -316,10 +350,9 @@ the_wacom_event_t::the_wacom_event_t(the_view_t * widget,
 				     float tangential_pressure,
 				     float rotation,
 				     float z_position):
-  the_input_device_event_t(widget),
+  the_pointer_device_event_t(widget, scs_pt),
   tool_(tool),
   tool_id_(tool_id),
-  scs_pt_(scs_pt),
   tilt_(tilt),
   pressure_(pressure),
   tangential_pressure_(tangential_pressure),
@@ -335,7 +368,7 @@ the_wacom_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
   
-  the_input_device_event_t::save(so, "the_wacom_event_t");
+  the_pointer_device_event_t::save(so, "the_wacom_event_t");
 
   int tool = tool_;
   ::save(so, tool);
@@ -343,7 +376,6 @@ the_wacom_event_t::save(std::ostream & so) const
   uint64_t tool_id = tool_id_;
   ::save_address(so, tool_id);
   
-  ::save(so, scs_pt_);
   ::save(so, tilt_);
   ::save(so, pressure_);
   ::save(so, tangential_pressure_);
@@ -357,7 +389,7 @@ the_wacom_event_t::save(std::ostream & so) const
 bool
 the_wacom_event_t::load(std::istream & si, const std::string & magic)
 {
-  if (!the_input_device_event_t::load(si, magic, "the_wacom_event_t"))
+  if (!the_pointer_device_event_t::load(si, magic, "the_wacom_event_t"))
   {
     return false;
   }
@@ -366,7 +398,6 @@ the_wacom_event_t::load(std::istream & si, const std::string & magic)
   uint64_t tool_id = 0;
   bool ok = (::load(si, tool) &&
 	     ::load_address(si, tool_id) &&
-	     ::load(si, scs_pt_) &&
 	     ::load(si, tilt_) &&
 	     ::load(si, pressure_) &&
 	     ::load(si, tangential_pressure_) &&
@@ -407,7 +438,6 @@ the_wacom_event_t::dump(ostream & sout, unsigned int indent) const
        << INDSCP << "{" << endl
        << INDSTR << "tool                = " << tool_str << endl
        << INDSTR << "tool_id             = " << int(tool_id_) << endl
-       << INDSTR << "scs_pt              = " << scs_pt_ << endl
        << INDSTR << "tilt                = " << tilt_ << endl
        << INDSTR << "pressure            = " << pressure_ << endl
        << INDSTR << "tangential pressure = " << tangential_pressure_ << endl

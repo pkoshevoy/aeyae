@@ -53,12 +53,36 @@ protected:
 	    const char * magic);
 };
 
+//----------------------------------------------------------------
+// the_pointer_device_event_t
+// 
+class the_pointer_device_event_t : public the_input_device_event_t
+{
+public:
+  the_pointer_device_event_t(the_view_t * widget = NULL,
+                             const p2x1_t & scs_pt = p2x1_t(0, 0));
+  
+  inline const p2x1_t & scs_pt() const
+  { return scs_pt_; }
+  
+  // pointer location expressed in the screen coordinate system:
+  p2x1_t scs_pt_;
+  
+protected:
+  // virtual: file I/O API:
+  void save(std::ostream & so,
+	    const char * magic) const;
+  
+  bool load(std::istream & si,
+	    const std::string & loaded_magic,
+	    const char * magic);
+};
 
 //----------------------------------------------------------------
 // the_mouse_event_t
 // 
 // Mouse event container:
-class the_mouse_event_t : public the_input_device_event_t
+class the_mouse_event_t : public the_pointer_device_event_t
 {
 public:
   the_mouse_event_t(the_view_t * widget = NULL,
@@ -77,9 +101,6 @@ public:
   inline unsigned int tran() const { return tran_; }
   inline unsigned int mods() const { return mods_; }
   
-  inline const p2x1_t & scs_pt() const
-  { return scs_pt_; }
-  
   // this must be called in order to let the mouse button class
   // know how it can detect the down and up key transitions:
   static void setup_transition_detectors(unsigned int tran_down,
@@ -95,9 +116,6 @@ public:
   
   bool double_click_;
   bool moving_;
-  
-  // pointer location expressed in the screen coordinate system:
-  p2x1_t scs_pt_;
 };
 
 
@@ -105,7 +123,7 @@ public:
 // the_wheel_event_t
 // 
 // Wheel event container:
-class the_wheel_event_t : public the_input_device_event_t
+class the_wheel_event_t : public the_pointer_device_event_t
 {
 public:
   the_wheel_event_t(the_view_t * widget = NULL,
@@ -125,9 +143,6 @@ public:
   inline unsigned int tran() const { return tran_; }
   inline unsigned int mods() const { return mods_; }
   
-  inline const p2x1_t & scs_pt() const
-  { return scs_pt_; }
-  
   inline double degrees_rotated() const
   { return degrees_rotated_; }
   
@@ -140,9 +155,6 @@ public:
   unsigned int btns_; // ids of the mouse buttons ORed together.
   unsigned int tran_; // type of transition (up or down).
   unsigned int mods_; // active modifier keys (shift, alt, ctrl).
-  
-  // pointer location expressed in the screen coordinate system:
-  p2x1_t scs_pt_;
   
   // the distance that the wheel is rotated, in steps:
   double degrees_rotated_;
@@ -208,7 +220,7 @@ typedef enum {
 // the_wacom_event_t
 // 
 // Tablet event container:
-class the_wacom_event_t : public the_input_device_event_t
+class the_wacom_event_t : public the_pointer_device_event_t
 {
 public:
   the_wacom_event_t(the_view_t * widget = NULL,
@@ -232,10 +244,6 @@ public:
   // unique id of the tablet tool that generated the event:
   inline const unsigned long int & tool_id() const
   { return tool_id_; }
-  
-  // tool location:
-  inline const p2x1_t & scs_pt() const
-  { return scs_pt_; }
   
   // pen/eraser tilt coordinates (u, v):
   // u: [-1.0 (left), 1.0 (right)]
@@ -262,9 +270,6 @@ public:
   
   // tablet tool ID (unique):
   unsigned long int tool_id_;
-  
-  // tool location expressed in the screen coordinate system:
-  p2x1_t scs_pt_;
   
   // pen/erase tilt vector:
   p2x1_t tilt_;
