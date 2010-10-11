@@ -598,6 +598,85 @@ the_masked_symbol_dl_elem_t::draw() const
   }
 }
 
+//----------------------------------------------------------------
+// the_bitmap_dl_elem_t::draw
+// 
+void
+the_bitmap_dl_elem_t::draw() const
+{
+  GLfloat i2a[2] = { 0.f };
+  GLfloat i2r[2] = { 0.f };
+  GLfloat i2g[2] = { 0.f };
+  GLfloat i2b[2] = { 0.f };
+  
+  the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_PIXEL_MODE_BIT);
+  the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
+  {
+    glDisable(GL_LIGHTING);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glRasterPos3fv(the_point_dl_elem_t::pt_.data());
+    
+    if (must_flip_bitmap_)
+    {
+      glPixelZoom(1.f, -1.f);
+      glBitmap(0,
+               0,
+               0.f,
+               0.f,
+               -float(x_),
+               float(y_),
+               NULL);
+    }
+    else
+    {
+      glPixelZoom(1.f, 1.f);
+      glBitmap(0,
+               0,
+               0.f,
+               0.f,
+               -float(x_),
+               -float(h_ - y_),
+               NULL);
+    }
+    
+    if (mask_)
+    {
+      // draw the icon mask:
+      i2a[1] = mask_color_.a();
+      i2r[1] = mask_color_.r();
+      i2g[1] = mask_color_.g();
+      i2b[1] = mask_color_.b();
+      
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, i2a);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_R, 2, i2r);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_G, 2, i2g);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 2, i2b);
+      
+      glDrawPixels(w_, h_, GL_COLOR_INDEX, GL_BITMAP, mask_);
+    }
+    
+    if (icon_)
+    {
+      // draw the icon:
+      i2a[1] = color_.a();
+      i2r[1] = color_.r();
+      i2g[1] = color_.g();
+      i2b[1] = color_.b();
+      
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, i2a);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_R, 2, i2r);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_G, 2, i2g);
+      glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 2, i2b);
+      
+      glDrawPixels(w_, h_, GL_COLOR_INDEX, GL_BITMAP, icon_);
+      // glBitmap(w_, h_, x_, y_, 0, 0, icon_);
+    }
+    
+    FIXME_OPENGL("the_bitmap_dl_elem_t::draw");
+  }
+}
+
 
 //----------------------------------------------------------------
 // the_arrow_dl_elem_t::draw

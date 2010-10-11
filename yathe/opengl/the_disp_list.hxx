@@ -398,6 +398,47 @@ private:
   the_color_t mask_color_;
 };
 
+//----------------------------------------------------------------
+// the_bitmap_dl_elem_t
+// 
+class the_bitmap_dl_elem_t : public the_point_dl_elem_t
+{
+public:
+  the_bitmap_dl_elem_t(const p3x1_t & position = p3x1_t(0.0, 0.0, 0.0),
+                       bool data_is_bottom_up = true,
+                       const unsigned char * icon = NULL,
+                       const unsigned char * mask = NULL,
+                       unsigned int width = 0,
+                       unsigned int height = 0,
+                       int x_origin = 0,
+                       int y_origin = 0,
+                       const the_color_t & icon_color = the_color_t::BLACK,
+                       const the_color_t & mask_color = the_color_t::WHITE):
+    the_point_dl_elem_t(position, icon_color),
+    must_flip_bitmap_(!data_is_bottom_up),
+    icon_(icon),
+    mask_(mask),
+    w_(width),
+    h_(height),
+    x_(x_origin),
+    y_(y_origin),
+    mask_color_(mask_color)
+  {}
+  
+  // virtual:
+  void draw() const;
+  
+private:
+  bool must_flip_bitmap_;
+  const unsigned char * icon_;
+  const unsigned char * mask_;
+  unsigned int w_;
+  unsigned int h_;
+  int x_;
+  int y_;
+  
+  the_color_t mask_color_;
+};
 
 //----------------------------------------------------------------
 // the_arrow_dl_elem_t
