@@ -29,7 +29,10 @@ the_view_mgr_t::the_view_mgr_t(const the_view_mgr_orientation_t & orientation,
   initial_orientation_(orientation),
   initial_zoom_(1.0),
   la_(0.0, 0.0, 0.0),
+#ifndef NOUI
   stereo_(NOT_STEREOSCOPIC_E),
+  cursor_id_(THE_BLANK_CURSOR_E),
+#endif
   width_(1.0),
   height_(1.0),
   scene_radius_(1.0),

@@ -16,6 +16,7 @@
 #include "opengl/the_view_mgr_orientation.hxx"
 #include "math/the_view_volume.hxx"
 #include "math/the_bbox.hxx"
+#include "ui/the_cursor.hxx"
 
 #ifndef NOUI
 #include "opengl/OpenGLCapabilities.h"
@@ -258,6 +259,13 @@ public:
   inline stereoscopic_t get_stereoscopic() const
   { return stereo_; }
   
+  // stereoscopic pointer cursor must be rendered manually:
+  void set_cursor_id(the_cursor_id_t cursor_id)
+  { cursor_id_ = cursor_id; }
+  
+  inline the_cursor_id_t get_cursor_id() const
+  { return cursor_id_; }
+  
   // setup glFrustum for 2D viewing:
   void setup_opengl_2d_viewing(const p2x1_t & ll, const p2x1_t & ur) const;
   
@@ -387,7 +395,16 @@ public:
   p3x1_t lf_; // look from point.
   p3x1_t la_; // look at point.
   v3x1_t up_; // vector up (so we know which way is up).
-  stereoscopic_t stereo_; // current stereoscopic rendering mode.
+
+#ifndef NOUI
+  // current stereoscopic rendering mode:
+  stereoscopic_t stereo_;
+
+  // current cursor id, needed because in stereoscopic rendering
+  // the input device pointer cursor must be rendered manually:
+  the_cursor_id_t cursor_id_;
+#endif
+  
   float width_; // view port width.
   float height_; // view port height.
   float view_radius_; // view sphere radius.
