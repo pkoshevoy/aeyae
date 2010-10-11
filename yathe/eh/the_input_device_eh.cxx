@@ -132,15 +132,32 @@ the_eh_stack_t::mouse_cb(const the_mouse_event_t & e)
   
   save_mouse_event(e);
   
+  // shortcut:
+  the_view_t * view = dynamic_cast<the_view_t *>(e.widget());
+  
   // Traverse the stack from the top until the event is processed:
+  bool accepted = false;
   for (std::list<the_input_device_eh_t *>::iterator
-	 i = begin(); i != end(); ++i)
+	 i = begin(); i != end() && !accepted; ++i)
   {
-    (*i)->save_event_originator(dynamic_cast<the_view_t *>(e.widget()));
-    if ((*i)->mouse_handler()) return true;
+    (*i)->save_event_originator(view);
+    accepted = (*i)->mouse_handler();
+    
+#if 0
+    if (accepted)
+    {
+      (*i)->draw_scs_drag_vec();
+    }
+#endif
   }
   
-  return false;
+  if (view->view_mgr().get_cursor_id() != THE_BLANK_CURSOR_E)
+  {
+    // force the view to repaint, just so we can draw the cursor:
+    view->refresh();
+  }
+  
+  return accepted;
 }
 
 //----------------------------------------------------------------
@@ -158,15 +175,25 @@ the_eh_stack_t::wheel_cb(const the_wheel_event_t & e)
   
   save_wheel_event(e);
   
+  // shortcut:
+  the_view_t * view = dynamic_cast<the_view_t *>(e.widget());
+  
   // Traverse the stack from the top until the event is processed:
+  bool accepted = false;
   for (std::list<the_input_device_eh_t *>::iterator
-	 i = begin(); i != end(); ++i)
+	 i = begin(); i != end() && !accepted; ++i)
   {
-    (*i)->save_event_originator(dynamic_cast<the_view_t *>(e.widget()));
-    if ((*i)->wheel_handler()) return true;
+    (*i)->save_event_originator(view);
+    accepted = (*i)->wheel_handler();
   }
   
-  return false;
+  if (view->view_mgr().get_cursor_id() != THE_BLANK_CURSOR_E)
+  {
+    // force the view to repaint, just so we can draw the cursor:
+    view->refresh();
+  }
+  
+  return accepted;
 }
 
 //----------------------------------------------------------------
@@ -184,15 +211,25 @@ the_eh_stack_t::keybd_cb(const the_keybd_event_t & e)
   // save the view pointer:
   save_keybd_event(e);
   
-  // Traverse the stack from the top until the event is processed:  
+  // shortcut:
+  the_view_t * view = dynamic_cast<the_view_t *>(e.widget());
+  
+  // Traverse the stack from the top until the event is processed:
+  bool accepted = false;
   for (std::list<the_input_device_eh_t *>::iterator
-	 i = begin(); i != end(); ++i)
+	 i = begin(); i != end() && !accepted; ++i)
   {
-    (*i)->save_event_originator(dynamic_cast<the_view_t *>(e.widget()));
-    if ((*i)->keybd_handler()) return true;
+    (*i)->save_event_originator(view);
+    accepted = (*i)->keybd_handler();
   }
   
-  return false;
+  if (view->view_mgr().get_cursor_id() != THE_BLANK_CURSOR_E)
+  {
+    // force the view to repaint, just so we can draw the cursor:
+    view->refresh();
+  }
+  
+  return accepted;
 }
 
 //----------------------------------------------------------------
@@ -211,15 +248,25 @@ the_eh_stack_t::wacom_cb(const the_wacom_event_t & e)
   
   save_wacom_event(e);
   
+  // shortcut:
+  the_view_t * view = dynamic_cast<the_view_t *>(e.widget());
+  
   // Traverse the stack from the top until the event is processed:
+  bool accepted = false;
   for (std::list<the_input_device_eh_t *>::iterator
-	 i = begin(); i != end(); ++i)
+	 i = begin(); i != end() && !accepted; ++i)
   {
-    (*i)->save_event_originator(dynamic_cast<the_view_t *>(e.widget()));
-    if ((*i)->wacom_handler()) return true;
+    (*i)->save_event_originator(view);
+    accepted = (*i)->wacom_handler();
   }
   
-  return false;
+  if (view->view_mgr().get_cursor_id() != THE_BLANK_CURSOR_E)
+  {
+    // force the view to repaint, just so we can draw the cursor:
+    view->refresh();
+  }
+  
+  return accepted;
 }
 
 //----------------------------------------------------------------
@@ -722,13 +769,20 @@ void
 the_input_device_eh_t::draw_scs_drag_vec()
 {
   the_disp_list_t & dl_2d = view().dl_eh_2d();
-  dl_2d.
-    push_back(new the_scs_arrow_dl_elem_t(view().view_mgr().width(),
-					  view().view_mgr().height(),
-					  a_scs(),
-					  scs_pt(),
-					  THE_APPEARANCE.palette().scs_drag(),
-					  11.0));
+  dl_2d.clear();
+  
+  if (has_drag())
+  {
+    the_scs_arrow_dl_elem_t * elem = 
+      new the_scs_arrow_dl_elem_t(view().view_mgr().width(),
+                                  view().view_mgr().height(),
+                                  a_scs(),
+                                  scs_pt(),
+                                  THE_APPEARANCE.palette().scs_drag(),
+                                  11.0);
+    
+    dl_2d.push_back(elem);
+  }
 }
 
 //----------------------------------------------------------------
