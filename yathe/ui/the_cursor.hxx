@@ -26,7 +26,8 @@ typedef enum
   THE_ROTATE_CURSOR_E,
   THE_SNAP_CURSOR_E,
   THE_SPIN_CURSOR_E,
-  THE_ZOOM_CURSOR_E
+  THE_ZOOM_CURSOR_E,
+  THE_BLANK_CURSOR_E
 } the_cursor_id_t;
 
 

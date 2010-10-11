@@ -925,6 +925,20 @@ the_cursor_t::setup(const the_cursor_id_t & cursor_id)
     }
     break;
 
+    case THE_BLANK_CURSOR_E:
+    {
+      static const byte_t icon[0] = {};
+      static const byte_t mask[0] = {};
+
+      icon_ = icon;
+      mask_ = mask;
+      w_ = 0;
+      h_ = 0;
+      x_ = 0;
+      y_ = 0;
+    }
+    break;
+
     default:
       assert(false);
       break;
