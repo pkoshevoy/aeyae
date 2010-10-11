@@ -143,9 +143,6 @@ public:
   }
   
 private:
-  // location of the mouse within the most-recent widget:
-  p2x1_t scs_pt_;
-  
   the_mouse_btn_t l_btn_; // left mouse button.
   the_mouse_btn_t m_btn_; // middle mouse button.
   the_mouse_btn_t r_btn_; // right mouse button.
