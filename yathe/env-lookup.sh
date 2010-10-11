@@ -18,8 +18,8 @@ fi
 #    export ITK_SOURCE_DIR=/usr/sci/crcnsdata/ITK
 #fi
 #
-#if [ -e /scratch/"${CPU}"/ITK ]; then
-#    export ITK_BINARY_DIR=/scratch/"${CPU}"/ITK
+#if [ -e /scratch/Developer/"${CPU}"/ITK ]; then
+#    export ITK_BINARY_DIR=/scratch/Developer/"${CPU}"/ITK
 #elif [ -e /usr/sci/crcnsdata/"${CPU}"/ITK ]; then
 #    export ITK_BINARY_DIR=/usr/sci/crcnsdata/"${CPU}"/ITK
 #fi
@@ -32,8 +32,8 @@ elif [ -e /usr/lib/qt3 ]; then
 fi
 
 # determine where Qt4 lives:
-if [ -e /scratch/"${CPU}"/Qt ]; then
-    export QT4_DIR=/scratch/"${CPU}"/Qt
+if [ -e /scratch/Developer/"${CPU}"/Qt ]; then
+    export QT4_DIR=/scratch/Developer/"${CPU}"/Qt
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/Qt ]; then
     export QT4_DIR=/usr/sci/crcnsdata/"${CPU}"/Qt
 elif [ -e /usr/include/QtCore ]; then
@@ -45,8 +45,8 @@ elif [ -e /usr/lib/libQtCore.so ]; then
 fi
 
 # determine where GLEW lives:
-if [ -e /scratch/"${CPU}"/GLEW ]; then
-    export GLEW_DIR=/scratch/"${CPU}"/GLEW
+if [ -e /scratch/Developer/"${CPU}"/GLEW ]; then
+    export GLEW_DIR=/scratch/Developer/"${CPU}"/GLEW
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/GLEW ]; then
     export GLEW_DIR=/usr/sci/crcnsdata/"${CPU}"/GLEW
 elif [ -e /usr/include/GL/glew.h ]; then
@@ -58,8 +58,8 @@ elif [ -e /usr/lib/libGLEW.so ]; then
 fi
 
 # determine where Cg lives:
-if [ -e /scratch/"${CPU}"/Cg ]; then
-    export CG_DIR=/scratch/"${CPU}"/Cg
+if [ -e /scratch/Developer/"${CPU}"/Cg ]; then
+    export CG_DIR=/scratch/Developer/"${CPU}"/Cg
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/Cg ]; then
     export CG_DIR=/usr/sci/crcnsdata/"${CPU}"/Cg
 elif [ -e /usr/include/Cg/cgGL.h ]; then
@@ -71,8 +71,8 @@ elif [ -e /usr/lib/libCg.so ]; then
 fi
 
 # determine where FFTW lives:
-if [ -e /scratch/"${CPU}"/FFTW ]; then
-    export FFTW_DIR=/scratch/"${CPU}"/FFTW
+if [ -e /scratch/Developer/"${CPU}"/FFTW ]; then
+    export FFTW_DIR=/scratch/Developer/"${CPU}"/FFTW
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/FFTW ]; then
     export FFTW_DIR=/usr/sci/crcnsdata/"${CPU}"/FFTW
 elif [ -e /usr/include/fftw3.h ]; then
@@ -84,8 +84,8 @@ elif [ -e /usr/lib/libfftw3.so ]; then
 fi
 
 # determine where BOOST lives:
-if [ -e /scratch/"${CPU}"/include/boost ]; then
-    export BOOST_ROOT=/scratch/"${CPU}"
+if [ -e /scratch/Developer/"${CPU}"/include/boost ]; then
+    export BOOST_ROOT=/scratch/Developer/"${CPU}"
 elif [ -e /usr/include/boost ]; then
     export BOOST_ROOT=/usr
 elif [ -e /usr/include/boost ]; then
@@ -109,8 +109,8 @@ fi
 
 if [ -e "${HOME}/${CPU}/build/the" ]; then
     export THE_BIN_DIR="${HOME}/${CPU}"/build/the
-elif [ -e /scratch/"${CPU}"/the ]; then
-    export THE_BIN_DIR=/scratch/"${CPU}"/the
+elif [ -e /scratch/Developer/"${CPU}"/the ]; then
+    export THE_BIN_DIR=/scratch/Developer/"${CPU}"/the
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/the ]; then
     export THE_BIN_DIR=/usr/sci/crcnsdata/"${CPU}"/the
 fi
