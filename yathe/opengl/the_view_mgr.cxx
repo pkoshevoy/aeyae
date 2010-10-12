@@ -214,9 +214,11 @@ the_view_mgr_t::update_scene_radius(const the_bbox_t & bbox)
 {
   if (bbox.is_empty() || bbox.is_singular()) return;
   scene_bbox_ = bbox;
-#if 0
-  float sr = scene_bbox_.radius(la_);
+#if 1
+  // for 3D
+  float sr = scene_bbox_.wcs_radius(la_);
 #else
+  // for 2D
   float shift = ~(scene_bbox_.wcs_center() - la_);
   float sr = shift + float(calc_scene_radius(scene_bbox_, width_, height_));
 #endif
@@ -562,13 +564,14 @@ the_persp_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
 {
   if (salvage_near_far(near_plane, far_plane) == false) return false;
 
+  float vr = view_radius();
   if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
   {
     int w0 = int(width_ / 2.0);
     glViewport(0, 0, w0, (int)height_);
     
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = !(up_ % la);
+    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
     p3x1_t lf = lf_ + le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
@@ -581,8 +584,8 @@ the_persp_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(w0, 0, w1, (int)height_);
   
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = !(up_ % la);
-    p3x1_t lf = lf_ + le;
+    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
+    p3x1_t lf = lf_ - le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
               up_.x(), up_.y(), up_.z());
@@ -688,13 +691,14 @@ the_ortho_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
 {
   if (salvage_near_far(near_plane, far_plane) == false) return false;
   
+  float vr = view_radius();
   if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
   {
     int w0 = int(width_ / 2.0);
     glViewport(0, 0, w0, (int)height_);
 
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = !(up_ % la);
+    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
     p3x1_t lf = lf_ + le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
@@ -707,7 +711,7 @@ the_ortho_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(w0, 0, w1, (int)height_);
 
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = !(up_ % la);
+    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
     p3x1_t lf = lf_ - le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
