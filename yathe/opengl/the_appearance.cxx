@@ -92,11 +92,27 @@ the_appearance_t::draw_view_label(the_view_t & view) const
     p3x1_t pos(THE_ASCII_FONT.x_step(),
 	       1.2f * float(THE_ASCII_FONT.height()),
 	       0);
+
+    the_text_t label = view.name();
+    if (dynamic_cast<const the_persp_view_mgr_t *>(&view.view_mgr()))
+    {
+      label += the_text_t(", perspective");
+    }
+    else
+    {
+      label += the_text_t(", orthographic");
+    }
+    
+    if (view.view_mgr().get_stereoscopic() !=
+        the_view_mgr_t::NOT_STEREOSCOPIC_E)
+    {
+      label += the_text_t(", stereoscopic");
+    }
     
     the_masked_text_dl_elem_t(pos,
 			      palette_.text(),
 			      palette_.mask(),
-			      view.name()).draw();
+			      label).draw();
   }
 }
 
