@@ -8,6 +8,7 @@
 
 // system includes:
 #include <assert.h>
+#include <stddef.h>
 
 // local includes:
 #include "ui/the_cursor.hxx"
@@ -927,11 +928,8 @@ the_cursor_t::setup(const the_cursor_id_t & cursor_id)
 
     case THE_BLANK_CURSOR_E:
     {
-      static const byte_t icon[0] = {};
-      static const byte_t mask[0] = {};
-
-      icon_ = icon;
-      mask_ = mask;
+      icon_ = NULL;
+      mask_ = NULL;
       w_ = 0;
       h_ = 0;
       x_ = 0;
