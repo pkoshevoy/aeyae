@@ -224,14 +224,20 @@ verify_pressed_keys(const std::list<the_keybd_key_t> & key_list) const
   collect_pressed_keys(pressed_keys);
   
   // easy test:
-  if (key_list.size() != pressed_keys.size()) return false;
+  if (key_list.size() != pressed_keys.size())
+  {
+    return false;
+  }
   
   // make sure that both lists have the same elements,
   // the list order does not matter:
   for (std::list<the_keybd_key_t>::const_iterator i = pressed_keys.begin();
        i != pressed_keys.end(); ++i)
   {
-    if (has(key_list, *i) == false) return false;
+    if (has(key_list, *i) == false)
+    {
+      return false;
+    }
   }
   
   return true;

@@ -80,6 +80,7 @@ public:
   
   inline bool changed() const
   { return (current() && (prev_state_ != curr_state_)); }
+  
 private:
   // previuos/current state of the button (up/down):
   the_btn_state_t prev_state_;
