@@ -52,10 +52,7 @@ the_mouse_btn_t::update(const the_mouse_event_t & e)
   dbl_clk_ = ((e.btns() & btn_) && e.double_click_);
   
   // detect drag while the button is down:
-  if (down())
-  {
-    moved_while_down_ = !changed();
-  }
+  moved_while_down_ = down() && !changed();
 }
 
 //----------------------------------------------------------------
