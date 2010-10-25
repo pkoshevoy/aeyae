@@ -146,42 +146,44 @@ OpenGL(unsigned int view_id, the_view_t * view = NULL);
 #if 1
 #ifndef NDEBUG
 #undef FIXME_OPENGL
-#define FIXME_OPENGL(x) \
-{ \
-  int i = 0; \
-  while (true) \
-  { \
-    GLenum err = glGetError(); \
-    if (err == GL_NO_ERROR) break; \
-    const GLubyte * str = gluErrorString(err); \
-    std::cerr << x << std::setw(3) << i << ". FIXME: " \
-              << __FILE__ << ':' << __LINE__ \
-              << ", OPENGL: " << str << std::endl; \
-    i++; \
-  } \
-  /* it's a quick way to die: */ \
-  static unsigned char * null = NULL; \
-  if (i > 0) null[0] = 0xFF; \
-}
+#define FIXME_OPENGL(x)                                         \
+  {                                                             \
+    int i = 0;                                                  \
+    while (true)                                                \
+    {                                                           \
+      GLenum err = glGetError();                                \
+      if (err == GL_NO_ERROR) break;                            \
+      const GLubyte * str = gluErrorString(err);                \
+      std::cerr << x << std::setw(3) << i << ". FIXME: "        \
+                << __FILE__ << ':' << __LINE__                  \
+                << ", OPENGL: " << str                          \
+                << ", error " << err << std::endl;              \
+      i++;                                                      \
+    }                                                           \
+    /* it's a quick way to die: */                              \
+    static unsigned char * null = NULL;                         \
+    if (i > 0) null[0] = 0xFF;                                  \
+  }
 #else // NDEBUG
 #define FIXME_OPENGL(x)
 #endif // NDEBUG
 
 #undef PERROR_OPENGL
-#define PERROR_OPENGL(x) \
-{ \
-  int i = 0; \
-  while (true) \
-  { \
-    GLenum err = glGetError(); \
-    if (err == GL_NO_ERROR) break; \
-    const GLubyte * str = gluErrorString(err); \
-    std::cerr << x << std::setw(3) << i << ". FIXME: " \
-              << __FILE__ << ':' << __LINE__ \
-              << ", OPENGL: " << str << std::endl; \
-    i++; \
-  } \
-}
+#define PERROR_OPENGL(x)                                        \
+  {                                                             \
+    int i = 0;                                                  \
+    while (true)                                                \
+    {                                                           \
+      GLenum err = glGetError();                                \
+      if (err == GL_NO_ERROR) break;                            \
+      const GLubyte * str = gluErrorString(err);                \
+      std::cerr << x << std::setw(3) << i << ". FIXME: "        \
+                << __FILE__ << ':' << __LINE__                  \
+                << ", OPENGL: " << str                          \
+                << ", error " << err << std::endl;              \
+      i++;                                                      \
+    }                                                           \
+  }
 
 #endif // 0
 
