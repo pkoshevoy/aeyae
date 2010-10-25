@@ -58,7 +58,8 @@ public:
   // virtual:
   void gl_done_current()
   {
-    // FIXME: Fl_Gl_Window::invalidate();
+    // FIXME:
+    Fl_Gl_Window::invalidate();
   }
   
   // virtual:
