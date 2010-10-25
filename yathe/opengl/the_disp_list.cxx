@@ -670,10 +670,9 @@ the_bitmap_dl_elem_t::draw() const
       glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 2, i2b);
       
       glDrawPixels(w_, h_, GL_COLOR_INDEX, GL_BITMAP, icon_);
-      // glBitmap(w_, h_, x_, y_, 0, 0, icon_);
     }
     
-    FIXME_OPENGL("the_bitmap_dl_elem_t::draw");
+    PERROR_OPENGL("the_bitmap_dl_elem_t::draw");
   }
 }
 
@@ -1492,7 +1491,7 @@ the_disp_list_t::draw() const
   {
     the_dl_elem_t * e = *i;
     e->draw();
-    FIXME_OPENGL("the_disp_list_t::draw");
+    PERROR_OPENGL("the_disp_list_t::draw");
   }
 }
 
