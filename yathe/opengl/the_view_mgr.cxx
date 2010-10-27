@@ -370,17 +370,17 @@ the_view_mgr_t::setup_opengl_2d_viewing(const p2x1_t & ll,
   if (stereo_ == STEREOSCOPIC_LEFT_EYE_E)
   {
     int w0 = int(width() / 2.0);
-    glViewport(0, 0, w0, height());
+    glViewport(0, 0, w0, int(height()));
   }
   else if (stereo_ == STEREOSCOPIC_RIGHT_EYE_E)
   {
     int w0 = int(width() / 2.0);
     int w1 = int(width()) - w0;
-    glViewport(w0, 0, w1, height());
+    glViewport(w0, 0, w1, int(height()));
   }
   else
   {
-    glViewport(0, 0, width(), height());
+    glViewport(0, 0, int(width()), int(height()));
   }
   
   glMatrixMode(GL_PROJECTION);
@@ -571,7 +571,7 @@ the_persp_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(0, 0, w0, (int)height_);
     
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
+    v3x1_t le = (!(up_ % la)) * vr * 0.1f;
     p3x1_t lf = lf_ + le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
@@ -584,7 +584,7 @@ the_persp_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(w0, 0, w1, (int)height_);
   
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
+    v3x1_t le = (!(up_ % la)) * vr * 0.1f;
     p3x1_t lf = lf_ - le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
@@ -698,7 +698,7 @@ the_ortho_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(0, 0, w0, (int)height_);
 
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
+    v3x1_t le = (!(up_ % la)) * vr * 0.1f;
     p3x1_t lf = lf_ + le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
@@ -711,7 +711,7 @@ the_ortho_view_mgr_t::setup_opengl_3d_viewing(float near_plane,
     glViewport(w0, 0, w1, (int)height_);
 
     v3x1_t la = !(la_ - lf_);
-    v3x1_t le = (!(up_ % la)) * vr * 1e-1;
+    v3x1_t le = (!(up_ % la)) * vr * 0.1f;
     p3x1_t lf = lf_ - le;
     gluLookAt(lf.x(), lf.y(), lf.z(),
               la_.x(), la_.y(), la_.z(),
