@@ -13,10 +13,6 @@
 #include "geom/the_tensurf.hxx"
 #include "geom/the_grid.hxx"
 
-// globals:
-extern bool DRAW_POLYLINE;
-extern bool DRAW_SURFACE;
-
 
 //----------------------------------------------------------------
 // the_tensurf_t::regenerate
@@ -243,11 +239,12 @@ class the_tensurf_dl_elem_t : public the_dl_elem_t
 {
 public:
   the_tensurf_dl_elem_t(const std::vector< std::vector<the_vertex_t> > &
-			tri_mesh,
-			const size_t & iso_skip = 4,
-			const the_color_t & tri_color = the_color_t::WHITE,
-			const the_color_t & iso_color = the_color_t::BLACK,
-			const the_color_t & crv_color = the_color_t::RED):
+                        tri_mesh,
+                        const size_t & iso_skip = 4,
+                        const the_color_t & tri_color = the_color_t::WHITE,
+                        const the_color_t & iso_color = the_color_t::BLACK,
+                        const the_color_t & crv_color = the_color_t::RED):
+    
     tri_mesh_(tri_mesh),
     iso_skip_(iso_skip),
     tri_color_(tri_color),
@@ -283,92 +280,84 @@ public:
     
     glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT);
     {
-      if (DRAW_SURFACE)
+      glEnable(GL_POLYGON_OFFSET_FILL);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glPolygonOffset(1.0, 1.0);
+      
+      glEnable(GL_COLOR_MATERIAL);
+      
+      glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT);
+      glColor4fv(tri_color_.mul3(0.75).rgba());
+      
+      the_color_t bgcolor =
+        0.3f * the_color_t::AMPAD_DARK +
+        0.7f * the_color_t::AMPAD_LIGHT;
+      
+      the_color_t diffuse =
+        0.6f * tri_color_.mul3(bgcolor) +
+        0.4f * bgcolor;
+      
+      glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
+      glColor4fv(diffuse.rgba());
+      
+      the_color_t specular =
+        0.36f * bgcolor +
+        0.64f * the_color_t::WHITE;
+      
+      glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
+      glColor4fv(specular.rgba());
+      
+      glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 7e+1);
+      for (size_t i = 1; i < rows; i++)
       {
-	/*
-	glDisable(GL_LIGHTING);
-	glColor4f(1, 1, 1, 1);
-	*/
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glPolygonOffset(1.0, 1.0);
-	
-	glEnable(GL_COLOR_MATERIAL);
-	
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT);
-	glColor4fv(tri_color_.mul3(0.75).rgba());
-	
-	the_color_t bgcolor =
-	  0.3f * the_color_t::AMPAD_DARK +
-	  0.7f * the_color_t::AMPAD_LIGHT;
-	
-	the_color_t diffuse =
-	  0.6f * tri_color_.mul3(bgcolor) +
-	  0.4f * bgcolor;
-	
-	glColorMaterial(GL_FRONT_AND_BACK, GL_DIFFUSE);
-	glColor4fv(diffuse.rgba());
-	
-	the_color_t specular =
-	  0.36f * bgcolor +
-	  0.64f * the_color_t::WHITE;
-	
-	glColorMaterial(GL_FRONT_AND_BACK, GL_SPECULAR);
-	glColor4fv(specular.rgba());
-	
-	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 7e+1);
-	for (size_t i = 1; i < rows; i++)
-	{
-	  glBegin(GL_QUAD_STRIP);
-	  for (size_t j = 0; j < cols; j++)
-	  {
-	    const the_vertex_t & a = tri_mesh_[i - 1][j];
-	    const the_vertex_t & b = tri_mesh_[i][j];
-	    
-	    glNormal3fv(a.vn.data());
-	    glVertex3fv(a.vx.data());
-	    
-	    glNormal3fv(b.vn.data());
-	    glVertex3fv(b.vx.data());
-	  }
-	  glEnd();
-	}
-	
-	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_POLYGON_OFFSET_FILL);
+        glBegin(GL_QUAD_STRIP);
+        for (size_t j = 0; j < cols; j++)
+        {
+          const the_vertex_t & a = tri_mesh_[i - 1][j];
+          const the_vertex_t & b = tri_mesh_[i][j];
+	  
+          glNormal3fv(a.vn.data());
+          glVertex3fv(a.vx.data());
+	  
+          glNormal3fv(b.vn.data());
+          glVertex3fv(b.vx.data());
+        }
+        glEnd();
       }
+      
+      glDisable(GL_COLOR_MATERIAL);
+      glDisable(GL_POLYGON_OFFSET_FILL);
     }
     glDisable(GL_LIGHTING);
     glColor4fv(iso_color_.rgba());
     
+#if 1
     size_t iso_incr = iso_skip_ + 1;
     
-    // FIXME: 20051024: if (!DRAW_POLYLINE)
+    for (size_t j = 0; j < cols; j += iso_incr)
     {
-      for (size_t j = 0; j < cols; j += iso_incr)
+      glBegin(GL_LINE_STRIP);
+      for (size_t i = 0; i < rows; i++)
       {
-	glBegin(GL_LINE_STRIP);
-	for (size_t i = 0; i < rows; i++)
-	{
-	  const the_vertex_t & a = tri_mesh_[i][j];
-	  glNormal3fv(a.vn.data());
-	  glVertex3fv(a.vx.data());
-	}
-	glEnd();
+        const the_vertex_t & a = tri_mesh_[i][j];
+        glNormal3fv(a.vn.data());
+        glVertex3fv(a.vx.data());
       }
-      
-      for (size_t i = 0; i < rows; i += iso_incr)
-      {
-	glBegin(GL_LINE_STRIP);
-	for (size_t j = 0; j < cols; j++)
-	{
-	  const the_vertex_t & a = tri_mesh_[i][j];
-	  glNormal3fv(a.vn.data());
-	  glVertex3fv(a.vx.data());
-	}
-	glEnd();
-      }
+      glEnd();
     }
+    
+    for (size_t i = 0; i < rows; i += iso_incr)
+    {
+      glBegin(GL_LINE_STRIP);
+      for (size_t j = 0; j < cols; j++)
+      {
+        const the_vertex_t & a = tri_mesh_[i][j];
+        glNormal3fv(a.vn.data());
+        glVertex3fv(a.vx.data());
+      }
+      glEnd();
+    }
+#endif
     
     glPopAttrib();
   }

@@ -46,7 +46,7 @@ public:
   // virtual:
   bool regenerate();
   
-  // virtual: display a piecewise linear approximation of the curve:
+  // virtual: display a piecewise linear approximation of the surface:
   the_dl_elem_t * dl_elem() const;
   
   // the tensor surface is supported by a grid:
