@@ -121,8 +121,11 @@ public:
   inline const std::vector<std::vector<bool> > & active() const
   { return active_; }
   
-  inline const std::vector<float> & u() const { return u_; }
-  inline const std::vector<float> & v() const { return v_; }
+  inline const std::vector<float> & u() const
+  { return u_; }
+  
+  inline const std::vector<float> & v() const
+  { return v_; }
   
   // virtual: file io:
   bool save(std::ostream & stream) const;
