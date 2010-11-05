@@ -32,6 +32,8 @@
 #include <QCloseEvent>
 #include <QShortcutEvent>
 
+// system includes:
+#include <list>
 
 /*
   from qapplication documentation:
@@ -295,31 +297,19 @@ extern bool load(std::istream & stream, QRect & data);
 // 
 struct the_qt_signal_blocker_t
 {
-  the_qt_signal_blocker_t(QObject * obj):
-    obj_(obj)
-  {
-    already_blocked_ = obj ? obj->signalsBlocked() : true;
-    
-    if (!already_blocked_)
-    {
-      obj_->blockSignals(true);
-    }
-  }
+  the_qt_signal_blocker_t(QObject * obj = NULL);
+  ~the_qt_signal_blocker_t();
+
+  the_qt_signal_blocker_t & operator << (QObject * obj);
   
-  ~the_qt_signal_blocker_t()
-  {
-    if (!already_blocked_)
-    {
-      obj_->blockSignals(false);
-    }
-  }
+  inline the_qt_signal_blocker_t & operator << (QObject & obj)
+  { return *this << &obj; }
   
 private:
   the_qt_signal_blocker_t(const the_qt_signal_blocker_t &);
   the_qt_signal_blocker_t & operator = (const the_qt_signal_blocker_t &);
   
-  QObject * obj_;
-  bool already_blocked_;
+  std::list<QObject *> blocked_;
 };
 
 

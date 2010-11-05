@@ -2419,3 +2419,43 @@ load(std::istream & stream, QRect & data)
   data = QRect(x, y, w, h);
   return true;
 }
+
+
+//----------------------------------------------------------------
+// the_qt_signal_blocker_t::the_qt_signal_blocker_t
+// 
+the_qt_signal_blocker_t::the_qt_signal_blocker_t(QObject * obj)
+{
+  if (obj)
+  {
+    *this << obj;
+  }
+}
+
+//----------------------------------------------------------------
+// the_qt_signal_blocker_t::~the_qt_signal_blocker_t
+// 
+the_qt_signal_blocker_t::~the_qt_signal_blocker_t()
+{
+  for (std::list<QObject *>::iterator i = blocked_.begin();
+       i != blocked_.end(); ++i)
+  {
+    QObject * obj = *i;
+    obj->blockSignals(false);
+  }
+}
+
+//----------------------------------------------------------------
+// the_qt_signal_blocker_t::operator <<
+// 
+the_qt_signal_blocker_t &
+the_qt_signal_blocker_t::operator << (QObject * obj)
+{
+  if (obj && !obj->signalsBlocked())
+  {
+    obj->blockSignals(true);
+    blocked_.push_back(obj);
+  }
+  
+  return *this;
+}
