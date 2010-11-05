@@ -290,4 +290,37 @@ extern bool save(std::ostream & stream, const QRect & data);
 extern bool load(std::istream & stream, QRect & data);
 
 
+//----------------------------------------------------------------
+// the_qt_signal_blocker_t
+// 
+struct the_qt_signal_blocker_t
+{
+  the_qt_signal_blocker_t(QObject * obj):
+    obj_(obj)
+  {
+    already_blocked_ = obj ? obj->signalsBlocked() : true;
+    
+    if (!already_blocked_)
+    {
+      obj_->blockSignals(true);
+    }
+  }
+  
+  ~the_qt_signal_blocker_t()
+  {
+    if (!already_blocked_)
+    {
+      obj_->blockSignals(false);
+    }
+  }
+  
+private:
+  the_qt_signal_blocker_t(const the_qt_signal_blocker_t &);
+  the_qt_signal_blocker_t & operator = (const the_qt_signal_blocker_t &);
+  
+  QObject * obj_;
+  bool already_blocked_;
+};
+
+
 #endif // THE_QT_TRAIL_HXX_
