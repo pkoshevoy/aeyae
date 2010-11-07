@@ -94,19 +94,22 @@ the_appearance_t::draw_view_label(the_view_t & view) const
 	       0);
 
     the_text_t label = view.name();
-    if (dynamic_cast<const the_persp_view_mgr_t *>(&view.view_mgr()))
+    if (!label.is_empty())
     {
-      label += the_text_t(", perspective");
-    }
-    else
-    {
-      label += the_text_t(", orthographic");
-    }
-    
-    if (view.view_mgr().get_stereoscopic() !=
-        the_view_mgr_t::NOT_STEREOSCOPIC_E)
-    {
-      label += the_text_t(", stereoscopic");
+      if (dynamic_cast<const the_persp_view_mgr_t *>(&view.view_mgr()))
+      {
+        label += the_text_t(", perspective");
+      }
+      else
+      {
+        label += the_text_t(", orthographic");
+      }
+      
+      if (view.view_mgr().get_stereoscopic() !=
+          the_view_mgr_t::NOT_STEREOSCOPIC_E)
+      {
+        label += the_text_t(", stereoscopic");
+      }
     }
     
     the_masked_text_dl_elem_t(pos,

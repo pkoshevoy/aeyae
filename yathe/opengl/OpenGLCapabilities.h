@@ -19,6 +19,7 @@
 #include <iomanip>
 
 // OpenGL includes:
+#include <GL/glew.h>
 #if defined(__APPLE__)
 #  include <AGL/agl.h>
 #  include <AGL/aglRenderers.h>
@@ -26,12 +27,14 @@
 #  include <OpenGL/glu.h>
 #  include <OpenGL/glext.h>
 #else
-#  if defined(WIN32)
+#  if defined(_WIN32)
 #    include <windows.h>
 #  endif
 #  include <GL/gl.h>
 #  include <GL/glu.h>
-#  include <GL/glext.h>
+#  if !defined(_WIN32)
+#    include <GL/glext.h>
+#  endif
 #endif
 
 // forward declarations:
