@@ -143,7 +143,7 @@ namespace Yamka
   private:
     // private implementation details:
     class Private;
-    Private * private_;
+    Private * const private_;
   };
 }
 

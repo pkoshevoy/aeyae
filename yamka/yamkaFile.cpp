@@ -244,8 +244,7 @@ namespace Yamka
   {
     if (&f != this)
     {
-      delete private_;
-      private_ = new File::Private(*(f.private_));
+      *private_ = *(f.private_);
     }
     
     return *this;
