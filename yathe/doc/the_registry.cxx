@@ -110,9 +110,16 @@ void
 the_registry_t::del(the_graph_node_t * prim)
 {
   unsigned int id = prim->id();
-  prim->removed_from_the_registry();
-  dispatcher_.release(id);
-  table_[id] = NULL;
+  if (id < table_.size())
+  {
+    prim->removed_from_the_registry();
+    dispatcher_.release(id);
+    table_[id] = NULL;
+  }
+  else
+  {
+    assert(false);
+  }
 }
 
 //----------------------------------------------------------------
