@@ -1,8 +1,7 @@
 project(yae)
 set(PROGNAME "yae")
 
-cmake_minimum_required(VERSION 2.6.0)
-include_directories(AFTER .)
+cmake_minimum_required(VERSION 2.8.0)
 
 find_package(OpenGL REQUIRED)
 
@@ -10,11 +9,6 @@ set(Boost_ADDITIONAL_VERSIONS "1.41" "1.41.0")
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost 1.35 COMPONENTS thread REQUIRED)
 find_package(Boost 1.35 COMPONENTS date_time REQUIRED)
-include_directories(AFTER ${Boost_INCLUDE_DIR})
-
-include_directories(AFTER
-  ${OPENGL_INCLUDE_DIR}
-  )
 
 find_package(Qt4)
 if (QT4_FOUND)
@@ -26,14 +20,43 @@ set(QT_USE_OPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
 include(${QT_USE_FILE})
 
-include_directories(AFTER ${QT_INCLUDE_DIR}
-			  ${QT_QTOPENGL_INCLUDE_DIR}
-			  )
+if (WIN32)
+  add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
+endif (WIN32)
+
+include_directories(AFTER 
+  .
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${Boost_INCLUDE_DIR}
+  ${OPENGL_INCLUDE_DIR}
+  ${QT_INCLUDE_DIR}
+  ${QT_QTOPENGL_INCLUDE_DIR}
+  )
 
 find_path(FFMPEG_INCLUDE_DIR libavutil/avutil.h /usr/include)
 if (FFMPEG_INCLUDE_DIR)
   include_directories(AFTER ${FFMPEG_INCLUDE_DIR})
 endif (FFMPEG_INCLUDE_DIR)
+
+find_library(QT4_PLUGINS_QGIF 
+  qgif ${QT_PLUGINS_DIR}/imageformats 
+  DOC "Qt image IO plugin for GIF")
+
+find_library(QT4_PLUGINS_QTIFF 
+  qtiff ${QT_PLUGINS_DIR}/imageformats 
+  DOC "Qt image IO plugin for TIFF")
+
+find_library(QT4_PLUGINS_QICO
+  qico ${QT_PLUGINS_DIR}/imageformats
+  DOC "Qt image IO plugin for ICO")
+
+find_library(QT4_PLUGINS_QJPEG
+  qjpeg ${QT_PLUGINS_DIR}/imageformats
+  DOC "Qt image IO plugin for JPEG")
+
+find_library(QT4_PLUGINS_QMNG
+  qmng ${QT_PLUGINS_DIR}/imageformats
+  DOC "Qt image IO plugin for MNG")
 
 find_library(JPEG_LIBRARY jpeg DOC "jpeg library")
 find_library(TIFF_LIBRARY tiff DOC "tiff library")
@@ -70,11 +93,9 @@ find_library(BZIP2_LIBRARY bz2 DOC "bzip2 library")
 #set(project_uis ......)
 #qt4_wrap_ui(project_uis_hxx ${project_uis})
 
-include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
-
 #qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
-set (project_sources
+set(project_sources 
   yaeMain.cpp
   yaeAPI.cpp
   yaeReaderFFMPEG.cpp
@@ -85,11 +106,10 @@ set (project_sources
   )
 
 # Set some Win32 Specific Settings
-if(WIN32)
-  add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
+if (WIN32)
   set(GUI_TYPE WIN32)
 #  set(project_sources ${project_sources} ${PROGNAME}.rc)
-endif(WIN32)
+endif (WIN32)
 
 # Set some Apple MacOS Specific settings
 if (APPLE)
@@ -107,7 +127,7 @@ set(TARGET_LIBS
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
-)
+  )
 
 if (AVFORMAT_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${AVFORMAT_LIBRARY})
@@ -221,6 +241,31 @@ if (BZIP2_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${BZIP2_LIBRARY})
 endif (BZIP2_LIBRARY)
 
+#message("QT_CONFG: "${QT_CONFIG})
+if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
+  add_definitions(-DQT_LIBS_ARE_STATIC)
+
+  if (QT4_PLUGINS_QGIF)
+    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QGIF})
+  endif (QT4_PLUGINS_QGIF)
+  
+  if (QT4_PLUGINS_QTIFF)
+    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QTIFF})
+  endif (QT4_PLUGINS_QTIFF)
+
+  if (QT4_PLUGINS_QICO)
+    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QICO})
+  endif (QT4_PLUGINS_QICO)
+  
+  if (QT4_PLUGINS_QJPEG)
+    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QJPEG})
+  endif (QT4_PLUGINS_QJPEG)
+  
+  if (QT4_PLUGINS_QMNG)
+    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QMNG})
+  endif (QT4_PLUGINS_QMNG)
+
+endif (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
 
 if (WIN32)
   set(TARGET_LIBS
@@ -232,24 +277,11 @@ if (WIN32)
     )
 endif (WIN32)
 
-
-if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
-  add_definitions(-DQT_LIBS_ARE_STATIC)
-  set(TARGET_LIBS
-    ${TARGET_LIBS}
-    ${QT4_PLUGINS_QGIF}
-    ${QT4_PLUGINS_QTIFF}
-    ${QT4_PLUGINS_QICO}
-    ${QT4_PLUGINS_QJPEG}
-    ${QT4_PLUGINS_QMNG}
-  )
-endif (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
-
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
   )
 
-#if(APPLE)
+if (APPLE)
 #  set_target_properties(${PROGNAME}
 #	PROPERTIES
 #	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
@@ -258,7 +290,10 @@ target_link_libraries(${PROGNAME}
 #	PROPERTIES
 #	MACOSX_PACKAGE_LOCATION Resources)
 #
-#else(APPLE)
-#endif(APPLE)
+  add_custom_command(TARGET ${PROGNAME} POST_BUILD
+	COMMAND ${THE_SRC_DIR}/DeployOSX.sh 
+	ARGS ${PROGNAME}.app
+	)
+endif (APPLE)
 
 install(TARGETS ${PROGNAME} DESTINATION bin)
