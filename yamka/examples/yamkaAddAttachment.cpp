@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string.h>
 #include <string>
+#include <limits>
 
 // namespace access:
 using namespace Yamka;
@@ -95,7 +96,8 @@ main(int argc, char ** argv)
   }
   
   uint64 attSize = att.file_.size();
-  Bytes attData(attSize);;
+  assert(attSize < uint64(std::numeric_limits<std::size_t>::max()));
+  Bytes attData((std::size_t)attSize);
   IStorage::IReceiptPtr attReceipt = att.load(attData);
   
   FileStorage src(srcPath, File::kReadOnly);
