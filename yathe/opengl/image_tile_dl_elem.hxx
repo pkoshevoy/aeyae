@@ -58,6 +58,10 @@ public:
   void setup_textures() const;
   
   // virtual:
+  const char * name() const
+  { return "image_tile_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
   inline void draw(const the_color_t & color,

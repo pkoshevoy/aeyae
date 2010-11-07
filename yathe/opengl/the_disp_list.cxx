@@ -1441,7 +1441,10 @@ the_disp_list_t::clear()
   
   while (!empty())
   {
-    delete remove_head(*this);
+    the_dl_elem_t * de = remove_head(*this);
+    // std::cerr << this << ", deleting " << de << ", ";
+    // std::cerr << de->name() << std::endl;
+    delete de;
   }
   
   bbox_.clear();
@@ -1469,6 +1472,8 @@ the_disp_list_t::push_back(the_dl_elem_t * const & elem)
 {
   if (elem == NULL) return false;
   
+  // std::cerr << this << ", adding " << elem << ", ";
+  // std::cerr << elem->name() << std::endl;
   std::list<the_dl_elem_t *>::push_back(elem);
   elem->update_bbox(bbox_);
   up_to_date_ = false;

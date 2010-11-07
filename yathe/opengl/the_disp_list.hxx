@@ -46,6 +46,8 @@ class the_dl_elem_t
 {
 public:
   virtual ~the_dl_elem_t() {}
+
+  virtual const char * name() const = 0;
   
   // draw the element:
   virtual void draw() const = 0;
@@ -62,6 +64,10 @@ class the_point_dl_elem_t : public the_dl_elem_t
 public:
   the_point_dl_elem_t(const p3x1_t & p = p3x1_t(0.0, 0.0, 0.0),
 		      const the_color_t & c = the_color_t(1.0, 1.0, 1.0, 1.0));
+  
+  // virtual:
+  const char * name() const
+  { return "the_point_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -104,6 +110,10 @@ public:
 			   const float & line_width = 1.0);
   
   // virtual:
+  const char * name() const
+  { return "the_line_strip_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   
@@ -136,6 +146,10 @@ public:
 		     const p3x1_t & b = p3x1_t(1.0, 1.0, 1.0),
 		     const the_color_t & c = the_color_t(0.5, 0.5, 0.5, 1.0),
 		     const float & line_width = 1.0);
+  
+  // virtual:
+  const char * name() const
+  { return "the_line_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -187,6 +201,10 @@ public:
    const float & line_width = 1.0);
   
   // virtual:
+  const char * name() const
+  { return "the_gradient_line_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
   // accessors:
@@ -210,6 +228,10 @@ public:
 			 const bool & calc_normal = false);
   
   // virtual:
+  const char * name() const
+  { return "the_triangle_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   
@@ -230,6 +252,10 @@ public:
 			       const bool & calc_normal = false);
   
   // virtual:
+  const char * name() const
+  { return "the_color_triangle_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
 protected:
@@ -246,6 +272,10 @@ class the_polygon_dl_elem_t : public the_dl_elem_t
 public:
   the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 			const bool & calc_normal = false);
+  
+  // virtual:
+  const char * name() const
+  { return "the_polygon_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -281,6 +311,10 @@ public:
 			      const bool & calc_normal = false);
   
   // virtual:
+  const char * name() const
+  { return "the_color_polygon_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
 protected:
@@ -301,6 +335,10 @@ public:
     the_point_dl_elem_t(position, color),
     text_(text)
   {}
+  
+  // virtual:
+  const char * name() const
+  { return "the_text_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -328,6 +366,10 @@ public:
   {}
   
   // virtual:
+  const char * name() const
+  { return "the_masked_text_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
   // accessor:
@@ -352,6 +394,10 @@ public:
     symbols_(&syms),
     symbol_id_(id)
   {}
+  
+  // virtual:
+  const char * name() const
+  { return "the_symbol_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -386,6 +432,10 @@ public:
     the_symbol_dl_elem_t(position, color, syms, id),
     mask_color_(mask)
   {}
+  
+  // virtual:
+  const char * name() const
+  { return "the_masked_symbol_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -424,6 +474,10 @@ public:
     y_(y_origin),
     mask_color_(mask_color)
   {}
+  
+  // virtual:
+  const char * name() const
+  { return "the_bitmap_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -501,6 +555,10 @@ public:
   }
   
   // virtual:
+  const char * name() const
+  { return "the_arrow_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   
   // accessors:
@@ -548,6 +606,10 @@ public:
 			  const float &      pixels_blade_length = 11.0);
   
   // virtual:
+  const char * name() const
+  { return "the_scs_arrow_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   
@@ -574,6 +636,10 @@ class the_height_map_dl_elem_t : public the_dl_elem_t
 public:
   the_height_map_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
 			   const std::vector<the_color_t> & color);
+  
+  // virtual:
+  const char * name() const
+  { return "the_height_map_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -606,6 +672,10 @@ public:
 			      const std::vector<the_color_t> & color);
   
   ~the_tex_surf_data_dl_elem_t();
+  
+  // virtual:
+  const char * name() const
+  { return "the_tex_surf_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -656,6 +726,10 @@ public:
 			  const char * z_label = "Z");
   
   // virtual:
+  const char * name() const
+  { return "the_coord_sys_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   
@@ -685,6 +759,10 @@ public:
   the_bbox_dl_elem_t(const the_bbox_t & bbox, const the_color_t & color);
   
   // virtual:
+  const char * name() const
+  { return "the_bbox_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   
@@ -709,6 +787,10 @@ public:
   ~the_ep_grid_dl_elem_t();
   
   // virtual:
+  const char * name() const
+  { return "the_ep_grid_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t &) const {}
   
@@ -730,6 +812,10 @@ public:
   ~the_view_volume_dl_elem_t();
   
   // virtual:
+  const char * name() const
+  { return "the_view_volume_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t &) const {}
   
@@ -747,6 +833,10 @@ class the_disp_list_dl_elem_t : public the_dl_elem_t
 {
 public:
   the_disp_list_dl_elem_t(const the_disp_list_t & disp_list);
+  
+  // virtual:
+  const char * name() const
+  { return "the_disp_list_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -770,6 +860,10 @@ class the_instance_dl_elem_t : public the_disp_list_dl_elem_t
 public:
   the_instance_dl_elem_t(const the_disp_list_t & disp_list,
 			 const m4x4_t & lcs_to_wcs);
+  
+  // virtual:
+  const char * name() const
+  { return "the_instance_dl_elem_t"; }
   
   // virtual:
   void draw() const;
@@ -800,6 +894,10 @@ public:
   {}
   
   // virtual:
+  const char * name() const
+  { return "the_memory_managed_dl_elem_t"; }
+  
+  // virtual:
   void draw() const
   { dl_elem_.draw(); }
   
@@ -821,6 +919,10 @@ protected:
 // 
 class the_disp_list_t : public std::list<the_dl_elem_t *>
 {
+  // intentionally disabled:
+  the_disp_list_t(const the_disp_list_t &);
+  the_disp_list_t & operator = (const the_disp_list_t &);
+  
 public:
   the_disp_list_t();
   the_disp_list_t(const the_bbox_t & bbox);

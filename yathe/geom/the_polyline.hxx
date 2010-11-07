@@ -99,6 +99,10 @@ public:
 			      const the_color_t & color);
   
   // virtual:
+  const char * name() const
+  { return "the_polyline_geom_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   

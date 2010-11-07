@@ -125,6 +125,10 @@ public:
 			   const size_t & segments = 100);
   
   // virtual:
+  const char * name() const
+  { return "the_curve_geom_dl_elem_t"; }
+  
+  // virtual:
   void draw() const;
   void update_bbox(the_bbox_t & bbox) const;
   

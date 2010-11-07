@@ -9,6 +9,9 @@
 // License      : MIT
 // Description  : A tensor product surface.
 
+// system includes:
+#include <iostream>
+
 // local includes:
 #include "geom/the_tensurf.hxx"
 #include "geom/the_grid.hxx"
@@ -251,6 +254,10 @@ public:
     iso_color_(iso_color),
     crv_color_(crv_color)
   {}
+  
+  // virtual:
+  const char * name() const
+  { return "the_tensurf_dl_elem_t"; }
   
   // virtual:
   void draw() const
