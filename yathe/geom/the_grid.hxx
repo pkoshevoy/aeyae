@@ -39,6 +39,7 @@ class the_grid_t : public the_primitive_t
 {
 public:
   the_grid_t();
+  the_grid_t(const the_grid_t & grid);
   
   // virtual:
   the_primitive_t * clone() const

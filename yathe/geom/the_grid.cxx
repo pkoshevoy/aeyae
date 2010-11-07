@@ -9,6 +9,9 @@
 // License      : MIT
 // Description  : A uniform grid class (4-connected vertex mesh).
 
+// system includes:
+#include <iostream>
+
 // local includes:
 #include "geom/the_grid.hxx"
 #include "geom/the_polyline.hxx"
@@ -25,6 +28,18 @@ the_grid_t::the_grid_t():
 {
   init();
 }
+
+//----------------------------------------------------------------
+// the_grid_t::the_grid_t
+// 
+the_grid_t::the_grid_t(const the_grid_t & grid):
+  the_primitive_t(grid),
+  anchor_(grid.anchor_),
+  grid_(grid.grid_),
+  active_(grid.active_),
+  u_(grid.u_),
+  v_(grid.v_)
+{}
 
 //----------------------------------------------------------------
 // the_grid_t::regenerate
