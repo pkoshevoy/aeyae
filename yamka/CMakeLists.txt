@@ -38,7 +38,7 @@ add_library(yamka STATIC
   )
 
 add_executable(yamkaTest 
-  yamkaTest.cpp
+  examples/yamkaTest.cpp
   )
 
 target_link_libraries(yamkaTest
@@ -46,7 +46,7 @@ target_link_libraries(yamkaTest
   )
 
 add_executable(yamkaAddAttachment 
-  yamkaAddAttachment.cpp
+  examples/yamkaAddAttachment.cpp
   )
 
 target_link_libraries(yamkaAddAttachment
@@ -54,10 +54,18 @@ target_link_libraries(yamkaAddAttachment
   )
 
 add_executable(yamkaRemux
-  yamkaRemux.cpp
+  examples/yamkaRemux.cpp
   )
 
 target_link_libraries(yamkaRemux
+  yamka
+  )
+
+add_executable(yamkaFileInfo
+  examples/yamkaFileInfo.cpp
+  )
+
+target_link_libraries(yamkaFileInfo
   yamka
   )
 
@@ -65,5 +73,6 @@ install(TARGETS
   yamkaTest
   yamkaAddAttachment
   yamkaRemux
+  yamkaFileInfo
   DESTINATION bin
   )

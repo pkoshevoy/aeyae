@@ -985,6 +985,12 @@ namespace Yamka
     
     ImplementsYamkaPayloadAPI();
     
+    // same as load, but doesn't discard element storage receipts:
+    uint64 loadAndKeepReceipts(FileStorage & storage, uint64 bytesToRead);
+    
+    // discard element storage receipts:
+    void discardReceipts();
+    
     // resolve positional references (seeks, cues, etc...)
     // for each segment:
     void resolveReferences();

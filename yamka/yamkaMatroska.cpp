@@ -3857,6 +3857,20 @@ namespace Yamka
   uint64
   MatroskaDoc::load(FileStorage & storage, uint64 bytesToRead)
   {
+    uint64 bytesReadTotal = loadAndKeepReceipts(storage, bytesToRead);
+    
+    // discard loaded storage receipts so they wouldn't screw up saving later:
+    discardReceipts();
+    
+    return bytesReadTotal;
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::loadAndKeepReceipts
+  // 
+  uint64
+  MatroskaDoc::loadAndKeepReceipts(FileStorage & storage, uint64 bytesToRead)
+  {
     // let the base class load the EBML header:
     uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead);
     bytesToRead -= bytesReadTotal;
@@ -3880,11 +3894,17 @@ namespace Yamka
     // resolve positional references (seeks, cues, clusters, etc...):
     resolveReferences();
     
-    // discard loaded storage receipts so they wouldn't screw up saving later:
+    return bytesReadTotal;
+  }
+
+  //----------------------------------------------------------------
+  // MatroskaDoc::discardReceipts
+  // 
+  void
+  MatroskaDoc::discardReceipts()
+  {
     DiscardReceipts crawler;
     eval(crawler);
-    
-    return bytesReadTotal;
   }
   
   //----------------------------------------------------------------
