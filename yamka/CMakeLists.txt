@@ -53,8 +53,17 @@ target_link_libraries(yamkaAddAttachment
   yamka
   )
 
+add_executable(yamkaRemux
+  yamkaRemux.cpp
+  )
+
+target_link_libraries(yamkaRemux
+  yamka
+  )
+
 install(TARGETS 
   yamkaTest
   yamkaAddAttachment
+  yamkaRemux
   DESTINATION bin
   )
