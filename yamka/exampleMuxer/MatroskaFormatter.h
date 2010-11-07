@@ -240,7 +240,7 @@ private:
     std::list<Yamka::Frame> m_videoFrames;
     
     // shortcuts to video/audio codec (so we can interrogate them for detail):
-	const AVideoCompressor * m_videoCodec;
+    const AVideoCompressor * m_videoCodec;
     const AAudioCompressor * m_audioCodec;
 };
 

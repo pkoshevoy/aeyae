@@ -38,8 +38,8 @@ static const Yamka::uint64 NANOSEC_PER_SEC = 1000000000;
 TMatroskaFormatter::TMatroskaFormatter(TFileFormat fileFormat):
     m_matroska(fileFormat)
 {
-	m_videoCodec = NULL;
-	m_audioCodec = NULL;
+    m_videoCodec = NULL;
+    m_audioCodec = NULL;
 }
 
 //----------------------------------------------------------------
@@ -91,15 +91,15 @@ TMatroskaFormatter::beginFormatting()
     m_yamkaTmp = Yamka::FileStorage(filenameUtf8 + ".yamka",
                                     Yamka::File::kReadWrite);
     if (!m_yamkaTmp.file_.isOpen())
-	{
-		return OOPS_FORMAT_FILE_CREATE_FAILED;
-	}
+    {
+        return OOPS_FORMAT_FILE_CREATE_FAILED;
+    }
     
     m_yamkaOut = Yamka::FileStorage(filenameUtf8, Yamka::File::kReadWrite);
     if (!m_yamkaOut.file_.isOpen())
-	{
-		return OOPS_FORMAT_FILE_CREATE_FAILED;
-	}
+    {
+        return OOPS_FORMAT_FILE_CREATE_FAILED;
+    }
     
     // truncate the output files, in case they already existed:
     m_yamkaTmp.file_.setSize(0);
@@ -258,8 +258,8 @@ TMatroskaFormatter::addAudioSample(TEncAudio * encAudio)
     
     if (codecId == kAudioCodecVorbis)
     {
-		const ogg_packet * oggPackets = (const ogg_packet *)(encAudio->pData);
-		const uint32_st numOggPackets = encAudio->unNumberOfMediaSamples;
+        const ogg_packet * oggPackets = (const ogg_packet *)(encAudio->pData);
+        const uint32_st numOggPackets = encAudio->unNumberOfMediaSamples;
         
         if (!m_audioFrames.empty() && numOggPackets)
         {
