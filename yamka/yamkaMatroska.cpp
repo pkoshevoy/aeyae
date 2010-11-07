@@ -3448,11 +3448,13 @@ namespace Yamka
       *receipt += seekHead.save(storage);
       ++seekHeadIter;
     }
-
+    
     *receipt += info_.save(storage);
     *receipt += tracks_.save(storage);
+    *receipt += cues_.save(storage);
     *receipt += chapters_.save(storage);
-    
+    *receipt += attachments_.save(storage);
+    *receipt += eltsSave(tags_, storage);
     *receipt += eltsSave(clusters_, storage);
     
     // save any remaining seekheads:
@@ -3461,11 +3463,6 @@ namespace Yamka
       const TSeekHead & seekHead = *seekHeadIter;
       *receipt += seekHead.save(storage);
     }
-    
-    *receipt += cues_.save(storage);
-    *receipt += attachments_.save(storage);
-    
-    *receipt += eltsSave(tags_, storage);
     
     return receipt;
   }
