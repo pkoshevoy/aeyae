@@ -27,6 +27,7 @@
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
+#include <set>
 
 // boost includes:
 #include <boost/thread.hpp>
@@ -362,17 +363,24 @@ namespace yae
   
   //----------------------------------------------------------------
   // Queue
-  //
+  // 
+  // Thread-safe queue
+  // 
   template <typename TData>
   struct Queue
   {
-    Queue(std::size_t maxSize = 4):
+    typedef Queue<TData> TSelf;
+    
+    Queue(std::size_t maxSize = 61):
+      closed_(true),
       size_(0),
       maxSize_(maxSize)
     {}
     
     ~Queue()
     {
+      close();
+      
       try
       {
         boost::this_thread::disable_interruption disableInterruption;
@@ -391,6 +399,76 @@ namespace yae
       {}
     }
     
+    void setMaxSize(std::size_t maxSize)
+    {
+      // change max queue size:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        if (maxSize_ == maxSize)
+        {
+          // same size, nothing changed:
+          return;
+        }
+        
+        maxSize_ = maxSize;
+      }
+      
+      cond_.notify_all();
+    }
+    
+    // check whether the Queue is empty:
+    bool empty() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      bool isEmpty = data_.empty();
+      return isEmpty;
+    }
+    
+    // check whether the queue is closed:
+    bool isClosed() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return closed_;
+    }
+    
+    // close the queue, abort any pending push/pop/etc... calls:
+    void close()
+    {
+      // close the queue:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        if (closed_)
+        {
+          // already closed:
+          return;
+        }
+        
+        closed_ = true;
+      }
+      
+      cond_.notify_all();
+    }
+    
+    // open the queue allowing push/pop/etc... calls:
+    void open()
+    {
+      // close the queue:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        if (!closed_)
+        {
+          // already open:
+          return;
+        }
+        
+        data_.clear();
+        closed_ = false;
+      }
+      
+      cond_.notify_all();
+    }
+    
+    // push data into the queue:
     bool push(const TData & newData)
     {
       try
@@ -398,9 +476,14 @@ namespace yae
         // add to queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (size_ >= maxSize_)
+          while (!closed_ && size_ >= maxSize_)
           {
             cond_.wait(lock);
+          }
+          
+          if (closed_)
+          {
+            return false;
           }
           
           data_.push_back(newData);
@@ -415,7 +498,8 @@ namespace yae
       
       return false;
     }
-    
+
+    // remove data from the queue:
     bool pop(TData & data)
     {
       try
@@ -423,9 +507,14 @@ namespace yae
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (data_.empty())
+          while (!closed_ && data_.empty())
           {
             cond_.wait(lock);
+          }
+          
+          if (closed_)
+          {
+            return false;
           }
           
           data = data_.front();
@@ -442,21 +531,243 @@ namespace yae
       return false;
     }
     
-    bool empty() const
+    // peek at the head of the Queue:
+    bool peekHead(TData & data) const
+    {
+      try
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        while (!closed_ && data_.empty())
+        {
+          cond_.wait(lock);
+        }
+        
+        if (closed_)
+        {
+          return false;
+        }
+        
+        data = data_.front();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+    
+    // peek at the head of the Queue:
+    bool peekTail(TData & data) const
+    {
+      try
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        while (!closed_ && data_.empty())
+        {
+          cond_.wait(lock);
+        }
+        
+        if (closed_)
+        {
+          return false;
+        }
+        
+        data = data_.back();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+
+    //----------------------------------------------------------------
+    // RegisterProducer
+    // 
+    struct RegisterProducer
+    {
+      RegisterProducer(TSelf * queue = NULL, const void * producer = NULL):
+        queue_(NULL),
+        producer_(NULL)
+      {
+        registerProducer(queue, producer);
+      }
+      
+      ~RegisterProducer()
+      {
+        if (!queue_ || !producer_)
+        {
+          return;
+        }
+        
+        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
+        std::set<const void *>::iterator i = queue_->producers_.find(producer_);
+        
+        if (i != queue_->producers_.end())
+        {
+          queue_->producers_.erase(i);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+      
+      void
+      registerProducer(TSelf * queue, const void * producer)
+      {
+        if (queue_ || producer_)
+        {
+          // already registered some other queue producer:
+          assert(false);
+          return;
+        }
+        
+        queue_ = queue;
+        producer_ = producer;
+        if (!queue_ || !producer_)
+        {
+          return;
+        }
+        
+        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
+        std::set<const void *>::iterator i = queue_->producers_.find(producer_);
+        
+        if (i == queue_->producers_.end())
+        {
+          queue_->producers_.insert(producer_);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+      
+    protected:
+      TSelf * queue_;
+      const void * producer_;
+    };
+    
+    //----------------------------------------------------------------
+    // RegisterConsumer
+    // 
+    struct RegisterConsumer
+    {
+      RegisterConsumer(TSelf * queue = NULL, const void * consumer = NULL):
+        queue_(NULL),
+        consumer_(NULL)
+      {
+        registerConsumer(queue, consumer);
+      }
+      
+      ~RegisterConsumer()
+      {
+        if (!queue_ || !consumer_)
+        {
+          return;
+        }
+        
+        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
+        std::set<const void *>::iterator i = queue_->consumers_.find(consumer_);
+        
+        if (i != queue_->consumers_.end())
+        {
+          queue_->consumers_.erase(i);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+      
+      void
+      registerConsumer(TSelf * queue, const void * consumer)
+      {
+        if (queue_ || consumer_)
+        {
+          // already registered some other queue consumer:
+          assert(false);
+          return;
+        }
+        
+        queue_ = queue;
+        consumer_ = consumer;
+        if (!queue_ || !consumer_)
+        {
+          return;
+        }
+        
+        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
+        std::set<const void *>::iterator i = queue_->consumers_.find(consumer_);
+        
+        if (i == queue_->consumers_.end())
+        {
+          queue_->consumers_.insert(consumer_);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+      
+    protected:
+      TSelf * queue_;
+      const void * consumer_;
+    };
+    
+    // check whether the Queue has any producers attached:
+    inline bool hasProducers() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      bool isEmpty = data_.empty();
-      return isEmpty;
+      return !producers_.empty();
+    }
+    
+    // check whether the Queue has any consumers attached:
+    inline bool hasConsumers() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return !consumers_.empty();
     }
     
   protected:
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
+    bool closed_;
     std::list<TData> data_;
     std::size_t size_;
     const std::size_t maxSize_;
-  };
 
+    // keep track of the producers/consumers using this queue:
+    friend struct RegisterProducer;
+    friend struct RegisterConsumer;
+    std::set<const void *> producers_;
+    std::set<const void *> consumers_;
+  };
+  
+  //----------------------------------------------------------------
+  // TOpenHere
+  // 
+  // open an instance of TOpenable in the constructor,
+  // close it in the destructor:
+  // 
+  template <typename TOpenable>
+  struct TOpenHere
+  {
+    TOpenHere(TOpenable & something):
+      something_(something)
+    {
+      something_.open();
+    }
+    
+    ~TOpenHere()
+    {
+      something_.close();
+    }
+    
+  protected:
+    TOpenable & something_;
+  };
+  
   //----------------------------------------------------------------
   // Packet
   // 
@@ -516,7 +827,7 @@ namespace yae
   
   //----------------------------------------------------------------
   // Track
-  // 
+  //
   struct Track
   {
     // NOTE: constructor does not open the stream:
@@ -550,10 +861,12 @@ namespace yae
     void getDuration(TTime & t) const;
     
     // get current position:
-    bool getPosition(TTime & t) const;
+    virtual bool getPosition(TTime &) const
+    { return false; }
     
     // seek to a position:
-    bool setPosition(const TTime & t);
+    virtual bool setPosition(const TTime &)
+    { return false; }
     
     // accessor to the packet queue:
     inline TPacketQueue & packetQueue()
@@ -641,6 +954,7 @@ namespace yae
       return false;
     }
     
+    packetQueue_.open();
     thread_.run();
     return true;
   }
@@ -653,6 +967,7 @@ namespace yae
   {
     if (stream_ && codec_)
     {
+      packetQueue_.close();
       thread_.stop();
       thread_.wait();
       
@@ -727,44 +1042,6 @@ namespace yae
     t.base_ = stream_->time_base.den;
   }
   
-  //----------------------------------------------------------------
-  // Track::getPosition
-  // 
-  bool
-  Track::getPosition(TTime & t) const
-  {
-    if (!stream_)
-    {
-      assert(false);
-      return false;
-    }
-    
-    // FIXME: not sure that I am looking at the correct timestamp:
-    if (stream_->cur_pkt.pts == int64_t(AV_NOPTS_VALUE))
-    {
-      return false;
-    }
-    
-    t.time_ = stream_->time_base.num * stream_->cur_pkt.pts;
-    t.base_ = stream_->time_base.den;
-    return true;
-  }
-  
-  //----------------------------------------------------------------
-  // Track::setPosition
-  // 
-  bool
-  Track::setPosition(const TTime & /* t */)
-  {
-    if (!stream_)
-    {
-      assert(false);
-      return false;
-    }
-    
-    return true;
-  }
-  
   
   //----------------------------------------------------------------
   // VideoTrack
@@ -772,6 +1049,12 @@ namespace yae
   struct VideoTrack : public Track
   {
     VideoTrack(AVFormatContext * context, AVStream * stream);
+    
+    // virtual: get current position:
+    bool getPosition(TTime & t) const;
+    
+    // virtual: seek to a position:
+    bool setPosition(const TTime & t);
     
     // virtual:
     void threadLoop();
@@ -795,6 +1078,38 @@ namespace yae
     Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::getPosition
+  // 
+  bool
+  VideoTrack::getPosition(TTime & t) const
+  {
+    if (!packetQueue_.hasProducers() ||
+        !frameQueue_.hasProducers())
+    {
+      return false;
+    }
+    
+    TVideoFramePtr curr;
+    if (frameQueue_.peekHead(curr))
+    {
+      t = curr->time_;
+      return true;
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::setPosition
+  // 
+  bool
+  VideoTrack::setPosition(const TTime & t)
+  {
+    // FIXME:
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -835,6 +1150,10 @@ namespace yae
   void
   VideoTrack::threadLoop()
   {
+    TPacketQueue::RegisterConsumer consumer(&packetQueue_, this);
+    TVideoFrameQueue::RegisterProducer producer(&frameQueue_, this);
+    TOpenHere<TVideoFrameQueue> closeOnExit(frameQueue_);
+    
     FrameWithAutoCleanup frameAutoCleanup;
     struct SwsContext * imgConvertCtx = NULL;
     
@@ -870,37 +1189,35 @@ namespace yae
           continue;
         }
         
-        TVideoFramePtr vf(new TVideoFrame());
+        TVideoFramePtr vfPtr(new TVideoFrame());
+        TVideoFrame & vf = *vfPtr;
         
-        TVideoFrame::TData & vfData = vf->data_;
-        vfData.resize((yPlaneSize * 3) / 2);
+        vf.traits_ = trackTraits;
+        vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
+        vf.time_.base_ = stream_->time_base.den;
         
-        TVideoFrame::TTraits & vfTraits = vf->traits_;
-        vfTraits = trackTraits;
-        
-        TTime & vfTime = vf->time_;
-        vfTime.time_ = stream_->time_base.num * avFrame->pts;
-        vfTime.base_ = stream_->time_base.den;
+        vf.setBufferSize<unsigned char>((yPlaneSize * 3) / 2);
+        unsigned char * vfData = vf.getBuffer<unsigned char>();
         
         AVPicture pict;
-        pict.data[0] = &vfData[0];
-        pict.data[1] = &vfData[yPlaneSize];
-        pict.data[2] = &vfData[yPlaneSize + yPlaneSize / 4];
-        pict.linesize[0] = vfTraits.encodedWidth_;
-        pict.linesize[1] = vfTraits.encodedWidth_ / 2;
-        pict.linesize[2] = vfTraits.encodedWidth_ / 2;
+        pict.data[0] = vfData;
+        pict.data[1] = vfData + yPlaneSize;
+        pict.data[2] = vfData + yPlaneSize + yPlaneSize / 4;
+        pict.linesize[0] = vf.traits_.encodedWidth_;
+        pict.linesize[1] = vf.traits_.encodedWidth_ / 2;
+        pict.linesize[2] = vf.traits_.encodedWidth_ / 2;
         
         // Convert the image into YUV format that SDL uses
         if (imgConvertCtx == NULL)
         {
           imgConvertCtx = sws_getContext(// from:
-                                         vfTraits.visibleWidth_,
-                                         vfTraits.visibleHeight_, 
+                                         vf.traits_.visibleWidth_,
+                                         vf.traits_.visibleHeight_, 
                                          codecContext()->pix_fmt,
                                          
                                          // to:
-                                         vfTraits.visibleWidth_,
-                                         vfTraits.visibleHeight_,
+                                         vf.traits_.visibleWidth_,
+                                         vf.traits_.visibleHeight_,
                                          PIX_FMT_YUV420P,
                                          
                                          SWS_BICUBIC,
@@ -923,12 +1240,18 @@ namespace yae
                   pict.linesize);
         
         // put the decoded/scaled frame into frame queue:
-        frameQueue_.push(vf);
+        frameQueue_.push(vfPtr);
       }
       catch (...)
       {
         break;
       }
+    }
+    
+    if (imgConvertCtx)
+    {
+      sws_freeContext(imgConvertCtx);
+      imgConvertCtx = NULL;
     }
   }
   
@@ -1035,6 +1358,12 @@ namespace yae
   {
     AudioTrack(AVFormatContext * context, AVStream * stream);
     
+    // virtual: get current position:
+    bool getPosition(TTime & t) const;
+    
+    // virtual: seek to a position:
+    bool setPosition(const TTime & t);
+    
     // virtual:
     void threadLoop();
     
@@ -1060,12 +1389,115 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // AudioTrack::getPosition
+  // 
+  bool
+  AudioTrack::getPosition(TTime & t) const
+  {
+    if (!packetQueue_.hasProducers() ||
+        !frameQueue_.hasProducers())
+    {
+      return false;
+    }
+    
+    TAudioFramePtr curr;
+    if (frameQueue_.peekHead(curr))
+    {
+      t = curr->time_;
+      return true;
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::setPosition
+  // 
+  bool
+  AudioTrack::setPosition(const TTime & t)
+  {
+    // FIXME:
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // AudioTrack::threadLoop
   // 
   void
   AudioTrack::threadLoop()
   {
-    // decode packets:
+    TPacketQueue::RegisterConsumer consumer(&packetQueue_, this);
+    TAudioFrameQueue::RegisterProducer producer(&frameQueue_, this);
+    TOpenHere<TAudioFrameQueue> closeOnExit(frameQueue_);
+    
+    TAudioFrame::TTraits trackTraits;
+    getTraits(trackTraits);
+    
+    while (true)
+    {
+      try
+      {
+        TPacketPtr packet;
+        bool ok = packetQueue_.pop(packet);
+        if (!ok)
+        {
+          break;
+        }
+        
+        // Decode audio frame, piecewise:
+        std::list<std::vector<int16_t> > chunks;
+        std::size_t totalSamples = 0;
+        
+        while (true)
+        {
+          chunks.push_back(std::vector<int16_t>(8192));
+          int chunkSize = 8192 - FF_INPUT_BUFFER_PADDING_SIZE;
+          
+          int16_t * chunk = &(chunks.back().front());
+          int bytesUsed = avcodec_decode_audio3(codecContext(),
+                                                chunk,
+                                                &chunkSize,
+                                                &packet->ffmpeg_);
+          
+          if (bytesUsed <= 0)
+          {
+            chunks.pop_back();
+            break;
+          }
+          
+          chunks.back().resize(chunkSize);
+          totalSamples += chunkSize;
+        }
+        
+        TAudioFramePtr afPtr(new TAudioFrame());
+        TAudioFrame & af = *afPtr;
+        
+        af.traits_ = trackTraits;
+        af.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
+        af.time_.base_ = stream_->time_base.den;
+        
+        af.setBufferSize<int16_t>(totalSamples);
+        int16_t * afBuffer = af.getBuffer<int16_t>();
+        
+        // concatenate chunks into a contiguous frame buffer:
+        while (!chunks.empty())
+        {
+          const int16_t * chunk = &(chunks.front().front());
+          std::size_t chunkSize = chunks.front().size();
+          memcpy(afBuffer, chunk, chunkSize);
+          
+          afBuffer += chunkSize;
+          chunks.pop_front();
+        }
+        
+        // put the decoded frame into frame queue:
+        frameQueue_.push(afPtr);
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
   }
   
   //----------------------------------------------------------------
@@ -1153,9 +1585,9 @@ namespace yae
   // AudioTrack::getNextFrame
   // 
   bool
-  AudioTrack::getNextFrame(TAudioFramePtr & /* frame */)
+  AudioTrack::getNextFrame(TAudioFramePtr & frame)
   {
-    return false;
+    return frameQueue_.pop(frame);
   }
   
   
@@ -1310,6 +1742,7 @@ namespace yae
       return;
     }
     
+    threadStop();
     videoTracks_.clear();
     audioTracks_.clear();
     
@@ -1400,15 +1833,19 @@ namespace yae
   Movie::threadLoop()
   {
     VideoTrackPtr videoTrack;
+    TPacketQueue::RegisterProducer videoProducer;
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       videoTrack = videoTracks_[selectedVideoTrack_];
+      videoProducer.registerProducer(&videoTrack->packetQueue(), this);
     }
     
     AudioTrackPtr audioTrack;
+    TPacketQueue::RegisterProducer audioProducer;
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       audioTrack = audioTracks_[selectedAudioTrack_];
+      audioProducer.registerProducer(&audioTrack->packetQueue(), this);
     }
     
     // Read frames and save first five frames to disk
@@ -1424,13 +1861,21 @@ namespace yae
       TPacketPtr packet = copyPacket(ffmpeg);
       if (packet)
       {
-        if (videoTrack && videoTrack->streamIndex() == ffmpeg.stream_index)
+        if (videoTrack &&
+            videoTrack->streamIndex() == ffmpeg.stream_index)
         {
-          videoTrack->packetQueue().push(packet);
+          if (!videoTrack->packetQueue().push(packet))
+          {
+            break;
+          }
         }
-        else if (audioTrack && audioTrack->streamIndex() == ffmpeg.stream_index)
+        else if (audioTrack &&
+                 audioTrack->streamIndex() == ffmpeg.stream_index)
         {
-          audioTrack->packetQueue().push(packet);
+          if (!audioTrack->packetQueue().push(packet))
+          {
+            break;
+          }
         }
       }
       else
@@ -1446,6 +1891,11 @@ namespace yae
   bool
   Movie::threadStart()
   {
+    if (!context_)
+    {
+      return false;
+    }
+    
     return thread_.run();
   }
   
@@ -1480,7 +1930,7 @@ namespace yae
       if (!ffmpegInitialized_)
       {
         av_register_all();
-#if 1
+#if 0
         av_register_protocol(&fileUtf8::urlProtocol);
 #else
         av_register_protocol2(&fileUtf8::urlProtocol,

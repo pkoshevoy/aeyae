@@ -187,26 +187,25 @@ namespace yae
     std::size_t imgH = frame_->traits_.visibleHeight_;
     std::size_t yFrameSize = imgW * imgH;
     std::size_t uFrameSize = imgW * imgH / 4;
+    const unsigned char * dataBuffer = frame_->getBuffer<unsigned char>();
     
     // update the labels:
     loadQImagePlane(y_,
                     flipTheImage_,
-                    &(frame_->data_[0]),
+                    dataBuffer,
                     imgW);
     
     loadQImagePlane(u_,
                     flipTheImage_,
-                    &(frame_->data_[yFrameSize]),
+                    dataBuffer + yFrameSize,
                     imgW / 2);
     
     loadQImagePlane(v_,
                     flipTheImage_,
-                    &(frame_->data_[yFrameSize + uFrameSize]),
+                    dataBuffer + yFrameSize + uFrameSize,
                     imgW / 2);
     
-    loadQImageYUV(rgb_,
-                  flipTheImage_,
-                  &(frame_->data_[0]));
+    loadQImageYUV(rgb_, flipTheImage_, dataBuffer);
     
     labelY_->setPixmap(QPixmap::fromImage(y_));
     labelU_->setPixmap(QPixmap::fromImage(u_));

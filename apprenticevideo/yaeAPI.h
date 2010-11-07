@@ -197,7 +197,28 @@ namespace yae
   {
     typedef traits_t TTraits;
     typedef TFrame<traits_t> TSelf;
-    typedef std::vector<unsigned char> TData;
+
+    //! resize data buffer:
+    template <typename TUnit>
+    inline void
+    setBufferSize(std::size_t numUnits,
+                  std::size_t paddingBytes = 0)
+    {
+      std::size_t n =
+        std::max<std::size_t>((sizeof(TUnit) * numUnits + paddingBytes) /
+                              sizeof(TDataUnit),
+                              1);
+      data_.resize(n);
+    }
+    
+    //! data buffer accessors:
+    template <typename TUnit>
+    inline TUnit * getBuffer()
+    { return (TUnit *)(&(data_[0])); }
+    
+    template <typename TUnit>
+    inline const TUnit * getBuffer() const
+    { return (const TUnit *)(&(data_[0])); }
     
     //! frame position:
     TTime time_;
@@ -205,7 +226,10 @@ namespace yae
     //! frame traits:
     TTraits traits_;
     
-    //! frame data:
+  private:
+    //! frame data (8-byte aligned):
+    typedef boost::uint64_t TDataUnit;
+    typedef std::vector<TDataUnit> TData;
     TData data_;
   };
   

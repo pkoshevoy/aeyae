@@ -42,27 +42,30 @@ main(int argc, char ** argv)
       continue;
     }
     
-    std::cout << "opened " << url << std::endl;
+    std::cerr << "opened " << url << std::endl;
     
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-    for (std::size_t i = 0; i < numVideoTracks; i++)
+    for (std::size_t j = 0; j < numVideoTracks; j++)
     {
-      reader->selectVideoTrack(i);
-      std::cout << "video track " << i << ", ";
+      reader->threadStop();
+      reader->selectVideoTrack(j);
+      reader->threadStart();
+      
+      std::cerr << "video track " << j << ", ";
       const char * trackName = reader->getSelectedVideoTrackName();
       if (trackName)
       {
-	std::cout << trackName;
+	std::cerr << trackName;
       }
       else
       {
-	std::cout << "no name";
+	std::cerr << "no name";
       }
       
       yae::TTime duration;
       if (reader->getVideoDuration(duration))
       {
-	std::cout << ", duration: "
+	std::cerr << ", duration: "
 		  << (double(duration.time_) /
 		      double(duration.base_))
 		  << " seconds";
@@ -71,7 +74,7 @@ main(int argc, char ** argv)
       yae::TTime position;
       if (reader->getVideoPosition(position))
       {
-	std::cout << ", position: "
+	std::cerr << ", position: "
 		  << (double(position.time_) /
 		      double(position.base_))
 		  << " seconds";
@@ -80,7 +83,7 @@ main(int argc, char ** argv)
       yae::VideoTraits t;
       if (reader->getVideoTraits(t))
       {
-	std::cout << ", frame rate: " << t.frameRate_ << " Hz"
+	std::cerr << ", frame rate: " << t.frameRate_ << " Hz"
 		  << ", color format: " << t.colorFormat_
 		  << ", encoded frame: " << t.encodedWidth_
 		  << " x " << t.encodedHeight_
@@ -92,28 +95,31 @@ main(int argc, char ** argv)
 		  << ", is upside down: " << t.isUpsideDown_;
       }
       
-      std::cout << std::endl;
+      std::cerr << std::endl;
     }
     
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
-    for (std::size_t i = 0; i < numAudioTracks; i++)
+    for (std::size_t j = 0; j < numAudioTracks; j++)
     {
-      reader->selectAudioTrack(i);
-      std::cout << "audio track " << i << ", ";
+      reader->threadStop();
+      reader->selectAudioTrack(j);
+      reader->threadStart();
+      
+      std::cerr << "audio track " << j << ", ";
       const char * trackName = reader->getSelectedAudioTrackName();
       if (trackName)
       {
-	std::cout << trackName;
+	std::cerr << trackName;
       }
       else
       {
-	std::cout << "no name";
+	std::cerr << "no name";
       }
       
       yae::TTime duration;
       if (reader->getAudioDuration(duration))
       {
-	std::cout << ", duration: "
+	std::cerr << ", duration: "
 		  << (double(duration.time_) /
 		      double(duration.base_))
 		  << " seconds";
@@ -122,7 +128,7 @@ main(int argc, char ** argv)
       yae::TTime position;
       if (reader->getAudioPosition(position))
       {
-	std::cout << ", position: "
+	std::cerr << ", position: "
 		  << (double(position.time_) /
 		      double(position.base_))
 		  << " seconds";
@@ -131,32 +137,28 @@ main(int argc, char ** argv)
       yae::AudioTraits t;
       if (reader->getAudioTraits(t))
       {
-	std::cout << ", sample rate: " << t.sampleRate_ << " Hz"
+	std::cerr << ", sample rate: " << t.sampleRate_ << " Hz"
 		  << ", sample format: " << t.sampleFormat_
 		  << ", channel format: " << t.channelFormat_
 		  << ", channel layout: " << t.channelLayout_;
       }
       
-      std::cout << std::endl;
+      std::cerr << std::endl;
     }
     
     // unselect audio track:
+    reader->threadStop();
     reader->selectAudioTrack(numAudioTracks);
+    reader->threadStart();
   }
   
-  if (reader)
-  {
-    reader->threadStart();
-    
-    yae::Viewer viewer(reader);
-    viewer.show();
-    viewer.loadFrame();
-    app.exec();
-
-    reader->threadStop();
-    reader->destroy();
-    reader = NULL;
-  }
+  yae::Viewer viewer(reader);
+  viewer.show();
+  viewer.loadFrame();
+  app.exec();
+  
+  reader->destroy();
+  reader = NULL;
   
   return 0;
 }
