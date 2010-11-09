@@ -144,6 +144,8 @@ the_document_ui_t::shutdown()
       delete view_mgr_eh_[i];
       view_mgr_eh_[i] = NULL;
     }
+    
+    view_[i]->assign_document(NULL);
   }
   view_mgr_eh_.resize(0);
   view_.resize(0);

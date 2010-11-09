@@ -313,8 +313,9 @@ the_view_t::detach_eh(the_input_device_eh_t * eh)
 void
 the_view_t::calc_bbox(the_bbox_t & bbox) const
 {
-  if (document() == NULL) return;
-  document()->calc_bbox(*this, bbox);
+  the_document_t * doc = document();
+  if (doc == NULL) return;
+  doc->calc_bbox(*this, bbox);
 }
 
 //----------------------------------------------------------------
