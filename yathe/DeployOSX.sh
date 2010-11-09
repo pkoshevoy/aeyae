@@ -274,23 +274,43 @@ PrepForDeployment()
 	# deploy Qt plugins manually:
 	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
 		pwd
-	
-    	shift 1
-		while [ $? = 0 ]; do
-			PLUGIN="${1}"
-			if [ -z "${PLUGIN}" ]; then
-				break;
-			fi
-			
-			echo $CP "${QTDIR}"/plugins/"${PLUGIN}" .
-			$CP "${QTDIR}"/plugins/"${PLUGIN}" .
-			shift
-		done
 
-		# get rid of debug plugins:
-		find . -name '*_debug.*' -type f -print | while read i; do
-			echo rm -f "${i}"
-			rm -f "${i}"
+		find . -type f -print | while read i; do
+
+			# find out which Qt was linked against and 
+			# copy plugins from the same version of Qt
+			QT_DIR=`otool -L "${i}" | grep QtCore | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev`
+			if [ -z "${QT_DIR}" ]; then 
+				continue; 
+			fi
+
+			printf '%s, QT_DIR: "%s"\n' "${i}" "${QT_DIR}"
+
+			QT_DIR_IS_ABSOLUTE_PATH=`echo "${QT_DIR}" | grep -v '@loader_path' | grep -v '@executable_path'`
+			if [ -z "${QT_DIR_IS_ABSOLUTE_PATH}" ]; then
+				continue;
+			fi
+
+			shift 1
+			while [ $? = 0 ]; do
+				PLUGIN="${1}"
+				if [ -z "${PLUGIN}" ]; then
+					break;
+				fi
+
+				echo $CP "${QT_DIR}"/plugins/"${PLUGIN}" .
+				$CP "${QT_DIR}"/plugins/"${PLUGIN}" .
+				shift
+			done
+
+			# get rid of debug plugins:
+			find . -name '*_debug.*' -type f -print | while read i; do
+				echo rm -f "${i}"
+				rm -f "${i}"
+			done
+
+			unset QT_DIR
+			break;
 		done
 	quiet_popd
 }
@@ -312,7 +332,6 @@ resolve_library()
 
 	for i in \
 		"/Developer/x86_64" \
-		"/Developer/qt" \
 		"/Library/Frameworks" \
 		; do
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
