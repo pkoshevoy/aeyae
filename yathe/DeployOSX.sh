@@ -315,7 +315,7 @@ resolve_library()
 		"/Developer/qt" \
 		"/Library/Frameworks" \
 		; do
-		find "${i}" -name "${NAME}" | while read j; do
+		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
 			DNAME=`dirname "${j}"`
 			DNAME=`(cd "${DNAME}"; pwd)`
 			BNAME=`basename "${j}"`
@@ -574,19 +574,19 @@ DeployAppBundle()
 		if [ $? != 0 ]; then exit 11; fi
 		echo
 	done
-	find Plug-ins -type f -print | grep MacOS | while read i; do
+	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
 		echo checking "${i}"
 		DeployFile "${BASE}" "${i}"
 		if [ $? != 0 ]; then exit 11; fi
 		echo
 	done
-	find Plug-ins -type f -path '*/Versions/*/*' -print | grep -v Resources | while read i; do
+	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		echo checking "${i}"
 		DeployFile "${BASE}" "${i}"
 		if [ $? != 0 ]; then exit 11; fi
 		echo
 	done
-	find Frameworks -type f -path '*/Versions/*/*' -print | grep -v Resources | while read i; do
+	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		echo checking "${i}"
 		DeployFile "${BASE}" "${i}"
 		if [ $? != 0 ]; then exit 11; fi
