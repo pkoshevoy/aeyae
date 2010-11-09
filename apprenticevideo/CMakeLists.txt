@@ -292,7 +292,8 @@ if (APPLE)
 #
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
 	COMMAND ${THE_SRC_DIR}/DeployOSX.sh 
-	ARGS ${PROGNAME}.app
+	ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+	COMMENT "pull in external dependencies"
 	)
 endif (APPLE)
 
