@@ -47,8 +47,8 @@ the_tensurf_t::regenerate()
   knot_vector_v_.init(1, rows);
   if (!knot_vector_v_.update(rows)) return false;
   
-  size_t quads_u = std::min<size_t>(rows * 10, 100);
-  size_t quads_v = std::min<size_t>(cols * 10, 100);
+  size_t quads_v = std::min<size_t>(rows * 10, 100);
+  size_t quads_u = std::min<size_t>(cols * 10, 100);
   
   // calculate the mesh:
   {
