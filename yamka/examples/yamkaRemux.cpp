@@ -188,7 +188,7 @@ main(int argc, char ** argv)
       
       credits += "remuxed with ";
       credits += creditsYamka;
-      segInfo.payload_.muxingApp_.payload_.set(credits);
+      muxingApp.payload_.set(credits);
     }
   }
   
