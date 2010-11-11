@@ -124,13 +124,8 @@ main(int argc, char ** argv)
     std::list<Segment::TTags> & tagsList = segment.payload_.tags_;
     std::list<Segment::TCluster> & clusters = segment.payload_.clusters_;
     
-    // add attachment to the seekhead index:
-    if (segment.payload_.seekHeads_.empty())
-    {
-      // this should't happen, but if the SeekHead element
-      // is missing -- add it:
-      segment.payload_.seekHeads_.push_back(Segment::TSeekHead());
-    }
+    segment.payload_.seekHeads_.clear();
+    segment.payload_.seekHeads_.push_back(Segment::TSeekHead());
     
     Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
     seekHead.payload_.seek_.clear();
@@ -180,6 +175,9 @@ main(int argc, char ** argv)
       }
     }
   }
+  
+  // optimize the document:
+  doc.optimize(tmp);
   
   // save the document:
   dst.file_.setSize(0);
