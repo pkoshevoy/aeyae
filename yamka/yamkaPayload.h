@@ -162,6 +162,9 @@ namespace Yamka
     const TData & get() const
     { return data_; }
     
+    const TData & getDefault() const
+    { return dataDefault_; }
+    
   protected:
     uint64 size_;
     
