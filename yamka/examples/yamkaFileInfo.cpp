@@ -16,6 +16,8 @@
 
 // system includes:
 #include <iostream>
+#include <string.h>
+#include <string>
 
 // namespace access:
 using namespace Yamka;
@@ -27,7 +29,8 @@ static void
 usage(char ** argv, const char * message = NULL)
 {
   std::cerr << "USAGE: " << argv[0]
-            << " source.mkv"
+            << " -i source.mkv"
+            << " [-q]"
             << std::endl;
   
   if (message != NULL)
@@ -43,7 +46,14 @@ usage(char ** argv, const char * message = NULL)
 // 
 struct Examiner : public IElementCrawler
 {
-  Examiner():
+  enum Verbosity
+  {
+    kHideFileOffsets = 0,
+    kShowFileOffsets = 1
+  };
+  
+  Examiner(Verbosity verbosity):
+    verbosity_(verbosity),
     indentation_(0)
   {}
   
@@ -55,15 +65,21 @@ struct Examiner : public IElementCrawler
     {
       std::cout
         << indent(indentation_)
-        << std::setw(8) << uintEncode(elt.getId())
-        << " @ "
-        << std::hex << "0x"
-        << storageReceipt->position()
-        << std::dec
-        << " -- " << elt.getName();
+        << std::setw(8) << uintEncode(elt.getId());
+
+      if (verbosity_ == kShowFileOffsets)
+      {
+        std::cout
+          << " @ "
+          << std::hex << "0x"
+          << storageReceipt->position()
+          << std::dec;
+      }
+      
+      std::cout << " -- " << elt.getName();
       
       IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
-      if (payloadReceipt)
+      if (payloadReceipt && verbosity_ == kShowFileOffsets)
       {
         std::cout << ", payload "
                   << payloadReceipt->numBytes()
@@ -137,11 +153,15 @@ struct Examiner : public IElementCrawler
       }
       else if (vEltPos)
       {
-        std::cout
-          << "element position "
-          << std::hex << "0x"
-          << vEltPos->position()
-          << std::dec;
+        std::cout << "element position";
+
+        if (verbosity_ == kShowFileOffsets)
+        {
+          std::cout
+            << std::hex << " 0x"
+            << vEltPos->position()
+            << std::dec;
+        }
         
         const IElement * elt = vEltPos->getElt();
         if (!elt)
@@ -154,11 +174,16 @@ struct Examiner : public IElementCrawler
           std::cout
             << ", resolved to "
             << elt->getName()
-            << "(" << uintEncode(elt->getId()) << ")"
-            << " @ "
-            << std::hex << "0x"
-            << storageReceipt->position()
-            << std::dec;
+            << "(" << uintEncode(elt->getId()) << ")";
+
+          if (verbosity_ == kShowFileOffsets)
+          {
+            std::cout
+              << " @ "
+              << std::hex << "0x"
+              << storageReceipt->position()
+              << std::dec;
+          }
         }
       }
       else
@@ -173,6 +198,7 @@ struct Examiner : public IElementCrawler
     return false;
   }
   
+  Verbosity verbosity_;
   unsigned int indentation_;
 };
 
@@ -183,16 +209,27 @@ struct Examiner : public IElementCrawler
 int
 main(int argc, char ** argv)
 {
-  if (argc < 2)
-  {
-    usage(argv, "you forgot to specify a file to examine");
-  }
-  else if (argc > 2)
-  {
-    usage(argv, "too many parameters specified");
-  }
+  Examiner::Verbosity verbosity = Examiner::kShowFileOffsets;
+  std::string srcPath;
   
-  std::string srcPath(argv[1]);
+  for (int i = 1; i < argc; i++)
+  {
+    if (strcmp(argv[i], "-i") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "could not parse -i parameter");
+      i++;
+      srcPath.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-q") == 0)
+    {
+      verbosity = Examiner::kHideFileOffsets;
+    }
+    else
+    {
+      usage(argv, (std::string("unknown option: ") +
+                   std::string(argv[i])).c_str());
+    }
+  }
   
   FileStorage src(srcPath, File::kReadOnly);
   if (!src.file_.isOpen())
@@ -210,7 +247,7 @@ main(int argc, char ** argv)
     usage(argv, (std::string("source file has no matroska segments").c_str()));
   }
 
-  Examiner examiner;
+  Examiner examiner(verbosity);
   doc.eval(examiner);
   
   // close open file handles:
