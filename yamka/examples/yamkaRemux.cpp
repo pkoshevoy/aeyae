@@ -174,6 +174,22 @@ main(int argc, char ** argv)
 	seekHead.payload_.indexThis(&segment, &cluster, tmp);
       }
     }
+    
+    // update muxer credits if necessary:
+    SegInfo::TMuxingApp & muxingApp = segInfo.payload_.muxingApp_;
+    std::string credits = muxingApp.payload_.get();
+    std::string creditsYamka = muxingApp.payload_.getDefault();
+    if (credits.find(creditsYamka) == std::string::npos)
+    {
+      if (!credits.empty())
+      {
+        credits += ", ";
+      }
+      
+      credits += "remuxed with ";
+      credits += creditsYamka;
+      segInfo.payload_.muxingApp_.payload_.set(credits);
+    }
   }
   
   // optimize the document:
