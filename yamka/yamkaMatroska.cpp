@@ -3944,6 +3944,10 @@ namespace Yamka
   // 
   struct Optimizer : public IElementCrawler
   {
+    Optimizer(IStorage & storageForTempData):
+      storageForTempData_(storageForTempData)
+    {}
+    
     // helper:
     template <typename block_t>
     void
@@ -3961,8 +3965,7 @@ namespace Yamka
       
       if (sizeAfter < sizeBefore)
       {
-        block.payload_.receipt_->save(blockBytes);
-        block.payload_.receipt_->setNumBytes(blockBytes.size());
+        block.payload_.set(blockBytes, storageForTempData_);
       }
       else if (sizeAfter > sizeBefore)
       {
@@ -4015,16 +4018,19 @@ namespace Yamka
       bool done = payload.eval(*this);
       return done;
     }
+    
+    // temp storage for blocks with optimized lacing:
+    IStorage & storageForTempData_;
   };
   
   //----------------------------------------------------------------
   // MatroskaDoc::optimize
   // 
   void
-  MatroskaDoc::optimize()
+  MatroskaDoc::optimize(IStorage & storageForTempData)
   {
     // doc.setCrc32(false);
-    Optimizer optimizer;
+    Optimizer optimizer(storageForTempData);
     eval(optimizer);
   }
   

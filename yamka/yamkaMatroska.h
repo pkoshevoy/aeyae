@@ -301,7 +301,7 @@ namespace Yamka
     TypedefYamkaElt(VUInt, 0x88, "FlagDefault") TFlagDefault;
     TFlagDefault flagDefault_;
     
-    TypedefYamkaElt(VUInt, 0x55AA, "FlagForces") TFlagForced;
+    TypedefYamkaElt(VUInt, 0x55AA, "FlagForced") TFlagForced;
     TFlagForced flagForced_;
     
     TypedefYamkaElt(VUInt, 0x9C, "FlagLacing") TFlagLacing;
@@ -998,8 +998,8 @@ namespace Yamka
     // enable saving CRC-32 checksums for level-1 elements:
     void setCrc32(bool enableCrc32);
     
-    // remove all optional elements:
-    void optimize();
+    // remove all optional elements, optimize lacing:
+    void optimize(IStorage & storageForTempData);
     
     TypedefYamkaElt(Segment, 0x18538067, "Segment") TSegment;
     std::list<TSegment> segments_;
