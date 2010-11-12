@@ -668,9 +668,10 @@ namespace Yamka
     //----------------------------------------------------------------
     // More::More
     // 
-    More::More()
+    More::More(unsigned int & indentation):
+      indentation_(indentation)
     {
-      ++depth_;
+      ++indentation_;
     }
     
     //----------------------------------------------------------------
@@ -678,7 +679,7 @@ namespace Yamka
     // 
     More::~More()
     {
-      --depth_;
+      --indentation_;
     };
 
     //----------------------------------------------------------------

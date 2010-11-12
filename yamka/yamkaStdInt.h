@@ -218,8 +218,10 @@ namespace Yamka
   {
     struct More
     {
-      More();
+      More(unsigned int & indentation);
       ~More();
+      
+      unsigned int & indentation_;
     };
     
     extern unsigned int depth_;
