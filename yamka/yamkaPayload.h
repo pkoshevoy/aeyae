@@ -58,7 +58,9 @@ namespace Yamka
     
     // attempt to load the payload, return number of bytes read successfully:
     virtual uint64
-    load(FileStorage & storage, uint64 bytesToRead) = 0;
+    load(FileStorage & storage,
+         uint64 bytesToRead,
+         IDelegateLoad * delegateLoader = NULL) = 0;
     
     // return true if this payload is a composite of one or more
     // EBML elements (such as an EBML Master Element payload)
@@ -113,7 +115,8 @@ namespace Yamka
   Yamka::uint64 calcSize() const;                                       \
   Yamka::IStorage::IReceiptPtr save(Yamka::IStorage & storage) const;   \
   Yamka::uint64 load(Yamka::FileStorage & storage,                      \
-                     Yamka::uint64 bytesToRead)
+                     Yamka::uint64 bytesToRead,                         \
+                     Yamka::IDelegateLoad * loader = NULL)
   
   
   //----------------------------------------------------------------
@@ -346,7 +349,7 @@ namespace Yamka
     
     // attempt to load the payload, return number of bytes read successfully:
     uint64
-    load(FileStorage & storage, uint64 bytesToRead)
+    load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
     {
       if (bytesToRead != fixedSize)
       {
@@ -405,6 +408,9 @@ namespace Yamka
     
     // accessor to the reference element storage receipt position:
     uint64 position() const;
+
+    // verify that an element position reference has in fact been loaded:
+    bool hasPosition() const;
     
     // Rewrite reference element storage receipt position.
     // 

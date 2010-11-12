@@ -37,7 +37,26 @@ namespace Yamka
     kIdCrc32 = 0xBF,
     kIdVoid = 0xEC
   };
-
+  
+  //----------------------------------------------------------------
+  // IDelegateLoad
+  // 
+  // NOTE: the delegate doesn't have to load the entire payload,
+  // or even any part of it.
+  // 
+  // NOTE: The delegate should return the number of bytes it consumed
+  // 
+  struct IDelegateLoad
+  {
+    virtual ~IDelegateLoad() {}
+    
+    // return number of payload bytes consumed:
+    virtual uint64 load(FileStorage & storage,
+                        uint64 payloadBytesToRead,
+                        uint64 eltId,
+                        IPayload & payload) = 0;
+  };
+  
   //----------------------------------------------------------------
   // IElement
   // 
@@ -87,7 +106,9 @@ namespace Yamka
     // NOTE: the file position is not advanced unless some of the
     // element is loaded successfully:
     virtual uint64
-    load(FileStorage & storage, uint64 storageSize);
+    load(FileStorage & storage,
+         uint64 storageSize,
+         IDelegateLoad * loader = NULL);
     
     // accessor to this elements storage receipt.
     // 

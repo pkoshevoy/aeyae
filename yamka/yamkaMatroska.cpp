@@ -72,13 +72,15 @@ namespace Yamka
   // ChapTranslate::load
   // 
   uint64
-  ChapTranslate::load(FileStorage & storage, uint64 bytesToRead)
+  ChapTranslate::load(FileStorage & storage,
+                      uint64 bytesToRead,
+                      IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= editionUID_.load(storage, bytesToRead);
-    bytesToRead -= chapTransCodec_.load(storage, bytesToRead);
-    bytesToRead -= chapTransID_.load(storage, bytesToRead);
+    bytesToRead -= editionUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= chapTransCodec_.load(storage, bytesToRead, loader);
+    bytesToRead -= chapTransID_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -199,24 +201,26 @@ namespace Yamka
   // SegInfo::load
   // 
   uint64
-  SegInfo::load(FileStorage & storage, uint64 bytesToRead)
+  SegInfo::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= segUID_.load(storage, bytesToRead);
-    bytesToRead -= segFilename_.load(storage, bytesToRead);
-    bytesToRead -= prevUID_.load(storage, bytesToRead);
-    bytesToRead -= prevFilename_.load(storage, bytesToRead);
-    bytesToRead -= nextUID_.load(storage, bytesToRead);
-    bytesToRead -= nextFilename_.load(storage, bytesToRead);
-    bytesToRead -= familyUID_.load(storage, bytesToRead);
-    bytesToRead -= chapTranslate_.load(storage, bytesToRead);
-    bytesToRead -= timecodeScale_.load(storage, bytesToRead);
-    bytesToRead -= duration_.load(storage, bytesToRead);
-    bytesToRead -= date_.load(storage, bytesToRead);
-    bytesToRead -= title_.load(storage, bytesToRead);
-    bytesToRead -= muxingApp_.load(storage, bytesToRead);
-    bytesToRead -= writingApp_.load(storage, bytesToRead);
+    bytesToRead -= segUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= segFilename_.load(storage, bytesToRead, loader);
+    bytesToRead -= prevUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= prevFilename_.load(storage, bytesToRead, loader);
+    bytesToRead -= nextUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= nextFilename_.load(storage, bytesToRead, loader);
+    bytesToRead -= familyUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= chapTranslate_.load(storage, bytesToRead, loader);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead, loader);
+    bytesToRead -= duration_.load(storage, bytesToRead, loader);
+    bytesToRead -= date_.load(storage, bytesToRead, loader);
+    bytesToRead -= title_.load(storage, bytesToRead, loader);
+    bytesToRead -= muxingApp_.load(storage, bytesToRead, loader);
+    bytesToRead -= writingApp_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -282,13 +286,15 @@ namespace Yamka
   // TrackTranslate::load
   // 
   uint64
-  TrackTranslate::load(FileStorage & storage, uint64 bytesToRead)
+  TrackTranslate::load(FileStorage & storage,
+                       uint64 bytesToRead,
+                       IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= editionUID_.load(storage, bytesToRead);
-    bytesToRead -= trackTransCodec_.load(storage, bytesToRead);
-    bytesToRead -= trackTransID_.load(storage, bytesToRead);
+    bytesToRead -= editionUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackTransCodec_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackTransID_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -417,25 +423,27 @@ namespace Yamka
   // Video::load
   // 
   uint64
-  Video::load(FileStorage & storage, uint64 bytesToRead)
+  Video::load(FileStorage & storage,
+              uint64 bytesToRead,
+              IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= flagInterlaced_.load(storage, bytesToRead);
-    bytesToRead -= stereoMode_.load(storage, bytesToRead);
-    bytesToRead -= pixelWidth_.load(storage, bytesToRead);
-    bytesToRead -= pixelHeight_.load(storage, bytesToRead);
-    bytesToRead -= pixelCropBottom_.load(storage, bytesToRead);
-    bytesToRead -= pixelCropTop_.load(storage, bytesToRead);
-    bytesToRead -= pixelCropLeft_.load(storage, bytesToRead);
-    bytesToRead -= pixelCropRight_.load(storage, bytesToRead);
-    bytesToRead -= displayWidth_.load(storage, bytesToRead);
-    bytesToRead -= displayHeight_.load(storage, bytesToRead);
-    bytesToRead -= displayUnits_.load(storage, bytesToRead);
-    bytesToRead -= aspectRatioType_.load(storage, bytesToRead);
-    bytesToRead -= colorSpace_.load(storage, bytesToRead);
-    bytesToRead -= gammaValue_.load(storage, bytesToRead);
-    bytesToRead -= frameRate_.load(storage, bytesToRead);
+    bytesToRead -= flagInterlaced_.load(storage, bytesToRead, loader);
+    bytesToRead -= stereoMode_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelWidth_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelHeight_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelCropBottom_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelCropTop_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelCropLeft_.load(storage, bytesToRead, loader);
+    bytesToRead -= pixelCropRight_.load(storage, bytesToRead, loader);
+    bytesToRead -= displayWidth_.load(storage, bytesToRead, loader);
+    bytesToRead -= displayHeight_.load(storage, bytesToRead, loader);
+    bytesToRead -= displayUnits_.load(storage, bytesToRead, loader);
+    bytesToRead -= aspectRatioType_.load(storage, bytesToRead, loader);
+    bytesToRead -= colorSpace_.load(storage, bytesToRead, loader);
+    bytesToRead -= gammaValue_.load(storage, bytesToRead, loader);
+    bytesToRead -= frameRate_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -518,15 +526,17 @@ namespace Yamka
   // Audio::load
   // 
   uint64
-  Audio::load(FileStorage & storage, uint64 bytesToRead)
+  Audio::load(FileStorage & storage,
+              uint64 bytesToRead,
+              IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= sampFreq_.load(storage, bytesToRead);
-    bytesToRead -= sampFreqOut_.load(storage, bytesToRead);
-    bytesToRead -= channels_.load(storage, bytesToRead);
-    bytesToRead -= channelPositions_.load(storage, bytesToRead);
-    bytesToRead -= bitDepth_.load(storage, bytesToRead);
+    bytesToRead -= sampFreq_.load(storage, bytesToRead, loader);
+    bytesToRead -= sampFreqOut_.load(storage, bytesToRead, loader);
+    bytesToRead -= channels_.load(storage, bytesToRead, loader);
+    bytesToRead -= channelPositions_.load(storage, bytesToRead, loader);
+    bytesToRead -= bitDepth_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -596,12 +606,14 @@ namespace Yamka
   // ContentCompr::load
   // 
   uint64
-  ContentCompr::load(FileStorage & storage, uint64 bytesToRead)
+  ContentCompr::load(FileStorage & storage,
+                     uint64 bytesToRead,
+                     IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= algo_.load(storage, bytesToRead);
-    bytesToRead -= settings_.load(storage, bytesToRead);
+    bytesToRead -= algo_.load(storage, bytesToRead, loader);
+    bytesToRead -= settings_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -679,16 +691,18 @@ namespace Yamka
   // ContentEncrypt::load
   // 
   uint64
-  ContentEncrypt::load(FileStorage & storage, uint64 bytesToRead)
+  ContentEncrypt::load(FileStorage & storage,
+                       uint64 bytesToRead,
+                       IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= encAlgo_.load(storage, bytesToRead);
-    bytesToRead -= encKeyID_.load(storage, bytesToRead);
-    bytesToRead -= signature_.load(storage, bytesToRead);
-    bytesToRead -= sigKeyID_.load(storage, bytesToRead);
-    bytesToRead -= sigAlgo_.load(storage, bytesToRead);
-    bytesToRead -= sigHashAlgo_.load(storage, bytesToRead);
+    bytesToRead -= encAlgo_.load(storage, bytesToRead, loader);
+    bytesToRead -= encKeyID_.load(storage, bytesToRead, loader);
+    bytesToRead -= signature_.load(storage, bytesToRead, loader);
+    bytesToRead -= sigKeyID_.load(storage, bytesToRead, loader);
+    bytesToRead -= sigAlgo_.load(storage, bytesToRead, loader);
+    bytesToRead -= sigHashAlgo_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -765,15 +779,17 @@ namespace Yamka
   // ContentEnc::load
   // 
   uint64
-  ContentEnc::load(FileStorage & storage, uint64 bytesToRead)
+  ContentEnc::load(FileStorage & storage,
+                   uint64 bytesToRead,
+                   IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= order_.load(storage, bytesToRead);
-    bytesToRead -= scope_.load(storage, bytesToRead);
-    bytesToRead -= type_.load(storage, bytesToRead);
-    bytesToRead -= compression_.load(storage, bytesToRead);
-    bytesToRead -= encryption_.load(storage, bytesToRead);
+    bytesToRead -= order_.load(storage, bytesToRead, loader);
+    bytesToRead -= scope_.load(storage, bytesToRead, loader);
+    bytesToRead -= type_.load(storage, bytesToRead, loader);
+    bytesToRead -= compression_.load(storage, bytesToRead, loader);
+    bytesToRead -= encryption_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -827,11 +843,13 @@ namespace Yamka
   // 
   uint64
   ContentEncodings::
-  load(FileStorage & storage, uint64 bytesToRead)
+  load(FileStorage & storage,
+       uint64 bytesToRead,
+       IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(encodings_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(encodings_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -984,38 +1002,40 @@ namespace Yamka
   // Track::load
   // 
   uint64
-  Track::load(FileStorage & storage, uint64 bytesToRead)
+  Track::load(FileStorage & storage,
+              uint64 bytesToRead,
+              IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= trackNumber_.load(storage, bytesToRead);
-    bytesToRead -= trackUID_.load(storage, bytesToRead);
-    bytesToRead -= trackType_.load(storage, bytesToRead);
-    bytesToRead -= flagEnabled_.load(storage, bytesToRead);
-    bytesToRead -= flagDefault_.load(storage, bytesToRead);
-    bytesToRead -= flagForced_.load(storage, bytesToRead);
-    bytesToRead -= flagLacing_.load(storage, bytesToRead);
-    bytesToRead -= minCache_.load(storage, bytesToRead);
-    bytesToRead -= maxCache_.load(storage, bytesToRead);
-    bytesToRead -= frameDuration_.load(storage, bytesToRead);
-    bytesToRead -= timecodeScale_.load(storage, bytesToRead);
-    bytesToRead -= trackOffset_.load(storage, bytesToRead);
-    bytesToRead -= maxBlockAddID_.load(storage, bytesToRead);
-    bytesToRead -= name_.load(storage, bytesToRead);
-    bytesToRead -= language_.load(storage, bytesToRead);
-    bytesToRead -= codecID_.load(storage, bytesToRead);
-    bytesToRead -= codecPrivate_.load(storage, bytesToRead);
-    bytesToRead -= codecName_.load(storage, bytesToRead);
-    bytesToRead -= attachmentLink_.load(storage, bytesToRead);
-    bytesToRead -= codecSettings_.load(storage, bytesToRead);
-    bytesToRead -= codecInfoURL_.load(storage, bytesToRead);
-    bytesToRead -= codecDownloadURL_.load(storage, bytesToRead);
-    bytesToRead -= codecDecodeAll_.load(storage, bytesToRead);
-    bytesToRead -= trackOverlay_.load(storage, bytesToRead);
-    bytesToRead -= trackTranslate_.load(storage, bytesToRead);
-    bytesToRead -= video_.load(storage, bytesToRead);
-    bytesToRead -= audio_.load(storage, bytesToRead);
-    bytesToRead -= contentEncs_.load(storage, bytesToRead);
+    bytesToRead -= trackNumber_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackType_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagEnabled_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagForced_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagLacing_.load(storage, bytesToRead, loader);
+    bytesToRead -= minCache_.load(storage, bytesToRead, loader);
+    bytesToRead -= maxCache_.load(storage, bytesToRead, loader);
+    bytesToRead -= frameDuration_.load(storage, bytesToRead, loader);
+    bytesToRead -= timecodeScale_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackOffset_.load(storage, bytesToRead, loader);
+    bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, loader);
+    bytesToRead -= name_.load(storage, bytesToRead, loader);
+    bytesToRead -= language_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecID_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecPrivate_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecName_.load(storage, bytesToRead, loader);
+    bytesToRead -= attachmentLink_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecSettings_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecInfoURL_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackOverlay_.load(storage, bytesToRead, loader);
+    bytesToRead -= trackTranslate_.load(storage, bytesToRead, loader);
+    bytesToRead -= video_.load(storage, bytesToRead, loader);
+    bytesToRead -= audio_.load(storage, bytesToRead, loader);
+    bytesToRead -= contentEncs_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1068,11 +1088,13 @@ namespace Yamka
   // Tracks::load
   // 
   uint64
-  Tracks::load(FileStorage & storage, uint64 bytesToRead)
+  Tracks::load(FileStorage & storage,
+               uint64 bytesToRead,
+               IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1148,14 +1170,16 @@ namespace Yamka
   // CueRef::load
   // 
   uint64
-  CueRef::load(FileStorage & storage, uint64 bytesToRead)
+  CueRef::load(FileStorage & storage,
+               uint64 bytesToRead,
+               IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead);
-    bytesToRead -= cluster_.load(storage, bytesToRead);
-    bytesToRead -= block_.load(storage, bytesToRead);
-    bytesToRead -= codecState_.load(storage, bytesToRead);
+    bytesToRead -= time_.load(storage, bytesToRead, loader);
+    bytesToRead -= cluster_.load(storage, bytesToRead, loader);
+    bytesToRead -= block_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecState_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1231,15 +1255,17 @@ namespace Yamka
   // CueTrkPos::load
   // 
   uint64
-  CueTrkPos::load(FileStorage & storage, uint64 bytesToRead)
+  CueTrkPos::load(FileStorage & storage,
+                  uint64 bytesToRead,
+                  IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= track_.load(storage, bytesToRead);
-    bytesToRead -= cluster_.load(storage, bytesToRead);
-    bytesToRead -= block_.load(storage, bytesToRead);
-    bytesToRead -= codecState_.load(storage, bytesToRead);
-    bytesToRead -= ref_.load(storage, bytesToRead);
+    bytesToRead -= track_.load(storage, bytesToRead, loader);
+    bytesToRead -= cluster_.load(storage, bytesToRead, loader);
+    bytesToRead -= block_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecState_.load(storage, bytesToRead, loader);
+    bytesToRead -= ref_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1305,12 +1331,14 @@ namespace Yamka
   // CuePoint::load
   // 
   uint64
-  CuePoint::load(FileStorage & storage, uint64 bytesToRead)
+  CuePoint::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead);
-    bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead);
+    bytesToRead -= time_.load(storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(trkPosns_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1363,11 +1391,13 @@ namespace Yamka
   // Cues::load
   // 
   uint64
-  Cues::load(FileStorage & storage, uint64 bytesToRead)
+  Cues::load(FileStorage & storage,
+             uint64 bytesToRead,
+             IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(points_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(points_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1425,12 +1455,14 @@ namespace Yamka
   // SeekEntry::load
   // 
   uint64
-  SeekEntry::load(FileStorage & storage, uint64 bytesToRead)
+  SeekEntry::load(FileStorage & storage,
+                  uint64 bytesToRead,
+                  IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= id_.load(storage, bytesToRead);
-    bytesToRead -= position_.load(storage, bytesToRead);
+    bytesToRead -= id_.load(storage, bytesToRead, loader);
+    bytesToRead -= position_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1483,11 +1515,13 @@ namespace Yamka
   // SeekHead::load
   // 
   uint64
-  SeekHead::load(FileStorage & storage, uint64 bytesToRead)
+  SeekHead::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(seek_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(seek_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1592,16 +1626,18 @@ namespace Yamka
   // AttdFile::load
   // 
   uint64
-  AttdFile::load(FileStorage & storage, uint64 bytesToRead)
+  AttdFile::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= description_.load(storage, bytesToRead);
-    bytesToRead -= filename_.load(storage, bytesToRead);
-    bytesToRead -= mimeType_.load(storage, bytesToRead);
-    bytesToRead -= data_.load(storage, bytesToRead);
-    bytesToRead -= fileUID_.load(storage, bytesToRead);
-    bytesToRead -= referral_.load(storage, bytesToRead);
+    bytesToRead -= description_.load(storage, bytesToRead, loader);
+    bytesToRead -= filename_.load(storage, bytesToRead, loader);
+    bytesToRead -= mimeType_.load(storage, bytesToRead, loader);
+    bytesToRead -= data_.load(storage, bytesToRead, loader);
+    bytesToRead -= fileUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= referral_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1654,11 +1690,13 @@ namespace Yamka
   // Attachments::load
   // 
   uint64
-  Attachments::load(FileStorage & storage, uint64 bytesToRead)
+  Attachments::load(FileStorage & storage,
+                    uint64 bytesToRead,
+                    IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(files_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(files_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1711,11 +1749,13 @@ namespace Yamka
   // ChapTrk::load
   // 
   uint64
-  ChapTrk::load(FileStorage & storage, uint64 bytesToRead)
+  ChapTrk::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1784,13 +1824,15 @@ namespace Yamka
   // ChapDisp::load
   // 
   uint64
-  ChapDisp::load(FileStorage & storage, uint64 bytesToRead)
+  ChapDisp::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= string_.load(storage, bytesToRead);
-    bytesToRead -= language_.load(storage, bytesToRead);
-    bytesToRead -= country_.load(storage, bytesToRead);
+    bytesToRead -= string_.load(storage, bytesToRead, loader);
+    bytesToRead -= language_.load(storage, bytesToRead, loader);
+    bytesToRead -= country_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1848,12 +1890,14 @@ namespace Yamka
   // ChapProcCmd::load
   // 
   uint64
-  ChapProcCmd::load(FileStorage & storage, uint64 bytesToRead)
+  ChapProcCmd::load(FileStorage & storage,
+                    uint64 bytesToRead,
+                    IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= time_.load(storage, bytesToRead);
-    bytesToRead -= data_.load(storage, bytesToRead);
+    bytesToRead -= time_.load(storage, bytesToRead, loader);
+    bytesToRead -= data_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -1915,14 +1959,16 @@ namespace Yamka
   // ChapProc::load
   // 
   uint64
-  ChapProc::load(FileStorage & storage, uint64 bytesToRead)
+  ChapProc::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= codecID_.load(storage, bytesToRead);
-    bytesToRead -= procPrivate_.load(storage, bytesToRead);
+    bytesToRead -= codecID_.load(storage, bytesToRead, loader);
+    bytesToRead -= procPrivate_.load(storage, bytesToRead, loader);
       
-    bytesToRead -= eltsLoad(cmds_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(cmds_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2022,23 +2068,25 @@ namespace Yamka
   // ChapAtom::load
   // 
   uint64
-  ChapAtom::load(FileStorage & storage, uint64 bytesToRead)
+  ChapAtom::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= UID_.load(storage, bytesToRead);
-    bytesToRead -= timeStart_.load(storage, bytesToRead);
-    bytesToRead -= timeEnd_.load(storage, bytesToRead);
-    bytesToRead -= hidden_.load(storage, bytesToRead);
-    bytesToRead -= enabled_.load(storage, bytesToRead);
-    bytesToRead -= segUID_.load(storage, bytesToRead);
-    bytesToRead -= segEditionUID_.load(storage, bytesToRead);
-    bytesToRead -= physEquiv_.load(storage, bytesToRead);
-    bytesToRead -= tracks_.load(storage, bytesToRead);
+    bytesToRead -= UID_.load(storage, bytesToRead, loader);
+    bytesToRead -= timeStart_.load(storage, bytesToRead, loader);
+    bytesToRead -= timeEnd_.load(storage, bytesToRead, loader);
+    bytesToRead -= hidden_.load(storage, bytesToRead, loader);
+    bytesToRead -= enabled_.load(storage, bytesToRead, loader);
+    bytesToRead -= segUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= segEditionUID_.load(storage, bytesToRead, loader);
+    bytesToRead -= physEquiv_.load(storage, bytesToRead, loader);
+    bytesToRead -= tracks_.load(storage, bytesToRead, loader);
       
-    bytesToRead -= eltsLoad(display_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(process_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(subChapAtom_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(display_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(process_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(subChapAtom_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2114,16 +2162,18 @@ namespace Yamka
   // Edition::load
   // 
   uint64
-  Edition::load(FileStorage & storage, uint64 bytesToRead)
+  Edition::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= UID_.load(storage, bytesToRead);
-    bytesToRead -= flagHidden_.load(storage, bytesToRead);
-    bytesToRead -= flagDefault_.load(storage, bytesToRead);
-    bytesToRead -= flagOrdered_.load(storage, bytesToRead);
+    bytesToRead -= UID_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagHidden_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagDefault_.load(storage, bytesToRead, loader);
+    bytesToRead -= flagOrdered_.load(storage, bytesToRead, loader);
       
-    bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(chapAtoms_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2176,11 +2226,13 @@ namespace Yamka
   // Chapters::load
   // 
   uint64
-  Chapters::load(FileStorage & storage, uint64 bytesToRead)
+  Chapters::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(editions_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(editions_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2267,17 +2319,19 @@ namespace Yamka
   // TagTargets::load
   // 
   uint64
-  TagTargets::load(FileStorage & storage, uint64 bytesToRead)
+  TagTargets::load(FileStorage & storage,
+                   uint64 bytesToRead,
+                   IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= typeValue_.load(storage, bytesToRead);
-    bytesToRead -= type_.load(storage, bytesToRead);
+    bytesToRead -= typeValue_.load(storage, bytesToRead, loader);
+    bytesToRead -= type_.load(storage, bytesToRead, loader);
       
-    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(editionUIDs_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(chapterUIDs_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(attachmentUIDs_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2353,15 +2407,17 @@ namespace Yamka
   // SimpleTag::load
   // 
   uint64
-  SimpleTag::load(FileStorage & storage, uint64 bytesToRead)
+  SimpleTag::load(FileStorage & storage,
+                  uint64 bytesToRead,
+                  IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= name_.load(storage, bytesToRead);
-    bytesToRead -= lang_.load(storage, bytesToRead);
-    bytesToRead -= default_.load(storage, bytesToRead);
-    bytesToRead -= string_.load(storage, bytesToRead);
-    bytesToRead -= binary_.load(storage, bytesToRead);
+    bytesToRead -= name_.load(storage, bytesToRead, loader);
+    bytesToRead -= lang_.load(storage, bytesToRead, loader);
+    bytesToRead -= default_.load(storage, bytesToRead, loader);
+    bytesToRead -= string_.load(storage, bytesToRead, loader);
+    bytesToRead -= binary_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2419,12 +2475,14 @@ namespace Yamka
   // Tag::load
   // 
   uint64
-  Tag::load(FileStorage & storage, uint64 bytesToRead)
+  Tag::load(FileStorage & storage,
+            uint64 bytesToRead,
+            IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= targets_.load(storage, bytesToRead);
-    bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead);
+    bytesToRead -= targets_.load(storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(simpleTags_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2477,11 +2535,13 @@ namespace Yamka
   // Tags::load
   // 
   uint64
-  Tags::load(FileStorage & storage, uint64 bytesToRead)
+  Tags::load(FileStorage & storage,
+             uint64 bytesToRead,
+             IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tags_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2534,11 +2594,13 @@ namespace Yamka
   // SilentTracks::load
   // 
   uint64
-  SilentTracks::load(FileStorage & storage, uint64 bytesToRead)
+  SilentTracks::load(FileStorage & storage,
+                     uint64 bytesToRead,
+                     IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2604,12 +2666,14 @@ namespace Yamka
   // BlockMore::load
   // 
   uint64
-  BlockMore::load(FileStorage & storage, uint64 bytesToRead)
+  BlockMore::load(FileStorage & storage,
+                  uint64 bytesToRead,
+                  IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= blockAddID_.load(storage, bytesToRead);
-    bytesToRead -= blockAdditional_.load(storage, bytesToRead);
+    bytesToRead -= blockAddID_.load(storage, bytesToRead, loader);
+    bytesToRead -= blockAdditional_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2662,11 +2726,13 @@ namespace Yamka
   // BlockAdditions::load
   // 
   uint64
-  BlockAdditions::load(FileStorage & storage, uint64 bytesToRead)
+  BlockAdditions::load(FileStorage & storage,
+                       uint64 bytesToRead,
+                       IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= eltsLoad(more_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(more_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -2745,19 +2811,21 @@ namespace Yamka
   // BlockGroup::load
   // 
   uint64
-  BlockGroup::load(FileStorage & storage, uint64 bytesToRead)
+  BlockGroup::load(FileStorage & storage,
+                   uint64 bytesToRead,
+                   IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= duration_.load(storage, bytesToRead);
-    bytesToRead -= block_.load(storage, bytesToRead);
-    bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead);
-    bytesToRead -= additions_.load(storage, bytesToRead);
-    bytesToRead -= refPriority_.load(storage, bytesToRead);
-    bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead);
-    bytesToRead -= refVirtual_.load(storage, bytesToRead);
-    bytesToRead -= codecState_.load(storage, bytesToRead);
-    bytesToRead -= eltsLoad(slices_, storage, bytesToRead);
+    bytesToRead -= duration_.load(storage, bytesToRead, loader);
+    bytesToRead -= block_.load(storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(blockVirtual_, storage, bytesToRead, loader);
+    bytesToRead -= additions_.load(storage, bytesToRead, loader);
+    bytesToRead -= refPriority_.load(storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, loader);
+    bytesToRead -= refVirtual_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecState_.load(storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(slices_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3346,18 +3414,20 @@ namespace Yamka
   // Cluster::load
   // 
   uint64
-  Cluster::load(FileStorage & storage, uint64 bytesToRead)
+  Cluster::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= timecode_.load(storage, bytesToRead);
-    bytesToRead -= silent_.load(storage, bytesToRead);
-    bytesToRead -= position_.load(storage, bytesToRead);
-    bytesToRead -= prevSize_.load(storage, bytesToRead);
+    bytesToRead -= timecode_.load(storage, bytesToRead, loader);
+    bytesToRead -= silent_.load(storage, bytesToRead, loader);
+    bytesToRead -= position_.load(storage, bytesToRead, loader);
+    bytesToRead -= prevSize_.load(storage, bytesToRead, loader);
       
-    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3471,19 +3541,21 @@ namespace Yamka
   // Segment::load
   // 
   uint64
-  Segment::load(FileStorage & storage, uint64 bytesToRead)
+  Segment::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= info_.load(storage, bytesToRead);
-    bytesToRead -= tracks_.load(storage, bytesToRead);
-    bytesToRead -= chapters_.load(storage, bytesToRead);
-    bytesToRead -= cues_.load(storage, bytesToRead);
-    bytesToRead -= attachments_.load(storage, bytesToRead);
+    bytesToRead -= info_.load(storage, bytesToRead, loader);
+    bytesToRead -= tracks_.load(storage, bytesToRead, loader);
+    bytesToRead -= chapters_.load(storage, bytesToRead, loader);
+    bytesToRead -= cues_.load(storage, bytesToRead, loader);
+    bytesToRead -= attachments_.load(storage, bytesToRead, loader);
     
-    bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(tags_, storage, bytesToRead);
-    bytesToRead -= eltsLoad(clusters_, storage, bytesToRead);
+    bytesToRead -= eltsLoad(seekHeads_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(tags_, storage, bytesToRead, loader);
+    bytesToRead -= eltsLoad(clusters_, storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -3533,6 +3605,11 @@ namespace Yamka
         TSeekEntry & seek = *j;
         
         VEltPosition & eltReference = seek.payload_.position_.payload_;
+        if (!eltReference.hasPosition())
+        {
+          continue;
+        }
+        
         eltReference.setOrigin(origin);
         
         Bytes eltIdBytes;
@@ -3594,6 +3671,10 @@ namespace Yamka
       {
         TCueTrkPos & cueTrkPos = *j;
         VEltPosition & clusterRef = cueTrkPos.payload_.cluster_.payload_;
+        if (!clusterRef.hasPosition())
+        {
+          continue;
+        }
         
         uint64 relativePosition = clusterRef.position();
         uint64 absolutePosition = originPosition + relativePosition;
@@ -3855,9 +3936,11 @@ namespace Yamka
   // MatroskaDoc::load
   // 
   uint64
-  MatroskaDoc::load(FileStorage & storage, uint64 bytesToRead)
+  MatroskaDoc::load(FileStorage & storage,
+                    uint64 bytesToRead,
+                    IDelegateLoad * loader)
   {
-    uint64 bytesReadTotal = loadAndKeepReceipts(storage, bytesToRead);
+    uint64 bytesReadTotal = loadAndKeepReceipts(storage, bytesToRead, loader);
     
     // discard loaded storage receipts so they wouldn't screw up saving later:
     discardReceipts();
@@ -3869,10 +3952,12 @@ namespace Yamka
   // MatroskaDoc::loadAndKeepReceipts
   // 
   uint64
-  MatroskaDoc::loadAndKeepReceipts(FileStorage & storage, uint64 bytesToRead)
+  MatroskaDoc::loadAndKeepReceipts(FileStorage & storage,
+                                   uint64 bytesToRead,
+                                   IDelegateLoad * loader)
   {
     // let the base class load the EBML header:
-    uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead);
+    uint64 bytesReadTotal = EbmlDoc::load(storage, bytesToRead, loader);
     bytesToRead -= bytesReadTotal;
     
     // read Segments:
@@ -3880,7 +3965,7 @@ namespace Yamka
     {
       uint64 prevBytesToRead = bytesToRead;
       
-      bytesToRead -= eltsLoad(segments_, storage, bytesToRead);
+      bytesToRead -= eltsLoad(segments_, storage, bytesToRead, loader);
       
       uint64 bytesRead = prevBytesToRead - bytesToRead;
       bytesReadTotal += bytesRead;

@@ -972,7 +972,7 @@ namespace Yamka
       save(const Segment & segment, IStorage & storage) = 0;
     };
     
-    // set this if you would like to save this segment differently:
+    // set this if you would like to save this segment "your way":
     mutable boost::shared_ptr<IDelegateSave> delegateSave_;
   };
   
@@ -986,7 +986,9 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     // same as load, but doesn't discard element storage receipts:
-    uint64 loadAndKeepReceipts(FileStorage & storage, uint64 bytesToRead);
+    uint64 loadAndKeepReceipts(FileStorage & storage,
+                               uint64 bytesToRead,
+                               IDelegateLoad * loader = NULL);
     
     // discard element storage receipts:
     void discardReceipts();

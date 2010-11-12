@@ -93,7 +93,7 @@ namespace Yamka
   // VInt::load
   // 
   uint64
-  VInt::load(FileStorage & storage, uint64 bytesToRead)
+  VInt::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     if (!storage.load(bytes))
@@ -161,7 +161,7 @@ namespace Yamka
   // VUInt::load
   // 
   uint64
-  VUInt::load(FileStorage & storage, uint64 bytesToRead)
+  VUInt::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     if (!storage.load(bytes))
@@ -239,7 +239,7 @@ namespace Yamka
   // VFloat::load
   // 
   uint64
-  VFloat::load(FileStorage & storage, uint64 bytesToRead)
+  VFloat::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     if (!storage.load(bytes))
@@ -341,7 +341,7 @@ namespace Yamka
   // VDate::load
   // 
   uint64
-  VDate::load(FileStorage & storage, uint64 bytesToRead)
+  VDate::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     if (!storage.load(bytes))
@@ -400,7 +400,7 @@ namespace Yamka
   // VString::load
   // 
   uint64
-  VString::load(FileStorage & storage, uint64 bytesToRead)
+  VString::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     if (!storage.load(bytes))
@@ -521,7 +521,9 @@ namespace Yamka
   // VVoid::load
   // 
   uint64
-  VVoid::load(Yamka::FileStorage & storage, uint64 bytesToRead)
+  VVoid::load(Yamka::FileStorage & storage,
+              uint64 bytesToRead,
+              IDelegateLoad *)
   {
     // Void payload is ignored, just skip over it:
     if (storage.file_.seek(bytesToRead, File::kRelativeToCurrent))
@@ -674,7 +676,7 @@ namespace Yamka
   // VBinary::load
   // 
   uint64
-  VBinary::load(FileStorage & storage, uint64 bytesToRead)
+  VBinary::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
     Bytes bytes((std::size_t)bytesToRead);
     
@@ -806,7 +808,9 @@ namespace Yamka
   // VEltPosition::load
   // 
   uint64
-  VEltPosition::load(FileStorage & storage, uint64 bytesToRead)
+  VEltPosition::load(FileStorage & storage,
+                     uint64 bytesToRead,
+                     IDelegateLoad *)
   {
     VUInt data;
     uint64 bytesRead = data.load(storage, bytesToRead);
@@ -854,6 +858,15 @@ namespace Yamka
   VEltPosition::getElt() const
   {
     return elt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::hasPosition
+  // 
+  bool
+  VEltPosition::hasPosition() const
+  {
+    return pos_ < uintMax[maxSize_];
   }
   
   //----------------------------------------------------------------

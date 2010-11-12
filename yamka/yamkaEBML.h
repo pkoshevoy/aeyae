@@ -97,7 +97,10 @@ namespace Yamka
   // 
   template <typename elts_t>
   uint64
-  eltsLoad(elts_t & elts, FileStorage & storage, uint64 bytesToRead)
+  eltsLoad(elts_t & elts,
+           FileStorage & storage,
+           uint64 bytesToRead,
+           IDelegateLoad * loader)
   {
     typedef typename elts_t::value_type elt_t;
     
@@ -105,7 +108,7 @@ namespace Yamka
     while (bytesToRead)
     {
       elt_t elt;
-      uint64 eltSize = elt.load(storage, bytesToRead);
+      uint64 eltSize = elt.load(storage, bytesToRead, loader);
       if (!eltSize)
       {
         break;

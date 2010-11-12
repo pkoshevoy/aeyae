@@ -244,7 +244,9 @@ namespace Yamka
   // IElement::load
   // 
   uint64
-  IElement::load(FileStorage & storage, uint64 bytesToRead)
+  IElement::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     if (!bytesToRead)
     {
@@ -266,7 +268,7 @@ namespace Yamka
     }
     
 #if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
-    Indent::More indentMore;
+    Indent::More indentMore(Indent::depth_);
     {
       File::Seek restore(storage.file_);
       uint64 vsizeSize = 0;
@@ -317,14 +319,28 @@ namespace Yamka
       uint64 prevPayloadBytesToRead = payloadBytesToRead;
       
       // try to load some part of the payload:
-      uint64 partialPayloadSize = payload.load(storage,
-                                               payloadBytesToRead);
-      payloadBytesToRead -= partialPayloadSize;
+      uint64 partialPayloadSize = 0;
+      if (loader)
+      {
+        uint64 bytesRead = loader->load(storage,
+                                        payloadBytesToRead,
+                                        eltId,
+                                        payload);
+        partialPayloadSize += bytesRead;
+        payloadBytesToRead -= bytesRead;
+      }
+      
+      uint64 bytesRead = payload.load(storage,
+                                      payloadBytesToRead,
+                                      loader);
+      partialPayloadSize += bytesRead;
+      payloadBytesToRead -= bytesRead;
       
       // consume any void elements that may exist:
       IPayload::TVoid eltVoid;
       uint64 voidPayloadSize = eltVoid.load(storage,
-                                            payloadBytesToRead);
+                                            payloadBytesToRead,
+                                            loader);
       if (voidPayloadSize)
       {
         payloadBytesToRead -= voidPayloadSize;

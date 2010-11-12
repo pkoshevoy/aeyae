@@ -103,17 +103,19 @@ namespace Yamka
   // EbmlHead::load
   // 
   uint64
-  EbmlHead::load(FileStorage & storage, uint64 bytesToRead)
+  EbmlHead::load(FileStorage & storage,
+                 uint64 bytesToRead,
+                 IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
     
-    bytesToRead -= version_.load(storage, bytesToRead);
-    bytesToRead -= readVersion_.load(storage, bytesToRead);
-    bytesToRead -= maxIdLength_.load(storage, bytesToRead);
-    bytesToRead -= maxSizeLength_.load(storage, bytesToRead);
-    bytesToRead -= docType_.load(storage, bytesToRead);
-    bytesToRead -= docTypeVersion_.load(storage, bytesToRead);
-    bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead);
+    bytesToRead -= version_.load(storage, bytesToRead, loader);
+    bytesToRead -= readVersion_.load(storage, bytesToRead, loader);
+    bytesToRead -= maxIdLength_.load(storage, bytesToRead, loader);
+    bytesToRead -= maxSizeLength_.load(storage, bytesToRead, loader);
+    bytesToRead -= docType_.load(storage, bytesToRead, loader);
+    bytesToRead -= docTypeVersion_.load(storage, bytesToRead, loader);
+    bytesToRead -= docTypeReadVersion_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -174,7 +176,9 @@ namespace Yamka
   // EbmlDoc::load
   // 
   uint64
-  EbmlDoc::load(FileStorage & storage, uint64 bytesToRead)
+  EbmlDoc::load(FileStorage & storage,
+                uint64 bytesToRead,
+                IDelegateLoad * loader)
   {
     Bytes oneByte(1);
     uint64 bytesReadTotal = 0;
@@ -182,7 +186,7 @@ namespace Yamka
     // skip forward until we load EBML head element:
     while (bytesToRead)
     {
-      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead);
+      uint64 headSize = EbmlDoc::head_.load(storage, bytesToRead, loader);
       if (headSize)
       {
         bytesToRead -= headSize;
