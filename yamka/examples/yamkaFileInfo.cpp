@@ -41,6 +41,30 @@ usage(char ** argv, const char * message = NULL)
   ::exit(1);
 }
 
+
+//----------------------------------------------------------------
+// PartialReader
+// 
+struct PartialReader : public IDelegateLoad
+{
+  // virtual:
+  uint64 load(FileStorage & storage,
+	      uint64 payloadBytesToRead,
+	      uint64 eltId,
+	      IPayload & payload)
+  {
+    if (eltId != Segment::TCluster::kId)
+    {
+      // let the generic load mechanism handle it:
+      return 0;
+    }
+    
+    // skip/postpone reading the cluster (to shorten file load time):
+    storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+    return payloadBytesToRead;
+  }
+};
+
 //----------------------------------------------------------------
 // Examiner
 // 
@@ -96,7 +120,7 @@ struct Examiner : public IElementCrawler
   // virtual:
   bool evalPayload(IPayload & payload)
   {
-    indentation_++;
+    Indent::More indentMore(indentation_);
     
     if (payload.isComposite())
     {
@@ -112,7 +136,11 @@ struct Examiner : public IElementCrawler
     }
     else if (!payload.isDefault())
     {
-      std::cout << indent(indentation_);
+      const VEltPosition * vEltPos = dynamic_cast<VEltPosition *>(&payload);
+      if (vEltPos && !vEltPos->hasPosition())
+      {
+        return false;
+      }
       
       const VInt * vInt = dynamic_cast<VInt *>(&payload);
       const VUInt * vUInt = dynamic_cast<VUInt *>(&payload);
@@ -121,7 +149,8 @@ struct Examiner : public IElementCrawler
       const VString * vString = dynamic_cast<VString *>(&payload);
       const VVoid * vVoid = dynamic_cast<VVoid *>(&payload);
       const VBinary * vBinary = dynamic_cast<VBinary *>(&payload);
-      const VEltPosition * vEltPos = dynamic_cast<VEltPosition *>(&payload);
+      
+      std::cout << indent(indentation_);
       
       if (vInt)
       {
@@ -194,7 +223,6 @@ struct Examiner : public IElementCrawler
       std::cout << std::endl;
     }
     
-    indentation_--;
     return false;
   }
   
@@ -211,6 +239,7 @@ main(int argc, char ** argv)
 {
   Examiner::Verbosity verbosity = Examiner::kShowFileOffsets;
   std::string srcPath;
+  bool useFastLoader = false;
   
   for (int i = 1; i < argc; i++)
   {
@@ -223,6 +252,10 @@ main(int argc, char ** argv)
     else if (strcmp(argv[i], "-q") == 0)
     {
       verbosity = Examiner::kHideFileOffsets;
+    }
+    else if (strcmp(argv[i], "--fast") == 0)
+    {
+      useFastLoader = true;
     }
     else
     {
@@ -241,7 +274,11 @@ main(int argc, char ** argv)
   
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
-  uint64 bytesRead = doc.loadAndKeepReceipts(src, srcSize);
+
+  PartialReader fastLoader;
+  IDelegateLoad * loader = useFastLoader ? &fastLoader : NULL;
+  
+  uint64 bytesRead = doc.loadAndKeepReceipts(src, srcSize, loader);
   if (!bytesRead || doc.segments_.empty())
   {
     usage(argv, (std::string("source file has no matroska segments").c_str()));
