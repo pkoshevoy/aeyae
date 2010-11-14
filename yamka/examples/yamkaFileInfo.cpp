@@ -165,18 +165,27 @@ struct Examiner : public IElementCrawler
       }
       else if (vDate)
       {
-        time_t t = time_t(vDate->get() / 1000000000 + kDateMilleniumUTC);
-        struct tm * gmt = gmtime(&t);
+        struct tm gmt;
+        
+#ifdef _WIN32
+        __time64_t t = __time64_t(kDateMilleniumUTC +
+                                  vDate->get() / 1000000000);
+        _gmtime64_s(&gmt, &t);
+#else
+        time_t t = time_t(kDateMilleniumUTC +
+                          vDate->get() / 1000000000);
+        gmtime_r(&t, &gmt);
+#endif
         
         std::cout
           << "date: " << vDate->get() << ", "
           << std::right
-          << std::setfill('0') << std::setw(4) << gmt->tm_year + 1900 << '/'
-          << std::setfill('0') << std::setw(2) << gmt->tm_mon + 1 << '/'
-          << std::setfill('0') << std::setw(2) << gmt->tm_mday << ' '
-          << std::setfill('0') << std::setw(2) << gmt->tm_hour << ':'
-          << std::setfill('0') << std::setw(2) << gmt->tm_min << ':'
-          << std::setfill('0') << std::setw(2) << gmt->tm_sec;
+          << std::setfill('0') << std::setw(4) << gmt.tm_year + 1900 << '/'
+          << std::setfill('0') << std::setw(2) << gmt.tm_mon + 1 << '/'
+          << std::setfill('0') << std::setw(2) << gmt.tm_mday << ' '
+          << std::setfill('0') << std::setw(2) << gmt.tm_hour << ':'
+          << std::setfill('0') << std::setw(2) << gmt.tm_min << ':'
+          << std::setfill('0') << std::setw(2) << gmt.tm_sec;
       }
       else if (vString)
       {
@@ -237,7 +246,7 @@ struct Examiner : public IElementCrawler
         
         if (payloadReceipt)
         {
-          Bytes data(payloadReceipt->numBytes());
+          Bytes data((std::size_t)(payloadReceipt->numBytes()));
           if (payloadReceipt->load(data))
           {
             std::cout << ", ";
