@@ -1043,12 +1043,267 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // TrackPlane::eval
+  // 
+  bool
+  TrackPlane::eval(IElementCrawler & crawler)
+  {
+    return
+      crawler.eval(uid_) ||
+      crawler.eval(type_);
+  }
+  
+  //----------------------------------------------------------------
+  // TrackPlane::isDefault
+  // 
+  bool
+  TrackPlane::isDefault() const
+  {
+    bool allDefault = !uid_.mustSave();
+    return allDefault;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackPlane::calcSize
+  // 
+  uint64
+  TrackPlane::calcSize() const
+  {
+    uint64 size =
+      uid_.calcSize() +
+      type_.calcSize();
+    
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackPlane::save
+  // 
+  IStorage::IReceiptPtr
+  TrackPlane::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    *receipt += uid_.save(storage);
+    *receipt += type_.save(storage);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackPlane::load
+  // 
+  uint64
+  TrackPlane::load(FileStorage & storage,
+                       uint64 bytesToRead,
+                       IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+    
+    bytesToRead -= uid_.load(storage, bytesToRead, loader);
+    bytesToRead -= type_.load(storage, bytesToRead, loader);
+    
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes::eval
+  // 
+  bool
+  TrackCombinePlanes::eval(IElementCrawler & crawler)
+  {
+    return eltsEval(planes_, crawler);
+  }
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes::isDefault
+  // 
+  bool
+  TrackCombinePlanes::isDefault() const
+  {
+    bool allDefault = planes_.empty();
+    return allDefault;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes::calcSize
+  // 
+  uint64
+  TrackCombinePlanes::calcSize() const
+  {
+    uint64 size = eltsCalcSize(planes_);
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes::save
+  // 
+  IStorage::IReceiptPtr
+  TrackCombinePlanes::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    *receipt += eltsSave(planes_, storage);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes::load
+  // 
+  uint64
+  TrackCombinePlanes::load(FileStorage & storage,
+                           uint64 bytesToRead,
+                           IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+    
+    bytesToRead -= eltsLoad(planes_, storage, bytesToRead, loader);
+    
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks::eval
+  // 
+  bool
+  TrackJoinBlocks::eval(IElementCrawler & crawler)
+  {
+    return eltsEval(trackUIDs_, crawler);
+  }
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks::isDefault
+  // 
+  bool
+  TrackJoinBlocks::isDefault() const
+  {
+    bool allDefault = trackUIDs_.empty();
+    return allDefault;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks::calcSize
+  // 
+  uint64
+  TrackJoinBlocks::calcSize() const
+  {
+    uint64 size = eltsCalcSize(trackUIDs_);
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks::save
+  // 
+  IStorage::IReceiptPtr
+  TrackJoinBlocks::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    *receipt += eltsSave(trackUIDs_, storage);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks::load
+  // 
+  uint64
+  TrackJoinBlocks::load(FileStorage & storage,
+                        uint64 bytesToRead,
+                        IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+    
+    bytesToRead -= eltsLoad(trackUIDs_, storage, bytesToRead, loader);
+    
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+
+  
+  //----------------------------------------------------------------
+  // TrackOperation::eval
+  // 
+  bool
+  TrackOperation::eval(IElementCrawler & crawler)
+  {
+    return
+      crawler.eval(combinePlanes_) ||
+      crawler.eval(joinBlocks_);
+  }
+  
+  //----------------------------------------------------------------
+  // TrackOperation::isDefault
+  // 
+  bool
+  TrackOperation::isDefault() const
+  {
+    bool allDefault =
+      !combinePlanes_.mustSave() &&
+      !joinBlocks_.mustSave();
+    
+    return allDefault;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackOperation::calcSize
+  // 
+  uint64
+  TrackOperation::calcSize() const
+  {
+    uint64 size =
+      combinePlanes_.calcSize() +
+      joinBlocks_.calcSize();
+    
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackOperation::save
+  // 
+  IStorage::IReceiptPtr
+  TrackOperation::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+    
+    *receipt += combinePlanes_.save(storage);
+    *receipt += joinBlocks_.save(storage);
+    
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
+  // TrackOperation::load
+  // 
+  uint64
+  TrackOperation::load(FileStorage & storage,
+                       uint64 bytesToRead,
+                       IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+    
+    bytesToRead -= combinePlanes_.load(storage, bytesToRead, loader);
+    bytesToRead -= joinBlocks_.load(storage, bytesToRead, loader);
+    
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+
+  
+  //----------------------------------------------------------------
   // Tracks::eval
   // 
   bool
   Tracks::eval(IElementCrawler & crawler)
   {
-    return eltsEval(tracks_, crawler);
+    return
+      eltsEval(tracks_, crawler) ||
+      crawler.eval(trackOperation_);
   }
   
   //----------------------------------------------------------------
@@ -1057,7 +1312,10 @@ namespace Yamka
   bool
   Tracks::isDefault() const
   {
-    bool allDefault = tracks_.empty();
+    bool allDefault =
+      tracks_.empty() &&
+      !trackOperation_.mustSave();
+    
     return allDefault;
   }
   
@@ -1067,7 +1325,10 @@ namespace Yamka
   uint64
   Tracks::calcSize() const
   {
-    uint64 size = eltsCalcSize(tracks_);
+    uint64 size =
+      eltsCalcSize(tracks_) +
+      trackOperation_.calcSize();
+    
     return size;
   }
   
@@ -1080,6 +1341,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.receipt();
     
     *receipt += eltsSave(tracks_, storage);
+    *receipt += trackOperation_.save(storage);
     
     return receipt;
   }
@@ -1095,6 +1357,7 @@ namespace Yamka
     uint64 prevBytesToRead = bytesToRead;
     
     bytesToRead -= eltsLoad(tracks_, storage, bytesToRead, loader);
+    bytesToRead -= trackOperation_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;

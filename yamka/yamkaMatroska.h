@@ -372,6 +372,57 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
+  // TrackPlane
+  // 
+  struct TrackPlane : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+    
+    TypedefYamkaElt(VUInt, 0xE5, "TrackPlaneUID") TTrackPlaneUID;
+    TTrackPlaneUID uid_;
+    
+    TypedefYamkaElt(VUInt, 0xE6, "TrackPlaneType") TTrackPlaneType;
+    TTrackPlaneType type_;
+  };
+  
+  //----------------------------------------------------------------
+  // TrackCombinePlanes
+  // 
+  struct TrackCombinePlanes : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+    
+    TypedefYamkaElt(TrackPlane, 0xE4, "TrackPlane") TTrackPlane;
+    std::list<TTrackPlane> planes_;
+  };
+  
+  //----------------------------------------------------------------
+  // TrackJoinBlocks
+  // 
+  struct TrackJoinBlocks : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+    
+    TypedefYamkaElt(VUInt, 0xED, "TrackJoinUID") TTrackJoinUID;
+    std::list<TTrackJoinUID> trackUIDs_;
+  };
+  
+  //----------------------------------------------------------------
+  // TrackOperation
+  // 
+  struct TrackOperation : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+    
+    TypedefYamkaElt(TrackCombinePlanes, 0xE3, "TrackCombinePlanes")
+    TTrackCombinePlanes;
+    TTrackCombinePlanes combinePlanes_;
+    
+    TypedefYamkaElt(TrackJoinBlocks, 0xE9, "TrackJoinBlocks") TTrackJoinBlocks;
+    TTrackJoinBlocks joinBlocks_;
+  };
+  
+  //----------------------------------------------------------------
   // Tracks
   // 
   struct Tracks : public EbmlMaster
@@ -380,6 +431,9 @@ namespace Yamka
     
     TypedefYamkaElt(Track, 0xAE, "TrackEntry") TTrack;
     std::deque<TTrack> tracks_;
+    
+    TypedefYamkaElt(TrackOperation, 0xE2, "TrackOperation") TTrackOperation;
+    TTrackOperation trackOperation_;
   };
   
   //----------------------------------------------------------------
