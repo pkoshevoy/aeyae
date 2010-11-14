@@ -131,7 +131,7 @@ struct Examiner : public IElementCrawler
       
       payload.eval(*this);
     }
-    else if (payloadReceipt || elt.mustSave())
+    else if (payloadReceipt)
     {
       const VEltPosition * vEltPos = dynamic_cast<VEltPosition *>(&payload);
       if (vEltPos && !vEltPos->hasPosition())
