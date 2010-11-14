@@ -16,8 +16,10 @@
 
 // system includes:
 #include <iostream>
+#include <iomanip>
 #include <string.h>
 #include <string>
+#include <time.h>
 
 // namespace access:
 using namespace Yamka;
@@ -85,6 +87,8 @@ struct Examiner : public IElementCrawler
   bool eval(IElement & elt)
   {
     IStorage::IReceiptPtr storageReceipt = elt.storageReceipt();
+    IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
+    
     if (storageReceipt)
     {
       std::cout
@@ -102,7 +106,6 @@ struct Examiner : public IElementCrawler
       
       std::cout << " -- " << elt.getName();
       
-      IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
       if (payloadReceipt && verbosity_ == kShowFileOffsets)
       {
         std::cout << ", payload "
@@ -113,15 +116,9 @@ struct Examiner : public IElementCrawler
       std::cout << std::endl;
     }
     
-    evalPayload(elt.getPayload());
-    return false;
-  }
-  
-  // virtual:
-  bool evalPayload(IPayload & payload)
-  {
     Indent::More indentMore(indentation_);
     
+    IPayload & payload = elt.getPayload();
     if (payload.isComposite())
     {
       EbmlMaster * ebmlMaster = dynamic_cast<EbmlMaster *>(&payload);
@@ -134,7 +131,7 @@ struct Examiner : public IElementCrawler
       
       payload.eval(*this);
     }
-    else if (!payload.isDefault())
+    else if (payloadReceipt || elt.mustSave())
     {
       const VEltPosition * vEltPos = dynamic_cast<VEltPosition *>(&payload);
       if (vEltPos && !vEltPos->hasPosition())
@@ -162,11 +159,24 @@ struct Examiner : public IElementCrawler
       }
       else if (vFloat)
       {
-        std::cout << "float: " << vFloat->get();
+        std::cout << "float: "
+                  << std::setiosflags(std::ios_base::fixed)
+                  << vFloat->get();
       }
       else if (vDate)
       {
-        std::cout << "date: " << vDate->get();
+        time_t t = time_t(vDate->get() / 1000000000 + kDateMilleniumUTC);
+        struct tm * gmt = gmtime(&t);
+        
+        std::cout
+          << "date: " << vDate->get() << ", "
+          << std::right
+          << std::setfill('0') << std::setw(4) << gmt->tm_year + 1900 << '/'
+          << std::setfill('0') << std::setw(2) << gmt->tm_mon + 1 << '/'
+          << std::setfill('0') << std::setw(2) << gmt->tm_mday << ' '
+          << std::setfill('0') << std::setw(2) << gmt->tm_hour << ':'
+          << std::setfill('0') << std::setw(2) << gmt->tm_min << ':'
+          << std::setfill('0') << std::setw(2) << gmt->tm_sec;
       }
       else if (vString)
       {
@@ -174,11 +184,17 @@ struct Examiner : public IElementCrawler
       }
       else if (vVoid)
       {
-        std::cout << "void" << vVoid->get();
+        std::cout << "void, size " << vVoid->get();
       }
       else if (vBinary)
       {
-        std::cout << "binary data, variable size";
+        std::cout << "variable size binary data";
+        if (vBinary->receipt_)
+        {
+          std::cout
+            << ", size "
+            << vBinary->receipt_->numBytes();
+        }
       }
       else if (vEltPos)
       {
@@ -204,7 +220,7 @@ struct Examiner : public IElementCrawler
             << ", resolved to "
             << elt->getName()
             << "(" << uintEncode(elt->getId()) << ")";
-
+          
           if (verbosity_ == kShowFileOffsets)
           {
             std::cout
@@ -218,8 +234,23 @@ struct Examiner : public IElementCrawler
       else
       {
         std::cout << "binary data, size " << payload.calcSize();
+        
+        if (payloadReceipt)
+        {
+          Bytes data(payloadReceipt->numBytes());
+          if (payloadReceipt->load(data))
+          {
+            std::cout << ", ";
+            std::cout << data;
+          }
+        }
       }
-
+      
+      if (!elt.mustSave())
+      {
+        std::cout << ", default value";
+      }
+      
       std::cout << std::endl;
     }
     
