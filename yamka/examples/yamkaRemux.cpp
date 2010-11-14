@@ -156,22 +156,22 @@ main(int argc, char ** argv)
     }
     
     for (std::list<Segment::TTags>::iterator j = tagsList.begin();
-	 j != tagsList.end(); ++j)
+         j != tagsList.end(); ++j)
     {
       Segment::TTags & tags = *j;
       if (tags.mustSave())
       {
-	seekHead.payload_.indexThis(&segment, &tags, tmp);
+        seekHead.payload_.indexThis(&segment, &tags, tmp);
       }
     }
     
     for (std::list<Segment::TCluster>::iterator j = clusters.begin();
-	 j != clusters.end(); ++j)
+         j != clusters.end(); ++j)
     {
       Segment::TCluster & cluster = *j;
       if (cluster.mustSave())
       {
-	seekHead.payload_.indexThis(&segment, &cluster, tmp);
+        seekHead.payload_.indexThis(&segment, &cluster, tmp);
       }
     }
     

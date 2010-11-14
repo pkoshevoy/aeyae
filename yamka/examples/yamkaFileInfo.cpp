@@ -51,9 +51,9 @@ struct PartialReader : public IDelegateLoad
 {
   // virtual:
   uint64 load(FileStorage & storage,
-	      uint64 payloadBytesToRead,
-	      uint64 eltId,
-	      IPayload & payload)
+              uint64 payloadBytesToRead,
+              uint64 eltId,
+              IPayload & payload)
   {
     if (eltId != Segment::TCluster::kId)
     {
