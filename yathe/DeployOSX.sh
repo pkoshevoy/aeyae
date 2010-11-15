@@ -169,7 +169,8 @@ get_xcode_config()
 # $2 -- project file
 # $3 -- requested configuration
 # $4 -- target
-# $5 -- Xcode SDK
+# $5 -- target arch
+# $6 -- Xcode SDK
 build_xcodeproj()
 {
 	if [ -z "${ACTION}" ]; then
@@ -179,7 +180,8 @@ build_xcodeproj()
     PROJ=${2}
     REQUESTED_CONFIG=${3}
 	TARGET=${4}
-	SDK=${5}
+	TARGET_ARCH=${5}
+	SDK=${6}
 
 	if [ -n "${SDK}" ]; then
 		XCODE_CMD="${XCODEBUILD} -sdk ${SDK}"
@@ -187,15 +189,21 @@ build_xcodeproj()
 		XCODE_CMD="${XCODEBUILD}"
 	fi
 
+	if [ -n "${TARGET_ARCH}" ]; then
+		ARCH_CFG="ARCHS=${TARGET_ARCH}"
+	else
+		unset ARCH_CFG
+	fi
+
 	XCODE_CONFIG=`get_xcode_config "${PROJ_DIR}" "${PROJ}" "${REQUESTED_CONFIG}"`
 
     quiet_pushd "${PROJ_DIR}"
 		if [ -n "${TARGET}" ]; then
-			echo "${PWD};" ${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ARCHS=${ARCH} "${ACTION}"
-			${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ARCHS=${ARCH} "${ACTION}"
+			echo "${PWD};" ${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
+			${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
 		else
-			echo "${PWD};" ${XCODE_CMD} -project "${PROJ}".xcodeproj -alltargets -configuration "${XCODE_CONFIG}" ARCHS=${ARCH} "${ACTION}"
-			${XCODE_CMD} -project "${PROJ}".xcodeproj -alltargets -configuration "${XCODE_CONFIG}" ARCHS=${ARCH} "${ACTION}"
+			echo "${PWD};" ${XCODE_CMD} -project "${PROJ}".xcodeproj -alltargets -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
+			${XCODE_CMD} -project "${PROJ}".xcodeproj -alltargets -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
 		fi
 
 		if [ $? != 0 ]; then exit 2; fi
@@ -212,10 +220,10 @@ build_xcodeproj()
 # $4 -- target (build, install, etc)
 build_qmake()
 {
-    PROJ_DIR=${1}
-    PROJ=${2}
-    REQUESTED_CONFIG=${3}
-	TARGET=${4}
+    PROJ_DIR="${1}"
+    PROJ="${2}"
+    REQUESTED_CONFIG="${3}"
+    TARGET="${4}"
     
     quiet_pushd "${PROJ_DIR}"
 		echo "${PWD};" qmake "${PROJ}".pro -spec macx-xcode
@@ -228,7 +236,11 @@ build_qmake()
 			exit 1
 		fi
 
-		build_xcodeproj "${PROJ_DIR}" "${PROJ}" "${CONFIG}" "${TARGET}"
+		if [ -d "${TARGET}.xcodeproj" ]; then
+			build_xcodeproj "${PROJ_DIR}" "${TARGET}" "${CONFIG}" "${TARGET}"
+		else
+			build_xcodeproj "${PROJ_DIR}" "${PROJ}" "${CONFIG}" "${TARGET}"
+		fi
 	quiet_popd
 }
 
@@ -267,6 +279,7 @@ build_make()
 PrepForDeployment()
 {
 	BUNDLE_PATH=${1}
+	shift 1
 
 	# let Qt do it's part:
 	# macdeployqt "${BUNDLE_PATH}" -verbose=3 -no-plugins
@@ -291,7 +304,6 @@ PrepForDeployment()
 				continue;
 			fi
 
-			shift 1
 			while [ $? = 0 ]; do
 				PLUGIN="${1}"
 				if [ -z "${PLUGIN}" ]; then
@@ -417,7 +429,10 @@ DeployFile()
 		NEEDS="${i}"
 		IS_USR_LIB=`echo "${NEEDS}" | grep '/usr/lib/'`
 		IS_SYS_LIB=`echo "${NEEDS}" | grep '/System/Library/'`
-		if [ -n "${IS_USR_LIB}" -o -n "${IS_SYS_LIB}" ]; then
+		IS_CUDA_DRIVER=`echo "${NEEDS}" | grep '/usr/local/cuda/lib/libcuda.dylib'`
+		if [ -n "${IS_USR_LIB}" -o \
+		     -n "${IS_SYS_LIB}" -o \
+		     -n "${IS_CUDA_DRIVER}" ]; then
 #			echo skipping system library "${NEEDS}"
 			continue
 		fi
