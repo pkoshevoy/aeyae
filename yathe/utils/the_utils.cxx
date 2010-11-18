@@ -39,7 +39,7 @@ THE SOFTWARE.
 #define NOMINMAX
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <wchar.h>
 #else
@@ -47,6 +47,7 @@ THE SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 #endif
 #include <stdio.h>
 
@@ -60,7 +61,7 @@ THE SOFTWARE.
 void
 sleep_msec(size_t msec)
 {
-#ifdef WIN32
+#ifdef _WIN32
   Sleep((DWORD)(msec));
 #else
   usleep(msec * 1000);
@@ -284,6 +285,228 @@ namespace the
 #endif
     
     return ret;
+  }
+
+#ifdef _WIN32
+  //----------------------------------------------------------------
+  // rmdir_recursively_utf16
+  // 
+  static bool
+  rmdir_recursively_utf16(const wchar_t * dir_utf16)
+  {
+    if (!dir_utf16)
+    {
+      assert(false);
+      return false;
+    }
+    
+    if (!*dir_utf16)
+    {
+      assert(false);
+      return true;
+    }
+    
+    wchar_t searchPath[_MAX_PATH] = { 0 };
+    _wmakepath_s(searchPath, _MAX_PATH, NULL, dir_utf16, L"*", L"");
+    
+    WIN32_FIND_DATAW file_data;
+    while (true)
+    {
+      HANDLE handle = FindFirstFileW(searchPath, &file_data);
+      if (handle == INVALID_HANDLE_VALUE)
+      {
+        return false;
+      }
+      
+      wchar_t nextPath[_MAX_PATH] = { 0 };
+      bool found = false;
+      bool isDir = false;
+      do
+      {
+        isDir = (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        if (isDir)
+        {
+          if (wcscmp(file_data.cFileName, L".") == 0 ||
+              wcscmp(file_data.cFileName, L"..") == 0)
+          {
+            continue;
+          }
+        }
+        
+        _wmakepath_s(nextPath,
+                     _MAX_PATH,
+                     NULL,
+                     dir_utf16,
+                     file_data.cFileName,
+                     NULL);
+        found = true;
+      }
+      while (!found && FindNextFileW(handle, &file_data));
+      
+      // close it, will reopen on next pass:
+      FindClose(handle);
+      
+      if (!found)
+      {
+        break;
+      }
+      
+      if (isDir)
+      {
+        if (!rmdir_recursively_utf16(nextPath))
+        {
+          return false;
+        }
+      }
+      else
+      {
+        DWORD attrs = GetFileAttributesW(nextPath);
+        
+        attrs = FILE_ATTRIBUTE_NORMAL;
+        SetFileAttributesW(nextPath, attrs);
+        
+        if (!DeleteFileW(nextPath))
+        {
+          return false;
+        }
+      }
+    }
+    
+    if (_wrmdir(dir_utf16) != 0)
+    {
+      return false;
+    }
+    
+    return true;
+  }
+#endif
+  
+  //----------------------------------------------------------------
+  // rmdir_recursively_utf8
+  // 
+  bool
+  rmdir_recursively_utf8(const std::string & dir_to_remove)
+  {
+    if (dir_to_remove.empty())
+    {
+      assert(false);
+      return true;
+    }
+    
+#ifdef _WIN32
+    // on windows utf-8 has to be converted to utf-16
+    wchar_t * dir_utf16 = 0;
+    utf8_to_utf16(dir_to_remove, dir_utf16);
+    
+    bool ok = rmdir_recursively_utf16(dir_utf16);
+    delete [] dir_utf16;
+    return ok;
+#else
+    
+    // Some systems don't define the d_name element sufficiently long.
+    // In this case the user has to provide additional space.
+    // There must be room for at least NAME_MAX + 1 characters
+    // in the d_name array
+    union
+    {
+      struct dirent d;
+      char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
+    } u;
+    
+    memset(&u, 0, sizeof(u));
+    
+    bool ok = true;
+    while (true)
+    {
+      DIR * dir = opendir(dir_to_remove.c_str());
+      if (!dir)
+      {
+        return false;
+      }
+      
+      struct dirent * found = NULL;
+      while (true)
+      {
+        int err = readdir_r(dir, &u.d, &found);
+        ok = (err == 0);
+        
+        if (!ok || !found)
+        {
+          break;
+        }
+        
+        if (u.d.d_type == DT_DIR)
+        {
+          if (strcmp(u.d.d_name, ".") == 0 ||
+              strcmp(u.d.d_name, "..") == 0)
+          {
+            continue;
+          }
+        }
+        
+        break;
+      }
+      
+      // close it, will reopen on next pass:
+      closedir(dir);
+      
+      if (!ok || !found)
+      {
+        break;
+      }
+      
+      std::string nextPath(dir_to_remove);
+      if (nextPath[nextPath.size() - 1] != '/')
+      {
+        nextPath += '/';
+      }
+      nextPath += std::string(u.d.d_name);
+      
+      if (u.d.d_type == DT_DIR)
+      {
+        if (!rmdir_recursively_utf8(nextPath))
+        {
+          return false;
+        }
+      }
+      else
+      {
+        if (remove(nextPath.c_str()) != 0)
+        {
+          return false;
+        }
+      }
+    }
+    
+    if (!ok || remove(dir_to_remove.c_str()) != 0)
+    {
+      return false;
+    }
+    
+    return true;
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // rmdir_recursively_utf8
+  // 
+  bool
+  rmdir_recursively_utf8(const char * dir_utf8)
+  {
+    if (!dir_utf8)
+    {
+      assert(false);
+      return false;
+    }
+    
+    if (!*dir_utf8)
+    {
+      assert(false);
+      return true;
+    }
+    
+    std::string dir_to_remove(dir_utf8);
+    return rmdir_recursively_utf8(dir_to_remove);
   }
   
   //----------------------------------------------------------------

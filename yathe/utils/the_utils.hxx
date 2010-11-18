@@ -916,6 +916,9 @@ namespace the
   extern int rmdir_utf8(const char * path_utf8);
   extern int mkdir_utf8(const char * path_utf8);
   
+  extern bool rmdir_recursively_utf8(const std::string & dir_to_remove);
+  extern bool rmdir_recursively_utf8(const char * dir_to_remove);
+  
   extern int fseek64(FILE * file, off_t offset, int whence);
   extern off_t ftell64(const FILE * file);
   
