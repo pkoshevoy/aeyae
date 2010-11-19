@@ -939,6 +939,10 @@ namespace the
     double err = fabs(given - ref);
     return err < tolerance;
   }
+  
+  extern bool
+  get_current_executable_path(std::string & exe_path_utf8);
+  
 }
 
 

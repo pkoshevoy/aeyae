@@ -43,6 +43,10 @@ THE SOFTWARE.
 #include <windows.h>
 #include <wchar.h>
 #else
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#include <uuid/uuid.h>
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -128,6 +132,58 @@ namespace the
 			utf16,
 			wcs_size);
   }
+  
+  //----------------------------------------------------------------
+  // utf8_to_utf16
+  // 
+  std::wstring
+  utf8_to_utf16(const std::string & str_utf8)
+  {
+    int sizeUTF16 =
+      MultiByteToWideChar(CP_UTF8,          // encoding (ansi, utf, etc...)
+                          0,                // flags (precomposed, composite)
+                          str_utf8.c_str(), // source multi-byte characters
+                          -1,               // number of bytes in the source
+                          NULL,             // wide-character destination
+                          0);               // destination buffer size
+    
+    std::wstring str_utf16(sizeUTF16 - 1, 0);
+    MultiByteToWideChar(CP_UTF8,
+                        0,
+                        str_utf8.c_str(),
+                        -1,
+                        &str_utf16[0],
+                        sizeUTF16);
+    return str_utf16;
+  }
+  
+  //----------------------------------------------------------------
+  // utf16_to_utf8
+  // 
+  std::string
+  utf16_to_utf8(const std::wstring & str_utf16)
+  {
+    int size_utf8 =
+      WideCharToMultiByte(CP_UTF8,           // encoding (ansi, utf, etc...)
+                          0,                 // flags (precomposed, composite)
+                          str_utf16.c_str(), // source multi-byte characters
+                          -1,                // number of bytes in the source
+                          NULL,              // wide-character destination
+                          0,                 // destination buffer size
+                          NULL,              // unmappable char replacement
+                          NULL);             // flag to set if replacement used
+    
+    std::string str_utf8(size_utf8 - 1, 0);
+    WideCharToMultiByte(CP_UTF8,
+                        0,
+                        str_utf16.c_str(),
+                        -1,
+                        &str_utf8[0],
+                        size_utf8,
+                        0,
+                        0);
+    return str_utf8;
+  }
 #endif
   
   //----------------------------------------------------------------
@@ -160,8 +216,8 @@ namespace the
   // 
   void
   open_utf8(std::fstream & fstream_to_open,
-	    const char * filename_utf8,
-	    std::ios_base::openmode mode)
+            const char * filename_utf8,
+            std::ios_base::openmode mode)
   {
 #ifdef _WIN32
     // on windows utf-8 has to be converted to utf-16
@@ -234,11 +290,8 @@ namespace the
   remove_utf8(const char * filename_utf8)
   {
 #ifdef _WIN32
-    wchar_t * filename_utf16 = NULL;
-    utf8_to_utf16(filename_utf8, filename_utf16);
-    
-    int ret = _wremove(filename_utf16);
-    delete [] filename_utf16;
+    std::wstring filename_utf16 = utf8_to_utf16(std::string(filename_utf8));
+    int ret = _wremove(filename_utf16.c_str());
 #else
     
     int ret = remove(filename_utf8);
@@ -254,11 +307,8 @@ namespace the
   rmdir_utf8(const char * dir_utf8)
   {
 #ifdef _WIN32
-    wchar_t * dir_utf16 = NULL;
-    utf8_to_utf16(dir_utf8, dir_utf16);
-    
-    int ret = _wrmdir(dir_utf16);
-    delete [] dir_utf16;
+    std::wstring dir_utf16 = utf8_to_utf16(std::string(dir_utf8));
+    int ret = _wrmdir(dir_utf16.c_str());
 #else
     
     int ret = remove(dir_utf8);
@@ -274,11 +324,8 @@ namespace the
   mkdir_utf8(const char * path_utf8)
   {
 #ifdef _WIN32
-    wchar_t * path_utf16 = NULL;
-    utf8_to_utf16(path_utf8, path_utf16);
-    
-    int ret = _wmkdir(path_utf16);
-    delete [] path_utf16;
+    std::wstring path_utf16 = utf8_to_utf16(std::string(path_utf8));
+    int ret = _wmkdir(path_utf16.c_str());
 #else
     
     int ret = mkdir(path_utf8, S_IRWXU);
@@ -395,12 +442,8 @@ namespace the
     
 #ifdef _WIN32
     // on windows utf-8 has to be converted to utf-16
-    wchar_t * dir_utf16 = 0;
-    utf8_to_utf16(dir_to_remove, dir_utf16);
-    
-    bool ok = rmdir_recursively_utf16(dir_utf16);
-    delete [] dir_utf16;
-    return ok;
+    std::wstring dir_utf16 = utf8_to_utf16(dir_to_remove);
+    return rmdir_recursively_utf16(dir_utf16);
 #else
     
     // Some systems don't define the d_name element sufficiently long.
@@ -537,5 +580,62 @@ namespace the
 #endif
     
     return pos;
+  }
+  
+  //----------------------------------------------------------------
+  // get_current_executable_path
+  // 
+  bool
+  get_current_executable_path(std::string & exe_path_utf8)
+  {
+    bool ok = false;
+    
+#ifdef _WIN32
+    wchar_t path[_MAX_PATH] = { 0 };
+    unsigned long pathLen = sizeof(path) / sizeof(wchar_t);
+    if (GetModuleFileNameW(0, path, pathLen) != 0)
+    {
+      exe_path_utf8 = utf16_to_utf8(std::wstring(path));
+      ok = true;
+    }
+    
+#elif defined(__APPLE__)
+    CFBundleRef bundle_ref = CFBundleGetMainBundle();
+    if (bundle_ref)
+    {
+      CFURLRef url_ref =
+        CFBundleCopyExecutableURL(bundle_ref);
+      
+      if (url_ref)
+      {
+        CFStringRef string_ref =
+          CFURLCopyFileSystemPath(url_ref, kCFURLPOSIXPathStyle);
+        
+        char txt[1024] = { 0 };
+        if (string_ref)
+        {
+          if (CFStringGetCString(string_ref,
+                                 txt,
+                                 sizeof(txt),
+                                 kCFStringEncodingUTF8))
+          {
+            exe_path_utf8.assign(txt);
+            ok = true;
+          }
+          
+          CFRelease(string_ref);
+        }
+        
+        CFRelease(url_ref);
+      }
+      
+      CFRelease(bundle_ref);
+    }
+#else
+    // FIXME: write me!
+#endif
+    
+    assert(!exe_path_utf8.empty());
+    return ok;
   }
 }
