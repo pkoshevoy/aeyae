@@ -54,6 +54,7 @@ THE SOFTWARE.
 #include <dirent.h>
 #endif
 #include <stdio.h>
+#include <string.h>
 
 // local includes:
 #include "the_utils.hxx"
