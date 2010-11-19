@@ -602,21 +602,30 @@ namespace the
       CFRelease(bundle_ref);
     }
 #else
-    
-    // The function dladdr() takes a function pointer
-    // and tries to resolve name and file where it is located.
-    Dl_info info;
-    if (dladdr(&main, &info))
+    char path[PATH_MAX + 1] = { 0 };
+    if (readlink("/proc/self/exe", path, sizeof(path)) > 0)
     {
-      exe_path_utf8.assign(info.dli_fname);
+      exe_path_utf8.assign(path);
       ok = true;
     }
-
+    /*
+    else
+    {
+      // The function dladdr() takes a function pointer
+      // and tries to resolve name and file where it is located.
+      Dl_info info;
+      
+      // if (dladdr((const void *)&get_current_executable_path, &info))
+      if (dladdr((const void *)&main, &info))
+      {
+        exe_path_utf8.assign(info.dli_fname);
+        ok = true;
+      }
+    }
+    */
+    
     /*
     // Linux exe:
-    char buf[255];
-    readlink("/proc/self/exe",buf,255);
-    String fullpath = buf;
     
     // Linux lib:
     Dl_info info;
