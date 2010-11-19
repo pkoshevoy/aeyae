@@ -52,6 +52,7 @@ THE SOFTWARE.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -59,6 +60,10 @@ THE SOFTWARE.
 // local includes:
 #include "the_utils.hxx"
 
+// forward declarations:
+#ifndef _WIN32
+extern "C" int main(int argc, char ** argv);
+#endif
 
 //----------------------------------------------------------------
 // sleep_msec
@@ -597,7 +602,41 @@ namespace the
       CFRelease(bundle_ref);
     }
 #else
-    // FIXME: write me!
+    
+    // The function dladdr() takes a function pointer
+    // and tries to resolve name and file where it is located.
+    Dl_info info;
+    if (dladdr(&main, &info))
+    {
+      exe_path_utf8.assign(info.dli_fname);
+      ok = true;
+    }
+
+    /*
+    // Linux exe:
+    char buf[255];
+    readlink("/proc/self/exe",buf,255);
+    String fullpath = buf;
+    
+    // Linux lib:
+    Dl_info info;
+    dladdr(&symbol,&info);
+    String fullpath = info.dli_filename;
+    
+    // BSD exe:
+    int mib[4];
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_PATHNAME;
+    mib[3] = -1;
+    char buf[1024];
+    size_t cb = sizeof(buf);
+    sysctl(mib, 4, buf, &cb, NULL, 0);
+
+    // solaris:
+    getexename();
+    */
+    
 #endif
     
     assert(!exe_path_utf8.empty());
