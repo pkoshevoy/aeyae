@@ -114,29 +114,6 @@ namespace the
   //----------------------------------------------------------------
   // utf8_to_utf16
   // 
-  static void
-  utf8_to_utf16(const char * utf8, wchar_t *& utf16)
-  {
-    int wcs_size =
-      MultiByteToWideChar(CP_UTF8, // encoding (ansi, utf, etc...)
-			  0,	   // flags (precomposed, composite,... )
-			  utf8,    // source multi-byte character string
-			  -1,	   // number of bytes in the source string
-			  NULL,	   // wide-character destination
-			  0);	   // destination buffer size
-    
-    utf16 = new wchar_t[wcs_size + 1];
-    MultiByteToWideChar(CP_UTF8,
-			0,
-			utf8,
-			-1,
-			utf16,
-			wcs_size);
-  }
-  
-  //----------------------------------------------------------------
-  // utf8_to_utf16
-  // 
   std::wstring
   utf8_to_utf16(const std::string & str_utf8)
   {
@@ -197,12 +174,10 @@ namespace the
     
 #ifdef _WIN32
     // on windows utf-8 has to be converted to utf-16
-    wchar_t * filename_utf16 = 0;
-    utf8_to_utf16(filename_utf8, filename_utf16);
+    std::wstring filename_utf16 = utf8_to_utf16(std::string(filename_utf8));
     
     int sflag = _SH_DENYNO;
-    _wsopen_s(&fd, filename_utf16, oflag, sflag, pmode);
-    delete [] filename_utf16;
+    _wsopen_s(&fd, filename_utf16.c_str(), oflag, sflag, pmode);
     
 #else
     // assume utf-8 is supported natively:
@@ -222,11 +197,9 @@ namespace the
   {
 #ifdef _WIN32
     // on windows utf-8 has to be converted to utf-16
-    wchar_t * filename_utf16 = 0;
-    utf8_to_utf16(filename_utf8, filename_utf16);
+    std::wstring filename_utf16 = utf8_to_utf16(std::string(filename_utf8));
     
-    fstream_to_open.open(filename_utf16, mode);
-    delete [] filename_utf16;
+    fstream_to_open.open(filename_utf16.c_str(), mode);
     
 #else
     // assume utf-8 is supported natively:
@@ -243,15 +216,11 @@ namespace the
     FILE * file = NULL;
     
 #ifdef _WIN32
-    wchar_t * filename_utf16 = NULL;
-    utf8_to_utf16(filename_utf8, filename_utf16);
+    std::wstring filename_utf16 = utf8_to_utf16(std::string(filename_utf8));
+    std::wstring mode_utf16 = utf8_to_utf16(std::string(mode));
     
-    wchar_t * mode_utf16 = NULL;
-    utf8_to_utf16(mode, mode_utf16);
+    _wfopen_s(&file, filename_utf16.c_str(), mode_utf16.c_str());
     
-    _wfopen_s(&file, filename_utf16, mode_utf16);
-    delete [] filename_utf16;
-    delete [] mode_utf16;
 #else
     file = fopen(filename_utf8, mode);
 #endif
@@ -266,16 +235,11 @@ namespace the
   rename_utf8(const char * old_utf8, const char * new_utf8)
   {
 #ifdef _WIN32
-    wchar_t * old_utf16 = NULL;
-    utf8_to_utf16(old_utf8, old_utf16);
+    std::wstring old_utf16 = utf8_to_utf16(std::string(old_utf8));
+    std::wstring new_utf16 = utf8_to_utf16(std::string(new_utf8));
     
-    wchar_t * new_utf16 = NULL;
-    utf8_to_utf16(new_utf8, new_utf16);
+    int ret = _wrename(old_utf16.c_str(), new_utf16.c_str());
     
-    int ret = _wrename(old_utf16, new_utf16);
-    
-    delete [] old_utf16;
-    delete [] new_utf16;
 #else
     
     int ret = rename(old_utf8, new_utf8);
@@ -444,7 +408,7 @@ namespace the
 #ifdef _WIN32
     // on windows utf-8 has to be converted to utf-16
     std::wstring dir_utf16 = utf8_to_utf16(dir_to_remove);
-    return rmdir_recursively_utf16(dir_utf16);
+    return rmdir_recursively_utf16(dir_utf16.c_str());
 #else
     
     // Some systems don't define the d_name element sufficiently long.
