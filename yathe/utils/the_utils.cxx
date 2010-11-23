@@ -66,6 +66,15 @@ extern "C" int main(int argc, char ** argv);
 #endif
 
 //----------------------------------------------------------------
+// THE_PATH_SEPARATOR
+// 
+#ifdef _WIN32
+const char * THE_PATH_SEPARATOR = "\\";
+#else
+const char * THE_PATH_SEPARATOR = "/";
+#endif
+
+//----------------------------------------------------------------
 // sleep_msec
 // 
 void
@@ -106,7 +115,7 @@ restore_console_stdio()
   console_buffer_size.X = 80;
   console_buffer_size.Y = 9999;
   SetConsoleScreenBufferSize(std_out_handle,
-			     console_buffer_size);
+                             console_buffer_size);
 #endif
   
   return true;
@@ -598,8 +607,6 @@ namespace the
         
         CFRelease(url_ref);
       }
-      
-      CFRelease(bundle_ref);
     }
 #else
     char path[PATH_MAX + 1] = { 0 };
@@ -651,4 +658,301 @@ namespace the
     assert(!exe_path_utf8.empty());
     return ok;
   }
+  
+  //----------------------------------------------------------------
+  // get_latest_err_str
+  // 
+  std::string
+  get_latest_err_str()
+  {
+    std::string err_str;
+    
+#ifdef _WIN32
+    DWORD err = GetLastError();
+    if (!err)
+    {
+      return std::string();
+    }
+    
+    LPVOID msg = NULL;
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+                   FORMAT_MESSAGE_FROM_SYSTEM |
+                   FORMAT_MESSAGE_IGNORE_INSERTS,
+                   
+                   NULL,
+                   err,
+                   
+                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                   (LPWSTR)&msg,
+                   0,
+                   NULL);
+    
+    err_str = utf16_to_utf8(std::wstring((LPWSTR)msg));
+    LocalFree(msg);
+    
+#else
+    err_str.assign(strerror(errno));
+#endif
+    
+    return err_str;
+  }
+  
+  //----------------------------------------------------------------
+  // dump_latest_err
+  // 
+  static void
+  dump_latest_err()
+  {
+    std::cerr << "ERROR: " << get_latest_err_str().c_str() << std::endl;
+  }
+  
+  //----------------------------------------------------------------
+  // launch_app
+  // 
+  bool
+  launch_app(const std::string & exe_path_utf8,
+             const std::list<std::string> & args_utf8,
+             const std::string & working_dir_utf8,
+             bool wait_to_finish)
+  {
+#ifdef _WIN32
+    std::wstring exe_path_utf16 = utf8_to_utf16(exe_path_utf8);
+    std::wstring work_dir_utf16 = utf8_to_utf16(work_dir_utf8);
+    
+    std::wstring params_utf16;
+    for (std::list<std::string>::const_iterator i = args_utf8.begin();
+         i != args_utf8.end(); ++i)
+    {
+      const std::string & arg = *i;
+      std::wstring arg_utf16 = utf8_to_utf16(arg);
+      params_utf16 += L"\"";
+      params_utf16 += arg_utf16;
+      params_utf16 += L"\" ";
+    }
+    
+    SHELLEXECUTEINFOW shell_exe_info;
+    memset(&shell_exe_info, 0, sizeof(SHELLEXECUTEINFOW));
+    shell_exe_info.cbSize = sizeof(SHELLEXECUTEINFOW);
+    shell_exe_info.fMask = SEE_MASK_NOCLOSEPROCESS;
+    shell_exe_info.hwnd = NULL;
+    shell_exe_info.lpVerb = NULL;
+    shell_exe_info.lpFile = exe_path_utf16.c_str();
+    shell_exe_info.lpParameters = params_utf16.c_str();
+    shell_exe_info.lpDirectory = (work_dir_utf16.empty() ?
+                                  NULL :
+                                  work_dir_utf16.c_str());
+    shell_exe_info.nShow = SW_HIDE;
+    
+    if (!ShellExecuteExW(&shell_exe_info))
+    {
+      dump_latest_err();
+      return false;
+    }
+    
+    if (wait_to_finish)
+    {
+      int r = WaitForSingleObject(shell_exe_info.hProcess, INFINITE);
+      if (r != WAIT_OBJECT_0)
+      {
+        dump_latest_err();
+        return false;
+      }
+      
+      DWORD exit_code = -1;
+      if (!GetExitCodeProcess(shell_exe_info.hProcess, &exit_code))
+      {
+        dump_latest_err();
+        return false;
+      }
+      
+      if (exit_code != 0)
+      {
+        return false;
+      }
+    }
+    
+#else
+    std::vector<char *> args;
+    args.push_back(const_cast<char *>(&exe_path_utf8[0]));
+    
+    for (std::list<std::string>::const_iterator i = args_utf8.begin();
+         i != args_utf8.end(); ++i)
+    {
+      const std::string & arg = *i;
+      args.push_back(const_cast<char *>(&arg[0]));
+    }
+    args.push_back(NULL);
+    
+    int pid = fork();
+    if (pid == -1)
+    {
+      dump_latest_err();
+      return false;
+    }
+    
+    if (pid == 0)
+    {
+      if (!work_dir_utf8.empty())
+      {
+        int err = chdir(work_dir_utf8.c_str());
+        if (err)
+        {
+          // terminate the fork:
+          ::exit(errno);
+        }
+      }
+      
+      // exec(...) functions do not return, unless there is an error:
+      char * const * argv = &args[0];
+      int err = execvp(exe_path_utf8.c_str(), argv);
+      if (err)
+      {
+        // terminate the fork:
+        ::exit(errno);
+      }
+    }
+    
+    if (wait_to_finish)
+    {
+      int status = 0;
+      waitpid(pid, &status, 0);
+        
+      if (!WIFEXITED(status))
+      {
+        dump_latest_err();
+        return false;
+      }
+        
+      int exit_code = WEXITSTATUS(status);
+      if (exit_code != 0)
+      {
+        return false;
+      }
+    }
+#endif
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // simplify_path
+  // 
+  bool
+  simplify_path(const std::string & path_utf8,
+                std::string & full_path_utf8)
+  {
+    if (path_utf8.empty())
+    {
+      return false;
+    }
+    
+    std::list<const char *> path;
+    
+    if (path_utf8[0] != *THE_PATH_SEPARATOR)
+    {
+      // get current working directory:
+#ifdef _WIN32
+      wchar_t wcurdir[4096] = { 0 };
+      if (_wgetcwd(wcurdir, sizeof(wcurdir) / sizeof(wcurdir[0])) == NULL)
+      {
+        dump_latest_err();
+        return false;
+      }
+      
+      std::string curdir = utf16_to_utf8(std::wstring(wcurdir));
+#else
+      char curdir[MAXPATHLEN] = { 0 };
+      if (getcwd(curdir, sizeof(curdir)) == NULL)
+      {
+        dump_latest_err();
+        return false;
+      }
+#endif
+      
+      // split current working directory path into tokens:
+      for (char * i = &curdir[0]; *i; ++i)
+      {
+        char & c = *i;
+        if (c == *THE_PATH_SEPARATOR)
+        {
+          c = 0;
+          if (*(i + 1))
+          {
+            path.push_back(++i);
+          }
+        }
+      }
+    }
+    
+    // split given path into tokens:
+    std::string relative(path_utf8);
+    char * siter = &relative[0];
+    
+    if (*siter != *THE_PATH_SEPARATOR)
+    {
+      path.push_back(siter);
+      ++siter;
+    }
+    
+    for (; *siter; ++siter)
+    {
+      char & c = *siter;
+      if (c == *THE_PATH_SEPARATOR)
+      {
+        c = 0;
+        if (*(siter + 1))
+        {
+          path.push_back(++siter);
+        }
+      }
+    }
+    
+    // remove redundant path elements:
+    std::list<const char *>::iterator i = path.begin();
+    while (i != path.end())
+    {
+      const char * a = *i;
+      if (strcmp(a, ".") == 0)
+      {
+        // drop .
+        i = path.erase(i);
+      }
+      else if (strcmp(a, "..") == 0)
+      {
+        if (i == path.begin())
+        {
+          return false;
+        }
+        
+        // drop a/..
+        --i;
+        i = path.erase(i);
+        i = path.erase(i);
+      }
+      else
+      {
+        ++i;
+      }
+    }
+    
+    if (path.empty())
+    {
+      full_path_utf8 = THE_PATH_SEPARATOR;
+    }
+    else
+    {
+      full_path_utf8.clear();
+      for (std::list<const char *>::const_iterator i = path.begin();
+           i != path.end(); ++i)
+      {
+        full_path_utf8 += THE_PATH_SEPARATOR;
+        
+        const char * a = *i;
+        full_path_utf8 += a;
+      }
+    }
+    
+    return true;
+  }
+  
 }

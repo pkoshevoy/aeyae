@@ -35,6 +35,10 @@
 // local includes:
 #include "utils/the_dynamic_array.hxx"
 
+//----------------------------------------------------------------
+// THE_PATH_SEPARATOR
+// 
+extern const char * THE_PATH_SEPARATOR;
 
 //----------------------------------------------------------------
 // array2d
@@ -942,6 +946,19 @@ namespace the
   
   extern bool
   get_current_executable_path(std::string & exe_path_utf8);
+
+  extern std::string
+  get_latest_err_str();
+  
+  extern bool
+  launch_app(const std::string & exe_path_utf8,
+             const std::list<std::string> & args_utf8,
+             const std::string & work_dir_utf8 = std::string(),
+             bool wait_to_finish = true);
+  
+  extern bool
+  simplify_path(const std::string & path_utf8,
+                std::string & full_path_utf8);
   
 }
 
