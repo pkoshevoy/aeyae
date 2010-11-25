@@ -712,7 +712,7 @@ namespace the
   bool
   launch_app(const std::string & exe_path_utf8,
              const std::list<std::string> & args_utf8,
-             const std::string & working_dir_utf8,
+             const std::string & work_dir_utf8,
              bool wait_to_finish)
   {
 #ifdef _WIN32
