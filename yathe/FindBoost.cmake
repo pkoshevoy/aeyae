@@ -114,6 +114,31 @@ endif (Boost_FIND_VERSION_EXACT)
 # Boost.
 set(Boost_ERROR_REASON)
 
+if (NOT BOOST_INCLUDEDIR)
+  set(BOOST_INCLUDEDIR $ENV{BOOST_INCLUDEDIR} CACHE PATH "Path to boost header files")
+  message(reading BOOST_INCLUDEDIR from environment)
+endif (NOT BOOST_INCLUDEDIR)
+
+if (NOT BOOST_LIBRARYDIR)
+  set(BOOST_LIBRARYDIR $ENV{BOOST_LIBRARYDIR} CACHE PATH "Path to boost libraries")
+  message(reading BOOST_LIBRARYDIR from environment)
+endif (NOT BOOST_LIBRARYDIR)
+
+if (NOT EXISTS ${BOOST_INCLUDEDIR})
+  set(BOOST_INCLUDEDIR BOOST_INCLUDEDIR-NOTFOUND CACHE PATH "Path to boost header files")
+  message(BOOST_INCLUDEDIR specifies non-existing path)
+else (NOT EXISTS ${BOOST_INCLUDEDIR})
+  set(Boost_INCLUDE_DIR ${BOOST_INCLUDEDIR})
+endif (NOT EXISTS ${BOOST_INCLUDEDIR})
+
+if (NOT EXISTS ${BOOST_LIBRARYDIR})
+  set(BOOST_LIBRARYDIR BOOST_LIBRARYDIR-NOTFOUND CACHE PATH "Path to boost libraries")
+  message(BOOST_LIBRARYDIR specifies non-existing path)
+else (NOT EXISTS ${BOOST_LIBRARYDIR})
+  set(Boost_LIBRARY_DIRS ${BOOST_LIBRARYDIR})
+endif (NOT EXISTS ${BOOST_LIBRARYDIR})
+
+
 ############################################
 #
 # Check the existence of the libraries.
@@ -249,16 +274,6 @@ ELSE (_boost_IN_CACHE)
   if (NOT BOOST_ROOT AND NOT $ENV{BOOSTROOT} STREQUAL "")
     set(BOOST_ROOT $ENV{BOOSTROOT})
   endif(NOT BOOST_ROOT AND NOT $ENV{BOOSTROOT} STREQUAL "")
-
-  # If BOOST_INCLUDEDIR was defined in the environment, use it.
-  IF( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
-    set(BOOST_INCLUDEDIR $ENV{BOOST_INCLUDEDIR})
-  ENDIF( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
-
-  # If BOOST_LIBRARYDIR was defined in the environment, use it.
-  IF( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
-    set(BOOST_LIBRARYDIR $ENV{BOOST_LIBRARYDIR})
-  ENDIF( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
 
   IF( BOOST_ROOT )
     file(TO_CMAKE_PATH ${BOOST_ROOT} BOOST_ROOT)
