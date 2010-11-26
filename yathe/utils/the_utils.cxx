@@ -47,8 +47,10 @@ THE SOFTWARE.
 #include <CoreServices/CoreServices.h>
 #include <uuid/uuid.h>
 #endif
+#include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <fcntl.h>
