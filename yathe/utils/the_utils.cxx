@@ -50,6 +50,7 @@ THE SOFTWARE.
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <dlfcn.h>
