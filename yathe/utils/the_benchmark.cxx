@@ -254,7 +254,6 @@ the_benchmark_t::the_benchmark_t(const char * name_utf8)
 the_benchmark_t::~the_benchmark_t()
 {
   the_walltime_t finish;
-  finish.mark();
   
   finish -= record_->start_;
   record_->total_ += finish;
