@@ -24,10 +24,10 @@
 //----------------------------------------------------------------
 // the_walltime_t
 // 
-the_walltime_t::the_walltime_t():
-  sec_(0),
-  usec_(0)
-{}
+the_walltime_t::the_walltime_t()
+{
+  mark();
+}
 
 //----------------------------------------------------------------
 // the_walltime_t::mark
@@ -36,15 +36,18 @@ void
 the_walltime_t::mark()
 {
 #if defined(_WIN32)
-  std::size_t msec = GetTickCount();
+  
+  uint64_t msec = GetTickCount64();
   sec_ = msec / 1000;
   usec_ = (msec % 1000) * 1000;
   
 #else
+  
   struct timeval tv;
   gettimeofday(&tv, NULL);
   sec_ = tv.tv_sec + tv.tv_usec / 1000000;
   usec_ = tv.tv_usec % 1000000;
+  
 #endif
 }
 
