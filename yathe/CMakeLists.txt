@@ -75,6 +75,8 @@ add_library(the_core STATIC
   utils/the_utils.hxx
   utils/the_benchmark.cxx
   utils/the_benchmark.hxx
+  utils/the_walltime.cxx
+  utils/the_walltime.hxx
   utils/instance_method_call.hxx
   utils/instance_method_call.cxx
   io/io_base.hxx

@@ -28,33 +28,35 @@ public:
   static void setup(const char * saveto_filename_utf8);
   static void reset();
   
+  struct record_t;
+  
 private:
-  void * record_;
+  record_t * record_;
 };
 
 
 //----------------------------------------------------------------
-// STR1
+// THE_STR1
 // 
 // macro for converting its parameter to a string literal
 // 
-#define STR1(a) STR1_HIDDEN(a)
-#define STR1_HIDDEN(a) #a
+#define THE_STR1(a) THE_STR1_HIDDEN(a)
+#define THE_STR1_HIDDEN(a) #a
 
 //----------------------------------------------------------------
-// CAT2
+// THE_CAT2
 //
 // macro for concatenating 2 parameters together
 // 
-#define CAT2(a, b) CAT2_HIDDEN(a, b)
-#define CAT2_HIDDEN(a, b) a ## b
+#define THE_CAT2(a, b) THE_CAT2_HIDDEN(a, b)
+#define THE_CAT2_HIDDEN(a, b) a ## b
 
 //----------------------------------------------------------------
-// BENCHMARK
+// THE_BENCHMARK
 // 
-#define BENCHMARK(name)				\
-  the_benchmark_t CAT2(benchmark_, __LINE__)	\
-    (#name ", " __FILE__ ":" STR1(__LINE__))
+#define THE_BENCHMARK(name)				\
+  the_benchmark_t THE_CAT2(benchmark_, __LINE__)	\
+    (#name ", " __FILE__ ":" THE_STR1(__LINE__))
 
 
 #endif // THE_BENCHMARK_HXX_

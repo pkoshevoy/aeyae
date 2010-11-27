@@ -10,20 +10,16 @@
 // Description  : Classed for keeping track of time spent in function calls.
 
 // system includes:
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#else
-#include <sys/time.h>
-#endif
-#include <assert.h>
 #include <vector>
 #include <string>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <assert.h>
 
 // local includes:
 #include "utils/the_benchmark.hxx"
+#include "utils/the_walltime.hxx"
 
 // Boost includes:
 #include <boost/thread/tss.hpp>
@@ -36,70 +32,11 @@ static std::string SAVE_TO;
 
 
 //----------------------------------------------------------------
-// the_walltime_t
+// the_benchmark_t::record_t
 // 
-struct the_walltime_t
+struct the_benchmark_t::record_t
 {
-  the_walltime_t():
-    sec_(0),
-    usec_(0)
-  {}
-  
-  inline void save()
-  {
-#if defined(_WIN32) || defined(_WIN64)
-    // Windows:
-    std::size_t msec = GetTickCount();
-    sec_ = msec / 1000;
-    usec_ = (msec % 1000) * 1000;
-    
-#else
-    // UNIX:
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    sec_ = tv.tv_sec + tv.tv_usec / 1000000;
-    usec_ = tv.tv_usec % 1000000;
-    
-#endif
-  }
-  
-  the_walltime_t & operator -= (const the_walltime_t & ref)
-  {
-    if (ref.usec_ > usec_)
-    {
-      usec_ = (usec_ + 1000000) - ref.usec_;
-      sec_ -= (ref.sec_ + 1);
-    }
-    else
-    {
-      usec_ -= ref.usec_;
-      sec_ -= ref.sec_;
-    }
-    
-    return *this;
-  }
-  
-  the_walltime_t & operator += (const the_walltime_t & ref)
-  {
-    usec_ += ref.usec_;
-    sec_ += ref.sec_ + usec_ / 1000000;
-    usec_ %= 1000000;
-    
-    return *this;
-  }
-  
-  unsigned int sec_;
-  unsigned int usec_;
-};
-
-
-//----------------------------------------------------------------
-// the_benchmark_record_t
-// 
-class the_benchmark_record_t
-{
-public:
-  the_benchmark_record_t(unsigned int level, const std::string & name):
+  record_t(unsigned int level, const std::string & name):
     level_(level),
     name_(name),
     calls_(0)
@@ -125,14 +62,14 @@ public:
 
   void clear();
   
-  the_benchmark_record_t * add(const std::string & name);
-  the_benchmark_record_t * lookup(const std::string & name) const;
+  the_benchmark_t::record_t * add(const std::string & name);
+  the_benchmark_t::record_t * lookup(const std::string & name) const;
   
   void dump(std::ostream & so) const;
   void save(const std::string & fn) const;
   
   // data members:
-  std::vector<the_benchmark_record_t *> benchmarks_;
+  std::vector<the_benchmark_t::record_t *> benchmarks_;
   unsigned int level_;
   std::string save_to_;
 };
@@ -182,11 +119,12 @@ the_benchmarks_t::clear()
 //----------------------------------------------------------------
 // the_benchmarks_t::add
 // 
-the_benchmark_record_t *
+the_benchmark_t::record_t *
 the_benchmarks_t::add(const std::string & name)
 {
-  the_benchmark_record_t * benchmark = new the_benchmark_record_t(level_,
-								  name);
+  the_benchmark_t::record_t * benchmark =
+    new the_benchmark_t::record_t(level_, name);
+  
   benchmarks_.push_back(benchmark);
   return benchmark;
 }
@@ -194,14 +132,15 @@ the_benchmarks_t::add(const std::string & name)
 //----------------------------------------------------------------
 // the_benchmarks_t::lookup
 // 
-the_benchmark_record_t *
+the_benchmark_t::record_t *
 the_benchmarks_t::lookup(const std::string & name) const
 {
   const std::size_t num_benchmarks = benchmarks_.size();
   for (std::size_t i = 0; i < num_benchmarks; i++)
   {
-    the_benchmark_record_t * benchmark = benchmarks_[i];
-    if (benchmark->level_ == level_ && benchmark->name_ == name)
+    the_benchmark_t::record_t * benchmark = benchmarks_[i];
+    if (benchmark->level_ == level_ &&
+        benchmark->name_ == name)
     {
       return benchmark;
     }
@@ -227,7 +166,7 @@ the_benchmarks_t::dump(std::ostream & so) const
   const std::size_t num_benchmarks = benchmarks_.size();
   for (std::size_t i = 0; i < num_benchmarks; i++)
   {
-    const the_benchmark_record_t * benchmark = benchmarks_[i];
+    const the_benchmark_t::record_t * benchmark = benchmarks_[i];
     double elapsed = (double(benchmark->total_.sec_ +
 			     benchmark->total_.usec_ / 1000000) +
 		      double(benchmark->total_.usec_ % 1000000) * 1e-6);
@@ -290,14 +229,14 @@ the_benchmark_t::the_benchmark_t(const char * name_utf8)
 
   // lookup a record by the given name at the current level:
   std::string name(name_utf8);
-  the_benchmark_record_t * benchmark = tss->lookup(name);
+  the_benchmark_t::record_t * benchmark = tss->lookup(name);
   if (!benchmark)
   {
     benchmark = tss->add(name);
   }
   
   // save entrance time:
-  benchmark->start_.save();
+  benchmark->start_.mark();
   
   // increment the call counter:
   benchmark->calls_++;
@@ -315,11 +254,10 @@ the_benchmark_t::the_benchmark_t(const char * name_utf8)
 the_benchmark_t::~the_benchmark_t()
 {
   the_walltime_t finish;
-  finish.save();
+  finish.mark();
   
-  the_benchmark_record_t * benchmark = (the_benchmark_record_t *)(record_);
-  finish -= benchmark->start_;
-  benchmark->total_ += finish;
+  finish -= record_->start_;
+  record_->total_ += finish;
   
   // decrement scope level at exit:
   the_benchmarks_t * tss = TSS.get();
