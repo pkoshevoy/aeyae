@@ -180,7 +180,7 @@ the_graph_node_t::verify_supporters_visited() const
 }
 
 //----------------------------------------------------------------
-// the_graph_node_t::graph_request_regeneration
+// the_graph_node_t::request_regeneration
 // 
 void
 the_graph_node_t::request_regeneration(the_graph_node_t * start_here)
