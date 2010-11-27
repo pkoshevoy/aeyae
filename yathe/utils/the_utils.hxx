@@ -436,28 +436,6 @@ expand(container_t & a,
   return a;
 }
 
-//----------------------------------------------------------------
-// next
-// 
-template <class iterator_t>
-iterator_t
-next(const iterator_t & curr)
-{
-  iterator_t tmp(curr);
-  return ++tmp;
-}
-
-//----------------------------------------------------------------
-// prev
-// 
-template <class iterator_t>
-iterator_t
-prev(const iterator_t & curr)
-{
-  iterator_t tmp(curr);
-  return --tmp;
-}
-
 
 //----------------------------------------------------------------
 // dump
@@ -903,6 +881,28 @@ restore_console_stdio();
 
 namespace the
 {
+  //----------------------------------------------------------------
+  // next
+  // 
+  template <class iterator_t>
+  iterator_t
+  next(const iterator_t & curr)
+  {
+    iterator_t tmp(curr);
+    return ++tmp;
+  }
+  
+  //----------------------------------------------------------------
+  // prev
+  // 
+  template <class iterator_t>
+  iterator_t
+  prev(const iterator_t & curr)
+  {
+    iterator_t tmp(curr);
+    return --tmp;
+  }
+  
   extern int open_utf8(const char * filename_utf8,
 		       int oflag,
 		       int pmode);

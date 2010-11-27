@@ -40,10 +40,10 @@ find_local_minima(std::list<the_deviation_min_t> & solution,
   the_dynamic_array_t<the_slope_sign_t> brackets;
   
   for (std::list<the_slope_sign_t>::iterator i = slope_signs.begin();
-       i != slope_signs.end() && next(i) != slope_signs.end(); ++i)
+       i != slope_signs.end() && the::next(i) != slope_signs.end(); ++i)
   {
     const the_slope_sign_t & a = *i;
-    const the_slope_sign_t & b = *next(i);
+    const the_slope_sign_t & b = *the::next(i);
     
     // if this interval starts with increase in function, then the solution
     // can only be a maxima, not minima, so skip it:
