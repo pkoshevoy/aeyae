@@ -226,7 +226,7 @@ the_registry_t::assert_sanity() const
     
     // make sure the id is unique in the list:
     for (std::list<unsigned int>::const_iterator
-	   j = next(i); j != reuse.end(); ++j)
+	   j = the::next(i); j != reuse.end(); ++j)
     {
       assert(*j != id);
     }

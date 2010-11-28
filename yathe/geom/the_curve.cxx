@@ -440,10 +440,10 @@ the_intcurve_t::remove_duplicates(const float & threshold)
   
   p3x1_t pa = point((*ia).id_)->value();
   
-  std::list<the_knot_point_t>::iterator ib = next(ia);
+  std::list<the_knot_point_t>::iterator ib = the::next(ia);
   while (ib != pts_.end())
   {
-    std::list<the_knot_point_t>::iterator ic = next(ib);
+    std::list<the_knot_point_t>::iterator ic = the::next(ib);
     p3x1_t pb = point((*ib).id_)->value();
     float d2 = (pb - pa).norm_sqrd();
     
@@ -581,7 +581,7 @@ the_intcurve_t::point_values(std::vector<p3x1_t> & wcs_pts,
   wt_list.push_back(point((*i).id_)->weight());
   kt_list.push_back((*i).param_);
   
-  for (i = next(i); i != pts_.end(); ++i)
+  for (i = the::next(i); i != pts_.end(); ++i)
   {
     if (fabs(kt_list.back() - (*i).param_) <= THE_EPSILON) continue;
     

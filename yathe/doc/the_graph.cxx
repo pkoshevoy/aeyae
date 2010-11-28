@@ -108,7 +108,7 @@ the_graph_t::dependency_sort()
   
   for (std::list<unsigned int>::iterator i = begin(); i != end(); ++i)
   {
-    for (std::list<unsigned int>::iterator j = next(i); j != end(); ++j)
+    for (std::list<unsigned int>::iterator j = the::next(i); j != end(); ++j)
     {
       bool swap_ij = registry_->elem(*j)->supports(*i);
       if (!swap_ij) continue;

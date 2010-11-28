@@ -1358,7 +1358,7 @@ the_interpolation_bspline_t::setup_parameterization()
   // centripetal parameterization:
   for (size_t i = 1; i < pts_.size(); i++)
   {
-    std::list<the_knot_point_t>::iterator ib = next(ia);
+    std::list<the_knot_point_t>::iterator ib = the::next(ia);
     p3x1_t pb = point((*ib).id_)->value();
     length += sqrt((pb - pa).norm());
     (*ib).param_ = length;
