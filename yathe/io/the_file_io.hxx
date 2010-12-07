@@ -198,7 +198,7 @@ public:
   // add a file io handler:
   void add(const loader_t & loader)
   {
-    unsigned int i = loaders_.index_of(loader);
+      std::size_t i = loaders_.index_of(loader);
     
     if (i == ~0u)
     {
