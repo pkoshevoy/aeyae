@@ -1745,6 +1745,13 @@ namespace yae
     }
     
     threadStop();
+    
+    const std::size_t numVideoTracks = videoTracks_.size();
+    selectVideoTrack(numVideoTracks);
+    
+    const std::size_t numAudioTracks = audioTracks_.size();
+    selectAudioTrack(numAudioTracks);
+    
     videoTracks_.clear();
     audioTracks_.clear();
     
