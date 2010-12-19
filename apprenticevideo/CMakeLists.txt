@@ -39,6 +39,8 @@ if (WIN32)
   add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
 endif (WIN32)
 
+add_definitions(-DYAE_STATIC)
+
 include_directories(AFTER 
   .
   ${CMAKE_CURRENT_BINARY_DIR}
