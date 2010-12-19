@@ -416,6 +416,7 @@ DeployFileOnce()
 		echo "${FILEPATH}" >> "${DONELIST}"
 		echo checking "${FILEPATH}"
 		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
+		echo
 	fi
 }
 
@@ -642,7 +643,6 @@ DeployAppBundle()
 			rm -f "${DONELIST}"
 			exit 11; 
 		fi
-		echo
 	done
 	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
@@ -650,7 +650,6 @@ DeployAppBundle()
 			rm -f "${DONELIST}"
 			exit 11; 
 		fi
-		echo
 	done
 	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
@@ -658,7 +657,6 @@ DeployAppBundle()
 			rm -f "${DONELIST}"
 			exit 11; 
 		fi
-		echo
 	done
 	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
@@ -666,7 +664,6 @@ DeployAppBundle()
 			rm -f "${DONELIST}"
 			exit 11; 
 		fi
-		echo
 	done
 	find MacOS -type d -print | while read i; do
 		find "${i}" -type f -print | while read j; do
@@ -675,7 +672,6 @@ DeployAppBundle()
 				rm -f "${DONELIST}"
 				exit 11; 
 			fi
-			echo
 		done
 	done
 	quiet_popd
