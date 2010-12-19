@@ -414,12 +414,10 @@ DeployFileOnce()
 	IS_DEPLOYED=`grep "${FILEPATH}" "${DONELIST}"`
 	if [ -n "${IS_DEPLOYED}" ]; then
 		printf "%40s : already deployed\n" "${FILEPATH}"
-		return;
 	else
 		echo "${FILEPATH}" >> "${DONELIST}"
+		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
 	fi
-	
-	(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
 }
 
 #----------------------------------------------------------------
@@ -687,8 +685,9 @@ DeployAppBundle()
 			echo
 		done
 	done
-	rm -f "${DONELIST}"
 	quiet_popd
+
+	rm -f "${DONELIST}"
 }
 
 #---------------------------------------------------------------------
