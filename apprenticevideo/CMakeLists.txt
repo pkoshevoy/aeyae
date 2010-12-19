@@ -1,8 +1,23 @@
-project(yae)
-set(PROGNAME "yae")
-
 cmake_minimum_required(VERSION 2.8.0)
 
+project(yae)
+set(PROGNAME "yap")
+
+if (EXISTS ${THE_DIR})
+  set(THE_SRC_DIR ${THE_DIR})
+endif (EXISTS ${THE_DIR})
+
+if (NOT THE_SRC_DIR)
+  file(TO_CMAKE_PATH "$ENV{THE_SRC_DIR}" THE_SRC_DIR)
+endif (NOT THE_SRC_DIR)
+
+if (NOT THE_BIN_DIR)
+  file(TO_CMAKE_PATH "$ENV{THE_BIN_DIR}" THE_BIN_DIR)
+endif (NOT THE_BIN_DIR)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${THE_SRC_DIR})
+
+find_package(THE REQUIRED)
 find_package(OpenGL REQUIRED)
 
 set(Boost_ADDITIONAL_VERSIONS "1.41" "1.41.0")
@@ -13,7 +28,7 @@ find_package(Boost 1.35 COMPONENTS date_time REQUIRED)
 find_package(Qt4)
 if (QT4_FOUND)
 else (QT4_FOUND)
-  message(FATAL_ERROR "Cannot build without Qt4.")
+  message(FATAL_ERROR "Cannot build without Qt4.  Please set QT4_DIR.")
 endif (QT4_FOUND)
 
 set(QT_USE_OPENGL TRUE)
@@ -27,13 +42,19 @@ endif (WIN32)
 include_directories(AFTER 
   .
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${THE_SRC_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
   ${QT_QTOPENGL_INCLUDE_DIR}
   )
 
-find_path(FFMPEG_INCLUDE_DIR libavutil/avutil.h /usr/include)
+find_path(FFMPEG_INCLUDE_DIR 
+  libavutil/avutil.h
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
 if (FFMPEG_INCLUDE_DIR)
   include_directories(AFTER ${FFMPEG_INCLUDE_DIR})
 endif (FFMPEG_INCLUDE_DIR)
@@ -87,34 +108,41 @@ find_library(NUT_LIBRARY nut DOC "nut library")
 find_library(ZLIB_LIBRARY z DOC "zlib library")
 find_library(BZIP2_LIBRARY bz2 DOC "bzip2 library")
 
-#set(project_moc_hxx .....)
-#qt4_wrap_cpp(project_moc_cxx ${iv_moc_hxx})
+set(project_moc_hxx 
+  yaeMainWindow.h
+  )
 
-#set(project_uis ......)
-#qt4_wrap_ui(project_uis_hxx ${project_uis})
+qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+
+set(project_uis 
+  yaeMainWindow.ui
+  )
+
+qt4_wrap_ui(project_uis_hxx ${project_uis})
 
 #qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
 set(project_sources 
   yaeMain.cpp
+  yaeMainWindow.cpp
   yaeAPI.cpp
   yaeReaderFFMPEG.cpp
   yaeViewer.cpp
-#  ${project_moc_cxx}
-#  ${project_uis_hxx}
+  ${project_moc_cxx}
+  ${project_uis_hxx}
 #  ${project_qrc_cxx}
   )
 
 # Set some Win32 Specific Settings
 if (WIN32)
   set(GUI_TYPE WIN32)
-#  set(project_sources ${project_sources} ${PROGNAME}.rc)
+  set(project_sources ${project_sources} ${PROGNAME}.rc)
 endif (WIN32)
 
 # Set some Apple MacOS Specific settings
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
-#  set(project_sources ${project_sources} Info.plist ${PROGNAME}.icns)
+  set(project_sources ${project_sources} ${PROGNAME}Info.plist ${PROGNAME}.icns)
 endif (APPLE)
 
 add_executable(${PROGNAME}
@@ -277,19 +305,27 @@ if (WIN32)
     )
 endif (WIN32)
 
+if (APPLE)
+  find_library(CORE_SERVICES_FRAMEWORK CoreServices)
+  mark_as_advanced(CORE_SERVICES_FRAMEWORK)
+  if (CORE_SERVICES_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${CORE_SERVICES_FRAMEWORK})
+  endif (CORE_SERVICES_FRAMEWORK)
+endif (APPLE)
+
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
   )
 
 if (APPLE)
-#  set_target_properties(${PROGNAME}
-#	PROPERTIES
-#	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist)
-#
-#  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.icns
-#	PROPERTIES
-#	MACOSX_PACKAGE_LOCATION Resources)
-#
+  set_target_properties(${PROGNAME}
+	PROPERTIES
+	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}Info.plist)
+
+  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.icns
+	PROPERTIES
+	MACOSX_PACKAGE_LOCATION Resources)
+
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
 	COMMAND ${THE_SRC_DIR}/DeployOSX.sh 
 	ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app

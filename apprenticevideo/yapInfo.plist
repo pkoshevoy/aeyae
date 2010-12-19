@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>avi</string>
+				<string>asf</string>
+				<string>divx</string>
+				<string>flv</string>
+				<string>f4v</string>
+				<string>mov</string>
+				<string>mpg</string>
+				<string>mpeg</string>
+				<string>mp4</string>
+				<string>m4v</string>
+				<string>mkv</string>
+				<string>ogm</string>
+				<string>ogv</string>
+				<string>wmv</string>
+				<string>webm</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>yap</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSIsAppleDefaultForType</key>
+			<false/>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>yap</string>
+	<key>CFBundleGetInfoString</key>
+	<string>yap v0.1 by Pavel Koshevoy (c) 2010</string>
+	<key>CFBundleIconFile</key>
+	<string>yap</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.aragog</string>
+	<key>CFBundleName</key>
+	<string>yap</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1</string>
+	<key>CFBundleSignature</key>
+	<string>yap</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSAppleScriptEnabled</key>
+	<string>YES</string>
+</dict>
+</plist>

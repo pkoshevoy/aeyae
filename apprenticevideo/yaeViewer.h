@@ -40,6 +40,8 @@ namespace yae
     Viewer(IReader * reader);
     ~Viewer();
     
+    void setReader(IReader * reader);
+    
     bool loadFrame();
     
   protected:

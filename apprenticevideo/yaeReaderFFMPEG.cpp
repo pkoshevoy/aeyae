@@ -94,6 +94,8 @@ fileSeek64(int fd, int64_t offset, int whence)
 {
 #ifdef _WIN32
   __int64 pos = _lseeki64(fd, offset, whence);
+#elif defined(__APPLE__)
+  off_t pos = lseek(fd, offset, whence);
 #else
   off64_t pos = lseek64(fd, offset, whence);
 #endif

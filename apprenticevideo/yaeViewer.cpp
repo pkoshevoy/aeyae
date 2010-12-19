@@ -115,9 +115,58 @@ namespace yae
   // 
   Viewer::Viewer(IReader * reader):
     QWidget(),
-    flipTheImage_(false),
-    reader_(reader)
+    reader_(NULL),
+    flipTheImage_(false)
   {
+    QGridLayout * grid = new QGridLayout(this);
+    grid->setSpacing(0);
+    grid->setContentsMargins(0, 0, 0, 0);
+    
+    labelY_ = new QLabel(this);
+    grid->addWidget(labelY_, 0, 0);
+    labelY_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    labelY_->show();
+    
+    labelU_ = new QLabel(this);
+    grid->addWidget(labelU_, 1, 0);
+    labelU_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    labelU_->show();
+    
+    labelV_ = new QLabel(this);
+    grid->addWidget(labelV_, 1, 1);
+    labelV_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    labelV_->show();
+    
+    labelRGB_ = new QLabel(this);
+    grid->addWidget(labelRGB_, 0, 1);
+    labelRGB_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    labelRGB_->show();
+    
+    setReader(reader);
+  }
+
+  //----------------------------------------------------------------
+  // Viewer::~Viewer
+  // 
+  Viewer::~Viewer()
+  {
+    if (reader_)
+    {
+      reader_->destroy();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // Viewer::setReader
+  // 
+  void
+  Viewer::setReader(IReader * reader)
+  {
+    reader_ = reader;
+    traits_ = VideoTraits();
+    frame_ =  TVideoFramePtr();
+    flipTheImage_ = false;
+    
     if (reader_)
     {
       reader_->getVideoTraits(traits_);
@@ -132,46 +181,12 @@ namespace yae
     rgb_ = QImage(imgW, imgH, QImage::Format_RGB888);
     
     setMinimumSize(imgW * 2, imgH * 2);
-    QGridLayout * grid = new QGridLayout(this);
-    grid->setSpacing(0);
-    grid->setContentsMargins(0, 0, 0, 0);
-    
-    labelY_ = new QLabel(this);
-    grid->addWidget(labelY_, 0, 0);
     labelY_->setMinimumSize(imgW, imgH);
-    labelY_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelY_->show();
-    
-    labelU_ = new QLabel(this);
-    grid->addWidget(labelU_, 1, 0);
     labelU_->setMinimumSize(imgW, imgH);
-    labelU_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelU_->show();
-    
-    labelV_ = new QLabel(this);
-    grid->addWidget(labelV_, 1, 1);
     labelV_->setMinimumSize(imgW, imgH);
-    labelV_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelV_->show();
-    
-    labelRGB_ = new QLabel(this);
-    grid->addWidget(labelRGB_, 0, 1);
     labelRGB_->setMinimumSize(imgW, imgH);
-    labelRGB_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelRGB_->show();
   }
 
-  //----------------------------------------------------------------
-  // Viewer::~Viewer
-  // 
-  Viewer::~Viewer()
-  {
-    if (reader_)
-    {
-      reader_->destroy();
-    }
-  }
-  
   //----------------------------------------------------------------
   // Viewer::loadFrame
   // 
