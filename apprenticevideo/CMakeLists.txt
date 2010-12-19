@@ -139,6 +139,13 @@ set(project_sources
 if (WIN32)
   set(GUI_TYPE WIN32)
   set(project_sources ${project_sources} ${PROGNAME}.rc)
+
+  if (MSYS OR MINGW)
+    set(CMAKE_RC_COMPILER_INIT windres)
+    enable_language(RC)
+    set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+  endif (MSYS OR MINGW)
+
 endif (WIN32)
 
 # Set some Apple MacOS Specific settings
