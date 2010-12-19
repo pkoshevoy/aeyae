@@ -47,6 +47,8 @@ namespace yae
   protected:
     // virtual:
     void closeEvent(QCloseEvent * e);
+    void dragEnterEvent(QDragEnterEvent * e);
+    void dropEvent(QDropEvent * e);
     
     // file reader:
     IReader * reader_;

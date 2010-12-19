@@ -14,8 +14,11 @@
 // Qt includes:
 #include <QApplication>
 #include <QCloseEvent>
+#include <QDragEnterEvent>
 #include <QVBoxLayout>
 #include <QFileDialog>
+#include <QMimeData>
+#include <QUrl>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -34,6 +37,7 @@ namespace yae
     QMainWindow(NULL, 0)
   {
     setupUi(this);
+    setAcceptDrops(true);
     
     reader_ = ReaderFFMPEG::create();
     viewer_ = new Viewer(reader_);
@@ -155,6 +159,39 @@ namespace yae
   {
     e->accept();
     fileExit();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::dragEnterEvent
+  // 
+  void
+  MainWindow::dragEnterEvent(QDragEnterEvent * e)
+  {
+    if (!e->mimeData()->hasUrls())
+    {
+      e->ignore();
+      return;
+    }
+    
+    e->acceptProposedAction();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::dropEvent
+  // 
+  void
+  MainWindow::dropEvent(QDropEvent * e)
+  {
+    if (!e->mimeData()->hasUrls())
+    {
+      e->ignore();
+      return;
+    }
+    
+    e->acceptProposedAction();
+    
+    QString filename = e->mimeData()->urls().front().toLocalFile();
+    load(filename);
   }
   
 };
