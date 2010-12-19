@@ -412,10 +412,9 @@ DeployFileOnce()
 
 	# avoid deploying the same file multiple times:
 	IS_DEPLOYED=`grep "${FILEPATH}" "${DONELIST}"`
-	if [ -n "${IS_DEPLOYED}" ]; then
-		printf "%40s : already deployed\n" "${FILEPATH}"
-	else
+	if [ -z "${IS_DEPLOYED}" ]; then
 		echo "${FILEPATH}" >> "${DONELIST}"
+		echo checking "${FILEPATH}"
 		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
 	fi
 }
@@ -607,7 +606,6 @@ DeployFile()
 			fi
 
 			quiet_pushd "${BASEPATH}"
-				echo "DeployFileOnce ${BASEPATH} ${DST}/${FN_DST} ${DONELIST}"
 				DeployFileOnce "${BASEPATH}" "${DST}/${FN_DST}" "${DONELIST}"
 				if [ $? != 0 ]; then exit 11; fi
 			quiet_popd
@@ -639,7 +637,6 @@ DeployAppBundle()
 	quiet_pushd "${BUNDLE_PATH}"/Contents
 	BASE=`pwd`
 	find MacOS -type f -print | while read i; do
-		echo checking "${i}"
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		if [ $? != 0 ]; then 
 			rm -f "${DONELIST}"
@@ -648,7 +645,6 @@ DeployAppBundle()
 		echo
 	done
 	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
-		echo checking "${i}"
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		if [ $? != 0 ]; then 
 			rm -f "${DONELIST}"
@@ -657,7 +653,6 @@ DeployAppBundle()
 		echo
 	done
 	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
-		echo checking "${i}"
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		if [ $? != 0 ]; then 
 			rm -f "${DONELIST}"
@@ -666,7 +661,6 @@ DeployAppBundle()
 		echo
 	done
 	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
-		echo checking "${i}"
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		if [ $? != 0 ]; then 
 			rm -f "${DONELIST}"
@@ -676,7 +670,6 @@ DeployAppBundle()
 	done
 	find MacOS -type d -print | while read i; do
 		find "${i}" -type f -print | while read j; do
-			echo checking "${j}"
 			DeployFileOnce "${BASE}" "${j}" "${DONELIST}"
 			if [ $? != 0 ]; then 
 				rm -f "${DONELIST}"
