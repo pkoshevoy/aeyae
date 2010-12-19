@@ -118,6 +118,9 @@ namespace yae
     reader_(NULL),
     flipTheImage_(false)
   {
+    setObjectName("yae::Viewer");
+    setFocusPolicy(Qt::StrongFocus);
+    
     QGridLayout * grid = new QGridLayout(this);
     grid->setSpacing(0);
     grid->setContentsMargins(0, 0, 0, 0);
