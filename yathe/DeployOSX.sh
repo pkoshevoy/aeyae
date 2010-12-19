@@ -292,9 +292,12 @@ PrepForDeployment()
 
 			# find out which Qt was linked against and 
 			# copy plugins from the same version of Qt
-			QT_DIR=`otool -L "${i}" | grep QtCore | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev`
+			QT_DIR=`otool -L "${i}" | grep QtCore | grep framework | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev`
 			if [ -z "${QT_DIR}" ]; then 
-				continue; 
+				QT_DIR=`otool -L "${i}" | grep QtCore | grep dylib | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f3- | rev`
+				if [ -z "${QT_DIR}" ]; then 
+					continue; 
+				fi
 			fi
 
 			printf '%s, QT_DIR: "%s"\n' "${i}" "${QT_DIR}"
@@ -395,15 +398,43 @@ GetPathToParentDir()
 }
 
 #----------------------------------------------------------------
+# DeployFileOnce
+# 
+# $1 -- bundle contents directory path (foo.app/Contents)
+# $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
+# $3 -- path to the file holding a list of previously deployed files
+# 
+DeployFileOnce()
+{
+	BASEPATH="${1}"
+	FILEPATH="${2}"
+	DONELIST="${3}"
+
+	# avoid deploying the same file multiple times:
+	IS_DEPLOYED=`grep "${FILEPATH}" "${DONELIST}"`
+	if [ -n "${IS_DEPLOYED}" ]; then
+		printf "%40s : already deployed\n" "${FILEPATH}"
+		return;
+	else
+		echo "${FILEPATH}" >> "${DONELIST}"
+	fi
+	
+	(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
+}
+
+#----------------------------------------------------------------
 # DeployFile
 # 
 # $1 -- bundle contents directory path (foo.app/Contents)
 # $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
+# $3 -- path to the file holding a list of previously deployed files
 # 
 DeployFile()
 {
 	BASEPATH="${1}"
 	FILEPATH="${2}"
+	DONELIST="${3}"
+
 #	echo
 #	echo BASEPATH: ${BASEPATH} 
 #	echo FILEPATH: ${FILEPATH}
@@ -412,7 +443,7 @@ DeployFile()
 		printf "MISSING: %s\n" "${BASEPATH}/${FILEPATH}"
 		exit 11
 	fi
-
+	
 	FILE=`basename "${FILEPATH}"`
 	FDIR=`dirname "${FILEPATH}"`
 	quiet_pushd "${FDIR}"
@@ -469,7 +500,7 @@ DeployFile()
 		
 		if [ -n "${AT_LOAD_PATH}" ]; then
 			REF=`echo "${NEEDS}" | cut -d/ -f2-`
-			(DeployFile "${BASEPATH}" "${REF}")
+			DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}"
 			if [ $? != 0 ]; then exit 11; fi
 		else
 			if [ -n "${AT_EXEC_PATH}" ]; then
@@ -578,8 +609,8 @@ DeployFile()
 			fi
 
 			quiet_pushd "${BASEPATH}"
-				echo "(DeployFile ${BASEPATH} ${DST}/${FN_DST})"
-				(DeployFile "${BASEPATH}" "${DST}/${FN_DST}")
+				echo "DeployFileOnce ${BASEPATH} ${DST}/${FN_DST} ${DONELIST}"
+				DeployFileOnce "${BASEPATH}" "${DST}/${FN_DST}" "${DONELIST}"
 				if [ $? != 0 ]; then exit 11; fi
 			quiet_popd
 			
@@ -599,41 +630,64 @@ DeployFile()
 DeployAppBundle()
 {
 	BUNDLE_PATH="${1}"
-	
+
+	if [ -z "${TMPDIR}" ]; then
+		TMPDIR=/tmp
+	fi
+
+	# create a temp file to keep the list of deployed files:
+	DONELIST=`mktemp -t DeployOSX.sh` || exit 12
+
 	quiet_pushd "${BUNDLE_PATH}"/Contents
 	BASE=`pwd`
 	find MacOS -type f -print | while read i; do
 		echo checking "${i}"
-		DeployFile "${BASE}" "${i}"
-		if [ $? != 0 ]; then exit 11; fi
+		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
+		if [ $? != 0 ]; then 
+			rm -f "${DONELIST}"
+			exit 11; 
+		fi
 		echo
 	done
 	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
 		echo checking "${i}"
-		DeployFile "${BASE}" "${i}"
-		if [ $? != 0 ]; then exit 11; fi
+		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
+		if [ $? != 0 ]; then 
+			rm -f "${DONELIST}"
+			exit 11; 
+		fi
 		echo
 	done
 	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		echo checking "${i}"
-		DeployFile "${BASE}" "${i}"
-		if [ $? != 0 ]; then exit 11; fi
+		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
+		if [ $? != 0 ]; then 
+			rm -f "${DONELIST}"
+			exit 11; 
+		fi
 		echo
 	done
 	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		echo checking "${i}"
-		DeployFile "${BASE}" "${i}"
-		if [ $? != 0 ]; then exit 11; fi
+		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
+		if [ $? != 0 ]; then 
+			rm -f "${DONELIST}"
+			exit 11; 
+		fi
 		echo
 	done
 	find MacOS -type d -print | while read i; do
 		find "${i}" -type f -print | while read j; do
 			echo checking "${j}"
-			DeployFile "${BASE}" "${j}"
-			if [ $? != 0 ]; then exit 11; fi
+			DeployFileOnce "${BASE}" "${j}" "${DONELIST}"
+			if [ $? != 0 ]; then 
+				rm -f "${DONELIST}"
+				exit 11; 
+			fi
 			echo
 		done
 	done
+	rm -f "${DONELIST}"
 	quiet_popd
 }
 
