@@ -416,7 +416,12 @@ DeployFileOnce()
 		echo "${FILEPATH}" >> "${DONELIST}"
 		echo checking "${FILEPATH}"
 		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
+		local EXITCODE=$?
 		echo
+		
+		if [ $EXITCODE != 0 ]; then 
+			exit $EXITCODE
+		fi
 	fi
 }
 
