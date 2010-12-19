@@ -300,12 +300,12 @@ PrepForDeployment()
 				fi
 			fi
 
-			printf '%s, QT_DIR: "%s"\n' "${i}" "${QT_DIR}"
-
 			QT_DIR_IS_ABSOLUTE_PATH=`echo "${QT_DIR}" | grep -v '@loader_path' | grep -v '@executable_path'`
 			if [ -z "${QT_DIR_IS_ABSOLUTE_PATH}" ]; then
 				continue;
 			fi
+
+			printf '%s, QT_DIR: "%s"\n' "${i}" "${QT_DIR}"
 
 			while [ $? = 0 ]; do
 				PLUGIN="${1}"
