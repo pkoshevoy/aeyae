@@ -70,7 +70,6 @@ fi
 
 # add Qt to the search paths:
 if [ -n "${QT4_DIR}" ]; then
-    export QTDIR=${QT4_DIR}
     export PATH=${QT4_DIR}/bin:${PATH}
     export CPATH=${QT4_DIR}/include:${CPATH}
     export MANPATH=${QT4_DIR}/share/man:${MANPATH}
