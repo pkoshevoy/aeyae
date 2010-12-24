@@ -1939,11 +1939,12 @@ namespace yae
       if (!ffmpegInitialized_)
       {
         av_register_all();
-#if 0
-        av_register_protocol(&fileUtf8::urlProtocol);
-#else
+#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
+                                       LIBAVFORMAT_VERSION_MINOR >= 69)
         av_register_protocol2(&fileUtf8::urlProtocol,
                               sizeof(fileUtf8::urlProtocol));
+#else
+        av_register_protocol(&fileUtf8::urlProtocol);
 #endif
         ffmpegInitialized_ = true;
       }
