@@ -15,6 +15,9 @@
 // yae includes:
 #include <yaeMainWindow.h>
 
+// the includes:
+#include <utils/the_utils.hxx>
+
 
 namespace yae
 {
@@ -57,6 +60,10 @@ namespace yae
 int
 main(int argc, char ** argv)
 {
+#ifndef NDEBUG
+  restore_console_stdio();
+#endif
+  
   yae::Application app(argc, argv);
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();

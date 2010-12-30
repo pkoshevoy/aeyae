@@ -35,6 +35,7 @@ set(QT_USE_OPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
 include(${QT_USE_FILE})
 
+add_definitions(-DBOOST_ALL_NO_LIB)
 if (WIN32)
   add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
 endif (WIN32)
@@ -51,8 +52,15 @@ include_directories(AFTER
   ${QT_QTOPENGL_INCLUDE_DIR}
   )
 
+if (WIN32)
+  include_directories(AFTER msIntTypes)
+endif (WIN32)
+
+set(FFMPEG_HEADERS_PATH "" CACHE PATH "search path for ffmpeg headers")
+
 find_path(FFMPEG_INCLUDE_DIR 
   libavutil/avutil.h
+  ${FFMPEG_HEADERS_PATH}
   /usr/include
   /usr/local/include
   /opt/local/include)
@@ -81,34 +89,47 @@ find_library(QT4_PLUGINS_QMNG
   qmng ${QT_PLUGINS_DIR}/imageformats
   DOC "Qt image IO plugin for MNG")
 
-find_library(JPEG_LIBRARY jpeg DOC "jpeg library")
-find_library(TIFF_LIBRARY tiff DOC "tiff library")
-find_library(PNG_LIBRARY png DOC "png library")
-find_library(MNG_LIBRARY mng DOC "mng library")
-find_library(AVFORMAT_LIBRARY avformat DOC "ffmpeg avformat library")
-find_library(AVCODEC_LIBRARY avcodec DOC "ffmpeg avutil library")
-find_library(AVUTIL_LIBRARY avutil DOC "ffmpeg avutil library")
-find_library(SWSCALE_LIBRARY swscale DOC "ffmpeg swscale library")
-find_library(FAAD_LIBRARY faad DOC "faad library")
-find_library(GSM_LIBRARY gsm DOC "gsm library")
-find_library(MP3LAME_LIBRARY mp3lame DOC "mp3lame library")
-find_library(OPENCORE_AMRNB_LIBRARY opencore-amrnb DOC "opencore-amrnb library")
-find_library(OPENCORE_AMRWB_LIBRARY opencore-amrwb DOC "opencore-amrwb library")
-find_library(OPENJPEG_LIBRARY openjpeg DOC "openjpeg library")
-find_library(SCHROEDINGER_LIBRARY schroedinger-1.0 DOC "shroedinger library")
-find_library(ORC_LIBRARY orc-0.4 DOC "orc library")
-find_library(SPEEX_LIBRARY speex DOC "Xiph.org speex library")
-find_library(THEORAENC_LIBRARY theoraenc DOC "Xiph.org theoraenc library")
-find_library(THEORADEC_LIBRARY theoradec DOC "Xiph.org theoradec library")
-find_library(OGG_LIBRARY ogg DOC "Xiph.org ogg library")
-find_library(VORBISENC_LIBRARY vorbisenc DOC "Xiph.org vorbisenc library")
-find_library(VORBIS_LIBRARY vorbis DOC "Xiph.org vorbis library")
-find_library(VPX_LIBRARY vpx DOC "Google vpx library (On2 VP8)")
-find_library(X264_LIBRARY x264 DOC "x264 library")
-find_library(XVIDCODE_LIBRARY xvidcore DOC "xvidcore library")
-find_library(NUT_LIBRARY nut DOC "nut library")
-find_library(ZLIB_LIBRARY z DOC "zlib library")
-find_library(BZIP2_LIBRARY bz2 DOC "bzip2 library")
+set(FFMPEG_LIBS_PATH "" CACHE PATH "search path for ffmpeg libraries")
+
+find_library(JPEG_LIBRARY jpeg PATHS ${FFMPEG_LIBS_PATH} DOC "jpeg library")
+find_library(TIFF_LIBRARY tiff PATHS ${FFMPEG_LIBS_PATH} DOC "tiff library")
+find_library(PNG_LIBRARY png PATHS ${FFMPEG_LIBS_PATH} DOC "png library")
+find_library(MNG_LIBRARY mng PATHS ${FFMPEG_LIBS_PATH} DOC "mng library")
+find_library(AVFORMAT_LIBRARY avformat PATHS ${FFMPEG_LIBS_PATH} DOC "ffmpeg avformat library")
+find_library(AVCODEC_LIBRARY avcodec PATHS ${FFMPEG_LIBS_PATH} DOC "ffmpeg avutil library")
+find_library(AVUTIL_LIBRARY avutil PATHS ${FFMPEG_LIBS_PATH} DOC "ffmpeg avutil library")
+find_library(SWSCALE_LIBRARY swscale PATHS ${FFMPEG_LIBS_PATH} DOC "ffmpeg swscale library")
+find_library(FAAD_LIBRARY faad PATHS ${FFMPEG_LIBS_PATH} DOC "faad library")
+find_library(GSM_LIBRARY gsm PATHS ${FFMPEG_LIBS_PATH} DOC "gsm library")
+find_library(MP3LAME_LIBRARY mp3lame PATHS ${FFMPEG_LIBS_PATH} DOC "mp3lame library")
+find_library(OPENCORE_AMRNB_LIBRARY opencore-amrnb PATHS ${FFMPEG_LIBS_PATH} DOC "opencore-amrnb library")
+find_library(OPENCORE_AMRWB_LIBRARY opencore-amrwb PATHS ${FFMPEG_LIBS_PATH} DOC "opencore-amrwb library")
+find_library(OPENJPEG_LIBRARY openjpeg PATHS ${FFMPEG_LIBS_PATH} DOC "openjpeg library")
+find_library(SCHROEDINGER_LIBRARY schroedinger-1.0 PATHS ${FFMPEG_LIBS_PATH} DOC "shroedinger library")
+find_library(ORC_LIBRARY orc-0.4 PATHS ${FFMPEG_LIBS_PATH} DOC "orc library")
+find_library(SPEEX_LIBRARY speex PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org speex library")
+find_library(THEORAENC_LIBRARY theoraenc PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org theoraenc library")
+find_library(THEORADEC_LIBRARY theoradec PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org theoradec library")
+find_library(OGG_LIBRARY ogg PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org ogg library")
+find_library(VORBISENC_LIBRARY vorbisenc PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org vorbisenc library")
+find_library(VORBIS_LIBRARY vorbis PATHS ${FFMPEG_LIBS_PATH} DOC "Xiph.org vorbis library")
+find_library(VPX_LIBRARY vpx PATHS ${FFMPEG_LIBS_PATH} DOC "Google vpx library (On2 VP8)")
+find_library(X264_LIBRARY x264 PATHS ${FFMPEG_LIBS_PATH} DOC "x264 library")
+find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore library")
+find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
+find_library(ZLIB_LIBRARY z PATHS ${FFMPEG_LIBS_PATH} DOC "zlib library")
+find_library(BZIP2_LIBRARY bz2 PATHS ${FFMPEG_LIBS_PATH} DOC "bzip2 library")
+
+if (WIN32)
+  find_library(LIBGCC_LIBRARY libgcc PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libgcc library")
+  find_library(LIBMINGW32_LIBRARY libmingw32 PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmingw32 library")
+  find_library(LIBMINGWEX_LIBRARY libmingwex PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmingwex library")
+  find_library(LIBCOLDNAME_LIBRARY libcoldname PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libcoldname library")
+  find_library(LIBMOLDNAME_RELEASE_LIBRARY libmoldname PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmoldname library")
+  find_library(LIBMOLDNAME_DEBUG_LIBRARY libmoldnamed PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmoldnamed library")
+  find_library(AVICAP32_LIBRARY avicap32 PATHS ${FFMPEG_LIBS_PATH} DOC "avicap32 library")
+  find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
+endif (WIN32)
 
 set(project_moc_hxx 
   yaeMainWindow.h
@@ -160,6 +181,7 @@ add_executable(${PROGNAME}
   )
 
 set(TARGET_LIBS
+  ${THE_CORE_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
@@ -278,6 +300,41 @@ if (BZIP2_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${BZIP2_LIBRARY})
 endif (BZIP2_LIBRARY)
 
+if (WIN32)
+
+  if (LIBGCC_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBGCC_LIBRARY})
+  endif (LIBGCC_LIBRARY)
+  
+  if (LIBMINGW32_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBMINGW32_LIBRARY})
+  endif (LIBMINGW32_LIBRARY)
+  
+  if (LIBMINGWEX_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBMINGWEX_LIBRARY})
+  endif (LIBMINGWEX_LIBRARY)
+  
+  if (LIBCOLDNAME_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBCOLDNAME_LIBRARY})
+  endif (LIBCOLDNAME_LIBRARY)
+  
+  if (LIBMOLDNAME_RELEASE_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBMOLDNAME_RELEASE_LIBRARY})
+  endif (LIBMOLDNAME_RELEASE_LIBRARY)
+  
+  if (LIBMOLDNAME_DEBUG_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${LIBMOLDNAME_DEBUG_LIBRARY})
+  endif (LIBMOLDNAME_DEBUG_LIBRARY)
+  
+  if (AVICAP32_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${AVICAP32_LIBRARY})
+  endif (AVICAP32_LIBRARY)
+  
+  if (AVIFIL32_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
+  endif (AVIFIL32_LIBRARY)
+endif (WIN32)
+
 #message("QT_CONFG: "${QT_CONFIG})
 if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
   add_definitions(-DQT_LIBS_ARE_STATIC)
@@ -308,8 +365,6 @@ if (WIN32)
   set(TARGET_LIBS
     ${TARGET_LIBS}
     ws2_32
-    avicap32
-    avifil32
     psapi
     )
 endif (WIN32)

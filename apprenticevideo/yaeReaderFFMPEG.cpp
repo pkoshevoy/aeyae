@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <sstream>
 #include <iostream>
@@ -180,6 +181,10 @@ namespace fileUtf8
         accessMode = O_RDONLY;
     }
     
+#ifdef _WIN32
+    accessMode |= (_O_BINARY | _O_SEQUENTIAL);
+#endif
+    
     int permissions = 0666;
     int fd = openUtf8(filename, accessMode, permissions);
     if (fd < 0)
@@ -198,7 +203,22 @@ namespace fileUtf8
   urlRead(URLContext * h, unsigned char * buf, int size)
   {
     int fd = urlGetFileHandle(h);
-    return read(fd, buf, size);
+
+#ifdef _WIN32
+    int nb = _read(fd, buf, size);
+#else
+    int nb = read(fd, buf, size);
+#endif
+
+    if (nb < 0)
+    {
+      std::cerr
+        << "read(" << fd << ", " << buf << ", " << size << ") "
+        << "failed, error: " << errno << " - " << strerror(errno)
+        << std::endl;
+    }
+    
+    return nb;
   }
   
   //----------------------------------------------------------------
