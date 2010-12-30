@@ -157,79 +157,79 @@ if (GLEW_FOUND)
     )
 
   install(TARGETS the_ui DESTINATION lib)
+
+  find_package(Qt4)
+  if (QT4_FOUND)
+    include(${QT_USE_FILE})
+    
+    include_directories(AFTER
+      ${QT_INCLUDE_DIR}
+      ${QT_QTOPENGL_INCLUDE_DIR}
+      )
+    
+    set(moc_hxx
+      Qt/the_qt_trail.hxx	
+      Qt/the_qt_view.hxx
+      Qt/the_qt_thread.hxx
+      Qt/the_qt_thread_pool.hxx
+      )
+    
+    qt4_wrap_cpp(moc_cxx ${moc_hxx})
+    
+    add_library(the_ui_qt STATIC
+      ${moc_cxx}
+      Qt/qimage_pixel_converter.cxx
+      Qt/the_qt_input_device_event.cxx
+      Qt/the_qt_thread.cxx
+      Qt/the_qt_thread_pool.cxx
+      Qt/the_qt_trail.cxx
+      Qt/the_qt_view.cxx
+      Qt/the_qt_mutex.cxx
+      )
+    
+    install(TARGETS the_ui_qt DESTINATION lib)
+  endif (QT4_FOUND)
+  
+  find_package(FLTK)
+  if (FLTK_FOUND)
+    include_directories(AFTER ${FLTK_INCLUDE_DIR})
+    
+    add_library(the_ui_fltk STATIC
+      FLTK/Fl_Knot_Vector.cxx
+      FLTK/the_fltk_input_device_event.cxx
+      FLTK/the_fltk_std_widgets.cxx
+      FLTK/the_fltk_trail.cxx
+      FLTK/the_fltk_view.cxx
+      )
+    
+    install(TARGETS the_ui_fltk DESTINATION lib)
+  endif (FLTK_FOUND)
+  
+  find_package(Qt3)
+  if (QT3_FOUND)
+    add_definitions(-DQT_THREAD_SUPPORT)
+    
+    include_directories(BEFORE
+      ${QT3_INCLUDE_DIR}
+      )
+    
+    set(moc3_hxx
+      Qt3/the_qt_trail.hxx	
+      Qt3/the_qt_view.hxx
+      )
+    
+    qt3_wrap_cpp(moc3_cxx ${moc3_hxx})
+    
+    add_library(the_ui_qt3 STATIC
+      ${moc3_cxx}
+      Qt3/qimage_pixel_converter.cxx
+      Qt3/the_qt_input_device_event.cxx
+      Qt3/the_qt_thread.cxx
+      Qt3/the_qt_trail.cxx
+      Qt3/the_qt_view.cxx
+      Qt3/the_qt_mutex.cxx
+      )
+    
+    install(TARGETS the_ui_qt3 DESTINATION lib)
+  endif (QT3_FOUND)
 endif (GLEW_FOUND)
-
-find_package(Qt4)
-if (QT4_FOUND)
-  include(${QT_USE_FILE})
-  
-  include_directories(AFTER
-    ${QT_INCLUDE_DIR}
-    ${QT_QTOPENGL_INCLUDE_DIR}
-    )
-  
-  set(moc_hxx
-    Qt/the_qt_trail.hxx	
-    Qt/the_qt_view.hxx
-    Qt/the_qt_thread.hxx
-    Qt/the_qt_thread_pool.hxx
-    )
-  
-  qt4_wrap_cpp(moc_cxx ${moc_hxx})
-  
-  add_library(the_ui_qt STATIC
-    ${moc_cxx}
-    Qt/qimage_pixel_converter.cxx
-    Qt/the_qt_input_device_event.cxx
-    Qt/the_qt_thread.cxx
-    Qt/the_qt_thread_pool.cxx
-    Qt/the_qt_trail.cxx
-    Qt/the_qt_view.cxx
-    Qt/the_qt_mutex.cxx
-    )
-
-  install(TARGETS the_ui_qt DESTINATION lib)
-endif (QT4_FOUND)
-
-find_package(FLTK)
-if (FLTK_FOUND)
-  include_directories(AFTER ${FLTK_INCLUDE_DIR})
-  
-  add_library(the_ui_fltk STATIC
-    FLTK/Fl_Knot_Vector.cxx
-    FLTK/the_fltk_input_device_event.cxx
-    FLTK/the_fltk_std_widgets.cxx
-    FLTK/the_fltk_trail.cxx
-    FLTK/the_fltk_view.cxx
-    )
-
-  install(TARGETS the_ui_fltk DESTINATION lib)
-endif (FLTK_FOUND)
-
-find_package(Qt3)
-if (QT3_FOUND)
-  add_definitions(-DQT_THREAD_SUPPORT)
-  
-  include_directories(BEFORE
-    ${QT3_INCLUDE_DIR}
-    )
-  
-  set(moc3_hxx
-    Qt3/the_qt_trail.hxx	
-    Qt3/the_qt_view.hxx
-    )
-  
-  qt3_wrap_cpp(moc3_cxx ${moc3_hxx})
-  
-  add_library(the_ui_qt3 STATIC
-    ${moc3_cxx}
-    Qt3/qimage_pixel_converter.cxx
-    Qt3/the_qt_input_device_event.cxx
-    Qt3/the_qt_thread.cxx
-    Qt3/the_qt_trail.cxx
-    Qt3/the_qt_view.cxx
-    Qt3/the_qt_mutex.cxx
-    )
-
-  install(TARGETS the_ui_qt3 DESTINATION lib)
-endif (QT3_FOUND)
