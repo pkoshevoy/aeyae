@@ -41,6 +41,7 @@ namespace yae
     
     reader_ = ReaderFFMPEG::create();
     viewer_ = new Viewer(reader_);
+    audioRenderer_ = new AudioRenderer();
     
     delete centralwidget->layout();
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);
@@ -93,17 +94,23 @@ namespace yae
     if (numVideoTracks)
     {
       reader->selectVideoTrack(0);
+    }
+    
+    if (numAudioTracks)
+    {
+      reader->selectAudioTrack(0);
       
       // FIXME: this is a temporary workaround for blocking on full queue:
       // unselect audio track:
-      reader->selectAudioTrack(numAudioTracks);
+      // reader->selectAudioTrack(numAudioTracks);
     }
     
     reader->threadStart();
     
-    // update the viewer:
+    // update the renderers:
     viewer_->setReader(reader);
     viewer_->loadFrame();
+    audioRenderer_->setReader(reader);
     
     // replace the previous reader:
     reader_->destroy();
@@ -128,14 +135,19 @@ namespace yae
                                    "*.divx "
                                    "*.flv "
                                    "*.f4v "
-                                   "*.mov "
-                                   "*.mpg "
-                                   "*.mpeg "
-                                   "*.mp4 "
+                                   "*.m2t "
+                                   "*.m2ts "
                                    "*.m4v "
                                    "*.mkv "
+                                   "*.mod "
+                                   "*.mov "
+                                   "*.mpg "
+                                   "*.mp4 "
+                                   "*.mpeg "
+                                   "*.mpts "
                                    "*.ogm "
                                    "*.ogv "
+                                   "*.ts "
                                    "*.wmv "
                                    "*.webm "
                                    ")");
@@ -148,6 +160,7 @@ namespace yae
   void
   MainWindow::fileExit()
   {
+    MainWindow::close();
     qApp->quit();
   }
   

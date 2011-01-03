@@ -8,6 +8,7 @@
 
 // system includes:
 #include <iostream>
+#include <stdexcept>
 
 // Qt includes:
 #include <QApplication>

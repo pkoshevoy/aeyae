@@ -16,6 +16,7 @@
 #include <yaeAPI.h>
 #include <yaeReader.h>
 #include <yaeViewer.h>
+#include <yaeAudioRenderer.h>
 
 // local includes:
 #include "ui_yaeMainWindow.h"
@@ -55,6 +56,9 @@ namespace yae
     
     // frame viewer:
     Viewer * viewer_;
+    
+    // audio renderer:
+    AudioRenderer * audioRenderer_;
   };
   
 };

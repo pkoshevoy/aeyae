@@ -197,17 +197,21 @@ namespace yae
   {
     typedef traits_t TTraits;
     typedef TFrame<traits_t> TSelf;
-
+    
+    TFrame(): dataSize_(0)
+    {}
+    
     //! resize data buffer:
     template <typename TUnit>
     inline void
-    setBufferSize(std::size_t numUnits,
-                  std::size_t paddingBytes = 0)
+    setBufferSize(std::size_t numUnits)
     {
-      std::size_t n =
-        std::max<std::size_t>((sizeof(TUnit) * numUnits + paddingBytes) /
-                              sizeof(TDataUnit),
-                              1);
+      dataSize_ = sizeof(TUnit) * numUnits;
+      
+      std::size_t paddingBytes = sizeof(TDataUnit) - 1;
+      std::size_t n = ((dataSize_ + paddingBytes) /
+                       sizeof(TDataUnit));
+      
       data_.resize(n);
     }
     
@@ -220,6 +224,10 @@ namespace yae
     inline const TUnit * getBuffer() const
     { return (const TUnit *)(&(data_[0])); }
     
+    template <typename TUnit>
+    inline std::size_t getBufferSize() const
+    { return dataSize_ / sizeof(TUnit); }
+    
     //! frame position:
     TTime time_;
     
@@ -231,6 +239,9 @@ namespace yae
     typedef boost::uint64_t TDataUnit;
     typedef std::vector<TDataUnit> TData;
     TData data_;
+    
+    //! frame payload size, in bytes, excluding padding:
+    std::size_t dataSize_;
   };
   
   //----------------------------------------------------------------

@@ -277,8 +277,11 @@ namespace fileUtf8
     0, // url_read_pause
     0, // url_read_seek
     &urlGetFileHandle,
-    // 0, // priv_data_size
-    // 0  // priv_data_class
+#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
+                                       LIBAVFORMAT_VERSION_MINOR >= 69)
+    0, // priv_data_size
+    0, // priv_data_class
+#endif
   };
   
 }
@@ -1491,6 +1494,11 @@ namespace yae
           totalSamples += chunkSize;
         }
         
+        if (!totalSamples)
+        {
+          continue;
+        }
+
         TAudioFramePtr afPtr(new TAudioFrame());
         TAudioFrame & af = *afPtr;
         
@@ -2086,7 +2094,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getSelectedAudioTrackIndex() const
   {
-    return private_->movie_.getSelectedVideoTrack();
+    return private_->movie_.getSelectedAudioTrack();
   }
   
   //----------------------------------------------------------------

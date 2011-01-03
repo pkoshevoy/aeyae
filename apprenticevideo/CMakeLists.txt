@@ -33,6 +33,7 @@ endif (QT4_FOUND)
 
 set(QT_USE_OPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
+set(QT_USE_QTMULTIMEDIA TRUE)
 include(${QT_USE_FILE})
 
 add_definitions(-DBOOST_ALL_NO_LIB)
@@ -133,6 +134,8 @@ endif (WIN32)
 
 set(project_moc_hxx 
   yaeMainWindow.h
+  yaeViewer.h
+  yaeAudioRenderer.h
   )
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -147,10 +150,16 @@ qt4_wrap_ui(project_uis_hxx ${project_uis})
 
 set(project_sources 
   yaeMain.cpp
+  yaeMainWindow.h
   yaeMainWindow.cpp
+  yaeAPI.h
   yaeAPI.cpp
+  yaeReaderFFMPEG.h
   yaeReaderFFMPEG.cpp
+  yaeViewer.h
   yaeViewer.cpp
+  yaeAudioRenderer.h
+  yaeAudioRenderer.cpp
   ${project_moc_cxx}
   ${project_uis_hxx}
 #  ${project_qrc_cxx}

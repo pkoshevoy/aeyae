@@ -36,6 +36,8 @@ namespace yae
   // 
   class Viewer : public QWidget
   {
+    Q_OBJECT;
+    
   public:
     Viewer(IReader * reader);
     ~Viewer();
