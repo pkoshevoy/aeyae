@@ -1462,39 +1462,46 @@ namespace yae
     {
       try
       {
-        TPacketPtr packet;
-        bool ok = packetQueue_.pop(packet);
+        TPacketPtr packetPtr;
+        bool ok = packetQueue_.pop(packetPtr);
         if (!ok)
         {
           break;
         }
         
-        // Decode audio frame, piecewise:
-        std::list<std::vector<int16_t> > chunks;
-        std::size_t totalSamples = 0;
+        // make a local shallow copy of the packet:
+        AVPacket packet = packetPtr->ffmpeg_;
         
-        while (true)
+        // Decode audio frame, piecewise:
+        std::list<std::vector<unsigned char> > chunks;
+        std::size_t totalBytes = 0;
+        
+        while (packet.size)
         {
-          chunks.push_back(std::vector<int16_t>(8192));
-          int chunkSize = 8192 - FF_INPUT_BUFFER_PADDING_SIZE;
+          int chunkSize = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+          chunks.push_back(std::vector<unsigned char>(chunkSize));
           
-          int16_t * chunk = &(chunks.back().front());
+          int16_t * chunk = (int16_t *)&(chunks.back().front());
           int bytesUsed = avcodec_decode_audio3(codecContext(),
                                                 chunk,
                                                 &chunkSize,
-                                                &packet->ffmpeg_);
+                                                &packet);
           
-          if (bytesUsed <= 0)
+          if (bytesUsed < 0)
           {
             chunks.pop_back();
             break;
           }
           
+          // adjust the packet (the copy, not the original):
+          packet.size -= bytesUsed;
+          packet.data += bytesUsed;
+          
           chunks.back().resize(chunkSize);
-          totalSamples += chunkSize;
+          totalBytes += chunkSize;
         }
         
-        if (!totalSamples)
+        if (!totalBytes)
         {
           continue;
         }
@@ -1503,16 +1510,16 @@ namespace yae
         TAudioFrame & af = *afPtr;
         
         af.traits_ = trackTraits;
-        af.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
+        af.time_.time_ = stream_->time_base.num * packet.pts;
         af.time_.base_ = stream_->time_base.den;
         
-        af.setBufferSize<int16_t>(totalSamples);
-        int16_t * afBuffer = af.getBuffer<int16_t>();
+        af.setBufferSize<unsigned char>(totalBytes);
+        unsigned char * afBuffer = af.getBuffer<unsigned char>();
         
         // concatenate chunks into a contiguous frame buffer:
         while (!chunks.empty())
         {
-          const int16_t * chunk = &(chunks.front().front());
+          const unsigned char * chunk = &(chunks.front().front());
           std::size_t chunkSize = chunks.front().size();
           memcpy(afBuffer, chunk, chunkSize);
           
