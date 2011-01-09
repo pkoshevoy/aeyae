@@ -167,77 +167,85 @@ namespace yae
     }
     
     reader_ = reader;
-    
-    if (reader_)
+    if (!reader_)
     {
-      std::size_t selTrack = reader_->getSelectedAudioTrackIndex();
-      std::size_t numTracks = reader_->getNumberOfAudioTracks();
-      if (selTrack < numTracks)
-      {
-        AudioTraits traits;
-        if (reader_->getAudioTraits(traits))
-        {
-          QAudioFormat afmt;
-          afmt.setCodec(QString::fromUtf8("audio/pcm"));
-          afmt.setChannelCount(traits.channelLayout_);
-          afmt.setSampleRate(traits.sampleRate_);
-          
-          switch (traits.sampleFormat_)
-          {
-            case kAudio8BitOffsetBinary:
-              afmt.setSampleSize(8);
-              afmt.setSampleType(QAudioFormat::UnSignedInt);
-              break;
-              
-            case kAudio16BitBigEndian:
-              afmt.setSampleSize(16);
-              afmt.setSampleType(QAudioFormat::SignedInt);
-              afmt.setByteOrder(QAudioFormat::BigEndian);
-              break;
-              
-            case kAudio16BitLittleEndian:
-              afmt.setSampleSize(16);
-              afmt.setSampleType(QAudioFormat::SignedInt);
-              afmt.setByteOrder(QAudioFormat::LittleEndian);
-              break;
-              
-            case kAudio24BitLittleEndian:
-              afmt.setSampleSize(24);
-              afmt.setSampleType(QAudioFormat::SignedInt);
-              afmt.setByteOrder(QAudioFormat::LittleEndian);
-              break;
-              
-            case kAudio32BitFloat:
-              afmt.setSampleSize(32);
-              afmt.setSampleType(QAudioFormat::Float);
-              break;
-              
-            default:
-              assert(false);
-              return;
-          }
-
-          double frameRate = 30.0;
-          
-          VideoTraits vtraits;
-          if (reader_->getVideoTraits(vtraits) &&
-              vtraits.frameRate_ > 0.0)
-          {
-            frameRate = vtraits.frameRate_;
-          }
-          
-          int bufferSize = int(double(afmt.channelCount() *
-                                      afmt.sampleSize() / 8 *
-                                      afmt.sampleRate()) /
-                               frameRate + 0.5);
-          
-          output_ = new QAudioOutput(afmt);
-          output_->setBufferSize(bufferSize);
-          output_->start(this);
-          emit readyRead();
-        }
-      }
+      return;
     }
+    
+    std::size_t selTrack = reader_->getSelectedAudioTrackIndex();
+    std::size_t numTracks = reader_->getNumberOfAudioTracks();
+    if (selTrack >= numTracks)
+    {
+      return;
+    }
+    
+    AudioTraits atraits;
+    if (!reader_->getAudioTraits(atraits))
+    {
+      return;
+    }
+    
+    QAudioFormat afmt;
+    afmt.setCodec(QString::fromUtf8("audio/pcm"));
+    afmt.setChannelCount(atraits.channelLayout_);
+    afmt.setSampleRate(atraits.sampleRate_);
+    
+    switch (atraits.sampleFormat_)
+    {
+      case kAudio8BitOffsetBinary:
+        afmt.setSampleSize(8);
+        afmt.setSampleType(QAudioFormat::UnSignedInt);
+        break;
+        
+      case kAudio16BitBigEndian:
+        afmt.setSampleSize(16);
+        afmt.setSampleType(QAudioFormat::SignedInt);
+        afmt.setByteOrder(QAudioFormat::BigEndian);
+        break;
+        
+      case kAudio16BitLittleEndian:
+        afmt.setSampleSize(16);
+        afmt.setSampleType(QAudioFormat::SignedInt);
+        afmt.setByteOrder(QAudioFormat::LittleEndian);
+        break;
+        
+      case kAudio24BitLittleEndian:
+        afmt.setSampleSize(24);
+        afmt.setSampleType(QAudioFormat::SignedInt);
+        afmt.setByteOrder(QAudioFormat::LittleEndian);
+        break;
+        
+      case kAudio32BitFloat:
+        afmt.setSampleSize(32);
+        afmt.setSampleType(QAudioFormat::Float);
+        break;
+        
+      default:
+        assert(false);
+        return;
+    }
+    
+    double frameRate = 30.0;
+    
+    VideoTraits vtraits;
+    if (reader_->getVideoTraits(vtraits) &&
+        vtraits.frameRate_ > 0.0)
+    {
+      frameRate = vtraits.frameRate_;
+    }
+    
+    int bufferSize = int(double(afmt.channelCount() *
+                                afmt.sampleSize() / 8 *
+                                afmt.sampleRate()) /
+                         frameRate + 0.5);
+    
+    output_ = new QAudioOutput(afmt);
+    output_->setBufferSize(bufferSize);
+    
+    QIODevice::open(QIODevice::ReadOnly);
+    output_->start(this);
+    
+    emit readyRead();
   }
   
   //----------------------------------------------------------------
