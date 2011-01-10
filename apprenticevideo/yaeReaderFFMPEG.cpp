@@ -1565,7 +1565,11 @@ namespace yae
         break;
         
       case SAMPLE_FMT_S16:
+#ifdef __BIG_ENDIAN__
+        t.sampleFormat_ = kAudio16BitBigEndian;
+#else
         t.sampleFormat_ = kAudio16BitLittleEndian;
+#endif
         break;
         
       case SAMPLE_FMT_FLT:
