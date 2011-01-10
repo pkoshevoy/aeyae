@@ -51,6 +51,7 @@ include_directories(AFTER
   ${OPENGL_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
   ${QT_QTOPENGL_INCLUDE_DIR}
+  ${QT_QTMULTIMEDIA_INCLUDE_DIR}
   )
 
 if (WIN32)
@@ -130,6 +131,8 @@ if (WIN32)
   find_library(LIBMOLDNAME_DEBUG_LIBRARY libmoldnamed PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmoldnamed library")
   find_library(AVICAP32_LIBRARY avicap32 PATHS ${FFMPEG_LIBS_PATH} DOC "avicap32 library")
   find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
+else (WIN32)
+  find_library(ASOUND_LIBRARY asound PATHS ${FFMPEG_LIBS_PATH} DOC "alsa sound library required by QtMultimedia")
 endif (WIN32)
 
 set(project_moc_hxx 
@@ -192,6 +195,7 @@ add_executable(${PROGNAME}
 set(TARGET_LIBS
   ${THE_CORE_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
+  ${QT_QTMULTIMEDIA_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
@@ -342,6 +346,10 @@ if (WIN32)
   if (AVIFIL32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
   endif (AVIFIL32_LIBRARY)
+else (WIN32)
+  if (ASOUND_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${ASOUND_LIBRARY})
+  endif (ASOUND_LIBRARY)
 endif (WIN32)
 
 #message("QT_CONFG: "${QT_CONFIG})
