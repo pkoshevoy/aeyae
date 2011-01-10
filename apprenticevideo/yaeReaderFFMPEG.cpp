@@ -225,7 +225,14 @@ namespace fileUtf8
   // urlWrite
   // 
   static int
-  urlWrite(URLContext * h, const unsigned char * buf, int size)
+  urlWrite(URLContext * h,
+#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
+                                       LIBAVFORMAT_VERSION_MINOR >= 69)
+           const unsigned char * buf,
+#else
+           unsigned char * buf,
+#endif
+           int size)
   {
     int fd = urlGetFileHandle(h);
     return write(fd, buf, size);
