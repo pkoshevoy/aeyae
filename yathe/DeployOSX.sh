@@ -344,9 +344,9 @@ resolve_library()
 	fi
 	
 	NAME=`basename "${NAME}"`
-
+	local NATIVE_ARCH=`arch`
 	for i in \
-		"/Developer/x86_64" \
+		"/Developer/${NATIVE_ARCH}/lib" \
 		"/Library/Frameworks" \
 		; do
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
