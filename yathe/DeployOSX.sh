@@ -618,6 +618,11 @@ DeployFile()
 			
 			echo install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
 			install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
+			if [ $? != 0 ]; then 
+				# install_name_tool failure may be fixed by using
+				# the -headerpad_max_install_names linker flag
+				exit 13; 
+			fi
 		fi
 	done
 
