@@ -22,7 +22,7 @@
 
 namespace yae
 {
-	
+  
   //----------------------------------------------------------------
   // Queue
   // 
@@ -79,7 +79,7 @@ namespace yae
     }
     
     // check whether the Queue is empty:
-    bool empty() const
+    bool isEmpty() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       bool isEmpty = data_.empty();
@@ -175,6 +175,61 @@ namespace yae
           }
           
           if (closed_)
+          {
+            return false;
+          }
+          
+          data = data_.front();
+          data_.pop_front();
+          size_--;
+        }
+        
+        cond_.notify_one();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+    
+    // push data into the queue:
+    bool tryPush(const TData & newData)
+    {
+      try
+      {
+        // add to queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          
+          if (closed_ || size_ >= maxSize_)
+          {
+            return false;
+          }
+          
+          data_.push_back(newData);
+          size_++;
+        }
+        
+        cond_.notify_one();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+
+    // remove data from the queue:
+    bool tryPop(TData & data)
+    {
+      try
+      {
+        // remove from queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          
+          if (closed_ || data_.empty())
           {
             return false;
           }

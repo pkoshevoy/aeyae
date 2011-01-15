@@ -734,7 +734,7 @@ namespace yae
         break;
         
       case PIX_FMT_YUYV422:
- 	t.colorFormat_ = kColorFormatYUYV;
+        t.colorFormat_ = kColorFormatYUYV;
         break;
         
       case PIX_FMT_RGB24:
@@ -742,7 +742,7 @@ namespace yae
         break;
         
       case PIX_FMT_BGR24:
- 	t.colorFormat_ = kColorFormatBGR;
+        t.colorFormat_ = kColorFormatBGR;
         break;
         
       case PIX_FMT_ARGB:
@@ -750,7 +750,7 @@ namespace yae
         break;
         
       case PIX_FMT_YUVJ420P:
- 	t.colorFormat_ = kColorFormatYUVJ420P;
+        t.colorFormat_ = kColorFormatYUVJ420P;
         break;
         
       case PIX_FMT_UYVY422:
@@ -803,7 +803,7 @@ namespace yae
   bool
   VideoTrack::getNextFrame(TVideoFramePtr & frame)
   {
-    return frameQueue_.pop(frame);
+    return frameQueue_.tryPop(frame);
   }
   
   //----------------------------------------------------------------
@@ -1058,7 +1058,7 @@ namespace yae
   bool
   AudioTrack::getNextFrame(TAudioFramePtr & frame)
   {
-    return frameQueue_.pop(frame);
+    return frameQueue_.tryPop(frame);
   }
   
   

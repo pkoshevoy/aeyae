@@ -15,7 +15,7 @@
 
 namespace yae
 {
-	
+  
   YAE_API int
   fileOpenUtf8(const char * filenameUTF8, int accessMode, int permissions);
   

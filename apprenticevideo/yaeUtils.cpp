@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <vector>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -47,17 +48,15 @@ namespace yae
                           NULL,    // output string destination buffer
                           0);      // output string destination buffer size
     
-    wchar_t * filenameUTF16 = (wchar_t *)malloc(sizeof(wchar_t) *
-                                                (wcsSize + 1));
+    std::vector<wchar_t> filenameUTF16(wcsSize + 1);
     MultiByteToWideChar(CP_UTF8,
                         0,
                         filenameUTF8,
                         -1,
-                        filenameUTF16,
+                        &filenameUTF16[0],
                         wcsSize);
     
-    int fd = _wopen(filenameUTF16, accessMode, permissions);
-    free(filenameUTF16);
+    int fd = _wopen(&filenameUTF16[0], accessMode, permissions);
     
 #else
     
