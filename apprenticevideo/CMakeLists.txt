@@ -157,8 +157,12 @@ set(project_sources
   yaeMainWindow.cpp
   yaeAPI.h
   yaeAPI.cpp
+  yaeQueue.h
   yaeReaderFFMPEG.h
   yaeReaderFFMPEG.cpp
+  yaeThreading.h
+  yaeUtils.h
+  yaeUtils.cpp
   yaeViewer.h
   yaeViewer.cpp
   yaeAudioRenderer.h
