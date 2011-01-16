@@ -153,7 +153,7 @@ namespace fileUtf8
   static int
   urlWrite(URLContext * h,
 #if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
-                                       LIBAVFORMAT_VERSION_MINOR >= 69)
+                                       LIBAVFORMAT_VERSION_MINOR >= 68)
            const unsigned char * buf,
 #else
            unsigned char * buf,
