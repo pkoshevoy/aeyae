@@ -30,6 +30,7 @@
 #include <math.h>
 #include <assert.h>
 #include <fstream>
+#include <sstream>
 #include <stdio.h>
 #include <string>
 
@@ -1129,7 +1130,7 @@ namespace the
   string_match_head(const TString & str, const TString & head)
   {
     typedef typename TString::charT TChar;
-    return string_match_head<TChar>(src.c_str(), head.c_str());
+    return string_match_head<TChar>(str.c_str(), head.c_str());
   }
   
   //----------------------------------------------------------------
