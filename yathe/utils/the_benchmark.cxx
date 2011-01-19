@@ -156,7 +156,7 @@ void
 the_benchmarks_t::dump(std::ostream & so) const
 {
   std::ios::fmtflags old_flags = so.setf(std::ios::dec | std::ios::scientific);
-  int old_precision = so.precision();
+  std::streamsize old_precision = so.precision();
   so.precision(6);
   
   so << "\n------------------------------- "
