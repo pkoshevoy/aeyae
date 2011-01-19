@@ -100,13 +100,13 @@ public:
   inline const QString * path() const
   { return path_; }
   
-  inline const unsigned int & path_size() const
+  inline const std::size_t & path_size() const
   { return path_size_; }
   
   inline const QString & class_name() const
   { return class_name_; }
   
-  inline const unsigned int & index() const
+  inline const std::size_t & index() const
   { return index_; }
   
   inline const bool & is_visible() const
@@ -131,9 +131,9 @@ private:
   
   // the object traits:
   QString *    path_;
-  unsigned int path_size_;
+  std::size_t  path_size_;
   QString      class_name_;
-  unsigned int index_;
+  std::size_t  index_;
   bool         is_visible_;
   
   static const char * special_chars_;

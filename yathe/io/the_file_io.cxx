@@ -116,7 +116,7 @@ load(std::istream & stream, the_registry_t & registry)
     return false;
   }
   
-  const unsigned int & size = registry.table_.size();
+  unsigned int size = (unsigned int)(registry.table_.size());
   for (unsigned int i = 0; i < size; i++)
   {
     the_graph_node_t * p = registry[i];

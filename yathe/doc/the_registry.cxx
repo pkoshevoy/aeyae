@@ -131,7 +131,7 @@ the_registry_t::graph(std::list<unsigned int> & graph) const
   graph.clear();
   
   // first populate the graph:
-  const unsigned int size = table_.size();
+  const unsigned int size = (unsigned int)(table_.size());
   for (unsigned int i = 0; i < size; i++)
   {
     if (table_[i] == NULL) continue;
@@ -149,7 +149,7 @@ the_registry_t::dump(ostream & strm, unsigned int indent) const
        << INDSCP << "{" << endl
        << INDSTR << "dispatcher_ =" << endl;
   dispatcher_.dump(strm, INDNXT);
-  unsigned int size = table_.size();
+  unsigned int size = (unsigned int)(table_.size());
   for (unsigned int i = 0; i < size; i++)
   {
     the_graph_node_t * prim = table_[i];
@@ -234,7 +234,7 @@ the_registry_t::assert_sanity() const
   
   // make sure every graph node in the registry knows it is in the registry,
   // and so are all of its dependents and supporters:
-  const unsigned int size = table_.size();
+  const unsigned int size = (unsigned int)(table_.size());
   for (unsigned int i = 0; i < size; i++)
   {
     ::assert_sanity(this, i);

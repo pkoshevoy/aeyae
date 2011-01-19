@@ -117,11 +117,11 @@ template <typename data_t>
 bool
 save(std::ostream & stream, const the_dynamic_array_t<data_t> & array)
 {
-  const unsigned int & size = array.size();
+  std::size_t size = array.size();
   save(stream, size);
   stream << std::endl;
   
-  for (unsigned int i = 0; i < size; i++)
+  for (std::size_t i = 0; i < size; i++)
   {
     save(stream, array[i]);
     stream << std::endl;
@@ -230,7 +230,7 @@ public:
     }
     
     std::cout << "loading " << magic_word << endl;
-    unsigned int i = loaders_.index_of(loader_t(magic_word, NULL));
+    std::size_t i = loaders_.index_of(loader_t(magic_word, NULL));
     if (i == ~0u)
     {
       return false;

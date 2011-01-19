@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <fstream>
 #include <stdio.h>
+#include <string>
 
 // local includes:
 #include "utils/the_dynamic_array.hxx"
@@ -72,11 +73,11 @@ clamp_angle(const double & absolute_angle)
 // 
 inline double
 calc_angle(const double & x,
-	   const double & y,
-	   const double & reference_angle = 0.0)
+           const double & y,
+           const double & reference_angle = 0.0)
 {
   return clamp_angle(fmod(atan2(y, x) + TWO_PI, TWO_PI) -
-		     fmod(reference_angle, TWO_PI));
+                     fmod(reference_angle, TWO_PI));
 }
 
 //----------------------------------------------------------------
@@ -232,7 +233,7 @@ assign(array3d(data_t) & array,
 template <class container_t, typename data_t>
 void
 push_back_unique(container_t & container,
-		 const data_t & data)
+                 const data_t & data)
 {
   typename container_t::const_iterator where =
     std::find(container.begin(), container.end(), data);
@@ -247,7 +248,7 @@ push_back_unique(container_t & container,
 template <class container_t, typename data_t>
 void
 push_front_unique(container_t & container,
-		  const data_t & data)
+                  const data_t & data)
 {
   typename container_t::const_iterator where =
     std::find(container.begin(), container.end(), data);
@@ -363,7 +364,7 @@ replace(container_t & container, const data_t & a, const data_t & b)
 template <typename data_t>
 typename std::list<data_t>::const_iterator
 iterator_at_index(const std::list<data_t> & container,
-		  const size_t & index)
+                  const size_t & index)
 {
   typename std::list<data_t>::const_iterator iter = container.begin();
   for (size_t i = 0; i < index && iter != container.end(); i++, ++iter) ;
@@ -376,7 +377,7 @@ iterator_at_index(const std::list<data_t> & container,
 template <typename data_t>
 typename std::list<data_t>::iterator
 iterator_at_index(std::list<data_t> & container,
-		  const size_t & index)
+                  const size_t & index)
 {
   typename std::list<data_t>::iterator iter = container.begin();
   for (size_t i = 0; i < index && iter != container.end(); i++, ++iter) ;
@@ -445,7 +446,7 @@ stream_t &
 dump(stream_t & so, const std::list<data_t> & c)
 {
   for (typename std::list<data_t>::const_iterator
-	 i = c.begin(); i != c.end(); ++i)
+         i = c.begin(); i != c.end(); ++i)
   {
     so << *i << ' ';
   }
@@ -501,8 +502,8 @@ class inserter_t
 {
 public:
   inserter_t(container_t & container,
-	     const typename container_t::iterator & iter,
-	     const bool & expand):
+             const typename container_t::iterator & iter,
+             const bool & expand):
     container_(container),
     iter_(iter),
     expand_(expand)
@@ -514,11 +515,11 @@ public:
     {
       if (expand_)
       {
-	iter_ = container_.insert(iter_, data);
+        iter_ = container_.insert(iter_, data);
       }
       else
       {
-	assert(0);
+        assert(0);
       }
     }
     else
@@ -573,7 +574,7 @@ operator << (std::list<data_t> & container, const data_t & data)
 template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
-			     const std::vector<data_t> & b)
+                             const std::vector<data_t> & b)
 {
   data_t distance_sqrd = data_t(0);
   for (size_t i = 0; i < dimensions; i++)
@@ -591,7 +592,7 @@ calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
 template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance(const std::vector<data_t> & a,
-			const std::vector<data_t> & b)
+                        const std::vector<data_t> & b)
 {
   data_t dist_sqrd = calc_euclidian_distance_sqrd<dimensions, data_t>(a, b);
   double dist = sqrt(double(dist_sqrd));
@@ -666,7 +667,7 @@ the_sign(const T & a)
 template <class T>
 void
 copy_a_to_b(const std::list<T> & container_a,
-	    std::vector<T> & container_b)
+            std::vector<T> & container_b)
 {
   container_b.assign(container_a.begin(), container_a.end());
 }
@@ -679,7 +680,7 @@ copy_a_to_b(const std::list<T> & container_a,
 template <class T>
 void
 copy_a_to_b(const std::list<T> & container_a,
-	    the_dynamic_array_t<T> & container_b)
+            the_dynamic_array_t<T> & container_b)
 {
   container_b.resize(container_a.size());
   
@@ -699,7 +700,7 @@ copy_a_to_b(const std::list<T> & container_a,
 template <class T>
 void
 copy_a_to_b(const the_dynamic_array_t<T> & container_a,
-	    std::vector<T> & container_b)
+            std::vector<T> & container_b)
 {
   container_b.resize(container_a.size());
   
@@ -807,8 +808,8 @@ class the_scoped_variable_t
 {
 public:
   the_scoped_variable_t(T & variable,
-			const T & in_scope_value,
-			const T & out_of_scope_value):
+                        const T & in_scope_value,
+                        const T & out_of_scope_value):
     var_(variable),
     in_(in_scope_value),
     out_(out_of_scope_value)
@@ -902,64 +903,412 @@ namespace the
     iterator_t tmp(curr);
     return --tmp;
   }
-  
+
+  //----------------------------------------------------------------
+  // open_utf8
+  // 
   extern int open_utf8(const char * filename_utf8,
-		       int oflag,
-		       int pmode);
-  
+                       int oflag,
+                       int pmode);
+
+  //----------------------------------------------------------------
+  // open_utf8
+  // 
   extern void open_utf8(std::fstream & fstream_to_open,
-			const char * filename_utf8,
-			std::ios_base::openmode mode);
-  
+                        const char * filename_utf8,
+                        std::ios_base::openmode mode);
+
+  //----------------------------------------------------------------
+  // fopen_utf8
+  // 
   extern FILE * fopen_utf8(const char * filename_utf8,
-			   const char * mode);
-  
+                           const char * mode);
+
+  //----------------------------------------------------------------
+  // fseek64
+  // 
+  extern int fseek64(FILE * file, off_t offset, int whence);
+
+  //----------------------------------------------------------------
+  // ftell64
+  // 
+  extern off_t ftell64(const FILE * file);
+
+  //----------------------------------------------------------------
+  // rename_utf8
+  // 
   extern int rename_utf8(const char * old_utf8, const char * new_utf8);
+
+  //----------------------------------------------------------------
+  // remove_utf8
+  // 
   extern int remove_utf8(const char * filename_utf8);
-  
+
+  //----------------------------------------------------------------
+  // rmdir_utf8
+  // 
   extern int rmdir_utf8(const char * path_utf8);
+
+  //----------------------------------------------------------------
+  // mkdir_utf8
+  // 
   extern int mkdir_utf8(const char * path_utf8);
-  
+
+  //----------------------------------------------------------------
+  // rmdir_recursively_utf8
+  // 
+  // avoid using these dangerous functions, try using
+  // find_matching_files(..) and remove_files(..) instead
+  // 
   extern bool rmdir_recursively_utf8(const std::string & dir_to_remove);
   extern bool rmdir_recursively_utf8(const char * dir_to_remove);
   
-  extern int fseek64(FILE * file, off_t offset, int whence);
-  extern off_t ftell64(const FILE * file);
+  //----------------------------------------------------------------
+  // find_matching_files
+  // 
+  // assemble a list of filenames in a given folder that match
+  // a specified filename prefix and extension suffix
+  //
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  extern bool
+  find_matching_files(std::list<std::string> & found,
+                      const char * folder,
+                      const char * prefix = "",
+                      const char * suffix = "");
   
+  //----------------------------------------------------------------
+  // remove_files
+  //
+  // remove files found with find_matching_files(..)
+  //
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  extern bool
+  remove_files(const char * folder,
+               const std::list<std::string> & filenames);
+
+  //----------------------------------------------------------------
+  // close_enough
+  // 
   inline static bool
   close_enough(const float & ref,
-	       const float & given,
-	       const float tolerance = 1e-6f)
+               const float & given,
+               const float tolerance = 1e-6f)
   {
     float err = fabsf(given - ref);
     return err < tolerance;
   }
-  
+
+  //----------------------------------------------------------------
+  // close_enough
+  // 
   inline static bool
   close_enough(const double & ref,
-	       const double & given,
-	       const double tolerance = 1e-6)
+               const double & given,
+               const double tolerance = 1e-6)
   {
     double err = fabs(given - ref);
     return err < tolerance;
   }
-  
+
+  //----------------------------------------------------------------
+  // get_current_executable_path
+  // 
   extern bool
   get_current_executable_path(std::string & exe_path_utf8);
 
+  //----------------------------------------------------------------
+  // get_latest_err_str
+  // 
   extern std::string
   get_latest_err_str();
-  
+
+  //----------------------------------------------------------------
+  // launch_app
+  // 
   extern bool
   launch_app(const std::string & exe_path_utf8,
              const std::list<std::string> & args_utf8,
              const std::string & work_dir_utf8 = std::string(),
              bool wait_to_finish = true);
-  
+
+  //----------------------------------------------------------------
+  // simplify_path
+  // 
   extern bool
   simplify_path(const std::string & path_utf8,
                 std::string & full_path_utf8);
   
+  //----------------------------------------------------------------
+  // parse_file_path
+  // 
+  // split a given file path into the folder name
+  // (excluding the last separator),
+  // and the file name.
+  // 
+  // NOTE: returns false if no file path separator was found.
+  // 
+  extern bool
+  parse_file_path(const std::string & file_path,
+                  std::string & folder,
+                  std::string & name);
+  
+  //----------------------------------------------------------------
+  // string_length
+  // 
+  template <typename TChar>
+  std::size_t
+  string_length(const TChar * str)
+  {
+    std::size_t length = 0;
+    
+    for (; str && *str; ++str, ++length)
+      ;
+    
+    return length;
+  }
+  
+  //----------------------------------------------------------------
+  // string_match_head
+  // 
+  template <typename TChar>
+  bool
+  string_match_head(const TChar * str, const TChar * head)
+  {
+    const TChar * a = str;
+    const TChar * b = head;
+
+    for (; a && b && *a && *b; ++a, ++b)
+    {
+      if (*a != *b)
+      {
+        return false;
+      }
+    }
+    
+    return !b || !*b;
+  }
+  
+  //----------------------------------------------------------------
+  // string_match_tail
+  // 
+  template <typename TChar>
+  bool
+  string_match_tail(const TChar * str, const TChar * tail)
+  {
+    const TChar * a = str;
+    const TChar * b = tail;
+    
+    std::size_t len_a = string_length(a);
+    std::size_t len_b = string_length(b);
+    
+    if (len_a < len_b)
+    {
+      return false;
+    }
+    
+    a += len_a - len_b;
+    
+    for (; a && b && *a && *b; ++a, ++b)
+    {
+      if (*a != *b)
+      {
+        return false;
+      }
+    }
+    
+    return !b || !*b;
+  }
+  
+  //----------------------------------------------------------------
+  // string_match_head
+  // 
+  template <typename TString>
+  bool
+  string_match_head(const TString & str, const TString & head)
+  {
+    typedef typename TString::charT TChar;
+    return string_match_head<TChar>(src.c_str(), head.c_str());
+  }
+  
+  //----------------------------------------------------------------
+  // string_match_tail
+  // 
+  template <typename TString>
+  bool
+  string_match_tail(const TString & str, const TString & tail)
+  {
+    typedef typename TString::charT TChar;
+    return string_match_tail<TChar>(str.c_str(), tail.c_str());
+  }
+
+  //----------------------------------------------------------------
+  // convert_to_string
+  // 
+  template <typename TData>
+  std::string
+  convert_to_string(const TData & data)
+  {
+    std::ostringstream os;
+    os << data;
+
+    std::string result(os.str().c_str());
+    return result;
+  }
+
+  //----------------------------------------------------------------
+  // open_folder_t
+  // 
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  struct open_folder_t
+  {
+    // NOTE: the constructor may throw exceptions if the folder
+    //       doesn't exist, or is inaccessible.
+    // NOTE: the constructor parses the first item in the folder,
+    //       it may throw an exception if it can parse the item,
+    open_folder_t(const std::string & folder_path);
+    ~open_folder_t();
+
+    // accessor to the cleaned up folder path:
+    const std::string & folder_path() const;
+
+    // parse the next item in the folder:
+    bool parse_next_item();
+
+    // accessors to current item properties:
+    bool item_is_folder() const;
+    std::string item_name() const;
+    std::string item_path() const;
+
+  private:
+    // intentionally disabled:
+    open_folder_t(const open_folder_t &);
+    open_folder_t & operator = (const open_folder_t &);
+        
+  protected:
+    // private implementation details:
+    class private_t;
+    private_t * private_;
+  };
+
+  //----------------------------------------------------------------
+  // open_file_t
+  // 
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  struct open_file_t
+  {
+    // NOTE: the constructor may throw exceptions if the file
+    //       doesn't exist, or is inaccessible.
+    open_file_t(const char * filename, const char * mode);
+
+    // NOTE: the destructor will close the file:
+    ~open_file_t();
+        
+    // the file handle:
+    FILE * file_;
+  };
+
+  //----------------------------------------------------------------
+  // progress_reporter_base_t
+  // 
+  struct progress_reporter_base_t
+  {
+    progress_reporter_base_t(unsigned int items_total = 0,
+                             double precision = 1e-3);
+    virtual ~progress_reporter_base_t();
+
+    // specify the smallest change in total progress that should be reported:
+    virtual void set_precision(double precision = 1e-3);
+
+    // specify how many items are included in the total progress calculation:
+    virtual void reset(unsigned int items_total);
+
+    // update progress for 1 item:
+    virtual void update_progress(double item_progress);
+        
+    // indicate that 1 item has completed:
+    virtual void item_finished();
+
+    // this will be called periodically,
+    // according to the selected precision:
+    virtual bool report_progress(double fraction_completed) = 0;
+    
+  protected:
+    unsigned int items_total_;
+    unsigned int items_completed_;
+    double item_progress_;
+    double precision_;
+    
+  private:
+    int reported_progress_;
+  };
+  
+  //----------------------------------------------------------------
+  // copy_file
+  // 
+  // copy a file from a given source file
+  // to the specified destination file,
+  // may throw std::exception
+  // 
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  extern bool
+  copy_file(const std::string & src,
+            const std::string & dst,
+            progress_reporter_base_t * progress_reporter);
+
+  //----------------------------------------------------------------
+  // copy_folder_contents
+  // 
+  // recursively copy folder contents of a given source folder
+  // to the specified destination folder,
+  // may throw std::exception
+  // 
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  extern bool
+  copy_folder_contents(const std::string & src,
+                       const std::string & dst,
+                       progress_reporter_base_t * progress_reporter);
+
+  //----------------------------------------------------------------
+  // copy_files
+  // 
+  // carry out the recursive file/folder copy operation;
+  // returns true/false to indicate success/failure,
+  // may throw a std::exception
+  // 
+  // NOTE: all strings are UTF-8 encoded
+  // 
+  extern bool
+  copy_files(const std::string & from,
+             const std::string & to,
+             progress_reporter_base_t * progress_reporter);
+
+  //----------------------------------------------------------------
+  // is_path_to_folder
+  // 
+  extern bool
+  is_path_to_folder(const std::string & path_utf8);
+
+  //----------------------------------------------------------------
+  // path_exists
+  // 
+  extern bool
+  path_exists(const std::string & path_utf8);
+
+  //----------------------------------------------------------------
+  // count_files
+  // 
+  // recursively count files stored at the specified path,
+  // may throw std::exception
+  // 
+  extern unsigned int
+  count_files(const std::string & path_utf8);
+
 }
 
 

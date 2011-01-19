@@ -171,7 +171,7 @@ save(const the_text_t & magic,
   the_text_t old_name(doc->name());
   {
     std::vector<the_text_t> tokens;
-    unsigned int num_tokens = filename.split(tokens, '/');
+    std::size_t num_tokens = filename.split(tokens, '/');
     document->name().assign(tokens[num_tokens - 1]);
   }
   
@@ -208,7 +208,7 @@ load(const the_text_t & magic,
   if (magic_word == magic)
   {
     std::vector<the_text_t> tokens;
-    unsigned int num_tokens = filename.split(tokens, '/');
+    std::size_t num_tokens = filename.split(tokens, '/');
     
     // update the document name:
     the_document_t * document = new the_document_t(filename);

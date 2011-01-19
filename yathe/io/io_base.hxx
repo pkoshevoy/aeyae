@@ -244,10 +244,10 @@ template <typename data_t>
 bool
 save(std::ostream & stream, const std::vector<data_t> & array)
 {
-  const unsigned int & size = array.size();
+  std::size_t size = array.size();
   bool ok = save(stream, size);
   
-  for (unsigned int i = 0; i < size && ok; i++)
+  for (std::size_t i = 0; i < size && ok; i++)
   {
     ok = save(stream, array[i]);
     stream << std::endl;
