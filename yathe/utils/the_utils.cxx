@@ -1526,7 +1526,7 @@ namespace the
   // 
   // update progress for 1 item
   // 
-  void
+  bool
   progress_reporter_base_t::update_progress(double item_progress)
   {
     item_progress_ = item_progress;
@@ -1542,8 +1542,10 @@ namespace the
     if (reportable_progress > reported_progress_)
     {
       reported_progress_ = reportable_progress;
-      report_progress(total_progress);
+      return report_progress(total_progress);
     }
+
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -1622,7 +1624,11 @@ namespace the
       if (progress_reporter)
       {
         double file_progress = double(dst_size) / double(src_size);
-        progress_reporter->update_progress(file_progress);
+        bool carry_on = progress_reporter->update_progress(file_progress);
+        if (!carry_on)
+        {
+          break;
+        }
       }
     }
 

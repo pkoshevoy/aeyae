@@ -1221,6 +1221,8 @@ namespace the
   //----------------------------------------------------------------
   // progress_reporter_base_t
   // 
+  // NOTE: progress is expressed as a scaler value in the range [0, 1]
+  // 
   struct progress_reporter_base_t
   {
     progress_reporter_base_t(unsigned int items_total = 0,
@@ -1233,14 +1235,15 @@ namespace the
     // specify how many items are included in the total progress calculation:
     virtual void reset(unsigned int items_total);
 
-    // update progress for 1 item:
-    virtual void update_progress(double item_progress);
+    // update progress for 1 item (returns true to carry on, false to abort),
+    // calls report_progress periodically (according to selected precision):
+    virtual bool update_progress(double item_progress);
         
     // indicate that 1 item has completed:
     virtual void item_finished();
 
-    // this will be called periodically,
-    // according to the selected precision:
+    // this will be called periodically (according to selected precision),
+    // returns true to carry on, false to abort;
     virtual bool report_progress(double fraction_completed) = 0;
     
   protected:
