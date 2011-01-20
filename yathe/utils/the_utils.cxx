@@ -913,6 +913,29 @@ namespace the
   }
   
   //----------------------------------------------------------------
+  // is_absolute_path
+  // 
+  bool
+  is_absolute_path(const std::string & path_utf8)
+  {
+    if (path_utf8.empty())
+    {
+      return false;
+    }
+    
+#ifdef _WIN32
+    // check for hostname or drive letter followed by ":\"
+    std::size_t found = path_utf8.find(":\\");
+    if (found != std::string::npos)
+    {
+      return true;
+    }
+#endif
+    
+    return (path_utf8[0] == *THE_PATH_SEPARATOR);
+  }
+  
+  //----------------------------------------------------------------
   // simplify_path
   // 
   bool
@@ -923,10 +946,11 @@ namespace the
     {
       return false;
     }
-    
+
+    std::string curdir;
     std::list<const char *> path;
     
-    if (path_utf8[0] != *THE_PATH_SEPARATOR)
+    if (!is_absolute_path(path_utf8))
     {
       // get current working directory:
 #ifdef _WIN32
@@ -937,17 +961,24 @@ namespace the
         return false;
       }
       
-      std::string curdir = utf16_to_utf8(std::wstring(wcurdir));
+      curdir = utf16_to_utf8(std::wstring(wcurdir));
 #else
-      char curdir[MAXPATHLEN] = { 0 };
-      if (getcwd(curdir, sizeof(curdir)) == NULL)
+      char buffer[MAXPATHLEN] = { 0 };
+      if (getcwd(buffer, sizeof(buffer)) == NULL)
       {
         dump_latest_err();
         return false;
       }
+
+      curdir.assign(buffer);
 #endif
       
       // split current working directory path into tokens:
+      if (curdir[0] != *THE_PATH_SEPARATOR)
+      {
+        path.push_back(&curdir[0]);
+      }
+      
       for (char * i = &curdir[0]; *i; ++i)
       {
         char & c = *i;
@@ -1020,8 +1051,22 @@ namespace the
     else
     {
       full_path_utf8.clear();
-      for (std::list<const char *>::const_iterator i = path.begin();
-           i != path.end(); ++i)
+
+      std::list<const char *>::const_iterator i = path.begin();
+      
+#ifdef _WIN32
+      {
+        const char * a = *i;
+        std::size_t na = string_length<char>(a);
+        if (na > 0 && a[na - 1] == ':')
+        {
+          full_path_utf8 += a;
+          ++i;
+        }
+      }
+#endif
+      
+      for (; i != path.end(); ++i)
       {
         full_path_utf8 += THE_PATH_SEPARATOR;
         

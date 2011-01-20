@@ -1033,6 +1033,12 @@ namespace the
              const std::list<std::string> & args_utf8,
              const std::string & work_dir_utf8 = std::string(),
              bool wait_to_finish = true);
+  
+  //----------------------------------------------------------------
+  // is_absolute_path
+  // 
+  extern bool
+  is_absolute_path(const std::string & path_utf8);
 
   //----------------------------------------------------------------
   // simplify_path
