@@ -888,6 +888,10 @@ namespace yae
     TAudioFrame::TTraits trackTraits;
     getTraits(trackTraits);
     
+    // declare a 16-byte aligned buffer for decoded audio samples:
+    DECLARE_ALIGNED(16, uint8_t, buffer)
+      [(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
+    
     while (true)
     {
       try
@@ -908,18 +912,14 @@ namespace yae
         
         while (packet.size)
         {
-          int chunkSize = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-          chunks.push_back(std::vector<unsigned char>(chunkSize));
-          
-          int16_t * chunk = (int16_t *)&(chunks.back().front());
+          int bufferSize = sizeof(buffer);
           int bytesUsed = avcodec_decode_audio3(codecContext(),
-                                                chunk,
-                                                &chunkSize,
+                                                (int16_t *)(&buffer[0]),
+                                                &bufferSize,
                                                 &packet);
           
           if (bytesUsed < 0)
           {
-            chunks.pop_back();
             break;
           }
           
@@ -927,8 +927,10 @@ namespace yae
           packet.size -= bytesUsed;
           packet.data += bytesUsed;
           
-          chunks.back().resize(chunkSize);
-          totalBytes += chunkSize;
+          chunks.push_back(std::vector<unsigned char>
+                           (buffer, buffer + bufferSize));
+          
+          totalBytes += bufferSize;
         }
         
         if (!totalBytes)
