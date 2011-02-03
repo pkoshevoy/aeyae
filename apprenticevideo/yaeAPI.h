@@ -39,6 +39,18 @@
 #endif
 
 
+//----------------------------------------------------------------
+// YAE_ALIGN
+// 
+#if defined(_MSC_VER)
+# define YAE_ALIGN(N, T) __declspec(align(N)) T
+#elif __GNUC__ >= 4
+# define YAE_ALIGN(N, T) T __attribute__ ((aligned(N)))
+#else
+# define YAE_ALIGN(N, T) T
+#endif
+
+
 namespace yae
 {
 
