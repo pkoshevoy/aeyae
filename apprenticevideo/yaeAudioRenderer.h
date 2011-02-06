@@ -10,83 +10,59 @@
 #define YAE_AUDIO_RENDERER_H_
 
 // system includes:
-#include <vector>
-
-// Qt includes:
-#include <QAudioOutput>
-#include <QIODevice>
-
-// boost includes:
-#include <boost/thread.hpp>
+#include <string>
 
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeReader.h>
 
+
 namespace yae
 {
   
   //----------------------------------------------------------------
-  // RingBuffer
+  // IAudioRenderer
   // 
-  class RingBuffer : public QIODevice
+  struct YAE_API IAudioRenderer
   {
-    Q_OBJECT;
+  protected:
+    IAudioRenderer();
+    virtual ~IAudioRenderer();
     
   public:
-    RingBuffer(std::size_t bufferCapacity);
     
-    // virtual:
-    bool isSequential() const;
+    //! The de/structor is intentionally hidden, use destroy() method instead.
+    //! This is necessary in order to avoid conflicting memory manager
+    //! problems that arise on windows when various libs are linked to
+    //! different versions of runtime library.  Each library uses its own
+    //! memory manager, so allocating in one library call and deallocating
+    //! in another library will not work.  This can be avoided by hiding
+    //! the standard constructor/destructor and providing an explicit
+    //! interface for de/allocating an object instance, thus ensuring that
+    //! the same memory manager will perform de/allocation.
+    virtual void destroy() = 0;
     
-    // virtual:
-    qint64 readData(char * data, qint64 maxSize);
-    qint64 writeData(const char * data, qint64 maxSize);
-    
-  protected:
-    // ring-buffer access is synchronized across threads:
-    mutable boost::mutex mutex_;
-    mutable boost::condition_variable cond_;
-    
-    // data buffer:
-    std::vector<unsigned char> data_;
-    
-    // read position:
-    std::size_t head_;
-    
-    // write position:
-    std::size_t tail_;
-  };
+    //! return a human readable name for this renderer (preferably unique):
+    virtual const char * getName() const = 0;
 
-  //----------------------------------------------------------------
-  // AudioRenderer
-  // 
-  struct AudioRenderer : public QIODevice
-  {
-    AudioRenderer();
+    //! there may be multiple audio rendering devices available:
+    virtual unsigned int countAvailableDevices() const = 0;
     
-    // helper:
-    void setReader(IReader * reader);
+    //! return index of the system default audio rendering device:
+    virtual unsigned int getDefaultDeviceIndex() const = 0;
     
-    // virtual:
-    bool isSequential() const;
+    //! get device name and max audio resolution capabilities:
+    virtual bool getDeviceName(unsigned int deviceIndex,
+                               std::string & deviceName) const = 0;
     
-    // virtual:
-    qint64 readData(char * dst, qint64 dstSize);
-    qint64 writeData(const char * src, qint64 srcSize);
+    //! initialize a given audio rendering device:
+    virtual bool open(unsigned int deviceIndex,
+                      IReader * reader) = 0;
     
-  protected:
-    // audio source:
-    IReader * reader_;
-    
-    // audio output:
-    QAudioOutput * output_;
-
-    // previous audio frame;
-    TAudioFramePtr audioFrame_;
-    std::size_t audioFrameStartOffset_;
+    //! terminate audio rendering:
+    virtual void close() = 0;
   };
-  
-};
+}
+
 
 #endif // YAE_AUDIO_RENDERER_H_

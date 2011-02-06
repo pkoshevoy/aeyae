@@ -138,7 +138,7 @@ endif (WIN32)
 set(project_moc_hxx 
   yaeMainWindow.h
   yaeViewer.h
-  yaeAudioRenderer.h
+  yaeAudioRendererQt.h
   )
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -167,6 +167,8 @@ set(project_sources
   yaeViewer.cpp
   yaeAudioRenderer.h
   yaeAudioRenderer.cpp
+  yaeAudioRendererQt.h
+  yaeAudioRendererQt.cpp
   ${project_moc_cxx}
   ${project_uis_hxx}
 #  ${project_qrc_cxx}

@@ -58,7 +58,7 @@ namespace yae
     Viewer * viewer_;
     
     // audio renderer:
-    AudioRenderer * audioRenderer_;
+    IAudioRenderer * audioRenderer_;
   };
   
 };

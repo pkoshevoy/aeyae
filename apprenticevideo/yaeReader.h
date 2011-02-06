@@ -23,6 +23,9 @@ namespace yae
   {
   protected:
     IReader() {}
+    virtual ~IReader() {}
+    
+  public:
     
     //! The de/structor is intentionally hidden, use destroy() method instead.
     //! This is necessary in order to avoid conflicting memory manager
@@ -33,9 +36,6 @@ namespace yae
     //! the standard constructor/destructor and providing an explicit
     //! interface for de/allocating an object instance, thus ensuring that
     //! the same memory manager will perform de/allocation.
-    virtual ~IReader() {}
-    
-  public:
     virtual void destroy() = 0;
     
     //! return a human readable name for this reader (preferably unique):

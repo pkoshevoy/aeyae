@@ -22,6 +22,7 @@
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
+#include <yaeAudioRendererQt.h>
 
 // local includes:
 #include <yaeMainWindow.h>
@@ -34,14 +35,17 @@ namespace yae
   // MainWindow::MainWindow
   // 
   MainWindow::MainWindow():
-    QMainWindow(NULL, 0)
+    QMainWindow(NULL, 0),
+    reader_(NULL),
+    viewer_(NULL),
+    audioRenderer_(NULL)
   {
     setupUi(this);
     setAcceptDrops(true);
     
     reader_ = ReaderFFMPEG::create();
     viewer_ = new Viewer(reader_);
-    audioRenderer_ = new AudioRenderer();
+    audioRenderer_ = AudioRendererQt::create();
     
     delete centralwidget->layout();
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);
@@ -65,6 +69,8 @@ namespace yae
   MainWindow::~MainWindow()
   {
     delete viewer_;
+    audioRenderer_->close();
+    audioRenderer_->destroy();
     reader_->destroy();
   }
   
@@ -110,7 +116,7 @@ namespace yae
     // update the renderers:
     viewer_->setReader(reader);
     viewer_->loadFrame();
-    audioRenderer_->setReader(reader);
+    audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader);
     
     // replace the previous reader:
     reader_->destroy();
