@@ -392,8 +392,8 @@ namespace yae
       {
         std::size_t samplesConsumed =
           srcPlanar ?
-          srcChunkSize / sampleSize_ :
-          srcChunkSize / (sampleSize_ * outputParams_.channelCount);
+          chunkSize / sampleSize_ :
+          chunkSize / (sampleSize_ * outputParams_.channelCount);
         audioFrameOffset_ += samplesConsumed;
       }
       else
