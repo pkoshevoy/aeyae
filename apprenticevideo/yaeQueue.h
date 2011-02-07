@@ -301,10 +301,7 @@ namespace yae
   protected:
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
-    
     bool closed_;
-    bool abanoned_;
-    
     std::list<TData> data_;
     std::size_t size_;
     const std::size_t maxSize_;
