@@ -295,7 +295,7 @@ namespace yae
     bool open();
     
     // close the stream:
-    void close();
+    virtual void close();
     
     // get track name:
     const char * getName() const;
@@ -505,6 +505,9 @@ namespace yae
   {
     VideoTrack(AVFormatContext * context, AVStream * stream);
     
+    // virtual:
+    void close();
+    
     // virtual: get current position:
     bool getPosition(TTime & t) const;
     
@@ -534,6 +537,16 @@ namespace yae
     Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::close
+  // 
+  void
+  VideoTrack::close()
+  {
+    frameQueue_.close();
+    Track::close();
   }
   
   //----------------------------------------------------------------
@@ -815,6 +828,9 @@ namespace yae
   {
     AudioTrack(AVFormatContext * context, AVStream * stream);
     
+    // virtual:
+    void close();
+    
     // virtual: get current position:
     bool getPosition(TTime & t) const;
     
@@ -844,6 +860,16 @@ namespace yae
     Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::close
+  // 
+  void
+  AudioTrack::close()
+  {
+    frameQueue_.close();
+    Track::close();
   }
   
   //----------------------------------------------------------------
