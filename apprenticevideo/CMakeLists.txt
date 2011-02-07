@@ -135,6 +135,8 @@ else (WIN32)
   find_library(ASOUND_LIBRARY asound PATHS ${FFMPEG_LIBS_PATH} DOC "alsa sound library required by QtMultimedia")
 endif (WIN32)
 
+find_library(PORTAUDIO_LIBRARY portaudio PATHS ${FFMPEG_LIBS_PATH} DOC "portaudio library")
+
 set(project_moc_hxx 
   yaeMainWindow.h
   yaeViewer.h
@@ -174,6 +176,26 @@ set(project_sources
 #  ${project_qrc_cxx}
   )
 
+find_path(PORTAUDIO_INCLUDE_DIR 
+  portaudio.h
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (PORTAUDIO_INCLUDE_DIR)
+  include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
+endif (PORTAUDIO_INCLUDE_DIR)
+
+if (PORTAUDIO_LIBRARY)
+  add_definitions(-DYAE_HAS_PORTAUDIO)
+  set(project_sources 
+    ${project_sources} 
+    yaeAudioRendererPortaudio.h
+    yaeAudioRendererPortaudio.cpp
+    )
+endif (PORTAUDIO_LIBRARY)
+
 # Set some Win32 Specific Settings
 if (WIN32)
   set(GUI_TYPE WIN32)
@@ -206,6 +228,10 @@ set(TARGET_LIBS
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   )
+
+if (PORTAUDIO_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
+endif (PORTAUDIO_LIBRARY)
 
 if (AVFORMAT_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${AVFORMAT_LIBRARY})

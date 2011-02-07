@@ -2,46 +2,44 @@
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
 
-// Created      : Sun Jan  2 18:37:06 MST 2011
+// Created      : Sat Feb  5 21:57:57 MST 2011
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_AUDIO_RENDERER_QT_H_
-#define YAE_AUDIO_RENDERER_QT_H_
+#ifndef YAE_AUDIO_RENDERER_PORTAUDIO_H_
+#define YAE_AUDIO_RENDERER_PORTAUDIO_H_
 
 // system includes:
-#include <vector>
-
-// Qt includes:
-#include <QAudioOutput>
-#include <QIODevice>
-
-// boost includes:
-#include <boost/thread.hpp>
+#include <string>
 
 // yae includes:
 #include <yaeAPI.h>
-#include <yaeReader.h>
 #include <yaeAudioRenderer.h>
+#include <yaeReader.h>
 
 
 namespace yae
 {
-  
   //----------------------------------------------------------------
   // AudioRenderer
   // 
-  struct YAE_API AudioRendererQt : public QIODevice,
-                                   public IAudioRenderer
+  struct YAE_API AudioRendererPortaudio : public IAudioRenderer
   {
-    Q_OBJECT;
+  private:
+    //! intentionally disabled:
+    AudioRendererPortaudio(const AudioRendererPortaudio & f);
+    AudioRendererPortaudio & operator = (const AudioRendererPortaudio & f);
+    
+    //! private implementation details:
+    class TPrivate;
+    TPrivate * private_;
     
   protected:
-    AudioRendererQt();
-    ~AudioRendererQt();
-
+    AudioRendererPortaudio();
+    ~AudioRendererPortaudio();
+    
   public:
-    static AudioRendererQt * create();
+    static AudioRendererPortaudio * create();
     virtual void destroy();
     
     //! return a human readable name for this renderer (preferably unique):
@@ -63,26 +61,8 @@ namespace yae
 
     //! terminate audio rendering:
     virtual void close();
-    
-    // virtual:
-    bool isSequential() const;
-    
-    // virtual:
-    qint64 readData(char * dst, qint64 dstSize);
-    qint64 writeData(const char * src, qint64 srcSize);
-    
-  protected:
-    // audio source:
-    IReader * reader_;
-    
-    // audio output:
-    QAudioOutput * output_;
-
-    // previous audio frame:
-    TAudioFramePtr audioFrame_;
-    std::size_t audioFrameStartOffset_;
   };
 }
 
 
-#endif // YAE_AUDIO_RENDERER_QT_H_
+#endif // YAE_AUDIO_RENDERER_PORTAUDIO_H_

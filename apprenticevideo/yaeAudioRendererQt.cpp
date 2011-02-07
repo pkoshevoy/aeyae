@@ -136,7 +136,7 @@ namespace yae
     std::size_t numTracks = reader_->getNumberOfAudioTracks();
     if (selTrack >= numTracks)
     {
-      return false;
+      return true;
     }
     
     AudioTraits atraits;
@@ -181,7 +181,6 @@ namespace yae
         break;
         
       default:
-        assert(false);
         return false;
     }
     
@@ -240,7 +239,7 @@ namespace yae
     
     if (!audioFrame_)
     {
-      if (!reader_->readAudio(audioFrame_))
+      if (!reader_->readAudioDontWait(audioFrame_))
       {
         return 0;
       }

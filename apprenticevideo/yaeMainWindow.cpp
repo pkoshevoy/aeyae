@@ -23,6 +23,9 @@
 // yae includes:
 #include <yaeReaderFFMPEG.h>
 #include <yaeAudioRendererQt.h>
+#ifdef YAE_HAS_PORTAUDIO
+#include <yaeAudioRendererPortaudio.h>
+#endif
 
 // local includes:
 #include <yaeMainWindow.h>
@@ -45,7 +48,12 @@ namespace yae
     
     reader_ = ReaderFFMPEG::create();
     viewer_ = new Viewer(reader_);
+    
+#ifdef YAE_HAS_PORTAUDIO
+    audioRenderer_ = AudioRendererPortaudio::create();
+#else
     audioRenderer_ = AudioRendererQt::create();
+#endif
     
     delete centralwidget->layout();
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);

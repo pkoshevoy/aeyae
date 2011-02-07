@@ -1,0 +1,499 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created      : Sat Feb  5 22:01:08 MST 2011
+// Copyright    : Pavel Koshevoy
+// License      : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+// system includes:
+#include <sstream>
+#include <string>
+#include <stdexcept>
+#include <vector>
+
+// boost includes:
+#include <boost/thread.hpp>
+
+// portaudio includes:
+#include <portaudio.h>
+
+// yae includes:
+#include <yaeAudioRendererPortaudio.h>
+
+
+namespace yae
+{
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate
+  // 
+  class AudioRendererPortaudio::TPrivate
+  {
+  public:
+    TPrivate();
+    ~TPrivate();
+    
+    unsigned int countAvailableDevices() const;
+    unsigned int getDefaultDeviceIndex() const;
+    
+    bool getDeviceName(unsigned int deviceIndex,
+                       std::string & deviceName) const;
+    
+    bool open(unsigned int deviceIndex, IReader * reader);
+    void close();
+    
+  private:
+    // portaudio stream callback:
+    static int callback(const void * input,
+                        void * output,
+                        unsigned long frameCount,
+                        const PaStreamCallbackTimeInfo * timeInfo,
+                        PaStreamCallbackFlags statusFlags,
+                        void * userData);
+    
+    // a helper used by the portaudio stream callback:
+    int serviceTheCallback(const void * input,
+                           void * output,
+                           unsigned long frameCount,
+                           const PaStreamCallbackTimeInfo * timeInfo,
+                           PaStreamCallbackFlags statusFlags);
+    
+    // status code returned by Pa_Initialize:
+    PaError initErr_;
+
+    // a mapping from output device enumeration to portaudio device index:
+    std::vector<PaDeviceIndex> outputDevices_;
+    unsigned int defaultDevice_;
+
+    // audio source:
+    IReader * reader_;
+
+    // output stream and its configuration:
+    PaStream * output_;
+    PaStreamParameters outputParams_;
+    unsigned int sampleSize_;
+    
+    // current audio frame:
+    TAudioFramePtr audioFrame_;
+
+    // number of samples already consumed from the current audio frame:
+    std::size_t audioFrameOffset_;
+  };
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::TPrivate
+  // 
+  AudioRendererPortaudio::TPrivate::TPrivate():
+    initErr_(Pa_Initialize()),
+    defaultDevice_(0),
+    reader_(NULL),
+    output_(NULL),
+    sampleSize_(0),
+    audioFrameOffset_(0)
+  {
+    if (initErr_ != paNoError)
+    {
+      std::string err("Pa_Initialize did not succeed: ");
+      err += Pa_GetErrorText(initErr_);
+      throw std::runtime_error(err);
+    }
+
+    // enumerate available output devices:
+    const PaDeviceIndex defaultDev = Pa_GetDefaultOutputDevice();
+    const PaDeviceIndex nDevsTotal = Pa_GetDeviceCount();
+    
+    for (PaDeviceIndex i = 0; i < nDevsTotal; i++)
+    {
+      const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
+      if (devInfo->maxOutputChannels < 1)
+      {
+        continue;
+      }
+      
+      if (defaultDev == i)
+      {
+        defaultDevice_ = outputDevices_.size();
+      }
+      
+      outputDevices_.push_back(i);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::~TPrivate
+  // 
+  AudioRendererPortaudio::TPrivate::~TPrivate()
+  {
+    if (initErr_ == paNoError)
+    {
+      Pa_Terminate();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::countAvailableDevices
+  // 
+  unsigned int
+  AudioRendererPortaudio::TPrivate::countAvailableDevices() const
+  {
+    return outputDevices_.size();
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::getDefaultDeviceIndex
+  // 
+  unsigned int
+  AudioRendererPortaudio::TPrivate::getDefaultDeviceIndex() const
+  {
+    return defaultDevice_;
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::getDeviceName
+  // 
+  bool
+  AudioRendererPortaudio::TPrivate::
+  getDeviceName(unsigned int deviceIndex,
+                std::string & deviceName) const
+  {
+    if (deviceIndex >= countAvailableDevices())
+    {
+      return false;
+    }
+    
+    const PaDeviceIndex i = outputDevices_[deviceIndex];
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
+    if (!devInfo)
+    {
+      return false;
+    }
+    
+    const PaHostApiInfo * apiInfo = Pa_GetHostApiInfo(devInfo->hostApi);
+    if (!apiInfo)
+    {
+      return false;
+    }
+
+    std::ostringstream oss;
+    oss << apiInfo->name << ": " << devInfo->name;
+    deviceName.assign(oss.str().c_str());
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::open
+  // 
+  bool
+  AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
+                                         IReader * reader)
+  {
+    if (output_)
+    {
+      Pa_StopStream(output_);
+      Pa_CloseStream(output_);
+      output_ = NULL;
+    }
+    
+    reader_ = reader;
+    if (!reader_)
+    {
+      return true;
+    }
+    
+    std::size_t selTrack = reader_->getSelectedAudioTrackIndex();
+    std::size_t numTracks = reader_->getNumberOfAudioTracks();
+    if (selTrack >= numTracks)
+    {
+      return true;
+    }
+    
+    AudioTraits atraits;
+    if (!reader_->getAudioTraits(atraits))
+    {
+      return false;
+    }
+
+    outputParams_.device = outputDevices_[deviceIndex];
+    
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputParams_.device);
+    outputParams_.suggestedLatency = devInfo->defaultHighOutputLatency;
+    
+    outputParams_.hostApiSpecificStreamInfo = NULL;
+    outputParams_.channelCount = atraits.channelLayout_;
+
+    switch (atraits.sampleFormat_)
+    {
+      case kAudio8BitOffsetBinary:
+        outputParams_.sampleFormat = paUInt8;
+        sampleSize_ = 1;
+        break;
+        
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        outputParams_.sampleFormat = paInt16;
+        sampleSize_ = 2;
+        break;
+        
+      case kAudio24BitLittleEndian:
+        outputParams_.sampleFormat = paInt24;
+        sampleSize_ = 3;
+        break;
+        
+      case kAudio32BitFloat:
+        outputParams_.sampleFormat = paFloat32;
+        sampleSize_ = 4;
+        break;
+        
+      default:
+        return false;
+    }
+    
+    if (atraits.channelFormat_ == kAudioChannelsPlanar)
+    {
+      outputParams_.sampleFormat |= paNonInterleaved;
+    }
+    
+    PaError errCode = Pa_OpenStream(&output_,
+                                    NULL,
+                                    &outputParams_,
+                                    double(atraits.sampleRate_),
+                                    paFramesPerBufferUnspecified,
+                                    paNoFlag, // paClipOff,
+                                    &callback,
+                                    this);
+    if (errCode != paNoError)
+    {
+      output_ = NULL;
+      return false;
+    }
+    
+    errCode = Pa_StartStream(output_);
+    if (errCode != paNoError)
+    {
+      Pa_CloseStream(output_);
+      output_ = NULL;
+      return false;
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::close
+  // 
+  void
+  AudioRendererPortaudio::TPrivate::close()
+  {
+    open(0, NULL);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::callback
+  // 
+  int
+  AudioRendererPortaudio::TPrivate::
+  callback(const void * input,
+           void * output,
+           unsigned long samplesToRead, // per channel
+           const PaStreamCallbackTimeInfo * timeInfo,
+           PaStreamCallbackFlags statusFlags,
+           void * userData)
+  {
+    TPrivate * context = (TPrivate *)userData;
+    return context->serviceTheCallback(input,
+                                       output,
+                                       samplesToRead,
+                                       timeInfo,
+                                       statusFlags);
+  }
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::serviceTheCallback
+  // 
+  int
+  AudioRendererPortaudio::TPrivate::
+  serviceTheCallback(const void * /* input */,
+                     void * output,
+                     unsigned long samplesToRead, // per channel
+                     const PaStreamCallbackTimeInfo * timeInfo,
+                     PaStreamCallbackFlags /* statusFlags */)
+  {
+    bool dstPlanar = (outputParams_.sampleFormat & paNonInterleaved) != 0;
+    unsigned char * dstBuf = (unsigned char *)output;
+    unsigned char ** dst = dstPlanar ? (unsigned char **)output : &dstBuf;
+
+    std::size_t dstChunkSize =
+      dstPlanar ?
+      samplesToRead * sampleSize_ :
+      samplesToRead * sampleSize_ * outputParams_.channelCount;
+    
+    while (dstChunkSize)
+    {
+      if (!audioFrame_)
+      {
+        // fetch the next audio frame from the reader:
+        if (!reader_->readAudio(audioFrame_))
+        {
+          return paComplete;
+        }
+        
+        audioFrameOffset_ = 0;
+      }
+      
+      const AudioTraits & atraits = audioFrame_->traits_;
+      const bool srcPlanar = atraits.channelFormat_ == kAudioChannelsPlanar;
+      if (dstPlanar != srcPlanar)
+      {
+        return paAbort;
+      }
+      
+      const unsigned char * srcBuf = audioFrame_->getBuffer<unsigned char>();
+      std::size_t srcFrameSize = audioFrame_->getBufferSize<unsigned char>();
+      std::size_t srcChunkSize = 0;
+      
+      std::vector<const unsigned char *> chunks;
+      if (!srcPlanar)
+      {
+        std::size_t bytesAlreadyConsumed =
+          audioFrameOffset_ * sampleSize_ * outputParams_.channelCount;
+        
+        chunks.resize(1);
+        chunks[0] = srcBuf + bytesAlreadyConsumed;
+        srcChunkSize = srcFrameSize - bytesAlreadyConsumed;
+      }
+      else
+      {
+        std::size_t channelSize = srcFrameSize / outputParams_.channelCount;
+        std::size_t bytesAlreadyConsumed = audioFrameOffset_ * sampleSize_;
+        srcChunkSize = channelSize - bytesAlreadyConsumed;
+        
+        chunks.resize(outputParams_.channelCount);
+        for (int i = 0; i < outputParams_.channelCount; i++)
+        {
+          chunks[i] = srcBuf + i * channelSize + bytesAlreadyConsumed;
+        }
+      }
+      
+      // avoid buffer overrun:
+      std::size_t chunkSize = std::min(srcChunkSize, dstChunkSize);
+      
+      const std::size_t numChunks = chunks.size();
+      for (std::size_t i = 0; i < numChunks; i++)
+      {
+        memcpy(dst[i], chunks[i], chunkSize);
+        dst[i] += chunkSize;
+      }
+      
+      // decrement the output buffer chunk size:
+      dstChunkSize -= chunkSize;
+      
+      if (chunkSize < srcChunkSize)
+      {
+        std::size_t samplesConsumed =
+          srcPlanar ?
+          srcChunkSize / sampleSize_ :
+          srcChunkSize / (sampleSize_ * outputParams_.channelCount);
+        audioFrameOffset_ += samplesConsumed;
+      }
+      else
+      {
+        // the entire frame was consumed, release it:
+        audioFrame_ = TAudioFramePtr();
+        audioFrameOffset_ = 0;
+      }
+    }
+    
+    return paContinue;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::AudioRendererPortaudio
+  // 
+  AudioRendererPortaudio::AudioRendererPortaudio():
+    private_(new TPrivate())
+  {}
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::~AudioRendererPortaudio
+  // 
+  AudioRendererPortaudio::~AudioRendererPortaudio()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::create
+  // 
+  AudioRendererPortaudio *
+  AudioRendererPortaudio::create()
+  {
+    return new AudioRendererPortaudio();
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::destroy
+  // 
+  void
+  AudioRendererPortaudio::destroy()
+  {
+    delete this;
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::getName
+  // 
+  const char *
+  AudioRendererPortaudio::getName() const
+  {
+    return typeid(*this).name();
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::countAvailableDevices
+  // 
+  unsigned int
+  AudioRendererPortaudio::countAvailableDevices() const
+  {
+    return private_->countAvailableDevices();
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::getDefaultDeviceIndex
+  // 
+  unsigned int
+  AudioRendererPortaudio::getDefaultDeviceIndex() const
+  {
+    return private_->getDefaultDeviceIndex();
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::getDeviceName
+  // 
+  bool
+  AudioRendererPortaudio::getDeviceName(unsigned int deviceIndex,
+                                        std::string & deviceName) const
+  {
+    return private_->getDeviceName(deviceIndex, deviceName);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::open
+  // 
+  bool
+  AudioRendererPortaudio::open(unsigned int deviceIndex,
+                               IReader * reader)
+  {
+    return private_->open(deviceIndex, reader);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::close
+  // 
+  void
+  AudioRendererPortaudio::close()
+  {
+    private_->close();
+  }
+}

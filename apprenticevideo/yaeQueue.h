@@ -114,7 +114,7 @@ namespace yae
     // open the queue allowing push/pop/etc... calls:
     void open()
     {
-      // close the queue:
+      // open the queue:
       {
         boost::lock_guard<boost::mutex> lock(mutex_);
         if (!closed_)
@@ -143,7 +143,7 @@ namespace yae
             cond_.wait(lock);
           }
           
-          if (closed_)
+          if (size_ >= maxSize_)
           {
             return false;
           }
@@ -174,7 +174,7 @@ namespace yae
             cond_.wait(lock);
           }
           
-          if (closed_)
+          if (data_.empty())
           {
             return false;
           }
@@ -259,7 +259,7 @@ namespace yae
           cond_.wait(lock);
         }
         
-        if (closed_)
+        if (data_.empty())
         {
           return false;
         }
@@ -284,7 +284,7 @@ namespace yae
           cond_.wait(lock);
         }
         
-        if (closed_)
+        if (data_.empty())
         {
           return false;
         }
@@ -298,167 +298,16 @@ namespace yae
       return false;
     }
 
-    //----------------------------------------------------------------
-    // RegisterProducer
-    // 
-    struct RegisterProducer
-    {
-      RegisterProducer(TSelf * queue = NULL, const void * producer = NULL):
-        queue_(NULL),
-        producer_(NULL)
-      {
-        registerProducer(queue, producer);
-      }
-      
-      ~RegisterProducer()
-      {
-        if (!queue_ || !producer_)
-        {
-          return;
-        }
-        
-        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
-        std::set<const void *>::iterator i = queue_->producers_.find(producer_);
-        
-        if (i != queue_->producers_.end())
-        {
-          queue_->producers_.erase(i);
-        }
-        else
-        {
-          assert(false);
-        }
-      }
-      
-      void
-      registerProducer(TSelf * queue, const void * producer)
-      {
-        if (queue_ || producer_)
-        {
-          // already registered some other queue producer:
-          assert(false);
-          return;
-        }
-        
-        queue_ = queue;
-        producer_ = producer;
-        if (!queue_ || !producer_)
-        {
-          return;
-        }
-        
-        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
-        std::set<const void *>::iterator i = queue_->producers_.find(producer_);
-        
-        if (i == queue_->producers_.end())
-        {
-          queue_->producers_.insert(producer_);
-        }
-        else
-        {
-          assert(false);
-        }
-      }
-      
-    protected:
-      TSelf * queue_;
-      const void * producer_;
-    };
-    
-    //----------------------------------------------------------------
-    // RegisterConsumer
-    // 
-    struct RegisterConsumer
-    {
-      RegisterConsumer(TSelf * queue = NULL, const void * consumer = NULL):
-        queue_(NULL),
-        consumer_(NULL)
-      {
-        registerConsumer(queue, consumer);
-      }
-      
-      ~RegisterConsumer()
-      {
-        if (!queue_ || !consumer_)
-        {
-          return;
-        }
-        
-        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
-        std::set<const void *>::iterator i = queue_->consumers_.find(consumer_);
-        
-        if (i != queue_->consumers_.end())
-        {
-          queue_->consumers_.erase(i);
-        }
-        else
-        {
-          assert(false);
-        }
-      }
-      
-      void
-      registerConsumer(TSelf * queue, const void * consumer)
-      {
-        if (queue_ || consumer_)
-        {
-          // already registered some other queue consumer:
-          assert(false);
-          return;
-        }
-        
-        queue_ = queue;
-        consumer_ = consumer;
-        if (!queue_ || !consumer_)
-        {
-          return;
-        }
-        
-        boost::lock_guard<boost::mutex> lock(queue_->mutex_);
-        std::set<const void *>::iterator i = queue_->consumers_.find(consumer_);
-        
-        if (i == queue_->consumers_.end())
-        {
-          queue_->consumers_.insert(consumer_);
-        }
-        else
-        {
-          assert(false);
-        }
-      }
-      
-    protected:
-      TSelf * queue_;
-      const void * consumer_;
-    };
-    
-    // check whether the Queue has any producers attached:
-    inline bool hasProducers() const
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      return !producers_.empty();
-    }
-    
-    // check whether the Queue has any consumers attached:
-    inline bool hasConsumers() const
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      return !consumers_.empty();
-    }
-    
   protected:
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
+    
     bool closed_;
+    bool abanoned_;
+    
     std::list<TData> data_;
     std::size_t size_;
     const std::size_t maxSize_;
-
-    // keep track of the producers/consumers using this queue:
-    friend struct RegisterProducer;
-    friend struct RegisterConsumer;
-    std::set<const void *> producers_;
-    std::set<const void *> consumers_;
   };
   
 }
