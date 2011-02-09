@@ -122,6 +122,7 @@ namespace yae
     reader->threadStart();
     
     // update the renderers:
+    reader_->close();
     viewer_->setReader(reader);
     viewer_->loadFrame();
     audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader);
@@ -174,6 +175,7 @@ namespace yae
   void
   MainWindow::fileExit()
   {
+    reader_->close();
     MainWindow::close();
     qApp->quit();
   }
