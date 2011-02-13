@@ -334,7 +334,8 @@ PrepForDeployment()
 # resolve_library
 # 
 # $1 -- library name
-# 
+# $2 -- cpu arch
+#
 resolve_library()
 {
 	NAME="${1}"
@@ -343,8 +344,12 @@ resolve_library()
 		echo "${NAME}"
 	fi
 	
+	local NATIVE_ARCH="${2}"
+	if [ -z "${NATIVE_ARCH}" ]; then
+		NATIVE_ARCH=`arch`
+	fi
+	
 	NAME=`basename "${NAME}"`
-	local NATIVE_ARCH=`arch`
 	for i in \
 		"/Developer/${NATIVE_ARCH}/lib" \
 		"/Library/Frameworks" \
@@ -471,6 +476,7 @@ DeployFile()
 			continue
 		fi
 		
+		FILE_ARCH=`file "${FILE}" | grep Mach-O | rev | cut -d' ' -f1 | rev`
 		IS_FRAMEWORK=`echo "${NEEDS}" | grep '\.framework/'`
 		IS_DEBUG=`echo "${NEEDS}" | grep _debug`
 		AT_LOAD_PATH=`echo "${NEEDS}" | grep '@loader_path/'`
@@ -547,8 +553,8 @@ DeployFile()
 			if [ ! -e "${BASEPATH}/${DST}/${FN_DST}" ]; then
 				SRC="${NEEDS}"
 				if [ ! -e "${SRC}" ]; then
-#					echo resolve_library "${SRC}"
-					SRC=`resolve_library "${SRC}"`
+#					echo resolve_library "${SRC}" "${FILE_ARCH}"
+					SRC=`resolve_library "${SRC}" "${FILE_ARCH}"`
 #					echo resolve_library returned \""${SRC}"\"
 					if [ -e "${SRC}" ]; then
 						echo "RESOLVED ${NEEDS} --- ${SRC}"
@@ -559,7 +565,7 @@ DeployFile()
 #				echo resolve_symlink returned \""${SRC}"\"
 
 				if [ ! -e "${SRC}" ]; then
-					echo "MISSING: ${SRC}"
+					echo "MISSING: ${NEEDS}"
 					exit 11
 				fi
 
