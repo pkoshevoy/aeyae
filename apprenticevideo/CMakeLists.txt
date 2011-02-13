@@ -51,7 +51,6 @@ include_directories(AFTER
   ${OPENGL_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
   ${QT_QTOPENGL_INCLUDE_DIR}
-  ${QT_QTMULTIMEDIA_INCLUDE_DIR}
   )
 
 if (WIN32)
@@ -140,7 +139,6 @@ find_library(PORTAUDIO_LIBRARY portaudio PATHS ${FFMPEG_LIBS_PATH} DOC "portaudi
 set(project_moc_hxx 
   yaeMainWindow.h
   yaeViewer.h
-  yaeAudioRendererQt.h
   )
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -154,23 +152,26 @@ qt4_wrap_ui(project_uis_hxx ${project_uis})
 #qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
 set(project_sources 
+  yaeAPI.h
+  yaeAPI.cpp
+  yaeAudioRenderer.h
+  yaeAudioRenderer.cpp
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
-  yaeAPI.h
-  yaeAPI.cpp
   yaeQueue.h
+  yaeReader.h
   yaeReaderFFMPEG.h
   yaeReaderFFMPEG.cpp
+  yaeSynchronous.h
+  yaeSynchronous.cpp
   yaeThreading.h
   yaeUtils.h
   yaeUtils.cpp
+  yaeVideoRenderer.h
+  yaeVideoRenderer.cpp
   yaeViewer.h
   yaeViewer.cpp
-  yaeAudioRenderer.h
-  yaeAudioRenderer.cpp
-  yaeAudioRendererQt.h
-  yaeAudioRendererQt.cpp
   ${project_moc_cxx}
   ${project_uis_hxx}
 #  ${project_qrc_cxx}
@@ -190,9 +191,26 @@ endif (PORTAUDIO_INCLUDE_DIR)
 if (PORTAUDIO_LIBRARY)
   add_definitions(-DYAE_HAS_PORTAUDIO)
   set(project_sources 
-    ${project_sources} 
     yaeAudioRendererPortaudio.h
     yaeAudioRendererPortaudio.cpp
+    ${project_sources} 
+    )
+else (PORTAUDIO_LIBRARY)
+  set(project_sources 
+    yaeAudioRendererQt.h
+    yaeAudioRendererQt.cpp
+    ${project_sources} 
+    )
+  set(project_moc_hxx 
+    yaeAudioRendererQt.h
+    ${project_moc_hxx}
+    )
+  set(TARGET_LIBS
+    ${QT_QTMULTIMEDIA_LIBRARY}
+    ${TARGET_LIBS}
+    )
+  include_directories(AFTER 
+    ${QT_QTMULTIMEDIA_INCLUDE_DIR}
     )
 endif (PORTAUDIO_LIBRARY)
 
@@ -223,7 +241,6 @@ add_executable(${PROGNAME}
 set(TARGET_LIBS
   ${THE_CORE_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
-  ${QT_QTMULTIMEDIA_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}

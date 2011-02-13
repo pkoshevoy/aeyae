@@ -12,111 +12,21 @@
 #include <yaeReader.h>
 #include <yaeViewer.h>
 
+// boost includes:
+#include <boost/thread.hpp>
+
 // Qt includes:
+#include <QApplication>
 #include <QGridLayout>
-
-
-//----------------------------------------------------------------
-// loadQImagePlane
-// 
-static void
-loadQImagePlane(QImage & qimg,
-                bool flipTheImage,
-                const unsigned char * data,
-                const unsigned int dataRowBytes)
-{
-  const unsigned int w = qimg.width();
-  const unsigned int h = qimg.height();
-  
-  unsigned char * qimgData = qimg.bits();
-  int qimgRowBytes = qimg.bytesPerLine();
-  
-  if (flipTheImage)
-  {
-    qimgData += qimgRowBytes * (h - 1);
-    qimgRowBytes = -qimgRowBytes;
-  }
-  
-  for (unsigned int i = 0; i < h; ++i,
-         data += dataRowBytes, qimgData += qimgRowBytes)
-  {
-    const unsigned char * dataPixel = data;
-    unsigned char * qimgPixel = qimgData;
-    
-    for (unsigned int j = 0; j < w; ++j)
-    {
-      *qimgPixel++ = *dataPixel;
-      *qimgPixel++ = *dataPixel;
-      *qimgPixel++ = *dataPixel++;
-    }
-  }
-}
-
-//----------------------------------------------------------------
-// clip
-// 
-template <typename data_t>
-static data_t
-clip(const data_t & n, const data_t & min, const data_t & max)
-{
-  return std::min(max, std::max(min, n));
-}
-
-//----------------------------------------------------------------
-// loadQImageYUV
-// 
-static void
-loadQImageYUV(QImage & qimg,
-              bool flipTheImage,
-              const unsigned char * yuv420p)
-{
-  const unsigned int w = qimg.width();
-  const unsigned int h = qimg.height();
-  
-  const unsigned int u_offset = w * h;
-  const unsigned int v_offset = (u_offset >> 2);
-  const unsigned int w2 = w / 2;
-  
-  // convert YUV420 into RGB:
-  for (unsigned int y = 0; y < h; y++)
-  {
-    unsigned int qimgY = flipTheImage ? h - y - 1 : y;
-    
-    for (unsigned int x = 0; x < w; x++)
-    {
-      unsigned int iy = y * w + x;
-      unsigned int iu = u_offset + (y >> 1) * w2 + (x >> 1);
-      unsigned int iv = iu + v_offset;
-      
-      const unsigned char & Y = *(yuv420p + iy);
-      const unsigned char & U = *(yuv420p + iu);
-      const unsigned char & V = *(yuv420p + iv);
-      
-      // taken from wikipedia:
-      int C = Y - 16;
-      int D = U - 128;
-      int E = V - 128;
-      int R = clip((298 * C           + 409 * E + 128) >> 8, 0, 255);
-      int G = clip((298 * C - 100 * D - 208 * E + 128) >> 8, 0, 255);
-      int B = clip((298 * C + 516 * D           + 128) >> 8, 0, 255);
-      
-      QRgb pixel = qRgb(R, G, B);
-      qimg.setPixel(x, qimgY, pixel);
-    }
-  }
-}
 
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // Viewer::Viewer
   // 
-  Viewer::Viewer(IReader * reader):
-    QWidget(),
-    reader_(NULL),
-    flipTheImage_(false)
+  Viewer::Viewer()
   {
     setObjectName("yae::Viewer");
     setFocusPolicy(Qt::StrongFocus);
@@ -125,38 +35,32 @@ namespace yae
     grid->setSpacing(0);
     grid->setContentsMargins(0, 0, 0, 0);
     
-    labelY_ = new QLabel(this);
-    grid->addWidget(labelY_, 0, 0);
-    labelY_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelY_->show();
-    
-    labelU_ = new QLabel(this);
-    grid->addWidget(labelU_, 1, 0);
-    labelU_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelU_->show();
-    
-    labelV_ = new QLabel(this);
-    grid->addWidget(labelV_, 1, 1);
-    labelV_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    labelV_->show();
-    
     labelRGB_ = new QLabel(this);
-    grid->addWidget(labelRGB_, 0, 1);
+    grid->addWidget(labelRGB_, 0, 0);
     labelRGB_->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     labelRGB_->show();
-    
-    setReader(reader);
   }
 
   //----------------------------------------------------------------
   // Viewer::~Viewer
   // 
   Viewer::~Viewer()
+  {}
+  
+  //----------------------------------------------------------------
+  // Viewer::render
+  // 
+  bool
+  Viewer::render(const TVideoFramePtr & frame)
   {
-    if (reader_)
+    bool replacedPayloadPriorToDelivery = payload_.set(frame);
+    if (!replacedPayloadPriorToDelivery)
     {
-      reader_->destroy();
+      // send an event:
+      qApp->postEvent(this, new RenderFrameEvent(payload_));
     }
+    
+    return true;
   }
   
   //----------------------------------------------------------------
@@ -165,72 +69,73 @@ namespace yae
   void
   Viewer::setReader(IReader * reader)
   {
-    reader_ = reader;
-    traits_ = VideoTraits();
-    frame_ =  TVideoFramePtr();
-    flipTheImage_ = false;
-    
-    if (reader_)
+    VideoTraits traits;
+    if (reader)
     {
-      reader_->getVideoTraits(traits_);
+      reader->getVideoTraitsOverride(traits);
     }
     
-    std::size_t imgW = traits_.visibleWidth_;
-    std::size_t imgH = traits_.visibleHeight_;
+    std::size_t imgW = traits.visibleWidth_;
+    std::size_t imgH = traits.visibleHeight_;
     
-    y_ = QImage(imgW, imgH, QImage::Format_RGB888);
-    u_ = QImage(imgW / 2, imgH / 2, QImage::Format_RGB888);
-    v_ = QImage(imgW / 2, imgH / 2, QImage::Format_RGB888);
-    rgb_ = QImage(imgW, imgH, QImage::Format_RGB888);
-    
-    setMinimumSize(imgW * 2, imgH * 2);
-    labelY_->setMinimumSize(imgW, imgH);
-    labelU_->setMinimumSize(imgW, imgH);
-    labelV_->setMinimumSize(imgW, imgH);
+    setMinimumSize(imgW, imgH);
     labelRGB_->setMinimumSize(imgW, imgH);
+  }
+  
+  //----------------------------------------------------------------
+  // Viewer::event
+  // 
+  bool
+  Viewer::event(QEvent * event)
+  {
+    if (event->type() == QEvent::User)
+    {
+      RenderFrameEvent * renderEvent = dynamic_cast<RenderFrameEvent *>(event);
+      if (renderEvent)
+      {
+        event->accept();
+        
+        TVideoFramePtr frame;
+        renderEvent->payload_.get(frame);
+        loadFrame(frame);
+        
+        return true;
+      }
+    }
+    
+    event->ignore();
+    return QWidget::event(event);
   }
 
   //----------------------------------------------------------------
   // Viewer::loadFrame
   // 
   bool
-  Viewer::loadFrame()
+  Viewer::loadFrame(const TVideoFramePtr & frame)
   {
-    if (!reader_->readVideo(frame_))
+    std::size_t imgW = frame->traits_.visibleWidth_;
+    std::size_t imgH = frame->traits_.visibleHeight_;
+    const unsigned char * dataBuffer = frame->getBuffer<unsigned char>();
+    
+    if (frame->traits_.colorFormat_ == kColorFormatRGB)
     {
-      return false;
+      QImage rgb(dataBuffer,
+                 imgW,
+                 imgH,
+                 frame->traits_.encodedWidth_ * 3,
+                 QImage::Format_RGB888);
+      labelRGB_->setPixmap(QPixmap::fromImage(rgb));
+    }
+    else if (frame->traits_.colorFormat_ == kColorFormatARGB)
+    {
+      QImage rgb(dataBuffer,
+                 imgW,
+                 imgH,
+                 frame->traits_.encodedWidth_ * 4,
+                 QImage::Format_ARGB32);
+      labelRGB_->setPixmap(QPixmap::fromImage(rgb));
     }
     
-    std::size_t imgW = frame_->traits_.visibleWidth_;
-    std::size_t imgH = frame_->traits_.visibleHeight_;
-    std::size_t yFrameSize = imgW * imgH;
-    std::size_t uFrameSize = imgW * imgH / 4;
-    const unsigned char * dataBuffer = frame_->getBuffer<unsigned char>();
-    
-    // update the labels:
-    loadQImagePlane(y_,
-                    flipTheImage_,
-                    dataBuffer,
-                    imgW);
-    
-    loadQImagePlane(u_,
-                    flipTheImage_,
-                    dataBuffer + yFrameSize,
-                    imgW / 2);
-    
-    loadQImagePlane(v_,
-                    flipTheImage_,
-                    dataBuffer + yFrameSize + uFrameSize,
-                    imgW / 2);
-    
-    loadQImageYUV(rgb_, flipTheImage_, dataBuffer);
-    
-    labelY_->setPixmap(QPixmap::fromImage(y_));
-    labelU_->setPixmap(QPixmap::fromImage(u_));
-    labelV_->setPixmap(QPixmap::fromImage(v_));
-    labelRGB_->setPixmap(QPixmap::fromImage(rgb_));
-    
-    std::cout << "loaded frame " << frame_ << std::endl;
     return true;
   }
   
@@ -246,22 +151,12 @@ namespace yae
       case Qt::Key_PageUp:
       case Qt::Key_Up:
       case Qt::Key_Left:
-	// stepBack();
-	loadFrame();
         event->accept();
         return;
-
+        
       case Qt::Key_PageDown:
       case Qt::Key_Down:
       case Qt::Key_Right:
-	loadFrame();
-        event->accept();
-        return;
-
-      case Qt::Key_F:
-        flipTheImage_ = !flipTheImage_;
-	// stepBack();
-        loadFrame();
         event->accept();
         return;
         
@@ -269,6 +164,7 @@ namespace yae
         break;
     }
     
+    event->ignore();
     QWidget::keyPressEvent(event);
   }
   

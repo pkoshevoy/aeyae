@@ -15,6 +15,7 @@
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeReader.h>
+#include <yaeSynchronous.h>
 
 
 namespace yae
@@ -23,7 +24,7 @@ namespace yae
   //----------------------------------------------------------------
   // IAudioRenderer
   // 
-  struct YAE_API IAudioRenderer
+  struct YAE_API IAudioRenderer : public ISynchronous
   {
   protected:
     IAudioRenderer();

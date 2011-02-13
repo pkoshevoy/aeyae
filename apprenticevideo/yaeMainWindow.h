@@ -17,6 +17,7 @@
 #include <yaeReader.h>
 #include <yaeViewer.h>
 #include <yaeAudioRenderer.h>
+#include <yaeVideoRenderer.h>
 
 // local includes:
 #include "ui_yaeMainWindow.h"
@@ -59,6 +60,9 @@ namespace yae
     
     // audio renderer:
     IAudioRenderer * audioRenderer_;
+    
+    // video renderer:
+    VideoRenderer * videoRenderer_;
   };
   
 };

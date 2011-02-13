@@ -27,8 +27,8 @@ namespace yae
   {
   private:
     //! intentionally disabled:
-    AudioRendererPortaudio(const AudioRendererPortaudio & f);
-    AudioRendererPortaudio & operator = (const AudioRendererPortaudio & f);
+    AudioRendererPortaudio(const AudioRendererPortaudio &);
+    AudioRendererPortaudio & operator = (const AudioRendererPortaudio &);
     
     //! private implementation details:
     class TPrivate;

@@ -222,6 +222,98 @@ namespace fileUtf8
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // toPixelFormat
+  // 
+  static enum PixelFormat
+  toPixelFormat(TVideoColorFormat colorFormat)
+  {
+    switch (colorFormat)
+    {
+      case kColorFormatI420Alpha:
+        return PIX_FMT_YUVA420P;
+
+      case kColorFormatI420:
+        return PIX_FMT_YUV420P;
+
+      case kColorFormatYUYV:
+        return PIX_FMT_YUYV422;
+
+      case kColorFormatRGB:
+        return PIX_FMT_RGB24;
+
+      case kColorFormatBGR:
+        return PIX_FMT_BGR24;
+
+      case kColorFormatARGB:
+        return PIX_FMT_ARGB;
+
+      case kColorFormatYUVJ420P:
+        return PIX_FMT_YUVJ420P;
+
+      case kColorFormatUYVY:
+        return PIX_FMT_UYVY422;
+
+      case kColorFormatBGRA:
+        return PIX_FMT_BGRA;
+
+      case kColorFormatYUVJ422P:
+        return PIX_FMT_YUVJ422P;
+
+      default:
+        break;
+    }
+
+    assert(false);
+    return PIX_FMT_NONE;
+  }
+
+  //----------------------------------------------------------------
+  // toVideoColorFormat
+  // 
+  static TVideoColorFormat
+  toVideoColorFormat(enum PixelFormat pixelFormat)
+  {
+    switch (pixelFormat)
+    {
+      case PIX_FMT_YUVA420P:
+        return kColorFormatI420Alpha;
+        
+      case PIX_FMT_YUV420P:
+        return kColorFormatI420;
+        
+      case PIX_FMT_YUYV422:
+        return kColorFormatYUYV;
+        
+      case PIX_FMT_RGB24:
+        return kColorFormatRGB;
+        
+      case PIX_FMT_BGR24:
+        return kColorFormatBGR;
+        
+      case PIX_FMT_ARGB:
+        return kColorFormatARGB;
+        
+      case PIX_FMT_YUVJ420P:
+        return kColorFormatYUVJ420P;
+        
+      case PIX_FMT_UYVY422:
+        return kColorFormatUYVY;
+        
+      case PIX_FMT_BGRA:
+        return kColorFormatBGRA;
+
+      case PIX_FMT_YUVJ422P:
+        return kColorFormatYUVJ422P;
+        
+      default:
+        break;
+    }
+
+    assert(false);
+    return kInvalidColorFormat;
+  }
   
   //----------------------------------------------------------------
   // Packet
@@ -329,6 +421,8 @@ namespace yae
     
     // packet decoding thread:
     virtual void threadLoop() {}
+    virtual bool threadStart();
+    virtual bool threadStop();
     
   private:
     // intentionally disabled:
@@ -370,6 +464,7 @@ namespace yae
   // 
   Track::~Track()
   {
+    threadStop();
     close();
   }
   
@@ -384,6 +479,7 @@ namespace yae
       return false;
     }
     
+    threadStop();
     close();
     
     codec_ = avcodec_find_decoder(stream_->codec->codec_id);
@@ -409,8 +505,6 @@ namespace yae
       return false;
     }
     
-    packetQueue_.open();
-    thread_.run();
     return true;
   }
   
@@ -422,10 +516,6 @@ namespace yae
   {
     if (stream_ && codec_)
     {
-      packetQueue_.close();
-      thread_.stop();
-      thread_.wait();
-      
       avcodec_close(stream_->codec);
       codec_ = NULL;
     }
@@ -497,6 +587,27 @@ namespace yae
     t.base_ = stream_->time_base.den;
   }
   
+  //----------------------------------------------------------------
+  // Track::threadStart
+  // 
+  bool
+  Track::threadStart()
+  {
+    packetQueue_.open();
+    return thread_.run();
+  }
+  
+  //----------------------------------------------------------------
+  // Track::threadStop
+  // 
+  bool
+  Track::threadStop()
+  {
+    packetQueue_.close();
+    thread_.stop();
+    return thread_.wait();
+  }
+  
   
   //----------------------------------------------------------------
   // VideoTrack
@@ -506,7 +617,7 @@ namespace yae
     VideoTrack(AVFormatContext * context, AVStream * stream);
     
     // virtual:
-    void close();
+    bool open();
     
     // virtual: get current position:
     bool getPosition(TTime & t) const;
@@ -516,13 +627,22 @@ namespace yae
     
     // virtual:
     void threadLoop();
+    bool threadStop();
     
+    // video traits, not overridden:
     bool getTraits(VideoTraits & traits) const;
+    
+    // use this for video frame conversion (color format and size)
+    bool setTraitsOverride(const VideoTraits & override);
+    bool getTraitsOverride(VideoTraits & override) const;
+    
+    // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame);
     bool getNextFrameDontWait(TVideoFramePtr & frame);
     
   protected:
     TVideoFrameQueue frameQueue_;
+    VideoTraits override_;
   };
   
   //----------------------------------------------------------------
@@ -538,15 +658,23 @@ namespace yae
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
   }
-
+  
   //----------------------------------------------------------------
-  // VideoTrack::close
+  // VideoTrack::open
   // 
-  void
-  VideoTrack::close()
+  bool
+  VideoTrack::open()
   {
-    frameQueue_.close();
-    Track::close();
+    if (Track::open())
+    {
+      getTraits(override_);
+      
+      // FIXME: force YUV420P for debugging purposes:
+      override_.colorFormat_ = kColorFormatI420;
+      return true;
+    }
+    
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -606,7 +734,7 @@ namespace yae
     
     AVFrame * frame_;
   };
-  
+
   //----------------------------------------------------------------
   // VideoTrack::threadLoop
   // 
@@ -617,18 +745,37 @@ namespace yae
     
     FrameWithAutoCleanup frameAutoCleanup;
     struct SwsContext * imgConvertCtx = NULL;
+
+
+    bool hasAlpha = hasAlphaChannel(override_.colorFormat_);
+    bool isPlanar = isFormatPlanar(override_.colorFormat_);
+    unsigned int bitsPerPixel = getBitsPerPixel(override_.colorFormat_);
+    enum PixelFormat pixelFormat = toPixelFormat(override_.colorFormat_);
     
-    TVideoFrame::TTraits trackTraits;
-    getTraits(trackTraits);
-    trackTraits.colorFormat_ = kColorFormatI420;
+    std::size_t pixelsPerFrame = (override_.encodedWidth_ *
+                                  override_.encodedHeight_);
     
-    std::size_t yPlaneSize = (trackTraits.encodedWidth_ *
-                              trackTraits.encodedHeight_);
+    std::size_t bytesPerFrame = (pixelsPerFrame * bitsPerPixel) / 8;
+    
+    // NOTE: this assumes there is at most 1 byte per Y (and A) channel:
+    std::size_t bytesPerChromaPlane =
+      hasAlpha ?
+      (bytesPerFrame - 2 * pixelsPerFrame) / 2 :
+      (bytesPerFrame - pixelsPerFrame) / 2;
+
+    // FIXME: this is definitely broken for NxM sub-sampling
+    // of UV planes when N != M
+    std::size_t bytesPerChromaRow =
+      hasAlpha ?
+      (override_.encodedWidth_ * (bitsPerPixel - 16)) / 8 :
+      (override_.encodedWidth_ * (bitsPerPixel - 8)) / 8;
     
     while (true)
     {
       try
       {
+        boost::this_thread::interruption_point();
+        
         TPacketPtr packet;
         bool ok = packetQueue_.pop(packet);
         if (!ok)
@@ -653,22 +800,37 @@ namespace yae
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
         
-        vf.traits_ = trackTraits;
+        vf.traits_ = override_;
         vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
         vf.time_.base_ = stream_->time_base.den;
         
-        vf.setBufferSize<unsigned char>((yPlaneSize * 3) / 2);
+        vf.setBufferSize<unsigned char>(bytesPerFrame);
         unsigned char * vfData = vf.getBuffer<unsigned char>();
         
         AVPicture pict;
         pict.data[0] = vfData;
-        pict.data[1] = vfData + yPlaneSize;
-        pict.data[2] = vfData + yPlaneSize + yPlaneSize / 4;
-        pict.linesize[0] = vf.traits_.encodedWidth_;
-        pict.linesize[1] = vf.traits_.encodedWidth_ / 2;
-        pict.linesize[2] = vf.traits_.encodedWidth_ / 2;
+
+        if (isPlanar)
+        {
+          pict.linesize[0] = override_.encodedWidth_;
+          pict.linesize[1] = bytesPerChromaRow;
+          pict.linesize[2] = pict.linesize[1];
+          
+          pict.data[1] = vfData + pixelsPerFrame;
+          pict.data[2] = pict.data[1] + bytesPerChromaPlane;
+          
+          if (hasAlpha)
+          {
+            pict.data[3] = pict.data[2] + bytesPerChromaPlane;
+            pict.linesize[3] = pict.linesize[0];
+          }
+        }
+        else
+        {
+          pict.linesize[0] = (override_.encodedWidth_ * bitsPerPixel) / 8;
+        }
         
-        // Convert the image into YUV format that SDL uses
+        // Convert the image into the desired color format:
         if (imgConvertCtx == NULL)
         {
           imgConvertCtx = sws_getContext(// from:
@@ -679,7 +841,7 @@ namespace yae
                                          // to:
                                          vf.traits_.visibleWidth_,
                                          vf.traits_.visibleHeight_,
-                                         PIX_FMT_YUV420P,
+                                         pixelFormat,
                                          
                                          SWS_BICUBIC,
                                          NULL,
@@ -695,7 +857,7 @@ namespace yae
         sws_scale(imgConvertCtx,
                   avFrame->data,
                   avFrame->linesize,
-                  0, 
+                  0,
                   codecContext()->height,
                   pict.data,
                   pict.linesize);
@@ -717,6 +879,16 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // VideoTrack::threadStop
+  // 
+  bool
+  VideoTrack::threadStop()
+  {
+    frameQueue_.close();
+    return Track::threadStop();
+  }
+  
+  //----------------------------------------------------------------
   // VideoTrack::getTraits
   // 
   bool
@@ -730,46 +902,8 @@ namespace yae
     // shortcut:
     const AVCodecContext * context = stream_->codec;
     
-    switch (context->pix_fmt)
-    {
-      case PIX_FMT_YUVA420P:
-        // same as I420, plus alpha plane (same size as Y plane)
-        
-      case PIX_FMT_YUV420P:
-        t.colorFormat_ = kColorFormatI420;
-        break;
-        
-      case PIX_FMT_YUYV422:
-        t.colorFormat_ = kColorFormatYUYV;
-        break;
-        
-      case PIX_FMT_RGB24:
-        t.colorFormat_ = kColorFormatRGB;
-        break;
-        
-      case PIX_FMT_BGR24:
-        t.colorFormat_ = kColorFormatBGR;
-        break;
-        
-      case PIX_FMT_ARGB:
-        t.colorFormat_ = kColorFormatARGB;
-        break;
-        
-      case PIX_FMT_YUVJ420P:
-        t.colorFormat_ = kColorFormatYUVJ420P;
-        break;
-        
-      case PIX_FMT_UYVY422:
-        t.colorFormat_ = kColorFormatUYVY;
-        break;
-        
-      case PIX_FMT_BGRA:
-        t.colorFormat_ = kColorFormatBGRA;
-        break;
-        
-      default:
-        t.colorFormat_ = kInvalidColorFormat;
-    }
+    //! color format:
+    t.colorFormat_ = toVideoColorFormat(context->pix_fmt);
     
     //! frame rate:
     t.frameRate_ =
@@ -804,6 +938,26 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // VideoTrack::setTraitsOverride
+  // 
+  bool
+  VideoTrack::setTraitsOverride(const VideoTraits & override)
+  {
+    override_ = override;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::getTraitsOverride
+  // 
+  bool
+  VideoTrack::getTraitsOverride(VideoTraits & override) const
+  {
+    override = override_;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
   // VideoTrack::getNextFrame
   // 
   bool
@@ -829,7 +983,7 @@ namespace yae
     AudioTrack(AVFormatContext * context, AVStream * stream);
     
     // virtual:
-    void close();
+    bool open();
     
     // virtual: get current position:
     bool getPosition(TTime & t) const;
@@ -839,13 +993,22 @@ namespace yae
     
     // virtual:
     void threadLoop();
+    bool threadStop();
     
+    // audio traits, not overridden:
     bool getTraits(AudioTraits & traits) const;
+    
+    // use this for audio format conversion (sample rate, channels, etc...)
+    bool setTraitsOverride(const AudioTraits & override);
+    bool getTraitsOverride(AudioTraits & override) const;
+    
+    // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TAudioFramePtr & frame);
     bool getNextFrameDontWait(TAudioFramePtr & frame);
     
   protected:
     TAudioFrameQueue frameQueue_;
+    AudioTraits override_;
   };
   
   //----------------------------------------------------------------
@@ -861,15 +1024,20 @@ namespace yae
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
   }
-
+  
   //----------------------------------------------------------------
-  // AudioTrack::close
+  // AudioTrack::open
   // 
-  void
-  AudioTrack::close()
+  bool
+  AudioTrack::open()
   {
-    frameQueue_.close();
-    Track::close();
+    if (Track::open())
+    {
+      getTraits(override_);
+      return true;
+    }
+    
+    return false;
   }
   
   //----------------------------------------------------------------
@@ -917,6 +1085,8 @@ namespace yae
     {
       try
       {
+        boost::this_thread::interruption_point();
+        
         TPacketPtr packetPtr;
         bool ok = packetQueue_.pop(packetPtr);
         if (!ok)
@@ -988,6 +1158,16 @@ namespace yae
         break;
       }
     }
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::threadStop
+  // 
+  bool
+  AudioTrack::threadStop()
+  {
+    frameQueue_.close();
+    return Track::threadStop();
   }
   
   //----------------------------------------------------------------
@@ -1072,6 +1252,26 @@ namespace yae
     //! packed, planar:
     t.channelFormat_ = kAudioChannelsPacked;
     
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::setTraitsOverride
+  // 
+  bool
+  AudioTrack::setTraitsOverride(const AudioTraits & override)
+  {
+    override_ = override;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::getTraitsOverride
+  // 
+  bool
+  AudioTrack::getTraitsOverride(AudioTraits & override) const
+  {
+    override = override;
     return true;
   }
   
@@ -1276,7 +1476,8 @@ namespace yae
     if (selectedVideoTrack_ < numVideoTracks)
     {
       // close currently selected track:
-      videoTracks_[selectedVideoTrack_]->close();
+      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      t->close();
     }
     
     selectedVideoTrack_ = i;
@@ -1304,7 +1505,8 @@ namespace yae
     if (selectedAudioTrack_ < numAudioTracks)
     {
       // close currently selected track:
-      audioTracks_[selectedAudioTrack_]->close();
+      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      t->close();
     }
     
     selectedAudioTrack_ = i;
@@ -1386,6 +1588,8 @@ namespace yae
     AVPacket ffmpeg;
     while (true)
     {
+      boost::this_thread::interruption_point();
+      
       int err = av_read_frame(context_, &ffmpeg);
       if (err)
       {
@@ -1430,6 +1634,18 @@ namespace yae
       return false;
     }
     
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      t->threadStart();
+    }
+    
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      t->threadStart();
+    }
+    
     return thread_.run();
   }
   
@@ -1439,6 +1655,18 @@ namespace yae
   bool
   Movie::threadStop()
   {
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      t->threadStop();
+    }
+    
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      t->threadStop();
+    }
+    
     thread_.stop();
     return thread_.wait();
   }
@@ -1699,6 +1927,70 @@ namespace yae
     if (i < private_->movie_.getAudioTracks().size())
     {
       return private_->movie_.getAudioTracks()[i]->getTraits(traits);
+    }
+    
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setAudioTraitsOverride
+  // 
+  bool
+  ReaderFFMPEG::setAudioTraitsOverride(const AudioTraits & override)
+  {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
+      return t->setTraitsOverride(override);
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setVideoTraitsOverride
+  // 
+  bool
+  ReaderFFMPEG::setVideoTraitsOverride(const VideoTraits & override)
+  {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
+      return t->setTraitsOverride(override);
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getAudioTraitsOverride
+  // 
+  bool
+  ReaderFFMPEG::getAudioTraitsOverride(AudioTraits & override) const
+  {
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
+      return t->getTraitsOverride(override);
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getVideoTraitsOverride
+  // 
+  bool
+  ReaderFFMPEG::getVideoTraitsOverride(VideoTraits & override) const
+  {
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
+      return t->getTraitsOverride(override);
     }
     
     return false;

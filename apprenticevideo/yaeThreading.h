@@ -9,6 +9,9 @@
 #ifndef YAE_THREADING_H_
 #define YAE_THREADING_H_
 
+// system includes:
+#include <iostream>
+
 // boost includes:
 #include <boost/thread.hpp>
 
@@ -71,7 +74,7 @@ namespace yae
       {
         std::cerr << "Thread::start: unexpected exception" << std::endl;
       }
-      
+
       return false;
     }
     
@@ -114,7 +117,6 @@ namespace yae
     boost::thread thread_;
     TContext * context_;
   };
-  
 }
 
 

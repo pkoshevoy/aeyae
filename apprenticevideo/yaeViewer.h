@@ -15,7 +15,11 @@
 #include <iostream>
 #include <vector>
 
+// boost includes:
+#include <boost/thread.hpp>
+
 // Qt includes:
+#include <QEvent>
 #include <QImage>
 #include <QLabel>
 #include <QWidget>
@@ -24,6 +28,7 @@
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeReader.h>
+#include <yaeVideoCanvas.h>
 
 
 namespace yae
@@ -34,36 +39,67 @@ namespace yae
   // 
   // Simple UI used for debugging Readers
   // 
-  class Viewer : public QWidget
+  class Viewer : public QWidget,
+                 public IVideoCanvas
   {
     Q_OBJECT;
     
   public:
-    Viewer(IReader * reader);
+    Viewer();
     ~Viewer();
+    
+    // virtual:
+    bool render(const TVideoFramePtr & frame);
     
     void setReader(IReader * reader);
     
-    bool loadFrame();
+    bool loadFrame(const TVideoFramePtr & frame);
     
   protected:
     // virtual:
+    bool event(QEvent * event);
     void keyPressEvent(QKeyEvent * event);
     
-    QLabel * labelY_;
-    QLabel * labelU_;
-    QLabel * labelV_;
-    QLabel * labelRGB_;
-  
-    QImage y_;
-    QImage u_;
-    QImage v_;
-    QImage rgb_;
+    //----------------------------------------------------------------
+    // RenderFrameEvent
+    // 
+    struct RenderFrameEvent : public QEvent
+    {
+      //----------------------------------------------------------------
+      // TPayload
+      // 
+      struct TPayload
+      {
+        bool set(const TVideoFramePtr & frame)
+        {
+          boost::lock_guard<boost::mutex> lock(mutex_);
+          bool replacedPayloadPriorToDelivery = frame_ != NULL;
+          frame_ = frame;
+          return replacedPayloadPriorToDelivery;
+        }
+        
+        void get(TVideoFramePtr & frame)
+        {
+          boost::lock_guard<boost::mutex> lock(mutex_);
+          frame = frame_;
+          frame_ = TVideoFramePtr();
+        }
+        
+      private:
+        mutable boost::mutex mutex_;
+        TVideoFramePtr frame_;
+      };
+      
+      RenderFrameEvent(TPayload & payload):
+        QEvent(QEvent::User),
+        payload_(payload)
+      {}
+      
+      TPayload & payload_;
+    };
     
-    IReader * reader_;
-    VideoTraits traits_;
-    TVideoFramePtr frame_;
-    bool flipTheImage_;
+    QLabel * labelRGB_;
+    RenderFrameEvent::TPayload payload_;
   };
   
 }

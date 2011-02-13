@@ -22,10 +22,12 @@
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
-#include <yaeAudioRendererQt.h>
 #ifdef YAE_HAS_PORTAUDIO
 #include <yaeAudioRendererPortaudio.h>
+#else
+#include <yaeAudioRendererQt.h>
 #endif
+#include <yaeVideoRenderer.h>
 
 // local includes:
 #include <yaeMainWindow.h>
@@ -41,20 +43,22 @@ namespace yae
     QMainWindow(NULL, 0),
     reader_(NULL),
     viewer_(NULL),
-    audioRenderer_(NULL)
+    audioRenderer_(NULL),
+    videoRenderer_(NULL)
   {
     setupUi(this);
     setAcceptDrops(true);
     
     reader_ = ReaderFFMPEG::create();
-    viewer_ = new Viewer(reader_);
+    viewer_ = new Viewer();
     
 #ifdef YAE_HAS_PORTAUDIO
     audioRenderer_ = AudioRendererPortaudio::create();
 #else
     audioRenderer_ = AudioRendererQt::create();
 #endif
-    
+    videoRenderer_ = VideoRenderer::create();
+      
     delete centralwidget->layout();
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);
     layout->setMargin(0);
@@ -76,10 +80,14 @@ namespace yae
   // 
   MainWindow::~MainWindow()
   {
-    delete viewer_;
     audioRenderer_->close();
     audioRenderer_->destroy();
+    
+    videoRenderer_->close();
+    videoRenderer_->destroy();
+    
     reader_->destroy();
+    delete viewer_;
   }
   
   //----------------------------------------------------------------
@@ -108,15 +116,32 @@ namespace yae
     if (numVideoTracks)
     {
       reader->selectVideoTrack(0);
+#if 1
+      VideoTraits traits;
+      if (reader->getVideoTraits(traits))
+      {
+        traits.colorFormat_ =
+          hasAlphaChannel(traits.colorFormat_) ?
+          kColorFormatARGB :
+          kColorFormatRGB;
+        
+        reader->setVideoTraitsOverride(traits);
+      }
+#endif
     }
     
     if (numAudioTracks)
     {
       reader->selectAudioTrack(0);
-      
-      // FIXME: this is a temporary workaround for blocking on full queue:
-      // unselect audio track:
-      // reader->selectAudioTrack(numAudioTracks);
+#if 0
+      // FIXME: just testing:
+      AudioTraits traits;
+      if (reader->getAudioTraits(traits))
+      {
+        traits.channelLayout_ = kAudioStereo;
+        reader->setVideoTraitsOverride(traits);
+      }
+#endif
     }
     
     reader->threadStart();
@@ -124,8 +149,8 @@ namespace yae
     // update the renderers:
     reader_->close();
     viewer_->setReader(reader);
-    viewer_->loadFrame();
     audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader);
+    videoRenderer_->open(viewer_, reader);
     
     // replace the previous reader:
     reader_->destroy();

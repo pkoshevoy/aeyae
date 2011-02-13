@@ -81,6 +81,12 @@ namespace yae
     virtual bool getVideoTraits(VideoTraits & traits) const;
     virtual bool getAudioTraits(AudioTraits & traits) const;
     
+    virtual bool setAudioTraitsOverride(const AudioTraits & override);
+    virtual bool setVideoTraitsOverride(const VideoTraits & override);
+    
+    virtual bool getAudioTraitsOverride(AudioTraits & override) const;
+    virtual bool getVideoTraitsOverride(VideoTraits & override) const;
+
     virtual bool getVideoPosition(TTime & t) const;
     virtual bool getAudioPosition(TTime & t) const;
     

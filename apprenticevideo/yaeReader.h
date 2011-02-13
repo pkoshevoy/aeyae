@@ -65,6 +65,13 @@ namespace yae
     virtual bool getAudioTraits(AudioTraits & traits) const = 0;
     virtual bool getVideoTraits(VideoTraits & traits) const = 0;
     
+    //! force decoded audio/video frames to be in a particular format:
+    virtual bool setAudioTraitsOverride(const AudioTraits & override) = 0;
+    virtual bool setVideoTraitsOverride(const VideoTraits & override) = 0;
+
+    virtual bool getAudioTraitsOverride(AudioTraits & override) const = 0;
+    virtual bool getVideoTraitsOverride(VideoTraits & override) const = 0;
+
     virtual bool getVideoPosition(TTime & t) const = 0;
     virtual bool getAudioPosition(TTime & t) const = 0;
     
