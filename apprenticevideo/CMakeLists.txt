@@ -141,13 +141,9 @@ set(project_moc_hxx
   yaeViewer.h
   )
 
-qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
-
 set(project_uis 
   yaeMainWindow.ui
   )
-
-qt4_wrap_ui(project_uis_hxx ${project_uis})
 
 #qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
@@ -172,9 +168,6 @@ set(project_sources
   yaeVideoRenderer.cpp
   yaeViewer.h
   yaeViewer.cpp
-  ${project_moc_cxx}
-  ${project_uis_hxx}
-#  ${project_qrc_cxx}
   )
 
 find_path(PORTAUDIO_INCLUDE_DIR 
@@ -232,6 +225,16 @@ if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
   set(project_sources ${project_sources} ${PROGNAME}Info.plist ${PROGNAME}.icns)
 endif (APPLE)
+
+qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+qt4_wrap_ui(project_uis_hxx ${project_uis})
+
+set(project_sources 
+  ${project_sources}
+  ${project_moc_cxx}
+  ${project_uis_hxx}
+#  ${project_qrc_cxx}
+  )
 
 add_executable(${PROGNAME}
   ${GUI_TYPE}
