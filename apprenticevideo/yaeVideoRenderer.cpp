@@ -98,7 +98,8 @@ namespace yae
       double relativePlayheadPosition = clock_.getCurrentTime(t0, dt);
       double segmentPosition = double(t0.time_) / double(t0.base_);
       double segmentDuration = double(dt.time_) / double(dt.base_);
-      double playheadPosition = relativePlayheadPosition * segmentDuration;
+      double playheadPosition = (segmentDuration * relativePlayheadPosition +
+                                 segmentPosition);
       
       // get position of the frame relative to the current time segment:
       double f0 = double(framePosition.time_) / double(framePosition.base_);
