@@ -48,7 +48,9 @@ namespace yae
     bool allowsSettingTime() const;
     
     //! set current time (only if this is the master clock):
-    bool setCurrentTime(const TTime & t0, const TTime & dt);
+    bool setCurrentTime(const TTime & t0,
+                        const TTime & dt,
+                        double latencyInSeconds = 0.0);
     
     //! retrieve the reference time interval, return elapsed system time
     //! relative to the reference time interval:

@@ -147,11 +147,13 @@ namespace yae
   // 
   bool
   SharedClock::setCurrentTime(const TTime & t0,
-                              const TTime & dt)
+                              const TTime & dt,
+                              double latency)
   {
     if (!private_->copied_)
     {
       boost::system_time now(boost::get_system_time());
+      now += boost::posix_time::microseconds(long(latency * 1e+6));
       
       TimeSegment & timeSegment = *(private_->shared_);
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);

@@ -426,7 +426,9 @@ namespace yae
     
     if (clock_.allowsSettingTime())
     {
-      clock_.setCurrentTime(framePosition, frameDuration);
+      clock_.setCurrentTime(framePosition,
+                            frameDuration,
+                            outputParams_.suggestedLatency);
     }
     
     return paContinue;
