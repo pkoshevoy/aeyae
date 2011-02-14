@@ -127,6 +127,13 @@ namespace yae
         1.0 / frame->traits_.frameRate_ :
         1.0 / double(framePosition.base_);
       
+      if (clock_.allowsSettingTime())
+      {
+        TTime duration(framePosition);
+        duration.time_ = int64(double(duration.base_) * frameDuration);
+        clock_.setCurrentTime(framePosition, duration);
+      }
+      
       // dispatch the frame to the canvas for rendering:
       if (canvas_)
       {

@@ -643,6 +643,7 @@ namespace yae
   protected:
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
+    uint64 framesDecoded_;
   };
   
   //----------------------------------------------------------------
@@ -668,9 +669,7 @@ namespace yae
     if (Track::open())
     {
       getTraits(override_);
-      
-      // FIXME: force YUV420P for debugging purposes:
-      override_.colorFormat_ = kColorFormatI420;
+      framesDecoded_ = 0;
       return true;
     }
     
@@ -797,12 +796,25 @@ namespace yae
           continue;
         }
         
+        framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
         
         vf.traits_ = override_;
-        vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
         vf.time_.base_ = stream_->time_base.den;
+        if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
+        }
+        else if (packet->ffmpeg_.dts != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.dts;
+        }
+        else
+        {
+          vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1);
+          vf.time_.base_ = stream_->avg_frame_rate.num;
+        }
         
         vf.setBufferSize<unsigned char>(bytesPerFrame);
         unsigned char * vfData = vf.getBuffer<unsigned char>();
@@ -1009,6 +1021,7 @@ namespace yae
   protected:
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
+    uint64 samplesDecoded_;
   };
   
   //----------------------------------------------------------------
@@ -1034,6 +1047,7 @@ namespace yae
     if (Track::open())
     {
       getTraits(override_);
+      samplesDecoded_ = 0;
       return true;
     }
     
@@ -1080,6 +1094,10 @@ namespace yae
     // declare a 16-byte aligned buffer for decoded audio samples:
     DECLARE_ALIGNED(16, uint8_t, buffer)
       [(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
+
+    unsigned int bytesPerSample =
+      getNumberOfChannels(trackTraits.channelLayout_) *
+      getBitsPerSample(trackTraits.sampleFormat_) / 8;
     
     while (true)
     {
@@ -1129,12 +1147,27 @@ namespace yae
           continue;
         }
 
+        std::size_t numSamples = totalBytes / bytesPerSample;
+        samplesDecoded_ += numSamples;
+        
         TAudioFramePtr afPtr(new TAudioFrame());
         TAudioFrame & af = *afPtr;
         
         af.traits_ = trackTraits;
-        af.time_.time_ = stream_->time_base.num * packet.pts;
         af.time_.base_ = stream_->time_base.den;
+        if (packet.pts != AV_NOPTS_VALUE)
+        {
+          af.time_.time_ = stream_->time_base.num * packet.pts;
+        }
+        else if (packet.dts != AV_NOPTS_VALUE)
+        {
+          af.time_.time_ = stream_->time_base.num * packet.dts;
+        }
+        else
+        {
+          af.time_.time_ = samplesDecoded_ - numSamples;
+          af.time_.base_ = trackTraits.sampleRate_;
+        }
         
         af.setBufferSize<unsigned char>(totalBytes);
         unsigned char * afBuffer = af.getBuffer<unsigned char>();

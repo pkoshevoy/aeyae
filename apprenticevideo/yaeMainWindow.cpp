@@ -146,6 +146,23 @@ namespace yae
     
     reader->threadStart();
     
+    // setup renderer shared reference clock:
+    if (numAudioTracks)
+    {
+      audioRenderer_->takeThisClock(SharedClock());
+      audioRenderer_->obeyThisClock(audioRenderer_->clock());
+      
+      if (numVideoTracks)
+      {
+        videoRenderer_->obeyThisClock(audioRenderer_->clock());
+      }
+    }
+    else if (numVideoTracks)
+    {
+      videoRenderer_->takeThisClock(SharedClock());
+      videoRenderer_->obeyThisClock(videoRenderer_->clock());
+    }
+    
     // update the renderers:
     reader_->close();
     viewer_->setReader(reader);

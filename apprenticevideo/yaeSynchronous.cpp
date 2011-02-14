@@ -23,15 +23,7 @@ namespace yae
   // 
   struct TimeSegment
   {
-    TimeSegment():
-      origin_(boost::get_system_time())
-    {
-      t0_.time_ = 0;
-      t0_.base_ = 1;
-
-      dt_.time_ = 1;
-      dt_.base_ = 1;
-    }
+    TimeSegment() {}
     
     // this keeps track of "when" the time segment was specified:
     boost::system_time origin_;
@@ -191,7 +183,9 @@ namespace yae
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
     double msecCurrentPosition = double(delta.total_milliseconds());
     
-    double relativePosition = msecCurrentPosition / msecSegmentDuration;
+    double relativePosition =
+      dt.time_ ? (msecCurrentPosition / msecSegmentDuration) : 0.0;
+    
     return relativePosition;
   }
   

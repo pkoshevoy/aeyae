@@ -22,6 +22,131 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // TTime::TTime
+  // 
+  TTime::TTime(int64 time, uint64 base):
+    time_(time),
+    base_(base)
+  {}
+
+  //----------------------------------------------------------------
+  // TTime::operator +=
+  // 
+  TTime &
+  TTime::operator += (const TTime & dt)
+  {
+    if (base_ == dt.base_)
+    {
+      time_ += dt.time_;
+      return *this;
+    }
+
+    double dtSec = double(dt.time_) / double(dt.base_);
+    return operator += (dtSec);
+  }
+  
+  //----------------------------------------------------------------
+  // TTime::operator +
+  // 
+  TTime
+  TTime::operator + (const TTime & dt) const
+  {
+    TTime t(*this);
+    t += dt;
+    return t;
+  }
+  
+  //----------------------------------------------------------------
+  // TTime::operator +
+  // 
+  TTime &
+  TTime::operator += (double dtSec)
+  {
+    time_ += int64(dtSec * double(base_));
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // TTime::operator +
+  // 
+  TTime
+  TTime::operator + (double dtSec) const
+  {
+    TTime t(*this);
+    t += dtSec;
+    return t;
+  }
+  
+  //----------------------------------------------------------------
+  // getBitsPerSample
+  // 
+  unsigned int
+  getBitsPerSample(TAudioSampleFormat sampleFormat)
+  {
+    switch (sampleFormat)
+    {
+      case kAudio8BitOffsetBinary:
+        return 8;
+        
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        return 16;
+        
+      case kAudio24BitLittleEndian:
+        return 24;
+        
+      case kAudio32BitFloat:
+        return 32;
+
+      default:
+        break;
+    }
+    
+    assert(false);
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // getNumberOfChannels
+  // 
+  unsigned int
+  getNumberOfChannels(TAudioChannelLayout channelLayout)
+  {
+    switch (channelLayout)
+    {
+      case kAudioMono:
+        return 1;
+        
+      case kAudioStereo:
+        return 2;
+        
+      case kAudio2Pt1:
+        return 3;
+        
+      case kAudioQuad:
+        return 4;
+        
+      case kAudio4Pt1:
+        return 5;
+        
+      case kAudio5Pt1:
+        return 6;
+
+      case kAudio6Pt1:
+        return 7;
+        
+      case kAudio7Pt1:
+        return 8;
+
+      default:
+        break;
+    }
+    
+    assert(false);
+    return 0;
+  }
+  
+  //----------------------------------------------------------------
   // AudioTraits::AudioTraits
   // 
   AudioTraits::AudioTraits():

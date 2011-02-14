@@ -70,6 +70,13 @@ namespace yae
   struct YAE_API TTime
   {
     TTime();
+    TTime(int64 time, uint64 base);
+    
+    TTime & operator += (const TTime & dt);
+    TTime operator + (const TTime & dt) const;
+    
+    TTime & operator += (double dtSec);
+    TTime operator + (double dtSec) const;
     
     int64 time_;
     uint64 base_;
@@ -87,6 +94,11 @@ namespace yae
     kAudio24BitLittleEndian  = 4, //!< [-8388608, 8388607]
     kAudio32BitFloat         = 5, //!< [-1, 1]
   };
+  
+  //----------------------------------------------------------------
+  // getBitsPerSample
+  // 
+  YAE_API unsigned int getBitsPerSample(TAudioSampleFormat sampleFormat);
   
   //----------------------------------------------------------------
   // TAudioChannelFormat
@@ -113,6 +125,11 @@ namespace yae
     kAudio6Pt1   = 7, //!< 6.1
     kAudio7Pt1   = 8  //!< 7.1
   };
+  
+  //----------------------------------------------------------------
+  // getNumberOfChannels
+  // 
+  YAE_API unsigned int getNumberOfChannels(TAudioChannelLayout channelLayout);
   
   //----------------------------------------------------------------
   // AudioTraits

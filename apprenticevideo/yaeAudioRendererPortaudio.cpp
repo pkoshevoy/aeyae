@@ -30,7 +30,7 @@ namespace yae
   class AudioRendererPortaudio::TPrivate
   {
   public:
-    TPrivate();
+    TPrivate(SharedClock & sharedClock);
     ~TPrivate();
     
     unsigned int countAvailableDevices() const;
@@ -78,18 +78,22 @@ namespace yae
 
     // number of samples already consumed from the current audio frame:
     std::size_t audioFrameOffset_;
+    
+    // maintain (os synchronize to) this clock:
+    SharedClock & clock_;
   };
 
   //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::TPrivate
   // 
-  AudioRendererPortaudio::TPrivate::TPrivate():
+  AudioRendererPortaudio::TPrivate::TPrivate(SharedClock & sharedClock):
     initErr_(Pa_Initialize()),
     defaultDevice_(0),
     reader_(NULL),
     output_(NULL),
     sampleSize_(0),
-    audioFrameOffset_(0)
+    audioFrameOffset_(0),
+    clock_(sharedClock)
   {
     if (initErr_ != paNoError)
     {
@@ -328,6 +332,22 @@ namespace yae
       samplesToRead * sampleSize_ :
       samplesToRead * sampleSize_ * outputParams_.channelCount;
     
+    if (!audioFrame_)
+    {
+      // fetch the next audio frame from the reader:
+      if (!reader_->readAudio(audioFrame_))
+      {
+        return paComplete;
+      }
+      
+      audioFrameOffset_ = 0;
+    }
+
+    unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
+    TTime frameDuration(samplesToRead, sampleRate);
+    TTime framePosition(audioFrame_->time_);
+    framePosition += TTime(audioFrameOffset_, sampleRate);
+    
     while (dstChunkSize)
     {
       if (!audioFrame_)
@@ -404,6 +424,11 @@ namespace yae
       }
     }
     
+    if (clock_.allowsSettingTime())
+    {
+      clock_.setCurrentTime(framePosition, frameDuration);
+    }
+    
     return paContinue;
   }
   
@@ -412,7 +437,7 @@ namespace yae
   // AudioRendererPortaudio::AudioRendererPortaudio
   // 
   AudioRendererPortaudio::AudioRendererPortaudio():
-    private_(new TPrivate())
+    private_(new TPrivate(ISynchronous::clock_))
   {}
 
   //----------------------------------------------------------------
