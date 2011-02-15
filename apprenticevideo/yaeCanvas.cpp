@@ -158,7 +158,6 @@ namespace yae
   void
   Canvas::resizeGL(int width, int height)
   {
-    std::cerr << "resizeGL: " << width << ", " << height << std::endl;
     QGLWidget::resizeGL(width, height);
   }
 
@@ -177,15 +176,26 @@ namespace yae
     the_scoped_variable_t<the_gl_context_interface_t *>
       active_context(the_gl_context_interface_t::current_, this, NULL);
     
-    glViewport(0, 0, int(width()), int(height()));
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(-width(), width(), -height(), height());
-    glClear(GL_COLOR_BUFFER_BIT);
-    
     // make a local copy of the auto pointer to avoid a race condition:
     TImagePtr image = image_;
+    
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT);
+    
     if (image.get())
     {
+      the_bbox_t bbox;
+      image->update_bbox(bbox);
+
+      float w = bbox.aa().max_.x() - bbox.aa().min_.x();
+      float h = bbox.aa().max_.y() - bbox.aa().min_.y();
+      
+      glViewport(0, 0, int(width()), int(height()));
+      glMatrixMode(GL_PROJECTION);
+      gluOrtho2D(0, w, h, 0);
       image->draw();
     }
   }

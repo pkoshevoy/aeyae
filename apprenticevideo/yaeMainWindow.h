@@ -14,8 +14,8 @@
 
 // yae includes:
 #include <yaeAPI.h>
+#include <yaeCanvas.h>
 #include <yaeReader.h>
-#include <yaeViewer.h>
 #include <yaeAudioRenderer.h>
 #include <yaeVideoRenderer.h>
 
@@ -38,6 +38,9 @@ namespace yae
     MainWindow();
     ~MainWindow();
     
+    // accessor to the OpenGL rendering canvas:
+    Canvas * canvas() const;
+  
     // open a movie file for playback:
     bool load(const QString & path);
     
@@ -55,8 +58,8 @@ namespace yae
     // file reader:
     IReader * reader_;
     
-    // frame viewer:
-    Viewer * viewer_;
+    // frame canvas:
+    Canvas * canvas_;
     
     // audio renderer:
     IAudioRenderer * audioRenderer_;
@@ -64,7 +67,7 @@ namespace yae
     // video renderer:
     VideoRenderer * videoRenderer_;
   };
-  
-};
+}
+
 
 #endif // YAE_MAIN_WINDOW_H_

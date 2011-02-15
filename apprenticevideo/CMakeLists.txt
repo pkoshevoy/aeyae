@@ -19,8 +19,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${THE_SRC_DIR})
 
 find_package(THE REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
 
-set(Boost_ADDITIONAL_VERSIONS "1.41" "1.41.0")
+set(Boost_ADDITIONAL_VERSIONS "1.44" "1.45")
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost 1.35 COMPONENTS thread REQUIRED)
 find_package(Boost 1.35 COMPONENTS date_time REQUIRED)
@@ -49,6 +50,7 @@ include_directories(AFTER
   ${THE_SRC_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
+  ${GLEW_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
   ${QT_QTOPENGL_INCLUDE_DIR}
   )
@@ -137,8 +139,8 @@ endif (WIN32)
 find_library(PORTAUDIO_LIBRARY portaudio PATHS ${FFMPEG_LIBS_PATH} DOC "portaudio library")
 
 set(project_moc_hxx 
+  yaeCanvas.h
   yaeMainWindow.h
-  yaeViewer.h
   )
 
 set(project_uis 
@@ -152,6 +154,8 @@ set(project_sources
   yaeAPI.cpp
   yaeAudioRenderer.h
   yaeAudioRenderer.cpp
+  yaeCanvas.h
+  yaeCanvas.cpp
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
@@ -166,8 +170,6 @@ set(project_sources
   yaeUtils.cpp
   yaeVideoRenderer.h
   yaeVideoRenderer.cpp
-  yaeViewer.h
-  yaeViewer.cpp
   )
 
 find_path(PORTAUDIO_INCLUDE_DIR 
@@ -242,7 +244,9 @@ add_executable(${PROGNAME}
   )
 
 set(TARGET_LIBS
+  ${THE_UI_LIBRARY}
   ${THE_CORE_LIBRARY}
+  ${GLEW_LIBRARIES}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}

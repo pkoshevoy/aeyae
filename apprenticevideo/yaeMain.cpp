@@ -9,14 +9,17 @@
 // system includes:
 #include <iostream>
 #include <stdexcept>
+#include <assert.h>
 
 // Qt includes:
 #include <QApplication>
+#include <QFileOpenEvent>
 
 // yae includes:
 #include <yaeMainWindow.h>
 
 // the includes:
+#include <opengl/glsl.hxx>
 #include <utils/the_utils.hxx>
 
 
@@ -68,6 +71,11 @@ main(int argc, char ** argv)
   yae::Application app(argc, argv);
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
+  
+  // initialize OpenGL GLEW wrapper:
+  bool ok = glsl_init();
+  assert(ok);
+  (void)ok;
   
   for (int i = 1; i < argc; i++)
   {

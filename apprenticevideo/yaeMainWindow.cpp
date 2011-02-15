@@ -42,7 +42,7 @@ namespace yae
   MainWindow::MainWindow():
     QMainWindow(NULL, 0),
     reader_(NULL),
-    viewer_(NULL),
+    canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL)
   {
@@ -50,7 +50,7 @@ namespace yae
     setAcceptDrops(true);
     
     reader_ = ReaderFFMPEG::create();
-    viewer_ = new Viewer();
+    canvas_ = new Canvas();
     
 #ifdef YAE_HAS_PORTAUDIO
     audioRenderer_ = AudioRendererPortaudio::create();
@@ -63,8 +63,8 @@ namespace yae
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);
     layout->setMargin(0);
     layout->setSpacing(0);
-    layout->addWidget(viewer_);
-
+    layout->addWidget(canvas_);
+    
     bool ok = true;
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
@@ -87,7 +87,16 @@ namespace yae
     videoRenderer_->destroy();
     
     reader_->destroy();
-    delete viewer_;
+    delete canvas_;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvas
+  // 
+  Canvas *
+  MainWindow::canvas() const
+  {
+    return canvas_;
   }
   
   //----------------------------------------------------------------
@@ -147,6 +156,9 @@ namespace yae
     reader->threadStart();
     
     // setup renderer shared reference clock:
+    videoRenderer_->close();
+    audioRenderer_->close();
+    
     if (numAudioTracks)
     {
       audioRenderer_->takeThisClock(SharedClock());
@@ -165,9 +177,8 @@ namespace yae
     
     // update the renderers:
     reader_->close();
-    viewer_->setReader(reader);
     audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader);
-    videoRenderer_->open(viewer_, reader);
+    videoRenderer_->open(canvas_, reader);
     
     // replace the previous reader:
     reader_->destroy();
