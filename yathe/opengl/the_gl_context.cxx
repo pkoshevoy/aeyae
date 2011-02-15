@@ -9,25 +9,26 @@
 // License      : MIT
 // Description  : An OpenGL rendering context wrapper class.
 
+// system includes:
+#include <stddef.h>
+
 // local includes:
-#include "opengl/the_view.hxx"
-#include "utils/debug.hxx"
+#include "opengl/the_gl_context.hxx"
+
+
+//----------------------------------------------------------------
+// the_gl_context_interface_t::current_
+// 
+the_gl_context_interface_t *
+the_gl_context_interface_t::current_ = NULL;
 
 
 //----------------------------------------------------------------
 // the_gl_context_t::the_gl_context_t
 // 
-the_gl_context_t::the_gl_context_t(the_view_t * view):
-  view_(view)
+the_gl_context_t::the_gl_context_t(the_gl_context_interface_t * context):
+  context_(context)
 {}
-
-//----------------------------------------------------------------
-// the_gl_context_t::~the_gl_context_t
-// 
-the_gl_context_t::~the_gl_context_t()
-{
-  view_ = NULL;
-}
 
 //----------------------------------------------------------------
 // the_gl_context_t::make_current
@@ -35,8 +36,12 @@ the_gl_context_t::~the_gl_context_t()
 void
 the_gl_context_t::make_current()
 {
-  if (view_ == NULL) return;
-  view_->gl_make_current();
+  if (!context_)
+  {
+    return;
+  }
+
+  context_->gl_make_current();
 }
 
 //----------------------------------------------------------------
@@ -45,8 +50,12 @@ the_gl_context_t::make_current()
 void
 the_gl_context_t::done_current()
 {
-  if (view_ == NULL) return;
-  view_->gl_done_current();
+  if (!context_)
+  {
+    return;
+  }
+  
+  context_->gl_done_current();
 }
 
 //----------------------------------------------------------------
@@ -55,8 +64,12 @@ the_gl_context_t::done_current()
 bool
 the_gl_context_t::is_valid() const
 {
-  if (view_ == NULL) return false;
-  return view_->gl_context_is_valid();
+  if (!context_)
+  {
+    return false;
+  }
+  
+  return context_->gl_context_is_valid();
 }
 
 //----------------------------------------------------------------
@@ -65,7 +78,7 @@ the_gl_context_t::is_valid() const
 void
 the_gl_context_t::invalidate()
 {
-  view_ = NULL;
+  context_ = NULL;
 }
 
 //----------------------------------------------------------------
@@ -74,5 +87,5 @@ the_gl_context_t::invalidate()
 the_gl_context_t
 the_gl_context_t::current()
 {
-  return the_view_t::gl_latest_context();
+  return the_gl_context_t(the_gl_context_interface_t::current_);
 }

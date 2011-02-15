@@ -47,7 +47,7 @@ typedef enum
 //----------------------------------------------------------------
 // the_view_t
 // 
-class the_view_t
+class the_view_t : public the_gl_context_interface_t
 {
   friend bool save(std::ostream & stream, const the_view_t * view);
   friend bool load(std::istream & stream, the_view_t * view);
@@ -179,13 +179,10 @@ public:
   virtual bool is_hidden() = 0;
   virtual void set_focus() = 0;
   virtual void refresh() = 0;
-  virtual bool gl_context_is_valid() const = 0;
-  virtual void gl_make_current() = 0;
-  virtual void gl_done_current() = 0;
   
   // accessor to the most context of the view that was current most recently:
-  static the_gl_context_t gl_latest_context()
-  { return the_gl_context_t(latest_view_); }
+  static inline the_gl_context_t gl_latest_context()
+  { return the_gl_context_t::current(); }
   
   inline the_gl_context_t gl_context() const
   { return the_gl_context_t(const_cast<the_view_t *>(this)); }

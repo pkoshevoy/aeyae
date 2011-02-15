@@ -388,7 +388,11 @@ the_view_t::gl_paint()
 {
   if (width() == 0 || height() == 0) return;
   
-  the_scoped_variable_t<the_view_t *> latest_view(latest_view_, this, NULL);
+  the_scoped_variable_t<the_gl_context_interface_t *>
+    active_context(the_gl_context_interface_t::current_, this, NULL);
+  
+  the_scoped_variable_t<the_view_t *>
+    latest_view(latest_view_, this, NULL);
   
   // disable view manager callbacks when repainting -- we don't
   // want to trigger recursive repaints:
