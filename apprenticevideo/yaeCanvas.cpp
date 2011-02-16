@@ -32,10 +32,11 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas::Canvas
   // 
-  Canvas::Canvas(QWidget * parent,
+  Canvas::Canvas(const QGLFormat & format,
+                 QWidget * parent,
                  const QGLWidget * shareWidget,
                  Qt::WindowFlags f):
-    QGLWidget(parent, shareWidget, f)
+    QGLWidget(format, parent, shareWidget, f)
   {
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);

@@ -48,9 +48,13 @@ namespace yae
   {
     setupUi(this);
     setAcceptDrops(true);
-    
+
+    // request vsync if available:
+    QGLFormat contextFormat;
+    contextFormat.setSwapInterval(1);
+  
+    canvas_ = new Canvas(contextFormat);
     reader_ = ReaderFFMPEG::create();
-    canvas_ = new Canvas();
     
 #ifdef YAE_HAS_PORTAUDIO
     audioRenderer_ = AudioRendererPortaudio::create();

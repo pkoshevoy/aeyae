@@ -39,7 +39,8 @@ namespace yae
     Q_OBJECT;
     
   public:
-    Canvas(QWidget * parent = 0,
+    Canvas(const QGLFormat & format,
+           QWidget * parent = 0,
            const QGLWidget * shareWidget = 0,
            Qt::WindowFlags f = 0);
     ~Canvas();
