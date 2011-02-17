@@ -189,32 +189,64 @@ namespace yae
     
     if (image.get())
     {
-      the_bbox_t bbox;
-      image->update_bbox(bbox);
-
-      float w = bbox.aa().max_.x() - bbox.aa().min_.x();
-      float h = bbox.aa().max_.y() - bbox.aa().min_.y();
+      the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
       
-      glViewport(0, 0, int(width()), int(height()));
-      glMatrixMode(GL_PROJECTION);
-      gluOrtho2D(0, w, h, 0);
+      int canvasWidth = width();
+      int canvasHeight = height();
       
       GLenum data_type = GL_UNSIGNED_BYTE;
       GLenum format_internal = GL_RGB8;
       GLenum format = GL_RGB;
       image->get_texture_info(data_type, format_internal, format);
       
-      the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
-      
       if (format == GL_BGRA)
       {
+        glViewport(0, 0, canvasWidth, canvasHeight);
+        glMatrixMode(GL_PROJECTION);
+        gluOrtho2D(0, canvasWidth, canvasHeight, 0);
+        
+        float zebra[2][3] =
+        {
+          1.0f, 1.0f, 1.0f,
+          0.7f, 0.7f, 0.7f
+        };
+      
+        int edgeSize = 24;
+        bool evenRow = false;
+        for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
+        {
+          int y1 = std::min(y + edgeSize, canvasHeight);
+          
+          bool evenCol = false;
+          for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
+          {
+            int x1 = std::min(x + edgeSize, canvasWidth);
+
+            float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
+            glColor3fv(color);
+            
+            glRecti(x, y, x1, y1);
+          }
+        }
+        
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        // FIXME: draw a checkerboard background:
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
       }
+      
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glMatrixMode(GL_MODELVIEW);
+      glLoadIdentity();
+      
+      the_bbox_t bbox;
+      image->update_bbox(bbox);
+
+      float imageWidth = bbox.aa().max_.x() - bbox.aa().min_.x();
+      float imageHeight = bbox.aa().max_.y() - bbox.aa().min_.y();
+      
+      glViewport(0, 0, canvasWidth, canvasHeight);
+      glMatrixMode(GL_PROJECTION);
+      gluOrtho2D(0, imageWidth, imageHeight, 0);
       
       glEnable(GL_TEXTURE_2D);
       image->draw();
