@@ -136,6 +136,15 @@ namespace yae
   {
     QGLWidget::initializeGL();
     
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_FOG);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glDisable(GL_LINE_SMOOTH);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_TEXTURE_2D);
+    
     glShadeModel(GL_SMOOTH);
     glClearDepth(0);
     glClearStencil(0);
@@ -143,14 +152,7 @@ namespace yae
     glClearColor(0, 0, 0, 1);
     glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    
-    glDisable(GL_LIGHTING);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_FOG);
-    glDisable(GL_POLYGON_OFFSET_FILL);
-    glDisable(GL_LINE_SMOOTH);
-    glEnable(GL_BLEND);
-    glEnable(GL_TEXTURE_2D);
+    glAlphaFunc(GL_ALWAYS, 0.0f);
   }
 
   //----------------------------------------------------------------
@@ -184,7 +186,6 @@ namespace yae
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glClear(GL_COLOR_BUFFER_BIT);
     
     if (image.get())
     {
@@ -197,7 +198,31 @@ namespace yae
       glViewport(0, 0, int(width()), int(height()));
       glMatrixMode(GL_PROJECTION);
       gluOrtho2D(0, w, h, 0);
+      
+      GLenum data_type = GL_UNSIGNED_BYTE;
+      GLenum format_internal = GL_RGB8;
+      GLenum format = GL_RGB;
+      image->get_texture_info(data_type, format_internal, format);
+      
+      the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
+      
+      if (format == GL_BGRA)
+      {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // FIXME: draw a checkerboard background:
+        glClearColor(1, 1, 1, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+      }
+      
+      glEnable(GL_TEXTURE_2D);
       image->draw();
+    }
+    else
+    {
+      glClearColor(0, 0, 0, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
     }
   }
   
@@ -223,12 +248,22 @@ namespace yae
                                    bytes_per_pixel,
                                    bytes_per_pixel,
                                    copy_pixels_t());
-    
+
     GLenum data_type = GL_UNSIGNED_BYTE;
     GLenum format_internal = GL_RGB8;
-    GLenum format = GL_RGB;
+    GLenum format = GL_BGR;
     GLenum filter = GL_LINEAR; // GL_NEAREST;
     const size_t max_texture = 1024;
+    
+    if (frame->traits_.colorFormat_ == kColorFormatBGRA)
+    {
+      format_internal = GL_RGBA;
+      format = GL_BGRA;
+    }
+    else
+    {
+      assert(frame->traits_.colorFormat_ == kColorFormatBGR);
+    }
     
     tile_generator.make_tiles(data_type,
                               format_internal,

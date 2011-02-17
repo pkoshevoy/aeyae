@@ -135,8 +135,8 @@ namespace yae
       {
         traits.colorFormat_ =
           hasAlphaChannel(traits.colorFormat_) ?
-          kColorFormatARGB :
-          kColorFormatRGB;
+          kColorFormatBGRA :
+          kColorFormatBGR;
         
         reader->setVideoTraitsOverride(traits);
       }
