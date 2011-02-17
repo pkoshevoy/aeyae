@@ -100,6 +100,10 @@ public:
   { return fragment_program_ != NULL; }
 #endif
   
+  bool get_texture_info(GLenum & data_type,
+                        GLenum & format_internal,
+                        GLenum & format) const;
+  
   // the shared display element:
   image_tile_generator_t data_;
   

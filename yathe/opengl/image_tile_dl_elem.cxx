@@ -388,8 +388,9 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     
-    glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.5f);
+    // don't allow fragments less than half opaque:
+    // glEnable(GL_ALPHA_TEST);
+    // glAlphaFunc(GL_GREATER, 0.5f);
     
     // setup magnification/minification filtering:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
@@ -405,7 +406,6 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
       glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     }
     glDisable(GL_LIGHTING);
-    // glColor4f(1, 1, 1, 1);
     glColor4fv(color.rgba());
     
     glEnable(GL_POLYGON_OFFSET_FILL);
@@ -516,3 +516,25 @@ image_tile_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
   bbox += bbox_;
 }
+
+//----------------------------------------------------------------
+// image_tile_dl_elem_t::get_texture_info
+// 
+bool
+image_tile_dl_elem_t::get_texture_info(GLenum & data_type,
+                                       GLenum & format_internal,
+                                       GLenum & format) const
+{
+  if (!data_.tiles_.empty())
+  {
+    boost::shared_ptr<texture_base_t> t = data_.tiles_.front().texture_;
+    const texture_base_t * texture = t.get();
+    data_type = texture->type_;
+    format_internal = texture->internal_format_;
+    format = texture->format_;
+    return true;
+  }
+  
+  return false;
+}
+  
