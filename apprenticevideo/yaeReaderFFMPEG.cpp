@@ -40,6 +40,8 @@
 #include <yaeReaderFFMPEG.h>
 #include <yaeThreading.h>
 #include <yaeUtils.h>
+#include <yaePixelFormatFFMPEG.h>
+#include <yaePixelFormatTraits.h>
 
 // ffmpeg includes:
 extern "C"
@@ -222,98 +224,6 @@ namespace fileUtf8
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // toPixelFormat
-  // 
-  static enum PixelFormat
-  toPixelFormat(TVideoColorFormat colorFormat)
-  {
-    switch (colorFormat)
-    {
-      case kColorFormatI420Alpha:
-        return PIX_FMT_YUVA420P;
-
-      case kColorFormatI420:
-        return PIX_FMT_YUV420P;
-
-      case kColorFormatYUYV:
-        return PIX_FMT_YUYV422;
-
-      case kColorFormatRGB:
-        return PIX_FMT_RGB24;
-
-      case kColorFormatBGR:
-        return PIX_FMT_BGR24;
-
-      case kColorFormatARGB:
-        return PIX_FMT_ARGB;
-
-      case kColorFormatYUVJ420P:
-        return PIX_FMT_YUVJ420P;
-
-      case kColorFormatUYVY:
-        return PIX_FMT_UYVY422;
-
-      case kColorFormatBGRA:
-        return PIX_FMT_BGRA;
-
-      case kColorFormatYUVJ422P:
-        return PIX_FMT_YUVJ422P;
-
-      default:
-        break;
-    }
-
-    assert(false);
-    return PIX_FMT_NONE;
-  }
-
-  //----------------------------------------------------------------
-  // toVideoColorFormat
-  // 
-  static TVideoColorFormat
-  toVideoColorFormat(enum PixelFormat pixelFormat)
-  {
-    switch (pixelFormat)
-    {
-      case PIX_FMT_YUVA420P:
-        return kColorFormatI420Alpha;
-        
-      case PIX_FMT_YUV420P:
-        return kColorFormatI420;
-        
-      case PIX_FMT_YUYV422:
-        return kColorFormatYUYV;
-        
-      case PIX_FMT_RGB24:
-        return kColorFormatRGB;
-        
-      case PIX_FMT_BGR24:
-        return kColorFormatBGR;
-        
-      case PIX_FMT_ARGB:
-        return kColorFormatARGB;
-        
-      case PIX_FMT_YUVJ420P:
-        return kColorFormatYUVJ420P;
-        
-      case PIX_FMT_UYVY422:
-        return kColorFormatUYVY;
-        
-      case PIX_FMT_BGRA:
-        return kColorFormatBGRA;
-
-      case PIX_FMT_YUVJ422P:
-        return kColorFormatYUVJ422P;
-        
-      default:
-        break;
-    }
-
-    assert(false);
-    return kInvalidColorFormat;
-  }
   
   //----------------------------------------------------------------
   // Packet
@@ -632,7 +542,7 @@ namespace yae
     // video traits, not overridden:
     bool getTraits(VideoTraits & traits) const;
     
-    // use this for video frame conversion (color format and size)
+    // use this for video frame conversion (pixel format and size)
     bool setTraitsOverride(const VideoTraits & override);
     bool getTraitsOverride(VideoTraits & override) const;
     
@@ -744,30 +654,82 @@ namespace yae
     
     FrameWithAutoCleanup frameAutoCleanup;
     struct SwsContext * imgConvertCtx = NULL;
-
-
-    bool hasAlpha = hasAlphaChannel(override_.colorFormat_);
-    bool isPlanar = isFormatPlanar(override_.colorFormat_);
-    unsigned int bitsPerPixel = getBitsPerPixel(override_.colorFormat_);
-    enum PixelFormat pixelFormat = toPixelFormat(override_.colorFormat_);
     
-    std::size_t pixelsPerFrame = (override_.encodedWidth_ *
-                                  override_.encodedHeight_);
+    // pixel format shortcut:
+    const pixelFormat::Traits * ptts =
+      pixelFormat::getTraits(override_.pixelFormat_);
+    if (!ptts)
+    {
+      assert(false);
+      return;
+    }
     
-    std::size_t bytesPerFrame = (pixelsPerFrame * bitsPerPixel) / 8;
+    // get number of contiguous sample planes,
+    // sample set stride (in bits) for each plane:
+    unsigned char samplePlaneStride[4] = { 0 };
+    unsigned char numSamplePlanes = ptts->getPlanes(samplePlaneStride);
     
-    // NOTE: this assumes there is at most 1 byte per Y (and A) channel:
-    std::size_t bytesPerChromaPlane =
-      hasAlpha ?
-      (bytesPerFrame - 2 * pixelsPerFrame) / 2 :
-      (bytesPerFrame - pixelsPerFrame) / 2;
+    unsigned int encodedWidth = override_.encodedWidth_;
+    if (ptts->chromaBoxW_ > 1)
+    {
+      unsigned int remainder = encodedWidth % ptts->chromaBoxW_;
+      if (remainder)
+      {
+        encodedWidth += ptts->chromaBoxW_ - remainder;
+      }
+    }
+    
+    unsigned int encodedHeight = override_.encodedHeight_;
+    if (ptts->chromaBoxH_ > 1)
+    {
+      unsigned int remainder = encodedHeight % ptts->chromaBoxH_;
+      if (remainder)
+      {
+        encodedHeight += ptts->chromaBoxH_ - remainder;
+      }
+    }
+    
+    // calculate number of bytes for each sample plane:
+    std::size_t totalPixels = encodedWidth * encodedHeight;
+    
+    std::size_t samplePlaneSize[4] = { 0 };
+    samplePlaneSize[0] = totalPixels * samplePlaneStride[0] / 8;
+    
+    std::size_t sampleLineSize[4] = { 0 };
+    sampleLineSize[0] = encodedWidth * samplePlaneStride[0] / 8;
 
-    // FIXME: this is definitely broken for NxM sub-sampling
-    // of UV planes when N != M
-    std::size_t bytesPerChromaRow =
-      hasAlpha ?
-      (override_.encodedWidth_ * (bitsPerPixel - 16)) / 8 :
-      (override_.encodedWidth_ * (bitsPerPixel - 8)) / 8;
+    for (unsigned char i = 1; i < numSamplePlanes; i++)
+    {
+      samplePlaneSize[i] = totalPixels * samplePlaneStride[i] / 8;
+      sampleLineSize[i] = encodedWidth * samplePlaneStride[i] / 8;
+    }
+    
+    // account for sub-sampling of UV plane(s):
+    std::size_t chromaBoxArea = ptts->chromaBoxW_ * ptts->chromaBoxH_;
+    if (chromaBoxArea > 1)
+    {
+      unsigned char uvSamplePlanes =
+        (ptts->flags_ & pixelFormat::kAlpha) ?
+        numSamplePlanes - 2 :
+        numSamplePlanes - 1;
+      
+      for (unsigned char i = 1; i < 1 + uvSamplePlanes; i++)
+      {
+        samplePlaneSize[i] /= chromaBoxArea;
+        sampleLineSize[i] /= ptts->chromaBoxW_;
+      }
+    }
+
+    // calculate frame size:
+    std::size_t bytesPerFrame = 0;
+    for (unsigned char i = 0; i < numSamplePlanes; i++)
+    {
+      bytesPerFrame += samplePlaneSize[i];
+    }
+    
+    // shortcut for ffmpeg pixel format:
+    enum PixelFormat ffmpegPixelFormat =
+      yae_to_ffmpeg(override_.pixelFormat_);
     
     while (true)
     {
@@ -801,6 +763,9 @@ namespace yae
         TVideoFrame & vf = *vfPtr;
         
         vf.traits_ = override_;
+        vf.traits_.encodedWidth_ = encodedWidth;
+        vf.traits_.encodedHeight_ = encodedHeight;
+        
         vf.time_.base_ = stream_->time_base.den;
         if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)
         {
@@ -821,28 +786,15 @@ namespace yae
         
         AVPicture pict;
         pict.data[0] = vfData;
+        pict.linesize[0] = sampleLineSize[0];
 
-        if (isPlanar)
+        for (unsigned char i = 1; i < numSamplePlanes; i++)
         {
-          pict.linesize[0] = override_.encodedWidth_;
-          pict.linesize[1] = bytesPerChromaRow;
-          pict.linesize[2] = pict.linesize[1];
-          
-          pict.data[1] = vfData + pixelsPerFrame;
-          pict.data[2] = pict.data[1] + bytesPerChromaPlane;
-          
-          if (hasAlpha)
-          {
-            pict.data[3] = pict.data[2] + bytesPerChromaPlane;
-            pict.linesize[3] = pict.linesize[0];
-          }
-        }
-        else
-        {
-          pict.linesize[0] = (override_.encodedWidth_ * bitsPerPixel) / 8;
+          pict.data[i] = pict.data[i - 1] + samplePlaneSize[i - 1];
+          pict.linesize[i] = sampleLineSize[i];
         }
         
-        // Convert the image into the desired color format:
+        // Convert the image into the desired pixel format:
         if (imgConvertCtx == NULL)
         {
           imgConvertCtx = sws_getContext(// from:
@@ -853,7 +805,7 @@ namespace yae
                                          // to:
                                          vf.traits_.visibleWidth_,
                                          vf.traits_.visibleHeight_,
-                                         pixelFormat,
+                                         ffmpegPixelFormat,
                                          
                                          SWS_BICUBIC,
                                          NULL,
@@ -914,8 +866,8 @@ namespace yae
     // shortcut:
     const AVCodecContext * context = stream_->codec;
     
-    //! color format:
-    t.colorFormat_ = toVideoColorFormat(context->pix_fmt);
+    //! pixel format:
+    t.pixelFormat_ = ffmpeg_to_yae(context->pix_fmt);
     
     //! frame rate:
     t.frameRate_ =

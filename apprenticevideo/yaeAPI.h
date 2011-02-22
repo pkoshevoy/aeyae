@@ -9,13 +9,15 @@
 #ifndef YAE_API_H_
 #define YAE_API_H_
 
+// yae includes:
+#include <yaePixelFormats.h>
+
 // system includes:
 #include <vector>
 
 // boost includes:
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
-
 
 //----------------------------------------------------------------
 // YAE_API
@@ -152,62 +154,6 @@ namespace yae
   };
   
   //----------------------------------------------------------------
-  // TVideoColorFormat
-  // 
-  enum TVideoColorFormat
-  {
-    kInvalidColorFormat = 0,
-    
-    //! packed Red, Green, Blue
-    kColorFormatRGB  = 1,
-
-    //! packed Red, Green, Blue
-    kColorFormatBGR  = 2,
-
-    //! packed Alpha, Red, Green, Blue
-    kColorFormatARGB = 3,
-    
-    //! packed Blue, Green, Red, Alpha
-    kColorFormatBGRA = 4,
-
-    //! 8-bit Y plane, 2x2 subsampled U plane, 2x2 V, [16, 235]
-    kColorFormatI420 = 5,
-
-    //! 8-bit Y plane, 2x2 subsampled U plane, 2x2 V, [16, 235], Alpha Y plane
-    kColorFormatI420Alpha = 6,
-    
-    //! 8-bit Y plane, 2x2 subsampled V plane, 2x2 U
-    kColorFormatYV12 = 7,
-    
-    //! packed, U and V are subsampled 2x horizontally
-    kColorFormatUYVY = 8,
-    
-    //! same as UYVY but with different ordering
-    kColorFormatYUYV = 9,
-    
-    //! jpeg YUV420P, same as I420 but with full range [0, 255]
-    kColorFormatYUVJ420P = 10,
-
-    //! jpeg YUV422P, planar, 1 UV pair per 2 Y values, [0, 255]
-    kColorFormatYUVJ422P = 11
-  };
-
-  //----------------------------------------------------------------
-  // hasAlphaChannel
-  // 
-  YAE_API bool hasAlphaChannel(TVideoColorFormat colorFormat);
-
-  //----------------------------------------------------------------
-  // isFormatPlanar
-  // 
-  YAE_API bool isFormatPlanar(TVideoColorFormat colorFormat);
-  
-  //----------------------------------------------------------------
-  // getBitsPerPixel
-  // 
-  YAE_API unsigned int getBitsPerPixel(TVideoColorFormat colorFormat);
-  
-  //----------------------------------------------------------------
   // VideoTraits
   // 
   struct YAE_API VideoTraits
@@ -218,7 +164,7 @@ namespace yae
     double frameRate_;
     
     //! frame color format:
-    TVideoColorFormat colorFormat_;
+    TPixelFormatId pixelFormat_;
     
     //! encoded frame size (including any padding):
     unsigned int encodedWidth_;

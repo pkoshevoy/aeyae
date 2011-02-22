@@ -159,6 +159,11 @@ set(project_sources
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
+  yaePixelFormats.h
+  yaePixelFormatFFMPEG.h
+  yaePixelFormatFFMPEG.cpp
+  yaePixelFormatTraits.h
+  yaePixelFormatTraits.cpp
   yaeQueue.h
   yaeReader.h
   yaeReaderFFMPEG.h

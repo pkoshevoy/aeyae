@@ -12,6 +12,7 @@
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeCanvas.h>
+#include <yaePixelFormatTraits.h>
 
 // the includes:
 #include <image/image_tile_generator.hxx>
@@ -257,6 +258,247 @@ namespace yae
       glClear(GL_COLOR_BUFFER_BIT);
     }
   }
+
+  //----------------------------------------------------------------
+  // yae_to_opengl
+  // 
+  static unsigned int
+  yae_to_opengl(TPixelFormatId yaePixelFormat,
+                GLint & internalFormat,
+                GLenum & format,
+                GLenum & dataType)
+  {
+    switch (yaePixelFormat)
+    {
+      
+      case kPixelFormatYUV420P:
+        //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
+      case kPixelFormatYUV422P:
+        //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples)
+      case kPixelFormatYUV444P:
+        //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples)
+      case kPixelFormatYUV410P:
+        //! planar YUV 4:1:0, 9bpp, (1 Cr & Cb sample per 4x4 Y samples)
+      case kPixelFormatYUV411P:
+        //! planar YUV 4:1:1, 12bpp, (1 Cr & Cb sample per 4x1 Y samples)
+      case kPixelFormatGRAY8:
+        //! Y, 8bpp
+      case kPixelFormatPAL8:
+        //! 8 bit with kPixelFormatRGB32 palette
+      case kPixelFormatNV12:
+        //! planar YUV 4:2:0, 12bpp, 1 plane for Y and 1 plane for the UV
+        //! components, which are interleaved (first byte U and the
+        //! following byte V)
+      case kPixelFormatNV21:
+        //! as above, but U and V bytes are swapped
+      case kPixelFormatYUV440P:
+        //! planar YUV 4:4:0 (1 Cr & Cb sample per 1x2 Y samples)
+      case kPixelFormatYUVA420P:
+        //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
+        //! samples)
+      case kPixelFormatYUVJ420P:
+        //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples), JPEG
+      case kPixelFormatYUVJ422P:
+        //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples), JPEG
+      case kPixelFormatYUVJ444P:
+        //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples), JPEG
+      case kPixelFormatYUVJ440P:
+        //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
+        
+        internalFormat = GL_LUMINANCE;
+        format = GL_LUMINANCE;
+        dataType = GL_UNSIGNED_BYTE;
+        return 1;
+    
+      case kPixelFormatRGB24:
+        //! packed RGB 8:8:8, 24bpp, RGBRGB...
+        internalFormat = GL_RGB;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_BYTE;
+        return 3;
+    
+      case kPixelFormatBGR24:
+        //! packed RGB 8:8:8, 24bpp, BGRBGR...
+        internalFormat = 3;
+        format = GL_BGR;
+        dataType = GL_UNSIGNED_BYTE;
+        return 3;
+        
+      case kPixelFormatMONOWHITE:
+        //! Y, 1bpp, 0 is white, 1 is black, in each byte pixels are
+        //! ordered from the msb to the lsb
+      case kPixelFormatMONOBLACK:
+        //! Y, 1bpp, 0 is black, 1 is white, in each byte pixels are
+        //! ordered from the msb to the lsb
+        
+        internalFormat = GL_LUMINANCE;
+        format = GL_LUMINANCE;
+        dataType = GL_BITMAP;
+        return 1;
+    
+      case kPixelFormatBGR8:
+        //! packed RGB 3:3:2, 8bpp, (msb)2B 3G 3R(lsb)
+        internalFormat = GL_R3_G3_B2;
+        format = GL_BGR;
+        dataType = GL_UNSIGNED_BYTE_2_3_3_REV;
+        return 3;
+    
+      case kPixelFormatRGB8:
+        //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
+        internalFormat = 3;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_BYTE_3_3_2;
+        return 3;
+        
+      case kPixelFormatARGB:
+        //! packed ARGB 8:8:8:8, 32bpp, ARGBARGB...
+        internalFormat = 4;
+        format = GL_BGRA;
+        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+        return 4;
+    
+      case kPixelFormatRGBA:
+        //! packed RGBA 8:8:8:8, 32bpp, RGBARGBA...
+        internalFormat = 4;
+        format = GL_RGBA;
+        dataType = GL_UNSIGNED_INT_8_8_8_8;
+        return 4;
+    
+      case kPixelFormatABGR:
+        //! packed ABGR 8:8:8:8, 32bpp, ABGRABGR...
+        internalFormat = 4;
+        format = GL_RGBA;
+        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+        return 4;
+    
+      case kPixelFormatBGRA:
+        //! packed BGRA 8:8:8:8, 32bpp, BGRABGRA...
+        internalFormat = 4;
+        format = GL_BGRA;
+        dataType = GL_UNSIGNED_INT_8_8_8_8;
+        return 4;
+        
+      case kPixelFormatGRAY16BE:
+        //! Y, 16bpp, big-endian
+      case kPixelFormatGRAY16LE:
+        //! Y, 16bpp, little-endian
+      case kPixelFormatYUV420P16LE:
+        //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
+        //! little-endian
+      case kPixelFormatYUV420P16BE:
+        //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
+        //! big-endian
+      case kPixelFormatYUV422P16LE:
+        //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
+        //! little-endian
+      case kPixelFormatYUV422P16BE:
+        //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
+        //! big-endian
+      case kPixelFormatYUV444P16LE:
+        //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
+        //! little-endian
+      case kPixelFormatYUV444P16BE:
+        //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
+        //! big-endian
+        
+        internalFormat = GL_LUMINANCE16;
+        format = GL_LUMINANCE;
+        dataType = GL_UNSIGNED_SHORT;
+        return 1;
+        
+      case kPixelFormatRGB48BE:
+        //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
+        //! each R/G/B component is stored as big-endian
+      case kPixelFormatRGB48LE:
+        //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
+        //! each R/G/B component is stored as little-endian
+    
+        internalFormat = GL_RGB16;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT;
+        return 3;
+        
+      case kPixelFormatRGB565BE:
+        //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), big-endian
+      case kPixelFormatBGR565LE:
+        //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), little-endian
+        
+        internalFormat = 3;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
+        return 3;
+        
+      case kPixelFormatRGB565LE:
+        //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), little-endian
+      case kPixelFormatBGR565BE:
+        //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), big-endian
+        
+        internalFormat = 3;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_5_6_5;
+        return 3;
+        
+      case kPixelFormatRGB555BE:
+        //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), big-endian,
+        //! most significant bit to 0
+      case kPixelFormatBGR555LE:
+        //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), little-endian,
+        //! most significant bit to 1
+        
+        internalFormat = 3;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+        return 3;
+    
+      case kPixelFormatRGB555LE:
+        //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), little-endian,
+        //! most significant bit to 0
+      case kPixelFormatBGR555BE:
+        //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), big-endian,
+        //! most significant bit to 1
+        
+        internalFormat = 3;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_5_5_5_1;
+        return 3;
+        
+      case kPixelFormatRGB444BE:
+        //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), big-endian,
+        //! most significant bits to 0
+      case kPixelFormatBGR444LE:
+        //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), little-endian,
+        //! most significant bits to 1
+    
+        internalFormat = GL_RGB4;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_4_4_4_4;
+        return 3;
+    
+      case kPixelFormatRGB444LE:
+        //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), little-endian,
+        //! most significant bits to 0
+      case kPixelFormatBGR444BE:
+        //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), big-endian,
+        //! most significant bits to 1
+        
+        internalFormat = GL_RGB4;
+        format = GL_RGB;
+        dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
+        return 3;
+    
+      case kPixelFormatY400A:
+        //! 8bit gray, 8bit alpha
+        internalFormat = GL_LUMINANCE8_ALPHA8;
+        format = GL_LUMINANCE_ALPHA;
+        dataType = GL_UNSIGNED_BYTE;
+        return 2;
+
+      default:
+        break;
+    }
+    
+    return 0;
+  }
   
   //----------------------------------------------------------------
   // Canvas::loadFrame
@@ -264,44 +506,58 @@ namespace yae
   bool
   Canvas::loadFrame(const TVideoFramePtr & frame)
   {
-    std::size_t imgW = frame->traits_.visibleWidth_;
-    std::size_t imgH = frame->traits_.visibleHeight_;
-    const unsigned char * dataBuffer = frame->getBuffer<unsigned char>();
-    unsigned int dataBufferAlignment = 1;
+    // video traits shortcut:
+    const VideoTraits & vtts = frame->traits_;
+
+    // pixel format shortcut:
+    const pixelFormat::Traits * ptts =
+      pixelFormat::getTraits(vtts.pixelFormat_);
+    
+    if (!ptts)
+    {
+      // don't know how to handle this pixel format:
+      assert(false);
+      return false;
+    }
+    
+    GLint format_internal = 0;
+    GLenum format = 0;
+    GLenum data_type = 0;
+    
+    unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
+                                                   format_internal,
+                                                   format,
+                                                   data_type);
+    if (!supportedChannels)
+    {
+      // can't render any part of the given frame using OpenGL:
+      return false;
+    }
     
     // gather some stats about the image:
-    size_t bytes_per_pixel = getBitsPerPixel(frame->traits_.colorFormat_) / 8;
-    bool has_alpha = hasAlphaChannel(frame->traits_.colorFormat_);
+    std::size_t bytes_per_pixel = ptts->stride_[supportedChannels - 1] / 8;
+    std::size_t imgWidth = frame->traits_.visibleWidth_;
+    std::size_t imgHeight = frame->traits_.visibleHeight_;
+    
     image_tile_generator_t tile_generator;
-    tile_generator.layout(imgW, imgH);
+    tile_generator.layout(imgWidth, imgHeight);
+    
+    const unsigned char * dataBuffer = frame->getBuffer<unsigned char>();
+    unsigned int dataBufferAlignment = 1;
     
     tile_generator.convert_and_pad(dataBuffer,
                                    dataBufferAlignment,
                                    bytes_per_pixel,
                                    bytes_per_pixel,
                                    copy_pixels_t());
-
-    GLenum data_type = GL_UNSIGNED_BYTE;
-    GLenum format_internal = GL_RGB8;
-    GLenum format = GL_BGR;
-    GLenum filter = GL_LINEAR; // GL_NEAREST;
+    
     const size_t max_texture = 1024;
-    
-    if (frame->traits_.colorFormat_ == kColorFormatBGRA)
-    {
-      format_internal = GL_RGBA;
-      format = GL_BGRA;
-    }
-    else
-    {
-      assert(frame->traits_.colorFormat_ == kColorFormatBGR);
-    }
-    
     tile_generator.make_tiles(data_type,
                               format_internal,
                               format,
                               max_texture);
     
+    GLenum filter = GL_LINEAR; // GL_NEAREST;
     TImagePtr image(new image_tile_dl_elem_t(tile_generator,
                                              filter,
                                              filter));

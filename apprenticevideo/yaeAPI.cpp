@@ -161,7 +161,7 @@ namespace yae
   // 
   VideoTraits::VideoTraits():
     frameRate_(0.0),
-    colorFormat_(kInvalidColorFormat),
+    pixelFormat_(kInvalidPixelFormat),
     encodedWidth_(0),
     encodedHeight_(0),
     offsetTop_(0),
@@ -171,84 +171,4 @@ namespace yae
     pixelAspectRatio_(1.0),
     isUpsideDown_(false)
   {}
-
-  //----------------------------------------------------------------
-  // hasAlphaChannel
-  // 
-  bool
-  hasAlphaChannel(TVideoColorFormat colorFormat)
-  {
-    switch (colorFormat)
-    {
-      case kColorFormatARGB:
-      case kColorFormatBGRA:
-      case kColorFormatI420Alpha:
-        return true;
-
-      default:
-        break;
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // isFormatPlanar
-  // 
-  bool
-  isFormatPlanar(TVideoColorFormat colorFormat)
-  {
-    switch (colorFormat)
-    {
-      case kColorFormatI420:
-      case kColorFormatI420Alpha:
-      case kColorFormatYV12:
-      case kColorFormatYUVJ420P:
-      case kColorFormatYUVJ422P:
-        return true;
-
-      default:
-        break;
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // getBitsPerPixel
-  // 
-  unsigned int
-  getBitsPerPixel(TVideoColorFormat colorFormat)
-  {
-    switch (colorFormat)
-    {
-      case kColorFormatI420:
-      case kColorFormatYUVJ420P:
-      case kColorFormatYV12:
-        return 12;
-        
-      case kColorFormatI420Alpha:
-        return 20;
-        
-      case kColorFormatYUYV:
-      case kColorFormatUYVY:
-      case kColorFormatYUVJ422P:
-        return 16;
-        
-      case kColorFormatRGB:
-      case kColorFormatBGR:
-        return 24;
-        
-      case kColorFormatARGB:
-      case kColorFormatBGRA:
-        return 32;
-        
-      default:
-        break;
-    }
-
-    assert(false);
-    return 0;
-  }
-  
 }

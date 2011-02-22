@@ -129,16 +129,52 @@ namespace yae
     if (numVideoTracks)
     {
       reader->selectVideoTrack(0);
-#if 1
+#if 0
       VideoTraits traits;
       if (reader->getVideoTraits(traits))
       {
-        traits.colorFormat_ =
-          hasAlphaChannel(traits.colorFormat_) ?
-          kColorFormatBGRA :
-          kColorFormatBGR;
+        // pixel format shortcut:
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+
+        bool unsupported = ptts == NULL;
+
+        if (!unsupported)
+        {
+          unsupported =
+            (ptts.flags_ & pixelFormat::kPaletted) ||
+            ((ptts.flags_ & pixelFormat::kPacked) &&
+             (ptts.flags_ & pixelFormat::kPlanar));
+        }
         
-        reader->setVideoTraitsOverride(traits);
+        for (unsigned char i = 0; !unsupported && i < ptts->channels_; i++)
+        {
+          unsupported = depth_[i] < 4;
+        }
+        
+        if (unsupported)
+        {
+          traits.pixelFormat_ = kPixelFormatGRAY8;
+          
+          if (ptts)
+          {
+            if ((ptts->flags_ & pixelFormat::kAlpha) &&
+                (ptts->flags_ & pixelFormat::kColor))
+            {
+              traits.pixelFormat_ = kPixelFormatBGRA;
+            }
+            else if (ptts->flags_ & pixelFormat::kColor)
+            {
+              traits.pixelFormat_ = kPixelFormatBGR24;
+            }
+            else if (ptts->flags_ & pixelFormat::kAlpha)
+            {
+              traits.pixelFormat_ = kPixelFormatY400A;
+            }
+          }
+          
+          reader->setVideoTraitsOverride(traits);
+        }
       }
 #endif
     }
