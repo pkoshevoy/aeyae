@@ -656,8 +656,17 @@ namespace yae
     struct SwsContext * imgConvertCtx = NULL;
     
     // pixel format shortcut:
+    TPixelFormatId yaeNativeFormat = ffmpeg_to_yae(codecContext()->pix_fmt);
+    TPixelFormatId yaeOutputFormat = override_.pixelFormat_;
+    if (yaeOutputFormat == kPixelFormatY400A &&
+        yaeNativeFormat != kPixelFormatY400A)
+    {
+      // sws_getContext doesn't support Y400A, so drop the alpha channel:
+      yaeOutputFormat = kPixelFormatGRAY8;
+    }
+    
     const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(override_.pixelFormat_);
+      pixelFormat::getTraits(yaeOutputFormat);
     if (!ptts)
     {
       assert(false);
@@ -728,8 +737,7 @@ namespace yae
     }
     
     // shortcut for ffmpeg pixel format:
-    enum PixelFormat ffmpegPixelFormat =
-      yae_to_ffmpeg(override_.pixelFormat_);
+    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
     
     while (true)
     {
@@ -765,6 +773,7 @@ namespace yae
         vf.traits_ = override_;
         vf.traits_.encodedWidth_ = encodedWidth;
         vf.traits_.encodedHeight_ = encodedHeight;
+        vf.traits_.pixelFormat_ = yaeOutputFormat;
         
         vf.time_.base_ = stream_->time_base.den;
         if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)

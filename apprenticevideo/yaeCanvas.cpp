@@ -200,7 +200,11 @@ namespace yae
       GLenum format = GL_RGB;
       image->get_texture_info(data_type, format_internal, format);
       
-      if (format == GL_BGRA)
+      if (format == GL_BGRA ||
+          format == GL_RGBA ||
+          format == GL_ALPHA ||
+          format == GL_LUMINANCE_ALPHA ||
+          format == GL_COLOR_INDEX)
       {
         glViewport(0, 0, canvasWidth, canvasHeight);
         glMatrixMode(GL_PROJECTION);
@@ -323,29 +327,51 @@ namespace yae
         format = GL_BGR;
         dataType = GL_UNSIGNED_BYTE;
         return 3;
-        
+
+        /*
       case kPixelFormatMONOWHITE:
         //! Y, 1bpp, 0 is white, 1 is black, in each byte pixels are
         //! ordered from the msb to the lsb
       case kPixelFormatMONOBLACK:
         //! Y, 1bpp, 0 is black, 1 is white, in each byte pixels are
         //! ordered from the msb to the lsb
-        
+
+#if 0
+        glEnable(GL_TEXTURE_2D);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glBindTexture(GL_TEXTURE_2D, texID);
+        glColorTableEXT(GL_TEXTURE_2D,
+                        GL_RGBA8,
+                        256,
+                        GL_RGBA,
+                        GL_UNSIGNED_BYTE,
+                        palette);
+        glTexImage2D(GL_TEXTURE_2D,
+                     0,
+                     GL_COLOR_INDEX8_EXT, // internal format
+                     width,
+                     height,
+                     0,
+                     GL_COLOR_INDEX, // format
+                     GL_UNSIGNED_BYTE, // datatype
+                     texture);
+#endif
         internalFormat = GL_LUMINANCE;
-        format = GL_LUMINANCE;
+        format = GL_COLOR_INDEX;
         dataType = GL_BITMAP;
         return 1;
-    
+        */
+        
       case kPixelFormatBGR8:
         //! packed RGB 3:3:2, 8bpp, (msb)2B 3G 3R(lsb)
         internalFormat = GL_R3_G3_B2;
-        format = GL_BGR;
+        format = GL_RGB;
         dataType = GL_UNSIGNED_BYTE_2_3_3_REV;
         return 3;
-    
+        
       case kPixelFormatRGB8:
         //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
-        internalFormat = 3;
+        internalFormat = GL_R3_G3_B2;
         format = GL_RGB;
         dataType = GL_UNSIGNED_BYTE_3_3_2;
         return 3;
@@ -354,28 +380,28 @@ namespace yae
         //! packed ARGB 8:8:8:8, 32bpp, ARGBARGB...
         internalFormat = 4;
         format = GL_BGRA;
-        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+        dataType = GL_UNSIGNED_INT_8_8_8_8;
         return 4;
     
       case kPixelFormatRGBA:
         //! packed RGBA 8:8:8:8, 32bpp, RGBARGBA...
         internalFormat = 4;
         format = GL_RGBA;
-        dataType = GL_UNSIGNED_INT_8_8_8_8;
+        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
         return 4;
     
       case kPixelFormatABGR:
         //! packed ABGR 8:8:8:8, 32bpp, ABGRABGR...
         internalFormat = 4;
         format = GL_RGBA;
-        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+        dataType = GL_UNSIGNED_INT_8_8_8_8;
         return 4;
     
       case kPixelFormatBGRA:
         //! packed BGRA 8:8:8:8, 32bpp, BGRABGRA...
         internalFormat = 4;
         format = GL_BGRA;
-        dataType = GL_UNSIGNED_INT_8_8_8_8;
+        dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
         return 4;
         
       case kPixelFormatGRAY16BE:
@@ -446,7 +472,7 @@ namespace yae
         //! most significant bit to 1
         
         internalFormat = 3;
-        format = GL_RGB;
+        format = GL_RGBA;
         dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
         return 3;
     
@@ -458,8 +484,8 @@ namespace yae
         //! most significant bit to 1
         
         internalFormat = 3;
-        format = GL_RGB;
-        dataType = GL_UNSIGNED_SHORT_5_5_5_1;
+        format = GL_BGRA;
+        dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
         return 3;
         
       case kPixelFormatRGB444BE:
@@ -470,8 +496,8 @@ namespace yae
         //! most significant bits to 1
     
         internalFormat = GL_RGB4;
-        format = GL_RGB;
-        dataType = GL_UNSIGNED_SHORT_4_4_4_4;
+        format = GL_RGBA;
+        dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
         return 3;
     
       case kPixelFormatRGB444LE:
@@ -482,7 +508,7 @@ namespace yae
         //! most significant bits to 1
         
         internalFormat = GL_RGB4;
-        format = GL_RGB;
+        format = GL_BGRA;
         dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
         return 3;
     

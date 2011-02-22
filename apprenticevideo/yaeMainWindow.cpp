@@ -22,6 +22,8 @@
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
+#include <yaePixelFormats.h>
+#include <yaePixelFormatTraits.h>
 #ifdef YAE_HAS_PORTAUDIO
 #include <yaeAudioRendererPortaudio.h>
 #else
@@ -129,14 +131,25 @@ namespace yae
     if (numVideoTracks)
     {
       reader->selectVideoTrack(0);
-#if 0
       VideoTraits traits;
       if (reader->getVideoTraits(traits))
       {
         // pixel format shortcut:
         const pixelFormat::Traits * ptts =
-          pixelFormat::getTraits(vtts.pixelFormat_);
+          pixelFormat::getTraits(traits.pixelFormat_);
 
+        std::cout << "yae: native format: ";
+        if (ptts)
+        {
+          std::cout << ptts->name_;
+        }
+        else
+        {
+          std::cout << "unsupported" << std::endl;
+        }
+        std::cout << std::endl;
+        
+#if 0
         bool unsupported = ptts == NULL;
 
         if (!unsupported)
@@ -167,16 +180,15 @@ namespace yae
             {
               traits.pixelFormat_ = kPixelFormatBGR24;
             }
-            else if (ptts->flags_ & pixelFormat::kAlpha)
-            {
-              traits.pixelFormat_ = kPixelFormatY400A;
-            }
           }
           
           reader->setVideoTraitsOverride(traits);
         }
-      }
+#elif 0
+        traits.pixelFormat_ = kPixelFormatY400A;
+        reader->setVideoTraitsOverride(traits);
 #endif
+      }
     }
     
     if (numAudioTracks)
