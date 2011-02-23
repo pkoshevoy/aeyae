@@ -9,6 +9,10 @@
 #ifndef YAE_PIXEL_FORMAT_FFMPEG_H_
 #define YAE_PIXEL_FORMAT_FFMPEG_H_
 
+#ifndef __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS
+#endif
+
 // yae includes:
 #include <yaeAPI.h>
 #include <yaePixelFormats.h>
