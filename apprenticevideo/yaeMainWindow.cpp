@@ -24,11 +24,7 @@
 #include <yaeReaderFFMPEG.h>
 #include <yaePixelFormats.h>
 #include <yaePixelFormatTraits.h>
-#ifdef YAE_HAS_PORTAUDIO
 #include <yaeAudioRendererPortaudio.h>
-#else
-#include <yaeAudioRendererQt.h>
-#endif
 #include <yaeVideoRenderer.h>
 
 // local includes:
@@ -58,11 +54,7 @@ namespace yae
     canvas_ = new Canvas(contextFormat);
     reader_ = ReaderFFMPEG::create();
     
-#ifdef YAE_HAS_PORTAUDIO
     audioRenderer_ = AudioRendererPortaudio::create();
-#else
-    audioRenderer_ = AudioRendererQt::create();
-#endif
     videoRenderer_ = VideoRenderer::create();
       
     delete centralwidget->layout();

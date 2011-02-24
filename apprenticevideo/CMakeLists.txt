@@ -34,7 +34,6 @@ endif (QT4_FOUND)
 
 set(QT_USE_OPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
-set(QT_USE_QTMULTIMEDIA TRUE)
 include(${QT_USE_FILE})
 
 add_definitions(-DBOOST_ALL_NO_LIB)
@@ -132,8 +131,6 @@ if (WIN32)
   find_library(LIBMOLDNAME_DEBUG_LIBRARY libmoldnamed PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmoldnamed library")
   find_library(AVICAP32_LIBRARY avicap32 PATHS ${FFMPEG_LIBS_PATH} DOC "avicap32 library")
   find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
-else (WIN32)
-  find_library(ASOUND_LIBRARY asound PATHS ${FFMPEG_LIBS_PATH} DOC "alsa sound library required by QtMultimedia")
 endif (WIN32)
 
 find_library(PORTAUDIO_LIBRARY portaudio PATHS ${FFMPEG_LIBS_PATH} DOC "portaudio library")
@@ -154,6 +151,8 @@ set(project_sources
   yaeAPI.cpp
   yaeAudioRenderer.h
   yaeAudioRenderer.cpp
+  yaeAudioRendererPortaudio.h
+  yaeAudioRendererPortaudio.cpp
   yaeCanvas.h
   yaeCanvas.cpp
   yaeMain.cpp
@@ -187,32 +186,6 @@ find_path(PORTAUDIO_INCLUDE_DIR
 if (PORTAUDIO_INCLUDE_DIR)
   include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
 endif (PORTAUDIO_INCLUDE_DIR)
-
-if (PORTAUDIO_LIBRARY)
-  add_definitions(-DYAE_HAS_PORTAUDIO)
-  set(project_sources 
-    yaeAudioRendererPortaudio.h
-    yaeAudioRendererPortaudio.cpp
-    ${project_sources} 
-    )
-else (PORTAUDIO_LIBRARY)
-  set(project_sources 
-    yaeAudioRendererQt.h
-    yaeAudioRendererQt.cpp
-    ${project_sources} 
-    )
-  set(project_moc_hxx 
-    yaeAudioRendererQt.h
-    ${project_moc_hxx}
-    )
-  set(TARGET_LIBS
-    ${QT_QTMULTIMEDIA_LIBRARY}
-    ${TARGET_LIBS}
-    )
-  include_directories(AFTER 
-    ${QT_QTMULTIMEDIA_INCLUDE_DIR}
-    )
-endif (PORTAUDIO_LIBRARY)
 
 # Set some Win32 Specific Settings
 if (WIN32)
@@ -426,10 +399,6 @@ if (WIN32)
   if (AVIFIL32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
   endif (AVIFIL32_LIBRARY)
-else (WIN32)
-  if (ASOUND_LIBRARY)
-    set(TARGET_LIBS ${TARGET_LIBS} ${ASOUND_LIBRARY})
-  endif (ASOUND_LIBRARY)
 endif (WIN32)
 
 #message("QT_CONFG: "${QT_CONFIG})
