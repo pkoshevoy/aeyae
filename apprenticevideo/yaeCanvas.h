@@ -106,6 +106,9 @@ namespace yae
     };
     
     RenderFrameEvent::TPayload payload_;
+
+    class TPrivate;
+    TPrivate * private_;
     
     //----------------------------------------------------------------
     // TImagePtr
