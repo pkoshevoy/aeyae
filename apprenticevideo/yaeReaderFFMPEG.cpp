@@ -729,13 +729,6 @@ namespace yae
       }
     }
 
-    // calculate frame size:
-    std::size_t bytesPerFrame = 0;
-    for (unsigned char i = 0; i < numSamplePlanes; i++)
-    {
-      bytesPerFrame += samplePlaneSize[i];
-    }
-    
     // shortcut for ffmpeg pixel format:
     enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
     
@@ -790,17 +783,21 @@ namespace yae
           vf.time_.base_ = stream_->avg_frame_rate.num;
         }
         
-        vf.setBufferSize<unsigned char>(bytesPerFrame);
-        unsigned char * vfData = vf.getBuffer<unsigned char>();
+        TSampleBufferPtr sampleBuffer(new TSampleBuffer(numSamplePlanes),
+                                      &ISampleBuffer::deallocator);
+        for (unsigned char i = 0; i < numSamplePlanes; i++)
+        {
+          std::size_t rowBytes = sampleLineSize[i];
+          std::size_t rows = samplePlaneSize[i] / rowBytes;
+          sampleBuffer->resize(i, rowBytes, rows);
+        }
+        vf.sampleBuffer_ = sampleBuffer;
         
         AVPicture pict;
-        pict.data[0] = vfData;
-        pict.linesize[0] = sampleLineSize[0];
-
-        for (unsigned char i = 1; i < numSamplePlanes; i++)
+        for (unsigned char i = 0; i < numSamplePlanes; i++)
         {
-          pict.data[i] = pict.data[i - 1] + samplePlaneSize[i - 1];
-          pict.linesize[i] = sampleLineSize[i];
+          pict.data[i] = sampleBuffer->samples(i);
+          pict.linesize[i] = sampleBuffer->rowBytes(i);
         }
         
         // Convert the image into the desired pixel format:
@@ -1116,6 +1113,7 @@ namespace yae
         
         af.traits_ = trackTraits;
         af.time_.base_ = stream_->time_base.den;
+        
         if (packet.pts != AV_NOPTS_VALUE)
         {
           af.time_.time_ = stream_->time_base.num * packet.pts;
@@ -1130,17 +1128,20 @@ namespace yae
           af.time_.base_ = trackTraits.sampleRate_;
         }
         
-        af.setBufferSize<unsigned char>(totalBytes);
-        unsigned char * afBuffer = af.getBuffer<unsigned char>();
+        TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
+                                      &ISampleBuffer::deallocator);
+        af.sampleBuffer_ = sampleBuffer;
+        sampleBuffer->resize(0, totalBytes, 1, 1);
+        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
         
         // concatenate chunks into a contiguous frame buffer:
         while (!chunks.empty())
         {
           const unsigned char * chunk = &(chunks.front().front());
           std::size_t chunkSize = chunks.front().size();
-          memcpy(afBuffer, chunk, chunkSize);
+          memcpy(afSampleBuffer, chunk, chunkSize);
           
-          afBuffer += chunkSize;
+          afSampleBuffer += chunkSize;
           chunks.pop_front();
         }
         

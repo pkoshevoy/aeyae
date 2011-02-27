@@ -184,6 +184,107 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     bool isUpsideDown_;
   };
+
+  //----------------------------------------------------------------
+  // ISampleBuffer
+  // 
+  class ISampleBuffer
+  {
+  protected:
+    virtual ~ISampleBuffer();
+    
+  public:
+    //! The de/structor is intentionally hidden, use destroy() method instead.
+    //! This is necessary in order to avoid conflicting memory manager
+    //! problems that arise on windows when various libs are linked to
+    //! different versions of runtime library.  Each library uses its own
+    //! memory manager, so allocating in one library call and deallocating
+    //! in another library will not work.  This can be avoided by hiding
+    //! the standard constructor/destructor and providing an explicit
+    //! interface for de/allocating an object instance, thus ensuring that
+    //! the same memory manager will perform de/allocation.
+    virtual void destroy() = 0;
+    
+    //! number of contiguous sample planes:
+    virtual std::size_t samplePlanes() const = 0;
+    
+    //! samples plane accessor:
+    virtual unsigned char * samples(std::size_t samplePlane) const = 0;
+    
+    //! bytes per plane row:
+    virtual std::size_t rowBytes(std::size_t samplePlaneIndex) const = 0;
+    
+    //! this will call ISampleBuffer::destroy()
+    static void deallocator(ISampleBuffer * sb);
+  };
+  
+  //----------------------------------------------------------------
+  // TISampleBufferPtr
+  // 
+  typedef boost::shared_ptr<ISampleBuffer> TISampleBufferPtr;
+
+  //----------------------------------------------------------------
+  // TSamplePlane
+  // 
+  struct TSamplePlane
+  {
+    TSamplePlane();
+    ~TSamplePlane();
+    
+    // resize the sample plane:
+    void resize(std::size_t rowBytes,
+                std::size_t rows,
+                unsigned char alignment = 16);
+    
+    // samples accessors:
+    inline unsigned char * data() const
+    { return data_ + alignmentOffset_; }
+    
+    // bytes per sample row:
+    inline int rowBytes() const
+    { return rowBytes_; }
+    
+  protected:
+    unsigned char * data_;
+    std::size_t alignmentOffset_;
+    int rowBytes_;
+    int rows_;
+  };
+  
+  //----------------------------------------------------------------
+  // TSampleBuffer
+  //
+  struct TSampleBuffer : public ISampleBuffer
+  {
+    TSampleBuffer(std::size_t samplePlanes);
+    
+    // virtual:
+    void destroy();
+    
+    // virtual:
+    std::size_t samplePlanes() const;
+    
+    // virtual:
+    unsigned char * samples(std::size_t samplePlane) const;
+    
+    // virtual:
+    std::size_t rowBytes(std::size_t samplePlane) const;
+    
+    // helper:
+    void resize(std::size_t samplePlane,
+                std::size_t rowBytes,
+                std::size_t rows,
+                std::size_t alignment = 16);
+    
+  protected:
+    // sample planes:
+    std::vector<TSamplePlane> plane_;
+  };
+  
+  //----------------------------------------------------------------
+  // TSampleBufferPtr
+  // 
+  typedef boost::shared_ptr<TSampleBuffer> TSampleBufferPtr;
   
   //----------------------------------------------------------------
   // TFrame
@@ -194,50 +295,14 @@ namespace yae
     typedef traits_t TTraits;
     typedef TFrame<traits_t> TSelf;
     
-    TFrame(): dataSize_(0)
-    {}
-    
-    //! resize data buffer:
-    template <typename TUnit>
-    inline void
-    setBufferSize(std::size_t numUnits)
-    {
-      dataSize_ = sizeof(TUnit) * numUnits;
-      
-      std::size_t paddingBytes = sizeof(TDataUnit) - 1;
-      std::size_t n = ((dataSize_ + paddingBytes) /
-                       sizeof(TDataUnit));
-      
-      data_.resize(n);
-    }
-    
-    //! data buffer accessors:
-    template <typename TUnit>
-    inline TUnit * getBuffer()
-    { return (TUnit *)(&(data_[0])); }
-    
-    template <typename TUnit>
-    inline const TUnit * getBuffer() const
-    { return (const TUnit *)(&(data_[0])); }
-    
-    template <typename TUnit>
-    inline std::size_t getBufferSize() const
-    { return dataSize_ / sizeof(TUnit); }
-    
     //! frame position:
     TTime time_;
     
     //! frame traits:
     TTraits traits_;
     
-  private:
-    //! frame data (8-byte aligned):
-    typedef boost::uint64_t TDataUnit;
-    typedef std::vector<TDataUnit> TData;
-    TData data_;
-    
-    //! frame payload size, in bytes, excluding padding:
-    std::size_t dataSize_;
+    //! frame sample buffer:
+    TISampleBufferPtr sampleBuffer_;
   };
   
   //----------------------------------------------------------------

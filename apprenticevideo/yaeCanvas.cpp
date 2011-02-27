@@ -523,7 +523,7 @@ namespace yae
                       vtts.encodedHeight_,
                       pixelFormatGL,
                       dataTypeGL,
-                      frame->getBuffer<unsigned char>());
+                      frame->sampleBuffer_->samples(0));
     }
     glPopClientAttrib();
     return true;

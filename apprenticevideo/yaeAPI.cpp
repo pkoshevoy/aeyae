@@ -171,4 +171,122 @@ namespace yae
     pixelAspectRatio_(1.0),
     isUpsideDown_(false)
   {}
+
+  //----------------------------------------------------------------
+  // ISampleBuffer::~ISampleBuffer
+  // 
+  ISampleBuffer::~ISampleBuffer()
+  {}
+  
+  //----------------------------------------------------------------
+  // ISampleBuffer::deallocator
+  // 
+  void
+  ISampleBuffer::deallocator(ISampleBuffer * sb)
+  {
+    if (sb)
+    {
+      sb->destroy();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // TSamplePlane::TSamplePlane
+  // 
+  TSamplePlane::TSamplePlane():
+    data_(NULL),
+    alignmentOffset_(0),
+    rowBytes_(0),
+    rows_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // TSamplePlane::~TSamplePlane
+  // 
+  TSamplePlane::~TSamplePlane()
+  {
+    delete [] data_;
+  }
+
+  //----------------------------------------------------------------
+  // TSamplePlane::resize
+  // 
+  void
+  TSamplePlane::resize(std::size_t rowBytes,
+                       std::size_t rows,
+                       unsigned char alignment)
+  {
+    std::size_t misalignedBytes = rowBytes % alignment;
+    std::size_t alignedRowBytes =
+      misalignedBytes ?
+      rowBytes + alignment - misalignedBytes :
+      rowBytes;
+
+    std::size_t planeSize = (alignedRowBytes * rows);
+    delete [] data_;
+    data_ = new unsigned char [planeSize + alignment - 1];
+    alignmentOffset_ = std::size_t(data_) % alignment;
+    rowBytes_ = alignedRowBytes;
+    rows_ = rows;
+  }
+  
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::TSampleBuffer
+  // 
+  TSampleBuffer::TSampleBuffer(std::size_t numSamplePlanes):
+    plane_(numSamplePlanes)
+  {}
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::destroy
+  // 
+  void
+  TSampleBuffer::destroy()
+  {
+    delete this;
+  }
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::samplePlanes
+  // 
+  std::size_t
+  TSampleBuffer::samplePlanes() const
+  {
+    return plane_.size();
+  }
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::samples
+  // 
+  unsigned char *
+  TSampleBuffer::samples(std::size_t samplePlane) const
+  {
+    return samplePlane < plane_.size() ? plane_[samplePlane].data() : NULL;
+  }
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::rowBytes
+  // 
+  std::size_t
+  TSampleBuffer::rowBytes(std::size_t samplePlane) const
+  {
+    return samplePlane < plane_.size() ? plane_[samplePlane].rowBytes() : 0;
+  }
+
+  //----------------------------------------------------------------
+  // TSampleBuffer::resize
+  // 
+  void
+  TSampleBuffer::resize(std::size_t samplePlane,
+                        std::size_t rowBytes,
+                        std::size_t rows,
+                        std::size_t alignment)
+  {
+    assert(samplePlane < plane_.size());
+    if (samplePlane < plane_.size())
+    {
+      plane_[samplePlane].resize(rowBytes, rows, alignment);
+    }
+  }
 }
