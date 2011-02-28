@@ -502,7 +502,8 @@ namespace yae
 
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
     {
-      // glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH,
+                    frame->sampleBuffer_->rowBytes(0) / (ptts->stride_[0] >> 3));
       // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
       // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
 
