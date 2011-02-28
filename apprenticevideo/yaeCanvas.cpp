@@ -43,21 +43,30 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
   
   switch (yaePixelFormat)
   {
-#ifdef __APPLE__
     case yae::kPixelFormatYUYV422:
-      //! packed RGB 8:8:8, 24bpp, RGBRGB...
-      internalFormat = 3;
-      format = GL_YCBCR_422_APPLE;
-      dataType = GL_UNSIGNED_SHORT_8_8_APPLE;
-      return 3;
-      
+      //! packed YUV 4:2:2, 16bpp, Y0 Cb Y1 Cr
     case yae::kPixelFormatUYVY422:
-      //! packed RGB 8:8:8, 24bpp, RGBRGB...
-      internalFormat = 3;
-      format = GL_YCBCR_422_APPLE;
-      dataType = GL_UNSIGNED_SHORT_8_8_REV_APPLE;
-      return 3;
+      //! packed YUV 4:2:2, 16bpp, Cb Y0 Cr Y1
+      
+      if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+      {
+        internalFormat = 3;
+        format = GL_YCBCR_422_APPLE;
+        
+#ifdef __BIG_ENDIAN__
+        dataType =
+          yaePixelFormat == yae::kPixelFormatYUYV422 ?
+          GL_UNSIGNED_SHORT_8_8_APPLE :
+          GL_UNSIGNED_SHORT_8_8_REV_APPLE;
+#else
+        dataType =
+          yaePixelFormat == yae::kPixelFormatYUYV422 ?
+          GL_UNSIGNED_SHORT_8_8_REV_APPLE :
+          GL_UNSIGNED_SHORT_8_8_APPLE;
 #endif
+        return 3;
+      }
+      break;
       
     case yae::kPixelFormatYUV420P:
       //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
@@ -497,23 +506,26 @@ namespace yae
                    0, // border width
                    pixelFormatGL,
                    dataTypeGL,
-                   NULL); // probably can't do this with APPLE_client_storage
+                   NULL);
     }
 
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
     {
       glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    frame->sampleBuffer_->rowBytes(0) / (ptts->stride_[0] >> 3));
+                    frame->sampleBuffer_->rowBytes(0) /
+                    (ptts->stride_[0] / 8));
+      
       // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
       // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
 
       // FIXME: will these solve the BE/LE mismatch problem?
       // glPixelStorei(GL_UNPACK_SWAP_BYTES, swap_bytes_);
       // glPixelStorei(GL_UNPACK_LSB_FIRST, lsb_first_);
-      
-#ifdef __APPLE__
-      glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
-#endif
+
+      if (glewIsExtensionSupported("GL_APPLE_client_storage"))
+      {
+        glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+      }
       
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT,

@@ -216,17 +216,11 @@ namespace yae
                        std::size_t rows,
                        unsigned char alignment)
   {
-    std::size_t misalignedBytes = rowBytes % alignment;
-    std::size_t alignedRowBytes =
-      misalignedBytes ?
-      rowBytes + alignment - misalignedBytes :
-      rowBytes;
-
-    std::size_t planeSize = (alignedRowBytes * rows);
+    std::size_t planeSize = (rowBytes * rows);
     delete [] data_;
     data_ = new unsigned char [planeSize + alignment - 1];
     alignmentOffset_ = std::size_t(data_) % alignment;
-    rowBytes_ = alignedRowBytes;
+    rowBytes_ = rowBytes;
     rows_ = rows;
   }
   

@@ -796,7 +796,7 @@ namespace yae
         {
           std::size_t rowBytes = sampleLineSize[i];
           std::size_t rows = samplePlaneSize[i] / rowBytes;
-          sampleBuffer->resize(i, rowBytes, rows);
+          sampleBuffer->resize(i, rowBytes, rows, 16);
         }
         vf.sampleBuffer_ = sampleBuffer;
 
@@ -1166,7 +1166,7 @@ namespace yae
         TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
                                       &ISampleBuffer::deallocator);
         af.sampleBuffer_ = sampleBuffer;
-        sampleBuffer->resize(0, totalBytes, 1, 1);
+        sampleBuffer->resize(0, totalBytes, 1, 16);
         unsigned char * afSampleBuffer = sampleBuffer->samples(0);
         
         // concatenate chunks into a contiguous frame buffer:

@@ -33,7 +33,7 @@ namespace yae
   {
     typedef Queue<TData> TSelf;
     
-    Queue(std::size_t maxSize = 61):
+    Queue(std::size_t maxSize = 50):
       closed_(true),
       size_(0),
       maxSize_(maxSize)
