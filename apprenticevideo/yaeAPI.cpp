@@ -273,6 +273,15 @@ namespace yae
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].rowBytes() : 0;
   }
+  
+  //----------------------------------------------------------------
+  // TSampleBuffer::rows
+  // 
+  std::size_t
+  TSampleBuffer::rows(std::size_t samplePlane) const
+  {
+    return samplePlane < plane_.size() ? plane_[samplePlane].rows() : 0;
+  }
 
   //----------------------------------------------------------------
   // TSampleBuffer::resize

@@ -414,7 +414,8 @@ namespace yae
       close();
       return false;
     }
-    
+
+    stream_->codec->opaque = this;
     return true;
   }
   
@@ -619,7 +620,9 @@ namespace yae
   {
     FrameWithAutoCleanup():
       frame_(avcodec_alloc_frame())
-    {}
+    {
+      frame_->opaque = this;
+    }
     
     ~FrameWithAutoCleanup()
     {
@@ -655,8 +658,12 @@ namespace yae
     FrameWithAutoCleanup frameAutoCleanup;
     struct SwsContext * imgConvertCtx = NULL;
     
+    // shortcut to native frame format traits:
+    VideoTraits nativeTraits;
+    getTraits(nativeTraits);
+    
     // pixel format shortcut:
-    TPixelFormatId yaeNativeFormat = ffmpeg_to_yae(codecContext()->pix_fmt);
+    TPixelFormatId yaeNativeFormat = nativeTraits.pixelFormat_;
     TPixelFormatId yaeOutputFormat = override_.pixelFormat_;
     if (yaeOutputFormat == kPixelFormatY400A &&
         yaeNativeFormat != kPixelFormatY400A)
@@ -749,8 +756,8 @@ namespace yae
         int gotPicture = 0;
         
         AVFrame * avFrame = frameAutoCleanup;
-        /* int bytesUsed = */
-        avcodec_decode_video2(codecContext(),
+        AVCodecContext * codecContext = this->codecContext();
+        avcodec_decode_video2(codecContext,
                               avFrame,
                               &gotPicture,
                               &packet->ffmpeg_);
@@ -762,11 +769,6 @@ namespace yae
         framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
-        
-        vf.traits_ = override_;
-        vf.traits_.encodedWidth_ = encodedWidth;
-        vf.traits_.encodedHeight_ = encodedHeight;
-        vf.traits_.pixelFormat_ = yaeOutputFormat;
         
         vf.time_.base_ = stream_->time_base.den;
         if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)
@@ -782,6 +784,11 @@ namespace yae
           vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1);
           vf.time_.base_ = stream_->avg_frame_rate.num;
         }
+
+        vf.traits_ = override_;
+        vf.traits_.encodedWidth_ = encodedWidth;
+        vf.traits_.encodedHeight_ = encodedHeight;
+        vf.traits_.pixelFormat_ = yaeOutputFormat;
         
         TSampleBufferPtr sampleBuffer(new TSampleBuffer(numSamplePlanes),
                                       &ISampleBuffer::deallocator);
@@ -792,47 +799,75 @@ namespace yae
           sampleBuffer->resize(i, rowBytes, rows);
         }
         vf.sampleBuffer_ = sampleBuffer;
-        
-        AVPicture pict;
-        for (unsigned char i = 0; i < numSamplePlanes; i++)
+
+        if (nativeTraits.pixelFormat_ == yaeOutputFormat &&
+            nativeTraits.encodedWidth_ == encodedWidth &&
+            nativeTraits.encodedHeight_ == encodedHeight)
         {
-          pict.data[i] = sampleBuffer->samples(i);
-          pict.linesize[i] = sampleBuffer->rowBytes(i);
-        }
-        
-        // Convert the image into the desired pixel format:
-        if (imgConvertCtx == NULL)
-        {
-          imgConvertCtx = sws_getContext(// from:
-                                         vf.traits_.visibleWidth_,
-                                         vf.traits_.visibleHeight_, 
-                                         codecContext()->pix_fmt,
-                                         
-                                         // to:
-                                         vf.traits_.visibleWidth_,
-                                         vf.traits_.visibleHeight_,
-                                         ffmpegPixelFormat,
-                                         
-                                         SWS_BICUBIC,
-                                         NULL,
-                                         NULL,
-                                         NULL);
-          if (imgConvertCtx == NULL)
+          // copy the sample planes:
+          
+          for (unsigned char i = 0; i < numSamplePlanes; i++)
           {
-            assert(false);
-            break;
+            std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
+            std::size_t dstRows = sampleBuffer->rows(i);
+            unsigned char * dst = sampleBuffer->samples(i);
+            
+            std::size_t srcRowBytes = avFrame->linesize[i];
+            const unsigned char * src = avFrame->data[i];
+            
+            std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
+            for (std::size_t i = 0; i < dstRows; i++)
+            {
+              memcpy(dst, src, copyRowBytes);
+              src += srcRowBytes;
+              dst += dstRowBytes;
+            }
           }
         }
+        else
+        {
+          // convert the image to the desired pixel format:
+          
+          AVPicture pict;
+          for (unsigned char i = 0; i < numSamplePlanes; i++)
+          {
+            pict.data[i] = sampleBuffer->samples(i);
+            pict.linesize[i] = sampleBuffer->rowBytes(i);
+          }
+          
+          if (imgConvertCtx == NULL)
+          {
+            imgConvertCtx = sws_getContext(// from:
+                                           nativeTraits.encodedWidth_,
+                                           nativeTraits.encodedHeight_, 
+                                           codecContext->pix_fmt,
+                                           
+                                           // to:
+                                           vf.traits_.encodedWidth_,
+                                           vf.traits_.encodedHeight_,
+                                           ffmpegPixelFormat,
+                                           
+                                           SWS_BICUBIC,
+                                           NULL,
+                                           NULL,
+                                           NULL);
+            if (imgConvertCtx == NULL)
+            {
+              assert(false);
+              break;
+            }
+          }
+          
+          sws_scale(imgConvertCtx,
+                    avFrame->data,
+                    avFrame->linesize,
+                    0,
+                    codecContext->height,
+                    pict.data,
+                    pict.linesize);
+        }
         
-        sws_scale(imgConvertCtx,
-                  avFrame->data,
-                  avFrame->linesize,
-                  0,
-                  codecContext()->height,
-                  pict.data,
-                  pict.linesize);
-        
-        // put the decoded/scaled frame into frame queue:
+        // put the output frame into frame queue:
         frameQueue_.push(vfPtr);
       }
       catch (...)

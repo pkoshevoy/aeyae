@@ -241,14 +241,18 @@ namespace yae
     { return data_ + alignmentOffset_; }
     
     // bytes per sample row:
-    inline int rowBytes() const
+    inline std::size_t rowBytes() const
     { return rowBytes_; }
+    
+    // rows per plane:
+    inline std::size_t rows() const
+    { return rows_; }
     
   protected:
     unsigned char * data_;
     std::size_t alignmentOffset_;
-    int rowBytes_;
-    int rows_;
+    std::size_t rowBytes_;
+    std::size_t rows_;
   };
   
   //----------------------------------------------------------------
@@ -269,6 +273,9 @@ namespace yae
     
     // virtual:
     std::size_t rowBytes(std::size_t samplePlane) const;
+    
+    // helper:
+    std::size_t rows(std::size_t samplePlane) const;
     
     // helper:
     void resize(std::size_t samplePlane,
