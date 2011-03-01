@@ -123,12 +123,12 @@ namespace yae
     if (numVideoTracks)
     {
       reader->selectVideoTrack(0);
-      VideoTraits traits;
-      if (reader->getVideoTraits(traits))
+      VideoTraits vtts;
+      if (reader->getVideoTraits(vtts))
       {
         // pixel format shortcut:
         const pixelFormat::Traits * ptts =
-          pixelFormat::getTraits(traits.pixelFormat_);
+          pixelFormat::getTraits(vtts.pixelFormat_);
 
         std::cout << "yae: native format: ";
         if (ptts)
@@ -146,39 +146,44 @@ namespace yae
 
         if (!unsupported)
         {
-          unsupported =
-            (ptts.flags_ & pixelFormat::kPaletted) ||
-            ((ptts.flags_ & pixelFormat::kPacked) &&
-             (ptts.flags_ & pixelFormat::kPlanar));
+          unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
         }
-        
-        for (unsigned char i = 0; !unsupported && i < ptts->channels_; i++)
+
+        if (!unsupported)
         {
-          unsupported = depth_[i] < 4;
+          GLint internalFormatGL;
+          GLenum pixelFormatGL;
+          GLenum dataTypeGL;
+          unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
+                                                         internalFormatGL,
+                                                         pixelFormatGL,
+                                                         dataTypeGL);
+          unsupported = (supportedChannels != ptts->channels_);
         }
         
         if (unsupported)
         {
-          traits.pixelFormat_ = kPixelFormatGRAY8;
+          vtts.pixelFormat_ = kPixelFormatGRAY8;
           
           if (ptts)
           {
             if ((ptts->flags_ & pixelFormat::kAlpha) &&
                 (ptts->flags_ & pixelFormat::kColor))
             {
-              traits.pixelFormat_ = kPixelFormatBGRA;
+              vtts.pixelFormat_ = kPixelFormatBGRA;
             }
-            else if (ptts->flags_ & pixelFormat::kColor)
+            else if ((ptts->flags_ & pixelFormat::kColor) ||
+                     (ptts->flags_ & pixelFormat::kPaletted))
             {
-              traits.pixelFormat_ = kPixelFormatBGR24;
+              vtts.pixelFormat_ = kPixelFormatBGR24;
             }
           }
           
-          reader->setVideoTraitsOverride(traits);
+          reader->setVideoTraitsOverride(vtts);
         }
 #elif 0
-        traits.pixelFormat_ = kPixelFormatY400A;
-        reader->setVideoTraitsOverride(traits);
+        vtts.pixelFormat_ = kPixelFormatY400A;
+        reader->setVideoTraitsOverride(vtts);
 #endif
       }
     }
@@ -188,11 +193,11 @@ namespace yae
       reader->selectAudioTrack(0);
 #if 0
       // FIXME: just testing:
-      AudioTraits traits;
-      if (reader->getAudioTraits(traits))
+      AudioTraits atts;
+      if (reader->getAudioTraits(atts))
       {
-        traits.channelLayout_ = kAudioStereo;
-        reader->setVideoTraitsOverride(traits);
+        atts.channelLayout_ = kAudioStereo;
+        reader->setVideoTraitsOverride(atts);
       }
 #endif
     }
