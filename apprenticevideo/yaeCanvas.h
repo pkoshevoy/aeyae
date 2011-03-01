@@ -26,6 +26,18 @@
 #include <yaeVideoCanvas.h>
 
 
+//----------------------------------------------------------------
+// yae_to_opengl
+// 
+// returns number of sample planes supported by OpenGL,
+// passes back parameters to use with glTexImage2D
+// 
+YAE_API unsigned int
+yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
+              GLint & internalFormat,
+              GLenum & format,
+              GLenum & dataType);
+
 namespace yae
 {
 

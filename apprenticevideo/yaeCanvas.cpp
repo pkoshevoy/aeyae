@@ -33,7 +33,7 @@
 //----------------------------------------------------------------
 // yae_to_opengl
 // 
-static unsigned int
+unsigned int
 yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
               GLint & internalFormat,
               GLenum & format,
@@ -264,7 +264,7 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       //! most significant bit to 1
       
       internalFormat = 3;
-      format = GL_RGBA;
+      format = GL_BGRA;
       dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
       return 3;
       
@@ -514,12 +514,25 @@ namespace yae
       glPixelStorei(GL_UNPACK_ROW_LENGTH,
                     frame->sampleBuffer_->rowBytes(0) /
                     (ptts->stride_[0] / 8));
+
+      GLint swapBytes = GL_FALSE;
+#ifdef __BIG_ENDIAN__
+      if (ptts->flags_ & pixelFormat::kLE)
+      {
+        swapBytes = GL_TRUE;
+      }
+#else
+      if (ptts->flags_ & pixelFormat::kBE)
+      {
+        swapBytes = GL_TRUE;
+      }
+#endif
       
       // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
       // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
 
       // FIXME: will these solve the BE/LE mismatch problem?
-      // glPixelStorei(GL_UNPACK_SWAP_BYTES, swap_bytes_);
+      glPixelStorei(GL_UNPACK_SWAP_BYTES, swapBytes);
       // glPixelStorei(GL_UNPACK_LSB_FIRST, lsb_first_);
 
       if (glewIsExtensionSupported("GL_APPLE_client_storage"))
