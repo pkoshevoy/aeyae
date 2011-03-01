@@ -43,6 +43,9 @@ endif (WIN32)
 
 add_definitions(-DYAE_STATIC)
 
+# use static GLEW libs:
+add_definitions(-DGLEW_STATIC=1)
+
 include_directories(AFTER 
   .
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -224,7 +227,7 @@ add_executable(${PROGNAME}
 set(TARGET_LIBS
   ${THE_UI_LIBRARY}
   ${THE_CORE_LIBRARY}
-  ${GLEW_LIBRARIES}
+  ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
