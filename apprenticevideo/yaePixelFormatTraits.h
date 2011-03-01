@@ -36,7 +36,7 @@ namespace yae
     //----------------------------------------------------------------
     // Traits
     // 
-    YAE_API struct Traits
+    struct YAE_API Traits
     {
       // format label:
       const char * name_;
