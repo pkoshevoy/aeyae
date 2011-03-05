@@ -216,13 +216,13 @@ namespace yae
       return true;
     }
     
-    AudioTraits atraits;
-    if (!reader_->getAudioTraits(atraits))
+    AudioTraits atts;
+    if (!reader_->getAudioTraitsOverride(atts))
     {
       return false;
     }
 
-    sampleSize_ = getBitsPerSample(atraits.sampleFormat_) / 8;
+    sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
     
     outputParams_.device = outputDevices_[deviceIndex];
     
@@ -230,9 +230,9 @@ namespace yae
     outputParams_.suggestedLatency = devInfo->defaultHighOutputLatency;
     
     outputParams_.hostApiSpecificStreamInfo = NULL;
-    outputParams_.channelCount = getNumberOfChannels(atraits.channelLayout_);
+    outputParams_.channelCount = getNumberOfChannels(atts.channelLayout_);
     
-    switch (atraits.sampleFormat_)
+    switch (atts.sampleFormat_)
     {
       case kAudio8BitOffsetBinary:
         outputParams_.sampleFormat = paUInt8;
@@ -255,7 +255,7 @@ namespace yae
         return false;
     }
     
-    if (atraits.channelFormat_ == kAudioChannelsPlanar)
+    if (atts.channelFormat_ == kAudioChannelsPlanar)
     {
       outputParams_.sampleFormat |= paNonInterleaved;
     }
@@ -263,7 +263,7 @@ namespace yae
     PaError errCode = Pa_OpenStream(&output_,
                                     NULL,
                                     &outputParams_,
-                                    double(atraits.sampleRate_),
+                                    double(atts.sampleRate_),
                                     paFramesPerBufferUnspecified,
                                     paNoFlag, // paClipOff,
                                     &callback,
