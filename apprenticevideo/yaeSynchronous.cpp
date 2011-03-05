@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system includes:
+#include <iostream>
+
 // yae includes:
 #include <yaeSynchronous.h>
 
@@ -13,7 +16,10 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/thread_time.hpp>
+#include <boost/date_time/posix_time/time_formatters.hpp>
 
+// namespace access:
+using boost::posix_time::to_simple_string;
 
 namespace yae
 {
@@ -23,7 +29,7 @@ namespace yae
   // 
   struct TimeSegment
   {
-    TimeSegment() {}
+    TimeSegment();
     
     // this keeps track of "when" the time segment was specified:
     boost::system_time origin_;
@@ -31,8 +37,20 @@ namespace yae
     TTime t0_;
     TTime dt_;
     
+    // this keeps track of "when" someone annouced they will be late:
+    boost::system_time waitForMe_;
+    double delayInSeconds_;
+    
     mutable boost::mutex mutex_;
   };
+
+  //----------------------------------------------------------------
+  // TimeSegment::TimeSegment
+  // 
+  TimeSegment::TimeSegment():
+    waitForMe_(boost::get_system_time()),
+    delayInSeconds_(0.0)
+  {}
 
   //----------------------------------------------------------------
   // TTimeSegmentPtr
@@ -49,12 +67,16 @@ namespace yae
     TPrivate():
       shared_(new TimeSegment()),
       copied_(false)
-    {}
+    {
+      waitingFor_ = boost::get_system_time();
+    }
     
     TPrivate(const TPrivate & p):
       shared_(p.shared_),
       copied_(true)
-    {}
+    {
+      waitingFor_ = boost::get_system_time();
+    }
 
     TPrivate & operator = (const TPrivate & p)
     {
@@ -62,12 +84,14 @@ namespace yae
       {
         shared_ = p.shared_;
         copied_ = true;
+        waitingFor_ = boost::get_system_time();
       }
 
       return *this;
     }
     
     TTimeSegmentPtr shared_;
+    boost::system_time waitingFor_;
     bool copied_;
   };
 
@@ -191,6 +215,75 @@ namespace yae
     return relativePosition;
   }
   
+  //----------------------------------------------------------------
+  // SharedClock::waitForMe
+  // 
+  void
+  SharedClock::waitForMe(double delayInSeconds)
+  {
+    TimeSegment & timeSegment = *(private_->shared_);
+    boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+    
+    boost::system_time now(boost::get_system_time());
+    boost::posix_time::time_duration delta = now - timeSegment.waitForMe_;
+    double timeSinceLastDelay = double(delta.total_milliseconds()) / 1000.0;
+    
+    if (timeSinceLastDelay > timeSegment.delayInSeconds_)
+    {
+      timeSegment.waitForMe_ = now;
+      timeSegment.delayInSeconds_ = delayInSeconds;
+      private_->waitingFor_ = timeSegment.waitForMe_;
+      
+#if 1
+      std::cerr << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
+                << ", " << delayInSeconds
+                << std::endl;
+#endif
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // SharedClock::waitForOthers
+  // 
+  void
+  SharedClock::waitForOthers()
+  {
+    TimeSegment & timeSegment = *(private_->shared_);
+    
+    boost::system_time waitFor;
+    double delayInSeconds = 0.0;
+    {
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      waitFor = timeSegment.waitForMe_;
+      delayInSeconds = timeSegment.delayInSeconds_;
+    }
+
+    if (private_->waitingFor_ < waitFor)
+    {
+      private_->waitingFor_ = waitFor;
+    
+      std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
+      
+      if (allowsSettingTime())
+      {
+        boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+        timeSegment.origin_ = boost::get_system_time();
+      }
+      
+      boost::this_thread::sleep(boost::posix_time::milliseconds
+                                (long(0.5 + delayInSeconds * 1000.0)));
+    }
+#if 0
+    else
+    {
+      std::cerr << "waitFor: " << to_simple_string(private_->waitingFor_)
+                << std::endl
+                << "waiting: " << to_simple_string(waitFor)
+                << std::endl;
+    }
+#endif
+  }
+
 
   //----------------------------------------------------------------
   // ISynchronous::~ISynchronous

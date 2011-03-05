@@ -56,6 +56,10 @@ namespace yae
     //! relative to the reference time interval:
     double getCurrentTime(TTime & t0, TTime & dt) const;
     
+    //! annouce that you are late so others would stop and wait for you:
+    void waitForMe(double waitInSeconds = 1.0);
+    void waitForOthers();
+    
   private:
     class TPrivate;
     TPrivate * private_;

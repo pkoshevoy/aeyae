@@ -163,7 +163,7 @@ namespace yae
                                                          pixelFormatGL,
                                                          dataTypeGL,
                                                          shouldSwapBytes);
-          unsupported = (supportedChannels != ptts->channels_);
+          unsupported = (supportedChannels < 1 /* ptts->channels_ */);
         }
         
         if (unsupported)
@@ -180,7 +180,7 @@ namespace yae
             else if ((ptts->flags_ & pixelFormat::kColor) ||
                      (ptts->flags_ & pixelFormat::kPaletted))
             {
-              if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+              if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
               {
                 vtts.pixelFormat_ = kPixelFormatYUYV422;
               }
@@ -255,7 +255,8 @@ namespace yae
     
     // update the renderers:
     reader_->close();
-    if (!audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader))
+    unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
+    if (!audioRenderer_->open(audioDevice, reader))
     {
       AudioTraits atts;
       if (reader->getAudioTraits(atts))
@@ -264,7 +265,7 @@ namespace yae
         reader->setAudioTraitsOverride(atts);
       }
       
-      if (!audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader))
+      if (!audioRenderer_->open(audioDevice, reader))
       {
         reader->selectAudioTrack(numAudioTracks);
         

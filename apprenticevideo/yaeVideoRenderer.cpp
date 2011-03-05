@@ -62,6 +62,9 @@ namespace yae
     {
       return true;
     }
+
+    // buffer up some frames:
+    clock_.waitForMe(1.0);
     
     return thread_.run();
   }
@@ -93,6 +96,8 @@ namespace yae
     {
       boost::this_thread::interruption_point();
       
+      clock_.waitForOthers();
+      
       // get the time segment we are supposed to render for,
       // and the current time relative to the time segment:
       double relativePlayheadPosition = clock_.getCurrentTime(t0, dt);
@@ -112,6 +117,13 @@ namespace yae
         boost::this_thread::sleep(boost::posix_time::milliseconds
                                   (long(df * 1000.0)));
         continue;
+      }
+      else if (-df > 0.067 /* frameDuration * 2.0 */)
+      {
+        // tell others to wait for the video renderer:
+        std::cerr << "video is late " << -df << " sec" << std::endl;
+        double delayInSeconds = std::max(-df + frameDuration, 1.0);
+        clock_.waitForMe(delayInSeconds);
       }
       
       // read a frame:

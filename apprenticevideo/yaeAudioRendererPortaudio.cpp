@@ -402,6 +402,8 @@ namespace yae
         srcStride = srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
       }
       
+      clock_.waitForOthers();
+      
       const unsigned char * srcBuf = audioFrame_->sampleBuffer_->samples(0);
       std::size_t srcFrameSize = audioFrame_->sampleBuffer_->rowBytes(0);
       std::size_t srcChunkSize = 0;

@@ -566,7 +566,8 @@ namespace yae
   // VideoTrack::VideoTrack
   // 
   VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream)
+    Track(context, stream),
+    frameQueue_(30)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
   }
@@ -1026,7 +1027,8 @@ namespace yae
   // AudioTrack::AudioTrack
   // 
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream)
+    Track(context, stream),
+    frameQueue_(30)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
   }
