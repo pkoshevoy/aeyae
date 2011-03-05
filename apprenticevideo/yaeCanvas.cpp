@@ -30,7 +30,6 @@
 #include <QApplication>
 
 
-#ifdef __BIG_ENDIAN__
 //----------------------------------------------------------------
 // yae_to_opengl
 // 
@@ -54,359 +53,6 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       {
         internalFormat = 3;
         format = GL_YCBCR_422_APPLE;
-#if 1
-        dataType =
-          yaePixelFormat == yae::kPixelFormatYUYV422 ?
-          GL_UNSIGNED_SHORT_8_8_APPLE :
-          GL_UNSIGNED_SHORT_8_8_REV_APPLE;
-#else
-        dataType = GL_UNSIGNED_SHORT_8_8_APPLE;
-        shouldSwapBytes =
-          yaePixelFormat == yae::kPixelFormatYUYV422 ?
-          GL_FALSE :
-          GL_TRUE;
-#endif
-        return 3;
-      }
-      break;
-      
-    case yae::kPixelFormatYUV420P:
-      //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
-    case yae::kPixelFormatYUV422P:
-      //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples)
-    case yae::kPixelFormatYUV444P:
-      //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples)
-    case yae::kPixelFormatYUV410P:
-      //! planar YUV 4:1:0, 9bpp, (1 Cr & Cb sample per 4x4 Y samples)
-    case yae::kPixelFormatYUV411P:
-      //! planar YUV 4:1:1, 12bpp, (1 Cr & Cb sample per 4x1 Y samples)
-    case yae::kPixelFormatGRAY8:
-      //! Y, 8bpp
-    case yae::kPixelFormatPAL8:
-      //! 8 bit with kPixelFormatRGB32 palette
-    case yae::kPixelFormatNV12:
-      //! planar YUV 4:2:0, 12bpp, 1 plane for Y and 1 plane for the UV
-      //! components, which are interleaved (first byte U and the
-      //! following byte V)
-    case yae::kPixelFormatNV21:
-      //! as above, but U and V bytes are swapped
-    case yae::kPixelFormatYUV440P:
-      //! planar YUV 4:4:0 (1 Cr & Cb sample per 1x2 Y samples)
-    case yae::kPixelFormatYUVA420P:
-      //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
-      //! samples)
-    case yae::kPixelFormatYUVJ420P:
-      //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples), JPEG
-    case yae::kPixelFormatYUVJ422P:
-      //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples), JPEG
-    case yae::kPixelFormatYUVJ444P:
-      //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples), JPEG
-    case yae::kPixelFormatYUVJ440P:
-      //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
-      
-      internalFormat = GL_LUMINANCE;
-      format = GL_LUMINANCE;
-      dataType = GL_UNSIGNED_BYTE;
-      return 1;
-      
-    case yae::kPixelFormatRGB24:
-      //! packed RGB 8:8:8, 24bpp, RGBRGB...
-      internalFormat = GL_RGB;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_BYTE;
-      return 3;
-      
-    case yae::kPixelFormatBGR24:
-      //! packed RGB 8:8:8, 24bpp, BGRBGR...
-      internalFormat = 3;
-      format = GL_BGR;
-      dataType = GL_UNSIGNED_BYTE;
-      return 3;
-      
-    case yae::kPixelFormatBGR8:
-      //! packed RGB 3:3:2, 8bpp, (msb)2B 3G 3R(lsb)
-      internalFormat = GL_R3_G3_B2;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_BYTE_2_3_3_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB8:
-      //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
-      internalFormat = GL_R3_G3_B2;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_BYTE_3_3_2;
-      return 3;
-      
-    case yae::kPixelFormatARGB:
-      //! packed ARGB 8:8:8:8, 32bpp, ARGBARGB...
-      internalFormat = 4;
-      format = GL_BGRA;
-#ifdef __BIG_ENDIAN__
-      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-#else
-      dataType = GL_UNSIGNED_INT_8_8_8_8;
-#endif
-      return 4;
-      
-    case yae::kPixelFormatRGBA:
-      //! packed RGBA 8:8:8:8, 32bpp, RGBARGBA...
-      internalFormat = 4;
-      format = GL_RGBA;
-#ifdef __BIG_ENDIAN__
-      dataType = GL_UNSIGNED_INT_8_8_8_8;
-#else
-      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-#endif
-      return 4;
-      
-    case yae::kPixelFormatABGR:
-      //! packed ABGR 8:8:8:8, 32bpp, ABGRABGR...
-      internalFormat = 4;
-      format = GL_RGBA;
-#ifdef __BIG_ENDIAN__
-      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-#else
-      dataType = GL_UNSIGNED_INT_8_8_8_8;
-#endif
-      return 4;
-      
-    case yae::kPixelFormatBGRA:
-      //! packed BGRA 8:8:8:8, 32bpp, BGRABGRA...
-      internalFormat = 4;
-      format = GL_BGRA;
-#ifdef __BIG_ENDIAN__
-      dataType = GL_UNSIGNED_INT_8_8_8_8;
-#else
-      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
-#endif
-      return 4;
-      
-    case yae::kPixelFormatGRAY16BE:
-      //! Y, 16bpp, big-endian
-    case yae::kPixelFormatYUV420P16BE:
-      //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
-      //! big-endian
-    case yae::kPixelFormatYUV422P16BE:
-      //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
-      //! big-endian
-    case yae::kPixelFormatYUV444P16BE:
-      //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
-      //! big-endian
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_LUMINANCE16;
-      format = GL_LUMINANCE;
-      dataType = GL_UNSIGNED_SHORT;
-      return 1;
-      
-    case yae::kPixelFormatGRAY16LE:
-      //! Y, 16bpp, little-endian
-    case yae::kPixelFormatYUV420P16LE:
-      //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
-      //! little-endian
-    case yae::kPixelFormatYUV422P16LE:
-      //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
-      //! little-endian
-    case yae::kPixelFormatYUV444P16LE:
-      //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
-      //! little-endian
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_LUMINANCE16;
-      format = GL_LUMINANCE;
-      dataType = GL_UNSIGNED_SHORT;
-      return 1;
-      
-    case yae::kPixelFormatRGB48BE:
-      //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
-      //! each R/G/B component is stored as big-endian
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB16;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT;
-      return 3;
-      
-    case yae::kPixelFormatRGB48LE:
-      //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
-      //! each R/G/B component is stored as little-endian
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB16;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT;
-      return 3;
-      
-    case yae::kPixelFormatRGB565BE:
-      //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), big-endian
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT_5_6_5;
-      return 3;
-      
-    case yae::kPixelFormatRGB565LE:
-      //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), little-endian
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT_5_6_5;
-      return 3;
-      
-    case yae::kPixelFormatBGR565BE:
-      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), big-endian
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatBGR565LE:
-      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), little-endian
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB555BE:
-      //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), big-endian,
-      //! most significant bit to 0
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_BGRA;
-      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB555LE:
-      //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), little-endian,
-      //! most significant bit to 0
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_BGRA;
-      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatBGR555BE:
-      //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), big-endian,
-      //! most significant bit to 1
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGBA;
-      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatBGR555LE:
-      //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), little-endian,
-      //! most significant bit to 1
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = 3;
-      format = GL_RGBA;
-      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB444BE:
-      //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), big-endian,
-      //! most significant bits to 0
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB4;
-      format = GL_BGRA;
-      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB444LE:
-      //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), little-endian,
-      //! most significant bits to 0
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB4;
-      format = GL_BGRA;
-      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
-      return 3;
-      
-    case yae::kPixelFormatBGR444BE:
-      //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), big-endian,
-      //! most significant bits to 1
-#ifndef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB4;
-      format = GL_RGBA;
-      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
-      return 3;
-      
-    case yae::kPixelFormatBGR444LE:
-      //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), little-endian,
-      //! most significant bits to 1
-#ifdef __BIG_ENDIAN__
-      shouldSwapBytes = GL_TRUE;
-#endif
-      internalFormat = GL_RGB4;
-      format = GL_RGBA;
-      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
-      return 3;
-      
-    case yae::kPixelFormatY400A:
-      //! 8bit gray, 8bit alpha
-      internalFormat = GL_LUMINANCE8_ALPHA8;
-      format = GL_LUMINANCE_ALPHA;
-      dataType = GL_UNSIGNED_BYTE;
-      return 2;
-      
-    default:
-      break;
-  }
-  
-  return 0;
-}
-#else
-//----------------------------------------------------------------
-// yae_to_opengl
-// 
-unsigned int
-yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
-              GLint & internalFormat,
-              GLenum & format,
-              GLenum & dataType,
-              GLint & shouldSwapBytes)
-{
-  shouldSwapBytes = GL_FALSE;
-  
-  switch (yaePixelFormat)
-  {
-    case yae::kPixelFormatYUYV422:
-      //! packed YUV 4:2:2, 16bpp, Y0 Cb Y1 Cr
-    case yae::kPixelFormatUYVY422:
-      //! packed YUV 4:2:2, 16bpp, Cb Y0 Cr Y1
-      
-      if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
-      {
-        internalFormat = 3;
-        format = GL_YCBCR_422_APPLE;
-        
 #ifdef __BIG_ENDIAN__
         dataType =
           yaePixelFormat == yae::kPixelFormatYUYV422 ?
@@ -475,38 +121,12 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       dataType = GL_UNSIGNED_BYTE;
       return 3;
       
-#if 0
-    case yae::kPixelFormatMONOWHITE:
-      //! Y, 1bpp, 0 is white, 1 is black, in each byte pixels are
-      //! ordered from the msb to the lsb
-    case yae::kPixelFormatMONOBLACK:
-      //! Y, 1bpp, 0 is black, 1 is white, in each byte pixels are
-      //! ordered from the msb to the lsb
-#if 0
-      glEnable(GL_TEXTURE_2D);
-      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-      glBindTexture(GL_TEXTURE_2D, texID);
-      glColorTableEXT(GL_TEXTURE_2D,
-                      GL_RGBA8,
-                      256,
-                      GL_RGBA,
-                      GL_UNSIGNED_BYTE,
-                      palette);
-      glTexImage2D(GL_TEXTURE_2D,
-                   0,
-                   GL_COLOR_INDEX8_EXT, // internal format
-                   width,
-                   height,
-                   0,
-                   GL_COLOR_INDEX, // format
-                   GL_UNSIGNED_BYTE, // datatype
-                   texture);
-#endif
-      internalFormat = GL_LUMINANCE;
-      format = GL_COLOR_INDEX;
-      dataType = GL_BITMAP;
-      return 1;
-#endif
+    case yae::kPixelFormatRGB8:
+      //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
+      internalFormat = GL_R3_G3_B2;
+      format = GL_RGB;
+      dataType = GL_UNSIGNED_BYTE_3_3_2;
+      return 3;
       
     case yae::kPixelFormatBGR8:
       //! packed RGB 3:3:2, 8bpp, (msb)2B 3G 3R(lsb)
@@ -515,64 +135,83 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       dataType = GL_UNSIGNED_BYTE_2_3_3_REV;
       return 3;
       
-    case yae::kPixelFormatRGB8:
-      //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
-      internalFormat = GL_R3_G3_B2;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_BYTE_3_3_2;
-      return 3;
-      
     case yae::kPixelFormatARGB:
       //! packed ARGB 8:8:8:8, 32bpp, ARGBARGB...
       internalFormat = 4;
       format = GL_BGRA;
+#ifdef __BIG_ENDIAN__
+      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+#else
       dataType = GL_UNSIGNED_INT_8_8_8_8;
+#endif
       return 4;
       
     case yae::kPixelFormatRGBA:
       //! packed RGBA 8:8:8:8, 32bpp, RGBARGBA...
       internalFormat = 4;
       format = GL_RGBA;
+#ifdef __BIG_ENDIAN__
+      dataType = GL_UNSIGNED_INT_8_8_8_8;
+#else
       dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+#endif
       return 4;
       
     case yae::kPixelFormatABGR:
       //! packed ABGR 8:8:8:8, 32bpp, ABGRABGR...
       internalFormat = 4;
       format = GL_RGBA;
+#ifdef __BIG_ENDIAN__
+      dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+#else
       dataType = GL_UNSIGNED_INT_8_8_8_8;
+#endif
       return 4;
       
     case yae::kPixelFormatBGRA:
       //! packed BGRA 8:8:8:8, 32bpp, BGRABGRA...
       internalFormat = 4;
       format = GL_BGRA;
+#ifdef __BIG_ENDIAN__
+      dataType = GL_UNSIGNED_INT_8_8_8_8;
+#else
       dataType = GL_UNSIGNED_INT_8_8_8_8_REV;
+#endif
       return 4;
       
     case yae::kPixelFormatGRAY16BE:
       //! Y, 16bpp, big-endian
+    case yae::kPixelFormatYUV420P16BE:
+      //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
+      //! big-endian
+    case yae::kPixelFormatYUV422P16BE:
+      //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
+      //! big-endian
+    case yae::kPixelFormatYUV444P16BE:
+      //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
+      //! big-endian
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_LUMINANCE16;
+      format = GL_LUMINANCE;
+      dataType = GL_UNSIGNED_SHORT;
+      return 1;
+      
     case yae::kPixelFormatGRAY16LE:
       //! Y, 16bpp, little-endian
     case yae::kPixelFormatYUV420P16LE:
       //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
       //! little-endian
-    case yae::kPixelFormatYUV420P16BE:
-      //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
-      //! big-endian
     case yae::kPixelFormatYUV422P16LE:
       //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
       //! little-endian
-    case yae::kPixelFormatYUV422P16BE:
-      //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
-      //! big-endian
     case yae::kPixelFormatYUV444P16LE:
       //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
       //! little-endian
-    case yae::kPixelFormatYUV444P16BE:
-      //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
-      //! big-endian
-      
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = GL_LUMINANCE16;
       format = GL_LUMINANCE;
       dataType = GL_UNSIGNED_SHORT;
@@ -581,10 +220,20 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
     case yae::kPixelFormatRGB48BE:
       //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
       //! each R/G/B component is stored as big-endian
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_RGB16;
+      format = GL_RGB;
+      dataType = GL_UNSIGNED_SHORT;
+      return 3;
+      
     case yae::kPixelFormatRGB48LE:
       //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
       //! each R/G/B component is stored as little-endian
-      
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = GL_RGB16;
       format = GL_RGB;
       dataType = GL_UNSIGNED_SHORT;
@@ -592,31 +241,50 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       
     case yae::kPixelFormatRGB565BE:
       //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), big-endian
-    case yae::kPixelFormatBGR565LE:
-      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), little-endian
-      
-      internalFormat = 3;
-      format = GL_RGB;
-      dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
-      return 3;
-      
-    case yae::kPixelFormatRGB565LE:
-      //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), little-endian
-    case yae::kPixelFormatBGR565BE:
-      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), big-endian
-      
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = 3;
       format = GL_RGB;
       dataType = GL_UNSIGNED_SHORT_5_6_5;
       return 3;
       
+    case yae::kPixelFormatRGB565LE:
+      //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), little-endian
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = 3;
+      format = GL_RGB;
+      dataType = GL_UNSIGNED_SHORT_5_6_5;
+      return 3;
+      
+    case yae::kPixelFormatBGR565BE:
+      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), big-endian
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = 3;
+      format = GL_RGB;
+      dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
+      return 3;
+      
+    case yae::kPixelFormatBGR565LE:
+      //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), little-endian
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = 3;
+      format = GL_RGB;
+      dataType = GL_UNSIGNED_SHORT_5_6_5_REV;
+      return 3;
+      
     case yae::kPixelFormatRGB555BE:
       //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), big-endian,
       //! most significant bit to 0
-    case yae::kPixelFormatBGR555LE:
-      //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), little-endian,
-      //! most significant bit to 1
-      
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = 3;
       format = GL_BGRA;
       dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
@@ -625,36 +293,77 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
     case yae::kPixelFormatRGB555LE:
       //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), little-endian,
       //! most significant bit to 0
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = 3;
+      format = GL_BGRA;
+      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+      return 3;
+      
     case yae::kPixelFormatBGR555BE:
       //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), big-endian,
       //! most significant bit to 1
-      
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = 3;
-      format = GL_BGRA;
+      format = GL_RGBA;
+      dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+      return 3;
+      
+    case yae::kPixelFormatBGR555LE:
+      //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), little-endian,
+      //! most significant bit to 1
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = 3;
+      format = GL_RGBA;
       dataType = GL_UNSIGNED_SHORT_1_5_5_5_REV;
       return 3;
       
     case yae::kPixelFormatRGB444BE:
       //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), big-endian,
       //! most significant bits to 0
-    case yae::kPixelFormatBGR444LE:
-      //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), little-endian,
-      //! most significant bits to 1
-      
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = GL_RGB4;
-      format = GL_RGBA;
+      format = GL_BGRA;
       dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
       return 3;
       
     case yae::kPixelFormatRGB444LE:
       //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), little-endian,
       //! most significant bits to 0
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_RGB4;
+      format = GL_BGRA;
+      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
+      return 3;
+      
     case yae::kPixelFormatBGR444BE:
       //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), big-endian,
       //! most significant bits to 1
-      
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
       internalFormat = GL_RGB4;
-      format = GL_BGRA;
+      format = GL_RGBA;
+      dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
+      return 3;
+      
+    case yae::kPixelFormatBGR444LE:
+      //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), little-endian,
+      //! most significant bits to 1
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_RGB4;
+      format = GL_RGBA;
       dataType = GL_UNSIGNED_SHORT_4_4_4_4_REV;
       return 3;
       
@@ -671,7 +380,6 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
   
   return 0;
 }
-#endif
 
 namespace yae
 {
