@@ -864,18 +864,50 @@ namespace yae
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       }
+      else
+      {
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+      }
       
       glMatrixMode(GL_PROJECTION);
       glLoadIdentity();
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
       
-      float imageWidth = float(private_->imageWidth());
-      float imageHeight = float(private_->imageHeight());
+      double imageWidth = private_->imageWidth();
+      double imageHeight = private_->imageHeight();
       
-      glViewport(0, 0, canvasWidth, canvasHeight);
+      double dar = imageWidth / imageHeight;
+      double car = double(canvasWidth) / double(canvasHeight);
+      
+      double x = 0.0;
+      double y = 0.0;
+      double w = double(canvasWidth);
+      double h = double(canvasHeight);
+      
+      if (dar < car)
+      {
+        w = double(canvasHeight) * dar;
+        x = 0.5 * (double(canvasWidth) - w);
+      }
+      else
+      {
+        h = double(canvasWidth) / dar;
+        y = 0.5 * (double(canvasHeight) - h);
+      }
+#if 0
+      std::cerr << "dar: " << dar
+                << ", car: " << car
+                << ", xy: " << x << " " << y
+                << ", wh: " << w << " " << h
+                << std::endl;
+#endif
+      
+      glViewport(GLint(x + 0.5), GLint(y + 0.5),
+                 GLsizei(w + 0.5), GLsizei(h + 0.5));
       glMatrixMode(GL_PROJECTION);
-      gluOrtho2D(0, imageWidth, imageHeight, 0);
+      gluOrtho2D(0.0, imageWidth, imageHeight, 0.0);
       
       glEnable(GL_TEXTURE_2D);
       private_->draw();
