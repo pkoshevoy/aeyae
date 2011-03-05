@@ -1072,6 +1072,31 @@ namespace yae
     // FIXME:
     return false;
   }
+
+  //----------------------------------------------------------------
+  // yae_to_ffmpeg
+  // 
+  static enum SampleFormat
+  yae_to_ffmpeg(TAudioSampleFormat yaeSampleFormat)
+  {
+    switch (yaeSampleFormat)
+    {
+      case kAudio8BitOffsetBinary:
+        return SAMPLE_FMT_U8;
+
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        return SAMPLE_FMT_S16;
+
+      case kAudio32BitFloat:
+        return SAMPLE_FMT_FLT;
+
+      default:
+        break;
+    }
+    
+    return SAMPLE_FMT_NONE;
+  }
   
   //----------------------------------------------------------------
   // AudioTrack::threadLoop
@@ -1081,16 +1106,26 @@ namespace yae
   {
     TOpenHere<TAudioFrameQueue> closeOnExit(frameQueue_);
     
-    TAudioFrame::TTraits trackTraits;
-    getTraits(trackTraits);
+    TAudioFrame::TTraits nativeTraits;
+    getTraits(nativeTraits);
     
     // declare a 16-byte aligned buffer for decoded audio samples:
     DECLARE_ALIGNED(16, uint8_t, buffer)
       [(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
 
+    int nativeChannels = getNumberOfChannels(nativeTraits.channelLayout_);
+    int nativeSampleRate = nativeTraits.sampleRate_;
+    enum SampleFormat nativeFormat = yae_to_ffmpeg(nativeTraits.sampleFormat_);
+    
+    int outputChannels = getNumberOfChannels(override_.channelLayout_);
+    int outputSampleRate = override_.sampleRate_;
+    enum SampleFormat outputFormat = yae_to_ffmpeg(override_.sampleFormat_);
+    
     unsigned int bytesPerSample =
-      getNumberOfChannels(trackTraits.channelLayout_) *
-      getBitsPerSample(trackTraits.sampleFormat_) / 8;
+      nativeChannels *
+      getBitsPerSample(nativeTraits.sampleFormat_) / 8;
+    
+    ReSampleContext * resampleCtx = NULL;
     
     while (true)
     {
@@ -1142,11 +1177,26 @@ namespace yae
 
         std::size_t numSamples = totalBytes / bytesPerSample;
         samplesDecoded_ += numSamples;
+
+        // FIXME: add support for resampling to support override_:
+        if (false && !resampleCtx)
+        {
+          resampleCtx = av_audio_resample_init(outputChannels,
+                                               nativeChannels,
+                                               outputSampleRate,
+                                               nativeSampleRate,
+                                               outputFormat,
+                                               nativeFormat,
+                                               16, // taps
+                                               10, // log2 phase count
+                                               0, // linear
+                                               0.8); // cutoff frequency
+        }
         
         TAudioFramePtr afPtr(new TAudioFrame());
         TAudioFrame & af = *afPtr;
         
-        af.traits_ = trackTraits;
+        af.traits_ = override_;
         af.time_.base_ = stream_->time_base.den;
         
         if (packet.pts != AV_NOPTS_VALUE)
@@ -1160,7 +1210,7 @@ namespace yae
         else
         {
           af.time_.time_ = samplesDecoded_ - numSamples;
-          af.time_.base_ = trackTraits.sampleRate_;
+          af.time_.base_ = nativeTraits.sampleRate_;
         }
         
         TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
@@ -1301,7 +1351,7 @@ namespace yae
   bool
   AudioTrack::getTraitsOverride(AudioTraits & override) const
   {
-    override = override;
+    override = override_;
     return true;
   }
   
