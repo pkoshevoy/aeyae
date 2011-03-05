@@ -144,7 +144,7 @@ namespace yae
         }
         std::cout << std::endl;
         
-#if 0
+#if 1
         bool unsupported = ptts == NULL;
 
         if (!unsupported)
@@ -196,10 +196,27 @@ namespace yae
 #elif 0
         vtts.pixelFormat_ = kPixelFormatRGB565BE;
         reader->setVideoTraitsOverride(vtts);
-        std::cout << "yae: override format: "
-                  << pixelFormat::getTraits(vtts.pixelFormat_)->name_
-                  << std::endl;
 #endif
+      }
+      
+      if (reader->getVideoTraitsOverride(vtts))
+      {
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+        
+        std::cout << "yae: output format: " << ptts->name_
+                  << ", par: " << vtts.pixelAspectRatio_
+                  << ", " << vtts.visibleWidth_
+                  << " x " << vtts.visibleHeight_;
+
+        if (vtts.pixelAspectRatio_ != 0.0)
+        {
+          std::cout << ", dar: "
+                    << (double(vtts.visibleWidth_) * vtts.pixelAspectRatio_ /
+                        double(vtts.visibleHeight_));
+        }
+        
+        std::cout << std::endl;
       }
     }
     
