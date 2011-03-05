@@ -203,38 +203,35 @@ namespace yae
       {
         const pixelFormat::Traits * ptts =
           pixelFormat::getTraits(vtts.pixelFormat_);
-        
-        std::cout << "yae: output format: " << ptts->name_
-                  << ", par: " << vtts.pixelAspectRatio_
-                  << ", " << vtts.visibleWidth_
-                  << " x " << vtts.visibleHeight_;
 
-        if (vtts.pixelAspectRatio_ != 0.0)
+        if (ptts)
         {
-          std::cout << ", dar: "
-                    << (double(vtts.visibleWidth_) * vtts.pixelAspectRatio_ /
-                        double(vtts.visibleHeight_));
+          std::cout << "yae: output format: " << ptts->name_
+                    << ", par: " << vtts.pixelAspectRatio_
+                    << ", " << vtts.visibleWidth_
+                    << " x " << vtts.visibleHeight_;
+          
+          if (vtts.pixelAspectRatio_ != 0.0)
+          {
+            std::cout << ", dar: "
+                      << (double(vtts.visibleWidth_) * vtts.pixelAspectRatio_ /
+                          double(vtts.visibleHeight_));
+          }
+          
+          std::cout << std::endl;
         }
-        
-        std::cout << std::endl;
+        else
+        {
+          // unsupported pixel format:
+          reader->selectVideoTrack(numVideoTracks);
+        }
       }
     }
     
     if (numAudioTracks)
     {
       reader->selectAudioTrack(0);
-#if 0
-      // FIXME: just testing:
-      AudioTraits atts;
-      if (reader->getAudioTraits(atts))
-      {
-        atts.channelLayout_ = kAudioStereo;
-        reader->setVideoTraitsOverride(atts);
-      }
-#endif
     }
-    
-    reader->threadStart();
     
     // setup renderer shared reference clock:
     videoRenderer_->close();
@@ -258,7 +255,28 @@ namespace yae
     
     // update the renderers:
     reader_->close();
-    audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader);
+    if (!audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader))
+    {
+      AudioTraits atts;
+      if (reader->getAudioTraits(atts))
+      {
+        atts.channelLayout_ = kAudioStereo;
+        reader->setAudioTraitsOverride(atts);
+      }
+      
+      if (!audioRenderer_->open(audioRenderer_->getDefaultDeviceIndex(), reader))
+      {
+        reader->selectAudioTrack(numAudioTracks);
+        
+        if (numVideoTracks)
+        {
+          videoRenderer_->takeThisClock(SharedClock());
+          videoRenderer_->obeyThisClock(videoRenderer_->clock());
+        }
+      }
+    }
+    
+    reader->threadStart();
     videoRenderer_->open(canvas_, reader);
     
     // replace the previous reader:
