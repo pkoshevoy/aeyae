@@ -931,7 +931,7 @@ namespace yae
     
     //! pixel aspect ration, used to calculate visible frame dimensions:
     t.pixelAspectRatio_ =
-      stream_->sample_aspect_ratio.den ?
+      stream_->sample_aspect_ratio.num && stream_->sample_aspect_ratio.den ?
       double(stream_->sample_aspect_ratio.num) /
       double(stream_->sample_aspect_ratio.den) :
       1.0;
