@@ -36,7 +36,8 @@ YAE_API unsigned int
 yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
               GLint & internalFormat,
               GLenum & format,
-              GLenum & dataType);
+              GLenum & dataType,
+              GLint & shouldSwapBytes);
 
 namespace yae
 {

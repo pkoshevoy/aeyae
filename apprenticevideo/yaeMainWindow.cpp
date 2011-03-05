@@ -11,6 +11,9 @@
 #include <sstream>
 #include <assert.h>
 
+// GLEW includes:
+#include <GL/glew.h>
+
 // Qt includes:
 #include <QApplication>
 #include <QCloseEvent>
@@ -154,10 +157,12 @@ namespace yae
           GLint internalFormatGL;
           GLenum pixelFormatGL;
           GLenum dataTypeGL;
+          GLint shouldSwapBytes;
           unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
                                                          internalFormatGL,
                                                          pixelFormatGL,
-                                                         dataTypeGL);
+                                                         dataTypeGL,
+                                                         shouldSwapBytes);
           unsupported = (supportedChannels != ptts->channels_);
         }
         
@@ -175,15 +180,25 @@ namespace yae
             else if ((ptts->flags_ & pixelFormat::kColor) ||
                      (ptts->flags_ & pixelFormat::kPaletted))
             {
-              vtts.pixelFormat_ = kPixelFormatBGR24;
+              if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+              {
+                vtts.pixelFormat_ = kPixelFormatYUYV422;
+              }
+              else
+              {
+                vtts.pixelFormat_ = kPixelFormatBGR24;
+              }
             }
           }
           
           reader->setVideoTraitsOverride(vtts);
         }
 #elif 0
-        vtts.pixelFormat_ = kPixelFormatY400A;
+        vtts.pixelFormat_ = kPixelFormatRGB565BE;
         reader->setVideoTraitsOverride(vtts);
+        std::cout << "yae: override format: "
+                  << pixelFormat::getTraits(vtts.pixelFormat_)->name_
+                  << std::endl;
 #endif
       }
     }
