@@ -214,8 +214,13 @@ namespace yae
           if (vtts.pixelAspectRatio_ != 0.0)
           {
             std::cout << ", dar: "
-                      << (double(vtts.visibleWidth_) * vtts.pixelAspectRatio_ /
-                          double(vtts.visibleHeight_));
+                      << (double(vtts.visibleWidth_) *
+                          vtts.pixelAspectRatio_ /
+                          double(vtts.visibleHeight_))
+                      << ", " << int(vtts.visibleWidth_ *
+                                     vtts.pixelAspectRatio_ +
+                                     0.5)
+                      << " x " << vtts.visibleHeight_;
           }
           
           std::cout << std::endl;
