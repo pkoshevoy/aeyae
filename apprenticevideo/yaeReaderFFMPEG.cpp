@@ -941,8 +941,8 @@ namespace yae
       0.0;
     
     //! encoded frame size (including any padding):
-    t.encodedWidth_ = context->width;
-    t.encodedHeight_ = context->height;
+    t.encodedWidth_ = context->coded_width;
+    t.encodedHeight_ = context->coded_height;
     
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
@@ -953,10 +953,16 @@ namespace yae
     t.visibleHeight_ = context->height;
     
     //! pixel aspect ration, used to calculate visible frame dimensions:
+    AVRational display_aspect_ratio;
+    av_reduce(&display_aspect_ratio.num,
+              &display_aspect_ratio.den,
+              context->width * context->sample_aspect_ratio.num,
+              context->height * context->sample_aspect_ratio.den,
+              1024 * 1024);
     t.pixelAspectRatio_ =
-      stream_->sample_aspect_ratio.num && stream_->sample_aspect_ratio.den ?
-      double(stream_->sample_aspect_ratio.num) /
-      double(stream_->sample_aspect_ratio.den) :
+      display_aspect_ratio.num && display_aspect_ratio.den ?
+      double(display_aspect_ratio.num * context->height) /
+      double(display_aspect_ratio.den * context->width) :
       1.0;
     
     //! a flag indicating whether video is upside-down:
