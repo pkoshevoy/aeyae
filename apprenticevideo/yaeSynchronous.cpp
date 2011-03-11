@@ -41,6 +41,9 @@ namespace yae
     boost::system_time waitForMe_;
     double delayInSeconds_;
     
+    // this indicates whether the clock is stopped while waiting for someone:
+    bool stopped_;
+    
     mutable boost::mutex mutex_;
   };
 
@@ -49,7 +52,8 @@ namespace yae
   // 
   TimeSegment::TimeSegment():
     waitForMe_(boost::get_system_time()),
-    delayInSeconds_(0.0)
+    delayInSeconds_(0.0),
+    stopped_(false)
   {}
 
   //----------------------------------------------------------------
@@ -205,6 +209,11 @@ namespace yae
     dt = timeSegment.dt_;
     double msecSegmentDuration = double(dt.time_) / double(dt.base_) * 1e+3;
     
+    if (timeSegment.stopped_)
+    {
+      return 0.0;
+    }
+    
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
     double msecCurrentPosition = double(delta.total_milliseconds());
@@ -241,6 +250,42 @@ namespace yae
 #endif
     }
   }
+
+  //----------------------------------------------------------------
+  // TStopTime
+  // 
+  struct TStopTime
+  {
+    TStopTime(TimeSegment & timeSegment, bool stop):
+      timeSegment_(timeSegment),
+      stopped_(false)
+    {
+      if (stop)
+      {
+        boost::lock_guard<boost::mutex> lock(timeSegment_.mutex_);
+        if (!timeSegment_.stopped_)
+        {
+          timeSegment_.stopped_ = true;
+          timeSegment_.origin_ = boost::get_system_time();
+          stopped_ = true;
+        }
+      }
+    }
+
+    ~TStopTime()
+    {
+      if (stopped_)
+      {
+        boost::lock_guard<boost::mutex> lock(timeSegment_.mutex_);
+        timeSegment_.stopped_ = false;
+        timeSegment_.origin_ = boost::get_system_time();
+      }
+    }
+
+  private:
+    TimeSegment & timeSegment_;
+    bool stopped_;
+  };
   
   //----------------------------------------------------------------
   // SharedClock::waitForOthers
@@ -263,13 +308,8 @@ namespace yae
       private_->waitingFor_ = waitFor;
     
       std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
-      
-      if (allowsSettingTime())
-      {
-        boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-        timeSegment.origin_ = boost::get_system_time();
-      }
-      
+
+      TStopTime stopTime(timeSegment, allowsSettingTime());
       boost::this_thread::sleep(boost::posix_time::milliseconds
                                 (long(0.5 + delayInSeconds * 1000.0)));
     }

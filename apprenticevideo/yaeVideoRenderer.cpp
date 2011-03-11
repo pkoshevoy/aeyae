@@ -92,7 +92,8 @@ namespace yae
     TTime framePosition;
     double frameDuration = 0.0;
     
-    while (true)
+    bool ok = true;
+    while (ok)
     {
       boost::this_thread::interruption_point();
       
@@ -118,22 +119,45 @@ namespace yae
                                   (long(df * 1000.0)));
         continue;
       }
-      else if (-df > 0.067 /* frameDuration * 2.0 */)
+      
+      if (-df > 0.067 /* frameDuration * 2.0 */)
       {
+        std::cerr << "video is late " << -df << " sec, "
+                  << "\tf0: " << f0
+                  << "\tf1: " << f1
+                  << "\tdt: " << relativePlayheadPosition
+                  << "\tt: " << playheadPosition
+                  << std::endl;
+        
         // tell others to wait for the video renderer:
-        std::cerr << "video is late " << -df << " sec" << std::endl;
         double delayInSeconds = std::max(-df + frameDuration, 1.0);
         clock_.waitForMe(delayInSeconds);
       }
       
       // read a frame:
       TVideoFramePtr frame;
-      if (!reader_->readVideo(frame))
+      while (ok)
+      {
+        ok = reader_->readVideo(frame);
+        if (ok)
+        {
+          framePosition = frame->time_;
+          double t =
+            double(framePosition.time_) /
+            double(framePosition.base_);
+          
+          if (t > f0)
+          {
+            break;
+          }
+        }
+      }
+      
+      if (!ok)
       {
         break;
       }
       
-      framePosition = frame->time_;
       frameDuration = 
         frame->traits_.frameRate_ ?
         1.0 / frame->traits_.frameRate_ :

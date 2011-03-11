@@ -561,6 +561,24 @@ namespace yae
   // VideoTrackPtr
   // 
   typedef boost::shared_ptr<VideoTrack> VideoTrackPtr;
+
+  //----------------------------------------------------------------
+  // descendingSortOrder
+  // 
+  static bool
+  aFollowsB(const TVideoFramePtr & a,
+            const TVideoFramePtr & b)
+  {
+    TTime framePosition;
+    if (a->time_.base_ == b->time_.base_)
+    {
+      return a->time_.time_ > b->time_.time_;
+    }
+    
+    double ta = double(a->time_.time_) / double(a->time_.base_);
+    double tb = double(b->time_.time_) / double(b->time_.base_);
+    return ta > tb;
+  }
   
   //----------------------------------------------------------------
   // VideoTrack::VideoTrack
@@ -570,6 +588,9 @@ namespace yae
     frameQueue_(30)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+
+    // make sure the frames are sorted from oldest to newest:
+    frameQueue_.setSortFunc(&aFollowsB);
   }
   
   //----------------------------------------------------------------
@@ -770,7 +791,7 @@ namespace yae
         framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
-        
+#if 0
         vf.time_.base_ = stream_->time_base.den;
         if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)
         {
@@ -781,6 +802,7 @@ namespace yae
           vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.dts;
         }
         else
+#endif
         {
           vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1);
           vf.time_.base_ = stream_->avg_frame_rate.num;

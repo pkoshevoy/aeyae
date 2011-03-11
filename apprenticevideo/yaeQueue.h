@@ -32,11 +32,13 @@ namespace yae
   struct Queue
   {
     typedef Queue<TData> TSelf;
+    typedef bool(*TSortFunc)(const TData &, const TData &);
     
     Queue(std::size_t maxSize = 50):
       closed_(true),
       size_(0),
-      maxSize_(maxSize)
+      maxSize_(maxSize),
+      sortFunc_(0)
     {}
     
     ~Queue()
@@ -59,6 +61,12 @@ namespace yae
       }
       catch (...)
       {}
+    }
+
+    void setSortFunc(TSortFunc sortFunc)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      sortFunc_ = sortFunc;
     }
     
     void setMaxSize(std::size_t maxSize)
@@ -147,8 +155,8 @@ namespace yae
           {
             return false;
           }
-          
-          data_.push_back(newData);
+
+          insert(newData);
           size_++;
         }
         
@@ -179,8 +187,8 @@ namespace yae
             return false;
           }
           
-          data = data_.front();
-          data_.pop_front();
+          data = data_.back();
+          data_.pop_back();
           size_--;
         }
         
@@ -207,7 +215,7 @@ namespace yae
             return false;
           }
           
-          data_.push_back(newData);
+          insert(newData);
           size_++;
         }
         
@@ -234,8 +242,8 @@ namespace yae
             return false;
           }
           
-          data = data_.front();
-          data_.pop_front();
+          data = data_.back();
+          data_.pop_back();
           size_--;
         }
         
@@ -299,12 +307,37 @@ namespace yae
     }
 
   protected:
+    
+    // push data into the queue:
+    void insert(const TData & newData)
+    {
+      if (data_.empty() || !sortFunc_)
+      {
+        data_.push_front(newData);
+        return;
+      }
+
+      // keep the queue sorted:
+      for (typename std::list<TData>::iterator i = data_.begin();
+           i != data_.end(); ++i)
+      {
+        if (sortFunc_(newData, *i))
+        {
+          data_.insert(i, newData);
+          return;
+        }
+      }
+      
+      data_.push_back(newData);
+    }
+    
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
     bool closed_;
     std::list<TData> data_;
     std::size_t size_;
     const std::size_t maxSize_;
+    TSortFunc sortFunc_;
   };
   
 }
