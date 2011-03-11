@@ -8,6 +8,7 @@
 
 // system includes:
 #include <iostream>
+#include <math.h>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -447,9 +448,9 @@ namespace yae
       {
         if (frame_->traits_.pixelAspectRatio_ != 0.0)
         {
-          return
-            double(frame_->traits_.visibleWidth_) *
-            frame_->traits_.pixelAspectRatio_;
+          return floor(double(frame_->traits_.visibleWidth_) *
+                       frame_->traits_.pixelAspectRatio_ +
+                       0.5);
         }
 
         return double(frame_->traits_.visibleWidth_);
