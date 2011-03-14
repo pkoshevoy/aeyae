@@ -283,6 +283,22 @@ namespace yae
   typedef Queue<TAudioFramePtr> TAudioFrameQueue;
   
   //----------------------------------------------------------------
+  // PacketTime
+  // 
+  struct PacketTime
+  {
+    PacketTime(int64_t pts, int64_t dts, int64_t duration):
+      pts_(pts),
+      dts_(dts),
+      duration_(duration)
+    {}
+    
+    int64_t pts_;
+    int64_t dts_;
+    int64_t duration_;
+  };
+  
+  //----------------------------------------------------------------
   // Track
   //
   struct Track
@@ -340,6 +356,16 @@ namespace yae
     Track & operator = (const Track &);
     
   protected:
+    static int callbackGetBuffer(AVCodecContext * c, AVFrame * frame);
+    static int callbackRegetBuffer(AVCodecContext * c, AVFrame * frame);
+    static void callbackReleaseBuffer(AVCodecContext * c, AVFrame * frame);
+    
+    virtual int getBuffer(AVCodecContext * c, AVFrame * frame);
+    virtual int regetBuffer(AVCodecContext * c, AVFrame * frame);
+    virtual void releaseBuffer(AVCodecContext * c, AVFrame * frame);
+    
+    void savePacketTime(const AVPacket & packet);
+    
     // worker thread:
     Thread<Track> thread_;
     
@@ -347,6 +373,7 @@ namespace yae
     AVStream * stream_;
     AVCodec * codec_;
     TPacketQueue packetQueue_;
+    PacketTime packetTime_;
   };
   
   //----------------------------------------------------------------
@@ -361,7 +388,8 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
-    codec_(NULL)
+    codec_(NULL),
+    packetTime_(AV_NOPTS_VALUE, AV_NOPTS_VALUE, AV_NOPTS_VALUE)
   {
     if (context_ && stream_)
     {
@@ -416,6 +444,10 @@ namespace yae
     }
 
     stream_->codec->opaque = this;
+    stream_->codec->get_buffer = &callbackGetBuffer;
+    stream_->codec->reget_buffer = &callbackRegetBuffer;
+    stream_->codec->release_buffer = &callbackReleaseBuffer;
+    
     return true;
   }
   
@@ -518,7 +550,99 @@ namespace yae
     thread_.stop();
     return thread_.wait();
   }
+
+  //----------------------------------------------------------------
+  // Track::callbackGetBuffer
+  // 
+  int
+  Track::callbackGetBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    Track * t = (Track *)(codecContext->opaque);
+    return t->getBuffer(codecContext, frame);
+  }
   
+  //----------------------------------------------------------------
+  // Track::callbackRegetBuffer
+  // 
+  int
+  Track::callbackRegetBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    Track * t = (Track *)(codecContext->opaque);
+    return t->regetBuffer(codecContext, frame);
+  }
+
+  //----------------------------------------------------------------
+  // Track::callbackReleaseBuffer
+  // 
+  void
+  Track::callbackReleaseBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    Track * t = (Track *)(codecContext->opaque);
+    t->releaseBuffer(codecContext, frame);
+  }
+  
+  //----------------------------------------------------------------
+  // Track::getBuffer
+  // 
+  int
+  Track::getBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    int err = avcodec_default_get_buffer(codecContext, frame);
+    if (!err)
+    {
+      PacketTime * ts = (PacketTime *)(frame->opaque);
+      delete ts;
+      
+      ts = new PacketTime(packetTime_);
+      frame->opaque = ts;
+    }
+    
+    return err;
+  }
+  
+  //----------------------------------------------------------------
+  // Track::regetBuffer
+  // 
+  int
+  Track::regetBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    int err = avcodec_default_reget_buffer(codecContext, frame);
+    if (!err)
+    {
+      PacketTime * ts = (PacketTime *)(frame->opaque);
+      delete ts;
+      
+      ts = new PacketTime(packetTime_);
+      frame->opaque = ts;
+    }
+    
+    return err;
+  }
+  
+  //----------------------------------------------------------------
+  // Track::releaseBuffer
+  // 
+  void
+  Track::releaseBuffer(AVCodecContext * codecContext, AVFrame * frame)
+  {
+    avcodec_default_release_buffer(codecContext, frame);
+    
+    PacketTime * ts = (PacketTime *)(frame->opaque);
+    delete ts;
+    
+    frame->opaque = NULL;
+  }
+
+  //----------------------------------------------------------------
+  // Track::savePacketTime
+  // 
+  void
+  Track::savePacketTime(const AVPacket & packet)
+  {
+    packetTime_.pts_ = packet.pts;
+    packetTime_.dts_ = packet.dts;
+    packetTime_.duration_ = packet.duration;
+  }
   
   //----------------------------------------------------------------
   // VideoTrack
@@ -642,9 +766,7 @@ namespace yae
   {
     FrameWithAutoCleanup():
       frame_(avcodec_alloc_frame())
-    {
-      frame_->opaque = this;
-    }
+    {}
     
     ~FrameWithAutoCleanup()
     {
@@ -767,22 +889,28 @@ namespace yae
       {
         boost::this_thread::interruption_point();
         
-        TPacketPtr packet;
-        bool ok = packetQueue_.pop(packet);
+        TPacketPtr packetPtr;
+        bool ok = packetQueue_.pop(packetPtr);
         if (!ok)
         {
           break;
         }
+
+        // make a local shallow copy of the packet:
+        AVPacket packet = packetPtr->ffmpeg_;
+
+        // save packet timestamps and duration so we can capture
+        // and re-use this to timestamp the decoded frame:
+        savePacketTime(packet);
         
         // Decode video frame
         int gotPicture = 0;
-        
         AVFrame * avFrame = frameAutoCleanup;
         AVCodecContext * codecContext = this->codecContext();
         avcodec_decode_video2(codecContext,
                               avFrame,
                               &gotPicture,
-                              &packet->ffmpeg_);
+                              &packet);
         if (!gotPicture)
         {
           continue;
@@ -791,18 +919,27 @@ namespace yae
         framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
-#if 0
         vf.time_.base_ = stream_->time_base.den;
-        if (packet->ffmpeg_.pts != AV_NOPTS_VALUE)
+
+        // shortcut to the saved packet time associated with this frame:
+        const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
+        
+#if 1
+        if (frameTime)
         {
-          vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.pts;
+          vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
         }
-        else if (packet->ffmpeg_.dts != AV_NOPTS_VALUE)
+#else
+        if (packet.pts != AV_NOPTS_VALUE)
         {
-          vf.time_.time_ = stream_->time_base.num * packet->ffmpeg_.dts;
+          vf.time_.time_ = stream_->time_base.num * packet.pts;
         }
-        else
+        else if (packet.dts != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * packet.dts;
+        }
 #endif
+        else
         {
           vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1);
           vf.time_.base_ = stream_->avg_frame_rate.num;
@@ -953,17 +1090,20 @@ namespace yae
     t.visibleHeight_ = context->height;
     
     //! pixel aspect ration, used to calculate visible frame dimensions:
-    AVRational display_aspect_ratio;
-    av_reduce(&display_aspect_ratio.num,
-              &display_aspect_ratio.den,
-              context->width * context->sample_aspect_ratio.num,
-              context->height * context->sample_aspect_ratio.den,
-              1024 * 1024);
-    t.pixelAspectRatio_ =
-      display_aspect_ratio.num && display_aspect_ratio.den ?
-      double(display_aspect_ratio.num * context->height) /
-      double(display_aspect_ratio.den * context->width) :
-      1.0;
+    t.pixelAspectRatio_ = 1.0;
+    
+    if (context->sample_aspect_ratio.num &&
+        context->sample_aspect_ratio.den)
+    {
+      t.pixelAspectRatio_ = (double(context->sample_aspect_ratio.num) /
+                             double(context->sample_aspect_ratio.den));
+    }
+    else if (stream_->sample_aspect_ratio.num &&
+             stream_->sample_aspect_ratio.den)
+    {
+      t.pixelAspectRatio_ = (double(stream_->sample_aspect_ratio.num) /
+                             double(stream_->sample_aspect_ratio.den));
+    }
     
     //! a flag indicating whether video is upside-down:
     t.isUpsideDown_ = false;
@@ -1172,6 +1312,10 @@ namespace yae
         
         // make a local shallow copy of the packet:
         AVPacket packet = packetPtr->ffmpeg_;
+        
+        // save packet timestamps and duration so we can capture
+        // and re-use this to timestamp the decoded frame:
+        // savePacketTime(packet);
         
         // Decode audio frame, piecewise:
         std::list<std::vector<unsigned char> > chunks;
