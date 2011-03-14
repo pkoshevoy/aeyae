@@ -130,7 +130,9 @@ namespace yae
                   << std::endl;
         
         // tell others to wait for the video renderer:
-        double delayInSeconds = std::max(-df + frameDuration, 1.0);
+        double delayInSeconds =
+          std::min(std::max(-df + frameDuration, 1.0), 2.0);
+        
         clock_.waitForMe(delayInSeconds);
       }
       
