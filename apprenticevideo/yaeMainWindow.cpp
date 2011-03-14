@@ -59,7 +59,7 @@ namespace yae
     
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
-      
+    
     delete centralwidget->layout();
     QVBoxLayout * layout = new QVBoxLayout(centralwidget);
     layout->setMargin(0);
@@ -122,6 +122,11 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     
     reader->threadStop();
+    
+    std::cout << std::endl
+              << "yae: " << url << std::endl
+              << "yae: video tracks: " << numVideoTracks << std::endl
+              << "yae: audio tracks: " << numAudioTracks << std::endl;
     
     if (numVideoTracks)
     {
