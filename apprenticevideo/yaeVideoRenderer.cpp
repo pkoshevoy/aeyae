@@ -62,9 +62,6 @@ namespace yae
     {
       return true;
     }
-
-    // buffer up some frames:
-    clock_.waitForMe(1.0);
     
     return thread_.run();
   }
