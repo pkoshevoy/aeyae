@@ -86,6 +86,13 @@ namespace yae
       cond_.notify_all();
     }
     
+    std::size_t getMaxSize() const
+    {
+      // get max queue size:
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return maxSize_;
+    }
+    
     // check whether the Queue is empty:
     bool isEmpty() const
     {
@@ -336,7 +343,7 @@ namespace yae
     bool closed_;
     std::list<TData> data_;
     std::size_t size_;
-    const std::size_t maxSize_;
+    std::size_t maxSize_;
     TSortFunc sortFunc_;
   };
   
