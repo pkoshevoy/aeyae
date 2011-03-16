@@ -390,7 +390,8 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
-    codec_(NULL)
+    codec_(NULL),
+    packetQueue_(120)
   {
     if (context_ && stream_)
     {
@@ -1028,16 +1029,21 @@ namespace yae
         }
 
         if (timestampsMonotonicallyIncreasing &&
-            frameTime)
+            frameTime &&
+            (frameTime->pts_ != AV_NOPTS_VALUE ||
+             framesDecoded_ == 1))
         {
           if (frameTime->pts_ != AV_NOPTS_VALUE)
           {
             vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
           }
+          else if (previousTime.pts_ != AV_NOPTS_VALUE)
+          {
+            vf.time_.time_ = stream_->time_base.num * (previousTime.pts_ + 1);
+          }
           else
           {
-            // drop this frame
-            continue;
+            vf.time_.time_ = 0;
           }
         }
         else if (stream_->avg_frame_rate.num &&
@@ -1324,10 +1330,12 @@ namespace yae
   // AudioTrack::AudioTrack
   // 
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream),
-    frameQueue_(90)
+    Track(context, stream)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+    
+    // match output queue size to input queue size:
+    frameQueue_.setMaxSize(packetQueue_.getMaxSize());
   }
   
   //----------------------------------------------------------------
