@@ -244,6 +244,7 @@ namespace yae
     }
     
     // setup renderer shared reference clock:
+    reader_->close();
     videoRenderer_->close();
     audioRenderer_->close();
     
@@ -264,7 +265,6 @@ namespace yae
     }
     
     // update the renderers:
-    reader_->close();
     unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
     if (!audioRenderer_->open(audioDevice, reader))
     {
