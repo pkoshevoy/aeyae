@@ -84,7 +84,6 @@ namespace yae
   VideoRenderer::TPrivate::threadLoop()
   {
     TTime t0;
-    TTime dt;
     
     TTime framePosition;
     double frameDuration = 0.0;
@@ -98,11 +97,8 @@ namespace yae
       
       // get the time segment we are supposed to render for,
       // and the current time relative to the time segment:
-      double relativePlayheadPosition = clock_.getCurrentTime(t0, dt);
+      double playheadPosition = clock_.getCurrentTime(t0);
       double segmentPosition = double(t0.time_) / double(t0.base_);
-      double segmentDuration = double(dt.time_) / double(dt.base_);
-      double playheadPosition = (segmentDuration * relativePlayheadPosition +
-                                 segmentPosition);
       
       // get position of the frame relative to the current time segment:
       double f0 = double(framePosition.time_) / double(framePosition.base_);
@@ -112,19 +108,30 @@ namespace yae
       if (df > 0.0)
       {
         // wait until the next frame is required:
+        double secondsToSleep = std::min(df, frameDuration);
+#if 0
+        std::cerr << "FRAME IS RELEVANT FOR " << df << " sec, "
+                  << "\tf0: " << f0
+                  << "\tf1: " << f1
+                  << "\tt: " << playheadPosition
+                  << "\tsleep: " << secondsToSleep << " sec"
+                  << std::endl;
+#endif
+        
         boost::this_thread::sleep(boost::posix_time::milliseconds
-                                  (long(df * 1000.0)));
+                                  (long(secondsToSleep * 1000.0)));
         continue;
       }
       
       if (-df > 0.067 /* frameDuration * 2.0 */)
       {
+#if 1
         std::cerr << "video is late " << -df << " sec, "
                   << "\tf0: " << f0
                   << "\tf1: " << f1
-                  << "\tdt: " << relativePlayheadPosition
                   << "\tt: " << playheadPosition
                   << std::endl;
+#endif
         
         // tell others to wait for the video renderer:
         double delayInSeconds =
@@ -164,9 +171,7 @@ namespace yae
       
       if (clock_.allowsSettingTime())
       {
-        TTime duration(framePosition);
-        duration.time_ = int64(double(duration.base_) * frameDuration);
-        clock_.setCurrentTime(framePosition, duration);
+        clock_.setCurrentTime(framePosition);
       }
       
       // dispatch the frame to the canvas for rendering:

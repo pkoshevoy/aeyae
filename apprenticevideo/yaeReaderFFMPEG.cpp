@@ -287,7 +287,9 @@ namespace yae
   // 
   struct PacketTime
   {
-    PacketTime(int64_t pts, int64_t dts, int64_t duration):
+    PacketTime(int64_t pts = AV_NOPTS_VALUE,
+               int64_t dts = AV_NOPTS_VALUE,
+               int64_t duration = AV_NOPTS_VALUE):
       pts_(pts),
       dts_(dts),
       duration_(duration)
@@ -388,8 +390,7 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
-    codec_(NULL),
-    packetTime_(AV_NOPTS_VALUE, AV_NOPTS_VALUE, AV_NOPTS_VALUE)
+    codec_(NULL)
   {
     if (context_ && stream_)
     {
@@ -639,8 +640,28 @@ namespace yae
   void
   Track::savePacketTime(const AVPacket & packet)
   {
-    packetTime_.pts_ = packet.pts;
-    packetTime_.dts_ = packet.dts;
+#if 1
+    if (packet.pts == stream_->start_time)
+    {
+      packetTime_.pts_ = AV_NOPTS_VALUE;
+    }
+    else
+#endif
+    {
+      packetTime_.pts_ = packet.pts;
+    }
+
+#if 1
+    if (packet.dts == stream_->first_dts)
+    {
+      packetTime_.dts_ = AV_NOPTS_VALUE;
+    }
+    else
+#endif
+    {
+      packetTime_.dts_ = packet.dts;
+    }
+    
     packetTime_.duration_ = packet.duration;
   }
   
@@ -792,6 +813,33 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // insertPacketTime
+  // 
+  static void
+  insertPacketTime(std::list<PacketTime> & packetTimes,
+                   const PacketTime & t)
+  {
+    if (packetTimes.empty())
+    {
+      packetTimes.push_front(t);
+      return;
+    }
+
+    for (std::list<PacketTime>::iterator i = packetTimes.begin();
+         i != packetTimes.end(); ++i)
+    {
+      const PacketTime & ti = *i;
+      if (t.pts_ > ti.pts_)
+      {
+        packetTimes.insert(i, t);
+        return;
+      }
+    }
+    
+    packetTimes.push_back(t);
+  }
+  
+  //----------------------------------------------------------------
   // VideoTrack::threadLoop
   // 
   void
@@ -882,6 +930,15 @@ namespace yae
 
     // shortcut for ffmpeg pixel format:
     enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
+
+    // it appears ffmpeg outputs decoded frames in correct presentation order
+    // but without the presentation time stamps (PTS), therefore I will
+    // keep a sorted list of packet time stamps for all packets going
+    // into avcodec_decode_video2 and use the earliest time stamp
+    // from that list to assign PTS to the decoded frames.
+    std::list<PacketTime> packetTimes;
+    PacketTime previousTime;
+    bool timestampsMonotonicallyIncreasing = true;
     
     while (true)
     {
@@ -898,10 +955,16 @@ namespace yae
 
         // make a local shallow copy of the packet:
         AVPacket packet = packetPtr->ffmpeg_;
-
+#if 0
+        std::cerr << "\n0. in  pts: " << packetTime_.pts_
+                  << ", dts: " << packetTime_.dts_
+                  << ", len: " << packetTime_.duration_ << std::endl;
+#endif
+        
         // save packet timestamps and duration so we can capture
         // and re-use this to timestamp the decoded frame:
         savePacketTime(packet);
+        insertPacketTime(packetTimes, packetTime_);
         
         // Decode video frame
         int gotPicture = 0;
@@ -915,6 +978,12 @@ namespace yae
         {
           continue;
         }
+
+        if (avFrame->repeat_pict)
+        {
+          std::cerr << "FRAME SHOULD BE REPEATED: " << avFrame->repeat_pict
+                    << std::endl;
+        }
         
         framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
@@ -923,26 +992,74 @@ namespace yae
 
         // shortcut to the saved packet time associated with this frame:
         const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
-        
-#if 1
         if (frameTime)
         {
-          vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
+          if (previousTime.pts_ != AV_NOPTS_VALUE &&
+              frameTime->pts_ != AV_NOPTS_VALUE)
+          {
+            timestampsMonotonicallyIncreasing =
+              previousTime.pts_ < frameTime->pts_;
+          }
+          
+          previousTime = *frameTime;
         }
-#else
-        if (packet.pts != AV_NOPTS_VALUE)
+        
+        PacketTime t;
+        if (!packetTimes.empty())
         {
-          vf.time_.time_ = stream_->time_base.num * packet.pts;
+          t = packetTimes.back();
+          packetTimes.pop_back();
+          
+          if (frameTime && frameTime->pts_ != t.pts_)
+          {
+            std::cerr << "\ntimestamp mismatch: " << std::endl
+                      << "1. out pts: " << frameTime->pts_
+                      << ", dts: " << frameTime->dts_
+                      << ", len: " << frameTime->duration_ << std::endl
+                      << "2. out pts: " << t.pts_
+                      << ", dts: " << t.dts_
+                      << ", len: " << t.duration_ << std::endl;
+          }
         }
-        else if (packet.dts != AV_NOPTS_VALUE)
-        {
-          vf.time_.time_ = stream_->time_base.num * packet.dts;
-        }
-#endif
         else
         {
-          vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1);
+          std::cerr << "2. packet timestamp is missing!" << std::endl;
+        }
+
+        if (timestampsMonotonicallyIncreasing &&
+            frameTime)
+        {
+          if (frameTime->pts_ != AV_NOPTS_VALUE)
+          {
+            vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
+          }
+          else
+          {
+            // drop this frame
+            continue;
+          }
+        }
+        else if (stream_->avg_frame_rate.num &&
+                 stream_->avg_frame_rate.den)
+        {
+          vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1) +
+            int64_t(double(stream_->avg_frame_rate.num) *
+                    double(stream_->start_time * stream_->time_base.num) /
+                    double(stream_->time_base.den));
           vf.time_.base_ = stream_->avg_frame_rate.num;
+        }
+        else if (stream_->r_frame_rate.num &&
+                 stream_->r_frame_rate.den)
+        {
+          vf.time_.time_ = stream_->r_frame_rate.den * (framesDecoded_ - 1) +
+            int64_t(double(stream_->r_frame_rate.num) *
+                    double(stream_->start_time * stream_->time_base.num) /
+                    double(stream_->time_base.den));
+          vf.time_.base_ = stream_->r_frame_rate.num;
+        }
+        else if (t.pts_ != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * t.pts_;
         }
 
         vf.traits_ = override_;
@@ -1071,11 +1188,22 @@ namespace yae
     t.pixelFormat_ = ffmpeg_to_yae(context->pix_fmt);
     
     //! frame rate:
-    t.frameRate_ =
-      stream_->avg_frame_rate.den ?
-      double(stream_->avg_frame_rate.num) /
-      double(stream_->avg_frame_rate.den) :
-      0.0;
+    if (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den)
+    {
+      t.frameRate_ =
+        double(stream_->avg_frame_rate.num) /
+        double(stream_->avg_frame_rate.den);
+    }
+    else if (stream_->r_frame_rate.num && stream_->r_frame_rate.den)
+    {
+      t.frameRate_ =
+        double(stream_->r_frame_rate.num) /
+        double(stream_->r_frame_rate.den);
+    }
+    else
+    {
+      t.frameRate_ = 0.0;
+    }
     
     //! encoded frame size (including any padding):
     t.encodedWidth_ = context->coded_width;
@@ -1196,7 +1324,7 @@ namespace yae
   // 
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
-    frameQueue_(30)
+    frameQueue_(90)
   {
     assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
   }
@@ -1329,7 +1457,7 @@ namespace yae
                                                 &bufferSize,
                                                 &packet);
           
-          if (bytesUsed < 0)
+          if (bytesUsed <= 0)
           {
             break;
           }
@@ -1338,10 +1466,13 @@ namespace yae
           packet.size -= bytesUsed;
           packet.data += bytesUsed;
           
-          chunks.push_back(std::vector<unsigned char>
-                           (buffer, buffer + bufferSize));
+          if (bufferSize)
+          {
+            chunks.push_back(std::vector<unsigned char>
+                             (buffer, buffer + bufferSize));
           
-          totalBytes += bufferSize;
+            totalBytes += bufferSize;
+          }
         }
         
         if (!totalBytes)
