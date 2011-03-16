@@ -1009,7 +1009,7 @@ namespace yae
         {
           t = packetTimes.back();
           packetTimes.pop_back();
-          
+#if 0
           if (frameTime && frameTime->pts_ != t.pts_)
           {
             std::cerr << "\ntimestamp mismatch: " << std::endl
@@ -1020,6 +1020,7 @@ namespace yae
                       << ", dts: " << t.dts_
                       << ", len: " << t.duration_ << std::endl;
           }
+#endif
         }
         else
         {
@@ -1457,7 +1458,7 @@ namespace yae
                                                 &bufferSize,
                                                 &packet);
           
-          if (bytesUsed <= 0)
+          if (bytesUsed < 0)
           {
             break;
           }
