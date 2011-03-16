@@ -424,7 +424,7 @@ namespace yae
         srcChunkSize = channelSize - bytesAlreadyConsumed;
         
         chunks.resize(srcChannels);
-        for (int i = 0; i < srcChannels; i++)
+        for (unsigned int i = 0; i < srcChannels; i++)
         {
           chunks[i] = srcBuf + i * channelSize + bytesAlreadyConsumed;
         }
@@ -459,7 +459,6 @@ namespace yae
     if (clock_.allowsSettingTime())
     {
       clock_.setCurrentTime(framePosition,
-                            frameDuration,
                             outputParams_.suggestedLatency);
     }
     

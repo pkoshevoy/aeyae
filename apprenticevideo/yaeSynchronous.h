@@ -48,13 +48,11 @@ namespace yae
     bool allowsSettingTime() const;
     
     //! set current time (only if this is the master clock):
-    bool setCurrentTime(const TTime & t0,
-                        const TTime & dt,
-                        double latencyInSeconds = 0.0);
+    bool setCurrentTime(const TTime & t0, double latencyInSeconds = 0.0);
     
     //! retrieve the reference time interval, return elapsed system time
     //! relative to the reference time interval:
-    double getCurrentTime(TTime & t0, TTime & dt) const;
+    double getCurrentTime(TTime & t0) const;
     
     //! annouce that you are late so others would stop and wait for you:
     void waitForMe(double waitInSeconds = 1.0);

@@ -35,7 +35,6 @@ namespace yae
     boost::system_time origin_;
     
     TTime t0_;
-    TTime dt_;
     
     // this keeps track of "when" someone annouced they will be late:
     boost::system_time waitForMe_;
@@ -174,9 +173,7 @@ namespace yae
   // SharedClock::setCurrentTime
   // 
   bool
-  SharedClock::setCurrentTime(const TTime & t0,
-                              const TTime & dt,
-                              double latency)
+  SharedClock::setCurrentTime(const TTime & t0, double latency)
   {
     if (!private_->copied_)
     {
@@ -188,7 +185,6 @@ namespace yae
       
       timeSegment.origin_ = now;
       timeSegment.t0_ = t0;
-      timeSegment.dt_ = dt;
       
       return true;
     }
@@ -200,28 +196,26 @@ namespace yae
   // SharedClock::getCurrentTime
   // 
   double
-  SharedClock::getCurrentTime(TTime & t0, TTime & dt) const
+  SharedClock::getCurrentTime(TTime & t0) const
   {
     const TimeSegment & timeSegment = *(private_->shared_);
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     
     t0 = timeSegment.t0_;
-    dt = timeSegment.dt_;
-    double msecSegmentDuration = double(dt.time_) / double(dt.base_) * 1e+3;
     
-    if (timeSegment.stopped_)
+    if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
       return 0.0;
     }
     
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
-    double msecCurrentPosition = double(delta.total_milliseconds());
     
-    double relativePosition =
-      dt.time_ ? (msecCurrentPosition / msecSegmentDuration) : 0.0;
+    double playheadPosition =
+      double(t0.time_) / double(t0.base_) +
+      double(delta.total_milliseconds()) * 1e-3;
     
-    return relativePosition;
+    return playheadPosition;
   }
   
   //----------------------------------------------------------------
