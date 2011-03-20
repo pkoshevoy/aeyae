@@ -228,7 +228,8 @@ namespace yae
                       << " x " << vtts.visibleHeight_;
           }
           
-          std::cout << std::endl;
+          std::cout << ", fps: " << vtts.frameRate_
+                    << std::endl;
         }
         else
         {
