@@ -964,6 +964,12 @@ namespace yae
       }
     }
     
+    // shortcut to the frame rate:
+    AVRational frameRate =
+      (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den) ?
+      stream_->avg_frame_rate :
+      stream_->r_frame_rate;
+    
     // shortcut for ffmpeg pixel format:
     enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
 
@@ -1071,15 +1077,15 @@ namespace yae
         }
         
         if (!gotPTS &&
-            stream_->avg_frame_rate.num &&
-            stream_->avg_frame_rate.den)
+            frameRate.num &&
+            frameRate.den)
         {
           if (gotPrevPTS)
           {
             // increment by average frame duration:
             vf.time_ = prevPTS;
-            vf.time_ += TTime(stream_->avg_frame_rate.den,
-                              stream_->avg_frame_rate.num);
+            vf.time_ += TTime(frameRate.den,
+                              frameRate.num);
             
             gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           }
@@ -1089,34 +1095,8 @@ namespace yae
             vf.time_.time_ =
               startTime +
               (framesDecoded_ - 1) *
-              (stream_->time_base.den * stream_->avg_frame_rate.den) /
-              (stream_->time_base.num * stream_->avg_frame_rate.num);
-            
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
-          }
-        }
-
-        if (!gotPTS &&
-            stream_->r_frame_rate.num &&
-            stream_->r_frame_rate.den)
-        {
-          if (gotPrevPTS)
-          {
-            // increment by frame duration:
-            vf.time_ = prevPTS;
-            vf.time_ += TTime(stream_->r_frame_rate.den,
-                              stream_->r_frame_rate.num);
-            
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
-          }
-          
-          if (!gotPTS)
-          {
-            vf.time_.time_ =
-              startTime +
-              (framesDecoded_ - 1) *
-              (stream_->time_base.den * stream_->r_frame_rate.den) /
-              (stream_->time_base.num * stream_->r_frame_rate.num);
+              (stream_->time_base.den * frameRate.den) /
+              (stream_->time_base.num * frameRate.num);
             
             gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           }
