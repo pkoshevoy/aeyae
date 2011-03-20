@@ -405,26 +405,6 @@ namespace yae
   
   
   //----------------------------------------------------------------
-  // mayReuseTextureObject
-  // 
-  static bool
-  mayReuseTextureObject(const TVideoFramePtr & a,
-                        const TVideoFramePtr & b)
-  {
-    if (!a || !b)
-    {
-      return false;
-    }
-    
-    const VideoTraits & at = a->traits_;
-    const VideoTraits & bt = b->traits_;
-    return (at.pixelFormat_ == bt.pixelFormat_ &&
-            at.encodedWidth_ == bt.encodedWidth_ &&
-            at.encodedHeight_ == bt.encodedHeight_);
-  }
-  
-  
-  //----------------------------------------------------------------
   // Canvas::TPrivate
   // 
   class Canvas::TPrivate
@@ -477,38 +457,7 @@ namespace yae
   Canvas::TPrivate::TPrivate():
     texId_(0)
   {}
-
-  //----------------------------------------------------------------
-  // getImageSpecsGL
-  // 
-  static unsigned int
-  getImageSpecsGL(const TVideoFramePtr & frame,
-                  GLint & internalFormatGL,
-                  GLenum & pixelFormatGL,
-                  GLenum & dataTypeGL,
-                  GLint & shouldSwapBytes)
-  {
-    // video traits shortcut:
-    const VideoTraits & vtts = frame->traits_;
-
-    // pixel format shortcut:
-    const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(vtts.pixelFormat_);
-    
-    if (!ptts)
-    {
-      // don't know how to handle this pixel format:
-      assert(false);
-      return false;
-    }
-    
-    return yae_to_opengl(vtts.pixelFormat_,
-                         internalFormatGL,
-                         pixelFormatGL,
-                         dataTypeGL,
-                         shouldSwapBytes);
-  }
-
+  
   //----------------------------------------------------------------
   // Canvas::TPrivate::loadFrame
   // 
@@ -547,34 +496,14 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
     
-    bool reuseTextureObject = mayReuseTextureObject(frame_, frame) && texId_;
-    if (!reuseTextureObject)
-    {
-      glDeleteTextures(1, &texId_);
-      texId_ = 0;
-    }
+    glDeleteTextures(1, &texId_);
+    texId_ = 0;
     
     frame_ = frame;
     
-    if (!texId_)
-    {
-      glGenTextures(1, &texId_);
-    }
+    glGenTextures(1, &texId_);
     
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
-
-    if (!reuseTextureObject)
-    {
-      glTexImage2D(GL_TEXTURE_RECTANGLE_EXT,
-                   0, // always level-0 for GL_TEXTURE_RECTANGLE_EXT
-                   internalFormatGL,
-                   vtts.encodedWidth_,
-                   vtts.encodedHeight_,
-                   0, // border width
-                   pixelFormatGL,
-                   dataTypeGL,
-                   NULL);
-    }
 
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
     {
@@ -597,15 +526,16 @@ namespace yae
       }
       
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-      glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT,
-                      0, // always level-0 for GL_TEXTURE_RECTANGLE_EXT
-                      0, // x-offset
-                      0, // y-offset
-                      vtts.encodedWidth_,
-                      vtts.encodedHeight_,
-                      pixelFormatGL,
-                      dataTypeGL,
-                      frame->sampleBuffer_->samples(0));
+
+      glTexImage2D(GL_TEXTURE_RECTANGLE_EXT,
+                   0, // always level-0 for GL_TEXTURE_RECTANGLE_EXT
+                   internalFormatGL,
+                   vtts.encodedWidth_,
+                   vtts.encodedHeight_,
+                   0, // border width
+                   pixelFormatGL,
+                   dataTypeGL,
+                   frame->sampleBuffer_->samples(0));
     }
     glPopClientAttrib();
     return true;
@@ -840,8 +770,8 @@ namespace yae
         
         float zebra[2][3] =
         {
-          1.0f, 1.0f, 1.0f,
-          0.7f, 0.7f, 0.7f
+          { 1.0f, 1.0f, 1.0f },
+          { 0.7f, 0.7f, 0.7f }
         };
       
         int edgeSize = 24;
