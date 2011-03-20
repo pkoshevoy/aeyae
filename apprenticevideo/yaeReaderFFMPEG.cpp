@@ -840,6 +840,20 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // verifyPTS
+  // 
+  // verify that presentation timestamps are monotonically increasing
+  // 
+  static inline bool
+  verifyPTS(bool gotPrevPTS, const TTime & prevPTS, const TTime & nextPTS)
+  {
+    return (!gotPrevPTS ||
+            (prevPTS.base_ == nextPTS.base_ ?
+             prevPTS.time_ < nextPTS.time_ :
+             prevPTS.toSeconds() < nextPTS.toSeconds()));
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::threadLoop
   // 
   void
@@ -928,6 +942,28 @@ namespace yae
       }
     }
 
+    int64_t startTime = stream_->start_time;
+    if (startTime == AV_NOPTS_VALUE)
+    {
+      startTime = 0;
+    }
+    else if (startTime > INT64_C(0xFFFFFFFF))
+    {
+      // probably an integer overflow error, check it:
+      startTime = (int32_t)startTime;
+
+      double frameDuration =
+        double(stream_->time_base.den) /
+        (double(stream_->time_base.num) * nativeTraits.frameRate_);
+      
+      if (-double(startTime) > 3.0 * frameDuration)
+      {
+        // the start time is not within 3 frames near zero,
+        // assume it's just broken and reset to zero:
+        startTime = 0;
+      }
+    }
+    
     // shortcut for ffmpeg pixel format:
     enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
 
@@ -937,8 +973,9 @@ namespace yae
     // into avcodec_decode_video2 and use the earliest time stamp
     // from that list to assign PTS to the decoded frames.
     std::list<PacketTime> packetTimes;
-    PacketTime previousTime;
-    bool timestampsMonotonicallyIncreasing = true;
+    
+    TTime prevPTS;
+    bool gotPrevPTS = false;
     
     while (true)
     {
@@ -964,7 +1001,10 @@ namespace yae
         // save packet timestamps and duration so we can capture
         // and re-use this to timestamp the decoded frame:
         savePacketTime(packet);
-        insertPacketTime(packetTimes, packetTime_);
+        if (packetTime_.pts_ != AV_NOPTS_VALUE)
+        {
+          insertPacketTime(packetTimes, packetTime_);
+        }
         
         // Decode video frame
         int gotPicture = 0;
@@ -978,11 +1018,12 @@ namespace yae
         {
           continue;
         }
-
+        
         if (avFrame->repeat_pict)
         {
           std::cerr << "FRAME SHOULD BE REPEATED: " << avFrame->repeat_pict
                     << std::endl;
+          assert(!avFrame->repeat_pict);
         }
         
         framesDecoded_++;
@@ -992,17 +1033,6 @@ namespace yae
 
         // shortcut to the saved packet time associated with this frame:
         const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
-        if (frameTime)
-        {
-          if (previousTime.pts_ != AV_NOPTS_VALUE &&
-              frameTime->pts_ != AV_NOPTS_VALUE)
-          {
-            timestampsMonotonicallyIncreasing =
-              previousTime.pts_ < frameTime->pts_;
-          }
-          
-          previousTime = *frameTime;
-        }
         
         PacketTime t;
         if (!packetTimes.empty())
@@ -1022,52 +1052,130 @@ namespace yae
           }
 #endif
         }
-        else
+
+        bool gotPTS = false;
+        
+        if (!gotPTS &&
+            framesDecoded_ == 1)
         {
-          std::cerr << "2. packet timestamp is missing!" << std::endl;
+          vf.time_.time_ = startTime;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+        }
+        
+        if (!gotPTS &&
+            frameTime &&
+            frameTime->pts_ != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+        }
+        
+        if (!gotPTS &&
+            stream_->avg_frame_rate.num &&
+            stream_->avg_frame_rate.den)
+        {
+          if (gotPrevPTS)
+          {
+            // increment by average frame duration:
+            vf.time_ = prevPTS;
+            vf.time_ += TTime(stream_->avg_frame_rate.den,
+                              stream_->avg_frame_rate.num);
+            
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          }
+          
+          if (!gotPTS)
+          {
+            vf.time_.time_ =
+              startTime +
+              (framesDecoded_ - 1) *
+              (stream_->time_base.den * stream_->avg_frame_rate.den) /
+              (stream_->time_base.num * stream_->avg_frame_rate.num);
+            
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          }
         }
 
-        if (timestampsMonotonicallyIncreasing &&
-            frameTime &&
-            (frameTime->pts_ != AV_NOPTS_VALUE ||
-             framesDecoded_ == 1))
+        if (!gotPTS &&
+            stream_->r_frame_rate.num &&
+            stream_->r_frame_rate.den)
         {
-          if (frameTime->pts_ != AV_NOPTS_VALUE)
+          if (gotPrevPTS)
           {
-            vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
+            // increment by frame duration:
+            vf.time_ = prevPTS;
+            vf.time_ += TTime(stream_->r_frame_rate.den,
+                              stream_->r_frame_rate.num);
+            
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           }
-          else if (previousTime.pts_ != AV_NOPTS_VALUE)
+          
+          if (!gotPTS)
           {
-            vf.time_.time_ = stream_->time_base.num * (previousTime.pts_ + 1);
-          }
-          else
-          {
-            vf.time_.time_ = 0;
+            vf.time_.time_ =
+              startTime +
+              (framesDecoded_ - 1) *
+              (stream_->time_base.den * stream_->r_frame_rate.den) /
+              (stream_->time_base.num * stream_->r_frame_rate.num);
+            
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           }
         }
-        else if (stream_->avg_frame_rate.num &&
-                 stream_->avg_frame_rate.den)
-        {
-          vf.time_.time_ = stream_->avg_frame_rate.den * (framesDecoded_ - 1) +
-            int64_t(double(stream_->avg_frame_rate.num) *
-                    double(stream_->start_time * stream_->time_base.num) /
-                    double(stream_->time_base.den));
-          vf.time_.base_ = stream_->avg_frame_rate.num;
-        }
-        else if (stream_->r_frame_rate.num &&
-                 stream_->r_frame_rate.den)
-        {
-          vf.time_.time_ = stream_->r_frame_rate.den * (framesDecoded_ - 1) +
-            int64_t(double(stream_->r_frame_rate.num) *
-                    double(stream_->start_time * stream_->time_base.num) /
-                    double(stream_->time_base.den));
-          vf.time_.base_ = stream_->r_frame_rate.num;
-        }
-        else if (t.pts_ != AV_NOPTS_VALUE)
+
+        if (!gotPTS &&
+            t.pts_ != AV_NOPTS_VALUE)
         {
           vf.time_.time_ = stream_->time_base.num * t.pts_;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
         }
-
+        
+        if (!gotPTS &&
+            avFrame->pts != AV_NOPTS_VALUE &&
+            codecContext->time_base.num != AV_NOPTS_VALUE &&
+            codecContext->time_base.den != AV_NOPTS_VALUE &&
+            codecContext->time_base.num &&
+            codecContext->time_base.den)
+        {
+          vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
+          vf.time_.base_ = codecContext->time_base.den;
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+        }
+        
+        assert(gotPTS);
+        if (!gotPTS && gotPrevPTS)
+        {
+          vf.time_ = prevPTS;
+          vf.time_.time_++;
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+        }
+        
+        assert(gotPTS);
+        if (gotPTS)
+        {
+          if (gotPrevPTS)
+          {
+            double ta = prevPTS.toSeconds();
+            double tb = vf.time_.toSeconds();
+            double dt = tb - ta;
+            double fd = 1.0 / nativeTraits.frameRate_;
+            if (dt > 2.0 * fd)
+            {
+              std::cerr
+                << "\nNOTE: detected large PTS jump: " << std::endl
+                << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
+                << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
+                << "difference " << dt << " seconds, equivalent to "
+                << dt / fd << " frames" << std::endl
+                << std::endl;
+            }
+          }
+          
+          gotPrevPTS = true;
+          prevPTS = vf.time_;
+        }
+        
         vf.traits_ = override_;
         vf.traits_.encodedWidth_ = encodedWidth;
         vf.traits_.encodedHeight_ = encodedHeight;
