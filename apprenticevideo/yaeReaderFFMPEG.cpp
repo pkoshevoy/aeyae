@@ -592,10 +592,7 @@ namespace yae
     int err = avcodec_default_get_buffer(codecContext, frame);
     if (!err)
     {
-      PacketTime * ts = (PacketTime *)(frame->opaque);
-      delete ts;
-      
-      ts = new PacketTime(packetTime_);
+      PacketTime * ts = new PacketTime(packetTime_);
       frame->opaque = ts;
     }
     
@@ -788,7 +785,9 @@ namespace yae
   {
     FrameWithAutoCleanup():
       frame_(avcodec_alloc_frame())
-    {}
+    {
+      frame_->opaque = NULL;
+    }
     
     ~FrameWithAutoCleanup()
     {
