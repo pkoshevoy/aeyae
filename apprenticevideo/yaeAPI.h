@@ -80,6 +80,9 @@ namespace yae
     TTime & operator += (double dtSec);
     TTime operator + (double dtSec) const;
     
+    inline double toSeconds() const
+    { return double(time_) / double(base_); }
+    
     int64 time_;
     uint64 base_;
   };

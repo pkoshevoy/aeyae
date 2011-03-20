@@ -41,8 +41,7 @@ namespace yae
       return *this;
     }
 
-    double dtSec = double(dt.time_) / double(dt.base_);
-    return operator += (dtSec);
+    return operator += (dt.toSeconds());
   }
   
   //----------------------------------------------------------------
@@ -77,6 +76,7 @@ namespace yae
     return t;
   }
   
+
   //----------------------------------------------------------------
   // getBitsPerSample
   // 
