@@ -98,7 +98,6 @@ namespace yae
       // get the time segment we are supposed to render for,
       // and the current time relative to the time segment:
       double playheadPosition = clock_.getCurrentTime(t0);
-      double segmentPosition = double(t0.time_) / double(t0.base_);
       
       // get position of the frame relative to the current time segment:
       double f0 = double(framePosition.time_) / double(framePosition.base_);

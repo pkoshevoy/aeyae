@@ -343,7 +343,7 @@ namespace yae
     unsigned int srcSampleSize =
       getBitsPerSample(audioFrame_->traits_.sampleFormat_) / 8;
     
-    unsigned int srcChannels =
+    int srcChannels =
       getNumberOfChannels(audioFrame_->traits_.channelLayout_);
     
     bool srcPlanar =
@@ -424,7 +424,7 @@ namespace yae
         srcChunkSize = channelSize - bytesAlreadyConsumed;
         
         chunks.resize(srcChannels);
-        for (unsigned int i = 0; i < srcChannels; i++)
+        for (int i = 0; i < srcChannels; i++)
         {
           chunks[i] = srcBuf + i * channelSize + bytesAlreadyConsumed;
         }
