@@ -52,6 +52,8 @@ namespace yae
     Q_OBJECT;
     
   public:
+    class TPrivate;
+    
     Canvas(const QGLFormat & format,
            QWidget * parent = 0,
            const QGLWidget * shareWidget = 0,
@@ -119,8 +121,6 @@ namespace yae
     };
     
     RenderFrameEvent::TPayload payload_;
-
-    class TPrivate;
     TPrivate * private_;
     
     //----------------------------------------------------------------

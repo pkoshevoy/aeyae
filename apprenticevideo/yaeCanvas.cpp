@@ -411,9 +411,10 @@ namespace yae
   {
   public:
     TPrivate();
+    virtual ~TPrivate() {}
     
-    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
-    void draw();
+    virtual bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
+    virtual void draw();
 
     inline const pixelFormat::Traits * pixelTraits() const
     {
@@ -446,7 +447,7 @@ namespace yae
     
     TVideoFramePtr frame_;
     
-  private:
+  protected:
     GLuint texId_;
     mutable boost::mutex mutex_;
   };
@@ -487,8 +488,7 @@ namespace yae
                                                    pixelFormatGL,
                                                    dataTypeGL,
                                                    shouldSwapBytes);
-    if (// supportedChannels != ptts->channels_ ||
-        !supportedChannels)
+    if (!supportedChannels)
     {
       return false;
     }
@@ -599,6 +599,191 @@ namespace yae
     }
     glEnd();
   }
+
+  
+  //----------------------------------------------------------------
+  // TLegacyCanvas
+  // 
+  // This is a subclass implementing frame rendering on OpenGL
+  // hardware that doesn't support GL_EXT_texture_rectangle
+  // 
+  struct TLegacyCanvas : public Canvas::TPrivate
+  {
+    // virtual:
+    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
+    
+    // virtual:
+    void draw();
+    
+  protected:
+    // power-of-two texture dimensions:
+    GLsizei potW_;
+    GLsizei potH_;
+  };
+
+  //----------------------------------------------------------------
+  // closest_power_of_two_larger_than_given
+  // 
+  template <typename TScalar>
+  inline static TScalar
+  closestPowerOfTwoLargerThanGiven(const TScalar & given)
+  {
+    size_t n = sizeof(given) * 8;
+    TScalar closest = TScalar(1);
+    for (size_t i = 0;
+         (i < n) && (closest < given);
+         i++, closest *= TScalar(2))
+    {}
+    
+    return closest;
+  }
+  
+  //----------------------------------------------------------------
+  // TLegacyCanvas::loadFrame
+  // 
+  bool
+  TLegacyCanvas::loadFrame(QGLWidget * canvas,
+                           const TVideoFramePtr & frame)
+  {
+    // video traits shortcut:
+    const VideoTraits & vtts = frame->traits_;
+    
+    // pixel format shortcut:
+    const pixelFormat::Traits * ptts =
+      pixelFormat::getTraits(vtts.pixelFormat_);
+    
+    if (!ptts)
+    {
+      // don't know how to handle this pixel format:
+      return false;
+    }
+    
+    GLint internalFormatGL;
+    GLenum pixelFormatGL;
+    GLenum dataTypeGL;
+    GLint shouldSwapBytes;
+    unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
+                                                   internalFormatGL,
+                                                   pixelFormatGL,
+                                                   dataTypeGL,
+                                                   shouldSwapBytes);
+    if (!supportedChannels)
+    {
+      return false;
+    }
+    
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    TMakeCurrentContext currentContext(canvas);
+    
+    glDeleteTextures(1, &texId_);
+    texId_ = 0;
+    
+    frame_ = frame;
+    
+    glGenTextures(1, &texId_);
+    
+    glBindTexture(GL_TEXTURE_2D, texId_);
+    
+    potW_ = closestPowerOfTwoLargerThanGiven(vtts.encodedWidth_);
+    potH_ = closestPowerOfTwoLargerThanGiven(vtts.encodedHeight_);
+    
+    glTexImage2D(GL_TEXTURE_2D,
+                 0, // mipmap level
+                 internalFormatGL,
+                 potW_,
+                 potH_,
+                 0, // border width
+                 pixelFormatGL,
+                 dataTypeGL,
+                 NULL);
+    
+    glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+    {
+      glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
+      
+      glPixelStorei(GL_UNPACK_ROW_LENGTH,
+                    frame->sampleBuffer_->rowBytes(0) /
+                    (ptts->stride_[0] / 8));
+
+      // order of bits in a byte only matters for bitmaps:
+      // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
+
+      // use this to crop the image perhaps?
+      // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
+      // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
+      
+      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+      glTexSubImage2D(GL_TEXTURE_2D,
+                      0, // mipmap level
+                      0, // x-offset
+                      0, // y-offset
+                      vtts.encodedWidth_,
+                      vtts.encodedHeight_,
+                      pixelFormatGL,
+                      dataTypeGL,
+                      frame->sampleBuffer_->samples(0));
+    }
+    glPopClientAttrib();
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TLegacyCanvas::draw
+  // 
+  void
+  TLegacyCanvas::draw()
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    if (!texId_)
+    {
+      return;
+    }
+    
+    // video traits shortcut:
+    const VideoTraits & vtts = frame_->traits_;
+    
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texId_);
+    
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_GENERATE_MIPMAP_SGIS, GL_FALSE);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D,
+                    GL_TEXTURE_MAX_LEVEL, 0);
+    
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    
+    glDisable(GL_LIGHTING);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColor3f(1.f, 1.f, 1.f);
+    
+    glBegin(GL_QUADS);
+    {
+      double x0 = double(vtts.offsetLeft_) / double(potW_);
+      double y0 = double(vtts.offsetTop_) / double(potH_);
+      glTexCoord2d(x0, y0);
+      glVertex2i(0, 0);
+
+      double vw = double(vtts.visibleWidth_ - 1) / double(potW_);
+      glTexCoord2d(x0 + vw, y0);
+      glVertex2i(int(imageWidth()), 0);
+
+      double vh = double(vtts.visibleHeight_ - 1) / double(potH_);
+      glTexCoord2d(x0 + vw, y0 + vh);
+      glVertex2i(int(imageWidth()), vtts.visibleHeight_);
+      
+      glTexCoord2d(x0, y0 + vh);
+      glVertex2i(0, vtts.visibleHeight_);
+    }
+    glEnd();
+  }
   
   
   //----------------------------------------------------------------
@@ -608,9 +793,17 @@ namespace yae
                  QWidget * parent,
                  const QGLWidget * shareWidget,
                  Qt::WindowFlags f):
-    QGLWidget(format, parent, shareWidget, f),
-    private_(new TPrivate())
+    QGLWidget(format, parent, shareWidget, f)
   {
+    if (glewIsExtensionSupported("GL_EXT_texture_rectangle"))
+    {
+      private_ = new TPrivate();
+    }
+    else
+    {
+      private_ = new TLegacyCanvas();
+    }
+    
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
     
