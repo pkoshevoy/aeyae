@@ -385,6 +385,43 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 namespace yae
 {
   //----------------------------------------------------------------
+  // powerOfTwoLEQ
+  // 
+  // calculate largest power-of-two less then or equal to the given
+  // 
+  template <typename TScalar>
+  inline static TScalar
+  powerOfTwoLEQ(const TScalar & given)
+  {
+    const std::size_t n = sizeof(given) * 8;
+    TScalar smaller = TScalar(0);
+    TScalar closest = TScalar(1);
+    for (std::size_t i = 0; (i < n) && (closest <= given); i++)
+    {
+      smaller = closest;
+      closest *= TScalar(2);
+    }
+    
+    return smaller;
+  }
+  
+  //----------------------------------------------------------------
+  // Tuple
+  // 
+  template <std::size_t size, typename TScalar>
+  struct Tuple
+  {
+    enum { kSize = size };
+    TScalar data_[size];
+    
+    inline TScalar & operator [] (std::size_t i)
+    { return data_[i]; }
+    
+    inline const TScalar & operator [] (std::size_t i) const
+    { return data_[i]; }
+  };
+  
+  //----------------------------------------------------------------
   // TMakeCurrentContext
   // 
   struct TMakeCurrentContext
@@ -410,12 +447,13 @@ namespace yae
   class Canvas::TPrivate
   {
   public:
-    TPrivate();
     virtual ~TPrivate() {}
     
-    virtual bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
-    virtual void draw();
-
+    virtual bool loadFrame(QGLWidget * canvas,
+                           const TVideoFramePtr & frame) = 0;
+    virtual void draw() = 0;
+    
+    // helper:
     inline const pixelFormat::Traits * pixelTraits() const
     {
       return (frame_ ?
@@ -445,25 +483,40 @@ namespace yae
       return (frame_ ? double(frame_->traits_.visibleHeight_) : 0.0);
     }
     
-    TVideoFramePtr frame_;
-    
   protected:
-    GLuint texId_;
     mutable boost::mutex mutex_;
+    TVideoFramePtr frame_;
   };
   
   //----------------------------------------------------------------
-  // Canvas::TPrivate::TPrivate
+  // TModernCanvas
   // 
-  Canvas::TPrivate::TPrivate():
+  struct TModernCanvas : public Canvas::TPrivate
+  {
+    TModernCanvas();
+
+    // virtual:
+    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
+    
+    // virtual:
+    void draw();
+
+  protected:
+    GLuint texId_;
+  };
+  
+  //----------------------------------------------------------------
+  // TModernCanvas::TModernCanvas
+  // 
+  TModernCanvas::TModernCanvas():
     texId_(0)
   {}
   
   //----------------------------------------------------------------
-  // Canvas::TPrivate::loadFrame
+  // TModernCanvas::loadFrame
   // 
   bool
-  Canvas::TPrivate::loadFrame(QGLWidget * canvas,
+  TModernCanvas::loadFrame(QGLWidget * canvas,
                               const TVideoFramePtr & frame)
   {
     // video traits shortcut:
@@ -542,10 +595,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Canvas::TPrivate::draw
+  // TModernCanvas::draw
   // 
   void
-  Canvas::TPrivate::draw()
+  TModernCanvas::draw()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (!texId_)
@@ -600,6 +653,25 @@ namespace yae
     glEnd();
   }
 
+  //----------------------------------------------------------------
+  // TFrameTile
+  // 
+  struct TFrameTile
+  {
+    // quad coordinates:
+    GLsizei x_;
+    GLsizei y_;
+
+    // quad width, height:
+    GLsizei w_;
+    GLsizei h_;
+    
+    // texture coordinates:
+    GLdouble s0_;
+    GLdouble s1_;
+    GLdouble t0_;
+    GLdouble t1_;
+  };
   
   //----------------------------------------------------------------
   // TLegacyCanvas
@@ -616,26 +688,61 @@ namespace yae
     void draw();
     
   protected:
-    // power-of-two texture dimensions:
-    GLsizei potW_;
-    GLsizei potH_;
+    // unpadded image dimensions:
+    GLsizei w_;
+    GLsizei h_;
+    
+    // additional padding due to odd image dimensions:
+    GLsizei wOdd_;
+    GLsizei hOdd_;
+    
+    // padded image dimensions:
+    GLsizei wPadded_;
+    GLsizei hPadded_;
+    
+    // padded image texture data:
+    std::vector<unsigned char> textureData_;
+
+    std::vector<TFrameTile> tiles_;
+    std::vector<GLuint> texId_;
   };
 
   //----------------------------------------------------------------
-  // closest_power_of_two_larger_than_given
+  // TEdge
   // 
-  template <typename TScalar>
-  inline static TScalar
-  closestPowerOfTwoLargerThanGiven(const TScalar & given)
+  typedef Tuple<2, GLsizei> TEdge;
+
+  //----------------------------------------------------------------
+  // calculateEdges
+  // 
+  static void
+  calculateEdges(std::deque<TEdge> & edges,
+                 GLsizei edgePadded,
+                 GLsizei edgeMax)
   {
-    size_t n = sizeof(given) * 8;
-    TScalar closest = TScalar(1);
-    for (size_t i = 0;
-         (i < n) && (closest < given);
-         i++, closest *= TScalar(2))
-    {}
-    
-    return closest;
+    if (!edgePadded)
+    {
+      return;
+    }
+
+    GLsizei offset = 0;
+    GLsizei extent = edgePadded;
+    while (true)
+    {
+      edges.push_back(TEdge());
+      TEdge & edge = edges.back();
+      
+      edge[0] = offset;
+      edge[1] = std::min(edgeMax, powerOfTwoLEQ(extent));
+      
+      if (edge[1] == extent)
+      {
+        break;
+      }
+        
+      offset += (edge[1] - 2);
+      extent -= (edge[1] - 2);
+    }
   }
   
   //----------------------------------------------------------------
@@ -645,6 +752,9 @@ namespace yae
   TLegacyCanvas::loadFrame(QGLWidget * canvas,
                            const TVideoFramePtr & frame)
   {
+    // FIXME: I should try to calculate this at run-time:
+    static const GLsizei textureEdgeMax = 2048;
+    
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
     
@@ -674,55 +784,194 @@ namespace yae
     
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
-    
-    glDeleteTextures(1, &texId_);
-    texId_ = 0;
+
+    bool mayReuseTexture =
+      frame_ && !frame &&
+      frame_->traits_.pixelFormat_ == frame->traits_.pixelFormat_ &&
+      frame_->traits_.encodedWidth_ == frame->traits_.encodedWidth_ &&
+      frame_->traits_.encodedHeight_ == frame->traits_.encodedHeight_;
     
     frame_ = frame;
     
-    glGenTextures(1, &texId_);
+    if (!mayReuseTexture && !texId_.empty())
+    {
+      glDeleteTextures(texId_.size(), &(texId_.front()));
+      texId_.clear();
+      textureData_.clear();
+    }
     
-    glBindTexture(GL_TEXTURE_2D, texId_);
+    if (!mayReuseTexture)
+    {
+      w_ = frame_->traits_.visibleWidth_;
+      h_ = frame_->traits_.visibleHeight_;
+      
+      wOdd_ = (GLsizei)(w_ & 0x01);
+      hOdd_ = (GLsizei)(h_ & 0x01);
+      
+      wPadded_ = w_ + 2 + wOdd_;
+      hPadded_ = h_ + 2 + hOdd_;
+      
+      // create a padded frame buffer:
+      std::size_t bytesPerPixel = ptts->stride_[0] / 8;
+      // textureData_.resize(wPadded_ * hPadded_ * bytesPerPixel);
+      textureData_.assign(wPadded_ * hPadded_ * bytesPerPixel, 0);
+      
+      // left, right padding offsets:
+      const std::size_t dstStride = bytesPerPixel * wPadded_;
+      const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
+      const std::size_t rowBytes = bytesPerPixel * w_;
+      
+      const unsigned char * src =
+        frame_->sampleBuffer_->samples(0) +
+        frame_->traits_.offsetTop_ * srcStride +
+        frame_->traits_.offsetLeft_ * bytesPerPixel;
+      
+      unsigned char * dst = &(textureData_.front());
+      
+      // pad on the top:
+      memcpy(dst + bytesPerPixel, src, rowBytes);
+      memcpy(dst, src, bytesPerPixel);
+      memcpy(dst + rowBytes + bytesPerPixel,
+             src + rowBytes - bytesPerPixel,
+             bytesPerPixel);
+      
+      // copy the frame, pad on left and right:
+      for (GLsizei i = 0; i < h_; i++)
+      {
+        const unsigned char * srcRow = src + srcStride * i;
+        unsigned char * dstRow = dst + dstStride * (i + 1);
+        memcpy(dstRow + bytesPerPixel, srcRow, rowBytes);
+        
+        memcpy(dstRow, srcRow, bytesPerPixel);
+        memcpy(dstRow + rowBytes + bytesPerPixel,
+               srcRow + rowBytes - bytesPerPixel,
+               bytesPerPixel);
+        
+      }
+      
+      // pad on the bottom:
+      memcpy(dst + (h_ + 1) * dstStride + bytesPerPixel,
+             src + (h_ - 1) * srcStride,
+             rowBytes);
+      memcpy(dst + (h_ + 1) * dstStride,
+             src + (h_ - 1) * srcStride,
+             bytesPerPixel);
+      memcpy(dst + (h_ + 1) * dstStride + rowBytes + bytesPerPixel,
+             src + (h_ - 1) * srcStride + rowBytes - bytesPerPixel,
+             bytesPerPixel);
+      
+      // calculate x-min, x-max coordinates for each tile:
+      std::deque<TEdge> x;
+      calculateEdges(x, wPadded_, textureEdgeMax);
+      
+      // calculate y-min, y-max coordinates for each tile:
+      std::deque<TEdge> y;
+      calculateEdges(y, hPadded_, textureEdgeMax);
+      
+      // setup the tiles:
+      const std::size_t rows = y.size();
+      const std::size_t cols = x.size();
+      tiles_.resize(rows * cols);
+
+      texId_.resize(rows * cols);
+      glGenTextures(texId_.size(), &(texId_.front()));
+      
+      for (std::size_t j = 0; j < rows; j++)
+      {
+        for (std::size_t i = 0; i < cols; i++)
+        {
+          std::size_t tileIndex = j * cols + i;
+          TFrameTile & tile = tiles_[tileIndex];
+
+          tile.x_ = x[i][0];
+          tile.y_ = y[j][0];
+          tile.w_ = x[i][1] - 2;
+          tile.h_ = y[j][1] - 2;
+          
+          tile.s0_ = GLdouble(1.0 / double(x[i][1]));
+          tile.s1_ = GLdouble(1.0 - 1.0 / double(x[i][1]));
+          tile.t0_ = GLdouble(1.0 / double(y[j][1]));
+          tile.t1_ = GLdouble(1.0 - 1.0 / double(y[j][1]));
+          
+          if (i + 1 == cols)
+          {
+            tile.w_ -= wOdd_;
+            tile.s1_ = GLdouble(1.0 - double(1 + wOdd_) / double(x[i][1]));
+          }
+          
+          if (j + 1 == rows)
+          {
+            tile.h_ -= hOdd_;
+            tile.t1_ = GLdouble(1.0 - double(1 + hOdd_) / double(y[j][1]));
+          }
+
+          GLuint texId = texId_[tileIndex];
+          glBindTexture(GL_TEXTURE_2D, texId);
+          
+          if (!glIsTexture(texId))
+          {
+            assert(false);
+            return false;
+          }
+          
+          glTexImage2D(GL_TEXTURE_2D,
+                       0, // mipmap level
+                       internalFormatGL,
+                       tile.w_ + 2,
+                       tile.h_ + 2,
+                       0, // border width
+                       pixelFormatGL,
+                       dataTypeGL,
+                       NULL);
+          
+          GLenum err = glGetError();
+          if (err != GL_NO_ERROR)
+          {
+            assert(false);
+            return false;
+          }
+        }
+      }
+    }
     
-    potW_ = closestPowerOfTwoLargerThanGiven(vtts.encodedWidth_);
-    potH_ = closestPowerOfTwoLargerThanGiven(vtts.encodedHeight_);
-    
-    glTexImage2D(GL_TEXTURE_2D,
-                 0, // mipmap level
-                 internalFormatGL,
-                 potW_,
-                 potH_,
-                 0, // border width
-                 pixelFormatGL,
-                 dataTypeGL,
-                 NULL);
-    
+    // upload the texture data:
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
-      
-      glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    frame->sampleBuffer_->rowBytes(0) /
-                    (ptts->stride_[0] / 8));
-
-      // order of bits in a byte only matters for bitmaps:
-      // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
-
-      // use this to crop the image perhaps?
-      // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
-      // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
-      
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, wPadded_);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-      glTexSubImage2D(GL_TEXTURE_2D,
-                      0, // mipmap level
-                      0, // x-offset
-                      0, // y-offset
-                      vtts.encodedWidth_,
-                      vtts.encodedHeight_,
-                      pixelFormatGL,
-                      dataTypeGL,
-                      frame->sampleBuffer_->samples(0));
+      
+      for (std::size_t i = 0; i < tiles_.size(); ++i)
+      {
+        const TFrameTile & tile = tiles_[i];
+        GLuint texId = texId_[i];
+        glBindTexture(GL_TEXTURE_2D, texId);
+        
+        if (!glIsTexture(texId))
+        {
+          assert(false);
+          continue;
+        }
+        
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_);
+        glTexSubImage2D(GL_TEXTURE_2D,
+                        0, // mipmap level
+                        0, // x-offset
+                        0, // y-offset
+                        tile.w_ + 2,
+                        tile.h_ + 2,
+                        pixelFormatGL,
+                        dataTypeGL,
+                        &(textureData_.front()));
+        
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR)
+        {
+          assert(false);
+          continue;
+        }
+      }
     }
     glPopClientAttrib();
     return true;
@@ -735,7 +984,7 @@ namespace yae
   TLegacyCanvas::draw()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    if (!texId_)
+    if (texId_.empty() || !frame_)
     {
       return;
     }
@@ -744,47 +993,53 @@ namespace yae
     const VideoTraits & vtts = frame_->traits_;
     
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texId_);
-    
-    glTexParameteri(GL_TEXTURE_2D,
-                    GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D,
-                    GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    
-    glTexParameteri(GL_TEXTURE_2D,
-                    GL_GENERATE_MIPMAP_SGIS, GL_FALSE);
-    glTexParameteri(GL_TEXTURE_2D,
-                    GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D,
-                    GL_TEXTURE_MAX_LEVEL, 0);
-    
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    
-    glDisable(GL_LIGHTING);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glColor3f(1.f, 1.f, 1.f);
-    
-    glBegin(GL_QUADS);
+    for (std::size_t i = 0; i < tiles_.size(); ++i)
     {
-      double x0 = double(vtts.offsetLeft_) / double(potW_);
-      double y0 = double(vtts.offsetTop_) / double(potH_);
-      glTexCoord2d(x0, y0);
-      glVertex2i(0, 0);
-
-      double vw = double(vtts.visibleWidth_ - 1) / double(potW_);
-      glTexCoord2d(x0 + vw, y0);
-      glVertex2i(int(imageWidth()), 0);
-
-      double vh = double(vtts.visibleHeight_ - 1) / double(potH_);
-      glTexCoord2d(x0 + vw, y0 + vh);
-      glVertex2i(int(imageWidth()), vtts.visibleHeight_);
+      const TFrameTile & tile = tiles_[i];
+      GLuint texId = texId_[i];
+      glBindTexture(GL_TEXTURE_2D, texId);
       
-      glTexCoord2d(x0, y0 + vh);
-      glVertex2i(0, vtts.visibleHeight_);
+      if (!glIsTexture(texId))
+      {
+        assert(false);
+        continue;
+      }
+        
+      glTexParameteri(GL_TEXTURE_2D,
+                      GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D,
+                      GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      
+      glTexParameteri(GL_TEXTURE_2D,
+                      GL_GENERATE_MIPMAP_SGIS, GL_FALSE);
+      glTexParameteri(GL_TEXTURE_2D,
+                      GL_TEXTURE_BASE_LEVEL, 0);
+      glTexParameteri(GL_TEXTURE_2D,
+                      GL_TEXTURE_MAX_LEVEL, 0);
+      
+      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+      
+      glDisable(GL_LIGHTING);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glColor3f(1.f, 1.f, 1.f);
+      
+      glBegin(GL_QUADS);
+      {
+        glTexCoord2d(tile.s0_, tile.t0_);
+        glVertex2i(tile.x_, tile.y_);
+        
+        glTexCoord2d(tile.s1_, tile.t0_);
+        glVertex2i(tile.x_ + tile.w_, tile.y_);
+        
+        glTexCoord2d(tile.s1_, tile.t1_);
+        glVertex2i(tile.x_ + tile.w_, tile.y_ + tile.h_);
+        
+        glTexCoord2d(tile.s0_, tile.t1_);
+        glVertex2i(tile.x_, tile.y_ + tile.h_);
+      }
+      glEnd();
     }
-    glEnd();
   }
-  
   
   //----------------------------------------------------------------
   // Canvas::Canvas
@@ -797,7 +1052,7 @@ namespace yae
   {
     if (glewIsExtensionSupported("GL_EXT_texture_rectangle"))
     {
-      private_ = new TPrivate();
+      private_ = new TModernCanvas();
     }
     else
     {
