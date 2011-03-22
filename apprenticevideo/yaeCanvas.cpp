@@ -785,23 +785,24 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    bool mayReuseTexture =
-      frame_ && !frame &&
+    bool mayReuseTextures =
+      frame_ && frame &&
       frame_->traits_.pixelFormat_ == frame->traits_.pixelFormat_ &&
       frame_->traits_.encodedWidth_ == frame->traits_.encodedWidth_ &&
       frame_->traits_.encodedHeight_ == frame->traits_.encodedHeight_;
-    
+
+    // take the new frame:
     frame_ = frame;
     
-    if (!mayReuseTexture && !texId_.empty())
+    if (!mayReuseTextures)
     {
-      glDeleteTextures(texId_.size(), &(texId_.front()));
-      texId_.clear();
-      textureData_.clear();
-    }
-    
-    if (!mayReuseTexture)
-    {
+      if (!texId_.empty())
+      {
+        glDeleteTextures(texId_.size(), &(texId_.front()));
+        texId_.clear();
+        textureData_.clear();
+      }
+      
       w_ = frame_->traits_.visibleWidth_;
       h_ = frame_->traits_.visibleHeight_;
       
@@ -810,55 +811,6 @@ namespace yae
       
       wPadded_ = w_ + 2 + wOdd_;
       hPadded_ = h_ + 2 + hOdd_;
-      
-      // create a padded frame buffer:
-      std::size_t bytesPerPixel = ptts->stride_[0] / 8;
-      // textureData_.resize(wPadded_ * hPadded_ * bytesPerPixel);
-      textureData_.assign(wPadded_ * hPadded_ * bytesPerPixel, 0);
-      
-      // left, right padding offsets:
-      const std::size_t dstStride = bytesPerPixel * wPadded_;
-      const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
-      const std::size_t rowBytes = bytesPerPixel * w_;
-      
-      const unsigned char * src =
-        frame_->sampleBuffer_->samples(0) +
-        frame_->traits_.offsetTop_ * srcStride +
-        frame_->traits_.offsetLeft_ * bytesPerPixel;
-      
-      unsigned char * dst = &(textureData_.front());
-      
-      // pad on the top:
-      memcpy(dst + bytesPerPixel, src, rowBytes);
-      memcpy(dst, src, bytesPerPixel);
-      memcpy(dst + rowBytes + bytesPerPixel,
-             src + rowBytes - bytesPerPixel,
-             bytesPerPixel);
-      
-      // copy the frame, pad on left and right:
-      for (GLsizei i = 0; i < h_; i++)
-      {
-        const unsigned char * srcRow = src + srcStride * i;
-        unsigned char * dstRow = dst + dstStride * (i + 1);
-        memcpy(dstRow + bytesPerPixel, srcRow, rowBytes);
-        
-        memcpy(dstRow, srcRow, bytesPerPixel);
-        memcpy(dstRow + rowBytes + bytesPerPixel,
-               srcRow + rowBytes - bytesPerPixel,
-               bytesPerPixel);
-        
-      }
-      
-      // pad on the bottom:
-      memcpy(dst + (h_ + 1) * dstStride + bytesPerPixel,
-             src + (h_ - 1) * srcStride,
-             rowBytes);
-      memcpy(dst + (h_ + 1) * dstStride,
-             src + (h_ - 1) * srcStride,
-             bytesPerPixel);
-      memcpy(dst + (h_ + 1) * dstStride + rowBytes + bytesPerPixel,
-             src + (h_ - 1) * srcStride + rowBytes - bytesPerPixel,
-             bytesPerPixel);
       
       // calculate x-min, x-max coordinates for each tile:
       std::deque<TEdge> x;
@@ -933,6 +885,56 @@ namespace yae
         }
       }
     }
+    
+    // creating a padded frame buffer:
+    std::size_t bytesPerPixel = ptts->stride_[0] / 8;
+    if (!mayReuseTextures)
+    {
+      textureData_.resize(wPadded_ * hPadded_ * bytesPerPixel);
+    }
+    
+    const std::size_t dstStride = bytesPerPixel * wPadded_;
+    const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
+    const std::size_t rowBytes = bytesPerPixel * w_;
+    
+    const unsigned char * src =
+      frame_->sampleBuffer_->samples(0) +
+      frame_->traits_.offsetTop_ * srcStride +
+      frame_->traits_.offsetLeft_ * bytesPerPixel;
+    
+    unsigned char * dst = &(textureData_.front());
+    
+    // pad on the top:
+    memcpy(dst + bytesPerPixel, src, rowBytes);
+    memcpy(dst, src, bytesPerPixel);
+    memcpy(dst + rowBytes + bytesPerPixel,
+           src + rowBytes - bytesPerPixel,
+           bytesPerPixel);
+    
+    // copy the frame, pad on left and right:
+    for (GLsizei i = 0; i < h_; i++)
+    {
+      const unsigned char * srcRow = src + srcStride * i;
+      unsigned char * dstRow = dst + dstStride * (i + 1);
+      memcpy(dstRow + bytesPerPixel, srcRow, rowBytes);
+      
+      memcpy(dstRow, srcRow, bytesPerPixel);
+      memcpy(dstRow + rowBytes + bytesPerPixel,
+             srcRow + rowBytes - bytesPerPixel,
+             bytesPerPixel);
+      
+    }
+    
+    // pad on the bottom:
+    memcpy(dst + (h_ + 1) * dstStride + bytesPerPixel,
+           src + (h_ - 1) * srcStride,
+           rowBytes);
+    memcpy(dst + (h_ + 1) * dstStride,
+           src + (h_ - 1) * srcStride,
+           bytesPerPixel);
+    memcpy(dst + (h_ + 1) * dstStride + rowBytes + bytesPerPixel,
+           src + (h_ - 1) * srcStride + rowBytes - bytesPerPixel,
+           bytesPerPixel);
     
     // upload the texture data:
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
