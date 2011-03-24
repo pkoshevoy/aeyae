@@ -13,10 +13,6 @@
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 
-// the includes:
-#include <opengl/the_gl_context.hxx>
-#include <opengl/image_tile_dl_elem.hxx>
-
 // Qt includes:
 #include <QEvent>
 #include <QGLWidget>
@@ -46,8 +42,7 @@ namespace yae
   // Canvas
   // 
   class Canvas : public QGLWidget,
-                 public IVideoCanvas,
-                 public the_gl_context_interface_t
+                 public IVideoCanvas
   {
     Q_OBJECT;
     
@@ -63,11 +58,6 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
-    
-    // virtual:
-    bool gl_context_is_valid() const;
-    void gl_make_current();
-    void gl_done_current();
     
     // helper:
     void refresh();
@@ -126,12 +116,6 @@ namespace yae
     
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
-    
-    //----------------------------------------------------------------
-    // TImagePtr
-    // 
-    typedef boost::shared_ptr<image_tile_dl_elem_t> TImagePtr;
-    TImagePtr image_;
   };
 }
 

@@ -151,7 +151,7 @@ namespace yae
             double(framePosition.time_) /
             double(framePosition.base_);
           
-          if (t > f0)
+          if (t > f0 || frameDuration == 0.0)
           {
             break;
           }

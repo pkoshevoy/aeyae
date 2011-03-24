@@ -7,9 +7,25 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#ifdef _WIN32
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <windows.h>
+#include <wchar.h>
+#endif
+
 #include <iostream>
 #include <stdexcept>
 #include <assert.h>
+
+// GLEW includes:
+#include <GL/glew.h>
 
 // Qt includes:
 #include <QApplication>
@@ -17,10 +33,6 @@
 
 // yae includes:
 #include <yaeMainWindow.h>
-
-// the includes:
-#include <opengl/glsl.hxx>
-#include <utils/the_utils.hxx>
 
 
 namespace yae
@@ -64,8 +76,29 @@ namespace yae
 int
 main(int argc, char ** argv)
 {
-#ifndef NDEBUG
-  restore_console_stdio();
+#if defined(_WIN32) && !defined(NDEBUG)
+  // restore console stdio:
+  {
+    AllocConsole();
+    
+#pragma warning(push)
+#pragma warning(disable: 4996)
+    
+    freopen("conin$", "r", stdin);
+    freopen("conout$", "w", stdout);
+    freopen("conout$", "w", stderr);
+    
+#pragma warning(pop)
+    
+    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hStdOut != INVALID_HANDLE_VALUE)
+    {
+      COORD consoleBufferSize;
+      consoleBufferSize.X = 80;
+      consoleBufferSize.Y = 9999;
+      SetConsoleScreenBufferSize(hStdOut, consoleBufferSize);
+    }
+  }
 #endif
   
   yae::Application app(argc, argv);
@@ -73,9 +106,12 @@ main(int argc, char ** argv)
   yae::mainWindow->show();
   
   // initialize OpenGL GLEW wrapper:
-  bool ok = glsl_init();
-  assert(ok);
-  (void)ok;
+  GLenum err = glewInit();
+  if (err != GLEW_OK)
+  {
+    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
+    assert(false);
+  }
   
   // initialize the canvas:
   yae::mainWindow->canvas()->initializePrivateBackend();

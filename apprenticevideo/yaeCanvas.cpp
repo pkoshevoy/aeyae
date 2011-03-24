@@ -9,6 +9,7 @@
 // system includes:
 #include <iostream>
 #include <math.h>
+#include <deque>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -1144,41 +1145,12 @@ namespace yae
     if (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
         glewIsExtensionSupported("GL_ARB_texture_rectangle"))
     {
-      std::cerr << "TModernCanvas" << std::endl;
       private_ = new TModernCanvas();
     }
     else
     {
-      std::cerr << "TLegacyCanvas" << std::endl;
       private_ = new TLegacyCanvas();
     }
-  }
-  
-  //----------------------------------------------------------------
-  // Canvas::gl_context_is_valid
-  // 
-  bool
-  Canvas::gl_context_is_valid() const
-  {
-    return QGLWidget::isValid();
-  }
-  
-  //----------------------------------------------------------------
-  // Canvas::gl_make_current
-  // 
-  void
-  Canvas::gl_make_current()
-  {
-    QGLWidget::makeCurrent();
-  }
-  
-  //----------------------------------------------------------------
-  // Canvas::gl_done_current
-  // 
-  void
-  Canvas::gl_done_current()
-  {
-    QGLWidget::doneCurrent();
   }
   
   //----------------------------------------------------------------

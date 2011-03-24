@@ -3,23 +3,7 @@ cmake_minimum_required(VERSION 2.8.0)
 project(yae)
 set(PROGNAME "yap")
 
-if (EXISTS ${THE_DIR})
-  set(THE_SRC_DIR ${THE_DIR})
-endif (EXISTS ${THE_DIR})
-
-if (NOT THE_SRC_DIR)
-  file(TO_CMAKE_PATH "$ENV{THE_SRC_DIR}" THE_SRC_DIR)
-endif (NOT THE_SRC_DIR)
-
-if (NOT THE_BIN_DIR)
-  file(TO_CMAKE_PATH "$ENV{THE_BIN_DIR}" THE_BIN_DIR)
-endif (NOT THE_BIN_DIR)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${THE_SRC_DIR})
-
-find_package(THE REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
 
 set(Boost_ADDITIONAL_VERSIONS "1.44" "1.45")
 set(Boost_USE_MULTITHREAD ON)
@@ -43,16 +27,14 @@ endif (WIN32)
 
 add_definitions(-DYAE_STATIC)
 
-# use static GLEW libs:
+# NOTE: this is necessary when linking to static GLEW libs:
 add_definitions(-DGLEW_STATIC=1)
 
 include_directories(AFTER 
   .
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${THE_SRC_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
-  ${GLEW_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
   ${QT_QTOPENGL_INCLUDE_DIR}
   )
@@ -136,7 +118,11 @@ if (WIN32)
   find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
 endif (WIN32)
 
-find_library(PORTAUDIO_LIBRARY portaudio PATHS ${FFMPEG_LIBS_PATH} DOC "portaudio library")
+set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}" CACHE PATH "root path for portaudio lib/ and include/ folders")
+find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "portaudio library")
+
+set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ folders")
+find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
 
 set(project_moc_hxx 
   yaeCanvas.h
@@ -181,6 +167,7 @@ set(project_sources
 
 find_path(PORTAUDIO_INCLUDE_DIR 
   portaudio.h
+  ${PORTAUDIO_DIR}/include
   ${FFMPEG_HEADERS_PATH}
   /usr/include
   /usr/local/include
@@ -189,6 +176,18 @@ find_path(PORTAUDIO_INCLUDE_DIR
 if (PORTAUDIO_INCLUDE_DIR)
   include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
 endif (PORTAUDIO_INCLUDE_DIR)
+
+find_path(GLEW_INCLUDE_DIR 
+  GL/glew.h
+  ${GLEW_DIR}/include 
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (GLEW_INCLUDE_DIR)
+  include_directories(AFTER ${GLEW_INCLUDE_DIR})
+endif (GLEW_INCLUDE_DIR)
 
 # Set some Win32 Specific Settings
 if (WIN32)
@@ -225,8 +224,6 @@ add_executable(${PROGNAME}
   )
 
 set(TARGET_LIBS
-  ${THE_UI_LIBRARY}
-  ${THE_CORE_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
@@ -460,7 +457,7 @@ if (APPLE)
 	MACOSX_PACKAGE_LOCATION Resources)
 
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
-	COMMAND ${THE_SRC_DIR}/DeployOSX.sh 
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/DeployOSX.sh 
 	ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
 	COMMENT "pull in external dependencies"
 	)
