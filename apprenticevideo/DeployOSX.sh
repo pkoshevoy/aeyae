@@ -350,10 +350,9 @@ resolve_library()
 	fi
 	
 	NAME=`basename "${NAME}"`
-	for i in \
-		"/Developer/${NATIVE_ARCH}/lib" \
-		"/Library/Frameworks" \
-		; do
+	SRCH_HERE="${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
+	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
+	echo "${SRCH_HERE}" | awk 'BEGIN{RS=":"}{print}' | while read i; do
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
 			DNAME=`dirname "${j}"`
 			DNAME=`(cd "${DNAME}"; pwd)`
