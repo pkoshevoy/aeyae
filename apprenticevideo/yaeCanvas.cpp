@@ -18,12 +18,6 @@
 #include <yaeCanvas.h>
 #include <yaePixelFormatTraits.h>
 
-// the includes:
-#include <image/image_tile_generator.hxx>
-#include <opengl/image_tile_dl_elem.hxx>
-#include <opengl/glsl.hxx>
-#include <utils/the_utils.hxx>
-
 // boost includes:
 #include <boost/thread.hpp>
 
@@ -384,6 +378,75 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // TGLSaveState
+  // 
+  struct TGLSaveState
+  {
+    TGLSaveState(GLbitfield mask):
+      applied_(false)
+    {
+      glPushAttrib(mask);
+      
+      GLenum err = glGetError();
+      if (err == GL_NO_ERROR)
+      {
+        applied_ = true;
+      }
+      else
+      {
+        const GLubyte * str = gluErrorString(err);
+        std::cerr << "GL_ERROR: " << str << std::endl;
+      }
+    }
+    
+    ~TGLSaveState()
+    {
+      if (applied_)
+      {
+        glPopAttrib();
+      }
+    }
+    
+  protected:
+    bool applied_;
+  };
+
+  //----------------------------------------------------------------
+  // TGLSaveClientState
+  // 
+  struct TGLSaveClientState
+  {
+    TGLSaveClientState(GLbitfield mask):
+      applied_(false)
+    {
+      glPushClientAttrib(mask);
+      
+      GLenum err = glGetError();
+      if (err == GL_NO_ERROR)
+      {
+        applied_ = true;
+      }
+      else
+      {
+        const GLubyte * str = gluErrorString(err);
+        std::cerr << "GL_ERROR: " << str << std::endl;
+      }
+    }
+    
+    ~TGLSaveClientState()
+    {
+      if (applied_)
+      {
+        glPopClientAttrib();
+      }
+    }
+    
+  protected:
+    bool applied_;
+  };
+  
   //----------------------------------------------------------------
   // powerOfTwoLEQ
   // 
@@ -558,7 +621,7 @@ namespace yae
     
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
 
-    glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+    TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
       
@@ -590,7 +653,6 @@ namespace yae
                    dataTypeGL,
                    frame->sampleBuffer_->samples(0));
     }
-    glPopClientAttrib();
     return true;
   }
 
@@ -1074,18 +1136,21 @@ namespace yae
   void
   Canvas::initializePrivateBackend()
   {
-    if (private_ == NULL)
+    TMakeCurrentContext currentContext(this);
+    
+    delete private_;
+    private_ = NULL;
+    
+    if (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
+        glewIsExtensionSupported("GL_ARB_texture_rectangle"))
     {
-      if (glewIsExtensionSupported("GL_EXT_texture_rectangle"))
-      {
-        std::cerr << "TModernCanvas" << std::endl;
-        private_ = new TModernCanvas();
-      }
-      else
-      {
-        std::cerr << "TLegacyCanvas" << std::endl;
-        private_ = new TLegacyCanvas();
-      }
+      std::cerr << "TModernCanvas" << std::endl;
+      private_ = new TModernCanvas();
+    }
+    else
+    {
+      std::cerr << "TLegacyCanvas" << std::endl;
+      private_ = new TLegacyCanvas();
     }
   }
   
@@ -1223,7 +1288,7 @@ namespace yae
     
     if (ptts)
     {
-      the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
+      TGLSaveState pushAttr(GL_ALL_ATTRIB_BITS);
       
       int canvasWidth = width();
       int canvasHeight = height();
