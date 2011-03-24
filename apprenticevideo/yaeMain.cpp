@@ -77,6 +77,9 @@ main(int argc, char ** argv)
   assert(ok);
   (void)ok;
   
+  // initialize the canvas:
+  yae::mainWindow->canvas()->initializePrivateBackend();
+  
   for (int i = 1; i < argc; i++)
   {
     QString filename = QString::fromUtf8(argv[i]);

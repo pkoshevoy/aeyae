@@ -60,6 +60,10 @@ namespace yae
            Qt::WindowFlags f = 0);
     ~Canvas();
     
+    // initialize private backend rendering object,
+    // should not be called prior to initializing GLEW:
+    void initializePrivateBackend();
+    
     // virtual:
     bool gl_context_is_valid() const;
     void gl_make_current();

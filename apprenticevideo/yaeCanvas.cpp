@@ -1050,17 +1050,9 @@ namespace yae
                  QWidget * parent,
                  const QGLWidget * shareWidget,
                  Qt::WindowFlags f):
-    QGLWidget(format, parent, shareWidget, f)
+    QGLWidget(format, parent, shareWidget, f),
+    private_(NULL)
   {
-    if (glewIsExtensionSupported("GL_EXT_texture_rectangle"))
-    {
-      private_ = new TModernCanvas();
-    }
-    else
-    {
-      private_ = new TLegacyCanvas();
-    }
-    
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
     
@@ -1072,7 +1064,30 @@ namespace yae
   // Canvas::~Canvas
   // 
   Canvas::~Canvas()
-  {}
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::initializePrivateBackend
+  // 
+  void
+  Canvas::initializePrivateBackend()
+  {
+    if (private_ == NULL)
+    {
+      if (glewIsExtensionSupported("GL_EXT_texture_rectangle"))
+      {
+        std::cerr << "TModernCanvas" << std::endl;
+        private_ = new TModernCanvas();
+      }
+      else
+      {
+        std::cerr << "TLegacyCanvas" << std::endl;
+        private_ = new TLegacyCanvas();
+      }
+    }
+  }
   
   //----------------------------------------------------------------
   // Canvas::gl_context_is_valid
@@ -1203,7 +1218,9 @@ namespace yae
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    const pixelFormat::Traits * ptts = private_->pixelTraits();
+    const pixelFormat::Traits * ptts =
+      private_ ? private_->pixelTraits() : NULL;
+    
     if (ptts)
     {
       the_scoped_gl_attrib_t push_attr(GL_ALL_ATTRIB_BITS);
