@@ -9,7 +9,6 @@
 // system includes:
 #include <iostream>
 #include <sstream>
-#include <assert.h>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -69,11 +68,11 @@ namespace yae
     bool ok = true;
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
-    assert(ok);
+    YAE_ASSERT(ok);
     
     ok = connect(actionExit, SIGNAL(triggered()),
                  this, SLOT(fileExit()));
-    assert(ok);
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------

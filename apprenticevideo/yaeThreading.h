@@ -56,7 +56,7 @@ namespace yae
     {
       if (!context_)
       {
-        assert(false);
+        YAE_ASSERT(false);
         return false;
       }
       

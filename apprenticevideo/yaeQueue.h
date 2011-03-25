@@ -57,7 +57,7 @@ namespace yae
         }
         
         // sanity check:
-        assert(size_ == 0);
+        YAE_ASSERT(size_ == 0);
       }
       catch (...)
       {}

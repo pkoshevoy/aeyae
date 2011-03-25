@@ -102,7 +102,7 @@ namespace yae
         break;
     }
     
-    assert(false);
+    YAE_ASSERT(false);
     return 0;
   }
 
@@ -142,7 +142,7 @@ namespace yae
         break;
     }
     
-    assert(false);
+    YAE_ASSERT(false);
     return 0;
   }
   
@@ -286,7 +286,7 @@ namespace yae
                         std::size_t rows,
                         std::size_t alignment)
   {
-    assert(samplePlane < plane_.size());
+    YAE_ASSERT(samplePlane < plane_.size());
     if (samplePlane < plane_.size())
     {
       plane_[samplePlane].resize(rowBytes, rows, alignment);

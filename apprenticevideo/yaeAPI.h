@@ -14,6 +14,7 @@
 
 // system includes:
 #include <vector>
+#include <assert.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -50,6 +51,19 @@
 # define YAE_ALIGN(N, T) T __attribute__ ((aligned(N)))
 #else
 # define YAE_ALIGN(N, T) T
+#endif
+
+//----------------------------------------------------------------
+// YAE_ASSERT
+// 
+#if defined(__APPLE__)
+# if defined(__ppc__)
+#  define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
+# else
+#  define YAE_ASSERT(expr) if (!(expr)) __asm { int 3 }
+# endif
+#else
+# define YAE_ASSERT(expr) assert(expr)
 #endif
 
 

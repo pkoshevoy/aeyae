@@ -925,7 +925,7 @@ namespace yae
           
           if (!glIsTexture(texId))
           {
-            assert(false);
+            YAE_ASSERT(false);
             return false;
           }
           
@@ -942,7 +942,7 @@ namespace yae
           GLenum err = glGetError();
           if (err != GL_NO_ERROR)
           {
-            assert(false);
+            YAE_ASSERT(false);
             return false;
           }
         }
@@ -1014,7 +1014,7 @@ namespace yae
         
         if (!glIsTexture(texId))
         {
-          assert(false);
+          YAE_ASSERT(false);
           continue;
         }
         
@@ -1033,7 +1033,7 @@ namespace yae
         GLenum err = glGetError();
         if (err != GL_NO_ERROR)
         {
-          assert(false);
+          YAE_ASSERT(false);
           continue;
         }
       }
@@ -1066,7 +1066,7 @@ namespace yae
       
       if (!glIsTexture(texId))
       {
-        assert(false);
+        YAE_ASSERT(false);
         continue;
       }
         

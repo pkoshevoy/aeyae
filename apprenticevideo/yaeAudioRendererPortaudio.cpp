@@ -331,7 +331,7 @@ namespace yae
     
     if (!audioFrame_)
     {
-      assert(!audioFrameOffset_);
+      YAE_ASSERT(!audioFrameOffset_);
       
       // fetch the next audio frame from the reader:
       if (!reader_->readAudio(audioFrame_))
@@ -354,7 +354,7 @@ namespace yae
         dstPlanar != srcPlanar)
     {
       // detected stale leftovers:
-      assert(false);
+      YAE_ASSERT(false);
       audioFrame_ = TAudioFramePtr();
       audioFrameOffset_ = 0;
       return paContinue;
@@ -374,7 +374,7 @@ namespace yae
     {
       if (!audioFrame_)
       {
-        assert(!audioFrameOffset_);
+        YAE_ASSERT(!audioFrameOffset_);
         
         // fetch the next audio frame from the reader:
         if (!reader_->readAudio(audioFrame_))
@@ -393,7 +393,7 @@ namespace yae
             dstPlanar != srcPlanar)
         {
           // detected stale leftovers:
-          assert(false);
+          YAE_ASSERT(false);
           audioFrame_ = TAudioFramePtr();
           audioFrameOffset_ = 0;
           return paContinue;

@@ -22,7 +22,6 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <assert.h>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -110,7 +109,7 @@ main(int argc, char ** argv)
   if (err != GLEW_OK)
   {
     std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
-    assert(false);
+    YAE_ASSERT(false);
   }
   
   // initialize the canvas:
