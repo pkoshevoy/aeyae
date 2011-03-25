@@ -395,7 +395,7 @@ namespace yae
   {
     if (context_ && stream_)
     {
-      assert(context_->streams[stream_->index] == stream_);
+      YAE_ASSERT(context_->streams[stream_->index] == stream_);
     }
   }
   
@@ -515,7 +515,7 @@ namespace yae
   {
     if (!stream_)
     {
-      assert(false);
+      YAE_ASSERT(false);
       return;
     }
     
@@ -730,7 +730,7 @@ namespace yae
     Track(context, stream),
     frameQueue_(30)
   {
-    assert(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+    YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_VIDEO);
 
     // make sure the frames are sorted from oldest to newest:
     frameQueue_.setSortFunc(&aFollowsB);
@@ -882,7 +882,7 @@ namespace yae
       pixelFormat::getTraits(yaeOutputFormat);
     if (!ptts)
     {
-      assert(false);
+      YAE_ASSERT(false);
       return;
     }
     
@@ -1025,13 +1025,6 @@ namespace yae
           continue;
         }
         
-        if (avFrame->repeat_pict)
-        {
-          std::cerr << "FRAME SHOULD BE REPEATED: " << avFrame->repeat_pict
-                    << std::endl;
-          assert(!avFrame->repeat_pict);
-        }
-        
         framesDecoded_++;
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
@@ -1077,39 +1070,6 @@ namespace yae
         }
         
         if (!gotPTS &&
-            frameRate.num &&
-            frameRate.den)
-        {
-          if (gotPrevPTS)
-          {
-            // increment by average frame duration:
-            vf.time_ = prevPTS;
-            vf.time_ += TTime(frameRate.den,
-                              frameRate.num);
-            
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
-          }
-          
-          if (!gotPTS)
-          {
-            vf.time_.time_ =
-              startTime +
-              (framesDecoded_ - 1) *
-              (stream_->time_base.den * frameRate.den) /
-              (stream_->time_base.num * frameRate.num);
-            
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
-          }
-        }
-
-        if (!gotPTS &&
-            t.pts_ != AV_NOPTS_VALUE)
-        {
-          vf.time_.time_ = stream_->time_base.num * t.pts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
-        }
-        
-        if (!gotPTS &&
             avFrame->pts != AV_NOPTS_VALUE &&
             codecContext->time_base.num != AV_NOPTS_VALUE &&
             codecContext->time_base.den != AV_NOPTS_VALUE &&
@@ -1122,7 +1082,37 @@ namespace yae
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
         }
         
-        assert(gotPTS);
+        if (!gotPTS &&
+            frameRate.num &&
+            frameRate.den)
+        {
+          vf.time_.time_ =
+            startTime +
+            (framesDecoded_ - 1) *
+            (stream_->time_base.den * frameRate.den) /
+            (stream_->time_base.num * frameRate.num);
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          
+          if (!gotPTS && gotPrevPTS)
+          {
+            // increment by average frame duration:
+            vf.time_ = prevPTS;
+            vf.time_ += TTime(frameRate.den,
+                              frameRate.num);
+            
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          }
+        }
+
+        if (!gotPTS &&
+            t.pts_ != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * t.pts_;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+        }
+        
+        YAE_ASSERT(gotPTS);
         if (!gotPTS && gotPrevPTS)
         {
           vf.time_ = prevPTS;
@@ -1131,7 +1121,7 @@ namespace yae
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
         }
         
-        assert(gotPTS);
+        YAE_ASSERT(gotPTS);
         if (gotPTS)
         {
           if (gotPrevPTS)
@@ -1224,7 +1214,7 @@ namespace yae
                                            NULL);
             if (imgConvertCtx == NULL)
             {
-              assert(false);
+              YAE_ASSERT(false);
               break;
             }
           }
@@ -1240,6 +1230,26 @@ namespace yae
         
         // put the output frame into frame queue:
         frameQueue_.push(vfPtr);
+
+        // put repeated output frames into frame queue:
+        for (int i = 0; i < avFrame->repeat_pict; i++)
+        {
+          TVideoFramePtr rvfPtr(new TVideoFrame(vf));
+          TVideoFrame & rvf = *rvfPtr;
+          
+          if (frameRate.num && frameRate.den)
+          {
+            rvf.time_ += TTime((i + 1) * frameRate.den, frameRate.num);
+          }
+          else
+          {
+            rvf.time_.time_++;
+          }
+          
+          std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
+                    << std::endl;
+          frameQueue_.push(rvfPtr);
+        }
       }
       catch (...)
       {
@@ -1419,7 +1429,7 @@ namespace yae
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream)
   {
-    assert(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+    YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_AUDIO);
     
     // match output queue size to input queue size:
     frameQueue_.setMaxSize(packetQueue_.getMaxSize());
