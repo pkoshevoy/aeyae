@@ -680,15 +680,6 @@ namespace yae
     glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
                     GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
-#if 0
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_GENERATE_MIPMAP_SGIS, GL_FALSE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_MAX_LEVEL, 0);
-#endif
-    
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     
     glDisable(GL_LIGHTING);
@@ -717,23 +708,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TEdge
+  // 
+  struct TEdge
+  {
+    // texture:
+    GLsizei offset_;
+    GLsizei extent_;
+    GLsizei length_;
+    
+    // padding:
+    GLsizei v0_;
+    GLsizei v1_;
+
+    // texture coordinates:
+    GLdouble t0_;
+    GLdouble t1_;
+  };
+  
+  //----------------------------------------------------------------
   // TFrameTile
   // 
   struct TFrameTile
   {
-    // quad coordinates:
-    GLsizei x_;
-    GLsizei y_;
-
-    // quad width, height:
-    GLsizei w_;
-    GLsizei h_;
-    
-    // texture coordinates:
-    GLdouble s0_;
-    GLdouble s1_;
-    GLdouble t0_;
-    GLdouble t1_;
+    TEdge x_;
+    TEdge y_;
   };
   
   //----------------------------------------------------------------
@@ -755,14 +754,6 @@ namespace yae
     GLsizei w_;
     GLsizei h_;
     
-    // additional padding due to odd image dimensions:
-    GLsizei wOdd_;
-    GLsizei hOdd_;
-    
-    // padded image dimensions:
-    GLsizei wPadded_;
-    GLsizei hPadded_;
-    
     // padded image texture data:
     std::vector<unsigned char> textureData_;
 
@@ -771,41 +762,96 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TEdge
-  // 
-  typedef Tuple<2, GLsizei> TEdge;
-
-  //----------------------------------------------------------------
   // calculateEdges
   // 
   static void
   calculateEdges(std::deque<TEdge> & edges,
-                 GLsizei edgePadded,
-                 GLsizei edgeMax)
+                 GLsizei edgeSize,
+                 GLsizei textureEdgeMax)
   {
-    if (!edgePadded)
+    if (!edgeSize)
     {
       return;
     }
 
     GLsizei offset = 0;
-    GLsizei extent = edgePadded;
+    GLsizei extent = edgeSize;
+    GLsizei segmentStart = 0;
+
     while (true)
     {
       edges.push_back(TEdge());
       TEdge & edge = edges.back();
       
-      edge[0] = offset;
-      edge[1] = std::min(edgeMax, powerOfTwoLEQ(extent));
+      edge.offset_ = offset;
+      edge.extent_ = std::min<GLsizei>(textureEdgeMax, powerOfTwoLEQ(extent));
       
-      if (edge[1] == extent)
+      if (edge.extent_ < extent &&
+          edge.extent_ < textureEdgeMax)
+      {
+        edge.extent_ *= 2;
+      }
+
+      // padding:
+      GLsizei p0 = (edge.offset_ > 0) ? 1 : 0;
+      GLsizei p1 = (edge.extent_ < extent) ? 1 : 0;
+
+      edge.length_ = std::min<GLsizei>(edge.extent_, extent);
+      edge.v0_ = segmentStart;
+      edge.v1_ = edge.v0_ + edge.length_ - (p0 + p1);
+      segmentStart = edge.v1_;
+      
+      edge.t0_ = double(p0) / double(edge.extent_);
+      edge.t1_ = double(edge.length_ - p1) / double(edge.extent_);
+      
+      if (edge.extent_ < extent)
+      {
+        offset += edge.extent_ - 2;
+        extent -= edge.extent_ - 2;
+        continue;
+      }
+      
+      break;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // calcTextureEdgeMax
+  // 
+  static GLsizei
+  calcTextureEdgeMax()
+  {
+    GLsizei edgeMax = 64;
+    
+    for (unsigned int i = 0; i < 8; i++, edgeMax *= 2)
+    {
+      glTexImage2D(GL_PROXY_TEXTURE_2D,
+                   0, // level
+                   GL_RGBA,
+                   edgeMax * 2, // width
+                   edgeMax * 2, // height
+                   0,
+                   GL_RGBA,
+                   GL_UNSIGNED_BYTE,
+                   NULL);// texels
+      GLenum err = glGetError();
+      if (err != GL_NO_ERROR)
       {
         break;
       }
-        
-      offset += (edge[1] - 2);
-      extent -= (edge[1] - 2);
+      
+      GLint width = 0;
+      glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D,
+                               0, // level
+                               GL_TEXTURE_WIDTH,
+                               &width);
+      if (width != GLint(edgeMax * 2))
+      {
+        break;
+      }
     }
+    
+    return edgeMax;
   }
   
   //----------------------------------------------------------------
@@ -815,8 +861,7 @@ namespace yae
   TLegacyCanvas::loadFrame(QGLWidget * canvas,
                            const TVideoFramePtr & frame)
   {
-    // FIXME: I should try to calculate this at run-time:
-    static const GLsizei textureEdgeMax = 2048;
+    static const GLsizei textureEdgeMax = calcTextureEdgeMax();
     
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -869,19 +914,13 @@ namespace yae
       w_ = frame_->traits_.visibleWidth_;
       h_ = frame_->traits_.visibleHeight_;
       
-      wOdd_ = (GLsizei)(w_ & 0x01);
-      hOdd_ = (GLsizei)(h_ & 0x01);
-      
-      wPadded_ = w_ + 2 + wOdd_;
-      hPadded_ = h_ + 2 + hOdd_;
-      
       // calculate x-min, x-max coordinates for each tile:
       std::deque<TEdge> x;
-      calculateEdges(x, wPadded_, textureEdgeMax);
+      calculateEdges(x, w_, textureEdgeMax);
       
       // calculate y-min, y-max coordinates for each tile:
       std::deque<TEdge> y;
-      calculateEdges(y, hPadded_, textureEdgeMax);
+      calculateEdges(y, h_, textureEdgeMax);
       
       // setup the tiles:
       const std::size_t rows = y.size();
@@ -896,30 +935,11 @@ namespace yae
         for (std::size_t i = 0; i < cols; i++)
         {
           std::size_t tileIndex = j * cols + i;
+          
           TFrameTile & tile = tiles_[tileIndex];
-
-          tile.x_ = x[i][0];
-          tile.y_ = y[j][0];
-          tile.w_ = x[i][1] - 2;
-          tile.h_ = y[j][1] - 2;
+          tile.x_ = x[i];
+          tile.y_ = y[j];
           
-          tile.s0_ = GLdouble(1.0 / double(x[i][1]));
-          tile.s1_ = GLdouble(1.0 - 1.0 / double(x[i][1]));
-          tile.t0_ = GLdouble(1.0 / double(y[j][1]));
-          tile.t1_ = GLdouble(1.0 - 1.0 / double(y[j][1]));
-          
-          if (i + 1 == cols)
-          {
-            tile.w_ -= wOdd_;
-            tile.s1_ = GLdouble(1.0 - double(1 + wOdd_) / double(x[i][1]));
-          }
-          
-          if (j + 1 == rows)
-          {
-            tile.h_ -= hOdd_;
-            tile.t1_ = GLdouble(1.0 - double(1 + hOdd_) / double(y[j][1]));
-          }
-
           GLuint texId = texId_[tileIndex];
           glBindTexture(GL_TEXTURE_2D, texId);
           
@@ -932,8 +952,8 @@ namespace yae
           glTexImage2D(GL_TEXTURE_2D,
                        0, // mipmap level
                        internalFormatGL,
-                       tile.w_ + 2,
-                       tile.h_ + 2,
+                       tile.x_.extent_,
+                       tile.y_.extent_,
                        0, // border width
                        pixelFormatGL,
                        dataTypeGL,
@@ -950,13 +970,7 @@ namespace yae
     }
     
     // creating a padded frame buffer:
-    std::size_t bytesPerPixel = ptts->stride_[0] / 8;
-    if (!mayReuseTextures)
-    {
-      textureData_.resize(wPadded_ * hPadded_ * bytesPerPixel);
-    }
-    
-    const std::size_t dstStride = bytesPerPixel * wPadded_;
+    const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
     const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
     const std::size_t rowBytes = bytesPerPixel * w_;
     
@@ -964,46 +978,12 @@ namespace yae
       frame_->sampleBuffer_->samples(0) +
       frame_->traits_.offsetTop_ * srcStride +
       frame_->traits_.offsetLeft_ * bytesPerPixel;
-    
-    unsigned char * dst = &(textureData_.front());
-    
-    // pad on the top:
-    memcpy(dst + bytesPerPixel, src, rowBytes);
-    memcpy(dst, src, bytesPerPixel);
-    memcpy(dst + rowBytes + bytesPerPixel,
-           src + rowBytes - bytesPerPixel,
-           bytesPerPixel);
-    
-    // copy the frame, pad on left and right:
-    for (GLsizei i = 0; i < h_; i++)
-    {
-      const unsigned char * srcRow = src + srcStride * i;
-      unsigned char * dstRow = dst + dstStride * (i + 1);
-      memcpy(dstRow + bytesPerPixel, srcRow, rowBytes);
-      
-      memcpy(dstRow, srcRow, bytesPerPixel);
-      memcpy(dstRow + rowBytes + bytesPerPixel,
-             srcRow + rowBytes - bytesPerPixel,
-             bytesPerPixel);
-      
-    }
-    
-    // pad on the bottom:
-    memcpy(dst + (h_ + 1) * dstStride + bytesPerPixel,
-           src + (h_ - 1) * srcStride,
-           rowBytes);
-    memcpy(dst + (h_ + 1) * dstStride,
-           src + (h_ - 1) * srcStride,
-           bytesPerPixel);
-    memcpy(dst + (h_ + 1) * dstStride + rowBytes + bytesPerPixel,
-           src + (h_ - 1) * srcStride + rowBytes - bytesPerPixel,
-           bytesPerPixel);
-    
+
     // upload the texture data:
     glPushClientAttrib(GL_UNPACK_ALIGNMENT);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
-      glPixelStorei(GL_UNPACK_ROW_LENGTH, wPadded_);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, frame_->traits_.encodedWidth_);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       
       for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1018,17 +998,17 @@ namespace yae
           continue;
         }
         
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_);
-        glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_.offset_);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
         glTexSubImage2D(GL_TEXTURE_2D,
                         0, // mipmap level
                         0, // x-offset
                         0, // y-offset
-                        tile.w_ + 2,
-                        tile.h_ + 2,
+                        tile.x_.length_,
+                        tile.y_.length_,
                         pixelFormatGL,
                         dataTypeGL,
-                        &(textureData_.front()));
+                        src);
         
         GLenum err = glGetError();
         if (err != GL_NO_ERROR)
@@ -1053,9 +1033,6 @@ namespace yae
     {
       return;
     }
-    
-    // video traits shortcut:
-    const VideoTraits & vtts = frame_->traits_;
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1090,17 +1067,17 @@ namespace yae
       
       glBegin(GL_QUADS);
       {
-        glTexCoord2d(tile.s0_, tile.t0_);
-        glVertex2i(tile.x_, tile.y_);
+        glTexCoord2d(tile.x_.t0_, tile.y_.t0_);
+        glVertex2i(tile.x_.v0_, tile.y_.v0_);
+
+        glTexCoord2d(tile.x_.t1_, tile.y_.t0_);
+        glVertex2i(tile.x_.v1_, tile.y_.v0_);
         
-        glTexCoord2d(tile.s1_, tile.t0_);
-        glVertex2i(tile.x_ + tile.w_, tile.y_);
+        glTexCoord2d(tile.x_.t1_, tile.y_.t1_);
+        glVertex2i(tile.x_.v1_, tile.y_.v1_);
         
-        glTexCoord2d(tile.s1_, tile.t1_);
-        glVertex2i(tile.x_ + tile.w_, tile.y_ + tile.h_);
-        
-        glTexCoord2d(tile.s0_, tile.t1_);
-        glVertex2i(tile.x_, tile.y_ + tile.h_);
+        glTexCoord2d(tile.x_.t0_, tile.y_.t1_);
+        glVertex2i(tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
     }
