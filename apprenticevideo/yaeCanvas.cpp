@@ -1009,7 +1009,76 @@ namespace yae
                         pixelFormatGL,
                         dataTypeGL,
                         src);
-        
+
+        if (tile.x_.length_ < tile.x_.extent_)
+        {
+          // extend on the right to avoid texture filtering artifacts:
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS, (tile.x_.offset_ +
+                                                tile.x_.length_ - 1));
+          glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
+          
+          glTexSubImage2D(GL_TEXTURE_2D,
+                          0, // mipmap level
+                          
+                          // x,y offset
+                          tile.x_.length_,
+                          0,
+                          
+                          // width, height
+                          1,
+                          tile.y_.length_,
+                          
+                          pixelFormatGL,
+                          dataTypeGL,
+                          src);
+        }
+
+        if (tile.y_.length_ < tile.y_.extent_)
+        {
+          // extend on the bottom to avoid texture filtering artifacts:
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_.offset_);
+          glPixelStorei(GL_UNPACK_SKIP_ROWS, (tile.y_.offset_ +
+                                              tile.y_.length_ - 1));
+          glTexSubImage2D(GL_TEXTURE_2D,
+                          0, // mipmap level
+                          
+                          // x,y offset
+                          0,
+                          tile.y_.length_ - 1,
+                          
+                          // width, height
+                          tile.y_.length_,
+                          1,
+                          
+                          pixelFormatGL,
+                          dataTypeGL,
+                          src);
+        }
+
+        if (tile.x_.length_ < tile.x_.extent_ &&
+            tile.y_.length_ < tile.y_.extent_)
+        {
+          // extend the bottom-right corner:
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS, (tile.x_.offset_ +
+                                                tile.x_.length_ - 1));
+          glPixelStorei(GL_UNPACK_SKIP_ROWS, (tile.y_.offset_ +
+                                              tile.y_.length_ - 1));
+          glTexSubImage2D(GL_TEXTURE_2D,
+                          0, // mipmap level
+                          
+                          // x,y offset
+                          tile.x_.length_,
+                          tile.y_.length_,
+                          
+                          // width, height
+                          1,
+                          1,
+                          
+                          pixelFormatGL,
+                          dataTypeGL,
+                          src);
+        }
+
         GLenum err = glGetError();
         if (err != GL_NO_ERROR)
         {
