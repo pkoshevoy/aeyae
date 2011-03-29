@@ -377,6 +377,24 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
   return 0;
 }
 
+//----------------------------------------------------------------
+// yae_assert_gl_no_error
+// 
+static bool
+yae_assert_gl_no_error()
+{
+  GLenum err = glGetError();
+  if (err == GL_NO_ERROR)
+  {
+    return true;
+  }
+  
+  const GLubyte * str = gluErrorString(err);
+  std::cerr << "GL_ERROR: " << str << std::endl;
+  YAE_ASSERT(false);
+  return false;
+}
+
 namespace yae
 {
 
@@ -389,17 +407,7 @@ namespace yae
       applied_(false)
     {
       glPushAttrib(mask);
-      
-      GLenum err = glGetError();
-      if (err == GL_NO_ERROR)
-      {
-        applied_ = true;
-      }
-      else
-      {
-        const GLubyte * str = gluErrorString(err);
-        std::cerr << "GL_ERROR: " << str << std::endl;
-      }
+      applied_ = yae_assert_gl_no_error();
     }
     
     ~TGLSaveState()
@@ -423,17 +431,7 @@ namespace yae
       applied_(false)
     {
       glPushClientAttrib(mask);
-      
-      GLenum err = glGetError();
-      if (err == GL_NO_ERROR)
-      {
-        applied_ = true;
-      }
-      else
-      {
-        const GLubyte * str = gluErrorString(err);
-        std::cerr << "GL_ERROR: " << str << std::endl;
-      }
+      applied_ = yae_assert_gl_no_error();
     }
     
     ~TGLSaveClientState()
@@ -959,10 +957,8 @@ namespace yae
                        dataTypeGL,
                        NULL);
           
-          GLenum err = glGetError();
-          if (err != GL_NO_ERROR)
+          if (!yae_assert_gl_no_error())
           {
-            YAE_ASSERT(false);
             return false;
           }
         }
@@ -980,11 +976,12 @@ namespace yae
       frame_->traits_.offsetLeft_ * bytesPerPixel;
 
     // upload the texture data:
-    glPushClientAttrib(GL_UNPACK_ALIGNMENT);
+    TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
       glPixelStorei(GL_UNPACK_ROW_LENGTH, frame_->traits_.encodedWidth_);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+      yae_assert_gl_no_error();
       
       for (std::size_t i = 0; i < tiles_.size(); ++i)
       {
@@ -999,7 +996,11 @@ namespace yae
         }
         
         glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_.offset_);
+        yae_assert_gl_no_error();
+        
         glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
+        yae_assert_gl_no_error();
+        
         glTexSubImage2D(GL_TEXTURE_2D,
                         0, // mipmap level
                         0, // x-offset
@@ -1009,13 +1010,17 @@ namespace yae
                         pixelFormatGL,
                         dataTypeGL,
                         src);
-
+        yae_assert_gl_no_error();
+        
         if (tile.x_.length_ < tile.x_.extent_)
         {
           // extend on the right to avoid texture filtering artifacts:
           glPixelStorei(GL_UNPACK_SKIP_PIXELS, (tile.x_.offset_ +
                                                 tile.x_.length_ - 1));
+          yae_assert_gl_no_error();
+          
           glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
+          yae_assert_gl_no_error();
           
           glTexSubImage2D(GL_TEXTURE_2D,
                           0, // mipmap level
@@ -1031,6 +1036,7 @@ namespace yae
                           pixelFormatGL,
                           dataTypeGL,
                           src);
+          yae_assert_gl_no_error();
         }
 
         if (tile.y_.length_ < tile.y_.extent_)
@@ -1044,15 +1050,16 @@ namespace yae
                           
                           // x,y offset
                           0,
-                          tile.y_.length_ - 1,
+                          tile.y_.length_,
                           
                           // width, height
-                          tile.y_.length_,
+                          tile.x_.length_,
                           1,
                           
                           pixelFormatGL,
                           dataTypeGL,
                           src);
+          yae_assert_gl_no_error();
         }
 
         if (tile.x_.length_ < tile.x_.extent_ &&
@@ -1077,17 +1084,11 @@ namespace yae
                           pixelFormatGL,
                           dataTypeGL,
                           src);
-        }
-
-        GLenum err = glGetError();
-        if (err != GL_NO_ERROR)
-        {
-          YAE_ASSERT(false);
-          continue;
+          yae_assert_gl_no_error();
         }
       }
     }
-    glPopClientAttrib();
+    
     return true;
   }
 
