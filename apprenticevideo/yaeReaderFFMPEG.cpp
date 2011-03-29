@@ -1090,7 +1090,7 @@ namespace yae
             startTime +
             (framesDecoded_ - 1) *
             (stream_->time_base.den * frameRate.den) /
-            (stream_->time_base.num * frameRate.num);
+            (frameRate.num);
           
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           
