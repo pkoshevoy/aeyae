@@ -1089,8 +1089,8 @@ namespace yae
           vf.time_.time_ =
             startTime +
             (framesDecoded_ - 1) *
-            (stream_->time_base.den * frameRate.den) /
-            (frameRate.num);
+            (int64_t(stream_->time_base.den) * int64_t(frameRate.den)) /
+            (int64_t(frameRate.num));
           
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
           
