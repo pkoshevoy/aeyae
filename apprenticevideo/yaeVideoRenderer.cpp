@@ -87,6 +87,8 @@ namespace yae
     
     TTime framePosition;
     double frameDuration = 0.0;
+    double lateFrames = 0.0;
+    double lateFramesErrorSum = 0.0;
     
     bool ok = true;
     while (ok)
@@ -97,38 +99,57 @@ namespace yae
       
       // get the time segment we are supposed to render for,
       // and the current time relative to the time segment:
-      double playheadPosition = clock_.getCurrentTime(t0);
+      double playheadPosition = 0.0;
+      bool clockIsRunning = clock_.getCurrentTime(t0, playheadPosition);
       
       // get position of the frame relative to the current time segment:
       double f0 = double(framePosition.time_) / double(framePosition.base_);
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
+
+      if (df < -0.067 && clockIsRunning)
+      {
+        lateFramesErrorSum -= df;
+        lateFrames += 1.0;
+      }
+      else
+      {
+        lateFramesErrorSum = 0.0;
+        lateFrames = 0.0;
+      }
       
       if (df > 0.0)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDuration);
-#if 0
-        std::cerr << "FRAME IS RELEVANT FOR " << df << " sec, "
-                  << "\tf0: " << f0
-                  << "\tf1: " << f1
-                  << "\tt: " << playheadPosition
-                  << "\tsleep: " << secondsToSleep << " sec"
-                  << std::endl;
-#endif
+
+        if (df > 0.067)
+        {
+          std::cerr << "FRAME IS VALID FOR " << df << " sec\n"
+                    << "sleep: " << secondsToSleep << " sec"
+                    << "\tf0: " << f0
+                    << "\tf1: " << f1
+                    << "\tt: " << playheadPosition
+                    << std::endl;
+        }
         
         boost::this_thread::sleep(boost::posix_time::milliseconds
                                   (long(secondsToSleep * 1000.0)));
         continue;
       }
       
-      if (-df > 0.067 /* frameDuration * 2.0 */)
+      if (clockIsRunning &&
+          lateFrames > 29.0 &&
+          lateFramesErrorSum / lateFrames > 0.067)
       {
 #if 1
         std::cerr << "video is late " << -df << " sec, "
                   << "\tf0: " << f0
                   << "\tf1: " << f1
                   << "\tt: " << playheadPosition
+                  << "\nlate frames: " << lateFrames
+                  << "\nerror total: " << lateFramesErrorSum
+                  << "\naverage err: " << lateFramesErrorSum / lateFrames
                   << std::endl;
 #endif
         
@@ -137,6 +158,9 @@ namespace yae
           std::min(std::max(-df + frameDuration, 1.0), 2.0);
         
         clock_.waitForMe(delayInSeconds);
+
+        lateFrames = 0.0;
+        lateFramesErrorSum = 0.0;
       }
       
       // read a frame:
@@ -153,6 +177,12 @@ namespace yae
           
           if (t > f0 || frameDuration == 0.0)
           {
+#if 0
+            std::cerr << "RENDER VIDEO @ " << t
+                      << ", clock is running: " << clockIsRunning
+                      << ", playhead: " << playheadPosition
+                      << std::endl;
+#endif
             break;
           }
         }

@@ -845,12 +845,24 @@ namespace yae
   // verify that presentation timestamps are monotonically increasing
   // 
   static inline bool
-  verifyPTS(bool gotPrevPTS, const TTime & prevPTS, const TTime & nextPTS)
+  verifyPTS(bool gotPrevPTS, const TTime & prevPTS, const TTime & nextPTS,
+            const char * debugMessage = NULL)
   {
-    return (!gotPrevPTS ||
-            (prevPTS.base_ == nextPTS.base_ ?
-             prevPTS.time_ < nextPTS.time_ :
-             prevPTS.toSeconds() < nextPTS.toSeconds()));
+    bool ok = (!gotPrevPTS ||
+               (prevPTS.base_ == nextPTS.base_ ?
+                prevPTS.time_ < nextPTS.time_ :
+                prevPTS.toSeconds() < nextPTS.toSeconds()));
+#if 0
+    if (ok && debugMessage)
+    {
+      std::cerr << "PTS OK: "
+                << nextPTS.time_ << "/" << nextPTS.base_
+                << ", " << debugMessage << std::endl;
+    }
+#else
+    (void)debugMessage;
+#endif
+    return ok;
   }
 
   //----------------------------------------------------------------
@@ -1007,7 +1019,8 @@ namespace yae
         // save packet timestamps and duration so we can capture
         // and re-use this to timestamp the decoded frame:
         savePacketTime(packet);
-        if (packetTime_.pts_ != AV_NOPTS_VALUE)
+        if (packetTime_.pts_ != AV_NOPTS_VALUE ||
+            packetTime_.dts_ != AV_NOPTS_VALUE)
         {
           insertPacketTime(packetTimes, packetTime_);
         }
@@ -1058,7 +1071,7 @@ namespace yae
             framesDecoded_ == 1)
         {
           vf.time_.time_ = startTime;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t0");
         }
         
         if (!gotPTS &&
@@ -1066,7 +1079,22 @@ namespace yae
             frameTime->pts_ != AV_NOPTS_VALUE)
         {
           vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "frameTime");
+        }
+        
+        if (!gotPTS &&
+            t.pts_ != AV_NOPTS_VALUE)
+        {
+          vf.time_.time_ = stream_->time_base.num * t.pts_;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t.pts");
+        }
+        
+        if (!gotPTS &&
+            t.dts_ != AV_NOPTS_VALUE &&
+            packetTimes.empty())
+        {
+          vf.time_.time_ = stream_->time_base.num * t.dts_;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t.dts");
         }
         
         if (!gotPTS &&
@@ -1079,20 +1107,21 @@ namespace yae
           vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
           vf.time_.base_ = codecContext->time_base.den;
           
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "avFrame->pts");
         }
         
         if (!gotPTS &&
             frameRate.num &&
             frameRate.den)
         {
+          vf.time_.base_ = stream_->time_base.den;
           vf.time_.time_ =
             startTime +
             (framesDecoded_ - 1) *
-            (int64_t(stream_->time_base.den) * int64_t(frameRate.den)) /
+            (int64_t(frameRate.den) * int64_t(stream_->time_base.num)) /
             (int64_t(frameRate.num));
           
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t0 + n/fps");
           
           if (!gotPTS && gotPrevPTS)
           {
@@ -1101,15 +1130,8 @@ namespace yae
             vf.time_ += TTime(frameRate.den,
                               frameRate.num);
             
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t += 1/fps");
           }
-        }
-
-        if (!gotPTS &&
-            t.pts_ != AV_NOPTS_VALUE)
-        {
-          vf.time_.time_ = stream_->time_base.num * t.pts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
         }
         
         YAE_ASSERT(gotPTS);
@@ -1118,7 +1140,7 @@ namespace yae
           vf.time_ = prevPTS;
           vf.time_.time_++;
           
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_);
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t++");
         }
         
         YAE_ASSERT(gotPTS);
@@ -1130,6 +1152,7 @@ namespace yae
             double tb = vf.time_.toSeconds();
             double dt = tb - ta;
             double fd = 1.0 / nativeTraits.frameRate_;
+            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
             if (dt > 2.0 * fd)
             {
               std::cerr
@@ -1531,6 +1554,21 @@ namespace yae
     
     ReSampleContext * resampleCtx = NULL;
     
+    int64_t startTime = stream_->start_time;
+    if (startTime == AV_NOPTS_VALUE)
+    {
+      startTime = 0;
+    }
+    else if (startTime > INT64_C(0xFFFFFFFF))
+    {
+      // assume it's just broken and reset to zero:
+      startTime = 0;
+    }
+    
+    TTime prevPTS;
+    bool gotPrevPTS = false;
+    uint64 prevNumSamples = 0;
+    
     while (true)
     {
       try
@@ -1610,18 +1648,71 @@ namespace yae
         af.traits_ = override_;
         af.time_.base_ = stream_->time_base.den;
         
-        if (packet.pts != AV_NOPTS_VALUE)
+        bool gotPTS = false;
+        
+        if (!gotPTS &&
+            packet.pts != AV_NOPTS_VALUE &&
+            packet.pts < INT64_C(0xFFFFFFFF))
         {
           af.time_.time_ = stream_->time_base.num * packet.pts;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.pts");
         }
-        else if (packet.dts != AV_NOPTS_VALUE)
+        
+        if (!gotPTS &&
+            packet.dts != AV_NOPTS_VALUE &&
+            packet.dts < INT64_C(0xFFFFFFFF))
         {
           af.time_.time_ = stream_->time_base.num * packet.dts;
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.dts");
         }
-        else
+        
+        if (!gotPTS)
         {
-          af.time_.time_ = samplesDecoded_ - numSamples;
           af.time_.base_ = nativeTraits.sampleRate_;
+          af.time_.time_ = samplesDecoded_ - numSamples;
+          af.time_ += TTime(startTime, stream_->time_base.den);
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
+        }
+        
+        if (!gotPTS && gotPrevPTS)
+        {
+          af.time_ = prevPTS;
+          af.time_ += TTime(prevNumSamples, nativeTraits.sampleRate_);
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
+        }
+        
+        YAE_ASSERT(gotPTS);
+        if (!gotPTS && gotPrevPTS)
+        {
+          af.time_ = prevPTS;
+          af.time_.time_++;
+          
+          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
+        }
+        
+        YAE_ASSERT(gotPTS);
+        if (gotPTS)
+        {
+          if (gotPrevPTS)
+          {
+            double ta = prevPTS.toSeconds();
+            double tb = af.time_.toSeconds();
+            double dt = tb - ta;
+            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+            if (dt > 0.67)
+            {
+              std::cerr
+                << "\nNOTE: detected large audio PTS jump -- " << std::endl
+                << dt << " seconds" << std::endl
+                << std::endl;
+            }
+          }
+          
+          gotPrevPTS = true;
+          prevPTS = af.time_;
+          prevNumSamples = numSamples;
         }
         
         TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),

@@ -195,8 +195,8 @@ namespace yae
   //----------------------------------------------------------------
   // SharedClock::getCurrentTime
   // 
-  double
-  SharedClock::getCurrentTime(TTime & t0) const
+  bool
+  SharedClock::getCurrentTime(TTime & t0, double & playheadPosition) const
   {
     const TimeSegment & timeSegment = *(private_->shared_);
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
@@ -205,17 +205,18 @@ namespace yae
     
     if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
-      return 0.0;
+      playheadPosition = t0.toSeconds();
+      return false;
     }
     
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
     
-    double playheadPosition =
+    playheadPosition =
       double(t0.time_) / double(t0.base_) +
       double(delta.total_milliseconds()) * 1e-3;
     
-    return playheadPosition;
+    return true;
   }
   
   //----------------------------------------------------------------

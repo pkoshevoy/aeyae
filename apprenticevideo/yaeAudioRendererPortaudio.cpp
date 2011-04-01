@@ -458,6 +458,9 @@ namespace yae
     
     if (clock_.allowsSettingTime())
     {
+#if 0
+      std::cerr << "RENDER AUDIO @ " << framePosition.toSeconds() << std::endl;
+#endif
       clock_.setCurrentTime(framePosition,
                             outputParams_.suggestedLatency);
     }
