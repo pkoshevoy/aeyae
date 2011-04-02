@@ -191,6 +191,9 @@ namespace yae
           
           if (data_.empty())
           {
+#ifndef NDEBUG
+            std::cerr << "queue is empty, closed: " << closed_ << std::endl;
+#endif
             return false;
           }
           

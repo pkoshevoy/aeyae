@@ -744,6 +744,10 @@ namespace yae
   {
     if (Track::open())
     {
+      // open the frame queue now to avoid a race condition between
+      // video decoder thread and video renderer thread:
+      frameQueue_.open();
+      
       getTraits(override_);
       framesDecoded_ = 0;
       return true;
@@ -1464,6 +1468,10 @@ namespace yae
   {
     if (Track::open())
     {
+      // open the frame queue now to avoid a race condition between
+      // audio decoder thread and audio renderer thread:
+      frameQueue_.open();
+      
       getTraits(override_);
       samplesDecoded_ = 0;
       return true;

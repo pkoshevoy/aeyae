@@ -190,6 +190,9 @@ namespace yae
       
       if (!ok)
       {
+#ifndef NDEBUG
+        std::cerr << "reader_->readVideo: " << ok << std::endl;
+#endif
         break;
       }
       
