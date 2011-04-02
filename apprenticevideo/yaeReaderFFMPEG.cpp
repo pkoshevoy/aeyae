@@ -1099,8 +1099,6 @@ namespace yae
         
         if (!gotPTS &&
             avFrame->pts != AV_NOPTS_VALUE &&
-            codecContext->time_base.num != AV_NOPTS_VALUE &&
-            codecContext->time_base.den != AV_NOPTS_VALUE &&
             codecContext->time_base.num &&
             codecContext->time_base.den)
         {
