@@ -244,6 +244,7 @@ namespace yae
     }
     
     // setup renderer shared reference clock:
+    SharedClock refClock;
     reader_->close();
     videoRenderer_->close();
     audioRenderer_->close();
@@ -252,6 +253,7 @@ namespace yae
     {
       audioRenderer_->takeThisClock(SharedClock());
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
+      refClock = audioRenderer_->clock();
       
       if (numVideoTracks)
       {
@@ -262,6 +264,7 @@ namespace yae
     {
       videoRenderer_->takeThisClock(SharedClock());
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
+      refClock = videoRenderer_->clock();
     }
     
     // update the renderers:
@@ -283,9 +286,14 @@ namespace yae
         {
           videoRenderer_->takeThisClock(SharedClock());
           videoRenderer_->obeyThisClock(videoRenderer_->clock());
+          refClock = videoRenderer_->clock();
         }
       }
     }
+    
+    // tell the renderers to wait for half a second to allow the
+    // frame queues to fill up a little:
+    refClock.waitForMe(0.5);
     
     reader->threadStart();
     videoRenderer_->open(canvas_, reader);
