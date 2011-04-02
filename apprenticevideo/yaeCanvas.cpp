@@ -445,6 +445,22 @@ namespace yae
   protected:
     bool applied_;
   };
+
+  //----------------------------------------------------------------
+  // TGLSaveMatrixState
+  // 
+  struct TGLSaveMatrixState
+  {
+    TGLSaveMatrixState()
+    {
+      glPushMatrix();
+    }
+    
+    ~TGLSaveMatrixState()
+    {
+      glPopMatrix();
+    }
+  };
   
   //----------------------------------------------------------------
   // powerOfTwoLEQ
@@ -968,7 +984,6 @@ namespace yae
     // creating a padded frame buffer:
     const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
     const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
-    const std::size_t rowBytes = bytesPerPixel * w_;
     
     const unsigned char * src =
       frame_->sampleBuffer_->samples(0) +
@@ -1103,6 +1118,9 @@ namespace yae
     {
       return;
     }
+
+    TGLSaveMatrixState pushMatrix;
+    glScaled(frame_->traits_.pixelAspectRatio_, 1.0, 1.0);
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1116,7 +1134,7 @@ namespace yae
         YAE_ASSERT(false);
         continue;
       }
-        
+      
       glTexParameteri(GL_TEXTURE_2D,
                       GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTexParameteri(GL_TEXTURE_2D,
