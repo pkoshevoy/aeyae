@@ -633,9 +633,19 @@ namespace yae
     frame_ = frame;
     
     glGenTextures(1, &texId_);
-    
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
-
+    
+    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
+                    GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
+                    GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
+                    GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
+                    GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    yae_assert_gl_no_error();
+    
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
@@ -647,10 +657,6 @@ namespace yae
       // order of bits in a byte only matters for bitmaps:
       // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
 
-      // use this to crop the image perhaps?
-      // glPixelStorei(GL_UNPACK_SKIP_PIXELS, skip_pixels_ + offset_x);
-      // glPixelStorei(GL_UNPACK_SKIP_ROWS, skip_rows_ + offset_y);
-      
       if (glewIsExtensionSupported("GL_APPLE_client_storage"))
       {
         glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
@@ -688,11 +694,6 @@ namespace yae
     
     glEnable(GL_TEXTURE_RECTANGLE_EXT);
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
-    
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     
@@ -963,6 +964,22 @@ namespace yae
             return false;
           }
           
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+          
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_BASE_LEVEL, 0);
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_MAX_LEVEL, 0);
+          
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+          glTexParameteri(GL_TEXTURE_2D,
+                          GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+          yae_assert_gl_no_error();
+          
           glTexImage2D(GL_TEXTURE_2D,
                        0, // mipmap level
                        internalFormatGL,
@@ -981,13 +998,12 @@ namespace yae
       }
     }
     
-    // creating a padded frame buffer:
+    // get the source data pointer:
+    const std::size_t bytesPerRow = frame_->sampleBuffer_->rowBytes(0);
     const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
-    const std::size_t srcStride = frame_->sampleBuffer_->rowBytes(0);
-    
     const unsigned char * src =
       frame_->sampleBuffer_->samples(0) +
-      frame_->traits_.offsetTop_ * srcStride +
+      frame_->traits_.offsetTop_ * bytesPerRow +
       frame_->traits_.offsetLeft_ * bytesPerPixel;
 
     // upload the texture data:
@@ -1119,8 +1135,8 @@ namespace yae
       return;
     }
     
-    // shortcut to pixel aspect ratio:
-    const double par = frame_->traits_.pixelAspectRatio_;
+    TGLSaveMatrixState pushMatrix;
+    glScaled(frame_->traits_.pixelAspectRatio_, 1.0, 1.0);
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1135,18 +1151,6 @@ namespace yae
         continue;
       }
       
-      glTexParameteri(GL_TEXTURE_2D,
-                      GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D,
-                      GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      
-      glTexParameteri(GL_TEXTURE_2D,
-                      GL_GENERATE_MIPMAP_SGIS, GL_FALSE);
-      glTexParameteri(GL_TEXTURE_2D,
-                      GL_TEXTURE_BASE_LEVEL, 0);
-      glTexParameteri(GL_TEXTURE_2D,
-                      GL_TEXTURE_MAX_LEVEL, 0);
-      
       glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
       
       glDisable(GL_LIGHTING);
@@ -1156,16 +1160,16 @@ namespace yae
       glBegin(GL_QUADS);
       {
         glTexCoord2d(tile.x_.t0_, tile.y_.t0_);
-        glVertex2i(par * tile.x_.v0_, tile.y_.v0_);
+        glVertex2i(tile.x_.v0_, tile.y_.v0_);
 
         glTexCoord2d(tile.x_.t1_, tile.y_.t0_);
-        glVertex2i(par * tile.x_.v1_, tile.y_.v0_);
+        glVertex2i(tile.x_.v1_, tile.y_.v0_);
         
         glTexCoord2d(tile.x_.t1_, tile.y_.t1_);
-        glVertex2i(par * tile.x_.v1_, tile.y_.v1_);
+        glVertex2i(tile.x_.v1_, tile.y_.v1_);
         
         glTexCoord2d(tile.x_.t0_, tile.y_.t1_);
-        glVertex2i(par * tile.x_.v0_, tile.y_.v1_);
+        glVertex2i(tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
     }
