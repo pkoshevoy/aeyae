@@ -1118,9 +1118,9 @@ namespace yae
     {
       return;
     }
-
-    TGLSaveMatrixState pushMatrix;
-    glScaled(frame_->traits_.pixelAspectRatio_, 1.0, 1.0);
+    
+    // shortcut to pixel aspect ratio:
+    const double par = frame_->traits_.pixelAspectRatio_;
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1156,16 +1156,16 @@ namespace yae
       glBegin(GL_QUADS);
       {
         glTexCoord2d(tile.x_.t0_, tile.y_.t0_);
-        glVertex2i(tile.x_.v0_, tile.y_.v0_);
+        glVertex2i(par * tile.x_.v0_, tile.y_.v0_);
 
         glTexCoord2d(tile.x_.t1_, tile.y_.t0_);
-        glVertex2i(tile.x_.v1_, tile.y_.v0_);
+        glVertex2i(par * tile.x_.v1_, tile.y_.v0_);
         
         glTexCoord2d(tile.x_.t1_, tile.y_.t1_);
-        glVertex2i(tile.x_.v1_, tile.y_.v1_);
+        glVertex2i(par * tile.x_.v1_, tile.y_.v1_);
         
         glTexCoord2d(tile.x_.t0_, tile.y_.t1_);
-        glVertex2i(tile.x_.v0_, tile.y_.v1_);
+        glVertex2i(par * tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
     }
