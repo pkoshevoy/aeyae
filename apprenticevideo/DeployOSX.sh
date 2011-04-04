@@ -1,4 +1,5 @@
 #!/bin/bash
+# -*- Mode: shell-script; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: t -*-
 
 #----------------------------------------------------------------
 # BUNDLE_PATH
@@ -39,7 +40,7 @@ fi
 # $1 -- directory to push
 quiet_pushd()
 {
-    DIR=${1}
+	DIR=${1}
 	if [ -z "${1}" ]; then exit 10; fi
 
 	pushd "${DIR}" 1>/dev/null 2>/dev/null
@@ -95,9 +96,9 @@ replace_all()
 # $1 -- path where cvs/svn tags should be removed
 remove_cvs_svn_tags()
 {
-    TARGET_DIR="${1}"
+	TARGET_DIR="${1}"
 
-    quiet_pushd "${TARGET_DIR}"
+	quiet_pushd "${TARGET_DIR}"
 		# remove version-control tags so that none of this can be checked in accidentally:
 		echo NOTE: removing CVS tags from $PWD tree
 		find . -type d -name CVS -exec rm -rf {} \; -prune
@@ -115,12 +116,12 @@ remove_cvs_svn_tags()
 # $3 -- requested configuration
 get_xcode_config()
 {
-    PROJ_DIR=${1}
-    PROJ=${2}
-    REQUESTED_CONFIG=${3}
+	PROJ_DIR=${1}
+	PROJ=${2}
+	REQUESTED_CONFIG=${3}
 	CONFIG_ARCH="" 
  
-    quiet_pushd "${PROJ_DIR}"
+	quiet_pushd "${PROJ_DIR}"
 		A=`xcodebuild -project "${PROJ}".xcodeproj -list`
 		if [ $? != 0 ]; then exit 1; fi
 		
@@ -176,9 +177,9 @@ build_xcodeproj()
 	if [ -z "${ACTION}" ]; then
 		ACTION=build
 	fi
-    PROJ_DIR=${1}
-    PROJ=${2}
-    REQUESTED_CONFIG=${3}
+	PROJ_DIR=${1}
+	PROJ=${2}
+	REQUESTED_CONFIG=${3}
 	TARGET=${4}
 	TARGET_ARCH=${5}
 	SDK=${6}
@@ -197,7 +198,7 @@ build_xcodeproj()
 
 	XCODE_CONFIG=`get_xcode_config "${PROJ_DIR}" "${PROJ}" "${REQUESTED_CONFIG}"`
 
-    quiet_pushd "${PROJ_DIR}"
+	quiet_pushd "${PROJ_DIR}"
 		if [ -n "${TARGET}" ]; then
 			echo "${PWD};" ${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
 			${XCODE_CMD} -project "${PROJ}".xcodeproj -target "${TARGET}" -configuration "${XCODE_CONFIG}" ${ARCH_CFG} "${ACTION}"
@@ -220,12 +221,12 @@ build_xcodeproj()
 # $4 -- target (build, install, etc)
 build_qmake()
 {
-    PROJ_DIR="${1}"
-    PROJ="${2}"
-    REQUESTED_CONFIG="${3}"
-    TARGET="${4}"
-    
-    quiet_pushd "${PROJ_DIR}"
+	PROJ_DIR="${1}"
+	PROJ="${2}"
+	REQUESTED_CONFIG="${3}"
+	TARGET="${4}"
+	
+	quiet_pushd "${PROJ_DIR}"
 		echo "${PWD};" qmake "${PROJ}".pro -spec macx-xcode
 		qmake "${PROJ}".pro -spec macx-xcode
 		if [ $? != 0 ]; then exit 3; fi
@@ -252,10 +253,10 @@ build_qmake()
 # $2 -- Optional compile args
 build_make()
 {
-    PROJ_DIR=${1}
+	PROJ_DIR=${1}
 	MAKE_ARGS=${2}
-    
-    quiet_pushd "${PROJ_DIR}"
+	
+	quiet_pushd "${PROJ_DIR}"
 		if [ "${ACTION}" == "clean" ]; then
 			echo "${PWD};" make CONFIG="${CONFIG}" -j${NUM_THREADS} clean
 			make CONFIG="${CONFIG}" -j${NUM_THREADS} clean
@@ -580,7 +581,7 @@ DeployFile()
 					quiet_pushd "${DST_BASE}/Resources"
 						pwd
 						echo COPYING "${SRC_BASE}/Resources"
-					    (cd "${SRC_BASE}/Resources"; tar c .) | tar xv
+						(cd "${SRC_BASE}/Resources"; tar c .) | tar xv
 					quiet_popd
 				fi
 
