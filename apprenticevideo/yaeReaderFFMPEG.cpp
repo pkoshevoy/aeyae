@@ -750,7 +750,9 @@ namespace yae
       
       getTraits(override_);
       framesDecoded_ = 0;
-      return true;
+      
+      bool ok = override_.pixelFormat_ != kInvalidPixelFormat;
+      return ok;
     }
     
     return false;
@@ -1458,7 +1460,9 @@ namespace yae
       
       getTraits(override_);
       samplesDecoded_ = 0;
-      return true;
+      
+      bool ok = override_.sampleFormat_ != kAudioInvalidFormat;
+      return ok;
     }
     
     return false;

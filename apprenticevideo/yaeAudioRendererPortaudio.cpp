@@ -217,7 +217,8 @@ namespace yae
     }
     
     AudioTraits atts;
-    if (!reader_->getAudioTraitsOverride(atts))
+    if (!reader_->getAudioTraitsOverride(atts) || 
+        atts.sampleFormat_ == kAudioInvalidFormat)
     {
       return false;
     }
