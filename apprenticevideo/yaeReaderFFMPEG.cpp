@@ -963,22 +963,6 @@ namespace yae
     {
       startTime = 0;
     }
-    else if (startTime > INT64_C(0xFFFFFFFF))
-    {
-      // probably an integer overflow error, check it:
-      startTime = (int32_t)startTime;
-
-      double frameDuration =
-        double(stream_->time_base.den) /
-        (double(stream_->time_base.num) * nativeTraits.frameRate_);
-      
-      if (-double(startTime) > 3.0 * frameDuration)
-      {
-        // the start time is not within 3 frames near zero,
-        // assume it's just broken and reset to zero:
-        startTime = 0;
-      }
-    }
     
     // shortcut to the frame rate:
     AVRational frameRate =
@@ -1565,11 +1549,6 @@ namespace yae
     {
       startTime = 0;
     }
-    else if (startTime > INT64_C(0xFFFFFFFF))
-    {
-      // assume it's just broken and reset to zero:
-      startTime = 0;
-    }
     
     TTime prevPTS;
     bool gotPrevPTS = false;
@@ -1657,16 +1636,14 @@ namespace yae
         bool gotPTS = false;
         
         if (!gotPTS &&
-            packet.pts != AV_NOPTS_VALUE &&
-            packet.pts < INT64_C(0xFFFFFFFF))
+            packet.pts != AV_NOPTS_VALUE)
         {
           af.time_.time_ = stream_->time_base.num * packet.pts;
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.pts");
         }
         
         if (!gotPTS &&
-            packet.dts != AV_NOPTS_VALUE &&
-            packet.dts < INT64_C(0xFFFFFFFF))
+            packet.dts != AV_NOPTS_VALUE)
         {
           af.time_.time_ = stream_->time_base.num * packet.dts;
           gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.dts");
