@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 2.8.0)
 
-project(yae)
-set(PROGNAME "yap")
+project(apprenticevideo)
+set(PROGNAME "apprenticevideo")
 
 find_package(OpenGL REQUIRED)
 
-set(Boost_ADDITIONAL_VERSIONS "1.44" "1.45")
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost 1.35 COMPONENTS thread REQUIRED)
 find_package(Boost 1.35 COMPONENTS date_time REQUIRED)
@@ -205,7 +204,10 @@ endif (WIN32)
 # Set some Apple MacOS Specific settings
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
-  set(project_sources ${project_sources} ${PROGNAME}Info.plist ${PROGNAME}.icns)
+  set(project_sources 
+	${project_sources}
+	${PROGNAME}.plist
+	${PROGNAME}.icns)
 endif (APPLE)
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -450,7 +452,7 @@ target_link_libraries(${PROGNAME}
 if (APPLE)
   set_target_properties(${PROGNAME}
 	PROPERTIES
-	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}Info.plist)
+	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.plist)
 
   set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.icns
 	PROPERTIES
