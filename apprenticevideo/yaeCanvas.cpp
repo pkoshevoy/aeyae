@@ -24,6 +24,7 @@
 
 // Qt includes:
 #include <QApplication>
+#include <QTimer>
 
 
 //----------------------------------------------------------------
@@ -707,16 +708,16 @@ namespace yae
                    vtts.offsetTop_);
       glVertex2i(0, 0);
       
-      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_ - 1,
+      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
                    vtts.offsetTop_);
       glVertex2i(int(imageWidth()), 0);
       
-      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_ - 1,
-                   vtts.offsetTop_ + vtts.visibleHeight_ - 1);
+      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
+                   vtts.offsetTop_ + vtts.visibleHeight_);
       glVertex2i(int(imageWidth()), vtts.visibleHeight_);
       
       glTexCoord2i(vtts.offsetLeft_,
-                   vtts.offsetTop_ + vtts.visibleHeight_ - 1);
+                   vtts.offsetTop_ + vtts.visibleHeight_);
       glVertex2i(0, vtts.visibleHeight_);
     }
     glEnd();
@@ -1183,14 +1184,31 @@ namespace yae
                  const QGLWidget * shareWidget,
                  Qt::WindowFlags f):
     QGLWidget(format, parent, shareWidget, f),
-    private_(NULL)
+    private_(NULL),
+    timerHideCursor_(this),
+    timerScreenSaver_(this)
   {
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
     
-    // setFocusPolicy(Qt::StrongFocus);
-    // setMouseTracking(true);
-  }
+    setFocusPolicy(Qt::StrongFocus);
+    setMouseTracking(true);
+
+    timerHideCursor_.setSingleShot(true);
+    timerHideCursor_.setInterval(3000);
+    
+    timerScreenSaver_.setSingleShot(true);
+    timerScreenSaver_.setInterval(60000);
+    
+    bool ok = true;
+    ok = connect(&timerHideCursor_, SIGNAL(timeout()),
+                 this, SLOT(hideCursor()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(&timerScreenSaver_, SIGNAL(timeout()),
+                 this, SLOT(wakeScreenSaver()));
+    YAE_ASSERT(ok);
+   }
 
   //----------------------------------------------------------------
   // Canvas::~Canvas
@@ -1211,8 +1229,9 @@ namespace yae
     delete private_;
     private_ = NULL;
     
-    if (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
-        glewIsExtensionSupported("GL_ARB_texture_rectangle"))
+    if (true &&
+        (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
+         glewIsExtensionSupported("GL_ARB_texture_rectangle")))
     {
       private_ = new TModernCanvas();
     }
@@ -1271,7 +1290,47 @@ namespace yae
     
     return QGLWidget::event(event);
   }
-
+  
+  //----------------------------------------------------------------
+  // Canvas::keyPressEvent
+  // 
+  void
+  Canvas::keyPressEvent(QKeyEvent * event)
+  {
+    int key = event->key();
+    if (key == Qt::Key_Space)
+    {
+      emit togglePause();
+    }
+    else if (key == Qt::Key_Escape)
+    {
+      emit exitFullScreen();
+    }
+    else
+    {
+      event->ignore();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::mouseMoveEvent
+  // 
+  void
+  Canvas::mouseMoveEvent(QMouseEvent * event)
+  {
+    setCursor(QCursor(Qt::ArrowCursor));
+    timerHideCursor_.start();
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::mouseDoubleClickEvent
+  // 
+  void
+  Canvas::mouseDoubleClickEvent(QMouseEvent * event)
+  {
+    emit toggleFullScreen();
+  }
+  
   //----------------------------------------------------------------
   // Canvas::initializeGL
   // 
@@ -1400,6 +1459,7 @@ namespace yae
         h = double(canvasWidth) / dar;
         y = 0.5 * (double(canvasHeight) - h);
       }
+      
 #if 0
       std::cerr << "dar: " << dar
                 << ", car: " << car
@@ -1431,6 +1491,50 @@ namespace yae
   {
     bool ok = private_->loadFrame(this, frame);
     refresh();
+    
+    if (ok && !timerScreenSaver_.isActive())
+    {
+      timerScreenSaver_.start();
+    }
+    
     return ok;
   }
+
+  //----------------------------------------------------------------
+  // Canvas::imageWidth
+  // 
+  double
+  Canvas::imageWidth() const
+  {
+    return private_->imageWidth();
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::imageHeight
+  // 
+  double
+  Canvas::imageHeight() const
+  {
+    return private_->imageHeight();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::hideCursor
+  // 
+  void
+  Canvas::hideCursor()
+  {
+    setCursor(QCursor(Qt::BlankCursor));
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::wakeScreenSaver
+  // 
+  void
+  Canvas::wakeScreenSaver()
+  {
+    // FIXME: not sure how to do this yet
+    std::cerr << "wakeScreenSaver" << std::endl;
+  }
+  
 }

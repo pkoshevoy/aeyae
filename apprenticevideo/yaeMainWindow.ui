@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>yae</string>
+   <string>Apprentice Video</string>
   </property>
   <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
@@ -23,14 +23,53 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu_File">
+   <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>&amp;File</string>
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionExit"/>
    </widget>
-   <addaction name="menu_File"/>
+   <widget class="QMenu" name="menuPlayback">
+    <property name="title">
+     <string>&amp;Playback</string>
+    </property>
+    <widget class="QMenu" name="menuOverride_Aspect_Ratio">
+     <property name="title">
+      <string>Aspect Ratio</string>
+     </property>
+     <addaction name="actionAspectRatioAuto"/>
+     <addaction name="actionAspectRatio1_33"/>
+     <addaction name="actionAspectRatio1_78"/>
+     <addaction name="actionAspectRatio1_85"/>
+     <addaction name="actionAspectRatio2_35"/>
+    </widget>
+    <addaction name="menuOverride_Aspect_Ratio"/>
+    <addaction name="actionShrinkWrap"/>
+    <addaction name="actionFullScreen"/>
+    <addaction name="actionColorConverter"/>
+   </widget>
+   <widget class="QMenu" name="menuAudio">
+    <property name="title">
+     <string>&amp;Audio</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuVideo">
+    <property name="title">
+     <string>&amp;Video</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuPlayback"/>
+   <addaction name="menuAudio"/>
+   <addaction name="menuVideo"/>
+   <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen">
    <property name="text">
@@ -42,7 +81,97 @@
     <string>&amp;Quit</string>
    </property>
   </action>
+  <action name="actionColorConverter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Color Converter</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_78">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:9</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_33">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4:3</string>
+   </property>
+  </action>
+  <action name="actionAspectRatioAuto">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic</string>
+   </property>
+  </action>
+  <action name="actionFullScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Full Screen</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSelect_Track">
+   <property name="text">
+    <string>Select Track</string>
+   </property>
+  </action>
+  <action name="actionSelect_Track_2">
+   <property name="text">
+    <string>Select Track</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio2_35">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.35</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_85">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.85</string>
+   </property>
+  </action>
+  <action name="actionShrinkWrap">
+   <property name="text">
+    <string>Shrink &amp;Wrap</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="apprenticevideo.qrc"/>
+ </resources>
  <connections/>
 </ui>

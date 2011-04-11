@@ -15,7 +15,10 @@
 
 // Qt includes:
 #include <QEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QGLWidget>
+#include <QTimer>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -65,11 +68,28 @@ namespace yae
     // virtual:
     bool render(const TVideoFramePtr & frame);
     
+    // helper:
     bool loadFrame(const TVideoFramePtr & frame);
+    
+    // accessors to full resolution frame dimensions:
+    double imageWidth() const;
+    double imageHeight() const;
+    
+  signals:
+    void togglePause();
+    void toggleFullScreen();
+    void exitFullScreen();
+
+  public slots:
+    void hideCursor();
+    void wakeScreenSaver();
     
   protected:
     // virtual:
     bool event(QEvent * event);
+    void keyPressEvent(QKeyEvent * event);
+    void mouseMoveEvent(QMouseEvent * event);
+    void mouseDoubleClickEvent(QMouseEvent * event);
     
     // virtual: Qt/OpenGL stuff:
     void initializeGL();
@@ -116,6 +136,12 @@ namespace yae
     
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
+
+    // a single shot timer for hiding the cursor:
+    QTimer timerHideCursor_;
+    
+    // asingle shot timer for preventing screen saver:
+    QTimer timerScreenSaver_;
   };
 }
 

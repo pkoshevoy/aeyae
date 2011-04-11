@@ -129,10 +129,11 @@ set(project_moc_hxx
   )
 
 set(project_uis 
+  yaeAbout.ui
   yaeMainWindow.ui
   )
 
-#qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
 set(project_sources 
   yaeAPI.h
@@ -217,7 +218,7 @@ set(project_sources
   ${project_sources}
   ${project_moc_cxx}
   ${project_uis_hxx}
-#  ${project_qrc_cxx}
+  ${project_qrc_cxx}
   )
 
 add_executable(${PROGNAME}

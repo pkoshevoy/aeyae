@@ -10,6 +10,7 @@
 #define YAE_MAIN_WINDOW_H_
 
 // Qt includes:
+#include <QDialog>
 #include <QMainWindow>
 
 // yae includes:
@@ -21,10 +22,24 @@
 
 // local includes:
 #include "ui_yaeMainWindow.h"
+#include "ui_yaeAbout.h"
 
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // AboutDialog
+  // 
+  class AboutDialog : public QDialog,
+                      public Ui::AboutDialog
+  {
+    Q_OBJECT;
+    
+  public:
+    AboutDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+  };
+  
   
   //----------------------------------------------------------------
   // MainWindow
@@ -45,15 +60,40 @@ namespace yae
     bool load(const QString & path);
     
   public slots:
-    // the file menu:
+    // file menu:
     void fileOpen();
     void fileExit();
+
+    // playback menu:
+    void playbackAspectRatioAuto();
+    void playbackAspectRatio2_35();
+    void playbackAspectRatio1_85();
+    void playbackAspectRatio1_78();
+    void playbackAspectRatio1_33();
+    void playbackColorConverter();
+    void playbackShrinkWrap();
+    void playbackFullScreen();
+    
+    // helper:
+    void exitFullScreen();
+    void playbackPause();
+    
+    // audio/video menus:
+    void audioSelectTrack();
+    void videoSelectTrack();
+
+    // help menu:
+    void helpAbout();
     
   protected:
     // virtual:
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
+    
+    // widgets used for full screen display:
+    QWidget fullscreen_;
+    QLayout * fullscreenLayout_;
     
     // file reader:
     IReader * reader_;

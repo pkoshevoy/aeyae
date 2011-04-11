@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="images">
+    <file>images/apprenticevideo-about.png</file>
+    <file>images/yae-256.png</file>
+  </qresource>
+</RCC>
