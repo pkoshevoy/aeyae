@@ -395,9 +395,9 @@ namespace yae
   {
     QString filename =
       QFileDialog::getOpenFileName(this,
-				   "Open file",
-				   QString(),
-				   "movies ("
+                                   "Open file",
+                                   QString(),
+                                   "movies ("
                                    "*.avi "
                                    "*.asf "
                                    "*.divx "
