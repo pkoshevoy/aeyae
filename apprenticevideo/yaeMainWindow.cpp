@@ -497,17 +497,10 @@ namespace yae
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
     
-    int fx0 = rectCanvas.x() - rectWindow.x();
-    int fy0 = rectCanvas.y() - rectWindow.y();
-    int fx1 = ((rectWindow.x() + ww) -
-               (rectCanvas.x() + cw));
-    int fy1 = ((rectWindow.y() + wh) -
-               (rectCanvas.y() + ch));
-    
     int dx = vw - cw;
     int dy = vh - ch;
     
-    // calculate frame width, height overhead:
+    // calculate width and height overhead:
     int ox = ww - cw;
     int oy = wh - ch;
     
@@ -556,7 +549,11 @@ namespace yae
     int new_y = new_y0 + shift_y;
     
     // apply the new window geometry:
-    resize(new_w - (fx0 + fx1), new_h - (fy0 + fy1));
+    QRect rectClient = geometry();
+    int cdx = rectWindow.width() - rectClient.width();
+    int cdy = rectWindow.height() - rectClient.height();
+    
+    resize(new_w - cdx, new_h - cdy);
     move(new_x, new_y);
   }
   
