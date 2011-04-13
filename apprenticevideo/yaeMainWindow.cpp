@@ -24,6 +24,7 @@
 #include <QUrl>
 #include <QSpacerItem>
 #include <QDesktopWidget>
+#include <QMenu>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -57,6 +58,10 @@ namespace yae
     QMainWindow(NULL, 0),
     fullscreen_(NULL, Qt::Widget | Qt::FramelessWindowHint),
     fullscreenLayout_(NULL),
+    audioTrackGroup_(NULL),
+    videoTrackGroup_(NULL),
+    audioTrackMapper_(NULL),
+    videoTrackMapper_(NULL),
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
@@ -215,170 +220,133 @@ namespace yae
               << "yae: video tracks: " << numVideoTracks << std::endl
               << "yae: audio tracks: " << numAudioTracks << std::endl;
     
-    if (numVideoTracks)
+    // update the UI:
+    delete audioTrackGroup_;
+    audioTrackGroup_ = new QActionGroup(this);
+    
+    delete videoTrackGroup_;
+    videoTrackGroup_ = new QActionGroup(this);
+    
+    delete audioTrackMapper_;
+    audioTrackMapper_ = new QSignalMapper(this);
+    
+    bool ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+                      this, SLOT(audioSelectTrack(int)));
+    YAE_ASSERT(ok);
+    
+    delete videoTrackMapper_;
+    videoTrackMapper_ = new QSignalMapper(this);
+    
+    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(videoSelectTrack(int)));
+    YAE_ASSERT(ok);
+    
+    menuAudio->clear();
+    menuVideo->clear();
+    
+    for (unsigned int i = 0; i < numAudioTracks; i++)
     {
-      reader->selectVideoTrack(0);
-      VideoTraits vtts;
-      if (reader->getVideoTraits(vtts))
+      reader->selectAudioTrack(i);
+      QString trackName = tr("Track %1").arg(i);
+        
+      const char * name = reader->getSelectedAudioTrackName();
+      if (name && *name)
       {
-        // pixel format shortcut:
-        const pixelFormat::Traits * ptts =
-          pixelFormat::getTraits(vtts.pixelFormat_);
-
-        std::cout << "yae: native format: ";
-        if (ptts)
-        {
-          std::cout << ptts->name_;
-        }
-        else
-        {
-          std::cout << "unsupported" << std::endl;
-        }
-        std::cout << std::endl;
-        
-#if 1
-        bool unsupported = ptts == NULL;
-
-        if (!unsupported)
-        {
-          unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
-        }
-
-        if (!unsupported)
-        {
-          GLint internalFormatGL;
-          GLenum pixelFormatGL;
-          GLenum dataTypeGL;
-          GLint shouldSwapBytes;
-          unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                         internalFormatGL,
-                                                         pixelFormatGL,
-                                                         dataTypeGL,
-                                                         shouldSwapBytes);
-          unsupported = (supportedChannels < 1 ||
-                         supportedChannels != ptts->channels_ &&
-                         actionColorConverter->isChecked());
-        }
-        
-        if (unsupported)
-        {
-          vtts.pixelFormat_ = kPixelFormatGRAY8;
-          
-          if (ptts)
-          {
-            if ((ptts->flags_ & pixelFormat::kAlpha) &&
-                (ptts->flags_ & pixelFormat::kColor))
-            {
-              vtts.pixelFormat_ = kPixelFormatBGRA;
-            }
-            else if ((ptts->flags_ & pixelFormat::kColor) ||
-                     (ptts->flags_ & pixelFormat::kPaletted))
-            {
-              if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
-              {
-                vtts.pixelFormat_ = kPixelFormatYUYV422;
-              }
-              else
-              {
-                vtts.pixelFormat_ = kPixelFormatBGR24;
-              }
-            }
-          }
-          
-          reader->setVideoTraitsOverride(vtts);
-        }
-#elif 0
-        vtts.pixelFormat_ = kPixelFormatRGB565BE;
-        reader->setVideoTraitsOverride(vtts);
-#endif
+        trackName += tr(", %1").arg(QString::fromUtf8(name));
       }
       
-      if (reader->getVideoTraitsOverride(vtts))
+      AudioTraits traits;
+      if (reader->getAudioTraits(traits))
       {
-        const pixelFormat::Traits * ptts =
-          pixelFormat::getTraits(vtts.pixelFormat_);
-
-        if (ptts)
-        {
-          std::cout << "yae: output format: " << ptts->name_
-                    << ", par: " << vtts.pixelAspectRatio_
-                    << ", " << vtts.visibleWidth_
-                    << " x " << vtts.visibleHeight_;
-          
-          if (vtts.pixelAspectRatio_ != 0.0)
-          {
-            std::cout << ", dar: "
-                      << (double(vtts.visibleWidth_) *
-                          vtts.pixelAspectRatio_ /
-                          double(vtts.visibleHeight_))
-                      << ", " << int(vtts.visibleWidth_ *
-                                     vtts.pixelAspectRatio_ +
-                                     0.5)
-                      << " x " << vtts.visibleHeight_;
-          }
-          
-          std::cout << ", fps: " << vtts.frameRate_
-                    << std::endl;
-        }
-        else
-        {
-          // unsupported pixel format:
-          reader->selectVideoTrack(numVideoTracks);
-        }
+        trackName +=
+          tr(", %1 Hz, %2 channels").
+          arg(traits.sampleRate_).
+          arg(int(traits.channelLayout_));
       }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuAudio->addAction(trackAction);
+      
+      trackAction->setCheckable(true);
+      trackAction->setChecked(i == 0);
+      audioTrackGroup_->addAction(trackAction);
+      
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   audioTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      audioTrackMapper_->setMapping(trackAction, i);
     }
-    
-    if (numAudioTracks)
+
+    // add an option to disable audio:
     {
-      reader->selectAudioTrack(0);
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuAudio->addAction(trackAction);
+      
+      trackAction->setCheckable(true);
+      trackAction->setChecked(numAudioTracks == 0);
+      audioTrackGroup_->addAction(trackAction);
+      
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   audioTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      audioTrackMapper_->setMapping(trackAction, numAudioTracks);
     }
     
-    // setup renderer shared reference clock:
+    for (unsigned int i = 0; i < numVideoTracks; i++)
+    {
+      reader->selectVideoTrack(i);
+      QString trackName = tr("Track %1").arg(i);
+        
+      const char * name = reader->getSelectedVideoTrackName();
+      if (name && *name)
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(name));
+      }
+      
+      VideoTraits traits;
+      if (reader->getVideoTraits(traits))
+      {
+        trackName +=
+          tr(", %1 x %2, %3 fps").
+          arg(traits.encodedWidth_).
+          arg(traits.encodedHeight_).
+          arg(traits.frameRate_);
+      }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuVideo->addAction(trackAction);
+      
+      trackAction->setCheckable(true);
+      trackAction->setChecked(i == 0);
+      videoTrackGroup_->addAction(trackAction);
+      
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   videoTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      videoTrackMapper_->setMapping(trackAction, i);
+    }
+
+    // add an option to disable video:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuVideo->addAction(trackAction);
+      
+      trackAction->setCheckable(true);
+      trackAction->setChecked(numVideoTracks == 0);
+      videoTrackGroup_->addAction(trackAction);
+      
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   videoTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      videoTrackMapper_->setMapping(trackAction, numVideoTracks);
+    }
+    
+    selectVideoTrack(reader, 0);
+    selectAudioTrack(reader, 0);
+    
     reader_->close();
-    videoRenderer_->close();
-    audioRenderer_->close();
-    
-    if (numAudioTracks)
-    {
-      audioRenderer_->takeThisClock(SharedClock());
-      audioRenderer_->obeyThisClock(audioRenderer_->clock());
-      
-      if (numVideoTracks)
-      {
-        videoRenderer_->obeyThisClock(audioRenderer_->clock());
-      }
-    }
-    else if (numVideoTracks)
-    {
-      videoRenderer_->takeThisClock(SharedClock());
-      videoRenderer_->obeyThisClock(videoRenderer_->clock());
-    }
-    
-    // update the renderers:
-    unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
-    if (!audioRenderer_->open(audioDevice, reader))
-    {
-      AudioTraits atts;
-      if (reader->getAudioTraits(atts))
-      {
-        atts.channelLayout_ = kAudioStereo;
-        reader->setAudioTraitsOverride(atts);
-      }
-      
-      if (!audioRenderer_->open(audioDevice, reader))
-      {
-        reader->selectAudioTrack(numAudioTracks);
-        
-        if (numVideoTracks)
-        {
-          videoRenderer_->takeThisClock(SharedClock());
-          videoRenderer_->obeyThisClock(videoRenderer_->clock());
-        }
-      }
-    }
-    
-    reader->threadStart();
-    videoRenderer_->open(canvas_, reader);
+    stopRenderers();
+    startRenderers(reader);
     
     // replace the previous reader:
     reader_->destroy();
@@ -619,15 +587,27 @@ namespace yae
   // MainWindow::audioSelectTrack
   // 
   void
-  MainWindow::audioSelectTrack()
-  {}
+  MainWindow::audioSelectTrack(int index)
+  {
+    std::cerr << "audioSelectTrack: " << index << std::endl;
+    reader_->threadStop();
+    stopRenderers();
+    selectAudioTrack(reader_, index);
+    startRenderers(reader_);
+  }
 
   //----------------------------------------------------------------
   // MainWindow::videoSelectTrack
   // 
   void
-  MainWindow::videoSelectTrack()
-  {}
+  MainWindow::videoSelectTrack(int index)
+  {
+    std::cerr << "videoSelectTrack: " << index << std::endl;
+    reader_->threadStop();
+    stopRenderers();
+    selectVideoTrack(reader_, index);
+    startRenderers(reader_);
+  }
   
   //----------------------------------------------------------------
   // MainWindow::helpAbout
@@ -680,6 +660,204 @@ namespace yae
     
     QString filename = e->mimeData()->urls().front().toLocalFile();
     load(filename);
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::stopRenderers
+  // 
+  void
+  MainWindow::stopRenderers()
+  {
+    videoRenderer_->close();
+    audioRenderer_->close();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::startRenderers
+  // 
+  void
+  MainWindow::startRenderers(IReader * reader)
+  {
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    std::size_t audioTrack = reader->getSelectedAudioTrackIndex();
+    
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    
+    if (audioTrack < numAudioTracks)
+    {
+      audioRenderer_->takeThisClock(SharedClock());
+      audioRenderer_->obeyThisClock(audioRenderer_->clock());
+      
+      if (videoTrack < numVideoTracks)
+      {
+        videoRenderer_->obeyThisClock(audioRenderer_->clock());
+      }
+    }
+    else if (videoTrack < numVideoTracks)
+    {
+      videoRenderer_->takeThisClock(SharedClock());
+      videoRenderer_->obeyThisClock(videoRenderer_->clock());
+    }
+    else
+    {
+      // all tracks disabled!
+      return;
+    }
+    
+    // update the renderers:
+    unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
+    if (!audioRenderer_->open(audioDevice, reader))
+    {
+      AudioTraits atts;
+      if (reader->getAudioTraits(atts))
+      {
+        atts.channelLayout_ = kAudioStereo;
+        reader->setAudioTraitsOverride(atts);
+      }
+      
+      if (!audioRenderer_->open(audioDevice, reader))
+      {
+        reader->selectAudioTrack(numAudioTracks);
+        
+        if (numVideoTracks)
+        {
+          videoRenderer_->takeThisClock(SharedClock());
+          videoRenderer_->obeyThisClock(videoRenderer_->clock());
+        }
+      }
+    }
+    
+    reader->threadStart();
+    videoRenderer_->open(canvas_, reader);
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::selectVideoTrack
+  // 
+  void
+  MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
+  {
+     reader->selectVideoTrack(videoTrackIndex);
+     
+     VideoTraits vtts;
+     if (reader->getVideoTraits(vtts))
+     {
+       // pixel format shortcut:
+       const pixelFormat::Traits * ptts =
+         pixelFormat::getTraits(vtts.pixelFormat_);
+       
+       std::cout << "yae: native format: ";
+       if (ptts)
+       {
+         std::cout << ptts->name_;
+       }
+       else
+       {
+         std::cout << "unsupported" << std::endl;
+       }
+       std::cout << std::endl;
+       
+#if 1
+       bool unsupported = ptts == NULL;
+       
+       if (!unsupported)
+       {
+         unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
+       }
+       
+       if (!unsupported)
+       {
+         GLint internalFormatGL;
+         GLenum pixelFormatGL;
+         GLenum dataTypeGL;
+         GLint shouldSwapBytes;
+         unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
+                                                        internalFormatGL,
+                                                        pixelFormatGL,
+                                                        dataTypeGL,
+                                                        shouldSwapBytes);
+         unsupported = (supportedChannels < 1 ||
+                        supportedChannels != ptts->channels_ &&
+                        actionColorConverter->isChecked());
+       }
+       
+       if (unsupported)
+       {
+         vtts.pixelFormat_ = kPixelFormatGRAY8;
+         
+         if (ptts)
+         {
+           if ((ptts->flags_ & pixelFormat::kAlpha) &&
+               (ptts->flags_ & pixelFormat::kColor))
+           {
+             vtts.pixelFormat_ = kPixelFormatBGRA;
+           }
+           else if ((ptts->flags_ & pixelFormat::kColor) ||
+                    (ptts->flags_ & pixelFormat::kPaletted))
+           {
+             if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+             {
+               vtts.pixelFormat_ = kPixelFormatYUYV422;
+             }
+             else
+             {
+               vtts.pixelFormat_ = kPixelFormatBGR24;
+             }
+           }
+         }
+         
+         reader->setVideoTraitsOverride(vtts);
+       }
+#elif 0
+       vtts.pixelFormat_ = kPixelFormatRGB565BE;
+       reader->setVideoTraitsOverride(vtts);
+#endif
+     }
+     
+     if (reader->getVideoTraitsOverride(vtts))
+     {
+       const pixelFormat::Traits * ptts =
+         pixelFormat::getTraits(vtts.pixelFormat_);
+       
+       if (ptts)
+       {
+         std::cout << "yae: output format: " << ptts->name_
+                   << ", par: " << vtts.pixelAspectRatio_
+                   << ", " << vtts.visibleWidth_
+                   << " x " << vtts.visibleHeight_;
+         
+         if (vtts.pixelAspectRatio_ != 0.0)
+         {
+           std::cout << ", dar: "
+                     << (double(vtts.visibleWidth_) *
+                         vtts.pixelAspectRatio_ /
+                         double(vtts.visibleHeight_))
+                     << ", " << int(vtts.visibleWidth_ *
+                                    vtts.pixelAspectRatio_ +
+                                    0.5)
+                     << " x " << vtts.visibleHeight_;
+         }
+         
+         std::cout << ", fps: " << vtts.frameRate_
+                   << std::endl;
+       }
+       else
+       {
+         // unsupported pixel format:
+         std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+         reader->selectVideoTrack(numVideoTracks);
+       }
+     }
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::selectAudioTrack
+  // 
+  void
+  MainWindow::selectAudioTrack(IReader * reader, std::size_t audioTrackIndex)
+  {
+     reader->selectAudioTrack(audioTrackIndex);
   }
   
 };

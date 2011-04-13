@@ -12,6 +12,7 @@
 // Qt includes:
 #include <QDialog>
 #include <QMainWindow>
+#include <QSignalMapper>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -79,8 +80,8 @@ namespace yae
     void playbackPause();
     
     // audio/video menus:
-    void audioSelectTrack();
-    void videoSelectTrack();
+    void audioSelectTrack(int index);
+    void videoSelectTrack(int index);
 
     // help menu:
     void helpAbout();
@@ -91,9 +92,22 @@ namespace yae
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
     
+    // helpers:
+    void stopRenderers();
+    void startRenderers(IReader * reader);
+    void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
+    void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
+    
     // widgets used for full screen display:
     QWidget fullscreen_;
     QLayout * fullscreenLayout_;
+    
+    // audio/video track selection widgets:
+    QActionGroup * audioTrackGroup_;
+    QActionGroup * videoTrackGroup_;
+    
+    QSignalMapper * audioTrackMapper_;
+    QSignalMapper * videoTrackMapper_;
     
     // file reader:
     IReader * reader_;
