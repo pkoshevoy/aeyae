@@ -244,6 +244,11 @@ namespace yae
         outputParams_.sampleFormat = paInt16;
         break;
         
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
+        outputParams_.sampleFormat = paInt32;
+        break;
+        
       case kAudio24BitLittleEndian:
         outputParams_.sampleFormat = paInt24;
         break;

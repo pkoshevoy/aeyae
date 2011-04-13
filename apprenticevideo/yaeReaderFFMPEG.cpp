@@ -748,10 +748,9 @@ namespace yae
       // video decoder thread and video renderer thread:
       frameQueue_.open();
       
-      getTraits(override_);
+      bool ok = getTraits(override_);
       framesDecoded_ = 0;
       
-      bool ok = override_.pixelFormat_ != kInvalidPixelFormat;
       return ok;
     }
     
@@ -1351,7 +1350,7 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     t.isUpsideDown_ = false;
     
-    return true;
+    return t.pixelFormat_ != kInvalidPixelFormat;
   }
   
   //----------------------------------------------------------------
@@ -1458,10 +1457,9 @@ namespace yae
       // audio decoder thread and audio renderer thread:
       frameQueue_.open();
       
-      getTraits(override_);
+      bool ok = getTraits(override_);
       samplesDecoded_ = 0;
       
-      bool ok = override_.sampleFormat_ != kAudioInvalidFormat;
       return ok;
     }
     
@@ -1508,6 +1506,10 @@ namespace yae
       case kAudio16BitBigEndian:
       case kAudio16BitLittleEndian:
         return SAMPLE_FMT_S16;
+
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
+        return SAMPLE_FMT_S32;
 
       case kAudio32BitFloat:
         return SAMPLE_FMT_FLT;
@@ -1767,6 +1769,14 @@ namespace yae
 #endif
         break;
         
+      case SAMPLE_FMT_S32:
+#ifdef __BIG_ENDIAN__
+        t.sampleFormat_ = kAudio32BitBigEndian;
+#else
+        t.sampleFormat_ = kAudio32BitLittleEndian;
+#endif
+        break;
+        
       case SAMPLE_FMT_FLT:
         t.sampleFormat_ = kAudio32BitFloat;
         break;
@@ -1821,7 +1831,10 @@ namespace yae
     //! packed, planar:
     t.channelFormat_ = kAudioChannelsPacked;
     
-    return true;
+    return
+      t.sampleRate_ > 0 &&
+      t.sampleFormat_ != kAudioInvalidFormat &&
+      t.channelLayout_ != kAudioInvalidFormat;
   }
   
   //----------------------------------------------------------------
@@ -1978,13 +1991,21 @@ namespace yae
       const AVMediaType codecType = stream->codec->codec_type;
       if (codecType == CODEC_TYPE_VIDEO)
       {
-        videoTracks_.push_back(VideoTrackPtr(new VideoTrack(context_,
-                                                            stream)));
+        VideoTrackPtr track(new VideoTrack(context_, stream));
+        VideoTraits traits;
+        if (track->getTraits(traits))
+        {
+          videoTracks_.push_back(track);
+        }
       }
       else if (codecType == CODEC_TYPE_AUDIO)
       {
-        audioTracks_.push_back(AudioTrackPtr(new AudioTrack(context_,
-                                                            stream)));
+        AudioTrackPtr track(new AudioTrack(context_, stream));
+        AudioTraits traits;
+        if (track->getTraits(traits))
+        {
+          audioTracks_.push_back(track);
+        }
       }
     }
     

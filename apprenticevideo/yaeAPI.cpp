@@ -96,6 +96,8 @@ namespace yae
         return 24;
         
       case kAudio32BitFloat:
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
         return 32;
 
       default:
