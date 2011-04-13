@@ -120,6 +120,9 @@ namespace yae
           return;
         }
         
+#ifndef NDEBUG
+        std::cerr << this << " close " << std::endl;
+#endif
         closed_ = true;
       }
       
@@ -138,7 +141,11 @@ namespace yae
           return;
         }
         
+#ifndef NDEBUG
+        std::cerr << this << " open " << std::endl;
+#endif
         data_.clear();
+        size_ = 0;
         closed_ = false;
       }
       
@@ -155,6 +162,9 @@ namespace yae
           boost::unique_lock<boost::mutex> lock(mutex_);
           while (!closed_ && size_ >= maxSize_)
           {
+#if 0 // ndef NDEBUG
+            std::cerr << this << " push wait, size " << size_ << std::endl;
+#endif
             cond_.wait(lock);
           }
           
@@ -165,6 +175,10 @@ namespace yae
 
           insert(newData);
           size_++;
+          
+#if 0 // ndef NDEBUG
+          std::cerr << this << " push done" << size_ << std::endl;
+#endif
         }
         
         cond_.notify_one();
@@ -186,13 +200,17 @@ namespace yae
           boost::unique_lock<boost::mutex> lock(mutex_);
           while (!closed_ && data_.empty())
           {
+#if 0 // ndef NDEBUG
+            std::cerr << this << " pop wait, size " << size_ << std::endl;
+#endif
             cond_.wait(lock);
           }
           
           if (data_.empty())
           {
 #ifndef NDEBUG
-            std::cerr << "queue is empty, closed: " << closed_ << std::endl;
+            std::cerr << this << " queue is empty, closed: "
+                      << closed_ << std::endl;
 #endif
             return false;
           }
@@ -200,6 +218,10 @@ namespace yae
           data = data_.back();
           data_.pop_back();
           size_--;
+          
+#if 0 // ndef NDEBUG
+          std::cerr << this << " pop done, size " << std::endl;
+#endif
         }
         
         cond_.notify_one();
