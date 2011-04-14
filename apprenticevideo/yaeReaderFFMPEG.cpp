@@ -1317,6 +1317,7 @@ namespace yae
     else
     {
       t.frameRate_ = 0.0;
+      YAE_ASSERT(false);
     }
     
     //! encoded frame size (including any padding):
@@ -1350,7 +1351,11 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     t.isUpsideDown_ = false;
     
-    return t.pixelFormat_ != kInvalidPixelFormat;
+    return
+      t.frameRate_ > 0.0 &&
+      t.encodedWidth_ > 0 &&
+      t.encodedHeight_ > 0 &&
+      t.pixelFormat_ != kInvalidPixelFormat;
   }
   
   //----------------------------------------------------------------
@@ -1834,7 +1839,7 @@ namespace yae
     return
       t.sampleRate_ > 0 &&
       t.sampleFormat_ != kAudioInvalidFormat &&
-      t.channelLayout_ != kAudioInvalidFormat;
+      t.channelLayout_ != kAudioChannelLayoutInvalid;
   }
   
   //----------------------------------------------------------------
