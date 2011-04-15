@@ -56,7 +56,7 @@ namespace yae
   // 
   MainWindow::MainWindow():
     QMainWindow(NULL, 0),
-    fullscreen_(NULL, Qt::Widget | Qt::FramelessWindowHint),
+    fullscreen_(NULL, Qt::Window | Qt::FramelessWindowHint),
     fullscreenLayout_(NULL),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
@@ -165,6 +165,10 @@ namespace yae
 
     ok = connect(canvas_, SIGNAL(togglePause()),
                  this, SLOT(playbackPause()));
+    YAE_ASSERT(ok);
+
+    ok = connect(canvas_, SIGNAL(urlsFromDropEvent(const QList<QUrl> &)),
+                 this, SLOT(processDropEventUrls(const QList<QUrl> &)));
     YAE_ASSERT(ok);
   }
 
@@ -554,10 +558,13 @@ namespace yae
     // enter full screen rendering:
     swapLayouts(centralwidget, &fullscreen_);
     
+    QDesktopWidget * dtop = QApplication::desktop();
     fullscreen_.setWindowTitle(tr("full screen: %1").arg(windowTitle()));
+    fullscreen_.setGeometry(geometry());
     fullscreen_.showFullScreen();
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
+    hide();
   }
   
   //----------------------------------------------------------------
@@ -573,6 +580,7 @@ namespace yae
       swapLayouts(centralwidget, &fullscreen_);
       actionFullScreen->setChecked(false);
       actionShrinkWrap->setEnabled(true);
+      show();
     }
   }
   
@@ -618,6 +626,16 @@ namespace yae
     AboutDialog about(this);
     about.exec();
   }
+
+  //----------------------------------------------------------------
+  // MainWindow::processDropEventUrls
+  // 
+  void
+  MainWindow::processDropEventUrls(const QList<QUrl> & urls)
+  {
+    QString filename = urls.front().toLocalFile();
+    load(filename);
+  }
   
   //----------------------------------------------------------------
   // MainWindow::closeEvent
@@ -657,9 +675,7 @@ namespace yae
     }
     
     e->acceptProposedAction();
-    
-    QString filename = e->mimeData()->urls().front().toLocalFile();
-    load(filename);
+    processDropEventUrls(e->mimeData()->urls());
   }
   
   //----------------------------------------------------------------

@@ -17,8 +17,11 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QDropEvent>
 #include <QGLWidget>
 #include <QTimer>
+#include <QList>
+#include <QUrl>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -79,6 +82,7 @@ namespace yae
     void togglePause();
     void toggleFullScreen();
     void exitFullScreen();
+    void urlsFromDropEvent(const QList<QUrl> & urls);
 
   public slots:
     void hideCursor();
@@ -90,6 +94,8 @@ namespace yae
     void keyPressEvent(QKeyEvent * event);
     void mouseMoveEvent(QMouseEvent * event);
     void mouseDoubleClickEvent(QMouseEvent * event);
+    void dragEnterEvent(QDragEnterEvent * e);
+    void dropEvent(QDropEvent * e);
     
     // virtual: Qt/OpenGL stuff:
     void initializeGL();

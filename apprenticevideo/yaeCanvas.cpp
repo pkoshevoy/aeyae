@@ -1193,6 +1193,7 @@ namespace yae
     
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
+    setAcceptDrops(true);
 
     timerHideCursor_.setSingleShot(true);
     timerHideCursor_.setInterval(3000);
@@ -1329,6 +1330,37 @@ namespace yae
   Canvas::mouseDoubleClickEvent(QMouseEvent * event)
   {
     emit toggleFullScreen();
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::dragEnterEvent
+  // 
+  void
+  Canvas::dragEnterEvent(QDragEnterEvent * e)
+  {
+    if (!e->mimeData()->hasUrls())
+    {
+      e->ignore();
+      return;
+    }
+    
+    e->acceptProposedAction();
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::dropEvent
+  // 
+  void
+  Canvas::dropEvent(QDropEvent * e)
+  {
+    if (!e->mimeData()->hasUrls())
+    {
+      e->ignore();
+      return;
+    }
+    
+    e->acceptProposedAction();
+    emit urlsFromDropEvent(e->mimeData()->urls());
   }
   
   //----------------------------------------------------------------

@@ -86,6 +86,9 @@ namespace yae
     // help menu:
     void helpAbout();
     
+    // helper:
+    void processDropEventUrls(const QList<QUrl> & urls);
+    
   protected:
     // virtual:
     void closeEvent(QCloseEvent * e);
