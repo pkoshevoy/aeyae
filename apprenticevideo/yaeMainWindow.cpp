@@ -560,7 +560,7 @@ namespace yae
     
     QDesktopWidget * dtop = QApplication::desktop();
     fullscreen_.setWindowTitle(tr("full screen: %1").arg(windowTitle()));
-    fullscreen_.setGeometry(geometry());
+    fullscreen_.setGeometry(dtop->screenGeometry(this));
     fullscreen_.showFullScreen();
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
