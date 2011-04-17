@@ -556,6 +556,8 @@ namespace yae
     }
 
     // enter full screen rendering:
+    fullscreenGeometry_ = geometry();
+    fullscreenPosition_ = pos();
     swapLayouts(centralwidget, &fullscreen_);
     
     QDesktopWidget * dtop = QApplication::desktop();
@@ -578,6 +580,8 @@ namespace yae
       // exit full screen rendering:
       fullscreen_.hide();
       swapLayouts(centralwidget, &fullscreen_);
+      setGeometry(fullscreenGeometry_);
+      move(fullscreenPosition_);
       actionFullScreen->setChecked(false);
       actionShrinkWrap->setEnabled(true);
       show();

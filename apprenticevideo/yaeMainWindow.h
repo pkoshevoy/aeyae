@@ -104,6 +104,8 @@ namespace yae
     // widgets used for full screen display:
     QWidget fullscreen_;
     QLayout * fullscreenLayout_;
+    QRect fullscreenGeometry_;  // window geometry prior to fullscreen
+    QPoint fullscreenPosition_; // window position prior to fullscreen
     
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
