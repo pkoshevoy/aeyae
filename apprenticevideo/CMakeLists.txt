@@ -42,10 +42,11 @@ if (WIN32)
   include_directories(AFTER msIntTypes)
 endif (WIN32)
 
-set(FFMPEG_HEADERS_PATH "" CACHE PATH "search path for ffmpeg headers")
+set(FFMPEG_HEADERS_PATH "$ENV{FFMPEG_HEADERS_PATH}" CACHE PATH "search path for ffmpeg headers")
 
 find_path(FFMPEG_INCLUDE_DIR 
   libavutil/avutil.h
+  PATHS
   ${FFMPEG_HEADERS_PATH}
   /usr/include
   /usr/local/include
@@ -75,7 +76,7 @@ find_library(QT4_PLUGINS_QMNG
   qmng ${QT_PLUGINS_DIR}/imageformats
   DOC "Qt image IO plugin for MNG")
 
-set(FFMPEG_LIBS_PATH "" CACHE PATH "search path for ffmpeg libraries")
+set(FFMPEG_LIBS_PATH "$ENV{FFMPEG_LIBS_PATH}" CACHE PATH "search path for ffmpeg libraries")
 
 find_library(JPEG_LIBRARY jpeg PATHS ${FFMPEG_LIBS_PATH} DOC "jpeg library")
 find_library(TIFF_LIBRARY tiff PATHS ${FFMPEG_LIBS_PATH} DOC "tiff library")
@@ -105,6 +106,7 @@ find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore l
 find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(ZLIB_LIBRARY z PATHS ${FFMPEG_LIBS_PATH} DOC "zlib library")
 find_library(BZIP2_LIBRARY bz2 PATHS ${FFMPEG_LIBS_PATH} DOC "bzip2 library")
+find_library(VA_LIBRARY va PATHS ${FFMPEG_LIBS_PATH} DOC "va library")
 
 if (WIN32)
   find_library(LIBGCC_LIBRARY libgcc PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libgcc library")
@@ -167,6 +169,7 @@ set(project_sources
 
 find_path(PORTAUDIO_INCLUDE_DIR 
   portaudio.h
+  PATHS
   ${PORTAUDIO_DIR}/include
   ${FFMPEG_HEADERS_PATH}
   /usr/include
@@ -179,6 +182,7 @@ endif (PORTAUDIO_INCLUDE_DIR)
 
 find_path(GLEW_INCLUDE_DIR 
   GL/glew.h
+  PATHS
   ${GLEW_DIR}/include 
   ${FFMPEG_HEADERS_PATH}
   /usr/include
@@ -368,6 +372,10 @@ endif (ZLIB_LIBRARY)
 if (BZIP2_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${BZIP2_LIBRARY})
 endif (BZIP2_LIBRARY)
+
+if (VA_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${VA_LIBRARY})
+endif (VA_LIBRARY)
 
 if (WIN32)
 
