@@ -907,8 +907,12 @@ namespace yae
     // sample set stride (in bits) for each plane:
     unsigned char samplePlaneStride[4] = { 0 };
     unsigned char numSamplePlanes = ptts->getPlanes(samplePlaneStride);
+
+    unsigned char rowAlignment = 16;
+    unsigned int encodedWidth =
+      (override_.encodedWidth_ + (rowAlignment - 1)) &
+      ~(rowAlignment - 1);
     
-    unsigned int encodedWidth = override_.encodedWidth_;
     if (ptts->chromaBoxW_ > 1)
     {
       unsigned int remainder = encodedWidth % ptts->chromaBoxW_;
@@ -1167,7 +1171,7 @@ namespace yae
         {
           std::size_t rowBytes = sampleLineSize[i];
           std::size_t rows = samplePlaneSize[i] / rowBytes;
-          sampleBuffer->resize(i, rowBytes, rows, 16);
+          sampleBuffer->resize(i, rowBytes, rows, rowAlignment);
         }
         vf.sampleBuffer_ = sampleBuffer;
 
