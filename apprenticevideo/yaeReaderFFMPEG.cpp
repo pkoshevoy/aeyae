@@ -2065,12 +2065,6 @@ namespace yae
   bool
   Movie::selectVideoTrack(std::size_t i)
   {
-    if (selectedVideoTrack_ == i)
-    {
-      // already selected:
-      return true;
-    }
-    
     const std::size_t numVideoTracks = videoTracks_.size();
     if (selectedVideoTrack_ < numVideoTracks)
     {
@@ -2094,12 +2088,6 @@ namespace yae
   bool
   Movie::selectAudioTrack(std::size_t i)
   {
-    if (selectedAudioTrack_ == i)
-    {
-      // already selected:
-      return true;
-    }
-    
     const std::size_t numAudioTracks = audioTracks_.size();
     if (selectedAudioTrack_ < numAudioTracks)
     {

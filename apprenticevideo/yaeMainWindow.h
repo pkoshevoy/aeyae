@@ -125,6 +125,9 @@ namespace yae
     
     // video renderer:
     VideoRenderer * videoRenderer_;
+    
+    // a flag indicating whether playback is paused:
+    bool playbackPaused_;
   };
 }
 

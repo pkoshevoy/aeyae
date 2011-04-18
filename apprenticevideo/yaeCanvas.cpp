@@ -526,6 +526,10 @@ namespace yae
   class Canvas::TPrivate
   {
   public:
+    TPrivate():
+      dar_(0.0)
+    {}
+    
     virtual ~TPrivate() {}
     
     virtual bool loadFrame(QGLWidget * canvas,
@@ -544,14 +548,18 @@ namespace yae
     {
       if (frame_)
       {
-        if (frame_->traits_.pixelAspectRatio_ != 0.0)
+        double w = double(frame_->traits_.visibleWidth_);
+        
+        if (dar_ != 0.0)
         {
-          return floor(double(frame_->traits_.visibleWidth_) *
-                       frame_->traits_.pixelAspectRatio_ +
-                       0.5);
+          w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
+        }
+        else if (frame_->traits_.pixelAspectRatio_ != 0.0)
+        {
+          w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
         }
 
-        return double(frame_->traits_.visibleWidth_);
+        return w;
       }
       
       return 0.0;
@@ -562,9 +570,15 @@ namespace yae
       return (frame_ ? double(frame_->traits_.visibleHeight_) : 0.0);
     }
     
+    inline void overrideDisplayAspectRatio(double dar)
+    {
+      dar_ = dar;
+    }
+    
   protected:
     mutable boost::mutex mutex_;
     TVideoFramePtr frame_;
+    double dar_;
   };
   
   //----------------------------------------------------------------
@@ -1532,6 +1546,15 @@ namespace yae
     return ok;
   }
 
+  //----------------------------------------------------------------
+  // Canvas::overrideDisplayAspectRatio
+  // 
+  void
+  Canvas::overrideDisplayAspectRatio(double dar)
+  {
+    private_->overrideDisplayAspectRatio(dar);
+  }
+  
   //----------------------------------------------------------------
   // Canvas::imageWidth
   // 

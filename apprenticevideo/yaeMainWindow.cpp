@@ -65,7 +65,8 @@ namespace yae
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
-    videoRenderer_(NULL)
+    videoRenderer_(NULL),
+    playbackPaused_(false)
   {
     setupUi(this);
     setAcceptDrops(true);
@@ -149,6 +150,10 @@ namespace yae
     
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
                  this, SLOT(playbackShrinkWrap()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionColorConverter, SIGNAL(triggered()),
+                 this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
     
     ok = connect(actionAbout, SIGNAL(triggered()),
@@ -350,6 +355,8 @@ namespace yae
     
     reader_->close();
     stopRenderers();
+    
+    reader->threadStart();
     startRenderers(reader);
     
     // replace the previous reader:
@@ -410,42 +417,62 @@ namespace yae
   // 
   void
   MainWindow::playbackAspectRatioAuto()
-  {}
+  {
+    canvas_->overrideDisplayAspectRatio(0.0);
+  }
 
   //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio2_35
   // 
   void
   MainWindow::playbackAspectRatio2_35()
-  {}
+  {
+    canvas_->overrideDisplayAspectRatio(2.35);
+  }
 
   //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio1_85
   // 
   void
   MainWindow::playbackAspectRatio1_85()
-  {}
+  {
+    canvas_->overrideDisplayAspectRatio(1.85);
+  }
   
   //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio1_78
   // 
   void
   MainWindow::playbackAspectRatio1_78()
-  {}
+  {
+    canvas_->overrideDisplayAspectRatio(16.0 / 9.0);
+  }
 
   //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio1_33
   // 
   void
   MainWindow::playbackAspectRatio1_33()
-  {}
+  {
+    canvas_->overrideDisplayAspectRatio(4.0 / 3.0);
+  }
 
   //----------------------------------------------------------------
   // MainWindow::playbackColorConverter
   // 
   void
   MainWindow::playbackColorConverter()
-  {}
+  {
+    std::cerr << "playbackColorConverter" << std::endl;
+    reader_->threadStop();
+    stopRenderers();
+    
+    std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
+    selectVideoTrack(reader_, videoTrack);
+    
+    reader_->threadStart();
+    startRenderers(reader_);
+  }
   
   //----------------------------------------------------------------
   // MainWindow::playbackShrinkWrap
@@ -593,7 +620,22 @@ namespace yae
   // 
   void
   MainWindow::playbackPause()
-  {}
+  {
+    std::cerr << "playbackPause" << std::endl;
+    
+    if (playbackPaused_)
+    {
+      // reader_->threadResume();
+      startRenderers(reader_);
+    }
+    else
+    {
+      // reader_->threadPause();
+      stopRenderers();
+    }
+    
+    playbackPaused_ = !playbackPaused_;
+  }
 
   //----------------------------------------------------------------
   // MainWindow::audioSelectTrack
@@ -605,6 +647,8 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
     selectAudioTrack(reader_, index);
+    
+    reader_->threadStart();
     startRenderers(reader_);
   }
 
@@ -617,7 +661,10 @@ namespace yae
     std::cerr << "videoSelectTrack: " << index << std::endl;
     reader_->threadStop();
     stopRenderers();
+    
     selectVideoTrack(reader_, index);
+    
+    reader_->threadStart();
     startRenderers(reader_);
   }
   
@@ -729,26 +776,10 @@ namespace yae
     unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
     if (!audioRenderer_->open(audioDevice, reader))
     {
-      AudioTraits atts;
-      if (reader->getAudioTraits(atts))
-      {
-        atts.channelLayout_ = kAudioStereo;
-        reader->setAudioTraitsOverride(atts);
-      }
-      
-      if (!audioRenderer_->open(audioDevice, reader))
-      {
-        reader->selectAudioTrack(numAudioTracks);
-        
-        if (numVideoTracks)
-        {
-          videoRenderer_->takeThisClock(SharedClock());
-          videoRenderer_->obeyThisClock(videoRenderer_->clock());
-        }
-      }
+      videoRenderer_->takeThisClock(SharedClock());
+      videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
     
-    reader->threadStart();
     videoRenderer_->open(canvas_, reader);
   }
   

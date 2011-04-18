@@ -73,6 +73,9 @@ namespace yae
     
     // helper:
     bool loadFrame(const TVideoFramePtr & frame);
+
+    // use this to override auto-detected aspect ratio:
+    void overrideDisplayAspectRatio(double dar);
     
     // accessors to full resolution frame dimensions:
     double imageWidth() const;

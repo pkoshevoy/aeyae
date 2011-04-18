@@ -36,7 +36,20 @@ namespace yae
     
     void operator()()
     {
-      context_->threadLoop();
+      try
+      {
+        context_->threadLoop();
+      }
+      catch (std::exception & e)
+      {
+        std::cerr << "Threadable::operator(): " << e.what()
+                  << std::endl;
+      }
+      catch (...)
+      {
+        std::cerr << "Threadable::operator(): unexpected exception"
+                  << std::endl;
+      }
     }
     
     TContext * context_;
