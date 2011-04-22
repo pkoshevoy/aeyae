@@ -77,7 +77,11 @@ namespace yae
     // use this to override auto-detected aspect ratio:
     void overrideDisplayAspectRatio(double dar);
     
-    // accessors to full resolution frame dimensions:
+    // use this to crop letterbox pillars and bars:
+    void cropFrame(double darCropped);
+    
+    // accessors to full resolution frame dimensions
+    // after overriding display aspect ratio and cropping:
     double imageWidth() const;
     double imageHeight() const;
     

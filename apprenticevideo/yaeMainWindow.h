@@ -71,6 +71,11 @@ namespace yae
     void playbackAspectRatio1_85();
     void playbackAspectRatio1_78();
     void playbackAspectRatio1_33();
+    void playbackCropFrameNone();
+    void playbackCropFrame2_35();
+    void playbackCropFrame1_85();
+    void playbackCropFrame1_78();
+    void playbackCropFrame1_33();
     void playbackColorConverter();
     void playbackShrinkWrap();
     void playbackFullScreen();

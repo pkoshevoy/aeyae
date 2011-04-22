@@ -20,7 +20,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -44,9 +44,22 @@
      <addaction name="actionAspectRatio1_85"/>
      <addaction name="actionAspectRatio2_35"/>
     </widget>
+    <widget class="QMenu" name="menuCropFrame">
+     <property name="title">
+      <string>Crop Frame</string>
+     </property>
+     <addaction name="actionCropFrameNone"/>
+     <addaction name="actionCropFrame1_33"/>
+     <addaction name="actionCropFrame1_78"/>
+     <addaction name="actionCropFrame1_85"/>
+     <addaction name="actionCropFrame2_35"/>
+    </widget>
     <addaction name="menuOverride_Aspect_Ratio"/>
+    <addaction name="menuCropFrame"/>
+    <addaction name="separator"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
+    <addaction name="separator"/>
     <addaction name="actionColorConverter"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
@@ -167,6 +180,49 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_78">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:9</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_33">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4:3</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_85">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.85</string>
+   </property>
+  </action>
+  <action name="actionCropFrame2_35">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.35</string>
+   </property>
+  </action>
+  <action name="actionCropFrameNone">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>None</string>
    </property>
   </action>
  </widget>

@@ -527,7 +527,8 @@ namespace yae
   {
   public:
     TPrivate():
-      dar_(0.0)
+      dar_(0.0),
+      darCropped_(0.0)
     {}
     
     virtual ~TPrivate() {}
@@ -574,11 +575,29 @@ namespace yae
     {
       dar_ = dar;
     }
+
+    inline double displayAspectRatio() const
+    {
+      double w = imageWidth();
+      double h = imageHeight();
+      return (h != 0.0) ? w / h : 0.0;
+    }
+
+    inline void cropFrame(double darCropped)
+    {
+      darCropped_ = darCropped;
+    }
+
+    inline double displayAspectRatioCropped() const
+    {
+      return darCropped_;
+    }
     
   protected:
     mutable boost::mutex mutex_;
     TVideoFramePtr frame_;
     double dar_;
+    double darCropped_;
   };
   
   //----------------------------------------------------------------
@@ -1490,10 +1509,10 @@ namespace yae
       glMatrixMode(GL_MODELVIEW);
       glLoadIdentity();
       
-      double imageWidth = private_->imageWidth();
-      double imageHeight = private_->imageHeight();
+      double croppedWidth = this->imageWidth();
+      double croppedHeight = this->imageHeight();
       
-      double dar = imageWidth / imageHeight;
+      double dar = croppedWidth / croppedHeight;
       double car = double(canvasWidth) / double(canvasHeight);
       
       double x = 0.0;
@@ -1523,7 +1542,15 @@ namespace yae
       glViewport(GLint(x + 0.5), GLint(y + 0.5),
                  GLsizei(w + 0.5), GLsizei(h + 0.5));
       glMatrixMode(GL_PROJECTION);
-      gluOrtho2D(0.0, imageWidth, imageHeight, 0.0);
+
+      double uncroppedWidth = private_->imageWidth();
+      double uncroppedHeight = private_->imageHeight();
+
+      double left = (uncroppedWidth - croppedWidth) * 0.5;
+      double right = left + croppedWidth;
+      double top = (uncroppedHeight - croppedHeight) * 0.5;
+      double bottom = top + croppedHeight;
+      gluOrtho2D(left, right, bottom, top);
       
       glEnable(GL_TEXTURE_2D);
       private_->draw();
@@ -1560,6 +1587,15 @@ namespace yae
   {
     private_->overrideDisplayAspectRatio(dar);
   }
+
+  //----------------------------------------------------------------
+  // Canvas::cropFrame
+  // 
+  void
+  Canvas::cropFrame(double darCropped)
+  {
+    private_->cropFrame(darCropped);
+  }
   
   //----------------------------------------------------------------
   // Canvas::imageWidth
@@ -1567,7 +1603,18 @@ namespace yae
   double
   Canvas::imageWidth() const
   {
-    return private_->imageWidth();
+    double w = private_->imageWidth();
+    double dar = private_->displayAspectRatio();
+    double darCropped = private_->displayAspectRatioCropped();
+    
+    if (dar != 0.0 && darCropped != 0.0 && dar > darCropped)
+    {
+      // crop left-right pillars:
+      double h = private_->imageHeight();
+      w = h * darCropped;
+    }
+    
+    return w;
   }
   
   //----------------------------------------------------------------
@@ -1576,7 +1623,18 @@ namespace yae
   double
   Canvas::imageHeight() const
   {
-    return private_->imageHeight();
+    double h = private_->imageHeight();
+    double dar = private_->displayAspectRatio();
+    double darCropped = private_->displayAspectRatioCropped();
+    
+    if (dar != 0.0 && darCropped != 0.0 && dar < darCropped)
+    {
+      // crop top-bottom bars:
+      double w = private_->imageWidth();
+      h = w / darCropped;
+    }
+    
+    return h;
   }
 
   //----------------------------------------------------------------

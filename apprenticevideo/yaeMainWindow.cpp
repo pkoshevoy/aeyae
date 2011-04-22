@@ -111,6 +111,14 @@ namespace yae
     aspectRatioGroup->addAction(actionAspectRatio2_35);
     actionAspectRatioAuto->setChecked(true);
     
+    QActionGroup * cropFrameGroup = new QActionGroup(this);
+    cropFrameGroup->addAction(actionCropFrameNone);
+    cropFrameGroup->addAction(actionCropFrame1_33);
+    cropFrameGroup->addAction(actionCropFrame1_78);
+    cropFrameGroup->addAction(actionCropFrame1_85);
+    cropFrameGroup->addAction(actionCropFrame2_35);
+    actionCropFrameNone->setChecked(true);
+    
     bool ok = true;
     ok = connect(fullscreenButton, SIGNAL(clicked()),
                  this, SLOT(exitFullScreen()));
@@ -142,6 +150,26 @@ namespace yae
     
     ok = connect(actionAspectRatio2_35, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio2_35()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionCropFrameNone, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameNone()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionCropFrame1_33, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame1_33()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionCropFrame1_78, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame1_78()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionCropFrame1_85, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame1_85()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionCropFrame2_35, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame2_35()));
     YAE_ASSERT(ok);
     
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -419,6 +447,7 @@ namespace yae
   MainWindow::playbackAspectRatioAuto()
   {
     canvas_->overrideDisplayAspectRatio(0.0);
+    playbackShrinkWrap();
   }
 
   //----------------------------------------------------------------
@@ -428,6 +457,7 @@ namespace yae
   MainWindow::playbackAspectRatio2_35()
   {
     canvas_->overrideDisplayAspectRatio(2.35);
+    playbackShrinkWrap();
   }
 
   //----------------------------------------------------------------
@@ -437,6 +467,7 @@ namespace yae
   MainWindow::playbackAspectRatio1_85()
   {
     canvas_->overrideDisplayAspectRatio(1.85);
+    playbackShrinkWrap();
   }
   
   //----------------------------------------------------------------
@@ -446,6 +477,7 @@ namespace yae
   MainWindow::playbackAspectRatio1_78()
   {
     canvas_->overrideDisplayAspectRatio(16.0 / 9.0);
+    playbackShrinkWrap();
   }
 
   //----------------------------------------------------------------
@@ -455,6 +487,57 @@ namespace yae
   MainWindow::playbackAspectRatio1_33()
   {
     canvas_->overrideDisplayAspectRatio(4.0 / 3.0);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrameNone
+  // 
+  void
+  MainWindow::playbackCropFrameNone()
+  {
+    canvas_->cropFrame(0.0);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame2_35
+  // 
+  void
+  MainWindow::playbackCropFrame2_35()
+  {
+    canvas_->cropFrame(2.35);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame1_85
+  // 
+  void
+  MainWindow::playbackCropFrame1_85()
+  {
+    canvas_->cropFrame(1.85);
+    playbackShrinkWrap();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame1_78
+  // 
+  void
+  MainWindow::playbackCropFrame1_78()
+  {
+    canvas_->cropFrame(16.0 / 9.0);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame1_33
+  // 
+  void
+  MainWindow::playbackCropFrame1_33()
+  {
+    canvas_->cropFrame(4.0 / 3.0);
+    playbackShrinkWrap();
   }
 
   //----------------------------------------------------------------
