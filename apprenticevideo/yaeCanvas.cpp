@@ -1151,7 +1151,13 @@ namespace yae
     }
     
     TGLSaveMatrixState pushMatrix;
-    glScaled(frame_->traits_.pixelAspectRatio_, 1.0, 1.0);
+    double par = frame_->traits_.pixelAspectRatio_;
+    if (dar_ != 0.0)
+    {
+      double w = dar_ * double(frame_->traits_.visibleHeight_);
+      par = w / double(frame_->traits_.visibleWidth_);
+    }
+    glScaled(par, 1.0, 1.0);
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
