@@ -64,6 +64,10 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
+
+    // call this after opening a movie so that the timeline
+    // could properly render elapsed time:
+    void initializeTimeline(double timelineDuration);
     
     // helper:
     void refresh();
@@ -153,8 +157,14 @@ namespace yae
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;
     
-    // asingle shot timer for preventing screen saver:
+    // a single shot timer for preventing screen saver:
     QTimer timerScreenSaver_;
+    
+    // a flag indicating whether the timeline should be visible:
+    bool exposeControls_;
+    
+    // video duration (used to draw the timeline progress):
+    double timelineDuration_;
   };
 }
 

@@ -452,15 +452,21 @@ namespace yae
   // 
   struct TGLSaveMatrixState
   {
-    TGLSaveMatrixState()
+    TGLSaveMatrixState(GLenum mode):
+      matrixMode_(mode)
     {
+      glMatrixMode(matrixMode_);
       glPushMatrix();
     }
     
     ~TGLSaveMatrixState()
     {
+      glMatrixMode(matrixMode_);
       glPopMatrix();
     }
+
+  protected:
+    GLenum matrixMode_;
   };
   
   //----------------------------------------------------------------
@@ -591,6 +597,11 @@ namespace yae
     inline double displayAspectRatioCropped() const
     {
       return darCropped_;
+    }
+    
+    inline const TVideoFramePtr & frame() const
+    {
+      return frame_;
     }
     
   protected:
@@ -754,6 +765,7 @@ namespace yae
       glVertex2i(0, vtts.visibleHeight_);
     }
     glEnd();
+    glDisable(GL_TEXTURE_RECTANGLE_EXT);
   }
 
   //----------------------------------------------------------------
@@ -1169,7 +1181,7 @@ namespace yae
       return;
     }
     
-    TGLSaveMatrixState pushMatrix;
+    TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     double par = frame_->traits_.pixelAspectRatio_;
     if (dar_ != 0.0)
     {
@@ -1213,6 +1225,7 @@ namespace yae
       }
       glEnd();
     }
+    glDisable(GL_TEXTURE_2D);
   }
   
   //----------------------------------------------------------------
@@ -1225,7 +1238,9 @@ namespace yae
     QGLWidget(format, parent, shareWidget, f),
     private_(NULL),
     timerHideCursor_(this),
-    timerScreenSaver_(this)
+    timerScreenSaver_(this),
+    exposeControls_(true),
+    timelineDuration_(0.0)
   {
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
@@ -1279,6 +1294,15 @@ namespace yae
     {
       private_ = new TLegacyCanvas();
     }
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::initializeTimeline
+  // 
+  void
+  Canvas::initializeTimeline(double timelineDuration)
+  {
+    timelineDuration_ = timelineDuration;
   }
   
   //----------------------------------------------------------------
@@ -1358,6 +1382,7 @@ namespace yae
   void
   Canvas::mouseMoveEvent(QMouseEvent * event)
   {
+    exposeControls_ = true;
     setCursor(QCursor(Qt::ArrowCursor));
     timerHideCursor_.start();
   }
@@ -1451,6 +1476,7 @@ namespace yae
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+    
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -1468,7 +1494,8 @@ namespace yae
       if (ptts->flags_ & (pixelFormat::kAlpha | pixelFormat::kPaletted))
       {
         glViewport(0, 0, canvasWidth, canvasHeight);
-        glMatrixMode(GL_PROJECTION);
+        
+        TGLSaveMatrixState pushMatrix(GL_PROJECTION);
         gluOrtho2D(0, canvasWidth, canvasHeight, 0);
         
         float zebra[2][3] =
@@ -1504,11 +1531,6 @@ namespace yae
         glClear(GL_COLOR_BUFFER_BIT);
       }
       
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      glMatrixMode(GL_MODELVIEW);
-      glLoadIdentity();
-      
       double croppedWidth = this->imageWidth();
       double croppedHeight = this->imageHeight();
       
@@ -1539,21 +1561,59 @@ namespace yae
                 << std::endl;
 #endif
       
-      glViewport(GLint(x + 0.5), GLint(y + 0.5),
-                 GLsizei(w + 0.5), GLsizei(h + 0.5));
-      glMatrixMode(GL_PROJECTION);
+      // draw the frame:
+      {
+        glViewport(GLint(x + 0.5), GLint(y + 0.5),
+                   GLsizei(w + 0.5), GLsizei(h + 0.5));
+        
+        double uncroppedWidth = private_->imageWidth();
+        double uncroppedHeight = private_->imageHeight();
+        
+        double left = (uncroppedWidth - croppedWidth) * 0.5;
+        double right = left + croppedWidth;
+        double top = (uncroppedHeight - croppedHeight) * 0.5;
+        double bottom = top + croppedHeight;
+        
+        TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+        gluOrtho2D(left, right, bottom, top);
+        
+        private_->draw();
+      }
 
-      double uncroppedWidth = private_->imageWidth();
-      double uncroppedHeight = private_->imageHeight();
+      // draw the timeline:
+      if (exposeControls_ && timelineDuration_ > 0.0)
+      {
+        double x0 = 16.0;
+        double x1 = double(canvasWidth) - x0;
+        double y1 = double(canvasHeight) - 16.0;
+        double y0 = y1 - 32.0;
 
-      double left = (uncroppedWidth - croppedWidth) * 0.5;
-      double right = left + croppedWidth;
-      double top = (uncroppedHeight - croppedHeight) * 0.5;
-      double bottom = top + croppedHeight;
-      gluOrtho2D(left, right, bottom, top);
-      
-      glEnable(GL_TEXTURE_2D);
-      private_->draw();
+        if (x1 - x0 > 64.0 && y0 > 16.0)
+        {
+          glViewport(0, 0, canvasWidth, canvasHeight);
+          
+          TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+          gluOrtho2D(0, canvasWidth, canvasHeight, 0);
+          
+          glEnable(GL_BLEND);
+          {
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glColor4d(1.0, 1.0, 1.0, 0.3);
+            glRectd(x0, y0, x1, y1);
+          }
+          glDisable(GL_BLEND);
+          
+          // FIXME: use the shared clock instead!
+          double t = private_->frame()->time_.toSeconds();
+          double x = x0 + 8.0 + (x1 - x0 - 16.0) * t / timelineDuration_;
+          
+          glColor3d(1.0, 0.0, 0.0);
+          glRectd(x0 + 8.0, y1 - 16.0, x, y1 - 8.0);
+          
+          glColor3d(0.9, 0.9, 0.9);
+          glRectd(x, y1 - 16.0, x1 - 8.0, y1 - 8.0);
+        }
+      }
     }
     else
     {
@@ -1643,6 +1703,7 @@ namespace yae
   void
   Canvas::hideCursor()
   {
+    exposeControls_ = false;
     setCursor(QCursor(Qt::BlankCursor));
   }
   

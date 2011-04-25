@@ -1222,7 +1222,7 @@ namespace yae
                                            vf.traits_.encodedHeight_,
                                            ffmpegPixelFormat,
                                            
-                                           SWS_BICUBIC,
+                                           SWS_FAST_BILINEAR,
                                            NULL,
                                            NULL,
                                            NULL);

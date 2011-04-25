@@ -833,9 +833,13 @@ namespace yae
     
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+
+    TTime timelineDuration;
     
     if (audioTrack < numAudioTracks)
     {
+      reader->getAudioDuration(timelineDuration);
+      
       audioRenderer_->takeThisClock(SharedClock());
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
       
@@ -846,6 +850,8 @@ namespace yae
     }
     else if (videoTrack < numVideoTracks)
     {
+      reader->getVideoDuration(timelineDuration);
+      
       videoRenderer_->takeThisClock(SharedClock());
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
@@ -859,9 +865,14 @@ namespace yae
     unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
     if (!audioRenderer_->open(audioDevice, reader))
     {
+      reader->getVideoDuration(timelineDuration);
+      
       videoRenderer_->takeThisClock(SharedClock());
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
+    
+    double durationInSeconds = timelineDuration.toSeconds();
+    canvas_->initializeTimeline(durationInSeconds);
     
     videoRenderer_->open(canvas_, reader);
   }
