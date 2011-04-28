@@ -72,7 +72,7 @@ namespace yae
     setAcceptDrops(true);
     
     // request vsync if available:
-    QGLFormat contextFormat;
+    QGLFormat contextFormat(QGL::SampleBuffers | QGL::AlphaChannel);
     contextFormat.setSwapInterval(1);
   
     canvas_ = new Canvas(contextFormat);
@@ -835,12 +835,13 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     TTime timelineDuration;
+    SharedClock sharedClock;
     
     if (audioTrack < numAudioTracks)
     {
       reader->getAudioDuration(timelineDuration);
       
-      audioRenderer_->takeThisClock(SharedClock());
+      audioRenderer_->takeThisClock(sharedClock);
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
       
       if (videoTrack < numVideoTracks)
@@ -852,7 +853,7 @@ namespace yae
     {
       reader->getVideoDuration(timelineDuration);
       
-      videoRenderer_->takeThisClock(SharedClock());
+      videoRenderer_->takeThisClock(sharedClock);
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
     else
@@ -867,12 +868,12 @@ namespace yae
     {
       reader->getVideoDuration(timelineDuration);
       
-      videoRenderer_->takeThisClock(SharedClock());
+      videoRenderer_->takeThisClock(sharedClock);
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
     
     double durationInSeconds = timelineDuration.toSeconds();
-    canvas_->initializeTimeline(durationInSeconds);
+    canvas_->initializeTimeline(durationInSeconds, sharedClock);
     
     videoRenderer_->open(canvas_, reader);
   }

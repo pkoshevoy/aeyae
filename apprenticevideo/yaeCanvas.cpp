@@ -25,6 +25,7 @@
 // Qt includes:
 #include <QApplication>
 #include <QTimer>
+#include <QTime>
 
 
 //----------------------------------------------------------------
@@ -640,7 +641,7 @@ namespace yae
   // 
   bool
   TModernCanvas::loadFrame(QGLWidget * canvas,
-                              const TVideoFramePtr & frame)
+                           const TVideoFramePtr & frame)
   {
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -1294,15 +1295,20 @@ namespace yae
     {
       private_ = new TLegacyCanvas();
     }
+
+    setAutoBufferSwap(false);
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
   }
   
   //----------------------------------------------------------------
   // Canvas::initializeTimeline
   // 
   void
-  Canvas::initializeTimeline(double timelineDuration)
+  Canvas::initializeTimeline(double timelineDuration,
+                             const SharedClock & sharedClock)
   {
     timelineDuration_ = timelineDuration;
+    sharedClock_ = sharedClock;
   }
   
   //----------------------------------------------------------------
@@ -1469,157 +1475,17 @@ namespace yae
   void
   Canvas::paintGL()
   {
-    if (width() == 0 || height() == 0)
-    {
-      return;
-    }
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+    QPainter p(this);
+    p.beginNativePainting();
+    drawFrame();
+    p.endNativePainting();
     
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    const pixelFormat::Traits * ptts =
-      private_ ? private_->pixelTraits() : NULL;
+    if (exposeControls_ && timelineDuration_ > 0.0)
+    {
+      drawControls(p);
+    }
     
-    if (ptts)
-    {
-      TGLSaveState pushAttr(GL_ALL_ATTRIB_BITS);
-      
-      int canvasWidth = width();
-      int canvasHeight = height();
-      
-      // draw a checkerboard to help visualize the alpha channel:
-      if (ptts->flags_ & (pixelFormat::kAlpha | pixelFormat::kPaletted))
-      {
-        glViewport(0, 0, canvasWidth, canvasHeight);
-        
-        TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-        gluOrtho2D(0, canvasWidth, canvasHeight, 0);
-        
-        float zebra[2][3] =
-        {
-          { 1.0f, 1.0f, 1.0f },
-          { 0.7f, 0.7f, 0.7f }
-        };
-      
-        int edgeSize = 24;
-        bool evenRow = false;
-        for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
-        {
-          int y1 = std::min(y + edgeSize, canvasHeight);
-          
-          bool evenCol = false;
-          for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
-          {
-            int x1 = std::min(x + edgeSize, canvasWidth);
-
-            float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
-            glColor3fv(color);
-            
-            glRecti(x, y, x1, y1);
-          }
-        }
-        
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      }
-      else
-      {
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-      }
-      
-      double croppedWidth = this->imageWidth();
-      double croppedHeight = this->imageHeight();
-      
-      double dar = croppedWidth / croppedHeight;
-      double car = double(canvasWidth) / double(canvasHeight);
-      
-      double x = 0.0;
-      double y = 0.0;
-      double w = double(canvasWidth);
-      double h = double(canvasHeight);
-      
-      if (dar < car)
-      {
-        w = double(canvasHeight) * dar;
-        x = 0.5 * (double(canvasWidth) - w);
-      }
-      else
-      {
-        h = double(canvasWidth) / dar;
-        y = 0.5 * (double(canvasHeight) - h);
-      }
-      
-#if 0
-      std::cerr << "dar: " << dar
-                << ", car: " << car
-                << ", xy: " << x << " " << y
-                << ", wh: " << w << " " << h
-                << std::endl;
-#endif
-      
-      // draw the frame:
-      {
-        glViewport(GLint(x + 0.5), GLint(y + 0.5),
-                   GLsizei(w + 0.5), GLsizei(h + 0.5));
-        
-        double uncroppedWidth = private_->imageWidth();
-        double uncroppedHeight = private_->imageHeight();
-        
-        double left = (uncroppedWidth - croppedWidth) * 0.5;
-        double right = left + croppedWidth;
-        double top = (uncroppedHeight - croppedHeight) * 0.5;
-        double bottom = top + croppedHeight;
-        
-        TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-        gluOrtho2D(left, right, bottom, top);
-        
-        private_->draw();
-      }
-
-      // draw the timeline:
-      if (exposeControls_ && timelineDuration_ > 0.0)
-      {
-        double x0 = 16.0;
-        double x1 = double(canvasWidth) - x0;
-        double y1 = double(canvasHeight) - 16.0;
-        double y0 = y1 - 32.0;
-
-        if (x1 - x0 > 64.0 && y0 > 16.0)
-        {
-          glViewport(0, 0, canvasWidth, canvasHeight);
-          
-          TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-          gluOrtho2D(0, canvasWidth, canvasHeight, 0);
-          
-          glEnable(GL_BLEND);
-          {
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glColor4d(1.0, 1.0, 1.0, 0.3);
-            glRectd(x0, y0, x1, y1);
-          }
-          glDisable(GL_BLEND);
-          
-          // FIXME: use the shared clock instead!
-          double t = private_->frame()->time_.toSeconds();
-          double x = x0 + 8.0 + (x1 - x0 - 16.0) * t / timelineDuration_;
-          
-          glColor3d(1.0, 0.0, 0.0);
-          glRectd(x0 + 8.0, y1 - 16.0, x, y1 - 8.0);
-          
-          glColor3d(0.9, 0.9, 0.9);
-          glRectd(x, y1 - 16.0, x1 - 8.0, y1 - 8.0);
-        }
-      }
-    }
-    else
-    {
-      glClearColor(0, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
-    }
+    swapBuffers();
   }
   
   //----------------------------------------------------------------
@@ -1715,6 +1581,200 @@ namespace yae
   {
     // FIXME: not sure how to do this yet
     std::cerr << "wakeScreenSaver" << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::drawFrame
+  // 
+  void
+  Canvas::drawFrame()
+  {
+    if (width() == 0 || height() == 0)
+    {
+      return;
+    }
+    
+    const pixelFormat::Traits * ptts =
+      private_ ? private_->pixelTraits() : NULL;
+    
+    if (!ptts)
+    {
+      // unsupported pixel format:
+      glClearColor(0, 0, 0, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
+      return;
+    }
+    
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    
+    TGLSaveState pushAttr(GL_ALL_ATTRIB_BITS);
+    
+    int canvasWidth = width();
+    int canvasHeight = height();
+    
+    // draw a checkerboard to help visualize the alpha channel:
+    if (ptts->flags_ & (pixelFormat::kAlpha | pixelFormat::kPaletted))
+    {
+      glViewport(0, 0, canvasWidth, canvasHeight);
+      
+      TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+      gluOrtho2D(0, canvasWidth, canvasHeight, 0);
+      
+      float zebra[2][3] = {
+        { 1.0f, 1.0f, 1.0f },
+        { 0.7f, 0.7f, 0.7f }
+      };
+      
+      int edgeSize = 24;
+      bool evenRow = false;
+      for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
+      {
+        int y1 = std::min(y + edgeSize, canvasHeight);
+        
+        bool evenCol = false;
+        for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
+        {
+          int x1 = std::min(x + edgeSize, canvasWidth);
+          
+          float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
+          glColor3fv(color);
+          
+          glRecti(x, y, x1, y1);
+        }
+      }
+      
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+    else
+    {
+      glClearColor(0, 0, 0, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
+    }
+    
+    double croppedWidth = this->imageWidth();
+    double croppedHeight = this->imageHeight();
+    
+    double dar = croppedWidth / croppedHeight;
+    double car = double(canvasWidth) / double(canvasHeight);
+    
+    double x = 0.0;
+    double y = 0.0;
+    double w = double(canvasWidth);
+    double h = double(canvasHeight);
+    
+    if (dar < car)
+    {
+      w = double(canvasHeight) * dar;
+      x = 0.5 * (double(canvasWidth) - w);
+    }
+    else
+    {
+      h = double(canvasWidth) / dar;
+      y = 0.5 * (double(canvasHeight) - h);
+    }
+    
+    // draw the frame:
+    glViewport(GLint(x + 0.5), GLint(y + 0.5),
+               GLsizei(w + 0.5), GLsizei(h + 0.5));
+    
+    double uncroppedWidth = private_->imageWidth();
+    double uncroppedHeight = private_->imageHeight();
+    
+    double left = (uncroppedWidth - croppedWidth) * 0.5;
+    double right = left + croppedWidth;
+    double top = (uncroppedHeight - croppedHeight) * 0.5;
+    double bottom = top + croppedHeight;
+    
+    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+    gluOrtho2D(left, right, bottom, top);
+    
+    private_->draw();
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::drawControls
+  // 
+  void
+  Canvas::drawControls(QPainter & p)
+  {
+    int canvasWidth = width();
+    int canvasHeight = height();
+    int offset = 8;
+    int x0 = offset;
+    int x1 = int(canvasWidth) - offset;
+    int y1 = int(canvasHeight) - offset;
+    int y0 = y1 - offset * 3;
+    
+    if (x1 - x0 > 64 && y0 > offset)
+    {
+      double t = 0.0;
+      TTime lastUpdate;
+      double playheadPosition = 0.0;
+      if (sharedClock_.getCurrentTime(lastUpdate, playheadPosition))
+      {
+        t = lastUpdate.toSeconds();
+      }
+      
+      int wtotal = x1 - x0 - offset * 2;
+      int wpassed = int(double(wtotal) * t / timelineDuration_);
+      
+      p.setPen(QColor(197, 197, 197, 157));
+      p.setBrush(QBrush(Qt::NoBrush));
+      p.drawRect(QRect(x0 + offset, y1 - 2 * offset, wtotal, offset));
+      
+      p.setPen(QPen(Qt::NoPen));
+      p.setBrush(QColor(255, 0, 0, 157));
+      p.drawRect(QRect(x0 + offset, y1 - 2 * offset, wpassed, offset));
+      
+      p.setBrush(QColor(197, 197, 197, 127));
+      p.drawRect(QRect(x0 + offset + wpassed,
+                       y1 - 2 * offset,
+                       wtotal - wpassed,
+                       offset));
+      
+      QFontMetrics fm(p.font(), this);
+      QRect bbox =
+        fm.boundingRect("00:00:00:000").
+        adjusted(-offset, -offset, offset, offset);
+      
+      bbox.moveBottomLeft(QPoint(x0, y0));
+      drawTimebox(p, bbox, t);
+
+      bbox.moveBottomRight(QPoint(x1, y0));
+      drawTimebox(p, bbox, timelineDuration_);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::drawTimebox
+  // 
+  void
+  Canvas::drawTimebox(QPainter & p, const QRect & bbox, double seconds)
+  {
+    int msec = int(seconds * 1000.0);
+    int sec = msec / 1000;
+    int min = sec / 60;
+    int hour = min / 60;
+    
+    msec %= 1000;
+    sec %= 60;
+    min %= 60;
+    
+    QString strTime =
+      QTime(hour, min, sec, msec).
+      toString(QString::fromUtf8("HH:mm:ss:zzz"));
+    
+    p.setPen(QColor(197, 197, 197, 157));
+    p.setBrush(QColor(197, 197, 197, 127));
+    p.drawRoundedRect(bbox, 2, 2);
+    
+    p.setPen(QColor(0, 0, 0, 157));
+    p.drawText(bbox, Qt::AlignCenter, strTime);
   }
   
 }

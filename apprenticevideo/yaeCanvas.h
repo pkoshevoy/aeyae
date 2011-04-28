@@ -26,6 +26,7 @@
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeVideoCanvas.h>
+#include <yaeSynchronous.h>
 
 
 //----------------------------------------------------------------
@@ -67,7 +68,8 @@ namespace yae
 
     // call this after opening a movie so that the timeline
     // could properly render elapsed time:
-    void initializeTimeline(double timelineDuration);
+    void initializeTimeline(double timelineDuration,
+                            const SharedClock & sharedClock);
     
     // helper:
     void refresh();
@@ -112,6 +114,11 @@ namespace yae
     void initializeGL();
     void resizeGL(int width, int height);
     void paintGL();
+
+    // helpers:
+    void drawFrame();
+    void drawControls(QPainter & p);
+    void drawTimebox(QPainter & p, const QRect & bbox, double seconds);
     
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -163,8 +170,11 @@ namespace yae
     // a flag indicating whether the timeline should be visible:
     bool exposeControls_;
     
-    // video duration (used to draw the timeline progress):
+    // video duration (used to draw the timeline):
     double timelineDuration_;
+    
+    // this is used to keep track of current playhead position:
+    SharedClock sharedClock_;
   };
 }
 
