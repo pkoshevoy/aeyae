@@ -1245,6 +1245,7 @@ namespace yae
   {
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
+    setAutoFillBackground(false);
     
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -1317,7 +1318,7 @@ namespace yae
   void
   Canvas::refresh()
   {
-    QGLWidget::updateGL();
+    QGLWidget::update();
     QGLWidget::doneCurrent();
   }
   
@@ -1434,6 +1435,31 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // Canvas::paintEvent
+  // 
+  void
+  Canvas::paintEvent(QPaintEvent * event)
+  {
+    makeCurrent();
+    {
+      TGLSaveState pushAttr(GL_ALL_ATTRIB_BITS);
+      TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+      TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
+      drawFrame();
+    }
+    
+    if (exposeControls_ && timelineDuration_ > 0.0)
+    {
+      QPainter painter(this);
+      painter.setRenderHint(QPainter::Antialiasing);
+      drawControls(painter);
+      painter.end();
+    }
+    
+    swapBuffers();
+  }
+  
+  //----------------------------------------------------------------
   // Canvas::initializeGL
   // 
   void
@@ -1458,34 +1484,8 @@ namespace yae
     glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
     glAlphaFunc(GL_ALWAYS, 0.0f);
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::resizeGL
-  // 
-  void
-  Canvas::resizeGL(int width, int height)
-  {
-    QGLWidget::resizeGL(width, height);
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::paintGL
-  // 
-  void
-  Canvas::paintGL()
-  {
-    QPainter p(this);
-    p.beginNativePainting();
-    drawFrame();
-    p.endNativePainting();
     
-    if (exposeControls_ && timelineDuration_ > 0.0)
-    {
-      drawControls(p);
-    }
-    
-    swapBuffers();
+    glEnable(GL_MULTISAMPLE);
   }
   
   //----------------------------------------------------------------
@@ -1723,10 +1723,6 @@ namespace yae
       int wtotal = x1 - x0 - offset * 2;
       int wpassed = int(double(wtotal) * t / timelineDuration_);
       
-      p.setPen(QColor(197, 197, 197, 157));
-      p.setBrush(QBrush(Qt::NoBrush));
-      p.drawRect(QRect(x0 + offset, y1 - 2 * offset, wtotal, offset));
-      
       p.setPen(QPen(Qt::NoPen));
       p.setBrush(QColor(255, 0, 0, 157));
       p.drawRect(QRect(x0 + offset, y1 - 2 * offset, wpassed, offset));
@@ -1736,6 +1732,10 @@ namespace yae
                        y1 - 2 * offset,
                        wtotal - wpassed,
                        offset));
+      
+      p.setPen(QColor(197, 197, 197, 157));
+      p.setBrush(QBrush(Qt::NoBrush));
+      p.drawRect(QRect(x0 + offset, y1 - 2 * offset, wtotal, offset));
       
       QFontMetrics fm(p.font(), this);
       QRect bbox =
@@ -1771,7 +1771,7 @@ namespace yae
     
     p.setPen(QColor(197, 197, 197, 157));
     p.setBrush(QColor(197, 197, 197, 127));
-    p.drawRoundedRect(bbox, 2, 2);
+    p.drawRoundedRect(bbox, 1, 1);
     
     p.setPen(QColor(0, 0, 0, 157));
     p.drawText(bbox, Qt::AlignCenter, strTime);

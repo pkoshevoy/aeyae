@@ -109,11 +109,10 @@ namespace yae
     void mouseDoubleClickEvent(QMouseEvent * event);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
+    void paintEvent(QPaintEvent * e);
     
     // virtual: Qt/OpenGL stuff:
     void initializeGL();
-    void resizeGL(int width, int height);
-    void paintGL();
 
     // helpers:
     void drawFrame();
