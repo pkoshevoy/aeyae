@@ -56,8 +56,6 @@ namespace yae
   // 
   MainWindow::MainWindow():
     QMainWindow(NULL, 0),
-    fullscreen_(NULL, Qt::Window | Qt::FramelessWindowHint),
-    fullscreenLayout_(NULL),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     audioTrackMapper_(NULL),
@@ -87,22 +85,6 @@ namespace yae
     layout->setSpacing(0);
     layout->addWidget(canvas_);
     
-    fullscreen_.resize(640, 480);
-    
-    QPushButton * fullscreenButton = new QPushButton(this);
-    fullscreenButton->setText(tr("exit full screen view"));
-    
-    QGridLayout * fullscreenLayout = new QGridLayout(&fullscreen_);
-    fullscreenLayout_ = fullscreenLayout;
-    
-    fullscreenLayout->setMargin(0);
-    fullscreenLayout->setSpacing(0);
-    fullscreenLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding),
-                              0, 0);
-    fullscreenLayout->addWidget(fullscreenButton, 0, 1);
-    fullscreenLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding),
-                              0, 2);
-    
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
     aspectRatioGroup->addAction(actionAspectRatio1_33);
@@ -120,10 +102,6 @@ namespace yae
     actionCropFrameNone->setChecked(true);
     
     bool ok = true;
-    ok = connect(fullscreenButton, SIGNAL(clicked()),
-                 this, SLOT(exitFullScreen()));
-    YAE_ASSERT(ok);
-    
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
     YAE_ASSERT(ok);
@@ -640,43 +618,22 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // swapLayouts
-  // 
-  static void
-  swapLayouts(QWidget * a, QWidget * b)
-  {
-    QWidget tmp;
-    QLayout * la = a->layout();
-    QLayout * lb = b->layout();
-    tmp.setLayout(la);
-    a->setLayout(lb);
-    b->setLayout(la);
-  }
-  
-  //----------------------------------------------------------------
   // MainWindow::playbackFullScreen
   // 
   void
   MainWindow::playbackFullScreen()
   {
-    if (fullscreen_.layout() != fullscreenLayout_)
+    if (isFullScreen())
     {
       exitFullScreen();
       return;
     }
 
     // enter full screen rendering:
-    fullscreenGeometry_ = geometry();
-    fullscreenPosition_ = pos();
-    swapLayouts(centralwidget, &fullscreen_);
-    
-    QDesktopWidget * dtop = QApplication::desktop();
-    fullscreen_.setWindowTitle(tr("full screen: %1").arg(windowTitle()));
-    fullscreen_.setGeometry(dtop->screenGeometry(this));
-    fullscreen_.showFullScreen();
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
-    hide();
+    menuBar()->hide();
+    showFullScreen();
   }
   
   //----------------------------------------------------------------
@@ -685,16 +642,13 @@ namespace yae
   void
   MainWindow::exitFullScreen()
   {
-    if (fullscreen_.layout() != fullscreenLayout_)
+    if (isFullScreen())
     {
       // exit full screen rendering:
-      fullscreen_.hide();
-      swapLayouts(centralwidget, &fullscreen_);
-      setGeometry(fullscreenGeometry_);
-      move(fullscreenPosition_);
       actionFullScreen->setChecked(false);
       actionShrinkWrap->setEnabled(true);
-      show();
+      menuBar()->show();
+      showNormal();
     }
   }
   

@@ -106,12 +106,6 @@ namespace yae
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     
-    // widgets used for full screen display:
-    QWidget fullscreen_;
-    QLayout * fullscreenLayout_;
-    QRect fullscreenGeometry_;  // window geometry prior to fullscreen
-    QPoint fullscreenPosition_; // window position prior to fullscreen
-    
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
