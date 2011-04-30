@@ -909,9 +909,14 @@ namespace yae
     unsigned char numSamplePlanes = ptts->getPlanes(samplePlaneStride);
 
     unsigned char rowAlignment = 16;
-    unsigned int encodedWidth =
-      (override_.encodedWidth_ + (rowAlignment - 1)) &
-      ~(rowAlignment - 1);
+    unsigned int encodedWidth = override_.encodedWidth_;
+    
+    if (yaeOutputFormat != yaeNativeFormat)
+    {
+      encodedWidth =
+        (override_.encodedWidth_ + (rowAlignment - 1)) &
+        ~(rowAlignment - 1);
+    }
     
     if (ptts->chromaBoxW_ > 1)
     {
