@@ -70,7 +70,7 @@ namespace yae
     setAcceptDrops(true);
     
     // request vsync if available:
-    QGLFormat contextFormat(QGL::SampleBuffers | QGL::AlphaChannel);
+    QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
   
     canvas_ = new Canvas(contextFormat);
@@ -826,8 +826,8 @@ namespace yae
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
     
-    double durationInSeconds = timelineDuration.toSeconds();
-    canvas_->initializeTimeline(durationInSeconds, sharedClock);
+    // double durationInSeconds = timelineDuration.toSeconds();
+    // initializeTimeline(durationInSeconds, sharedClock);
     
     videoRenderer_->open(canvas_, reader);
   }

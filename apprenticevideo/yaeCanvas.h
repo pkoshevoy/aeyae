@@ -65,11 +65,6 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
-
-    // call this after opening a movie so that the timeline
-    // could properly render elapsed time:
-    void initializeTimeline(double timelineDuration,
-                            const SharedClock & sharedClock);
     
     // helper:
     void refresh();
@@ -109,15 +104,10 @@ namespace yae
     void mouseDoubleClickEvent(QMouseEvent * event);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
-    void paintEvent(QPaintEvent * e);
     
     // virtual: Qt/OpenGL stuff:
     void initializeGL();
-
-    // helpers:
-    void drawFrame();
-    void drawControls(QPainter & p);
-    void drawTimebox(QPainter & p, const QRect & bbox, double seconds);
+    void paintGL();
     
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -165,15 +155,6 @@ namespace yae
     
     // a single shot timer for preventing screen saver:
     QTimer timerScreenSaver_;
-    
-    // a flag indicating whether the timeline should be visible:
-    bool exposeControls_;
-    
-    // video duration (used to draw the timeline):
-    double timelineDuration_;
-    
-    // this is used to keep track of current playhead position:
-    SharedClock sharedClock_;
   };
 }
 
