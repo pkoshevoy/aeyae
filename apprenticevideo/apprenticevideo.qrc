@@ -1,6 +1,9 @@
 <RCC>
-  <qresource prefix="images">
+  <qresource>
     <file>images/apprenticevideo-about.png</file>
     <file>images/yae-256.png</file>
+    <file>images/timeIn.png</file>
+    <file>images/timeOut.png</file>
+    <file>images/playHead.png</file>
   </qresource>
 </RCC>

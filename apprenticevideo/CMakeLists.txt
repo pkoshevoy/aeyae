@@ -128,6 +128,7 @@ find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GL
 set(project_moc_hxx 
   yaeCanvas.h
   yaeMainWindow.h
+  yaePlaybackControls.h
   )
 
 set(project_uis 
@@ -154,6 +155,8 @@ set(project_sources
   yaePixelFormatFFMPEG.cpp
   yaePixelFormatTraits.h
   yaePixelFormatTraits.cpp
+  yaePlaybackControls.h
+  yaePlaybackControls.cpp
   yaeQueue.h
   yaeReader.h
   yaeReaderFFMPEG.h

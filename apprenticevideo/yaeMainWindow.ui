@@ -57,6 +57,7 @@
     <addaction name="menuOverride_Aspect_Ratio"/>
     <addaction name="menuCropFrame"/>
     <addaction name="separator"/>
+    <addaction name="actionShowControls"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
     <addaction name="separator"/>
@@ -223,6 +224,17 @@
    </property>
    <property name="text">
     <string>None</string>
+   </property>
+  </action>
+  <action name="actionShowControls">
+   <property name="text">
+    <string>Show &amp;Controls</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
  </widget>

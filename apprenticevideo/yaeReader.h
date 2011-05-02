@@ -59,8 +59,8 @@ namespace yae
     virtual const char * getSelectedVideoTrackName() const = 0;
     virtual const char * getSelectedAudioTrackName() const = 0;
     
-    virtual bool getVideoDuration(TTime & t) const = 0;
-    virtual bool getAudioDuration(TTime & t) const = 0;
+    virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
+    virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
     
     virtual bool getAudioTraits(AudioTraits & traits) const = 0;
     virtual bool getVideoTraits(VideoTraits & traits) const = 0;

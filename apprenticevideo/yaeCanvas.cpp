@@ -1365,7 +1365,7 @@ namespace yae
     }
     else
     {
-      event->ignore();
+      QGLWidget::keyPressEvent(event);
     }
   }
   

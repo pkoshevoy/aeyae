@@ -13,6 +13,7 @@
 #include <QDialog>
 #include <QMainWindow>
 #include <QSignalMapper>
+#include <QShortcut>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -20,6 +21,7 @@
 #include <yaeReader.h>
 #include <yaeAudioRenderer.h>
 #include <yaeVideoRenderer.h>
+#include <yaePlaybackControls.h>
 
 // local includes:
 #include "ui_yaeMainWindow.h"
@@ -77,6 +79,7 @@ namespace yae
     void playbackCropFrame1_78();
     void playbackCropFrame1_33();
     void playbackColorConverter();
+    void playbackShowControls();
     void playbackShrinkWrap();
     void playbackFullScreen();
     
@@ -106,6 +109,11 @@ namespace yae
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     
+    // shortcuts used during full-screen mode (when menubar is invisible)
+    QShortcut * shortcutExit_;
+    QShortcut * shortcutFullScreen_;
+    QShortcut * shortcutShowControls_;
+    
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
@@ -127,6 +135,9 @@ namespace yae
     
     // a flag indicating whether playback is paused:
     bool playbackPaused_;
+    
+    // playback controls:
+    PlaybackControls * playbackControls_;
   };
 }
 

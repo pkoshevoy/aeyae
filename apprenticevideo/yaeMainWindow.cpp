@@ -25,6 +25,7 @@
 #include <QSpacerItem>
 #include <QDesktopWidget>
 #include <QMenu>
+#include <QShortcut>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -85,6 +86,20 @@ namespace yae
     layout->setSpacing(0);
     layout->addWidget(canvas_);
     
+    playbackControls_ =
+      new PlaybackControls(this, Qt::Tool | Qt::WindowStaysOnTopHint);
+
+    // when in fullscreen mode the menubar is hidden and all actions
+    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
+    // so I am creating these shortcuts as a workaround:
+    shortcutExit_ = new QShortcut(this);
+    shortcutFullScreen_ = new QShortcut(this);
+    shortcutShowControls_ = new QShortcut(this);
+    
+    shortcutExit_->setContext(Qt::ApplicationShortcut);
+    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+    shortcutShowControls_->setContext(Qt::ApplicationShortcut);
+    
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
     aspectRatioGroup->addAction(actionAspectRatio1_33);
@@ -109,7 +124,11 @@ namespace yae
     ok = connect(actionExit, SIGNAL(triggered()),
                  this, SLOT(fileExit()));
     YAE_ASSERT(ok);
-
+    
+    ok = connect(shortcutExit_, SIGNAL(activated()),
+                 this, SLOT(fileExit()));
+    YAE_ASSERT(ok);
+    
     ok = connect(actionAspectRatioAuto, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatioAuto()));
     YAE_ASSERT(ok);
@@ -154,8 +173,20 @@ namespace yae
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
     
+    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
+                 this, SLOT(playbackFullScreen()));
+    YAE_ASSERT(ok);
+    
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
                  this, SLOT(playbackShrinkWrap()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionShowControls, SIGNAL(triggered()),
+                 this, SLOT(playbackShowControls()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutShowControls_, SIGNAL(activated()),
+                 this, SLOT(playbackShowControls()));
     YAE_ASSERT(ok);
     
     ok = connect(actionColorConverter, SIGNAL(triggered()),
@@ -536,6 +567,40 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // MainWindow::playbackShowControls
+  // 
+  void
+  MainWindow::playbackShowControls()
+  {
+    QApplication::processEvents();
+    
+    QPoint xy = pos();
+    QRect g = frameGeometry();
+    int w = width();
+    int h = height();
+    
+    if (isFullScreen())
+    {
+      QDesktopWidget * dtop = QApplication::desktop();
+      xy = dtop->pos();
+      g = dtop->screenGeometry(this);
+      
+      QRect pg = playbackControls_->frameGeometry();
+      w = g.width() - (pg.width() - playbackControls_->width());
+      
+      playbackControls_->resize(w, 19);
+      playbackControls_->move(xy.x(), xy.y() + g.height() - pg.height());
+    }
+    else
+    {
+      playbackControls_->move(xy.x(), xy.y() + g.height());
+      playbackControls_->resize(w, 19);
+    }
+    
+    playbackControls_->show();
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::playbackShrinkWrap
   // 
   void
@@ -615,6 +680,22 @@ namespace yae
     
     resize(new_w - cdx, new_h - cdy);
     move(new_x, new_y);
+    
+    if (playbackControls_->isVisible())
+    {
+      playbackShowControls();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // swapShortcuts
+  // 
+  static inline void
+  swapShortcuts(QShortcut * a, QAction * b)
+  {
+    QKeySequence tmp = a->key();
+    a->setKey(b->shortcut());
+    b->setShortcut(tmp);
   }
   
   //----------------------------------------------------------------
@@ -634,6 +715,15 @@ namespace yae
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
     showFullScreen();
+    
+    if (playbackControls_->isVisible())
+    {
+      playbackShowControls();
+    }
+    
+    swapShortcuts(shortcutExit_, actionExit);
+    swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    swapShortcuts(shortcutShowControls_, actionShowControls);
   }
   
   //----------------------------------------------------------------
@@ -649,6 +739,15 @@ namespace yae
       actionShrinkWrap->setEnabled(true);
       menuBar()->show();
       showNormal();
+      
+      if (playbackControls_->isVisible())
+      {
+        playbackShowControls();
+      }
+      
+      swapShortcuts(shortcutExit_, actionExit);
+      swapShortcuts(shortcutFullScreen_, actionFullScreen);
+      swapShortcuts(shortcutShowControls_, actionShowControls);
     }
   }
   
@@ -788,13 +887,10 @@ namespace yae
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
-    TTime timelineDuration;
     SharedClock sharedClock;
     
     if (audioTrack < numAudioTracks)
     {
-      reader->getAudioDuration(timelineDuration);
-      
       audioRenderer_->takeThisClock(sharedClock);
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
       
@@ -805,8 +901,6 @@ namespace yae
     }
     else if (videoTrack < numVideoTracks)
     {
-      reader->getVideoDuration(timelineDuration);
-      
       videoRenderer_->takeThisClock(sharedClock);
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
@@ -820,16 +914,12 @@ namespace yae
     unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
     if (!audioRenderer_->open(audioDevice, reader))
     {
-      reader->getVideoDuration(timelineDuration);
-      
       videoRenderer_->takeThisClock(sharedClock);
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
     }
     
-    // double durationInSeconds = timelineDuration.toSeconds();
-    // initializeTimeline(durationInSeconds, sharedClock);
-    
     videoRenderer_->open(canvas_, reader);
+    playbackControls_->reset(sharedClock, reader);
   }
   
   //----------------------------------------------------------------

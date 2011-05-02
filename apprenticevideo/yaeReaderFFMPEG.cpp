@@ -333,7 +333,7 @@ namespace yae
     { return codec_; }
     
     // get track duration:
-    void getDuration(TTime & t) const;
+    void getDuration(TTime & start, TTime & duration) const;
     
     // get current position:
     virtual bool getPosition(TTime &) const
@@ -511,7 +511,7 @@ namespace yae
   // Track::getDuration
   // 
   void
-  Track::getDuration(TTime & t) const
+  Track::getDuration(TTime & start, TTime & duration) const
   {
     if (!stream_)
     {
@@ -522,14 +522,21 @@ namespace yae
     if (context_ && stream_->duration == int64_t(AV_NOPTS_VALUE))
     {
       // track duration is unknown, return movie duration instead:
-      t.time_ = context_->duration;
-      t.base_ = AV_TIME_BASE;
+      start.time_ = context_->start_time;
+      start.base_ = AV_TIME_BASE;
+      
+      duration.time_ = context_->duration;
+      duration.base_ = AV_TIME_BASE;
+      
       return;
     }
     
     // return track duration:
-    t.time_ = stream_->time_base.num * stream_->duration;
-    t.base_ = stream_->time_base.den;
+    start.time_ = stream_->time_base.num * stream_->start_time;
+    start.base_ = stream_->time_base.den;
+    
+    duration.time_ = stream_->time_base.num * stream_->duration;
+    duration.base_ = stream_->time_base.den;
   }
   
   //----------------------------------------------------------------
@@ -2466,12 +2473,12 @@ namespace yae
   // ReaderFFMPEG::getVideoDuration
   // 
   bool
-  ReaderFFMPEG::getVideoDuration(TTime & t) const
+  ReaderFFMPEG::getVideoDuration(TTime & start, TTime & duration) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
     {
-      private_->movie_.getVideoTracks()[i]->getDuration(t);
+      private_->movie_.getVideoTracks()[i]->getDuration(start, duration);
       return true;
     }
     
@@ -2482,12 +2489,12 @@ namespace yae
   // ReaderFFMPEG::getAudioDuration
   // 
   bool
-  ReaderFFMPEG::getAudioDuration(TTime & t) const
+  ReaderFFMPEG::getAudioDuration(TTime & start, TTime & duration) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
-      private_->movie_.getAudioTracks()[i]->getDuration(t);
+      private_->movie_.getAudioTracks()[i]->getDuration(start, duration);
       return true;
     }
     
