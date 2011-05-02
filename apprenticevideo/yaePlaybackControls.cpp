@@ -30,6 +30,7 @@ namespace yae
   Marker::bbox() const
   {
     QRect bbox = pixmap_.rect();
+    return bbox;
   }
   
   //----------------------------------------------------------------
