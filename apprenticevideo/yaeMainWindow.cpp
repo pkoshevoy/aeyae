@@ -80,6 +80,8 @@ namespace yae
         qObj->blockSignals(true);
         blocked_.push_back(qObj);
       }
+      
+      return *this;
     }
     
     std::list<QObject *> blocked_;
