@@ -611,17 +611,27 @@ namespace yae
     
     QRect mainGeom = geometry();
     int ctrlHeight = timelineControls_->height();
+    bool fullScreen = this->isFullScreen();
     
     if (timelineControls_->isVisible())
     {
       actionShowTimeline->setChecked(false);
       timelineControls_->hide();
-      resize(width(), mainGeom.height() - ctrlHeight);
+      
+      if (!fullScreen)
+      {
+        resize(width(), mainGeom.height() - ctrlHeight);
+      }
     }
     else
     {
       actionShowTimeline->setChecked(true);
-      resize(width(), mainGeom.height() + ctrlHeight);
+
+      if (!fullScreen)
+      {
+        resize(width(), mainGeom.height() + ctrlHeight);
+      }
+      
       timelineControls_->show();
     }
   }
