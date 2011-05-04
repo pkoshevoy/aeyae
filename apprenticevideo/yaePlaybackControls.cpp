@@ -53,12 +53,13 @@ namespace yae
     timelineDuration_(1.0),
     timerRefreshTimeline_(this)
   {
-    pad_ = 8;
+    pad_ = 16;
     yExt_ = 3;
     xPos_ = pad_;
     
     setFixedHeight(pad_ * 2 + yExt_);
-    setMinimumWidth(300);
+    setMinimumWidth(pad_ * 2 + 64);
+    setAutoFillBackground(true);
     
     // pixmaps used to draw in/out markers and the playhead
     markerTimeIn_.pixmap_ = QPixmap(":/images/timeIn.png");
@@ -219,11 +220,9 @@ namespace yae
   // PlaybackControls::PlaybackControls
   // 
   PlaybackControls::PlaybackControls(QWidget * parent, Qt::WindowFlags f):
-    QWidget(parent, f),
-    timeline_(new TimelineControls())
+    QWidget(parent, f)
   {
     QVBoxLayout * layout = new QVBoxLayout(this);
-    layout->addWidget(timeline_);
   }
   
   //----------------------------------------------------------------
@@ -232,15 +231,6 @@ namespace yae
   PlaybackControls::~PlaybackControls()
   {}
 
-  //----------------------------------------------------------------
-  // PlaybackControls::initializeTimeline
-  // 
-  void
-  PlaybackControls::reset(const SharedClock & sharedClock, IReader * reader)
-  {
-    timeline_->reset(sharedClock, reader);
-  }
-    
   //----------------------------------------------------------------
   // PlaybackControls::closeEvent
   // 

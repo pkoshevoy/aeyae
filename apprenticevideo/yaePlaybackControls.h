@@ -128,8 +128,6 @@ namespace yae
     PlaybackControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
     ~PlaybackControls();
     
-    void reset(const SharedClock & sharedClock, IReader * reader);
-    
   signals:
     void load(const QUrl & url);
     void togglePlayback();
@@ -141,9 +139,6 @@ namespace yae
     
     // current playlist:
     QList<QUrl> playlist_;
-
-    // timeline, in/out points, playhead -- all in one package:
-    TimelineControls * timeline_;
   };
 }
 

@@ -57,7 +57,7 @@
     <addaction name="menuOverride_Aspect_Ratio"/>
     <addaction name="menuCropFrame"/>
     <addaction name="separator"/>
-    <addaction name="actionShowControls"/>
+    <addaction name="actionShowTimeline"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
     <addaction name="separator"/>
@@ -226,9 +226,15 @@
     <string>None</string>
    </property>
   </action>
-  <action name="actionShowControls">
+  <action name="actionShowTimeline">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Show &amp;Controls</string>
+    <string>Show &amp;Timeline</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>

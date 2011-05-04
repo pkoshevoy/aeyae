@@ -79,7 +79,7 @@ namespace yae
     void playbackCropFrame1_78();
     void playbackCropFrame1_33();
     void playbackColorConverter();
-    void playbackShowControls();
+    void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
     
@@ -112,7 +112,7 @@ namespace yae
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
-    QShortcut * shortcutShowControls_;
+    QShortcut * shortcutShowTimeline_;
     
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
@@ -137,7 +137,7 @@ namespace yae
     bool playbackPaused_;
     
     // playback controls:
-    PlaybackControls * playbackControls_;
+    TimelineControls * timelineControls_;
   };
 }
 

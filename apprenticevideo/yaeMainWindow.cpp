@@ -9,6 +9,7 @@
 // system includes:
 #include <iostream>
 #include <sstream>
+#include <list>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -50,7 +51,39 @@ namespace yae
   {
     Ui::AboutDialog::setupUi(this);
   }
-  
+
+  //----------------------------------------------------------------
+  // SignalBlocker
+  // 
+  struct SignalBlocker
+  {
+    SignalBlocker(QObject * qObj = NULL)
+    {
+      *this << qObj;
+    }
+    
+    ~SignalBlocker()
+    {
+      while (!blocked_.empty())
+      {
+        QObject * qObj = blocked_.front();
+        blocked_.pop_front();
+
+        qObj->blockSignals(false);
+      }
+    }
+    
+    SignalBlocker & operator << (QObject * qObj)
+    {
+      if (qObj && !qObj->signalsBlocked())
+      {
+        qObj->blockSignals(true);
+        blocked_.push_back(qObj);
+      }
+    }
+    
+    std::list<QObject *> blocked_;
+  };
   
   //----------------------------------------------------------------
   // MainWindow::MainWindow
@@ -86,19 +119,19 @@ namespace yae
     layout->setSpacing(0);
     layout->addWidget(canvas_);
     
-    playbackControls_ =
-      new PlaybackControls(this, Qt::Tool | Qt::WindowStaysOnTopHint);
-
+    timelineControls_ = new TimelineControls(this);
+    layout->addWidget(timelineControls_);
+    
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
-    shortcutShowControls_ = new QShortcut(this);
+    shortcutShowTimeline_ = new QShortcut(this);
     
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
-    shortcutShowControls_->setContext(Qt::ApplicationShortcut);
+    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
     
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
@@ -181,12 +214,12 @@ namespace yae
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionShowControls, SIGNAL(triggered()),
-                 this, SLOT(playbackShowControls()));
+    ok = connect(actionShowTimeline, SIGNAL(triggered()),
+                 this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
     
-    ok = connect(shortcutShowControls_, SIGNAL(activated()),
-                 this, SLOT(playbackShowControls()));
+    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
+                 this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
     
     ok = connect(actionColorConverter, SIGNAL(triggered()),
@@ -567,37 +600,28 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // MainWindow::playbackShowControls
+  // MainWindow::playbackShowTimeline
   // 
   void
-  MainWindow::playbackShowControls()
+  MainWindow::playbackShowTimeline()
   {
-    QApplication::processEvents();
+    SignalBlocker blockSignals(actionShowTimeline);
     
-    QPoint xy = pos();
-    QRect g = frameGeometry();
-    int w = width();
-    int h = height();
+    QRect mainGeom = geometry();
+    int ctrlHeight = timelineControls_->height();
     
-    if (isFullScreen())
+    if (timelineControls_->isVisible())
     {
-      QDesktopWidget * dtop = QApplication::desktop();
-      xy = dtop->pos();
-      g = dtop->screenGeometry(this);
-      
-      QRect pg = playbackControls_->frameGeometry();
-      w = g.width() - (pg.width() - playbackControls_->width());
-      
-      playbackControls_->resize(w, 19);
-      playbackControls_->move(xy.x(), xy.y() + g.height() - pg.height());
+      actionShowTimeline->setChecked(false);
+      timelineControls_->hide();
+      resize(width(), mainGeom.height() - ctrlHeight);
     }
     else
     {
-      playbackControls_->move(xy.x(), xy.y() + g.height());
-      playbackControls_->resize(w, 19);
+      actionShowTimeline->setChecked(true);
+      resize(width(), mainGeom.height() + ctrlHeight);
+      timelineControls_->show();
     }
-    
-    playbackControls_->show();
   }
   
   //----------------------------------------------------------------
@@ -680,11 +704,6 @@ namespace yae
     
     resize(new_w - cdx, new_h - cdy);
     move(new_x, new_y);
-    
-    if (playbackControls_->isVisible())
-    {
-      playbackShowControls();
-    }
   }
   
   //----------------------------------------------------------------
@@ -711,19 +730,16 @@ namespace yae
     }
 
     // enter full screen rendering:
+    SignalBlocker blockSignals(actionFullScreen);
+    
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
     showFullScreen();
     
-    if (playbackControls_->isVisible())
-    {
-      playbackShowControls();
-    }
-    
     swapShortcuts(shortcutExit_, actionExit);
     swapShortcuts(shortcutFullScreen_, actionFullScreen);
-    swapShortcuts(shortcutShowControls_, actionShowControls);
+    swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
   }
   
   //----------------------------------------------------------------
@@ -735,19 +751,16 @@ namespace yae
     if (isFullScreen())
     {
       // exit full screen rendering:
+      SignalBlocker blockSignals(actionFullScreen);
+      
       actionFullScreen->setChecked(false);
       actionShrinkWrap->setEnabled(true);
       menuBar()->show();
       showNormal();
       
-      if (playbackControls_->isVisible())
-      {
-        playbackShowControls();
-      }
-      
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
-      swapShortcuts(shortcutShowControls_, actionShowControls);
+      swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
     }
   }
   
@@ -919,7 +932,7 @@ namespace yae
     }
     
     videoRenderer_->open(canvas_, reader);
-    playbackControls_->reset(sharedClock, reader);
+    timelineControls_->reset(sharedClock, reader);
   }
   
   //----------------------------------------------------------------
