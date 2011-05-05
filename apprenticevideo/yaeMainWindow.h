@@ -62,6 +62,10 @@ namespace yae
     // open a movie file for playback:
     bool load(const QString & path);
     
+  signals:
+    void setInPoint();
+    void setOutPoint();
+
   public slots:
     // file menu:
     void fileOpen();
@@ -102,6 +106,7 @@ namespace yae
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
+    void keyPressEvent(QKeyEvent * e);
     
     // helpers:
     void stopRenderers();

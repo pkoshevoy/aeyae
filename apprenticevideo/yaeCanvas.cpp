@@ -1246,10 +1246,7 @@ namespace yae
     setAttribute(Qt::WA_OpaquePaintEvent, true);
     setAutoBufferSwap(true);
     setAutoFillBackground(false);
-    
-    setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
-    setAcceptDrops(true);
 
     timerHideCursor_.setSingleShot(true);
     timerHideCursor_.setInterval(3000);
@@ -1349,27 +1346,6 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // Canvas::keyPressEvent
-  // 
-  void
-  Canvas::keyPressEvent(QKeyEvent * event)
-  {
-    int key = event->key();
-    if (key == Qt::Key_Space)
-    {
-      emit togglePause();
-    }
-    else if (key == Qt::Key_Escape)
-    {
-      emit exitFullScreen();
-    }
-    else
-    {
-      QGLWidget::keyPressEvent(event);
-    }
-  }
-  
-  //----------------------------------------------------------------
   // Canvas::mouseMoveEvent
   // 
   void
@@ -1386,37 +1362,6 @@ namespace yae
   Canvas::mouseDoubleClickEvent(QMouseEvent * event)
   {
     emit toggleFullScreen();
-  }
-  
-  //----------------------------------------------------------------
-  // Canvas::dragEnterEvent
-  // 
-  void
-  Canvas::dragEnterEvent(QDragEnterEvent * e)
-  {
-    if (!e->mimeData()->hasUrls())
-    {
-      e->ignore();
-      return;
-    }
-    
-    e->acceptProposedAction();
-  }
-  
-  //----------------------------------------------------------------
-  // Canvas::dropEvent
-  // 
-  void
-  Canvas::dropEvent(QDropEvent * e)
-  {
-    if (!e->mimeData()->hasUrls())
-    {
-      e->ignore();
-      return;
-    }
-    
-    e->acceptProposedAction();
-    emit urlsFromDropEvent(e->mimeData()->urls());
   }
   
   //----------------------------------------------------------------

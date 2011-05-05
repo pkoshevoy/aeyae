@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system includes:
+#include <iostream>
+
 // Qt includes:
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -22,15 +25,45 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // Marker::Marker
+  // 
+  Marker::Marker():
+    position_(0.0),
+    positionAnchor_(0.0)
+  {
+    hotspot_[0] = 0;
+    hotspot_[1] = 0;
+  }
   
   //----------------------------------------------------------------
-  // Marker::bbox
+  // Marker::overlaps
   // 
-  QRect
-  Marker::bbox() const
+  bool
+  Marker::overlaps(const QPoint & coords,
+                   
+                   // these parameters are used to derive current
+                   // marker position:
+                   const int & xOrigin,
+                   const int & yOrigin,
+                   const int & unitLength) const
   {
-    QRect bbox = pixmap_.rect();
-    return bbox;
+    int x = coords.x() - (xOrigin +
+                          int(0.5 + unitLength * position_) -
+                          hotspot_[0]);
+    int y = coords.y() - (yOrigin - hotspot_[1]);
+    
+    QRect bbox = image_.rect();
+    if (!bbox.contains(x, y))
+    {
+      return false;
+    }
+    
+    QRgb rgba = image_.pixel(x, y);
+    int alpha = qAlpha(rgba);
+    
+    return alpha > 0;
   }
   
   //----------------------------------------------------------------
@@ -53,27 +86,28 @@ namespace yae
     timelineDuration_(1.0),
     timerRefreshTimeline_(this)
   {
-    pad_ = 16;
-    yExt_ = 3;
-    xPos_ = pad_;
+    padding_ = 16;
+    lineWidth_ = 3;
     
-    setFixedHeight(pad_ * 2 + yExt_);
-    setMinimumWidth(pad_ * 2 + 64);
+    setFixedHeight(padding_ * 2 + lineWidth_);
+    setMinimumWidth(padding_ * 2 + 64);
     setAutoFillBackground(true);
+    setFocusPolicy(Qt::StrongFocus);
+    setMouseTracking(true);
     
-    // pixmaps used to draw in/out markers and the playhead
-    markerTimeIn_.pixmap_ = QPixmap(":/images/timeIn.png");
-    markerTimeOut_.pixmap_ = QPixmap(":/images/timeOut.png");
-    markerPlayhead_.pixmap_ = QPixmap(":/images/playHead.png");
+    // load graphics for direct manipulation handles:
+    markerTimeIn_.image_ = QImage(":/images/timeIn.png");
+    markerTimeOut_.image_ = QImage(":/images/timeOut.png");
+    markerPlayhead_.image_ = QImage(":/images/playHead.png");
     
     // setup hotspots:
-    markerTimeIn_.hotspot_[0] = markerTimeIn_.pixmap_.width() - 1;
+    markerTimeIn_.hotspot_[0] = markerTimeIn_.image_.width() - 1;
     markerTimeIn_.hotspot_[1] = 12;
     
     markerTimeOut_.hotspot_[0] = 0;
     markerTimeOut_.hotspot_[1] = 12;
     
-    markerPlayhead_.hotspot_[0] = markerPlayhead_.pixmap_.width() / 2;
+    markerPlayhead_.hotspot_[0] = markerPlayhead_.image_.width() / 2;
     markerPlayhead_.hotspot_[1] = 8;
     
     // current state of playback controls:
@@ -122,6 +156,38 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // TimelineControls::setInPoint
+  // 
+  void
+  TimelineControls::setInPoint()
+  {
+    if (currentState_ == kIdle)
+    {
+      markerTimeIn_.position_ = markerPlayhead_.position_;
+      markerTimeOut_.position_ = std::max(markerTimeIn_.position_,
+                                          markerTimeOut_.position_);
+      
+      refreshTimeline();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::setOutPoint
+  // 
+  void
+  TimelineControls::setOutPoint()
+  {
+    if (currentState_ == kIdle)
+    {
+      markerTimeOut_.position_ = markerPlayhead_.position_;
+      markerTimeIn_.position_ = std::min(markerTimeIn_.position_,
+                                         markerTimeOut_.position_);
+      
+      refreshTimeline();
+    }
+  }
+  
+  //----------------------------------------------------------------
   // TimelineControls::refreshTimeline
   // 
   void
@@ -149,35 +215,47 @@ namespace yae
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     
-    xExt_ = width() - pad_ * 2;
-    yPos_ = height() - yExt_ - pad_;
+    int xOrigin = 0;
+    int yOriginInOut = 0;
+    int yOriginPlayhead = 0;
+    int unitLength = 0;
+    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
     
-    int inExt = xExt_ * markerTimeIn_.position_;
-    int outExt = xExt_ * markerTimeOut_.position_;
-    int playExt = xExt_ * markerPlayhead_.position_;
+    int inExt = int(0.5 + double(unitLength) * markerTimeIn_.position_);
+    int outExt = int(0.5 + double(unitLength) * markerTimeOut_.position_);
+    int playExt = int(0.5 + double(unitLength) * markerPlayhead_.position_);
     
     p.setPen(Qt::NoPen);
     
-    p.setBrush(QBrush(QColor(0x80, 0x80, 0x80)));
-    p.drawRect(QRect(xPos_, yPos_, inExt, yExt_));
+    p.setBrush(QColor(0x80, 0x80, 0x80));
+    p.drawRect(xOrigin,
+               yOriginPlayhead,
+               inExt,
+               lineWidth_);
     
-    p.setBrush(QBrush(QColor(0x40, 0x80, 0xff)));
-    p.drawRect(QRect(xPos_ + inExt, yPos_, outExt - inExt, yExt_));
+    p.setBrush(QColor(0x40, 0x80, 0xff));
+    p.drawRect(xOrigin + inExt,
+               yOriginPlayhead,
+               outExt - inExt,
+               lineWidth_);
+  
+    p.setBrush(QColor(0x80, 0x80, 0x80));
+    p.drawRect(xOrigin + outExt,
+               yOriginPlayhead,
+               unitLength - outExt,
+               lineWidth_);
     
-    p.setBrush(QBrush(QColor(0x80, 0x80, 0x80)));
-    p.drawRect(QRect(xPos_ + outExt, yPos_, xExt_ - outExt, yExt_));
+    p.drawImage(xOrigin + inExt - markerTimeIn_.hotspot_[0],
+                yOriginInOut - markerTimeIn_.hotspot_[1],
+                markerTimeIn_.image_);
     
-    p.drawPixmap(xPos_ + inExt - markerTimeIn_.hotspot_[0],
-                 yPos_ + yExt_ - markerTimeIn_.hotspot_[1],
-                 markerTimeIn_.pixmap_);
+    p.drawImage(xOrigin + outExt - markerTimeOut_.hotspot_[0],
+                yOriginInOut - markerTimeOut_.hotspot_[1],
+                markerTimeOut_.image_);
     
-    p.drawPixmap(xPos_ + outExt - markerTimeOut_.hotspot_[0],
-                 yPos_ + yExt_ - markerTimeOut_.hotspot_[1],
-                 markerTimeOut_.pixmap_);
-    
-    p.drawPixmap(xPos_ + playExt - markerPlayhead_.hotspot_[0],
-                 yPos_ - markerPlayhead_.hotspot_[1],
-                 markerPlayhead_.pixmap_);
+    p.drawImage(xOrigin + playExt - markerPlayhead_.hotspot_[0],
+                yOriginPlayhead - markerPlayhead_.hotspot_[1],
+                markerPlayhead_.image_);
   }
 
   //----------------------------------------------------------------
@@ -185,35 +263,144 @@ namespace yae
   // 
   void
   TimelineControls::wheelEvent(QWheelEvent * e)
-  {}
+  {
+    // seek back and forth here:
+  }
   
   //----------------------------------------------------------------
   // TimelineControls::mousePressEvent
   // 
   void
   TimelineControls::mousePressEvent(QMouseEvent * e)
-  {}
+  {
+    QPoint pt = e->pos();
+    
+    int xOrigin = 0;
+    int yOriginInOut = 0;
+    int yOriginPlayhead = 0;
+    int unitLength = 0;
+    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
+
+    dragStart_ = pt;
+    markerTimeIn_.setAnchor();
+    markerTimeOut_.setAnchor();
+    markerPlayhead_.setAnchor();
+    
+    if (markerPlayhead_.overlaps(pt, xOrigin, yOriginPlayhead, unitLength))
+    {
+      // std::cout << "PLAYHEAD" << std::endl;
+      currentState_ = kDraggingPlayheadMarker;
+      activeMarker_ = &markerPlayhead_;
+    }
+    else if (markerTimeOut_.overlaps(pt, xOrigin, yOriginInOut, unitLength))
+    {
+      // std::cout << "OUT POINT" << std::endl;
+      currentState_ = kDraggingTimeOutMarker;
+      activeMarker_ = &markerTimeOut_;
+    }
+    else if (markerTimeIn_.overlaps(pt, xOrigin, yOriginInOut, unitLength))
+    {
+      // std::cout << "IN POINT" << std::endl;
+      currentState_ = kDraggingTimeInMarker;
+      activeMarker_ = &markerTimeIn_;
+    }
+    else
+    {
+      currentState_ = kIdle;
+      activeMarker_ = NULL;
+    }
+  }
   
   //----------------------------------------------------------------
   // TimelineControls::mouseReleaseEvent
   // 
   void
   TimelineControls::mouseReleaseEvent(QMouseEvent * e)
-  {}
-
+  {
+    currentState_ = kIdle;
+    activeMarker_ = NULL;
+  }
+  
   //----------------------------------------------------------------
   // TimelineControls::mouseMoveEvent
   // 
   void
   TimelineControls::mouseMoveEvent(QMouseEvent * e)
-  {}
+  {
+    if (currentState_ == kIdle || !activeMarker_)
+    {
+      return;
+    }
+    
+    QPoint pt = e->pos();
+    int dx = pt.x() - dragStart_.x();
+    
+    int xOrigin = 0;
+    int yOriginInOut = 0;
+    int yOriginPlayhead = 0;
+    int unitLength = 0;
+    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
+    
+    double t =
+      activeMarker_->positionAnchor_ +
+      double(dx) / double(unitLength);
+    
+    t = std::max(0.0, std::min(1.0, t));
+    activeMarker_->position_ = t;
+    
+    if (currentState_ == kDraggingTimeInMarker)
+    {
+      markerTimeOut_.position_ = std::max(activeMarker_->position_,
+                                          markerTimeOut_.positionAnchor_);
+    }
+    
+    if (currentState_ == kDraggingTimeOutMarker)
+    {
+      markerTimeIn_.position_ = std::min(activeMarker_->position_,
+                                         markerTimeIn_.positionAnchor_);
+    }
+    
+    refreshTimeline();
+  }
 
   //----------------------------------------------------------------
   // TimelineControls::keyPressEvent
   // 
   void
   TimelineControls::keyPressEvent(QKeyEvent * e)
-  {}
+  {
+    int key = e->key();
+    
+    if (activeMarker_ &&
+        currentState_ != kIdle &&
+        key == Qt::Key_Escape)
+    {
+      activeMarker_->position_ = activeMarker_->positionAnchor_;
+      currentState_ = kIdle;
+      activeMarker_ = NULL;
+      
+      refreshTimeline();
+    }
+    else
+    {
+      e->ignore();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::getMarkerCSys
+  // 
+  void
+  TimelineControls::getMarkerCSys(int & xOrigin,
+                                  int & yOriginInOut,
+                                  int & yOriginPlayhead,
+                                  int & unitLength) const
+  {
+    xOrigin = padding_;
+    yOriginInOut = height() - padding_;
+    yOriginPlayhead = height() - lineWidth_ - padding_;
+    unitLength = width() - padding_ * 2;
+  }
   
   
   //----------------------------------------------------------------

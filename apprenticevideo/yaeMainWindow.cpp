@@ -104,6 +104,7 @@ namespace yae
   {
     setupUi(this);
     setAcceptDrops(true);
+    setFocusPolicy(Qt::StrongFocus);
     
     // request vsync if available:
     QGLFormat contextFormat;
@@ -236,16 +237,12 @@ namespace yae
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(canvas_, SIGNAL(exitFullScreen()),
-                 this, SLOT(exitFullScreen()));
+    ok = connect(this, SIGNAL(setInPoint()),
+                 timelineControls_, SLOT(setInPoint()));
     YAE_ASSERT(ok);
 
-    ok = connect(canvas_, SIGNAL(togglePause()),
-                 this, SLOT(playbackPause()));
-    YAE_ASSERT(ok);
-
-    ok = connect(canvas_, SIGNAL(urlsFromDropEvent(const QList<QUrl> &)),
-                 this, SLOT(processDropEventUrls(const QList<QUrl> &)));
+    ok = connect(this, SIGNAL(setOutPoint()),
+                 timelineControls_, SLOT(setOutPoint()));
     YAE_ASSERT(ok);
   }
 
@@ -888,6 +885,35 @@ namespace yae
     
     e->acceptProposedAction();
     processDropEventUrls(e->mimeData()->urls());
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::keyPressEvent
+  // 
+  void
+  MainWindow::keyPressEvent(QKeyEvent * event)
+  {
+    int key = event->key();
+    if (key == Qt::Key_Space)
+    {
+      playbackPause();
+    }
+    else if (key == Qt::Key_Escape)
+    {
+      exitFullScreen();
+    }
+    else if (key == Qt::Key_I)
+    {
+      emit setInPoint();
+    }
+    else if (key == Qt::Key_O)
+    {
+      emit setOutPoint();
+    }
+    else
+    {
+      event->ignore();
+    }
   }
   
   //----------------------------------------------------------------

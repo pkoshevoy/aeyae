@@ -17,7 +17,6 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QDropEvent>
 #include <QGLWidget>
 #include <QTimer>
 #include <QList>
@@ -87,10 +86,7 @@ namespace yae
     double imageHeight() const;
     
   signals:
-    void togglePause();
     void toggleFullScreen();
-    void exitFullScreen();
-    void urlsFromDropEvent(const QList<QUrl> & urls);
 
   public slots:
     void hideCursor();
@@ -99,11 +95,8 @@ namespace yae
   protected:
     // virtual:
     bool event(QEvent * event);
-    void keyPressEvent(QKeyEvent * event);
     void mouseMoveEvent(QMouseEvent * event);
     void mouseDoubleClickEvent(QMouseEvent * event);
-    void dragEnterEvent(QDragEnterEvent * e);
-    void dropEvent(QDropEvent * e);
     
     // virtual: Qt/OpenGL stuff:
     void initializeGL();
