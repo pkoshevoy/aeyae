@@ -18,6 +18,8 @@
 #include <QColor>
 #include <QBrush>
 #include <QPen>
+#include <QFontMetrics>
+#include <QTime>
 
 // yae includes:
 #include <yaePlaybackControls.h>
@@ -25,6 +27,29 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // getTimeStamp
+  // 
+  static QString
+  getTimeStamp(double seconds)
+  {
+    int msec = int(seconds * 1000.0);
+    int sec = msec / 1000;
+    int min = sec / 60;
+    int hour = min / 60;
+    
+    msec %= 1000;
+    sec %= 60;
+    min %= 60;
+    hour %= 24;
+    
+    QString ts =
+      QTime(hour, min, sec, msec).
+      toString(QString::fromUtf8("HH:mm:ss.zzz"));
+    
+    return ts;
+  }
 
   //----------------------------------------------------------------
   // Marker::Marker
@@ -88,9 +113,27 @@ namespace yae
   {
     padding_ = 16;
     lineWidth_ = 3;
+
+#if 1
+    QFont clockFont;
+    clockFont.setFamily(QString::fromUtf8("helvetica"));
+    clockFont.setBold(true);
+    clockFont.setPixelSize(11);
+    clockFont.setStyle(QFont::StyleNormal);
+    clockFont.setStyleHint(QFont::Monospace);
+    clockFont.setStyleStrategy(QFont::PreferDefault);
+    clockFont.setWeight(QFont::Normal);
+    setFont(clockFont);
+#else
+    clockFont = font();
+#endif
+    
+    clockEnd_ = QString::fromUtf8("00:00:00.000");
+    clockPosition_ = clockEnd_;
+    clockWidth_ = QFontMetrics(clockFont).boundingRect(clockEnd_).width();
     
     setFixedHeight(padding_ * 2 + lineWidth_);
-    setMinimumWidth(padding_ * 2 + 64);
+    setMinimumWidth((clockWidth_ + padding_ * 2) * 2 + 64);
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -146,13 +189,22 @@ namespace yae
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
     
-    markerTimeIn_.position_ = 0.1;
-    markerTimeIn_.setAnchor();
-    
-    markerTimeOut_.position_ = 0.8;
-    markerTimeOut_.setAnchor();
+    clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
     
     timerRefreshTimeline_.start();
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::resetTimeInOut
+  // 
+  void
+  TimelineControls::resetTimeInOut()
+  {
+    markerTimeIn_.position_ = 0.0;
+    markerTimeIn_.setAnchor();
+    
+    markerTimeOut_.position_ = 1.0;
+    markerTimeOut_.setAnchor();
   }
   
   //----------------------------------------------------------------
@@ -198,6 +250,9 @@ namespace yae
     if (sharedClock_.getCurrentTime(lastUpdate, playheadPosition)) 	 
     {
       double t = lastUpdate.toSeconds();
+      
+      clockPosition_ = getTimeStamp(t);
+      
       t -= timelineStart_;
       markerPlayhead_.position_ = t / timelineDuration_;
       markerPlayhead_.setAnchor();
@@ -244,6 +299,10 @@ namespace yae
                yOriginPlayhead,
                unitLength - outExt,
                lineWidth_);
+
+    p.setPen(QPen(palette().color(QPalette::Normal, QPalette::Text)));
+    p.drawText(padding_, yOriginInOut, clockPosition_);
+    p.drawText(xOrigin + unitLength + padding_, yOriginInOut, clockEnd_);
     
     p.drawImage(xOrigin + inExt - markerTimeIn_.hotspot_[0],
                 yOriginInOut - markerTimeIn_.hotspot_[1],
@@ -396,10 +455,10 @@ namespace yae
                                   int & yOriginPlayhead,
                                   int & unitLength) const
   {
-    xOrigin = padding_;
+    xOrigin = padding_ * 2 + clockWidth_;
     yOriginInOut = height() - padding_;
     yOriginPlayhead = height() - lineWidth_ - padding_;
-    unitLength = width() - padding_ * 2;
+    unitLength = width() - (padding_ * 2 + clockWidth_) * 2;
   }
   
   

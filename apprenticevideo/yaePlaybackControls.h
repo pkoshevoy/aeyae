@@ -69,6 +69,7 @@ namespace yae
     ~TimelineControls();
     
     void reset(const SharedClock & sharedClock, IReader * reader);
+    void resetTimeInOut();
     
     enum TState
     {
@@ -121,7 +122,14 @@ namespace yae
     
     // timeline line width in pixels:
     int lineWidth_;
+
+    // font used to render the position/duration clock:
+    QString clockPosition_;
+    QString clockEnd_;
     
+    // width of the text field used for the position/duration clock:
+    int clockWidth_;
+
     // a clock used to synchronize playback renderers,
     // used for playhead position:
     SharedClock sharedClock_;

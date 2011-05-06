@@ -425,6 +425,8 @@ namespace yae
     reader_->close();
     stopRenderers();
     
+    timelineControls_->resetTimeInOut();
+    
     reader->threadStart();
     startRenderers(reader);
     
