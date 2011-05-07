@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="pixmap">
-      <pixmap resource="apprenticevideo.qrc">:/images/images/apprenticevideo-about.png</pixmap>
+      <pixmap resource="apprenticevideo.qrc">:/images/apprenticevideo-about.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
