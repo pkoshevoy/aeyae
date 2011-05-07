@@ -859,9 +859,9 @@ namespace yae
   void
   MainWindow::userIsSeeking(bool seeking)
   {
-    if (seeking && !playbackInterrupted_)
+    if (seeking && !playbackPaused_)
     {
-      playbackInterrupted_ = !playbackPaused_;
+      playbackInterrupted_ = true;
       togglePlayback();
     }
     else if (!seeking && playbackInterrupted_)

@@ -127,10 +127,12 @@ namespace yae
 #else
     clockFont = font();
 #endif
+
+    QString clockTemplate = QString::fromUtf8("00:00:00.000");
+    clockWidth_ = QFontMetrics(clockFont).boundingRect(clockTemplate).width();
     
-    clockEnd_ = QString::fromUtf8("00:00:00.000");
-    clockPosition_ = clockEnd_;
-    clockWidth_ = QFontMetrics(clockFont).boundingRect(clockEnd_).width();
+    clockPosition_ = getTimeStamp(timelineStart_);
+    clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
     
     setFixedHeight(padding_ * 2 + lineWidth_);
     setMinimumWidth((clockWidth_ + padding_ * 2) * 2 + 64);
@@ -152,6 +154,11 @@ namespace yae
     
     markerPlayhead_.hotspot_[0] = markerPlayhead_.image_.width() / 2;
     markerPlayhead_.hotspot_[1] = 8;
+    
+    // setup marker positions:
+    markerTimeIn_.position_ = timelineStart_;
+    markerTimeOut_.position_ = timelineStart_ + timelineDuration_;
+    markerPlayhead_.position_ = timelineStart_;
     
     // current state of playback controls:
     currentState_ = TimelineControls::kIdle;
