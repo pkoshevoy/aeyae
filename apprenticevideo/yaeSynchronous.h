@@ -19,8 +19,8 @@ namespace yae
   //----------------------------------------------------------------
   // SharedClock
   // 
-  // implicitly shared thread-safe time piece,
-  // useful for various synchronization tasks
+  //! implicitly shared thread-safe time piece,
+  //! useful for various synchronization tasks
   // 
   struct YAE_API SharedClock
   {
@@ -56,9 +56,25 @@ namespace yae
     //! returns true when clock is running:
     bool getCurrentTime(TTime & t0, double & playheadPosition) const;
     
-    //! annouce that you are late so others would stop and wait for you:
+    //! announce that you are late so others would stop and wait for you:
     void waitForMe(double waitInSeconds = 1.0);
     void waitForOthers();
+    
+    //----------------------------------------------------------------
+    // IObserver
+    // 
+    //! Use the observer interface to receive notifications when
+    //! setCurrentTime is called on the master clock
+    //!
+    //! NOTE: this is an notification interface, therefore the implementation
+    //! must be thread-safe, asynchronous, non-blocking...
+    struct IObserver
+    {
+      virtual ~IObserver();
+      virtual void currentTimeChanged(const TTime & t0) = 0;
+    };
+    
+    void setObserver(IObserver * observer);
     
   private:
     class TPrivate;

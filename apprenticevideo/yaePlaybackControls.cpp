@@ -10,6 +10,7 @@
 #include <iostream>
 
 // Qt includes:
+#include <QApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -108,8 +109,7 @@ namespace yae
     QWidget(parent, f),
     reader_(NULL),
     timelineStart_(0.0),
-    timelineDuration_(1.0),
-    timerRefreshTimeline_(this)
+    timelineDuration_(1.0)
   {
     padding_ = 16;
     lineWidth_ = 3;
@@ -155,14 +155,6 @@ namespace yae
     
     // current state of playback controls:
     currentState_ = TimelineControls::kIdle;
-    
-    timerRefreshTimeline_.setSingleShot(false);
-    timerRefreshTimeline_.setInterval(100);
-    
-    bool ok = true;
-    ok = connect(&timerRefreshTimeline_, SIGNAL(timeout()),
-                 this, SLOT(refreshTimeline()));
-    YAE_ASSERT(ok);
   }
   
   //----------------------------------------------------------------
@@ -170,7 +162,21 @@ namespace yae
   // 
   TimelineControls::~TimelineControls()
   {}
-
+  
+  //----------------------------------------------------------------
+  // TimelineControls::timelineHasChanged
+  // 
+  void
+  TimelineControls::currentTimeChanged(const TTime & currentTime)
+  {
+    bool postThePayload = payload_.set(currentTime);
+    if (postThePayload)
+    {
+      // send an event:
+      qApp->postEvent(this, new TimelineEvent(payload_));
+    }
+  }
+  
   //----------------------------------------------------------------
   // TimelineControls::reset
   // 
@@ -190,8 +196,6 @@ namespace yae
     timelineDuration_ = duration.toSeconds();
     
     clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
-    
-    timerRefreshTimeline_.start();
   }
   
   //----------------------------------------------------------------
@@ -219,7 +223,7 @@ namespace yae
       markerTimeOut_.position_ = std::max(markerTimeIn_.position_,
                                           markerTimeOut_.position_);
       
-      refreshTimeline();
+      update();
     }
   }
   
@@ -235,30 +239,39 @@ namespace yae
       markerTimeIn_.position_ = std::min(markerTimeIn_.position_,
                                          markerTimeOut_.position_);
       
-      refreshTimeline();
+      update();
     }
   }
   
   //----------------------------------------------------------------
-  // TimelineControls::refreshTimeline
+  // TimelineControls::event
   // 
-  void
-  TimelineControls::refreshTimeline()
+  bool
+  TimelineControls::event(QEvent * e)
   {
-    TTime lastUpdate; 	 
-    double playheadPosition = 0.0; 	 
-    if (sharedClock_.getCurrentTime(lastUpdate, playheadPosition)) 	 
+    if (e->type() == QEvent::User)
     {
-      double t = lastUpdate.toSeconds();
-      
-      clockPosition_ = getTimeStamp(t);
-      
-      t -= timelineStart_;
-      markerPlayhead_.position_ = t / timelineDuration_;
-      markerPlayhead_.setAnchor();
+      TimelineEvent * timeChangedEvent = dynamic_cast<TimelineEvent *>(e);
+      if (timeChangedEvent)
+      {
+        timeChangedEvent->accept();
+        
+        TTime currentTime;
+        timeChangedEvent->payload_.get(currentTime);
+        
+        double t = currentTime.toSeconds();
+        clockPosition_ = getTimeStamp(t);
+        
+        t -= timelineStart_;
+        markerPlayhead_.position_ = t / timelineDuration_;
+        markerPlayhead_.setAnchor();
+        
+        update();
+        return true;
+      }
     }
     
-    update();
+    return QWidget::event(e);
   }
   
   //----------------------------------------------------------------
@@ -350,6 +363,7 @@ namespace yae
       // std::cout << "PLAYHEAD" << std::endl;
       currentState_ = kDraggingPlayheadMarker;
       activeMarker_ = &markerPlayhead_;
+      emit userIsSeeking(true);
     }
     else if (markerTimeOut_.overlaps(pt, xOrigin, yOriginInOut, unitLength))
     {
@@ -376,6 +390,11 @@ namespace yae
   void
   TimelineControls::mouseReleaseEvent(QMouseEvent * e)
   {
+    if (currentState_ == kDraggingPlayheadMarker)
+    {
+      emit userIsSeeking(false);
+    }
+    
     currentState_ = kIdle;
     activeMarker_ = NULL;
   }
@@ -419,7 +438,13 @@ namespace yae
                                          markerTimeIn_.positionAnchor_);
     }
     
-    refreshTimeline();
+    if (currentState_ == kDraggingPlayheadMarker)
+    {
+      double seconds = t * timelineDuration_ + timelineStart_;
+      clockPosition_ = getTimeStamp(seconds);
+    }
+    
+    update();
   }
 
   //----------------------------------------------------------------
@@ -438,7 +463,7 @@ namespace yae
       currentState_ = kIdle;
       activeMarker_ = NULL;
       
-      refreshTimeline();
+      update();
     }
     else
     {

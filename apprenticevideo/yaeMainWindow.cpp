@@ -100,7 +100,8 @@ namespace yae
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
-    playbackPaused_(false)
+    playbackPaused_(false),
+    playbackInterrupted_(false)
   {
     setupUi(this);
     setAcceptDrops(true);
@@ -243,6 +244,10 @@ namespace yae
 
     ok = connect(this, SIGNAL(setOutPoint()),
                  timelineControls_, SLOT(setOutPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(timelineControls_, SIGNAL(userIsSeeking(bool)),
+                 this, SLOT(userIsSeeking(bool)));
     YAE_ASSERT(ok);
   }
 
@@ -776,12 +781,12 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // MainWindow::playbackPause
+  // MainWindow::togglePlayback
   // 
   void
-  MainWindow::playbackPause()
+  MainWindow::togglePlayback()
   {
-    std::cerr << "playbackPause" << std::endl;
+    std::cerr << "togglePlayback" << std::endl;
     
     if (playbackPaused_)
     {
@@ -849,6 +854,24 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // MainWindow::userIsSeeking
+  // 
+  void
+  MainWindow::userIsSeeking(bool seeking)
+  {
+    if (seeking && !playbackInterrupted_)
+    {
+      playbackInterrupted_ = !playbackPaused_;
+      togglePlayback();
+    }
+    else if (!seeking && playbackInterrupted_)
+    {
+      playbackInterrupted_ = false;
+      togglePlayback();
+    }
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::closeEvent
   // 
   void
@@ -898,7 +921,7 @@ namespace yae
     int key = event->key();
     if (key == Qt::Key_Space)
     {
-      playbackPause();
+      togglePlayback();
     }
     else if (key == Qt::Key_Escape)
     {
@@ -941,6 +964,7 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
+    sharedClock.setObserver(timelineControls_);
     
     if (audioTrack < numAudioTracks)
     {

@@ -89,7 +89,7 @@ namespace yae
     
     // helper:
     void exitFullScreen();
-    void playbackPause();
+    void togglePlayback();
     
     // audio/video menus:
     void audioSelectTrack(int index);
@@ -100,6 +100,7 @@ namespace yae
     
     // helper:
     void processDropEventUrls(const QList<QUrl> & urls);
+    void userIsSeeking(bool seeking);
     
   protected:
     // virtual:
@@ -140,6 +141,7 @@ namespace yae
     
     // a flag indicating whether playback is paused:
     bool playbackPaused_;
+    bool playbackInterrupted_;
     
     // playback controls:
     TimelineControls * timelineControls_;

@@ -43,6 +43,9 @@ namespace yae
     // this indicates whether the clock is stopped while waiting for someone:
     bool stopped_;
     
+    // shared clock observer interface, may be NULL:
+    SharedClock::IObserver * observer_;
+    
     mutable boost::mutex mutex_;
   };
 
@@ -52,7 +55,8 @@ namespace yae
   TimeSegment::TimeSegment():
     waitForMe_(boost::get_system_time()),
     delayInSeconds_(0.0),
-    stopped_(false)
+    stopped_(false),
+    observer_(NULL)
   {}
 
   //----------------------------------------------------------------
@@ -186,6 +190,11 @@ namespace yae
       timeSegment.origin_ = now;
       timeSegment.t0_ = t0;
       
+      if (timeSegment.observer_)
+      {
+        timeSegment.observer_->currentTimeChanged(t0);
+      }
+      
       return true;
     }
 
@@ -318,8 +327,26 @@ namespace yae
     }
 #endif
   }
-
-
+  
+  //----------------------------------------------------------------
+  // SharedClock::setObserver
+  // 
+  void
+  SharedClock::setObserver(IObserver * observer)
+  {
+    TimeSegment & timeSegment = *(private_->shared_);
+    boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+    timeSegment.observer_ = observer;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // SharedClock::IObserver::~IObserver
+  // 
+  SharedClock::IObserver::~IObserver()
+  {}
+  
+  
   //----------------------------------------------------------------
   // ISynchronous::~ISynchronous
   // 

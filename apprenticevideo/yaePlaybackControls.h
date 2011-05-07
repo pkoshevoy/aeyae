@@ -9,11 +9,14 @@
 #ifndef YAE_PLAYBACK_CONTROLS_H_
 #define YAE_PLAYBACK_CONTROLS_H_
 
+// boost includes:
+#include <boost/thread.hpp>
+
 // Qt includes:
 #include <QWidget>
 #include <QUrl>
-#include <QTimer>
 #include <QImage>
+#include <QEvent>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -60,7 +63,8 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls
   // 
-  class TimelineControls : public QWidget
+  class TimelineControls : public QWidget,
+                           public SharedClock::IObserver
   {
     Q_OBJECT;
 
@@ -70,6 +74,9 @@ namespace yae
     
     void reset(const SharedClock & sharedClock, IReader * reader);
     void resetTimeInOut();
+    
+    // virtual: thread safe, asynchronous, non-blocking:
+    void currentTimeChanged(const TTime & currentTime);
     
     enum TState
     {
@@ -83,14 +90,15 @@ namespace yae
     void moveTimeIn(double t);
     void moveTimeOut(double t);
     void movePlayHead(double t);
+    void userIsSeeking(bool seeking);
     
   public slots:
     void setInPoint();
     void setOutPoint();
-    void refreshTimeline();
     
   protected:
     // virtual:
+    bool event(QEvent * e);
     void paintEvent(QPaintEvent * e);
     void wheelEvent(QWheelEvent * e);
     void mousePressEvent(QMouseEvent * e);
@@ -105,6 +113,51 @@ namespace yae
                        int & yOriginInOut,
                        int & yOriginPlayhead,
                        int & unitLength) const;
+    
+    //----------------------------------------------------------------
+    // TimelineEvent
+    // 
+    struct TimelineEvent : public QEvent
+    {
+      //----------------------------------------------------------------
+      // TPayload
+      // 
+      struct TPayload
+      {
+        TPayload(): dismissed_(true) {}
+        
+        bool set(const TTime & currentTime)
+        {
+          boost::lock_guard<boost::mutex> lock(mutex_);
+          bool postThePayload = dismissed_;
+          currentTime_ = currentTime;
+          dismissed_ = false;
+          return postThePayload;
+        }
+        
+        void get(TTime & currentTime)
+        {
+          boost::lock_guard<boost::mutex> lock(mutex_);
+          currentTime = currentTime_;
+          dismissed_ = true;
+        }
+        
+      private:
+        mutable boost::mutex mutex_;
+        TTime currentTime_;
+        bool dismissed_;
+      };
+      
+      TimelineEvent(TPayload & payload):
+        QEvent(QEvent::User),
+        payload_(payload)
+      {}
+      
+      TPayload & payload_;
+    };
+
+    // event payload used for asynchronous timeline updates:
+    TimelineEvent::TPayload payload_;
     
     // direct manipulation handles representing in/out time points
     // and current playback position marker (playhead):
@@ -142,9 +195,6 @@ namespace yae
     
     // playback duration in seconds:
     double timelineDuration_;
-    
-    // a timer used for timeline marker position refresh:
-    QTimer timerRefreshTimeline_;
   };
 
   //----------------------------------------------------------------
