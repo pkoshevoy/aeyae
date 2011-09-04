@@ -79,7 +79,7 @@ namespace yae
     // number of samples already consumed from the current audio frame:
     std::size_t audioFrameOffset_;
     
-    // maintain (os synchronize to) this clock:
+    // maintain (or synchronize to) this clock:
     SharedClock & clock_;
   };
 
