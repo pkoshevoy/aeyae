@@ -1597,6 +1597,35 @@ namespace yae
   {
 #ifdef __APPLE__
     UpdateSystemActivity(UsrActivity);
+#elif defined(_WIN32)
+    // http://www.codeproject.com/KB/system/disablescreensave.aspx
+    //
+    // Call the SystemParametersInfo function to query and reset the
+    // screensaver time-out value.  Use the user's default settings
+    // in case your application terminates abnormally.
+    // 
+
+    static UINT spiGetter[] = { SPI_GETLOWPOWERTIMEOUT, 
+                                SPI_GETPOWEROFFTIMEOUT,
+                                SPI_GETSCREENSAVETIMEOUT };
+    
+    static UINT spiSetter[] = { SPI_SETLOWPOWERTIMEOUT, 
+                                SPI_SETPOWEROFFTIMEOUT,
+                                SPI_SETSCREENSAVETIMEOUT };
+    
+    std::size_t numParams = sizeof(spiGetter) / sizeof(spiGetter[0]);
+    for (std::size_t i = 0; i < numParams; i++)
+    {
+      UINT val = 0;
+      BOOL ok = SystemParametersInfo(spiGetter[i], 0, &val, 0);
+      YAE_ASSERT(ok);
+      if (ok)
+      {
+        ok = SystemParametersInfo(spiSetter[i], val, NULL, 0);
+        YAE_ASSERT(ok);
+      }
+    }
+    
 #else
     // FIXME: not sure how to do this yet
     std::cerr << "wakeScreenSaver" << std::endl;
