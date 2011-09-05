@@ -152,6 +152,27 @@ namespace yae
       cond_.notify_all();
     }
     
+    // remove all data from the queue:
+    bool clear()
+    {
+      try
+      {
+        // remove from queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          data_.clear();
+          size_ = 0;
+        }
+        
+        cond_.notify_one();
+        return true;
+      }
+      catch (...)
+      {}
+      
+      return false;
+    }
+    
     // push data into the queue:
     bool push(const TData & newData)
     {

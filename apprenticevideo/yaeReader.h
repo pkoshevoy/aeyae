@@ -74,9 +74,9 @@ namespace yae
 
     virtual bool getVideoPosition(TTime & t) const = 0;
     virtual bool getAudioPosition(TTime & t) const = 0;
-    
-    virtual bool setVideoPosition(const TTime & t) = 0;
-    virtual bool setAudioPosition(const TTime & t) = 0;
+
+    //! set current position to a given value (or an earlier value nearby):
+    virtual bool seek(const TTime & t) = 0;
     
     virtual bool readVideo(TVideoFramePtr & frame) = 0;
     virtual bool readAudio(TAudioFramePtr & frame) = 0;

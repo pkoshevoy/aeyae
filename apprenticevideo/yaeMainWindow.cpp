@@ -27,6 +27,7 @@
 #include <QDesktopWidget>
 #include <QMenu>
 #include <QShortcut>
+#include <QFileInfo>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -125,6 +126,10 @@ namespace yae
     
     timelineControls_ = new TimelineControls(this);
     layout->addWidget(timelineControls_);
+
+    // hide the timeline:
+    actionShowTimeline->setChecked(false);
+    timelineControls_->hide();
     
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -249,6 +254,18 @@ namespace yae
     ok = connect(timelineControls_, SIGNAL(userIsSeeking(bool)),
                  this, SLOT(userIsSeeking(bool)));
     YAE_ASSERT(ok);
+
+    ok = connect(timelineControls_, SIGNAL(moveTimeIn(double)),
+                 this, SLOT(moveTimeIn(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(timelineControls_, SIGNAL(moveTimeOut(double)),
+                 this, SLOT(moveTimeOut(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(timelineControls_, SIGNAL(movePlayHead(double)),
+                 this, SLOT(movePlayHead(double)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -333,7 +350,7 @@ namespace yae
       QString trackName = tr("Track %1").arg(i);
         
       const char * name = reader->getSelectedAudioTrackName();
-      if (name && *name)
+      if (name && *name && strcmp(name, "und") != 0)
       {
         trackName += tr(", %1").arg(QString::fromUtf8(name));
       }
@@ -438,7 +455,9 @@ namespace yae
     // replace the previous reader:
     reader_->destroy();
     reader_ = reader;
-    
+
+    this->setWindowTitle(tr("Apprentice Video: %1").
+                         arg(QFileInfo(path).fileName()));
     return true;
   }
   
@@ -869,6 +888,43 @@ namespace yae
       playbackInterrupted_ = false;
       togglePlayback();
     }
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::moveTimeIn
+  // 
+  void
+  MainWindow::moveTimeIn(double seconds)
+  {
+    std::cout << "in: " << seconds << std::endl;
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::moveTimeOut
+  // 
+  void
+  MainWindow::moveTimeOut(double seconds)
+  {
+    std::cout << "out: " << seconds << std::endl;
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::movePlayHead
+  // 
+  void
+  MainWindow::movePlayHead(double seconds)
+  {
+    if (!reader_)
+    {
+      return;
+    }
+    
+    TTime t(0, 1001);
+    t += seconds;
+    
+    bool ok = reader_->seek(t);
+    std::cout << "seek: " << seconds << ", "
+              << (ok ? "ok" : "failed") << std::endl;
   }
   
   //----------------------------------------------------------------

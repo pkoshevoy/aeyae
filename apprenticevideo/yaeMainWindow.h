@@ -98,9 +98,12 @@ namespace yae
     // help menu:
     void helpAbout();
     
-    // helper:
+    // helpers:
     void processDropEventUrls(const QList<QUrl> & urls);
     void userIsSeeking(bool seeking);
+    void moveTimeIn(double seconds);
+    void moveTimeOut(double seconds);
+    void movePlayHead(double seconds);
     
   protected:
     // virtual:

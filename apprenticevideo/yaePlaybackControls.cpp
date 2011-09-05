@@ -435,20 +435,38 @@ namespace yae
     
     if (currentState_ == kDraggingTimeInMarker)
     {
-      markerTimeOut_.position_ = std::max(activeMarker_->position_,
-                                          markerTimeOut_.positionAnchor_);
+      emit moveTimeIn(activeMarker_->position_);
+      
+      double t1 = std::max(activeMarker_->position_,
+                           markerTimeOut_.positionAnchor_);
+      
+      if (t1 != markerTimeOut_.position_)
+      {
+        markerTimeOut_.position_ = t1;
+        emit moveTimeOut(t1);
+      }
     }
     
     if (currentState_ == kDraggingTimeOutMarker)
     {
-      markerTimeIn_.position_ = std::min(activeMarker_->position_,
-                                         markerTimeIn_.positionAnchor_);
+      emit moveTimeOut(activeMarker_->position_);
+      
+      double t0 = std::min(activeMarker_->position_,
+                           markerTimeIn_.positionAnchor_);
+      
+      if (t0 != markerTimeIn_.position_)
+      {
+        markerTimeIn_.position_ = t0;
+        emit moveTimeIn(t0);
+      }
     }
     
     if (currentState_ == kDraggingPlayheadMarker)
     {
       double seconds = t * timelineDuration_ + timelineStart_;
       clockPosition_ = getTimeStamp(seconds);
+      
+      emit movePlayHead(seconds);
     }
     
     update();

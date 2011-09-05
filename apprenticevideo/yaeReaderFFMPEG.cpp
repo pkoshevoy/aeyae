@@ -339,10 +339,6 @@ namespace yae
     virtual bool getPosition(TTime &) const
     { return false; }
     
-    // seek to a position:
-    virtual bool setPosition(const TTime &)
-    { return false; }
-    
     // accessor to the packet queue:
     inline TPacketQueue & packetQueue()
     { return packetQueue_; }
@@ -687,9 +683,6 @@ namespace yae
     // virtual: get current position:
     bool getPosition(TTime & t) const;
     
-    // virtual: seek to a position:
-    bool setPosition(const TTime & t);
-    
     // virtual:
     void threadLoop();
     bool threadStop();
@@ -705,7 +698,6 @@ namespace yae
     bool getNextFrame(TVideoFramePtr & frame);
     bool getNextFrameDontWait(TVideoFramePtr & frame);
     
-  protected:
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
     uint64 framesDecoded_;
@@ -781,16 +773,6 @@ namespace yae
       return true;
     }
     
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // VideoTrack::setPosition
-  // 
-  bool
-  VideoTrack::setPosition(const TTime & t)
-  {
-    // FIXME:
     return false;
   }
   
@@ -1429,9 +1411,6 @@ namespace yae
     // virtual: get current position:
     bool getPosition(TTime & t) const;
     
-    // virtual: seek to a position:
-    bool setPosition(const TTime & t);
-    
     // virtual:
     void threadLoop();
     bool threadStop();
@@ -1447,7 +1426,6 @@ namespace yae
     bool getNextFrame(TAudioFramePtr & frame);
     bool getNextFrameDontWait(TAudioFramePtr & frame);
     
-  protected:
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
     uint64 samplesDecoded_;
@@ -1507,16 +1485,6 @@ namespace yae
     return false;
   }
   
-  //----------------------------------------------------------------
-  // AudioTrack::setPosition
-  // 
-  bool
-  AudioTrack::setPosition(const TTime & t)
-  {
-    // FIXME:
-    return false;
-  }
-
   //----------------------------------------------------------------
   // yae_to_ffmpeg
   // 
@@ -1934,6 +1902,8 @@ namespace yae
     bool threadStart();
     bool threadStop();
     
+    bool seek(const TTime & t);
+    
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -1942,6 +1912,7 @@ namespace yae
   protected:
     // worker thread:
     Thread<Movie> thread_;
+    mutable boost::mutex mutex_;
     
     AVFormatContext * context_;
     
@@ -1951,6 +1922,10 @@ namespace yae
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
     std::size_t selectedAudioTrack_;
+
+    // demuxer current position (DTS):
+    TTime dts_;
+    int dtsStreamIndex_;
   };
   
   
@@ -2186,17 +2161,46 @@ namespace yae
     
     PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
     PacketQueueCloseOnExit audioCloseOnExit(audioTrack);
+
+#if 0
+    // FIXME: just testing (seeking):
+    {
+      int64_t startHere =
+        context_->start_time != AV_NOPTS_VALUE ?
+        context_->start_time : 0;
+      
+      int r = av_seek_frame(context_,
+                            -1,
+                            startHere,
+                            0);
+    }
+#endif
     
-    // Read frames and save first five frames to disk
     AVPacket ffmpeg;
     while (true)
     {
       boost::this_thread::interruption_point();
-      
-      int err = av_read_frame(context_, &ffmpeg);
-      if (err)
+
+      // read a packet:
       {
-        break;
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        int err = av_read_frame(context_, &ffmpeg);
+        if (err)
+        {
+          break;
+        }
+      }
+      
+      if (ffmpeg.dts != AV_NOPTS_VALUE)
+      {
+        // keep track of current DTS, so that we would know which way to seek
+        // relative to the current position (back/forth)
+        const AVStream * stream = context_->streams[ffmpeg.stream_index];
+        const AVRational & timebase = stream->time_base;
+        TTime dts(ffmpeg.dts * timebase.num, timebase.den);
+        
+        dts_ = dts;
+        dtsStreamIndex_ = ffmpeg.stream_index;
       }
       
       TPacketPtr packet = copyPacket(ffmpeg);
@@ -2274,6 +2278,55 @@ namespace yae
     return thread_.wait();
   }
   
+  //----------------------------------------------------------------
+  // Movie::seek
+  // 
+  bool
+  Movie::seek(const TTime & seekTime)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      
+      double tCurr = dts_.toSeconds();
+      double tSeek = seekTime.toSeconds();
+      int seekFlags = tSeek < tCurr ? AVSEEK_FLAG_BACKWARD : 0;
+
+      const AVStream * stream = context_->streams[dtsStreamIndex_];
+      const AVRational & timebase = stream->time_base;
+
+      int64_t ts = int64_t((tSeek / double(timebase.num)) *
+                           double(timebase.den));
+      int r = av_seek_frame(context_,
+                            dtsStreamIndex_,
+                            ts,
+                            seekFlags);
+      if (r < 0)
+      {
+        return false;
+      }
+      
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack->packetQueue().clear();
+        videoTrack->frameQueue_.clear();
+      }
+      
+      if (selectedAudioTrack_ < audioTracks_.size())
+      {
+        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        audioTrack->packetQueue().clear();
+        audioTrack->frameQueue_.clear();
+      }
+      
+      return true;
+    }
+    catch (...)
+    {}
+
+    return false;
+  }
   
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -2623,9 +2676,6 @@ namespace yae
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
-      // FIXME: if getPosition fails for a track,
-      // perhaps it is possible to look at the format context
-      // or some other track?
       return private_->movie_.getAudioTracks()[i]->getPosition(t);
     }
     
@@ -2633,33 +2683,12 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // ReaderFFMPEG::setVideoPosition
+  // ReaderFFMPEG::seek
   // 
   bool
-  ReaderFFMPEG::setVideoPosition(const TTime & t)
+  ReaderFFMPEG::seek(const TTime & t)
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->setPosition(t);
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // ReaderFFMPEG::setAudioPosition
-  // 
-  bool
-  ReaderFFMPEG::setAudioPosition(const TTime & t)
-  {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->setPosition(t);
-    }
-    
-    return false;
+    return private_->movie_.seek(t);;
   }
   
   //----------------------------------------------------------------
