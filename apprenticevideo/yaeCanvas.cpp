@@ -27,6 +27,10 @@
 #include <QTimer>
 #include <QTime>
 
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
+#endif
+
 
 //----------------------------------------------------------------
 // yae_to_opengl
@@ -1252,7 +1256,7 @@ namespace yae
     timerHideCursor_.setInterval(3000);
     
     timerScreenSaver_.setSingleShot(true);
-    timerScreenSaver_.setInterval(60000);
+    timerScreenSaver_.setInterval(29000);
     
     bool ok = true;
     ok = connect(&timerHideCursor_, SIGNAL(timeout()),
@@ -1591,8 +1595,12 @@ namespace yae
   void
   Canvas::wakeScreenSaver()
   {
+#ifdef __APPLE__
+    UpdateSystemActivity(UsrActivity);
+#else
     // FIXME: not sure how to do this yet
     std::cerr << "wakeScreenSaver" << std::endl;
+#endif
   }
 
 }
