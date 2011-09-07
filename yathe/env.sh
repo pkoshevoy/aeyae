@@ -86,3 +86,13 @@ if [ -n "${THE_BIN_DIR}" ]; then
     export LIBRARY_PATH=${THE_BIN_DIR}:${LIBRARY_PATH}
     export LD_LIBRARY_PATH=${THE_BIN_DIR}:${LD_LIBRARY_PATH}
 fi
+
+if [ -n "${FFMPEG_HEADERS_PATH}" ]; then
+    export CPATH="${FFMPEG_HEADERS_PATH}"
+fi
+
+
+if [ -n "${FFMPEG_LIBS_PATH}" ]; then
+    export LIBRARY_PATH="${FFMPEG_LIBS_PATH}:${LIBRARY_PATH}"
+    export LD_LIBRARY_PATH="${FFMPEG_LIBS_PATH}:${LD_LIBRARY_PATH}"
+fi

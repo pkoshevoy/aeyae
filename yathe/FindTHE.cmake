@@ -23,6 +23,7 @@ if (THE_DIR)
 endif (THE_DIR)
 
 find_library(THE_CORE_LIBRARY the_core
+  PATHS
   ${THE_BIN_DIR} 
   /scratch/$ENV{CPU}/the
   /usr/sci/crcnsdata/$ENV{CPU}/the
@@ -30,6 +31,7 @@ find_library(THE_CORE_LIBRARY the_core
   )
 
 find_library(THE_UI_LIBRARY the_ui
+  PATHS
   ${THE_BIN_DIR} 
   /scratch/$ENV{CPU}/the
   /usr/sci/crcnsdata/$ENV{CPU}/the
@@ -37,6 +39,7 @@ find_library(THE_UI_LIBRARY the_ui
   )
 
 find_library(THE_UI_QT_LIBRARY the_ui_qt
+  PATHS
   ${THE_BIN_DIR} 
   /scratch/$ENV{CPU}/the
   /usr/sci/crcnsdata/$ENV{CPU}/the
@@ -44,6 +47,7 @@ find_library(THE_UI_QT_LIBRARY the_ui_qt
   )
 
 find_library(THE_UI_FLTK_LIBRARY the_ui_fltk
+  PATHS
   ${THE_BIN_DIR} 
   /scratch/$ENV{CPU}/the
   /usr/sci/crcnsdata/$ENV{CPU}/the
@@ -51,6 +55,7 @@ find_library(THE_UI_FLTK_LIBRARY the_ui_fltk
   )
 
 find_path(THE_INCLUDE_DIR utils/the_utils.hxx 
+  PATHS
   ${THE_SRC_DIR} 
   DOC "include directory for the_* libraries"
   )

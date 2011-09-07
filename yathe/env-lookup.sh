@@ -114,3 +114,12 @@ elif [ -e /scratch/Developer/"${CPU}"/the ]; then
 elif [ -e /usr/sci/crcnsdata/"${CPU}"/the ]; then
     export THE_BIN_DIR=/usr/sci/crcnsdata/"${CPU}"/the
 fi
+
+# use local build of ffmpeg if it is available:
+if [ -e "/scratch/Developer/${CPU}/include/libavcodec/avcodec.h" ]; then
+    export FFMPEG_HEADERS_PATH="/scratch/Developer/${CPU}/include"
+    export FFMPEG_LIBS_PATH="/scratch/Developer/${CPU}/lib"
+elif [ -e "/Developer/${CPU}/include/libavcodec/avcodec.h" ]; then
+    export FFMPEG_HEADERS_PATH="/Developer/${CPU}/include"
+    export FFMPEG_LIBS_PATH="/Developer/${CPU}/lib"
+fi
