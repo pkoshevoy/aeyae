@@ -15,7 +15,8 @@ else (QT4_FOUND)
   message(FATAL_ERROR "Cannot build without Qt4.  Please set QT4_DIR.")
 endif (QT4_FOUND)
 
-set(QT_USE_OPENGL TRUE)
+set(QT_USE_QTDBUS TRUE)
+set(QT_USE_QTOPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
 include(${QT_USE_FILE})
 
@@ -107,6 +108,8 @@ find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(ZLIB_LIBRARY z PATHS ${FFMPEG_LIBS_PATH} DOC "zlib library")
 find_library(BZIP2_LIBRARY bz2 PATHS ${FFMPEG_LIBS_PATH} DOC "bzip2 library")
 find_library(VA_LIBRARY va PATHS ${FFMPEG_LIBS_PATH} DOC "va library")
+find_library(ALSA_LIBRARY asound PATHS ${FFMPEG_LIBS_PATH} DOC "alsa library")
+find_library(JACK_LIBRARY jack PATHS ${FFMPEG_LIBS_PATH} DOC "jack library")
 
 if (WIN32)
   find_library(LIBGCC_LIBRARY libgcc PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libgcc library")
@@ -213,9 +216,9 @@ endif (WIN32)
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
   set(project_sources 
-	${project_sources}
-	${PROGNAME}.plist
-	${PROGNAME}.icns)
+    ${project_sources}
+    ${PROGNAME}.plist
+    ${PROGNAME}.icns)
 endif (APPLE)
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -244,23 +247,23 @@ set(TARGET_LIBS
 if (PORTAUDIO_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
   if (APPLE)
-	find_library(CORE_AUDIO_FRAMEWORK CoreAudio)
-	mark_as_advanced(CORE_AUDIO_FRAMEWORK)
-	if (CORE_AUDIO_FRAMEWORK)
+    find_library(CORE_AUDIO_FRAMEWORK CoreAudio)
+    mark_as_advanced(CORE_AUDIO_FRAMEWORK)
+    if (CORE_AUDIO_FRAMEWORK)
       set(TARGET_LIBS ${TARGET_LIBS} ${CORE_AUDIO_FRAMEWORK})
-	endif (CORE_AUDIO_FRAMEWORK)
+    endif (CORE_AUDIO_FRAMEWORK)
 
-	find_library(AUDIO_TOOLBOX_FRAMEWORK AudioToolbox)
-	mark_as_advanced(AUDIO_TOOLBOX_FRAMEWORK)
-	if (AUDIO_TOOLBOX_FRAMEWORK)
+    find_library(AUDIO_TOOLBOX_FRAMEWORK AudioToolbox)
+    mark_as_advanced(AUDIO_TOOLBOX_FRAMEWORK)
+    if (AUDIO_TOOLBOX_FRAMEWORK)
       set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_TOOLBOX_FRAMEWORK})
-	endif (AUDIO_TOOLBOX_FRAMEWORK)
+    endif (AUDIO_TOOLBOX_FRAMEWORK)
 
-	find_library(AUDIO_UNIT_FRAMEWORK AudioUnit)
-	mark_as_advanced(AUDIO_UNIT_FRAMEWORK)
-	if (AUDIO_UNIT_FRAMEWORK)
+    find_library(AUDIO_UNIT_FRAMEWORK AudioUnit)
+    mark_as_advanced(AUDIO_UNIT_FRAMEWORK)
+    if (AUDIO_UNIT_FRAMEWORK)
       set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_UNIT_FRAMEWORK})
-	endif (AUDIO_UNIT_FRAMEWORK)
+    endif (AUDIO_UNIT_FRAMEWORK)
   endif (APPLE)
 endif (PORTAUDIO_LIBRARY)
 
@@ -380,6 +383,14 @@ if (VA_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${VA_LIBRARY})
 endif (VA_LIBRARY)
 
+if (ALSA_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${ALSA_LIBRARY})
+endif (ALSA_LIBRARY)
+
+if (JACK_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${JACK_LIBRARY})
+endif (JACK_LIBRARY)
+
 if (WIN32)
 
   if (LIBGCC_LIBRARY)
@@ -463,18 +474,18 @@ target_link_libraries(${PROGNAME}
 
 if (APPLE)
   set_target_properties(${PROGNAME}
-	PROPERTIES
-	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.plist)
+    PROPERTIES
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.plist)
 
   set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.icns
-	PROPERTIES
-	MACOSX_PACKAGE_LOCATION Resources)
+    PROPERTIES
+    MACOSX_PACKAGE_LOCATION Resources)
 
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/DeployOSX.sh 
-	ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
-	COMMENT "pull in external dependencies"
-	)
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/DeployOSX.sh 
+    ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    COMMENT "pull in external dependencies"
+    )
 endif (APPLE)
 
 install(TARGETS ${PROGNAME} DESTINATION bin)

@@ -347,7 +347,7 @@ namespace yae
     for (unsigned int i = 0; i < numAudioTracks; i++)
     {
       reader->selectAudioTrack(i);
-      QString trackName = tr("Track %1").arg(i);
+      QString trackName = tr("Track %1").arg(i + 1);
         
       const char * name = reader->getSelectedAudioTrackName();
       if (name && *name && strcmp(name, "und") != 0)
@@ -395,7 +395,7 @@ namespace yae
     for (unsigned int i = 0; i < numVideoTracks; i++)
     {
       reader->selectVideoTrack(i);
-      QString trackName = tr("Track %1").arg(i);
+      QString trackName = tr("Track %1").arg(i + 1);
         
       const char * name = reader->getSelectedVideoTrackName();
       if (name && *name)

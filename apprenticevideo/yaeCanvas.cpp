@@ -29,6 +29,8 @@
 
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
+#elif !defined(_WIN32)
+#include <QtDBus/QtDBus>
 #endif
 
 
@@ -1627,8 +1629,25 @@ namespace yae
     }
     
 #else
-    // FIXME: not sure how to do this yet
-    std::cerr << "wakeScreenSaver" << std::endl;
+    // try using DBUS to talk to the screensaver...
+    bool done = false;
+    
+    if (QDBusConnection::sessionBus().isConnected())
+    {
+      QDBusInterface screensaver("org.freedesktop.ScreenSaver",
+                                 "/ScreenSaver");
+      if (screensaver.isValid())
+      {
+        screensaver.call(QDBus::NoBlock, "SimulateUserActivity");
+        done = true;
+      }
+    }
+
+    if (!done)
+    {
+      // FIXME: not sure how to do this yet
+      std::cerr << "wakeScreenSaver" << std::endl;
+    }
 #endif
   }
 
