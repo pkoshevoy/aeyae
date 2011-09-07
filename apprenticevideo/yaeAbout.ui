@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>About Apprentice Video</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="apprenticevideo.qrc">
+    <normaloff>:/images/apprenticevideo-64.png</normaloff>:/images/apprenticevideo-64.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="dialogLayout">
    <item>
     <widget class="QLabel" name="logoLabel">
