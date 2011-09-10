@@ -120,7 +120,7 @@ namespace yae
     clockFont.setBold(true);
     clockFont.setPixelSize(11);
     clockFont.setStyle(QFont::StyleNormal);
-    clockFont.setStyleHint(QFont::Monospace);
+    clockFont.setStyleHint(QFont::Courier);
     clockFont.setStyleStrategy(QFont::PreferDefault);
     clockFont.setWeight(QFont::Normal);
     setFont(clockFont);
