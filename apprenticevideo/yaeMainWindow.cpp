@@ -107,6 +107,11 @@ namespace yae
     setupUi(this);
     setAcceptDrops(true);
     setFocusPolicy(Qt::StrongFocus);
+
+#if !defined(__APPLE__) && !defined(_WIN32)
+    QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
+    this->setWindowIcon(QIcon(fnIcon));
+#endif
     
     // request vsync if available:
     QGLFormat contextFormat;

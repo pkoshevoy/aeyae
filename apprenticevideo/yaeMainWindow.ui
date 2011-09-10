@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>Apprentice Video</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="apprenticevideo.qrc">
-    <normaloff>:/images/apprenticevideo-64.png</normaloff>:/images/apprenticevideo-64.png</iconset>
-  </property>
   <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
