@@ -664,7 +664,7 @@ namespace Yamka
     TypedefYamkaElt(VBinary, 0x6E67, "ChapterSegmentUID") TSegUID;
     TSegUID segUID_;
     
-    TypedefYamkaElt(VBinary, 0x6EBC, "ChapSegmentEditionUID") TSegEditionUID;
+    TypedefYamkaElt(VUInt, 0x6EBC, "ChapSegmentEditionUID") TSegEditionUID;
     TSegEditionUID segEditionUID_;
     
     TypedefYamkaElt(VUInt, 0x63C3, "ChapterPhysicalEquiv") TPhysEquiv;
