@@ -56,6 +56,13 @@ namespace yae
     virtual bool getDeviceName(unsigned int deviceIndex,
                                std::string & deviceName) const = 0;
     
+    //! get output device audio traits matched to source audio traits,
+    //! however output device audio traits may not be exactly the same
+    //! as the source traits due to hardware constraints:
+    virtual void match(unsigned int deviceIndex,
+                       const AudioTraits & source,
+                       AudioTraits & output) const = 0;
+    
     //! initialize a given audio rendering device:
     virtual bool open(unsigned int deviceIndex,
                       IReader * reader) = 0;

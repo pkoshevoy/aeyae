@@ -54,7 +54,14 @@ namespace yae
     //! get device name and max audio resolution capabilities:
     virtual bool getDeviceName(unsigned int deviceIndex,
                                std::string & deviceName) const;
-
+    
+    //! get output device audio traits matched to source audio traits,
+    //! however output device audio traits may not be exactly the same
+    //! as the source traits due to hardware constraints:
+    virtual void match(unsigned int deviceIndex,
+                       const AudioTraits & source,
+                       AudioTraits & output) const;
+    
     //! begin rendering audio frames from a given reader:
     virtual bool open(unsigned int deviceIndex,
                       IReader * reader);

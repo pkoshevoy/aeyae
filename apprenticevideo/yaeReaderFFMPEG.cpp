@@ -343,6 +343,16 @@ namespace yae
     inline TPacketQueue & packetQueue()
     { return packetQueue_; }
     
+    // decode a given packet:
+    virtual bool decoderStartup()
+    { return false; }
+    
+    virtual bool decoderShutdown()
+    { return false; }
+    
+    virtual bool decode(const TPacketPtr & packetPtr)
+    { return false; }
+    
     // packet decoding thread:
     virtual void threadLoop() {}
     virtual bool threadStart();
@@ -671,17 +681,66 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // FrameWithAutoCleanup
+  // 
+  struct FrameWithAutoCleanup
+  {
+    FrameWithAutoCleanup():
+      frame_(avcodec_alloc_frame())
+    {
+      frame_->opaque = NULL;
+    }
+    
+    ~FrameWithAutoCleanup()
+    {
+      av_free(frame_);
+    }
+    
+    operator AVFrame * ()
+    {
+      return frame_;
+    }
+    
+    operator AVPicture * ()
+    {
+      return (AVPicture *)frame_;
+    }
+
+    void reset()
+    {
+      av_free(frame_);
+      frame_ = avcodec_alloc_frame();
+      frame_->opaque = NULL;
+    }
+    
+  private:
+    // intentionally disabled:
+    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
+    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
+    
+    AVFrame * frame_;
+  };
+  
+  //----------------------------------------------------------------
   // VideoTrack
   // 
   struct VideoTrack : public Track
   {
     VideoTrack(AVFormatContext * context, AVStream * stream);
+
+    // row byte alignment constant:
+    enum { kRowAlignment = 16 };
     
     // virtual:
     bool open();
     
     // virtual: get current position:
     bool getPosition(TTime & t) const;
+    
+    // virtual:
+    bool decoderStartup();
+    bool decoderShutdown();
+    bool decode(const TPacketPtr & packetPtr);
     
     // virtual:
     void threadLoop();
@@ -700,7 +759,31 @@ namespace yae
     
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
+    VideoTraits native_;
+    VideoTraits output_;
+
+    // output sample buffer properties;
+    unsigned char numSamplePlanes_;
+    std::size_t samplePlaneSize_[4];
+    std::size_t sampleLineSize_[4];
+    
+    int64_t startTime_;
+    AVRational frameRate_;
+    
+    // it appears ffmpeg outputs decoded frames in correct presentation order
+    // but without the presentation time stamps (PTS), therefore I will
+    // keep a sorted list of packet time stamps for all packets going
+    // into avcodec_decode_video2 and use the earliest time stamp
+    // from that list to assign PTS to the decoded frames.
+    std::list<PacketTime> packetTimes_;
+    
+    TTime prevPTS_;
+    bool hasPrevPTS_;
+
     uint64 framesDecoded_;
+    struct SwsContext * imgConvertCtx_;
+    
+    FrameWithAutoCleanup frameAutoCleanup_;
   };
   
   //----------------------------------------------------------------
@@ -731,7 +814,12 @@ namespace yae
   // 
   VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
-    frameQueue_(30)
+    frameQueue_(30),
+    numSamplePlanes_(0),
+    startTime_(0),
+    hasPrevPTS_(false),
+    framesDecoded_(0),
+    imgConvertCtx_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_VIDEO);
 
@@ -775,40 +863,6 @@ namespace yae
     
     return false;
   }
-  
-  //----------------------------------------------------------------
-  // FrameWithAutoCleanup
-  // 
-  struct FrameWithAutoCleanup
-  {
-    FrameWithAutoCleanup():
-      frame_(avcodec_alloc_frame())
-    {
-      frame_->opaque = NULL;
-    }
-    
-    ~FrameWithAutoCleanup()
-    {
-      av_free(frame_);
-    }
-    
-    operator AVFrame * ()
-    {
-      return frame_;
-    }
-    
-    operator AVPicture * ()
-    {
-      return (AVPicture *)frame_;
-    }
-    
-  private:
-    // intentionally disabled:
-    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
-    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
-    
-    AVFrame * frame_;
-  };
 
   //----------------------------------------------------------------
   // insertPacketTime
@@ -843,10 +897,10 @@ namespace yae
   // verify that presentation timestamps are monotonically increasing
   // 
   static inline bool
-  verifyPTS(bool gotPrevPTS, const TTime & prevPTS, const TTime & nextPTS,
+  verifyPTS(bool hasPrevPTS, const TTime & prevPTS, const TTime & nextPTS,
             const char * debugMessage = NULL)
   {
-    bool ok = (!gotPrevPTS ||
+    bool ok = (!hasPrevPTS ||
                (prevPTS.base_ == nextPTS.base_ ?
                 prevPTS.time_ < nextPTS.time_ :
                 prevPTS.toSeconds() < nextPTS.toSeconds()));
@@ -864,85 +918,74 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::threadLoop
+  // VideoTrack::decoderStartup
   // 
-  void
-  VideoTrack::threadLoop()
+  bool
+  VideoTrack::decoderStartup()
   {
-    TOpenHere<TVideoFrameQueue> closeOnExit(frameQueue_);
-    
-    FrameWithAutoCleanup frameAutoCleanup;
-    struct SwsContext * imgConvertCtx = NULL;
-    
     // shortcut to native frame format traits:
-    VideoTraits nativeTraits;
-    getTraits(nativeTraits);
-    
+    getTraits(native_);
+
     // pixel format shortcut:
-    TPixelFormatId yaeNativeFormat = nativeTraits.pixelFormat_;
-    TPixelFormatId yaeOutputFormat = override_.pixelFormat_;
-    if (yaeOutputFormat == kPixelFormatY400A &&
-        yaeNativeFormat != kPixelFormatY400A)
+    output_ = override_;
+    if (output_.pixelFormat_ == kPixelFormatY400A &&
+        native_.pixelFormat_ != kPixelFormatY400A)
     {
       // sws_getContext doesn't support Y400A, so drop the alpha channel:
-      yaeOutputFormat = kPixelFormatGRAY8;
+      output_.pixelFormat_ = kPixelFormatGRAY8;
     }
     
     const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(yaeOutputFormat);
+      pixelFormat::getTraits(output_.pixelFormat_);
     if (!ptts)
     {
       YAE_ASSERT(false);
-      return;
+      return false;
     }
     
     // get number of contiguous sample planes,
     // sample set stride (in bits) for each plane:
     unsigned char samplePlaneStride[4] = { 0 };
-    unsigned char numSamplePlanes = ptts->getPlanes(samplePlaneStride);
-
-    unsigned char rowAlignment = 16;
-    unsigned int encodedWidth = override_.encodedWidth_;
+    numSamplePlanes_ = ptts->getPlanes(samplePlaneStride);
     
-    if (yaeOutputFormat != yaeNativeFormat)
+    if (output_.pixelFormat_ != native_.pixelFormat_)
     {
-      encodedWidth =
-        (override_.encodedWidth_ + (rowAlignment - 1)) &
-        ~(rowAlignment - 1);
+      output_.encodedWidth_ =
+        (override_.encodedWidth_ + (kRowAlignment - 1)) &
+        ~(kRowAlignment - 1);
     }
     
     if (ptts->chromaBoxW_ > 1)
     {
-      unsigned int remainder = encodedWidth % ptts->chromaBoxW_;
+      unsigned int remainder = output_.encodedWidth_ % ptts->chromaBoxW_;
       if (remainder)
       {
-        encodedWidth += ptts->chromaBoxW_ - remainder;
+        output_.encodedWidth_ += ptts->chromaBoxW_ - remainder;
       }
     }
     
-    unsigned int encodedHeight = override_.encodedHeight_;
     if (ptts->chromaBoxH_ > 1)
     {
-      unsigned int remainder = encodedHeight % ptts->chromaBoxH_;
+      unsigned int remainder = output_.encodedHeight_ % ptts->chromaBoxH_;
       if (remainder)
       {
-        encodedHeight += ptts->chromaBoxH_ - remainder;
+        output_.encodedHeight_ += ptts->chromaBoxH_ - remainder;
       }
     }
     
     // calculate number of bytes for each sample plane:
-    std::size_t totalPixels = encodedWidth * encodedHeight;
+    std::size_t totalPixels = output_.encodedWidth_ * output_.encodedHeight_;
     
-    std::size_t samplePlaneSize[4] = { 0 };
-    samplePlaneSize[0] = totalPixels * samplePlaneStride[0] / 8;
+    memset(samplePlaneSize_, 0, sizeof(samplePlaneSize_));
+    samplePlaneSize_[0] = totalPixels * samplePlaneStride[0] / 8;
     
-    std::size_t sampleLineSize[4] = { 0 };
-    sampleLineSize[0] = encodedWidth * samplePlaneStride[0] / 8;
+    memset(sampleLineSize_, 0, sizeof(sampleLineSize_));
+    sampleLineSize_[0] = output_.encodedWidth_ * samplePlaneStride[0] / 8;
 
-    for (unsigned char i = 1; i < numSamplePlanes; i++)
+    for (unsigned char i = 1; i < numSamplePlanes_; i++)
     {
-      samplePlaneSize[i] = totalPixels * samplePlaneStride[i] / 8;
-      sampleLineSize[i] = encodedWidth * samplePlaneStride[i] / 8;
+      samplePlaneSize_[i] = totalPixels * samplePlaneStride[i] / 8;
+      sampleLineSize_[i] = output_.encodedWidth_ * samplePlaneStride[i] / 8;
     }
     
     // account for sub-sampling of UV plane(s):
@@ -951,40 +994,327 @@ namespace yae
     {
       unsigned char uvSamplePlanes =
         (ptts->flags_ & pixelFormat::kAlpha) ?
-        numSamplePlanes - 2 :
-        numSamplePlanes - 1;
+        numSamplePlanes_ - 2 :
+        numSamplePlanes_ - 1;
       
       for (unsigned char i = 1; i < 1 + uvSamplePlanes; i++)
       {
-        samplePlaneSize[i] /= chromaBoxArea;
-        sampleLineSize[i] /= ptts->chromaBoxW_;
+        samplePlaneSize_[i] /= chromaBoxArea;
+        sampleLineSize_[i] /= ptts->chromaBoxW_;
       }
     }
 
-    int64_t startTime = stream_->start_time;
-    if (startTime == AV_NOPTS_VALUE)
+    startTime_ = stream_->start_time;
+    if (startTime_ == AV_NOPTS_VALUE)
     {
-      startTime = 0;
+      startTime_ = 0;
     }
     
     // shortcut to the frame rate:
-    AVRational frameRate =
+    frameRate_ =
       (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den) ?
       stream_->avg_frame_rate :
       stream_->r_frame_rate;
     
-    // shortcut for ffmpeg pixel format:
-    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(yaeOutputFormat);
-
-    // it appears ffmpeg outputs decoded frames in correct presentation order
-    // but without the presentation time stamps (PTS), therefore I will
-    // keep a sorted list of packet time stamps for all packets going
-    // into avcodec_decode_video2 and use the earliest time stamp
-    // from that list to assign PTS to the decoded frames.
-    std::list<PacketTime> packetTimes;
+    if (native_.pixelFormat_ != output_.pixelFormat_ ||
+        native_.encodedWidth_ != output_.encodedWidth_ ||
+        native_.encodedHeight_ != output_.encodedHeight_)
+    {
+      // shortcut for ffmpeg pixel format:
+      enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
+      AVCodecContext * codecContext = this->codecContext();
+      
+      imgConvertCtx_ = sws_getContext(// from:
+                                      native_.encodedWidth_,
+                                      native_.encodedHeight_, 
+                                      codecContext->pix_fmt,
+                                      
+                                      // to:
+                                      output_.encodedWidth_,
+                                      output_.encodedHeight_,
+                                      ffmpegPixelFormat,
+                                      
+                                      SWS_FAST_BILINEAR,
+                                      NULL,
+                                      NULL,
+                                      NULL);
+    }
     
-    TTime prevPTS;
-    bool gotPrevPTS = false;
+    frameAutoCleanup_.reset();
+    packetTimes_.clear();
+    hasPrevPTS_ = false;
+    // framesDecoded_ = 0;
+    
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::decoderShutdown
+  // 
+  bool
+  VideoTrack::decoderShutdown()
+  {
+    if (imgConvertCtx_)
+    {
+      sws_freeContext(imgConvertCtx_);
+      imgConvertCtx_ = NULL;
+    }
+    
+    frameAutoCleanup_.reset();
+    packetTimes_.clear();
+    hasPrevPTS_ = false;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::decode
+  // 
+  bool
+  VideoTrack::decode(const TPacketPtr & packetPtr)
+  {
+    try
+    {
+      // make a local shallow copy of the packet:
+      AVPacket packet = packetPtr->ffmpeg_;
+      
+      // save packet timestamps and duration so we can capture
+      // and re-use this to timestamp the decoded frame:
+      savePacketTime(packet);
+      if (packetTime_.pts_ != AV_NOPTS_VALUE ||
+          packetTime_.dts_ != AV_NOPTS_VALUE)
+      {
+        insertPacketTime(packetTimes_, packetTime_);
+      }
+      
+      // Decode video frame
+      int gotPicture = 0;
+      AVFrame * avFrame = frameAutoCleanup_;
+      AVCodecContext * codecContext = this->codecContext();
+      avcodec_decode_video2(codecContext,
+                            avFrame,
+                            &gotPicture,
+                            &packet);
+      if (!gotPicture)
+      {
+        return true;
+      }
+      
+      framesDecoded_++;
+      TVideoFramePtr vfPtr(new TVideoFrame());
+      TVideoFrame & vf = *vfPtr;
+      vf.time_.base_ = stream_->time_base.den;
+      
+      // shortcut to the saved packet time associated with this frame:
+      const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
+      
+      PacketTime t;
+      if (!packetTimes_.empty())
+      {
+        t = packetTimes_.back();
+        packetTimes_.pop_back();
+#if 0
+        if (frameTime && frameTime->pts_ != t.pts_)
+        {
+          std::cerr << "\ntimestamp mismatch: " << std::endl
+                    << "1. out pts: " << frameTime->pts_
+                    << ", dts: " << frameTime->dts_
+                    << ", len: " << frameTime->duration_ << std::endl
+                    << "2. out pts: " << t.pts_
+                    << ", dts: " << t.dts_
+                    << ", len: " << t.duration_ << std::endl;
+        }
+#endif
+      }
+      
+      bool gotPTS = false;
+      
+      if (!gotPTS &&
+          framesDecoded_ == 1)
+      {
+        vf.time_.time_ = startTime_;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
+      }
+      
+      if (!gotPTS && frameTime && frameTime->pts_ != AV_NOPTS_VALUE)
+      {
+        vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "frameTime");
+      }
+      
+      if (!gotPTS && t.pts_ != AV_NOPTS_VALUE)
+      {
+        vf.time_.time_ = stream_->time_base.num * t.pts_;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t.pts");
+      }
+      
+      if (!gotPTS && t.dts_ != AV_NOPTS_VALUE && packetTimes_.empty())
+      {
+        vf.time_.time_ = stream_->time_base.num * t.dts_;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t.dts");
+      }
+      
+      if (!gotPTS &&
+          avFrame->pts != AV_NOPTS_VALUE &&
+          codecContext->time_base.num &&
+          codecContext->time_base.den)
+      {
+        vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
+        vf.time_.base_ = codecContext->time_base.den;
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
+      }
+      
+      if (!gotPTS &&
+          frameRate_.num &&
+          frameRate_.den)
+      {
+        vf.time_.base_ = stream_->time_base.den;
+        vf.time_.time_ =
+          startTime_ +
+          (framesDecoded_ - 1) *
+          (int64_t(frameRate_.den) * int64_t(stream_->time_base.num)) /
+          (int64_t(frameRate_.num));
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0 + n/fps");
+        
+        if (!gotPTS && hasPrevPTS_)
+        {
+          // increment by average frame duration:
+          vf.time_ = prevPTS_;
+          vf.time_ += TTime(frameRate_.den,
+                            frameRate_.num);
+          
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
+        }
+      }
+      
+      YAE_ASSERT(gotPTS);
+      if (!gotPTS && hasPrevPTS_)
+      {
+        vf.time_ = prevPTS_;
+        vf.time_.time_++;
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t++");
+      }
+      
+      YAE_ASSERT(gotPTS);
+      if (gotPTS)
+      {
+        if (hasPrevPTS_)
+        {
+          double ta = prevPTS_.toSeconds();
+          double tb = vf.time_.toSeconds();
+          double dt = tb - ta;
+          double fd = 1.0 / native_.frameRate_;
+          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+          if (dt > 2.0 * fd)
+          {
+            std::cerr
+              << "\nNOTE: detected large PTS jump: " << std::endl
+              << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
+              << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
+              << "difference " << dt << " seconds, equivalent to "
+              << dt / fd << " frames" << std::endl
+              << std::endl;
+          }
+        }
+        
+        hasPrevPTS_ = true;
+        prevPTS_ = vf.time_;
+      }
+      
+      vf.traits_ = output_;
+      
+      TSampleBufferPtr sampleBuffer(new TSampleBuffer(numSamplePlanes_),
+                                    &ISampleBuffer::deallocator);
+      for (unsigned char i = 0; i < numSamplePlanes_; i++)
+      {
+        std::size_t rowBytes = sampleLineSize_[i];
+        std::size_t rows = samplePlaneSize_[i] / rowBytes;
+        sampleBuffer->resize(i, rowBytes, rows, kRowAlignment);
+      }
+      vf.sampleBuffer_ = sampleBuffer;
+      
+      if (!imgConvertCtx_)
+      {
+        // copy the sample planes:
+        
+        for (unsigned char i = 0; i < numSamplePlanes_; i++)
+        {
+          std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
+          std::size_t dstRows = sampleBuffer->rows(i);
+          unsigned char * dst = sampleBuffer->samples(i);
+          
+          std::size_t srcRowBytes = avFrame->linesize[i];
+          const unsigned char * src = avFrame->data[i];
+          
+          std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
+          for (std::size_t i = 0; i < dstRows; i++)
+          {
+            memcpy(dst, src, copyRowBytes);
+            src += srcRowBytes;
+            dst += dstRowBytes;
+          }
+        }
+      }
+      else
+      {
+        // convert the image to the desired pixel format:
+        
+        AVPicture pict;
+        for (unsigned char i = 0; i < numSamplePlanes_; i++)
+        {
+          pict.data[i] = sampleBuffer->samples(i);
+          pict.linesize[i] = sampleBuffer->rowBytes(i);
+        }
+        
+        sws_scale(imgConvertCtx_,
+                  avFrame->data,
+                  avFrame->linesize,
+                  0,
+                  codecContext->height,
+                  pict.data,
+                  pict.linesize);
+      }
+      
+      // put the output frame into frame queue:
+      frameQueue_.push(vfPtr);
+      
+      // put repeated output frames into frame queue:
+      for (int i = 0; i < avFrame->repeat_pict; i++)
+      {
+        TVideoFramePtr rvfPtr(new TVideoFrame(vf));
+        TVideoFrame & rvf = *rvfPtr;
+        
+        if (frameRate_.num && frameRate_.den)
+        {
+          rvf.time_ += TTime((i + 1) * frameRate_.den, frameRate_.num);
+        }
+        else
+        {
+          rvf.time_.time_++;
+        }
+        
+        std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
+                  << std::endl;
+        frameQueue_.push(rvfPtr);
+      }
+    }
+    catch (...)
+    {
+      return false;
+    }
+
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::threadLoop
+  // 
+  void
+  VideoTrack::threadLoop()
+  {
+    decoderStartup();
     
     while (true)
     {
@@ -993,274 +1323,14 @@ namespace yae
         boost::this_thread::interruption_point();
         
         TPacketPtr packetPtr;
-        bool ok = packetQueue_.pop(packetPtr);
-        if (!ok)
+        if (!packetQueue_.pop(packetPtr))
         {
           break;
         }
 
-        // make a local shallow copy of the packet:
-        AVPacket packet = packetPtr->ffmpeg_;
-#if 0
-        std::cerr << "\n0. in  pts: " << packetTime_.pts_
-                  << ", dts: " << packetTime_.dts_
-                  << ", len: " << packetTime_.duration_ << std::endl;
-#endif
-        
-        // save packet timestamps and duration so we can capture
-        // and re-use this to timestamp the decoded frame:
-        savePacketTime(packet);
-        if (packetTime_.pts_ != AV_NOPTS_VALUE ||
-            packetTime_.dts_ != AV_NOPTS_VALUE)
+        if (!decode(packetPtr))
         {
-          insertPacketTime(packetTimes, packetTime_);
-        }
-        
-        // Decode video frame
-        int gotPicture = 0;
-        AVFrame * avFrame = frameAutoCleanup;
-        AVCodecContext * codecContext = this->codecContext();
-        avcodec_decode_video2(codecContext,
-                              avFrame,
-                              &gotPicture,
-                              &packet);
-        if (!gotPicture)
-        {
-          continue;
-        }
-        
-        framesDecoded_++;
-        TVideoFramePtr vfPtr(new TVideoFrame());
-        TVideoFrame & vf = *vfPtr;
-        vf.time_.base_ = stream_->time_base.den;
-
-        // shortcut to the saved packet time associated with this frame:
-        const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
-        
-        PacketTime t;
-        if (!packetTimes.empty())
-        {
-          t = packetTimes.back();
-          packetTimes.pop_back();
-#if 0
-          if (frameTime && frameTime->pts_ != t.pts_)
-          {
-            std::cerr << "\ntimestamp mismatch: " << std::endl
-                      << "1. out pts: " << frameTime->pts_
-                      << ", dts: " << frameTime->dts_
-                      << ", len: " << frameTime->duration_ << std::endl
-                      << "2. out pts: " << t.pts_
-                      << ", dts: " << t.dts_
-                      << ", len: " << t.duration_ << std::endl;
-          }
-#endif
-        }
-
-        bool gotPTS = false;
-        
-        if (!gotPTS &&
-            framesDecoded_ == 1)
-        {
-          vf.time_.time_ = startTime;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t0");
-        }
-        
-        if (!gotPTS &&
-            frameTime &&
-            frameTime->pts_ != AV_NOPTS_VALUE)
-        {
-          vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "frameTime");
-        }
-        
-        if (!gotPTS &&
-            t.pts_ != AV_NOPTS_VALUE)
-        {
-          vf.time_.time_ = stream_->time_base.num * t.pts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t.pts");
-        }
-        
-        if (!gotPTS &&
-            t.dts_ != AV_NOPTS_VALUE &&
-            packetTimes.empty())
-        {
-          vf.time_.time_ = stream_->time_base.num * t.dts_;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t.dts");
-        }
-        
-        if (!gotPTS &&
-            avFrame->pts != AV_NOPTS_VALUE &&
-            codecContext->time_base.num &&
-            codecContext->time_base.den)
-        {
-          vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
-          vf.time_.base_ = codecContext->time_base.den;
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "avFrame->pts");
-        }
-        
-        if (!gotPTS &&
-            frameRate.num &&
-            frameRate.den)
-        {
-          vf.time_.base_ = stream_->time_base.den;
-          vf.time_.time_ =
-            startTime +
-            (framesDecoded_ - 1) *
-            (int64_t(frameRate.den) * int64_t(stream_->time_base.num)) /
-            (int64_t(frameRate.num));
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t0 + n/fps");
-          
-          if (!gotPTS && gotPrevPTS)
-          {
-            // increment by average frame duration:
-            vf.time_ = prevPTS;
-            vf.time_ += TTime(frameRate.den,
-                              frameRate.num);
-            
-            gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t += 1/fps");
-          }
-        }
-        
-        YAE_ASSERT(gotPTS);
-        if (!gotPTS && gotPrevPTS)
-        {
-          vf.time_ = prevPTS;
-          vf.time_.time_++;
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, vf.time_, "t++");
-        }
-        
-        YAE_ASSERT(gotPTS);
-        if (gotPTS)
-        {
-          if (gotPrevPTS)
-          {
-            double ta = prevPTS.toSeconds();
-            double tb = vf.time_.toSeconds();
-            double dt = tb - ta;
-            double fd = 1.0 / nativeTraits.frameRate_;
-            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-            if (dt > 2.0 * fd)
-            {
-              std::cerr
-                << "\nNOTE: detected large PTS jump: " << std::endl
-                << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
-                << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
-                << "difference " << dt << " seconds, equivalent to "
-                << dt / fd << " frames" << std::endl
-                << std::endl;
-            }
-          }
-          
-          gotPrevPTS = true;
-          prevPTS = vf.time_;
-        }
-        
-        vf.traits_ = override_;
-        vf.traits_.encodedWidth_ = encodedWidth;
-        vf.traits_.encodedHeight_ = encodedHeight;
-        vf.traits_.pixelFormat_ = yaeOutputFormat;
-        
-        TSampleBufferPtr sampleBuffer(new TSampleBuffer(numSamplePlanes),
-                                      &ISampleBuffer::deallocator);
-        for (unsigned char i = 0; i < numSamplePlanes; i++)
-        {
-          std::size_t rowBytes = sampleLineSize[i];
-          std::size_t rows = samplePlaneSize[i] / rowBytes;
-          sampleBuffer->resize(i, rowBytes, rows, rowAlignment);
-        }
-        vf.sampleBuffer_ = sampleBuffer;
-
-        if (nativeTraits.pixelFormat_ == yaeOutputFormat &&
-            nativeTraits.encodedWidth_ == encodedWidth &&
-            nativeTraits.encodedHeight_ == encodedHeight)
-        {
-          // copy the sample planes:
-          
-          for (unsigned char i = 0; i < numSamplePlanes; i++)
-          {
-            std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
-            std::size_t dstRows = sampleBuffer->rows(i);
-            unsigned char * dst = sampleBuffer->samples(i);
-            
-            std::size_t srcRowBytes = avFrame->linesize[i];
-            const unsigned char * src = avFrame->data[i];
-            
-            std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
-            for (std::size_t i = 0; i < dstRows; i++)
-            {
-              memcpy(dst, src, copyRowBytes);
-              src += srcRowBytes;
-              dst += dstRowBytes;
-            }
-          }
-        }
-        else
-        {
-          // convert the image to the desired pixel format:
-          
-          AVPicture pict;
-          for (unsigned char i = 0; i < numSamplePlanes; i++)
-          {
-            pict.data[i] = sampleBuffer->samples(i);
-            pict.linesize[i] = sampleBuffer->rowBytes(i);
-          }
-          
-          if (imgConvertCtx == NULL)
-          {
-            imgConvertCtx = sws_getContext(// from:
-                                           nativeTraits.encodedWidth_,
-                                           nativeTraits.encodedHeight_, 
-                                           codecContext->pix_fmt,
-                                           
-                                           // to:
-                                           vf.traits_.encodedWidth_,
-                                           vf.traits_.encodedHeight_,
-                                           ffmpegPixelFormat,
-                                           
-                                           SWS_FAST_BILINEAR,
-                                           NULL,
-                                           NULL,
-                                           NULL);
-            if (imgConvertCtx == NULL)
-            {
-              YAE_ASSERT(false);
-              break;
-            }
-          }
-          
-          sws_scale(imgConvertCtx,
-                    avFrame->data,
-                    avFrame->linesize,
-                    0,
-                    codecContext->height,
-                    pict.data,
-                    pict.linesize);
-        }
-        
-        // put the output frame into frame queue:
-        frameQueue_.push(vfPtr);
-
-        // put repeated output frames into frame queue:
-        for (int i = 0; i < avFrame->repeat_pict; i++)
-        {
-          TVideoFramePtr rvfPtr(new TVideoFrame(vf));
-          TVideoFrame & rvf = *rvfPtr;
-          
-          if (frameRate.num && frameRate.den)
-          {
-            rvf.time_ += TTime((i + 1) * frameRate.den, frameRate.num);
-          }
-          else
-          {
-            rvf.time_.time_++;
-          }
-          
-          std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
-                    << std::endl;
-          frameQueue_.push(rvfPtr);
+          break;
         }
       }
       catch (...)
@@ -1269,11 +1339,7 @@ namespace yae
       }
     }
     
-    if (imgConvertCtx)
-    {
-      sws_freeContext(imgConvertCtx);
-      imgConvertCtx = NULL;
-    }
+    decoderShutdown();
   }
   
   //----------------------------------------------------------------
@@ -1411,6 +1477,11 @@ namespace yae
     // virtual: get current position:
     bool getPosition(TTime & t) const;
     
+    // virtual: FIXME: write me!
+    bool decoderStartup();
+    bool decoderShutdown();
+    bool decode(const TPacketPtr & packetPtr);
+    
     // virtual:
     void threadLoop();
     bool threadStop();
@@ -1428,7 +1499,23 @@ namespace yae
     
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
+    AudioTraits native_;
+    AudioTraits output_;
+
+    // output sample buffer properties:
+    unsigned int nativeBytesPerSample_;
+    unsigned int outputBytesPerSample_;
+    TSamplePlane nativeBuffer_;
+    TSamplePlane resampleBuffer_;
+    
+    TTime prevPTS_;
+    bool hasPrevPTS_;
+    uint64 prevNumSamples_;
+    
+    int64_t startTime_;
     uint64 samplesDecoded_;
+    
+    ReSampleContext * resampleCtx_;
   };
   
   //----------------------------------------------------------------
@@ -1440,7 +1527,14 @@ namespace yae
   // AudioTrack::AudioTrack
   // 
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream)
+    Track(context, stream),
+    nativeBytesPerSample_(0),
+    outputBytesPerSample_(0),
+    hasPrevPTS_(false),
+    prevNumSamples_(0),
+    startTime_(0),
+    samplesDecoded_(0),
+    resampleCtx_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_AUDIO);
     
@@ -1513,6 +1607,258 @@ namespace yae
     
     return SAMPLE_FMT_NONE;
   }
+
+  //----------------------------------------------------------------
+  // AudioTrack::decoderStartup
+  // 
+  bool
+  AudioTrack::decoderStartup()
+  {
+    getTraits(native_);
+    output_ = override_;
+
+    int nativeChannels = getNumberOfChannels(native_.channelLayout_);
+    int outputChannels = getNumberOfChannels(output_.channelLayout_);
+    
+    nativeBytesPerSample_ =
+      nativeChannels * getBitsPerSample(native_.sampleFormat_) / 8;
+
+    outputBytesPerSample_ =
+      outputChannels * getBitsPerSample(output_.sampleFormat_) / 8;
+
+    // declare a 16-byte aligned buffer for decoded audio samples:
+    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2,
+                         1, 16);
+    
+    resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
+                                       double(outputBytesPerSample_) /
+                                       double(nativeBytesPerSample_) + 0.5),
+                           1, 16);
+    
+    if (nativeChannels != outputChannels ||
+        native_.sampleFormat_ != output_.sampleFormat_ ||
+        native_.sampleRate_ != output_.sampleRate_)
+    {
+      enum SampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
+      enum SampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
+      resampleCtx_ = av_audio_resample_init(outputChannels,
+                                            nativeChannels,
+                                            output_.sampleRate_,
+                                            native_.sampleRate_,
+                                            outputFormat,
+                                            nativeFormat,
+                                            16, // taps
+                                            10, // log2 phase count
+                                            0, // linear
+                                            0.8); // cutoff frequency
+    }
+      
+    startTime_ = stream_->start_time;
+    if (startTime_ == AV_NOPTS_VALUE)
+    {
+      startTime_ = 0;
+    }
+    
+    hasPrevPTS_ = false;
+    prevNumSamples_ = 0;
+    samplesDecoded_ = 0;
+    
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::decoderShutdown
+  // 
+  bool
+  AudioTrack::decoderShutdown()
+  {
+    if (resampleCtx_)
+    {
+      // FIXME: flush the resampler:
+      audio_resample_close(resampleCtx_);
+      resampleCtx_ = NULL;
+    }
+    
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::decode
+  // 
+  bool
+  AudioTrack::decode(const TPacketPtr & packetPtr)
+  {
+    try
+    {
+      // make a local shallow copy of the packet:
+      AVPacket packet = packetPtr->ffmpeg_;
+      AVCodecContext * codecContext = this->codecContext();
+      
+      // save packet timestamps and duration so we can capture
+      // and re-use this to timestamp the decoded frame:
+      // savePacketTime(packet);
+      
+      // Decode audio frame, piecewise:
+      std::list<std::vector<unsigned char> > chunks;
+      std::size_t nativeBytes = 0;
+      std::size_t outputBytes = 0;
+      
+      while (packet.size)
+      {
+        int bufferSize = (int)(nativeBuffer_.rowBytes());
+        int bytesUsed = avcodec_decode_audio3(codecContext,
+                                              nativeBuffer_.data<int16_t>(),
+                                              &bufferSize,
+                                              &packet);
+        
+        if (bytesUsed < 0)
+        {
+          break;
+        }
+        
+        // adjust the packet (the copy, not the original):
+        packet.size -= bytesUsed;
+        packet.data += bytesUsed;
+        
+        if (!bufferSize)
+        {
+          continue;
+        }
+
+        if (resampleCtx_)
+        {
+          int16_t * src = nativeBuffer_.data<int16_t>();
+          int16_t * dst = resampleBuffer_.data<int16_t>();
+
+          int srcSamples = bufferSize / nativeBytesPerSample_;
+          int dstSamples = audio_resample(resampleCtx_, dst, src, srcSamples);
+
+          if (dstSamples)
+          {
+            std::size_t resampledBytes = dstSamples * outputBytesPerSample_;
+            chunks.push_back(std::vector<unsigned char>
+                             (resampleBuffer_.data(),
+                              resampleBuffer_.data() + resampledBytes));
+            outputBytes += resampledBytes;
+          }
+        }
+        else
+        {
+          chunks.push_back(std::vector<unsigned char>
+                           (nativeBuffer_.data(),
+                            nativeBuffer_.data() + bufferSize));
+          outputBytes += bufferSize;
+        }
+        
+        nativeBytes += bufferSize;
+      }
+      
+      if (!outputBytes)
+      {
+        return true;
+      }
+      
+      std::size_t numNativeSamples = nativeBytes / nativeBytesPerSample_;
+      samplesDecoded_ += numNativeSamples;
+      
+      TAudioFramePtr afPtr(new TAudioFrame());
+      TAudioFrame & af = *afPtr;
+      
+      af.traits_ = output_;
+      af.time_.base_ = stream_->time_base.den;
+      
+      bool gotPTS = false;
+      
+      if (!gotPTS &&
+          packet.pts != AV_NOPTS_VALUE)
+      {
+        af.time_.time_ = stream_->time_base.num * packet.pts;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, "packet.pts");
+      }
+      
+      if (!gotPTS &&
+          packet.dts != AV_NOPTS_VALUE)
+      {
+        af.time_.time_ = stream_->time_base.num * packet.dts;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, "packet.dts");
+      }
+      
+      if (!gotPTS)
+      {
+        af.time_.base_ = native_.sampleRate_;
+        af.time_.time_ = samplesDecoded_ - numNativeSamples;
+        af.time_ += TTime(startTime_, stream_->time_base.den);
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+      }
+      
+      if (!gotPTS && hasPrevPTS_)
+      {
+        af.time_ = prevPTS_;
+        af.time_ += TTime(prevNumSamples_, native_.sampleRate_);
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+      }
+      
+      YAE_ASSERT(gotPTS);
+      if (!gotPTS && hasPrevPTS_)
+      {
+        af.time_ = prevPTS_;
+        af.time_.time_++;
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+      }
+      
+      YAE_ASSERT(gotPTS);
+      if (gotPTS)
+      {
+        if (hasPrevPTS_)
+        {
+          double ta = prevPTS_.toSeconds();
+          double tb = af.time_.toSeconds();
+          double dt = tb - ta;
+          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+          if (dt > 0.67)
+          {
+            std::cerr
+              << "\nNOTE: detected large audio PTS jump -- " << std::endl
+              << dt << " seconds" << std::endl
+              << std::endl;
+          }
+        }
+        
+        hasPrevPTS_ = true;
+        prevPTS_ = af.time_;
+        prevNumSamples_ = numNativeSamples;
+      }
+      
+      TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
+                                    &ISampleBuffer::deallocator);
+      af.sampleBuffer_ = sampleBuffer;
+      sampleBuffer->resize(0, outputBytes, 1, 16);
+      unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+      
+      // concatenate chunks into a contiguous frame buffer:
+      while (!chunks.empty())
+      {
+        const unsigned char * chunk = &(chunks.front().front());
+        std::size_t chunkSize = chunks.front().size();
+        memcpy(afSampleBuffer, chunk, chunkSize);
+        
+        afSampleBuffer += chunkSize;
+        chunks.pop_front();
+      }
+      
+      // put the decoded frame into frame queue:
+      frameQueue_.push(afPtr);
+    }
+    catch (...)
+    {
+      return false;
+    }
+    
+    return true;
+  }
   
   //----------------------------------------------------------------
   // AudioTrack::threadLoop
@@ -1520,38 +1866,7 @@ namespace yae
   void
   AudioTrack::threadLoop()
   {
-    TOpenHere<TAudioFrameQueue> closeOnExit(frameQueue_);
-    
-    TAudioFrame::TTraits nativeTraits;
-    getTraits(nativeTraits);
-    
-    // declare a 16-byte aligned buffer for decoded audio samples:
-    DECLARE_ALIGNED(16, uint8_t, buffer)
-      [(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
-
-    int nativeChannels = getNumberOfChannels(nativeTraits.channelLayout_);
-    int nativeSampleRate = nativeTraits.sampleRate_;
-    enum SampleFormat nativeFormat = yae_to_ffmpeg(nativeTraits.sampleFormat_);
-    
-    int outputChannels = getNumberOfChannels(override_.channelLayout_);
-    int outputSampleRate = override_.sampleRate_;
-    enum SampleFormat outputFormat = yae_to_ffmpeg(override_.sampleFormat_);
-    
-    unsigned int bytesPerSample =
-      nativeChannels *
-      getBitsPerSample(nativeTraits.sampleFormat_) / 8;
-    
-    ReSampleContext * resampleCtx = NULL;
-    
-    int64_t startTime = stream_->start_time;
-    if (startTime == AV_NOPTS_VALUE)
-    {
-      startTime = 0;
-    }
-    
-    TTime prevPTS;
-    bool gotPrevPTS = false;
-    uint64 prevNumSamples = 0;
+    decoderStartup();
     
     while (true)
     {
@@ -1560,168 +1875,23 @@ namespace yae
         boost::this_thread::interruption_point();
         
         TPacketPtr packetPtr;
-        bool ok = packetQueue_.pop(packetPtr);
-        if (!ok)
+        if (!packetQueue_.pop(packetPtr))
         {
           break;
         }
-        
-        // make a local shallow copy of the packet:
-        AVPacket packet = packetPtr->ffmpeg_;
-        
-        // save packet timestamps and duration so we can capture
-        // and re-use this to timestamp the decoded frame:
-        // savePacketTime(packet);
-        
-        // Decode audio frame, piecewise:
-        std::list<std::vector<unsigned char> > chunks;
-        std::size_t totalBytes = 0;
-        
-        while (packet.size)
-        {
-          int bufferSize = sizeof(buffer);
-          int bytesUsed = avcodec_decode_audio3(codecContext(),
-                                                (int16_t *)(&buffer[0]),
-                                                &bufferSize,
-                                                &packet);
-          
-          if (bytesUsed < 0)
-          {
-            break;
-          }
-          
-          // adjust the packet (the copy, not the original):
-          packet.size -= bytesUsed;
-          packet.data += bytesUsed;
-          
-          if (bufferSize)
-          {
-            chunks.push_back(std::vector<unsigned char>
-                             (buffer, buffer + bufferSize));
-          
-            totalBytes += bufferSize;
-          }
-        }
-        
-        if (!totalBytes)
-        {
-          continue;
-        }
 
-        std::size_t numSamples = totalBytes / bytesPerSample;
-        samplesDecoded_ += numSamples;
-
-        // FIXME: add support for resampling to support override_:
-        if (false && !resampleCtx)
+        if (!decode(packetPtr))
         {
-          resampleCtx = av_audio_resample_init(outputChannels,
-                                               nativeChannels,
-                                               outputSampleRate,
-                                               nativeSampleRate,
-                                               outputFormat,
-                                               nativeFormat,
-                                               16, // taps
-                                               10, // log2 phase count
-                                               0, // linear
-                                               0.8); // cutoff frequency
+          break;
         }
-        
-        TAudioFramePtr afPtr(new TAudioFrame());
-        TAudioFrame & af = *afPtr;
-        
-        af.traits_ = override_;
-        af.time_.base_ = stream_->time_base.den;
-        
-        bool gotPTS = false;
-        
-        if (!gotPTS &&
-            packet.pts != AV_NOPTS_VALUE)
-        {
-          af.time_.time_ = stream_->time_base.num * packet.pts;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.pts");
-        }
-        
-        if (!gotPTS &&
-            packet.dts != AV_NOPTS_VALUE)
-        {
-          af.time_.time_ = stream_->time_base.num * packet.dts;
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_, "packet.dts");
-        }
-        
-        if (!gotPTS)
-        {
-          af.time_.base_ = nativeTraits.sampleRate_;
-          af.time_.time_ = samplesDecoded_ - numSamples;
-          af.time_ += TTime(startTime, stream_->time_base.den);
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
-        }
-        
-        if (!gotPTS && gotPrevPTS)
-        {
-          af.time_ = prevPTS;
-          af.time_ += TTime(prevNumSamples, nativeTraits.sampleRate_);
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
-        }
-        
-        YAE_ASSERT(gotPTS);
-        if (!gotPTS && gotPrevPTS)
-        {
-          af.time_ = prevPTS;
-          af.time_.time_++;
-          
-          gotPTS = verifyPTS(gotPrevPTS, prevPTS, af.time_);
-        }
-        
-        YAE_ASSERT(gotPTS);
-        if (gotPTS)
-        {
-          if (gotPrevPTS)
-          {
-            double ta = prevPTS.toSeconds();
-            double tb = af.time_.toSeconds();
-            double dt = tb - ta;
-            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-            if (dt > 0.67)
-            {
-              std::cerr
-                << "\nNOTE: detected large audio PTS jump -- " << std::endl
-                << dt << " seconds" << std::endl
-                << std::endl;
-            }
-          }
-          
-          gotPrevPTS = true;
-          prevPTS = af.time_;
-          prevNumSamples = numSamples;
-        }
-        
-        TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
-                                      &ISampleBuffer::deallocator);
-        af.sampleBuffer_ = sampleBuffer;
-        sampleBuffer->resize(0, totalBytes, 1, 16);
-        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
-        
-        // concatenate chunks into a contiguous frame buffer:
-        while (!chunks.empty())
-        {
-          const unsigned char * chunk = &(chunks.front().front());
-          std::size_t chunkSize = chunks.front().size();
-          memcpy(afSampleBuffer, chunk, chunkSize);
-          
-          afSampleBuffer += chunkSize;
-          chunks.pop_front();
-        }
-        
-        // put the decoded frame into frame queue:
-        frameQueue_.push(afPtr);
       }
       catch (...)
       {
         break;
       }
     }
+    
+    decoderShutdown();
   }
   
   //----------------------------------------------------------------

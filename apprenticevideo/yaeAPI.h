@@ -249,6 +249,9 @@ namespace yae
   {
     TSamplePlane();
     ~TSamplePlane();
+
+    TSamplePlane(const TSamplePlane & src);
+    TSamplePlane & operator = (const TSamplePlane & src);
     
     // resize the sample plane:
     void resize(std::size_t rowBytes,
@@ -256,6 +259,10 @@ namespace yae
                 unsigned char alignment = 16);
     
     // samples accessors:
+    template <typename TSample>
+    inline TSample * data() const
+    { return (TSample *)(data_ + alignmentOffset_); }
+    
     inline unsigned char * data() const
     { return data_ + alignmentOffset_; }
     
@@ -272,6 +279,7 @@ namespace yae
     std::size_t alignmentOffset_;
     std::size_t rowBytes_;
     std::size_t rows_;
+    unsigned char alignment_;
   };
   
   //----------------------------------------------------------------

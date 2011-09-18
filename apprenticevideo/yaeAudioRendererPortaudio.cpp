@@ -39,6 +39,10 @@ namespace yae
     bool getDeviceName(unsigned int deviceIndex,
                        std::string & deviceName) const;
     
+    void match(unsigned int deviceIndex,
+               const AudioTraits & source,
+               AudioTraits & output) const;
+    
     bool open(unsigned int deviceIndex, IReader * reader);
     void close();
     
@@ -183,6 +187,34 @@ namespace yae
     deviceName.assign(oss.str().c_str());
     
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::match
+  // 
+  void
+  AudioRendererPortaudio::TPrivate::match(unsigned int deviceIndex,
+                                          const AudioTraits & source,
+                                          AudioTraits & output) const
+  {
+    if (&output != &source)
+    {
+      output = source;
+    }
+    
+    if (output.sampleFormat_ == kAudioInvalidFormat)
+    {
+      return;
+    }
+
+    PaDeviceIndex paDevIndex = outputDevices_[deviceIndex];
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(paDevIndex);
+    
+    int sourceChannels = getNumberOfChannels(source.channelLayout_);
+    if (devInfo->maxOutputChannels < sourceChannels)
+    {
+      output.channelLayout_ = TAudioChannelLayout(devInfo->maxOutputChannels);
+    }
   }
   
   //----------------------------------------------------------------
@@ -545,6 +577,17 @@ namespace yae
     return private_->getDeviceName(deviceIndex, deviceName);
   }
 
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::match
+  // 
+  void
+  AudioRendererPortaudio::match(unsigned int deviceIndex,
+                                const AudioTraits & source,
+                                AudioTraits & output) const
+  {
+    return private_->match(deviceIndex, source, output);
+  }
+  
   //----------------------------------------------------------------
   // AudioRendererPortaudio::open
   // 

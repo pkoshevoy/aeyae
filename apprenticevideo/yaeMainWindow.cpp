@@ -1186,6 +1186,15 @@ namespace yae
   MainWindow::selectAudioTrack(IReader * reader, std::size_t audioTrackIndex)
   {
      reader->selectAudioTrack(audioTrackIndex);
+     
+     AudioTraits native;
+     if (reader->getAudioTraits(native) && audioRenderer_)
+     {
+       unsigned int audioDevice = audioRenderer_->getDefaultDeviceIndex();
+       AudioTraits supported;
+       audioRenderer_->match(audioDevice, native, supported);
+       reader->setAudioTraitsOverride(supported);
+     }
   }
   
 };

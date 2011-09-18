@@ -199,7 +199,8 @@ namespace yae
     data_(NULL),
     alignmentOffset_(0),
     rowBytes_(0),
-    rows_(0)
+    rows_(0),
+    alignment_(0)
   {}
 
   //----------------------------------------------------------------
@@ -210,6 +211,35 @@ namespace yae
     delete [] data_;
   }
 
+  TSamplePlane::TSamplePlane(const TSamplePlane & src):
+    data_(NULL),
+    alignmentOffset_(0),
+    rowBytes_(0),
+    rows_(0),
+    alignment_(0)
+  {
+    if (src.data_)
+    {
+      resize(src.rowBytes_, src.rows_, src.alignment_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TSamplePlane::operator =
+  // 
+  TSamplePlane &
+  TSamplePlane::operator = (const TSamplePlane & src)
+  {
+    YAE_ASSERT(this != &src);
+    
+    if (this != &src)
+    {
+      resize(src.rowBytes_, src.rows_, src.alignment_);
+    }
+    
+    return *this;
+  }
+  
   //----------------------------------------------------------------
   // TSamplePlane::resize
   // 
@@ -220,10 +250,17 @@ namespace yae
   {
     std::size_t planeSize = (rowBytes * rows);
     delete [] data_;
-    data_ = new unsigned char [planeSize + alignment - 1];
+    data_ = NULL;
+    
+    if (planeSize)
+    {
+      data_ = new unsigned char [planeSize + alignment - 1];
+    }
+    
     alignmentOffset_ = std::size_t(data_) % alignment;
     rowBytes_ = rowBytes;
     rows_ = rows;
+    alignment_ = alignment;
   }
   
 
