@@ -328,6 +328,7 @@ PrepForDeployment()
 			unset QT_DIR
 			break;
 		done
+		EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 	quiet_popd
 }
 
@@ -349,11 +350,12 @@ resolve_library()
 	if [ -z "${NATIVE_ARCH}" ]; then
 		NATIVE_ARCH=`arch`
 	fi
-	
+
 	NAME=`basename "${NAME}"`
 	SRCH_HERE="${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
 	echo "${SRCH_HERE}" | awk 'BEGIN{RS=":"}{print}' | while read i; do
+		if [ ! -e "${i}" ]; then continue; fi
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
 			DNAME=`dirname "${j}"`
 			DNAME=`(cd "${DNAME}"; pwd)`
@@ -361,10 +363,15 @@ resolve_library()
 			NAME="${DNAME}/${BNAME}"
 			if [ -e "${NAME}" ]; then
 				echo "${NAME}"
-				return
+				return 1;
 			fi
 		done
+		DONE=$?
+	    if [ $DONE = 1 ]; then
+			break;
+		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 }
 
 #----------------------------------------------------------------
@@ -423,8 +430,7 @@ DeployFileOnce()
 		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
 		local EXITCODE=$?
 		echo
-		
-		if [ $EXITCODE != 0 ]; then 
+		if [ $EXITCODE != 0 ]; then
 			exit $EXITCODE
 		fi
 	fi
@@ -631,6 +637,7 @@ DeployFile()
 			fi
 		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 
 	quiet_popd
 }
@@ -655,41 +662,56 @@ DeployAppBundle()
 	BASE=`pwd`
 	find MacOS -type f -print | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
-		if [ $? != 0 ]; then 
+		EXITCODE=$?
+		if [ $EXITCODE != 0 ]; then 
 			rm -f "${DONELIST}"
-			exit 11; 
+			exit $EXITCODE; 
 		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
+
 	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
-		if [ $? != 0 ]; then 
+		EXITCODE=$?
+		if [ $EXITCODE != 0 ]; then 
 			rm -f "${DONELIST}"
-			exit 11; 
+			exit $EXITCODE; 
 		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
+
 	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
-		if [ $? != 0 ]; then 
+		EXITCODE=$?
+		if [ $EXITCODE != 0 ]; then 
 			rm -f "${DONELIST}"
-			exit 11; 
+			exit $EXITCODE; 
 		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
+
 	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
-		if [ $? != 0 ]; then 
+		EXITCODE=$?
+		if [ $EXITCODE != 0 ]; then 
 			rm -f "${DONELIST}"
-			exit 11; 
+			exit $EXITCODE; 
 		fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
+
 	find MacOS -type d -print | while read i; do
 		find "${i}" -type f -print | while read j; do
 			DeployFileOnce "${BASE}" "${j}" "${DONELIST}"
-			if [ $? != 0 ]; then 
+			EXITCODE=$?
+			if [ $EXITCODE != 0 ]; then 
 				rm -f "${DONELIST}"
-				exit 11; 
+				exit $EXITCODE; 
 			fi
 		done
+		EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 	quiet_popd
 
 	rm -f "${DONELIST}"
