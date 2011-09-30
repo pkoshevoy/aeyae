@@ -626,7 +626,10 @@ namespace yae
     selectVideoTrack(reader_, videoTrack);
     
     reader_->threadStart();
-    startRenderers(reader_);
+    if (!playbackPaused_)
+    {
+      startRenderers(reader_);
+    }
   }
   
   //----------------------------------------------------------------
@@ -838,7 +841,10 @@ namespace yae
     selectAudioTrack(reader_, index);
     
     reader_->threadStart();
-    startRenderers(reader_);
+    if (!playbackPaused_)
+    {
+      startRenderers(reader_);
+    }
   }
 
   //----------------------------------------------------------------
@@ -854,7 +860,10 @@ namespace yae
     selectVideoTrack(reader_, index);
     
     reader_->threadStart();
-    startRenderers(reader_);
+    if (!playbackPaused_)
+    {
+      startRenderers(reader_);
+    }
   }
   
   //----------------------------------------------------------------
