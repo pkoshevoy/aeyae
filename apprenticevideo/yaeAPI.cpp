@@ -257,7 +257,7 @@ namespace yae
       data_ = new unsigned char [planeSize + alignment - 1];
     }
     
-    alignmentOffset_ = std::size_t(data_) % alignment;
+    alignmentOffset_ = alignment ? std::size_t(data_) % alignment : 0;
     rowBytes_ = rowBytes;
     rows_ = rows;
     alignment_ = alignment;

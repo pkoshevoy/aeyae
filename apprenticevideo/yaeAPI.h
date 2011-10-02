@@ -358,6 +358,25 @@ namespace yae
   // TAudioFramePtr
   // 
   typedef boost::shared_ptr<TAudioFrame> TAudioFramePtr;
+
+  //----------------------------------------------------------------
+  // getRemixMatrix
+  // 
+  void getRemixMatrix(std::size_t srcChannels,
+                      std::size_t dstChannels,
+                      std::vector<double> & matrix);
+  
+  //----------------------------------------------------------------
+  // remix
+  // 
+  void remix(std::size_t numSamples,
+             TAudioSampleFormat sampleFormat,
+             TAudioChannelFormat channelFormat,
+             TAudioChannelLayout srcLayout,
+             const unsigned char * src,
+             TAudioChannelLayout dstLayout,
+             unsigned char * dst,
+             const double * channelRemixMatrix);
   
 }
 

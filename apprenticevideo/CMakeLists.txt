@@ -164,6 +164,7 @@ set(project_sources
   yaeReader.h
   yaeReaderFFMPEG.h
   yaeReaderFFMPEG.cpp
+  yaeRemix.cpp
   yaeSynchronous.h
   yaeSynchronous.cpp
   yaeThreading.h

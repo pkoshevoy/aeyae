@@ -1432,8 +1432,9 @@ namespace yae
     unsigned int nativeBytesPerSample_;
     unsigned int outputBytesPerSample_;
     TSamplePlane nativeBuffer_;
-    TSamplePlane downmixBuffer_;
+    TSamplePlane remixBuffer_;
     TSamplePlane resampleBuffer_;
+    std::vector<double> remixChannelMatrix_;
     
     TTime prevPTS_;
     bool hasPrevPTS_;
@@ -1553,19 +1554,35 @@ namespace yae
     nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2,
                          1, 16);
     
-    resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
-                                       double(outputBytesPerSample_) /
-                                       double(nativeBytesPerSample_) + 0.5),
-                           1, 16);
+    remixBuffer_ = TSamplePlane();
+    if (outputChannels_ != nativeChannels_)
+    {
+      // lookup a remix matrix:
+      getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);
+      remixBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
+                                      double(outputChannels_) /
+                                      double(nativeChannels_) + 0.5),
+                          1, 16);
+    }
+
+    // we implement our own remixing because ffmpeg supports
+    // a very limited subset of possible channel configurations:
+    resampleBuffer_ = TSamplePlane();
+    if (output_.sampleRate_ != native_.sampleRate_)
+    {
+      resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
+                                         double(outputBytesPerSample_) /
+                                         double(nativeBytesPerSample_) + 0.5),
+                             1, 16);
+    }
     
-    if (nativeChannels_ != outputChannels_ ||
-        native_.sampleFormat_ != output_.sampleFormat_ ||
+    if (native_.sampleFormat_ != output_.sampleFormat_ ||
         native_.sampleRate_ != output_.sampleRate_)
     {
       enum SampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
       enum SampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
       resampleCtx_ = av_audio_resample_init(outputChannels_,
-                                            nativeChannels_,
+                                            outputChannels_,
                                             output_.sampleRate_,
                                             native_.sampleRate_,
                                             outputFormat,
@@ -1602,6 +1619,9 @@ namespace yae
       audio_resample_close(resampleCtx_);
       resampleCtx_ = NULL;
     }
+    
+    remixBuffer_ = TSamplePlane();
+    resampleBuffer_ = TSamplePlane();
     
     frameQueue_.close();
     return true;
@@ -1649,13 +1669,30 @@ namespace yae
         {
           continue;
         }
-
+        
+        const int srcSamples = bufferSize / nativeBytesPerSample_;
+        
+        if (outputChannels_ != nativeChannels_)
+        {
+          yae::remix(srcSamples,
+                     native_.sampleFormat_,
+                     native_.channelFormat_,
+                     native_.channelLayout_,
+                     nativeBuffer_.data(),
+                     output_.channelLayout_,
+                     remixBuffer_.data(),
+                     remixChannelMatrix_.data());
+        }
+        
         if (resampleCtx_)
         {
-          int16_t * src = nativeBuffer_.data<int16_t>();
           int16_t * dst = resampleBuffer_.data<int16_t>();
 
-          int srcSamples = bufferSize / nativeBytesPerSample_;
+          int16_t * src =
+            (outputChannels_ == nativeChannels_ ?
+             nativeBuffer_.data<int16_t>() :
+             remixBuffer_.data<int16_t>());
+          
           int dstSamples = audio_resample(resampleCtx_, dst, src, srcSamples);
 
           if (dstSamples)
@@ -1666,6 +1703,14 @@ namespace yae
                               resampleBuffer_.data() + resampledBytes));
             outputBytes += resampledBytes;
           }
+        }
+        else if (outputChannels_ != nativeChannels_)
+        {
+          std::size_t remixedBytes = srcSamples * outputBytesPerSample_;
+            chunks.push_back(std::vector<unsigned char>
+                             (remixBuffer_.data(),
+                              remixBuffer_.data() + remixedBytes));
+          outputBytes += remixedBytes;
         }
         else
         {
