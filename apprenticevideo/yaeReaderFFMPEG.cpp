@@ -96,7 +96,7 @@ namespace fileUtf8
     av_strstart(filename, "://", &filename);
     
     int accessMode = 0;
-    if (flags & URL_RDWR)
+    if ((flags & URL_RDONLY) && (flags & URL_WRONLY))
     {
         accessMode = O_CREAT | O_TRUNC | O_RDWR;
     }
@@ -224,6 +224,25 @@ namespace fileUtf8
 
 namespace yae
 {
+  
+  enum
+  {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(52, 64, 0)
+    kCodecTypeUnknown = CODEC_TYPE_UNKNOWN,
+    kCodecTypeAudio = CODEC_TYPE_AUDIO,
+    kCodecTypeVideo = CODEC_TYPE_VIDEO,
+    kCodecTypeData = CODEC_TYPE_DATA,
+    kCodecTypeSubtitle = CODEC_TYPE_SUBTITLE,
+    kCodecTypeAttachment = CODEC_TYPE_ATTACHMENT,
+#else
+    kCodecTypeUnknown = AVMEDIA_TYPE_UNKNOWN,
+    kCodecTypeAudio = AVMEDIA_TYPE_AUDIO,
+    kCodecTypeVideo = AVMEDIA_TYPE_VIDEO,
+    kCodecTypeData = AVMEDIA_TYPE_DATA,
+    kCodecTypeSubtitle = AVMEDIA_TYPE_SUBTITLE,
+    kCodecTypeAttachment = AVMEDIA_TYPE_ATTACHMENT,
+#endif
+  };
   
   //----------------------------------------------------------------
   // Packet
@@ -789,7 +808,7 @@ namespace yae
     framesDecoded_(0),
     imgConvertCtx_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_VIDEO);
+    YAE_ASSERT(stream->codec->codec_type == kCodecTypeVideo);
 
     // make sure the frames are sorted from oldest to newest:
     frameQueue_.setSortFunc(&aFollowsB);
@@ -1464,7 +1483,7 @@ namespace yae
     samplesDecoded_(0),
     resampleCtx_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == CODEC_TYPE_AUDIO);
+    YAE_ASSERT(stream->codec->codec_type == kCodecTypeAudio);
     
     // match output queue size to input queue size:
     frameQueue_.setMaxSize(packetQueue_.getMaxSize());
@@ -2088,7 +2107,7 @@ namespace yae
       }
       
       const AVMediaType codecType = stream->codec->codec_type;
-      if (codecType == CODEC_TYPE_VIDEO)
+      if (codecType == kCodecTypeVideo)
       {
         VideoTrackPtr track(new VideoTrack(context_, stream));
         VideoTraits traits;
@@ -2097,7 +2116,7 @@ namespace yae
           videoTracks_.push_back(track);
         }
       }
-      else if (codecType == CODEC_TYPE_AUDIO)
+      else if (codecType == kCodecTypeAudio)
       {
         AudioTrackPtr track(new AudioTrack(context_, stream));
         AudioTraits traits;

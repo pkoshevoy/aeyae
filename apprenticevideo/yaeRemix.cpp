@@ -18,6 +18,7 @@
 #include <limits>
 #include <utility>
 #include <stdlib.h>
+#include <string.h>
 
 // yae includes:
 #include <yaeAPI.h>
