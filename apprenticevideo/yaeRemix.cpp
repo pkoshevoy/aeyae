@@ -69,7 +69,7 @@ namespace yae
       
       if (srcChannels > 4)
       {
-        // add the center channel:
+        // add the front center channel:
         matrix[0 * srcChannels + 2] = 0.71;
         matrix[1 * srcChannels + 2] = 0.71;
       }
@@ -79,6 +79,20 @@ namespace yae
         // add Ls and Rs channels:
         matrix[0 * srcChannels + 3] = 0.71;
         matrix[1 * srcChannels + 4] = 0.71;
+      }
+      
+      if (srcChannels == 7)
+      {
+        // add the rear center channel:
+        matrix[0 * srcChannels + 5] = 1.0;
+        matrix[1 * srcChannels + 5] = 1.0;
+      }
+      
+      if (srcChannels == 8)
+      {
+        // add Ls and Rs channels:
+        matrix[0 * srcChannels + 5] = 1.0;
+        matrix[1 * srcChannels + 6] = 1.0;
       }
     }
   }
