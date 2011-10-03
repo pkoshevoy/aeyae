@@ -168,10 +168,10 @@ namespace yae
                            numSamples,
                            srcStride,
                            srcChannels,
-                           srcChan.data(),
+                           &srcChan[0],
                            dstStride,
                            dstChannels,
-                           dstChan.data());
+                           &dstChan[0]);
     }
     else if (sampleFormat == kAudio16BitBigEndian ||
              sampleFormat == kAudio16BitLittleEndian)
@@ -180,10 +180,10 @@ namespace yae
                        numSamples,
                        srcStride,
                        srcChannels,
-                       srcChan.data(),
+                       &srcChan[0],
                        dstStride,
                        dstChannels,
-                       dstChan.data());
+                       &dstChan[0]);
     }
     else if (sampleFormat == kAudio24BitLittleEndian)
     {
@@ -191,10 +191,10 @@ namespace yae
                  numSamples,
                  srcStride,
                  srcChannels,
-                 srcChan.data(),
+                 &srcChan[0],
                  dstStride,
                  dstChannels,
-                 dstChan.data(),
+                 &dstChan[0],
                  -8388608.0, 8388607.0, 3);
     }
     else if (sampleFormat == kAudio32BitBigEndian ||
@@ -204,10 +204,10 @@ namespace yae
                  numSamples,
                  srcStride,
                  srcChannels,
-                 srcChan.data(),
+                 &srcChan[0],
                  dstStride,
                  dstChannels,
-                 dstChan.data());
+                 &dstChan[0]);
     }
     else if (sampleFormat == kAudio32BitFloat)
     {
@@ -215,10 +215,10 @@ namespace yae
                    numSamples,
                    srcStride,
                    srcChannels,
-                   srcChan.data(),
+                   &srcChan[0],
                    dstStride,
                    dstChannels,
-                   dstChan.data(),
+                   &dstChan[0],
                    -1.0, 1.0);
     }
   }

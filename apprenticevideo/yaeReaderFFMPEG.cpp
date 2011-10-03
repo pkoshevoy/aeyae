@@ -1681,7 +1681,7 @@ namespace yae
                      nativeBuffer_.data(),
                      output_.channelLayout_,
                      remixBuffer_.data(),
-                     remixChannelMatrix_.data());
+                     &remixChannelMatrix_[0]);
         }
         
         if (resampleCtx_)
