@@ -60,7 +60,7 @@
 # if defined(__ppc__)
 #  define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
 # else
-#  define YAE_ASSERT(expr) if (!(expr)) __asm { int 3 }
+#  define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
 # endif
 #else
 # define YAE_ASSERT(expr) assert(expr)
