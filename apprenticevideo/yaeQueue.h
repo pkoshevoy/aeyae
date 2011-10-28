@@ -308,56 +308,6 @@ namespace yae
       
       return false;
     }
-    
-    // peek at the head of the Queue:
-    bool peekHead(TData & data) const
-    {
-      try
-      {
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        while (!closed_ && data_.empty())
-        {
-          cond_.wait(lock);
-        }
-        
-        if (data_.empty())
-        {
-          return false;
-        }
-        
-        data = data_.front();
-        return true;
-      }
-      catch (...)
-      {}
-      
-      return false;
-    }
-    
-    // peek at the head of the Queue:
-    bool peekTail(TData & data) const
-    {
-      try
-      {
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        while (!closed_ && data_.empty())
-        {
-          cond_.wait(lock);
-        }
-        
-        if (data_.empty())
-        {
-          return false;
-        }
-        
-        data = data_.back();
-        return true;
-      }
-      catch (...)
-      {}
-      
-      return false;
-    }
 
   protected:
     

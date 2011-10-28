@@ -354,10 +354,6 @@ namespace yae
     // get track duration:
     void getDuration(TTime & start, TTime & duration) const;
     
-    // get current position:
-    virtual bool getPosition(TTime &) const
-    { return false; }
-    
     // accessor to the packet queue:
     inline TPacketQueue & packetQueue()
     { return packetQueue_; }
@@ -725,9 +721,6 @@ namespace yae
     // virtual:
     bool open();
     
-    // virtual: get current position:
-    bool getPosition(TTime & t) const;
-    
     // virtual:
     bool decoderStartup();
     bool decoderShutdown();
@@ -742,7 +735,6 @@ namespace yae
     
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame);
-    bool getNextFrameDontWait(TVideoFramePtr & frame);
     
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
@@ -831,22 +823,6 @@ namespace yae
     return false;
   }
   
-  //----------------------------------------------------------------
-  // VideoTrack::getPosition
-  // 
-  bool
-  VideoTrack::getPosition(TTime & t) const
-  {
-    TVideoFramePtr curr;
-    if (frameQueue_.peekHead(curr))
-    {
-      t = curr->time_;
-      return true;
-    }
-    
-    return false;
-  }
-
   //----------------------------------------------------------------
   // insertPacketTime
   // 
@@ -1403,15 +1379,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::getNextFrameDontWait
-  // 
-  bool
-  VideoTrack::getNextFrameDontWait(TVideoFramePtr & frame)
-  {
-    return frameQueue_.tryPop(frame);
-  }
-  
-  //----------------------------------------------------------------
   // AudioTrack
   // 
   struct AudioTrack : public Track
@@ -1420,9 +1387,6 @@ namespace yae
     
     // virtual:
     bool open();
-    
-    // virtual: get current position:
-    bool getPosition(TTime & t) const;
     
     // virtual: FIXME: write me!
     bool decoderStartup();
@@ -1438,7 +1402,6 @@ namespace yae
     
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TAudioFramePtr & frame);
-    bool getNextFrameDontWait(TAudioFramePtr & frame);
     
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
@@ -1501,22 +1464,6 @@ namespace yae
       samplesDecoded_ = 0;
       
       return ok;
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // AudioTrack::getPosition
-  // 
-  bool
-  AudioTrack::getPosition(TTime & t) const
-  {
-    TAudioFramePtr curr;
-    if (frameQueue_.peekHead(curr))
-    {
-      t = curr->time_;
-      return true;
     }
     
     return false;
@@ -1975,15 +1922,6 @@ namespace yae
   AudioTrack::getNextFrame(TAudioFramePtr & frame)
   {
     return frameQueue_.pop(frame);
-  }
-  
-  //----------------------------------------------------------------
-  // AudioTrack::getNextFrameDontWait
-  // 
-  bool
-  AudioTrack::getNextFrameDontWait(TAudioFramePtr & frame)
-  {
-    return frameQueue_.tryPop(frame);
   }
   
   
@@ -2773,36 +2711,6 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getVideoPosition
-  // 
-  bool
-  ReaderFFMPEG::getVideoPosition(TTime & t) const
-  {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->getPosition(t);
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // ReaderFFMPEG::getAudioPosition
-  // 
-  bool
-  ReaderFFMPEG::getAudioPosition(TTime & t) const
-  {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->getPosition(t);
-    }
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
   // ReaderFFMPEG::seek
   // 
   bool
@@ -2841,38 +2749,6 @@ namespace yae
     
     AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
     return t->getNextFrame(frame);
-  }
-  
-  //----------------------------------------------------------------
-  // ReaderFFMPEG::readVideoDontWait
-  // 
-  bool
-  ReaderFFMPEG::readVideoDontWait(TVideoFramePtr & frame)
-  {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (private_->movie_.getVideoTracks().size() <= i)
-    {
-      return false;
-    }
-    
-    VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-    return t->getNextFrameDontWait(frame);
-  }
-  
-  //----------------------------------------------------------------
-  // ReaderFFMPEG::readAudioDontWait
-  // 
-  bool
-  ReaderFFMPEG::readAudioDontWait(TAudioFramePtr & frame)
-  {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (private_->movie_.getAudioTracks().size() <= i)
-    {
-      return false;
-    }
-    
-    AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-    return t->getNextFrameDontWait(frame);
   }
   
   //----------------------------------------------------------------

@@ -86,17 +86,11 @@ namespace yae
     
     virtual bool getAudioTraitsOverride(AudioTraits & override) const;
     virtual bool getVideoTraitsOverride(VideoTraits & override) const;
-
-    virtual bool getVideoPosition(TTime & t) const;
-    virtual bool getAudioPosition(TTime & t) const;
     
     virtual bool seek(const TTime & t);
     
     virtual bool readVideo(TVideoFramePtr & frame);
     virtual bool readAudio(TAudioFramePtr & frame);
-    
-    virtual bool readVideoDontWait(TVideoFramePtr & frame);
-    virtual bool readAudioDontWait(TAudioFramePtr & frame);
     
     virtual bool threadStart();
     virtual bool threadStop();
