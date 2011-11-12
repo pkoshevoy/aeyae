@@ -266,7 +266,6 @@ namespace yae
     // test the configuration:
     PaStream * testStream = NULL;
     PaStreamParameters testStreamParams;
-    unsigned int sampleSize;
 
     while (true)
     {
@@ -556,7 +555,7 @@ namespace yae
         std::size_t channelSize = samplesToRead * sampleSize_;
         if (dstPlanar)
         {
-          for (std::size_t i = 0; i < outputParams_.channelCount; i++)
+          for (int i = 0; i < outputParams_.channelCount; i++)
           {
             memset(dst[i], 0, channelSize);
           }
