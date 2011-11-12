@@ -56,6 +56,9 @@ namespace yae
     virtual bool getDeviceName(unsigned int deviceIndex,
                                std::string & deviceName) const = 0;
     
+    //! get device index of the device specified by name:
+    virtual unsigned int getDeviceIndex(const std::string & devName) const = 0;
+    
     //! get output device audio traits matched to source audio traits,
     //! however output device audio traits may not be exactly the same
     //! as the source traits due to hardware constraints:

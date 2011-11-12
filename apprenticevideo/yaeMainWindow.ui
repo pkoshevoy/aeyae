@@ -34,7 +34,29 @@
     <property name="title">
      <string>&amp;Playback</string>
     </property>
-    <widget class="QMenu" name="menuOverride_Aspect_Ratio">
+    <addaction name="actionShowTimeline"/>
+    <addaction name="actionShrinkWrap"/>
+    <addaction name="actionFullScreen"/>
+    <addaction name="separator"/>
+    <addaction name="actionColorConverter"/>
+   </widget>
+   <widget class="QMenu" name="menuAudio">
+    <property name="title">
+     <string>&amp;Audio</string>
+    </property>
+    <widget class="QMenu" name="menuAudioDevice">
+     <property name="title">
+      <string>Audio Device</string>
+     </property>
+    </widget>
+    <addaction name="menuAudioDevice"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuVideo">
+    <property name="title">
+     <string>&amp;Video</string>
+    </property>
+    <widget class="QMenu" name="menuAspectRatio">
      <property name="title">
       <string>Aspect Ratio</string>
      </property>
@@ -54,24 +76,9 @@
      <addaction name="actionCropFrame1_85"/>
      <addaction name="actionCropFrame2_35"/>
     </widget>
-    <addaction name="menuOverride_Aspect_Ratio"/>
+    <addaction name="menuAspectRatio"/>
     <addaction name="menuCropFrame"/>
     <addaction name="separator"/>
-    <addaction name="actionShowTimeline"/>
-    <addaction name="actionShrinkWrap"/>
-    <addaction name="actionFullScreen"/>
-    <addaction name="separator"/>
-    <addaction name="actionColorConverter"/>
-   </widget>
-   <widget class="QMenu" name="menuAudio">
-    <property name="title">
-     <string>&amp;Audio</string>
-    </property>
-   </widget>
-   <widget class="QMenu" name="menuVideo">
-    <property name="title">
-     <string>&amp;Video</string>
-    </property>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">

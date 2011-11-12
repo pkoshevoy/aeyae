@@ -7,6 +7,7 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <stdexcept>
@@ -39,6 +40,8 @@ namespace yae
     bool getDeviceName(unsigned int deviceIndex,
                        std::string & deviceName) const;
     
+    unsigned int getDeviceIndex(const std::string & audioDevice) const;
+    
     void match(unsigned int deviceIndex,
                const AudioTraits & source,
                AudioTraits & output) const;
@@ -47,6 +50,13 @@ namespace yae
     void close();
     
   private:
+    static bool openStream(PaDeviceIndex outputDevice,
+                           const AudioTraits & atts,
+                           PaStream ** outputStream,
+                           PaStreamParameters * outputParams,
+                           PaStreamCallback streamCallback,
+                           void * userData);
+    
     // portaudio stream callback:
     static int callback(const void * input,
                         void * output,
@@ -113,7 +123,8 @@ namespace yae
     for (PaDeviceIndex i = 0; i < nDevsTotal; i++)
     {
       const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
-      if (devInfo->maxOutputChannels < 1)
+      if (devInfo->maxOutputChannels < 1 ||
+          devInfo->maxOutputChannels > 21)
       {
         continue;
       }
@@ -190,30 +201,105 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::getDeviceIndex
+  // 
+  unsigned int
+  AudioRendererPortaudio::TPrivate::
+  getDeviceIndex(const std::string & audioDevice) const
+  {
+    std::size_t numDevs = outputDevices_.size();
+    for (std::size_t i = 0; i < numDevs; i++)
+    {
+      std::string devName;
+      if (getDeviceName(i, devName))
+      {
+        if (devName == audioDevice)
+        {
+          return i;
+        }
+      }
+    }
+    
+    return numDevs;
+  }
+
+  //----------------------------------------------------------------
+  // testCallback
+  // 
+  static int testCallback(const void * input,
+                          void * output,
+                          unsigned long samplesToRead, // per channel
+                          const PaStreamCallbackTimeInfo * timeInfo,
+                          PaStreamCallbackFlags statusFlags,
+                          void * userData)
+  {
+    return paComplete;
+  }
+  
+  //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::match
   // 
   void
   AudioRendererPortaudio::TPrivate::match(unsigned int deviceIndex,
-                                          const AudioTraits & source,
-                                          AudioTraits & output) const
+                                          const AudioTraits & srcAtts,
+                                          AudioTraits & outAtts) const
   {
-    if (&output != &source)
+    if (&outAtts != &srcAtts)
     {
-      output = source;
+      outAtts = srcAtts;
     }
     
-    if (output.sampleFormat_ == kAudioInvalidFormat)
+    if (outAtts.sampleFormat_ == kAudioInvalidFormat)
     {
       return;
     }
 
-    PaDeviceIndex paDevIndex = outputDevices_[deviceIndex];
-    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(paDevIndex);
+    PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputDevice);
     
-    int sourceChannels = getNumberOfChannels(source.channelLayout_);
+    int sourceChannels = getNumberOfChannels(srcAtts.channelLayout_);
     if (devInfo->maxOutputChannels < sourceChannels)
     {
-      output.channelLayout_ = TAudioChannelLayout(devInfo->maxOutputChannels);
+      outAtts.channelLayout_ = TAudioChannelLayout(devInfo->maxOutputChannels);
+    }
+    
+    // test the configuration:
+    PaStream * testStream = NULL;
+    PaStreamParameters testStreamParams;
+    unsigned int sampleSize;
+
+    while (true)
+    {
+      if (openStream(outputDevice,
+                     outAtts,
+                     &testStream,
+                     &testStreamParams,
+                     &testCallback,
+                     NULL))
+      {
+        break;
+      }
+      
+      if (outAtts.channelLayout_ > kAudioStereo)
+      {
+        outAtts.channelLayout_ = kAudioStereo;
+      }
+      else if (outAtts.channelLayout_ > kAudioMono)
+      {
+        outAtts.channelLayout_ = kAudioMono;
+      }
+      else
+      {
+        outAtts.channelLayout_ = kAudioChannelLayoutInvalid;
+        break;
+      }
+    }
+
+    if (testStream)
+    {
+      Pa_StopStream(testStream);
+      Pa_CloseStream(testStream);
+      testStream = NULL;
     }
   }
   
@@ -249,78 +335,20 @@ namespace yae
     }
     
     AudioTraits atts;
-    if (!reader_->getAudioTraitsOverride(atts) || 
-        atts.sampleFormat_ == kAudioInvalidFormat)
+    if (!reader_->getAudioTraitsOverride(atts))
     {
       return false;
     }
-
+    
     sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
     
-    outputParams_.device = outputDevices_[deviceIndex];
-    
-    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputParams_.device);
-    outputParams_.suggestedLatency = devInfo->defaultHighOutputLatency;
-    
-    outputParams_.hostApiSpecificStreamInfo = NULL;
-    outputParams_.channelCount = getNumberOfChannels(atts.channelLayout_);
-    
-    switch (atts.sampleFormat_)
-    {
-      case kAudio8BitOffsetBinary:
-        outputParams_.sampleFormat = paUInt8;
-        break;
-        
-      case kAudio16BitBigEndian:
-      case kAudio16BitLittleEndian:
-        outputParams_.sampleFormat = paInt16;
-        break;
-        
-      case kAudio32BitBigEndian:
-      case kAudio32BitLittleEndian:
-        outputParams_.sampleFormat = paInt32;
-        break;
-        
-      case kAudio24BitLittleEndian:
-        outputParams_.sampleFormat = paInt24;
-        break;
-        
-      case kAudio32BitFloat:
-        outputParams_.sampleFormat = paFloat32;
-        break;
-        
-      default:
-        return false;
-    }
-    
-    if (atts.channelFormat_ == kAudioChannelsPlanar)
-    {
-      outputParams_.sampleFormat |= paNonInterleaved;
-    }
-    
-    PaError errCode = Pa_OpenStream(&output_,
-                                    NULL,
-                                    &outputParams_,
-                                    double(atts.sampleRate_),
-                                    paFramesPerBufferUnspecified,
-                                    paNoFlag, // paClipOff,
-                                    &callback,
-                                    this);
-    if (errCode != paNoError)
-    {
-      output_ = NULL;
-      return false;
-    }
-    
-    errCode = Pa_StartStream(output_);
-    if (errCode != paNoError)
-    {
-      Pa_CloseStream(output_);
-      output_ = NULL;
-      return false;
-    }
-    
-    return true;
+    PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
+    return openStream(outputDevice,
+                      atts,
+                      &output_,
+                      &outputParams_,
+                      &callback,
+                      this);
   }
   
   //----------------------------------------------------------------
@@ -332,6 +360,89 @@ namespace yae
     open(0, NULL);
   }
 
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::openStream
+  // 
+  bool
+  AudioRendererPortaudio::TPrivate::
+  openStream(PaDeviceIndex outputDevice,
+             const AudioTraits & atts,
+             PaStream ** outputStream,
+             PaStreamParameters * outputParams,
+             PaStreamCallback streamCallback,
+             void * userData)
+  {
+    if (atts.sampleFormat_ == kAudioInvalidFormat)
+    {
+      return false;
+    }
+
+    outputParams->device = outputDevice;
+    
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputParams->device);
+    outputParams->suggestedLatency = devInfo->defaultHighOutputLatency;
+    
+    outputParams->hostApiSpecificStreamInfo = NULL;
+    outputParams->channelCount = getNumberOfChannels(atts.channelLayout_);
+    
+    switch (atts.sampleFormat_)
+    {
+      case kAudio8BitOffsetBinary:
+        outputParams->sampleFormat = paUInt8;
+        break;
+        
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        outputParams->sampleFormat = paInt16;
+        break;
+        
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
+        outputParams->sampleFormat = paInt32;
+        break;
+        
+      case kAudio24BitLittleEndian:
+        outputParams->sampleFormat = paInt24;
+        break;
+        
+      case kAudio32BitFloat:
+        outputParams->sampleFormat = paFloat32;
+        break;
+        
+      default:
+        return false;
+    }
+    
+    if (atts.channelFormat_ == kAudioChannelsPlanar)
+    {
+      outputParams->sampleFormat |= paNonInterleaved;
+    }
+    
+    PaError errCode = Pa_OpenStream(outputStream,
+                                    NULL,
+                                    outputParams,
+                                    double(atts.sampleRate_),
+                                    paFramesPerBufferUnspecified,
+                                    paNoFlag, // paClipOff,
+                                    streamCallback,
+                                    userData);
+    if (errCode != paNoError)
+    {
+      *outputStream = NULL;
+      return false;
+    }
+    
+    errCode = Pa_StartStream(*outputStream);
+    if (errCode != paNoError)
+    {
+      Pa_CloseStream(*outputStream);
+      *outputStream = NULL;
+      return false;
+    }
+    
+    return true;
+  }
+  
   //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::callback
   // 
@@ -387,26 +498,23 @@ namespace yae
     bool srcPlanar =
       audioFrame_->traits_.channelFormat_ == kAudioChannelsPlanar;
     
-    if (outputParams_.channelCount != srcChannels ||
-        sampleSize_ != srcSampleSize ||
-        dstPlanar != srcPlanar)
-    {
-      // detected stale leftovers:
-      YAE_ASSERT(false);
-      audioFrame_ = TAudioFramePtr();
-      audioFrameOffset_ = 0;
-      return paContinue;
-    }
+    unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
+    TTime frameDuration(samplesToRead, sampleRate);
+    TTime framePosition(audioFrame_->time_);
+    framePosition += TTime(audioFrameOffset_, sampleRate);
+
+    bool detectedStaleFrame =
+      (outputParams_.channelCount != srcChannels ||
+       sampleSize_ != srcSampleSize ||
+       dstPlanar != srcPlanar);
+    
+    std::size_t dstStride =
+      dstPlanar ? sampleSize_ : sampleSize_ * outputParams_.channelCount;
     
     std::size_t srcStride =
       srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
     
     std::size_t dstChunkSize = samplesToRead * srcStride;
-    
-    unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
-    TTime frameDuration(samplesToRead, sampleRate);
-    TTime framePosition(audioFrame_->time_);
-    framePosition += TTime(audioFrameOffset_, sampleRate);
     
     while (dstChunkSize)
     {
@@ -425,72 +533,95 @@ namespace yae
         srcSampleSize = getBitsPerSample(t.sampleFormat_) / 8;
         srcChannels = getNumberOfChannels(t.channelLayout_);
         srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
-        
-        if (outputParams_.channelCount != srcChannels ||
-            sampleSize_ != srcSampleSize ||
-            dstPlanar != srcPlanar)
-        {
-          // detected stale leftovers:
-          YAE_ASSERT(false);
-          audioFrame_ = TAudioFramePtr();
-          audioFrameOffset_ = 0;
-          return paContinue;
-        }
+
+        detectedStaleFrame =
+          (outputParams_.channelCount != srcChannels ||
+           sampleSize_ != srcSampleSize ||
+           dstPlanar != srcPlanar);
         
         srcStride = srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
       }
       
       clock_.waitForOthers();
-      
-      const unsigned char * srcBuf = audioFrame_->sampleBuffer_->samples(0);
-      std::size_t srcFrameSize = audioFrame_->sampleBuffer_->rowBytes(0);
-      std::size_t srcChunkSize = 0;
-      
-      std::vector<const unsigned char *> chunks;
-      if (!srcPlanar)
+
+      if (detectedStaleFrame)
       {
-        std::size_t bytesAlreadyConsumed = audioFrameOffset_ * srcStride;
+        std::cerr << "expected " << outputParams_.channelCount
+                  << " channels, received " << srcChannels
+                  << std::endl;
         
-        chunks.resize(1);
-        chunks[0] = srcBuf + bytesAlreadyConsumed;
-        srcChunkSize = srcFrameSize - bytesAlreadyConsumed;
-      }
-      else
-      {
-        std::size_t channelSize = srcFrameSize / srcChannels;
-        std::size_t bytesAlreadyConsumed = audioFrameOffset_ * srcSampleSize;
-        srcChunkSize = channelSize - bytesAlreadyConsumed;
-        
-        chunks.resize(srcChannels);
-        for (int i = 0; i < srcChannels; i++)
-        {
-          chunks[i] = srcBuf + i * channelSize + bytesAlreadyConsumed;
-        }
-      }
-      
-      // avoid buffer overrun:
-      std::size_t chunkSize = std::min(srcChunkSize, dstChunkSize);
-      
-      const std::size_t numChunks = chunks.size();
-      for (std::size_t i = 0; i < numChunks; i++)
-      {
-        memcpy(dst[i], chunks[i], chunkSize);
-        dst[i] += chunkSize;
-      }
-      
-      // decrement the output buffer chunk size:
-      dstChunkSize -= chunkSize;
-      
-      if (chunkSize < srcChunkSize)
-      {
-        std::size_t samplesConsumed = chunkSize / srcStride;
-        audioFrameOffset_ += samplesConsumed;
-      }
-      else
-      {
-        // the entire frame was consumed, release it:
         audioFrame_ = TAudioFramePtr();
         audioFrameOffset_ = 0;
+
+        std::size_t channelSize = samplesToRead * sampleSize_;
+        if (dstPlanar)
+        {
+          for (std::size_t i = 0; i < outputParams_.channelCount; i++)
+          {
+            memset(dst[i], 0, channelSize);
+          }
+        }
+        else
+        {
+          memset(dst[0], 0, channelSize * outputParams_.channelCount);
+        }
+        
+        audioFrame_ = TAudioFramePtr();
+        audioFrameOffset_ = 0;
+        break;
+      }
+      else
+      {
+        const unsigned char * srcBuf = audioFrame_->sampleBuffer_->samples(0);
+        std::size_t srcFrameSize = audioFrame_->sampleBuffer_->rowBytes(0);
+        std::size_t srcChunkSize = 0;
+        
+        std::vector<const unsigned char *> chunks;
+        if (!srcPlanar)
+        {
+          std::size_t bytesAlreadyConsumed = audioFrameOffset_ * srcStride;
+          
+          chunks.resize(1);
+          chunks[0] = srcBuf + bytesAlreadyConsumed;
+          srcChunkSize = srcFrameSize - bytesAlreadyConsumed;
+        }
+        else
+        {
+          std::size_t channelSize = srcFrameSize / srcChannels;
+          std::size_t bytesAlreadyConsumed = audioFrameOffset_ * srcSampleSize;
+          srcChunkSize = channelSize - bytesAlreadyConsumed;
+          
+          chunks.resize(srcChannels);
+          for (int i = 0; i < srcChannels; i++)
+          {
+            chunks[i] = srcBuf + i * channelSize + bytesAlreadyConsumed;
+          }
+        }
+        
+        // avoid buffer overrun:
+        std::size_t chunkSize = std::min(srcChunkSize, dstChunkSize);
+        
+        const std::size_t numChunks = chunks.size();
+        for (std::size_t i = 0; i < numChunks; i++)
+        {
+          memcpy(dst[i], chunks[i], chunkSize);
+          dst[i] += chunkSize;
+        }
+        
+        // decrement the output buffer chunk size:
+        dstChunkSize -= chunkSize;
+        
+        if (chunkSize < srcChunkSize)
+        {
+          std::size_t samplesConsumed = chunkSize / srcStride;
+          audioFrameOffset_ += samplesConsumed;
+        }
+        else
+        {
+          // the entire frame was consumed, release it:
+          audioFrame_ = TAudioFramePtr();
+          audioFrameOffset_ = 0;
+        }
       }
     }
     
@@ -575,6 +706,15 @@ namespace yae
                                         std::string & deviceName) const
   {
     return private_->getDeviceName(deviceIndex, deviceName);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::getDeviceIndex
+  // 
+  unsigned int
+  AudioRendererPortaudio::getDeviceIndex(const std::string & devName) const
+  {
+    return private_->getDeviceIndex(devName);
   }
 
   //----------------------------------------------------------------

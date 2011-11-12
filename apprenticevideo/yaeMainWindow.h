@@ -92,6 +92,7 @@ namespace yae
     void togglePlayback();
     
     // audio/video menus:
+    void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
 
@@ -104,6 +105,7 @@ namespace yae
     void moveTimeIn(double seconds);
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
+    void populateAudioDeviceMenu();
     
   protected:
     // virtual:
@@ -117,12 +119,17 @@ namespace yae
     void startRenderers(IReader * reader);
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
+    unsigned int adjustAudioTraitsOverride(IReader * reader);
     
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
     QShortcut * shortcutShowTimeline_;
     
+    // audio device selection widget:
+    QActionGroup * audioDeviceGroup_;
+    QSignalMapper * audioDeviceMapper_;
+
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
@@ -135,6 +142,9 @@ namespace yae
     
     // frame canvas:
     Canvas * canvas_;
+
+    // audio device:
+    std::string audioDevice_;
     
     // audio renderer:
     IAudioRenderer * audioRenderer_;
