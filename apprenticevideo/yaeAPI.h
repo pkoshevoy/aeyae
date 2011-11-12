@@ -62,6 +62,8 @@
 # else
 #  define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
 # endif
+#elif __GNUC__
+#  define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
 #else
 # define YAE_ASSERT(expr) assert(expr)
 #endif
