@@ -139,6 +139,11 @@ namespace yae
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
+
+    QPalette pal = palette();
+    pal.setColor(QPalette::Window, QColor(0, 0, 0));
+    pal.setColor(QPalette::Text, QColor(200, 200, 200));
+    setPalette(pal);
     
     // load graphics for direct manipulation handles:
     markerTimeIn_.image_ = QImage(":/images/timeIn.png");
