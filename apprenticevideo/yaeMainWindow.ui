@@ -46,7 +46,7 @@
     </property>
     <widget class="QMenu" name="menuAudioDevice">
      <property name="title">
-      <string>Audio Device</string>
+      <string>Output Device</string>
      </property>
     </widget>
     <addaction name="menuAudioDevice"/>
