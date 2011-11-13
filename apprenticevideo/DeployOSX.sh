@@ -482,7 +482,7 @@ DeployFile()
 			continue
 		fi
 		
-		FILE_ARCH=`file "${FILE}" | grep Mach-O | rev | cut -d' ' -f1 | rev`
+		FILE_ARCH=`lipo -info "${FILE}" | rev | cut -d' ' -f1 | rev`
 		IS_FRAMEWORK=`echo "${NEEDS}" | grep '\.framework/'`
 		IS_DEBUG=`echo "${NEEDS}" | grep _debug`
 		AT_LOAD_PATH=`echo "${NEEDS}" | grep '@loader_path/'`
