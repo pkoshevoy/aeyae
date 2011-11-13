@@ -368,6 +368,11 @@ namespace yae
     virtual bool decode(const TPacketPtr & packetPtr)
     { return false; }
     
+    // packet decoding thread:
+    virtual void threadLoop() {}
+    virtual bool threadStart();
+    virtual bool threadStop();
+    
   private:
     // intentionally disabled:
     Track(const Track &);
@@ -420,6 +425,7 @@ namespace yae
   // 
   Track::~Track()
   {
+    threadStop();
     close();
   }
   
@@ -434,6 +440,7 @@ namespace yae
       return false;
     }
     
+    threadStop();
     close();
     
     codec_ = avcodec_find_decoder(stream_->codec->codec_id);
@@ -555,6 +562,27 @@ namespace yae
     
     duration.time_ = stream_->time_base.num * stream_->duration;
     duration.base_ = stream_->time_base.den;
+  }
+  
+  //----------------------------------------------------------------
+  // Track::threadStart
+  // 
+  bool
+  Track::threadStart()
+  {
+    packetQueue_.open();
+    return thread_.run();
+  }
+  
+  //----------------------------------------------------------------
+  // Track::threadStop
+  // 
+  bool
+  Track::threadStop()
+  {
+    packetQueue_.close();
+    thread_.stop();
+    return thread_.wait();
   }
 
   //----------------------------------------------------------------
@@ -725,6 +753,10 @@ namespace yae
     bool decoderStartup();
     bool decoderShutdown();
     bool decode(const TPacketPtr & packetPtr);
+    
+    // virtual:
+    void threadLoop();
+    bool threadStop();
     
     // video traits, not overridden:
     bool getTraits(VideoTraits & traits) const;
@@ -1276,6 +1308,50 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // VideoTrack::threadLoop
+  // 
+  void
+  VideoTrack::threadLoop()
+  {
+    decoderStartup();
+    
+    while (true)
+    {
+      try
+      {
+        boost::this_thread::interruption_point();
+        
+        TPacketPtr packetPtr;
+        if (!packetQueue_.pop(packetPtr))
+        {
+          break;
+        }
+
+        if (!decode(packetPtr))
+        {
+          break;
+        }
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
+    
+    decoderShutdown();
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::threadStop
+  // 
+  bool
+  VideoTrack::threadStop()
+  {
+    frameQueue_.close();
+    return Track::threadStop();
+  }
+  
+  //----------------------------------------------------------------
   // VideoTrack::getTraits
   // 
   bool
@@ -1392,6 +1468,10 @@ namespace yae
     bool decoderStartup();
     bool decoderShutdown();
     bool decode(const TPacketPtr & packetPtr);
+    
+    // virtual:
+    void threadLoop();
+    bool threadStop();
     
     // audio traits, not overridden:
     bool getTraits(AudioTraits & traits) const;
@@ -1797,6 +1877,50 @@ namespace yae
     }
     
     return true;
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::threadLoop
+  // 
+  void
+  AudioTrack::threadLoop()
+  {
+    decoderStartup();
+    
+    while (true)
+    {
+      try
+      {
+        boost::this_thread::interruption_point();
+        
+        TPacketPtr packetPtr;
+        if (!packetQueue_.pop(packetPtr))
+        {
+          break;
+        }
+
+        if (!decode(packetPtr))
+        {
+          break;
+        }
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
+    
+    decoderShutdown();
+  }
+  
+  //----------------------------------------------------------------
+  // AudioTrack::threadStop
+  // 
+  bool
+  AudioTrack::threadStop()
+  {
+    frameQueue_.close();
+    return Track::threadStop();
   }
   
   //----------------------------------------------------------------
@@ -2215,6 +2339,9 @@ namespace yae
       audioTrack = audioTracks_[selectedAudioTrack_];
     }
     
+    PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
+    PacketQueueCloseOnExit audioCloseOnExit(audioTrack);
+
 #if 0
     // FIXME: just testing (seeking):
     {
@@ -2264,7 +2391,8 @@ namespace yae
           if (videoTrack &&
               videoTrack->streamIndex() == ffmpeg.stream_index)
           {
-            if (!videoTrack->decode(packet))
+            // if (!videoTrack->decode(packet))
+            if (!videoTrack->packetQueue().push(packet))
             {
               break;
             }
@@ -2272,7 +2400,8 @@ namespace yae
           else if (audioTrack &&
                    audioTrack->streamIndex() == ffmpeg.stream_index)
           {
-            if (!audioTrack->decode(packet))
+            // if (!audioTrack->decode(packet))
+            if (!audioTrack->packetQueue().push(packet))
             {
               break;
             }
@@ -2291,12 +2420,12 @@ namespace yae
 
     if (videoTrack)
     {
-      videoTrack->decoderShutdown();
+      // videoTrack->decoderShutdown();
     }
 
     if (audioTrack)
     {
-      audioTrack->decoderShutdown();
+      // audioTrack->decoderShutdown();
     }
   }
   
@@ -2314,13 +2443,15 @@ namespace yae
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
-      t->decoderStartup();
+      // t->decoderStartup();
+      t->threadStart();
     }
     
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
-      t->decoderStartup();
+      // t->decoderStartup();
+      t->threadStart();
     }
     
     return thread_.run();
@@ -2332,6 +2463,18 @@ namespace yae
   bool
   Movie::threadStop()
   {
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      t->threadStop();
+    }
+    
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      t->threadStop();
+    }
+    
     thread_.stop();
     return thread_.wait();
   }
