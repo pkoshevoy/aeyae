@@ -1,19 +1,37 @@
+#include "afxres.h"
+
 IDI_ICON1               ICON    DISCARDABLE     "apprenticevideo.ico"
 
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION	0,0,0,@PROJ_WC_REVISION@
+ PRODUCTVERSION	0,0,0,@PROJ_WC_REVISION@
+ FILEFLAGSMASK	0x3fL
+#ifdef _DEBUG
+ FILEFLAGS	0x1L
+#else
+ FILEFLAGS	0x0L
+#endif
+ FILEOS		0x40004L
+ FILETYPE	0x1L
+ FILESUBTYPE	0x0L
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
         BLOCK "040904b0"
         BEGIN
-			VALUE "Comments", "http://sourceforge.net/projects/apprenticevideo/develop"
+            VALUE "Comments", "http://sourceforge.net/projects/apprenticevideo/develop"
             VALUE "CompanyName", "Pavel Koshevoy"
             VALUE "FileDescription", "Video Player"
-            VALUE "FileVersion", "@PROJ_WC_REVISION@"
+            VALUE "FileVersion", "0.0.0.@PROJ_WC_REVISION@"
             VALUE "InternalName", "apprenticevideo"
             VALUE "LegalCopyright", "Copyright © 2010 Pavel Koshevoy"
             VALUE "OriginalFilename", "apprenticevideo.exe"
             VALUE "ProductName", "Apprentice Video"
-            VALUE "ProductVersion", "@PROJ_WC_REVISION@"
+            VALUE "ProductVersion", "0.0.0.@PROJ_WC_REVISION@"
         END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
     END
 END
