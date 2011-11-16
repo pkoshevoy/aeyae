@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 2.8.0)
 
-project(apprenticevideo)
+project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
+
+find_package(Subversion)
+if(Subversion_FOUND)
+  Subversion_WC_INFO(${PROJECT_SOURCE_DIR} PROJ)
+else(Subversion_FOUND)
+  set(PROJ_WC_REVISION "0")
+endif(Subversion_FOUND)
 
 find_package(OpenGL REQUIRED)
 
@@ -32,7 +39,7 @@ add_definitions(-DGLEW_STATIC=1)
 
 include_directories(AFTER 
   .
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
@@ -200,10 +207,29 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
+configure_file(
+  "${PROJECT_SOURCE_DIR}/yaeVersion.h.in"
+  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+
+execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
+  "${PROJECT_BINARY_DIR}/yaeVersion.h")
+
+set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/yaeVersion.h")
+
 # Set some Win32 Specific Settings
 if (WIN32)
   set(GUI_TYPE WIN32)
-  set(project_sources ${project_sources} ${PROGNAME}.rc)
+
+  configure_file(
+	"${PROJECT_SOURCE_DIR}/${PROGNAME}.rc.in"
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp")
+
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp"
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
+
+  set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 
   if (MSYS OR MINGW)
     set(CMAKE_RC_COMPILER_INIT windres)
@@ -216,10 +242,20 @@ endif (WIN32)
 # Set some Apple MacOS Specific settings
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
+
+  configure_file(
+	"${PROJECT_SOURCE_DIR}/${PROGNAME}.plist.in"
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp")
+
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp"
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
+
   set(project_sources 
     ${project_sources}
-    ${PROGNAME}.plist
-    ${PROGNAME}.icns)
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.plist"
+    ${PROGNAME}.icns
+	InfoPlist.strings)
 endif (APPLE)
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -476,15 +512,19 @@ target_link_libraries(${PROGNAME}
 if (APPLE)
   set_target_properties(${PROGNAME}
     PROPERTIES
-    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.plist)
+    MACOSX_BUNDLE_INFO_PLIST ${PROJECT_BINARY_DIR}/${PROGNAME}.plist)
 
-  set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/${PROGNAME}.icns
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/${PROGNAME}.icns
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
 
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
+    PROPERTIES
+    MACOSX_PACKAGE_LOCATION Resources/en.lproj)
+
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/DeployOSX.sh 
-    ARGS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh 
+    ARGS ${PROJECT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)

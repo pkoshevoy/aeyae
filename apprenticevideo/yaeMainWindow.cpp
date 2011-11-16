@@ -35,6 +35,7 @@
 #include <yaePixelFormatTraits.h>
 #include <yaeAudioRendererPortaudio.h>
 #include <yaeVideoRenderer.h>
+#include <yaeVersion.h>
 
 // local includes:
 #include <yaeMainWindow.h>
@@ -923,6 +924,8 @@ namespace yae
   MainWindow::helpAbout()
   {
     AboutDialog about(this);
+    about.setWindowTitle(tr("Apprentice Video (revision %1)").
+                         arg(QString::fromUtf8(YAE_REVISION)));
     about.exec();
   }
 

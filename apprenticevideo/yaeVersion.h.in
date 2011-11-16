@@ -1,0 +1,14 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created   : Tue Nov 15 21:51:19 MST 2011
+// Copyright : Pavel Koshevoy
+// License   : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+#ifndef YAE_VERSION_H_
+#define YAE_VERSION_H_
+
+#define YAE_REVISION "@PROJ_WC_REVISION@"
+
+#endif // YAE_VERSION_H_
