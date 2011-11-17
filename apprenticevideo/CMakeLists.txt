@@ -181,6 +181,23 @@ set(project_sources
   yaeVideoRenderer.cpp
   )
 
+if (APPLE)
+  include_directories(AFTER martinkahr-apple_remote_control)
+  
+  set(project_sources 
+	${project_sources} 
+	yaeAppleRemoteControl.h
+	yaeAppleRemoteControl.mm
+	martinkahr-apple_remote_control/AppleRemote.h
+	martinkahr-apple_remote_control/AppleRemote.m
+	martinkahr-apple_remote_control/HIDRemoteControlDevice.h
+	martinkahr-apple_remote_control/HIDRemoteControlDevice.m
+	martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
+	martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
+	martinkahr-apple_remote_control/RemoteControl.h
+	martinkahr-apple_remote_control/RemoteControl.m)
+endif (APPLE)
+
 find_path(PORTAUDIO_INCLUDE_DIR 
   portaudio.h
   PATHS
@@ -503,6 +520,18 @@ if (APPLE)
   if (CORE_SERVICES_FRAMEWORK)
     set(TARGET_LIBS ${TARGET_LIBS} ${CORE_SERVICES_FRAMEWORK})
   endif (CORE_SERVICES_FRAMEWORK)
+
+  find_library(COCOA_FRAMEWORK Cocoa)
+  mark_as_advanced(COCOA_FRAMEWORK)
+  if (COCOA_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${COCOA_FRAMEWORK})
+  endif (COCOA_FRAMEWORK)
+
+  find_library(IOKIT_FRAMEWORK IOKit)
+  mark_as_advanced(IOKIT_FRAMEWORK)
+  if (IOKIT_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${IOKIT_FRAMEWORK})
+  endif (IOKIT_FRAMEWORK)
 endif (APPLE)
 
 target_link_libraries(${PROGNAME}
