@@ -28,6 +28,7 @@
 #include <QMenu>
 #include <QShortcut>
 #include <QFileInfo>
+#include <QProcess>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -1090,7 +1091,8 @@ namespace yae
     {
       appleRemoteControl_ =
         appleRemoteControlOpen(true, // exclusive
-                               true, // count clicks
+                               false, // count clicks
+                               false, // simulate hold
                                &MainWindow::appleRemoteControlObserver,
                                this);
     }
@@ -1125,7 +1127,6 @@ namespace yae
         {
           if (rc->pressedDown_ && !rc->heldDown_)
           {
-            std::cerr << "toggle playback" << std::endl;
             togglePlayback();
           }
         }
@@ -1133,14 +1134,44 @@ namespace yae
         {
           if (rc->pressedDown_)
           {
-            std::cerr << "volume up" << std::endl;
+            // raise the volume:
+            static QStringList args;
+            
+            if (args.empty())
+            {
+              args << "-e" << ("set currentVolume to output "
+                               "volume of (get volume settings)")
+                   << "-e" << ("set volume output volume "
+                               "(currentVolume + 6.25)")
+                   << "-e" << ("do shell script \"afplay "
+                               "/System/Library/LoginPlugins"
+                               "/BezelServices.loginPlugin"
+                               "/Contents/Resources/volume.aiff\"");
+            }
+            
+            QProcess::startDetached("/usr/bin/osascript", args);
           }
         }
         else if (rc->buttonId_ == kRemoteControlVolumeDown)
         {
           if (rc->pressedDown_)
           {
-            std::cerr << "volume down" << std::endl;
+            // lower the volume:
+            static QStringList args;
+            
+            if (args.empty())
+            {
+              args << "-e" << ("set currentVolume to output "
+                               "volume of (get volume settings)")
+                   << "-e" << ("set volume output volume "
+                               "(currentVolume - 6.25)")
+                   << "-e" << ("do shell script \"afplay "
+                               "/System/Library/LoginPlugins"
+                               "/BezelServices.loginPlugin"
+                               "/Contents/Resources/volume.aiff\"");
+            }
+            
+            QProcess::startDetached("/usr/bin/osascript", args);
           }
         }
         
