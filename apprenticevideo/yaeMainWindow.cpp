@@ -305,6 +305,10 @@ namespace yae
     ok = connect(menuAudioDevice, SIGNAL(aboutToShow()),
                  this, SLOT(populateAudioDeviceMenu()));
     YAE_ASSERT(ok);
+
+    ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
+                 this, SLOT(focusChanged(QWidget *, QWidget *)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -1075,6 +1079,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::focusChanged
+  // 
+  void
+  MainWindow::focusChanged(QWidget * prev, QWidget * curr)
+  {
+    std::cerr << "focus changed: " << prev << " -> " << curr << std::endl;
+#ifdef __APPLE__
+    if (!appleRemoteControl_ && curr)
+    {
+      appleRemoteControl_ =
+        appleRemoteControlOpen(true, // exclusive
+                               true, // count clicks
+                               &MainWindow::appleRemoteControlObserver,
+                               this);
+    }
+    else if (appleRemoteControl_ && !curr)
+    {
+      appleRemoteControlClose(appleRemoteControl_);
+      appleRemoteControl_ = NULL;
+    }
+#endif
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::event
   // 
   bool
@@ -1122,40 +1150,6 @@ namespace yae
     }
     
     return QMainWindow::event(e);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::focusInEvent
-  // 
-  void
-  MainWindow::focusInEvent(QFocusEvent * e)
-  {
-#ifdef __APPLE__
-    appleRemoteControl_ =
-      appleRemoteControlOpen(true, // exclusive
-                             true, // count clicks
-                             &MainWindow::appleRemoteControlObserver,
-                             this);
-#endif
-    
-    QMainWindow::focusInEvent(e);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::focusOutEvent
-  // 
-  void
-  MainWindow::focusOutEvent(QFocusEvent * e)
-  {
-#ifdef __APPLE__
-    if (appleRemoteControl_)
-    {
-      appleRemoteControlClose(appleRemoteControl_);
-      appleRemoteControl_ = NULL;
-    }
-#endif
-    
-    QMainWindow::focusOutEvent(e);
   }
   
   //----------------------------------------------------------------

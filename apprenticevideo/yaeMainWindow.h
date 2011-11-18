@@ -109,12 +109,11 @@ namespace yae
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
     void populateAudioDeviceMenu();
+    void focusChanged(QWidget * prev, QWidget * curr);
     
   protected:
     // virtual:
     bool event(QEvent * e);
-    void focusInEvent(QFocusEvent * e);
-    void focusOutEvent(QFocusEvent * e);
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
