@@ -75,6 +75,9 @@ namespace yae
     void reset(const SharedClock & sharedClock, IReader * reader);
     void resetTimeInOut();
     
+    // helper:
+    double currentTime() const;
+    
     // virtual: thread safe, asynchronous, non-blocking:
     void currentTimeChanged(const TTime & currentTime);
     
@@ -95,6 +98,7 @@ namespace yae
   public slots:
     void setInPoint();
     void setOutPoint();
+    void seekFromCurrentTime(double offsetSeconds);
     
   protected:
     // virtual:

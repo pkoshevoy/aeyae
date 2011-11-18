@@ -176,6 +176,18 @@ namespace yae
   {}
   
   //----------------------------------------------------------------
+  // TimelineControls::currentTime
+  // 
+  double
+  TimelineControls::currentTime() const
+  {
+      double seconds =
+        markerPlayhead_.position_ * timelineDuration_ + timelineStart_;
+      
+      return seconds;
+  }
+  
+  //----------------------------------------------------------------
   // TimelineControls::timelineHasChanged
   // 
   void
@@ -253,6 +265,25 @@ namespace yae
       
       update();
     }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::seekFromCurrentTime
+  // 
+  void
+  TimelineControls::seekFromCurrentTime(double secOffset)
+  {
+    emit userIsSeeking(true);
+    double seconds = currentTime() + secOffset;
+    
+    double t = (seconds - timelineStart_) / timelineDuration_;
+    t = std::min(1.0, std::max(0.0, t));
+    
+    seconds = t * timelineDuration_ + timelineStart_;
+    clockPosition_ = getTimeStamp(seconds);
+    
+    emit movePlayHead(seconds);
+    emit userIsSeeking(false);
   }
   
   //----------------------------------------------------------------

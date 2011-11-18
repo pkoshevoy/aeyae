@@ -1174,6 +1174,17 @@ namespace yae
             QProcess::startDetached("/usr/bin/osascript", args);
           }
         }
+        else if (rc->buttonId_ == kRemoteControlLeftButton ||
+                 rc->buttonId_ == kRemoteControlRightButton)
+        {
+          if (rc->pressedDown_)
+          {
+            double offset =
+              (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
+            
+            timelineControls_->seekFromCurrentTime(offset);
+          }
+        }
         
         return true;
       }
