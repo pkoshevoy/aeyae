@@ -33,6 +33,7 @@
 // constructor:
 - (id) initWithExclusiveAccess: (BOOL) exclusiveAccess
                    countClicks: (BOOL) countClicks
+                  simulateHold: (BOOL) simulateHold
                       observer: (yae::TRemoteControlObserver) observer
                observerContext: (void *) observerContext;
 
@@ -78,6 +79,7 @@
 // 
 - (id) initWithExclusiveAccess: (BOOL) exclusiveAccess
                    countClicks: (BOOL) countClicks
+                  simulateHold: (BOOL) simulateHold
                       observer: (yae::TRemoteControlObserver) observer
                observerContext: (void *) observerContext
 {
@@ -88,6 +90,8 @@
   // It works like a middle man between the delegate and the remote control
   MultiClickRemoteBehavior * newRemoteBehavior = [MultiClickRemoteBehavior new];
   [newRemoteBehavior setDelegate: self];
+  [newRemoteBehavior setClickCountingEnabled: countClicks];
+  [newRemoteBehavior setSimulateHoldEvent: simulateHold];
   [newRemoteControl setDelegate: newRemoteBehavior];
 
   // set new remote control which will update bindings
@@ -182,12 +186,14 @@ namespace yae
   // 
   void * appleRemoteControlOpen(bool exclusiveAccess,
                                 bool countClicks,
+                                bool simulateHold,
                                 TRemoteControlObserver observer,
                                 void * observerContext)
   {
     TAppleRemoteControlBridge * rc =
       [[TAppleRemoteControlBridge alloc] initWithExclusiveAccess:exclusiveAccess
                                          countClicks:countClicks
+                                         simulateHold:simulateHold
                                          observer:observer
                                          observerContext:observerContext];
     return rc;

@@ -39,6 +39,7 @@ namespace yae
   // 
   void * appleRemoteControlOpen(bool exclusive,
                                 bool countClicks,
+                                bool simulateHold,
                                 TRemoteControlObserver observer,
                                 void * observerContext);
 
