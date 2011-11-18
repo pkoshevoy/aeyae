@@ -90,7 +90,7 @@ namespace yae
     std::list<QObject *> blocked_;
   };
   
-  
+#ifdef __APPLE__
   //----------------------------------------------------------------
   // RemoteControlEvent
   // 
@@ -112,7 +112,8 @@ namespace yae
     unsigned int clickCount_;
     bool heldDown_;
   };
-  
+#endif
+
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   // 
@@ -1481,6 +1482,7 @@ namespace yae
      return deviceIndex;
   }
 
+#ifdef __APPLE__
   //----------------------------------------------------------------
   // appleRemoteControlObserver
   // 
@@ -1497,5 +1499,5 @@ namespace yae
                                                        clickCount,
                                                        heldDown));
   }
-  
+#endif
 };
