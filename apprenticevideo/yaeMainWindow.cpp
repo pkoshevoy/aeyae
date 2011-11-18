@@ -89,6 +89,29 @@ namespace yae
     std::list<QObject *> blocked_;
   };
   
+  
+  //----------------------------------------------------------------
+  // RemoteControlEvent
+  // 
+  struct RemoteControlEvent : public QEvent
+  {
+    RemoteControlEvent(TRemoteControlButtonId buttonId,
+                       bool pressedDown,
+                       unsigned int clickCount,
+                       bool heldDown):
+      QEvent(QEvent::User),
+      buttonId_(buttonId),
+      pressedDown_(pressedDown),
+      clickCount_(clickCount),
+      heldDown_(heldDown)
+    {}
+    
+    TRemoteControlButtonId buttonId_;
+    bool pressedDown_;
+    unsigned int clickCount_;
+    bool heldDown_;
+  };
+  
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   // 
@@ -107,6 +130,10 @@ namespace yae
     playbackPaused_(false),
     playbackInterrupted_(false)
   {
+#ifdef __APPLE__
+    appleRemoteControl_ = NULL;
+#endif
+    
     setupUi(this);
     setAcceptDrops(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -115,7 +142,7 @@ namespace yae
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
-    
+
     // request vsync if available:
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
@@ -1048,6 +1075,90 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::event
+  // 
+  bool
+  MainWindow::event(QEvent * e)
+  {
+    if (e->type() == QEvent::User)
+    {
+#ifdef __APPLE__
+      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
+      if (rc)
+      {
+        rc->accept();
+        std::cerr << "remote control: " << rc->buttonId_
+                  << ", down: " << rc->pressedDown_
+                  << ", clicks: " << rc->clickCount_
+                  << ", held down: " << rc->heldDown_
+                  << std::endl;
+        
+        if (rc->buttonId_ == kRemoteControlPlayButton)
+        {
+          if (rc->pressedDown_ && !rc->heldDown_)
+          {
+            std::cerr << "toggle playback" << std::endl;
+            togglePlayback();
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeUp)
+        {
+          if (rc->pressedDown_)
+          {
+            std::cerr << "volume up" << std::endl;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeDown)
+        {
+          if (rc->pressedDown_)
+          {
+            std::cerr << "volume down" << std::endl;
+          }
+        }
+        
+        return true;
+      }
+#endif
+    }
+    
+    return QMainWindow::event(e);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::focusInEvent
+  // 
+  void
+  MainWindow::focusInEvent(QFocusEvent * e)
+  {
+#ifdef __APPLE__
+    appleRemoteControl_ =
+      appleRemoteControlOpen(true, // exclusive
+                             true, // count clicks
+                             &MainWindow::appleRemoteControlObserver,
+                             this);
+#endif
+    
+    QMainWindow::focusInEvent(e);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::focusOutEvent
+  // 
+  void
+  MainWindow::focusOutEvent(QFocusEvent * e)
+  {
+#ifdef __APPLE__
+    if (appleRemoteControl_)
+    {
+      appleRemoteControlClose(appleRemoteControl_);
+      appleRemoteControl_ = NULL;
+    }
+#endif
+    
+    QMainWindow::focusOutEvent(e);
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::closeEvent
   // 
   void
@@ -1332,6 +1443,23 @@ namespace yae
      }
 
      return deviceIndex;
+  }
+
+  //----------------------------------------------------------------
+  // appleRemoteControlObserver
+  // 
+  void
+  MainWindow::appleRemoteControlObserver(void * observerContext,
+                                         TRemoteControlButtonId buttonId,
+                                         bool pressedDown,
+                                         unsigned int clickCount,
+                                         bool heldDown)
+  {
+    MainWindow * mainWindow = (MainWindow *)observerContext;
+    qApp->postEvent(mainWindow, new RemoteControlEvent(buttonId,
+                                                       pressedDown,
+                                                       clickCount,
+                                                       heldDown));
   }
   
 };

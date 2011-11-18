@@ -16,12 +16,13 @@ namespace yae
   // TRemoteControlButtonId
   // 
   enum TRemoteControlButtonId {
-    kRemoteControlVolumeUp,
-    kRemoteControlVolumeDown,
-    kRemoteControlMenuButton,
-    kRemoteControlTogglePlayback,
-    kRemoteControlLeftButton,
-    kRemoteControlRightButton
+    kRemoteControlButtonUndefined = 0,
+    kRemoteControlVolumeUp        = 1,
+    kRemoteControlVolumeDown      = 2,
+    kRemoteControlMenuButton      = 3,
+    kRemoteControlPlayButton      = 4,
+    kRemoteControlLeftButton      = 5,
+    kRemoteControlRightButton     = 6
   };
   
   //----------------------------------------------------------------
@@ -29,27 +30,22 @@ namespace yae
   // 
   typedef void(*TRemoteControlObserver)(void * /* observerContext */,
                                         TRemoteControlButtonId /* button */,
-                                        bool /* pressed */,
-                                        bool /* held down autorepeat */,
-                                        unsigned int /* click count */);
+                                        bool /* pressed down */,
+                                        unsigned int /* click count */,
+                                        bool /* held down */);
 
   //----------------------------------------------------------------
   // appleRemoteControlOpen
   // 
   void * appleRemoteControlOpen(bool exclusive,
-                                bool countClicks);
+                                bool countClicks,
+                                TRemoteControlObserver observer,
+                                void * observerContext);
 
   //----------------------------------------------------------------
   // appleRemoteControlClose
   // 
   void appleRemoteControlClose(void * appleRemoteControl);
-
-  //----------------------------------------------------------------
-  // appleRemoteControlSetObserver
-  // 
-  void appleRemoteControlSetObserver(void * appleRemoteControl,
-                                     TRemoteControlObserver observer,
-                                     void * observerContext);
   
 }
 

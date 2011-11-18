@@ -22,7 +22,10 @@ else (QT4_FOUND)
   message(FATAL_ERROR "Cannot build without Qt4.  Please set QT4_DIR.")
 endif (QT4_FOUND)
 
-set(QT_USE_QTDBUS TRUE)
+if (QT_QTDBUS_FOUND)
+  set(QT_USE_QTDBUS TRUE)
+endif (QT_QTDBUS_FOUND)
+
 set(QT_USE_QTOPENGL TRUE)
 set(QT_USE_QTMAIN TRUE)
 include(${QT_USE_FILE})

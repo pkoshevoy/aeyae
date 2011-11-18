@@ -22,6 +22,9 @@
 #include <yaeAudioRenderer.h>
 #include <yaeVideoRenderer.h>
 #include <yaePlaybackControls.h>
+#ifdef __APPLE__
+#include <yaeAppleRemoteControl.h>
+#endif
 
 // local includes:
 #include "ui_yaeMainWindow.h"
@@ -109,6 +112,9 @@ namespace yae
     
   protected:
     // virtual:
+    bool event(QEvent * e);
+    void focusInEvent(QFocusEvent * e);
+    void focusOutEvent(QFocusEvent * e);
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
@@ -120,6 +126,16 @@ namespace yae
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     unsigned int adjustAudioTraitsOverride(IReader * reader);
+
+#ifdef __APPLE__
+    // for Apple Remote:
+    static void appleRemoteControlObserver(void * observerContext,
+                                           TRemoteControlButtonId buttonId,
+                                           bool pressedDown,
+                                           unsigned int clickCount,
+                                           bool heldDown);
+    void * appleRemoteControl_;
+#endif
     
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
