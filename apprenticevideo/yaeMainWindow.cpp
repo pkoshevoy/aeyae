@@ -1131,6 +1131,20 @@ namespace yae
             togglePlayback();
           }
         }
+        else if (rc->buttonId_ == kRemoteControlMenuButton)
+        {
+          if (rc->pressedDown_)
+          {
+            if (rc->heldDown_)
+            {
+              playbackShowTimeline();
+            }
+            else
+            {
+              playbackFullScreen();
+            }
+          }
+        }
         else if (rc->buttonId_ == kRemoteControlVolumeUp)
         {
           if (rc->pressedDown_)
