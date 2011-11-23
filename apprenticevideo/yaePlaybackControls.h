@@ -108,6 +108,7 @@ namespace yae
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
     void mouseMoveEvent(QMouseEvent * e);
+    void mouseDoubleClickEvent(QMouseEvent * e);
     void keyPressEvent(QKeyEvent * e);
 
     // accessors to coordinate system origin and x-axis unit length
@@ -217,10 +218,6 @@ namespace yae
     void togglePlayback();
     
   protected:
-    void closeEvent(QCloseEvent * e);
-    void keyPressEvent(QKeyEvent * e);
-    void mouseDoubleClickEvent(QMouseEvent * e);
-    
     // current playlist:
     QList<QUrl> playlist_;
   };

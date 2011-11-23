@@ -507,6 +507,31 @@ namespace yae
     
     update();
   }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::mouseDoubleClickEvent
+  // 
+  void
+  TimelineControls::mouseDoubleClickEvent(QMouseEvent * e)
+  {
+    int xOrigin = 0;
+    int yOriginInOut = 0;
+    int yOriginPlayhead = 0;
+    int unitLength = 0;
+    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
+    
+    QPoint pt = e->pos();
+    double t = double(pt.x() - xOrigin) / double(unitLength);
+    t = std::max(0.0, std::min(1.0, t));
+    markerPlayhead_.position_ = t;
+    
+    double seconds = t * timelineDuration_ + timelineStart_;
+    clockPosition_ = getTimeStamp(seconds);
+    
+    emit movePlayHead(seconds);
+    
+    update();
+  }
 
   //----------------------------------------------------------------
   // TimelineControls::keyPressEvent
@@ -561,27 +586,6 @@ namespace yae
   // PlaybackControls::~PlaybackControls
   // 
   PlaybackControls::~PlaybackControls()
-  {}
-
-  //----------------------------------------------------------------
-  // PlaybackControls::closeEvent
-  // 
-  void
-  PlaybackControls::closeEvent(QCloseEvent * e)
-  {}
-
-  //----------------------------------------------------------------
-  // PlaybackControls::keyPressEvent
-  // 
-  void
-  PlaybackControls::keyPressEvent(QKeyEvent * e)
-  {}
-  
-  //----------------------------------------------------------------
-  // PlaybackControls::mouseDoubleClickEvent
-  // 
-  void
-  PlaybackControls::mouseDoubleClickEvent(QMouseEvent * e)
   {}
   
 }
