@@ -318,9 +318,9 @@ the_rgba_word_t::dump(ostream & strm, unsigned int indent) const
 {
   strm << INDSCP << "the_rgba_word_t(" << (void *)this
        << ") data_ ="
-       << "  r: " << (void *)(int(data_[0]))
-       << ", g: " << (void *)(int(data_[1]))
-       << ", b: " << (void *)(int(data_[2]))
-       << ", a: " << (void *)(int(data_[3]))
+       << "  r: " << (void *)(size_t(data_[0]))
+       << ", g: " << (void *)(size_t(data_[1]))
+       << ", b: " << (void *)(size_t(data_[2]))
+       << ", a: " << (void *)(size_t(data_[3]))
        << endl;
 }

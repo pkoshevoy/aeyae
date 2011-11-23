@@ -15,6 +15,7 @@
 // system includes:
 #include <list>
 #include <algorithm>
+#include <stddef.h>
 
 
 namespace the
