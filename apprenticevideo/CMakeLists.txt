@@ -3,13 +3,6 @@ cmake_minimum_required(VERSION 2.8.0)
 project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
 
-find_package(Subversion)
-if(Subversion_FOUND)
-  Subversion_WC_INFO(${PROJECT_SOURCE_DIR} PROJ)
-else(Subversion_FOUND)
-  set(PROJ_WC_REVISION "0")
-endif(Subversion_FOUND)
-
 find_package(OpenGL REQUIRED)
 
 set(Boost_USE_MULTITHREAD ON)
@@ -188,17 +181,17 @@ if (APPLE)
   include_directories(AFTER martinkahr-apple_remote_control)
   
   set(project_sources 
-	${project_sources} 
-	yaeAppleRemoteControl.h
-	yaeAppleRemoteControl.mm
-	martinkahr-apple_remote_control/AppleRemote.h
-	martinkahr-apple_remote_control/AppleRemote.m
-	martinkahr-apple_remote_control/HIDRemoteControlDevice.h
-	martinkahr-apple_remote_control/HIDRemoteControlDevice.m
-	martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
-	martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
-	martinkahr-apple_remote_control/RemoteControl.h
-	martinkahr-apple_remote_control/RemoteControl.m)
+    ${project_sources} 
+    yaeAppleRemoteControl.h
+    yaeAppleRemoteControl.mm
+    martinkahr-apple_remote_control/AppleRemote.h
+    martinkahr-apple_remote_control/AppleRemote.m
+    martinkahr-apple_remote_control/HIDRemoteControlDevice.h
+    martinkahr-apple_remote_control/HIDRemoteControlDevice.m
+    martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
+    martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
+    martinkahr-apple_remote_control/RemoteControl.h
+    martinkahr-apple_remote_control/RemoteControl.m)
 endif (APPLE)
 
 find_path(PORTAUDIO_INCLUDE_DIR 
@@ -227,27 +220,21 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
-configure_file(
-  "${PROJECT_SOURCE_DIR}/yaeVersion.h.in"
-  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+add_custom_target("update revision" ALL
+  DEPENDS "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
-execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
-  "${PROJECT_BINARY_DIR}/yaeVersion.h")
+add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/yaeVersion.h"
+  COMMAND "${CMAKE_COMMAND}"
+  -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+  -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
+  -DPROGNAME="${PROGNAME}"
+  -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
 set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 # Set some Win32 Specific Settings
 if (WIN32)
   set(GUI_TYPE WIN32)
-
-  configure_file(
-	"${PROJECT_SOURCE_DIR}/${PROGNAME}.rc.in"
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp")
-
-  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp"
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 
   set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 
@@ -263,19 +250,11 @@ endif (WIN32)
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
 
-  configure_file(
-	"${PROJECT_SOURCE_DIR}/${PROGNAME}.plist.in"
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp")
-
-  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp"
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
-
   set(project_sources 
     ${project_sources}
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist"
     ${PROGNAME}.icns
-	InfoPlist.strings)
+    InfoPlist.strings)
 endif (APPLE)
 
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
@@ -560,5 +539,47 @@ if (APPLE)
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)
+
+if (WIN32)
+  add_executable(wixWrapper wixWrapper.cpp)
+
+  find_program(DEPENDENCY_WALKER NAMES depends.exe DOC 
+    "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
+
+  find_program(WIX_CANDLE NAMES candle.exe DOC 
+    "WiX compiler executable candle.exe, http://wix.sourceforge.net/")
+
+  find_program(WIX_LIT NAMES lit.exe DOC 
+    "WiX librarian executable lit.exe, http://wix.sourceforge.net/")
+
+  find_program(WIX_LIGHT NAMES light.exe DOC 
+    "WiX installer package linker light.exe, http://wix.sourceforge.net/")
+
+  set(ALLOWED_PATHS ${FFMPEG_LIBS_PATH} CACHE STRING 
+    "semicolon separated search path where dlls for Qt, portaudio, ffmpeg, etc... can be found")
+
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
+  file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
+  file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
+  file(TO_NATIVE_PATH "${WIX_LIT}" NATIVE_LIT_EXE)
+  file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
+  file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
+
+  add_custom_target("create installer" DEPENDS "${PROJECT_BINARY_DIR}/${PROGNAME}.msi")
+
+  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/${PROGNAME}.msi"
+    COMMAND wixWrapper
+    ARGS
+    "${NATIVE_PROGRAM_EXE}"
+    "${NATIVE_DEPENDS_EXE}"
+    "${NATIVE_CANDLE_EXE}"
+    "${NATIVE_LIT_EXE}"
+    "${NATIVE_LIGHT_EXE}"
+    "${NATIVE_ALLOWED_PATHS}"
+    DEPENDS ${PROGNAME}
+    COMMENT "create installer package"
+    )
+
+endif (WIN32)
 
 install(TARGETS ${PROGNAME} DESTINATION bin)
