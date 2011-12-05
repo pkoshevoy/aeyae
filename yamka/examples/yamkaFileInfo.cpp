@@ -32,7 +32,7 @@ usage(char ** argv, const char * message = NULL)
 {
   std::cerr << "USAGE: " << argv[0]
             << " -i source.mkv"
-            << " [-q]"
+            << " [-q] [--fast]"
             << std::endl;
   
   if (message != NULL)
