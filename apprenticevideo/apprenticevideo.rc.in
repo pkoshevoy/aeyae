@@ -21,10 +21,10 @@ BEGIN
         BEGIN
             VALUE "Comments", "http://sourceforge.net/projects/apprenticevideo/develop"
             VALUE "CompanyName", "Pavel Koshevoy"
-            VALUE "FileDescription", "Video Player"
+            VALUE "FileDescription", "Apprentice Video"
             VALUE "FileVersion", "0.0.0.@PROJ_WC_REVISION@"
             VALUE "InternalName", "apprenticevideo"
-            VALUE "LegalCopyright", "Copyright © 2010 Pavel Koshevoy"
+            VALUE "LegalCopyright", "Copyright © 2011 Pavel Koshevoy"
             VALUE "OriginalFilename", "apprenticevideo.exe"
             VALUE "ProductName", "Apprentice Video"
             VALUE "ProductVersion", "0.0.0.@PROJ_WC_REVISION@"

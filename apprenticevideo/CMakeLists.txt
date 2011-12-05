@@ -221,9 +221,9 @@ if (GLEW_INCLUDE_DIR)
 endif (GLEW_INCLUDE_DIR)
 
 add_custom_target("update revision" ALL
-  DEPENDS "${PROJECT_BINARY_DIR}/yaeVersion.h")
+  DEPENDS "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
 
-add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/yaeVersion.h"
+add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
   COMMAND "${CMAKE_COMMAND}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
@@ -271,6 +271,8 @@ add_executable(${PROGNAME}
   ${GUI_TYPE}
   ${project_sources}
   )
+
+add_dependencies(${PROGNAME} "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
 
 set(TARGET_LIBS
   ${GLEW_LIBRARY}
@@ -541,8 +543,13 @@ if (APPLE)
 endif (APPLE)
 
 if (WIN32)
-  add_executable(wixWrapper wixWrapper.cpp)
-
+  add_executable(wixWrapper 
+    wixWrapper.cpp
+    "${PROJECT_BINARY_DIR}/yaeVersion.h" 
+    )
+  
+  add_dependencies(wixWrapper "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+  
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC 
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
 
@@ -562,9 +569,13 @@ if (WIN32)
   file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
   file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
 
-  add_custom_target("create installer" DEPENDS "${PROJECT_BINARY_DIR}/${PROGNAME}.msi")
+  add_custom_target("create installer" 
+    ALL DEPENDS 
+    wixWrapper
+    "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
+    )
 
-  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/${PROGNAME}.msi"
+  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
     COMMAND wixWrapper
     ARGS
     "${NATIVE_PROGRAM_EXE}"
@@ -573,7 +584,7 @@ if (WIN32)
     "${NATIVE_ALLOWED_PATHS}"
     "${NATIVE_CANDLE_EXE}"
     "${NATIVE_LIGHT_EXE}"
-    DEPENDS ${PROGNAME}
+    DEPENDS ${PROGNAME} wixWrapper 
     COMMENT "create installer package"
     )
 

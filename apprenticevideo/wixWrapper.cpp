@@ -358,6 +358,31 @@ main(int argc, char ** argv)
       
       out << "      </File>"
           << std::endl;
+
+      static const char * supported[] = {
+        "3gp", "aac", "ac3", "aiff", "asf", "avi", "divx", "dv", "flv", "f4v",
+        "gif", "jpg", "mod", "mov", "mpeg", "mpg", "mp3", "mp4", "m2t", "m2ts",
+        "m2v", "m4a", "m4v", "mka", "mkv", "mts", "mxf", "ogg", "ogm", "ogv",
+        "png", "ra", "rm", "tif", "tiff", "ts", "vob", "wav", "wma", "wmv",
+        "weba", "webm" };
+
+      std::size_t numSupported = sizeof(supported) / sizeof(supported[0]);
+      for (std::size_t j = 0; j < numSupported; j++)
+      {
+        const char * ext = supported[j];
+        out << "      <ProgId Id='ApprenticeVideo." << ext << "' "
+            << "Icon='" << icon << "' IconIndex='0' Advertise='yes' "
+            << "Description='media file format "
+            << "supported by Apprentice Video'>\n"
+            << "       <Extension Id='" << ext << "'>\n"
+            << "        <Verb Id='open' Command='Open' "
+            << "Argument='&quot;%1&quot;' />\n"
+          // << "        <MIME Advertise='yes' "
+          // << "ContentType='video/x-matroska' Default='yes' />\n"
+            << "       </Extension>\n"
+            << "      </ProgId>"
+            << std::endl;
+      }
     }
     else
     {
