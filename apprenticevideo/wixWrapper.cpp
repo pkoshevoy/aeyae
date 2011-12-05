@@ -133,18 +133,20 @@ main(int argc, char ** argv)
   if (argc != 7)
   {
     std::cerr << "USAGE: " << argv[0]
-              << " module pathToDependsExe pathWixCandleExe pathWixLitExe pathWixLightExe allowed;search;path;list"
+              << " module pathToIconFile"
+              << " pathToDependsExe dlls;allowed;search;path;list"
+              << " pathWixCandleExe pathWixLightExe"
               << std::endl;
     return 1;
   }
   
-  std::string module(argv[1]);
-  std::string dependsExe(argv[2]);
   std::string dependsLog("depends-exe-log.txt");
-  std::string wixCandleExe(argv[3]);
-  std::string wixLitExe(argv[4]);
-  std::string wixLightExe(argv[5]);
-  std::string allowedPaths(argv[6]);
+  std::string module(argv[1]);
+  std::string iconFile(argv[2]);
+  std::string dependsExe(argv[3]);
+  std::string allowedPaths(argv[4]);
+  std::string wixCandleExe(argv[5]);
+  std::string wixLightExe(argv[6]);
 
   // call depends.exe:
   {
@@ -247,6 +249,7 @@ main(int argc, char ** argv)
             const std::string & pfx = *i;
             if (detect(pfx.c_str(), path, head, tail))
             {
+              std::cerr << "depends: " << path << std::endl;
               deps.push_back(path);
               break;
             }
@@ -266,6 +269,12 @@ main(int argc, char ** argv)
   {
     std::ostringstream os;
     os << "apprenticevideo-revision-" << YAE_REVISION;
+#ifdef _WIN64
+    os << "-win32-x64";
+#else
+    os << "-win32-x86";
+#endif
+    
     installerName.assign(os.str().c_str()); 
   }
   
@@ -297,17 +306,24 @@ main(int argc, char ** argv)
       << std::endl;
 
   out << "  <Media Id='1' Cabinet='product.cab' EmbedCab='yes' />\n"
-      << "  <Directory Id='TARGETDIR' Name='SourceDir'>\n"
-      << "   <Directory Id='ProgramFilesFolder' Name='PFiles'>\n"
-      << "    <Directory Id='ApprenticeVideo' Name='Apprentice Video'>"
+      << "  <Directory Id='TARGETDIR' Name='SourceDir'>\n";
+  
+#ifdef _WIN64
+  out << "   <Directory Id='ProgramFiles64Folder' Name='PFiles'>\n";
+#else
+  out << "   <Directory Id='ProgramFilesFolder' Name='PFiles'>\n";
+#endif
+  
+  out << "    <Directory Id='ApprenticeVideo' Name='Apprentice Video'>"
       << std::endl;
 
+  
+  std::string icon = getFileName(iconFile);
   
   for (std::size_t i = 0; i < deps.size(); i++)
   {
     const std::string & path = deps[i];
     std::string name = getFileName(path);
-    
     std::string guid = makeGuidStr();
     
     out << "     <Component Id='Component" << i << "' Guid='" << guid << "'>"
@@ -326,7 +342,7 @@ main(int argc, char ** argv)
           << "Directory='ProgramMenuDir' "
           << "Name='Apprentice Video' "
           << "WorkingDirectory='INSTALLDIR' "
-          << "Icon='" << name << "' "
+          << "Icon='" << icon << "' "
           << "IconIndex='0' "
           << "Advertise='yes' />"
           << std::endl;
@@ -335,7 +351,7 @@ main(int argc, char ** argv)
           << "Directory='DesktopFolder' "
           << "Name='Apprentice Video' "
           << "WorkingDirectory='INSTALLDIR' "
-          << "Icon='" << name <<"' "
+          << "Icon='" << icon <<"' "
           << "IconIndex='0' "
           << "Advertise='yes' />"
           << std::endl;
@@ -384,8 +400,8 @@ main(int argc, char ** argv)
   
   out << "   <ComponentRef Id='ProgramMenuDir' />\n"
       << "  </Feature>\n"
-      << "  <Icon Id='" << getFileName(module) << "' "
-      << "SourceFile='" << module << "' />"
+      << "  <Icon Id='" << icon << "' "
+      << "SourceFile='" << iconFile << "' />"
       << std::endl;
   
   out << " </Product>\n"

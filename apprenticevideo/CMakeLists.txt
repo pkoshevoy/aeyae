@@ -549,9 +549,6 @@ if (WIN32)
   find_program(WIX_CANDLE NAMES candle.exe DOC 
     "WiX compiler executable candle.exe, http://wix.sourceforge.net/")
 
-  find_program(WIX_LIT NAMES lit.exe DOC 
-    "WiX librarian executable lit.exe, http://wix.sourceforge.net/")
-
   find_program(WIX_LIGHT NAMES light.exe DOC 
     "WiX installer package linker light.exe, http://wix.sourceforge.net/")
 
@@ -559,11 +556,11 @@ if (WIN32)
     "semicolon separated search path where dlls for Qt, portaudio, ffmpeg, etc... can be found")
 
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
+  file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
   file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
-  file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
-  file(TO_NATIVE_PATH "${WIX_LIT}" NATIVE_LIT_EXE)
-  file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
   file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
+  file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
+  file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
 
   add_custom_target("create installer" DEPENDS "${PROJECT_BINARY_DIR}/${PROGNAME}.msi")
 
@@ -571,11 +568,11 @@ if (WIN32)
     COMMAND wixWrapper
     ARGS
     "${NATIVE_PROGRAM_EXE}"
+    "${NATIVE_PROGRAM_ICON}"
     "${NATIVE_DEPENDS_EXE}"
-    "${NATIVE_CANDLE_EXE}"
-    "${NATIVE_LIT_EXE}"
-    "${NATIVE_LIGHT_EXE}"
     "${NATIVE_ALLOWED_PATHS}"
+    "${NATIVE_CANDLE_EXE}"
+    "${NATIVE_LIGHT_EXE}"
     DEPENDS ${PROGNAME}
     COMMENT "create installer package"
     )
