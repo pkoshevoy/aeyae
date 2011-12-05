@@ -114,10 +114,11 @@ main(int argc, char ** argv)
   
   // initialize the canvas:
   yae::mainWindow->canvas()->initializePrivateBackend();
-  
-  for (int i = 1; i < argc; i++)
+
+  QStringList args = app.arguments();
+  for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
-    QString filename = QString::fromUtf8(argv[i]);
+    QString filename = *i;
     if (yae::mainWindow->load(filename))
     {
       break;
