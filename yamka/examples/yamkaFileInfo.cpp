@@ -31,8 +31,8 @@ static void
 usage(char ** argv, const char * message = NULL)
 {
   std::cerr << "USAGE: " << argv[0]
+            << " [-q] [--readEverything] [--skipClusters]"
             << " -i source.mkv"
-            << " [-q] [--fast]"
             << std::endl;
   
   if (message != NULL)
@@ -66,6 +66,55 @@ struct PartialReader : public IDelegateLoad
     return payloadBytesToRead;
   }
 };
+
+//----------------------------------------------------------------
+// SeekHeadReader
+// 
+// load everything up-to and including the first seekhead,
+// skip the rest until the end of the segment.
+// 
+struct SeekHeadReader : public IDelegateLoad
+{
+  bool gotSeekHeads_;
+  
+  SeekHeadReader():
+    gotSeekHeads_(false)
+  {}
+  
+  // virtual:
+  uint64 load(FileStorage & storage,
+              uint64 payloadBytesToRead,
+              uint64 eltId,
+              IPayload & payload)
+  {
+    if (gotSeekHeads_)
+    {
+      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+      return payloadBytesToRead;
+    }
+    
+    if (eltId != MatroskaDoc::TSegment::kId)
+    {
+      // let the generic load mechanism handle it:
+      return 0;
+    }
+    
+    // skip/postpone reading the cluster (to shorten file load time):
+    Segment & segment = dynamic_cast<Segment &>(payload);
+
+    uint64 bytesRead = eltsLoad(segment.seekHeads_,
+                                storage,
+                                payloadBytesToRead,
+                                NULL);
+    if (bytesRead)
+    {
+      gotSeekHeads_ = true;
+    }
+    
+    return bytesRead;
+  }
+};
+
 
 //----------------------------------------------------------------
 // Examiner
@@ -279,7 +328,8 @@ main(int argc, char ** argv)
 {
   Examiner::Verbosity verbosity = Examiner::kShowFileOffsets;
   std::string srcPath;
-  bool useFastLoader = false;
+  bool skipClusters = false;
+  bool useSeekHead = true;
   
   for (int i = 1; i < argc; i++)
   {
@@ -293,9 +343,13 @@ main(int argc, char ** argv)
     {
       verbosity = Examiner::kHideFileOffsets;
     }
-    else if (strcmp(argv[i], "--fast") == 0)
+    else if (strcmp(argv[i], "--skipClusters") == 0)
     {
-      useFastLoader = true;
+      skipClusters = true;
+    }
+    else if (strcmp(argv[i], "--readEverything") == 0)
+    {
+      useSeekHead = false;
     }
     else
     {
@@ -316,14 +370,26 @@ main(int argc, char ** argv)
   MatroskaDoc doc;
 
   PartialReader fastLoader;
-  IDelegateLoad * loader = useFastLoader ? &fastLoader : NULL;
+  SeekHeadReader seekHeadLoader;
+  
+  IDelegateLoad * loader =
+    useSeekHead ? (IDelegateLoad *)&seekHeadLoader :
+    skipClusters ? (IDelegateLoad *)&fastLoader :
+    NULL;
   
   uint64 bytesRead = doc.loadAndKeepReceipts(src, srcSize, loader);
   if (!bytesRead || doc.segments_.empty())
   {
     usage(argv, (std::string("source file has no matroska segments").c_str()));
   }
-
+  
+  if (useSeekHead)
+  {
+    // use the SeekHead to load the rest of the file:
+    loader = skipClusters ? &fastLoader : NULL;
+    doc.reloadViaSeekHead(src, loader);
+  }
+  
   Examiner examiner(verbosity);
   doc.eval(examiner);
   

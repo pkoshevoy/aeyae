@@ -985,6 +985,10 @@ namespace Yamka
     // resolve positional references (seeks, cues, etc...)
     void resolveReferences(const IElement * origin);
     
+    // reload the segment from storage based on SeekHead data:
+    bool reloadViaSeekHead(FileStorage & storage,
+                           IDelegateLoad * loader);
+    
     // enable saving CRC-32 checksums for level-1 elements:
     void setCrc32(bool enableCrc32);
     
@@ -1050,6 +1054,10 @@ namespace Yamka
     // resolve positional references (seeks, cues, etc...)
     // for each segment:
     void resolveReferences();
+
+    // reload each segment from storage based on segment SeekHead data:
+    bool reloadViaSeekHead(FileStorage & storage,
+                           IDelegateLoad * loader);
     
     // enable saving CRC-32 checksums for level-1 elements:
     void setCrc32(bool enableCrc32);

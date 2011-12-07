@@ -330,11 +330,14 @@ namespace Yamka
         payloadBytesToRead -= bytesRead;
       }
       
-      uint64 bytesRead = payload.load(storage,
-                                      payloadBytesToRead,
-                                      loader);
-      partialPayloadSize += bytesRead;
-      payloadBytesToRead -= bytesRead;
+      if (!partialPayloadSize)
+      {
+        uint64 bytesRead = payload.load(storage,
+                                        payloadBytesToRead,
+                                        loader);
+        partialPayloadSize += bytesRead;
+        payloadBytesToRead -= bytesRead;
+      }
       
       // consume any void elements that may exist:
       IPayload::TVoid eltVoid;

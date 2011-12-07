@@ -3960,6 +3960,228 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // Segment::reloadViaSeekHead
+  // 
+  bool
+  Segment::reloadViaSeekHead(FileStorage & storage,
+                             IDelegateLoad * loader)
+  {
+    // shortcuts:
+    typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
+    typedef std::list<TCluster>::iterator TClusterIter;
+    
+    typedef SeekHead::TSeekEntry TSeekEntry;
+    typedef std::list<TSeekEntry>::iterator TSeekEntryIter;
+    
+    typedef Cues::TCuePoint TCuePoint;
+    typedef std::list<TCuePoint>::iterator TCuePointIter;
+    
+    typedef CuePoint::TCueTrkPos TCueTrkPos;
+    typedef std::list<TCueTrkPos>::iterator TCueTrkPosIter;
+
+    // load any additional SeekHeads, if they exist:
+    bool ok = true;
+    for (std::size_t i = 0; i < seekHeads_.size(); i++)
+    {
+      TSeekHead & seekHead = seekHeads_[i];
+      seekHead.payload_.voids_.clear();
+      
+      std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
+      for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)
+      {
+        TSeekEntry & seek = *j;
+        
+        Bytes eltIdBytes;
+        if (!seek.payload_.id_.payload_.get(eltIdBytes))
+        {
+          ok = false;
+          continue;
+        }
+        
+        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        if (eltId != TSeekHead::kId)
+        {
+          continue;
+        }
+        
+        VEltPosition & eltReference = seek.payload_.position_.payload_;
+        if (!eltReference.hasPosition())
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        const IElement * origin = eltReference.getOrigin();
+        if (!origin)
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        IStorage::IReceiptPtr originReceipt = origin->payloadReceipt();
+        if (!originReceipt)
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        uint64 originPosition = originReceipt->position();
+        uint64 relativePosition = eltReference.position();
+        uint64 absolutePosition = originPosition + relativePosition;
+
+        const IElement * elt = eltReference.getElt();
+        if (elt)
+        {
+          // this SeekHead is already loaded:
+          continue;
+        }
+
+        // add another SeekHead:
+        seekHeads_.push_back(TSeekHead());
+        TSeekHead & seekHead2 = seekHeads_.back();
+
+        // update the reference:
+        eltReference.setElt(&seekHead2);
+        
+        // load the SeekHead:
+        if (!storage.file_.seek(absolutePosition, File::kAbsolutePosition))
+        {
+          assert(false);
+          ok = false;
+        }
+        else if (!seekHead2.load(storage, uintMax[8], loader))
+        {
+          assert(false);
+          ok = false;
+        }
+        else
+        {
+          std::list<TSeekEntry> & seeks2 = seekHead2.payload_.seek_;
+          for (TSeekEntryIter k = seeks2.begin(); k != seeks2.end(); ++k)
+          {
+            TSeekEntry & seek2 = *k;
+            seek2.payload_.position_.payload_.setOrigin(origin);
+          }
+        }
+      }
+    }
+    
+    info_ = TInfo();
+    tracks_ = TTracks();
+    cues_ = TCues();
+    attachments_ = TAttachment();
+    chapters_ = TChapters();
+    tags_.clear();
+    clusters_.clear();
+    
+    for (std::size_t i = 0; i < seekHeads_.size(); i++)
+    {
+      TSeekHead & seekHead = seekHeads_[i];
+      std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
+      
+      for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)
+      {
+        TSeekEntry & seek = *j;
+        
+        Bytes eltIdBytes;
+        if (!seek.payload_.id_.payload_.get(eltIdBytes))
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        if (eltId == TSeekHead::kId)
+        {
+          // all SeekHeads should have been loaded by now:
+          continue;
+        }
+        
+        VEltPosition & eltReference = seek.payload_.position_.payload_;
+        if (!eltReference.hasPosition())
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        const IElement * origin = eltReference.getOrigin();
+        if (!origin)
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        IStorage::IReceiptPtr originReceipt = origin->payloadReceipt();
+        if (!originReceipt)
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+        
+        uint64 originPosition = originReceipt->position();
+        uint64 relativePosition = eltReference.position();
+        uint64 absolutePosition = originPosition + relativePosition;
+
+        if (!storage.file_.seek(absolutePosition, File::kAbsolutePosition))
+        {
+          assert(false);
+          ok = false;
+          continue;
+        }
+
+        uint64 bytesRead = 0;
+        if (eltId == TInfo::kId)
+        {
+          bytesRead = info_.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TTracks::kId)
+        {
+          bytesRead = tracks_.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TCues::kId)
+        {
+          bytesRead = cues_.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TAttachment::kId)
+        {
+          bytesRead = attachments_.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TChapters::kId)
+        {
+          bytesRead = chapters_.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TTags::kId)
+        {
+          tags_.push_back(TTags());
+          TTags & tag = tags_.back();
+          bytesRead = tag.load(storage, uintMax[8], loader);
+        }
+        else if (eltId == TCluster::kId)
+        {
+          clusters_.push_back(TCluster());
+          TCluster & cluster = clusters_.back();
+          bytesRead = cluster.load(storage, uintMax[8], loader);
+        }
+
+        if (!bytesRead)
+        {
+          assert(false);
+          ok = false;
+        }
+      }
+    }
+
+    return ok;
+  }
+  
+  //----------------------------------------------------------------
   // Segment::setCrc32
   // 
   void
@@ -4269,6 +4491,31 @@ namespace Yamka
       TSegment & segment = *i;
       segment.payload_.resolveReferences(&segment);
     }
+  }
+  
+  //----------------------------------------------------------------
+  // MatroskaDoc::reloadViaSeekHead
+  // 
+  bool
+  MatroskaDoc::reloadViaSeekHead(FileStorage & storage,
+                                 IDelegateLoad * loader)
+  {
+    // shortcut:
+    typedef std::list<TSegment>::iterator TSegmentIter;
+    
+    bool ok = true;
+    for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+    {
+      TSegment & segment = *i;
+      if (!segment.payload_.reloadViaSeekHead(storage, loader))
+      {
+        ok = false;
+      }
+      
+      segment.payload_.resolveReferences(&segment);
+    }
+    
+    return ok;
   }
   
   //----------------------------------------------------------------
