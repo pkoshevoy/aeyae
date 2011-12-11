@@ -326,6 +326,14 @@ namespace Yamka
                                         payloadBytesToRead,
                                         eltId,
                                         payload);
+        if (bytesRead == uintMax[8])
+        {
+          // special case, indicating that the loader doesn't
+          // want to read any more data:
+          storageStart.doRestore();
+          return 0;
+        }
+        
         partialPayloadSize += bytesRead;
         payloadBytesToRead -= bytesRead;
       }
