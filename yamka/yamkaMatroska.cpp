@@ -3960,11 +3960,12 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // Segment::reloadViaSeekHead
+  // Segment::loadViaSeekHead
   // 
   bool
-  Segment::reloadViaSeekHead(FileStorage & storage,
-                             IDelegateLoad * loader)
+  Segment::loadViaSeekHead(FileStorage & storage,
+                           IDelegateLoad * loader,
+                           bool loadClusters)
   {
     // shortcuts:
     typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
@@ -4163,7 +4164,7 @@ namespace Yamka
           TTags & tag = tags_.back();
           bytesRead = tag.load(storage, uintMax[8], loader);
         }
-        else if (eltId == TCluster::kId)
+        else if (eltId == TCluster::kId && loadClusters)
         {
           clusters_.push_back(TCluster());
           TCluster & cluster = clusters_.back();
@@ -4494,11 +4495,88 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // MatroskaDoc::reloadViaSeekHead
+  // SeekHeadReader
+  // 
+  // load everything up-to and including the first seekhead,
+  // skip the rest until the end of the segment.
+  // 
+  struct SeekHeadReader : public IDelegateLoad
+  {
+    bool loadedSeekHead_;
+    
+    SeekHeadReader():
+      loadedSeekHead_(false)
+    {}
+    
+    // virtual:
+    uint64 load(FileStorage & storage,
+                uint64 payloadBytesToRead,
+                uint64 eltId,
+                IPayload & payload)
+    {
+      if (loadedSeekHead_)
+      {
+        storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+        return payloadBytesToRead;
+      }
+      
+      if (eltId != MatroskaDoc::TSegment::kId)
+      {
+        // let the generic load mechanism handle it:
+      return 0;
+      }
+      
+      // skip/postpone reading the cluster (to shorten file load time):
+      Segment & segment = dynamic_cast<Segment &>(payload);
+      
+      uint64 bytesRead = eltsLoad(segment.seekHeads_,
+                                  storage,
+                                  payloadBytesToRead,
+                                  NULL);
+      if (bytesRead)
+      {
+        loadedSeekHead_ = true;
+      }
+      
+      return bytesRead;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // MatroskaDoc::loadSeekHead
   // 
   bool
-  MatroskaDoc::reloadViaSeekHead(FileStorage & storage,
-                                 IDelegateLoad * loader)
+  MatroskaDoc::loadSeekHead(FileStorage & storage,
+                            uint64 bytesToRead)
+  {
+    typedef std::list<TSegment>::iterator TSegmentIter;
+    segments_.clear();
+    
+    SeekHeadReader seekHeadLoader;
+    uint64 bytesRead = loadAndKeepReceipts(storage,
+                                           bytesToRead,
+                                           &seekHeadLoader);
+
+    bool ok = false;
+    for (TSegmentIter i = segments_.begin(); i != segments_.end() && !ok; ++i)
+    {
+      TSegment & segment = *i;
+      if (!segment.payload_.seekHeads_.empty())
+      {
+        ok = true;
+      }
+    }
+    
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // MatroskaDoc::loadViaSeekHead
+  // 
+  bool
+  MatroskaDoc::loadViaSeekHead(FileStorage & storage,
+                               IDelegateLoad * loader,
+                               bool loadClusters)
   {
     // shortcut:
     typedef std::list<TSegment>::iterator TSegmentIter;
@@ -4507,7 +4585,7 @@ namespace Yamka
     for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
     {
       TSegment & segment = *i;
-      if (!segment.payload_.reloadViaSeekHead(storage, loader))
+      if (!segment.payload_.loadViaSeekHead(storage, loader, loadClusters))
       {
         ok = false;
       }
@@ -4627,6 +4705,300 @@ namespace Yamka
     // doc.setCrc32(false);
     Optimizer optimizer(storageForTempData);
     eval(optimizer);
+  }
+  
+  
+  //----------------------------------------------------------------
+  // WebmSegmentSaver
+  // 
+  struct WebmSegmentSaver : public Segment::IDelegateSave
+  {
+    // virtual:
+    IStorage::IReceiptPtr
+    save(const Segment & segment, IStorage & storage)
+    {
+      IStorage::IReceiptPtr receipt = storage.receipt();
+      
+      typedef std::deque<Segment::TSeekHead>::const_iterator TSeekHeadIter;
+      TSeekHeadIter seekHeadIter = segment.seekHeads_.begin();
+      
+      // save the first seekhead:
+      if (seekHeadIter != segment.seekHeads_.end())
+      {
+        const Segment::TSeekHead & seekHead = *seekHeadIter;
+        *receipt += seekHead.save(storage);
+        ++seekHeadIter;
+      }
+      
+      *receipt += segment.info_.save(storage);
+      *receipt += segment.tracks_.save(storage);
+      *receipt += segment.chapters_.save(storage);
+      *receipt += segment.cues_.save(storage);
+      *receipt += segment.attachments_.save(storage);
+      *receipt += eltsSave(segment.tags_, storage);
+      *receipt += eltsSave(segment.clusters_, storage);
+      
+      // save any remaining seekheads:
+      for (; seekHeadIter != segment.seekHeads_.end(); ++seekHeadIter)
+      {
+        const Segment::TSeekHead & seekHead = *seekHeadIter;
+        *receipt += seekHead.save(storage);
+      }
+      
+      return receipt;
+    }
+  };
+  
+  
+  //----------------------------------------------------------------
+  // WebmDoc::WebmDoc
+  // 
+  WebmDoc::WebmDoc(TFileFormat fileFormat):
+    MatroskaDoc(),
+    fileFormat_(fileFormat)
+  {
+    if (fileFormat_ == kFileFormatWebm)
+    {
+      // Webm uses "webm" DocType.
+      // However, most Matroska tools will not work
+      // if DocType is not "matroska".
+      // Therefore, we set DocType to "webm" and append
+      // a Void element to it so that "webm" + Void element
+      // can be replaced with "matroska" if necessary.
+      
+      EbmlDoc::head_.payload_.docType_.payload_.set("webm");
+      EbmlDoc::head_.payload_.docType_.payload_.addVoid(2);
+    }
+    
+    // Must set DocType...Version to 2 because we use SimpleBlock:
+    EbmlDoc::head_.payload_.docTypeVersion_.payload_.set(2);
+    EbmlDoc::head_.payload_.docTypeReadVersion_.payload_.set(2);
+  }
+  
+  //----------------------------------------------------------------
+  // WebmDoc::save
+  // 
+  IStorage::IReceiptPtr
+  WebmDoc::save(IStorage & storage) const
+  {
+    if (fileFormat_ == kFileFormatWebm)
+    {
+      // shortcut:
+      typedef std::list<TSegment>::const_iterator TSegmentIter;
+      
+      // override how the segments will be saved:
+      for (TSegmentIter i = segments_.begin(); i != segments_.end(); ++i)
+      {
+        const TSegment & segment = *i;
+        segment.payload_.delegateSave_.reset(new WebmSegmentSaver);
+      }
+    }
+    
+    // let the base class handle everything else as usual:
+    return MatroskaDoc::save(storage);
+  }
+  
+  
+  //----------------------------------------------------------------
+  // TimeSpan::TimeSpan
+  // 
+  TimeSpan::TimeSpan():
+    start_(0),
+    extent_(0),
+    base_(0)
+  {}
+  
+  //----------------------------------------------------------------
+  // TimeSpan::getStart
+  // 
+  uint64
+  TimeSpan::getStart(uint64 base) const
+  {
+    uint64 ta = uint64(double(start_ * base) / double(base_));
+    return ta;
+  }
+  
+  //----------------------------------------------------------------
+  // TimeSpan::getExtent
+  // 
+  uint64
+  TimeSpan::getExtent(uint64 base) const
+  {
+    uint64 te = uint64(double(extent_ * base) / double(base_));
+    return te;
+  }
+  
+  //----------------------------------------------------------------
+  // TimeSpan::getEnd
+  // 
+  uint64
+  TimeSpan::getEnd(uint64 base) const
+  {
+    uint64 tb = uint64(double((start_ + extent_) * base) / double(base_));
+    return tb;
+  }
+  
+  //----------------------------------------------------------------
+  // TimeSpan::setStart
+  // 
+  void
+  TimeSpan::setStart(uint64 t, uint64 base)
+  {
+    start_ = uint64(double(t * base_) / double(base));
+  }
+  
+  //----------------------------------------------------------------
+  // TimeSpan::expand
+  // 
+  void
+  TimeSpan::expand(uint64 t, uint64 base)
+  {
+    uint64 tb = uint64(double(t * base_) / double(base));
+    if (tb > start_)
+    {
+      uint64 te = tb - start_;
+      extent_ = std::max(te, extent_);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // TimeSpan::contains
+  // 
+  bool
+  TimeSpan::contains(uint64 t, uint64 base) const
+  {
+    uint64 ta = getStart(base);
+    uint64 tb = getEnd(base);
+    bool isInside = (t >= ta) && (t < tb);
+    return isInside;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // Frame::Frame
+  // 
+  Frame::Frame():
+    trackNumber_(0),
+    isKeyframe_(false)
+  {}
+  
+  
+  //----------------------------------------------------------------
+  // GroupOfFrames::GroupOfFrames
+  // 
+  GroupOfFrames::GroupOfFrames(uint64 timebase):
+    minStart_(std::numeric_limits<uint64>::max()),
+    maxStart_(std::numeric_limits<uint64>::min())
+  {
+    ts_.base_ = timebase;
+  }
+  
+  //----------------------------------------------------------------
+  // GroupOfFrames::mayAdd
+  // 
+  bool
+  GroupOfFrames::mayAdd(const Frame & frame) const
+  {
+    if (frames_.empty())
+    {
+      return true;
+    }
+    
+    uint64 groupStart = ts_.start_;
+    uint64 frameStart = frame.ts_.getStart(ts_.base_);
+    uint64 distFromStart =
+      frameStart > groupStart ?
+      frameStart - groupStart :
+      groupStart - frameStart;
+    
+    bool withinLimit = distFromStart < kShortDistLimit;
+    return withinLimit;
+  }
+  
+  //----------------------------------------------------------------
+  // GroupOfFrames::add
+  // 
+  void
+  GroupOfFrames::add(const Frame & frame)
+  {
+    uint64 frameStart = frame.ts_.getStart(ts_.base_);
+    uint64 frameEnd = frame.ts_.getEnd(ts_.base_);
+    
+    if (frames_.empty())
+    {
+      ts_.setStart(frameStart, ts_.base_);
+    }
+    ts_.expand(frameEnd, ts_.base_);
+    
+    minStart_ = std::min(frameStart, minStart_);
+    maxStart_ = std::max(frameStart, maxStart_);
+    
+    frames_.push_back(frame);
+  }
+  
+  
+  //----------------------------------------------------------------
+  // MetaCluster::MetaCluster
+  // 
+  MetaCluster::MetaCluster(bool allowMultipleKeyframes):
+    allowMultipleKeyframes_(allowMultipleKeyframes)
+  {}
+  
+  //----------------------------------------------------------------
+  // MetaCluster::mayAdd
+  // 
+  bool
+  MetaCluster::mayAdd(const GroupOfFrames & gof) const
+  {
+    if (frames_.empty())
+    {
+      return true;
+    }
+    else if (!allowMultipleKeyframes_)
+    {
+      return false;
+    }
+    
+    assert(ts_.base_ == gof.ts_.base_);
+    
+    uint64 clusterStart = ts_.start_;
+    uint64 groupMin = gof.minStart_;
+    uint64 groupMax = gof.maxStart_;
+    
+    uint64 distMin =
+      groupMin > clusterStart ?
+      groupMin - clusterStart :
+      clusterStart - groupMin;
+    
+    uint64 distMax =
+      groupMax > clusterStart ?
+      groupMax - clusterStart :
+      clusterStart - groupMax;
+    
+    bool withinLimit =
+      (distMin < kShortDistLimit) &&
+      (distMax < kShortDistLimit);
+    
+    return withinLimit;
+  }
+  
+  //----------------------------------------------------------------
+  // MetaCluster::add
+  // 
+  void
+  MetaCluster::add(const GroupOfFrames & gof)
+  {
+    if (frames_.empty())
+    {
+      ts_ = gof.ts_;
+    }
+    
+    assert(ts_.base_ == gof.ts_.base_);
+    
+    uint64 gofEnd = gof.ts_.getEnd(ts_.base_);
+    ts_.expand(gofEnd, ts_.base_);
+    
+    frames_.insert(frames_.end(), gof.frames_.begin(), gof.frames_.end());
   }
   
 }

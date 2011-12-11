@@ -67,54 +67,6 @@ struct PartialReader : public IDelegateLoad
   }
 };
 
-//----------------------------------------------------------------
-// SeekHeadReader
-// 
-// load everything up-to and including the first seekhead,
-// skip the rest until the end of the segment.
-// 
-struct SeekHeadReader : public IDelegateLoad
-{
-  bool gotSeekHeads_;
-  
-  SeekHeadReader():
-    gotSeekHeads_(false)
-  {}
-  
-  // virtual:
-  uint64 load(FileStorage & storage,
-              uint64 payloadBytesToRead,
-              uint64 eltId,
-              IPayload & payload)
-  {
-    if (gotSeekHeads_)
-    {
-      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
-      return payloadBytesToRead;
-    }
-    
-    if (eltId != MatroskaDoc::TSegment::kId)
-    {
-      // let the generic load mechanism handle it:
-      return 0;
-    }
-    
-    // skip/postpone reading the cluster (to shorten file load time):
-    Segment & segment = dynamic_cast<Segment &>(payload);
-
-    uint64 bytesRead = eltsLoad(segment.seekHeads_,
-                                storage,
-                                payloadBytesToRead,
-                                NULL);
-    if (bytesRead)
-    {
-      gotSeekHeads_ = true;
-    }
-    
-    return bytesRead;
-  }
-};
-
 
 //----------------------------------------------------------------
 // Examiner
@@ -370,24 +322,28 @@ main(int argc, char ** argv)
   MatroskaDoc doc;
 
   PartialReader fastLoader;
-  SeekHeadReader seekHeadLoader;
+  IDelegateLoad * loader = skipClusters ? &fastLoader : NULL;
   
-  IDelegateLoad * loader =
-    useSeekHead ? (IDelegateLoad *)&seekHeadLoader :
-    skipClusters ? (IDelegateLoad *)&fastLoader :
-    NULL;
+  uint64 bytesRead = 0;
+
+  if (useSeekHead)
+  {
+    bool loadClusters = !skipClusters;
+    
+    if (doc.loadSeekHead(src, srcSize) &&
+        doc.loadViaSeekHead(src, loader, loadClusters))
+    {
+      bytesRead = srcSize;
+    }
+  }
+  else
+  {
+    bytesRead = doc.loadAndKeepReceipts(src, srcSize, loader);
+  }
   
-  uint64 bytesRead = doc.loadAndKeepReceipts(src, srcSize, loader);
   if (!bytesRead || doc.segments_.empty())
   {
     usage(argv, (std::string("source file has no matroska segments").c_str()));
-  }
-  
-  if (useSeekHead)
-  {
-    // use the SeekHead to load the rest of the file:
-    loader = skipClusters ? &fastLoader : NULL;
-    doc.reloadViaSeekHead(src, loader);
   }
   
   Examiner examiner(verbosity);

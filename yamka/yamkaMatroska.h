@@ -985,9 +985,10 @@ namespace Yamka
     // resolve positional references (seeks, cues, etc...)
     void resolveReferences(const IElement * origin);
     
-    // reload the segment from storage based on SeekHead data:
-    bool reloadViaSeekHead(FileStorage & storage,
-                           IDelegateLoad * loader);
+    // load the segment from storage based on SeekHead data:
+    bool loadViaSeekHead(FileStorage & storage,
+                         IDelegateLoad * loader,
+                         bool loadClusters);
     
     // enable saving CRC-32 checksums for level-1 elements:
     void setCrc32(bool enableCrc32);
@@ -1055,9 +1056,14 @@ namespace Yamka
     // for each segment:
     void resolveReferences();
 
-    // reload each segment from storage based on segment SeekHead data:
-    bool reloadViaSeekHead(FileStorage & storage,
-                           IDelegateLoad * loader);
+    // partiually load each segment up to and including the first SeekHead:
+    bool loadSeekHead(FileStorage & storage,
+                      uint64 bytesToRead);
+
+    // load each segment from storage based on segment SeekHead data:
+    bool loadViaSeekHead(FileStorage & storage,
+                         IDelegateLoad * loader = NULL,
+                         bool loadClusters = false);
     
     // enable saving CRC-32 checksums for level-1 elements:
     void setCrc32(bool enableCrc32);
@@ -1069,6 +1075,154 @@ namespace Yamka
     std::list<TSegment> segments_;
   };
   
+  //----------------------------------------------------------------
+  // TFileFormat
+  // 
+  typedef enum
+  {
+    kFileFormatMatroska,
+    kFileFormatWebm
+  } TFileFormat;
+  
+  //----------------------------------------------------------------
+  // WebmDoc
+  // 
+  // 1. Webm requires "webm" DocType
+  // 2. Webm requires Cues to be saved ahead of the Clusters
+  // 
+  struct WebmDoc : public MatroskaDoc
+  {
+    WebmDoc(TFileFormat fileFormat);
+    
+    // virtual:
+    IStorage::IReceiptPtr
+    save(IStorage & storage) const;
+    
+    // helper:
+    static IStorage::IReceiptPtr
+    saveSegment(const Segment & segment, IStorage & storage);
+    
+    // which format are we writing to:
+    TFileFormat fileFormat_;
+  };
+  
+  //----------------------------------------------------------------
+  // TimeSpan
+  // 
+  struct TimeSpan
+  {
+    TimeSpan();
+    
+    // return extreme points of this time span expressed in a given timebase:
+    uint64 getStart(uint64 base) const;
+    uint64 getExtent(uint64 base) const;
+    uint64 getEnd(uint64 base) const;
+    
+    // set the start point of this time span, expressed in given time base:
+    void setStart(uint64 t, uint64 base);
+    
+    // expand this time span to include a given time point.
+    // NOTE: given timepoint must not precede the start point
+    //     of this time span.
+    void expand(uint64 t, uint64 base);
+    
+    // check whether a given timepoint (expressed in given time base)
+    // falls within this time span:
+    bool contains(uint64 t, uint64 base) const;
+    
+    // numerator (position in time base units):
+    uint64 start_;
+
+    // numerator (duration in time base units)
+    uint64 extent_;
+    
+    // denominator (units per second):
+    uint64 base_;
+  };
+  
+  //----------------------------------------------------------------
+  // Frame
+  // 
+  struct Frame
+  {
+    Frame();
+    
+    // what track does this Frame belong to:
+    uint64 trackNumber_;
+    
+    // where is this Frame on the timeline, in seconds:
+    TimeSpan ts_;
+    
+    // frame data:
+    VBinary data_;
+    
+    // keyframe flag:
+    bool isKeyframe_;
+  };
+  
+  
+  //----------------------------------------------------------------
+  // kShortDistLimit
+  // 
+  enum { kShortDistLimit = 0x7fff };
+  
+  
+  //----------------------------------------------------------------
+  // GroupOfFrames
+  // 
+  struct GroupOfFrames
+  {
+    GroupOfFrames(uint64 timebase);
+    
+    // check whether another frame may be added to this group
+    // without exceeding the short distance limit (interpreted
+    // in this groups time base) from frame start point
+    // to the start point of this group:
+    bool mayAdd(const Frame & frame) const;
+    
+    // add a frame to the group:
+    void add(const Frame & frame);
+    
+    // where is this group on the timeline, in seconds:
+    TimeSpan ts_;
+    
+    // min and max start point over all frames containes in this group,
+    // expressed in this groups time base:
+    uint64 minStart_;
+    uint64 maxStart_;
+    
+    // a list of frames included in this group:
+    std::list<Frame> frames_;
+  };
+  
+  //----------------------------------------------------------------
+  // MetaCluster
+  // 
+  struct MetaCluster
+  {
+    MetaCluster(bool allowMultipleKeyframes);
+    
+    // check whether another group of frames may be added to this cluster
+    // without exceeding the short distance limit (interpreted in
+    // this clusters time base) from min/max GOF start point
+    // to the start point of this cluster:
+    bool mayAdd(const GroupOfFrames & gof) const;
+    
+    // add a group of frames to this cluster:
+    void add(const GroupOfFrames & gof);
+    
+    // where is this cluster on the timeline, in seconds:
+    TimeSpan ts_;
+    
+    // a list of frames included in this group:
+    std::list<Frame> frames_;
+    
+    // a flag to control whether multiple multiple keyframes may be stored
+    // in a cluster (not appropriate for streaming, many players will only
+    // seek to the first keyframe in the cluster):
+    bool allowMultipleKeyframes_;
+  };
+
 }
 
 
