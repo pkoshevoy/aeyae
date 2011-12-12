@@ -4171,7 +4171,7 @@ namespace Yamka
           bytesRead = cluster.load(storage, uintMax[8], loader);
         }
 
-        if (!bytesRead)
+        if (!bytesRead && (eltId != TCluster::kId || loadClusters))
         {
           assert(false);
           ok = false;
@@ -4997,8 +4997,60 @@ namespace Yamka
     
     uint64 gofEnd = gof.ts_.getEnd(ts_.base_);
     ts_.expand(gofEnd, ts_.base_);
+
+    for (std::list<Frame>::const_iterator i = gof.frames_.begin();
+         i != gof.frames_.end(); ++i)
+    {
+      const Frame & frame = *i;
+      frames_[frame.trackNumber_].push_back(frame);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // MetaCluster::getSortedFrames
+  // 
+  void
+  MetaCluster::getSortedFrames(std::list<Frame> & output) const
+  {
+    typedef TTrackFrames::iterator TIter;
     
-    frames_.insert(frames_.end(), gof.frames_.begin(), gof.frames_.end());
+    std::map<uint64, std::list<Frame> > tracks = frames_;
+    output.clear();
+    
+    while (true)
+    {
+      double bestTime = 0.0;
+      std::list<Frame> * bestTrack = NULL;
+      
+      for (TIter i = tracks.begin(); i != tracks.end(); )
+      {
+        std::list<Frame> & track = i->second;
+        if (track.empty())
+        {
+          i = tracks.erase(i);
+          continue;
+        }
+        
+        const Frame & frame = track.front();
+        double frameTime = double(frame.ts_.start_) / double(frame.ts_.base_);
+        
+        if (!bestTrack || frameTime < bestTime)
+        {
+          bestTrack = &track;
+          bestTime = frameTime;
+        }
+        
+        ++i;
+      }
+      
+      if (!bestTrack)
+      {
+        break;
+      }
+      
+      output.push_back(bestTrack->front());
+      bestTrack->pop_front();
+    }
   }
   
 }

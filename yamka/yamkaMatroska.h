@@ -15,6 +15,7 @@
 #include <yamkaEBML.h>
 
 // system includes:
+#include <map>
 #include <list>
 #include <deque>
 
@@ -1210,12 +1211,17 @@ namespace Yamka
     
     // add a group of frames to this cluster:
     void add(const GroupOfFrames & gof);
+
+    // get frames sorted in ascending order (per timestamp),
+    // while preserving the order of frames per track:
+    void getSortedFrames(std::list<Frame> & output) const;
     
     // where is this cluster on the timeline, in seconds:
     TimeSpan ts_;
     
-    // a list of frames included in this group:
-    std::list<Frame> frames_;
+    // a list of frames included in this group, per track:
+    typedef std::map<uint64, std::list<Frame> > TTrackFrames;
+    TTrackFrames frames_;
     
     // a flag to control whether multiple multiple keyframes may be stored
     // in a cluster (not appropriate for streaming, many players will only
