@@ -841,13 +841,18 @@ main(int argc, char ** argv)
         }
         
         GroupOfFrames & gof = gofs.back();
-        do
+        while (true)
         {
           if (gof.mayAdd(frame))
           {
-            frames.pop_front();
             gof.add(frame);
             addedFrames = true;
+            
+            frames.pop_front();
+            if (frames.empty())
+            {
+              break;
+            }
           }
           else
           {
@@ -857,7 +862,6 @@ main(int argc, char ** argv)
           
           frame = frames.front();
         }
-        while (!frames.empty());
       }
 
       if (!addedFrames)
