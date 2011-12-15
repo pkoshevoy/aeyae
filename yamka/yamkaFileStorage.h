@@ -31,6 +31,7 @@ namespace Yamka
     // virtual:
     IReceiptPtr save(const Bytes & data);
     IReceiptPtr load(Bytes & data);
+    IReceiptPtr skip(uint64 numBytes);
 
     //----------------------------------------------------------------
     // Receipt

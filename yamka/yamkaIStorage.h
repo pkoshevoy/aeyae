@@ -72,8 +72,14 @@ namespace Yamka
       // by adding number of stored bytes in a given receipt:
       IReceipt & operator += (const IReceiptPtr & receipt);
     };
+
+    // If a storage implementation does not actually load/save
+    // any data it should override this to return true.
+    // A NULL storage implementation is useful for file layout optimization.
+    virtual bool isNullStorage() const
+    { return false; }
     
-    // get a receipt for the current storage state:
+    // get a receipt for the current storage position:
     virtual IReceiptPtr receipt() const = 0;
     
     // NOTE: IStorage::save always appends at the end of the file:
@@ -81,6 +87,9 @@ namespace Yamka
     
     // NOTE: IStorage::load always reads from current storage position:
     virtual IReceiptPtr load(Bytes & data) = 0;
+    
+    // NOTE: IStorage::skip always skips from current storage position:
+    virtual IReceiptPtr skip(uint64 numBytes) = 0;
   };
   
   //----------------------------------------------------------------
@@ -94,6 +103,9 @@ namespace Yamka
     NullStorage(uint64 currentPostion = 0);
     
     // virtual:
+    bool isNullStorage() const;
+    
+    // virtual:
     IReceiptPtr receipt() const;
     
     // virtual:
@@ -101,6 +113,9 @@ namespace Yamka
     
     // virtual: not supported for null-storage:
     IReceiptPtr load(Bytes & data);
+    
+    // virtual:
+    IReceiptPtr skip(uint64 numBytes);
     
     //----------------------------------------------------------------
     // Receipt

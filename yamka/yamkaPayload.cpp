@@ -662,6 +662,12 @@ namespace Yamka
       return IStorage::IReceiptPtr();
     }
     
+    if (storage.isNullStorage())
+    {
+      // don't bother loading the data when saving to NULL storage:
+      return storage.skip(receipt_->numBytes());
+    }
+    
     Bytes data((std::size_t)receipt_->numBytes());
     if (!receipt_->load(data))
     {
@@ -678,9 +684,7 @@ namespace Yamka
   uint64
   VBinary::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    
-    receipt_ = storage.load(bytes);
+    receipt_ = storage.skip(bytesToRead);
     if (!receipt_)
     {
       return 0;

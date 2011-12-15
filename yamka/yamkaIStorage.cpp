@@ -45,6 +45,15 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // NullStorage::isNullStorage
+  // 
+  bool
+  NullStorage::isNullStorage() const
+  {
+    return true;
+  }
+  
+  //----------------------------------------------------------------
   // NullStorage::save
   // 
   IStorage::IReceiptPtr
@@ -66,6 +75,20 @@ namespace Yamka
   NullStorage::load(Bytes & data)
   {
     return IReceiptPtr();
+  }
+  
+  //----------------------------------------------------------------
+  // NullStorage::skip
+  // 
+  IStorage::IReceiptPtr
+  NullStorage::skip(uint64 numBytes)
+  {
+    IStorage::IReceiptPtr receipt(new Receipt(currentPosition_));
+    
+    currentPosition_ += numBytes;
+    receipt->add(numBytes);
+    
+    return receipt;
   }
   
   //----------------------------------------------------------------

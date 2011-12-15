@@ -69,6 +69,22 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // FileStorage::skip
+  // 
+  IStorage::IReceiptPtr
+  FileStorage::skip(uint64 numBytes)
+  {
+    IStorage::IReceiptPtr receipt(new Receipt(file_));
+    if (!file_.seek(numBytes, File::kRelativeToCurrent))
+    {
+      return IStorage::IReceiptPtr();
+    }
+    
+    receipt->add(numBytes);
+    return receipt;
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::Receipt::Receipt
   // 
   FileStorage::Receipt::Receipt(const File & file):
