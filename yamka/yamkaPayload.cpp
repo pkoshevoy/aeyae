@@ -548,7 +548,7 @@ namespace Yamka
   VBinary &
   VBinary::set(const Bytes & bytes, IStorage & storage)
   {
-    receipt_ = storage.save(bytes);
+    data_.set(bytes, storage);
     return *this;
   }
 
@@ -558,13 +558,7 @@ namespace Yamka
   bool
   VBinary::get(Bytes & bytes) const
   {
-    if (!receipt_)
-    {
-      return false;
-    }
-    
-    bytes = Bytes((std::size_t)receipt_->numBytes());
-    return receipt_->load(bytes);
+    return data_.get(bytes);
   }
   
   //----------------------------------------------------------------
@@ -573,8 +567,8 @@ namespace Yamka
   VBinary &
   VBinary::setDefault(const Bytes & bytes, IStorage & storage)
   {
-    receiptDefault_ = storage.save(bytes);
-    receipt_ = receiptDefault_;
+    dataDefault_.set(bytes, storage);
+    data_ = dataDefault_;
     return *this;
   }
   
@@ -593,47 +587,7 @@ namespace Yamka
   bool
   VBinary::isDefault() const
   {
-    if (receiptDefault_ && receipt_)
-    {
-      std::size_t sizeDefault = (std::size_t)receiptDefault_->numBytes();
-      std::size_t size = (std::size_t)receipt_->numBytes();
-      
-      if (sizeDefault != size)
-      {
-        return false;
-      }
-      
-      if (size == 0)
-      {
-        return true;
-      }
-      
-      if (receiptDefault_ == receipt_)
-      {
-        return true;
-      }
-      
-      Bytes bytesDefault(sizeDefault);
-      if (receiptDefault_->load(bytesDefault))
-      {
-        // default payload can't be read:
-        return false;
-      }
-      
-      Bytes bytes(size);
-      if (!receipt_->load(bytes))
-      {
-        // payload can't be read:
-        return true;
-      }
-      
-      // compare byte vectors:
-      bool same = (bytesDefault.bytes_->front() ==
-                   bytes.bytes_->front());
-      return same;
-    }
-    
-    return !receipt_;
+    return data_ == dataDefault_;
   }
   
   //----------------------------------------------------------------
@@ -642,12 +596,7 @@ namespace Yamka
   uint64
   VBinary::calcSize() const
   {
-    if (!receipt_)
-    {
-      return 0;
-    }
-    
-    return receipt_->numBytes();
+    return data_.numBytes();
   }
   
   //----------------------------------------------------------------
@@ -656,26 +605,7 @@ namespace Yamka
   IStorage::IReceiptPtr
   VBinary::save(IStorage & storage) const
   {
-    if (!receipt_)
-    {
-      assert(false);
-      return IStorage::IReceiptPtr();
-    }
-    
-    if (storage.isNullStorage())
-    {
-      // don't bother loading the data when saving to NULL storage:
-      return storage.skip(receipt_->numBytes());
-    }
-    
-    Bytes data((std::size_t)receipt_->numBytes());
-    if (!receipt_->load(data))
-    {
-      assert(false);
-      return IStorage::IReceiptPtr();
-    }
-    
-    return storage.save(data);
+    return data_.save(storage);
   }
   
   //----------------------------------------------------------------
@@ -684,13 +614,7 @@ namespace Yamka
   uint64
   VBinary::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    receipt_ = storage.skip(bytesToRead);
-    if (!receipt_)
-    {
-      return 0;
-    }
-    
-    return receipt_->numBytes();
+    return data_.load(storage, bytesToRead);
   }
   
   

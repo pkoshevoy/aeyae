@@ -20,6 +20,8 @@
 
 namespace Yamka
 {
+  // forward declarations:
+  struct HodgePodge;
   
   //----------------------------------------------------------------
   // IStorage
@@ -62,6 +64,7 @@ namespace Yamka
       // return false if load/save fails:
       virtual bool save(const Bytes & data) = 0;
       virtual bool load(Bytes & data) = 0;
+      virtual bool load(TByte * data) = 0;
       
       // compute CRC-32 checksum on data covered by this receipt,
       // skip data in region specied by receiptSkip:
@@ -71,6 +74,10 @@ namespace Yamka
       // increase number of stored bytes for this receipt
       // by adding number of stored bytes in a given receipt:
       IReceipt & operator += (const IReceiptPtr & receipt);
+
+      // create a receipt for a contiguous region of data
+      // contained within this receipt:
+      virtual IReceiptPtr receipt(uint64 offset, uint64 size) const = 0;
     };
 
     // If a storage implementation does not actually load/save
@@ -90,6 +97,13 @@ namespace Yamka
     
     // NOTE: IStorage::skip always skips from current storage position:
     virtual IReceiptPtr skip(uint64 numBytes) = 0;
+
+    // set the HodgePodge storage receipt according to the current
+    // storage position and the requested number of bytes.
+    // 
+    // NOTE: this is the same as skip(numBytes) above, except that
+    // the resulting storage receipt is also stored in the hodgePodge:
+    IReceiptPtr loadHodgePodge(HodgePodge & hodgePodge, uint64 numBytes);
   };
   
   //----------------------------------------------------------------
@@ -122,7 +136,7 @@ namespace Yamka
     // 
     struct Receipt : public IReceipt
     {
-      Receipt(uint64 addr);
+      Receipt(uint64 addr, uint64 numBytes = 0);
       
       // virtual:
       uint64 position() const;
@@ -139,7 +153,11 @@ namespace Yamka
       // virtual: not supported for null-storage:
       bool save(const Bytes & data);
       bool load(Bytes & data);
+      bool load(TByte * data);
       bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
+      
+      // virtual:
+      IReceiptPtr receipt(uint64 offset, uint64 size) const;
       
     protected:
       uint64 addr_;

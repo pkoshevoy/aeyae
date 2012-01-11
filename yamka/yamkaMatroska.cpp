@@ -9,6 +9,9 @@
 // yamka includes:
 #include <yamkaMatroska.h>
 
+// system includes:
+#include <limits>
+
 
 namespace Yamka
 {
@@ -3265,43 +3268,53 @@ namespace Yamka
   std::size_t
   SimpleBlock::getNumberOfFrames() const
   {
-    return frames_.size();
+    return frames_.receipts_.size();
   }
   
   //----------------------------------------------------------------
   // SimpleBlock::getFrame
   // 
-  const Bytes &
+  const IStorage::IReceiptPtr &
   SimpleBlock::getFrame(std::size_t frameNumber) const
   {
-    return frames_[frameNumber];
+    assert(frameNumber < frames_.receipts_.size());
+    return frames_.receipts_[frameNumber];
   }
   
   //----------------------------------------------------------------
   // SimpleBlock::addFrame
   // 
   void
-  SimpleBlock::addFrame(const Bytes & frame)
+  SimpleBlock::addFrame(const Bytes & frame, IStorage & storage)
   {
-    frames_.push_back(frame);
+    frames_.add(frame, storage);
+  }
+
+  //----------------------------------------------------------------
+  // SimpleBlock::addFrame
+  // 
+  void
+  SimpleBlock::addFrame(const IStorage::IReceiptPtr & frameReceipt)
+  {
+    frames_.add(frameReceipt);
   }
   
   //----------------------------------------------------------------
   // sameSize
   // 
   static bool
-  sameSize(const std::deque<Bytes> & frames)
+  sameSize(const std::deque<IStorage::IReceiptPtr> & frames)
   {
     if (frames.empty())
     {
       return true;
     }
     
-    const std::size_t frameSize = frames[0].size();
+    const uint64 frameSize = frames[0]->numBytes();
     const std::size_t numFrames = frames.size();
     for (std::size_t i = 1; i < numFrames; i++)
     {
-      if (frames[i].size() != frameSize)
+      if (frames[i]->numBytes() != frameSize)
       {
         return false;
       }
@@ -3314,11 +3327,11 @@ namespace Yamka
   // SimpleBlock::exportData
   // 
   void
-  SimpleBlock::exportData(Bytes & simpleBlock) const
+  SimpleBlock::exportData(HodgePodge & simpleBlock, IStorage & storage) const
   {
-    simpleBlock = Bytes();
-    simpleBlock << vsizeEncode(trackNumber_)
-                << intEncode(timeCode_, 2);
+    Bytes header;
+    header << vsizeEncode(trackNumber_)
+           << intEncode(timeCode_, 2);
     
     std::size_t lastFrameIndex = getNumberOfFrames() - 1;
     Lacing lacing = lastFrameIndex ? getLacing() : kLacingNone;
@@ -3334,7 +3347,7 @@ namespace Yamka
         // 1 frame -- no lacing:
         lacing = kLacingNone;
       }
-      else if (sameSize(frames_))
+      else if (sameSize(frames_.receipts_))
       {
         // all frames have the same size, use fixed size lacing:
         lacing = kLacingFixedSize;
@@ -3345,7 +3358,7 @@ namespace Yamka
         {
           for (std::size_t i = 0; i < lastFrameIndex; i++)
           {
-            uint64 frameSize = frames_[i].size();
+            uint64 frameSize = frames_.receipts_[i]->numBytes();
             while (true)
             {
               TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
@@ -3362,13 +3375,15 @@ namespace Yamka
         
         // try EBML lacing
         {
-          uint64 frameSize = frames_[0].size();
+          uint64 frameSize = frames_.receipts_[0]->numBytes();
           laceEBML << vsizeEncode(frameSize);
           
           for (std::size_t i = 1; i < lastFrameIndex; i++)
           {
-            int64 frameSizeDiff = (int64(frames_[i].size()) - 
-                                   int64(frames_[i - 1].size()));
+            int64 frameSizeDiff =
+              (int64(frames_.receipts_[i]->numBytes()) - 
+               int64(frames_.receipts_[i - 1]->numBytes()));
+            
             laceEBML << vsizeSignedEncode(frameSizeDiff);
           }
         }
@@ -3387,25 +3402,29 @@ namespace Yamka
     
     // save the flag with correct lacing bits set:
     unsigned char flags = setLacingBits(flags_, lacing);
-    simpleBlock << flags;
+    header << flags;
     
     if (lacing != kLacingNone)
     {
-      simpleBlock << TByte(lastFrameIndex);
+      header << TByte(lastFrameIndex);
     }
     
     if (lacing == kLacingXiph)
     {
-      simpleBlock << laceXiph;
+      header << laceXiph;
     }
     else if (lacing == kLacingEBML)
     {
-      simpleBlock << laceEBML;
+      header << laceEBML;
     }
+
+    // store the header:
+    simpleBlock.set(header, storage);
     
+    // store the frames:
     for (std::size_t i = 0; i <= lastFrameIndex; i++)
     {
-      simpleBlock << Bytes(frames_[i]);
+      simpleBlock.add(frames_.receipts_[i]);
     }
   }
   
@@ -3413,12 +3432,15 @@ namespace Yamka
   // SimpleBlock::importData
   // 
   bool
-  SimpleBlock::importData(const Bytes & simpleBlock)
+  SimpleBlock::importData(const HodgePodge & simpleBlock)
   {
-    const uint64 blockSize = simpleBlock.size();
+    const uint64 blockSize = simpleBlock.numBytes();
+    
+    // use an iterator to simplify parsing:
+    HodgePodgeConstIter blockData(simpleBlock);
     
     uint64 bytesRead = 0;
-    trackNumber_ = vsizeDecode(simpleBlock, bytesRead);
+    trackNumber_ = vsizeDecode(blockData, bytesRead);
     if (bytesRead == 0)
     {
       return false;
@@ -3429,10 +3451,6 @@ namespace Yamka
       // need 2 more bytes for timecode, and 1 more for flags:
       return false;
     }
-    
-    // convert to contiguous memory to simplify parsing:
-    TByteVec blockByteVec(simpleBlock);
-    const TByte * blockData = &(blockByteVec[0]);
     
     // decode the timecode:
     TByteVec timecode(2);
@@ -3459,9 +3477,9 @@ namespace Yamka
     }
     
     // unpack the frame(s):
-    frames_.resize(lastFrameIndex + 1);
+    std::vector<uint64> frameSizes(lastFrameIndex + 1, 0);
     uint64 leadingFramesSize = 0;
-    
+
     if (lacing == kLacingXiph)
     {
       for (std::size_t i = 0; i < lastFrameIndex; i++)
@@ -3483,26 +3501,28 @@ namespace Yamka
           }
         }
         
-        frames_[i] = Bytes((std::size_t)frameSize);
+        frameSizes[i] = frameSize;
         leadingFramesSize += frameSize;
       }
     }
     else if (lacing == kLacingEBML)
     {
+      blockData.setpos(bytesRead);
       uint64 vsizeSize = 0;
-      uint64 frameSize = vsizeDecode(&blockData[bytesRead],
-                                      vsizeSize);
+      uint64 frameSize = vsizeDecode(blockData, vsizeSize);
+      
       bytesRead += vsizeSize;
-      frames_[0] = Bytes((std::size_t)frameSize);
+      frameSizes[0] = frameSize;
       leadingFramesSize += frameSize;
       
       for (std::size_t i = 1; i < lastFrameIndex; i++)
       {
-        int64 frameSizeDiff = vsizeSignedDecode(&blockData[bytesRead],
-                                                vsizeSize);
+        blockData.setpos(bytesRead);
+        int64 frameSizeDiff = vsizeSignedDecode(blockData, vsizeSize);
+        
         bytesRead += vsizeSize;
         frameSize += frameSizeDiff;
-        frames_[i] = Bytes((std::size_t)frameSize);
+        frameSizes[i] = frameSize;
         leadingFramesSize += frameSize;
       }
     }
@@ -3513,7 +3533,7 @@ namespace Yamka
       
       for (std::size_t i = 0; i < lastFrameIndex; i++)
       {
-        frames_[i] = Bytes((std::size_t)frameSize);
+        frameSizes[i] = frameSize;
         leadingFramesSize += frameSize;
       }
     }
@@ -3522,13 +3542,14 @@ namespace Yamka
     uint64 lastFrameSize = (blockSize -
                             bytesRead -
                             leadingFramesSize);
-    frames_[lastFrameIndex] = Bytes((std::size_t)lastFrameSize);
+    frameSizes[lastFrameIndex] = lastFrameSize;
     
     // load the frames:
+    frames_.receipts_.resize(lastFrameIndex + 1);
     for (std::size_t i = 0; i <= lastFrameIndex; i++)
     {
-      std::size_t numBytes = frames_[i].size();
-      frames_[i].deepCopy(&blockData[bytesRead], numBytes);
+      uint64 numBytes = frameSizes[i];
+      frames_.receipts_[i] = blockData.receipt(bytesRead, numBytes);
       bytesRead += numBytes;
     }
     
@@ -3593,9 +3614,9 @@ namespace Yamka
     
     for (std::size_t j = 0; j < numFrames; j++)
     {
-      const Bytes & frame = sb.getFrame(j);
+      const IStorage::IReceiptPtr & frameReceipt = sb.getFrame(j);
       os << ", f[" << j << "] "
-         << frame.size() << " bytes";
+         << frameReceipt->numBytes() << " bytes";
     }
     
     return os;
@@ -4626,19 +4647,18 @@ namespace Yamka
     void
     optimizeBlock(block_t & block)
     {
-      Bytes blockBytes;
-      block.payload_.get(blockBytes);
-      const uint64 sizeBefore = blockBytes.size();
+      const uint64 sizeBefore = block.payload_.data_.numBytes();
       
+      HodgePodge optimized;
       SimpleBlock simpleBlock;
-      simpleBlock.importData(blockBytes);
+      simpleBlock.importData(block.payload_.data_);
       simpleBlock.setAutoLacing();
-      simpleBlock.exportData(blockBytes);
-      const uint64 sizeAfter = blockBytes.size();
+      simpleBlock.exportData(optimized, storageForTempData_);
+      const uint64 sizeAfter = optimized.numBytes();
       
       if (sizeAfter < sizeBefore)
       {
-        block.payload_.set(blockBytes, storageForTempData_);
+        block.payload_.data_ = optimized;
       }
       else if (sizeAfter > sizeBefore)
       {
@@ -5022,12 +5042,11 @@ namespace Yamka
       double bestTime = 0.0;
       std::list<Frame> * bestTrack = NULL;
       
-      for (TIter i = tracks.begin(); i != tracks.end(); )
+      for (TIter i = tracks.begin(); i != tracks.end(); ++i)
       {
         std::list<Frame> & track = i->second;
         if (track.empty())
         {
-          i = tracks.erase(i);
           continue;
         }
         
@@ -5039,8 +5058,6 @@ namespace Yamka
           bestTrack = &track;
           bestTime = frameTime;
         }
-        
-        ++i;
       }
       
       if (!bestTrack)

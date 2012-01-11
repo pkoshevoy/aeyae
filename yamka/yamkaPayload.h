@@ -11,6 +11,7 @@
 
 // yamka includes:
 #include <yamkaFileStorage.h>
+#include <yamkaHodgePodge.h>
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
 #include <yamkaBytes.h>
@@ -296,8 +297,8 @@ namespace Yamka
     { return false; }
     
     // data storage:
-    IStorage::IReceiptPtr receipt_;
-    IStorage::IReceiptPtr receiptDefault_;
+    HodgePodge dataDefault_;
+    HodgePodge data_;
   };
   
   

@@ -9,6 +9,7 @@
 // yamka includes:
 #include <yamkaStdInt.h>
 #include <yamkaIStorage.h>
+#include <yamkaHodgePodge.h>
 
 // system includes:
 #include <assert.h>
@@ -195,6 +196,16 @@ namespace Yamka
   // vsizeDecode
   // 
   uint64
+  vsizeDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize)
+  {
+    uint64 i = vsizeDecodeBytes(byteIter, vsizeSize);
+    return i;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  uint64
   vsizeDecode(const Bytes & bytes, uint64 & vsizeSize)
   {
     uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
@@ -294,6 +305,16 @@ namespace Yamka
   {
     uint64 u = vsizeDecodeBytes(v, vsizeSize);
     int64 i = u - vsizeHalfRange[vsizeSize];
+    return i;
+  }
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  int64
+  vsizeSignedDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize)
+  {
+    int64 i = vsizeSignedDecodeBytes(byteIter, vsizeSize);
     return i;
   }
   

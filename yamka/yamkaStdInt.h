@@ -24,6 +24,7 @@ namespace Yamka
   
   // forward declarations:
   struct IStorage;
+  struct HodgePodgeConstIter;
   
   //----------------------------------------------------------------
   // uint64
@@ -61,6 +62,12 @@ namespace Yamka
   // vsizeDecode
   // 
   extern uint64
+  vsizeDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize);
+  
+  //----------------------------------------------------------------
+  // vsizeDecode
+  // 
+  extern uint64
   vsizeDecode(const Bytes & bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
@@ -92,6 +99,12 @@ namespace Yamka
   // 
   extern unsigned int
   vsizeSignedNumBytes(int64 vsize);
+  
+  //----------------------------------------------------------------
+  // vsizeSignedDecode
+  // 
+  extern int64
+  vsizeSignedDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeSignedDecode

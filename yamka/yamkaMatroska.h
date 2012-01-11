@@ -11,6 +11,7 @@
 
 // yamka includes:
 #include <yamkaElt.h>
+#include <yamkaHodgePodge.h>
 #include <yamkaPayload.h>
 #include <yamkaEBML.h>
 
@@ -908,11 +909,14 @@ namespace Yamka
     void setAutoLacing();
     
     std::size_t getNumberOfFrames() const;
-    const Bytes & getFrame(std::size_t frameNumber) const;
-    void addFrame(const Bytes & frame);
     
-    void exportData(Bytes & simpleBlock) const;
-    bool importData(const Bytes & simpleBlock);
+    const IStorage::IReceiptPtr & getFrame(std::size_t frameNumber) const;
+    
+    void addFrame(const Bytes & frame, IStorage & storage);
+    void addFrame(const IStorage::IReceiptPtr & frameReceipt);
+    
+    void exportData(HodgePodge & simpleBlock, IStorage & storage) const;
+    bool importData(const HodgePodge & data);
     
   protected:
     // auto-lacing helper function:
@@ -933,7 +937,7 @@ namespace Yamka
     uint64 trackNumber_;
     short int timeCode_;
     unsigned char flags_;
-    std::deque<Bytes> frames_;
+    HodgePodge frames_;
   };
   
   //----------------------------------------------------------------

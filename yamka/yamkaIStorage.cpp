@@ -8,6 +8,7 @@
 
 // yamka includes:
 #include <yamkaIStorage.h>
+#include <yamkaHodgePodge.h>
 
 
 namespace Yamka
@@ -26,7 +27,17 @@ namespace Yamka
     
     return add(receipt->numBytes());
   }
-  
+
+  //----------------------------------------------------------------
+  // IStorage::loadHodgePodge
+  // 
+  IStorage::IReceiptPtr
+  IStorage::loadHodgePodge(HodgePodge & hodgePodge, uint64 numBytes)
+  {
+    IReceiptPtr receipt = skip(numBytes);
+    hodgePodge.set(receipt);
+    return receipt;
+  }
   
   //----------------------------------------------------------------
   // NullStorage::NullStorage
@@ -94,9 +105,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // NullStorage::Receipt::Receipt
   // 
-  NullStorage::Receipt::Receipt(uint64 addr):
+  NullStorage::Receipt::Receipt(uint64 addr, uint64 numBytes):
     addr_(addr),
-    numBytes_(0)
+    numBytes_(numBytes)
   {}
   
   //----------------------------------------------------------------
@@ -156,6 +167,15 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // NullStorage::Receipt::load
+  // 
+  bool
+  NullStorage::Receipt::load(TByte * data)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // NullStorage::Receipt::calcCrc32
   // 
   bool
@@ -163,6 +183,22 @@ namespace Yamka
                                   const IStorage::IReceiptPtr & receiptSkip)
   {
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // NullStorage::Receipt::receipt
+  // 
+  IStorage::IReceiptPtr
+  NullStorage::Receipt::receipt(uint64 offset, uint64 size) const
+  {
+    if (offset + size > numBytes_)
+    {
+      assert(false);
+      return IStorage::IReceiptPtr();
+    }
+    
+    NullStorage::Receipt * r = new NullStorage::Receipt(addr_ + offset, size);
+    return IStorage::IReceiptPtr(r);
   }
   
 }

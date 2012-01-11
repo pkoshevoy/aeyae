@@ -55,14 +55,18 @@ namespace Yamka
       // virtual:
       bool save(const Bytes & data);
       bool load(Bytes & data);
+      bool load(TByte * data);
       
       // virtual:
       bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
       
+      // virtual:
+      IReceiptPtr receipt(uint64 offset, uint64 size) const;
+      
     protected:
       File file_;
       File::TOff addr_;
-      File::TOff numBytes_;
+      uint64 numBytes_;
     };
     
     // file used to store data:

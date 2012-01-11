@@ -199,11 +199,10 @@ struct Examiner : public IElementCrawler
       else if (vBinary)
       {
         std::cout << "variable size binary data";
-        if (vBinary->receipt_)
+        uint64 binSize = vBinary->data_.numBytes();
+        if (binSize)
         {
-          std::cout
-            << ", size "
-            << vBinary->receipt_->numBytes();
+          std::cout << ", size " << binSize;
         }
       }
       else if (vEltPos)

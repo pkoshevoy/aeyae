@@ -174,6 +174,26 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // FileStorage::Receipt::load
+  // 
+  bool
+  FileStorage::Receipt::load(TByte * data)
+  {
+    try
+    {
+      File::Seek temp(file_, addr_);
+      if (file_.read(data, (std::size_t)numBytes_))
+      {
+        return true;
+      }
+    }
+    catch (...)
+    {}
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::Receipt::calcCrc32
   // 
   bool
@@ -192,10 +212,11 @@ namespace Yamka
         skipBytes = receiptSkip->numBytes();
       }
       
-      File::TOff p0 = std::min(addr_, skipAddr);
+      File::TOff p0 = std::min<File::TOff>(addr_, skipAddr);
       File::TOff n0 = skipAddr - p0;
       
-      File::TOff p1 = std::min(skipAddr + skipBytes, addr_ + numBytes_);
+      File::TOff p1 = std::min<File::TOff>(skipAddr + skipBytes,
+                                           addr_ + numBytes_);
       File::TOff n1 = addr_ + numBytes_ - p1;
       
       bool done = (file_.calcCrc32(p0, n0, computeCrc32) &&
@@ -206,6 +227,24 @@ namespace Yamka
     {}
     
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // FileStorage::Receipt::receipt
+  // 
+  IStorage::IReceiptPtr
+  FileStorage::Receipt::receipt(uint64 offset, uint64 size) const
+  {
+    if (offset + size > numBytes_)
+    {
+      assert(false);
+      return IStorage::IReceiptPtr();
+    }
+    
+    FileStorage::Receipt * r = new FileStorage::Receipt(file_);
+    r->addr_ = addr_ + offset;
+    r->numBytes_ = size;
+    return IStorage::IReceiptPtr(r);
   }
   
 }

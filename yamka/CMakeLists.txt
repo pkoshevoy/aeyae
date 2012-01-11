@@ -20,6 +20,7 @@ add_library(yamka STATIC
   yamkaFile.h
   yamkaFileStorage.h
   yamka.h
+  yamkaHodgePodge.h
   yamkaIStorage.h
   yamkaMatroska.h
   yamkaPayload.h
@@ -31,6 +32,7 @@ add_library(yamka STATIC
   yamkaElt.cpp
   yamkaFile.cpp
   yamkaFileStorage.cpp
+  yamkaHodgePodge.cpp
   yamkaIStorage.cpp
   yamkaMatroska.cpp
   yamkaPayload.cpp

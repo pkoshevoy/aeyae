@@ -87,7 +87,7 @@ template <typename TKey, typename TValue>
 bool
 has(const std::map<TKey, TValue> & keyValueMap, const TValue & key)
 {
-  std::map<TKey, TValue>::const_iterator found =
+  typename std::map<TKey, TValue>::const_iterator found =
     keyValueMap.find(key);
   
   return found != keyValueMap.end();
@@ -373,10 +373,10 @@ finishCurrentBlock(Cluster & cluster,
     cluster.simpleBlocks_.push_back(TSimpleBlock());
     TSimpleBlock & block = cluster.simpleBlocks_.back();
     
-    Bytes data;
+    HodgePodge data;
     simpleBlock.setAutoLacing();
-    simpleBlock.exportData(data);
-    block.payload_.set(data, tmp);
+    simpleBlock.exportData(data, tmp);
+    block.payload_.data_ = data;
     
     simpleBlock = SimpleBlock();
 }
@@ -696,8 +696,8 @@ main(int argc, char ** argv)
           }
         }
 
-        Bytes blockData((std::size_t)numBytes);
-        receipt = src.load(blockData);
+        HodgePodge blockData;
+        receipt = src.loadHodgePodge(blockData, numBytes);
         if (!receipt)
         {
           assert(false);
@@ -734,8 +734,8 @@ main(int argc, char ** argv)
           frame.ts_.start_ = (clusterTime + blockTime) * timecodeScale;
           frame.ts_.base_ = NANOSEC_PER_SEC;
           
-          const Bytes & frameData = block.getFrame(k);
-          frame.data_.set(frameData, tmp);
+          const IStorage::IReceiptPtr & frameReceipt = block.getFrame(k);
+          frame.data_.data_.set(frameReceipt);
         }
       }
       
@@ -976,10 +976,9 @@ main(int argc, char ** argv)
           pos.cluster_.payload_.setOrigin(&segmentElt);
           pos.cluster_.payload_.setElt(&clusterElt);
         }
-        
-        Bytes frameData;
-        frame.data_.get(frameData);
-        simpleBlock.addFrame(frameData);
+
+        assert(frame.data_.data_.receipts_.size() == 1);
+        simpleBlock.addFrame(frame.data_.data_.receipts_.front());
       }
       
       // finish the last block in this cluster:
@@ -1015,3 +1014,5 @@ main(int argc, char ** argv)
   
   return 0;
 }
+
+//  +t 1 +t 2 +t  3 +t 7 +t 9 +t 10
