@@ -61,6 +61,11 @@ typedef std::list<TCuePoint>::const_iterator TCuePointConstIter;
 typedef std::list<TCueTrkPos>::const_iterator TCueTrkPosConstIter;
 
 //----------------------------------------------------------------
+// BE_QUIET
+// 
+#define BE_QUIET
+
+//----------------------------------------------------------------
 // NANOSEC_PER_SEC
 // 
 // 1 second, in nanoseconds
@@ -146,11 +151,13 @@ usage(char ** argv, const char * message = NULL)
             << std::endl;
   
   std::cerr << "USAGE: " << argv[0]
-            << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]*"
+            << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
+            << "[-t0 hh mm ss] [-t1 hh mm ss]"
             << std::endl;
   
   std::cerr << "EXAMPLE: " << argv[0]
             << " -i input.mkv -o output.mkv -t 1 -t 2"
+            << " -t0 00 04 00 -t1 00 08 00"
             << std::endl;
 
   if (message != NULL)
@@ -392,6 +399,9 @@ main(int argc, char ** argv)
   std::string tmpPath;
   std::list<uint64> tracksToKeep;
   std::list<uint64> tracksDelete;
+
+  uint64 t0 = 0;
+  uint64 t1 = (uint64)(~0);
   
   for (int i = 1; i < argc; i++)
   {
@@ -448,11 +458,48 @@ main(int argc, char ** argv)
         tracksToKeep.push_back(trackNo);
       }
     }
+    else if (strcmp(argv[i], "-t0") == 0)
+    {
+      if ((argc - i) <= 3) usage(argv, "could not parse -t0 parameter");
+      
+      i++;
+      uint64 hh = toScalar<uint64>(argv[i]);
+      
+      i++;
+      uint64 mm = toScalar<uint64>(argv[i]);
+      
+      i++;
+      uint64 ss = toScalar<uint64>(argv[i]);
+      
+      t0 = ss + 60 * (mm + 60 * hh);
+    }
+    else if (strcmp(argv[i], "-t1") == 0)
+    {
+      if ((argc - i) <= 3) usage(argv, "could not parse -t1 parameter");
+      
+      i++;
+      uint64 hh = toScalar<uint64>(argv[i]);
+      
+      i++;
+      uint64 mm = toScalar<uint64>(argv[i]);
+      
+      i++;
+      uint64 ss = toScalar<uint64>(argv[i]);
+      
+      t1 = ss + 60 * (mm + 60 * hh);
+    }
     else
     {
       usage(argv, (std::string("unknown option: ") +
                    std::string(argv[i])).c_str());
     }
+  }
+  
+  if (t0 > t1)
+  {
+    usage(argv,
+          "start time (-t0 hh mm ss) is greater than "
+          "finish time (-t1 hh mm ss)");
   }
   
   bool keepAllTracks = tracksToKeep.empty() && tracksDelete.empty();
@@ -561,13 +608,15 @@ main(int argc, char ** argv)
     tmp.file_.setSize(0);
   }
 
-  bool isWebmOutput= endsWith(dstPath, ".webm") || endsWith(dstPath, ".weba");
+  bool isWebmOutput = endsWith(dstPath, ".webm") || endsWith(dstPath, ".weba");
   WebmDoc out(isWebmOutput ? kFileFormatWebm : kFileFormatMatroska);
   
   segmentIndex = 0;
   for (std::list<TSegment>::iterator i = doc.segments_.begin();
        i != doc.segments_.end(); ++i, ++segmentIndex)
   {
+    std::cout << "\t\t\tsegment index: " << segmentIndex << std::endl;
+    
     out.segments_.push_back(TSegment());
     TSegment & segmentElt = out.segments_.back();
     
@@ -645,7 +694,7 @@ main(int argc, char ** argv)
     // shortcut:
     std::vector<std::list<Frame> > & trackFrames =
       segmentTrackFrames[segmentIndex];
-    
+
     // Read cluster(s) and extract track frames that we are interested in:
     while (true)
     {
@@ -661,6 +710,12 @@ main(int argc, char ** argv)
       
       File::Seek autoRestore(src.file_);
       const uint64 clusterTime = cluster.timecode_.payload_.get();
+
+#ifndef BE_QUIET
+      std::cout << "\t\t\tcluster time: "
+                << double(clusterTime * timecodeScale) / double(NANOSEC_PER_SEC)
+                << std::endl;
+#endif
       
       std::deque<TBlockGroup> & blockGroups = cluster.blockGroups_;
       std::size_t numBlockGroups = blockGroups.size();
@@ -711,18 +766,33 @@ main(int argc, char ** argv)
           continue;
         }
 
-        const short int blockTime = block.getRelativeTimecode();
-        
         uint64 trackNo = trackInOut[trackNoIn];
         const Track & track = tracks[(std::size_t)(trackNo - 1)].payload_;
-
+        
+        const short int blockTime = block.getRelativeTimecode();
+#ifndef BE_QUIET
+        std::cout << "\t\t\tt" << trackNo << " block time: "
+                  << double(blockTime * timecodeScale) / double(NANOSEC_PER_SEC)
+                  << std::endl;
+#endif
+        
         // shortcut to the output frame list:
         std::list<Frame> & frames = trackFrames[(std::size_t)(trackNo - 1)];
+        std::size_t numFrames = block.getNumberOfFrames();
         
         // default frame duration, expressed in nanoseconds:
-        uint64 frameDuration = track.frameDuration_.payload_.get(); 
+        uint64 frameDuration = track.frameDuration_.payload_.get();
+        if (!frameDuration)
+        {
+          frameDuration = timecodeScale;
+        }
         
-        std::size_t numFrames = block.getNumberOfFrames();
+#ifndef BE_QUIET
+        std::cout << "\t\t\tt" << trackNo << " frame duration: "
+                  << double(frameDuration) / double(NANOSEC_PER_SEC)
+                  << std::endl;
+#endif
+        
         for (std::size_t k = 0; k < numFrames; k++)
         {
           frames.push_back(Frame());
@@ -731,8 +801,19 @@ main(int argc, char ** argv)
           frame.trackNumber_ = trackNo;
           frame.isKeyframe_ = (k == 0) && block.isKeyframe();
           frame.ts_.extent_ = frameDuration;
-          frame.ts_.start_ = (clusterTime + blockTime) * timecodeScale;
+          frame.ts_.start_ = ((clusterTime + blockTime) * timecodeScale +
+                              k * frameDuration);
           frame.ts_.base_ = NANOSEC_PER_SEC;
+
+#ifndef BE_QUIET
+          // FIXME:
+          {
+            double t = double(frame.ts_.start_) / double(frame.ts_.base_);
+            double d = double(frameDuration) / double(frame.ts_.base_);
+            std::cout << "t" << trackNo << ": " << t << " - " << t + d
+                      << std::endl;
+          }
+#endif
           
           const IStorage::IReceiptPtr & frameReceipt = block.getFrame(k);
           frame.data_.data_.set(frameReceipt);
@@ -752,6 +833,8 @@ main(int argc, char ** argv)
     }
     
     // split frames into groups:
+    std::cout << "\t\t\tsplit frames into groups" << std::endl;
+    
     const uint64 clusterTimeBase = NANOSEC_PER_SEC / timecodeScale;
     std::list<GroupOfFrames> gofs;
     gofs.push_back(GroupOfFrames(clusterTimeBase));
@@ -766,7 +849,8 @@ main(int argc, char ** argv)
         Frame videoFrame = videoFrames.front();
         videoFrames.pop_front();
         
-        if (videoFrame.isKeyframe_ || !gofs.back().mayAdd(videoFrame))
+        if ((videoFrame.isKeyframe_ || !gofs.back().mayAdd(videoFrame)) &&
+            !gofs.back().frames_.empty())
         {
           // start a new group of frames:
           gofs.push_back(GroupOfFrames(clusterTimeBase));
@@ -793,8 +877,7 @@ main(int argc, char ** argv)
           while (!frames.empty())
           {
             Frame frame = frames.front();
-            if (!gof.ts_.contains(frame.ts_.getEnd(gof.ts_.base_),
-                                  gof.ts_.base_))
+            if (gof.ts_.getEnd(gof.ts_.base_) < frame.ts_.getEnd(gof.ts_.base_))
             {
               break;
             }
@@ -814,6 +897,8 @@ main(int argc, char ** argv)
     }
     
     // split remaining frames into groups of frames:
+    std::cout << "\t\t\tsplit remaining frames into groups" << std::endl;
+    
     while (true)
     {
       bool addedFrames = false;
@@ -869,8 +954,30 @@ main(int argc, char ** argv)
         break;
       }
     }
+
+#ifndef BE_QUIET
+    // FIXME:
+    for (std::list<GroupOfFrames>::const_iterator i = gofs.begin();
+         i != gofs.end(); ++i)
+    {
+      std::cout << std::endl;
+      const GroupOfFrames & gof = *i;
+      for (std::list<Frame>::const_iterator j = gof.frames_.begin();
+           j != gof.frames_.end(); ++j)
+      {
+        const Frame & frame = *j;
+        double t = double(frame.ts_.start_) / double(frame.ts_.base_);
+        double d = double(frameDuration) / double(frame.ts_.base_);
+        std::cout << "t" << frame.trackNumber << ": "
+                  << t << " - " << t + d
+                  << std::endl;
+      }
+    }
+#endif
     
     // assemble groups of frames into clusters:
+    std::cout << "\t\t\tassemble groups of frames into clusters" << std::endl;
+    
     bool allowManyKeyframes = !isWebmOutput;
     std::list<MetaCluster> metaClusters;
     while (!gofs.empty())
@@ -890,6 +997,9 @@ main(int argc, char ** argv)
 
     // convert meta clusters into matroska Clusters and SimpleBlocks,
     // create Cues along the way:
+    std::cout << "\t\t\tconvert meta clusters into Clusters and SimpleBlocks"
+              << std::endl;
+    
     TCues & cuesElt = segment.cues_;
     Cues & cues = cuesElt.payload_;
     
@@ -989,6 +1099,10 @@ main(int argc, char ** argv)
     {
       seekHead.indexThis(&segmentElt, &cuesElt, tmp);
     }
+    
+    // FIXME: don't forget about Attachments and Chapters
+    
+    
     /*
     if (!isWebmOutput)
     {
@@ -997,22 +1111,32 @@ main(int argc, char ** argv)
     }
     */
   }
+
+  // FIXME:
+  std::cout << "\t\t\tsave the file" << std::endl;
   
   // save the file:
   dst.file_.setSize(0);
   IStorage::IReceiptPtr receipt = out.save(dst);
   
   // close open file handles:
-  doc = MatroskaDoc();
-  out = WebmDoc(kFileFormatMatroska);
-  src = FileStorage();
-  dst = FileStorage();
-  tmp = FileStorage();
-
+  src.file_.close();
+  dst.file_.close();
+  tmp.file_.close();
+  
   // remove temp file:
   File::remove(tmpPath.c_str());
+
+  // FIXME:
+  std::cout << "\t\t\texit" << std::endl;
+  
+  // avoid waiting for all the destructors to be called:
+  ::exit(0);
+  
+  doc = MatroskaDoc();
+  out = WebmDoc(kFileFormatMatroska);
   
   return 0;
 }
 
-//  +t 1 +t 2 +t  3 +t 7 +t 9 +t 10
+//  +t 1 +t 2 +t 7
