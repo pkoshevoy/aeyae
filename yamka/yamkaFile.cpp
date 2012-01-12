@@ -103,28 +103,44 @@ namespace Yamka
     
   public:
     SharedFile(const std::string & path, File::AccessMode fileMode):
-      path_(path)
+      file_(NULL)
     {
-      const char * mode =
-        (fileMode == File::kReadWrite) ?
-        "rb+" :
-        "rb";
-      
-      file_ = fopen_utf8(path.c_str(), mode);
-      if (!file_ && fileMode == File::kReadWrite)
-      {
-        // try creating the file:
-        file_ = fopen_utf8(path.c_str(), "wb+");
-      }
+      this->open(path, fileMode);
     }
     
     ~SharedFile()
+    {
+      this->close();
+    }
+
+    void close()
     {
       if (file_)
       {
         fclose(file_);
         file_ = NULL;
       }
+    }
+
+    bool open(const std::string & path, File::AccessMode fileMode)
+    {
+      close();
+      
+      const char * mode =
+        (fileMode == File::kReadWrite) ?
+        "rb+" :
+        "rb";
+
+      path_ = path;
+      file_ = fopen_utf8(path_.c_str(), mode);
+      if (!file_ && fileMode == File::kReadWrite)
+      {
+        // try creating the file:
+        file_ = fopen_utf8(path_.c_str(), "wb+");
+      }
+
+      bool ok = (file_ != NULL);
+      return ok;
     }
     
     // UTF-8 file path:
@@ -268,6 +284,24 @@ namespace Yamka
   File::isOpen() const
   {
     return private_->shared_->file_ != NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // File::close
+  // 
+  void
+  File::close()
+  {
+    private_->shared_->close();
+  }
+
+  //----------------------------------------------------------------
+  // File::open
+  // 
+  bool
+  File::open(const std::string & pathUTF8, AccessMode fileMode)
+  {
+    return private_->shared_->open(pathUTF8, fileMode);
   }
   
   //----------------------------------------------------------------

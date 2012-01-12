@@ -198,9 +198,11 @@ namespace Yamka
   HodgePodgeConstIter::HodgePodgeConstIter(const HodgePodge & hodgePodge,
                                            uint64 pos):
     hodgePodge_(hodgePodge),
-    start_(0),
-    end_(0),
-    pos_(pos)
+    pos_(pos),
+    receiptStart_(0),
+    receiptEnd_(0),
+    cacheStart_(0),
+    cacheEnd_(0)
   {}
 
   //----------------------------------------------------------------
@@ -219,13 +221,13 @@ namespace Yamka
   TByte
   HodgePodgeConstIter::operator [] (int64 offset) const
   {
-    if (!load(pos_ + offset))
+    if (!updateCache(pos_ + offset))
     {
       assert(false);
       return 0;
     }
 
-    return cache_[(std::size_t)(pos_ + offset)];
+    return cache_[(std::size_t)(pos_ + offset - cacheStart_)];
   }
 
   //----------------------------------------------------------------
@@ -234,13 +236,13 @@ namespace Yamka
   TByte
   HodgePodgeConstIter::operator * () const
   {
-    if (!load(pos_))
+    if (!updateCache(pos_))
     {
       assert(false);
       return 0;
     }
 
-    return cache_[(std::size_t)pos_];
+    return cache_[(std::size_t)(pos_ - cacheStart_)];
   }
 
   //----------------------------------------------------------------
@@ -249,40 +251,71 @@ namespace Yamka
   IStorage::IReceiptPtr
   HodgePodgeConstIter::receipt(uint64 position, uint64 numBytes) const
   {
-    if (!load(position) || position + numBytes > end_)
+    if (!updateReceipt(position) || position + numBytes > receiptEnd_)
     {
       assert(false);
       return IStorage::IReceiptPtr();
     }
     
-    return receipt_->receipt(position - start_, numBytes);
+    return receipt_->receipt(position - receiptStart_, numBytes);
   }
   
   //----------------------------------------------------------------
-  // HodgePodgeConstIter::load
+  // HodgePodgeConstIter::updateReceipt
   // 
   bool
-  HodgePodgeConstIter::load(uint64 pos) const
+  HodgePodgeConstIter::updateReceipt(uint64 position) const
   {
-    if (pos >= start_ && pos < end_)
+    if (position >= receiptStart_ && position < receiptEnd_)
     {
       return true;
     }
-
-    start_ = 0;
+    
+    receiptStart_ = 0;
+    cacheStart_ = 0;
+    cacheEnd_ = 0;
+    
     for (TReceiptPtrCIter i = hodgePodge_.receipts_.begin();
          i != hodgePodge_.receipts_.end(); ++i)
     {
       const IStorage::IReceiptPtr & dataReceipt = *i;
       uint64 size = dataReceipt->numBytes();
-      end_ = start_ + size;
+      receiptEnd_ = receiptStart_ + size;
       
-      if (pos >= start_ && pos < end_)
+      if (position >= receiptStart_ && position < receiptEnd_)
       {
-        cache_ = TByteVec((std::size_t)size);
         receipt_ = dataReceipt;
-        return receipt_->load(&cache_[0]);
+        return true;
       }
+    }
+
+    receipt_ = IStorage::IReceiptPtr();
+    receiptEnd_ = 0;
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // HodgePodgeConstIter::updateCache
+  // 
+  bool
+  HodgePodgeConstIter::updateCache(uint64 position) const
+  {
+    if (position >= cacheStart_ && position < cacheEnd_)
+    {
+      return true;
+    }
+    
+    if (updateReceipt(position))
+    {
+      cacheStart_ = position - (position % kCacheSize);
+      cacheEnd_ = std::min<uint64>(cacheStart_ + kCacheSize, receiptEnd_);
+      std::size_t chunkSize = (std::size_t)(cacheEnd_ - cacheStart_);
+      cache_.resize(kCacheSize);
+      
+      IStorage::IReceiptPtr chunk =
+        receipt_->receipt(receiptStart_ - cacheStart_, chunkSize);
+      
+      return chunk->load(&cache_[0]);
     }
     
     return false;

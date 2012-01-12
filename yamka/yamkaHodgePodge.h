@@ -94,14 +94,21 @@ namespace Yamka
     IStorage::IReceiptPtr receipt(uint64 position, uint64 numBytes) const; 
     
   protected:
-    bool load(uint64 pos) const;
+    bool updateReceipt(uint64 position) const;
+    bool updateCache(uint64 position) const;
     
     const HodgePodge & hodgePodge_;
-    mutable IStorage::IReceiptPtr receipt_;
-    mutable TByteVec cache_;
-    mutable uint64 start_;
-    mutable uint64 end_;
     uint64 pos_;
+    
+    mutable IStorage::IReceiptPtr receipt_;
+    mutable uint64 receiptStart_;
+    mutable uint64 receiptEnd_;
+
+    enum { kCacheSize = 128 };
+    
+    mutable TByteVec cache_;
+    mutable uint64 cacheStart_;
+    mutable uint64 cacheEnd_;
   };
   
 }

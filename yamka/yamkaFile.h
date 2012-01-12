@@ -50,6 +50,17 @@ namespace Yamka
     
     // check whether the file handle is open:
     virtual bool isOpen() const;
+
+    // close current file handle.
+    // NOTE: this applies to all copies of this File object
+    //       due to implicit sharing
+    virtual void close();
+
+    // close current file handle and open another file.
+    // NOTE: this applies to all copies of this File object
+    //       due to implicit sharing
+    virtual bool open(const std::string & pathUTF8,
+                      AccessMode fileMode = kReadOnly);
     
     //----------------------------------------------------------------
     // TOff
