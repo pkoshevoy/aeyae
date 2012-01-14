@@ -220,23 +220,40 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
-add_custom_target("update revision" ALL
-  DEPENDS "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
-add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
+if (WIN32)
+  set (YAE_VERSIONED_FILES
+    ${YAE_VERSIONED_FILES} 
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
+endif (WIN32)
+
+if (APPLE)
+  set (YAE_VERSIONED_FILES
+    ${YAE_VERSIONED_FILES} 
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
+endif (APPLE)
+
+add_custom_target("update revision" ALL
+  DEPENDS
+#  ${YAE_VERSIONED_FILES}
+  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
+)
+
+add_custom_command(OUTPUT
+  ${YAE_VERSIONED_FILES}
+ "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
   COMMAND "${CMAKE_COMMAND}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
   -DPROGNAME="${PROGNAME}"
   -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
-set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/yaeVersion.h")
+set(project_sources ${project_sources} ${YAE_VERSIONED_FILES})
 
 # Set some Win32 Specific Settings
 if (WIN32)
   set(GUI_TYPE WIN32)
-
-  set(project_sources ${project_sources} "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 
   if (MSYS OR MINGW)
     set(CMAKE_RC_COMPILER_INIT windres)
@@ -252,7 +269,6 @@ if (APPLE)
 
   set(project_sources 
     ${project_sources}
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.plist"
     ${PROGNAME}.icns
     InfoPlist.strings)
 endif (APPLE)
@@ -272,7 +288,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+add_dependencies(${PROGNAME} "update revision")
 
 set(TARGET_LIBS
   ${GLEW_LIBRARY}
@@ -548,7 +564,7 @@ if (WIN32)
     "${PROJECT_BINARY_DIR}/yaeVersion.h" 
     )
   
-  add_dependencies(wixWrapper "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp")
+  add_dependencies(wixWrapper "update revision")
   
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC 
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
