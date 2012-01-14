@@ -220,6 +220,8 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
+execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
+  "${PROJECT_BINARY_DIR}/yaeVersion.h")
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)
@@ -236,11 +238,13 @@ endif (APPLE)
 
 add_custom_target("update revision" ALL
   DEPENDS
-  ${YAE_VERSIONED_FILES}
+#  ${YAE_VERSIONED_FILES}
+  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
 )
 
 add_custom_command(OUTPUT
-  ${YAE_VERSIONED_FILES}
+#  ${YAE_VERSIONED_FILES}
+  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
   COMMAND "${CMAKE_COMMAND}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
