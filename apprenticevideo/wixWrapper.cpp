@@ -298,10 +298,15 @@ main(int argc, char ** argv)
       << std::endl;
 
   out << "  <Package Id='*' Keywords='Installer' "
+#ifdef _WIN64
+      << "Platform='x64' "
+#else
+      << "Platform='x86' "
+#endif
       << "Description='Apprentice Video Installer' "
       << "Comments='A video player' "
       << "Manufacturer='Pavel Koshevoy' "
-      << "InstallerVersion='" << YAE_REVISION << "' "
+      << "InstallerVersion='200' "
       << "Languages='1033' Compressed='yes' SummaryCodepage='1252' />"
       << std::endl;
 
@@ -326,8 +331,13 @@ main(int argc, char ** argv)
     std::string name = getFileName(path);
     std::string guid = makeGuidStr();
     
-    out << "     <Component Id='Component" << i << "' Guid='" << guid << "'>"
-        << std::endl;
+    out << "     <Component Id='Component" << i << "' Guid='" << guid << "'"
+#ifdef _WIN64
+        << " Win64='yes'"
+#else
+        << " Win64='no'"
+#endif
+        << ">" << std::endl;
 
     if (i == 0)
     {
