@@ -236,13 +236,11 @@ endif (APPLE)
 
 add_custom_target("update revision" ALL
   DEPENDS
-#  ${YAE_VERSIONED_FILES}
-  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
+  ${YAE_VERSIONED_FILES}
 )
 
 add_custom_command(OUTPUT
   ${YAE_VERSIONED_FILES}
- "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
   COMMAND "${CMAKE_COMMAND}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
