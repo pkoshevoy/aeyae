@@ -448,13 +448,7 @@ namespace yae
   void
   TimelineControls::mouseMoveEvent(QMouseEvent * e)
   {
-    if (currentState_ == kIdle || !activeMarker_)
-    {
-      return;
-    }
-    
     QPoint pt = e->pos();
-    int dx = pt.x() - dragStart_.x();
     
     int xOrigin = 0;
     int yOriginInOut = 0;
@@ -462,11 +456,25 @@ namespace yae
     int unitLength = 0;
     getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
     
+    if (currentState_ == kIdle || !activeMarker_)
+    {
+      double t = double(pt.x() - xOrigin) / double(unitLength);
+      t = std::max(0.0, std::min(1.0, t));
+      
+      double seconds = t * timelineDuration_ + timelineStart_;
+      QString mousePosition = getTimeStamp(seconds);
+      setToolTip(mousePosition);
+      return;
+    }
+    
+    int dx = pt.x() - dragStart_.x();
+    
     double t =
       activeMarker_->positionAnchor_ +
       double(dx) / double(unitLength);
     
     t = std::max(0.0, std::min(1.0, t));
+    
     activeMarker_->position_ = t;
     
     if (currentState_ == kDraggingTimeInMarker)
