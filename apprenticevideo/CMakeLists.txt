@@ -598,6 +598,7 @@ if (WIN32)
     ARGS
     "${NATIVE_PROGRAM_EXE}"
     "${NATIVE_PROGRAM_ICON}"
+    "http://sourceforge.net/projects/apprenticevideo/"
     "${NATIVE_DEPENDS_EXE}"
     "${NATIVE_ALLOWED_PATHS}"
     "${NATIVE_CANDLE_EXE}"

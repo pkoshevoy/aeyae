@@ -131,10 +131,10 @@ main(int argc, char ** argv)
   }
   
   // get runtime parameters:
-  if (argc != 7)
+  if (argc != 8)
   {
     std::cerr << "USAGE: " << argv[0]
-              << " module pathToIconFile"
+              << " module pathToIconFile helpLinkURL"
               << " pathToDependsExe dlls;allowed;search;path;list"
               << " pathWixCandleExe pathWixLightExe"
               << std::endl;
@@ -144,10 +144,11 @@ main(int argc, char ** argv)
   std::string dependsLog("depends-exe-log.txt");
   std::string module(argv[1]);
   std::string iconFile(argv[2]);
-  std::string dependsExe(argv[3]);
-  std::string allowedPaths(argv[4]);
-  std::string wixCandleExe(argv[5]);
-  std::string wixLightExe(argv[6]);
+  std::string helpLink(argv[3]);
+  std::string dependsExe(argv[4]);
+  std::string allowedPaths(argv[5]);
+  std::string wixCandleExe(argv[6]);
+  std::string wixLightExe(argv[7]);
 
   // call depends.exe:
   {
@@ -453,9 +454,9 @@ main(int argc, char ** argv)
   out << "   <ComponentRef Id='ProgramMenuDir' />\n"
       << "  </Feature>\n"
       << "  <Icon Id='" << icon << "' "
-      << "SourceFile='" << iconFile << "' />"
-      << std::endl
-      << "  <Property Id='ARPPRODUCTICON' Value='" << icon << "' />"
+      << "SourceFile='" << iconFile << "' />\n"
+      << "  <Property Id='ARPPRODUCTICON' Value='" << icon << "' />\n"
+      << "  <Property Id='ARPHELPLINK' Value='" << helpLink << "' />"
       << std::endl;
   
   out << " </Product>\n"
