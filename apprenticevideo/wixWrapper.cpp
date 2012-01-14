@@ -454,6 +454,8 @@ main(int argc, char ** argv)
       << "  </Feature>\n"
       << "  <Icon Id='" << icon << "' "
       << "SourceFile='" << iconFile << "' />"
+      << std::endl
+      << "  <Property Id='ARPPRODUCTICON' Value='" << icon << "' />"
       << std::endl;
   
   out << " </Product>\n"
