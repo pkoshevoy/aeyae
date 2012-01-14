@@ -12,6 +12,7 @@
 #include <unknwn.h>
 #include <iostream>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <sstream>
 #include <iomanip>
@@ -150,6 +151,22 @@ main(int argc, char ** argv)
 
   // call depends.exe:
   {
+    std::string path;
+    const char * pathEnv = getenv("PATH");
+    if (pathEnv)
+    {
+      path = pathEnv;
+    }
+
+    std::size_t pathSize = path.size();
+    if (pathSize && path[pathSize - 1] != ';')
+    {
+      path += ';';
+    }
+
+    path += allowedPaths;
+    _putenv((std::string("PATH=") + path).c_str());
+    
     std::ostringstream os;
     os << dependsExe << " /c /a:0 /f:1 /ot:" << dependsLog << " " << module;
     
