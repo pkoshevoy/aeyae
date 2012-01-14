@@ -19,6 +19,7 @@
 #include <iostream>
 #include <string.h>
 #include <string>
+#include <time.h>
 #include <map>
 
 // namespace access:
@@ -138,6 +139,21 @@ toText(TScalar v)
   oss << v;
   std::string text = oss.str().c_str();
   return text;
+}
+
+//----------------------------------------------------------------
+// printCurrentTime
+// 
+static void
+printCurrentTime(const char * msg)
+{
+  time_t rawtime = 0;
+  time(&rawtime);
+  
+  struct tm * timeinfo = localtime(&rawtime);
+  std::string s(asctime(timeinfo));
+  s[s.size() - 1] = '\0';
+  std::cout << s.c_str() << " -- " << msg << std::endl;
 }
 
 //----------------------------------------------------------------
@@ -394,6 +410,8 @@ finishCurrentBlock(Cluster & cluster,
 int
 main(int argc, char ** argv)
 {
+  printCurrentTime("start");
+  
   std::string srcPath;
   std::string dstPath;
   std::string tmpPath;
@@ -514,13 +532,24 @@ main(int argc, char ** argv)
   
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
+#if 1
   if (!doc.loadSeekHead(src, srcSize) ||
       !doc.loadViaSeekHead(src, NULL, false) ||
       doc.segments_.empty())
   {
     usage(argv, (std::string("failed to load any matroska segments").c_str()));
   }
-
+#else
+  // Fri Jan 13 21:25:41 2012 -- start
+  // Fri Jan 13 21:49:36 2012 -- doc.load finished
+  if (!doc.load(src, srcSize) || doc.segments_.empty())
+  {
+    usage(argv, (std::string("failed to load any matroska segments").c_str()));
+  }
+#endif
+  
+  printCurrentTime("doc.load finished");
+  
   std::size_t numSegments = doc.segments_.size();
   std::vector<std::map<uint64, uint64> > segmentTrackInOut(numSegments);
   std::vector<std::map<uint64, uint64> > segmentTrackOutIn(numSegments);
@@ -615,7 +644,7 @@ main(int argc, char ** argv)
   for (std::list<TSegment>::iterator i = doc.segments_.begin();
        i != doc.segments_.end(); ++i, ++segmentIndex)
   {
-    std::cout << "\t\t\tsegment index: " << segmentIndex << std::endl;
+    printCurrentTime("parse next segment");
     
     out.segments_.push_back(TSegment());
     TSegment & segmentElt = out.segments_.back();
@@ -809,7 +838,7 @@ main(int argc, char ** argv)
           // FIXME:
           {
             double t = double(frame.ts_.start_) / double(frame.ts_.base_);
-            double d = double(frameDuration) / double(frame.ts_.base_);
+            double d = double(frame.ts_.extent_) / double(frame.ts_.base_);
             std::cout << "t" << trackNo << ": " << t << " - " << t + d
                       << std::endl;
           }
@@ -833,7 +862,7 @@ main(int argc, char ** argv)
     }
     
     // split frames into groups:
-    std::cout << "\t\t\tsplit frames into groups" << std::endl;
+    printCurrentTime("split frames into groups");
     
     const uint64 clusterTimeBase = NANOSEC_PER_SEC / timecodeScale;
     std::list<GroupOfFrames> gofs;
@@ -897,7 +926,7 @@ main(int argc, char ** argv)
     }
     
     // split remaining frames into groups of frames:
-    std::cout << "\t\t\tsplit remaining frames into groups" << std::endl;
+    printCurrentTime("split remaining frames into groups");
     
     while (true)
     {
@@ -967,8 +996,8 @@ main(int argc, char ** argv)
       {
         const Frame & frame = *j;
         double t = double(frame.ts_.start_) / double(frame.ts_.base_);
-        double d = double(frameDuration) / double(frame.ts_.base_);
-        std::cout << "t" << frame.trackNumber << ": "
+        double d = double(frame.ts_.extent_) / double(frame.ts_.base_);
+        std::cout << "t" << frame.trackNumber_ << ": "
                   << t << " - " << t + d
                   << std::endl;
       }
@@ -976,7 +1005,7 @@ main(int argc, char ** argv)
 #endif
     
     // assemble groups of frames into clusters:
-    std::cout << "\t\t\tassemble groups of frames into clusters" << std::endl;
+    printCurrentTime("assemble meta clusters");
     
     bool allowManyKeyframes = !isWebmOutput;
     std::list<MetaCluster> metaClusters;
@@ -997,8 +1026,7 @@ main(int argc, char ** argv)
 
     // convert meta clusters into matroska Clusters and SimpleBlocks,
     // create Cues along the way:
-    std::cout << "\t\t\tconvert meta clusters into Clusters and SimpleBlocks"
-              << std::endl;
+    printCurrentTime("convert meta clusters to Clusters, SimpleBlocks");
     
     TCues & cuesElt = segment.cues_;
     Cues & cues = cuesElt.payload_;
@@ -1113,7 +1141,7 @@ main(int argc, char ** argv)
   }
 
   // FIXME:
-  std::cout << "\t\t\tsave the file" << std::endl;
+  printCurrentTime("save to disk");
   
   // save the file:
   dst.file_.setSize(0);
@@ -1128,7 +1156,7 @@ main(int argc, char ** argv)
   File::remove(tmpPath.c_str());
 
   // FIXME:
-  std::cout << "\t\t\texit" << std::endl;
+  printCurrentTime("exit");
   
   // avoid waiting for all the destructors to be called:
   ::exit(0);
