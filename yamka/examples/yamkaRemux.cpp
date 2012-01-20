@@ -35,6 +35,7 @@ typedef Segment::TCluster TCluster;
 typedef Segment::TCues TCues;
 typedef Segment::TTags TTags;
 typedef Segment::TChapters TChapters;
+typedef Segment::TAttachment TAttachment;
 typedef Cues::TCuePoint TCuePoint;
 typedef CuePoint::TCueTrkPos TCueTrkPos;
 typedef Tags::TTag TTag;
@@ -45,6 +46,7 @@ typedef Tracks::TTrack TTrack;
 typedef Cluster::TBlockGroup TBlockGroup;
 typedef Cluster::TSimpleBlock TSimpleBlock;
 typedef Cluster::TEncryptedBlock TEncryptedBlock;
+typedef Cluster::TSilent TSilentTracks;
 typedef Chapters::TEdition TEdition;
 typedef Edition::TChapAtom TChapAtom;
 typedef ChapAtom::TDisplay TChapDisplay;
@@ -60,6 +62,16 @@ typedef std::list<TCluster>::const_iterator TClusterConstIter;
 typedef std::list<TSeekEntry>::const_iterator TSeekEntryConstIter;
 typedef std::list<TCuePoint>::const_iterator TCuePointConstIter;
 typedef std::list<TCueTrkPos>::const_iterator TCueTrkPosConstIter;
+
+//----------------------------------------------------------------
+// kMinShort
+// 
+static const short int kMinShort = std::numeric_limits<short int>::min();
+
+//----------------------------------------------------------------
+// kMaxShort
+// 
+static const short int kMaxShort = std::numeric_limits<short int>::max();
 
 //----------------------------------------------------------------
 // BE_QUIET
@@ -153,7 +165,7 @@ printCurrentTime(const char * msg)
   struct tm * timeinfo = localtime(&rawtime);
   std::string s(asctime(timeinfo));
   s[s.size() - 1] = '\0';
-  std::cout << s.c_str() << " -- " << msg << std::endl;
+  std::cout << "\n\n" << s.c_str() << " -- " << msg << std::endl;
 }
 
 //----------------------------------------------------------------
@@ -194,76 +206,6 @@ usage(char ** argv, const std::string & message)
 }
 
 //----------------------------------------------------------------
-// PartialClusterReader
-// 
-// skip loading any blocks:
-// 
-struct PartialClusterReader : public IDelegateLoad
-{
-  // virtual:
-  uint64 load(FileStorage & storage,
-              uint64 payloadBytesToRead,
-              uint64 eltId,
-              IPayload & payload)
-  {
-    if (eltId == TBlockGroup::kId ||
-        eltId == TSimpleBlock::kId ||
-        eltId == TEncryptedBlock::kId)
-    {
-      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
-      return payloadBytesToRead;
-    }
-    
-    // let the generic load mechanism handle id:
-    return 0;
-  }
-};
-
-
-//----------------------------------------------------------------
-// OneClusterReader
-// 
-// Load the first cluster, skip everything else.
-// 
-struct OneClusterReader : public IDelegateLoad
-{
-  bool loadedOneCluster_;
-  
-  OneClusterReader():
-    loadedOneCluster_(false)
-  {}
-  
-  // virtual:
-  uint64 load(FileStorage & storage,
-              uint64 payloadBytesToRead,
-              uint64 eltId,
-              IPayload & payload)
-  {
-    if (loadedOneCluster_)
-    {
-      return uintMax[8];
-    }
-    
-    if (eltId == TSegment::kId)
-    {
-      // avoid skipping the entire segment:
-      return 0;
-    }
-    
-    const bool payloadIsCluster = (eltId == TCluster::kId);
-    if (!payloadIsCluster)
-    {
-      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
-      return payloadBytesToRead;
-    }
-    
-    // let the generic load mechanism handle the actual loading:
-    loadedOneCluster_ = payloadIsCluster;
-    return 0;
-  }
-};
-
-//----------------------------------------------------------------
 // getTrack
 // 
 static const Track *
@@ -284,124 +226,825 @@ getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
 }
 
 //----------------------------------------------------------------
-// getFirstClusterPosition
+// ScopedVar
 // 
-static uint64
-getFirstClusterPosition(const TSegment & segmentElt,
-                        FileStorage & storage)
+template <typename T>
+struct ScopedVar
 {
-  // shortcuts:
-  const Segment & segment = segmentElt.payload_;
+  T & valRef_;
+  T valOutOfScope_;
   
-  IStorage::IReceiptPtr originReceipt = segmentElt.payloadReceipt();
-  uint64 originPosition = originReceipt->position();
-  
-  IStorage::IReceiptPtr segmentReceipt = segmentElt.storageReceipt();
-  uint64 segmentPosition = segmentReceipt->position();
-  uint64 segmentSize = segmentReceipt->numBytes();
-  
-  // check the SeekHead(s):
-  const std::deque<TSeekHead> & seekHeads = segment.seekHeads_;
-  std::size_t numSeekHeads = seekHeads.size();
-  for (std::size_t i = 0; i < numSeekHeads; i++)
+  ScopedVar(T & valRef, T valInScope):
+    valRef_(valRef),
+    valOutOfScope_(valRef)
   {
-    const SeekHead & seekHead = seekHeads[i].payload_;
-    const std::list<TSeekEntry> & seekList = seekHead.seek_;
-
-    for (std::list<TSeekEntry>::const_iterator j = seekList.begin();
-         j != seekList.end(); ++j)
-    {
-      const SeekEntry & seekEntry = j->payload_;
-      
-      Bytes eltIdBytes;
-      if (!seekEntry.id_.payload_.get(eltIdBytes))
-      {
-        assert(false);
-        continue;
-      }
-      
-      uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
-      if (eltId != TCluster::kId)
-      {
-        continue;
-      }
-        
-      const VEltPosition & eltReference = seekEntry.position_.payload_;
-      if (!eltReference.hasPosition())
-      {
-        assert(false);
-        continue;
-      }
-      
-      uint64 relativePosition = eltReference.position();
-      uint64 absolutePosition = originPosition + relativePosition;
-      return absolutePosition;
-    }
+    valRef_ = valInScope;
   }
 
-  // check the Cues:
-  const std::list<TCuePoint> & cuePoints = segment.cues_.payload_.points_;
-  for (TCuePointConstIter i = cuePoints.begin(); i != cuePoints.end(); ++i)
+  ~ScopedVar()
   {
-    const CuePoint & cuePoint = i->payload_;
-    const std::list<TCueTrkPos> & cueTrkPns = cuePoint.trkPosns_;
-    
-    for (TCueTrkPosConstIter j = cueTrkPns.begin(); j != cueTrkPns.end(); ++j)
-    {
-      const CueTrkPos & cueTrkPos = j->payload_;
-      const VEltPosition & clusterRef = cueTrkPos.cluster_.payload_;
-      if (!clusterRef.hasPosition())
-      {
-        continue;
-      }
-      
-      uint64 relativePosition = clusterRef.position();
-      uint64 absolutePosition = originPosition + relativePosition;
-      return absolutePosition;
-    }
+    valRef_ = valOutOfScope_;
   }
-  
-  // search the segment for the first cluster:
-  storage.file_.seek(segmentPosition, File::kAbsolutePosition);
-  
-  OneClusterReader reader;
-  TSegment segElt;
-  segElt.load(storage, segmentSize, &reader);
+};
 
-  Segment & seg = segElt.payload_;
-  if (seg.clusters_.empty())
-  {
-    // could not load any clusters:
-    return uintMax[8];
-  }
-  
-  assert(seg.clusters_.size() == 1);
-  uint64 clusterPosition = seg.clusters_.front().storageReceipt()->position();
-  return clusterPosition;
+//----------------------------------------------------------------
+// printProgress
+// 
+static void
+printProgress(FileStorage & storage, uint64 storageSize)
+{
+  // print progress:
+  uint64 pos = storage.file_.absolutePosition();
+  double pct = 100.0 * (double(pos) / double(storageSize));
+  printf("\r%3.6f%%  ", pct);
 }
 
 //----------------------------------------------------------------
-// finishCurrentBlock
+// LoadWithProgress
 // 
-static void
-finishCurrentBlock(Cluster & cluster,
-                   SimpleBlock & simpleBlock,
-                   FileStorage & tmp)
+struct LoadWithProgress : public IDelegateLoad
 {
-    if (!simpleBlock.getNumberOfFrames())
+  uint64 srcSize_;
+  
+  LoadWithProgress(uint64 srcSize = 1):
+    srcSize_(srcSize)
+  {}
+  
+  uint64 load(FileStorage & storage,
+              uint64 payloadBytesToRead,
+              uint64 eltId,
+              IPayload & payload)
+  {
+    printProgress(storage, srcSize_);
+    
+    // let the generic load mechanism handle the actual loading:
+    return 0;
+  }
+  
+  void loaded(IElement & elt)
+  {
+    if (elt.getId() == TSilentTracks::kId)
     {
-        return;
+      // if the SilentTracks element was present in the stream
+      // it must be saved to the output stream too,
+      // even if it contained no tracks at all:
+      elt.alwaysSave();
+    }
+  }
+};
+
+//----------------------------------------------------------------
+// ClusterSkipReader
+// 
+// Load the first cluster, skip everything else.
+// 
+struct ClusterSkipReader : public LoadWithProgress
+{
+  ClusterSkipReader(uint64 srcSize):
+    LoadWithProgress(srcSize)
+  {}
+  
+  // virtual:
+  uint64 load(FileStorage & storage,
+              uint64 payloadBytesToRead,
+              uint64 eltId,
+              IPayload & payload)
+  {
+    LoadWithProgress::load(storage, payloadBytesToRead, eltId, payload);
+    
+    const bool payloadIsCluster = (eltId == TCluster::kId);
+    const bool payloadIsCues = (eltId == TCues::kId);
+    if (payloadIsCluster || payloadIsCues)
+    {
+      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+      return payloadBytesToRead;
     }
     
-    cluster.simpleBlocks_.push_back(TSimpleBlock());
-    TSimpleBlock & block = cluster.simpleBlocks_.back();
+    // let the generic load mechanism handle the actual loading:
+    return 0;
+  }
+};
+
+//----------------------------------------------------------------
+// TTrackMap
+// 
+typedef std::map<uint64, uint64> TTrackMap;
+
+//----------------------------------------------------------------
+// TFifo
+//
+template <typename TLink>
+struct TFifo
+{
+  TFifo():
+    head_(NULL),
+    tail_(NULL),
+    size_(0)
+  {}
+  
+  ~TFifo()
+  {
+    assert(!head_);
+  }
+  
+  void push(TLink * link)
+  {
+    assert(!link->next_);
     
-    HodgePodge data;
-    simpleBlock.setAutoLacing();
-    simpleBlock.exportData(data, tmp);
-    block.payload_.data_ = data;
+    if (!head_)
+    {
+      assert(!tail_);
+      assert(!size_);
+      head_ = link;
+      tail_ = link;
+      size_ = 1;
+    }
+    else
+    {
+      assert(tail_);
+      assert(size_);
+      tail_->next_ = link;
+      tail_ = link;
+      size_++;
+    }
+  }
+  
+  TLink * pop()
+  {
+    if (!head_)
+    {
+      return NULL;
+    }
     
-    simpleBlock = SimpleBlock();
+    TLink * link = head_;
+    head_ = link->next_;
+    size_--;
+    
+    if (!head_)
+    {
+      tail_ = NULL;
+    }
+    
+    return link;
+  }
+  
+  TLink * head_;
+  TLink * tail_;
+  std::size_t size_;
+};
+
+//----------------------------------------------------------------
+// TBlockInfo
+// 
+struct TBlockInfo
+{
+  TBlockInfo():
+    pts_(0),
+    trackNo_(0),
+    next_(NULL)
+  {}
+  
+  inline HodgePodge * getBlockData()
+  {
+    if (sblockElt_.mustSave())
+    {
+      return &(sblockElt_.payload_.data_);
+    }
+    else if (bgroupElt_.mustSave())
+    {
+      return &(bgroupElt_.payload_.block_.payload_.data_);
+    }
+    else if (eblockElt_.mustSave())
+    {
+      return &(eblockElt_.payload_.data_);
+    }
+
+    assert(false);
+    return NULL;
+  }
+
+  IStorage::IReceiptPtr save(FileStorage & storage)
+  {
+    if (sblockElt_.mustSave())
+    {
+      return sblockElt_.save(storage);
+    }
+    else if (bgroupElt_.mustSave())
+    {
+      return bgroupElt_.save(storage);
+    }
+    else if (eblockElt_.mustSave())
+    {
+      return eblockElt_.save(storage);
+    }
+
+    assert(false);
+    return IStorage::IReceiptPtr();
+  }
+
+  TSilentTracks silentElt_;
+  TSimpleBlock sblockElt_;
+  TBlockGroup bgroupElt_;
+  TEncryptedBlock eblockElt_;
+  
+  SimpleBlock block_;
+  IStorage::IReceiptPtr header_;
+  IStorage::IReceiptPtr frames_;
+  
+  uint64 pts_;
+  uint64 trackNo_;
+  bool keyframe_;
+  
+  TBlockInfo * next_;
+};
+
+//----------------------------------------------------------------
+// TBlockFifo
+// 
+typedef TFifo<TBlockInfo> TBlockFifo;
+
+//----------------------------------------------------------------
+// TLace
+// 
+struct TLace
+{
+  TLace(std::size_t numTracks):
+    tracks_(numTracks + 1),
+    size_(0)
+  {}
+  
+  void push(TBlockInfo * binfo)
+  {
+    TBlockFifo & track = tracks_[binfo->trackNo_];
+    track.push(binfo);
+    size_++;
+  }
+
+  TBlockInfo * pop()
+  {
+    TBlockFifo * nextTrack = NULL;
+    uint64 earliestPTS = (uint64)(~0);
+
+    std::size_t numTracks = tracks_.size();
+    for (std::size_t i = 0; i < numTracks; i++)
+    {
+      TBlockFifo & track = tracks_[i];
+      if (track.size_ && track.head_->pts_ < earliestPTS)
+      {
+        nextTrack = &track;
+        earliestPTS = track.head_->pts_;
+      }
+    }
+
+    if (!nextTrack)
+    {
+      return NULL;
+    }
+
+    size_--;
+    return nextTrack->pop();
+  }
+  
+  std::vector<TBlockFifo> tracks_;
+  std::size_t size_;
+};
+
+//----------------------------------------------------------------
+// TRemuxer
+// 
+struct TRemuxer : public LoadWithProgress
+{
+  TRemuxer(const TTrackMap & trackSrcDst,
+           const TTrackMap & trackDstSrc,
+           const TSegment & srcSeg,
+           TSegment & dstSeg,
+           FileStorage & src,
+           FileStorage & dst,
+           FileStorage & tmp);
+
+  void remux();
+  void flush();
+
+  // Returns true if the given Block/SimpleBlock/EncryptedBlock
+  // should be kept, returns false if the block should be discarded:
+  bool isRelevant(uint64 clusterTime, TBlockInfo & binfo);
+  
+  // if necessary remaps the track number, adjusts blockTime,
+  // keyframe flag, and stores the updated block header without
+  // altering the (possibly) laced (or encrypted) block data:
+  bool updateHeader(uint64 clusterTime, TBlockInfo & binfo);
+  
+  void push(uint64 clusterTime, TSilentTracks & silentElt);
+  void push(uint64 clusterTime, TSimpleBlock & sblockElt);
+  void push(uint64 clusterTime, TBlockGroup & bgroupElt);
+  void push(uint64 clusterTime, TEncryptedBlock & eblockElt);
+  
+  void mux(std::size_t minLaceSize = 50);
+  void startNextCluster(TBlockInfo * binfo);
+  void finishCurrentCluster();
+  void addCuePoint(TCluster * clusterElt, TBlockInfo * binfo);
+  
+  const TTrackMap & trackSrcDst_;
+  const TTrackMap & trackDstSrc_;
+  const TSegment & srcSeg_;
+  TSegment & dstSeg_;
+  FileStorage & src_;
+  FileStorage & dst_;
+  FileStorage & tmp_;
+  uint64 clusterBlocks_;
+  uint64 cuesTrackNo_;
+  
+  TLace lace_;
+};
+
+//----------------------------------------------------------------
+// TRemuxer::TRemuxer
+// 
+TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
+                   const TTrackMap & trackDstSrc,
+                   const TSegment & srcSeg,
+                   TSegment & dstSeg,
+                   FileStorage & src,
+                   FileStorage & dst,
+                   FileStorage & tmp):
+  LoadWithProgress(src.file_.size()),
+  trackSrcDst_(trackSrcDst),
+  trackDstSrc_(trackDstSrc),
+  srcSeg_(srcSeg),
+  dstSeg_(dstSeg),
+  src_(src),
+  dst_(dst),
+  tmp_(tmp),
+  lace_(trackSrcDst.size()),
+  clusterBlocks_(0),
+  cuesTrackNo_(0)
+{
+  TTracks & tracksElt = dstSeg.payload_.tracks_;
+  std::deque<TTrack> & tracks = tracksElt.payload_.tracks_;
+  
+  std::size_t numTracks = tracks.size();
+  for (std::size_t i = 0; i < numTracks; i++)
+  {
+    Track & track = tracks[i].payload_;
+    uint64 trackType = track.trackType_.payload_.get();
+    uint64 trackNo = track.trackNumber_.payload_.get();
+    
+    if (trackType == Track::kTrackTypeVideo)
+    {
+      cuesTrackNo_ = trackNo;
+      break;
+    }
+    else if (trackType == Track::kTrackTypeAudio && !cuesTrackNo_)
+    {
+      cuesTrackNo_ = trackNo;
+    }
+  }
+
+  if (!cuesTrackNo_ && numTracks)
+  {
+    cuesTrackNo_ = tracks[0].payload_.trackNumber_.payload_.get();
+  }
+
+  // add 2nd SeekHead:
+  dstSeg_.payload_.seekHeads_.push_back(TSeekHead());
+  TSeekHead & seekHeadElt = dstSeg_.payload_.seekHeads_.back();
+  
+  // index the 2nd SeekHead and Cues:
+  SeekHead & seekHead1 = dstSeg_.payload_.seekHeads_.front().payload_;
+  seekHead1.indexThis(&dstSeg_, &seekHeadElt, tmp_);
+  seekHead1.indexThis(&dstSeg_, &(dstSeg_.payload_.cues_), tmp_);
+
+  TAttachment & attachments = dstSeg_.payload_.attachments_;
+  attachments = srcSeg_.payload_.attachments_;
+  if (attachments.mustSave())
+  {
+    seekHead1.indexThis(&dstSeg_, &attachments, tmp_);
+  }
+  
+  TChapters & chapters = dstSeg_.payload_.chapters_;
+  chapters = srcSeg_.payload_.chapters_;
+  if (chapters.mustSave())
+  {
+    seekHead1.indexThis(&dstSeg_, &chapters, tmp_);
+  }
+}
+
+//----------------------------------------------------------------
+// TRemuxer::remux
+// 
+void
+TRemuxer::remux()
+{
+  const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
+  for (std::list<TCluster>::const_iterator i = clusters.begin();
+       i != clusters.end(); ++i)
+  {
+    TCluster clusterElt = *i;
+
+    uint64 position = clusterElt.storageReceipt()->position();
+    uint64 numBytes = clusterElt.storageReceipt()->numBytes();
+    clusterElt.discardReceipts();
+    
+    src_.file_.seek(position);
+    uint64 bytesRead = clusterElt.load(src_, numBytes, this);
+    assert(bytesRead == numBytes);
+
+    Cluster & cluster = clusterElt.payload_;
+    uint64 clusterTime = cluster.timecode_.payload_.get();
+
+    // use SilentTracks as a cluster delimiter:
+    if (cluster.silent_.mustSave())
+    {
+      push(clusterTime, cluster.silent_);
+    }
+    
+    // iterate through simple blocks and push them into a lace:
+    std::deque<TSimpleBlock> & sblocks = cluster.simpleBlocks_;
+    for (std::deque<TSimpleBlock>::iterator i = sblocks.begin();
+         i != sblocks.end(); ++i)
+    {
+      TSimpleBlock & sblockElt = *i;
+      push(clusterTime, sblockElt);
+    }
+    
+    // iterate through block groups and push them into a lace:
+    std::deque<TBlockGroup> & bgroups = cluster.blockGroups_;
+    for (std::deque<TBlockGroup>::iterator i = bgroups.begin();
+         i != bgroups.end(); ++i)
+    {
+      TBlockGroup & bgroupElt = *i;
+      push(clusterTime, bgroupElt);
+    }
+    
+    // iterate through encrypted blocks and push them into a lace:
+    std::deque<TEncryptedBlock> & eblocks = cluster.encryptedBlocks_;
+    for (std::deque<TEncryptedBlock>::iterator i = eblocks.begin();
+         i != eblocks.end(); ++i)
+    {
+      TEncryptedBlock & eblockElt = *i;
+      push(clusterTime, eblockElt);
+    }
+  }
+  
+  flush();
+
+  TSeekHead & seekHead2 = dstSeg_.payload_.seekHeads_.back();
+  seekHead2.save(dst_);
+
+  TCues & cues = dstSeg_.payload_.cues_;
+  cues.save(dst_);
+
+  TAttachment & attachments = dstSeg_.payload_.attachments_;
+  if (attachments.mustSave())
+  {
+    attachments.save(dst_);
+  }
+  
+  TChapters & chapters = dstSeg_.payload_.chapters_;
+  if (chapters.mustSave())
+  {
+    chapters.save(dst_);
+  }
+}
+
+//----------------------------------------------------------------
+// TRemuxer::flush
+// 
+void
+TRemuxer::flush()
+{
+  while (lace_.size_)
+  {
+    mux(lace_.size_);
+  }
+  
+  finishCurrentCluster();
+}
+
+//----------------------------------------------------------------
+// TRemuxer::isRelevant
+// 
+bool
+TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
+{
+  HodgePodge * blockData = binfo.getBlockData();
+  if (!blockData)
+  {
+    return false;
+  }
+                     
+  // check whether the given block is for a track we are interested in:
+  uint64 bytesRead = binfo.block_.importData(*blockData);
+  if (!bytesRead)
+  {
+    assert(false);
+    return false;
+  }
+  
+  uint64 srcTrackNo = binfo.block_.getTrackNumber();
+  TTrackMap::const_iterator found = trackSrcDst_.find(srcTrackNo);
+  if (found == trackSrcDst_.end())
+  {
+    return false;
+  }
+  
+  const uint64 blockSize = blockData->numBytes();
+  HodgePodgeConstIter blockDataIter(*blockData);
+  binfo.header_ = blockDataIter.receipt(0, bytesRead);
+  binfo.frames_ = blockDataIter.receipt(bytesRead, blockSize - bytesRead);
+  
+  binfo.trackNo_ = found->second;
+  binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
+  binfo.keyframe_ = binfo.block_.isKeyframe();
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// TRemuxer::updateHeader
+// 
+bool
+TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
+{
+  int64 dstBlockTime = binfo.pts_ - clusterTime;
+  assert(dstBlockTime >= kMinShort &&
+         dstBlockTime <= kMaxShort);
+  
+  uint64 srcTrackNo = binfo.block_.getTrackNumber();
+  short int srcBlockTime = binfo.block_.getRelativeTimecode();
+  bool srcIsKeyframe = binfo.block_.isKeyframe();
+  
+  if (srcTrackNo == binfo.trackNo_ &&
+      srcBlockTime == dstBlockTime &&
+      srcIsKeyframe == binfo.keyframe_)
+  {
+    // nothing changed:
+    return true;
+  }
+  
+  HodgePodge * blockData = binfo.getBlockData();
+  if (!blockData)
+  {
+    return false;
+  }
+  
+  binfo.block_.setTrackNumber(binfo.trackNo_);
+  binfo.block_.setRelativeTimecode((short int)(dstBlockTime));
+  binfo.block_.setKeyframe(binfo.keyframe_);
+  
+  binfo.header_ = binfo.block_.writeHeader(tmp_);
+  
+  blockData->set(binfo.header_);
+  blockData->add(binfo.frames_);
+  
+  return true;
+}
+
+//----------------------------------------------------------------
+// TRemuxer::push
+// 
+void
+TRemuxer::push(uint64 clusterTime, TSilentTracks & silentElt)
+{
+  TBlockInfo * info = new TBlockInfo();
+  info->silentElt_ = silentElt;
+  info->pts_ = clusterTime;
+  lace_.push(info);
+}
+
+//----------------------------------------------------------------
+// TRemuxer::push
+// 
+void
+TRemuxer::push(uint64 clusterTime, TSimpleBlock & sblockElt)
+{
+  TBlockInfo * info = new TBlockInfo();
+  info->sblockElt_ = sblockElt;
+  
+  if (!isRelevant(clusterTime, *info))
+  {
+    delete info;
+    return;
+  }
+
+  lace_.push(info);
+  mux();
+}
+
+//----------------------------------------------------------------
+// TRemuxer::push
+// 
+void
+TRemuxer::push(uint64 clusterTime, TBlockGroup & bgroupElt)
+{
+  TBlockInfo * info = new TBlockInfo();
+  info->bgroupElt_ = bgroupElt;
+  
+  if (!isRelevant(clusterTime, *info))
+  {
+    delete info;
+    return;
+  }
+
+  lace_.push(info);
+  mux();
+}
+
+//----------------------------------------------------------------
+// TRemuxer::push
+// 
+void
+TRemuxer::push(uint64 clusterTime, TEncryptedBlock & eblockElt)
+{
+  TBlockInfo * info = new TBlockInfo();
+  info->eblockElt_ = eblockElt;
+  
+  if (!isRelevant(clusterTime, *info))
+  {
+    delete info;
+    return;
+  }
+
+  lace_.push(info);
+  mux();
+}
+
+//----------------------------------------------------------------
+// TRemuxer::mux
+// 
+void
+TRemuxer::mux(std::size_t minLaceSize)
+{
+  if (lace_.size_ < minLaceSize)
+  {
+    return;
+  }
+
+  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
+  
+  TBlockInfo * binfo = lace_.pop();
+  if (!binfo->trackNo_ || clusters.empty())
+  {
+    startNextCluster(binfo);
+  }
+
+  TCluster * clusterElt = &(clusters.back());
+  uint64 clusterTime = clusterElt->payload_.timecode_.payload_.get();
+  int64 blockTime = binfo->pts_ - clusterTime;
+  
+  if (blockTime > kMaxShort)
+  {
+    startNextCluster(binfo);
+
+    clusterElt = &(clusters.back());
+    clusterTime = clusterElt->payload_.timecode_.payload_.get();
+    blockTime = binfo->pts_ - clusterTime;
+  }
+
+  if (binfo->trackNo_ && updateHeader(clusterTime, *binfo))
+  {
+    Cluster & cluster = clusterElt->payload_;
+    
+    if (binfo->sblockElt_.mustSave())
+    {
+      cluster.simpleBlocks_.push_back(binfo->sblockElt_);
+      binfo->sblockElt_ = cluster.simpleBlocks_.back();
+    }
+    else if (binfo->bgroupElt_.mustSave())
+    {
+      cluster.blockGroups_.push_back(binfo->bgroupElt_);
+      binfo->bgroupElt_ = cluster.blockGroups_.back();
+    }
+    else if (binfo->eblockElt_.mustSave())
+    {
+      cluster.encryptedBlocks_.push_back(binfo->eblockElt_);
+      binfo->eblockElt_ = cluster.encryptedBlocks_.back();
+    }
+    
+    binfo->save(dst_);
+    
+    clusterBlocks_++;
+    addCuePoint(clusterElt, binfo);
+  }
+  
+  delete binfo;
+}
+
+//----------------------------------------------------------------
+// TRemuxer::startNextCluster
+// 
+void
+TRemuxer::startNextCluster(TBlockInfo * binfo)
+{
+  finishCurrentCluster();
+  
+  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
+
+  // start a new cluster:
+  clusterBlocks_ = 0;
+  clusters.push_back(TCluster());
+  TCluster & clusterElt = clusters.back();
+  
+  // index the new cluster with the 2nd SeekHead:
+  SeekHead & seekHead2 = dstSeg_.payload_.seekHeads_.back().payload_;
+  seekHead2.indexThis(&dstSeg_, &clusterElt, tmp_);
+  
+  // set the start time:
+  clusterElt.payload_.timecode_.payload_.set(binfo->pts_);
+
+  if (!binfo->trackNo_ && binfo->silentElt_.mustSave())
+  {
+    // copy the SilentTracks, update track numbers to match:
+    typedef SilentTracks::TTrack TTrkNumElt;
+    typedef std::list<TTrkNumElt> TTrkNumElts;
+
+    clusterElt.payload_.silent_.alwaysSave();
+    
+    const TTrkNumElts & srcSilentTracks =
+      binfo->silentElt_.payload_.tracks_;
+
+    TTrkNumElts & dstSilentTracks =
+      clusterElt.payload_.silent_.payload_.tracks_;
+
+    for (TTrkNumElts::const_iterator i = srcSilentTracks.begin();
+         i != srcSilentTracks.end(); ++i)
+    {
+      const TTrkNumElt & srcTnElt = *i;
+      uint64 srcTrackNo = srcTnElt.payload_.get();
+      
+      TTrackMap::const_iterator found = trackSrcDst_.find(srcTrackNo);
+      if (found != trackSrcDst_.end())
+      {
+        dstSilentTracks.push_back(TTrkNumElt());
+        TTrkNumElt & dstTnElt = dstSilentTracks.back();
+
+        uint64 dstTrackNo = found->second;
+        dstTnElt.payload_.set(dstTrackNo);
+      }
+    }
+  }
+  
+  clusterElt.savePaddedUpToSize(dst_, uintMax[8]);
+}
+
+//----------------------------------------------------------------
+// TRemuxed::finishCurrentCluster
+// 
+void
+TRemuxer::finishCurrentCluster()
+{
+  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
+  if (clusters.empty())
+  {
+    return;
+  }
+
+  // fix the cluster size:
+  TCluster & clusterElt = clusters.back();
+
+  IStorage::IReceiptPtr receipt = clusterElt.storageReceipt();
+  IStorage::IReceiptPtr payload = clusterElt.payloadReceipt();
+  IStorage::IReceiptPtr payloadEnd = dst_.receipt();
+
+  uint64 payloadSize = payloadEnd->position() - payload->position();
+  uint64 elementIdSize = uintNumBytes(TCluster::kId);
+
+  IStorage::IReceiptPtr payloadSizeReceipt =
+    receipt->receipt(elementIdSize, 8);
+  
+  TByteVec v = vsizeEncode(payloadSize, 8);
+  payloadSizeReceipt->save(Bytes(v));
+}
+
+//----------------------------------------------------------------
+// TRemuxer::addCuePoint
+// 
+void
+TRemuxer::addCuePoint(TCluster * clusterElt, TBlockInfo * binfo)
+{
+  if (!binfo->keyframe_ || binfo->trackNo_ != cuesTrackNo_)
+  {
+    return;
+  }
+  
+  Cues & cues = dstSeg_.payload_.cues_.payload_;
+  
+  // add to cues:
+  cues.points_.push_back(TCuePoint());
+  TCuePoint & cuePoint = cues.points_.back();
+  
+  // set cue timepoint:
+  cuePoint.payload_.time_.payload_.set(binfo->pts_);
+  
+  // add a track position for this timepoint:
+  cuePoint.payload_.trkPosns_.resize(1);
+  CueTrkPos & pos = cuePoint.payload_.trkPosns_.back().payload_;
+  
+  pos.block_.payload_.set(clusterBlocks_);
+  pos.track_.payload_.set(binfo->trackNo_);
+  
+  pos.cluster_.payload_.setOrigin(&dstSeg_);
+  pos.cluster_.payload_.setElt(clusterElt);
 }
 
 //----------------------------------------------------------------
@@ -532,27 +1175,41 @@ main(int argc, char ** argv)
   
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
-#if 1
-  if (!doc.loadSeekHead(src, srcSize) ||
-      !doc.loadViaSeekHead(src, NULL, false) ||
-      doc.segments_.empty())
-  {
-    usage(argv, (std::string("failed to load any matroska segments").c_str()));
-  }
-#else
-  // Fri Jan 13 21:25:41 2012 -- start
-  // Fri Jan 13 21:49:36 2012 -- doc.load finished
-  if (!doc.load(src, srcSize) || doc.segments_.empty())
-  {
-    usage(argv, (std::string("failed to load any matroska segments").c_str()));
-  }
-#endif
+  ClusterSkipReader skipClusters(srcSize);
+
+  // attempl to load via SeekHead(s):
+  bool ok = doc.loadSeekHead(src, srcSize);
+  printCurrentTime("doc.loadSeekHead finished");
   
-  printCurrentTime("doc.load finished");
+  if (ok)
+  {
+    ok = doc.loadViaSeekHead(src, &skipClusters, true);
+    printCurrentTime("doc.loadViaSeekHead finished");
+  }
+
+  if (!ok ||
+      !doc.segments_.empty() &&
+      doc.segments_.front().payload_.clusters_.empty())
+  {
+    std::cout << "failed to find Clusters via SeekHead, "
+              << "attempting brute force"
+              << std::endl;
+    
+    doc = MatroskaDoc();
+    src.file_.seek(0);
+    
+    doc.loadAndKeepReceipts(src, srcSize, &skipClusters);
+    printCurrentTime("doc.loadAndKeepReceipts finished");
+  }
+
+  if (doc.segments_.empty())
+  {
+    usage(argv, (std::string("failed to load any matroska segments").c_str()));
+  }
   
   std::size_t numSegments = doc.segments_.size();
-  std::vector<std::map<uint64, uint64> > segmentTrackInOut(numSegments);
-  std::vector<std::map<uint64, uint64> > segmentTrackOutIn(numSegments);
+  std::vector<std::map<uint64, uint64> > trackSrcDst(numSegments);
+  std::vector<std::map<uint64, uint64> > trackDstSrc(numSegments);
   std::vector<std::vector<std::list<Frame> > > segmentTrackFrames(numSegments);
   
   // verify that the specified tracks exist:
@@ -560,8 +1217,8 @@ main(int argc, char ** argv)
   for (std::list<TSegment>::iterator i = doc.segments_.begin();
        i != doc.segments_.end(); ++i, ++segmentIndex)
   {
-    std::map<uint64, uint64> & trackInOut = segmentTrackInOut[segmentIndex];
-    std::map<uint64, uint64> & trackOutIn = segmentTrackOutIn[segmentIndex];
+    std::map<uint64, uint64> & trackInOut = trackSrcDst[segmentIndex];
+    std::map<uint64, uint64> & trackOutIn = trackDstSrc[segmentIndex];
     
     const Segment & segment = i->payload_;
     
@@ -636,18 +1293,21 @@ main(int argc, char ** argv)
   {
     tmp.file_.setSize(0);
   }
-
-  bool isWebmOutput = endsWith(dstPath, ".webm") || endsWith(dstPath, ".weba");
-  WebmDoc out(isWebmOutput ? kFileFormatWebm : kFileFormatMatroska);
+  
+  MatroskaDoc out;
+  dst.file_.setSize(0);
+  out.save(dst);
   
   segmentIndex = 0;
   for (std::list<TSegment>::iterator i = doc.segments_.begin();
        i != doc.segments_.end(); ++i, ++segmentIndex)
   {
     printCurrentTime("parse next segment");
-    
-    out.segments_.push_back(TSegment());
-    TSegment & segmentElt = out.segments_.back();
+
+    TSegment segmentElt;
+    segmentElt.setFixedSize(uintMax[8]);
+    // out.segments_.push_back(TSegment());
+    // TSegment & segmentElt = out.segments_.back();
     
     Segment & segment = segmentElt.payload_;
     const Segment & segmentIn = i->payload_;
@@ -655,6 +1315,7 @@ main(int argc, char ** argv)
     // add first SeekHead, written before clusters:
     segment.seekHeads_.push_back(TSeekHead());
     TSeekHead & seekHeadElt = segment.seekHeads_.back();
+    seekHeadElt.setFixedSize(1024);
     SeekHead & seekHead = seekHeadElt.payload_;
     
     // copy segment info:
@@ -675,8 +1336,8 @@ main(int argc, char ** argv)
     std::deque<TTrack> & tracks = tracksElt.payload_.tracks_;
     const std::deque<TTrack> & tracksIn = segmentIn.tracks_.payload_.tracks_;
 
-    std::map<uint64, uint64> & trackInOut = segmentTrackInOut[segmentIndex];
-    std::map<uint64, uint64> & trackOutIn = segmentTrackOutIn[segmentIndex];
+    std::map<uint64, uint64> & trackInOut = trackSrcDst[segmentIndex];
+    std::map<uint64, uint64> & trackOutIn = trackDstSrc[segmentIndex];
     uint64 trackMapSize = trackOutIn.size();
 
     std::vector<Track::MatroskaTrackType> trackType((std::size_t)trackMapSize);
@@ -686,7 +1347,7 @@ main(int argc, char ** argv)
     {
       tracks.push_back(TTrack());
       Track & track = tracks.back().payload_;
-
+      
       uint64 trackNoIn = trackOutIn[trackNo];
       const Track * trackIn = getTrack(tracksIn, trackNoIn);
       if (trackIn)
@@ -714,439 +1375,55 @@ main(int argc, char ** argv)
     // index the first set of top-level elements:
     seekHead.indexThis(&segmentElt, &segInfoElt, tmp);
     seekHead.indexThis(&segmentElt, &tracksElt, tmp);
-
-    // Find the first cluster in this segment, either via SeekHead(s),
-    // a CuePoint, or by searching the level-1 elements in the file:
-    uint64 clusterPosition = getFirstClusterPosition(*i, src);
-    src.file_.seek(clusterPosition, File::kAbsolutePosition);
     
-    // shortcut:
-    std::vector<std::list<Frame> > & trackFrames =
-      segmentTrackFrames[segmentIndex];
+    // minor cleanup prior to saving:
+    RemoveVoids().eval(segmentElt);
+    
+    // discard previous storage receipts:
+    DiscardReceipts().eval(segmentElt);
+    
+    // save a placeholder:
+    IStorage::IReceiptPtr segmentReceipt = segmentElt.save(dst);
+    
+    printCurrentTime("begin segment remux");
 
-    // Read cluster(s) and extract track frames that we are interested in:
-    while (true)
+    // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
+    TRemuxer remuxer(trackInOut, trackOutIn, *i, segmentElt, src, dst, tmp);
+    remuxer.remux();
+
+    printCurrentTime("finished segment remux");
+    
+    // rewrite the 1st SeekHead:
     {
-      TCluster clusterElt;
-      Cluster & cluster = clusterElt.payload_;
+      TSeekHead & seekHead = segmentElt.payload_.seekHeads_.front();
+      IStorage::IReceiptPtr receipt = seekHead.storageReceipt();
       
-      PartialClusterReader clusterReader;
-      uint64 bytesRead = clusterElt.load(src, uintMax[8], &clusterReader);
-      if (!bytesRead)
-      {
-        break;
-      }
+      File::Seek autoRestorePosition(dst.file_);
+      dst.file_.seek(receipt->position());
       
-      File::Seek autoRestore(src.file_);
-      const uint64 clusterTime = cluster.timecode_.payload_.get();
-
-#ifndef BE_QUIET
-      std::cout << "\t\t\tcluster time: "
-                << double(clusterTime * timecodeScale) / double(NANOSEC_PER_SEC)
-                << std::endl;
-#endif
-      
-      std::deque<TBlockGroup> & blockGroups = cluster.blockGroups_;
-      std::size_t numBlockGroups = blockGroups.size();
-      for (std::size_t j = 0; j < numBlockGroups; j++)
-      {
-        TBlockGroup & bg = blockGroups[j];
-      }
-      
-      std::deque<TSimpleBlock> & simpleBlocks = cluster.simpleBlocks_;
-      std::size_t numSimpleBlocks = simpleBlocks.size();
-      for (std::size_t j = 0; j < numSimpleBlocks; j++)
-      {
-        TSimpleBlock & sb = simpleBlocks[j];
-
-        IStorage::IReceiptPtr receipt = sb.payloadReceipt();
-        uint64 position = receipt->position();
-        uint64 numBytes = receipt->numBytes();
-        src.file_.seek(position, File::kAbsolutePosition);
-        
-        // check whether this block is for a track we are interested in:
-        uint64 trackNoIn = 0;
-        {
-          File::Seek storageStart(src.file_);
-          
-          // read track number:
-          uint64 vsizeSize = 0;
-          trackNoIn = vsizeDecode(src, vsizeSize);
-
-          if (!has(trackInOut, trackNoIn))
-          {
-            // ignore this block:
-            continue;
-          }
-        }
-
-        HodgePodge blockData;
-        receipt = src.loadHodgePodge(blockData, numBytes);
-        if (!receipt)
-        {
-          assert(false);
-          continue;
-        }
-        
-        SimpleBlock block;
-        if (!block.importData(blockData))
-        {
-          assert(false);
-          continue;
-        }
-
-        uint64 trackNo = trackInOut[trackNoIn];
-        const Track & track = tracks[(std::size_t)(trackNo - 1)].payload_;
-        
-        const short int blockTime = block.getRelativeTimecode();
-#ifndef BE_QUIET
-        std::cout << "\t\t\tt" << trackNo << " block time: "
-                  << double(blockTime * timecodeScale) / double(NANOSEC_PER_SEC)
-                  << std::endl;
-#endif
-        
-        // shortcut to the output frame list:
-        std::list<Frame> & frames = trackFrames[(std::size_t)(trackNo - 1)];
-        std::size_t numFrames = block.getNumberOfFrames();
-        
-        // default frame duration, expressed in nanoseconds:
-        uint64 frameDuration = track.frameDuration_.payload_.get();
-        if (!frameDuration)
-        {
-          frameDuration = timecodeScale;
-        }
-        
-#ifndef BE_QUIET
-        std::cout << "\t\t\tt" << trackNo << " frame duration: "
-                  << double(frameDuration) / double(NANOSEC_PER_SEC)
-                  << std::endl;
-#endif
-        
-        for (std::size_t k = 0; k < numFrames; k++)
-        {
-          frames.push_back(Frame());
-          Frame & frame = frames.back();
-          
-          frame.trackNumber_ = trackNo;
-          frame.isKeyframe_ = (k == 0) && block.isKeyframe();
-          frame.ts_.extent_ = frameDuration;
-          frame.ts_.start_ = ((clusterTime + blockTime) * timecodeScale +
-                              k * frameDuration);
-          frame.ts_.base_ = NANOSEC_PER_SEC;
-
-#ifndef BE_QUIET
-          // FIXME:
-          {
-            double t = double(frame.ts_.start_) / double(frame.ts_.base_);
-            double d = double(frame.ts_.extent_) / double(frame.ts_.base_);
-            std::cout << "t" << trackNo << ": " << t << " - " << t + d
-                      << std::endl;
-          }
-#endif
-          
-          const IStorage::IReceiptPtr & frameReceipt = block.getFrame(k);
-          frame.data_.data_.set(frameReceipt);
-        }
-      }
-      
-      if (!isWebmOutput)
-      {
-        // webm doesn't support encrypted blocks:
-        std::deque<TEncryptedBlock> & encBlocks = cluster.encryptedBlocks_;
-        std::size_t numEncBlocks = encBlocks.size();
-        for (std::size_t j = 0; j < numEncBlocks; j++)
-        {
-          TEncryptedBlock & eb = encBlocks[j];
-        }
-      }
+      seekHead.save(dst);
     }
     
-    // split frames into groups:
-    printCurrentTime("split frames into groups");
-    
-    const uint64 clusterTimeBase = NANOSEC_PER_SEC / timecodeScale;
-    std::list<GroupOfFrames> gofs;
-    gofs.push_back(GroupOfFrames(clusterTimeBase));
+    // rewrite element position references (second pass):
+    RewriteReferences().eval(segmentElt);
 
-    if (videoTrackNo)
+    // rewrite the segment payload size:
     {
-      std::list<Frame> & videoFrames =
-        trackFrames[(std::size_t)(videoTrackNo - 1)];
-      
-      while (!videoFrames.empty())
-      {
-        Frame videoFrame = videoFrames.front();
-        videoFrames.pop_front();
-        
-        if ((videoFrame.isKeyframe_ || !gofs.back().mayAdd(videoFrame)) &&
-            !gofs.back().frames_.empty())
-        {
-          // start a new group of frames:
-          gofs.push_back(GroupOfFrames(clusterTimeBase));
-        }
-        
-        GroupOfFrames & gof = gofs.back();
-        gof.add(videoFrame);
-        
-        for (uint64 trackNo = 1; trackNo <= trackMapSize; trackNo++)
-        {
-          if (trackNo == videoTrackNo)
-          {
-            continue;
-          }
-          
-          // const Track & track = tracks[trackNo - 1].payload_;
-          bool isVideoTrack =
-            trackType[(std::size_t)(trackNo - 1)] == Track::kTrackTypeVideo;
-          
-          std::list<Frame> & frames = trackFrames[(std::size_t)(trackNo - 1)];
-          
-          // add frames whose time span end point is contained
-          // in the current group of frames:
-          while (!frames.empty())
-          {
-            Frame frame = frames.front();
-            if (gof.ts_.getEnd(gof.ts_.base_) < frame.ts_.getEnd(gof.ts_.base_))
-            {
-              break;
-            }
-            
-            frames.pop_front();
-            if (gof.mayAdd(frame))
-            {
-              gof.add(frame);
-            }
-            else
-            {
-              assert(false);
-            }
-          }
-        }
-      }
-    }
-    
-    // split remaining frames into groups of frames:
-    printCurrentTime("split remaining frames into groups");
-    
-    while (true)
-    {
-      bool addedFrames = false;
-      
-      for (uint64 trackNo = 1; trackNo <= trackMapSize; trackNo++)
-      {
-        std::list<Frame> & frames = trackFrames[(std::size_t)(trackNo - 1)];
-        if (frames.empty())
-        {
-          continue;
-        }
-        
-        // shortcut:
-        bool isVideoTrack =
-          trackType[(std::size_t)(trackNo - 1)] == Track::kTrackTypeVideo;
-        
-        // start a new group of frames:
-        Frame frame = frames.front();
-        
-        if ((isVideoTrack && frame.isKeyframe_) ||
-            !gofs.back().mayAdd(frame))
-        {
-          // start a new group of frames:
-          gofs.push_back(GroupOfFrames(clusterTimeBase));
-        }
-        
-        GroupOfFrames & gof = gofs.back();
-        while (true)
-        {
-          if (gof.mayAdd(frame))
-          {
-            gof.add(frame);
-            addedFrames = true;
-            
-            frames.pop_front();
-            if (frames.empty())
-            {
-              break;
-            }
-          }
-          else
-          {
-            // move on to the next track:
-            break;
-          }
-          
-          frame = frames.front();
-        }
-      }
+      IStorage::IReceiptPtr receipt = segmentElt.storageReceipt();
+      IStorage::IReceiptPtr payload = segmentElt.payloadReceipt();
+      IStorage::IReceiptPtr payloadEnd = dst.receipt();
 
-      if (!addedFrames)
-      {
-        break;
-      }
+      uint64 payloadSize = payloadEnd->position() - payload->position();
+      uint64 elementIdSize = uintNumBytes(TSegment::kId);
+      
+      IStorage::IReceiptPtr payloadSizeReceipt =
+        receipt->receipt(elementIdSize, 8);
+      
+      TByteVec v = vsizeEncode(payloadSize, 8);
+      payloadSizeReceipt->save(Bytes(v));
     }
-
-#ifndef BE_QUIET
-    // FIXME:
-    for (std::list<GroupOfFrames>::const_iterator i = gofs.begin();
-         i != gofs.end(); ++i)
-    {
-      std::cout << std::endl;
-      const GroupOfFrames & gof = *i;
-      for (std::list<Frame>::const_iterator j = gof.frames_.begin();
-           j != gof.frames_.end(); ++j)
-      {
-        const Frame & frame = *j;
-        double t = double(frame.ts_.start_) / double(frame.ts_.base_);
-        double d = double(frame.ts_.extent_) / double(frame.ts_.base_);
-        std::cout << "t" << frame.trackNumber_ << ": "
-                  << t << " - " << t + d
-                  << std::endl;
-      }
-    }
-#endif
-    
-    // assemble groups of frames into clusters:
-    printCurrentTime("assemble meta clusters");
-    
-    bool allowManyKeyframes = !isWebmOutput;
-    std::list<MetaCluster> metaClusters;
-    while (!gofs.empty())
-    {
-      GroupOfFrames gof = gofs.front();
-      gofs.pop_front();
-      
-      if (metaClusters.empty() || !metaClusters.back().mayAdd(gof))
-      {
-        // start a new meta cluster:
-        metaClusters.push_back(MetaCluster(allowManyKeyframes));
-      }
-      
-      MetaCluster & metaCluster = metaClusters.back();
-      metaCluster.add(gof);
-    }
-
-    // convert meta clusters into matroska Clusters and SimpleBlocks,
-    // create Cues along the way:
-    printCurrentTime("convert meta clusters to Clusters, SimpleBlocks");
-    
-    TCues & cuesElt = segment.cues_;
-    Cues & cues = cuesElt.payload_;
-    
-    while (!metaClusters.empty())
-    {
-      MetaCluster metaCluster = metaClusters.front();
-      metaClusters.pop_front();
-      
-      // sort frames in ascending timecode order, per WebM guideline,
-      // while preserving the decode order of the frames:
-      std::list<Frame> frames;
-      metaCluster.getSortedFrames(frames);
-      metaCluster.frames_.clear();
-      
-      segment.clusters_.push_back(TCluster());
-      TCluster & clusterElt = segment.clusters_.back();
-      Cluster & cluster = clusterElt.payload_;
-      
-      cluster.timecode_.payload_.set(metaCluster.ts_.start_);
-      cluster.position_.payload_.setOrigin(&segmentElt);
-      cluster.position_.payload_.setElt(&clusterElt);
-      
-      seekHead.indexThis(&segmentElt, &clusterElt, tmp);
-      
-      if (!videoTrackNo && !frames.empty())
-      {
-        // audio-only files should include a CuePoint
-        // to the first audio frame of each cluster:
-        Frame & frame = frames.front();
-
-        Track::MatroskaTrackType tt =
-          trackType[(std::size_t)(frame.trackNumber_ - 1)];
-          
-        if (tt == Track::kTrackTypeAudio)
-        {
-          frame.isKeyframe_ = true;
-        }
-      }
-      
-      SimpleBlock simpleBlock;
-      while (!frames.empty())
-      {
-        Frame frame = frames.front();
-        frames.pop_front();
-        
-        // NOTE: WebM doesn't support lacing, yet:
-        if (isWebmOutput ||
-            simpleBlock.getTrackNumber() != frame.trackNumber_ ||
-            simpleBlock.getNumberOfFrames() > 7 ||
-            frame.trackNumber_ == videoTrackNo ||
-            frame.isKeyframe_)
-        {
-          finishCurrentBlock(cluster, simpleBlock, tmp);
-        }
-        
-        uint64 absTimecode = frame.ts_.getStart(metaCluster.ts_.base_);
-        int64 relTimecode = absTimecode - metaCluster.ts_.start_;
-        assert(relTimecode < kShortDistLimit);
-        if (simpleBlock.getNumberOfFrames() == 0)
-        {
-          simpleBlock.setRelativeTimecode((short int)relTimecode);
-        }
-        
-        simpleBlock.setTrackNumber(frame.trackNumber_);
-        if (frame.isKeyframe_)
-        {
-          simpleBlock.setKeyframe(true);
-          
-          // add block to cues:
-          cues.points_.push_back(TCuePoint());
-          TCuePoint & cuePoint = cues.points_.back();
-          
-          // set cue timepoint:
-          cuePoint.payload_.time_.payload_.set(absTimecode);
-          
-          // add a track position for this timepoint:
-          cuePoint.payload_.trkPosns_.resize(1);
-          CueTrkPos & pos = cuePoint.payload_.trkPosns_.back().payload_;
-          
-          std::size_t blockIndex = cluster.simpleBlocks_.size() + 1;
-          pos.block_.payload_.set(blockIndex);
-          pos.track_.payload_.set(frame.trackNumber_);
-          
-          pos.cluster_.payload_.setOrigin(&segmentElt);
-          pos.cluster_.payload_.setElt(&clusterElt);
-        }
-
-        assert(frame.data_.data_.receipts_.size() == 1);
-        simpleBlock.addFrame(frame.data_.data_.receipts_.front());
-      }
-      
-      // finish the last block in this cluster:
-      finishCurrentBlock(cluster, simpleBlock, tmp);
-    }
-    
-    if (cuesElt.mustSave())
-    {
-      seekHead.indexThis(&segmentElt, &cuesElt, tmp);
-    }
-    
-    // FIXME: don't forget about Attachments and Chapters
-    
-    
-    /*
-    if (!isWebmOutput)
-    {
-      // enable CRC-32 for Level-1 elements:
-      out.setCrc32(true);
-    }
-    */
   }
 
-  // FIXME:
-  printCurrentTime("save to disk");
-  
-  // save the file:
-  dst.file_.setSize(0);
-  IStorage::IReceiptPtr receipt = out.save(dst);
-  
   // close open file handles:
   src.file_.close();
   dst.file_.close();
@@ -1155,9 +1432,8 @@ main(int argc, char ** argv)
   // remove temp file:
   File::remove(tmpPath.c_str());
 
-  // FIXME:
-  printCurrentTime("exit");
-  
+  printCurrentTime("done");
+
   // avoid waiting for all the destructors to be called:
   ::exit(0);
   
