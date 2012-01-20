@@ -914,9 +914,20 @@ namespace Yamka
     
     void addFrame(const Bytes & frame, IStorage & storage);
     void addFrame(const IStorage::IReceiptPtr & frameReceipt);
-    
+
+    // store the block header and the frames:
     void exportData(HodgePodge & simpleBlock, IStorage & storage) const;
-    bool importData(const HodgePodge & data);
+
+    // store the block header (TrackNo, TimeCode, Flags, Lace),
+    // but do not store the frames (Laced Data);
+    // returns the storage receipt for the block header:
+    IStorage::IReceiptPtr writeHeader(IStorage & storage) const;
+    
+    // parses the header (TrackNo, TimeCode, Flags, Lace),
+    // loads the frames (Laced Data);
+    // returns block header size (number of bytes) on success,
+    // return 0 on failure:
+    uint64 importData(const HodgePodge & simpleBlock);
     
   protected:
     // auto-lacing helper function:
@@ -1038,6 +1049,63 @@ namespace Yamka
     
     // set this if you would like to save this segment "your way":
     mutable boost::shared_ptr<IDelegateSave> delegateSave_;
+  };
+  
+  //----------------------------------------------------------------
+  // RemoveVoids
+  // 
+  struct RemoveVoids : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload);
+  };
+
+  //----------------------------------------------------------------
+  // OptimizeReferences
+  // 
+  struct OptimizeReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload);
+  };
+
+  //----------------------------------------------------------------
+  // ResetReferences
+  // 
+  struct ResetReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload);
+  };
+
+  //----------------------------------------------------------------
+  // DiscardReceipts
+  // 
+  struct DiscardReceipts : public IElementCrawler
+  {
+    // virtual:
+    bool eval(IElement & elt);
+    
+    // virtual:
+    bool evalPayload(IPayload & payload);
+  };
+
+  //----------------------------------------------------------------
+  // RewriteReferences
+  // 
+  struct RewriteReferences : public IElementCrawler
+  {
+    // virtual:
+    bool evalPayload(IPayload & payload);
+  };
+
+  //----------------------------------------------------------------
+  // ReplaceCrc32Placeholders
+  // 
+  struct ReplaceCrc32Placeholders : public IElementCrawler
+  {
+    // virtual:
+    bool eval(IElement & elt);
   };
   
   //----------------------------------------------------------------

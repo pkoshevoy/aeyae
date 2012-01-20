@@ -3327,7 +3327,25 @@ namespace Yamka
   // SimpleBlock::exportData
   // 
   void
-  SimpleBlock::exportData(HodgePodge & simpleBlock, IStorage & storage) const
+  SimpleBlock::exportData(HodgePodge & blockData, IStorage & storage) const
+  {
+    // store the header:
+    IStorage::IReceiptPtr headerReceipt = writeHeader(storage);
+    blockData.set(headerReceipt);
+    
+    // store the frames:
+    std::size_t numFrames = getNumberOfFrames();
+    for (std::size_t i = 0; i < numFrames; i++)
+    {
+      blockData.add(frames_.receipts_[i]);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // SimpleBlock::writeHeader
+  // 
+  IStorage::IReceiptPtr
+  SimpleBlock::writeHeader(IStorage & storage) const
   {
     Bytes header;
     header << vsizeEncode(trackNumber_)
@@ -3340,14 +3358,14 @@ namespace Yamka
     Bytes laceEBML;
     
     // choose the best lacing method:
-    if (autoLacing_)
+    if (autoLacing_ || lacing != kLacingNone)
     {
-      if (lastFrameIndex == 0)
+      if (autoLacing_ && lastFrameIndex == 0)
       {
         // 1 frame -- no lacing:
         lacing = kLacingNone;
       }
-      else if (sameSize(frames_.receipts_))
+      else if (autoLacing_ && sameSize(frames_.receipts_))
       {
         // all frames have the same size, use fixed size lacing:
         lacing = kLacingFixedSize;
@@ -3355,6 +3373,7 @@ namespace Yamka
       else
       {
         // try Xiph lacing
+        if (autoLacing_ || lacing == kLacingXiph)
         {
           for (std::size_t i = 0; i < lastFrameIndex; i++)
           {
@@ -3374,6 +3393,7 @@ namespace Yamka
         }
         
         // try EBML lacing
+        if (autoLacing_ || lacing == kLacingEBML)
         {
           uint64 frameSize = frames_.receipts_[0]->numBytes();
           laceEBML << vsizeEncode(frameSize);
@@ -3389,13 +3409,16 @@ namespace Yamka
         }
         
         // choose the one with lowest overhead:
-        if (laceXiph.size() < laceEBML.size())
+        if (autoLacing_)
         {
-          lacing = kLacingXiph;
-        }
-        else
-        {
-          lacing = kLacingEBML;
+          if (laceXiph.size() < laceEBML.size())
+          {
+            lacing = kLacingXiph;
+          }
+          else
+          {
+            lacing = kLacingEBML;
+          }
         }
       }
     }
@@ -3419,48 +3442,43 @@ namespace Yamka
     }
 
     // store the header:
-    simpleBlock.set(header, storage);
-    
-    // store the frames:
-    for (std::size_t i = 0; i <= lastFrameIndex; i++)
-    {
-      simpleBlock.add(frames_.receipts_[i]);
-    }
+    IStorage::IReceiptPtr headerReceipt = storage.save(header);
+    return headerReceipt;
   }
   
   //----------------------------------------------------------------
   // SimpleBlock::importData
   // 
-  bool
-  SimpleBlock::importData(const HodgePodge & simpleBlock)
+  uint64
+  SimpleBlock::importData(const HodgePodge & blockData)
   {
-    const uint64 blockSize = simpleBlock.numBytes();
+    const uint64 blockSize = blockData.numBytes();
     
     // use an iterator to simplify parsing:
-    HodgePodgeConstIter blockData(simpleBlock);
+    HodgePodgeConstIter blockDataIter(blockData);
     
     uint64 bytesRead = 0;
-    trackNumber_ = vsizeDecode(blockData, bytesRead);
+    trackNumber_ = vsizeDecode(blockDataIter, bytesRead);
     if (bytesRead == 0)
     {
-      return false;
+      return 0;
     }
     
     if (blockSize - bytesRead < 3)
     {
       // need 2 more bytes for timecode, and 1 more for flags:
-      return false;
+      return 0;
     }
     
     // decode the timecode:
     TByteVec timecode(2);
-    timecode[0] = blockData[bytesRead++];
-    timecode[1] = blockData[bytesRead++];
+    timecode[0] = blockDataIter[bytesRead++];
+    timecode[1] = blockDataIter[bytesRead++];
     timeCode_ = (short int)(intDecode(timecode, 2));
     
     // get the flags:
     autoLacing_ = false;
-    flags_ = blockData[bytesRead++];
+    flags_ = blockDataIter[bytesRead++];
     
     // get the number of frames:
     std::size_t lastFrameIndex = 0;
@@ -3470,10 +3488,10 @@ namespace Yamka
     {
       if (blockSize - bytesRead < 1)
       {
-        return false;
+        return 0;
       }
       
-      lastFrameIndex = blockData[bytesRead++];
+      lastFrameIndex = blockDataIter[bytesRead++];
     }
     
     // unpack the frame(s):
@@ -3489,10 +3507,10 @@ namespace Yamka
         {
           if (bytesRead > blockSize)
           {
-            return false;
+            return 0;
           }
           
-          uint64 n = blockData[bytesRead++];
+          uint64 n = blockDataIter[bytesRead++];
           frameSize += n;
           
           if (n < 0xFF)
@@ -3507,9 +3525,9 @@ namespace Yamka
     }
     else if (lacing == kLacingEBML)
     {
-      blockData.setpos(bytesRead);
+      blockDataIter.setpos(bytesRead);
       uint64 vsizeSize = 0;
-      uint64 frameSize = vsizeDecode(blockData, vsizeSize);
+      uint64 frameSize = vsizeDecode(blockDataIter, vsizeSize);
       
       bytesRead += vsizeSize;
       frameSizes[0] = frameSize;
@@ -3517,8 +3535,8 @@ namespace Yamka
       
       for (std::size_t i = 1; i < lastFrameIndex; i++)
       {
-        blockData.setpos(bytesRead);
-        int64 frameSizeDiff = vsizeSignedDecode(blockData, vsizeSize);
+        blockDataIter.setpos(bytesRead);
+        int64 frameSizeDiff = vsizeSignedDecode(blockDataIter, vsizeSize);
         
         bytesRead += vsizeSize;
         frameSize += frameSizeDiff;
@@ -3539,6 +3557,7 @@ namespace Yamka
     }
     
     // last frame:
+    uint64 headerSize = bytesRead;
     uint64 lastFrameSize = (blockSize -
                             bytesRead -
                             leadingFramesSize);
@@ -3549,14 +3568,19 @@ namespace Yamka
     for (std::size_t i = 0; i <= lastFrameIndex; i++)
     {
       uint64 numBytes = frameSizes[i];
-      frames_.receipts_[i] = blockData.receipt(bytesRead, numBytes);
+      if (bytesRead + numBytes > blockSize)
+      {
+        return 0;
+      }
+      
+      frames_.receipts_[i] = blockDataIter.receipt(bytesRead, numBytes);
       bytesRead += numBytes;
     }
     
     // sanity check:
     assert(bytesRead == blockSize);
     
-    return true;
+    return headerSize;
   }
   
   //----------------------------------------------------------------
@@ -4261,126 +4285,131 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // OptimizeReferences
+  // RemoveVoids::evalPayload
   // 
-  struct OptimizeReferences : public IElementCrawler
+  bool
+  RemoveVoids::evalPayload(IPayload & payload)
   {
-    // virtual:
-    bool evalPayload(IPayload & payload)
+    if (payload.isComposite())
     {
-      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
-      if (eltRef)
-      {
-        eltRef->discardReceipt();
-        
-        uint64 numBytesNeeded = eltRef->calcSize();
-        eltRef->setMaxSize(numBytesNeeded);
-      }
-      
-      bool done = payload.eval(*this);
-      return done;
-    }
-  };
-  
-  //----------------------------------------------------------------
-  // ResetReferences
-  // 
-  struct ResetReferences : public IElementCrawler
-  {
-    // virtual:
-    bool evalPayload(IPayload & payload)
-    {
-      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
-      if (eltRef)
-      {
-        eltRef->setMaxSize(8);
-        eltRef->discardReceipt();
-      }
-      
-      bool done = payload.eval(*this);
-      return done;
-    }
-  };
-  
-  //----------------------------------------------------------------
-  // DiscardReceipts
-  // 
-  struct DiscardReceipts : public IElementCrawler
-  {
-    // virtual:
-    bool eval(IElement & elt)
-    {
-      elt.discardReceipts();
-      
-      bool done = evalPayload(elt.getPayload());
-      return done;
+      // remove all void elements:
+      EbmlMaster * ebmlMaster = dynamic_cast<EbmlMaster *>(&payload);
+      ebmlMaster->voids_.clear();
     }
     
-    // virtual:
-    bool evalPayload(IPayload & payload)
+    bool done = payload.eval(*this);
+    return done;
+  }
+
+  //----------------------------------------------------------------
+  // OptimizeReferences::evalPayload
+  // 
+  bool
+  OptimizeReferences::evalPayload(IPayload & payload)
+  {
+    VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+    if (eltRef)
     {
-      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
-      if (eltRef)
-      {
-        eltRef->discardReceipt();
-      }
+      eltRef->discardReceipt();
       
-      bool done = payload.eval(*this);
-      return done;
+      uint64 numBytesNeeded = eltRef->calcSize();
+      eltRef->setMaxSize(numBytesNeeded);
     }
-  };
+    
+    bool done = payload.eval(*this);
+    return done;
+  }
   
   //----------------------------------------------------------------
-  // RewriteReferences
+  // ResetReferences::evalPayload
   // 
-  struct RewriteReferences : public IElementCrawler
+  bool
+  ResetReferences::evalPayload(IPayload & payload)
   {
-    // virtual:
-    bool evalPayload(IPayload & payload)
+    VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+    if (eltRef)
     {
-      VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
-      if (eltRef)
-      {
-        eltRef->rewrite();
-      }
-      
-      bool done = payload.eval(*this);
-      return done;
+      eltRef->setMaxSize(8);
+      eltRef->discardReceipt();
     }
-  };
-  
+    
+    bool done = payload.eval(*this);
+    return done;
+  }
+
   //----------------------------------------------------------------
-  // ReplaceCrc32Placeholders
+  // DiscardReceipts::eval
   // 
-  struct ReplaceCrc32Placeholders : public IElementCrawler
+  bool
+  DiscardReceipts::eval(IElement & elt)
   {
-    // virtual:
-    bool eval(IElement & elt)
+    elt.discardReceipts();
+    
+    bool done = evalPayload(elt.getPayload());
+    return done;
+  }
+
+  //----------------------------------------------------------------
+  // DiscardReceipts::evalPayload
+  // 
+  bool
+  DiscardReceipts::evalPayload(IPayload & payload)
+  {
+    VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+    if (eltRef)
     {
-      // depth-first traversal:
-      bool done = evalPayload(elt.getPayload());
-      
-      IStorage::IReceiptPtr receiptCrc32 = elt.crc32Receipt();
-      if (receiptCrc32)
-      {
-        IStorage::IReceiptPtr receiptPayload = elt.payloadReceipt();
-        
-        // calculate and save CRC-32 checksum:
-        Crc32 crc32;
-        receiptPayload->calcCrc32(crc32, receiptCrc32);
-        unsigned int checksumCrc32 = crc32.checksum();
-        
-        Bytes bytesCrc32;
-        bytesCrc32 << uintEncode(kIdCrc32)
-                   << vsizeEncode(4)
-                   << uintEncode(checksumCrc32, 4);
-        
-        receiptCrc32->save(bytesCrc32);
-      }
-      
-      return done;
+      eltRef->discardReceipt();
     }
-  };
+    
+    bool done = payload.eval(*this);
+    return done;
+  }
+
+  //----------------------------------------------------------------
+  // RewriteReferences::evalPayload
+  // 
+  bool
+  RewriteReferences::evalPayload(IPayload & payload)
+  {
+    VEltPosition * eltRef = dynamic_cast<VEltPosition *>(&payload);
+    if (eltRef)
+    {
+      eltRef->rewrite();
+    }
+    
+    bool done = payload.eval(*this);
+    return done;
+  }
+
+  //----------------------------------------------------------------
+  // ReplaceCrc32Placeholders::eval
+  // 
+  bool
+  ReplaceCrc32Placeholders::eval(IElement & elt)
+  {
+    // depth-first traversal:
+    bool done = evalPayload(elt.getPayload());
+    
+    IStorage::IReceiptPtr receiptCrc32 = elt.crc32Receipt();
+    if (receiptCrc32)
+    {
+      IStorage::IReceiptPtr receiptPayload = elt.payloadReceipt();
+      
+      // calculate and save CRC-32 checksum:
+      Crc32 crc32;
+      receiptPayload->calcCrc32(crc32, receiptCrc32);
+      unsigned int checksumCrc32 = crc32.checksum();
+      
+      Bytes bytesCrc32;
+      bytesCrc32 << uintEncode(kIdCrc32)
+                 << vsizeEncode(4)
+                 << uintEncode(checksumCrc32, 4);
+      
+      receiptCrc32->save(bytesCrc32);
+    }
+    
+    return done;
+  }
   
   //----------------------------------------------------------------
   // MatroskaDoc::save
