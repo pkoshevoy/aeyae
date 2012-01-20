@@ -25,6 +25,7 @@ namespace Yamka
   
   // forward declarations:
   struct IPayload;
+  struct IElement;
   
   //----------------------------------------------------------------
   // EbmlGlobalID
@@ -37,7 +38,14 @@ namespace Yamka
     kIdCrc32 = 0xBF,
     kIdVoid = 0xEC
   };
-  
+
+  //----------------------------------------------------------------
+  // kMinVoidEltSize
+  //
+  // EC80 -- the smallest possible Void element (0 bytes payload)
+  // 
+  enum { kMinVoidEltSize = 2 };
+
   //----------------------------------------------------------------
   // IDelegateLoad
   // 
@@ -55,6 +63,11 @@ namespace Yamka
                         uint64 payloadBytesToRead,
                         uint64 eltId,
                         IPayload & payload) = 0;
+
+    // allow the delegate to perform some post-processing
+    // once the element has been successfully loaded:
+    virtual void loaded(IElement &)
+    {}
   };
   
   //----------------------------------------------------------------
@@ -91,6 +104,29 @@ namespace Yamka
     
     // accessor to total element size (recursive):
     virtual uint64 calcSize() const;
+
+    // set the fixedSize_ variable to control whether this element will
+    // be saved to storage with padded size, unknown size, or exact size:
+    virtual void setFixedSize(uint64 fixedSize);
+
+    // this is used to preallocate some storage for an element
+    // where exact payload size is not yet known.
+    // 
+    // NOTE: the element will be saved using 8-byte payload size.
+    // The combined element id size, payload size, the payload,
+    // and padding void element will not exceed the
+    // specified padded size.
+    //
+    // NOTE: CRC-32 will not be saved, existing voids will be discarded
+    // and replaced with a padding void
+    // 
+    // paddedSize = 8 + sizeof(ebml-id) + sizeof(payload) + sizeof(void)
+    //
+    // NOTE: if paddedSize equals uintMax[8] -- saves the element
+    // with "unknown size" per EBML spec, does not pad with a void element.
+    // 
+    virtual IStorage::IReceiptPtr
+    savePaddedUpToSize(IStorage & storage, uint64 paddedSize) const;
     
     // save this element to a storage stream,
     // and return a storage receipt.
@@ -98,7 +134,7 @@ namespace Yamka
     // NOTE: if the element can not be saved due to invalid or
     // insufficient storage, then a NULL storage receipt is returned:
     virtual IStorage::IReceiptPtr
-    save(IStorage & storage) const;
+    save(IStorage & storage, uint64 vsizeBytesToUse = 0) const;
     
     // attempt to load an instance of this element from a file,
     // return the number of bytes consumed successfully.
@@ -136,6 +172,10 @@ namespace Yamka
     
     // helper for loading CRC-32 checksum element:
     uint64 loadCrc32(FileStorage & storage, uint64 bytesToRead);
+
+    // when fixedSize_ != 0 IElement::savePaddedUpToSize(...) is used
+    // when fixedSize_ == 0 IElement::save(...) is used (default)
+    uint64 fixedSize_;
     
     // this flag indicates that this element must be saved
     // even when it holds a default value:

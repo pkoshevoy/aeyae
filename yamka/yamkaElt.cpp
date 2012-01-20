@@ -24,6 +24,7 @@ namespace Yamka
   // IElement::IElement
   // 
   IElement::IElement():
+    fixedSize_(0),
     alwaysSave_(false),
     computeCrc32_(false),
     checksumCrc32_(0)
@@ -36,7 +37,8 @@ namespace Yamka
   IElement::mustSave() const
   {
     const IPayload & payload = getPayload();
-    return (alwaysSave_ ||
+    return (fixedSize_ ||
+            alwaysSave_ ||
             !payload.isDefault() ||
             (payload.isComposite() && payload.hasVoid()));
   }
@@ -116,11 +118,125 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // IElement::setFixedSize
+  // 
+  void
+  IElement::setFixedSize(uint64 fixedSize)
+  {
+    fixedSize_ = fixedSize;
+  }
+  
+  //----------------------------------------------------------------
+  // IElement::savePaddedUpToSize
+  // 
+  IStorage::IReceiptPtr
+  IElement::savePaddedUpToSize(IStorage & storage, uint64 paddedSize) const
+  {
+    // shortcut:
+    const IPayload & payload = getPayload();
+
+    const bool payloadSizeUnknown = (paddedSize == uintMax[8]);
+    uint64 elementIdSize = uintNumBytes(getId());
+    uint64 payloadSize = payload.calcSize();
+    uint64 vsizeBytesToUse = vsizeNumBytes(payloadSize);
+    
+    // make sure the paddedSize is big enough to store the payload:
+    uint64 elementSize = elementIdSize + vsizeBytesToUse + payloadSize;
+    if (!payloadSizeUnknown &&
+        elementSize != paddedSize &&
+        elementSize + kMinVoidEltSize > paddedSize)
+    {
+      return IStorage::IReceiptPtr();
+    }
+
+    // save element id:
+    receipt_ = storage.save(Bytes(uintEncode(getId())));
+    if (!receipt_)
+    {
+      return receipt_;
+    }
+
+    // save payload size:
+    IStorage::IReceiptPtr payloadSizeReceipt;
+    if (payloadSizeUnknown)
+    {
+      TByteVec v = vsizeEncode(vsizeUnknown[8], 8);
+      payloadSizeReceipt = storage.save(Bytes(v));
+    }
+    else
+    {
+      TByteVec v = vsizeEncode(payloadSize, vsizeBytesToUse);
+      payloadSizeReceipt = storage.save(Bytes(v));
+    }
+    
+    *receipt_ += payloadSizeReceipt;
+    
+    // save payload receipt:
+    receiptPayload_ = storage.receipt();
+    receiptCrc32_ = IStorage::IReceiptPtr();
+    
+    // save the payload:
+    IStorage::IReceiptPtr payloadReceipt = payload.save(storage);
+    if (!payloadReceipt)
+    {
+      return payloadReceipt;
+    }
+    
+    *receiptPayload_ += payloadReceipt;
+    *receipt_ += receiptPayload_;
+    
+    if (payloadSizeUnknown)
+    {
+      // done:
+      return receipt_;
+    }
+    
+    uint64 payloadBytesSaved = receiptPayload_->numBytes();
+    assert(payloadBytesSaved <= payloadSize);
+    
+    if (payloadBytesSaved < payloadSize)
+    {
+      // save exact payload size:
+      TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesToUse);
+      payloadSizeReceipt->save(Bytes(v));
+    }
+    
+    // add the padding:
+    assert(payload.voids_.empty());
+    
+    elementSize = (elementIdSize + vsizeBytesToUse + payloadBytesSaved);
+    uint64 voidSize = paddedSize - elementSize;
+    
+    if (voidSize >= kMinVoidEltSize)
+    {
+      IPayload::TVoid eltVoid;
+      
+      uint64 voidIdSize = uintNumBytes(eltVoid.getId());
+      uint64 vsizeBytesToUse = vsizeNumBytes(voidSize - voidIdSize);
+      
+      eltVoid.payload_.set(voidSize - voidIdSize - vsizeBytesToUse);
+      IStorage::IReceiptPtr receipt = eltVoid.save(storage, vsizeBytesToUse);
+      
+      if (receipt)
+      {
+        *receipt_ += receipt;
+      }
+    }
+    
+    return receipt_;
+  }
+
+  //----------------------------------------------------------------
   // IElement::save
   // 
   IStorage::IReceiptPtr
-  IElement::save(IStorage & storage) const
+  IElement::save(IStorage & storage, uint64 vsizeBytesToUse) const
   {
+    if (fixedSize_)
+    {
+      return savePaddedUpToSize(storage, fixedSize_);
+    }
+    
     if (!mustSave())
     {
       return storage.receipt();
@@ -146,9 +262,15 @@ namespace Yamka
     {
       payloadSize += uintNumBytes(kIdCrc32) + vsizeNumBytes(4) + 4;
     }
+
+    // if necessary calculate number of bytes used to store the payload size:
+    if (!vsizeBytesToUse)
+    {
+      vsizeBytesToUse = vsizeNumBytes(payloadSize);
+    }
     
     IStorage::IReceiptPtr payloadSizeReceipt =
-      storage.save(Bytes(vsizeEncode(payloadSize)));
+      storage.save(Bytes(vsizeEncode(payloadSize, vsizeBytesToUse)));
     *receipt_ += payloadSizeReceipt;
     
     // save payload receipt:
@@ -189,8 +311,7 @@ namespace Yamka
     if (payloadBytesSaved < payloadSize)
     {
       // save exact payload size:
-      uint64 vsizeBytesUsed = vsizeNumBytes(payloadSize);
-      TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesUsed);
+      TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesToUse);
       payloadSizeReceipt->save(Bytes(v));
     }
     
@@ -292,6 +413,7 @@ namespace Yamka
     // read payload size:
     uint64 vsizeSize = 0;
     uint64 payloadSize = vsizeDecode(storage, vsizeSize);
+    const bool payloadSizeUnknown = (payloadSize == uintMax[8]);
     
     // keep track of the number of bytes read successfully:
     receipt_->add(uintNumBytes(eltId));
@@ -331,6 +453,7 @@ namespace Yamka
           // special case, indicating that the loader doesn't
           // want to read any more data:
           storageStart.doRestore();
+          loader->loaded(*this);
           return 0;
         }
         
@@ -391,7 +514,7 @@ namespace Yamka
       }
     }
     
-    if (payloadBytesReadTotal < payloadSize)
+    if (payloadBytesReadTotal < payloadSize && !payloadSizeUnknown)
     {
       // skip unrecognized alien data:
       uint64 alienDataSize = payloadSize - payloadBytesReadTotal;
@@ -439,6 +562,12 @@ namespace Yamka
         receiptPayload_->calcCrc32(doOverCrc32, receiptCrc32_);
 #endif
       }
+    }
+
+    if (loader && receipt_->numBytes())
+    {
+      // allow the delegate to perform post-processing on the loaded element:
+      loader->loaded(*this);
     }
     
     return receipt_->numBytes();
