@@ -60,6 +60,9 @@ namespace Yamka
   
   //----------------------------------------------------------------
   // vsizeRange
+  //
+  // NOTE: it's 0x...E and not 0x...F, because 0x...F are reserved
+  //       for "unknown size" special value per EBML specs.
   // 
   static const uint64 vsizeRange[9] =
   {
@@ -72,6 +75,22 @@ namespace Yamka
     YamkaUnsignedInt64(0x03FFFFFFFFFE),
     YamkaUnsignedInt64(0x01FFFFFFFFFFFE),
     YamkaUnsignedInt64(0x00FFFFFFFFFFFFFE)
+  };
+
+  //----------------------------------------------------------------
+  // vsizeUnknown
+  // 
+  const uint64 vsizeUnknown[9] =
+  {
+    YamkaUnsignedInt64(0x0),
+    YamkaUnsignedInt64(0x7F),
+    YamkaUnsignedInt64(0x3FFF),
+    YamkaUnsignedInt64(0x1FFFFF),
+    YamkaUnsignedInt64(0x0FFFFFFF),
+    YamkaUnsignedInt64(0x07FFFFFFFF),
+    YamkaUnsignedInt64(0x03FFFFFFFFFF),
+    YamkaUnsignedInt64(0x01FFFFFFFFFFFF),
+    YamkaUnsignedInt64(0x00FFFFFFFFFFFFFF)
   };
   
   //----------------------------------------------------------------
@@ -187,6 +206,11 @@ namespace Yamka
     {
       assert(false);
       vsizeSize = 0;
+    }
+    
+    if (vsizeUnknown[vsizeSize] == i)
+    {
+      i = uintMax[8];
     }
     
     return i;

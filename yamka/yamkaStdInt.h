@@ -53,13 +53,28 @@ namespace Yamka
   extern const uint64 uintMax[9];
   
   //----------------------------------------------------------------
+  // vsizeUnknown
+  // 
+  // Reserved vsize value used to indicate that the payload size
+  // is unknown, and payload boundary should be determined
+  // by detecting an upper level EBML ID that could never be
+  // part of the payload.
+  // 
+  extern const uint64 vsizeUnknown[9];
+  
+  //----------------------------------------------------------------
   // vsizeNumBytes
+  // 
+  // Return number of bytes required to encode a given integer.
   // 
   extern unsigned int
   vsizeNumBytes(uint64 i);
   
   //----------------------------------------------------------------
   // vsizeDecode
+  //
+  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
+  //       then uintMax[8] will be returned
   // 
   extern uint64
   vsizeDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize);
@@ -67,17 +82,26 @@ namespace Yamka
   //----------------------------------------------------------------
   // vsizeDecode
   // 
+  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
+  //       then uintMax[8] will be returned
+  // 
   extern uint64
   vsizeDecode(const Bytes & bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeDecode
   // 
+  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
+  //       then uintMax[8] will be returned
+  // 
   extern uint64
   vsizeDecode(const TByteVec & v, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeDecode
+  // 
+  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
+  //       then uintMax[8] will be returned
   // 
   extern uint64
   vsizeDecode(const TByte * v, uint64 & vsizeSize);
