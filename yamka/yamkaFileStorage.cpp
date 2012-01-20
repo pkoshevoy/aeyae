@@ -38,10 +38,6 @@ namespace Yamka
   IStorage::IReceiptPtr
   FileStorage::save(const Bytes & data)
   {
-    // this may not be necessary, but just in case someone seeked
-    // the shared file storage -- seek to the end so we can append:
-    file_.seek(0, File::kOffsetFromEnd);
-    
     IStorage::IReceiptPtr receipt(new Receipt(file_));
     if (!file_.save(data))
     {
