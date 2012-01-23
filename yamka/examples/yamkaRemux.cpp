@@ -400,6 +400,7 @@ struct TBlockInfo
 {
   TBlockInfo():
     pts_(0),
+    duration_(0),
     trackNo_(0),
     next_(NULL)
   {}
@@ -452,8 +453,10 @@ struct TBlockInfo
   IStorage::IReceiptPtr frames_;
   
   uint64 pts_;
+  uint64 duration_;
   uint64 trackNo_;
   bool keyframe_;
+  std::size_t numFrames_;
   
   TBlockInfo * next_;
 };
@@ -468,45 +471,178 @@ typedef TFifo<TBlockInfo> TBlockFifo;
 // 
 struct TLace
 {
-  TLace(std::size_t numTracks):
-    tracks_(numTracks + 1),
+  TLace():
+    cuesTrackNo_(0),
     size_(0)
   {}
   
   void push(TBlockInfo * binfo)
   {
-    TBlockFifo & track = tracks_[binfo->trackNo_];
+    TBlockFifo & track = track_[binfo->trackNo_];
     track.push(binfo);
     size_++;
   }
 
   TBlockInfo * pop()
   {
-    TBlockFifo * nextTrack = NULL;
-    uint64 earliestPTS = (uint64)(~0);
+    std::size_t numTracks = track_.size();
+    
+    bool cuesTrackHasData =
+      cuesTrackNo_ < numTracks &&
+      track_[cuesTrackNo_].size_;
+    
+    uint64 bestTrackNo = cuesTrackHasData ? cuesTrackNo_ : numTracks;
+    uint64 bestTrackTime = nextTime(cuesTrackNo_);
 
-    std::size_t numTracks = tracks_.size();
+    uint64 trackTime = (uint64)(~0);
     for (std::size_t i = 0; i < numTracks; i++)
     {
-      TBlockFifo & track = tracks_[i];
-      if (track.size_ && track.head_->pts_ < earliestPTS)
+      if (i != cuesTrackNo_ && (trackTime = nextTime(i)) < bestTrackTime)
       {
-        nextTrack = &track;
-        earliestPTS = track.head_->pts_;
+        bestTrackNo = i;
+        bestTrackTime = trackTime;
       }
     }
 
-    if (!nextTrack)
+    if (bestTrackNo < numTracks)
     {
-      return NULL;
-    }
+      TBlockInfo * binfo = track_[bestTrackNo].pop();
+      size_--;
+      
+      if (!binfo->duration_)
+      {
+        Track::MatroskaTrackType trackType = trackType_[bestTrackNo];
+        uint64 defaultDuration = defaultDuration_[bestTrackNo];
+        
+        if (defaultDuration)
+        {
+          double frameDuration =
+            double(defaultDuration) /
+            double(timecodeScale_);
 
-    size_--;
-    return nextTrack->pop();
+          binfo->duration_ =
+            (uint64)(0.5 + frameDuration * double(binfo->numFrames_));
+        }
+        else if (binfo->next_ && trackType == Track::kTrackTypeAudio)
+        {
+          // calculate audio frame duration based on next frame duration:
+          binfo->duration_ = binfo->next_->pts_ - binfo->pts_;
+        }
+      }
+      
+      return binfo;
+    }
+    
+    return NULL;
+  }
+
+  uint64 nextTime(std::size_t trackNo)
+  {
+    if (trackNo >= track_.size() || !track_[trackNo].size_)
+    {
+      return (uint64)(~0);
+    }
+    
+    TBlockFifo & track = track_[trackNo];
+    uint64 startTime = track.head_->pts_;
+    return startTime;
+  }
+
+  std::vector<Track::MatroskaTrackType> trackType_;
+  std::vector<uint64> defaultDuration_;
+  std::vector<TBlockFifo> track_;
+  uint64 timecodeScale_;
+  uint64 cuesTrackNo_;
+  std::size_t size_;
+};
+
+
+//----------------------------------------------------------------
+// TDataTable
+// 
+template <typename TData, unsigned int PageSize = 65536>
+struct TDataTable
+{
+  //----------------------------------------------------------------
+  // TPage
+  // 
+  struct TPage
+  {
+    enum { kSize = PageSize };
+    TData data_[PageSize];
+  };
+
+  TDataTable(unsigned int maxSize):
+    pages_(0),
+    numPages_(0),
+    size_(0)
+  {
+    if (maxSize % TPage::kSize)
+    {
+      maxSize -= maxSize % TPage::kSize;
+      maxSize += TPage::kSize;
+    }
+    
+    numPages_ = maxSize / TPage::kSize;
+    
+    unsigned int memSize = sizeof(TPage *) * numPages_;
+    pages_ = (TPage **)malloc(memSize);
+    memset(pages_, 0, memSize);
   }
   
-  std::vector<TBlockFifo> tracks_;
-  std::size_t size_;
+  ~TDataTable()
+  {
+    for (unsigned int i = 0; i < numPages_; i++)
+    {
+      TPage * page = pages_[i];
+      if (page)
+      {
+        free(page);
+      }
+    }
+    
+    free(pages_);
+  }
+
+  bool add(const TData & data)
+  {
+    unsigned int i = size_ / TPage::kSize;
+    if (i >= numPages_)
+    {
+      assert(i < numPages_);
+      return false;
+    }
+    
+    TPage * page = pages_[i];
+    if (!page)
+    {
+      unsigned int memSize = sizeof(TPage);
+      page = (TPage *)malloc(memSize);
+      memset(page, 0, memSize);
+      pages_[i] = page;
+    }
+
+    unsigned int j = size_ % TPage::kSize;
+    page->data_[j] = data;
+    size_++;
+    
+    return true;
+  }
+  
+  TPage ** pages_;
+  unsigned int numPages_;
+  unsigned int size_;
+};
+
+//----------------------------------------------------------------
+// TCue
+// 
+struct TCue
+{
+  uint64 time_;
+  uint64 track_;
+  uint64 cluster_;
+  uint64 block_;
 };
 
 //----------------------------------------------------------------
@@ -542,7 +678,7 @@ struct TRemuxer : public LoadWithProgress
   void mux(std::size_t minLaceSize = 50);
   void startNextCluster(TBlockInfo * binfo);
   void finishCurrentCluster();
-  void addCuePoint(TCluster * clusterElt, TBlockInfo * binfo);
+  void addCuePoint(TBlockInfo * binfo);
   
   const TTrackMap & trackSrcDst_;
   const TTrackMap & trackDstSrc_;
@@ -552,9 +688,16 @@ struct TRemuxer : public LoadWithProgress
   FileStorage & dst_;
   FileStorage & tmp_;
   uint64 clusterBlocks_;
-  uint64 cuesTrackNo_;
+  uint64 cuesTrackKeyframes_;
+  std::vector<bool> needCuePointForTrack_;
+  
+  const uint64 segmentPayloadPosition_;
+  uint64 clusterRelativePosition_;
   
   TLace lace_;
+  TDataTable<uint64> seekTable_;
+  TDataTable<TCue> cueTable_;
+  TCluster clusterElt_;
 };
 
 //----------------------------------------------------------------
@@ -575,34 +718,63 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   src_(src),
   dst_(dst),
   tmp_(tmp),
-  lace_(trackSrcDst.size()),
   clusterBlocks_(0),
-  cuesTrackNo_(0)
+  cuesTrackKeyframes_(0),
+  segmentPayloadPosition_(dstSeg.payloadReceipt()->position()),
+  clusterRelativePosition_(0),
+  seekTable_(1 << 24),
+  cueTable_(1 << 27)
 {
-  TTracks & tracksElt = dstSeg.payload_.tracks_;
+  TTracks & tracksElt = dstSeg_.payload_.tracks_;
   std::deque<TTrack> & tracks = tracksElt.payload_.tracks_;
-  
   std::size_t numTracks = tracks.size();
+  
+  // create a barrier to avoid making too many CuePoints:
+  needCuePointForTrack_.assign(numTracks + 1, true);
+  
+  lace_.timecodeScale_ =
+    dstSeg_.payload_.info_.payload_.timecodeScale_.payload_.get();
+  
+  // store track types using base-1 array index for quicker lookup,
+  // because track numbers are also base-1:
+  lace_.trackType_.resize(numTracks + 1);
+  lace_.defaultDuration_.resize(numTracks + 1);
+  lace_.track_.resize(numTracks + 1);
+  
+  lace_.trackType_[0] = Track::kTrackTypeUndefined;
+  lace_.defaultDuration_[0] = 0;
+  
   for (std::size_t i = 0; i < numTracks; i++)
   {
     Track & track = tracks[i].payload_;
     uint64 trackType = track.trackType_.payload_.get();
+    lace_.trackType_[i + 1] = (Track::MatroskaTrackType)trackType;
+
+    uint64 defaultDuration = track.frameDuration_.payload_.get();
+    lace_.defaultDuration_[i + 1] = defaultDuration;
+  }
+  
+  // determine which track is the "main" track for starting Clusters:
+  for (std::size_t i = 0; i < numTracks; i++)
+  {
+    Track & track = tracks[i].payload_;
     uint64 trackNo = track.trackNumber_.payload_.get();
     
+    Track::MatroskaTrackType trackType = lace_.trackType_[i + 1];
     if (trackType == Track::kTrackTypeVideo)
     {
-      cuesTrackNo_ = trackNo;
+      lace_.cuesTrackNo_ = trackNo;
       break;
     }
-    else if (trackType == Track::kTrackTypeAudio && !cuesTrackNo_)
+    else if (trackType == Track::kTrackTypeAudio && !lace_.cuesTrackNo_)
     {
-      cuesTrackNo_ = trackNo;
+      lace_.cuesTrackNo_ = trackNo;
     }
   }
 
-  if (!cuesTrackNo_ && numTracks)
+  if (!lace_.cuesTrackNo_ && numTracks)
   {
-    cuesTrackNo_ = tracks[0].payload_.trackNumber_.payload_.get();
+    lace_.cuesTrackNo_ = tracks[0].payload_.trackNumber_.payload_.get();
   }
 
   // add 2nd SeekHead:
@@ -613,20 +785,31 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   SeekHead & seekHead1 = dstSeg_.payload_.seekHeads_.front().payload_;
   seekHead1.indexThis(&dstSeg_, &seekHeadElt, tmp_);
   seekHead1.indexThis(&dstSeg_, &(dstSeg_.payload_.cues_), tmp_);
+}
 
-  TAttachment & attachments = dstSeg_.payload_.attachments_;
-  attachments = srcSeg_.payload_.attachments_;
-  if (attachments.mustSave())
+//----------------------------------------------------------------
+// overwriteUnknownPayloadSize
+// 
+static bool
+overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
+{
+  IStorage::IReceiptPtr receipt = elt.storageReceipt();
+  if (!receipt)
   {
-    seekHead1.indexThis(&dstSeg_, &attachments, tmp_);
+    return false;
   }
   
-  TChapters & chapters = dstSeg_.payload_.chapters_;
-  chapters = srcSeg_.payload_.chapters_;
-  if (chapters.mustSave())
-  {
-    seekHead1.indexThis(&dstSeg_, &chapters, tmp_);
-  }
+  IStorage::IReceiptPtr payload = elt.payloadReceipt();
+  IStorage::IReceiptPtr payloadEnd = storage.receipt();
+  
+  uint64 payloadSize = payloadEnd->position() - payload->position();
+  uint64 elementIdSize = uintNumBytes(TSegment::kId);
+  
+  IStorage::IReceiptPtr payloadSizeReceipt =
+    receipt->receipt(elementIdSize, 8);
+  
+  TByteVec v = vsizeEncode(payloadSize, 8);
+  return payloadSizeReceipt->save(Bytes(v));
 }
 
 //----------------------------------------------------------------
@@ -688,22 +871,134 @@ TRemuxer::remux()
   
   flush();
 
-  TSeekHead & seekHead2 = dstSeg_.payload_.seekHeads_.back();
-  seekHead2.save(dst_);
-
-  TCues & cues = dstSeg_.payload_.cues_;
-  cues.save(dst_);
-
-  TAttachment & attachments = dstSeg_.payload_.attachments_;
-  if (attachments.mustSave())
+  // save the seek point table, rewrite the SeekHead size
   {
-    attachments.save(dst_);
+    TSeekHead & seekHead2 = dstSeg_.payload_.seekHeads_.back();
+    seekHead2.setFixedSize(uintMax[8]);
+    seekHead2.save(dst_);
+    
+    unsigned int pageSize = TDataTable<uint64>::TPage::kSize;
+    unsigned int numPages = seekTable_.size_ / pageSize;
+    if (seekTable_.size_ % pageSize)
+    {
+      numPages++;
+    }
+
+    TByteVec bvCluster = uintEncode(TCluster::kId);
+    TByteVec bvSeekEntry = uintEncode(TSeekEntry::kId);
+    TByteVec bvSeekId = uintEncode(SeekEntry::TId::kId);
+    TByteVec bvSeekPos = uintEncode(SeekEntry::TPosition::kId);
+    
+    for (unsigned int i = 0; i < numPages; i++)
+    {
+      const TDataTable<uint64>::TPage * page = seekTable_.pages_[i];
+      
+      unsigned int size = pageSize;
+      if ((i + 1) == numPages)
+      {
+        size = seekTable_.size_ % pageSize;
+      }
+
+      for (unsigned int j = 0; j < size; j++)
+      {
+        TByteVec bvPosition = uintEncode(page->data_[j]);
+
+        Bytes seekPointPayload;
+        seekPointPayload
+          << bvSeekId
+          << vsizeEncode(bvCluster.size())
+          << bvCluster
+          << bvSeekPos
+          << vsizeEncode(bvPosition.size())
+          << bvPosition;
+        
+        Bytes seekPoint;
+        seekPoint
+          << bvSeekEntry
+          << vsizeEncode(seekPointPayload.size())
+          << seekPointPayload;
+        
+        dst_.save(seekPoint);
+      }
+    }
+    
+    // rewrite SeekHead size:
+    overwriteUnknownPayloadSize(seekHead2, dst_);
   }
   
-  TChapters & chapters = dstSeg_.payload_.chapters_;
-  if (chapters.mustSave())
+  // save the cue point table, rewrite the Cues size
   {
-    chapters.save(dst_);
+    TCues & cuesElt = dstSeg_.payload_.cues_;
+    cuesElt.setFixedSize(uintMax[8]);
+    cuesElt.save(dst_);
+    
+    unsigned int pageSize = TDataTable<uint64>::TPage::kSize;
+    unsigned int numPages = cueTable_.size_ / pageSize;
+    if (cueTable_.size_ % pageSize)
+    {
+      numPages++;
+    }
+
+    TByteVec bvCuePoint = uintEncode(TCuePoint::kId);
+    TByteVec bvCueTime = uintEncode(CuePoint::TTime::kId);
+    TByteVec bvCueTrkPos = uintEncode(CuePoint::TCueTrkPos::kId);
+    TByteVec bvCueTrack = uintEncode(CueTrkPos::TTrack::kId);
+    TByteVec bvCueCluster = uintEncode(CueTrkPos::TCluster::kId);
+    TByteVec bvCueBlock = uintEncode(CueTrkPos::TBlock::kId);
+    
+    for (unsigned int i = 0; i < numPages; i++)
+    {
+      const TDataTable<TCue>::TPage * page = cueTable_.pages_[i];
+      
+      unsigned int size = pageSize;
+      if ((i + 1) == numPages)
+      {
+        size = cueTable_.size_ % pageSize;
+      }
+
+      for (unsigned int j = 0; j < size; j++)
+      {
+        // shortcut to Cue data:
+        const TCue & cue = page->data_[j];
+        
+        TByteVec bvPosition = uintEncode(cue.cluster_);
+        TByteVec bvBlock = uintEncode(cue.block_);
+        TByteVec bvTrack = uintEncode(cue.track_);
+        TByteVec bvTime = uintEncode(cue.time_);
+        
+        Bytes cueTrkPosPayload;
+        cueTrkPosPayload
+          << bvCueTrack
+          << vsizeEncode(bvTrack.size())
+          << bvTrack
+          << bvCueCluster
+          << vsizeEncode(bvPosition.size())
+          << bvPosition
+          << bvCueBlock
+          << vsizeEncode(bvBlock.size())
+          << bvBlock;
+        
+        Bytes cuePointPayload;
+        cuePointPayload
+          << bvCueTime
+          << vsizeEncode(bvTime.size())
+          << bvTime
+          << bvCueTrkPos
+          << vsizeEncode(cueTrkPosPayload.size())
+          << cueTrkPosPayload;
+        
+        Bytes cuePoint;
+        cuePoint
+          << bvCuePoint
+          << vsizeEncode(cuePointPayload.size())
+          << cuePointPayload;
+        
+        dst_.save(cuePoint);
+      }
+    }
+    
+    // rewrite Cues size:
+    overwriteUnknownPayloadSize(cuesElt, dst_);
   }
 }
 
@@ -756,6 +1051,7 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
   binfo.keyframe_ = binfo.block_.isKeyframe();
+  binfo.numFrames_ = binfo.block_.getNumberOfFrames();
   
   return true;
 }
@@ -846,6 +1142,7 @@ TRemuxer::push(uint64 clusterTime, TBlockGroup & bgroupElt)
     return;
   }
 
+  info->duration_ = bgroupElt.payload_.duration_.payload_.get();
   lace_.push(info);
   mux();
 }
@@ -883,27 +1180,25 @@ TRemuxer::mux(std::size_t minLaceSize)
   std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
   
   TBlockInfo * binfo = lace_.pop();
-  if (!binfo->trackNo_ || clusters.empty())
-  {
-    startNextCluster(binfo);
-  }
-
-  TCluster * clusterElt = &(clusters.back());
-  uint64 clusterTime = clusterElt->payload_.timecode_.payload_.get();
+  uint64 clusterTime = clusterElt_.payload_.timecode_.payload_.get();
   int64 blockTime = binfo->pts_ - clusterTime;
   
-  if (blockTime > kMaxShort)
+  if ((binfo->trackNo_ == 0) ||
+      (blockTime > kMaxShort) ||
+      (binfo->trackNo_ == lace_.cuesTrackNo_ &&
+       binfo->keyframe_ &&
+       cuesTrackKeyframes_ == 1) ||
+      (clusterElt_.storageReceipt() == NULL))
   {
     startNextCluster(binfo);
 
-    clusterElt = &(clusters.back());
-    clusterTime = clusterElt->payload_.timecode_.payload_.get();
+    clusterTime = clusterElt_.payload_.timecode_.payload_.get();
     blockTime = binfo->pts_ - clusterTime;
   }
 
   if (binfo->trackNo_ && updateHeader(clusterTime, *binfo))
   {
-    Cluster & cluster = clusterElt->payload_;
+    Cluster & cluster = clusterElt_.payload_;
     
     if (binfo->sblockElt_.mustSave())
     {
@@ -924,7 +1219,7 @@ TRemuxer::mux(std::size_t minLaceSize)
     binfo->save(dst_);
     
     clusterBlocks_++;
-    addCuePoint(clusterElt, binfo);
+    addCuePoint(binfo);
   }
   
   delete binfo;
@@ -938,19 +1233,13 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
 {
   finishCurrentCluster();
   
-  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
-
   // start a new cluster:
   clusterBlocks_ = 0;
-  clusters.push_back(TCluster());
-  TCluster & clusterElt = clusters.back();
-  
-  // index the new cluster with the 2nd SeekHead:
-  SeekHead & seekHead2 = dstSeg_.payload_.seekHeads_.back().payload_;
-  seekHead2.indexThis(&dstSeg_, &clusterElt, tmp_);
+  cuesTrackKeyframes_ = 0;
+  clusterElt_ = TCluster();
   
   // set the start time:
-  clusterElt.payload_.timecode_.payload_.set(binfo->pts_);
+  clusterElt_.payload_.timecode_.payload_.set(binfo->pts_);
 
   if (!binfo->trackNo_ && binfo->silentElt_.mustSave())
   {
@@ -958,13 +1247,13 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
     typedef SilentTracks::TTrack TTrkNumElt;
     typedef std::list<TTrkNumElt> TTrkNumElts;
 
-    clusterElt.payload_.silent_.alwaysSave();
+    clusterElt_.payload_.silent_.alwaysSave();
     
     const TTrkNumElts & srcSilentTracks =
       binfo->silentElt_.payload_.tracks_;
 
     TTrkNumElts & dstSilentTracks =
-      clusterElt.payload_.silent_.payload_.tracks_;
+      clusterElt_.payload_.silent_.payload_.tracks_;
 
     for (TTrkNumElts::const_iterator i = srcSilentTracks.begin();
          i != srcSilentTracks.end(); ++i)
@@ -984,7 +1273,12 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
     }
   }
   
-  clusterElt.savePaddedUpToSize(dst_, uintMax[8]);
+  clusterElt_.savePaddedUpToSize(dst_, uintMax[8]);
+  
+  // save relative cluster position for 2nd SeekHead:
+  uint64 absPos = clusterElt_.storageReceipt()->position();
+  clusterRelativePosition_ = absPos - segmentPayloadPosition_;
+  seekTable_.add(clusterRelativePosition_);
 }
 
 //----------------------------------------------------------------
@@ -993,58 +1287,43 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
 void
 TRemuxer::finishCurrentCluster()
 {
-  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
-  if (clusters.empty())
-  {
-    return;
-  }
-
   // fix the cluster size:
-  TCluster & clusterElt = clusters.back();
-
-  IStorage::IReceiptPtr receipt = clusterElt.storageReceipt();
-  IStorage::IReceiptPtr payload = clusterElt.payloadReceipt();
-  IStorage::IReceiptPtr payloadEnd = dst_.receipt();
-
-  uint64 payloadSize = payloadEnd->position() - payload->position();
-  uint64 elementIdSize = uintNumBytes(TCluster::kId);
-
-  IStorage::IReceiptPtr payloadSizeReceipt =
-    receipt->receipt(elementIdSize, 8);
-  
-  TByteVec v = vsizeEncode(payloadSize, 8);
-  payloadSizeReceipt->save(Bytes(v));
+  overwriteUnknownPayloadSize(clusterElt_, dst_);
 }
 
 //----------------------------------------------------------------
 // TRemuxer::addCuePoint
 // 
 void
-TRemuxer::addCuePoint(TCluster * clusterElt, TBlockInfo * binfo)
+TRemuxer::addCuePoint(TBlockInfo * binfo)
 {
-  if (!binfo->keyframe_ || binfo->trackNo_ != cuesTrackNo_)
+  if (!binfo->keyframe_)
   {
     return;
   }
+
+  if (binfo->trackNo_ == lace_.cuesTrackNo_)
+  {
+    cuesTrackKeyframes_++;
+
+    // reset the CuePoint barrier:
+    needCuePointForTrack_.assign(needCuePointForTrack_.size(), true);
+  }
+
+  if (!needCuePointForTrack_[binfo->trackNo_])
+  {
+    // avoid making too many CuePoints:
+    return;
+  }
   
-  Cues & cues = dstSeg_.payload_.cues_.payload_;
+  needCuePointForTrack_[binfo->trackNo_] = false;
   
-  // add to cues:
-  cues.points_.push_back(TCuePoint());
-  TCuePoint & cuePoint = cues.points_.back();
-  
-  // set cue timepoint:
-  cuePoint.payload_.time_.payload_.set(binfo->pts_);
-  
-  // add a track position for this timepoint:
-  cuePoint.payload_.trkPosns_.resize(1);
-  CueTrkPos & pos = cuePoint.payload_.trkPosns_.back().payload_;
-  
-  pos.block_.payload_.set(clusterBlocks_);
-  pos.track_.payload_.set(binfo->trackNo_);
-  
-  pos.cluster_.payload_.setOrigin(&dstSeg_);
-  pos.cluster_.payload_.setElt(clusterElt);
+  TCue cue;
+  cue.time_ = binfo->pts_;
+  cue.track_ = binfo->trackNo_;
+  cue.cluster_ = clusterRelativePosition_;
+  cue.block_ = clusterBlocks_;
+  cueTable_.add(cue);
 }
 
 //----------------------------------------------------------------
@@ -1177,7 +1456,7 @@ main(int argc, char ** argv)
   MatroskaDoc doc;
   ClusterSkipReader skipClusters(srcSize);
 
-  // attempl to load via SeekHead(s):
+  // attempt to load via SeekHead(s):
   bool ok = doc.loadSeekHead(src, srcSize);
   printCurrentTime("doc.loadSeekHead finished");
   
@@ -1315,7 +1594,7 @@ main(int argc, char ** argv)
     // add first SeekHead, written before clusters:
     segment.seekHeads_.push_back(TSeekHead());
     TSeekHead & seekHeadElt = segment.seekHeads_.back();
-    seekHeadElt.setFixedSize(1024);
+    seekHeadElt.setFixedSize(256);
     SeekHead & seekHead = seekHeadElt.payload_;
     
     // copy segment info:
@@ -1375,7 +1654,21 @@ main(int argc, char ** argv)
     // index the first set of top-level elements:
     seekHead.indexThis(&segmentElt, &segInfoElt, tmp);
     seekHead.indexThis(&segmentElt, &tracksElt, tmp);
+
+    TAttachment & attachmentsElt = segmentElt.payload_.attachments_;
+    attachmentsElt = segmentIn.attachments_;
+    if (attachmentsElt.mustSave())
+    {
+      seekHead.indexThis(&segmentElt, &attachmentsElt, tmp);
+    }
     
+    TChapters & chaptersElt = segmentElt.payload_.chapters_;
+    chaptersElt = segmentIn.chapters_;
+    if (chaptersElt.mustSave())
+    {
+      seekHead.indexThis(&segmentElt, &chaptersElt, tmp);
+    }
+
     // minor cleanup prior to saving:
     RemoveVoids().eval(segmentElt);
     
@@ -1393,7 +1686,7 @@ main(int argc, char ** argv)
 
     printCurrentTime("finished segment remux");
     
-    // rewrite the 1st SeekHead:
+    // rewrite the SeekHead:
     {
       TSeekHead & seekHead = segmentElt.payload_.seekHeads_.front();
       IStorage::IReceiptPtr receipt = seekHead.storageReceipt();
@@ -1408,20 +1701,7 @@ main(int argc, char ** argv)
     RewriteReferences().eval(segmentElt);
 
     // rewrite the segment payload size:
-    {
-      IStorage::IReceiptPtr receipt = segmentElt.storageReceipt();
-      IStorage::IReceiptPtr payload = segmentElt.payloadReceipt();
-      IStorage::IReceiptPtr payloadEnd = dst.receipt();
-
-      uint64 payloadSize = payloadEnd->position() - payload->position();
-      uint64 elementIdSize = uintNumBytes(TSegment::kId);
-      
-      IStorage::IReceiptPtr payloadSizeReceipt =
-        receipt->receipt(elementIdSize, 8);
-      
-      TByteVec v = vsizeEncode(payloadSize, 8);
-      payloadSizeReceipt->save(Bytes(v));
-    }
+    overwriteUnknownPayloadSize(segmentElt, dst);
   }
 
   // close open file handles:

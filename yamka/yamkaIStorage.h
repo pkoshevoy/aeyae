@@ -13,9 +13,7 @@
 #include <yamkaBytes.h>
 #include <yamkaCrc32.h>
 #include <yamkaStdInt.h>
-
-// boost includes:
-#include <boost/shared_ptr.hpp>
+#include <yamkaSharedPtr.h>
 
 
 namespace Yamka
@@ -40,7 +38,7 @@ namespace Yamka
     //----------------------------------------------------------------
     // IReceiptPtr
     // 
-    typedef boost::shared_ptr<IReceipt> IReceiptPtr;
+    typedef TSharedPtr<IReceipt> IReceiptPtr;
     
     //----------------------------------------------------------------
     // IReceipt

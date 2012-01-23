@@ -17,6 +17,7 @@
 
 // yamka includes:
 #include <yamkaFile.h>
+#include <yamkaSharedPtr.h>
 
 // turn on 64-bit file offsets:
 #ifndef _FILE_OFFSET_BITS
@@ -153,7 +154,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // TSharedFilePtr
   // 
-  typedef boost::shared_ptr<SharedFile> TSharedFilePtr;
+  typedef TSharedPtr<SharedFile> TSharedFilePtr;
   
   //----------------------------------------------------------------
   // File::Private

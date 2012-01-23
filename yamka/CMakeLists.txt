@@ -24,6 +24,7 @@ add_library(yamka STATIC
   yamkaIStorage.h
   yamkaMatroska.h
   yamkaPayload.h
+  yamkaSharedPtr.h
   yamkaStdInt.h
   yamkaBytes.h
   yamkaBytes.cpp

@@ -9,9 +9,6 @@
 // yamka includes:
 #include <yamkaBytes.h>
 
-// boost includes:
-#include <boost/shared_ptr.hpp>
-
 // system includes:
 #include <iomanip>
 #include <assert.h>

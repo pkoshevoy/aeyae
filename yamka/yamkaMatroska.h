@@ -14,6 +14,7 @@
 #include <yamkaHodgePodge.h>
 #include <yamkaPayload.h>
 #include <yamkaEBML.h>
+#include <yamkaSharedPtr.h>
 
 // system includes:
 #include <map>
@@ -277,6 +278,7 @@ namespace Yamka
     
     enum MatroskaTrackType
     {
+      kTrackTypeUndefined = 0,
       kTrackTypeVideo = 1,
       kTrackTypeAudio = 2,
       kTrackTypeComplex = 3,
@@ -1048,7 +1050,7 @@ namespace Yamka
     };
     
     // set this if you would like to save this segment "your way":
-    mutable boost::shared_ptr<IDelegateSave> delegateSave_;
+    mutable TSharedPtr<IDelegateSave> delegateSave_;
   };
   
   //----------------------------------------------------------------

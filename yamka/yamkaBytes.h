@@ -9,8 +9,8 @@
 #ifndef YAMKA_BYTES_H_
 #define YAMKA_BYTES_H_
 
-// boost includes:
-#include <boost/shared_ptr.hpp>
+// yamka includes:
+#include <yamkaSharedPtr.h>
 
 // system includes:
 #include <deque>
@@ -39,7 +39,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // TByteVecDecPtr
   // 
-  typedef boost::shared_ptr<TByteVecDec> TByteVecDecPtr;
+  typedef TSharedPtr<TByteVecDec> TByteVecDecPtr;
   
   //----------------------------------------------------------------
   // Bytes
