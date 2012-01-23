@@ -1052,6 +1052,26 @@ namespace Yamka
     // set this if you would like to save this segment "your way":
     mutable TSharedPtr<IDelegateSave> delegateSave_;
   };
+
+  //----------------------------------------------------------------
+  // LoadWithProgress
+  // 
+  struct LoadWithProgress : public IDelegateLoad
+  {
+    LoadWithProgress(uint64 storageSize = 1);
+    
+    // virtual:
+    uint64 load(FileStorage & storage,
+                uint64 payloadBytesToRead,
+                uint64 eltId,
+                IPayload & payload);
+    
+    // virtual:
+    void loaded(IElement & elt);
+    
+  protected:
+    uint64 storageSize_;
+  };
   
   //----------------------------------------------------------------
   // RemoveVoids

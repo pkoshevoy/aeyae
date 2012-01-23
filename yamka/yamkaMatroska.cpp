@@ -4283,6 +4283,57 @@ namespace Yamka
     
     return size;
   }
+
+  
+  //----------------------------------------------------------------
+  // printProgress
+  // 
+  static void
+  printProgress(FileStorage & storage, uint64 storageSize)
+  {
+    // print progress:
+    uint64 pos = storage.file_.absolutePosition();
+    double pct = 100.0 * (double(pos) / double(storageSize));
+    printf("\r%3.6f%%  ", pct);
+  }
+  
+  //----------------------------------------------------------------
+  // LoadWithProgress::LoadWithProgress
+  // 
+  LoadWithProgress::LoadWithProgress(uint64 storageSize):
+    storageSize_(storageSize)
+  {}
+
+  //----------------------------------------------------------------
+  // LoadWithProgress::load
+  // 
+  uint64
+  LoadWithProgress::load(FileStorage & storage,
+                         uint64 payloadBytesToRead,
+                         uint64 eltId,
+                         IPayload & payload)
+  {
+    printProgress(storage, storageSize_);
+    
+    // let the generic load mechanism handle the actual loading:
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // LoadWithProgress::loaded
+  // 
+  void
+  LoadWithProgress::loaded(IElement & elt)
+  {
+    if (elt.getId() == Cluster::TSilent::kId)
+    {
+      // if the SilentTracks element was present in the stream
+      // it must be saved to the output stream too,
+      // even if it contained no tracks at all:
+      elt.alwaysSave();
+    }
+  }
+  
   
   //----------------------------------------------------------------
   // RemoveVoids::evalPayload

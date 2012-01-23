@@ -44,7 +44,11 @@ namespace Yamka
   //
   // EC80 -- the smallest possible Void element (0 bytes payload)
   // 
-  enum { kMinVoidEltSize = 2 };
+  enum
+  {
+    kMinVoidEltSize = 2,
+    kCrc32EltSize = 6,
+  };
 
   //----------------------------------------------------------------
   // IDelegateLoad
@@ -156,13 +160,13 @@ namespace Yamka
     // 
     // NOTE: payload storage receipt is set only after
     // an element payload is loaded/saved successfully
-    virtual const IStorage::IReceiptPtr & payloadReceipt() const;
+    virtual IStorage::IReceiptPtr payloadReceipt() const;
     
     // accessor to this elements payload CRC-32 checksum storage receipt.
     // 
     // NOTE: payload CRC-32 checksum storage receipt is set only after
     // an element payload is loaded/saved successfully
-    virtual const IStorage::IReceiptPtr & crc32Receipt() const;
+    virtual IStorage::IReceiptPtr crc32Receipt() const;
     
     // dispose of storage receipts:
     virtual IElement & discardReceipts();
@@ -173,27 +177,37 @@ namespace Yamka
     // helper for loading CRC-32 checksum element:
     uint64 loadCrc32(FileStorage & storage, uint64 bytesToRead);
 
-    // when fixedSize_ != 0 IElement::savePaddedUpToSize(...) is used
-    // when fixedSize_ == 0 IElement::save(...) is used (default)
-    uint64 fixedSize_;
+    // special value used to indcate that payload (or CRC-32 element)
+    // position is unknown relative to this elements storage position:
+    static const uint64 kUndefinedOffset;
     
-    // this flag indicates that this element must be saved
-    // even when it holds a default value:
-    bool alwaysSave_;
+    enum
+    {
+      // this flag indicates that this element must be saved
+      // even when it holds a default value:
+      kAlwaysSave   = 1 << 0,
+      
+      // The CRC-32 value represents all the data inside the
+      // EBML Master it's contained in, except the CRC32 element itself.
+      // It should be placed as the first element in a Master
+      // so it applies to all the following elements at that level.
+      kComputeCrc32 = 1 << 1
+    };
     
-    // The CRC-32 value represents all the data inside the
-    // EBML Master it's contained in, except the CRC32 element itself.
-    // It should be placed as the first element in a Master
-    // so it applies to all the following elements at that level.
-    bool computeCrc32_;
+    // kAlwaysSave, kComputeCrc32
+    unsigned char storageFlags_;
     
     // loaded/computed CRC-32 checksum:
     mutable unsigned int checksumCrc32_;
     
     // storage receipts for this element and the payload (including CRC-32):
     mutable IStorage::IReceiptPtr receipt_;
-    mutable IStorage::IReceiptPtr receiptPayload_;
-    mutable IStorage::IReceiptPtr receiptCrc32_;
+    mutable uint64 offsetToPayload_;
+    mutable uint64 offsetToCrc32_;
+
+    // when fixedSize_ != 0 IElement::savePaddedUpToSize(...) is used
+    // when fixedSize_ == 0 IElement::save(...) is used (default)
+    uint64 fixedSize_;
   };
   
   //----------------------------------------------------------------

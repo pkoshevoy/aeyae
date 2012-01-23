@@ -64,6 +64,14 @@ target_link_libraries(yamkaRemux
   yamka
   )
 
+add_executable(yamkaSimplify
+  examples/yamkaSimplify.cpp
+  )
+
+target_link_libraries(yamkaSimplify
+  yamka
+  )
+
 add_executable(yamkaFileInfo
   examples/yamkaFileInfo.cpp
   )

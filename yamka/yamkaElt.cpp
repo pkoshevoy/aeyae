@@ -19,15 +19,21 @@
 
 namespace Yamka
 {
+
+  //----------------------------------------------------------------
+  // IElement::kUndefinedOffset
+  // 
+  const uint64 IElement::kUndefinedOffset = (uint64)(~0);
   
   //----------------------------------------------------------------
   // IElement::IElement
   // 
   IElement::IElement():
-    fixedSize_(0),
-    alwaysSave_(false),
-    computeCrc32_(false),
-    checksumCrc32_(0)
+    storageFlags_(0),
+    checksumCrc32_(0),
+    offsetToPayload_(IElement::kUndefinedOffset),
+    offsetToCrc32_(IElement::kUndefinedOffset),
+    fixedSize_(0)
   {}
   
   //----------------------------------------------------------------
@@ -38,7 +44,7 @@ namespace Yamka
   {
     const IPayload & payload = getPayload();
     return (fixedSize_ ||
-            alwaysSave_ ||
+            (storageFlags_ & kAlwaysSave) ||
             !payload.isDefault() ||
             (payload.isComposite() && payload.hasVoid()));
   }
@@ -49,7 +55,7 @@ namespace Yamka
   IElement &
   IElement::alwaysSave()
   {
-    alwaysSave_ = true;
+    storageFlags_ |= kAlwaysSave;
     return *this;
   }
   
@@ -59,7 +65,15 @@ namespace Yamka
   IElement &
   IElement::setCrc32(bool enableCrc32)
   {
-    computeCrc32_ = enableCrc32 && getPayload().isComposite();
+    if (enableCrc32 && getPayload().isComposite())
+    {
+      storageFlags_ |= kComputeCrc32;
+    }
+    else
+    {
+      storageFlags_ &= ~kComputeCrc32;
+    }
+
     return *this;
   }
   
@@ -69,7 +83,7 @@ namespace Yamka
   bool
   IElement::shouldComputeCrc32() const
   {
-    return computeCrc32_ && getPayload().isComposite();
+    return (storageFlags_ & kComputeCrc32) && getPayload().isComposite();
   }
   
   //----------------------------------------------------------------
@@ -172,8 +186,8 @@ namespace Yamka
     *receipt_ += payloadSizeReceipt;
     
     // save payload receipt:
-    receiptPayload_ = storage.receipt();
-    receiptCrc32_ = IStorage::IReceiptPtr();
+    offsetToPayload_ = storage.receipt()->position() - receipt_->position();
+    offsetToCrc32_ = kUndefinedOffset;
     
     // save the payload:
     IStorage::IReceiptPtr payloadReceipt = payload.save(storage);
@@ -182,8 +196,7 @@ namespace Yamka
       return payloadReceipt;
     }
     
-    *receiptPayload_ += payloadReceipt;
-    *receipt_ += receiptPayload_;
+    *receipt_ += payloadReceipt;
     
     if (payloadSizeUnknown)
     {
@@ -191,7 +204,7 @@ namespace Yamka
       return receipt_;
     }
     
-    uint64 payloadBytesSaved = receiptPayload_->numBytes();
+    uint64 payloadBytesSaved = payloadReceipt->numBytes();
     assert(payloadBytesSaved <= payloadSize);
     
     if (payloadBytesSaved < payloadSize)
@@ -274,38 +287,38 @@ namespace Yamka
     *receipt_ += payloadSizeReceipt;
     
     // save payload receipt:
-    receiptPayload_ = storage.receipt();
-    receiptCrc32_ = IStorage::IReceiptPtr();
+    offsetToPayload_ = storage.receipt()->position() - receipt_->position();
+    offsetToCrc32_ = kUndefinedOffset;
     
     // save CRC-32 element placeholder:
     if (shouldComputeCrc32())
     {
-      receiptCrc32_ = storage.receipt();
+      IStorage::IReceiptPtr receiptCrc32 = storage.receipt();
       Bytes bytes;
       bytes << uintEncode(kIdCrc32)
             << vsizeEncode(4)
             << uintEncode(0, 4);
       
-      receiptCrc32_ = storage.save(bytes);
-      if (!receiptCrc32_)
+      receiptCrc32 = storage.save(bytes);
+      if (!receiptCrc32)
       {
-        return receiptCrc32_;
+        return receiptCrc32;
       }
       
-      *receiptPayload_ += receiptCrc32_;
+      *receipt_ += receiptCrc32;
+      offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
     }
     
     // save the payload:
-    IStorage::IReceiptPtr payloadReceipt = payload.save(storage);
-    if (!payloadReceipt)
+    IStorage::IReceiptPtr receiptPayload = payload.save(storage);
+    if (!receiptPayload)
     {
-      return payloadReceipt;
+      return receiptPayload;
     }
     
-    *receiptPayload_ += payloadReceipt;
-    *receipt_ += receiptPayload_;
+    *receipt_ += receiptPayload;
     
-    uint64 payloadBytesSaved = receiptPayload_->numBytes();
+    uint64 payloadBytesSaved = receipt_->numBytes() - offsetToPayload_;
     assert(payloadBytesSaved <= payloadSize);
     
     if (payloadBytesSaved < payloadSize)
@@ -420,13 +433,14 @@ namespace Yamka
     receipt_->add(vsizeSize);
     
     // clear the payload checksum:
-    computeCrc32_ = false;
+    setCrc32(false);
     checksumCrc32_ = 0;
     
     // save the payload storage receipt so that element position references
     // can be resolved later:
-    receiptPayload_ = storage.receipt();
-    receiptCrc32_ = IStorage::IReceiptPtr();
+    IStorage::IReceiptPtr receiptPayload = storage.receipt();
+    offsetToPayload_ = receiptPayload->position() - receipt_->position();
+    offsetToCrc32_ = kUndefinedOffset;
     
     // shortcut:
     IPayload & payload = getPayload();
@@ -534,14 +548,16 @@ namespace Yamka
       payloadBytesReadTotal = payloadSize;
     }
     
-    receiptPayload_->add(payloadBytesReadTotal);
-    *receipt_ += receiptPayload_;
+    receiptPayload->add(payloadBytesReadTotal);
+    *receipt_ += receiptPayload;
     
     // verify stored payload CRC-32 checksum:
     if (shouldComputeCrc32())
     {
+      IStorage::IReceiptPtr receiptCrc32 = crc32Receipt();
+      
       Crc32 crc32;
-      receiptPayload_->calcCrc32(crc32, receiptCrc32_);
+      receiptPayload->calcCrc32(crc32, receiptCrc32);
       unsigned int freshChecksum = crc32.checksum();
       
       if (freshChecksum != checksumCrc32_)
@@ -552,14 +568,14 @@ namespace Yamka
                   << " -- checksum mismatch, loaded "
                   << std::hex << checksumCrc32_
                   << ", computed " << freshChecksum
-                  << ", CRC-32 @ 0x" << receiptCrc32_->position()
-                  << ", payload @ 0x" << receiptPayload_->position()
-                  << ":" << receiptPayload_->numBytes()
+                  << ", CRC-32 @ 0x" << receiptCrc32->position()
+                  << ", payload @ 0x" << receiptPayload->position()
+                  << ":" << receiptPayload->numBytes()
                   << std::dec
                   << std::endl;
         
         Crc32 doOverCrc32;
-        receiptPayload_->calcCrc32(doOverCrc32, receiptCrc32_);
+        receiptPayload->calcCrc32(doOverCrc32, receiptCrc32);
 #endif
       }
     }
@@ -587,7 +603,7 @@ namespace Yamka
     
     // save current seek position, so it can be restored if necessary:
     File::Seek storageStart(storage.file_);
-    IStorage::IReceiptPtr receipt = storage.receipt();
+    IStorage::IReceiptPtr receiptCrc32 = storage.receipt();
     
     uint64 eltId = loadEbmlId(storage);
     if (eltId != kIdCrc32)
@@ -595,7 +611,7 @@ namespace Yamka
       return 0;
     }
     
-    if (receiptCrc32_)
+    if (offsetToCrc32_ != kUndefinedOffset)
     {
       // only one CRC-32 element is allowed per master element:
       assert(false);
@@ -618,16 +634,19 @@ namespace Yamka
     }
     
     // update the receipt:
-    receipt->add(uintNumBytes(kIdCrc32) + vsizeSize + 4);
+    receiptCrc32->add(uintNumBytes(kIdCrc32) + vsizeSize + 4);
     
     // successfully loaded the CRC-32 element:
     storageStart.doNotRestore();
     
-    computeCrc32_ = true;
+    setCrc32(true);
     checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
-    receiptCrc32_ = receipt;
+    offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
     
-    return receipt->numBytes();
+    uint64 bytesRead = receiptCrc32->numBytes();
+    assert(bytesRead == kCrc32EltSize);
+    
+    return bytesRead;
   }
 
   //----------------------------------------------------------------
@@ -640,16 +659,35 @@ namespace Yamka
   //----------------------------------------------------------------
   // IElement::payloadReceipt
   // 
-  const IStorage::IReceiptPtr &
+  IStorage::IReceiptPtr
   IElement::payloadReceipt() const
-  { return receiptPayload_; }
+  {
+    IStorage::IReceiptPtr receiptPayload;
+    
+    if (offsetToPayload_ != kUndefinedOffset)
+    {
+      uint64 elementSize = receipt_->numBytes();
+      receiptPayload = receipt_->receipt(offsetToPayload_,
+                                         elementSize - offsetToPayload_);
+    }
+    
+    return receiptPayload;
+  }
   
   //----------------------------------------------------------------
   // IElement::crc32Receipt
   // 
-  const IStorage::IReceiptPtr &
+  IStorage::IReceiptPtr
   IElement::crc32Receipt() const
-  { return receiptCrc32_; }
+  {
+    IStorage::IReceiptPtr receiptCrc32;
+    if (offsetToCrc32_ != kUndefinedOffset)
+    {
+      receiptCrc32 = receipt_->receipt(offsetToCrc32_, kCrc32EltSize);
+    }
+    
+    return receiptCrc32;
+  }
   
   //----------------------------------------------------------------
   // IElement::discardReceipts
@@ -658,7 +696,8 @@ namespace Yamka
   IElement::discardReceipts()
   {
     receipt_ = IStorage::IReceiptPtr();
-    receiptPayload_ = IStorage::IReceiptPtr();
+    offsetToPayload_ = kUndefinedOffset;
+    offsetToCrc32_ = kUndefinedOffset;
     return *this;
   }
   

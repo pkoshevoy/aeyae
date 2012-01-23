@@ -247,60 +247,15 @@ struct ScopedVar
   }
 };
 
-//----------------------------------------------------------------
-// printProgress
-// 
-static void
-printProgress(FileStorage & storage, uint64 storageSize)
-{
-  // print progress:
-  uint64 pos = storage.file_.absolutePosition();
-  double pct = 100.0 * (double(pos) / double(storageSize));
-  printf("\r%3.6f%%  ", pct);
-}
 
 //----------------------------------------------------------------
-// LoadWithProgress
+// LoaderSkipClusterPayload
 // 
-struct LoadWithProgress : public IDelegateLoad
+// Skip cluster payload, let the generic mechanism load everything else
+// 
+struct LoaderSkipClusterPayload : public LoadWithProgress
 {
-  uint64 srcSize_;
-  
-  LoadWithProgress(uint64 srcSize = 1):
-    srcSize_(srcSize)
-  {}
-  
-  uint64 load(FileStorage & storage,
-              uint64 payloadBytesToRead,
-              uint64 eltId,
-              IPayload & payload)
-  {
-    printProgress(storage, srcSize_);
-    
-    // let the generic load mechanism handle the actual loading:
-    return 0;
-  }
-  
-  void loaded(IElement & elt)
-  {
-    if (elt.getId() == TSilentTracks::kId)
-    {
-      // if the SilentTracks element was present in the stream
-      // it must be saved to the output stream too,
-      // even if it contained no tracks at all:
-      elt.alwaysSave();
-    }
-  }
-};
-
-//----------------------------------------------------------------
-// ClusterSkipReader
-// 
-// Load the first cluster, skip everything else.
-// 
-struct ClusterSkipReader : public LoadWithProgress
-{
-  ClusterSkipReader(uint64 srcSize):
+  LoaderSkipClusterPayload(uint64 srcSize):
     LoadWithProgress(srcSize)
   {}
   
@@ -455,8 +410,6 @@ struct TBlockInfo
   uint64 pts_;
   uint64 duration_;
   uint64 trackNo_;
-  bool keyframe_;
-  std::size_t numFrames_;
   
   TBlockInfo * next_;
 };
@@ -519,9 +472,9 @@ struct TLace
           double frameDuration =
             double(defaultDuration) /
             double(timecodeScale_);
-
-          binfo->duration_ =
-            (uint64)(0.5 + frameDuration * double(binfo->numFrames_));
+          
+          std::size_t numFrames = binfo->block_.getNumberOfFrames();
+          binfo->duration_ = (uint64)(0.5 + frameDuration * double(numFrames));
         }
         else if (binfo->next_ && trackType == Track::kTrackTypeAudio)
         {
@@ -1050,8 +1003,6 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
-  binfo.keyframe_ = binfo.block_.isKeyframe();
-  binfo.numFrames_ = binfo.block_.getNumberOfFrames();
   
   return true;
 }
@@ -1071,8 +1022,7 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   bool srcIsKeyframe = binfo.block_.isKeyframe();
   
   if (srcTrackNo == binfo.trackNo_ &&
-      srcBlockTime == dstBlockTime &&
-      srcIsKeyframe == binfo.keyframe_)
+      srcBlockTime == dstBlockTime)
   {
     // nothing changed:
     return true;
@@ -1086,7 +1036,6 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   
   binfo.block_.setTrackNumber(binfo.trackNo_);
   binfo.block_.setRelativeTimecode((short int)(dstBlockTime));
-  binfo.block_.setKeyframe(binfo.keyframe_);
   
   binfo.header_ = binfo.block_.writeHeader(tmp_);
   
@@ -1186,7 +1135,7 @@ TRemuxer::mux(std::size_t minLaceSize)
   if ((binfo->trackNo_ == 0) ||
       (blockTime > kMaxShort) ||
       (binfo->trackNo_ == lace_.cuesTrackNo_ &&
-       binfo->keyframe_ &&
+       binfo->block_.isKeyframe() &&
        cuesTrackKeyframes_ == 1) ||
       (clusterElt_.storageReceipt() == NULL))
   {
@@ -1297,7 +1246,7 @@ TRemuxer::finishCurrentCluster()
 void
 TRemuxer::addCuePoint(TBlockInfo * binfo)
 {
-  if (!binfo->keyframe_)
+  if (!binfo->block_.isKeyframe())
   {
     return;
   }
@@ -1454,7 +1403,7 @@ main(int argc, char ** argv)
   
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
-  ClusterSkipReader skipClusters(srcSize);
+  LoaderSkipClusterPayload skipClusters(srcSize);
 
   // attempt to load via SeekHead(s):
   bool ok = doc.loadSeekHead(src, srcSize);
