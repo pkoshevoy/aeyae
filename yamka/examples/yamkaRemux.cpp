@@ -225,28 +225,6 @@ getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
   return NULL;
 }
 
-//----------------------------------------------------------------
-// ScopedVar
-// 
-template <typename T>
-struct ScopedVar
-{
-  T & valRef_;
-  T valOutOfScope_;
-  
-  ScopedVar(T & valRef, T valInScope):
-    valRef_(valRef),
-    valOutOfScope_(valRef)
-  {
-    valRef_ = valInScope;
-  }
-
-  ~ScopedVar()
-  {
-    valRef_ = valOutOfScope_;
-  }
-};
-
 
 //----------------------------------------------------------------
 // LoaderSkipClusterPayload
@@ -611,7 +589,7 @@ struct TRemuxer : public LoadWithProgress
            FileStorage & dst,
            FileStorage & tmp);
 
-  void remux();
+  void remux(uint64 t0, uint64 t1);
   void flush();
 
   // Returns true if the given Block/SimpleBlock/EncryptedBlock
@@ -651,6 +629,8 @@ struct TRemuxer : public LoadWithProgress
   TDataTable<uint64> seekTable_;
   TDataTable<TCue> cueTable_;
   TCluster clusterElt_;
+  uint64 t0_;
+  uint64 t1_;
 };
 
 //----------------------------------------------------------------
@@ -676,7 +656,9 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   segmentPayloadPosition_(dstSeg.payloadReceipt()->position()),
   clusterRelativePosition_(0),
   seekTable_(1 << 24),
-  cueTable_(1 << 27)
+  cueTable_(1 << 27),
+  t0_(0),
+  t1_(0)
 {
   TTracks & tracksElt = dstSeg_.payload_.tracks_;
   std::deque<TTrack> & tracks = tracksElt.payload_.tracks_;
@@ -769,8 +751,14 @@ overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
 // TRemuxer::remux
 // 
 void
-TRemuxer::remux()
+TRemuxer::remux(uint64 inPointInSeconds, uint64 outPointInSeconds)
 {
+  uint64 oneSecond = NANOSEC_PER_SEC / lace_.timecodeScale_;
+  t0_ = oneSecond * inPointInSeconds;
+  t1_ = oneSecond * outPointInSeconds;
+  
+  bool extractTimeSegment = (t0_ && t1_);
+  
   const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
   for (std::list<TCluster>::const_iterator i = clusters.begin();
        i != clusters.end(); ++i)
@@ -787,7 +775,20 @@ TRemuxer::remux()
 
     Cluster & cluster = clusterElt.payload_;
     uint64 clusterTime = cluster.timecode_.payload_.get();
-
+    
+    if (extractTimeSegment)
+    {
+      if (clusterTime > t1_ + oneSecond)
+      {
+        break;
+      }
+      
+      if (clusterTime + oneSecond * 10 < t0_)
+      {
+        continue;
+      }
+    }
+    
     // use SilentTracks as a cluster delimiter:
     if (cluster.silent_.mustSave())
     {
@@ -1126,11 +1127,20 @@ TRemuxer::mux(std::size_t minLaceSize)
     return;
   }
 
-  std::list<TCluster> & clusters = dstSeg_.payload_.clusters_;
-  
   TBlockInfo * binfo = lace_.pop();
   uint64 clusterTime = clusterElt_.payload_.timecode_.payload_.get();
   int64 blockTime = binfo->pts_ - clusterTime;
+  
+  bool extractTimeSegment = (t0_ && t1_);
+  if (extractTimeSegment)
+  {
+    if ((binfo->pts_ > t1_) ||
+        (binfo->pts_ + binfo->duration_ < t0_))
+    {
+      delete binfo;
+      return;
+    }
+  }
   
   if ((binfo->trackNo_ == 0) ||
       (blockTime > kMaxShort) ||
@@ -1290,7 +1300,7 @@ main(int argc, char ** argv)
   std::list<uint64> tracksDelete;
 
   uint64 t0 = 0;
-  uint64 t1 = (uint64)(~0);
+  uint64 t1 = 0;
   
   for (int i = 1; i < argc; i++)
   {
@@ -1567,9 +1577,6 @@ main(int argc, char ** argv)
     std::map<uint64, uint64> & trackInOut = trackSrcDst[segmentIndex];
     std::map<uint64, uint64> & trackOutIn = trackDstSrc[segmentIndex];
     uint64 trackMapSize = trackOutIn.size();
-
-    std::vector<Track::MatroskaTrackType> trackType((std::size_t)trackMapSize);
-    uint64 videoTrackNo = 0;
     
     for (uint64 trackNo = 1; trackNo <= trackMapSize; trackNo++)
     {
@@ -1589,15 +1596,6 @@ main(int argc, char ** argv)
       
       track.trackNumber_.payload_.set(trackNo);
       track.flagLacing_.payload_.set(1);
-
-      trackType[(std::size_t)(trackNo - 1)] =
-        (Track::MatroskaTrackType)(track.trackType_.payload_.get());
-      
-      if (!videoTrackNo &&
-          trackType[(std::size_t)(trackNo - 1)] == Track::kTrackTypeVideo)
-      {
-        videoTrackNo = trackNo;
-      }
     }
 
     // index the first set of top-level elements:
@@ -1631,7 +1629,7 @@ main(int argc, char ** argv)
 
     // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
     TRemuxer remuxer(trackInOut, trackOutIn, *i, segmentElt, src, dst, tmp);
-    remuxer.remux();
+    remuxer.remux(t0, t1);
 
     printCurrentTime("finished segment remux");
     
