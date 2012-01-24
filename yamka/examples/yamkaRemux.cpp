@@ -233,8 +233,11 @@ getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
 // 
 struct LoaderSkipClusterPayload : public LoadWithProgress
 {
-  LoaderSkipClusterPayload(uint64 srcSize):
-    LoadWithProgress(srcSize)
+  bool skipCues_;
+  
+  LoaderSkipClusterPayload(uint64 srcSize, bool skipCues):
+    LoadWithProgress(srcSize),
+    skipCues_(skipCues)
   {}
   
   // virtual:
@@ -247,7 +250,7 @@ struct LoaderSkipClusterPayload : public LoadWithProgress
     
     const bool payloadIsCluster = (eltId == TCluster::kId);
     const bool payloadIsCues = (eltId == TCues::kId);
-    if (payloadIsCluster || payloadIsCues)
+    if (payloadIsCluster || (payloadIsCues && skipCues_))
     {
       storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
       return payloadBytesToRead;
@@ -753,17 +756,58 @@ overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
 void
 TRemuxer::remux(uint64 inPointInSeconds, uint64 outPointInSeconds)
 {
+  const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
+  std::list<TCluster>::const_iterator clusterIter = clusters.begin();
+  
   uint64 oneSecond = NANOSEC_PER_SEC / lace_.timecodeScale_;
   t0_ = oneSecond * inPointInSeconds;
   t1_ = oneSecond * outPointInSeconds;
+  bool extractTimeSegment = (t0_ < t1_);
   
-  bool extractTimeSegment = (t0_ && t1_);
-  
-  const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
-  for (std::list<TCluster>::const_iterator i = clusters.begin();
-       i != clusters.end(); ++i)
+  if (extractTimeSegment)
   {
-    TCluster clusterElt = *i;
+    // use CuePoints to find the closest Cluster:
+    const std::list<Cues::TCuePoint> & cuePoints =
+      srcSeg_.payload_.cues_.payload_.points_;
+
+    const TCluster * found = NULL;
+    for (std::list<Cues::TCuePoint>::const_iterator i = cuePoints.begin();
+         i != cuePoints.end(); ++i)
+    {
+      const CuePoint & cuePoint = i->payload_;
+      if (cuePoint.trkPosns_.empty())
+      {
+        continue;
+      }
+      
+      uint64 t = cuePoint.time_.payload_.get();
+      if (t > t0_)
+      {
+        break;
+      }
+      
+      const CueTrkPos & cueTrkPos =
+        cuePoint.trkPosns_.front().payload_;
+      
+      found =
+        static_cast<const TCluster *>(cueTrkPos.cluster_.payload_.getElt());
+    }
+
+    for (std::list<TCluster>::const_iterator i = clusters.begin();
+         i != clusters.end() && found; ++i)
+    {
+      const TCluster & clusterElt = *i;
+      if (found == &clusterElt)
+      {
+        clusterIter = i;
+        break;
+      }
+    }
+  }
+  
+  for (; clusterIter != clusters.end(); ++clusterIter)
+  {
+    TCluster clusterElt = *clusterIter;
 
     uint64 position = clusterElt.storageReceipt()->position();
     uint64 numBytes = clusterElt.storageReceipt()->numBytes();
@@ -1131,7 +1175,7 @@ TRemuxer::mux(std::size_t minLaceSize)
   uint64 clusterTime = clusterElt_.payload_.timecode_.payload_.get();
   int64 blockTime = binfo->pts_ - clusterTime;
   
-  bool extractTimeSegment = (t0_ && t1_);
+  bool extractTimeSegment = (t0_ < t1_);
   if (extractTimeSegment)
   {
     if ((binfo->pts_ > t1_) ||
@@ -1410,10 +1454,12 @@ main(int argc, char ** argv)
                  srcPath +
                  std::string(" for reading")).c_str());
   }
-  
+
+  bool extractTimeSegment = (t0 < t1);
+  bool skipCues = !extractTimeSegment;
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
-  LoaderSkipClusterPayload skipClusters(srcSize);
+  LoaderSkipClusterPayload skipClusters(srcSize, skipCues);
 
   // attempt to load via SeekHead(s):
   bool ok = doc.loadSeekHead(src, srcSize);
@@ -1544,8 +1590,6 @@ main(int argc, char ** argv)
 
     TSegment segmentElt;
     segmentElt.setFixedSize(uintMax[8]);
-    // out.segments_.push_back(TSegment());
-    // TSegment & segmentElt = out.segments_.back();
     
     Segment & segment = segmentElt.payload_;
     const Segment & segmentIn = i->payload_;
