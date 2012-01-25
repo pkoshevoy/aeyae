@@ -1580,6 +1580,13 @@ main(int argc, char ** argv)
   }
   
   MatroskaDoc out;
+
+  // keep the original DocType:
+  out.head_.payload_.docTypeVersion_ =
+    doc.head_.payload_.docTypeVersion_;
+  out.head_.payload_.docTypeReadVersion_ =
+    doc.head_.payload_.docTypeReadVersion_;
+  
   dst.file_.setSize(0);
   out.save(dst);
   
