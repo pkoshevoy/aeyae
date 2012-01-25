@@ -15,6 +15,7 @@
 #include <yamkaMatroska.h>
 
 // system includes:
+#include <limits>
 #include <sstream>
 #include <iostream>
 #include <string.h>

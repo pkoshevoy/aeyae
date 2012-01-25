@@ -10,7 +10,13 @@
 #include <yamkaMatroska.h>
 
 // system includes:
+#include <string.h>
+#include <assert.h>
+#include <stdio.h>
+#include <cstddef>
 #include <limits>
+#include <time.h>
+#include <map>
 
 
 namespace Yamka

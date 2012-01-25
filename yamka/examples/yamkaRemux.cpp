@@ -15,6 +15,7 @@
 #include <yamkaMatroska.h>
 
 // system includes:
+#include <limits>
 #include <sstream>
 #include <iostream>
 #include <string.h>
@@ -1191,7 +1192,7 @@ TRemuxer::mux(std::size_t minLaceSize)
       (binfo->trackNo_ == lace_.cuesTrackNo_ &&
        binfo->block_.isKeyframe() &&
        cuesTrackKeyframes_ == 1) ||
-      (clusterElt_.storageReceipt() == NULL))
+      (!clusterElt_.storageReceipt()))
   {
     startNextCluster(binfo);
 
