@@ -81,9 +81,9 @@ target_link_libraries(yamkaFileInfo
   )
 
 install(TARGETS 
-  yamkaTest
   yamkaAddAttachment
   yamkaRemux
+  yamkaSimplify
   yamkaFileInfo
   DESTINATION bin
   )

@@ -181,12 +181,12 @@ usage(char ** argv, const char * message = NULL)
   
   std::cerr << "USAGE: " << argv[0]
             << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
-            << "[-t0 hh mm ss] [-t1 hh mm ss]"
+            << "[[-t0|-k0]  hh mm ss msec] [-t1 hh mm ss msec]"
             << std::endl;
   
   std::cerr << "EXAMPLE: " << argv[0]
-            << " -i input.mkv -o output.mkv -t 1 -t 2"
-            << " -t0 00 04 00 -t1 00 08 00"
+            << " -i input.mkv -o output.mkv +t 1 +t 2"
+            << " -k0 00 15 30 000 -t1 00 17 00 000"
             << std::endl;
 
   if (message != NULL)
@@ -339,6 +339,7 @@ struct TBlockInfo
     pts_(0),
     duration_(0),
     trackNo_(0),
+    keyframe_(false),
     next_(NULL)
   {}
   
@@ -392,6 +393,7 @@ struct TBlockInfo
   uint64 pts_;
   uint64 duration_;
   uint64 trackNo_;
+  bool keyframe_;
   
   TBlockInfo * next_;
 };
@@ -413,7 +415,7 @@ struct TLace
   
   void push(TBlockInfo * binfo)
   {
-    TBlockFifo & track = track_[binfo->trackNo_];
+    TBlockFifo & track = track_[(std::size_t)(binfo->trackNo_)];
     track.push(binfo);
     size_++;
   }
@@ -424,10 +426,10 @@ struct TLace
     
     bool cuesTrackHasData =
       cuesTrackNo_ < numTracks &&
-      track_[cuesTrackNo_].size_;
+      track_[(std::size_t)(cuesTrackNo_)].size_;
     
     uint64 bestTrackNo = cuesTrackHasData ? cuesTrackNo_ : numTracks;
-    uint64 bestTrackTime = nextTime(cuesTrackNo_);
+    uint64 bestTrackTime = nextTime((std::size_t)(cuesTrackNo_));
 
     uint64 trackTime = (uint64)(~0);
     for (std::size_t i = 0; i < numTracks; i++)
@@ -441,13 +443,16 @@ struct TLace
 
     if (bestTrackNo < numTracks)
     {
-      TBlockInfo * binfo = track_[bestTrackNo].pop();
+      TBlockInfo * binfo = track_[(std::size_t)(bestTrackNo)].pop();
       size_--;
       
       if (!binfo->duration_)
       {
-        Track::MatroskaTrackType trackType = trackType_[bestTrackNo];
-        uint64 defaultDuration = defaultDuration_[bestTrackNo];
+        Track::MatroskaTrackType trackType =
+          trackType_[(std::size_t)(bestTrackNo)];
+        
+        uint64 defaultDuration =
+          defaultDuration_[(std::size_t)(bestTrackNo)];
         
         if (defaultDuration)
         {
@@ -593,7 +598,7 @@ struct TRemuxer : public LoadWithProgress
            FileStorage & dst,
            FileStorage & tmp);
 
-  void remux(uint64 t0, uint64 t1);
+  void remux(uint64 t0, uint64 t1, bool extractFromKeyframe);
   void flush();
 
   // Returns true if the given Block/SimpleBlock/EncryptedBlock
@@ -623,7 +628,7 @@ struct TRemuxer : public LoadWithProgress
   FileStorage & dst_;
   FileStorage & tmp_;
   uint64 clusterBlocks_;
-  uint64 cuesTrackKeyframes_;
+  uint64 cuesTrackHasKeyframes_;
   std::vector<bool> needCuePointForTrack_;
   
   const uint64 segmentPayloadPosition_;
@@ -635,6 +640,9 @@ struct TRemuxer : public LoadWithProgress
   TCluster clusterElt_;
   uint64 t0_;
   uint64 t1_;
+  bool extractTimeSegment_;
+  bool extractFromKeyframe_;
+  bool foundFirstKeyframe_;
 };
 
 //----------------------------------------------------------------
@@ -656,13 +664,16 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   dst_(dst),
   tmp_(tmp),
   clusterBlocks_(0),
-  cuesTrackKeyframes_(0),
+  cuesTrackHasKeyframes_(0),
   segmentPayloadPosition_(dstSeg.payloadReceipt()->position()),
   clusterRelativePosition_(0),
   seekTable_(1 << 24),
   cueTable_(1 << 27),
   t0_(0),
-  t1_(0)
+  t1_(0),
+  extractTimeSegment_(false),
+  extractFromKeyframe_(false),
+  foundFirstKeyframe_(false)
 {
   TTracks & tracksElt = dstSeg_.payload_.tracks_;
   std::deque<TTrack> & tracks = tracksElt.payload_.tracks_;
@@ -755,22 +766,42 @@ overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
 // TRemuxer::remux
 // 
 void
-TRemuxer::remux(uint64 inPointInSeconds, uint64 outPointInSeconds)
+TRemuxer::remux(uint64 inPointInMsec,
+                uint64 outPointInMsec,
+                bool extractFromKeyframe)
 {
   const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
   std::list<TCluster>::const_iterator clusterIter = clusters.begin();
   
   uint64 oneSecond = NANOSEC_PER_SEC / lace_.timecodeScale_;
-  t0_ = oneSecond * inPointInSeconds;
-  t1_ = oneSecond * outPointInSeconds;
-  bool extractTimeSegment = (t0_ < t1_);
+  t0_ = (oneSecond * inPointInMsec) / 1000;
+  t1_ = (oneSecond * outPointInMsec) / 1000;
   
-  if (extractTimeSegment)
+  extractTimeSegment_ = (t0_ < t1_);
+  extractFromKeyframe_ = (extractTimeSegment_ && extractFromKeyframe);
+  foundFirstKeyframe_ = false;
+  
+  if (extractTimeSegment_)
   {
     // use CuePoints to find the closest Cluster:
     const std::list<Cues::TCuePoint> & cuePoints =
       srcSeg_.payload_.cues_.payload_.points_;
 
+    // lookup the source segment track number we are interested in:
+    uint64 srcCuesTrackNo = (uint64)(~0);
+    {
+      TTrackMap::const_iterator found =
+        trackDstSrc_.find(lace_.cuesTrackNo_);
+      if (found != trackDstSrc_.end())
+      {
+        srcCuesTrackNo = found->second;
+      }
+    }
+
+    // keep track of adjacent CuePoint times for the track we care about:
+    uint64 ta = (uint64)(~0);
+    uint64 tb = (uint64)(~0);
+    
     const TCluster * found = NULL;
     for (std::list<Cues::TCuePoint>::const_iterator i = cuePoints.begin();
          i != cuePoints.end(); ++i)
@@ -781,19 +812,67 @@ TRemuxer::remux(uint64 inPointInSeconds, uint64 outPointInSeconds)
         continue;
       }
       
-      uint64 t = cuePoint.time_.payload_.get();
-      if (t > t0_)
+      const CueTrkPos & cueTrkPos =
+        cuePoint.trkPosns_.front().payload_;
+      uint64 trackNo = cueTrkPos.track_.payload_.get();
+      if (trackNo != srcCuesTrackNo)
+      {
+        continue;
+      }
+
+      ta = tb;
+      tb = cuePoint.time_.payload_.get();
+      if (tb > t0_)
       {
         break;
       }
-      
-      const CueTrkPos & cueTrkPos =
-        cuePoint.trkPosns_.front().payload_;
-      
-      found =
-        static_cast<const TCluster *>(cueTrkPos.cluster_.payload_.getElt());
+
+      const IElement * elt = cueTrkPos.cluster_.payload_.getElt();
+      found = static_cast<const TCluster *>(elt);
     }
 
+    if (tb != (uint64)(~0))
+    {
+      // decide which is the closest CuePoint:
+      uint64 t = tb;
+      
+      if (ta != (uint64)(~0))
+      {
+        uint64 da = t0_ - ta;
+        uint64 db = tb - t0_;
+        if (da <= db)
+        {
+          t = ta;
+        }
+        else
+        {
+          t = tb;
+        }
+      }
+
+      uint64 temp = t;
+      uint64 msec = ((temp * 1000) / oneSecond) % 1000;
+      temp /= oneSecond;
+      uint64 sec = temp % 60;
+      temp /= 60;
+      uint64 min = temp % 60;
+      temp /= 60;
+      
+      std::cout << "closest cue point: "
+                << temp << "h, "
+                << min << "m, "
+                << sec << "s, "
+                << msec << "ms"
+                << std::endl;
+
+      if (extractFromKeyframe_)
+      {
+        // adjust the in-point to the closest CuePoint:
+        t0_ = t;
+      }
+    }
+
+    // find the cluster that contains the in-point:
     for (std::list<TCluster>::const_iterator i = clusters.begin();
          i != clusters.end() && found; ++i)
     {
@@ -821,14 +900,15 @@ TRemuxer::remux(uint64 inPointInSeconds, uint64 outPointInSeconds)
     Cluster & cluster = clusterElt.payload_;
     uint64 clusterTime = cluster.timecode_.payload_.get();
     
-    if (extractTimeSegment)
+    if (extractTimeSegment_)
     {
       if (clusterTime > t1_ + oneSecond)
       {
+        // finish once the out-point is reached:
         break;
       }
       
-      if (clusterTime + oneSecond * 10 < t0_)
+      if (clusterTime + oneSecond * 32 < t0_)
       {
         continue;
       }
@@ -1050,6 +1130,24 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
   
+  Track::MatroskaTrackType trackType =
+    lace_.trackType_[(std::size_t)(binfo.trackNo_)];
+  
+  binfo.keyframe_ = (binfo.block_.isKeyframe() ||
+                     trackType == Track::kTrackTypeSubtitle);
+  
+  if (extractFromKeyframe_ && !foundFirstKeyframe_)
+  {
+    if (!binfo.keyframe_ || binfo.trackNo_ != lace_.cuesTrackNo_)
+    {
+      return false;
+    }
+    
+    // adjust the in-point:
+    t0_ = binfo.pts_;
+    foundFirstKeyframe_ = true;
+  }
+  
   return true;
 }
 
@@ -1068,7 +1166,8 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   bool srcIsKeyframe = binfo.block_.isKeyframe();
   
   if (srcTrackNo == binfo.trackNo_ &&
-      srcBlockTime == dstBlockTime)
+      srcBlockTime == dstBlockTime &&
+      srcIsKeyframe == binfo.keyframe_)
   {
     // nothing changed:
     return true;
@@ -1082,6 +1181,7 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   
   binfo.block_.setTrackNumber(binfo.trackNo_);
   binfo.block_.setRelativeTimecode((short int)(dstBlockTime));
+  binfo.block_.setKeyframe(binfo.keyframe_);
   
   binfo.header_ = binfo.block_.writeHeader(tmp_);
   
@@ -1176,11 +1276,10 @@ TRemuxer::mux(std::size_t minLaceSize)
   uint64 clusterTime = clusterElt_.payload_.timecode_.payload_.get();
   int64 blockTime = binfo->pts_ - clusterTime;
   
-  bool extractTimeSegment = (t0_ < t1_);
-  if (extractTimeSegment)
+  if (extractTimeSegment_)
   {
     if ((binfo->pts_ > t1_) ||
-        (binfo->pts_ + binfo->duration_ < t0_))
+        (binfo->pts_ + binfo->duration_ <= t0_))
     {
       delete binfo;
       return;
@@ -1190,8 +1289,8 @@ TRemuxer::mux(std::size_t minLaceSize)
   if ((binfo->trackNo_ == 0) ||
       (blockTime > kMaxShort) ||
       (binfo->trackNo_ == lace_.cuesTrackNo_ &&
-       binfo->block_.isKeyframe() &&
-       cuesTrackKeyframes_ == 1) ||
+       binfo->keyframe_ &&
+       cuesTrackHasKeyframes_ == 1) ||
       (!clusterElt_.storageReceipt()))
   {
     startNextCluster(binfo);
@@ -1239,7 +1338,7 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
   
   // start a new cluster:
   clusterBlocks_ = 0;
-  cuesTrackKeyframes_ = 0;
+  cuesTrackHasKeyframes_ = 0;
   clusterElt_ = TCluster();
   
   // set the start time:
@@ -1301,26 +1400,26 @@ TRemuxer::finishCurrentCluster()
 void
 TRemuxer::addCuePoint(TBlockInfo * binfo)
 {
-  if (!binfo->block_.isKeyframe())
+  if (!binfo->keyframe_)
   {
     return;
   }
 
   if (binfo->trackNo_ == lace_.cuesTrackNo_)
   {
-    cuesTrackKeyframes_++;
+    cuesTrackHasKeyframes_++;
 
     // reset the CuePoint barrier:
     needCuePointForTrack_.assign(needCuePointForTrack_.size(), true);
   }
 
-  if (!needCuePointForTrack_[binfo->trackNo_])
+  if (!needCuePointForTrack_[(std::size_t)(binfo->trackNo_)])
   {
     // avoid making too many CuePoints:
     return;
   }
   
-  needCuePointForTrack_[binfo->trackNo_] = false;
+  needCuePointForTrack_[(std::size_t)(binfo->trackNo_)] = false;
   
   TCue cue;
   cue.time_ = binfo->pts_;
@@ -1344,6 +1443,9 @@ main(int argc, char ** argv)
   std::list<uint64> tracksToKeep;
   std::list<uint64> tracksDelete;
 
+  // time segment extraction region,
+  // t0 and t1 are expressed in milliseconds:
+  bool extractFromKeyframe = false;
   uint64 t0 = 0;
   uint64 t1 = 0;
   
@@ -1402,9 +1504,16 @@ main(int argc, char ** argv)
         tracksToKeep.push_back(trackNo);
       }
     }
-    else if (strcmp(argv[i], "-t0") == 0)
+    else if (strcmp(argv[i], "-t0") == 0 ||
+             strcmp(argv[i], "-k0") == 0)
     {
-      if ((argc - i) <= 3) usage(argv, "could not parse -t0 parameter");
+      if ((argc - i) <= 4)
+      {
+        usage(argv, (std::string("could not parse ") + argv[i] +
+                     std::string(" parameter")));
+      }
+
+      extractFromKeyframe = (strcmp(argv[i], "-k0") == 0);
       
       i++;
       uint64 hh = toScalar<uint64>(argv[i]);
@@ -1415,11 +1524,14 @@ main(int argc, char ** argv)
       i++;
       uint64 ss = toScalar<uint64>(argv[i]);
       
-      t0 = ss + 60 * (mm + 60 * hh);
+      i++;
+      uint64 ms = toScalar<uint64>(argv[i]);
+      
+      t0 = ms + 1000 * (ss + 60 * (mm + 60 * hh));
     }
     else if (strcmp(argv[i], "-t1") == 0)
     {
-      if ((argc - i) <= 3) usage(argv, "could not parse -t1 parameter");
+      if ((argc - i) <= 4) usage(argv, "could not parse -t1 parameter");
       
       i++;
       uint64 hh = toScalar<uint64>(argv[i]);
@@ -1430,7 +1542,10 @@ main(int argc, char ** argv)
       i++;
       uint64 ss = toScalar<uint64>(argv[i]);
       
-      t1 = ss + 60 * (mm + 60 * hh);
+      i++;
+      uint64 ms = toScalar<uint64>(argv[i]);
+      
+      t1 = ms + 1000 * (ss + 60 * (mm + 60 * hh));
     }
     else
     {
@@ -1442,8 +1557,8 @@ main(int argc, char ** argv)
   if (t0 > t1)
   {
     usage(argv,
-          "start time (-t0 hh mm ss) is greater than "
-          "finish time (-t1 hh mm ss)");
+          "start time (-t0 hh mm ss ms) is greater than "
+          "finish time (-t1 hh mm ss ms)");
   }
   
   bool keepAllTracks = tracksToKeep.empty() && tracksDelete.empty();
@@ -1463,13 +1578,13 @@ main(int argc, char ** argv)
   LoaderSkipClusterPayload skipClusters(srcSize, skipCues);
 
   // attempt to load via SeekHead(s):
+  printCurrentTime("doc.loadSeekHead");
   bool ok = doc.loadSeekHead(src, srcSize);
-  printCurrentTime("doc.loadSeekHead finished");
   
   if (ok)
   {
+    printCurrentTime("doc.loadViaSeekHead");
     ok = doc.loadViaSeekHead(src, &skipClusters, true);
-    printCurrentTime("doc.loadViaSeekHead finished");
   }
 
   if (!ok ||
@@ -1483,14 +1598,16 @@ main(int argc, char ** argv)
     doc = MatroskaDoc();
     src.file_.seek(0);
     
+    printCurrentTime("doc.loadAndKeepReceipts");
     doc.loadAndKeepReceipts(src, srcSize, &skipClusters);
-    printCurrentTime("doc.loadAndKeepReceipts finished");
   }
 
   if (doc.segments_.empty())
   {
     usage(argv, (std::string("failed to load any matroska segments").c_str()));
   }
+  
+  printCurrentTime("doc.load... finished");
   
   std::size_t numSegments = doc.segments_.size();
   std::vector<std::map<uint64, uint64> > trackSrcDst(numSegments);
@@ -1681,7 +1798,7 @@ main(int argc, char ** argv)
 
     // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
     TRemuxer remuxer(trackInOut, trackOutIn, *i, segmentElt, src, dst, tmp);
-    remuxer.remux(t0, t1);
+    remuxer.remux(t0, t1, extractFromKeyframe);
 
     printCurrentTime("finished segment remux");
     
