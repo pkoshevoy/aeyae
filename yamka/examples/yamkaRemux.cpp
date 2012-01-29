@@ -1133,8 +1133,22 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   Track::MatroskaTrackType trackType =
     lace_.trackType_[(std::size_t)(binfo.trackNo_)];
   
-  binfo.keyframe_ = (binfo.block_.isKeyframe() ||
-                     trackType == Track::kTrackTypeSubtitle);
+  binfo.keyframe_ = binfo.block_.isKeyframe();
+
+  if (!binfo.keyframe_)
+  {
+    if (trackType == Track::kTrackTypeSubtitle ||
+        trackType == Track::kTrackTypeAudio)
+    {
+      binfo.keyframe_ = true;
+    }
+    else if (trackType == Track::kTrackTypeVideo &&
+             binfo.bgroupElt_.mustSave())
+    {
+      const BlockGroup & bg = binfo.bgroupElt_.payload_;
+      binfo.keyframe_ = bg.refBlock_.empty();
+    }
+  }
   
   if (extractFromKeyframe_ && !foundFirstKeyframe_)
   {
@@ -1161,13 +1175,20 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   assert(dstBlockTime >= kMinShort &&
          dstBlockTime <= kMaxShort);
   
+  bool dstIsKeyframe = binfo.keyframe_;
+  if (binfo.bgroupElt_.mustSave())
+  {
+    // BlockGroup blocks do not have a keyframe flag:
+    dstIsKeyframe = false;
+  }
+  
   uint64 srcTrackNo = binfo.block_.getTrackNumber();
   short int srcBlockTime = binfo.block_.getRelativeTimecode();
   bool srcIsKeyframe = binfo.block_.isKeyframe();
   
   if (srcTrackNo == binfo.trackNo_ &&
       srcBlockTime == dstBlockTime &&
-      srcIsKeyframe == binfo.keyframe_)
+      srcIsKeyframe == dstIsKeyframe)
   {
     // nothing changed:
     return true;
@@ -1181,7 +1202,7 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
   
   binfo.block_.setTrackNumber(binfo.trackNo_);
   binfo.block_.setRelativeTimecode((short int)(dstBlockTime));
-  binfo.block_.setKeyframe(binfo.keyframe_);
+  binfo.block_.setKeyframe(dstIsKeyframe);
   
   binfo.header_ = binfo.block_.writeHeader(tmp_);
   
