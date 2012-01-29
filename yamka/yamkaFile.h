@@ -19,10 +19,37 @@
 // system includes:
 #include <string>
 #include <stdexcept>
+#include <cstdio>
 
 
 namespace Yamka
 {
+
+#ifdef _WIN32
+  //----------------------------------------------------------------
+  // utf8_to_utf16
+  // 
+  wchar_t *
+  utf8_to_utf16(const char * utf8);
+  
+  //----------------------------------------------------------------
+  // utf16_to_utf8
+  // 
+  char *
+  utf16_to_utf8(const wchar_t * str_utf16);
+
+  //----------------------------------------------------------------
+  // get_main_args_utf8
+  // 
+  void
+  get_main_args_utf8(int & argc, char **& argv);
+#endif
+  
+  //----------------------------------------------------------------
+  // fopen_utf8
+  // 
+  std::FILE *
+  fopen_utf8(const char * filename_utf8, const char * mode);
   
   //----------------------------------------------------------------
   // File

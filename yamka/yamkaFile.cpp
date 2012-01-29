@@ -38,60 +38,89 @@
 #define fileno _fileno
 
 //----------------------------------------------------------------
-// utf8_to_utf16
+// __wgetmainargs
 // 
-static void
-utf8_to_utf16(const char * utf8, wchar_t *& utf16)
-{
-  int wcs_size =
-    MultiByteToWideChar(CP_UTF8, // encoding (ansi, utf, etc...)
-                        0,       // flags (precomposed, composite,... )
-                        utf8,    // source multi-byte character string
-                        -1,      // number of bytes in the source string
-                        NULL,    // wide-character destination
-                        0);      // destination buffer size
-  
-  utf16 = new wchar_t[wcs_size + 1];
-  MultiByteToWideChar(CP_UTF8,
-                      0,
-                      utf8,
-                      -1,
-                      utf16,
-                      wcs_size);
-}
+extern "C" void __wgetmainargs(int * argc,
+                               wchar_t *** argv,
+                               wchar_t *** env,
+                               int doWildCard,
+                               int * startInfo);
 
 #endif // _WIN32
-
-
-//----------------------------------------------------------------
-// fopen_utf8
-// 
-static std::FILE *
-fopen_utf8(const char * filename_utf8, const char * mode)
-{
-  std::FILE * file = NULL;
-  
-#ifdef _WIN32
-  wchar_t * filename_utf16 = NULL;
-  utf8_to_utf16(filename_utf8, filename_utf16);
-  
-  wchar_t * mode_utf16 = NULL;
-  utf8_to_utf16(mode, mode_utf16);
-  
-  _wfopen_s(&file, filename_utf16, mode_utf16);
-  delete [] filename_utf16;
-  delete [] mode_utf16;
-#else
-  file = fopen(filename_utf8, mode);
-#endif
-  
-  return file;
-}
-
 
 namespace Yamka
 {
 
+#ifdef _WIN32
+  //----------------------------------------------------------------
+  // utf8_to_utf16
+  // 
+  wchar_t *
+  utf8_to_utf16(const char * str_utf8)
+  {
+    int nchars = MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, NULL, 0);
+    wchar_t * str_utf16 = (wchar_t *)malloc(nchars * sizeof(wchar_t));
+    MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, str_utf16, nchars);
+    return str_utf16;
+  }
+  
+  //----------------------------------------------------------------
+  // utf16_to_utf8
+  // 
+  char *
+  utf16_to_utf8(const wchar_t * str_utf16)
+  {
+    int nchars = WideCharToMultiByte(CP_UTF8, 0, str_utf16, -1, NULL, 0, 0, 0);
+    char * str_utf8 = (char *)malloc(nchars * sizeof(char));
+    WideCharToMultiByte(CP_UTF8, 0, str_utf16, -1, str_utf8, nchars, 0, 0);
+    return str_utf8;
+  }
+
+  //----------------------------------------------------------------
+  // get_main_args_utf8
+  // 
+  void
+  get_main_args_utf8(int & argc, char **& argv)
+  {
+    argc = 0;
+    wchar_t ** wenpv = NULL;
+    wchar_t ** wargv = NULL;
+    int startupInfo = 0;
+
+    __wgetmainargs(&argc, &wargv, &wenpv, 1, &startupInfo);
+    
+    argv = (char **)malloc(argc * sizeof(char *));
+    for (int i = 0; i < argc; i++)
+    {
+        argv[i] = utf16_to_utf8(wargv[i]);
+    }
+  }
+#endif
+  
+  //----------------------------------------------------------------
+  // fopen_utf8
+  // 
+  std::FILE *
+  fopen_utf8(const char * filename_utf8, const char * mode)
+  {
+    std::FILE * file = NULL;
+    
+#ifdef _WIN32
+    wchar_t * wname = utf8_to_utf16(filename_utf8);
+    wchar_t * wmode = utf8_to_utf16(mode);
+    
+    _wfopen_s(&file, wname, wmode);
+    
+    free(wname);
+    free(wmode);
+#else
+    file = fopen(filename_utf8, mode);
+#endif
+    
+    return file;
+  }
+  
+  
   //----------------------------------------------------------------
   // SharedFile
   // 
@@ -487,11 +516,9 @@ namespace Yamka
   File::remove(const char * filename_utf8)
   {
 #ifdef _WIN32
-    wchar_t * filename_utf16 = NULL;
-    utf8_to_utf16(filename_utf8, filename_utf16);
-    
-    int err = _wremove(filename_utf16);
-    delete [] filename_utf16;
+    wchar_t * wname = utf8_to_utf16(filename_utf8);
+    int err = _wremove(wname);
+    free(wname);
 #else
     
     int err = ::remove(filename_utf8);

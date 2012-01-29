@@ -27,6 +27,10 @@ using namespace Yamka;
 int
 main(int argc, char ** argv)
 {
+#ifdef _WIN32
+  get_main_args_utf8(argc, argv);
+#endif
+  
   uint64 vsizeSize = 0;
   std::cout << "0x" << uintEncode(0x1A45DFA3) << std::endl
             << "0x" << uintEncode(0xEC) << std::endl

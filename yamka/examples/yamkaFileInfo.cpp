@@ -277,6 +277,10 @@ struct Examiner : public IElementCrawler
 int
 main(int argc, char ** argv)
 {
+#ifdef _WIN32
+  get_main_args_utf8(argc, argv);
+#endif
+  
   Examiner::Verbosity verbosity = Examiner::kShowFileOffsets;
   std::string srcPath;
   bool skipClusters = false;

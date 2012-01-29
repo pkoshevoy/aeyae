@@ -51,6 +51,10 @@ usage(char ** argv, const char * message = NULL)
 int
 main(int argc, char ** argv)
 {
+#ifdef _WIN32
+  get_main_args_utf8(argc, argv);
+#endif
+  
   std::string srcPath;
   std::string dstPath;
   std::string tmpPath;

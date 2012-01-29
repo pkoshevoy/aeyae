@@ -318,6 +318,10 @@ usage(char ** argv, const std::string & message)
 int
 main(int argc, char ** argv)
 {
+#ifdef _WIN32
+  get_main_args_utf8(argc, argv);
+#endif
+  
   printCurrentTime("start");
   
   std::string srcPath;
