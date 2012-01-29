@@ -4230,6 +4230,23 @@ namespace Yamka
       }
     }
 
+    if (loadClusters && !clusters_.empty())
+    {
+      // attempt to load any clusters that may not have been referenced
+      // via a SeekHead entry:
+      
+      IStorage::IReceiptPtr lastCluster = clusters_.back().storageReceipt();
+      uint64 nextPosition = lastCluster->position() + lastCluster->numBytes();
+      if (storage.file_.seek(nextPosition, File::kAbsolutePosition))
+      {
+        std::list<TCluster> moreClusters;
+        if (eltsLoad(moreClusters, storage, uintMax[8], loader))
+        {
+          clusters_.splice(clusters_.end(), moreClusters);
+        }
+      }
+    }
+
     return ok;
   }
   
