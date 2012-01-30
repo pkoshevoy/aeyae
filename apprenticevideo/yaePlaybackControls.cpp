@@ -306,6 +306,16 @@ namespace yae
         clockPosition_ = getTimeStamp(t);
         
         t -= timelineStart_;
+        double t0 = timelineDuration_ * markerTimeIn_.position_;
+        double t1 = timelineDuration_ * markerTimeOut_.position_;
+
+        if (t > t1)
+        {
+          emit userIsSeeking(true);
+          emit movePlayHead(timelineStart_ + t0);
+          emit userIsSeeking(false);
+        }
+        
         markerPlayhead_.position_ = t / timelineDuration_;
         markerPlayhead_.setAnchor();
         
@@ -522,6 +532,8 @@ namespace yae
   void
   TimelineControls::mouseDoubleClickEvent(QMouseEvent * e)
   {
+    emit userIsSeeking(true);
+    
     int xOrigin = 0;
     int yOriginInOut = 0;
     int yOriginPlayhead = 0;
@@ -537,6 +549,7 @@ namespace yae
     clockPosition_ = getTimeStamp(seconds);
     
     emit movePlayHead(seconds);
+    emit userIsSeeking(false);
     
     update();
   }

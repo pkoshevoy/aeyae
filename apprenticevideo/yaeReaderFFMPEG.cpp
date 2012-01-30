@@ -28,6 +28,7 @@
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
+#include <limits>
 #include <set>
 
 // boost includes:
@@ -767,6 +768,21 @@ namespace yae
     
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame);
+
+    void restartTimeCounters()
+    {
+      std::cerr << "VideoTrack::restartTimeCounter" << std::endl;
+      packetQueue().clear();
+      frameQueue_.clear();
+      packetQueue().waitForConsumerToBlock();
+      frameQueue_.clear();
+      
+      avcodec_flush_buffers(this->codecContext());
+      startTime_ = 0;
+      packetTimes_.clear();
+      hasPrevPTS_ = false;
+      framesDecoded_ = 0;
+    }
     
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
@@ -1482,6 +1498,21 @@ namespace yae
     
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TAudioFramePtr & frame);
+    
+    void restartTimeCounters()
+    {
+      std::cerr << "AudioTrack::restartTimeCounter" << std::endl;
+      packetQueue().clear();
+      frameQueue_.clear();
+      packetQueue().waitForConsumerToBlock();
+      frameQueue_.clear();
+      
+      avcodec_flush_buffers(this->codecContext());
+      hasPrevPTS_ = false;
+      prevNumSamples_ = 0;
+      startTime_ = 0;
+      samplesDecoded_ = 0;
+    }
     
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
@@ -2341,20 +2372,6 @@ namespace yae
     
     PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
     PacketQueueCloseOnExit audioCloseOnExit(audioTrack);
-
-#if 0
-    // FIXME: just testing (seeking):
-    {
-      int64_t startHere =
-        context_->start_time != AV_NOPTS_VALUE ?
-        context_->start_time : 0;
-      
-      int r = av_seek_frame(context_,
-                            -1,
-                            startHere,
-                            0);
-    }
-#endif
     
     AVPacket ffmpeg;
     try
@@ -2492,16 +2509,14 @@ namespace yae
       double tCurr = dts_.toSeconds();
       double tSeek = seekTime.toSeconds();
       int seekFlags = tSeek < tCurr ? AVSEEK_FLAG_BACKWARD : 0;
-
-      const AVStream * stream = context_->streams[dtsStreamIndex_];
-      const AVRational & timebase = stream->time_base;
-
-      int64_t ts = int64_t((tSeek / double(timebase.num)) *
-                           double(timebase.den));
-      int r = av_seek_frame(context_,
-                            dtsStreamIndex_,
-                            ts,
-                            seekFlags);
+      
+      int64_t ts = int64_t(tSeek * double(AV_TIME_BASE));
+      int r = avformat_seek_file(context_,
+                                 -1,
+                                 std::numeric_limits<int64_t>::min(),
+                                 ts,
+                                 std::numeric_limits<int64_t>::max(),
+                                 seekFlags);
       if (r < 0)
       {
         return false;
@@ -2510,15 +2525,13 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->packetQueue().clear();
-        videoTrack->frameQueue_.clear();
+        videoTrack->restartTimeCounters();
       }
       
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->packetQueue().clear();
-        audioTrack->frameQueue_.clear();
+        audioTrack->restartTimeCounters();
       }
       
       return true;

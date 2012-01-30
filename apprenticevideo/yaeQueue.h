@@ -36,6 +36,7 @@ namespace yae
     
     Queue(std::size_t maxSize = 50):
       closed_(true),
+      consumerIsBlocked_(false),
       size_(0),
       maxSize_(maxSize),
       sortFunc_(0)
@@ -224,9 +225,12 @@ namespace yae
 #if 0 // ndef NDEBUG
             std::cerr << this << " pop wait, size " << size_ << std::endl;
 #endif
+            consumerIsBlocked_ = true;
+            cond_.notify_one();
             cond_.wait(lock);
           }
           
+          consumerIsBlocked_ = false;
           if (data_.empty())
           {
 #ifndef NDEBUG
@@ -254,59 +258,15 @@ namespace yae
       return false;
     }
     
-    // push data into the queue:
-    bool tryPush(const TData & newData)
+    bool waitForConsumerToBlock()
     {
-      try
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      while (!closed_ && !consumerIsBlocked_)
       {
-        // add to queue:
-        {
-          boost::unique_lock<boost::mutex> lock(mutex_);
-          
-          if (closed_ || size_ >= maxSize_)
-          {
-            return false;
-          }
-          
-          insert(newData);
-          size_++;
-        }
-        
-        cond_.notify_one();
-        return true;
+        cond_.wait(lock);
       }
-      catch (...)
-      {}
       
-      return false;
-    }
-
-    // remove data from the queue:
-    bool tryPop(TData & data)
-    {
-      try
-      {
-        // remove from queue:
-        {
-          boost::unique_lock<boost::mutex> lock(mutex_);
-          
-          if (closed_ || data_.empty())
-          {
-            return false;
-          }
-          
-          data = data_.back();
-          data_.pop_back();
-          size_--;
-        }
-        
-        cond_.notify_one();
-        return true;
-      }
-      catch (...)
-      {}
-      
-      return false;
+      return consumerIsBlocked_;
     }
 
   protected:
@@ -337,6 +297,7 @@ namespace yae
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
     bool closed_;
+    bool consumerIsBlocked_;
     std::list<TData> data_;
     std::size_t size_;
     std::size_t maxSize_;
