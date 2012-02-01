@@ -33,6 +33,7 @@ namespace yae
   {
     typedef Queue<TData> TSelf;
     typedef bool(*TSortFunc)(const TData &, const TData &);
+    typedef std::list<TData> TSequence;
     
     Queue(std::size_t maxSize = 50):
       closed_(true),
@@ -50,11 +51,16 @@ namespace yae
       {
         boost::this_thread::disable_interruption disableInterruption;
         boost::lock_guard<boost::mutex> lock(mutex_);
-        
-        while (!data_.empty())
+
+        while (!sequences_.empty())
         {
-          data_.pop_front();
-          size_--;
+          TSequence & sequence = sequences_.front();
+          while (!sequence.empty())
+          {
+            sequence.pop_front();
+            size_--;
+          }
+          sequences_.pop_front();
         }
         
         // sanity check:
@@ -98,8 +104,7 @@ namespace yae
     bool isEmpty() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      bool isEmpty = data_.empty();
-      return isEmpty;
+      return !size_;
     }
     
     // check whether the queue is closed:
@@ -145,7 +150,7 @@ namespace yae
 #ifndef NDEBUG
         std::cerr << this << " open " << std::endl;
 #endif
-        data_.clear();
+        sequences_.clear();
         size_ = 0;
         closed_ = false;
       }
@@ -161,7 +166,7 @@ namespace yae
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          data_.clear();
+          sequences_.clear();
           size_ = 0;
         }
         
@@ -220,7 +225,7 @@ namespace yae
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && data_.empty())
+          while (!closed_ && !size_)
           {
 #if 0 // ndef NDEBUG
             std::cerr << this << " pop wait, size " << size_ << std::endl;
@@ -231,7 +236,7 @@ namespace yae
           }
           
           consumerIsBlocked_ = false;
-          if (data_.empty())
+          if (!size_)
           {
 #ifndef NDEBUG
             std::cerr << this << " queue is empty, closed: "
@@ -239,10 +244,21 @@ namespace yae
 #endif
             return false;
           }
+
+          while (sequences_.front().empty())
+          {
+            sequences_.pop_front();
+          }
           
-          data = data_.back();
-          data_.pop_back();
+          TSequence & sequence = sequences_.front();
+          data = sequence.back();
+          sequence.pop_back();
           size_--;
+          
+          if (sequence.empty())
+          {
+            sequences_.pop_front();
+          }
           
 #if 0 // ndef NDEBUG
           std::cerr << this << " pop done, size " << std::endl;
@@ -269,39 +285,62 @@ namespace yae
       return consumerIsBlocked_;
     }
 
+    void startNewSequence(const TData & sequenceEndData)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      if (sequences_.empty())
+      {
+        sequences_.push_back(TSequence());
+      }
+      
+      TSequence & sequence = sequences_.back();
+      sequence.push_front(sequenceEndData);
+      size_++;
+      sequences_.push_back(TSequence());
+      cond_.notify_one();
+    }
+
   protected:
     
     // push data into the queue:
     void insert(const TData & newData)
     {
-      if (data_.empty() || !sortFunc_)
+      if (sequences_.empty())
       {
-        data_.push_front(newData);
+        sequences_.push_back(TSequence());
+      }
+      
+      TSequence & sequence = sequences_.back();
+      if (sequence.empty() || !sortFunc_)
+      {
+        sequence.push_front(newData);
         return;
       }
 
       // keep the queue sorted:
-      for (typename std::list<TData>::iterator i = data_.begin();
-           i != data_.end(); ++i)
+      for (typename std::list<TData>::iterator i = sequence.begin();
+           i != sequence.end(); ++i)
       {
         if (sortFunc_(newData, *i))
         {
-          data_.insert(i, newData);
+          sequence.insert(i, newData);
           return;
         }
       }
       
-      data_.push_back(newData);
+      sequence.push_back(newData);
     }
     
-    mutable boost::mutex mutex_;
-    mutable boost::condition_variable cond_;
     bool closed_;
     bool consumerIsBlocked_;
-    std::list<TData> data_;
+    std::list<TSequence> sequences_;
     std::size_t size_;
     std::size_t maxSize_;
     TSortFunc sortFunc_;
+
+  public:
+    mutable boost::mutex mutex_;
+    mutable boost::condition_variable cond_;
   };
   
 }

@@ -89,7 +89,7 @@ namespace yae
     double frameDuration = 0.0;
     double lateFrames = 0.0;
     double lateFramesErrorSum = 0.0;
-    
+   
     bool ok = true;
     while (ok)
     {
@@ -165,11 +165,22 @@ namespace yae
       
       // read a frame:
       TVideoFramePtr frame;
+      bool resetTimeCounters = false;
       while (ok)
       {
         ok = reader_->readVideo(frame);
         if (ok)
         {
+          if (!frame)
+          {
+#if 1
+            std::cerr << "\nRESET TIME COUNTERS, playhead: " << playheadPosition
+                      << std::endl << std::endl;
+#endif
+            resetTimeCounters = true;
+            break;
+          }
+          
           framePosition = frame->time_;
           double t =
             double(framePosition.time_) /
@@ -195,21 +206,32 @@ namespace yae
 #endif
         break;
       }
-      
-      frameDuration = 
-        frame->traits_.frameRate_ ?
-        1.0 / frame->traits_.frameRate_ :
-        1.0 / double(framePosition.base_);
+
+      if (!resetTimeCounters)
+      {
+        frameDuration = 
+          frame->traits_.frameRate_ ?
+          1.0 / frame->traits_.frameRate_ :
+          1.0 / double(framePosition.base_);
+        
+        // dispatch the frame to the canvas for rendering:
+        if (canvas_)
+        {
+          canvas_->render(frame);
+        }
+      }
+      else
+      {
+        t0 = TTime();
+        framePosition = TTime();
+        frameDuration = 0.0;
+        lateFrames = 0.0;
+        lateFramesErrorSum = 0.0;
+      }
       
       if (clock_.allowsSettingTime())
       {
         clock_.setCurrentTime(framePosition);
-      }
-      
-      // dispatch the frame to the canvas for rendering:
-      if (canvas_)
-      {
-        canvas_->render(frame);
       }
     }
   }

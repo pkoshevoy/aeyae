@@ -477,7 +477,7 @@ namespace yae
     unsigned char * dstBuf = (unsigned char *)output;
     unsigned char ** dst = dstPlanar ? (unsigned char **)output : &dstBuf;
     
-    if (!audioFrame_)
+    while (!audioFrame_)
     {
       YAE_ASSERT(!audioFrameOffset_);
       
@@ -485,6 +485,12 @@ namespace yae
       if (!reader_->readAudio(audioFrame_))
       {
         return paComplete;
+      }
+      
+      if (!audioFrame_)
+      {
+        // resetTimeCounters:
+        continue;
       }
     }
     
@@ -517,7 +523,7 @@ namespace yae
     
     while (dstChunkSize)
     {
-      if (!audioFrame_)
+      while (!audioFrame_)
       {
         YAE_ASSERT(!audioFrameOffset_);
         
@@ -525,6 +531,13 @@ namespace yae
         if (!reader_->readAudio(audioFrame_))
         {
           return paComplete;
+        }
+
+        if (!audioFrame_)
+        {
+          // resetTimeCounters:
+          framePosition = TTime();
+          continue;
         }
         
         const AudioTraits & t = audioFrame_->traits_;

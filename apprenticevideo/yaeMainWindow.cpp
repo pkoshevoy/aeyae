@@ -978,6 +978,7 @@ namespace yae
   void
   MainWindow::userIsSeeking(bool seeking)
   {
+#if 0
     if (seeking && !playbackPaused_)
     {
       playbackInterrupted_ = true;
@@ -988,6 +989,7 @@ namespace yae
       playbackInterrupted_ = false;
       togglePlayback();
     }
+#endif
   }
   
   //----------------------------------------------------------------
@@ -996,7 +998,12 @@ namespace yae
   void
   MainWindow::moveTimeIn(double seconds)
   {
-    std::cout << "in: " << seconds << std::endl;
+    if (!reader_)
+    {
+      return;
+    }
+    
+    reader_->setPlaybackIntervalStart(seconds);
   }
   
   //----------------------------------------------------------------
@@ -1005,7 +1012,12 @@ namespace yae
   void
   MainWindow::moveTimeOut(double seconds)
   {
-    std::cout << "out: " << seconds << std::endl;
+    if (!reader_)
+    {
+      return;
+    }
+    
+    reader_->setPlaybackIntervalEnd(seconds);
   }
   
   //----------------------------------------------------------------
@@ -1019,12 +1031,7 @@ namespace yae
       return;
     }
     
-    TTime t(0, 1001);
-    t += seconds;
-    
-    bool ok = reader_->seek(t);
-    std::cout << "seek: " << seconds << ", "
-              << (ok ? "ok" : "failed") << std::endl;
+    bool ok = reader_->seek(seconds);
   }
 
   //----------------------------------------------------------------

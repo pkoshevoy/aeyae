@@ -244,9 +244,16 @@ namespace yae
     if (currentState_ == kIdle)
     {
       markerTimeIn_.position_ = markerPlayhead_.position_;
-      markerTimeOut_.position_ = std::max(markerTimeIn_.position_,
-                                          markerTimeOut_.position_);
+      double seconds = (timelineDuration_ * markerTimeIn_.position_ +
+                        timelineStart_);
+
+      if (markerTimeOut_.position_ < markerTimeIn_.position_)
+      {
+        markerTimeOut_.position_ = markerTimeIn_.position_;
+        emit moveTimeOut(seconds);
+      }
       
+      emit moveTimeIn(seconds);
       update();
     }
   }
@@ -260,9 +267,16 @@ namespace yae
     if (currentState_ == kIdle)
     {
       markerTimeOut_.position_ = markerPlayhead_.position_;
-      markerTimeIn_.position_ = std::min(markerTimeIn_.position_,
-                                         markerTimeOut_.position_);
+      double seconds = (timelineDuration_ * markerTimeOut_.position_ +
+                        timelineStart_);
       
+      if (markerTimeIn_.position_ > markerTimeOut_.position_)
+      {
+        markerTimeIn_.position_ = markerTimeOut_.position_;
+        emit moveTimeIn(seconds);
+      }
+      
+      emit moveTimeOut(seconds);
       update();
     }
   }
@@ -306,16 +320,6 @@ namespace yae
         clockPosition_ = getTimeStamp(t);
         
         t -= timelineStart_;
-        double t0 = timelineDuration_ * markerTimeIn_.position_;
-        double t1 = timelineDuration_ * markerTimeOut_.position_;
-
-        if (t > t1)
-        {
-          emit userIsSeeking(true);
-          emit movePlayHead(timelineStart_ + t0);
-          emit userIsSeeking(false);
-        }
-        
         markerPlayhead_.position_ = t / timelineDuration_;
         markerPlayhead_.setAnchor();
         
@@ -486,40 +490,41 @@ namespace yae
     t = std::max(0.0, std::min(1.0, t));
     
     activeMarker_->position_ = t;
+    double seconds = t * timelineDuration_ + timelineStart_;
     
     if (currentState_ == kDraggingTimeInMarker)
     {
-      emit moveTimeIn(activeMarker_->position_);
-      
       double t1 = std::max(activeMarker_->position_,
                            markerTimeOut_.positionAnchor_);
       
       if (t1 != markerTimeOut_.position_)
       {
         markerTimeOut_.position_ = t1;
-        emit moveTimeOut(t1);
+        double seconds = t1 * timelineDuration_ + timelineStart_;
+        emit moveTimeOut(seconds);
       }
+      
+      emit moveTimeIn(seconds);
     }
     
     if (currentState_ == kDraggingTimeOutMarker)
     {
-      emit moveTimeOut(activeMarker_->position_);
-      
       double t0 = std::min(activeMarker_->position_,
                            markerTimeIn_.positionAnchor_);
       
       if (t0 != markerTimeIn_.position_)
       {
         markerTimeIn_.position_ = t0;
-        emit moveTimeIn(t0);
+        double seconds = t0 * timelineDuration_ + timelineStart_;
+        emit moveTimeIn(seconds);
       }
+      
+      emit moveTimeOut(seconds);
     }
     
     if (currentState_ == kDraggingPlayheadMarker)
     {
-      double seconds = t * timelineDuration_ + timelineStart_;
       clockPosition_ = getTimeStamp(seconds);
-      
       emit movePlayHead(seconds);
     }
     
