@@ -12,6 +12,7 @@
 
 // system includes:
 #include <algorithm>
+#include <limits>
 
 
 namespace yae
@@ -89,7 +90,8 @@ namespace yae
     double frameDuration = 0.0;
     double lateFrames = 0.0;
     double lateFramesErrorSum = 0.0;
-   
+    double playheadPositionPrev = - std::numeric_limits<double>::max();
+    
     bool ok = true;
     while (ok)
     {
@@ -102,12 +104,15 @@ namespace yae
       double playheadPosition = 0.0;
       bool clockIsRunning = clock_.getCurrentTime(t0, playheadPosition);
       
+      bool playbackLoopedAround = (playheadPosition < playheadPositionPrev);
+      playheadPositionPrev = playheadPosition;
+      
       // get position of the frame relative to the current time segment:
       double f0 = double(framePosition.time_) / double(framePosition.base_);
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
 
-      if (df < -0.067 && clockIsRunning)
+      if (df < -0.067 && clockIsRunning && !playbackLoopedAround)
       {
         lateFramesErrorSum -= df;
         lateFrames += 1.0;
@@ -118,7 +123,7 @@ namespace yae
         lateFrames = 0.0;
       }
       
-      if (df > 0.0)
+      if (df > 0.0 && !playbackLoopedAround)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDuration);
@@ -140,7 +145,8 @@ namespace yae
       
       if (clockIsRunning &&
           lateFrames > 29.0 &&
-          lateFramesErrorSum / lateFrames > 0.067)
+          lateFramesErrorSum / lateFrames > 0.067 &&
+          !playbackLoopedAround)
       {
 #if 1
         std::cerr << "video is late " << -df << " sec, "
@@ -174,7 +180,8 @@ namespace yae
           if (!frame)
           {
 #if 1
-            std::cerr << "\nRESET TIME COUNTERS, playhead: " << playheadPosition
+            std::cerr << "\nRESET VIDEO TIME COUNTERS, playhead: "
+                      << playheadPosition
                       << std::endl << std::endl;
 #endif
             resetTimeCounters = true;

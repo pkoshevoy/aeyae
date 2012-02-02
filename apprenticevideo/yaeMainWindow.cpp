@@ -343,15 +343,12 @@ namespace yae
   bool
   MainWindow::load(const QString & path)
   {
-    std::ostringstream os;
-    os << fileUtf8::kProtocolName << "://" << path.toUtf8().constData();
-    
-    std::string url(os.str());
+    std::string filename(path.toUtf8().constData());
     
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
-    if (!reader->open(url.c_str()))
+    if (!reader->open(filename.c_str()))
     {
-      std::cerr << "ERROR: could not open movie: " << url << std::endl;
+      std::cerr << "ERROR: could not open movie: " << filename << std::endl;
       return false;
     }
     
@@ -361,7 +358,7 @@ namespace yae
     reader->threadStop();
     
     std::cout << std::endl
-              << "yae: " << url << std::endl
+              << "yae: " << filename << std::endl
               << "yae: video tracks: " << numVideoTracks << std::endl
               << "yae: audio tracks: " << numAudioTracks << std::endl;
     

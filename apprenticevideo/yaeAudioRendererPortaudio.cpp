@@ -536,6 +536,10 @@ namespace yae
         if (!audioFrame_)
         {
           // resetTimeCounters:
+#if 1
+          std::cerr << "\nRESET AUDIO TIME COUNTERS"
+                    << std::endl << std::endl;
+#endif
           framePosition = TTime();
           continue;
         }

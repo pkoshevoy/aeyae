@@ -56,173 +56,6 @@ extern "C"
 }
 
 
-//----------------------------------------------------------------
-// fileUtf8
-// 
-namespace fileUtf8
-{
-  
-  //----------------------------------------------------------------
-  // kProtocolName
-  // 
-  const char * kProtocolName = "fileUtfEight";
-  
-  //----------------------------------------------------------------
-  // urlGetFileHandle
-  // 
-  static void
-  urlSetFileHandle(URLContext * h, int fd)
-  {
-    h->priv_data = (void *)(size_t)fd;
-  }
-  
-  //----------------------------------------------------------------
-  // urlGetFileHandle
-  // 
-  static int
-  urlGetFileHandle(URLContext * h)
-  {
-    int fd = (size_t)h->priv_data;
-    return fd;
-  }
-  
-  //----------------------------------------------------------------
-  // urlOpen
-  // 
-  static int
-  urlOpen(URLContext * h, const char * url, int flags)
-  {
-    const char * filename = url;
-    av_strstart(url, kProtocolName, &filename);
-    av_strstart(filename, "://", &filename);
-    
-    int accessMode = 0;
-    if ((flags & URL_RDONLY) && (flags & URL_WRONLY))
-    {
-        accessMode = O_CREAT | O_TRUNC | O_RDWR;
-    }
-    else if (flags & URL_WRONLY)
-    {
-        accessMode = O_CREAT | O_TRUNC | O_WRONLY;
-    }
-    else
-    {
-        accessMode = O_RDONLY;
-    }
-    
-#ifdef _WIN32
-    accessMode |= (_O_BINARY | _O_SEQUENTIAL);
-#endif
-    
-    int permissions = 0666;
-    int fd = yae::fileOpenUtf8(filename, accessMode, permissions);
-    if (fd < 0)
-    {
-      return AVERROR(errno);
-    }
-    
-    urlSetFileHandle(h, fd);
-    return 0;
-  }
-  
-  //----------------------------------------------------------------
-  // urlRead
-  // 
-  static int
-  urlRead(URLContext * h, unsigned char * buf, int size)
-  {
-    int fd = urlGetFileHandle(h);
-
-#ifdef _WIN32
-    int nb = _read(fd, buf, size);
-#else
-    int nb = read(fd, buf, size);
-#endif
-
-    if (nb < 0)
-    {
-      std::cerr
-        << "read(" << fd << ", " << buf << ", " << size << ") "
-        << "failed, error: " << errno << " - " << strerror(errno)
-        << std::endl;
-    }
-    
-    return nb;
-  }
-  
-  //----------------------------------------------------------------
-  // urlWrite
-  // 
-  static int
-  urlWrite(URLContext * h,
-#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
-                                       LIBAVFORMAT_VERSION_MINOR >= 68)
-           const unsigned char * buf,
-#else
-           unsigned char * buf,
-#endif
-           int size)
-  {
-    int fd = urlGetFileHandle(h);
-    return write(fd, buf, size);
-  }
-  
-  //----------------------------------------------------------------
-  // urlSeek
-  // 
-  static int64_t
-  urlSeek(URLContext * h, int64_t pos, int whence)
-  {
-    int fd = urlGetFileHandle(h);
-    if (whence == AVSEEK_SIZE)
-    {
-      int64_t size = yae::fileSize64(fd);
-      if (size < 0)
-      {
-        return AVERROR(errno);
-      }
-      
-      return size;
-    }
-
-    return yae::fileSeek64(fd, pos, whence);
-  }
-  
-  //----------------------------------------------------------------
-  // urlClose
-  // 
-  static int
-  urlClose(URLContext * h)
-  {
-    int fd = urlGetFileHandle(h);
-    return close(fd);
-  }
-  
-  //----------------------------------------------------------------
-  // urlProtocol
-  // 
-  static URLProtocol urlProtocol =
-  {
-    kProtocolName,
-    &urlOpen,
-    &urlRead,
-    &urlWrite,
-    &urlSeek,
-    &urlClose,
-    0, // next
-    0, // url_read_pause
-    0, // url_read_seek
-    &urlGetFileHandle,
-#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
-                                       LIBAVFORMAT_VERSION_MINOR >= 69)
-    0, // priv_data_size
-    0, // priv_data_class
-#endif
-  };
-  
-}
-
-
 namespace yae
 {
 
@@ -2309,11 +2142,10 @@ namespace yae
     // FIXME: avoid closing/reopening the same resource:
     close();
     
-    int err = av_open_input_file(&context_,
-                                 resourcePath,
-                                 NULL, // AVInputFormat to force
-                                 0,    // buffer size, 0 if default
-                                 NULL);// additional parameters
+    int err = avformat_open_input(&context_,
+                                  resourcePath,
+                                  NULL, // AVInputFormat to force
+                                  NULL);// AVDictionary of options
     if (err != 0)
     {
       close();
@@ -2554,8 +2386,21 @@ namespace yae
         
         if (err)
         {
-          double d = double(context_->duration) / double(AV_TIME_BASE);
-          bool mustRewind = timeOut_ < d;
+          TTime start;
+          TTime duration;
+          if (audioTrack)
+          {
+            audioTrack->getDuration(start, duration);
+          }
+          else if (videoTrack)
+          {
+            videoTrack->getDuration(start, duration);
+          }
+          
+          double s = start.toSeconds();
+          double d = duration.toSeconds();
+          bool mustRewind = timeOut_ < (s + d);
+          
           if (mustRewind)
           {
             rewind(audioTrack, videoTrack);
@@ -2843,25 +2688,8 @@ namespace yae
       if (!ffmpegInitialized_)
       {
         av_register_all();
-#if LIBAVFORMAT_VERSION_MAJOR > 52 || (LIBAVFORMAT_VERSION_MAJOR == 52 && \
-                                       LIBAVFORMAT_VERSION_MINOR >= 69)
-        av_register_protocol2(&fileUtf8::urlProtocol,
-                              sizeof(fileUtf8::urlProtocol));
-#else
-        av_register_protocol(&fileUtf8::urlProtocol);
-#endif
         ffmpegInitialized_ = true;
       }
-      
-#ifdef DEBUG
-      // display availabled IO protocols:
-      URLProtocol * up = first_protocol;
-      while (up != NULL)
-      {
-        std::cout << "protocol: " << up->name << std::endl;
-        up = up->next;
-      }
-#endif
     }
     
     Movie movie_;
