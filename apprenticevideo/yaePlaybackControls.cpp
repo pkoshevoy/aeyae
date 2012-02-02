@@ -188,10 +188,10 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // TimelineControls::timelineHasChanged
+  // TimelineControls::noteCurrentTimeChanged
   // 
   void
-  TimelineControls::currentTimeChanged(const TTime & currentTime)
+  TimelineControls::noteCurrentTimeChanged(const TTime & currentTime)
   {
     bool postThePayload = payload_.set(currentTime);
     if (postThePayload)
@@ -199,6 +199,15 @@ namespace yae
       // send an event:
       qApp->postEvent(this, new TimelineEvent(payload_));
     }
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::noteTheClockHasStopped
+  // 
+  void
+  TimelineControls::noteTheClockHasStopped()
+  {
+    qApp->postEvent(this, new ClockStoppedEvent());
   }
   
   //----------------------------------------------------------------
@@ -219,7 +228,11 @@ namespace yae
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
     
+    clockPosition_ = getTimeStamp(timelineStart_);
     clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
+    
+    markerPlayhead_.position_ = 0.0;
+    markerPlayhead_.setAnchor();
   }
   
   //----------------------------------------------------------------
@@ -324,6 +337,14 @@ namespace yae
         markerPlayhead_.setAnchor();
         
         update();
+        return true;
+      }
+
+      ClockStoppedEvent * clockStoppedEvent =
+        dynamic_cast<ClockStoppedEvent *>(e);
+      if (clockStoppedEvent)
+      {
+        emit clockStopped();
         return true;
       }
     }

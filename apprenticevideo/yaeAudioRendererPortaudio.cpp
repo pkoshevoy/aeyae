@@ -484,6 +484,11 @@ namespace yae
       // fetch the next audio frame from the reader:
       if (!reader_->readAudio(audioFrame_))
       {
+        if (clock_.allowsSettingTime())
+        {
+          clock_.noteTheClockHasStopped();
+        }
+        
         return paComplete;
       }
       
@@ -530,6 +535,11 @@ namespace yae
         // fetch the next audio frame from the reader:
         if (!reader_->readAudio(audioFrame_))
         {
+          if (clock_.allowsSettingTime())
+          {
+            clock_.noteTheClockHasStopped();
+          }
+          
           return paComplete;
         }
 

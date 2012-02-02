@@ -241,6 +241,11 @@ namespace yae
         clock_.setCurrentTime(framePosition);
       }
     }
+    
+    if (clock_.allowsSettingTime())
+    {
+      clock_.noteTheClockHasStopped();
+    }
   }
   
   //----------------------------------------------------------------

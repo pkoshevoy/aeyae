@@ -185,6 +185,7 @@ namespace yae
     aspectRatioGroup->addAction(actionAspectRatio1_78);
     aspectRatioGroup->addAction(actionAspectRatio1_85);
     aspectRatioGroup->addAction(actionAspectRatio2_35);
+    aspectRatioGroup->addAction(actionAspectRatio2_40);
     actionAspectRatioAuto->setChecked(true);
     
     QActionGroup * cropFrameGroup = new QActionGroup(this);
@@ -193,6 +194,7 @@ namespace yae
     cropFrameGroup->addAction(actionCropFrame1_78);
     cropFrameGroup->addAction(actionCropFrame1_85);
     cropFrameGroup->addAction(actionCropFrame2_35);
+    cropFrameGroup->addAction(actionCropFrame2_40);
     actionCropFrameNone->setChecked(true);
     
     bool ok = true;
@@ -227,6 +229,10 @@ namespace yae
     ok = connect(actionAspectRatio2_35, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio2_35()));
     YAE_ASSERT(ok);
+    
+    ok = connect(actionAspectRatio2_40, SIGNAL(triggered()),
+                 this, SLOT(playbackAspectRatio2_40()));
+    YAE_ASSERT(ok);
 
     ok = connect(actionCropFrameNone, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameNone()));
@@ -246,6 +252,10 @@ namespace yae
     
     ok = connect(actionCropFrame2_35, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame2_35()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionCropFrame2_40, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame2_40()));
     YAE_ASSERT(ok);
     
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -304,6 +314,10 @@ namespace yae
                  this, SLOT(movePlayHead(double)));
     YAE_ASSERT(ok);
 
+    ok = connect(timelineControls_, SIGNAL(clockStopped()),
+                 this, SLOT(clockStopped()));
+    YAE_ASSERT(ok);
+
     ok = connect(menuAudioDevice, SIGNAL(aboutToShow()),
                  this, SLOT(populateAudioDeviceMenu()));
     YAE_ASSERT(ok);
@@ -335,6 +349,16 @@ namespace yae
   MainWindow::canvas() const
   {
     return canvas_;
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::setPlaylist
+  // 
+  void
+  MainWindow::setPlaylist(const std::list<QString> & playlist)
+  {
+    playlist_ = playlist;
+    clockStopped();
   }
   
   //----------------------------------------------------------------
@@ -583,6 +607,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackAspectRatio2_40
+  // 
+  void
+  MainWindow::playbackAspectRatio2_40()
+  {
+    canvas_->overrideDisplayAspectRatio(2.40);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio2_35
   // 
   void
@@ -629,6 +663,16 @@ namespace yae
   MainWindow::playbackCropFrameNone()
   {
     canvas_->cropFrame(0.0);
+    playbackShrinkWrap();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame2_40
+  // 
+  void
+  MainWindow::playbackCropFrame2_40()
+  {
+    canvas_->cropFrame(2.40);
     playbackShrinkWrap();
   }
 
@@ -965,8 +1009,14 @@ namespace yae
   void
   MainWindow::processDropEventUrls(const QList<QUrl> & urls)
   {
-    QString filename = urls.front().toLocalFile();
-    load(filename);
+    std::list<QString> playlist;
+    for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
+    {
+      QString filename = i->toLocalFile();
+      playlist.push_back(filename);
+    }
+    
+    setPlaylist(playlist);
   }
   
   //----------------------------------------------------------------
@@ -1108,7 +1158,47 @@ namespace yae
     }
 #endif
   }
+  
+  //----------------------------------------------------------------
+  // MainWindow::clockStopped
+  // 
+  void
+  MainWindow::clockStopped()
+  {
+    // when the reader/renderers are stopped the timeline
+    // will be notified that the clock has stopped,
+    // and the timeline will try to emit a signal -- this
+    // signal has to be blocked here in order to avoid recursion:
+    SignalBlocker blockSignals(timelineControls_);
+    
+    reader_->close();
+    stopRenderers();
+    
+    reader_->destroy();
+    reader_ = ReaderFFMPEG::create();
+    
+    SharedClock sharedClock;
+    sharedClock.setObserver(timelineControls_);
+    
+    timelineControls_->reset(sharedClock, reader_);
+    timelineControls_->resetTimeInOut();
+    timelineControls_->update();
+    canvas_->clear();
+    
+    this->setWindowTitle(tr("Apprentice Video"));
+    
+    while (!playlist_.empty())
+    {
+      QString filename = playlist_.front();
+      playlist_.pop_front();
 
+      if (load(filename))
+      {
+        break;
+      }
+    }
+  }
+  
   //----------------------------------------------------------------
   // MainWindow::event
   // 

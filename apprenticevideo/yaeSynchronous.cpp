@@ -192,7 +192,7 @@ namespace yae
       
       if (timeSegment.observer_)
       {
-        timeSegment.observer_->currentTimeChanged(t0);
+        timeSegment.observer_->noteCurrentTimeChanged(t0);
       }
       
       return true;
@@ -337,6 +337,28 @@ namespace yae
     TimeSegment & timeSegment = *(private_->shared_);
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     timeSegment.observer_ = observer;
+  }
+  
+  //----------------------------------------------------------------
+  // SharedClock::noteTheClockHasStopped
+  // 
+  bool
+  SharedClock::noteTheClockHasStopped()
+  {
+    if (!private_->copied_)
+    {
+      TimeSegment & timeSegment = *(private_->shared_);
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      
+      if (timeSegment.observer_)
+      {
+        timeSegment.observer_->noteTheClockHasStopped();
+      }
+      
+      return true;
+    }
+    
+    return false;
   }
   
   

@@ -62,6 +62,9 @@ namespace yae
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
   
+    // specify a playlist of files to load:
+    void setPlaylist(const std::list<QString> & playlist);
+    
     // open a movie file for playback:
     bool load(const QString & path);
     
@@ -76,11 +79,13 @@ namespace yae
 
     // playback menu:
     void playbackAspectRatioAuto();
+    void playbackAspectRatio2_40();
     void playbackAspectRatio2_35();
     void playbackAspectRatio1_85();
     void playbackAspectRatio1_78();
     void playbackAspectRatio1_33();
     void playbackCropFrameNone();
+    void playbackCropFrame2_40();
     void playbackCropFrame2_35();
     void playbackCropFrame1_85();
     void playbackCropFrame1_78();
@@ -110,6 +115,7 @@ namespace yae
     void movePlayHead(double seconds);
     void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
+    void clockStopped();
     
   protected:
     // virtual:
@@ -173,6 +179,9 @@ namespace yae
     
     // playback controls:
     TimelineControls * timelineControls_;
+    
+    // playlist:
+    std::list<QString> playlist_;
   };
 }
 

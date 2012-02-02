@@ -71,10 +71,16 @@ namespace yae
     struct IObserver
     {
       virtual ~IObserver();
-      virtual void currentTimeChanged(const TTime & t0) = 0;
+      virtual void noteCurrentTimeChanged(const TTime & t0) = 0;
+      virtual void noteTheClockHasStopped() = 0;
     };
     
     void setObserver(IObserver * observer);
+    
+    //! notify the observer (if it exists) that there will be no
+    //! further updates to the current time on this clock,
+    //! most likely because playback has reached the end:
+    bool noteTheClockHasStopped();
     
   private:
     class TPrivate;

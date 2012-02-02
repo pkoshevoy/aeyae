@@ -65,6 +65,7 @@
      <addaction name="actionAspectRatio1_78"/>
      <addaction name="actionAspectRatio1_85"/>
      <addaction name="actionAspectRatio2_35"/>
+     <addaction name="actionAspectRatio2_40"/>
     </widget>
     <widget class="QMenu" name="menuCropFrame">
      <property name="title">
@@ -75,6 +76,7 @@
      <addaction name="actionCropFrame1_78"/>
      <addaction name="actionCropFrame1_85"/>
      <addaction name="actionCropFrame2_35"/>
+     <addaction name="actionCropFrame2_40"/>
     </widget>
     <addaction name="menuAspectRatio"/>
     <addaction name="menuCropFrame"/>
@@ -166,6 +168,14 @@
     <string>About</string>
    </property>
   </action>
+  <action name="actionAspectRatio2_40">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.40</string>
+   </property>
+  </action>
   <action name="actionAspectRatio2_35">
    <property name="checkable">
     <bool>true</bool>
@@ -212,6 +222,14 @@
    </property>
    <property name="text">
     <string>1.85</string>
+   </property>
+  </action>
+  <action name="actionCropFrame2_40">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.40</string>
    </property>
   </action>
   <action name="actionCropFrame2_35">

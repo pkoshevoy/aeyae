@@ -79,7 +79,8 @@ namespace yae
     double currentTime() const;
     
     // virtual: thread safe, asynchronous, non-blocking:
-    void currentTimeChanged(const TTime & currentTime);
+    void noteCurrentTimeChanged(const TTime & currentTime);
+    void noteTheClockHasStopped();
     
     enum TState
     {
@@ -94,7 +95,8 @@ namespace yae
     void moveTimeOut(double t);
     void movePlayHead(double t);
     void userIsSeeking(bool seeking);
-    
+    void clockStopped();
+
   public slots:
     void setInPoint();
     void setOutPoint();
@@ -118,6 +120,14 @@ namespace yae
                        int & yOriginInOut,
                        int & yOriginPlayhead,
                        int & unitLength) const;
+    
+    //----------------------------------------------------------------
+    // ClockStoppedEvent
+    // 
+    struct ClockStoppedEvent : public QEvent
+    {
+      ClockStoppedEvent(): QEvent(QEvent::User) {}
+    };
     
     //----------------------------------------------------------------
     // TimelineEvent
@@ -160,7 +170,7 @@ namespace yae
       
       TPayload & payload_;
     };
-
+    
     // event payload used for asynchronous timeline updates:
     TimelineEvent::TPayload payload_;
     
