@@ -546,6 +546,8 @@ namespace yae
     
     virtual ~TPrivate() {}
     
+    virtual void clear(QGLWidget * canvas) = 0;
+    
     virtual bool loadFrame(QGLWidget * canvas,
                            const TVideoFramePtr & frame) = 0;
     virtual void draw() = 0;
@@ -624,7 +626,10 @@ namespace yae
   struct TModernCanvas : public Canvas::TPrivate
   {
     TModernCanvas();
-
+    
+    // virtual:
+    void clear(QGLWidget * canvas);
+    
     // virtual:
     bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
     
@@ -642,6 +647,22 @@ namespace yae
     texId_(0)
   {}
   
+  //----------------------------------------------------------------
+  // TModernCanvas::clear
+  // 
+  void
+  TModernCanvas::clear(QGLWidget * canvas)
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    TMakeCurrentContext currentContext(canvas);
+    
+    glDeleteTextures(1, &texId_);
+    texId_ = 0;
+    dar_ = 0.0;
+    darCropped_ = 0.0;
+    frame_ = TVideoFramePtr();
+  }
+
   //----------------------------------------------------------------
   // TModernCanvas::loadFrame
   // 
@@ -812,6 +833,9 @@ namespace yae
   struct TLegacyCanvas : public Canvas::TPrivate
   {
     // virtual:
+    void clear(QGLWidget * canvas);
+    
+    // virtual:
     bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
     
     // virtual:
@@ -828,7 +852,32 @@ namespace yae
     std::vector<TFrameTile> tiles_;
     std::vector<GLuint> texId_;
   };
+  
+  //----------------------------------------------------------------
+  // TLegacyCanvas::clear
+  // 
+  void
+  TLegacyCanvas::clear(QGLWidget * canvas)
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    TMakeCurrentContext currentContext(canvas);
 
+    frame_ = TVideoFramePtr();
+    w_ = 0;
+    h_ = 0;
+    dar_ = 0.0;
+    darCropped_ = 0.0;
+    
+    if (!texId_.empty())
+    {
+      glDeleteTextures(texId_.size(), &(texId_.front()));
+    }
+    
+    texId_.clear();
+    textureData_.clear();
+    tiles_.clear();
+  }
+  
   //----------------------------------------------------------------
   // calculateEdges
   // 
@@ -1299,6 +1348,16 @@ namespace yae
     {
       private_ = new TLegacyCanvas();
     }
+  }
+  
+  //----------------------------------------------------------------
+  // Canvas::clear
+  // 
+  void
+  Canvas::clear()
+  {
+    private_->clear(this);
+    refresh();
   }
   
   //----------------------------------------------------------------

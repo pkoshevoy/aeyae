@@ -65,6 +65,9 @@ namespace yae
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
     
+    // discard currently stored image data, repaint the canvas:
+    void clear();
+    
     // helper:
     void refresh();
     
