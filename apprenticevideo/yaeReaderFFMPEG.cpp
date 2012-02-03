@@ -2084,6 +2084,7 @@ namespace yae
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
+    void setPlaybackLooping(bool enableLooping);
     
   private:
     // intentionally disabled:
@@ -2110,6 +2111,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
+    bool looping_;
   };
   
   
@@ -2122,7 +2124,8 @@ namespace yae
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
     timeIn_(0.0),
-    timeOut_(kMaxDouble)
+    timeOut_(kMaxDouble),
+    looping_(false)
   {}
   
   //----------------------------------------------------------------
@@ -2371,7 +2374,14 @@ namespace yae
           
           if (mustRewind)
           {
-            rewind(audioTrack, videoTrack);
+            if (looping_)
+            {
+              rewind(audioTrack, videoTrack);
+            }
+            else
+            {
+              break;
+            }
           }
         }
         
@@ -2386,22 +2396,7 @@ namespace yae
         
         if (err)
         {
-          TTime start;
-          TTime duration;
-          if (audioTrack)
-          {
-            audioTrack->getDuration(start, duration);
-          }
-          else if (videoTrack)
-          {
-            videoTrack->getDuration(start, duration);
-          }
-          
-          double s = start.toSeconds();
-          double d = duration.toSeconds();
-          bool mustRewind = timeOut_ < (s + d);
-          
-          if (mustRewind)
+          if (looping_)
           {
             rewind(audioTrack, videoTrack);
             continue;
@@ -2662,6 +2657,21 @@ namespace yae
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
         audioTrack->setPlaybackInterval(timeIn_, timeOut_);
       }
+    }
+    catch (...)
+    {}
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::setPlaybackLooping
+  // 
+  void
+  Movie::setPlaybackLooping(bool enableLooping)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      looping_ = enableLooping;
     }
     catch (...)
     {}
@@ -3125,6 +3135,15 @@ namespace yae
   ReaderFFMPEG::setPlaybackIntervalEnd(double timeOut)
   {
     private_->movie_.setPlaybackIntervalEnd(timeOut);
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setPlaybackLooping
+  // 
+  void 
+  ReaderFFMPEG::setPlaybackLooping(bool enableLooping)
+  {
+    private_->movie_.setPlaybackLooping(enableLooping);
   }
   
 }

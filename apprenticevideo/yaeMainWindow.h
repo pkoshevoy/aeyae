@@ -61,12 +61,14 @@ namespace yae
     
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
-  
-    // specify a playlist of files to load:
-    void setPlaylist(const std::list<QString> & playlist);
     
+  protected:
     // open a movie file for playback:
     bool load(const QString & path);
+    
+  public:
+    // specify a playlist of files to load:
+    void setPlaylist(const std::list<QString> & playlist);
     
   signals:
     void setInPoint();
@@ -90,6 +92,9 @@ namespace yae
     void playbackCropFrame1_85();
     void playbackCropFrame1_78();
     void playbackCropFrame1_33();
+    void playbackNext();
+    void playbackPrev();
+    void playbackLoop();
     void playbackColorConverter();
     void playbackShowTimeline();
     void playbackShrinkWrap();
@@ -115,7 +120,7 @@ namespace yae
     void movePlayHead(double seconds);
     void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
-    void clockStopped();
+    void playbackFinished();
     
   protected:
     // virtual:
@@ -126,6 +131,7 @@ namespace yae
     void keyPressEvent(QKeyEvent * e);
     
     // helpers:
+    void fixupNextPrev();
     void stopRenderers();
     void startRenderers(IReader * reader);
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
@@ -146,6 +152,9 @@ namespace yae
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
     QShortcut * shortcutShowTimeline_;
+    QShortcut * shortcutNext_;
+    QShortcut * shortcutPrev_;
+    QShortcut * shortcutLoop_;
     
     // audio device selection widget:
     QActionGroup * audioDeviceGroup_;
@@ -181,7 +190,8 @@ namespace yae
     TimelineControls * timelineControls_;
     
     // playlist:
-    std::list<QString> playlist_;
+    std::list<QString> todo_;
+    std::list<QString> done_;
   };
 }
 

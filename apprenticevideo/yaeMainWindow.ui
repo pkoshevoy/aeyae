@@ -34,9 +34,15 @@
     <property name="title">
      <string>&amp;Playback</string>
     </property>
+    <addaction name="actionPlay"/>
+    <addaction name="separator"/>
+    <addaction name="actionNext"/>
+    <addaction name="actionPrev"/>
+    <addaction name="separator"/>
     <addaction name="actionShowTimeline"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
+    <addaction name="actionLoop"/>
     <addaction name="separator"/>
     <addaction name="actionColorConverter"/>
    </widget>
@@ -263,6 +269,53 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionPlay">
+   <property name="text">
+    <string>Play</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionNext">
+   <property name="text">
+    <string>Skip</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Right</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionPrev">
+   <property name="text">
+    <string>Go Back</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Left</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionLoop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Loop</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>

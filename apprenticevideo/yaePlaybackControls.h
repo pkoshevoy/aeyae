@@ -71,9 +71,13 @@ namespace yae
   public:
     TimelineControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
     ~TimelineControls();
+
+    // NOTE: this instance of TimelineControls will register itself
+    // as an observer of the given shared clock; it will unregister
+    // itself as the observer of previous shared clock.
+    void observe(const SharedClock & sharedClock);
     
     void reset(const SharedClock & sharedClock, IReader * reader);
-    void resetTimeInOut();
     
     // helper:
     double currentTime() const;

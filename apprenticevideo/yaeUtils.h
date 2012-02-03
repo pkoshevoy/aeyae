@@ -19,10 +19,10 @@ namespace yae
   YAE_API int
   fileOpenUtf8(const char * filenameUTF8, int accessMode, int permissions);
   
-  YAE_API int64_t
-  fileSeek64(int fd, int64_t offset, int whence);
+  YAE_API int64
+  fileSeek64(int fd, int64 offset, int whence);
   
-  YAE_API int64_t
+  YAE_API int64
   fileSize64(int fd);
   
   //----------------------------------------------------------------
@@ -48,6 +48,30 @@ namespace yae
   protected:
     TOpenable & something_;
   };
+
+  //----------------------------------------------------------------
+  // isSizeOne
+  // 
+  template <typename TContainer>
+  inline bool
+  isSizeOne(const TContainer & c)
+  {
+    typename TContainer::const_iterator i = c.begin();
+    typename TContainer::const_iterator e = c.end();
+    return (i != e) && (++i == e);
+  }
+  
+  //----------------------------------------------------------------
+  // isSizeTwoOrMore
+  // 
+  template <typename TContainer>
+  inline bool
+  isSizeTwoOrMore(const TContainer & c)
+  {
+    typename TContainer::const_iterator i = c.begin();
+    typename TContainer::const_iterator e = c.end();
+    return (i != e) && (++i != e);
+  }
   
 }
 

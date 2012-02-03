@@ -211,12 +211,23 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // TimelineControls::observe
+  // 
+  void
+  TimelineControls::observe(const SharedClock & sharedClock)
+  {
+    sharedClock_.setObserver(NULL);
+    sharedClock_ = sharedClock;
+    sharedClock_.setObserver(this);
+  }
+
+  //----------------------------------------------------------------
   // TimelineControls::reset
   // 
   void
   TimelineControls::reset(const SharedClock & sharedClock, IReader * reader)
   {
-    sharedClock_ = sharedClock;
+    observe(sharedClock);
     
     TTime start;
     TTime duration;
@@ -233,19 +244,14 @@ namespace yae
     
     markerPlayhead_.position_ = 0.0;
     markerPlayhead_.setAnchor();
-  }
-  
-  //----------------------------------------------------------------
-  // TimelineControls::resetTimeInOut
-  // 
-  void
-  TimelineControls::resetTimeInOut()
-  {
+    
     markerTimeIn_.position_ = 0.0;
     markerTimeIn_.setAnchor();
     
     markerTimeOut_.position_ = 1.0;
     markerTimeOut_.setAnchor();
+    
+    update();
   }
   
   //----------------------------------------------------------------

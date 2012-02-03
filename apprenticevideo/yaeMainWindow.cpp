@@ -29,6 +29,7 @@
 #include <QShortcut>
 #include <QFileInfo>
 #include <QProcess>
+#include <QDesktopServices>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -37,6 +38,7 @@
 #include <yaeAudioRendererPortaudio.h>
 #include <yaeVideoRenderer.h>
 #include <yaeVersion.h>
+#include <yaeUtils.h>
 
 // local includes:
 #include <yaeMainWindow.h>
@@ -174,10 +176,16 @@ namespace yae
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
     shortcutShowTimeline_ = new QShortcut(this);
+    shortcutNext_ = new QShortcut(this);
+    shortcutPrev_ = new QShortcut(this);
+    shortcutLoop_ = new QShortcut(this);
     
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
     shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
+    shortcutNext_->setContext(Qt::ApplicationShortcut);
+    shortcutPrev_->setContext(Qt::ApplicationShortcut);
+    shortcutLoop_->setContext(Qt::ApplicationShortcut);
     
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
@@ -257,6 +265,34 @@ namespace yae
     ok = connect(actionCropFrame2_40, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame2_40()));
     YAE_ASSERT(ok);
+
+    ok = connect(actionPlay, SIGNAL(triggered()),
+                 this, SLOT(togglePlayback()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionNext, SIGNAL(triggered()),
+                 this, SLOT(playbackFinished()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutNext_, SIGNAL(activated()),
+                 this, SLOT(playbackFinished()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionPrev, SIGNAL(triggered()),
+                 this, SLOT(playbackPrev()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutPrev_, SIGNAL(activated()),
+                 this, SLOT(playbackPrev()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionLoop, SIGNAL(triggered()),
+                 this, SLOT(playbackLoop()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutLoop_, SIGNAL(activated()),
+                 this, SLOT(playbackLoop()));
+    YAE_ASSERT(ok);
     
     ok = connect(actionFullScreen, SIGNAL(triggered()),
                  this, SLOT(playbackFullScreen()));
@@ -281,13 +317,13 @@ namespace yae
     ok = connect(actionColorConverter, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
-    
-    ok = connect(actionAbout, SIGNAL(triggered()),
-                 this, SLOT(helpAbout()));
-    YAE_ASSERT(ok);
 
     ok = connect(canvas_, SIGNAL(toggleFullScreen()),
                  this, SLOT(playbackFullScreen()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionAbout, SIGNAL(triggered()),
+                 this, SLOT(helpAbout()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setInPoint()),
@@ -315,7 +351,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(timelineControls_, SIGNAL(clockStopped()),
-                 this, SLOT(clockStopped()));
+                 this, SLOT(playbackFinished()));
     YAE_ASSERT(ok);
 
     ok = connect(menuAudioDevice, SIGNAL(aboutToShow()),
@@ -357,8 +393,9 @@ namespace yae
   void
   MainWindow::setPlaylist(const std::list<QString> & playlist)
   {
-    playlist_ = playlist;
-    clockStopped();
+    todo_ = playlist;
+    done_.clear();
+    playbackNext();
   }
   
   //----------------------------------------------------------------
@@ -369,12 +406,18 @@ namespace yae
   {
     std::string filename(path.toUtf8().constData());
     
+    actionPlay->setEnabled(false);
+    actionPlay->setText(tr("Play"));
+    
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
     if (!reader->open(filename.c_str()))
     {
       std::cerr << "ERROR: could not open movie: " << filename << std::endl;
       return false;
     }
+    
+    // disconnect timeline from renderers:
+    timelineControls_->observe(SharedClock());
     
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
@@ -536,7 +579,8 @@ namespace yae
     reader_->close();
     stopRenderers();
     
-    timelineControls_->resetTimeInOut();
+    bool enableLooping = actionLoop->isChecked();
+    reader->setPlaybackLooping(enableLooping);
     
     reader->threadStart();
     startRenderers(reader);
@@ -547,6 +591,9 @@ namespace yae
 
     this->setWindowTitle(tr("Apprentice Video: %1").
                          arg(QFileInfo(path).fileName()));
+    actionPlay->setEnabled(true);
+    actionPlay->setText(tr("Pause"));
+    
     return true;
   }
   
@@ -556,33 +603,54 @@ namespace yae
   void
   MainWindow::fileOpen()
   {
-    QString filename =
-      QFileDialog::getOpenFileName(this,
-                                   "Open file",
-                                   QString(),
-                                   "movies ("
-                                   "*.avi "
-                                   "*.asf "
-                                   "*.divx "
-                                   "*.flv "
-                                   "*.f4v "
-                                   "*.m2t "
-                                   "*.m2ts "
-                                   "*.m4v "
-                                   "*.mkv "
-                                   "*.mod "
-                                   "*.mov "
-                                   "*.mpg "
-                                   "*.mp4 "
-                                   "*.mpeg "
-                                   "*.mpts "
-                                   "*.ogm "
-                                   "*.ogv "
-                                   "*.ts "
-                                   "*.wmv "
-                                   "*.webm "
-                                   ")");
-    load(filename);
+    QString filter =
+      tr("movies ("
+         "*.avi "
+         "*.asf "
+         "*.divx "
+         "*.flv "
+         "*.f4v "
+         "*.m2t "
+         "*.m2ts "
+         "*.m4v "
+         "*.mkv "
+         "*.mod "
+         "*.mov "
+         "*.mpg "
+         "*.mp4 "
+         "*.mpeg "
+         "*.mpts "
+         "*.ogm "
+         "*.ogv "
+         "*.ts "
+         "*.wmv "
+         "*.webm "
+         ")");
+
+    QString startHere =
+      QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
+                                        // QDesktopServices::HomeLocation
+                                        );
+    
+    QStringList filenames =
+      QFileDialog::getOpenFileNames(this,
+                                    tr("Select one or more files"),
+                                    startHere,
+                                    filter);
+    if (filenames.empty())
+    {
+      return;
+    }
+    
+    std::list<QString> playlist;
+    for (QStringList::const_iterator i = filenames.begin();
+         i != filenames.end(); ++i)
+    {
+      QString filename = *i;
+      playlist.push_back(filename);
+    }
+    
+    setPlaylist(playlist);
   }
   
   //----------------------------------------------------------------
@@ -715,7 +783,7 @@ namespace yae
     canvas_->cropFrame(4.0 / 3.0);
     playbackShrinkWrap();
   }
-
+  
   //----------------------------------------------------------------
   // MainWindow::playbackColorConverter
   // 
@@ -887,6 +955,9 @@ namespace yae
     swapShortcuts(shortcutExit_, actionExit);
     swapShortcuts(shortcutFullScreen_, actionFullScreen);
     swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+    swapShortcuts(shortcutNext_, actionNext);
+    swapShortcuts(shortcutPrev_, actionPrev);
+    swapShortcuts(shortcutLoop_, actionLoop);
   }
   
   //----------------------------------------------------------------
@@ -908,6 +979,9 @@ namespace yae
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
       swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+      swapShortcuts(shortcutNext_, actionNext);
+      swapShortcuts(shortcutPrev_, actionPrev);
+      swapShortcuts(shortcutLoop_, actionLoop);
     }
   }
   
@@ -921,12 +995,12 @@ namespace yae
     
     if (playbackPaused_)
     {
-      // reader_->threadResume();
+      actionPlay->setText(tr("Pause"));
       startRenderers(reader_);
     }
     else
     {
-      // reader_->threadPause();
+      actionPlay->setText(tr("Play"));
       stopRenderers();
     }
     
@@ -1160,42 +1234,123 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // MainWindow::clockStopped
+  // MainWindow::playbackFinished
   // 
   void
-  MainWindow::clockStopped()
+  MainWindow::playbackFinished()
   {
-    // when the reader/renderers are stopped the timeline
-    // will be notified that the clock has stopped,
-    // and the timeline will try to emit a signal -- this
-    // signal has to be blocked here in order to avoid recursion:
-    SignalBlocker blockSignals(timelineControls_);
+    ReaderFFMPEG * reader = ReaderFFMPEG::create();
+    timelineControls_->reset(SharedClock(), reader);
     
     reader_->close();
     stopRenderers();
     
     reader_->destroy();
-    reader_ = ReaderFFMPEG::create();
+    reader_ = reader;
     
-    SharedClock sharedClock;
-    sharedClock.setObserver(timelineControls_);
-    
-    timelineControls_->reset(sharedClock, reader_);
-    timelineControls_->resetTimeInOut();
     timelineControls_->update();
     canvas_->clear();
     
     this->setWindowTitle(tr("Apprentice Video"));
     
-    while (!playlist_.empty())
+    if (!todo_.empty())
     {
-      QString filename = playlist_.front();
-      playlist_.pop_front();
-
+      QString filename = todo_.front();
+      todo_.pop_front();
+      done_.push_back(filename);
+    }
+    
+    playbackNext();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::fixupNextPrev
+  // 
+  void
+  MainWindow::fixupNextPrev()
+  {
+    actionPrev->setEnabled(!done_.empty());
+    actionNext->setEnabled(!todo_.empty());
+    
+    if (!done_.empty())
+    {
+      QString prev = done_.back();
+      QString name = QFileInfo(prev).fileName();
+      actionPrev->setText(tr("Go Back To %1").arg(name));
+    }
+    else
+    {
+      actionPrev->setText(tr("Go Back"));
+    }
+    
+    if (isSizeTwoOrMore(todo_))
+    {
+      QString next = *(++(todo_.begin()));
+      QString name = QFileInfo(next).fileName();
+      actionNext->setText(tr("Skip To %1").arg(name));
+    }
+    else
+    {
+      actionNext->setText(tr("Skip"));
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackNext
+  // 
+  void
+  MainWindow::playbackNext()
+  {
+    actionPlay->setEnabled(false);
+    
+    while (!todo_.empty())
+    {
+      QString filename = todo_.front();
       if (load(filename))
       {
         break;
       }
+      
+      todo_.pop_front();
+      done_.push_back(filename);
+    }
+    
+    fixupNextPrev();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackPrev
+  // 
+  void
+  MainWindow::playbackPrev()
+  {
+    actionPlay->setEnabled(false);
+    
+    while (!done_.empty())
+    {
+      QString filename = done_.back();
+      done_.pop_back();
+      todo_.push_front(filename);
+      
+      if (load(todo_.front()))
+      {
+        break;
+      }
+    }
+    
+    fixupNextPrev();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackLoop
+  // 
+  void
+  MainWindow::playbackLoop()
+  {
+    if (reader_)
+    {
+      bool enableLooping = actionLoop->isChecked();
+      reader_->setPlaybackLooping(enableLooping);
     }
   }
   
@@ -1396,7 +1551,7 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
-    sharedClock.setObserver(timelineControls_);
+    timelineControls_->observe(sharedClock);
     
     if (audioTrack < numAudioTracks)
     {

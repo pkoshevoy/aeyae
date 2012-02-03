@@ -69,8 +69,8 @@ namespace yae
   //----------------------------------------------------------------
   // fileSeek64
   // 
-  int64_t
-  fileSeek64(int fd, int64_t offset, int whence)
+  int64
+  fileSeek64(int fd, int64 offset, int whence)
   {
 #ifdef _WIN32
     __int64 pos = _lseeki64(fd, offset, whence);
@@ -86,7 +86,7 @@ namespace yae
   //----------------------------------------------------------------
   // fileSize64
   // 
-  int64_t
+  int64
   fileSize64(int fd)
   {
 #ifdef _WIN32

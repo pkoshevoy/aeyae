@@ -62,7 +62,9 @@ namespace yae
       
       // handle the apple event to open a document:
       QString filename = static_cast<QFileOpenEvent *>(e)->file();
-      mainWindow->load(filename);
+      std::list<QString> playlist;
+      playlist.push_back(filename);
+      mainWindow->setPlaylist(playlist);
       
       return true;
     }
