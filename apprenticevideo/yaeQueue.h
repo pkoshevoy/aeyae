@@ -126,7 +126,7 @@ namespace yae
           return;
         }
         
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         std::cerr << this << " close " << std::endl;
 #endif
         closed_ = true;
@@ -147,7 +147,7 @@ namespace yae
           return;
         }
         
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         std::cerr << this << " open " << std::endl;
 #endif
         sequences_.clear();
@@ -170,7 +170,7 @@ namespace yae
           size_ = 0;
         }
         
-        cond_.notify_one();
+        cond_.notify_all();
         return true;
       }
       catch (...)
@@ -208,7 +208,7 @@ namespace yae
 #endif
         }
         
-        cond_.notify_one();
+        cond_.notify_all();
         return true;
       }
       catch (...)
@@ -231,14 +231,14 @@ namespace yae
             std::cerr << this << " pop wait, size " << size_ << std::endl;
 #endif
             consumerIsBlocked_ = true;
-            cond_.notify_one();
+            cond_.notify_all();
             cond_.wait(lock);
           }
           
           consumerIsBlocked_ = false;
           if (!size_)
           {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             std::cerr << this << " queue is empty, closed: "
                       << closed_ << std::endl;
 #endif
@@ -265,7 +265,7 @@ namespace yae
 #endif
         }
         
-        cond_.notify_one();
+        cond_.notify_all();
         return true;
       }
       catch (...)
@@ -297,7 +297,7 @@ namespace yae
       sequence.push_front(sequenceEndData);
       size_++;
       sequences_.push_back(TSequence());
-      cond_.notify_one();
+      cond_.notify_all();
     }
 
   protected:
