@@ -546,7 +546,7 @@ namespace yae
         if (!audioFrame_)
         {
           // resetTimeCounters:
-#if 1
+#if 0
           std::cerr << "\nRESET AUDIO TIME COUNTERS"
                     << std::endl << std::endl;
 #endif
@@ -572,9 +572,11 @@ namespace yae
 
       if (detectedStaleFrame)
       {
+#if 0
         std::cerr << "expected " << outputParams_.channelCount
                   << " channels, received " << srcChannels
                   << std::endl;
+#endif
         
         audioFrame_ = TAudioFramePtr();
         audioFrameOffset_ = 0;

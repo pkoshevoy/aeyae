@@ -130,12 +130,14 @@ namespace yae
 
         if (df > 0.067)
         {
+#if 0
           std::cerr << "FRAME IS VALID FOR " << df << " sec\n"
                     << "sleep: " << secondsToSleep << " sec"
                     << "\tf0: " << f0
                     << "\tf1: " << f1
                     << "\tt: " << playheadPosition
                     << std::endl;
+#endif
         }
         
         boost::this_thread::sleep(boost::posix_time::milliseconds
@@ -148,7 +150,7 @@ namespace yae
           lateFramesErrorSum / lateFrames > 0.067 &&
           !playbackLoopedAround)
       {
-#if 1
+#if 0
         std::cerr << "video is late " << -df << " sec, "
                   << "\tf0: " << f0
                   << "\tf1: " << f1
@@ -179,7 +181,7 @@ namespace yae
         {
           if (!frame)
           {
-#if 1
+#if 0
             std::cerr << "\nRESET VIDEO TIME COUNTERS, playhead: "
                       << playheadPosition
                       << std::endl << std::endl;
@@ -208,7 +210,7 @@ namespace yae
       
       if (!ok)
       {
-#ifndef NDEBUG
+#if 0
         std::cerr << "reader_->readVideo: " << ok << std::endl;
 #endif
         break;

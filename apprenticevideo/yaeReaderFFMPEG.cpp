@@ -1055,6 +1055,7 @@ namespace yae
       YAE_ASSERT(gotPTS);
       if (gotPTS)
       {
+#if 0
         if (hasPrevPTS_)
         {
           double ta = prevPTS_.toSeconds();
@@ -1073,6 +1074,7 @@ namespace yae
               << std::endl;
           }
         }
+#endif
         
         hasPrevPTS_ = true;
         prevPTS_ = vf.time_;
@@ -1174,9 +1176,12 @@ namespace yae
         {
           rvf.time_.time_++;
         }
-        
+
+#if 0
         std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
                   << std::endl;
+#endif
+        
         if (!frameQueue_.push(rvfPtr))
         {
           return false;
@@ -1763,6 +1768,7 @@ namespace yae
       YAE_ASSERT(gotPTS);
       if (gotPTS)
       {
+#if 0
         if (hasPrevPTS_)
         {
           double ta = prevPTS_.toSeconds();
@@ -1777,6 +1783,7 @@ namespace yae
               << std::endl;
           }
         }
+#endif
         
         hasPrevPTS_ = true;
         prevPTS_ = af.time_;
@@ -2458,7 +2465,9 @@ namespace yae
     }
     catch (...)
     {
+#if 0
       std::cerr << "\nMovie::threadLoop caught exception" << std::endl;
+#endif
     }
 
     if (videoTrack)
@@ -2548,7 +2557,9 @@ namespace yae
                                  seekFlags);
       if (r < 0)
       {
+#if 0
         std::cerr << "Movie::seek(" << tSeek << ") returned " << r << std::endl;
+#endif
         return false;
       }
       
@@ -3029,7 +3040,7 @@ namespace yae
         break;
       }
 
-#if 1
+#if 0
       std::cerr << "ignoring video frame: " << t
                 << ", expecting [" << timeIn << ", " << timeOut << ")"
                 << std::endl;
@@ -3082,7 +3093,7 @@ namespace yae
         break;
       }
 
-#if 1
+#if 0
       std::cerr << "ignoring audio frame: " << t
                 << ", expecting [" << timeIn << ", " << timeOut << ")"
                 << std::endl;
