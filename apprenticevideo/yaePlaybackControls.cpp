@@ -176,6 +176,48 @@ namespace yae
   {}
   
   //----------------------------------------------------------------
+  // TimelineControls::timelineStart
+  // 
+  double
+  TimelineControls::timelineStart() const
+  {
+    return timelineStart_;
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::timelineDuration
+  // 
+  double
+  TimelineControls::timelineDuration() const
+  {
+    return timelineDuration_;
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::timeIn
+  // 
+  double
+  TimelineControls::timeIn() const
+  {
+    double seconds =
+      markerTimeOut_.position_ * timelineDuration_ + timelineStart_;
+    
+    return seconds;
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::timeOut
+  // 
+  double
+  TimelineControls::timeOut() const
+  {
+    double seconds =
+      markerTimeOut_.position_ * timelineDuration_ + timelineStart_;
+    
+    return seconds;
+  }
+  
+  //----------------------------------------------------------------
   // TimelineControls::currentTime
   // 
   double
@@ -306,17 +348,28 @@ namespace yae
   void
   TimelineControls::seekFromCurrentTime(double secOffset)
   {
-    emit userIsSeeking(true);
     double seconds = currentTime() + secOffset;
-    
+    seekTo(seconds);
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::seekTo
+  // 
+  void
+  TimelineControls::seekTo(double seconds)
+  {
+    emit userIsSeeking(true);
     double t = (seconds - timelineStart_) / timelineDuration_;
     t = std::min(1.0, std::max(0.0, t));
     
+    markerPlayhead_.position_ = t;
     seconds = t * timelineDuration_ + timelineStart_;
     clockPosition_ = getTimeStamp(seconds);
     
     emit movePlayHead(seconds);
     emit userIsSeeking(false);
+    
+    update();
   }
   
   //----------------------------------------------------------------
@@ -340,7 +393,6 @@ namespace yae
         
         t -= timelineStart_;
         markerPlayhead_.position_ = t / timelineDuration_;
-        markerPlayhead_.setAnchor();
         
         update();
         return true;
@@ -412,15 +464,6 @@ namespace yae
     p.drawImage(xOrigin + playExt - markerPlayhead_.hotspot_[0],
                 yOriginPlayhead - markerPlayhead_.hotspot_[1],
                 markerPlayhead_.image_);
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::wheelEvent
-  // 
-  void
-  TimelineControls::wheelEvent(QWheelEvent * e)
-  {
-    // seek back and forth here:
   }
   
   //----------------------------------------------------------------
@@ -564,8 +607,6 @@ namespace yae
   void
   TimelineControls::mouseDoubleClickEvent(QMouseEvent * e)
   {
-    emit userIsSeeking(true);
-    
     int xOrigin = 0;
     int yOriginInOut = 0;
     int yOriginPlayhead = 0;
@@ -575,15 +616,8 @@ namespace yae
     QPoint pt = e->pos();
     double t = double(pt.x() - xOrigin) / double(unitLength);
     t = std::max(0.0, std::min(1.0, t));
-    markerPlayhead_.position_ = t;
-    
     double seconds = t * timelineDuration_ + timelineStart_;
-    clockPosition_ = getTimeStamp(seconds);
-    
-    emit movePlayHead(seconds);
-    emit userIsSeeking(false);
-    
-    update();
+    seekTo(seconds);
   }
 
   //----------------------------------------------------------------

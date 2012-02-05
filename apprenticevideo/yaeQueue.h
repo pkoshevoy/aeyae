@@ -35,7 +35,7 @@ namespace yae
     typedef bool(*TSortFunc)(const TData &, const TData &);
     typedef std::list<TData> TSequence;
     
-    Queue(std::size_t maxSize = 50):
+    Queue(std::size_t maxSize = 1):
       closed_(true),
       consumerIsBlocked_(false),
       size_(0),
@@ -45,26 +45,13 @@ namespace yae
     
     ~Queue()
     {
-      close();
-      
       try
       {
         boost::this_thread::disable_interruption disableInterruption;
         boost::lock_guard<boost::mutex> lock(mutex_);
-
-        while (!sequences_.empty())
-        {
-          TSequence & sequence = sequences_.front();
-          while (!sequence.empty())
-          {
-            sequence.pop_front();
-            size_--;
-          }
-          sequences_.pop_front();
-        }
-        
-        // sanity check:
-        YAE_ASSERT(size_ == 0);
+        sequences_.clear();
+        size_ = 0;
+        closed_ = true;
       }
       catch (...)
       {}
@@ -165,7 +152,7 @@ namespace yae
       {
         // remove from queue:
         {
-          boost::unique_lock<boost::mutex> lock(mutex_);
+          boost::lock_guard<boost::mutex> lock(mutex_);
           sequences_.clear();
           size_ = 0;
         }
@@ -281,13 +268,20 @@ namespace yae
       {
         cond_.wait(lock);
       }
+
+      if (consumerIsBlocked_ && size_)
+      {
+        // this should never happen:
+        std::size_t * blah = 0;
+        *blah = 1;
+      }
       
       return consumerIsBlocked_;
     }
 
     void startNewSequence(const TData & sequenceEndData)
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
       if (sequences_.empty())
       {
         sequences_.push_back(TSequence());

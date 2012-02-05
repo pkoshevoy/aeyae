@@ -92,6 +92,22 @@ namespace yae
   // kMinInt64
   // 
   static const int64_t kMinInt64 = std::numeric_limits<int64_t>::min();
+
+  //----------------------------------------------------------------
+  // kQueueSizeSmall
+  // 
+  enum
+  {
+#if 1
+    kQueueSizeSmall = 30,
+    kQueueSizeMedium = 50,
+    kQueueSizeLarge = 120
+#else
+    kQueueSizeSmall = 1,
+    kQueueSizeMedium = 1,
+    kQueueSizeLarge = 1
+#endif
+  };
   
   //----------------------------------------------------------------
   // Packet
@@ -167,7 +183,57 @@ namespace yae
     int64_t dts_;
     int64_t duration_;
   };
-  
+
+  //----------------------------------------------------------------
+  // lockManager
+  // 
+  static int
+  lockManager(void ** context, enum AVLockOp op)
+  {
+    try
+    {
+      switch (op)
+      {
+        case AV_LOCK_CREATE:
+        {
+          *context = new boost::mutex();
+        }
+        break;
+          
+        case AV_LOCK_OBTAIN:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          mtx->lock();
+        }
+        break;
+        
+        case AV_LOCK_RELEASE:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          mtx->unlock();
+        }
+        break;
+        
+        case AV_LOCK_DESTROY:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          delete mtx;
+        }
+        break;
+
+        default:
+          YAE_ASSERT(false);
+          return -1;
+      }
+      
+      return 0;
+    }
+    catch (...)
+    {}
+    
+    return -1;
+  }
+
   //----------------------------------------------------------------
   // Track
   //
@@ -261,7 +327,7 @@ namespace yae
     context_(context),
     stream_(stream),
     codec_(NULL),
-    packetQueue_(120)
+    packetQueue_(kQueueSizeLarge)
   {
     if (context_ && stream_)
     {
@@ -684,7 +750,7 @@ namespace yae
   // 
   VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
-    frameQueue_(30),
+    frameQueue_(kQueueSizeSmall),
     numSamplePlanes_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -1340,7 +1406,31 @@ namespace yae
   bool
   VideoTrack::getNextFrame(TVideoFramePtr & frame)
   {
-    return frameQueue_.pop(frame);
+    bool ok = true;
+    while (ok)
+    {
+      ok = frameQueue_.pop(frame);
+      if (!ok || !frame)
+      {
+        break;
+      }
+      
+      // discard outlier frames:
+      double t = frame->time_.toSeconds();
+      double dt = 1.0 / double(frame->traits_.frameRate_);
+      if (t < timeOut_ && (t + dt) > timeIn_)
+      {
+        break;
+      }
+      
+#if 0
+      std::cerr << "ignoring video frame: " << t
+                << ", expecting [" << timeIn << ", " << timeOut << ")"
+                << std::endl;
+#endif
+    }
+    
+    return ok;
   }
   
   //----------------------------------------------------------------
@@ -1370,9 +1460,11 @@ namespace yae
     frameQueue_.startNewSequence(TVideoFramePtr());
     
     avcodec_flush_buffers(stream_->codec);
+#if 1
     avcodec_close(stream_->codec);
     int err = avcodec_open(stream_->codec, codec_);
     YAE_ASSERT(err >= 0);
+#endif
     
     setPlaybackInterval(seekTime, timeOut_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
@@ -1455,6 +1547,7 @@ namespace yae
   // 
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
+    frameQueue_(kQueueSizeMedium),
     nativeBytesPerSample_(0),
     outputBytesPerSample_(0),
     hasPrevPTS_(false),
@@ -2009,7 +2102,38 @@ namespace yae
   bool
   AudioTrack::getNextFrame(TAudioFramePtr & frame)
   {
-    return frameQueue_.pop(frame);
+    bool ok = true;
+    while (ok)
+    {
+      ok = frameQueue_.pop(frame);
+      if (!ok || !frame)
+      {
+        break;
+      }
+      
+      // discard outlier frames:
+      const AudioTraits & atraits = frame->traits_;
+      unsigned int sampleSize = getBitsPerSample(atraits.sampleFormat_) / 8;
+      int channels = getNumberOfChannels(atraits.channelLayout_);
+      std::size_t frameSize = frame->sampleBuffer_->rowBytes(0);
+      std::size_t numSamples = frameSize / (channels * sampleSize);
+      
+      double t = frame->time_.toSeconds();
+      double dt = double(numSamples) / double(atraits.sampleRate_);
+      
+      if (t < timeOut_ && (t + dt) > timeIn_)
+      {
+        break;
+      }
+      
+#if 0
+      std::cerr << "ignoring audio frame: " << t
+                << ", expecting [" << timeIn << ", " << timeOut << ")"
+                << std::endl;
+#endif
+    }
+    
+    return ok;
   }
 
   //----------------------------------------------------------------
@@ -2039,9 +2163,11 @@ namespace yae
     frameQueue_.startNewSequence(TAudioFramePtr());
     
     avcodec_flush_buffers(stream_->codec);
+#if 1
     avcodec_close(stream_->codec);
     int err = avcodec_open(stream_->codec, codec_);
     YAE_ASSERT(err >= 0);
+#endif
     
     setPlaybackInterval(seekTime, timeOut_);
     hasPrevPTS_ = false;
@@ -2084,10 +2210,15 @@ namespace yae
     bool threadStart();
     bool threadStop();
     
-    bool seek(double tSeek);
-    void rewind(const AudioTrackPtr & audioTrack,
-                const VideoTrackPtr & videoTrack);
+    bool requestSeekTime(double seekTime);
+
+  protected:
+    int seekTo(double seekTime);
     
+  public:
+    int rewind(const AudioTrackPtr & audioTrack,
+               const VideoTrackPtr & videoTrack);
+
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
@@ -2119,6 +2250,9 @@ namespace yae
     double timeIn_;
     double timeOut_;
     bool looping_;
+
+    bool mustSeek_;
+    double seekTime_;
   };
   
   
@@ -2132,7 +2266,9 @@ namespace yae
     selectedAudioTrack_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
-    looping_(false)
+    looping_(false),
+    mustSeek_(false),
+    seekTime_(0.0)
   {}
   
   //----------------------------------------------------------------
@@ -2364,59 +2500,68 @@ namespace yae
     AVPacket ffmpeg;
     try
     {
+      int err = 0;
       while (true)
       {
+        boost::this_thread::interruption_point();
+        
         // check whether it's time to rewind to the in-point:
+        bool mustRewind = true;
+        
+        if (audioTrack && audioTrack->discarded_ < 1)
         {
-          bool mustRewind = true;
-          
-          if (audioTrack && audioTrack->discarded_ < 1)
+          mustRewind = false;
+        }
+        else if (videoTrack && videoTrack->discarded_ < 3)
+        {
+          mustRewind = false;
+        }
+        
+        if (mustRewind)
+        {
+          if (looping_)
           {
-            mustRewind = false;
+            err = rewind(audioTrack, videoTrack);
           }
-          else if (videoTrack && videoTrack->discarded_ < 3)
+          else
           {
-            mustRewind = false;
-          }
-          
-          if (mustRewind)
-          {
-            if (looping_)
-            {
-              rewind(audioTrack, videoTrack);
-            }
-            else
-            {
-              break;
-            }
+            break;
           }
         }
         
-        boost::this_thread::interruption_point();
-        
-        // read a packet:
-        int err = 0;
+        // service seek request, read a packet:
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
+          
+          if (mustSeek_)
+          {
+            err = seekTo(seekTime_);
+            mustSeek_ = false;
+          }
+          
           err = av_read_frame(context_, &ffmpeg);
         }
         
         if (err)
         {
+          av_free_packet(&ffmpeg);
+          
           if (looping_)
           {
-            rewind(audioTrack, videoTrack);
+            err = rewind(audioTrack, videoTrack);
             continue;
           }
 
           // done:
           if (audioTrack)
           {
+            audioTrack->packetQueue().waitForConsumerToBlock();
             audioTrack->frameQueue_.waitForConsumerToBlock();
           }
           
           if (videoTrack)
           {
+            videoTrack->packetQueue().waitForConsumerToBlock();
             videoTrack->frameQueue_.waitForConsumerToBlock();
           }
           
@@ -2532,47 +2677,27 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // Movie::seek
+  // Movie::requestSeekTime
   // 
   bool
-  Movie::seek(double tSeek)
+  Movie::requestSeekTime(double seekTime)
   {
     try
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      if (!context_)
-      {
-        return false;
-      }
-      
-      double tCurr = dts_.toSeconds();
-      int seekFlags = tSeek < tCurr ? AVSEEK_FLAG_BACKWARD : 0;
-      
-      int64_t ts = int64_t(tSeek * double(AV_TIME_BASE));
-      int r = avformat_seek_file(context_,
-                                 -1,
-                                 kMinInt64,
-                                 ts,
-                                 kMaxInt64,
-                                 seekFlags);
-      if (r < 0)
-      {
-#if 0
-        std::cerr << "Movie::seek(" << tSeek << ") returned " << r << std::endl;
-#endif
-        return false;
-      }
+      mustSeek_ = true;
+      seekTime_ = seekTime;
       
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->resetTimeCounters(tSeek);
+        videoTrack->packetQueue().clear();
       }
       
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->resetTimeCounters(tSeek);
+        audioTrack->packetQueue().clear();
       }
       
       return true;
@@ -2584,23 +2709,71 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // Movie::seekTo
+  // 
+  int
+  Movie::seekTo(double seekTime)
+  {
+    if (!context_)
+    {
+      return -1;
+    }
+    
+    double tCurr = dts_.toSeconds();
+    int seekFlags = seekTime < tCurr ? AVSEEK_FLAG_BACKWARD : 0;
+    
+    int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
+    int err = avformat_seek_file(context_,
+                               -1,
+                               kMinInt64,
+                               ts,
+                               kMaxInt64,
+                               seekFlags);
+    if (err < 0)
+    {
+#if 0
+      std::cerr << "Movie::seek(" << seekTime << ") returned " << r
+                << std::endl;
+#endif
+      return err;
+    }
+    
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+      videoTrack->resetTimeCounters(seekTime);
+    }
+    
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+      audioTrack->resetTimeCounters(seekTime);
+    }
+    
+    return err;
+  }
+  
+  //----------------------------------------------------------------
   // Movie::rewind
   // 
-  void
+  int
   Movie::rewind(const AudioTrackPtr & audioTrack,
                 const VideoTrackPtr & videoTrack)
   {
     // wait for the the frame queues to empty out:
     if (audioTrack)
     {
+      audioTrack->packetQueue().waitForConsumerToBlock();
       audioTrack->frameQueue_.waitForConsumerToBlock();
     }
     else if (videoTrack)
     {
+      videoTrack->packetQueue().waitForConsumerToBlock();
       videoTrack->frameQueue_.waitForConsumerToBlock();
     }
     
-    seek(timeIn_);
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    return seekTo(timeIn_);
   }
   
   //----------------------------------------------------------------
@@ -2708,7 +2881,17 @@ namespace yae
     {
       if (!ffmpegInitialized_)
       {
+        av_log_set_flags(AV_LOG_SKIP_REPEATED);
+#if CONFIG_AVDEVICE
+        avdevice_register_all();
+#endif
+#if CONFIG_AVFILTER
+        avfilter_register_all();
+#endif
         av_register_all();
+        avformat_network_init();
+        
+        av_lockmgr_register(&lockManager);
         ffmpegInitialized_ = true;
       }
     }
@@ -3000,9 +3183,9 @@ namespace yae
   // ReaderFFMPEG::seek
   // 
   bool
-  ReaderFFMPEG::seek(double t)
+  ReaderFFMPEG::seek(double seekTime)
   {
-    return private_->movie_.seek(t);
+    return private_->movie_.requestSeekTime(seekTime);
   }
   
   //----------------------------------------------------------------
@@ -3017,36 +3200,8 @@ namespace yae
       return false;
     }
     
-    double timeIn = 0.0;
-    double timeOut = kMaxDouble;
-    private_->movie_.getPlaybackInterval(timeIn, timeOut);
-    
     VideoTrackPtr track = private_->movie_.getVideoTracks()[i];
-    bool ok = true;
-
-    while (true)
-    {
-      ok = track->getNextFrame(frame);
-      if (!ok || !frame)
-      {
-        break;
-      }
-      
-      // discard outlier frames:
-      double t = frame->time_.toSeconds();
-      double dt = 1.0 / double(frame->traits_.frameRate_);
-      if (t < timeOut && (t + dt) > timeIn)
-      {
-        break;
-      }
-
-#if 0
-      std::cerr << "ignoring video frame: " << t
-                << ", expecting [" << timeIn << ", " << timeOut << ")"
-                << std::endl;
-#endif
-    }
-    
+    bool ok = track->getNextFrame(frame);
     return ok;
   }
   
@@ -3062,44 +3217,8 @@ namespace yae
       return false;
     }
     
-    double timeIn = 0.0;
-    double timeOut = kMaxDouble;
-    private_->movie_.getPlaybackInterval(timeIn, timeOut);
-    
     AudioTrackPtr track = private_->movie_.getAudioTracks()[i];
-    bool ok = true;
-    
-    while (true)
-    {
-      ok = track->getNextFrame(frame);
-      if (!ok || !frame)
-      {
-        break;
-      }
-      
-      // discard outlier frames:
-
-      const AudioTraits & atraits = frame->traits_;
-      unsigned int sampleSize = getBitsPerSample(atraits.sampleFormat_) / 8;
-      int channels = getNumberOfChannels(atraits.channelLayout_);
-      std::size_t frameSize = frame->sampleBuffer_->rowBytes(0);
-      std::size_t numSamples = frameSize / (channels * sampleSize);
-      
-      double t = frame->time_.toSeconds();
-      double dt = double(numSamples) / double(atraits.sampleRate_);
-      
-      if (t < timeOut && (t + dt) > timeIn)
-      {
-        break;
-      }
-
-#if 0
-      std::cerr << "ignoring audio frame: " << t
-                << ", expecting [" << timeIn << ", " << timeOut << ")"
-                << std::endl;
-#endif
-    }
-    
+    bool ok = track->getNextFrame(frame);
     return ok;
   }
   

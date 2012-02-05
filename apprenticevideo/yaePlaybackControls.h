@@ -79,6 +79,12 @@ namespace yae
     
     void reset(const SharedClock & sharedClock, IReader * reader);
     
+    // accessors:
+    double timelineStart() const;
+    double timelineDuration() const;
+    double timeIn() const;
+    double timeOut() const;
+    
     // helper:
     double currentTime() const;
     
@@ -105,12 +111,12 @@ namespace yae
     void setInPoint();
     void setOutPoint();
     void seekFromCurrentTime(double offsetSeconds);
+    void seekTo(double absoluteSeconds);
     
   protected:
     // virtual:
     bool event(QEvent * e);
     void paintEvent(QPaintEvent * e);
-    void wheelEvent(QWheelEvent * e);
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
     void mouseMoveEvent(QMouseEvent * e);

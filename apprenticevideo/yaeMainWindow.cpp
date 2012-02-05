@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <list>
+#include <math.h>
 
 // GLEW includes:
 #include <GL/glew.h>
@@ -18,6 +19,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QWheelEvent>
 #include <QDragEnterEvent>
 #include <QVBoxLayout>
 #include <QFileDialog>
@@ -132,7 +134,9 @@ namespace yae
     audioRenderer_(NULL),
     videoRenderer_(NULL),
     playbackPaused_(false),
-    playbackInterrupted_(false)
+    playbackInterrupted_(false),
+    scrollStart_(0.0),
+    scrollOffset_(0.0)
   {
 #ifdef __APPLE__
     appleRemoteControl_ = NULL;
@@ -169,6 +173,7 @@ namespace yae
     // hide the timeline:
     actionShowTimeline->setChecked(false);
     timelineControls_->hide();
+    scrollWheelTimer_.setSingleShot(true);
     
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -360,6 +365,10 @@ namespace yae
 
     ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
                  this, SLOT(focusChanged(QWidget *, QWidget *)));
+    YAE_ASSERT(ok);
+    
+    ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
+                 this, SLOT(scrollWheelTimerExpired()));
     YAE_ASSERT(ok);
   }
 
@@ -1249,7 +1258,7 @@ namespace yae
     reader_ = reader;
     
     timelineControls_->update();
-    canvas_->clear();
+    // canvas_->clear();
     
     this->setWindowTitle(tr("Apprentice Video"));
     
@@ -1355,6 +1364,25 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // MainWindow::scrollWheelTimerExpired
+  // 
+  void
+  MainWindow::scrollWheelTimerExpired()
+  {
+    double seconds = scrollStart_ + scrollOffset_;
+    
+    bool isLooping = actionLoop->isChecked();
+    if (isLooping)
+    {
+      double t0 = timelineControls_->timelineStart();
+      double dt = timelineControls_->timelineDuration();
+      seconds = t0 + fmod(seconds - t0, dt);
+    }
+    
+    timelineControls_->seekTo(seconds);
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::event
   // 
   bool
@@ -1456,6 +1484,28 @@ namespace yae
     }
     
     return QMainWindow::event(e);
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::wheelEvent
+  // 
+  void
+  MainWindow::wheelEvent(QWheelEvent * e)
+  {
+    // seek back and forth here:
+    int delta = e->delta();
+    double percent = floor(0.5 + fabs(double(delta)) / 120.0);
+    percent = std::max<double>(1.0, percent);
+    double offset = percent * ((delta < 0) ? 5.0 : -5.0);
+    
+    if (!scrollWheelTimer_.isActive())
+    {
+      scrollStart_ = timelineControls_->currentTime();
+      scrollOffset_ = 0.0;
+    }
+    
+    scrollOffset_ += offset;
+    scrollWheelTimer_.start(200);
   }
   
   //----------------------------------------------------------------

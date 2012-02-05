@@ -14,6 +14,7 @@
 #include <QMainWindow>
 #include <QSignalMapper>
 #include <QShortcut>
+#include <QTimer>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -121,10 +122,12 @@ namespace yae
     void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished();
+    void scrollWheelTimerExpired();
     
   protected:
     // virtual:
     bool event(QEvent * e);
+    void wheelEvent(QWheelEvent * e);
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
@@ -188,6 +191,11 @@ namespace yae
     
     // playback controls:
     TimelineControls * timelineControls_;
+    
+    // scroll-wheel timer:
+    QTimer scrollWheelTimer_;
+    double scrollStart_;
+    double scrollOffset_;
     
     // playlist:
     std::list<QString> todo_;
