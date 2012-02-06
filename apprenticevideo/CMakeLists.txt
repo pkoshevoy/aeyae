@@ -108,6 +108,11 @@ find_library(VPX_LIBRARY vpx PATHS ${FFMPEG_LIBS_PATH} DOC "Google vpx library (
 find_library(X264_LIBRARY x264 PATHS ${FFMPEG_LIBS_PATH} DOC "x264 library")
 find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore library")
 find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
+find_library(CELT_LIBRARY celt0 PATHS ${FFMPEG_LIBS_PATH} DOC "celt library")
+find_library(MODPLUG_LIBRARY modplug PATHS ${FFMPEG_LIBS_PATH} DOC "modplug library")
+find_library(GNUTLS_LIBRARY gnutls PATHS ${FFMPEG_LIBS_PATH} DOC "gnutls library")
+find_library(DIRACENC_LIBRARY dirac_encoder PATHS ${FFMPEG_LIBS_PATH} DOC "dirac_encoder library")
+find_library(RTMP_LIBRARY rtmp PATHS ${FFMPEG_LIBS_PATH} DOC "rtmp library")
 find_library(ZLIB_LIBRARY z PATHS ${FFMPEG_LIBS_PATH} DOC "zlib library")
 find_library(BZIP2_LIBRARY bz2 PATHS ${FFMPEG_LIBS_PATH} DOC "bzip2 library")
 find_library(VA_LIBRARY va PATHS ${FFMPEG_LIBS_PATH} DOC "va library")
@@ -410,6 +415,26 @@ endif (XVIDCODE_LIBRARY)
 if (NUT_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${NUT_LIBRARY})
 endif (NUT_LIBRARY)
+
+if (CELT_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${CELT_LIBRARY})
+endif (CELT_LIBRARY)
+
+if (MODPLUG_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${MODPLUG_LIBRARY})
+endif (MODPLUG_LIBRARY)
+
+if (GNUTLS_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${GNUTLS_LIBRARY})
+endif (GNUTLS_LIBRARY)
+
+if (DIRACENC_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${DIRACENC_LIBRARY})
+endif (DIRACENC_LIBRARY)
+
+if (RTMP_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${RTMP_LIBRARY})
+endif (RTMP_LIBRARY)
 
 if (TIFF_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${TIFF_LIBRARY})
