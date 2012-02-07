@@ -46,7 +46,8 @@ namespace yae
     
     //! begin rendering video frames onto a given canvas:
     bool open(IVideoCanvas * canvas,
-              IReader * reader);
+              IReader * reader,
+              bool forOneFrameOnly);
     
     //! terminate video rendering:
     void close();

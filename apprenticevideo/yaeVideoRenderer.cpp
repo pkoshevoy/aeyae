@@ -26,7 +26,7 @@ namespace yae
   public:
     TPrivate(SharedClock & clock);
     
-    bool open(IVideoCanvas * canvas, IReader * reader);
+    bool open(IVideoCanvas * canvas, IReader * reader, bool forOneFrameOnly);
     void close();
     void threadLoop();
     
@@ -36,6 +36,7 @@ namespace yae
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
+    bool forOneFrameOnly_;
   };
   
   //----------------------------------------------------------------
@@ -52,11 +53,14 @@ namespace yae
   // VideoRenderer::TPrivate::open
   // 
   bool
-  VideoRenderer::TPrivate::open(IVideoCanvas * canvas, IReader * reader)
+  VideoRenderer::TPrivate::open(IVideoCanvas * canvas,
+                                IReader * reader,
+                                bool forOneFrameOnly)
   {
     close();
     
     boost::lock_guard<boost::mutex> lock(mutex_);
+    forOneFrameOnly_ = forOneFrameOnly;
     canvas_ = canvas;
     reader_ = reader;
     if (!reader_)
@@ -227,6 +231,10 @@ namespace yae
         if (canvas_)
         {
           canvas_->render(frame);
+          if (forOneFrameOnly_)
+          {
+            break;
+          }
         }
       }
       else
@@ -287,9 +295,11 @@ namespace yae
   // VideoRenderer::open
   // 
   bool
-  VideoRenderer::open(IVideoCanvas * canvas, IReader * reader)
+  VideoRenderer::open(IVideoCanvas * canvas,
+                      IReader * reader,
+                      bool forOneFrameOnly)
   {
-    return private_->open(canvas, reader);
+    return private_->open(canvas, reader, forOneFrameOnly);
   }
   
   //----------------------------------------------------------------

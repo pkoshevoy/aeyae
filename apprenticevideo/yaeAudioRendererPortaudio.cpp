@@ -46,7 +46,9 @@ namespace yae
                const AudioTraits & source,
                AudioTraits & output) const;
     
-    bool open(unsigned int deviceIndex, IReader * reader);
+    bool open(unsigned int deviceIndex,
+              IReader * reader,
+              bool forOneFrameOnly);
     void close();
     
   private:
@@ -81,7 +83,8 @@ namespace yae
 
     // audio source:
     IReader * reader_;
-
+    bool forOneFrameOnly_;
+    
     // output stream and its configuration:
     PaStream * output_;
     PaStreamParameters outputParams_;
@@ -104,6 +107,7 @@ namespace yae
     initErr_(Pa_Initialize()),
     defaultDevice_(0),
     reader_(NULL),
+    forOneFrameOnly_(false),
     output_(NULL),
     sampleSize_(0),
     audioFrameOffset_(0),
@@ -307,7 +311,8 @@ namespace yae
   // 
   bool
   AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
-                                         IReader * reader)
+                                         IReader * reader,
+                                         bool forOneFrameOnly)
   {
     if (output_)
     {
@@ -321,6 +326,7 @@ namespace yae
     audioFrameOffset_ = 0;
     
     reader_ = reader;
+    forOneFrameOnly_ = forOneFrameOnly;
     if (!reader_)
     {
       return true;
@@ -356,7 +362,7 @@ namespace yae
   void
   AudioRendererPortaudio::TPrivate::close()
   {
-    open(0, NULL);
+    open(0, NULL, false);
   }
 
   //----------------------------------------------------------------
@@ -632,7 +638,15 @@ namespace yae
         const std::size_t numChunks = chunks.size();
         for (std::size_t i = 0; i < numChunks; i++)
         {
-          memcpy(dst[i], chunks[i], chunkSize);
+          if (forOneFrameOnly_)
+          {
+            memset(dst[i], 0, chunkSize);
+          }
+          else
+          {
+            memcpy(dst[i], chunks[i], chunkSize);
+          }
+          
           dst[i] += chunkSize;
         }
         
@@ -660,6 +674,11 @@ namespace yae
 #endif
       clock_.setCurrentTime(framePosition,
                             outputParams_.suggestedLatency);
+    }
+    
+    if (forOneFrameOnly_)
+    {
+      return paComplete;
     }
     
     return paContinue;
@@ -761,9 +780,10 @@ namespace yae
   // 
   bool
   AudioRendererPortaudio::open(unsigned int deviceIndex,
-                               IReader * reader)
+                               IReader * reader,
+                               bool forOneFrameOnly)
   {
-    return private_->open(deviceIndex, reader);
+    return private_->open(deviceIndex, reader, forOneFrameOnly);
   }
 
   //----------------------------------------------------------------

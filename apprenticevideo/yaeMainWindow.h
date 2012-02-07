@@ -136,7 +136,8 @@ namespace yae
     // helpers:
     void fixupNextPrev();
     void stopRenderers();
-    void startRenderers(IReader * reader);
+    void startRenderers(IReader * reader, bool forOneFrameOnly = false);
+    void renderOneFrame();
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     unsigned int adjustAudioTraitsOverride(IReader * reader);

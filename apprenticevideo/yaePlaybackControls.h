@@ -77,7 +77,8 @@ namespace yae
     // itself as the observer of previous shared clock.
     void observe(const SharedClock & sharedClock);
     
-    void reset(const SharedClock & sharedClock, IReader * reader);
+    void resetFor(IReader * reader);
+    void adjustTo(IReader * reader);
     
     // accessors:
     double timelineStart() const;

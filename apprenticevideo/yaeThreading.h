@@ -125,6 +125,11 @@ namespace yae
       
       return false;
     }
+
+    bool isRunning() const
+    {
+      return thread_.joinable();
+    }
     
   protected:
     boost::thread thread_;

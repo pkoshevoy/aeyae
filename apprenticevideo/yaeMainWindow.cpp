@@ -432,6 +432,7 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     
     reader->threadStop();
+    reader->setPlaybackInterval(true);
     
     std::cout << std::endl
               << "yae: " << filename << std::endl
@@ -592,6 +593,10 @@ namespace yae
     reader->setPlaybackLooping(enableLooping);
     
     reader->threadStart();
+    
+    // reset timeline start, duration, playhead, in/out points:
+    timelineControls_->resetFor(reader);
+    
     startRenderers(reader);
     
     // replace the previous reader:
@@ -806,11 +811,11 @@ namespace yae
     std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
     selectVideoTrack(reader_, videoTrack);
     
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
     reader_->threadStart();
-    if (!playbackPaused_)
-    {
-      startRenderers(reader_);
-    }
+    
+    startRenderers(reader_, playbackPaused_);
   }
   
   //----------------------------------------------------------------
@@ -1002,6 +1007,8 @@ namespace yae
   {
     std::cerr << "togglePlayback" << std::endl;
     
+    reader_->setPlaybackInterval(playbackPaused_);
+    
     if (playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
@@ -1030,11 +1037,11 @@ namespace yae
     audioDevice_.assign(audioDevice.toUtf8().constData());
     adjustAudioTraitsOverride(reader_);
     
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
     reader_->threadStart();
-    if (!playbackPaused_)
-    {
-      startRenderers(reader_);
-    }
+    
+    startRenderers(reader_, playbackPaused_);
   }
 
   //----------------------------------------------------------------
@@ -1048,11 +1055,11 @@ namespace yae
     stopRenderers();
     selectAudioTrack(reader_, index);
     
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
     reader_->threadStart();
-    if (!playbackPaused_)
-    {
-      startRenderers(reader_);
-    }
+    
+    startRenderers(reader_, playbackPaused_);
   }
 
   //----------------------------------------------------------------
@@ -1064,14 +1071,13 @@ namespace yae
     std::cerr << "videoSelectTrack: " << index << std::endl;
     reader_->threadStop();
     stopRenderers();
-    
     selectVideoTrack(reader_, index);
     
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
     reader_->threadStart();
-    if (!playbackPaused_)
-    {
-      startRenderers(reader_);
-    }
+    
+    startRenderers(reader_, playbackPaused_);
   }
   
   //----------------------------------------------------------------
@@ -1108,6 +1114,8 @@ namespace yae
   void
   MainWindow::userIsSeeking(bool seeking)
   {
+    reader_->setPlaybackInterval(!seeking);
+    
 #if 0
     if (seeking && !playbackPaused_)
     {
@@ -1162,6 +1170,12 @@ namespace yae
     }
     
     bool ok = reader_->seek(seconds);
+    
+    if (playbackPaused_)
+    {
+      bool forOneFrameOnly = true;
+      startRenderers(reader_, forOneFrameOnly);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1249,7 +1263,8 @@ namespace yae
   MainWindow::playbackFinished()
   {
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
-    timelineControls_->reset(SharedClock(), reader);
+    timelineControls_->observe(SharedClock());
+    timelineControls_->resetFor(reader);
     
     reader_->close();
     stopRenderers();
@@ -1592,7 +1607,7 @@ namespace yae
   // MainWindow::startRenderers
   // 
   void
-  MainWindow::startRenderers(IReader * reader)
+  MainWindow::startRenderers(IReader * reader, bool forOneFrameOnly)
   {
     std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
     std::size_t audioTrack = reader->getSelectedAudioTrackIndex();
@@ -1601,9 +1616,12 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
-    timelineControls_->observe(sharedClock);
+    if (!forOneFrameOnly)
+    {
+      timelineControls_->observe(sharedClock);
+    }
     
-    if (audioTrack < numAudioTracks)
+    if (!forOneFrameOnly && audioTrack < numAudioTracks)
     {
       audioRenderer_->takeThisClock(sharedClock);
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
@@ -1625,15 +1643,22 @@ namespace yae
     }
     
     // update the renderers:
-    unsigned int audioDeviceIndex = adjustAudioTraitsOverride(reader);
-    if (!audioRenderer_->open(audioDeviceIndex, reader))
+    if (!forOneFrameOnly)
     {
-      videoRenderer_->takeThisClock(sharedClock);
-      videoRenderer_->obeyThisClock(videoRenderer_->clock());
+      unsigned int audioDeviceIndex = adjustAudioTraitsOverride(reader);
+      if (!audioRenderer_->open(audioDeviceIndex, reader, forOneFrameOnly))
+      {
+        videoRenderer_->takeThisClock(sharedClock);
+        videoRenderer_->obeyThisClock(videoRenderer_->clock());
+      }
     }
     
-    videoRenderer_->open(canvas_, reader);
-    timelineControls_->reset(sharedClock, reader);
+    videoRenderer_->open(canvas_, reader, forOneFrameOnly);
+    
+    if (!forOneFrameOnly)
+    {
+      timelineControls_->adjustTo(reader);
+    }
   }
   
   //----------------------------------------------------------------

@@ -84,7 +84,8 @@ namespace yae
     virtual void getPlaybackInterval(double & tIn, double & tOut) const = 0;
     virtual void setPlaybackIntervalStart(double timeIn) = 0;
     virtual void setPlaybackIntervalEnd(double timeOut) = 0;
-    virtual void setPlaybackLooping(bool enableLooping) = 0;
+    virtual void setPlaybackInterval(bool enabled) = 0;
+    virtual void setPlaybackLooping(bool enabled) = 0;
   };
   
 }

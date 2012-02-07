@@ -68,7 +68,8 @@ namespace yae
     
     //! initialize a given audio rendering device:
     virtual bool open(unsigned int deviceIndex,
-                      IReader * reader) = 0;
+                      IReader * reader,
+                      bool forOneFrameOnly) = 0;
     
     //! terminate audio rendering:
     virtual void close() = 0;

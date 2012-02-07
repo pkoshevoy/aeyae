@@ -200,7 +200,7 @@ namespace yae
   TimelineControls::timeIn() const
   {
     double seconds =
-      markerTimeOut_.position_ * timelineDuration_ + timelineStart_;
+      markerTimeIn_.position_ * timelineDuration_ + timelineStart_;
     
     return seconds;
   }
@@ -264,13 +264,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::reset
+  // TimelineControls::resetFor
   // 
   void
-  TimelineControls::reset(const SharedClock & sharedClock, IReader * reader)
+  TimelineControls::resetFor(IReader * reader)
   {
-    observe(sharedClock);
-    
     TTime start;
     TTime duration;
     if (!reader->getAudioDuration(start, duration))
@@ -291,6 +289,51 @@ namespace yae
     markerTimeIn_.setAnchor();
     
     markerTimeOut_.position_ = 1.0;
+    markerTimeOut_.setAnchor();
+    
+    update();
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::adjustTo
+  // 
+  void
+  TimelineControls::adjustTo(IReader * reader)
+  {
+    // get current in/out/playhead positions in seconds:
+    double t0 = timeIn();
+    double t1 = timeOut();
+    double t = currentTime();
+    
+    TTime start;
+    TTime duration;
+    if (!reader->getAudioDuration(start, duration))
+    {
+      reader->getVideoDuration(start, duration);
+    }
+    
+    timelineStart_ = start.toSeconds();
+    timelineDuration_ = duration.toSeconds();
+    
+    // shortcuts:
+    double dT = timelineDuration_;
+    double T0 = timelineStart_;
+    double T1 = T0 + dT;
+    
+    t0 = std::max<double>(T0, std::min<double>(T1, t0));
+    t1 = std::max<double>(T0, std::min<double>(T1, t1));
+    t = std::max<double>(T0, std::min<double>(T1, t));
+    
+    clockPosition_ = getTimeStamp(t);
+    clockEnd_ = getTimeStamp(T1);
+    
+    markerPlayhead_.position_ = (t - T0) / dT;
+    markerPlayhead_.setAnchor();
+    
+    markerTimeIn_.position_ = (t0 - T0) / dT;
+    markerTimeIn_.setAnchor();
+    
+    markerTimeOut_.position_ = (t1 - T0) / dT;
     markerTimeOut_.setAnchor();
     
     update();
@@ -358,7 +401,6 @@ namespace yae
   void
   TimelineControls::seekTo(double seconds)
   {
-    emit userIsSeeking(true);
     double t = (seconds - timelineStart_) / timelineDuration_;
     t = std::min(1.0, std::max(0.0, t));
     
@@ -367,7 +409,6 @@ namespace yae
     clockPosition_ = getTimeStamp(seconds);
     
     emit movePlayHead(seconds);
-    emit userIsSeeking(false);
     
     update();
   }

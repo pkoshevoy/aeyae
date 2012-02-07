@@ -684,7 +684,7 @@ namespace yae
     bool getNextFrame(TVideoFramePtr & frame);
     
     // adjust playback interval (used when seeking or looping):
-    void setPlaybackInterval(double timeIn, double timeOut);
+    void setPlaybackInterval(double timeIn, double timeOut, bool enabled);
     
     // reset time counters, setup to output frames
     // starting from a given time point:
@@ -702,6 +702,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
+    bool playbackInterval_;
     uint64_t discarded_;
     int64_t startTime_;
     AVRational frameRate_;
@@ -754,6 +755,7 @@ namespace yae
     numSamplePlanes_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
+    playbackInterval_(false),
     discarded_(0),
     startTime_(0),
     hasPrevPTS_(false),
@@ -1147,6 +1149,7 @@ namespace yae
       }
 
       // make sure the frame is in the in/out interval:
+      if (playbackInterval_)
       {
         double t = vf.time_.toSeconds();
         double dt = 1.0 / double(output_.frameRate_);
@@ -1410,7 +1413,7 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame);
-      if (!ok || !frame)
+      if (!ok || !frame || !playbackInterval_)
       {
         break;
       }
@@ -1437,10 +1440,11 @@ namespace yae
   // VideoTrack::setPlaybackInterval
   // 
   void
-  VideoTrack::setPlaybackInterval(double timeIn, double timeOut)
+  VideoTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
   {
     timeIn_ = timeIn;
     timeOut_ = timeOut;
+    playbackInterval_ = enabled;
     discarded_ = 0;
   }
   
@@ -1466,7 +1470,7 @@ namespace yae
     YAE_ASSERT(err >= 0);
 #endif
     
-    setPlaybackInterval(seekTime, timeOut_);
+    setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     packetTimes_.clear();
     hasPrevPTS_ = false;
@@ -1503,7 +1507,7 @@ namespace yae
     bool getNextFrame(TAudioFramePtr & frame);
     
     // adjust playback interval (used when seeking or looping):
-    void setPlaybackInterval(double timeIn, double timeOut);
+    void setPlaybackInterval(double timeIn, double timeOut, bool enabled);
     
     // reset time counters, setup to output frames
     // starting from a given time point:
@@ -1530,6 +1534,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
+    bool playbackInterval_;
     uint64_t discarded_;
     int64_t startTime_;
     uint64 samplesDecoded_;
@@ -1554,6 +1559,7 @@ namespace yae
     prevNumSamples_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
+    playbackInterval_(false),
     discarded_(0),
     startTime_(0),
     samplesDecoded_(0),
@@ -1884,6 +1890,7 @@ namespace yae
       }
       
       // make sure the frame is in the in/out interval:
+      if (playbackInterval_)
       {
         double t = af.time_.toSeconds();
         double dt = double(numNativeSamples) / double(native_.sampleRate_);
@@ -2106,7 +2113,7 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame);
-      if (!ok || !frame)
+      if (!ok || !frame || !playbackInterval_)
       {
         break;
       }
@@ -2140,10 +2147,11 @@ namespace yae
   // AudioTrack::setPlaybackInterval
   // 
   void
-  AudioTrack::setPlaybackInterval(double timeIn, double timeOut)
+  AudioTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
   {
     timeIn_ = timeIn;
     timeOut_ = timeOut;
+    playbackInterval_ = enabled;
     discarded_ = 0;
   }
 
@@ -2169,7 +2177,7 @@ namespace yae
     YAE_ASSERT(err >= 0);
 #endif
     
-    setPlaybackInterval(seekTime, timeOut_);
+    setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
@@ -2222,7 +2230,8 @@ namespace yae
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
-    void setPlaybackLooping(bool enableLooping);
+    void setPlaybackInterval(bool enabled);
+    void setPlaybackLooping(bool enabled);
     
   private:
     // intentionally disabled:
@@ -2249,6 +2258,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
+    bool playbackInterval_;
     bool looping_;
 
     bool mustSeek_;
@@ -2266,6 +2276,7 @@ namespace yae
     selectedAudioTrack_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
+    playbackInterval_(false),
     looping_(false),
     mustSeek_(false),
     seekTime_(0.0)
@@ -2402,7 +2413,7 @@ namespace yae
     }
 
     VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_);
+    track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
     return track->open();
   }
   
@@ -2427,7 +2438,7 @@ namespace yae
     }
     
     AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_);
+    track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
     return track->open();
   }
   
@@ -2690,16 +2701,21 @@ namespace yae
       mustSeek_ = true;
       seekTime_ = seekTime;
       
+      VideoTrackPtr videoTrack;
+      AudioTrackPtr audioTrack;
+      
       if (selectedVideoTrack_ < videoTracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack = videoTracks_[selectedVideoTrack_];
         videoTrack->packetQueue().clear();
+        videoTrack->frameQueue_.clear();
       }
       
       if (selectedAudioTrack_ < audioTracks_.size())
       {
-        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        audioTrack = audioTracks_[selectedAudioTrack_];
         audioTrack->packetQueue().clear();
+        audioTrack->frameQueue_.clear();
       }
       
       return true;
@@ -2808,13 +2824,13 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_);
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
       }
       
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_);
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
       }
     }
     catch (...)
@@ -2835,13 +2851,40 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_);
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
       }
       
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_);
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+      }
+    }
+    catch (...)
+    {}
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::setPlaybackInterval
+  // 
+  void
+  Movie::setPlaybackInterval(bool enabled)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      playbackInterval_ = enabled;
+      
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+      }
+      
+      if (selectedAudioTrack_ < audioTracks_.size())
+      {
+        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
       }
     }
     catch (...)
@@ -2852,12 +2895,12 @@ namespace yae
   // Movie::setPlaybackLooping
   // 
   void
-  Movie::setPlaybackLooping(bool enableLooping)
+  Movie::setPlaybackLooping(bool enabled)
   {
     try
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      looping_ = enableLooping;
+      looping_ = enabled;
     }
     catch (...)
     {}
@@ -3270,12 +3313,21 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // ReaderFFMPEG::setPlaybackInterval
+  // 
+  void
+  ReaderFFMPEG::setPlaybackInterval(bool enabled)
+  {
+    private_->movie_.setPlaybackInterval(enabled);
+  }
+  
+  //----------------------------------------------------------------
   // ReaderFFMPEG::setPlaybackLooping
   // 
   void 
-  ReaderFFMPEG::setPlaybackLooping(bool enableLooping)
+  ReaderFFMPEG::setPlaybackLooping(bool enabled)
   {
-    private_->movie_.setPlaybackLooping(enableLooping);
+    private_->movie_.setPlaybackLooping(enabled);
   }
   
 }
