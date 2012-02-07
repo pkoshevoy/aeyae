@@ -2642,6 +2642,7 @@ namespace yae
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
       // t->decoderStartup();
       t->threadStart();
+      t->packetQueue().waitForConsumerToBlock();
     }
     
     if (selectedAudioTrack_ < audioTracks_.size())
@@ -2649,6 +2650,7 @@ namespace yae
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
       // t->decoderStartup();
       t->threadStart();
+      t->packetQueue().waitForConsumerToBlock();
     }
     
     return thread_.run();

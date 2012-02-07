@@ -264,7 +264,7 @@ namespace yae
     bool waitForConsumerToBlock()
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      while (!closed_ && !consumerIsBlocked_)
+      while (!closed_ && !(consumerIsBlocked_ && !size_))
       {
         cond_.wait(lock);
       }
