@@ -109,6 +109,7 @@ namespace yae
     void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
+    void playlistSelect(const QString & path);
 
     // help menu:
     void helpAbout();
@@ -170,6 +171,10 @@ namespace yae
     
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
+    
+    // playlist menu actions:
+    QActionGroup * playlistGroup_;
+    QSignalMapper * playlistMapper_;
     
     // file reader:
     IReader * reader_;

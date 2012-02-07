@@ -129,6 +129,8 @@ namespace yae
     videoTrackGroup_(NULL),
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
+    playlistGroup_(NULL),
+    playlistMapper_(NULL),
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
@@ -404,6 +406,67 @@ namespace yae
   {
     todo_ = playlist;
     done_.clear();
+    
+    if (playlistGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = playlistGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+        
+        menuNowPlaying->removeAction(action);
+      }
+    }
+    
+    delete playlistGroup_;
+    playlistGroup_ = new QActionGroup(this);
+    
+    delete playlistMapper_;
+    playlistMapper_ = new QSignalMapper(this);
+    
+    bool ok = connect(playlistMapper_, SIGNAL(mapped(const QString &)),
+                      this, SLOT(playlistSelect(const QString &)));
+    YAE_ASSERT(ok);
+
+    for (std::list<QString>::const_iterator i = todo_.begin();
+         i != todo_.end(); ++i)
+    {
+      const QString & path = *i;
+      
+      QString name = QFileInfo(path).fileName();
+      QAction * action = new QAction(name, this);
+      menuNowPlaying->addAction(action);
+      
+      action->setCheckable(true);
+      action->setChecked(i == todo_.begin());
+      playlistGroup_->addAction(action);
+      playlistMapper_->setMapping(action, path);
+      
+      ok = connect(action, SIGNAL(triggered()),
+                   playlistMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+    }
+    
+    if (!todo_.empty())
+    {
+      menuNowPlaying->addSeparator();
+    }
+    
+    QAction * action = new QAction(tr("Nothing"), this);
+    menuNowPlaying->addAction(action);
+    
+    action->setCheckable(true);
+    action->setChecked(todo_.empty());
+    playlistGroup_->addAction(action);
+    playlistMapper_->setMapping(action, QString());
+    
+    ok = connect(action, SIGNAL(triggered()),
+                 playlistMapper_, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    // begin playback:
     playbackNext();
   }
   
@@ -1081,6 +1144,39 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // MainWindow::playlistSelect
+  // 
+  void
+  MainWindow::playlistSelect(const QString & playNext)
+  {
+    std::cerr << "playlist selected: " << playNext.toUtf8().constData()
+              << std::endl;
+    todo_.splice(todo_.begin(), done_);
+    
+    while (!todo_.empty())
+    {
+      const QString & path = todo_.front();
+      if (path == playNext)
+      {
+        break;
+      }
+
+      done_.push_back(path);
+      todo_.pop_front();
+    }
+    
+    if (todo_.empty())
+    {
+      playbackFinished();
+      canvas_->clear();
+    }
+    else
+    {
+      playbackNext();
+    }
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::helpAbout
   // 
   void
@@ -1316,6 +1412,14 @@ namespace yae
     else
     {
       actionNext->setText(tr("Skip"));
+    }
+    
+    QString nowPlaying = todo_.empty() ? QString() : todo_.front();
+    QObject * found = playlistMapper_->mapping(nowPlaying);
+    QAction * action = qobject_cast<QAction *>(found);
+    if (action)
+    {
+      action->setChecked(true);
     }
   }
   

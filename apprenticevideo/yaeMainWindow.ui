@@ -34,10 +34,16 @@
     <property name="title">
      <string>&amp;Playback</string>
     </property>
+    <widget class="QMenu" name="menuNowPlaying">
+     <property name="title">
+      <string>Now Playing</string>
+     </property>
+    </widget>
     <addaction name="actionPlay"/>
     <addaction name="separator"/>
     <addaction name="actionNext"/>
     <addaction name="actionPrev"/>
+    <addaction name="menuNowPlaying"/>
     <addaction name="separator"/>
     <addaction name="actionShowTimeline"/>
     <addaction name="actionShrinkWrap"/>
@@ -319,6 +325,11 @@
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionNothing">
+   <property name="text">
+    <string>Nothing</string>
    </property>
   </action>
  </widget>
