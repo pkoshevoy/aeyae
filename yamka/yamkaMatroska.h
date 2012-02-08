@@ -985,13 +985,8 @@ namespace Yamka
     TPrevSize prevSize_;
     
     TypedefYamkaElt(BlockGroup, 0xA0, "BlockGroup") TBlockGroup;
-    std::deque<TBlockGroup> blockGroups_;
-    
     TypedefYamkaElt(VBinary, 0xA3, "SimpleBlock") TSimpleBlock;
-    std::deque<TSimpleBlock> simpleBlocks_;
-    
     TypedefYamkaElt(VBinary, 0xAF, "EncryptedBlock") TEncryptedBlock;
-    std::deque<TEncryptedBlock> encryptedBlocks_;
     
     // BlockGroups, SimpleBlocks, EncryptedBlocks in preserved order:
     MixedElements blocks_;

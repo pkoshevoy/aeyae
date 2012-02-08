@@ -3780,6 +3780,10 @@ namespace Yamka
   Cluster::Cluster()
   {
     timecode_.alwaysSave();
+    
+    blocks_.addType<TBlockGroup>();
+    blocks_.addType<TSimpleBlock>();
+    blocks_.addType<TEncryptedBlock>();
   }
   
   //----------------------------------------------------------------
@@ -3793,9 +3797,7 @@ namespace Yamka
       crawler.eval(silent_) ||
       crawler.eval(position_) ||
       crawler.eval(prevSize_) ||
-      eltsEval(blockGroups_, crawler) ||
-      eltsEval(simpleBlocks_, crawler) ||
-      eltsEval(encryptedBlocks_, crawler);
+      blocks_.eval(crawler);
   }
   
   //----------------------------------------------------------------
@@ -3809,9 +3811,7 @@ namespace Yamka
       !silent_.mustSave() &&
       !position_.mustSave() &&
       !prevSize_.mustSave() &&
-      blockGroups_.empty() &&
-      simpleBlocks_.empty() &&
-      encryptedBlocks_.empty();
+      !blocks_.mustSave();
     
     return allDefault;
   }
@@ -3827,9 +3827,7 @@ namespace Yamka
       silent_.calcSize() +
       position_.calcSize() +
       prevSize_.calcSize() +
-      eltsCalcSize(blockGroups_) +
-      eltsCalcSize(simpleBlocks_) +
-      eltsCalcSize(encryptedBlocks_);
+      blocks_.calcSize();
     
     return size;
   }
@@ -3846,10 +3844,7 @@ namespace Yamka
     *receipt += silent_.save(storage);
     *receipt += position_.save(storage);
     *receipt += prevSize_.save(storage);
-    
-    *receipt += eltsSave(blockGroups_, storage);
-    *receipt += eltsSave(simpleBlocks_, storage);
-    *receipt += eltsSave(encryptedBlocks_, storage);
+    *receipt += blocks_.save(storage);
     
     return receipt;
   }
@@ -3868,10 +3863,7 @@ namespace Yamka
     bytesToRead -= silent_.load(storage, bytesToRead, loader);
     bytesToRead -= position_.load(storage, bytesToRead, loader);
     bytesToRead -= prevSize_.load(storage, bytesToRead, loader);
-      
-    bytesToRead -= eltsLoad(blockGroups_, storage, bytesToRead, loader);
-    bytesToRead -= eltsLoad(simpleBlocks_, storage, bytesToRead, loader);
-    bytesToRead -= eltsLoad(encryptedBlocks_, storage, bytesToRead, loader);
+    bytesToRead -= blocks_.load(storage, bytesToRead, loader);
     
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;

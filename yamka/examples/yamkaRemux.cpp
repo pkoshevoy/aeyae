@@ -609,11 +609,9 @@ struct TRemuxer : public LoadWithProgress
   // keyframe flag, and stores the updated block header without
   // altering the (possibly) laced (or encrypted) block data:
   bool updateHeader(uint64 clusterTime, TBlockInfo & binfo);
-  
-  void push(uint64 clusterTime, TSilentTracks & silentElt);
-  void push(uint64 clusterTime, TSimpleBlock & sblockElt);
-  void push(uint64 clusterTime, TBlockGroup & bgroupElt);
-  void push(uint64 clusterTime, TEncryptedBlock & eblockElt);
+
+  // lace together BlockGroups, SimpleBlocks, EncryptedBlocks, SilentTracks:
+  void push(uint64 clusterTime, const IElement * elt);
   
   void mux(std::size_t minLaceSize = 50);
   void startNextCluster(TBlockInfo * binfo);
@@ -917,34 +915,16 @@ TRemuxer::remux(uint64 inPointInMsec,
     // use SilentTracks as a cluster delimiter:
     if (cluster.silent_.mustSave())
     {
-      push(clusterTime, cluster.silent_);
+      push(clusterTime, &cluster.silent_);
     }
     
     // iterate through simple blocks and push them into a lace:
-    std::deque<TSimpleBlock> & sblocks = cluster.simpleBlocks_;
-    for (std::deque<TSimpleBlock>::iterator i = sblocks.begin();
-         i != sblocks.end(); ++i)
+    const std::list<IElement *> & blocks = cluster.blocks_.elts();
+    for (std::list<IElement *>::const_iterator i = blocks.begin();
+         i != blocks.end(); ++i)
     {
-      TSimpleBlock & sblockElt = *i;
-      push(clusterTime, sblockElt);
-    }
-    
-    // iterate through block groups and push them into a lace:
-    std::deque<TBlockGroup> & bgroups = cluster.blockGroups_;
-    for (std::deque<TBlockGroup>::iterator i = bgroups.begin();
-         i != bgroups.end(); ++i)
-    {
-      TBlockGroup & bgroupElt = *i;
-      push(clusterTime, bgroupElt);
-    }
-    
-    // iterate through encrypted blocks and push them into a lace:
-    std::deque<TEncryptedBlock> & eblocks = cluster.encryptedBlocks_;
-    for (std::deque<TEncryptedBlock>::iterator i = eblocks.begin();
-         i != eblocks.end(); ++i)
-    {
-      TEncryptedBlock & eblockElt = *i;
-      push(clusterTime, eblockElt);
+      const IElement * elt = *i;
+      push(clusterTime, elt);
     }
   }
   
@@ -1216,70 +1196,49 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
 // TRemuxer::push
 // 
 void
-TRemuxer::push(uint64 clusterTime, TSilentTracks & silentElt)
+TRemuxer::push(uint64 clusterTime, const IElement * elt)
 {
   TBlockInfo * info = new TBlockInfo();
-  info->silentElt_ = silentElt;
-  info->pts_ = clusterTime;
-  lace_.push(info);
-}
 
-//----------------------------------------------------------------
-// TRemuxer::push
-// 
-void
-TRemuxer::push(uint64 clusterTime, TSimpleBlock & sblockElt)
-{
-  TBlockInfo * info = new TBlockInfo();
-  info->sblockElt_ = sblockElt;
+  uint64 eltId = elt->getId();
+  switch (eltId)
+  {
+    case TBlockGroup::kId:
+      info->bgroupElt_ = *((const TBlockGroup *)elt);
+      info->duration_ = info->bgroupElt_.payload_.duration_.payload_.get();
+      break;
+
+    case TSimpleBlock::kId:
+      info->sblockElt_ = *((const TSimpleBlock *)elt);
+      break;
+
+    case TEncryptedBlock::kId:
+      info->eblockElt_ = *((const TEncryptedBlock *)elt);
+      break;
+
+    case TSilentTracks::kId:
+      info->silentElt_ = *((const TSilentTracks *)elt);
+      info->pts_ = clusterTime;
+      break;
+      
+    default:
+      assert(false);
+      delete info;
+      return;
+  }
   
-  if (!isRelevant(clusterTime, *info))
+  if (eltId != TSilentTracks::kId && !isRelevant(clusterTime, *info))
   {
     delete info;
     return;
   }
-
-  lace_.push(info);
-  mux();
-}
-
-//----------------------------------------------------------------
-// TRemuxer::push
-// 
-void
-TRemuxer::push(uint64 clusterTime, TBlockGroup & bgroupElt)
-{
-  TBlockInfo * info = new TBlockInfo();
-  info->bgroupElt_ = bgroupElt;
   
-  if (!isRelevant(clusterTime, *info))
-  {
-    delete info;
-    return;
-  }
-
-  info->duration_ = bgroupElt.payload_.duration_.payload_.get();
   lace_.push(info);
-  mux();
-}
-
-//----------------------------------------------------------------
-// TRemuxer::push
-// 
-void
-TRemuxer::push(uint64 clusterTime, TEncryptedBlock & eblockElt)
-{
-  TBlockInfo * info = new TBlockInfo();
-  info->eblockElt_ = eblockElt;
   
-  if (!isRelevant(clusterTime, *info))
+  if (eltId != TSilentTracks::kId)
   {
-    delete info;
-    return;
+    mux();
   }
-
-  lace_.push(info);
-  mux();
 }
 
 //----------------------------------------------------------------
@@ -1326,18 +1285,18 @@ TRemuxer::mux(std::size_t minLaceSize)
     
     if (binfo->sblockElt_.mustSave())
     {
-      cluster.simpleBlocks_.push_back(binfo->sblockElt_);
-      binfo->sblockElt_ = cluster.simpleBlocks_.back();
+      cluster.blocks_.push_back(binfo->sblockElt_);
+      binfo->sblockElt_ = cluster.blocks_.back<TSimpleBlock>();
     }
     else if (binfo->bgroupElt_.mustSave())
     {
-      cluster.blockGroups_.push_back(binfo->bgroupElt_);
-      binfo->bgroupElt_ = cluster.blockGroups_.back();
+      cluster.blocks_.push_back(binfo->bgroupElt_);
+      binfo->bgroupElt_ = cluster.blocks_.back<TBlockGroup>();
     }
     else if (binfo->eblockElt_.mustSave())
     {
-      cluster.encryptedBlocks_.push_back(binfo->eblockElt_);
-      binfo->eblockElt_ = cluster.encryptedBlocks_.back();
+      cluster.blocks_.push_back(binfo->eblockElt_);
+      binfo->eblockElt_ = cluster.blocks_.back<TEncryptedBlock>();
     }
     
     binfo->save(dst_);

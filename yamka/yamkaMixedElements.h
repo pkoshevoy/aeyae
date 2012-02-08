@@ -31,26 +31,19 @@ namespace Yamka
     template <typename TElement>
     inline bool addType()
     {
-      TElementCreate create = &(TElement::create);
-      
-      TElement * elt = create();
-      if (!elt)
-      {
-        return false;
-      }
-      
-      uint64 id = elt->getId();
-      delete elt;
-      
+      uint64 id = TElement::kId;
       if (create_[id])
       {
         assert(false);
         return false;
       }
       
-      TElementCreateCopy createCopy = &(TElement::createCopy);
+      TElementCreate create = &(TElement::create);
       create_[id] = create;
+      
+      TElementCreateCopy createCopy = &(TElement::createCopy);
       createCopy_[id] = createCopy;
+      
       return true;
     }
 
@@ -70,12 +63,11 @@ namespace Yamka
     inline const std::list<IElement *> & elts() const
     { return elts_; }
     
-    // check whether there are any elements stored here:
-    inline bool empty() const
-    { return elts_.empty(); }
-    
     // remove and delete all elements stored here:
     void clear();
+    
+    // check whether there these elements must be stored:
+    bool mustSave() const;
     
     // perform crawler computation on the elements stored here:
     bool eval(IElementCrawler & crawler) const;
@@ -91,7 +83,18 @@ namespace Yamka
     uint64 load(FileStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader);
-   
+    
+    // attempt to add an element to this mix:
+    bool push_back(const IElement & elt);
+    
+    // accessor to the last element in this mix:
+    template <typename TElement>
+    inline const TElement & back() const
+    {
+      const TElement * elt = (const TElement *)(elts_.back());
+      return *elt;
+    }
+    
   protected:
     // a map from element id to factory method:
     std::map<uint64, TElementCreate> create_;

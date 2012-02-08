@@ -95,6 +95,25 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // MixedElements::mustSave
+  // 
+  bool
+  MixedElements::mustSave() const
+  {
+    for (std::list<IElement *>::const_iterator i = elts_.begin();
+         i != elts_.end(); ++i)
+    {
+      IElement & elt = *(*i);
+      if (elt.mustSave())
+      {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
   // MixedElements::eval
   // 
   bool
@@ -191,4 +210,28 @@ namespace Yamka
     return bytesRead;
   }
   
+  //----------------------------------------------------------------
+  // MixedElements::push_back
+  // 
+  bool
+  MixedElements::push_back(const IElement & elt)
+  {
+    uint64 eltId = elt.getId();
+    
+    typedef std::map<uint64, TElementCreateCopy>::const_iterator TFactoryIter;
+    TFactoryIter found = createCopy_.find(eltId);
+    if (found == createCopy_.end())
+    {
+      // element type is not allowed in this mix:
+      assert(false);
+      return false;
+    }
+    
+    // shortuct to the factory method:
+    TElementCreateCopy createCopy = found->second;
+    IElement * copy = createCopy(&elt);
+    elts_.push_back(copy);
+    
+    return true;
+  }
 }

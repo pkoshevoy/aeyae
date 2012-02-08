@@ -248,11 +248,11 @@ namespace Yamka
     { return elt_name_t::getName(); }
     
     // factory method for creating new element instances:
-    static TSelf * create()
+    static IElement * create()
     { return new TSelf(); }
     
     // factory method for creating copy element instances:
-    static TSelf * createCopy(const IElement * elt)
+    static IElement * createCopy(const IElement * elt)
     {
       if (elt->getId() == kId)
       {
