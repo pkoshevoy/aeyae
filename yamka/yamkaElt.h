@@ -209,6 +209,16 @@ namespace Yamka
     // when fixedSize_ == 0 IElement::save(...) is used (default)
     uint64 fixedSize_;
   };
+
+  //----------------------------------------------------------------
+  // TElementMake
+  // 
+  typedef IElement * (*TElementCreate)();
+  
+  //----------------------------------------------------------------
+  // TElementCopy
+  // 
+  typedef IElement * (*TElementCreateCopy)(const IElement *);
   
   //----------------------------------------------------------------
   // TElt
@@ -236,6 +246,23 @@ namespace Yamka
     // static accessor to descriptive name of this element:
     static const char * name()
     { return elt_name_t::getName(); }
+    
+    // factory method for creating new element instances:
+    static TSelf * create()
+    { return new TSelf(); }
+    
+    // factory method for creating copy element instances:
+    static TSelf * createCopy(const IElement * elt)
+    {
+      if (elt->getId() == kId)
+      {
+        const TSelf * original = (const TSelf *)elt;
+        return new TSelf(*original);
+      }
+      
+      assert(false);
+      return NULL;
+    }
     
     // virtual:
     uint64 getId() const

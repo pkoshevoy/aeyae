@@ -14,19 +14,20 @@ if (WIN32)
 endif (WIN32)
 
 add_library(yamka STATIC
+  yamka.h
+  yamkaBytes.h
   yamkaCrc32.h
   yamkaEBML.h
   yamkaElt.h
   yamkaFile.h
   yamkaFileStorage.h
-  yamka.h
   yamkaHodgePodge.h
   yamkaIStorage.h
   yamkaMatroska.h
+  yamkaMixedElements.h
   yamkaPayload.h
   yamkaSharedPtr.h
   yamkaStdInt.h
-  yamkaBytes.h
   yamkaBytes.cpp
   yamkaCrc32.cpp
   yamkaEBML.cpp
@@ -36,6 +37,7 @@ add_library(yamka STATIC
   yamkaHodgePodge.cpp
   yamkaIStorage.cpp
   yamkaMatroska.cpp
+  yamkaMixedElements.cpp
   yamkaPayload.cpp
   yamkaStdInt.cpp
   )

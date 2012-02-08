@@ -15,6 +15,7 @@
 #include <yamkaPayload.h>
 #include <yamkaEBML.h>
 #include <yamkaSharedPtr.h>
+#include <yamkaMixedElements.h>
 
 // system includes:
 #include <map>
@@ -991,6 +992,9 @@ namespace Yamka
     
     TypedefYamkaElt(VBinary, 0xAF, "EncryptedBlock") TEncryptedBlock;
     std::deque<TEncryptedBlock> encryptedBlocks_;
+    
+    // BlockGroups, SimpleBlocks, EncryptedBlocks in preserved order:
+    MixedElements blocks_;
   };
   
   //----------------------------------------------------------------
