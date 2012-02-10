@@ -430,7 +430,7 @@ struct TLace
     track.push(binfo);
     size_++;
 
-    uint64 dts = binfo->dts_;
+    int64 dts = binfo->dts_;
     for (TBlockInfo * i = track.tail_->prev_; i != NULL; i = i->prev_)
     {
       if (i->dts_ < dts)
