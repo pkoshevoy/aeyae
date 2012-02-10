@@ -81,7 +81,8 @@ struct Examiner : public IElementCrawler
   
   Examiner(Verbosity verbosity):
     verbosity_(verbosity),
-    indentation_(0)
+    indentation_(0),
+    clusterTime_(0)
   {}
   
   // virtual:
@@ -90,11 +91,14 @@ struct Examiner : public IElementCrawler
     IStorage::IReceiptPtr storageReceipt = elt.storageReceipt();
     IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
     
+    uint64 eltId = elt.getId();
+    IPayload & payload = elt.getPayload();
+    
     if (storageReceipt)
     {
       std::cout
         << indent(indentation_)
-        << std::setw(8) << uintEncode(elt.getId());
+        << std::setw(8) << uintEncode(eltId);
 
       if (verbosity_ == kShowFileOffsets)
       {
@@ -115,11 +119,16 @@ struct Examiner : public IElementCrawler
       }
       
       std::cout << std::endl;
+
+      if (eltId == Segment::TCluster::kId)
+      {
+        Cluster * cluster = dynamic_cast<Cluster *>(&payload);
+        clusterTime_ = cluster->timecode_.payload_.get();
+      }
     }
     
     Indent::More indentMore(indentation_);
     
-    IPayload & payload = elt.getPayload();
     if (payload.isComposite())
     {
       EbmlMaster * ebmlMaster = dynamic_cast<EbmlMaster *>(&payload);
@@ -198,11 +207,42 @@ struct Examiner : public IElementCrawler
       }
       else if (vBinary)
       {
-        std::cout << "variable size binary data";
-        uint64 binSize = vBinary->data_.numBytes();
-        if (binSize)
+        if (eltId == BlockGroup::TBlock::kId ||
+            eltId == Cluster::TSimpleBlock::kId ||
+            eltId == Cluster::TEncryptedBlock::kId)
         {
-          std::cout << ", size " << binSize;
+          SimpleBlock block;
+          block.importData(vBinary->data_);
+
+          short int offset = block.getRelativeTimecode();
+          std::cout << "track "
+                    << std::right << std::setfill(' ') << std::setw(3)
+                    << block.getTrackNumber()
+                    << ", abs time "
+                    << std::right << std::setfill(' ') << std::setw(10)
+                    << (clusterTime_ + offset);
+
+          if (block.isKeyframe())
+          {
+            std::cout << ", key";
+          }
+
+          if (block.isDiscardable())
+          {
+            std::cout << ", discardable";
+          }
+          
+          std::cout << ", " << block.getNumberOfFrames()
+                    << " frames";
+        }
+        else
+        {
+          std::cout << "variable size binary data";
+          uint64 binSize = vBinary->data_.numBytes();
+          if (binSize)
+          {
+            std::cout << ", size " << binSize;
+          }
         }
       }
       else if (vEltPos)
@@ -268,6 +308,7 @@ struct Examiner : public IElementCrawler
   
   Verbosity verbosity_;
   unsigned int indentation_;
+  uint64 clusterTime_;
 };
 
 
