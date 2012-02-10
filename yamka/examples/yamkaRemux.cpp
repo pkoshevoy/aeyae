@@ -301,6 +301,7 @@ struct TFifo
       assert(tail_);
       assert(size_);
       tail_->next_ = link;
+      link->prev_ = tail_;
       tail_ = link;
       size_++;
     }
@@ -315,11 +316,17 @@ struct TFifo
     
     TLink * link = head_;
     head_ = link->next_;
+    link->prev_ = NULL;
+    link->next_ = NULL;
     size_--;
     
     if (!head_)
     {
       tail_ = NULL;
+    }
+    else
+    {
+      head_->prev_ = NULL;
     }
     
     return link;
@@ -336,11 +343,13 @@ struct TFifo
 struct TBlockInfo
 {
   TBlockInfo():
+    dts_(0),
     pts_(0),
     duration_(0),
     trackNo_(0),
     keyframe_(false),
-    next_(NULL)
+    next_(NULL),
+    prev_(NULL)
   {}
   
   inline HodgePodge * getBlockData()
@@ -389,13 +398,15 @@ struct TBlockInfo
   SimpleBlock block_;
   IStorage::IReceiptPtr header_;
   IStorage::IReceiptPtr frames_;
-  
+
+  int64 dts_;
   uint64 pts_;
   uint64 duration_;
   uint64 trackNo_;
   bool keyframe_;
   
   TBlockInfo * next_;
+  TBlockInfo * prev_;
 };
 
 //----------------------------------------------------------------
@@ -418,6 +429,18 @@ struct TLace
     TBlockFifo & track = track_[(std::size_t)(binfo->trackNo_)];
     track.push(binfo);
     size_++;
+
+    uint64 dts = binfo->dts_;
+    for (TBlockInfo * i = track.tail_->prev_; i != NULL; i = i->prev_)
+    {
+      if (i->dts_ < dts)
+      {
+        break;
+      }
+      
+      i->dts_ = dts - 1;
+      dts = i->dts_;
+    }
   }
 
   TBlockInfo * pop()
@@ -484,7 +507,7 @@ struct TLace
     }
     
     TBlockFifo & track = track_[trackNo];
-    uint64 startTime = track.head_->pts_;
+    uint64 startTime = track.head_->dts_;
     return startTime;
   }
 
@@ -613,7 +636,7 @@ struct TRemuxer : public LoadWithProgress
   // lace together BlockGroups, SimpleBlocks, EncryptedBlocks, SilentTracks:
   void push(uint64 clusterTime, const IElement * elt);
   
-  void mux(std::size_t minLaceSize = 50);
+  void mux(std::size_t minLaceSize = 150);
   void startNextCluster(TBlockInfo * binfo);
   void finishCurrentCluster();
   void addCuePoint(TBlockInfo * binfo);
@@ -1109,6 +1132,7 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
+  binfo.dts_ = binfo.pts_;
   
   Track::MatroskaTrackType trackType =
     lace_.trackType_[(std::size_t)(binfo.trackNo_)];
@@ -1219,6 +1243,7 @@ TRemuxer::push(uint64 clusterTime, const IElement * elt)
     case TSilentTracks::kId:
       info->silentElt_ = *((const TSilentTracks *)elt);
       info->pts_ = clusterTime;
+      info->dts_ = clusterTime;
       break;
       
     default:
