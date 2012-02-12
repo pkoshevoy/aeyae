@@ -16,6 +16,7 @@
 
 // system includes:
 #include <iostream>
+#include <typeinfo>
 
 // namespace access:
 using namespace Yamka;
