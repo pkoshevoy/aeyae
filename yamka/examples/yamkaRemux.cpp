@@ -170,43 +170,6 @@ printCurrentTime(const char * msg)
 }
 
 //----------------------------------------------------------------
-// usage
-// 
-static void
-usage(char ** argv, const char * message = NULL)
-{
-  std::cerr << "NOTE: remuxing input files containing multiple segments "
-            << "with mismatched tracks will not work correctly"
-            << std::endl;
-  
-  std::cerr << "USAGE: " << argv[0]
-            << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
-            << "[[-t0|-k0]  hh mm ss msec] [-t1 hh mm ss msec]"
-            << std::endl;
-  
-  std::cerr << "EXAMPLE: " << argv[0]
-            << " -i input.mkv -o output.mkv +t 1 +t 2"
-            << " -k0 00 15 30 000 -t1 00 17 00 000"
-            << std::endl;
-
-  if (message != NULL)
-  {
-    std::cerr << "ERROR: " << message << std::endl;
-  }
-  
-  ::exit(1);
-}
-
-//----------------------------------------------------------------
-// usage
-// 
-inline static void
-usage(char ** argv, const std::string & message)
-{
-  usage(argv, message.c_str());
-}
-
-//----------------------------------------------------------------
 // getTrack
 // 
 static const Track *
@@ -399,7 +362,7 @@ struct TBlockInfo
   IStorage::IReceiptPtr header_;
   IStorage::IReceiptPtr frames_;
 
-  int64 dts_;
+  uint64 dts_;
   uint64 pts_;
   uint64 duration_;
   uint64 trackNo_;
@@ -430,16 +393,15 @@ struct TLace
     track.push(binfo);
     size_++;
 
-    int64 dts = binfo->dts_;
+    uint64 dts = binfo->dts_;
     for (TBlockInfo * i = track.tail_->prev_; i != NULL; i = i->prev_)
     {
-      if (i->dts_ < dts)
+      if (i->dts_ <= dts)
       {
         break;
       }
       
-      i->dts_ = dts - 1;
-      dts = i->dts_;
+      i->dts_ = dts;
     }
   }
 
@@ -514,6 +476,7 @@ struct TLace
   std::vector<Track::MatroskaTrackType> trackType_;
   std::vector<uint64> defaultDuration_;
   std::vector<TBlockFifo> track_;
+  std::vector<std::string> codecID_;
   uint64 timecodeScale_;
   uint64 cuesTrackNo_;
   std::size_t size_;
@@ -621,7 +584,7 @@ struct TRemuxer : public LoadWithProgress
            FileStorage & dst,
            FileStorage & tmp);
 
-  void remux(uint64 t0, uint64 t1, bool extractFromKeyframe);
+  void remux(uint64 t0, uint64 t1, bool extractFromKeyframe, bool fixKeyFlag);
   void flush();
 
   // Returns true if the given Block/SimpleBlock/EncryptedBlock
@@ -634,7 +597,7 @@ struct TRemuxer : public LoadWithProgress
   bool updateHeader(uint64 clusterTime, TBlockInfo & binfo);
 
   // lace together BlockGroups, SimpleBlocks, EncryptedBlocks, SilentTracks:
-  void push(uint64 clusterTime, const IElement * elt);
+  TBlockInfo * push(uint64 clusterTime, const IElement * elt);
   
   void mux(std::size_t minLaceSize = 150);
   void startNextCluster(TBlockInfo * binfo);
@@ -710,6 +673,7 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   // because track numbers are also base-1:
   lace_.trackType_.resize(numTracks + 1);
   lace_.defaultDuration_.resize(numTracks + 1);
+  lace_.codecID_.resize(numTracks + 1);
   lace_.track_.resize(numTracks + 1);
   
   lace_.trackType_[0] = Track::kTrackTypeUndefined;
@@ -723,6 +687,8 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
 
     uint64 defaultDuration = track.frameDuration_.payload_.get();
     lace_.defaultDuration_[i + 1] = defaultDuration;
+
+    lace_.codecID_[i + 1] = track.codecID_.payload_.get();
   }
   
   // determine which track is the "main" track for starting Clusters:
@@ -783,13 +749,120 @@ overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
   return payloadSizeReceipt->save(Bytes(v));
 }
 
+
+//----------------------------------------------------------------
+// TNal
+// 
+struct TNal
+{
+  enum TUnitType
+  {
+    kUnspecified0 = 0,
+    kCodedSliceNonIDR = 1,
+    kCodedSliceDataA = 2,
+    kCodedSliceDataB = 3,
+    kCodedSliceDataC = 4,
+    kCodedSliceIDR = 5,
+    kSEI = 6,
+    kSPS = 7,
+    kPPS = 8,
+    kAUD = 9,
+    kEndOfSequence = 10,
+    kEndOfStream = 11,
+    kFillerData = 12,
+    kFillerReserved13 = 13,
+    kFillerReserved14 = 14,
+    kFillerReserved15 = 15,
+    kFillerReserved16 = 16,
+    kFillerReserved17 = 17,
+    kFillerReserved18 = 18,
+    kFillerReserved19 = 19,
+    kFillerReserved20 = 20,
+    kFillerReserved21 = 21,
+    kFillerReserved22 = 22,
+    kFillerReserved23 = 23,
+    kUnspecified24 = 24,
+    kUnspecified25 = 25,
+    kUnspecified26 = 26,
+    kUnspecified27 = 27,
+    kUnspecified28 = 28,
+    kUnspecified29 = 29,
+    kUnspecified30 = 30,
+    kUnspecified31 = 31
+  };
+  
+  TNal(unsigned char head, uint64 offset, std::size_t size = 0):
+    offset_(offset),
+    size_(size)
+  {
+    forbidden_zero_bit_ = (head >> 7) & 0x01;
+    nal_ref_idc_        = (head >> 5) & 0x03;
+    nal_unit_type_      =  head       & 0x1F;
+  }
+  
+  inline TUnitType unitType() const
+  { return TUnitType(nal_unit_type_); }
+  
+  unsigned char forbidden_zero_bit_ : 1;
+  unsigned char nal_ref_idc_        : 2;
+  unsigned char nal_unit_type_      : 5;
+  
+  uint64 offset_;
+  std::size_t size_;
+};
+
+//----------------------------------------------------------------
+// TNalUnitType
+// 
+
+//----------------------------------------------------------------
+// isH264Keyframe
+//
+static bool
+isH264Keyframe(const HodgePodge * data)
+{
+  std::size_t dataSize = data ? data->numBytes() : 0;
+  if (dataSize < 5)
+  {
+    return false;
+  }
+
+  HodgePodgeConstIter begin(*data);
+  HodgePodgeConstIter iter(*data);
+  HodgePodgeConstIter end(*data, dataSize);
+  
+  while (iter < end)
+  {
+    // 4 bytes payload size, followed by the payload
+    unsigned int nalSize = ((iter[0] << 24) |
+                            (iter[1] << 16) |
+                            (iter[2] << 8) |
+                            iter[3]);
+    
+    TNal nal(iter[4], (iter - begin) + 4, nalSize);
+    TNal::TUnitType nalUnitType = nal.unitType();
+    
+    if (nalUnitType == TNal::kCodedSliceIDR)
+    {
+      return true;
+    }
+    
+    iter += (4 + nalSize);
+    assert(iter <= end);
+  }
+  
+  return false;
+}
+
+
 //----------------------------------------------------------------
 // TRemuxer::remux
 // 
 void
 TRemuxer::remux(uint64 inPointInMsec,
                 uint64 outPointInMsec,
-                bool extractFromKeyframe)
+                bool extractFromKeyframe,
+                bool fixKeyFlag)
 {
   const std::list<TCluster> & clusters = srcSeg_.payload_.clusters_;
   std::list<TCluster>::const_iterator clusterIter = clusters.begin();
@@ -946,8 +1019,23 @@ TRemuxer::remux(uint64 inPointInMsec,
     for (std::list<IElement *>::const_iterator i = blocks.begin();
          i != blocks.end(); ++i)
     {
-      const IElement * elt = *i;
-      push(clusterTime, elt);
+      TBlockInfo * binfo = push(clusterTime, *i);
+      if (!binfo)
+      {
+        continue;
+      }
+      
+      if (fixKeyFlag && !binfo->keyframe_)
+      {
+        if (lace_.codecID_[binfo->trackNo_] == "V_MPEG4/ISO/AVC")
+        {
+          HodgePodge blockFrames;
+          blockFrames.set(binfo->frames_);
+          binfo->keyframe_ = isH264Keyframe(&blockFrames);
+        }
+      }
+      
+      mux();
     }
   }
   
@@ -1219,7 +1307,7 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
 //----------------------------------------------------------------
 // TRemuxer::push
 // 
-void
+TBlockInfo *
 TRemuxer::push(uint64 clusterTime, const IElement * elt)
 {
   TBlockInfo * info = new TBlockInfo();
@@ -1249,21 +1337,17 @@ TRemuxer::push(uint64 clusterTime, const IElement * elt)
     default:
       assert(false);
       delete info;
-      return;
+      return NULL;
   }
   
   if (eltId != TSilentTracks::kId && !isRelevant(clusterTime, *info))
   {
     delete info;
-    return;
+    return NULL;
   }
   
   lace_.push(info);
-  
-  if (eltId != TSilentTracks::kId)
-  {
-    mux();
-  }
+  return info;
 }
 
 //----------------------------------------------------------------
@@ -1435,6 +1519,44 @@ TRemuxer::addCuePoint(TBlockInfo * binfo)
 }
 
 //----------------------------------------------------------------
+// usage
+// 
+static void
+usage(char ** argv, const char * message = NULL)
+{
+  std::cerr << "NOTE: remuxing input files containing multiple segments "
+            << "with mismatched tracks will not work correctly"
+            << std::endl;
+  
+  std::cerr << "USAGE: " << argv[0]
+            << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
+            << "[[-t0|-k0]  hh mm ss msec] [-t1 hh mm ss msec] "
+            << "[-fixKeyFlag]"
+            << std::endl;
+  
+  std::cerr << "EXAMPLE: " << argv[0]
+            << " -i input.mkv -o output.mkv +t 1 +t 2"
+            << " -k0 00 15 30 000 -t1 00 17 00 000"
+            << std::endl;
+
+  if (message != NULL)
+  {
+    std::cerr << "ERROR: " << message << std::endl;
+  }
+  
+  ::exit(1);
+}
+
+//----------------------------------------------------------------
+// usage
+// 
+inline static void
+usage(char ** argv, const std::string & message)
+{
+  usage(argv, message.c_str());
+}
+
+//----------------------------------------------------------------
 // main
 // 
 int
@@ -1457,6 +1579,10 @@ main(int argc, char ** argv)
   bool extractFromKeyframe = false;
   uint64 t0 = 0;
   uint64 t1 = 0;
+  
+  // yamkaRemux r166, r167 wiped out the SimpleBlock keyframe flag
+  // and created CuePoints for non-keyframes:
+  bool fixKeyFlag = false;
   
   for (int i = 1; i < argc; i++)
   {
@@ -1555,6 +1681,10 @@ main(int argc, char ** argv)
       uint64 ms = toScalar<uint64>(argv[i]);
       
       t1 = ms + 1000 * (ss + 60 * (mm + 60 * hh));
+    }
+    else if (strcmp(argv[i], "-fixKeyFlag") == 0)
+    {
+      fixKeyFlag = true;
     }
     else
     {
@@ -1807,7 +1937,7 @@ main(int argc, char ** argv)
 
     // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
     TRemuxer remuxer(trackInOut, trackOutIn, *i, segmentElt, src, dst, tmp);
-    remuxer.remux(t0, t1, extractFromKeyframe);
+    remuxer.remux(t0, t1, extractFromKeyframe, fixKeyFlag);
 
     printCurrentTime("finished segment remux");
     
