@@ -286,7 +286,7 @@ main(int argc, char ** argv)
   std::string installerName;
   {
     std::ostringstream os;
-    os << "apprenticevideo-revision-" << YAE_REVISION;
+    os << "apprenticevideo-r" << YAE_REVISION;
 #ifdef _WIN64
     os << "-win32-x64";
 #else

@@ -2225,7 +2225,8 @@ namespace yae
     
   public:
     int rewind(const AudioTrackPtr & audioTrack,
-               const VideoTrackPtr & videoTrack);
+               const VideoTrackPtr & videoTrack,
+               bool seekToTimeIn = true);
 
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
@@ -2562,7 +2563,13 @@ namespace yae
             err = rewind(audioTrack, videoTrack);
             continue;
           }
-
+          
+          if (!playbackInterval_)
+          {
+            err = rewind(audioTrack, videoTrack, false);
+            continue;
+          }
+          
           // done:
           if (audioTrack)
           {
@@ -2776,7 +2783,8 @@ namespace yae
   // 
   int
   Movie::rewind(const AudioTrackPtr & audioTrack,
-                const VideoTrackPtr & videoTrack)
+                const VideoTrackPtr & videoTrack,
+                bool seekToTimeIn)
   {
     // wait for the the frame queues to empty out:
     if (audioTrack)
@@ -2791,7 +2799,8 @@ namespace yae
     }
     
     boost::lock_guard<boost::mutex> lock(mutex_);
-    return seekTo(timeIn_);
+    double seekTime = seekToTimeIn ? timeIn_ : 0.0;
+    return seekTo(seekTime);
   }
   
   //----------------------------------------------------------------

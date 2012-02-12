@@ -1237,7 +1237,11 @@ namespace yae
       return;
     }
     
+    reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalStart(seconds);
+    
+    SignalBlocker blockSignals(actionLoop);
+    actionLoop->setChecked(true);
   }
   
   //----------------------------------------------------------------
@@ -1251,7 +1255,11 @@ namespace yae
       return;
     }
     
+    reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalEnd(seconds);
+    
+    SignalBlocker blockSignals(actionLoop);
+    actionLoop->setChecked(true);
   }
   
   //----------------------------------------------------------------
