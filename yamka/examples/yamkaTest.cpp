@@ -20,6 +20,25 @@
 // namespace access:
 using namespace Yamka;
 
+//----------------------------------------------------------------
+// sanity_check
+// 
+template <typename TPayload>
+bool
+sanity_check()
+{
+  TPayload p;
+  bool ok = p.isDefault();
+  if (!ok)
+  {
+    std::cerr << typeid(TPayload).name()
+              << " default constructor did not create a default payload"
+              << std::endl;
+    assert(false);
+  }
+  
+  return ok;
+}
 
 //----------------------------------------------------------------
 // main
@@ -30,6 +49,47 @@ main(int argc, char ** argv)
 #ifdef _WIN32
   get_main_args_utf8(argc, argv);
 #endif
+  
+  sanity_check<ChapTranslate>();
+  sanity_check<SegInfo>();
+  sanity_check<TrackTranslate>();
+  sanity_check<Video>();
+  sanity_check<Audio>();
+  sanity_check<ContentCompr>();
+  sanity_check<ContentEncrypt>();
+  sanity_check<ContentEnc>();
+  sanity_check<ContentEncodings>();
+  sanity_check<Track>();
+  sanity_check<TrackPlane>();
+  sanity_check<TrackCombinePlanes>();
+  sanity_check<TrackJoinBlocks>();
+  sanity_check<TrackOperation>();
+  sanity_check<Tracks>();
+  sanity_check<CueRef>();
+  sanity_check<CueTrkPos>();
+  sanity_check<CuePoint>();
+  sanity_check<Cues>();
+  sanity_check<SeekEntry>();
+  sanity_check<SeekHead>();
+  sanity_check<AttdFile>();
+  sanity_check<Attachments>();
+  sanity_check<ChapTrk>();
+  sanity_check<ChapDisp>();
+  sanity_check<ChapProcCmd>();
+  sanity_check<ChapProc>();
+  sanity_check<ChapAtom>();
+  sanity_check<Edition>();
+  sanity_check<Chapters>();
+  sanity_check<TagTargets>();
+  sanity_check<SimpleTag>();
+  sanity_check<Tag>();
+  sanity_check<Tags>();
+  sanity_check<SilentTracks>();
+  sanity_check<BlockMore>();
+  sanity_check<BlockAdditions>();
+  sanity_check<BlockGroup>();
+  sanity_check<Cluster>();
+  sanity_check<Segment>();
   
   uint64 vsizeSize = 0;
   std::cout << "0x" << uintEncode(0x1A45DFA3) << std::endl

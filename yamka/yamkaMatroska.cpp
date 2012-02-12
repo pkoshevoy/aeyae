@@ -148,11 +148,11 @@ namespace Yamka
       !nextFilename_.mustSave() &&
       !familyUID_.mustSave() &&
       !chapTranslate_.mustSave() &&
-      !timecodeScale_.mustSave() &&
-      !duration_.mustSave() &&
-      !date_.mustSave() &&
+      // !timecodeScale_.mustSave() &&
+      // !duration_.mustSave() &&
+      // !date_.mustSave() &&
       !title_.mustSave() &&
-      !muxingApp_.mustSave() &&
+      // !muxingApp_.mustSave() &&
       !writingApp_.mustSave();
     
     return allDefault;
@@ -581,7 +581,7 @@ namespace Yamka
   ContentCompr::isDefault() const
   {
     bool allDefault =
-      !algo_.mustSave() &&
+      // !algo_.mustSave() &&
       !settings_.mustSave();
     
     return allDefault;
@@ -1528,7 +1528,7 @@ namespace Yamka
   CueTrkPos::isDefault() const
   {
     bool allDefault =
-      !track_.mustSave() &&
+      // !track_.mustSave() &&
       !cluster_.mustSave() &&
       !block_.mustSave() &&
       !codecState_.mustSave() &&
@@ -1617,8 +1617,8 @@ namespace Yamka
   CuePoint::isDefault() const
   {
     bool allDefault =
-      trkPosns_.empty() &&
-      !time_.mustSave();
+      // !time_.mustSave() &&
+      trkPosns_.empty();
     
     return allDefault;
   }
@@ -2364,10 +2364,10 @@ namespace Yamka
   {
     bool allDefault =
       !UID_.mustSave() &&
-      !timeStart_.mustSave() &&
+      // !timeStart_.mustSave() &&
       !timeEnd_.mustSave() &&
-      !hidden_.mustSave() &&
-      !enabled_.mustSave() &&
+      // !hidden_.mustSave() &&
+      // !enabled_.mustSave() &&
       !segUID_.mustSave() &&
       !segEditionUID_.mustSave() &&
       !physEquiv_.mustSave() &&
@@ -2487,7 +2487,7 @@ namespace Yamka
     bool allDefault =
       !UID_.mustSave() &&
       !flagHidden_.mustSave() &&
-      !flagDefault_.mustSave() &&
+      // !flagDefault_.mustSave() &&
       !flagOrdered_.mustSave() &&
       chapAtoms_.empty();
     
@@ -3810,7 +3810,7 @@ namespace Yamka
   Cluster::isDefault() const
   {
     bool allDefault =
-      !timecode_.mustSave() &&
+      // !timecode_.mustSave() &&
       !silent_.mustSave() &&
       !position_.mustSave() &&
       !prevSize_.mustSave() &&
