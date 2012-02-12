@@ -91,7 +91,57 @@ namespace Yamka
     TByte operator [] (int64 offset) const;
     TByte operator * () const;
     
-    IStorage::IReceiptPtr receipt(uint64 position, uint64 numBytes) const; 
+    IStorage::IReceiptPtr receipt(uint64 position, uint64 numBytes) const;
+
+    // ++i, prefix increment operator:
+    inline HodgePodgeConstIter & operator++ ()
+    { return setpos(pos_ + 1); }
+    
+    // --i, prefix decrement operator:
+    inline HodgePodgeConstIter & operator-- ()
+    { return setpos(pos_ - 1); }
+    
+    inline HodgePodgeConstIter & operator += (int64 offset)
+    { return setpos(pos_ + offset); }
+    
+    inline HodgePodgeConstIter & operator -= (int64 offset)
+    { return setpos(pos_ - offset); }
+    
+    inline HodgePodgeConstIter operator + (int64 offset)
+    { return HodgePodgeConstIter(hodgePodge_, pos_ + offset); }
+    
+    inline HodgePodgeConstIter operator - (int64 offset)
+    { return HodgePodgeConstIter(hodgePodge_, pos_ - offset); }
+    
+    inline bool operator < (const HodgePodgeConstIter & iter) const
+    { return &hodgePodge_ == &iter.hodgePodge_ && pos_ < iter.pos_; }
+    
+    inline bool operator == (const HodgePodgeConstIter & iter) const
+    { return &hodgePodge_ == &iter.hodgePodge_ && pos_ == iter.pos_; }
+    
+    inline bool operator <= (const HodgePodgeConstIter & iter) const
+    { return &hodgePodge_ == &iter.hodgePodge_ && pos_ <= iter.pos_; }
+    
+    inline bool operator >= (const HodgePodgeConstIter & iter) const
+    { return &hodgePodge_ == &iter.hodgePodge_ && pos_ >= iter.pos_; }
+    
+    inline int64 operator - (const HodgePodgeConstIter & iter) const
+    { return pos_ - iter.pos_; }
+    
+    template <typename TBytes>
+    int memcmp(const TBytes & bytes, std::size_t numBytes)
+    {
+      for (std::size_t i = 0; i < numBytes; i++)
+      {
+        unsigned char a = this->operator[](i);
+        unsigned char b = bytes[i];
+        if (a == b) continue;
+        
+        return (a < b) ? -1 : 1;
+      }
+      
+      return 0;
+    }
     
   protected:
     bool updateReceipt(uint64 position) const;

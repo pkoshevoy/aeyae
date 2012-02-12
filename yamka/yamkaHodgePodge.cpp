@@ -313,7 +313,7 @@ namespace Yamka
       cache_.resize(kCacheSize);
       
       IStorage::IReceiptPtr chunk =
-        receipt_->receipt(receiptStart_ - cacheStart_, chunkSize);
+        receipt_->receipt(receiptStart_ + cacheStart_, chunkSize);
       
       return chunk->load(&cache_[0]);
     }
