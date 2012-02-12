@@ -8,6 +8,7 @@
 
 // yamka includes:
 #include <yamkaMatroska.h>
+#include <yamkaVersion.h>
 
 // system includes:
 #include <string.h>
@@ -101,7 +102,9 @@ namespace Yamka
   // 
   SegInfo::SegInfo()
   {
-    static const char * yamkaURL = "http://sourceforge.net/projects/yamka";
+    static const char * yamkaURL =
+      "http://sourceforge.net/projects/yamka rev." YAMKA_REVISION;
+    
     timecodeScale_.alwaysSave().payload_.setDefault(1000000);
     duration_.alwaysSave().payload_.setDefault(0.0);
     muxingApp_.alwaysSave().payload_.setDefault(yamkaURL);

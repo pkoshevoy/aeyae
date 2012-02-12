@@ -1,7 +1,10 @@
 project(yamka)
 
 cmake_minimum_required(VERSION 2.8.0)
-include_directories(AFTER .)
+include_directories(AFTER 
+  .
+  ${PROJECT_BINARY_DIR}
+  )
 
 find_package(Boost REQUIRED)
 if (Boost_INCLUDE_DIR)
@@ -12,6 +15,23 @@ if (WIN32)
   add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-DNOMINMAX)
 endif (WIN32)
+
+execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
+  "${PROJECT_BINARY_DIR}/yamkaVersion.h")
+set (YAMKA_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yamkaVersion.h")
+
+add_custom_target("update revision" ALL
+  DEPENDS
+  "${PROJECT_BINARY_DIR}/yamkaVersion.h.tmp"
+)
+
+add_custom_command(OUTPUT
+  "${PROJECT_BINARY_DIR}/yamkaVersion.h.tmp"
+  COMMAND "${CMAKE_COMMAND}"
+  -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+  -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
+  -DPROGNAME="${PROGNAME}"
+  -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
 add_library(yamka STATIC
   yamka.h
@@ -40,7 +60,10 @@ add_library(yamka STATIC
   yamkaMixedElements.cpp
   yamkaPayload.cpp
   yamkaStdInt.cpp
+  ${YAMKA_VERSIONED_FILES} 
   )
+
+add_dependencies(yamka "update revision")
 
 add_executable(yamkaTest 
   examples/yamkaTest.cpp

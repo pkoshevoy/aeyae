@@ -13,6 +13,7 @@
 #include <yamkaFileStorage.h>
 #include <yamkaEBML.h>
 #include <yamkaMatroska.h>
+#include <yamkaVersion.h>
 
 // system includes:
 #include <limits>
@@ -1867,7 +1868,7 @@ main(int argc, char ** argv)
     
     segInfo = segInfoIn;
     segInfo.muxingApp_.payload_.set(segInfo.muxingApp_.payload_.getDefault());
-    segInfo.writingApp_.payload_.set("yamkaRemux");
+    segInfo.writingApp_.payload_.set("yamkaRemux rev." YAMKA_REVISION);
 
     // segment timecode scale, such that
     // timeInNanosec := timecodeScale * (clusterTime + blockTime):
