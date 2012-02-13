@@ -283,7 +283,11 @@ namespace yae
         break;
       }
       
-      if (outAtts.channelLayout_ > kAudioStereo)
+      if (outAtts.sampleRate_ != devInfo->defaultSampleRate)
+      {
+        outAtts.sampleRate_ = devInfo->defaultSampleRate;
+      }
+      else if (outAtts.channelLayout_ > kAudioStereo)
       {
         outAtts.channelLayout_ = kAudioStereo;
       }

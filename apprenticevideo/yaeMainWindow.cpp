@@ -183,6 +183,7 @@ namespace yae
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
     shortcutShowTimeline_ = new QShortcut(this);
+    shortcutPlay_ = new QShortcut(this);
     shortcutNext_ = new QShortcut(this);
     shortcutPrev_ = new QShortcut(this);
     shortcutLoop_ = new QShortcut(this);
@@ -190,6 +191,7 @@ namespace yae
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
     shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
+    shortcutPlay_->setContext(Qt::ApplicationShortcut);
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
@@ -272,11 +274,15 @@ namespace yae
     ok = connect(actionCropFrame2_40, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame2_40()));
     YAE_ASSERT(ok);
-
+    
     ok = connect(actionPlay, SIGNAL(triggered()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
-
+    
+    ok = connect(shortcutPlay_, SIGNAL(activated()),
+                 this, SLOT(togglePlayback()));
+    YAE_ASSERT(ok);
+    
     ok = connect(actionNext, SIGNAL(triggered()),
                  this, SLOT(playbackFinished()));
     YAE_ASSERT(ok);
@@ -1032,6 +1038,7 @@ namespace yae
     swapShortcuts(shortcutExit_, actionExit);
     swapShortcuts(shortcutFullScreen_, actionFullScreen);
     swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+    swapShortcuts(shortcutPlay_, actionPlay);
     swapShortcuts(shortcutNext_, actionNext);
     swapShortcuts(shortcutPrev_, actionPrev);
     swapShortcuts(shortcutLoop_, actionLoop);
@@ -1056,6 +1063,7 @@ namespace yae
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
       swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+      swapShortcuts(shortcutPlay_, actionPlay);
       swapShortcuts(shortcutNext_, actionNext);
       swapShortcuts(shortcutPrev_, actionPrev);
       swapShortcuts(shortcutLoop_, actionLoop);
@@ -1683,11 +1691,7 @@ namespace yae
   MainWindow::keyPressEvent(QKeyEvent * event)
   {
     int key = event->key();
-    if (key == Qt::Key_Space)
-    {
-      togglePlayback();
-    }
-    else if (key == Qt::Key_Escape)
+    if (key == Qt::Key_Escape)
     {
       exitFullScreen();
     }
@@ -1702,6 +1706,20 @@ namespace yae
     else
     {
       event->ignore();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::mousePressEvent
+  // 
+  void
+  MainWindow::mousePressEvent(QMouseEvent * e)
+  {
+    if (e->button() == Qt::RightButton)
+    {
+      QPoint localPt = e->pos();
+      QPoint globalPt = QWidget::mapToGlobal(localPt);
+      menuPlayback->popup(globalPt);
     }
   }
   

@@ -133,6 +133,7 @@ namespace yae
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
     void keyPressEvent(QKeyEvent * e);
+    void mousePressEvent(QMouseEvent * e);
     
     // helpers:
     void fixupNextPrev();
@@ -157,6 +158,7 @@ namespace yae
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
     QShortcut * shortcutShowTimeline_;
+    QShortcut * shortcutPlay_;
     QShortcut * shortcutNext_;
     QShortcut * shortcutPrev_;
     QShortcut * shortcutLoop_;
