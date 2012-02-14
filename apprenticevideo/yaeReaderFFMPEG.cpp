@@ -1496,6 +1496,9 @@ namespace yae
     void threadLoop();
     bool threadStop();
     
+    // reset remixer/resampler if native traits change during decoding:
+    void noteNativeTraitsChanged();
+    
     // audio traits, not overridden:
     bool getTraits(AudioTraits & traits) const;
     
@@ -1623,60 +1626,18 @@ namespace yae
   bool
   AudioTrack::decoderStartup()
   {
-    getTraits(native_);
     output_ = override_;
 
-    nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
     outputChannels_ = getNumberOfChannels(output_.channelLayout_);
-    
-    nativeBytesPerSample_ =
-      nativeChannels_ * getBitsPerSample(native_.sampleFormat_) / 8;
 
     outputBytesPerSample_ =
       outputChannels_ * getBitsPerSample(output_.sampleFormat_) / 8;
 
     // declare a 16-byte aligned buffer for decoded audio samples:
-    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2,
-                         1, 16);
+    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1, 16);
     
-    remixBuffer_ = TSamplePlane();
-    if (outputChannels_ != nativeChannels_)
-    {
-      // lookup a remix matrix:
-      getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);
-      remixBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
-                                      double(outputChannels_) /
-                                      double(nativeChannels_) + 0.5),
-                          1, 16);
-    }
-
-    // we implement our own remixing because ffmpeg supports
-    // a very limited subset of possible channel configurations:
-    resampleBuffer_ = TSamplePlane();
-    if (output_.sampleRate_ != native_.sampleRate_)
-    {
-      resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
-                                         double(outputBytesPerSample_) /
-                                         double(nativeBytesPerSample_) + 0.5),
-                             1, 16);
-    }
-    
-    if (native_.sampleFormat_ != output_.sampleFormat_ ||
-        native_.sampleRate_ != output_.sampleRate_)
-    {
-      enum SampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
-      enum SampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
-      resampleCtx_ = av_audio_resample_init(outputChannels_,
-                                            outputChannels_,
-                                            output_.sampleRate_,
-                                            native_.sampleRate_,
-                                            outputFormat,
-                                            nativeFormat,
-                                            16, // taps
-                                            10, // log2 phase count
-                                            0, // linear
-                                            0.8); // cutoff frequency
-    }
+    getTraits(native_);
+    noteNativeTraitsChanged();
     
     startTime_ = stream_->start_time;
     if (startTime_ == AV_NOPTS_VALUE)
@@ -1753,6 +1714,16 @@ namespace yae
         if (!bufferSize)
         {
           continue;
+        }
+        
+        if (nativeChannels_ != codecContext->channels ||
+            native_.sampleRate_ != codecContext->sample_rate)
+        {
+          // detected a change in the number of audio channels,
+          // or detected a change in audio sample rate,
+          // prepare to remix or resample accordingly:
+          getTraits(native_);
+          noteNativeTraitsChanged();
         }
         
         const int srcSamples = bufferSize / nativeBytesPerSample_;
@@ -1987,6 +1958,64 @@ namespace yae
     return Track::threadStop();
   }
   
+  //----------------------------------------------------------------
+  // AudioTrack::noteNativeTraitsChanged
+  // 
+  void
+  AudioTrack::noteNativeTraitsChanged()
+  {
+    if (resampleCtx_)
+    {
+      // FIXME: flush the resampler:
+      audio_resample_close(resampleCtx_);
+      resampleCtx_ = NULL;
+    }
+    
+    remixBuffer_ = TSamplePlane();
+    resampleBuffer_ = TSamplePlane();
+    
+    unsigned int bitsPerSample = getBitsPerSample(native_.sampleFormat_);
+    nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
+    nativeBytesPerSample_ = (nativeChannels_ * bitsPerSample / 8);
+    
+    if (outputChannels_ != nativeChannels_)
+    {
+      // lookup a remix matrix:
+      getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);
+      remixBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
+                                      double(outputChannels_) /
+                                      double(nativeChannels_) + 0.5),
+                          1, 16);
+    }
+
+    // we implement our own remixing because ffmpeg supports
+    // a very limited subset of possible channel configurations:
+    if (output_.sampleRate_ != native_.sampleRate_)
+    {
+      resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
+                                         double(outputBytesPerSample_) /
+                                         double(nativeBytesPerSample_) + 0.5),
+                             1, 16);
+    }
+    
+    if (native_.sampleFormat_ != output_.sampleFormat_ ||
+        native_.sampleRate_ != output_.sampleRate_)
+    {
+      enum SampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
+      enum SampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
+      resampleCtx_ = av_audio_resample_init(outputChannels_,
+                                            outputChannels_,
+                                            output_.sampleRate_,
+                                            native_.sampleRate_,
+                                            outputFormat,
+                                            nativeFormat,
+                                            16, // taps
+                                            10, // log2 phase count
+                                            0, // linear
+                                            0.8); // cutoff frequency
+    }
+  }
+
   //----------------------------------------------------------------
   // AudioTrack::getTraits
   // 
