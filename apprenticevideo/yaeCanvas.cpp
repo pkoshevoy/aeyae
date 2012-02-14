@@ -560,12 +560,14 @@ namespace yae
               NULL);
     }
     
-    inline double imageWidth() const
+    bool imageWidthHeight(double & w, double & h) const
     {
       if (frame_)
       {
-        double w = double(frame_->traits_.visibleWidth_);
-        
+        w = double(frame_->traits_.visibleWidth_);
+        h = double(frame_->traits_.visibleHeight_);
+
+#if 1
         if (dar_ != 0.0)
         {
           w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
@@ -574,30 +576,41 @@ namespace yae
         {
           w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
         }
+#else
+        if (dar_ != 0.0)
+        {
+          double wh = w / h;
+          
+          if (dar_ > wh)
+          {
+            w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
+          }
+          else if (dar_ < wh)
+          {
+            h = floor(0.5 + frame_->traits_.visibleWidth_ / dar_);
+          }
+        }
+        else if (frame_->traits_.pixelAspectRatio_ > 1.0)
+        {
+          w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
+        }
+        else if (frame_->traits_.pixelAspectRatio_ < 1.0)
+        {
+          h = floor(0.5 + h / frame_->traits_.pixelAspectRatio_);
+        }
+#endif
 
-        return w;
+        return true;
       }
-      
-      return 0.0;
-    }
 
-    inline double imageHeight() const
-    {
-      return (frame_ ? double(frame_->traits_.visibleHeight_) : 0.0);
+      return false;
     }
     
     inline void overrideDisplayAspectRatio(double dar)
     {
       dar_ = dar;
     }
-
-    inline double displayAspectRatio() const
-    {
-      double w = imageWidth();
-      double h = imageHeight();
-      return (h != 0.0) ? w / h : 0.0;
-    }
-
+    
     inline void cropFrame(double darCropped)
     {
       darCropped_ = darCropped;
@@ -724,8 +737,8 @@ namespace yae
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
       
       glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    frame->sampleBuffer_->rowBytes(0) /
-                    (ptts->stride_[0] / 8));
+                    (GLint)(frame->sampleBuffer_->rowBytes(0) /
+                            (ptts->stride_[0] / 8)));
 
       // order of bits in a byte only matters for bitmaps:
       // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
@@ -774,6 +787,10 @@ namespace yae
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glColor3f(1.f, 1.f, 1.f);
     
+    double w = 0.0;
+    double h = 0.0;
+    imageWidthHeight(w, h);
+    
     glBegin(GL_QUADS);
     {
       glTexCoord2i(vtts.offsetLeft_,
@@ -782,15 +799,15 @@ namespace yae
       
       glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
                    vtts.offsetTop_);
-      glVertex2i(int(imageWidth()), 0);
+      glVertex2i(int(w), 0);
       
       glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
                    vtts.offsetTop_ + vtts.visibleHeight_);
-      glVertex2i(int(imageWidth()), vtts.visibleHeight_);
+      glVertex2i(int(w), int(h));
       
       glTexCoord2i(vtts.offsetLeft_,
                    vtts.offsetTop_ + vtts.visibleHeight_);
-      glVertex2i(0, vtts.visibleHeight_);
+      glVertex2i(0, int(h));
     }
     glEnd();
     glDisable(GL_TEXTURE_RECTANGLE_EXT);
@@ -870,7 +887,7 @@ namespace yae
     
     if (!texId_.empty())
     {
-      glDeleteTextures(texId_.size(), &(texId_.front()));
+      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
     }
     
     texId_.clear();
@@ -1023,7 +1040,7 @@ namespace yae
     {
       if (!texId_.empty())
       {
-        glDeleteTextures(texId_.size(), &(texId_.front()));
+        glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
         texId_.clear();
         textureData_.clear();
       }
@@ -1045,7 +1062,7 @@ namespace yae
       tiles_.resize(rows * cols);
 
       texId_.resize(rows * cols);
-      glGenTextures(texId_.size(), &(texId_.front()));
+      glGenTextures((GLsizei)(texId_.size()), &(texId_.front()));
       
       for (std::size_t j = 0; j < rows; j++)
       {
@@ -1238,13 +1255,14 @@ namespace yae
     }
     
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-    double par = frame_->traits_.pixelAspectRatio_;
-    if (dar_ != 0.0)
-    {
-      double w = dar_ * double(frame_->traits_.visibleHeight_);
-      par = w / double(frame_->traits_.visibleWidth_);
-    }
-    glScaled(par, 1.0, 1.0);
+    
+    double iw = 0.0;
+    double ih = 0.0;
+    imageWidthHeight(iw, ih);
+    
+    double sx = iw / double(frame_->traits_.visibleWidth_);
+    double sy = ih / double(frame_->traits_.visibleHeight_);
+    glScaled(sx, sy, 1.0);
     
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1338,7 +1356,7 @@ namespace yae
     delete private_;
     private_ = NULL;
     
-    if (true &&
+    if (false &&
         (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
          glewIsExtensionSupported("GL_ARB_texture_rectangle")))
     {
@@ -1551,8 +1569,9 @@ namespace yae
     glViewport(GLint(x + 0.5), GLint(y + 0.5),
                GLsizei(w + 0.5), GLsizei(h + 0.5));
     
-    double uncroppedWidth = private_->imageWidth();
-    double uncroppedHeight = private_->imageHeight();
+    double uncroppedWidth = 0.0;
+    double uncroppedHeight = 0.0;
+    private_->imageWidthHeight(uncroppedWidth, uncroppedHeight);
     
     double left = (uncroppedWidth - croppedWidth) * 0.5;
     double right = left + croppedWidth;
@@ -1607,14 +1626,14 @@ namespace yae
   double
   Canvas::imageWidth() const
   {
-    double w = private_->imageWidth();
-    double dar = private_->displayAspectRatio();
+    double w = 0.0;
+    double h = 0.0;
+    double dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
     double darCropped = private_->displayAspectRatioCropped();
     
     if (dar != 0.0 && darCropped != 0.0 && dar > darCropped)
     {
       // crop left-right pillars:
-      double h = private_->imageHeight();
       w = h * darCropped;
     }
     
@@ -1627,14 +1646,14 @@ namespace yae
   double
   Canvas::imageHeight() const
   {
-    double h = private_->imageHeight();
-    double dar = private_->displayAspectRatio();
+    double w = 0.0;
+    double h = 0.0;
+    double dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
     double darCropped = private_->displayAspectRatioCropped();
     
     if (dar != 0.0 && darCropped != 0.0 && dar < darCropped)
     {
       // crop top-bottom bars:
-      double w = private_->imageWidth();
       h = w / darCropped;
     }
     

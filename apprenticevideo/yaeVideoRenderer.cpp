@@ -134,7 +134,7 @@ namespace yae
 
         if (df > 0.067)
         {
-#if 0
+#ifndef NDEBUG
           std::cerr << "FRAME IS VALID FOR " << df << " sec\n"
                     << "sleep: " << secondsToSleep << " sec"
                     << "\tf0: " << f0
@@ -154,7 +154,7 @@ namespace yae
           lateFramesErrorSum / lateFrames > 0.067 &&
           !playbackLoopedAround)
       {
-#if 0
+#ifndef NDEBUG
         std::cerr << "video is late " << -df << " sec, "
                   << "\tf0: " << f0
                   << "\tf1: " << f1

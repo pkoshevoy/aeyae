@@ -1035,7 +1035,7 @@ namespace yae
       {
         t = packetTimes_.back();
         packetTimes_.pop_back();
-#if 0
+#if 0 // ndef NDEBUG
         if (frameTime && frameTime->pts_ != t.pts_)
         {
           std::cerr << "\ntimestamp mismatch: " << std::endl
@@ -1123,7 +1123,7 @@ namespace yae
       YAE_ASSERT(gotPTS);
       if (gotPTS)
       {
-#if 0
+#if 0 // ndef NDEBUG
         if (hasPrevPTS_)
         {
           double ta = prevPTS_.toSeconds();
@@ -1246,7 +1246,7 @@ namespace yae
           rvf.time_.time_++;
         }
 
-#if 0
+#ifndef NDEBUG
         std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
                   << std::endl;
 #endif
@@ -1838,7 +1838,7 @@ namespace yae
       YAE_ASSERT(gotPTS);
       if (gotPTS)
       {
-#if 0
+#if 0 // ndef NDEBUG
         if (hasPrevPTS_)
         {
           double ta = prevPTS_.toSeconds();
