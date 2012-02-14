@@ -369,7 +369,7 @@ namespace yae
     if (err < 0)
     {
       // unsupported codec:
-      close();
+      codec_ = NULL;
       return false;
     }
     
