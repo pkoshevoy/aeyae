@@ -89,11 +89,14 @@ namespace Yamka
     
     // accessor to the last element in this mix:
     template <typename TElement>
-    inline const TElement & back() const
+    inline TElement & back() const
     {
-      const TElement * elt = (const TElement *)(elts_.back());
+      TElement * elt = (TElement *)(elts_.back());
       return *elt;
     }
+    
+    // accessor to the counter of elements stored here:
+    std::size_t getCount() const;
     
   protected:
     // a map from element id to factory method:
@@ -102,6 +105,7 @@ namespace Yamka
     
     // an ordered list of elements:
     std::list<IElement *> elts_;
+    std::size_t count_;
   };
   
 }

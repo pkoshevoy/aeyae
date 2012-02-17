@@ -31,7 +31,8 @@ namespace Yamka
   //----------------------------------------------------------------
   // MixedElements::MixedElements
   // 
-  MixedElements::MixedElements()
+  MixedElements::MixedElements():
+    count_(0)
   {}
   
   //----------------------------------------------------------------
@@ -74,6 +75,7 @@ namespace Yamka
       else
       {
         elts_.push_back(copy);
+        count_++;
       }
     }
     
@@ -92,6 +94,8 @@ namespace Yamka
       delete elt;
       elts_.pop_front();
     }
+
+    count_ = 0;
   }
   
   //----------------------------------------------------------------
@@ -203,6 +207,8 @@ namespace Yamka
       }
       
       elts_.push_back(elt);
+      count_++;
+      
       bytesRead += eltSize;
       bytesToRead -= eltSize;
     }
@@ -230,8 +236,19 @@ namespace Yamka
     // shortuct to the factory method:
     TElementCreateCopy createCopy = found->second;
     IElement * copy = createCopy(&elt);
+    
     elts_.push_back(copy);
+    count_++;
     
     return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MixedElements::getCount
+  // 
+  std::size_t
+  MixedElements::getCount() const
+  {
+    return count_;
   }
 }
