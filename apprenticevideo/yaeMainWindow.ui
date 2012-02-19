@@ -51,6 +51,7 @@
     <addaction name="actionLoop"/>
     <addaction name="separator"/>
     <addaction name="actionColorConverter"/>
+    <addaction name="actionVerticalScaling"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
     <property name="title">
@@ -330,6 +331,14 @@
   <action name="actionNothing">
    <property name="text">
     <string>Nothing</string>
+   </property>
+  </action>
+  <action name="actionVerticalScaling">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Allow Vertical Upscaling</string>
    </property>
   </action>
  </widget>

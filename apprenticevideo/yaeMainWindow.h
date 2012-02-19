@@ -97,6 +97,7 @@ namespace yae
     void playbackPrev();
     void playbackLoop();
     void playbackColorConverter();
+    void playbackVerticalScaling();
     void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();

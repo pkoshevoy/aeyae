@@ -541,7 +541,8 @@ namespace yae
   public:
     TPrivate():
       dar_(0.0),
-      darCropped_(0.0)
+      darCropped_(0.0),
+      verticalScalingEnabled_(false)
     {}
     
     virtual ~TPrivate() {}
@@ -560,6 +561,11 @@ namespace yae
               NULL);
     }
     
+    void enableVerticalScaling(bool enable)
+    {
+      verticalScalingEnabled_ = enable;
+    }
+    
     bool imageWidthHeight(double & w, double & h) const
     {
       if (frame_)
@@ -567,39 +573,42 @@ namespace yae
         w = double(frame_->traits_.visibleWidth_);
         h = double(frame_->traits_.visibleHeight_);
 
-#if 1
-        if (dar_ != 0.0)
+        if (!verticalScalingEnabled_)
         {
-          w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
-        }
-        else if (frame_->traits_.pixelAspectRatio_ != 0.0)
-        {
-          w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
-        }
-#else
-        if (dar_ != 0.0)
-        {
-          double wh = w / h;
-          
-          if (dar_ > wh)
+          if (dar_ != 0.0)
           {
             w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
           }
-          else if (dar_ < wh)
+          else if (frame_->traits_.pixelAspectRatio_ != 0.0)
           {
-            h = floor(0.5 + frame_->traits_.visibleWidth_ / dar_);
+            w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
           }
         }
-        else if (frame_->traits_.pixelAspectRatio_ > 1.0)
+        else
         {
-          w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
+          if (dar_ != 0.0)
+          {
+            double wh = w / h;
+            
+            if (dar_ > wh)
+            {
+              w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
+            }
+            else if (dar_ < wh)
+            {
+              h = floor(0.5 + frame_->traits_.visibleWidth_ / dar_);
+            }
+          }
+          else if (frame_->traits_.pixelAspectRatio_ > 1.0)
+          {
+            w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
+          }
+          else if (frame_->traits_.pixelAspectRatio_ < 1.0)
+          {
+            h = floor(0.5 + h / frame_->traits_.pixelAspectRatio_);
+          }
         }
-        else if (frame_->traits_.pixelAspectRatio_ < 1.0)
-        {
-          h = floor(0.5 + h / frame_->traits_.pixelAspectRatio_);
-        }
-#endif
-
+        
         return true;
       }
 
@@ -631,6 +640,7 @@ namespace yae
     TVideoFramePtr frame_;
     double dar_;
     double darCropped_;
+    bool verticalScalingEnabled_;
   };
   
   //----------------------------------------------------------------
@@ -1601,7 +1611,16 @@ namespace yae
     
     return ok;
   }
-
+  
+  //----------------------------------------------------------------
+  // Canvas::enableVerticalScaling
+  // 
+  void
+  Canvas::enableVerticalScaling(bool enable)
+  {
+    private_->enableVerticalScaling(enable);
+  }
+  
   //----------------------------------------------------------------
   // Canvas::overrideDisplayAspectRatio
   // 

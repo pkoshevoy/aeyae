@@ -331,6 +331,10 @@ namespace yae
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionVerticalScaling, SIGNAL(triggered()),
+                 this, SLOT(playbackVerticalScaling()));
+    YAE_ASSERT(ok);
+
     ok = connect(canvas_, SIGNAL(toggleFullScreen()),
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
@@ -600,7 +604,7 @@ namespace yae
       ok = connect(trackAction, SIGNAL(triggered()),
                    audioTrackMapper_, SLOT(map()));
       YAE_ASSERT(ok);
-      audioTrackMapper_->setMapping(trackAction, numAudioTracks);
+      audioTrackMapper_->setMapping(trackAction, int(numAudioTracks));
     }
     
     for (unsigned int i = 0; i < numVideoTracks; i++)
@@ -649,7 +653,7 @@ namespace yae
       ok = connect(trackAction, SIGNAL(triggered()),
                    videoTrackMapper_, SLOT(map()));
       YAE_ASSERT(ok);
-      videoTrackMapper_->setMapping(trackAction, numVideoTracks);
+      videoTrackMapper_->setMapping(trackAction, int(numVideoTracks));
     }
     
     selectVideoTrack(reader, 0);
@@ -885,6 +889,17 @@ namespace yae
     reader_->threadStart();
     
     startRenderers(reader_, playbackPaused_);
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackVerticalScaling
+  // 
+  void
+  MainWindow::playbackVerticalScaling()
+  {
+    bool enable = actionVerticalScaling->isChecked();
+    canvas_->enableVerticalScaling(enable);
+    playbackShrinkWrap();
   }
   
   //----------------------------------------------------------------
@@ -1327,7 +1342,7 @@ namespace yae
     
     for (std::size_t i = 0; i < numDevices; i++)
     {
-      audioRenderer_->getDeviceName(i, devName);
+      audioRenderer_->getDeviceName((unsigned int)i, devName);
 
       QString device = QString::fromUtf8(devName.c_str());
       QAction * deviceAction = new QAction(device, this);

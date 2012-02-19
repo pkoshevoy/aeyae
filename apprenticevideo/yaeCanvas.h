@@ -77,6 +77,15 @@ namespace yae
     // helper:
     bool loadFrame(const TVideoFramePtr & frame);
 
+    // NOTE: In order to avoid blurring interlaced frames vertical scaling
+    // is disabled by default.  However, if the video is not interlaced
+    // and display aspect ratio is less than encoded frame aspect ratio
+    // scaling down frame width would result in loss of information,
+    // therefore scaling up frame height would be preferred.
+    // 
+    // use this to enable/disable frame height scaling:
+    void enableVerticalScaling(bool enable);
+    
     // use this to override auto-detected aspect ratio:
     void overrideDisplayAspectRatio(double dar);
     
