@@ -771,17 +771,17 @@ struct TNal
     kEndOfSequence = 10,
     kEndOfStream = 11,
     kFillerData = 12,
-    kFillerReserved13 = 13,
-    kFillerReserved14 = 14,
-    kFillerReserved15 = 15,
-    kFillerReserved16 = 16,
-    kFillerReserved17 = 17,
-    kFillerReserved18 = 18,
-    kFillerReserved19 = 19,
-    kFillerReserved20 = 20,
-    kFillerReserved21 = 21,
-    kFillerReserved22 = 22,
-    kFillerReserved23 = 23,
+    kReserved13 = 13,
+    kReserved14 = 14,
+    kReserved15 = 15,
+    kReserved16 = 16,
+    kReserved17 = 17,
+    kReserved18 = 18,
+    kReserved19 = 19,
+    kReserved20 = 20,
+    kReserved21 = 21,
+    kReserved22 = 22,
+    kReserved23 = 23,
     kUnspecified24 = 24,
     kUnspecified25 = 25,
     kUnspecified26 = 26,
@@ -813,6 +813,200 @@ struct TNal
 };
 
 //----------------------------------------------------------------
+// TSei
+// 
+struct TSei
+{
+  enum TMessageType
+  {
+    kBufferingPeriod = 0,
+    kPicTiming = 1,
+    kPanScanRect = 2,
+    kFillerPayload = 3,
+    kUserDataRegistered_ITU_T_T35 = 4,
+    kUserDataUnregistered = 5,
+    kRecoveryPoint = 6,
+    kDecRefPicMarkingRepetition = 7,
+    kSparePic = 8,
+    kSceneInfo = 9,
+    kSubSeqInfo = 10,
+    kSubSeqLayerCharacteristics = 11,
+    kSubSeqCharacteristics = 12,
+    kFullFrameFreeze = 13,
+    kFullFrameFreezeRelease = 14,
+    kFullFrameSnapshot = 15,
+    kProgressiveRefinementSegmentStart = 16,
+    kProgressiveRefinementSegmentEnd = 17,
+    kMotionConstrainedSliceGroupSet = 18
+  };
+
+  TSei(uint64 payloadType, uint64 offset, uint64 size):
+    offset_(offset),
+    size_(size)
+  {
+    type_ = TMessageType(payloadType);
+  }
+  
+  TMessageType type_;
+  uint64 offset_;
+  std::size_t size_;
+};
+
+//----------------------------------------------------------------
+// toText
+// 
+static std::string
+toText(TNal::TUnitType nalUnitType)
+{
+  std::ostringstream os;
+  
+  if (nalUnitType == TNal::kCodedSliceNonIDR)
+  {
+    os << "CodedSliceNonIDR";
+  }
+  else if (nalUnitType >= TNal::kCodedSliceDataA &&
+           nalUnitType <= TNal::kCodedSliceDataC)
+  {
+    os << "CodedSliceData" << 'A' + int(nalUnitType - TNal::kCodedSliceDataA);
+  }
+  else if (nalUnitType == TNal::kCodedSliceIDR)
+  {
+    os << "CodedSliceIDR";
+  }
+  else if (nalUnitType == TNal::kSEI)
+  {
+    os << "SEI";
+  }
+  else if (nalUnitType == TNal::kSPS)
+  {
+    os << "SPS";
+  }
+  else if (nalUnitType == TNal::kPPS)
+  {
+    os << "PPS";
+  }
+  else if (nalUnitType == TNal::kAUD)
+  {
+    os << "AUD";
+  }
+  else if (nalUnitType == TNal::kEndOfSequence)
+  {
+    os << "EndOfSequence";
+  }
+  else if (nalUnitType == TNal::kEndOfStream)
+  {
+    os << "EndOfStream";
+  }
+  else if (nalUnitType == TNal::kFillerData)
+  {
+    os << "FillerData";
+  }
+  else if (nalUnitType >= TNal::kReserved13 &&
+           nalUnitType <= TNal::kReserved23)
+  {
+    os << "Reserved" << int(nalUnitType);
+  }
+  else
+  {
+    os << "Unspecified" << int(nalUnitType);
+  }
+  
+  return std::string(os.str().c_str());
+}
+
+//----------------------------------------------------------------
+// toText
+// 
+static std::string
+toText(TSei::TMessageType seiMsgType)
+{
+  std::ostringstream os;
+  
+  if (seiMsgType == TSei::kBufferingPeriod)
+  {
+    os << "buffering_period";
+  }
+  else if (seiMsgType == TSei::kPicTiming)
+  {
+    os << "pic_timing";
+  }
+  else if (seiMsgType == TSei::kPanScanRect)
+  {
+    os << "pan_scan_rect";
+  }
+  else if (seiMsgType == TSei::kFillerPayload)
+  {
+    os << "filler_payload";
+  }
+  else if (seiMsgType == TSei::kUserDataRegistered_ITU_T_T35)
+  {
+    os << "user_data_registered_itu_t_t35";
+  }
+  else if (seiMsgType == TSei::kUserDataUnregistered)
+  {
+    os << "user_data_unregistered";
+  }
+  else if (seiMsgType == TSei::kRecoveryPoint)
+  {
+    os << "recovery_point";
+  }
+  else if (seiMsgType == TSei::kDecRefPicMarkingRepetition)
+  {
+    os << "dec_ref_pic_marking_repetition";
+  }
+  else if (seiMsgType == TSei::kSparePic)
+  {
+    os << "spare_pic";
+  }
+  else if (seiMsgType == TSei::kSceneInfo)
+  {
+    os << "scene_info";
+  }
+  else if (seiMsgType == TSei::kSubSeqInfo)
+  {
+    os << "sub_seq_info";
+  }
+  else if (seiMsgType == TSei::kSubSeqLayerCharacteristics)
+  {
+    os << "sub_seq_layer_characteristics";
+  }
+  else if (seiMsgType == TSei::kSubSeqCharacteristics)
+  {
+    os << "sub_seq_characteristics";
+  }
+  else if (seiMsgType == TSei::kFullFrameFreeze)
+  {
+    os << "full_frame_freeze";
+  }
+  else if (seiMsgType == TSei::kFullFrameFreezeRelease)
+  {
+    os << "full_frame_freeze_release";
+  }
+  else if (seiMsgType == TSei::kFullFrameSnapshot)
+  {
+    os << "full_frame_snapshot";
+  }
+  else if (seiMsgType == TSei::kProgressiveRefinementSegmentStart)
+  {
+    os << "progressive_refinement_segment_start";
+  }
+  else if (seiMsgType == TSei::kProgressiveRefinementSegmentEnd)
+  {
+    os << "progressive_refinement_segment_end";
+  }
+  else if (seiMsgType == TSei::kMotionConstrainedSliceGroupSet)
+  {
+    os << "motion_constrained_slice_group_set";
+  }
+  else
+  {
+    os << "Reserved" << int(seiMsgType);
+  }
+  
+  return std::string(os.str().c_str());
+}
+
+//----------------------------------------------------------------
 // isH264Keyframe
 //
 static bool
@@ -827,6 +1021,10 @@ isH264Keyframe(const HodgePodge * data)
   HodgePodgeConstIter begin(*data);
   HodgePodgeConstIter iter(*data);
   HodgePodgeConstIter end(*data, dataSize);
+
+  int numIDR = 0;
+  int numNonIDR = 0;
+  int numRecoveryPoint = 0;
   
   while (iter < end)
   {
@@ -835,20 +1033,88 @@ isH264Keyframe(const HodgePodge * data)
                             (iter[1] << 16) |
                             (iter[2] << 8) |
                             iter[3]);
-    
+
     TNal nal(iter[4], (iter - begin) + 4, nalSize);
     TNal::TUnitType nalUnitType = nal.unitType();
     
     if (nalUnitType == TNal::kCodedSliceIDR)
     {
-      return true;
+      // return true;
+      numIDR++;
     }
+    else if (nalUnitType == TNal::kCodedSliceNonIDR ||
+             nalUnitType >= TNal::kCodedSliceDataA &&
+             nalUnitType <= TNal::kCodedSliceDataC)
+    {
+      numNonIDR++;
+    }
+    else if (nalUnitType == TNal::kSEI)
+    {
+#if 0
+      std::cout << "\nNAL: " << toText(nalUnitType)
+                << ", size " << nalSize << std::endl;
+#endif
+      
+      uint64 j = 1;
+      while (j < nalSize && iter[4 + j] != 0x80)
+      {
+        // extract SEI message type:
+        uint64 payloadType = 0;
+        for (; j < nalSize && iter[4 + j] == 0xFF; j++)
+        {
+          payloadType += 0xFF;
+        }
+        payloadType += iter[4 + j];
+        j++;
+        
+        // extract SET message size:
+        uint64 payloadSize = 0;
+        for (; j < nalSize && iter[4 + j] == 0xFF; j++)
+        {
+          payloadSize += 0xFF;
+        }
+        payloadSize += iter[4 + j];
+        j++;
+        
+        TSei sei(payloadType, (iter - begin) + 4 + j, payloadSize);
+        if (sei.type_ == TSei::kRecoveryPoint)
+        {
+          numRecoveryPoint++;
+        }
+        
+#if 0
+        std::cout << " " << toText(sei.type_)
+                  << ", size: " << payloadSize
+                  << std::endl;
+#endif
+        
+        // skip to the next SEI message:
+        j += payloadSize;
+      }
+      
+      assert(j == nalSize || j + 1 == nalSize && iter[4 + j] == 0x80);
+    }
+#if 0
+    else if (nalUnitType != TNal::kSPS &&
+             nalUnitType != TNal::kPPS)
+    {
+      std::cout << "\nNAL: " << toText(nalUnitType)
+                << ", size " << nalSize << std::endl;
+    }
+#endif
     
     iter += (4 + nalSize);
     assert(iter <= end);
   }
   
-  return false;
+  if (numIDR)
+  {
+    assert(!numNonIDR);
+    return !numNonIDR;
+  }
+
+  bool intraRefresh = (numRecoveryPoint > 0);
+  return intraRefresh;
 }
 
 
