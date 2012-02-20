@@ -1036,7 +1036,12 @@ isH264Keyframe(const HodgePodge * data)
 
     TNal nal(iter[4], (iter - begin) + 4, nalSize);
     TNal::TUnitType nalUnitType = nal.unitType();
-    
+
+#if 0
+    std::cout << "\nNAL: " << toText(nalUnitType)
+              << ", size " << nalSize << std::endl;
+#endif
+
     if (nalUnitType == TNal::kCodedSliceIDR)
     {
       // return true;
@@ -1288,7 +1293,7 @@ TRemuxer::remux(uint64 inPointInMsec,
         continue;
       }
       
-      if (fixKeyFlag && !binfo->keyframe_)
+      if (fixKeyFlag)
       {
         if (lace_.codecID_[binfo->trackNo_] == "V_MPEG4/ISO/AVC")
         {
