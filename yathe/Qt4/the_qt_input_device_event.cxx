@@ -10,10 +10,10 @@
 // Description  : Qt wrappers for input device events
 
 // local includes:
-#include "Qt/the_qt_input_device_event.hxx"
+#include "Qt4/the_qt_input_device_event.hxx"
 #include "opengl/the_view.hxx"
 
-// Qt includes:
+// Qt4 includes:
 #include <QWidget>
 #include <QEvent>
 #include <QMouseEvent>

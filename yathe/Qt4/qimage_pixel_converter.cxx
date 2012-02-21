@@ -11,7 +11,7 @@
 //                from Qt images.
 
 // the includes:
-#include <Qt/qimage_pixel_converter.hxx>
+#include "Qt4/qimage_pixel_converter.hxx"
 
 
 //----------------------------------------------------------------

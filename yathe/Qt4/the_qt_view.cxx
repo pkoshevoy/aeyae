@@ -7,14 +7,14 @@
 // Created      : Sun Jun 23 21:53:36 MDT 2002
 // Copyright    : (C) 2002
 // License      : MIT
-// Description  : A Qt based port of the OpenGL view widget.
+// Description  : A Qt4 based port of the OpenGL view widget.
 
 // system includes:
 #include <assert.h>
 
 // local includes:
-#include "Qt/the_qt_view.hxx"
-#include "Qt/the_qt_input_device_event.hxx"
+#include "Qt4/the_qt_view.hxx"
+#include "Qt4/the_qt_input_device_event.hxx"
 #include "eh/the_input_device_eh.hxx"
 
 // Qt includes:

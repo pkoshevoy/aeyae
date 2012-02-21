@@ -10,7 +10,7 @@
 // Description  : A Qt based thread pool class.
 
 // local includes:
-#include "Qt/the_qt_thread_pool.hxx"
+#include "Qt4/the_qt_thread_pool.hxx"
 
 //----------------------------------------------------------------
 // the_qt_thread_pool_t::the_qt_thread_pool_t

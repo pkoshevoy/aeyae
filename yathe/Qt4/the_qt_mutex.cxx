@@ -10,7 +10,7 @@
 // Description  : A Qt mutex wrapper class.
 
 // local includes:
-#include "Qt/the_qt_mutex.hxx"
+#include "Qt4/the_qt_mutex.hxx"
 
 // system includes:
 #include <iostream>

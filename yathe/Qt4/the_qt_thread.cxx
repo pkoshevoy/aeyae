@@ -10,9 +10,9 @@
 // Description  : A Qt thread wrapper class.
 
 // local include:
-#include "Qt/the_qt_thread.hxx"
-#include "Qt/the_qt_thread_storage.hxx"
-#include "Qt/the_qt_mutex.hxx"
+#include "Qt4/the_qt_thread.hxx"
+#include "Qt4/the_qt_thread_storage.hxx"
+#include "Qt4/the_qt_mutex.hxx"
 #include "thread/the_mutex_interface.hxx"
 #include "thread/the_transaction.hxx"
 #include "thread/the_thread_pool.hxx"

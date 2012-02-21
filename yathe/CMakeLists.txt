@@ -1,20 +1,15 @@
 cmake_minimum_required(VERSION 2.8.0)
 
-project(THE)
-
-file(TO_CMAKE_PATH "$ENV{THE_SRC_DIR}" THE_SRC_DIR)
-file(TO_CMAKE_PATH "$ENV{THE_BIN_DIR}" THE_BIN_DIR)
+project(YATHE)
 
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${THE_SRC_DIR}
 )
 
 find_package(Boost REQUIRED)
 include_directories(AFTER
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${THE_SRC_DIR}
   ${Boost_INCLUDE_DIR}
   )
 
@@ -94,13 +89,89 @@ add_library(the_core STATIC
   )
 
 install(TARGETS the_core DESTINATION lib)
+install(FILES 
+  math/the_aa_bbox.hxx
+  math/the_linear_algebra.hxx
+  math/the_ray.hxx
+  math/the_bbox.hxx
+  math/the_deviation.hxx
+  math/the_camera.hxx
+  math/the_quadratic_polynomial.hxx
+  math/the_color_blend.hxx
+  math/the_sampling_method.hxx
+  math/tree.hxx
+  math/fp.hxx
+  math/the_transform.hxx
+  math/the_color.hxx
+  math/the_mersenne_twister.hxx
+  math/v3x1p3x1.hxx
+  math/m4x4.hxx
+  math/the_view_volume.hxx
+  math/the_coord_sys.hxx
+  math/the_plane.hxx
+  
+  DESTINATION 
+  include/math)
+
+install(FILES 
+  thread/the_boost_thread_storage.hxx
+  thread/the_thread_storage.hxx
+  thread/the_thread_pool.hxx
+  thread/the_boost_mutex.hxx
+  thread/the_mutex_interface.hxx
+  thread/the_transaction.hxx
+  thread/the_boost_thread.hxx
+  thread/the_thread_interface.hxx
+  thread/the_terminator.hxx
+  
+  DESTINATION 
+  include/thread)
+
+install(FILES 
+  utils/the_dynamic_array.hxx
+  utils/the_bit_tree.hxx
+  utils/the_walltime.hxx
+  utils/the_log.hxx
+  utils/the_fifo.hxx
+  utils/the_dlink.hxx
+  utils/debug.hxx
+  utils/the_dloop.hxx
+  utils/the_text.hxx
+  utils/instance_method_call.hxx
+  utils/the_exception.hxx
+  utils/the_array.hxx
+  utils/the_indentation.hxx
+  utils/the_benchmark.hxx
+  utils/the_unique_list.hxx
+  utils/the_domain_array.hxx
+  utils/histogram.hxx
+  utils/the_utils.hxx
+  
+  DESTINATION 
+  include/utils)
+
+install(FILES 
+  io/io_base.hxx
+  io/the_file_io.hxx
+  
+  DESTINATION 
+  include/io)
+
+install(FILES 
+  doc/the_registry.hxx
+  doc/the_graph.hxx
+  doc/the_graph_node.hxx
+  doc/the_graph_node_ref.hxx
+  
+  DESTINATION 
+  include/doc)
 
 find_package(GLEW)
 if (GLEW_FOUND)
   find_package(OpenGL REQUIRED)
 
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
-
+  
 #  find_package(Cg)
 #  if (Cg_FOUND)
 #    add_definitions(-DUSE_CG)
@@ -157,6 +228,94 @@ if (GLEW_FOUND)
     )
 
   install(TARGETS the_ui DESTINATION lib)
+  install(FILES 
+    doc/the_procedure.hxx
+    doc/the_document_so.hxx
+    doc/the_document.hxx
+    doc/the_primitive.hxx
+    doc/the_reference.hxx
+    
+    DESTINATION 
+    include/doc)
+
+  install(FILES 
+    eh/the_keybd_device.hxx
+    eh/the_document_eh.hxx
+    eh/the_modifier.hxx
+    eh/the_wacom_device.hxx
+    eh/the_input_device_eh.hxx
+    eh/the_mouse_device.hxx
+    eh/the_input_device.hxx
+    eh/the_view_mgr_eh.hxx
+    eh/the_input_device_event.hxx
+    
+    DESTINATION 
+    include/eh)
+
+  install(FILES 
+    geom/the_tensurf.hxx
+    geom/the_bspline.hxx
+    geom/the_polyline.hxx
+    geom/the_point.hxx
+    geom/the_grid.hxx
+    geom/the_rational_bezier.hxx
+    geom/the_triangle_mesh.hxx
+    geom/the_bvh.hxx
+    geom/the_curve.hxx
+    
+    DESTINATION 
+    include/geom)
+
+  install(FILES 
+    image/texture.hxx
+    image/image_tile_generator.hxx
+    image/la_pixel_converter.hxx
+    image/image_tile.hxx
+    image/texture_data.hxx
+    
+    DESTINATION 
+    include/image)
+
+  install(FILES 
+    opengl/the_view.hxx
+    opengl/the_vertex.hxx
+    opengl/OpenGLCapabilities.h
+    opengl/the_ep_grid.hxx
+    opengl/the_disp_list.hxx
+    opengl/the_ascii_font.hxx
+    opengl/the_symbols.hxx
+    opengl/the_view_mgr.hxx
+    opengl/the_point_symbols.hxx
+    opengl/the_gl_context.hxx
+    opengl/image_tile_dl_elem.hxx
+    opengl/glsl.hxx
+    opengl/the_appearance.hxx
+    opengl/the_palette.hxx
+    opengl/the_view_mgr_orientation.hxx
+    opengl/the_font.hxx
+    
+    DESTINATION 
+    include/opengl)
+
+  install(FILES 
+    sel/the_pick_list.hxx
+    sel/the_pick_rec.hxx
+    sel/the_pick_filter.hxx
+    sel/the_curve_selset.hxx
+    sel/the_selset.hxx
+    
+    DESTINATION 
+    include/sel)
+
+  install(FILES 
+    ui/the_cursor.hxx
+    ui/the_desktop_metrics.hxx
+    ui/the_trail.hxx
+    ui/the_procedure_ui.hxx
+    ui/the_document_ui.hxx
+    
+    DESTINATION 
+    include/ui)
 
   find_package(Qt4)
   if (QT4_FOUND)
@@ -168,26 +327,40 @@ if (GLEW_FOUND)
       )
     
     set(moc_hxx
-      Qt/the_qt_trail.hxx	
-      Qt/the_qt_view.hxx
-      Qt/the_qt_thread.hxx
-      Qt/the_qt_thread_pool.hxx
+      Qt4/the_qt_trail.hxx	
+      Qt4/the_qt_view.hxx
+      Qt4/the_qt_thread.hxx
+      Qt4/the_qt_thread_pool.hxx
       )
     
     qt4_wrap_cpp(moc_cxx ${moc_hxx})
     
-    add_library(the_ui_qt STATIC
+    add_library(the_ui_qt4 STATIC
       ${moc_cxx}
-      Qt/qimage_pixel_converter.cxx
-      Qt/the_qt_input_device_event.cxx
-      Qt/the_qt_thread.cxx
-      Qt/the_qt_thread_pool.cxx
-      Qt/the_qt_trail.cxx
-      Qt/the_qt_view.cxx
-      Qt/the_qt_mutex.cxx
+      Qt4/qimage_pixel_converter.cxx
+      Qt4/the_qt_input_device_event.cxx
+      Qt4/the_qt_thread.cxx
+      Qt4/the_qt_thread_pool.cxx
+      Qt4/the_qt_trail.cxx
+      Qt4/the_qt_view.cxx
+      Qt4/the_qt_mutex.cxx
       )
     
-    install(TARGETS the_ui_qt DESTINATION lib)
+    install(TARGETS the_ui_qt4 DESTINATION lib)
+    install(FILES 
+      Qt4/the_qt_thread_pool.hxx
+      Qt4/the_qt_desktop_metrics.hxx
+      Qt4/the_qt_input_device_event.hxx
+      Qt4/the_qt_thread.hxx
+      Qt4/the_qt_view.hxx
+      Qt4/the_qt_thread_storage.hxx
+      Qt4/qimage_pixel_converter.hxx
+      Qt4/the_qt_trail.hxx
+      Qt4/the_qt_mutex.hxx
+      
+      DESTINATION 
+      include/Qt4)
+
   endif (QT4_FOUND)
   
   find_package(FLTK)
@@ -203,6 +376,16 @@ if (GLEW_FOUND)
       )
     
     install(TARGETS the_ui_fltk DESTINATION lib)
+    install(FILES 
+      FLTK/the_fltk_view.hxx
+      FLTK/Fl_Knot_Vector.H
+      FLTK/the_fltk_input_device_event.hxx
+      FLTK/the_fltk_std_widgets.hxx
+      FLTK/the_fltk_trail.hxx
+
+      DESTINATION 
+      include/FLTK)
+
   endif (FLTK_FOUND)
   
   find_package(Qt3)
@@ -231,5 +414,18 @@ if (GLEW_FOUND)
       )
     
     install(TARGETS the_ui_qt3 DESTINATION lib)
+    install(FILES 
+      Qt3/the_qt_desktop_metrics.hxx
+      Qt3/the_qt_input_device_event.hxx
+      Qt3/the_qt_thread.hxx
+      Qt3/the_qt_view.hxx
+      Qt3/the_qt_thread_storage.hxx
+      Qt3/qimage_pixel_converter.hxx
+      Qt3/the_qt_trail.hxx
+      Qt3/the_qt_mutex.hxx
+      
+      DESTINATION 
+      include/Qt3)
+
   endif (QT3_FOUND)
 endif (GLEW_FOUND)

@@ -11,8 +11,8 @@
 //                for regression testing and debugging.
 
 // local includes:
-#include "Qt/the_qt_trail.hxx"
-#include "Qt/the_qt_input_device_event.hxx"
+#include "Qt4/the_qt_trail.hxx"
+#include "Qt4/the_qt_input_device_event.hxx"
 #include "utils/the_utils.hxx"
 #include "utils/the_text.hxx"
 #include "io/io_base.hxx"
