@@ -88,6 +88,15 @@ add_library(the_core STATIC
   doc/the_graph_node_ref.cxx
   )
 
+install(FILES 
+  FindCg.cmake
+  FindFFTW.cmake
+  FindGLEW.cmake
+  FindYATHE.cmake
+  
+  DESTINATION 
+  share/cmake/Modules)
+
 install(TARGETS the_core DESTINATION lib)
 install(FILES 
   math/the_aa_bbox.hxx
