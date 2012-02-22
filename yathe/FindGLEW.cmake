@@ -5,27 +5,24 @@
 #  GLEW_INCLUDE_DIR  - the GLEW include directory
 #  GLEW_LIBRARIES    - Link these to use GLEW
 
-FILE(TO_CMAKE_PATH "$ENV{GLEW_DIR}" GLEW_DIR)
+set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH 
+  "root path for GLEW lib/ and include/ folders")
 
-FIND_LIBRARY(GLEW_LIBRARY GLEW 
-  ${GLEW_DIR}/lib 
-  DOC "GLEW lib"
+find_path(GLEW_INCLUDE_DIR GL/glew.h 
+  PATHS ${GLEW_DIR}/include 
+  DOC "headers directory for GLEW"
 )
 
-FIND_PATH(GLEW_INCLUDE_DIR GL/glew.h 
-  ${GLEW_DIR}/include 
-  DOC "Include for GLEW"
-)
+if (GLEW_INCLUDE_DIR)
+  find_library(GLEW_LIBRARY 
+    NAMES GLEW glew32s
+    PATHS ${GLEW_INCLUDE_DIR}/../lib ${GLEW_DIR}/lib 
+    DOC "GLEW lib"
+    )
+endif (GLEW_INCLUDE_DIR)
 
-SET( GLEW_FOUND "NO" )
-IF(GLEW_LIBRARY)
-  
-  SET( GLEW_LIBRARIES  ${GLEW_LIBRARY} ${GLEW_LIBRARIES})
-  
-  IF(GLEW_INCLUDE_DIR)
-    SET( GLEW_FOUND "YES" )
-  ELSE(GLEW_INCLUDE_DIR)
-    SET( GLEW_FOUND "NO" )
-  ENDIF(GLEW_INCLUDE_DIR)
-  
-ENDIF(GLEW_LIBRARY)
+set(GLEW_FOUND "NO")
+if(GLEW_LIBRARY AND GLEW_INCLUDE_DIR)
+  set(GLEW_LIBRARIES ${GLEW_LIBRARY})
+  set(GLEW_FOUND "YES")
+endif(GLEW_LIBRARY AND GLEW_INCLUDE_DIR)
