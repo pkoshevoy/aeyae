@@ -12,7 +12,7 @@
 set(YATHE_DIR "$ENV{YATHE_DIR}" CACHE PATH 
   "root path for YATHE lib/ and include/ folders")
 
-find_path(YATHE_INCLUDE_DIR utils/the_utils.hxx
+find_path(YATHE_INCLUDE_DIR eh/the_view_mgr_eh.hxx
   PATHS ${YATHE_DIR}/include
   DOC "headers directory for the_* libraries"
   )
