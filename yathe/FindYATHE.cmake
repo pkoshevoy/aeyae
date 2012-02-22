@@ -13,38 +13,38 @@ set(YATHE_DIR "$ENV{YATHE_DIR}" CACHE PATH
   "root path for YATHE lib/ and include/ folders")
 
 find_path(YATHE_INCLUDE_DIR utils/the_utils.hxx
-  PATHS "{YATHE_DIR}"/include
+  PATHS ${YATHE_DIR}/include
   DOC "headers directory for the_* libraries"
   )
 
 if (YATHE_INCLUDE_DIR)
   find_library(YATHE_CORE_LIBRARY
     NAMES the_core 
-    PATHS "${YATHE_INCLUDE_DIR}/"../lib "{YATHE_DIR}"/lib
+    PATHS ${YATHE_INCLUDE_DIR}/../lib ${YATHE_DIR}/lib
     DOC "the_core library"
     )
   
   find_library(YATHE_UI_LIBRARY 
     NAMES the_ui
-    PATHS "${YATHE_INCLUDE_DIR}/"../lib "{YATHE_DIR}"/lib
+    PATHS ${YATHE_INCLUDE_DIR}/../lib ${YATHE_DIR}/lib
     DOC "the_ui library"
     )
   
   find_library(YATHE_UI_QT4_LIBRARY
     NAMES the_ui_qt4
-    PATHS "${YATHE_INCLUDE_DIR}/"../lib "{YATHE_DIR}"/lib
+    PATHS ${YATHE_INCLUDE_DIR}/../lib ${YATHE_DIR}/lib
     DOC "the_ui_qt4 library"
     )
   
   find_library(YATHE_UI_QT3_LIBRARY 
     NAMES the_ui_qt3
-    PATHS "${YATHE_INCLUDE_DIR}/"../lib "{YATHE_DIR}"/lib
+    PATHS ${YATHE_INCLUDE_DIR}/../lib ${YATHE_DIR}/lib
     DOC "the_ui_qt3 library"
     )
   
   find_library(YATHE_UI_FLTK_LIBRARY 
     NAMES the_ui_fltk
-    PATHS "${YATHE_INCLUDE_DIR}/"../lib "{YATHE_DIR}"/lib
+    PATHS ${YATHE_INCLUDE_DIR}/../lib ${YATHE_DIR}/lib
     DOC "the_ui_fltk library"
     )
 endif (YATHE_INCLUDE_DIR)
