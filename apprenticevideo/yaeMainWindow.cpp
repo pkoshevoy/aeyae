@@ -739,6 +739,9 @@ namespace yae
   void
   MainWindow::fileOpenURL()
   {
+    openUrl_->lineEdit->setFocus();
+    openUrl_->lineEdit->selectAll();
+    
     int r = openUrl_->exec();
     if (r == QDialog::Accepted)
     {
