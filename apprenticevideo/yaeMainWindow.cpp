@@ -58,7 +58,17 @@ namespace yae
   {
     Ui::AboutDialog::setupUi(this);
   }
-
+  
+  //----------------------------------------------------------------
+  // OpenUrlDialog::OpenUrlDialog
+  // 
+  OpenUrlDialog::OpenUrlDialog(QWidget * parent, Qt::WFlags f):
+    QDialog(parent, f),
+    Ui::OpenUrlDialog()
+  {
+    Ui::OpenUrlDialog::setupUi(this);
+  }
+  
   //----------------------------------------------------------------
   // SignalBlocker
   // 
@@ -177,6 +187,35 @@ namespace yae
     timelineControls_->hide();
     scrollWheelTimer_.setSingleShot(true);
     
+    // setup the Open URL dialog:
+    {
+      std::list<std::string> protocols;
+      reader_->getUrlProtocols(protocols);
+      
+      QString supported = tr("Supported URL protocols include:\n");
+      unsigned int column = 0;
+      for (std::list<std::string>::const_iterator i = protocols.begin();
+           i != protocols.end(); ++i)
+      {
+        const std::string & name = *i;
+        if (column)
+        {
+          supported += "  ";
+        }
+        
+        supported += QString::fromUtf8(name.c_str());
+        column = (column + 1) % 6;
+        
+        if (!column)
+        {
+          supported += "\n";
+        }
+      }
+      
+      openUrl_ = new OpenUrlDialog(this);
+      openUrl_->lineEdit->setToolTip(supported);
+    }
+    
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
@@ -217,6 +256,10 @@ namespace yae
     bool ok = true;
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionOpenURL, SIGNAL(triggered()),
+                 this, SLOT(fileOpenURL()));
     YAE_ASSERT(ok);
     
     ok = connect(actionExit, SIGNAL(triggered()),
@@ -389,6 +432,9 @@ namespace yae
   // 
   MainWindow::~MainWindow()
   {
+    delete openUrl_;
+    openUrl_ = NULL;
+    
     audioRenderer_->close();
     audioRenderer_->destroy();
     
@@ -412,7 +458,8 @@ namespace yae
   // MainWindow::setPlaylist
   // 
   void
-  MainWindow::setPlaylist(const std::list<QString> & playlist)
+  MainWindow::setPlaylist(const std::list<QString> & playlist,
+                          bool beginPlaybackImmediately)
   {
     todo_ = playlist;
     done_.clear();
@@ -476,8 +523,10 @@ namespace yae
                  playlistMapper_, SLOT(map()));
     YAE_ASSERT(ok);
     
-    // begin playback:
-    playbackNext();
+    if (beginPlaybackImmediately)
+    {
+      playbackNext();
+    }
   }
   
   //----------------------------------------------------------------
@@ -682,6 +731,30 @@ namespace yae
     actionPlay->setText(tr("Pause"));
     
     return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::fileOpenURL
+  // 
+  void
+  MainWindow::fileOpenURL()
+  {
+    int r = openUrl_->exec();
+    if (r == QDialog::Accepted)
+    {
+      QString url = openUrl_->lineEdit->text();
+      
+      std::list<QString> playlist;
+      playlist.splice(playlist.end(), done_);
+      playlist.splice(playlist.end(), todo_);
+      playlist.push_back(url);
+      
+      bool beginPlaybackImmediately = false;
+      setPlaylist(playlist, beginPlaybackImmediately);
+      
+      // begin playback:
+      playlistSelect(url);
+    }
   }
   
   //----------------------------------------------------------------

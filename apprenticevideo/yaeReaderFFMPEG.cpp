@@ -2224,6 +2224,8 @@ namespace yae
     // NOTE: destructor will close the movie:
     ~Movie();
     
+    bool getUrlProtocols(std::list<std::string> & protocols) const;
+    
     bool open(const char * resourcePath);
     void close();
     
@@ -2318,6 +2320,24 @@ namespace yae
   Movie::~Movie()
   {
     close();
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::getUrlProtocols
+  // 
+  bool
+  Movie::getUrlProtocols(std::list<std::string> & protocols) const
+  {
+    protocols.clear();
+    
+    void * opaque = NULL;
+    const char * name = NULL;
+    while ((name = avio_enum_protocols(&opaque, 0)))
+    {
+      protocols.push_back(std::string(name));
+    }
+    
+    return true;
   }
   
   //----------------------------------------------------------------
@@ -3032,6 +3052,15 @@ namespace yae
   ReaderFFMPEG::getName() const
   {
     return typeid(*this).name();
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getUrlProtocols
+  // 
+  bool
+  ReaderFFMPEG::getUrlProtocols(std::list<std::string> & protocols) const
+  {
+    return private_->movie_.getUrlProtocols(protocols);
   }
   
   //----------------------------------------------------------------

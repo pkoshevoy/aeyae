@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>About Apprentice Video</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="apprenticevideo.qrc">
+    <normaloff>:/images/apprenticevideo-64.png</normaloff>:/images/apprenticevideo-64.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="dialogLayout">
    <item>
     <widget class="QLabel" name="logoLabel">
@@ -49,7 +53,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="writtenBy">
        <property name="text">
         <string>written by Pavel Koshevoy</string>
        </property>

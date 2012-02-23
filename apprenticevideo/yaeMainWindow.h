@@ -28,8 +28,9 @@
 #endif
 
 // local includes:
-#include "ui_yaeMainWindow.h"
 #include "ui_yaeAbout.h"
+#include "ui_yaeMainWindow.h"
+#include "ui_yaeOpenUrlDialog.h"
 
 
 namespace yae
@@ -45,6 +46,19 @@ namespace yae
     
   public:
     AboutDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+  };
+  
+  
+  //----------------------------------------------------------------
+  // OpenUrlDialog
+  // 
+  class OpenUrlDialog : public QDialog,
+                        public Ui::OpenUrlDialog
+  {
+    Q_OBJECT;
+    
+  public:
+    OpenUrlDialog(QWidget * parent = 0, Qt::WFlags f = 0);
   };
   
   
@@ -69,7 +83,8 @@ namespace yae
     
   public:
     // specify a playlist of files to load:
-    void setPlaylist(const std::list<QString> & playlist);
+    void setPlaylist(const std::list<QString> & playlist,
+                     bool beginPlaybackImmediately = true);
     
   signals:
     void setInPoint();
@@ -78,6 +93,7 @@ namespace yae
   public slots:
     // file menu:
     void fileOpen();
+    void fileOpenURL();
     void fileExit();
 
     // playback menu:
@@ -209,6 +225,9 @@ namespace yae
     // playlist:
     std::list<QString> todo_;
     std::list<QString> done_;
+    
+    // dialog for opening a URL resource:
+    OpenUrlDialog * openUrl_;
   };
 }
 

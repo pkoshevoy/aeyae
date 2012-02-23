@@ -9,6 +9,10 @@
 #ifndef YAE_READER_H_
 #define YAE_READER_H_
 
+// system includes:
+#include <string>
+#include <list>
+
 // yae includes:
 #include <yaeAPI.h>
 
@@ -40,6 +44,9 @@ namespace yae
     
     //! return a human readable name for this reader (preferably unique):
     virtual const char * getName() const = 0;
+    
+    //! assemble a list of supported URL protocols:
+    virtual bool getUrlProtocols(std::list<std::string> & protocols) const = 0;
     
     //! open a resource specified by the resourcePath such as filepath or URL:
     virtual bool open(const char * resourcePathUTF8) = 0;

@@ -145,6 +145,7 @@ set(project_moc_hxx
 set(project_uis 
   yaeAbout.ui
   yaeMainWindow.ui
+  yaeOpenUrlDialog.ui
   )
 
 qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)

@@ -57,6 +57,9 @@ namespace yae
     //! return a human readable name for this reader (preferably unique):
     virtual const char * getName() const;
     
+    //! assemble a list of supported URL protocols:
+    virtual bool getUrlProtocols(std::list<std::string> & protocols) const;
+    
     //! open a resource specified by the resourcePath such as filepath or URL:
     virtual bool open(const char * resourcePathUTF8);
     
