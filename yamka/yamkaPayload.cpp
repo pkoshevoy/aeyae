@@ -551,7 +551,17 @@ namespace Yamka
     data_.set(bytes, storage);
     return *this;
   }
-
+  
+  //----------------------------------------------------------------
+  // VBinary::set
+  // 
+  VBinary &
+  VBinary::set(const IStorage::IReceiptPtr & dataReceipt)
+  {
+    data_.set(dataReceipt);
+    return *this;
+  }
+  
   //----------------------------------------------------------------
   // VBinary::get
   // 
@@ -568,6 +578,17 @@ namespace Yamka
   VBinary::setDefault(const Bytes & bytes, IStorage & storage)
   {
     dataDefault_.set(bytes, storage);
+    data_ = dataDefault_;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VBinary::setDefault
+  // 
+  VBinary &
+  VBinary::setDefault(const IStorage::IReceiptPtr & dataReceipt)
+  {
+    dataDefault_.set(dataReceipt);
     data_ = dataDefault_;
     return *this;
   }

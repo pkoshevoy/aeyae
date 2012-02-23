@@ -287,7 +287,10 @@ namespace Yamka
     VBinary();
     
     VBinary & setDefault(const Bytes & bytes, IStorage & storage);
+    VBinary & setDefault(const IStorage::IReceiptPtr & dataReceipt);
+    
     VBinary & set(const Bytes & bytes, IStorage & storage);
+    VBinary & set(const IStorage::IReceiptPtr & dataReceipt);
     bool get(Bytes & bytes) const;
     
     ImplementsYamkaPayloadAPI();

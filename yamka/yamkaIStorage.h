@@ -165,6 +165,72 @@ namespace Yamka
     uint64 currentPosition_;
   };
   
+  //----------------------------------------------------------------
+  // MemReceipt
+  // 
+  struct MemReceipt : public IStorage::IReceipt
+  {
+    MemReceipt(void * addr = NULL, std::size_t numBytes = 0);
+    
+    // virtual:
+    uint64 position() const;
+    
+    // virtual:
+    uint64 numBytes() const;
+    
+    // virtual: use at your own risk:
+    MemReceipt & setNumBytes(uint64 numBytes);
+    
+    // virtual: use at your own risk:
+    MemReceipt & add(uint64 numBytes);
+    
+    // virtual: this will fail if data is larger than this receipt
+    bool save(const Bytes & data);
+
+    // virtual: this will fail if data is larger than this receipt
+    bool load(Bytes & data);
+    
+    // virtual: use at your own rist:
+    bool load(TByte * data);
+    
+    // virtual:
+    bool calcCrc32(Crc32 & computeCrc32,
+                   const IStorage::IReceiptPtr & receiptSkip);
+    
+    // virtual: use at your own risk:
+    IStorage::IReceiptPtr receipt(uint64 offset, uint64 size) const;
+    
+  protected:
+    unsigned char * addr_;
+    std::size_t numBytes_;
+  };
+  
+  //----------------------------------------------------------------
+  // ConstMemReceipt
+  // 
+  struct ConstMemReceipt : public MemReceipt
+  {
+    ConstMemReceipt(const void * addr = NULL, std::size_t numBytes = 0);
+    
+    // virtual: this is not allowed for const memory:
+    bool save(const Bytes & data);
+    
+    // virtual: use at your own risk:
+    IStorage::IReceiptPtr receipt(uint64 offset, uint64 size) const;
+  };
+  
+  //----------------------------------------------------------------
+  // receiptForMemory
+  // 
+  extern IStorage::IReceiptPtr
+  receiptForMemory(void * data, std::size_t size);
+  
+  //----------------------------------------------------------------
+  // receiptForConstMemory
+  // 
+  extern IStorage::IReceiptPtr
+  receiptForConstMemory(const void * data, std::size_t size);
+  
 }
 
 

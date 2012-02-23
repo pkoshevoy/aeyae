@@ -39,6 +39,7 @@ namespace Yamka
     return receipt;
   }
   
+  
   //----------------------------------------------------------------
   // NullStorage::NullStorage
   // 
@@ -199,6 +200,220 @@ namespace Yamka
     
     NullStorage::Receipt * r = new NullStorage::Receipt(addr_ + offset, size);
     return IStorage::IReceiptPtr(r);
+  }
+  
+  
+  //----------------------------------------------------------------
+  // MemReceipt::MemReceipt
+  // 
+  MemReceipt::MemReceipt(void * addr, std::size_t numBytes):
+    addr_((unsigned char *)addr),
+    numBytes_(numBytes)
+  {}
+  
+  //----------------------------------------------------------------
+  // MemReceipt::position
+  // 
+  uint64
+  MemReceipt::position() const
+  {
+    return uint64(addr_);
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::numBytes
+  // 
+  uint64
+  MemReceipt::numBytes() const
+  {
+    return uint64(numBytes_);
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::setNumBytes
+  // 
+  MemReceipt &
+  MemReceipt::setNumBytes(uint64 numBytes)
+  {
+    numBytes_ = (std::size_t)numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::add
+  // 
+  MemReceipt &
+  MemReceipt::add(uint64 numBytes)
+  {
+    numBytes_ += (std::size_t)numBytes;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::save
+  // 
+  bool
+  MemReceipt::save(const Bytes & data)
+  {
+    unsigned char * dst = addr_;
+    std::size_t dstSize = numBytes_;
+    
+    const TByteVecDec & deq = *(data.bytes_);
+    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
+    {
+      const TByteVec & vec = *i;
+      std::size_t vecSize = vec.size();
+
+      if (vecSize > dstSize)
+      {
+        return false;
+      }
+      
+      memcpy(dst, &vec[0], vecSize);
+      dst += vecSize;
+      dstSize -= vecSize;
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::load
+  // 
+  bool
+  MemReceipt::load(Bytes & data)
+  {
+    const unsigned char * src = addr_;
+    std::size_t srcSize = numBytes_;
+    
+    TByteVecDec & deq = *(data.bytes_);
+    for (TByteVecDec::iterator i = deq.begin(); i != deq.end(); ++i)
+    {
+      TByteVec & vec = *i;
+      std::size_t vecSize = vec.size();
+      
+      if (vecSize > srcSize)
+      {
+        return false;
+      }
+      
+      memcpy(&vec[0], src, vecSize);
+      src += vecSize;
+      srcSize -= vecSize;
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::load
+  // 
+  bool
+  MemReceipt::load(TByte * data)
+  {
+    memcpy(data, addr_, numBytes_);
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::calcCrc32
+  // 
+  bool
+  MemReceipt::calcCrc32(Crc32 & computeCrc32,
+                                  const IStorage::IReceiptPtr & receiptSkip)
+  {
+    try
+    {
+      const unsigned char * skipAddr = addr_;
+      uint64 skipBytes = 0;
+      
+      if (receiptSkip)
+      {
+        skipAddr += receiptSkip->position() - position();
+        skipBytes = receiptSkip->numBytes();
+      }
+      
+      const unsigned char * p0 =
+        std::min<const unsigned char *>(addr_, skipAddr);
+      std::size_t n0 = (std::size_t)(skipAddr) - (std::size_t)(p0);
+      
+      const unsigned char * p1 =
+        std::min<const unsigned char *>(skipAddr + skipBytes, addr_ + numBytes_);
+      std::size_t n1 = (std::size_t)(addr_ + numBytes_) - (std::size_t)(p1);
+      
+      if (n0)
+      {
+        computeCrc32.compute(p0, (std::size_t)n0);
+      }
+      
+      if (n1)
+      {
+        computeCrc32.compute(p1, (std::size_t)n1);
+      }
+      
+      return true;
+    }
+    catch (...)
+    {}
+    
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // MemReceipt::receipt
+  // 
+  IStorage::IReceiptPtr
+  MemReceipt::receipt(uint64 offset, uint64 size) const
+  {
+    unsigned char * addr = addr_ + (std::size_t)offset;
+	return IStorage::IReceiptPtr(new MemReceipt(addr, (std::size_t)size));
+  }
+  
+  
+  //----------------------------------------------------------------
+  // ConstMemReceipt::ConstMemReceipt
+  // 
+  ConstMemReceipt::ConstMemReceipt(const void * addr, std::size_t numBytes):
+    MemReceipt(const_cast<void *>(addr), numBytes)
+  {}
+  
+  //----------------------------------------------------------------
+  // ConstMemReceipt::save
+  // 
+  bool
+  ConstMemReceipt::save(const Bytes & data)
+  {
+    (void) data;
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // ConstMemReceipt::receipt
+  // 
+  IStorage::IReceiptPtr
+  ConstMemReceipt::receipt(uint64 offset, uint64 size) const
+  {
+    const unsigned char * addr = addr_ + (std::size_t)offset;
+	return IStorage::IReceiptPtr(new ConstMemReceipt(addr, (std::size_t)size));
+  }
+  
+  
+  //----------------------------------------------------------------
+  // receiptForMemory
+  // 
+  IStorage::IReceiptPtr
+  receiptForMemory(void * data, std::size_t size)
+  {
+    return IStorage::IReceiptPtr(new MemReceipt(data, size));
+  }
+  
+  //----------------------------------------------------------------
+  // receiptForConstMemory
+  // 
+  IStorage::IReceiptPtr
+  receiptForConstMemory(const void * data, std::size_t size)
+  {
+    return IStorage::IReceiptPtr(new ConstMemReceipt(data, size));
   }
   
 }
