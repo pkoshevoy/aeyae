@@ -132,14 +132,36 @@ namespace Yamka
   bool
   HodgePodge::get(Bytes & bytes) const
   {
+    uint64 total = numBytes();
+    bytes = Bytes((std::size_t)total);
+    TByte * data = &(bytes[0]);
+    
+    return get(data);
+  }
+  
+  //----------------------------------------------------------------
+  // HodgePodge::get
+  // 
+  bool
+  HodgePodge::get(TByteVec & bytes) const
+  {
+    uint64 total = numBytes();
+    bytes.resize((std::size_t)total);
+    TByte * data = &(bytes[0]);
+    
+    return get(data);
+  }
+  
+  //----------------------------------------------------------------
+  // HodgePodge::get
+  // 
+  bool
+  HodgePodge::get(TByte * data) const
+  {
     if (receipts_.empty())
     {
       return false;
     }
-    
-    uint64 total = numBytes();
-    bytes = Bytes((std::size_t)total);
-    TByte * data = &(bytes[0]);
     
     for (TReceiptPtrCIter i = receipts_.begin(); i != receipts_.end(); ++i)
     {

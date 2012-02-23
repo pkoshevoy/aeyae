@@ -71,6 +71,8 @@ namespace Yamka
 
     // load data from storage receipts and store in contiguous byte vector:
     bool get(Bytes & bytes) const;
+    bool get(TByteVec & bytes) const;
+    bool get(TByte * bytes) const;
 
     // equivalence test:
     bool operator == (const HodgePodge & other) const;
