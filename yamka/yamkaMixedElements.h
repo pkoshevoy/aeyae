@@ -84,9 +84,10 @@ namespace Yamka
                 uint64 bytesToRead,
                 IDelegateLoad * loader);
 
-    // try to load one element, but do not add it to the mix,
-    // return a pointer to the loaded element,
-    // return NULL if an element could not be loaded:
+    // try to load one element, but do not add it to the mix.
+    // pass back a pointer to the loaded element,
+    // return number of bytes consumed to load the element,
+    // return 0 if an element could not be loaded:
     uint64 loadOneElement(IElement *& elt,
                           FileStorage & storage,
                           uint64 bytesToRead,

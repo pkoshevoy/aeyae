@@ -222,7 +222,7 @@ namespace Yamka
       return 0;
     }
     
-    // shortuct to the factory method:
+    // shortcut to the factory method:
     TElementCreate create = found->second;
     elt = create();
     
@@ -255,7 +255,7 @@ namespace Yamka
       return false;
     }
     
-    // shortuct to the factory method:
+    // shortcut to the factory method:
     TElementCreateCopy createCopy = found->second;
     IElement * copy = createCopy(&elt);
     
