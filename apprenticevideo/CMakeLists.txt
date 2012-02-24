@@ -231,12 +231,16 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -E touch
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES} 
     "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 endif (WIN32)
 
 if (APPLE)
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
+	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES} 
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
