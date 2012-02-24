@@ -2330,12 +2330,23 @@ namespace yae
   {
     protocols.clear();
     
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 13, 0)
     void * opaque = NULL;
     const char * name = NULL;
     while ((name = avio_enum_protocols(&opaque, 0)))
     {
       protocols.push_back(std::string(name));
     }
+#else
+    URLProtocol * protocol = NULL;
+    while ((protocol = av_protocol_next(protocol)))
+    {
+      if (protocol->url_read)
+      {
+        protocols.push_back(std::string(protocol->name));
+      }
+    }
+#endif
     
     return true;
   }
@@ -2992,7 +3003,10 @@ namespace yae
         avfilter_register_all();
 #endif
         av_register_all();
+        
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 13, 0)
         avformat_network_init();
+#endif
         
         av_lockmgr_register(&lockManager);
         ffmpegInitialized_ = true;
