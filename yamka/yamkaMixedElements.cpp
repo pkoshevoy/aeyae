@@ -181,28 +181,10 @@ namespace Yamka
     uint64 bytesRead = 0;
     while (bytesToRead)
     {
-      uint64 eltId = 0;
-      {
-        File::Seek autoRestorePosition(storage.file_);
-        eltId = loadEbmlId(storage);
-      }
-      
-      typedef std::map<uint64, TElementCreate>::const_iterator TFactoryIter;
-      TFactoryIter found = create_.find(eltId);
-      if (found == create_.end())
-      {
-        // done
-        break;
-      }
-      
-      // shortuct to the factory method:
-      TElementCreate create = found->second;
-      IElement * elt = create();
-      
-      uint64 eltSize = elt->load(storage, bytesToRead, loader);
+      IElement * elt = NULL;
+      uint64 eltSize = loadOneElement(elt, storage, bytesToRead, loader);
       if (!eltSize)
       {
-        delete elt;
         break;
       }
       
@@ -214,6 +196,46 @@ namespace Yamka
     }
     
     return bytesRead;
+  }
+  
+  //----------------------------------------------------------------
+  // MixedElements::loadOneElement
+  // 
+  uint64
+  MixedElements::loadOneElement(IElement *& elt,
+                                FileStorage & storage,
+                                uint64 bytesToRead,
+                                IDelegateLoad * loader)
+  {
+    uint64 eltId = 0;
+    {
+      File::Seek autoRestorePosition(storage.file_);
+      eltId = loadEbmlId(storage);
+    }
+    
+    typedef std::map<uint64, TElementCreate>::const_iterator TFactoryIter;
+    TFactoryIter found = create_.find(eltId);
+    if (found == create_.end())
+    {
+      // done:
+      elt = NULL;
+      return 0;
+    }
+    
+    // shortuct to the factory method:
+    TElementCreate create = found->second;
+    elt = create();
+    
+    uint64 eltSize = elt->load(storage, bytesToRead, loader);
+    if (eltSize)
+    {
+      return eltSize;
+    }
+    
+    delete elt;
+    elt = NULL;
+    
+    return 0;
   }
   
   //----------------------------------------------------------------

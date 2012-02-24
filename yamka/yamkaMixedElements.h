@@ -83,6 +83,14 @@ namespace Yamka
     uint64 load(FileStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader);
+
+    // try to load one element, but do not add it to the mix,
+    // return a pointer to the loaded element,
+    // return NULL if an element could not be loaded:
+    uint64 loadOneElement(IElement *& elt,
+                          FileStorage & storage,
+                          uint64 bytesToRead,
+                          IDelegateLoad * loader);
     
     // attempt to add an element to this mix:
     bool push_back(const IElement & elt);
