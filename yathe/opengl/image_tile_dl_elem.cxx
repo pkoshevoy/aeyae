@@ -17,12 +17,6 @@
 #include "opengl/image_tile_dl_elem.hxx"
 #include "opengl/the_gl_context.hxx"
 
-// forward declarations:
-#ifdef USE_CG
-extern CGcontext cg_context;
-extern CGprofile cg_profile;
-#endif
-
 //----------------------------------------------------------------
 // DEBUG_TEXTURE_IDS
 // 
@@ -38,9 +32,6 @@ image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
   data_(data),
   min_filter_(min_filter),
   mag_filter_(mag_filter)
-#ifdef USE_CG
-  ,fragment_program_(NULL)
-#endif
 {
   p3x1_t min(float(data_.origin_x_),
 	     float(data_.origin_y_),
@@ -50,29 +41,6 @@ image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
 	     0);
   bbox_ << min << min + ext;
 }
-
-#ifdef USE_CG
-//----------------------------------------------------------------
-// image_tile_dl_elem_t::image_tile_dl_elem_t
-// 
-image_tile_dl_elem_t::image_tile_dl_elem_t(const image_tile_generator_t & data,
-					   GLenum min_filter,
-					   GLenum mag_filter,
-					   const CGprogram * fragment_program):
-  data_(data),
-  min_filter_(min_filter),
-  mag_filter_(mag_filter),
-  fragment_program_(fragment_program)
-{
-  p3x1_t min(float(data_.origin_x_),
-	     float(data_.origin_y_),
-	     0);
-  v3x1_t ext(float(data_.spacing_x_ * data_.w_),
-	     float(data_.spacing_y_ * data_.h_),
-	     0);
-  bbox_ << min << min + ext;
-}
-#endif
 
 //----------------------------------------------------------------
 // image_tile_dl_elem_t::~image_tile_dl_elem_t
@@ -170,13 +138,6 @@ image_tile_dl_elem_t::setup_textures() const
     // setup the textures:
     for (size_t i = 0; i < num_tiles; i++)
     {
-#ifdef USE_CG
-      if (has_fragment_program())
-      {
-	glActiveTexture(GL_TEXTURE0 + i % num_texture_units);
-      }
-#endif
-      
       const image_tile_t & tile = tiles[i];
       texture_ok_[i] = tile.texture_->setup(texture_ids[i]);
     }
@@ -239,29 +200,6 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
   
   setup_textures();
   
-#ifdef USE_CG
-  CGparameter texture_param = 0;
-  CGparameter tile_size_param = 0;
-  CGparameter antialias_param = 0;
-  CGparameter tint_param = 0;
-  CGparameter mask_param = 0;
-  
-  if (has_fragment_program())
-  {
-    cgGLLoadProgram(*fragment_program_);
-    texture_param = cgGetNamedParameter(*fragment_program_, "tile_texture");
-    tile_size_param = cgGetNamedParameter(*fragment_program_, "tile_size");
-    antialias_param = cgGetNamedParameter(*fragment_program_, "antialias");
-    tint_param = cgGetNamedParameter(*fragment_program_, "tint");
-    mask_param = cgGetNamedParameter(*fragment_program_, "mask");
-    
-    FIXME_OPENGL("GPU Program ON");
-  }
-  
-  // check whether fragments should be anti-aliased:
-  bool antialias = min_filter_ != GL_NEAREST;
-#endif
-  
   // number of available texture units:
   GLint num_texture_units = 0;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units);
@@ -274,77 +212,15 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
     
     const image_tile_t & tile = tiles[i];
     
-#ifdef USE_CG
-    if (has_fragment_program())
-    {
-      glActiveTexture(GL_TEXTURE0 + i % num_texture_units);
-      
-      cgGLBindProgram(*fragment_program_);
-      cgGLEnableProfile(cg_profile);
-      
-      cgGLSetTextureParameter(texture_param, texture_id_[i]);
-      cgGLEnableTextureParameter(texture_param);
-      
-      cgGLSetParameter2f(tile_size_param,
-			 float(tile.texture_->width_),
-			 float(tile.texture_->height_));
-      
-      if (antialias_param != 0)
-      {
-	cgGLSetParameter1f(antialias_param,
-			   float(antialias));
-      }
-      
-      if (tint_param != 0)
-      {
-	cgGLSetParameter3f(tint_param,
-			   color[0],
-			   color[1],
-			   color[2]);
-      }
-      
-      if (mask_param != 0)
-      {
-	cgGLSetParameter1f(mask_param, float(!use_textures));
-      }
-      
-      // the fragment shader will handle anti-aliasing if necessary:
-      draw(draw_tile_cb,
-	   draw_tile_cb_data,
-	   i,
-	   color,
-	   use_textures,
-	   texture_id_[i],
-	   GL_NEAREST,
-	   GL_NEAREST);
-      
-      cgGLDisableTextureParameter(texture_param);
-      cgGLDisableProfile(cg_profile);
-    }
-    else
-#endif
-    {
-      draw(draw_tile_cb,
-	   draw_tile_cb_data,
-	   i,
-	   color,
-	   use_textures,
-	   texture_id_[i],
-	   min_filter_,
-	   mag_filter_);
-    }
+    draw(draw_tile_cb,
+         draw_tile_cb_data,
+         i,
+         color,
+         use_textures,
+         texture_id_[i],
+         min_filter_,
+         mag_filter_);
   }
-  
-#ifdef USE_CG
-  if (has_fragment_program())
-  {
-    cgGLUnbindProgram(cg_profile);
-    FIXME_OPENGL("GPU Program OFF");
-    
-    // restore classic OpenGL texturing:
-    glActiveTexture(GL_TEXTURE0);
-  }
-#endif
 }
 
 //----------------------------------------------------------------
@@ -421,16 +297,7 @@ image_tile_dl_elem_t::draw(draw_tile_cb_t draw_tile_cb,
     glLineWidth(1);
     
 #else // DEBUG_TEXTURES
-#ifdef USE_CG
-    if (has_fragment_program() && use_textures)
-    {
-      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    }
-    else
-#endif
-    {
-      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    }
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     
     glDisable(GL_LIGHTING);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -451,45 +318,6 @@ image_tile_dl_elem_t::draw_tile(const void * data,
 {
   const image_tile_dl_elem_t * image = (const image_tile_dl_elem_t *)(data);
   const image_tile_t & tile = image->data_.tiles_[tile_index];
-  /*
-#ifdef USE_CG
-  if (image->has_fragment_program())
-  {
-    const CGprogram & fragment_program = *(image->fragment_program_);
-    
-    CGparameter texture_param = 0;
-    CGparameter tile_size_param = 0;
-    CGparameter antialias_param = 0;
-    
-    cgGLLoadProgram(fragment_program);
-    texture_param = cgGetNamedParameter(fragment_program, "tile_texture");
-    tile_size_param = cgGetNamedParameter(fragment_program, "tile_size");
-    antialias_param = cgGetNamedParameter(fragment_program, "antialias");
-    
-    FIXME_OPENGL("GPU Program ON");
-  
-    // check whether fragments should be anti-aliased:
-    bool antialias = image->min_filter_ != GL_NEAREST;
-    
-    GLint num_texture_units = 0;
-    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &num_texture_units);
-    glActiveTexture(GL_TEXTURE0 + tile_index % num_texture_units);
-    
-    cgGLBindProgram(fragment_program);
-    cgGLEnableProfile(cg_profile);
-    
-    cgGLSetTextureParameter(texture_param, image->texture_id_[tile_index]);
-    cgGLEnableTextureParameter(texture_param);
-    
-    cgGLSetParameter2f(tile_size_param,
-		       float(tile.texture_->width_),
-		       float(tile.texture_->height_));
-    
-    cgGLSetParameter1f(antialias_param,
-		       float(antialias));
-  }
-#endif
-  */
   
   glBegin(GL_QUADS);
   {

@@ -89,7 +89,6 @@ add_library(the_core STATIC
   )
 
 install(FILES 
-  FindCg.cmake
   FindFFTW.cmake
   FindGLEW.cmake
   FindYATHE.cmake
@@ -180,12 +179,6 @@ if (GLEW_FOUND)
   find_package(OpenGL REQUIRED)
 
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
-  
-  find_package(Cg)
-  if (Cg_FOUND)
-    add_definitions(-DUSE_CG)
-    include_directories(AFTER ${Cg_INCLUDE_DIR})
-  endif (Cg_FOUND)
   
   add_library(the_ui STATIC
     doc/the_document.cxx

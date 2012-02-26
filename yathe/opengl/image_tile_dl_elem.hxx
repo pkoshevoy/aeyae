@@ -29,11 +29,6 @@
 #include <vector>
 #include <list>
 
-// Cg includes:
-#ifdef USE_CG
-#include <Cg/cgGL.h>
-#endif
-
 
 //----------------------------------------------------------------
 // image_tile_dl_elem_t
@@ -44,13 +39,6 @@ public:
   image_tile_dl_elem_t(const image_tile_generator_t & data,
 		       GLenum min_filter = GL_NEAREST,
 		       GLenum mag_filter = GL_NEAREST);
-  
-#ifdef USE_CG
-  image_tile_dl_elem_t(const image_tile_generator_t & data,
-		       GLenum min_filter,
-		       GLenum mag_filter,
-		       const CGprogram * fragment_program);
-#endif
   
   // virtual:
   ~image_tile_dl_elem_t();
@@ -94,12 +82,6 @@ public:
   // virtual:
   void update_bbox(the_bbox_t & bbox) const;
   
-#ifdef USE_CG
-  // helper:
-  inline bool has_fragment_program() const
-  { return fragment_program_ != NULL; }
-#endif
-  
   bool get_texture_info(GLenum & data_type,
                         GLenum & format_internal,
                         GLenum & format) const;
@@ -127,11 +109,6 @@ public:
   GLenum min_filter_;
   GLenum mag_filter_;
 
-#ifdef USE_CG
-  // fragment program used to process texture data:
-  const CGprogram * fragment_program_;
-#endif
-  
 private:
   image_tile_dl_elem_t();
   
