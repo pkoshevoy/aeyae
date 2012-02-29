@@ -134,9 +134,7 @@ namespace Yamka
   {
     uint64 total = numBytes();
     bytes = Bytes((std::size_t)total);
-    TByte * data = &(bytes[0]);
-    
-    return get(data);
+    return total ? get(&(bytes[0])) : true;
   }
   
   //----------------------------------------------------------------
@@ -147,9 +145,7 @@ namespace Yamka
   {
     uint64 total = numBytes();
     bytes.resize((std::size_t)total);
-    TByte * data = &(bytes[0]);
-    
-    return get(data);
+    return total ? get(&(bytes[0])) : true;
   }
   
   //----------------------------------------------------------------
