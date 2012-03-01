@@ -99,12 +99,6 @@ namespace Yamka
       
       *receipt += dstReceipt;
     }
-
-    if (!receipt->numBytes())
-    {
-      assert(false);
-      return IStorage::IReceiptPtr();
-    }
     
     return receipt;
   }
