@@ -5057,36 +5057,6 @@ namespace Yamka
   {}
   
   //----------------------------------------------------------------
-  // TimeSpan::getStart
-  // 
-  uint64
-  TimeSpan::getStart(uint64 base) const
-  {
-    uint64 ta = uint64(double(start_ * base) / double(base_));
-    return ta;
-  }
-  
-  //----------------------------------------------------------------
-  // TimeSpan::getExtent
-  // 
-  uint64
-  TimeSpan::getExtent(uint64 base) const
-  {
-    uint64 te = uint64(double(extent_ * base) / double(base_));
-    return te;
-  }
-  
-  //----------------------------------------------------------------
-  // TimeSpan::getEnd
-  // 
-  uint64
-  TimeSpan::getEnd(uint64 base) const
-  {
-    uint64 tb = uint64(double((start_ + extent_) * base) / double(base_));
-    return tb;
-  }
-  
-  //----------------------------------------------------------------
   // TimeSpan::setStart
   // 
   void

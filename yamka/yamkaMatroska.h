@@ -1206,11 +1206,20 @@ namespace Yamka
   struct TimeSpan
   {
     TimeSpan();
+
+    // convert time from local timebase to a given timebase:
+    inline uint64 getTime(uint64 t, uint64 base) const
+    { return (base_ == base) ? t : uint64(double(t * base) / double(base_)); }
     
     // return extreme points of this time span expressed in a given timebase:
-    uint64 getStart(uint64 base) const;
-    uint64 getExtent(uint64 base) const;
-    uint64 getEnd(uint64 base) const;
+    inline uint64 getStart(uint64 base) const
+    { return getTime(start_, base); }
+    
+    inline uint64 getExtent(uint64 base) const
+    { return getTime(extent_, base); }
+    
+    inline uint64 getEnd(uint64 base) const
+    { return getTime(start_ + extent_, base); }
     
     // set the start point of this time span, expressed in given time base:
     void setStart(uint64 t, uint64 base);
