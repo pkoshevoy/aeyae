@@ -1244,8 +1244,12 @@ namespace Yamka
     // what track does this Frame belong to:
     uint64 trackNumber_;
     
-    // where is this Frame on the timeline, in seconds:
+    // where is this Frame on the presentation timeline, in seconds:
     TimeSpan ts_;
+    
+    // offset from decote timestamp to presentation timestamp,
+    // expressed in PTS time base:
+    uint64 offsetFromDtsToPts_;
     
     // frame data:
     VBinary data_;

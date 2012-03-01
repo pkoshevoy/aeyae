@@ -5127,6 +5127,7 @@ namespace Yamka
   // 
   Frame::Frame():
     trackNumber_(0),
+    offsetFromDtsToPts_(0),
     isKeyframe_(false)
   {}
   
@@ -5279,7 +5280,10 @@ namespace Yamka
         }
         
         const Frame & frame = track.front();
-        double frameTime = double(frame.ts_.start_) / double(frame.ts_.base_);
+        
+        double frameTime =
+          double(frame.ts_.start_ - frame.offsetFromDtsToPts_) /
+          double(frame.ts_.base_);
         
         if (!bestTrack || frameTime < bestTime)
         {
