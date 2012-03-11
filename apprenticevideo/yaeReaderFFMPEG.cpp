@@ -59,25 +59,6 @@ extern "C"
 namespace yae
 {
 
-  enum
-  {
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(52, 64, 0)
-    kCodecTypeUnknown = CODEC_TYPE_UNKNOWN,
-    kCodecTypeAudio = CODEC_TYPE_AUDIO,
-    kCodecTypeVideo = CODEC_TYPE_VIDEO,
-    kCodecTypeData = CODEC_TYPE_DATA,
-    kCodecTypeSubtitle = CODEC_TYPE_SUBTITLE,
-    kCodecTypeAttachment = CODEC_TYPE_ATTACHMENT,
-#else
-    kCodecTypeUnknown = AVMEDIA_TYPE_UNKNOWN,
-    kCodecTypeAudio = AVMEDIA_TYPE_AUDIO,
-    kCodecTypeVideo = AVMEDIA_TYPE_VIDEO,
-    kCodecTypeData = AVMEDIA_TYPE_DATA,
-    kCodecTypeSubtitle = AVMEDIA_TYPE_SUBTITLE,
-    kCodecTypeAttachment = AVMEDIA_TYPE_ATTACHMENT,
-#endif
-  };
-  
   //----------------------------------------------------------------
   // kMaxDouble
   // 
@@ -413,7 +394,7 @@ namespace yae
       return NULL;
     }
     
-    AVMetadataTag * name = av_metadata_get(stream_->metadata,
+    AVDictionaryEntry * name = av_dict_get(stream_->metadata,
                                            "name",
                                            NULL,
                                            0);
@@ -422,7 +403,7 @@ namespace yae
       return name->value;
     }
     
-    AVMetadataTag * title = av_metadata_get(stream_->metadata,
+    AVDictionaryEntry * title = av_dict_get(stream_->metadata,
                                             "title",
                                             NULL,
                                             0);
@@ -431,7 +412,7 @@ namespace yae
       return title->value;
     }
     
-    AVMetadataTag * lang = av_metadata_get(stream_->metadata,
+    AVDictionaryEntry * lang = av_dict_get(stream_->metadata,
                                            "language",
                                            NULL,
                                            0);
@@ -762,7 +743,7 @@ namespace yae
     framesDecoded_(0),
     imgConvertCtx_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == kCodecTypeVideo);
+    YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_VIDEO);
 
     // make sure the frames are sorted from oldest to newest:
     frameQueue_.setSortFunc(&aFollowsB);
@@ -1568,7 +1549,7 @@ namespace yae
     samplesDecoded_(0),
     resampleCtx_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == kCodecTypeAudio);
+    YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_AUDIO);
     
     // match output queue size to input queue size:
     frameQueue_.setMaxSize(packetQueue_.getMaxSize());
@@ -1594,30 +1575,30 @@ namespace yae
   //----------------------------------------------------------------
   // yae_to_ffmpeg
   // 
-  static enum SampleFormat
+  static enum AVSampleFormat
   yae_to_ffmpeg(TAudioSampleFormat yaeSampleFormat)
   {
     switch (yaeSampleFormat)
     {
       case kAudio8BitOffsetBinary:
-        return SAMPLE_FMT_U8;
+        return AV_SAMPLE_FMT_U8;
 
       case kAudio16BitBigEndian:
       case kAudio16BitLittleEndian:
-        return SAMPLE_FMT_S16;
+        return AV_SAMPLE_FMT_S16;
 
       case kAudio32BitBigEndian:
       case kAudio32BitLittleEndian:
-        return SAMPLE_FMT_S32;
+        return AV_SAMPLE_FMT_S32;
 
       case kAudio32BitFloat:
-        return SAMPLE_FMT_FLT;
+        return AV_SAMPLE_FMT_FLT;
 
       default:
         break;
     }
     
-    return SAMPLE_FMT_NONE;
+    return AV_SAMPLE_FMT_NONE;
   }
 
   //----------------------------------------------------------------
@@ -2001,8 +1982,8 @@ namespace yae
     if (native_.sampleFormat_ != output_.sampleFormat_ ||
         native_.sampleRate_ != output_.sampleRate_)
     {
-      enum SampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
-      enum SampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
+      enum AVSampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
+      enum AVSampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
       resampleCtx_ = av_audio_resample_init(outputChannels_,
                                             outputChannels_,
                                             output_.sampleRate_,
@@ -2032,11 +2013,11 @@ namespace yae
     
     switch (context->sample_fmt)
     {
-      case SAMPLE_FMT_U8:
+      case AV_SAMPLE_FMT_U8:
         t.sampleFormat_ = kAudio8BitOffsetBinary;
         break;
         
-      case SAMPLE_FMT_S16:
+      case AV_SAMPLE_FMT_S16:
 #ifdef __BIG_ENDIAN__
         t.sampleFormat_ = kAudio16BitBigEndian;
 #else
@@ -2044,7 +2025,7 @@ namespace yae
 #endif
         break;
         
-      case SAMPLE_FMT_S32:
+      case AV_SAMPLE_FMT_S32:
 #ifdef __BIG_ENDIAN__
         t.sampleFormat_ = kAudio32BitBigEndian;
 #else
@@ -2052,7 +2033,7 @@ namespace yae
 #endif
         break;
         
-      case SAMPLE_FMT_FLT:
+      case AV_SAMPLE_FMT_FLT:
         t.sampleFormat_ = kAudio32BitFloat;
         break;
         
@@ -2392,7 +2373,7 @@ namespace yae
       }
       
       const AVMediaType codecType = stream->codec->codec_type;
-      if (codecType == kCodecTypeVideo)
+      if (codecType == AVMEDIA_TYPE_VIDEO)
       {
         VideoTrackPtr track(new VideoTrack(context_, stream));
         VideoTraits traits;
@@ -2401,7 +2382,7 @@ namespace yae
           videoTracks_.push_back(track);
         }
       }
-      else if (codecType == kCodecTypeAudio)
+      else if (codecType == AVMEDIA_TYPE_AUDIO)
       {
         AudioTrackPtr track(new AudioTrack(context_, stream));
         AudioTraits traits;
