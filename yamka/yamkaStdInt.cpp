@@ -382,7 +382,7 @@ namespace Yamka
       return 0;
     }
     
-    return storage.skip(numBytesToLoad + 1);
+    return (unsigned int)storage.skip(numBytesToLoad + 1);
   }
   
   //----------------------------------------------------------------

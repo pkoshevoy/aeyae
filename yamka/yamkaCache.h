@@ -67,11 +67,13 @@ namespace Yamka
     TLine * lookup(uint64 addr);
     TLine * addLine(uint64 addr);
     TLine * getLine(uint64 addr);
-
+    
     std::size_t load(uint64 addr, std::size_t size, unsigned char * dst);
     std::size_t save(uint64 addr, std::size_t size, const unsigned char * src);
     
   protected:
+    void adjustLineSize(std::size_t requestSize);
+    
     ICacheDataProvider * provider_;
     std::size_t lineSize_;
     std::size_t numLines_;

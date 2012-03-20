@@ -11,6 +11,7 @@
 
 // system includes:
 #include <assert.h>
+#include <iostream>
 #include <string.h>
 #include <vector>
 
@@ -114,6 +115,12 @@ namespace Yamka
       lines_.assign(maxLines, NULL);
       lineSize_ = lineSize;
     }
+    
+#if 0
+    std::cerr << "cache resized: "
+              << maxLines << " x " << lineSize
+              << std::endl;
+#endif
   }
   
   //----------------------------------------------------------------
@@ -263,6 +270,11 @@ namespace Yamka
   std::size_t
   TCache::load(uint64 addr, std::size_t size, unsigned char * dst)
   {
+    if (lineSize_ < size && size <= 16777216)
+    {
+      adjustLineSize(size);
+    }
+    
     std::size_t todo = size;
     
     uint64 addr0 = addr - addr % lineSize_;
@@ -308,6 +320,11 @@ namespace Yamka
   std::size_t
   TCache::save(uint64 addr, std::size_t size, const unsigned char * src)
   {
+    if (lineSize_ < size && size <= 16777216)
+    {
+      adjustLineSize(size);
+    }
+    
     std::size_t todo = size;
     
     uint64 addr0 = addr - addr % lineSize_;
@@ -350,6 +367,17 @@ namespace Yamka
     
     std::size_t done = size - todo;
     return done;
+  }
+  
+  //----------------------------------------------------------------
+  // TCache::adjustLineSize
+  // 
+  void
+  TCache::adjustLineSize(std::size_t requestSize)
+  {
+    std::size_t n = (requestSize + lineSize_ - 1) / lineSize_;
+    std::size_t z = n * lineSize_;
+    resize(lines_.size(), z);
   }
   
 }
