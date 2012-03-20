@@ -10,6 +10,7 @@
 #define YAMKA_FILE_H_
 
 // yamka includes:
+#include <yamkaCache.h>
 #include <yamkaCrc32.h>
 
 // boost includes:
@@ -56,7 +57,7 @@ namespace Yamka
   class File
   {
   public:
-    virtual ~File();
+    ~File();
     
     //----------------------------------------------------------------
     // AccessMode
@@ -74,19 +75,26 @@ namespace Yamka
     File(const File & f);
     File & operator = (const File & f);
     
+    // accessor to the file cache,
+    // will return NULL if the file is not open:
+    TCache * cache() const;
+    
     // check whether the file handle is open:
-    virtual bool isOpen() const;
+    bool isOpen() const;
 
     // close current file handle.
     // NOTE: this applies to all copies of this File object
     //       due to implicit sharing
-    virtual void close();
+    void close();
 
     // close current file handle and open another file.
     // NOTE: this applies to all copies of this File object
     //       due to implicit sharing
-    virtual bool open(const std::string & pathUTF8,
-                      AccessMode fileMode = kReadOnly);
+    bool open(const std::string & pathUTF8,
+              AccessMode fileMode = kReadOnly);
+    
+    // accessor to the filename (UTF-8):
+    const std::string & filename() const;
     
     //----------------------------------------------------------------
     // TOff
@@ -104,11 +112,11 @@ namespace Yamka
     };
 
     // seek to a specified file position:
-    virtual bool seek(TOff offset,
-                      PositionReference relativeTo = kAbsolutePosition);
+    bool seek(TOff offset,
+              PositionReference relativeTo = kAbsolutePosition);
     
     // return current absolute file position:
-    virtual TOff absolutePosition() const;
+    TOff absolutePosition() const;
     
     //----------------------------------------------------------------
     // Seek
@@ -152,30 +160,28 @@ namespace Yamka
     };
     
     // helper to get current file size:
-    virtual TOff size();
+    TOff size();
     
     // truncate or extend file to a given size:
-    virtual bool setSize(TOff size);
+    bool setSize(TOff size);
     
     // write out at current file position a specified number of bytes
     // from the source buffer:
-    virtual bool write(const void * source, std::size_t numBytes);
+    bool save(const void * src, std::size_t numBytes);
     
     // read at current file position a specified number of bytes
     // into the destination buffer:
-    virtual bool read(void * destination, std::size_t numBytes);
+    bool load(void * dst, std::size_t numBytes);
     
-    // accessor to the filename (UTF-8):
-    virtual const std::string & filename() const;
-    
-    // helpers for storing non-contiguous byte sequences:
-    virtual bool save(const unsigned char * data, std::size_t size);
-    virtual bool load(unsigned char * data, std::size_t size);
+    // unlike load/save/read/write peek does not change the current
+    // file position; otherwise peek behaves like load and
+    // returns the number of bytes successfully loaded:
+    std::size_t peek(void * dst, std::size_t numBytes);
     
     // calculate CRC-32 checksum over a region of this file:
-    virtual bool calcCrc32(TOff seekToPosition,
-                           TOff numBytesToRead,
-                           Crc32 & computeCrc32);
+    bool calcCrc32(TOff seekToPosition,
+                   TOff numBytesToRead,
+                   Crc32 & computeCrc32);
     
     // remove a given file:
     static bool remove(const char * filenameUTF8);

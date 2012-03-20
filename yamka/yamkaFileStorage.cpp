@@ -65,19 +65,26 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // FileStorage::peek
+  // 
+  std::size_t
+  FileStorage::peek(unsigned char * data, std::size_t size)
+  {
+    return file_.peek(data, size);
+  }
+  
+  //----------------------------------------------------------------
   // FileStorage::skip
   // 
-  IStorage::IReceiptPtr
+  uint64
   FileStorage::skip(uint64 numBytes)
   {
-    IStorage::IReceiptPtr receipt(new Receipt(file_));
     if (!file_.seek(numBytes, File::kRelativeToCurrent))
     {
-      return IStorage::IReceiptPtr();
+      return 0;
     }
     
-    receipt->add(numBytes);
-    return receipt;
+    return numBytes;
   }
   
   //----------------------------------------------------------------
@@ -157,7 +164,7 @@ namespace Yamka
     try
     {
       File::Seek temp(file_, addr_);
-      if (file_.read(data, (std::size_t)numBytes_))
+      if (file_.load(data, (std::size_t)numBytes_))
       {
         return true;
       }

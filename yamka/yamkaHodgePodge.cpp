@@ -49,7 +49,7 @@ namespace Yamka
   uint64
   HodgePodge::load(FileStorage & storage, uint64 bytesToRead)
   {
-    IStorage::IReceiptPtr dataReceipt = storage.skip(bytesToRead);
+    IStorage::IReceiptPtr dataReceipt = storage.skipWithReceipt(bytesToRead);
     if (!dataReceipt)
     {
       return 0;
@@ -57,9 +57,9 @@ namespace Yamka
     
     receipts_.clear();
     receipts_.push_back(dataReceipt);
-    return dataReceipt->numBytes();
+    return bytesToRead;
   }
-
+  
   //----------------------------------------------------------------
   // HodgePodge::save
   // 
@@ -79,7 +79,7 @@ namespace Yamka
       if (isNullStorage)
       {
         // don't bother copying the data when saving to NULL storage:
-        dstReceipt = storage.skip(srcReceipt->numBytes());
+        dstReceipt = storage.skipWithReceipt(srcReceipt->numBytes());
       }
       else
       {

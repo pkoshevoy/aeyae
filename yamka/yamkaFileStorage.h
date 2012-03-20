@@ -31,8 +31,9 @@ namespace Yamka
     // virtual:
     IReceiptPtr save(const unsigned char * data, std::size_t size);
     IReceiptPtr load(unsigned char * data, std::size_t size);
-    IReceiptPtr skip(uint64 numBytes);
-
+    std::size_t peek(unsigned char * data, std::size_t size);
+    uint64      skip(uint64 numBytes);
+    
     //----------------------------------------------------------------
     // Receipt
     // 

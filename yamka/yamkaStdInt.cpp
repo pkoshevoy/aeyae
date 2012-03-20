@@ -352,7 +352,7 @@ namespace Yamka
             IStorage & storage,
             unsigned int maxBytes)
   {
-    if (!storage.load(vsize, 1))
+    if (!storage.peek(vsize, 1))
     {
       return 0;
     }
@@ -377,12 +377,12 @@ namespace Yamka
     }
     
     // load the remaining vsize bytes:
-    if (numBytesToLoad && !storage.load(&vsize[1], numBytesToLoad))
+    if (numBytesToLoad && !storage.peek(vsize, numBytesToLoad + 1))
     {
       return 0;
     }
     
-    return numBytesToLoad + 1;
+    return storage.skip(numBytesToLoad + 1);
   }
   
   //----------------------------------------------------------------

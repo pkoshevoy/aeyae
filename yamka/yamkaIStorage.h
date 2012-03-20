@@ -91,15 +91,17 @@ namespace Yamka
     // NOTE: IStorage::load always reads from current storage position:
     virtual IReceiptPtr load(unsigned char * data, std::size_t size) = 0;
     
-    // NOTE: IStorage::skip always skips from current storage position:
-    virtual IReceiptPtr skip(uint64 numBytes) = 0;
-
-    // set the HodgePodge storage receipt according to the current
-    // storage position and the requested number of bytes.
-    // 
-    // NOTE: this is the same as skip(numBytes) above, except that
-    // the resulting storage receipt is also stored in the hodgePodge:
-    IReceiptPtr loadHodgePodge(HodgePodge & hodgePodge, uint64 numBytes);
+    // NOTE: IStorage::peek does not change current storage position,
+    // returns number of bytes loaded:
+    virtual std::size_t peek(unsigned char * data, std::size_t size) = 0;
+    
+    // NOTE: IStorage::skip always skips from current storage position,
+    // returns number of bytes skipped:
+    virtual uint64 skip(uint64 numBytes) = 0;
+    
+    // NOTE: this is the same as skip(numBytes) above, except this function
+    // returns a storage receipt for the storage location that was skipped:
+    IReceiptPtr skipWithReceipt(uint64 numBytes);
   };
   
   //----------------------------------------------------------------
@@ -125,7 +127,10 @@ namespace Yamka
     IReceiptPtr load(unsigned char * data, std::size_t size);
     
     // virtual:
-    IReceiptPtr skip(uint64 numBytes);
+    std::size_t peek(unsigned char * data, std::size_t size);
+    
+    // virtual:
+    uint64 skip(uint64 numBytes);
     
     //----------------------------------------------------------------
     // Receipt

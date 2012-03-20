@@ -36,6 +36,7 @@ add_custom_command(OUTPUT
 add_library(yamka STATIC
   yamka.h
   yamkaBytes.h
+  yamkaCache.h
   yamkaCrc32.h
   yamkaEBML.h
   yamkaElt.h
@@ -49,6 +50,7 @@ add_library(yamka STATIC
   yamkaSharedPtr.h
   yamkaStdInt.h
   yamkaBytes.cpp
+  yamkaCache.cpp
   yamkaCrc32.cpp
   yamkaEBML.cpp
   yamkaElt.cpp

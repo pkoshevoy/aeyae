@@ -16,6 +16,7 @@
 #endif
 
 // yamka includes:
+#include <yamkaCache.h>
 #include <yamkaFile.h>
 #include <yamkaSharedPtr.h>
 #include <yamkaStdInt.h>
@@ -122,351 +123,6 @@ namespace Yamka
     return file;
   }
   
-  //----------------------------------------------------------------
-  // ICacheDataProvider
-  // 
-  struct ICacheDataProvider
-  {
-    virtual ~ICacheDataProvider() {}
-    
-    virtual bool
-    load(uint64 addr, std::size_t * size, unsigned char * dst) = 0;
-    
-    virtual bool
-    save(uint64 addr, std::size_t size, const unsigned char * src) = 0;
-  };
-  
-  //----------------------------------------------------------------
-  // TCache
-  //
-  class TCache
-  {
-    // intentionally disabled:
-    TCache();
-    TCache(const TCache &);
-    TCache & operator = (const TCache &);
-    
-  public:
-    
-    //----------------------------------------------------------------
-    // TLine
-    // 
-    struct TLine
-    {
-      TLine(std::size_t size):
-        data_(size),
-        age_(0)
-      {
-        init((std::size_t)(~0));
-      }
-
-      //----------------------------------------------------------------
-      // init
-      // 
-      inline void init(uint64 addr)
-      {
-        head_ = addr;
-        tail_ = head_;
-        ready_ = false;
-        dirty_ = false;
-      }
-
-      //----------------------------------------------------------------
-      // contains
-      // 
-      inline bool contains(uint64 addr) const
-      { return head_ <= addr && addr < tail_; }
-      
-      std::vector<unsigned char> data_;
-      uint64 head_;
-      uint64 tail_;
-      uint64 age_;
-      bool ready_;
-      bool dirty_;
-    };
-
-    //----------------------------------------------------------------
-    // TCache
-    // 
-    TCache(ICacheDataProvider * provider,
-           std::size_t maxLines,
-           std::size_t lineSize):
-      provider_(provider),
-      lineSize_(lineSize),
-      numLines_(0),
-      age_(0)
-    {
-      lines_.assign(maxLines, NULL);
-    }
-
-    //----------------------------------------------------------------
-    // ~TCache
-    // 
-    ~TCache()
-    {
-      clear();
-    }
-
-    //----------------------------------------------------------------
-    // clear
-    // 
-    void
-    clear()
-    {
-      const std::size_t numLines = lines_.size();
-      for (std::size_t i = 0; i < numLines; i++)
-      {
-        TLine * line = lines_[i];
-        flush(line);
-        delete line;
-        lines_[i] = NULL;
-      }
-      
-      numLines_ = 0;
-      age_ = 0;
-    }
-
-    //----------------------------------------------------------------
-    // flush
-    // 
-    bool
-    flush(TLine * line)
-    {
-      if (!line || !line->dirty_ || line->tail_ <= line->head_ || !provider_)
-      {
-        return true;
-      }
-      
-      // must flush the line:
-      const unsigned char * src = &(line->data_[0]);
-      std::size_t numBytes = (std::size_t)(line->tail_ - line->head_);
-      
-      bool ok = provider_->save(line->head_, numBytes, src);
-      line->dirty_ = !ok;
-      
-      assert(ok);
-      return ok;
-    }
-    
-    //----------------------------------------------------------------
-    // truncate
-    // 
-    void truncate(uint64 addr)
-    {
-      // must properly align the address:
-      uint64 head = addr - addr % lineSize_;
-      
-      for (std::size_t i = 0; i < numLines_; i++)
-      {
-        TLine * line = lines_[i];
-        if (line->head_ > head)
-        {
-          delete line;
-          lines_[i] = NULL;
-          numLines_--;
-          std::swap(lines_[i], lines_[numLines_]);
-        }
-        else if (line->head_ == head)
-        {
-          assert(line->ready_);
-          line->tail_ = addr;
-        }
-      }
-    }
-    
-    //----------------------------------------------------------------
-    // lookup
-    // 
-    TLine *
-    lookup(uint64 addr)
-    {
-      // must properly align the address:
-      addr -= addr % lineSize_;
-      
-      for (std::size_t i = 0; i < numLines_; i++)
-      {
-        TLine * line = lines_[i];
-        if (line->head_ == addr)
-        {
-          age_++;
-          line->age_ = age_;
-          return line;
-        }
-      }
-      
-      return NULL;
-    }
-
-    //----------------------------------------------------------------
-    // addLine
-    // 
-    TLine *
-    addLine(uint64 addr)
-    {
-      // must properly align the address:
-      addr -= addr % lineSize_;
-      
-      TLine * line = NULL;
-      if (numLines_ < lines_.size())
-      {
-        // add another line:
-        line = new TLine(lineSize_);
-        lines_[numLines_] = line;
-        numLines_++;
-      }
-      else
-      {
-        // find the oldest line to reuse:
-        line = lines_[0];
-        
-        for (std::size_t i = 1; i < numLines_; i++)
-        {
-          if (lines_[i]->age_ < line->age_)
-          {
-            line = lines_[i];
-          }
-        }
-
-        if (!flush(line))
-        {
-          assert(false);
-          return NULL;
-        }
-      }
-      
-      age_++;
-      line->age_ = age_;
-      line->init(addr);
-      
-      return line;
-    }
-
-    //----------------------------------------------------------------
-    // getLine
-    // 
-    TLine *
-    getLine(uint64 addr)
-    {
-      TLine * line = lookup(addr);
-      if (!line)
-      {
-        line = addLine(addr);
-      }
-      
-      if (line && !line->ready_)
-      {
-        // must properly align the address:
-        uint64 head = addr - addr % lineSize_;
-        std::size_t numBytes = lineSize_;
-        unsigned char * dst = &(line->data_[0]);
-        line->ready_ = provider_->load(head, &numBytes, dst);
-        line->tail_ = head + numBytes;
-      }
-      
-      return line;
-    }
-
-    //----------------------------------------------------------------
-    // load
-    // 
-    std::size_t
-    load(uint64 addr, std::size_t size, unsigned char * dst)
-    {
-      std::size_t todo = size;
-      
-      uint64 addr0 = addr - addr % lineSize_;
-      uint64 addr1 = addr + size;
-      
-      for (uint64 head = addr0; todo && head < addr1; head += lineSize_)
-      {
-        TLine * line = getLine(head);
-        if (!line || !line->ready_)
-        {
-          assert(false);
-          return 0;
-        }
-        
-        assert(head == line->head_);
-        unsigned char * src = &(line->data_[0]);
-        
-        uint64 a0 = (head < addr) ? addr : head;
-        uint64 a1 = (line->tail_ < addr1) ? (line->tail_) : addr1;
-        
-        std::size_t lineOffset = (std::size_t)(a0 - head);
-        std::size_t numBytes = (std::size_t)(a1 - a0);
-        
-        memcpy(dst, src + lineOffset, numBytes);
-        dst += numBytes;
-        todo -= numBytes;
-        
-        uint64 tail = head + lineSize_;
-        if (tail != line->tail_)
-        {
-          assert(!todo);
-          break;
-        }
-      }
-      
-      std::size_t done = size - todo;
-      return done;
-    }
-    
-    //----------------------------------------------------------------
-    // save
-    // 
-    std::size_t
-    save(uint64 addr, std::size_t size, const unsigned char * src)
-    {
-      std::size_t todo = size;
-      
-      uint64 addr0 = addr - addr % lineSize_;
-      uint64 addr1 = addr + size;
-      
-      for (uint64 head = addr0; todo && head < addr1; head += lineSize_)
-      {
-        TLine * line = getLine(head);
-        if (!line || !line->ready_)
-        {
-          assert(false);
-          return 0;
-        }
-        
-        assert(head == line->head_);
-        unsigned char * dst = &(line->data_[0]);
-        
-        uint64 tail = head + lineSize_;
-        uint64 a0 = (head < addr) ? addr : head;
-        uint64 a1 = (tail < addr1) ? tail : addr1;
-        
-        std::size_t lineOffset = (std::size_t)(a0 - head);
-        std::size_t numBytes = (std::size_t)(a1 - a0);
-        
-        if (line->tail_ < a1)
-        {
-          line->tail_ = a1;
-        }
-        
-        if (numBytes)
-        {
-          line->ready_ = true;
-          line->dirty_ = true;
-          
-          memcpy(dst + lineOffset, src, numBytes);
-          src += numBytes;
-          todo -= numBytes;
-        }
-      }
-      
-      std::size_t done = size - todo;
-      return done;
-    }
-    
-    ICacheDataProvider * provider_;
-    std::size_t lineSize_;
-    std::size_t numLines_;
-    std::vector<TLine *> lines_;
-    uint64 age_;
-  };
   
   //----------------------------------------------------------------
   // SharedFile
@@ -485,6 +141,8 @@ namespace Yamka
     SharedFile(const std::string & path, File::AccessMode fileMode):
       mode_(fileMode),
       file_(NULL),
+      pos_(0),
+      end_(0),
       cache_(NULL)
     {
       this->open(path, fileMode);
@@ -517,6 +175,7 @@ namespace Yamka
       }
       
       pos_ = 0;
+      end_ = 0;
     }
     
     //----------------------------------------------------------------
@@ -546,21 +205,29 @@ namespace Yamka
       if (ok)
       {
         pos_ = ftello(file_);
+        end_ = this->size();
         
         assert(!cache_);
-        cache_ = new TCache(this, 16, 1024 * 1024);
+        cache_ = new TCache(this, 1, 4096);
 
 #if 0
         std::cerr << path_ << " - open " << mode
                   << ", size: " << size()
                   << ", pos: " << pos_
+                  << ", end: " << end_
                   << std::endl;
 #endif
       }
       
       return ok;
     }
-
+    
+    //----------------------------------------------------------------
+    // cache
+    // 
+    inline TCache * cache() const
+    { return cache_; }
+    
     //----------------------------------------------------------------
     // isOpen
     // 
@@ -594,7 +261,8 @@ namespace Yamka
         size() + offset :
         pos;
 #endif
-      
+
+#if 0
       int err = fseeko(file_, pos, relativeTo);
       if (err)
       {
@@ -603,11 +271,15 @@ namespace Yamka
       }
       
       pos_ = ftello(file_);
+#else      
+      pos_ = (relativeTo == File::kOffsetFromEnd) ? end_ : pos;
+#endif
       
 #if 0 // !defined(NDEBUG) && (defined(_DEBUG) || defined(DEBUG))
       assert(pos_ == dst);
 #endif
       
+      end_ = std::max<uint64>(end_, pos_);
       return true;
     }
 
@@ -624,6 +296,11 @@ namespace Yamka
     // 
     File::TOff size()
     {
+      if (cache_)
+      {
+        return end_;
+      }
+      
       File::TOff prev = ftello(file_);
       int err = fseeko(file_, 0, SEEK_END);
       
@@ -662,17 +339,18 @@ namespace Yamka
       }
       
       cache_->truncate(size);
+      end_ = size;
       return true;
     }
     
     //----------------------------------------------------------------
     // write
     // 
-    bool write(const void * source, std::size_t numBytes)
+    bool write(const unsigned char * src, std::size_t numBytes)
     {
-      const unsigned char * src = (const unsigned char *)source;
       size_t bytesOut = cache_->save(pos_, numBytes, src);
       pos_ += bytesOut;
+      end_ = std::max<uint64>(end_, pos_);
       
       return bytesOut == numBytes;
     }
@@ -680,15 +358,24 @@ namespace Yamka
     //----------------------------------------------------------------
     // read
     // 
-    bool read(void * destination, std::size_t numBytes)
+    bool read(unsigned char * dst, std::size_t numBytes)
     {
-      unsigned char * dst = (unsigned char *)destination;
       size_t bytesRead = cache_->load(pos_, numBytes, dst);
       pos_ += bytesRead;
+      assert(pos_ <= end_);
       
       return bytesRead == numBytes;
     }
-
+    
+    //----------------------------------------------------------------
+    // peek
+    //
+    inline std::size_t
+    peek(unsigned char * dst, std::size_t numBytes)
+    {
+      return cache_->load(pos_, numBytes, dst);
+    }
+    
   protected:
     
     // virtual:
@@ -747,6 +434,9 @@ namespace Yamka
     
     // file position:
     File::TOff pos_;
+    
+    // file end position:
+    File::TOff end_;
     
     // I/O cache:
     TCache * cache_;    
@@ -878,7 +568,16 @@ namespace Yamka
     
     return *this;
   }
-
+  
+  //----------------------------------------------------------------
+  // File::cache
+  // 
+  TCache *
+  File::cache() const
+  {
+    return private_->shared_->cache();
+  }
+  
   //----------------------------------------------------------------
   // File::isOpen
   // 
@@ -943,24 +642,6 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
-  // File::write
-  // 
-  bool
-  File::write(const void * source, std::size_t numBytes)
-  {
-    return private_->shared_->write(source, numBytes);
-  }
-  
-  //----------------------------------------------------------------
-  // File::read
-  // 
-  bool
-  File::read(void * destination, std::size_t numBytes)
-  {
-    return private_->shared_->read(destination, numBytes);
-  }
-  
-  //----------------------------------------------------------------
   // File::filename
   // 
   const std::string &
@@ -973,18 +654,27 @@ namespace Yamka
   // File::save
   // 
   bool
-  File::save(const unsigned char * data, std::size_t size)
+  File::save(const void * data, std::size_t size)
   {
-    return this->write(data, size);
+    return private_->shared_->write((const unsigned char *)data, size);
   }
   
   //----------------------------------------------------------------
   // File::load
   // 
   bool
-  File::load(unsigned char * data, std::size_t size)
+  File::load(void * data, std::size_t size)
   {
-    return this->read(data, size);
+    return private_->shared_->read((unsigned char *)data, size);
+  }
+  
+  //----------------------------------------------------------------
+  // File::peek
+  // 
+  std::size_t
+  File::peek(void * data, std::size_t size)
+  {
+    return private_->shared_->peek((unsigned char *)data, size);
   }
   
   //----------------------------------------------------------------
@@ -1019,7 +709,7 @@ namespace Yamka
         bytesPerPass :
         (std::size_t)bytesToRead;
       
-      if (!read(dataPtr, bytesToReadNow))
+      if (!this->load(dataPtr, bytesToReadNow))
       {
         return false;
       }

@@ -27,16 +27,22 @@ namespace Yamka
     
     return add(receipt->numBytes());
   }
-
+  
+  
   //----------------------------------------------------------------
-  // IStorage::loadHodgePodge
+  // IStorage::skipWithReceipt
   // 
   IStorage::IReceiptPtr
-  IStorage::loadHodgePodge(HodgePodge & hodgePodge, uint64 numBytes)
+  IStorage::skipWithReceipt(uint64 numBytes)
   {
-    IReceiptPtr receipt = skip(numBytes);
-    hodgePodge.set(receipt);
-    return receipt;
+    IReceiptPtr dataReceipt = this->receipt();
+    if (!dataReceipt || !this->skip(numBytes))
+    {
+      return IReceiptPtr();
+    }
+    
+    dataReceipt->add(numBytes);
+    return dataReceipt;
   }
   
   
@@ -92,17 +98,24 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // NullStorage::peek
+  // 
+  std::size_t
+  NullStorage::peek(unsigned char * data, std::size_t size)
+  {
+    (void) data;
+    (void) size;
+    return 0;
+  }
+  
+  //----------------------------------------------------------------
   // NullStorage::skip
   // 
-  IStorage::IReceiptPtr
+  uint64
   NullStorage::skip(uint64 numBytes)
   {
-    IStorage::IReceiptPtr receipt(new Receipt(currentPosition_));
-    
     currentPosition_ += numBytes;
-    receipt->add(numBytes);
-    
-    return receipt;
+    return numBytes;
   }
   
   //----------------------------------------------------------------
