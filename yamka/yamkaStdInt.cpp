@@ -230,27 +230,7 @@ namespace Yamka
   // vsizeDecode
   // 
   uint64
-  vsizeDecode(const Bytes & bytes, uint64 & vsizeSize)
-  {
-    uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
-    return i;
-  }
-  
-  //----------------------------------------------------------------
-  // vsizeDecode
-  // 
-  uint64
-  vsizeDecode(const TByteVec & bytes, uint64 & vsizeSize)
-  {
-    uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
-    return i;
-  }
-  
-  //----------------------------------------------------------------
-  // vsizeDecode
-  // 
-  uint64
-  vsizeDecode(const TByte * bytes, uint64 & vsizeSize)
+  vsizeDecode(const unsigned char * bytes, uint64 & vsizeSize)
   {
     uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
@@ -259,29 +239,26 @@ namespace Yamka
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  TByteVec
-  vsizeEncode(uint64 vsize, uint64 numBytes)
+  void
+  vsizeEncode(uint64 vsize, unsigned char * v, uint64 numBytes)
   {
-    TByteVec v((std::size_t)numBytes);
-    
     for (unsigned int j = 0; j < numBytes; j++)
     {
       unsigned char n = 0xFF & (vsize >> (j * 8));
       v[(std::size_t)(numBytes - j - 1)] = n;
     }
     v[0] |= (1 << (8 - numBytes));
-    
-    return v;
   }
   
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  TByteVec
-  vsizeEncode(uint64 vsize)
+  unsigned int
+  vsizeEncode(uint64 vsize, unsigned char * v)
   {
     unsigned int numBytes = vsizeNumBytes(vsize);
-    return vsizeEncode(vsize, numBytes);
+    vsizeEncode(vsize, v, numBytes);
+    return numBytes;
   }
   
   //----------------------------------------------------------------
@@ -346,27 +323,7 @@ namespace Yamka
   // vsizeSignedDecode
   // 
   int64
-  vsizeSignedDecode(const Bytes & bytes, uint64 & vsizeSize)
-  {
-    int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
-    return i;
-  }
-  
-  //----------------------------------------------------------------
-  // vsizeSignedDecode
-  // 
-  int64
-  vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize)
-  {
-    int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
-    return i;
-  }
-  
-  //----------------------------------------------------------------
-  // vsizeSignedDecode
-  // 
-  int64
-  vsizeSignedDecode(const TByte * bytes, uint64 & vsizeSize)
+  vsizeSignedDecode(const unsigned char * bytes, uint64 & vsizeSize)
   {
     int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
     return i;
@@ -375,12 +332,13 @@ namespace Yamka
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  TByteVec
-  vsizeSignedEncode(int64 vsize)
+  unsigned int
+  vsizeSignedEncode(int64 vsize, unsigned char * v)
   {
     unsigned int numBytes = vsizeSignedNumBytes(vsize);
     uint64 u = vsize + vsizeHalfRange[numBytes];
-    return vsizeEncode(u);
+    vsizeEncode(u, v, numBytes);
+    return numBytes;
   }
   
   //----------------------------------------------------------------
@@ -389,20 +347,19 @@ namespace Yamka
   // helper function for loading a vsize unsigned integer
   // from a storage stream
   // 
-  static bool
-  vsizeLoad(TByteVec & v,
+  static unsigned int
+  vsizeLoad(unsigned char * vsize,
             IStorage & storage,
             unsigned int maxBytes)
   {
-    Bytes vsize(1);
-    if (!storage.load(vsize))
+    if (!storage.load(vsize, 1))
     {
-      return false;
+      return 0;
     }
     
     // find how many bytes remain to be read:
-    const TByte firstByte = vsize[0];
-    TByte leadingBitsMask = 1 << 7;
+    const unsigned char firstByte = vsize[0];
+    unsigned char leadingBitsMask = 1 << 7;
     unsigned int numBytesToLoad = 0;
     for (; numBytesToLoad < maxBytes; numBytesToLoad++)
     {
@@ -414,20 +371,18 @@ namespace Yamka
       leadingBitsMask >>= 1;
     }
     
-    if (numBytesToLoad > maxBytes - 1)
+    if (numBytesToLoad + 1 > maxBytes)
     {
-      return false;
+      return 0;
     }
     
     // load the remaining vsize bytes:
-    Bytes bytes(numBytesToLoad);
-    if (!storage.load(bytes))
+    if (numBytesToLoad && !storage.load(&vsize[1], numBytesToLoad))
     {
-      return false;
+      return 0;
     }
     
-    v = TByteVec(vsize + bytes);
-    return true;
+    return numBytesToLoad + 1;
   }
   
   //----------------------------------------------------------------
@@ -437,15 +392,15 @@ namespace Yamka
   // descriptor from a storage stream
   // 
   uint64
-  vsizeDecode(IStorage & storage,
-              uint64 & vsizeSize)
+  vsizeDecode(IStorage & storage, uint64 & vsizeSize)
   {
-    TByteVec v;
-    if (vsizeLoad(v, storage, 8))
+    unsigned char v[8];
+    vsizeSize = vsizeLoad(v, storage, 8);
+    if (vsizeSize)
     {
       return vsizeDecode(v, vsizeSize);
     }
-
+    
     // invalid vsize or vsize insufficient storage:
     return uintMax[8];
   }
@@ -456,22 +411,22 @@ namespace Yamka
   uint64
   loadEbmlId(IStorage & storage)
   {
-    TByteVec v;
-    if (vsizeLoad(v, storage, 4))
+    unsigned char v[4];
+    unsigned int numBytes = vsizeLoad(v, storage, 4);
+    if (numBytes)
     {
-      return uintDecode(v, v.size());
+      return uintDecode(v, numBytes);
     }
     
     // invalid EBML ID or insufficient storage:
     return 0;
   }
   
-  
   //----------------------------------------------------------------
   // uintDecode
   // 
   uint64
-  uintDecode(const TByteVec & v, uint64 numBytes)
+  uintDecode(const unsigned char * v, uint64 numBytes)
   {
     uint64 ui = 0;
     for (unsigned int j = 0; j < numBytes; j++)
@@ -483,18 +438,16 @@ namespace Yamka
   
   //----------------------------------------------------------------
   // uintEncode
-  // 
-  TByteVec
-  uintEncode(uint64 ui, uint64 numBytes)
+  //
+  void 
+  uintEncode(uint64 ui, unsigned char * v, uint64 numBytes)
   {
-    TByteVec v((std::size_t)numBytes);
     for (uint64 j = 0, k = numBytes - 1; j < numBytes; j++, k--)
     {
       unsigned char n = 0xFF & ui;
       ui >>= 8;
       v[(std::size_t)k] = n;
     }
-    return v;
   }
   
   //----------------------------------------------------------------
@@ -533,45 +486,6 @@ namespace Yamka
     }
     
     return 8;
-  }
-  
-  //----------------------------------------------------------------
-  // uintEncode
-  // 
-  TByteVec
-  uintEncode(uint64 ui)
-  {
-    unsigned int numBytes = uintNumBytes(ui);
-    return uintEncode(ui, numBytes);
-  }
-  
-  //----------------------------------------------------------------
-  // intDecode
-  // 
-  int64
-  intDecode(const TByteVec & v, uint64 numBytes)
-  {
-    uint64 ui = uintDecode(v, numBytes);
-    uint64 mu = uintMax[numBytes];
-    uint64 mi = mu >> 1;
-    int64 i = (ui > mi) ? (ui - mu) - 1 : ui;
-    return i;
-  }
-  
-  //----------------------------------------------------------------
-  // intEncode
-  // 
-  TByteVec
-  intEncode(int64 si, uint64 numBytes)
-  {
-    TByteVec v((std::size_t)numBytes);
-    for (uint64 j = 0, k = numBytes - 1; j < numBytes; j++, k--)
-    {
-      unsigned char n = 0xFF & si;
-      si >>= 8;
-      v[(std::size_t)k] = n;
-    }
-    return v;
   }
   
   //----------------------------------------------------------------
@@ -619,70 +533,12 @@ namespace Yamka
     return 8;
   }
   
-  //----------------------------------------------------------------
-  // intEncode
-  // 
-  TByteVec
-  intEncode(int64 si)
-  {
-    unsigned int numBytes = intNumBytes(si);
-    return intEncode(si, numBytes);
-  }
-  
-  //----------------------------------------------------------------
-  // floatEncode
-  // 
-  TByteVec
-  floatEncode(float d)
-  {
-    const unsigned char * b = (const unsigned char *)&d;
-    uint64 i = 0;
-    memcpy(&i, b, 4);
-    return uintEncode(i, 4);
-  }
-  
-  //----------------------------------------------------------------
-  // floatDecode
-  // 
-  float
-  floatDecode(const TByteVec & v)
-  {
-    float d = 0;
-    uint64 i = uintDecode(v, 4);
-    memcpy(&d, &i, 4);
-    return d;
-  }
-  
-  //----------------------------------------------------------------
-  // doubleEncode
-  // 
-  TByteVec
-  doubleEncode(double d)
-  {
-    const unsigned char * b = (const unsigned char *)&d;
-    uint64 i = 0;
-    memcpy(&i, b, 8);
-    return uintEncode(i, 8);
-  }
-  
-  //----------------------------------------------------------------
-  // doubleDecode
-  // 
-  double
-  doubleDecode(const TByteVec & v)
-  {
-    double d = 0;
-    uint64 i = uintDecode(v, 8);
-    memcpy(&d, &i, 8);
-    return d;
-  }
-  
   
   //----------------------------------------------------------------
   // createUID
   // 
-  TByteVec
-  createUID(std::size_t numBytes)
+  void
+  createUID(unsigned char * v, std::size_t numBytes)
   {
     static bool seeded = false;
     if (!seeded)
@@ -696,68 +552,24 @@ namespace Yamka
       seeded = true;
     }
     
-    TByteVec v(numBytes);
     for (std::size_t i = 0; i < numBytes; i++)
     {
       double t = double(rand()) / double(RAND_MAX);
-      v[i] = TByte(t * 255.0);
+      v[i] = (unsigned char)(t * 255.0);
     }
-    
-    return v;
   }
   
-  
-  namespace Indent
+  //----------------------------------------------------------------
+  // createUID
+  // 
+  uint64
+  createUID()
   {
-    
-    //----------------------------------------------------------------
-    // More::More
-    // 
-    More::More(unsigned int & indentation):
-      indentation_(indentation)
-    {
-      ++indentation_;
-    }
-    
-    //----------------------------------------------------------------
-    // More::~More
-    // 
-    More::~More()
-    {
-      --indentation_;
-    };
+    unsigned char v[8];
+    createUID(v, 8);
 
-    //----------------------------------------------------------------
-    // depth_
-    // 
-    unsigned int depth_ = 0;
-  }
-  
-  
-  //----------------------------------------------------------------
-  // indent::indent
-  // 
-  indent::indent(unsigned int depth):
-    depth_(Indent::depth_ + depth)
-  {}
-  
-  
-  //----------------------------------------------------------------
-  // operator <<
-  // 
-  std::ostream &
-  operator << (std::ostream & s, const indent & ind)
-  {
-    static const char * tab = "        \0";
-    for (unsigned int i = 0; i < ind.depth_ / 8; i++)
-    {
-      s << tab;
-    }
-    
-    const char * trailing_spaces = tab + (8 - ind.depth_ % 8);
-    s << trailing_spaces;
-    
-    return s;
+    uint64 id = uintDecode(v, 8) >> 7;
+    return id;
   }
   
 }

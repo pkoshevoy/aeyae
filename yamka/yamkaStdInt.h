@@ -9,9 +9,6 @@
 #ifndef YAMKA_STDINT_H_
 #define YAMKA_STDINT_H_
 
-// yamka includes:
-#include <yamkaBytes.h>
-
 // boost includes:
 #include <boost/cstdint.hpp>
 
@@ -86,37 +83,19 @@ namespace Yamka
   //       then uintMax[8] will be returned
   // 
   extern uint64
-  vsizeDecode(const Bytes & bytes, uint64 & vsizeSize);
-  
-  //----------------------------------------------------------------
-  // vsizeDecode
-  // 
-  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
-  //       then uintMax[8] will be returned
-  // 
-  extern uint64
-  vsizeDecode(const TByteVec & v, uint64 & vsizeSize);
-  
-  //----------------------------------------------------------------
-  // vsizeDecode
-  // 
-  // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
-  //       then uintMax[8] will be returned
-  // 
-  extern uint64
-  vsizeDecode(const TByte * v, uint64 & vsizeSize);
+  vsizeDecode(const unsigned char * bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  extern TByteVec
-  vsizeEncode(uint64 vsize, uint64 vsizeSize);
+  extern void
+  vsizeEncode(uint64 vsize, unsigned char * v, uint64 vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeEncode
   // 
-  extern TByteVec
-  vsizeEncode(uint64 vsize);
+  extern unsigned int
+  vsizeEncode(uint64 vsize, unsigned char * v);
   
   //----------------------------------------------------------------
   // vsizeSignedNumBytes
@@ -134,25 +113,13 @@ namespace Yamka
   // vsizeSignedDecode
   // 
   extern int64
-  vsizeSignedDecode(const Bytes & bytes, uint64 & vsizeSize);
-  
-  //----------------------------------------------------------------
-  // vsizeSignedDecode
-  // 
-  extern int64
-  vsizeSignedDecode(const TByteVec & bytes, uint64 & vsizeSize);
-  
-  //----------------------------------------------------------------
-  // vsizeSignedDecode
-  // 
-  extern int64
-  vsizeSignedDecode(const TByte * bytes, uint64 & vsizeSize);
+  vsizeSignedDecode(const unsigned char * bytes, uint64 & vsizeSize);
   
   //----------------------------------------------------------------
   // vsizeSignedEncode
   // 
-  extern TByteVec
-  vsizeSignedEncode(int64 vsize);
+  extern unsigned int
+  vsizeSignedEncode(int64 vsize, unsigned char * v);
   
   //----------------------------------------------------------------
   // vsizeDecode
@@ -174,13 +141,13 @@ namespace Yamka
   // uintDecode
   // 
   extern uint64
-  uintDecode(const TByteVec & v, uint64 nbytes);
+  uintDecode(const unsigned char * v, uint64 nbytes);
   
   //----------------------------------------------------------------
   // uintEncode
   // 
-  extern TByteVec
-  uintEncode(uint64 ui, uint64 nbytes);
+  extern void
+  uintEncode(uint64 ui, unsigned char * v, uint64 nbytes);
   
   //----------------------------------------------------------------
   // uintNumBytes
@@ -191,20 +158,40 @@ namespace Yamka
   //----------------------------------------------------------------
   // uintEncode
   // 
-  extern TByteVec
-  uintEncode(uint64 ui);
+  inline unsigned int
+  uintEncode(uint64 ui, unsigned char * v)
+  {
+    unsigned int numBytes = uintNumBytes(ui);
+    uintEncode(ui, v, numBytes);
+    return numBytes;
+  }
   
   //----------------------------------------------------------------
   // intDecode
   // 
-  extern int64
-  intDecode(const TByteVec & v, uint64 len);
+  inline int64
+  intDecode(const unsigned char * v, uint64 nbytes)
+  {
+    uint64 ui = uintDecode(v, nbytes);
+    uint64 mu = uintMax[nbytes];
+    uint64 mi = mu >> 1;
+    int64 i = (ui > mi) ? (ui - mu) - 1 : ui;
+    return i;
+  }
   
   //----------------------------------------------------------------
   // intEncode
   // 
-  extern TByteVec
-  intEncode(int64 si, uint64 nbytes);
+  inline void
+  intEncode(int64 si, unsigned char * v, uint64 nbytes)
+  {
+    for (uint64 j = 0, k = nbytes - 1; j < nbytes; j++, k--)
+    {
+      unsigned char n = 0xFF & si;
+      si >>= 8;
+      v[(std::size_t)k] = n;
+    }
+  }
   
   //----------------------------------------------------------------
   // intNumBytes
@@ -215,70 +202,74 @@ namespace Yamka
   //----------------------------------------------------------------
   // intEncode
   // 
-  extern TByteVec
-  intEncode(int64 si);
-
+  inline unsigned int
+  intEncode(int64 si, unsigned char * v)
+  {
+    unsigned int numBytes = intNumBytes(si);
+    intEncode(si, v, numBytes);
+    return numBytes;
+  }
+  
   //----------------------------------------------------------------
   // floatEncode
   // 
-  extern TByteVec
-  floatEncode(float f);
-
+  inline unsigned int
+  floatEncode(float d, unsigned char * v)
+  {
+    const unsigned char * b = (const unsigned char *)&d;
+    uint64 i = 0;
+    memcpy(&i, b, 4);
+    uintEncode(i, v, 4);
+    return 4;
+  }
+  
   //----------------------------------------------------------------
   // floatDecode
   // 
-  extern float
-  floatDecode(const TByteVec & v);
+  inline float
+  floatDecode(const unsigned char * v)
+  {
+    float d = 0;
+    uint64 i = uintDecode(v, 4);
+    memcpy(&d, &i, 4);
+    return d;
+  }
   
   //----------------------------------------------------------------
   // doubleEncode
   // 
-  extern TByteVec
-  doubleEncode(double d);
+  inline unsigned int
+  doubleEncode(double d, unsigned char * v)
+  {
+    const unsigned char * b = (const unsigned char *)&d;
+    uint64 i = 0;
+    memcpy(&i, b, 8);
+    uintEncode(i, v, 8);
+    return 8;
+  }
   
   //----------------------------------------------------------------
   // doubleDecode
   // 
-  extern double
-  doubleDecode(const TByteVec & v);
+  inline double
+  doubleDecode(const unsigned char * v)
+  {
+    double d = 0;
+    uint64 i = uintDecode(v, 8);
+    memcpy(&d, &i, 8);
+    return d;
+  }
   
   //----------------------------------------------------------------
   // createUID
   // 
-  extern TByteVec
-  createUID(std::size_t numBytes);
+  extern void
+  createUID(unsigned char * v, std::size_t numBytes);
   
   //----------------------------------------------------------------
-  // Indent
+  // createUID
   // 
-  namespace Indent
-  {
-    struct More
-    {
-      More(unsigned int & indentation);
-      ~More();
-      
-      unsigned int & indentation_;
-    };
-    
-    extern unsigned int depth_;
-  }
-  
-  //----------------------------------------------------------------
-  // indent
-  // 
-  struct indent
-  {
-    indent(unsigned int depth = 0);
-    
-    const unsigned int depth_;
-  };
-  
-  //----------------------------------------------------------------
-  // operator <<
-  // 
-  extern std::ostream &
-  operator << (std::ostream & s, const indent & ind);
+  extern uint64 createUID();
   
 }
 

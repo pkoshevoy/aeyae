@@ -10,7 +10,6 @@
 #define YAMKA_ISTORAGE_H_
 
 // yamka includes:
-#include <yamkaBytes.h>
 #include <yamkaCrc32.h>
 #include <yamkaStdInt.h>
 #include <yamkaSharedPtr.h>
@@ -60,9 +59,8 @@ namespace Yamka
       virtual IReceipt & add(uint64 numBytes) = 0;
       
       // return false if load/save fails:
-      virtual bool save(const Bytes & data) = 0;
-      virtual bool load(Bytes & data) = 0;
-      virtual bool load(TByte * data) = 0;
+      virtual bool save(const unsigned char * data, std::size_t size) = 0;
+      virtual bool load(unsigned char * data) = 0;
       
       // compute CRC-32 checksum on data covered by this receipt,
       // skip data in region specied by receiptSkip:
@@ -88,10 +86,10 @@ namespace Yamka
     virtual IReceiptPtr receipt() const = 0;
     
     // NOTE: IStorage::save always appends at the end of the file:
-    virtual IReceiptPtr save(const Bytes & data) = 0;
+    virtual IReceiptPtr save(const unsigned char * data, std::size_t size) = 0;
     
     // NOTE: IStorage::load always reads from current storage position:
-    virtual IReceiptPtr load(Bytes & data) = 0;
+    virtual IReceiptPtr load(unsigned char * data, std::size_t size) = 0;
     
     // NOTE: IStorage::skip always skips from current storage position:
     virtual IReceiptPtr skip(uint64 numBytes) = 0;
@@ -121,10 +119,10 @@ namespace Yamka
     IReceiptPtr receipt() const;
     
     // virtual:
-    IReceiptPtr save(const Bytes & data);
+    IReceiptPtr save(const unsigned char * data, std::size_t size);
     
     // virtual: not supported for null-storage:
-    IReceiptPtr load(Bytes & data);
+    IReceiptPtr load(unsigned char * data, std::size_t size);
     
     // virtual:
     IReceiptPtr skip(uint64 numBytes);
@@ -149,9 +147,8 @@ namespace Yamka
       Receipt & add(uint64 numBytes);
       
       // virtual: not supported for null-storage:
-      bool save(const Bytes & data);
-      bool load(Bytes & data);
-      bool load(TByte * data);
+      bool save(const unsigned char * data, std::size_t size);
+      bool load(unsigned char * data);
       bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
       
       // virtual:
@@ -185,13 +182,10 @@ namespace Yamka
     MemReceipt & add(uint64 numBytes);
     
     // virtual: this will fail if data is larger than this receipt
-    bool save(const Bytes & data);
+    bool save(const unsigned char * data, std::size_t size);
 
-    // virtual: this will fail if data is larger than this receipt
-    bool load(Bytes & data);
-    
     // virtual: use at your own rist:
-    bool load(TByte * data);
+    bool load(unsigned char * data);
     
     // virtual:
     bool calcCrc32(Crc32 & computeCrc32,
@@ -213,7 +207,7 @@ namespace Yamka
     ConstMemReceipt(const void * addr = NULL, std::size_t numBytes = 0);
     
     // virtual: this is not allowed for const memory:
-    bool save(const Bytes & data);
+    bool save(const unsigned char * data, std::size_t size);
     
     // virtual: use at your own risk:
     IStorage::IReceiptPtr receipt(uint64 offset, uint64 size) const;

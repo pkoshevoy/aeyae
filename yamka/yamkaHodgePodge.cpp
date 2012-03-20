@@ -35,9 +35,11 @@ namespace Yamka
   // HodgePodge::add
   // 
   void
-  HodgePodge::add(const Bytes & data, IStorage & storage)
+  HodgePodge::add(const unsigned char * data,
+                  std::size_t size,
+                  IStorage & storage)
   {
-    IStorage::IReceiptPtr dataReceipt = storage.save(data);
+    IStorage::IReceiptPtr dataReceipt = storage.save(data, size);
     receipts_.push_back(dataReceipt);
   }
 
@@ -81,14 +83,14 @@ namespace Yamka
       }
       else
       {
-        Bytes data((std::size_t)srcReceipt->numBytes());
-        if (!srcReceipt->load(data))
+        TByteVec data;
+        if (!Yamka::load(srcReceipt, data))
         {
           assert(false);
           return IStorage::IReceiptPtr();
         }
         
-        dstReceipt = storage.save(data);
+        dstReceipt = Yamka::save(storage, data);
       }
       
       if (!dstReceipt)
@@ -124,17 +126,6 @@ namespace Yamka
   // HodgePodge::get
   // 
   bool
-  HodgePodge::get(Bytes & bytes) const
-  {
-    uint64 total = numBytes();
-    bytes = Bytes((std::size_t)total);
-    return total ? get(&(bytes[0])) : true;
-  }
-  
-  //----------------------------------------------------------------
-  // HodgePodge::get
-  // 
-  bool
   HodgePodge::get(TByteVec & bytes) const
   {
     uint64 total = numBytes();
@@ -146,7 +137,7 @@ namespace Yamka
   // HodgePodge::get
   // 
   bool
-  HodgePodge::get(TByte * data) const
+  HodgePodge::get(unsigned char * data) const
   {
     if (receipts_.empty())
     {
@@ -187,18 +178,18 @@ namespace Yamka
       return true;
     }
     
-    Bytes a(na);
-    if (!get(a))
+    TByteVec a;
+    if (!this->get(a))
     {
       return false;
     }
     
-    Bytes b(nb);
-    if (!get(b))
+    TByteVec b;
+    if (!this->get(b))
     {
       return false;
     }
-
+    
     bool same = memcmp(&(a[0]), &(b[0]), na) == 0;
     return same;
   }
@@ -230,7 +221,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // HodgePodgeConstIter::operator []
   // 
-  TByte
+  unsigned char
   HodgePodgeConstIter::operator [] (int64 offset) const
   {
     if (!updateCache(pos_ + offset))
@@ -245,7 +236,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // HodgePodgeConstIter::operator
   // 
-  TByte
+  unsigned char
   HodgePodgeConstIter::operator * () const
   {
     if (!updateCache(pos_))

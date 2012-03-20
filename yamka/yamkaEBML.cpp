@@ -180,7 +180,7 @@ namespace Yamka
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
-    Bytes oneByte(1);
+    unsigned char oneByte = 0;
     uint64 bytesReadTotal = 0;
     
     // skip forward until we load EBML head element:
@@ -194,7 +194,7 @@ namespace Yamka
         break;
       }
       
-      storage.load(oneByte);
+      storage.load(&oneByte, 1);
       bytesToRead--;
     }
     

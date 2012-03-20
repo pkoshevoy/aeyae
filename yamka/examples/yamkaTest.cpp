@@ -135,7 +135,7 @@ main(int argc, char ** argv)
               << ", current file size: " << fs.file_.size()
               << std::endl;
     
-    Bytes bytes;
+    TByteVec bytes;
     bytes << uintEncode(0x1A45DFA3)
           << uintEncode(0x4286)
           << vsizeEncode(1)
@@ -145,7 +145,7 @@ main(int argc, char ** argv)
           << uintEncode(1);
     
     fs.file_.setSize(0);
-    IStorage::IReceiptPtr receipt = fs.save(bytes);
+    IStorage::IReceiptPtr receipt = Yamka::save(fs, bytes);
     if (receipt)
     {
       std::cout << "stored " << bytes.size() << " bytes" << std::endl;

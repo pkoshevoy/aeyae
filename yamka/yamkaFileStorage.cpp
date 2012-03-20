@@ -36,15 +36,15 @@ namespace Yamka
   // NOTE: IStorage::save always appends at the end of the file.
   // 
   IStorage::IReceiptPtr
-  FileStorage::save(const Bytes & data)
+  FileStorage::save(const unsigned char * data, std::size_t size)
   {
     IStorage::IReceiptPtr receipt(new Receipt(file_));
-    if (!file_.save(data))
+    if (!file_.save(data, size))
     {
       return IStorage::IReceiptPtr();
     }
     
-    receipt->add(data.size());
+    receipt->add(size);
     return receipt;
   }
   
@@ -52,15 +52,15 @@ namespace Yamka
   // FileStorage::load
   // 
   IStorage::IReceiptPtr
-  FileStorage::load(Bytes & data)
+  FileStorage::load(unsigned char * data, std::size_t size)
   {
     IStorage::IReceiptPtr receipt(new Receipt(file_));
-    if (!file_.load(data))
+    if (!file_.load(data, size))
     {
       return IStorage::IReceiptPtr();
     }
     
-    receipt->add(data.size());
+    receipt->add(size);
     return receipt;
   }
   
@@ -131,14 +131,14 @@ namespace Yamka
   // FileStorage::Receipt::save
   // 
   bool
-  FileStorage::Receipt::save(const Bytes & data)
+  FileStorage::Receipt::save(const unsigned char * data, std::size_t size)
   {
     try
     {
       File::Seek temp(file_, addr_);
-      if (file_.save(data))
+      if (file_.save(data, size))
       {
-        numBytes_ = std::max<uint64>(numBytes_, data.size());
+        numBytes_ = std::max<uint64>(numBytes_, size);
         return true;
       }
     }
@@ -152,28 +152,7 @@ namespace Yamka
   // FileStorage::Receipt::load
   // 
   bool
-  FileStorage::Receipt::load(Bytes & data)
-  {
-    try
-    {
-      File::Seek temp(file_, addr_);
-      if (file_.load(data))
-      {
-        numBytes_ = std::max<uint64>(numBytes_, data.size());
-        return true;
-      }
-    }
-    catch (...)
-    {}
-    
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // FileStorage::Receipt::load
-  // 
-  bool
-  FileStorage::Receipt::load(TByte * data)
+  FileStorage::Receipt::load(unsigned char * data)
   {
     try
     {

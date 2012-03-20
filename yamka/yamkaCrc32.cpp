@@ -39,23 +39,6 @@ namespace Yamka
   {
     delete private_;
   }
-
-  //----------------------------------------------------------------
-  // Crc32::compute
-  // 
-  void
-  Crc32::compute(const Bytes & bytes)
-  {
-    const TByteVecDec & deq = *(bytes.bytes_);
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      const TByteVec & vec = *i;
-      if (!vec.empty())
-      {
-        compute(&(vec[0]), vec.size());
-      }
-    }
-  }
   
   //----------------------------------------------------------------
   // Crc32::compute

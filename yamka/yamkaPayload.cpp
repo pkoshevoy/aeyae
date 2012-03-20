@@ -83,10 +83,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   VInt::save(IStorage & storage) const
   {
-    Bytes bytes;
-    bytes << intEncode(TSuper::data_);
-    
-    return storage.save(bytes);
+    unsigned char bytes[8];
+    unsigned int numBytes = intEncode(TSuper::data_, bytes);
+    return storage.save(bytes, numBytes);
   }
   
   //----------------------------------------------------------------
@@ -95,8 +94,9 @@ namespace Yamka
   uint64
   VInt::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    if (!storage.load(bytes))
+    assert(bytesToRead <= 8);
+    unsigned char bytes[8];
+    if (!storage.load(bytes, (std::size_t)bytesToRead))
     {
       return 0;
     }
@@ -151,10 +151,9 @@ namespace Yamka
   IStorage::IReceiptPtr
   VUInt::save(IStorage & storage) const
   {
-    Bytes bytes;
-    bytes << uintEncode(TSuper::data_);
-    
-    return storage.save(bytes);
+    unsigned char bytes[8];
+    unsigned int numBytes = uintEncode(TSuper::data_, bytes);
+    return storage.save(bytes, numBytes);
   }
   
   //----------------------------------------------------------------
@@ -163,8 +162,9 @@ namespace Yamka
   uint64
   VUInt::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    if (!storage.load(bytes))
+    assert(bytesToRead <= 8);
+    unsigned char bytes[8];
+    if (!storage.load(bytes, (std::size_t)bytesToRead))
     {
       return 0;
     }
@@ -221,18 +221,18 @@ namespace Yamka
   VFloat::save(IStorage & storage) const
   {
     uint64 size = calcSize();
-    Bytes bytes;
+    unsigned char bytes[8];
     
     if (size == 4)
     {
-      bytes << floatEncode(float(TSuper::data_));
+      floatEncode(float(TSuper::data_), bytes);
     }
     else
     {
-      bytes << doubleEncode(TSuper::data_);
+      doubleEncode(TSuper::data_, bytes);
     }
     
-    return storage.save(bytes);
+    return storage.save(bytes, (std::size_t)size);
   }
   
   //----------------------------------------------------------------
@@ -241,8 +241,10 @@ namespace Yamka
   uint64
   VFloat::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    if (!storage.load(bytes))
+    assert(bytesToRead <= 8);
+    unsigned char bytes[8];
+    
+    if (!storage.load(bytes, (std::size_t)bytesToRead))
     {
       return 0;
     }
@@ -331,10 +333,10 @@ namespace Yamka
   {
     uint64 size = calcSize();
     
-    Bytes bytes;
-    bytes << intEncode(TSuper::data_, size);
+    unsigned char bytes[8];
+    intEncode(TSuper::data_, bytes, size);
     
-    return storage.save(bytes);
+    return storage.save(bytes, (std::size_t)size);
   }
   
   //----------------------------------------------------------------
@@ -343,8 +345,10 @@ namespace Yamka
   uint64
   VDate::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    if (!storage.load(bytes))
+    assert(bytesToRead <= 8);
+    unsigned char bytes[8];
+    
+    if (!storage.load(bytes, (std::size_t)bytesToRead))
     {
       return 0;
     }
@@ -390,10 +394,10 @@ namespace Yamka
   IStorage::IReceiptPtr
   VString::save(IStorage & storage) const
   {
-    Bytes bytes;
-    bytes << TSuper::data_;
+    const unsigned char * text = (const unsigned char *)TSuper::data_.data();
+    std::size_t size = TSuper::data_.size();
     
-    return storage.save(bytes);
+    return storage.save(text, size);
   }
   
   //----------------------------------------------------------------
@@ -402,14 +406,23 @@ namespace Yamka
   uint64
   VString::load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
   {
-    Bytes bytes((std::size_t)bytesToRead);
-    if (!storage.load(bytes))
+    if (bytesToRead)
     {
-      return 0;
+      TByteVec chars((std::size_t)bytesToRead);
+      if (!Yamka::load(storage, chars))
+      {
+        return 0;
+      }
+      
+      const char * text = (const char *)&chars[0];
+      std::size_t size = chars.size();
+      TSuper::data_.assign(text, text + size);
+    }
+    else
+    {
+      TSuper::data_ = std::string();
     }
     
-    TByteVec chars = TByteVec(bytes);
-    TSuper::data_.assign((const char *)&chars[0], chars.size());
     return bytesToRead;
   }
   
@@ -499,20 +512,22 @@ namespace Yamka
   IStorage::IReceiptPtr
   VVoid::save(Yamka::IStorage & storage) const
   {
-    static const std::size_t kNumZeros = 1024;
-    Bytes zeros(kNumZeros);
+    unsigned char zeros[1024] = { 0 };
     
     IStorage::IReceiptPtr receipt = storage.receipt();
-    uint64 numSteps = size_ / kNumZeros;
+    uint64 numSteps = size_ / 1024;
     for (uint64 i = 0; i < numSteps; i++)
     {
-      storage.save(zeros);
-      receipt->add(kNumZeros);
+      storage.save(zeros, 1024);
+      receipt->add(1024);
     }
     
-    std::size_t remainder = (std::size_t)(size_ % kNumZeros);
-    storage.save(Bytes(remainder));
-    receipt->add(remainder);
+    std::size_t remainder = (std::size_t)(size_ % 1024);
+    if (remainder)
+    {
+      storage.save(&zeros[1024 - remainder], remainder);
+      receipt->add(remainder);
+    }
     
     return receipt;
   }
@@ -546,7 +561,17 @@ namespace Yamka
   // VBinary::set
   // 
   VBinary &
-  VBinary::set(const Bytes & bytes, IStorage & storage)
+  VBinary::set(const unsigned char * b, std::size_t nb, IStorage & storage)
+  {
+    data_.set(b, nb, storage);
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VBinary::set
+  // 
+  VBinary &
+  VBinary::set(const TByteVec & bytes, IStorage & storage)
   {
     data_.set(bytes, storage);
     return *this;
@@ -566,7 +591,7 @@ namespace Yamka
   // VBinary::get
   // 
   bool
-  VBinary::get(Bytes & bytes) const
+  VBinary::get(TByteVec & bytes) const
   {
     return data_.get(bytes);
   }
@@ -575,7 +600,18 @@ namespace Yamka
   // VBinary::setDefault
   // 
   VBinary &
-  VBinary::setDefault(const Bytes & bytes, IStorage & storage)
+  VBinary::setDefault(const unsigned char * b, std::size_t nb, IStorage & s)
+  {
+    dataDefault_.set(b, nb, s);
+    data_ = dataDefault_;
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // VBinary::setDefault
+  // 
+  VBinary &
+  VBinary::setDefault(const TByteVec & bytes, IStorage & storage)
   {
     dataDefault_.set(bytes, storage);
     data_ = dataDefault_;
@@ -862,10 +898,10 @@ namespace Yamka
       return false;
     }
     
-    Bytes bytes;
-    bytes << uintEncode(relativePosition, bytesUsed);
+    unsigned char bytes[8];
+    uintEncode(relativePosition, bytes, bytesUsed);
     
-    bool saved = receipt_->save(bytes);
+    bool saved = receipt_->save(bytes, (std::size_t)bytesUsed);
     return saved;
   }
   

@@ -40,6 +40,11 @@ namespace Yamka
   // 
   struct HodgePodge
   {
+    inline void clear()
+    {
+      receipts_.clear();
+    }
+    
     // shortcut:
     inline void set(const IStorage::IReceiptPtr & dataReceipt)
     {
@@ -48,17 +53,35 @@ namespace Yamka
     }
 
     // shortcut:
-    inline void set(const Bytes & data, IStorage & storage)
+    inline void set(const unsigned char * b, std::size_t nb, IStorage & stor)
+    {
+      receipts_.clear();
+      add(b, nb, stor);
+    }
+    
+    // shortcut:
+    inline void set(const TByteVec & data, IStorage & storage)
     {
       receipts_.clear();
       add(data, storage);
+    }
+    
+    // shortcut:
+    inline void add(const TByteVec & data, IStorage & storage)
+    {
+      if (!data.empty())
+      {
+        add(&data[0], data.size(), storage);
+      }
     }
     
     // append given data storage receipt:
     void add(const IStorage::IReceiptPtr & dataReceipt);
     
     // store data in given storage and append the data storage receipt:
-    void add(const Bytes & data, IStorage & storage);
+    void add(const unsigned char * data,
+             std::size_t size,
+             IStorage & storage);
     
     // discard all receipts, then load data and store the receipt:
     uint64 load(FileStorage & storage, uint64 bytesToRead);
@@ -70,9 +93,8 @@ namespace Yamka
     uint64 numBytes() const;
 
     // load data from storage receipts and store in contiguous byte vector:
-    bool get(Bytes & bytes) const;
     bool get(TByteVec & bytes) const;
-    bool get(TByte * bytes) const;
+    bool get(unsigned char * bytes) const;
 
     // equivalence test:
     bool operator == (const HodgePodge & other) const;
@@ -90,8 +112,8 @@ namespace Yamka
   {
     HodgePodgeConstIter(const HodgePodge & src, uint64 pos = 0);
     HodgePodgeConstIter & setpos(uint64 pos);
-    TByte operator [] (int64 offset) const;
-    TByte operator * () const;
+    unsigned char operator [] (int64 offset) const;
+    unsigned char operator * () const;
     
     IStorage::IReceiptPtr receipt(uint64 position, uint64 numBytes) const;
 

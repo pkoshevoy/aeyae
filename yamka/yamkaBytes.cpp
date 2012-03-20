@@ -16,207 +16,19 @@
 
 namespace Yamka
 {
-  
   //----------------------------------------------------------------
-  // Bytes::Bytes
-  // 
-  Bytes::Bytes(std::size_t size):
-    bytes_(new TByteVecDec(1, TByteVec(size)))
-  {}
-  
-  //----------------------------------------------------------------
-  // Bytes::Bytes
-  // 
-  Bytes::Bytes(const void * data, std::size_t size):
-    bytes_(new TByteVecDec(1, TByteVec((const unsigned char *)data,
-                                       (const unsigned char *)data + size)))
-  {}
-  
-  //----------------------------------------------------------------
-  // Bytes::Bytes
-  // 
-  Bytes::Bytes(const TByteVec & byteVec):
-    bytes_(new TByteVecDec(1, byteVec))
-  {}
-  
-  //----------------------------------------------------------------
-  // Bytes::operator TByteVec
-  // 
-  Bytes::operator TByteVec() const
-  {
-    TByteVec dstVec;
-    dstVec.reserve(size());
-    
-    const TByteVecDec & deq = *bytes_;
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      const TByteVec & vec = *i;
-      dstVec.insert(dstVec.end(), vec.begin(), vec.end());
-    }
-    
-    return dstVec;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::deepCopy
-  // 
-  Bytes &
-  Bytes::deepCopy(const Bytes & bytes)
-  {
-    TByteVecDec & deq = *bytes_;
-    deq.resize(1);
-    
-    TByteVec & vec = deq.back();
-    vec = TByteVec(bytes);
-    
-    return *this;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::deepCopy
-  // 
-  Bytes &
-  Bytes::deepCopy(const TByte * bytes, std::size_t numBytes)
-  {
-    Bytes tmp(bytes, numBytes);
-    return *this = tmp;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::operator +=
-  // 
-  // NOTE: this is a deep copy of data (not shared with source):
-  Bytes &
-  Bytes::operator += (const Bytes & from)
-  {
-    const TByteVecDec & src = *(from.bytes_);
-    TByteVecDec & dst = *bytes_;
-    
-    dst.insert(dst.end(),
-               src.begin(),
-               src.end());
-    
-    return *this;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::operator <<
-  // 
-  Bytes &
-  Bytes::operator << (const TByteVec & bytes)
-  {
-    TByteVecDec & deq = *bytes_;
-    deq.push_back(bytes);
-    
-    return *this;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::operator <<
-  // 
-  Bytes &
-  Bytes::operator << (const TByte & byte)
-  {
-    TByteVecDec & deq = *bytes_;
-    deq.back().push_back(byte);
-    
-    return *this;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::operator <<
-  // 
-  Bytes &
-  Bytes::operator << (const std::string & str)
-  {
-    TByteVec vec(str.data(), str.data() + str.size());
-    return (*this) << vec;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::empty
-  // 
-  bool
-  Bytes::empty() const
-  {
-    const TByteVecDec & deq = *bytes_;
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      const TByteVec & byteVec = *i;
-      if (!byteVec.empty())
-      {
-        return false;
-      }
-    }
-    
-    return true;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::size
-  // 
-  std::size_t
-  Bytes::size() const
-  {
-    std::size_t total = 0;
-    
-    const TByteVecDec & deq = *bytes_;
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      const TByteVec & byteVec = *i;
-      total += byteVec.size();
-    }
-    
-    return total;
-  }
-  
-  //----------------------------------------------------------------
-  // Bytes::getByte
-  // 
-  const TByte &
-  Bytes::getByte(std::size_t i) const
-  {
-    const TByteVecDec & deq = *bytes_;
-    for (TByteVecDec::const_iterator j = deq.begin(); j != deq.end(); ++j)
-    {
-      const TByteVec & byteVec = *j;
-      const std::size_t byteVecSize = byteVec.size();
-      
-      if (i < byteVecSize)
-      {
-        return byteVec[i];
-      }
-      
-      i -= byteVecSize;
-    }
-    
-    assert(false);
-    return *(TByte *)NULL;
-  }
-  
-  //----------------------------------------------------------------
-  // operator +
-  // 
-  Bytes
-  operator + (const Bytes & a, const Bytes & b)
-  {
-    Bytes ab(a);
-    ab += b;
-    return ab;
-  }
-  
-  //----------------------------------------------------------------
-  // operator <<
+  // serialize
   // 
   std::ostream &
-  operator << (std::ostream & os, const TByteVec & vec)
+  serialize(std::ostream & os, const unsigned char * data, std::size_t size)
   {
     os << std::hex
        << std::uppercase;
     
-    for (TByteVec::const_iterator j = vec.begin(); j != vec.end(); ++j)
+    const unsigned char * end = data + size;
+    for (const unsigned char * i = data; i < end; ++i)
     {
-      const TByte & byte = *j;
+      const unsigned char & byte = *i;
       os << std::setw(2)
          << std::setfill('0')
          << int(byte);
@@ -226,19 +38,58 @@ namespace Yamka
     return os;
   }
   
+  
+  namespace Indent
+  {
+    
+    //----------------------------------------------------------------
+    // More::More
+    // 
+    More::More(unsigned int & indentation):
+      indentation_(indentation)
+    {
+      ++indentation_;
+    }
+    
+    //----------------------------------------------------------------
+    // More::~More
+    // 
+    More::~More()
+    {
+      --indentation_;
+    };
+
+    //----------------------------------------------------------------
+    // depth_
+    // 
+    unsigned int depth_ = 0;
+  }
+  
+  
+  //----------------------------------------------------------------
+  // indent::indent
+  // 
+  indent::indent(unsigned int depth):
+    depth_(Indent::depth_ + depth)
+  {}
+  
+  
   //----------------------------------------------------------------
   // operator <<
   // 
   std::ostream &
-  operator << (std::ostream & os, const Bytes & bytes)
+  operator << (std::ostream & s, const indent & ind)
   {
-    const TByteVecDec & deq = *(bytes.bytes_);
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
+    static const char * tab = "        \0";
+    for (unsigned int i = 0; i < ind.depth_ / 8; i++)
     {
-      const TByteVec & vec = *i;
-      os << vec;
+      s << tab;
     }
-    return os;
+    
+    const char * trailing_spaces = tab + (8 - ind.depth_ % 8);
+    s << trailing_spaces;
+    
+    return s;
   }
   
 }

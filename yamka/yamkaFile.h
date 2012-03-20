@@ -10,7 +10,6 @@
 #define YAMKA_FILE_H_
 
 // yamka includes:
-#include <yamkaBytes.h>
 #include <yamkaCrc32.h>
 
 // boost includes:
@@ -170,8 +169,8 @@ namespace Yamka
     virtual const std::string & filename() const;
     
     // helpers for storing non-contiguous byte sequences:
-    virtual bool save(const Bytes & data);
-    virtual bool load(Bytes & data);
+    virtual bool save(const unsigned char * data, std::size_t size);
+    virtual bool load(unsigned char * data, std::size_t size);
     
     // calculate CRC-32 checksum over a region of this file:
     virtual bool calcCrc32(TOff seekToPosition,

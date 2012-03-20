@@ -746,8 +746,9 @@ overwriteUnknownPayloadSize(IElement & elt, IStorage & storage)
   IStorage::IReceiptPtr payloadSizeReceipt =
     receipt->receipt(elementIdSize, 8);
   
-  TByteVec v = vsizeEncode(payloadSize, 8);
-  return payloadSizeReceipt->save(Bytes(v));
+  unsigned char v[8];
+  vsizeEncode(payloadSize, v, 8);
+  return payloadSizeReceipt->save(v, 8);
 }
 
 
@@ -842,7 +843,7 @@ struct TSei
 
   TSei(uint64 payloadType, uint64 offset, uint64 size):
     offset_(offset),
-    size_(size)
+    size_((std::size_t)size)
   {
     type_ = TMessageType(payloadType);
   }
@@ -1012,7 +1013,7 @@ toText(TSei::TMessageType seiMsgType)
 static bool
 isH264Keyframe(const HodgePodge * data)
 {
-  std::size_t dataSize = data ? data->numBytes() : 0;
+  std::size_t dataSize = data ? (std::size_t)data->numBytes() : 0;
   if (dataSize < 5)
   {
     return false;
@@ -1295,7 +1296,7 @@ TRemuxer::remux(uint64 inPointInMsec,
       
       if (fixKeyFlag)
       {
-        if (lace_.codecID_[binfo->trackNo_] == "V_MPEG4/ISO/AVC")
+        if (lace_.codecID_[(std::size_t)binfo->trackNo_] == "V_MPEG4/ISO/AVC")
         {
           HodgePodge blockFrames;
           blockFrames.set(binfo->frames_);
@@ -1322,10 +1323,10 @@ TRemuxer::remux(uint64 inPointInMsec,
       numPages++;
     }
 
-    TByteVec bvCluster = uintEncode(TCluster::kId);
-    TByteVec bvSeekEntry = uintEncode(TSeekEntry::kId);
-    TByteVec bvSeekId = uintEncode(SeekEntry::TId::kId);
-    TByteVec bvSeekPos = uintEncode(SeekEntry::TPosition::kId);
+    TEightByteBuffer bvCluster = uintEncode(TCluster::kId);
+    TEightByteBuffer bvSeekEntry = uintEncode(TSeekEntry::kId);
+    TEightByteBuffer bvSeekId = uintEncode(SeekEntry::TId::kId);
+    TEightByteBuffer bvSeekPos = uintEncode(SeekEntry::TPosition::kId);
     
     for (unsigned int i = 0; i < numPages; i++)
     {
@@ -1339,24 +1340,24 @@ TRemuxer::remux(uint64 inPointInMsec,
 
       for (unsigned int j = 0; j < size; j++)
       {
-        TByteVec bvPosition = uintEncode(page->data_[j]);
+        TEightByteBuffer bvPosition = uintEncode(page->data_[j]);
 
-        Bytes seekPointPayload;
+        TByteVec seekPointPayload;
         seekPointPayload
           << bvSeekId
-          << vsizeEncode(bvCluster.size())
+          << vsizeEncode(bvCluster.n_)
           << bvCluster
           << bvSeekPos
-          << vsizeEncode(bvPosition.size())
+          << vsizeEncode(bvPosition.n_)
           << bvPosition;
         
-        Bytes seekPoint;
+        TByteVec seekPoint;
         seekPoint
           << bvSeekEntry
           << vsizeEncode(seekPointPayload.size())
           << seekPointPayload;
         
-        dst_.save(seekPoint);
+        Yamka::save(dst_, seekPoint);
       }
     }
     
@@ -1377,12 +1378,12 @@ TRemuxer::remux(uint64 inPointInMsec,
       numPages++;
     }
 
-    TByteVec bvCuePoint = uintEncode(TCuePoint::kId);
-    TByteVec bvCueTime = uintEncode(CuePoint::TTime::kId);
-    TByteVec bvCueTrkPos = uintEncode(CuePoint::TCueTrkPos::kId);
-    TByteVec bvCueTrack = uintEncode(CueTrkPos::TTrack::kId);
-    TByteVec bvCueCluster = uintEncode(CueTrkPos::TCluster::kId);
-    TByteVec bvCueBlock = uintEncode(CueTrkPos::TBlock::kId);
+    TEightByteBuffer bvCuePoint = uintEncode(TCuePoint::kId);
+    TEightByteBuffer bvCueTime = uintEncode(CuePoint::TTime::kId);
+    TEightByteBuffer bvCueTrkPos = uintEncode(CuePoint::TCueTrkPos::kId);
+    TEightByteBuffer bvCueTrack = uintEncode(CueTrkPos::TTrack::kId);
+    TEightByteBuffer bvCueCluster = uintEncode(CueTrkPos::TCluster::kId);
+    TEightByteBuffer bvCueBlock = uintEncode(CueTrkPos::TBlock::kId);
     
     for (unsigned int i = 0; i < numPages; i++)
     {
@@ -1399,39 +1400,39 @@ TRemuxer::remux(uint64 inPointInMsec,
         // shortcut to Cue data:
         const TCue & cue = page->data_[j];
         
-        TByteVec bvPosition = uintEncode(cue.cluster_);
-        TByteVec bvBlock = uintEncode(cue.block_);
-        TByteVec bvTrack = uintEncode(cue.track_);
-        TByteVec bvTime = uintEncode(cue.time_);
+        TEightByteBuffer bvPosition = uintEncode(cue.cluster_);
+        TEightByteBuffer bvBlock = uintEncode(cue.block_);
+        TEightByteBuffer bvTrack = uintEncode(cue.track_);
+        TEightByteBuffer bvTime = uintEncode(cue.time_);
         
-        Bytes cueTrkPosPayload;
+        TByteVec cueTrkPosPayload;
         cueTrkPosPayload
           << bvCueTrack
-          << vsizeEncode(bvTrack.size())
+          << vsizeEncode(bvTrack.n_)
           << bvTrack
           << bvCueCluster
-          << vsizeEncode(bvPosition.size())
+          << vsizeEncode(bvPosition.n_)
           << bvPosition
           << bvCueBlock
-          << vsizeEncode(bvBlock.size())
+          << vsizeEncode(bvBlock.n_)
           << bvBlock;
         
-        Bytes cuePointPayload;
+        TByteVec cuePointPayload;
         cuePointPayload
           << bvCueTime
-          << vsizeEncode(bvTime.size())
+          << vsizeEncode(bvTime.n_)
           << bvTime
           << bvCueTrkPos
           << vsizeEncode(cueTrkPosPayload.size())
           << cueTrkPosPayload;
         
-        Bytes cuePoint;
+        TByteVec cuePoint;
         cuePoint
           << bvCuePoint
           << vsizeEncode(cuePointPayload.size())
           << cuePointPayload;
         
-        dst_.save(cuePoint);
+        Yamka::save(dst_, cuePoint);
       }
     }
     
@@ -2246,4 +2247,4 @@ main(int argc, char ** argv)
   return 0;
 }
 
-//  +t 1 +t 2 +t 7
+//  +t 1 +t 2 +t 7 -k0 00 17 00 000 -t1 00 19 00 000

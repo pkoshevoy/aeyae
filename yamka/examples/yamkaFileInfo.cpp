@@ -286,8 +286,8 @@ struct Examiner : public IElementCrawler
         
         if (payloadReceipt)
         {
-          Bytes data((std::size_t)(payloadReceipt->numBytes()));
-          if (payloadReceipt->load(data))
+          TByteVec data;
+          if (Yamka::load(payloadReceipt, data) && data.size())
           {
             std::cout << ", ";
             std::cout << data;

@@ -1860,7 +1860,7 @@ namespace Yamka
   void
   SeekHead::indexThis(const IElement * segment,
                       const IElement * element,
-                      IStorage & binaryStorage)
+                      IStorage & storage)
   {
     if (!element)
     {
@@ -1883,8 +1883,9 @@ namespace Yamka
     seek_.push_back(TSeekEntry());
     TSeekEntry & index = seek_.back();
     
-    Bytes eltId = Bytes(uintEncode(element->getId()));
-    index.payload_.id_.payload_.set(eltId, binaryStorage);
+    unsigned char v[8];
+    unsigned int nv = uintEncode(element->getId(), v);
+    index.payload_.id_.payload_.set(v, nv, storage);
     index.payload_.position_.payload_.setOrigin(segment);
     index.payload_.position_.payload_.setElt(element);
   }
@@ -3415,9 +3416,11 @@ namespace Yamka
   // SimpleBlock::addFrame
   // 
   void
-  SimpleBlock::addFrame(const Bytes & frame, IStorage & storage)
+  SimpleBlock::addFrame(const unsigned char * frame,
+                        std::size_t frameSize,
+                        IStorage & storage)
   {
-    frames_.add(frame, storage);
+    frames_.add(frame, frameSize, storage);
   }
 
   //----------------------------------------------------------------
@@ -3477,15 +3480,21 @@ namespace Yamka
   IStorage::IReceiptPtr
   SimpleBlock::writeHeader(IStorage & storage) const
   {
-    Bytes header;
-    header << vsizeEncode(trackNumber_)
-           << intEncode(timeCode_, 2);
+    unsigned char v[8];
+    unsigned int nv = 0;
+    TByteVec header;
+    
+    nv = vsizeEncode(trackNumber_, v);
+    append(header, v, nv);
+    
+    intEncode(timeCode_, v, 2);
+    append(header, v, 2);
     
     std::size_t lastFrameIndex = getNumberOfFrames() - 1;
     Lacing lacing = lastFrameIndex ? getLacing() : kLacingNone;
     
-    Bytes laceXiph;
-    Bytes laceEBML;
+    TByteVec laceXiph;
+    TByteVec laceEBML;
     
     // choose the best lacing method:
     if (autoLacing_ || lacing != kLacingNone)
@@ -3510,10 +3519,13 @@ namespace Yamka
             uint64 frameSize = frames_.receipts_[i]->numBytes();
             while (true)
             {
-              TByte sz = frameSize < 0xFF ? TByte(frameSize) : 0xFF;
+              unsigned char sz =
+                (frameSize < 0xFF) ?
+                (unsigned char)(frameSize) :
+                (unsigned char)(0xFF);
               frameSize -= sz;
               
-              laceXiph << sz;
+              laceXiph.push_back(sz);
               if (sz < 0xFF)
               {
                 break;
@@ -3526,7 +3538,8 @@ namespace Yamka
         if (autoLacing_ || lacing == kLacingEBML)
         {
           uint64 frameSize = frames_.receipts_[0]->numBytes();
-          laceEBML << vsizeEncode(frameSize);
+          nv = vsizeEncode(frameSize, v);
+          append(laceEBML, v, nv);
           
           for (std::size_t i = 1; i < lastFrameIndex; i++)
           {
@@ -3534,7 +3547,8 @@ namespace Yamka
               (int64(frames_.receipts_[i]->numBytes()) - 
                int64(frames_.receipts_[i - 1]->numBytes()));
             
-            laceEBML << vsizeSignedEncode(frameSizeDiff);
+            nv = vsizeSignedEncode(frameSizeDiff, v);
+            append(laceEBML, v, nv);
           }
         }
         
@@ -3555,24 +3569,24 @@ namespace Yamka
     
     // save the flag with correct lacing bits set:
     unsigned char flags = setLacingBits(flags_, lacing);
-    header << flags;
+    header.push_back(flags);
     
     if (lacing != kLacingNone)
     {
-      header << TByte(lastFrameIndex);
+      header.push_back((unsigned char)(lastFrameIndex));
     }
     
     if (lacing == kLacingXiph)
     {
-      header << laceXiph;
+      append(header, laceXiph);
     }
     else if (lacing == kLacingEBML)
     {
-      header << laceEBML;
+      append(header, laceEBML);
     }
 
     // store the header:
-    IStorage::IReceiptPtr headerReceipt = storage.save(header);
+    IStorage::IReceiptPtr headerReceipt = Yamka::save(storage, header);
     return headerReceipt;
   }
   
@@ -3601,7 +3615,7 @@ namespace Yamka
     }
     
     // decode the timecode:
-    TByteVec timecode(2);
+    unsigned char timecode[2];
     timecode[0] = blockDataIter[bytesRead++];
     timecode[1] = blockDataIter[bytesRead++];
     timeCode_ = (short int)(intDecode(timecode, 2));
@@ -4051,13 +4065,13 @@ namespace Yamka
         
         eltReference.setOrigin(origin);
         
-        Bytes eltIdBytes;
+        TByteVec eltIdBytes;
         if (!seek.payload_.id_.payload_.get(eltIdBytes))
         {
           continue;
         }
         
-        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
         uint64 relativePosition = eltReference.position();
         uint64 absolutePosition = originPosition + relativePosition;
         
@@ -4168,14 +4182,14 @@ namespace Yamka
       {
         TSeekEntry & seek = *j;
         
-        Bytes eltIdBytes;
+        TByteVec eltIdBytes;
         if (!seek.payload_.id_.payload_.get(eltIdBytes))
         {
           ok = false;
           continue;
         }
         
-        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
         if (eltId != TSeekHead::kId)
         {
           continue;
@@ -4263,7 +4277,7 @@ namespace Yamka
       {
         TSeekEntry & seek = *j;
         
-        Bytes eltIdBytes;
+        TByteVec eltIdBytes;
         if (!seek.payload_.id_.payload_.get(eltIdBytes))
         {
           assert(false);
@@ -4271,7 +4285,7 @@ namespace Yamka
           continue;
         }
         
-        uint64 eltId = uintDecode(eltIdBytes, eltIdBytes.size());
+        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
         if (eltId == TSeekHead::kId)
         {
           // all SeekHeads should have been loaded by now:
@@ -4599,12 +4613,12 @@ namespace Yamka
       receiptPayload->calcCrc32(crc32, receiptCrc32);
       unsigned int checksumCrc32 = crc32.checksum();
       
-      Bytes bytesCrc32;
+      TByteVec bytesCrc32;
       bytesCrc32 << uintEncode(kIdCrc32)
                  << vsizeEncode(4)
                  << uintEncode(checksumCrc32, 4);
       
-      receiptCrc32->save(bytesCrc32);
+      Yamka::save(receiptCrc32, bytesCrc32);
     }
     
     return done;

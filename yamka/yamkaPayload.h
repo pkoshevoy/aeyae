@@ -282,16 +282,17 @@ namespace Yamka
   //
   struct VBinary : public IPayload
   {
-    typedef Bytes TData;
-    
     VBinary();
     
-    VBinary & setDefault(const Bytes & bytes, IStorage & storage);
+    VBinary & setDefault(const unsigned char * b, std::size_t n, IStorage & s);
+    VBinary & setDefault(const TByteVec & bytes, IStorage & storage);
     VBinary & setDefault(const IStorage::IReceiptPtr & dataReceipt);
     
-    VBinary & set(const Bytes & bytes, IStorage & storage);
+    VBinary & set(const unsigned char * b, std::size_t n, IStorage & storage);
+    VBinary & set(const TByteVec & bytes, IStorage & storage);
     VBinary & set(const IStorage::IReceiptPtr & dataReceipt);
-    bool get(Bytes & bytes) const;
+    
+    bool get(TByteVec & bytes) const;
     
     ImplementsYamkaPayloadAPI();
     
@@ -312,19 +313,10 @@ namespace Yamka
   struct VBytes : public IPayload
   {
     typedef VBytes<fixedSize> TSelf;
-    typedef Bytes TData;
     
-    TSelf & set(const Bytes & bytes)
+    TSelf & set(const unsigned char * bytes)
     {
-      if (bytes.size() == fixedSize)
-      {
-        data_.deepCopy(bytes);
-      }
-      else
-      {
-        assert(false);
-      }
-      
+      data_.assign(bytes, bytes + fixedSize);
       return *this;
     }
     
@@ -342,13 +334,16 @@ namespace Yamka
     
     // calculate payload size:
     uint64 calcSize() const
-    { return fixedSize; }
+    { return data_.size(); }
     
     // save the payload and return storage receipt:
     IStorage::IReceiptPtr
     save(IStorage & storage) const
     {
-      return storage.save(data_);
+      return
+        data_.empty() ?
+        storage.receipt() :
+        storage.save(&data_[0], data_.size());
     }
     
     // attempt to load the payload, return number of bytes read successfully:
@@ -360,17 +355,18 @@ namespace Yamka
         return 0;
       }
       
-      Bytes bytes(fixedSize);
-      if (storage.load(bytes))
+      TByteVec bytes(fixedSize);
+      if (!storage.load(&bytes[0], fixedSize))
       {
-        data_ = bytes;
+        return 0;
       }
       
+      data_ = bytes;
       return bytesToRead;
     }
     
     // data storage:
-    Bytes data_;
+    TByteVec data_;
   };
   
   

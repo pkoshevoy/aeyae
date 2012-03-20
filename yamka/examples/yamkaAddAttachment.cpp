@@ -101,8 +101,13 @@ main(int argc, char ** argv)
   
   uint64 attSize = att.file_.size();
   assert(attSize < uint64(std::numeric_limits<std::size_t>::max()));
-  Bytes attData((std::size_t)attSize);
-  IStorage::IReceiptPtr attReceipt = att.load(attData);
+  if (!attSize)
+  {
+    usage(argv, (std::string("file is empty - ") + attPath).c_str());
+  }
+  
+  TByteVec attData((std::size_t)attSize);
+  IStorage::IReceiptPtr attReceipt = Yamka::load(att, attData);
   
   FileStorage src(srcPath, File::kReadOnly);
   if (!src.file_.isOpen())
@@ -155,8 +160,8 @@ main(int argc, char ** argv)
   attachment.payload_.filename_.payload_.set(attPath);
   attachment.payload_.data_.payload_.set(attData, tmp);
   
-  TByteVec attUID = Yamka::createUID(16);
-  attachment.payload_.fileUID_.payload_.set(Yamka::uintDecode(attUID, 16));
+  uint64 attUID = Yamka::createUID();
+  attachment.payload_.fileUID_.payload_.set(attUID);
   
   // add attachment to the seekhead index:
   if (segment.payload_.seekHeads_.empty())

@@ -69,13 +69,13 @@ namespace Yamka
   // NullStorage::save
   // 
   IStorage::IReceiptPtr
-  NullStorage::save(const Bytes & data)
+  NullStorage::save(const unsigned char * data, std::size_t size)
   {
+    (void) data;
     IStorage::IReceiptPtr receipt(new Receipt(currentPosition_));
     
-    const std::size_t dataSize = data.size();
-    currentPosition_ += dataSize;
-    receipt->add(dataSize);
+    currentPosition_ += size;
+    receipt->add(size);
     
     return receipt;
   }
@@ -84,8 +84,10 @@ namespace Yamka
   // NullStorage::load
   // 
   IStorage::IReceiptPtr
-  NullStorage::load(Bytes & data)
+  NullStorage::load(unsigned char * data, std::size_t size)
   {
+    (void) data;
+    (void) size;
     return IReceiptPtr();
   }
   
@@ -153,8 +155,10 @@ namespace Yamka
   // NullStorage::Receipt::save
   // 
   bool
-  NullStorage::Receipt::save(const Bytes & data)
+  NullStorage::Receipt::save(const unsigned char * data, std::size_t size)
   {
+    (void) data;
+    (void) size;
     return false;
   }
   
@@ -162,17 +166,9 @@ namespace Yamka
   // NullStorage::Receipt::load
   // 
   bool
-  NullStorage::Receipt::load(Bytes & data)
+  NullStorage::Receipt::load(unsigned char * data)
   {
-    return false;
-  }
-  
-  //----------------------------------------------------------------
-  // NullStorage::Receipt::load
-  // 
-  bool
-  NullStorage::Receipt::load(TByte * data)
-  {
+    (void) data;
     return false;
   }
   
@@ -253,27 +249,15 @@ namespace Yamka
   // MemReceipt::save
   // 
   bool
-  MemReceipt::save(const Bytes & data)
+  MemReceipt::save(const unsigned char * data, std::size_t size)
   {
-    unsigned char * dst = addr_;
     std::size_t dstSize = numBytes_;
-    
-    const TByteVecDec & deq = *(data.bytes_);
-    for (TByteVecDec::const_iterator i = deq.begin(); i != deq.end(); ++i)
+    if (dstSize < size)
     {
-      const TByteVec & vec = *i;
-      std::size_t vecSize = vec.size();
-
-      if (vecSize > dstSize)
-      {
-        return false;
-      }
-      
-      memcpy(dst, &vec[0], vecSize);
-      dst += vecSize;
-      dstSize -= vecSize;
+      return false;
     }
     
+    memcpy(addr_, data, size);
     return true;
   }
   
@@ -281,35 +265,7 @@ namespace Yamka
   // MemReceipt::load
   // 
   bool
-  MemReceipt::load(Bytes & data)
-  {
-    const unsigned char * src = addr_;
-    std::size_t srcSize = numBytes_;
-    
-    TByteVecDec & deq = *(data.bytes_);
-    for (TByteVecDec::iterator i = deq.begin(); i != deq.end(); ++i)
-    {
-      TByteVec & vec = *i;
-      std::size_t vecSize = vec.size();
-      
-      if (vecSize > srcSize)
-      {
-        return false;
-      }
-      
-      memcpy(&vec[0], src, vecSize);
-      src += vecSize;
-      srcSize -= vecSize;
-    }
-    
-    return true;
-  }
-  
-  //----------------------------------------------------------------
-  // MemReceipt::load
-  // 
-  bool
-  MemReceipt::load(TByte * data)
+  MemReceipt::load(unsigned char * data)
   {
     memcpy(data, addr_, numBytes_);
     return true;
@@ -320,7 +276,7 @@ namespace Yamka
   // 
   bool
   MemReceipt::calcCrc32(Crc32 & computeCrc32,
-                                  const IStorage::IReceiptPtr & receiptSkip)
+                        const IStorage::IReceiptPtr & receiptSkip)
   {
     try
     {
@@ -338,7 +294,8 @@ namespace Yamka
       std::size_t n0 = (std::size_t)(skipAddr) - (std::size_t)(p0);
       
       const unsigned char * p1 =
-        std::min<const unsigned char *>(skipAddr + skipBytes, addr_ + numBytes_);
+        std::min<const unsigned char *>(skipAddr + skipBytes,
+                                        addr_ + numBytes_);
       std::size_t n1 = (std::size_t)(addr_ + numBytes_) - (std::size_t)(p1);
       
       if (n0)
@@ -366,7 +323,7 @@ namespace Yamka
   MemReceipt::receipt(uint64 offset, uint64 size) const
   {
     unsigned char * addr = addr_ + (std::size_t)offset;
-	return IStorage::IReceiptPtr(new MemReceipt(addr, (std::size_t)size));
+    return IStorage::IReceiptPtr(new MemReceipt(addr, (std::size_t)size));
   }
   
   
@@ -381,9 +338,10 @@ namespace Yamka
   // ConstMemReceipt::save
   // 
   bool
-  ConstMemReceipt::save(const Bytes & data)
+  ConstMemReceipt::save(const unsigned char * data, std::size_t size)
   {
     (void) data;
+    (void) size;
     return false;
   }
   
@@ -394,7 +352,7 @@ namespace Yamka
   ConstMemReceipt::receipt(uint64 offset, uint64 size) const
   {
     const unsigned char * addr = addr_ + (std::size_t)offset;
-	return IStorage::IReceiptPtr(new ConstMemReceipt(addr, (std::size_t)size));
+    return IStorage::IReceiptPtr(new ConstMemReceipt(addr, (std::size_t)size));
   }
   
   

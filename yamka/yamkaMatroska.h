@@ -915,7 +915,9 @@ namespace Yamka
     
     const IStorage::IReceiptPtr & getFrame(std::size_t frameNumber) const;
     
-    void addFrame(const Bytes & frame, IStorage & storage);
+    void addFrame(const unsigned char * frame,
+                  std::size_t frameSize,
+                  IStorage & storage);
     void addFrame(const IStorage::IReceiptPtr & frameReceipt);
 
     // store the block header and the frames:

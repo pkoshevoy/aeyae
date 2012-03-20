@@ -164,7 +164,9 @@ namespace Yamka
     }
 
     // save element id:
-    receipt_ = storage.save(Bytes(uintEncode(getId())));
+    unsigned char v[8];
+    uintEncode(getId(), v, elementIdSize);
+    receipt_ = storage.save(v, (std::size_t)elementIdSize);
     if (!receipt_)
     {
       return receipt_;
@@ -174,13 +176,13 @@ namespace Yamka
     IStorage::IReceiptPtr payloadSizeReceipt;
     if (payloadSizeUnknown)
     {
-      TByteVec v = vsizeEncode(vsizeUnknown[8], 8);
-      payloadSizeReceipt = storage.save(Bytes(v));
+      vsizeEncode(vsizeUnknown[8], v, 8);
+      payloadSizeReceipt = storage.save(v, 8);
     }
     else
     {
-      TByteVec v = vsizeEncode(payloadSize, vsizeBytesToUse);
-      payloadSizeReceipt = storage.save(Bytes(v));
+      vsizeEncode(payloadSize, v, vsizeBytesToUse);
+      payloadSizeReceipt = storage.save(v, (std::size_t)vsizeBytesToUse);
     }
     
     *receipt_ += payloadSizeReceipt;
@@ -210,8 +212,8 @@ namespace Yamka
     if (payloadBytesSaved < payloadSize)
     {
       // save exact payload size:
-      TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesToUse);
-      payloadSizeReceipt->save(Bytes(v));
+      vsizeEncode(payloadBytesSaved, v, vsizeBytesToUse);
+      payloadSizeReceipt->save(v, (std::size_t)vsizeBytesToUse);
     }
     
     // add the padding:
@@ -255,7 +257,10 @@ namespace Yamka
       return storage.receipt();
     }
     
-    receipt_ = storage.save(Bytes(uintEncode(getId())));
+    unsigned char v[8];
+    uint64 elementIdSize = uintNumBytes(getId());
+    uintEncode(getId(), v, elementIdSize);
+    receipt_ = storage.save(v, (std::size_t)elementIdSize);
     if (!receipt_)
     {
       return receipt_;
@@ -282,8 +287,9 @@ namespace Yamka
       vsizeBytesToUse = vsizeNumBytes(payloadSize);
     }
     
+    vsizeEncode(payloadSize, v, vsizeBytesToUse);
     IStorage::IReceiptPtr payloadSizeReceipt =
-      storage.save(Bytes(vsizeEncode(payloadSize, vsizeBytesToUse)));
+      storage.save(v, (std::size_t)vsizeBytesToUse);
     *receipt_ += payloadSizeReceipt;
     
     // save payload receipt:
@@ -294,12 +300,12 @@ namespace Yamka
     if (shouldComputeCrc32())
     {
       IStorage::IReceiptPtr receiptCrc32 = storage.receipt();
-      Bytes bytes;
+      TByteVec bytes;
       bytes << uintEncode(kIdCrc32)
             << vsizeEncode(4)
             << uintEncode(0, 4);
       
-      receiptCrc32 = storage.save(bytes);
+      receiptCrc32 = Yamka::save(storage, bytes);
       if (!receiptCrc32)
       {
         return receiptCrc32;
@@ -324,8 +330,8 @@ namespace Yamka
     if (payloadBytesSaved < payloadSize)
     {
       // save exact payload size:
-      TByteVec v = vsizeEncode(payloadBytesSaved, vsizeBytesToUse);
-      payloadSizeReceipt->save(Bytes(v));
+      vsizeEncode(payloadBytesSaved, v, vsizeBytesToUse);
+      payloadSizeReceipt->save(v, (std::size_t)vsizeBytesToUse);
     }
     
     // save attached Void elements:
@@ -626,8 +632,8 @@ namespace Yamka
       return 0;
     }
     
-    Bytes bytesCrc32(4);
-    if (!storage.load(bytesCrc32))
+    unsigned char bytesCrc32[4];
+    if (!storage.load(bytesCrc32, 4))
     {
       // failed to load CRC-32 checksum:
       return 0;
@@ -640,7 +646,7 @@ namespace Yamka
     storageStart.doNotRestore();
     
     setCrc32(true);
-    checksumCrc32_ = (unsigned int)uintDecode(TByteVec(bytesCrc32), 4);
+    checksumCrc32_ = (unsigned int)uintDecode(bytesCrc32, 4);
     offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
     
     uint64 bytesRead = receiptCrc32->numBytes();

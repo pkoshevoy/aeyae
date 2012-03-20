@@ -207,6 +207,13 @@ namespace Yamka
                                 uint64 bytesToRead,
                                 IDelegateLoad * loader)
   {
+    if (!bytesToRead)
+    {
+      // nothing to read:
+      elt = NULL;
+      return 0;
+    }
+    
     uint64 eltId = 0;
     {
       File::Seek autoRestorePosition(storage.file_);

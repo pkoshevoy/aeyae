@@ -29,8 +29,8 @@ namespace Yamka
     IReceiptPtr receipt() const;
     
     // virtual:
-    IReceiptPtr save(const Bytes & data);
-    IReceiptPtr load(Bytes & data);
+    IReceiptPtr save(const unsigned char * data, std::size_t size);
+    IReceiptPtr load(unsigned char * data, std::size_t size);
     IReceiptPtr skip(uint64 numBytes);
 
     //----------------------------------------------------------------
@@ -53,9 +53,8 @@ namespace Yamka
       Receipt & add(uint64 numBytes);
       
       // virtual:
-      bool save(const Bytes & data);
-      bool load(Bytes & data);
-      bool load(TByte * data);
+      bool save(const unsigned char * data, std::size_t size);
+      bool load(unsigned char * data);
       
       // virtual:
       bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);

@@ -9,8 +9,8 @@
 #ifndef YAMKA_CRC32_H_
 #define YAMKA_CRC32_H_
 
-// yamka includes:
-#include <yamkaBytes.h>
+// system includes:
+#include <vector>
 
 
 namespace Yamka
@@ -28,7 +28,13 @@ namespace Yamka
     void compute(const void * bytes, std::size_t numBytes);
     
     // process data to compute the checksum:
-    void compute(const Bytes & bytes);
+    inline void compute(const std::vector<unsigned char> & bytes)
+    {
+      if (!bytes.empty())
+      {
+        compute(&bytes[0], bytes.size());
+      }
+    }
     
     // accessor to the current checksum:
     unsigned int checksum() const;
