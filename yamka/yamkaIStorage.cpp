@@ -213,6 +213,183 @@ namespace Yamka
   
   
   //----------------------------------------------------------------
+  // MemoryStorage::receipt
+  // 
+  IStorage::IReceiptPtr
+  MemoryStorage::receipt() const
+  {
+    TStoragePtr bytes(new TStorage());
+    return IStorage::IReceiptPtr(new Receipt(bytes));
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::save
+  // 
+  IStorage::IReceiptPtr
+  MemoryStorage::save(const unsigned char * data, std::size_t size)
+  {
+    TStoragePtr bytes(new TStorage(data, data + size));
+    return IStorage::IReceiptPtr(new Receipt(bytes, 0, size));
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::load
+  // 
+  IStorage::IReceiptPtr
+  MemoryStorage::load(unsigned char * data, std::size_t size)
+  {
+    (void) data;
+    (void) size;
+    assert(false);
+    return IStorage::IReceiptPtr();
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::peek
+  // 
+  std::size_t
+  MemoryStorage::peek(unsigned char * data, std::size_t size)
+  {
+    (void) data;
+    (void) size;
+    assert(false);
+    return 0;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::skip
+  // 
+  uint64
+  MemoryStorage::skip(uint64 numBytes)
+  {
+    (void) numBytes;
+    assert(false);
+    return 0;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::Receipt
+  // 
+  MemoryStorage::Receipt::Receipt(const MemoryStorage::TStoragePtr & bytesPtr,
+                                  std::size_t position,
+                                  std::size_t numBytes):
+    bytesPtr_(bytesPtr),
+    position_(position),
+    numBytes_(numBytes)
+  {}
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::position
+  // 
+  uint64
+  MemoryStorage::Receipt::position() const
+  {
+    return position_;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::numBytes
+  // 
+  uint64
+  MemoryStorage::Receipt::numBytes() const
+  {
+    return numBytes_;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::setNumBytes
+  // 
+  MemoryStorage::Receipt &
+  MemoryStorage::Receipt::setNumBytes(uint64 numBytes)
+  {
+    numBytes_ = (std::size_t)numBytes;
+    assert(position_ + numBytes_ <= bytesPtr_->size());
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::add
+  // 
+  MemoryStorage::Receipt &
+  MemoryStorage::Receipt::add(uint64 numBytes)
+  {
+    numBytes_ += (std::size_t)numBytes;
+    assert(position_ + numBytes_ <= bytesPtr_->size());
+    return *this;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::save
+  // 
+  bool
+  MemoryStorage::Receipt::save(const unsigned char * data, std::size_t size)
+  {
+    if (!size)
+    {
+      return true;
+    }
+    
+    TStorage & bytes = *bytesPtr_;
+    const std::size_t capacity = bytes.size();
+    
+    if (capacity < position_ + size)
+    {
+      assert(false);
+      return false;
+    }
+    
+    unsigned char * dst = &bytes[position_];
+    memcpy(dst, data, size);
+    numBytes_ = std::max<std::size_t>(numBytes_, size);
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::load
+  // 
+  bool
+  MemoryStorage::Receipt::load(unsigned char * data)
+  {
+    const TStorage & bytes = *bytesPtr_;
+    const std::size_t capacity = bytes.size();
+    assert(position_ + numBytes_ <= capacity);
+    
+    if (numBytes_)
+    {
+      const unsigned char * src = &bytes[position_];
+      memcpy(data, src, numBytes_);
+    }
+    
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::calcCrc32
+  // 
+  bool
+  MemoryStorage::Receipt::calcCrc32(Crc32 & computeCrc32,
+                                    const IStorage::IReceiptPtr & receiptSkip)
+  {
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // MemoryStorage::Receipt::receipt
+  // 
+  IStorage::IReceiptPtr
+  MemoryStorage::Receipt::receipt(uint64 offset, uint64 size) const
+  {
+    std::size_t position = position_ + (std::size_t)(offset + size);
+    assert(position <= bytesPtr_->size());
+    
+    return IStorage::IReceiptPtr(new Receipt(bytesPtr_,
+                                             position,
+                                             (std::size_t)size));
+  }
+  
+  
+  //----------------------------------------------------------------
   // MemReceipt::MemReceipt
   // 
   MemReceipt::MemReceipt(void * addr, std::size_t numBytes):
@@ -291,41 +468,6 @@ namespace Yamka
   MemReceipt::calcCrc32(Crc32 & computeCrc32,
                         const IStorage::IReceiptPtr & receiptSkip)
   {
-    try
-    {
-      const unsigned char * skipAddr = addr_;
-      uint64 skipBytes = 0;
-      
-      if (receiptSkip)
-      {
-        skipAddr += receiptSkip->position() - position();
-        skipBytes = receiptSkip->numBytes();
-      }
-      
-      const unsigned char * p0 =
-        std::min<const unsigned char *>(addr_, skipAddr);
-      std::size_t n0 = (std::size_t)(skipAddr) - (std::size_t)(p0);
-      
-      const unsigned char * p1 =
-        std::min<const unsigned char *>(skipAddr + skipBytes,
-                                        addr_ + numBytes_);
-      std::size_t n1 = (std::size_t)(addr_ + numBytes_) - (std::size_t)(p1);
-      
-      if (n0)
-      {
-        computeCrc32.compute(p0, (std::size_t)n0);
-      }
-      
-      if (n1)
-      {
-        computeCrc32.compute(p1, (std::size_t)n1);
-      }
-      
-      return true;
-    }
-    catch (...)
-    {}
-    
     return false;
   }
   

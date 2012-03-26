@@ -126,7 +126,7 @@ namespace Yamka
     // virtual: not supported for null-storage:
     IReceiptPtr load(unsigned char * data, std::size_t size);
     
-    // virtual:
+    // virtual: not supported for null-storage:
     std::size_t peek(unsigned char * data, std::size_t size);
     
     // virtual:
@@ -168,6 +168,76 @@ namespace Yamka
   };
   
   //----------------------------------------------------------------
+  // MemoryStorage
+  // 
+  // Non-contiguous storage of binary data in memory
+  // 
+  // NOTE: position, seeking, peeking and loading data are meaningless
+  // to non-contiguous memory storage, and are not supported.
+  //
+  // Stored data may be accessed again only via storage receipt.
+  // 
+  struct MemoryStorage : public IStorage
+  {
+    typedef std::vector<unsigned char> TStorage;
+    typedef TSharedPtr<TStorage> TStoragePtr;
+    
+    // virtual:
+    IReceiptPtr receipt() const;
+    
+    // virtual:
+    IReceiptPtr save(const unsigned char * data, std::size_t size);
+    
+    // virtual: not supported for non-contiguous memory storage:
+    IReceiptPtr load(unsigned char * data, std::size_t size);
+    
+    // virtual: not supported for non-contiguous memory storage:
+    std::size_t peek(unsigned char * data, std::size_t size);
+    
+    // virtual: not supported for non-contiguous memory storage:
+    uint64 skip(uint64 numBytes);
+    
+    //----------------------------------------------------------------
+    // Receipt
+    // 
+    struct Receipt : public IReceipt
+    {
+      Receipt(const TStoragePtr & data,
+              std::size_t position = 0,
+              std::size_t numBytes = 0);
+      
+      // virtual:
+      uint64 position() const;
+      
+      // virtual:
+      uint64 numBytes() const;
+      
+      // virtual:
+      Receipt & setNumBytes(uint64 numBytes);
+      
+      // virtual:
+      Receipt & add(uint64 numBytes);
+
+      // virtual:
+      bool save(const unsigned char * data, std::size_t size);
+      
+      // virtual:
+      bool load(unsigned char * data);
+      
+      // virtual: not supported for non-contiguous memory storage:
+      bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
+      
+      // virtual:
+      IReceiptPtr receipt(uint64 offset, uint64 size) const;
+      
+    protected:
+      TStoragePtr bytesPtr_;
+      std::size_t position_;
+      std::size_t numBytes_;
+    };
+  };
+  
+  //----------------------------------------------------------------
   // MemReceipt
   // 
   struct MemReceipt : public IStorage::IReceipt
@@ -192,7 +262,7 @@ namespace Yamka
     // virtual: use at your own rist:
     bool load(unsigned char * data);
     
-    // virtual:
+    // virtual: not supported
     bool calcCrc32(Crc32 & computeCrc32,
                    const IStorage::IReceiptPtr & receiptSkip);
     

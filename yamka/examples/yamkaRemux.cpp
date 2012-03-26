@@ -583,7 +583,7 @@ struct TRemuxer : public LoadWithProgress
            TSegment & dstSeg,
            FileStorage & src,
            FileStorage & dst,
-           FileStorage & tmp);
+           IStorage & tmp);
 
   void remux(uint64 t0, uint64 t1, bool extractFromKeyframe, bool fixKeyFlag);
   void flush();
@@ -611,7 +611,7 @@ struct TRemuxer : public LoadWithProgress
   TSegment & dstSeg_;
   FileStorage & src_;
   FileStorage & dst_;
-  FileStorage & tmp_;
+  IStorage & tmp_;
   uint64 clusterBlocks_;
   uint64 cuesTrackHasKeyframes_;
   std::vector<bool> needCuePointForTrack_;
@@ -639,7 +639,7 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
                    TSegment & dstSeg,
                    FileStorage & src,
                    FileStorage & dst,
-                   FileStorage & tmp):
+                   IStorage & tmp):
   LoadWithProgress(src.file_.size()),
   trackSrcDst_(trackSrcDst),
   trackDstSrc_(trackDstSrc),
@@ -1839,7 +1839,6 @@ main(int argc, char ** argv)
   
   std::string srcPath;
   std::string dstPath;
-  std::string tmpPath;
   std::list<uint64> tracksToKeep;
   std::list<uint64> tracksDelete;
 
@@ -1866,7 +1865,6 @@ main(int argc, char ** argv)
       if ((argc - i) <= 1) usage(argv, "could not parse -o parameter");
       i++;
       dstPath.assign(argv[i]);
-      tmpPath = dstPath + std::string(".yamka");
     }
     else if (strcmp(argv[i], "-t") == 0)
     {
@@ -2092,18 +2090,7 @@ main(int argc, char ** argv)
                  std::string(" for writing")).c_str());
   }
   
-  FileStorage tmp(tmpPath, File::kReadWrite);
-  if (!tmp.file_.isOpen())
-  {
-    usage(argv, (std::string("failed to open ") +
-                 tmpPath +
-                 std::string(" for writing")).c_str());
-  }
-  else
-  {
-    tmp.file_.setSize(0);
-  }
-  
+  MemoryStorage tmp;
   MatroskaDoc out;
 
   // keep the original DocType:
@@ -2231,11 +2218,7 @@ main(int argc, char ** argv)
   // close open file handles:
   src.file_.close();
   dst.file_.close();
-  tmp.file_.close();
   
-  // remove temp file:
-  File::remove(tmpPath.c_str());
-
   printCurrentTime("done");
 
   // avoid waiting for all the destructors to be called:
