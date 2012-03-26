@@ -522,7 +522,7 @@ namespace Yamka
   {
     ImplementsYamkaPayloadAPI();
     
-    TypedefYamkaElt(VBinary, 0x53AB, "SeekID") TId;
+    TypedefYamkaElt(VUInt, 0x53AB, "SeekID") TId;
     TId id_;
     
     TypedefYamkaElt(VEltPosition, 0x53AC, "SeekPosition") TPosition;
@@ -536,9 +536,7 @@ namespace Yamka
   {
     ImplementsYamkaPayloadAPI();
     
-    void indexThis(const IElement * segment,
-                   const IElement * element,
-                   IStorage & binaryStorage);
+    void indexThis(const IElement * segment, const IElement * element);
     
     TypedefYamkaElt(SeekEntry, 0x4DBB, "Seek") TSeekEntry;
     std::list<TSeekEntry> seek_;

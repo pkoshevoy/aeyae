@@ -584,27 +584,27 @@ main(int argc, char ** argv)
 
     if (segInfo.mustSave())
     {
-      seekHead.payload_.indexThis(&segment, &segInfo, tmp);
+      seekHead.payload_.indexThis(&segment, &segInfo);
     }
 
     if (tracks.mustSave())
     {
-      seekHead.payload_.indexThis(&segment, &tracks, tmp);
+      seekHead.payload_.indexThis(&segment, &tracks);
     }
 
     if (cues.mustSave())
     {
-      seekHead.payload_.indexThis(&segment, &cues, tmp);
+      seekHead.payload_.indexThis(&segment, &cues);
     }
 
     if (attachments.mustSave())
     {
-      seekHead.payload_.indexThis(&segment, &attachments, tmp);
+      seekHead.payload_.indexThis(&segment, &attachments);
     }
 
     if (chapters.mustSave())
     {
-      seekHead.payload_.indexThis(&segment, &chapters, tmp);
+      seekHead.payload_.indexThis(&segment, &chapters);
     }
     
     for (std::list<Segment::TTags>::iterator j = tagsList.begin();
@@ -613,7 +613,7 @@ main(int argc, char ** argv)
       Segment::TTags & tags = *j;
       if (tags.mustSave())
       {
-        seekHead.payload_.indexThis(&segment, &tags, tmp);
+        seekHead.payload_.indexThis(&segment, &tags);
       }
     }
     
@@ -623,7 +623,7 @@ main(int argc, char ** argv)
       Segment::TCluster & cluster = *j;
       if (cluster.mustSave())
       {
-        seekHead.payload_.indexThis(&segment, &cluster, tmp);
+        seekHead.payload_.indexThis(&segment, &cluster);
       }
     }
     

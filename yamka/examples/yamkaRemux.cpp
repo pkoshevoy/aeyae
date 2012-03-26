@@ -721,8 +721,8 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   
   // index the 2nd SeekHead and Cues:
   SeekHead & seekHead1 = dstSeg_.payload_.seekHeads_.front().payload_;
-  seekHead1.indexThis(&dstSeg_, &seekHeadElt, tmp_);
-  seekHead1.indexThis(&dstSeg_, &(dstSeg_.payload_.cues_), tmp_);
+  seekHead1.indexThis(&dstSeg_, &seekHeadElt);
+  seekHead1.indexThis(&dstSeg_, &(dstSeg_.payload_.cues_));
 }
 
 //----------------------------------------------------------------
@@ -2176,21 +2176,21 @@ main(int argc, char ** argv)
     }
 
     // index the first set of top-level elements:
-    seekHead.indexThis(&segmentElt, &segInfoElt, tmp);
-    seekHead.indexThis(&segmentElt, &tracksElt, tmp);
+    seekHead.indexThis(&segmentElt, &segInfoElt);
+    seekHead.indexThis(&segmentElt, &tracksElt);
 
     TAttachment & attachmentsElt = segmentElt.payload_.attachments_;
     attachmentsElt = segmentIn.attachments_;
     if (attachmentsElt.mustSave())
     {
-      seekHead.indexThis(&segmentElt, &attachmentsElt, tmp);
+      seekHead.indexThis(&segmentElt, &attachmentsElt);
     }
     
     TChapters & chaptersElt = segmentElt.payload_.chapters_;
     chaptersElt = segmentIn.chapters_;
     if (chaptersElt.mustSave())
     {
-      seekHead.indexThis(&segmentElt, &chaptersElt, tmp);
+      seekHead.indexThis(&segmentElt, &chaptersElt);
     }
 
     // minor cleanup prior to saving:

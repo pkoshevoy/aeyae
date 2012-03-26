@@ -172,7 +172,7 @@ main(int argc, char ** argv)
   }
   
   Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
-  seekHead.payload_.indexThis(&segment, &attachments, tmp);
+  seekHead.payload_.indexThis(&segment, &attachments);
   
   // save the document:
   dst.file_.setSize(0);

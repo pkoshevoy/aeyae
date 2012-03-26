@@ -1859,8 +1859,7 @@ namespace Yamka
   // 
   void
   SeekHead::indexThis(const IElement * segment,
-                      const IElement * element,
-                      IStorage & storage)
+                      const IElement * element)
   {
     if (!element)
     {
@@ -1883,9 +1882,7 @@ namespace Yamka
     seek_.push_back(TSeekEntry());
     TSeekEntry & index = seek_.back();
     
-    unsigned char v[8];
-    unsigned int nv = uintEncode(element->getId(), v);
-    index.payload_.id_.payload_.set(v, nv, storage);
+    index.payload_.id_.payload_.set(element->getId());
     index.payload_.position_.payload_.setOrigin(segment);
     index.payload_.position_.payload_.setElt(element);
   }
@@ -4065,13 +4062,7 @@ namespace Yamka
         
         eltReference.setOrigin(origin);
         
-        TByteVec eltIdBytes;
-        if (!seek.payload_.id_.payload_.get(eltIdBytes))
-        {
-          continue;
-        }
-        
-        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
+        uint64 eltId = seek.payload_.id_.payload_.get();
         uint64 relativePosition = eltReference.position();
         uint64 absolutePosition = originPosition + relativePosition;
         
@@ -4182,14 +4173,7 @@ namespace Yamka
       {
         TSeekEntry & seek = *j;
         
-        TByteVec eltIdBytes;
-        if (!seek.payload_.id_.payload_.get(eltIdBytes))
-        {
-          ok = false;
-          continue;
-        }
-        
-        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
+        uint64 eltId = seek.payload_.id_.payload_.get();
         if (eltId != TSeekHead::kId)
         {
           continue;
@@ -4277,15 +4261,7 @@ namespace Yamka
       {
         TSeekEntry & seek = *j;
         
-        TByteVec eltIdBytes;
-        if (!seek.payload_.id_.payload_.get(eltIdBytes))
-        {
-          assert(false);
-          ok = false;
-          continue;
-        }
-        
-        uint64 eltId = uintDecode(&eltIdBytes[0], eltIdBytes.size());
+        uint64 eltId = seek.payload_.id_.payload_.get();
         if (eltId == TSeekHead::kId)
         {
           // all SeekHeads should have been loaded by now:
