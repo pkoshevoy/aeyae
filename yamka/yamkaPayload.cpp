@@ -851,6 +851,9 @@ namespace Yamka
   void
   VEltPosition::setPosition(uint64 position)
   {
+    discardReceipt();
+    setMaxSize(uintNumBytes(position));
+    
     origin_ = NULL;
     elt_ = NULL;
     pos_ = position;

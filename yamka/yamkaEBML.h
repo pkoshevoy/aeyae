@@ -229,6 +229,11 @@ namespace Yamka
     THead head_;
   };
   
+  //----------------------------------------------------------------
+  // TVoidElt
+  // 
+  TypedefYamkaElt(VVoid, 0xEC, "Void") TVoidElt;
+  
 }
 
 
