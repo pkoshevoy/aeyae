@@ -169,6 +169,28 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // receiptForMemory
+  // 
+  inline IStorage::IReceiptPtr
+  receiptForMemory(TByteVec & vec)
+  {
+    std::size_t size = vec.size();
+    unsigned char * data = size ? &vec[0] : NULL;
+    return receiptForMemory(data, size);
+  }
+  
+  //----------------------------------------------------------------
+  // receiptForConstMemory
+  // 
+  inline IStorage::IReceiptPtr
+  receiptForConstMemory(const TByteVec & vec)
+  {
+    std::size_t size = vec.size();
+    const unsigned char * data = size ? &vec[0] : NULL;
+    return receiptForConstMemory(data, size);
+  }
+  
+  //----------------------------------------------------------------
   // vsizeDecode
   // 
   // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
