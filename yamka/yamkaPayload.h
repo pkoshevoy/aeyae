@@ -406,6 +406,13 @@ namespace Yamka
     void setElt(const IElement * elt);
     const IElement * getElt() const;
     
+    // NOTE: this will set origin and reference element pointer to NULL.
+    // 
+    // use this to bypass automatic calculation of the position based on
+    // origin element and reference element storage receipt positions.
+    // 
+    void setPosition(uint64 position);
+    
     // accessor to the reference element storage receipt position:
     uint64 position() const;
 

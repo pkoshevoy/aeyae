@@ -722,7 +722,7 @@ namespace Yamka
   VEltPosition::isDefault() const
   {
     // no point is saving an unresolved invalid reference:
-    return !elt_;
+    return !elt_ && pos_ == uintMax[maxSize_];
   }
   
   //----------------------------------------------------------------
@@ -767,7 +767,7 @@ namespace Yamka
   VEltPosition::save(IStorage & storage) const
   {
     uint64 bytesNeeded = calcSize();
-    uint64 eltPosition = uintMax[bytesNeeded];
+    uint64 eltPosition = pos_;
     uint64 originPosition = getOriginPosition();
     
     if (elt_)
@@ -843,6 +843,17 @@ namespace Yamka
   VEltPosition::getElt() const
   {
     return elt_;
+  }
+  
+  //----------------------------------------------------------------
+  // VEltPosition::setPosition
+  // 
+  void
+  VEltPosition::setPosition(uint64 position)
+  {
+    origin_ = NULL;
+    elt_ = NULL;
+    pos_ = position;
   }
   
   //----------------------------------------------------------------
