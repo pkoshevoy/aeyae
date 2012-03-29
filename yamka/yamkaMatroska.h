@@ -537,6 +537,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
     
     void indexThis(const IElement * segment, const IElement * element);
+    void indexThis(uint64 eltId, uint64 positionWithinSegment);
     
     TypedefYamkaElt(SeekEntry, 0x4DBB, "Seek") TSeekEntry;
     std::list<TSeekEntry> seek_;

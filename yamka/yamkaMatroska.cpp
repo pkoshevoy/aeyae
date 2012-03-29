@@ -1887,6 +1887,19 @@ namespace Yamka
     index.payload_.position_.payload_.setElt(element);
   }
   
+  //----------------------------------------------------------------
+  // SeekHead::indexThis
+  // 
+  void
+  SeekHead::indexThis(uint64 eltId, uint64 relativePosition)
+  {
+    seek_.push_back(TSeekEntry());
+    TSeekEntry & index = seek_.back();
+    
+    index.payload_.id_.payload_.set(eltId);
+    index.payload_.position_.payload_.setPosition(relativePosition);
+  }
+  
   
   //----------------------------------------------------------------
   // AttdFile::eval
