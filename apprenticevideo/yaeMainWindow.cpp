@@ -643,6 +643,18 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // findFilesAndSort
+  // 
+  static void
+  findFilesAndSort(std::list<QString> & files,
+                   const QString & startHere,
+                   bool recursive = true)
+  {
+    findFiles(files, startHere, recursive);
+    files.sort();
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::load
   // 
   bool
@@ -891,7 +903,7 @@ namespace yae
     {
       if (fi.isDir() && ext != kExtEyetv)
       {
-        findFiles(playlist, folder, true);
+        findFilesAndSort(playlist, folder, true);
       }
       else
       {
@@ -1003,7 +1015,7 @@ namespace yae
       
       if (fi.isDir() && fi.suffix() != kExtEyetv)
       {
-        findFiles(playlist, filename);
+        findFilesAndSort(playlist, filename);
       }
       else
       {
@@ -1504,7 +1516,7 @@ namespace yae
       
       if (fi.isDir() && fi.suffix() != kExtEyetv)
       {
-        findFiles(playlist, filename);
+        findFilesAndSort(playlist, filename);
       }
       else
       {
