@@ -563,6 +563,13 @@ namespace yae
       << QString::fromUtf8("lzma")
       << QString::fromUtf8("html")
       << QString::fromUtf8("txt")
+      << QString::fromUtf8("app")
+      << QString::fromUtf8("framework")
+      << QString::fromUtf8("bundle")
+      << QString::fromUtf8("sc")
+      << QString::fromUtf8("so")
+      << QString::fromUtf8("dylib")
+      << QString::fromUtf8("dll")
       << QString::fromUtf8("exe")
       << QString::fromUtf8("com")
       << QString::fromUtf8("cmd")
@@ -576,7 +583,9 @@ namespace yae
       << QString::fromUtf8("log")
       << QString::fromUtf8("sqz")
       << QString::fromUtf8("xss")
-      << QString::fromUtf8("spfx");
+      << QString::fromUtf8("spfx")
+      << QString::fromUtf8("iso")
+      << QString::fromUtf8("dmg");
     
     return ext;
   }
@@ -615,17 +624,20 @@ namespace yae
       QString fn = fi.absoluteFilePath();
       QString ext = fi.suffix();
       std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
-
-      if (fi.isDir() && ext != kExtEyetv)
+      
+      if (!kExtIgnoreList.contains(ext))
       {
-        if (recursive && !kExtIgnoreList.contains(ext))
+        if (fi.isDir() && ext != kExtEyetv)
         {
-          findFiles(files, fn, recursive);
+          if (recursive)
+          {
+            findFiles(files, fn, recursive);
+          }
         }
-      }
-      else if (!kExtIgnoreList.contains(ext))
-      {
-        files.push_back(fn);
+        else
+        {
+          files.push_back(fn);
+        }
       }
     }
   }
@@ -871,7 +883,21 @@ namespace yae
     
     // find all files in the folder, sorted alphabetically
     std::list<QString> playlist;
-    findFiles(playlist, folder, true);
+    
+    QFileInfo fi(folder);
+    QString ext = fi.suffix();
+    
+    if (!kExtIgnoreList.contains(ext))
+    {
+      if (fi.isDir() && ext != kExtEyetv)
+      {
+        findFiles(playlist, folder, true);
+      }
+      else
+      {
+        playlist.push_back(folder);
+      }
+    }
     
     setPlaylist(playlist);
   }
@@ -938,7 +964,7 @@ namespace yae
       QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
                                         // QDesktopServices::HomeLocation
                                         );
-#if 0
+#ifndef __APPLE__
     QStringList filenames =
       QFileDialog::getOpenFileNames(this,
                                     tr("Select one or more files"),
@@ -949,7 +975,11 @@ namespace yae
                        tr("Select one or more files"),
                        startHere,
                        filter);
-    dialog.exec();
+    int r = dialog.exec();
+    if (r != QDialog::Accepted)
+    {
+      return;
+    }
     
     QStringList filenames = dialog.selectedFiles();
 #endif
