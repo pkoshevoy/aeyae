@@ -9,6 +9,7 @@
 // yamka includes:
 #include <yamkaMatroska.h>
 #include <yamkaVersion.h>
+#include <yamkaBytes.h>
 
 // system includes:
 #include <string.h>
@@ -1866,19 +1867,6 @@ namespace Yamka
       return;
     }
     
-    // avoid adding duplicate SeekEntry:
-    for (std::list<TSeekEntry>::const_iterator i = seek_.begin();
-         i != seek_.end(); ++i)
-    {
-      const TSeekEntry & index = *i;
-      if (index.payload_.position_.payload_.getOrigin() == segment &&
-          index.payload_.position_.payload_.getElt() == element)
-      {
-        // this element is already indexed:
-        return;
-      }
-    }
-    
     seek_.push_back(TSeekEntry());
     TSeekEntry & index = seek_.back();
     
@@ -1898,6 +1886,26 @@ namespace Yamka
     
     index.payload_.id_.payload_.set(eltId);
     index.payload_.position_.payload_.setPosition(relativePosition);
+  }
+  
+  //----------------------------------------------------------------
+  // SeekHead::findFirst
+  // 
+  SeekHead::TSeekEntry *
+  SeekHead::findFirst(uint64 eltId)
+  {
+    for (std::list<TSeekEntry>::iterator i = seek_.begin();
+         i != seek_.end(); ++i)
+    {
+      TSeekEntry & index = *i;
+      
+      if (index.payload_.id_.payload_.get() == eltId)
+      {
+        return &index;
+      }
+    }
+    
+    return NULL;
   }
   
   
@@ -3987,8 +3995,8 @@ namespace Yamka
     *receipt += cues_.save(storage);
     *receipt += chapters_.save(storage);
     *receipt += attachments_.save(storage);
-    *receipt += eltsSave(tags_, storage);
     *receipt += eltsSave(clusters_, storage);
+    *receipt += eltsSave(tags_, storage);
     
     // save any remaining seekheads:
     for (; seekHeadIter != seekHeads_.end(); ++seekHeadIter)
@@ -4176,9 +4184,9 @@ namespace Yamka
 
     // load any additional SeekHeads, if they exist:
     bool ok = true;
-    for (std::size_t i = 0; i < seekHeads_.size(); i++)
+    for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
     {
-      TSeekHead & seekHead = seekHeads_[i];
+      TSeekHead & seekHead = *i;
       seekHead.payload_.voids_.clear();
       
       std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
@@ -4265,9 +4273,9 @@ namespace Yamka
     tags_.clear();
     clusters_.clear();
     
-    for (std::size_t i = 0; i < seekHeads_.size(); i++)
+    for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
     {
-      TSeekHead & seekHead = seekHeads_[i];
+      TSeekHead & seekHead = *i;
       std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
       
       for (TSeekEntryIter j = seeks.begin(); j != seeks.end(); ++j)

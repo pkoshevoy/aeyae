@@ -535,12 +535,16 @@ namespace Yamka
   struct SeekHead : public EbmlMaster
   {
     ImplementsYamkaPayloadAPI();
-    
+
+    // NOTE: these do not check for duplicate SeekEntry elements:
     void indexThis(const IElement * segment, const IElement * element);
     void indexThis(uint64 eltId, uint64 positionWithinSegment);
     
     TypedefYamkaElt(SeekEntry, 0x4DBB, "Seek") TSeekEntry;
     std::list<TSeekEntry> seek_;
+    
+    // lookup the first SeekEntry referencing a given element id:
+    TSeekEntry * findFirst(uint64 eltId);
   };
   
   //----------------------------------------------------------------
