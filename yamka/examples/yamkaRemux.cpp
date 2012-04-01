@@ -498,26 +498,23 @@ struct TDataTable
     enum { kSize = PageSize };
     TData data_[PageSize];
   };
-
-  TDataTable(unsigned int maxSize):
-    pages_(0),
+  
+  TDataTable():
+    pages_(NULL),
     numPages_(0),
     size_(0)
-  {
-    if (maxSize % TPage::kSize)
-    {
-      maxSize -= maxSize % TPage::kSize;
-      maxSize += TPage::kSize;
-    }
-    
-    numPages_ = maxSize / TPage::kSize;
-    
-    unsigned int memSize = sizeof(TPage *) * numPages_;
-    pages_ = (TPage **)malloc(memSize);
-    memset(pages_, 0, memSize);
-  }
+  {}
   
   ~TDataTable()
+  {
+    clear();
+    free(pages_);
+  }
+  
+  inline bool empty() const
+  { return !size_; }
+  
+  void clear()
   {
     for (unsigned int i = 0; i < numPages_; i++)
     {
@@ -526,18 +523,34 @@ struct TDataTable
       {
         free(page);
       }
+      
+      pages_[i] = NULL;
     }
     
-    free(pages_);
+    size_ = 0;
   }
-
-  bool add(const TData & data)
+  
+  void grow()
+  {
+    unsigned int numPages = numPages_ ? numPages_ * 2 : 256;
+    
+    unsigned int oldSize = sizeof(TPage *) * numPages_;
+    unsigned int newSize = sizeof(TPage *) * numPages;
+    
+    TPage ** pages = (TPage **)malloc(newSize);
+    memcpy(pages, pages_, oldSize);
+    memset(pages + oldSize, 0, newSize - oldSize);
+    free(pages_);
+    pages_ = pages;
+    numPages_ = numPages;
+  }
+  
+  void add(const TData & data)
   {
     unsigned int i = size_ / TPage::kSize;
     if (i >= numPages_)
     {
-      assert(i < numPages_);
-      return false;
+      grow();
     }
     
     TPage * page = pages_[i];
@@ -548,12 +561,10 @@ struct TDataTable
       memset(page, 0, memSize);
       pages_[i] = page;
     }
-
+    
     unsigned int j = size_ % TPage::kSize;
     page->data_[j] = data;
     size_++;
-    
-    return true;
   }
   
   TPage ** pages_;
@@ -652,8 +663,6 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
   cuesTrackHasKeyframes_(0),
   segmentPayloadPosition_(dstSeg.payloadReceipt()->position()),
   clusterRelativePosition_(0),
-  seekTable_(1 << 24),
-  cueTable_(1 << 27),
   t0_(0),
   t1_(0),
   extractTimeSegment_(false),
@@ -1412,10 +1421,15 @@ TRemuxer::remux(uint64 inPointInMsec,
           << bvTrack
           << bvCueCluster
           << vsizeEncode(bvPosition.n_)
-          << bvPosition
-          << bvCueBlock
-          << vsizeEncode(bvBlock.n_)
-          << bvBlock;
+          << bvPosition;
+        
+        if (cue.block_ > 1)
+        {
+          cueTrkPosPayload
+            << bvCueBlock
+            << vsizeEncode(bvBlock.n_)
+            << bvBlock;
+        }
         
         TByteVec cuePointPayload;
         cuePointPayload
