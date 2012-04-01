@@ -32,6 +32,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QDesktopServices>
+#include <QDirIterator>
 
 // yae includes:
 #include <yaeReaderFFMPEG.h>
@@ -260,6 +261,10 @@ namespace yae
     
     ok = connect(actionOpenURL, SIGNAL(triggered()),
                  this, SLOT(fileOpenURL()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionOpenFolder, SIGNAL(triggered()),
+                 this, SLOT(fileOpenFolder()));
     YAE_ASSERT(ok);
     
     ok = connect(actionExit, SIGNAL(triggered()),
@@ -530,12 +535,121 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // kExtEyetv
+  // 
+  static const QString kExtEyetv = QString::fromUtf8("eyetv");
+  
+  //----------------------------------------------------------------
+  // getExtIgnoreList
+  // 
+  static QStringList getExtIgnoreList()
+  {
+    QStringList ext;
+    ext
+      << QString::fromUtf8("eyetvsched")
+      << QString::fromUtf8("eyetvp")
+      << QString::fromUtf8("eyetvr")
+      << QString::fromUtf8("eyetvi")
+      << QString::fromUtf8("doc")
+      << QString::fromUtf8("pdf")
+      << QString::fromUtf8("htm")
+      << QString::fromUtf8("zip")
+      << QString::fromUtf8("7z")
+      << QString::fromUtf8("gz")
+      << QString::fromUtf8("bz2")
+      << QString::fromUtf8("tar")
+      << QString::fromUtf8("tgz")
+      << QString::fromUtf8("tbz2")
+      << QString::fromUtf8("lzma")
+      << QString::fromUtf8("html")
+      << QString::fromUtf8("txt")
+      << QString::fromUtf8("exe")
+      << QString::fromUtf8("com")
+      << QString::fromUtf8("cmd")
+      << QString::fromUtf8("bat")
+      << QString::fromUtf8("py")
+      << QString::fromUtf8("sh")
+      << QString::fromUtf8("cpp")
+      << QString::fromUtf8("h")
+      << QString::fromUtf8("cxx")
+      << QString::fromUtf8("hxx")
+      << QString::fromUtf8("log")
+      << QString::fromUtf8("sqz")
+      << QString::fromUtf8("xss")
+      << QString::fromUtf8("spfx");
+    
+    return ext;
+  }
+  
+  //----------------------------------------------------------------
+  // kExtIgnoreList
+  // 
+  static QStringList kExtIgnoreList = getExtIgnoreList();
+  
+  //----------------------------------------------------------------
+  // findFiles
+  // 
+  static void
+  findFiles(std::list<QString> & files,
+            const QString & startHere,
+            bool recursive = true)
+  {
+    QStringList extFilters;
+    if (QFileInfo(startHere).suffix() == kExtEyetv)
+    {
+      extFilters << QString::fromUtf8("*.mpg");
+    }
+    
+    QDirIterator iter(startHere,
+                      extFilters,
+                      QDir::NoDotAndDotDot |
+                      QDir::AllEntries |
+                      QDir::Readable,
+                      QDirIterator::FollowSymlinks);
+    
+    while (iter.hasNext())
+    {
+      iter.next();
+      
+      QFileInfo fi = iter.fileInfo();
+      QString fn = fi.absoluteFilePath();
+      QString ext = fi.suffix();
+      std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
+
+      if (fi.isDir() && ext != kExtEyetv)
+      {
+        if (recursive && !kExtIgnoreList.contains(ext))
+        {
+          findFiles(files, fn, recursive);
+        }
+      }
+      else if (!kExtIgnoreList.contains(ext))
+      {
+        files.push_back(fn);
+      }
+    }
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::load
   // 
   bool
   MainWindow::load(const QString & path)
   {
-    std::string filename(path.toUtf8().constData());
+    QString fn = path;
+    QFileInfo fi(fn);
+    if (fi.suffix() == kExtEyetv)
+    {
+      std::list<QString> found;
+      findFiles(found, path, false);
+      
+      if (!found.empty())
+      {
+        fn = found.front();
+      }
+    }
+    
+    std::string filename(fn.toUtf8().constData());
     
     actionPlay->setEnabled(false);
     actionPlay->setText(tr("Play"));
@@ -734,6 +848,35 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // MainWindow::fileOpenFolder
+  // 
+  void
+  MainWindow::fileOpenFolder()
+  {
+    QString startHere =
+      QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
+                                        // QDesktopServices::HomeLocation
+                                        );
+    
+    QString folder =
+      QFileDialog::getExistingDirectory(this,
+                                        tr("Select a video folder"),
+                                        startHere,
+                                        QFileDialog::ShowDirsOnly |
+                                        QFileDialog::DontResolveSymlinks);
+    if (folder.isEmpty())
+    {
+      return;
+    }
+    
+    // find all files in the folder, sorted alphabetically
+    std::list<QString> playlist;
+    findFiles(playlist, folder, true);
+    
+    setPlaylist(playlist);
+  }
+  
+  //----------------------------------------------------------------
   // MainWindow::fileOpenURL
   // 
   void
@@ -771,6 +914,7 @@ namespace yae
          "*.avi "
          "*.asf "
          "*.divx "
+         "*.eyetv "
          "*.flv "
          "*.f4v "
          "*.m2t "
@@ -794,12 +938,22 @@ namespace yae
       QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
                                         // QDesktopServices::HomeLocation
                                         );
-    
+#if 0
     QStringList filenames =
       QFileDialog::getOpenFileNames(this,
                                     tr("Select one or more files"),
                                     startHere,
                                     filter);
+#else
+    QFileDialog dialog(this,
+                       tr("Select one or more files"),
+                       startHere,
+                       filter);
+    dialog.exec();
+    
+    QStringList filenames = dialog.selectedFiles();
+#endif
+    
     if (filenames.empty())
     {
       return;
@@ -810,7 +964,21 @@ namespace yae
          i != filenames.end(); ++i)
     {
       QString filename = *i;
-      playlist.push_back(filename);
+      QFileInfo fi(filename);
+      
+      if (!fi.isReadable())
+      {
+        continue;
+      }
+      
+      if (fi.isDir() && fi.suffix() != kExtEyetv)
+      {
+        findFiles(playlist, filename);
+      }
+      else
+      {
+        playlist.push_back(filename);
+      }
     }
     
     setPlaylist(playlist);
@@ -1297,7 +1465,21 @@ namespace yae
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
       QString filename = i->toLocalFile();
-      playlist.push_back(filename);
+      QFileInfo fi(filename);
+      
+      if (!fi.isReadable())
+      {
+        continue;
+      }
+      
+      if (fi.isDir() && fi.suffix() != kExtEyetv)
+      {
+        findFiles(playlist, filename);
+      }
+      else
+      {
+        playlist.push_back(filename);
+      }
     }
     
     setPlaylist(playlist);

@@ -33,6 +33,7 @@
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionOpenURL"/>
+    <addaction name="actionOpenFolder"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -355,7 +356,12 @@
   </action>
   <action name="actionOpenURL">
    <property name="text">
-    <string>Open URL</string>
+    <string>Open &amp;URL</string>
+   </property>
+  </action>
+  <action name="actionOpenFolder">
+   <property name="text">
+    <string>Open Fol&amp;der</string>
    </property>
   </action>
  </widget>

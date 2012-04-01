@@ -226,8 +226,12 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
-execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
-  "${PROJECT_BINARY_DIR}/yaeVersion.h")
+execute_process(COMMAND "${CMAKE_COMMAND}"
+  -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+  -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
+  -DPROGNAME="${PROGNAME}"
+  -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
+
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)

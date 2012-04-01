@@ -94,6 +94,7 @@ namespace yae
     // file menu:
     void fileOpen();
     void fileOpenURL();
+    void fileOpenFolder();
     void fileExit();
 
     // playback menu:
