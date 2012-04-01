@@ -488,7 +488,7 @@ namespace Yamka
   {
     if (restoreOnExit_)
     {
-      seek(prev_, kAbsolutePosition);
+      restorePosition();
     }
   }
   
@@ -508,6 +508,15 @@ namespace Yamka
   File::Seek::doRestore()
   {
     restoreOnExit_ = true;
+  }
+  
+  //----------------------------------------------------------------
+  // File::Seek::restorePosition
+  // 
+  void
+  File::Seek::restorePosition()
+  {
+    seek(prev_, kAbsolutePosition);
   }
   
   //----------------------------------------------------------------

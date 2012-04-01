@@ -12,6 +12,7 @@
 // yamka includes:
 #include <yamkaStdInt.h>
 #include <yamkaIStorage.h>
+#include <yamkaFile.h>
 
 // system includes:
 #include <deque>
@@ -123,6 +124,24 @@ namespace Yamka
   //----------------------------------------------------------------
   // save
   // 
+  inline bool
+  save(File & f, const TByteVec & vec)
+  {
+    return vec.empty() ? true : f.save(&(vec[0]), vec.size());
+  }
+  
+  //----------------------------------------------------------------
+  // load
+  // 
+  inline bool
+  load(File & f, TByteVec & vec)
+  {
+    return vec.empty() ? true : f.load(&(vec[0]), vec.size());
+  }
+  
+  //----------------------------------------------------------------
+  // save
+  // 
   inline IStorage::IReceiptPtr
   save(IStorage & s, const TEightByteBuffer & buf)
   {
@@ -144,7 +163,7 @@ namespace Yamka
   inline IStorage::IReceiptPtr
   load(IStorage & s, TByteVec & vec)
   {
-    return vec.empty() ? s.receipt() : s.load(&vec[0], vec.size());
+    return vec.empty() ? s.receipt() : s.load(&(vec[0]), vec.size());
   }
   
   //----------------------------------------------------------------
@@ -154,7 +173,7 @@ namespace Yamka
   save(IStorage::IReceipt * receipt, const TByteVec & vec)
   {
     std::size_t nb = vec.size();
-    return nb ? receipt->save(&vec[0], nb) : receipt->save(NULL, 0);
+    return nb ? receipt->save(&(vec[0]), nb) : receipt->save(NULL, 0);
   }
   
   //----------------------------------------------------------------
@@ -165,7 +184,7 @@ namespace Yamka
   {
     std::size_t nb = (std::size_t)(receipt->numBytes());
     vec.resize(nb);
-    return nb ? receipt->load(&vec[0]) : true;
+    return nb ? receipt->load(&(vec[0])) : true;
   }
   
   //----------------------------------------------------------------
@@ -175,7 +194,7 @@ namespace Yamka
   receiptForMemory(TByteVec & vec)
   {
     std::size_t size = vec.size();
-    unsigned char * data = size ? &vec[0] : NULL;
+    unsigned char * data = size ? &(vec[0]) : NULL;
     return receiptForMemory(data, size);
   }
   
@@ -186,7 +205,7 @@ namespace Yamka
   receiptForConstMemory(const TByteVec & vec)
   {
     std::size_t size = vec.size();
-    const unsigned char * data = size ? &vec[0] : NULL;
+    const unsigned char * data = size ? &(vec[0]) : NULL;
     return receiptForConstMemory(data, size);
   }
   

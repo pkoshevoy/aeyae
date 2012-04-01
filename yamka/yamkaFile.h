@@ -137,15 +137,25 @@ namespace Yamka
       // if required, then restore saved seek position:
       ~Seek();
       
-      // call this to disable restoring the previos file position:
+      // call this to disable restoring the previous file position:
       void doNotRestore();
       
-      // call this to restore the previous file position:
+      // call this to enable restoring the previous file position:
       void doRestore();
+      
+      // call this to immediately restore the previous file position:
+      void restorePosition();
       
       // accessor to the absolute position of the file
       // at the moment a Seek instance was created:
       TOff absolutePosition() const;
+      
+      // synonyms:
+      inline void enable()
+      { doRestore(); }
+      
+      inline void disable()
+      { doNotRestore(); }
       
     private:
       Seek(const Seek &);
