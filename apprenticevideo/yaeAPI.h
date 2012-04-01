@@ -258,7 +258,7 @@ namespace yae
     // resize the sample plane:
     void resize(std::size_t rowBytes,
                 std::size_t rows,
-                unsigned char alignment = 16);
+                std::size_t alignment = 16);
     
     // samples accessors:
     template <typename TSample>
@@ -281,7 +281,7 @@ namespace yae
     std::size_t alignmentOffset_;
     std::size_t rowBytes_;
     std::size_t rows_;
-    unsigned char alignment_;
+    std::size_t alignment_;
   };
   
   //----------------------------------------------------------------

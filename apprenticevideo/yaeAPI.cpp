@@ -246,7 +246,7 @@ namespace yae
   void
   TSamplePlane::resize(std::size_t rowBytes,
                        std::size_t rows,
-                       unsigned char alignment)
+                       std::size_t alignment)
   {
     std::size_t planeSize = (rowBytes * rows);
     delete [] data_;

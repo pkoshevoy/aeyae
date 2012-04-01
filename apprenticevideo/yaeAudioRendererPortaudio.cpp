@@ -135,7 +135,7 @@ namespace yae
       
       if (defaultDev == i)
       {
-        defaultDevice_ = outputDevices_.size();
+        defaultDevice_ = (unsigned int)outputDevices_.size();
       }
       
       outputDevices_.push_back(i);
@@ -159,7 +159,7 @@ namespace yae
   unsigned int
   AudioRendererPortaudio::TPrivate::countAvailableDevices() const
   {
-    return outputDevices_.size();
+    return (unsigned int)outputDevices_.size();
   }
 
   //----------------------------------------------------------------
@@ -211,8 +211,8 @@ namespace yae
   AudioRendererPortaudio::TPrivate::
   getDeviceIndex(const std::string & audioDevice) const
   {
-    std::size_t numDevs = outputDevices_.size();
-    for (std::size_t i = 0; i < numDevs; i++)
+    unsigned int numDevs = (unsigned int)outputDevices_.size();
+    for (unsigned int i = 0; i < numDevs; i++)
     {
       std::string devName;
       if (getDeviceName(i, devName))
@@ -285,7 +285,7 @@ namespace yae
       
       if (outAtts.sampleRate_ != devInfo->defaultSampleRate)
       {
-        outAtts.sampleRate_ = devInfo->defaultSampleRate;
+        outAtts.sampleRate_ = (unsigned int)(devInfo->defaultSampleRate);
       }
       else if (outAtts.channelLayout_ > kAudioStereo)
       {

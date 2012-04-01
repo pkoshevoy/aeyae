@@ -1194,7 +1194,7 @@ namespace yae
         for (unsigned char i = 0; i < numSamplePlanes_; i++)
         {
           pict.data[i] = sampleBuffer->samples(i);
-          pict.linesize[i] = sampleBuffer->rowBytes(i);
+          pict.linesize[i] = (int)sampleBuffer->rowBytes(i);
         }
         
         sws_scale(imgConvertCtx_,

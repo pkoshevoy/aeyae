@@ -40,7 +40,7 @@ namespace yae
 #ifdef _WIN32
     accessMode |= O_BINARY;
     
-    size_t wcsSize =
+    int wcsSize =
       MultiByteToWideChar(CP_UTF8, // source string encoding
                           0,       // flags (precomposed, composite, etc...)
                           filenameUTF8, // source string
