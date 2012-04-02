@@ -14,6 +14,7 @@
 
 // system includes:
 #include <iostream>
+#include <string.h>
 
 
 namespace Yamka
