@@ -172,7 +172,7 @@ main(int argc, char ** argv)
   }
   
   Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
-  if (!seekHead.payload_.findFirst(Segment::TAttachment::kId))
+  if (!seekHead.payload_.findIndex(&attachments))
   {
     seekHead.payload_.indexThis(&segment, &attachments);
   }

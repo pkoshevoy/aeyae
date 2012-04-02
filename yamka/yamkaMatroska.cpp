@@ -1889,6 +1889,26 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // SeekHead::findIndex
+  // 
+  SeekHead::TSeekEntry *
+  SeekHead::findIndex(const IElement * element)
+  {
+    for (std::list<TSeekEntry>::iterator i = seek_.begin();
+         i != seek_.end(); ++i)
+    {
+      TSeekEntry & index = *i;
+      
+      if (index.payload_.position_.payload_.getElt() == element) 	 
+      {
+        return &index;
+      }
+    }
+    
+    return NULL;
+  }
+  
+  //----------------------------------------------------------------
   // SeekHead::findFirst
   // 
   SeekHead::TSeekEntry *

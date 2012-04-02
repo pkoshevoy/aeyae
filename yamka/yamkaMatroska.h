@@ -543,6 +543,9 @@ namespace Yamka
     TypedefYamkaElt(SeekEntry, 0x4DBB, "Seek") TSeekEntry;
     std::list<TSeekEntry> seek_;
     
+    // lookup the SeekEntry referencing a given element:
+    TSeekEntry * findIndex(const IElement * element);
+    
     // lookup the first SeekEntry referencing a given element id:
     TSeekEntry * findFirst(uint64 eltId);
   };
