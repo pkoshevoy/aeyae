@@ -9,8 +9,14 @@
 #ifndef YAE_UTILS_H_
 #define YAE_UTILS_H_
 
+// std includes:
+#include <list>
+
 // yae includes:
 #include <yaeAPI.h>
+
+// Qt includes:
+#include <QString>
 
 
 namespace yae
@@ -72,6 +78,34 @@ namespace yae
     typename TContainer::const_iterator e = c.end();
     return (i != e) && (++i != e);
   }
+  
+  //----------------------------------------------------------------
+  // toQString
+  // 
+  extern QString
+  toQString(const std::list<QString> & keys);
+  
+  //----------------------------------------------------------------
+  // splitOnCamelCase
+  // 
+  extern void
+  splitOnCamelCase(const QString & key, std::list<QString> & tokens);
+  
+  //----------------------------------------------------------------
+  // splitIntoWords
+  // 
+  extern void
+  splitIntoWords(const QString & key, std::list<QString> & tokens);
+  
+  //----------------------------------------------------------------
+  // toWords
+  // 
+  extern QString toWords(const std::list<QString> & keys);
+  
+  //----------------------------------------------------------------
+  // toWords
+  // 
+  extern QString toWords(const QString & key);
   
 }
 

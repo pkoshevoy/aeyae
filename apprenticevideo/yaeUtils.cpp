@@ -105,4 +105,132 @@ namespace yae
     return st.st_size;
   }
   
+  //----------------------------------------------------------------
+  // toQString
+  // 
+  QString
+  toQString(const std::list<QString> & keys)
+  {
+    QString path;
+    
+    for (std::list<QString>::const_iterator i = keys.begin();
+         i != keys.end(); ++i)
+    {
+      if (i != keys.begin())
+      {
+        path += QString::fromUtf8(" ");
+      }
+      
+      const QString & key = *i;
+      path += key;
+    }
+    
+    return path;
+  }
+  
+  //----------------------------------------------------------------
+  // splitOnCamelCase
+  // 
+  void
+  splitOnCamelCase(const QString & key, std::list<QString> & tokens)
+  {
+    // attempt to split on camel case:
+    QString token;
+    
+    QChar c0 = key[0];
+    token += c0;
+    
+    const int size = key.size();
+    for (int i = 1; i < size; i++)
+    {
+      QChar c1 = key[i];
+      
+      if (// c0.isNumber() &&
+          // c1.isLetter() ||
+          c0.isLetter() &&
+          (// c1.isNumber() ||
+           c1.isLetter() && c0.isLower() && !c1.isLower()))
+      {
+        tokens.push_back(token);
+        token = QString();
+      }
+      
+      token += c1;
+      c0 = c1;
+    }
+    
+    if (!token.isEmpty())
+    {
+      tokens.push_back(token);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // splitIntoWords
+  // 
+  void
+  splitIntoWords(const QString & key, std::list<QString> & tokens)
+  {
+    static const QChar kUnderscore = QChar::fromAscii('_');
+    static const QChar kHyphen = QChar::fromAscii('-');
+    static const QChar kSpace = QChar::fromAscii(' ');
+    
+    // attempt to split based on separator character:
+    QString token;
+    
+    const int size = key.size();
+    for (int i = 0; i < size; i++)
+    {
+      QChar c = key[i];
+      if (c == kUnderscore ||
+          c == kHyphen ||
+          c == kSpace)
+      {
+        if (!token.isEmpty())
+        {
+          splitOnCamelCase(token, tokens);
+          token = QString();
+        }
+      }
+      else
+      {
+        token += c;
+      }
+    }
+    
+    if (!token.isEmpty())
+    {
+      splitOnCamelCase(token, tokens);
+      token = QString();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // toWords
+  // 
+  QString
+  toWords(const std::list<QString> & keys)
+  {
+    std::list<QString> words;
+    for (std::list<QString>::const_iterator i = keys.begin();
+         i != keys.end(); ++i)
+    {
+      const QString & key = *i;
+      splitIntoWords(key, words);
+    }
+
+    return toQString(words);
+  }
+  
+  //----------------------------------------------------------------
+  // toWords
+  // 
+  QString
+  toWords(const QString & key)
+  {
+    std::list<QString> words;
+    splitIntoWords(key, words);
+    return toQString(words);
+  }
+  
 }

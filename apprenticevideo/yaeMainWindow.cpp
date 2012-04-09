@@ -163,7 +163,7 @@ namespace yae
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
-
+    
     // request vsync if available:
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
@@ -182,7 +182,14 @@ namespace yae
     
     timelineControls_ = new TimelineControls(this);
     layout->addWidget(timelineControls_);
-
+#if 0
+    // hide the playlist:
+    actionShowPlaylist->setChecked(false);
+    playlistDockWidget->hide();
+#endif
+    // playlistWidget_ = new PlaylistWidget(this, 0);
+    // playlistScrollArea->setWidget(playlistWidget_);
+    
     // hide the timeline:
     actionShowTimeline->setChecked(false);
     timelineControls_->hide();
@@ -367,6 +374,10 @@ namespace yae
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
     
+    ok = connect(actionShowPlaylist, SIGNAL(triggered()),
+                 this, SLOT(playbackShowPlaylist()));
+    YAE_ASSERT(ok);
+    
     ok = connect(actionShowTimeline, SIGNAL(triggered()),
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
@@ -466,6 +477,9 @@ namespace yae
   MainWindow::setPlaylist(const std::list<QString> & playlist,
                           bool beginPlaybackImmediately)
   {
+    // FIXME:
+    playlistWidget_->setPlaylist(playlist);
+    
     todo_ = playlist;
     done_.clear();
     
@@ -1186,6 +1200,26 @@ namespace yae
     bool enable = actionVerticalScaling->isChecked();
     canvas_->enableVerticalScaling(enable);
     playbackShrinkWrap();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackShowPlaylist
+  // 
+  void
+  MainWindow::playbackShowPlaylist()
+  {
+    SignalBlocker blockSignals(actionShowPlaylist);
+    
+    if (playlistDockWidget->isVisible())
+    {
+      actionShowPlaylist->setChecked(false);
+      playlistDockWidget->hide();
+    }
+    else
+    {
+      actionShowPlaylist->setChecked(true);
+      playlistDockWidget->show();
+    }
   }
   
   //----------------------------------------------------------------

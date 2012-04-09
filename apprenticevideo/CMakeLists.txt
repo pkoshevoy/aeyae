@@ -140,6 +140,7 @@ set(project_moc_hxx
   yaeCanvas.h
   yaeMainWindow.h
   yaePlaybackControls.h
+  yaePlaylistWidget.h
   )
 
 set(project_uis 
@@ -169,6 +170,8 @@ set(project_sources
   yaePixelFormatTraits.cpp
   yaePlaybackControls.h
   yaePlaybackControls.cpp
+  yaePlaylistWidget.h
+  yaePlaylistWidget.cpp
   yaeQueue.h
   yaeReader.h
   yaeReaderFFMPEG.h
@@ -177,6 +180,7 @@ set(project_sources
   yaeSynchronous.h
   yaeSynchronous.cpp
   yaeThreading.h
+  yaeTree.h
   yaeUtils.h
   yaeUtils.cpp
   yaeVideoRenderer.h

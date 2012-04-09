@@ -23,6 +23,7 @@
 #include <yaeAudioRenderer.h>
 #include <yaeVideoRenderer.h>
 #include <yaePlaybackControls.h>
+// #include <yaePlaylistWidget.h>
 #ifdef __APPLE__
 #include <yaeAppleRemoteControl.h>
 #endif
@@ -115,6 +116,7 @@ namespace yae
     void playbackLoop();
     void playbackColorConverter();
     void playbackVerticalScaling();
+    void playbackShowPlaylist();
     void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
@@ -224,6 +226,7 @@ namespace yae
     double scrollOffset_;
     
     // playlist:
+    // PlaylistWidget * playlistWidget_;
     std::list<QString> todo_;
     std::list<QString> done_;
     

@@ -1443,13 +1443,16 @@ namespace yae
     // push a NULL frame into frame queue to resetTimeCounter
     // down the line:
     frameQueue_.startNewSequence(TVideoFramePtr());
-    
-    avcodec_flush_buffers(stream_->codec);
+
+    if (stream_ && stream_->codec)
+    {
+      avcodec_flush_buffers(stream_->codec);
 #if 1
-    avcodec_close(stream_->codec);
-    int err = avcodec_open(stream_->codec, codec_);
-    YAE_ASSERT(err >= 0);
+      avcodec_close(stream_->codec);
+      int err = avcodec_open(stream_->codec, codec_);
+      YAE_ASSERT(err >= 0);
 #endif
+    }
     
     setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
@@ -2179,13 +2182,16 @@ namespace yae
     // push a NULL frame into frame queue to resetTimeCounter
     // down the line:
     frameQueue_.startNewSequence(TAudioFramePtr());
-    
-    avcodec_flush_buffers(stream_->codec);
+
+    if (stream_ && stream_->codec)
+    {
+      avcodec_flush_buffers(stream_->codec);
 #if 1
-    avcodec_close(stream_->codec);
-    int err = avcodec_open(stream_->codec, codec_);
-    YAE_ASSERT(err >= 0);
+      avcodec_close(stream_->codec);
+      int err = avcodec_open(stream_->codec, codec_);
+      YAE_ASSERT(err >= 0);
 #endif
+    }
     
     setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
     hasPrevPTS_ = false;
