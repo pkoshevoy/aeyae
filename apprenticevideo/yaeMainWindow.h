@@ -183,6 +183,11 @@ namespace yae
     QShortcut * shortcutPrev_;
     QShortcut * shortcutLoop_;
     
+    // playlist shortcuts:
+    QShortcut * shortcutRemove_;
+    QShortcut * shortcutSelectAll_;
+    QShortcut * shortcutSelectNone_;
+    
     // audio device selection widget:
     QActionGroup * audioDeviceGroup_;
     QSignalMapper * audioDeviceMapper_;

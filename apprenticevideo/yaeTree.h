@@ -116,6 +116,42 @@ namespace yae
       }
     }
     
+    void remove(const std::list<TKey> & keyPath)
+    {
+      typename std::list<TKey>::const_iterator keyIter = keyPath.begin();
+      remove(keyIter, keyPath.end());
+    }
+    
+    // NOTE: this is recursive:
+    void remove(typename std::list<TKey>::const_iterator & keyIter,
+                const typename std::list<TKey>::const_iterator & pathEnd)
+    {
+      if (keyIter == pathEnd)
+      {
+        assert(false);
+        return;
+      }
+      
+      // find the key mapping:
+      const TKey & key = *keyIter;
+      typename std::map<TKey, TTree>::iterator found = tree_.find(key);
+      
+      if (found != tree_.end())
+      {
+        ++keyIter;
+        
+        if (keyIter != pathEnd)
+        {
+          remove(keyIter, pathEnd);
+        }
+        
+        if (found->second.tree_.empty())
+        {
+          tree_.erase(found);
+        }
+      }
+    }
+    
     std::map<TKey, TTree> tree_;
     TValue value_;
   };

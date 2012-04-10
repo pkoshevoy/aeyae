@@ -181,6 +181,7 @@ namespace yae
     }
   }
   
+  
   //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
   // 
@@ -188,14 +189,24 @@ namespace yae
     selected_(false)
   {}
   
+  
+  //----------------------------------------------------------------
+  // PlaylistGroup::PlaylistGroup
+  // 
+  PlaylistGroup::PlaylistGroup():
+    offset_(0)
+  {}
+  
+  
   //----------------------------------------------------------------
   // PlaylistWidget::PlaylistWidget
   // 
   PlaylistWidget::PlaylistWidget(QWidget * parent, Qt::WindowFlags):
     QAbstractScrollArea(parent),
     rubberBand_(QRubberBand::Rectangle, this),
-    playing_(0),
-    current_(0)
+    numItems_(0),
+    current_(0),
+    highlighted_(0)
   {}
   
   //----------------------------------------------------------------
@@ -204,6 +215,14 @@ namespace yae
   void
   PlaylistWidget::setPlaylist(const std::list<QString> & playlist)
   {
+    if (playlist.empty())
+    {
+      return;
+    }
+    
+    // path of the first new playlist item:
+    QString firstNewItemPath;
+    
     for (std::list<QString>::const_iterator i = playlist.begin();
          i != playlist.end(); ++i)
     {
@@ -213,6 +232,11 @@ namespace yae
       if (fi.exists())
       {
         path = fi.absoluteFilePath();
+      }
+      
+      if (firstNewItemPath.isEmpty())
+      {
+        firstNewItemPath = path;
       }
       
       // tokenize it, convert into a tree key path:
@@ -239,6 +263,9 @@ namespace yae
     std::list<TFringeGroup> fringeGroups;
     tree_.get(fringeGroups);
     groups_.clear();
+    numItems_ = 0;
+    current_ = 0;
+    highlighted_ = 0;
     
     for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
          i != fringeGroups.end(); ++i)
@@ -250,13 +277,14 @@ namespace yae
       PlaylistGroup & group = groups_.back();
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = toWords(fringeGroup.abbreviatedPath_);
+      group.offset_ = numItems_;
       
       // shortcuts:
       typedef std::map<QString, QString> TSiblings;
       const TSiblings & siblings = fringeGroup.siblings_;
       
       for (TSiblings::const_iterator j = siblings.begin();
-           j != siblings.end(); ++j)
+           j != siblings.end(); ++j, ++numItems_)
       {
         const QString & key = j->first;
         const QString & value = j->second;
@@ -269,42 +297,139 @@ namespace yae
         QFileInfo fi(key);
         playlistItem.name_ = toWords(fi.baseName());
         playlistItem.ext_ = fi.completeSuffix();
+        
+        if (playlistItem.path_ == firstNewItemPath)
+        {
+          highlighted_ = numItems_;
+        }
       }
     }
     
     updateGeometries();
+    setCurrentItem(highlighted_);
   }
   
   //----------------------------------------------------------------
-  // PlaylistWidget::currentGroup
+  // PlaylistWidget::countItems
   // 
-  const PlaylistGroup *
-  PlaylistWidget::currentGroup() const
+  std::size_t
+  PlaylistWidget::countItems() const
   {
-    return NULL;
+    return numItems_;
   }
   
   //----------------------------------------------------------------
-  // PlaylistWidget::skipToNext
+  // PlaylistWidget::countItemsAhead
   // 
-  void
-  PlaylistWidget::skipToNext()
-  {}
-  
-  //----------------------------------------------------------------
-  // PlaylistWidget::backToPrev
-  // 
-  void
-  PlaylistWidget::backToPrev()
-  {}
-  
-  //----------------------------------------------------------------
-  // PlaylistWidget::event
-  // 
-  bool
-  PlaylistWidget::event(QEvent * e)
+  std::size_t
+  PlaylistWidget::countItemsAhead() const
   {
-    return QAbstractScrollArea::event(e);
+    return (current_ < numItems_) ? (numItems_ - current_) : 0;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::countItemsBehind
+  // 
+  std::size_t
+  PlaylistWidget::countItemsBehind() const
+  {
+    return (current_ < numItems_) ? current_ : numItems_;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::playbackNext
+  // 
+  void
+  PlaylistWidget::setCurrentItem(std::size_t index)
+  {
+    if (index != current_)
+    {
+      current_ = (index < numItems_) ? index : numItems_;
+      update();
+      
+      emit currentItemChanged(current_);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::playbackPaused
+  // 
+  void
+  PlaylistWidget::playbackPaused(bool paused)
+  {
+    paused_ = paused;
+    update();
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::selectAll
+  // 
+  void
+  PlaylistWidget::selectAll(bool selected)
+  {
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      
+      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+           j != group.items_.end(); ++j)
+      {
+        PlaylistItem & item = *j;
+        item.selected_ = selected;
+      }
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::selectNone
+  // 
+  void
+  PlaylistWidget::selectNone()
+  {
+    selectAll(false);
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::removeSelected
+  // 
+  void
+  PlaylistWidget::removeSelected()
+  {
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); )
+    {
+      PlaylistGroup & group = *i;
+      
+      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+           j != group.items_.end(); )
+      {
+        PlaylistItem & item = *j;
+        if (!item.selected_)
+        {
+          ++j;
+          continue;
+        }
+        
+        // 1. remove the item from the tree:
+        std::list<QString> keyPath = group.keyPath_;
+        keyPath.push_back(item.key_);
+        tree_.remove(keyPath);
+        
+        // 2. remove the item from the group:
+        j = group.items_.erase(j);
+      }
+      
+      // if the group is empty, remove it:
+      if (!group.items_.empty())
+      {
+        ++i;
+        continue;
+      }
+      
+      tree_.remove(group.keyPath_);
+      i = groups_.erase(i);
+    }
   }
   
   //----------------------------------------------------------------
@@ -335,15 +460,26 @@ namespace yae
   void
   PlaylistWidget::mousePressEvent(QMouseEvent * e)
   {
-    if (e->buttons() & Qt::LeftButton)
+    if (e->button() == Qt::LeftButton)
     {
+      e->accept();
+      
+      int mod = e->modifiers();
+      bool extendSelection = (mod & Qt::ShiftModifier);
+      bool toggleSelection = !extendSelection && (mod & Qt::ControlModifier);
+      
       QPoint viewOffset = getViewOffset();
-      anchor_ = e->pos() + viewOffset;
+      QPoint pt = e->pos() + viewOffset;
       
-      rubberBand_.setGeometry(QRect(anchor_ - viewOffset, QSize()));
-      rubberBand_.show();
+      if (!extendSelection)
+      {
+        anchor_ = pt;
+        
+        rubberBand_.setGeometry(QRect(anchor_ - viewOffset, QSize()));
+        rubberBand_.show();
+      }
       
-      updateSelection(e->pos());
+      updateSelection(e->pos(), toggleSelection);
     }
   }
   
@@ -353,7 +489,11 @@ namespace yae
   void
   PlaylistWidget::mouseReleaseEvent(QMouseEvent * e)
   {
-    rubberBand_.hide();
+    if (e->button() == Qt::LeftButton)
+    {
+      e->accept();
+      rubberBand_.hide();
+    }
   }
   
   //----------------------------------------------------------------
@@ -364,7 +504,11 @@ namespace yae
   {
     if (e->buttons() & Qt::LeftButton)
     {
-      updateSelection(e->pos(), true);
+      e->accept();
+      
+      bool toggleSelection = false;
+      bool scrollToItem = true;
+      updateSelection(e->pos(), toggleSelection, scrollToItem);
     }
   }
   
@@ -374,7 +518,24 @@ namespace yae
   void
   PlaylistWidget::mouseDoubleClickEvent(QMouseEvent * e)
   {
-    QAbstractScrollArea::mouseDoubleClickEvent(e);
+    if (e->button() == Qt::LeftButton && !e->modifiers())
+    {
+      e->accept();
+      
+      QPoint viewOffset = getViewOffset();
+      QPoint pt = e->pos() + viewOffset;
+      
+      PlaylistGroup * group = lookupGroup(pt);
+      std::size_t index = lookupItemIndex(group, pt);
+      if (index < numItems_)
+      {
+        highlighted_ = index;
+        current_ = index;
+        paused_ = false;
+        emit currentItemChanged(current_);
+        update();
+      }
+    }
   }
   
   //----------------------------------------------------------------
@@ -383,25 +544,28 @@ namespace yae
   void
   PlaylistWidget::wheelEvent(QWheelEvent * e)
   {
-    QScrollBar * sb = verticalScrollBar();
-    int val = sb->value();
-    int min = sb->minimum();
-    int max = sb->maximum();
-    int delta = -(e->delta());
-    
-    if (val == min && delta < 0 ||
-        val == max && delta > 0)
+    if (!e->modifiers() && (!e->buttons() || e->buttons() & Qt::LeftButton))
     {
-      // prevent wheel event from propagating to the parent widget:
-      e->accept();
-      return;
-    }
-    
-    QAbstractScrollArea::wheelEvent(e);
-    
-    if (e->buttons() & Qt::LeftButton)
-    {
-      updateSelection(e->pos());
+      QScrollBar * sb = verticalScrollBar();
+      int val = sb->value();
+      int min = sb->minimum();
+      int max = sb->maximum();
+      int delta = -(e->delta());
+      
+      if (val == min && delta < 0 ||
+          val == max && delta > 0)
+      {
+        // prevent wheel event from propagating to the parent widget:
+        e->accept();
+        return;
+      }
+      
+      QAbstractScrollArea::wheelEvent(e);
+      
+      if (e->buttons() & Qt::LeftButton)
+      {
+        updateSelection(e->pos());
+      }
     }
   }
   
@@ -411,7 +575,124 @@ namespace yae
   void
   PlaylistWidget::keyPressEvent(QKeyEvent * e)
   {
-    QAbstractScrollArea::keyPressEvent(e);
+    int key = e->key();
+    
+    bool stepUp = (key == Qt::Key_Up);
+    bool stepDn = (key == Qt::Key_Down);
+    bool pageUp = (key == Qt::Key_PageUp);
+    bool pageDn = (key == Qt::Key_PageDown);
+    
+    bool enter = (key == Qt::Key_Enter || key == Qt::Key_Return);
+    
+    int mod = e->modifiers();
+    bool modAlt   = mod & Qt::AltModifier;
+    bool modShift = mod & Qt::ShiftModifier;
+    bool modNone  = !modShift && !modAlt;
+    
+    if (modNone || modAlt)
+    {
+      // change highlighted item:
+      PlaylistGroup * group = NULL;
+      PlaylistItem * found = NULL;
+      
+      if (modNone && stepUp && highlighted_ > 0)
+      {
+        highlighted_--;
+        found = lookup(highlighted_, &group);
+      }
+      else if (modNone && stepDn && highlighted_ + 1 < numItems_)
+      {
+        highlighted_++;
+        found = lookup(highlighted_, &group);
+      }
+      else if (modNone && (pageUp || pageDn))
+      {
+        PlaylistItem * item = lookup(highlighted_);
+        if (item)
+        {
+          int vh = viewport()->height();
+          
+          QPoint viewOffset = getViewOffset();
+          QPoint p0 = item->bbox_.center();
+          QPoint p1 =
+            pageUp ?
+            QPoint(p0.x(), p0.y() - vh) :
+            QPoint(p0.x(), p0.y() + vh);
+
+          group = lookupGroup(p1);
+          std::size_t index = lookupItemIndex(group, p1);
+          
+          highlighted_ = (index < numItems_) ? index : 0;
+          found = lookup(highlighted_);
+        }
+      }
+      else if (modAlt && (stepUp || stepDn) && numItems_)
+      {
+        highlighted_ = stepUp ? 0 : (numItems_ - 1);
+        found = lookup(highlighted_, &group);
+      }
+      else if (modNone && enter)
+      {
+        setCurrentItem(highlighted_);
+        e->accept();
+      }
+      
+      if (found)
+      {
+        // update the anchor:
+        anchor_ = found->bbox_.center();
+        
+        // update the selection set:
+        QPoint viewOffset = getViewOffset();
+        QPoint mousePt(anchor_.x() - viewOffset.x(),
+                       anchor_.y() - viewOffset.y());
+
+        bool toggleSelection = false;
+        bool scrollToItem = true;
+        updateSelection(mousePt, toggleSelection, scrollToItem);
+        e->accept();
+      }
+      else if (group)
+      {
+        scrollTo(group, NULL);
+        e->accept();
+      }
+    }
+    else if (modShift && (stepUp || stepDn))
+    {
+      // update selection set:
+      PlaylistGroup * group = NULL;
+      PlaylistItem * found = NULL;
+      
+      if (stepUp && highlighted_ > 0)
+      {
+        highlighted_--;
+        found = lookup(highlighted_, &group);
+      }
+      else if (stepDn && highlighted_ + 1 < numItems_)
+      {
+        highlighted_++;
+        found = lookup(highlighted_, &group);
+      }
+      
+      if (found)
+      {
+        QPoint viewOffset = getViewOffset();
+        QPoint pt = found->bbox_.center();
+        QPoint mousePt(pt.x() - viewOffset.x(),
+                       pt.y() - viewOffset.y());
+        
+        bool toggleSelection = false;
+        bool scrollToItem = true;
+        updateSelection(mousePt, toggleSelection, scrollToItem);
+      }
+      
+      e->accept();
+    }
+    else
+    {
+      QAbstractScrollArea::keyPressEvent(e);
+    }
   }
   
   //----------------------------------------------------------------
@@ -557,15 +838,9 @@ namespace yae
         const QPixmap * icon = NULL;
         bool underline = false;
         
-        if (index == playing_)
-        {
-          // FIXME: check whether playback is paused:
-          icon = &iconPlay;
-          // icon = &iconPause;
-        }
-        
         if (index == current_)
         {
+          icon = paused_ ? &iconPause : &iconPlay;
           underline = true;
         }
         
@@ -618,6 +893,7 @@ namespace yae
   // 
   void
   PlaylistWidget::updateSelection(const QPoint & mousePos,
+                                  bool toggleSelection,
                                   bool scrollToItem)
   {
     QPoint viewOffset = getViewOffset();
@@ -627,27 +903,38 @@ namespace yae
                                   p1 - viewOffset).normalized());
     
     QRect bboxSel = QRect(anchor_, p1).normalized();
-    selectItems(bboxSel);
-
-    if (!scrollToItem)
-    {
-      update();
-      return;
-    }
+    selectItems(bboxSel, toggleSelection);
     
     PlaylistGroup * group = lookupGroup(p1);
-    PlaylistItem * item = lookup(group, p1);
-    scrollTo(group, item);
-    
-    QPoint viewOffsetNew = getViewOffset();
-    int dy = viewOffsetNew.y() - viewOffset.y();
-    int dx = viewOffsetNew.x() - viewOffset.x();
-    if (dy)
+    if (group)
     {
-      // move the cursor:
-      QPoint pt = this->mapToGlobal(mousePos);
-      pt -= QPoint(dx, dy);
-      QCursor::setPos(pt);
+      std::size_t index = lookupItemIndex(group, p1);
+      
+      PlaylistItem * item =
+        (index < numItems_) ?
+        &group->items_[index - group->offset_] :
+        NULL;
+      
+      highlighted_ = index;
+      
+      if (!scrollToItem)
+      {
+        update();
+        return;
+      }
+      
+      scrollTo(group, item);
+      
+      QPoint viewOffsetNew = getViewOffset();
+      int dy = viewOffsetNew.y() - viewOffset.y();
+      int dx = viewOffsetNew.x() - viewOffset.x();
+      if (dy)
+      {
+        // move the cursor:
+        QPoint pt = this->mapToGlobal(mousePos);
+        pt -= QPoint(dx, dy);
+        QCursor::setPos(pt);
+      }
     }
   }
   
@@ -655,7 +942,8 @@ namespace yae
   // PlaylistWidget::selectItems
   // 
   void
-  PlaylistWidget::selectItems(const QRect & bboxSel)
+  PlaylistWidget::selectItems(const QRect & bboxSel,
+                              bool toggleSelection)
   {
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
@@ -665,7 +953,15 @@ namespace yae
            j != group.items_.end(); ++j)
       {
         PlaylistItem & item = *j;
-        item.selected_ = item.bbox_.intersects(bboxSel);
+        
+        if (item.bbox_.intersects(bboxSel))
+        {
+          item.selected_ = toggleSelection ? !item.selected_ : true;
+        }
+        else if (!toggleSelection)
+        {
+          item.selected_ = false;
+        }
       }
     }
   }
@@ -713,6 +1009,23 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // PlaylistWidget::scrollTo
+  // 
+  void
+  PlaylistWidget::scrollTo(std::size_t index, PlaylistItem ** returnItem)
+  {
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = lookup(index, &group);
+    
+    if (returnItem)
+    {
+      *returnItem = item;
+    }
+    
+    scrollTo(group, item);
+  }
+  
+  //----------------------------------------------------------------
   // PlaylistWidget::lookupGroup
   // 
   PlaylistGroup *
@@ -748,20 +1061,21 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // PlaylistWidget::lookup
+  // PlaylistWidget::lookupItemIndex
   // 
-  PlaylistItem *
-  PlaylistWidget::lookup(PlaylistGroup * group, const QPoint & pt)
+  std::size_t
+  PlaylistWidget::lookupItemIndex(PlaylistGroup * group, const QPoint & pt)
   {
     if (group)
     {
+      std::size_t index = group->offset_;
       for (std::vector<PlaylistItem>::iterator j = group->items_.begin();
-           j != group->items_.end(); ++j)
+           j != group->items_.end(); ++j, ++index)
       {
         PlaylistItem & item = *j;
         if (item.bbox_.contains(pt))
         {
-          return &item;
+          return index;
         }
       }
       
@@ -770,8 +1084,62 @@ namespace yae
         QRect bbox = group->items_.back().bbox_;
         if (bbox.y() + bbox.height() < pt.y())
         {
-          return &group->items_.back();
+          index = group->offset_ + group->items_.size() - 1;
+          return index;
         }
+      }
+    }
+    
+    return numItems_;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::lookup
+  // 
+  PlaylistItem *
+  PlaylistWidget::lookup(PlaylistGroup * group, const QPoint & pt)
+  {
+    std::size_t index = lookupItemIndex(group, pt);
+    if (index < numItems_)
+    {
+      std::size_t i = index - group->offset_;
+      return &(group->items_[i]);
+    }
+    
+    return NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::lookup
+  // 
+  PlaylistItem *
+  PlaylistWidget::lookup(const QPoint & pt, PlaylistGroup ** returnGroup)
+  {
+    PlaylistGroup * group = lookupGroup(pt);
+    if (returnGroup)
+    {
+      *returnGroup = group;
+    }
+    
+    PlaylistItem * item = lookup(group, pt);
+    return item;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::lookupGroup
+  // 
+  PlaylistGroup *
+  PlaylistWidget::lookupGroup(std::size_t index)
+  {
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      std::size_t numItems = group.items_.size();
+      
+      if (index < group.offset_ + numItems)
+      {
+        return &group;
       }
     }
     
@@ -782,11 +1150,21 @@ namespace yae
   // PlaylistWidget::lookup
   // 
   PlaylistItem *
-  PlaylistWidget::lookup(const QPoint & pt)
+  PlaylistWidget::lookup(std::size_t index, PlaylistGroup ** returnGroup)
   {
-    PlaylistGroup * group = lookupGroup(pt);
-    PlaylistItem * item = lookup(group, pt);
-    return item;
+    PlaylistGroup * group = lookupGroup(index);
+    if (returnGroup)
+    {
+      *returnGroup = group;
+    }
+    
+    if (group)
+    {
+      std::size_t i = index - group->offset_;
+      return &group->items_[i];
+    }
+    
+    return NULL;
   }
   
 }

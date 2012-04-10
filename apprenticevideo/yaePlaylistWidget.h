@@ -63,6 +63,8 @@ namespace yae
   // 
   struct PlaylistGroup
   {
+    PlaylistGroup();
+    
     // complete key path to the fringe group that corresponds to this
     // playlist group:
     std::list<QString> keyPath_;
@@ -78,8 +80,11 @@ namespace yae
     
     // bounding box of the group items:
     QRect bboxItems_;
-  };
 
+    // number of items stored in other playlist groups preceding this group:
+    std::size_t offset_;
+  };
+  
   //----------------------------------------------------------------
   // PlaylistWidget
   // 
@@ -92,16 +97,40 @@ namespace yae
     
     void setPlaylist(const std::list<QString> & playlist);
     
-    // accessor to the current playlist group:
-    const PlaylistGroup * currentGroup() const;
+    // return index of the current item:
+    std::size_t currentItem() const;
     
+    // return number of items in the playlist:
+    std::size_t countItems() const;
+    
+    // this is used to check whether previous/next navigation is possible:
+    std::size_t countItemsAhead() const;
+    std::size_t countItemsBehind() const;
+    
+    // lookup a playlist item by index:
+    PlaylistGroup * lookupGroup(std::size_t index);
+    PlaylistItem * lookup(std::size_t index, PlaylistGroup ** group = NULL);
+    
+  public slots:
     // playlist navigation controls:
-    void skipToNext();
-    void backToPrev();
+    void setCurrentItem(std::size_t index);
+    
+    // this may affect current item decoration:
+    void playbackPaused(bool paused);
+    
+    // selection set management:
+    void selectAll(bool selected = true);
+    void selectNone();
+    void removeSelected();
+    
+  signals:
+    // this signal may be emitted if the user activates an item,
+    // or otherwise changes the playlist to invalidate the
+    // existing current item:
+    void currentItemChanged(std::size_t index);
     
   protected:
     // virtual:
-    bool event(QEvent * e);
     void paintEvent(QPaintEvent * e);
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
@@ -122,13 +151,25 @@ namespace yae
     void updateGeometries();
     void updateScrollBars();
     void draw(QPainter & painter, const QRect & region);
-    void updateSelection(const QPoint & mousePos, bool scrollToItem = false);
-    void selectItems(const QRect & bboxSel);
+
+    void updateSelection(const QPoint & mousePos,
+                         bool toggleSelection = false,
+                         bool scrollToItem = false);
+    
+    void selectItems(const QRect & bboxSel,
+                     bool toggleSelection);
+    
     void scrollTo(const PlaylistGroup * group,
                   const PlaylistItem * item);
+    
+    void scrollTo(std::size_t index,
+                  PlaylistItem ** item = NULL);
+    
     PlaylistGroup * lookupGroup(const QPoint & pt);
+    std::size_t lookupItemIndex(PlaylistGroup * group, const QPoint & pt);
+    
     PlaylistItem * lookup(PlaylistGroup * group, const QPoint & pt);
-    PlaylistItem * lookup(const QPoint & pt);
+    PlaylistItem * lookup(const QPoint & pt, PlaylistGroup ** group = NULL);
     
     // selection rubber-band widget:
     QRubberBand rubberBand_;
@@ -142,9 +183,17 @@ namespace yae
     // a list of playlist item groups, derived from playlist tree fringes:
     std::vector<PlaylistGroup> groups_;
     
-    // active item index:
-    std::size_t playing_;
+    // total number of items:
+    std::size_t numItems_;
+    
+    // current item index:
     std::size_t current_;
+    
+    // highlighted item index:
+    std::size_t highlighted_;
+    
+    // a flag indicating whether the current item is paused:
+    bool paused_;
   };
   
 }

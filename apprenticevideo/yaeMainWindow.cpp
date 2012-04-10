@@ -234,6 +234,9 @@ namespace yae
     shortcutNext_ = new QShortcut(this);
     shortcutPrev_ = new QShortcut(this);
     shortcutLoop_ = new QShortcut(this);
+    shortcutRemove_ = new QShortcut(this);
+    shortcutSelectAll_ = new QShortcut(this);
+    shortcutSelectNone_ = new QShortcut(this);
     
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
@@ -242,6 +245,9 @@ namespace yae
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
+    shortcutRemove_->setContext(Qt::ApplicationShortcut);
+    shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
+    shortcutSelectNone_->setContext(Qt::ApplicationShortcut);
     
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
@@ -360,6 +366,18 @@ namespace yae
     
     ok = connect(shortcutLoop_, SIGNAL(activated()),
                  this, SLOT(playbackLoop()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutRemove_, SIGNAL(activated()),
+                 playlistWidget_, SLOT(removeSelected()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutSelectAll_, SIGNAL(activated()),
+                 playlistWidget_, SLOT(selectAll()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutSelectNone_, SIGNAL(activated()),
+                 playlistWidget_, SLOT(selectNone()));
     YAE_ASSERT(ok);
     
     ok = connect(actionFullScreen, SIGNAL(triggered()),
