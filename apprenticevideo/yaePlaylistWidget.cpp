@@ -310,6 +310,15 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // PlaylistWidget::currentItem
+  // 
+  std::size_t
+  PlaylistWidget::currentItem() const
+  {
+    return current_;
+  }
+  
+  //----------------------------------------------------------------
   // PlaylistWidget::countItems
   // 
   std::size_t
@@ -340,9 +349,9 @@ namespace yae
   // PlaylistWidget::playbackNext
   // 
   void
-  PlaylistWidget::setCurrentItem(std::size_t index)
+  PlaylistWidget::setCurrentItem(std::size_t index, bool force)
   {
-    if (index != current_)
+    if (index != current_ || force)
     {
       current_ = (index < numItems_) ? index : numItems_;
       update();
@@ -365,7 +374,7 @@ namespace yae
   // PlaylistWidget::selectAll
   // 
   void
-  PlaylistWidget::selectAll(bool selected)
+  PlaylistWidget::selectAll()
   {
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
@@ -376,18 +385,11 @@ namespace yae
            j != group.items_.end(); ++j)
       {
         PlaylistItem & item = *j;
-        item.selected_ = selected;
+        item.selected_ = true;
       }
     }
-  }
-  
-  //----------------------------------------------------------------
-  // PlaylistWidget::selectNone
-  // 
-  void
-  PlaylistWidget::selectNone()
-  {
-    selectAll(false);
+    
+    update();
   }
   
   //----------------------------------------------------------------
@@ -396,20 +398,39 @@ namespace yae
   void
   PlaylistWidget::removeSelected()
   {
+    std::size_t oldIndex = 0;
+    std::size_t newIndex = 0;
+    std::size_t newCurrent = current_;
+    bool currentRemoved = false;
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); )
     {
       PlaylistGroup & group = *i;
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           j != group.items_.end(); )
+           j != group.items_.end(); oldIndex++)
       {
         PlaylistItem & item = *j;
         if (!item.selected_)
         {
           ++j;
+          newIndex++;
           continue;
         }
+        
+        if (oldIndex < current_)
+        {
+          // adjust the current index:
+          newCurrent--;
+        }
+        else if (oldIndex == current_)
+        {
+          // current item has changed:
+          currentRemoved = true;
+        }
+        
+        highlighted_ = newIndex;
         
         // 1. remove the item from the tree:
         std::list<QString> keyPath = group.keyPath_;
@@ -429,6 +450,29 @@ namespace yae
       
       tree_.remove(group.keyPath_);
       i = groups_.erase(i);
+    }
+    
+    updateGeometries();
+    
+    if (highlighted_ >= numItems_)
+    {
+      highlighted_ = numItems_ ? numItems_ - 1 : 0;
+    }
+
+    if (highlighted_ < numItems_)
+    {
+      PlaylistItem * item = lookup(highlighted_);
+      item->selected_ = true;
+      scrollTo(highlighted_);
+    }
+    
+    if (currentRemoved)
+    {
+      setCurrentItem(highlighted_, true);
+    }
+    else
+    {
+      current_ = newCurrent;
     }
   }
   
@@ -460,6 +504,8 @@ namespace yae
   void
   PlaylistWidget::mousePressEvent(QMouseEvent * e)
   {
+    e->ignore();
+    
     if (e->button() == Qt::LeftButton)
     {
       e->accept();
@@ -489,6 +535,8 @@ namespace yae
   void
   PlaylistWidget::mouseReleaseEvent(QMouseEvent * e)
   {
+    e->ignore();
+    
     if (e->button() == Qt::LeftButton)
     {
       e->accept();
@@ -713,19 +761,21 @@ namespace yae
   {
     int offset = 0;
     int width = viewport()->width();
+    std::size_t y = 0;
     
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      group.offset_ = offset;
       group.bbox_.setX(0);
-      group.bbox_.setY(offset);
+      group.bbox_.setY(y);
       group.bbox_.setWidth(width);
       group.bbox_.setHeight(kGroupNameHeight);
-      offset += kGroupNameHeight;
+      y += kGroupNameHeight;
       
       group.bboxItems_.setX(0);
-      group.bboxItems_.setY(offset);
+      group.bboxItems_.setY(y);
       group.bboxItems_.setWidth(width);
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
@@ -733,15 +783,17 @@ namespace yae
       {
         PlaylistItem & item = *j;
         item.bbox_.setX(0);
-        item.bbox_.setY(offset);
+        item.bbox_.setY(y);
         item.bbox_.setWidth(width);
         item.bbox_.setHeight(kGroupItemHeight);
-        offset += kGroupItemHeight;
+        y += kGroupItemHeight;
       }
       
-      group.bboxItems_.setHeight(offset - group.bboxItems_.y());
+      group.bboxItems_.setHeight(y - group.bboxItems_.y());
+      offset += group.items_.size();
     }
     
+    numItems_ = offset;
     updateScrollBars();
   }
   

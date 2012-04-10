@@ -129,8 +129,8 @@ namespace yae
     void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
-    void playlistSelect(const QString & path);
-
+    void playlistItemChanged(std::size_t index);
+    
     // help menu:
     void helpAbout();
     
@@ -143,6 +143,8 @@ namespace yae
     void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished();
+    void playbackStop();
+    void playback(bool forward = true);
     void scrollWheelTimerExpired();
     
   protected:
@@ -186,7 +188,6 @@ namespace yae
     // playlist shortcuts:
     QShortcut * shortcutRemove_;
     QShortcut * shortcutSelectAll_;
-    QShortcut * shortcutSelectNone_;
     
     // audio device selection widget:
     QActionGroup * audioDeviceGroup_;
@@ -198,10 +199,6 @@ namespace yae
     
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
-    
-    // playlist menu actions:
-    QActionGroup * playlistGroup_;
-    QSignalMapper * playlistMapper_;
     
     // file reader:
     IReader * reader_;
@@ -229,11 +226,6 @@ namespace yae
     QTimer scrollWheelTimer_;
     double scrollStart_;
     double scrollOffset_;
-    
-    // playlist:
-    // PlaylistWidget * playlistWidget_;
-    std::list<QString> todo_;
-    std::list<QString> done_;
     
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;

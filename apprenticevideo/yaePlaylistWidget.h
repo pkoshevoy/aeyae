@@ -113,14 +113,13 @@ namespace yae
     
   public slots:
     // playlist navigation controls:
-    void setCurrentItem(std::size_t index);
+    void setCurrentItem(std::size_t index, bool force = false);
     
     // this may affect current item decoration:
     void playbackPaused(bool paused);
     
     // selection set management:
-    void selectAll(bool selected = true);
-    void selectNone();
+    void selectAll();
     void removeSelected();
     
   signals:

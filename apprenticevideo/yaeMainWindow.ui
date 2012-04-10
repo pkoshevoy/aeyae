@@ -41,16 +41,10 @@
     <property name="title">
      <string>&amp;Playback</string>
     </property>
-    <widget class="QMenu" name="menuNowPlaying">
-     <property name="title">
-      <string>Now Playing</string>
-     </property>
-    </widget>
     <addaction name="actionPlay"/>
     <addaction name="separator"/>
     <addaction name="actionNext"/>
     <addaction name="actionPrev"/>
-    <addaction name="menuNowPlaying"/>
     <addaction name="separator"/>
     <addaction name="actionShowPlaylist"/>
     <addaction name="actionShowTimeline"/>

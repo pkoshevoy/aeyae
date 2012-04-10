@@ -140,8 +140,6 @@ namespace yae
     videoTrackGroup_(NULL),
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
-    playlistGroup_(NULL),
-    playlistMapper_(NULL),
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
@@ -187,8 +185,6 @@ namespace yae
     actionShowPlaylist->setChecked(false);
     playlistDockWidget->hide();
 #endif
-    // playlistWidget_ = new PlaylistWidget(this, 0);
-    // playlistScrollArea->setWidget(playlistWidget_);
     
     // hide the timeline:
     actionShowTimeline->setChecked(false);
@@ -236,7 +232,6 @@ namespace yae
     shortcutLoop_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
-    shortcutSelectNone_ = new QShortcut(this);
     
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
@@ -247,7 +242,9 @@ namespace yae
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
-    shortcutSelectNone_->setContext(Qt::ApplicationShortcut);
+
+    shortcutRemove_->setKey(QKeySequence(QKeySequence::Delete));
+    shortcutSelectAll_->setKey(QKeySequence(QKeySequence::SelectAll));
     
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
@@ -376,8 +373,8 @@ namespace yae
                  playlistWidget_, SLOT(selectAll()));
     YAE_ASSERT(ok);
     
-    ok = connect(shortcutSelectNone_, SIGNAL(activated()),
-                 playlistWidget_, SLOT(selectNone()));
+    ok = connect(playlistWidget_, SIGNAL(currentItemChanged(std::size_t)),
+                 this, SLOT(playlistItemChanged(std::size_t)));
     YAE_ASSERT(ok);
     
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -495,74 +492,12 @@ namespace yae
   MainWindow::setPlaylist(const std::list<QString> & playlist,
                           bool beginPlaybackImmediately)
   {
-    // FIXME:
+    SignalBlocker blockSignals(playlistWidget_);
     playlistWidget_->setPlaylist(playlist);
-    
-    todo_ = playlist;
-    done_.clear();
-    
-    if (playlistGroup_)
-    {
-      // remove old actions:
-      QList<QAction *> actions = playlistGroup_->actions();
-      while (!actions.empty())
-      {
-        QAction * action = actions.front();
-        actions.pop_front();
-        
-        menuNowPlaying->removeAction(action);
-      }
-    }
-    
-    delete playlistGroup_;
-    playlistGroup_ = new QActionGroup(this);
-    
-    delete playlistMapper_;
-    playlistMapper_ = new QSignalMapper(this);
-    
-    bool ok = connect(playlistMapper_, SIGNAL(mapped(const QString &)),
-                      this, SLOT(playlistSelect(const QString &)));
-    YAE_ASSERT(ok);
-
-    for (std::list<QString>::const_iterator i = todo_.begin();
-         i != todo_.end(); ++i)
-    {
-      const QString & path = *i;
-      
-      QString name = QFileInfo(path).fileName();
-      QAction * action = new QAction(name, this);
-      menuNowPlaying->addAction(action);
-      
-      action->setCheckable(true);
-      action->setChecked(i == todo_.begin());
-      playlistGroup_->addAction(action);
-      playlistMapper_->setMapping(action, path);
-      
-      ok = connect(action, SIGNAL(triggered()),
-                   playlistMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-    }
-    
-    if (!todo_.empty())
-    {
-      menuNowPlaying->addSeparator();
-    }
-    
-    QAction * action = new QAction(tr("Nothing"), this);
-    menuNowPlaying->addAction(action);
-    
-    action->setCheckable(true);
-    action->setChecked(todo_.empty());
-    playlistGroup_->addAction(action);
-    playlistMapper_->setMapping(action, QString());
-    
-    ok = connect(action, SIGNAL(triggered()),
-                 playlistMapper_, SLOT(map()));
-    YAE_ASSERT(ok);
     
     if (beginPlaybackImmediately)
     {
-      playbackNext();
+      playback();
     }
   }
   
@@ -961,15 +896,13 @@ namespace yae
       QString url = openUrl_->lineEdit->text();
       
       std::list<QString> playlist;
-      playlist.splice(playlist.end(), done_);
-      playlist.splice(playlist.end(), todo_);
       playlist.push_back(url);
       
       bool beginPlaybackImmediately = false;
       setPlaylist(playlist, beginPlaybackImmediately);
       
       // begin playback:
-      playlistSelect(url);
+      playback();
     }
   }
   
@@ -1505,35 +1438,21 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // MainWindow::playlistSelect
+  // MainWindow::playlistItemChanged
   // 
   void
-  MainWindow::playlistSelect(const QString & playNext)
+  MainWindow::playlistItemChanged(std::size_t index)
   {
-    std::cerr << "playlist selected: " << playNext.toUtf8().constData()
-              << std::endl;
-    todo_.splice(todo_.begin(), done_);
+    playbackStop();
     
-    while (!todo_.empty())
+    PlaylistItem * item = playlistWidget_->lookup(index);
+    if (!item)
     {
-      const QString & path = todo_.front();
-      if (path == playNext)
-      {
-        break;
-      }
-
-      done_.push_back(path);
-      todo_.pop_front();
-    }
-    
-    if (todo_.empty())
-    {
-      playbackFinished();
       canvas_->clear();
     }
     else
     {
-      playbackNext();
+      playback();
     }
   }
   
@@ -1741,6 +1660,16 @@ namespace yae
   void
   MainWindow::playbackFinished()
   {
+    playbackStop();
+    playbackNext();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackStop
+  // 
+  void
+  MainWindow::playbackStop()
+  {
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
     timelineControls_->observe(SharedClock());
     timelineControls_->resetFor(reader);
@@ -1752,18 +1681,41 @@ namespace yae
     reader_ = reader;
     
     timelineControls_->update();
-    // canvas_->clear();
     
     this->setWindowTitle(tr("Apprentice Video"));
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playback
+  // 
+  void
+  MainWindow::playback(bool forward)
+  {
+    SignalBlocker blockSignals(playlistWidget_);
+    actionPlay->setEnabled(false);
+
+    std::size_t current = playlistWidget_->currentItem();
+    PlaylistItem * item = NULL;
+    bool ok = false;
     
-    if (!todo_.empty())
+    while (item = playlistWidget_->lookup(current))
     {
-      QString filename = todo_.front();
-      todo_.pop_front();
-      done_.push_back(filename);
+      if (load(item->path_))
+      {
+        ok = true;
+        break;
+      }
+      
+      current += forward ? 1 : -1;
+      playlistWidget_->setCurrentItem(current);
     }
     
-    playbackNext();
+    fixupNextPrev();
+    
+    if (!ok && !forward)
+    {
+      playback(true);
+    }
   }
   
   //----------------------------------------------------------------
@@ -1772,37 +1724,32 @@ namespace yae
   void
   MainWindow::fixupNextPrev()
   {
-    actionPrev->setEnabled(!done_.empty());
-    actionNext->setEnabled(!todo_.empty());
+    std::size_t index = playlistWidget_->currentItem();
+    std::size_t nPrev = playlistWidget_->countItemsBehind();
+    std::size_t nNext = playlistWidget_->countItemsAhead();
     
-    if (!done_.empty())
+    PlaylistItem * prev = nPrev ? playlistWidget_->lookup(index - 1) : NULL;
+    PlaylistItem * next = nNext ? playlistWidget_->lookup(index + 1) : NULL;
+    
+    actionPrev->setEnabled(nPrev);
+    actionNext->setEnabled(nNext);
+    
+    if (prev)
     {
-      QString prev = done_.back();
-      QString name = QFileInfo(prev).fileName();
-      actionPrev->setText(tr("Go Back To %1").arg(name));
+      actionPrev->setText(tr("Go Back To %1").arg(prev->name_));
     }
     else
     {
       actionPrev->setText(tr("Go Back"));
     }
     
-    if (isSizeTwoOrMore(todo_))
+    if (next)
     {
-      QString next = *(++(todo_.begin()));
-      QString name = QFileInfo(next).fileName();
-      actionNext->setText(tr("Skip To %1").arg(name));
+      actionNext->setText(tr("Skip To %1").arg(next->name_));
     }
     else
     {
       actionNext->setText(tr("Skip"));
-    }
-    
-    QString nowPlaying = todo_.empty() ? QString() : todo_.front();
-    QObject * found = playlistMapper_->mapping(nowPlaying);
-    QAction * action = qobject_cast<QAction *>(found);
-    if (action)
-    {
-      action->setChecked(true);
     }
   }
   
@@ -1812,21 +1759,16 @@ namespace yae
   void
   MainWindow::playbackNext()
   {
+    SignalBlocker blockSignals(playlistWidget_);
     actionPlay->setEnabled(false);
     
-    while (!todo_.empty())
+    std::size_t current = playlistWidget_->currentItem();
+    if (playlistWidget_->countItemsAhead())
     {
-      QString filename = todo_.front();
-      if (load(filename))
-      {
-        break;
-      }
-      
-      todo_.pop_front();
-      done_.push_back(filename);
+      playlistWidget_->setCurrentItem(current + 1);
     }
     
-    fixupNextPrev();
+    playback(true);
   }
   
   //----------------------------------------------------------------
@@ -1835,21 +1777,16 @@ namespace yae
   void
   MainWindow::playbackPrev()
   {
+    SignalBlocker blockSignals(playlistWidget_);
     actionPlay->setEnabled(false);
     
-    while (!done_.empty())
+    std::size_t current = playlistWidget_->currentItem();
+    if (playlistWidget_->countItemsBehind())
     {
-      QString filename = done_.back();
-      done_.pop_back();
-      todo_.push_front(filename);
-      
-      if (load(todo_.front()))
-      {
-        break;
-      }
+      playlistWidget_->setCurrentItem(current - 1);
     }
     
-    fixupNextPrev();
+    playback(false);
   }
   
   //----------------------------------------------------------------
