@@ -12,9 +12,64 @@
 // yae includes:
 #include <yaeAPI.h>
 
+// boost includes:
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/thread_time.hpp>
+#include <boost/date_time/posix_time/time_formatters.hpp>
+
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // IClockObserver
+  // 
+  //! Use the observer interface to receive notifications when
+  //! setCurrentTime is called on the master clock
+  //!
+  //! NOTE: this is an notification interface, therefore the implementation
+  //! must be thread-safe, asynchronous, non-blocking...
+  struct IClockObserver
+  {
+    virtual ~IClockObserver() {}
+    virtual void noteCurrentTimeChanged(const TTime & t0) = 0;
+    virtual void noteTheClockHasStopped() = 0;
+  };
+  
+  //----------------------------------------------------------------
+  // TimeSegment
+  // 
+  struct YAE_API TimeSegment
+  {
+    TimeSegment();
+    
+    // this keeps track of "when" the time segment was specified:
+    boost::system_time origin_;
+    
+    // current time:
+    TTime t0_;
+    
+    // this keeps track of "when" someone annouced they will be late:
+    boost::system_time waitForMe_;
+    
+    // how long to wait:
+    double delayInSeconds_;
+    
+    // this indicates whether the clock is stopped while waiting for someone:
+    bool stopped_;
+    
+    // shared clock observer interface, may be NULL:
+    IClockObserver * observer_;
+    
+    // avoid concurrent access from multiple threads:
+    mutable boost::mutex mutex_;
+  };
+  
+  //----------------------------------------------------------------
+  // TTimeSegmentPtr
+  // 
+  typedef boost::shared_ptr<TimeSegment> TTimeSegmentPtr;
 
   //----------------------------------------------------------------
   // SharedClock
@@ -60,22 +115,7 @@ namespace yae
     void waitForMe(double waitInSeconds = 1.0);
     void waitForOthers();
     
-    //----------------------------------------------------------------
-    // IObserver
-    // 
-    //! Use the observer interface to receive notifications when
-    //! setCurrentTime is called on the master clock
-    //!
-    //! NOTE: this is an notification interface, therefore the implementation
-    //! must be thread-safe, asynchronous, non-blocking...
-    struct IObserver
-    {
-      virtual ~IObserver();
-      virtual void noteCurrentTimeChanged(const TTime & t0) = 0;
-      virtual void noteTheClockHasStopped() = 0;
-    };
-    
-    void setObserver(IObserver * observer);
+    void setObserver(IClockObserver * observer);
     
     //! notify the observer (if it exists) that there will be no
     //! further updates to the current time on this clock,
@@ -83,8 +123,9 @@ namespace yae
     bool noteTheClockHasStopped();
     
   private:
-    class TPrivate;
-    TPrivate * private_;
+    TTimeSegmentPtr shared_;
+    boost::system_time waitingFor_;
+    bool copied_;
   };
   
   //----------------------------------------------------------------
@@ -92,7 +133,7 @@ namespace yae
   // 
   struct YAE_API ISynchronous
   {
-    virtual ~ISynchronous();
+    virtual ~ISynchronous() {}
     
     //! take responsibility for maintaining the shared reference clock:
     void takeThisClock(const SharedClock & yourNewClock);

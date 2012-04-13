@@ -64,7 +64,7 @@ namespace yae
   // TimelineControls
   // 
   class TimelineControls : public QWidget,
-                           public SharedClock::IObserver
+                           public IClockObserver
   {
     Q_OBJECT;
 

@@ -24,32 +24,7 @@ using boost::posix_time::to_simple_string;
 namespace yae
 {
 
-  //----------------------------------------------------------------
-  // TimeSegment
-  // 
-  struct TimeSegment
-  {
-    TimeSegment();
-    
-    // this keeps track of "when" the time segment was specified:
-    boost::system_time origin_;
-    
-    TTime t0_;
-    
-    // this keeps track of "when" someone annouced they will be late:
-    boost::system_time waitForMe_;
-    double delayInSeconds_;
-    
-    // this indicates whether the clock is stopped while waiting for someone:
-    bool stopped_;
-    
-    // shared clock observer interface, may be NULL:
-    SharedClock::IObserver * observer_;
-    
-    mutable boost::mutex mutex_;
-  };
-
-  //----------------------------------------------------------------
+ //----------------------------------------------------------------
   // TimeSegment::TimeSegment
   // 
   TimeSegment::TimeSegment():
@@ -60,70 +35,30 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // TTimeSegmentPtr
-  // 
-  typedef boost::shared_ptr<TimeSegment> TTimeSegmentPtr;
-
-  //----------------------------------------------------------------
-  // SharedClock::TPrivate
-  // 
-  class SharedClock::TPrivate
-  {
-  public:
-    
-    TPrivate():
-      shared_(new TimeSegment()),
-      copied_(false)
-    {
-      waitingFor_ = boost::get_system_time();
-    }
-    
-    TPrivate(const TPrivate & p):
-      shared_(p.shared_),
-      copied_(true)
-    {
-      waitingFor_ = boost::get_system_time();
-    }
-
-    TPrivate & operator = (const TPrivate & p)
-    {
-      if (this != &p)
-      {
-        shared_ = p.shared_;
-        copied_ = true;
-        waitingFor_ = boost::get_system_time();
-      }
-
-      return *this;
-    }
-    
-    TTimeSegmentPtr shared_;
-    boost::system_time waitingFor_;
-    bool copied_;
-  };
-
-
-  //----------------------------------------------------------------
   // SharedClock::SharedClock
   // 
   SharedClock::SharedClock():
-    private_(new TPrivate())
-  {}
-
+    shared_(new TimeSegment()),
+    copied_(false)
+  {
+    waitingFor_ = boost::get_system_time();
+  }
+  
   //----------------------------------------------------------------
   // SharedClock::~SharedClock
   // 
   SharedClock::~SharedClock()
-  {
-    delete private_;
-  }
+  {}
 
   //----------------------------------------------------------------
   // SharedClock::SharedClock
   // 
   SharedClock::SharedClock(const SharedClock & c):
-    private_(new TPrivate(*c.private_))
-  {}
+    shared_(c.shared_),
+    copied_(true)
+  {
+    waitingFor_ = boost::get_system_time();
+  }
   
   //----------------------------------------------------------------
   // SharedClock::operator =
@@ -131,12 +66,13 @@ namespace yae
   SharedClock &
   SharedClock::operator = (const SharedClock & c)
   {
-    if (private_ != c.private_)
+    if (this != &c)
     {
-      delete private_;
-      private_ = new TPrivate(*c.private_);
+      shared_ = c.shared_;
+      copied_ = true;
+      waitingFor_ = boost::get_system_time();
     }
-
+    
     return *this;
   }
   
@@ -146,7 +82,7 @@ namespace yae
   bool
   SharedClock::sharesCurrentTimeWith(const SharedClock & c) const
   {
-    return private_->shared_ == c.private_->shared_;
+    return shared_ == c.shared_;
   }
   
   //----------------------------------------------------------------
@@ -157,7 +93,7 @@ namespace yae
   {
     if (sharesCurrentTimeWith(master))
     {
-      private_->copied_ = (this != &master);
+      copied_ = (this != &master);
       return true;
     }
     
@@ -170,7 +106,7 @@ namespace yae
   bool
   SharedClock::allowsSettingTime() const
   {
-    return !private_->copied_;
+    return !copied_;
   }
   
   //----------------------------------------------------------------
@@ -179,12 +115,14 @@ namespace yae
   bool
   SharedClock::setCurrentTime(const TTime & t0, double latency)
   {
-    if (!private_->copied_)
+    TTimeSegmentPtr keepAlive(shared_);
+    
+    if (!copied_)
     {
       boost::system_time now(boost::get_system_time());
       now += boost::posix_time::microseconds(long(latency * 1e+6));
       
-      TimeSegment & timeSegment = *(private_->shared_);
+      TimeSegment & timeSegment = *keepAlive;
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       
       timeSegment.origin_ = now;
@@ -207,7 +145,8 @@ namespace yae
   bool
   SharedClock::getCurrentTime(TTime & t0, double & playheadPosition) const
   {
-    const TimeSegment & timeSegment = *(private_->shared_);
+    TTimeSegmentPtr keepAlive(shared_);
+    const TimeSegment & timeSegment = *keepAlive;
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     
     t0 = timeSegment.t0_;
@@ -234,7 +173,8 @@ namespace yae
   void
   SharedClock::waitForMe(double delayInSeconds)
   {
-    TimeSegment & timeSegment = *(private_->shared_);
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     
     boost::system_time now(boost::get_system_time());
@@ -245,7 +185,7 @@ namespace yae
     {
       timeSegment.waitForMe_ = now;
       timeSegment.delayInSeconds_ = delayInSeconds;
-      private_->waitingFor_ = timeSegment.waitForMe_;
+      waitingFor_ = timeSegment.waitForMe_;
       
 #if 1
       std::cerr << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
@@ -297,7 +237,8 @@ namespace yae
   void
   SharedClock::waitForOthers()
   {
-    TimeSegment & timeSegment = *(private_->shared_);
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
     
     boost::system_time waitFor;
     double delayInSeconds = 0.0;
@@ -307,9 +248,9 @@ namespace yae
       delayInSeconds = timeSegment.delayInSeconds_;
     }
 
-    if (private_->waitingFor_ < waitFor)
+    if (waitingFor_ < waitFor)
     {
-      private_->waitingFor_ = waitFor;
+      waitingFor_ = waitFor;
     
       std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
 
@@ -320,7 +261,7 @@ namespace yae
 #if 0
     else
     {
-      std::cerr << "waitFor: " << to_simple_string(private_->waitingFor_)
+      std::cerr << "waitFor: " << to_simple_string(waitingFor_)
                 << std::endl
                 << "waiting: " << to_simple_string(waitFor)
                 << std::endl;
@@ -332,9 +273,10 @@ namespace yae
   // SharedClock::setObserver
   // 
   void
-  SharedClock::setObserver(IObserver * observer)
+  SharedClock::setObserver(IClockObserver * observer)
   {
-    TimeSegment & timeSegment = *(private_->shared_);
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     timeSegment.observer_ = observer;
   }
@@ -345,9 +287,10 @@ namespace yae
   bool
   SharedClock::noteTheClockHasStopped()
   {
-    if (!private_->copied_)
+    if (!copied_)
     {
-      TimeSegment & timeSegment = *(private_->shared_);
+      TTimeSegmentPtr keepAlive(shared_);
+      TimeSegment & timeSegment = *keepAlive;
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       
       if (timeSegment.observer_)
@@ -362,19 +305,6 @@ namespace yae
   }
   
   
-  //----------------------------------------------------------------
-  // SharedClock::IObserver::~IObserver
-  // 
-  SharedClock::IObserver::~IObserver()
-  {}
-  
-  
-  //----------------------------------------------------------------
-  // ISynchronous::~ISynchronous
-  // 
-  ISynchronous::~ISynchronous()
-  {}
-
   //----------------------------------------------------------------
   // ISynchronous::takeThisClock
   // 
