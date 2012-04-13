@@ -181,12 +181,91 @@ namespace yae
     }
   }
   
+  //----------------------------------------------------------------
+  // drawTextShadow
+  // 
+  static void
+  drawTextShadow(QPainter & painter,
+                 const QRect & bbox,
+                 int textAlignment,
+                 const QString & text)
+  {
+    painter.drawText(bbox.translated(-1, 0), textAlignment, text);
+    painter.drawText(bbox.translated(1, 0), textAlignment, text);
+    painter.drawText(bbox.translated(0, -1), textAlignment, text);
+    painter.drawText(bbox.translated(0, 1), textAlignment, text);
+  }
+  
+  //----------------------------------------------------------------
+  // drawTextWithShadowToFit
+  // 
+  static void
+  drawTextWithShadowToFit(QPainter & painter,
+                          const QRect & bboxBig,
+                          int textAlignment,
+                          const QString & text,
+                          const QPen & fgPen,
+                          const QPen & bgPen,
+                          QRect * bboxText = NULL)
+  {
+    QRect bbox(bboxBig.x() + 1,
+               bboxBig.y() + 1,
+               bboxBig.width() - 1,
+               bboxBig.height() - 1);
+    
+    QString textLeft;
+    QString textRight;
+    
+    if (!shortenTextToFit(painter,
+                          bbox,
+                          textAlignment,
+                          text,
+                          textLeft,
+                          textRight))
+    {
+      // text fits:
+      painter.setPen(bgPen);
+      drawTextShadow(painter, bbox, textAlignment, text);
+      
+      painter.setPen(fgPen);
+      painter.drawText(bbox, textAlignment, text, bboxText);
+      return;
+    }
+    
+    // one part will have ... added to it
+    int vertAlignment = textAlignment & Qt::AlignVertical_Mask;
+    
+    painter.setPen(bgPen);
+    drawTextShadow(painter, bbox, vertAlignment | Qt::AlignLeft, textLeft);
+    drawTextShadow(painter, bbox, vertAlignment | Qt::AlignRight, textRight);
+    
+    painter.setPen(fgPen);
+    QRect bboxLeft;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignLeft,
+                     textLeft,
+                     &bboxLeft);
+    
+    QRect bboxRight;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignRight,
+                     textRight,
+                     &bboxRight);
+    
+    if (bboxText)
+    {
+      *bboxText = bboxRight;
+      *bboxText |= bboxLeft;
+    }
+  }
+  
   
   //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
   // 
   PlaylistItem::PlaylistItem():
-    selected_(false)
+    selected_(false),
+    excluded_(false)
   {}
   
   
@@ -194,7 +273,8 @@ namespace yae
   // PlaylistGroup::PlaylistGroup
   // 
   PlaylistGroup::PlaylistGroup():
-    offset_(0)
+    offset_(0),
+    collapsed_(false)
   {}
   
   
@@ -207,7 +287,9 @@ namespace yae
     numItems_(0),
     current_(0),
     highlighted_(0)
-  {}
+  {
+    setPlaylist(std::list<QString>());
+  }
   
   //----------------------------------------------------------------
   // PlaylistWidget::setPlaylist
@@ -215,10 +297,7 @@ namespace yae
   void
   PlaylistWidget::setPlaylist(const std::list<QString> & playlist)
   {
-    if (playlist.empty())
-    {
-      return;
-    }
+    std::cerr << "PlaylistWidget::setPlaylist" << std::endl;
     
     // path of the first new playlist item:
     QString firstNewItemPath;
@@ -237,6 +316,13 @@ namespace yae
       if (firstNewItemPath.isEmpty())
       {
         firstNewItemPath = path;
+      }
+      
+      QString name = toWords(fi.baseName());
+      if (name.isEmpty())
+      {
+        std::cerr << "IGNORING: " << i->toUtf8().constData() << std::endl;
+        continue;
       }
       
       // tokenize it, convert into a tree key path:
@@ -305,8 +391,16 @@ namespace yae
       }
     }
     
+    // add a tail group:
+    {
+      groups_.push_back(PlaylistGroup());
+      PlaylistGroup & group = groups_.back();
+      group.name_ = tr("...end of playlist...");
+      group.offset_ = numItems_;
+    }
+    
     updateGeometries();
-    setCurrentItem(highlighted_);
+    setCurrentItem(highlighted_, true);
   }
   
   //----------------------------------------------------------------
@@ -351,10 +445,11 @@ namespace yae
   void
   PlaylistWidget::setCurrentItem(std::size_t index, bool force)
   {
+    std::cerr << "PlaylistWidget::setCurrentItem" << std::endl;
     if (index != current_ || force)
     {
       current_ = (index < numItems_) ? index : numItems_;
-      update();
+      selectItem(index);
       
       emit currentItemChanged(current_);
     }
@@ -380,12 +475,59 @@ namespace yae
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      selectGroup(&group);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::selectGroup
+  // 
+  void
+  PlaylistWidget::selectGroup(PlaylistGroup * group)
+  {
+    for (std::vector<PlaylistItem>::iterator i = group->items_.begin();
+         i != group->items_.end(); ++i)
+    {
+      PlaylistItem & item = *i;
+      item.selected_ = true;
+    }
+    
+    update();
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::selectItem
+  // 
+  void
+  PlaylistWidget::selectItem(std::size_t indexSel, bool exclusive)
+  {
+    std::cerr << "PlaylistWidget::selectItem: " << indexSel << std::endl;
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      std::size_t groupEnd = group.offset_ + group.items_.size();
       
-      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           j != group.items_.end(); ++j)
+      if (exclusive)
       {
-        PlaylistItem & item = *j;
+        for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+             j != group.items_.end(); ++j)
+        {
+          PlaylistItem & item = *j;
+          item.selected_ = false;
+        }
+      }
+      
+      if (group.offset_ <= indexSel && indexSel < groupEnd)
+      {
+        PlaylistItem & item = group.items_[indexSel - group.offset_];
         item.selected_ = true;
+        
+        if (!exclusive)
+        {
+          // done:
+          break;
+        }
       }
     }
     
@@ -398,6 +540,7 @@ namespace yae
   void
   PlaylistWidget::removeSelected()
   {
+    std::cerr << "PlaylistWidget::removeSelected" << std::endl;
     std::size_t oldIndex = 0;
     std::size_t newIndex = 0;
     std::size_t newCurrent = current_;
@@ -749,6 +892,7 @@ namespace yae
   void
   PlaylistWidget::resizeEvent(QResizeEvent * e)
   {
+    std::cerr << "PlaylistWidget::resizeEvent" << std::endl;
     (void) e;
     updateGeometries();
   }
@@ -759,6 +903,7 @@ namespace yae
   void
   PlaylistWidget::updateGeometries()
   {
+    std::cerr << "PlaylistWidget::updateGeometries" << std::endl;
     int offset = 0;
     int width = viewport()->width();
     std::size_t y = 0;
@@ -820,8 +965,15 @@ namespace yae
       PlaylistGroup & group = groups_.back();
       contentWidth = group.bbox_.width();
       
-      PlaylistItem & item = group.items_.back();
-      contentHeight = item.bbox_.y() + item.bbox_.height();
+      if (!group.items_.empty())
+      {
+        PlaylistItem & item = group.items_.back();
+        contentHeight = item.bbox_.y() + item.bbox_.height();
+      }
+      else
+      {
+        contentHeight = group.bbox_.y() + group.bbox_.height();
+      }
     }
     
     verticalScrollBar()->setSingleStep(kGroupItemHeight);
@@ -842,8 +994,11 @@ namespace yae
     static QPixmap iconPlay = QPixmap(":/images/iconPlay.png");
     static QPixmap iconPause = QPixmap(":/images/iconPause.png");
     
-    static const QColor headerColorBg(0x40, 0x80, 0xff);
-    static const QColor activeColorBg(0xff, 0x80, 0x40);
+    // static const QColor headerColorBg(0xcd, 0xcd, 0xcd);
+    // static const QColor headerColorBg(18, 68, 121);
+    // static const QColor headerColorBg("#43768F");
+    static const QColor headerColorBg(0xb4, 0xb4, 0xb4);
+    static const QColor brightColorBg(0x40, 0xff, 0x4f);
     static const QColor brightColorFg(0xff, 0xff, 0xff);
     static const QColor zebraBg[] = {
       QColor(0, 0, 0, 0),
@@ -855,7 +1010,10 @@ namespace yae
     QColor selectedColorBg = palette.color(QPalette::Highlight);
     QColor selectedColorFg = palette.color(QPalette::HighlightedText);
     QColor foregroundColor = palette.color(QPalette::WindowText);
+    
     QFont textFont = painter.font();
+    QFont tinyFont = textFont;
+    tinyFont.setPixelSize(7);
     
     std::size_t index = 0;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
@@ -865,13 +1023,72 @@ namespace yae
       
       if (group.bbox_.intersects(region))
       {
-        painter.fillRect(group.bbox_, headerColorBg);
-        painter.setPen(brightColorFg);
+        QRect bbox = group.bbox_;
         
+#if 0
+        painter.fillRect(group.bbox_, headerColorBg);
+#else
+        QLinearGradient gradient(bbox.x(),
+                                 bbox.y() + 1,
+                                 bbox.x(),
+                                 bbox.y() + bbox.height() - 1);
+        // gradient.setColorAt(0, QColor(130, 130, 130));
+        // gradient.setColorAt(1, QColor(98, 98, 98));
+        // gradient.setColorAt(0, QColor(93, 93, 93));
+        // gradient.setColorAt(1, QColor(60, 60, 60));
+        gradient.setColorAt(0.0, QColor(27, 28, 32));
+        gradient.setColorAt(0.49, QColor(23, 31, 47));
+        gradient.setColorAt(0.5, QColor(13, 18, 34));
+        gradient.setColorAt(1, QColor(21, 33, 65));
+        gradient.setSpread(QGradient::PadSpread);
+        painter.setBrush(QBrush(gradient));
+        // painter.setPen(Qt::NoPen);
+        painter.fillRect(group.bbox_, QBrush(gradient));
+#endif
+        
+        QPen dashPen = painter.pen();
+        QVector<qreal> dashes;
+        dashes << 9 << 3;
+        dashPen.setDashPattern(dashes);
+        dashPen.setColor(QColor(0xa0, 0xa0, 0xa0));
+        
+        painter.setRenderHint(QPainter::Antialiasing, false);
+#if 1
+        // painter.setPen(QColor(0xa0, 0xa0, 0xa0));
+        // painter.setPen(QColor(0x5D, 0x5D, 0x5D));
+        painter.setPen(QColor(0x00, 0x00, 0x00));
+        painter.drawLine(bbox.x(),
+                         bbox.y(),
+                         bbox.x() + bbox.width() - 1,
+                         bbox.y());
+#endif
+        if (!group.items_.empty())
+        {
+          // painter.setPen(QColor(0x40, 0x40, 0x40));
+          // painter.setPen(dashPen);
+        }
+        
+        painter.drawLine(bbox.x(),
+                         bbox.y() + bbox.height() - 1,
+                         bbox.x() + bbox.width() - 1,
+                         bbox.y() + bbox.height() - 1);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        
+#if 0
+        drawTextWithShadowToFit(painter,
+                                group.bbox_,
+                                Qt::AlignVCenter | Qt::AlignCenter,
+                                group.name_,
+                                QColor(0xff, 0xff, 0xff),
+                                QColor(0x40, 0x40, 0x40));
+#else
+        // painter.setPen(brightColorFg);
+        painter.setPen(QColor(62, 162, 242));
         drawTextToFit(painter,
                       group.bbox_,
                       Qt::AlignVCenter | Qt::AlignCenter,
                       group.name_);
+#endif
       }
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
@@ -887,14 +1104,6 @@ namespace yae
         
         QColor bg = zebraBg[zebraIndex];
         QColor fg = foregroundColor;
-        const QPixmap * icon = NULL;
-        bool underline = false;
-        
-        if (index == current_)
-        {
-          icon = paused_ ? &iconPause : &iconPlay;
-          underline = true;
-        }
         
         if (item.selected_)
         {
@@ -902,40 +1111,57 @@ namespace yae
           fg = selectedColorFg;
         }
         
-        painter.setPen(fg);
         painter.fillRect(item.bbox_, bg);
-        QString text = tr("%1, %2").arg(item.name_).arg(item.ext_);
         
-        QRect bboxText = item.bbox_;
-        if (icon)
+        if (index == current_)
         {
-          int yoffset = (item.bbox_.height() - icon->height()) / 2;
-          QPoint pt(item.bbox_.x(), item.bbox_.y() + yoffset);
-          painter.drawPixmap(pt, *icon);
+          QString nowPlaying = tr("NOW PLAYING");
+          
+          painter.setFont(tinyFont);
+          QFontMetrics fm = painter.fontMetrics();
+          QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
+          QRect bx = item.bbox_.adjusted(1, 1, -1, -1);
+          
+          // add a little padding:
+          sz.setWidth(sz.width() + 8);
+          
+          if (bx.width() > sz.width())
+          {
+            bx.setX(bx.x() + bx.width() - sz.width());
+            bx.setWidth(sz.width());
+          }
+          
+          if (bx.height() > sz.height())
+          {
+            bx.setHeight(sz.height());
+          }
+          
+          int radius = std::min<int>(sz.width(), sz.height()) / 2;
+          painter.setBrush(selectedColorBg);
+          painter.setPen(Qt::NoPen);
+          painter.drawRoundedRect(bx, radius, radius);
+          
+          painter.setPen(brightColorFg);
+          drawTextToFit(painter,
+                        bx,
+                        Qt::AlignVCenter | Qt::AlignCenter,
+                        nowPlaying);
+          painter.setFont(textFont);
         }
         
-        int xoffset = kPlayPauseIconWidth;
-        bboxText.setX(item.bbox_.x() + xoffset);
-        bboxText.setWidth(item.bbox_.width() - xoffset);
+        painter.setPen(fg);
         
+        QRect bboxText = item.bbox_;
+        bboxText.setHeight(item.bbox_.height() - 1);
+        
+        QString text = tr("%1, %2").arg(item.name_).arg(item.ext_);
         QRect bboxTextOut;
         drawTextToFit(painter,
                       bboxText,
-                      Qt::AlignVCenter | Qt::AlignLeft,
+                      Qt::AlignBottom | Qt::AlignLeft,
                       text,
                       &bboxTextOut);
         
-        if (underline)
-        {
-          QColor fg = zebraBg[1].darker(150);
-          QPoint p0 = bboxTextOut.bottomLeft() + QPoint(0, 1);
-          QPoint p1 = bboxTextOut.bottomRight() + QPoint(0, 1);
-          
-          painter.setRenderHint(QPainter::Antialiasing, false);
-          painter.setPen(fg);
-          painter.drawLine(p0, p1);
-          painter.setRenderHint(QPainter::Antialiasing);
-        }
       }
     }
   }
@@ -948,6 +1174,7 @@ namespace yae
                                   bool toggleSelection,
                                   bool scrollToItem)
   {
+    std::cerr << "PlaylistWidget::updateSelection" << std::endl;
     QPoint viewOffset = getViewOffset();
     QPoint p1 = mousePos + viewOffset;
     
@@ -966,6 +1193,11 @@ namespace yae
         (index < numItems_) ?
         &group->items_[index - group->offset_] :
         NULL;
+      
+      if (!item)
+      {
+        selectGroup(group);
+      }
       
       highlighted_ = index;
       
@@ -997,6 +1229,7 @@ namespace yae
   PlaylistWidget::selectItems(const QRect & bboxSel,
                               bool toggleSelection)
   {
+    std::cerr << "PlaylistWidget::selectItems" << std::endl;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -1083,6 +1316,7 @@ namespace yae
   PlaylistGroup *
   PlaylistWidget::lookupGroup(const QPoint & pt)
   {
+    std::cerr << "PlaylistWidget::lookupGroup" << std::endl;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -1118,6 +1352,7 @@ namespace yae
   std::size_t
   PlaylistWidget::lookupItemIndex(PlaylistGroup * group, const QPoint & pt)
   {
+    std::cerr << "PlaylistWidget::lookupItemIndex" << std::endl;
     if (group)
     {
       std::size_t index = group->offset_;
@@ -1183,6 +1418,7 @@ namespace yae
   PlaylistGroup *
   PlaylistWidget::lookupGroup(std::size_t index)
   {
+    std::cerr << "PlaylistWidget::lookupGroup: " << index << std::endl;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -1204,6 +1440,7 @@ namespace yae
   PlaylistItem *
   PlaylistWidget::lookup(std::size_t index, PlaylistGroup ** returnGroup)
   {
+    std::cerr << "PlaylistWidget::lookup: " << index << std::endl;
     PlaylistGroup * group = lookupGroup(index);
     if (returnGroup)
     {

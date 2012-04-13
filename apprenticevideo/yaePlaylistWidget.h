@@ -56,6 +56,9 @@ namespace yae
     
     // a flag indicating whether this item is currently selected:
     bool selected_;
+    
+    // a flag indicating whether this item is excluded from the list:
+    bool excluded_;
   };
   
   //----------------------------------------------------------------
@@ -80,9 +83,12 @@ namespace yae
     
     // bounding box of the group items:
     QRect bboxItems_;
-
+    
     // number of items stored in other playlist groups preceding this group:
     std::size_t offset_;
+    
+    // a flag indicating whether this group is collapsed for brevity:
+    bool collapsed_;
   };
   
   //----------------------------------------------------------------
@@ -120,6 +126,8 @@ namespace yae
     
     // selection set management:
     void selectAll();
+    void selectGroup(PlaylistGroup * group);
+    void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
     
   signals:
