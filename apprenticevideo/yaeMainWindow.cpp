@@ -518,6 +518,8 @@ namespace yae
       << QString::fromUtf8("eyetvr")
       << QString::fromUtf8("eyetvi")
       << QString::fromUtf8("doc")
+      << QString::fromUtf8("xls")
+      << QString::fromUtf8("ppt")
       << QString::fromUtf8("pdf")
       << QString::fromUtf8("htm")
       << QString::fromUtf8("zip")
@@ -529,10 +531,16 @@ namespace yae
       << QString::fromUtf8("tbz2")
       << QString::fromUtf8("lzma")
       << QString::fromUtf8("html")
+      << QString::fromUtf8("xml")
       << QString::fromUtf8("txt")
+      << QString::fromUtf8("srt")
+      << QString::fromUtf8("ifo")
+      << QString::fromUtf8("info")
       << QString::fromUtf8("app")
+      << QString::fromUtf8("plist")
       << QString::fromUtf8("framework")
       << QString::fromUtf8("bundle")
+      << QString::fromUtf8("rcproject")
       << QString::fromUtf8("sc")
       << QString::fromUtf8("so")
       << QString::fromUtf8("dylib")
@@ -541,6 +549,7 @@ namespace yae
       << QString::fromUtf8("com")
       << QString::fromUtf8("cmd")
       << QString::fromUtf8("bat")
+      << QString::fromUtf8("sys")
       << QString::fromUtf8("py")
       << QString::fromUtf8("sh")
       << QString::fromUtf8("cpp")
@@ -552,7 +561,8 @@ namespace yae
       << QString::fromUtf8("xss")
       << QString::fromUtf8("spfx")
       << QString::fromUtf8("iso")
-      << QString::fromUtf8("dmg");
+      << QString::fromUtf8("dmg")
+      << QString::fromUtf8("svq");
     
     return ext;
   }

@@ -121,9 +121,6 @@ namespace yae
     // playlist navigation controls:
     void setCurrentItem(std::size_t index, bool force = false);
     
-    // this may affect current item decoration:
-    void playbackPaused(bool paused);
-    
     // selection set management:
     void selectAll();
     void selectGroup(PlaylistGroup * group);
@@ -198,9 +195,6 @@ namespace yae
     
     // highlighted item index:
     std::size_t highlighted_;
-    
-    // a flag indicating whether the current item is paused:
-    bool paused_;
   };
   
 }

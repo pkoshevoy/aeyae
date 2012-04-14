@@ -36,11 +36,6 @@ namespace yae
   static const int kGroupItemHeight = 20;
 
   //----------------------------------------------------------------
-  // kPlayPauseIconWidth
-  // 
-  static const int kPlayPauseIconWidth = 14;
-  
-  //----------------------------------------------------------------
   // shortenTextToFit
   // 
   static bool
@@ -396,7 +391,7 @@ namespace yae
     {
       groups_.push_back(PlaylistGroup());
       PlaylistGroup & group = groups_.back();
-      group.name_ = tr("...end of playlist...");
+      group.name_ = tr("END OF PLAYLIST");
       group.offset_ = numItems_;
     }
     
@@ -450,20 +445,11 @@ namespace yae
     if (index != current_ || force)
     {
       current_ = (index < numItems_) ? index : numItems_;
-      selectItem(index);
+      selectItem(current_);
+      scrollTo(current_);
       
       emit currentItemChanged(current_);
     }
-  }
-  
-  //----------------------------------------------------------------
-  // PlaylistWidget::playbackPaused
-  // 
-  void
-  PlaylistWidget::playbackPaused(bool paused)
-  {
-    paused_ = paused;
-    update();
   }
   
   //----------------------------------------------------------------
@@ -722,7 +708,6 @@ namespace yae
       {
         highlighted_ = index;
         current_ = index;
-        paused_ = false;
         emit currentItemChanged(current_);
         update();
       }
@@ -984,6 +969,26 @@ namespace yae
     horizontalScrollBar()->setPageStep(viewportSize.width());
     horizontalScrollBar()->setRange(0, qMax(0, contentWidth - viewportWidth));
   }
+
+  //----------------------------------------------------------------
+  // headerBrush
+  // 
+  static const QBrush & headerBrush(int height)
+  {
+    static QBrush * brush = NULL;
+    if (!brush)
+    {
+      QLinearGradient gradient(0, 1, 0, height - 1);
+      gradient.setColorAt(0.0,  QColor("#1b1c20"));
+      gradient.setColorAt(0.49, QColor("#1b1f2f"));
+      gradient.setColorAt(0.5,  QColor("#070d1e"));
+      gradient.setColorAt(1.0,  QColor("#152141"));
+      gradient.setSpread(QGradient::PadSpread);
+      brush = new QBrush(gradient);
+    }
+    
+    return *brush;
+  }
   
   //----------------------------------------------------------------
   // PlaylistWidget::draw
@@ -991,8 +996,8 @@ namespace yae
   void
   PlaylistWidget::draw(QPainter & painter, const QRect & region)
   {
-    static QPixmap iconPlay = QPixmap(":/images/iconPlay.png");
-    static QPixmap iconPause = QPixmap(":/images/iconPause.png");
+    // static QPixmap iconPlay = QPixmap(":/images/iconPlay.png");
+    // static QPixmap iconPause = QPixmap(":/images/iconPause.png");
     
     // static const QColor headerColorBg(0xcd, 0xcd, 0xcd);
     // static const QColor headerColorBg(18, 68, 121);
@@ -1012,6 +1017,7 @@ namespace yae
     QColor foregroundColor = palette.color(QPalette::WindowText);
     
     QFont textFont = painter.font();
+    textFont.setPixelSize(11);
     QFont tinyFont = textFont;
     tinyFont.setPixelSize(7);
     
@@ -1024,71 +1030,63 @@ namespace yae
       if (group.bbox_.intersects(region))
       {
         QRect bbox = group.bbox_;
-        
 #if 0
-        painter.fillRect(group.bbox_, headerColorBg);
-#else
-        QLinearGradient gradient(bbox.x(),
-                                 bbox.y() + 1,
-                                 bbox.x(),
-                                 bbox.y() + bbox.height() - 1);
-        // gradient.setColorAt(0, QColor(130, 130, 130));
-        // gradient.setColorAt(1, QColor(98, 98, 98));
-        // gradient.setColorAt(0, QColor(93, 93, 93));
-        // gradient.setColorAt(1, QColor(60, 60, 60));
-        gradient.setColorAt(0.0, QColor(27, 28, 32));
-        gradient.setColorAt(0.49, QColor(23, 31, 47));
-        gradient.setColorAt(0.5, QColor(13, 18, 34));
-        gradient.setColorAt(1, QColor(21, 33, 65));
-        gradient.setSpread(QGradient::PadSpread);
-        painter.setBrush(QBrush(gradient));
-        // painter.setPen(Qt::NoPen);
-        painter.fillRect(group.bbox_, QBrush(gradient));
-#endif
+        painter.setBrush(headerBrush(bbox.height()));
+        painter.setBrushOrigin(bbox.topLeft());
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(group.bbox_);
         
-        QPen dashPen = painter.pen();
-        QVector<qreal> dashes;
-        dashes << 9 << 3;
-        dashPen.setDashPattern(dashes);
-        dashPen.setColor(QColor(0xa0, 0xa0, 0xa0));
-        
-        painter.setRenderHint(QPainter::Antialiasing, false);
-#if 1
-        // painter.setPen(QColor(0xa0, 0xa0, 0xa0));
-        // painter.setPen(QColor(0x5D, 0x5D, 0x5D));
-        painter.setPen(QColor(0x00, 0x00, 0x00));
-        painter.drawLine(bbox.x(),
-                         bbox.y(),
-                         bbox.x() + bbox.width() - 1,
-                         bbox.y());
-#endif
-        if (!group.items_.empty())
+        if (!group.keyPath_.empty())
         {
-          // painter.setPen(QColor(0x40, 0x40, 0x40));
-          // painter.setPen(dashPen);
+          painter.setPen(QColor("#40a0ff"));
+          drawTextToFit(painter,
+                        group.bbox_,
+                        Qt::AlignVCenter | Qt::AlignCenter,
+                        group.name_);
+        }
+        else
+        {
+          QRect bx = bbox.adjusted(2, 1, -2, -1);
+          painter.setFont(tinyFont);
+          painter.setPen(QColor("#2080e0"));
+          drawTextToFit(painter,
+                        bx,
+                        Qt::AlignBottom | Qt::AlignRight,
+                        group.name_);
+          painter.setFont(textFont);
+        }
+#else
+        painter.fillRect(bbox, Qt::black);
+        
+        if (!group.keyPath_.empty())
+        {
+          drawTextWithShadowToFit(painter,
+                                  group.bbox_,
+                                  Qt::AlignVCenter | Qt::AlignCenter,
+                                  group.name_,
+                                  QColor("#40a0ff"),
+                                  QColor("#102040"));
+        }
+        else
+        {
+          QRect bx = bbox.adjusted(2, 1, -2, -1);
+          painter.setFont(tinyFont);
+          painter.setPen(QColor("#2080e0"));
+          drawTextToFit(painter,
+                        bx,
+                        Qt::AlignBottom | Qt::AlignRight,
+                        // Qt::AlignVCenter | Qt::AlignCenter,
+                        group.name_);
+          painter.setFont(textFont);
         }
         
-        painter.drawLine(bbox.x(),
-                         bbox.y() + bbox.height() - 1,
-                         bbox.x() + bbox.width() - 1,
-                         bbox.y() + bbox.height() - 1);
-        painter.setRenderHint(QPainter::Antialiasing, true);
-        
-#if 0
-        drawTextWithShadowToFit(painter,
-                                group.bbox_,
-                                Qt::AlignVCenter | Qt::AlignCenter,
-                                group.name_,
-                                QColor(0xff, 0xff, 0xff),
-                                QColor(0x40, 0x40, 0x40));
-#else
-        // painter.setPen(brightColorFg);
-        // painter.setPen(QColor(62, 162, 242));
-        painter.setPen(QColor(64, 160, 255));
-        drawTextToFit(painter,
-                      group.bbox_,
-                      Qt::AlignVCenter | Qt::AlignCenter,
-                      group.name_);
+        QPainter::CompositionMode cm = painter.compositionMode();
+        painter.setCompositionMode(QPainter::CompositionMode_Plus);
+        painter.setBrush(headerBrush(bbox.height()));
+        painter.setBrushOrigin(bbox.topLeft());
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(bbox);
+        painter.setCompositionMode(cm);
 #endif
       }
       
