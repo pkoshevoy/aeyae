@@ -120,7 +120,7 @@
     <set>QDockWidget::DockWidgetFeatureMask</set>
    </property>
    <property name="allowedAreas">
-    <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+    <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
     <string>Playlist</string>
@@ -138,6 +138,12 @@
      </property>
      <item>
       <widget class="yae::PlaylistWidget" name="playlistWidget_">
+       <property name="minimumSize">
+        <size>
+         <width>128</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="styleSheet">
         <string notr="true">#playlistWidget_ {
     font: 10px;
