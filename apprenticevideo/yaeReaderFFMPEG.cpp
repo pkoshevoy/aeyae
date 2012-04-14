@@ -1227,7 +1227,7 @@ namespace yae
           rvf.time_.time_++;
         }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
                   << std::endl;
 #endif

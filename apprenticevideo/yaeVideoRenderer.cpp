@@ -97,7 +97,7 @@ namespace yae
     double playheadPositionPrev = - std::numeric_limits<double>::max();
     
     bool ok = true;
-    while (ok)
+    while (ok && !boost::this_thread::interruption_requested())
     {
       boost::this_thread::interruption_point();
       
@@ -134,7 +134,7 @@ namespace yae
 
         if (df > 0.067)
         {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
           std::cerr << "FRAME IS VALID FOR " << df << " sec\n"
                     << "sleep: " << secondsToSleep << " sec"
                     << "\tf0: " << f0
@@ -143,7 +143,8 @@ namespace yae
                     << std::endl;
 #endif
         }
-        
+
+        boost::this_thread::disable_interruption here;
         boost::this_thread::sleep(boost::posix_time::milliseconds
                                   (long(secondsToSleep * 1000.0)));
         continue;
