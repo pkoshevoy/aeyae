@@ -378,6 +378,7 @@ namespace yae
         group.items_.push_back(PlaylistItem());
         PlaylistItem & playlistItem = group.items_.back();
         
+        playlistItem.key_ = key;
         playlistItem.path_ = value;
         
         QFileInfo fi(key);
@@ -584,14 +585,13 @@ namespace yae
         j = group.items_.erase(j);
       }
       
-      // if the group is empty, remove it:
-      if (!group.items_.empty())
+      // if the group is empty and has a key path, remove it:
+      if (!group.items_.empty() || group.keyPath_.empty())
       {
         ++i;
         continue;
       }
       
-      tree_.remove(group.keyPath_);
       i = groups_.erase(i);
     }
     
@@ -1083,7 +1083,8 @@ namespace yae
                                 QColor(0x40, 0x40, 0x40));
 #else
         // painter.setPen(brightColorFg);
-        painter.setPen(QColor(62, 162, 242));
+        // painter.setPen(QColor(62, 162, 242));
+        painter.setPen(QColor(64, 160, 255));
         drawTextToFit(painter,
                       group.bbox_,
                       Qt::AlignVCenter | Qt::AlignCenter,

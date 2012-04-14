@@ -116,20 +116,21 @@ namespace yae
       }
     }
     
-    void remove(const std::list<TKey> & keyPath)
+    bool remove(const std::list<TKey> & keyPath)
     {
       typename std::list<TKey>::const_iterator keyIter = keyPath.begin();
-      remove(keyIter, keyPath.end());
+      typename std::list<TKey>::const_iterator pathEnd = keyPath.end();
+      return remove(keyIter, pathEnd);
     }
     
     // NOTE: this is recursive:
-    void remove(typename std::list<TKey>::const_iterator & keyIter,
+    bool remove(typename std::list<TKey>::const_iterator & keyIter,
                 const typename std::list<TKey>::const_iterator & pathEnd)
     {
       if (keyIter == pathEnd)
       {
         assert(false);
-        return;
+        return false;
       }
       
       // find the key mapping:
@@ -142,14 +143,22 @@ namespace yae
         
         if (keyIter != pathEnd)
         {
-          remove(keyIter, pathEnd);
+          if (!found->second.remove(keyIter, pathEnd))
+          {
+            return false;
+          }
         }
         
         if (found->second.tree_.empty())
         {
           tree_.erase(found);
         }
+        
+        return true;
       }
+      
+      // key not found:
+      return false;
     }
     
     std::map<TKey, TTree> tree_;
