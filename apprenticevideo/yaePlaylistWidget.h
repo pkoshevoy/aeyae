@@ -203,6 +203,9 @@ namespace yae
     // total number of items:
     std::size_t numItems_;
     
+    // non-excluded number of items:
+    std::size_t numShown_;
+    
     // current item index:
     std::size_t current_;
     

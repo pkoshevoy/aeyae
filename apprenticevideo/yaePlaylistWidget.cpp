@@ -1116,11 +1116,12 @@ namespace yae
 #if 0
     std::cerr << "PlaylistWidget::updateGeometries" << std::endl;
 #endif
-    
+
     int offset = 0;
     int width = viewport()->width();
     std::size_t y = 0;
     
+    numShown_ = 0;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -1152,6 +1153,7 @@ namespace yae
           {
             item.bbox_.setHeight(kGroupItemHeight);
             y += kGroupItemHeight;
+            numShown_++;
           }
         }
       }
@@ -1338,10 +1340,11 @@ namespace yae
             painter.setPen(headerColor);
           }
           
+          QString text = tr("%1 ITEMS,  %2").arg(numShown_).arg(group.name_);
           drawTextToFit(painter,
                         bx,
                         Qt::AlignBottom | Qt::AlignRight,
-                        group.name_);
+                        text);
           painter.setFont(textFont);
         }
       }
