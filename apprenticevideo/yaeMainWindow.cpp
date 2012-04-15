@@ -2112,8 +2112,7 @@ namespace yae
   // MainWindow::prepareReaderAndRenderers
   // 
   void
-  MainWindow::prepareReaderAndRenderers(IReader * reader,
-                                        bool forOneFrameOnly)
+  MainWindow::prepareReaderAndRenderers(IReader * reader, bool forOneFrameOnly)
   {
     std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
     std::size_t audioTrack = reader->getSelectedAudioTrackIndex();

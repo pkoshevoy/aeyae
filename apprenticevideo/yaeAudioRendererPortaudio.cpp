@@ -500,13 +500,15 @@ namespace yae
                      const PaStreamCallbackTimeInfo * timeInfo,
                      PaStreamCallbackFlags /* statusFlags */)
   {
-    while (pause_)
+    static const double secondsToPause = 0.1;
+    while (pause_ && !boost::this_thread::interruption_requested())
     {
       boost::this_thread::disable_interruption here;
-      double secondsToSleep = 0.1;
       boost::this_thread::sleep(boost::posix_time::milliseconds
-                                (long(secondsToSleep * 1000.0)));
+                                (long(secondsToPause * 1000.0)));
     }
+    
+    boost::this_thread::interruption_point();
     
     bool dstPlanar = (outputParams_.sampleFormat & paNonInterleaved) != 0;
     unsigned char * dstBuf = (unsigned char *)output;

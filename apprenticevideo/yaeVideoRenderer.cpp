@@ -109,16 +109,16 @@ namespace yae
     double lateFrames = 0.0;
     double lateFramesErrorSum = 0.0;
     double playheadPositionPrev = - std::numeric_limits<double>::max();
+    static const double secondsToPause = 0.1;
     
     bool ok = true;
     while (ok && !boost::this_thread::interruption_requested())
     {
-      while (pause_)
+      while (pause_ && !boost::this_thread::interruption_requested())
       {
         boost::this_thread::disable_interruption here;
-        double secondsToSleep = 0.1;
         boost::this_thread::sleep(boost::posix_time::milliseconds
-                                  (long(secondsToSleep * 1000.0)));
+                                  (long(secondsToPause * 1000.0)));
       }
       
       boost::this_thread::interruption_point();
@@ -237,7 +237,7 @@ namespace yae
       
       if (!ok)
       {
-#if 1
+#if 0
         std::cerr << "reader_->readVideo: " << ok << std::endl;
 #endif
         break;
