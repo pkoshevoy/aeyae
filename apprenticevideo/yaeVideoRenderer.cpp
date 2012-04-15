@@ -28,6 +28,7 @@ namespace yae
     
     bool open(IVideoCanvas * canvas, IReader * reader, bool forOneFrameOnly);
     void close();
+    void pause(bool pause);
     void threadLoop();
     
     mutable boost::mutex mutex_;
@@ -37,6 +38,7 @@ namespace yae
     IVideoCanvas * canvas_;
     IReader * reader_;
     bool forOneFrameOnly_;
+    bool pause_;
   };
   
   //----------------------------------------------------------------
@@ -46,7 +48,8 @@ namespace yae
     thread_(this),
     clock_(clock),
     canvas_(NULL),
-    reader_(NULL)
+    reader_(NULL),
+    pause_(true)
   {}
 
   //----------------------------------------------------------------
@@ -63,6 +66,8 @@ namespace yae
     forOneFrameOnly_ = forOneFrameOnly;
     canvas_ = canvas;
     reader_ = reader;
+    pause_ = true;
+    
     if (!reader_)
     {
       return true;
@@ -81,7 +86,16 @@ namespace yae
     thread_.stop();
     thread_.wait();
   }
-
+  
+  //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::pause
+  // 
+  void
+  VideoRenderer::TPrivate::pause(bool paused)
+  {
+    pause_ = paused;
+  }
+  
   //----------------------------------------------------------------
   // VideoRenderer::TPrivate::threadLoop
   // 
@@ -99,6 +113,14 @@ namespace yae
     bool ok = true;
     while (ok && !boost::this_thread::interruption_requested())
     {
+      while (pause_)
+      {
+        boost::this_thread::disable_interruption here;
+        double secondsToSleep = 0.1;
+        boost::this_thread::sleep(boost::posix_time::milliseconds
+                                  (long(secondsToSleep * 1000.0)));
+      }
+      
       boost::this_thread::interruption_point();
       
       clock_.waitForOthers();
@@ -215,7 +237,7 @@ namespace yae
       
       if (!ok)
       {
-#if 0
+#if 1
         std::cerr << "reader_->readVideo: " << ok << std::endl;
 #endif
         break;
@@ -310,5 +332,14 @@ namespace yae
   VideoRenderer::close()
   {
     private_->close();
+  }
+  
+  //----------------------------------------------------------------
+  // VideoRenderer::pause
+  // 
+  void
+  VideoRenderer::pause(bool paused)
+  {
+    private_->pause(paused);
   }
 }

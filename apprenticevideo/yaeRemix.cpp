@@ -151,6 +151,12 @@ namespace yae
         unsigned char * dst,
         const double * channelMatrix)
   {
+    if (srcLayout == kAudioChannelLayoutInvalid ||
+        dstLayout == kAudioChannelLayoutInvalid)
+    {
+      return;
+    }
+    
     bool isPlanar = (channelFormat == kAudioChannelsPlanar);
     std::size_t sampleSize = getBitsPerSample(sampleFormat) / 8;
     std::size_t srcChannels = getNumberOfChannels(srcLayout);

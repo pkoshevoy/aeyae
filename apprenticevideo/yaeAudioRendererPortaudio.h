@@ -72,6 +72,10 @@ namespace yae
 
     //! terminate audio rendering:
     virtual void close();
+    
+    //! the initial state after open(...) must be paused;
+    //! use this to resume or pause the rendering thread loop;
+    virtual void pause(bool paused);
   };
 }
 

@@ -31,7 +31,7 @@ namespace yae
     //! intentionally disabled:
     VideoRenderer(const VideoRenderer &);
     VideoRenderer & operator = (const VideoRenderer &);
-
+    
     //! private implementation details:
     class TPrivate;
     TPrivate * private_;
@@ -51,6 +51,14 @@ namespace yae
     
     //! terminate video rendering:
     void close();
+    
+    //! the initial state after open(...) must be paused;
+    //! use this to resume or pause the rendering thread loop;
+    void pause(bool paused = true);
+    
+    //! shortcut:
+    inline void resume()
+    { pause(false); }
   };
 }
 

@@ -861,12 +861,22 @@ namespace yae
     bool enableLooping = actionLoop->isChecked();
     reader->setPlaybackLooping(enableLooping);
     
-    reader->threadStart();
-    
     // reset timeline start, duration, playhead, in/out points:
     timelineControls_->resetFor(reader);
     
-    startRenderers(reader);
+    // renderers have to be started before the reader, because they
+    // may need to specify reader output format override, which is
+    // too late if the reader already started the decoding loops;
+    // renderers are started paused, so after the reader is started
+    // the rendrers have to be resumed:
+    prepareReaderAndRenderers(reader);
+    
+    // this opens the output frame queues for renderers
+    // and starts the decoding loops:
+    reader->threadStart();
+    
+    // allow renderers to read from output frame queues:
+    resumeRenderers();
     
     // replace the previous reader:
     reader_->destroy();
@@ -1176,12 +1186,13 @@ namespace yae
     
     std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
     selectVideoTrack(reader_, videoTrack);
+    prepareReaderAndRenderers(reader_, playbackPaused_);
     
     double t = timelineControls_->currentTime();
     reader_->seek(t);
     reader_->threadStart();
     
-    startRenderers(reader_, playbackPaused_);
+    resumeRenderers();
   }
   
   //----------------------------------------------------------------
@@ -1413,7 +1424,8 @@ namespace yae
     if (playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
-      startRenderers(reader_);
+      prepareReaderAndRenderers(reader_);
+      resumeRenderers();
     }
     else
     {
@@ -1435,14 +1447,15 @@ namespace yae
     
     reader_->threadStop();
     stopRenderers();
+    
     audioDevice_.assign(audioDevice.toUtf8().constData());
-    adjustAudioTraitsOverride(reader_);
+    prepareReaderAndRenderers(reader_, playbackPaused_);
     
     double t = timelineControls_->currentTime();
     reader_->seek(t);
     reader_->threadStart();
     
-    startRenderers(reader_, playbackPaused_);
+    resumeRenderers();
   }
 
   //----------------------------------------------------------------
@@ -1454,13 +1467,15 @@ namespace yae
     std::cerr << "audioSelectTrack: " << index << std::endl;
     reader_->threadStop();
     stopRenderers();
+    
     selectAudioTrack(reader_, index);
+    prepareReaderAndRenderers(reader_, playbackPaused_);
     
     double t = timelineControls_->currentTime();
     reader_->seek(t);
     reader_->threadStart();
     
-    startRenderers(reader_, playbackPaused_);
+    resumeRenderers();
   }
 
   //----------------------------------------------------------------
@@ -1472,13 +1487,15 @@ namespace yae
     std::cerr << "videoSelectTrack: " << index << std::endl;
     reader_->threadStop();
     stopRenderers();
+    
     selectVideoTrack(reader_, index);
+    prepareReaderAndRenderers(reader_, playbackPaused_);
     
     double t = timelineControls_->currentTime();
     reader_->seek(t);
     reader_->threadStart();
     
-    startRenderers(reader_, playbackPaused_);
+    resumeRenderers();
   }
   
   //----------------------------------------------------------------
@@ -1616,7 +1633,8 @@ namespace yae
     if (playbackPaused_)
     {
       bool forOneFrameOnly = true;
-      startRenderers(reader_, forOneFrameOnly);
+      prepareReaderAndRenderers(reader_, forOneFrameOnly);
+      resumeRenderers();
     }
   }
 
@@ -2091,10 +2109,11 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // MainWindow::startRenderers
+  // MainWindow::prepareReaderAndRenderers
   // 
   void
-  MainWindow::startRenderers(IReader * reader, bool forOneFrameOnly)
+  MainWindow::prepareReaderAndRenderers(IReader * reader,
+                                        bool forOneFrameOnly)
   {
     std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
     std::size_t audioTrack = reader->getSelectedAudioTrackIndex();
@@ -2145,6 +2164,23 @@ namespace yae
     if (!forOneFrameOnly)
     {
       timelineControls_->adjustTo(reader);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::resumeRenderers
+  // 
+  void
+  MainWindow::resumeRenderers()
+  {
+    if (audioRenderer_)
+    {
+      audioRenderer_->resume();
+    }
+    
+    if (videoRenderer_)
+    {
+      videoRenderer_->resume();
     }
   }
   

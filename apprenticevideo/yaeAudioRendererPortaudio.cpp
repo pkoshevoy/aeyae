@@ -51,6 +51,8 @@ namespace yae
               bool forOneFrameOnly);
     void close();
     
+    void pause(bool pause);
+    
   private:
     static bool openStream(PaDeviceIndex outputDevice,
                            const AudioTraits & atts,
@@ -98,8 +100,11 @@ namespace yae
     
     // maintain (or synchronize to) this clock:
     SharedClock & clock_;
+    
+    // a flag indicating whether the renderer should be paused:
+    bool pause_;
   };
-
+  
   //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::TPrivate
   // 
@@ -111,7 +116,8 @@ namespace yae
     output_(NULL),
     sampleSize_(0),
     audioFrameOffset_(0),
-    clock_(sharedClock)
+    clock_(sharedClock),
+    pause_(true)
   {
     if (initErr_ != paNoError)
     {
@@ -329,8 +335,10 @@ namespace yae
     audioFrame_ = TAudioFramePtr();
     audioFrameOffset_ = 0;
     
-    reader_ = reader;
     forOneFrameOnly_ = forOneFrameOnly;
+    pause_ = true;
+    reader_ = reader;
+    
     if (!reader_)
     {
       return true;
@@ -368,7 +376,16 @@ namespace yae
   {
     open(0, NULL, false);
   }
-
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::pause
+  // 
+  void
+  AudioRendererPortaudio::TPrivate::pause(bool paused)
+  {
+    pause_ = paused;
+  }
+  
   //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::openStream
   // 
@@ -483,6 +500,14 @@ namespace yae
                      const PaStreamCallbackTimeInfo * timeInfo,
                      PaStreamCallbackFlags /* statusFlags */)
   {
+    while (pause_)
+    {
+      boost::this_thread::disable_interruption here;
+      double secondsToSleep = 0.1;
+      boost::this_thread::sleep(boost::posix_time::milliseconds
+                                (long(secondsToSleep * 1000.0)));
+    }
+    
     bool dstPlanar = (outputParams_.sampleFormat & paNonInterleaved) != 0;
     unsigned char * dstBuf = (unsigned char *)output;
     unsigned char ** dst = dstPlanar ? (unsigned char **)output : &dstBuf;
@@ -797,5 +822,14 @@ namespace yae
   AudioRendererPortaudio::close()
   {
     private_->close();
+  }
+  
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::pause
+  // 
+  void
+  AudioRendererPortaudio::pause(bool paused)
+  {
+    private_->pause(paused);
   }
 }

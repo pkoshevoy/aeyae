@@ -1370,8 +1370,18 @@ namespace yae
   bool
   VideoTrack::setTraitsOverride(const VideoTraits & override)
   {
+    bool alreadyDecoding = thread_.isRunning();
+    YAE_ASSERT(!alreadyDecoding);
+    
+    if (alreadyDecoding)
+    {
+      frameQueue_.close();
+      thread_.stop();
+      thread_.wait();
+    }
+    
     override_ = override;
-    return true;
+    return alreadyDecoding ? thread_.run() : true;
   }
   
   //----------------------------------------------------------------
@@ -1621,6 +1631,9 @@ namespace yae
     nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1, 16);
     
     getTraits(native_);
+    std::cerr << this << ", audio decoder startup native channel layout: "
+              << native_.channelLayout_ << std::endl;
+    YAE_ASSERT(native_.channelLayout_ > 0);
     noteNativeTraitsChanged();
     
     startTime_ = stream_->start_time;
@@ -1948,6 +1961,8 @@ namespace yae
   void
   AudioTrack::noteNativeTraitsChanged()
   {
+    std::cerr << this << ", audio decoder native traits changes: "
+              << native_.channelLayout_ << std::endl;
     if (resampleCtx_)
     {
       // FIXME: flush the resampler:
@@ -2089,7 +2104,7 @@ namespace yae
     
     //! packed, planar:
     t.channelFormat_ = kAudioChannelsPacked;
-    
+    std::cerr << this << ", audio native channel layout: " << t.channelLayout_ << std::endl;
     return
       t.sampleRate_ > 0 &&
       t.sampleFormat_ != kAudioInvalidFormat &&
@@ -2102,8 +2117,18 @@ namespace yae
   bool
   AudioTrack::setTraitsOverride(const AudioTraits & override)
   {
+    bool alreadyDecoding = thread_.isRunning();
+    YAE_ASSERT(!alreadyDecoding);
+    
+    if (alreadyDecoding)
+    {
+      frameQueue_.close();
+      thread_.stop();
+      thread_.wait();
+    }
+    
     override_ = override;
-    return true;
+    return alreadyDecoding ? thread_.run() : true;
   }
   
   //----------------------------------------------------------------
