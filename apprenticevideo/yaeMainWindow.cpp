@@ -532,20 +532,33 @@ namespace yae
       << QString::fromUtf8("ppt")
       << QString::fromUtf8("pdf")
       << QString::fromUtf8("htm")
+      << QString::fromUtf8("rar")
       << QString::fromUtf8("zip")
       << QString::fromUtf8("7z")
       << QString::fromUtf8("gz")
       << QString::fromUtf8("bz2")
+      << QString::fromUtf8("war")
       << QString::fromUtf8("tar")
       << QString::fromUtf8("tgz")
       << QString::fromUtf8("tbz2")
       << QString::fromUtf8("lzma")
+      << QString::fromUtf8("url")
+      << QString::fromUtf8("eml")
       << QString::fromUtf8("html")
       << QString::fromUtf8("xml")
+      << QString::fromUtf8("db")
       << QString::fromUtf8("txt")
       << QString::fromUtf8("srt")
+      << QString::fromUtf8("idx")
+      << QString::fromUtf8("sub")
       << QString::fromUtf8("ifo")
       << QString::fromUtf8("info")
+      << QString::fromUtf8("nfo")
+      << QString::fromUtf8("md5")
+      << QString::fromUtf8("crc")
+      << QString::fromUtf8("sfv")
+      << QString::fromUtf8("m3u")
+      << QString::fromUtf8("smil")
       << QString::fromUtf8("app")
       << QString::fromUtf8("plist")
       << QString::fromUtf8("framework")
@@ -583,6 +596,15 @@ namespace yae
   static QStringList kExtIgnoreList = getExtIgnoreList();
   
   //----------------------------------------------------------------
+  // shouldIgnore
+  // 
+  static bool shouldIgnore(const QString & ext)
+  {
+    QString extLowered = ext.toLower();
+    return kExtIgnoreList.contains(extLowered);
+  }
+  
+  //----------------------------------------------------------------
   // findFiles
   // 
   static void
@@ -612,7 +634,7 @@ namespace yae
       QString ext = fi.suffix();
       std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
       
-      if (!kExtIgnoreList.contains(ext))
+      if (!shouldIgnore(ext))
       {
         if (fi.isDir() && ext != kExtEyetv)
         {
@@ -886,7 +908,7 @@ namespace yae
     QFileInfo fi(folder);
     QString ext = fi.suffix();
     
-    if (!kExtIgnoreList.contains(ext))
+    if (!shouldIgnore(ext))
     {
       if (fi.isDir() && ext != kExtEyetv)
       {
