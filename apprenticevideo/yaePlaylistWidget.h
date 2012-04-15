@@ -89,6 +89,9 @@ namespace yae
     
     // a flag indicating whether this group is collapsed for brevity:
     bool collapsed_;
+    
+    // a flag indicating whether this group is collapsed for brevity:
+    bool excluded_;
   };
   
   //----------------------------------------------------------------
@@ -169,11 +172,20 @@ namespace yae
     void scrollTo(std::size_t index,
                   PlaylistItem ** item = NULL);
     
-    PlaylistGroup * lookupGroup(const QPoint & pt);
+    PlaylistGroup * lookupGroup(const QPoint & pt, bool findClosest = true);
     std::size_t lookupItemIndex(PlaylistGroup * group, const QPoint & pt);
     
     PlaylistItem * lookup(PlaylistGroup * group, const QPoint & pt);
     PlaylistItem * lookup(const QPoint & pt, PlaylistGroup ** group = NULL);
+
+    enum TMouseState {
+      kNotReady = 0,
+      kUpdateSelection = 1,
+      kToggleCollapsedGroup = 2
+    };
+    
+    // a helper used to distinguish between various mouse actions:
+    TMouseState mouseState_;
     
     // selection rubber-band widget:
     QRubberBand rubberBand_;

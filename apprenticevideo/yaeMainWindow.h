@@ -179,6 +179,7 @@ namespace yae
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
+    QShortcut * shortcutShowPlaylist_;
     QShortcut * shortcutShowTimeline_;
     QShortcut * shortcutPlay_;
     QShortcut * shortcutNext_;

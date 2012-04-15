@@ -225,6 +225,7 @@ namespace yae
     // so I am creating these shortcuts as a workaround:
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
+    shortcutShowPlaylist_ = new QShortcut(this);
     shortcutShowTimeline_ = new QShortcut(this);
     shortcutPlay_ = new QShortcut(this);
     shortcutNext_ = new QShortcut(this);
@@ -235,6 +236,7 @@ namespace yae
     
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+    shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
     shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
     shortcutPlay_->setContext(Qt::ApplicationShortcut);
     shortcutNext_->setContext(Qt::ApplicationShortcut);
@@ -390,6 +392,10 @@ namespace yae
     YAE_ASSERT(ok);
     
     ok = connect(actionShowPlaylist, SIGNAL(triggered()),
+                 this, SLOT(playbackShowPlaylist()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
                  this, SLOT(playbackShowPlaylist()));
     YAE_ASSERT(ok);
     
@@ -1333,6 +1339,7 @@ namespace yae
     
     swapShortcuts(shortcutExit_, actionExit);
     swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
     swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
     swapShortcuts(shortcutPlay_, actionPlay);
     swapShortcuts(shortcutNext_, actionNext);
@@ -1358,6 +1365,7 @@ namespace yae
       
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
+      swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
       swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
       swapShortcuts(shortcutPlay_, actionPlay);
       swapShortcuts(shortcutNext_, actionNext);

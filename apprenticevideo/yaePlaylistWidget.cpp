@@ -34,7 +34,43 @@ namespace yae
   // kGroupItemHeight
   // 
   static const int kGroupItemHeight = 20;
-
+  
+  //----------------------------------------------------------------
+  // kGroupArrowSize
+  // 
+  static const int kGroupArrowSize = 10;
+  
+  //----------------------------------------------------------------
+  // overlapExists
+  // 
+  static bool
+  overlapExists(const QRect & a, const QRect & b)
+  {
+    if (a.height() && a.width() &&
+        b.height() && b.width())
+    {
+      return a.intersects(b);
+    }
+    
+    // ignore overlap with an empty region:
+    return false;
+  }
+  
+  //----------------------------------------------------------------
+  // overlapExists
+  // 
+  static bool
+  overlapExists(const QRect & a, const QPoint & b)
+  {
+    if (a.height() && a.width())
+    {
+      return a.contains(b);
+    }
+    
+    // ignore overlap with an empty region:
+    return false;
+  }
+  
   //----------------------------------------------------------------
   // shortenTextToFit
   // 
@@ -269,7 +305,8 @@ namespace yae
   // 
   PlaylistGroup::PlaylistGroup():
     offset_(0),
-    collapsed_(false)
+    collapsed_(false),
+    excluded_(false)
   {}
   
   
@@ -278,6 +315,7 @@ namespace yae
   // 
   PlaylistWidget::PlaylistWidget(QWidget * parent, Qt::WindowFlags):
     QAbstractScrollArea(parent),
+    mouseState_(PlaylistWidget::kNotReady),
     rubberBand_(QRubberBand::Rectangle, this),
     numItems_(0),
     current_(0),
@@ -292,7 +330,9 @@ namespace yae
   void
   PlaylistWidget::setPlaylist(const std::list<QString> & playlist)
   {
+#if 0
     std::cerr << "PlaylistWidget::setPlaylist" << std::endl;
+#endif
     
     // path of the first new playlist item:
     QString firstNewItemPath;
@@ -316,7 +356,9 @@ namespace yae
       QString name = toWords(fi.baseName());
       if (name.isEmpty())
       {
+#if 0
         std::cerr << "IGNORING: " << i->toUtf8().constData() << std::endl;
+#endif
         continue;
       }
       
@@ -441,7 +483,10 @@ namespace yae
   void
   PlaylistWidget::setCurrentItem(std::size_t index, bool force)
   {
+#if 0
     std::cerr << "PlaylistWidget::setCurrentItem" << std::endl;
+#endif
+    
     if (index != current_ || force)
     {
       current_ = (index < numItems_) ? index : numItems_;
@@ -462,6 +507,11 @@ namespace yae
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      if (group.excluded_)
+      {
+        continue;
+      }
+      
       selectGroup(&group);
     }
   }
@@ -476,6 +526,11 @@ namespace yae
          i != group->items_.end(); ++i)
     {
       PlaylistItem & item = *i;
+      if (item.excluded_)
+      {
+        continue;
+      }
+      
       item.selected_ = true;
     }
     
@@ -488,11 +543,19 @@ namespace yae
   void
   PlaylistWidget::selectItem(std::size_t indexSel, bool exclusive)
   {
+#if 0
     std::cerr << "PlaylistWidget::selectItem: " << indexSel << std::endl;
+#endif
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      if (group.excluded_)
+      {
+        continue;
+      }
+      
       std::size_t groupEnd = group.offset_ + group.items_.size();
       
       if (exclusive)
@@ -501,6 +564,11 @@ namespace yae
              j != group.items_.end(); ++j)
         {
           PlaylistItem & item = *j;
+          if (item.excluded_)
+          {
+            continue;
+          }
+          
           item.selected_ = false;
         }
       }
@@ -527,7 +595,10 @@ namespace yae
   void
   PlaylistWidget::removeSelected()
   {
+#if 0
     std::cerr << "PlaylistWidget::removeSelected" << std::endl;
+#endif
+    
     std::size_t oldIndex = 0;
     std::size_t newIndex = 0;
     std::size_t newCurrent = current_;
@@ -539,10 +610,11 @@ namespace yae
       PlaylistGroup & group = *i;
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           j != group.items_.end(); oldIndex++)
+           !group.excluded_ && j != group.items_.end(); oldIndex++)
       {
         PlaylistItem & item = *j;
-        if (!item.selected_)
+        
+        if (item.excluded_ || !item.selected_)
         {
           ++j;
           newIndex++;
@@ -572,7 +644,7 @@ namespace yae
       }
       
       // if the group is empty and has a key path, remove it:
-      if (!group.items_.empty() || group.keyPath_.empty())
+      if (!group.items_.empty() || group.keyPath_.empty() || group.excluded_)
       {
         ++i;
         continue;
@@ -634,17 +706,33 @@ namespace yae
   PlaylistWidget::mousePressEvent(QMouseEvent * e)
   {
     e->ignore();
+    mouseState_ = PlaylistWidget::kNotReady;
     
     if (e->button() == Qt::LeftButton)
     {
       e->accept();
       
+      QPoint viewOffset = getViewOffset();
+      QPoint pt = e->pos() + viewOffset;
+      
+      if (pt.x() <= 10 + kGroupArrowSize)
+      {
+        // lookup the exact group:
+        PlaylistGroup * group = lookupGroup(pt, false);
+        
+        if (group)
+        {
+          mouseState_ = PlaylistWidget::kToggleCollapsedGroup;
+          group->collapsed_ = !group->collapsed_;
+          updateGeometries();
+          update();
+          return;
+        }
+      }
+      
       int mod = e->modifiers();
       bool extendSelection = (mod & Qt::ShiftModifier);
       bool toggleSelection = !extendSelection && (mod & Qt::ControlModifier);
-      
-      QPoint viewOffset = getViewOffset();
-      QPoint pt = e->pos() + viewOffset;
       
       if (!extendSelection)
       {
@@ -654,6 +742,7 @@ namespace yae
         rubberBand_.show();
       }
       
+      mouseState_ == PlaylistWidget::kUpdateSelection;
       updateSelection(e->pos(), toggleSelection);
     }
   }
@@ -671,6 +760,8 @@ namespace yae
       e->accept();
       rubberBand_.hide();
     }
+    
+    mouseState_ = PlaylistWidget::kNotReady;
   }
   
   //----------------------------------------------------------------
@@ -679,7 +770,8 @@ namespace yae
   void
   PlaylistWidget::mouseMoveEvent(QMouseEvent * e)
   {
-    if (e->buttons() & Qt::LeftButton)
+    if (e->buttons() & Qt::LeftButton &&
+        mouseState_ == PlaylistWidget::kUpdateSelection)
     {
       e->accept();
       
@@ -776,30 +868,38 @@ namespace yae
         highlighted_--;
         found = lookup(highlighted_, &group);
       }
-      else if (modNone && stepDn && highlighted_ + 1 < numItems_)
+      else if (modNone && stepDn && highlighted_ < numItems_)
       {
         highlighted_++;
         found = lookup(highlighted_, &group);
       }
       else if (modNone && (pageUp || pageDn))
       {
-        PlaylistItem * item = lookup(highlighted_);
-        if (item)
+        PlaylistGroup * highlightedGroup = NULL;
+        PlaylistItem * highlightedItem = lookup(highlighted_,
+                                                &highlightedGroup);
+        
+        if (highlightedGroup || highlightedItem)
         {
-          int vh = viewport()->height();
-          
+          int vh = viewport()->height() - kGroupNameHeight;
           QPoint viewOffset = getViewOffset();
-          QPoint p0 = item->bbox_.center();
+          
+          QPoint p0 =
+            highlightedItem ?
+            highlightedItem->bbox_.center() :
+            highlightedGroup->bbox_.center();
+          
           QPoint p1 =
             pageUp ?
             QPoint(p0.x(), p0.y() - vh) :
             QPoint(p0.x(), p0.y() + vh);
-
+          
           group = lookupGroup(p1);
           std::size_t index = lookupItemIndex(group, p1);
           
-          highlighted_ = (index < numItems_) ? index : 0;
-          found = lookup(highlighted_);
+          highlighted_ = (index < numItems_) ? index : group->offset_;
+          
+          found = lookup(highlighted_, &group);
         }
       }
       else if (modAlt && (stepUp || stepDn) && numItems_)
@@ -813,28 +913,29 @@ namespace yae
         e->accept();
       }
       
-      if (found)
+      if (group || found)
       {
+        if (group->collapsed_)
+        {
+          group->collapsed_ = false;
+          updateGeometries();
+        }
+        
         // update the anchor:
-        anchor_ = found->bbox_.center();
+        anchor_ = found ? found->bbox_.center() : group->bbox_.center();
         
         // update the selection set:
         QPoint viewOffset = getViewOffset();
         QPoint mousePt(anchor_.x() - viewOffset.x(),
                        anchor_.y() - viewOffset.y());
-
+        
         bool toggleSelection = false;
         bool scrollToItem = true;
         updateSelection(mousePt, toggleSelection, scrollToItem);
         e->accept();
       }
-      else if (group)
-      {
-        scrollTo(group, NULL);
-        e->accept();
-      }
     }
-    else if (modShift && (stepUp || stepDn))
+    else if (modShift && (stepUp || stepDn || pageUp || pageDn))
     {
       // update selection set:
       PlaylistGroup * group = NULL;
@@ -845,16 +946,55 @@ namespace yae
         highlighted_--;
         found = lookup(highlighted_, &group);
       }
-      else if (stepDn && highlighted_ + 1 < numItems_)
+      else if (stepDn && highlighted_ < numItems_)
       {
         highlighted_++;
         found = lookup(highlighted_, &group);
       }
-      
-      if (found)
+      else if (pageUp || pageDn)
       {
+        PlaylistGroup * highlightedGroup = NULL;
+        PlaylistItem * highlightedItem = lookup(highlighted_,
+                                                &highlightedGroup);
+        
+        if (highlightedGroup || highlightedItem)
+        {
+          int vh = viewport()->height() - kGroupNameHeight;
+          QPoint viewOffset = getViewOffset();
+          
+          QPoint p0 =
+            highlightedItem ?
+            highlightedItem->bbox_.center() :
+            highlightedGroup->bbox_.center();
+          
+          QPoint p1 =
+            pageUp ?
+            QPoint(p0.x(), p0.y() - vh) :
+            QPoint(p0.x(), p0.y() + vh);
+          
+          group = lookupGroup(p1);
+          std::size_t index = lookupItemIndex(group, p1);
+          
+          highlighted_ = (index < numItems_) ? index : group->offset_;
+          /*
+          highlighted_ =
+            (index < numItems_) ? index :
+            pageDn ? numItems_ : 0;
+          */
+          found = lookup(highlighted_, &group);
+        }
+      }
+      
+      if (group || found)
+      {
+        if (group->collapsed_)
+        {
+          group->collapsed_ = false;
+          updateGeometries();
+        }
+        
         QPoint viewOffset = getViewOffset();
-        QPoint pt = found->bbox_.center();
+        QPoint pt = found ? found->bbox_.center() : group->bbox_.center();
         QPoint mousePt(pt.x() - viewOffset.x(),
                        pt.y() - viewOffset.y());
         
@@ -877,7 +1017,10 @@ namespace yae
   void
   PlaylistWidget::resizeEvent(QResizeEvent * e)
   {
+#if 0
     std::cerr << "PlaylistWidget::resizeEvent" << std::endl;
+#endif
+    
     (void) e;
     updateGeometries();
   }
@@ -888,7 +1031,10 @@ namespace yae
   void
   PlaylistWidget::updateGeometries()
   {
+#if 0
     std::cerr << "PlaylistWidget::updateGeometries" << std::endl;
+#endif
+    
     int offset = 0;
     int width = viewport()->width();
     std::size_t y = 0;
@@ -898,25 +1044,34 @@ namespace yae
     {
       PlaylistGroup & group = *i;
       group.offset_ = offset;
+      
+      int headerHeight = group.excluded_ ? 0 : kGroupNameHeight;
       group.bbox_.setX(0);
       group.bbox_.setY(y);
       group.bbox_.setWidth(width);
-      group.bbox_.setHeight(kGroupNameHeight);
-      y += kGroupNameHeight;
+      group.bbox_.setHeight(headerHeight);
+      y += headerHeight;
       
       group.bboxItems_.setX(0);
-      group.bboxItems_.setY(y);
       group.bboxItems_.setWidth(width);
+      group.bboxItems_.setY(y);
       
-      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           j != group.items_.end(); ++j)
+      if (!group.excluded_)
       {
-        PlaylistItem & item = *j;
-        item.bbox_.setX(0);
-        item.bbox_.setY(y);
-        item.bbox_.setWidth(width);
-        item.bbox_.setHeight(kGroupItemHeight);
-        y += kGroupItemHeight;
+        for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+             !group.collapsed_ && j != group.items_.end(); ++j)
+        {
+          PlaylistItem & item = *j;
+          item.bbox_.setX(0);
+          item.bbox_.setY(y);
+          item.bbox_.setWidth(width);
+
+          if (!item.excluded_)
+          {
+            item.bbox_.setHeight(kGroupItemHeight);
+            y += kGroupItemHeight;
+          }
+        }
       }
       
       group.bboxItems_.setHeight(y - group.bboxItems_.y());
@@ -989,22 +1144,13 @@ namespace yae
     
     return *brush;
   }
-  
+
   //----------------------------------------------------------------
   // PlaylistWidget::draw
   // 
   void
   PlaylistWidget::draw(QPainter & painter, const QRect & region)
   {
-    // static QPixmap iconPlay = QPixmap(":/images/iconPlay.png");
-    // static QPixmap iconPause = QPixmap(":/images/iconPause.png");
-    
-    // static const QColor headerColorBg(0xcd, 0xcd, 0xcd);
-    // static const QColor headerColorBg(18, 68, 121);
-    // static const QColor headerColorBg("#43768F");
-    static const QColor headerColorBg(0xb4, 0xb4, 0xb4);
-    static const QColor brightColorBg(0x40, 0xff, 0x4f);
-    static const QColor brightColorFg(0xff, 0xff, 0xff);
     static const QColor zebraBg[] = {
       QColor(0, 0, 0, 0),
       QColor(0xf4, 0xf4, 0xf4)
@@ -1017,7 +1163,10 @@ namespace yae
     QColor foregroundColor = palette.color(QPalette::WindowText);
     
     QFont textFont = painter.font();
-    textFont.setPixelSize(11);
+    textFont.setPixelSize(10);
+    
+    painter.setFont(textFont);
+    
     QFont tinyFont = textFont;
     tinyFont.setPixelSize(7);
     
@@ -1026,42 +1175,49 @@ namespace yae
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      std::size_t groupSize = group.items_.size();
       
-      if (group.bbox_.intersects(region))
+      if (group.excluded_)
       {
-        QRect bbox = group.bbox_;
-#if 0
-        painter.setBrush(headerBrush(bbox.height()));
-        painter.setBrushOrigin(bbox.topLeft());
-        painter.setPen(Qt::NoPen);
-        painter.drawRect(group.bbox_);
-        
-        if (!group.keyPath_.empty())
-        {
-          painter.setPen(QColor("#40a0ff"));
-          drawTextToFit(painter,
-                        group.bbox_,
-                        Qt::AlignVCenter | Qt::AlignCenter,
-                        group.name_);
-        }
-        else
-        {
-          QRect bx = bbox.adjusted(2, 1, -2, -1);
-          painter.setFont(tinyFont);
-          painter.setPen(QColor("#2080e0"));
-          drawTextToFit(painter,
-                        bx,
-                        Qt::AlignBottom | Qt::AlignRight,
-                        group.name_);
-          painter.setFont(textFont);
-        }
-#else
+        index += groupSize;
+        continue;
+      }
+      
+      if (overlapExists(group.bbox_, region))
+      {
+        QRect bbox(group.bbox_.x(),
+                   0,
+                   group.bbox_.width(),
+                   group.bbox_.height());
         painter.fillRect(bbox, Qt::black);
         
         if (!group.keyPath_.empty())
         {
+          int w = kGroupArrowSize;
+          int h = bbox.height();
+          int o = 1 + (h - w) / 2;
+          
+          QPoint arrow[3];
+          if (group.collapsed_)
+          {
+            arrow[0] = QPoint(5, o);
+            arrow[1] = QPoint(5 + w, o + w / 2);
+            arrow[2] = QPoint(5, o + w);
+          }
+          else
+          {
+            arrow[0] = QPoint(5, o);
+            arrow[1] = QPoint(5 + w / 2, o + w);
+            arrow[2] = QPoint(5 + w, o);
+          }
+          
+          painter.setPen(QColor("#000"));
+          painter.setBrush(QColor("#40a0ff"));
+          painter.drawPolygon(arrow, 3);
+
+          QRect bx = bbox.adjusted(10 + w, 0, 0, 0);
           drawTextWithShadowToFit(painter,
-                                  group.bbox_,
+                                  bx,
                                   Qt::AlignVCenter | Qt::AlignCenter,
                                   group.name_,
                                   QColor("#40a0ff"),
@@ -1075,7 +1231,6 @@ namespace yae
           drawTextToFit(painter,
                         bx,
                         Qt::AlignBottom | Qt::AlignRight,
-                        // Qt::AlignVCenter | Qt::AlignCenter,
                         group.name_);
           painter.setFont(textFont);
         }
@@ -1087,7 +1242,21 @@ namespace yae
         painter.setPen(Qt::NoPen);
         painter.drawRect(bbox);
         painter.setCompositionMode(cm);
-#endif
+      }
+      
+      painter.translate(0, group.bbox_.height());
+      
+      if (group.collapsed_)
+      {
+        index += groupSize;
+        continue;
+      }
+      
+      if (!overlapExists(group.bboxItems_, region))
+      {
+        painter.translate(0, group.bboxItems_.height());
+        index += groupSize;
+        continue;
       }
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
@@ -1096,10 +1265,21 @@ namespace yae
         PlaylistItem & item = *j;
         std::size_t zebraIndex = index % 2;
         
-        if (!item.bbox_.intersects(region))
+        if (item.excluded_)
         {
           continue;
         }
+        
+        if (!overlapExists(item.bbox_, region))
+        {
+          painter.translate(0, item.bbox_.height());
+          continue;
+        }
+        
+        QRect bbox(item.bbox_.x(),
+                   0,
+                   item.bbox_.width(),
+                   item.bbox_.height());
         
         QColor bg = zebraBg[zebraIndex];
         QColor fg = foregroundColor;
@@ -1110,7 +1290,7 @@ namespace yae
           fg = selectedColorFg;
         }
         
-        painter.fillRect(item.bbox_, bg);
+        painter.fillRect(bbox, bg);
         
         if (index == current_)
         {
@@ -1119,7 +1299,7 @@ namespace yae
           painter.setFont(tinyFont);
           QFontMetrics fm = painter.fontMetrics();
           QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
-          QRect bx = item.bbox_.adjusted(1, 1, -1, -1);
+          QRect bx = bbox.adjusted(1, 1, -1, -1);
           
           // add a little padding:
           sz.setWidth(sz.width() + 8);
@@ -1140,7 +1320,7 @@ namespace yae
           painter.setPen(Qt::NoPen);
           painter.drawRoundedRect(bx, radius, radius);
           
-          painter.setPen(brightColorFg);
+          painter.setPen(Qt::white);
           drawTextToFit(painter,
                         bx,
                         Qt::AlignVCenter | Qt::AlignCenter,
@@ -1150,17 +1330,14 @@ namespace yae
         
         painter.setPen(fg);
         
-        QRect bboxText = item.bbox_;
-        bboxText.setHeight(item.bbox_.height() - 1);
-        
+        QRect bboxText = bbox.adjusted(0, 0, 0, -1);
         QString text = tr("%1, %2").arg(item.name_).arg(item.ext_);
-        QRect bboxTextOut;
         drawTextToFit(painter,
                       bboxText,
                       Qt::AlignBottom | Qt::AlignLeft,
-                      text,
-                      &bboxTextOut);
+                      text);
         
+        painter.translate(0, item.bbox_.height());
       }
     }
   }
@@ -1173,7 +1350,10 @@ namespace yae
                                   bool toggleSelection,
                                   bool scrollToItem)
   {
+#if 0
     std::cerr << "PlaylistWidget::updateSelection" << std::endl;
+#endif
+    
     QPoint viewOffset = getViewOffset();
     QPoint p1 = mousePos + viewOffset;
     
@@ -1228,19 +1408,36 @@ namespace yae
   PlaylistWidget::selectItems(const QRect & bboxSel,
                               bool toggleSelection)
   {
+#if 0
     std::cerr << "PlaylistWidget::selectItems" << std::endl;
+#endif
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
+      if (group.excluded_)
+      {
+        continue;
+      }
+      
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
            j != group.items_.end(); ++j)
       {
         PlaylistItem & item = *j;
+        if (item.excluded_)
+        {
+          continue;
+        }
         
-        if (item.bbox_.intersects(bboxSel))
+        if (!group.collapsed_ && overlapExists(item.bbox_, bboxSel))
         {
           item.selected_ = toggleSelection ? !item.selected_ : true;
+#if 0
+          std::cerr << "selectItems, found: "
+                    << item.name_.toUtf8().constData()
+                    << std::endl;
+#endif
         }
         else if (!toggleSelection)
         {
@@ -1264,7 +1461,15 @@ namespace yae
     
     QPoint viewOffset = getViewOffset();
     QRect area = viewport()->rect().translated(viewOffset);
-    QRect rect = item ? item->bbox_ : group->bbox_;
+    QRect rect = item && !group->collapsed_ ? item->bbox_ : group->bbox_;
+    
+    if (item && item == &(group->items_.front()) &&
+        group->bbox_.y() < viewOffset.y())
+    {
+      // when scrolling to the first item in the group
+      // scroll to the group header instead:
+      rect = group->bbox_;
+    }
     
     QScrollBar * hsb = horizontalScrollBar();
     QScrollBar * vsb = verticalScrollBar();
@@ -1306,43 +1511,109 @@ namespace yae
       *returnItem = item;
     }
     
+    if (item && group->collapsed_)
+    {
+      group->collapsed_ = false;
+      updateGeometries();
+    }
+    
     scrollTo(group, item);
+  }
+  
+  //----------------------------------------------------------------
+  // lookupFirstGroup
+  // 
+  // return the fist non-excluded group:
+  // 
+  static PlaylistGroup *
+  lookupFirstGroup(std::vector<PlaylistGroup> & groups)
+  {
+    for (std::vector<PlaylistGroup>::iterator i = groups.begin();
+         i != groups.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      if (!group.excluded_)
+      {
+#if 0
+        std::cerr << "lookupGroup, first: "
+                  << group.name_.toUtf8().constData()
+                  << std::endl;
+#endif
+        return &group;
+      }
+    }
+    
+    return NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // lookupLastGroup
+  // 
+  // return the last non-excluded group:
+  // 
+  static PlaylistGroup *
+  lookupLastGroup(std::vector<PlaylistGroup> & groups)
+  {
+    for (std::vector<PlaylistGroup>::reverse_iterator i = groups.rbegin();
+         i != groups.rend(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      if (!group.excluded_)
+      {
+#if 0
+        std::cerr << "lookupGroup, last: "
+                  << group.name_.toUtf8().constData()
+                  << std::endl;
+#endif
+        return &group;
+      }
+    }
+    
+    return NULL;
   }
   
   //----------------------------------------------------------------
   // PlaylistWidget::lookupGroup
   // 
   PlaylistGroup *
-  PlaylistWidget::lookupGroup(const QPoint & pt)
+  PlaylistWidget::lookupGroup(const QPoint & pt, bool findClosest)
   {
+#if 0
     std::cerr << "PlaylistWidget::lookupGroup" << std::endl;
+#endif
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
-      if (group.bboxItems_.contains(pt) ||
-          group.bbox_.contains(pt))
+      
+      if (group.excluded_)
       {
+        continue;
+      }
+      
+      if (overlapExists(group.bbox_, pt) ||
+          findClosest && !group.collapsed_ &&
+          overlapExists(group.bboxItems_, pt))
+      {
+#if 0
+        std::cerr << "lookupGroup, found: "
+                  << group.name_.toUtf8().constData()
+                  << std::endl;
+#endif
         return &group;
       }
     }
     
-    if (!groups_.empty())
+    if (groups_.empty() || !findClosest)
     {
-      QRect bbox = groups_.front().bbox_;
-      if (pt.y() <= bbox.y())
-      {
-        return &groups_.front();
-      }
-      
-      bbox = groups_.back().bboxItems_;
-      if (bbox.y() + bbox.height() < pt.y())
-      {
-        return &groups_.back();
-      }
+      return NULL;
     }
     
-    return NULL;
+    return
+      (pt.y() < 0) ?
+      lookupFirstGroup(groups_) :
+      lookupLastGroup(groups_);
   }
   
   //----------------------------------------------------------------
@@ -1351,26 +1622,59 @@ namespace yae
   std::size_t
   PlaylistWidget::lookupItemIndex(PlaylistGroup * group, const QPoint & pt)
   {
+#if 0
     std::cerr << "PlaylistWidget::lookupItemIndex" << std::endl;
-    if (group)
+#endif
+    
+    if (!group ||
+        group->collapsed_ ||
+        group->excluded_ ||
+        group->items_.empty())
     {
-      std::size_t index = group->offset_;
-      for (std::vector<PlaylistItem>::iterator j = group->items_.begin();
-           j != group->items_.end(); ++j, ++index)
+      return numItems_;
+    }
+    
+    std::vector<PlaylistItem> & items = group->items_;
+    std::size_t index = group->offset_;
+
+    if (overlapExists(group->bboxItems_, pt))
+    {
+      for (std::vector<PlaylistItem>::iterator j = items.begin();
+           j != items.end(); ++j, ++index)
       {
         PlaylistItem & item = *j;
-        if (item.bbox_.contains(pt))
+        if (item.excluded_)
         {
+          continue;
+        }
+      
+        if (overlapExists(item.bbox_, pt))
+        {
+#if 0
+          std::cerr << "lookupItemIndex, found: "
+                    << item.name_.toUtf8().constData()
+                    << std::endl;
+#endif
           return index;
         }
       }
-      
-      if (!group->items_.empty())
+    }
+    
+    if (group->bboxItems_.y() + group->bboxItems_.height() < pt.y())
+    {
+      // return the last non-excluded item:
+      index = group->offset_ + items.size() - 1;
+      for (std::vector<PlaylistItem>::reverse_iterator j = items.rbegin();
+           j != items.rend(); --j, --index)
       {
-        QRect bbox = group->items_.back().bbox_;
-        if (bbox.y() + bbox.height() < pt.y())
+        PlaylistItem & item = *j;
+        if (!item.excluded_)
         {
-          index = group->offset_ + group->items_.size() - 1;
+#if 0
+          std::cerr << "lookupItemIndex, last: "
+                    << item.name_.toUtf8().constData()
+                    << std::endl;
+#endif
           return index;
         }
       }
@@ -1417,7 +1721,10 @@ namespace yae
   PlaylistGroup *
   PlaylistWidget::lookupGroup(std::size_t index)
   {
+#if 0
     std::cerr << "PlaylistWidget::lookupGroup: " << index << std::endl;
+#endif
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -1430,7 +1737,8 @@ namespace yae
       }
     }
     
-    return NULL;
+    YAE_ASSERT(index == numItems_);
+    return lookupLastGroup(groups_);
   }
   
   //----------------------------------------------------------------
@@ -1439,7 +1747,10 @@ namespace yae
   PlaylistItem *
   PlaylistWidget::lookup(std::size_t index, PlaylistGroup ** returnGroup)
   {
+#if 0
     std::cerr << "PlaylistWidget::lookup: " << index << std::endl;
+#endif
+    
     PlaylistGroup * group = lookupGroup(index);
     if (returnGroup)
     {
@@ -1448,8 +1759,11 @@ namespace yae
     
     if (group)
     {
+      std::size_t groupSize = group->items_.size();
       std::size_t i = index - group->offset_;
-      return &group->items_[i];
+      
+      YAE_ASSERT(i < groupSize || index == numItems_);
+      return i < groupSize ? &group->items_[i] : NULL;
     }
     
     return NULL;
