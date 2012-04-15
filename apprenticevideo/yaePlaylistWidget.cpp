@@ -886,8 +886,13 @@ namespace yae
         {
           if (group->collapsed_ && group->offset_)
           {
-            lookup(group->offset_ - 1, &group);
-            highlighted_ = group->offset_;
+            highlighted_ = group->offset_ - 1;
+            lookup(highlighted_, &group);
+            
+            if (group->collapsed_)
+            {
+              highlighted_ = group->offset_;
+            }
           }
           else
           {
@@ -980,8 +985,14 @@ namespace yae
           }
           else if (groupCollapse && highlighted_ > 0)
           {
-            lookup(hiGroup->offset_ - 1, &hiGroup);
-            highlighted_ = hiGroup->offset_;
+            highlighted_ = hiGroup->offset_ - 1;
+            lookup(highlighted_, &hiGroup);
+            
+            if (hiGroup->collapsed_)
+            {
+              highlighted_ = hiGroup->offset_;
+            }
+            
             found = lookup(highlighted_, &group);
           }
           else if (groupExpand && highlighted_ < numItems_)
