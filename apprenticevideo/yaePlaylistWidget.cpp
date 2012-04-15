@@ -1276,7 +1276,11 @@ namespace yae
                    0,
                    group.bbox_.width(),
                    group.bbox_.height());
-        painter.fillRect(bbox, Qt::black);
+        
+        painter.setBrush(headerBrush(bbox.height()));
+        painter.setBrushOrigin(bbox.topLeft());
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(bbox);
         
         if (!group.keyPath_.empty())
         {
@@ -1340,14 +1344,6 @@ namespace yae
                         group.name_);
           painter.setFont(textFont);
         }
-        
-        QPainter::CompositionMode cm = painter.compositionMode();
-        painter.setCompositionMode(QPainter::CompositionMode_Plus);
-        painter.setBrush(headerBrush(bbox.height()));
-        painter.setBrushOrigin(bbox.topLeft());
-        painter.setPen(Qt::NoPen);
-        painter.drawRect(bbox);
-        painter.setCompositionMode(cm);
       }
       
       painter.translate(0, group.bbox_.height());
