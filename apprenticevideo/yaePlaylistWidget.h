@@ -161,7 +161,8 @@ namespace yae
 
     void updateSelection(const QPoint & mousePos,
                          bool toggleSelection = false,
-                         bool scrollToItem = false);
+                         bool scrollToItem = false,
+                         bool allowGroupSelection = true);
     
     void selectItems(const QRect & bboxSel,
                      bool toggleSelection);

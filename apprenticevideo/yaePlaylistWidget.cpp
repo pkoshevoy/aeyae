@@ -38,7 +38,7 @@ namespace yae
   //----------------------------------------------------------------
   // kGroupArrowSize
   // 
-  static const int kGroupArrowSize = 10;
+  static const int kGroupArrowSize = 7;
   
   //----------------------------------------------------------------
   // overlapExists
@@ -742,7 +742,7 @@ namespace yae
         rubberBand_.show();
       }
       
-      mouseState_ == PlaylistWidget::kUpdateSelection;
+      mouseState_ = PlaylistWidget::kUpdateSelection;
       updateSelection(e->pos(), toggleSelection);
     }
   }
@@ -777,7 +777,12 @@ namespace yae
       
       bool toggleSelection = false;
       bool scrollToItem = true;
-      updateSelection(e->pos(), toggleSelection, scrollToItem);
+      bool allowGroupSelection = false;
+      
+      updateSelection(e->pos(),
+                      toggleSelection,
+                      scrollToItem,
+                      allowGroupSelection);
     }
   }
   
@@ -832,7 +837,14 @@ namespace yae
       
       if (e->buttons() & Qt::LeftButton)
       {
-        updateSelection(e->pos());
+        bool toggleSelection = false;
+        bool scrollToItem = false;
+        bool allowGroupSelection = false;
+        
+        updateSelection(e->pos(),
+                        toggleSelection,
+                        scrollToItem,
+                        allowGroupSelection);
       }
     }
   }
@@ -850,6 +862,9 @@ namespace yae
     bool pageUp = (key == Qt::Key_PageUp);
     bool pageDn = (key == Qt::Key_PageDown);
     
+    bool groupCollapse = (key == Qt::Key_Left);
+    bool groupExpand = (key == Qt::Key_Right);
+    
     bool enter = (key == Qt::Key_Enter || key == Qt::Key_Return);
     
     int mod = e->modifiers();
@@ -865,29 +880,55 @@ namespace yae
       
       if (modNone && stepUp && highlighted_ > 0)
       {
-        highlighted_--;
+        lookup(highlighted_, &group);
+        
+        if (group)
+        {
+          if (group->collapsed_ && group->offset_)
+          {
+            lookup(group->offset_ - 1, &group);
+            highlighted_ = group->offset_;
+          }
+          else
+          {
+            highlighted_--;
+          }
+        }
+        
         found = lookup(highlighted_, &group);
       }
       else if (modNone && stepDn && highlighted_ < numItems_)
       {
-        highlighted_++;
+        lookup(highlighted_, &group);
+        
+        if (group)
+        {
+          if (group->collapsed_)
+          {
+            highlighted_ = group->offset_ + group->items_.size();
+          }
+          else
+          {
+            highlighted_++;
+          }
+        }
+        
         found = lookup(highlighted_, &group);
       }
       else if (modNone && (pageUp || pageDn))
       {
-        PlaylistGroup * highlightedGroup = NULL;
-        PlaylistItem * highlightedItem = lookup(highlighted_,
-                                                &highlightedGroup);
+        PlaylistGroup * hiGroup = NULL;
+        PlaylistItem * hiItem = lookup(highlighted_, &hiGroup);
         
-        if (highlightedGroup || highlightedItem)
+        if (hiGroup || hiItem)
         {
           int vh = viewport()->height() - kGroupNameHeight;
           QPoint viewOffset = getViewOffset();
           
           QPoint p0 =
-            highlightedItem ?
-            highlightedItem->bbox_.center() :
-            highlightedGroup->bbox_.center();
+            hiItem ?
+            hiItem->bbox_.center() :
+            hiGroup->bbox_.center();
           
           QPoint p1 =
             pageUp ?
@@ -912,17 +953,52 @@ namespace yae
         setCurrentItem(highlighted_);
         e->accept();
       }
+      else if (modNone && (groupExpand || groupCollapse))
+      {
+        PlaylistGroup * hiGroup = NULL;
+        lookup(highlighted_, &hiGroup);
+
+        if (hiGroup)
+        {
+          bool expandable = !hiGroup->keyPath_.empty();
+          
+          if (expandable && hiGroup->collapsed_ && groupExpand)
+          {
+            hiGroup->collapsed_ = false;
+            updateGeometries();
+            highlighted_ = hiGroup->offset_;
+            selectItem(hiGroup->offset_);
+            e->accept();
+          }
+          else if (expandable && groupCollapse && !hiGroup->collapsed_)
+          {
+            hiGroup->collapsed_ = true;
+            updateGeometries();
+            selectGroup(hiGroup);
+            highlighted_ = hiGroup->offset_;
+            e->accept();
+          }
+          else if (groupCollapse && highlighted_ > 0)
+          {
+            lookup(hiGroup->offset_ - 1, &hiGroup);
+            highlighted_ = hiGroup->offset_;
+            found = lookup(highlighted_, &group);
+          }
+          else if (groupExpand && highlighted_ < numItems_)
+          {
+            highlighted_++;
+            found = lookup(highlighted_, &group);
+          }
+        }
+      }
       
       if (group || found)
       {
-        if (group->collapsed_)
-        {
-          group->collapsed_ = false;
-          updateGeometries();
-        }
-        
         // update the anchor:
-        anchor_ = found ? found->bbox_.center() : group->bbox_.center();
+        anchor_ =
+          found && !group->collapsed_?
+          found->bbox_.center() :
+          group->bbox_.center();
         
         // update the selection set:
         QPoint viewOffset = getViewOffset();
@@ -953,19 +1029,18 @@ namespace yae
       }
       else if (pageUp || pageDn)
       {
-        PlaylistGroup * highlightedGroup = NULL;
-        PlaylistItem * highlightedItem = lookup(highlighted_,
-                                                &highlightedGroup);
+        PlaylistGroup * hiGroup = NULL;
+        PlaylistItem * hiItem = lookup(highlighted_, &hiGroup);
         
-        if (highlightedGroup || highlightedItem)
+        if (hiGroup || hiItem)
         {
           int vh = viewport()->height() - kGroupNameHeight;
           QPoint viewOffset = getViewOffset();
           
           QPoint p0 =
-            highlightedItem ?
-            highlightedItem->bbox_.center() :
-            highlightedGroup->bbox_.center();
+            hiItem ?
+            hiItem->bbox_.center() :
+            hiGroup->bbox_.center();
           
           QPoint p1 =
             pageUp ?
@@ -976,11 +1051,7 @@ namespace yae
           std::size_t index = lookupItemIndex(group, p1);
           
           highlighted_ = (index < numItems_) ? index : group->offset_;
-          /*
-          highlighted_ =
-            (index < numItems_) ? index :
-            pageDn ? numItems_ : 0;
-          */
+          
           found = lookup(highlighted_, &group);
         }
       }
@@ -1161,6 +1232,7 @@ namespace yae
     QColor selectedColorBg = palette.color(QPalette::Highlight);
     QColor selectedColorFg = palette.color(QPalette::HighlightedText);
     QColor foregroundColor = palette.color(QPalette::WindowText);
+    QColor headerColor = QColor("#40a0ff");
     
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
@@ -1182,6 +1254,10 @@ namespace yae
         index += groupSize;
         continue;
       }
+
+      bool isHighlightedGroup =
+        group.offset_ <= highlighted_ &&
+        highlighted_ < (group.offset_ + groupSize);
       
       if (overlapExists(group.bbox_, region))
       {
@@ -1193,41 +1269,60 @@ namespace yae
         
         if (!group.keyPath_.empty())
         {
-          int w = kGroupArrowSize;
-          int h = bbox.height();
-          int o = 1 + (h - w) / 2;
+          double w = kGroupArrowSize;
+          double h = bbox.height();
+          double s = w / 2.0;
+          double x = 7.5;
+          double y = h / 2.0;
           
-          QPoint arrow[3];
+          QPointF arrow[3];
           if (group.collapsed_)
           {
-            arrow[0] = QPoint(5, o);
-            arrow[1] = QPoint(5 + w, o + w / 2);
-            arrow[2] = QPoint(5, o + w);
+            arrow[0] = QPointF(0.5 + x, y - s);
+            arrow[1] = QPointF(0.5 + x + w, y);
+            arrow[2] = QPointF(0.5 + x, y + s);
           }
           else
           {
-            arrow[0] = QPoint(5, o);
-            arrow[1] = QPoint(5 + w / 2, o + w);
-            arrow[2] = QPoint(5 + w, o);
+            arrow[0] = QPointF(x,     0.5 + y - s);
+            arrow[1] = QPointF(x + s, 0.5 + y + s);
+            arrow[2] = QPointF(x + w, 0.5 + y - s);
           }
           
-          painter.setPen(QColor("#000"));
-          painter.setBrush(QColor("#40a0ff"));
+          if (isHighlightedGroup)
+          {
+            painter.setBrush(Qt::white);
+          }
+          else
+          {
+            painter.setBrush(headerColor);
+          }
+          
+          painter.setPen(Qt::NoPen);
           painter.drawPolygon(arrow, 3);
-
+          
           QRect bx = bbox.adjusted(10 + w, 0, 0, 0);
           drawTextWithShadowToFit(painter,
                                   bx,
                                   Qt::AlignVCenter | Qt::AlignCenter,
                                   group.name_,
-                                  QColor("#40a0ff"),
+                                  headerColor,
                                   QColor("#102040"));
         }
         else
         {
           QRect bx = bbox.adjusted(2, 1, -2, -1);
           painter.setFont(tinyFont);
-          painter.setPen(QColor("#2080e0"));
+          
+          if (group.offset_ == highlighted_ && numItems_)
+          {
+            painter.setPen(Qt::white);
+          }
+          else
+          {
+            painter.setPen(headerColor);
+          }
+          
           drawTextToFit(painter,
                         bx,
                         Qt::AlignBottom | Qt::AlignRight,
@@ -1348,7 +1443,8 @@ namespace yae
   void
   PlaylistWidget::updateSelection(const QPoint & mousePos,
                                   bool toggleSelection,
-                                  bool scrollToItem)
+                                  bool scrollToItem,
+                                  bool allowGroupSelection)
   {
 #if 0
     std::cerr << "PlaylistWidget::updateSelection" << std::endl;
@@ -1373,12 +1469,14 @@ namespace yae
         &group->items_[index - group->offset_] :
         NULL;
       
-      if (!item)
+      if (item)
+      {
+        highlighted_ = index;
+      }
+      else if (allowGroupSelection)
       {
         selectGroup(group);
       }
-      
-      highlighted_ = index;
       
       if (!scrollToItem)
       {
