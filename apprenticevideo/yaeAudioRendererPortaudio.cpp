@@ -374,6 +374,7 @@ namespace yae
   void
   AudioRendererPortaudio::TPrivate::close()
   {
+    pause_ = false;
     open(0, NULL, false);
   }
   

@@ -2106,6 +2106,9 @@ namespace yae
   {
     videoRenderer_->close();
     audioRenderer_->close();
+    
+    videoRenderer_->pause();
+    audioRenderer_->pause();
   }
   
   //----------------------------------------------------------------
@@ -2172,15 +2175,8 @@ namespace yae
   void
   MainWindow::resumeRenderers()
   {
-    if (audioRenderer_)
-    {
-      audioRenderer_->resume();
-    }
-    
-    if (videoRenderer_)
-    {
-      videoRenderer_->resume();
-    }
+    audioRenderer_->resume();
+    videoRenderer_->resume();
   }
   
   //----------------------------------------------------------------

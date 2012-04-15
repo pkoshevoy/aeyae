@@ -83,6 +83,7 @@ namespace yae
   VideoRenderer::TPrivate::close()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
+    pause_ = false;
     thread_.stop();
     thread_.wait();
   }

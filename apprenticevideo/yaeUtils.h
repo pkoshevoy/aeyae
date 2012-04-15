@@ -11,6 +11,7 @@
 
 // std includes:
 #include <list>
+#include <string.h>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -77,6 +78,15 @@ namespace yae
     typename TContainer::const_iterator i = c.begin();
     typename TContainer::const_iterator e = c.end();
     return (i != e) && (++i != e);
+  }
+
+  //----------------------------------------------------------------
+  // compare
+  // 
+  template <typename TData>
+  int compare(const TData & a, const TData & b)
+  {
+    return memcmp(&a, &b, sizeof(TData));
   }
   
   //----------------------------------------------------------------

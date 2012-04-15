@@ -1370,12 +1370,18 @@ namespace yae
   bool
   VideoTrack::setTraitsOverride(const VideoTraits & override)
   {
+    if (compare<VideoTraits>(override_, override) == 0)
+    {
+      // nothing changed:
+      return true;
+    }
+    
     bool alreadyDecoding = thread_.isRunning();
     YAE_ASSERT(!alreadyDecoding);
     
     if (alreadyDecoding)
     {
-      frameQueue_.close();
+      frameQueue_.clear();
       thread_.stop();
       thread_.wait();
     }
@@ -2112,12 +2118,18 @@ namespace yae
   bool
   AudioTrack::setTraitsOverride(const AudioTraits & override)
   {
+    if (compare<AudioTraits>(override_, override) == 0)
+    {
+      // nothing changed:
+      return true;
+    }
+    
     bool alreadyDecoding = thread_.isRunning();
     YAE_ASSERT(!alreadyDecoding);
     
     if (alreadyDecoding)
     {
-      frameQueue_.close();
+      frameQueue_.clear();
       thread_.stop();
       thread_.wait();
     }
