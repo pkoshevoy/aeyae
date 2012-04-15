@@ -146,6 +146,7 @@ namespace yae
     void playbackStop();
     void playback(bool forward = true);
     void scrollWheelTimerExpired();
+    void playlistVisibilityChanged(bool visible);
     
   protected:
     // virtual:

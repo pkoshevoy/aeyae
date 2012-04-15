@@ -180,11 +180,6 @@ namespace yae
     
     timelineControls_ = new TimelineControls(this);
     layout->addWidget(timelineControls_);
-#if 0
-    // hide the playlist:
-    actionShowPlaylist->setChecked(false);
-    playlistDockWidget->hide();
-#endif
     
     // hide the timeline:
     actionShowTimeline->setChecked(false);
@@ -462,8 +457,17 @@ namespace yae
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
                  this, SLOT(scrollWheelTimerExpired()));
     YAE_ASSERT(ok);
+    
+    ok = connect(playlistDockWidget, SIGNAL(visibilityChanged(bool)),
+                 this, SLOT(playlistVisibilityChanged(bool)));
+    YAE_ASSERT(ok);
+    
+#if 1
+    // hide the playlist:
+    playlistDockWidget->hide();
+#endif
   }
-
+  
   //----------------------------------------------------------------
   // MainWindow::~MainWindow
   // 
@@ -1837,6 +1841,15 @@ namespace yae
     }
     
     timelineControls_->seekTo(seconds);
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playlistVisibilityChanged
+  // 
+  void
+  MainWindow::playlistVisibilityChanged(bool visible)
+  {
+    actionShowPlaylist->setChecked(visible);
   }
   
   //----------------------------------------------------------------
