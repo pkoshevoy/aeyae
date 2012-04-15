@@ -1139,21 +1139,22 @@ namespace yae
       group.bboxItems_.setWidth(width);
       group.bboxItems_.setY(y);
       
-      if (!group.excluded_)
+      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+           j != group.items_.end(); ++j)
       {
-        for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-             !group.collapsed_ && j != group.items_.end(); ++j)
+        PlaylistItem & item = *j;
+        item.bbox_.setX(0);
+        item.bbox_.setY(y);
+        item.bbox_.setWidth(width);
+        
+        if (!item.excluded_)
         {
-          PlaylistItem & item = *j;
-          item.bbox_.setX(0);
-          item.bbox_.setY(y);
-          item.bbox_.setWidth(width);
-
-          if (!item.excluded_)
+          numShown_++;
+          
+          if (!group.collapsed_)
           {
             item.bbox_.setHeight(kGroupItemHeight);
             y += kGroupItemHeight;
-            numShown_++;
           }
         }
       }
