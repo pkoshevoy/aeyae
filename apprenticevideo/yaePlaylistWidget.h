@@ -120,7 +120,26 @@ namespace yae
     PlaylistGroup * lookupGroup(std::size_t index);
     PlaylistItem * lookup(std::size_t index, PlaylistGroup ** group = NULL);
     
+    enum TDirection {
+      kBehind = 0,
+      kAhead = 1
+    };
+    
+    // lookup non-excluded group closest (in a given direction)
+    // to the specified item index:
+    PlaylistGroup * closestGroup(std::size_t itemIndex,
+                                 TDirection where = kAhead);
+    
+    // lookup non-excluded item closest (in a given direction)
+    // to the specified item index:
+    std::size_t closestItem(std::size_t itemIndex,
+                            TDirection where = kAhead,
+                            PlaylistGroup ** group = NULL);
+
   public slots:
+    // item filter:
+    void filterChanged(const QString & filter);
+    
     // playlist navigation controls:
     void setCurrentItem(std::size_t index, bool force = false);
     
@@ -178,7 +197,7 @@ namespace yae
     
     PlaylistItem * lookup(PlaylistGroup * group, const QPoint & pt);
     PlaylistItem * lookup(const QPoint & pt, PlaylistGroup ** group = NULL);
-
+    
     enum TMouseState {
       kNotReady = 0,
       kUpdateSelection = 1,

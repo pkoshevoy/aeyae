@@ -462,10 +462,16 @@ namespace yae
                  this, SLOT(playlistVisibilityChanged(bool)));
     YAE_ASSERT(ok);
     
-#if 1
+    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
+                 playlistWidget_, SLOT(filterChanged(const QString &)));
+    YAE_ASSERT(ok);
+    
+    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
+                 this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+    
     // hide the playlist:
     playlistDockWidget->hide();
-#endif
   }
   
   //----------------------------------------------------------------
@@ -1768,7 +1774,16 @@ namespace yae
         break;
       }
       
-      current += forward ? 1 : -1;
+      if (forward)
+      {
+        current = playlistWidget_->closestItem(current + 1);
+      }
+      else
+      {
+        current = playlistWidget_->closestItem(current - 1,
+                                               PlaylistWidget::kBehind);
+      }
+      
       playlistWidget_->setCurrentItem(current);
     }
     
@@ -1787,14 +1802,20 @@ namespace yae
   MainWindow::fixupNextPrev()
   {
     std::size_t index = playlistWidget_->currentItem();
-    std::size_t nPrev = playlistWidget_->countItemsBehind();
     std::size_t nNext = playlistWidget_->countItemsAhead();
+    std::size_t nPrev = playlistWidget_->countItemsBehind();
+    std::size_t iNext = playlistWidget_->closestItem(index + 1);
+    std::size_t iPrev = playlistWidget_->closestItem(index - 1,
+                                                     PlaylistWidget::kBehind);
     
-    PlaylistItem * prev = nPrev ? playlistWidget_->lookup(index - 1) : NULL;
-    PlaylistItem * next = nNext ? playlistWidget_->lookup(index + 1) : NULL;
+    PlaylistItem * prev =
+      nPrev && iPrev < index ? playlistWidget_->lookup(iPrev) : NULL;
     
-    actionPrev->setEnabled(nPrev);
-    actionNext->setEnabled(nNext);
+    PlaylistItem * next =
+      nNext && iNext > index ? playlistWidget_->lookup(iNext) : NULL;
+    
+    actionPrev->setEnabled(iPrev < index);
+    actionNext->setEnabled(iNext > index);
     
     if (prev)
     {
@@ -1824,10 +1845,11 @@ namespace yae
     SignalBlocker blockSignals(playlistWidget_);
     actionPlay->setEnabled(false);
     
-    std::size_t current = playlistWidget_->currentItem();
-    if (playlistWidget_->countItemsAhead())
+    std::size_t index = playlistWidget_->currentItem();
+    std::size_t iNext = playlistWidget_->closestItem(index + 1);
+    if (iNext > index)
     {
-      playlistWidget_->setCurrentItem(current + 1);
+      playlistWidget_->setCurrentItem(iNext);
     }
     
     playback(true);
@@ -1842,10 +1864,12 @@ namespace yae
     SignalBlocker blockSignals(playlistWidget_);
     actionPlay->setEnabled(false);
     
-    std::size_t current = playlistWidget_->currentItem();
-    if (playlistWidget_->countItemsBehind())
+    std::size_t index = playlistWidget_->currentItem();
+    std::size_t iPrev = playlistWidget_->closestItem(index - 1,
+                                                     PlaylistWidget::kBehind);
+    if (iPrev < index)
     {
-      playlistWidget_->setCurrentItem(current - 1);
+      playlistWidget_->setCurrentItem(iPrev);
     }
     
     playback(false);

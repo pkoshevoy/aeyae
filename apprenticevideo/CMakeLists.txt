@@ -141,6 +141,7 @@ set(project_moc_hxx
   yaeMainWindow.h
   yaePlaybackControls.h
   yaePlaylistWidget.h
+  yaeLineEdit.h
   )
 
 set(project_uis 
@@ -160,6 +161,8 @@ set(project_sources
   yaeAudioRendererPortaudio.cpp
   yaeCanvas.h
   yaeCanvas.cpp
+  yaeLineEdit.h
+  yaeLineEdit.cpp
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp

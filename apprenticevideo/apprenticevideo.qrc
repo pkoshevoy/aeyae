@@ -6,5 +6,7 @@
     <file>images/timeIn.png</file>
     <file>images/timeOut.png</file>
     <file>images/playHead.png</file>
+    <file>images/search.png</file>
+    <file>images/clear.png</file>
   </qresource>
 </RCC>

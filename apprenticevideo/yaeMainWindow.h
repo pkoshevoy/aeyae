@@ -147,6 +147,7 @@ namespace yae
     void playback(bool forward = true);
     void scrollWheelTimerExpired();
     void playlistVisibilityChanged(bool visible);
+    void fixupNextPrev();
     
   protected:
     // virtual:
@@ -159,7 +160,6 @@ namespace yae
     void mousePressEvent(QMouseEvent * e);
     
     // helpers:
-    void fixupNextPrev();
     void stopRenderers();
     void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
     void resumeRenderers();

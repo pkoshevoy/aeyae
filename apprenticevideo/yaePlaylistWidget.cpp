@@ -478,6 +478,219 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // PlaylistWidget::closestGroup
+  // 
+  PlaylistGroup *
+  PlaylistWidget::closestGroup(std::size_t index,
+                               PlaylistWidget::TDirection where)
+  {
+    if (numItems_ == numShown_)
+    {
+      // no items have been excluded:
+      return lookupGroup(index);
+    }
+    
+    PlaylistGroup * prev = NULL;
+    
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      if (group.excluded_)
+      {
+        continue;
+      }
+
+      std::size_t groupSize = group.items_.size();
+      std::size_t groupEnd = group.offset_ + groupSize;
+      if (groupEnd < index)
+      {
+        prev = &group;
+      }
+      
+      if (index < groupEnd)
+      {
+        if (index >= group.offset_)
+        {
+          // make sure the group has an un-excluded item
+          // in the range that we are interested in:
+          const int step = where == kAhead ? 1 : -1;
+          
+          for (std::size_t j = index - group.offset_; j < groupSize; j += step)
+          {
+            PlaylistItem & item = group.items_[j];
+            if (!item.excluded_)
+            {
+              return &group;
+            }
+          }
+        }
+        else if (where == kAhead)
+        {
+          return &group;
+        }
+        
+        if (where == kBehind)
+        {
+          break;
+        }
+      }
+    }
+    
+    if (where == kBehind)
+    {
+      return prev;
+    }
+    
+    return NULL;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::closestItem
+  // 
+  std::size_t
+  PlaylistWidget::closestItem(std::size_t index,
+                              PlaylistWidget::TDirection where,
+                              PlaylistGroup ** returnGroup)
+  {
+    if (numItems_ == numShown_)
+    {
+      // no items have been excluded:
+      return index;
+    }
+    
+    PlaylistGroup * group = closestGroup(index, where);
+    if (returnGroup)
+    {
+      *returnGroup = group;
+    }
+    
+    if (!group)
+    {
+      if (where == kAhead)
+      {
+        return numItems_;
+      }
+      
+      // nothing left behind, try looking ahead for the first un-excluded item:
+      return closestItem(index, kAhead, returnGroup);
+    }
+    
+    // find the closest item within this group:
+    const std::vector<PlaylistItem> & items = group->items_;
+    const std::size_t groupSize = items.size();
+    const int step = where == kAhead ? 1 : -1;
+
+    std::size_t i =
+      index < group->offset_ ? 0 :
+      index - group->offset_ >= groupSize ? groupSize - 1 :
+      index - group->offset_;
+    
+    for (; i < groupSize; i += step)
+    {
+      const PlaylistItem & item = items[i];
+      if (!item.excluded_)
+      {
+        return (group->offset_ + i);
+      }
+    }
+    
+    if (where == kAhead)
+    {
+      return numItems_;
+    }
+    
+    // nothing left behind, try looking ahead for the first un-excluded item:
+    return closestItem(index, kAhead, returnGroup);
+  }
+  
+  //----------------------------------------------------------------
+  // keywordsMatch
+  // 
+  static bool
+  keywordsMatch(const std::list<QString> & keywords, const QString  & text)
+  {
+    for (std::list<QString>::const_iterator i = keywords.begin();
+         i != keywords.end(); ++i)
+    {
+      const QString & keyword = *i;
+      if (!text.contains(keyword, Qt::CaseInsensitive))
+      {
+        return false;
+      }
+    }
+    
+    std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
+    return true;
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::filterChanged
+  // 
+  void
+  PlaylistWidget::filterChanged(const QString & filter)
+  {
+    std::list<QString> keywords;
+    splitIntoWords(filter, keywords);
+    
+    bool exclude = !keywords.empty();
+    bool changed = false;
+    
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      
+      std::size_t groupSize = group.items_.size();
+      std::size_t numExcluded = 0;
+      
+      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+           j != group.items_.end(); ++j)
+      {
+        PlaylistItem & item = *j;
+        
+        if (!exclude)
+        {
+          if (item.excluded_)
+          {
+            item.excluded_ = false;
+            changed = true;
+          }
+          
+          continue;
+        }
+        
+        if (!keywordsMatch(keywords, item.name_))
+        {
+          if (!item.excluded_)
+          {
+            item.excluded_ = true;
+            changed = true;
+          }
+          
+          numExcluded++;
+        }
+        else if (item.excluded_)
+        {
+          item.excluded_ = false;
+          changed = true;
+        }
+      }
+      
+      if (!group.keyPath_.empty())
+      {
+        group.excluded_ = (groupSize == numExcluded);
+      }
+    }
+    
+    if (changed)
+    {
+      updateGeometries();
+      update();
+    }
+  }
+  
+  //----------------------------------------------------------------
   // PlaylistWidget::playbackNext
   // 
   void
@@ -546,6 +759,7 @@ namespace yae
 #if 0
     std::cerr << "PlaylistWidget::selectItem: " << indexSel << std::endl;
 #endif
+    bool itemSelected = false;
     
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
@@ -577,6 +791,7 @@ namespace yae
       {
         PlaylistItem & item = group.items_[indexSel - group.offset_];
         item.selected_ = true;
+        itemSelected = true;
         
         if (!exclusive)
         {
@@ -586,6 +801,7 @@ namespace yae
       }
     }
     
+    YAE_ASSERT(itemSelected || indexSel == numItems_);
     update();
   }
   
@@ -659,7 +875,10 @@ namespace yae
     {
       highlighted_ = numItems_ ? numItems_ - 1 : 0;
     }
-
+    
+    // must account for the excluded items:
+    highlighted_ = closestItem(highlighted_, kBehind);
+    
     if (highlighted_ < numItems_)
     {
       PlaylistItem * item = lookup(highlighted_);
@@ -868,11 +1087,10 @@ namespace yae
     bool enter = (key == Qt::Key_Enter || key == Qt::Key_Return);
     
     int mod = e->modifiers();
-    bool modAlt   = mod & Qt::AltModifier;
     bool modShift = mod & Qt::ShiftModifier;
-    bool modNone  = !modShift && !modAlt;
+    bool modNone  = !modShift;
     
-    if (modNone || modAlt)
+    if (modNone)
     {
       // change highlighted item:
       PlaylistGroup * group = NULL;
@@ -886,7 +1104,7 @@ namespace yae
         {
           if (group->collapsed_ && group->offset_)
           {
-            highlighted_ = group->offset_ - 1;
+            highlighted_ = closestItem(group->offset_ - 1, kBehind);
             lookup(highlighted_, &group);
             
             if (group->collapsed_)
@@ -896,7 +1114,7 @@ namespace yae
           }
           else
           {
-            highlighted_--;
+            highlighted_ = closestItem(highlighted_ - 1, kBehind);
           }
         }
         
@@ -910,11 +1128,11 @@ namespace yae
         {
           if (group->collapsed_)
           {
-            highlighted_ = group->offset_ + group->items_.size();
+            highlighted_ = closestItem(group->offset_ + group->items_.size());
           }
           else
           {
-            highlighted_++;
+            highlighted_ = closestItem(highlighted_ + 1);
           }
         }
         
@@ -944,14 +1162,10 @@ namespace yae
           std::size_t index = lookupItemIndex(group, p1);
           
           highlighted_ = (index < numItems_) ? index : group->offset_;
+          highlighted_ = closestItem(highlighted_, pageDn ? kAhead : kBehind);
           
           found = lookup(highlighted_, &group);
         }
-      }
-      else if (modAlt && (stepUp || stepDn) && numItems_)
-      {
-        highlighted_ = stepUp ? 0 : (numItems_ - 1);
-        found = lookup(highlighted_, &group);
       }
       else if (modNone && enter)
       {
@@ -972,7 +1186,7 @@ namespace yae
             hiGroup->collapsed_ = false;
             updateGeometries();
             highlighted_ = hiGroup->offset_;
-            selectItem(hiGroup->offset_);
+            selectItem(closestItem(hiGroup->offset_));
             e->accept();
           }
           else if (expandable && groupCollapse && !hiGroup->collapsed_)
@@ -985,7 +1199,7 @@ namespace yae
           }
           else if (groupCollapse && highlighted_ > 0)
           {
-            highlighted_ = hiGroup->offset_ - 1;
+            highlighted_ = closestItem(hiGroup->offset_ - 1, kBehind);
             lookup(highlighted_, &hiGroup);
             
             if (hiGroup->collapsed_)
@@ -997,7 +1211,7 @@ namespace yae
           }
           else if (groupExpand && highlighted_ < numItems_)
           {
-            highlighted_++;
+            highlighted_ = closestItem(highlighted_ + 1);
             found = lookup(highlighted_, &group);
           }
         }
@@ -1030,12 +1244,12 @@ namespace yae
       
       if (stepUp && highlighted_ > 0)
       {
-        highlighted_--;
+        highlighted_ = closestItem(highlighted_ - 1, kBehind);
         found = lookup(highlighted_, &group);
       }
       else if (stepDn && highlighted_ < numItems_)
       {
-        highlighted_++;
+        highlighted_ = closestItem(highlighted_ + 1);
         found = lookup(highlighted_, &group);
       }
       else if (pageUp || pageDn)
@@ -1062,6 +1276,7 @@ namespace yae
           std::size_t index = lookupItemIndex(group, p1);
           
           highlighted_ = (index < numItems_) ? index : group->offset_;
+          highlighted_ = closestItem(highlighted_, pageDn ? kAhead : kBehind);
           
           found = lookup(highlighted_, &group);
         }
