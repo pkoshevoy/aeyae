@@ -1556,7 +1556,11 @@ namespace yae
             painter.setPen(headerColor);
           }
           
-          QString text = tr("%1 ITEMS,  %2").arg(numShown_).arg(group.name_);
+          QString text =
+            (numShown_ == 1 ? tr("%1 ITEM,  %2") : tr("%1 ITEMS,  %2")).
+            arg(numShown_).
+            arg(group.name_);
+          
           drawTextToFit(painter,
                         bx,
                         Qt::AlignBottom | Qt::AlignRight,
