@@ -695,6 +695,7 @@ namespace yae
     // from that list to assign PTS to the decoded frames.
     std::list<PacketTime> packetTimes_;
     
+    int64 ptsBestEffort_;
     TTime prevPTS_;
     bool hasPrevPTS_;
 
@@ -945,6 +946,7 @@ namespace yae
     frameAutoCleanup_.reset();
     packetTimes_.clear();
     hasPrevPTS_ = false;
+    ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
     
     frameQueue_.open();
@@ -966,6 +968,7 @@ namespace yae
     frameAutoCleanup_.reset();
     packetTimes_.clear();
     hasPrevPTS_ = false;
+    ptsBestEffort_ = 0;
     frameQueue_.close();
     return true;
   }
@@ -1006,7 +1009,6 @@ namespace yae
       framesDecoded_++;
       TVideoFramePtr vfPtr(new TVideoFrame());
       TVideoFrame & vf = *vfPtr;
-      vf.time_.base_ = stream_->time_base.den;
       
       // shortcut to the saved packet time associated with this frame:
       const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
@@ -1031,14 +1033,44 @@ namespace yae
       }
       
       bool gotPTS = false;
+      vf.time_.base_ = stream_->time_base.den;
       
-      if (!gotPTS &&
-          framesDecoded_ == 1)
+      // std::cerr << "T: " << avFrame->best_effort_timestamp << std::endl;
+      
+      if (!gotPTS && framesDecoded_ == 1)
       {
+        ptsBestEffort_ = 0;
         vf.time_.time_ = startTime_;
         gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
       }
       
+      if (!gotPTS)
+      {
+        if (ptsBestEffort_ < avFrame->best_effort_timestamp)
+        {
+          ptsBestEffort_ = avFrame->best_effort_timestamp;
+        }
+        else
+        {
+          ptsBestEffort_++;
+        }
+        
+        vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
+                           "avFrame->best_effort_timestamp");
+      }
+      
+      if (!gotPTS &&
+          avFrame->pts != AV_NOPTS_VALUE &&
+          codecContext->time_base.num &&
+          codecContext->time_base.den)
+      {
+        vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
+        vf.time_.base_ = codecContext->time_base.den;
+        
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
+      }
+#if 0
       if (!gotPTS && frameTime && frameTime->pts_ != AV_NOPTS_VALUE)
       {
         vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
@@ -1057,20 +1089,7 @@ namespace yae
         gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t.dts");
       }
       
-      if (!gotPTS &&
-          avFrame->pts != AV_NOPTS_VALUE &&
-          codecContext->time_base.num &&
-          codecContext->time_base.den)
-      {
-        vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
-        vf.time_.base_ = codecContext->time_base.den;
-        
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
-      }
-      
-      if (!gotPTS &&
-          frameRate_.num &&
-          frameRate_.den)
+      if (!gotPTS && frameRate_.num && frameRate_.den)
       {
         vf.time_.base_ = stream_->time_base.den;
         vf.time_.time_ =
@@ -1090,6 +1109,15 @@ namespace yae
           
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
         }
+      }
+#endif
+      
+      if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
+      {
+        // increment by average frame duration:
+        vf.time_ = prevPTS_;
+        vf.time_ += TTime(frameRate_.den, frameRate_.num);
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
       }
       
       YAE_ASSERT(gotPTS);
@@ -1211,6 +1239,8 @@ namespace yae
       {
         return false;
       }
+      
+      // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
       
       // put repeated output frames into frame queue:
       for (int i = 0; i < avFrame->repeat_pict; i++)
@@ -1474,6 +1504,7 @@ namespace yae
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     packetTimes_.clear();
     hasPrevPTS_ = false;
+    ptsBestEffort_ = 0;
     framesDecoded_ = 0;
   }
   
@@ -1905,6 +1936,8 @@ namespace yae
       {
         return false;
       }
+      
+      // std::cerr << "A: " << af.time_.toSeconds() << std::endl;
     }
     catch (...)
     {
