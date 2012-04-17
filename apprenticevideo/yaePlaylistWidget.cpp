@@ -353,7 +353,7 @@ namespace yae
         firstNewItemPath = path;
       }
       
-      QString name = toWords(fi.baseName());
+      QString name = toWords(fi.completeBaseName());
       if (name.isEmpty())
       {
 #if 0
@@ -419,8 +419,8 @@ namespace yae
         playlistItem.path_ = value;
         
         QFileInfo fi(key);
-        playlistItem.name_ = toWords(fi.baseName());
-        playlistItem.ext_ = fi.completeSuffix();
+        playlistItem.name_ = toWords(fi.completeBaseName());
+        playlistItem.ext_ = fi.suffix();
         
         if (playlistItem.path_ == firstNewItemPath)
         {
@@ -619,8 +619,10 @@ namespace yae
         return false;
       }
     }
-    
+
+#if 0
     std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
+#endif
     return true;
   }
   
@@ -659,8 +661,13 @@ namespace yae
           
           continue;
         }
+
+        QString text =
+          group.name_ + QString::fromUtf8(" ") +
+          item.name_ + QString::fromUtf8(".") +
+          item.ext_;
         
-        if (!keywordsMatch(keywords, item.name_))
+        if (!keywordsMatch(keywords, text))
         {
           if (!item.excluded_)
           {

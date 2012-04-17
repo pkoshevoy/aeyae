@@ -638,7 +638,7 @@ namespace yae
       QFileInfo fi = iter.fileInfo();
       QString fn = fi.absoluteFilePath();
       QString ext = fi.suffix();
-      std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
+      // std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
       
       if (!shouldIgnore(ext))
       {
