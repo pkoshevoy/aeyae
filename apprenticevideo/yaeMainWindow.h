@@ -22,8 +22,7 @@
 #include <yaeReader.h>
 #include <yaeAudioRenderer.h>
 #include <yaeVideoRenderer.h>
-#include <yaePlaybackControls.h>
-// #include <yaePlaylistWidget.h>
+#include <yaeTimelineControls.h>
 #ifdef __APPLE__
 #include <yaeAppleRemoteControl.h>
 #endif
@@ -207,6 +206,7 @@ namespace yae
     IReader * reader_;
     
     // frame canvas:
+    QWidget * canvasContainer_;
     Canvas * canvas_;
 
     // audio device:
@@ -232,6 +232,10 @@ namespace yae
     
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
+    
+    // this flag is used to restore playlist dock visibility
+    // when switching between canvas and playlist view:
+    bool playlistDockWasHidden_;
   };
 }
 

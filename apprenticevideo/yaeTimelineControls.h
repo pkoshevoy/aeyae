@@ -6,8 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_PLAYBACK_CONTROLS_H_
-#define YAE_PLAYBACK_CONTROLS_H_
+#ifndef YAE_TIMELINE_CONTROLS_H_
+#define YAE_TIMELINE_CONTROLS_H_
 
 // boost includes:
 #include <boost/thread.hpp>
@@ -222,27 +222,7 @@ namespace yae
     // playback duration in seconds:
     double timelineDuration_;
   };
-
-  //----------------------------------------------------------------
-  // PlaybackControls
-  // 
-  class PlaybackControls : public QWidget
-  {
-    Q_OBJECT;
-    
-  public:
-    PlaybackControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
-    ~PlaybackControls();
-    
-  signals:
-    void load(const QUrl & url);
-    void togglePlayback();
-    
-  protected:
-    // current playlist:
-    QList<QUrl> playlist_;
-  };
 }
 
 
-#endif // YAE_PLAYBACK_CONTROLS_H_
+#endif // YAE_TIMELINE_CONTROLS_H_

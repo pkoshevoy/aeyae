@@ -49,7 +49,21 @@
 
 namespace yae
 {
-
+  
+  //----------------------------------------------------------------
+  // swapLayouts
+  // 
+  static void
+  swapLayouts(QWidget * a, QWidget * b)
+  {
+    QWidget tmp;
+    QLayout * la = a->layout();
+    QLayout * lb = b->layout();
+    tmp.setLayout(la);
+    a->setLayout(lb);
+    b->setLayout(la);
+  }
+  
   //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   // 
@@ -141,6 +155,7 @@ namespace yae
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
     reader_(NULL),
+    canvasContainer_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
@@ -167,19 +182,29 @@ namespace yae
     contextFormat.setSwapInterval(1);
   
     canvas_ = new Canvas(contextFormat);
-    reader_ = ReaderFFMPEG::create();
     
+    canvasContainer_ = new QWidget();
+    // canvasContainer_->setSizePolicy(QSizePolicy::Preferred,
+    //                                 QSizePolicy::Preferred);
+    QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
+    canvasLayout->setMargin(0);
+    canvasLayout->setSpacing(0);
+    canvasLayout->addWidget(canvas_);
+    
+    reader_ = ReaderFFMPEG::create();
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
     
     delete centralwidget->layout();
-    QVBoxLayout * layout = new QVBoxLayout(centralwidget);
-    layout->setMargin(0);
-    layout->setSpacing(0);
-    layout->addWidget(canvas_);
+    QVBoxLayout * centralLayout = new QVBoxLayout(centralwidget);
+    centralLayout->setMargin(0);
+    centralLayout->setSpacing(0);
+    centralLayout->addWidget(canvasContainer_);
     
     timelineControls_ = new TimelineControls(this);
-    layout->addWidget(timelineControls_);
+    centralLayout->addWidget(timelineControls_);
+    timelineControls_->setSizePolicy(QSizePolicy::Preferred,
+                                     QSizePolicy::Fixed);
     
     // hide the timeline:
     actionShowTimeline->setChecked(false);
@@ -458,7 +483,7 @@ namespace yae
                  this, SLOT(scrollWheelTimerExpired()));
     YAE_ASSERT(ok);
     
-    ok = connect(playlistDockWidget, SIGNAL(visibilityChanged(bool)),
+    ok = connect(playlistDock_, SIGNAL(visibilityChanged(bool)),
                  this, SLOT(playlistVisibilityChanged(bool)));
     YAE_ASSERT(ok);
     
@@ -471,7 +496,7 @@ namespace yae
     YAE_ASSERT(ok);
     
     // hide the playlist:
-    playlistDockWidget->hide();
+    playlistDock_->hide();
   }
   
   //----------------------------------------------------------------
@@ -1220,15 +1245,15 @@ namespace yae
   {
     SignalBlocker blockSignals(actionShowPlaylist);
     
-    if (playlistDockWidget->isVisible())
+    if (playlistDock_->isVisible())
     {
       actionShowPlaylist->setChecked(false);
-      playlistDockWidget->hide();
+      playlistDock_->hide();
     }
     else
     {
       actionShowPlaylist->setChecked(true);
-      playlistDockWidget->show();
+      playlistDock_->show();
     }
   }
   
@@ -2209,117 +2234,147 @@ namespace yae
   void
   MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
   {
-     reader->selectVideoTrack(videoTrackIndex);
-     
-     VideoTraits vtts;
-     if (reader->getVideoTraits(vtts))
-     {
-       // pixel format shortcut:
-       const pixelFormat::Traits * ptts =
-         pixelFormat::getTraits(vtts.pixelFormat_);
-       
-       std::cout << "yae: native format: ";
-       if (ptts)
-       {
-         std::cout << ptts->name_;
-       }
-       else
-       {
-         std::cout << "unsupported" << std::endl;
-       }
-       std::cout << std::endl;
-       
+    reader->selectVideoTrack(videoTrackIndex);
+    
+    VideoTraits vtts;
+    if (reader->getVideoTraits(vtts))
+    {
+      // pixel format shortcut:
+      const pixelFormat::Traits * ptts =
+        pixelFormat::getTraits(vtts.pixelFormat_);
+      
+      std::cout << "yae: native format: ";
+      if (ptts)
+      {
+        std::cout << ptts->name_;
+      }
+      else
+      {
+        std::cout << "unsupported" << std::endl;
+      }
+      std::cout << std::endl;
+      
 #if 1
-       bool unsupported = ptts == NULL;
-       
-       if (!unsupported)
-       {
-         unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
-       }
-       
-       if (!unsupported)
-       {
-         GLint internalFormatGL;
-         GLenum pixelFormatGL;
-         GLenum dataTypeGL;
-         GLint shouldSwapBytes;
-         unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                        internalFormatGL,
-                                                        pixelFormatGL,
-                                                        dataTypeGL,
-                                                        shouldSwapBytes);
-         unsupported = (supportedChannels < 1 ||
-                        supportedChannels != ptts->channels_ &&
-                        actionColorConverter->isChecked());
-       }
-       
-       if (unsupported)
-       {
-         vtts.pixelFormat_ = kPixelFormatGRAY8;
-         
-         if (ptts)
-         {
-           if ((ptts->flags_ & pixelFormat::kAlpha) &&
-               (ptts->flags_ & pixelFormat::kColor))
-           {
-             vtts.pixelFormat_ = kPixelFormatBGRA;
-           }
-           else if ((ptts->flags_ & pixelFormat::kColor) ||
-                    (ptts->flags_ & pixelFormat::kPaletted))
-           {
-             if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
-             {
-               vtts.pixelFormat_ = kPixelFormatYUYV422;
-             }
-             else
-             {
-               vtts.pixelFormat_ = kPixelFormatBGR24;
-             }
-           }
-         }
-         
-         reader->setVideoTraitsOverride(vtts);
-       }
+      bool unsupported = ptts == NULL;
+      
+      if (!unsupported)
+      {
+        unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
+      }
+      
+      if (!unsupported)
+      {
+        GLint internalFormatGL;
+        GLenum pixelFormatGL;
+        GLenum dataTypeGL;
+        GLint shouldSwapBytes;
+        unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
+                                                       internalFormatGL,
+                                                       pixelFormatGL,
+                                                       dataTypeGL,
+                                                       shouldSwapBytes);
+        unsupported = (supportedChannels < 1 ||
+                       supportedChannels != ptts->channels_ &&
+                       actionColorConverter->isChecked());
+      }
+      
+      if (unsupported)
+      {
+        vtts.pixelFormat_ = kPixelFormatGRAY8;
+        
+        if (ptts)
+        {
+          if ((ptts->flags_ & pixelFormat::kAlpha) &&
+              (ptts->flags_ & pixelFormat::kColor))
+          {
+            vtts.pixelFormat_ = kPixelFormatBGRA;
+          }
+          else if ((ptts->flags_ & pixelFormat::kColor) ||
+                   (ptts->flags_ & pixelFormat::kPaletted))
+          {
+            if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+            {
+              vtts.pixelFormat_ = kPixelFormatYUYV422;
+            }
+            else
+            {
+              vtts.pixelFormat_ = kPixelFormatBGR24;
+            }
+          }
+        }
+        
+        reader->setVideoTraitsOverride(vtts);
+      }
 #elif 0
-       vtts.pixelFormat_ = kPixelFormatRGB565BE;
-       reader->setVideoTraitsOverride(vtts);
+      vtts.pixelFormat_ = kPixelFormatRGB565BE;
+      reader->setVideoTraitsOverride(vtts);
 #endif
-     }
-     
-     if (reader->getVideoTraitsOverride(vtts))
-     {
-       const pixelFormat::Traits * ptts =
-         pixelFormat::getTraits(vtts.pixelFormat_);
-       
-       if (ptts)
-       {
-         std::cout << "yae: output format: " << ptts->name_
-                   << ", par: " << vtts.pixelAspectRatio_
-                   << ", " << vtts.visibleWidth_
-                   << " x " << vtts.visibleHeight_;
-         
-         if (vtts.pixelAspectRatio_ != 0.0)
-         {
-           std::cout << ", dar: "
-                     << (double(vtts.visibleWidth_) *
-                         vtts.pixelAspectRatio_ /
-                         double(vtts.visibleHeight_))
-                     << ", " << int(vtts.visibleWidth_ *
-                                    vtts.pixelAspectRatio_ +
-                                    0.5)
-                     << " x " << vtts.visibleHeight_;
-         }
-         
-         std::cout << ", fps: " << vtts.frameRate_
-                   << std::endl;
-       }
-       else
-       {
-         // unsupported pixel format:
-         std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-         reader->selectVideoTrack(numVideoTracks);
-       }
-     }
+    }
+    
+    if (reader->getVideoTraitsOverride(vtts))
+    {
+      const pixelFormat::Traits * ptts =
+        pixelFormat::getTraits(vtts.pixelFormat_);
+      
+      if (ptts)
+      {
+        std::cout << "yae: output format: " << ptts->name_
+                  << ", par: " << vtts.pixelAspectRatio_
+                  << ", " << vtts.visibleWidth_
+                  << " x " << vtts.visibleHeight_;
+        
+        if (vtts.pixelAspectRatio_ != 0.0)
+        {
+          std::cout << ", dar: "
+                    << (double(vtts.visibleWidth_) *
+                        vtts.pixelAspectRatio_ /
+                        double(vtts.visibleHeight_))
+                    << ", " << int(vtts.visibleWidth_ *
+                                   vtts.pixelAspectRatio_ +
+                                   0.5)
+                    << " x " << vtts.visibleHeight_;
+        }
+        
+        std::cout << ", fps: " << vtts.frameRate_
+                  << std::endl;
+      }
+      else
+      {
+        // unsupported pixel format:
+        std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+        reader->selectVideoTrack(numVideoTracks);
+      }
+    }
+    
+    if (reader->getNumberOfVideoTracks() <= videoTrackIndex)
+    {
+      if (actionShowPlaylist->isEnabled())
+      {
+        playlistDockWasHidden_ = playlistDock_->isHidden();
+        
+        playlistDock_->hide();
+        shortcutShowPlaylist_->setEnabled(false);
+        actionShowPlaylist->setEnabled(false);
+        
+        swapLayouts(canvasContainer_, playlistContainer_);
+        playlistWidget_->update();
+      }
+    }
+    else
+    {
+      if (!actionShowPlaylist->isEnabled())
+      {
+        swapLayouts(canvasContainer_, playlistContainer_);
+        shortcutShowPlaylist_->setEnabled(true);
+        actionShowPlaylist->setEnabled(true);
+        
+        if (!playlistDockWasHidden_)
+        {
+          playlistDock_->show();
+          playlistWidget_->update();
+        }
+      }
+    }
   }
   
   //----------------------------------------------------------------

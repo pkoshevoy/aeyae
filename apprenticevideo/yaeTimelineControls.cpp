@@ -23,7 +23,7 @@
 #include <QTime>
 
 // yae includes:
-#include <yaePlaybackControls.h>
+#include <yaeTimelineControls.h>
 
 
 namespace yae
@@ -699,21 +699,5 @@ namespace yae
     yOriginPlayhead = height() - lineWidth_ - padding_;
     unitLength = width() - (padding_ * 2 + clockWidth_) * 2;
   }
-  
-  
-  //----------------------------------------------------------------
-  // PlaybackControls::PlaybackControls
-  // 
-  PlaybackControls::PlaybackControls(QWidget * parent, Qt::WindowFlags f):
-    QWidget(parent, f)
-  {
-    QVBoxLayout * layout = new QVBoxLayout(this);
-  }
-  
-  //----------------------------------------------------------------
-  // PlaybackControls::~PlaybackControls
-  // 
-  PlaybackControls::~PlaybackControls()
-  {}
   
 }

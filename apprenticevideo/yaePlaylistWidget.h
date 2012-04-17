@@ -104,6 +104,11 @@ namespace yae
   public:
     PlaylistWidget(QWidget * parent = NULL, Qt::WindowFlags f = 0);
     
+    // virtual:
+    QSize minimumSizeHint() const;
+    QSize sizeHint() const;
+    
+    // use this to add items to the playlist:
     void setPlaylist(const std::list<QString> & playlist);
     
     // return index of the current item:
@@ -222,8 +227,11 @@ namespace yae
     // total number of items:
     std::size_t numItems_;
     
-    // non-excluded number of items:
+    // number of non-excluded items:
     std::size_t numShown_;
+    
+    // number of non-excluded item groups:
+    std::size_t numShownGroups_;
     
     // current item index:
     std::size_t current_;

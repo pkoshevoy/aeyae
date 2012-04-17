@@ -139,7 +139,7 @@ find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GL
 set(project_moc_hxx 
   yaeCanvas.h
   yaeMainWindow.h
-  yaePlaybackControls.h
+  yaeTimelineControls.h
   yaePlaylistWidget.h
   yaeLineEdit.h
   )
@@ -171,8 +171,8 @@ set(project_sources
   yaePixelFormatFFMPEG.cpp
   yaePixelFormatTraits.h
   yaePixelFormatTraits.cpp
-  yaePlaybackControls.h
-  yaePlaybackControls.cpp
+  yaeTimelineControls.h
+  yaeTimelineControls.cpp
   yaePlaylistWidget.h
   yaePlaylistWidget.cpp
   yaeQueue.h

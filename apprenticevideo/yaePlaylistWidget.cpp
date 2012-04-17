@@ -318,10 +318,42 @@ namespace yae
     mouseState_(PlaylistWidget::kNotReady),
     rubberBand_(QRubberBand::Rectangle, this),
     numItems_(0),
+    numShown_(0),
+    numShownGroups_(0),
     current_(0),
     highlighted_(0)
   {
     setPlaylist(std::list<QString>());
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::minimumSizeHint
+  // 
+  QSize
+  PlaylistWidget::minimumSizeHint() const
+  {
+    int w = minimumWidth();
+    int h = kGroupNameHeight;
+    
+    if (numShown_)
+    {
+      h += kGroupNameHeight + kGroupItemHeight;
+    }
+    
+    return QSize(w, h);
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::sizeHint
+  // 
+  QSize
+  PlaylistWidget::sizeHint() const
+  {
+    int w = minimumWidth();
+    int h = (kGroupNameHeight * numShownGroups_ +
+             kGroupItemHeight * numShown_);
+    
+    return QSize(w, h);
   }
   
   //----------------------------------------------------------------
@@ -1094,8 +1126,10 @@ namespace yae
     bool enter = (key == Qt::Key_Enter || key == Qt::Key_Return);
     
     int mod = e->modifiers();
+    bool modAlt   = mod & Qt::AltModifier;
+    bool modCtrl  = mod & Qt::ControlModifier;
     bool modShift = mod & Qt::ShiftModifier;
-    bool modNone  = !modShift;
+    bool modNone  = !modShift && !modCtrl && !modAlt;
     
     if (modNone)
     {
@@ -1344,13 +1378,21 @@ namespace yae
     std::size_t y = 0;
     
     numShown_ = 0;
+    numShownGroups_ = 0;
+    
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
       PlaylistGroup & group = *i;
       group.offset_ = offset;
       
-      int headerHeight = group.excluded_ ? 0 : kGroupNameHeight;
+      int headerHeight = 0;
+      if (!group.excluded_)
+      {
+        headerHeight = kGroupNameHeight;
+        numShownGroups_++;
+      }
+      
       group.bbox_.setX(0);
       group.bbox_.setY(y);
       group.bbox_.setWidth(width);
