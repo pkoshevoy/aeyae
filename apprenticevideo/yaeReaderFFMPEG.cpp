@@ -353,15 +353,17 @@ namespace yae
       codec_ = NULL;
       return false;
     }
-    
+#if 0
     if (stream_->duration == int64_t(AV_NOPTS_VALUE) &&
-        context_->duration == int64_t(AV_NOPTS_VALUE))
+        !stream_->codec->bit_rate &&
+        context_->duration == int64_t(AV_NOPTS_VALUE) &&
+        !context_->bit_rate)
     {
       // unknown duration:
       close();
       return false;
     }
-
+#endif
     stream_->codec->opaque = this;
     stream_->codec->get_buffer = &callbackGetBuffer;
     stream_->codec->reget_buffer = &callbackRegetBuffer;
@@ -436,7 +438,26 @@ namespace yae
       return;
     }
     
-    if (context_ && stream_->duration == int64_t(AV_NOPTS_VALUE))
+    if (stream_->duration != int64_t(AV_NOPTS_VALUE))
+    {
+      // return track duration:
+      start.base_ = stream_->time_base.den;
+      start.time_ =
+        stream_->start_time != int64_t(AV_NOPTS_VALUE) ?
+        stream_->time_base.num * stream_->start_time : 0;
+      
+      duration.time_ = stream_->time_base.num * stream_->duration;
+      duration.base_ = stream_->time_base.den;
+      return;
+    }
+    
+    if (!context_)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+    
+    if (context_->duration != int64_t(AV_NOPTS_VALUE))
     {
       // track duration is unknown, return movie duration instead:
       start.base_ = AV_TIME_BASE;
@@ -446,18 +467,40 @@ namespace yae
       
       duration.time_ = context_->duration;
       duration.base_ = AV_TIME_BASE;
+      return;
+    }
+
+    int64_t fileBits = avio_size(context_->pb) * 8;
+    start.base_ = AV_TIME_BASE;
+    start.time_ = 0;
+    
+    if (context_->bit_rate)
+    {
+      double t =
+        double(fileBits / context_->bit_rate) +
+        double(fileBits % context_->bit_rate) /
+        double(context_->bit_rate);
       
+      duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
+      duration.base_ = AV_TIME_BASE;
       return;
     }
     
-    // return track duration:
-    start.base_ = stream_->time_base.den;
-    start.time_ =
-      stream_->start_time != int64_t(AV_NOPTS_VALUE) ?
-      stream_->time_base.num * stream_->start_time : 0;
-    
-    duration.time_ = stream_->time_base.num * stream_->duration;
-    duration.base_ = stream_->time_base.den;
+    if (stream_->codec->bit_rate)
+    {
+      double t =
+        double(fileBits / stream_->codec->bit_rate) +
+        double(fileBits % stream_->codec->bit_rate) /
+        double(stream_->codec->bit_rate);
+      
+      duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
+      duration.base_ = AV_TIME_BASE;
+      return;
+    }
+
+    // unknown duration:
+    duration.time_ = std::numeric_limits<int64>::max() >> 1;
+    duration.base_ = AV_TIME_BASE;
   }
   
   //----------------------------------------------------------------
