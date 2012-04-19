@@ -170,7 +170,6 @@ namespace yae
     
     setupUi(this);
     setAcceptDrops(true);
-    setFocusPolicy(Qt::StrongFocus);
 
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
@@ -496,7 +495,7 @@ namespace yae
     YAE_ASSERT(ok);
     
     // hide the playlist:
-    playlistDock_->hide();
+    // playlistDock_->hide();
   }
   
   //----------------------------------------------------------------
@@ -1728,7 +1727,13 @@ namespace yae
   void
   MainWindow::focusChanged(QWidget * prev, QWidget * curr)
   {
-    std::cerr << "focus changed: " << prev << " -> " << curr << std::endl;
+    std::cerr << "focus changed: " << prev << " -> " << curr;
+    if (curr)
+    {
+      std::cerr << ", " << curr->objectName().toUtf8().constData()
+                << " (" << curr->metaObject()->className() << ")";
+    }
+    std::cerr << std::endl;
 #ifdef __APPLE__
     if (!appleRemoteControl_ && curr)
     {

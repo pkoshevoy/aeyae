@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -160,7 +160,7 @@
            </size>
           </property>
           <property name="focusPolicy">
-           <enum>Qt::ClickFocus</enum>
+           <enum>Qt::StrongFocus</enum>
           </property>
           <property name="styleSheet">
            <string notr="true">QLineEdit	{
@@ -198,9 +198,12 @@ QLineEdit QToolButton#clear_:pressed {
        </property>
        <property name="minimumSize">
         <size>
-         <width>128</width>
+         <width>250</width>
          <height>0</height>
         </size>
+       </property>
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
        </property>
        <property name="styleSheet">
         <string notr="true">#playlistWidget_ {

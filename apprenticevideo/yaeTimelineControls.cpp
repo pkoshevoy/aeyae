@@ -137,7 +137,7 @@ namespace yae
     setFixedHeight(padding_ * 2 + lineWidth_);
     setMinimumWidth((clockWidth_ + padding_ * 2) * 2 + 64);
     setAutoFillBackground(true);
-    setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::ClickFocus);
     setMouseTracking(true);
 
     QPalette pal = palette();

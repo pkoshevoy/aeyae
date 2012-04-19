@@ -1113,6 +1113,7 @@ namespace yae
   void
   PlaylistWidget::keyPressEvent(QKeyEvent * e)
   {
+    e->ignore();
     int key = e->key();
     
     bool stepUp = (key == Qt::Key_Up);
@@ -1343,7 +1344,8 @@ namespace yae
       
       e->accept();
     }
-    else
+    
+    if (!e->isAccepted())
     {
       QAbstractScrollArea::keyPressEvent(e);
     }
