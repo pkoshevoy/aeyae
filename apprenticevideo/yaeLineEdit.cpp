@@ -32,6 +32,7 @@ namespace yae
     clear_->setIconSize(pixmap.size());
     clear_->setCursor(Qt::ArrowCursor);
     clear_->setMinimumSize(QSize(11, 11));
+    clear_->setFocusPolicy(Qt::NoFocus);
     clear_->hide();
     
     int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
