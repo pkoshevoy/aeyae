@@ -617,7 +617,11 @@ namespace yae
       << QString::fromUtf8("spfx")
       << QString::fromUtf8("iso")
       << QString::fromUtf8("dmg")
-      << QString::fromUtf8("svq");
+      << QString::fromUtf8("svq")
+      << QString::fromUtf8("itdb")
+      << QString::fromUtf8("itl")
+      << QString::fromUtf8("itc")
+      << QString::fromUtf8("ipa");
     
     return ext;
   }
