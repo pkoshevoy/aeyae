@@ -465,7 +465,7 @@ namespace yae
     {
       groups_.push_back(PlaylistGroup());
       PlaylistGroup & group = groups_.back();
-      group.name_ = tr("END OF PLAYLIST");
+      group.name_ = tr("end of playlist");
       group.offset_ = numItems_;
     }
     
@@ -1495,7 +1495,24 @@ namespace yae
     
     return *brush;
   }
-
+  
+  //----------------------------------------------------------------
+  // legibleTextColorForGivenBackground
+  // 
+  static QColor
+  legibleTextColorForGivenBackground(const QColor & bg)
+  {
+    qreal h, s, v;
+    bg.getHsvF(&h, &s, &v);
+    
+    qreal t = (1 - s) * v;
+    v = t < 0.9 ? 1 : 0;
+    
+    QColor fg;
+    fg.setHsvF(h, 0, v);
+    return fg;
+  }
+  
   //----------------------------------------------------------------
   // PlaylistWidget::draw
   // 
@@ -1517,10 +1534,13 @@ namespace yae
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
     
-    painter.setFont(textFont);
+    QFont smallFont = textFont;
+    smallFont.setPixelSize(9);
     
     QFont tinyFont = textFont;
     tinyFont.setPixelSize(7);
+    
+    painter.setFont(textFont);
     
     std::size_t index = 0;
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
@@ -1596,7 +1616,7 @@ namespace yae
         else
         {
           QRect bx = bbox.adjusted(2, 1, -2, -1);
-          painter.setFont(tinyFont);
+          painter.setFont(smallFont);
           
           if (group.offset_ == highlighted_ && numItems_)
           {
@@ -1608,7 +1628,7 @@ namespace yae
           }
           
           QString text =
-            (numShown_ == 1 ? tr("%1 ITEM,  %2") : tr("%1 ITEMS,  %2")).
+            (numShown_ == 1 ? tr("%1 item,  %2") : tr("%1 items,  %2")).
             arg(numShown_).
             arg(group.name_);
           
@@ -1696,7 +1716,7 @@ namespace yae
           painter.setPen(Qt::NoPen);
           painter.drawRoundedRect(bx, radius, radius);
           
-          painter.setPen(Qt::white);
+          painter.setPen(legibleTextColorForGivenBackground(selectedColorBg));
           drawTextToFit(painter,
                         bx,
                         Qt::AlignVCenter | Qt::AlignCenter,
