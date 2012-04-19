@@ -170,7 +170,9 @@ namespace yae
     
     setupUi(this);
     setAcceptDrops(true);
-
+    setFocusPolicy(Qt::StrongFocus);
+    setFocusProxy(playlistWidget_);
+    
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
     this->setWindowIcon(QIcon(fnIcon));
@@ -2356,12 +2358,14 @@ namespace yae
       if (actionShowPlaylist->isEnabled())
       {
         playlistDockWasHidden_ = playlistDock_->isHidden();
-        
         playlistDock_->hide();
+        
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
         
         swapLayouts(canvasContainer_, playlistContainer_);
+        
+        playlistWidget_->setFocus();
         playlistWidget_->update();
       }
     }
@@ -2370,6 +2374,7 @@ namespace yae
       if (!actionShowPlaylist->isEnabled())
       {
         swapLayouts(canvasContainer_, playlistContainer_);
+        
         shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
         
@@ -2378,6 +2383,8 @@ namespace yae
           playlistDock_->show();
           playlistWidget_->update();
         }
+        
+        this->setFocus();
       }
     }
   }
