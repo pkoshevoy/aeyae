@@ -486,7 +486,7 @@ namespace yae
       return;
     }
     
-    if (stream_->codec->bit_rate)
+    if (stream_->codec->bit_rate && context_->nb_streams == 1)
     {
       double t =
         double(fileBits / stream_->codec->bit_rate) +
