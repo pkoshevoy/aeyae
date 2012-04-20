@@ -495,9 +495,6 @@ namespace yae
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
-    
-    // hide the playlist:
-    // playlistDock_->hide();
   }
   
   //----------------------------------------------------------------
@@ -1253,12 +1250,12 @@ namespace yae
     if (playlistDock_->isVisible())
     {
       actionShowPlaylist->setChecked(false);
-      playlistDock_->hide();
+      removeDockWidget(playlistDock_);
     }
     else
     {
       actionShowPlaylist->setChecked(true);
-      playlistDock_->show();
+      restoreDockWidget(playlistDock_);
     }
   }
   
@@ -1664,7 +1661,7 @@ namespace yae
       return;
     }
     
-    bool ok = reader_->seek(seconds);
+    reader_->seek(seconds);
     
     if (playbackPaused_)
     {
@@ -2361,16 +2358,19 @@ namespace yae
     {
       if (actionShowPlaylist->isEnabled())
       {
-        playlistDockWasHidden_ = playlistDock_->isHidden();
-        playlistDock_->hide();
+        if (actionShowPlaylist->isChecked())
+        {
+          removeDockWidget(playlistDock_);
+        }
         
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
         
         swapLayouts(canvasContainer_, playlistContainer_);
         
-        playlistWidget_->setFocus();
+        playlistWidget_->show();
         playlistWidget_->update();
+        playlistWidget_->setFocus();
       }
     }
     else
@@ -2379,16 +2379,17 @@ namespace yae
       {
         swapLayouts(canvasContainer_, playlistContainer_);
         
-        shortcutShowPlaylist_->setEnabled(true);
-        actionShowPlaylist->setEnabled(true);
-        
-        if (!playlistDockWasHidden_)
+        if (actionShowPlaylist->isChecked())
         {
-          playlistDock_->show();
-          playlistWidget_->update();
+          restoreDockWidget(playlistDock_);
         }
         
+        playlistWidget_->show();
+        playlistWidget_->update();
         this->setFocus();
+        
+        shortcutShowPlaylist_->setEnabled(true);
+        actionShowPlaylist->setEnabled(true);
       }
     }
   }

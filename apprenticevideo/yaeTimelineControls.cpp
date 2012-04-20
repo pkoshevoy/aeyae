@@ -109,7 +109,8 @@ namespace yae
     QWidget(parent, f),
     reader_(NULL),
     timelineStart_(0.0),
-    timelineDuration_(1.0)
+    timelineDuration_(1.0),
+    repaintTimer_(this)
   {
     padding_ = 16;
     lineWidth_ = 3;
@@ -167,6 +168,14 @@ namespace yae
     
     // current state of playback controls:
     currentState_ = TimelineControls::kIdle;
+    
+    // this is to avoid too much repainting:
+    repaintTimer_.setSingleShot(true);
+    repaintTimer_.setInterval(100);
+    
+    bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
+                      this, SLOT(repaintTimerExpired()));
+    YAE_ASSERT(ok);
   }
   
   //----------------------------------------------------------------
@@ -414,6 +423,37 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // TimelineControls::requestRepaint
+  // 
+  void
+  TimelineControls::requestRepaint()
+  {
+    if (!repaintTimer_.isActive())
+    {
+      repaintTimer_.start();
+      repaintTimerStartTime_.start();
+    }
+    else if (repaintTimerStartTime_.elapsed() > 500)
+    {
+      // this shouldn't happen, but for some reason it does on the Mac,
+      // sometimes the timer remains active but the timeout signal is
+      // never delivered; this is a workaround:
+      std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
+      repaintTimer_.stop();
+      repaint();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::repaintTimerExpired
+  // 
+  void
+  TimelineControls::repaintTimerExpired()
+  {
+    update();
+  }
+  
+  //----------------------------------------------------------------
   // TimelineControls::event
   // 
   bool
@@ -435,7 +475,7 @@ namespace yae
         t -= timelineStart_;
         markerPlayhead_.position_ = t / timelineDuration_;
         
-        update();
+        requestRepaint();
         return true;
       }
 

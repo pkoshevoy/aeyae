@@ -17,6 +17,8 @@
 #include <QUrl>
 #include <QImage>
 #include <QEvent>
+#include <QTimer>
+#include <QTime>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -113,6 +115,10 @@ namespace yae
     void setOutPoint();
     void seekFromCurrentTime(double offsetSeconds);
     void seekTo(double absoluteSeconds);
+    void requestRepaint();
+
+  protected slots:
+    void repaintTimerExpired();
     
   protected:
     // virtual:
@@ -221,6 +227,10 @@ namespace yae
     
     // playback duration in seconds:
     double timelineDuration_;
+    
+    // repaint buffering:
+    QTimer repaintTimer_;
+    QTime repaintTimerStartTime_;
   };
 }
 

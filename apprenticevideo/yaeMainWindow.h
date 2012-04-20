@@ -232,10 +232,6 @@ namespace yae
     
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
-    
-    // this flag is used to restore playlist dock visibility
-    // when switching between canvas and playlist view:
-    bool playlistDockWasHidden_;
   };
 }
 
