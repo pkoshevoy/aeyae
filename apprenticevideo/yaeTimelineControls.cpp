@@ -428,6 +428,11 @@ namespace yae
   void
   TimelineControls::requestRepaint()
   {
+    if (isHidden())
+    {
+      return;
+    }
+    
     if (!repaintTimer_.isActive())
     {
       repaintTimer_.start();
