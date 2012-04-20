@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.0)
 project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
 
+include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
+
 find_package(OpenGL REQUIRED)
 
 set(Boost_USE_MULTITHREAD ON)
@@ -233,25 +235,15 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
 
-execute_process(COMMAND "${CMAKE_COMMAND}"
-  -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
-  -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
-  -DPROGNAME="${PROGNAME}"
-  -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
-
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)
-  execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES} 
     "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 endif (WIN32)
 
 if (APPLE)
-  execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
-	"${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES} 
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
