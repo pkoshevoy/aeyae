@@ -1,6 +1,9 @@
 project(yamka)
 
 cmake_minimum_required(VERSION 2.8.0)
+
+include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
+
 include_directories(AFTER 
   .
   ${PROJECT_BINARY_DIR}
@@ -16,8 +19,6 @@ if (WIN32)
   add_definitions(-DNOMINMAX)
 endif (WIN32)
 
-execute_process(COMMAND "${CMAKE_COMMAND}" -E touch 
-  "${PROJECT_BINARY_DIR}/yamkaVersion.h")
 set (YAMKA_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yamkaVersion.h")
 
 add_custom_target("update revision" ALL
