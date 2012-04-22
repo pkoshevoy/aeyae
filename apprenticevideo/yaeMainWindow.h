@@ -206,9 +206,8 @@ namespace yae
     IReader * reader_;
     
     // frame canvas:
-    QWidget * canvasContainer_;
     Canvas * canvas_;
-
+    
     // audio device:
     std::string audioDevice_;
     
@@ -221,9 +220,6 @@ namespace yae
     // a flag indicating whether playback is paused:
     bool playbackPaused_;
     bool playbackInterrupted_;
-    
-    // playback controls:
-    TimelineControls * timelineControls_;
     
     // scroll-wheel timer:
     QTimer scrollWheelTimer_;

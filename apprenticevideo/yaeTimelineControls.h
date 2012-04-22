@@ -17,6 +17,7 @@
 #include <QUrl>
 #include <QImage>
 #include <QEvent>
+#include <QLineEdit>
 #include <QTimer>
 #include <QTime>
 
@@ -73,7 +74,16 @@ namespace yae
   public:
     TimelineControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
     ~TimelineControls();
-
+    
+    // optional widgets used to display (or edit) playhead
+    // position and total duration:
+    void setAuxWidgets(QLineEdit * playhead,
+                       QLineEdit * duration,
+                       
+                       // after user enters new playhead position
+                       // focus will be given to this widget:
+                       QWidget * focusWidget);
+    
     // NOTE: this instance of TimelineControls will register itself
     // as an observer of the given shared clock; it will unregister
     // itself as the observer of previous shared clock.
@@ -115,6 +125,8 @@ namespace yae
     void setOutPoint();
     void seekFromCurrentTime(double offsetSeconds);
     void seekTo(double absoluteSeconds);
+    void seekTo(const QString & HhMmSsFf);
+    void seekToAuxPlayhead();
     void requestRepaint();
 
   protected slots:
@@ -129,7 +141,7 @@ namespace yae
     void mouseMoveEvent(QMouseEvent * e);
     void mouseDoubleClickEvent(QMouseEvent * e);
     void keyPressEvent(QKeyEvent * e);
-
+    
     // accessors to coordinate system origin and x-axis unit length
     // on which the direct manipulation handles are drawn,
     // expressed in widget coordinate space:
@@ -137,6 +149,9 @@ namespace yae
                        int & yOriginInOut,
                        int & yOriginPlayhead,
                        int & unitLength) const;
+    
+    void updateAuxPlayhead(double position);
+    void updateAuxDuration(double duration);
     
     //----------------------------------------------------------------
     // ClockStoppedEvent
@@ -207,14 +222,7 @@ namespace yae
     
     // timeline line width in pixels:
     int lineWidth_;
-
-    // font used to render the position/duration clock:
-    QString clockPosition_;
-    QString clockEnd_;
     
-    // width of the text field used for the position/duration clock:
-    int clockWidth_;
-
     // a clock used to synchronize playback renderers,
     // used for playhead position:
     SharedClock sharedClock_;
@@ -227,6 +235,18 @@ namespace yae
     
     // playback duration in seconds:
     double timelineDuration_;
+    
+    // frame rate:
+    double frameRate_;
+    
+    // text widgets for displaying (or editing) playhead position
+    // and displaying total duration:
+    QLineEdit * auxPlayhead_;
+    QLineEdit * auxDuration_;
+    
+    // after user enters new playhead position (via auxPlayead_)
+    // focus will be given to this widget:
+    QWidget * auxFocusWidget_;
     
     // repaint buffering:
     QTimer repaintTimer_;

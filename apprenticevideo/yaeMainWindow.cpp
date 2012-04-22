@@ -155,7 +155,6 @@ namespace yae
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
     reader_(NULL),
-    canvasContainer_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
@@ -178,39 +177,28 @@ namespace yae
     this->setWindowIcon(QIcon(fnIcon));
 #endif
     
-    // request vsync if available:
-    QGLFormat contextFormat;
-    contextFormat.setSwapInterval(1);
-  
-    canvas_ = new Canvas(contextFormat);
+    timelineControls_->setAuxWidgets(lineEditPlayhead_,
+                                     lineEditDuration_,
+                                     this);
     
-    canvasContainer_ = new QWidget();
-    // canvasContainer_->setSizePolicy(QSizePolicy::Preferred,
-    //                                 QSizePolicy::Preferred);
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
+    
+    // request vsync if available:
+    QGLFormat contextFormat;
+    contextFormat.setSwapInterval(1);
+    
+    canvas_ = new Canvas(contextFormat);
     canvasLayout->addWidget(canvas_);
     
     reader_ = ReaderFFMPEG::create();
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
     
-    delete centralwidget->layout();
-    QVBoxLayout * centralLayout = new QVBoxLayout(centralwidget);
-    centralLayout->setMargin(0);
-    centralLayout->setSpacing(0);
-    centralLayout->addWidget(canvasContainer_);
-    
-    timelineControls_ = new TimelineControls(this);
-    centralLayout->addWidget(timelineControls_);
-    timelineControls_->setSizePolicy(QSizePolicy::Preferred,
-                                     QSizePolicy::Fixed);
-    
     // hide the timeline:
     actionShowTimeline->setChecked(false);
-    timelineControls_->hide();
-    scrollWheelTimer_.setSingleShot(true);
+    timelineWidgets_->hide();
     
     // setup the Open URL dialog:
     {
@@ -240,6 +228,10 @@ namespace yae
       openUrl_ = new OpenUrlDialog(this);
       openUrl_->lineEdit->setToolTip(supported);
     }
+    
+    // for scroll-wheel event buffering,
+    // used to avoid frequent seeking by small distances:
+    scrollWheelTimer_.setSingleShot(true);
     
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -1268,13 +1260,13 @@ namespace yae
     SignalBlocker blockSignals(actionShowTimeline);
     
     QRect mainGeom = geometry();
-    int ctrlHeight = timelineControls_->height();
+    int ctrlHeight = timelineWidgets_->height();
     bool fullScreen = this->isFullScreen();
     
-    if (timelineControls_->isVisible())
+    if (timelineWidgets_->isVisible())
     {
       actionShowTimeline->setChecked(false);
-      timelineControls_->hide();
+      timelineWidgets_->hide();
       
       if (!fullScreen)
       {
@@ -1290,7 +1282,7 @@ namespace yae
         resize(width(), mainGeom.height() + ctrlHeight);
       }
       
-      timelineControls_->show();
+      timelineWidgets_->show();
     }
   }
   
@@ -1556,10 +1548,15 @@ namespace yae
   void
   MainWindow::helpAbout()
   {
-    AboutDialog about(this);
-    about.setWindowTitle(tr("Apprentice Video (revision %1)").
-                         arg(QString::fromUtf8(YAE_REVISION)));
-    about.exec();
+    static AboutDialog * about = NULL;
+    if (!about)
+    {
+      about = new AboutDialog(this);
+      about->setWindowTitle(tr("Apprentice Video (revision %1)").
+                            arg(QString::fromUtf8(YAE_REVISION)));
+    }
+    
+    about->show();
   }
 
   //----------------------------------------------------------------

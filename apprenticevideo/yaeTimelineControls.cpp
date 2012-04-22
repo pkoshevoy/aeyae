@@ -6,8 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// std includes:
 #include <iostream>
+#include <sstream>
 
 // Qt includes:
 #include <QApplication>
@@ -30,10 +31,15 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kClockTemplate
+  // 
+  static QString kClockTemplate = QString::fromUtf8("00:00:00:00");
+  
+  //----------------------------------------------------------------
   // getTimeStamp
   // 
   static QString
-  getTimeStamp(double seconds)
+  getTimeStamp(double seconds, double frameRate)
   {
     int msec = int(seconds * 1000.0);
     int sec = msec / 1000;
@@ -45,13 +51,32 @@ namespace yae
     min %= 60;
     hour %= 24;
     
-    QString ts =
-      QTime(hour, min, sec, msec).
-      toString(QString::fromUtf8("HH:mm:ss.zzz"));
+    uint64 frames = uint64(seconds * frameRate );
+    uint64 frameNo = frames - uint64(frameRate * floor(seconds));
     
-    return ts;
-  }
+    std::ostringstream os;
+    os << std::setw(2) << std::setfill('0') << hour << ':'
+       << std::setw(2) << std::setfill('0') << min << ':'
+       << std::setw(2) << std::setfill('0') << sec << ':'
+       << std::setw(2) << std::setfill('0') << frameNo;
 
+    // crop the leading zeros:
+    std::string str(os.str().c_str());
+    const char * text = str.c_str();
+    
+    while (*text)
+    {
+      if (*text != '0' && *text != ':')
+      {
+        break;
+      }
+      
+      ++text;
+    }
+    
+    return QString::fromUtf8(text);
+  }
+  
   //----------------------------------------------------------------
   // Marker::Marker
   // 
@@ -109,34 +134,18 @@ namespace yae
     QWidget(parent, f),
     reader_(NULL),
     timelineStart_(0.0),
-    timelineDuration_(1.0),
+    timelineDuration_(0.0),
+    frameRate_(23.976),
+    auxPlayhead_(NULL),
+    auxDuration_(NULL),
+    auxFocusWidget_(NULL),
     repaintTimer_(this)
   {
-    padding_ = 16;
+    padding_ = 8;
     lineWidth_ = 3;
-
-#if 1
-    QFont clockFont;
-    clockFont.setFamily(QString::fromUtf8("helvetica"));
-    clockFont.setBold(true);
-    clockFont.setPixelSize(11);
-    clockFont.setStyle(QFont::StyleNormal);
-    clockFont.setStyleHint(QFont::Courier);
-    clockFont.setStyleStrategy(QFont::PreferDefault);
-    clockFont.setWeight(QFont::Normal);
-    setFont(clockFont);
-#else
-    clockFont = font();
-#endif
-
-    QString clockTemplate = QString::fromUtf8("00:00:00.000");
-    clockWidth_ = QFontMetrics(clockFont).boundingRect(clockTemplate).width();
-    
-    clockPosition_ = getTimeStamp(timelineStart_);
-    clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
     
     setFixedHeight(padding_ * 2 + lineWidth_);
-    setMinimumWidth((clockWidth_ + padding_ * 2) * 2 + 64);
+    setMinimumWidth(padding_ * 2 + 64);
     setAutoFillBackground(true);
     setFocusPolicy(Qt::ClickFocus);
     setMouseTracking(true);
@@ -183,6 +192,67 @@ namespace yae
   // 
   TimelineControls::~TimelineControls()
   {}
+  
+  //----------------------------------------------------------------
+  // TimelineControls::setAuxWidgets
+  // 
+  void
+  TimelineControls::setAuxWidgets(QLineEdit * playhead,
+                                  QLineEdit * duration,
+                                  QWidget * focusWidget)
+  {
+    auxFocusWidget_ = focusWidget;
+    
+    if (auxPlayhead_)
+    {
+      auxPlayhead_->disconnect();
+    }
+    
+    if (auxDuration_)
+    {
+      auxDuration_->disconnect();
+    }
+    
+    auxPlayhead_ = playhead;
+    auxDuration_ = duration;
+    
+    QFont clockFont = font();
+    clockFont.setBold(true);
+    clockFont.setPixelSize(11);
+    clockFont.setStyle(QFont::StyleNormal);
+    clockFont.setStyleHint(QFont::Monospace);
+    clockFont.setStyleStrategy(QFont::PreferDefault);
+    clockFont.setWeight(QFont::Normal);
+    
+    QFontMetrics fm(clockFont);
+    QSize bbox = fm.size(Qt::TextSingleLine, kClockTemplate);
+    bbox += QSize(4, 8);
+    
+    bool ok = true;
+    
+    if (auxPlayhead_)
+    {
+      auxPlayhead_->setFont(clockFont);
+      auxPlayhead_->setMinimumSize(bbox);
+      auxPlayhead_->setMaximumSize(bbox);
+      auxPlayhead_->setEnabled(timelineDuration_);
+      
+      ok = connect(auxPlayhead_, SIGNAL(returnPressed()),
+                   this, SLOT(seekToAuxPlayhead()));
+      YAE_ASSERT(ok);
+    }
+    
+    if (auxDuration_)
+    {
+      auxDuration_->setFont(clockFont);
+      auxDuration_->setMinimumSize(bbox);
+      auxDuration_->setMaximumSize(bbox);
+      auxDuration_->setEnabled(timelineDuration_);
+    }
+
+    updateAuxPlayhead(timelineStart_);
+    updateAuxDuration(timelineStart_ + timelineDuration_);
+  }
   
   //----------------------------------------------------------------
   // TimelineControls::timelineStart
@@ -285,11 +355,27 @@ namespace yae
       reader->getVideoDuration(start, duration);
     }
     
+    VideoTraits videoTraits;
+    if (reader->getVideoTraits(videoTraits))
+    {
+      frameRate_ = videoTraits.frameRate_;
+    }
+    
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
     
-    clockPosition_ = getTimeStamp(timelineStart_);
-    clockEnd_ = getTimeStamp(timelineStart_ + timelineDuration_);
+    if (auxPlayhead_)
+    {
+      auxPlayhead_->setEnabled(timelineDuration_);
+    }
+    
+    if (auxDuration_)
+    {
+      auxDuration_->setEnabled(timelineDuration_);
+    }
+    
+    updateAuxPlayhead(timelineStart_);
+    updateAuxDuration(timelineStart_ + timelineDuration_);
     
     markerPlayhead_.position_ = 0.0;
     markerPlayhead_.setAnchor();
@@ -321,6 +407,12 @@ namespace yae
       reader->getVideoDuration(start, duration);
     }
     
+    VideoTraits videoTraits;
+    if (reader->getVideoTraits(videoTraits))
+    {
+      frameRate_ = videoTraits.frameRate_;
+    }
+    
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
     
@@ -333,8 +425,18 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
     
-    clockPosition_ = getTimeStamp(t);
-    clockEnd_ = getTimeStamp(T1);
+    if (auxPlayhead_)
+    {
+      auxPlayhead_->setEnabled(timelineDuration_);
+    }
+    
+    if (auxDuration_)
+    {
+      auxDuration_->setEnabled(timelineDuration_);
+    }
+    
+    updateAuxPlayhead(t);
+    updateAuxDuration(T1);
     
     markerPlayhead_.position_ = (t - T0) / dT;
     markerPlayhead_.setAnchor();
@@ -415,11 +517,106 @@ namespace yae
     
     markerPlayhead_.position_ = t;
     seconds = t * timelineDuration_ + timelineStart_;
-    clockPosition_ = getTimeStamp(seconds);
+    updateAuxPlayhead(seconds);
     
     emit movePlayHead(seconds);
     
     update();
+  }
+  
+  //----------------------------------------------------------------
+  // parseTimeCode
+  // 
+  // NOTE: returns the number of fields parsed
+  // 
+  static unsigned int
+  parseTimeCode(QString timecode,
+                int & hh,
+                int & mm,
+                int & ss,
+                int & ff)
+  {
+    // parse the timecode right to left 'ff' 1st, 'ss' 2nd, 'mm' 3rd, 'hh' 4th:
+    unsigned int parsed = 0;
+    
+    // default separator:
+    const char separator = ':';
+    
+    // convert white-space to default separator:
+    timecode = timecode.simplified();
+    timecode.replace(' ', separator);
+    
+    QStringList	hh_mm_ss_ff = timecode.split(':', QString::SkipEmptyParts);
+    int nc = hh_mm_ss_ff.size();
+    
+    if (!nc)
+    {
+      return 0;
+    }
+    
+    // the right-most token is a frame number:
+    QString last = hh_mm_ss_ff.back();
+    hh_mm_ss_ff.pop_back();
+    ff = last.toInt();
+    parsed++;
+    
+    int hhmmss[3];
+    hhmmss[0] = 0;
+    hhmmss[1] = 0;
+    hhmmss[2] = 0;
+    
+    for (int i = 0; i < 3 && !hh_mm_ss_ff.empty(); i++)
+    {
+      QString t = hh_mm_ss_ff.back();
+      hh_mm_ss_ff.pop_back();
+      
+      hhmmss[2 - i] = t.toInt();
+      parsed++;
+    }
+    
+    hh = hhmmss[0];
+    mm = hhmmss[1];
+    ss = hhmmss[2];
+    
+    return parsed;
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::seekTo
+  // 
+  void
+  TimelineControls::seekTo(const QString & hhmmssff)
+  {
+    int hh = 0;
+    int mm = 0;
+    int ss = 0;
+    int ff = 0;
+    
+    unsigned int parsed = parseTimeCode(hhmmssff, hh, mm, ss, ff);
+    if (!parsed)
+    {
+      return;
+    }
+    
+    double seconds = ss + 60.0 * (mm + 60.0 * hh);
+    double msec = double(ff) / frameRate_;
+    
+    seekTo(seconds + msec);
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::seekToAuxPlayhead
+  // 
+  void
+  TimelineControls::seekToAuxPlayhead()
+  {
+    QString hhmmssff = auxPlayhead_->text();
+    seekTo(hhmmssff);
+    
+    if (auxFocusWidget_)
+    {
+      auxFocusWidget_->setFocus();
+    }
   }
   
   //----------------------------------------------------------------
@@ -475,7 +672,7 @@ namespace yae
         timeChangedEvent->payload_.get(currentTime);
         
         double t = currentTime.toSeconds();
-        clockPosition_ = getTimeStamp(t);
+        updateAuxPlayhead(t);
         
         t -= timelineStart_;
         markerPlayhead_.position_ = t / timelineDuration_;
@@ -504,6 +701,7 @@ namespace yae
   {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(Qt::NoPen);
     
     int xOrigin = 0;
     int yOriginInOut = 0;
@@ -511,11 +709,19 @@ namespace yae
     int unitLength = 0;
     getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
     
+    if (!timelineDuration_)
+    {
+      p.setBrush(QColor(0x40, 0x40, 0x40));
+      p.drawRect(xOrigin,
+                 yOriginPlayhead,
+                 unitLength,
+                 lineWidth_);
+      return;
+    }
+    
     int inExt = int(0.5 + double(unitLength) * markerTimeIn_.position_);
     int outExt = int(0.5 + double(unitLength) * markerTimeOut_.position_);
     int playExt = int(0.5 + double(unitLength) * markerPlayhead_.position_);
-    
-    p.setPen(Qt::NoPen);
     
     p.setBrush(QColor(0x80, 0x80, 0x80));
     p.drawRect(xOrigin,
@@ -528,16 +734,12 @@ namespace yae
                yOriginPlayhead,
                outExt - inExt,
                lineWidth_);
-  
+    
     p.setBrush(QColor(0x80, 0x80, 0x80));
     p.drawRect(xOrigin + outExt,
                yOriginPlayhead,
                unitLength - outExt,
                lineWidth_);
-
-    p.setPen(QPen(palette().color(QPalette::Normal, QPalette::Text)));
-    p.drawText(padding_, yOriginInOut, clockPosition_);
-    p.drawText(xOrigin + unitLength + padding_, yOriginInOut, clockEnd_);
     
     p.drawImage(xOrigin + inExt - markerTimeIn_.hotspot_[0],
                 yOriginInOut - markerTimeIn_.hotspot_[1],
@@ -558,6 +760,11 @@ namespace yae
   void
   TimelineControls::mousePressEvent(QMouseEvent * e)
   {
+    if (!timelineDuration_)
+    {
+      return;
+    }
+    
     QPoint pt = e->pos();
     
     int xOrigin = 0;
@@ -618,6 +825,11 @@ namespace yae
   void
   TimelineControls::mouseMoveEvent(QMouseEvent * e)
   {
+    if (!timelineDuration_)
+    {
+      return;
+    }
+    
     QPoint pt = e->pos();
     
     int xOrigin = 0;
@@ -632,7 +844,7 @@ namespace yae
       t = std::max(0.0, std::min(1.0, t));
       
       double seconds = t * timelineDuration_ + timelineStart_;
-      QString mousePosition = getTimeStamp(seconds);
+      QString mousePosition = getTimeStamp(seconds, frameRate_);
       setToolTip(mousePosition);
       return;
     }
@@ -680,7 +892,7 @@ namespace yae
     
     if (currentState_ == kDraggingPlayheadMarker)
     {
-      clockPosition_ = getTimeStamp(seconds);
+      updateAuxPlayhead(seconds);
       emit movePlayHead(seconds);
     }
     
@@ -739,10 +951,50 @@ namespace yae
                                   int & yOriginPlayhead,
                                   int & unitLength) const
   {
-    xOrigin = padding_ * 2 + clockWidth_;
+    xOrigin = padding_;
     yOriginInOut = height() - padding_;
     yOriginPlayhead = height() - lineWidth_ - padding_;
-    unitLength = width() - (padding_ * 2 + clockWidth_) * 2;
+    unitLength = width() - padding_ * 2;
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::updateAuxPlayhead
+  // 
+  void
+  TimelineControls::updateAuxPlayhead(double position)
+  {
+    if (auxPlayhead_)
+    {
+      if (!auxPlayhead_->isEnabled())
+      {
+        auxPlayhead_->setText(kClockTemplate);
+      }
+      else if (!auxPlayhead_->hasFocus())
+      {
+        QString ts = getTimeStamp(position, frameRate_);
+        auxPlayhead_->setText(ts);
+      }
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // TimelineControls::updateAuxDuration
+  // 
+  void
+  TimelineControls::updateAuxDuration(double duration)
+  {
+    if (auxDuration_)
+    {
+      if (!auxDuration_->isEnabled())
+      {
+        auxDuration_->setText(kClockTemplate);
+      }
+      else
+      {
+        QString ts = getTimeStamp(duration, frameRate_);
+        auxDuration_->setText(ts);
+      }
+    }
   }
   
 }
