@@ -197,9 +197,10 @@ namespace yae
     void scrollTo(std::size_t index,
                   PlaylistItem ** item = NULL);
     
+    std::size_t lookupGroupIndex(const QPoint & pt, bool findClosest = true);
     PlaylistGroup * lookupGroup(const QPoint & pt, bool findClosest = true);
-    std::size_t lookupItemIndex(PlaylistGroup * group, const QPoint & pt);
     
+    std::size_t lookupItemIndex(PlaylistGroup * group, const QPoint & pt);
     PlaylistItem * lookup(PlaylistGroup * group, const QPoint & pt);
     PlaylistItem * lookup(const QPoint & pt, PlaylistGroup ** group = NULL);
     
