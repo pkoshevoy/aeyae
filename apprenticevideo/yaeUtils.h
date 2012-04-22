@@ -102,6 +102,18 @@ namespace yae
   splitOnCamelCase(const QString & key, std::list<QString> & tokens);
   
   //----------------------------------------------------------------
+  // splitOnGroupTags
+  // 
+  extern void
+  splitOnGroupTags(const QString & key, std::list<QString> & tokens);
+  
+  //----------------------------------------------------------------
+  // splitOnSeparators
+  // 
+  extern void
+  splitOnSeparators(const QString & key, std::list<QString> & tokens);
+  
+  //----------------------------------------------------------------
   // splitIntoWords
   // 
   extern void
