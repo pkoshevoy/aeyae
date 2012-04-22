@@ -220,7 +220,11 @@ namespace yae
     clockFont.setBold(true);
     clockFont.setPixelSize(11);
     clockFont.setStyle(QFont::StyleNormal);
+#if QT_VERSION < 0x040700
+    clockFont.setStyleHint(QFont::Courier);
+#else
     clockFont.setStyleHint(QFont::Monospace);
+#endif
     clockFont.setStyleStrategy(QFont::PreferDefault);
     clockFont.setWeight(QFont::Normal);
     
