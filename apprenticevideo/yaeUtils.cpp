@@ -268,6 +268,11 @@ namespace yae
     for (std::list<QString>::const_iterator i = words.begin();
          i != words.end(); ++i)
     {
+      if (!out.isEmpty())
+      {
+        out += QChar::fromAscii(' ');
+      }
+      
       QString word = *i;
       
       // if the string is all numerical then pad it on the front so that
