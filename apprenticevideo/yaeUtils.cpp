@@ -109,7 +109,7 @@ namespace yae
   // toQString
   // 
   QString
-  toQString(const std::list<QString> & keys)
+  toQString(const std::list<QString> & keys, bool trimWhiteSpace)
   {
     QString path;
     
@@ -122,7 +122,7 @@ namespace yae
       }
       
       const QString & key = *i;
-      path += key;
+      path += trimWhiteSpace ? key.trimmed() : key;
     }
     
     return path;
@@ -221,7 +221,7 @@ namespace yae
       splitIntoWords(key, words);
     }
 
-    return toQString(words);
+    return toQString(words, true);
   }
   
   //----------------------------------------------------------------
@@ -232,7 +232,57 @@ namespace yae
   {
     std::list<QString> words;
     splitIntoWords(key, words);
-    return toQString(words);
+    return toQString(words, false);
   }
   
+  //----------------------------------------------------------------
+  // isNumeric
+  // 
+  int
+  isNumeric(const QString & key)
+  {
+    const int size = key.size();
+    for (int i = 0; i < size; i++)
+    {
+      QChar c = key[i];
+      if (!c.isNumber())
+      {
+        return 0;
+      }
+    }
+    
+    return size;
+  }
+  
+  //----------------------------------------------------------------
+  // prepareForSorting
+  // 
+  QString
+  prepareForSorting(const QString & key)
+  {
+    std::list<QString> words;
+    splitIntoWords(key, words);
+    
+    QString out;
+    
+    for (std::list<QString>::const_iterator i = words.begin();
+         i != words.end(); ++i)
+    {
+      QString word = *i;
+      
+      // if the string is all numerical then pad it on the front so that
+      // it would be properly sorted (2.avi would be before 10.avi)
+      int numDigits = isNumeric(word);
+      
+      if (numDigits && numDigits < 8)
+      {
+        QString padding(8 - numDigits, QChar::fromAscii(' '));
+        out += padding;
+      }
+      
+      out += word;
+    }
+    
+    return out;
+  }
 }

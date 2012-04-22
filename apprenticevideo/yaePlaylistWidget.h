@@ -109,7 +109,7 @@ namespace yae
     QSize sizeHint() const;
     
     // use this to add items to the playlist:
-    void setPlaylist(const std::list<QString> & playlist);
+    void add(const std::list<QString> & playlist);
     
     // return index of the current item:
     std::size_t currentItem() const;

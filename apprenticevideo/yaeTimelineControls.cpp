@@ -135,6 +135,7 @@ namespace yae
     reader_(NULL),
     timelineStart_(0.0),
     timelineDuration_(0.0),
+    timelinePosition_(0.0),
     frameRate_(23.976),
     auxPlayhead_(NULL),
     auxDuration_(NULL),
@@ -367,6 +368,7 @@ namespace yae
     
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
+    timelinePosition_ = timelineStart_;
     
     if (auxPlayhead_)
     {
@@ -419,6 +421,7 @@ namespace yae
     
     timelineStart_ = start.toSeconds();
     timelineDuration_ = duration.toSeconds();
+    timelinePosition_ = timelineStart_;
     
     // shortcuts:
     double dT = timelineDuration_;
@@ -646,6 +649,8 @@ namespace yae
       // never delivered; this is a workaround:
       std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
       repaintTimer_.stop();
+      
+      updateAuxPlayhead(timelinePosition_);
       repaint();
     }
   }
@@ -656,6 +661,7 @@ namespace yae
   void
   TimelineControls::repaintTimerExpired()
   {
+    updateAuxPlayhead(timelinePosition_);
     update();
   }
   
@@ -674,11 +680,9 @@ namespace yae
         
         TTime currentTime;
         timeChangedEvent->payload_.get(currentTime);
+        timelinePosition_ = currentTime.toSeconds();
         
-        double t = currentTime.toSeconds();
-        updateAuxPlayhead(t);
-        
-        t -= timelineStart_;
+        double t = timelinePosition_ - timelineStart_;
         markerPlayhead_.position_ = t / timelineDuration_;
         
         requestRepaint();

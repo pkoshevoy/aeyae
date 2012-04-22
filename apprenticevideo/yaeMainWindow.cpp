@@ -524,7 +524,7 @@ namespace yae
                           bool beginPlaybackImmediately)
   {
     SignalBlocker blockSignals(playlistWidget_);
-    playlistWidget_->setPlaylist(playlist);
+    playlistWidget_->add(playlist);
     
     if (beginPlaybackImmediately)
     {

@@ -93,7 +93,7 @@ namespace yae
   // toQString
   // 
   extern QString
-  toQString(const std::list<QString> & keys);
+  toQString(const std::list<QString> & keys, bool trimWhiteSpace = false);
   
   //----------------------------------------------------------------
   // splitOnCamelCase
@@ -116,6 +116,20 @@ namespace yae
   // toWords
   // 
   extern QString toWords(const QString & key);
+  
+  //----------------------------------------------------------------
+  // isNumeric
+  //
+  // if the key consists exclusively of numeric characters
+  // returns the key length;
+  // otherwise returns 0
+  // 
+  extern int isNumeric(const QString & key);
+  
+  //----------------------------------------------------------------
+  // prepareForSorting
+  // 
+  extern QString prepareForSorting(const QString & key);
   
 }
 

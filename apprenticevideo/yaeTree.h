@@ -116,6 +116,42 @@ namespace yae
       }
     }
     
+    // find the value of the first item of the first fringe group:
+    const TValue * findFirstFringeItemValue() const
+    {
+      if (tree_.empty())
+      {
+        return NULL;
+      }
+      
+      for (typename std::map<TKey, TTree>::const_iterator i = tree_.begin();
+           i != tree_.end(); ++i)
+      {
+        const TKey & key = i->first;
+        const TTree & next = i->second;
+        
+        if (next.tree_.empty())
+        {
+          return &next.value_;
+        }
+      }
+      
+      for (typename std::map<TKey, TTree>::const_iterator i = tree_.begin();
+           i != tree_.end(); ++i)
+      {
+        const TKey & key = i->first;
+        const TTree & next = i->second;
+        
+        if (!next.tree_.empty())
+        {
+          return next.findFirstFringeItemValue();
+        }
+      }
+      
+      YAE_ASSERT(false);
+      return &value_;
+    }
+    
     bool remove(const std::list<TKey> & keyPath)
     {
       typename std::list<TKey>::const_iterator keyIter = keyPath.begin();

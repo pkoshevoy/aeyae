@@ -236,6 +236,9 @@ namespace yae
     // playback duration in seconds:
     double timelineDuration_;
     
+    // playback position delivered via most recent timeline event:
+    double timelinePosition_;
+    
     // frame rate:
     double frameRate_;
     

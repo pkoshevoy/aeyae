@@ -324,7 +324,7 @@ namespace yae
     current_(0),
     highlighted_(0)
   {
-    setPlaylist(std::list<QString>());
+    add(std::list<QString>());
   }
   
   //----------------------------------------------------------------
@@ -358,17 +358,18 @@ namespace yae
   }
   
   //----------------------------------------------------------------
-  // PlaylistWidget::setPlaylist
+  // PlaylistWidget::add
   // 
   void
-  PlaylistWidget::setPlaylist(const std::list<QString> & playlist)
+  PlaylistWidget::add(const std::list<QString> & playlist)
   {
 #if 0
-    std::cerr << "PlaylistWidget::setPlaylist" << std::endl;
+    std::cerr << "PlaylistWidget::add" << std::endl;
 #endif
     
-    // path of the first new playlist item:
-    QString firstNewItemPath;
+    // a temporary playlist tree used for deciding which of the
+    // newly added items should be selected for playback:
+    TPlaylistTree tmpTree;
     
     for (std::list<QString>::const_iterator i = playlist.begin();
          i != playlist.end(); ++i)
@@ -379,11 +380,6 @@ namespace yae
       if (fi.exists())
       {
         path = fi.absoluteFilePath();
-      }
-      
-      if (firstNewItemPath.isEmpty())
-      {
-        firstNewItemPath = path;
       }
       
       QString name = toWords(fi.completeBaseName());
@@ -405,14 +401,29 @@ namespace yae
           break;
         }
         
+        QFileInfo parseKey(key);
+        QString name = parseKey.completeBaseName();
+        QString ext = parseKey.suffix();
+        
+        key = prepareForSorting(name);
+        if (!ext.isEmpty())
+        {
+          key += QChar::fromAscii('.');
+          key += ext;
+        }
+        
         keys.push_front(key);
         
         QString dir = fi.path();
         fi = QFileInfo(dir);
       }
       
+      tmpTree.set(keys, path);
       tree_.set(keys, path);
     }
+    
+    // lookup the first new item:
+    const QString * firstNewItemPath = tmpTree.findFirstFringeItemValue();
     
     // flatten the tree into a list of play groups:
     typedef TPlaylistTree::FringeGroup TFringeGroup;
@@ -455,7 +466,7 @@ namespace yae
         playlistItem.name_ = toWords(fi.completeBaseName());
         playlistItem.ext_ = fi.suffix();
         
-        if (playlistItem.path_ == firstNewItemPath)
+        if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
           highlighted_ = numItems_;
         }
