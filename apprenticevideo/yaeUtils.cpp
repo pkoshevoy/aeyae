@@ -129,6 +129,92 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // indexOf
+  // 
+  template <typename TData>
+  std::size_t
+  indexOf(const TData & item, const TData * items, std::size_t numItems)
+  {
+    for (std::size_t i = 0; i < numItems; ++i, ++items)
+    {
+      if (item == *items)
+      {
+        return i;
+      }
+    }
+    
+    return numItems;
+  }
+  
+  //----------------------------------------------------------------
+  // splitOnVersion
+  // 
+  static void
+  splitOnVersion(const QString & key, std::list<QString> & tokens)
+  {
+    static const QChar kVersionTags[] = {
+      QChar::fromAscii('v')
+      // QChar::fromAscii('n'),
+      // QChar::fromAscii('p')
+    };
+    
+    static const std::size_t numTags = sizeof(kVersionTags) / sizeof(QChar);
+    
+    // attempt to split on camel case:
+    QString token;
+    QChar versionTag = 0;
+    
+    const int size = key.size();
+    for (int i = 0; i < size; i++)
+    {
+      QChar c = key[i];
+      
+      if (versionTag != 0)
+      {
+        if (!c.isNumber())
+        {
+          token += versionTag;
+        }
+        else
+        {
+          if (!token.isEmpty())
+          {
+            tokens.push_back(token);
+          }
+          
+          token = QString(versionTag);
+        }
+        
+        versionTag = 0;
+        token += c;
+      }
+      else
+      {
+        std::size_t tagIndex = indexOf(c.toLower(), kVersionTags, numTags);
+        
+        if (tagIndex < numTags)
+        {
+          versionTag = c;
+        }
+        else
+        {
+          token += c;
+        }
+      }
+    }
+    
+    if (versionTag != 0)
+    {
+      token += versionTag;
+    }
+    
+    if (!token.isEmpty())
+    {
+      tokens.push_back(token);
+    }
+  }
+  
+  //----------------------------------------------------------------
   // splitOnCamelCase
   // 
   void
@@ -151,7 +237,7 @@ namespace yae
           (// c1.isNumber() ||
            c1.isLetter() && c0.isLower() && !c1.isLower()))
       {
-        tokens.push_back(token);
+        splitOnVersion(token, tokens);
         token = QString();
       }
       
@@ -161,15 +247,98 @@ namespace yae
     
     if (!token.isEmpty())
     {
+      splitOnVersion(token, tokens);
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // splitOnGroupTags
+  // 
+  void
+  splitOnGroupTags(const QString & key, std::list<QString> & tokens)
+  {
+    static const QChar kOpenTag[] = {
+      QChar::fromAscii('<'),
+      QChar::fromAscii('['),
+      QChar::fromAscii('{'),
+      QChar::fromAscii('('),
+      QChar::fromAscii('"')
+    };
+    
+    static const QChar kCloseTag[] = {
+      QChar::fromAscii('>'),
+      QChar::fromAscii(']'),
+      QChar::fromAscii('}'),
+      QChar::fromAscii(')'),
+      QChar::fromAscii('"')
+    };
+    
+    // attempt to split on open/close tags:
+    QString token;
+    
+    std::size_t numTags = sizeof(kOpenTag) / sizeof(kOpenTag[0]);
+    std::size_t tagIndex0 = numTags;
+    std::size_t tagIndex1 = numTags;
+    std::size_t tagSize = 0;
+    
+    const int size = key.size();
+    for (int i = 0; i < size; i++)
+    {
+      QChar c = key[i];
+
+      if (tagIndex0 == numTags)
+      {
+        tagIndex0 = indexOf(c, kOpenTag, numTags);
+        tagIndex1 = numTags;
+        tagSize = 0;
+      }
+      else
+      {
+        tagIndex1 = indexOf(c, kCloseTag, numTags);
+        tagIndex1 = (tagIndex1 == tagIndex0) ? tagIndex0 : numTags;
+      }
+      
+      if (tagIndex0 < numTags && !tagSize)
+      {
+        if (!token.isEmpty())
+        {
+          tokens.push_back(token);
+        }
+        
+        token = QString(c);
+        tagSize = 1;
+      }
+      else
+      {
+        token += c;
+        
+        if (tagIndex0 < numTags)
+        {
+          tagSize++;
+        }
+        
+        if (tagIndex1 < numTags)
+        {
+          tokens.push_back(token);
+          token = QString();
+          tagIndex0 = numTags;
+          tagIndex1 = numTags;
+          tagSize = 0;
+        }
+      }
+    }
+    
+    if (!token.isEmpty())
+    {
       tokens.push_back(token);
     }
   }
   
   //----------------------------------------------------------------
-  // splitIntoWords
+  // splitOnSeparators
   // 
   void
-  splitIntoWords(const QString & key, std::list<QString> & tokens)
+  splitOnSeparators(const QString & key, std::list<QString> & tokens)
   {
     static const QChar kUnderscore = QChar::fromAscii('_');
     static const QChar kHyphen = QChar::fromAscii('-');
@@ -204,6 +373,23 @@ namespace yae
     {
       splitOnCamelCase(token, tokens);
       token = QString();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // splitIntoWords
+  // 
+  void
+  splitIntoWords(const QString & key, std::list<QString> & words)
+  {
+    std::list<QString> groups;
+    splitOnGroupTags(key, groups);
+    
+    for (std::list<QString>::const_iterator i = groups.begin();
+         i != groups.end(); ++i)
+    {
+      const QString & group = *i;
+      splitOnSeparators(group, words);
     }
   }
   
