@@ -1943,7 +1943,10 @@ namespace yae
   void
   MainWindow::playlistVisibilityChanged(bool visible)
   {
-    actionShowPlaylist->setChecked(visible);
+    if (actionShowPlaylist->isEnabled())
+    {
+      actionShowPlaylist->setChecked(visible);
+    }
   }
   
   //----------------------------------------------------------------
@@ -2355,13 +2358,13 @@ namespace yae
     {
       if (actionShowPlaylist->isEnabled())
       {
+        shortcutShowPlaylist_->setEnabled(false);
+        actionShowPlaylist->setEnabled(false);
+        
         if (actionShowPlaylist->isChecked())
         {
           removeDockWidget(playlistDock_);
         }
-        
-        shortcutShowPlaylist_->setEnabled(false);
-        actionShowPlaylist->setEnabled(false);
         
         swapLayouts(canvasContainer_, playlistContainer_);
         
@@ -2381,12 +2384,12 @@ namespace yae
           restoreDockWidget(playlistDock_);
         }
         
+        shortcutShowPlaylist_->setEnabled(true);
+        actionShowPlaylist->setEnabled(true);
+        
         playlistWidget_->show();
         playlistWidget_->update();
         this->setFocus();
-        
-        shortcutShowPlaylist_->setEnabled(true);
-        actionShowPlaylist->setEnabled(true);
       }
     }
   }
