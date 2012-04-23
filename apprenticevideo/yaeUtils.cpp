@@ -163,6 +163,7 @@ namespace yae
     // attempt to split on camel case:
     QString token;
     QChar versionTag = 0;
+    QChar c0 = 0;
     
     const int size = key.size();
     for (int i = 0; i < size; i++)
@@ -190,7 +191,10 @@ namespace yae
       }
       else
       {
-        std::size_t tagIndex = indexOf(c.toLower(), kVersionTags, numTags);
+        std::size_t tagIndex =
+          c0.isNumber() ?
+          indexOf(c.toLower(), kVersionTags, numTags) :
+          numTags;
         
         if (tagIndex < numTags)
         {
@@ -201,6 +205,8 @@ namespace yae
           token += c;
         }
       }
+      
+      c0 = c;
     }
     
     if (versionTag != 0)
@@ -372,7 +378,6 @@ namespace yae
     if (!token.isEmpty())
     {
       splitOnCamelCase(token, tokens);
-      token = QString();
     }
   }
   

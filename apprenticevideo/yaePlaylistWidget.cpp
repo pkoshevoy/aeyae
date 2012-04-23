@@ -402,10 +402,10 @@ namespace yae
         }
         
         QFileInfo parseKey(key);
-        QString name = parseKey.completeBaseName();
+        QString base = parseKey.completeBaseName();
         QString ext = parseKey.suffix();
         
-        key = prepareForSorting(name);
+        key = prepareForSorting(base);
         if (!ext.isEmpty())
         {
           key += QChar::fromAscii('.');
@@ -414,8 +414,8 @@ namespace yae
         
         keys.push_front(key);
         
-        QString dir = fi.path();
-        fi = QFileInfo(dir);
+        QString next = fi.absolutePath();
+        fi = QFileInfo(next);
       }
       
       tmpTree.set(keys, path);
