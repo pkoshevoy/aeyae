@@ -92,6 +92,10 @@ namespace yae
     PaStreamParameters outputParams_;
     unsigned int sampleSize_;
     
+    // this is a tool for aborting a request for an audio frame
+    // from the decoded frames queue, used to avoid a deadlock:
+    QueueWaitMgr terminator_;
+    
     // current audio frame:
     TAudioFramePtr audioFrame_;
 
@@ -360,6 +364,7 @@ namespace yae
     sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
     
     PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
+    terminator_.stopWaiting(false);
     return openStream(outputDevice,
                       atts,
                       &output_,
@@ -375,6 +380,7 @@ namespace yae
   AudioRendererPortaudio::TPrivate::close()
   {
     pause_ = false;
+    terminator_.stopWaiting(true);
     open(0, NULL, false);
   }
   
@@ -520,7 +526,7 @@ namespace yae
       YAE_ASSERT(!audioFrameOffset_);
       
       // fetch the next audio frame from the reader:
-      if (!reader_->readAudio(audioFrame_))
+      if (!reader_->readAudio(audioFrame_, &terminator_))
       {
         if (clock_.allowsSettingTime())
         {
@@ -571,7 +577,7 @@ namespace yae
         YAE_ASSERT(!audioFrameOffset_);
         
         // fetch the next audio frame from the reader:
-        if (!reader_->readAudio(audioFrame_))
+        if (!reader_->readAudio(audioFrame_, &terminator_))
         {
           if (clock_.allowsSettingTime())
           {

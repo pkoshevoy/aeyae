@@ -92,8 +92,8 @@ namespace yae
     
     virtual bool seek(double t);
     
-    virtual bool readVideo(TVideoFramePtr & frame);
-    virtual bool readAudio(TAudioFramePtr & frame);
+    virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0);
+    virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr = 0);
     
     virtual bool threadStart();
     virtual bool threadStop();

@@ -24,6 +24,77 @@ namespace yae
 {
   
   //----------------------------------------------------------------
+  // QueueWaitMgr
+  // 
+  struct QueueWaitMgr
+  {
+    QueueWaitMgr():
+      cond_(NULL),
+      wait_(true)
+    {}
+    
+    void waitingFor(boost::condition_variable * cond)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      cond_ = cond;
+    }
+    
+    void stopWaiting(bool stop = true)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      wait_ = !stop;
+      
+      if (cond_)
+      {
+        cond_->notify_all();
+      }
+    }
+    
+    inline bool keepWaiting() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return wait_;
+    }
+    
+  protected:
+    mutable boost::mutex mutex_;
+    boost::condition_variable * cond_;
+    bool wait_;
+  };
+  
+  //----------------------------------------------------------------
+  // QueueWaitTerminator
+  // 
+  struct QueueWaitTerminator
+  {
+    QueueWaitTerminator(QueueWaitMgr * waitMgr,
+                        boost::condition_variable * cond):
+      waitMgr_(waitMgr)
+    {
+      if (waitMgr_)
+      {
+        waitMgr_->waitingFor(cond);
+      }
+    }
+    
+    ~QueueWaitTerminator()
+    {
+      if (waitMgr_)
+      {
+        waitMgr_->waitingFor(NULL);
+      }
+    }
+    
+    inline bool keepWaiting() const
+    {
+      return waitMgr_ ? waitMgr_->keepWaiting() : true;
+    }
+    
+  private:
+    QueueWaitMgr * waitMgr_;
+  };
+  
+  //----------------------------------------------------------------
   // Queue
   // 
   // Thread-safe queue
@@ -167,14 +238,16 @@ namespace yae
     }
     
     // push data into the queue:
-    bool push(const TData & newData)
+    bool push(const TData & newData, QueueWaitMgr * waitMgr = NULL)
     {
       try
       {
+        QueueWaitTerminator terminator(waitMgr, &cond_);
+        
         // add to queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && size_ >= maxSize_)
+          while (!closed_ && size_ >= maxSize_ && terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
             std::cerr << this << " push wait, size " << size_ << std::endl;
@@ -205,14 +278,16 @@ namespace yae
     }
 
     // remove data from the queue:
-    bool pop(TData & data)
+    bool pop(TData & data, QueueWaitMgr * waitMgr = NULL)
     {
       try
       {
+        QueueWaitTerminator terminator(waitMgr, &cond_);
+        
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && !size_)
+          while (!closed_ && !size_ && terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
             std::cerr << this << " pop wait, size " << size_ << std::endl;

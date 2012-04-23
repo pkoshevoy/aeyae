@@ -288,6 +288,9 @@ namespace yae
     // worker thread:
     Thread<Track> thread_;
     
+    // deadlock avoidance mechanism:
+    QueueWaitMgr terminator_;
+    
     AVFormatContext * context_;
     AVStream * stream_;
     AVCodec * codec_;
@@ -509,6 +512,7 @@ namespace yae
   bool
   Track::threadStart()
   {
+    terminator_.stopWaiting(false);
     packetQueue_.open();
     return thread_.run();
   }
@@ -519,6 +523,7 @@ namespace yae
   bool
   Track::threadStop()
   {
+    terminator_.stopWaiting(true);
     packetQueue_.close();
     thread_.stop();
     return thread_.wait();
@@ -705,7 +710,7 @@ namespace yae
     bool getTraitsOverride(VideoTraits & override) const;
     
     // retrieve a decoded/converted frame from the queue:
-    bool getNextFrame(TVideoFramePtr & frame);
+    bool getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator);
     
     // adjust playback interval (used when seeking or looping):
     void setPlaybackInterval(double timeIn, double timeOut, bool enabled);
@@ -1278,7 +1283,7 @@ namespace yae
       }
       
       // put the output frame into frame queue:
-      if (!frameQueue_.push(vfPtr))
+      if (!frameQueue_.push(vfPtr, &terminator_))
       {
         return false;
       }
@@ -1305,7 +1310,7 @@ namespace yae
                   << std::endl;
 #endif
         
-        if (!frameQueue_.push(rvfPtr))
+        if (!frameQueue_.push(rvfPtr, &terminator_))
         {
           return false;
         }
@@ -1334,7 +1339,7 @@ namespace yae
         boost::this_thread::interruption_point();
         
         TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr))
+        if (!packetQueue_.pop(packetPtr, &terminator_))
         {
           break;
         }
@@ -1454,13 +1459,21 @@ namespace yae
     
     if (alreadyDecoding)
     {
+      terminator_.stopWaiting(true);
       frameQueue_.clear();
       thread_.stop();
       thread_.wait();
     }
     
     override_ = override;
-    return alreadyDecoding ? thread_.run() : true;
+    
+    if (alreadyDecoding)
+    {
+      terminator_.stopWaiting(false);
+      return thread_.run();
+    }
+    
+    return true;
   }
   
   //----------------------------------------------------------------
@@ -1477,12 +1490,12 @@ namespace yae
   // VideoTrack::getNextFrame
   // 
   bool
-  VideoTrack::getNextFrame(TVideoFramePtr & frame)
+  VideoTrack::getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
     bool ok = true;
     while (ok)
     {
-      ok = frameQueue_.pop(frame);
+      ok = frameQueue_.pop(frame, terminator);
       if (!ok || !frame || !playbackInterval_)
       {
         break;
@@ -1581,7 +1594,7 @@ namespace yae
     bool getTraitsOverride(AudioTraits & override) const;
     
     // retrieve a decoded/converted frame from the queue:
-    bool getNextFrame(TAudioFramePtr & frame);
+    bool getNextFrame(TAudioFramePtr & frame, QueueWaitMgr * terminator);
     
     // adjust playback interval (used when seeking or looping):
     void setPlaybackInterval(double timeIn, double timeOut, bool enabled);
@@ -1975,7 +1988,7 @@ namespace yae
       }
 
       // put the decoded frame into frame queue:
-      if (!frameQueue_.push(afPtr))
+      if (!frameQueue_.push(afPtr, &terminator_))
       {
         return false;
       }
@@ -2005,7 +2018,7 @@ namespace yae
         boost::this_thread::interruption_point();
         
         TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr))
+        if (!packetQueue_.pop(packetPtr, &terminator_))
         {
           break;
         }
@@ -2205,13 +2218,21 @@ namespace yae
     
     if (alreadyDecoding)
     {
+      terminator_.stopWaiting(true);
       frameQueue_.clear();
       thread_.stop();
       thread_.wait();
     }
     
     override_ = override;
-    return alreadyDecoding ? thread_.run() : true;
+    
+    if (alreadyDecoding)
+    {
+      terminator_.stopWaiting(false);
+      return thread_.run();
+    }
+    
+    return true;
   }
   
   //----------------------------------------------------------------
@@ -2228,12 +2249,12 @@ namespace yae
   // AudioTrack::getNextFrame
   // 
   bool
-  AudioTrack::getNextFrame(TAudioFramePtr & frame)
+  AudioTrack::getNextFrame(TAudioFramePtr & frame, QueueWaitMgr * terminator)
   {
     bool ok = true;
     while (ok)
     {
-      ok = frameQueue_.pop(frame);
+      ok = frameQueue_.pop(frame, terminator);
       if (!ok || !frame || !playbackInterval_)
       {
         break;
@@ -2369,6 +2390,9 @@ namespace yae
     // worker thread:
     Thread<Movie> thread_;
     mutable boost::mutex mutex_;
+    
+    // deadlock avoidance mechanism:
+    QueueWaitMgr terminator_;
     
     AVFormatContext * context_;
     
@@ -2760,7 +2784,7 @@ namespace yae
               videoTrack->streamIndex() == ffmpeg.stream_index)
           {
             // if (!videoTrack->decode(packet))
-            if (!videoTrack->packetQueue().push(packet))
+            if (!videoTrack->packetQueue().push(packet, &terminator_))
             {
               break;
             }
@@ -2769,7 +2793,7 @@ namespace yae
                    audioTrack->streamIndex() == ffmpeg.stream_index)
           {
             // if (!audioTrack->decode(packet))
-            if (!audioTrack->packetQueue().push(packet))
+            if (!audioTrack->packetQueue().push(packet, &terminator_))
             {
               break;
             }
@@ -2826,6 +2850,7 @@ namespace yae
       t->packetQueue().waitForConsumerToBlock();
     }
     
+    terminator_.stopWaiting(false);
     return thread_.run();
   }
   
@@ -2847,6 +2872,7 @@ namespace yae
       t->threadStop();
     }
     
+    terminator_.stopWaiting(true);
     thread_.stop();
     return thread_.wait();
   }
@@ -3413,7 +3439,7 @@ namespace yae
   // ReaderFFMPEG::readVideo
   // 
   bool
-  ReaderFFMPEG::readVideo(TVideoFramePtr & frame)
+  ReaderFFMPEG::readVideo(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (private_->movie_.getVideoTracks().size() <= i)
@@ -3422,7 +3448,7 @@ namespace yae
     }
     
     VideoTrackPtr track = private_->movie_.getVideoTracks()[i];
-    bool ok = track->getNextFrame(frame);
+    bool ok = track->getNextFrame(frame, terminator);
     return ok;
   }
   
@@ -3430,7 +3456,7 @@ namespace yae
   // ReaderFFMPEG::readAudio
   // 
   bool
-  ReaderFFMPEG::readAudio(TAudioFramePtr & frame)
+  ReaderFFMPEG::readAudio(TAudioFramePtr & frame, QueueWaitMgr * terminator)
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (private_->movie_.getAudioTracks().size() <= i)
@@ -3439,7 +3465,7 @@ namespace yae
     }
     
     AudioTrackPtr track = private_->movie_.getAudioTracks()[i];
-    bool ok = track->getNextFrame(frame);
+    bool ok = track->getNextFrame(frame, terminator);
     return ok;
   }
   

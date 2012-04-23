@@ -34,6 +34,10 @@ namespace yae
     mutable boost::mutex mutex_;
     Thread<TPrivate> thread_;
     
+    // this is a tool for aborting a request for a video frame
+    // from the decoded frames queue, used to avoid a deadlock:
+    QueueWaitMgr terminator_;
+    
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
@@ -73,6 +77,7 @@ namespace yae
       return true;
     }
     
+    terminator_.stopWaiting(false);
     return thread_.run();
   }
   
@@ -84,6 +89,7 @@ namespace yae
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     pause_ = false;
+    terminator_.stopWaiting(true);
     thread_.stop();
     thread_.wait();
   }
@@ -204,7 +210,7 @@ namespace yae
       bool resetTimeCounters = false;
       while (ok)
       {
-        ok = reader_->readVideo(frame);
+        ok = reader_->readVideo(frame, &terminator_);
         if (ok)
         {
           if (!frame)

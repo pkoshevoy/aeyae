@@ -15,6 +15,7 @@
 
 // yae includes:
 #include <yaeAPI.h>
+#include <yaeQueue.h>
 
 
 namespace yae
@@ -81,9 +82,13 @@ namespace yae
 
     //! set current position to a given value (or an earlier value nearby):
     virtual bool seek(double t) = 0;
-    
-    virtual bool readVideo(TVideoFramePtr & frame) = 0;
-    virtual bool readAudio(TAudioFramePtr & frame) = 0;
+
+    //! By default readAudio and readVideo will block indefinitely
+    //! until a frame arrives or the frame queue is closed.
+    //! Use QueueWaitMgr if you need to break out of the waiting
+    //! loop for some reason (such as in order to avoid a deadlock).
+    virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
+    virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
     
     virtual bool threadStart() = 0;
     virtual bool threadStop() = 0;
