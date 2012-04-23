@@ -1242,12 +1242,12 @@ namespace yae
     if (playlistDock_->isVisible())
     {
       actionShowPlaylist->setChecked(false);
-      removeDockWidget(playlistDock_);
+      playlistDock_->hide();
     }
     else
     {
       actionShowPlaylist->setChecked(true);
-      restoreDockWidget(playlistDock_);
+      playlistDock_->show();
     }
   }
   
@@ -2363,7 +2363,7 @@ namespace yae
         
         if (actionShowPlaylist->isChecked())
         {
-          removeDockWidget(playlistDock_);
+          playlistDock_->hide();
         }
         
         swapLayouts(canvasContainer_, playlistContainer_);
@@ -2381,7 +2381,7 @@ namespace yae
         
         if (actionShowPlaylist->isChecked())
         {
-          restoreDockWidget(playlistDock_);
+          playlistDock_->show();
         }
         
         shortcutShowPlaylist_->setEnabled(true);
