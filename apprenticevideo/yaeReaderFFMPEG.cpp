@@ -473,7 +473,9 @@ namespace yae
       return;
     }
 
-    int64_t fileBits = avio_size(context_->pb) * 8;
+    int64 fileSize = avio_size(context_->pb);
+    int64 fileBits = fileSize * 8;
+    
     start.base_ = AV_TIME_BASE;
     start.time_ = 0;
     
@@ -489,7 +491,7 @@ namespace yae
       return;
     }
     
-    if (stream_->codec->bit_rate && context_->nb_streams == 1)
+    if (context_->nb_streams == 1 && stream_->codec->bit_rate)
     {
       double t =
         double(fileBits / stream_->codec->bit_rate) +
@@ -500,9 +502,33 @@ namespace yae
       duration.base_ = AV_TIME_BASE;
       return;
     }
-
+    
+#if 0
+    if (context_->nb_streams == 1 &&
+        codec_->id == CODEC_ID_RAWVIDEO &&
+        stream_->cur_pkt.size)
+    {
+      if (stream_->avg_frame_rate.num &&
+          stream_->avg_frame_rate.den)
+      {
+        uint64 nframes = fileSize / stream_->cur_pkt.size;
+        duration.time_ = stream_->avg_frame_rate.den * nframes;
+        duration.base_ = stream_->avg_frame_rate.num;
+        return;
+      }
+      else if (stream_->r_frame_rate.num &&
+               stream_->r_frame_rate.den)
+      {
+        uint64 nframes = fileSize / stream_->cur_pkt.size;
+        duration.time_ = stream_->r_frame_rate.den * nframes;
+        duration.base_ = stream_->r_frame_rate.num;
+        return;
+      }
+    }
+#endif
+    
     // unknown duration:
-    duration.time_ = std::numeric_limits<int64>::max() >> 1;
+    duration.time_ = std::numeric_limits<int64>::max();
     duration.base_ = AV_TIME_BASE;
   }
   
@@ -2930,15 +2956,26 @@ namespace yae
     
     int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
     int err = avformat_seek_file(context_,
+                                 -1,
+                                 kMinInt64,
+                                 ts,
+                                 kMaxInt64,
+                                 seekFlags);
+    if (err < 0)
+    {
+      seekFlags |= AVSEEK_FLAG_ANY;
+      err = avformat_seek_file(context_,
                                -1,
                                kMinInt64,
                                ts,
                                kMaxInt64,
                                seekFlags);
+    }
+    
     if (err < 0)
     {
-#if 0
-      std::cerr << "Movie::seek(" << seekTime << ") returned " << r
+#if 1
+      std::cerr << "Movie::seek(" << seekTime << ") returned " << err
                 << std::endl;
 #endif
       return err;
