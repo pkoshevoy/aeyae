@@ -247,6 +247,11 @@ namespace yae
 #if 0
         std::cerr << "reader_->readVideo: " << ok << std::endl;
 #endif
+        if (clock_.allowsSettingTime())
+        {
+          clock_.noteTheClockHasStopped();
+        }
+        
         break;
       }
 
@@ -280,11 +285,6 @@ namespace yae
       {
         clock_.setCurrentTime(framePosition);
       }
-    }
-    
-    if (clock_.allowsSettingTime())
-    {
-      clock_.noteTheClockHasStopped();
     }
   }
   
