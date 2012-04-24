@@ -585,6 +585,7 @@ namespace yae
       << QString::fromUtf8("framework")
       << QString::fromUtf8("bundle")
       << QString::fromUtf8("rcproject")
+      << QString::fromUtf8("ipmeta")
       << QString::fromUtf8("sc")
       << QString::fromUtf8("so")
       << QString::fromUtf8("dylib")
@@ -710,7 +711,6 @@ namespace yae
     std::string filename(fn.toUtf8().constData());
     
     actionPlay->setEnabled(false);
-    actionPlay->setText(tr("Play"));
     
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
     if (!reader->open(filename.c_str()))
@@ -894,7 +894,7 @@ namespace yae
     // too late if the reader already started the decoding loops;
     // renderers are started paused, so after the reader is started
     // the rendrers have to be resumed:
-    prepareReaderAndRenderers(reader);
+    prepareReaderAndRenderers(reader, playbackPaused_);
     
     // this opens the output frame queues for renderers
     // and starts the decoding loops:
@@ -910,7 +910,6 @@ namespace yae
     this->setWindowTitle(tr("Apprentice Video: %1").
                          arg(QFileInfo(path).fileName()));
     actionPlay->setEnabled(true);
-    actionPlay->setText(tr("Pause"));
     
     return true;
   }
