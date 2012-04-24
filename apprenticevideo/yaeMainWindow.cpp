@@ -1441,7 +1441,10 @@ namespace yae
   void
   MainWindow::togglePlayback()
   {
-    std::cerr << "togglePlayback" << std::endl;
+    std::cerr << "togglePlayback: "
+              << !playbackPaused_ << " -> "
+              << playbackPaused_
+              << std::endl;
     
     reader_->setPlaybackInterval(playbackPaused_);
     

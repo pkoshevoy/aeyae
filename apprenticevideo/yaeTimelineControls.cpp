@@ -398,6 +398,7 @@ namespace yae
     markerTimeOut_.position_ = 1.0;
     markerTimeOut_.setAnchor();
     
+    setToolTip(QString());
     update();
   }
   
@@ -460,6 +461,7 @@ namespace yae
     markerTimeOut_.position_ = (t1 - T0) / dT;
     markerTimeOut_.setAnchor();
     
+    setToolTip(QString());
     update();
   }
   
@@ -779,7 +781,7 @@ namespace yae
   void
   TimelineControls::mousePressEvent(QMouseEvent * e)
   {
-    if (!timelineDuration_)
+    if (!timelineDuration_ || unknownDuration_)
     {
       return;
     }
@@ -844,7 +846,7 @@ namespace yae
   void
   TimelineControls::mouseMoveEvent(QMouseEvent * e)
   {
-    if (!timelineDuration_)
+    if (!timelineDuration_ || unknownDuration_)
     {
       return;
     }
