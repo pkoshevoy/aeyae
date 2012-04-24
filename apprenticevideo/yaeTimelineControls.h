@@ -230,6 +230,9 @@ namespace yae
     // current reader:
     IReader * reader_;
     
+    // a flag indicating whether source duration is known or not:
+    bool unknownDuration_;
+    
     // playback doesn't necessarily start at zero seconds:
     double timelineStart_;
     

@@ -60,11 +60,12 @@ namespace yae
        << std::setw(2) << std::setfill('0') << sec << ':'
        << std::setw(2) << std::setfill('0') << frameNo;
 
-    // crop the leading zeros:
+    // crop the leading zeros up to s:ff
     std::string str(os.str().c_str());
     const char * text = str.c_str();
+    const char * tend = text + 7;
     
-    while (*text)
+    while (text < tend)
     {
       if (*text != '0' && *text != ':')
       {
@@ -133,6 +134,7 @@ namespace yae
   TimelineControls::TimelineControls(QWidget * parent, Qt::WindowFlags f):
     QWidget(parent, f),
     reader_(NULL),
+    unknownDuration_(false),
     timelineStart_(0.0),
     timelineDuration_(0.0),
     timelinePosition_(0.0),
@@ -365,10 +367,14 @@ namespace yae
     {
       frameRate_ = videoTraits.frameRate_;
     }
-    
+
     timelineStart_ = start.toSeconds();
-    timelineDuration_ = duration.toSeconds();
     timelinePosition_ = timelineStart_;
+    
+    unknownDuration_ = (duration.time_ == std::numeric_limits<int64>::max());
+    timelineDuration_ = (unknownDuration_ ?
+                         std::numeric_limits<double>::max() :
+                         duration.toSeconds());
     
     if (auxPlayhead_)
     {
@@ -519,6 +525,11 @@ namespace yae
   void
   TimelineControls::seekTo(double seconds)
   {
+    if (!timelineDuration_ || unknownDuration_)
+    {
+      return;
+    }
+    
     double t = (seconds - timelineStart_) / timelineDuration_;
     t = std::min(1.0, std::max(0.0, t));
     
@@ -717,7 +728,7 @@ namespace yae
     int unitLength = 0;
     getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
     
-    if (!timelineDuration_)
+    if (!timelineDuration_ || unknownDuration_)
     {
       p.setBrush(QColor(0x40, 0x40, 0x40));
       p.drawRect(xOrigin,
@@ -996,6 +1007,10 @@ namespace yae
       if (!auxDuration_->isEnabled())
       {
         auxDuration_->setText(kClockTemplate);
+      }
+      else if (unknownDuration_)
+      {
+        auxDuration_->setText(tr("N/A"));
       }
       else
       {
