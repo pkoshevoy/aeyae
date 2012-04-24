@@ -343,13 +343,6 @@ namespace yae
       {
         cond_.wait(lock);
       }
-
-      if (consumerIsBlocked_ && size_)
-      {
-        // this should never happen:
-        std::size_t * blah = 0;
-        *blah = 1;
-      }
       
       return consumerIsBlocked_;
     }
