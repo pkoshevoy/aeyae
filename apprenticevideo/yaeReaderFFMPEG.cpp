@@ -2518,7 +2518,7 @@ namespace yae
     // spend at most 2 seconds trying to analyze the file:
     context_->max_analyze_duration = 30 * AV_TIME_BASE;
     
-    err = av_find_stream_info(context_);
+    err = avformat_find_stream_info(context_, NULL);
     if (err < 0)
     {
       close();

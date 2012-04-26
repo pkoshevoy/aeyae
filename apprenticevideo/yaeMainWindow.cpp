@@ -171,6 +171,7 @@ namespace yae
     setAcceptDrops(true);
     setFocusPolicy(Qt::StrongFocus);
     setFocusProxy(playlistWidget_);
+    actionPlay->setText(tr("Pause"));
     
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
@@ -196,9 +197,9 @@ namespace yae
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
     
-    // hide the timeline:
-    actionShowTimeline->setChecked(false);
-    timelineWidgets_->hide();
+    // show the timeline:
+    actionShowTimeline->setChecked(true);
+    timelineWidgets_->show();
     
     // setup the Open URL dialog:
     {
