@@ -1563,7 +1563,7 @@ namespace yae
     bg.getHsvF(&h, &s, &v);
     
     qreal t = (1 - s) * v;
-    v = t < 0.9 ? 1 : 0;
+    v = t < 0.6 ? 1 : 0;
     
     QColor fg;
     fg.setHsvF(h, 0, v);
