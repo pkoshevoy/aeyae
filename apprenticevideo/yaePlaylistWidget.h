@@ -179,6 +179,7 @@ namespace yae
     }
     
     // helpers:
+    bool applyFilter();
     void updateGeometries();
     void updateScrollBars();
     void draw(QPainter & painter, const QRect & region);
@@ -239,6 +240,9 @@ namespace yae
     
     // highlighted item index:
     std::size_t highlighted_;
+    
+    // playlist filter:
+    std::list<QString> m_keywords;
   };
   
 }

@@ -16,6 +16,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QUrl>
 
 // yae includes:
 #include <yaePlaylistWidget.h>
@@ -375,14 +376,28 @@ namespace yae
          i != playlist.end(); ++i)
     {
       QString path = *i;
+      QString humanReadablePath = path;
       
       QFileInfo fi(path);
       if (fi.exists())
       {
         path = fi.absoluteFilePath();
+        humanReadablePath = path;
+      }
+      else
+      {
+        QUrl url;
+        url.setEncodedUrl(path.toUtf8(), QUrl::StrictMode);
+        
+        if (url.isValid())
+        {
+          humanReadablePath = url.toString();
+        }
       }
       
+      fi = QFileInfo(humanReadablePath);
       QString name = toWords(fi.completeBaseName());
+      
       if (name.isEmpty())
       {
 #if 0
@@ -431,8 +446,6 @@ namespace yae
     tree_.get(fringeGroups);
     groups_.clear();
     numItems_ = 0;
-    current_ = 0;
-    highlighted_ = 0;
     
     for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
          i != fringeGroups.end(); ++i)
@@ -479,6 +492,11 @@ namespace yae
       PlaylistGroup & group = groups_.back();
       group.name_ = tr("end of playlist");
       group.offset_ = numItems_;
+    }
+    
+    if (applyFilter())
+    {
+      highlighted_ = closestItem(highlighted_);
     }
     
     updateGeometries();
@@ -676,10 +694,23 @@ namespace yae
   void
   PlaylistWidget::filterChanged(const QString & filter)
   {
-    std::list<QString> keywords;
-    splitIntoWords(filter, keywords);
+    m_keywords.clear();
+    splitIntoWords(filter, m_keywords);
     
-    bool exclude = !keywords.empty();
+    if (applyFilter())
+    {
+      updateGeometries();
+      update();
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // PlaylistWidget::applyFilter
+  // 
+  bool
+  PlaylistWidget::applyFilter()
+  {
+    bool exclude = !m_keywords.empty();
     bool changed = false;
     
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
@@ -711,7 +742,7 @@ namespace yae
           item.name_ + QString::fromUtf8(".") +
           item.ext_;
         
-        if (!keywordsMatch(keywords, text))
+        if (!keywordsMatch(m_keywords, text))
         {
           if (!item.excluded_)
           {
@@ -734,11 +765,7 @@ namespace yae
       }
     }
     
-    if (changed)
-    {
-      updateGeometries();
-      update();
-    }
+    return changed;
   }
   
   //----------------------------------------------------------------
@@ -875,9 +902,18 @@ namespace yae
          i != groups_.end(); )
     {
       PlaylistGroup & group = *i;
+
+      if (group.excluded_)
+      {
+        std::size_t groupSize = group.items_.size();
+        oldIndex += groupSize;
+        newIndex += groupSize;
+        ++i;
+        continue;
+      }
       
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           !group.excluded_ && j != group.items_.end(); oldIndex++)
+           j != group.items_.end(); oldIndex++)
       {
         PlaylistItem & item = *j;
         
@@ -945,6 +981,8 @@ namespace yae
     {
       current_ = newCurrent;
     }
+    
+    update();
   }
   
   //----------------------------------------------------------------
