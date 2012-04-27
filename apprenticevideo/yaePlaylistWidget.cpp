@@ -1462,6 +1462,7 @@ namespace yae
         item.bbox_.setX(0);
         item.bbox_.setY(y);
         item.bbox_.setWidth(width);
+        item.bbox_.setHeight(0);
         
         if (!item.excluded_)
         {
