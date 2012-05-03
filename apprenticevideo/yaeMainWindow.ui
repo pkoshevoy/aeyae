@@ -233,8 +233,10 @@ QLineEdit:disabled {
     <addaction name="actionFullScreen"/>
     <addaction name="actionLoop"/>
     <addaction name="separator"/>
-    <addaction name="actionColorConverter"/>
     <addaction name="actionVerticalScaling"/>
+    <addaction name="actionSkipColorConverter"/>
+    <addaction name="actionSkipLoopFilter"/>
+    <addaction name="actionSkipNonReferenceFrames"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
     <property name="title">
@@ -427,15 +429,12 @@ QLineEdit QToolButton#clear_:pressed {
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionColorConverter">
+  <action name="actionSkipColorConverter">
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
-    <string>Color Converter</string>
+    <string>Skip Color Converter</string>
    </property>
   </action>
   <action name="actionAspectRatio1_78">
@@ -474,16 +473,6 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
-  <action name="actionSelect_Track">
-   <property name="text">
-    <string>Select Track</string>
-   </property>
-  </action>
-  <action name="actionSelect_Track_2">
-   <property name="text">
-    <string>Select Track</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -638,11 +627,6 @@ QLineEdit QToolButton#clear_:pressed {
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionNothing">
-   <property name="text">
-    <string>Nothing</string>
-   </property>
-  </action>
   <action name="actionVerticalScaling">
    <property name="checkable">
     <bool>true</bool>
@@ -676,6 +660,22 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSkipLoopFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Skip Loop Filter</string>
+   </property>
+  </action>
+  <action name="actionSkipNonReferenceFrames">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Skip Non-Reference Frames</string>
    </property>
   </action>
  </widget>

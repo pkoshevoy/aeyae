@@ -421,8 +421,16 @@ namespace yae
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionColorConverter, SIGNAL(triggered()),
+    ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSkipLoopFilter, SIGNAL(triggered()),
+                 this, SLOT(playbackLoopFilter()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSkipNonReferenceFrames, SIGNAL(triggered()),
+                 this, SLOT(playbackNonReferenceFrames()));
     YAE_ASSERT(ok);
 
     ok = connect(actionVerticalScaling, SIGNAL(triggered()),
@@ -1218,6 +1226,26 @@ namespace yae
     reader_->threadStart();
     
     resumeRenderers();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackLoopFilter
+  // 
+  void
+  MainWindow::playbackLoopFilter()
+  {
+    std::cerr << "playbackLoopFilter" << std::endl;
+    reader_->skipLoopFilter(actionSkipLoopFilter->isChecked());
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackNonReferenceFrames
+  // 
+  void
+  MainWindow::playbackNonReferenceFrames()
+  {
+    std::cerr << "playbackNonReferenceFrames" << std::endl;
+    reader_->skipNonReferenceFrames(actionSkipNonReferenceFrames->isChecked());
   }
   
   //----------------------------------------------------------------
@@ -2286,7 +2314,7 @@ namespace yae
                                                        shouldSwapBytes);
         unsupported = (supportedChannels < 1 ||
                        supportedChannels != ptts->channels_ &&
-                       actionColorConverter->isChecked());
+                       !actionSkipColorConverter->isChecked());
       }
       
       if (unsupported)

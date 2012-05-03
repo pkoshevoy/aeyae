@@ -113,8 +113,10 @@ namespace yae
     void playbackNext();
     void playbackPrev();
     void playbackLoop();
-    void playbackColorConverter();
     void playbackVerticalScaling();
+    void playbackColorConverter();
+    void playbackLoopFilter();
+    void playbackNonReferenceFrames();
     void playbackShowPlaylist();
     void playbackShowTimeline();
     void playbackShrinkWrap();

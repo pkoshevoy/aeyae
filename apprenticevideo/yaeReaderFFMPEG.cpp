@@ -296,6 +296,14 @@ namespace yae
     AVCodec * codec_;
     TPacketQueue packetQueue_;
     PacketTime packetTime_;
+    
+    double timeIn_;
+    double timeOut_;
+    bool playbackInterval_;
+    int64_t startTime_;
+    
+  public:
+    uint64_t discarded_;
   };
   
   //----------------------------------------------------------------
@@ -311,7 +319,12 @@ namespace yae
     context_(context),
     stream_(stream),
     codec_(NULL),
-    packetQueue_(kQueueSizeLarge)
+    packetQueue_(kQueueSizeLarge),
+    timeIn_(0.0),
+    timeOut_(kMaxDouble),
+    playbackInterval_(false),
+    startTime_(0),
+    discarded_(0)
   {
     if (context_ && stream_)
     {
@@ -719,6 +732,10 @@ namespace yae
     // virtual:
     bool open();
     
+    // these are used to speed up video decoding:
+    void skipLoopFilter(bool skip);
+    void skipNonReferenceFrames(bool skip);
+    
     // virtual:
     bool decoderStartup();
     bool decoderShutdown();
@@ -743,7 +760,11 @@ namespace yae
     
     // reset time counters, setup to output frames
     // starting from a given time point:
-    void resetTimeCounters(double seekTime);
+    int resetTimeCounters(double seekTime);
+    
+    // these are used to speed up video decoding:
+    bool skipLoopFilter_;
+    bool skipNonReferenceFrames_;
     
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
@@ -754,12 +775,6 @@ namespace yae
     unsigned char numSamplePlanes_;
     std::size_t samplePlaneSize_[4];
     std::size_t sampleLineSize_[4];
-
-    double timeIn_;
-    double timeOut_;
-    bool playbackInterval_;
-    uint64_t discarded_;
-    int64_t startTime_;
     AVRational frameRate_;
     
     // it appears ffmpeg outputs decoded frames in correct presentation order
@@ -807,13 +822,10 @@ namespace yae
   // 
   VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
+    skipLoopFilter_(false),
+    skipNonReferenceFrames_(false),
     frameQueue_(kQueueSizeSmall),
     numSamplePlanes_(0),
-    timeIn_(0.0),
-    timeOut_(kMaxDouble),
-    playbackInterval_(false),
-    discarded_(0),
-    startTime_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
     imgConvertCtx_(NULL)
@@ -832,6 +844,9 @@ namespace yae
   {
     if (Track::open())
     {
+      skipLoopFilter(skipLoopFilter_);
+      skipNonReferenceFrames(skipNonReferenceFrames_);
+      
       bool ok = getTraits(override_);
       framesDecoded_ = 0;
       
@@ -839,6 +854,48 @@ namespace yae
     }
     
     return false;
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::skipLoopFilter
+  // 
+  void
+  VideoTrack::skipLoopFilter(bool skip)
+  {
+    skipLoopFilter_ = skip;
+
+    if (stream_->codec)
+    {
+      if (skipLoopFilter_)
+      {
+        stream_->codec->skip_loop_filter = AVDISCARD_ALL;
+      }
+      else
+      {
+        stream_->codec->skip_loop_filter = AVDISCARD_DEFAULT;
+      }
+    }
+  }
+  
+  //----------------------------------------------------------------
+  // VideoTrack::skipNonReferenceFrames
+  // 
+  void
+  VideoTrack::skipNonReferenceFrames(bool skip)
+  {
+    skipNonReferenceFrames_ = skip;
+
+    if (stream_->codec)
+    {
+      if (skipNonReferenceFrames_)
+      {
+        stream_->codec->skip_frame = AVDISCARD_NONREF;
+      }
+      else
+      {
+        stream_->codec->skip_frame = AVDISCARD_DEFAULT;
+      }
+    }
   }
   
   //----------------------------------------------------------------
@@ -1560,7 +1617,7 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::resetTimeCounters
   // 
-  void
+  int
   VideoTrack::resetTimeCounters(double seekTime)
   {
     packetQueue().clear();
@@ -1572,12 +1629,14 @@ namespace yae
     // down the line:
     frameQueue_.startNewSequence(TVideoFramePtr());
 
+    int err = 0;
     if (stream_ && stream_->codec)
     {
       avcodec_flush_buffers(stream_->codec);
 #if 1
       avcodec_close(stream_->codec);
-      int err = avcodec_open(stream_->codec, codec_);
+      codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+      err = avcodec_open(stream_->codec, codec_);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -1588,6 +1647,8 @@ namespace yae
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     framesDecoded_ = 0;
+    
+    return err;
   }
   
   //----------------------------------------------------------------
@@ -1627,7 +1688,7 @@ namespace yae
     
     // reset time counters, setup to output frames
     // starting from a given time point:
-    void resetTimeCounters(double seekTime);
+    int resetTimeCounters(double seekTime);
     
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
@@ -1647,12 +1708,6 @@ namespace yae
     TTime prevPTS_;
     bool hasPrevPTS_;
     uint64 prevNumSamples_;
-
-    double timeIn_;
-    double timeOut_;
-    bool playbackInterval_;
-    uint64_t discarded_;
-    int64_t startTime_;
     uint64 samplesDecoded_;
     
     ReSampleContext * resampleCtx_;
@@ -1673,11 +1728,6 @@ namespace yae
     outputBytesPerSample_(0),
     hasPrevPTS_(false),
     prevNumSamples_(0),
-    timeIn_(0.0),
-    timeOut_(kMaxDouble),
-    playbackInterval_(false),
-    discarded_(0),
-    startTime_(0),
     samplesDecoded_(0),
     resampleCtx_(NULL)
   {
@@ -2326,7 +2376,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTrack::resetTimeCounters
   // 
-  void
+  int
   AudioTrack::resetTimeCounters(double seekTime)
   {
     packetQueue().clear();
@@ -2338,12 +2388,14 @@ namespace yae
     // down the line:
     frameQueue_.startNewSequence(TAudioFramePtr());
 
+    int err = 0;
     if (stream_ && stream_->codec)
     {
       avcodec_flush_buffers(stream_->codec);
 #if 1
       avcodec_close(stream_->codec);
-      int err = avcodec_open(stream_->codec, codec_);
+      codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+      err = avcodec_open(stream_->codec, codec_);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -2353,6 +2405,8 @@ namespace yae
     prevNumSamples_ = 0;
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     samplesDecoded_ = 0;
+    
+    return err;
   }
   
   
@@ -2407,6 +2461,9 @@ namespace yae
     void setPlaybackInterval(bool enabled);
     void setPlaybackLooping(bool enabled);
     
+    void skipLoopFilter(bool skip);
+    void skipNonReferenceFrames(bool skip);
+    
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -2429,6 +2486,10 @@ namespace yae
     std::size_t selectedVideoTrack_;
     std::size_t selectedAudioTrack_;
 
+    // these are used to speed up video decoding:
+    bool skipLoopFilter_;
+    bool skipNonReferenceFrames_;
+    
     // demuxer current position (DTS):
     TTime dts_;
     int dtsStreamIndex_;
@@ -2449,6 +2510,8 @@ namespace yae
   Movie::Movie():
     thread_(this),
     context_(NULL),
+    skipLoopFilter_(false),
+    skipNonReferenceFrames_(false),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
     timeIn_(0.0),
@@ -2620,6 +2683,8 @@ namespace yae
 
     VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
     track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+    track->skipLoopFilter(skipLoopFilter_);
+    track->skipNonReferenceFrames(skipNonReferenceFrames_);
     return track->open();
   }
   
@@ -2756,7 +2821,10 @@ namespace yae
             mustSeek_ = false;
           }
           
-          err = av_read_frame(context_, &ffmpeg);
+          if (!err)
+          {
+            err = av_read_frame(context_, &ffmpeg);
+          }
         }
         
         if (err)
@@ -2984,13 +3052,13 @@ namespace yae
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-      videoTrack->resetTimeCounters(seekTime);
+      err = videoTrack->resetTimeCounters(seekTime);
     }
     
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (!err && selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-      audioTrack->resetTimeCounters(seekTime);
+      err = audioTrack->resetTimeCounters(seekTime);
     }
     
     return err;
@@ -3133,6 +3201,47 @@ namespace yae
     {}
   }
   
+  //----------------------------------------------------------------
+  // Movie::skipLoopFilter
+  // 
+  void
+  Movie::skipLoopFilter(bool skip)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      skipLoopFilter_ = skip;
+      
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack->skipLoopFilter(skipLoopFilter_);
+      }
+    }
+    catch (...)
+    {}
+  }
+  
+  //----------------------------------------------------------------
+  // Movie::skipNonReferenceFrames
+  // 
+  void
+  Movie::skipNonReferenceFrames(bool skip)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      skipNonReferenceFrames_ = skip;
+      
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack->skipNonReferenceFrames(skipNonReferenceFrames_);
+      }
+    }
+    catch (...)
+    {}
+  }
   
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -3567,6 +3676,24 @@ namespace yae
   ReaderFFMPEG::setPlaybackLooping(bool enabled)
   {
     private_->movie_.setPlaybackLooping(enabled);
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::skipLoopFilter
+  // 
+  void
+  ReaderFFMPEG::skipLoopFilter(bool skip)
+  {
+    private_->movie_.skipLoopFilter(skip);
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::skipNonReferenceFrames
+  // 
+  void
+  ReaderFFMPEG::skipNonReferenceFrames(bool skip)
+  {
+    private_->movie_.skipNonReferenceFrames(skip);
   }
   
 }
