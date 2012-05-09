@@ -1899,7 +1899,7 @@ namespace Yamka
     {
       TSeekEntry & index = *i;
       
-      if (index.payload_.position_.payload_.getElt() == element) 	 
+      if (index.payload_.position_.payload_.getElt() == element)
       {
         return &index;
       }
