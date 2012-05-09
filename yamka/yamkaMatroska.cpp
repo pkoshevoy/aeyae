@@ -3451,23 +3451,50 @@ namespace Yamka
   }
   
   //----------------------------------------------------------------
+  // SimpleBlock::mayAddFrame
+  // 
+  bool
+  SimpleBlock::mayAddFrame() const
+  {
+    return getNumberOfFrames() < 256;
+  }
+  
+  //----------------------------------------------------------------
   // SimpleBlock::addFrame
   // 
-  void
+  bool
   SimpleBlock::addFrame(const unsigned char * frame,
                         std::size_t frameSize,
                         IStorage & storage)
   {
-    frames_.add(frame, frameSize, storage);
+    // lace can't have more than 256 frames because the frame counter
+    // is an unsigned char:
+    if (getNumberOfFrames() < 256)
+    {
+      frames_.add(frame, frameSize, storage);
+      return true;
+    }
+    
+    assert(false);
+    return false;
   }
-
+  
   //----------------------------------------------------------------
   // SimpleBlock::addFrame
   // 
-  void
+  bool
   SimpleBlock::addFrame(const IStorage::IReceiptPtr & frameReceipt)
   {
-    frames_.add(frameReceipt);
+    // lace can't have more than 256 frames because the frame counter
+    // is an unsigned char:
+    if (getNumberOfFrames() < 256)
+    {
+      frames_.add(frameReceipt);
+      return true;
+    }
+    
+    assert(false);
+    return false;
   }
   
   //----------------------------------------------------------------

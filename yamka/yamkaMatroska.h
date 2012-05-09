@@ -921,10 +921,14 @@ namespace Yamka
     
     const IStorage::IReceiptPtr & getFrame(std::size_t frameNumber) const;
     
-    void addFrame(const unsigned char * frame,
+    // lace can't have more than 256 frames because the frame counter
+    // is an unsigned char:
+    bool mayAddFrame() const;
+    
+    bool addFrame(const unsigned char * frame,
                   std::size_t frameSize,
                   IStorage & storage);
-    void addFrame(const IStorage::IReceiptPtr & frameReceipt);
+    bool addFrame(const IStorage::IReceiptPtr & frameReceipt);
 
     // store the block header and the frames:
     void exportData(HodgePodge & simpleBlock, IStorage & storage) const;
