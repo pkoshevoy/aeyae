@@ -12,6 +12,7 @@
 // std includes:
 #include <list>
 #include <string.h>
+#include <cstdio>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -22,6 +23,9 @@
 
 namespace yae
 {
+  
+  YAE_API std::FILE *
+  fopenUtf8(const char * filenameUtf8, const char * mode);
   
   YAE_API int
   fileOpenUtf8(const char * filenameUTF8, int accessMode, int permissions);

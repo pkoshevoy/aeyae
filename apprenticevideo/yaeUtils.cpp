@@ -13,6 +13,15 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+//----------------------------------------------------------------
+// _FILE_OFFSET_BITS
+// 
+// turn on 64-bit file offsets:
+// 
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
+
 // system includes:
 #if defined(_WIN32)
 #include <windows.h>
@@ -31,36 +40,59 @@
 namespace yae
 {
   
+#ifdef _WIN32
+  //----------------------------------------------------------------
+  // utf8_to_utf16
+  // 
+  static wchar_t * utf8_to_utf16(const char * str_utf8)
+  {
+    int nchars = MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, NULL, 0);
+    wchar_t * str_utf16 = (wchar_t *)malloc(nchars * sizeof(wchar_t));
+    MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, str_utf16, nchars);
+    return str_utf16;
+  }
+#endif
+  
+  //----------------------------------------------------------------
+  // fopenUtf8
+  // 
+  std::FILE *
+  fopenUtf8(const char * filenameUtf8, const char * mode)
+  {
+    std::FILE * file = NULL;
+    
+#ifdef _WIN32
+    wchar_t * wname = utf8_to_utf16(filenameUtf8);
+    wchar_t * wmode = utf8_to_utf16(mode);
+    
+    _wfopen_s(&file, wname, wmode);
+    
+    free(wname);
+    free(wmode);
+#else
+    file = fopen(filenameUtf8, mode);
+#endif
+    
+    return file;
+  }
+  
   //----------------------------------------------------------------
   // fileOpenUtf8
   // 
   int
-  fileOpenUtf8(const char * filenameUTF8, int accessMode, int permissions)
+  fileOpenUtf8(const char * filenameUtf8, int accessMode, int permissions)
   {
 #ifdef _WIN32
     accessMode |= O_BINARY;
     
-    int wcsSize =
-      MultiByteToWideChar(CP_UTF8, // source string encoding
-                          0,       // flags (precomposed, composite, etc...)
-                          filenameUTF8, // source string
-                          -1,      // source string size
-                          NULL,    // output string destination buffer
-                          0);      // output string destination buffer size
+    wchar_t * wname = utf8_to_utf16(filenameUtf8);
+    int fd = -1;
+    int sh = accessMode & (_O_RDWR | _O_WRONLY) ? _SH_DENYWR : _SH_DENYNO;
     
-    std::vector<wchar_t> filenameUTF16(wcsSize + 1);
-    MultiByteToWideChar(CP_UTF8,
-                        0,
-                        filenameUTF8,
-                        -1,
-                        &filenameUTF16[0],
-                        wcsSize);
-    
-    int fd = _wopen(&filenameUTF16[0], accessMode, permissions);
-    
+    errno_t err = _wsopen_s(&fd, wname, accessMode, sh, permissions);
+    free(wname);
 #else
-    
-    int fd = open(filenameUTF8, accessMode, permissions);
+    int fd = open(filenameUtf8, accessMode, permissions);
 #endif
     
     return fd;
