@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -222,6 +222,23 @@ QLineEdit:disabled {
     <property name="title">
      <string>&amp;Playback</string>
     </property>
+    <widget class="QMenu" name="menuPlaybackSpeed">
+     <property name="title">
+      <string>Playback Speed</string>
+     </property>
+     <addaction name="actionTempo50"/>
+     <addaction name="actionTempo60"/>
+     <addaction name="actionTempo70"/>
+     <addaction name="actionTempo80"/>
+     <addaction name="actionTempo90"/>
+     <addaction name="actionTempo100"/>
+     <addaction name="actionTempo110"/>
+     <addaction name="actionTempo120"/>
+     <addaction name="actionTempo130"/>
+     <addaction name="actionTempo140"/>
+     <addaction name="actionTempo150"/>
+     <addaction name="actionTempo200"/>
+    </widget>
     <addaction name="actionPlay"/>
     <addaction name="separator"/>
     <addaction name="actionPrev"/>
@@ -237,6 +254,8 @@ QLineEdit:disabled {
     <addaction name="actionSkipColorConverter"/>
     <addaction name="actionSkipLoopFilter"/>
     <addaction name="actionSkipNonReferenceFrames"/>
+    <addaction name="separator"/>
+    <addaction name="menuPlaybackSpeed"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
     <property name="title">
@@ -676,6 +695,105 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>Skip Non-Reference Frames</string>
+   </property>
+  </action>
+  <action name="actionTempo50">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>50%</string>
+   </property>
+  </action>
+  <action name="actionTempo60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>60%</string>
+   </property>
+  </action>
+  <action name="actionTempo70">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>70%</string>
+   </property>
+  </action>
+  <action name="actionTempo80">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>80%</string>
+   </property>
+  </action>
+  <action name="actionTempo90">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>90%</string>
+   </property>
+  </action>
+  <action name="actionTempo100">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>100%</string>
+   </property>
+  </action>
+  <action name="actionTempo110">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>110%</string>
+   </property>
+  </action>
+  <action name="actionTempo120">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>120%</string>
+   </property>
+  </action>
+  <action name="actionTempo130">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>130%</string>
+   </property>
+  </action>
+  <action name="actionTempo140">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>140%</string>
+   </property>
+  </action>
+  <action name="actionTempo150">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>150%</string>
+   </property>
+  </action>
+  <action name="actionTempo200">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>200%</string>
    </property>
   </action>
  </widget>

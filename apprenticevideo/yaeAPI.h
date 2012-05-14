@@ -116,6 +116,14 @@ namespace yae
     kAudio32BitFloat         = 5, //!< [-1, 1]
     kAudio32BitBigEndian     = 6, //!< [-2147483648, 2147483647]
     kAudio32BitLittleEndian  = 7, //!< [-2147483648, 2147483647]
+    
+#ifdef __BIG_ENDIAN__
+    kAudio16BitNative        = kAudio16BitBigEndian,
+    kAudio32BitNative        = kAudio32BitBigEndian,
+#else
+    kAudio16BitNative        = kAudio16BitLittleEndian,
+    kAudio32BitNative        = kAudio32BitLittleEndian,
+#endif
   };
   
   //----------------------------------------------------------------

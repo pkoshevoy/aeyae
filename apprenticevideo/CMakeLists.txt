@@ -157,10 +157,12 @@ qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 set(project_sources 
   yaeAPI.h
   yaeAPI.cpp
+  yaeAudioFragment.h
   yaeAudioRenderer.h
   yaeAudioRenderer.cpp
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
+  yaeAudioTempoFilter.h
   yaeCanvas.h
   yaeCanvas.cpp
   yaeLineEdit.h
