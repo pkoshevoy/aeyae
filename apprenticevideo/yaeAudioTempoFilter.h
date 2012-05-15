@@ -649,7 +649,7 @@ namespace yae
   //----------------------------------------------------------------
   // TAudioTempoFilterI32
   // 
-  typedef AudioTempoFilter<int, -int(2147483648), int(2147483647)>
+  typedef AudioTempoFilter<int, -2147483648, 2147483647>
   TAudioTempoFilterI32;
   
   //----------------------------------------------------------------
