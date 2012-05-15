@@ -505,7 +505,7 @@ namespace yae
         if (na)
         {
           TSample * a = &buffer_[tail_];
-          memcpy(a, src, na * channels_ * sizeof(TSample));
+          memcpy(a, src, na * sizeof(TSample));
           
           src += na;
           position_[0] += na / channels_;
@@ -518,7 +518,7 @@ namespace yae
         if (nb)
         {
           TSample * b = &buffer_[0];
-          memcpy(b, src, nb * channels_ * sizeof(TSample));
+          memcpy(b, src, nb * sizeof(TSample));
           
           src += nb;
           position_[0] += nb / channels_;
