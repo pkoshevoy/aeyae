@@ -98,10 +98,14 @@ namespace yae
     virtual void setPlaybackIntervalEnd(double timeOut) = 0;
     virtual void setPlaybackInterval(bool enabled) = 0;
     virtual void setPlaybackLooping(bool enabled) = 0;
-
+    
     // these are used to speed up video decoding:
     virtual void skipLoopFilter(bool skip) = 0;
     virtual void skipNonReferenceFrames(bool skip) = 0;
+    
+    // this can be used to slow down audio if video decoding is too slow,
+    // or it can be used to speed up audio to watch the movie faster:
+    virtual bool setTempo(double tempo) = 0;
   };
   
 }

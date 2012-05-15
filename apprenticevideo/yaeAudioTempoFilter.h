@@ -41,6 +41,8 @@ namespace yae
     virtual void reset(unsigned int sampleRate,
                        unsigned int numChannels) = 0;
     
+    virtual void clear() = 0;
+    
     virtual bool setTempo(double tempo) = 0;
     
     virtual void apply(const unsigned char ** srcBuffer,
@@ -50,6 +52,10 @@ namespace yae
     
     virtual bool flush(unsigned char ** dstBuffer,
                        unsigned char * dstBufferEnd) = 0;
+    
+    // number of bytes required to store a
+    // single multi-channel window of samples:
+    virtual std::size_t fragmentSize() const = 0;
   };
   
   //----------------------------------------------------------------
@@ -102,8 +108,7 @@ namespace yae
     //----------------------------------------------------------------
     // reset
     // 
-    void
-    reset(unsigned int sampleRate, unsigned int numChannels)
+    void reset(unsigned int sampleRate, unsigned int numChannels)
     {
       // pick a segment window size:
       window_ = sampleRate / 50;
@@ -122,6 +127,22 @@ namespace yae
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);
       
+      // sample the Hann window function:
+      hann_.resize(window_);
+      for (std::size_t i = 0; i < window_; i++)
+      {
+        hann_[i] = 0.5 * (1.0 - cos(2.0 * M_PI * double(i) /
+                                    double(window_ - 1)));
+      }
+      
+      clear();
+    }
+
+    //----------------------------------------------------------------
+    // clear
+    // 
+    void clear()
+    {
       size_ = 0;
       head_ = 0;
       tail_ = 0;
@@ -134,27 +155,18 @@ namespace yae
       
       frag_[0].clear();
       frag_[1].clear();
-
+      
       // shift left position of 1st fragment by half a window
       // so that no re-normalization would be required for
       // the left half of the 1st fragment:
       frag_[0].position_[0] = -int64(window_ / 2);
       frag_[0].position_[1] = -int64(window_ / 2);
-      
-      // sample the Hann window function:
-      hann_.resize(window_);
-      for (std::size_t i = 0; i < window_; i++)
-      {
-        hann_[i] = 0.5 * (1.0 - cos(2.0 * M_PI * double(i) /
-                                    double(window_ - 1)));
-      }
     }
     
     //----------------------------------------------------------------
     // setTempo
     // 
-    bool
-    setTempo(double tempo)
+    bool setTempo(double tempo)
     {
       if (tempo < 0.5 || tempo > 2.0)
       {
@@ -581,6 +593,10 @@ namespace yae
     // accessor to the previous fragment:
     inline TAudioFragment & prevFrag()
     { return frag_[(nfrag_ + 1) % 2]; }
+    
+    // virtual:
+    std::size_t fragmentSize() const
+    { return window_ * channels_ * sizeof(TSample); }
     
     // ring-buffer of input samples:
     std::vector<TSample> buffer_;

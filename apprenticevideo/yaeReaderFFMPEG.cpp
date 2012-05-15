@@ -43,6 +43,8 @@
 #include <yaeUtils.h>
 #include <yaePixelFormatFFMPEG.h>
 #include <yaePixelFormatTraits.h>
+#include <yaeAudioFragment.h>
+#include <yaeAudioTempoFilter.h>
 
 // ffmpeg includes:
 extern "C"
@@ -1690,6 +1692,9 @@ namespace yae
     // starting from a given time point:
     int resetTimeCounters(double seekTime);
     
+    // adjust audio tempo:
+    bool setTempo(double tempo);
+    
     TAudioFrameQueue frameQueue_;
     AudioTraits override_;
     AudioTraits native_;
@@ -1711,6 +1716,12 @@ namespace yae
     uint64 samplesDecoded_;
     
     ReSampleContext * resampleCtx_;
+    
+    // for adjusting audio tempo:
+    mutable boost::mutex tempoMutex_;
+    std::vector<unsigned char> tempoBuffer_;
+    IAudioTempoFilter * tempoFilter_;
+    double tempo_;
   };
   
   //----------------------------------------------------------------
@@ -1729,7 +1740,9 @@ namespace yae
     hasPrevPTS_(false),
     prevNumSamples_(0),
     samplesDecoded_(0),
-    resampleCtx_(NULL)
+    resampleCtx_(NULL),
+    tempoFilter_(NULL),
+    tempo_(1.0)
   {
     YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_AUDIO);
     
@@ -2049,20 +2062,62 @@ namespace yae
       TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
                                     &ISampleBuffer::deallocator);
       af.sampleBuffer_ = sampleBuffer;
-      sampleBuffer->resize(0, outputBytes, 1, 16);
-      unsigned char * afSampleBuffer = sampleBuffer->samples(0);
       
-      // concatenate chunks into a contiguous frame buffer:
-      while (!chunks.empty())
+      bool shouldAdjustTempo = true;
       {
-        const unsigned char * chunk = &(chunks.front().front());
-        std::size_t chunkSize = chunks.front().size();
-        memcpy(afSampleBuffer, chunk, chunkSize);
-        
-        afSampleBuffer += chunkSize;
-        chunks.pop_front();
+        boost::lock_guard<boost::mutex> lock(tempoMutex_);
+        shouldAdjustTempo = tempoFilter_ && tempo_ != 1.0;
       }
-
+      
+      if (!shouldAdjustTempo)
+      {
+        // concatenate chunks into a contiguous frame buffer:
+        sampleBuffer->resize(0, outputBytes, 1, 16);
+        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+        
+        while (!chunks.empty())
+        {
+          const unsigned char * chunk = &(chunks.front().front());
+          std::size_t chunkSize = chunks.front().size();
+          memcpy(afSampleBuffer, chunk, chunkSize);
+          
+          afSampleBuffer += chunkSize;
+          chunks.pop_front();
+        }
+      }
+      else
+      {
+        boost::lock_guard<boost::mutex> lock(tempoMutex_);
+        
+        // pass source samples through the tempo filter:
+        unsigned char * dstStart = &tempoBuffer_[0];
+        unsigned char * dstEnd = dstStart + tempoBuffer_.size();
+        unsigned char * dst = dstStart;
+        
+        while (!chunks.empty())
+        {
+          const unsigned char * chunk = &(chunks.front().front());
+          std::size_t chunkSize = chunks.front().size();
+          
+          const unsigned char * srcStart = chunk;
+          const unsigned char * srcEnd = srcStart + chunkSize;
+          const unsigned char * src = srcStart;
+          
+          while (src < srcEnd && dst < dstEnd)
+          {
+            tempoFilter_->apply(&src, srcEnd, &dst, dstEnd);
+          }
+          
+          chunks.pop_front();
+        }
+        
+        std::size_t scaledBytes = dst - dstStart;
+        
+        sampleBuffer->resize(0, scaledBytes, 1, 16);
+        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+        memcpy(afSampleBuffer, dstStart, scaledBytes);
+      }
+      
       // put the decoded frame into frame queue:
       if (!frameQueue_.push(afPtr, &terminator_))
       {
@@ -2136,6 +2191,13 @@ namespace yae
       resampleCtx_ = NULL;
     }
     
+    // reset the tempo filter:
+    {
+      boost::lock_guard<boost::mutex> lock(tempoMutex_);
+      delete tempoFilter_;
+      tempoFilter_ = NULL;
+    }
+    
     remixBuffer_ = TSamplePlane();
     resampleBuffer_ = TSamplePlane();
     
@@ -2178,6 +2240,42 @@ namespace yae
                                             10, // log2 phase count
                                             0, // linear
                                             0.8); // cutoff frequency
+    }
+    
+    // initialize the tempo filter:
+    {
+      boost::lock_guard<boost::mutex> lock(tempoMutex_);
+      YAE_ASSERT(!tempoFilter_);
+      
+      if ((output_.channelFormat_ != kAudioChannelsPlanar ||
+           output_.channelLayout_ == kAudioMono))
+      {
+        if (output_.sampleFormat_ == kAudio8BitOffsetBinary)
+        {
+          tempoFilter_ = new TAudioTempoFilterU8();
+        }
+        else if (output_.sampleFormat_ == kAudio16BitNative)
+        {
+          tempoFilter_ = new TAudioTempoFilterI16();
+        }
+        else if (output_.sampleFormat_ == kAudio32BitNative)
+        {
+          tempoFilter_ = new TAudioTempoFilterI32();
+        }
+        else if (output_.sampleFormat_ == kAudio32BitFloat)
+        {
+          tempoFilter_ = new TAudioTempoFilterF32();
+        }
+        
+        if (tempoFilter_)
+        {
+          tempoFilter_->reset(output_.sampleRate_, outputChannels_);
+          tempoFilter_->setTempo(tempo_);
+          
+          std::size_t fragmentSize = tempoFilter_->fragmentSize();
+          tempoBuffer_.resize(fragmentSize * 3);
+        }
+      }
     }
   }
 
@@ -2409,6 +2507,29 @@ namespace yae
     return err;
   }
   
+  //----------------------------------------------------------------
+  // AudioTrack::setTempo
+  // 
+  bool
+  AudioTrack::setTempo(double tempo)
+  {
+    boost::lock_guard<boost::mutex> lock(tempoMutex_);
+    
+    tempo_ = tempo;
+    
+    if (tempoFilter_ && !tempoFilter_->setTempo(tempo_))
+    {
+      return false;
+    }
+    
+    if (tempo_ == 1.0 && tempoFilter_)
+    {
+      tempoFilter_->clear();
+    }
+    
+    return true;
+  }
+  
   
   //----------------------------------------------------------------
   // Movie
@@ -2463,6 +2584,8 @@ namespace yae
     
     void skipLoopFilter(bool skip);
     void skipNonReferenceFrames(bool skip);
+    
+    bool setTempo(double tempo);
     
   private:
     // intentionally disabled:
@@ -3244,6 +3367,28 @@ namespace yae
   }
   
   //----------------------------------------------------------------
+  // Movie::setTempo
+  // 
+  bool
+  Movie::setTempo(double tempo)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      if (selectedAudioTrack_ < audioTracks_.size())
+      {
+        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        return audioTrack->setTempo(tempo);
+      }
+    }
+    catch (...)
+    {}
+    
+    return false;
+  }
+  
+  
+  //----------------------------------------------------------------
   // ReaderFFMPEG::Private
   // 
   class ReaderFFMPEG::Private
@@ -3694,6 +3839,15 @@ namespace yae
   ReaderFFMPEG::skipNonReferenceFrames(bool skip)
   {
     private_->movie_.skipNonReferenceFrames(skip);
+  }
+  
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setTempo
+  // 
+  bool
+  ReaderFFMPEG::setTempo(double tempo)
+  {
+    return private_->movie_.setTempo(tempo);
   }
   
 }

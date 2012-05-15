@@ -161,7 +161,8 @@ namespace yae
     playbackPaused_(false),
     playbackInterrupted_(false),
     scrollStart_(0.0),
-    scrollOffset_(0.0)
+    scrollOffset_(0.0),
+    tempo_(1.0)
   {
 #ifdef __APPLE__
     appleRemoteControl_ = NULL;
@@ -280,7 +281,88 @@ namespace yae
     cropFrameGroup->addAction(actionCropFrame2_40);
     actionCropFrameNone->setChecked(true);
     
+    QActionGroup * playRateGroup = new QActionGroup(this);
+    playRateGroup->addAction(actionTempo50);
+    playRateGroup->addAction(actionTempo60);
+    playRateGroup->addAction(actionTempo70);
+    playRateGroup->addAction(actionTempo80);
+    playRateGroup->addAction(actionTempo90);
+    playRateGroup->addAction(actionTempo100);
+    playRateGroup->addAction(actionTempo110);
+    playRateGroup->addAction(actionTempo120);
+    playRateGroup->addAction(actionTempo130);
+    playRateGroup->addAction(actionTempo140);
+    playRateGroup->addAction(actionTempo150);
+    playRateGroup->addAction(actionTempo200);
+    actionTempo100->setChecked(true);
+    
+    QSignalMapper * playRateMapper = new QSignalMapper(this);
+    playRateMapper->setMapping(actionTempo50, 50);
+    playRateMapper->setMapping(actionTempo60, 60);
+    playRateMapper->setMapping(actionTempo70, 70);
+    playRateMapper->setMapping(actionTempo80, 80);
+    playRateMapper->setMapping(actionTempo90, 90);
+    playRateMapper->setMapping(actionTempo100, 100);
+    playRateMapper->setMapping(actionTempo110, 110);
+    playRateMapper->setMapping(actionTempo120, 120);
+    playRateMapper->setMapping(actionTempo130, 130);
+    playRateMapper->setMapping(actionTempo140, 140);
+    playRateMapper->setMapping(actionTempo150, 150);
+    playRateMapper->setMapping(actionTempo200, 200);
+    
     bool ok = true;
+    ok = connect(playRateMapper, SIGNAL(mapped(int)),
+                 this, SLOT(playbackSetTempo(int)));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo50, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo60, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo70, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo80, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo90, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo100, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo110, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo120, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo130, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo140, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo150, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
+    ok = connect(actionTempo200, SIGNAL(triggered()),
+                 playRateMapper, SLOT(map()));
+    YAE_ASSERT(ok);
+    
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
     YAE_ASSERT(ok);
@@ -1257,6 +1339,16 @@ namespace yae
     bool enable = actionVerticalScaling->isChecked();
     canvas_->enableVerticalScaling(enable);
     playbackShrinkWrap();
+  }
+  
+  //----------------------------------------------------------------
+  // MainWindow::playbackSetTempo
+  // 
+  void
+  MainWindow::playbackSetTempo(int percent)
+  {
+    tempo_ = double(percent) / 100.0;
+    reader_->setTempo(tempo_);
   }
   
   //----------------------------------------------------------------
@@ -2254,6 +2346,14 @@ namespace yae
     if (!forOneFrameOnly)
     {
       timelineControls_->adjustTo(reader);
+      
+      // request playback at currently selected playback rate:
+      reader->setTempo(tempo_);
+    }
+    else
+    {
+      // disable audio tempo filtering:
+      reader->setTempo(1.0);
     }
   }
   

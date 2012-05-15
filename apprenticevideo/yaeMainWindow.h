@@ -121,6 +121,7 @@ namespace yae
     void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
+    void playbackSetTempo(int percent);
     
     // helper:
     void exitFullScreen();
@@ -230,6 +231,9 @@ namespace yae
     
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
+    
+    // desired playback tempo:
+    double tempo_;
   };
 }
 

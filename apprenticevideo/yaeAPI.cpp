@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// std includes:
+#include <stdlib.h>
+
 // yae includes:
 #include <yaeAPI.h>
 
@@ -208,7 +211,10 @@ namespace yae
   // 
   TSamplePlane::~TSamplePlane()
   {
-    delete [] data_;
+    if (data_)
+    {
+      free(data_);
+    }
   }
 
   TSamplePlane::TSamplePlane(const TSamplePlane & src):
@@ -249,12 +255,15 @@ namespace yae
                        std::size_t alignment)
   {
     std::size_t planeSize = (rowBytes * rows);
-    delete [] data_;
-    data_ = NULL;
     
     if (planeSize)
     {
-      data_ = new unsigned char [planeSize + alignment - 1];
+      data_ = (unsigned char *)realloc(data_, planeSize + alignment - 1);
+    }
+    else if (data_)
+    {
+      free(data_);
+      data_ = NULL;
     }
     
     alignmentOffset_ = alignment ? std::size_t(data_) % alignment : 0;
