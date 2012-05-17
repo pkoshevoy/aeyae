@@ -113,6 +113,7 @@ namespace yae
     
     TTime framePosition;
     double frameDuration = 0.0;
+    double tempo = 1.0;
     double lateFrames = 0.0;
     double lateFramesErrorSum = 0.0;
     double playheadPositionPrev = - std::numeric_limits<double>::max();
@@ -134,17 +135,19 @@ namespace yae
       
       // get the time segment we are supposed to render for,
       // and the current time relative to the time segment:
-      double playheadPosition = 0.0;
-      bool clockIsRunning = clock_.getCurrentTime(t0, playheadPosition);
+      double elapsedTime = 0.0;
+      bool clockIsRunning = clock_.getCurrentTime(t0, elapsedTime);
+      double playheadPosition = t0.toSeconds() + elapsedTime * tempo;
       
       bool playbackLoopedAround = (playheadPosition < playheadPositionPrev);
       playheadPositionPrev = playheadPosition;
       
       // get position of the frame relative to the current time segment:
+      double frameDurationScaled = frameDuration / tempo;
       double f0 = double(framePosition.time_) / double(framePosition.base_);
-      double f1 = f0 + frameDuration;
+      double f1 = f0 + frameDurationScaled;
       double df = f1 - playheadPosition;
-
+      
       if (df < -0.067 && clockIsRunning && !playbackLoopedAround)
       {
         lateFramesErrorSum -= df;
@@ -159,8 +162,8 @@ namespace yae
       if (df > 0.0 && !playbackLoopedAround)
       {
         // wait until the next frame is required:
-        double secondsToSleep = std::min(df, frameDuration);
-
+        double secondsToSleep = std::min(df, frameDurationScaled);
+        
         if (df > 0.067)
         {
 #if 0 // ndef NDEBUG
@@ -197,7 +200,7 @@ namespace yae
         
         // tell others to wait for the video renderer:
         double delayInSeconds =
-          std::min(std::max(-df + frameDuration, 1.0), 2.0);
+          std::min(std::max(-df + frameDurationScaled, 1.0), 2.0);
         
         clock_.waitForMe(delayInSeconds);
 
@@ -262,7 +265,7 @@ namespace yae
           1.0 / frame->traits_.frameRate_ :
           1.0 / double(framePosition.base_);
         
-        frameDuration /= frame->tempo_;
+        tempo = frame->tempo_;
         
         // dispatch the frame to the canvas for rendering:
         if (canvas_)
@@ -279,6 +282,7 @@ namespace yae
         t0 = TTime();
         framePosition = TTime();
         frameDuration = 0.0;
+        tempo = 1.0;
         lateFrames = 0.0;
         lateFramesErrorSum = 0.0;
       }

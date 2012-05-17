@@ -105,11 +105,11 @@ namespace yae
     //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0, double latencyInSeconds = 0.0);
     
-    //! retrieve the reference time interval and current playhead position;
+    //! retrieve the reference time interval and time since last clock update;
     //! returns false when clock is not set or is stopped while the clock
     //! owner is waiting for someone to catch up;
     //! returns true when clock is running:
-    bool getCurrentTime(TTime & t0, double & playheadPosition) const;
+    bool getCurrentTime(TTime & t0, double & elapsedTime) const;
     
     //! announce that you are late so others would stop and wait for you:
     void waitForMe(double waitInSeconds = 1.0);

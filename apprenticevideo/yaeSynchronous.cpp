@@ -143,7 +143,7 @@ namespace yae
   // SharedClock::getCurrentTime
   // 
   bool
-  SharedClock::getCurrentTime(TTime & t0, double & playheadPosition) const
+  SharedClock::getCurrentTime(TTime & t0, double & elapsedTime) const
   {
     TTimeSegmentPtr keepAlive(shared_);
     const TimeSegment & timeSegment = *keepAlive;
@@ -153,16 +153,14 @@ namespace yae
     
     if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
-      playheadPosition = t0.toSeconds();
+      elapsedTime = 0.0;
       return false;
     }
     
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
     
-    playheadPosition =
-      double(t0.time_) / double(t0.base_) +
-      double(delta.total_milliseconds()) * 1e-3;
+    elapsedTime = double(delta.total_milliseconds()) * 1e-3;
     
     return true;
   }
