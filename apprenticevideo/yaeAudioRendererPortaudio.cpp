@@ -555,8 +555,10 @@ namespace yae
     unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
     TTime frameDuration(samplesToRead, sampleRate);
     TTime framePosition(audioFrame_->time_);
-    framePosition += TTime(audioFrameOffset_, sampleRate);
-
+    framePosition +=
+      TTime(std::size_t(0.5 + audioFrame_->tempo_ * double(audioFrameOffset_)),
+            sampleRate);
+    
     bool detectedStaleFrame =
       (outputParams_.channelCount != srcChannels ||
        sampleSize_ != srcSampleSize ||

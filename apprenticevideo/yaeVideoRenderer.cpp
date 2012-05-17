@@ -262,6 +262,8 @@ namespace yae
           1.0 / frame->traits_.frameRate_ :
           1.0 / double(framePosition.base_);
         
+        frameDuration /= frame->tempo_;
+        
         // dispatch the frame to the canvas for rendering:
         if (canvas_)
         {

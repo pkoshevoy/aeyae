@@ -271,6 +271,9 @@ namespace yae
     virtual bool threadStart();
     virtual bool threadStop();
     
+    // adjust frame duration:
+    virtual bool setTempo(double tempo);
+    
   private:
     // intentionally disabled:
     Track(const Track &);
@@ -304,6 +307,10 @@ namespace yae
     bool playbackInterval_;
     int64_t startTime_;
     
+    // for adjusting frame duration (playback tempo scaling):
+    mutable boost::mutex tempoMutex_;
+    double tempo_;
+    
   public:
     uint64_t discarded_;
   };
@@ -326,6 +333,7 @@ namespace yae
     timeOut_(kMaxDouble),
     playbackInterval_(false),
     startTime_(0),
+    tempo_(1.0),
     discarded_(0)
   {
     if (context_ && stream_)
@@ -569,7 +577,18 @@ namespace yae
     thread_.stop();
     return thread_.wait();
   }
-
+  
+  //----------------------------------------------------------------
+  // Track::setTempo
+  // 
+  bool
+  Track::setTempo(double tempo)
+  {
+    boost::lock_guard<boost::mutex> lock(tempoMutex_);
+    tempo_ = tempo;
+    return true;
+  }
+  
   //----------------------------------------------------------------
   // Track::callbackGetBuffer
   // 
@@ -1325,6 +1344,12 @@ namespace yae
       }
       vf.sampleBuffer_ = sampleBuffer;
       
+      // don't forget about tempo scaling:
+      {
+        boost::lock_guard<boost::mutex> lock(tempoMutex_);
+        vf.tempo_ = tempo_;
+      }
+      
       if (!imgConvertCtx_)
       {
         // copy the sample planes:
@@ -1389,7 +1414,7 @@ namespace yae
         {
           rvf.time_.time_++;
         }
-
+        
 #if 0 // ndef NDEBUG
         std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
                   << std::endl;
@@ -1692,7 +1717,7 @@ namespace yae
     // starting from a given time point:
     int resetTimeCounters(double seekTime);
     
-    // adjust audio tempo:
+    // adjust frame duration:
     bool setTempo(double tempo);
     
     TAudioFrameQueue frameQueue_;
@@ -1717,11 +1742,9 @@ namespace yae
     
     ReSampleContext * resampleCtx_;
     
-    // for adjusting audio tempo:
-    mutable boost::mutex tempoMutex_;
+    // for adjusting audio frame duration:
     std::vector<unsigned char> tempoBuffer_;
     IAudioTempoFilter * tempoFilter_;
-    double tempo_;
   };
   
   //----------------------------------------------------------------
@@ -1741,8 +1764,7 @@ namespace yae
     prevNumSamples_(0),
     samplesDecoded_(0),
     resampleCtx_(NULL),
-    tempoFilter_(NULL),
-    tempo_(1.0)
+    tempoFilter_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_AUDIO);
     
@@ -2067,6 +2089,7 @@ namespace yae
       {
         boost::lock_guard<boost::mutex> lock(tempoMutex_);
         shouldAdjustTempo = tempoFilter_ && tempo_ != 1.0;
+        af.tempo_ = shouldAdjustTempo ? tempo_ : 1.0;
       }
       
       if (!shouldAdjustTempo)
@@ -2090,9 +2113,7 @@ namespace yae
         boost::lock_guard<boost::mutex> lock(tempoMutex_);
         
         // pass source samples through the tempo filter:
-        unsigned char * dstStart = &tempoBuffer_[0];
-        unsigned char * dstEnd = dstStart + tempoBuffer_.size();
-        unsigned char * dst = dstStart;
+        std::size_t frameSize = 0;
         
         while (!chunks.empty())
         {
@@ -2103,19 +2124,24 @@ namespace yae
           const unsigned char * srcEnd = srcStart + chunkSize;
           const unsigned char * src = srcStart;
           
-          while (src < srcEnd && dst < dstEnd)
+          while (src < srcEnd)
           {
+            unsigned char * dstStart = &tempoBuffer_[0];
+            unsigned char * dstEnd = dstStart + tempoBuffer_.size();
+            unsigned char * dst = dstStart;
             tempoFilter_->apply(&src, srcEnd, &dst, dstEnd);
+            
+            std::size_t tmpSize = dst - dstStart;
+            sampleBuffer->resize(frameSize + tmpSize);
+            
+            unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+            memcpy(afSampleBuffer + frameSize, dstStart, tmpSize);
+            frameSize += tmpSize;
           }
           
+          YAE_ASSERT(src == srcEnd);
           chunks.pop_front();
         }
-        
-        std::size_t scaledBytes = dst - dstStart;
-        
-        sampleBuffer->resize(0, scaledBytes, 1, 16);
-        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
-        memcpy(afSampleBuffer, dstStart, scaledBytes);
       }
       
       // put the decoded frame into frame queue:
@@ -3375,10 +3401,22 @@ namespace yae
     try
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
+      
+      // first set audio tempo -- this may fail:
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        return audioTrack->setTempo(tempo);
+        if (!audioTrack->setTempo(tempo))
+        {
+          return false;
+        }
+      }
+      
+      // then set video tempo -- this can't fail:
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        return videoTrack->setTempo(tempo);
       }
     }
     catch (...)

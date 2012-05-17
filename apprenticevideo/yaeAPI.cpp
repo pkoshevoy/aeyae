@@ -216,7 +216,10 @@ namespace yae
       free(data_);
     }
   }
-
+  
+  //----------------------------------------------------------------
+  // TSamplePlane::TSamplePlane
+  // 
   TSamplePlane::TSamplePlane(const TSamplePlane & src):
     data_(NULL),
     alignmentOffset_(0),

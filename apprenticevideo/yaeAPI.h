@@ -265,7 +265,7 @@ namespace yae
     
     // resize the sample plane:
     void resize(std::size_t rowBytes,
-                std::size_t rows,
+                std::size_t rows = 1,
                 std::size_t alignment = 16);
     
     // samples accessors:
@@ -320,6 +320,10 @@ namespace yae
                 std::size_t rows,
                 std::size_t alignment = 16);
     
+    // helper, useful for audio sample buffer:
+    inline void resize(std::size_t numBytes, std::size_t alignment = 16)
+    { resize(0, numBytes, 1, alignment); }
+    
   protected:
     // sample planes:
     std::vector<TSamplePlane> plane_;
@@ -339,8 +343,13 @@ namespace yae
     typedef traits_t TTraits;
     typedef TFrame<traits_t> TSelf;
     
+    TFrame(): tempo_(1.0) {}
+    
     //! frame position:
     TTime time_;
+    
+    //! frame duration tempo scaling:
+    double tempo_;
     
     //! frame traits:
     TTraits traits_;
