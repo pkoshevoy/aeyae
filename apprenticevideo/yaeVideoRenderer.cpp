@@ -110,13 +110,14 @@ namespace yae
   VideoRenderer::TPrivate::threadLoop()
   {
     TTime t0;
-    
+
     TTime framePosition;
     double frameDuration = 0.0;
     double tempo = 1.0;
+    double drift = 0.0;
     double lateFrames = 0.0;
     double lateFramesErrorSum = 0.0;
-    double playheadPositionPrev = - std::numeric_limits<double>::max();
+    double clockPositionPrev = - std::numeric_limits<double>::max();
     static const double secondsToPause = 0.1;
     
     bool ok = true;
@@ -137,15 +138,16 @@ namespace yae
       // and the current time relative to the time segment:
       double elapsedTime = 0.0;
       bool clockIsRunning = clock_.getCurrentTime(t0, elapsedTime);
-      double playheadPosition = t0.toSeconds() + elapsedTime * tempo;
+      double clockPosition = t0.toSeconds();
+      double playheadPosition = clockPosition + elapsedTime * tempo - drift;
       
-      bool playbackLoopedAround = (playheadPosition < playheadPositionPrev);
-      playheadPositionPrev = playheadPosition;
+      bool playbackLoopedAround = (clockPosition < clockPositionPrev);
+      clockPositionPrev = clockPosition;
       
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
       double f0 = double(framePosition.time_) / double(framePosition.base_);
-      double f1 = f0 + frameDurationScaled;
+      double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
       
       if (df < -0.067 && clockIsRunning && !playbackLoopedAround)
@@ -228,9 +230,7 @@ namespace yae
           }
           
           framePosition = frame->time_;
-          double t =
-            double(framePosition.time_) /
-            double(framePosition.base_);
+          double t = framePosition.toSeconds();
           
           if (t > f0 || frameDuration == 0.0)
           {
@@ -283,13 +283,16 @@ namespace yae
         framePosition = TTime();
         frameDuration = 0.0;
         tempo = 1.0;
+        drift = 0.0;
         lateFrames = 0.0;
         lateFramesErrorSum = 0.0;
+        clockPositionPrev = - std::numeric_limits<double>::max();
       }
       
       if (clock_.allowsSettingTime())
       {
         clock_.setCurrentTime(framePosition);
+        drift = df;
       }
     }
   }
