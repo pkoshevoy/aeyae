@@ -382,6 +382,7 @@ namespace yae
     static const QChar kHyphen = QChar::fromAscii('-');
     static const QChar kSpace = QChar::fromAscii(' ');
     static const QChar kPeriod = QChar::fromAscii('.');
+    static const QChar kNumber = QChar::fromAscii('#');
     
     // attempt to split based on separator character:
     QString token;
@@ -393,7 +394,8 @@ namespace yae
       if (c == kUnderscore ||
           c == kHyphen ||
           c == kSpace ||
-          c == kPeriod)
+          c == kPeriod ||
+          c == kNumber)
       {
         if (!token.isEmpty())
         {
