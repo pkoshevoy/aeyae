@@ -29,6 +29,12 @@
 // yae includes:
 #include <yaeAPI.h>
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavcodec/avfft.h>
+}
+
 //----------------------------------------------------------------
 // YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
 // 
@@ -38,7 +44,7 @@
 // YAE_MAX_AMPLITUDE_PYRAMID
 //
 #ifndef YAE_MAX_AMPLITUDE_PYRAMID
-#define YAE_MAX_AMPLITUDE_PYRAMID 1
+#define YAE_MAX_AMPLITUDE_PYRAMID 0
 #endif
 
 
@@ -114,6 +120,7 @@ namespace yae
     // 
     void clear()
     {
+      xdat_.clear();
       pyramid_.clear();
       position_[0] = 0;
       position_[1] = 0;
@@ -247,7 +254,7 @@ namespace yae
       // so coarse that it will be useless in practice:
 #ifndef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
       int lowestLevel = 6;
-      numLevels = std::min<int>(numLevels, lowestLevel + 1);
+      // numLevels = std::min<int>(numLevels, lowestLevel + 1);
 #endif
       
       // resize the pyramid:
@@ -259,6 +266,10 @@ namespace yae
         // empty fragment, nothing to do here:
         return;
       }
+      
+      // init complex data buffer used for FFT and Correlation:
+      xdat_.resize(1 << (numLevels));
+      memset(&xdat_.front(), 0, xdat_.size() * sizeof(FFTComplex));
       
       // init the base pyramid level:
       pyramid_[0].resize(numSamples_);
@@ -274,9 +285,10 @@ namespace yae
 
       if (numChannels_ == 1)
       {
+        FFTComplex * xdat = &xdat_.front();
         TSample tmp;
         
-        for (; src < srcEnd; src += stride_, dst++)
+        for (; src < srcEnd; src += stride_, dst++, xdat++)
         {
           memcpy(&tmp, src, stride_);
           
@@ -293,25 +305,35 @@ namespace yae
           *dst = TScalar(min1 + rng1 * ((s - min0) / rng0));
           magnitude_ += fabs(double(*dst));
 #endif
+          
+          // xdat->re = FFTSample(-1.0 + 2.0 * (double(tmp) - min0) / rng0);
+          xdat->re = FFTSample(tmp);
+          xdat->im = 0;
         }
         
         magnitude_ /= double(numSamples_);
       }
       else
       {
+        FFTComplex * xdat = &xdat_.front();
+        
         // temporary buffer for a row of samples:
         std::vector<TSample> tmp(numChannels_);
         
-        for (; src < srcEnd; src += stride_, dst++)
+        for (; src < srcEnd; src += stride_, dst++, xdat++)
         {
           memcpy(&tmp[0], src, stride_);
           
 #if YAE_MAX_AMPLITUDE_PYRAMID
-          double s = std::min<double>(max0, fabs(double(tmp[0])));
+          double t0 = tmp[0];
+          double s = std::min<double>(max0, fabs(double(t0)));
+          double avg = double(t0);
           
           for (std::size_t i = 1; i < numChannels_; i++)
           {
-            double s0 = std::min<double>(max0, fabs(double(tmp[i])));
+            double ti = tmp[i];
+            double s0 = std::min<double>(max0, fabs(ti));
+            avg += ti;
             
             // store max amplitude only:
             s = std::max<double>(s, s0);
@@ -320,19 +342,28 @@ namespace yae
           // affine transform sample into local sample format:
           *dst = TScalar(max1 * ((s - mid0) / hlf0));
           magnitude_ += double(*dst);
-#else
-          double s = 0;
           
-          for (std::size_t i = 0; i < numChannels_; i++)
+          avg /= double(numChannels_);
+          // xdat->re = FFTSample(-1.0 + 2.0 * (avg - min0) / rng0);
+          xdat->re = FFTSample(avg);
+          xdat->im = 0;
+#else
+          double avg = tmp[0];
+          
+          for (std::size_t i = 1; i < numChannels_; i++)
           {
-            s += double(tmp[i]);
+            avg += double(tmp[i]);
           }
           
-          s /= double(numChannels_);
+          avg /= double(numChannels_);
           
           // affine transform sample into local sample format:
-          *dst = TScalar(min1 + rng1 * ((s - min0) / rng0));
+          *dst = TScalar(min1 + rng1 * ((avg - min0) / rng0));
           magnitude_ += fabs(double(*dst));
+          
+          // xdat->re = FFTSample(-1.0 + 2.0 * (avg - min0) / rng0);
+          xdat->re = FFTSample(avg);
+          xdat->im = 0;
 #endif
         }
         
@@ -366,7 +397,20 @@ namespace yae
         }
       }
     }
-
+    
+#if defined(_WIN64) || !defined(_WIN32)
+    //----------------------------------------------------------------
+    // transform
+    // 
+    void transform(FFTContext * fft)
+    {
+      // apply FFT:
+      FFTComplex * xdat = &xdat_.front();
+      av_fft_permute(fft, xdat);
+      av_fft_calc(fft, xdat);
+    }
+#endif
+    
     //----------------------------------------------------------------
     // calcOverlapMetric
     // 
@@ -401,42 +445,144 @@ namespace yae
       return metric;
     }
     
+#if defined(_WIN64) || !defined(_WIN32)
     //----------------------------------------------------------------
     // alignTo
     // 
-    // align this fragment to the given fragment:
+    // align this fragment to the given fragment using Correlation
     // 
     int
     alignTo(const AudioFragment & fragment,
             unsigned int deltaMax,
-            int drift)
+            int drift,
+            const FFTSample * denoiseFilter,
+            const FFTSample * lowpassFilter,
+            FFTComplex * correlation,
+            FFTComplex * correlationFiltered,
+            FFTContext * fftInverse)
     {
-      int correction = -drift;
+      int bestOffset = -drift;
       
-      const std::size_t numLevels = pyramid_.size();
-      if (numLevels != fragment.pyramid_.size())
-      {
-        // mismatched pyramids:
-        return correction;
-      }
-
+#if 0
       if (fragment.magnitude_ < 1.0 && magnitude_ < 1.0)
       {
         // both fragments are really quiet,
         // don't bother refining their alignment
         // since nobody will be able to notice anyway:
-        return correction;
+        return bestOffset;
+      }
+#endif
+      
+      const int window = xdat_.size() / 2;
+      const FFTComplex * xa = &fragment.xdat_.front();
+      const FFTComplex * xb = &xdat_.front();
+      FFTComplex * xc = correlation;
+      FFTComplex * zc = correlationFiltered;
+      const FFTSample * dz = denoiseFilter;
+      const FFTSample * lp = lowpassFilter;
+      
+      for (int i = 0; i < window * 2; i++, xa++, xb++, xc++, zc++, dz++, lp++)
+      {
+        xc->re = *dz * (xa->re * xb->re + xa->im * xb->im);
+        xc->im = *dz * (xa->im * xb->re - xa->re * xb->im);
+        
+#if 0
+        FFTSample magnitude = 1e-6 + sqrtf(xc->re * xc->re + xc->im * xc->im);
+        xc->re /= magnitude;
+        xc->im /= magnitude;
+#endif
+        
+        zc->re = *lp * xc->re;
+        zc->im = *lp * xc->im;
       }
       
-      // get window size so that nominal 50% overlap can be calculated:
-      const int window = pyramid_[0].size();
+      // apply inverse FFT:
+      av_fft_permute(fftInverse, correlation);
+      av_fft_calc(fftInverse, correlation);
       
-      // deterine appropriate pyramid level to start from:
-      int lowestLevel = std::min<int>(numLevels - 1, 6);
+      av_fft_permute(fftInverse, correlationFiltered);
+      av_fft_calc(fftInverse, correlationFiltered);
       
+      // identify peaks:
+      int i0 = std::max<int>(window / 2 - deltaMax - drift, 0);
+      i0 = std::min<int>(i0, window);
+      
+      int i1 = std::min<int>(window / 2 + deltaMax - drift, window);
+      i1 = std::max<int>(i1, 0);
+      
+      // subtract low-pass filtered correlation from
+      // denoised correlation to enhance peaks:
+      xc = correlation + i0;
+      zc = correlationFiltered + i0;
+      
+      FFTSample bestMetric = 0;
+      for (int i = i0; i < i1; i++, xc++, zc++)
+      {
+        FFTSample h = xc->re; // * xc->re;
+        FFTSample l = zc->re; // * zc->re;
+        FFTSample metric =
+          (l < h) ? (h < 0 ? FFTSample(0) : (h - l) * h) : FFTSample(0);
+        
+        // normalize:
+        int overlap = 1 + abs(window - i);
+        metric /= FFTSample(overlap);
+        
+        if (metric > bestMetric)
+        {
+          bestMetric = metric;
+          bestOffset = i - window / 2;
+        }
+        
+        // this is for debugging/visualization:
+        // zc->re = metric;
+      }
+#if 0
+      // this is for debugging/visualization:
+      zc = correlationFiltered;
+      for (int i = 0; i < i0; i++, zc++)
+      {
+        zc->re = 0.0;
+      }
+      
+      zc = correlationFiltered + i1;
+      for (int i = i1; i < window; i++, zc++)
+      {
+        zc->re = 0.0;
+      }
+#endif
+#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
+      std::cerr << "best offset: " << bestOffset << std::endl
+                << std::endl;
+#endif
+      
+#if 0
+      return bestOffset;
+#else
+      return refineAlignment(fragment,
+                             deltaMax,
+                             drift,
+                             bestOffset,
+                             2);
+#endif
+    }
+#endif
+    
+    //----------------------------------------------------------------
+    // refineAlignment
+    // 
+    int
+    refineAlignment(const AudioFragment & fragment,
+                    unsigned int deltaMax,
+                    int drift,
+                    int correction,
+                    int lowestLevel)
+    {
 #ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
       std::cerr << "\ninitial correction: " << correction << std::endl;
 #endif
+      
+      // get window size so that nominal 50% overlap can be calculated:
+      const int window = pyramid_[0].size();
       
       for (int level = lowestLevel; level >= 0; level--)
       {
@@ -476,6 +622,43 @@ namespace yae
 #endif
       
       return correction;
+    }
+    
+    //----------------------------------------------------------------
+    // alignTo
+    // 
+    // align this fragment to the given fragment:
+    // 
+    int
+    alignTo(const AudioFragment & fragment,
+            unsigned int deltaMax,
+            int drift)
+    {
+      int correction = -drift;
+      
+      const std::size_t numLevels = pyramid_.size();
+      if (numLevels != fragment.pyramid_.size())
+      {
+        // mismatched pyramids:
+        return correction;
+      }
+
+      if (fragment.magnitude_ < 1.0 && magnitude_ < 1.0)
+      {
+        // both fragments are really quiet,
+        // don't bother refining their alignment
+        // since nobody will be able to notice anyway:
+        return correction;
+      }
+      
+      // deterine appropriate pyramid level to start from:
+      int lowestLevel = std::min<int>(numLevels - 1, 6);
+      
+      return refineAlignment(fragment,
+                             deltaMax,
+                             drift,
+                             correction,
+                             lowestLevel);
     }
 
     //----------------------------------------------------------------
@@ -589,11 +772,15 @@ namespace yae
     // stride = (number-of-channels * bits-per-sample-per-channel) / 8
     std::size_t stride_;
     
+    // FFT transform of the downmixed mono fragment, used for
+    // waveform alignment via correlation:
+    std::vector<FFTComplex> xdat_;
+    
     // multi-resolution pyramid of mono waveform samples segment
     // stored in the TScalar sample format:
     std::vector<std::vector<TScalar> > pyramid_;
     
-    // average sample amplitude of the base level:
+    // average sample amplitude:
     double magnitude_;
   };
   

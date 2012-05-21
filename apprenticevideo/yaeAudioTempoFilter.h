@@ -30,7 +30,40 @@
 
 namespace yae
 {
+  
+  //----------------------------------------------------------------
+  // setupLowpassFilter
+  // 
+  template <typename TScalar>
+  static void
+  setupLowpassFilter(TScalar * filter, int size, double r, double s)
+  {
+    double r0 = r - s;
+    double r1 = r + s;
+    double dr = r1 - r0;
+    int half = size / 2;
+    
+    for (int i = 0; i < size; i++, filter++)
+    {
+      double t = fabs(double((i + half) % size - half) /
+                      double(half));
+      
+      *filter = TScalar((t <= r0) ? 1.0 :
+                        (t >= r1) ? 0.0 :
+                        (1.0 + cos(M_PI * (t - r0) / dr)) / 2.0);
+    }
+  }
 
+  //----------------------------------------------------------------
+  // *TDebugAlignment
+  // 
+  typedef void(*TDebugAlignment)(int /* window */,
+                                 const TAudioFragment * /* a */,
+                                 const TAudioFragment * /* b */,
+                                 int /* correction */,
+                                 const FFTComplex * /* denoisedCorrelation */,
+                                 const FFTComplex * /* filteredCorrelation */);
+  
   //----------------------------------------------------------------
   // IAudioTempoFilter
   // 
@@ -48,7 +81,8 @@ namespace yae
     virtual void apply(const unsigned char ** srcBuffer,
                        const unsigned char * srcBufferEnd,
                        unsigned char ** dstBuffer,
-                       unsigned char * dstBufferEnd) = 0;
+                       unsigned char * dstBufferEnd,
+                       TDebugAlignment debugAlignment = NULL) = 0;
     
     virtual bool flush(unsigned char ** dstBuffer,
                        unsigned char * dstBufferEnd) = 0;
@@ -99,10 +133,34 @@ namespace yae
       tempo_(1.0),
       drift_(0),
       nfrag_(0),
-      state_(kLoadFragment)
+      state_(kLoadFragment),
+      fftForward_(NULL),
+      fftInverse_(NULL)
     {
+#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
+      debugAlignment_ = NULL;
+#endif
+      
       position_[0] = 0;
       position_[1] = 0;
+    }
+    
+    //----------------------------------------------------------------
+    // ~AudioTempoFilter
+    // 
+    ~AudioTempoFilter()
+    {
+      if (fftForward_)
+      {
+        av_fft_end(fftForward_);
+        fftForward_ = NULL;
+      }
+      
+      if (fftInverse_)
+      {
+        av_fft_end(fftInverse_);
+        fftInverse_ = NULL;
+      }
     }
     
     //----------------------------------------------------------------
@@ -110,19 +168,55 @@ namespace yae
     // 
     void reset(unsigned int sampleRate, unsigned int numChannels)
     {
+      channels_ = numChannels;
+      
       // pick a segment window size:
       window_ = sampleRate / 50;
       
       // adjust window size to be a power-of-two integer:
-      unsigned int pot = powerOfTwoLessThanOrEqual<unsigned int>(window_);
+      unsigned int nlevels = 0;
+      unsigned int pot = powerOfTwoLessThanOrEqual<unsigned int>(window_,
+                                                                 &nlevels);
       YAE_ASSERT(pot <= window_);
       
       if (pot < window_)
       {
         window_ = pot * 2;
+        nlevels++;
       }
       
-      channels_ = numChannels;
+#if defined(_WIN64) || !defined(_WIN32)
+      // initialize FFT contexts:
+      if (fftForward_)
+      {
+        av_fft_end(fftForward_);
+        fftForward_ = NULL;
+      }
+      
+      if (fftInverse_)
+      {
+        av_fft_end(fftInverse_);
+        fftInverse_ = NULL;
+      }
+      
+      fftForward_ = av_fft_init(nlevels, 0);
+      fftInverse_ = av_fft_init(nlevels, 1);
+      denoiseFilter_.resize(window_ * 2);
+      lowpassFilter_.resize(window_ * 2);
+      correlation_.resize(window_ * 2);
+      correlationFiltered_.resize(window_ * 2);
+      
+      // initialize the lowpass filters:
+      setupLowpassFilter<FFTSample>(&denoiseFilter_[0],
+                                    window_ * 2,
+                                    2e-1,
+                                    5e-2);
+      
+      setupLowpassFilter<FFTSample>(&lowpassFilter_[0],
+                                    window_ * 2,
+                                    5e-2,
+                                    5e-2);
+#endif
       
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);
@@ -183,8 +277,13 @@ namespace yae
     void apply(const unsigned char ** srcBuffer,
                const unsigned char * srcBufferEnd,
                unsigned char ** dstBuffer,
-               unsigned char * dstBufferEnd)
+               unsigned char * dstBufferEnd,
+               TDebugAlignment debugAlignment = NULL)
     {
+#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
+      debugAlignment_ = debugAlignment;
+#endif
+      
       const TSample * src = (const TSample *)*srcBuffer;
       const TSample * srcEnd = (const TSample *)srcBufferEnd;
       
@@ -203,6 +302,11 @@ namespace yae
           
           // build a multi-resolution pyramid for fragment alignment:
           currFrag().template downsample<TSample>(double(tmin), double(tmax));
+          
+#if defined(_WIN64) || !defined(_WIN32)
+          // apply FFT:
+          currFrag().transform(fftForward_);
+#endif
           
           // must load the second fragment before alignment can start:
           if (!nfrag_)
@@ -234,6 +338,11 @@ namespace yae
           
           // build a multi-resolution pyramid for fragment alignment:
           currFrag().template downsample<TSample>(double(tmin), double(tmax));
+          
+#if defined(_WIN64) || !defined(_WIN32)
+          // apply FFT:
+          currFrag().transform(fftForward_);
+#endif
           
           state_ = kOutputOverlapAdd;
         }
@@ -354,6 +463,11 @@ namespace yae
         {
           // build a multi-resolution pyramid for fragment alignment:
           frag.template downsample<TSample>(double(tmin), double(tmax));
+          
+#if defined(_WIN64) || !defined(_WIN32)
+          // apply FFT:
+          frag.transform(fftForward_);
+#endif
           
           // align current fragment to previous fragment:
           if (adjustPosition())
@@ -569,8 +683,33 @@ namespace yae
       TAudioFragment &       frag = currFrag();
       
       const int deltaMax = window_ / 4;
-      const int correction = frag.alignTo(prev, deltaMax, drift_);
       
+#if defined(_WIN32) && !defined(_WIN64)
+      // fallback to the non-FFT method because current win32 build
+      // of libavcodec av_fft_permute crashes:
+      const int correction = frag.alignTo(prev, deltaMax, drift_);
+#else
+      const int correction = frag.alignTo(prev,
+                                          deltaMax,
+                                          drift_,
+                                          &denoiseFilter_[0],
+                                          &lowpassFilter_[0],
+                                          &correlation_[0],
+                                          &correlationFiltered_[0],
+                                          fftInverse_);
+#endif
+      
+#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
+      if (debugAlignment_)
+      {
+        debugAlignment_(window_,
+                        &prev,
+                        &frag,
+                        correction,
+                        &correlation_[0],
+                        &correlationFiltered_[0]);
+      }
+#endif
       if (correction)
       {
         // adjust fragment position:
@@ -634,6 +773,18 @@ namespace yae
     
     // current state:
     TState state_;
+    
+    // for audio fragment alignment via correlation in frequency domain:
+    FFTContext * fftForward_;
+    FFTContext * fftInverse_;
+    std::vector<FFTSample> denoiseFilter_;
+    std::vector<FFTSample> lowpassFilter_;
+    std::vector<FFTComplex> correlation_;
+    std::vector<FFTComplex> correlationFiltered_;
+    
+#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
+    TDebugAlignment debugAlignment_;
+#endif
   };
   
   //----------------------------------------------------------------

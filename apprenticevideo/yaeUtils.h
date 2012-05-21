@@ -24,6 +24,9 @@
 namespace yae
 {
   
+  YAE_API int
+  renameUtf8(const char * fnOldUtf8, const char * fnNewUtf8);
+  
   YAE_API std::FILE *
   fopenUtf8(const char * filenameUtf8, const char * mode);
   

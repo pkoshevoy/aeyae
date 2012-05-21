@@ -52,6 +52,27 @@ namespace yae
     return str_utf16;
   }
 #endif
+
+  //----------------------------------------------------------------
+  // renameUtf8
+  //
+  int
+  renameUtf8(const char * fnOld, const char * fnNew)
+  {
+#ifdef _WIN32
+    wchar_t * wold = utf8_to_utf16(fnOld);
+    wchar_t * wnew = utf8_to_utf16(fnNew);
+    
+    int ret = _wrename(wold, wnew);
+    
+    free(wold);
+    free(wnew);
+#else
+    int ret = rename(fnOld, fnNew);
+#endif
+    
+    return ret;
+  }
   
   //----------------------------------------------------------------
   // fopenUtf8
