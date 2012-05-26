@@ -111,44 +111,6 @@ namespace yae
     //----------------------------------------------------------------
     // init
     // 
-    bool init(int64 position,
-              const unsigned char * data,
-              std::size_t numSamples,
-              const AudioTraits & traits)
-    {
-      if (traits.channelFormat_ != kAudioChannelsPacked &&
-          traits.channelLayout_ != kAudioMono)
-      {
-        // incompatible channel layout format:
-        return false;
-      }
-      
-      std::size_t numChannels = getNumberOfChannels(traits.channelLayout_);
-      std::size_t bitsPerSample = getBitsPerSample(traits.sampleFormat_);
-      
-      // packed sample stride, expressed in bits:
-      std::size_t stride = numChannels * bitsPerSample;
-      
-      // sanity check:
-      if (stride % 8)
-      {
-        // incompatible sample format, stride can't be expressed in bytes:
-        return false;
-      }
-      
-      // convert to sample row bytes:
-      stride /= 8;
-      
-      // load the data:
-      init(position, data, numSamples, numChannels, stride);
-      
-      // NOTE: someone still has to downsample this data...
-      return true;
-    }
-    
-    //----------------------------------------------------------------
-    // init
-    // 
     void init(int64 fragmentPosition,
               std::size_t numberOfSamples,
               std::size_t numberOfChannels,
@@ -159,54 +121,6 @@ namespace yae
       numSamples_ = numberOfSamples;
       numChannels_ = numberOfChannels;
       stride_ = sampleStride;
-    }
-
-    //----------------------------------------------------------------
-    // init
-    // 
-    void init(int64 fragmentPosition,
-              const unsigned char * data,
-              std::size_t numberOfSamples,
-              std::size_t numberOfChannels,
-              std::size_t sampleStride)
-    {
-      data_.assign(data, data + numberOfSamples * sampleStride);
-      position_[0] = fragmentPosition;
-      numSamples_ = numberOfSamples;
-      numChannels_ = numberOfChannels;
-      stride_ = sampleStride;
-    }
-
-    //----------------------------------------------------------------
-    // downsample
-    // 
-    bool
-    downsample(const AudioTraits & traits)
-    {
-      // initialize the pyramid levels:
-      if (traits.sampleFormat_ == kAudio8BitOffsetBinary)
-      {
-        downsample<unsigned char>();
-      }
-      else if (traits.sampleFormat_ == kAudio16BitNative)
-      {
-        downsample<short int>();
-      }
-      else if (traits.sampleFormat_ == kAudio32BitNative)
-      {
-        downsample<int>();
-      }
-      else if (traits.sampleFormat_ == kAudio32BitFloat)
-      {
-        downsample<float>(-1.0, 1.0);
-      }
-      else
-      {
-        // unsupported sample format:
-        return false;
-      }
-      
-      return true;
     }
     
     //----------------------------------------------------------------
