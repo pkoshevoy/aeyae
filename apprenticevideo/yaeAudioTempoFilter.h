@@ -32,39 +32,6 @@ namespace yae
 {
   
   //----------------------------------------------------------------
-  // setupLowpassFilter
-  // 
-  template <typename TScalar>
-  static void
-  setupLowpassFilter(TScalar * filter, int size, double r, double s)
-  {
-    double r0 = r - s;
-    double r1 = r + s;
-    double dr = r1 - r0;
-    int half = size / 2;
-    
-    for (int i = 0; i < size; i++, filter++)
-    {
-      double t = fabs(double((i + half) % size - half) /
-                      double(half));
-      
-      *filter = TScalar((t <= r0) ? 1.0 :
-                        (t >= r1) ? 0.0 :
-                        (1.0 + cos(M_PI * (t - r0) / dr)) / 2.0);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // *TDebugAlignment
-  // 
-  typedef void(*TDebugAlignment)(int /* window */,
-                                 const TAudioFragment * /* a */,
-                                 const TAudioFragment * /* b */,
-                                 int /* correction */,
-                                 const FFTComplex * /* denoisedCorrelation */,
-                                 const FFTComplex * /* filteredCorrelation */);
-  
-  //----------------------------------------------------------------
   // IAudioTempoFilter
   // 
   struct IAudioTempoFilter
@@ -81,8 +48,7 @@ namespace yae
     virtual void apply(const unsigned char ** srcBuffer,
                        const unsigned char * srcBufferEnd,
                        unsigned char ** dstBuffer,
-                       unsigned char * dstBufferEnd,
-                       TDebugAlignment debugAlignment = NULL) = 0;
+                       unsigned char * dstBufferEnd) = 0;
     
     virtual bool flush(unsigned char ** dstBuffer,
                        unsigned char * dstBufferEnd) = 0;
@@ -116,9 +82,10 @@ namespace yae
     // 
     enum TState {
       kLoadFragment = 0,
-      kReloadFragment = 1,
-      kOutputOverlapAdd = 2,
-      kFlushOutput = 3
+      kAdjustPosition = 1,
+      kReloadFragment = 2,
+      kOutputOverlapAdd = 3,
+      kFlushOutput = 4
     };
     
     //----------------------------------------------------------------
@@ -133,34 +100,10 @@ namespace yae
       tempo_(1.0),
       drift_(0),
       nfrag_(0),
-      state_(kLoadFragment),
-      fftForward_(NULL),
-      fftInverse_(NULL)
+      state_(kLoadFragment)
     {
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      debugAlignment_ = NULL;
-#endif
-      
       position_[0] = 0;
       position_[1] = 0;
-    }
-    
-    //----------------------------------------------------------------
-    // ~AudioTempoFilter
-    // 
-    ~AudioTempoFilter()
-    {
-      if (fftForward_)
-      {
-        av_fft_end(fftForward_);
-        fftForward_ = NULL;
-      }
-      
-      if (fftInverse_)
-      {
-        av_fft_end(fftInverse_);
-        fftInverse_ = NULL;
-      }
     }
     
     //----------------------------------------------------------------
@@ -171,52 +114,18 @@ namespace yae
       channels_ = numChannels;
       
       // pick a segment window size:
-      window_ = sampleRate / 50;
+      window_ = sampleRate / 25;
       
       // adjust window size to be a power-of-two integer:
-      unsigned int nlevels = 0;
-      unsigned int pot = powerOfTwoLessThanOrEqual<unsigned int>(window_,
-                                                                 &nlevels);
+      unsigned int pot = powerOfTwoLessThanOrEqual<unsigned int>(window_);
       YAE_ASSERT(pot <= window_);
       
       if (pot < window_)
       {
         window_ = pot * 2;
-        nlevels++;
       }
       
-#if defined(_WIN64) || !defined(_WIN32)
-      // initialize FFT contexts:
-      if (fftForward_)
-      {
-        av_fft_end(fftForward_);
-        fftForward_ = NULL;
-      }
-      
-      if (fftInverse_)
-      {
-        av_fft_end(fftInverse_);
-        fftInverse_ = NULL;
-      }
-      
-      fftForward_ = av_fft_init(nlevels, 0);
-      fftInverse_ = av_fft_init(nlevels, 1);
-      denoiseFilter_.resize(window_ * 2);
-      lowpassFilter_.resize(window_ * 2);
-      correlation_.resize(window_ * 2);
-      correlationFiltered_.resize(window_ * 2);
-      
-      // initialize the lowpass filters:
-      setupLowpassFilter<FFTSample>(&denoiseFilter_[0],
-                                    window_ * 2,
-                                    2e-1,
-                                    5e-2);
-      
-      setupLowpassFilter<FFTSample>(&lowpassFilter_[0],
-                                    window_ * 2,
-                                    5e-2,
-                                    5e-2);
-#endif
+      metric_.assign(window_, 0);
       
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);
@@ -225,8 +134,8 @@ namespace yae
       hann_.resize(window_);
       for (std::size_t i = 0; i < window_; i++)
       {
-        hann_[i] = 0.5 * (1.0 - cos(2.0 * M_PI * double(i) /
-                                    double(window_ - 1)));
+        hann_[i] = float(0.5 * (1.0 - cos(2.0 * M_PI * double(i) /
+                                          double(window_ - 1))));
       }
       
       clear();
@@ -277,13 +186,8 @@ namespace yae
     void apply(const unsigned char ** srcBuffer,
                const unsigned char * srcBufferEnd,
                unsigned char ** dstBuffer,
-               unsigned char * dstBufferEnd,
-               TDebugAlignment debugAlignment = NULL)
+               unsigned char * dstBufferEnd)
     {
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      debugAlignment_ = debugAlignment;
-#endif
-      
       const TSample * src = (const TSample *)*srcBuffer;
       const TSample * srcEnd = (const TSample *)srcBufferEnd;
       
@@ -301,12 +205,7 @@ namespace yae
           }
           
           // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(double(tmin), double(tmax));
-          
-#if defined(_WIN64) || !defined(_WIN32)
-          // apply FFT:
-          currFrag().transform(fftForward_);
-#endif
+          currFrag().template downsample<TSample>(float(tmin), float(tmax));
           
           // must load the second fragment before alignment can start:
           if (!nfrag_)
@@ -314,7 +213,12 @@ namespace yae
             advanceToNextFrag();
             continue;
           }
-          
+
+          state_ = kAdjustPosition;
+        }
+
+        if (state_ == kAdjustPosition)
+        {
           // adjust position for better alignment:
           if (adjustPosition())
           {
@@ -337,12 +241,7 @@ namespace yae
           }
           
           // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(double(tmin), double(tmax));
-          
-#if defined(_WIN64) || !defined(_WIN32)
-          // apply FFT:
-          currFrag().transform(fftForward_);
-#endif
+          currFrag().template downsample<TSample>(float(tmin), float(tmax));
           
           state_ = kOutputOverlapAdd;
         }
@@ -376,16 +275,24 @@ namespace yae
       const TAudioFragment & prev = prevFrag();
       const TAudioFragment & frag = currFrag();
       
-      const int64 stopHere = prev.position_[1] + prev.numSamples_;
-      const int64 startHere = std::max<int64>(position_[1], frag.position_[1]);
+      const int64 startHere = std::max<int64>(position_[1],
+                                              frag.position_[1]);
+      
+      const int64 stopHere = std::min<int64>(prev.position_[1] +
+                                             prev.numSamples_,
+                                             frag.position_[1] +
+                                             frag.numSamples_);
+      
       const int64 overlap = stopHere - startHere;
-      YAE_ASSERT(startHere < stopHere && frag.position_[1] <= startHere);
+      YAE_ASSERT(startHere <= stopHere &&
+                 frag.position_[1] <= startHere &&
+                 overlap <= frag.numSamples_);
       
       const int64 ia = startHere - prev.position_[1];
       const int64 ib = startHere - frag.position_[1];
       
-      const double * wa = &hann_[0] + ia;
-      const double * wb = &hann_[0] + ib;
+      const float * wa = &hann_[0] + ia;
+      const float * wb = &hann_[0] + ib;
       
       // this is risky, waveform pyramid does not guarantee alignment:
       const std::size_t stride = channels_ * sizeof(TSample);
@@ -395,13 +302,13 @@ namespace yae
       for (int64 i = 0; i < overlap && dst < dstEnd;
            i++, position_[1]++, wa++, wb++)
       {
-        double w0 = *wa;
-        double w1 = *wb;
+        float w0 = *wa;
+        float w1 = *wb;
         
         for (unsigned int j = 0; j < channels_; j++, a++, b++, dst++)
         {
-          double t0 = double(*a);
-          double t1 = double(*b);
+          float t0 = float(*a);
+          float t1 = float(*b);
           
           *dst = (frag.position_[0] + i < 0) ? *a : TSample(t0 * w0 + t1 * w1);
         }
@@ -462,12 +369,7 @@ namespace yae
         if (nfrag_)
         {
           // build a multi-resolution pyramid for fragment alignment:
-          frag.template downsample<TSample>(double(tmin), double(tmax));
-          
-#if defined(_WIN64) || !defined(_WIN32)
-          // apply FFT:
-          frag.transform(fftForward_);
-#endif
+          frag.template downsample<TSample>(float(tmin), float(tmax));
           
           // align current fragment to previous fragment:
           if (adjustPosition())
@@ -482,8 +384,9 @@ namespace yae
       TSample * dst = (TSample *)*dstBuffer;
       TSample * dstEnd = (TSample *)dstBufferEnd;
       
-      const int64 fragCenter = frag.position_[1] + window_ / 2;
-      while (position_[1] < fragCenter)
+      const int64 overlapEnd =
+        frag.position_[1] + std::min<int64>(window_ / 2, frag.numSamples_);
+      while (position_[1] < overlapEnd)
       {
         if (!overlapAdd(dst, dstEnd))
         {
@@ -495,10 +398,10 @@ namespace yae
       *dstBuffer = (unsigned char *)dst;
       
       // flush the remaininder of the current fragment:
-      const int64 startHere = std::max<int64>(position_[1], fragCenter);
+      const int64 startHere = std::max<int64>(position_[1], overlapEnd);
       const int64 stopHere = frag.position_[1] + frag.numSamples_;
       const int64 offset = startHere - frag.position_[1];
-      YAE_ASSERT(startHere < stopHere && frag.position_[1] <= startHere);
+      YAE_ASSERT(startHere <= stopHere && frag.position_[1] <= startHere);
       
       const std::size_t stride = channels_ * sizeof(TSample);
       const unsigned char * src = &frag.data_[0] + offset * stride;
@@ -682,34 +585,13 @@ namespace yae
       const TAudioFragment & prev = prevFrag();
       TAudioFragment &       frag = currFrag();
       
-      const int deltaMax = window_ / 4;
-      
-#if defined(_WIN32) && !defined(_WIN64)
-      // fallback to the non-FFT method because current win32 build
-      // of libavcodec av_fft_permute crashes:
-      const int correction = frag.alignTo(prev, deltaMax, drift_);
-#else
+      const int deltaMax = window_ / 2;
       const int correction = frag.alignTo(prev,
+                                          window_,
                                           deltaMax,
                                           drift_,
-                                          &denoiseFilter_[0],
-                                          &lowpassFilter_[0],
-                                          &correlation_[0],
-                                          &correlationFiltered_[0],
-                                          fftInverse_);
-#endif
+                                          &metric_[0]);
       
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      if (debugAlignment_)
-      {
-        debugAlignment_(window_,
-                        &prev,
-                        &frag,
-                        correction,
-                        &correlation_[0],
-                        &correlationFiltered_[0]);
-      }
-#endif
       if (correction)
       {
         // adjust fragment position:
@@ -754,7 +636,7 @@ namespace yae
     
     // Hann window coefficients, for feathering
     // (blending) the overlapping fragment region:
-    std::vector<double> hann_;
+    std::vector<float> hann_;
     
     // fragment window size, power-of-two integer:
     unsigned int window_;
@@ -774,17 +656,8 @@ namespace yae
     // current state:
     TState state_;
     
-    // for audio fragment alignment via correlation in frequency domain:
-    FFTContext * fftForward_;
-    FFTContext * fftInverse_;
-    std::vector<FFTSample> denoiseFilter_;
-    std::vector<FFTSample> lowpassFilter_;
-    std::vector<FFTComplex> correlation_;
-    std::vector<FFTComplex> correlationFiltered_;
-    
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-    TDebugAlignment debugAlignment_;
-#endif
+    // for audio fragment alignment:
+    std::vector<float> metric_;
   };
   
   //----------------------------------------------------------------

@@ -29,23 +29,10 @@
 // yae includes:
 #include <yaeAPI.h>
 
-// ffmpeg includes:
-extern "C"
-{
-#include <libavcodec/avfft.h>
-}
-
 //----------------------------------------------------------------
 // YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
 // 
 // #define YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-
-//----------------------------------------------------------------
-// YAE_MAX_AMPLITUDE_PYRAMID
-//
-#ifndef YAE_MAX_AMPLITUDE_PYRAMID
-#define YAE_MAX_AMPLITUDE_PYRAMID 0
-#endif
 
 
 namespace yae
@@ -85,19 +72,12 @@ namespace yae
   //----------------------------------------------------------------
   // AudioFragment
   //
-  template <typename TScalar, int tmin, int tmax>
   struct AudioFragment
   {
-    //----------------------------------------------------------------
-    // TData
-    // 
-    typedef TScalar TData;
     
-    enum
-    {
-      kMin = tmin,
-      kMax = tmax
-    };
+    typedef char TScalar;
+    enum { kMin = -128 };
+    enum { kMax = 127 };
     
     //----------------------------------------------------------------
     // AudioFragment
@@ -106,7 +86,7 @@ namespace yae
       numSamples_(0),
       numChannels_(0),
       stride_(0),
-      magnitude_(0.0)
+      magnitude_(0.f)
     {
       // input position:
       position_[0] = 0;
@@ -120,7 +100,6 @@ namespace yae
     // 
     void clear()
     {
-      xdat_.clear();
       pyramid_.clear();
       position_[0] = 0;
       position_[1] = 0;
@@ -235,8 +214,8 @@ namespace yae
     // 
     template <typename TSample>
     void
-    downsample(double min0 = double(std::numeric_limits<TSample>::min()),
-               double max0 = double(std::numeric_limits<TSample>::max()))
+    downsample(float min0 = float(std::numeric_limits<TSample>::min()),
+               float max0 = float(std::numeric_limits<TSample>::max()))
     {
       // shortcuts:
       const unsigned char * src = data_.empty() ? NULL : &data_[0];
@@ -253,8 +232,8 @@ namespace yae
       // avoid downsampling too much, since the granularity will become
       // so coarse that it will be useless in practice:
 #ifndef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      int lowestLevel = 6;
-      // numLevels = std::min<int>(numLevels, lowestLevel + 1);
+      int lowestLevel = 3;
+      numLevels = std::min<int>(numLevels, lowestLevel + 1);
 #endif
       
       // resize the pyramid:
@@ -267,107 +246,67 @@ namespace yae
         return;
       }
       
-      // init complex data buffer used for FFT and Correlation:
-      xdat_.resize(1 << (numLevels));
-      memset(&xdat_.front(), 0, xdat_.size() * sizeof(FFTComplex));
-      
       // init the base pyramid level:
       pyramid_[0].resize(numSamples_);
       TScalar * dst = &pyramid_[0][0];
       
       // shortcuts:
-      const double rng0 = max0 - min0;
-      const double hlf0 = rng0 / 2.0;
-      const double mid0 = min0 + hlf0;
-      const double min1 = double(tmin);
-      const double max1 = double(tmax);
-      const double rng1 = max1 - min1;
+      const float rng0 = max0 - min0;
+      const float hlf0 = rng0 / 2.0;
+      const float mid0 = min0 + hlf0;
+      const float min1 = float(kMin);
+      const float max1 = float(kMax);
+      const float rng1 = max1 - min1;
 
       if (numChannels_ == 1)
       {
-        FFTComplex * xdat = &xdat_.front();
         TSample tmp;
         
-        for (; src < srcEnd; src += stride_, dst++, xdat++)
+        for (; src < srcEnd; src += stride_, dst++)
         {
           memcpy(&tmp, src, stride_);
-          
-#if YAE_MAX_AMPLITUDE_PYRAMID
-          double s = std::min<double>(max0, fabs(double(tmp)));
-          
-          // affine transform sample into local sample format:
-          *dst = TScalar(max1 * ((s - mid0) / hlf0));
-          magnitude_ += double(*dst);
-#else
-          double s = double(tmp);
+          float s = float(tmp);
           
           // affine transform sample into local sample format:
           *dst = TScalar(min1 + rng1 * ((s - min0) / rng0));
-          magnitude_ += fabs(double(*dst));
-#endif
-          
-          // xdat->re = FFTSample(-1.0 + 2.0 * (double(tmp) - min0) / rng0);
-          xdat->re = FFTSample(tmp);
-          xdat->im = 0;
+          magnitude_ += fabsf((s - mid0) / hlf0);
         }
         
-        magnitude_ /= double(numSamples_);
+        magnitude_ /= float(numSamples_);
       }
       else
       {
-        FFTComplex * xdat = &xdat_.front();
-        
         // temporary buffer for a row of samples:
         std::vector<TSample> tmp(numChannels_);
         
-        for (; src < srcEnd; src += stride_, dst++, xdat++)
+        for (; src < srcEnd; src += stride_, dst++)
         {
           memcpy(&tmp[0], src, stride_);
           
-#if YAE_MAX_AMPLITUDE_PYRAMID
-          double t0 = tmp[0];
-          double s = std::min<double>(max0, fabs(double(t0)));
-          double avg = double(t0);
+          float t0 = tmp[0];
+          float s = std::min<float>(max0, fabsf(t0));
+          float max = float(t0);
           
           for (std::size_t i = 1; i < numChannels_; i++)
           {
-            double ti = tmp[i];
-            double s0 = std::min<double>(max0, fabs(ti));
-            avg += ti;
+            float ti = tmp[i];
+            float s0 = std::min<float>(max0, fabsf(ti));
             
             // store max amplitude only:
-            s = std::max<double>(s, s0);
+            if (s < s0)
+            {
+              s = s0;
+              max = ti;
+            }
           }
           
           // affine transform sample into local sample format:
-          *dst = TScalar(max1 * ((s - mid0) / hlf0));
-          magnitude_ += double(*dst);
-          
-          avg /= double(numChannels_);
-          // xdat->re = FFTSample(-1.0 + 2.0 * (avg - min0) / rng0);
-          xdat->re = FFTSample(avg);
-          xdat->im = 0;
-#else
-          double avg = tmp[0];
-          
-          for (std::size_t i = 1; i < numChannels_; i++)
-          {
-            avg += double(tmp[i]);
-          }
-          
-          avg /= double(numChannels_);
-          
-          // affine transform sample into local sample format:
-          *dst = TScalar(min1 + rng1 * ((avg - min0) / rng0));
-          magnitude_ += fabs(double(*dst));
-          
-          // xdat->re = FFTSample(-1.0 + 2.0 * (avg - min0) / rng0);
-          xdat->re = FFTSample(avg);
-          xdat->im = 0;
-#endif
+          float t = (max - mid0) / hlf0;
+          *dst = TScalar(max1 * t);
+          magnitude_ += fabsf(t);
         }
         
-        magnitude_ /= double(numSamples_);
+        magnitude_ /= float(numSamples_);
       }
       
       // fill in the remaining levels of the pyramid:
@@ -385,67 +324,50 @@ namespace yae
           
           for (unsigned int j = 0; j < numSamples; j++, src += 2, dst++)
           {
-#if YAE_MAX_AMPLITUDE_PYRAMID
-            *dst = src[0] < src[1] ? src[1] : src[0];
-            *dst = j + 1 < numSamples ? (*dst < src[2] ? src[2] : *dst) : *dst;
-#else
-            *dst = TScalar((double(src[0]) + double(src[1])) / 2.0);
-            *dst = j + 1 < numSamples ?
-              TScalar((double(*dst) + double(src[2]) * 0.5) / 1.5) : *dst;
-#endif
+            *dst = abs(src[0]) < abs(src[1]) ? src[1] : src[0];
           }
         }
       }
     }
     
-#if defined(_WIN64) || !defined(_WIN32)
     //----------------------------------------------------------------
-    // transform
+    // calcAlignmentMetric
     // 
-    void transform(FFTContext * fft)
+    float calcAlignmentMetric(const TScalar * a,
+                              const TScalar * b,
+                              int overlap) const
     {
-      // apply FFT:
-      FFTComplex * xdat = &xdat_.front();
-      av_fft_permute(fft, xdat);
-      av_fft_calc(fft, xdat);
-    }
-#endif
-    
-    //----------------------------------------------------------------
-    // calcOverlapMetric
-    // 
-    // alignment metric used by alignTo(..):
-    // 
-    double calcOverlapMetric(const TScalar * a,
-                             const TScalar * b,
-                             unsigned int window,
-                             int offset,
-                             unsigned int granularity) const
-    {
-      // calculate reference frame position envelope:
-      int aoffset = (window / 2 + offset) / granularity;
-      int overlap = (window / granularity) - aoffset;
-      
       if (overlap < 3)
       {
-        return std::numeric_limits<double>::max();
+        return -std::numeric_limits<float>::max();
       }
       
-      // calculate the overlap metric:
-      double metric = 0.0;
-      for (int i = 1; i < overlap - 1; i++)
+      // skip the last sample:
+      const TScalar * aEnd = a + overlap - 1;
+      
+      // skip the first sample:
+      a++;
+      b++;
+      
+      float mismatch = 0.0;
+      float corr = 0.0;
+      for (; a < aEnd; a++, b++)
       {
-        double d = double(a[aoffset + i]) - double(b[i]);
-        metric += d * d;
+        float g = float(*a);
+        float h = float(*b);
+        corr += g * h;
+        
+        float d = g - h;
+        mismatch += d * d;
       }
       
-      // normalize the metric:
-      metric /= double((overlap - 2) * (overlap - 2));
+      // normalize:
+      corr /= float(overlap - 2);
+      mismatch /= float((overlap - 2) * (overlap - 2));
       
-      return metric;
+      return corr * (1.0 / (1.0 + mismatch));
     }
     
-#if defined(_WIN64) || !defined(_WIN32)
     //----------------------------------------------------------------
     // alignTo
     // 
@@ -453,307 +375,92 @@ namespace yae
     // 
     int
     alignTo(const AudioFragment & fragment,
-            unsigned int deltaMax,
-            int drift,
-            const FFTSample * denoiseFilter,
-            const FFTSample * lowpassFilter,
-            FFTComplex * correlation,
-            FFTComplex * correlationFiltered,
-            FFTContext * fftInverse)
+            const int window,
+            const int deltaMax,
+            const int drift,
+            float * alignment)
     {
-      int bestOffset = -drift;
-      
-#if 0
-      if (fragment.magnitude_ < 1.0 && magnitude_ < 1.0)
+      static const float almostSilent = 3e-3f;
+      if (fragment.magnitude_ < almostSilent && magnitude_ < almostSilent)
       {
         // both fragments are really quiet,
         // don't bother refining their alignment
         // since nobody will be able to notice anyway:
-        return bestOffset;
-      }
-#endif
-      
-      const int window = xdat_.size() / 2;
-      const FFTComplex * xa = &fragment.xdat_.front();
-      const FFTComplex * xb = &xdat_.front();
-      FFTComplex * xc = correlation;
-      FFTComplex * zc = correlationFiltered;
-      const FFTSample * dz = denoiseFilter;
-      const FFTSample * lp = lowpassFilter;
-      
-      for (int i = 0; i < window * 2; i++, xa++, xb++, xc++, zc++, dz++, lp++)
-      {
-        xc->re = *dz * (xa->re * xb->re + xa->im * xb->im);
-        xc->im = *dz * (xa->im * xb->re - xa->re * xb->im);
-        
-#if 0
-        FFTSample magnitude = 1e-6 + sqrtf(xc->re * xc->re + xc->im * xc->im);
-        xc->re /= magnitude;
-        xc->im /= magnitude;
-#endif
-        
-        zc->re = *lp * xc->re;
-        zc->im = *lp * xc->im;
+        return -drift;
       }
       
-      // apply inverse FFT:
-      av_fft_permute(fftInverse, correlation);
-      av_fft_calc(fftInverse, correlation);
+      float * xc = alignment;
+      memset(xc, 0, sizeof(float) * window);
       
-      av_fft_permute(fftInverse, correlationFiltered);
-      av_fft_calc(fftInverse, correlationFiltered);
-      
-      // identify peaks:
       int i0 = std::max<int>(window / 2 - deltaMax - drift, 0);
       i0 = std::min<int>(i0, window);
       
-      int i1 = std::min<int>(window / 2 + deltaMax - drift, window);
+      int i1 = std::min<int>(window / 2 + deltaMax - drift,
+                             window - window / 16);
       i1 = std::max<int>(i1, 0);
       
-      // subtract low-pass filtered correlation from
-      // denoised correlation to enhance peaks:
-      xc = correlation + i0;
-      zc = correlationFiltered + i0;
+      float metricThreshold = -std::numeric_limits<float>::max();
       
-      FFTSample bestMetric = 0;
-      for (int i = i0; i < i1; i++, xc++, zc++)
+      for (int level = 3; level >= 0; level--)
       {
-        FFTSample h = xc->re; // * xc->re;
-        FFTSample l = zc->re; // * zc->re;
-        FFTSample metric =
-          (l < h) ? (h < 0 ? FFTSample(0) : (h - l) * h) : FFTSample(0);
+        const int granularity = 1 << level;
+        int j0 = i0 / granularity;
+        int j1 = i1 / granularity;
         
-        // normalize:
-        int overlap = 1 + abs(window - i);
-        metric /= FFTSample(overlap);
+        float metricSum = 0.0;
+        int measurements = 0;
+        xc = alignment + j0 * granularity;
         
-        if (metric > bestMetric)
+        for (int j = j0; j < j1; j++, xc += granularity)
+        {
+          const int overlap = window / granularity - j;
+          const TScalar * xa = &fragment.pyramid_[level].front() + j;
+          const TScalar * xb = &pyramid_[level].front();
+          
+          float metric = *xc;
+          if (*xc > metricThreshold)
+          {
+            metric = calcAlignmentMetric(xa, xb, overlap);
+            metricSum += metric;
+            measurements++;
+          }
+          
+          for (int i = 0; i < granularity; i++)
+          {
+            xc[i] = metric;
+          }
+        }
+        
+        if (measurements)
+        {
+          // update threshold for the next level:
+          float metricAvg = metricSum / float(measurements);
+          metricThreshold = std::max<float>(0, metricAvg);
+        }
+      }
+      
+      float bestMetric = -std::numeric_limits<float>::max();
+      int bestOffset = -drift;
+      
+      xc = alignment + i0;
+      for (int i = i0; i < i1; i++, xc++)
+      {
+        float metric = *xc;
+        if (bestMetric < metric ||
+            bestMetric == metric &&
+            abs(i - window / 2 + drift) < abs(bestOffset + drift))
         {
           bestMetric = metric;
           bestOffset = i - window / 2;
         }
-        
-        // this is for debugging/visualization:
-        // zc->re = metric;
-      }
-#if 0
-      // this is for debugging/visualization:
-      zc = correlationFiltered;
-      for (int i = 0; i < i0; i++, zc++)
-      {
-        zc->re = 0.0;
       }
       
-      zc = correlationFiltered + i1;
-      for (int i = i1; i < window; i++, zc++)
-      {
-        zc->re = 0.0;
-      }
-#endif
 #ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
       std::cerr << "best offset: " << bestOffset << std::endl
                 << std::endl;
 #endif
       
-#if 0
       return bestOffset;
-#else
-      return refineAlignment(fragment,
-                             deltaMax,
-                             drift,
-                             bestOffset,
-                             2);
-#endif
-    }
-#endif
-    
-    //----------------------------------------------------------------
-    // refineAlignment
-    // 
-    int
-    refineAlignment(const AudioFragment & fragment,
-                    unsigned int deltaMax,
-                    int drift,
-                    int correction,
-                    int lowestLevel)
-    {
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      std::cerr << "\ninitial correction: " << correction << std::endl;
-#endif
-      
-      // get window size so that nominal 50% overlap can be calculated:
-      const int window = pyramid_[0].size();
-      
-      for (int level = lowestLevel; level >= 0; level--)
-      {
-        const int granularity = 1 << level;
-        const int n = std::max<int>(1, deltaMax >> (level + 1));
-        
-        for (int i = 0; i < n; i++)
-        {
-          int bestOffset = alignTo(fragment,
-                                   drift,
-                                   correction,
-                                   window,
-                                   level,
-                                   deltaMax,
-                                   granularity);
-          if (!bestOffset)
-          {
-            // convergence:
-            break;
-          }
-          
-          correction += bestOffset;
-          
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-          std::cerr
-            << "1:" << granularity << ", "
-            << i + 1 << " of " << n
-            << ", best offset: " << bestOffset
-            << ", correction: " << correction << std::endl;
-#endif
-        }
-      }
-      
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      std::cerr << "final correction: " << correction << std::endl
-                << std::endl;
-#endif
-      
-      return correction;
-    }
-    
-    //----------------------------------------------------------------
-    // alignTo
-    // 
-    // align this fragment to the given fragment:
-    // 
-    int
-    alignTo(const AudioFragment & fragment,
-            unsigned int deltaMax,
-            int drift)
-    {
-      int correction = -drift;
-      
-      const std::size_t numLevels = pyramid_.size();
-      if (numLevels != fragment.pyramid_.size())
-      {
-        // mismatched pyramids:
-        return correction;
-      }
-
-      if (fragment.magnitude_ < 1.0 && magnitude_ < 1.0)
-      {
-        // both fragments are really quiet,
-        // don't bother refining their alignment
-        // since nobody will be able to notice anyway:
-        return correction;
-      }
-      
-      // deterine appropriate pyramid level to start from:
-      int lowestLevel = std::min<int>(numLevels - 1, 6);
-      
-      return refineAlignment(fragment,
-                             deltaMax,
-                             drift,
-                             correction,
-                             lowestLevel);
-    }
-
-    //----------------------------------------------------------------
-    // alignTo
-    // 
-    // align a level of this fragment to a matchin level of
-    // the given fragment, return alignment correction value:
-    // 
-    int
-    alignTo(const AudioFragment & fragment,
-            int64 drift,
-            int correction,
-            unsigned int window,
-            unsigned int level,
-            unsigned int deltaMax,
-            unsigned int offsetMax)
-    {
-      if (fragment.pyramid_.size() <= level ||
-          pyramid_.size() <= level)
-      {
-        // mismatched pyramids:
-        return 0;
-      }
-      
-      int granularity = 1 << level;
-      if ((offsetMax * 2) / granularity <= 1)
-      {
-        // granularity is too coarse, skip to a higher resolution level:
-        return 0;
-      }
-      
-      // shortcuts:
-      const TScalar * a = &fragment.pyramid_[level][0];
-      const TScalar * b = &pyramid_[level][0];
-      
-      int bestOffset = 0;
-      double bestMetric =
-        calcOverlapMetric(a, b, window, correction, granularity);
-      
-      if (bestMetric == std::numeric_limits<double>::max())
-      {
-        // granularity is too coarse, skip to a higher resolution level:
-        return 0;
-      }
-      
-      // refine the correction estimate:
-      for (int i = -int(offsetMax); i <= int(offsetMax); i += granularity)
-      {
-        int deltai = drift + correction + i;
-        if (i == 0 || deltai < -int(deltaMax) || deltai > int(deltaMax))
-        {
-          // don't step outside the search envelope:
-          continue;
-        }
-        
-        double metric =
-          calcOverlapMetric(a, b, window, correction + i, granularity);
-        
-        if (metric < bestMetric ||
-            metric == bestMetric && abs(i) < abs(bestOffset))
-        {
-          bestMetric = metric;
-          bestOffset = i;
-        }
-      }
-      
-      return bestOffset;
-    }
-
-    //----------------------------------------------------------------
-    // calcOverlapMetric
-    // 
-    double
-    calcOverlapMetric(const AudioFragment & fragment,
-                      unsigned int level,
-                      int offset = 0) const
-    {
-      const std::size_t numLevels = pyramid_.size();
-      
-      if (numLevels <= level ||
-          numLevels != fragment.pyramid_.size())
-      {
-        // mismatched pyramids:
-        return 0.0;
-      }
-      
-      // get window size so that nominal 50% overlap can be calculated:
-      const int window = pyramid_[0].size();
-      
-      // shortcuts:
-      const TScalar * a = &fragment.pyramid_[level][0];
-      const TScalar * b = &pyramid_[level][0];
-      
-      int granularity = 1 << level;
-      return calcOverlapMetric(a, b, window, offset, granularity);
     }
     
     // index of the first sample of this segment in the overall waveform:
@@ -772,27 +479,18 @@ namespace yae
     // stride = (number-of-channels * bits-per-sample-per-channel) / 8
     std::size_t stride_;
     
-    // FFT transform of the downmixed mono fragment, used for
-    // waveform alignment via correlation:
-    std::vector<FFTComplex> xdat_;
-    
     // multi-resolution pyramid of mono waveform samples segment
     // stored in the TScalar sample format:
     std::vector<std::vector<TScalar> > pyramid_;
     
     // average sample amplitude:
-    double magnitude_;
+    float magnitude_;
   };
   
   //----------------------------------------------------------------
   // TAudioFragment
-  //
-#if YAE_MAX_AMPLITUDE_PYRAMID
-  typedef AudioFragment<unsigned char, 0, 255> TAudioFragment;
-#else
-  // typedef AudioFragment<short int, -32768, 32767> TAudioFragment;
-  typedef AudioFragment<char, -128, 127> TAudioFragment;
-#endif
+  // 
+  typedef AudioFragment TAudioFragment;
   
 }
 
