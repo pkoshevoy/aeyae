@@ -145,10 +145,8 @@ namespace yae
       
       // avoid downsampling too much, since the granularity will become
       // so coarse that it will be useless in practice:
-#ifndef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
       int lowestLevel = 3;
       numLevels = std::min<int>(numLevels, lowestLevel + 1);
-#endif
       
       // resize the pyramid:
       pyramid_.resize(numLevels);
@@ -368,11 +366,6 @@ namespace yae
           bestOffset = i - window / 2;
         }
       }
-      
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      std::cerr << "best offset: " << bestOffset << std::endl
-                << std::endl;
-#endif
       
       return bestOffset;
     }

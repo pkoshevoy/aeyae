@@ -315,29 +315,6 @@ namespace yae
       }
       
       bool done = position_[1] == stopHere;
-      
-#ifdef YAE_DEBUG_AUDIO_FRAGMENT_ALIGNMENT
-      if (done)
-      {
-        int64 samplesInNow = frag.position_[0] + frag.numSamples_;
-        int64 samplesOutNow = frag.position_[1] + frag.numSamples_;
-        
-        double tempoNow =
-          (samplesOutNow <= window_ / 2) ? 1.0 :
-          double(samplesInNow - window_ / 2) /
-          double(samplesOutNow - window_ / 2);
-        
-        std::cerr
-          << "samples in:  " << samplesInNow
-          << ", position:  " << frag.position_[0] << std::endl
-          << "samples out: " << samplesOutNow
-          << ", position:  " << frag.position_[1] << std::endl
-          << "drift: " << drift_ << std::endl
-          << "tempo: " << tempoNow << std::endl
-          << std::endl;
-      }
-#endif
-      
       return done;
     }
     
