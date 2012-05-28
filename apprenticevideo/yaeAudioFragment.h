@@ -374,11 +374,6 @@ namespace yae
           if (*xc > metricThreshold)
           {
             metric = calcAlignmentMetric(xa, xb, overlap);
-            
-            // normalize:
-            float drifti = float(drift + (j + granularity / 2));
-            metric *= drifti * drifti;
-            
             metricSum += metric;
             measurements++;
           }
