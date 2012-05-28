@@ -105,10 +105,8 @@ namespace yae
       position_[0] = 0;
       position_[1] = 0;
       
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
       fftForward_ = NULL;
       fftInverse_ = NULL;
-#endif
     }
     
     //----------------------------------------------------------------
@@ -116,7 +114,6 @@ namespace yae
     // 
     ~AudioTempoFilter()
     {
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
       if (fftForward_)
       {
         av_fft_end(fftForward_);
@@ -128,7 +125,6 @@ namespace yae
         av_fft_end(fftInverse_);
         fftInverse_ = NULL;
       }
-#endif
     }
     
     //----------------------------------------------------------------
@@ -153,9 +149,6 @@ namespace yae
         nlevels++;
       }
       
-      metric_.assign(window_, 0);
-      
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
       // initialize FFT contexts:
       if (fftForward_)
       {
@@ -172,7 +165,6 @@ namespace yae
       fftForward_ = av_fft_init(nlevels, 0);
       fftInverse_ = av_fft_init(nlevels, 1);
       correlation_.resize<FFTComplex>(window_ * 2);
-#endif
       
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);
@@ -256,10 +248,8 @@ namespace yae
                                                   float(tmin),
                                                   float(tmax));
 
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
           // apply FFT:
           currFrag().transform(fftForward_);
-#endif
           
           // must load the second fragment before alignment can start:
           if (!nfrag_)
@@ -299,10 +289,8 @@ namespace yae
                                                   float(tmin),
                                                   float(tmax));
           
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
           // apply FFT:
           currFrag().transform(fftForward_);
-#endif
           
           state_ = kOutputOverlapAdd;
         }
@@ -411,10 +399,8 @@ namespace yae
                                             float(tmin),
                                             float(tmax));
           
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
           // apply FFT:
           frag.transform(fftForward_);
-#endif
           
           // align current fragment to previous fragment:
           if (adjustPosition())
@@ -632,21 +618,12 @@ namespace yae
       
       const int deltaMax = window_ / 2;
       
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
       const int correction = frag.alignTo(prev,
                                           window_,
                                           deltaMax,
                                           drift_,
-                                          &metric_[0],
                                           correlation_.data<FFTComplex>(),
                                           fftInverse_);
-#else
-      const int correction = frag.alignTo(prev,
-                                          window_,
-                                          deltaMax,
-                                          drift_,
-                                          &metric_[0]);
-#endif
       
       if (correction)
       {
@@ -712,15 +689,10 @@ namespace yae
     // current state:
     TState state_;
     
-    // audio fragment alignment metric:
-    std::vector<float> metric_;
-    
-#if YAE_FFT_AUDIO_FRAGMENT_ALIGNMENT
-    // for audio fragment alignment via correlation in frequency domain:
+    // for fast correlation calculation in frequency domain:
     FFTContext * fftForward_;
     FFTContext * fftInverse_;
     TSamplePlane correlation_;
-#endif
   };
   
   //----------------------------------------------------------------
