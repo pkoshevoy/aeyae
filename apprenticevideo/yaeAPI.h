@@ -268,6 +268,12 @@ namespace yae
                 std::size_t rows = 1,
                 std::size_t alignment = 16);
     
+    template <typename TSample>
+    void resize(std::size_t samples,
+                std::size_t rows = 1,
+                std::size_t alignment = 16)
+    { this->resize(samples * sizeof(TSample), rows, alignment); }
+    
     // samples accessors:
     template <typename TSample>
     inline TSample * data() const

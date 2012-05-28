@@ -227,10 +227,7 @@ namespace yae
     rows_(0),
     alignment_(0)
   {
-    if (src.data_)
-    {
-      resize(src.rowBytes_, src.rows_, src.alignment_);
-    }
+    *this = src;
   }
 
   //----------------------------------------------------------------
@@ -244,6 +241,7 @@ namespace yae
     if (this != &src)
     {
       resize(src.rowBytes_, src.rows_, src.alignment_);
+      memcpy(this->data(), src.data(), src.rowBytes_ * src.rows_);
     }
     
     return *this;
