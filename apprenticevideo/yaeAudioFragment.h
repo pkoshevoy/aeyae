@@ -76,10 +76,6 @@ namespace yae
   struct AudioFragment
   {
     
-    typedef char TScalar;
-    enum { kMin = -128 };
-    enum { kMax = 127 };
-    
     //----------------------------------------------------------------
     // AudioFragment
     // 

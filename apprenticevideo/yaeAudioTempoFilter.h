@@ -61,7 +61,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTempoFilter
   // 
-  // A transparent filter of waveform data
+  // Another version of WSOLA filter
   // 
   template <typename TSample, int tmin, int tmax>
   struct AudioTempoFilter : public IAudioTempoFilter

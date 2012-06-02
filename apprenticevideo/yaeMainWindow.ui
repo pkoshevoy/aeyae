@@ -232,11 +232,10 @@ QLineEdit:disabled {
      <addaction name="actionTempo80"/>
      <addaction name="actionTempo90"/>
      <addaction name="actionTempo100"/>
-     <addaction name="actionTempo110"/>
-     <addaction name="actionTempo120"/>
-     <addaction name="actionTempo130"/>
-     <addaction name="actionTempo140"/>
-     <addaction name="actionTempo150"/>
+     <addaction name="actionTempo111"/>
+     <addaction name="actionTempo125"/>
+     <addaction name="actionTempo143"/>
+     <addaction name="actionTempo167"/>
      <addaction name="actionTempo200"/>
     </widget>
     <addaction name="actionPlay"/>
@@ -745,44 +744,36 @@ QLineEdit QToolButton#clear_:pressed {
     <string>100%</string>
    </property>
   </action>
-  <action name="actionTempo110">
+  <action name="actionTempo111">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>110%</string>
+    <string>111%</string>
    </property>
   </action>
-  <action name="actionTempo120">
+  <action name="actionTempo125">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>120%</string>
+    <string>125%</string>
    </property>
   </action>
-  <action name="actionTempo130">
+  <action name="actionTempo143">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>130%</string>
+    <string>143%</string>
    </property>
   </action>
-  <action name="actionTempo140">
+  <action name="actionTempo167">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>140%</string>
-   </property>
-  </action>
-  <action name="actionTempo150">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>150%</string>
+    <string>167%</string>
    </property>
   </action>
   <action name="actionTempo200">

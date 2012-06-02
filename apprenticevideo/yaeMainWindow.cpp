@@ -288,11 +288,10 @@ namespace yae
     playRateGroup->addAction(actionTempo80);
     playRateGroup->addAction(actionTempo90);
     playRateGroup->addAction(actionTempo100);
-    playRateGroup->addAction(actionTempo110);
-    playRateGroup->addAction(actionTempo120);
-    playRateGroup->addAction(actionTempo130);
-    playRateGroup->addAction(actionTempo140);
-    playRateGroup->addAction(actionTempo150);
+    playRateGroup->addAction(actionTempo111);
+    playRateGroup->addAction(actionTempo125);
+    playRateGroup->addAction(actionTempo143);
+    playRateGroup->addAction(actionTempo167);
     playRateGroup->addAction(actionTempo200);
     actionTempo100->setChecked(true);
     
@@ -303,11 +302,10 @@ namespace yae
     playRateMapper->setMapping(actionTempo80, 80);
     playRateMapper->setMapping(actionTempo90, 90);
     playRateMapper->setMapping(actionTempo100, 100);
-    playRateMapper->setMapping(actionTempo110, 110);
-    playRateMapper->setMapping(actionTempo120, 120);
-    playRateMapper->setMapping(actionTempo130, 130);
-    playRateMapper->setMapping(actionTempo140, 140);
-    playRateMapper->setMapping(actionTempo150, 150);
+    playRateMapper->setMapping(actionTempo111, 111);
+    playRateMapper->setMapping(actionTempo125, 125);
+    playRateMapper->setMapping(actionTempo143, 143);
+    playRateMapper->setMapping(actionTempo167, 167);
     playRateMapper->setMapping(actionTempo200, 200);
     
     bool ok = true;
@@ -339,23 +337,19 @@ namespace yae
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionTempo110, SIGNAL(triggered()),
+    ok = connect(actionTempo111, SIGNAL(triggered()),
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionTempo120, SIGNAL(triggered()),
+    ok = connect(actionTempo125, SIGNAL(triggered()),
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionTempo130, SIGNAL(triggered()),
+    ok = connect(actionTempo143, SIGNAL(triggered()),
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
     
-    ok = connect(actionTempo140, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
-    YAE_ASSERT(ok);
-    
-    ok = connect(actionTempo150, SIGNAL(triggered()),
+    ok = connect(actionTempo167, SIGNAL(triggered()),
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
     
