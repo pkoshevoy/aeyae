@@ -194,8 +194,10 @@ namespace yae
       case PIX_FMT_YUV420P9:
         return kPixelFormatYUV420P9;
 
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 0, 0)
       case PIX_FMT_YUV422P9:
         return kPixelFormatYUV422P9;
+#endif
 
       case PIX_FMT_YUV444P9:
         return kPixelFormatYUV444P9;
@@ -392,8 +394,10 @@ namespace yae
       case kPixelFormatYUV420P9:
         return PIX_FMT_YUV420P9;
 
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 0, 0)
       case kPixelFormatYUV422P9:
         return PIX_FMT_YUV422P9;
+#endif
 
       case kPixelFormatYUV444P9:
         return PIX_FMT_YUV444P9;
