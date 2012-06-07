@@ -881,6 +881,84 @@ namespace yae
       .stride( 8, 8, 8 )
       .samples( 1, 1, 1 );
 
+    //! planar YUV 4:2:0, 9-bits per channel:
+    set(kPixelFormatYUV420P9) = TraitsInit()
+      .name( "YUV420P9" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 2 )
+      .chromaBoxH( 2 )
+      .plane( 0, 1, 2 )
+      .depth( 9, 9, 9 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
+    //! planar YUV 4:2:2, 9-bits per channel:
+    set(kPixelFormatYUV422P9) = TraitsInit()
+      .name( "YUV422P9" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 2 )
+      .chromaBoxH( 1 )
+      .plane( 0, 1, 2 )
+      .depth( 9, 9, 9 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
+    //! planar YUV 4:4:4, 9-bits per channel:
+    set(kPixelFormatYUV444P9) = TraitsInit()
+      .name( "YUV444P9" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 0, 1, 2 )
+      .depth( 9, 9, 9 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
+    //! planar YUV 4:2:0, 10-bits per channel:
+    set(kPixelFormatYUV420P10) = TraitsInit()
+      .name( "YUV420P10" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 2 )
+      .chromaBoxH( 2 )
+      .plane( 0, 1, 2 )
+      .depth( 10, 10, 10 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
+    //! planar YUV 4:2:2, 10-bits per channel:
+    set(kPixelFormatYUV422P10) = TraitsInit()
+      .name( "YUV422P10" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 2 )
+      .chromaBoxH( 1 )
+      .plane( 0, 1, 2 )
+      .depth( 10, 10, 10 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
+    //! planar YUV 4:4:4, 10-bits per channel:
+    set(kPixelFormatYUV444P10) = TraitsInit()
+      .name( "YUV444P10" )
+      .flags( kColor | kPlanar )
+      .channels( 3 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 0, 1, 2 )
+      .depth( 10, 10, 10 )
+      .lshift( 0, 0, 0 )
+      .stride( 16, 16, 16 )
+      .samples( 1, 1, 1 );
+
   }
 
   //----------------------------------------------------------------

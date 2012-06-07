@@ -191,6 +191,24 @@ namespace yae
       case PIX_FMT_YUVJ440P:
         return kPixelFormatYUVJ440P;
 
+      case PIX_FMT_YUV420P9:
+        return kPixelFormatYUV420P9;
+
+      case PIX_FMT_YUV422P9:
+        return kPixelFormatYUV422P9;
+
+      case PIX_FMT_YUV444P9:
+        return kPixelFormatYUV444P9;
+
+      case PIX_FMT_YUV420P10:
+        return kPixelFormatYUV420P10;
+
+      case PIX_FMT_YUV422P10:
+        return kPixelFormatYUV422P10;
+
+      case PIX_FMT_YUV444P10:
+        return kPixelFormatYUV444P10;
+
       default:
         break;
     }
@@ -370,6 +388,24 @@ namespace yae
 
       case kPixelFormatYUVJ440P:
         return PIX_FMT_YUVJ440P;
+
+      case kPixelFormatYUV420P9:
+        return PIX_FMT_YUV420P9;
+
+      case kPixelFormatYUV422P9:
+        return PIX_FMT_YUV422P9;
+
+      case kPixelFormatYUV444P9:
+        return PIX_FMT_YUV444P9;
+
+      case kPixelFormatYUV420P10:
+        return PIX_FMT_YUV420P10;
+
+      case kPixelFormatYUV422P10:
+        return PIX_FMT_YUV422P10;
+
+      case kPixelFormatYUV444P10:
+        return PIX_FMT_YUV444P10;
 
       default:
         break;

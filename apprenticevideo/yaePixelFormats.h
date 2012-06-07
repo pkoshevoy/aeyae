@@ -207,7 +207,17 @@ namespace yae
     kPixelFormatYUVJ444P = 53,
     
     //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
-    kPixelFormatYUVJ440P = 54
+    kPixelFormatYUVJ440P = 54,
+
+    //! planar YUV, 9-bits per channel:
+    kPixelFormatYUV420P9 = 55,
+    kPixelFormatYUV422P9 = 56,
+    kPixelFormatYUV444P9 = 57,
+
+    //! planar YUV, 10-bits per channel:
+    kPixelFormatYUV420P10 = 58,
+    kPixelFormatYUV422P10 = 59,
+    kPixelFormatYUV444P10 = 60,
   };
 }
 
