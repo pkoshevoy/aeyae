@@ -20,18 +20,18 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // IReader
-  // 
+  //
   struct YAE_API IReader
   {
   protected:
     IReader() {}
     virtual ~IReader() {}
-    
+
   public:
-    
+
     //! The de/structor is intentionally hidden, use destroy() method instead.
     //! This is necessary in order to avoid conflicting memory manager
     //! problems that arise on windows when various libs are linked to
@@ -42,37 +42,37 @@ namespace yae
     //! interface for de/allocating an object instance, thus ensuring that
     //! the same memory manager will perform de/allocation.
     virtual void destroy() = 0;
-    
+
     //! return a human readable name for this reader (preferably unique):
     virtual const char * getName() const = 0;
-    
+
     //! assemble a list of supported URL protocols:
     virtual bool getUrlProtocols(std::list<std::string> & protocols) const = 0;
-    
+
     //! open a resource specified by the resourcePath such as filepath or URL:
     virtual bool open(const char * resourcePathUTF8) = 0;
-    
+
     //! close currently open resource:
     virtual void close() = 0;
-    
+
     virtual std::size_t getNumberOfVideoTracks() const = 0;
     virtual std::size_t getNumberOfAudioTracks() const = 0;
-    
+
     virtual std::size_t getSelectedVideoTrackIndex() const = 0;
     virtual std::size_t getSelectedAudioTrackIndex() const = 0;
-    
+
     virtual bool selectVideoTrack(std::size_t i) = 0;
     virtual bool selectAudioTrack(std::size_t i) = 0;
-    
+
     virtual const char * getSelectedVideoTrackName() const = 0;
     virtual const char * getSelectedAudioTrackName() const = 0;
-    
+
     virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
-    
+
     virtual bool getAudioTraits(AudioTraits & traits) const = 0;
     virtual bool getVideoTraits(VideoTraits & traits) const = 0;
-    
+
     //! force decoded audio/video frames to be in a particular format:
     virtual bool setAudioTraitsOverride(const AudioTraits & override) = 0;
     virtual bool setVideoTraitsOverride(const VideoTraits & override) = 0;
@@ -89,25 +89,25 @@ namespace yae
     //! loop for some reason (such as in order to avoid a deadlock).
     virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
     virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
-    
+
     virtual bool threadStart() = 0;
     virtual bool threadStop() = 0;
-    
+
     virtual void getPlaybackInterval(double & tIn, double & tOut) const = 0;
     virtual void setPlaybackIntervalStart(double timeIn) = 0;
     virtual void setPlaybackIntervalEnd(double timeOut) = 0;
     virtual void setPlaybackInterval(bool enabled) = 0;
     virtual void setPlaybackLooping(bool enabled) = 0;
-    
+
     // these are used to speed up video decoding:
     virtual void skipLoopFilter(bool skip) = 0;
     virtual void skipNonReferenceFrames(bool skip) = 0;
-    
+
     // this can be used to slow down audio if video decoding is too slow,
     // or it can be used to speed up audio to watch the movie faster:
     virtual bool setTempo(double tempo) = 0;
   };
-  
+
 }
 
 

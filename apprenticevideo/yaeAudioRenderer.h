@@ -20,18 +20,18 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // IAudioRenderer
-  // 
+  //
   struct YAE_API IAudioRenderer : public ISynchronous
   {
   protected:
     IAudioRenderer();
     virtual ~IAudioRenderer();
-    
+
   public:
-    
+
     //! The de/structor is intentionally hidden, use destroy() method instead.
     //! This is necessary in order to avoid conflicting memory manager
     //! problems that arise on windows when various libs are linked to
@@ -42,46 +42,46 @@ namespace yae
     //! interface for de/allocating an object instance, thus ensuring that
     //! the same memory manager will perform de/allocation.
     virtual void destroy() = 0;
-    
+
     //! return a human readable name for this renderer (preferably unique):
     virtual const char * getName() const = 0;
 
     //! there may be multiple audio rendering devices available:
     virtual unsigned int countAvailableDevices() const = 0;
-    
+
     //! return index of the system default audio rendering device:
     virtual unsigned int getDefaultDeviceIndex() const = 0;
-    
+
     //! get device name and max audio resolution capabilities:
     virtual bool getDeviceName(unsigned int deviceIndex,
                                std::string & deviceName) const = 0;
-    
+
     //! get device index of the device specified by name:
     virtual unsigned int getDeviceIndex(const std::string & devName) const = 0;
-    
+
     //! get output device audio traits matched to source audio traits,
     //! however output device audio traits may not be exactly the same
     //! as the source traits due to hardware constraints:
     virtual void match(unsigned int deviceIndex,
                        const AudioTraits & source,
                        AudioTraits & output) const = 0;
-    
+
     //! initialize a given audio rendering device:
     virtual bool open(unsigned int deviceIndex,
                       IReader * reader,
                       bool forOneFrameOnly) = 0;
-    
+
     //! terminate audio rendering:
     virtual void close() = 0;
-    
+
     //! the initial state after open(...) must be paused;
     //! use this to resume or pause the rendering thread loop;
     virtual void pause(bool paused = true) = 0;
-    
+
     //! shortcut:
     inline void resume()
     { pause(false); }
-    
+
   };
 }
 

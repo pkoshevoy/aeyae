@@ -21,19 +21,19 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // Threadable
-  // 
+  //
   // Thread entry point:
-  // 
+  //
   template <typename TContext>
   struct Threadable
   {
     Threadable(TContext * context):
       context_(context)
     {}
-    
+
     void operator()()
     {
       try
@@ -51,20 +51,20 @@ namespace yae
                   << std::endl;
       }
     }
-    
+
     TContext * context_;
   };
-  
+
   //----------------------------------------------------------------
   // Thread
-  // 
+  //
   template <typename TContext>
   struct Thread
   {
     Thread(TContext * context):
       context_(context)
     {}
-    
+
     bool run()
     {
       if (!context_)
@@ -72,7 +72,7 @@ namespace yae
         YAE_ASSERT(false);
         return false;
       }
-      
+
       try
       {
         Threadable<TContext> threadable(context_);
@@ -90,7 +90,7 @@ namespace yae
 
       return false;
     }
-    
+
     void stop()
     {
       try
@@ -106,7 +106,7 @@ namespace yae
         std::cerr << "Thread::stop: unexpected exception" << std::endl;
       }
     }
-    
+
     bool wait()
     {
       try
@@ -122,7 +122,7 @@ namespace yae
       {
         std::cerr << "Thread::wait: unexpected exception" << std::endl;
       }
-      
+
       return false;
     }
 
@@ -130,7 +130,7 @@ namespace yae
     {
       return thread_.joinable();
     }
-    
+
   protected:
     boost::thread thread_;
     TContext * context_;

@@ -11,10 +11,10 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // TRemoteControlButtonId
-  // 
+  //
   enum TRemoteControlButtonId {
     kRemoteControlButtonUndefined = 0,
     kRemoteControlVolumeUp        = 1,
@@ -24,10 +24,10 @@ namespace yae
     kRemoteControlLeftButton      = 5,
     kRemoteControlRightButton     = 6
   };
-  
+
   //----------------------------------------------------------------
   // TRemoteControlObserver
-  // 
+  //
   typedef void(*TRemoteControlObserver)(void * /* observerContext */,
                                         TRemoteControlButtonId /* button */,
                                         bool /* pressed down */,
@@ -36,7 +36,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // appleRemoteControlOpen
-  // 
+  //
   void * appleRemoteControlOpen(bool exclusive,
                                 bool countClicks,
                                 bool simulateHold,
@@ -45,9 +45,9 @@ namespace yae
 
   //----------------------------------------------------------------
   // appleRemoteControlClose
-  // 
+  //
   void appleRemoteControlClose(void * appleRemoteControl);
-  
+
 }
 
 #endif // YAE_APPLE_REMOTE_CONTROL_H_

@@ -38,54 +38,54 @@ namespace yae
 
   //----------------------------------------------------------------
   // AboutDialog
-  // 
+  //
   class AboutDialog : public QDialog,
                       public Ui::AboutDialog
   {
     Q_OBJECT;
-    
+
   public:
     AboutDialog(QWidget * parent = 0, Qt::WFlags f = 0);
   };
-  
-  
+
+
   //----------------------------------------------------------------
   // OpenUrlDialog
-  // 
+  //
   class OpenUrlDialog : public QDialog,
                         public Ui::OpenUrlDialog
   {
     Q_OBJECT;
-    
+
   public:
     OpenUrlDialog(QWidget * parent = 0, Qt::WFlags f = 0);
   };
-  
-  
+
+
   //----------------------------------------------------------------
   // MainWindow
-  // 
+  //
   class MainWindow : public QMainWindow,
                      public Ui::yaeMainWindow
   {
     Q_OBJECT;
-    
+
   public:
     MainWindow();
     ~MainWindow();
-    
+
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
-    
+
   protected:
     // open a movie file for playback:
     bool load(const QString & path);
-    
+
   public:
     // specify a playlist of files to load:
     void setPlaylist(const std::list<QString> & playlist,
                      bool beginPlaybackImmediately = true);
-    
+
   signals:
     void setInPoint();
     void setOutPoint();
@@ -122,20 +122,20 @@ namespace yae
     void playbackShrinkWrap();
     void playbackFullScreen();
     void playbackSetTempo(int percent);
-    
+
     // helper:
     void exitFullScreen();
     void togglePlayback();
-    
+
     // audio/video menus:
     void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void playlistItemChanged(std::size_t index);
-    
+
     // help menu:
     void helpAbout();
-    
+
     // helpers:
     void processDropEventUrls(const QList<QUrl> & urls);
     void userIsSeeking(bool seeking);
@@ -150,7 +150,7 @@ namespace yae
     void scrollWheelTimerExpired();
     void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
-    
+
   protected:
     // virtual:
     bool event(QEvent * e);
@@ -160,7 +160,7 @@ namespace yae
     void dropEvent(QDropEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
-    
+
     // helpers:
     void stopRenderers();
     void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
@@ -179,7 +179,7 @@ namespace yae
                                            bool heldDown);
     void * appleRemoteControl_;
 #endif
-    
+
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
@@ -189,11 +189,11 @@ namespace yae
     QShortcut * shortcutNext_;
     QShortcut * shortcutPrev_;
     QShortcut * shortcutLoop_;
-    
+
     // playlist shortcuts:
     QShortcut * shortcutRemove_;
     QShortcut * shortcutSelectAll_;
-    
+
     // audio device selection widget:
     QActionGroup * audioDeviceGroup_;
     QSignalMapper * audioDeviceMapper_;
@@ -201,37 +201,37 @@ namespace yae
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
-    
+
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
-    
+
     // file reader:
     IReader * reader_;
-    
+
     // frame canvas:
     Canvas * canvas_;
-    
+
     // audio device:
     std::string audioDevice_;
-    
+
     // audio renderer:
     IAudioRenderer * audioRenderer_;
-    
+
     // video renderer:
     VideoRenderer * videoRenderer_;
-    
+
     // a flag indicating whether playback is paused:
     bool playbackPaused_;
     bool playbackInterrupted_;
-    
+
     // scroll-wheel timer:
     QTimer scrollWheelTimer_;
     double scrollStart_;
     double scrollOffset_;
-    
+
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
-    
+
     // desired playback tempo:
     double tempo_;
   };

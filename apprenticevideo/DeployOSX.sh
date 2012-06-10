@@ -3,24 +3,24 @@
 
 #----------------------------------------------------------------
 # BUNDLE_PATH
-# 
+#
 BUNDLE_PATH=${1}
 
 #----------------------------------------------------------------
 # CP
-# 
+#
 # Use rsync because it's much faster than 'cp -r'.
-# 
+#
 CP='rsync -a --copy-unsafe-links'
 
 #----------------------------------------------------------------
 # DARWIN_REV
-# 
+#
 DARWIN_REV=`uname -r`
 
 #----------------------------------------------------------------
 # XCODEBUILD
-# 
+#
 XCODEBUILD='xcodebuild'
 if [ "${DARWIN_REV}" = "8.11.0" -o "${DARWIN_REV}" = "8.11.1" ]; then
 	XCODE_SDK='/Developer/SDKs/MacOSX10.4u.sdk'
@@ -36,7 +36,7 @@ fi
 
 #----------------------------------------------------------------
 # quiet_pushd
-# 
+#
 # $1 -- directory to push
 quiet_pushd()
 {
@@ -44,7 +44,7 @@ quiet_pushd()
 	if [ -z "${1}" ]; then exit 10; fi
 
 	pushd "${DIR}" 1>/dev/null 2>/dev/null
-	if [ $? != 0 ]; then 
+	if [ $? != 0 ]; then
 		echo ERROR: failed to change current directory to "${DIR}"
 		exit 1;
 	fi
@@ -52,7 +52,7 @@ quiet_pushd()
 
 #----------------------------------------------------------------
 # quiet_popd
-# 
+#
 quiet_popd()
 {
 	popd 1>/dev/null 2>/dev/null
@@ -60,7 +60,7 @@ quiet_popd()
 
 #----------------------------------------------------------------
 # replace_all
-# 
+#
 # $1 -- filename
 # $2 -- search string
 # $3 -- replacement string
@@ -69,7 +69,7 @@ replace_all()
 	FN="${1}"
 	SRCH="${2}"
 	RPLC="${3}"
-	
+
 	if [ -z "{FN}" -o -z "${SRCH}" ]; then
 		echo USAGE: ${0} filename search_string replacement_string
 		exit 3;
@@ -92,7 +92,7 @@ replace_all()
 
 #----------------------------------------------------------------
 # remove_cvs_svn_tags
-# 
+#
 # $1 -- path where cvs/svn tags should be removed
 remove_cvs_svn_tags()
 {
@@ -110,7 +110,7 @@ remove_cvs_svn_tags()
 
 #----------------------------------------------------------------
 # get_xcode_config
-# 
+#
 # $1 -- project directory
 # $2 -- project file
 # $3 -- requested configuration
@@ -119,18 +119,18 @@ get_xcode_config()
 	PROJ_DIR=${1}
 	PROJ=${2}
 	REQUESTED_CONFIG=${3}
-	CONFIG_ARCH="" 
- 
+	CONFIG_ARCH=""
+
 	quiet_pushd "${PROJ_DIR}"
 		A=`xcodebuild -project "${PROJ}".xcodeproj -list`
 		if [ $? != 0 ]; then exit 1; fi
-		
+
 		if [ ${ARCH} == "x86_64" ]; then
 			AB=`echo "${A}" | grep 64`
 			if [ -n "${AB}" ]; then
 				CONFIG_ARCH="64"
 			fi
-		fi	   
+		fi
 
 		DEBUG_CONFIG=""
 		B=`echo "${A}" | grep Development`
@@ -165,7 +165,7 @@ get_xcode_config()
 
 #----------------------------------------------------------------
 # build_xcodeproj
-# 
+#
 # $1 -- project directory
 # $2 -- project file
 # $3 -- requested configuration
@@ -214,7 +214,7 @@ build_xcodeproj()
 
 #----------------------------------------------------------------
 # build_qmake
-# 
+#
 # $1 -- project directory
 # $2 -- project file
 # $3 -- requested configuration
@@ -225,7 +225,7 @@ build_qmake()
 	PROJ="${2}"
 	REQUESTED_CONFIG="${3}"
 	TARGET="${4}"
-	
+
 	quiet_pushd "${PROJ_DIR}"
 		echo "${PWD};" qmake "${PROJ}".pro -spec macx-xcode
 		qmake "${PROJ}".pro -spec macx-xcode
@@ -248,14 +248,14 @@ build_qmake()
 
 #----------------------------------------------------------------
 # build_make
-# 
+#
 # $1 -- project directory
 # $2 -- Optional compile args
 build_make()
 {
 	PROJ_DIR=${1}
 	MAKE_ARGS=${2}
-	
+
 	quiet_pushd "${PROJ_DIR}"
 		if [ "${ACTION}" == "clean" ]; then
 			echo "${PWD};" make CONFIG="${CONFIG}" -j${NUM_THREADS} clean
@@ -271,9 +271,9 @@ build_make()
 
 #----------------------------------------------------------------
 # PrepForDeployment
-# 
+#
 # prepare a bundle for deployment:
-# 
+#
 # $1 -- bundle path to prepare for deployment
 # $2, $3, etc... -- Qt plugins to include
 #
@@ -291,13 +291,13 @@ PrepForDeployment()
 
 		find . -type f -print | while read i; do
 
-			# find out which Qt was linked against and 
+			# find out which Qt was linked against and
 			# copy plugins from the same version of Qt
 			QT_DIR=`otool -L "${i}" | grep QtCore | grep framework | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev`
-			if [ -z "${QT_DIR}" ]; then 
+			if [ -z "${QT_DIR}" ]; then
 				QT_DIR=`otool -L "${i}" | grep QtCore | grep dylib | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f3- | rev`
-				if [ -z "${QT_DIR}" ]; then 
-					continue; 
+				if [ -z "${QT_DIR}" ]; then
+					continue;
 				fi
 			fi
 
@@ -334,7 +334,7 @@ PrepForDeployment()
 
 #----------------------------------------------------------------
 # resolve_library
-# 
+#
 # $1 -- library name
 # $2 -- cpu arch
 #
@@ -345,7 +345,7 @@ resolve_library()
 		# done
 		echo "${NAME}"
 	fi
-	
+
 	local NATIVE_ARCH="${2}"
 	if [ -z "${NATIVE_ARCH}" ]; then
 		NATIVE_ARCH=`arch`
@@ -376,9 +376,9 @@ resolve_library()
 
 #----------------------------------------------------------------
 # resolve_symlink
-# 
+#
 # $1 -- file path
-# 
+#
 resolve_symlink()
 {
 	SRC="${1}"
@@ -394,11 +394,11 @@ resolve_symlink()
 
 #----------------------------------------------------------------
 # GetPathToParentDir
-# 
+#
 # Convert Frameworks/Some3rdParty.framework/Versions/A to ../../../..
 # Convert qtplugins/imageformats to ../..
-# Convert MacOS to .. 
-# 
+# Convert MacOS to ..
+#
 # $1 -- Child path (like Frameworks/Some3rdParty.framework/Versions/A)
 #
 GetPathToParentDir()
@@ -411,11 +411,11 @@ GetPathToParentDir()
 
 #----------------------------------------------------------------
 # DeployFileOnce
-# 
+#
 # $1 -- bundle contents directory path (foo.app/Contents)
 # $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
 # $3 -- path to the file holding a list of previously deployed files
-# 
+#
 DeployFileOnce()
 {
 	BASEPATH="${1}"
@@ -438,11 +438,11 @@ DeployFileOnce()
 
 #----------------------------------------------------------------
 # DeployFile
-# 
+#
 # $1 -- bundle contents directory path (foo.app/Contents)
 # $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
 # $3 -- path to the file holding a list of previously deployed files
-# 
+#
 DeployFile()
 {
 	BASEPATH="${1}"
@@ -450,14 +450,14 @@ DeployFile()
 	DONELIST="${3}"
 
 #	echo
-#	echo BASEPATH: ${BASEPATH} 
+#	echo BASEPATH: ${BASEPATH}
 #	echo FILEPATH: ${FILEPATH}
 
 	if [ ! -e "${FILEPATH}" ]; then
 		printf "MISSING: %s\n" "${BASEPATH}/${FILEPATH}"
 		exit 11
 	fi
-	
+
 	FILE=`basename "${FILEPATH}"`
 	FDIR=`dirname "${FILEPATH}"`
 	quiet_pushd "${FDIR}"
@@ -469,8 +469,8 @@ DeployFile()
 	if [ -n "${IS_PLUGIN}" ]; then
 		printf "PLUGIN\n"
 	fi
-	
-	otool -L "${FILE}" | grep -v "${FILE}" | rev | cut -d'(' -f2 | rev | while read i; do 
+
+	otool -L "${FILE}" | grep -v "${FILE}" | rev | cut -d'(' -f2 | rev | while read i; do
 		NEEDS="${i}"
 		IS_USR_LIB=`echo "${NEEDS}" | grep '/usr/lib/'`
 		IS_SYS_LIB=`echo "${NEEDS}" | grep '/System/Library/'`
@@ -481,7 +481,7 @@ DeployFile()
 #			echo skipping system library "${NEEDS}"
 			continue
 		fi
-		
+
 		FILE_ARCH=`lipo -info "${FILE}" | rev | cut -d' ' -f1 | rev`
 		IS_FRAMEWORK=`echo "${NEEDS}" | grep '\.framework/'`
 		IS_DEBUG=`echo "${NEEDS}" | grep _debug`
@@ -495,7 +495,7 @@ DeployFile()
 		else
 			printf "dylib, "
 		fi
-		
+
 		if [ -n "${IS_DEBUG}" ]; then
 			printf "debug, "
 			IS_QTLIB=`echo "${NEEDS}" | grep Qt`
@@ -505,14 +505,14 @@ DeployFile()
 				NEEDS="${NO_DEBUG}"
 			fi
 		fi
-		
+
 		if [ -n "${AT_LOAD_PATH}" ]; then
 			printf "@load, "
 		elif [ -n "${AT_EXEC_PATH}" ]; then
 			printf "@exec, "
 		fi
 		printf "%s\n" `basename "${NEEDS}"`
-		
+
 		if [ -n "${AT_LOAD_PATH}" ]; then
 			REF=`echo "${NEEDS}" | cut -d/ -f2-`
 			DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}"
@@ -523,15 +523,15 @@ DeployFile()
 				REF=`echo "${NEEDS}" | cut -d/ -f2- | cut -c4-`
 				NEEDS="${BASEPATH}"/"${REF}"
 			fi
-			
+
 			printf "%s (in %s) NEEDS %s\n" "${FILE}" "${FDIR}" "${NEEDS}"
-			
+
 			if [ -n "${IS_FRAMEWORK}" ]; then
 				DST="Frameworks"
 			else
 				DST="Auxiliaries"
 			fi
-			
+
 			HAS_VERSION=`echo "${NEEDS}" | grep /Versions/`
 			if [ -n "${HAS_VERSION}" ]; then
 				FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-4 | rev`
@@ -549,10 +549,10 @@ DeployFile()
 				echo mkdir -p "${BASEPATH}/${DST_DIR}"
 				mkdir -p "${BASEPATH}/${DST_DIR}"
 			fi
-			
+
 			OFFSET=`GetPathToParentDir "${FDIR}"`
 #			echo FDIR: ${FDIR} -- OFFSET: ${OFFSET}
-			
+
 			DST_NAME="@loader_path/${OFFSET}/${DST}/${FN_DST}"
 
 #			echo CHECK IF EXISTS: "${BASEPATH}/${DST}/${FN_DST}"
@@ -594,10 +594,10 @@ DeployFile()
 				if [ -n "${HAS_VERSION}" ]; then
 					VERTMP=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
 					VERSION=`basename "${VERTMP}"`
-					
+
 					VERTMP=`dirname "${VERTMP}"`
 					VERSIONS="${VERTMP}"
-					
+
 					quiet_pushd "${VERSIONS}"
 						pwd
 						if [ ! -e Current ]; then
@@ -627,13 +627,13 @@ DeployFile()
 				DeployFileOnce "${BASEPATH}" "${DST}/${FN_DST}" "${DONELIST}"
 				if [ $? != 0 ]; then exit 11; fi
 			quiet_popd
-			
+
 			echo install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
 			install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
-			if [ $? != 0 ]; then 
+			if [ $? != 0 ]; then
 				# install_name_tool failure may be fixed by using
 				# the -headerpad_max_install_names linker flag
-				exit 13; 
+				exit 13;
 			fi
 		fi
 	done
@@ -644,9 +644,9 @@ DeployFile()
 
 #----------------------------------------------------------------
 # DeployAppBundle
-# 
+#
 # $1 -- Bundle path (/path/to/foo.app)
-# 
+#
 DeployAppBundle()
 {
 	BUNDLE_PATH="${1}"
@@ -663,9 +663,9 @@ DeployAppBundle()
 	find MacOS -type f -print | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
-		if [ $EXITCODE != 0 ]; then 
+		if [ $EXITCODE != 0 ]; then
 			rm -f "${DONELIST}"
-			exit $EXITCODE; 
+			exit $EXITCODE;
 		fi
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
@@ -673,9 +673,9 @@ DeployAppBundle()
 	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
-		if [ $EXITCODE != 0 ]; then 
+		if [ $EXITCODE != 0 ]; then
 			rm -f "${DONELIST}"
-			exit $EXITCODE; 
+			exit $EXITCODE;
 		fi
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
@@ -683,9 +683,9 @@ DeployAppBundle()
 	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
-		if [ $EXITCODE != 0 ]; then 
+		if [ $EXITCODE != 0 ]; then
 			rm -f "${DONELIST}"
-			exit $EXITCODE; 
+			exit $EXITCODE;
 		fi
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
@@ -693,9 +693,9 @@ DeployAppBundle()
 	find Frameworks -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
-		if [ $EXITCODE != 0 ]; then 
+		if [ $EXITCODE != 0 ]; then
 			rm -f "${DONELIST}"
-			exit $EXITCODE; 
+			exit $EXITCODE;
 		fi
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
@@ -704,9 +704,9 @@ DeployAppBundle()
 		find "${i}" -type f -print | while read j; do
 			DeployFileOnce "${BASE}" "${j}" "${DONELIST}"
 			EXITCODE=$?
-			if [ $EXITCODE != 0 ]; then 
+			if [ $EXITCODE != 0 ]; then
 				rm -f "${DONELIST}"
-				exit $EXITCODE; 
+				exit $EXITCODE;
 			fi
 		done
 		EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi

@@ -19,20 +19,20 @@ namespace yae
 {
   //----------------------------------------------------------------
   // LineEdit
-  // 
+  //
   class LineEdit : public QLineEdit
   {
     Q_OBJECT;
-    
+
   public:
     LineEdit(QWidget * parent = 0);
-    
+
   protected:
     void resizeEvent(QResizeEvent *);
 
   protected slots:
     void textChanged(const QString & text);
-    
+
   protected:
     QToolButton * clear_;
   };

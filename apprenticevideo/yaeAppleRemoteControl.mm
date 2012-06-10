@@ -17,7 +17,7 @@
 
 //----------------------------------------------------------------
 // TAppleRemoteControlBridge
-// 
+//
 @interface TAppleRemoteControlBridge : NSObject
 {
   RemoteControl * rc_;
@@ -48,7 +48,7 @@
 
 //----------------------------------------------------------------
 // dealloc
-// 
+//
 - (void) dealloc
 {
   [rc_ stopListening: self];
@@ -59,7 +59,7 @@
 
 //----------------------------------------------------------------
 // remoteControl
-// 
+//
 - (RemoteControl *) remoteControl
 {
   return rc_;
@@ -67,7 +67,7 @@
 
 //----------------------------------------------------------------
 // setRemoteControl
-// 
+//
 - (void) setRemoteControl: (RemoteControl *) newControl
 {
   [rc_ autorelease];
@@ -76,7 +76,7 @@
 
 //----------------------------------------------------------------
 // initWithExclusiveAccess
-// 
+//
 - (id) initWithExclusiveAccess: (BOOL) exclusiveAccess
                    countClicks: (BOOL) countClicks
                   simulateHold: (BOOL) simulateHold
@@ -110,9 +110,9 @@
 
 //----------------------------------------------------------------
 // remoteButton:
-// 
+//
 // delegate method for the MultiClickRemoteBehavior
-// 
+//
 - (void) remoteButton: (RemoteControlEventIdentifier) buttonIdentifier
           pressedDown: (BOOL) pressedDown
            clickCount: (unsigned int) clickCount
@@ -121,10 +121,10 @@
   {
     return;
   }
-  
+
   yae::TRemoteControlButtonId buttonId = yae::kRemoteControlButtonUndefined;
   bool heldDown = false;
-  
+
   switch (buttonIdentifier)
   {
     case kRemoteButtonPlus:
@@ -171,7 +171,7 @@
       NSLog(@"Unmapped event for button %d", buttonIdentifier);
       return;
   }
-  
+
   // forward to the observer:
   observer_(observerContext_, buttonId, pressedDown, clickCount, heldDown);
 }
@@ -183,7 +183,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // appleRemoteControlOpen
-  // 
+  //
   void * appleRemoteControlOpen(bool exclusiveAccess,
                                 bool countClicks,
                                 bool simulateHold,
@@ -201,7 +201,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // appleRemoteControlClose
-  // 
+  //
   void appleRemoteControlClose(void * appleRemoteControl)
   {
     if (appleRemoteControl)
@@ -211,5 +211,5 @@ namespace yae
       [rc release];
     }
   }
-  
+
 }

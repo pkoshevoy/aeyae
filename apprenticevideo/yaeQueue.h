@@ -22,49 +22,49 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // QueueWaitMgr
-  // 
+  //
   struct QueueWaitMgr
   {
     QueueWaitMgr():
       cond_(NULL),
       wait_(true)
     {}
-    
+
     void waitingFor(boost::condition_variable * cond)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       cond_ = cond;
     }
-    
+
     void stopWaiting(bool stop = true)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       wait_ = !stop;
-      
+
       if (cond_)
       {
         cond_->notify_all();
       }
     }
-    
+
     inline bool keepWaiting() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       return wait_;
     }
-    
+
   protected:
     mutable boost::mutex mutex_;
     boost::condition_variable * cond_;
     bool wait_;
   };
-  
+
   //----------------------------------------------------------------
   // QueueWaitTerminator
-  // 
+  //
   struct QueueWaitTerminator
   {
     QueueWaitTerminator(QueueWaitMgr * waitMgr,
@@ -76,7 +76,7 @@ namespace yae
         waitMgr_->waitingFor(cond);
       }
     }
-    
+
     ~QueueWaitTerminator()
     {
       if (waitMgr_)
@@ -84,28 +84,28 @@ namespace yae
         waitMgr_->waitingFor(NULL);
       }
     }
-    
+
     inline bool keepWaiting() const
     {
       return waitMgr_ ? waitMgr_->keepWaiting() : true;
     }
-    
+
   private:
     QueueWaitMgr * waitMgr_;
   };
-  
+
   //----------------------------------------------------------------
   // Queue
-  // 
+  //
   // Thread-safe queue
-  // 
+  //
   template <typename TData>
   struct Queue
   {
     typedef Queue<TData> TSelf;
     typedef bool(*TSortFunc)(const TData &, const TData &);
     typedef std::list<TData> TSequence;
-    
+
     Queue(std::size_t maxSize = 1):
       closed_(true),
       consumerIsBlocked_(false),
@@ -113,7 +113,7 @@ namespace yae
       maxSize_(maxSize),
       sortFunc_(0)
     {}
-    
+
     ~Queue()
     {
       try
@@ -133,7 +133,7 @@ namespace yae
       boost::lock_guard<boost::mutex> lock(mutex_);
       sortFunc_ = sortFunc;
     }
-    
+
     void setMaxSize(std::size_t maxSize)
     {
       // change max queue size:
@@ -144,34 +144,34 @@ namespace yae
           // same size, nothing changed:
           return;
         }
-        
+
         maxSize_ = maxSize;
       }
-      
+
       cond_.notify_all();
     }
-    
+
     std::size_t getMaxSize() const
     {
       // get max queue size:
       boost::lock_guard<boost::mutex> lock(mutex_);
       return maxSize_;
     }
-    
+
     // check whether the Queue is empty:
     bool isEmpty() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       return !size_;
     }
-    
+
     // check whether the queue is closed:
     bool isClosed() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       return closed_;
     }
-    
+
     // close the queue, abort any pending push/pop/etc... calls:
     void close()
     {
@@ -183,16 +183,16 @@ namespace yae
           // already closed:
           return;
         }
-        
+
 #if 0 // ndef NDEBUG
         std::cerr << this << " close " << std::endl;
 #endif
         closed_ = true;
       }
-      
+
       cond_.notify_all();
     }
-    
+
     // open the queue allowing push/pop/etc... calls:
     void open()
     {
@@ -204,7 +204,7 @@ namespace yae
           // already open:
           return;
         }
-        
+
 #if 0 // ndef NDEBUG
         std::cerr << this << " open " << std::endl;
 #endif
@@ -212,10 +212,10 @@ namespace yae
         size_ = 0;
         closed_ = false;
       }
-      
+
       cond_.notify_all();
     }
-    
+
     // remove all data from the queue:
     bool clear()
     {
@@ -227,23 +227,23 @@ namespace yae
           sequences_.clear();
           size_ = 0;
         }
-        
+
         cond_.notify_all();
         return true;
       }
       catch (...)
       {}
-      
+
       return false;
     }
-    
+
     // push data into the queue:
     bool push(const TData & newData, QueueWaitMgr * waitMgr = NULL)
     {
       try
       {
         QueueWaitTerminator terminator(waitMgr, &cond_);
-        
+
         // add to queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
@@ -254,7 +254,7 @@ namespace yae
 #endif
             cond_.wait(lock);
           }
-          
+
           if (size_ >= maxSize_)
           {
             return false;
@@ -262,18 +262,18 @@ namespace yae
 
           insert(newData);
           size_++;
-          
+
 #if 0 // ndef NDEBUG
           std::cerr << this << " push done" << size_ << std::endl;
 #endif
         }
-        
+
         cond_.notify_all();
         return true;
       }
       catch (...)
       {}
-      
+
       return false;
     }
 
@@ -283,7 +283,7 @@ namespace yae
       try
       {
         QueueWaitTerminator terminator(waitMgr, &cond_);
-        
+
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
@@ -296,7 +296,7 @@ namespace yae
             cond_.notify_all();
             cond_.wait(lock);
           }
-          
+
           consumerIsBlocked_ = false;
           if (!size_)
           {
@@ -311,31 +311,31 @@ namespace yae
           {
             sequences_.pop_front();
           }
-          
+
           TSequence & sequence = sequences_.front();
           data = sequence.back();
           sequence.pop_back();
           size_--;
-          
+
           if (sequence.empty())
           {
             sequences_.pop_front();
           }
-          
+
 #if 0 // ndef NDEBUG
           std::cerr << this << " pop done, size " << std::endl;
 #endif
         }
-        
+
         cond_.notify_all();
         return true;
       }
       catch (...)
       {}
-      
+
       return false;
     }
-    
+
     bool waitForConsumerToBlock()
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -343,7 +343,7 @@ namespace yae
       {
         cond_.wait(lock);
       }
-      
+
       return consumerIsBlocked_;
     }
 
@@ -354,7 +354,7 @@ namespace yae
       {
         sequences_.push_back(TSequence());
       }
-      
+
       TSequence & sequence = sequences_.back();
       sequence.push_front(sequenceEndData);
       size_++;
@@ -363,7 +363,7 @@ namespace yae
     }
 
   protected:
-    
+
     // push data into the queue:
     void insert(const TData & newData)
     {
@@ -371,7 +371,7 @@ namespace yae
       {
         sequences_.push_back(TSequence());
       }
-      
+
       TSequence & sequence = sequences_.back();
       if (sequence.empty() || !sortFunc_)
       {
@@ -389,10 +389,10 @@ namespace yae
           return;
         }
       }
-      
+
       sequence.push_back(newData);
     }
-    
+
     bool closed_;
     bool consumerIsBlocked_;
     std::list<TSequence> sequences_;
@@ -404,7 +404,7 @@ namespace yae
     mutable boost::mutex mutex_;
     mutable boost::condition_variable cond_;
   };
-  
+
 }
 
 

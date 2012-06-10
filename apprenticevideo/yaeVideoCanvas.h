@@ -15,10 +15,10 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // IVideoCanvas
-  // 
+  //
   struct YAE_API IVideoCanvas
   {
     virtual ~IVideoCanvas() {}

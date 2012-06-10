@@ -21,7 +21,7 @@ namespace yae
   {
     //----------------------------------------------------------------
     // TFlags
-    // 
+    //
     enum TFlags
     {
       kLE = 1 << 0,      // little-endian
@@ -32,10 +32,10 @@ namespace yae
       kPlanar = 1 << 5,  // has a contiguous plane per channel samples
       kPaletted = 1 << 6 // requires a color palette
     };
-    
+
     //----------------------------------------------------------------
     // Traits
-    // 
+    //
     struct YAE_API Traits
     {
       // format label:
@@ -50,41 +50,41 @@ namespace yae
       // 3 -- color, YUV or RGB
       // 4 -- color and alpha, YUV or RGB
       unsigned char channels_;
-      
+
       // horizontal chroma subsampling bounding box width,
       // specifies number of Y samples per UV sample,
       // set to 0 if there is no color:
       unsigned char chromaBoxW_;
-      
+
       // horizontal chroma subsampling region height,
       // specifies number of Y samples per UV sample,
       // set to 0 if there is no color:
       unsigned char chromaBoxH_;
-      
+
       // index of contiguous sample plane each channel belongs to:
       unsigned char plane_[4];
-      
+
       // sample bit depth per channel:
       unsigned char depth_[4];
-      
+
       // sample bit offset (left-shift bits) per channel:
       unsigned char lshift_[4];
-      
+
       // bits to skip to reach next set of samples per channel:
       unsigned char stride_[4];
-      
+
       // number of samples in the set per channel,
       // necessary for complex formats like UYYVYY411:
       unsigned char samples_[4];
-      
+
       // NOTE:
       // number of least significant bits to right-shift
       // to get the channel sample value is not stored
       // since this can be derived from existing properties:
-      // 
+      //
       // rshift = stride - lshift - depth
       unsigned char rshift(unsigned char channel) const;
-      
+
       // return number of contiguous sample planes, pass back
       // sample set stride (in bits) per sample plane:
       unsigned char getPlanes(unsigned char stride[4]) const;
@@ -92,7 +92,7 @@ namespace yae
 
     //----------------------------------------------------------------
     // getTraits
-    // 
+    //
     YAE_API const Traits * getTraits(TPixelFormatId id);
   }
 }

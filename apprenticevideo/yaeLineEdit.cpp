@@ -17,15 +17,15 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // LineEdit::LineEdit
-  // 
+  //
   LineEdit::LineEdit(QWidget * parent):
     QLineEdit(parent)
   {
     static QPixmap pixmap = QPixmap(":/images/clear.png");
-    
+
     clear_ = new QToolButton(this);
     clear_->setObjectName("clear_");
     clear_->setIcon(QIcon(pixmap));
@@ -34,43 +34,43 @@ namespace yae
     clear_->setMinimumSize(QSize(11, 11));
     clear_->setFocusPolicy(Qt::NoFocus);
     clear_->hide();
-    
+
     int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
     int minHeight = 11 + frameWidth * 2 + 4;
-    
+
     setStyleSheet(QString::fromUtf8("QLineEdit { padding-right: %1px; }").
                   arg(minHeight));
     setMinimumWidth(minHeight);
     setMinimumHeight(minHeight);
-    
+
     bool ok = connect(clear_, SIGNAL(clicked()),
                       this, SLOT(clear()));
     YAE_ASSERT(ok);
-    
+
     ok = connect(this, SIGNAL(textChanged(const QString &)),
                  this, SLOT(textChanged(const QString &)));
     YAE_ASSERT(ok);
   }
-  
+
   //----------------------------------------------------------------
   // LineEdit::resizeEvent
-  // 
+  //
   void
   LineEdit::resizeEvent(QResizeEvent *)
   {
     QRect bx = rect();
-    
+
     int w = bx.width();
     int h = bx.height();
     int f = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
     int p = 2 + f;
-    
+
     clear_->setGeometry(w - h + p - 1, p, h - 2 * p, h - 2 * p);
   }
-  
+
   //----------------------------------------------------------------
   // LineEdit::textChanged
-  // 
+  //
   void
   LineEdit::textChanged(const QString & text)
   {

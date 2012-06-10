@@ -20,7 +20,7 @@ namespace yae
 {
   //----------------------------------------------------------------
   // ffmpeg_to_yae
-  // 
+  //
   TPixelFormatId
   ffmpeg_to_yae(enum PixelFormat ffmpegPixelFormat)
   {
@@ -220,7 +220,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // yae_to_ffmpeg
-  // 
+  //
   enum PixelFormat
   yae_to_ffmpeg(TPixelFormatId yaePixelFormat)
   {

@@ -28,13 +28,13 @@ namespace yae
 {
   //----------------------------------------------------------------
   // ffmpeg_to_yae
-  // 
+  //
   YAE_API TPixelFormatId
   ffmpeg_to_yae(enum PixelFormat ffmpegPixelFormat);
 
   //----------------------------------------------------------------
   // yae_to_ffmpeg
-  // 
+  //
   YAE_API enum PixelFormat
   yae_to_ffmpeg(TPixelFormatId yaePixelFormat);
 }

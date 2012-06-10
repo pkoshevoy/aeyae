@@ -24,7 +24,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // IClockObserver
-  // 
+  //
   //! Use the observer interface to receive notifications when
   //! setCurrentTime is called on the master clock
   //!
@@ -36,47 +36,47 @@ namespace yae
     virtual void noteCurrentTimeChanged(const TTime & t0) = 0;
     virtual void noteTheClockHasStopped() = 0;
   };
-  
+
   //----------------------------------------------------------------
   // TimeSegment
-  // 
+  //
   struct YAE_API TimeSegment
   {
     TimeSegment();
-    
+
     // this keeps track of "when" the time segment was specified:
     boost::system_time origin_;
-    
+
     // current time:
     TTime t0_;
-    
+
     // this keeps track of "when" someone annouced they will be late:
     boost::system_time waitForMe_;
-    
+
     // how long to wait:
     double delayInSeconds_;
-    
+
     // this indicates whether the clock is stopped while waiting for someone:
     bool stopped_;
-    
+
     // shared clock observer interface, may be NULL:
     IClockObserver * observer_;
-    
+
     // avoid concurrent access from multiple threads:
     mutable boost::mutex mutex_;
   };
-  
+
   //----------------------------------------------------------------
   // TTimeSegmentPtr
-  // 
+  //
   typedef boost::shared_ptr<TimeSegment> TTimeSegmentPtr;
 
   //----------------------------------------------------------------
   // SharedClock
-  // 
+  //
   //! implicitly shared thread-safe time piece,
   //! useful for various synchronization tasks
-  // 
+  //
   struct YAE_API SharedClock
   {
     SharedClock();
@@ -87,64 +87,64 @@ namespace yae
     //! will not allow setCurrentTime to succeed:
     SharedClock(const SharedClock & c);
     SharedClock & operator = (const SharedClock & c);
-    
+
     //! Check whether a given clock and this clock
     //! refer to the same time segment:
     bool sharesCurrentTimeWith(const SharedClock & c) const;
-    
+
     //! NOTE: setMasterClock will fail if the given clock
     //! and this clock do not refer to the same current time.
-    //! 
+    //!
     //! Specify which is the master reference clock:
     bool setMasterClock(const SharedClock & master);
-    
+
     //! NOTE: setting current time is permitted
     //! only when this clock is the master clock:
     bool allowsSettingTime() const;
-    
+
     //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0, double latencyInSeconds = 0.0);
-    
+
     //! retrieve the reference time interval and time since last clock update;
     //! returns false when clock is not set or is stopped while the clock
     //! owner is waiting for someone to catch up;
     //! returns true when clock is running:
     bool getCurrentTime(TTime & t0, double & elapsedTime) const;
-    
+
     //! announce that you are late so others would stop and wait for you:
     void waitForMe(double waitInSeconds = 1.0);
     void waitForOthers();
-    
+
     void setObserver(IClockObserver * observer);
-    
+
     //! notify the observer (if it exists) that there will be no
     //! further updates to the current time on this clock,
     //! most likely because playback has reached the end:
     bool noteTheClockHasStopped();
-    
+
   private:
     TTimeSegmentPtr shared_;
     boost::system_time waitingFor_;
     bool copied_;
   };
-  
+
   //----------------------------------------------------------------
   // ISynchronous
-  // 
+  //
   struct YAE_API ISynchronous
   {
     virtual ~ISynchronous() {}
-    
+
     //! take responsibility for maintaining the shared reference clock:
     void takeThisClock(const SharedClock & yourNewClock);
-    
+
     //! synchronize against a given clock (which may be maintained elsewhere):
     void obeyThisClock(const SharedClock & someRefClock);
-    
+
     //! accessor to this objects shared clock:
     inline const SharedClock & clock() const
     { return clock_; }
-    
+
   protected:
     mutable SharedClock clock_;
   };

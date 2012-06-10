@@ -35,7 +35,7 @@ add_definitions(-DYAE_STATIC)
 # NOTE: this is necessary when linking to static GLEW libs:
 add_definitions(-DGLEW_STATIC=1)
 
-include_directories(AFTER 
+include_directories(AFTER
   .
   ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
@@ -50,7 +50,7 @@ endif (WIN32)
 
 set(FFMPEG_HEADERS_PATH "$ENV{FFMPEG_HEADERS_PATH}" CACHE PATH "search path for ffmpeg headers")
 
-find_path(FFMPEG_INCLUDE_DIR 
+find_path(FFMPEG_INCLUDE_DIR
   libavutil/avutil.h
   PATHS
   ${FFMPEG_HEADERS_PATH}
@@ -62,12 +62,12 @@ if (FFMPEG_INCLUDE_DIR)
   include_directories(AFTER ${FFMPEG_INCLUDE_DIR})
 endif (FFMPEG_INCLUDE_DIR)
 
-find_library(QT4_PLUGINS_QGIF 
-  qgif ${QT_PLUGINS_DIR}/imageformats 
+find_library(QT4_PLUGINS_QGIF
+  qgif ${QT_PLUGINS_DIR}/imageformats
   DOC "Qt image IO plugin for GIF")
 
-find_library(QT4_PLUGINS_QTIFF 
-  qtiff ${QT_PLUGINS_DIR}/imageformats 
+find_library(QT4_PLUGINS_QTIFF
+  qtiff ${QT_PLUGINS_DIR}/imageformats
   DOC "Qt image IO plugin for TIFF")
 
 find_library(QT4_PLUGINS_QICO
@@ -138,7 +138,7 @@ find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIB
 set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ folders")
 find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
 
-set(project_moc_hxx 
+set(project_moc_hxx
   yaeCanvas.h
   yaeMainWindow.h
   yaeTimelineControls.h
@@ -146,7 +146,7 @@ set(project_moc_hxx
   yaeLineEdit.h
   )
 
-set(project_uis 
+set(project_uis
   yaeAbout.ui
   yaeMainWindow.ui
   yaeOpenUrlDialog.ui
@@ -154,7 +154,7 @@ set(project_uis
 
 qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 
-set(project_sources 
+set(project_sources
   yaeAPI.h
   yaeAPI.cpp
   yaeAudioFragment.h
@@ -196,9 +196,9 @@ set(project_sources
 
 if (APPLE)
   include_directories(AFTER martinkahr-apple_remote_control)
-  
-  set(project_sources 
-    ${project_sources} 
+
+  set(project_sources
+    ${project_sources}
     yaeAppleRemoteControl.h
     yaeAppleRemoteControl.mm
     martinkahr-apple_remote_control/AppleRemote.h
@@ -211,7 +211,7 @@ if (APPLE)
     martinkahr-apple_remote_control/RemoteControl.m)
 endif (APPLE)
 
-find_path(PORTAUDIO_INCLUDE_DIR 
+find_path(PORTAUDIO_INCLUDE_DIR
   portaudio.h
   PATHS
   ${PORTAUDIO_DIR}/include
@@ -224,10 +224,10 @@ if (PORTAUDIO_INCLUDE_DIR)
   include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
 endif (PORTAUDIO_INCLUDE_DIR)
 
-find_path(GLEW_INCLUDE_DIR 
+find_path(GLEW_INCLUDE_DIR
   GL/glew.h
   PATHS
-  ${GLEW_DIR}/include 
+  ${GLEW_DIR}/include
   ${FFMPEG_HEADERS_PATH}
   /usr/include
   /usr/local/include
@@ -241,13 +241,13 @@ set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)
   set (YAE_VERSIONED_FILES
-    ${YAE_VERSIONED_FILES} 
+    ${YAE_VERSIONED_FILES}
     "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 endif (WIN32)
 
 if (APPLE)
   set (YAE_VERSIONED_FILES
-    ${YAE_VERSIONED_FILES} 
+    ${YAE_VERSIONED_FILES}
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif (APPLE)
 
@@ -284,7 +284,7 @@ endif (WIN32)
 if (APPLE)
   set(GUI_TYPE MACOSX_BUNDLE)
 
-  set(project_sources 
+  set(project_sources
     ${project_sources}
     ${PROGNAME}.icns
     InfoPlist.strings)
@@ -293,7 +293,7 @@ endif (APPLE)
 qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
 qt4_wrap_ui(project_uis_hxx ${project_uis})
 
-set(project_sources 
+set(project_sources
   ${project_sources}
   ${project_moc_cxx}
   ${project_uis_hxx}
@@ -487,31 +487,31 @@ if (WIN32)
   if (LIBGCC_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBGCC_LIBRARY})
   endif (LIBGCC_LIBRARY)
-  
+
   if (LIBMINGW32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBMINGW32_LIBRARY})
   endif (LIBMINGW32_LIBRARY)
-  
+
   if (LIBMINGWEX_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBMINGWEX_LIBRARY})
   endif (LIBMINGWEX_LIBRARY)
-  
+
   if (LIBCOLDNAME_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBCOLDNAME_LIBRARY})
   endif (LIBCOLDNAME_LIBRARY)
-  
+
   if (LIBMOLDNAME_RELEASE_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBMOLDNAME_RELEASE_LIBRARY})
   endif (LIBMOLDNAME_RELEASE_LIBRARY)
-  
+
   if (LIBMOLDNAME_DEBUG_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${LIBMOLDNAME_DEBUG_LIBRARY})
   endif (LIBMOLDNAME_DEBUG_LIBRARY)
-  
+
   if (AVICAP32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVICAP32_LIBRARY})
   endif (AVICAP32_LIBRARY)
-  
+
   if (AVIFIL32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
   endif (AVIFIL32_LIBRARY)
@@ -524,7 +524,7 @@ if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
   if (QT4_PLUGINS_QGIF)
     set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QGIF})
   endif (QT4_PLUGINS_QGIF)
-  
+
   if (QT4_PLUGINS_QTIFF)
     set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QTIFF})
   endif (QT4_PLUGINS_QTIFF)
@@ -532,11 +532,11 @@ if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
   if (QT4_PLUGINS_QICO)
     set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QICO})
   endif (QT4_PLUGINS_QICO)
-  
+
   if (QT4_PLUGINS_QJPEG)
     set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QJPEG})
   endif (QT4_PLUGINS_QJPEG)
-  
+
   if (QT4_PLUGINS_QMNG)
     set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QMNG})
   endif (QT4_PLUGINS_QMNG)
@@ -601,30 +601,30 @@ if (APPLE)
     MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
-    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh 
+    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
     ARGS ${PROJECT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)
 
 if (WIN32)
-  add_executable(wixWrapper 
+  add_executable(wixWrapper
     wixWrapper.cpp
-    "${PROJECT_BINARY_DIR}/yaeVersion.h" 
+    "${PROJECT_BINARY_DIR}/yaeVersion.h"
     )
-  
+
   add_dependencies(wixWrapper "update revision")
-  
-  find_program(DEPENDENCY_WALKER NAMES depends.exe DOC 
+
+  find_program(DEPENDENCY_WALKER NAMES depends.exe DOC
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
 
-  find_program(WIX_CANDLE NAMES candle.exe DOC 
+  find_program(WIX_CANDLE NAMES candle.exe DOC
     "WiX compiler executable candle.exe, http://wix.sourceforge.net/")
 
-  find_program(WIX_LIGHT NAMES light.exe DOC 
+  find_program(WIX_LIGHT NAMES light.exe DOC
     "WiX installer package linker light.exe, http://wix.sourceforge.net/")
 
-  set(ALLOWED_PATHS ${FFMPEG_LIBS_PATH} CACHE STRING 
+  set(ALLOWED_PATHS ${FFMPEG_LIBS_PATH} CACHE STRING
     "semicolon separated search path where dlls for Qt, portaudio, ffmpeg, etc... can be found")
 
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
@@ -634,8 +634,8 @@ if (WIN32)
   file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
   file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
 
-  add_custom_target("create installer" 
-    ALL DEPENDS 
+  add_custom_target("create installer"
+    ALL DEPENDS
     wixWrapper
     "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
     )
@@ -650,7 +650,7 @@ if (WIN32)
     "${NATIVE_ALLOWED_PATHS}"
     "${NATIVE_CANDLE_EXE}"
     "${NATIVE_LIGHT_EXE}"
-    DEPENDS ${PROGNAME} wixWrapper 
+    DEPENDS ${PROGNAME} wixWrapper
     COMMENT "create installer package"
     )
 

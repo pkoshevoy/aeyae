@@ -21,41 +21,41 @@
 
 namespace yae
 {
-  
+
   //----------------------------------------------------------------
   // VideoRenderer
-  // 
+  //
   struct YAE_API VideoRenderer : public ISynchronous
   {
   private:
     //! intentionally disabled:
     VideoRenderer(const VideoRenderer &);
     VideoRenderer & operator = (const VideoRenderer &);
-    
+
     //! private implementation details:
     class TPrivate;
     TPrivate * private_;
-    
+
   protected:
     VideoRenderer();
     ~VideoRenderer();
-    
+
   public:
     static VideoRenderer * create();
     void destroy();
-    
+
     //! begin rendering video frames onto a given canvas:
     bool open(IVideoCanvas * canvas,
               IReader * reader,
               bool forOneFrameOnly);
-    
+
     //! terminate video rendering:
     void close();
-    
+
     //! the initial state after open(...) must be paused;
     //! use this to resume or pause the rendering thread loop;
     void pause(bool paused = true);
-    
+
     //! shortcut:
     inline void resume()
     { pause(false); }

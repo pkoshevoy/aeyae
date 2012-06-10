@@ -8,7 +8,7 @@
 
 //----------------------------------------------------------------
 // __STDC_CONSTANT_MACROS
-// 
+//
 #ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
 #endif
@@ -29,7 +29,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // getRemixMatrix
-  // 
+  //
   void
   getRemixMatrix(std::size_t srcChannels,
                  std::size_t dstChannels,
@@ -59,35 +59,35 @@ namespace yae
         matrix[0 * srcChannels + 2] = 0.71;
         matrix[1 * srcChannels + 2] = 0.71;
       }
-      
+
       if (srcChannels == 4)
       {
         // assume 4.0 surround:
         matrix[0 * srcChannels + 2] = 0.71;
         matrix[1 * srcChannels + 3] = 0.71;
       }
-      
+
       if (srcChannels > 4)
       {
         // add the front center channel:
         matrix[0 * srcChannels + 2] = 0.71;
         matrix[1 * srcChannels + 2] = 0.71;
       }
-      
+
       if (srcChannels > 5)
       {
         // add Ls and Rs channels:
         matrix[0 * srcChannels + 3] = 0.71;
         matrix[1 * srcChannels + 4] = 0.71;
       }
-      
+
       if (srcChannels == 7)
       {
         // add the rear center channel:
         matrix[0 * srcChannels + 5] = 1.0;
         matrix[1 * srcChannels + 5] = 1.0;
       }
-      
+
       if (srcChannels == 8)
       {
         // add Ls and Rs channels:
@@ -99,7 +99,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TRemix
-  // 
+  //
   template <typename TData>
   void remix(const double * matrix,
              std::size_t numSamples,
@@ -125,7 +125,7 @@ namespace yae
           memcpy(&sample + sizeof(TData) - bytesPerSample,
                  src[k] + i * srcStride,
                  bytesPerSample);
-          
+
           t += scale[k] * double(sample);
         }
 
@@ -137,10 +137,10 @@ namespace yae
       }
     }
   }
-  
+
   //----------------------------------------------------------------
   // remix
-  // 
+  //
   void
   remix(std::size_t numSamples,
         TAudioSampleFormat sampleFormat,
@@ -156,15 +156,15 @@ namespace yae
     {
       return;
     }
-    
+
     bool isPlanar = (channelFormat == kAudioChannelsPlanar);
     std::size_t sampleSize = getBitsPerSample(sampleFormat) / 8;
     std::size_t srcChannels = getNumberOfChannels(srcLayout);
     std::size_t dstChannels = getNumberOfChannels(dstLayout);
-    
+
     std::size_t srcPlanes = isPlanar ? srcChannels : 1;
     std::size_t dstPlanes = isPlanar ? dstChannels : 1;
-    
+
     std::size_t srcStride = sampleSize * srcChannels / srcPlanes;
     std::size_t dstStride = sampleSize * dstChannels / dstPlanes;
 
@@ -176,13 +176,13 @@ namespace yae
     {
       srcChan[i] = src + i * (isPlanar ? srcPlaneStride : sampleSize);
     }
-    
+
     std::vector<unsigned char *> dstChan(dstChannels, NULL);
     for (std::size_t i = 0; i < dstChannels; i++)
     {
       dstChan[i] = dst + i * (isPlanar ? dstPlaneStride : sampleSize);
     }
-    
+
     if (sampleFormat == kAudio8BitOffsetBinary)
     {
       remix<unsigned char>(channelMatrix,

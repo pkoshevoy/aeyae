@@ -19,7 +19,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TTime::TTime
-  // 
+  //
   TTime::TTime():
     time_(0),
     base_(1001)
@@ -27,7 +27,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TTime::TTime
-  // 
+  //
   TTime::TTime(int64 time, uint64 base):
     time_(time),
     base_(base)
@@ -35,7 +35,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TTime::operator +=
-  // 
+  //
   TTime &
   TTime::operator += (const TTime & dt)
   {
@@ -47,10 +47,10 @@ namespace yae
 
     return operator += (dt.toSeconds());
   }
-  
+
   //----------------------------------------------------------------
   // TTime::operator +
-  // 
+  //
   TTime
   TTime::operator + (const TTime & dt) const
   {
@@ -58,20 +58,20 @@ namespace yae
     t += dt;
     return t;
   }
-  
+
   //----------------------------------------------------------------
   // TTime::operator +
-  // 
+  //
   TTime &
   TTime::operator += (double dtSec)
   {
     time_ += int64(dtSec * double(base_));
     return *this;
   }
-  
+
   //----------------------------------------------------------------
   // TTime::operator +
-  // 
+  //
   TTime
   TTime::operator + (double dtSec) const
   {
@@ -79,11 +79,11 @@ namespace yae
     t += dtSec;
     return t;
   }
-  
+
 
   //----------------------------------------------------------------
   // getBitsPerSample
-  // 
+  //
   unsigned int
   getBitsPerSample(TAudioSampleFormat sampleFormat)
   {
@@ -91,14 +91,14 @@ namespace yae
     {
       case kAudio8BitOffsetBinary:
         return 8;
-        
+
       case kAudio16BitBigEndian:
       case kAudio16BitLittleEndian:
         return 16;
-        
+
       case kAudio24BitLittleEndian:
         return 24;
-        
+
       case kAudio32BitFloat:
       case kAudio32BitBigEndian:
       case kAudio32BitLittleEndian:
@@ -107,14 +107,14 @@ namespace yae
       default:
         break;
     }
-    
+
     YAE_ASSERT(false);
     return 0;
   }
 
   //----------------------------------------------------------------
   // getNumberOfChannels
-  // 
+  //
   unsigned int
   getNumberOfChannels(TAudioChannelLayout channelLayout)
   {
@@ -122,49 +122,49 @@ namespace yae
     {
       case kAudioMono:
         return 1;
-        
+
       case kAudioStereo:
         return 2;
-        
+
       case kAudio2Pt1:
         return 3;
-        
+
       case kAudioQuad:
         return 4;
-        
+
       case kAudio4Pt1:
         return 5;
-        
+
       case kAudio5Pt1:
         return 6;
 
       case kAudio6Pt1:
         return 7;
-        
+
       case kAudio7Pt1:
         return 8;
 
       default:
         break;
     }
-    
+
     YAE_ASSERT(false);
     return 0;
   }
-  
+
   //----------------------------------------------------------------
   // AudioTraits::AudioTraits
-  // 
+  //
   AudioTraits::AudioTraits():
     sampleRate_(0),
     sampleFormat_(kAudioInvalidFormat),
     channelFormat_(kAudioChannelFormatInvalid),
     channelLayout_(kAudioChannelLayoutInvalid)
   {}
-  
+
   //----------------------------------------------------------------
   // VideoTraits::VideoTraits
-  // 
+  //
   VideoTraits::VideoTraits():
     frameRate_(0.0),
     pixelFormat_(kInvalidPixelFormat),
@@ -180,13 +180,13 @@ namespace yae
 
   //----------------------------------------------------------------
   // ISampleBuffer::~ISampleBuffer
-  // 
+  //
   ISampleBuffer::~ISampleBuffer()
   {}
-  
+
   //----------------------------------------------------------------
   // ISampleBuffer::deallocator
-  // 
+  //
   void
   ISampleBuffer::deallocator(ISampleBuffer * sb)
   {
@@ -195,10 +195,10 @@ namespace yae
       sb->destroy();
     }
   }
-  
+
   //----------------------------------------------------------------
   // TSamplePlane::TSamplePlane
-  // 
+  //
   TSamplePlane::TSamplePlane():
     data_(NULL),
     alignmentOffset_(0),
@@ -209,7 +209,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSamplePlane::~TSamplePlane
-  // 
+  //
   TSamplePlane::~TSamplePlane()
   {
     if (data_)
@@ -217,10 +217,10 @@ namespace yae
       free(data_);
     }
   }
-  
+
   //----------------------------------------------------------------
   // TSamplePlane::TSamplePlane
-  // 
+  //
   TSamplePlane::TSamplePlane(const TSamplePlane & src):
     data_(NULL),
     alignmentOffset_(0),
@@ -233,31 +233,31 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSamplePlane::operator =
-  // 
+  //
   TSamplePlane &
   TSamplePlane::operator = (const TSamplePlane & src)
   {
     YAE_ASSERT(this != &src);
-    
+
     if (this != &src)
     {
       resize(src.rowBytes_, src.rows_, src.alignment_);
       memcpy(this->data(), src.data(), src.rowBytes_ * src.rows_);
     }
-    
+
     return *this;
   }
-  
+
   //----------------------------------------------------------------
   // TSamplePlane::resize
-  // 
+  //
   void
   TSamplePlane::resize(std::size_t rowBytes,
                        std::size_t rows,
                        std::size_t alignment)
   {
     std::size_t planeSize = (rowBytes * rows);
-    
+
     if (planeSize)
     {
       data_ = (unsigned char *)realloc(data_, planeSize + alignment - 1);
@@ -267,24 +267,24 @@ namespace yae
       free(data_);
       data_ = NULL;
     }
-    
+
     alignmentOffset_ = alignment ? std::size_t(data_) % alignment : 0;
     rowBytes_ = rowBytes;
     rows_ = rows;
     alignment_ = alignment;
   }
-  
+
 
   //----------------------------------------------------------------
   // TSampleBuffer::TSampleBuffer
-  // 
+  //
   TSampleBuffer::TSampleBuffer(std::size_t numSamplePlanes):
     plane_(numSamplePlanes)
   {}
 
   //----------------------------------------------------------------
   // TSampleBuffer::destroy
-  // 
+  //
   void
   TSampleBuffer::destroy()
   {
@@ -293,7 +293,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSampleBuffer::samplePlanes
-  // 
+  //
   std::size_t
   TSampleBuffer::samplePlanes() const
   {
@@ -302,7 +302,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSampleBuffer::samples
-  // 
+  //
   unsigned char *
   TSampleBuffer::samples(std::size_t samplePlane) const
   {
@@ -311,16 +311,16 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSampleBuffer::rowBytes
-  // 
+  //
   std::size_t
   TSampleBuffer::rowBytes(std::size_t samplePlane) const
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].rowBytes() : 0;
   }
-  
+
   //----------------------------------------------------------------
   // TSampleBuffer::rows
-  // 
+  //
   std::size_t
   TSampleBuffer::rows(std::size_t samplePlane) const
   {
@@ -329,7 +329,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TSampleBuffer::resize
-  // 
+  //
   void
   TSampleBuffer::resize(std::size_t samplePlane,
                         std::size_t rowBytes,

@@ -27,37 +27,37 @@
 
 //----------------------------------------------------------------
 // makeGuidStr
-// 
+//
 static std::string
 makeGuidStr()
 {
   GUID guid;
   CoCreateGuid(&guid);
-  
+
   wchar_t * wstr = NULL;
   StringFromCLSID(guid, &wstr);
-  
+
   int sz = WideCharToMultiByte(CP_UTF8, 0,
                                wstr, -1,
                                NULL, 0,
                                NULL, NULL);
-  
+
   std::vector<char> chars(sz, 0);
   WideCharToMultiByte(CP_UTF8, 0,
                       wstr, -1,
                       &chars[0], sz,
                       NULL, NULL);
-  
+
   CoTaskMemFree(wstr);
   wstr = NULL;
-  
+
   std::string str(chars.begin() + 1, chars.end() - 2);
   return str;
 }
 
 //----------------------------------------------------------------
 // getFileName
-// 
+//
 static std::string
 getFileName(const std::string & fullPath)
 {
@@ -73,7 +73,7 @@ getFileName(const std::string & fullPath)
 
 //----------------------------------------------------------------
 // TState
-// 
+//
 enum TState
 {
   kParsing,
@@ -85,7 +85,7 @@ enum TState
 
 //----------------------------------------------------------------
 // detect
-// 
+//
 static bool
 detect(const char * pattern,
        const std::string & line,
@@ -106,7 +106,7 @@ detect(const char * pattern,
 
 //----------------------------------------------------------------
 // tolower
-// 
+//
 static std::string
 tolower(const std::string & src)
 {
@@ -121,7 +121,7 @@ tolower(const std::string & src)
 
 //----------------------------------------------------------------
 // main
-// 
+//
 int
 main(int argc, char ** argv)
 {
@@ -129,7 +129,7 @@ main(int argc, char ** argv)
   {
     std::cerr << i << '\t' << argv[i] << std::endl;
   }
-  
+
   // get runtime parameters:
   if (argc != 8)
   {
@@ -140,7 +140,7 @@ main(int argc, char ** argv)
               << std::endl;
     return 1;
   }
-  
+
   std::string dependsLog("depends-exe-log.txt");
   std::string module(argv[1]);
   std::string iconFile(argv[2]);
@@ -167,21 +167,21 @@ main(int argc, char ** argv)
 
     path += allowedPaths;
     _putenv((std::string("PATH=") + path).c_str());
-    
+
     std::ostringstream os;
     os << dependsExe << " /c /a:0 /f:1 /ot:" << dependsLog << " " << module;
-    
+
     std::string cmd(os.str().c_str());
     std::cerr << cmd << std::endl;
-    
+
     int r = system(cmd.c_str());
     std::cerr << dependsExe << " returned: " << r << std::endl;
   }
-  
+
   // parse allowed paths:
   std::string head;
   std::string tail;
-  
+
   std::list<std::string> allowed;
   while (allowedPaths.size())
   {
@@ -191,7 +191,7 @@ main(int argc, char ** argv)
       {
         allowed.push_back(tolower(head.substr(0, head.size() - 1)));
       }
-      
+
       allowedPaths = tail;
     }
     else
@@ -205,7 +205,7 @@ main(int argc, char ** argv)
   FILE * in = fopen(dependsLog.c_str(), "rb");
   std::vector<std::string> deps;
   deps.push_back(module);
-  
+
   std::list<char> tmpAcc;
   TState state = kParsing;
   while (true)
@@ -227,7 +227,7 @@ main(int argc, char ** argv)
     {
       continue;
     }
-    
+
     std::string line(tmpAcc.begin(), tmpAcc.end());
     tmpAcc.clear();
 
@@ -247,7 +247,7 @@ main(int argc, char ** argv)
       else if (detect("[", line, head, tail))
       {
         line = tail;
-        
+
         std::string path;
         if (detect("] ", line, head, path))
         {
@@ -276,7 +276,7 @@ main(int argc, char ** argv)
       }
     }
   }
-  
+
   if (in)
   {
     fclose(in);
@@ -292,10 +292,10 @@ main(int argc, char ** argv)
 #else
     os << "-win32-x86";
 #endif
-    
-    installerName.assign(os.str().c_str()); 
+
+    installerName.assign(os.str().c_str());
   }
-  
+
   std::string installerNameWxs = installerName + ".wxs";
   std::fstream out;
   out.open(installerNameWxs.c_str(), std::ios::out);
@@ -306,7 +306,7 @@ main(int argc, char ** argv)
 
   std::string guidProduct = makeGuidStr();
   std::string guidUpgrade = makeGuidStr();
-  
+
   out << " <Product Name='Apprentice Video' "
       << "Id='" << guidProduct << "' "
       << "UpgradeCode='" << guidUpgrade << "' "
@@ -330,25 +330,25 @@ main(int argc, char ** argv)
 
   out << "  <Media Id='1' Cabinet='product.cab' EmbedCab='yes' />\n"
       << "  <Directory Id='TARGETDIR' Name='SourceDir'>\n";
-  
+
 #ifdef _WIN64
   out << "   <Directory Id='ProgramFiles64Folder' Name='PFiles'>\n";
 #else
   out << "   <Directory Id='ProgramFilesFolder' Name='PFiles'>\n";
 #endif
-  
+
   out << "    <Directory Id='ApprenticeVideo' Name='Apprentice Video'>"
       << std::endl;
 
-  
+
   std::string icon = getFileName(iconFile);
-  
+
   for (std::size_t i = 0; i < deps.size(); i++)
   {
     const std::string & path = deps[i];
     std::string name = getFileName(path);
     std::string guid = makeGuidStr();
-    
+
     out << "     <Component Id='Component" << i << "' Guid='" << guid << "'"
 #ifdef _WIN64
         << " Win64='yes'"
@@ -383,7 +383,7 @@ main(int argc, char ** argv)
           << "IconIndex='0' "
           << "Advertise='yes' />"
           << std::endl;
-      
+
       out << "      </File>"
           << std::endl;
 
@@ -420,7 +420,7 @@ main(int argc, char ** argv)
           << "Source='" << path << "' "
           << "KeyPath='yes' />\n";
     }
-    
+
     out << "     </Component>"
         << std::endl;
   }
@@ -441,16 +441,16 @@ main(int argc, char ** argv)
       << "   </Directory>\n"
       << "   <Directory Id='DesktopFolder' Name='Desktop' />"
       << std::endl;
-  
+
   out << "  </Directory>\n"
       << std::endl;
-  
+
   out << "  <Feature Id='Complete' Title='Apprentice Video' Level='1'>\n";
   for (std::size_t i = 0; i < deps.size(); ++i)
   {
     out << "   <ComponentRef Id='Component" << i << "' />\n";
   }
-  
+
   out << "   <ComponentRef Id='ProgramMenuDir' />\n"
       << "  </Feature>\n"
       << "  <Icon Id='" << icon << "' "
@@ -458,36 +458,36 @@ main(int argc, char ** argv)
       << "  <Property Id='ARPPRODUCTICON' Value='" << icon << "' />\n"
       << "  <Property Id='ARPHELPLINK' Value='" << helpLink << "' />"
       << std::endl;
-  
+
   out << " </Product>\n"
       << "</Wix>"
       << std::endl;
-  
+
   out.close();
-  
+
   // call candle.exe:
   {
     std::ostringstream os;
     os << '"' << wixCandleExe << "\" " << installerName << ".wxs";
-    
+
     std::string cmd(os.str().c_str());
     std::cerr << cmd << std::endl;
-    
+
     int r = system(cmd.c_str());
     std::cerr << wixCandleExe << " returned: " << r << std::endl;
   }
-  
+
   // call light.exe:
   {
     std::ostringstream os;
     os << '"' << wixLightExe << "\" " << installerName << ".wixobj";
-    
+
     std::string cmd(os.str().c_str());
     std::cerr << cmd << std::endl;
-    
+
     int r = system(cmd.c_str());
     std::cerr << wixLightExe << " returned: " << r << std::endl;
   }
-  
+
   return 0;
 }

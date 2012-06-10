@@ -26,7 +26,7 @@ namespace yae
 
  //----------------------------------------------------------------
   // TimeSegment::TimeSegment
-  // 
+  //
   TimeSegment::TimeSegment():
     waitForMe_(boost::get_system_time()),
     delayInSeconds_(0.0),
@@ -36,33 +36,33 @@ namespace yae
 
   //----------------------------------------------------------------
   // SharedClock::SharedClock
-  // 
+  //
   SharedClock::SharedClock():
     shared_(new TimeSegment()),
     copied_(false)
   {
     waitingFor_ = boost::get_system_time();
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::~SharedClock
-  // 
+  //
   SharedClock::~SharedClock()
   {}
 
   //----------------------------------------------------------------
   // SharedClock::SharedClock
-  // 
+  //
   SharedClock::SharedClock(const SharedClock & c):
     shared_(c.shared_),
     copied_(true)
   {
     waitingFor_ = boost::get_system_time();
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::operator =
-  // 
+  //
   SharedClock &
   SharedClock::operator = (const SharedClock & c)
   {
@@ -72,22 +72,22 @@ namespace yae
       copied_ = true;
       waitingFor_ = boost::get_system_time();
     }
-    
+
     return *this;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::sharesCurrentTimeWith
-  // 
+  //
   bool
   SharedClock::sharesCurrentTimeWith(const SharedClock & c) const
   {
     return shared_ == c.shared_;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::setMasterClock
-  // 
+  //
   bool
   SharedClock::setMasterClock(const SharedClock & master)
   {
@@ -96,95 +96,95 @@ namespace yae
       copied_ = (this != &master);
       return true;
     }
-    
+
     return false;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::allowsSettingTime
-  // 
+  //
   bool
   SharedClock::allowsSettingTime() const
   {
     return !copied_;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::setCurrentTime
-  // 
+  //
   bool
   SharedClock::setCurrentTime(const TTime & t0, double latency)
   {
     TTimeSegmentPtr keepAlive(shared_);
-    
+
     if (!copied_)
     {
       boost::system_time now(boost::get_system_time());
       now += boost::posix_time::microseconds(long(latency * 1e+6));
-      
+
       TimeSegment & timeSegment = *keepAlive;
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-      
+
       timeSegment.origin_ = now;
       timeSegment.t0_ = t0;
-      
+
       if (timeSegment.observer_)
       {
         timeSegment.observer_->noteCurrentTimeChanged(t0);
       }
-      
+
       return true;
     }
 
     return false;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::getCurrentTime
-  // 
+  //
   bool
   SharedClock::getCurrentTime(TTime & t0, double & elapsedTime) const
   {
     TTimeSegmentPtr keepAlive(shared_);
     const TimeSegment & timeSegment = *keepAlive;
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-    
+
     t0 = timeSegment.t0_;
-    
+
     if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
       elapsedTime = 0.0;
       return false;
     }
-    
+
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
-    
+
     elapsedTime = double(delta.total_milliseconds()) * 1e-3;
-    
+
     return true;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::waitForMe
-  // 
+  //
   void
   SharedClock::waitForMe(double delayInSeconds)
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-    
+
     boost::system_time now(boost::get_system_time());
     boost::posix_time::time_duration delta = now - timeSegment.waitForMe_;
     double timeSinceLastDelay = double(delta.total_milliseconds()) / 1000.0;
-    
+
     if (timeSinceLastDelay > timeSegment.delayInSeconds_)
     {
       timeSegment.waitForMe_ = now;
       timeSegment.delayInSeconds_ = delayInSeconds;
       waitingFor_ = timeSegment.waitForMe_;
-      
+
 #if 1
       std::cerr << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
                 << ", " << delayInSeconds
@@ -195,7 +195,7 @@ namespace yae
 
   //----------------------------------------------------------------
   // TStopTime
-  // 
+  //
   struct TStopTime
   {
     TStopTime(TimeSegment & timeSegment, bool stop):
@@ -228,16 +228,16 @@ namespace yae
     TimeSegment & timeSegment_;
     bool stopped_;
   };
-  
+
   //----------------------------------------------------------------
   // SharedClock::waitForOthers
-  // 
+  //
   void
   SharedClock::waitForOthers()
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
-    
+
     boost::system_time waitFor;
     double delayInSeconds = 0.0;
     {
@@ -249,7 +249,7 @@ namespace yae
     if (waitingFor_ < waitFor)
     {
       waitingFor_ = waitFor;
-    
+
       std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
 
       TStopTime stopTime(timeSegment, allowsSettingTime());
@@ -266,10 +266,10 @@ namespace yae
     }
 #endif
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::setObserver
-  // 
+  //
   void
   SharedClock::setObserver(IClockObserver * observer)
   {
@@ -278,10 +278,10 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     timeSegment.observer_ = observer;
   }
-  
+
   //----------------------------------------------------------------
   // SharedClock::noteTheClockHasStopped
-  // 
+  //
   bool
   SharedClock::noteTheClockHasStopped()
   {
@@ -290,32 +290,32 @@ namespace yae
       TTimeSegmentPtr keepAlive(shared_);
       TimeSegment & timeSegment = *keepAlive;
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-      
+
       if (timeSegment.observer_)
       {
         timeSegment.observer_->noteTheClockHasStopped();
       }
-      
+
       return true;
     }
-    
+
     return false;
   }
-  
-  
+
+
   //----------------------------------------------------------------
   // ISynchronous::takeThisClock
-  // 
+  //
   void
   ISynchronous::takeThisClock(const SharedClock & yourNewClock)
   {
     clock_ = yourNewClock;
     clock_.setMasterClock(clock_);
   }
-  
+
   //----------------------------------------------------------------
   // ISynchronous::obeyThisClock
-  // 
+  //
   void
   ISynchronous::obeyThisClock(const SharedClock & someRefClock)
   {

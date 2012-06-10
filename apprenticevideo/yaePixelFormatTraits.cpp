@@ -16,21 +16,21 @@
 namespace yae
 {
   using namespace pixelFormat;
-  
+
   //----------------------------------------------------------------
   // TraitsInit
-  // 
+  //
   struct TraitsInit : public Traits
   {
     friend class TraitsInitVector;
-    
+
   protected:
     inline TraitsInit & name(const char * name)
     {
       name_ = name;
       return *this;
     }
-    
+
     inline TraitsInit & flags(unsigned char flags)
     {
       flags_ = flags;
@@ -42,7 +42,7 @@ namespace yae
       channels_ = channels;
       return *this;
     }
-    
+
     inline TraitsInit & chromaBoxW(unsigned char chromaBoxW)
     {
       chromaBoxW_ = chromaBoxW;
@@ -54,7 +54,7 @@ namespace yae
       chromaBoxH_ = chromaBoxH;
       return *this;
     }
-    
+
     inline TraitsInit & plane(unsigned char a,
                               unsigned char b = 0,
                               unsigned char c = 0,
@@ -66,7 +66,7 @@ namespace yae
       plane_[3] = d;
       return *this;
     }
-    
+
     inline TraitsInit & depth(unsigned char a,
                               unsigned char b = 0,
                               unsigned char c = 0,
@@ -102,7 +102,7 @@ namespace yae
       stride_[3] = d;
       return *this;
     }
-    
+
     inline TraitsInit & samples(unsigned char a,
                                 unsigned char b = 0,
                                 unsigned char c = 0,
@@ -115,10 +115,10 @@ namespace yae
       return *this;
     }
   };
-  
+
   //----------------------------------------------------------------
   // TraitsInitVector
-  // 
+  //
   class TraitsInitVector : public std::vector<TraitsInit>
   {
   public:
@@ -131,14 +131,14 @@ namespace yae
       {
         resize(id + 1);
       }
-      
+
       return operator[](id);
     }
   };
-  
+
   //----------------------------------------------------------------
   // TraitsInitVector::TraitsInitVector
-  // 
+  //
   TraitsInitVector::TraitsInitVector()
   {
     //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
@@ -153,7 +153,7 @@ namespace yae
       .lshift( 0, 0, 0 )
       .stride( 8, 8, 8 )
       .samples( 1, 1, 1 );
-    
+
     //! packed YUV 4:2:2, 16bpp, Y0 Cb Y1 Cr
     set(kPixelFormatYUYV422) = TraitsInit()
       .name( "YUYV422" )
@@ -257,7 +257,7 @@ namespace yae
       .lshift( 0 )
       .stride( 8 )
       .samples( 1 );
-    
+
     //! Y, 1bpp, 0 is white, 1 is black, in each byte pixels are
     //! ordered from the msb to the lsb
     set(kPixelFormatMONOWHITE) = TraitsInit()
@@ -285,7 +285,7 @@ namespace yae
       .lshift( 0 )
       .stride( 1 )
       .samples( 1 );
-    
+
     //! 8 bit with kPixelFormatRGB32 palette
     set(kPixelFormatPAL8) = TraitsInit()
       .name( "PAL8" )
@@ -298,7 +298,7 @@ namespace yae
       .lshift( 0 )
       .stride( 8 )
       .samples( 1 );
-    
+
     //! packed YUV 4:2:2, 16bpp, Cb Y0 Cr Y1
     set(kPixelFormatUYVY422) = TraitsInit()
       .name( "UYVY422" )
@@ -963,29 +963,29 @@ namespace yae
 
   //----------------------------------------------------------------
   // kTraits
-  // 
+  //
   static const TraitsInitVector kTraits;
-  
-  
+
+
   //----------------------------------------------------------------
   // Traits::rshift
-  // 
+  //
   unsigned char
   Traits::rshift(unsigned char channel) const
   {
     return stride_[channel] - depth_[channel] - lshift_[channel];
   }
-  
+
   //----------------------------------------------------------------
   // Traits::getPlanes
-  // 
+  //
   unsigned char
   Traits::getPlanes(unsigned char stride[4]) const
   {
     unsigned char known[4];
     known[0] = plane_[0];
     stride[0] = stride_[0];
-    
+
     unsigned char numPlanes = 1;
     for (unsigned char i = 1; i < channels_; i++)
     {
@@ -998,7 +998,7 @@ namespace yae
           break;
         }
       }
-      
+
       if (!same)
       {
         known[numPlanes] = plane_[i];
@@ -1006,7 +1006,7 @@ namespace yae
         numPlanes++;
       }
     }
-    
+
     return numPlanes;
   }
 
@@ -1014,17 +1014,17 @@ namespace yae
   {
     //----------------------------------------------------------------
     // getTraits
-    // 
+    //
     const Traits *
     getTraits(TPixelFormatId id)
     {
       static const std::size_t numFormats = kTraits.size();
-      
+
       if (id >= 0 && std::size_t(id) < numFormats)
       {
         return &kTraits[id];
       }
-      
+
       return NULL;
     }
   }

@@ -13,13 +13,13 @@ namespace yae
 {
   //----------------------------------------------------------------
   // IAudioRenderer::IAudioRenderer
-  // 
+  //
   IAudioRenderer::IAudioRenderer()
   {}
 
   //----------------------------------------------------------------
   // IAudioRenderer::~IAudioRenderer
-  // 
+  //
   IAudioRenderer::~IAudioRenderer()
   {}
 }
