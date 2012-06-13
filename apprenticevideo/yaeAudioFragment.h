@@ -40,37 +40,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // powerOfTwoLessThanOrEqual
-  //
-  template <typename TScalar>
-  TScalar
-  powerOfTwoLessThanOrEqual(TScalar given, unsigned int * pyramidLevels = NULL)
-  {
-    unsigned int levels = 0;
-    TScalar pot = 0;
-
-    if (given >= 1)
-    {
-      levels = 1;
-      pot = 1;
-
-      while (given >= 2)
-      {
-        pot *= 2;
-        given /= 2;
-        levels++;
-      }
-    }
-
-    if (pyramidLevels)
-    {
-      *pyramidLevels = levels;
-    }
-
-    return pot;
-  }
-
-  //----------------------------------------------------------------
   // AudioFragment
   //
   struct AudioFragment
@@ -123,7 +92,7 @@ namespace yae
     //
     template <typename TSample>
     void
-    downsample(const float * blend,
+    downsample(const int window,
                float min0 = float(std::numeric_limits<TSample>::min()),
                float max0 = float(std::numeric_limits<TSample>::max()))
     {
@@ -131,70 +100,65 @@ namespace yae
       const unsigned char * src = data_.empty() ? NULL : &data_[0];
       const unsigned char * srcEnd = src + numSamples_ * stride_;
 
-      unsigned int numLevels = 0;
-      std::size_t pot = powerOfTwoLessThanOrEqual(numSamples_, &numLevels);
+      unsigned int nlevels = (unsigned int)(log((double)window) /
+                                            log(2.0));
+      std::size_t pot = 1 << nlevels;
+      YAE_ASSERT(window == pot);
 
-      if (pot < numSamples_)
-      {
-        pot *= 2;
-        numLevels++;
-      }
-
-      if (!numLevels)
-      {
-        // empty fragment, nothing to do here:
-        return;
-      }
-
-      // init complex data buffer used for FFT and Correlation:
-      xdat_.resize<FFTComplex>(1 << numLevels);
+      // init complex data buffer used for rDFT and Cross-Correlation:
+      xdat_.resize<FFTComplex>(window + 1);
       memset(xdat_.data(), 0, xdat_.rowBytes());
 
       if (numChannels_ == 1)
       {
-        FFTComplex * xdat = xdat_.template data<FFTComplex>();
+        FFTSample * xdat = xdat_.template data<FFTSample>();
         TSample tmp;
 
-        for (; src < srcEnd; src += stride_, blend++)
+        while (src < srcEnd)
         {
-          memcpy(&tmp, src, stride_);
-          float s = float(tmp);
+          tmp = *(const TSample *)src;
+          src += sizeof(TSample);
 
-          xdat->re = s;
-          xdat->im = 0;
+          *xdat = (FFTSample)tmp;
           xdat++;
         }
       }
       else
       {
-        FFTComplex * xdat = xdat_.template data<FFTComplex>();
+        FFTSample * xdat = xdat_.template data<FFTSample>();
 
         // temporary buffer for a row of samples:
-        std::vector<TSample> tmp(numChannels_);
+        TSample tmp;
+        float s;
+        float max;
+        float ti;
+        float si;
 
-        for (; src < srcEnd; src += stride_, blend++)
+        while (src < srcEnd)
         {
-          memcpy(&tmp[0], src, stride_);
+          tmp = *(const TSample *)src;
+          src += sizeof(TSample);
 
-          float t0 = float(tmp[0]);
-          float s = std::min<float>(max0, fabsf(t0));
-          float max = float(t0);
+          max = (float)tmp;
+          s = std::min<float>(max0, fabsf(max));
 
           for (std::size_t i = 1; i < numChannels_; i++)
           {
-            float ti = float(tmp[i]);
-            float s0 = std::min<float>(max0, fabsf(ti));
+            tmp = *(const TSample *)src;
+            src += sizeof(TSample);
+
+            ti = (float)tmp;
+            si = std::min<float>(max0, fabsf(ti));
 
             // store max amplitude only:
-            if (s < s0)
+            if (s < si)
             {
-              s = s0;
+              s   = si;
               max = ti;
             }
           }
 
-          xdat->re = max;
-          xdat->im = 0;
+          *xdat = max;
           xdat++;
         }
       }
@@ -203,40 +167,41 @@ namespace yae
     //----------------------------------------------------------------
     // transform
     //
-    void transform(FFTContext * fft)
+    void transform(RDFTContext * rdft)
     {
-      // apply FFT:
-      FFTComplex * xdat = xdat_.data<FFTComplex>();
-      av_fft_permute(fft, xdat);
-      av_fft_calc(fft, xdat);
+      // apply rDFT:
+      FFTSample * xdat = xdat_.data<FFTSample>();
+      av_rdft_calc(rdft, xdat);
     }
 
     //----------------------------------------------------------------
     // alignTo
     //
-    // align this fragment to the given fragment using Correlation
+    // align this fragment to the given fragment using Cross-Correlation
     //
     int
     alignTo(const AudioFragment & fragment,
             const int window,
             const int deltaMax,
             const int drift,
-            FFTComplex * correlation,
-            FFTContext * fftInverse)
+            FFTSample * correlation,
+            RDFTContext * complexToReal)
     {
-      const FFTComplex * xa = fragment.xdat_.data<FFTComplex>();
-      const FFTComplex * xb = xdat_.data<FFTComplex>();
-      FFTComplex * xc = correlation;
-
-      for (int i = 0; i < window * 2; i++, xa++, xb++, xc++)
+      // calculate cross correlation in frequency domain:
       {
-        xc->re = (xa->re * xb->re + xa->im * xb->im);
-        xc->im = (xa->im * xb->re - xa->re * xb->im);
-      }
+        const FFTComplex * xa = fragment.xdat_.data<FFTComplex>();
+        const FFTComplex * xb = xdat_.data<FFTComplex>();
+        FFTComplex * xc = (FFTComplex *)correlation;
 
-      // apply inverse FFT:
-      av_fft_permute(fftInverse, correlation);
-      av_fft_calc(fftInverse, correlation);
+        for (int i = 0; i <= window; i++, xa++, xb++, xc++)
+        {
+          xc->re = (xa->re * xb->re + xa->im * xb->im);
+          xc->im = (xa->im * xb->re - xa->re * xb->im);
+        }
+
+        // apply inverse rDFT transform:
+        av_rdft_calc(complexToReal, correlation);
+      }
 
       // identify peaks:
       int bestOffset = -drift;
@@ -249,10 +214,10 @@ namespace yae
                              window - window / 16);
       i1 = std::max<int>(i1, 0);
 
-      xc = correlation + i0;
+      FFTSample * xc = correlation + i0;
       for (int i = i0; i < i1; i++, xc++)
       {
-        FFTSample metric = xc->re;
+        FFTSample metric = *xc;
 
         // normalize:
         FFTSample drifti = FFTSample(drift + i);
@@ -284,7 +249,7 @@ namespace yae
     // stride = (number-of-channels * bits-per-sample-per-channel) / 8
     std::size_t stride_;
 
-    // FFT transform of the downmixed mono fragment, used for
+    // rDFT transform of the downmixed mono fragment, used for
     // waveform alignment via correlation:
     TSamplePlane xdat_;
   };

@@ -105,8 +105,8 @@ namespace yae
       position_[0] = 0;
       position_[1] = 0;
 
-      fftForward_ = NULL;
-      fftInverse_ = NULL;
+      realToComplex_ = NULL;
+      complexToReal_ = NULL;
     }
 
     //----------------------------------------------------------------
@@ -114,17 +114,11 @@ namespace yae
     //
     ~AudioTempoFilter()
     {
-      if (fftForward_)
-      {
-        av_fft_end(fftForward_);
-        fftForward_ = NULL;
-      }
+      av_rdft_end(realToComplex_);
+      realToComplex_ = NULL;
 
-      if (fftInverse_)
-      {
-        av_fft_end(fftInverse_);
-        fftInverse_ = NULL;
-      }
+      av_rdft_end(complexToReal_);
+      complexToReal_ = NULL;
     }
 
     //----------------------------------------------------------------
@@ -138,9 +132,9 @@ namespace yae
       window_ = sampleRate / 24;
 
       // adjust window size to be a power-of-two integer:
-      unsigned int nlevels = 0;
-      unsigned int pot = powerOfTwoLessThanOrEqual<unsigned int>(window_,
-                                                                 &nlevels);
+      unsigned int nlevels = (unsigned int)(log((double)window_) /
+                                            log(2.0));
+      std::size_t pot = 1 << nlevels;
       YAE_ASSERT(pot <= window_);
 
       if (pot < window_)
@@ -150,21 +144,15 @@ namespace yae
       }
 
       // initialize FFT contexts:
-      if (fftForward_)
-      {
-        av_fft_end(fftForward_);
-        fftForward_ = NULL;
-      }
+      av_rdft_end(realToComplex_);
+      realToComplex_ = NULL;
 
-      if (fftInverse_)
-      {
-        av_fft_end(fftInverse_);
-        fftInverse_ = NULL;
-      }
+      av_rdft_end(complexToReal_);
+      complexToReal_ = NULL;
 
-      fftForward_ = av_fft_init(nlevels, 0);
-      fftInverse_ = av_fft_init(nlevels, 1);
-      correlation_.resize<FFTComplex>(window_ * 2);
+      realToComplex_ = av_rdft_init(nlevels + 1, DFT_R2C);
+      complexToReal_ = av_rdft_init(nlevels + 1, IDFT_C2R);
+      correlation_.resize<FFTComplex>(window_ + 1);
 
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);
@@ -244,12 +232,12 @@ namespace yae
           }
 
           // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(&hann_[0],
+          currFrag().template downsample<TSample>(window_,
                                                   float(tmin),
                                                   float(tmax));
 
           // apply FFT:
-          currFrag().transform(fftForward_);
+          currFrag().transform(realToComplex_);
 
           // must load the second fragment before alignment can start:
           if (!nfrag_)
@@ -285,12 +273,12 @@ namespace yae
           }
 
           // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(&hann_[0],
+          currFrag().template downsample<TSample>(window_,
                                                   float(tmin),
                                                   float(tmax));
 
           // apply FFT:
-          currFrag().transform(fftForward_);
+          currFrag().transform(realToComplex_);
 
           state_ = kOutputOverlapAdd;
         }
@@ -395,12 +383,12 @@ namespace yae
         if (nfrag_)
         {
           // build a multi-resolution pyramid for fragment alignment:
-          frag.template downsample<TSample>(&hann_[0],
+          frag.template downsample<TSample>(window_,
                                             float(tmin),
                                             float(tmax));
 
           // apply FFT:
-          frag.transform(fftForward_);
+          frag.transform(realToComplex_);
 
           // align current fragment to previous fragment:
           if (adjustPosition())
@@ -622,8 +610,8 @@ namespace yae
                                           window_,
                                           deltaMax,
                                           drift_,
-                                          correlation_.data<FFTComplex>(),
-                                          fftInverse_);
+                                          correlation_.data<FFTSample>(),
+                                          complexToReal_);
 
       if (correction)
       {
@@ -690,8 +678,8 @@ namespace yae
     TState state_;
 
     // for fast correlation calculation in frequency domain:
-    FFTContext * fftForward_;
-    FFTContext * fftInverse_;
+    RDFTContext * realToComplex_;
+    RDFTContext * complexToReal_;
     TSamplePlane correlation_;
   };
 
