@@ -150,6 +150,22 @@ namespace yae
   //
   extern QString prepareForSorting(const QString & key);
 
+  //----------------------------------------------------------------
+  // floor_log2
+  //
+  template <typename TScalar>
+  unsigned int
+  floor_log2(TScalar given)
+  {
+    unsigned int n = 0;
+    while (given >= 2)
+    {
+      given /= 2;
+      n++;
+    }
+
+    return n;
+  }
 }
 
 

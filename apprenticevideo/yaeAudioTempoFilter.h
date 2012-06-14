@@ -132,8 +132,7 @@ namespace yae
       window_ = sampleRate / 24;
 
       // adjust window size to be a power-of-two integer:
-      unsigned int nlevels = (unsigned int)(log((double)window_) /
-                                            log(2.0));
+      unsigned int nlevels = floor_log2(window_);
       std::size_t pot = 1 << nlevels;
       YAE_ASSERT(pot <= window_);
 
@@ -152,7 +151,7 @@ namespace yae
 
       realToComplex_ = av_rdft_init(nlevels + 1, DFT_R2C);
       complexToReal_ = av_rdft_init(nlevels + 1, IDFT_C2R);
-      correlation_.resize<FFTComplex>(window_ + 1);
+      correlation_.resize<FFTComplex>(window_);
 
       unsigned int samplesToBuffer = window_ * 3;
       buffer_.resize(samplesToBuffer * channels_);

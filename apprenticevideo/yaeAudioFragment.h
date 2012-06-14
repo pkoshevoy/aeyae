@@ -28,6 +28,7 @@
 
 // yae includes:
 #include <yaeAPI.h>
+#include <yaeUtils.h>
 
 // ffmpeg includes:
 extern "C"
@@ -100,10 +101,8 @@ namespace yae
       const unsigned char * src = data_.empty() ? NULL : &data_[0];
       const unsigned char * srcEnd = src + numSamples_ * stride_;
 
-      unsigned int nlevels = (unsigned int)(log((double)window) /
-                                            log(2.0));
-      std::size_t pot = 1 << nlevels;
-      YAE_ASSERT(window == pot);
+      unsigned int nlevels = floor_log2(window);
+      YAE_ASSERT(window == (1 << nlevels));
 
       // init complex data buffer used for rDFT and Cross-Correlation:
       xdat_.resize<FFTComplex>(window + 1);
@@ -193,7 +192,17 @@ namespace yae
         const FFTComplex * xb = xdat_.data<FFTComplex>();
         FFTComplex * xc = (FFTComplex *)correlation;
 
-        for (int i = 0; i <= window; i++, xa++, xb++, xc++)
+        // NOTE: first element requires special care -- Given Y = rDFT(X),
+        // Im(Y[0]) and Im(Y[N/2]) are always zero, therefore av_rdft_calc
+        // stores Re(Y[N/2]) in place of Im(Y[0]).
+
+        xc->re = xa->re * xb->re;
+        xc->im = xa->im * xb->im;
+        xa++;
+        xb++;
+        xc++;
+
+        for (int i = 1; i < window; i++, xa++, xb++, xc++)
         {
           xc->re = (xa->re * xb->re + xa->im * xb->im);
           xc->im = (xa->im * xb->re - xa->re * xb->im);
