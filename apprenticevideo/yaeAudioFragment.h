@@ -230,7 +230,7 @@ namespace yae
 
         // normalize:
         FFTSample drifti = FFTSample(drift + i);
-        metric *= drifti;
+        metric *= drifti * FFTSample(i - i0) * FFTSample(i1 - i);
 
         if (metric > bestMetric)
         {
