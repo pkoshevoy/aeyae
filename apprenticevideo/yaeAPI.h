@@ -216,28 +216,23 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // SubsTraits
+  // TSubsFormat
   //
-  struct YAE_API SubsTraits
+  enum TSubsFormat
   {
-    enum TType
-    {
-      kDVD,
-      kDVB,
-      kText,
-      kXSUB,
-      kSSA,
-      kMOVTEXT,
-      kHDMVPGS,
-      kDVBTeletext,
-      kSRT,
-      kMICRODVD,
-      kCEA608,
-      kCEA708,
-      kJACOSUB
-    };
-
-    TType type_;
+    kSubsNone,
+    kSubsDVD,
+    kSubsDVB,
+    kSubsText,
+    kSubsXSUB,
+    kSubsSSA,
+    kSubsMovText,
+    kSubsHDMVPGS,
+    kSubsDVBTeletext,
+    kSubsSRT,
+    kSubsMICRODVD,
+    kSubsCEA608,
+    kSubsJACOSUB
   };
 
   //----------------------------------------------------------------
@@ -391,9 +386,9 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TSubsFrame
+  // TSubs
   //
-  typedef TFrame<SubsTraits> TSubs;
+  typedef TFrame<TSubsFormat> TSubs;
 
   //----------------------------------------------------------------
   // TVideoFrame

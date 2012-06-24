@@ -114,7 +114,7 @@ namespace yae
 
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const;
-    virtual const char * subsInfo(std::size_t i, SubsTraits * t = 0) const;
+    virtual const char * subsInfo(std::size_t i, TSubsFormat * t = 0) const;
     virtual void subsRender(std::size_t i, bool render);
   };
 

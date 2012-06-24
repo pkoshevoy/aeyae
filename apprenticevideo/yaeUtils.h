@@ -13,6 +13,7 @@
 #include <list>
 #include <string.h>
 #include <cstdio>
+#include <sstream>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -165,6 +166,18 @@ namespace yae
     }
 
     return n;
+  }
+
+  //----------------------------------------------------------------
+  // toText
+  //
+  template <typename TData>
+  std::string
+  toText(const TData & data)
+  {
+    std::ostringstream os;
+    os << data;
+    return std::string(os.str().c_str());
   }
 }
 

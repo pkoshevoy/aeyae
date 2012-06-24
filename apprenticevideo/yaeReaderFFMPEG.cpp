@@ -218,6 +218,74 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getSubsFormat
+  //
+  static TSubsFormat
+  getSubsFormat(enum CodecID id)
+  {
+    switch (id)
+    {
+      case CODEC_ID_DVD_SUBTITLE:
+        return kSubsDVD;
+
+      case CODEC_ID_DVB_SUBTITLE:
+        return kSubsDVB;
+
+      case CODEC_ID_TEXT:
+        return kSubsText;
+
+      case CODEC_ID_XSUB:
+        return kSubsXSUB;
+
+      case CODEC_ID_SSA:
+        return kSubsSSA;
+
+      case CODEC_ID_MOV_TEXT:
+        return kSubsMovText;
+
+      case CODEC_ID_HDMV_PGS_SUBTITLE:
+        return kSubsHDMVPGS;
+
+      case CODEC_ID_DVB_TELETEXT:
+        return kSubsDVBTeletext;
+
+      case CODEC_ID_SRT:
+        return kSubsSRT;
+
+      case CODEC_ID_MICRODVD:
+        return kSubsMICRODVD;
+
+      case CODEC_ID_EIA_608:
+        return kSubsCEA608;
+
+      case CODEC_ID_JACOSUB:
+        return kSubsJACOSUB;
+
+      default:
+        break;
+    }
+
+    return kSubsNone;
+  }
+
+  //----------------------------------------------------------------
+  // SubtitlesInfo
+  //
+  struct SubtitlesInfo
+  {
+    SubtitlesInfo():
+      streamIndex_(~0),
+      format_(kSubsNone),
+      render_(false)
+    {}
+
+    std::size_t streamIndex_;
+    std::string title_;
+    TSubsFormat format_;
+    bool render_;
+  };
+
+  //----------------------------------------------------------------
   // Track
   //
   struct Track
@@ -412,17 +480,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Track::getName
+  // getTrackName
   //
-  const char *
-  Track::getName() const
+  static const char *
+  getTrackName(AVDictionary * metadata)
   {
-    if (!stream_)
-    {
-      return NULL;
-    }
-
-    AVDictionaryEntry * name = av_dict_get(stream_->metadata,
+    AVDictionaryEntry * name = av_dict_get(metadata,
                                            "name",
                                            NULL,
                                            0);
@@ -431,7 +494,7 @@ namespace yae
       return name->value;
     }
 
-    AVDictionaryEntry * title = av_dict_get(stream_->metadata,
+    AVDictionaryEntry * title = av_dict_get(metadata,
                                             "title",
                                             NULL,
                                             0);
@@ -440,7 +503,7 @@ namespace yae
       return title->value;
     }
 
-    AVDictionaryEntry * lang = av_dict_get(stream_->metadata,
+    AVDictionaryEntry * lang = av_dict_get(metadata,
                                            "language",
                                            NULL,
                                            0);
@@ -450,6 +513,15 @@ namespace yae
     }
 
     return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // Track::getName
+  //
+  const char *
+  Track::getName() const
+  {
+    return stream_ ? getTrackName(stream_->metadata) : NULL;
   }
 
   //----------------------------------------------------------------
@@ -2556,7 +2628,6 @@ namespace yae
     return true;
   }
 
-
   //----------------------------------------------------------------
   // Movie
   //
@@ -2613,6 +2684,10 @@ namespace yae
 
     bool setTempo(double tempo);
 
+    std::size_t subsCount() const;
+    const char * subsInfo(std::size_t i, TSubsFormat * t) const;
+    void subsRender(std::size_t i, bool render);
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -2630,6 +2705,7 @@ namespace yae
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
+    std::vector<SubtitlesInfo> subs_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
@@ -2767,6 +2843,23 @@ namespace yae
           audioTracks_.push_back(track);
         }
       }
+      else if (codecType == AVMEDIA_TYPE_SUBTITLE)
+      {
+        subs_.push_back(SubtitlesInfo());
+        SubtitlesInfo & subs = subs_.back();
+
+        subs.streamIndex_ = i;
+        subs.title_ = std::string("Track ") + toText(subs_.size());
+
+        const char * name = getTrackName(stream->metadata);
+        if (name)
+        {
+          subs.title_ += ", ";
+          subs.title_ += name;
+        }
+
+        subs.format_ = getSubsFormat(stream->codec->codec_id);
+      }
     }
 
     if (videoTracks_.empty() &&
@@ -2805,6 +2898,7 @@ namespace yae
 
     videoTracks_.clear();
     audioTracks_.clear();
+    subs_.clear();
 
     av_close_input_file(context_);
     context_ = NULL;
@@ -3425,6 +3519,56 @@ namespace yae
     return false;
   }
 
+  //----------------------------------------------------------------
+  // Movie::subsCount
+  //
+  std::size_t
+  Movie::subsCount() const
+  {
+    return subs_.size();
+  }
+
+  //----------------------------------------------------------------
+  // Movie::subsInfo
+  //
+  const char *
+  Movie::subsInfo(std::size_t i, TSubsFormat * t) const
+  {
+    std::size_t nsubs = subs_.size();
+    if (i >= nsubs)
+    {
+      if (t)
+      {
+        *t = kSubsNone;
+      }
+
+      return NULL;
+    }
+
+    const SubtitlesInfo & subs = subs_[i];
+
+    if (t)
+    {
+      *t = subs.format_;
+    }
+
+    return &subs.title_[0];
+  }
+
+  //----------------------------------------------------------------
+  // Movie::subsRender
+  //
+  void
+  Movie::subsRender(std::size_t i, bool render)
+  {
+    std::size_t nsubs = subs_.size();
+    if (i < nsubs)
+    {
+      SubtitlesInfo & subs = subs_[i];
+      subs.render_ = render;
+    }
+  }
+
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -3894,20 +4038,16 @@ namespace yae
   std::size_t
   ReaderFFMPEG::subsCount() const
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
-    return 0;
+    return private_->movie_.subsCount();
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::subsInfo
   //
   const char *
-  ReaderFFMPEG::subsInfo(std::size_t i, SubsTraits * t) const
+  ReaderFFMPEG::subsInfo(std::size_t i, TSubsFormat * t) const
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
-    return NULL;
+    return private_->movie_.subsInfo(i, t);
   }
 
   //----------------------------------------------------------------
@@ -3916,7 +4056,6 @@ namespace yae
   void
   ReaderFFMPEG::subsRender(std::size_t i, bool render)
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
+    private_->movie_.subsRender(i, render);
   }
 }

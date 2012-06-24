@@ -87,8 +87,8 @@ namespace yae
     //! until a frame arrives or the frame queue is closed.
     //! Use QueueWaitMgr if you need to break out of the waiting
     //! loop for some reason (such as in order to avoid a deadlock).
-    virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
-    virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr = 0) = 0;
+    virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr) = 0;
+    virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr) = 0;
 
     virtual bool threadStart() = 0;
     virtual bool threadStop() = 0;
@@ -109,7 +109,7 @@ namespace yae
 
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const = 0;
-    virtual const char * subsInfo(std::size_t i, SubsTraits * t = 0) const = 0;
+    virtual const char * subsInfo(std::size_t i, TSubsFormat * t) const = 0;
     virtual void subsRender(std::size_t i, bool render) = 0;
   };
 
