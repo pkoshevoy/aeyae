@@ -352,8 +352,8 @@ namespace yae
   PlaylistWidget::sizeHint() const
   {
     int w = minimumWidth();
-    int h = (kGroupNameHeight * numShownGroups_ +
-             kGroupItemHeight * numShown_);
+    int h = int(kGroupNameHeight * numShownGroups_ +
+                kGroupItemHeight * numShown_);
 
     return QSize(w, h);
   }

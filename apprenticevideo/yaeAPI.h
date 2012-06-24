@@ -13,8 +13,9 @@
 #include <yaePixelFormats.h>
 
 // system includes:
-#include <vector>
 #include <assert.h>
+#include <list>
+#include <vector>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -215,12 +216,37 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // ISampleBuffer
+  // SubsTraits
   //
-  class ISampleBuffer
+  struct YAE_API SubsTraits
+  {
+    enum TType
+    {
+      kDVD,
+      kDVB,
+      kText,
+      kXSUB,
+      kSSA,
+      kMOVTEXT,
+      kHDMVPGS,
+      kDVBTeletext,
+      kSRT,
+      kMICRODVD,
+      kCEA608,
+      kCEA708,
+      kJACOSUB
+    };
+
+    TType type_;
+  };
+
+  //----------------------------------------------------------------
+  // IPlanarBuffer
+  //
+  class IPlanarBuffer
   {
   protected:
-    virtual ~ISampleBuffer();
+    virtual ~IPlanarBuffer();
 
   public:
     //! The de/structor is intentionally hidden, use destroy() method instead.
@@ -234,44 +260,44 @@ namespace yae
     //! the same memory manager will perform de/allocation.
     virtual void destroy() = 0;
 
+    //! this will call IPlanarBuffer::destroy()
+    static void deallocator(IPlanarBuffer * sb);
+
     //! number of contiguous sample planes:
-    virtual std::size_t samplePlanes() const = 0;
+    virtual std::size_t planes() const = 0;
 
     //! samples plane accessor:
-    virtual unsigned char * samples(std::size_t samplePlane) const = 0;
+    virtual unsigned char * samples(std::size_t plane) const = 0;
 
     //! bytes per plane row:
-    virtual std::size_t rowBytes(std::size_t samplePlaneIndex) const = 0;
-
-    //! this will call ISampleBuffer::destroy()
-    static void deallocator(ISampleBuffer * sb);
+    virtual std::size_t rowBytes(std::size_t planeIndex) const = 0;
   };
 
   //----------------------------------------------------------------
-  // TISampleBufferPtr
+  // TIPlanarBufferPtr
   //
-  typedef boost::shared_ptr<ISampleBuffer> TISampleBufferPtr;
+  typedef boost::shared_ptr<IPlanarBuffer> TIPlanarBufferPtr;
 
   //----------------------------------------------------------------
-  // TSamplePlane
+  // TDataBuffer
   //
-  struct TSamplePlane
+  struct TDataBuffer
   {
-    TSamplePlane();
-    ~TSamplePlane();
+    TDataBuffer();
+    ~TDataBuffer();
 
-    TSamplePlane(const TSamplePlane & src);
-    TSamplePlane & operator = (const TSamplePlane & src);
+    TDataBuffer(const TDataBuffer & src);
+    TDataBuffer & operator = (const TDataBuffer & src);
 
     // resize the sample plane:
     void resize(std::size_t rowBytes,
                 std::size_t rows = 1,
-                std::size_t alignment = 16);
+                std::size_t alignment = 32);
 
     template <typename TSample>
     void resize(std::size_t samples,
                 std::size_t rows = 1,
-                std::size_t alignment = 16)
+                std::size_t alignment = 32)
     { this->resize(samples * sizeof(TSample), rows, alignment); }
 
     // samples accessors:
@@ -299,46 +325,46 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TSampleBuffer
+  // TPlanarBuffer
   //
-  struct TSampleBuffer : public ISampleBuffer
+  struct TPlanarBuffer : public IPlanarBuffer
   {
-    TSampleBuffer(std::size_t samplePlanes);
+    TPlanarBuffer(std::size_t planes);
 
     // virtual:
     void destroy();
 
     // virtual:
-    std::size_t samplePlanes() const;
+    std::size_t planes() const;
 
     // virtual:
-    unsigned char * samples(std::size_t samplePlane) const;
+    unsigned char * samples(std::size_t plane) const;
 
     // virtual:
-    std::size_t rowBytes(std::size_t samplePlane) const;
+    std::size_t rowBytes(std::size_t plane) const;
 
     // helper:
-    std::size_t rows(std::size_t samplePlane) const;
+    std::size_t rows(std::size_t plane) const;
 
     // helper:
-    void resize(std::size_t samplePlane,
+    void resize(std::size_t plane,
                 std::size_t rowBytes,
                 std::size_t rows,
-                std::size_t alignment = 16);
+                std::size_t alignment = 32);
 
     // helper, useful for audio sample buffer:
-    inline void resize(std::size_t numBytes, std::size_t alignment = 16)
+    inline void resize(std::size_t numBytes, std::size_t alignment = 32)
     { resize(0, numBytes, 1, alignment); }
 
   protected:
-    // sample planes:
-    std::vector<TSamplePlane> plane_;
+    // data planes:
+    std::vector<TDataBuffer> plane_;
   };
 
   //----------------------------------------------------------------
-  // TSampleBufferPtr
+  // TPlanarBufferPtr
   //
-  typedef boost::shared_ptr<TSampleBuffer> TSampleBufferPtr;
+  typedef boost::shared_ptr<TPlanarBuffer> TPlanarBufferPtr;
 
   //----------------------------------------------------------------
   // TFrame
@@ -360,14 +386,22 @@ namespace yae
     //! frame traits:
     TTraits traits_;
 
-    //! frame sample buffer:
-    TISampleBufferPtr sampleBuffer_;
+    //! frame buffer:
+    TIPlanarBufferPtr data_;
   };
+
+  //----------------------------------------------------------------
+  // TSubsFrame
+  //
+  typedef TFrame<SubsTraits> TSubs;
 
   //----------------------------------------------------------------
   // TVideoFrame
   //
-  typedef TFrame<VideoTraits> TVideoFrame;
+  struct TVideoFrame : public TFrame<VideoTraits>
+  {
+    std::list<TSubs> subs_;
+  };
 
   //----------------------------------------------------------------
   // TVideoFramePtr

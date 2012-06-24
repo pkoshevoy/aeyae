@@ -1334,15 +1334,15 @@ namespace yae
 
       vf.traits_ = output_;
 
-      TSampleBufferPtr sampleBuffer(new TSampleBuffer(numSamplePlanes_),
-                                    &ISampleBuffer::deallocator);
+      TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
+                                    &IPlanarBuffer::deallocator);
       for (unsigned char i = 0; i < numSamplePlanes_; i++)
       {
         std::size_t rowBytes = sampleLineSize_[i];
         std::size_t rows = samplePlaneSize_[i] / rowBytes;
         sampleBuffer->resize(i, rowBytes, rows, kRowAlignment);
       }
-      vf.sampleBuffer_ = sampleBuffer;
+      vf.data_ = sampleBuffer;
 
       // don't forget about tempo scaling:
       {
@@ -1730,9 +1730,9 @@ namespace yae
     int outputChannels_;
     unsigned int nativeBytesPerSample_;
     unsigned int outputBytesPerSample_;
-    TSamplePlane nativeBuffer_;
-    TSamplePlane remixBuffer_;
-    TSamplePlane resampleBuffer_;
+    TDataBuffer nativeBuffer_;
+    TDataBuffer remixBuffer_;
+    TDataBuffer resampleBuffer_;
     std::vector<double> remixChannelMatrix_;
 
     TTime prevPTS_;
@@ -1864,8 +1864,8 @@ namespace yae
       resampleCtx_ = NULL;
     }
 
-    remixBuffer_ = TSamplePlane();
-    resampleBuffer_ = TSamplePlane();
+    remixBuffer_ = TDataBuffer();
+    resampleBuffer_ = TDataBuffer();
 
     frameQueue_.close();
     return true;
@@ -2081,9 +2081,9 @@ namespace yae
         discarded_ = 0;
       }
 
-      TSampleBufferPtr sampleBuffer(new TSampleBuffer(1),
-                                    &ISampleBuffer::deallocator);
-      af.sampleBuffer_ = sampleBuffer;
+      TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(1),
+                                    &IPlanarBuffer::deallocator);
+      af.data_ = sampleBuffer;
 
       bool shouldAdjustTempo = true;
       {
@@ -2224,8 +2224,8 @@ namespace yae
       tempoFilter_ = NULL;
     }
 
-    remixBuffer_ = TSamplePlane();
-    resampleBuffer_ = TSamplePlane();
+    remixBuffer_ = TDataBuffer();
+    resampleBuffer_ = TDataBuffer();
 
     unsigned int bitsPerSample = getBitsPerSample(native_.sampleFormat_);
     nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
@@ -2464,7 +2464,7 @@ namespace yae
       const AudioTraits & atraits = frame->traits_;
       unsigned int sampleSize = getBitsPerSample(atraits.sampleFormat_) / 8;
       int channels = getNumberOfChannels(atraits.channelLayout_);
-      std::size_t frameSize = frame->sampleBuffer_->rowBytes(0);
+      std::size_t frameSize = frame->data_->rowBytes(0);
       std::size_t numSamples = frameSize / (channels * sampleSize);
 
       double t = frame->time_.toSeconds();
@@ -3888,4 +3888,35 @@ namespace yae
     return private_->movie_.setTempo(tempo);
   }
 
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::subsCount
+  //
+  std::size_t
+  ReaderFFMPEG::subsCount() const
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::subsInfo
+  //
+  const char *
+  ReaderFFMPEG::subsInfo(std::size_t i, SubsTraits * t) const
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::subsRender
+  //
+  void
+  ReaderFFMPEG::subsRender(std::size_t i, bool render)
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+  }
 }

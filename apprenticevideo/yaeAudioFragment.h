@@ -260,7 +260,7 @@ namespace yae
 
     // rDFT transform of the downmixed mono fragment, used for
     // waveform alignment via correlation:
-    TSamplePlane xdat_;
+    TDataBuffer xdat_;
   };
 
   //----------------------------------------------------------------

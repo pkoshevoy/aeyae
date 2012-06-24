@@ -111,6 +111,11 @@ namespace yae
     // this can be used to slow down audio if video decoding is too slow,
     // or it can be used to speed up audio to watch the movie faster:
     virtual bool setTempo(double tempo);
+
+    // query subtitles, enable/disable rendering...
+    virtual std::size_t subsCount() const;
+    virtual const char * subsInfo(std::size_t i, SubsTraits * t = 0) const;
+    virtual void subsRender(std::size_t i, bool render);
   };
 
 }

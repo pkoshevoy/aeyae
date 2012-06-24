@@ -747,7 +747,7 @@ namespace yae
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
 
       glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    (GLint)(frame->sampleBuffer_->rowBytes(0) /
+                    (GLint)(frame->data_->rowBytes(0) /
                             (ptts->stride_[0] / 8)));
 
       // order of bits in a byte only matters for bitmaps:
@@ -768,7 +768,7 @@ namespace yae
                    0, // border width
                    pixelFormatGL,
                    dataTypeGL,
-                   frame->sampleBuffer_->samples(0));
+                   frame->data_->samples(0));
     }
     return true;
   }
@@ -1128,10 +1128,10 @@ namespace yae
     }
 
     // get the source data pointer:
-    const std::size_t bytesPerRow = frame_->sampleBuffer_->rowBytes(0);
+    const std::size_t bytesPerRow = frame_->data_->rowBytes(0);
     const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
     const unsigned char * src =
-      frame_->sampleBuffer_->samples(0) +
+      frame_->data_->samples(0) +
       frame_->traits_.offsetTop_ * bytesPerRow +
       frame_->traits_.offsetLeft_ * bytesPerPixel;
 

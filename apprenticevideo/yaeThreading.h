@@ -61,9 +61,15 @@ namespace yae
   template <typename TContext>
   struct Thread
   {
-    Thread(TContext * context):
+    Thread(TContext * context = NULL):
       context_(context)
     {}
+
+    void setContext(TContext * context)
+    {
+      YAE_ASSERT(!context_);
+      context_ = context;
+    }
 
     bool run()
     {

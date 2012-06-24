@@ -49,12 +49,13 @@ namespace yae
   // VideoRenderer::TPrivate::TPrivate
   //
   VideoRenderer::TPrivate::TPrivate(SharedClock & clock):
-    thread_(this),
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
     pause_(true)
-  {}
+  {
+    thread_.setContext(this);
+  }
 
   //----------------------------------------------------------------
   // VideoRenderer::TPrivate::open

@@ -133,7 +133,7 @@ namespace yae
 
       // adjust window size to be a power-of-two integer:
       unsigned int nlevels = floor_log2(window_);
-      std::size_t pot = 1 << nlevels;
+      unsigned int pot = 1 << nlevels;
       YAE_ASSERT(pot <= window_);
 
       if (pot < window_)
@@ -322,7 +322,7 @@ namespace yae
       const int64 overlap = stopHere - startHere;
       YAE_ASSERT(startHere <= stopHere &&
                  frag.position_[1] <= startHere &&
-                 overlap <= frag.numSamples_);
+                 overlap <= (int64)frag.numSamples_);
 
       const int64 ia = startHere - prev.position_[1];
       const int64 ib = startHere - frag.position_[1];
@@ -373,7 +373,7 @@ namespace yae
         return true;
       }
 
-      if (frag.position_[0] + frag.numSamples_ < position_[0])
+      if (frag.position_[0] + (int64)frag.numSamples_ < position_[0])
       {
         // finish loading the current (possibly partial) fragment:
         const TSample * nullSrc = NULL;
@@ -679,7 +679,7 @@ namespace yae
     // for fast correlation calculation in frequency domain:
     RDFTContext * realToComplex_;
     RDFTContext * complexToReal_;
-    TSamplePlane correlation_;
+    TDataBuffer correlation_;
   };
 
   //----------------------------------------------------------------

@@ -9,6 +9,7 @@
 // std includes:
 #include <stdlib.h>
 #include <string.h>
+#include <new>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -179,16 +180,16 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // ISampleBuffer::~ISampleBuffer
+  // IPlanarBuffer::~IPlanarBuffer
   //
-  ISampleBuffer::~ISampleBuffer()
+  IPlanarBuffer::~IPlanarBuffer()
   {}
 
   //----------------------------------------------------------------
-  // ISampleBuffer::deallocator
+  // IPlanarBuffer::deallocator
   //
   void
-  ISampleBuffer::deallocator(ISampleBuffer * sb)
+  IPlanarBuffer::deallocator(IPlanarBuffer * sb)
   {
     if (sb)
     {
@@ -197,9 +198,9 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TSamplePlane::TSamplePlane
+  // TDataBuffer::TDataBuffer
   //
-  TSamplePlane::TSamplePlane():
+  TDataBuffer::TDataBuffer():
     data_(NULL),
     alignmentOffset_(0),
     rowBytes_(0),
@@ -208,9 +209,9 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // TSamplePlane::~TSamplePlane
+  // TDataBuffer::~TDataBuffer
   //
-  TSamplePlane::~TSamplePlane()
+  TDataBuffer::~TDataBuffer()
   {
     if (data_)
     {
@@ -219,9 +220,9 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TSamplePlane::TSamplePlane
+  // TDataBuffer::TDataBuffer
   //
-  TSamplePlane::TSamplePlane(const TSamplePlane & src):
+  TDataBuffer::TDataBuffer(const TDataBuffer & src):
     data_(NULL),
     alignmentOffset_(0),
     rowBytes_(0),
@@ -232,10 +233,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TSamplePlane::operator =
+  // TDataBuffer::operator =
   //
-  TSamplePlane &
-  TSamplePlane::operator = (const TSamplePlane & src)
+  TDataBuffer &
+  TDataBuffer::operator = (const TDataBuffer & src)
   {
     YAE_ASSERT(this != &src);
 
@@ -249,18 +250,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TSamplePlane::resize
+  // TDataBuffer::resize
   //
   void
-  TSamplePlane::resize(std::size_t rowBytes,
-                       std::size_t rows,
-                       std::size_t alignment)
+  TDataBuffer::resize(std::size_t rowBytes,
+                      std::size_t rows,
+                      std::size_t alignment)
   {
     std::size_t planeSize = (rowBytes * rows);
 
     if (planeSize)
     {
-      data_ = (unsigned char *)realloc(data_, planeSize + alignment - 1);
+      void * newData = realloc(data_, planeSize + alignment - 1);
+      if (!newData)
+      {
+        throw std::bad_alloc();
+      }
+
+      data_ = (unsigned char *)newData;
     }
     else if (data_)
     {
@@ -276,62 +283,62 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TSampleBuffer::TSampleBuffer
+  // TPlanarBuffer::TPlanarBuffer
   //
-  TSampleBuffer::TSampleBuffer(std::size_t numSamplePlanes):
+  TPlanarBuffer::TPlanarBuffer(std::size_t numSamplePlanes):
     plane_(numSamplePlanes)
   {}
 
   //----------------------------------------------------------------
-  // TSampleBuffer::destroy
+  // TPlanarBuffer::destroy
   //
   void
-  TSampleBuffer::destroy()
+  TPlanarBuffer::destroy()
   {
     delete this;
   }
 
   //----------------------------------------------------------------
-  // TSampleBuffer::samplePlanes
+  // TPlanarBuffer::planes
   //
   std::size_t
-  TSampleBuffer::samplePlanes() const
+  TPlanarBuffer::planes() const
   {
     return plane_.size();
   }
 
   //----------------------------------------------------------------
-  // TSampleBuffer::samples
+  // TPlanarBuffer::samples
   //
   unsigned char *
-  TSampleBuffer::samples(std::size_t samplePlane) const
+  TPlanarBuffer::samples(std::size_t samplePlane) const
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].data() : NULL;
   }
 
   //----------------------------------------------------------------
-  // TSampleBuffer::rowBytes
+  // TPlanarBuffer::rowBytes
   //
   std::size_t
-  TSampleBuffer::rowBytes(std::size_t samplePlane) const
+  TPlanarBuffer::rowBytes(std::size_t samplePlane) const
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].rowBytes() : 0;
   }
 
   //----------------------------------------------------------------
-  // TSampleBuffer::rows
+  // TPlanarBuffer::rows
   //
   std::size_t
-  TSampleBuffer::rows(std::size_t samplePlane) const
+  TPlanarBuffer::rows(std::size_t samplePlane) const
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].rows() : 0;
   }
 
   //----------------------------------------------------------------
-  // TSampleBuffer::resize
+  // TPlanarBuffer::resize
   //
   void
-  TSampleBuffer::resize(std::size_t samplePlane,
+  TPlanarBuffer::resize(std::size_t samplePlane,
                         std::size_t rowBytes,
                         std::size_t rows,
                         std::size_t alignment)
