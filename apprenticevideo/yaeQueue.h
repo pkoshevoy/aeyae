@@ -278,7 +278,9 @@ namespace yae
     }
 
     // remove data from the queue:
-    bool pop(TData & data, QueueWaitMgr * waitMgr = NULL)
+    bool pop(TData & data,
+             QueueWaitMgr * waitMgr = NULL,
+             bool waitForData = true)
     {
       try
       {
@@ -287,7 +289,7 @@ namespace yae
         // remove from queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && !size_ && terminator.keepWaiting())
+          while (!closed_ && !size_ && waitForData && terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
             std::cerr << this << " pop wait, size " << size_ << std::endl;
@@ -328,6 +330,42 @@ namespace yae
         }
 
         cond_.notify_all();
+        return true;
+      }
+      catch (...)
+      {}
+
+      return false;
+    }
+
+    // take a peek at the top of the queue:
+    bool peek(TData & data, QueueWaitMgr * waitMgr = NULL)
+    {
+      try
+      {
+        QueueWaitTerminator terminator(waitMgr, &cond_);
+
+        // peek at the queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          if (closed_ || !size_)
+          {
+            return false;
+          }
+
+          for (typename std::list<TSequence>::const_iterator
+                 i = sequences_.begin(); i != sequences_.end(); ++i)
+          {
+            const TSequence & sequence = *i;
+            if (sequence.empty())
+            {
+              continue;
+            }
+
+            data = sequence.back();
+          }
+        }
+
         return true;
       }
       catch (...)

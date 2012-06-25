@@ -149,6 +149,40 @@ namespace yae
   //
   typedef Queue<TAudioFramePtr> TAudioFrameQueue;
 
+
+  //----------------------------------------------------------------
+  // TSubsPrivate
+  //
+  class TSubsPrivate : public TSubsFrame::IPrivate
+  {
+    virtual ~TSubsPrivate()
+    {
+      avsubtitle_free(&sub_);
+    }
+
+  public:
+    TSubsPrivate(const AVSubtitle & sub):
+      sub_(sub)
+    {}
+
+    virtual void destroy()
+    {
+      delete this;
+    }
+
+    AVSubtitle sub_;
+  };
+
+  //----------------------------------------------------------------
+  // TSubsPrivatePtr
+  //
+  typedef boost::shared_ptr<TSubsPrivate> TSubsPrivatePtr;
+
+  //----------------------------------------------------------------
+  // TSubsFrameQueue
+  //
+  typedef Queue<TSubsFrame> TSubsFrameQueue;
+
   //----------------------------------------------------------------
   // PacketTime
   //
@@ -218,6 +252,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getTrackName
+  //
+  static const char *
+  getTrackName(AVDictionary * metadata)
+  {
+    AVDictionaryEntry * name = av_dict_get(metadata,
+                                           "name",
+                                           NULL,
+                                           0);
+    if (name)
+    {
+      return name->value;
+    }
+
+    AVDictionaryEntry * title = av_dict_get(metadata,
+                                            "title",
+                                            NULL,
+                                            0);
+    if (title)
+    {
+      return title->value;
+    }
+
+    AVDictionaryEntry * lang = av_dict_get(metadata,
+                                           "language",
+                                           NULL,
+                                           0);
+    if (lang)
+    {
+      return lang->value;
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // getSubsFormat
   //
   static TSubsFormat
@@ -255,11 +325,13 @@ namespace yae
       case CODEC_ID_MICRODVD:
         return kSubsMICRODVD;
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54, 19, 100)
       case CODEC_ID_EIA_608:
         return kSubsCEA608;
 
       case CODEC_ID_JACOSUB:
         return kSubsJACOSUB;
+#endif
 
       default:
         break;
@@ -269,20 +341,91 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SubtitlesInfo
+  // SubtitlesTrack
   //
-  struct SubtitlesInfo
+  struct SubtitlesTrack
   {
-    SubtitlesInfo():
-      streamIndex_(~0),
+    SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0):
+      stream_(stream),
+      codec_(NULL),
       format_(kSubsNone),
-      render_(false)
-    {}
+      index_(index),
+      render_(false),
+      queue_(kQueueSizeLarge)
+    {
+      if (stream_)
+      {
+        format_ = getSubsFormat(stream_->codec->codec_id);
+        codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+        prev_.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
 
-    std::size_t streamIndex_;
-    std::string title_;
+        if (codec_)
+        {
+          int err = avcodec_open(stream_->codec, codec_);
+          if (err < 0)
+          {
+            // unsupported codec:
+            codec_ = NULL;
+          }
+        }
+
+        const char * name = getTrackName(stream_->metadata);
+        if (name)
+        {
+          title_.assign(name);
+        }
+
+        queue_.open();
+      }
+    }
+
+    ~SubtitlesTrack()
+    {
+      if (stream_ && codec_)
+      {
+        avcodec_close(stream_->codec);
+        codec_ = NULL;
+      }
+    }
+
+    SubtitlesTrack(const SubtitlesTrack & given):
+      stream_(NULL),
+      codec_(NULL),
+      format_(kSubsNone),
+      index_(~0),
+      render_(false),
+      queue_(kQueueSizeLarge)
+    {
+      *this = given;
+    }
+
+    SubtitlesTrack & operator = (const SubtitlesTrack & given)
+    {
+      YAE_ASSERT(!stream_ && !codec_ && queue_.clear());
+
+      stream_ = given.stream_;
+      codec_  = given.codec_;
+      format_ = given.format_;
+      title_  = given.title_;
+      index_  = given.index_;
+      render_ = given.render_;
+
+      queue_.open();
+      prev_.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
+
+      return *this;
+    }
+
+    AVStream * stream_;
+    AVCodec * codec_;
+
     TSubsFormat format_;
+    std::string title_;
+    std::size_t index_;
     bool render_;
+
+    TSubsFrameQueue queue_;
+    TSubsFrame prev_;
   };
 
   //----------------------------------------------------------------
@@ -434,13 +577,13 @@ namespace yae
     close();
 
     codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-    if (!codec_)
+    if (!codec_ && stream_->codec->codec_id != CODEC_ID_TEXT)
     {
       // unsupported codec:
       return false;
     }
 
-    int err = avcodec_open(stream_->codec, codec_);
+    int err = codec_ ? avcodec_open(stream_->codec, codec_) : 0;
     if (err < 0)
     {
       // unsupported codec:
@@ -458,10 +601,14 @@ namespace yae
       return false;
     }
 #endif
-    stream_->codec->opaque = this;
-    stream_->codec->get_buffer = &callbackGetBuffer;
-    stream_->codec->reget_buffer = &callbackRegetBuffer;
-    stream_->codec->release_buffer = &callbackReleaseBuffer;
+
+    if (codec_)
+    {
+      stream_->codec->opaque = this;
+      stream_->codec->get_buffer = &callbackGetBuffer;
+      stream_->codec->reget_buffer = &callbackRegetBuffer;
+      stream_->codec->release_buffer = &callbackReleaseBuffer;
+    }
 
     return true;
   }
@@ -477,42 +624,6 @@ namespace yae
       avcodec_close(stream_->codec);
       codec_ = NULL;
     }
-  }
-
-  //----------------------------------------------------------------
-  // getTrackName
-  //
-  static const char *
-  getTrackName(AVDictionary * metadata)
-  {
-    AVDictionaryEntry * name = av_dict_get(metadata,
-                                           "name",
-                                           NULL,
-                                           0);
-    if (name)
-    {
-      return name->value;
-    }
-
-    AVDictionaryEntry * title = av_dict_get(metadata,
-                                            "title",
-                                            NULL,
-                                            0);
-    if (title)
-    {
-      return title->value;
-    }
-
-    AVDictionaryEntry * lang = av_dict_get(metadata,
-                                           "language",
-                                           NULL,
-                                           0);
-    if (lang)
-    {
-      return lang->value;
-    }
-
-    return NULL;
   }
 
   //----------------------------------------------------------------
@@ -855,6 +966,9 @@ namespace yae
     // starting from a given time point:
     int resetTimeCounters(double seekTime);
 
+    void setSubs(std::vector<SubtitlesTrack> * subs)
+    { subs_ = subs; }
+
     // these are used to speed up video decoding:
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;
@@ -885,6 +999,8 @@ namespace yae
     struct SwsContext * imgConvertCtx_;
 
     FrameWithAutoCleanup frameAutoCleanup_;
+
+    std::vector<SubtitlesTrack> * subs_;
   };
 
   //----------------------------------------------------------------
@@ -921,7 +1037,8 @@ namespace yae
     numSamplePlanes_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
-    imgConvertCtx_(NULL)
+    imgConvertCtx_(NULL),
+    subs_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_VIDEO);
 
@@ -1422,6 +1539,63 @@ namespace yae
         vf.tempo_ = tempo_;
       }
 
+      // check for applicable subtitles:
+      {
+        double v0 = vf.time_.toSeconds();
+        double v1 = v0 + (vf.traits_.frameRate_ ?
+                          1.0 / vf.traits_.frameRate_ :
+                          0.042);
+
+        std::size_t nsubs = subs_ ? subs_->size() : 0;
+        for (std::size_t i = 0; i < nsubs; i++)
+        {
+          SubtitlesTrack & subs = (*subs_)[i];
+
+          double s0 = subs.prev_.time_.toSeconds();
+          double s1 = subs.prev_.tEnd_.toSeconds();
+
+          while (true)
+          {
+            if (subs.prev_.tEnd_.time_ == std::numeric_limits<int64>::max())
+            {
+              // calculate the end time based in display time
+              // of the next subtitle frame:
+
+              TSubsFrame next;
+              if (subs.queue_.peek(next, &terminator_))
+              {
+                subs.prev_.tEnd_ = next.time_;
+                s1 = subs.prev_.tEnd_.toSeconds();
+              }
+            }
+
+            if (v0 < s1)
+            {
+              break;
+            }
+
+            bool waitForData = false;
+            if (!subs.queue_.pop(subs.prev_, &terminator_, waitForData))
+            {
+              break;
+            }
+
+            s0 = subs.prev_.time_.toSeconds();
+            s1 = subs.prev_.tEnd_.toSeconds();
+          }
+
+          if (s0 < v1 && v0 < s1)
+          {
+            vf.subs_.push_back(subs.prev_);
+
+            if (subs.render_)
+            {
+              // FIXME: overlay subtitle onto frame here:
+            }
+          }
+        }
+      }
+
       if (!imgConvertCtx_)
       {
         // copy the sample planes:
@@ -1430,7 +1604,7 @@ namespace yae
         {
           std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
           std::size_t dstRows = sampleBuffer->rows(i);
-          unsigned char * dst = sampleBuffer->samples(i);
+          unsigned char * dst = sampleBuffer->data(i);
 
           std::size_t srcRowBytes = avFrame->linesize[i];
           const unsigned char * src = avFrame->data[i];
@@ -1451,7 +1625,7 @@ namespace yae
         AVPicture pict;
         for (unsigned char i = 0; i < numSamplePlanes_; i++)
         {
-          pict.data[i] = sampleBuffer->samples(i);
+          pict.data[i] = sampleBuffer->data(i);
           pict.linesize[i] = (int)sampleBuffer->rowBytes(i);
         }
 
@@ -2033,9 +2207,9 @@ namespace yae
         else if (outputChannels_ != nativeChannels_)
         {
           std::size_t remixedBytes = srcSamples * outputBytesPerSample_;
-            chunks.push_back(std::vector<unsigned char>
-                             (remixBuffer_.data(),
-                              remixBuffer_.data() + remixedBytes));
+          chunks.push_back(std::vector<unsigned char>
+                           (remixBuffer_.data(),
+                            remixBuffer_.data() + remixedBytes));
           outputBytes += remixedBytes;
         }
         else
@@ -2168,7 +2342,7 @@ namespace yae
       {
         // concatenate chunks into a contiguous frame buffer:
         sampleBuffer->resize(0, outputBytes, 1, 16);
-        unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+        unsigned char * afSampleBuffer = sampleBuffer->data(0);
 
         while (!chunks.empty())
         {
@@ -2206,7 +2380,7 @@ namespace yae
             std::size_t tmpSize = dst - dstStart;
             sampleBuffer->resize(frameSize + tmpSize);
 
-            unsigned char * afSampleBuffer = sampleBuffer->samples(0);
+            unsigned char * afSampleBuffer = sampleBuffer->data(0);
             memcpy(afSampleBuffer + frameSize, dstStart, tmpSize);
             frameSize += tmpSize;
           }
@@ -2628,6 +2802,7 @@ namespace yae
     return true;
   }
 
+
   //----------------------------------------------------------------
   // Movie
   //
@@ -2658,7 +2833,7 @@ namespace yae
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);
 
-    // this will read the file and push audio/video packets to decoding queues:
+    // this will read the file and push packets to decoding queues:
     void threadLoop();
     bool threadStart();
     bool threadStop();
@@ -2688,6 +2863,8 @@ namespace yae
     const char * subsInfo(std::size_t i, TSubsFormat * t) const;
     void subsRender(std::size_t i, bool render);
 
+    SubtitlesTrack * subsLookup(unsigned int streamIndex);
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -2705,7 +2882,8 @@ namespace yae
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
-    std::vector<SubtitlesInfo> subs_;
+    std::vector<SubtitlesTrack> subs_;
+    std::map<unsigned int, std::size_t> subsIdx_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
@@ -2845,20 +3023,8 @@ namespace yae
       }
       else if (codecType == AVMEDIA_TYPE_SUBTITLE)
       {
-        subs_.push_back(SubtitlesInfo());
-        SubtitlesInfo & subs = subs_.back();
-
-        subs.streamIndex_ = i;
-        subs.title_ = std::string("Track ") + toText(subs_.size());
-
-        const char * name = getTrackName(stream->metadata);
-        if (name)
-        {
-          subs.title_ += ", ";
-          subs.title_ += name;
-        }
-
-        subs.format_ = getSubsFormat(stream->codec->codec_id);
+        subsIdx_[i] = subs_.size();
+        subs_.push_back(SubtitlesTrack(stream, subs_.size()));
       }
     }
 
@@ -2899,6 +3065,7 @@ namespace yae
     videoTracks_.clear();
     audioTracks_.clear();
     subs_.clear();
+    subsIdx_.clear();
 
     av_close_input_file(context_);
     context_ = NULL;
@@ -2928,6 +3095,8 @@ namespace yae
     track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
+    track->setSubs(&subs_);
+
     return track->open();
   }
 
@@ -3120,7 +3289,6 @@ namespace yae
           if (videoTrack &&
               videoTrack->streamIndex() == ffmpeg.stream_index)
           {
-            // if (!videoTrack->decode(packet))
             if (!videoTrack->packetQueue().push(packet, &terminator_))
             {
               break;
@@ -3129,10 +3297,75 @@ namespace yae
           else if (audioTrack &&
                    audioTrack->streamIndex() == ffmpeg.stream_index)
           {
-            // if (!audioTrack->decode(packet))
             if (!audioTrack->packetQueue().push(packet, &terminator_))
             {
               break;
+            }
+          }
+          else
+          {
+            SubtitlesTrack * subs = NULL;
+            if (videoTrack &&
+                (subs = subsLookup(ffmpeg.stream_index)))
+            {
+              AVRational tb;
+              tb.num = 1;
+              tb.den = AV_TIME_BASE;
+
+              TSubsFrame sf;
+              sf.time_.time_ = av_rescale_q(ffmpeg.pts,
+                                            subs->stream_->time_base,
+                                            tb);
+              sf.time_.base_ = AV_TIME_BASE;
+              sf.tEnd_ = TTime(std::numeric_limits<int64>::max(),
+                               AV_TIME_BASE);
+
+              sf.traits_ = subs->format_;
+              sf.index_ = subs->index_;
+
+              if (ffmpeg.data && ffmpeg.size)
+              {
+                TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                        &IPlanarBuffer::deallocator);
+                buffer->resize(0, ffmpeg.size, 1);
+                unsigned char * dst = buffer->data(0);
+                memcpy(dst, ffmpeg.data, ffmpeg.size);
+
+                sf.data_ = buffer;
+              }
+
+              if (ffmpeg.side_data &&
+                  ffmpeg.side_data->data &&
+                  ffmpeg.side_data->size)
+              {
+                TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                        &IPlanarBuffer::deallocator);
+                buffer->resize(1, ffmpeg.side_data->size, 1);
+                unsigned char * dst = buffer->data(0);
+                memcpy(dst, ffmpeg.side_data->data, ffmpeg.side_data->size);
+
+                sf.sideData_ = buffer;
+              }
+
+              if (subs->codec_)
+              {
+                // decode the subtitle:
+                int gotSub = 0;
+                AVSubtitle sub;
+                err = avcodec_decode_subtitle2(subs->stream_->codec,
+                                               &sub,
+                                               &gotSub,
+                                               &ffmpeg);
+                if (!err && gotSub)
+                {
+                  sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub),
+                                                &TSubsPrivate::deallocator);
+
+                  sf.tEnd_.time_ = sub.end_display_time;
+                }
+              }
+
+              subs->queue_.push(sf, &terminator_);
             }
           }
         }
@@ -3147,16 +3380,6 @@ namespace yae
 #if 0
       std::cerr << "\nMovie::threadLoop caught exception" << std::endl;
 #endif
-    }
-
-    if (videoTrack)
-    {
-      // videoTrack->decoderShutdown();
-    }
-
-    if (audioTrack)
-    {
-      // audioTrack->decoderShutdown();
     }
   }
 
@@ -3174,7 +3397,6 @@ namespace yae
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
-      // t->decoderStartup();
       t->threadStart();
       t->packetQueue().waitForConsumerToBlock();
     }
@@ -3182,7 +3404,6 @@ namespace yae
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
-      // t->decoderStartup();
       t->threadStart();
       t->packetQueue().waitForConsumerToBlock();
     }
@@ -3545,7 +3766,7 @@ namespace yae
       return NULL;
     }
 
-    const SubtitlesInfo & subs = subs_[i];
+    const SubtitlesTrack & subs = subs_[i];
 
     if (t)
     {
@@ -3564,9 +3785,26 @@ namespace yae
     std::size_t nsubs = subs_.size();
     if (i < nsubs)
     {
-      SubtitlesInfo & subs = subs_[i];
+      SubtitlesTrack & subs = subs_[i];
       subs.render_ = render;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Movie::subsLookup
+  //
+  SubtitlesTrack *
+  Movie::subsLookup(unsigned int streamIndex)
+  {
+    std::map<unsigned int, std::size_t>::const_iterator
+      found = subsIdx_.find(streamIndex);
+
+    if (found != subsIdx_.end())
+    {
+      return &subs_[found->second];
+    }
+
+    return NULL;
   }
 
 

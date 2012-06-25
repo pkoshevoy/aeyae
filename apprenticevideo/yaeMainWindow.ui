@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -304,10 +304,16 @@ QLineEdit:disabled {
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuSubs">
+    <property name="title">
+     <string>&amp;Subtitles</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuAudio"/>
    <addaction name="menuVideo"/>
+   <addaction name="menuSubs"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="playlistDock_">
@@ -782,6 +788,11 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>200%</string>
+   </property>
+  </action>
+  <action name="actionNone">
+   <property name="text">
+    <string>None</string>
    </property>
   </action>
  </widget>

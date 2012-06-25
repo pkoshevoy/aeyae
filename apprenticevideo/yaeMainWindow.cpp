@@ -152,8 +152,10 @@ namespace yae
     audioDeviceMapper_(NULL),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
+    subsTrackGroup_(NULL),
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
+    subsTrackMapper_(NULL),
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
@@ -809,6 +811,7 @@ namespace yae
 
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t subsCount = reader->subsCount();
 
     reader->threadStop();
     reader->setPlaybackInterval(true);
@@ -816,7 +819,8 @@ namespace yae
     std::cout << std::endl
               << "yae: " << filename << std::endl
               << "yae: video tracks: " << numVideoTracks << std::endl
-              << "yae: audio tracks: " << numAudioTracks << std::endl;
+              << "yae: audio tracks: " << numAudioTracks << std::endl
+              << "yae: subs tracks: " << subsCount << std::endl;
 
     if (audioTrackGroup_)
     {
@@ -844,12 +848,28 @@ namespace yae
       }
     }
 
+    if (subsTrackGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = subsTrackGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+
+        menuSubs->removeAction(action);
+      }
+    }
+
     // update the UI:
     delete audioTrackGroup_;
     audioTrackGroup_ = new QActionGroup(this);
 
     delete videoTrackGroup_;
     videoTrackGroup_ = new QActionGroup(this);
+
+    delete subsTrackGroup_;
+    subsTrackGroup_ = new QActionGroup(this);
 
     delete audioTrackMapper_;
     audioTrackMapper_ = new QSignalMapper(this);
@@ -863,6 +883,13 @@ namespace yae
 
     ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
                  this, SLOT(videoSelectTrack(int)));
+    YAE_ASSERT(ok);
+
+    delete subsTrackMapper_;
+    subsTrackMapper_ = new QSignalMapper(this);
+
+    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(subsSelectTrack(int)));
     YAE_ASSERT(ok);
 
     for (unsigned int i = 0; i < numAudioTracks; i++)
@@ -962,8 +989,47 @@ namespace yae
       videoTrackMapper_->setMapping(trackAction, int(numVideoTracks));
     }
 
+    for (unsigned int i = 0; i < subsCount; i++)
+    {
+      QString trackName = tr("Track %1").arg(i + 1);
+
+      const char * name = reader->subsInfo(i);
+      if (name && *name)
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(name));
+      }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      trackAction->setChecked(i == 0);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, i);
+    }
+
+    // add an option to disable subs:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      trackAction->setChecked(subsCount == 0);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, int(subsCount));
+    }
+
     selectVideoTrack(reader, 0);
     selectAudioTrack(reader, 0);
+    selectSubsTrack(reader, 0);
 
     reader_->close();
     stopRenderers();
@@ -1631,6 +1697,26 @@ namespace yae
     stopRenderers();
 
     selectVideoTrack(reader_, index);
+    prepareReaderAndRenderers(reader_, playbackPaused_);
+
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
+    reader_->threadStart();
+
+    resumeRenderers();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::subsSelectTrack
+  //
+  void
+  MainWindow::subsSelectTrack(int index)
+  {
+    std::cerr << "subsSelectTrack: " << index << std::endl;
+    reader_->threadStop();
+    stopRenderers();
+
+    selectSubsTrack(reader_, index);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->currentTime();
@@ -2527,6 +2613,15 @@ namespace yae
   {
      reader->selectAudioTrack(audioTrackIndex);
      adjustAudioTraitsOverride(reader);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::selectSubsTrack
+  //
+  void
+  MainWindow::selectSubsTrack(IReader * reader, std::size_t subsTrackIndex)
+  {
+    reader->subsRender(subsTrackIndex, true);
   }
 
   //----------------------------------------------------------------

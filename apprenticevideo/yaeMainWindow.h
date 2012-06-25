@@ -131,6 +131,7 @@ namespace yae
     void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
+    void subsSelectTrack(int index);
     void playlistItemChanged(std::size_t index);
 
     // help menu:
@@ -168,6 +169,7 @@ namespace yae
     void renderOneFrame();
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
+    void selectSubsTrack(IReader * reader, std::size_t subsTrackIndex);
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
 #ifdef __APPLE__
@@ -201,9 +203,11 @@ namespace yae
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
+    QActionGroup * subsTrackGroup_;
 
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
+    QSignalMapper * subsTrackMapper_;
 
     // file reader:
     IReader * reader_;

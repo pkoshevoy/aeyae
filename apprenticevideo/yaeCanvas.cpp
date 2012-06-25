@@ -768,7 +768,7 @@ namespace yae
                    0, // border width
                    pixelFormatGL,
                    dataTypeGL,
-                   frame->data_->samples(0));
+                   frame->data_->data(0));
     }
     return true;
   }
@@ -1131,7 +1131,7 @@ namespace yae
     const std::size_t bytesPerRow = frame_->data_->rowBytes(0);
     const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
     const unsigned char * src =
-      frame_->data_->samples(0) +
+      frame_->data_->data(0) +
       frame_->traits_.offsetTop_ * bytesPerRow +
       frame_->traits_.offsetLeft_ * bytesPerPixel;
 

@@ -261,8 +261,8 @@ namespace yae
     //! number of contiguous sample planes:
     virtual std::size_t planes() const = 0;
 
-    //! samples plane accessor:
-    virtual unsigned char * samples(std::size_t plane) const = 0;
+    //! data plane accessor:
+    virtual unsigned char * data(std::size_t plane) const = 0;
 
     //! bytes per plane row:
     virtual std::size_t rowBytes(std::size_t planeIndex) const = 0;
@@ -295,7 +295,7 @@ namespace yae
                 std::size_t alignment = 32)
     { this->resize(samples * sizeof(TSample), rows, alignment); }
 
-    // samples accessors:
+    // data accessors:
     template <typename TSample>
     inline TSample * data() const
     { return (TSample *)(data_ + alignmentOffset_); }
@@ -333,7 +333,7 @@ namespace yae
     std::size_t planes() const;
 
     // virtual:
-    unsigned char * samples(std::size_t plane) const;
+    unsigned char * data(std::size_t plane) const;
 
     // virtual:
     std::size_t rowBytes(std::size_t plane) const;
@@ -386,16 +386,38 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TSubs
+  // TSubsFrame
   //
-  typedef TFrame<TSubsFormat> TSubs;
+  struct YAE_API TSubsFrame : public TFrame<TSubsFormat>
+  {
+    struct IPrivate
+    {
+    protected:
+      virtual ~IPrivate() {}
+
+    public:
+      virtual void destroy() = 0;
+      static void deallocator(IPrivate * p);
+    };
+
+    // track index:
+    std::size_t index_;
+
+    // additional data:
+    TIPlanarBufferPtr sideData_;
+
+    // frame expiration time:
+    TTime tEnd_;
+
+    boost::shared_ptr<IPrivate> private_;
+  };
 
   //----------------------------------------------------------------
   // TVideoFrame
   //
-  struct TVideoFrame : public TFrame<VideoTraits>
+  struct YAE_API TVideoFrame : public TFrame<VideoTraits>
   {
-    std::list<TSubs> subs_;
+    std::list<TSubsFrame> subs_;
   };
 
   //----------------------------------------------------------------

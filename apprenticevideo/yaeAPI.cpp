@@ -308,10 +308,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TPlanarBuffer::samples
+  // TPlanarBuffer::data
   //
   unsigned char *
-  TPlanarBuffer::samples(std::size_t samplePlane) const
+  TPlanarBuffer::data(std::size_t samplePlane) const
   {
     return samplePlane < plane_.size() ? plane_[samplePlane].data() : NULL;
   }
@@ -347,6 +347,18 @@ namespace yae
     if (samplePlane < plane_.size())
     {
       plane_[samplePlane].resize(rowBytes, rows, alignment);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TSubsFrame::IPrivate::deallocator
+  //
+  void
+  TSubsFrame::IPrivate::deallocator(IPrivate * p)
+  {
+    if (p)
+    {
+      p->destroy();
     }
   }
 }

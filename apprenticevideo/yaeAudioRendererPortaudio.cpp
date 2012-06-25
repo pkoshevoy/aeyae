@@ -646,7 +646,7 @@ namespace yae
       }
       else
       {
-        const unsigned char * srcBuf = audioFrame_->data_->samples(0);
+        const unsigned char * srcBuf = audioFrame_->data_->data(0);
         std::size_t srcFrameSize = audioFrame_->data_->rowBytes(0);
         std::size_t srcChunkSize = 0;
 
