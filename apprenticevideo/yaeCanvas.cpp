@@ -1005,6 +1005,42 @@ namespace yae
   TLegacyCanvas::loadFrame(QGLWidget * canvas,
                            const TVideoFramePtr & frame)
   {
+#if 0
+    static std::map<std::size_t, std::string> prev;
+    for (std::list<TSubsFrame>::const_iterator i = frame->subs_.begin();
+         i != frame->subs_.end(); ++i)
+    {
+      const TSubsFrame & subs = *i;
+      if (subs.traits_ == kSubsText)
+      {
+        const unsigned char * str = subs.data_->data(0);
+        const unsigned char * end = str + subs.data_->rowBytes(0);
+        std::string text(str, end);
+
+        if (prev[subs.index_] == text)
+        {
+          continue;
+        }
+
+        prev[subs.index_] = text;
+
+        std::cerr << std::endl << subs.index_
+                  << ". [" << subs.time_.toSeconds() << ", ";
+
+        if (subs.tEnd_.time_ != std::numeric_limits<int64>::max())
+        {
+          std::cerr << subs.tEnd_.toSeconds() << ") ";
+        }
+        else
+        {
+          std::cerr << "...)";
+        }
+
+        std::cerr << std::endl << text << std::endl;
+      }
+    }
+#endif
+
     static const GLsizei textureEdgeMax = calcTextureEdgeMax();
 
     // video traits shortcut:
