@@ -275,7 +275,10 @@ namespace yae
       data_ = NULL;
     }
 
-    alignmentOffset_ = alignment ? std::size_t(data_) % alignment : 0;
+    alignmentOffset_ =
+      alignment && ((std::size_t)(data_) & (alignment - 1)) ?
+      alignment -  ((std::size_t)(data_) & (alignment - 1)) : 0;
+
     rowBytes_ = rowBytes;
     rows_ = rows;
     alignment_ = alignment;

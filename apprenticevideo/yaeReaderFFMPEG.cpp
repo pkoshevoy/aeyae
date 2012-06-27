@@ -931,7 +931,7 @@ namespace yae
     VideoTrack(AVFormatContext * context, AVStream * stream);
 
     // row byte alignment constant:
-    enum { kRowAlignment = 16 };
+    enum { kRowAlignment = 32 };
 
     // virtual:
     bool open();
@@ -2078,7 +2078,7 @@ namespace yae
       outputChannels_ * getBitsPerSample(output_.sampleFormat_) / 8;
 
     // declare a 16-byte aligned buffer for decoded audio samples:
-    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1, 16);
+    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1);
 
     getTraits(native_);
     noteNativeTraitsChanged();
@@ -2341,7 +2341,7 @@ namespace yae
       if (!shouldAdjustTempo)
       {
         // concatenate chunks into a contiguous frame buffer:
-        sampleBuffer->resize(0, outputBytes, 1, 16);
+        sampleBuffer->resize(0, outputBytes, 1);
         unsigned char * afSampleBuffer = sampleBuffer->data(0);
 
         while (!chunks.empty())
@@ -2483,8 +2483,8 @@ namespace yae
       getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);
       remixBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
                                       double(outputChannels_) /
-                                      double(nativeChannels_) + 0.5),
-                          1, 16);
+                                      double(nativeChannels_) +
+                                      0.5), 1);
     }
 
     // we implement our own remixing because ffmpeg supports
@@ -2493,8 +2493,8 @@ namespace yae
     {
       resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
                                          double(outputBytesPerSample_) /
-                                         double(nativeBytesPerSample_) + 0.5),
-                             1, 16);
+                                         double(nativeBytesPerSample_) +
+                                         0.5), 1);
     }
 
     if (native_.sampleFormat_ != output_.sampleFormat_ ||
