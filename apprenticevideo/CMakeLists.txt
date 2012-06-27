@@ -26,6 +26,11 @@ set(QT_USE_QTMAIN TRUE)
 include(${QT_USE_FILE})
 
 add_definitions(-DBOOST_ALL_NO_LIB)
+
+if (MSYS OR MINGW)
+	add_definitions(-DBOOST_THREAD_USE_LIB)
+endif (MSYS OR MINGW)
+
 if (WIN32)
   add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
 endif (WIN32)
@@ -44,9 +49,9 @@ include_directories(AFTER
   ${QT_QTOPENGL_INCLUDE_DIR}
   )
 
-if (WIN32)
+if (WIN32 AND NOT (MINGW OR MSYS))
   include_directories(AFTER msIntTypes)
-endif (WIN32)
+endif (WIN32 AND NOT (MINGW OR MSYS))
 
 set(FFMPEG_HEADERS_PATH "$ENV{FFMPEG_HEADERS_PATH}" CACHE PATH "search path for ffmpeg headers")
 
@@ -515,6 +520,18 @@ if (WIN32)
   if (AVIFIL32_LIBRARY)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
   endif (AVIFIL32_LIBRARY)
+
+  if (MSYS OR MINGW)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      -L/Developer/ffmpeg/lib
+      vo-aacenc
+      vo-amrwbenc
+      orc-0.4
+      xavs
+      pthread
+      wsock32
+      winmm)
+  endif (MSYS OR MINGW)
 endif (WIN32)
 
 #message("QT_CONFG: "${QT_CONFIG})
@@ -627,12 +644,21 @@ if (WIN32)
   set(ALLOWED_PATHS ${FFMPEG_LIBS_PATH} CACHE STRING
     "semicolon separated search path where dlls for Qt, portaudio, ffmpeg, etc... can be found")
 
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
-  file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
-  file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
-  file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
-  file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
-  file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
+  if (MINGW OR MSYS)
+    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_EXE "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe")
+    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico")
+    string(REPLACE "/" "\\\\" NATIVE_DEPENDS_EXE "${DEPENDENCY_WALKER}")
+    string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
+    string(REPLACE "/" "\\\\" NATIVE_CANDLE_EXE "${WIX_CANDLE}")
+    string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
+  else (MINGW OR MSYS)
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
+    file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
+    file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
+    file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
+    file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
+    file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
+  endif (MINGW OR MSYS)
 
   add_custom_target("create installer"
     ALL DEPENDS

@@ -40,7 +40,7 @@
 namespace yae
 {
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
   //----------------------------------------------------------------
   // utf8_to_utf16
   //
@@ -59,7 +59,7 @@ namespace yae
   int
   renameUtf8(const char * fnOld, const char * fnNew)
   {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     wchar_t * wold = utf8_to_utf16(fnOld);
     wchar_t * wnew = utf8_to_utf16(fnNew);
 
@@ -82,7 +82,7 @@ namespace yae
   {
     std::FILE * file = NULL;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     wchar_t * wname = utf8_to_utf16(filenameUtf8);
     wchar_t * wmode = utf8_to_utf16(mode);
 
@@ -103,7 +103,7 @@ namespace yae
   int
   fileOpenUtf8(const char * filenameUtf8, int accessMode, int permissions)
   {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     accessMode |= O_BINARY;
 
     wchar_t * wname = utf8_to_utf16(filenameUtf8);
@@ -125,7 +125,7 @@ namespace yae
   int64
   fileSeek64(int fd, int64 offset, int whence)
   {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     __int64 pos = _lseeki64(fd, offset, whence);
 #elif defined(__APPLE__)
     off_t pos = lseek(fd, offset, whence);
@@ -142,7 +142,7 @@ namespace yae
   int64
   fileSize64(int fd)
   {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     struct _stati64 st;
     __int64 ret = _fstati64(fd, &st);
 #else
