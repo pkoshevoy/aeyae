@@ -353,6 +353,16 @@ namespace yae
       render_(false),
       queue_(kQueueSizeLarge)
     {
+      open();
+    }
+
+    ~SubtitlesTrack()
+    {
+      close();
+    }
+
+    void open()
+    {
       if (stream_)
       {
         format_ = getSubsFormat(stream_->codec->codec_id);
@@ -379,7 +389,7 @@ namespace yae
       }
     }
 
-    ~SubtitlesTrack()
+    void close()
     {
       if (stream_ && codec_)
       {
@@ -388,34 +398,11 @@ namespace yae
       }
     }
 
-    SubtitlesTrack(const SubtitlesTrack & given):
-      stream_(NULL),
-      codec_(NULL),
-      format_(kSubsNone),
-      index_(~0),
-      render_(false),
-      queue_(kQueueSizeLarge)
-    {
-      *this = given;
-    }
+  private:
+    SubtitlesTrack(const SubtitlesTrack & given);
+    SubtitlesTrack & operator = (const SubtitlesTrack & given);
 
-    SubtitlesTrack & operator = (const SubtitlesTrack & given)
-    {
-      YAE_ASSERT(!stream_ && !codec_ && queue_.clear());
-
-      stream_ = given.stream_;
-      codec_  = given.codec_;
-      format_ = given.format_;
-      title_  = given.title_;
-      index_  = given.index_;
-      render_ = given.render_;
-
-      queue_.open();
-      prev_.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
-
-      return *this;
-    }
-
+  public:
     AVStream * stream_;
     AVCodec * codec_;
 
@@ -427,6 +414,11 @@ namespace yae
     TSubsFrameQueue queue_;
     TSubsFrame prev_;
   };
+
+  //----------------------------------------------------------------
+  // TSubsTrackPtr
+  //
+  typedef boost::shared_ptr<SubtitlesTrack> TSubsTrackPtr;
 
   //----------------------------------------------------------------
   // Track
@@ -966,7 +958,7 @@ namespace yae
     // starting from a given time point:
     int resetTimeCounters(double seekTime);
 
-    void setSubs(std::vector<SubtitlesTrack> * subs)
+    void setSubs(std::vector<TSubsTrackPtr> * subs)
     { subs_ = subs; }
 
     // these are used to speed up video decoding:
@@ -1000,7 +992,7 @@ namespace yae
 
     FrameWithAutoCleanup frameAutoCleanup_;
 
-    std::vector<SubtitlesTrack> * subs_;
+    std::vector<TSubsTrackPtr> * subs_;
   };
 
   //----------------------------------------------------------------
@@ -1549,7 +1541,7 @@ namespace yae
         std::size_t nsubs = subs_ ? subs_->size() : 0;
         for (std::size_t i = 0; i < nsubs; i++)
         {
-          SubtitlesTrack & subs = (*subs_)[i];
+          SubtitlesTrack & subs = *((*subs_)[i]);
 
           double s0 = subs.prev_.time_.toSeconds();
           double s1 = subs.prev_.tEnd_.toSeconds();
@@ -2882,7 +2874,7 @@ namespace yae
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
-    std::vector<SubtitlesTrack> subs_;
+    std::vector<TSubsTrackPtr> subs_;
     std::map<unsigned int, std::size_t> subsIdx_;
 
     // index of the selected video/audio track:
@@ -3023,8 +3015,13 @@ namespace yae
       }
       else if (codecType == AVMEDIA_TYPE_SUBTITLE)
       {
+        // avoid codec instance sharing between a temporary Track object
+        // and SubtitlesTrack object:
+        track = TrackPtr();
+
         subsIdx_[i] = subs_.size();
-        subs_.push_back(SubtitlesTrack(stream, subs_.size()));
+        TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
+        subs_.push_back(subsTrk);
       }
     }
 
@@ -3356,8 +3353,9 @@ namespace yae
                                                &sub,
                                                &gotSub,
                                                &ffmpeg);
-                if (!err && gotSub)
+                if (err >= 0 && gotSub)
                 {
+                  err = 0;
                   sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub),
                                                 &TSubsPrivate::deallocator);
 
@@ -3766,7 +3764,7 @@ namespace yae
       return NULL;
     }
 
-    const SubtitlesTrack & subs = subs_[i];
+    const SubtitlesTrack & subs = *(subs_[i]);
 
     if (t)
     {
@@ -3785,7 +3783,7 @@ namespace yae
     std::size_t nsubs = subs_.size();
     if (i < nsubs)
     {
-      SubtitlesTrack & subs = subs_[i];
+      SubtitlesTrack & subs = *(subs_[i]);
       subs.render_ = render;
     }
   }
@@ -3801,7 +3799,7 @@ namespace yae
 
     if (found != subsIdx_.end())
     {
-      return &subs_[found->second];
+      return subs_[found->second].get();
     }
 
     return NULL;
