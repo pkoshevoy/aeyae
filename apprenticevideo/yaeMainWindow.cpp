@@ -574,6 +574,9 @@ namespace yae
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
+
+    // FIXME: hide subtitles menu until they are properly supported:
+    menubar->removeAction(menuSubs->menuAction());
   }
 
   //----------------------------------------------------------------
