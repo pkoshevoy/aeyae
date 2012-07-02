@@ -729,7 +729,14 @@ namespace yae
     frame_ = frame;
 
     glGenTextures(1, &texId_);
+    glEnable(GL_TEXTURE_RECTANGLE_EXT);
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
+
+#ifdef __APPLE__
+    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
+                    GL_TEXTURE_STORAGE_HINT_APPLE,
+                    GL_STORAGE_SHARED_APPLE);
+#endif
 
     glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
                     GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -753,10 +760,12 @@ namespace yae
       // order of bits in a byte only matters for bitmaps:
       // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
 
+#ifdef __APPLE__
       if (glewIsExtensionSupported("GL_APPLE_client_storage"))
       {
         glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
       }
+#endif
 
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -770,6 +779,7 @@ namespace yae
                    dataTypeGL,
                    frame->data_->data(0));
     }
+
     return true;
   }
 
@@ -1402,8 +1412,7 @@ namespace yae
     delete private_;
     private_ = NULL;
 
-    if (false &&
-        (glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
+    if ((glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
          glewIsExtensionSupported("GL_ARB_texture_rectangle")))
     {
       private_ = new TModernCanvas();
