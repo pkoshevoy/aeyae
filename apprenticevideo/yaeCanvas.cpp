@@ -735,7 +735,7 @@ namespace yae
 #ifdef __APPLE__
     glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
                     GL_TEXTURE_STORAGE_HINT_APPLE,
-                    GL_STORAGE_SHARED_APPLE);
+                    GL_STORAGE_CACHED_APPLE);
 #endif
 
     glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
