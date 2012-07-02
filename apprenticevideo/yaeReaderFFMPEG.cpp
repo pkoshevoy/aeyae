@@ -3330,7 +3330,7 @@ namespace yae
 
                 sf.data_ = buffer;
               }
-
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 47, 0)
               if (ffmpeg.side_data &&
                   ffmpeg.side_data->data &&
                   ffmpeg.side_data->size)
@@ -3343,7 +3343,7 @@ namespace yae
 
                 sf.sideData_ = buffer;
               }
-
+#endif
               if (subs->codec_)
               {
                 // decode the subtitle:
