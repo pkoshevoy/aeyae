@@ -51,11 +51,30 @@ extern "C"
 {
 #include <libavutil/avstring.h>
 #include <libavutil/error.h>
+#include <libavutil/pixdesc.h>
+#include <libavfilter/avfilter.h>
+#include <libavfilter/avfiltergraph.h>
 #include <libavformat/avio.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 }
+
+
+//----------------------------------------------------------------
+// YAE_ASSERT_NO_AVERROR_OR_RETURN
+//
+#define YAE_ASSERT_NO_AVERROR_OR_RETURN(err, ret)       \
+  do {                                                  \
+    if (err < 0)                                        \
+    {                                                   \
+      char tmp[1024];                                   \
+      av_strerror(err, tmp, sizeof(tmp));               \
+      std::cerr << "AVERROR: " << tmp << std::endl;     \
+      YAE_ASSERT(false);                                \
+      return ret;                                       \
+    }                                                   \
+  } while (0)
 
 
 namespace yae
@@ -874,6 +893,155 @@ namespace yae
     packetTime_.duration_ = packet.duration;
   }
 
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph
+  //
+  struct VideoFilterGraph
+  {
+    VideoFilterGraph():
+      srcFilterCtx_(NULL),
+      dstFilterCtx_(NULL),
+      in_(NULL),
+      out_(NULL),
+      graph_(NULL)
+    {
+      reset();
+    }
+
+    ~VideoFilterGraph()
+    {
+      reset();
+    }
+
+    bool setup(int srcWidth,
+               int srcHeight,
+               const AVRational & srcTimeBase,
+               const AVRational & srcPAR,
+               PixelFormat srcPixFmt,
+               PixelFormat dstPixFmt)
+    {
+      reset();
+
+      srcWidth_ = srcWidth;
+      srcHeight_ = srcHeight;
+      srcPixFmt_ = srcPixFmt;
+      dstPixFmt_[0] = dstPixFmt;
+
+      srcTimeBase_ = srcTimeBase;
+      srcPAR_ = srcPAR;
+
+#if 0
+      AVFilter * srcFilterDef = avfilter_get_by_name("buffer");
+      AVFilter * dstFilterDef = avfilter_get_by_name("buffersink");
+
+      graph_ = avfilter_graph_alloc();
+
+      std::string srcCfg;
+      {
+        const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
+
+        std::ostringstream os;
+        os << "video_size=" << srcWidth_ << "x" << srcHeight_
+           << ":pix_fmt=" << txtPixFmt
+           << ":time_base=" << srcTimeBase_.num
+           << "/" << srcTimeBase_.den
+           << ":pixel_aspect=" << srcPAR_.num
+           << "/" << srcPAR_.den;
+        srcCfg = os.str().c_str();
+      }
+
+      int err = avfilter_graph_create_filter(&srcFilterCtx_,
+                                             srcFilterDef,
+                                             "in",
+                                             srcCfg.c_str(),
+                                             NULL,
+                                             graph_);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      err = avfilter_graph_create_filter(&dstFilterCtx_,
+                                         dstFilterDef,
+                                         "out",
+                                         NULL,
+                                         dstPixFmt_,
+                                         graph_);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      out_ = avfilter_inout_alloc();
+      err = out_ ? 0 : AVERROR(ENOMEM);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      out_->name = av_strdup("in");
+      out_->filter_ctx = srcFilterCtx_;
+      out_->pad_idx = 0;
+      out_->next = NULL;
+
+      in_ = avfilter_inout_alloc();
+      err = in_ ? 0 : AVERROR(ENOMEM);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      in_->name = av_strdup("out");
+      in_->filter_ctx = dstFilterCtx_;
+      in_->pad_idx = 0;
+      in_->next = NULL;
+
+      const char * filters =
+        "drawtext=fontsize=30:"
+        "fontfile=/usr/share/fonts/truetype/FreeSerif.ttf:"
+        "text='hello world':"
+        "x=(w-text_w)/2:"
+        "y=(h-text_h-line_h):"
+        "fontcolor='0xffffff80':"
+        "shadowcolor='0x0000007f':"
+        "shadowx=1:"
+        "shadowy=1";
+
+      err = avfilter_graph_parse(graph_, filters, &in_, &out_, NULL);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      err = avfilter_graph_config(graph_, NULL);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+#endif
+
+      return true;
+    }
+
+    void reset()
+    {
+      avfilter_graph_free(&graph_);
+      avfilter_inout_free(&in_);
+      avfilter_inout_free(&out_);
+
+      srcTimeBase_.num = 0;
+      srcTimeBase_.den = 1;
+
+      srcPAR_.num = 0;
+      srcPAR_.den = 1;
+
+      srcWidth_  = 0;
+      srcHeight_ = 0;
+
+      srcPixFmt_    = PIX_FMT_NONE;
+      dstPixFmt_[0] = PIX_FMT_NONE;
+      dstPixFmt_[1] = PIX_FMT_NONE;
+    }
+
+    int srcWidth_;
+    int srcHeight_;
+    AVRational srcTimeBase_;
+    AVRational srcPAR_;
+    PixelFormat srcPixFmt_;
+    PixelFormat dstPixFmt_[2];
+
+    AVFilterContext * srcFilterCtx_;
+    AVFilterContext * dstFilterCtx_;
+
+    AVFilterInOut * in_;
+    AVFilterInOut * out_;
+
+    AVFilterGraph * graph_;
+  };
+
   //----------------------------------------------------------------
   // FrameWithAutoCleanup
   //
@@ -993,6 +1161,8 @@ namespace yae
     FrameWithAutoCleanup frameAutoCleanup_;
 
     std::vector<TSubsTrackPtr> * subs_;
+
+    VideoFilterGraph filterGraph_;
   };
 
   //----------------------------------------------------------------
@@ -1252,14 +1422,14 @@ namespace yae
       stream_->avg_frame_rate :
       stream_->r_frame_rate;
 
+    // shortcut for ffmpeg pixel format:
+    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
+    AVCodecContext * codecContext = this->codecContext();
+
     if (native_.pixelFormat_ != output_.pixelFormat_ ||
         native_.encodedWidth_ != output_.encodedWidth_ ||
         native_.encodedHeight_ != output_.encodedHeight_)
     {
-      // shortcut for ffmpeg pixel format:
-      enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
-      AVCodecContext * codecContext = this->codecContext();
-
       imgConvertCtx_ = sws_getContext(// from:
                                       native_.encodedWidth_,
                                       native_.encodedHeight_,
@@ -1282,6 +1452,14 @@ namespace yae
     ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
 
+    filterGraph_.setup(codecContext->width,
+                       codecContext->height,
+                       codecContext->time_base,
+                       codecContext->sample_aspect_ratio,
+                       codecContext->pix_fmt,
+                       ffmpegPixelFormat);
+
+
     frameQueue_.open();
     return true;
   }
@@ -1292,6 +1470,8 @@ namespace yae
   bool
   VideoTrack::decoderShutdown()
   {
+    filterGraph_.reset();
+
     if (imgConvertCtx_)
     {
       sws_freeContext(imgConvertCtx_);
@@ -3826,12 +4006,7 @@ namespace yae
       if (!ffmpegInitialized_)
       {
         av_log_set_flags(AV_LOG_SKIP_REPEATED);
-#if CONFIG_AVDEVICE
-        avdevice_register_all();
-#endif
-#if CONFIG_AVFILTER
         avfilter_register_all();
-#endif
         av_register_all();
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 13, 0)
