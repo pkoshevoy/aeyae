@@ -52,8 +52,10 @@ extern "C"
 #include <libavutil/avstring.h>
 #include <libavutil/error.h>
 #include <libavutil/pixdesc.h>
+#include <libavfilter/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/avfiltergraph.h>
+#include <libavfilter/buffersink.h>
 #include <libavformat/avio.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -527,16 +529,6 @@ namespace yae
     Track & operator = (const Track &);
 
   protected:
-    static int callbackGetBuffer(AVCodecContext * c, AVFrame * frame);
-    static int callbackRegetBuffer(AVCodecContext * c, AVFrame * frame);
-    static void callbackReleaseBuffer(AVCodecContext * c, AVFrame * frame);
-
-    virtual int getBuffer(AVCodecContext * c, AVFrame * frame);
-    virtual int regetBuffer(AVCodecContext * c, AVFrame * frame);
-    virtual void releaseBuffer(AVCodecContext * c, AVFrame * frame);
-
-    void savePacketTime(const AVPacket & packet);
-
     // worker thread:
     Thread<Track> thread_;
 
@@ -547,7 +539,6 @@ namespace yae
     AVStream * stream_;
     AVCodec * codec_;
     TPacketQueue packetQueue_;
-    PacketTime packetTime_;
 
     double timeIn_;
     double timeOut_;
@@ -637,14 +628,6 @@ namespace yae
       return false;
     }
 #endif
-
-    if (codec_)
-    {
-      stream_->codec->opaque = this;
-      stream_->codec->get_buffer = &callbackGetBuffer;
-      stream_->codec->reget_buffer = &callbackRegetBuffer;
-      stream_->codec->release_buffer = &callbackReleaseBuffer;
-    }
 
     return true;
   }
@@ -808,268 +791,29 @@ namespace yae
     return true;
   }
 
-  //----------------------------------------------------------------
-  // Track::callbackGetBuffer
-  //
-  int
-  Track::callbackGetBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    Track * t = (Track *)(codecContext->opaque);
-    return t->getBuffer(codecContext, frame);
-  }
-
-  //----------------------------------------------------------------
-  // Track::callbackRegetBuffer
-  //
-  int
-  Track::callbackRegetBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    Track * t = (Track *)(codecContext->opaque);
-    return t->regetBuffer(codecContext, frame);
-  }
-
-  //----------------------------------------------------------------
-  // Track::callbackReleaseBuffer
-  //
-  void
-  Track::callbackReleaseBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    Track * t = (Track *)(codecContext->opaque);
-    t->releaseBuffer(codecContext, frame);
-  }
-
-  //----------------------------------------------------------------
-  // Track::getBuffer
-  //
-  int
-  Track::getBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    int err = avcodec_default_get_buffer(codecContext, frame);
-    if (!err)
-    {
-      PacketTime * ts = new PacketTime(packetTime_);
-      frame->opaque = ts;
-    }
-
-    return err;
-  }
-
-  //----------------------------------------------------------------
-  // Track::regetBuffer
-  //
-  int
-  Track::regetBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    int err = avcodec_default_reget_buffer(codecContext, frame);
-    if (!err)
-    {
-      PacketTime * ts = (PacketTime *)(frame->opaque);
-      delete ts;
-
-      ts = new PacketTime(packetTime_);
-      frame->opaque = ts;
-    }
-
-    return err;
-  }
-
-  //----------------------------------------------------------------
-  // Track::releaseBuffer
-  //
-  void
-  Track::releaseBuffer(AVCodecContext * codecContext, AVFrame * frame)
-  {
-    avcodec_default_release_buffer(codecContext, frame);
-
-    PacketTime * ts = (PacketTime *)(frame->opaque);
-    delete ts;
-
-    frame->opaque = NULL;
-  }
-
-  //----------------------------------------------------------------
-  // Track::savePacketTime
-  //
-  void
-  Track::savePacketTime(const AVPacket & packet)
-  {
-#if 1
-    if (packet.pts == stream_->start_time)
-    {
-      packetTime_.pts_ = AV_NOPTS_VALUE;
-    }
-    else
-#endif
-    {
-      packetTime_.pts_ = packet.pts;
-    }
-
-#if 1
-    if (packet.dts == stream_->first_dts)
-    {
-      packetTime_.dts_ = AV_NOPTS_VALUE;
-    }
-    else
-#endif
-    {
-      packetTime_.dts_ = packet.dts;
-    }
-
-    packetTime_.duration_ = packet.duration;
-  }
-
 
   //----------------------------------------------------------------
   // VideoFilterGraph
   //
   struct VideoFilterGraph
   {
-    VideoFilterGraph():
-      srcFilterCtx_(NULL),
-      dstFilterCtx_(NULL),
-      in_(NULL),
-      out_(NULL),
-      graph_(NULL)
-    {
-      reset();
-    }
+    VideoFilterGraph();
+    ~VideoFilterGraph();
 
-    ~VideoFilterGraph()
-    {
-      reset();
-    }
+    void reset();
 
     bool setup(int srcWidth,
                int srcHeight,
                const AVRational & srcTimeBase,
                const AVRational & srcPAR,
                PixelFormat srcPixFmt,
-               PixelFormat dstPixFmt)
-    {
-      reset();
+               PixelFormat dstPixFmt,
+               const char * filterChain = "null");
 
-      srcWidth_ = srcWidth;
-      srcHeight_ = srcHeight;
-      srcPixFmt_ = srcPixFmt;
-      dstPixFmt_[0] = dstPixFmt;
+    bool push(const AVFrame * in);
+    bool pull(AVFrame * out);
 
-      srcTimeBase_ = srcTimeBase;
-      srcPAR_ = srcPAR;
-
-#if 0
-      AVFilter * srcFilterDef = avfilter_get_by_name("buffer");
-      AVFilter * dstFilterDef = avfilter_get_by_name("buffersink");
-
-      graph_ = avfilter_graph_alloc();
-
-      std::string srcCfg;
-      {
-        const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
-
-        std::ostringstream os;
-
-#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(3, 0, 101)
-        os << "video_size=" << srcWidth_ << "x" << srcHeight_
-           << ":pix_fmt=" << txtPixFmt
-           << ":time_base=" << srcTimeBase_.num
-           << "/" << srcTimeBase_.den
-           << ":pixel_aspect=" << srcPAR_.num
-           << "/" << srcPAR_.den;
-#else
-        os << srcWidth_ << ":"
-           << srcHeight_ << ":"
-           << srcPixFmt_ << ":"
-           << srcTimeBase_.num << ":"
-           << srcTimeBase_.den << ":"
-           << srcPAR_.num << ":"
-           << srcPAR_.den;
-#endif
-        srcCfg = os.str().c_str();
-      }
-
-      int err = avfilter_graph_create_filter(&srcFilterCtx_,
-                                             srcFilterDef,
-                                             "in",
-                                             srcCfg.c_str(),
-                                             NULL,
-                                             graph_);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      err = avfilter_graph_create_filter(&dstFilterCtx_,
-                                         dstFilterDef,
-                                         "out",
-                                         NULL,
-                                         dstPixFmt_,
-                                         graph_);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      out_ = avfilter_inout_alloc();
-      err = out_ ? 0 : AVERROR(ENOMEM);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      out_->name = av_strdup("in");
-      out_->filter_ctx = srcFilterCtx_;
-      out_->pad_idx = 0;
-      out_->next = NULL;
-
-      in_ = avfilter_inout_alloc();
-      err = in_ ? 0 : AVERROR(ENOMEM);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      in_->name = av_strdup("out");
-      in_->filter_ctx = dstFilterCtx_;
-      in_->pad_idx = 0;
-      in_->next = NULL;
-
-#if 1
-      const char * filters = "null";
-#else
-      const char * filters =
-        "drawtext=fontsize=30:"
-#ifdef __APPLE__
-        "fontfile=/Library/Fonts/Arial Unicode.ttf:"
-#else
-        "fontfile=/usr/share/fonts/truetype/FreeSerif.ttf:"
-#endif
-        "text='hello world':"
-        "x=(w-text_w)/2:"
-        "y=(h-text_h-line_h):"
-        "fontcolor='0xffffff80':"
-        "shadowcolor='0x0000007f':"
-        "shadowx=1:"
-        "shadowy=1";
-#endif
-
-      err = avfilter_graph_parse(graph_, filters, &in_, &out_, NULL);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      err = avfilter_graph_config(graph_, NULL);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-#endif
-
-      return true;
-    }
-
-    void reset()
-    {
-      avfilter_graph_free(&graph_);
-      avfilter_inout_free(&in_);
-      avfilter_inout_free(&out_);
-
-      srcTimeBase_.num = 0;
-      srcTimeBase_.den = 1;
-
-      srcPAR_.num = 0;
-      srcPAR_.den = 1;
-
-      srcWidth_  = 0;
-      srcHeight_ = 0;
-
-      srcPixFmt_    = PIX_FMT_NONE;
-      dstPixFmt_[0] = PIX_FMT_NONE;
-      dstPixFmt_[1] = PIX_FMT_NONE;
-    }
-
+  protected:
     int srcWidth_;
     int srcHeight_;
     AVRational srcTimeBase_;
@@ -1077,14 +821,192 @@ namespace yae
     PixelFormat srcPixFmt_;
     PixelFormat dstPixFmt_[2];
 
-    AVFilterContext * srcFilterCtx_;
-    AVFilterContext * dstFilterCtx_;
+    AVFilterContext * src_;
+    AVFilterContext * sink_;
 
     AVFilterInOut * in_;
     AVFilterInOut * out_;
-
     AVFilterGraph * graph_;
   };
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::VideoFilterGraph
+  //
+  VideoFilterGraph::VideoFilterGraph():
+    src_(NULL),
+    sink_(NULL),
+    in_(NULL),
+    out_(NULL),
+    graph_(NULL)
+  {
+    reset();
+  }
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::~VideoFilterGraph
+  //
+  VideoFilterGraph::~VideoFilterGraph()
+  {
+    reset();
+  }
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::reset
+  //
+  void
+  VideoFilterGraph::reset()
+  {
+    avfilter_graph_free(&graph_);
+    avfilter_inout_free(&in_);
+    avfilter_inout_free(&out_);
+
+    srcTimeBase_.num = 0;
+    srcTimeBase_.den = 1;
+
+    srcPAR_.num = 0;
+    srcPAR_.den = 1;
+
+    srcWidth_  = 0;
+    srcHeight_ = 0;
+
+    srcPixFmt_    = PIX_FMT_NONE;
+    dstPixFmt_[0] = PIX_FMT_NONE;
+    dstPixFmt_[1] = PIX_FMT_NONE;
+  }
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::setup
+  //
+  bool
+  VideoFilterGraph::setup(int srcWidth,
+                          int srcHeight,
+                          const AVRational & srcTimeBase,
+                          const AVRational & srcPAR,
+                          PixelFormat srcPixFmt,
+                          PixelFormat dstPixFmt,
+                          const char * filterChain)
+  {
+    reset();
+
+    srcWidth_ = srcWidth;
+    srcHeight_ = srcHeight;
+    srcPixFmt_ = srcPixFmt;
+    dstPixFmt_[0] = dstPixFmt;
+
+    srcTimeBase_ = srcTimeBase;
+    srcPAR_ = srcPAR;
+
+    AVFilter * srcFilterDef = avfilter_get_by_name("buffer");
+    AVFilter * dstFilterDef = avfilter_get_by_name("buffersink");
+
+    graph_ = avfilter_graph_alloc();
+
+    std::string srcCfg;
+    {
+      const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
+
+      std::ostringstream os;
+
+#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(3, 0, 101)
+      os << "video_size=" << srcWidth_ << "x" << srcHeight_
+         << ":pix_fmt=" << txtPixFmt
+         << ":time_base=" << srcTimeBase_.num
+         << "/" << srcTimeBase_.den
+         << ":pixel_aspect=" << srcPAR_.num
+         << "/" << srcPAR_.den;
+#else
+      os << srcWidth_ << ":"
+         << srcHeight_ << ":"
+         << srcPixFmt_ << ":"
+         << srcTimeBase_.num << ":"
+         << srcTimeBase_.den << ":"
+         << srcPAR_.num << ":"
+         << srcPAR_.den;
+#endif
+      srcCfg = os.str().c_str();
+    }
+
+    int err = avfilter_graph_create_filter(&src_,
+                                           srcFilterDef,
+                                           "in",
+                                           srcCfg.c_str(),
+                                           NULL,
+                                           graph_);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_create_filter(&sink_,
+                                       dstFilterDef,
+                                       "out",
+                                       NULL,
+                                       dstPixFmt_,
+                                       graph_);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    out_ = avfilter_inout_alloc();
+    err = out_ ? 0 : AVERROR(ENOMEM);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    out_->name = av_strdup("in");
+    out_->filter_ctx = src_;
+    out_->pad_idx = 0;
+    out_->next = NULL;
+
+    in_ = avfilter_inout_alloc();
+    err = in_ ? 0 : AVERROR(ENOMEM);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    in_->name = av_strdup("out");
+    in_->filter_ctx = sink_;
+    in_->pad_idx = 0;
+    in_->next = NULL;
+
+    err = avfilter_graph_parse(graph_, filterChain, &in_, &out_, NULL);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_config(graph_, NULL);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::push
+  //
+  bool
+  VideoFilterGraph::push(const AVFrame * frame)
+  {
+    int flags = AV_VSRC_BUF_FLAG_OVERWRITE;
+    int err = av_vsrc_buffer_add_frame(src_, frame, flags);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // VideoFilterGraph::pull
+  //
+  bool
+  VideoFilterGraph::pull(AVFrame * frame)
+  {
+    if (avfilter_poll_frame(sink_->inputs[0]))
+    {
+      AVFilterBufferRef * picref = NULL;
+      int flags = 0;
+      int err = av_vsink_buffer_get_video_buffer_ref(sink_, &picref, flags);
+      YAE_ASSERT(err >= 0);
+
+      if (picref)
+      {
+        err = avfilter_fill_frame_from_video_buffer_ref(frame, picref);
+        YAE_ASSERT(err >= 0);
+        avfilter_unref_buffer(picref);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 
   //----------------------------------------------------------------
   // FrameWithAutoCleanup
@@ -1188,19 +1110,11 @@ namespace yae
     std::size_t sampleLineSize_[4];
     AVRational frameRate_;
 
-    // it appears ffmpeg outputs decoded frames in correct presentation order
-    // but without the presentation time stamps (PTS), therefore I will
-    // keep a sorted list of packet time stamps for all packets going
-    // into avcodec_decode_video2 and use the earliest time stamp
-    // from that list to assign PTS to the decoded frames.
-    std::list<PacketTime> packetTimes_;
-
     int64 ptsBestEffort_;
     TTime prevPTS_;
     bool hasPrevPTS_;
 
     uint64 framesDecoded_;
-    struct SwsContext * imgConvertCtx_;
 
     FrameWithAutoCleanup frameAutoCleanup_;
 
@@ -1243,7 +1157,6 @@ namespace yae
     numSamplePlanes_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
-    imgConvertCtx_(NULL),
     subs_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_VIDEO);
@@ -1470,39 +1383,24 @@ namespace yae
     enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
     AVCodecContext * codecContext = this->codecContext();
 
-    if (native_.pixelFormat_ != output_.pixelFormat_ ||
-        native_.encodedWidth_ != output_.encodedWidth_ ||
-        native_.encodedHeight_ != output_.encodedHeight_)
-    {
-      imgConvertCtx_ = sws_getContext(// from:
-                                      native_.encodedWidth_,
-                                      native_.encodedHeight_,
-                                      codecContext->pix_fmt,
-
-                                      // to:
-                                      output_.encodedWidth_,
-                                      output_.encodedHeight_,
-                                      ffmpegPixelFormat,
-
-                                      SWS_FAST_BILINEAR,
-                                      NULL,
-                                      NULL,
-                                      NULL);
-    }
-
     frameAutoCleanup_.reset();
-    packetTimes_.clear();
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
+
+#if 1
+    const char * filterChain = "null";
+#else
+    const char * filterChain = "yadif=0:0:1";
+#endif
 
     filterGraph_.setup(codecContext->width,
                        codecContext->height,
                        codecContext->time_base,
                        codecContext->sample_aspect_ratio,
                        codecContext->pix_fmt,
-                       ffmpegPixelFormat);
-
+                       ffmpegPixelFormat,
+                       filterChain);
 
     frameQueue_.open();
     return true;
@@ -1515,15 +1413,7 @@ namespace yae
   VideoTrack::decoderShutdown()
   {
     filterGraph_.reset();
-
-    if (imgConvertCtx_)
-    {
-      sws_freeContext(imgConvertCtx_);
-      imgConvertCtx_ = NULL;
-    }
-
     frameAutoCleanup_.reset();
-    packetTimes_.clear();
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     frameQueue_.close();
@@ -1541,15 +1431,6 @@ namespace yae
       // make a local shallow copy of the packet:
       AVPacket packet = packetPtr->ffmpeg_;
 
-      // save packet timestamps and duration so we can capture
-      // and re-use this to timestamp the decoded frame:
-      savePacketTime(packet);
-      if (packetTime_.pts_ != AV_NOPTS_VALUE ||
-          packetTime_.dts_ != AV_NOPTS_VALUE)
-      {
-        insertPacketTime(packetTimes_, packetTime_);
-      }
-
       // Decode video frame
       int gotPicture = 0;
       AVFrame * avFrame = frameAutoCleanup_;
@@ -1563,259 +1444,202 @@ namespace yae
         return true;
       }
 
-      framesDecoded_++;
-      TVideoFramePtr vfPtr(new TVideoFrame());
-      TVideoFrame & vf = *vfPtr;
-
-      // shortcut to the saved packet time associated with this frame:
-      const PacketTime * frameTime = (PacketTime *)(avFrame->opaque);
-
-      PacketTime t;
-      if (!packetTimes_.empty())
-      {
-        t = packetTimes_.back();
-        packetTimes_.pop_back();
-#if 0 // ndef NDEBUG
-        if (frameTime && frameTime->pts_ != t.pts_)
-        {
-          std::cerr << "\ntimestamp mismatch: " << std::endl
-                    << "1. out pts: " << frameTime->pts_
-                    << ", dts: " << frameTime->dts_
-                    << ", len: " << frameTime->duration_ << std::endl
-                    << "2. out pts: " << t.pts_
-                    << ", dts: " << t.dts_
-                    << ", len: " << t.duration_ << std::endl;
-        }
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54, 32, 100)
+      avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+#else
+      avFrame->pts = avFrame->best_effort_timestamp;
 #endif
+      framesDecoded_++;
+
+      if (!filterGraph_.push(avFrame))
+      {
+        YAE_ASSERT(false);
+        return true;
       }
 
-      bool gotPTS = false;
-      vf.time_.base_ = stream_->time_base.den;
-
-      // std::cerr << "T: " << avFrame->best_effort_timestamp << std::endl;
-
-      if (!gotPTS && framesDecoded_ == 1)
+      while (filterGraph_.pull(avFrame))
       {
-        ptsBestEffort_ = 0;
-        vf.time_.time_ = startTime_;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
-      }
+        TVideoFramePtr vfPtr(new TVideoFrame());
+        TVideoFrame & vf = *vfPtr;
 
-      if (!gotPTS)
-      {
-        if (ptsBestEffort_ < avFrame->best_effort_timestamp)
-        {
-          ptsBestEffort_ = avFrame->best_effort_timestamp;
-        }
-        else
-        {
-          ptsBestEffort_++;
-        }
-
-        vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
-                           "avFrame->best_effort_timestamp");
-      }
-
-      if (!gotPTS &&
-          avFrame->pts != AV_NOPTS_VALUE &&
-          codecContext->time_base.num &&
-          codecContext->time_base.den)
-      {
-        vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
-        vf.time_.base_ = codecContext->time_base.den;
-
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
-      }
-#if 0
-      if (!gotPTS && frameTime && frameTime->pts_ != AV_NOPTS_VALUE)
-      {
-        vf.time_.time_ = stream_->time_base.num * frameTime->pts_;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "frameTime");
-      }
-
-      if (!gotPTS && t.pts_ != AV_NOPTS_VALUE)
-      {
-        vf.time_.time_ = stream_->time_base.num * t.pts_;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t.pts");
-      }
-
-      if (!gotPTS && t.dts_ != AV_NOPTS_VALUE && packetTimes_.empty())
-      {
-        vf.time_.time_ = stream_->time_base.num * t.dts_;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t.dts");
-      }
-
-      if (!gotPTS && frameRate_.num && frameRate_.den)
-      {
+        bool gotPTS = false;
         vf.time_.base_ = stream_->time_base.den;
-        vf.time_.time_ =
-          startTime_ +
-          (framesDecoded_ - 1) *
-          (int64_t(frameRate_.den) * int64_t(stream_->time_base.num)) /
-          (int64_t(frameRate_.num));
 
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0 + n/fps");
+        // std::cerr << "T: " << avFrame->best_effort_timestamp << std::endl;
 
-        if (!gotPTS && hasPrevPTS_)
+        if (!gotPTS && framesDecoded_ == 1)
+        {
+          ptsBestEffort_ = 0;
+          vf.time_.time_ = startTime_;
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
+        }
+
+        if (!gotPTS)
+        {
+          if (ptsBestEffort_ < avFrame->best_effort_timestamp)
+          {
+            ptsBestEffort_ = avFrame->best_effort_timestamp;
+          }
+          else
+          {
+            ptsBestEffort_++;
+          }
+
+          vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
+                             "avFrame->best_effort_timestamp");
+        }
+
+        if (!gotPTS &&
+            avFrame->pts != AV_NOPTS_VALUE &&
+            codecContext->time_base.num &&
+            codecContext->time_base.den)
+        {
+          vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
+          vf.time_.base_ = codecContext->time_base.den;
+
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
+        }
+
+        if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
         {
           // increment by average frame duration:
           vf.time_ = prevPTS_;
-          vf.time_ += TTime(frameRate_.den,
-                            frameRate_.num);
-
+          vf.time_ += TTime(frameRate_.den, frameRate_.num);
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
         }
-      }
-#endif
 
-      if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
-      {
-        // increment by average frame duration:
-        vf.time_ = prevPTS_;
-        vf.time_ += TTime(frameRate_.den, frameRate_.num);
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
-      }
-
-      YAE_ASSERT(gotPTS);
-      if (!gotPTS && hasPrevPTS_)
-      {
-        vf.time_ = prevPTS_;
-        vf.time_.time_++;
-
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t++");
-      }
-
-      YAE_ASSERT(gotPTS);
-      if (gotPTS)
-      {
-#if 0 // ndef NDEBUG
-        if (hasPrevPTS_)
+        YAE_ASSERT(gotPTS);
+        if (!gotPTS && hasPrevPTS_)
         {
-          double ta = prevPTS_.toSeconds();
-          double tb = vf.time_.toSeconds();
-          double dt = tb - ta;
-          double fd = 1.0 / native_.frameRate_;
-          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-          if (dt > 2.0 * fd)
-          {
-            std::cerr
-              << "\nNOTE: detected large PTS jump: " << std::endl
-              << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
-              << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
-              << "difference " << dt << " seconds, equivalent to "
-              << dt / fd << " frames" << std::endl
-              << std::endl;
-          }
+          vf.time_ = prevPTS_;
+          vf.time_.time_++;
+
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t++");
         }
+
+        YAE_ASSERT(gotPTS);
+        if (gotPTS)
+        {
+#if 0 // ndef NDEBUG
+          if (hasPrevPTS_)
+          {
+            double ta = prevPTS_.toSeconds();
+            double tb = vf.time_.toSeconds();
+            double dt = tb - ta;
+            double fd = 1.0 / native_.frameRate_;
+            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+            if (dt > 2.0 * fd)
+            {
+              std::cerr
+                << "\nNOTE: detected large PTS jump: " << std::endl
+                << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
+                << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
+                << "difference " << dt << " seconds, equivalent to "
+                << dt / fd << " frames" << std::endl
+                << std::endl;
+            }
+          }
 #endif
 
-        hasPrevPTS_ = true;
-        prevPTS_ = vf.time_;
-      }
+          hasPrevPTS_ = true;
+          prevPTS_ = vf.time_;
+        }
 
-      // make sure the frame is in the in/out interval:
-      if (playbackInterval_)
-      {
-        double t = vf.time_.toSeconds();
-        double dt = 1.0 / double(output_.frameRate_);
-        if (t > timeOut_ || (t + dt) < timeIn_)
+        // make sure the frame is in the in/out interval:
+        if (playbackInterval_)
         {
-          if (t > timeOut_)
+          double t = vf.time_.toSeconds();
+          double dt = 1.0 / double(output_.frameRate_);
+          if (t > timeOut_ || (t + dt) < timeIn_)
           {
-            discarded_++;
-          }
+            if (t > timeOut_)
+            {
+              discarded_++;
+            }
 
 #if 0
-          std::cerr << "discarding video frame: " << t
-                    << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
-                    << std::endl;
+            std::cerr << "discarding video frame: " << t
+                      << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
+                      << std::endl;
 #endif
-          return true;
+            return true;
+          }
+
+          discarded_ = 0;
         }
 
-        discarded_ = 0;
-      }
+        vf.traits_ = output_;
 
-      vf.traits_ = output_;
-
-      TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
-                                    &IPlanarBuffer::deallocator);
-      for (unsigned char i = 0; i < numSamplePlanes_; i++)
-      {
-        std::size_t rowBytes = sampleLineSize_[i];
-        std::size_t rows = samplePlaneSize_[i] / rowBytes;
-        sampleBuffer->resize(i, rowBytes, rows, kRowAlignment);
-      }
-      vf.data_ = sampleBuffer;
-
-      // don't forget about tempo scaling:
-      {
-        boost::lock_guard<boost::mutex> lock(tempoMutex_);
-        vf.tempo_ = tempo_;
-      }
-
-      // check for applicable subtitles:
-      {
-        double v0 = vf.time_.toSeconds();
-        double v1 = v0 + (vf.traits_.frameRate_ ?
-                          1.0 / vf.traits_.frameRate_ :
-                          0.042);
-
-        std::size_t nsubs = subs_ ? subs_->size() : 0;
-        for (std::size_t i = 0; i < nsubs; i++)
+        TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
+                                      &IPlanarBuffer::deallocator);
+        for (unsigned char i = 0; i < numSamplePlanes_; i++)
         {
-          SubtitlesTrack & subs = *((*subs_)[i]);
+          std::size_t rowBytes = sampleLineSize_[i];
+          std::size_t rows = samplePlaneSize_[i] / rowBytes;
+          sampleBuffer->resize(i, rowBytes, rows, kRowAlignment);
+        }
+        vf.data_ = sampleBuffer;
 
-          double s0 = subs.prev_.time_.toSeconds();
-          double s1 = subs.prev_.tEnd_.toSeconds();
+        // don't forget about tempo scaling:
+        {
+          boost::lock_guard<boost::mutex> lock(tempoMutex_);
+          vf.tempo_ = tempo_;
+        }
 
-          while (true)
+        // check for applicable subtitles:
+        {
+          double v0 = vf.time_.toSeconds();
+          double v1 = v0 + (vf.traits_.frameRate_ ?
+                            1.0 / vf.traits_.frameRate_ :
+                            0.042);
+
+          std::size_t nsubs = subs_ ? subs_->size() : 0;
+          for (std::size_t i = 0; i < nsubs; i++)
           {
-            if (subs.prev_.tEnd_.time_ == std::numeric_limits<int64>::max())
-            {
-              // calculate the end time based in display time
-              // of the next subtitle frame:
+            SubtitlesTrack & subs = *((*subs_)[i]);
 
-              TSubsFrame next;
-              if (subs.queue_.peek(next, &terminator_))
+            double s0 = subs.prev_.time_.toSeconds();
+            double s1 = subs.prev_.tEnd_.toSeconds();
+
+            while (true)
+            {
+              if (subs.prev_.tEnd_.time_ == std::numeric_limits<int64>::max())
               {
-                subs.prev_.tEnd_ = next.time_;
-                s1 = subs.prev_.tEnd_.toSeconds();
+                // calculate the end time based in display time
+                // of the next subtitle frame:
+
+                TSubsFrame next;
+                if (subs.queue_.peek(next, &terminator_))
+                {
+                  subs.prev_.tEnd_ = next.time_;
+                  s1 = subs.prev_.tEnd_.toSeconds();
+                }
               }
+
+              if (v0 < s1)
+              {
+                break;
+              }
+
+              bool waitForData = false;
+              if (!subs.queue_.pop(subs.prev_, &terminator_, waitForData))
+              {
+                break;
+              }
+
+              s0 = subs.prev_.time_.toSeconds();
+              s1 = subs.prev_.tEnd_.toSeconds();
             }
 
-            if (v0 < s1)
+            if (s0 < v1 && v0 < s1)
             {
-              break;
-            }
-
-            bool waitForData = false;
-            if (!subs.queue_.pop(subs.prev_, &terminator_, waitForData))
-            {
-              break;
-            }
-
-            s0 = subs.prev_.time_.toSeconds();
-            s1 = subs.prev_.tEnd_.toSeconds();
-          }
-
-          if (s0 < v1 && v0 < s1)
-          {
-            vf.subs_.push_back(subs.prev_);
-
-            if (subs.render_)
-            {
-              // FIXME: overlay subtitle onto frame here:
+              vf.subs_.push_back(subs.prev_);
             }
           }
         }
-      }
 
-      if (!imgConvertCtx_)
-      {
         // copy the sample planes:
-
         for (unsigned char i = 0; i < numSamplePlanes_; i++)
         {
           std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
@@ -1823,68 +1647,51 @@ namespace yae
           unsigned char * dst = sampleBuffer->data(i);
 
           std::size_t srcRowBytes = avFrame->linesize[i];
+          std::size_t srcRows = avFrame->height;
           const unsigned char * src = avFrame->data[i];
 
           std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
-          for (std::size_t i = 0; i < dstRows; i++)
+          std::size_t copyRows = std::min(srcRows, dstRows);
+          for (std::size_t i = 0; i < copyRows; i++)
           {
             memcpy(dst, src, copyRowBytes);
             src += srcRowBytes;
             dst += dstRowBytes;
           }
         }
-      }
-      else
-      {
-        // convert the image to the desired pixel format:
 
-        AVPicture pict;
-        for (unsigned char i = 0; i < numSamplePlanes_; i++)
-        {
-          pict.data[i] = sampleBuffer->data(i);
-          pict.linesize[i] = (int)sampleBuffer->rowBytes(i);
-        }
-
-        sws_scale(imgConvertCtx_,
-                  avFrame->data,
-                  avFrame->linesize,
-                  0,
-                  codecContext->height,
-                  pict.data,
-                  pict.linesize);
-      }
-
-      // put the output frame into frame queue:
-      if (!frameQueue_.push(vfPtr, &terminator_))
-      {
-        return false;
-      }
-
-      // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
-
-      // put repeated output frames into frame queue:
-      for (int i = 0; i < avFrame->repeat_pict; i++)
-      {
-        TVideoFramePtr rvfPtr(new TVideoFrame(vf));
-        TVideoFrame & rvf = *rvfPtr;
-
-        if (frameRate_.num && frameRate_.den)
-        {
-          rvf.time_ += TTime((i + 1) * frameRate_.den, frameRate_.num);
-        }
-        else
-        {
-          rvf.time_.time_++;
-        }
-
-#if 0 // ndef NDEBUG
-        std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
-                  << std::endl;
-#endif
-
-        if (!frameQueue_.push(rvfPtr, &terminator_))
+        // put the output frame into frame queue:
+        if (!frameQueue_.push(vfPtr, &terminator_))
         {
           return false;
+        }
+
+        // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
+
+        // put repeated output frames into frame queue:
+        for (int i = 0; i < avFrame->repeat_pict; i++)
+        {
+          TVideoFramePtr rvfPtr(new TVideoFrame(vf));
+          TVideoFrame & rvf = *rvfPtr;
+
+          if (frameRate_.num && frameRate_.den)
+          {
+            rvf.time_ += TTime((i + 1) * frameRate_.den, frameRate_.num);
+          }
+          else
+          {
+            rvf.time_.time_++;
+          }
+
+#if 0 // ndef NDEBUG
+          std::cerr << "frame repeated at " << rvf.time_.toSeconds() << " sec"
+                    << std::endl;
+#endif
+
+          if (!frameQueue_.push(rvfPtr, &terminator_))
+          {
+            return false;
+          }
         }
       }
     }
@@ -1977,8 +1784,8 @@ namespace yae
     }
 
     //! encoded frame size (including any padding):
-    t.encodedWidth_ = context->coded_width;
-    t.encodedHeight_ = context->coded_height;
+    t.encodedWidth_ = context->width;
+    t.encodedHeight_ = context->height;
 
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
@@ -2132,7 +1939,6 @@ namespace yae
 
     setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
-    packetTimes_.clear();
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     framesDecoded_ = 0;
@@ -2344,10 +2150,6 @@ namespace yae
       // make a local shallow copy of the packet:
       AVPacket packet = packetPtr->ffmpeg_;
       AVCodecContext * codecContext = this->codecContext();
-
-      // save packet timestamps and duration so we can capture
-      // and re-use this to timestamp the decoded frame:
-      // savePacketTime(packet);
 
       // Decode audio frame, piecewise:
       std::list<std::vector<unsigned char> > chunks;
