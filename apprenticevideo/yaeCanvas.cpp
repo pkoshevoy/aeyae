@@ -779,6 +779,7 @@ namespace yae
                    dataTypeGL,
                    frame->data_->data(0));
     }
+    glDisable(GL_TEXTURE_RECTANGLE_EXT);
 
     return true;
   }
