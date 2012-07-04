@@ -390,6 +390,21 @@ namespace yae
   //
   struct YAE_API TSubsFrame : public TFrame<TSubsFormat>
   {
+    struct TRect
+    {
+      int x_;
+      int y_;
+      int w_;
+      int h_;
+      int numColors_;
+
+      const unsigned char * data_[4];
+      int rowBytes_[4];
+
+      const char * text_;
+      const char * assa_;
+    };
+
     struct IPrivate
     {
     protected:
@@ -398,6 +413,9 @@ namespace yae
     public:
       virtual void destroy() = 0;
       static void deallocator(IPrivate * p);
+
+      virtual unsigned int numRects() const = 0;
+      virtual void getRect(unsigned int i, TRect & rect) const = 0;
     };
 
     // track index:

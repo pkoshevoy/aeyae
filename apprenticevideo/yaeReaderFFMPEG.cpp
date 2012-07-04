@@ -174,7 +174,8 @@ namespace yae
   //
   class TSubsPrivate : public TSubsFrame::IPrivate
   {
-    virtual ~TSubsPrivate()
+    // virtual:
+    ~TSubsPrivate()
     {
       avsubtitle_free(&sub_);
     }
@@ -184,9 +185,33 @@ namespace yae
       sub_(sub)
     {}
 
-    virtual void destroy()
+    // virtual:
+    void destroy()
+    { delete this; }
+
+    // virtual:
+    unsigned int numRects() const
+    { return sub_.num_rects; }
+
+    // virtual:
+    void getRect(unsigned int i, TSubsFrame::TRect & rect) const
     {
-      delete this;
+      if (i >= sub_.num_rects)
+      {
+        YAE_ASSERT(false);
+        return;
+      }
+
+      const AVSubtitleRect * r = sub_.rects[i];
+      rect.x_ = r->x;
+      rect.y_ = r->y;
+      rect.w_ = r->w;
+      rect.h_ = r->h;
+      rect.numColors_ = r->nb_colors;
+      memcpy(rect.data_, r->pict.data, sizeof(r->pict.data));
+      memcpy(rect.rowBytes_, r->pict.linesize, sizeof(r->pict.linesize));
+      rect.text_ = r->text;
+      rect.assa_ = r->ass;
     }
 
     AVSubtitle sub_;
@@ -942,12 +967,23 @@ namespace yae
         const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
 
         std::ostringstream os;
+
+#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(3, 0, 101)
         os << "video_size=" << srcWidth_ << "x" << srcHeight_
            << ":pix_fmt=" << txtPixFmt
            << ":time_base=" << srcTimeBase_.num
            << "/" << srcTimeBase_.den
            << ":pixel_aspect=" << srcPAR_.num
            << "/" << srcPAR_.den;
+#else
+        os << srcWidth_ << ":"
+           << srcHeight_ << ":"
+           << srcPixFmt_ << ":"
+           << srcTimeBase_.num << ":"
+           << srcTimeBase_.den << ":"
+           << srcPAR_.num << ":"
+           << srcPAR_.den;
+#endif
         srcCfg = os.str().c_str();
       }
 
@@ -985,9 +1021,16 @@ namespace yae
       in_->pad_idx = 0;
       in_->next = NULL;
 
+#if 1
+      const char * filters = "null";
+#else
       const char * filters =
         "drawtext=fontsize=30:"
+#ifdef __APPLE__
+        "fontfile=/Library/Fonts/Arial Unicode.ttf:"
+#else
         "fontfile=/usr/share/fonts/truetype/FreeSerif.ttf:"
+#endif
         "text='hello world':"
         "x=(w-text_w)/2:"
         "y=(h-text_h-line_h):"
@@ -995,6 +1038,7 @@ namespace yae
         "shadowcolor='0x0000007f':"
         "shadowx=1:"
         "shadowy=1";
+#endif
 
       err = avfilter_graph_parse(graph_, filters, &in_, &out_, NULL);
       YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
