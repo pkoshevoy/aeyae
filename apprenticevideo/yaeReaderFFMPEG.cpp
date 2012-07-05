@@ -1652,6 +1652,8 @@ namespace yae
 
           std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
           std::size_t copyRows = std::min(srcRows, dstRows);
+          vf.traits_.encodedHeight_ = copyRows;
+
           for (std::size_t i = 0; i < copyRows; i++)
           {
             memcpy(dst, src, copyRowBytes);
@@ -1784,8 +1786,8 @@ namespace yae
     }
 
     //! encoded frame size (including any padding):
-    t.encodedWidth_ = context->width;
-    t.encodedHeight_ = context->height;
+    t.encodedWidth_ = context->coded_width;
+    t.encodedHeight_ = context->coded_height;
 
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
