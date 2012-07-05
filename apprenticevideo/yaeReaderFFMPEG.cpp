@@ -49,16 +49,17 @@
 // ffmpeg includes:
 extern "C"
 {
-#include <libavutil/avstring.h>
-#include <libavutil/error.h>
-#include <libavutil/pixdesc.h>
+#include <libavcodec/avcodec.h>
 #include <libavfilter/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/avfiltergraph.h>
 #include <libavfilter/buffersink.h>
-#include <libavformat/avio.h>
 #include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
+#include <libavformat/avio.h>
+#include <libavutil/avstring.h>
+#include <libavutil/error.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
 
@@ -808,7 +809,7 @@ namespace yae
                const AVRational & srcPAR,
                PixelFormat srcPixFmt,
                PixelFormat dstPixFmt,
-               const char * filterChain = "null");
+               const char * filterChain = NULL);
 
     bool push(const AVFrame * in);
     bool pull(AVFrame * out);
@@ -903,11 +904,10 @@ namespace yae
 
     std::string srcCfg;
     {
-      const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
-
       std::ostringstream os;
 
 #if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(3, 0, 101)
+      const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
       os << "video_size=" << srcWidth_ << "x" << srcHeight_
          << ":pix_fmt=" << txtPixFmt
          << ":time_base=" << srcTimeBase_.num
@@ -960,7 +960,21 @@ namespace yae
     in_->pad_idx = 0;
     in_->next = NULL;
 
-    err = avfilter_graph_parse(graph_, filterChain, &in_, &out_, NULL);
+    std::string filters;
+    {
+      std::ostringstream os;
+      if (filterChain && *filterChain && strcmp(filterChain, "null") != 0)
+      {
+        os << filterChain << ",";
+      }
+
+      const char * txtPixFmt = av_get_pix_fmt_name(dstPixFmt_[0]);
+      os << "format=" << txtPixFmt;
+
+      filters = os.str().c_str();
+    }
+
+    err = avfilter_graph_parse(graph_, filters.c_str(), &in_, &out_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
@@ -975,8 +989,7 @@ namespace yae
   bool
   VideoFilterGraph::push(const AVFrame * frame)
   {
-    int flags = AV_VSRC_BUF_FLAG_OVERWRITE;
-    int err = av_vsrc_buffer_add_frame(src_, frame, flags);
+    int err = av_buffersrc_add_frame(src_, frame, 0);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     return true;
@@ -988,20 +1001,21 @@ namespace yae
   bool
   VideoFilterGraph::pull(AVFrame * frame)
   {
-    if (avfilter_poll_frame(sink_->inputs[0]))
+    AVFilterBufferRef * picref = NULL;
+    int err = av_buffersink_get_buffer_ref(sink_, &picref, 0);
+    if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
     {
-      AVFilterBufferRef * picref = NULL;
-      int flags = 0;
-      int err = av_vsink_buffer_get_video_buffer_ref(sink_, &picref, flags);
-      YAE_ASSERT(err >= 0);
+      return false;
+    }
 
-      if (picref)
-      {
-        err = avfilter_fill_frame_from_video_buffer_ref(frame, picref);
-        YAE_ASSERT(err >= 0);
-        avfilter_unref_buffer(picref);
-        return true;
-      }
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    if (picref)
+    {
+      err = avfilter_copy_buf_props(frame, picref);
+      YAE_ASSERT(err >= 0);
+      avfilter_unref_buffer(picref);
+      return true;
     }
 
     return false;
@@ -1055,9 +1069,6 @@ namespace yae
   struct VideoTrack : public Track
   {
     VideoTrack(AVFormatContext * context, AVStream * stream);
-
-    // row byte alignment constant:
-    enum { kRowAlignment = 32 };
 
     // virtual:
     bool open();
@@ -1306,6 +1317,10 @@ namespace yae
       return false;
     }
 
+    // shortcut for ffmpeg pixel format:
+    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
+    AVCodecContext * codecContext = this->codecContext();
+
     // get number of contiguous sample planes,
     // sample set stride (in bits) for each plane:
     unsigned char samplePlaneStride[4] = { 0 };
@@ -1313,6 +1328,7 @@ namespace yae
 
     if (output_.pixelFormat_ != native_.pixelFormat_)
     {
+      const unsigned int kRowAlignment = 32;
       output_.encodedWidth_ =
         (override_.encodedWidth_ + (kRowAlignment - 1)) &
         ~(kRowAlignment - 1);
@@ -1379,17 +1395,13 @@ namespace yae
       stream_->avg_frame_rate :
       stream_->r_frame_rate;
 
-    // shortcut for ffmpeg pixel format:
-    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
-    AVCodecContext * codecContext = this->codecContext();
-
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
 
 #if 1
-    const char * filterChain = "null";
+    const char * filterChain = NULL;
 #else
     const char * filterChain = "yadif=0:0:1";
 #endif
@@ -1577,7 +1589,7 @@ namespace yae
         {
           std::size_t rowBytes = sampleLineSize_[i];
           std::size_t rows = samplePlaneSize_[i] / rowBytes;
-          sampleBuffer->resize(i, rowBytes, rows, kRowAlignment);
+          sampleBuffer->resize(i, rowBytes, rows);
         }
         vf.data_ = sampleBuffer;
 
@@ -1652,8 +1664,6 @@ namespace yae
 
           std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
           std::size_t copyRows = std::min(srcRows, dstRows);
-          vf.traits_.encodedHeight_ = copyRows;
-
           for (std::size_t i = 0; i < copyRows; i++)
           {
             memcpy(dst, src, copyRowBytes);
