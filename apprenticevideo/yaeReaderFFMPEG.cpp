@@ -1090,8 +1090,11 @@ namespace yae
     bool getTraits(VideoTraits & traits) const;
 
     // use this for video frame conversion (pixel format and size)
-    bool setTraitsOverride(const VideoTraits & override);
+    bool setTraitsOverride(const VideoTraits & override, bool deint);
     bool getTraitsOverride(VideoTraits & override) const;
+
+    inline bool setTraitsOverride(const VideoTraits & override)
+    { return setTraitsOverride(override, deinterlace_); }
 
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator);
@@ -1103,12 +1106,17 @@ namespace yae
     // starting from a given time point:
     int resetTimeCounters(double seekTime);
 
+    // adjust frame duration:
+    bool setDeinterlacing(bool enabled);
+
     void setSubs(std::vector<TSubsTrackPtr> * subs)
     { subs_ = subs; }
 
     // these are used to speed up video decoding:
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;
+
+    bool deinterlace_;
 
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;
@@ -1164,6 +1172,7 @@ namespace yae
     Track(context, stream),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
+    deinterlace_(false),
     frameQueue_(kQueueSizeSmall),
     numSamplePlanes_(0),
     hasPrevPTS_(false),
@@ -1400,12 +1409,7 @@ namespace yae
     ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
 
-#if 1
-    const char * filterChain = NULL;
-#else
-    const char * filterChain = "yadif=0:0:1";
-#endif
-
+    const char * filterChain = deinterlace_ ? "yadif=0:0:1" : NULL;
     filterGraph_.setup(codecContext->width,
                        codecContext->height,
                        codecContext->time_base,
@@ -1837,9 +1841,10 @@ namespace yae
   // VideoTrack::setTraitsOverride
   //
   bool
-  VideoTrack::setTraitsOverride(const VideoTraits & override)
+  VideoTrack::setTraitsOverride(const VideoTraits & override, bool deint)
   {
-    if (compare<VideoTraits>(override_, override) == 0)
+    if (compare<VideoTraits>(override_, override) == 0 &&
+        deinterlace_ == deint)
     {
       // nothing changed:
       return true;
@@ -1857,6 +1862,7 @@ namespace yae
     }
 
     override_ = override;
+    deinterlace_ = deint;
 
     if (alreadyDecoding)
     {
@@ -1957,6 +1963,16 @@ namespace yae
 
     return err;
   }
+
+  //----------------------------------------------------------------
+  // VideoTrack::setDeinterlacing
+  //
+  bool
+  VideoTrack::setDeinterlacing(bool deint)
+  {
+    return setTraitsOverride(override_, deint);
+  }
+
 
   //----------------------------------------------------------------
   // AudioTrack
@@ -2888,6 +2904,7 @@ namespace yae
     void skipNonReferenceFrames(bool skip);
 
     bool setTempo(double tempo);
+    bool setDeinterlacing(bool enabled);
 
     std::size_t subsCount() const;
     const char * subsInfo(std::size_t i, TSubsFormat * t) const;
@@ -3777,6 +3794,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::setDeinterlacing
+  //
+  bool
+  Movie::setDeinterlacing(bool enabled)
+  {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        return videoTrack->setDeinterlacing(enabled);
+      }
+    }
+    catch (...)
+    {}
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Movie::subsCount
   //
   std::size_t
@@ -4299,6 +4338,15 @@ namespace yae
   ReaderFFMPEG::setTempo(double tempo)
   {
     return private_->movie_.setTempo(tempo);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setDeinterlacing
+  //
+  bool
+  ReaderFFMPEG::setDeinterlacing(bool enabled)
+  {
+    return private_->movie_.setDeinterlacing(enabled);
   }
 
   //----------------------------------------------------------------

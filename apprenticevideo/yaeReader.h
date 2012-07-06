@@ -107,6 +107,9 @@ namespace yae
     // or it can be used to speed up audio to watch the movie faster:
     virtual bool setTempo(double tempo) = 0;
 
+    // enable/disable video deinterlacing:
+    virtual bool setDeinterlacing(bool enabled) = 0;
+
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const = 0;
     virtual const char * subsInfo(std::size_t i, TSubsFormat * t) const = 0;

@@ -515,6 +515,10 @@ namespace yae
                  this, SLOT(playbackVerticalScaling()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionDeinterlace, SIGNAL(triggered()),
+                 this, SLOT(playbackColorConverter()));
+    YAE_ASSERT(ok);
+
     ok = connect(canvas_, SIGNAL(toggleFullScreen()),
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
@@ -2432,6 +2436,9 @@ namespace yae
 
       // request playback at currently selected playback rate:
       reader->setTempo(tempo_);
+
+      bool enable = actionDeinterlace->isChecked();
+      reader->setDeinterlacing(enable);
     }
     else
     {

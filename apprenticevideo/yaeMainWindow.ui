@@ -250,6 +250,7 @@ QLineEdit:disabled {
     <addaction name="actionLoop"/>
     <addaction name="separator"/>
     <addaction name="actionVerticalScaling"/>
+    <addaction name="actionDeinterlace"/>
     <addaction name="actionSkipColorConverter"/>
     <addaction name="actionSkipLoopFilter"/>
     <addaction name="actionSkipNonReferenceFrames"/>
@@ -793,6 +794,14 @@ QLineEdit QToolButton#clear_:pressed {
   <action name="actionNone">
    <property name="text">
     <string>None</string>
+   </property>
+  </action>
+  <action name="actionDeinterlace">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>De&amp;interlace</string>
    </property>
   </action>
  </widget>
