@@ -989,9 +989,14 @@ namespace yae
   bool
   VideoFilterGraph::push(const AVFrame * frame)
   {
+#if LIBAVFILTER_VERSION_MAJOR < 3
+    int flags = AV_VSRC_BUF_FLAG_OVERWRITE;
+    int err = av_vsrc_buffer_add_frame(src_, frame, flags);
+#else
     int err = av_buffersrc_add_frame(src_, frame, 0);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+#endif
 
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
   }
 
@@ -1002,12 +1007,28 @@ namespace yae
   VideoFilterGraph::pull(AVFrame * frame)
   {
     AVFilterBufferRef * picref = NULL;
+
+#if LIBAVFILTER_VERSION_MAJOR < 3
+    if (avfilter_poll_frame(sink_->inputs[0]))
+    {
+      int flags = 0;
+      int err = av_vsink_buffer_get_video_buffer_ref(sink_, &picref, flags);
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+      if (picref)
+      {
+        err = avfilter_fill_frame_from_video_buffer_ref(frame, picref);
+        YAE_ASSERT(err >= 0);
+        avfilter_unref_buffer(picref);
+        return true;
+      }
+    }
+#else
     int err = av_buffersink_get_buffer_ref(sink_, &picref, 0);
     if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
     {
       return false;
     }
-
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     if (picref)
@@ -1017,6 +1038,7 @@ namespace yae
       avfilter_unref_buffer(picref);
       return true;
     }
+#endif
 
     return false;
   }
