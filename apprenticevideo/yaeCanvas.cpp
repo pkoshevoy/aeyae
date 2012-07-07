@@ -1805,8 +1805,9 @@ namespace yae
         const unsigned char * str = subs.data_->data(0);
         const unsigned char * end = str + subs.data_->rowBytes(0);
         std::string text(str, end);
-        QString qstr = QString::fromUtf8(text.c_str()).trimmed();
+        text = stripHtmlTags(text);
 
+        QString qstr = QString::fromUtf8(text.c_str()).trimmed();
         if (!qstr.isEmpty())
         {
           drawTextWithShadowToFit(painter,

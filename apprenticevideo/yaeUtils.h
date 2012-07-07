@@ -225,6 +225,12 @@ namespace yae
                           int shadowOffset = 1,
                           QRect * bboxText = NULL);
 
+  //----------------------------------------------------------------
+  // stripHtmlTags
+  //
+  extern std::string
+  stripHtmlTags(const std::string & in);
+
 }
 
 

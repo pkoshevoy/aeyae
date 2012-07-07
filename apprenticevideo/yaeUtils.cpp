@@ -805,4 +805,76 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // stripHtmlTags
+  //
+  std::string
+  stripHtmlTags(const std::string & in)
+  {
+    // count open/close angle brackets:
+    int brackets[] = { 0, 0 };
+
+    std::size_t inLen = in.size();
+    for (std::size_t i = 0; i < inLen; i++)
+    {
+      if (in[i] == '<')
+      {
+        brackets[0]++;
+      }
+      else if (in[i] == '>')
+      {
+        brackets[1]++;
+      }
+
+      if (brackets[0] >= 2 && brackets[1] >= 2)
+      {
+        break;
+      }
+    }
+
+    if (brackets[0] < 2 || brackets[1] < 2)
+    {
+      // insufficient number of brackets, probably not an html string:
+      return std::string(in);
+    }
+
+    std::vector<char> tmp(inLen, 0);
+    std::size_t j = 0;
+
+    enum TState
+    {
+      kInText,
+      kInTag
+    };
+    TState s = kInText;
+
+    for (std::size_t i = 0; i < inLen; i++)
+    {
+      char c = in[i];
+
+      if (s == kInText)
+      {
+        if (c == '<')
+        {
+          s = kInTag;
+        }
+        else
+        {
+          tmp[j++] = c;
+        }
+      }
+      else if (s == kInTag)
+      {
+        if (c == '>')
+        {
+          s = kInText;
+          tmp[j++] = ' ';
+        }
+      }
+    }
+
+    std::string out(&(tmp[0]));
+    return out;
+  }
+
 }
