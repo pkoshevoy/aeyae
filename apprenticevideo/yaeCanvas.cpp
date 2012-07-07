@@ -18,6 +18,7 @@
 #include <yaeAPI.h>
 #include <yaeCanvas.h>
 #include <yaePixelFormatTraits.h>
+#include <yaeUtils.h>
 
 // boost includes:
 #include <boost/thread.hpp>
@@ -496,22 +497,6 @@ namespace yae
 
     return smaller;
   }
-
-  //----------------------------------------------------------------
-  // Tuple
-  //
-  template <std::size_t size, typename TScalar>
-  struct Tuple
-  {
-    enum { kSize = size };
-    TScalar data_[size];
-
-    inline TScalar & operator [] (std::size_t i)
-    { return data_[i]; }
-
-    inline const TScalar & operator [] (std::size_t i) const
-    { return data_[i]; }
-  };
 
   //----------------------------------------------------------------
   // TMakeCurrentContext
@@ -1016,42 +1001,6 @@ namespace yae
   TLegacyCanvas::loadFrame(QGLWidget * canvas,
                            const TVideoFramePtr & frame)
   {
-#if 0
-    static std::map<std::size_t, std::string> prev;
-    for (std::list<TSubsFrame>::const_iterator i = frame->subs_.begin();
-         i != frame->subs_.end(); ++i)
-    {
-      const TSubsFrame & subs = *i;
-      if (subs.traits_ == kSubsText)
-      {
-        const unsigned char * str = subs.data_->data(0);
-        const unsigned char * end = str + subs.data_->rowBytes(0);
-        std::string text(str, end);
-
-        if (prev[subs.index_] == text)
-        {
-          continue;
-        }
-
-        prev[subs.index_] = text;
-
-        std::cerr << std::endl << subs.index_
-                  << ". [" << subs.time_.toSeconds() << ", ";
-
-        if (subs.tEnd_.time_ != std::numeric_limits<int64>::max())
-        {
-          std::cerr << subs.tEnd_.toSeconds() << ") ";
-        }
-        else
-        {
-          std::cerr << "...)";
-        }
-
-        std::cerr << std::endl << text << std::endl;
-      }
-    }
-#endif
-
     static const GLsizei textureEdgeMax = calcTextureEdgeMax();
 
     // video traits shortcut:
@@ -1368,6 +1317,7 @@ namespace yae
                  Qt::WindowFlags f):
     QGLWidget(format, parent, shareWidget, f),
     private_(NULL),
+    overlay_(NULL),
     timerHideCursor_(this),
     timerScreenSaver_(this)
   {
@@ -1400,6 +1350,7 @@ namespace yae
   Canvas::~Canvas()
   {
     delete private_;
+    delete overlay_;
   }
 
   //----------------------------------------------------------------
@@ -1413,14 +1364,19 @@ namespace yae
     delete private_;
     private_ = NULL;
 
+    delete overlay_;
+    overlay_ = NULL;
+
     if ((glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
          glewIsExtensionSupported("GL_ARB_texture_rectangle")))
     {
       private_ = new TModernCanvas();
+      overlay_ = new TModernCanvas();
     }
     else
     {
       private_ = new TLegacyCanvas();
+      overlay_ = new TLegacyCanvas();
     }
   }
 
@@ -1431,6 +1387,8 @@ namespace yae
   Canvas::clear()
   {
     private_->clear(this);
+    overlay_->clear(this);
+    subs_.clear();
     refresh();
   }
 
@@ -1504,6 +1462,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::resizeEvent
+  //
+  void
+  Canvas::resizeEvent(QResizeEvent * event)
+  {
+    QGLWidget::resizeEvent(event);
+
+    if (overlay_)
+    {
+      updateOverlay();
+    }
+  }
+
+  //----------------------------------------------------------------
   // Canvas::initializeGL
   //
   void
@@ -1520,7 +1492,8 @@ namespace yae
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
 
-    glShadeModel(GL_SMOOTH);
+    // glShadeModel(GL_SMOOTH);
+    glShadeModel(GL_FLAT);
     glClearDepth(0);
     glClearStencil(0);
     glClearAccum(0, 0, 0, 1);
@@ -1528,6 +1501,95 @@ namespace yae
     glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
     glAlphaFunc(GL_ALWAYS, 0.0f);
+  }
+
+  //----------------------------------------------------------------
+  // calcImageWidth
+  //
+  static double
+  calcImageWidth(const Canvas::TPrivate * canvas)
+  {
+    double w = 0.0;
+    double h = 0.0;
+    double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
+    double darCropped = canvas->displayAspectRatioCropped();
+
+    if (dar != 0.0 && darCropped != 0.0 && dar > darCropped)
+    {
+      // crop left-right pillars:
+      w = h * darCropped;
+    }
+
+    return w;
+  }
+
+  //----------------------------------------------------------------
+  // calcImageHeight
+  //
+  static double
+  calcImageHeight(const Canvas::TPrivate * canvas)
+  {
+    double w = 0.0;
+    double h = 0.0;
+    double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
+    double darCropped = canvas->displayAspectRatioCropped();
+
+    if (dar != 0.0 && darCropped != 0.0 && dar < darCropped)
+    {
+      // crop top-bottom bars:
+      h = w / darCropped;
+    }
+
+    return h;
+  }
+
+  //----------------------------------------------------------------
+  // paintImage
+  //
+  static void
+  paintImage(Canvas::TPrivate * canvas,
+             int canvasWidth,
+             int canvasHeight)
+  {
+    double croppedWidth = calcImageWidth(canvas);
+    double croppedHeight = calcImageHeight(canvas);
+
+    double dar = croppedWidth / croppedHeight;
+    double car = double(canvasWidth) / double(canvasHeight);
+
+    double x = 0.0;
+    double y = 0.0;
+    double w = double(canvasWidth);
+    double h = double(canvasHeight);
+
+    if (dar < car)
+    {
+      w = double(canvasHeight) * dar;
+      x = 0.5 * (double(canvasWidth) - w);
+    }
+    else
+    {
+      h = double(canvasWidth) / dar;
+      y = 0.5 * (double(canvasHeight) - h);
+    }
+
+    glViewport(GLint(x + 0.5), GLint(y + 0.5),
+               GLsizei(w + 0.5), GLsizei(h + 0.5));
+
+    double uncroppedWidth = 0.0;
+    double uncroppedHeight = 0.0;
+    canvas->imageWidthHeight(uncroppedWidth, uncroppedHeight);
+
+    double left = (uncroppedWidth - croppedWidth) * 0.5;
+    double right = left + croppedWidth;
+    double top = (uncroppedHeight - croppedHeight) * 0.5;
+    double bottom = top + croppedHeight;
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(left, right, bottom, top);
+
+    canvas->draw();
   }
 
   //----------------------------------------------------------------
@@ -1599,46 +1661,14 @@ namespace yae
       glClear(GL_COLOR_BUFFER_BIT);
     }
 
-    double croppedWidth = this->imageWidth();
-    double croppedHeight = this->imageHeight();
-
-    double dar = croppedWidth / croppedHeight;
-    double car = double(canvasWidth) / double(canvasHeight);
-
-    double x = 0.0;
-    double y = 0.0;
-    double w = double(canvasWidth);
-    double h = double(canvasHeight);
-
-    if (dar < car)
-    {
-      w = double(canvasHeight) * dar;
-      x = 0.5 * (double(canvasWidth) - w);
-    }
-    else
-    {
-      h = double(canvasWidth) / dar;
-      y = 0.5 * (double(canvasHeight) - h);
-    }
-
     // draw the frame:
-    glViewport(GLint(x + 0.5), GLint(y + 0.5),
-               GLsizei(w + 0.5), GLsizei(h + 0.5));
+    paintImage(private_, canvasWidth, canvasHeight);
 
-    double uncroppedWidth = 0.0;
-    double uncroppedHeight = 0.0;
-    private_->imageWidthHeight(uncroppedWidth, uncroppedHeight);
-
-    double left = (uncroppedWidth - croppedWidth) * 0.5;
-    double right = left + croppedWidth;
-    double top = (uncroppedHeight - croppedHeight) * 0.5;
-    double bottom = top + croppedHeight;
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(left, right, bottom, top);
-
-    private_->draw();
+    // draw the overlay:
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    paintImage(overlay_, canvasWidth, canvasHeight);
+    glDisable(GL_BLEND);
   }
 
   //----------------------------------------------------------------
@@ -1648,6 +1678,8 @@ namespace yae
   Canvas::loadFrame(const TVideoFramePtr & frame)
   {
     bool ok = private_->loadFrame(this, frame);
+    setSubs(frame->subs_);
+
     refresh();
 
     if (ok && !timerScreenSaver_.isActive())
@@ -1655,6 +1687,141 @@ namespace yae
       timerScreenSaver_.start();
     }
 
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::setSubs
+  //
+  void
+  Canvas::setSubs(const std::list<TSubsFrame> & subs)
+  {
+    std::list<TSubsFrame> renderSubs;
+
+    for (std::list<TSubsFrame>::const_iterator i = subs.begin();
+         i != subs.end(); ++i)
+    {
+      const TSubsFrame & subs = *i;
+      if (subs.render_)
+      {
+        renderSubs.push_back(subs);
+      }
+    }
+
+    if (renderSubs != subs_)
+    {
+      subs_ = renderSubs;
+      updateOverlay();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TQImageBuffer
+  //
+  struct TQImageBuffer : public IPlanarBuffer
+  {
+    const QImage * qimg_;
+
+    TQImageBuffer(const QImage * qimg = NULL):
+      qimg_(qimg)
+    {}
+
+    // virtual:
+    void destroy()
+    { delete this; }
+
+    // virtual:
+    std::size_t planes() const
+    { return 1; }
+
+    // virtual:
+    unsigned char * data(std::size_t plane) const
+    {
+      YAE_ASSERT(qimg_);
+      const uchar * bits = qimg_->bits();
+      return const_cast<unsigned char *>(bits);
+    }
+
+    // virtual:
+    std::size_t rowBytes(std::size_t planeIndex) const
+    {
+      YAE_ASSERT(qimg_);
+      int n = qimg_->bytesPerLine();
+      return (std::size_t)n;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // Canvas::loadSubs
+  //
+  bool
+  Canvas::updateOverlay()
+  {
+    double w = this->width();
+    double h = this->height();
+
+    if (h > 1024.0)
+    {
+      w *= 1024.0 / h;
+      h = 1024.0;
+    }
+
+    if (w > 1024.0)
+    {
+      h *= 1024.0 / w;
+      w = 1024.0;
+    }
+
+    QImage subsFrm((int)w, (int)h, QImage::Format_ARGB32);
+    subsFrm.fill(0);
+
+    QPainter painter(&subsFrm);
+    painter.setPen(Qt::white);
+
+    QFont ft;
+    int px = std::max<int>(20, 56.0 * (h / 1024.0));
+    ft.setPixelSize(px);
+    painter.setFont(ft);
+
+    int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
+
+    for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
+         i != subs_.end(); ++i)
+    {
+      const TSubsFrame & subs = *i;
+
+      // if (subs.traits_ == kSubsText)
+      {
+        const unsigned char * str = subs.data_->data(0);
+        const unsigned char * end = str + subs.data_->rowBytes(0);
+        std::string text(str, end);
+        QString qstr = QString::fromUtf8(text.c_str());
+
+        drawTextWithShadowToFit(painter,
+                                subsFrm.rect(),
+                                textAlignment,
+                                qstr,
+                                QPen(Qt::black));
+      }
+    }
+
+    painter.end();
+
+    TVideoFramePtr vf(new TVideoFrame());
+    vf->data_.reset(new TQImageBuffer(&subsFrm));
+
+    VideoTraits & vtts = vf->traits_;
+    vtts.pixelFormat_ = kPixelFormatBGRA;
+    vtts.encodedWidth_ = subsFrm.bytesPerLine() / 4;
+    vtts.encodedHeight_ = subsFrm.byteCount() / subsFrm.bytesPerLine();
+    vtts.offsetTop_ = 0;
+    vtts.offsetLeft_ = 0;
+    vtts.visibleWidth_ = (int)w;
+    vtts.visibleHeight_ = (int)h;
+    vtts.pixelAspectRatio_ = 1.0;
+    vtts.isUpsideDown_ = false;
+
+    bool ok = overlay_->loadFrame(this, vf);
     return ok;
   }
 
@@ -1691,18 +1858,7 @@ namespace yae
   double
   Canvas::imageWidth() const
   {
-    double w = 0.0;
-    double h = 0.0;
-    double dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
-    double darCropped = private_->displayAspectRatioCropped();
-
-    if (dar != 0.0 && darCropped != 0.0 && dar > darCropped)
-    {
-      // crop left-right pillars:
-      w = h * darCropped;
-    }
-
-    return w;
+    return calcImageWidth(private_);
   }
 
   //----------------------------------------------------------------
@@ -1711,18 +1867,7 @@ namespace yae
   double
   Canvas::imageHeight() const
   {
-    double w = 0.0;
-    double h = 0.0;
-    double dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
-    double darCropped = private_->displayAspectRatioCropped();
-
-    if (dar != 0.0 && darCropped != 0.0 && dar < darCropped)
-    {
-      // crop top-bottom bars:
-      h = w / darCropped;
-    }
-
-    return h;
+    return calcImageHeight(private_);
   }
 
   //----------------------------------------------------------------

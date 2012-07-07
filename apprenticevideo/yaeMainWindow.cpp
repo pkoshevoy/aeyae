@@ -580,7 +580,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     // FIXME: hide subtitles menu until they are properly supported:
-    menubar->removeAction(menuSubs->menuAction());
+    // menubar->removeAction(menuSubs->menuAction());
   }
 
   //----------------------------------------------------------------
@@ -2437,8 +2437,8 @@ namespace yae
       // request playback at currently selected playback rate:
       reader->setTempo(tempo_);
 
-      bool enable = actionDeinterlace->isChecked();
-      reader->setDeinterlacing(enable);
+      bool deint = actionDeinterlace->isChecked();
+      reader->setDeinterlacing(deint);
     }
     else
     {
@@ -2631,7 +2631,14 @@ namespace yae
   void
   MainWindow::selectSubsTrack(IReader * reader, std::size_t subsTrackIndex)
   {
-    reader->subsRender(subsTrackIndex, true);
+    const std::size_t nsubs = reader->subsCount();
+    for (std::size_t i = 0; i < nsubs; i++)
+    {
+      bool enable = (i == subsTrackIndex);
+      reader->subsRender(i, enable);
+    }
+
+    canvas_->setSubs(std::list<TSubsFrame>());
   }
 
   //----------------------------------------------------------------

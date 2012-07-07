@@ -100,6 +100,9 @@ namespace yae
     inline double toSeconds() const
     { return double(time_) / double(base_); }
 
+    inline bool operator == (const TTime & t) const
+    { return time_ == t.time_ && base_ == t.base_; }
+
     int64 time_;
     uint64 base_;
   };
@@ -372,6 +375,14 @@ namespace yae
 
     TFrame(): tempo_(1.0) {}
 
+    bool operator == (const TSelf & s) const
+    {
+      return (time_   == s.time_ &&
+              tempo_  == s.tempo_ &&
+              traits_ == s.traits_ &&
+              data_   == s.data_);
+    }
+
     //! frame position:
     TTime time_;
 
@@ -390,6 +401,8 @@ namespace yae
   //
   struct YAE_API TSubsFrame : public TFrame<TSubsFormat>
   {
+    typedef TFrame<TSubsFormat> TBase;
+
     struct TRect
     {
       int x_;
@@ -418,6 +431,10 @@ namespace yae
       virtual void getRect(unsigned int i, TRect & rect) const = 0;
     };
 
+    TSubsFrame();
+
+    bool operator == (const TSubsFrame & s) const;
+
     // track index:
     std::size_t index_;
 
@@ -426,6 +443,8 @@ namespace yae
 
     // frame expiration time:
     TTime tEnd_;
+
+    bool render_;
 
     boost::shared_ptr<IPrivate> private_;
   };

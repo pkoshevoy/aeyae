@@ -74,8 +74,10 @@ namespace yae
     // virtual:
     bool render(const TVideoFramePtr & frame);
 
-    // helper:
+    // helpers:
     bool loadFrame(const TVideoFramePtr & frame);
+    void setSubs(const std::list<TSubsFrame> & subs);
+    bool updateOverlay();
 
     // NOTE: In order to avoid blurring interlaced frames vertical scaling
     // is disabled by default.  However, if the video is not interlaced
@@ -109,6 +111,7 @@ namespace yae
     bool event(QEvent * event);
     void mouseMoveEvent(QMouseEvent * event);
     void mouseDoubleClickEvent(QMouseEvent * event);
+    void resizeEvent(QResizeEvent * event);
 
     // virtual: Qt/OpenGL stuff:
     void initializeGL();
@@ -154,12 +157,17 @@ namespace yae
 
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
+    TPrivate * overlay_;
 
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;
 
     // a single shot timer for preventing screen saver:
     QTimer timerScreenSaver_;
+
+    // keep track of previously displayed subtitles
+    // in order to avoid re-rendering the same subtitles with every frame:
+    std::list<TSubsFrame> subs_;
   };
 }
 

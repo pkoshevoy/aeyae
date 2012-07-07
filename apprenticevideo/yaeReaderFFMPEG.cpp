@@ -1628,8 +1628,20 @@ namespace yae
                 TSubsFrame next;
                 if (subs.queue_.peek(next, &terminator_))
                 {
-                  subs.prev_.tEnd_ = next.time_;
-                  s1 = subs.prev_.tEnd_.toSeconds();
+                  s1 = next.time_.toSeconds();
+
+                  double ds = std::min<double>(5.0, s1 - s0);
+                  s1 = s0 + ds;
+
+                  subs.prev_.tEnd_ = subs.prev_.time_;
+                  subs.prev_.tEnd_ += ds;
+                }
+                else if (v1 - s0 > 5.0)
+                {
+                  s1 = s0 + 5.0;
+
+                  subs.prev_.tEnd_ = subs.prev_.time_;
+                  subs.prev_.tEnd_ += 5.0;
                 }
               }
 
@@ -3372,6 +3384,7 @@ namespace yae
               sf.tEnd_ = TTime(std::numeric_limits<int64>::max(),
                                AV_TIME_BASE);
 
+              sf.render_ = subs->render_;
               sf.traits_ = subs->format_;
               sf.index_ = subs->index_;
 

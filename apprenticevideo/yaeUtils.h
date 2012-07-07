@@ -20,7 +20,7 @@
 
 // Qt includes:
 #include <QString>
-
+#include <QPainter>
 
 namespace yae
 {
@@ -179,6 +179,52 @@ namespace yae
     os << data;
     return std::string(os.str().c_str());
   }
+
+  //----------------------------------------------------------------
+  // overlapExists
+  //
+  extern bool
+  overlapExists(const QRect & a, const QRect & b);
+
+  //----------------------------------------------------------------
+  // overlapExists
+  //
+  extern bool
+  overlapExists(const QRect & a, const QPoint & b);
+
+  //----------------------------------------------------------------
+  // shortenTextToFit
+  //
+  extern bool
+  shortenTextToFit(QPainter & painter,
+                   const QRect & bbox,
+                   int textAlignment,
+                   const QString & text,
+                   QString & textLeft,
+                   QString & textRight);
+
+  //----------------------------------------------------------------
+  // drawTextToFit
+  //
+  extern void
+  drawTextToFit(QPainter & painter,
+                const QRect & bbox,
+                int textAlignment,
+                const QString & text,
+                QRect * bboxText = NULL);
+
+  //----------------------------------------------------------------
+  // drawTextWithShadowToFit
+  //
+  extern void
+  drawTextWithShadowToFit(QPainter & painter,
+                          const QRect & bboxBig,
+                          int textAlignment,
+                          const QString & text,
+                          const QPen & bgPen,
+                          int shadowOffset = 1,
+                          QRect * bboxText = NULL);
+
 }
 
 

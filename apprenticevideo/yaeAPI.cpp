@@ -364,4 +364,28 @@ namespace yae
       p->destroy();
     }
   }
+
+  //----------------------------------------------------------------
+  // TSubsFrame::TSubsFrame
+  //
+  TSubsFrame::TSubsFrame():
+    index_(~0),
+    render_(false)
+  {}
+
+  //----------------------------------------------------------------
+  // TSubsFrame::operator ==
+  //
+  bool
+  TSubsFrame::operator == (const TSubsFrame & s) const
+  {
+    bool same = (index_    == s.index_ &&
+                 render_   == s.render_ &&
+                 sideData_ == s.sideData_ &&
+                 tEnd_     == s.tEnd_ &&
+                 private_  == s.private_ &&
+                 TBase::operator == (s));
+    return same;
+  }
+
 }
