@@ -877,4 +877,31 @@ namespace yae
     return out;
   }
 
+  //----------------------------------------------------------------
+  // assaToPlainText
+  //
+  std::string
+  assaToPlainText(const std::string & in)
+  {
+    std::size_t inLen = in.size();
+    const char * ssa = in.c_str();
+    ssa = strstr(ssa, "Dialogue:");
+    if (ssa)
+    {
+      ssa += 9;
+      for (int i = 0; i < 9; i++)
+      {
+        ssa = strstr(ssa, ",");
+        if (!ssa)
+        {
+          break;
+        }
+
+        ssa++;
+      }
+    }
+
+    return ssa ? std::string(ssa) : std::string();
+  }
+
 }

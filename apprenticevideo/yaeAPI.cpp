@@ -354,6 +354,61 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getSubsFormatLabel
+  //
+  const char *
+  getSubsFormatLabel(TSubsFormat fmt)
+  {
+    switch (fmt)
+    {
+      case kSubsDVD:
+        return "DVD";
+
+      case kSubsDVB:
+        return "DVB";
+
+      case kSubsText:
+        return "plain text";
+
+      case kSubsXSUB:
+        return "XSUB";
+
+      case kSubsSSA:
+        return "SSA/ASS";
+
+      case kSubsMovText:
+        return "QuickTime";
+
+      case kSubsHDMVPGS:
+        return "HDMV PGS";
+
+      case kSubsDVBTeletext:
+        return "DVB Teletext";
+
+      case kSubsSRT:
+        return "SRT";
+
+      case kSubsMICRODVD:
+        return "MICRODVD";
+
+      case kSubsCEA608:
+        return "CEA-608";
+
+      case kSubsJACOSUB:
+        return "JACOSUB";
+
+      case kSubsNone:
+        return "none";
+
+      default:
+        YAE_ASSERT(false);
+        break;
+    }
+
+    return "unknown";
+  }
+
+  //----------------------------------------------------------------
   // TSubsFrame::IPrivate::deallocator
   //
   void
@@ -379,11 +434,12 @@ namespace yae
   bool
   TSubsFrame::operator == (const TSubsFrame & s) const
   {
-    bool same = (index_    == s.index_ &&
-                 render_   == s.render_ &&
-                 sideData_ == s.sideData_ &&
-                 tEnd_     == s.tEnd_ &&
-                 private_  == s.private_ &&
+    bool same = (render_    == s.render_ &&
+                 index_     == s.index_ &&
+                 extraData_ == s.extraData_ &&
+                 sideData_  == s.sideData_ &&
+                 tEnd_      == s.tEnd_ &&
+                 private_   == s.private_ &&
                  TBase::operator == (s));
     return same;
   }

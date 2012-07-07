@@ -239,6 +239,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // getSubsFormatLabel
+  //
+  YAE_API const char * getSubsFormatLabel(TSubsFormat fmt);
+
+  //----------------------------------------------------------------
   // IPlanarBuffer
   //
   class IPlanarBuffer
@@ -435,17 +440,22 @@ namespace yae
 
     bool operator == (const TSubsFrame & s) const;
 
+    // a flag indicating whether this subtitle frame should be rendered:
+    bool render_;
+
     // track index:
     std::size_t index_;
 
-    // additional data:
+    // track specific data (sequence header, etc...)
+    TIPlanarBufferPtr extraData_;
+
+    // additional frame data:
     TIPlanarBufferPtr sideData_;
 
     // frame expiration time:
     TTime tEnd_;
 
-    bool render_;
-
+    // decoded subtitle data:
     boost::shared_ptr<IPrivate> private_;
   };
 

@@ -100,42 +100,42 @@ namespace yae
   //----------------------------------------------------------------
   // toQString
   //
-  extern QString
+  YAE_API QString
   toQString(const std::list<QString> & keys, bool trimWhiteSpace = false);
 
   //----------------------------------------------------------------
   // splitOnCamelCase
   //
-  extern void
+  YAE_API void
   splitOnCamelCase(const QString & key, std::list<QString> & tokens);
 
   //----------------------------------------------------------------
   // splitOnGroupTags
   //
-  extern void
+  YAE_API void
   splitOnGroupTags(const QString & key, std::list<QString> & tokens);
 
   //----------------------------------------------------------------
   // splitOnSeparators
   //
-  extern void
+  YAE_API void
   splitOnSeparators(const QString & key, std::list<QString> & tokens);
 
   //----------------------------------------------------------------
   // splitIntoWords
   //
-  extern void
+  YAE_API void
   splitIntoWords(const QString & key, std::list<QString> & tokens);
 
   //----------------------------------------------------------------
   // toWords
   //
-  extern QString toWords(const std::list<QString> & keys);
+  YAE_API QString toWords(const std::list<QString> & keys);
 
   //----------------------------------------------------------------
   // toWords
   //
-  extern QString toWords(const QString & key);
+  YAE_API QString toWords(const QString & key);
 
   //----------------------------------------------------------------
   // isNumeric
@@ -144,12 +144,12 @@ namespace yae
   // returns the key length;
   // otherwise returns 0
   //
-  extern int isNumeric(const QString & key);
+  YAE_API int isNumeric(const QString & key);
 
   //----------------------------------------------------------------
   // prepareForSorting
   //
-  extern QString prepareForSorting(const QString & key);
+  YAE_API QString prepareForSorting(const QString & key);
 
   //----------------------------------------------------------------
   // floor_log2
@@ -183,19 +183,19 @@ namespace yae
   //----------------------------------------------------------------
   // overlapExists
   //
-  extern bool
+  YAE_API bool
   overlapExists(const QRect & a, const QRect & b);
 
   //----------------------------------------------------------------
   // overlapExists
   //
-  extern bool
+  YAE_API bool
   overlapExists(const QRect & a, const QPoint & b);
 
   //----------------------------------------------------------------
   // shortenTextToFit
   //
-  extern bool
+  YAE_API bool
   shortenTextToFit(QPainter & painter,
                    const QRect & bbox,
                    int textAlignment,
@@ -206,7 +206,7 @@ namespace yae
   //----------------------------------------------------------------
   // drawTextToFit
   //
-  extern void
+  YAE_API void
   drawTextToFit(QPainter & painter,
                 const QRect & bbox,
                 int textAlignment,
@@ -216,7 +216,7 @@ namespace yae
   //----------------------------------------------------------------
   // drawTextWithShadowToFit
   //
-  extern void
+  YAE_API void
   drawTextWithShadowToFit(QPainter & painter,
                           const QRect & bboxBig,
                           int textAlignment,
@@ -228,8 +228,14 @@ namespace yae
   //----------------------------------------------------------------
   // stripHtmlTags
   //
-  extern std::string
+  YAE_API std::string
   stripHtmlTags(const std::string & in);
+
+  //----------------------------------------------------------------
+  // assaToPlainText
+  //
+  YAE_API std::string
+  assaToPlainText(const std::string & in);
 
 }
 

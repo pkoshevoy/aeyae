@@ -1818,6 +1818,30 @@ namespace yae
           subsInOverlay_ = true;
         }
       }
+      else if (subs.traits_ == kSubsSSA)
+      {
+        const TSubsFrame::IPrivate * subExt = subs.private_.get();
+        const unsigned int nrects = subExt ? subExt->numRects() : 0;
+
+        for (unsigned int j = 0; j < nrects; j++)
+        {
+          TSubsFrame::TRect r;
+          subExt->getRect(j, r);
+          std::string text(r.assa_);
+          text = assaToPlainText(text);
+
+          QString qstr = QString::fromUtf8(text.c_str()).trimmed();
+          if (!qstr.isEmpty())
+          {
+            drawTextWithShadowToFit(painter,
+                                    subsFrm.rect(),
+                                    textAlignment,
+                                    qstr,
+                                    QPen(Qt::black));
+            subsInOverlay_ = true;
+          }
+        }
+      }
     }
 
     painter.end();

@@ -395,9 +395,9 @@ namespace yae
     SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0):
       stream_(stream),
       codec_(NULL),
+      render_(false),
       format_(kSubsNone),
       index_(index),
-      render_(false),
       queue_(kQueueSizeLarge)
     {
       open();
@@ -423,6 +423,20 @@ namespace yae
           {
             // unsupported codec:
             codec_ = NULL;
+          }
+          else if (stream_->codec->extradata &&
+                   stream_->codec->extradata_size)
+          {
+            TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                    &IPlanarBuffer::deallocator);
+            buffer->resize(0, stream_->codec->extradata_size, 1, 1);
+
+            unsigned char * dst = buffer->data(0);
+            memcpy(dst,
+                   stream_->codec->extradata,
+                   stream_->codec->extradata_size);
+
+            extraData_ = buffer;
           }
         }
 
@@ -453,11 +467,12 @@ namespace yae
     AVStream * stream_;
     AVCodec * codec_;
 
+    bool render_;
     TSubsFormat format_;
     std::string title_;
     std::size_t index_;
-    bool render_;
 
+    TIPlanarBufferPtr extraData_;
     TSubsFrameQueue queue_;
     TSubsFrame prev_;
   };
@@ -3409,6 +3424,7 @@ namespace yae
               sf.render_ = subs->render_;
               sf.traits_ = subs->format_;
               sf.index_ = subs->index_;
+              sf.extraData_ = subs->extraData_;
 
               if (ffmpeg.data && ffmpeg.size)
               {
@@ -3427,7 +3443,7 @@ namespace yae
               {
                 TPlanarBufferPtr buffer(new TPlanarBuffer(1),
                                         &IPlanarBuffer::deallocator);
-                buffer->resize(1, ffmpeg.side_data->size, 1);
+                buffer->resize(0, ffmpeg.side_data->size, 1, 1);
                 unsigned char * dst = buffer->data(0);
                 memcpy(dst, ffmpeg.side_data->data, ffmpeg.side_data->size);
 
@@ -3449,7 +3465,23 @@ namespace yae
                   sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub),
                                                 &TSubsPrivate::deallocator);
 
-                  sf.tEnd_.time_ = sub.end_display_time;
+                  if (ffmpeg.pts != AV_NOPTS_VALUE &&
+                      sub.start_display_time != AV_NOPTS_VALUE)
+                  {
+                    sf.time_.time_ = av_rescale_q(ffmpeg.pts +
+                                                  sub.start_display_time,
+                                                  subs->stream_->time_base,
+                                                  tb);
+                  }
+
+                  if (ffmpeg.pts != AV_NOPTS_VALUE &&
+                      sub.end_display_time != AV_NOPTS_VALUE)
+                  {
+                    sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
+                                                  sub.end_display_time,
+                                                  subs->stream_->time_base,
+                                                  tb);
+                  }
                 }
               }
 

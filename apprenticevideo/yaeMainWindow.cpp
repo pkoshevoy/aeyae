@@ -1000,10 +1000,17 @@ namespace yae
     {
       QString trackName = tr("Track %1").arg(i + 1);
 
-      const char * name = reader->subsInfo(i);
+      TSubsFormat subsFmt = kSubsNone;
+      const char * name = reader->subsInfo(i, &subsFmt);
       if (name && *name)
       {
         trackName += tr(", %1").arg(QString::fromUtf8(name));
+      }
+
+      if (subsFmt != kSubsNone)
+      {
+        const char * label = getSubsFormatLabel(subsFmt);
+        trackName += tr(", %1").arg(QString::fromUtf8(label));
       }
 
       QAction * trackAction = new QAction(trackName, this);
