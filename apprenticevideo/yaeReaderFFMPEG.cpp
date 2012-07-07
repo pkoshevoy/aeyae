@@ -3591,6 +3591,14 @@ namespace yae
       err = audioTrack->resetTimeCounters(seekTime);
     }
 
+    const std::size_t nsubs = subs_.size();
+    for (std::size_t i = 0; i < nsubs; i++)
+    {
+      SubtitlesTrack & subs = *(subs_[i]);
+      subs.queue_.clear();
+      subs.prev_ = TSubsFrame();
+    }
+
     return err;
   }
 
