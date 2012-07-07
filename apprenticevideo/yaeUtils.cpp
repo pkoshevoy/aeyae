@@ -901,6 +901,20 @@ namespace yae
       }
     }
 
+    if (ssa)
+    {
+      // skip override:
+      const char * override = strstr(ssa, "{");
+      if (override)
+      {
+        override = strstr(override, "}");
+        if (override)
+        {
+          ssa = override + 1;
+        }
+      }
+    }
+
     return ssa ? std::string(ssa) : std::string();
   }
 

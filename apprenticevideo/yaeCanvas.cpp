@@ -1755,6 +1755,37 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // drawPlainText
+  //
+  static bool
+  drawPlainText(const std::string & text,
+                QPainter & painter,
+                QRect & bbox,
+                int textAlignment)
+  {
+    QString qstr = QString::fromUtf8(text.c_str()).trimmed();
+    if (!qstr.isEmpty())
+    {
+      QRect used;
+      drawTextWithShadowToFit(painter,
+                              bbox,
+                              textAlignment,
+                              qstr,
+                              QPen(Qt::black),
+                              1,
+                              &used);
+      if (!used.isNull())
+      {
+        // avoid overwriting subs on top of each other:
+        bbox.setBottom(used.top());
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Canvas::loadSubs
   //
   bool
@@ -1795,10 +1826,13 @@ namespace yae
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     subsInOverlay_ = false;
 
+    QRect bboxCanvas = subsFrm.rect();
+
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
          i != subs_.end(); ++i)
     {
       const TSubsFrame & subs = *i;
+      QRect used;
 
       if (subs.traits_ == kSubsText)
       {
@@ -1807,14 +1841,8 @@ namespace yae
         std::string text(str, end);
         text = stripHtmlTags(text);
 
-        QString qstr = QString::fromUtf8(text.c_str()).trimmed();
-        if (!qstr.isEmpty())
+        if (drawPlainText(text, painter, bboxCanvas, textAlignment))
         {
-          drawTextWithShadowToFit(painter,
-                                  subsFrm.rect(),
-                                  textAlignment,
-                                  qstr,
-                                  QPen(Qt::black));
           subsInOverlay_ = true;
         }
       }
@@ -1830,14 +1858,8 @@ namespace yae
           std::string text(r.assa_);
           text = assaToPlainText(text);
 
-          QString qstr = QString::fromUtf8(text.c_str()).trimmed();
-          if (!qstr.isEmpty())
+          if (drawPlainText(text, painter, bboxCanvas, textAlignment))
           {
-            drawTextWithShadowToFit(painter,
-                                    subsFrm.rect(),
-                                    textAlignment,
-                                    qstr,
-                                    QPen(Qt::black));
             subsInOverlay_ = true;
           }
         }
