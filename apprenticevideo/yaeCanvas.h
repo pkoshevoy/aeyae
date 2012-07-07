@@ -158,6 +158,7 @@ namespace yae
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
     TPrivate * overlay_;
+    bool subsInOverlay_;
 
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;

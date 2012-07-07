@@ -1318,6 +1318,7 @@ namespace yae
     QGLWidget(format, parent, shareWidget, f),
     private_(NULL),
     overlay_(NULL),
+    subsInOverlay_(false),
     timerHideCursor_(this),
     timerScreenSaver_(this)
   {
@@ -1388,6 +1389,7 @@ namespace yae
   {
     private_->clear(this);
     overlay_->clear(this);
+    subsInOverlay_ = false;
     subs_.clear();
     refresh();
   }
@@ -1469,7 +1471,7 @@ namespace yae
   {
     QGLWidget::resizeEvent(event);
 
-    if (overlay_)
+    if (overlay_ && subsInOverlay_)
     {
       updateOverlay();
     }
@@ -1665,10 +1667,13 @@ namespace yae
     paintImage(private_, canvasWidth, canvasHeight);
 
     // draw the overlay:
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    paintImage(overlay_, canvasWidth, canvasHeight);
-    glDisable(GL_BLEND);
+    if (subsInOverlay_)
+    {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      paintImage(overlay_, canvasWidth, canvasHeight);
+      glDisable(GL_BLEND);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1720,10 +1725,10 @@ namespace yae
   //
   struct TQImageBuffer : public IPlanarBuffer
   {
-    const QImage * qimg_;
+    QImage qimg_;
 
-    TQImageBuffer(const QImage * qimg = NULL):
-      qimg_(qimg)
+    TQImageBuffer(int w, int h, QImage::Format fmt):
+      qimg_(w, h, fmt)
     {}
 
     // virtual:
@@ -1737,16 +1742,14 @@ namespace yae
     // virtual:
     unsigned char * data(std::size_t plane) const
     {
-      YAE_ASSERT(qimg_);
-      const uchar * bits = qimg_->bits();
+      const uchar * bits = qimg_.bits();
       return const_cast<unsigned char *>(bits);
     }
 
     // virtual:
     std::size_t rowBytes(std::size_t planeIndex) const
     {
-      YAE_ASSERT(qimg_);
-      int n = qimg_->bytesPerLine();
+      int n = qimg_.bytesPerLine();
       return (std::size_t)n;
     }
   };
@@ -1772,7 +1775,13 @@ namespace yae
       w = 1024.0;
     }
 
-    QImage subsFrm((int)w, (int)h, QImage::Format_ARGB32);
+    TVideoFramePtr vf(new TVideoFrame());
+    TQImageBuffer * imageBuffer =
+      new TQImageBuffer((int)w, (int)h, QImage::Format_ARGB32);
+    vf->data_.reset(imageBuffer);
+
+    // shortcut:
+    QImage & subsFrm = imageBuffer->qimg_;
     subsFrm.fill(0);
 
     QPainter painter(&subsFrm);
@@ -1784,31 +1793,38 @@ namespace yae
     painter.setFont(ft);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
+    subsInOverlay_ = false;
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
          i != subs_.end(); ++i)
     {
       const TSubsFrame & subs = *i;
 
-      // if (subs.traits_ == kSubsText)
+      if (subs.traits_ == kSubsText)
       {
         const unsigned char * str = subs.data_->data(0);
         const unsigned char * end = str + subs.data_->rowBytes(0);
         std::string text(str, end);
-        QString qstr = QString::fromUtf8(text.c_str());
+        QString qstr = QString::fromUtf8(text.c_str()).trimmed();
 
-        drawTextWithShadowToFit(painter,
-                                subsFrm.rect(),
-                                textAlignment,
-                                qstr,
-                                QPen(Qt::black));
+        if (!qstr.isEmpty())
+        {
+          drawTextWithShadowToFit(painter,
+                                  subsFrm.rect(),
+                                  textAlignment,
+                                  qstr,
+                                  QPen(Qt::black));
+          subsInOverlay_ = true;
+        }
       }
     }
 
     painter.end();
 
-    TVideoFramePtr vf(new TVideoFrame());
-    vf->data_.reset(new TQImageBuffer(&subsFrm));
+    if (!subsInOverlay_)
+    {
+      return true;
+    }
 
     VideoTraits & vtts = vf->traits_;
     vtts.pixelFormat_ = kPixelFormatBGRA;
@@ -1821,8 +1837,9 @@ namespace yae
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
-    bool ok = overlay_->loadFrame(this, vf);
-    return ok;
+    subsInOverlay_ = overlay_->loadFrame(this, vf);
+    YAE_ASSERT(subsInOverlay_);
+    return subsInOverlay_;
   }
 
   //----------------------------------------------------------------
