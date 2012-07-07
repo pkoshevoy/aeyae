@@ -904,14 +904,21 @@ namespace yae
     if (ssa)
     {
       // skip override:
-      const char * override = strstr(ssa, "{");
-      if (override)
+      while (true)
       {
-        override = strstr(override, "}");
-        if (override)
+        const char * override = strstr(ssa, "{");
+        if (!override)
         {
-          ssa = override + 1;
+          break;
         }
+
+        override = strstr(override, "}");
+        if (!override)
+        {
+          break;
+        }
+
+        ssa = override + 1;
       }
     }
 
