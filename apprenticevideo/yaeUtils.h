@@ -237,6 +237,11 @@ namespace yae
   YAE_API std::string
   assaToPlainText(const std::string & in);
 
+  //----------------------------------------------------------------
+  // convertEscapeCodes
+  //
+  YAE_API std::string
+  convertEscapeCodes(const std::string & in);
 }
 
 

@@ -873,7 +873,7 @@ namespace yae
       }
     }
 
-    std::string out(&(tmp[0]));
+    std::string out(&(tmp[0]), &(tmp[0]) + j);
     return out;
   }
 
@@ -923,6 +923,67 @@ namespace yae
     }
 
     return ssa ? std::string(ssa) : std::string();
+  }
+
+  //----------------------------------------------------------------
+  // convertEscapeCodes
+  //
+  std::string
+  convertEscapeCodes(const std::string & in)
+  {
+    std::size_t inLen = in.size();
+    const char * str = in.c_str();
+    std::vector<char> tmp(inLen, 0);
+    std::size_t j = 0;
+
+    enum TState
+    {
+      kInText,
+      kInEsc
+    };
+    TState s = kInText;
+
+    for (std::size_t i = 0; i < inLen; i++)
+    {
+      char c = in[i];
+
+      if (s == kInText)
+      {
+        if (c == '\\')
+        {
+          s = kInEsc;
+        }
+        else
+        {
+          tmp[j++] = c;
+        }
+      }
+      else if (s == kInEsc)
+      {
+        if (c == 'n')
+        {
+          tmp[j++] = '\n';
+        }
+        else if (c == 'r')
+        {
+          tmp[j++] = '\r';
+        }
+        else if (c == 't')
+        {
+          tmp[j++] = '\t';
+        }
+        else
+        {
+          tmp[j++] = '\\';
+          tmp[j++] = c;
+        }
+
+        s = kInText;
+      }
+    }
+
+    std::string out(&(tmp[0]), &(tmp[0]) + j);
+    return out;
   }
 
 }

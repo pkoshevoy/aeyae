@@ -1840,6 +1840,7 @@ namespace yae
         const unsigned char * end = str + subs.data_->rowBytes(0);
         std::string text(str, end);
         text = stripHtmlTags(text);
+        text = convertEscapeCodes(text);
 
         if (drawPlainText(text, painter, bboxCanvas, textAlignment))
         {
@@ -1857,6 +1858,7 @@ namespace yae
           subExt->getRect(j, r);
           std::string text(r.assa_);
           text = assaToPlainText(text);
+          text = convertEscapeCodes(text);
 
           if (drawPlainText(text, painter, bboxCanvas, textAlignment))
           {
