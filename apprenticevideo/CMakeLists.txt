@@ -120,6 +120,8 @@ find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore l
 find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(CELT_LIBRARY celt0 PATHS ${FFMPEG_LIBS_PATH} DOC "celt library")
 find_library(MODPLUG_LIBRARY modplug PATHS ${FFMPEG_LIBS_PATH} DOC "modplug library")
+find_library(LIBASS_LIBRARY libass PATHS ${FFMPEG_LIBS_PATH} DOC "libass library")
+find_library(FREETYPE_LIBRARY freetype PATHS ${FFMPEG_LIBS_PATH} DOC "freetype library")
 find_library(GNUTLS_LIBRARY gnutls PATHS ${FFMPEG_LIBS_PATH} DOC "gnutls library")
 find_library(DIRACENC_LIBRARY dirac_encoder PATHS ${FFMPEG_LIBS_PATH} DOC "dirac_encoder library")
 find_library(RTMP_LIBRARY rtmp PATHS ${FFMPEG_LIBS_PATH} DOC "rtmp library")
@@ -453,6 +455,14 @@ endif (CELT_LIBRARY)
 if (MODPLUG_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${MODPLUG_LIBRARY})
 endif (MODPLUG_LIBRARY)
+
+if (LIBASS_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBASS_LIBRARY})
+endif (LIBASS_LIBRARY)
+
+if (FREETYPE_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${FREETYPE_LIBRARY})
+endif (FREETYPE_LIBRARY)
 
 if (GNUTLS_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${GNUTLS_LIBRARY})
