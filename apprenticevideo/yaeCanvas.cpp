@@ -1827,7 +1827,11 @@ namespace yae
     }
 
     VideoTraits & vtts = vf->traits_;
+#ifdef _BIG_ENDIAN
+    vtts.pixelFormat_ = kPixelFormatARGB;
+#else
     vtts.pixelFormat_ = kPixelFormatBGRA;
+#endif
     vtts.encodedWidth_ = subsFrm.bytesPerLine() / 4;
     vtts.encodedHeight_ = subsFrm.byteCount() / subsFrm.bytesPerLine();
     vtts.offsetTop_ = 0;
