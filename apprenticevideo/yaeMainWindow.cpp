@@ -2541,6 +2541,9 @@ namespace yae
   void
   MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
   {
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+
     reader->selectVideoTrack(videoTrackIndex);
 
     VideoTraits vtts;
@@ -2648,12 +2651,11 @@ namespace yae
       else
       {
         // unsupported pixel format:
-        std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
         reader->selectVideoTrack(numVideoTracks);
       }
     }
 
-    if (reader->getNumberOfVideoTracks() <= videoTrackIndex)
+    if (numVideoTracks <= videoTrackIndex && numAudioTracks > 0)
     {
       if (actionShowPlaylist->isEnabled())
       {
