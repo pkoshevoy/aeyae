@@ -181,6 +181,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // toScalar
+  //
+  template <typename TScalar, typename TText>
+  TScalar
+  toScalar(const TText & text)
+  {
+    std::istringstream is;
+    is.str(std::string(text));
+
+    TScalar v = (TScalar)0;
+    is >> v;
+
+    return v;
+  }
+
+  //----------------------------------------------------------------
   // overlapExists
   //
   YAE_API bool

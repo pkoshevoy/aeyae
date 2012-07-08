@@ -3475,7 +3475,8 @@ namespace yae
                   }
 
                   if (ffmpeg.pts != AV_NOPTS_VALUE &&
-                      sub.end_display_time != AV_NOPTS_VALUE)
+                      sub.end_display_time != AV_NOPTS_VALUE &&
+                      sub.end_display_time > sub.start_display_time)
                   {
                     sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
                                                   sub.end_display_time,
