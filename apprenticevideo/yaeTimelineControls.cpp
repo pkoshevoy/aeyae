@@ -133,6 +133,7 @@ namespace yae
   //
   TimelineControls::TimelineControls(QWidget * parent, Qt::WindowFlags f):
     QWidget(parent, f),
+    ignoreClockStopped_(false),
     reader_(NULL),
     unknownDuration_(false),
     timelineStart_(0.0),
@@ -335,7 +336,19 @@ namespace yae
   void
   TimelineControls::noteTheClockHasStopped()
   {
-    qApp->postEvent(this, new ClockStoppedEvent());
+    if (!ignoreClockStopped_)
+    {
+      qApp->postEvent(this, new ClockStoppedEvent());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::ignoreClockStoppedEvent
+  //
+  void
+  TimelineControls::ignoreClockStoppedEvent(bool ignore)
+  {
+    ignoreClockStopped_ = ignore;
   }
 
   //----------------------------------------------------------------

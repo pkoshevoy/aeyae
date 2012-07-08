@@ -1364,12 +1364,54 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TIgnoreClockStop
+  //
+  struct TIgnoreClockStop
+  {
+    TIgnoreClockStop(TimelineControls * tc):
+      tc_(tc)
+    {
+      count_++;
+      YAE_ASSERT(count_ < 2);
+
+      if (count_ < 2)
+      {
+        tc_->ignoreClockStoppedEvent(true);
+      }
+    }
+
+    ~TIgnoreClockStop()
+    {
+      count_--;
+      if (!count_)
+      {
+        tc_->ignoreClockStoppedEvent(false);
+      }
+    }
+
+  private:
+    TIgnoreClockStop(const TIgnoreClockStop &);
+    TIgnoreClockStop & operator = (const TIgnoreClockStop &);
+
+    static int count_;
+    TimelineControls * tc_;
+  };
+
+  //----------------------------------------------------------------
+  // TIgnoreClockStop::count_
+  //
+  int
+  TIgnoreClockStop::count_ = 0;
+
+  //----------------------------------------------------------------
   // MainWindow::playbackColorConverter
   //
   void
   MainWindow::playbackColorConverter()
   {
     std::cerr << "playbackColorConverter" << std::endl;
+
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
 
@@ -1652,6 +1694,7 @@ namespace yae
     else
     {
       actionPlay->setText(tr("Play"));
+      TIgnoreClockStop ignoreClockStop(timelineControls_);
       stopRenderers();
     }
 
@@ -1667,6 +1710,7 @@ namespace yae
     std::cerr << "audioSelectDevice: "
               << audioDevice.toUtf8().constData() << std::endl;
 
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
 
@@ -1687,6 +1731,8 @@ namespace yae
   MainWindow::audioSelectTrack(int index)
   {
     std::cerr << "audioSelectTrack: " << index << std::endl;
+
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
 
@@ -1707,6 +1753,8 @@ namespace yae
   MainWindow::videoSelectTrack(int index)
   {
     std::cerr << "videoSelectTrack: " << index << std::endl;
+
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
 
@@ -1727,6 +1775,8 @@ namespace yae
   MainWindow::subsSelectTrack(int index)
   {
     std::cerr << "subsSelectTrack: " << index << std::endl;
+
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
 

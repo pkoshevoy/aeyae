@@ -105,6 +105,10 @@ namespace yae
     void noteCurrentTimeChanged(const TTime & currentTime);
     void noteTheClockHasStopped();
 
+    // helper used to block the "clock has stopped" events
+    // to avoid aborting playback prematurely:
+    void ignoreClockStoppedEvent(bool ignore);
+
     enum TState
     {
       kIdle,
@@ -226,6 +230,7 @@ namespace yae
     // a clock used to synchronize playback renderers,
     // used for playhead position:
     SharedClock sharedClock_;
+    bool ignoreClockStopped_;
 
     // current reader:
     IReader * reader_;

@@ -415,7 +415,7 @@ namespace yae
         {
           lEnd = end;
         }
-        
+
         const char * found = 0;
         if ((found = strstr(line, "size:")) && found < lEnd)
         {
