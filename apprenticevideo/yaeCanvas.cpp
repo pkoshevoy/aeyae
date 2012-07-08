@@ -1986,7 +1986,7 @@ namespace yae
       const TSubsFrame & subs = *i;
       QRect used;
 
-      if (subs.traits_ == kSubsText)
+      if (subs.traits_ == kSubsText && subs.data_)
       {
         const unsigned char * str = subs.data_->data(0);
         const unsigned char * end = str + subs.data_->rowBytes(0);
@@ -2009,6 +2009,20 @@ namespace yae
           TSubsFrame::TRect r;
           subExt->getRect(j, r);
           std::string text(r.assa_);
+          text = assaToPlainText(text);
+          text = convertEscapeCodes(text);
+
+          if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+          {
+            subsInOverlay_ = true;
+          }
+        }
+
+        if (!nrects && subs.data_)
+        {
+          const unsigned char * str = subs.data_->data(0);
+          const unsigned char * end = str + subs.data_->rowBytes(0);
+          std::string text(str, end);
           text = assaToPlainText(text);
           text = convertEscapeCodes(text);
 

@@ -3461,7 +3461,6 @@ namespace yae
                                                &ffmpeg);
                 if (err >= 0 && gotSub)
                 {
-                  err = 0;
                   sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub),
                                                 &TSubsPrivate::deallocator);
 
@@ -3484,6 +3483,7 @@ namespace yae
                                                   tb);
                   }
                 }
+                err = 0;
               }
 
               subs->queue_.push(sf, &terminator_);

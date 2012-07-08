@@ -883,11 +883,26 @@ namespace yae
   std::string
   assaToPlainText(const std::string & in)
   {
+    std::string out;
+
     std::size_t inLen = in.size();
     const char * ssa = in.c_str();
-    ssa = strstr(ssa, "Dialogue:");
-    if (ssa)
+    const char * end = ssa + inLen;
+
+    while (ssa && ssa < end)
     {
+      ssa = strstr(ssa, "Dialogue:");
+      if (!ssa)
+      {
+        break;
+      }
+
+      const char * lEnd = strstr(ssa, "\n");
+      if (!lEnd)
+      {
+        lEnd = end;
+      }
+
       ssa += 9;
       for (int i = 0; i < 9; i++)
       {
@@ -899,30 +914,57 @@ namespace yae
 
         ssa++;
       }
-    }
 
-    if (ssa)
-    {
+      if (!ssa)
+      {
+        break;
+      }
+
       // skip override:
+      std::string tmp;
+
       while (true)
       {
         const char * override = strstr(ssa, "{");
-        if (!override)
+        if (!override || override >= lEnd)
         {
           break;
         }
 
+        if (ssa < override)
+        {
+          tmp += std::string(ssa, override);
+        }
+
         override = strstr(override, "}");
-        if (!override)
+        if (!override || override >= lEnd)
         {
           break;
         }
 
         ssa = override + 1;
       }
+
+      if (!tmp.empty() || (ssa && ssa < lEnd))
+      {
+        if (!out.empty())
+        {
+          out += "\n";
+        }
+
+        if (!tmp.empty())
+        {
+          out += tmp;
+        }
+
+        if (ssa && (ssa < lEnd))
+        {
+          out += std::string(ssa, lEnd);
+        }
+      }
     }
 
-    return ssa ? std::string(ssa) : std::string();
+    return out;
   }
 
   //----------------------------------------------------------------
@@ -960,15 +1002,15 @@ namespace yae
       }
       else if (s == kInEsc)
       {
-        if (c == 'n')
+        if (c == 'n' || c == 'N')
         {
           tmp[j++] = '\n';
         }
-        else if (c == 'r')
+        else if (c == 'r' || c == 'R')
         {
           tmp[j++] = '\r';
         }
-        else if (c == 't')
+        else if (c == 't' || c == 'T')
         {
           tmp[j++] = '\t';
         }
