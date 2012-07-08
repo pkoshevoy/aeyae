@@ -446,6 +446,10 @@ namespace yae
     // track index:
     std::size_t index_;
 
+    // reference frame width and height, if known:
+    int rh_;
+    int rw_;
+
     // track specific data (sequence header, etc...)
     TIPlanarBufferPtr extraData_;
 

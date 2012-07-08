@@ -388,6 +388,120 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TVobSubSpecs
+  //
+  struct TVobSubSpecs
+  {
+    TVobSubSpecs():
+      x_(0),
+      y_(0),
+      w_(0),
+      h_(0),
+      scalex_(1.0),
+      scaley_(1.0),
+      alpha_(1.0)
+    {}
+
+    void init(const unsigned char * extraData, std::size_t size)
+    {
+      const char * line = (const char *)extraData;
+      const char * end = line + size;
+
+      while (line < end)
+      {
+        // parse one line at a time:
+        const char * lEnd = strstr(line, "\n");
+
+        const char * found = 0;
+        if ((found = strstr(line, "size:")) && found < lEnd)
+        {
+          const char * strw = found + 5;
+          const char * strh = strstr(strw, "x");
+          if (strh)
+          {
+            strh++;
+
+            w_ = toScalar<int, std::string>(std::string(strw, strh - 1));
+            h_ = toScalar<int, std::string>(std::string(strh, lEnd));
+          }
+        }
+        else if ((found = strstr(line, "org:")) && found < lEnd)
+        {
+          const char * strx = found + 4;
+          const char * stry = strstr(strx, ",");
+          if (stry)
+          {
+            stry++;
+
+            x_ = toScalar<int, std::string>(std::string(strx, stry - 1));
+            y_ = toScalar<int, std::string>(std::string(stry, lEnd));
+          }
+        }
+        else if ((found = strstr(line, "scale:")) && found < lEnd)
+        {
+          const char * strx = found + 6;
+          const char * stry = strstr(strx, ",");
+          if (stry)
+          {
+            stry++;
+
+            int x = toScalar<int, std::string>(std::string(strx, stry - 2));
+            int y = toScalar<int, std::string>(std::string(stry, lEnd - 1));
+
+            scalex_ = double(x) / 100.0;
+            scaley_ = double(y) / 100.0;
+          }
+        }
+        else if ((found = strstr(line, "alpha:")) && found < lEnd)
+        {
+          const char * str = found + 6;
+          int x = toScalar<int, std::string>(std::string(str, lEnd - 1));
+          alpha_ = double(x) / 100.0;
+        }
+        else if ((found = strstr(line, "palette:")) && found < lEnd)
+        {
+          const char * str = found + 8;
+          std::list<std::string> colors;
+
+          while (str && str < lEnd)
+          {
+            while (*str == ' ')
+            {
+              str++;
+            }
+
+            const char * next = strstr(str, ",");
+            next = std::min<const char *>(next, lEnd);
+
+            std::string color(str, next ? next : lEnd);
+            color = std::string("#") + color;
+
+            colors.push_back(color);
+            str = next ? next + 1 : NULL;
+          }
+
+          palette_.assign(colors.begin(), colors.end());
+        }
+
+        line = lEnd + 1;
+      }
+    }
+
+    // reference frame origin and dimensions:
+    int x_;
+    int y_;
+    int w_;
+    int h_;
+
+    double scalex_;
+    double scaley_;
+    double alpha_;
+
+    // color palette:
+    std::vector<std::string> palette_;
+  };
+
+  //----------------------------------------------------------------
   // SubtitlesTrack
   //
   struct SubtitlesTrack
@@ -437,6 +551,12 @@ namespace yae
                    stream_->codec->extradata_size);
 
             extraData_ = buffer;
+
+            if (format_ == kSubsDVD)
+            {
+              vobsub_.init(stream_->codec->extradata,
+                           stream_->codec->extradata_size);
+            }
           }
         }
 
@@ -475,6 +595,8 @@ namespace yae
     TIPlanarBufferPtr extraData_;
     TSubsFrameQueue queue_;
     TSubsFrame prev_;
+
+    TVobSubSpecs vobsub_;
   };
 
   //----------------------------------------------------------------
@@ -3426,6 +3548,19 @@ namespace yae
               sf.index_ = subs->index_;
               sf.extraData_ = subs->extraData_;
 
+              // copy the reference frame size:
+              if (subs->stream_->codec)
+              {
+                sf.rw_ = subs->stream_->codec->width;
+                sf.rh_ = subs->stream_->codec->height;
+              }
+
+              if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
+              {
+                sf.rw_ = subs->vobsub_.w_;
+                sf.rh_ = subs->vobsub_.h_;
+              }
+
               if (ffmpeg.data && ffmpeg.size)
               {
                 TPlanarBufferPtr buffer(new TPlanarBuffer(1),
@@ -3477,10 +3612,20 @@ namespace yae
                       sub.end_display_time != AV_NOPTS_VALUE &&
                       sub.end_display_time > sub.start_display_time)
                   {
-                    sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
-                                                  sub.end_display_time,
-                                                  subs->stream_->time_base,
-                                                  tb);
+                    double dt =
+                      double(sub.end_display_time -
+                             sub.start_display_time) *
+                      double(subs->stream_->time_base.num) /
+                      double(subs->stream_->time_base.den);
+
+                    // avoid subs that are visible for more than 5 seconds:
+                    if (dt < 5.0)
+                    {
+                      sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
+                                                    sub.end_display_time,
+                                                    subs->stream_->time_base,
+                                                    tb);
+                    }
                   }
                 }
                 err = 0;

@@ -424,8 +424,10 @@ namespace yae
   // TSubsFrame::TSubsFrame
   //
   TSubsFrame::TSubsFrame():
+    render_(false),
     index_(~0),
-    render_(false)
+    rh_(0),
+    rw_(0)
   {}
 
   //----------------------------------------------------------------
@@ -436,6 +438,8 @@ namespace yae
   {
     bool same = (render_    == s.render_ &&
                  index_     == s.index_ &&
+                 rh_        == s.rh_ &&
+                 rw_        == s.rw_ &&
                  extraData_ == s.extraData_ &&
                  sideData_  == s.sideData_ &&
                  tEnd_      == s.tEnd_ &&
