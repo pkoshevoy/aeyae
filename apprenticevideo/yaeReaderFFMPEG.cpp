@@ -411,7 +411,11 @@ namespace yae
       {
         // parse one line at a time:
         const char * lEnd = strstr(line, "\n");
-
+        if (!lEnd)
+        {
+          lEnd = end;
+        }
+        
         const char * found = 0;
         if ((found = strstr(line, "size:")) && found < lEnd)
         {
