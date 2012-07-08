@@ -78,6 +78,7 @@ namespace yae
     bool loadFrame(const TVideoFramePtr & frame);
     void setSubs(const std::list<TSubsFrame> & subs);
     bool updateOverlay();
+    bool updateGreeting();
 
     // NOTE: In order to avoid blurring interlaced frames vertical scaling
     // is disabled by default.  However, if the video is not interlaced
@@ -158,6 +159,7 @@ namespace yae
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
     TPrivate * overlay_;
+    bool showTheGreeting_;
     bool subsInOverlay_;
 
     // a single shot timer for hiding the cursor:

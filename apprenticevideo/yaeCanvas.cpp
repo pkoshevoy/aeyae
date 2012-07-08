@@ -1318,6 +1318,7 @@ namespace yae
     QGLWidget(format, parent, shareWidget, f),
     private_(NULL),
     overlay_(NULL),
+    showTheGreeting_(true),
     subsInOverlay_(false),
     timerHideCursor_(this),
     timerScreenSaver_(this)
@@ -1389,6 +1390,7 @@ namespace yae
   {
     private_->clear(this);
     overlay_->clear(this);
+    showTheGreeting_ = true;
     subsInOverlay_ = false;
     subs_.clear();
     refresh();
@@ -1421,6 +1423,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // UpdateOverlayEvent
+  //
+  struct UpdateOverlayEvent : public QEvent
+  {
+    UpdateOverlayEvent(): QEvent(QEvent::User) {}
+  };
+
+  //----------------------------------------------------------------
   // Canvas::event
   //
   bool
@@ -1437,6 +1447,16 @@ namespace yae
         renderEvent->payload_.get(frame);
         loadFrame(frame);
 
+        return true;
+      }
+
+      UpdateOverlayEvent * overlayEvent =
+        dynamic_cast<UpdateOverlayEvent *>(event);
+
+      if (overlayEvent)
+      {
+        updateOverlay();
+        refresh();
         return true;
       }
     }
@@ -1471,7 +1491,7 @@ namespace yae
   {
     QGLWidget::resizeEvent(event);
 
-    if (overlay_ && subsInOverlay_)
+    if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
       updateOverlay();
     }
@@ -1592,6 +1612,7 @@ namespace yae
     gluOrtho2D(left, right, bottom, top);
 
     canvas->draw();
+    yae_assert_gl_no_error();
   }
 
   //----------------------------------------------------------------
@@ -1613,7 +1634,11 @@ namespace yae
       // unsupported pixel format:
       glClearColor(0, 0, 0, 1);
       glClear(GL_COLOR_BUFFER_BIT);
-      return;
+
+      if (!showTheGreeting_)
+      {
+        return;
+      }
     }
 
     glMatrixMode(GL_MODELVIEW);
@@ -1623,7 +1648,8 @@ namespace yae
     int canvasHeight = height();
 
     // draw a checkerboard to help visualize the alpha channel:
-    if (ptts->flags_ & (pixelFormat::kAlpha | pixelFormat::kPaletted))
+    if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
+                                 pixelFormat::kPaletted)))
     {
       glViewport(0, 0, canvasWidth, canvasHeight);
 
@@ -1663,16 +1689,26 @@ namespace yae
       glClear(GL_COLOR_BUFFER_BIT);
     }
 
-    // draw the frame:
-    paintImage(private_, canvasWidth, canvasHeight);
+    if (!showTheGreeting_)
+    {
+      // draw the frame:
+      paintImage(private_, canvasWidth, canvasHeight);
+    }
 
     // draw the overlay:
-    if (subsInOverlay_)
+    if (subsInOverlay_ || showTheGreeting_)
     {
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      paintImage(overlay_, canvasWidth, canvasHeight);
-      glDisable(GL_BLEND);
+      if (overlay_ && overlay_->pixelTraits())
+      {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        paintImage(overlay_, canvasWidth, canvasHeight);
+        glDisable(GL_BLEND);
+      }
+      else
+      {
+        qApp->postEvent(this, new UpdateOverlayEvent());
+      }
     }
   }
 
@@ -1683,6 +1719,7 @@ namespace yae
   Canvas::loadFrame(const TVideoFramePtr & frame)
   {
     bool ok = private_->loadFrame(this, frame);
+    showTheGreeting_ = false;
     setSubs(frame->subs_);
 
     refresh();
@@ -1791,6 +1828,11 @@ namespace yae
   bool
   Canvas::updateOverlay()
   {
+    if (showTheGreeting_)
+    {
+      return updateGreeting();
+    }
+
     double uncroppedWidth = 0.0;
     double uncroppedHeight = 0.0;
     private_->imageWidthHeight(uncroppedWidth, uncroppedHeight);
@@ -1975,6 +2017,83 @@ namespace yae
     subsInOverlay_ = overlay_->loadFrame(this, vf);
     YAE_ASSERT(subsInOverlay_);
     return subsInOverlay_;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::updateGreeting
+  //
+  bool
+  Canvas::updateGreeting()
+  {
+    double w = this->width();
+    double h = this->height();
+
+    if (h > 1024.0)
+    {
+      w *= 1024.0 / h;
+      h = 1024.0;
+    }
+
+    if (w > 1024.0)
+    {
+      h *= 1024.0 / w;
+      w = 1024.0;
+    }
+
+    TVideoFramePtr vf(new TVideoFrame());
+    TQImageBuffer * imageBuffer =
+      new TQImageBuffer((int)w, (int)h, QImage::Format_ARGB32);
+    vf->data_.reset(imageBuffer);
+
+    // shortcut:
+    QImage & subsFrm = imageBuffer->qimg_;
+    subsFrm.fill(0);
+
+    QPainter painter(&subsFrm);
+    painter.setPen(QColor(0x7f, 0x7f, 0x7f, 0x7f));
+
+    QFont ft;
+    int px = std::max<int>(12, 56.0 * (std::min<double>(w, h) / 1024.0));
+    ft.setPixelSize(px);
+    painter.setFont(ft);
+
+    int textAlignment = Qt::TextWordWrap | Qt::AlignCenter;
+    QRect bboxCanvas = subsFrm.rect();
+
+    QString qstr = tr("drop videos/music here\n\n"
+                      "press spacebar to pause/resume\n\n"
+                      "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+                      "use apple remote for volume and seeking\n\n"
+#endif
+                      "explore the menus for more options");
+
+    std::string text(qstr.toUtf8().constData());
+    if (!drawPlainText(text, painter, bboxCanvas, textAlignment))
+    {
+      return false;
+    }
+
+    painter.end();
+
+    VideoTraits & vtts = vf->traits_;
+#ifdef _BIG_ENDIAN
+    vtts.pixelFormat_ = kPixelFormatARGB;
+#else
+    vtts.pixelFormat_ = kPixelFormatBGRA;
+#endif
+    vtts.encodedWidth_ = subsFrm.bytesPerLine() / 4;
+    vtts.encodedHeight_ = subsFrm.byteCount() / subsFrm.bytesPerLine();
+    vtts.offsetTop_ = 0;
+    vtts.offsetLeft_ = 0;
+    vtts.visibleWidth_ = (int)w;
+    vtts.visibleHeight_ = (int)h;
+    vtts.pixelAspectRatio_ = 1.0;
+    vtts.isUpsideDown_ = false;
+
+    bool ok = overlay_->loadFrame(this, vf);
+    YAE_ASSERT(ok);
+    return ok;
   }
 
   //----------------------------------------------------------------

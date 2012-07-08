@@ -579,8 +579,29 @@ namespace yae
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
 
-    // FIXME: hide subtitles menu until they are properly supported:
-    // menubar->removeAction(menuSubs->menuAction());
+    // hide the playlist:
+    playlistDock_->hide();
+
+    // initialize the subtitles menu:
+    {
+      subsTrackGroup_ = new QActionGroup(this);
+      subsTrackMapper_ = new QSignalMapper(this);
+      ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+                   this, SLOT(subsSelectTrack(int)));
+      YAE_ASSERT(ok);
+
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      trackAction->setChecked(true);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, int(0));
+    }
   }
 
   //----------------------------------------------------------------
