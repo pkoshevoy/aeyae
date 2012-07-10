@@ -1831,6 +1831,9 @@ namespace yae
         }
 
         // copy the sample planes:
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(output_.pixelFormat_);
+
         for (unsigned char i = 0; i < numSamplePlanes_; i++)
         {
           std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
@@ -1839,6 +1842,10 @@ namespace yae
 
           std::size_t srcRowBytes = avFrame->linesize[i];
           std::size_t srcRows = avFrame->height;
+          if (i > 0)
+          {
+            srcRows /= ptts->chromaBoxH_;
+          }
           const unsigned char * src = avFrame->data[i];
 
           std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
