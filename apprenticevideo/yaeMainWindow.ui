@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>19</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -243,11 +243,13 @@ QLineEdit:disabled {
     <addaction name="actionPrev"/>
     <addaction name="actionNext"/>
     <addaction name="separator"/>
+    <addaction name="actionFullScreen"/>
     <addaction name="actionShowPlaylist"/>
     <addaction name="actionShowTimeline"/>
-    <addaction name="actionShrinkWrap"/>
-    <addaction name="actionFullScreen"/>
+    <addaction name="separator"/>
     <addaction name="actionLoop"/>
+    <addaction name="actionSetInPoint"/>
+    <addaction name="actionSetOutPoint"/>
     <addaction name="separator"/>
     <addaction name="actionVerticalScaling"/>
     <addaction name="actionDeinterlace"/>
@@ -310,11 +312,22 @@ QLineEdit:disabled {
      <string>&amp;Subtitles</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="actionHalfSize"/>
+    <addaction name="actionFullSize"/>
+    <addaction name="actionDoubleSize"/>
+    <addaction name="separator"/>
+    <addaction name="actionShrinkWrap"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuAudio"/>
    <addaction name="menuVideo"/>
    <addaction name="menuSubs"/>
+   <addaction name="menuWindow"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="playlistDock_">
@@ -801,7 +814,56 @@ QLineEdit QToolButton#clear_:pressed {
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>De&amp;interlace</string>
+    <string>&amp;Deinterlace</string>
+   </property>
+  </action>
+  <action name="actionHalfSize">
+   <property name="text">
+    <string>Half Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+0</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionFullSize">
+   <property name="text">
+    <string>Full Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDoubleSize">
+   <property name="text">
+    <string>Double Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSetInPoint">
+   <property name="text">
+    <string>Set &amp;In Point Anchor</string>
+   </property>
+   <property name="shortcut">
+    <string>I</string>
+   </property>
+  </action>
+  <action name="actionSetOutPoint">
+   <property name="text">
+    <string>Set &amp;Out Point Anchor</string>
+   </property>
+   <property name="shortcut">
+    <string>O</string>
    </property>
   </action>
  </widget>

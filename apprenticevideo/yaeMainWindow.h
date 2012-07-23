@@ -134,6 +134,11 @@ namespace yae
     void subsSelectTrack(int index);
     void playlistItemChanged(std::size_t index);
 
+    // window menu:
+    void windowHalfSize();
+    void windowFullSize();
+    void windowDoubleSize();
+
     // help menu:
     void helpAbout();
 
@@ -151,6 +156,8 @@ namespace yae
     void scrollWheelTimerExpired();
     void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
+    void canvasSizeBackup();
+    void canvasSizeRestore();
 
   protected:
     // virtual:
@@ -161,8 +168,10 @@ namespace yae
     void dropEvent(QDropEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
+    void resizeEvent(QResizeEvent * e);
 
     // helpers:
+    void canvasSizeSet(double xexpand, double yexpand);
     void stopRenderers();
     void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
     void resumeRenderers();
@@ -235,6 +244,10 @@ namespace yae
 
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
+
+    // shrink wrap stretch factors:
+    double xexpand_;
+    double yexpand_;
 
     // desired playback tempo:
     double tempo_;

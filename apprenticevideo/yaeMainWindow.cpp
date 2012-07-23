@@ -164,6 +164,8 @@ namespace yae
     playbackInterrupted_(false),
     scrollStart_(0.0),
     scrollOffset_(0.0),
+    xexpand_(1.0),
+    yexpand_(1.0),
     tempo_(1.0)
   {
 #ifdef __APPLE__
@@ -203,6 +205,10 @@ namespace yae
     // show the timeline:
     actionShowTimeline->setChecked(true);
     timelineWidgets_->show();
+
+    // hide the playlist:
+    actionShowPlaylist->setChecked(false);
+    playlistDock_->hide();
 
     // setup the Open URL dialog:
     {
@@ -459,6 +465,14 @@ namespace yae
                  this, SLOT(playbackLoop()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionSetInPoint, SIGNAL(triggered()),
+                 this, SIGNAL(setInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSetOutPoint, SIGNAL(triggered()),
+                 this, SIGNAL(setOutPoint()));
+    YAE_ASSERT(ok);
+
     ok = connect(shortcutRemove_, SIGNAL(activated()),
                  playlistWidget_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
@@ -523,6 +537,18 @@ namespace yae
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionHalfSize, SIGNAL(triggered()),
+                 this, SLOT(windowHalfSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionFullSize, SIGNAL(triggered()),
+                 this, SLOT(windowFullSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionDoubleSize, SIGNAL(triggered()),
+                 this, SLOT(windowDoubleSize()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAbout, SIGNAL(triggered()),
                  this, SLOT(helpAbout()));
     YAE_ASSERT(ok);
@@ -578,9 +604,6 @@ namespace yae
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
-
-    // hide the playlist:
-    playlistDock_->hide();
 
     // initialize the subtitles menu:
     {
@@ -1270,8 +1293,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatioAuto()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(0.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1280,8 +1304,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatio2_40()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(2.40);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1290,8 +1315,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatio2_35()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(2.35);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1300,8 +1326,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_85()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(1.85);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1310,8 +1337,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_78()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(16.0 / 9.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1320,8 +1348,9 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_33()
   {
+    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(4.0 / 3.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1330,8 +1359,9 @@ namespace yae
   void
   MainWindow::playbackCropFrameNone()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(0.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1340,8 +1370,9 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_40()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(2.40);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1350,8 +1381,9 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_35()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(2.35);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1360,8 +1392,9 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_85()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(1.85);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1370,8 +1403,9 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_78()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(16.0 / 9.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1380,8 +1414,9 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_33()
   {
+    canvasSizeBackup();
     canvas_->cropFrame(4.0 / 3.0);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1473,9 +1508,10 @@ namespace yae
   void
   MainWindow::playbackVerticalScaling()
   {
+    canvasSizeBackup();
     bool enable = actionVerticalScaling->isChecked();
     canvas_->enableVerticalScaling(enable);
-    playbackShrinkWrap();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -1549,80 +1585,15 @@ namespace yae
   void
   MainWindow::playbackShrinkWrap()
   {
-    // get image dimensions:
-    int vw = int(0.5 + canvas_->imageWidth());
-    int vh = int(0.5 + canvas_->imageHeight());
-    if (vw < 1 || vh < 1)
+    if (isFullScreen())
     {
       return;
     }
 
-    QRect rectWindow = frameGeometry();
-    int ww = rectWindow.width();
-    int wh = rectWindow.height();
+    canvasSizeBackup();
 
-    QRect rectCanvas = canvas_->geometry();
-    int cw = rectCanvas.width();
-    int ch = rectCanvas.height();
-
-    int dx = vw - cw;
-    int dy = vh - ch;
-
-    // calculate width and height overhead:
-    int ox = ww - cw;
-    int oy = wh - ch;
-
-    int ideal_w = ww + dx;
-    int ideal_h = wh + dy;
-
-    QRect rectMax = QApplication::desktop()->availableGeometry(this);
-    int max_w = rectMax.width();
-    int max_h = rectMax.height();
-
-    if (ideal_w > max_w || ideal_h > max_h)
-    {
-      // image won't fit on screen, scale it to the largest size that fits:
-      double vDAR = canvas_->imageWidth() / canvas_->imageHeight();
-      double cDAR = double(max_w - ox) / double(max_h - oy);
-
-      if (vDAR > cDAR)
-      {
-        ideal_w = max_w;
-        ideal_h = oy + int(0.5 + double(max_w - ox) / vDAR);
-      }
-      else
-      {
-        ideal_h = max_h;
-        ideal_w = ox + int(0.5 + double(max_h - oy) * vDAR);
-      }
-    }
-
-    int new_w = std::min(ideal_w, max_w);
-    int new_h = std::min(ideal_h, max_h);
-
-    int max_x0 = rectMax.x();
-    int max_y0 = rectMax.y();
-    int max_x1 = max_x0 + max_w - 1;
-    int max_y1 = max_y0 + max_h - 1;
-
-    int new_x0 = rectWindow.x();
-    int new_y0 = rectWindow.y();
-    int new_x1 = new_x0 + new_w - 1;
-    int new_y1 = new_y0 + new_h - 1;
-
-    int shift_x = std::min(0, max_x1 - new_x1);
-    int shift_y = std::min(0, max_y1 - new_y1);
-
-    int new_x = new_x0 + shift_x;
-    int new_y = new_y0 + shift_y;
-
-    // apply the new window geometry:
-    QRect rectClient = geometry();
-    int cdx = rectWindow.width() - rectClient.width();
-    int cdy = rectWindow.height() - rectClient.height();
-
-    resize(new_w - cdx, new_h - cdy);
-    move(new_x, new_y);
+    double scale = std::min<double>(xexpand_, yexpand_);
+    canvasSizeSet(scale, scale);
   }
 
   //----------------------------------------------------------------
@@ -1651,6 +1622,7 @@ namespace yae
     // enter full screen rendering:
     SignalBlocker blockSignals(actionFullScreen);
 
+    canvasSizeBackup();
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
@@ -1681,6 +1653,7 @@ namespace yae
       actionShrinkWrap->setEnabled(true);
       menuBar()->show();
       showNormal();
+      canvasSizeRestore();
 
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
@@ -1828,6 +1801,33 @@ namespace yae
     {
       playback();
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowHalfSize
+  //
+  void
+  MainWindow::windowHalfSize()
+  {
+    canvasSizeSet(0.5, 0.5);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowFullSize
+  //
+  void
+  MainWindow::windowFullSize()
+  {
+    canvasSizeSet(1.0, 1.0);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowDoubleSize
+  //
+  void
+  MainWindow::windowDoubleSize()
+  {
+    canvasSizeSet(2.0, 2.0);
   }
 
   //----------------------------------------------------------------
@@ -2235,6 +2235,8 @@ namespace yae
     {
       actionShowPlaylist->setChecked(visible);
     }
+
+    QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
   }
 
   //----------------------------------------------------------------
@@ -2441,6 +2443,151 @@ namespace yae
       QPoint globalPt = QWidget::mapToGlobal(localPt);
       menuPlayback->popup(globalPt);
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::resizeEvent
+  //
+  void
+  MainWindow::resizeEvent(QResizeEvent * e)
+  {
+    if (!canvas_)
+    {
+      return;
+    }
+
+    QTimer::singleShot(1, this, SLOT(canvasSizeBackup()));
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvasSizeBackup
+  //
+  void
+  MainWindow::canvasSizeBackup()
+  {
+    if (isFullScreen())
+    {
+      return;
+    }
+
+    int vw = int(0.5 + canvas_->imageWidth());
+    int vh = int(0.5 + canvas_->imageHeight());
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
+
+    QRect rectCanvas = canvas_->geometry();
+    int cw = rectCanvas.width();
+    int ch = rectCanvas.height();
+
+    xexpand_ = double(cw) / double(vw);
+    yexpand_ = double(ch) / double(vh);
+    std::cerr << "expand: " << xexpand_ << ", " << yexpand_ << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvasSizeRestore
+  //
+  void
+  MainWindow::canvasSizeRestore()
+  {
+    canvasSizeSet(xexpand_, yexpand_);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvasSizeRestore
+  //
+  void
+  MainWindow::canvasSizeSet(double xexpand, double yexpand)
+  {
+    xexpand_ = xexpand;
+    yexpand_ = yexpand;
+
+    if (isFullScreen())
+    {
+      return;
+    }
+
+    double iw = canvas_->imageWidth();
+    double ih = canvas_->imageHeight();
+
+    int vw = int(0.5 + iw);
+    int vh = int(0.5 + ih);
+
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
+
+    QRect rectWindow = frameGeometry();
+    int ww = rectWindow.width();
+    int wh = rectWindow.height();
+
+    QRect rectCanvas = canvas_->geometry();
+    int cw = rectCanvas.width();
+    int ch = rectCanvas.height();
+
+    // calculate width and height overhead:
+    int ox = ww - cw;
+    int oy = wh - ch;
+
+    int ideal_w = ox + int(0.5 + vw * xexpand_);
+    int ideal_h = oy + int(0.5 + vh * yexpand_);
+
+    QRect rectMax = QApplication::desktop()->availableGeometry(this);
+    int max_w = rectMax.width();
+    int max_h = rectMax.height();
+
+    if (ideal_w > max_w || ideal_h > max_h)
+    {
+      // image won't fit on screen, scale it to the largest size that fits:
+      double vDAR = canvas_->imageWidth() / canvas_->imageHeight();
+      double cDAR = double(max_w - ox) / double(max_h - oy);
+
+      if (vDAR > cDAR)
+      {
+        ideal_w = max_w;
+        ideal_h = oy + int(0.5 + double(max_w - ox) / vDAR);
+      }
+      else
+      {
+        ideal_h = max_h;
+        ideal_w = ox + int(0.5 + double(max_h - oy) * vDAR);
+      }
+    }
+
+    int new_w = std::min(ideal_w, max_w);
+    int new_h = std::min(ideal_h, max_h);
+#if 0
+    cw = new_w - ox;
+    ch = new_h - oy;
+    xexpand_ = double(cw) / double(vw);
+    yexpand_ = double(ch) / double(vh);
+#endif
+    int max_x0 = rectMax.x();
+    int max_y0 = rectMax.y();
+    int max_x1 = max_x0 + max_w - 1;
+    int max_y1 = max_y0 + max_h - 1;
+
+    int new_x0 = rectWindow.x();
+    int new_y0 = rectWindow.y();
+    int new_x1 = new_x0 + new_w - 1;
+    int new_y1 = new_y0 + new_h - 1;
+
+    int shift_x = std::min(0, max_x1 - new_x1);
+    int shift_y = std::min(0, max_y1 - new_y1);
+
+    int new_x = new_x0 + shift_x;
+    int new_y = new_y0 + shift_y;
+
+    // apply the new window geometry:
+    QRect rectClient = geometry();
+    int cdx = rectWindow.width() - rectClient.width();
+    int cdy = rectWindow.height() - rectClient.height();
+
+    resize(new_w - cdx, new_h - cdy);
+    move(new_x, new_y);
   }
 
   //----------------------------------------------------------------
@@ -2655,7 +2802,7 @@ namespace yae
       }
     }
 
-    if (numVideoTracks <= videoTrackIndex && numAudioTracks > 0)
+    if (!numVideoTracks && numAudioTracks > 0)
     {
       if (actionShowPlaylist->isEnabled())
       {
@@ -2668,6 +2815,9 @@ namespace yae
         }
 
         swapLayouts(canvasContainer_, playlistContainer_);
+        menubar->removeAction(menuVideo->menuAction());
+        menubar->removeAction(menuSubs->menuAction());
+        menubar->removeAction(menuWindow->menuAction());
 
         playlistWidget_->show();
         playlistWidget_->update();
@@ -2679,6 +2829,9 @@ namespace yae
       if (!actionShowPlaylist->isEnabled())
       {
         swapLayouts(canvasContainer_, playlistContainer_);
+        menubar->insertMenu(menuHelp->menuAction(), menuVideo);
+        menubar->insertMenu(menuHelp->menuAction(), menuSubs);
+        menubar->insertMenu(menuHelp->menuAction(), menuWindow);
 
         if (actionShowPlaylist->isChecked())
         {
