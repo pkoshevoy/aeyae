@@ -34,6 +34,14 @@
 #include <QtDBus/QtDBus>
 #endif
 
+// libass includes:
+#ifdef YAE_USE_LIBASS
+extern "C"
+{
+#include <ass/ass.h>
+}
+#endif
+
 
 //----------------------------------------------------------------
 // yae_to_opengl
@@ -1380,6 +1388,22 @@ namespace yae
       private_ = new TLegacyCanvas();
       overlay_ = new TLegacyCanvas();
     }
+
+#if 0 // def YAE_USE_LIBASS
+    ASS_Library * lass = ass_library_init();
+    ASS_Renderer * lassRenderer = ass_renderer_init(lass);
+
+    const char * default_font = NULL;
+    const char * default_family = NULL;
+    ass_set_fonts(lassRenderer,
+                  default_font,
+                  default_family,
+                  1, // use fontconfig
+                  NULL, // fontconfig configuration file path
+                  1); // update font cache
+    ass_renderer_done(lassRenderer);
+    ass_library_done(lass);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2129,7 +2153,7 @@ namespace yae
   double
   Canvas::imageWidth() const
   {
-    return calcImageWidth(private_);
+    return private_ ? calcImageWidth(private_) : 0.0;
   }
 
   //----------------------------------------------------------------
@@ -2138,7 +2162,7 @@ namespace yae
   double
   Canvas::imageHeight() const
   {
-    return calcImageHeight(private_);
+    return private_ ? calcImageHeight(private_) : 0.0;
   }
 
   //----------------------------------------------------------------

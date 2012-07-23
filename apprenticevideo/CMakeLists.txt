@@ -28,7 +28,7 @@ include(${QT_USE_FILE})
 add_definitions(-DBOOST_ALL_NO_LIB)
 
 if (MSYS OR MINGW)
-	add_definitions(-DBOOST_THREAD_USE_LIB)
+  add_definitions(-DBOOST_THREAD_USE_LIB)
 endif (MSYS OR MINGW)
 
 if (WIN32)
@@ -120,8 +120,7 @@ find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore l
 find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(CELT_LIBRARY celt0 PATHS ${FFMPEG_LIBS_PATH} DOC "celt library")
 find_library(MODPLUG_LIBRARY modplug PATHS ${FFMPEG_LIBS_PATH} DOC "modplug library")
-find_library(LIBASS_LIBRARY libass PATHS ${FFMPEG_LIBS_PATH} DOC "libass library")
-find_library(FREETYPE_LIBRARY freetype PATHS ${FFMPEG_LIBS_PATH} DOC "freetype library")
+#find_library(FREETYPE_LIBRARY freetype PATHS ${FFMPEG_LIBS_PATH} DOC "freetype library")
 find_library(GNUTLS_LIBRARY gnutls PATHS ${FFMPEG_LIBS_PATH} DOC "gnutls library")
 find_library(DIRACENC_LIBRARY dirac_encoder PATHS ${FFMPEG_LIBS_PATH} DOC "dirac_encoder library")
 find_library(RTMP_LIBRARY rtmp PATHS ${FFMPEG_LIBS_PATH} DOC "rtmp library")
@@ -141,6 +140,34 @@ if (WIN32)
   find_library(AVICAP32_LIBRARY avicap32 PATHS ${FFMPEG_LIBS_PATH} DOC "avicap32 library")
   find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
 endif (WIN32)
+
+set(LIBASS_DIR "$ENV{LIBASS_DIR}" CACHE PATH "root path for libass lib/ and include/ folders")
+find_library(LIBASS_LIBRARY ass
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libass (for ssa/ass subtitle renderering)")
+find_library(LIBHARFBUZZ_LIBRARY harfbuzz
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libharfbuzz (for ssa/ass subtitle renderering)")
+find_library(LIBFRIBIDI_LIBRARY fribidi
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libfribidi (for ssa/ass subtitle renderering)")
+find_library(LIBFONTCONFIG_LIBRARY fontconfig
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libfontconfig (for ssa/ass subtitle renderering)")
+find_library(LIBFREETYPE_LIBRARY freetype
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libfreetype (for ssa/ass subtitle renderering)")
+find_library(LIBICONV_LIBRARY iconv
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libiconv (for ssa/ass subtitle renderering)")
+find_library(LIBEXPAT_LIBRARY expat
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libexpat (for ssa/ass subtitle renderering)")
+find_library(LIBENCA_LIBRARY enca
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libenca (for ssa/ass subtitle renderering)")
+
+
 
 set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}" CACHE PATH "root path for portaudio lib/ and include/ folders")
 find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "portaudio library")
@@ -220,6 +247,19 @@ if (APPLE)
     martinkahr-apple_remote_control/RemoteControl.h
     martinkahr-apple_remote_control/RemoteControl.m)
 endif (APPLE)
+
+find_path(LIBASS_INCLUDE_DIR
+  ass/ass.h
+  PATHS
+  ${LIBASS_DIR}/include
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (LIBASS_INCLUDE_DIR)
+  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
+endif (LIBASS_INCLUDE_DIR)
 
 find_path(PORTAUDIO_INCLUDE_DIR
   portaudio.h
@@ -324,6 +364,32 @@ set(TARGET_LIBS
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   )
+
+if (LIBASS_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBASS_LIBRARY})
+  add_definitions(-DYAE_USE_LIBASS)
+endif (LIBASS_LIBRARY)
+if (LIBHARFBUZZ_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBHARFBUZZ_LIBRARY})
+endif (LIBHARFBUZZ_LIBRARY)
+if (LIBFRIBIDI_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBFRIBIDI_LIBRARY})
+endif (LIBFRIBIDI_LIBRARY)
+if (LIBFONTCONFIG_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBFONTCONFIG_LIBRARY})
+endif (LIBFONTCONFIG_LIBRARY)
+if (LIBFREETYPE_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBFREETYPE_LIBRARY})
+endif (LIBFREETYPE_LIBRARY)
+if (LIBICONV_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBICONV_LIBRARY})
+endif (LIBICONV_LIBRARY)
+if (LIBEXPAT_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBEXPAT_LIBRARY})
+endif (LIBEXPAT_LIBRARY)
+if (LIBENCA_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBENCA_LIBRARY})
+endif (LIBENCA_LIBRARY)
 
 if (PORTAUDIO_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
@@ -456,13 +522,9 @@ if (MODPLUG_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${MODPLUG_LIBRARY})
 endif (MODPLUG_LIBRARY)
 
-if (LIBASS_LIBRARY)
-  set(TARGET_LIBS ${TARGET_LIBS} ${LIBASS_LIBRARY})
-endif (LIBASS_LIBRARY)
-
-if (FREETYPE_LIBRARY)
-  set(TARGET_LIBS ${TARGET_LIBS} ${FREETYPE_LIBRARY})
-endif (FREETYPE_LIBRARY)
+#if (FREETYPE_LIBRARY)
+#  set(TARGET_LIBS ${TARGET_LIBS} ${FREETYPE_LIBRARY})
+#endif (FREETYPE_LIBRARY)
 
 if (GNUTLS_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${GNUTLS_LIBRARY})
