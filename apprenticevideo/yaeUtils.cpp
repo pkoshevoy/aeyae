@@ -46,14 +46,27 @@ namespace yae
 
 #if defined(_WIN32) && !defined(__MINGW32__)
   //----------------------------------------------------------------
-  // utf8_to_utf16
+  // cstr_to_utf16
   //
-  static wchar_t * utf8_to_utf16(const char * str_utf8)
+  static wchar_t *
+  cstr_to_utf16(const char * cstr, unsigned int code_page = CP_UTF8)
   {
-    int nchars = MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, NULL, 0);
-    wchar_t * str_utf16 = (wchar_t *)malloc(nchars * sizeof(wchar_t));
-    MultiByteToWideChar(CP_UTF8, 0, str_utf8, -1, str_utf16, nchars);
-    return str_utf16;
+    int sz = MultiByteToWideChar(code_page, 0, cstr, -1, NULL, 0);
+    wchar_t * wstr = (wchar_t *)malloc(sz * sizeof(wchar_t));
+    MultiByteToWideChar(code_page, 0, cstr, -1, wstr, sz);
+    return wstr;
+  }
+
+  //----------------------------------------------------------------
+  // utf16_to_cstr
+  //
+  static char *
+  utf16_to_cstr(const wchar_t * wstr, unsigned int code_page = CP_UTF8)
+  {
+    int sz = WideCharToMultiByte(code_page, 0, wstr, -1, NULL, 0, NULL, NULL);
+    char * cstr = (char *)malloc(sz);
+    WideCharToMultiByte(code_page, 0, wstr, -1, cstr, sz, NULL, NULL);
+    return cstr;
   }
 #endif
 
@@ -64,8 +77,8 @@ namespace yae
   renameUtf8(const char * fnOld, const char * fnNew)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
-    wchar_t * wold = utf8_to_utf16(fnOld);
-    wchar_t * wnew = utf8_to_utf16(fnNew);
+    wchar_t * wold = cstr_to_utf16(fnOld);
+    wchar_t * wnew = cstr_to_utf16(fnNew);
 
     int ret = _wrename(wold, wnew);
 
@@ -87,8 +100,8 @@ namespace yae
     std::FILE * file = NULL;
 
 #if defined(_WIN32) && !defined(__MINGW32__)
-    wchar_t * wname = utf8_to_utf16(filenameUtf8);
-    wchar_t * wmode = utf8_to_utf16(mode);
+    wchar_t * wname = cstr_to_utf16(filenameUtf8);
+    wchar_t * wmode = cstr_to_utf16(mode);
 
     _wfopen_s(&file, wname, wmode);
 
@@ -110,7 +123,7 @@ namespace yae
 #if defined(_WIN32) && !defined(__MINGW32__)
     accessMode |= O_BINARY;
 
-    wchar_t * wname = utf8_to_utf16(filenameUtf8);
+    wchar_t * wname = cstr_to_utf16(filenameUtf8);
     int fd = -1;
     int sh = accessMode & (_O_RDWR | _O_WRONLY) ? _SH_DENYWR : _SH_DENYNO;
 
@@ -1029,3 +1042,216 @@ namespace yae
   }
 
 }
+
+#if defined(_WIN32) && !defined(__MINGW32__)
+#include <io.h>
+extern "C"
+{
+
+  //----------------------------------------------------------------
+  // strtoll
+  //
+  long long int
+  strtoll(const char * nptr, char ** endptr, int base)
+  {
+    YAE_ASSERT(sizeof(long long int) == sizeof(__int64));
+    return _strtoi64(nptr, endptr, base);
+  }
+
+  //----------------------------------------------------------------
+  // __strtod
+  //
+  double
+  __strtod(const char * nptr, char ** endptr)
+  {
+    return strtod(nptr, endptr);
+  }
+
+  //----------------------------------------------------------------
+  // dirent
+  //
+  // this structure is layed out same as in mingw/include/dirent.h
+  // for binary compatibility with code built with mingw compiler
+  //
+  struct dirent
+  {
+    long int           d_ino;       // always zero
+    unsigned short int d_reclen;    // always zero
+    unsigned short int d_namlen;    // name length
+    char               d_name[260]; // name[FILENAME_MAX]
+  };
+
+  //----------------------------------------------------------------
+  // TDir
+  //
+  struct TDir
+  {
+    TDir():
+      codepg_(CP_UTF8),
+      handle_(0),
+      nfound_(0)
+    {
+      memset(&dirent_, 0, sizeof(dirent_));
+    }
+
+    ~TDir()
+    {
+      close();
+    }
+
+    int close()
+    {
+      if (handle_)
+      {
+        int err =_findclose(handle_);
+        memset(&dirent_, 0, sizeof(dirent_));
+        nfound_ = 0;
+        wquery_.clear();
+        return err;
+      }
+
+      return 0;
+    }
+
+    bool open(const char * path)
+    {
+      if (handle_)
+      {
+        close();
+      }
+
+      std::string query(path);
+      std::size_t pathLen = query.size();
+
+      if (!pathLen || !strchr("\\/", path[pathLen - 1]))
+      {
+        query += "/";
+      }
+
+      query += "*";
+
+      // try UTF-8 encoding first:
+      codepg_ = CP_UTF8;
+      wchar_t * tmp = yae::cstr_to_utf16(query.c_str(), codepg_);
+      if (!tmp)
+      {
+        return false;
+      }
+
+      wquery_ = tmp;
+      free(tmp);
+
+      handle_ = _wfindfirst64(wquery_.c_str(), &dfound_);
+      if (handle_)
+      {
+        return true;
+      }
+
+      // try local ANSI code page:
+      codepg_ = CP_ACP;
+      tmp = yae::cstr_to_utf16(query.c_str(), codepg_);
+      if (!tmp)
+      {
+        return false;
+      }
+
+      wquery_ = tmp;
+      free(tmp);
+
+      handle_ = _wfindfirst64(wquery_.c_str(), &dfound_);
+      if (handle_)
+      {
+        return true;
+      }
+
+      return false;
+    }
+
+    void load()
+    {
+      static const size_t nameMax = sizeof(dirent_.d_name);
+      char * name = yae::utf16_to_cstr(dfound_.name, codepg_);
+      size_t nameLen = strlen(name);
+      size_t copyLen = std::min<size_t>(nameLen, nameMax);
+      strncpy_s(dirent_.d_name, nameMax, name, copyLen);
+      free(name);
+    }
+
+    bool next()
+    {
+      if (!handle_ || nfound_ < 0)
+      {
+        return false;
+      }
+
+      load();
+
+      if (_wfindnext64(handle_, &dfound_) == -1)
+      {
+        nfound_ = -1;
+      }
+      else
+      {
+        nfound_ ++;
+      }
+
+      return true;
+    }
+
+    unsigned int          codepg_;
+    struct dirent         dirent_;
+    intptr_t              handle_;
+    struct _wfinddata64_t dfound_;
+    int                   nfound_;
+    std::wstring          wquery_;
+  };
+
+  //----------------------------------------------------------------
+  // opendir
+  //
+  void *
+  opendir(const char * path)
+  {
+    TDir * dir = new TDir();
+    if (dir->open(path))
+    {
+      return dir;
+    }
+
+    delete dir;
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // closedir
+  //
+  int
+  closedir(void * priv)
+  {
+    TDir * dir = (TDir *)priv;
+    if (!dir)
+    {
+      return -1;
+    }
+
+    delete dir;
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // readdir
+  //
+  struct dirent *
+  readdir(void * priv)
+  {
+    TDir * dir = (TDir *)priv;
+    if (dir && dir->next())
+    {
+      return &(dir->dirent_);
+    }
+
+    return NULL;
+  }
+}
+
+#endif
