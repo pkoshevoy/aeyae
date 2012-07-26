@@ -1974,6 +1974,38 @@ namespace yae
       t.frameRate_ =
         double(stream_->r_frame_rate.num) /
         double(stream_->r_frame_rate.den);
+
+      if (context_->metadata)
+      {
+        AVDictionaryEntry * frameRateTag =
+          av_dict_get(context_->metadata, "framerate", NULL, 0);
+
+        AVDictionaryEntry * totalFramesTag =
+          av_dict_get(context_->metadata, "totalframes", NULL, 0);
+
+        if (frameRateTag)
+        {
+          t.frameRate_ = toScalar<double, const char *>(frameRateTag->value);
+        }
+        else if (totalFramesTag &&
+                 context_->duration &&
+                 context_->duration != int64_t(AV_NOPTS_VALUE))
+        {
+          // estimate frame rate based on duration
+          // and metadata for total number of frames:
+          double totalSeconds =
+            double(context_->duration) / double(AV_TIME_BASE);
+
+          int64_t totalFrames =
+            toScalar<int64_t, const char *>(totalFramesTag->value);
+
+          if (totalFrames)
+          {
+            double r = double(totalFrames) / totalSeconds;
+            t.frameRate_ = std::min<double>(t.frameRate_, r);
+          }
+        }
+      }
     }
     else
     {
@@ -3630,7 +3662,7 @@ namespace yae
                       double(subs->stream_->time_base.den);
 
                     // avoid subs that are visible for more than 5 seconds:
-                    if (dt < 5.0)
+                    if (dt > 0.5 && dt < 5.0)
                     {
                       sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
                                                     sub.end_display_time,
