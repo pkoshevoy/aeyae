@@ -378,7 +378,8 @@ namespace yae
     VideoTraits videoTraits;
     if (reader->getVideoTraits(videoTraits))
     {
-      frameRate_ = videoTraits.frameRate_;
+      frameRate_ =
+        videoTraits.frameRate_ < 60.0 ? videoTraits.frameRate_ : 23.976;
     }
 
     timelineStart_ = start.toSeconds();
@@ -436,7 +437,8 @@ namespace yae
     VideoTraits videoTraits;
     if (reader->getVideoTraits(videoTraits))
     {
-      frameRate_ = videoTraits.frameRate_;
+      frameRate_ =
+        videoTraits.frameRate_ < 60.0 ? videoTraits.frameRate_ : 23.976;
     }
 
     timelineStart_ = start.toSeconds();
