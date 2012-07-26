@@ -1653,7 +1653,7 @@ namespace yae
       actionShrinkWrap->setEnabled(true);
       menuBar()->show();
       showNormal();
-      canvasSizeRestore();
+      QTimer::singleShot(100, this, SLOT(canvasSizeRestore()));
 
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
@@ -2456,7 +2456,7 @@ namespace yae
       return;
     }
 
-    QTimer::singleShot(1, this, SLOT(canvasSizeBackup()));
+    // QTimer::singleShot(1, this, SLOT(canvasSizeBackup()));
   }
 
   //----------------------------------------------------------------
@@ -2483,7 +2483,8 @@ namespace yae
 
     xexpand_ = double(cw) / double(vw);
     yexpand_ = double(ch) / double(vh);
-    std::cerr << "expand: " << xexpand_ << ", " << yexpand_ << std::endl;
+    std::cerr << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_
+              << std::endl;
   }
 
   //----------------------------------------------------------------
@@ -2586,6 +2587,12 @@ namespace yae
     int cdx = rectWindow.width() - rectClient.width();
     int cdy = rectWindow.height() - rectClient.height();
 
+    std::cerr << "\ncanvas size set: " << xexpand_ << ", " << yexpand_
+              << std::endl
+              << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
+              << std::endl
+              << "canvas move to: " << new_x << ", " << new_y
+              << std::endl;
     resize(new_w - cdx, new_h - cdy);
     move(new_x, new_y);
   }
