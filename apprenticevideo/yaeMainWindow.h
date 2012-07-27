@@ -12,6 +12,7 @@
 // Qt includes:
 #include <QDialog>
 #include <QMainWindow>
+#include <QMenu>
 #include <QSignalMapper>
 #include <QShortcut>
 #include <QTimer>
@@ -191,6 +192,9 @@ namespace yae
     void * appleRemoteControl_;
 #endif
 
+    // context sensitive menu which includes most relevant actions:
+    QMenu * contextMenu_;
+
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
@@ -202,6 +206,8 @@ namespace yae
     QShortcut * shortcutLoop_;
 
     // playlist shortcuts:
+    QAction * actionRemove_;
+    QAction * actionSelectAll_;
     QShortcut * shortcutRemove_;
     QShortcut * shortcutSelectAll_;
 

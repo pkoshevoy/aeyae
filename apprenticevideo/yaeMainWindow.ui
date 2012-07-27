@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -242,21 +242,15 @@ QLineEdit:disabled {
     <addaction name="separator"/>
     <addaction name="actionPrev"/>
     <addaction name="actionNext"/>
-    <addaction name="separator"/>
-    <addaction name="actionFullScreen"/>
     <addaction name="actionShowPlaylist"/>
-    <addaction name="actionShowTimeline"/>
     <addaction name="separator"/>
     <addaction name="actionLoop"/>
     <addaction name="actionSetInPoint"/>
     <addaction name="actionSetOutPoint"/>
+    <addaction name="actionShowTimeline"/>
     <addaction name="separator"/>
-    <addaction name="actionVerticalScaling"/>
-    <addaction name="actionDeinterlace"/>
-    <addaction name="actionSkipColorConverter"/>
-    <addaction name="actionSkipLoopFilter"/>
-    <addaction name="actionSkipNonReferenceFrames"/>
-    <addaction name="separator"/>
+    <addaction name="actionShrinkWrap"/>
+    <addaction name="actionFullScreen"/>
     <addaction name="menuPlaybackSpeed"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
@@ -297,8 +291,23 @@ QLineEdit:disabled {
      <addaction name="actionCropFrame2_35"/>
      <addaction name="actionCropFrame2_40"/>
     </widget>
+    <widget class="QMenu" name="menuWindowSize">
+     <property name="title">
+      <string>Window Size</string>
+     </property>
+     <addaction name="actionHalfSize"/>
+     <addaction name="actionFullSize"/>
+     <addaction name="actionDoubleSize"/>
+    </widget>
     <addaction name="menuAspectRatio"/>
     <addaction name="menuCropFrame"/>
+    <addaction name="menuWindowSize"/>
+    <addaction name="separator"/>
+    <addaction name="actionVerticalScaling"/>
+    <addaction name="actionDeinterlace"/>
+    <addaction name="actionSkipColorConverter"/>
+    <addaction name="actionSkipLoopFilter"/>
+    <addaction name="actionSkipNonReferenceFrames"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -312,22 +321,11 @@ QLineEdit:disabled {
      <string>&amp;Subtitles</string>
     </property>
    </widget>
-   <widget class="QMenu" name="menuWindow">
-    <property name="title">
-     <string>Window</string>
-    </property>
-    <addaction name="actionHalfSize"/>
-    <addaction name="actionFullSize"/>
-    <addaction name="actionDoubleSize"/>
-    <addaction name="separator"/>
-    <addaction name="actionShrinkWrap"/>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuAudio"/>
    <addaction name="menuVideo"/>
    <addaction name="menuSubs"/>
-   <addaction name="menuWindow"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="playlistDock_">

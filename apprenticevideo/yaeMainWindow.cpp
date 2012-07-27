@@ -178,6 +178,9 @@ namespace yae
     setFocusProxy(playlistWidget_);
     actionPlay->setText(tr("Pause"));
 
+    contextMenu_ = new QMenu(this);
+    contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
+
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
     this->setWindowIcon(QIcon(fnIcon));
@@ -265,11 +268,24 @@ namespace yae
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
+
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setKey(QKeySequence(QKeySequence::Delete));
     shortcutSelectAll_->setKey(QKeySequence(QKeySequence::SelectAll));
+
+    actionRemove_ = new QAction(this);
+    actionRemove_->setObjectName(QString::fromUtf8("actionRemove_"));
+    actionRemove_->setShortcutContext(Qt::ApplicationShortcut);
+    actionRemove_->setText(tr("&Remove Selected"));
+    actionRemove_->setShortcut(tr("Delete"));
+
+    actionSelectAll_ = new QAction(this);
+    actionSelectAll_->setObjectName(QString::fromUtf8("actionSelectAll_"));
+    actionSelectAll_->setShortcutContext(Qt::ApplicationShortcut);
+    actionSelectAll_->setText(tr("&Select All"));
+    actionSelectAll_->setShortcut(tr("Ctrl+A"));
 
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
@@ -471,6 +487,14 @@ namespace yae
 
     ok = connect(actionSetOutPoint, SIGNAL(triggered()),
                  this, SIGNAL(setOutPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionRemove_, SIGNAL(triggered()),
+                 playlistWidget_, SLOT(removeSelected()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSelectAll_, SIGNAL(triggered()),
+                 playlistWidget_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutRemove_, SIGNAL(activated()),
@@ -2439,9 +2463,57 @@ namespace yae
   {
     if (e->button() == Qt::RightButton)
     {
+      std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+      std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
+
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
-      menuPlayback->popup(globalPt);
+
+      // populate the context menu:
+      contextMenu_->clear();
+      contextMenu_->addAction(actionPlay);
+
+      contextMenu_->addSeparator();
+      contextMenu_->addAction(actionPrev);
+      contextMenu_->addAction(actionNext);
+      contextMenu_->addAction(actionShowPlaylist);
+
+      if (playlistWidget_->underMouse() &&
+          playlistWidget_->countItems())
+      {
+        contextMenu_->addSeparator();
+        contextMenu_->addAction(actionRemove_);
+        contextMenu_->addAction(actionSelectAll_);
+      }
+
+      contextMenu_->addSeparator();
+      contextMenu_->addAction(actionLoop);
+      contextMenu_->addAction(actionSetInPoint);
+      contextMenu_->addAction(actionSetOutPoint);
+      contextMenu_->addAction(actionShowTimeline);
+
+      contextMenu_->addSeparator();
+      contextMenu_->addAction(actionShrinkWrap);
+      contextMenu_->addAction(actionFullScreen);
+      contextMenu_->addAction(menuPlaybackSpeed->menuAction());
+
+      if (numVideoTracks || numAudioTracks)
+      {
+        contextMenu_->addSeparator();
+
+        if (numAudioTracks)
+        {
+          contextMenu_->addAction(menuAudio->menuAction());
+        }
+
+        if (numVideoTracks)
+        {
+          contextMenu_->addAction(menuVideo->menuAction());
+          contextMenu_->addAction(menuSubs->menuAction());
+        }
+      }
+
+      contextMenu_->popup(globalPt);
     }
   }
 
@@ -2815,6 +2887,8 @@ namespace yae
       {
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
+        actionShrinkWrap->setEnabled(false);
+        actionFullScreen->setEnabled(false);
 
         if (actionShowPlaylist->isChecked())
         {
@@ -2824,7 +2898,6 @@ namespace yae
         swapLayouts(canvasContainer_, playlistContainer_);
         menubar->removeAction(menuVideo->menuAction());
         menubar->removeAction(menuSubs->menuAction());
-        menubar->removeAction(menuWindow->menuAction());
 
         playlistWidget_->show();
         playlistWidget_->update();
@@ -2838,7 +2911,6 @@ namespace yae
         swapLayouts(canvasContainer_, playlistContainer_);
         menubar->insertMenu(menuHelp->menuAction(), menuVideo);
         menubar->insertMenu(menuHelp->menuAction(), menuSubs);
-        menubar->insertMenu(menuHelp->menuAction(), menuWindow);
 
         if (actionShowPlaylist->isChecked())
         {
@@ -2847,6 +2919,8 @@ namespace yae
 
         shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
+        actionShrinkWrap->setEnabled(true);
+        actionFullScreen->setEnabled(true);
 
         playlistWidget_->show();
         playlistWidget_->update();
