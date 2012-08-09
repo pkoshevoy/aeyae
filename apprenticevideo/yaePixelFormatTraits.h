@@ -27,11 +27,20 @@ namespace yae
       kLE = 1 << 0,      // little-endian
       kBE = 1 << 1,      // big-endian
       kAlpha = 1 << 2,   // has an alpha channel
-      kColor = 1 << 3,   // has color (RGB or YUV)
-      kPacked = 1 << 4,  // has a plane with interleaved channel samples
-      kPlanar = 1 << 5,  // has a contiguous plane per channel samples
-      kPaletted = 1 << 6 // requires a color palette
+      kYUV = 1 << 3,     // has color (YUV)
+      kRGB = 1 << 4,     // has color (RGB)
+      kPacked = 1 << 5,  // has a plane with interleaved channel samples
+      kPlanar = 1 << 6,  // has a contiguous plane per channel samples
+      kPaletted = 1 << 7 // requires a color palette
     };
+
+    enum { kColor = (kYUV | kRGB) };
+
+#ifdef __BIG_ENDIAN__
+    enum { kNativeEndian = kBE };
+#else
+    enum { kNativeEndian = kLE };
+#endif
 
     //----------------------------------------------------------------
     // Traits

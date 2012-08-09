@@ -1528,10 +1528,12 @@ namespace yae
     std::size_t totalPixels = output_.encodedWidth_ * output_.encodedHeight_;
 
     memset(samplePlaneSize_, 0, sizeof(samplePlaneSize_));
-    samplePlaneSize_[0] = totalPixels * samplePlaneStride[0] / 8;
+    samplePlaneSize_[0] =
+      totalPixels * (samplePlaneStride[0] / ptts->samples_[0]) / 8;
 
     memset(sampleLineSize_, 0, sizeof(sampleLineSize_));
-    sampleLineSize_[0] = output_.encodedWidth_ * samplePlaneStride[0] / 8;
+    sampleLineSize_[0] =
+      output_.encodedWidth_ * (samplePlaneStride[0] / ptts->samples_[0]) / 8;
 
     for (unsigned char i = 1; i < numSamplePlanes_; i++)
     {
