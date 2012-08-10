@@ -67,7 +67,7 @@ namespace yae
 
     void setContext(TContext * context)
     {
-      YAE_ASSERT(!context_);
+      YAE_ASSERT(!context || !context_);
       context_ = context;
     }
 
