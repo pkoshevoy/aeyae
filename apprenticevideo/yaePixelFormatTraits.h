@@ -104,6 +104,20 @@ namespace yae
     //
     YAE_API const Traits * getTraits(TPixelFormatId id);
   }
+
+
+  //----------------------------------------------------------------
+  // pixelIntensity
+  //
+  // if pixel format is YUV -- return Y channel pixel value
+  // if pixel format is RGB -- return RGB average pixel value
+  //
+  YAE_API double pixelIntensity(const int x,
+                                const int y,
+                                const unsigned char * data,
+                                const std::size_t rowBytes,
+                                const pixelFormat::Traits & ptts);
+
 }
 
 

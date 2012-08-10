@@ -246,7 +246,7 @@ namespace yae
   //----------------------------------------------------------------
   // IPlanarBuffer
   //
-  class IPlanarBuffer
+  class YAE_API IPlanarBuffer
   {
   protected:
     virtual ~IPlanarBuffer();
@@ -284,7 +284,7 @@ namespace yae
   //----------------------------------------------------------------
   // TDataBuffer
   //
-  struct TDataBuffer
+  struct YAE_API TDataBuffer
   {
     TDataBuffer();
     ~TDataBuffer();
@@ -330,7 +330,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlanarBuffer
   //
-  struct TPlanarBuffer : public IPlanarBuffer
+  struct YAE_API TPlanarBuffer : public IPlanarBuffer
   {
     TPlanarBuffer(std::size_t planes);
 
@@ -489,21 +489,21 @@ namespace yae
   //----------------------------------------------------------------
   // getRemixMatrix
   //
-  void getRemixMatrix(std::size_t srcChannels,
+  YAE_API void getRemixMatrix(std::size_t srcChannels,
                       std::size_t dstChannels,
                       std::vector<double> & matrix);
 
   //----------------------------------------------------------------
   // remix
   //
-  void remix(std::size_t numSamples,
-             TAudioSampleFormat sampleFormat,
-             TAudioChannelFormat channelFormat,
-             TAudioChannelLayout srcLayout,
-             const unsigned char * src,
-             TAudioChannelLayout dstLayout,
-             unsigned char * dst,
-             const double * channelRemixMatrix);
+  YAE_API void remix(std::size_t numSamples,
+                     TAudioSampleFormat sampleFormat,
+                     TAudioChannelFormat channelFormat,
+                     TAudioChannelLayout srcLayout,
+                     const unsigned char * src,
+                     TAudioChannelLayout dstLayout,
+                     unsigned char * dst,
+                     const double * channelRemixMatrix);
 
 }
 

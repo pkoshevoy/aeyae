@@ -1028,4 +1028,120 @@ namespace yae
       return NULL;
     }
   }
+
+
+  //----------------------------------------------------------------
+  // toUInt16
+  //
+  inline static unsigned short int
+  toUInt16(const unsigned char * src, const bool littleEndian)
+  {
+    return
+      littleEndian ?
+      ((unsigned short int)(src[1]) << 8) | src[0] :
+      ((unsigned short int)(src[0]) << 8) | src[1];
+  }
+
+  //----------------------------------------------------------------
+  // pixelIntensity
+  //
+  double
+  pixelIntensity(const int x,
+                 const int y,
+                 const unsigned char * data,
+                 const std::size_t rowBytes,
+                 const pixelFormat::Traits & ptts)
+  {
+    static const unsigned short int bitmask[] = {
+      0x0,
+      0x1, 0x3, 0x7, 0xF,
+      0x1F, 0x3F, 0x7F, 0xFF,
+      0x1FF, 0x3FF, 0x7FF, 0xFFF,
+      0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF
+    };
+
+    const bool littleEndian = ptts.flags_ & pixelFormat::kLE;
+
+    int localIndex = x % ptts.samples_[0];
+    std::size_t skipBits = (ptts.stride_[0]) * (x / ptts.samples_[0]);
+    std::size_t skipBytes = skipBits >> 3;
+
+    const unsigned char * src = data + y * rowBytes + skipBytes;
+
+    uint64 pixel = 0;
+
+    if (ptts.stride_[0] == 8)
+    {
+      pixel = src[0];
+    }
+    else if (ptts.stride_[0] == 16)
+    {
+      pixel = toUInt16(src, littleEndian);
+    }
+    else if (ptts.stride_[0] == 24)
+    {
+      YAE_ASSERT(!littleEndian);
+      pixel = (src[0] << 16) | (src[1] << 8) | src[2];
+    }
+    else if (ptts.stride_[0] == 32)
+    {
+      YAE_ASSERT(!littleEndian);
+      pixel = (src[0] << 24) | (src[1] << 16) | (src[2] << 8) | src[3];
+    }
+    else if (ptts.stride_[0] == 48)
+    {
+      uint64 a = toUInt16(src,     littleEndian);
+      uint64 b = toUInt16(src + 2, littleEndian);
+      uint64 c = toUInt16(src + 4, littleEndian);
+
+      pixel = (a << 32) | (b << 16) | c;
+    }
+    else if (ptts.stride_[0] < 8)
+    {
+      std::size_t skip = skipBits - (skipBytes << 3);
+      pixel =
+        bitmask[ptts.stride_[0]] &
+        (src[0] >> (8 - ptts.stride_[0] - skip));
+    }
+    else
+    {
+      // FIXME: write me!
+      YAE_ASSERT(false);
+      return 0.0;
+    }
+
+    if (ptts.flags_ & pixelFormat::kRGB)
+    {
+      unsigned short int r =
+        bitmask[ptts.depth_[0]] &
+        (pixel >> (ptts.stride_[0] - ptts.lshift_[0] - ptts.depth_[0]));
+
+      unsigned short int g =
+        bitmask[ptts.depth_[1]] &
+        (pixel >> (ptts.stride_[1] - ptts.lshift_[1] - ptts.depth_[1]));
+
+      unsigned short int b =
+        bitmask[ptts.depth_[2]] &
+        (pixel >> (ptts.stride_[2] - ptts.lshift_[2] - ptts.depth_[2]));
+
+      double t = (double(r) / double(bitmask[ptts.depth_[0]]) +
+                  double(g) / double(bitmask[ptts.depth_[1]]) +
+                  double(b) / double(bitmask[ptts.depth_[2]])) / 3.0;
+      return t;
+    }
+    else if (!(ptts.flags_ & pixelFormat::kPaletted))
+    {
+      unsigned short int lum =
+        bitmask[ptts.depth_[0]] &
+        (pixel >> (ptts.stride_[0] -
+                   ptts.lshift_[0] -
+                   ptts.depth_[0] * (1 + localIndex)));
+      double t = double(lum) / double(bitmask[ptts.depth_[0]]);
+      return t;
+    }
+
+    YAE_ASSERT(false);
+    return 0.0;
+  }
+
 }
