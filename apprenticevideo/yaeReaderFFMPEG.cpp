@@ -338,7 +338,7 @@ namespace yae
   // getSubsFormat
   //
   static TSubsFormat
-  getSubsFormat(enum AVCodecID id)
+  getSubsFormat(int id)
   {
     switch (id)
     {
