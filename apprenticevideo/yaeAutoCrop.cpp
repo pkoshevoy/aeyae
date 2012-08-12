@@ -149,8 +149,8 @@ namespace yae
     }
 
     static int findex = 0;
-    std::string fn = toText(++findex) + ".pgm";
-    std::cerr << "SAVING " << fn << std::endl;
+    std::string fn = std::string("/tmp/") + toText(++findex) + ".pgm";
+    std::cerr << "SAVING " << fn << ", original was " << ptts->name_ << std::endl;
     std::FILE * fout = fopenUtf8(fn.c_str(), "wb");
     std::string header;
     header += "P5\n";
@@ -178,6 +178,7 @@ namespace yae
     std::vector<unsigned int> offsetBottom(nx);
 
     double epsilon = 1.0 / 256.0;
+    double backgnd = (ptts->flags_ & pixelFormat::kYUV ? 16.0 : 1.0) * epsilon;
 
     for (unsigned int y = 0; y < h; y += step)
     {
@@ -188,7 +189,7 @@ namespace yae
       {
         TFiFo<double, 4> negative;
         TFiFo<double, 4> positive;
-        positive.push(epsilon * 2.0);
+        positive.push(backgnd);
 
         double & best = responseLeft[sampleIndex];
         best = 0.0;
@@ -225,7 +226,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (offset && best > 1.0 && response < 1.1 && improved < 0.7)
           {
             break;
           }
@@ -236,7 +237,7 @@ namespace yae
       {
         TFiFo<double, 4> negative;
         TFiFo<double, 4> positive;
-        positive.push(epsilon * 2.0);
+        positive.push(backgnd);
 
         double & best = responseRight[sampleIndex];
         best = 0.0;
@@ -273,7 +274,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (offset && best > 1.0 && response < 1.1 && improved < 0.7)
           {
             break;
           }
@@ -290,7 +291,7 @@ namespace yae
       {
         TFiFo<double, 4> negative;
         TFiFo<double, 4> positive;
-        positive.push(epsilon * 2.0);
+        positive.push(backgnd);
 
         double & best = responseTop[sampleIndex];
         best = 0.0;
@@ -326,7 +327,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (offset && best > 1.0 && response < 1.1 && improved < 0.7)
           {
             break;
           }
@@ -337,7 +338,7 @@ namespace yae
       {
         TFiFo<double, 4> negative;
         TFiFo<double, 4> positive;
-        positive.push(epsilon * 2.0);
+        positive.push(backgnd);
 
         double & best = responseBottom[sampleIndex];
         best = 0.0;
@@ -374,7 +375,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (offset && best > 1.0 && response < 1.1 && improved < 0.7)
           {
             break;
           }
