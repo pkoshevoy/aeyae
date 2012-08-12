@@ -193,6 +193,8 @@ namespace yae
   {
     VideoTraits();
 
+    bool sameFrameSize(const VideoTraits & vt) const;
+
     //! frame rate:
     double frameRate_;
 
@@ -490,8 +492,8 @@ namespace yae
   // getRemixMatrix
   //
   YAE_API void getRemixMatrix(std::size_t srcChannels,
-                      std::size_t dstChannels,
-                      std::vector<double> & matrix);
+                              std::size_t dstChannels,
+                              std::vector<double> & matrix);
 
   //----------------------------------------------------------------
   // remix

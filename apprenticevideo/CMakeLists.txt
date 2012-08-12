@@ -200,6 +200,8 @@ set(project_sources
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
   yaeAudioTempoFilter.h
+  yaeAutoCrop.h
+  yaeAutoCrop.cpp
   yaeCanvas.h
   yaeCanvas.cpp
   yaeLineEdit.h

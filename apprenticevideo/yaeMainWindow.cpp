@@ -119,6 +119,19 @@ namespace yae
     std::list<QObject *> blocked_;
   };
 
+  //----------------------------------------------------------------
+  // AutoCropEvent
+  //
+  struct AutoCropEvent : public QEvent
+  {
+    AutoCropEvent(const TCropFrame & cropFrame):
+      QEvent(QEvent::User),
+      cropFrame_(cropFrame)
+    {}
+
+    TCropFrame cropFrame_;
+  };
+
 #ifdef __APPLE__
   //----------------------------------------------------------------
   // RemoteControlEvent
@@ -290,6 +303,7 @@ namespace yae
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto);
     aspectRatioGroup->addAction(actionAspectRatio1_33);
+    aspectRatioGroup->addAction(actionAspectRatio1_60);
     aspectRatioGroup->addAction(actionAspectRatio1_78);
     aspectRatioGroup->addAction(actionAspectRatio1_85);
     aspectRatioGroup->addAction(actionAspectRatio2_35);
@@ -299,10 +313,12 @@ namespace yae
     QActionGroup * cropFrameGroup = new QActionGroup(this);
     cropFrameGroup->addAction(actionCropFrameNone);
     cropFrameGroup->addAction(actionCropFrame1_33);
+    cropFrameGroup->addAction(actionCropFrame1_60);
     cropFrameGroup->addAction(actionCropFrame1_78);
     cropFrameGroup->addAction(actionCropFrame1_85);
     cropFrameGroup->addAction(actionCropFrame2_35);
     cropFrameGroup->addAction(actionCropFrame2_40);
+    cropFrameGroup->addAction(actionCropFrameAutoDetect);
     actionCropFrameNone->setChecked(true);
 
     QActionGroup * playRateGroup = new QActionGroup(this);
@@ -409,6 +425,10 @@ namespace yae
                  this, SLOT(playbackAspectRatio1_33()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionAspectRatio1_60, SIGNAL(triggered()),
+                 this, SLOT(playbackAspectRatio1_60()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAspectRatio1_78, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_78()));
     YAE_ASSERT(ok);
@@ -433,6 +453,10 @@ namespace yae
                  this, SLOT(playbackCropFrame1_33()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionCropFrame1_60, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrame1_60()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrame1_78, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_78()));
     YAE_ASSERT(ok);
@@ -447,6 +471,10 @@ namespace yae
 
     ok = connect(actionCropFrame2_40, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame2_40()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameAutoDetect()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPlay, SIGNAL(triggered()),
@@ -666,6 +694,7 @@ namespace yae
     videoRenderer_->destroy();
 
     reader_->destroy();
+    canvas_->cropAutoDetectStop();
     delete canvas_;
   }
 
@@ -1367,6 +1396,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackAspectRatio1_60
+  //
+  void
+  MainWindow::playbackAspectRatio1_60()
+  {
+    canvasSizeBackup();
+    canvas_->overrideDisplayAspectRatio(1.6);
+    canvasSizeRestore();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackAspectRatio1_33
   //
   void
@@ -1433,6 +1473,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackCropFrame1_60
+  //
+  void
+  MainWindow::playbackCropFrame1_60()
+  {
+    canvasSizeBackup();
+    canvas_->cropFrame(1.6);
+    canvasSizeRestore();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackCropFrame1_33
   //
   void
@@ -1441,6 +1492,16 @@ namespace yae
     canvasSizeBackup();
     canvas_->cropFrame(4.0 / 3.0);
     canvasSizeRestore();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackCropFrameAutoDetect
+  //
+  void
+  MainWindow::playbackCropFrameAutoDetect()
+  {
+    canvasSizeBackup();
+    canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
   }
 
   //----------------------------------------------------------------
@@ -2271,6 +2332,15 @@ namespace yae
   {
     if (e->type() == QEvent::User)
     {
+      AutoCropEvent * ac = dynamic_cast<AutoCropEvent *>(e);
+      if (ac)
+      {
+        ac->accept();
+        canvas_->cropFrame(ac->cropFrame_);
+        canvasSizeSet(1.0, 1.0);
+        return true;
+      }
+
 #ifdef __APPLE__
       RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
       if (rc)
@@ -2666,7 +2736,7 @@ namespace yae
               << "canvas move to: " << new_x << ", " << new_y
               << std::endl;
     resize(new_w - cdx, new_h - cdy);
-    move(new_x, new_y);
+    // move(new_x, new_y);
   }
 
   //----------------------------------------------------------------
@@ -2828,7 +2898,7 @@ namespace yae
           else if ((ptts->flags_ & pixelFormat::kColor) ||
                    (ptts->flags_ & pixelFormat::kPaletted))
           {
-            if (false && glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+            if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
             {
               vtts.pixelFormat_ = kPixelFormatYUYV422;
             }
@@ -2841,9 +2911,10 @@ namespace yae
 
         reader->setVideoTraitsOverride(vtts);
       }
-#elif 0
-      vtts.pixelFormat_ = kPixelFormatRGB565BE;
+#elif 1
+      vtts.pixelFormat_ = kPixelFormatYUV420P9;
       reader->setVideoTraitsOverride(vtts);
+      canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
 #endif
     }
 
@@ -2983,6 +3054,16 @@ namespace yae
      }
 
      return deviceIndex;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::autoCropCallback
+  //
+  void
+  MainWindow::autoCropCallback(void * callbackContext, const TCropFrame & cf)
+  {
+    MainWindow * mainWindow = (MainWindow *)callbackContext;
+    qApp->postEvent(mainWindow, new AutoCropEvent(cf));
   }
 
 #ifdef __APPLE__

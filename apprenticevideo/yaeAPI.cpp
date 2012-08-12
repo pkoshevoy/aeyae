@@ -180,6 +180,22 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // VideoTraits::sameFrameSize
+  //
+  bool
+  VideoTraits::sameFrameSize(const VideoTraits & vt) const
+  {
+    return (encodedWidth_ == vt.encodedWidth_ &&
+            encodedHeight_ == vt.encodedHeight_ &&
+            offsetTop_ == vt.offsetTop_ &&
+            offsetLeft_ == vt.offsetLeft_ &&
+            visibleWidth_ == vt.visibleWidth_ &&
+            visibleHeight_ == vt.visibleHeight_ &&
+            pixelAspectRatio_ == vt.pixelAspectRatio_ &&
+            isUpsideDown_ == vt.isUpsideDown_);
+  }
+
+  //----------------------------------------------------------------
   // IPlanarBuffer::~IPlanarBuffer
   //
   IPlanarBuffer::~IPlanarBuffer()

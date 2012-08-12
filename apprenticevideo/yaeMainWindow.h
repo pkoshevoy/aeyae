@@ -104,13 +104,16 @@ namespace yae
     void playbackAspectRatio2_35();
     void playbackAspectRatio1_85();
     void playbackAspectRatio1_78();
+    void playbackAspectRatio1_60();
     void playbackAspectRatio1_33();
     void playbackCropFrameNone();
     void playbackCropFrame2_40();
     void playbackCropFrame2_35();
     void playbackCropFrame1_85();
     void playbackCropFrame1_78();
+    void playbackCropFrame1_60();
     void playbackCropFrame1_33();
+    void playbackCropFrameAutoDetect();
     void playbackNext();
     void playbackPrev();
     void playbackLoop();
@@ -181,6 +184,8 @@ namespace yae
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     void selectSubsTrack(IReader * reader, std::size_t subsTrackIndex);
     unsigned int adjustAudioTraitsOverride(IReader * reader);
+
+    static void autoCropCallback(void * context, const TCropFrame & cf);
 
 #ifdef __APPLE__
     // for Apple Remote:

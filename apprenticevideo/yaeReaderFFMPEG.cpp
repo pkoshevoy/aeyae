@@ -3463,7 +3463,7 @@ namespace yae
     try
     {
       int err = 0;
-      while (true)
+      while (!err)
       {
         boost::this_thread::interruption_point();
 

@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -269,28 +269,6 @@ QLineEdit:disabled {
     <property name="title">
      <string>&amp;Video</string>
     </property>
-    <widget class="QMenu" name="menuAspectRatio">
-     <property name="title">
-      <string>Aspect Ratio</string>
-     </property>
-     <addaction name="actionAspectRatioAuto"/>
-     <addaction name="actionAspectRatio1_33"/>
-     <addaction name="actionAspectRatio1_78"/>
-     <addaction name="actionAspectRatio1_85"/>
-     <addaction name="actionAspectRatio2_35"/>
-     <addaction name="actionAspectRatio2_40"/>
-    </widget>
-    <widget class="QMenu" name="menuCropFrame">
-     <property name="title">
-      <string>Crop Frame</string>
-     </property>
-     <addaction name="actionCropFrameNone"/>
-     <addaction name="actionCropFrame1_33"/>
-     <addaction name="actionCropFrame1_78"/>
-     <addaction name="actionCropFrame1_85"/>
-     <addaction name="actionCropFrame2_35"/>
-     <addaction name="actionCropFrame2_40"/>
-    </widget>
     <widget class="QMenu" name="menuWindowSize">
      <property name="title">
       <string>Window Size</string>
@@ -299,8 +277,33 @@ QLineEdit:disabled {
      <addaction name="actionFullSize"/>
      <addaction name="actionDoubleSize"/>
     </widget>
-    <addaction name="menuAspectRatio"/>
+    <widget class="QMenu" name="menuCropFrame">
+     <property name="title">
+      <string>Crop Frame</string>
+     </property>
+     <addaction name="actionCropFrameNone"/>
+     <addaction name="actionCropFrame1_33"/>
+     <addaction name="actionCropFrame1_60"/>
+     <addaction name="actionCropFrame1_78"/>
+     <addaction name="actionCropFrame1_85"/>
+     <addaction name="actionCropFrame2_35"/>
+     <addaction name="actionCropFrame2_40"/>
+     <addaction name="actionCropFrameAutoDetect"/>
+    </widget>
+    <widget class="QMenu" name="menuAspectRatio">
+     <property name="title">
+      <string>Aspect Ratio</string>
+     </property>
+     <addaction name="actionAspectRatioAuto"/>
+     <addaction name="actionAspectRatio1_33"/>
+     <addaction name="actionAspectRatio1_60"/>
+     <addaction name="actionAspectRatio1_78"/>
+     <addaction name="actionAspectRatio1_85"/>
+     <addaction name="actionAspectRatio2_35"/>
+     <addaction name="actionAspectRatio2_40"/>
+    </widget>
     <addaction name="menuCropFrame"/>
+    <addaction name="menuAspectRatio"/>
     <addaction name="menuWindowSize"/>
     <addaction name="separator"/>
     <addaction name="actionVerticalScaling"/>
@@ -850,7 +853,7 @@ QLineEdit QToolButton#clear_:pressed {
   </action>
   <action name="actionSetInPoint">
    <property name="text">
-    <string>Set &amp;In Point Anchor</string>
+    <string>Set &amp;In Point</string>
    </property>
    <property name="shortcut">
     <string>I</string>
@@ -858,10 +861,40 @@ QLineEdit QToolButton#clear_:pressed {
   </action>
   <action name="actionSetOutPoint">
    <property name="text">
-    <string>Set &amp;Out Point Anchor</string>
+    <string>Set &amp;Out Point</string>
    </property>
    <property name="shortcut">
     <string>O</string>
+   </property>
+  </action>
+  <action name="actionCropFrameAutoDetect">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Crop</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+C</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:10</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:10</string>
    </property>
   </action>
  </widget>

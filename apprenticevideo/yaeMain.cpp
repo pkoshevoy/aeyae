@@ -101,7 +101,12 @@ main(int argc, char ** argv)
     }
   }
 #endif
-
+  /*
+  std::cout.precision(4);
+  std::cerr.precision(4);
+  std::cout.setf(std::ios::scientific);
+  std::cerr.setf(std::ios::scientific);
+  */
   yae::Application app(argc, argv);
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();

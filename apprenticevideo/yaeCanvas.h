@@ -24,8 +24,10 @@
 
 // yae includes:
 #include <yaeAPI.h>
+#include <yaeAutoCrop.h>
 #include <yaeVideoCanvas.h>
 #include <yaeSynchronous.h>
+#include <yaeThreading.h>
 
 
 //----------------------------------------------------------------
@@ -71,13 +73,19 @@ namespace yae
     // helper:
     void refresh();
 
-    // virtual:
+    // virtual: this will be called from a secondary thread:
     bool render(const TVideoFramePtr & frame);
 
     // helpers:
     bool loadFrame(const TVideoFramePtr & frame);
+    TVideoFramePtr currentFrame() const;
+
+    // helpers:
     void setSubs(const std::list<TSubsFrame> & subs);
     bool updateOverlay();
+
+    // helpers:
+    void setGreeting(const QString & greeting);
     bool updateGreeting();
 
     // NOTE: In order to avoid blurring interlaced frames vertical scaling
@@ -94,6 +102,15 @@ namespace yae
 
     // use this to crop letterbox pillars and bars:
     void cropFrame(double darCropped);
+
+    // use this to zoom/crop a portion of the frame
+    // to eliminate letterbox pillars and/or bars;
+    void cropFrame(const TCropFrame & crop);
+
+    // start crop frame detection thread and deliver the results
+    // asynchronously via a callback:
+    void cropAutoDetect(void * callbackContext, TAutoCropCallback callback);
+    void cropAutoDetectStop();
 
     // accessors to full resolution frame dimensions
     // after overriding display aspect ratio and cropping:
@@ -171,6 +188,13 @@ namespace yae
     // keep track of previously displayed subtitles
     // in order to avoid re-rendering the same subtitles with every frame:
     std::list<TSubsFrame> subs_;
+
+    // the greeting message shown to the user
+    QString greeting_;
+
+    // automatic frame margin detection:
+    TAutoCropDetect autoCrop_;
+    Thread<TAutoCropDetect> autoCropThread_;
   };
 }
 

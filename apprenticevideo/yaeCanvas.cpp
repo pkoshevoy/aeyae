@@ -18,6 +18,7 @@
 #include <yaeAPI.h>
 #include <yaeCanvas.h>
 #include <yaePixelFormatTraits.h>
+#include <yaeThreading.h>
 #include <yaeUtils.h>
 
 // boost includes:
@@ -559,22 +560,69 @@ namespace yae
       verticalScalingEnabled_ = enable;
     }
 
+    bool getCroppedFrame(TCropFrame & crop) const
+    {
+      if (!frame_)
+      {
+        return false;
+      }
+
+      if (crop_.isEmpty())
+      {
+        const VideoTraits & vtts = frame_->traits_;
+
+        crop.x_ = vtts.offsetLeft_;
+        crop.y_ = vtts.offsetTop_;
+        crop.w_ = vtts.visibleWidth_;
+        crop.h_ = vtts.visibleHeight_;
+
+        if (darCropped_)
+        {
+          double dar = double(crop.w_) / double(crop.h_);
+          if (dar < darCropped_)
+          {
+            // adjust height:
+            int h = int(0.5 + double(crop.w_) / darCropped_);
+            crop.y_ += (crop.h_ - h) / 2;
+            crop.h_ = h;
+          }
+          else
+          {
+            // adjust width:
+            int w = int(0.5 + double(crop.h_) * darCropped_);
+            crop.x_ += (crop.w_ - w) / 2;
+            crop.w_ = w;
+          }
+        }
+      }
+      else
+      {
+        crop = crop_;
+      }
+
+      return true;
+    }
+
     bool imageWidthHeight(double & w, double & h) const
     {
-      if (frame_)
+      TCropFrame crop;
+      if (getCroppedFrame(crop))
       {
-        w = double(frame_->traits_.visibleWidth_);
-        h = double(frame_->traits_.visibleHeight_);
+        // video traits shortcut:
+        const VideoTraits & vtts = frame_->traits_;
+
+        w = crop.w_;
+        h = crop.h_;
 
         if (!verticalScalingEnabled_)
         {
           if (dar_ != 0.0)
           {
-            w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
+            w = floor(0.5 + dar_ * h);
           }
-          else if (frame_->traits_.pixelAspectRatio_ != 0.0)
+          else if (vtts.pixelAspectRatio_ != 0.0)
           {
-            w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
+            w = floor(0.5 + w * vtts.pixelAspectRatio_);
           }
         }
         else
@@ -585,20 +633,20 @@ namespace yae
 
             if (dar_ > wh)
             {
-              w = floor(0.5 + dar_ * frame_->traits_.visibleHeight_);
+              w = floor(0.5 + dar_ * h);
             }
             else if (dar_ < wh)
             {
-              h = floor(0.5 + frame_->traits_.visibleWidth_ / dar_);
+              h = floor(0.5 + w / dar_);
             }
           }
-          else if (frame_->traits_.pixelAspectRatio_ > 1.0)
+          else if (vtts.pixelAspectRatio_ > 1.0)
           {
-            w = floor(0.5 + w * frame_->traits_.pixelAspectRatio_);
+            w = floor(0.5 + w * vtts.pixelAspectRatio_);
           }
-          else if (frame_->traits_.pixelAspectRatio_ < 1.0)
+          else if (vtts.pixelAspectRatio_ < 1.0)
           {
-            h = floor(0.5 + h / frame_->traits_.pixelAspectRatio_);
+            h = floor(0.5 + h / vtts.pixelAspectRatio_);
           }
         }
 
@@ -615,22 +663,43 @@ namespace yae
 
     inline void cropFrame(double darCropped)
     {
+      crop_.clear();
       darCropped_ = darCropped;
     }
 
-    inline double displayAspectRatioCropped() const
+    inline void cropFrame(const TCropFrame & crop)
     {
-      return darCropped_;
+      darCropped_ = 0.0;
+      crop_ = crop;
     }
 
-    inline const TVideoFramePtr & frame() const
+    inline void getFrame(TVideoFramePtr & frame) const
     {
-      return frame_;
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      frame = frame_;
     }
 
   protected:
+
+    inline bool setFrame(const TVideoFramePtr & frame)
+    {
+      // NOTE: this assumes that the mutex is already locked:
+      bool frameSizeChanged = false;
+
+      if (!frame_ || !frame || !frame_->traits_.sameFrameSize(frame->traits_))
+      {
+        crop_.clear();
+        darCropped_ = 0.0;
+        frameSizeChanged = true;
+      }
+
+      frame_ = frame;
+      return frameSizeChanged;
+    }
+
     mutable boost::mutex mutex_;
     TVideoFramePtr frame_;
+    TCropFrame crop_;
     double dar_;
     double darCropped_;
     bool verticalScalingEnabled_;
@@ -676,6 +745,7 @@ namespace yae
     texId_ = 0;
     dar_ = 0.0;
     darCropped_ = 0.0;
+    crop_.clear();
     frame_ = TVideoFramePtr();
   }
 
@@ -719,7 +789,7 @@ namespace yae
     glDeleteTextures(1, &texId_);
     texId_ = 0;
 
-    frame_ = frame;
+    setFrame(frame);
 
     glGenTextures(1, &texId_);
     glEnable(GL_TEXTURE_RECTANGLE_EXT);
@@ -805,22 +875,21 @@ namespace yae
     double h = 0.0;
     imageWidthHeight(w, h);
 
+    TCropFrame crop;
+    getCroppedFrame(crop);
+
     glBegin(GL_QUADS);
     {
-      glTexCoord2i(vtts.offsetLeft_,
-                   vtts.offsetTop_);
+      glTexCoord2i(crop.x_, crop.y_);
       glVertex2i(0, 0);
 
-      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
-                   vtts.offsetTop_);
+      glTexCoord2i(crop.x_ + crop.w_, crop.y_);
       glVertex2i(int(w), 0);
 
-      glTexCoord2i(vtts.offsetLeft_ + vtts.visibleWidth_,
-                   vtts.offsetTop_ + vtts.visibleHeight_);
+      glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_);
       glVertex2i(int(w), int(h));
 
-      glTexCoord2i(vtts.offsetLeft_,
-                   vtts.offsetTop_ + vtts.visibleHeight_);
+      glTexCoord2i(crop.x_, crop.y_ + crop.h_);
       glVertex2i(0, int(h));
     }
     glEnd();
@@ -898,6 +967,7 @@ namespace yae
     h_ = 0;
     dar_ = 0.0;
     darCropped_ = 0.0;
+    crop_.clear();
 
     if (!texId_.empty())
     {
@@ -1041,16 +1111,13 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    bool mayReuseTextures =
-      frame_ && frame &&
-      frame_->traits_.pixelFormat_ == frame->traits_.pixelFormat_ &&
-      frame_->traits_.encodedWidth_ == frame->traits_.encodedWidth_ &&
-      frame_->traits_.encodedHeight_ == frame->traits_.encodedHeight_;
-
     // take the new frame:
-    frame_ = frame;
+    bool frameSizeChanged = setFrame(frame);
 
-    if (!mayReuseTextures)
+    TCropFrame crop;
+    getCroppedFrame(crop);
+
+    if (frameSizeChanged || w_ != crop.w_ || h_ != crop.h_)
     {
       if (!texId_.empty())
       {
@@ -1059,8 +1126,8 @@ namespace yae
         textureData_.clear();
       }
 
-      w_ = frame_->traits_.visibleWidth_;
-      h_ = frame_->traits_.visibleHeight_;
+      w_ = crop.w_;
+      h_ = crop.h_;
 
       // calculate x-min, x-max coordinates for each tile:
       std::deque<TEdge> x;
@@ -1136,14 +1203,14 @@ namespace yae
     const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
     const unsigned char * src =
       frame_->data_->data(0) +
-      frame_->traits_.offsetTop_ * bytesPerRow +
-      frame_->traits_.offsetLeft_ * bytesPerPixel;
+      crop.y_ * bytesPerRow +
+      crop.x_ * bytesPerPixel;
 
     // upload the texture data:
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
-      glPixelStorei(GL_UNPACK_ROW_LENGTH, frame_->traits_.encodedWidth_);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, vtts.encodedWidth_);
       glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       yae_assert_gl_no_error();
 
@@ -1274,8 +1341,11 @@ namespace yae
     double ih = 0.0;
     imageWidthHeight(iw, ih);
 
-    double sx = iw / double(frame_->traits_.visibleWidth_);
-    double sy = ih / double(frame_->traits_.visibleHeight_);
+    TCropFrame crop;
+    getCroppedFrame(crop);
+
+    double sx = iw / double(crop.w_);
+    double sy = ih / double(crop.h_);
     glScaled(sx, sy, 1.0);
 
     glEnable(GL_TEXTURE_2D);
@@ -1352,7 +1422,15 @@ namespace yae
     ok = connect(&timerScreenSaver_, SIGNAL(timeout()),
                  this, SLOT(wakeScreenSaver()));
     YAE_ASSERT(ok);
-   }
+
+    greeting_ = tr("drop videos/music here\n\n"
+                   "press spacebar to pause/resume\n\n"
+                   "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+                   "use apple remote for volume and seeking\n\n"
+#endif
+                   "explore the menus for more options");
+  }
 
   //----------------------------------------------------------------
   // Canvas::~Canvas
@@ -1441,6 +1519,11 @@ namespace yae
     {
       // send an event:
       qApp->postEvent(this, new RenderFrameEvent(payload_));
+    }
+
+    if (autoCropThread_.isRunning())
+    {
+      autoCrop_.setFrame(frame);
     }
 
     return true;
@@ -1558,14 +1641,6 @@ namespace yae
     double w = 0.0;
     double h = 0.0;
     double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
-    double darCropped = canvas->displayAspectRatioCropped();
-
-    if (dar != 0.0 && darCropped != 0.0 && dar > darCropped)
-    {
-      // crop left-right pillars:
-      w = h * darCropped;
-    }
-
     return w;
   }
 
@@ -1578,14 +1653,6 @@ namespace yae
     double w = 0.0;
     double h = 0.0;
     double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
-    double darCropped = canvas->displayAspectRatioCropped();
-
-    if (dar != 0.0 && darCropped != 0.0 && dar < darCropped)
-    {
-      // crop top-bottom bars:
-      h = w / darCropped;
-    }
-
     return h;
   }
 
@@ -1713,7 +1780,7 @@ namespace yae
       glClear(GL_COLOR_BUFFER_BIT);
     }
 
-    if (!showTheGreeting_)
+    if (ptts)
     {
       // draw the frame:
       paintImage(private_, canvasWidth, canvasHeight);
@@ -1754,6 +1821,22 @@ namespace yae
     }
 
     return ok;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::currentFrame
+  //
+  TVideoFramePtr
+  Canvas::currentFrame() const
+  {
+    TVideoFramePtr frame;
+
+    if (private_)
+    {
+      private_->getFrame(frame);
+    }
+
+    return frame;
   }
 
   //----------------------------------------------------------------
@@ -2044,11 +2127,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::setGreeting
+  //
+  void
+  Canvas::setGreeting(const QString & greeting)
+  {
+    showTheGreeting_ = true;
+    greeting_ = greeting;
+    updateGreeting();
+    refresh();
+  }
+
+  //----------------------------------------------------------------
   // Canvas::updateGreeting
   //
   bool
   Canvas::updateGreeting()
   {
+    if (!overlay_)
+    {
+      return false;
+    }
+
     double w = this->width();
     double h = this->height();
 
@@ -2084,15 +2184,7 @@ namespace yae
     int textAlignment = Qt::TextWordWrap | Qt::AlignCenter;
     QRect bboxCanvas = subsFrm.rect();
 
-    QString qstr = tr("drop videos/music here\n\n"
-                      "press spacebar to pause/resume\n\n"
-                      "alt-left/alt-right to navigate playlist\n\n"
-#ifdef __APPLE__
-                      "use apple remote for volume and seeking\n\n"
-#endif
-                      "explore the menus for more options");
-
-    std::string text(qstr.toUtf8().constData());
+    std::string text(greeting_.toUtf8().constData());
     if (!drawPlainText(text, painter, bboxCanvas, textAlignment))
     {
       return false;
@@ -2145,6 +2237,50 @@ namespace yae
   Canvas::cropFrame(double darCropped)
   {
     private_->cropFrame(darCropped);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::cropFrame
+  //
+  void
+  Canvas::cropFrame(const TCropFrame & crop)
+  {
+    cropAutoDetectStop();
+
+    std::cerr << "\nCROP FRAME AUTO DETECTED: "
+              << "x = " << crop.x_ << ", "
+              << "y = " << crop.y_ << ", "
+              << "w = " << crop.w_ << ", "
+              << "h = " << crop.h_
+              << std::endl;
+
+    private_->cropFrame(crop);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::cropAutoDetect
+  //
+  void
+  Canvas::cropAutoDetect(void * callbackContext, TAutoCropCallback callback)
+  {
+    if (!autoCropThread_.isRunning())
+    {
+      autoCrop_.reset(callbackContext, callback);
+      autoCropThread_.setContext(&autoCrop_);
+      autoCropThread_.run();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::cropAutoDetectStop
+  //
+  void
+  Canvas::cropAutoDetectStop()
+  {
+    autoCrop_.stop();
+    autoCropThread_.stop();
+    autoCropThread_.wait();
+    autoCropThread_.setContext(NULL);
   }
 
   //----------------------------------------------------------------
