@@ -338,7 +338,7 @@ namespace yae
   // getSubsFormat
   //
   static TSubsFormat
-  getSubsFormat(enum CodecID id)
+  getSubsFormat(enum AVCodecID id)
   {
     switch (id)
     {
@@ -1615,6 +1615,7 @@ namespace yae
       // Decode video frame
       int gotPicture = 0;
       AVFrame * avFrame = frameAutoCleanup_;
+      avcodec_get_frame_defaults(avFrame);
       AVCodecContext * codecContext = this->codecContext();
       avcodec_decode_video2(codecContext,
                             avFrame,

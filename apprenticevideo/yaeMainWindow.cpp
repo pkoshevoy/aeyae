@@ -270,6 +270,8 @@ namespace yae
     shortcutNext_ = new QShortcut(this);
     shortcutPrev_ = new QShortcut(this);
     shortcutLoop_ = new QShortcut(this);
+    shortcutCropNone_ = new QShortcut(this);
+    shortcutAutoCrop_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
 
@@ -281,6 +283,8 @@ namespace yae
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
+    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
+    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
@@ -449,6 +453,10 @@ namespace yae
                  this, SLOT(playbackCropFrameNone()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutCropNone_, SIGNAL(activated()),
+                 this, SLOT(playbackCropFrameNone()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrame1_33, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_33()));
     YAE_ASSERT(ok);
@@ -474,6 +482,10 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameAutoDetect()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
                  this, SLOT(playbackCropFrameAutoDetect()));
     YAE_ASSERT(ok);
 
@@ -1721,6 +1733,8 @@ namespace yae
     swapShortcuts(shortcutNext_, actionNext);
     swapShortcuts(shortcutPrev_, actionPrev);
     swapShortcuts(shortcutLoop_, actionLoop);
+    swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+    swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
   }
 
   //----------------------------------------------------------------
@@ -1748,6 +1762,8 @@ namespace yae
       swapShortcuts(shortcutNext_, actionNext);
       swapShortcuts(shortcutPrev_, actionPrev);
       swapShortcuts(shortcutLoop_, actionLoop);
+      swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+      swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     }
   }
 

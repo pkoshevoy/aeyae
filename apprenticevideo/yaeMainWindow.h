@@ -209,6 +209,8 @@ namespace yae
     QShortcut * shortcutNext_;
     QShortcut * shortcutPrev_;
     QShortcut * shortcutLoop_;
+    QShortcut * shortcutCropNone_;
+    QShortcut * shortcutAutoCrop_;
 
     // playlist shortcuts:
     QAction * actionRemove_;
