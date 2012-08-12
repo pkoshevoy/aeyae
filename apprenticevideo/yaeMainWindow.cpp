@@ -1941,7 +1941,7 @@ namespace yae
     std::list<QString> playlist;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
-      QString filename = i->toLocalFile();
+      QString filename = QFileInfo(i->toLocalFile()).canonicalFilePath();
       QFileInfo fi(filename);
 
       if (!fi.isReadable())
@@ -2169,7 +2169,7 @@ namespace yae
     PlaylistItem * item = NULL;
     bool ok = false;
 
-    while (item = playlistWidget_->lookup(current))
+    while ((item = playlistWidget_->lookup(current)))
     {
       if (load(item->path_))
       {
