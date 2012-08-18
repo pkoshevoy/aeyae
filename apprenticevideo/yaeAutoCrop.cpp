@@ -8,6 +8,7 @@
 
 // system includes:
 #include <iostream>
+#include <map>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -109,6 +110,44 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TBin
+  //
+  struct TBin
+  {
+    TBin():
+      size_(0),
+      sum_(0)
+    {}
+
+    int size_;
+    int sum_;
+  };
+
+  //----------------------------------------------------------------
+  // updateBin
+  //
+  inline static void
+  updateBin(TBin & bin, int offset, int weight = 1)
+  {
+    bin.sum_ += offset * weight;
+    bin.size_ += weight;
+  }
+
+  //----------------------------------------------------------------
+  // updateHistogram
+  //
+  inline static void
+  updateHistogram(std::map<int, TBin> & bins, int offset)
+  {
+    static const int kGranularity = 2;
+
+    int i = offset / kGranularity;
+    updateBin(bins[i - 1], offset);
+    updateBin(bins[i], offset, 2);
+    updateBin(bins[i + 1], offset);
+  }
+
+  //----------------------------------------------------------------
   // analyze
   //
   static bool
@@ -150,7 +189,8 @@ namespace yae
 
     static int findex = 0;
     std::string fn = std::string("/tmp/") + toText(++findex) + ".pgm";
-    std::cerr << "SAVING " << fn << ", original was " << ptts->name_ << std::endl;
+    std::cerr << "SAVING " << fn << ", original was " << ptts->name_
+              << std::endl;
     std::FILE * fout = fopenUtf8(fn.c_str(), "wb");
     std::string header;
     header += "P5\n";
@@ -178,7 +218,8 @@ namespace yae
     std::vector<unsigned int> offsetBottom(nx);
 
     double epsilon = 1.0 / 256.0;
-    double backgnd = (ptts->flags_ & pixelFormat::kYUV ? 16.0 : 1.0) * epsilon;
+    // double backgnd = (ptts->flags_ & pixelFormat::kYUV ? 16.0 : 1.0) * epsilon;
+    double backgnd = 24.0 * epsilon;
 
     for (unsigned int y = 0; y < h; y += step)
     {
@@ -187,8 +228,8 @@ namespace yae
 
       // left-side edge:
       {
-        TFiFo<double, 4> negative;
-        TFiFo<double, 4> positive;
+        TFiFo<double, 16> negative;
+        TFiFo<double, 16> positive;
         positive.push(backgnd);
 
         double & best = responseLeft[sampleIndex];
@@ -197,20 +238,20 @@ namespace yae
         unsigned int & offset = offsetLeft[sampleIndex];
         offset = 0;
 
-        for (unsigned int x = 0; x < w / 3; x++)
+        for (unsigned int x = 0; x < w / 2; x++)
         {
           double t = pixelIntensity(x0 + x, y0 + y,
                                     data, rowBytes, *ptts);
           positive.push(t, negative);
 
           double mn = negative.isEmpty() ? 0.0 : negative.mean();
-          if (mn < epsilon)
+          if (mn <= 0.0)
           {
             continue;
           }
 
           double mp = positive.mean();
-          double response = mp / mn;
+          double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
           std::cerr << std::setw(4) << y << ", left offset "
@@ -226,7 +267,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.95)
           {
             break;
           }
@@ -235,8 +276,8 @@ namespace yae
 
       // right-side edge:
       {
-        TFiFo<double, 4> negative;
-        TFiFo<double, 4> positive;
+        TFiFo<double, 16> negative;
+        TFiFo<double, 16> positive;
         positive.push(backgnd);
 
         double & best = responseRight[sampleIndex];
@@ -245,20 +286,20 @@ namespace yae
         unsigned int & offset = offsetRight[sampleIndex];
         offset = 0;
 
-        for (unsigned int x = 0; x < w / 3; x++)
+        for (unsigned int x = 0; x < w / 2; x++)
         {
           double t = pixelIntensity(x0 + w - 1 - x, y0 + y,
                                     data, rowBytes, *ptts);
           positive.push(t, negative);
 
           double mn = negative.isEmpty() ? 0.0 : negative.mean();
-          if (mn < epsilon)
+          if (mn <= 0.0)
           {
             continue;
           }
 
           double mp = positive.mean();
-          double response = mp / mn;
+          double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
           std::cerr << std::setw(4) << y << ", right offset "
@@ -274,7 +315,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.95)
           {
             break;
           }
@@ -289,8 +330,8 @@ namespace yae
 
       // top-side edge:
       {
-        TFiFo<double, 4> negative;
-        TFiFo<double, 4> positive;
+        TFiFo<double, 16> negative;
+        TFiFo<double, 16> positive;
         positive.push(backgnd);
 
         double & best = responseTop[sampleIndex];
@@ -299,19 +340,19 @@ namespace yae
         unsigned int & offset = offsetTop[sampleIndex];
         offset = 0;
 
-        for (unsigned int y = 0; y < h / 3; y++)
+        for (unsigned int y = 0; y < h / 2; y++)
         {
           double t = pixelIntensity(x0 + x, y0 + y, data, rowBytes, *ptts);
           positive.push(t, negative);
 
           double mn = negative.isEmpty() ? 0.0 : negative.mean();
-          if (mn < epsilon)
+          if (mn <= 0.0)
           {
             continue;
           }
 
           double mp = positive.mean();
-          double response = mp / mn;
+          double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
           std::cerr << std::setw(4) << x << ", top offset "
@@ -327,7 +368,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.95)
           {
             break;
           }
@@ -336,8 +377,8 @@ namespace yae
 
       // bottom-side edge:
       {
-        TFiFo<double, 4> negative;
-        TFiFo<double, 4> positive;
+        TFiFo<double, 16> negative;
+        TFiFo<double, 16> positive;
         positive.push(backgnd);
 
         double & best = responseBottom[sampleIndex];
@@ -346,20 +387,20 @@ namespace yae
         unsigned int & offset = offsetBottom[sampleIndex];
         offset = 0;
 
-        for (unsigned int y = 0; y < h / 3; y++)
+        for (unsigned int y = 0; y < h / 2; y++)
         {
           double t = pixelIntensity(x0 + x, y0 + h - 1 - y,
                                     data, rowBytes, *ptts);
           positive.push(t, negative);
 
           double mn = negative.isEmpty() ? 0.0 : negative.mean();
-          if (mn < epsilon)
+          if (mn <= 0.0)
           {
             continue;
           }
 
           double mp = positive.mean();
-          double response = mp / mn;
+          double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
           std::cerr << std::setw(4) << x << ", bottom offset "
@@ -375,7 +416,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < 1.1 && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.95)
           {
             break;
           }
@@ -391,7 +432,9 @@ namespace yae
       std::cerr << "response(" << offsetLeft[i] << ", " << y << ") = "
                 << responseLeft[i] << std::endl;
     }
+#endif
 
+#if 0
     std::cerr << "\nRIGHT EDGE:" << std::endl;
     for (std::size_t i = 0; i < ny; i++)
     {
@@ -399,7 +442,9 @@ namespace yae
       std::cerr << "response(" << offsetRight[i] << ", " << y << ") = "
                 << responseRight[i] << std::endl;
     }
+#endif
 
+#if 0
     std::cerr << "\nTOP EDGE:" << std::endl;
     for (std::size_t i = 0; i < nx; i++)
     {
@@ -407,7 +452,9 @@ namespace yae
       std::cerr << "response(" << x << ", " << offsetTop[i] << ") = "
                 << responseTop[i] << std::endl;
     }
+#endif
 
+#if 0
     std::cerr << "\nBOTTOM EDGE:" << std::endl;
     for (std::size_t i = 0; i < nx; i++)
     {
@@ -417,48 +464,119 @@ namespace yae
     }
 #endif
 
-    std::sort(offsetLeft.begin(), offsetLeft.end());
-    std::sort(offsetRight.begin(), offsetRight.end());
-    std::sort(offsetTop.begin(), offsetTop.end());
-    std::sort(offsetBottom.begin(), offsetBottom.end());
+    std::map<int, TBin> leftHistogram;
+    std::map<int, TBin> rightHistogram;
+    std::map<int, TBin> topHistogram;
+    std::map<int, TBin> bottomHistogram;
 
-    const std::size_t ny3 = ny / 3;
-    const std::size_t nx3 = nx / 3;
-
-    double left = 0.0;
-    double right = 0.0;
-
-    for (std::size_t i = 0; i < ny3; i++)
+    for (std::size_t i = 0; i < ny; i++)
     {
-      left += offsetLeft[i + ny3];
-      right += offsetRight[i + ny3];
+      updateHistogram(leftHistogram, offsetLeft[i]);
+      updateHistogram(rightHistogram, offsetRight[i]);
     }
 
-    left /= double(ny3);
-    right /= double(ny3);
-
-    double top = 0.0;
-    double bottom = 0.0;
-
-    for (std::size_t i = 0; i < nx3; i++)
+    for (std::size_t i = 0; i < nx; i++)
     {
-      top += offsetTop[i + nx3];
-      bottom += offsetBottom[i + nx3];
+      updateHistogram(topHistogram, offsetTop[i]);
+      updateHistogram(bottomHistogram, offsetBottom[i]);
     }
 
-    top /= double(nx3);
-    bottom /= double(nx3);
+    TBin lbest;
+    for (std::map<int, TBin>::const_iterator i = leftHistogram.begin();
+         i != leftHistogram.end(); ++i)
+    {
+      const TBin & bin = i->second;
+#if 0
+      std::cerr << "left: " << double(bin.sum_) / double(bin.size_)
+                << " -> " << bin.size_ << std::endl;
+#endif
+      if (lbest.size_ < bin.size_)
+      {
+        lbest = bin;
+      }
+    }
 
-    crop.x_ = (int)(x0 + left + 0.5);
-    crop.w_ = (int)(w - x0 - right - left + 0.5);
-    crop.y_ = (int)(y0 + top + 0.5);
-    crop.h_ = (int)(h - y0 - bottom - top + 0.5);
+    TBin rbest;
+    for (std::map<int, TBin>::const_iterator i = rightHistogram.begin();
+         i != rightHistogram.end(); ++i)
+    {
+      const TBin & bin = i->second;
+#if 0
+      std::cerr << "right: " << double(bin.sum_) / double(bin.size_)
+                << " -> " << bin.size_ << std::endl;
+#endif
+      if (rbest.size_ < bin.size_)
+      {
+        rbest = bin;
+      }
+    }
 
-    std::cerr << "\ncrop margins: left " << crop.x_
-              << ", right " << w - (crop.x_ + crop.w_)
-              << ", top " << crop.y_
-              << ", bottom " << h - (crop.y_ + crop.h_)
-              << std::endl;
+    TBin tbest;
+    for (std::map<int, TBin>::const_iterator i = topHistogram.begin();
+         i != topHistogram.end(); ++i)
+    {
+      const TBin & bin = i->second;
+#if 0
+      std::cerr << "top: " << double(bin.sum_) / double(bin.size_)
+                << " -> " << bin.size_ << std::endl;
+#endif
+      if (tbest.size_ < bin.size_)
+      {
+        tbest = bin;
+      }
+    }
+
+    TBin bbest;
+    for (std::map<int, TBin>::const_iterator i = bottomHistogram.begin();
+         i != bottomHistogram.end(); ++i)
+    {
+      const TBin & bin = i->second;
+#if 0
+      std::cerr << "bottom: " << double(bin.sum_) / double(bin.size_)
+                << " -> " << bin.size_ << std::endl;
+#endif
+      if (bbest.size_ < bin.size_)
+      {
+        bbest = bin;
+      }
+    }
+
+    double lOffset =
+      leftHistogram.size() < 50 ?
+      double(lbest.sum_) / double(lbest.size_) :
+      0.0;
+
+    double rOffset =
+      rightHistogram.size() < 50 ?
+      double(rbest.sum_) / double(rbest.size_) :
+      0.0;
+
+    double tOffset =
+      topHistogram.size() < 50 ?
+      double(tbest.sum_) / double(tbest.size_) :
+      0.0;
+
+    double bOffset =
+      bottomHistogram.size() < 50 ?
+      double(bbest.sum_) / double(bbest.size_) :
+      0.0;
+
+    crop.x_ = (int)(x0 + lOffset + 0.5);
+    crop.y_ = (int)(y0 + tOffset + 0.5);
+    crop.w_ = (int)(w - x0 - rOffset - lOffset + 0.5);
+    crop.h_ = (int)(h - y0 - bOffset - tOffset + 0.5);
+
+    std::cerr
+      << "\ncrop margins:\n"
+      << "  left " << lOffset
+      << " group(" << lbest.size_ << "), " << leftHistogram.size() << "\n"
+      << " right " << rOffset
+      << " group(" << rbest.size_ << "), " << rightHistogram.size() << "\n"
+      << "   top " << tOffset
+      << " group(" << tbest.size_ << "), " << topHistogram.size() << "\n"
+      << "bottom " << bOffset
+      << " group(" << bbest.size_ << "), " << bottomHistogram.size() << "\n"
+      << std::endl;
 
     return true;
   }
