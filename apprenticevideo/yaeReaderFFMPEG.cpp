@@ -950,12 +950,14 @@ namespace yae
                const AVRational & srcPAR,
                PixelFormat srcPixFmt,
                PixelFormat dstPixFmt,
-               const char * filterChain = NULL);
+               const char * filterChain = NULL,
+               bool * frameTraitsChanged = NULL);
 
     bool push(const AVFrame * in);
     bool pull(AVFrame * out);
 
   protected:
+    std::string filterChain_;
     int srcWidth_;
     int srcHeight_;
     AVRational srcTimeBase_;
@@ -1026,8 +1028,26 @@ namespace yae
                           const AVRational & srcPAR,
                           PixelFormat srcPixFmt,
                           PixelFormat dstPixFmt,
-                          const char * filterChain)
+                          const char * filterChain,
+                          bool * frameTraitsChanged)
   {
+    filterChain = filterChain ? filterChain : "";
+    bool sameTraits = (srcWidth_ == srcWidth &&
+                       srcHeight_ == srcHeight &&
+                       srcPixFmt_ == srcPixFmt &&
+                       dstPixFmt_[0] == dstPixFmt &&
+                       filterChain_ == filterChain);
+
+    if (frameTraitsChanged)
+    {
+      *frameTraitsChanged = !sameTraits;
+    }
+
+    if (sameTraits)
+    {
+      return true;
+    }
+
     reset();
 
     srcWidth_ = srcWidth;
@@ -1104,7 +1124,7 @@ namespace yae
     std::string filters;
     {
       std::ostringstream os;
-      if (filterChain && *filterChain && strcmp(filterChain, "null") != 0)
+      if (*filterChain && strcmp(filterChain, "null") != 0)
       {
         os << filterChain << ",";
       }
@@ -1113,6 +1133,7 @@ namespace yae
       os << "format=" << txtPixFmt;
 
       filters = os.str().c_str();
+      filterChain_ = filterChain;
     }
 
     err = avfilter_graph_parse(graph_, filters.c_str(), &in_, &out_, NULL);
@@ -1239,6 +1260,11 @@ namespace yae
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);
     void skipNonReferenceFrames(bool skip);
+
+    // helpers: these are used to re-configure output buffers
+    // when frame traits change:
+    void refreshTraits();
+    bool reconfigure();
 
     // virtual:
     bool decoderStartup();
@@ -1464,15 +1490,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::decoderStartup
+  // VideoTrack::refreshTraits
   //
-  bool
-  VideoTrack::decoderStartup()
+  void
+  VideoTrack::refreshTraits()
   {
     // shortcut to native frame format traits:
     getTraits(native_);
 
-    // pixel format shortcut:
+    // frame size may have changed, so update the override accordingly:
+    override_.encodedWidth_ = native_.encodedWidth_;
+    override_.encodedHeight_ = native_.encodedHeight_;
+    override_.visibleWidth_ = native_.visibleWidth_;
+    override_.visibleHeight_ = native_.visibleHeight_;
+
     output_ = override_;
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)
@@ -1480,7 +1511,17 @@ namespace yae
       // sws_getContext doesn't support Y400A, so drop the alpha channel:
       output_.pixelFormat_ = kPixelFormatGRAY8;
     }
+  }
 
+  //----------------------------------------------------------------
+  // VideoTrack::reconfigure
+  //
+  bool
+  VideoTrack::reconfigure()
+  {
+    refreshTraits();
+
+    // pixel format shortcut:
     const pixelFormat::Traits * ptts =
       pixelFormat::getTraits(output_.pixelFormat_);
     if (!ptts)
@@ -1488,10 +1529,6 @@ namespace yae
       YAE_ASSERT(false);
       return false;
     }
-
-    // shortcut for ffmpeg pixel format:
-    enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
-    AVCodecContext * codecContext = this->codecContext();
 
     // get number of contiguous sample planes,
     // sample set stride (in bits) for each plane:
@@ -1557,6 +1594,17 @@ namespace yae
       }
     }
 
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::decoderStartup
+  //
+  bool
+  VideoTrack::decoderStartup()
+  {
+    refreshTraits();
+
     startTime_ = stream_->start_time;
     if (startTime_ == AV_NOPTS_VALUE)
     {
@@ -1573,15 +1621,6 @@ namespace yae
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     // framesDecoded_ = 0;
-
-    const char * filterChain = deinterlace_ ? "yadif=0:0:1" : NULL;
-    filterGraph_.setup(codecContext->width,
-                       codecContext->height,
-                       codecContext->time_base,
-                       codecContext->sample_aspect_ratio,
-                       codecContext->pix_fmt,
-                       ffmpegPixelFormat,
-                       filterChain);
 
     frameQueue_.open();
     return true;
@@ -1632,6 +1671,29 @@ namespace yae
       avFrame->pts = avFrame->best_effort_timestamp;
 #endif
       framesDecoded_++;
+
+      enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
+      const char * filterChain = deinterlace_ ? "yadif=0:0:1" : NULL;
+      bool frameTraitsChanged = false;
+      if (!filterGraph_.setup(avFrame->width,
+                              avFrame->height,
+                              codecContext->time_base,
+                              codecContext->sample_aspect_ratio,
+                              (PixelFormat)avFrame->format,
+                              // codecContext->pix_fmt,
+                              ffmpegPixelFormat,
+                              filterChain,
+                              &frameTraitsChanged))
+      {
+        YAE_ASSERT(false);
+        return true;
+      }
+
+      if (frameTraitsChanged && !reconfigure())
+      {
+        YAE_ASSERT(false);
+        return true;
+      }
 
       if (!filterGraph_.push(avFrame))
       {
