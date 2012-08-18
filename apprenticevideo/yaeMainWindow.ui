@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -602,7 +602,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>None</string>
    </property>
    <property name="shortcut">
-    <string>Alt+N</string>
+    <string>Alt+X</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
