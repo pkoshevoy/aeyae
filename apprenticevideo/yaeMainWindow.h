@@ -30,6 +30,7 @@
 
 // local includes:
 #include "ui_yaeAbout.h"
+#include "ui_yaeAspectRatioDialog.h"
 #include "ui_yaeMainWindow.h"
 #include "ui_yaeOpenUrlDialog.h"
 
@@ -47,6 +48,19 @@ namespace yae
 
   public:
     AboutDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+  };
+
+
+  //----------------------------------------------------------------
+  // AspectRatioDialog
+  //
+  class AspectRatioDialog : public QDialog,
+                            public Ui::AspectRatioDialog
+  {
+    Q_OBJECT;
+
+  public:
+    AspectRatioDialog(QWidget * parent = 0, Qt::WFlags f = 0);
   };
 
 
@@ -100,6 +114,7 @@ namespace yae
 
     // playback menu:
     void playbackAspectRatioAuto();
+    void playbackAspectRatioOther();
     void playbackAspectRatio2_40();
     void playbackAspectRatio2_35();
     void playbackAspectRatio1_85();

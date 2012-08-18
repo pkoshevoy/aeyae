@@ -185,6 +185,7 @@ set(project_moc_hxx
 
 set(project_uis
   yaeAbout.ui
+  yaeAspectRatioDialog.ui
   yaeMainWindow.ui
   yaeOpenUrlDialog.ui
   )

@@ -2302,6 +2302,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::imageAspectRatio
+  //
+  double
+  Canvas::imageAspectRatio(double & w, double & h) const
+  {
+    double dar = 0.0;
+    w = 0.0;
+    h = 0.0;
+
+    if (private_)
+    {
+      dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
+    }
+
+    return dar;
+  }
+
+  //----------------------------------------------------------------
   // Canvas::hideCursor
   //
   void

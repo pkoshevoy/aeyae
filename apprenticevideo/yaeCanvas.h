@@ -117,6 +117,14 @@ namespace yae
     double imageWidth() const;
     double imageHeight() const;
 
+    // return width/height image aspect ration
+    // and pass back image width and height
+    //
+    // NOTE: width and height are preprocessed according to current
+    // frame crop and aspect ratio settings.
+    //
+    double imageAspectRatio(double & w, double & h) const;
+
   signals:
     void toggleFullScreen();
 

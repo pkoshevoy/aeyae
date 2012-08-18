@@ -301,6 +301,7 @@ QLineEdit:disabled {
      <addaction name="actionAspectRatio1_85"/>
      <addaction name="actionAspectRatio2_35"/>
      <addaction name="actionAspectRatio2_40"/>
+     <addaction name="actionAspectRatioOther"/>
     </widget>
     <addaction name="menuCropFrame"/>
     <addaction name="menuAspectRatio"/>
@@ -901,6 +902,17 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>16:10</string>
+   </property>
+  </action>
+  <action name="actionAspectRatioOther">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Other</string>
+   </property>
+   <property name="toolTip">
+    <string>Specify custom frame aspect ratio</string>
    </property>
   </action>
  </widget>

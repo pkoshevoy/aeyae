@@ -75,6 +75,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AspectRatioDialog::AspectRatioDialog
+  //
+  AspectRatioDialog::AspectRatioDialog(QWidget * parent, Qt::WFlags f):
+    QDialog(parent, f),
+    Ui::AspectRatioDialog()
+  {
+    Ui::AspectRatioDialog::setupUi(this);
+  }
+
+  //----------------------------------------------------------------
   // OpenUrlDialog::OpenUrlDialog
   //
   OpenUrlDialog::OpenUrlDialog(QWidget * parent, Qt::WFlags f):
@@ -312,6 +322,7 @@ namespace yae
     aspectRatioGroup->addAction(actionAspectRatio1_85);
     aspectRatioGroup->addAction(actionAspectRatio2_35);
     aspectRatioGroup->addAction(actionAspectRatio2_40);
+    aspectRatioGroup->addAction(actionAspectRatioOther);
     actionAspectRatioAuto->setChecked(true);
 
     QActionGroup * cropFrameGroup = new QActionGroup(this);
@@ -447,6 +458,10 @@ namespace yae
 
     ok = connect(actionAspectRatio2_40, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio2_40()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionAspectRatioOther, SIGNAL(triggered()),
+                 this, SLOT(playbackAspectRatioOther()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrameNone, SIGNAL(triggered()),
@@ -1360,6 +1375,36 @@ namespace yae
   {
     canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(0.0);
+    canvasSizeRestore();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackAspectRatioOther
+  //
+  void
+  MainWindow::playbackAspectRatioOther()
+  {
+    static AspectRatioDialog * aspectRatioDialog = NULL;
+    if (!aspectRatioDialog)
+    {
+      aspectRatioDialog = new AspectRatioDialog(this);
+    }
+
+    double w = 0.0;
+    double h = 0.0;
+    double dar = canvas_->imageAspectRatio(w, h);
+    dar = dar != 0.0 ? dar : 1.777777;
+    aspectRatioDialog->doubleSpinBox->setValue(dar);
+
+    int r = aspectRatioDialog->exec();
+    if (r != QDialog::Accepted)
+    {
+      return;
+    }
+
+    dar = aspectRatioDialog->doubleSpinBox->value();
+    canvasSizeBackup();
+    canvas_->overrideDisplayAspectRatio(dar);
     canvasSizeRestore();
   }
 
