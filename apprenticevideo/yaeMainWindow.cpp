@@ -1172,6 +1172,9 @@ namespace yae
     reader_->close();
     stopRenderers();
 
+    // reset overlay plane to clean state, reset libass wrapper:
+    canvas_->clearOverlay();
+
     bool enableLooping = actionLoop->isChecked();
     reader->setPlaybackLooping(enableLooping);
 

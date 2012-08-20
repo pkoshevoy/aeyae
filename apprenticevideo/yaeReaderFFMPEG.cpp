@@ -526,13 +526,19 @@ namespace yae
       close();
     }
 
+    void clear()
+    {
+      queue_.clear();
+      active_.clear();
+    }
+
     void open()
     {
       if (stream_)
       {
         format_ = getSubsFormat(stream_->codec->codec_id);
         codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-        prev_.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
+        active_.clear();
 
         if (codec_)
         {
@@ -576,10 +582,93 @@ namespace yae
 
     void close()
     {
+      clear();
+
       if (stream_ && codec_)
       {
         avcodec_close(stream_->codec);
         codec_ = NULL;
+      }
+    }
+
+    void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next)
+    {
+      if (prev.tEnd_.time_ == std::numeric_limits<int64>::max())
+      {
+        double s0 = prev.time_.toSeconds();
+        double s1 = next.time_.toSeconds();
+
+        if (next.time_.time_ != std::numeric_limits<int64>::max() &&
+            s0 < s1)
+        {
+          // calculate the end time based in display time
+          // of the next subtitle frame:
+          double ds = std::min<double>(5.0, s1 - s0);
+
+          prev.tEnd_ = prev.time_;
+          prev.tEnd_ += ds;
+        }
+        else if (v1 - s0 > 5.0)
+        {
+          prev.tEnd_ = prev.time_;
+          prev.tEnd_ += 5.0;
+        }
+      }
+    }
+
+    void fixupEndTimes(double v1, const TSubsFrame & last)
+    {
+      if (active_.empty())
+      {
+        return;
+      }
+
+      std::list<TSubsFrame>::iterator i = active_.begin();
+      TSubsFrame * prev = &(*i);
+      ++i;
+
+      for (; i != active_.end(); ++i)
+      {
+        TSubsFrame & next = *i;
+        fixupEndTime(v1, *prev, next);
+        prev = &next;
+      }
+
+      fixupEndTime(v1, *prev, last);
+    }
+
+    void expungeOldSubs(double v0)
+    {
+      for (std::list<TSubsFrame>::iterator i = active_.begin();
+           i != active_.end(); )
+      {
+        const TSubsFrame & sf = *i;
+        double s1 = sf.tEnd_.toSeconds();
+
+        if (s1 <= v0)
+        {
+          i = active_.erase(i);
+        }
+        else
+        {
+          ++i;
+        }
+      }
+    }
+
+    void get(double v0, double v1, std::list<TSubsFrame> & subs)
+    {
+      for (std::list<TSubsFrame>::const_iterator i = active_.begin();
+           i != active_.end(); ++i)
+      {
+        const TSubsFrame & sf = *i;
+        double s0 = sf.time_.toSeconds();
+        double s1 = sf.tEnd_.toSeconds();
+
+        if (s0 < v1 && v0 < s1)
+        {
+          subs.push_back(sf);
+        }
       }
     }
 
@@ -598,7 +687,7 @@ namespace yae
 
     TIPlanarBufferPtr extraData_;
     TSubsFrameQueue queue_;
-    TSubsFrame prev_;
+    std::list<TSubsFrame> active_;
 
     TVobSubSpecs vobsub_;
   };
@@ -1641,6 +1730,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TSubsPredicate
+  //
+  struct TSubsPredicate
+  {
+    TSubsPredicate(double now):
+      now_(now)
+    {}
+
+    bool operator() (const TSubsFrame & sf) const
+    {
+      double s0 = sf.time_.toSeconds();
+      return s0 <= now_;
+    }
+
+    double now_;
+  };
+
+  //----------------------------------------------------------------
   // VideoTrack::decode
   //
   bool
@@ -1838,60 +1945,20 @@ namespace yae
                             1.0 / vf.traits_.frameRate_ :
                             0.042);
 
+          TSubsPredicate subSelector(v1);
+
           std::size_t nsubs = subs_ ? subs_->size() : 0;
           for (std::size_t i = 0; i < nsubs; i++)
           {
             SubtitlesTrack & subs = *((*subs_)[i]);
+            subs.queue_.get(subSelector, subs.active_, &terminator_);
 
-            double s0 = subs.prev_.time_.toSeconds();
-            double s1 = subs.prev_.tEnd_.toSeconds();
+            TSubsFrame next;
+            subs.queue_.peek(next, &terminator_);
+            subs.fixupEndTimes(v1, next);
+            subs.expungeOldSubs(v0);
 
-            while (true)
-            {
-              if (subs.prev_.tEnd_.time_ == std::numeric_limits<int64>::max())
-              {
-                // calculate the end time based in display time
-                // of the next subtitle frame:
-
-                TSubsFrame next;
-                if (subs.queue_.peek(next, &terminator_))
-                {
-                  s1 = next.time_.toSeconds();
-
-                  double ds = std::min<double>(5.0, s1 - s0);
-                  s1 = s0 + ds;
-
-                  subs.prev_.tEnd_ = subs.prev_.time_;
-                  subs.prev_.tEnd_ += ds;
-                }
-                else if (v1 - s0 > 5.0)
-                {
-                  s1 = s0 + 5.0;
-
-                  subs.prev_.tEnd_ = subs.prev_.time_;
-                  subs.prev_.tEnd_ += 5.0;
-                }
-              }
-
-              if (v0 < s1)
-              {
-                break;
-              }
-
-              bool waitForData = false;
-              if (!subs.queue_.pop(subs.prev_, &terminator_, waitForData))
-              {
-                break;
-              }
-
-              s0 = subs.prev_.time_.toSeconds();
-              s1 = subs.prev_.tEnd_.toSeconds();
-            }
-
-            if (s0 < v1 && v0 < s1)
-            {
-              vf.subs_.push_back(subs.prev_);
-            }
+            subs.get(v0, v1, vf.subs_);
           }
         }
 
@@ -3903,8 +3970,7 @@ namespace yae
     for (std::size_t i = 0; i < nsubs; i++)
     {
       SubtitlesTrack & subs = *(subs_[i]);
-      subs.queue_.clear();
-      subs.prev_ = TSubsFrame();
+      subs.clear();
     }
 
     return err;

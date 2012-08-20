@@ -56,6 +56,7 @@ namespace yae
 
   public:
     class TPrivate;
+    class TPrivateLibass;
 
     Canvas(const QGLFormat & format,
            QWidget * parent = 0,
@@ -69,6 +70,7 @@ namespace yae
 
     // discard currently stored image data, repaint the canvas:
     void clear();
+    void clearOverlay();
 
     // helper:
     void refresh();
@@ -82,7 +84,7 @@ namespace yae
 
     // helpers:
     void setSubs(const std::list<TSubsFrame> & subs);
-    bool updateOverlay();
+    bool updateOverlay(bool reparse);
 
     // helpers:
     void setGreeting(const QString & greeting);
@@ -184,6 +186,7 @@ namespace yae
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
     TPrivate * overlay_;
+    TPrivateLibass * libass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
 

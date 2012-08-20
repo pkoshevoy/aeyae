@@ -36,6 +36,7 @@
 #endif
 
 // libass includes:
+// #undef YAE_USE_LIBASS
 #ifdef YAE_USE_LIBASS
 extern "C"
 {
@@ -1386,6 +1387,127 @@ namespace yae
     glDisable(GL_TEXTURE_2D);
   }
 
+
+  //----------------------------------------------------------------
+  // Canvas::TPrivateLibass
+  //
+  class Canvas::TPrivateLibass
+  {
+  public:
+
+#ifdef YAE_USE_LIBASS
+    struct TLine
+    {
+      TLine(int64 pts = 0,
+            const unsigned char * data = NULL,
+            std::size_t size = 0):
+        pts_(pts),
+        data_((const char *)data, (const char *)data + size)
+      {}
+
+      bool operator == (const TLine & sub) const
+      {
+        return pts_ == sub.pts_ && data_ == sub.data_;
+      }
+
+      // presentation timestamp expressed in milliseconds:
+      int64 pts_;
+
+      // subtitle dialog line:
+      std::string data_;
+    };
+
+    TPrivateLibass(const unsigned char * codecPrivate,
+                   std::size_t codecPrivateSize):
+      library_(NULL),
+      renderer_(NULL),
+      track_(NULL),
+      bufferSize_(0)
+    {
+      library_ = ass_library_init();
+      renderer_ = ass_renderer_init(library_);
+      track_ = ass_new_track(library_);
+
+      const char * default_font = NULL;
+      const char * default_family = NULL;
+      ass_set_fonts(renderer_,
+                    default_font,
+                    default_family,
+                    1, // use fontconfig
+                    NULL, // fontconfig configuration file path
+                    1); // update font cache
+
+      ass_process_codec_private(track_,
+                                (char *)codecPrivate,
+                                (int)codecPrivateSize);
+    }
+
+    ~TPrivateLibass()
+    {
+      ass_free_track(track_);
+      ass_renderer_done(renderer_);
+      ass_library_done(library_);
+    }
+
+    void setFrameSize(int w, int h)
+    {
+      ass_set_frame_size(renderer_, w, h);
+
+      double ar = double(w) / double(h);
+      ass_set_aspect_ratio(renderer_, ar, ar);
+    }
+
+    void processData(const unsigned char * data, std::size_t size, int64 pts)
+    {
+      TLine line(pts, data, size);
+      if (has(buffer_, line))
+      {
+        return;
+      }
+
+      std::cerr << "ass_process_data: " << line.data_ << std::endl;
+
+      if (bufferSize_)
+      {
+        const TLine & first = buffer_.front();
+        if (pts < first.pts_)
+        {
+          // user skipped back in time, purge cached subs:
+          ass_flush_events(track_);
+          buffer_.clear();
+          bufferSize_ = 0;
+        }
+      }
+
+      if (bufferSize_ < 10)
+      {
+        bufferSize_++;
+      }
+      else
+      {
+        buffer_.pop_front();
+      }
+
+      buffer_.push_back(line);
+      ass_process_data(track_, (char *)data, (int)size);
+    }
+
+    ASS_Image * renderFrame(int64 now, int * detectChange)
+    {
+      return ass_render_frame(renderer_,
+                              track_,
+                              (long long)now,
+                              detectChange);
+    }
+
+    ASS_Library * library_;
+    ASS_Renderer * renderer_;
+    ASS_Track * track_;
+    std::list<TLine> buffer_;
+    std::size_t bufferSize_;
+#endif
+  };
+
   //----------------------------------------------------------------
   // Canvas::Canvas
   //
@@ -1396,6 +1518,7 @@ namespace yae
     QGLWidget(format, parent, shareWidget, f),
     private_(NULL),
     overlay_(NULL),
+    libass_(NULL),
     showTheGreeting_(true),
     subsInOverlay_(false),
     timerHideCursor_(this),
@@ -1439,6 +1562,7 @@ namespace yae
   {
     delete private_;
     delete overlay_;
+    delete libass_;
   }
 
   //----------------------------------------------------------------
@@ -1466,22 +1590,6 @@ namespace yae
       private_ = new TLegacyCanvas();
       overlay_ = new TLegacyCanvas();
     }
-
-#if 0 // def YAE_USE_LIBASS
-    ASS_Library * lass = ass_library_init();
-    ASS_Renderer * lassRenderer = ass_renderer_init(lass);
-
-    const char * default_font = NULL;
-    const char * default_family = NULL;
-    ass_set_fonts(lassRenderer,
-                  default_font,
-                  default_family,
-                  1, // use fontconfig
-                  NULL, // fontconfig configuration file path
-                  1); // update font cache
-    ass_renderer_done(lassRenderer);
-    ass_library_done(lass);
-#endif
   }
 
   //----------------------------------------------------------------
@@ -1491,11 +1599,24 @@ namespace yae
   Canvas::clear()
   {
     private_->clear(this);
+    clearOverlay();
+    refresh();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::clearOverlay
+  //
+  void
+  Canvas::clearOverlay()
+  {
     overlay_->clear(this);
+
+    delete libass_;
+    libass_ = NULL;
+
     showTheGreeting_ = true;
     subsInOverlay_ = false;
     subs_.clear();
-    refresh();
   }
 
   //----------------------------------------------------------------
@@ -1562,7 +1683,7 @@ namespace yae
 
       if (overlayEvent)
       {
-        updateOverlay();
+        updateOverlay(true);
         refresh();
         return true;
       }
@@ -1600,7 +1721,7 @@ namespace yae
 
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
-      updateOverlay();
+      updateOverlay(true);
     }
   }
 
@@ -1857,11 +1978,13 @@ namespace yae
       }
     }
 
-    if (renderSubs != subs_)
+    bool reparse = (renderSubs != subs_);
+    if (reparse)
     {
       subs_ = renderSubs;
-      updateOverlay();
     }
+
+    updateOverlay(reparse);
   }
 
   //----------------------------------------------------------------
@@ -1933,17 +2056,17 @@ namespace yae
   // Canvas::loadSubs
   //
   bool
-  Canvas::updateOverlay()
+  Canvas::updateOverlay(bool reparse)
   {
     if (showTheGreeting_)
     {
       return updateGreeting();
     }
 
-    double uncroppedWidth = 0.0;
-    double uncroppedHeight = 0.0;
-    private_->imageWidthHeight(uncroppedWidth, uncroppedHeight);
-    double dar = uncroppedWidth / uncroppedHeight;
+    double imageWidth = 0.0;
+    double imageHeight = 0.0;
+    private_->imageWidthHeight(imageWidth, imageHeight);
+    double dar = imageWidth / imageHeight;
 
     double w = this->width();
     double h = this->height();
@@ -1977,7 +2100,11 @@ namespace yae
       fy = 0.5 * (h - fh);
     }
 
-    QRect bboxFrame((int)fx, (int)fy, (int)fw, (int)fh);
+    int ix = int(fx);
+    int iy = int(fy);
+    int iw = int(fw);
+    int ih = int(fh);
+    QRect bboxFrame(ix, iy, iw, ih);
 
     TVideoFramePtr vf(new TVideoFrame());
     TQImageBuffer * imageBuffer =
@@ -1990,6 +2117,7 @@ namespace yae
 
     QPainter painter(&subsFrm);
     painter.setPen(Qt::white);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
     QFont ft;
     int px = std::max<int>(20, 56.0 * (h / 1024.0));
@@ -1997,15 +2125,15 @@ namespace yae
     painter.setFont(ft);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
-    subsInOverlay_ = false;
+    bool paintedSomeSubs = false;
 
     QRect bboxCanvas = subsFrm.rect();
+    TVideoFramePtr frame = currentFrame();
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
-         i != subs_.end(); ++i)
+         i != subs_.end() && reparse; ++i)
     {
       const TSubsFrame & subs = *i;
-      QRect used;
 
       if (subs.traits_ == kSubsText && subs.data_)
       {
@@ -2017,39 +2145,63 @@ namespace yae
 
         if (drawPlainText(text, painter, bboxCanvas, textAlignment))
         {
-          subsInOverlay_ = true;
+          paintedSomeSubs = true;
         }
       }
       else if (subs.traits_ == kSubsSSA)
       {
-        const TSubsFrame::IPrivate * subExt = subs.private_.get();
-        const unsigned int nrects = subExt ? subExt->numRects() : 0;
+        bool done = false;
 
-        for (unsigned int j = 0; j < nrects; j++)
+#ifdef YAE_USE_LIBASS
+        if (!libass_ && subs.extraData_)
         {
-          TSubsFrame::TRect r;
-          subExt->getRect(j, r);
-          std::string text(r.assa_);
-          text = assaToPlainText(text);
-          text = convertEscapeCodes(text);
-
-          if (drawPlainText(text, painter, bboxCanvas, textAlignment))
-          {
-            subsInOverlay_ = true;
-          }
+          libass_ = new TPrivateLibass(subs.extraData_->data(0),
+                                       subs.extraData_->rowBytes(0));
         }
 
-        if (!nrects && subs.data_)
+        if (libass_)
         {
-          const unsigned char * str = subs.data_->data(0);
-          const unsigned char * end = str + subs.data_->rowBytes(0);
-          std::string text(str, end);
-          text = assaToPlainText(text);
-          text = convertEscapeCodes(text);
+          done = true;
 
-          if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+          if (subs.data_)
           {
-            subsInOverlay_ = true;
+            int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
+            libass_->processData(subs.data_->data(0),
+                                 subs.data_->rowBytes(0),
+                                 pts);
+          }
+        }
+#endif
+        if (!done)
+        {
+          const TSubsFrame::IPrivate * subExt = subs.private_.get();
+          const unsigned int nrects = subExt ? subExt->numRects() : 0;
+          for (unsigned int j = 0; j < nrects; j++)
+          {
+            TSubsFrame::TRect r;
+            subExt->getRect(j, r);
+            std::string text(r.assa_);
+            text = assaToPlainText(text);
+            text = convertEscapeCodes(text);
+
+            if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+            {
+              paintedSomeSubs = true;
+            }
+          }
+
+          if (!nrects && subs.data_)
+          {
+            const unsigned char * str = subs.data_->data(0);
+            const unsigned char * end = str + subs.data_->rowBytes(0);
+            std::string text(str, end);
+            text = assaToPlainText(text);
+            text = convertEscapeCodes(text);
+
+            if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+            {
+              paintedSomeSubs = true;
+            }
           }
         }
       }
@@ -2094,14 +2246,68 @@ namespace yae
                         (int)(sy * double(r.h_)));
 
           painter.drawImage(QRect(dstPos, dstSize), img, img.rect());
-          subsInOverlay_ = true;
+          paintedSomeSubs = true;
         }
       }
     }
 
+#ifdef YAE_USE_LIBASS
+    if (libass_ && frame)
+    {
+      libass_->setFrameSize(iw, ih);
+
+      // the list of images is owned by libass,
+      // libass is responsible for their deallocation:
+      int64 now = (int64)(frame->time_.toSeconds() * 1000.0 + 0.5);
+
+      int changeDetected = 0;
+      ASS_Image * pic = libass_->renderFrame(now, &changeDetected);
+
+      unsigned char bgra[4];
+      while (pic)
+      {
+        bgra[0] = 0xFF & (pic->color >> 8);
+        bgra[1] = 0xFF & (pic->color >> 16);
+        bgra[2] = 0xFF & (pic->color >> 24);
+        bgra[3] = 0xFF & (pic->color);
+
+        QImage tmp(pic->w, pic->h, QImage::Format_ARGB32);
+        int dstRowBytes = tmp.bytesPerLine();
+        unsigned char * dst = tmp.bits();
+
+        for (int y = 0; y < pic->h; y++)
+        {
+          const unsigned char * srcLine = pic->bitmap + pic->stride * y;
+          unsigned char * dstLine = dst + dstRowBytes * y;
+
+          for (int x = 0; x < pic->w; x++, dstLine += 4, srcLine++)
+          {
+            unsigned char alpha = *srcLine;
+            memcpy(dstLine, bgra, 3);
+            dstLine[3] = alpha;
+          }
+        }
+
+        painter.drawImage(QRect(pic->dst_x + ix,
+                                pic->dst_y + iy,
+                                pic->w,
+                                pic->h),
+                          tmp, tmp.rect());
+
+        pic = pic->next;
+        paintedSomeSubs = true;
+      }
+    }
+#endif
+
     painter.end();
 
-    if (!subsInOverlay_)
+    if (reparse)
+    {
+      subsInOverlay_ = paintedSomeSubs;
+    }
+
+    if (!paintedSomeSubs)
     {
       return true;
     }

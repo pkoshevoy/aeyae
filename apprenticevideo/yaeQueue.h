@@ -338,6 +338,60 @@ namespace yae
       return false;
     }
 
+    // remove items from the queue if they satisfy predicate conditions:
+    template <typename TPredicate>
+    bool get(const TPredicate & predicate,
+             std::list<TData> & found,
+             QueueWaitMgr * waitMgr = NULL)
+    {
+      try
+      {
+        QueueWaitTerminator terminator(waitMgr, &cond_);
+
+        // remove from queue:
+        {
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          for (typename std::list<TSequence>::iterator
+                 i = sequences_.begin(); i != sequences_.end(); )
+          {
+            TSequence & sequence = *i;
+
+            for (typename std::list<TData>::iterator j = sequence.begin();
+                 j != sequence.end(); )
+            {
+              const TData & data = *j;
+              if (predicate(data))
+              {
+                found.push_back(data);
+                j = sequence.erase(j);
+                size_--;
+              }
+              else
+              {
+                ++j;
+              }
+            }
+
+            if (sequence.empty())
+            {
+              i = sequences_.erase(i);
+            }
+            else
+            {
+              ++i;
+            }
+          }
+        }
+
+        cond_.notify_all();
+        return true;
+      }
+      catch (...)
+      {}
+
+      return false;
+    }
+
     // take a peek at the top of the queue:
     bool peek(TData & data, QueueWaitMgr * waitMgr = NULL)
     {

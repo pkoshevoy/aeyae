@@ -89,6 +89,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // has
+  //
+  template <typename TContainer>
+  bool
+  has(const TContainer & container, const typename TContainer::value_type & v)
+  {
+    typename TContainer::const_iterator iter =
+      std::find(container.begin(), container.end(), v);
+    return iter != container.end();
+  }
+
+  //----------------------------------------------------------------
   // compare
   //
   template <typename TData>
