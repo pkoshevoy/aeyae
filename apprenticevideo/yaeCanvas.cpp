@@ -2126,6 +2126,7 @@ namespace yae
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
+    bool libassSameSubs = false;
 
     QRect bboxCanvas = subsFrm.rect();
     TVideoFramePtr frame = currentFrame();
@@ -2262,9 +2263,11 @@ namespace yae
 
       int changeDetected = 0;
       ASS_Image * pic = libass_->renderFrame(now, &changeDetected);
+      libassSameSubs = !changeDetected;
+      paintedSomeSubs = changeDetected;
 
       unsigned char bgra[4];
-      while (pic)
+      while (pic && changeDetected)
       {
         bgra[0] = 0xFF & (pic->color >> 8);
         bgra[1] = 0xFF & (pic->color >> 16);
@@ -2295,14 +2298,13 @@ namespace yae
                           tmp, tmp.rect());
 
         pic = pic->next;
-        paintedSomeSubs = true;
       }
     }
 #endif
 
     painter.end();
 
-    if (reparse)
+    if (reparse && !libassSameSubs)
     {
       subsInOverlay_ = paintedSomeSubs;
     }
