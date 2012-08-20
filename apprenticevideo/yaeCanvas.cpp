@@ -1465,7 +1465,7 @@ namespace yae
         return;
       }
 
-      std::cerr << "ass_process_data: " << line.data_ << std::endl;
+      // std::cerr << "ass_process_data: " << line.data_ << std::endl;
 
       if (bufferSize_)
       {
@@ -2269,11 +2269,17 @@ namespace yae
       unsigned char bgra[4];
       while (pic && changeDetected)
       {
+#ifdef __BIG_ENDIAN__
+        bgra[3] = 0xFF & (pic->color >> 8);
+        bgra[2] = 0xFF & (pic->color >> 16);
+        bgra[1] = 0xFF & (pic->color >> 24);
+        bgra[0] = 0xFF & (pic->color);
+#else
         bgra[0] = 0xFF & (pic->color >> 8);
         bgra[1] = 0xFF & (pic->color >> 16);
         bgra[2] = 0xFF & (pic->color >> 24);
         bgra[3] = 0xFF & (pic->color);
-
+#endif
         QImage tmp(pic->w, pic->h, QImage::Format_ARGB32);
         int dstRowBytes = tmp.bytesPerLine();
         unsigned char * dst = tmp.bits();
@@ -2286,8 +2292,13 @@ namespace yae
           for (int x = 0; x < pic->w; x++, dstLine += 4, srcLine++)
           {
             unsigned char alpha = *srcLine;
+#ifdef __BIG_ENDIAN__
+            dstLine[0] = alpha;
+            memcpy(dstLine + 1, bgra + 1, 3);
+#else
             memcpy(dstLine, bgra, 3);
             dstLine[3] = alpha;
+#endif
           }
         }
 
