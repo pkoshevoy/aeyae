@@ -45,18 +45,24 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 
 namespace yae
 {
+  class YAE_API Canvas;
+  class YAE_API TLibass;
+
+  //----------------------------------------------------------------
+  // initLibass
+  //
+  YAE_API bool initLibass(Canvas * canvas);
 
   //----------------------------------------------------------------
   // Canvas
   //
-  class Canvas : public QGLWidget,
-                 public IVideoCanvas
+  class YAE_API Canvas : public QGLWidget,
+                         public IVideoCanvas
   {
     Q_OBJECT;
 
   public:
     class TPrivate;
-    class TPrivateLibass;
 
     Canvas(const QGLFormat & format,
            QWidget * parent = 0,
@@ -127,6 +133,10 @@ namespace yae
     //
     double imageAspectRatio(double & w, double & h) const;
 
+    // this will be called from a helper thread
+    // once it is done updating fontconfig cache for libass:
+    static void libassInitDoneCallback(void * canvas);
+
   signals:
     void toggleFullScreen();
 
@@ -186,7 +196,7 @@ namespace yae
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
     TPrivate * overlay_;
-    TPrivateLibass * libass_;
+    TLibass * libass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
 

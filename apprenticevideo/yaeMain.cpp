@@ -107,6 +107,9 @@ main(int argc, char ** argv)
   std::cout.setf(std::ios::scientific);
   std::cerr.setf(std::ios::scientific);
   */
+  yae::Application::setApplicationName("ApprenticeVideo");
+  yae::Application::setOrganizationName("PavelKoshevoy");
+  yae::Application::setOrganizationDomain("sourceforge.net");
   yae::Application app(argc, argv);
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();

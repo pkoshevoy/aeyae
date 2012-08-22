@@ -26,6 +26,9 @@
 
 // Qt includes:
 #include <QApplication>
+#include <QDesktopServices>
+#include <QDir>
+#include <QFileInfo>
 #include <QTimer>
 #include <QTime>
 
@@ -1387,11 +1390,203 @@ namespace yae
     glDisable(GL_TEXTURE_2D);
   }
 
+#ifdef YAE_USE_LIBASS
+  //----------------------------------------------------------------
+  // getFontsConf
+  //
+  static bool
+  getFontsConf(std::string & fontsConf)
+  {
+    int64 appPid = QCoreApplication::applicationPid();
+
+    QString tempDir =
+      QDesktopServices::storageLocation(QDesktopServices::TempLocation);
+
+    QString fontsDir =
+      QDesktopServices::storageLocation(QDesktopServices::FontsLocation);
+
+    QString cacheDir =
+      QDesktopServices::storageLocation(QDesktopServices::CacheLocation);
+
+    QString fontconfigCache =
+      cacheDir + QString::fromUtf8("/apprenticevideo-fontconfig-cache");
+
+    std::ostringstream os;
+    os << "<?xml version=\"1.0\"?>" << std::endl
+       << "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">" << std::endl
+       << "<fontconfig>" << std::endl
+       << "\t<dir>"
+       << QDir::toNativeSeparators(fontsDir).toUtf8().constData()
+       << "</dir>" << std::endl
+#ifdef __APPLE__
+       << "\t<dir>/Library/Fonts</dir>" << std::endl
+       << "\t<dir>~/Library/Fonts</dir>" << std::endl
+#endif
+       << "\t<cachedir>"
+       << QDir::toNativeSeparators(fontconfigCache).toUtf8().constData()
+       << "</cachedir>" << std::endl
+       << "</fontconfig>" << std::endl;
+
+    QString fn =
+      tempDir +
+      QString::fromUtf8("/apprenticevideo.fonts.conf.") +
+      QString::number(appPid);
+
+    fontsConf = fn.toUtf8().constData();
+    std::cerr << "fonts.conf: " << fontsConf << std::endl;
+
+    std::FILE * fout = fopenUtf8(fontsConf.c_str(), "w");
+    if (!fout)
+    {
+      return false;
+    }
+
+    std::string xml = os.str().c_str();
+    std::cerr << "fonts.conf content:\n" << xml << std::endl;
+
+    std::size_t nout = fwrite(xml.c_str(), 1, xml.size(), fout);
+    fclose(fout);
+
+    return nout == xml.size();
+  }
 
   //----------------------------------------------------------------
-  // Canvas::TPrivateLibass
+  // TLibassInitDoneCallback
   //
-  class Canvas::TPrivateLibass
+  typedef void(*TLibassInitDoneCallback)(void *);
+
+  //----------------------------------------------------------------
+  // TLibassInit
+  //
+  struct TLibassInit
+  {
+    TLibassInit():
+      callbackContext_(NULL),
+      callback_(NULL),
+      finished_(false),
+      success_(0)
+    {}
+
+    void setCallback(void * context, TLibassInitDoneCallback callback)
+    {
+      YAE_ASSERT(!callback_ || !callback);
+      callbackContext_ = context;
+      callback_ = callback;
+    }
+
+    static int init(ASS_Library *& library,
+                    ASS_Renderer *& renderer,
+                    ASS_Track *& track)
+    {
+      library = ass_library_init();
+      renderer = ass_renderer_init(library);
+      track = ass_new_track(library);
+
+      // lookup Fontconfig configuration file path:
+      std::string fontsConf;
+      getFontsConf(fontsConf);
+
+      const char * defaultFont = NULL;
+      const char * defaultFamily = NULL;
+      int useFontconfig = 1;
+      int updateFontCache = 0;
+
+      ass_set_fonts(renderer,
+                    defaultFont,
+                    defaultFamily,
+                    useFontconfig,
+                    fontsConf.size() ? fontsConf.c_str() : NULL,
+                    updateFontCache);
+
+      int err = ass_fonts_update(renderer);
+
+      // remove the temporary fontconfig file:
+      QFile::remove(QString::fromUtf8(fontsConf.c_str()));
+
+      return err;
+    }
+
+    static void done(ASS_Library *& library,
+                     ASS_Renderer *& renderer,
+                     ASS_Track *& track)
+    {
+      ass_free_track(track);
+      track = NULL;
+
+      ass_renderer_done(renderer);
+      renderer = NULL;
+
+      ass_library_done(library);
+      library = NULL;
+    }
+
+    void threadLoop()
+    {
+      // begin:
+      finished_ = false;
+
+      // this can take a while to rebuild the font cache:
+      ASS_Library * library = NULL;
+      ASS_Renderer * renderer = NULL;
+      ASS_Track * track = NULL;
+      success_ = init(library, renderer, track);
+
+      // cleanup:
+      done(library, renderer, track);
+
+      // done:
+      finished_ = true;
+
+      if (callback_)
+      {
+        callback_(callbackContext_);
+      }
+    }
+
+    void * callbackContext_;
+    TLibassInitDoneCallback callback_;
+    bool finished_;
+    int success_;
+  };
+
+  //----------------------------------------------------------------
+  // libassInit
+  //
+  static TLibassInit libassInit;
+
+  //----------------------------------------------------------------
+  // libassInitThread
+  //
+  static Thread<TLibassInit> libassInitThread;
+#endif
+
+  //----------------------------------------------------------------
+  // initLibass
+  //
+  bool
+  initLibass(Canvas * canvas)
+  {
+#ifdef YAE_USE_LIBASS
+    if (libassInit.finished_)
+    {
+      return libassInit.success_ != 0;
+    }
+
+    if (!libassInitThread.isRunning())
+    {
+      libassInit.setCallback(canvas, &Canvas::libassInitDoneCallback);
+      libassInitThread.setContext(&libassInit);
+      libassInitThread.run();
+    }
+#endif
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // TLibass
+  //
+  class TLibass
   {
   public:
 
@@ -1417,36 +1612,32 @@ namespace yae
       std::string data_;
     };
 
-    TPrivateLibass(const unsigned char * codecPrivate,
-                   std::size_t codecPrivateSize):
+    TLibass(const unsigned char * codecPrivate,
+            std::size_t codecPrivateSize):
       library_(NULL),
       renderer_(NULL),
       track_(NULL),
+      success_(0),
       bufferSize_(0)
     {
-      library_ = ass_library_init();
-      renderer_ = ass_renderer_init(library_);
-      track_ = ass_new_track(library_);
+      success_ = TLibassInit::init(library_, renderer_, track_);
 
-      const char * default_font = NULL;
-      const char * default_family = NULL;
-      ass_set_fonts(renderer_,
-                    default_font,
-                    default_family,
-                    1, // use fontconfig
-                    NULL, // fontconfig configuration file path
-                    1); // update font cache
-
-      ass_process_codec_private(track_,
-                                (char *)codecPrivate,
-                                (int)codecPrivateSize);
+      if (codecPrivate && codecPrivateSize && track_)
+      {
+        ass_process_codec_private(track_,
+                                  (char *)codecPrivate,
+                                  (int)codecPrivateSize);
+      }
     }
 
-    ~TPrivateLibass()
+    ~TLibass()
     {
-      ass_free_track(track_);
-      ass_renderer_done(renderer_);
-      ass_library_done(library_);
+      TLibassInit::done(library_, renderer_, track_);
+    }
+
+    inline bool ready() const
+    {
+      return success_ != 0;
     }
 
     void setFrameSize(int w, int h)
@@ -1503,6 +1694,7 @@ namespace yae
     ASS_Library * library_;
     ASS_Renderer * renderer_;
     ASS_Track * track_;
+    int success_;
     std::list<TLine> buffer_;
     std::size_t bufferSize_;
 #endif
@@ -1590,6 +1782,8 @@ namespace yae
       private_ = new TLegacyCanvas();
       overlay_ = new TLegacyCanvas();
     }
+
+    initLibass(this);
   }
 
   //----------------------------------------------------------------
@@ -1659,6 +1853,14 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // LibassInitDoneEvent
+  //
+  struct LibassInitDoneEvent : public QEvent
+  {
+    LibassInitDoneEvent(): QEvent(QEvent::User) {}
+  };
+
+  //----------------------------------------------------------------
   // Canvas::event
   //
   bool
@@ -1680,11 +1882,33 @@ namespace yae
 
       UpdateOverlayEvent * overlayEvent =
         dynamic_cast<UpdateOverlayEvent *>(event);
-
       if (overlayEvent)
       {
+        event->accept();
+
         updateOverlay(true);
         refresh();
+        return true;
+      }
+
+      LibassInitDoneEvent * libassInitDoneEvent =
+        dynamic_cast<LibassInitDoneEvent *>(event);
+      if (libassInitDoneEvent)
+      {
+        event->accept();
+
+#ifdef YAE_USE_LIBASS
+        std::cerr << "LIBASS INIT DONE: "
+                  << libassInit.finished_
+                  << ", success: "
+                  << libassInit.success_
+                  << std::endl;
+
+        libassInitThread.stop();
+        libassInitThread.wait();
+        libassInitThread.setContext(NULL);
+        libassInit.setCallback(NULL, NULL);
+#endif
         return true;
       }
     }
@@ -2154,13 +2378,13 @@ namespace yae
         bool done = false;
 
 #ifdef YAE_USE_LIBASS
-        if (!libass_ && subs.extraData_)
+        if (!libass_ && subs.extraData_ && initLibass(this))
         {
-          libass_ = new TPrivateLibass(subs.extraData_->data(0),
-                                       subs.extraData_->rowBytes(0));
+          libass_ = new TLibass(subs.extraData_->data(0),
+                                subs.extraData_->rowBytes(0));
         }
 
-        if (libass_)
+        if (libass_ && libass_->ready())
         {
           done = true;
 
@@ -2536,6 +2760,16 @@ namespace yae
     }
 
     return dar;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::libassInitDoneCallback
+  //
+  void
+  Canvas::libassInitDoneCallback(void * context)
+  {
+    Canvas * canvas = (Canvas *)context;
+    qApp->postEvent(canvas, new LibassInitDoneEvent());
   }
 
   //----------------------------------------------------------------
