@@ -863,9 +863,6 @@ namespace yae
       return;
     }
 
-    // video traits shortcut:
-    const VideoTraits & vtts = frame_->traits_;
-
     glEnable(GL_TEXTURE_RECTANGLE_EXT);
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
 
@@ -1985,7 +1982,7 @@ namespace yae
   {
     double w = 0.0;
     double h = 0.0;
-    double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
+    canvas->imageWidthHeight(w, h);
     return w;
   }
 
@@ -1997,7 +1994,7 @@ namespace yae
   {
     double w = 0.0;
     double h = 0.0;
-    double dar = canvas->imageWidthHeight(w, h) ? w / h : 0.0;
+    canvas->imageWidthHeight(w, h);
     return h;
   }
 
@@ -2277,6 +2274,79 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TPainterWrapper
+  //
+  struct TPainterWrapper
+  {
+    TPainterWrapper(int w, int h):
+      painter_(NULL),
+      w_(w),
+      h_(h)
+    {}
+
+    ~TPainterWrapper()
+    {
+      delete painter_;
+    }
+
+    inline TVideoFramePtr & getFrame()
+    {
+      if (!frame_)
+      {
+        frame_.reset(new TVideoFrame());
+
+        TQImageBuffer * imageBuffer =
+          new TQImageBuffer(w_, h_, QImage::Format_ARGB32);
+        // imageBuffer->qimg_.fill(0);
+
+        frame_->data_.reset(imageBuffer);
+      }
+
+      return frame_;
+    }
+
+    inline QImage & getImage()
+    {
+      TVideoFramePtr & vf = getFrame();
+      TQImageBuffer * imageBuffer = (TQImageBuffer *)(vf->data_.get());
+      return imageBuffer->qimg_;
+    }
+
+    inline QPainter & getPainter()
+    {
+      if (!painter_)
+      {
+        QImage & image = getImage();
+        painter_ = new QPainter(&image);
+
+        painter_->setPen(Qt::white);
+        painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+        QFont ft;
+        int px = std::max<int>(20, 56.0 * (h_ / 1024.0));
+        ft.setPixelSize(px);
+        painter_->setFont(ft);
+      }
+
+      return *painter_;
+    }
+
+    inline void painterEnd()
+    {
+      if (painter_)
+      {
+        painter_->end();
+      }
+    }
+
+  private:
+    TVideoFramePtr frame_;
+    QPainter * painter_;
+    int w_;
+    int h_;
+  };
+
+  //----------------------------------------------------------------
   // Canvas::loadSubs
   //
   bool
@@ -2328,31 +2398,14 @@ namespace yae
     int iy = int(fy);
     int iw = int(fw);
     int ih = int(fh);
-    QRect bboxFrame(ix, iy, iw, ih);
 
-    TVideoFramePtr vf(new TVideoFrame());
-    TQImageBuffer * imageBuffer =
-      new TQImageBuffer((int)w, (int)h, QImage::Format_ARGB32);
-    vf->data_.reset(imageBuffer);
-
-    // shortcut:
-    QImage & subsFrm = imageBuffer->qimg_;
-    subsFrm.fill(0);
-
-    QPainter painter(&subsFrm);
-    painter.setPen(Qt::white);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-
-    QFont ft;
-    int px = std::max<int>(20, 56.0 * (h / 1024.0));
-    ft.setPixelSize(px);
-    painter.setFont(ft);
+    TPainterWrapper wrapper((int)w, (int)h);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
 
-    QRect bboxCanvas = subsFrm.rect();
+    QRect canvasBBox(0, 0, (int)w, (int)h);
     TVideoFramePtr frame = currentFrame();
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
@@ -2368,7 +2421,10 @@ namespace yae
         text = stripHtmlTags(text);
         text = convertEscapeCodes(text);
 
-        if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+        if (drawPlainText(text,
+                          wrapper.getPainter(),
+                          canvasBBox,
+                          textAlignment))
         {
           paintedSomeSubs = true;
         }
@@ -2409,7 +2465,10 @@ namespace yae
             text = assaToPlainText(text);
             text = convertEscapeCodes(text);
 
-            if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+            if (drawPlainText(text,
+                              wrapper.getPainter(),
+                              canvasBBox,
+                              textAlignment))
             {
               paintedSomeSubs = true;
             }
@@ -2423,7 +2482,10 @@ namespace yae
             text = assaToPlainText(text);
             text = convertEscapeCodes(text);
 
-            if (drawPlainText(text, painter, bboxCanvas, textAlignment))
+            if (drawPlainText(text,
+                              wrapper.getPainter(),
+                              canvasBBox,
+                              textAlignment))
             {
               paintedSomeSubs = true;
             }
@@ -2470,7 +2532,8 @@ namespace yae
           QSize dstSize((int)(sx * double(r.w_)),
                         (int)(sy * double(r.h_)));
 
-          painter.drawImage(QRect(dstPos, dstSize), img, img.rect());
+          wrapper.getPainter().drawImage(QRect(dstPos, dstSize),
+                                         img, img.rect());
           paintedSomeSubs = true;
         }
       }
@@ -2526,18 +2589,18 @@ namespace yae
           }
         }
 
-        painter.drawImage(QRect(pic->dst_x + ix,
-                                pic->dst_y + iy,
-                                pic->w,
-                                pic->h),
-                          tmp, tmp.rect());
+        wrapper.getPainter().drawImage(QRect(pic->dst_x + ix,
+                                             pic->dst_y + iy,
+                                             pic->w,
+                                             pic->h),
+                                       tmp, tmp.rect());
 
         pic = pic->next;
       }
     }
 #endif
 
-    painter.end();
+    wrapper.painterEnd();
 
     if (reparse && !libassSameSubs)
     {
@@ -2549,14 +2612,17 @@ namespace yae
       return true;
     }
 
+    TVideoFramePtr & vf = wrapper.getFrame();
     VideoTraits & vtts = vf->traits_;
+    QImage & image = wrapper.getImage();
+
 #ifdef _BIG_ENDIAN
     vtts.pixelFormat_ = kPixelFormatARGB;
 #else
     vtts.pixelFormat_ = kPixelFormatBGRA;
 #endif
-    vtts.encodedWidth_ = subsFrm.bytesPerLine() / 4;
-    vtts.encodedHeight_ = subsFrm.byteCount() / subsFrm.bytesPerLine();
+    vtts.encodedWidth_ = image.bytesPerLine() / 4;
+    vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
     vtts.offsetTop_ = 0;
     vtts.offsetLeft_ = 0;
     vtts.visibleWidth_ = (int)w;
@@ -2625,10 +2691,10 @@ namespace yae
     painter.setFont(ft);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignCenter;
-    QRect bboxCanvas = subsFrm.rect();
+    QRect canvasBBox = subsFrm.rect();
 
     std::string text(greeting_.toUtf8().constData());
-    if (!drawPlainText(text, painter, bboxCanvas, textAlignment))
+    if (!drawPlainText(text, painter, canvasBBox, textAlignment))
     {
       return false;
     }
