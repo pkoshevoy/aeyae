@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <iostream>
 #include <stdint.h>
 #include <vector>
 
@@ -1251,6 +1252,56 @@ extern "C"
     }
 
     return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // access
+  //
+  int
+  access(const char * path, int perms)
+  {
+    // X_OK (01) permission causes fatal error in win32 _access(..),
+    // therefore it must be excluded from the permission bitmask:
+    perms &= ~1;
+
+    wchar_t * tmp = yae::cstr_to_utf16(path);
+    int r = _waccess(tmp, perms);
+#if 0
+    std::cerr << "access(" << path << ", " << perms << ") = " << r
+              << std::endl;
+#endif
+    free(tmp);
+    return r;
+  }
+
+  //----------------------------------------------------------------
+  // open
+  //
+  int
+  open(const char * fn, int oflag, ...)
+  {
+    wchar_t * tmp = yae::cstr_to_utf16(fn);
+    int r = _wopen(tmp, oflag);
+#if 0
+    std::cerr << "open(" << fn << ", " << oflag << ", ...) = " << r
+              << std::endl;
+#endif
+    free(tmp);
+    return r;
+  }
+
+  //----------------------------------------------------------------
+  // close
+  //
+  int
+  close(int fd)
+  {
+    int r = _close(fd);
+#if 0
+    std::cerr << "close(" << fd << ") = " << r
+              << std::endl;
+#endif
+    return r;
   }
 }
 

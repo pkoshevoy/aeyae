@@ -1429,7 +1429,7 @@ namespace yae
       QString::fromUtf8("/apprenticevideo.fonts.conf.") +
       QString::number(appPid);
 
-    fontsConf = fn.toUtf8().constData();
+    fontsConf = QDir::toNativeSeparators(fn).toUtf8().constData();
     std::cerr << "fonts.conf: " << fontsConf << std::endl;
 
     std::FILE * fout = fopenUtf8(fontsConf.c_str(), "w");
