@@ -1392,8 +1392,31 @@ namespace yae
   // getFontsConf
   //
   static bool
-  getFontsConf(std::string & fontsConf)
+  getFontsConf(std::string & fontsConf, bool & removeAfterUse)
   {
+#if !defined(_WIN32)
+    fontsConf = "/etc/fonts/fonts.conf";
+
+    if (QFileInfo(QString::fromUtf8(fontsConf.c_str())).exists())
+    {
+      // use the system fontconfig file:
+      removeAfterUse = false;
+      return true;
+    }
+#endif
+
+#if defined(__APPLE__)
+    fontsConf = "/opt/local/etc/fonts/fonts.conf";
+
+    if (QFileInfo(QString::fromUtf8(fontsConf.c_str())).exists())
+    {
+      // use the macports fontconfig file:
+      removeAfterUse = false;
+      return true;
+    }
+#endif
+
+    removeAfterUse = true;
     int64 appPid = QCoreApplication::applicationPid();
 
     QString tempDir =
@@ -1414,12 +1437,33 @@ namespace yae
        << "<fontconfig>" << std::endl
        << "\t<dir>"
        << QDir::toNativeSeparators(fontsDir).toUtf8().constData()
-       << "</dir>" << std::endl
+       << "</dir>" << std::endl;
+
 #ifdef __APPLE__
-       << "\t<dir>/Library/Fonts</dir>" << std::endl
-       << "\t<dir>~/Library/Fonts</dir>" << std::endl
+    os << "\t<dir>/Library/Fonts</dir>" << std::endl
+       << "\t<dir>~/Library/Fonts</dir>" << std::endl;
 #endif
-       << "\t<cachedir>"
+
+#ifndef _WIN32
+    const char * fontdir[] = {
+      "/usr/share/fonts",
+      "/usr/X11R6/lib/X11/fonts",
+      "/opt/kde3/share/fonts",
+      "/usr/local/share/fonts"
+    };
+
+    std::size_t nfontdir = sizeof(fontdir) / sizeof(fontdir[0]);
+    for (std::size_t i = 0; i < nfontdir; i++)
+    {
+      QString path = QString::fromUtf8(fontdir[i]);
+      if (QFileInfo(path).exists())
+      {
+        os << "\t<dir>" << fontdir[i] << "</dir>" << std::endl;
+      }
+    }
+#endif
+
+    os << "\t<cachedir>"
        << QDir::toNativeSeparators(fontconfigCache).toUtf8().constData()
        << "</cachedir>" << std::endl
        << "</fontconfig>" << std::endl;
@@ -1481,7 +1525,8 @@ namespace yae
 
       // lookup Fontconfig configuration file path:
       std::string fontsConf;
-      getFontsConf(fontsConf);
+      bool removeAfterUse = false;
+      getFontsConf(fontsConf, removeAfterUse);
 
       const char * defaultFont = NULL;
       const char * defaultFamily = NULL;
@@ -1497,8 +1542,11 @@ namespace yae
 
       int err = ass_fonts_update(renderer);
 
-      // remove the temporary fontconfig file:
-      QFile::remove(QString::fromUtf8(fontsConf.c_str()));
+      if (removeAfterUse)
+      {
+        // remove the temporary fontconfig file:
+        QFile::remove(QString::fromUtf8(fontsConf.c_str()));
+      }
 
       return err;
     }
