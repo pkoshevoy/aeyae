@@ -2217,7 +2217,11 @@ namespace yae
 
     TQImageBuffer(int w, int h, QImage::Format fmt):
       qimg_(w, h, fmt)
-    {}
+    {
+      unsigned char * dst = qimg_.bits();
+      int rowBytes = qimg_.bytesPerLine();
+      memset(dst, 0, rowBytes * h);
+    }
 
     // virtual:
     void destroy()
