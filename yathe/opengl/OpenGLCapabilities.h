@@ -165,7 +165,7 @@ OpenGL(unsigned int view_id, the_view_t * view = NULL);
     }                                                           \
     /* it's a quick way to die: */                              \
     static unsigned char * null = NULL;                         \
-    if (i > 0) null[0] = 0xFF;                                  \
+    if (false && i > 0) null[0] = 0xFF;                         \
   }
 #else // NDEBUG
 #define FIXME_OPENGL(x)
