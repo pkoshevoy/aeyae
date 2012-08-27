@@ -22,6 +22,7 @@
 class the_pick_filter_t
 {
 public:
+  the_pick_filter_t() {}
   virtual ~the_pick_filter_t() {}
   
   virtual bool allow(const the_registry_t * registry,
