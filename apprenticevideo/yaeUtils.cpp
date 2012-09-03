@@ -736,11 +736,16 @@ namespace yae
                  const QRect & bbox,
                  int textAlignment,
                  const QString & text,
+                 bool outline,
                  int offset)
   {
-    painter.drawText(bbox.translated(-offset, 0), textAlignment, text);
-    painter.drawText(bbox.translated(offset, 0), textAlignment, text);
-    painter.drawText(bbox.translated(0, -offset), textAlignment, text);
+    if (outline)
+    {
+      painter.drawText(bbox.translated(-offset, 0), textAlignment, text);
+      painter.drawText(bbox.translated(offset, 0), textAlignment, text);
+      painter.drawText(bbox.translated(0, -offset), textAlignment, text);
+    }
+
     painter.drawText(bbox.translated(0, offset), textAlignment, text);
   }
 
@@ -753,6 +758,7 @@ namespace yae
                           int textAlignment,
                           const QString & text,
                           const QPen & bgPen,
+                          bool outlineShadow,
                           int shadowOffset,
                           QRect * bboxText)
   {
@@ -776,7 +782,12 @@ namespace yae
     {
       // text fits:
       painter.setPen(bgPen);
-      drawTextShadow(painter, bbox, textAlignment, text, shadowOffset);
+      drawTextShadow(painter,
+                     bbox,
+                     textAlignment,
+                     text,
+                     outlineShadow,
+                     shadowOffset);
 
       painter.setPen(fgPen);
       painter.drawText(bbox, textAlignment, text, bboxText);
@@ -791,12 +802,14 @@ namespace yae
                    bbox,
                    vertAlignment | Qt::AlignLeft,
                    textLeft,
+                   outlineShadow,
                    shadowOffset);
 
     drawTextShadow(painter,
                    bbox,
                    vertAlignment | Qt::AlignRight,
                    textRight,
+                   outlineShadow,
                    shadowOffset);
 
     painter.setPen(fgPen);

@@ -250,6 +250,7 @@ namespace yae
                           int textAlignment,
                           const QString & text,
                           const QPen & bgPen,
+                          bool outlineShadow = true,
                           int shadowOffset = 1,
                           QRect * bboxText = NULL);
 

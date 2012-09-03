@@ -1278,33 +1278,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // headerBrush
-  //
-  static const QBrush & headerBrush(int height)
-  {
-    static QBrush * brush = NULL;
-    if (!brush)
-    {
-      QLinearGradient gradient(0, 1, 0, height - 1);
-#if 0
-      gradient.setColorAt(0.0,  QColor("#1b1c20"));
-      gradient.setColorAt(0.49, QColor("#1b1f2f"));
-      gradient.setColorAt(0.5,  QColor("#070d1e"));
-      gradient.setColorAt(1.0,  QColor("#152141"));
-#else
-      gradient.setColorAt(0.0,  QColor("#66758c"));
-      gradient.setColorAt(0.49, QColor("#234a76"));
-      gradient.setColorAt(0.5,  QColor("#0e224e"));
-      gradient.setColorAt(1.0,  QColor("#377e9e"));
-#endif
-      gradient.setSpread(QGradient::PadSpread);
-      brush = new QBrush(gradient);
-    }
-
-    return *brush;
-  }
-
-  //----------------------------------------------------------------
   // legibleTextColorForGivenBackground
   //
   static QColor
@@ -1322,14 +1295,63 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // headerBrush
+  //
+  static const QBrush & headerBrush(int height, bool active)
+  {
+    static QBrush * brush = NULL;
+    static QBrush * brushActive = NULL;
+
+    if (!brush)
+    {
+#if 1
+      brush       = new QBrush(QColor("#c1c1c1"));
+      brushActive = new QBrush(QColor("#939393"));
+#else
+      QLinearGradient gradient(0, 1, 0, height - 1);
+#if 1
+      gradient.setColorAt(0.0,   QColor("#a8a8a8"));
+      gradient.setColorAt(0.01,  QColor("#a8a8a8"));
+      gradient.setColorAt(0.011, QColor("#c1c1c1"));
+      gradient.setColorAt(1.0,   QColor("#9b9b9b"));
+#else
+      gradient.setColorAt(0.0,  QColor("#66758c"));
+      gradient.setColorAt(0.49, QColor("#234a76"));
+      gradient.setColorAt(0.5,  QColor("#0e224e"));
+      gradient.setColorAt(1.0,  QColor("#377e9e"));
+#endif
+      gradient.setSpread(QGradient::PadSpread);
+      brush = new QBrush(gradient);
+
+      gradient = QLinearGradient(0, 1, 0, height - 1);
+#if 1
+      gradient.setColorAt(0.0,   QColor("#7c8b9d"));
+      gradient.setColorAt(0.01,  QColor("#7c8b9d"));
+      gradient.setColorAt(0.011, QColor("#93a4b4"));
+      gradient.setColorAt(1.0,   QColor("#536b83"));
+#else
+      gradient.setColorAt(0.0,  QColor("#66758c"));
+      gradient.setColorAt(0.49, QColor("#234a76"));
+      gradient.setColorAt(0.5,  QColor("#0e224e"));
+      gradient.setColorAt(1.0,  QColor("#377e9e"));
+#endif
+      gradient.setSpread(QGradient::PadSpread);
+      brushActive = new QBrush(gradient);
+#endif
+    }
+
+    return active ? *brushActive : *brush;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistWidget::draw
   //
   void
   PlaylistWidget::draw(QPainter & painter, const QRect & region)
   {
     static const QColor zebraBg[] = {
-      QColor(0, 0, 0, 0),
-      QColor(0xf4, 0xf4, 0xf4)
+      QColor(0xf0, 0xf0, 0xf0, 0),
+      QColor(0xff, 0xff, 0xff)
     };
 
     QPalette palette = this->palette();
@@ -1339,11 +1361,14 @@ namespace yae
     QColor foregroundColor = palette.color(QPalette::WindowText);
     // QColor headerColor = QColor("#40a0ff");
     // QColor headerColor = QColor("#c7ddff");
-    QColor headerColor = QColor("#c0e7ff");
+    QColor headerColor = QColor("#202020");
     QColor activeColor = QColor("#ffffff");
 
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
+
+    QFont headerFont = textFont;
+    // headerFont.setBold(true);
 
     QFont smallFont = textFont;
     smallFont.setPixelSize(9);
@@ -1377,7 +1402,7 @@ namespace yae
                    group.bbox_.width(),
                    group.bbox_.height());
 
-        painter.setBrush(headerBrush(bbox.height()));
+        painter.setBrush(headerBrush(bbox.height(), isHighlightedGroup));
         painter.setBrushOrigin(bbox.topLeft());
         painter.setPen(Qt::NoPen);
         painter.drawRect(bbox);
@@ -1404,15 +1429,7 @@ namespace yae
             arrow[2] = QPointF(x + w, 0.5 + y - s);
           }
 
-          if (isHighlightedGroup)
-          {
-            painter.setBrush(activeColor);
-          }
-          else
-          {
-            painter.setBrush(headerColor);
-          }
-
+          painter.setBrush(activeColor);
           painter.setPen(Qt::NoPen);
           painter.drawPolygon(arrow, 3);
 
@@ -1426,18 +1443,26 @@ namespace yae
           }
 
           QRect bx = bbox.adjusted(10 + w, 0, 0, 0);
-#if 1
-          drawTextWithShadowToFit(painter,
-                                  bx,
-                                  Qt::AlignVCenter | Qt::AlignCenter,
-                                  group.name_,
-                                  QColor("#204080"));
-#else
-          drawTextToFit(painter,
-                        bx,
-                        Qt::AlignVCenter | Qt::AlignCenter,
-                        group.name_);
-#endif
+
+          if (isHighlightedGroup)
+          {
+            painter.setFont(headerFont);
+            drawTextWithShadowToFit(painter,
+                                    bx,
+                                    Qt::AlignVCenter | Qt::AlignCenter,
+                                    group.name_,
+                                    QColor("#404040"),
+                                    false); // underline shadow
+          }
+          else
+          {
+            painter.setFont(headerFont);
+            drawTextToFit(painter,
+                          bx,
+                          Qt::AlignVCenter | Qt::AlignCenter,
+                          group.name_);
+          }
+          painter.setFont(textFont);
         }
         else
         {
@@ -1603,6 +1628,7 @@ namespace yae
       else if (allowGroupSelection)
       {
         selectGroup(group);
+        highlighted_ = group->offset_;
       }
 
       if (!scrollToItem)

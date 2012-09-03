@@ -2312,7 +2312,8 @@ namespace yae
                               textAlignment,
                               qstr,
                               QPen(Qt::black),
-                              1,
+                              true, // outline shadow
+                              1, // shadow offset
                               &used);
       if (!used.isNull())
       {
