@@ -101,21 +101,39 @@ namespace yae
                    const int & yOrigin,
                    const int & unitLength) const
   {
-    int x = coords.x() - (xOrigin +
-                          int(0.5 + unitLength * position_) -
-                          hotspot_[0]);
-    int y = coords.y() - (yOrigin - hotspot_[1]);
-
     QRect bbox = image_.rect();
-    if (!bbox.contains(x, y))
+
+    int x0 = coords.x() - (xOrigin +
+                           int(0.5 + unitLength * position_) -
+                           hotspot_[0]);
+
+    int y0 = coords.y() - (yOrigin - hotspot_[1]);
+
+    // the mouse coordinates are tested with [-3, 3] margin
+    // in order to make it easier to click on small handles:
+    for (int i = -3; i <= 3; i++)
     {
-      return false;
+      for (int j = -3; j <= 3; j++)
+      {
+        int x = x0 + i;
+        int y = y0 + j;
+
+        if (!bbox.contains(x, y))
+        {
+          continue;
+        }
+
+        QRgb rgba = image_.pixel(x, y);
+        int alpha = qAlpha(rgba);
+
+        if (alpha > 0)
+        {
+          return true;
+        }
+      }
     }
 
-    QRgb rgba = image_.pixel(x, y);
-    int alpha = qAlpha(rgba);
-
-    return alpha > 0;
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -148,7 +166,7 @@ namespace yae
     padding_ = 8;
     lineWidth_ = 3;
 
-    setFixedHeight(padding_ * 2 + lineWidth_);
+    setMinimumHeight(padding_ * 2 + lineWidth_);
     setMinimumWidth(padding_ * 2 + 64);
     setAutoFillBackground(true);
     setFocusPolicy(Qt::ClickFocus);
@@ -988,8 +1006,9 @@ namespace yae
                                   int & unitLength) const
   {
     xOrigin = padding_;
-    yOriginInOut = height() - padding_;
-    yOriginPlayhead = height() - lineWidth_ - padding_;
+    int mh = minimumHeight();
+    yOriginInOut = (height() - mh) / 2 + (mh - padding_);
+    yOriginPlayhead = yOriginInOut - lineWidth_;
     unitLength = width() - padding_ * 2;
   }
 
