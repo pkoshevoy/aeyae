@@ -20,15 +20,6 @@
 #include <boost/shared_ptr.hpp>
 
 
-namespace fileUtf8
-{
-  //----------------------------------------------------------------
-  // kProtocolName
-  //
-  extern const char * kProtocolName;
-}
-
-
 namespace yae
 {
 
@@ -75,8 +66,8 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i);
     virtual bool selectAudioTrack(std::size_t i);
 
-    virtual const char * getSelectedVideoTrackName() const;
-    virtual const char * getSelectedAudioTrackName() const;
+    virtual void getSelectedVideoTrackInfo(TTrackInfo & info) const;
+    virtual void getSelectedAudioTrackInfo(TTrackInfo & info) const;
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const;
@@ -117,7 +108,7 @@ namespace yae
 
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const;
-    virtual const char * subsInfo(std::size_t i, TSubsFormat * t = 0) const;
+    virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;
     virtual void subsRender(std::size_t i, bool render);
   };
 

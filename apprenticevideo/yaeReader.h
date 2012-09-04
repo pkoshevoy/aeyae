@@ -64,8 +64,8 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i) = 0;
     virtual bool selectAudioTrack(std::size_t i) = 0;
 
-    virtual const char * getSelectedVideoTrackName() const = 0;
-    virtual const char * getSelectedAudioTrackName() const = 0;
+    virtual void getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
+    virtual void getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
@@ -112,7 +112,7 @@ namespace yae
 
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const = 0;
-    virtual const char * subsInfo(std::size_t i, TSubsFormat * t) const = 0;
+    virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const = 0;
     virtual void subsRender(std::size_t i, bool render) = 0;
   };
 

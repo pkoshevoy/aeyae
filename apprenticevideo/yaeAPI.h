@@ -173,6 +173,8 @@ namespace yae
   {
     AudioTraits();
 
+    bool operator == (const AudioTraits & at) const;
+
     //! audio sample rate, Hz:
     unsigned int sampleRate_;
 
@@ -194,6 +196,8 @@ namespace yae
     VideoTraits();
 
     bool sameFrameSize(const VideoTraits & vt) const;
+
+    bool operator == (const VideoTraits & vt) const;
 
     //! frame rate:
     double frameRate_;
@@ -506,6 +510,29 @@ namespace yae
                      TAudioChannelLayout dstLayout,
                      unsigned char * dst,
                      const double * channelRemixMatrix);
+
+  //----------------------------------------------------------------
+  // TTrackInfo
+  //
+  struct YAE_API TTrackInfo
+  {
+    TTrackInfo(std::size_t index = 0, std::size_t ntracks = 0);
+
+    bool isValid() const;
+    bool hasLang() const;
+    bool hasName() const;
+
+    const char * lang() const;
+    const char * name() const;
+
+    void setLang(const char * lang);
+    void setName(const char * name);
+
+    std::size_t ntracks_;
+    std::size_t index_;
+    std::string lang_;
+    std::string name_;
+  };
 
 }
 

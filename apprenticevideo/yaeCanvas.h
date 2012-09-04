@@ -45,8 +45,8 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 
 namespace yae
 {
-  class YAE_API Canvas;
-  class YAE_API TLibass;
+  class Canvas;
+  class TLibass;
 
   //----------------------------------------------------------------
   // initLibass

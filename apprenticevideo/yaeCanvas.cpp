@@ -2458,7 +2458,7 @@ namespace yae
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
 
-    QRect canvasBBox(0, 0, (int)w, (int)h);
+    QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
     TVideoFramePtr frame = currentFrame();
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();

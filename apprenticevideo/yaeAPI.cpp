@@ -164,6 +164,15 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // AudioTraits::operator
+  //
+  bool
+  AudioTraits::operator == (const AudioTraits & at) const
+  {
+    return memcmp(this, &at, sizeof(AudioTraits)) == 0;
+  }
+
+  //----------------------------------------------------------------
   // VideoTraits::VideoTraits
   //
   VideoTraits::VideoTraits():
@@ -193,6 +202,15 @@ namespace yae
             visibleHeight_ == vt.visibleHeight_ &&
             pixelAspectRatio_ == vt.pixelAspectRatio_ &&
             isUpsideDown_ == vt.isUpsideDown_);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::operator
+  //
+  bool
+  VideoTraits::operator == (const VideoTraits & vt) const
+  {
+    return memcmp(this, &vt, sizeof(VideoTraits)) == 0;
   }
 
   //----------------------------------------------------------------
@@ -464,4 +482,88 @@ namespace yae
     return same;
   }
 
+  //----------------------------------------------------------------
+  // TTrackInfo::TTrackInfo
+  //
+  TTrackInfo::TTrackInfo(std::size_t index, std::size_t ntracks):
+    ntracks_(ntracks),
+    index_(index)
+  {}
+
+  //----------------------------------------------------------------
+  // TTrackInfo::isValid
+  //
+  bool
+  TTrackInfo::isValid() const
+  {
+    return index_ < ntracks_;
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::hasLang
+  //
+  bool
+  TTrackInfo::hasLang() const
+  {
+    return lang_.size() > 0 && lang_[0];
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::hasName
+  //
+  bool
+  TTrackInfo::hasName() const
+  {
+    return name_.size() > 0 && name_[0] && name_ != "und";
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::lang
+  //
+  const char *
+  TTrackInfo::lang() const
+  {
+    return hasLang() ? lang_.c_str() : NULL;
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::name
+  //
+  const char *
+  TTrackInfo::name() const
+  {
+    return hasName() ? name_.c_str() : NULL;
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::setLang
+  //
+  void
+  TTrackInfo::setLang(const char * lang)
+  {
+    if (lang)
+    {
+      lang_ = lang;
+    }
+    else
+    {
+      lang_.clear();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::setName
+  //
+  void
+  TTrackInfo::setName(const char * name)
+  {
+    if (name)
+    {
+      name_ = name;
+    }
+    else
+    {
+      name_.clear();
+    }
+  }
 }

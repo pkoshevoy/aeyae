@@ -299,6 +299,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getTrackLang
+  //
+  static const char *
+  getTrackLang(AVDictionary * metadata)
+  {
+    AVDictionaryEntry * lang = av_dict_get(metadata,
+                                            "language",
+                                            NULL,
+                                            0);
+
+    if (lang)
+    {
+      return lang->value;
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // getTrackName
   //
   static const char *
@@ -320,15 +339,6 @@ namespace yae
     if (title)
     {
       return title->value;
-    }
-
-    AVDictionaryEntry * lang = av_dict_get(metadata,
-                                           "language",
-                                           NULL,
-                                           0);
-    if (lang)
-    {
-      return lang->value;
     }
 
     return NULL;
@@ -573,7 +583,21 @@ namespace yae
         const char * name = getTrackName(stream_->metadata);
         if (name)
         {
-          title_.assign(name);
+          name_.assign(name);
+        }
+        else
+        {
+          name_.clear();
+        }
+
+        const char * lang = getTrackLang(stream_->metadata);
+        if (lang)
+        {
+          lang_.assign(lang);
+        }
+        else
+        {
+          lang_.clear();
         }
 
         queue_.open();
@@ -682,7 +706,8 @@ namespace yae
 
     bool render_;
     TSubsFormat format_;
-    std::string title_;
+    std::string name_;
+    std::string lang_;
     std::size_t index_;
 
     TIPlanarBufferPtr extraData_;
@@ -716,6 +741,7 @@ namespace yae
 
     // get track name:
     const char * getName() const;
+    const char * getLang() const;
 
     // accessor to stream index of this track within AVFormatContext:
     inline int streamIndex() const
@@ -883,6 +909,15 @@ namespace yae
   Track::getName() const
   {
     return stream_ ? getTrackName(stream_->metadata) : NULL;
+  }
+
+  //----------------------------------------------------------------
+  // Track::getLang
+  //
+  const char *
+  Track::getLang() const
+  {
+    return stream_ ? getTrackLang(stream_->metadata) : NULL;
   }
 
   //----------------------------------------------------------------
@@ -3253,7 +3288,7 @@ namespace yae
     bool setDeinterlacing(bool enabled);
 
     std::size_t subsCount() const;
-    const char * subsInfo(std::size_t i, TSubsFormat * t) const;
+    TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;
     void subsRender(std::size_t i, bool render);
 
     SubtitlesTrack * subsLookup(unsigned int streamIndex);
@@ -4222,28 +4257,23 @@ namespace yae
   //----------------------------------------------------------------
   // Movie::subsInfo
   //
-  const char *
-  Movie::subsInfo(std::size_t i, TSubsFormat * t) const
+  TSubsFormat
+  Movie::subsInfo(std::size_t i, TTrackInfo & info) const
   {
-    std::size_t nsubs = subs_.size();
-    if (i >= nsubs)
-    {
-      if (t)
-      {
-        *t = kSubsNone;
-      }
+    info.ntracks_ = subs_.size();
+    info.index_ = i;
+    info.lang_.clear();
+    info.name_.clear();
 
-      return NULL;
+    if (info.index_ < info.ntracks_)
+    {
+      const SubtitlesTrack & subs = *(subs_[i]);
+      info.lang_ = subs.lang_;
+      info.name_ = subs.name_;
+      return subs.format_;
     }
 
-    const SubtitlesTrack & subs = *(subs_[i]);
-
-    if (t)
-    {
-      *t = subs.format_;
-    }
-
-    return &subs.title_[0];
+    return kSubsNone;
   }
 
   //----------------------------------------------------------------
@@ -4449,31 +4479,39 @@ namespace yae
   //----------------------------------------------------------------
   // ReaderFFMPEG::getSelectedVideoTrackName
   //
-  const char *
-  ReaderFFMPEG::getSelectedVideoTrackName() const
+  void
+  ReaderFFMPEG::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->getName();
-    }
+    info.ntracks_ = private_->movie_.getVideoTracks().size();
+    info.index_ = private_->movie_.getSelectedVideoTrack();
+    info.lang_.clear();
+    info.name_.clear();
 
-    return NULL;
+    if (info.index_ < info.ntracks_)
+    {
+      VideoTrackPtr t = private_->movie_.getVideoTracks()[info.index_];
+      info.setLang(t->getLang());
+      info.setName(t->getName());
+    }
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getSelectedAudioTrackName
+  // ReaderFFMPEG::getSelectedAudioTrackInfo
   //
-  const char *
-  ReaderFFMPEG::getSelectedAudioTrackName() const
+  void
+  ReaderFFMPEG::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->getName();
-    }
+    info.ntracks_ = private_->movie_.getAudioTracks().size();
+    info.index_ = private_->movie_.getSelectedAudioTrack();
+    info.lang_.clear();
+    info.name_.clear();
 
-    return NULL;
+    if (info.index_ < info.ntracks_)
+    {
+      AudioTrackPtr t = private_->movie_.getAudioTracks()[info.index_];
+      info.setLang(t->getLang());
+      info.setName(t->getName());
+    }
   }
 
   //----------------------------------------------------------------
@@ -4756,10 +4794,10 @@ namespace yae
   //----------------------------------------------------------------
   // ReaderFFMPEG::subsInfo
   //
-  const char *
-  ReaderFFMPEG::subsInfo(std::size_t i, TSubsFormat * t) const
+  TSubsFormat
+  ReaderFFMPEG::subsInfo(std::size_t i, TTrackInfo & info) const
   {
-    return private_->movie_.subsInfo(i, t);
+    return private_->movie_.subsInfo(i, info);
   }
 
   //----------------------------------------------------------------

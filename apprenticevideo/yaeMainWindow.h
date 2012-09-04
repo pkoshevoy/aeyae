@@ -279,6 +279,20 @@ namespace yae
 
     // desired playback tempo:
     double tempo_;
+
+    // selected track info is used to select matching track(s)
+    // after loading next file in the playlist:
+    TTrackInfo selVideo_;
+    VideoTraits selVideoTraits_;
+
+    TTrackInfo selAudio_;
+    AudioTraits selAudioTraits_;
+
+    TTrackInfo selSubs_;
+    TSubsFormat selSubsFormat_;
+
+    // auto-crop single shot timer:
+    QTimer autocropTimer_;
   };
 }
 
