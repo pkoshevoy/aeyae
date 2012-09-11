@@ -16,7 +16,7 @@
 #include "opengl/the_view.hxx"
 
 // Qt includes:
-#include <QtOpenGL>
+#include <QBitmap>
 #include <QGLWidget>
 #include <QEvent>
 #include <QMouseEvent>
