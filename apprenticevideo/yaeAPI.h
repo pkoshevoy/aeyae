@@ -535,6 +535,23 @@ namespace yae
     std::string name_;
   };
 
+  //----------------------------------------------------------------
+  // TChapter
+  //
+  struct YAE_API TChapter
+  {
+    TChapter(const std::string & n = std::string(),
+             double t = 0.0,
+             double dt = 0.0);
+
+    // chapter name:
+    std::string name_;
+
+    // expressed in seconds:
+    double start_;
+    double duration_;
+  };
+
 }
 
 

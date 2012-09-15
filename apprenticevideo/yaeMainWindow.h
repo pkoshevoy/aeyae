@@ -151,6 +151,7 @@ namespace yae
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
+    void skipToChapter(int index);
     void playlistItemChanged(std::size_t index);
 
     // window menu:
@@ -198,6 +199,7 @@ namespace yae
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     void selectSubsTrack(IReader * reader, std::size_t subsTrackIndex);
+    void adjustMenues(IReader * reader);
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
     static void autoCropCallback(void * context, const TCropFrame & cf);
@@ -245,6 +247,7 @@ namespace yae
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
     QSignalMapper * subsTrackMapper_;
+    QSignalMapper * chapterMapper_;
 
     // file reader:
     IReader * reader_;

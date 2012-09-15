@@ -3293,6 +3293,9 @@ namespace yae
 
     SubtitlesTrack * subsLookup(unsigned int streamIndex);
 
+    std::size_t countChapters() const;
+    bool getChapterInfo(std::size_t i, TChapter & c) const;
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -4307,6 +4310,43 @@ namespace yae
     return NULL;
   }
 
+  //----------------------------------------------------------------
+  // Movie::countChapters
+  //
+  std::size_t
+  Movie::countChapters() const
+  {
+    return context_ ? context_->nb_chapters : 0;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::getChapterInfo
+  //
+  bool
+  Movie::getChapterInfo(std::size_t i, TChapter & c) const
+  {
+    if (!context_ || i >= context_->nb_chapters)
+    {
+      return false;
+    }
+
+    std::ostringstream os;
+    os << "Chapter " << i + 1;
+
+    const AVChapter * av = context_->chapters[i];
+    AVDictionaryEntry * name = av_dict_get(av->metadata, "title", NULL, 0);
+    c.name_ = name ? name->value : os.str().c_str();
+
+    double timebase = (double(av->time_base.num) /
+                       double(av->time_base.den));
+    c.start_ = double(av->start) * timebase;
+
+    double end = double(av->end) * timebase;
+    c.duration_ = end - c.start_;
+
+    return true;
+  }
+
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -4807,5 +4847,23 @@ namespace yae
   ReaderFFMPEG::subsRender(std::size_t i, bool render)
   {
     private_->movie_.subsRender(i, render);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::countChapters
+  //
+  std::size_t
+  ReaderFFMPEG::countChapters() const
+  {
+    return private_->movie_.countChapters();
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getChapterInfo
+  //
+  bool
+  ReaderFFMPEG::getChapterInfo(std::size_t i, TChapter & c) const
+  {
+    return private_->movie_.getChapterInfo(i, c);
   }
 }

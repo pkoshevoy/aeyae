@@ -179,6 +179,7 @@ namespace yae
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
     subsTrackMapper_(NULL),
+    chapterMapper_(NULL),
     reader_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
@@ -714,6 +715,8 @@ namespace yae
       YAE_ASSERT(ok);
       subsTrackMapper_->setMapping(trackAction, int(0));
     }
+
+    menubar->removeAction(menuChapters->menuAction());
   }
 
   //----------------------------------------------------------------
@@ -1360,6 +1363,41 @@ namespace yae
                                                         selSubsFormat_);
     selectSubsTrack(reader, strack);
     subsTrackAction[strack]->setChecked(true);
+
+
+    // update the chapter menu:
+    delete chapterMapper_;
+    chapterMapper_ = new QSignalMapper(this);
+
+    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(skipToChapter(int)));
+    YAE_ASSERT(ok);
+
+    std::size_t numChapters = reader->countChapters();
+    menuChapters->clear();
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      ok = reader->getChapterInfo(i, ch);
+      YAE_ASSERT(ok);
+
+      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + ch.start_ * 1000.0));
+
+      QString name =
+        tr("%1   %2").
+        arg(t0.toString("hh:mm:ss")).
+        arg(QString::fromUtf8(ch.name_.c_str()));
+
+      QAction * chapterAction = new QAction(name, this);
+      menuChapters->addAction(chapterAction);
+
+      ok = connect(chapterAction, SIGNAL(triggered()),
+                   chapterMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      chapterMapper_->setMapping(chapterAction, (int)i);
+    }
+
+    adjustMenues(reader);
 
     reader_->close();
     stopRenderers();
@@ -2133,6 +2171,19 @@ namespace yae
     reader_->threadStart();
 
     resumeRenderers();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToChapter
+  //
+  void
+  MainWindow::skipToChapter(int index)
+  {
+    TChapter ch;
+    bool ok = reader_->getChapterInfo(index, ch);
+    YAE_ASSERT(ok);
+
+    timelineControls_->seekTo(ch.start_);
   }
 
   //----------------------------------------------------------------
@@ -3230,6 +3281,42 @@ namespace yae
       }
     }
 
+    adjustMenues(reader);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::adjustMenues
+  //
+  void
+  MainWindow::adjustMenues(IReader * reader)
+  {
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t numChapters = reader->countChapters();
+    std::size_t videoTrackIndex = reader->getSelectedVideoTrackIndex();
+
+    if (!numVideoTracks)
+    {
+      menubar->removeAction(menuVideo->menuAction());
+      menubar->removeAction(menuSubs->menuAction());
+    }
+
+    if (numChapters < 2 )
+    {
+      menubar->removeAction(menuChapters->menuAction());
+    }
+
+    if (numVideoTracks)
+    {
+      menubar->insertMenu(menuHelp->menuAction(), menuVideo);
+      menubar->insertMenu(menuHelp->menuAction(), menuSubs);
+    }
+
+    if (numChapters > 1)
+    {
+      menubar->insertMenu(menuHelp->menuAction(), menuChapters);
+    }
+
     if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
     {
       if (actionShowPlaylist->isEnabled())
@@ -3246,12 +3333,6 @@ namespace yae
 
         swapLayouts(canvasContainer_, playlistContainer_);
 
-        if (!numVideoTracks)
-        {
-          menubar->removeAction(menuVideo->menuAction());
-          menubar->removeAction(menuSubs->menuAction());
-        }
-
         playlistWidget_->show();
         playlistWidget_->update();
         playlistWidget_->setFocus();
@@ -3262,12 +3343,6 @@ namespace yae
       if (!actionShowPlaylist->isEnabled())
       {
         swapLayouts(canvasContainer_, playlistContainer_);
-
-        if (numVideoTracks)
-        {
-          menubar->insertMenu(menuHelp->menuAction(), menuVideo);
-          menubar->insertMenu(menuHelp->menuAction(), menuSubs);
-        }
 
         if (actionShowPlaylist->isChecked())
         {

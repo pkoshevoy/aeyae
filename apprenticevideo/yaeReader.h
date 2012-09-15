@@ -114,6 +114,10 @@ namespace yae
     virtual std::size_t subsCount() const = 0;
     virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const = 0;
     virtual void subsRender(std::size_t i, bool render) = 0;
+
+    // chapter navigation:
+    virtual std::size_t countChapters() const = 0;
+    virtual bool getChapterInfo(std::size_t i, TChapter & c) const = 0;
   };
 
 }

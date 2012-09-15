@@ -1853,7 +1853,7 @@ namespace yae
     delete libass_;
     libass_ = NULL;
 
-    showTheGreeting_ = true;
+    showTheGreeting_ = false;
     subsInOverlay_ = false;
     subs_.clear();
   }

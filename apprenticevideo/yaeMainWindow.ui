@@ -205,7 +205,7 @@ QLineEdit:disabled {
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -325,11 +325,17 @@ QLineEdit:disabled {
      <string>&amp;Subtitles</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuChapters">
+    <property name="title">
+     <string>Chap&amp;ters</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuAudio"/>
    <addaction name="menuVideo"/>
    <addaction name="menuSubs"/>
+   <addaction name="menuChapters"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="playlistDock_">

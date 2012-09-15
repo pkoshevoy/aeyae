@@ -566,4 +566,15 @@ namespace yae
       name_.clear();
     }
   }
+
+
+  //----------------------------------------------------------------
+  // TChapter::TChapter
+  //
+  TChapter::TChapter(const std::string & n, double t, double dt):
+    name_(n),
+    start_(t),
+    duration_(dt)
+  {}
+
 }
