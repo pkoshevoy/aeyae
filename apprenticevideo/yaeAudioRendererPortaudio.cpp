@@ -137,8 +137,7 @@ namespace yae
     for (PaDeviceIndex i = 0; i < nDevsTotal; i++)
     {
       const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
-      if (devInfo->maxOutputChannels < 1 ||
-          devInfo->maxOutputChannels > 21)
+      if (devInfo->maxOutputChannels < 1)
       {
         continue;
       }
