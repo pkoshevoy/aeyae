@@ -462,6 +462,7 @@ namespace yae
   {
     bool exclude = !m_keywords.empty();
     bool changed = false;
+    std::size_t index = 0;
 
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
@@ -472,7 +473,7 @@ namespace yae
       std::size_t numExcluded = 0;
 
       for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
-           j != group.items_.end(); ++j)
+           j != group.items_.end(); ++j, index++)
       {
         PlaylistItem & item = *j;
 
@@ -491,6 +492,11 @@ namespace yae
           group.name_ + QString::fromUtf8(" ") +
           item.name_ + QString::fromUtf8(".") +
           item.ext_;
+
+        if (index == current_)
+        {
+          text += tr("NOW PLAYING");
+        }
 
         if (!keywordsMatch(m_keywords, text))
         {
