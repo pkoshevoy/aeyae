@@ -166,6 +166,7 @@ namespace yae
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDurationScaled);
+        secondsToSleep = std::min(1.0, secondsToSleep);
 
         if (df > 0.067)
         {

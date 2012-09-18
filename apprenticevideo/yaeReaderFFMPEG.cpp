@@ -2511,7 +2511,11 @@ namespace yae
     // declare a 16-byte aligned buffer for decoded audio samples:
     nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1);
 
-    getTraits(native_);
+    if (!getTraits(native_))
+    {
+      return false;
+    }
+    
     noteNativeTraitsChanged();
 
     startTime_ = stream_->start_time;
@@ -2593,7 +2597,10 @@ namespace yae
           // detected a change in the number of audio channels,
           // or detected a change in audio sample rate,
           // prepare to remix or resample accordingly:
-          getTraits(native_);
+          if (!getTraits(native_))
+          {
+            return false;
+          }
           noteNativeTraitsChanged();
         }
 
@@ -2839,7 +2846,10 @@ namespace yae
   void
   AudioTrack::threadLoop()
   {
-    decoderStartup();
+    if (!decoderStartup())
+    {
+      return;
+    }
 
     while (true)
     {
