@@ -113,7 +113,9 @@ namespace yae
   // SharedClock::setCurrentTime
   //
   bool
-  SharedClock::setCurrentTime(const TTime & t0, double latency)
+  SharedClock::setCurrentTime(const TTime & t0,
+                              double latency,
+                              bool notifyObserver)
   {
     TTimeSegmentPtr keepAlive(shared_);
 
@@ -128,7 +130,7 @@ namespace yae
       timeSegment.origin_ = now;
       timeSegment.t0_ = t0;
 
-      if (timeSegment.observer_)
+      if (timeSegment.observer_ && notifyObserver)
       {
         timeSegment.observer_->noteCurrentTimeChanged(t0);
       }

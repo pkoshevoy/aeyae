@@ -292,7 +292,9 @@ namespace yae
 
       if (clock_.allowsSettingTime())
       {
-        clock_.setCurrentTime(framePosition);
+        double latency = 0.0;
+        bool notifyObserver = !resetTimeCounters;
+        clock_.setCurrentTime(framePosition, latency, notifyObserver);
         drift = df;
       }
     }

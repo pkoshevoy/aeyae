@@ -103,7 +103,9 @@ namespace yae
     bool allowsSettingTime() const;
 
     //! set current time (only if this is the master clock):
-    bool setCurrentTime(const TTime & t0, double latencyInSeconds = 0.0);
+    bool setCurrentTime(const TTime & t0,
+                        double latencyInSeconds = 0.0,
+                        bool notifyObserver = true);
 
     //! retrieve the reference time interval and time since last clock update;
     //! returns false when clock is not set or is stopped while the clock
