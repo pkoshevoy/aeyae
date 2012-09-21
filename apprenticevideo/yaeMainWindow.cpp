@@ -2984,6 +2984,8 @@ namespace yae
     {
       std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
       std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
+      std::size_t numSubtitles = reader_->subsCount();
+      std::size_t numChapters = reader_->countChapters();
 
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
@@ -3028,7 +3030,16 @@ namespace yae
         if (numVideoTracks)
         {
           contextMenu_->addAction(menuVideo->menuAction());
+        }
+
+        if (numSubtitles)
+        {
           contextMenu_->addAction(menuSubs->menuAction());
+        }
+
+        if (numChapters > 1)
+        {
+          contextMenu_->addAction(menuChapters->menuAction());
         }
       }
 
@@ -3412,12 +3423,17 @@ namespace yae
   {
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t numSubtitles = reader->subsCount();
     std::size_t numChapters = reader->countChapters();
     std::size_t videoTrackIndex = reader->getSelectedVideoTrackIndex();
 
     if (!numVideoTracks)
     {
       menubar->removeAction(menuVideo->menuAction());
+    }
+
+    if (!numSubtitles)
+    {
       menubar->removeAction(menuSubs->menuAction());
     }
 
@@ -3429,6 +3445,10 @@ namespace yae
     if (numVideoTracks)
     {
       menubar->insertMenu(menuHelp->menuAction(), menuVideo);
+    }
+
+    if (numSubtitles)
+    {
       menubar->insertMenu(menuHelp->menuAction(), menuSubs);
     }
 
