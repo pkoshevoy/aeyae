@@ -188,8 +188,6 @@ namespace yae
     playbackInterrupted_(false),
     scrollStart_(0.0),
     scrollOffset_(0.0),
-    xexpand_(1.0),
-    yexpand_(1.0),
     tempo_(1.0),
     selVideo_(0, 1),
     selAudio_(0, 1),
@@ -1731,9 +1729,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatioAuto()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(0.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1761,9 +1758,8 @@ namespace yae
     }
 
     dar = aspectRatioDialog->doubleSpinBox->value();
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(dar);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1772,9 +1768,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio2_40()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(2.40);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1783,9 +1778,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio2_35()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(2.35);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1794,9 +1788,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_85()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(1.85);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1805,9 +1798,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_78()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(16.0 / 9.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1816,9 +1808,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_60()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(1.6);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1827,9 +1818,8 @@ namespace yae
   void
   MainWindow::playbackAspectRatio1_33()
   {
-    canvasSizeBackup();
     canvas_->overrideDisplayAspectRatio(4.0 / 3.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1838,9 +1828,8 @@ namespace yae
   void
   MainWindow::playbackCropFrameNone()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(0.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1849,9 +1838,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_40()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(2.40);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1860,9 +1848,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_35()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(2.35);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1871,9 +1858,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_85()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(1.85);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1882,9 +1868,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_78()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(16.0 / 9.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1893,9 +1878,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_60()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(1.6);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1904,9 +1888,8 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_33()
   {
-    canvasSizeBackup();
     canvas_->cropFrame(4.0 / 3.0);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1915,7 +1898,6 @@ namespace yae
   void
   MainWindow::playbackCropFrameAutoDetect()
   {
-    canvasSizeBackup();
     canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
   }
 
@@ -2008,10 +1990,9 @@ namespace yae
   void
   MainWindow::playbackVerticalScaling()
   {
-    canvasSizeBackup();
     bool enable = actionVerticalScaling->isChecked();
     canvas_->enableVerticalScaling(enable);
-    canvasSizeRestore();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2090,9 +2071,20 @@ namespace yae
       return;
     }
 
-    canvasSizeBackup();
+    int vw = int(0.5 + canvas_->imageWidth());
+    int vh = int(0.5 + canvas_->imageHeight());
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
 
-    double scale = std::min<double>(xexpand_, yexpand_);
+    QRect rectCanvas = canvas_->geometry();
+    int cw = rectCanvas.width();
+    int ch = rectCanvas.height();
+
+    double xexpand  = double(cw) / double(vw);
+    double yexpand = double(ch) / double(vh);
+    double scale = std::min<double>(xexpand, yexpand);
     canvasSizeSet(scale, scale);
   }
 
@@ -2122,7 +2114,6 @@ namespace yae
     // enter full screen rendering:
     SignalBlocker blockSignals(actionFullScreen);
 
-    canvasSizeBackup();
     actionFullScreen->setChecked(true);
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
@@ -2155,7 +2146,7 @@ namespace yae
       actionShrinkWrap->setEnabled(true);
       menuBar()->show();
       showNormal();
-      QTimer::singleShot(100, this, SLOT(canvasSizeRestore()));
+      QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
 
       swapShortcuts(shortcutExit_, actionExit);
       swapShortcuts(shortcutFullScreen_, actionFullScreen);
@@ -2758,7 +2749,7 @@ namespace yae
       actionShowPlaylist->setChecked(visible);
     }
 
-    QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
+    QTimer::singleShot(1, this, SLOT(adjustCanvasHeight()));
   }
 
   //----------------------------------------------------------------
@@ -2774,19 +2765,7 @@ namespace yae
       {
         ac->accept();
         canvas_->cropFrame(ac->cropFrame_);
-
-        if (!isFullScreen())
-        {
-          double w = 1.0;
-          double h = 1.0;
-          double dar = canvas_->imageAspectRatio(w, h);
-          if (dar)
-          {
-            double s = double(canvas_->width()) / w;
-            canvasSizeSet(s, s);
-          }
-        }
-
+        adjustCanvasHeight();
         return true;
       }
 
@@ -3048,65 +3027,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::resizeEvent
-  //
-  void
-  MainWindow::resizeEvent(QResizeEvent * e)
-  {
-    if (!canvas_)
-    {
-      return;
-    }
-
-    // QTimer::singleShot(1, this, SLOT(canvasSizeBackup()));
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::canvasSizeBackup
-  //
-  void
-  MainWindow::canvasSizeBackup()
-  {
-    if (isFullScreen())
-    {
-      return;
-    }
-
-    int vw = int(0.5 + canvas_->imageWidth());
-    int vh = int(0.5 + canvas_->imageHeight());
-    if (vw < 1 || vh < 1)
-    {
-      return;
-    }
-
-    QRect rectCanvas = canvas_->geometry();
-    int cw = rectCanvas.width();
-    int ch = rectCanvas.height();
-
-    xexpand_ = double(cw) / double(vw);
-    yexpand_ = double(ch) / double(vh);
-    std::cerr << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_
-              << std::endl;
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::canvasSizeRestore
-  //
-  void
-  MainWindow::canvasSizeRestore()
-  {
-    canvasSizeSet(xexpand_, yexpand_);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::canvasSizeRestore
+  // MainWindow::canvasSizeSet
   //
   void
   MainWindow::canvasSizeSet(double xexpand, double yexpand)
   {
-    xexpand_ = xexpand;
-    yexpand_ = yexpand;
-
     if (isFullScreen())
     {
       return;
@@ -3135,8 +3060,8 @@ namespace yae
     int ox = ww - cw;
     int oy = wh - ch;
 
-    int ideal_w = ox + int(0.5 + vw * xexpand_);
-    int ideal_h = oy + int(0.5 + vh * yexpand_);
+    int ideal_w = ox + int(0.5 + vw * xexpand);
+    int ideal_h = oy + int(0.5 + vh * yexpand);
 
     QRect rectMax = QApplication::desktop()->availableGeometry(this);
     int max_w = rectMax.width();
@@ -3162,12 +3087,7 @@ namespace yae
 
     int new_w = std::min(ideal_w, max_w);
     int new_h = std::min(ideal_h, max_h);
-#if 0
-    cw = new_w - ox;
-    ch = new_h - oy;
-    xexpand_ = double(cw) / double(vw);
-    yexpand_ = double(ch) / double(vh);
-#endif
+
     int max_x0 = rectMax.x();
     int max_y0 = rectMax.y();
     int max_x1 = max_x0 + max_w - 1;
@@ -3189,7 +3109,7 @@ namespace yae
     int cdx = rectWindow.width() - rectClient.width();
     int cdy = rectWindow.height() - rectClient.height();
 
-    std::cerr << "\ncanvas size set: " << xexpand_ << ", " << yexpand_
+    std::cerr << "\ncanvas size set: " << xexpand << ", " << yexpand
               << std::endl
               << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
               << std::endl
@@ -3197,6 +3117,26 @@ namespace yae
               << std::endl;
     resize(new_w - cdx, new_h - cdy);
     // move(new_x, new_y);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::adjustCanvasHeight
+  //
+  void
+  MainWindow::adjustCanvasHeight()
+  {
+    if (!isFullScreen())
+    {
+      double w = 1.0;
+      double h = 1.0;
+      double dar = canvas_->imageAspectRatio(w, h);
+
+      if (dar)
+      {
+        double s = double(canvas_->width()) / w;
+        canvasSizeSet(s, s);
+      }
+    }
   }
 
   //----------------------------------------------------------------

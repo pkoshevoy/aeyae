@@ -176,8 +176,7 @@ namespace yae
     void scrollWheelTimerExpired();
     void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
-    void canvasSizeBackup();
-    void canvasSizeRestore();
+    void adjustCanvasHeight();
 
   protected:
     // virtual:
@@ -188,7 +187,6 @@ namespace yae
     void dropEvent(QDropEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
-    void resizeEvent(QResizeEvent * e);
 
     // helpers:
     void canvasSizeSet(double xexpand, double yexpand);
@@ -275,10 +273,6 @@ namespace yae
 
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
-
-    // shrink wrap stretch factors:
-    double xexpand_;
-    double yexpand_;
 
     // desired playback tempo:
     double tempo_;
