@@ -177,6 +177,8 @@ namespace yae
     void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
     void adjustCanvasHeight();
+    void canvasSizeBackup();
+    void canvasSizeRestore();
 
   protected:
     // virtual:
@@ -273,6 +275,10 @@ namespace yae
 
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
+
+    // shrink wrap stretch factors:
+    double xexpand_;
+    double yexpand_;
 
     // desired playback tempo:
     double tempo_;

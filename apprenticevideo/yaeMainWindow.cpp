@@ -188,6 +188,8 @@ namespace yae
     playbackInterrupted_(false),
     scrollStart_(0.0),
     scrollOffset_(0.0),
+    xexpand_(1.0),
+    yexpand_(1.0),
     tempo_(1.0),
     selVideo_(0, 1),
     selAudio_(0, 1),
@@ -1990,9 +1992,10 @@ namespace yae
   void
   MainWindow::playbackVerticalScaling()
   {
+    canvasSizeBackup();
     bool enable = actionVerticalScaling->isChecked();
     canvas_->enableVerticalScaling(enable);
-    adjustCanvasHeight();
+    canvasSizeRestore();
   }
 
   //----------------------------------------------------------------
@@ -2012,6 +2015,7 @@ namespace yae
   MainWindow::playbackShowPlaylist()
   {
     SignalBlocker blockSignals(actionShowPlaylist);
+    canvasSizeBackup();
 
     if (playlistDock_->isVisible())
     {
@@ -2071,20 +2075,9 @@ namespace yae
       return;
     }
 
-    int vw = int(0.5 + canvas_->imageWidth());
-    int vh = int(0.5 + canvas_->imageHeight());
-    if (vw < 1 || vh < 1)
-    {
-      return;
-    }
+    canvasSizeBackup();
 
-    QRect rectCanvas = canvas_->geometry();
-    int cw = rectCanvas.width();
-    int ch = rectCanvas.height();
-
-    double xexpand  = double(cw) / double(vw);
-    double yexpand = double(ch) / double(vh);
-    double scale = std::min<double>(xexpand, yexpand);
+    double scale = std::min<double>(xexpand_, yexpand_);
     canvasSizeSet(scale, scale);
   }
 
@@ -2749,7 +2742,7 @@ namespace yae
       actionShowPlaylist->setChecked(visible);
     }
 
-    QTimer::singleShot(1, this, SLOT(adjustCanvasHeight()));
+    QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
   }
 
   //----------------------------------------------------------------
@@ -3027,11 +3020,51 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::canvasSizeBackup
+  //
+  void
+  MainWindow::canvasSizeBackup()
+  {
+    if (isFullScreen())
+    {
+      return;
+    }
+
+    int vw = int(0.5 + canvas_->imageWidth());
+    int vh = int(0.5 + canvas_->imageHeight());
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
+
+    QRect rectCanvas = canvas_->geometry();
+    int cw = rectCanvas.width();
+    int ch = rectCanvas.height();
+
+    xexpand_ = double(cw) / double(vw);
+    yexpand_ = double(ch) / double(vh);
+    std::cerr << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_
+              << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvasSizeRestore
+  //
+  void
+  MainWindow::canvasSizeRestore()
+  {
+    canvasSizeSet(xexpand_, yexpand_);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::canvasSizeSet
   //
   void
   MainWindow::canvasSizeSet(double xexpand, double yexpand)
   {
+    xexpand_ = xexpand;
+    yexpand_ = yexpand;
+
     if (isFullScreen())
     {
       return;
@@ -3060,8 +3093,8 @@ namespace yae
     int ox = ww - cw;
     int oy = wh - ch;
 
-    int ideal_w = ox + int(0.5 + vw * xexpand);
-    int ideal_h = oy + int(0.5 + vh * yexpand);
+    int ideal_w = ox + int(0.5 + vw * xexpand_);
+    int ideal_h = oy + int(0.5 + vh * yexpand_);
 
     QRect rectMax = QApplication::desktop()->availableGeometry(this);
     int max_w = rectMax.width();
