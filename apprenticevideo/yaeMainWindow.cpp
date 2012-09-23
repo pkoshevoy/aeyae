@@ -1557,6 +1557,10 @@ namespace yae
     {
       autocropTimer_.start(1900);
     }
+    else
+    {
+      QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+    }
 
     return true;
   }
