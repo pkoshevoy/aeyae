@@ -582,18 +582,23 @@ namespace yae
 
         if (darCropped_)
         {
-          double dar = double(crop.w_) / double(crop.h_);
+          double par = (vtts.pixelAspectRatio_ != 0.0 &&
+                        vtts.pixelAspectRatio_ != 1.0 ?
+                        vtts.pixelAspectRatio_ : 1.0);
+
+          double dar = double(par * crop.w_) / double(crop.h_);
+
           if (dar < darCropped_)
           {
             // adjust height:
-            int h = int(0.5 + double(crop.w_) / darCropped_);
+            int h = int(0.5 + double(par * crop.w_) / darCropped_);
             crop.y_ += (crop.h_ - h) / 2;
             crop.h_ = h;
           }
           else
           {
             // adjust width:
-            int w = int(0.5 + double(crop.h_) * darCropped_);
+            int w = int(0.5 + double(crop.h_ / par) * darCropped_);
             crop.x_ += (crop.w_ - w) / 2;
             crop.w_ = w;
           }
@@ -693,7 +698,6 @@ namespace yae
       if (!frame_ || !frame || !frame_->traits_.sameFrameSize(frame->traits_))
       {
         crop_.clear();
-        darCropped_ = 0.0;
         frameSizeChanged = true;
       }
 
