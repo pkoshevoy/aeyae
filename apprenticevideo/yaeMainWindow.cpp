@@ -1559,7 +1559,7 @@ namespace yae
     }
     else
     {
-      QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+      QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
 
     return true;
