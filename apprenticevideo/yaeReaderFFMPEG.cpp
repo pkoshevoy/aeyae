@@ -1219,11 +1219,13 @@ namespace yae
                                            graph_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
+    AVBufferSinkParams params;
+    params.pixel_fmts = dstPixFmt_;
     err = avfilter_graph_create_filter(&sink_,
                                        dstFilterDef,
                                        "out",
                                        NULL,
-                                       dstPixFmt_,
+                                       &params,
                                        graph_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
