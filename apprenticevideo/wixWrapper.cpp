@@ -131,12 +131,13 @@ main(int argc, char ** argv)
   }
 
   // get runtime parameters:
-  if (argc != 8)
+  if (argc != 9)
   {
     std::cerr << "USAGE: " << argv[0]
               << " module pathToIconFile helpLinkURL"
               << " pathToDependsExe dlls;allowed;search;path;list"
-              << " pathWixCandleExe pathWixLightExe"
+              << " pathWixCandleExe pathWixLightExe "
+              << " pathVCRedistMsm"
               << std::endl;
     return 1;
   }
@@ -149,6 +150,7 @@ main(int argc, char ** argv)
   std::string allowedPaths(argv[5]);
   std::string wixCandleExe(argv[6]);
   std::string wixLightExe(argv[7]);
+  std::string vcRedistMsm(argv[8]);
 
   // call depends.exe:
   {
@@ -324,8 +326,19 @@ main(int argc, char ** argv)
       << "Description='Apprentice Video Installer' "
       << "Comments='A video player' "
       << "Manufacturer='Pavel Koshevoy' "
-      << "InstallerVersion='200' "
+      << "InstallerVersion='300' "
       << "Languages='1033' Compressed='yes' SummaryCodepage='1252' />"
+      << std::endl;
+
+  out << " <DirectoryRef Id=\"TARGETDIR\">\n"
+      << "  <Merge Id=\"VCRedist\" SourceFile=\""
+      << vcRedistMsm
+      << "\" DiskId=\"1\" Language=\"0\"/>\n"
+      << " </DirectoryRef>\n"
+      << " <Feature Id=\"VCRedist\" Title=\"Visual C++ Runtime\" "
+      << "AllowAdvertise=\"no\" Display=\"hidden\" Level=\"1\">\n"
+      << "  <MergeRef Id=\"VCRedist\"/>\n"
+      << " </Feature>"
       << std::endl;
 
   out << "  <Media Id='1' Cabinet='product.cab' EmbedCab='yes' />\n"

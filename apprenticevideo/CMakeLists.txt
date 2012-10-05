@@ -140,6 +140,8 @@ if (WIN32)
   find_library(LIBMOLDNAME_DEBUG_LIBRARY libmoldnamed PATHS ${FFMPEG_LIBS_PATH} DOC "mingw libmoldnamed library")
   find_library(AVICAP32_LIBRARY avicap32 PATHS ${FFMPEG_LIBS_PATH} DOC "avicap32 library")
   find_library(AVIFIL32_LIBRARY avifil32 PATHS ${FFMPEG_LIBS_PATH} DOC "avifil32 library")
+  find_library(ICUUC_LIBRARY icuuc PATHS ${FFMPEG_LIBS_PATH} DOC "icuuc library")
+  find_library(ICUDT_LIBRARY icudt PATHS ${FFMPEG_LIBS_PATH} DOC "icudt library")
 endif (WIN32)
 
 set(LIBASS_DIR "$ENV{LIBASS_DIR}" CACHE PATH "root path for libass lib/ and include/ folders")
@@ -612,6 +614,14 @@ if (WIN32)
     set(TARGET_LIBS ${TARGET_LIBS} ${AVIFIL32_LIBRARY})
   endif (AVIFIL32_LIBRARY)
 
+  if (ICUUC_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${ICUUC_LIBRARY})
+  endif (ICUUC_LIBRARY)
+
+  if (ICUDT_LIBRARY)
+    set(TARGET_LIBS ${TARGET_LIBS} ${ICUDT_LIBRARY})
+  endif (ICUDT_LIBRARY)
+
   if (MSYS OR MINGW)
     set(TARGET_LIBS ${TARGET_LIBS}
       -L/Developer/ffmpeg/lib
@@ -735,6 +745,10 @@ if (WIN32)
   set(ALLOWED_PATHS ${FFMPEG_LIBS_PATH} CACHE STRING
     "semicolon separated search path where dlls for Qt, portaudio, ffmpeg, etc... can be found")
 
+  set(VC_CRT_MSM
+    "C:/Program Files/Common Files/Merge Modules/Microsoft_VC*_CRT_*.msm"
+    CACHE FILEPATH "VCRedist CRT .msm merge module")
+
   if (MINGW OR MSYS)
     string(REPLACE "/" "\\\\" NATIVE_PROGRAM_EXE "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe")
     string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico")
@@ -742,6 +756,7 @@ if (WIN32)
     string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
     string(REPLACE "/" "\\\\" NATIVE_CANDLE_EXE "${WIX_CANDLE}")
     string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
+    string(REPLACE "/" "\\\\" NATIVE_VC_CRT_MSM "${VC_CRT_MSM}")
   else (MINGW OR MSYS)
     file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
     file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
@@ -749,6 +764,7 @@ if (WIN32)
     file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
     file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
     file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
+    file(TO_NATIVE_PATH "${VC_CRT_MSM}" NATIVE_VC_CRT_MSM)
   endif (MINGW OR MSYS)
 
   add_custom_target("create installer"
@@ -767,6 +783,7 @@ if (WIN32)
     "${NATIVE_ALLOWED_PATHS}"
     "${NATIVE_CANDLE_EXE}"
     "${NATIVE_LIGHT_EXE}"
+    "${NATIVE_VC_CRT_MSM}"
     DEPENDS ${PROGNAME} wixWrapper
     COMMENT "create installer package"
     )
