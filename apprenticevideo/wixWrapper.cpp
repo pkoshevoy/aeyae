@@ -210,7 +210,7 @@ main(int argc, char ** argv)
 
   std::list<char> tmpAcc;
   TState state = kParsing;
-  while (true)
+  while (in)
   {
     char ch = 0;
     std::size_t nb = fread(&ch, 1, 1, in);
