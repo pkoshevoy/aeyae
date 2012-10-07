@@ -145,30 +145,33 @@ if (WIN32)
 endif (WIN32)
 
 set(LIBASS_DIR "$ENV{LIBASS_DIR}" CACHE PATH "root path for libass lib/ and include/ folders")
-find_library(LIBASS_LIBRARY ass
+find_library(LIBASS_LIBRARY ass libass
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libass (for ssa/ass subtitle renderering)")
-find_library(LIBHARFBUZZ_LIBRARY harfbuzz
+find_library(LIBHARFBUZZ_LIBRARY harfbuzz libharfbuzz
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libharfbuzz (for ssa/ass subtitle renderering)")
-find_library(LIBFRIBIDI_LIBRARY fribidi
+find_library(LIBFRIBIDI_LIBRARY fribidi libfribidi
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libfribidi (for ssa/ass subtitle renderering)")
-find_library(LIBFONTCONFIG_LIBRARY fontconfig
+find_library(LIBFONTCONFIG_LIBRARY fontconfig libfontconfig
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libfontconfig (for ssa/ass subtitle renderering)")
-find_library(LIBFREETYPE_LIBRARY freetype
+find_library(LIBFREETYPE_LIBRARY freetype libfreetype
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libfreetype (for ssa/ass subtitle renderering)")
-find_library(LIBICONV_LIBRARY iconv
+find_library(LIBICONV_LIBRARY iconv libiconv
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libiconv (for ssa/ass subtitle renderering)")
-find_library(LIBEXPAT_LIBRARY expat
+find_library(LIBEXPAT_LIBRARY expat libexpat
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libexpat (for ssa/ass subtitle renderering)")
-find_library(LIBENCA_LIBRARY enca
+find_library(LIBENCA_LIBRARY enca libenca
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libenca (for ssa/ass subtitle renderering)")
+find_library(LIBICUUC_LIBRARY icuuc libicuuc
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libicuuc (for ssa/ass subtitle renderering)")
 
 
 
@@ -396,6 +399,9 @@ endif (LIBEXPAT_LIBRARY)
 if (LIBENCA_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${LIBENCA_LIBRARY})
 endif (LIBENCA_LIBRARY)
+if (LIBICUUC_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${LIBICUUC_LIBRARY})
+endif (LIBICUUC_LIBRARY)
 
 if (PORTAUDIO_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
