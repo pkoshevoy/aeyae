@@ -58,16 +58,20 @@
 //----------------------------------------------------------------
 // YAE_ASSERT
 //
-#if defined(__APPLE__)
-# if defined(__ppc__)
-#  define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
-# else
-#  define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
-# endif
-#elif __GNUC__
-#  define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
+#if defined(NDEBUG)
+# define YAE_ASSERT(expr)
 #else
-# define YAE_ASSERT(expr) assert(expr)
+# if defined(__APPLE__)
+#  if defined(__ppc__)
+#   define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
+#  else
+#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
+#  endif
+# elif __GNUC__
+#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
+# else
+#  define YAE_ASSERT(expr) assert(expr)
+# endif
 #endif
 
 
