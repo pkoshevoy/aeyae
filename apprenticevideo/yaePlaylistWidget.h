@@ -153,6 +153,7 @@ namespace yae
     void selectGroup(PlaylistGroup * group);
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
+    void removeItems(std::size_t groupIndex, std::size_t itemIndex);
 
   signals:
     // this signal may be emitted if the user activates an item,
@@ -182,7 +183,9 @@ namespace yae
     bool applyFilter();
     void updateGeometries();
     void updateScrollBars();
-    void draw(QPainter & painter, const QRect & region);
+    void draw(QPainter & painter,
+              const QRect & region,
+              const QPoint & mousePos);
 
     void updateSelection(const QPoint & mousePos,
                          bool toggleSelection = false,
@@ -198,17 +201,27 @@ namespace yae
     void scrollTo(std::size_t index,
                   PlaylistItem ** item = NULL);
 
-    std::size_t lookupGroupIndex(const QPoint & pt, bool findClosest = true);
-    PlaylistGroup * lookupGroup(const QPoint & pt, bool findClosest = true);
+    std::size_t lookupGroupIndex(const QPoint & pt,
+                                 bool findClosest = true) const;
 
-    std::size_t lookupItemIndex(PlaylistGroup * group, const QPoint & pt);
+    PlaylistGroup * lookupGroup(const QPoint & pt,
+                                bool findClosest = true);
+
+    std::size_t lookupItemIndex(const PlaylistGroup * group,
+                                const QPoint & pt) const;
+
     PlaylistItem * lookup(PlaylistGroup * group, const QPoint & pt);
     PlaylistItem * lookup(const QPoint & pt, PlaylistGroup ** group = NULL);
+
+    bool isMouseOverRemoveButton(const QPoint & pt,
+                                 std::size_t & groupIndex,
+                                 std::size_t & itemIndex) const;
 
     enum TMouseState {
       kNotReady = 0,
       kUpdateSelection = 1,
-      kToggleCollapsedGroup = 2
+      kToggleCollapsedGroup = 2,
+      kRemoveItem = 3
     };
 
     // a helper used to distinguish between various mouse actions:

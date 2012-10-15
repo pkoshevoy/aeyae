@@ -41,6 +41,14 @@ namespace yae
   //
   static const int kGroupArrowSize = 7;
 
+  //----------------------------------------------------------------
+  // kPixmapClear
+  //
+  static QPixmap & kPixmapClear()
+  {
+    static QPixmap p = QPixmap(":/images/clear.png");
+    return p;
+  }
 
 
   //----------------------------------------------------------------
@@ -75,6 +83,7 @@ namespace yae
     current_(0),
     highlighted_(0)
   {
+    setMouseTracking(true);
     add(std::list<QString>());
   }
 
@@ -742,6 +751,135 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistWidget::removeItems
+  //
+  void
+  PlaylistWidget::removeItems(std::size_t groupIndex, std::size_t itemIndex)
+  {
+    bool currentRemoved = false;
+    std::size_t newCurrent = current_;
+
+    PlaylistGroup & group = groups_[groupIndex];
+    if (group.excluded_)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    if (itemIndex < numItems_)
+    {
+      // remove one item:
+      std::vector<PlaylistItem>::iterator iter =
+        group.items_.begin() + (itemIndex - group.offset_);
+
+      // remove item from the tree:
+      {
+        PlaylistItem & item = *iter;
+        std::list<QString> keyPath = group.keyPath_;
+        keyPath.push_back(item.key_);
+        tree_.remove(keyPath);
+      }
+
+      if (itemIndex < current_)
+      {
+        // adjust the current index:
+        newCurrent = current_ - 1;
+      }
+      else if (itemIndex == current_)
+      {
+        // current item has changed:
+        currentRemoved = true;
+        newCurrent = current_;
+      }
+
+      if (itemIndex < highlighted_)
+      {
+        highlighted_--;
+      }
+
+      group.items_.erase(iter);
+    }
+    else
+    {
+      // remove entire group:
+      for (std::vector<PlaylistItem>::iterator iter = group.items_.begin();
+           iter != group.items_.end(); ++iter)
+      {
+        // remove item from the tree:
+        PlaylistItem & item = *iter;
+        std::list<QString> keyPath = group.keyPath_;
+        keyPath.push_back(item.key_);
+        tree_.remove(keyPath);
+      }
+
+      std::size_t groupSize = group.items_.size();
+      std::size_t groupEnd = group.offset_ + groupSize;
+      if (groupEnd < current_)
+      {
+        // adjust the current index:
+        newCurrent = current_ - groupSize;
+      }
+      else if (group.offset_ <= current_)
+      {
+        // current item has changed:
+        currentRemoved = true;
+        newCurrent = group.offset_;
+      }
+
+      if (groupEnd < highlighted_)
+      {
+        highlighted_ -= groupSize;
+      }
+      else if (group.offset_ <= highlighted_)
+      {
+        highlighted_ = group.offset_;
+      }
+
+      group.items_.clear();
+    }
+
+    // if the group is empty and has a key path, remove it:
+    if (group.items_.empty() && !group.keyPath_.empty())
+    {
+      std::vector<PlaylistGroup>::iterator iter = groups_.begin() + groupIndex;
+      groups_.erase(iter);
+    }
+
+    updateGeometries();
+
+    if (newCurrent >= numItems_)
+    {
+      newCurrent = numItems_ ? numItems_ - 1 : 0;
+    }
+
+    if (highlighted_ >= numItems_)
+    {
+      highlighted_ = numItems_ ? numItems_ - 1 : 0;
+    }
+
+    // must account for the excluded items:
+    newCurrent = closestItem(newCurrent, kBehind);
+    highlighted_ = closestItem(highlighted_, kBehind);
+
+    if (highlighted_ < numItems_)
+    {
+      PlaylistItem * item = lookup(highlighted_);
+      item->selected_ = true;
+    }
+
+    if (currentRemoved)
+    {
+      setCurrentItem(newCurrent, true);
+    }
+    else
+    {
+      current_ = newCurrent;
+    }
+
+    update();
+  }
+
+  //----------------------------------------------------------------
   // PlaylistWidget::paintEvent
   //
   void
@@ -758,7 +896,8 @@ namespace yae
     QRect localRegion = e->rect().translated(viewOffset);
     painter.translate(-viewOffset);
 
-    draw(painter, localRegion);
+    QPoint mousePos = mapFromGlobal(QCursor::pos()) + viewOffset;
+    draw(painter, localRegion, mousePos);
 
     painter.end();
   }
@@ -778,6 +917,18 @@ namespace yae
 
       QPoint viewOffset = getViewOffset();
       QPoint pt = e->pos() + viewOffset;
+
+      // check whether the [x] button was clicked:
+      {
+        std::size_t groupIndex = groups_.size();
+        std::size_t itemIndex = numItems_;
+        if (isMouseOverRemoveButton(pt, groupIndex, itemIndex))
+        {
+          // handle item removal on mouse button release:
+          mouseState_ = PlaylistWidget::kRemoveItem;
+          return;
+        }
+      }
 
       if (pt.x() <= 10 + kGroupArrowSize)
       {
@@ -822,6 +973,20 @@ namespace yae
     if (e->button() == Qt::LeftButton)
     {
       e->accept();
+
+      if (mouseState_ == PlaylistWidget::kRemoveItem)
+      {
+        QPoint viewOffset = getViewOffset();
+        QPoint pt = e->pos() + viewOffset;
+
+        std::size_t groupIndex = groups_.size();
+        std::size_t itemIndex = numItems_;
+        if (isMouseOverRemoveButton(pt, groupIndex, itemIndex))
+        {
+          removeItems(groupIndex, itemIndex);
+        }
+      }
+
       rubberBand_.hide();
     }
 
@@ -847,6 +1012,11 @@ namespace yae
                       toggleSelection,
                       scrollToItem,
                       allowGroupSelection);
+    }
+    else if (!e->buttons())
+    {
+      e->accept();
+      update();
     }
   }
 
@@ -1301,59 +1471,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // headerBrush
+  // bboxRemoveButton
   //
-  static const QBrush & headerBrush(int height, bool active)
+  static QRect
+  bboxRemoveButton(const QRect & bbox)
   {
-    static QBrush * brush = NULL;
-    static QBrush * brushActive = NULL;
+    static const int w = 12;
+    return QRect(bbox.x() + bbox.width() - w - 3,
+                 bbox.y() + (bbox.height() - w) / 2,
+                 w,
+                 w);
+  }
 
-    if (!brush)
-    {
-#if 1
-      brush       = new QBrush(QColor("#c1c1c1"));
-      brushActive = new QBrush(QColor("#939393"));
-#else
-      QLinearGradient gradient(0, 1, 0, height - 1);
-#if 1
-      gradient.setColorAt(0.0,   QColor("#a8a8a8"));
-      gradient.setColorAt(0.01,  QColor("#a8a8a8"));
-      gradient.setColorAt(0.011, QColor("#c1c1c1"));
-      gradient.setColorAt(1.0,   QColor("#9b9b9b"));
-#else
-      gradient.setColorAt(0.0,  QColor("#66758c"));
-      gradient.setColorAt(0.49, QColor("#234a76"));
-      gradient.setColorAt(0.5,  QColor("#0e224e"));
-      gradient.setColorAt(1.0,  QColor("#377e9e"));
-#endif
-      gradient.setSpread(QGradient::PadSpread);
-      brush = new QBrush(gradient);
-
-      gradient = QLinearGradient(0, 1, 0, height - 1);
-#if 1
-      gradient.setColorAt(0.0,   QColor("#7c8b9d"));
-      gradient.setColorAt(0.01,  QColor("#7c8b9d"));
-      gradient.setColorAt(0.011, QColor("#93a4b4"));
-      gradient.setColorAt(1.0,   QColor("#536b83"));
-#else
-      gradient.setColorAt(0.0,  QColor("#66758c"));
-      gradient.setColorAt(0.49, QColor("#234a76"));
-      gradient.setColorAt(0.5,  QColor("#0e224e"));
-      gradient.setColorAt(1.0,  QColor("#377e9e"));
-#endif
-      gradient.setSpread(QGradient::PadSpread);
-      brushActive = new QBrush(gradient);
-#endif
-    }
-
-    return active ? *brushActive : *brush;
+  //----------------------------------------------------------------
+  // drawRemoveButton
+  //
+  static void
+  drawRemoveButton(QPainter & painter,
+                   const QRect & bbox,
+                   const QPixmap & button,
+                   const QColor & bgColor)
+  {
+    QRect bx = bboxRemoveButton(bbox);
+    painter.setBrush(bgColor);
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(bx, 2, 2);
+    painter.drawPixmap(bx.x() + (bx.width() - button.width()) / 2,
+                       bx.y() + (bx.height() - button.height()) / 2,
+                       button);
   }
 
   //----------------------------------------------------------------
   // PlaylistWidget::draw
   //
   void
-  PlaylistWidget::draw(QPainter & painter, const QRect & region)
+  PlaylistWidget::draw(QPainter & painter,
+                       const QRect & region,
+                       const QPoint & mousePos)
   {
     static const QColor zebraBg[] = {
       QColor(0xf0, 0xf0, 0xf0, 0),
@@ -1361,21 +1515,18 @@ namespace yae
     };
 
     QPalette palette = this->palette();
-
     QColor selectedColorBg = palette.color(QPalette::Highlight);
     QColor selectedColorFg = palette.color(QPalette::HighlightedText);
     QColor foregroundColor = palette.color(QPalette::WindowText);
-    // QColor headerColor = QColor("#40a0ff");
-    // QColor headerColor = QColor("#c7ddff");
-    QColor headerColor = QColor("#202020");
-    QColor activeColor = QColor("#ffffff");
+    static QColor headerColor = QColor("#202020");
+    static QColor activeColor = QColor("#ffffff");
+    static QColor loBgGroup = QColor("#c1c1c1");
+    static QColor hiBgGroup = QColor("#939393");
 
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
 
     QFont headerFont = textFont;
-    // headerFont.setBold(true);
-
     QFont smallFont = textFont;
     smallFont.setPixelSize(9);
 
@@ -1408,13 +1559,19 @@ namespace yae
                    group.bbox_.width(),
                    group.bbox_.height());
 
-        painter.setBrush(headerBrush(bbox.height(), isHighlightedGroup));
+        const QColor & bg = isHighlightedGroup ? hiBgGroup : loBgGroup;
+        painter.setBrush(bg);
         painter.setBrushOrigin(bbox.topLeft());
         painter.setPen(Qt::NoPen);
         painter.drawRect(bbox);
 
         if (!group.keyPath_.empty())
         {
+          if (overlapExists(group.bbox_, mousePos))
+          {
+            drawRemoveButton(painter, bbox, kPixmapClear(), bg);
+          }
+
           double w = kGroupArrowSize;
           double h = bbox.height();
           double s = w / 2.0;
@@ -1552,7 +1709,7 @@ namespace yae
           painter.setFont(tinyFont);
           QFontMetrics fm = painter.fontMetrics();
           QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
-          QRect bx = bbox.adjusted(1, 1, -1, -1);
+          QRect bx = bbox.adjusted(1, 1, -17, -1);
 
           // add a little padding:
           sz.setWidth(sz.width() + 8);
@@ -1589,6 +1746,12 @@ namespace yae
                       bboxText,
                       Qt::AlignBottom | Qt::AlignLeft,
                       text);
+
+        if (overlapExists(item.bbox_, mousePos))
+        {
+          const QColor & bg = item.selected_ ? selectedColorBg : loBgGroup;
+          drawRemoveButton(painter, bbox, kPixmapClear(), bg);
+        }
 
         painter.translate(0, item.bbox_.height());
       }
@@ -1783,13 +1946,13 @@ namespace yae
   // return index of the first non-excluded group:
   //
   static std::size_t
-  lookupFirstGroupIndex(std::vector<PlaylistGroup> & groups)
+  lookupFirstGroupIndex(const std::vector<PlaylistGroup> & groups)
   {
     std::size_t index = 0;
-    for (std::vector<PlaylistGroup>::iterator i = groups.begin();
+    for (std::vector<PlaylistGroup>::const_iterator i = groups.begin();
          i != groups.end(); ++i, ++index)
     {
-      PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *i;
       if (!group.excluded_)
       {
 #if 0
@@ -1822,13 +1985,13 @@ namespace yae
   // return index of the last non-excluded group:
   //
   static std::size_t
-  lookupLastGroupIndex(std::vector<PlaylistGroup> & groups)
+  lookupLastGroupIndex(const std::vector<PlaylistGroup> & groups)
   {
     std::size_t index = groups.size();
-    for (std::vector<PlaylistGroup>::reverse_iterator i = groups.rbegin();
-         i != groups.rend(); ++i, --index)
+    for (std::vector<PlaylistGroup>::const_reverse_iterator
+           i = groups.rbegin(); i != groups.rend(); ++i, --index)
     {
-      PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *i;
       if (!group.excluded_)
       {
 #if 0
@@ -1859,7 +2022,7 @@ namespace yae
   // PlaylistWidget::lookupGroupIndex
   //
   std::size_t
-  PlaylistWidget::lookupGroupIndex(const QPoint & pt, bool findClosest)
+  PlaylistWidget::lookupGroupIndex(const QPoint & pt, bool findClosest) const
   {
 #if 0
     std::cerr << "PlaylistWidget::lookupGroupIndex" << std::endl;
@@ -1880,7 +2043,7 @@ namespace yae
     {
       std::size_t i = i0 + (i1 - i0) / 2;
 
-      PlaylistGroup & group = groups_[i];
+      const PlaylistGroup & group = groups_[i];
 
       int y1 =
         findClosest && !group.collapsed_ ?
@@ -1899,7 +2062,7 @@ namespace yae
 
     if (i0 < numGroups)
     {
-      PlaylistGroup & group = groups_[i0];
+      const PlaylistGroup & group = groups_[i0];
       if (!group.excluded_ &&
           (overlapExists(group.bbox_, pt) ||
            findClosest && !group.collapsed_ &&
@@ -1951,7 +2114,8 @@ namespace yae
   // PlaylistWidget::lookupItemIndex
   //
   std::size_t
-  PlaylistWidget::lookupItemIndex(PlaylistGroup * group, const QPoint & pt)
+  PlaylistWidget::lookupItemIndex(const PlaylistGroup * group,
+                                  const QPoint & pt) const
   {
 #if 0
     std::cerr << "PlaylistWidget::lookupItemIndex" << std::endl;
@@ -1965,7 +2129,7 @@ namespace yae
       return numItems_;
     }
 
-    std::vector<PlaylistItem> & items = group->items_;
+    const std::vector<PlaylistItem> & items = group->items_;
 
     if (overlapExists(group->bboxItems_, pt))
     {
@@ -1978,7 +2142,7 @@ namespace yae
       while (i0 != i1)
       {
         std::size_t i = i0 + (i1 - i0) / 2;
-        PlaylistItem & item = items[i];
+        const PlaylistItem & item = items[i];
 
         int y1 = item.bbox_.y() + item.bbox_.height();
 
@@ -1994,7 +2158,7 @@ namespace yae
 
       if (i0 < groupSize)
       {
-        PlaylistItem & item = items[i0];
+        const PlaylistItem & item = items[i0];
 
         if (overlapExists(item.bbox_, pt))
         {
@@ -2013,10 +2177,10 @@ namespace yae
       // return the last non-excluded item:
       std::size_t index = group->offset_ + items.size() - 1;
 
-      for (std::vector<PlaylistItem>::reverse_iterator j = items.rbegin();
-           j != items.rend(); --j, --index)
+      for (std::vector<PlaylistItem>::const_reverse_iterator
+             j = items.rbegin(); j != items.rend(); --j, --index)
       {
-        PlaylistItem & item = *j;
+        const PlaylistItem & item = *j;
         if (!item.excluded_)
         {
 #if 0
@@ -2153,4 +2317,45 @@ namespace yae
     return NULL;
   }
 
+  //----------------------------------------------------------------
+  // PlaylistWidget::isMouseOverRemoveButton
+  //
+  bool
+  PlaylistWidget::isMouseOverRemoveButton(const QPoint & pt,
+                                          std::size_t & groupIndex,
+                                          std::size_t & itemIndex) const
+  {
+    const std::size_t numGroups = groups_.size();
+
+    itemIndex = numItems_;
+    groupIndex = lookupGroupIndex(pt);
+    if (groupIndex >= numGroups)
+    {
+      return false;
+    }
+
+    const PlaylistGroup & group = groups_[groupIndex];
+    QRect bx = bboxRemoveButton(group.bbox_);
+
+    if (overlapExists(bx, pt))
+    {
+      return true;
+    }
+
+    itemIndex = lookupItemIndex(&group, pt);
+    if (itemIndex >= numItems_)
+    {
+      return false;
+    }
+
+    const PlaylistItem & item = group.items_[itemIndex - group.offset_];
+    bx = bboxRemoveButton(item.bbox_);
+
+    if (overlapExists(bx, pt))
+    {
+      return true;
+    }
+
+    return false;
+  }
 }
