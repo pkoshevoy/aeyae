@@ -85,6 +85,11 @@ namespace yae
   {
     setMouseTracking(true);
     add(std::list<QString>());
+
+    repaintTimer_.setSingleShot(true);
+    bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
+                      this, SLOT(update()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -1017,6 +1022,7 @@ namespace yae
     {
       e->accept();
       update();
+      repaintTimer_.start(300);
     }
   }
 
@@ -1339,15 +1345,6 @@ namespace yae
 
     (void) e;
     updateGeometries();
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistWidget::focusOutEvent
-  //
-  void
-  PlaylistWidget::focusOutEvent(QFocusEvent * e)
-  {
-    update();
   }
 
   //----------------------------------------------------------------

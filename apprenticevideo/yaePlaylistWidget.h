@@ -18,6 +18,7 @@
 #include <QRect>
 #include <QScrollBar>
 #include <QRubberBand>
+#include <QTimer>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -171,7 +172,6 @@ namespace yae
     void wheelEvent(QWheelEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void resizeEvent(QResizeEvent * e);
-    void focusOutEvent(QFocusEvent * e);
 
     // helper: return viewport position relative to the playlist widget:
     inline QPoint getViewOffset() const
@@ -257,6 +257,9 @@ namespace yae
 
     // playlist filter:
     std::list<QString> m_keywords;
+
+    // repaint buffer timer:
+    QTimer repaintTimer_;
   };
 
 }
