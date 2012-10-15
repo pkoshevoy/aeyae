@@ -171,6 +171,7 @@ namespace yae
     void wheelEvent(QWheelEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void resizeEvent(QResizeEvent * e);
+    void focusOutEvent(QFocusEvent * e);
 
     // helper: return viewport position relative to the playlist widget:
     inline QPoint getViewOffset() const

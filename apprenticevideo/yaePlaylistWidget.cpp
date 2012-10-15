@@ -1342,6 +1342,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistWidget::focusOutEvent
+  //
+  void
+  PlaylistWidget::focusOutEvent(QFocusEvent * e)
+  {
+    update();
+  }
+
+  //----------------------------------------------------------------
   // PlaylistWidget::updateGeometries
   //
   void
