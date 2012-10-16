@@ -1583,7 +1583,8 @@ namespace yae
 
         if (!group.keyPath_.empty())
         {
-          if (overlapExists(group.bbox_, mousePos))
+          if (overlapExists(group.bbox_, mousePos) &&
+              group.bbox_.right() - mousePos.x() < 17)
           {
             drawRemoveButton(painter, bbox, kPixmapClear(), bg);
           }
@@ -1720,7 +1721,8 @@ namespace yae
 
         painter.fillRect(bbox, bg);
 
-        if (overlapExists(item.bbox_, mousePos))
+        if (overlapExists(item.bbox_, mousePos) &&
+            item.bbox_.right() - mousePos.x() < 17)
         {
           const QPixmap & button =
             item.selected_ ? kPixmapClear() : kPixmapClearDark();
