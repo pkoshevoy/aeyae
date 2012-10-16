@@ -50,6 +50,15 @@ namespace yae
     return p;
   }
 
+  //----------------------------------------------------------------
+  // kPixmapClearDark
+  //
+  static QPixmap & kPixmapClearDark()
+  {
+    static QPixmap p = QPixmap(":/images/clear-dark.png");
+    return p;
+  }
+
 
   //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
@@ -1482,7 +1491,7 @@ namespace yae
   static QRect
   bboxRemoveButton(const QRect & bbox)
   {
-    static const int w = 12;
+    static const int w = 10;
     return QRect(bbox.x() + bbox.width() - w - 3,
                  bbox.y() + (bbox.height() - w) / 2,
                  w,
@@ -1492,7 +1501,7 @@ namespace yae
   //----------------------------------------------------------------
   // drawRemoveButton
   //
-  static void
+  static int
   drawRemoveButton(QPainter & painter,
                    const QRect & bbox,
                    const QPixmap & button,
@@ -1505,6 +1514,7 @@ namespace yae
     painter.drawPixmap(bx.x() + (bx.width() - button.width()) / 2,
                        bx.y() + (bx.height() - button.height()) / 2,
                        button);
+    return bx.x();
   }
 
   //----------------------------------------------------------------
@@ -1577,6 +1587,8 @@ namespace yae
           {
             drawRemoveButton(painter, bbox, kPixmapClear(), bg);
           }
+
+          bbox.adjust(0, 0, -17, 0);
 
           double w = kGroupArrowSize;
           double h = bbox.height();
@@ -1708,6 +1720,17 @@ namespace yae
 
         painter.fillRect(bbox, bg);
 
+        if (overlapExists(item.bbox_, mousePos))
+        {
+          const QPixmap & button =
+            item.selected_ ? kPixmapClear() : kPixmapClearDark();
+
+          const QColor & buttonBg = item.selected_ ? selectedColorBg : bg;
+
+          int x0 = drawRemoveButton(painter, bbox, button, buttonBg);
+          bbox.setRight(x0 - 4);
+        }
+
         if (index == current_)
         {
           QString nowPlaying = tr("NOW PLAYING");
@@ -1715,7 +1738,7 @@ namespace yae
           painter.setFont(tinyFont);
           QFontMetrics fm = painter.fontMetrics();
           QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
-          QRect bx = bbox.adjusted(1, 1, -17, -1);
+          QRect bx = bbox.adjusted(1, 1, -1, -1);
 
           // add a little padding:
           sz.setWidth(sz.width() + 8);
@@ -1752,12 +1775,6 @@ namespace yae
                       bboxText,
                       Qt::AlignBottom | Qt::AlignLeft,
                       text);
-
-        if (overlapExists(item.bbox_, mousePos))
-        {
-          const QColor & bg = item.selected_ ? selectedColorBg : loBgGroup;
-          drawRemoveButton(painter, bbox, kPixmapClear(), bg);
-        }
 
         painter.translate(0, item.bbox_.height());
       }
