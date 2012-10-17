@@ -1030,8 +1030,17 @@ namespace yae
     else if (!e->buttons())
     {
       e->accept();
-      update();
-      repaintTimer_.start(300);
+
+      // avoid repainting the [x] item removal button unless
+      // the mouse is hovering near it:
+      int vw = viewport()->width();
+      QPoint vo = getViewOffset();
+      QPoint pt = e->pos() + vo;
+      if (vw - pt.x() < 17)
+      {
+        update();
+        repaintTimer_.start(300);
+      }
     }
   }
 
@@ -1724,14 +1733,12 @@ namespace yae
         if (overlapExists(item.bbox_, mousePos) &&
             item.bbox_.right() - mousePos.x() < 17)
         {
-          const QPixmap & button =
-            item.selected_ ? kPixmapClear() : kPixmapClearDark();
-
-          const QColor & buttonBg = item.selected_ ? selectedColorBg : bg;
-
-          int x0 = drawRemoveButton(painter, bbox, button, buttonBg);
-          bbox.setRight(x0 - 4);
+          const QColor & bg = item.selected_ ? selectedColorBg : loBgGroup;
+          int x0 = drawRemoveButton(painter, bbox, kPixmapClear(), bg);
+          bbox.setRight(x0);
         }
+
+        bbox.adjust(3, 0, -3, 0);
 
         if (index == current_)
         {
