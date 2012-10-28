@@ -2470,7 +2470,9 @@ namespace yae
     {
       const TSubsFrame & subs = *i;
 
-      if (subs.traits_ == kSubsText && subs.data_)
+      if (subs.data_ &&
+          (subs.traits_ == kSubsText ||
+           subs.traits_ == kSubsSUBRIP))
       {
         const unsigned char * str = subs.data_->data(0);
         const unsigned char * end = str + subs.data_->rowBytes(0);

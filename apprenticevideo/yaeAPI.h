@@ -246,7 +246,12 @@ namespace yae
     kSubsSRT,
     kSubsMICRODVD,
     kSubsCEA608,
-    kSubsJACOSUB
+    kSubsJACOSUB,
+    kSubsSAMI,
+    kSubsREALTEXT,
+    kSubsSUBVIEWER,
+    kSubsSUBRIP,
+    kSubsWEBVTT
   };
 
   //----------------------------------------------------------------

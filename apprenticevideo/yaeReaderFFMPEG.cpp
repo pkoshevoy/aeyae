@@ -352,42 +352,57 @@ namespace yae
   {
     switch (id)
     {
-      case CODEC_ID_DVD_SUBTITLE:
+      case AV_CODEC_ID_DVD_SUBTITLE:
         return kSubsDVD;
 
-      case CODEC_ID_DVB_SUBTITLE:
+      case AV_CODEC_ID_DVB_SUBTITLE:
         return kSubsDVB;
 
-      case CODEC_ID_TEXT:
+      case AV_CODEC_ID_TEXT:
         return kSubsText;
 
-      case CODEC_ID_XSUB:
+      case AV_CODEC_ID_XSUB:
         return kSubsXSUB;
 
-      case CODEC_ID_SSA:
+      case AV_CODEC_ID_SSA:
         return kSubsSSA;
 
-      case CODEC_ID_MOV_TEXT:
+      case AV_CODEC_ID_MOV_TEXT:
         return kSubsMovText;
 
-      case CODEC_ID_HDMV_PGS_SUBTITLE:
+      case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
         return kSubsHDMVPGS;
 
-      case CODEC_ID_DVB_TELETEXT:
+      case AV_CODEC_ID_DVB_TELETEXT:
         return kSubsDVBTeletext;
 
-      case CODEC_ID_SRT:
+      case AV_CODEC_ID_SRT:
         return kSubsSRT;
 
-      case CODEC_ID_MICRODVD:
+      case AV_CODEC_ID_MICRODVD:
         return kSubsMICRODVD;
 
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54, 19, 100)
-      case CODEC_ID_EIA_608:
+      case AV_CODEC_ID_EIA_608:
         return kSubsCEA608;
 
-      case CODEC_ID_JACOSUB:
+      case AV_CODEC_ID_JACOSUB:
         return kSubsJACOSUB;
+
+      case AV_CODEC_ID_SAMI:
+        return kSubsSAMI;
+
+      case AV_CODEC_ID_REALTEXT:
+        return kSubsREALTEXT;
+
+      case AV_CODEC_ID_SUBVIEWER:
+        return kSubsSUBVIEWER;
+
+      case AV_CODEC_ID_SUBRIP:
+        return kSubsSUBRIP;
+
+      case AV_CODEC_ID_WEBVTT:
+        return kSubsWEBVTT;
 #endif
 
       default:

@@ -431,6 +431,21 @@ namespace yae
       case kSubsJACOSUB:
         return "JACOSUB";
 
+      case kSubsSAMI:
+        return "SAMI";
+
+      case kSubsREALTEXT:
+        return "REALTEXT";
+
+      case kSubsSUBVIEWER:
+        return "SUBVIEWER";
+
+      case kSubsSUBRIP:
+        return "SUBRIP";
+
+      case kSubsWEBVTT:
+        return "WEBVTT";
+
       case kSubsNone:
         return "none";
 
