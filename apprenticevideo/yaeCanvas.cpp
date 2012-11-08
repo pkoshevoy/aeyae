@@ -2469,99 +2469,17 @@ namespace yae
          i != subs_.end() && reparse; ++i)
     {
       const TSubsFrame & subs = *i;
+      const TSubsFrame::IPrivate * subExt = subs.private_.get();
+      const unsigned int nrects = subExt ? subExt->numRects() : 0;
+      unsigned int nrectsPainted = 0;
 
-      if (subs.data_ &&
-          (subs.traits_ == kSubsText ||
-           subs.traits_ == kSubsSUBRIP))
+      for (unsigned int j = 0; j < nrects; j++)
       {
-        const unsigned char * str = subs.data_->data(0);
-        const unsigned char * end = str + subs.data_->rowBytes(0);
-        std::string text(str, end);
-        text = stripHtmlTags(text);
-        text = convertEscapeCodes(text);
+        TSubsFrame::TRect r;
+        subExt->getRect(j, r);
 
-        if (drawPlainText(text,
-                          wrapper.getPainter(),
-                          canvasBBox,
-                          textAlignment))
+        if (r.type_ == kSubtitleBitmap)
         {
-          paintedSomeSubs = true;
-        }
-      }
-      else if (subs.traits_ == kSubsSSA)
-      {
-        bool done = false;
-
-#ifdef YAE_USE_LIBASS
-        if (!libass_ && subs.extraData_ && initLibass(this))
-        {
-          libass_ = new TLibass(subs.extraData_->data(0),
-                                subs.extraData_->rowBytes(0));
-        }
-
-        if (libass_ && libass_->ready())
-        {
-          done = true;
-
-          if (subs.data_)
-          {
-            int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
-            libass_->processData(subs.data_->data(0),
-                                 subs.data_->rowBytes(0),
-                                 pts);
-          }
-        }
-#endif
-        if (!done)
-        {
-          const TSubsFrame::IPrivate * subExt = subs.private_.get();
-          const unsigned int nrects = subExt ? subExt->numRects() : 0;
-          for (unsigned int j = 0; j < nrects; j++)
-          {
-            TSubsFrame::TRect r;
-            subExt->getRect(j, r);
-            std::string text(r.assa_);
-            text = assaToPlainText(text);
-            text = convertEscapeCodes(text);
-
-            if (drawPlainText(text,
-                              wrapper.getPainter(),
-                              canvasBBox,
-                              textAlignment))
-            {
-              paintedSomeSubs = true;
-            }
-          }
-
-          if (!nrects && subs.data_)
-          {
-            const unsigned char * str = subs.data_->data(0);
-            const unsigned char * end = str + subs.data_->rowBytes(0);
-            std::string text(str, end);
-            text = assaToPlainText(text);
-            text = convertEscapeCodes(text);
-
-            if (drawPlainText(text,
-                              wrapper.getPainter(),
-                              canvasBBox,
-                              textAlignment))
-            {
-              paintedSomeSubs = true;
-            }
-          }
-        }
-      }
-      else if (subs.traits_ == kSubsDVD ||
-               subs.traits_ == kSubsHDMVPGS)
-      {
-        const TSubsFrame::IPrivate * subExt = subs.private_.get();
-        const unsigned int nrects = subExt ? subExt->numRects() : 0;
-
-        for (unsigned int j = 0; j < nrects; j++)
-        {
-          TSubsFrame::TRect r;
-          subExt->getRect(j, r);
-
           const unsigned char * pal = r.data_[1];
 
           QImage img(r.w_, r.h_, QImage::Format_ARGB32);
@@ -2580,8 +2498,8 @@ namespace yae
             }
           }
 
-          double rw = double(subs.rw_ ? subs.rw_ : 720);
-          double rh = double(subs.rh_ ? subs.rh_ : 480);
+          double rw = double(subs.rw_ ? subs.rw_ : imageWidth);
+          double rh = double(subs.rh_ ? subs.rh_ : imageHeight);
 
           double sx = fw / rw;
           double sy = fh / rh;
@@ -2593,6 +2511,77 @@ namespace yae
 
           wrapper.getPainter().drawImage(QRect(dstPos, dstSize),
                                          img, img.rect());
+          paintedSomeSubs = true;
+          nrectsPainted++;
+        }
+        else if (r.type_ == kSubtitleASS)
+        {
+          std::string assa(r.assa_);
+          bool done = false;
+
+#ifdef YAE_USE_LIBASS
+          if (!libass_ && initLibass(this))
+          {
+            if (subs.traits_ == kSubsSSA && subs.extraData_)
+            {
+              libass_ = new TLibass(subs.extraData_->data(0),
+                                    subs.extraData_->rowBytes(0));
+            }
+            else if (subExt->headerSize())
+            {
+              libass_ = new TLibass(subExt->header(), subExt->headerSize());
+            }
+          }
+
+          if (libass_ && libass_->ready())
+          {
+            int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
+            libass_->processData((unsigned char *)&assa[0], assa.size(), pts);
+            nrectsPainted++;
+            done = true;
+          }
+#endif
+          if (!done)
+          {
+            std::string text = assaToPlainText(assa);
+            text = convertEscapeCodes(text);
+
+            if (drawPlainText(text,
+                              wrapper.getPainter(),
+                              canvasBBox,
+                              textAlignment))
+            {
+              paintedSomeSubs = true;
+              nrectsPainted++;
+            }
+          }
+        }
+      }
+
+      if (!nrectsPainted && subs.data_ &&
+          (subs.traits_ == kSubsSSA ||
+           subs.traits_ == kSubsText ||
+           subs.traits_ == kSubsSUBRIP))
+      {
+        const unsigned char * str = subs.data_->data(0);
+        const unsigned char * end = str + subs.data_->rowBytes(0);
+
+        std::string text(str, end);
+        if (subs.traits_ == kSubsSSA)
+        {
+          text = assaToPlainText(text);
+        }
+        else
+        {
+          text = stripHtmlTags(text);
+        }
+
+        text = convertEscapeCodes(text);
+        if (drawPlainText(text,
+                          wrapper.getPainter(),
+                          canvasBBox,
+                          textAlignment))
+        {
           paintedSomeSubs = true;
         }
       }

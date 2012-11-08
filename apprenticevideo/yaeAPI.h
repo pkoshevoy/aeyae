@@ -255,6 +255,17 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TSubtitleType
+  //
+  enum TSubtitleType
+  {
+    kSubtitleNone,
+    kSubtitleBitmap,
+    kSubtitleText,
+    kSubtitleASS
+  };
+
+  //----------------------------------------------------------------
   // getSubsFormatLabel
   //
   YAE_API const char * getSubsFormatLabel(TSubsFormat fmt);
@@ -426,6 +437,8 @@ namespace yae
 
     struct TRect
     {
+      TSubtitleType type_;
+
       int x_;
       int y_;
       int w_;
@@ -447,6 +460,9 @@ namespace yae
     public:
       virtual void destroy() = 0;
       static void deallocator(IPrivate * p);
+
+      virtual std::size_t headerSize() const = 0;
+      virtual const unsigned char * header() const = 0;
 
       virtual unsigned int numRects() const = 0;
       virtual void getRect(unsigned int i, TRect & rect) const = 0;

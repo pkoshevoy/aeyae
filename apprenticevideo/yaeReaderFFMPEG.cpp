@@ -184,13 +184,24 @@ namespace yae
     }
 
   public:
-    TSubsPrivate(const AVSubtitle & sub):
-      sub_(sub)
+    TSubsPrivate(const AVSubtitle & sub,
+                 const unsigned char * subsHeader,
+                 std::size_t subsHeaderSize):
+      sub_(sub),
+      header_(subsHeader, subsHeader + subsHeaderSize)
     {}
 
     // virtual:
     void destroy()
     { delete this; }
+
+    // virtual:
+    std::size_t headerSize() const
+    { return header_.size(); }
+
+    // virtual:
+    const unsigned char * header() const
+    { return header_.empty() ? NULL : &header_[0]; }
 
     // virtual:
     unsigned int numRects() const
@@ -206,6 +217,7 @@ namespace yae
       }
 
       const AVSubtitleRect * r = sub_.rects[i];
+      rect.type_ = TSubsPrivate::getType(r);
       rect.x_ = r->x;
       rect.y_ = r->y;
       rect.w_ = r->w;
@@ -217,7 +229,29 @@ namespace yae
       rect.assa_ = r->ass;
     }
 
+    // helper:
+    static TSubtitleType getType(const AVSubtitleRect * r)
+    {
+      switch (r->type)
+      {
+        case SUBTITLE_BITMAP:
+          return kSubtitleBitmap;
+
+        case SUBTITLE_TEXT:
+          return kSubtitleText;
+
+        case SUBTITLE_ASS:
+          return kSubtitleASS;
+
+        default:
+          break;
+      }
+
+      return kSubtitleNone;
+    }
+
     AVSubtitle sub_;
+    std::vector<unsigned char> header_;
   };
 
   //----------------------------------------------------------------
@@ -3836,7 +3870,15 @@ namespace yae
                                                &ffmpeg);
                 if (err >= 0 && gotSub)
                 {
-                  sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub),
+                  const unsigned char * header =
+                    subs->stream_->codec->subtitle_header;
+
+                  std::size_t headerSize =
+                    subs->stream_->codec->subtitle_header_size;
+
+                  sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
+                                                                 header,
+                                                                 headerSize),
                                                 &TSubsPrivate::deallocator);
 
                   if (ffmpeg.pts != AV_NOPTS_VALUE &&
@@ -3990,7 +4032,7 @@ namespace yae
     }
 
     double tCurr = dts_.toSeconds();
-    int seekFlags = seekTime < tCurr ? AVSEEK_FLAG_BACKWARD : 0;
+    int seekFlags = AVSEEK_FLAG_BACKWARD;
 
     int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
     int err = avformat_seek_file(context_,
