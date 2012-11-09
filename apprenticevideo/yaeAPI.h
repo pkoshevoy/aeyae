@@ -405,7 +405,7 @@ namespace yae
     typedef traits_t TTraits;
     typedef TFrame<traits_t> TSelf;
 
-    TFrame(): tempo_(1.0) {}
+    TFrame(): readerId_((unsigned int)~0), tempo_(1.0) {}
 
     bool operator == (const TSelf & s) const
     {
@@ -414,6 +414,9 @@ namespace yae
               traits_ == s.traits_ &&
               data_   == s.data_);
     }
+
+    //! reader ID tag:
+    unsigned int readerId_;
 
     //! frame position:
     TTime time_;

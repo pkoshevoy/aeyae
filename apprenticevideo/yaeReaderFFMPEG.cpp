@@ -4432,7 +4432,8 @@ namespace yae
 
   public:
     Private():
-      frame_(NULL)
+      frame_(NULL),
+      readerId_((unsigned int)~0)
     {
       if (!ffmpegInitialized_)
       {
@@ -4452,6 +4453,7 @@ namespace yae
     Movie movie_;
     AVFrame * frame_;
     AVPacket packet_;
+    unsigned int readerId_;
   };
 
   //----------------------------------------------------------------
@@ -4772,6 +4774,11 @@ namespace yae
 
     VideoTrackPtr track = private_->movie_.getVideoTracks()[i];
     bool ok = track->getNextFrame(frame, terminator);
+    if (ok && frame)
+    {
+      frame->readerId_ = private_->readerId_;
+    }
+
     return ok;
   }
 
@@ -4789,6 +4796,11 @@ namespace yae
 
     AudioTrackPtr track = private_->movie_.getAudioTracks()[i];
     bool ok = track->getNextFrame(frame, terminator);
+    if (ok && frame)
+    {
+      frame->readerId_ = private_->readerId_;
+    }
+
     return ok;
   }
 
@@ -4934,5 +4946,14 @@ namespace yae
   ReaderFFMPEG::getChapterInfo(std::size_t i, TChapter & c) const
   {
     return private_->movie_.getChapterInfo(i, c);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setReaderId
+  //
+  void
+  ReaderFFMPEG::setReaderId(unsigned int readerId)
+  {
+    private_->readerId_ = readerId;
   }
 }

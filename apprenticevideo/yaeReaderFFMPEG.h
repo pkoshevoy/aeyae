@@ -114,6 +114,11 @@ namespace yae
     // chapter navigation:
     virtual std::size_t countChapters() const;
     virtual bool getChapterInfo(std::size_t i, TChapter & c) const;
+
+    // frames produced by this reader will be tagged with a reader ID,
+    // so that renderers can disambiguate between frames produced
+    // by different readers:
+    virtual void setReaderId(unsigned int readerId);
   };
 
 }

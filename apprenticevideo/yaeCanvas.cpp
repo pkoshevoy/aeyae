@@ -1836,6 +1836,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::acceptFramesWithReaderId
+  //
+  void
+  Canvas::acceptFramesWithReaderId(unsigned int readerId)
+  {
+    payload_.setExpectedReaderId(readerId);
+  }
+
+  //----------------------------------------------------------------
   // Canvas::clear
   //
   void
@@ -2203,6 +2212,11 @@ namespace yae
   bool
   Canvas::loadFrame(const TVideoFramePtr & frame)
   {
+    if (!frame)
+    {
+      return false;
+    }
+
     bool ok = private_->loadFrame(this, frame);
     showTheGreeting_ = false;
     setSubs(frame->subs_);

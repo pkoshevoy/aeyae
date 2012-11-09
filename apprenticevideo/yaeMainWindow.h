@@ -251,6 +251,7 @@ namespace yae
 
     // file reader:
     IReader * reader_;
+    unsigned int readerId_;
 
     // frame canvas:
     Canvas * canvas_;

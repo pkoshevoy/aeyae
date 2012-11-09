@@ -74,6 +74,10 @@ namespace yae
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
 
+    // specify reader ID tag so that the Canvas can discard
+    // frames originating from any other reader:
+    void acceptFramesWithReaderId(unsigned int readerId);
+
     // discard currently stored image data, repaint the canvas:
     void clear();
     void clearOverlay();
@@ -165,6 +169,10 @@ namespace yae
       //
       struct TPayload
       {
+        TPayload():
+          expectedReaderId_((unsigned int)~0)
+        {}
+
         bool set(const TVideoFramePtr & frame)
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
@@ -176,13 +184,26 @@ namespace yae
         void get(TVideoFramePtr & frame)
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
-          frame = frame_;
+          if (frame_ && frame_->readerId_ == expectedReaderId_)
+          {
+            frame = frame_;
+          }
           frame_ = TVideoFramePtr();
+        }
+
+        void setExpectedReaderId(unsigned int readerId)
+        {
+          boost::lock_guard<boost::mutex> lock(mutex_);
+          expectedReaderId_ = readerId;
         }
 
       private:
         mutable boost::mutex mutex_;
         TVideoFramePtr frame_;
+
+        // frames with matching reader ID tag will be rendered,
+        // mismatching frames will be ignored:
+        unsigned int expectedReaderId_;
       };
 
       RenderFrameEvent(TPayload & payload):

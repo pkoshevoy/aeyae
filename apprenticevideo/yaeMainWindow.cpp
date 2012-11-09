@@ -181,6 +181,7 @@ namespace yae
     subsTrackMapper_(NULL),
     chapterMapper_(NULL),
     reader_(NULL),
+    readerId_(0),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
@@ -1206,6 +1207,12 @@ namespace yae
       std::cerr << "ERROR: could not open movie: " << filename << std::endl;
       return false;
     }
+
+    ++readerId_;
+    reader->setReaderId(readerId_);
+
+    // prevent Canvas from rendering any pending frames from previous reader:
+    canvas_->acceptFramesWithReaderId(readerId_);
 
     // disconnect timeline from renderers:
     timelineControls_->observe(SharedClock());
