@@ -900,7 +900,12 @@ namespace yae
       }
     }
 
-    std::string out(&(tmp[0]), &(tmp[0]) + j);
+    std::string out;
+    if (j > 0)
+    {
+        out.assign(&(tmp[0]), &(tmp[0]) + j);
+    }
+ 
     return out;
   }
 
@@ -1051,7 +1056,12 @@ namespace yae
       }
     }
 
-    std::string out(&(tmp[0]), &(tmp[0]) + j);
+    std::string out;
+    if (j > 0)
+    {
+        out.assign(&(tmp[0]), &(tmp[0]) + j);
+    }
+
     return out;
   }
 
