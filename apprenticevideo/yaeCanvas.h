@@ -49,11 +49,6 @@ namespace yae
   class TLibass;
 
   //----------------------------------------------------------------
-  // initLibass
-  //
-  YAE_API bool initLibass(Canvas * canvas);
-
-  //----------------------------------------------------------------
   // Canvas
   //
   class YAE_API Canvas : public QGLWidget,
