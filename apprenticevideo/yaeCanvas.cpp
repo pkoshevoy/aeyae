@@ -1498,7 +1498,7 @@ namespace yae
   //----------------------------------------------------------------
   // TLibassInitDoneCallback
   //
-  typedef void(*TLibassInitDoneCallback)(void *);
+  typedef void(*TLibassInitDoneCallback)(void *, TLibass *);
 #endif
 
   //----------------------------------------------------------------
@@ -1693,7 +1693,7 @@ namespace yae
 
       if (callback_)
       {
-        callback_(callbackContext_);
+        callback_(callbackContext_, this);
       }
     }
 
@@ -1938,7 +1938,12 @@ namespace yae
   //
   struct LibassInitDoneEvent : public QEvent
   {
-    LibassInitDoneEvent(): QEvent(QEvent::User) {}
+    LibassInitDoneEvent(TLibass * libass):
+      QEvent(QEvent::User),
+      libass_(libass)
+    {}
+
+    TLibass * libass_;
   };
 
   //----------------------------------------------------------------
@@ -1980,9 +1985,9 @@ namespace yae
 
 #ifdef YAE_USE_LIBASS
         std::cerr << "LIBASS INIT DONE: "
-                  << libass_->finished_
+                  << libassInitDoneEvent->libass_->finished_
                   << ", success: "
-                  << libass_->success_
+                  << libassInitDoneEvent->libass_->success_
                   << std::endl;
         stopAsyncInitLibassThread();
         updateOverlay(true);
@@ -2950,10 +2955,10 @@ namespace yae
   // Canvas::libassInitDoneCallback
   //
   void
-  Canvas::libassInitDoneCallback(void * context)
+  Canvas::libassInitDoneCallback(void * context, TLibass * libass)
   {
     Canvas * canvas = (Canvas *)context;
-    qApp->postEvent(canvas, new LibassInitDoneEvent());
+    qApp->postEvent(canvas, new LibassInitDoneEvent(libass));
   }
 
   //----------------------------------------------------------------

@@ -134,7 +134,7 @@ namespace yae
 
     // this will be called from a helper thread
     // once it is done updating fontconfig cache for libass:
-    static void libassInitDoneCallback(void * canvas);
+    static void libassInitDoneCallback(void * canvas, TLibass * libass);
 
   signals:
     void toggleFullScreen();
