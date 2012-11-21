@@ -2657,13 +2657,15 @@ namespace yae
 
         const int srcSamples = bufferSize / nativeBytesPerSample_;
 
-        if (outputChannels_ != nativeChannels_)
+        if (outputChannels_ != nativeChannels_ ||
+            output_.channelFormat_ != native_.channelFormat_)
         {
           yae::remix(srcSamples,
                      native_.sampleFormat_,
                      native_.channelFormat_,
                      native_.channelLayout_,
                      nativeBuffer_.data(),
+                     output_.channelFormat_,
                      output_.channelLayout_,
                      remixBuffer_.data(),
                      &remixChannelMatrix_[0]);
@@ -2689,7 +2691,8 @@ namespace yae
             outputBytes += resampledBytes;
           }
         }
-        else if (outputChannels_ != nativeChannels_)
+        else if (outputChannels_ != nativeChannels_ ||
+                 output_.channelFormat_ != native_.channelFormat_)
         {
           std::size_t remixedBytes = srcSamples * outputBytesPerSample_;
           chunks.push_back(std::vector<unsigned char>
@@ -2965,7 +2968,8 @@ namespace yae
     nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
     nativeBytesPerSample_ = (nativeChannels_ * bitsPerSample / 8);
 
-    if (outputChannels_ != nativeChannels_)
+    if (outputChannels_ != nativeChannels_ ||
+        output_.channelFormat_ != native_.channelFormat_)
     {
       // lookup a remix matrix:
       getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);

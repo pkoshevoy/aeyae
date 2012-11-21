@@ -533,9 +533,10 @@ namespace yae
   //
   YAE_API void remix(std::size_t numSamples,
                      TAudioSampleFormat sampleFormat,
-                     TAudioChannelFormat channelFormat,
+                     TAudioChannelFormat srcFormat,
                      TAudioChannelLayout srcLayout,
                      const unsigned char * src,
+                     TAudioChannelFormat dstFormat,
                      TAudioChannelLayout dstLayout,
                      unsigned char * dst,
                      const double * channelRemixMatrix);

@@ -267,6 +267,12 @@ namespace yae
       return;
     }
 
+    if (srcAtts.channelFormat_ == kAudioChannelsPlanar)
+    {
+      // packed sample format is preferred:
+      outAtts.channelFormat_ = kAudioChannelsPacked;
+    }
+
     PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
     const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputDevice);
 

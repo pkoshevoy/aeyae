@@ -144,9 +144,10 @@ namespace yae
   void
   remix(std::size_t numSamples,
         TAudioSampleFormat sampleFormat,
-        TAudioChannelFormat channelFormat,
+        TAudioChannelFormat srcFormat,
         TAudioChannelLayout srcLayout,
         const unsigned char * src,
+        TAudioChannelFormat dstFormat,
         TAudioChannelLayout dstLayout,
         unsigned char * dst,
         const double * channelMatrix)
@@ -157,13 +158,15 @@ namespace yae
       return;
     }
 
-    bool isPlanar = (channelFormat == kAudioChannelsPlanar);
+    bool srcPlanar = (srcFormat == kAudioChannelsPlanar);
+    bool dstPlanar = (dstFormat == kAudioChannelsPlanar);
+
     std::size_t sampleSize = getBitsPerSample(sampleFormat) / 8;
     std::size_t srcChannels = getNumberOfChannels(srcLayout);
     std::size_t dstChannels = getNumberOfChannels(dstLayout);
 
-    std::size_t srcPlanes = isPlanar ? srcChannels : 1;
-    std::size_t dstPlanes = isPlanar ? dstChannels : 1;
+    std::size_t srcPlanes = srcPlanar ? srcChannels : 1;
+    std::size_t dstPlanes = dstPlanar ? dstChannels : 1;
 
     std::size_t srcStride = sampleSize * srcChannels / srcPlanes;
     std::size_t dstStride = sampleSize * dstChannels / dstPlanes;
@@ -174,13 +177,13 @@ namespace yae
     std::vector<const unsigned char *> srcChan(srcChannels, NULL);
     for (std::size_t i = 0; i < srcChannels; i++)
     {
-      srcChan[i] = src + i * (isPlanar ? srcPlaneStride : sampleSize);
+      srcChan[i] = src + i * (srcPlanar ? srcPlaneStride : sampleSize);
     }
 
     std::vector<unsigned char *> dstChan(dstChannels, NULL);
     for (std::size_t i = 0; i < dstChannels; i++)
     {
-      dstChan[i] = dst + i * (isPlanar ? dstPlaneStride : sampleSize);
+      dstChan[i] = dst + i * (dstPlanar ? dstPlaneStride : sampleSize);
     }
 
     if (sampleFormat == kAudio8BitOffsetBinary)
