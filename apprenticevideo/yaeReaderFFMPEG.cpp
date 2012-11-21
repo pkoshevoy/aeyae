@@ -2566,7 +2566,7 @@ namespace yae
     {
       return false;
     }
-    
+
     noteNativeTraitsChanged();
 
     startTime_ = stream_->start_time;
@@ -3056,10 +3056,12 @@ namespace yae
     switch (context->sample_fmt)
     {
       case AV_SAMPLE_FMT_U8:
+      case AV_SAMPLE_FMT_U8P:
         t.sampleFormat_ = kAudio8BitOffsetBinary;
         break;
 
       case AV_SAMPLE_FMT_S16:
+      case AV_SAMPLE_FMT_S16P:
 #ifdef __BIG_ENDIAN__
         t.sampleFormat_ = kAudio16BitBigEndian;
 #else
@@ -3068,6 +3070,7 @@ namespace yae
         break;
 
       case AV_SAMPLE_FMT_S32:
+      case AV_SAMPLE_FMT_S32P:
 #ifdef __BIG_ENDIAN__
         t.sampleFormat_ = kAudio32BitBigEndian;
 #else
@@ -3076,6 +3079,7 @@ namespace yae
         break;
 
       case AV_SAMPLE_FMT_FLT:
+      case AV_SAMPLE_FMT_FLTP:
         t.sampleFormat_ = kAudio32BitFloat;
         break;
 
@@ -3127,7 +3131,19 @@ namespace yae
     t.sampleRate_ = context->sample_rate;
 
     //! packed, planar:
-    t.channelFormat_ = kAudioChannelsPacked;
+    switch (context->sample_fmt)
+    {
+      case AV_SAMPLE_FMT_U8P:
+      case AV_SAMPLE_FMT_S16P:
+      case AV_SAMPLE_FMT_S32P:
+      case AV_SAMPLE_FMT_FLTP:
+        t.channelFormat_ = kAudioChannelsPlanar;
+        break;
+
+      default:
+        t.channelFormat_ = kAudioChannelsPacked;
+        break;
+    }
 
     return
       t.sampleRate_ > 0 &&
