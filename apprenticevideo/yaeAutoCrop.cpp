@@ -267,7 +267,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.5)
           {
             break;
           }
@@ -315,7 +315,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.5)
           {
             break;
           }
@@ -368,7 +368,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.5)
           {
             break;
           }
@@ -416,7 +416,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.7)
+          else if (best > 1.0 && response < best && improved < 0.5)
           {
             break;
           }
