@@ -2797,11 +2797,19 @@ namespace yae
           {
             if (rc->heldDown_)
             {
-              playbackShowTimeline();
+              if (actionCropFrameAutoDetect->isChecked())
+              {
+                canvas_->cropAutoDetectStop();
+                actionCropFrameNone->trigger();
+              }
+              else
+              {
+                actionCropFrameAutoDetect->trigger();
+              }
             }
             else
             {
-              playbackFullScreen();
+              playbackShowTimeline();
             }
           }
         }
