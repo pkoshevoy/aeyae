@@ -218,7 +218,6 @@ namespace yae
     std::vector<unsigned int> offsetBottom(nx);
 
     double epsilon = 1.0 / 256.0;
-    // double backgnd = (ptts->flags_ & pixelFormat::kYUV ? 16.0 : 1.0) * epsilon;
     double backgnd = 24.0 * epsilon;
 
     for (unsigned int y = 0; y < h; y += step)
@@ -267,7 +266,8 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.5)
+          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+                   improved < 1.0)
           {
             break;
           }
@@ -315,7 +315,8 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.5)
+          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+                   improved < 1.0)
           {
             break;
           }
@@ -368,7 +369,8 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.5)
+          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+                   improved < 1.0)
           {
             break;
           }
@@ -416,7 +418,8 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.0 && response < best && improved < 0.5)
+          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+                   improved < 1.0)
           {
             break;
           }
@@ -487,7 +490,8 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "left: " << double(bin.sum_) / double(bin.size_)
+      std::cerr << "left(" << i->first << "): "
+                << double(bin.sum_) / double(bin.size_)
                 << " -> " << bin.size_ << std::endl;
 #endif
       if (lbest.size_ < bin.size_)
@@ -502,7 +506,8 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "right: " << double(bin.sum_) / double(bin.size_)
+      std::cerr << "right(" << i->first << "): "
+                << double(bin.sum_) / double(bin.size_)
                 << " -> " << bin.size_ << std::endl;
 #endif
       if (rbest.size_ < bin.size_)
@@ -517,7 +522,8 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "top: " << double(bin.sum_) / double(bin.size_)
+      std::cerr << "top(" << i->first << "): "
+                << double(bin.sum_) / double(bin.size_)
                 << " -> " << bin.size_ << std::endl;
 #endif
       if (tbest.size_ < bin.size_)
@@ -532,7 +538,8 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "bottom: " << double(bin.sum_) / double(bin.size_)
+      std::cerr << "bottom(" << i->first << "): "
+                << double(bin.sum_) / double(bin.size_)
                 << " -> " << bin.size_ << std::endl;
 #endif
       if (bbest.size_ < bin.size_)
@@ -542,22 +549,22 @@ namespace yae
     }
 
     double lOffset =
-      leftHistogram.size() < 50 ?
+      leftHistogram.size() < (ny * 2) && lbest.size_ > (ny / 2) ?
       double(lbest.sum_) / double(lbest.size_) :
       0.0;
 
     double rOffset =
-      rightHistogram.size() < 50 ?
+      rightHistogram.size() < (ny * 2) && rbest.size_ > (ny / 2) ?
       double(rbest.sum_) / double(rbest.size_) :
       0.0;
 
     double tOffset =
-      topHistogram.size() < 50 ?
+      topHistogram.size() < (nx * 2) && tbest.size_ > (nx / 2) ?
       double(tbest.sum_) / double(tbest.size_) :
       0.0;
 
     double bOffset =
-      bottomHistogram.size() < 50 ?
+      bottomHistogram.size() < (nx * 2) && bbest.size_ > (nx / 2) ?
       double(bbest.sum_) / double(bbest.size_) :
       0.0;
 
