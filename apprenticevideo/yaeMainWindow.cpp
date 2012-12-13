@@ -1532,9 +1532,6 @@ namespace yae
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
 
-    bool enableLooping = actionLoop->isChecked();
-    reader->setPlaybackLooping(enableLooping);
-
     // reset timeline start, duration, playhead, in/out points:
     timelineControls_->resetFor(reader);
 
@@ -2959,6 +2956,12 @@ namespace yae
     {
       emit setOutPoint();
     }
+#if 0
+    else if (key == Qt::Key_Right)
+    {
+      videoRenderer_->skipToNextFrame();
+    }
+#endif
     else
     {
       event->ignore();
@@ -3262,15 +3265,19 @@ namespace yae
 
       // request playback at currently selected playback rate:
       reader->setTempo(tempo_);
+    }
 
-      bool deint = actionDeinterlace->isChecked();
-      reader->setDeinterlacing(deint);
-    }
-    else
-    {
-      // disable audio tempo filtering:
-      reader->setTempo(1.0);
-    }
+    bool enableLooping = actionLoop->isChecked();
+    reader->setPlaybackLooping(enableLooping);
+
+    bool skipLoopFilter = actionSkipLoopFilter->isChecked();
+    reader->skipLoopFilter(skipLoopFilter);
+
+    bool skipNonRefFrames = actionSkipNonReferenceFrames->isChecked();
+    reader->skipNonReferenceFrames(skipNonRefFrames);
+
+    bool deint = actionDeinterlace->isChecked();
+    reader->setDeinterlacing(deint);
   }
 
   //----------------------------------------------------------------

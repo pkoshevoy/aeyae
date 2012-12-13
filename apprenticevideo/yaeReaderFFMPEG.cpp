@@ -1866,14 +1866,21 @@ namespace yae
       framesDecoded_++;
 
       enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
-      const char * filterChain = deinterlace_ ? "yadif=0:0:1" : NULL;
+      const char * filterChain = NULL;
+      if (deinterlace_)
+      {
+        // when non-reference frames are discarded deinterlacing filter
+        // loses ability to detect interlaced frames, therefore
+        // it is better to simply drop a field:
+        filterChain = skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:0:1";
+      }
+
       bool frameTraitsChanged = false;
       if (!filterGraph_.setup(avFrame->width,
                               avFrame->height,
-                              codecContext->time_base,
+                              stream_->time_base,
                               codecContext->sample_aspect_ratio,
                               (PixelFormat)avFrame->format,
-                              // codecContext->pix_fmt,
                               ffmpegPixelFormat,
                               filterChain,
                               &frameTraitsChanged))
@@ -1901,13 +1908,15 @@ namespace yae
 
         bool gotPTS = false;
         vf.time_.base_ = stream_->time_base.den;
+        vf.time_.time_ = (stream_->time_base.num *
+                          avFrame->best_effort_timestamp);
 
         // std::cerr << "T: " << avFrame->best_effort_timestamp << std::endl;
 
-        if (!gotPTS && framesDecoded_ == 1)
+        if (!gotPTS && !hasPrevPTS_)
         {
           ptsBestEffort_ = 0;
-          vf.time_.time_ = startTime_;
+          vf.time_.time_ = stream_->time_base.num * startTime_;
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
         }
 
@@ -1925,17 +1934,6 @@ namespace yae
           vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
                              "avFrame->best_effort_timestamp");
-        }
-
-        if (!gotPTS &&
-            avFrame->pts != AV_NOPTS_VALUE &&
-            codecContext->time_base.num &&
-            codecContext->time_base.den)
-        {
-          vf.time_.time_ = avFrame->pts * codecContext->time_base.num;
-          vf.time_.base_ = codecContext->time_base.den;
-
-          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "avFrame->pts");
         }
 
         if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
@@ -1963,10 +1961,11 @@ namespace yae
           {
             double ta = prevPTS_.toSeconds();
             double tb = vf.time_.toSeconds();
+            // std::cerr << "video pts: " << tb << std::endl;
             double dt = tb - ta;
             double fd = 1.0 / native_.frameRate_;
             // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-            if (dt > 2.0 * fd)
+            if (dt > 2.01 * fd)
             {
               std::cerr
                 << "\nNOTE: detected large PTS jump: " << std::endl
@@ -2775,6 +2774,7 @@ namespace yae
         {
           double ta = prevPTS_.toSeconds();
           double tb = af.time_.toSeconds();
+          // std::cerr << "audio pts: " << tb << std::endl;
           double dt = tb - ta;
           // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
           if (dt > 0.67)

@@ -719,6 +719,9 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Skip Loop Filter</string>
    </property>
