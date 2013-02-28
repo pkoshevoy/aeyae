@@ -16,36 +16,36 @@
 #include <list>
 #include <map>
 
-  
+
 namespace Yamka
 {
 
   //----------------------------------------------------------------
   // MixedElements::~MixedElements
-  // 
+  //
   MixedElements::~MixedElements()
   {
     clear();
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::MixedElements
-  // 
+  //
   MixedElements::MixedElements():
     count_(0)
   {}
-  
+
   //----------------------------------------------------------------
   // MixedElements::MixedElements
-  // 
+  //
   MixedElements::MixedElements(const MixedElements & eltMix)
   {
     *this = eltMix;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::operator =
-  // 
+  //
   MixedElements &
   MixedElements::operator = (const MixedElements & eltMix)
   {
@@ -53,21 +53,21 @@ namespace Yamka
     {
       return *this;
     }
-    
+
     clear();
-    
+
     create_ = eltMix.create_;
     createCopy_ = eltMix.createCopy_;
-    
+
     for (std::list<IElement *>::const_iterator i = eltMix.elts_.begin();
          i != eltMix.elts_.end(); ++i)
     {
       const IElement * elt = *i;
       uint64 id = elt->getId();
-      
+
       TElementCreateCopy createCopy = createCopy_[id];
       IElement * copy = createCopy(elt);
-      
+
       if (!copy)
       {
         assert(false);
@@ -78,13 +78,13 @@ namespace Yamka
         count_++;
       }
     }
-    
+
     return *this;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::clear
-  // 
+  //
   void
   MixedElements::clear()
   {
@@ -97,10 +97,10 @@ namespace Yamka
 
     count_ = 0;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::mustSave
-  // 
+  //
   bool
   MixedElements::mustSave() const
   {
@@ -113,13 +113,13 @@ namespace Yamka
         return true;
       }
     }
-    
+
     return false;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::eval
-  // 
+  //
   bool
   MixedElements::eval(IElementCrawler & crawler) const
   {
@@ -132,13 +132,13 @@ namespace Yamka
         return true;
       }
     }
-    
+
     return false;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::calcSize
-  // 
+  //
   uint64
   MixedElements::calcSize() const
   {
@@ -149,13 +149,13 @@ namespace Yamka
       IElement & elt = *(*i);
       size += elt.calcSize();
     }
-    
+
     return size;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::save
-  // 
+  //
   IStorage::IReceiptPtr
   MixedElements::save(IStorage & storage) const
   {
@@ -166,13 +166,13 @@ namespace Yamka
       IElement & elt = *(*i);
       *receipt += elt.save(storage);
     }
-    
+
     return receipt;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::load
-  // 
+  //
   uint64
   MixedElements::load(FileStorage & storage,
                       uint64 bytesToRead,
@@ -187,20 +187,20 @@ namespace Yamka
       {
         break;
       }
-      
+
       elts_.push_back(elt);
       count_++;
-      
+
       bytesRead += eltSize;
       bytesToRead -= eltSize;
     }
-    
+
     return bytesRead;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::loadOneElement
-  // 
+  //
   uint64
   MixedElements::loadOneElement(IElement *& elt,
                                 FileStorage & storage,
@@ -213,13 +213,13 @@ namespace Yamka
       elt = NULL;
       return 0;
     }
-    
+
     uint64 eltId = 0;
     {
       File::Seek autoRestorePosition(storage.file_);
       eltId = loadEbmlId(storage);
     }
-    
+
     typedef std::map<uint64, TElementCreate>::const_iterator TFactoryIter;
     TFactoryIter found = create_.find(eltId);
     if (found == create_.end())
@@ -228,31 +228,31 @@ namespace Yamka
       elt = NULL;
       return 0;
     }
-    
+
     // shortcut to the factory method:
     TElementCreate create = found->second;
     elt = create();
-    
+
     uint64 eltSize = elt->load(storage, bytesToRead, loader);
     if (eltSize)
     {
       return eltSize;
     }
-    
+
     delete elt;
     elt = NULL;
-    
+
     return 0;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::push_back
-  // 
+  //
   bool
   MixedElements::push_back(const IElement & elt)
   {
     uint64 eltId = elt.getId();
-    
+
     typedef std::map<uint64, TElementCreateCopy>::const_iterator TFactoryIter;
     TFactoryIter found = createCopy_.find(eltId);
     if (found == createCopy_.end())
@@ -261,20 +261,20 @@ namespace Yamka
       assert(false);
       return false;
     }
-    
+
     // shortcut to the factory method:
     TElementCreateCopy createCopy = found->second;
     IElement * copy = createCopy(&elt);
-    
+
     elts_.push_back(copy);
     count_++;
-    
+
     return true;
   }
-  
+
   //----------------------------------------------------------------
   // MixedElements::getCount
-  // 
+  //
   std::size_t
   MixedElements::getCount() const
   {

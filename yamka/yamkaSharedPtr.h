@@ -16,13 +16,13 @@
 
 namespace Yamka
 {
-  
+
   //----------------------------------------------------------------
   // TRefCount
-  // 
+  //
   // NOTE: This reference counter implementation is not thread safe,
   // increment/decrement are not atomic function calls.
-  // 
+  //
   template <typename TBase>
   struct TRefCount
   {
@@ -55,7 +55,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // TSharedPtr
-  // 
+  //
   template <typename TData, typename TBase = TData>
   struct TSharedPtr
   {
@@ -64,7 +64,7 @@ namespace Yamka
     typedef TSharedPtr<TData, TBase> TSelf;
     typedef TBase base_type;
     typedef TData value_type;
-    
+
     TSharedPtr():
       r_(new TRefCount<TBase>())
     {
@@ -74,16 +74,16 @@ namespace Yamka
     // This constructor is marked explicit in order to disallow
     // automatic conversion from raw pointer to shared pointer,
     // otherwise the following can happen:
-    // 
+    //
     // int * rawPtr = new int;
-    // 
+    //
     // Give ownership of rawPtr to a shared ptr A
     // TSharedPtr<int> A(rawPtr);
-    // 
+    //
     // Here shared pointer B also points to rawPtr,
     // but the reference count is not shared with shared pointer A
     // TSharedPtr<int> B = (int *)(A);
-    // 
+    //
     explicit TSharedPtr(TData * rawPtr):
       r_(new TRefCount<TBase>())
     {
@@ -109,7 +109,7 @@ namespace Yamka
     {
       r_->decrement();
     }
-    
+
     template <typename TCast>
     TSharedPtr<TCast, TBase> cast() const
     {
@@ -122,7 +122,7 @@ namespace Yamka
         castPtr.r_ = r_;
         castPtr.r_->increment();
       }
-      
+
       return castPtr;
     }
 
@@ -134,7 +134,7 @@ namespace Yamka
         r_ = from.r_;
         r_->increment();
       }
-      
+
       return (*this);
     }
 
@@ -142,80 +142,80 @@ namespace Yamka
     {
       *this = TSelf();
     }
-    
+
     inline void setTo(TData * newData)
     {
       reset(newData);
     }
-    
+
     inline void reset(TData * newData)
     {
       *this = TSelf(newData);
     }
-    
+
     inline operator std::size_t () const
     {
       std::size_t value = reinterpret_cast<std::size_t>(get());
       return value;
     }
-    
+
     inline bool operator == (std::size_t value) const
     {
       TData * data = get();
       return (data == reinterpret_cast<TData *>(value));
     }
-    
-    inline bool	operator != (std::size_t value) const
+
+    inline bool operator != (std::size_t value) const
     {
       return (!operator == (value));
     }
-    
-    inline bool	operator == (int value) const
+
+    inline bool operator == (int value) const
     {
       return (operator == (std::size_t(value)));
     }
-    
-    inline bool	operator != (int value) const
+
+    inline bool operator != (int value) const
     {
       return (!operator == (std::size_t(value)));
     }
-    
+
     inline bool operator == (const TSelf & compPtr) const
     {
       return (get() == compPtr.get());
     }
-    
+
     inline bool operator != (const TSelf & compPtr) const
     {
       return !(operator == (compPtr));
     }
-    
+
     inline TData * get () const
     {
       TData * data = static_cast<TData *>(r_->p_);
       return data;
     }
-    
+
     inline operator TData * () const
     {
       return get();
     }
-    
+
     inline operator unsigned char * () const
     {
       return reinterpret_cast<unsigned char *>(get());
     }
-    
+
     inline TData * operator -> () const
     {
       return get();
     }
-    
+
     inline TData & operator * () const
     {
       return *get();
     }
-    
+
   protected:
     TRefCount<TBase> * r_;
   };

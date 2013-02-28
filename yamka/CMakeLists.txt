@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8.0)
 
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
-include_directories(AFTER 
+include_directories(AFTER
   .
   ${PROJECT_BINARY_DIR}
   )
@@ -63,12 +63,12 @@ add_library(yamka STATIC
   yamkaMixedElements.cpp
   yamkaPayload.cpp
   yamkaStdInt.cpp
-  ${YAMKA_VERSIONED_FILES} 
+  ${YAMKA_VERSIONED_FILES}
   )
 
 add_dependencies(yamka "update revision")
 
-add_executable(yamkaTest 
+add_executable(yamkaTest
   examples/yamkaTest.cpp
   )
 
@@ -76,7 +76,7 @@ target_link_libraries(yamkaTest
   yamka
   )
 
-add_executable(yamkaAddAttachment 
+add_executable(yamkaAddAttachment
   examples/yamkaAddAttachment.cpp
   )
 
@@ -108,7 +108,7 @@ target_link_libraries(yamkaFileInfo
   yamka
   )
 
-install(TARGETS 
+install(TARGETS
   yamkaAddAttachment
   yamkaRemux
   yamkaSimplify

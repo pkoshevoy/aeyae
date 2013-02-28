@@ -18,40 +18,40 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // Crc32::Private
-  // 
+  //
   class Crc32::Private
   {
   public:
     boost::crc_32_type checksum_;
   };
-  
+
   //----------------------------------------------------------------
   // Crc32::Crc32
-  // 
+  //
   Crc32::Crc32():
     private_(new Crc32::Private)
   {}
-  
+
   //----------------------------------------------------------------
   // Crc32::~Crc32
-  // 
+  //
   Crc32::~Crc32()
   {
     delete private_;
   }
-  
+
   //----------------------------------------------------------------
   // Crc32::compute
-  // 
+  //
   void
   Crc32::compute(const void * bytes, std::size_t numBytes)
   {
     private_->checksum_.process_bytes(bytes, numBytes);
   }
-  
+
   //----------------------------------------------------------------
   // Crc32::checksum
-  // 
+  //
   unsigned int
   Crc32::checksum() const
   {

@@ -19,12 +19,12 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // TReceiptPtrCIter
-  // 
+  //
   typedef std::deque<IStorage::IReceiptPtr>::const_iterator TReceiptPtrCIter;
-  
+
   //----------------------------------------------------------------
   // HodgePodge::add
-  // 
+  //
   void
   HodgePodge::add(const IStorage::IReceiptPtr & dataReceipt)
   {
@@ -33,7 +33,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodge::add
-  // 
+  //
   void
   HodgePodge::add(const unsigned char * data,
                   std::size_t size,
@@ -45,7 +45,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodge::load
-  // 
+  //
   uint64
   HodgePodge::load(FileStorage & storage, uint64 bytesToRead)
   {
@@ -54,15 +54,15 @@ namespace Yamka
     {
       return 0;
     }
-    
+
     receipts_.clear();
     receipts_.push_back(dataReceipt);
     return bytesToRead;
   }
-  
+
   //----------------------------------------------------------------
   // HodgePodge::save
-  // 
+  //
   IStorage::IReceiptPtr
   HodgePodge::save(IStorage & storage) const
   {
@@ -70,12 +70,12 @@ namespace Yamka
 
     // shortcut:
     bool isNullStorage = storage.isNullStorage();
-    
+
     for (TReceiptPtrCIter i = receipts_.begin(); i != receipts_.end(); ++i)
     {
       IStorage::IReceiptPtr srcReceipt = *i;
       IStorage::IReceiptPtr dstReceipt;
-      
+
       if (isNullStorage)
       {
         // don't bother copying the data when saving to NULL storage:
@@ -89,42 +89,42 @@ namespace Yamka
           assert(false);
           return IStorage::IReceiptPtr();
         }
-        
+
         dstReceipt = Yamka::save(storage, data);
       }
-      
+
       if (!dstReceipt)
       {
         assert(false);
         return IStorage::IReceiptPtr();
       }
-      
+
       *receipt += dstReceipt;
     }
-    
+
     return receipt;
   }
 
   //----------------------------------------------------------------
   // HodgePodge::numBytes
-  // 
+  //
   uint64
   HodgePodge::numBytes() const
   {
     uint64 total = 0;
-    
+
     for (TReceiptPtrCIter i = receipts_.begin(); i != receipts_.end(); ++i)
     {
       const IStorage::IReceipt & dataReceipt = *(*i);
       total += dataReceipt.numBytes();
     }
-    
+
     return total;
   }
-  
+
   //----------------------------------------------------------------
   // HodgePodge::get
-  // 
+  //
   bool
   HodgePodge::get(TByteVec & bytes) const
   {
@@ -132,10 +132,10 @@ namespace Yamka
     bytes.resize((std::size_t)total);
     return total ? get(&(bytes[0])) : true;
   }
-  
+
   //----------------------------------------------------------------
   // HodgePodge::get
-  // 
+  //
   bool
   HodgePodge::get(unsigned char * data) const
   {
@@ -143,7 +143,7 @@ namespace Yamka
     {
       return false;
     }
-    
+
     for (TReceiptPtrCIter i = receipts_.begin(); i != receipts_.end(); ++i)
     {
       const IStorage::IReceiptPtr & dataReceipt = *i;
@@ -152,16 +152,16 @@ namespace Yamka
         assert(false);
         return false;
       }
-      
+
       data += dataReceipt->numBytes();
     }
-    
+
     return true;
   }
 
   //----------------------------------------------------------------
   // HodgePodge::operator ==
-  // 
+  //
   bool
   HodgePodge::operator == (const HodgePodge & other) const
   {
@@ -172,32 +172,32 @@ namespace Yamka
     {
       return false;
     }
-    
+
     if (na == 0)
     {
       return true;
     }
-    
+
     TByteVec a;
     if (!this->get(a))
     {
       return false;
     }
-    
+
     TByteVec b;
     if (!this->get(b))
     {
       return false;
     }
-    
+
     bool same = memcmp(&(a[0]), &(b[0]), na) == 0;
     return same;
   }
-  
+
 
   //----------------------------------------------------------------
   // HodgePodgeConstIter::HodgePodgeConstIter
-  // 
+  //
   HodgePodgeConstIter::HodgePodgeConstIter(const HodgePodge & hodgePodge,
                                            uint64 pos):
     hodgePodge_(hodgePodge),
@@ -210,7 +210,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodgeConstIter::setpos
-  // 
+  //
   HodgePodgeConstIter &
   HodgePodgeConstIter::setpos(uint64 pos)
   {
@@ -220,7 +220,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodgeConstIter::operator []
-  // 
+  //
   unsigned char
   HodgePodgeConstIter::operator [] (int64 offset) const
   {
@@ -235,7 +235,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodgeConstIter::operator
-  // 
+  //
   unsigned char
   HodgePodgeConstIter::operator * () const
   {
@@ -250,7 +250,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // HodgePodgeConstIter::receipt
-  // 
+  //
   IStorage::IReceiptPtr
   HodgePodgeConstIter::receipt(uint64 position, uint64 numBytes) const
   {
@@ -259,13 +259,13 @@ namespace Yamka
       assert(false);
       return IStorage::IReceiptPtr();
     }
-    
+
     return receipt_->receipt(position - receiptStart_, numBytes);
   }
-  
+
   //----------------------------------------------------------------
   // HodgePodgeConstIter::updateReceipt
-  // 
+  //
   bool
   HodgePodgeConstIter::updateReceipt(uint64 position) const
   {
@@ -273,18 +273,18 @@ namespace Yamka
     {
       return true;
     }
-    
+
     receiptStart_ = 0;
     cacheStart_ = 0;
     cacheEnd_ = 0;
-    
+
     for (TReceiptPtrCIter i = hodgePodge_.receipts_.begin();
          i != hodgePodge_.receipts_.end(); ++i)
     {
       const IStorage::IReceiptPtr & dataReceipt = *i;
       uint64 size = dataReceipt->numBytes();
       receiptEnd_ = receiptStart_ + size;
-      
+
       if (position >= receiptStart_ && position < receiptEnd_)
       {
         receipt_ = dataReceipt;
@@ -296,10 +296,10 @@ namespace Yamka
     receiptEnd_ = 0;
     return false;
   }
-  
+
   //----------------------------------------------------------------
   // HodgePodgeConstIter::updateCache
-  // 
+  //
   bool
   HodgePodgeConstIter::updateCache(uint64 position) const
   {
@@ -307,20 +307,20 @@ namespace Yamka
     {
       return true;
     }
-    
+
     if (updateReceipt(position))
     {
       cacheStart_ = position - (position % kCacheSize);
       cacheEnd_ = std::min<uint64>(cacheStart_ + kCacheSize, receiptEnd_);
       std::size_t chunkSize = (std::size_t)(cacheEnd_ - cacheStart_);
       cache_.resize(kCacheSize);
-      
+
       IStorage::IReceiptPtr chunk =
         receipt_->receipt(receiptStart_ + cacheStart_, chunkSize);
-      
+
       return chunk->load(&cache_[0]);
     }
-    
+
     return false;
   }
 

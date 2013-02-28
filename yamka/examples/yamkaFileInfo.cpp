@@ -26,7 +26,7 @@ using namespace Yamka;
 
 //----------------------------------------------------------------
 // usage
-// 
+//
 static void
 usage(char ** argv, const char * message = NULL)
 {
@@ -34,19 +34,19 @@ usage(char ** argv, const char * message = NULL)
             << " [-q] [--readEverything] [--skipClusters]"
             << " -i source.mkv"
             << std::endl;
-  
+
   if (message != NULL)
   {
     std::cerr << "ERROR: " << message << std::endl;
   }
-  
+
   ::exit(1);
 }
 
 
 //----------------------------------------------------------------
 // PartialReader
-// 
+//
 struct PartialReader : public IDelegateLoad
 {
   // virtual:
@@ -60,7 +60,7 @@ struct PartialReader : public IDelegateLoad
       // let the generic load mechanism handle it:
       return 0;
     }
-    
+
     // skip/postpone reading the cluster (to shorten file load time):
     storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
     return payloadBytesToRead;
@@ -70,7 +70,7 @@ struct PartialReader : public IDelegateLoad
 
 //----------------------------------------------------------------
 // Examiner
-// 
+//
 struct Examiner : public IElementCrawler
 {
   enum Verbosity
@@ -78,22 +78,22 @@ struct Examiner : public IElementCrawler
     kHideFileOffsets = 0,
     kShowFileOffsets = 1
   };
-  
+
   Examiner(Verbosity verbosity):
     verbosity_(verbosity),
     indentation_(0),
     clusterTime_(0)
   {}
-  
+
   // virtual:
   bool eval(IElement & elt)
   {
     IStorage::IReceiptPtr storageReceipt = elt.storageReceipt();
     IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
-    
+
     uint64 eltId = elt.getId();
     IPayload & payload = elt.getPayload();
-    
+
     if (storageReceipt)
     {
       std::cout
@@ -108,16 +108,16 @@ struct Examiner : public IElementCrawler
           << storageReceipt->position()
           << std::dec;
       }
-      
+
       std::cout << " -- " << elt.getName();
-      
+
       if (payloadReceipt && verbosity_ == kShowFileOffsets)
       {
         std::cout << ", payload "
                   << payloadReceipt->numBytes()
                   << " bytes";
       }
-      
+
       std::cout << std::endl;
 
       if (eltId == Segment::TCluster::kId)
@@ -126,9 +126,9 @@ struct Examiner : public IElementCrawler
         clusterTime_ = cluster->timecode_.payload_.get();
       }
     }
-    
+
     Indent::More indentMore(indentation_);
-    
+
     if (payload.isComposite())
     {
       EbmlMaster * ebmlMaster = dynamic_cast<EbmlMaster *>(&payload);
@@ -138,7 +138,7 @@ struct Examiner : public IElementCrawler
         IPayload::TVoid & eltVoid = *i;
         eval(eltVoid);
       }
-      
+
       payload.eval(*this);
     }
     else if (payloadReceipt)
@@ -148,7 +148,7 @@ struct Examiner : public IElementCrawler
       {
         return false;
       }
-      
+
       const VInt * vInt = dynamic_cast<VInt *>(&payload);
       const VUInt * vUInt = dynamic_cast<VUInt *>(&payload);
       const VFloat * vFloat = dynamic_cast<VFloat *>(&payload);
@@ -156,9 +156,9 @@ struct Examiner : public IElementCrawler
       const VString * vString = dynamic_cast<VString *>(&payload);
       const VVoid * vVoid = dynamic_cast<VVoid *>(&payload);
       const VBinary * vBinary = dynamic_cast<VBinary *>(&payload);
-      
+
       std::cout << indent(indentation_);
-      
+
       if (vInt)
       {
         std::cout << "int: " << vInt->get();
@@ -176,7 +176,7 @@ struct Examiner : public IElementCrawler
       else if (vDate)
       {
         struct tm gmt;
-        
+
 #ifdef _WIN32
         __time64_t t = __time64_t(kDateMilleniumUTC +
                                   vDate->get() / 1000000000);
@@ -186,7 +186,7 @@ struct Examiner : public IElementCrawler
                           vDate->get() / 1000000000);
         gmtime_r(&t, &gmt);
 #endif
-        
+
         std::cout
           << "date: " << vDate->get() << ", "
           << std::right
@@ -231,7 +231,7 @@ struct Examiner : public IElementCrawler
           {
             std::cout << ", discardable";
           }
-          
+
           std::cout << ", " << block.getNumberOfFrames()
                     << " frames";
         }
@@ -256,7 +256,7 @@ struct Examiner : public IElementCrawler
             << vEltPos->position()
             << std::dec;
         }
-        
+
         const IElement * elt = vEltPos->getElt();
         if (!elt)
         {
@@ -269,7 +269,7 @@ struct Examiner : public IElementCrawler
             << ", resolved to "
             << elt->getName()
             << "(" << uintEncode(elt->getId()) << ")";
-          
+
           if (verbosity_ == kShowFileOffsets)
           {
             std::cout
@@ -283,7 +283,7 @@ struct Examiner : public IElementCrawler
       else
       {
         std::cout << "binary data, size " << payload.calcSize();
-        
+
         if (payloadReceipt)
         {
           TByteVec data;
@@ -294,18 +294,18 @@ struct Examiner : public IElementCrawler
           }
         }
       }
-      
+
       if (!elt.mustSave())
       {
         std::cout << ", default value";
       }
-      
+
       std::cout << std::endl;
     }
-    
+
     return false;
   }
-  
+
   Verbosity verbosity_;
   unsigned int indentation_;
   uint64 clusterTime_;
@@ -314,19 +314,19 @@ struct Examiner : public IElementCrawler
 
 //----------------------------------------------------------------
 // main
-// 
+//
 int
 main(int argc, char ** argv)
 {
 #ifdef _WIN32
   get_main_args_utf8(argc, argv);
 #endif
-  
+
   Examiner::Verbosity verbosity = Examiner::kShowFileOffsets;
   std::string srcPath;
   bool skipClusters = false;
   bool useSeekHead = true;
-  
+
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-i") == 0)
@@ -353,7 +353,7 @@ main(int argc, char ** argv)
                    std::string(argv[i])).c_str());
     }
   }
-  
+
   FileStorage src(srcPath, File::kReadOnly);
   if (!src.file_.isOpen())
   {
@@ -361,19 +361,19 @@ main(int argc, char ** argv)
                  srcPath +
                  std::string(" for reading")).c_str());
   }
-  
+
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
 
   PartialReader fastLoader;
   IDelegateLoad * loader = skipClusters ? &fastLoader : NULL;
-  
+
   uint64 bytesRead = 0;
 
   if (useSeekHead)
   {
     bool loadClusters = !skipClusters;
-    
+
     if (doc.loadSeekHead(src, srcSize) &&
         doc.loadViaSeekHead(src, loader, loadClusters))
     {
@@ -384,15 +384,15 @@ main(int argc, char ** argv)
   {
     bytesRead = doc.loadAndKeepReceipts(src, srcSize, loader);
   }
-  
+
   if (!bytesRead || doc.segments_.empty())
   {
     usage(argv, (std::string("source file has no matroska segments").c_str()));
   }
-  
+
   Examiner examiner(verbosity);
   doc.eval(examiner);
-  
+
   // close open file handles:
   doc = MatroskaDoc();
   src = FileStorage();

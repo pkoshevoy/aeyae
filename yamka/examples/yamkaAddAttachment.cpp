@@ -25,42 +25,42 @@ using namespace Yamka;
 
 //----------------------------------------------------------------
 // usage
-// 
+//
 static void
 usage(char ** argv, const char * message = NULL)
 {
   std::cerr << "USAGE: " << argv[0]
             << " -i source.mkv -o output.mkv -a mimetype attachment.xyz"
             << std::endl;
-  
+
   std::cerr << "EXAMPLE: " << argv[0]
             << " -i source.mkv -o output.mkv -a text/plain notes.txt"
             << std::endl;
-  
+
   if (message != NULL)
   {
     std::cerr << "ERROR: " << message << std::endl;
   }
-  
+
   ::exit(1);
 }
 
 //----------------------------------------------------------------
 // main
-// 
+//
 int
 main(int argc, char ** argv)
 {
 #ifdef _WIN32
   get_main_args_utf8(argc, argv);
 #endif
-  
+
   std::string srcPath;
   std::string dstPath;
   std::string tmpPath;
   std::string attType;
   std::string attPath;
-  
+
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-a") == 0)
@@ -90,7 +90,7 @@ main(int argc, char ** argv)
                    std::string(argv[i])).c_str());
     }
   }
-  
+
   FileStorage att(attPath, File::kReadOnly);
   if (!att.file_.isOpen())
   {
@@ -98,17 +98,17 @@ main(int argc, char ** argv)
                  attPath +
                  std::string(" for reading")).c_str());
   }
-  
+
   uint64 attSize = att.file_.size();
   assert(attSize < uint64(std::numeric_limits<std::size_t>::max()));
   if (!attSize)
   {
     usage(argv, (std::string("file is empty - ") + attPath).c_str());
   }
-  
+
   TByteVec attData((std::size_t)attSize);
   IStorage::IReceiptPtr attReceipt = Yamka::load(att, attData);
-  
+
   FileStorage src(srcPath, File::kReadOnly);
   if (!src.file_.isOpen())
   {
@@ -116,7 +116,7 @@ main(int argc, char ** argv)
                  srcPath +
                  std::string(" for reading")).c_str());
   }
-  
+
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
   uint64 bytesRead = doc.load(src, srcSize);
@@ -124,7 +124,7 @@ main(int argc, char ** argv)
   {
     usage(argv, (std::string("source file has no matroska segments").c_str()));
   }
-  
+
   FileStorage dst(dstPath, File::kReadWrite);
   if (!dst.file_.isOpen())
   {
@@ -132,7 +132,7 @@ main(int argc, char ** argv)
                  dstPath +
                  std::string(" for writing")).c_str());
   }
-  
+
   FileStorage tmp(tmpPath, File::kReadWrite);
   if (!tmp.file_.isOpen())
   {
@@ -140,29 +140,29 @@ main(int argc, char ** argv)
                  tmpPath +
                  std::string(" for writing")).c_str());
   }
-  
+
   tmp.file_.setSize(0);
-  
+
   // get the last segment:
   MatroskaDoc::TSegment & segment = doc.segments_.back();
-  
+
   // shortcut to the attachments element:
   Segment::TAttachment & attachments = segment.payload_.attachments_;
-  
+
   // create an attached file element:
   attachments.payload_.files_.push_back(Attachments::TFile());
   Attachments::TFile & attachment = attachments.payload_.files_.back();
-  
+
   attachment.payload_.description_.payload_.
       set("put optional attachment description here");
-  
+
   attachment.payload_.mimeType_.payload_.set(attType);
   attachment.payload_.filename_.payload_.set(attPath);
   attachment.payload_.data_.payload_.set(attData, tmp);
-  
+
   uint64 attUID = Yamka::createUID();
   attachment.payload_.fileUID_.payload_.set(attUID);
-  
+
   // add attachment to the seekhead index:
   if (segment.payload_.seekHeads_.empty())
   {
@@ -170,13 +170,13 @@ main(int argc, char ** argv)
       // is missing -- add it:
       segment.payload_.seekHeads_.push_back(Segment::TSeekHead());
   }
-  
+
   Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
   if (!seekHead.payload_.findIndex(&attachments))
   {
     seekHead.payload_.indexThis(&segment, &attachments);
   }
-  
+
   // save the document:
   dst.file_.setSize(0);
   IStorage::IReceiptPtr receipt = doc.save(dst);
@@ -184,7 +184,7 @@ main(int argc, char ** argv)
   {
     std::cout << "stored " << doc.calcSize() << " bytes" << std::endl;
   }
-  
+
   // close open file handles:
   doc = MatroskaDoc();
   src = FileStorage();
@@ -193,6 +193,6 @@ main(int argc, char ** argv)
 
   // remove temp file:
   File::remove(tmpPath.c_str());
-  
+
   return 0;
 }

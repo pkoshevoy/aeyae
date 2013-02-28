@@ -66,34 +66,34 @@ typedef std::list<TCueTrkPos>::const_iterator TCueTrkPosConstIter;
 
 //----------------------------------------------------------------
 // TTrackMap
-// 
+//
 typedef std::map<uint64, uint64> TTrackMap;
 
 //----------------------------------------------------------------
 // kMinShort
-// 
+//
 static const short int kMinShort = std::numeric_limits<short int>::min();
 
 //----------------------------------------------------------------
 // kMaxShort
-// 
+//
 static const short int kMaxShort = std::numeric_limits<short int>::max();
 
 //----------------------------------------------------------------
 // BE_QUIET
-// 
+//
 #define BE_QUIET
 
 //----------------------------------------------------------------
 // NANOSEC_PER_SEC
-// 
+//
 // 1 second, in nanoseconds
 //
 static const Yamka::uint64 NANOSEC_PER_SEC = 1000000000;
 
 //----------------------------------------------------------------
 // has
-// 
+//
 template <typename TDataContainer, typename TData>
 bool
 has(const TDataContainer & container, const TData & value)
@@ -106,20 +106,20 @@ has(const TDataContainer & container, const TData & value)
 
 //----------------------------------------------------------------
 // has
-// 
+//
 template <typename TKey, typename TValue>
 bool
 has(const std::map<TKey, TValue> & keyValueMap, const TValue & key)
 {
   typename std::map<TKey, TValue>::const_iterator found =
     keyValueMap.find(key);
-  
+
   return found != keyValueMap.end();
 }
 
 //----------------------------------------------------------------
 // endsWith
-// 
+//
 static bool
 endsWith(const std::string & str, const char * suffix)
 {
@@ -132,23 +132,23 @@ endsWith(const std::string & str, const char * suffix)
 
 //----------------------------------------------------------------
 // toScalar
-// 
+//
 template <typename TScalar>
 static TScalar
 toScalar(const char * text)
 {
   std::istringstream iss;
   iss.str(std::string(text));
-  
+
   TScalar v = (TScalar)0;
   iss >> v;
-  
+
   return v;
 }
 
 //----------------------------------------------------------------
 // toText
-// 
+//
 template <typename TScalar>
 static std::string
 toText(TScalar v)
@@ -161,13 +161,13 @@ toText(TScalar v)
 
 //----------------------------------------------------------------
 // printCurrentTime
-// 
+//
 static void
 printCurrentTime(const char * msg)
 {
   time_t rawtime = 0;
   time(&rawtime);
-  
+
   struct tm * timeinfo = localtime(&rawtime);
   std::string s(asctime(timeinfo));
   s[s.size() - 1] = '\0';
@@ -176,7 +176,7 @@ printCurrentTime(const char * msg)
 
 //----------------------------------------------------------------
 // getTrack
-// 
+//
 static const Track *
 getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
 {
@@ -197,7 +197,7 @@ getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
 #if 0
 //----------------------------------------------------------------
 // TRemuxer::isRelevant
-// 
+//
 bool
 TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
 {
@@ -206,7 +206,7 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   {
     return false;
   }
-                     
+
   // check whether the given block is for a track we are interested in:
   uint64 bytesRead = binfo.block_.importData(*blockData);
   if (!bytesRead)
@@ -214,40 +214,40 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
     assert(false);
     return false;
   }
-  
+
   uint64 srcTrackNo = binfo.block_.getTrackNumber();
   TTrackMap::const_iterator found = trackSrcDst_.find(srcTrackNo);
   if (found == trackSrcDst_.end())
   {
     return false;
   }
-  
+
   const uint64 blockSize = blockData->numBytes();
   HodgePodgeConstIter blockDataIter(*blockData);
   binfo.header_ = blockDataIter.receipt(0, bytesRead);
   binfo.frames_ = blockDataIter.receipt(bytesRead, blockSize - bytesRead);
-  
+
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
   binfo.keyframe_ = binfo.block_.isKeyframe();
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // TRemuxer::updateHeader
-// 
+//
 bool
 TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
 {
   int64 dstBlockTime = binfo.pts_ - clusterTime;
   assert(dstBlockTime >= kMinShort &&
          dstBlockTime <= kMaxShort);
-  
+
   uint64 srcTrackNo = binfo.block_.getTrackNumber();
   short int srcBlockTime = binfo.block_.getRelativeTimecode();
   bool srcIsKeyframe = binfo.block_.isKeyframe();
-  
+
   if (srcTrackNo == binfo.trackNo_ &&
       srcBlockTime == dstBlockTime &&
       srcIsKeyframe == binfo.keyframe_)
@@ -255,41 +255,41 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
     // nothing changed:
     return true;
   }
-  
+
   HodgePodge * blockData = binfo.getBlockData();
   if (!blockData)
   {
     return false;
   }
-  
+
   binfo.block_.setTrackNumber(binfo.trackNo_);
   binfo.block_.setRelativeTimecode((short int)(dstBlockTime));
   binfo.block_.setKeyframe(binfo.keyframe_);
-  
+
   binfo.header_ = binfo.block_.writeHeader(tmp_);
-  
+
   blockData->set(binfo.header_);
   blockData->add(binfo.frames_);
-  
+
   return true;
 }
 #endif
 
 //----------------------------------------------------------------
 // usage
-// 
+//
 static void
 usage(char ** argv, const char * message = NULL)
 {
   std::cerr << "NOTE: remuxing input files containing multiple segments "
             << "with mismatched tracks will not work correctly"
             << std::endl;
-  
+
   std::cerr << "USAGE: " << argv[0]
             << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
             << "[-t0 hh mm ss] [-t1 hh mm ss]"
             << std::endl;
-  
+
   std::cerr << "EXAMPLE: " << argv[0]
             << " -i input.mkv -o output.mkv -t 1 -t 2"
             << " -t0 00 04 00 -t1 00 08 00"
@@ -299,13 +299,13 @@ usage(char ** argv, const char * message = NULL)
   {
     std::cerr << "ERROR: " << message << std::endl;
   }
-  
+
   ::exit(1);
 }
 
 //----------------------------------------------------------------
 // usage
-// 
+//
 inline static void
 usage(char ** argv, const std::string & message)
 {
@@ -314,16 +314,16 @@ usage(char ** argv, const std::string & message)
 
 //----------------------------------------------------------------
 // main
-// 
+//
 int
 main(int argc, char ** argv)
 {
 #ifdef _WIN32
   get_main_args_utf8(argc, argv);
 #endif
-  
+
   printCurrentTime("start");
-  
+
   std::string srcPath;
   std::string dstPath;
   std::string tmpPath;
@@ -332,7 +332,7 @@ main(int argc, char ** argv)
 
   uint64 t0 = 0;
   uint64 t1 = (uint64)(~0);
-  
+
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-i") == 0)
@@ -357,7 +357,7 @@ main(int argc, char ** argv)
       {
         usage(argv, "-t and +t parameter can not be used together");
       }
-      
+
       uint64 trackNo = toScalar<uint64>(argv[i]);
       if (trackNo == 0)
       {
@@ -377,7 +377,7 @@ main(int argc, char ** argv)
       {
         usage(argv, "-t and +t parameter can not be used together");
       }
-      
+
       uint64 trackNo = toScalar<uint64>(argv[i]);
       if (trackNo == 0)
       {
@@ -391,31 +391,31 @@ main(int argc, char ** argv)
     else if (strcmp(argv[i], "-t0") == 0)
     {
       if ((argc - i) <= 3) usage(argv, "could not parse -t0 parameter");
-      
+
       i++;
       uint64 hh = toScalar<uint64>(argv[i]);
-      
+
       i++;
       uint64 mm = toScalar<uint64>(argv[i]);
-      
+
       i++;
       uint64 ss = toScalar<uint64>(argv[i]);
-      
+
       t0 = ss + 60 * (mm + 60 * hh);
     }
     else if (strcmp(argv[i], "-t1") == 0)
     {
       if ((argc - i) <= 3) usage(argv, "could not parse -t1 parameter");
-      
+
       i++;
       uint64 hh = toScalar<uint64>(argv[i]);
-      
+
       i++;
       uint64 mm = toScalar<uint64>(argv[i]);
-      
+
       i++;
       uint64 ss = toScalar<uint64>(argv[i]);
-      
+
       t1 = ss + 60 * (mm + 60 * hh);
     }
     else
@@ -424,16 +424,16 @@ main(int argc, char ** argv)
                    std::string(argv[i])).c_str());
     }
   }
-  
+
   if (t0 > t1)
   {
     usage(argv,
           "start time (-t0 hh mm ss) is greater than "
           "finish time (-t1 hh mm ss)");
   }
-  
+
   bool keepAllTracks = tracksToKeep.empty() && tracksDelete.empty();
-  
+
   FileStorage src(srcPath, File::kReadOnly);
   if (!src.file_.isOpen())
   {
@@ -441,14 +441,14 @@ main(int argc, char ** argv)
                  srcPath +
                  std::string(" for reading")).c_str());
   }
-  
+
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
 
   // attempt to load via SeekHead(s):
   bool ok = doc.loadSeekHead(src, srcSize);
   printCurrentTime("doc.loadSeekHead finished");
-  
+
   LoadWithProgress showProgress(srcSize);
   if (ok)
   {
@@ -463,10 +463,10 @@ main(int argc, char ** argv)
     std::cout << "failed to find Clusters via SeekHead, "
               << "attempting brute force"
               << std::endl;
-    
+
     doc = MatroskaDoc();
     src.file_.seek(0);
-    
+
     doc.loadAndKeepReceipts(src, srcSize, &showProgress);
     printCurrentTime("doc.loadAndKeepReceipts finished");
   }
@@ -475,12 +475,12 @@ main(int argc, char ** argv)
   {
     usage(argv, (std::string("failed to load any matroska segments").c_str()));
   }
-  
+
   std::size_t numSegments = doc.segments_.size();
   std::vector<std::map<uint64, uint64> > trackSrcDst(numSegments);
   std::vector<std::map<uint64, uint64> > trackDstSrc(numSegments);
   std::vector<std::vector<std::list<Frame> > > segmentTrackFrames(numSegments);
-  
+
   // verify that the specified tracks exist:
   std::size_t segmentIndex = 0;
   for (std::list<TSegment>::iterator i = doc.segments_.begin();
@@ -488,9 +488,9 @@ main(int argc, char ** argv)
   {
     std::map<uint64, uint64> & trackInOut = trackSrcDst[segmentIndex];
     std::map<uint64, uint64> & trackOutIn = trackDstSrc[segmentIndex];
-    
+
     const Segment & segment = i->payload_;
-    
+
     const std::deque<TTrack> & tracks = segment.tracks_.payload_.tracks_;
     for (std::deque<TTrack>::const_iterator j = tracks.begin();
          j != tracks.end(); ++j)
@@ -498,7 +498,7 @@ main(int argc, char ** argv)
       const Track & track = j->payload_;
       uint64 trackNo = track.trackNumber_.payload_.get();
       uint64 trackNoOut = trackInOut.size() + 1;
-      
+
       if (!tracksToKeep.empty() && has(tracksToKeep, trackNo))
       {
         trackInOut[trackNo] = trackNoOut;
@@ -530,7 +530,7 @@ main(int argc, char ** argv)
           << std::endl;
       }
     }
-    
+
     if (trackOutIn.empty())
     {
       usage(argv,
@@ -538,11 +538,11 @@ main(int argc, char ** argv)
             toText(segmentIndex + 1) +
             std::string(", none of the specified input tracks exist"));
     }
-    
+
     std::size_t numTracks = trackInOut.size();
     segmentTrackFrames[segmentIndex].resize(numTracks);
   }
-  
+
   FileStorage dst(dstPath, File::kReadWrite);
   if (!dst.file_.isOpen())
   {
@@ -550,7 +550,7 @@ main(int argc, char ** argv)
                  dstPath +
                  std::string(" for writing")).c_str());
   }
-  
+
   FileStorage tmp(tmpPath, File::kReadWrite);
   if (!tmp.file_.isOpen())
   {
@@ -558,7 +558,7 @@ main(int argc, char ** argv)
                  tmpPath +
                  std::string(" for writing")).c_str());
   }
-  
+
   tmp.file_.setSize(0);
 
   printCurrentTime("simplifying the SeekHead");
@@ -566,7 +566,7 @@ main(int argc, char ** argv)
        i != doc.segments_.end(); ++i)
   {
     MatroskaDoc::TSegment & segment = *i;
-    
+
     // shortcuts:
     Segment::TInfo & segInfo = segment.payload_.info_;
     Segment::TTracks & tracks = segment.payload_.tracks_;
@@ -575,10 +575,10 @@ main(int argc, char ** argv)
     Segment::TChapters & chapters = segment.payload_.chapters_;
     std::list<Segment::TTags> & tagsList = segment.payload_.tags_;
     std::list<Segment::TCluster> & clusters = segment.payload_.clusters_;
-    
+
     segment.payload_.seekHeads_.clear();
     segment.payload_.seekHeads_.push_back(Segment::TSeekHead());
-    
+
     Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
     seekHead.payload_.seek_.clear();
 
@@ -606,7 +606,7 @@ main(int argc, char ** argv)
     {
       seekHead.payload_.indexThis(&segment, &chapters);
     }
-    
+
     for (std::list<Segment::TTags>::iterator j = tagsList.begin();
          j != tagsList.end(); ++j)
     {
@@ -616,7 +616,7 @@ main(int argc, char ** argv)
         seekHead.payload_.indexThis(&segment, &tags);
       }
     }
-    
+
     for (std::list<Segment::TCluster>::iterator j = clusters.begin();
          j != clusters.end(); ++j)
     {
@@ -626,7 +626,7 @@ main(int argc, char ** argv)
         seekHead.payload_.indexThis(&segment, &cluster);
       }
     }
-    
+
     // update muxer credits if necessary:
     SegInfo::TMuxingApp & muxingApp = segInfo.payload_.muxingApp_;
     std::string credits = muxingApp.payload_.get();
@@ -637,13 +637,13 @@ main(int argc, char ** argv)
       {
         credits += ", ";
       }
-      
+
       credits += "remuxed with ";
       credits += creditsYamka;
       muxingApp.payload_.set(credits);
     }
   }
-  
+
   // optimize the document:
   printCurrentTime("optimizing");
   doc.optimize(tmp);
@@ -653,7 +653,7 @@ main(int argc, char ** argv)
   printCurrentTime("enabling CRC-32");
   doc.setCrc32(true);
 #endif
-  
+
   // save the document:
   printCurrentTime("saving");
   dst.file_.setSize(0);
@@ -662,13 +662,13 @@ main(int argc, char ** argv)
   {
     std::cout << "stored " << doc.calcSize() << " bytes" << std::endl;
   }
-  
+
   // close open file handles:
   printCurrentTime("cleaning up");
   src.file_.close();
   dst.file_.close();
   tmp.file_.close();
-  
+
   // remove temp file:
   File::remove(tmpPath.c_str());
 

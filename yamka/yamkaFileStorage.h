@@ -16,63 +16,63 @@
 
 namespace Yamka
 {
-  
+
   //----------------------------------------------------------------
   // FileStorage
-  // 
+  //
   struct FileStorage : public IStorage
   {
     FileStorage(const std::string & pathUTF8 = std::string(),
                 File::AccessMode fileMode = File::kReadWrite);
-    
+
     // virtual:
     IReceiptPtr receipt() const;
-    
+
     // virtual:
     IReceiptPtr save(const unsigned char * data, std::size_t size);
     IReceiptPtr load(unsigned char * data, std::size_t size);
     std::size_t peek(unsigned char * data, std::size_t size);
     uint64      skip(uint64 numBytes);
-    
+
     //----------------------------------------------------------------
     // Receipt
-    // 
+    //
     struct Receipt : public IReceipt
     {
       Receipt(const File & file);
-      
+
       // virtual:
       uint64 position() const;
-      
+
       // virtual:
       uint64 numBytes() const;
-      
+
       // virtual:
       Receipt & setNumBytes(uint64 numBytes);
-      
+
       // virtual:
       Receipt & add(uint64 numBytes);
-      
+
       // virtual:
       bool save(const unsigned char * data, std::size_t size);
       bool load(unsigned char * data);
-      
+
       // virtual:
       bool calcCrc32(Crc32 & computeCrc32, const IReceiptPtr & receiptSkip);
-      
+
       // virtual:
       IReceiptPtr receipt(uint64 offset, uint64 size) const;
-      
+
     protected:
       File file_;
       File::TOff addr_;
       uint64 numBytes_;
     };
-    
+
     // file used to store data:
     File file_;
   };
-  
+
 }
 
 

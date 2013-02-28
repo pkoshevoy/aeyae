@@ -18,13 +18,13 @@
 #include <list>
 #include <map>
 
-  
+
 namespace Yamka
 {
 
   //----------------------------------------------------------------
   // MixedElements
-  // 
+  //
   struct MixedElements
   {
     // register an element type that may occur in this mix:
@@ -37,41 +37,41 @@ namespace Yamka
         assert(false);
         return false;
       }
-      
+
       TElementCreate create = &(TElement::create);
       create_[id] = create;
-      
+
       TElementCreateCopy createCopy = &(TElement::createCopy);
       createCopy_[id] = createCopy;
-      
+
       return true;
     }
 
     // NOTE: destructor calls clear()
     ~MixedElements();
-    
+
     // default constructor:
     MixedElements();
-    
+
     // copy constructor:
     MixedElements(const MixedElements & eltMix);
-    
+
     // assignment operator:
     MixedElements & operator = (const MixedElements & eltMix);
-    
+
     // accessor:
     inline const std::list<IElement *> & elts() const
     { return elts_; }
-    
+
     // remove and delete all elements stored here:
     void clear();
-    
+
     // check whether there these elements must be stored:
     bool mustSave() const;
-    
+
     // perform crawler computation on the elements stored here:
     bool eval(IElementCrawler & crawler) const;
-    
+
     // calculate payload size:
     uint64 calcSize() const;
 
@@ -92,10 +92,10 @@ namespace Yamka
                           FileStorage & storage,
                           uint64 bytesToRead,
                           IDelegateLoad * loader);
-    
+
     // attempt to add an element to this mix:
     bool push_back(const IElement & elt);
-    
+
     // accessor to the last element in this mix:
     template <typename TElement>
     inline TElement & back() const
@@ -103,20 +103,20 @@ namespace Yamka
       TElement * elt = (TElement *)(elts_.back());
       return *elt;
     }
-    
+
     // accessor to the counter of elements stored here:
     std::size_t getCount() const;
-    
+
   protected:
     // a map from element id to factory method:
     std::map<uint64, TElementCreate> create_;
     std::map<uint64, TElementCreateCopy> createCopy_;
-    
+
     // an ordered list of elements:
     std::list<IElement *> elts_;
     std::size_t count_;
   };
-  
+
 }
 
 

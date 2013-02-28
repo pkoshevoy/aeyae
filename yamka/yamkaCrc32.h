@@ -18,15 +18,15 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // Crc32
-  // 
+  //
   struct Crc32
   {
     Crc32();
     ~Crc32();
-    
+
     // process data to compute the checksum:
     void compute(const void * bytes, std::size_t numBytes);
-    
+
     // process data to compute the checksum:
     inline void compute(const std::vector<unsigned char> & bytes)
     {
@@ -35,15 +35,15 @@ namespace Yamka
         compute(&bytes[0], bytes.size());
       }
     }
-    
+
     // accessor to the current checksum:
     unsigned int checksum() const;
-    
+
   private:
     // intentionally disabled:
     Crc32(const Crc32 &);
     Crc32 & operator = (const Crc32);
-    
+
     // private implementation details:
     class Private;
     Private * private_;

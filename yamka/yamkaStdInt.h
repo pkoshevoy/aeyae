@@ -19,146 +19,146 @@
 
 namespace Yamka
 {
-  
+
   // forward declarations:
   struct IStorage;
   struct HodgePodgeConstIter;
-  
+
   //----------------------------------------------------------------
   // uint64
-  // 
+  //
   typedef boost::uint64_t uint64;
-  
+
   //----------------------------------------------------------------
   // int64
-  // 
+  //
   typedef boost::int64_t int64;
-  
+
   //----------------------------------------------------------------
   // TUnixTimeContant
-  // 
+  //
   enum TUnixTimeContant
   {
     // 2001/01/01 00:00:00 UTC:
     kDateMilleniumUTC = 978307200
   };
-  
+
   //----------------------------------------------------------------
   // uintMax
-  // 
+  //
   // Constant max unsigned int for each byte size:
-  // 
+  //
   extern const uint64 uintMax[9];
-  
+
   //----------------------------------------------------------------
   // vsizeUnknown
-  // 
+  //
   // Reserved vsize value used to indicate that the payload size
   // is unknown, and payload boundary should be determined
   // by detecting an upper level EBML ID that could never be
   // part of the payload.
-  // 
+  //
   extern const uint64 vsizeUnknown[9];
-  
+
   //----------------------------------------------------------------
   // vsizeNumBytes
-  // 
+  //
   // Return number of bytes required to encode a given integer.
-  // 
+  //
   extern unsigned int
   vsizeNumBytes(uint64 i);
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
   //
   // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
   //       then uintMax[8] will be returned
-  // 
+  //
   extern uint64
   vsizeDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize);
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
-  // 
+  //
   // NOTE: if the decoded value equals vsizeUnknown[vsizeSize]
   //       then uintMax[8] will be returned
-  // 
+  //
   extern uint64
   vsizeDecode(const unsigned char * bytes, uint64 & vsizeSize);
-  
+
   //----------------------------------------------------------------
   // vsizeEncode
-  // 
+  //
   extern void
   vsizeEncode(uint64 vsize, unsigned char * v, uint64 vsizeSize);
-  
+
   //----------------------------------------------------------------
   // vsizeEncode
-  // 
+  //
   extern unsigned int
   vsizeEncode(uint64 vsize, unsigned char * v);
-  
+
   //----------------------------------------------------------------
   // vsizeSignedNumBytes
-  // 
+  //
   extern unsigned int
   vsizeSignedNumBytes(int64 vsize);
-  
+
   //----------------------------------------------------------------
   // vsizeSignedDecode
-  // 
+  //
   extern int64
   vsizeSignedDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize);
-  
+
   //----------------------------------------------------------------
   // vsizeSignedDecode
-  // 
+  //
   extern int64
   vsizeSignedDecode(const unsigned char * bytes, uint64 & vsizeSize);
-  
+
   //----------------------------------------------------------------
   // vsizeSignedEncode
-  // 
+  //
   extern unsigned int
   vsizeSignedEncode(int64 vsize, unsigned char * v);
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
-  // 
+  //
   // helper function for loading and decoding a payload size
   // descriptor from a storage stream
-  // 
+  //
   extern uint64
   vsizeDecode(IStorage & storage,
               uint64 & vsizeSize);
-  
+
   //----------------------------------------------------------------
   // loadEbmlId
-  // 
+  //
   extern uint64
   loadEbmlId(IStorage & storage);
-  
+
   //----------------------------------------------------------------
   // uintDecode
-  // 
+  //
   extern uint64
   uintDecode(const unsigned char * v, uint64 nbytes);
-  
+
   //----------------------------------------------------------------
   // uintEncode
-  // 
+  //
   extern void
   uintEncode(uint64 ui, unsigned char * v, uint64 nbytes);
-  
+
   //----------------------------------------------------------------
   // uintNumBytes
-  // 
+  //
   extern unsigned int
   uintNumBytes(uint64 ui);
-  
+
   //----------------------------------------------------------------
   // uintEncode
-  // 
+  //
   inline unsigned int
   uintEncode(uint64 ui, unsigned char * v)
   {
@@ -166,10 +166,10 @@ namespace Yamka
     uintEncode(ui, v, numBytes);
     return numBytes;
   }
-  
+
   //----------------------------------------------------------------
   // intDecode
-  // 
+  //
   inline int64
   intDecode(const unsigned char * v, uint64 nbytes)
   {
@@ -179,10 +179,10 @@ namespace Yamka
     int64 i = (ui > mi) ? (ui - mu) - 1 : ui;
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // intEncode
-  // 
+  //
   inline void
   intEncode(int64 si, unsigned char * v, uint64 nbytes)
   {
@@ -193,16 +193,16 @@ namespace Yamka
       v[(std::size_t)k] = n;
     }
   }
-  
+
   //----------------------------------------------------------------
   // intNumBytes
-  // 
+  //
   extern unsigned int
   intNumBytes(int64 si);
-  
+
   //----------------------------------------------------------------
   // intEncode
-  // 
+  //
   inline unsigned int
   intEncode(int64 si, unsigned char * v)
   {
@@ -210,10 +210,10 @@ namespace Yamka
     intEncode(si, v, numBytes);
     return numBytes;
   }
-  
+
   //----------------------------------------------------------------
   // floatEncode
-  // 
+  //
   inline unsigned int
   floatEncode(float d, unsigned char * v)
   {
@@ -223,10 +223,10 @@ namespace Yamka
     uintEncode(i, v, 4);
     return 4;
   }
-  
+
   //----------------------------------------------------------------
   // floatDecode
-  // 
+  //
   inline float
   floatDecode(const unsigned char * v)
   {
@@ -235,10 +235,10 @@ namespace Yamka
     memcpy(&d, &i, 4);
     return d;
   }
-  
+
   //----------------------------------------------------------------
   // doubleEncode
-  // 
+  //
   inline unsigned int
   doubleEncode(double d, unsigned char * v)
   {
@@ -248,10 +248,10 @@ namespace Yamka
     uintEncode(i, v, 8);
     return 8;
   }
-  
+
   //----------------------------------------------------------------
   // doubleDecode
-  // 
+  //
   inline double
   doubleDecode(const unsigned char * v)
   {
@@ -260,18 +260,18 @@ namespace Yamka
     memcpy(&d, &i, 8);
     return d;
   }
-  
+
   //----------------------------------------------------------------
   // createUID
-  // 
+  //
   extern void
   createUID(unsigned char * v, std::size_t numBytes);
-  
+
   //----------------------------------------------------------------
   // createUID
-  // 
+  //
   extern uint64 createUID();
-  
+
 }
 
 

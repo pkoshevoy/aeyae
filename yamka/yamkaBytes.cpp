@@ -18,13 +18,13 @@ namespace Yamka
 {
   //----------------------------------------------------------------
   // serialize
-  // 
+  //
   std::ostream &
   serialize(std::ostream & os, const unsigned char * data, std::size_t size)
   {
     os << std::hex
        << std::uppercase;
-    
+
     const unsigned char * end = data + size;
     for (const unsigned char * i = data; i < end; ++i)
     {
@@ -33,27 +33,27 @@ namespace Yamka
          << std::setfill('0')
          << int(byte);
     }
-    
+
     os << std::dec;
     return os;
   }
-  
-  
+
+
   namespace Indent
   {
-    
+
     //----------------------------------------------------------------
     // More::More
-    // 
+    //
     More::More(unsigned int & indentation):
       indentation_(indentation)
     {
       ++indentation_;
     }
-    
+
     //----------------------------------------------------------------
     // More::~More
-    // 
+    //
     More::~More()
     {
       --indentation_;
@@ -61,22 +61,22 @@ namespace Yamka
 
     //----------------------------------------------------------------
     // depth_
-    // 
+    //
     unsigned int depth_ = 0;
   }
-  
-  
+
+
   //----------------------------------------------------------------
   // indent::indent
-  // 
+  //
   indent::indent(unsigned int depth):
     depth_(Indent::depth_ + depth)
   {}
-  
-  
+
+
   //----------------------------------------------------------------
   // operator <<
-  // 
+  //
   std::ostream &
   operator << (std::ostream & s, const indent & ind)
   {
@@ -85,11 +85,11 @@ namespace Yamka
     {
       s << tab;
     }
-    
+
     const char * trailing_spaces = tab + (8 - ind.depth_ % 8);
     s << trailing_spaces;
-    
+
     return s;
   }
-  
+
 }

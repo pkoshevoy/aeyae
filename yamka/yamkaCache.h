@@ -18,28 +18,28 @@
 
 namespace Yamka
 {
-  
+
   //----------------------------------------------------------------
   // uint64
-  // 
+  //
   typedef boost::uint64_t uint64;
-  
-  
+
+
   //----------------------------------------------------------------
   // ICacheDataProvider
-  // 
+  //
   struct ICacheDataProvider
   {
     virtual ~ICacheDataProvider() {}
-    
+
     virtual bool
     load(uint64 addr, std::size_t * size, unsigned char * dst) = 0;
-    
+
     virtual bool
     save(uint64 addr, std::size_t size, const unsigned char * src) = 0;
   };
-  
-  
+
+
   //----------------------------------------------------------------
   // TCache
   //
@@ -49,31 +49,31 @@ namespace Yamka
     TCache();
     TCache(const TCache &);
     TCache & operator = (const TCache &);
-    
+
   public:
-    
+
     TCache(ICacheDataProvider * provider,
            std::size_t maxLines,
            std::size_t lineSize);
     ~TCache();
-    
+
     void clear();
     void resize(std::size_t maxLines, std::size_t lineSize);
     void truncate(uint64 addr);
-    
+
     struct TLine;
     bool flush(TLine * line);
-    
+
     TLine * lookup(uint64 addr);
     TLine * addLine(uint64 addr);
     TLine * getLine(uint64 addr);
-    
+
     std::size_t load(uint64 addr, std::size_t size, unsigned char * dst);
     std::size_t save(uint64 addr, std::size_t size, const unsigned char * src);
-    
+
   protected:
     void adjustLineSize(std::size_t requestSize);
-    
+
     ICacheDataProvider * provider_;
     std::size_t lineSize_;
     std::size_t numLines_;

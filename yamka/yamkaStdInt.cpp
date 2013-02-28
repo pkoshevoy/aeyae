@@ -24,27 +24,27 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // YamkaUnsignedInt64
-  // 
+  //
 # ifdef _WIN32
 # define YamkaUnsignedInt64(i) uint64(i)
 # else
 # define YamkaUnsignedInt64(i) i##LLU
 # endif
-  
+
   //----------------------------------------------------------------
   // YamkaSignedInt64
-  // 
+  //
 # ifdef _WIN32
 # define YamkaSignedInt64(i) int64(i)
 # else
 # define YamkaSignedInt64(i) i##LL
 # endif
-  
+
   //----------------------------------------------------------------
   // uintMax
-  // 
+  //
   // Constant max unsigned int for each byte size:
-  // 
+  //
   const uint64 uintMax[9] =
   {
     YamkaUnsignedInt64(0x0),
@@ -57,13 +57,13 @@ namespace Yamka
     YamkaUnsignedInt64(0xFFFFFFFFFFFFFF),
     YamkaUnsignedInt64(0xFFFFFFFFFFFFFFFF)
   };
-  
+
   //----------------------------------------------------------------
   // vsizeRange
   //
   // NOTE: it's 0x...E and not 0x...F, because 0x...F are reserved
   //       for "unknown size" special value per EBML specs.
-  // 
+  //
   static const uint64 vsizeRange[9] =
   {
     YamkaUnsignedInt64(0x0),
@@ -79,7 +79,7 @@ namespace Yamka
 
   //----------------------------------------------------------------
   // vsizeUnknown
-  // 
+  //
   const uint64 vsizeUnknown[9] =
   {
     YamkaUnsignedInt64(0x0),
@@ -92,10 +92,10 @@ namespace Yamka
     YamkaUnsignedInt64(0x01FFFFFFFFFFFF),
     YamkaUnsignedInt64(0x00FFFFFFFFFFFFFF)
   };
-  
+
   //----------------------------------------------------------------
   // vsizeNumBytes
-  // 
+  //
   unsigned int
   vsizeNumBytes(uint64 vsize)
   {
@@ -106,14 +106,14 @@ namespace Yamka
         return j;
       }
     }
-    
+
     assert(vsize <= vsizeRange[8]);
     return 8;
   }
-  
+
   //----------------------------------------------------------------
   // LeadingBits
-  // 
+  //
   enum LeadingBits
   {
     LeadingBits1 = 1 << 7,
@@ -134,7 +134,7 @@ namespace Yamka
   vsizeDecodeBytes(const bytes_t & v, uint64 & vsizeSize)
   {
     uint64 i = 0;
-    
+
     if (v[0] & LeadingBits1)
     {
       vsizeSize = 1;
@@ -207,38 +207,38 @@ namespace Yamka
       assert(false);
       vsizeSize = 0;
     }
-    
+
     if (vsizeUnknown[vsizeSize] == i)
     {
       i = uintMax[8];
     }
-    
+
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
-  // 
+  //
   uint64
   vsizeDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize)
   {
     uint64 i = vsizeDecodeBytes(byteIter, vsizeSize);
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
-  // 
+  //
   uint64
   vsizeDecode(const unsigned char * bytes, uint64 & vsizeSize)
   {
     uint64 i = vsizeDecodeBytes(bytes, vsizeSize);
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeEncode
-  // 
+  //
   void
   vsizeEncode(uint64 vsize, unsigned char * v, uint64 numBytes)
   {
@@ -249,10 +249,10 @@ namespace Yamka
     }
     v[0] |= (1 << (8 - numBytes));
   }
-  
+
   //----------------------------------------------------------------
   // vsizeEncode
-  // 
+  //
   unsigned int
   vsizeEncode(uint64 vsize, unsigned char * v)
   {
@@ -260,10 +260,10 @@ namespace Yamka
     vsizeEncode(vsize, v, numBytes);
     return numBytes;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeHalfRange
-  // 
+  //
   static const int64 vsizeHalfRange[9] =
   {
     YamkaSignedInt64(0x0),
@@ -276,10 +276,10 @@ namespace Yamka
     YamkaSignedInt64(0x00FFFFFFFFFFFF),
     YamkaSignedInt64(0x007FFFFFFFFFFFFF)
   };
-  
+
   //----------------------------------------------------------------
   // vsizeSignedNumBytes
-  // 
+  //
   unsigned int
   vsizeSignedNumBytes(int64 vsize)
   {
@@ -291,15 +291,15 @@ namespace Yamka
         return j;
       }
     }
-    
+
     assert(vsize >= -vsizeHalfRange[8] &&
            vsize <= vsizeHalfRange[8]);
     return 8;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeSignedDecodeBytes
-  // 
+  //
   template <typename bytes_t>
   int64
   vsizeSignedDecodeBytes(const bytes_t & v, uint64 & vsizeSize)
@@ -308,30 +308,30 @@ namespace Yamka
     int64 i = u - vsizeHalfRange[vsizeSize];
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeSignedDecode
-  // 
+  //
   int64
   vsizeSignedDecode(const HodgePodgeConstIter & byteIter, uint64 & vsizeSize)
   {
     int64 i = vsizeSignedDecodeBytes(byteIter, vsizeSize);
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeSignedDecode
-  // 
+  //
   int64
   vsizeSignedDecode(const unsigned char * bytes, uint64 & vsizeSize)
   {
     int64 i = vsizeSignedDecodeBytes(bytes, vsizeSize);
     return i;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeEncode
-  // 
+  //
   unsigned int
   vsizeSignedEncode(int64 vsize, unsigned char * v)
   {
@@ -340,13 +340,13 @@ namespace Yamka
     vsizeEncode(u, v, numBytes);
     return numBytes;
   }
-  
+
   //----------------------------------------------------------------
   // vsizeLoad
-  // 
+  //
   // helper function for loading a vsize unsigned integer
   // from a storage stream
-  // 
+  //
   static unsigned int
   vsizeLoad(unsigned char * vsize,
             IStorage & storage,
@@ -356,7 +356,7 @@ namespace Yamka
     {
       return 0;
     }
-    
+
     // find how many bytes remain to be read:
     const unsigned char firstByte = vsize[0];
     unsigned char leadingBitsMask = 1 << 7;
@@ -367,30 +367,30 @@ namespace Yamka
       {
         break;
       }
-      
+
       leadingBitsMask >>= 1;
     }
-    
+
     if (numBytesToLoad + 1 > maxBytes)
     {
       return 0;
     }
-    
+
     // load the remaining vsize bytes:
     if (numBytesToLoad && !storage.peek(vsize, numBytesToLoad + 1))
     {
       return 0;
     }
-    
+
     return (unsigned int)storage.skip(numBytesToLoad + 1);
   }
-  
+
   //----------------------------------------------------------------
   // vsizeDecode
-  // 
+  //
   // helper function for loading and decoding a payload size
   // descriptor from a storage stream
-  // 
+  //
   uint64
   vsizeDecode(IStorage & storage, uint64 & vsizeSize)
   {
@@ -400,14 +400,14 @@ namespace Yamka
     {
       return vsizeDecode(v, vsizeSize);
     }
-    
+
     // invalid vsize or vsize insufficient storage:
     return uintMax[8];
   }
-  
+
   //----------------------------------------------------------------
   // loadEbmlId
-  // 
+  //
   uint64
   loadEbmlId(IStorage & storage)
   {
@@ -417,14 +417,14 @@ namespace Yamka
     {
       return uintDecode(v, numBytes);
     }
-    
+
     // invalid EBML ID or insufficient storage:
     return 0;
   }
-  
+
   //----------------------------------------------------------------
   // uintDecode
-  // 
+  //
   uint64
   uintDecode(const unsigned char * v, uint64 numBytes)
   {
@@ -435,11 +435,11 @@ namespace Yamka
     }
     return ui;
   }
-  
+
   //----------------------------------------------------------------
   // uintEncode
   //
-  void 
+  void
   uintEncode(uint64 ui, unsigned char * v, uint64 numBytes)
   {
     for (uint64 j = 0, k = numBytes - 1; j < numBytes; j++, k--)
@@ -449,10 +449,10 @@ namespace Yamka
       v[(std::size_t)k] = n;
     }
   }
-  
+
   //----------------------------------------------------------------
   // uintNumBytes
-  // 
+  //
   unsigned int
   uintNumBytes(uint64 ui)
   {
@@ -484,13 +484,13 @@ namespace Yamka
     {
       return 7;
     }
-    
+
     return 8;
   }
-  
+
   //----------------------------------------------------------------
   // intNumBytes
-  // 
+  //
   unsigned int
   intNumBytes(int64 si)
   {
@@ -529,14 +529,14 @@ namespace Yamka
     {
       return 7;
     }
-    
+
     return 8;
   }
-  
-  
+
+
   //----------------------------------------------------------------
   // createUID
-  // 
+  //
   void
   createUID(unsigned char * v, std::size_t numBytes)
   {
@@ -547,21 +547,21 @@ namespace Yamka
       unsigned int seed =
         (currentTime - kDateMilleniumUTC) %
         std::numeric_limits<unsigned int>::max();
-      
+
       srand(seed);
       seeded = true;
     }
-    
+
     for (std::size_t i = 0; i < numBytes; i++)
     {
       double t = double(rand()) / double(RAND_MAX);
       v[i] = (unsigned char)(t * 255.0);
     }
   }
-  
+
   //----------------------------------------------------------------
   // createUID
-  // 
+  //
   uint64
   createUID()
   {
@@ -571,5 +571,5 @@ namespace Yamka
     uint64 id = uintDecode(v, 8) >> 7;
     return id;
   }
-  
+
 }
