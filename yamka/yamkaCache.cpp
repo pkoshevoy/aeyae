@@ -257,7 +257,7 @@ namespace Yamka
       uint64 head = addr - addr % lineSize_;
       std::size_t numBytes = lineSize_;
       unsigned char * dst = &(line->data_[0]);
-      line->ready_ = provider_->load(head, &numBytes, dst) && numBytes;
+      line->ready_ = provider_->load(head, &numBytes, dst);
       line->tail_ = head + numBytes;
     }
 
@@ -294,6 +294,12 @@ namespace Yamka
 
       uint64 a0 = (head < addr) ? addr : head;
       uint64 a1 = (line->tail_ < addr1) ? (line->tail_) : addr1;
+      if (a1 < a0)
+      {
+        // cache line was partially loaded:
+        assert(line->tail_ - line->head_ < lineSize_);
+        return 0;
+      }
 
       std::size_t lineOffset = (std::size_t)(a0 - head);
       std::size_t numBytes = (std::size_t)(a1 - a0);
