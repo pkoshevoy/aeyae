@@ -257,7 +257,7 @@ namespace Yamka
       uint64 head = addr - addr % lineSize_;
       std::size_t numBytes = lineSize_;
       unsigned char * dst = &(line->data_[0]);
-      line->ready_ = provider_->load(head, &numBytes, dst);
+      line->ready_ = provider_->load(head, &numBytes, dst) && numBytes;
       line->tail_ = head + numBytes;
     }
 
@@ -285,7 +285,7 @@ namespace Yamka
       TLine * line = getLine(head);
       if (!line || !line->ready_)
       {
-        assert(false);
+        // assert(false);
         return 0;
       }
 

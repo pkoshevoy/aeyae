@@ -4407,8 +4407,9 @@ namespace Yamka
 
         if (!bytesRead && (eltId != TCluster::kId || loadClusters))
         {
-          assert(false);
-          ok = false;
+          // assert(false);
+          // ok = false;
+          continue;
         }
       }
     }
