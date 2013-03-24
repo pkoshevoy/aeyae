@@ -102,7 +102,7 @@ namespace Yamka
       r_(new TRefCount<TBase>())
     {
       r_->increment();
-      *this = from.cast<TData>();
+      *this = from.template cast<TData>();
     }
 
     ~TSharedPtr()

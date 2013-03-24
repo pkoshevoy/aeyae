@@ -24,6 +24,9 @@
 #include <time.h>
 #include <map>
 
+// forward declarations:
+struct TTodo;
+
 // namespace access:
 using namespace Yamka;
 
@@ -1058,8 +1061,8 @@ isH264Keyframe(const HodgePodge * data)
       numIDR++;
     }
     else if (nalUnitType == TNal::kCodedSliceNonIDR ||
-             nalUnitType >= TNal::kCodedSliceDataA &&
-             nalUnitType <= TNal::kCodedSliceDataC)
+             (nalUnitType >= TNal::kCodedSliceDataA &&
+              nalUnitType <= TNal::kCodedSliceDataC))
     {
       numNonIDR++;
     }
@@ -1812,9 +1815,15 @@ usage(char ** argv, const char * message = NULL)
             << std::endl;
 
   std::cerr << "USAGE: " << argv[0]
-            << " -i input.mkv -o output.mkv [-t trackNo | +t trackNo]* "
-            << "[[-t0|-k0]  hh mm ss msec] [-t1 hh mm ss msec] "
-            << "[-fixKeyFlag]"
+            << " -i input.mkv -o output.mkv\n"
+            << " [-t trackNo | +t trackNo]*\n"
+            << " [-t0|-k0  hh mm ss msec]\n"
+            << " [-t1 hh mm ss msec]\n"
+            << " [--fix-keyframe-flag]\n"
+            << " [--attach mime/type attachment.xyz]\n"
+            << " [--copy-codec-private fromhere.mkv]\n"
+            << " [--save-chapters output.txt]\n"
+            << " [--load-chapters input.txt]\n"
             << std::endl;
 
   std::cerr << "EXAMPLE: " << argv[0]
@@ -1840,6 +1849,564 @@ usage(char ** argv, const std::string & message)
 }
 
 //----------------------------------------------------------------
+// TTodoFunc
+//
+typedef void(*TTodoFunc)(MatroskaDoc &, const TTodo &, char **);
+
+//----------------------------------------------------------------
+// TTodo
+//
+// something to do prior to remuxing
+//
+struct TTodo
+{
+  TTodo(TTodoFunc func):
+    func_(func)
+  {}
+
+  void addParam(const char * name, const char * value)
+  {
+    params_[std::string(name)] = std::string(value);
+  }
+
+  std::string getParam(const char * name) const
+  {
+    std::map<std::string, std::string>::const_iterator found =
+      params_.find(std::string(name));
+
+    if (found != params_.end())
+    {
+      return found->second;
+    }
+
+    return std::string();
+  }
+
+  void execute(MatroskaDoc & doc, char ** argv) const
+  {
+    func_(doc, *this, argv);
+  }
+
+  TTodoFunc func_;
+  std::map<std::string, std::string> params_;
+};
+
+//----------------------------------------------------------------
+// addAttachment
+//
+static void
+addAttachment(MatroskaDoc & doc, const TTodo & todo, char ** argv)
+{
+  std::string attType = todo.getParam("type");
+  std::string attPath = todo.getParam("file");
+
+  FileStorage att(attPath, File::kReadOnly);
+  if (!att.file_.isOpen())
+  {
+    usage(argv, (std::string("failed to open ") +
+                 attPath +
+                 std::string(" for reading")));
+  }
+
+  uint64 attSize = att.file_.size();
+  assert(attSize < uint64(std::numeric_limits<std::size_t>::max()));
+  if (!attSize)
+  {
+    usage(argv, std::string("file is empty - ") + attPath);
+  }
+
+  // don't load anything into memory, use a storage receipt instead:
+  att.file_.seek(0);
+  IStorage::IReceiptPtr attReceipt = att.receipt();
+  attReceipt->setNumBytes(attSize);
+
+  // get the last segment:
+  MatroskaDoc::TSegment & segment = doc.segments_.back();
+
+  // shortcut to the attachments element:
+  Segment::TAttachment & attachments = segment.payload_.attachments_;
+
+  // create an attached file element:
+  attachments.payload_.files_.push_back(Attachments::TFile());
+  Attachments::TFile & attachment = attachments.payload_.files_.back();
+
+  attachment.payload_.description_.payload_.
+      set("put optional attachment description here");
+
+  attachment.payload_.mimeType_.payload_.set(attType);
+  attachment.payload_.filename_.payload_.set(attPath);
+  attachment.payload_.data_.payload_.set(attReceipt);
+
+  uint64 attUID = Yamka::createUID();
+  attachment.payload_.fileUID_.payload_.set(attUID);
+
+  // add attachment to the seekhead index:
+  if (segment.payload_.seekHeads_.empty())
+  {
+      // this should't happen, but if the SeekHead element
+      // is missing -- add it:
+      segment.payload_.seekHeads_.push_back(Segment::TSeekHead());
+  }
+
+  Segment::TSeekHead & seekHead = segment.payload_.seekHeads_.front();
+  if (!seekHead.payload_.findIndex(&attachments))
+  {
+    seekHead.payload_.indexThis(&segment, &attachments);
+  }
+}
+
+//----------------------------------------------------------------
+// copyCodecPrivate
+//
+static void
+copyCodecPrivate(MatroskaDoc & doc, const TTodo & todo, char ** argv)
+{
+  std::string auxPath = todo.getParam("file");
+
+  FileStorage aux(auxPath, File::kReadOnly);
+  if (!aux.file_.isOpen())
+  {
+    usage(argv, (std::string("failed to open ") +
+                 auxPath +
+                 std::string(" for reading")));
+  }
+
+  uint64 auxSize = aux.file_.size();
+  MatroskaDoc ref;
+
+  bool skipCues = true;
+  LoaderSkipClusterPayload skipClusters(auxSize, skipCues);
+
+  // attempt to load via SeekHead(s):
+  printCurrentTime("ref.loadSeekHead");
+  bool ok = ref.loadSeekHead(aux, auxSize);
+
+  if (ok)
+  {
+    printCurrentTime("ref.loadViaSeekHead");
+    ok = ref.loadViaSeekHead(aux, &skipClusters, true);
+  }
+
+  if (!ok || (!ref.segments_.empty() &&
+              ref.segments_.front().payload_.clusters_.empty()))
+  {
+    std::cout << "failed to find Clusters via SeekHead, "
+              << "attempting brute force"
+              << std::endl;
+
+    ref = MatroskaDoc();
+    aux.file_.seek(0);
+
+    printCurrentTime("ref.loadAndKeepReceipts");
+    ref.loadAndKeepReceipts(aux, auxSize, &skipClusters);
+  }
+
+  if (ref.segments_.empty())
+  {
+    usage(argv, "reference source file has no matroska segments");
+  }
+
+  MatroskaDoc::TSegment & refSegment = ref.segments_.back();
+  MatroskaDoc::TSegment & srcSegment = doc.segments_.back();
+
+  std::deque<Tracks::TTrack> & refTracks =
+    refSegment.payload_.tracks_.payload_.tracks_;
+
+  std::deque<Tracks::TTrack> & srcTracks =
+    srcSegment.payload_.tracks_.payload_.tracks_;
+
+  for (std::deque<Tracks::TTrack>::iterator
+         i = refTracks.begin(), j = srcTracks.begin();
+       i != refTracks.end() && j != srcTracks.end(); ++i, ++j)
+  {
+    Track & refTrack = i->payload_;
+    Track & srcTrack = j->payload_;
+
+    if (refTrack.trackNumber_.payload_.get() !=
+        srcTrack.trackNumber_.payload_.get())
+    {
+      continue;
+    }
+
+    if (refTrack.codecID_.payload_.get() !=
+        srcTrack.codecID_.payload_.get())
+    {
+      continue;
+    }
+
+    std::cout
+      << "copying track info for track number "
+      << refTrack.trackNumber_.payload_.get()
+      << ", codec id: "
+      << refTrack.codecID_.payload_.get()
+      << std::endl
+      << "name: " << refTrack.name_.payload_.get() << std::endl
+      << "lang: " << refTrack.language_.payload_.get() << std::endl
+      << "codec private data size: "
+      << refTrack.codecPrivate_.payload_.calcSize() << std::endl
+      << std::endl;
+
+    srcTrack.name_ = refTrack.name_;
+    srcTrack.language_ = refTrack.language_;
+    srcTrack.codecPrivate_ = refTrack.codecPrivate_;
+  }
+}
+
+//----------------------------------------------------------------
+// nsecToText
+//
+static std::string
+nsecToText(uint64 ns)
+{
+  // convert from nanoseconds to milliseconds
+  uint64 t = ns / 1000000;
+
+  uint64 ms = t % 1000;
+  t /= 1000;
+  uint64 ss = t % 60;
+  t /= 60;
+  uint64 mm = t % 60;
+  t /= 60;
+  uint64 hh = t;
+
+  std::ostringstream os;
+  os << std::setw(2) << std::setfill('0') << hh << ':'
+     << std::setw(2) << std::setfill('0') << mm << ':'
+     << std::setw(2) << std::setfill('0') << ss << '.'
+     << std::setw(3) << std::setfill('0') << ms;
+
+  return std::string(os.str().c_str());
+}
+
+//----------------------------------------------------------------
+// exportText
+//
+static void
+exportText(const char * tag, const std::string & text, std::ostream & os)
+{
+  os << tag << '\t' << text << std::endl;
+}
+
+//----------------------------------------------------------------
+// exportChapter
+//
+static void
+exportChapter(const ChapAtom & atom, std::ostream & os)
+{
+  os << "uid\t" << atom.UID_.payload_.get() << '\n'
+     << "start\t" << nsecToText(atom.timeStart_.payload_.get()) << '\n'
+     << "end\t" << nsecToText(atom.timeEnd_.payload_.get()) << '\n';
+
+  const std::list<ChapAtom::TDisplay> & display = atom.display_;
+  for (std::list<ChapAtom::TDisplay>::const_iterator
+         i = display.begin(); i != display.end(); ++i)
+  {
+    const ChapDisp & title = i->payload_;
+    exportText("lang", title.language_.payload_.get(), os);
+    exportText("country", title.country_.payload_.get(), os);
+    exportText("title", title.string_.payload_.get(), os);
+  }
+}
+
+//----------------------------------------------------------------
+// saveChapters
+//
+static void
+saveChapters(MatroskaDoc & doc, const TTodo & todo, char ** argv)
+{
+  std::string auxPath = todo.getParam("file");
+
+  FileStorage aux(auxPath, File::kReadWrite);
+  if (!aux.file_.isOpen())
+  {
+    usage(argv, (std::string("failed to open ") +
+                 auxPath +
+                 std::string(" for writing")));
+  }
+  aux.file_.setSize(0);
+
+  std::ostringstream os;
+  for (std::list<MatroskaDoc::TSegment>::const_iterator
+         i = doc.segments_.begin(); i != doc.segments_.end(); ++i)
+  {
+    const Segment & segment = i->payload_;
+
+    const std::list<Chapters::TEdition> & editions =
+      segment.chapters_.payload_.editions_;
+
+    for (std::list<Chapters::TEdition>::const_iterator
+           j = editions.begin(); j != editions.end(); ++j)
+    {
+      const Edition & edition = j->payload_;
+
+      const std::list<Edition::TChapAtom> & chapters = edition.chapAtoms_;
+      for (std::list<Edition::TChapAtom>::const_iterator
+             k = chapters.begin(); k != chapters.end(); ++k)
+      {
+        os << "begin chapter" << std::endl;
+        const ChapAtom & atom = k->payload_;
+        exportChapter(atom, os);
+        os << "chapter end\n" << std::endl;
+      }
+
+      os << "edition end\n" << std::endl;
+    }
+    os << "segment end\n" << std::endl;
+  }
+
+  aux.save((const unsigned char *)os.str().c_str(), os.str().size());
+}
+
+//----------------------------------------------------------------
+// toNanoSec
+//
+static uint64
+toNanoSec(const std::string & text)
+{
+  std::string tmp = text;
+  tmp[2] = ' ';
+  tmp[5] = ' ';
+  tmp[8] = ' ';
+
+  std::istringstream in(tmp);
+  uint64 hh = 0;
+  uint64 mm = 0;
+  uint64 ss = 0;
+  uint64 ms = 0;
+
+  in >> hh;
+  in >> mm;
+  in >> ss;
+  in >> ms;
+
+  // convert to nanoseconds:
+  uint64 t = 1000000 * (ms + 1000 * (ss + 60 * (mm + 60 * hh)));
+  return t;
+}
+
+//----------------------------------------------------------------
+// importText
+//
+static std::string
+importText(std::istream & in)
+{
+  char value[1024] = { 0 };
+  in.getline(value, sizeof(value));
+  std::string text(value);
+  return text;
+}
+
+//----------------------------------------------------------------
+// importChapter
+//
+static void
+importChapter(ChapAtom & atom, std::istream & in)
+{
+  char separator = 0;
+  std::string token;
+
+  while (!in.eof())
+  {
+    in >> token;
+    in.get(separator);
+
+    if (token == "chapter")
+    {
+      std::string value;
+      in >> value;
+      if (value == "end")
+      {
+        break;
+      }
+
+      assert(false);
+      break;
+    }
+    else if (token == "uid")
+    {
+      uint64 value = 0;
+      in >> value;
+      atom.UID_.payload_.set(value);
+    }
+    else if (token == "start")
+    {
+      std::string value;
+      in >> value;
+      uint64 t = toNanoSec(value);
+      atom.timeStart_.payload_.set(t);
+    }
+    else if (token == "end")
+    {
+      std::string value;
+      in >> value;
+      uint64 t = toNanoSec(value);
+      atom.timeEnd_.payload_.set(t);
+    }
+    else if (token == "lang")
+    {
+      atom.display_.push_back(ChapAtom::TDisplay());
+
+      ChapDisp & title = atom.display_.back().payload_;
+      std::string value = importText(in);
+      title.language_.payload_.set(value);
+
+      in >> token;
+      in.get(separator);
+      value = importText(in);
+
+      if (token != "country")
+      {
+        assert(false);
+        break;
+      }
+
+      title.country_.payload_.set(value);
+
+      in >> token;
+      in.get(separator);
+      value = importText(in);
+
+      if (token != "title")
+      {
+        assert(false);
+        break;
+      }
+
+      title.string_.payload_.set(value);
+
+      bool isDefault = title.isDefault();
+      assert(!isDefault);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// loadChapters
+//
+static void
+loadChapters(MatroskaDoc & doc, const TTodo & todo, char ** argv)
+{
+  std::string auxPath = todo.getParam("file");
+
+  FileStorage aux(auxPath, File::kReadOnly);
+  if (!aux.file_.isOpen())
+  {
+    usage(argv, (std::string("failed to open ") +
+                 auxPath +
+                 std::string(" for reading")));
+  }
+
+  std::string auxText(aux.file_.size() + 1, 0);
+  aux.load((unsigned char *)(&auxText[0]), aux.file_.size());
+
+  std::istringstream in(auxText);
+
+  // setup segment iterator:
+  std::list<MatroskaDoc::TSegment>::iterator iSeg = doc.segments_.begin();
+  if (iSeg == doc.segments_.end())
+  {
+    std::cerr << "document has not segments, nowhere to put chapters"
+              << std::endl;
+    return;
+  }
+
+  // setup chapter editions iterator:
+  std::list<Chapters::TEdition>::iterator iEdn;
+  {
+    Segment & segment = iSeg->payload_;
+    std::list<Chapters::TEdition> & editions =
+      segment.chapters_.payload_.editions_;
+
+    iEdn = editions.begin();
+    if (iEdn == editions.end())
+    {
+      iEdn = editions.insert(editions.end(), Chapters::TEdition());
+    }
+  }
+
+  while (!in.eof())
+  {
+    char token[256] = { 0 };
+    in.getline(token, sizeof(token));
+
+    if (strcmp(token, "segment end") == 0)
+    {
+      ++iSeg;
+      if (iSeg == doc.segments_.end())
+      {
+        break;
+      }
+
+      Segment & segment = iSeg->payload_;
+      std::list<Chapters::TEdition> & editions =
+        segment.chapters_.payload_.editions_;
+
+      iEdn = editions.begin();
+      if (iEdn == editions.end())
+      {
+        iEdn = editions.insert(editions.end(), Chapters::TEdition());
+      }
+    }
+    else if (strcmp(token, "edition end") == 0)
+    {
+      Segment & segment = iSeg->payload_;
+      std::list<Chapters::TEdition> & editions =
+        segment.chapters_.payload_.editions_;
+
+      ++iEdn;
+      if (iEdn == editions.end())
+      {
+        iEdn = editions.insert(editions.end(), Chapters::TEdition());
+      }
+    }
+    else if (strcmp(token, "begin chapter") == 0)
+    {
+      ChapAtom atom;
+      importChapter(atom, in);
+
+      // find a chapter with matching UID:
+      Edition & edition = iEdn->payload_;
+      std::list<Edition::TChapAtom> & chapters = edition.chapAtoms_;
+
+      std::list<Edition::TChapAtom>::iterator found = chapters.begin();
+      for (; found != chapters.end(); ++found)
+      {
+        ChapAtom & chap = found->payload_;
+        if (chap.UID_.payload_.get() == atom.UID_.payload_.get())
+        {
+          // found it:
+          break;
+        }
+      }
+
+      if (found == chapters.end())
+      {
+        found = chapters.insert(chapters.end(), Edition::TChapAtom());
+      }
+
+      ChapAtom & chap = found->payload_;
+      chap.UID_.payload_.set(atom.UID_.payload_.get());
+      chap.timeStart_.payload_.set(atom.timeStart_.payload_.get());
+      chap.timeEnd_.payload_.set(atom.timeEnd_.payload_.get());
+      chap.display_ = atom.display_;
+      assert(!chap.display_.empty());
+    }
+  }
+}
+
+
+//----------------------------------------------------------------
+// addTodo
+//
+static TTodo &
+addTodo(std::list<TTodo> & todoList, TTodoFunc todoFunc)
+{
+  todoList.push_back(TTodo(todoFunc));
+  return todoList.back();
+}
+
+
+//----------------------------------------------------------------
 // main
 //
 int
@@ -1855,6 +2422,7 @@ main(int argc, char ** argv)
   std::string dstPath;
   std::list<uint64> tracksToKeep;
   std::list<uint64> tracksDelete;
+  std::list<TTodo> todoList;
 
   // time segment extraction region,
   // t0 and t1 are expressed in milliseconds:
@@ -1879,6 +2447,57 @@ main(int argc, char ** argv)
       if ((argc - i) <= 1) usage(argv, "could not parse -o parameter");
       i++;
       dstPath.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "--attach") == 0)
+    {
+      if ((argc - i) <= 2)
+      {
+        usage(argv, "could not parse --attach parameter");
+      }
+
+      TTodo & todo = addTodo(todoList, &addAttachment);
+
+      i++;
+      todo.addParam("type", argv[i]);
+
+      i++;
+      todo.addParam("file", argv[i]);
+    }
+    else if (strcmp(argv[i], "--copy-codec-private") == 0)
+    {
+      if ((argc - i) <= 1)
+      {
+        usage(argv, "could not parse --copy-codec-private parameter");
+      }
+
+      TTodo & todo = addTodo(todoList, &copyCodecPrivate);
+
+      i++;
+      todo.addParam("file", argv[i]);
+    }
+    else if (strcmp(argv[i], "--save-chapters") == 0)
+    {
+      if ((argc - i) <= 1)
+      {
+        usage(argv, "could not parse --save-chapters parameter");
+      }
+
+      TTodo & todo = addTodo(todoList, &saveChapters);
+
+      i++;
+      todo.addParam("file", argv[i]);
+    }
+    else if (strcmp(argv[i], "--load-chapters") == 0)
+    {
+      if ((argc - i) <= 1)
+      {
+        usage(argv, "could not parse --load-chapters parameter");
+      }
+
+      TTodo & todo = addTodo(todoList, &loadChapters);
+
+      i++;
+      todo.addParam("file", argv[i]);
     }
     else if (strcmp(argv[i], "-t") == 0)
     {
@@ -1963,7 +2582,7 @@ main(int argc, char ** argv)
 
       t1 = ms + 1000 * (ss + 60 * (mm + 60 * hh));
     }
-    else if (strcmp(argv[i], "-fixKeyFlag") == 0)
+    else if (strcmp(argv[i], "--fix-keyframe-flag") == 0)
     {
       fixKeyFlag = true;
     }
@@ -2007,9 +2626,8 @@ main(int argc, char ** argv)
     ok = doc.loadViaSeekHead(src, &skipClusters, true);
   }
 
-  if (!ok ||
-      !doc.segments_.empty() &&
-      doc.segments_.front().payload_.clusters_.empty())
+  if (!ok || (!doc.segments_.empty() &&
+              doc.segments_.front().payload_.clusters_.empty()))
   {
     std::cout << "failed to find Clusters via SeekHead, "
               << "attempting brute force"
@@ -2028,6 +2646,14 @@ main(int argc, char ** argv)
   }
 
   printCurrentTime("doc.load... finished");
+
+  // execute the todo list:
+  for (std::list<TTodo>::const_iterator i = todoList.begin();
+       i != todoList.end(); ++i)
+  {
+    const TTodo & todo = *i;
+    todo.execute(doc, argv);
+  }
 
   std::size_t numSegments = doc.segments_.size();
   std::vector<std::map<uint64, uint64> > trackSrcDst(numSegments);
