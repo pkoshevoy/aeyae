@@ -76,14 +76,6 @@ target_link_libraries(yamkaTest
   yamka
   )
 
-add_executable(yamkaAddAttachment
-  examples/yamkaAddAttachment.cpp
-  )
-
-target_link_libraries(yamkaAddAttachment
-  yamka
-  )
-
 add_executable(yamkaRemux
   examples/yamkaRemux.cpp
   )
@@ -109,7 +101,6 @@ target_link_libraries(yamkaFileInfo
   )
 
 install(TARGETS
-  yamkaAddAttachment
   yamkaRemux
   yamkaSimplify
   yamkaFileInfo
