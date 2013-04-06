@@ -132,9 +132,9 @@ endsWith(const std::string & str, const char * suffix)
 //----------------------------------------------------------------
 // toScalar
 //
-template <typename TScalar>
+template <typename TScalar, typename TString>
 static TScalar
-toScalar(const char * text)
+toScalar(const TString & text)
 {
   std::istringstream iss;
   iss.str(std::string(text));
@@ -1824,11 +1824,13 @@ usage(char ** argv, const char * message = NULL)
             << " [--copy-codec-private fromhere.mkv]\n"
             << " [--save-chapters output.txt]\n"
             << " [--load-chapters input.txt]\n"
+            << " [--lang trackNo lang]\n"
             << std::endl;
 
   std::cerr << "EXAMPLE: " << argv[0]
             << " -i input.mkv -o output.mkv +t 1 +t 2"
             << " -k0 00 15 30 000 -t1 00 17 00 000"
+            << " --lang 1 eng --lang 2 jpn"
             << std::endl;
 
   if (message != NULL)
@@ -2394,6 +2396,45 @@ loadChapters(MatroskaDoc & doc, const TTodo & todo, char ** argv)
   }
 }
 
+//----------------------------------------------------------------
+// setTrackLang
+//
+static void
+setTrackLang(MatroskaDoc & doc, const TTodo & todo, char ** argv)
+{
+  uint64 trackNo = 0;
+  {
+    std::string t = todo.getParam("track");
+    trackNo = toScalar<uint64>(t);
+    if (trackNo == 0)
+    {
+      usage(argv, std::string("invalid track number: ") + t);
+    }
+  }
+
+  std::string lang = todo.getParam("lang");
+
+  std::size_t segmentIndex = 0;
+  for (std::list<TSegment>::iterator i = doc.segments_.begin();
+       i != doc.segments_.end(); ++i, ++segmentIndex)
+  {
+    Segment & segment = i->payload_;
+
+    std::deque<TTrack> & tracks = segment.tracks_.payload_.tracks_;
+    for (std::deque<TTrack>::iterator j = tracks.begin();
+         j != tracks.end(); ++j)
+    {
+      Track & track = j->payload_;
+      uint64 n = track.trackNumber_.payload_.get();
+      if (n == trackNo)
+      {
+        track.language_.payload_.set(lang);
+        track.language_.alwaysSave();
+      }
+    }
+  }
+}
+
 
 //----------------------------------------------------------------
 // addTodo
@@ -2498,6 +2539,18 @@ main(int argc, char ** argv)
 
       i++;
       todo.addParam("file", argv[i]);
+    }
+    else if (strcmp(argv[i], "--lang") == 0)
+    {
+      if ((argc - i) <= 2) usage(argv, "could not parse --lang parameter");
+
+      TTodo & todo = addTodo(todoList, &setTrackLang);
+
+      i++;
+      todo.addParam("track", argv[i]);
+
+      i++;
+      todo.addParam("lang", argv[i]);
     }
     else if (strcmp(argv[i], "-t") == 0)
     {
