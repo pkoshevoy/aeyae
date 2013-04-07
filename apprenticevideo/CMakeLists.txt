@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 2.8.9)
 
 project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
@@ -18,13 +18,15 @@ else (QT4_FOUND)
   message(FATAL_ERROR "Cannot build without Qt4.  Please set QT4_DIR.")
 endif (QT4_FOUND)
 
-if (QT_QTDBUS_FOUND)
-  set(QT_USE_QTDBUS TRUE)
-endif (QT_QTDBUS_FOUND)
+if (QT4_FOUND)
+  if (QT_QTDBUS_FOUND)
+    set(QT_USE_QTDBUS TRUE)
+  endif (QT_QTDBUS_FOUND)
 
-set(QT_USE_QTOPENGL TRUE)
-set(QT_USE_QTMAIN TRUE)
-include(${QT_USE_FILE})
+  set(QT_USE_QTOPENGL TRUE)
+  set(QT_USE_QTMAIN TRUE)
+  include(${QT_USE_FILE})
+endif (QT4_FOUND)
 
 add_definitions(-DBOOST_ALL_NO_LIB)
 
@@ -68,25 +70,27 @@ if (FFMPEG_INCLUDE_DIR)
   include_directories(AFTER ${FFMPEG_INCLUDE_DIR})
 endif (FFMPEG_INCLUDE_DIR)
 
-find_library(QT4_PLUGINS_QGIF
-  qgif ${QT_PLUGINS_DIR}/imageformats
-  DOC "Qt image IO plugin for GIF")
+if (QT4_FOUND)
+  find_library(QT4_PLUGINS_QGIF
+    qgif ${QT_PLUGINS_DIR}/imageformats
+    DOC "Qt image IO plugin for GIF")
 
-find_library(QT4_PLUGINS_QTIFF
-  qtiff ${QT_PLUGINS_DIR}/imageformats
-  DOC "Qt image IO plugin for TIFF")
+  find_library(QT4_PLUGINS_QTIFF
+    qtiff ${QT_PLUGINS_DIR}/imageformats
+    DOC "Qt image IO plugin for TIFF")
 
-find_library(QT4_PLUGINS_QICO
-  qico ${QT_PLUGINS_DIR}/imageformats
-  DOC "Qt image IO plugin for ICO")
+  find_library(QT4_PLUGINS_QICO
+    qico ${QT_PLUGINS_DIR}/imageformats
+    DOC "Qt image IO plugin for ICO")
 
-find_library(QT4_PLUGINS_QJPEG
-  qjpeg ${QT_PLUGINS_DIR}/imageformats
-  DOC "Qt image IO plugin for JPEG")
+  find_library(QT4_PLUGINS_QJPEG
+    qjpeg ${QT_PLUGINS_DIR}/imageformats
+    DOC "Qt image IO plugin for JPEG")
 
-find_library(QT4_PLUGINS_QMNG
-  qmng ${QT_PLUGINS_DIR}/imageformats
-  DOC "Qt image IO plugin for MNG")
+  find_library(QT4_PLUGINS_QMNG
+    qmng ${QT_PLUGINS_DIR}/imageformats
+    DOC "Qt image IO plugin for MNG")
+endif (QT4_FOUND)
 
 set(FFMPEG_LIBS_PATH "$ENV{FFMPEG_LIBS_PATH}" CACHE PATH "search path for ffmpeg libraries")
 
@@ -120,6 +124,7 @@ find_library(X264_LIBRARY x264 PATHS ${FFMPEG_LIBS_PATH} DOC "x264 library")
 find_library(XVIDCODE_LIBRARY xvidcore PATHS ${FFMPEG_LIBS_PATH} DOC "xvidcore library")
 find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(CELT_LIBRARY celt0 PATHS ${FFMPEG_LIBS_PATH} DOC "celt library")
+find_library(OPUS_LIBRARY opus PATHS ${FFMPEG_LIBS_PATH} DOC "opus library")
 find_library(MODPLUG_LIBRARY modplug PATHS ${FFMPEG_LIBS_PATH} DOC "modplug library")
 #find_library(FREETYPE_LIBRARY freetype PATHS ${FFMPEG_LIBS_PATH} DOC "freetype library")
 find_library(GNUTLS_LIBRARY gnutls PATHS ${FFMPEG_LIBS_PATH} DOC "gnutls library")
@@ -196,7 +201,9 @@ set(project_uis
   yaeOpenUrlDialog.ui
   )
 
-qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+if (QT4_FOUND)
+  qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+endif (QT4_FOUND)
 
 set(project_sources
   yaeAPI.h
@@ -349,8 +356,10 @@ if (APPLE)
     InfoPlist.strings)
 endif (APPLE)
 
-qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
-qt4_wrap_ui(project_uis_hxx ${project_uis})
+if (QT4_FOUND)
+  qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+  qt4_wrap_ui(project_uis_hxx ${project_uis})
+endif (QT4_FOUND)
 
 set(project_sources
   ${project_sources}
@@ -530,6 +539,10 @@ if (CELT_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${CELT_LIBRARY})
 endif (CELT_LIBRARY)
 
+if (OPUS_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${OPUS_LIBRARY})
+endif (OPUS_LIBRARY)
+
 if (MODPLUG_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${MODPLUG_LIBRARY})
 endif (MODPLUG_LIBRARY)
@@ -641,31 +654,33 @@ if (WIN32)
   endif (MSYS OR MINGW)
 endif (WIN32)
 
-#message("QT_CONFG: "${QT_CONFIG})
-if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
-  add_definitions(-DQT_LIBS_ARE_STATIC)
+if (QT4_FOUND)
+  #message("QT_CONFG: "${QT_CONFIG})
+  if (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
+    add_definitions(-DQT_LIBS_ARE_STATIC)
 
-  if (QT4_PLUGINS_QGIF)
-    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QGIF})
-  endif (QT4_PLUGINS_QGIF)
+    if (QT4_PLUGINS_QGIF)
+      set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QGIF})
+    endif (QT4_PLUGINS_QGIF)
 
-  if (QT4_PLUGINS_QTIFF)
-    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QTIFF})
-  endif (QT4_PLUGINS_QTIFF)
+    if (QT4_PLUGINS_QTIFF)
+      set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QTIFF})
+    endif (QT4_PLUGINS_QTIFF)
 
-  if (QT4_PLUGINS_QICO)
-    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QICO})
-  endif (QT4_PLUGINS_QICO)
+    if (QT4_PLUGINS_QICO)
+      set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QICO})
+    endif (QT4_PLUGINS_QICO)
 
-  if (QT4_PLUGINS_QJPEG)
-    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QJPEG})
-  endif (QT4_PLUGINS_QJPEG)
+    if (QT4_PLUGINS_QJPEG)
+      set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QJPEG})
+    endif (QT4_PLUGINS_QJPEG)
 
-  if (QT4_PLUGINS_QMNG)
-    set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QMNG})
-  endif (QT4_PLUGINS_QMNG)
+    if (QT4_PLUGINS_QMNG)
+      set(TARGET_LIBS ${TARGET_LIBS} ${QT4_PLUGINS_QMNG})
+    endif (QT4_PLUGINS_QMNG)
 
-endif (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
+  endif (QT_CONFIG MATCHES "static" OR QT4_PLUGINS_QTIFF MATCHES ".a$")
+endif (QT4_FOUND)
 
 if (WIN32)
   set(TARGET_LIBS
