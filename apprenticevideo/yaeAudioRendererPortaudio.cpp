@@ -342,12 +342,6 @@ namespace yae
       output_ = NULL;
     }
 
-#if 1
-    // avoid leaving behind stale leftovers:
-    audioFrame_ = TAudioFramePtr();
-    audioFrameOffset_ = 0;
-#endif
-
     forOneFrameOnly_ = forOneFrameOnly;
     pause_ = true;
     reader_ = reader;
