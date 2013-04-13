@@ -29,6 +29,7 @@ namespace yae
     bool open(IVideoCanvas * canvas, IReader * reader, bool forOneFrameOnly);
     void close();
     void pause(bool pause);
+    void skipToNextFrame();
     void threadLoop();
 
     mutable boost::mutex mutex_;
@@ -43,6 +44,7 @@ namespace yae
     IReader * reader_;
     bool forOneFrameOnly_;
     bool pause_;
+    TTime framePosition_;
   };
 
   //----------------------------------------------------------------
@@ -105,6 +107,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::skipToNextFrame
+  //
+  void
+  VideoRenderer::TPrivate::skipToNextFrame()
+  {
+    if (!thread_.isRunning() && canvas_ && reader_)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      terminator_.stopWaiting(false);
+      forOneFrameOnly_ = true;
+      pause_ = false;
+      thread_.run();
+      thread_.wait();
+    }
+  }
+
+  //----------------------------------------------------------------
   // VideoRenderer::TPrivate::threadLoop
   //
   void
@@ -112,7 +131,7 @@ namespace yae
   {
     TTime t0;
 
-    TTime framePosition;
+    framePosition_ = TTime();
     double frameDuration = 0.0;
     double tempo = 1.0;
     double drift = 0.0;
@@ -147,7 +166,7 @@ namespace yae
 
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
-      double f0 = double(framePosition.time_) / double(framePosition.base_);
+      double f0 = double(framePosition_.time_) / double(framePosition_.base_);
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
 
@@ -231,8 +250,8 @@ namespace yae
             break;
           }
 
-          framePosition = frame->time_;
-          double t = framePosition.toSeconds();
+          framePosition_ = frame->time_;
+          double t = framePosition_.toSeconds();
 
           if (t > f0 || frameDuration == 0.0)
           {
@@ -265,7 +284,7 @@ namespace yae
         frameDuration =
           frame->traits_.frameRate_ ?
           1.0 / frame->traits_.frameRate_ :
-          1.0 / double(framePosition.base_);
+          1.0 / double(framePosition_.base_);
 
         tempo = frame->tempo_;
 
@@ -282,7 +301,7 @@ namespace yae
       else
       {
         t0 = TTime();
-        framePosition = TTime();
+        framePosition_ = TTime();
         frameDuration = 0.0;
         tempo = 1.0;
         drift = 0.0;
@@ -295,7 +314,7 @@ namespace yae
       {
         double latency = 0.0;
         bool notifyObserver = !resetTimeCounters;
-        clock_.setCurrentTime(framePosition, latency, notifyObserver);
+        clock_.setCurrentTime(framePosition_, latency, notifyObserver);
         drift = df;
       }
     }
@@ -352,6 +371,16 @@ namespace yae
   VideoRenderer::close()
   {
     private_->close();
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::skipToNextFrame
+  //
+  const TTime &
+  VideoRenderer::skipToNextFrame()
+  {
+    private_->skipToNextFrame();
+    return private_->framePosition_;
   }
 
   //----------------------------------------------------------------

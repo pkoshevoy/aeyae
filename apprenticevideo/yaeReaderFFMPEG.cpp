@@ -54,11 +54,13 @@ extern "C"
 #include <libavfilter/avfilter.h>
 #include <libavfilter/avfiltergraph.h>
 #include <libavfilter/buffersink.h>
+#include <libavfilter/buffersrc.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavutil/avstring.h>
 #include <libavutil/error.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
@@ -416,7 +418,6 @@ namespace yae
       case AV_CODEC_ID_MICRODVD:
         return kSubsMICRODVD;
 
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54, 19, 100)
       case AV_CODEC_ID_EIA_608:
         return kSubsCEA608;
 
@@ -437,7 +438,6 @@ namespace yae
 
       case AV_CODEC_ID_WEBVTT:
         return kSubsWEBVTT;
-#endif
 
       default:
         break;
@@ -601,7 +601,7 @@ namespace yae
 
         if (codec_)
         {
-          int err = avcodec_open(stream_->codec, codec_);
+          int err = avcodec_open2(stream_->codec, codec_, NULL);
           if (err < 0)
           {
             // unsupported codec:
@@ -916,24 +916,13 @@ namespace yae
       return false;
     }
 
-    int err = codec_ ? avcodec_open(stream_->codec, codec_) : 0;
+    int err = codec_ ? avcodec_open2(stream_->codec, codec_, NULL) : 0;
     if (err < 0)
     {
       // unsupported codec:
       codec_ = NULL;
       return false;
     }
-#if 0
-    if (stream_->duration == int64_t(AV_NOPTS_VALUE) &&
-        !stream_->codec->bit_rate &&
-        context_->duration == int64_t(AV_NOPTS_VALUE) &&
-        !context_->bit_rate)
-    {
-      // unknown duration:
-      close();
-      return false;
-    }
-#endif
 
     return true;
   }
@@ -1042,30 +1031,6 @@ namespace yae
       duration.base_ = AV_TIME_BASE;
       return;
     }
-
-#if 0
-    if (context_->nb_streams == 1 &&
-        codec_->id == CODEC_ID_RAWVIDEO &&
-        stream_->cur_pkt.size)
-    {
-      if (stream_->avg_frame_rate.num &&
-          stream_->avg_frame_rate.den)
-      {
-        uint64 nframes = fileSize / stream_->cur_pkt.size;
-        duration.time_ = stream_->avg_frame_rate.den * nframes;
-        duration.base_ = stream_->avg_frame_rate.num;
-        return;
-      }
-      else if (stream_->r_frame_rate.num &&
-               stream_->r_frame_rate.den)
-      {
-        uint64 nframes = fileSize / stream_->cur_pkt.size;
-        duration.time_ = stream_->r_frame_rate.den * nframes;
-        duration.base_ = stream_->r_frame_rate.num;
-        return;
-      }
-    }
-#endif
 
     // unknown duration:
     duration.time_ = std::numeric_limits<int64>::max();
@@ -1240,7 +1205,6 @@ namespace yae
     {
       std::ostringstream os;
 
-#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(3, 0, 101)
       const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
       os << "video_size=" << srcWidth_ << "x" << srcHeight_
          << ":pix_fmt=" << txtPixFmt
@@ -1248,15 +1212,6 @@ namespace yae
          << "/" << srcTimeBase_.den
          << ":pixel_aspect=" << srcPAR_.num
          << "/" << srcPAR_.den;
-#else
-      os << srcWidth_ << ":"
-         << srcHeight_ << ":"
-         << srcPixFmt_ << ":"
-         << srcTimeBase_.num << ":"
-         << srcTimeBase_.den << ":"
-         << srcPAR_.num << ":"
-         << srcPAR_.den;
-#endif
       srcCfg = os.str().c_str();
     }
 
@@ -1326,12 +1281,7 @@ namespace yae
   bool
   VideoFilterGraph::push(const AVFrame * frame)
   {
-#if LIBAVFILTER_VERSION_MAJOR < 3
-    int flags = AV_VSRC_BUF_FLAG_OVERWRITE;
-    int err = av_vsrc_buffer_add_frame(src_, frame, flags);
-#else
-    int err = av_buffersrc_add_frame(src_, frame, 0);
-#endif
+    int err = av_buffersrc_write_frame(src_, frame);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
@@ -1343,81 +1293,95 @@ namespace yae
   bool
   VideoFilterGraph::pull(AVFrame * frame)
   {
-    AVFilterBufferRef * picref = NULL;
-
-#if LIBAVFILTER_VERSION_MAJOR < 3
-    if (avfilter_poll_frame(sink_->inputs[0]))
-    {
-      int flags = 0;
-      int err = av_vsink_buffer_get_video_buffer_ref(sink_, &picref, flags);
-      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-      if (picref)
-      {
-        err = avfilter_fill_frame_from_video_buffer_ref(frame, picref);
-        YAE_ASSERT(err >= 0);
-        avfilter_unref_buffer(picref);
-        return true;
-      }
-    }
-#else
-    int err = av_buffersink_get_buffer_ref(sink_, &picref, 0);
+    int err = av_buffersink_get_frame(sink_, frame);
     if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
     {
       return false;
     }
+
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    if (picref)
-    {
-      err = avfilter_copy_buf_props(frame, picref);
-      YAE_ASSERT(err >= 0);
-      avfilter_unref_buffer(picref);
-      return true;
-    }
-#endif
-
-    return false;
+    return true;
   }
 
 
   //----------------------------------------------------------------
+  // AutoFree
+  //
+  template <typename TData>
+  struct AutoFree
+  {
+    AutoFree(TData * data):
+      data_(data)
+    {}
+
+    ~AutoFree()
+    {
+      av_free(data_);
+    }
+
+    inline TData * get() const
+    {
+      return data_;
+    }
+
+    inline operator TData * () const
+    {
+      return data_;
+    }
+
+    inline void reset(TData * data)
+    {
+      av_free(data_);
+      data_ = data;
+    }
+
+  protected:
+    TData * data_;
+
+  private:
+    // intentionally disabled:
+    AutoFree(const AutoFree &);
+    AutoFree & operator = (const AutoFree &);
+  };
+
+  //----------------------------------------------------------------
   // FrameWithAutoCleanup
   //
-  struct FrameWithAutoCleanup
+  struct FrameWithAutoCleanup : AutoFree<AVFrame>
   {
+    typedef AutoFree<AVFrame> TBase;
+
     FrameWithAutoCleanup():
-      frame_(avcodec_alloc_frame())
+      TBase(avcodec_alloc_frame())
     {
-      frame_->opaque = NULL;
+      data_->opaque = NULL;
     }
 
-    ~FrameWithAutoCleanup()
+    operator AVPicture * () const
     {
-      av_free(frame_);
-    }
-
-    operator AVFrame * ()
-    {
-      return frame_;
-    }
-
-    operator AVPicture * ()
-    {
-      return (AVPicture *)frame_;
+      return (AVPicture *)data_;
     }
 
     void reset()
     {
-      av_free(frame_);
-      frame_ = avcodec_alloc_frame();
-      frame_->opaque = NULL;
+      TBase::reset(avcodec_alloc_frame());
+      data_->opaque = NULL;
     }
+  };
 
-  private:
-    // intentionally disabled:
-    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
-    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
+  //----------------------------------------------------------------
+  // FrameAutoUnref
+  //
+  struct FrameAutoUnref
+  {
+    FrameAutoUnref(AVFrame * frame):
+      frame_(frame)
+    {}
+
+    ~FrameAutoUnref()
+    {
+      av_frame_unref(frame_);
+    }
 
     AVFrame * frame_;
   };
@@ -1845,24 +1809,20 @@ namespace yae
       AVPacket packet = packetPtr->ffmpeg_;
 
       // Decode video frame
-      int gotPicture = 0;
+      int gotFrame = 0;
       AVFrame * avFrame = frameAutoCleanup_;
       avcodec_get_frame_defaults(avFrame);
       AVCodecContext * codecContext = this->codecContext();
       avcodec_decode_video2(codecContext,
                             avFrame,
-                            &gotPicture,
+                            &gotFrame,
                             &packet);
-      if (!gotPicture)
+      if (!gotFrame)
       {
         return true;
       }
 
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54, 32, 100)
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
-#else
-      avFrame->pts = avFrame->best_effort_timestamp;
-#endif
       framesDecoded_++;
 
       enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
@@ -1903,6 +1863,8 @@ namespace yae
 
       while (filterGraph_.pull(avFrame))
       {
+        FrameAutoUnref autoUnref(avFrame);
+
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
@@ -2381,7 +2343,7 @@ namespace yae
 #if 1
       avcodec_close(stream_->codec);
       codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-      err = avcodec_open(stream_->codec, codec_);
+      err = avcodec_open2(stream_->codec, codec_, NULL);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -2404,6 +2366,371 @@ namespace yae
     return setTraitsOverride(override_, deint);
   }
 
+  //----------------------------------------------------------------
+  // ffmpeg_to_yae
+  //
+  static bool
+  ffmpeg_to_yae(enum AVSampleFormat givenFormat,
+                TAudioSampleFormat & sampleFormat,
+                TAudioChannelFormat & channelFormat)
+  {
+    channelFormat =
+      (givenFormat == AV_SAMPLE_FMT_U8  ||
+       givenFormat == AV_SAMPLE_FMT_S16 ||
+       givenFormat == AV_SAMPLE_FMT_S32 ||
+       givenFormat == AV_SAMPLE_FMT_FLT ||
+       givenFormat == AV_SAMPLE_FMT_DBL) ?
+      kAudioChannelsPacked : kAudioChannelsPlanar;
+
+    switch (givenFormat)
+    {
+      case AV_SAMPLE_FMT_U8:
+      case AV_SAMPLE_FMT_U8P:
+        sampleFormat = kAudio8BitOffsetBinary;
+        break;
+
+      case AV_SAMPLE_FMT_S16:
+      case AV_SAMPLE_FMT_S16P:
+#ifdef __BIG_ENDIAN__
+        sampleFormat = kAudio16BitBigEndian;
+#else
+        sampleFormat = kAudio16BitLittleEndian;
+#endif
+        break;
+
+      case AV_SAMPLE_FMT_S32:
+      case AV_SAMPLE_FMT_S32P:
+#ifdef __BIG_ENDIAN__
+        sampleFormat = kAudio32BitBigEndian;
+#else
+        sampleFormat = kAudio32BitLittleEndian;
+#endif
+        break;
+
+      case AV_SAMPLE_FMT_FLT:
+      case AV_SAMPLE_FMT_FLTP:
+        sampleFormat = kAudio32BitFloat;
+        break;
+
+      case AV_SAMPLE_FMT_DBL:
+      case AV_SAMPLE_FMT_DBLP:
+        sampleFormat = kAudio64BitDouble;
+        break;
+
+      default:
+        channelFormat = kAudioChannelFormatInvalid;
+        sampleFormat = kAudioInvalidFormat;
+        return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // yae_to_ffmpeg
+  //
+  static enum AVSampleFormat
+  yae_to_ffmpeg(TAudioSampleFormat sampleFormat,
+                TAudioChannelFormat channelFormat)
+  {
+    bool planar = channelFormat == kAudioChannelsPlanar;
+
+    switch (sampleFormat)
+    {
+      case kAudio8BitOffsetBinary:
+        return (planar ? AV_SAMPLE_FMT_U8P : AV_SAMPLE_FMT_U8);
+
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        YAE_ASSERT(sampleFormat == kAudio16BitNative);
+        return (planar ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16);
+
+      case kAudio24BitLittleEndian:
+        YAE_ASSERT(false);
+
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
+        YAE_ASSERT(sampleFormat == kAudio32BitNative);
+        return (planar ? AV_SAMPLE_FMT_S32P : AV_SAMPLE_FMT_S32);
+
+      case kAudio32BitFloat:
+        return (planar ? AV_SAMPLE_FMT_FLTP : AV_SAMPLE_FMT_FLT);
+
+      case kAudio64BitDouble:
+        return (planar ? AV_SAMPLE_FMT_DBLP : AV_SAMPLE_FMT_DBL);
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return AV_SAMPLE_FMT_NONE;
+  }
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph
+  //
+  struct AudioFilterGraph
+  {
+    AudioFilterGraph();
+    ~AudioFilterGraph();
+
+    void reset();
+
+    bool setup(// input format:
+               const AVRational & srcTimeBase,
+               enum AVSampleFormat srcSampleFmt,
+               int srcSampleRate,
+               int64 srcChannelLayout,
+
+               // output format:
+               enum AVSampleFormat dstSampleFmt,
+               int dstSampleRate,
+               int64 dstChannelLayout,
+
+               const char * filterChain = NULL,
+               bool * frameTraitsChanged = NULL);
+
+    bool push(const AVFrame * in);
+    bool pull(AVFrame * out);
+
+  protected:
+    std::string filterChain_;
+
+    AVRational srcTimeBase_;
+
+    enum AVSampleFormat srcSampleFmt_;
+    enum AVSampleFormat dstSampleFmt_[2];
+
+    int srcSampleRate_;
+    int dstSampleRate_[2];
+
+    int64 srcChannelLayout_;
+    int64 dstChannelLayout_[2];
+
+    AVFilterContext * src_;
+    AVFilterContext * sink_;
+
+    AVFilterInOut * in_;
+    AVFilterInOut * out_;
+    AVFilterGraph * graph_;
+  };
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::AudioFilterGraph
+  //
+  AudioFilterGraph::AudioFilterGraph():
+    src_(NULL),
+    sink_(NULL),
+    in_(NULL),
+    out_(NULL),
+    graph_(NULL)
+  {
+    reset();
+  }
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::~AudioFilterGraph
+  //
+  AudioFilterGraph::~AudioFilterGraph()
+  {
+    reset();
+  }
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::reset
+  //
+  void
+  AudioFilterGraph::reset()
+  {
+    avfilter_graph_free(&graph_);
+    avfilter_inout_free(&in_);
+    avfilter_inout_free(&out_);
+
+    srcTimeBase_.num = 0;
+    srcTimeBase_.den = 1;
+
+    srcSampleFmt_    = AV_SAMPLE_FMT_NONE;
+    dstSampleFmt_[0] = AV_SAMPLE_FMT_NONE;
+    dstSampleFmt_[1] = AV_SAMPLE_FMT_NONE;
+
+    srcSampleRate_    = -1;
+    dstSampleRate_[0] = -1;
+    dstSampleRate_[1] = -1;
+
+    srcChannelLayout_    = -1;
+    dstChannelLayout_[0] = -1;
+    dstChannelLayout_[1] = -1;
+  }
+
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::setup
+  //
+  bool
+  AudioFilterGraph::setup(// input format:
+                          const AVRational & srcTimeBase,
+                          enum AVSampleFormat srcSampleFmt,
+                          int srcSampleRate,
+                          int64 srcChannelLayout,
+
+                          // output format:
+                          enum AVSampleFormat dstSampleFmt,
+                          int dstSampleRate,
+                          int64 dstChannelLayout,
+
+                          const char * filterChain,
+                          bool * frameTraitsChanged)
+  {
+    filterChain = filterChain ? filterChain : "";
+    bool sameTraits = (srcSampleRate_ == srcSampleRate &&
+                       srcChannelLayout_ == srcChannelLayout &&
+                       srcSampleFmt_ == srcSampleFmt &&
+                       dstSampleFmt_[0] == dstSampleFmt &&
+                       filterChain_ == filterChain);
+
+    if (frameTraitsChanged)
+    {
+      *frameTraitsChanged = !sameTraits;
+    }
+
+    if (sameTraits)
+    {
+      return true;
+    }
+
+    reset();
+
+    srcTimeBase_ = srcTimeBase;
+
+    srcSampleFmt_    = srcSampleFmt;
+    dstSampleFmt_[0] = dstSampleFmt;
+
+    srcSampleRate_    = srcSampleRate;
+    dstSampleRate_[0] = dstSampleRate;
+
+    srcChannelLayout_    = srcChannelLayout;
+    dstChannelLayout_[0] = dstChannelLayout;
+
+    AVFilter * srcFilterDef = avfilter_get_by_name("abuffer");
+    AVFilter * dstFilterDef = avfilter_get_by_name("abuffersink");
+
+    graph_ = avfilter_graph_alloc();
+
+    std::string srcCfg;
+    {
+      std::ostringstream os;
+
+      const char * txtSampleFmt = av_get_sample_fmt_name(srcSampleFmt_);
+      os << "time_base=" << srcTimeBase_.num << "/" << srcTimeBase_.den << ':'
+         << "sample_rate=" << srcSampleRate_ << ':'
+         << "sample_fmt=" << txtSampleFmt << ':'
+         << "channel_layout=0x" << std::hex << srcChannelLayout;
+      srcCfg = os.str().c_str();
+    }
+
+    int err = avfilter_graph_create_filter(&src_,
+                                           srcFilterDef,
+                                           "in",
+                                           srcCfg.c_str(),
+                                           NULL,
+                                           graph_);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_create_filter(&sink_,
+                                       dstFilterDef,
+                                       "out",
+                                       NULL,
+                                       NULL,
+                                       graph_);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = av_opt_set_int_list(sink_, "sample_fmts",
+                              dstSampleFmt_, AV_SAMPLE_FMT_NONE,
+                              AV_OPT_SEARCH_CHILDREN);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = av_opt_set_int_list(sink_, "channel_layouts",
+                              dstChannelLayout_, -1,
+                              AV_OPT_SEARCH_CHILDREN);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = av_opt_set_int_list(sink_, "sample_rates",
+                              dstSampleRate_, -1,
+                              AV_OPT_SEARCH_CHILDREN);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    out_ = avfilter_inout_alloc();
+    err = out_ ? 0 : AVERROR(ENOMEM);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    out_->name = av_strdup("in");
+    out_->filter_ctx = src_;
+    out_->pad_idx = 0;
+    out_->next = NULL;
+
+    in_ = avfilter_inout_alloc();
+    err = in_ ? 0 : AVERROR(ENOMEM);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    in_->name = av_strdup("out");
+    in_->filter_ctx = sink_;
+    in_->pad_idx = 0;
+    in_->next = NULL;
+
+    std::string filters;
+    {
+      std::ostringstream os;
+      if (*filterChain && strcmp(filterChain, "anull") != 0)
+      {
+        os << filterChain << ",";
+      }
+      else if (!filterChain || !*filterChain)
+      {
+        os << "anull";
+      }
+
+      filters = os.str().c_str();
+      filterChain_ = filterChain;
+    }
+
+    err = avfilter_graph_parse(graph_, filters.c_str(), &in_, &out_, NULL);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_config(graph_, NULL);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::push
+  //
+  bool
+  AudioFilterGraph::push(const AVFrame * frame)
+  {
+    int err = av_buffersrc_write_frame(src_, frame);
+
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // AudioFilterGraph::pull
+  //
+  bool
+  AudioFilterGraph::pull(AVFrame * frame)
+  {
+    int err = av_buffersink_get_frame(sink_, frame);
+    if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
+    {
+      return false;
+    }
+
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    return true;
+  }
+
 
   //----------------------------------------------------------------
   // AudioTrack
@@ -2424,7 +2751,7 @@ namespace yae
     void threadLoop();
     bool threadStop();
 
-    // reset remixer/resampler if native traits change during decoding:
+    // flush and reset filter graph if native traits change during decoding:
     void noteNativeTraitsChanged();
 
     // audio traits, not overridden:
@@ -2457,21 +2784,19 @@ namespace yae
     int outputChannels_;
     unsigned int nativeBytesPerSample_;
     unsigned int outputBytesPerSample_;
-    TDataBuffer nativeBuffer_;
-    TDataBuffer remixBuffer_;
-    TDataBuffer resampleBuffer_;
-    std::vector<double> remixChannelMatrix_;
 
     TTime prevPTS_;
     bool hasPrevPTS_;
     uint64 prevNumSamples_;
     uint64 samplesDecoded_;
 
-    ReSampleContext * resampleCtx_;
+    FrameWithAutoCleanup frameAutoCleanup_;
 
     // for adjusting audio frame duration:
     std::vector<unsigned char> tempoBuffer_;
     IAudioTempoFilter * tempoFilter_;
+
+    AudioFilterGraph filterGraph_;
   };
 
   //----------------------------------------------------------------
@@ -2490,7 +2815,6 @@ namespace yae
     hasPrevPTS_(false),
     prevNumSamples_(0),
     samplesDecoded_(0),
-    resampleCtx_(NULL),
     tempoFilter_(NULL)
   {
     YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_AUDIO);
@@ -2510,39 +2834,17 @@ namespace yae
       bool ok = getTraits(override_);
       samplesDecoded_ = 0;
 
+      AVCodecContext * context = this->codecContext();
+      if (!context->channel_layout)
+      {
+        context->channel_layout =
+          av_get_default_channel_layout(context->channels);
+      }
+
       return ok;
     }
 
     return false;
-  }
-
-  //----------------------------------------------------------------
-  // yae_to_ffmpeg
-  //
-  static enum AVSampleFormat
-  yae_to_ffmpeg(TAudioSampleFormat yaeSampleFormat)
-  {
-    switch (yaeSampleFormat)
-    {
-      case kAudio8BitOffsetBinary:
-        return AV_SAMPLE_FMT_U8;
-
-      case kAudio16BitBigEndian:
-      case kAudio16BitLittleEndian:
-        return AV_SAMPLE_FMT_S16;
-
-      case kAudio32BitBigEndian:
-      case kAudio32BitLittleEndian:
-        return AV_SAMPLE_FMT_S32;
-
-      case kAudio32BitFloat:
-        return AV_SAMPLE_FMT_FLT;
-
-      default:
-        break;
-    }
-
-    return AV_SAMPLE_FMT_NONE;
   }
 
   //----------------------------------------------------------------
@@ -2558,9 +2860,6 @@ namespace yae
     outputBytesPerSample_ =
       outputChannels_ * getBitsPerSample(output_.sampleFormat_) / 8;
 
-    // declare a 16-byte aligned buffer for decoded audio samples:
-    nativeBuffer_.resize((AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2, 1);
-
     if (!getTraits(native_))
     {
       return false;
@@ -2574,6 +2873,7 @@ namespace yae
       startTime_ = 0;
     }
 
+    frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
     samplesDecoded_ = 0;
@@ -2588,15 +2888,7 @@ namespace yae
   bool
   AudioTrack::decoderShutdown()
   {
-    if (resampleCtx_)
-    {
-      // FIXME: flush the resampler:
-      audio_resample_close(resampleCtx_);
-      resampleCtx_ = NULL;
-    }
-
-    remixBuffer_ = TDataBuffer();
-    resampleBuffer_ = TDataBuffer();
+    frameAutoCleanup_.reset();
 
     frameQueue_.close();
     return true;
@@ -2616,15 +2908,25 @@ namespace yae
 
       // Decode audio frame, piecewise:
       std::list<std::vector<unsigned char> > chunks;
-      std::size_t nativeBytes = 0;
       std::size_t outputBytes = 0;
+
+      // shortcuts:
+      enum AVSampleFormat outputFormat =
+        yae_to_ffmpeg(output_.sampleFormat_, output_.channelFormat_);
+
+      int64 outputChannelLayout =
+        av_get_default_channel_layout(outputChannels_);
 
       while (packet.size)
       {
-        int bufferSize = (int)(nativeBuffer_.rowBytes());
-        int bytesUsed = avcodec_decode_audio3(codecContext,
-                                              nativeBuffer_.data<int16_t>(),
-                                              &bufferSize,
+        // Decode audio frame
+        int gotFrame = 0;
+        AVFrame * avFrame = frameAutoCleanup_;
+        avcodec_get_frame_defaults(avFrame);
+
+        int bytesUsed = avcodec_decode_audio4(codecContext,
+                                              avFrame,
+                                              &gotFrame,
                                               &packet);
 
         if (bytesUsed < 0)
@@ -2636,13 +2938,34 @@ namespace yae
         packet.size -= bytesUsed;
         packet.data += bytesUsed;
 
-        if (!bufferSize)
+        if (!gotFrame || !avFrame->nb_samples)
         {
           continue;
         }
 
-        if (nativeChannels_ != codecContext->channels ||
-            native_.sampleRate_ != codecContext->sample_rate)
+        avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+
+        const char * filterChain = NULL;
+        bool frameTraitsChanged = false;
+        if (!filterGraph_.setup(// input format:
+                                stream_->time_base,
+                                (enum AVSampleFormat)avFrame->format,
+                                avFrame->sample_rate,
+                                avFrame->channel_layout,
+
+                                // output format:
+                                outputFormat,
+                                output_.sampleRate_,
+                                outputChannelLayout,
+
+                                filterChain,
+                                &frameTraitsChanged))
+        {
+          YAE_ASSERT(false);
+          return true;
+        }
+
+        if (frameTraitsChanged)
         {
           // detected a change in the number of audio channels,
           // or detected a change in audio sample rate,
@@ -2651,63 +2974,26 @@ namespace yae
           {
             return false;
           }
+
           noteNativeTraitsChanged();
         }
 
-        const int srcSamples = bufferSize / nativeBytesPerSample_;
-
-        if (outputChannels_ != nativeChannels_ ||
-            output_.channelFormat_ != native_.channelFormat_)
+        if (!filterGraph_.push(avFrame))
         {
-          yae::remix(srcSamples,
-                     native_.sampleFormat_,
-                     native_.channelFormat_,
-                     native_.channelLayout_,
-                     nativeBuffer_.data(),
-                     output_.channelFormat_,
-                     output_.channelLayout_,
-                     remixBuffer_.data(),
-                     &remixChannelMatrix_[0]);
+          YAE_ASSERT(false);
+          return true;
         }
 
-        if (resampleCtx_)
+        while (filterGraph_.pull(avFrame))
         {
-          int16_t * dst = resampleBuffer_.data<int16_t>();
+          FrameAutoUnref autoUnref(avFrame);
 
-          int16_t * src =
-            (outputChannels_ == nativeChannels_ ?
-             nativeBuffer_.data<int16_t>() :
-             remixBuffer_.data<int16_t>());
-
-          int dstSamples = audio_resample(resampleCtx_, dst, src, srcSamples);
-
-          if (dstSamples)
-          {
-            std::size_t resampledBytes = dstSamples * outputBytesPerSample_;
-            chunks.push_back(std::vector<unsigned char>
-                             (resampleBuffer_.data(),
-                              resampleBuffer_.data() + resampledBytes));
-            outputBytes += resampledBytes;
-          }
-        }
-        else if (outputChannels_ != nativeChannels_ ||
-                 output_.channelFormat_ != native_.channelFormat_)
-        {
-          std::size_t remixedBytes = srcSamples * outputBytesPerSample_;
+          const int bufferSize = avFrame->nb_samples * outputBytesPerSample_;
           chunks.push_back(std::vector<unsigned char>
-                           (remixBuffer_.data(),
-                            remixBuffer_.data() + remixedBytes));
-          outputBytes += remixedBytes;
-        }
-        else
-        {
-          chunks.push_back(std::vector<unsigned char>
-                           (nativeBuffer_.data(),
-                            nativeBuffer_.data() + bufferSize));
+                           (avFrame->data[0],
+                            avFrame->data[0] + bufferSize));
           outputBytes += bufferSize;
         }
-
-        nativeBytes += bufferSize;
       }
 
       if (!outputBytes)
@@ -2715,8 +3001,8 @@ namespace yae
         return true;
       }
 
-      std::size_t numNativeSamples = nativeBytes / nativeBytesPerSample_;
-      samplesDecoded_ += numNativeSamples;
+      std::size_t numOutputSamples = outputBytes / outputBytesPerSample_;
+      samplesDecoded_ += numOutputSamples;
 
       TAudioFramePtr afPtr(new TAudioFrame());
       TAudioFrame & af = *afPtr;
@@ -2742,8 +3028,8 @@ namespace yae
 
       if (!gotPTS)
       {
-        af.time_.base_ = native_.sampleRate_;
-        af.time_.time_ = samplesDecoded_ - numNativeSamples;
+        af.time_.base_ = output_.sampleRate_;
+        af.time_.time_ = samplesDecoded_ - numOutputSamples;
         af.time_ += TTime(startTime_, stream_->time_base.den);
 
         gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
@@ -2752,7 +3038,7 @@ namespace yae
       if (!gotPTS && hasPrevPTS_)
       {
         af.time_ = prevPTS_;
-        af.time_ += TTime(prevNumSamples_, native_.sampleRate_);
+        af.time_ += TTime(prevNumSamples_, output_.sampleRate_);
 
         gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
       }
@@ -2789,14 +3075,14 @@ namespace yae
 
         hasPrevPTS_ = true;
         prevPTS_ = af.time_;
-        prevNumSamples_ = numNativeSamples;
+        prevNumSamples_ = numOutputSamples;
       }
 
       // make sure the frame is in the in/out interval:
       if (playbackInterval_)
       {
         double t = af.time_.toSeconds();
-        double dt = double(numNativeSamples) / double(native_.sampleRate_);
+        double dt = double(numOutputSamples) / double(output_.sampleRate_);
         if (t > timeOut_ || (t + dt) < timeIn_)
         {
           if (t > timeOut_)
@@ -2947,13 +3233,6 @@ namespace yae
   void
   AudioTrack::noteNativeTraitsChanged()
   {
-    if (resampleCtx_)
-    {
-      // FIXME: flush the resampler:
-      audio_resample_close(resampleCtx_);
-      resampleCtx_ = NULL;
-    }
-
     // reset the tempo filter:
     {
       boost::lock_guard<boost::mutex> lock(tempoMutex_);
@@ -2961,50 +3240,9 @@ namespace yae
       tempoFilter_ = NULL;
     }
 
-    remixBuffer_ = TDataBuffer();
-    resampleBuffer_ = TDataBuffer();
-
     unsigned int bitsPerSample = getBitsPerSample(native_.sampleFormat_);
     nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
     nativeBytesPerSample_ = (nativeChannels_ * bitsPerSample / 8);
-
-    if (outputChannels_ != nativeChannels_ ||
-        output_.channelFormat_ != native_.channelFormat_)
-    {
-      // lookup a remix matrix:
-      getRemixMatrix(nativeChannels_, outputChannels_, remixChannelMatrix_);
-      remixBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
-                                      double(outputChannels_) /
-                                      double(nativeChannels_) +
-                                      0.5), 1);
-    }
-
-    // we implement our own remixing because ffmpeg supports
-    // a very limited subset of possible channel configurations:
-    if (output_.sampleRate_ != native_.sampleRate_)
-    {
-      resampleBuffer_.resize(std::size_t(double(nativeBuffer_.rowBytes()) *
-                                         double(outputBytesPerSample_) /
-                                         double(nativeBytesPerSample_) +
-                                         0.5), 1);
-    }
-
-    if (native_.sampleFormat_ != output_.sampleFormat_ ||
-        native_.sampleRate_ != output_.sampleRate_)
-    {
-      enum AVSampleFormat nativeFormat = yae_to_ffmpeg(native_.sampleFormat_);
-      enum AVSampleFormat outputFormat = yae_to_ffmpeg(output_.sampleFormat_);
-      resampleCtx_ = av_audio_resample_init(outputChannels_,
-                                            outputChannels_,
-                                            output_.sampleRate_,
-                                            native_.sampleRate_,
-                                            outputFormat,
-                                            nativeFormat,
-                                            16, // taps
-                                            10, // log2 phase count
-                                            0, // linear
-                                            0.8); // cutoff frequency
-    }
 
     // initialize the tempo filter:
     {
@@ -3273,7 +3511,7 @@ namespace yae
 #if 1
       avcodec_close(stream_->codec);
       codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-      err = avcodec_open(stream_->codec, codec_);
+      err = avcodec_open2(stream_->codec, codec_, NULL);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -3453,23 +3691,12 @@ namespace yae
   {
     protocols.clear();
 
-#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 13, 0)
     void * opaque = NULL;
     const char * name = NULL;
     while ((name = avio_enum_protocols(&opaque, 0)))
     {
       protocols.push_back(std::string(name));
     }
-#else
-    URLProtocol * protocol = NULL;
-    while ((protocol = av_protocol_next(protocol)))
-    {
-      if (protocol->url_read)
-      {
-        protocols.push_back(std::string(protocol->name));
-      }
-    }
-#endif
 
     return true;
   }
@@ -3584,8 +3811,7 @@ namespace yae
     subs_.clear();
     subsIdx_.clear();
 
-    av_close_input_file(context_);
-    context_ = NULL;
+    avformat_close_input(&context_);
   }
 
   //----------------------------------------------------------------
@@ -3865,7 +4091,7 @@ namespace yae
 
                 sf.data_ = buffer;
               }
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 47, 0)
+
               if (ffmpeg.side_data &&
                   ffmpeg.side_data->data &&
                   ffmpeg.side_data->size)
@@ -3878,7 +4104,7 @@ namespace yae
 
                 sf.sideData_ = buffer;
               }
-#endif
+
               if (subs->codec_)
               {
                 // decode the subtitle:
@@ -4074,7 +4300,7 @@ namespace yae
 
     if (err < 0)
     {
-#if 1
+#if 0
       std::cerr << "Movie::seek(" << seekTime << ") returned " << err
                 << std::endl;
 #endif
@@ -4461,9 +4687,7 @@ namespace yae
         avfilter_register_all();
         av_register_all();
 
-#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 13, 0)
         avformat_network_init();
-#endif
 
         av_lockmgr_register(&lockManager);
         ffmpegInitialized_ = true;

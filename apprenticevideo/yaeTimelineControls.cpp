@@ -693,7 +693,9 @@ namespace yae
       // this shouldn't happen, but for some reason it does on the Mac,
       // sometimes the timer remains active but the timeout signal is
       // never delivered; this is a workaround:
+#if 0
       std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
+#endif
       repaintTimer_.stop();
 
       updateAuxPlayhead(timelinePosition_);

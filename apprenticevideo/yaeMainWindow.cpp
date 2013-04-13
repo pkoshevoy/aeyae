@@ -1204,7 +1204,9 @@ namespace yae
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
     if (!reader->open(filename.c_str()))
     {
+#if 0
       std::cerr << "ERROR: could not open movie: " << filename << std::endl;
+#endif
       return false;
     }
 
@@ -1224,11 +1226,13 @@ namespace yae
     reader->threadStop();
     reader->setPlaybackInterval(true);
 
-    std::cout << std::endl
+#if 0
+    std::cerr << std::endl
               << "yae: " << filename << std::endl
               << "yae: video tracks: " << numVideoTracks << std::endl
               << "yae: audio tracks: " << numAudioTracks << std::endl
               << "yae: subs tracks: " << subsCount << std::endl;
+#endif
 
     if (audioTrackGroup_)
     {
@@ -1957,7 +1961,9 @@ namespace yae
   void
   MainWindow::playbackColorConverter()
   {
+#if 0
     std::cerr << "playbackColorConverter" << std::endl;
+#endif
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -1980,7 +1986,9 @@ namespace yae
   void
   MainWindow::playbackLoopFilter()
   {
+#if 0
     std::cerr << "playbackLoopFilter" << std::endl;
+#endif
     reader_->skipLoopFilter(actionSkipLoopFilter->isChecked());
   }
 
@@ -1990,7 +1998,9 @@ namespace yae
   void
   MainWindow::playbackNonReferenceFrames()
   {
+#if 0
     std::cerr << "playbackNonReferenceFrames" << std::endl;
+#endif
     reader_->skipNonReferenceFrames(actionSkipNonReferenceFrames->isChecked());
   }
 
@@ -2168,10 +2178,12 @@ namespace yae
   void
   MainWindow::togglePlayback()
   {
+#if 0
     std::cerr << "togglePlayback: "
               << !playbackPaused_ << " -> "
               << playbackPaused_
               << std::endl;
+#endif
 
     reader_->setPlaybackInterval(playbackPaused_);
 
@@ -2197,8 +2209,10 @@ namespace yae
   void
   MainWindow::audioSelectDevice(const QString & audioDevice)
   {
+#if 0
     std::cerr << "audioSelectDevice: "
               << audioDevice.toUtf8().constData() << std::endl;
+#endif
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -2220,7 +2234,9 @@ namespace yae
   void
   MainWindow::audioSelectTrack(int index)
   {
+#if 0
     std::cerr << "audioSelectTrack: " << index << std::endl;
+#endif
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -2244,7 +2260,9 @@ namespace yae
   void
   MainWindow::videoSelectTrack(int index)
   {
+#if 0
     std::cerr << "videoSelectTrack: " << index << std::endl;
+#endif
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -2268,7 +2286,9 @@ namespace yae
   void
   MainWindow::subsSelectTrack(int index)
   {
+#if 0
     std::cerr << "subsSelectTrack: " << index << std::endl;
+#endif
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -2529,6 +2549,7 @@ namespace yae
   void
   MainWindow::focusChanged(QWidget * prev, QWidget * curr)
   {
+#if 0
     std::cerr << "focus changed: " << prev << " -> " << curr;
     if (curr)
     {
@@ -2536,6 +2557,8 @@ namespace yae
                 << " (" << curr->metaObject()->className() << ")";
     }
     std::cerr << std::endl;
+#endif
+
 #ifdef __APPLE__
     if (!appleRemoteControl_ && curr)
     {
@@ -2775,11 +2798,13 @@ namespace yae
       if (rc)
       {
         rc->accept();
+#if 0
         std::cerr << "remote control: " << rc->buttonId_
                   << ", down: " << rc->pressedDown_
                   << ", clicks: " << rc->clickCount_
                   << ", held down: " << rc->heldDown_
                   << std::endl;
+#endif
 
         if (rc->buttonId_ == kRemoteControlPlayButton)
         {
@@ -2943,6 +2968,19 @@ namespace yae
   void
   MainWindow::keyPressEvent(QKeyEvent * event)
   {
+    std::size_t numAudioTracks = 0;
+    std::size_t numVideoTracks = 0;
+    std::size_t audioTrackIndex = 0;
+    std::size_t videoTrackIndex = 0;
+
+    if (reader_)
+    {
+      numAudioTracks = reader_->getNumberOfAudioTracks();
+      numVideoTracks = reader_->getNumberOfVideoTracks();
+      audioTrackIndex = reader_->getSelectedAudioTrackIndex();
+      videoTrackIndex = reader_->getSelectedVideoTrackIndex();
+    }
+
     int key = event->key();
     if (key == Qt::Key_Escape)
     {
@@ -2956,12 +2994,16 @@ namespace yae
     {
       emit setOutPoint();
     }
-#if 0
-    else if (key == Qt::Key_Right)
+    else if (key == Qt::Key_N &&
+             playbackPaused_ &&
+             videoTrackIndex < numVideoTracks)
     {
-      videoRenderer_->skipToNextFrame();
+      TTime t = videoRenderer_->skipToNextFrame();
+      if (audioTrackIndex < numAudioTracks)
+      {
+        audioRenderer_->skipToTime(t, reader_);
+      }
     }
-#endif
     else
     {
       event->ignore();
@@ -3065,8 +3107,11 @@ namespace yae
 
     xexpand_ = double(cw) / double(vw);
     yexpand_ = double(ch) / double(vh);
+
+#if 0
     std::cerr << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_
               << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -3164,12 +3209,15 @@ namespace yae
     int cdx = rectWindow.width() - rectClient.width();
     int cdy = rectWindow.height() - rectClient.height();
 
+#if 0
     std::cerr << "\ncanvas size set: " << xexpand << ", " << yexpand
               << std::endl
               << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
               << std::endl
               << "canvas move to: " << new_x << ", " << new_y
               << std::endl;
+#endif
+
     resize(new_w - cdx, new_h - cdy);
     // move(new_x, new_y);
   }
@@ -3308,16 +3356,18 @@ namespace yae
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-      std::cout << "yae: native format: ";
+#if 0
+      std::cerr << "yae: native format: ";
       if (ptts)
       {
-        std::cout << ptts->name_;
+        std::cerr << ptts->name_;
       }
       else
       {
-        std::cout << "unsupported" << std::endl;
+        std::cerr << "unsupported" << std::endl;
       }
-      std::cout << std::endl;
+      std::cerr << std::endl;
+#endif
 
 #if 1
       bool unsupported = ptts == NULL;
@@ -3384,14 +3434,15 @@ namespace yae
 
       if (ptts)
       {
-        std::cout << "yae: output format: " << ptts->name_
+#if 0
+        std::cerr << "yae: output format: " << ptts->name_
                   << ", par: " << vtts.pixelAspectRatio_
                   << ", " << vtts.visibleWidth_
                   << " x " << vtts.visibleHeight_;
 
         if (vtts.pixelAspectRatio_ != 0.0)
         {
-          std::cout << ", dar: "
+          std::cerr << ", dar: "
                     << (double(vtts.visibleWidth_) *
                         vtts.pixelAspectRatio_ /
                         double(vtts.visibleHeight_))
@@ -3401,8 +3452,9 @@ namespace yae
                     << " x " << vtts.visibleHeight_;
         }
 
-        std::cout << ", fps: " << vtts.frameRate_
+        std::cerr << ", fps: " << vtts.frameRate_
                   << std::endl;
+#endif
       }
       else
       {
@@ -3548,8 +3600,11 @@ namespace yae
 
        // FIXME: temporary for debugging on openSuSE
        // supported.channelLayout_ = kAudioStereo;
+#if 0
        std::cerr << "supported: " << supported.channelLayout_ << std::endl
                  << "required:  " << native.channelLayout_ << std::endl;
+#endif
+
        reader->setAudioTraitsOverride(supported);
      }
 

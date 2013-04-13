@@ -52,6 +52,8 @@ namespace yae
     //! terminate video rendering:
     void close();
 
+    const TTime & skipToNextFrame();
+
     //! the initial state after open(...) must be paused;
     //! use this to resume or pause the rendering thread loop;
     void pause(bool paused = true);

@@ -81,6 +81,83 @@ namespace yae
     return t;
   }
 
+  //----------------------------------------------------------------
+  // TTime::operator -=
+  //
+  TTime &
+  TTime::operator -= (const TTime & dt)
+  {
+    if (base_ == dt.base_)
+    {
+      time_ -= dt.time_;
+      return *this;
+    }
+
+    return operator -= (dt.toSeconds());
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator -
+  //
+  TTime
+  TTime::operator - (const TTime & dt) const
+  {
+    TTime t(*this);
+    t -= dt;
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator -
+  //
+  TTime &
+  TTime::operator -= (double dtSec)
+  {
+    time_ -= int64(dtSec * double(base_));
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator -
+  //
+  TTime
+  TTime::operator - (double dtSec) const
+  {
+    TTime t(*this);
+    t -= dtSec;
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator <
+  //
+  bool
+  TTime::operator < (const TTime & t) const
+  {
+    if (t.base_ == base_)
+    {
+      return time_ < t.time_;
+    }
+
+    return toSeconds() < t.toSeconds();
+  }
+
+  //----------------------------------------------------------------
+  // TTime::getTime
+  //
+  int64
+  TTime::getTime(uint64 base) const
+  {
+    if (base_ == base)
+    {
+      return time_;
+    }
+
+    TTime t(0, base);
+    t += *this;
+    return t.time_;
+  }
+
 
   //----------------------------------------------------------------
   // getBitsPerSample
@@ -104,6 +181,9 @@ namespace yae
       case kAudio32BitBigEndian:
       case kAudio32BitLittleEndian:
         return 32;
+
+      case kAudio64BitDouble:
+        return 64;
 
       default:
         break;

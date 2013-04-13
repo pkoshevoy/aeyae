@@ -1984,11 +1984,13 @@ namespace yae
         event->accept();
 
 #ifdef YAE_USE_LIBASS
+#if 0
         std::cerr << "LIBASS INIT DONE: "
                   << libassInitDoneEvent->libass_->finished_
                   << ", success: "
                   << libassInitDoneEvent->libass_->success_
                   << std::endl;
+#endif
         stopAsyncInitLibassThread();
         updateOverlay(true);
         refresh();
@@ -2879,12 +2881,14 @@ namespace yae
   {
     cropAutoDetectStop();
 
+#if 0
     std::cerr << "\nCROP FRAME AUTO DETECTED: "
               << "x = " << crop.x_ << ", "
               << "y = " << crop.y_ << ", "
               << "w = " << crop.w_ << ", "
               << "h = " << crop.h_
               << std::endl;
+#endif
 
     private_->cropFrame(crop);
   }

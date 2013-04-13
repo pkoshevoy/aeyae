@@ -573,6 +573,7 @@ namespace yae
     crop.w_ = (int)(w - x0 - rOffset - lOffset + 0.5);
     crop.h_ = (int)(h - y0 - bOffset - tOffset + 0.5);
 
+#if 0
     std::cerr
       << "\ncrop margins:\n"
       << "  left " << lOffset
@@ -584,6 +585,7 @@ namespace yae
       << "bottom " << bOffset
       << " group(" << bbest.size_ << "), " << bottomHistogram.size() << "\n"
       << std::endl;
+#endif
 
     return true;
   }

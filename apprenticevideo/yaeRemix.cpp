@@ -245,6 +245,18 @@ namespace yae
                    &dstChan[0],
                    -1.0, 1.0);
     }
+    else if (sampleFormat == kAudio64BitDouble)
+    {
+      remix<double>(channelMatrix,
+                    numSamples,
+                    srcStride,
+                    srcChannels,
+                    &srcChan[0],
+                    dstStride,
+                    dstChannels,
+                    &dstChan[0],
+                    -1.0, 1.0);
+    }
   }
 
 }

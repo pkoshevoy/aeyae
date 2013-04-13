@@ -82,6 +82,8 @@ namespace yae
     inline void resume()
     { pause(false); }
 
+    //! this is used for single-frame stepping while playback is paused:
+    virtual void skipToTime(const TTime & t, IReader * reader) = 0;
   };
 }
 

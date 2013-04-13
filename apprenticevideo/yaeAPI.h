@@ -102,6 +102,16 @@ namespace yae
     TTime & operator += (double dtSec);
     TTime operator + (double dtSec) const;
 
+    TTime & operator -= (const TTime & dt);
+    TTime operator - (const TTime & dt) const;
+
+    TTime & operator -= (double dtSec);
+    TTime operator - (double dtSec) const;
+
+    bool operator < (const TTime & t) const;
+
+    int64 getTime(uint64 base) const;
+
     inline double toSeconds() const
     { return double(time_) / double(base_); }
 
@@ -125,6 +135,7 @@ namespace yae
     kAudio32BitFloat         = 5, //!< [-1, 1]
     kAudio32BitBigEndian     = 6, //!< [-2147483648, 2147483647]
     kAudio32BitLittleEndian  = 7, //!< [-2147483648, 2147483647]
+    kAudio64BitDouble        = 8, //!< [-1, 1]
 
 #ifdef __BIG_ENDIAN__
     kAudio16BitNative        = kAudio16BitBigEndian,

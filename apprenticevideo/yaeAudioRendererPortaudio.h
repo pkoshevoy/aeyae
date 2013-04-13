@@ -76,6 +76,9 @@ namespace yae
     //! the initial state after open(...) must be paused;
     //! use this to resume or pause the rendering thread loop;
     virtual void pause(bool paused);
+
+    //! this is used for single-frame stepping while playback is paused:
+    virtual void skipToTime(const TTime & t, IReader * reader);
   };
 }
 

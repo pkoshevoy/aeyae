@@ -50,7 +50,7 @@ namespace yae
     // current time:
     TTime t0_;
 
-    // this keeps track of "when" someone annouced they will be late:
+    // this keeps track of "when" someone announced they will be late:
     boost::system_time waitForMe_;
 
     // how long to wait:

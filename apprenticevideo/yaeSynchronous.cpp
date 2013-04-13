@@ -187,7 +187,7 @@ namespace yae
       timeSegment.delayInSeconds_ = delayInSeconds;
       waitingFor_ = timeSegment.waitForMe_;
 
-#if 1
+#if 0
       std::cerr << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
                 << ", " << delayInSeconds
                 << std::endl;
@@ -252,7 +252,9 @@ namespace yae
     {
       waitingFor_ = waitFor;
 
+#if 0
       std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
+#endif
 
       TStopTime stopTime(timeSegment, allowsSettingTime());
       boost::this_thread::sleep(boost::posix_time::milliseconds
