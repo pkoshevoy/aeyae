@@ -98,7 +98,6 @@ namespace yae
       channels_(0),
       window_(0),
       tempo_(1.0),
-      drift_(0),
       nfrag_(0),
       state_(kLoadFragment)
     {
@@ -175,12 +174,14 @@ namespace yae
       size_ = 0;
       head_ = 0;
       tail_ = 0;
-      drift_ = 0;
       nfrag_ = 0;
       state_ = kLoadFragment;
 
       position_[0] = 0;
       position_[1] = 0;
+
+      origin_[0] = 0;
+      origin_[1] = 0;
 
       frag_[0].clear();
       frag_[1].clear();
@@ -202,6 +203,9 @@ namespace yae
         return false;
       }
 
+      const TAudioFragment & prev = prevFrag();
+      origin_[0] = prev.position_[0] + window_ / 2;
+      origin_[1] = prev.position_[1] + window_ / 2;
       tempo_ = tempo;
       return true;
     }
@@ -603,12 +607,20 @@ namespace yae
       const TAudioFragment & prev = prevFrag();
       TAudioFragment &       frag = currFrag();
 
+      const double prevOutputPosition =
+        (double)(prev.position_[1] - origin_[1] + window_ / 2);
+
+      const double idealOutputPosition =
+        (double)(prev.position_[0] - origin_[0] + window_ / 2) / tempo_;
+
+      const int drift = (int)(prevOutputPosition - idealOutputPosition);
+
       const int deltaMax = window_ / 2;
 
       const int correction = frag.alignTo(prev,
                                           window_,
                                           deltaMax,
-                                          drift_,
+                                          drift,
                                           correlation_.data<FFTSample>(),
                                           complexToReal_);
 
@@ -619,9 +631,6 @@ namespace yae
 
         // clear so that the fragment can be reloaded:
         frag.numSamples_ = 0;
-
-        // update cumulative correction drift counter:
-        drift_ += correction;
       }
 
       return correction;
@@ -664,8 +673,9 @@ namespace yae
     // tempo scaling factor:
     double tempo_;
 
-    // cumulative alignment drift:
-    int64 drift_;
+    // a snapshot of previous fragment input and output position values
+    // captured when the tempo scale factor was set most recently:
+    int64 origin_[2];
 
     // current/previous fragment ring-buffer:
     TAudioFragment frag_[2];
