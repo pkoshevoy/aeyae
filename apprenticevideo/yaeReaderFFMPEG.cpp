@@ -2586,7 +2586,9 @@ namespace yae
     bool sameTraits = (srcSampleRate_ == srcSampleRate &&
                        srcChannelLayout_ == srcChannelLayout &&
                        srcSampleFmt_ == srcSampleFmt &&
+                       dstSampleRate_[0] == dstSampleRate &&
                        dstSampleFmt_[0] == dstSampleFmt &&
+                       dstChannelLayout_[0] == dstChannelLayout &&
                        filterChain_ == filterChain);
 
     if (frameTraitsChanged)
