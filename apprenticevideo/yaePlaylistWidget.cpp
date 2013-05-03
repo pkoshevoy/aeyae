@@ -190,8 +190,18 @@ namespace yae
         }
 
         QFileInfo parseKey(key);
-        QString base = parseKey.completeBaseName();
-        QString ext = parseKey.suffix();
+        QString base;
+        QString ext;
+
+        if (keys.empty())
+        {
+          base = parseKey.completeBaseName();
+          ext = parseKey.suffix();
+        }
+        else
+        {
+          base = parseKey.fileName();
+        }
 
         key = prepareForSorting(base);
         if (!ext.isEmpty())
