@@ -218,6 +218,51 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // isNumeric
+  //
+  bool
+  isNumeric(const QChar & c)
+  {
+    return c >= QChar('0') && c <= QChar('9');
+  }
+
+  //----------------------------------------------------------------
+  // isNumeric
+  //
+  int
+  isNumeric(const QString & key)
+  {
+    const int size = key.size();
+    for (int i = 0; i < size; i++)
+    {
+      QChar c = key[i];
+      if (!isNumeric(c))
+      {
+        return 0;
+      }
+    }
+
+    return size;
+  }
+
+  //----------------------------------------------------------------
+  // capitalize
+  //
+  static QString
+  capitalize(const QString & word)
+  {
+    if (word.isEmpty())
+    {
+      YAE_ASSERT(false);
+      return word;
+    }
+
+    QString out = word;
+    out[0] = out[0].toUpper();
+    return out;
+  }
+
+  //----------------------------------------------------------------
   // splitOnVersion
   //
   static void
@@ -243,7 +288,7 @@ namespace yae
 
       if (versionTag != 0)
       {
-        if (!c.isNumber())
+        if (!isNumeric(c))
         {
           token += versionTag;
         }
@@ -251,7 +296,7 @@ namespace yae
         {
           if (!token.isEmpty())
           {
-            tokens.push_back(token);
+            tokens.push_back(capitalize(token));
           }
 
           token = QString(versionTag);
@@ -263,7 +308,7 @@ namespace yae
       else
       {
         std::size_t tagIndex =
-          c0.isNumber() ?
+          isNumeric(c0) ?
           indexOf(c.toLower(), kVersionTags, numTags) :
           numTags;
 
@@ -287,7 +332,7 @@ namespace yae
 
     if (!token.isEmpty())
     {
-      tokens.push_back(token);
+      tokens.push_back(capitalize(token));
     }
   }
 
@@ -308,13 +353,14 @@ namespace yae
     {
       QChar c1 = key[i];
 
-      if (// c0.isNumber() &&
-          // c1.isLetter() ||
-          c0.isLetter() &&
-          (// c1.isNumber() ||
-           c1.isLetter() && c0.isLower() && !c1.isLower()))
+      if (c0.isLetter() && c1.isLetter() && c0.isLower() && !c1.isLower())
       {
         splitOnVersion(token, tokens);
+        token = QString();
+      }
+      else if (isNumeric(token) && !isNumeric(c1))
+      {
+        tokens.push_back(token);
         token = QString();
       }
 
@@ -497,25 +543,6 @@ namespace yae
     std::list<QString> words;
     splitIntoWords(key, words);
     return toQString(words, false);
-  }
-
-  //----------------------------------------------------------------
-  // isNumeric
-  //
-  int
-  isNumeric(const QString & key)
-  {
-    const int size = key.size();
-    for (int i = 0; i < size; i++)
-    {
-      QChar c = key[i];
-      if (!c.isNumber())
-      {
-        return 0;
-      }
-    }
-
-    return size;
   }
 
   //----------------------------------------------------------------

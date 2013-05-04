@@ -29,9 +29,25 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // PlaylistKey
+  //
+  struct PlaylistKey
+  {
+    PlaylistKey(const QString & key = QString(),
+                const QString & ext = QString());
+
+    bool operator == (const PlaylistKey & k) const;
+    bool operator < (const PlaylistKey & k) const;
+    bool operator > (const PlaylistKey & k) const;
+
+    QString key_;
+    QString ext_;
+  };
+
+  //----------------------------------------------------------------
   // TPlaylistTree
   //
-  typedef Tree<QString, QString> TPlaylistTree;
+  typedef Tree<PlaylistKey, QString> TPlaylistTree;
 
   //----------------------------------------------------------------
   // PlaylistItem
@@ -41,7 +57,7 @@ namespace yae
     PlaylistItem();
 
     // playlist item key within the fringe group it belongs to:
-    QString key_;
+    PlaylistKey key_;
 
     // absolute path to the playlist item:
     QString path_;
@@ -71,7 +87,7 @@ namespace yae
 
     // complete key path to the fringe group that corresponds to this
     // playlist group:
-    std::list<QString> keyPath_;
+    std::list<PlaylistKey> keyPath_;
 
     // human friendly text describing this playlist item group:
     QString name_;

@@ -61,6 +61,58 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PlaylistKey::PlaylistKey
+  //
+  PlaylistKey::PlaylistKey(const QString & key, const QString & ext):
+    key_(key),
+    ext_(ext)
+  {}
+
+  //----------------------------------------------------------------
+  // PlaylistKey::operator
+  //
+  bool
+  PlaylistKey::operator == (const PlaylistKey & k) const
+  {
+    int diff = key_.compare(k.key_);
+    if (diff)
+    {
+      return false;
+    }
+
+    return ext_ == k.ext_;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistKey::operator <
+  //
+  bool
+  PlaylistKey::operator < (const PlaylistKey & k) const
+  {
+    int diff = key_.compare(k.key_);
+    if (diff)
+    {
+      return diff < 0;
+    }
+
+    return ext_ < k.ext_;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistKey::operator >
+  //
+  bool PlaylistKey::operator > (const PlaylistKey & k) const
+  {
+    int diff = key_.compare(k.key_);
+    if (diff)
+    {
+      return diff > 0;
+    }
+
+    return ext_ > k.ext_;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
   //
   PlaylistItem::PlaylistItem():
@@ -132,6 +184,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // toWords
+  //
+  static QString
+  toWords(const std::list<PlaylistKey> & keys)
+  {
+    std::list<QString> words;
+    for (std::list<PlaylistKey>::const_iterator i = keys.begin();
+         i != keys.end(); ++i)
+    {
+      const PlaylistKey & key = *i;
+      splitIntoWords(key.key_, words);
+
+      if (!key.ext_.isEmpty())
+      {
+        words.push_back(key.ext_);
+      }
+    }
+
+    return toQString(words, true);
+  }
+
+  //----------------------------------------------------------------
   // PlaylistWidget::add
   //
   void
@@ -180,7 +254,7 @@ namespace yae
       }
 
       // tokenize it, convert into a tree key path:
-      std::list<QString> keys;
+      std::list<PlaylistKey> keys;
       while (true)
       {
         QString key = fi.fileName();
@@ -204,13 +278,7 @@ namespace yae
         }
 
         key = prepareForSorting(base);
-        if (!ext.isEmpty())
-        {
-          key += QChar::fromAscii('.');
-          key += ext;
-        }
-
-        keys.push_front(key);
+        keys.push_front(PlaylistKey(key, ext));
 
         QString next = fi.absolutePath();
         fi = QFileInfo(next);
@@ -243,13 +311,13 @@ namespace yae
       group.offset_ = numItems_;
 
       // shortcuts:
-      typedef std::map<QString, QString> TSiblings;
+      typedef std::map<PlaylistKey, QString> TSiblings;
       const TSiblings & siblings = fringeGroup.siblings_;
 
       for (TSiblings::const_iterator j = siblings.begin();
            j != siblings.end(); ++j, ++numItems_)
       {
-        const QString & key = j->first;
+        const PlaylistKey & key = j->first;
         const QString & value = j->second;
 
         group.items_.push_back(PlaylistItem());
@@ -258,9 +326,8 @@ namespace yae
         playlistItem.key_ = key;
         playlistItem.path_ = value;
 
-        QFileInfo fi(key);
-        playlistItem.name_ = toWords(fi.completeBaseName());
-        playlistItem.ext_ = fi.suffix();
+        playlistItem.name_ = toWords(key.key_);
+        playlistItem.ext_ = key.ext_;
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
@@ -727,7 +794,7 @@ namespace yae
         highlighted_ = newIndex;
 
         // 1. remove the item from the tree:
-        std::list<QString> keyPath = group.keyPath_;
+        std::list<PlaylistKey> keyPath = group.keyPath_;
         keyPath.push_back(item.key_);
         tree_.remove(keyPath);
 
@@ -799,7 +866,7 @@ namespace yae
       // remove item from the tree:
       {
         PlaylistItem & item = *iter;
-        std::list<QString> keyPath = group.keyPath_;
+        std::list<PlaylistKey> keyPath = group.keyPath_;
         keyPath.push_back(item.key_);
         tree_.remove(keyPath);
       }
@@ -831,7 +898,7 @@ namespace yae
       {
         // remove item from the tree:
         PlaylistItem & item = *iter;
-        std::list<QString> keyPath = group.keyPath_;
+        std::list<PlaylistKey> keyPath = group.keyPath_;
         keyPath.push_back(item.key_);
         tree_.remove(keyPath);
       }
