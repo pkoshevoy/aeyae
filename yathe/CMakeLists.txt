@@ -88,16 +88,16 @@ add_library(the_core STATIC
   doc/the_graph_node_ref.cxx
   )
 
-install(FILES 
+install(FILES
   FindFFTW.cmake
   FindGLEW.cmake
   FindYATHE.cmake
-  
-  DESTINATION 
+
+  DESTINATION
   share/cmake/Modules)
 
 install(TARGETS the_core DESTINATION lib)
-install(FILES 
+install(FILES
   math/the_aa_bbox.hxx
   math/the_linear_algebra.hxx
   math/the_ray.hxx
@@ -117,11 +117,11 @@ install(FILES
   math/the_view_volume.hxx
   math/the_coord_sys.hxx
   math/the_plane.hxx
-  
-  DESTINATION 
+
+  DESTINATION
   include/math)
 
-install(FILES 
+install(FILES
   thread/the_boost_thread_storage.hxx
   thread/the_thread_storage.hxx
   thread/the_thread_pool.hxx
@@ -131,11 +131,11 @@ install(FILES
   thread/the_boost_thread.hxx
   thread/the_thread_interface.hxx
   thread/the_terminator.hxx
-  
-  DESTINATION 
+
+  DESTINATION
   include/thread)
 
-install(FILES 
+install(FILES
   utils/the_dynamic_array.hxx
   utils/the_bit_tree.hxx
   utils/the_walltime.hxx
@@ -154,24 +154,24 @@ install(FILES
   utils/the_domain_array.hxx
   utils/histogram.hxx
   utils/the_utils.hxx
-  
-  DESTINATION 
+
+  DESTINATION
   include/utils)
 
-install(FILES 
+install(FILES
   io/io_base.hxx
   io/the_file_io.hxx
-  
-  DESTINATION 
+
+  DESTINATION
   include/io)
 
-install(FILES 
+install(FILES
   doc/the_registry.hxx
   doc/the_graph.hxx
   doc/the_graph_node.hxx
   doc/the_graph_node_ref.hxx
-  
-  DESTINATION 
+
+  DESTINATION
   include/doc)
 
 find_package(GLEW)
@@ -179,7 +179,7 @@ if (GLEW_FOUND)
   find_package(OpenGL REQUIRED)
 
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
-  
+
   add_library(the_ui STATIC
     doc/the_document.cxx
     doc/the_document_so.cxx
@@ -230,17 +230,17 @@ if (GLEW_FOUND)
     )
 
   install(TARGETS the_ui DESTINATION lib)
-  install(FILES 
+  install(FILES
     doc/the_procedure.hxx
     doc/the_document_so.hxx
     doc/the_document.hxx
     doc/the_primitive.hxx
     doc/the_reference.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/doc)
 
-  install(FILES 
+  install(FILES
     eh/the_keybd_device.hxx
     eh/the_document_eh.hxx
     eh/the_modifier.hxx
@@ -250,11 +250,11 @@ if (GLEW_FOUND)
     eh/the_input_device.hxx
     eh/the_view_mgr_eh.hxx
     eh/the_input_device_event.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/eh)
 
-  install(FILES 
+  install(FILES
     geom/the_tensurf.hxx
     geom/the_bspline.hxx
     geom/the_polyline.hxx
@@ -264,21 +264,21 @@ if (GLEW_FOUND)
     geom/the_triangle_mesh.hxx
     geom/the_bvh.hxx
     geom/the_curve.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/geom)
 
-  install(FILES 
+  install(FILES
     image/texture.hxx
     image/image_tile_generator.hxx
     image/la_pixel_converter.hxx
     image/image_tile.hxx
     image/texture_data.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/image)
 
-  install(FILES 
+  install(FILES
     opengl/the_view.hxx
     opengl/the_vertex.hxx
     opengl/OpenGLCapabilities.h
@@ -295,48 +295,48 @@ if (GLEW_FOUND)
     opengl/the_palette.hxx
     opengl/the_view_mgr_orientation.hxx
     opengl/the_font.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/opengl)
 
-  install(FILES 
+  install(FILES
     sel/the_pick_list.hxx
     sel/the_pick_rec.hxx
     sel/the_pick_filter.hxx
     sel/the_curve_selset.hxx
     sel/the_selset.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/sel)
 
-  install(FILES 
+  install(FILES
     ui/the_cursor.hxx
     ui/the_desktop_metrics.hxx
     ui/the_trail.hxx
     ui/the_procedure_ui.hxx
     ui/the_document_ui.hxx
-    
-    DESTINATION 
+
+    DESTINATION
     include/ui)
 
   find_package(Qt4)
   if (QT4_FOUND)
     include(${QT_USE_FILE})
-    
+
     include_directories(AFTER
       ${QT_INCLUDE_DIR}
       ${QT_QTOPENGL_INCLUDE_DIR}
       )
-    
+
     set(moc_hxx
-      Qt4/the_qt_trail.hxx	
+      Qt4/the_qt_trail.hxx
       Qt4/the_qt_view.hxx
       Qt4/the_qt_thread.hxx
       Qt4/the_qt_thread_pool.hxx
       )
-    
+
     qt4_wrap_cpp(moc_cxx ${moc_hxx})
-    
+
     add_library(the_ui_qt4 STATIC
       ${moc_cxx}
       Qt4/qimage_pixel_converter.cxx
@@ -347,9 +347,9 @@ if (GLEW_FOUND)
       Qt4/the_qt_view.cxx
       Qt4/the_qt_mutex.cxx
       )
-    
+
     install(TARGETS the_ui_qt4 DESTINATION lib)
-    install(FILES 
+    install(FILES
       Qt4/the_qt_thread_pool.hxx
       Qt4/the_qt_desktop_metrics.hxx
       Qt4/the_qt_input_device_event.hxx
@@ -359,16 +359,16 @@ if (GLEW_FOUND)
       Qt4/qimage_pixel_converter.hxx
       Qt4/the_qt_trail.hxx
       Qt4/the_qt_mutex.hxx
-      
-      DESTINATION 
+
+      DESTINATION
       include/Qt4)
 
   endif (QT4_FOUND)
-  
+
   find_package(FLTK)
   if (FLTK_FOUND)
     include_directories(AFTER ${FLTK_INCLUDE_DIR})
-    
+
     add_library(the_ui_fltk STATIC
       FLTK/Fl_Knot_Vector.cxx
       FLTK/the_fltk_input_device_event.cxx
@@ -376,35 +376,35 @@ if (GLEW_FOUND)
       FLTK/the_fltk_trail.cxx
       FLTK/the_fltk_view.cxx
       )
-    
+
     install(TARGETS the_ui_fltk DESTINATION lib)
-    install(FILES 
+    install(FILES
       FLTK/the_fltk_view.hxx
       FLTK/Fl_Knot_Vector.H
       FLTK/the_fltk_input_device_event.hxx
       FLTK/the_fltk_std_widgets.hxx
       FLTK/the_fltk_trail.hxx
 
-      DESTINATION 
+      DESTINATION
       include/FLTK)
 
   endif (FLTK_FOUND)
-  
+
   find_package(Qt3)
   if (QT3_FOUND)
     add_definitions(-DQT_THREAD_SUPPORT)
-    
+
     include_directories(BEFORE
       ${QT3_INCLUDE_DIR}
       )
-    
+
     set(moc3_hxx
-      Qt3/the_qt_trail.hxx	
+      Qt3/the_qt_trail.hxx
       Qt3/the_qt_view.hxx
       )
-    
+
     qt3_wrap_cpp(moc3_cxx ${moc3_hxx})
-    
+
     add_library(the_ui_qt3 STATIC
       ${moc3_cxx}
       Qt3/qimage_pixel_converter.cxx
@@ -414,9 +414,9 @@ if (GLEW_FOUND)
       Qt3/the_qt_view.cxx
       Qt3/the_qt_mutex.cxx
       )
-    
+
     install(TARGETS the_ui_qt3 DESTINATION lib)
-    install(FILES 
+    install(FILES
       Qt3/the_qt_desktop_metrics.hxx
       Qt3/the_qt_input_device_event.hxx
       Qt3/the_qt_thread.hxx
@@ -425,8 +425,8 @@ if (GLEW_FOUND)
       Qt3/qimage_pixel_converter.hxx
       Qt3/the_qt_trail.hxx
       Qt3/the_qt_mutex.hxx
-      
-      DESTINATION 
+
+      DESTINATION
       include/Qt3)
 
   endif (QT3_FOUND)
