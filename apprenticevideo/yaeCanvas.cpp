@@ -2446,6 +2446,70 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // calcFrameTransform
+  //
+  static void
+  calcFrameTransform(double bbox_w,
+                     double bbox_h,
+                     double frame_w,
+                     double frame_h,
+                     double & offset_x,
+                     double & offset_y,
+                     double & scaled_w,
+                     double & scaled_h)
+  {
+    double bbox_ar = double(bbox_w) / double(bbox_h);
+    double frame_ar = double(frame_w) / double(frame_h);
+
+    offset_x = 0;
+    offset_y = 0;
+    scaled_w = bbox_w;
+    scaled_h = bbox_h;
+
+    if (frame_ar < bbox_ar)
+    {
+      scaled_w = bbox_h * frame_ar;
+      offset_x = 0.5 * (bbox_w - scaled_w);
+    }
+    else
+    {
+      scaled_h = bbox_w / frame_ar;
+      offset_y = 0.5 * (bbox_h - scaled_h);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TScaledFrame
+  //
+  struct TScaledFrame
+  {
+    double x_;
+    double y_;
+    double w_;
+    double h_;
+  };
+
+  //----------------------------------------------------------------
+  // calcFrameTransform
+  //
+  inline static void
+  calcFrameTransform(double bbox_w,
+                     double bbox_h,
+                     double frame_w,
+                     double frame_h,
+                     TScaledFrame & f)
+  {
+    calcFrameTransform(bbox_w,
+                       bbox_h,
+                       frame_w,
+                       frame_h,
+                       f.x_,
+                       f.y_,
+                       f.w_,
+                       f.h_);
+  }
+
+  //----------------------------------------------------------------
   // Canvas::loadSubs
   //
   bool
@@ -2459,7 +2523,6 @@ namespace yae
     double imageWidth = 0.0;
     double imageHeight = 0.0;
     private_->imageWidthHeight(imageWidth, imageHeight);
-    double dar = imageWidth / imageHeight;
 
     double w = this->width();
     double h = this->height();
@@ -2476,22 +2539,12 @@ namespace yae
       w = 1024.0;
     }
 
-    double car = w / h;
     double fw = w;
     double fh = h;
     double fx = 0;
     double fy = 0;
 
-    if (dar < car)
-    {
-      fw = h * dar;
-      fx = 0.5 * (w - fw);
-    }
-    else
-    {
-      fh = w / dar;
-      fy = 0.5 * (h - fh);
-    }
+    calcFrameTransform(w, h, imageWidth, imageHeight, fx, fy, fw, fh);
 
     int ix = int(fx);
     int iy = int(fy);
@@ -2543,11 +2596,14 @@ namespace yae
           double rw = double(subs.rw_ ? subs.rw_ : imageWidth);
           double rh = double(subs.rh_ ? subs.rh_ : imageHeight);
 
-          double sx = fw / rw;
-          double sy = fh / rh;
+          TScaledFrame sf;
+          calcFrameTransform(w, h, rw, rh, sf);
 
-          QPoint dstPos((int)(fx + sx * double(r.x_)),
-                        (int)(fy + sy * double(r.y_)));
+          double sx = sf.w_ / rw;
+          double sy = sf.h_ / rh;
+
+          QPoint dstPos((int)(sx * double(r.x_) + sf.x_),
+                        (int)(sy * double(r.y_) + sf.y_));
           QSize dstSize((int)(sx * double(r.w_)),
                         (int)(sy * double(r.h_)));
 
