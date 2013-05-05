@@ -601,6 +601,8 @@ namespace yae
 
         if (codec_)
         {
+          av_opt_set(stream_->codec, "threads", "auto", 0);
+          av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
           int err = avcodec_open2(stream_->codec, codec_, NULL);
           if (err < 0)
           {
@@ -916,7 +918,14 @@ namespace yae
       return false;
     }
 
-    int err = codec_ ? avcodec_open2(stream_->codec, codec_, NULL) : 0;
+    int err = 0;
+    if (codec_)
+    {
+      av_opt_set(stream_->codec, "threads", "auto", 0);
+      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
+      err = avcodec_open2(stream_->codec, codec_, NULL);
+    }
+
     if (err < 0)
     {
       // unsupported codec:
@@ -1091,7 +1100,7 @@ namespace yae
                const char * filterChain = NULL,
                bool * frameTraitsChanged = NULL);
 
-    bool push(const AVFrame * in);
+    bool push(AVFrame * in);
     bool pull(AVFrame * out);
 
   protected:
@@ -1279,9 +1288,9 @@ namespace yae
   // VideoFilterGraph::push
   //
   bool
-  VideoFilterGraph::push(const AVFrame * frame)
+  VideoFilterGraph::push(AVFrame * frame)
   {
-    int err = av_buffersrc_write_frame(src_, frame);
+    int err = av_buffersrc_add_frame_flags(src_, frame, 0);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
@@ -1546,10 +1555,12 @@ namespace yae
       if (skipLoopFilter_)
       {
         stream_->codec->skip_loop_filter = AVDISCARD_ALL;
+        stream_->codec->flags2 |= CODEC_FLAG2_FAST;
       }
       else
       {
         stream_->codec->skip_loop_filter = AVDISCARD_DEFAULT;
+        stream_->codec->flags2 &= ~(CODEC_FLAG2_FAST);
       }
     }
   }
@@ -2343,6 +2354,9 @@ namespace yae
 #if 1
       avcodec_close(stream_->codec);
       codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+
+      av_opt_set(stream_->codec, "threads", "auto", 0);
+      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
       err = avcodec_open2(stream_->codec, codec_, NULL);
       YAE_ASSERT(err >= 0);
 #endif
@@ -2491,7 +2505,7 @@ namespace yae
                const char * filterChain = NULL,
                bool * frameTraitsChanged = NULL);
 
-    bool push(const AVFrame * in);
+    bool push(AVFrame * in);
     bool pull(AVFrame * out);
 
   protected:
@@ -2709,9 +2723,9 @@ namespace yae
   // AudioFilterGraph::push
   //
   bool
-  AudioFilterGraph::push(const AVFrame * frame)
+  AudioFilterGraph::push(AVFrame * frame)
   {
-    int err = av_buffersrc_write_frame(src_, frame);
+    int err = av_buffersrc_add_frame_flags(src_, frame, 0);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
@@ -2740,6 +2754,9 @@ namespace yae
   struct AudioTrack : public Track
   {
     AudioTrack(AVFormatContext * context, AVStream * stream);
+
+    // virtual:
+    ~AudioTrack();
 
     // virtual:
     bool open();
@@ -2823,6 +2840,15 @@ namespace yae
 
     // match output queue size to input queue size:
     frameQueue_.setMaxSize(packetQueue_.getMaxSize());
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::~AudioTrack
+  //
+  AudioTrack::~AudioTrack()
+  {
+    delete tempoFilter_;
+    tempoFilter_ = NULL;
   }
 
   //----------------------------------------------------------------
@@ -3270,6 +3296,10 @@ namespace yae
         {
           tempoFilter_ = new TAudioTempoFilterF32();
         }
+        else if (output_.sampleFormat_ == kAudio64BitDouble)
+        {
+          tempoFilter_ = new TAudioTempoFilterF64();
+        }
 
         if (tempoFilter_)
         {
@@ -3513,6 +3543,9 @@ namespace yae
 #if 1
       avcodec_close(stream_->codec);
       codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+
+      av_opt_set(stream_->codec, "threads", "auto", 0);
+      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
       err = avcodec_open2(stream_->codec, codec_, NULL);
       YAE_ASSERT(err >= 0);
 #endif
