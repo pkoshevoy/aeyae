@@ -713,6 +713,11 @@ namespace yae
   //
   typedef AudioTempoFilter<float, -1, 1> TAudioTempoFilterF32;
 
+  //----------------------------------------------------------------
+  // TAudioTempoFilterF64
+  //
+  typedef AudioTempoFilter<double, -1, 1> TAudioTempoFilterF64;
+
 }
 
 
