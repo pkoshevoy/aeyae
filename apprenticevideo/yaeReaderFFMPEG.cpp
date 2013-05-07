@@ -173,6 +173,53 @@ namespace yae
   //
   typedef Queue<TAudioFramePtr> TAudioFrameQueue;
 
+  //----------------------------------------------------------------
+  // TAVFrameBuffer
+  //
+  struct YAE_API TAVFrameBuffer : public IPlanarBuffer
+  {
+    AVFrame * frame_;
+
+    TAVFrameBuffer(AVFrame * src)
+    {
+      // this is a shallow reference counted copy:
+      frame_ = av_frame_clone(src);
+    }
+
+    // virtual:
+    ~TAVFrameBuffer()
+    {
+      av_frame_unref(frame_);
+      av_freep(&frame_);
+    }
+
+    // virtual:
+    void destroy()
+    {
+      delete this;
+    }
+
+    // virtual:
+    std::size_t planes() const
+    {
+      enum AVPixelFormat pix_fmt = (enum AVPixelFormat)frame_->format;
+      int n = av_pix_fmt_count_planes(pix_fmt);
+      YAE_ASSERT(n >= 0);
+      return (std::size_t)n;
+    }
+
+    // virtual:
+    unsigned char * data(std::size_t plane) const
+    {
+      return frame_->data[plane];
+    }
+
+    // virtual:
+    std::size_t rowBytes(std::size_t plane) const
+    {
+      return frame_->linesize[plane];
+    }
+  };
 
   //----------------------------------------------------------------
   // TSubsPrivate
@@ -1980,15 +2027,56 @@ namespace yae
 
         vf.traits_ = output_;
 
-        TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
-                                      &IPlanarBuffer::deallocator);
-        for (unsigned char i = 0; i < numSamplePlanes_; i++)
+
+        if (avFrame->linesize[0] > 0)
         {
-          std::size_t rowBytes = sampleLineSize_[i];
-          std::size_t rows = samplePlaneSize_[i] / rowBytes;
-          sampleBuffer->resize(i, rowBytes, rows);
+          // use AVFrame directly:
+          TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(avFrame),
+                                         &IPlanarBuffer::deallocator);
+          vf.traits_.encodedWidth_ = avFrame->width;
+          vf.traits_.encodedHeight_ = avFrame->height;
+          vf.data_ = sampleBuffer;
         }
-        vf.data_ = sampleBuffer;
+        else
+        {
+          // upside-down frame, copy the sample planes:
+          TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
+                                        &IPlanarBuffer::deallocator);
+          for (unsigned char i = 0; i < numSamplePlanes_; i++)
+          {
+            std::size_t rowBytes = sampleLineSize_[i];
+            std::size_t rows = samplePlaneSize_[i] / rowBytes;
+            sampleBuffer->resize(i, rowBytes, rows);
+          }
+          vf.data_ = sampleBuffer;
+
+          const pixelFormat::Traits * ptts =
+            pixelFormat::getTraits(output_.pixelFormat_);
+
+          for (unsigned char i = 0; i < numSamplePlanes_; i++)
+          {
+            std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
+            std::size_t dstRows = sampleBuffer->rows(i);
+            unsigned char * dst = sampleBuffer->data(i);
+
+            std::size_t srcRowBytes = avFrame->linesize[i];
+            std::size_t srcRows = avFrame->height;
+            if (i > 0)
+            {
+              srcRows /= ptts->chromaBoxH_;
+            }
+            const unsigned char * src = avFrame->data[i];
+
+            std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
+            std::size_t copyRows = std::min(srcRows, dstRows);
+            for (std::size_t i = 0; i < copyRows; i++)
+            {
+              memcpy(dst, src, copyRowBytes);
+              src += srcRowBytes;
+              dst += dstRowBytes;
+            }
+          }
+        }
 
         // don't forget about tempo scaling:
         {
@@ -2017,34 +2105,6 @@ namespace yae
             subs.expungeOldSubs(v0);
 
             subs.get(v0, v1, vf.subs_);
-          }
-        }
-
-        // copy the sample planes:
-        const pixelFormat::Traits * ptts =
-          pixelFormat::getTraits(output_.pixelFormat_);
-
-        for (unsigned char i = 0; i < numSamplePlanes_; i++)
-        {
-          std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
-          std::size_t dstRows = sampleBuffer->rows(i);
-          unsigned char * dst = sampleBuffer->data(i);
-
-          std::size_t srcRowBytes = avFrame->linesize[i];
-          std::size_t srcRows = avFrame->height;
-          if (i > 0)
-          {
-            srcRows /= ptts->chromaBoxH_;
-          }
-          const unsigned char * src = avFrame->data[i];
-
-          std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
-          std::size_t copyRows = std::min(srcRows, dstRows);
-          for (std::size_t i = 0; i < copyRows; i++)
-          {
-            memcpy(dst, src, copyRowBytes);
-            src += srcRowBytes;
-            dst += dstRowBytes;
           }
         }
 
