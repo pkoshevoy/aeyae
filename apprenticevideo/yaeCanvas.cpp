@@ -838,8 +838,6 @@ namespace yae
       }
 #endif
 
-      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
       glTexImage2D(GL_TEXTURE_RECTANGLE_EXT,
                    0, // always level-0 for GL_TEXTURE_RECTANGLE_EXT
                    internalFormatGL,
@@ -1216,7 +1214,6 @@ namespace yae
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
       glPixelStorei(GL_UNPACK_ROW_LENGTH, vtts.encodedWidth_);
-      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       yae_assert_gl_no_error();
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
