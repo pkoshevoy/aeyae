@@ -193,6 +193,16 @@ getTrack(const std::deque<TTrack> & tracks, uint64 trackNo)
   return NULL;
 }
 
+//----------------------------------------------------------------
+// getOffset
+//
+static double
+getOffset(const std::map<uint64, double> & tsOffset, uint64 trackNo)
+{
+  std::map<uint64, double>::const_iterator found = tsOffset.find(trackNo);
+  return (found == tsOffset.end()) ? 0.0 : found->second;
+}
+
 
 //----------------------------------------------------------------
 // LoaderSkipClusterPayload
@@ -591,7 +601,8 @@ struct TCue
 //
 struct TRemuxer : public LoadWithProgress
 {
-  TRemuxer(const TTrackMap & trackSrcDst,
+  TRemuxer(const std::map<uint64, double> & tsOffset,
+           const TTrackMap & trackSrcDst,
            const TTrackMap & trackDstSrc,
            const TSegment & srcSeg,
            TSegment & dstSeg,
@@ -599,7 +610,10 @@ struct TRemuxer : public LoadWithProgress
            FileStorage & dst,
            IStorage & tmp);
 
-  void remux(uint64 t0, uint64 t1, bool extractFromKeyframe, bool fixKeyFlag);
+  void remux(uint64 t0,
+             uint64 t1,
+             bool extractFromKeyframe,
+             bool fixKeyFlag);
   void flush();
 
   // Returns true if the given Block/SimpleBlock/EncryptedBlock
@@ -619,6 +633,7 @@ struct TRemuxer : public LoadWithProgress
   void finishCurrentCluster();
   void addCuePoint(TBlockInfo * binfo);
 
+  const std::map<uint64, double> & tsOffset_;
   const TTrackMap & trackSrcDst_;
   const TTrackMap & trackDstSrc_;
   const TSegment & srcSeg_;
@@ -647,7 +662,8 @@ struct TRemuxer : public LoadWithProgress
 //----------------------------------------------------------------
 // TRemuxer::TRemuxer
 //
-TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
+TRemuxer::TRemuxer(const std::map<uint64, double> & tsOffset,
+                   const TTrackMap & trackSrcDst,
                    const TTrackMap & trackDstSrc,
                    const TSegment & srcSeg,
                    TSegment & dstSeg,
@@ -655,6 +671,7 @@ TRemuxer::TRemuxer(const TTrackMap & trackSrcDst,
                    FileStorage & dst,
                    IStorage & tmp):
   LoadWithProgress(src.file_.size()),
+  tsOffset_(tsOffset),
   trackSrcDst_(trackSrcDst),
   trackDstSrc_(trackDstSrc),
   srcSeg_(srcSeg),
@@ -1135,7 +1152,6 @@ isH264Keyframe(const HodgePodge * data)
   return intraRefresh;
 }
 
-
 //----------------------------------------------------------------
 // TRemuxer::remux
 //
@@ -1499,6 +1515,11 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
     return false;
   }
 
+  // lookup timestamp offset:
+  double dtSeconds = getOffset(tsOffset_, srcTrackNo);
+  int64 dt = (int64)(double(NANOSEC_PER_SEC / lace_.timecodeScale_) *
+                     dtSeconds);
+
   const uint64 blockSize = blockData->numBytes();
   HodgePodgeConstIter blockDataIter(*blockData);
   binfo.header_ = blockDataIter.receipt(0, bytesRead);
@@ -1507,6 +1528,14 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   binfo.trackNo_ = found->second;
   binfo.pts_ = clusterTime + binfo.block_.getRelativeTimecode();
   binfo.dts_ = binfo.pts_;
+
+  if (dt < 0 && (binfo.pts_ < -dt || binfo.dts_ < -dt))
+  {
+    return false;
+  }
+
+  binfo.pts_ += dt;
+  binfo.dts_ += dt;
 
   Track::MatroskaTrackType trackType =
     lace_.trackType_[(std::size_t)(binfo.trackNo_)];
@@ -1825,6 +1854,7 @@ usage(char ** argv, const char * message = NULL)
             << " [--save-chapters output.txt]\n"
             << " [--load-chapters input.txt]\n"
             << " [--lang trackNo lang]\n"
+            << " [+dt trackNo secondsToAdd]\n"
             << std::endl;
 
   std::cerr << "EXAMPLE: " << argv[0]
@@ -2435,7 +2465,6 @@ setTrackLang(MatroskaDoc & doc, const TTodo & todo, char ** argv)
   }
 }
 
-
 //----------------------------------------------------------------
 // addTodo
 //
@@ -2445,7 +2474,6 @@ addTodo(std::list<TTodo> & todoList, TTodoFunc todoFunc)
   todoList.push_back(TTodo(todoFunc));
   return todoList.back();
 }
-
 
 //----------------------------------------------------------------
 // main
@@ -2470,6 +2498,8 @@ main(int argc, char ** argv)
   bool extractFromKeyframe = false;
   uint64 t0 = 0;
   uint64 t1 = 0;
+
+  std::map<uint64, double> tsOffset;
 
   // yamkaRemux r166, r167 wiped out the SimpleBlock keyframe flag
   // and created CuePoints for non-keyframes:
@@ -2551,6 +2581,18 @@ main(int argc, char ** argv)
 
       i++;
       todo.addParam("lang", argv[i]);
+    }
+    else if (strcmp(argv[i], "+dt") == 0)
+    {
+      if ((argc - i) <= 2) usage(argv, "could not parse +dt parameters");
+
+      i++;
+      uint64 trackNo = toScalar<uint64>(argv[i]);
+
+      i++;
+      double dt = toScalar<double>(argv[i]);
+
+      tsOffset[trackNo] = dt;
     }
     else if (strcmp(argv[i], "-t") == 0)
     {
@@ -2885,7 +2927,14 @@ main(int argc, char ** argv)
     printCurrentTime("begin segment remux");
 
     // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
-    TRemuxer remuxer(trackInOut, trackOutIn, *i, segmentElt, src, dst, tmp);
+    TRemuxer remuxer(tsOffset,
+                     trackInOut,
+                     trackOutIn,
+                     *i,
+                     segmentElt,
+                     src,
+                     dst,
+                     tmp);
     remuxer.remux(t0, t1, extractFromKeyframe, fixKeyFlag);
 
     printCurrentTime("finished segment remux");
