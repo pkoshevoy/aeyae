@@ -289,6 +289,8 @@ namespace yae
     shortcutPrev_ = new QShortcut(this);
     shortcutLoop_ = new QShortcut(this);
     shortcutCropNone_ = new QShortcut(this);
+    shortcutCrop1_33_ = new QShortcut(this);
+    shortcutCrop1_78_ = new QShortcut(this);
     shortcutAutoCrop_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
@@ -302,6 +304,8 @@ namespace yae
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
     shortcutCropNone_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
@@ -437,7 +441,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutExit_, SIGNAL(activated()),
-                 this, SLOT(fileExit()));
+                 actionExit, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatioAuto, SIGNAL(triggered()),
@@ -477,11 +481,15 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutCropNone_, SIGNAL(activated()),
-                 this, SLOT(playbackCropFrameNone()));
+                 actionCropFrameNone, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame1_33, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_33()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
+                 actionCropFrame1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame1_60, SIGNAL(triggered()),
@@ -490,6 +498,10 @@ namespace yae
 
     ok = connect(actionCropFrame1_78, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_78()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
+                 actionCropFrame1_78, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame1_85, SIGNAL(triggered()),
@@ -509,7 +521,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
-                 this, SLOT(playbackCropFrameAutoDetect()));
+                 actionCropFrameAutoDetect, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPlay, SIGNAL(triggered()),
@@ -517,7 +529,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutPlay_, SIGNAL(activated()),
-                 this, SLOT(togglePlayback()));
+                 actionPlay, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionNext, SIGNAL(triggered()),
@@ -525,7 +537,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutNext_, SIGNAL(activated()),
-                 this, SLOT(playbackFinished()));
+                 actionNext, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPrev, SIGNAL(triggered()),
@@ -533,7 +545,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutPrev_, SIGNAL(activated()),
-                 this, SLOT(playbackPrev()));
+                 actionPrev, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionLoop, SIGNAL(triggered()),
@@ -541,7 +553,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutLoop_, SIGNAL(activated()),
-                 this, SLOT(playbackLoop()));
+                 actionLoop, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSetInPoint, SIGNAL(triggered()),
@@ -577,7 +589,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 this, SLOT(playbackFullScreen()));
+                 actionFullScreen, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
@@ -589,7 +601,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
-                 this, SLOT(playbackShowPlaylist()));
+                 actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionShowTimeline, SIGNAL(triggered()),
@@ -597,7 +609,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
-                 this, SLOT(playbackShowTimeline()));
+                 actionShowTimeline, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
@@ -2139,6 +2151,8 @@ namespace yae
     swapShortcuts(shortcutPrev_, actionPrev);
     swapShortcuts(shortcutLoop_, actionLoop);
     swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+    swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
+    swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
   }
 
@@ -2168,6 +2182,8 @@ namespace yae
       swapShortcuts(shortcutPrev_, actionPrev);
       swapShortcuts(shortcutLoop_, actionLoop);
       swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+      swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
+      swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
       swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     }
   }
