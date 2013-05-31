@@ -1213,7 +1213,9 @@ namespace yae
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
-      glPixelStorei(GL_UNPACK_ROW_LENGTH, vtts.encodedWidth_);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH,
+                    (GLint)(frame->data_->rowBytes(0) /
+                            (ptts->stride_[0] / 8)));
       yae_assert_gl_no_error();
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
