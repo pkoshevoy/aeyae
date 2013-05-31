@@ -8,9 +8,7 @@ include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 find_package(OpenGL REQUIRED)
 
 set(Boost_USE_MULTITHREAD ON)
-find_package(Boost 1.35 COMPONENTS thread REQUIRED)
-find_package(Boost 1.35 COMPONENTS date_time REQUIRED)
-find_package(Boost 1.35 COMPONENTS system REQUIRED)
+find_package(Boost 1.35 COMPONENTS thread date_time system REQUIRED)
 
 find_package(Qt4)
 if (QT4_FOUND)
