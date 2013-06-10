@@ -777,11 +777,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // kExtEyetv
-  //
-  static const QString kExtEyetv = QString::fromUtf8("eyetv");
-
-  //----------------------------------------------------------------
   // getExtIgnoreList
   //
   static QStringList getExtIgnoreList()
@@ -992,7 +987,18 @@ namespace yae
   //
   static bool shouldIgnore(const QString & ext, QFileInfo & fi)
   {
-    return fi.isDir() ? false : shouldIgnore(ext);
+    if (fi.isDir())
+    {
+      QString extLowered = ext.toLower();
+      if (extLowered == QString::fromUtf8("eyetvsched"))
+      {
+        return true;
+      }
+
+      return false;
+    }
+
+    return shouldIgnore(ext);
   }
 
   //----------------------------------------------------------------

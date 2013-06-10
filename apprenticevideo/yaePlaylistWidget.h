@@ -29,6 +29,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kExtEyetv
+  //
+  extern const QString kExtEyetv;
+
+  //----------------------------------------------------------------
   // PlaylistKey
   //
   struct PlaylistKey

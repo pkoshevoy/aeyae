@@ -271,6 +271,15 @@ namespace yae
   //
   YAE_API std::string
   convertEscapeCodes(const std::string & in);
+
+  //----------------------------------------------------------------
+  // parseEyetvInfo
+  //
+  YAE_API bool
+  parseEyetvInfo(const QString & eyetvPath,
+                 QString & program,
+                 QString & episode,
+                 QString & timestamp);
 }
 
 

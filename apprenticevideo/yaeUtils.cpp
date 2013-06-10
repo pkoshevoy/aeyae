@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <stdint.h>
+#include <string.h>
 #include <vector>
 
 // yae includes:
@@ -39,8 +40,12 @@
 #include <yaeUtils.h>
 
 // Qt includes:
+#include <QDateTime>
+#include <QDirIterator>
+#include <QFile>
 #include <QPainter>
-
+#include <QStringList>
+#include <QXmlStreamReader>
 
 namespace yae
 {
@@ -1033,7 +1038,6 @@ namespace yae
   convertEscapeCodes(const std::string & in)
   {
     std::size_t inLen = in.size();
-    const char * str = in.c_str();
     std::vector<char> tmp(inLen, 0);
     std::size_t j = 0;
 
@@ -1092,6 +1096,256 @@ namespace yae
     return out;
   }
 
+  //----------------------------------------------------------------
+  // readNextValidToken
+  //
+  static QXmlStreamReader::TokenType
+  readNextValidToken(QXmlStreamReader & xml)
+  {
+    QXmlStreamReader::TokenType tt = xml.tokenType();
+
+    for (int i = 0; i < 10; i++)
+    {
+      xml.readNext();
+      tt = xml.tokenType();
+
+      if (tt != QXmlStreamReader::NoToken &&
+          tt != QXmlStreamReader::Invalid)
+      {
+        break;
+      }
+
+      QXmlStreamReader::Error xerr = xml.error();
+      if (xml.atEnd() && xerr == QXmlStreamReader::NoError)
+      {
+        break;
+      }
+    }
+
+    return tt;
+  }
+
+  //----------------------------------------------------------------
+  // parseXmlTag
+  //
+  static bool
+  parseXmlTag(QXmlStreamReader & xml,
+              std::string & name,
+              QString & value)
+  {
+    name.clear();
+    value.clear();
+
+    QXmlStreamReader::TokenType tt = xml.tokenType();
+    while (!xml.atEnd())
+    {
+      if (tt == QXmlStreamReader::StartElement)
+      {
+        name = xml.name().toString().toLower().toUtf8().constData();
+
+        tt = readNextValidToken(xml);
+        if (tt == QXmlStreamReader::StartElement)
+        {
+          return false;
+        }
+
+        if (tt == QXmlStreamReader::Characters)
+        {
+          value = xml.text().toString();
+          tt = readNextValidToken(xml);
+        }
+
+        if (tt == QXmlStreamReader::StartElement)
+        {
+          bool emptyValue = value.trimmed().isEmpty();
+          YAE_ASSERT(emptyValue);
+          value.clear();
+          return false;
+        }
+
+        if (tt != QXmlStreamReader::EndElement)
+        {
+          YAE_ASSERT(false);
+          value.clear();
+          return false;
+        }
+
+        tt = readNextValidToken(xml);
+        if (tt == QXmlStreamReader::Characters)
+        {
+          std::string t = xml.text().toString().trimmed().toUtf8().constData();
+          YAE_ASSERT(t.empty());
+          tt = readNextValidToken(xml);
+        }
+
+        return true;
+      }
+
+      tt = readNextValidToken(xml);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // same
+  //
+  static bool
+  same(const std::list<std::string> & nodePath,
+       const char * testPath)
+  {
+    const char * startHere = testPath;
+
+    for (std::list<std::string>::const_iterator i = nodePath.begin();
+         i != nodePath.end(); )
+    {
+      const std::string & node = *i;
+      std::size_t size = node.size();
+      if (strncmp(&node[0], startHere, size) != 0)
+      {
+        return false;
+      }
+
+      // skip to the next node:
+      startHere += size;
+      ++i;
+
+      if (i == nodePath.end())
+      {
+        break;
+      }
+      else if (startHere[0] != '/')
+      {
+        return false;
+      }
+
+      // skip the '/' path separator:
+      startHere++;
+    }
+
+    return startHere && startHere[0] == '\0';
+  }
+
+  //----------------------------------------------------------------
+  // parseEyetvInfo
+  //
+  bool
+  parseEyetvInfo(const QString & eyetvPath,
+                 QString & program,
+                 QString & episode,
+                 QString & timestamp)
+  {
+    static const QString kExtEyetvR = QString::fromUtf8("eyetvr");
+
+    QStringList extFilters;
+    QDirIterator iter(eyetvPath,
+                      extFilters,
+                      QDir::NoDotAndDotDot |
+                      QDir::AllEntries |
+                      QDir::Readable,
+                      QDirIterator::FollowSymlinks);
+
+    while (iter.hasNext())
+    {
+      iter.next();
+
+      QFileInfo fi = iter.fileInfo();
+      QString fn = fi.absoluteFilePath();
+      QString ext = fi.suffix();
+
+      if (ext == kExtEyetvR)
+      {
+        QFile xmlFile(fn);
+        if (!xmlFile.open(QIODevice::ReadOnly))
+        {
+          return false;
+        }
+        std::string filename = fn.toUtf8().constData();
+        std::string name;
+        QString value;
+        std::list<std::string> nodePath;
+
+        QXmlStreamReader xml(&xmlFile);
+        while (!xml.atEnd())
+        {
+          bool nameValue = parseXmlTag(xml, name, value);
+          if (!nameValue)
+          {
+            if (name.empty())
+            {
+              break;
+            }
+
+            nodePath.push_back(name);
+          }
+
+          if (nameValue && name == "key")
+          {
+            std::string v = value.toLower().toUtf8().constData();
+
+            if (v == "recording title" && same(nodePath, "plist/dict/dict"))
+            {
+              if (!parseXmlTag(xml, name, value))
+              {
+                YAE_ASSERT(false);
+                return false;
+              }
+
+              program = value;
+            }
+            else if (v == "episode title" && same(nodePath, "plist/dict/dict"))
+            {
+              if (!parseXmlTag(xml, name, value))
+              {
+                YAE_ASSERT(false);
+                return false;
+              }
+
+              episode = value;
+            }
+            else if (v == "start" && same(nodePath, "plist/dict/dict"))
+            {
+              if (!parseXmlTag(xml, name, value))
+              {
+                YAE_ASSERT(false);
+                return false;
+              }
+
+              QDateTime t = QDateTime::fromString(value, Qt::ISODate);
+              timestamp = t.toLocalTime().toString("yyyyMMdd hhmm");
+            }
+          }
+
+          QXmlStreamReader::TokenType tt = xml.tokenType();
+          if (tt == QXmlStreamReader::EndElement)
+          {
+            const std::string & top = nodePath.back();
+            name = xml.name().toString().toLower().toUtf8().constData();
+            if (top != name)
+            {
+              YAE_ASSERT(false);
+              return false;
+            }
+
+            nodePath.pop_back();
+          }
+
+          if (!program.isEmpty() &&
+              !episode.isEmpty() &&
+              !timestamp.isEmpty())
+          {
+            // done:
+            break;
+          }
+        }
+      }
+    }
+
+    bool done = ((!program.isEmpty() ||
+                  !episode.isEmpty()) &&
+                 !timestamp.isEmpty());
+    return done;
+  }
 }
 
 #if defined(_WIN32) && !defined(__MINGW32__)

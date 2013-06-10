@@ -27,6 +27,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kExtEyetv
+  //
+  const QString kExtEyetv = QString::fromUtf8("eyetv");
+
+  //----------------------------------------------------------------
   // kGroupNameHeight
   //
   static const int kGroupNameHeight = 24;
@@ -277,8 +282,37 @@ namespace yae
           base = parseKey.fileName();
         }
 
-        key = prepareForSorting(base);
-        keys.push_front(PlaylistKey(key, ext));
+        if (keys.empty() && ext.compare(kExtEyetv, Qt::CaseInsensitive) == 0)
+        {
+          // handle Eye TV archive more gracefully:
+          QString program;
+          QString episode;
+          QString timestamp;
+          if (!parseEyetvInfo(path, program, episode, timestamp))
+          {
+            YAE_ASSERT(false);
+            continue;
+          }
+
+          if (episode.isEmpty())
+          {
+            key = timestamp + " " + program;
+            keys.push_front(PlaylistKey(key, QString()));
+          }
+          else
+          {
+            key = timestamp + " " + episode;
+            keys.push_front(PlaylistKey(key, QString()));
+          }
+
+          key = program;
+          keys.push_front(PlaylistKey(key, QString()));
+        }
+        else
+        {
+          key = prepareForSorting(base);
+          keys.push_front(PlaylistKey(key, ext));
+        }
 
         QString next = fi.absolutePath();
         fi = QFileInfo(next);
@@ -1856,7 +1890,12 @@ namespace yae
         painter.setPen(fg);
 
         QRect bboxText = bbox.adjusted(0, 0, 0, -1);
-        QString text = tr("%1, %2").arg(item.name_).arg(item.ext_);
+
+        QString text =
+          item.ext_.isEmpty() ?
+          item.name_ :
+          tr("%1, %2").arg(item.name_).arg(item.ext_);
+
         drawTextToFit(painter,
                       bboxText,
                       Qt::AlignBottom | Qt::AlignLeft,
