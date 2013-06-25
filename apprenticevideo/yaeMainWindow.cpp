@@ -1215,6 +1215,8 @@ namespace yae
       }
     }
 
+    // convert to NFD normal form (Normalization Form Canonical Decomposition):
+    fn = fn.normalized(QString::NormalizationForm_D);
     std::string filename(fn.toUtf8().constData());
 
     actionPlay->setEnabled(false);
