@@ -1322,7 +1322,7 @@ namespace yae
       filterChain_ = filterChain;
     }
 
-    err = avfilter_graph_parse(graph_, filters.c_str(), &in_, &out_, NULL);
+    err = avfilter_graph_parse_ptr(graph_, filters.c_str(), &in_, &out_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
@@ -2770,7 +2770,7 @@ namespace yae
       filterChain_ = filterChain;
     }
 
-    err = avfilter_graph_parse(graph_, filters.c_str(), &in_, &out_, NULL);
+    err = avfilter_graph_parse_ptr(graph_, filters.c_str(), &in_, &out_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
@@ -3805,18 +3805,30 @@ namespace yae
     // FIXME: avoid closing/reopening the same resource:
     close();
 
+    AVDictionary * options = NULL;
+
+    // set probesize to 64 MiB:
+    av_dict_set(&options, "probesize", "67108864", 0);
+
+    // set analyze duration to 10 seconds:
+    av_dict_set(&options, "analyzeduration", "10000000", 0);
+
+    // set genpts:
+    av_dict_set(&options, "fflags", "genpts", 0);
+
     int err = avformat_open_input(&context_,
                                   resourcePath,
                                   NULL, // AVInputFormat to force
-                                  NULL);// AVDictionary of options
+                                  &options);
+    av_dict_free(&options);
+
     if (err != 0)
     {
       close();
       return false;
     }
 
-    // spend at most 2 seconds trying to analyze the file:
-    context_->max_analyze_duration = 30 * AV_TIME_BASE;
+    YAE_ASSERT(context_->flags & AVFMT_FLAG_GENPTS);
 
     err = avformat_find_stream_info(context_, NULL);
     if (err < 0)
@@ -3828,6 +3840,11 @@ namespace yae
     for (unsigned int i = 0; i < context_->nb_streams; i++)
     {
       AVStream * stream = context_->streams[i];
+
+      // assume codec is unsupported,
+      // discard all packets unless proven otherwise:
+      stream->discard = AVDISCARD_ALL;
+
       TrackPtr track(new Track(context_, stream));
 
       if (!track->open())
@@ -3843,6 +3860,7 @@ namespace yae
         VideoTraits traits;
         if (track->getTraits(traits))
         {
+          stream->discard = AVDISCARD_DEFAULT;
           videoTracks_.push_back(track);
         }
       }
@@ -3852,6 +3870,7 @@ namespace yae
         AudioTraits traits;
         if (track->getTraits(traits))
         {
+          stream->discard = AVDISCARD_DEFAULT;
           audioTracks_.push_back(track);
         }
       }
@@ -3862,6 +3881,7 @@ namespace yae
         track = TrackPtr();
 
         subsIdx_[i] = subs_.size();
+        stream->discard = AVDISCARD_DEFAULT;
         TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
         subs_.push_back(subsTrk);
       }
@@ -4372,10 +4392,46 @@ namespace yae
       return -1;
     }
 
-    double tCurr = dts_.toSeconds();
-    int seekFlags = AVSEEK_FLAG_BACKWARD;
+    int streamIndex = -1;
+    VideoTrackPtr videoTrack;
+    TTime startTime;
+    TTime duration;
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      videoTrack = videoTracks_[selectedVideoTrack_];
+      streamIndex = videoTrack->streamIndex();
+      videoTrack->getDuration(startTime, duration);
+    }
+
+    AudioTrackPtr audioTrack;
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      audioTrack = audioTracks_[selectedAudioTrack_];
+
+      if (streamIndex < 0)
+      {
+        streamIndex = audioTrack->streamIndex();
+        audioTrack->getDuration(startTime, duration);
+      }
+    }
 
     int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
+    int seekFlags = 0;
+
+    if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
+        strcmp(context_->iformat->name, "ogg") != 0)
+    {
+      seekFlags |= AVSEEK_FLAG_BYTE;
+
+      uint64_t fileBytes =  avio_size(context_->pb);
+      double offset = startTime.toSeconds();
+      double totalTime = duration.toSeconds();
+
+      double t = (seekTime - offset) / totalTime;
+      ts = int64_t(t * double(fileBytes));
+      ts = std::max<int64_t>(0, ts);
+    }
+
     int err = avformat_seek_file(context_,
                                  -1,
                                  kMinInt64,
@@ -4384,13 +4440,12 @@ namespace yae
                                  seekFlags);
     if (err < 0)
     {
-      seekFlags |= AVSEEK_FLAG_ANY;
       err = avformat_seek_file(context_,
                                -1,
                                kMinInt64,
                                ts,
                                kMaxInt64,
-                               seekFlags);
+                               seekFlags | AVSEEK_FLAG_ANY);
     }
 
     if (err < 0)
@@ -4402,15 +4457,13 @@ namespace yae
       return err;
     }
 
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (videoTrack)
     {
-      VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
       err = videoTrack->resetTimeCounters(seekTime);
     }
 
-    if (!err && selectedAudioTrack_ < audioTracks_.size())
+    if (!err && audioTrack)
     {
-      AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
       err = audioTrack->resetTimeCounters(seekTime);
     }
 
