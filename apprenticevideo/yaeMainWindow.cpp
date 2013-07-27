@@ -1881,7 +1881,11 @@ namespace yae
 
         QString name =
           escapeAmpersand(group->name_) +
+#ifdef __APPLE__
+          QString::fromUtf8(": ") +
+#else
           QString::fromUtf8("\t") +
+#endif
           escapeAmpersand(item.name_) +
           QString::fromUtf8(", ") +
           QString::fromUtf8(ts.c_str());
@@ -1934,7 +1938,7 @@ namespace yae
   void
   MainWindow::bookmarksSelectItem(int index)
   {
-    if (index >= bookmarks_.size())
+    if (index >= (int)bookmarks_.size())
     {
       return;
     }
