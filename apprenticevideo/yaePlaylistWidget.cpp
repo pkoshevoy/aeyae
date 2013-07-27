@@ -11,6 +11,7 @@
 #include <algorithm>
 
 // Qt includes:
+#include <QCryptographicHash>
 #include <QCursor>
 #include <QFileInfo>
 #include <QImage>
@@ -62,6 +63,41 @@ namespace yae
   {
     static QPixmap p = QPixmap(":/images/clear-dark.png");
     return p;
+  }
+
+
+  //----------------------------------------------------------------
+  // makeHashKey
+  //
+  static std::string
+  makeHashKey(const PlaylistKey & key)
+  {
+    QCryptographicHash crypto(QCryptographicHash::Sha1);
+    crypto.addData(key.key_.toUtf8());
+    crypto.addData(key.ext_.toUtf8());
+
+    std::string hash(crypto.result().toHex().constData());
+    return hash;
+  }
+
+  //----------------------------------------------------------------
+  // getBookmarkHash
+  //
+  static std::string
+  getBookmarkHash(const PlaylistGroup & group)
+  {
+    std::string keyHash("bookmark-");
+    keyHash += makeHashKey(group.keyPath_.back());
+    return keyHash;
+  }
+
+  //----------------------------------------------------------------
+  // getBookmarkHash
+  //
+  static std::string
+  getBookmarkHash(const PlaylistItem & item)
+  {
+    return makeHashKey(item.key_);
   }
 
 
@@ -343,6 +379,7 @@ namespace yae
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = toWords(fringeGroup.abbreviatedPath_);
       group.offset_ = numItems_;
+      group.bookmarkHash_ = getBookmarkHash(group);
 
       // shortcuts:
       typedef std::map<PlaylistKey, QString> TSiblings;
@@ -362,6 +399,7 @@ namespace yae
 
         playlistItem.name_ = toWords(key.key_);
         playlistItem.ext_ = key.ext_;
+        playlistItem.bookmarkHash_ = getBookmarkHash(playlistItem);
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
@@ -502,6 +540,11 @@ namespace yae
     if (numItems_ == numShown_)
     {
       // no items have been excluded:
+      if (returnGroup)
+      {
+        *returnGroup = lookupGroup(index);
+      }
+
       return index;
     }
 
@@ -671,6 +714,7 @@ namespace yae
     if (index != current_ || force)
     {
       current_ = (index < numItems_) ? index : numItems_;
+      highlighted_ = current_;
       selectItem(current_);
       scrollTo(current_);
 
@@ -870,6 +914,7 @@ namespace yae
     else
     {
       current_ = newCurrent;
+      highlighted_ = current_;
     }
 
     update();
@@ -999,6 +1044,7 @@ namespace yae
     else
     {
       current_ = newCurrent;
+      highlighted_ = current_;
     }
 
     update();
@@ -1172,8 +1218,8 @@ namespace yae
       std::size_t index = lookupItemIndex(group, pt);
       if (index < numItems_)
       {
-        highlighted_ = index;
         current_ = index;
+        highlighted_ = index;
         emit currentItemChanged(current_);
         update();
       }

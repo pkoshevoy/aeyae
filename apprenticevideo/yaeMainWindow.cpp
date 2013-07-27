@@ -94,6 +94,16 @@ namespace yae
     Ui::OpenUrlDialog::setupUi(this);
   }
 
+
+  //----------------------------------------------------------------
+  // PlaylistBookmark::PlaylistBookmark
+  //
+  PlaylistBookmark::PlaylistBookmark():
+    TBookmark(),
+    itemIndex_(std::numeric_limits<std::size_t>::max())
+  {}
+
+
   //----------------------------------------------------------------
   // SignalBlocker
   //
@@ -180,13 +190,15 @@ namespace yae
     videoTrackMapper_(NULL),
     subsTrackMapper_(NULL),
     chapterMapper_(NULL),
+    bookmarksGroup_(NULL),
+    bookmarksMapper_(NULL),
+    bookmarksMenuSeparator_(NULL),
     reader_(NULL),
     readerId_(0),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
     playbackPaused_(false),
-    playbackInterrupted_(false),
     scrollStart_(0.0),
     scrollOffset_(0.0),
     xexpand_(1.0),
@@ -276,6 +288,12 @@ namespace yae
 
     // for re-running auto-crop soon after loading next file in the playlist:
     autocropTimer_.setSingleShot(true);
+
+    // update a bookmark every 3 minutes during playback:
+    bookmarkTimer_.setInterval(180000);
+
+    bookmarksMenuSeparator_ =
+      menuBookmarks->insertSeparator(actionRemoveBookmarks);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -533,7 +551,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(actionNext, SIGNAL(triggered()),
-                 this, SLOT(playbackFinished()));
+                 this, SLOT(playbackNext()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutNext_, SIGNAL(activated()),
@@ -706,6 +724,18 @@ namespace yae
 
     ok = connect(&autocropTimer_, SIGNAL(timeout()),
                  this, SLOT(playbackCropFrameAutoDetect()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&bookmarkTimer_, SIGNAL(timeout()),
+                 this, SLOT(saveBookmark()));
+    YAE_ASSERT(ok);
+
+    ok = connect(menuBookmarks, SIGNAL(aboutToShow()),
+                 this, SLOT(bookmarksPopulate()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionRemoveBookmarks, SIGNAL(triggered()),
+                 this, SLOT(bookmarksRemove()));
     YAE_ASSERT(ok);
 
     // initialize the subtitles menu:
@@ -1590,6 +1620,8 @@ namespace yae
       QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
 
+    bookmarkTimer_.start();
+
     return true;
   }
 
@@ -1755,6 +1787,181 @@ namespace yae
     reader_->close();
     MainWindow::close();
     qApp->quit();
+  }
+
+  //----------------------------------------------------------------
+  // escapeAmpersand
+  //
+  static QString
+  escapeAmpersand(const QString & menuText)
+  {
+    QString out = menuText;
+    out.replace(QString::fromUtf8("&"), QString::fromUtf8("&&"));
+    return out;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::bookmarksPopulate
+  //
+  void
+  MainWindow::bookmarksPopulate()
+  {
+    delete bookmarksGroup_;
+    bookmarksGroup_ = NULL;
+
+    delete bookmarksMapper_;
+    bookmarksMapper_ = NULL;
+
+    bookmarksMenuSeparator_->setVisible(false);
+
+    for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
+         i != bookmarks_.end(); ++i)
+    {
+      PlaylistBookmark & bookmark = *i;
+      delete bookmark.action_;
+    }
+
+    bookmarks_.clear();
+
+    if (!actionAutomaticBookmarks->isChecked())
+    {
+      return;
+    }
+
+    std::size_t itemIndex = 0;
+    while (true)
+    {
+      PlaylistGroup * group = playlistWidget_->closestGroup(itemIndex);
+      std::size_t groupSize = group ? group->items_.size() : 0;
+      if (!groupSize)
+      {
+        break;
+      }
+
+      itemIndex += groupSize;
+
+      if (group->excluded_)
+      {
+        continue;
+      }
+
+      // check whether there is a bookmark for an item in this group:
+      PlaylistBookmark bookmark;
+      if (!yae::loadBookmark(group->bookmarkHash_, bookmark))
+      {
+        continue;
+      }
+
+      // check whether the item hash matches a group item:
+      for (std::size_t i = 0; i < groupSize; i++)
+      {
+        const PlaylistItem & item = group->items_[i];
+        if (item.excluded_ || item.bookmarkHash_ != bookmark.itemHash_)
+        {
+          continue;
+        }
+
+        // found a match, add it to the bookmarks menu:
+        bookmark.itemIndex_ = group->offset_ + i;
+
+        std::string ts = TTime(bookmark.positionInSeconds_).to_hhmmss(":");
+
+
+        if (!bookmarksGroup_)
+        {
+          bookmarksGroup_ = new QActionGroup(this);
+          bookmarksMapper_ = new QSignalMapper(this);
+
+          bool ok = connect(bookmarksMapper_, SIGNAL(mapped(int)),
+                            this, SLOT(bookmarksSelectItem(int)));
+          YAE_ASSERT(ok);
+
+          bookmarksMenuSeparator_->setVisible(true);
+        }
+
+        QString name =
+          escapeAmpersand(group->name_) +
+          QString::fromUtf8("\t") +
+          escapeAmpersand(item.name_) +
+          QString::fromUtf8(", ") +
+          QString::fromUtf8(ts.c_str());
+
+        bookmark.action_ = new QAction(name, this);
+        menuBookmarks->insertAction(bookmarksMenuSeparator_, bookmark.action_);
+        bookmarksGroup_->addAction(bookmark.action_);
+
+        bool ok = connect(bookmark.action_, SIGNAL(triggered()),
+                          bookmarksMapper_, SLOT(map()));
+        YAE_ASSERT(ok);
+
+        bookmarksMapper_->setMapping(bookmark.action_,
+                                     bookmarks_.size());
+
+        bookmarks_.push_back(bookmark);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::bookmarksRemove
+  //
+  void
+  MainWindow::bookmarksRemove()
+  {
+    delete bookmarksGroup_;
+    bookmarksGroup_ = NULL;
+
+    delete bookmarksMapper_;
+    bookmarksMapper_ = NULL;
+
+    bookmarksMenuSeparator_->setVisible(false);
+
+    for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
+         i != bookmarks_.end(); ++i)
+    {
+      PlaylistBookmark & bookmark = *i;
+      delete bookmark.action_;
+
+      removeBookmark(bookmark.groupHash_);
+    }
+
+    bookmarks_.clear();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::bookmarksSelectItem
+  //
+  void
+  MainWindow::bookmarksSelectItem(int index)
+  {
+    if (index >= bookmarks_.size())
+    {
+      return;
+    }
+
+    const PlaylistBookmark & bookmark = bookmarks_[index];
+    playbackStop();
+
+    SignalBlocker blockSignals(playlistWidget_);
+    actionPlay->setEnabled(false);
+
+    playlistWidget_->setCurrentItem(bookmark.itemIndex_);
+    playback(true);
+
+    std::size_t currentItem = playlistWidget_->currentItem();
+    if (currentItem == bookmark.itemIndex_)
+    {
+      videoSelectTrack(bookmark.vtrack_);
+      audioSelectTrack(bookmark.atrack_);
+
+      if (!bookmark.subs_.empty())
+      {
+        std::size_t strack = bookmark.subs_.front();
+        subsSelectTrack(strack);
+      }
+
+      timelineControls_->seekTo(bookmark.positionInSeconds_);
+    }
   }
 
   //----------------------------------------------------------------
@@ -2216,12 +2423,17 @@ namespace yae
       actionPlay->setText(tr("Pause"));
       prepareReaderAndRenderers(reader_);
       resumeRenderers();
+
+      bookmarkTimer_.start();
     }
     else
     {
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_);
       stopRenderers();
+
+      bookmarkTimer_.stop();
+      saveBookmark();
     }
 
     playbackPaused_ = !playbackPaused_;
@@ -2442,19 +2654,6 @@ namespace yae
   MainWindow::userIsSeeking(bool seeking)
   {
     reader_->setPlaybackInterval(!seeking);
-
-#if 0
-    if (seeking && !playbackPaused_)
-    {
-      playbackInterrupted_ = true;
-      togglePlayback();
-    }
-    else if (!seeking && playbackInterrupted_)
-    {
-      playbackInterrupted_ = false;
-      togglePlayback();
-    }
-#endif
   }
 
   //----------------------------------------------------------------
@@ -2607,8 +2806,29 @@ namespace yae
   void
   MainWindow::playbackFinished()
   {
-    playbackStop();
+    // remove current bookmark:
+    bookmarkTimer_.stop();
+
+    std::size_t itemIndex = playlistWidget_->currentItem();
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+
+    if (item && group)
+    {
+      PlaylistGroup * nextGroup = NULL;
+      std::size_t nextIndex =
+        playlistWidget_->closestItem(itemIndex + 1,
+                                     PlaylistWidget::kAhead,
+                                     &nextGroup);
+
+      if (group != nextGroup)
+      {
+        yae::removeBookmark(group->bookmarkHash_);
+      }
+    }
+
     playbackNext();
+    saveBookmark();
   }
 
   //----------------------------------------------------------------
@@ -2721,6 +2941,8 @@ namespace yae
   void
   MainWindow::playbackNext()
   {
+    playbackStop();
+
     SignalBlocker blockSignals(playlistWidget_);
     actionPlay->setEnabled(false);
 
@@ -2798,6 +3020,28 @@ namespace yae
     }
 
     QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::saveBookmark
+  //
+  void
+  MainWindow::saveBookmark()
+  {
+    if (!actionAutomaticBookmarks->isChecked())
+    {
+      return;
+    }
+
+    std::size_t itemIndex = playlistWidget_->currentItem();
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    double positionInSeconds = timelineControls_->currentTime();
+
+    yae::saveBookmark(group->bookmarkHash_,
+                      item->bookmarkHash_,
+                      reader_,
+                      positionInSeconds);
   }
 
   //----------------------------------------------------------------
@@ -3596,7 +3840,7 @@ namespace yae
     for (std::size_t i = 0; i < nsubs; i++)
     {
       bool enable = (i == subsTrackIndex);
-      reader->subsRender(i, enable);
+      reader->setSubsRender(i, enable);
     }
 
     canvas_->setSubs(std::list<TSubsFrame>());

@@ -280,6 +280,15 @@ namespace yae
                  QString & program,
                  QString & episode,
                  QString & timestamp);
+
+  //----------------------------------------------------------------
+  // xmlEncode
+  //
+  // this properly handles special characters &, <, >, ", etc...
+  //
+  YAE_API QString
+  xmlEncode(const QString & text);
+
 }
 
 

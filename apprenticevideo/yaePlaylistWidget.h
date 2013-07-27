@@ -81,6 +81,9 @@ namespace yae
 
     // a flag indicating whether this item is excluded from the list:
     bool excluded_;
+
+    // a hash string identifying this item:
+    std::string bookmarkHash_;
   };
 
   //----------------------------------------------------------------
@@ -112,8 +115,11 @@ namespace yae
     // a flag indicating whether this group is collapsed for brevity:
     bool collapsed_;
 
-    // a flag indicating whether this group is collapsed for brevity:
+    // a flag indicating whether this group is excluded from the list:
     bool excluded_;
+
+    // a hash string identifying this group:
+    std::string bookmarkHash_;
   };
 
   //----------------------------------------------------------------

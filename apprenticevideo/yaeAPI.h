@@ -95,6 +95,7 @@ namespace yae
   {
     TTime();
     TTime(int64 time, uint64 base);
+    TTime(double seconds);
 
     TTime & operator += (const TTime & dt);
     TTime operator + (const TTime & dt) const;
@@ -111,6 +112,29 @@ namespace yae
     bool operator < (const TTime & t) const;
 
     int64 getTime(uint64 base) const;
+
+    void to_hhmmss(std::string & ts,
+                   const char * separator = "") const;
+
+    void to_hhmmss_usec(std::string & ts,
+                        const char * separator = "",
+                        const char * usec_separator = ".") const;
+
+    inline std::string to_hhmmss(const char * separator = "") const
+    {
+      std::string ts;
+      to_hhmmss(ts, separator);
+      return ts;
+    }
+
+    // return timestamp in hhmmss.uuuuuu format
+    inline std::string to_hhmmss_usec(const char * separator = "",
+                                      const char * usec_separator = ".") const
+    {
+      std::string ts;
+      to_hhmmss_usec(ts, separator, usec_separator);
+      return ts;
+    }
 
     inline double toSeconds() const
     { return double(time_) / double(base_); }

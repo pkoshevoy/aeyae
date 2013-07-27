@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <new>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -32,6 +35,14 @@ namespace yae
   TTime::TTime(int64 time, uint64 base):
     time_(time),
     base_(base)
+  {}
+
+  //----------------------------------------------------------------
+  // TTime::TTime
+  //
+  TTime::TTime(double seconds):
+    time_(1000000.0 * seconds),
+    base_(1000000)
   {}
 
   //----------------------------------------------------------------
@@ -158,6 +169,48 @@ namespace yae
     return t.time_;
   }
 
+  //----------------------------------------------------------------
+  // TTime::to_hhmmss
+  //
+  void
+    TTime::to_hhmmss(std::string & ts, const char * separator) const
+  {
+    int64_t t = time_;
+    t /= base_;
+
+    int64_t seconds = t % 60;
+    t /= 60;
+
+    int64_t minutes = t % 60;
+    int64_t hours = t / 60;
+
+    std::ostringstream os;
+    os << std::setw(2) << std::setfill('0') << (int)(hours) << separator
+       << std::setw(2) << std::setfill('0') << (int)(minutes) << separator
+       << std::setw(2) << std::setfill('0') << (int)(seconds);
+
+    ts = std::string(os.str().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // TTime::to_hhmmss_usec
+  //
+  void
+  TTime::to_hhmmss_usec(std::string & ts,
+                        const char * separator,
+                        const char * usec_separator) const
+  {
+    to_hhmmss(ts, separator);
+
+    int64_t remainder = time_ % base_;
+    int64_t usec = (1000000 * remainder) / base_;
+
+    std::ostringstream os;
+    os << ts << usec_separator
+       << std::setw(6) << std::setfill('0') << (int)(usec);
+
+    ts = std::string(os.str().c_str());
+  }
 
   //----------------------------------------------------------------
   // getBitsPerSample

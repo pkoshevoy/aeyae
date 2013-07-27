@@ -19,6 +19,7 @@
 
 // yae includes:
 #include <yaeAPI.h>
+#include <yaeBookmarks.h>
 #include <yaeCanvas.h>
 #include <yaeReader.h>
 #include <yaeAudioRenderer.h>
@@ -76,6 +77,16 @@ namespace yae
     OpenUrlDialog(QWidget * parent = 0, Qt::WFlags f = 0);
   };
 
+  //----------------------------------------------------------------
+  // PlaylistBookmark
+  //
+  struct PlaylistBookmark : public TBookmark
+  {
+    PlaylistBookmark();
+
+    std::size_t itemIndex_;
+    QAction * action_;
+  };
 
   //----------------------------------------------------------------
   // MainWindow
@@ -111,6 +122,11 @@ namespace yae
     void fileOpenURL();
     void fileOpenFolder();
     void fileExit();
+
+    // bookmarks menu:
+    void bookmarksPopulate();
+    void bookmarksRemove();
+    void bookmarksSelectItem(int index);
 
     // playback menu:
     void playbackAspectRatioAuto();
@@ -179,6 +195,7 @@ namespace yae
     void adjustCanvasHeight();
     void canvasSizeBackup();
     void canvasSizeRestore();
+    void saveBookmark();
 
   protected:
     // virtual:
@@ -251,6 +268,12 @@ namespace yae
     QSignalMapper * subsTrackMapper_;
     QSignalMapper * chapterMapper_;
 
+    // bookmark selection mechanism:
+    std::vector<PlaylistBookmark> bookmarks_;
+    QActionGroup * bookmarksGroup_;
+    QSignalMapper * bookmarksMapper_;
+    QAction * bookmarksMenuSeparator_;
+
     // file reader:
     IReader * reader_;
     unsigned int readerId_;
@@ -269,7 +292,6 @@ namespace yae
 
     // a flag indicating whether playback is paused:
     bool playbackPaused_;
-    bool playbackInterrupted_;
 
     // scroll-wheel timer:
     QTimer scrollWheelTimer_;
@@ -299,6 +321,9 @@ namespace yae
 
     // auto-crop single shot timer:
     QTimer autocropTimer_;
+
+    // auto-bookmark timer:
+    QTimer bookmarkTimer_;
   };
 }
 

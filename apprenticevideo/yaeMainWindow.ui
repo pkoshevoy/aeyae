@@ -330,7 +330,16 @@ QLineEdit:disabled {
      <string>Chap&amp;ters</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuBookmarks">
+    <property name="title">
+     <string>&amp;Bookmarks</string>
+    </property>
+    <addaction name="actionAutomaticBookmarks"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemoveBookmarks"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuBookmarks"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuAudio"/>
    <addaction name="menuVideo"/>
@@ -932,6 +941,22 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="toolTip">
     <string>Specify custom frame aspect ratio</string>
+   </property>
+  </action>
+  <action name="actionAutomaticBookmarks">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Create Playlist Bookmarks Automatically</string>
+   </property>
+  </action>
+  <action name="actionRemoveBookmarks">
+   <property name="text">
+    <string>Remove Bookmarks</string>
    </property>
   </action>
  </widget>

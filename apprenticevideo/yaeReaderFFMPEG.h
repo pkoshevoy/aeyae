@@ -109,7 +109,8 @@ namespace yae
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const;
     virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;
-    virtual void subsRender(std::size_t i, bool render);
+    virtual void setSubsRender(std::size_t i, bool render);
+    virtual bool getSubsRender(std::size_t i) const;
 
     // chapter navigation:
     virtual std::size_t countChapters() const;

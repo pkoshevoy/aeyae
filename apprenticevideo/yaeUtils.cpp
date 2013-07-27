@@ -46,6 +46,7 @@
 #include <QPainter>
 #include <QStringList>
 #include <QXmlStreamReader>
+#include <QXmlStreamWriter>
 
 namespace yae
 {
@@ -1345,6 +1346,21 @@ namespace yae
                   !episode.isEmpty()) &&
                  !timestamp.isEmpty());
     return done;
+  }
+
+  //----------------------------------------------------------------
+  // xmlEncode
+  //
+  QString
+  xmlEncode(const QString & text)
+  {
+    QString output;
+    {
+      QXmlStreamWriter stream(&output);
+      stream.writeCharacters(text);
+    }
+
+    return output;
   }
 }
 

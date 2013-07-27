@@ -214,6 +214,8 @@ set(project_sources
   yaeAudioTempoFilter.h
   yaeAutoCrop.h
   yaeAutoCrop.cpp
+  yaeBookmarks.h
+  yaeBookmarks.cpp
   yaeCanvas.h
   yaeCanvas.cpp
   yaeLineEdit.h

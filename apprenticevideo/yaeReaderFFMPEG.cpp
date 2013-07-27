@@ -3703,7 +3703,8 @@ namespace yae
 
     std::size_t subsCount() const;
     TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;
-    void subsRender(std::size_t i, bool render);
+    void setSubsRender(std::size_t i, bool render);
+    bool getSubsRender(std::size_t i) const;
 
     SubtitlesTrack * subsLookup(unsigned int streamIndex);
 
@@ -4743,10 +4744,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::subsRender
+  // Movie::setSubsRender
   //
   void
-  Movie::subsRender(std::size_t i, bool render)
+  Movie::setSubsRender(std::size_t i, bool render)
   {
     std::size_t nsubs = subs_.size();
     if (i < nsubs)
@@ -4754,6 +4755,22 @@ namespace yae
       SubtitlesTrack & subs = *(subs_[i]);
       subs.render_ = render;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Movie::getSubsRender
+  //
+  bool
+  Movie::getSubsRender(std::size_t i) const
+  {
+    std::size_t nsubs = subs_.size();
+    if (i < nsubs)
+    {
+      SubtitlesTrack & subs = *(subs_[i]);
+      return subs.render_;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -5314,12 +5331,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::subsRender
+  // ReaderFFMPEG::setSubsRender
   //
   void
-  ReaderFFMPEG::subsRender(std::size_t i, bool render)
+  ReaderFFMPEG::setSubsRender(std::size_t i, bool render)
   {
-    private_->movie_.subsRender(i, render);
+    private_->movie_.setSubsRender(i, render);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getSubsRender
+  //
+  bool
+  ReaderFFMPEG::getSubsRender(std::size_t i) const
+  {
+    return private_->movie_.getSubsRender(i);
   }
 
   //----------------------------------------------------------------
