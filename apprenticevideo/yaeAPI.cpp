@@ -175,14 +175,14 @@ namespace yae
   void
     TTime::to_hhmmss(std::string & ts, const char * separator) const
   {
-    int64_t t = time_;
+    int64 t = time_;
     t /= base_;
 
-    int64_t seconds = t % 60;
+    int64 seconds = t % 60;
     t /= 60;
 
-    int64_t minutes = t % 60;
-    int64_t hours = t / 60;
+    int64 minutes = t % 60;
+    int64 hours = t / 60;
 
     std::ostringstream os;
     os << std::setw(2) << std::setfill('0') << (int)(hours) << separator
@@ -202,8 +202,8 @@ namespace yae
   {
     to_hhmmss(ts, separator);
 
-    int64_t remainder = time_ % base_;
-    int64_t usec = (1000000 * remainder) / base_;
+    int64 remainder = time_ % base_;
+    int64 usec = (1000000 * remainder) / base_;
 
     std::ostringstream os;
     os << ts << usec_separator
