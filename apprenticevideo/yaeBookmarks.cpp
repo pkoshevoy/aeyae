@@ -132,6 +132,11 @@ namespace yae
                const IReader * reader,
                const double & positionInSeconds)
   {
+    if (!reader || groupHash.empty() || itemHash.empty())
+    {
+      return false;
+    }
+
     // serialize:
     QString value;
     QXmlStreamWriter xml(&value);
