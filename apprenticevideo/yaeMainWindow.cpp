@@ -1604,7 +1604,7 @@ namespace yae
                                                         videoTraits,
                                                         selVideo_,
                                                         selVideoTraits_);
-    if (bookmark && bookmark->vtrack_ < numVideoTracks)
+    if (bookmark && bookmark->vtrack_ <= numVideoTracks)
     {
       vtrack = bookmark->vtrack_;
     }
@@ -1616,7 +1616,7 @@ namespace yae
                                                         audioTraits,
                                                         selAudio_,
                                                         selAudioTraits_);
-    if (bookmark && bookmark->atrack_ < numAudioTracks)
+    if (bookmark && bookmark->atrack_ <= numAudioTracks)
     {
       atrack = bookmark->atrack_;
     }
