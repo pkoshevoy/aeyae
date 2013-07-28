@@ -86,7 +86,7 @@ namespace yae
 
       std::list<TKey> fullPath = fringes.back().fullPath_;
       std::list<TKey> abbreviatedPath;
-      if (hasItems)
+      if (hasItems || tree_.size() > 1)
       {
         abbreviatedPath = fringes.back().abbreviatedPath_;
       }
