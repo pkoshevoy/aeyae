@@ -45,11 +45,21 @@
 #include <QFile>
 #include <QPainter>
 #include <QStringList>
+#include <QSettings>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
 namespace yae
 {
+
+#ifdef __APPLE__
+  static QString kOrganization = QString::fromUtf8("sourceforge.net");
+  static QString kApplication = QString::fromUtf8("apprenticevideo");
+#else
+  static QString kOrganization = QString::fromUtf8("PavelKoshevoy");
+  static QString kApplication = QString::fromUtf8("ApprenticeVideo");
+#endif
+
 
 #if defined(_WIN32) && !defined(__MINGW32__)
   //----------------------------------------------------------------
@@ -1361,6 +1371,75 @@ namespace yae
     }
 
     return output;
+  }
+
+  //----------------------------------------------------------------
+  // saveSetting
+  //
+  bool
+  saveSetting(const QString & key, const QString & value)
+  {
+    QSettings settings(QSettings::NativeFormat,
+                       QSettings::UserScope,
+                       kOrganization,
+                       kApplication);
+
+    settings.setValue(key, value);
+
+    bool ok = (settings.status() == QSettings::NoError);
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // loadSetting
+  //
+  bool
+  loadSetting(const QString & key, QString & value)
+  {
+    QSettings settings(QSettings::NativeFormat,
+                       QSettings::UserScope,
+                       kOrganization,
+                       kApplication);
+
+    if (!settings.contains(key))
+    {
+      return false;
+    }
+
+    value = settings.value(key).toString();
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // loadSettingOrDefault
+  //
+  QString
+  loadSettingOrDefault(const QString & key, const QString & defaultValue)
+  {
+    QString value;
+    if (loadSetting(key, value))
+    {
+      return value;
+    }
+
+    return defaultValue;
+  }
+
+  //----------------------------------------------------------------
+  // removeSetting
+  //
+  bool
+  removeSetting(const QString & key)
+  {
+    QSettings settings(QSettings::NativeFormat,
+                       QSettings::UserScope,
+                       kOrganization,
+                       kApplication);
+
+    settings.remove(key);
+
+    bool ok = (settings.status() == QSettings::NoError);
+    return ok;
   }
 }
 

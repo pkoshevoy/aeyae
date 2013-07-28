@@ -289,6 +289,30 @@ namespace yae
   YAE_API QString
   xmlEncode(const QString & text);
 
+  //----------------------------------------------------------------
+  // saveSetting
+  //
+  YAE_API bool
+  saveSetting(const QString & key, const QString & value);
+
+  //----------------------------------------------------------------
+  // loadSetting
+  //
+  YAE_API bool
+  loadSetting(const QString & key, QString & value);
+
+  //----------------------------------------------------------------
+  // loadSettingOrDefault
+  //
+  YAE_API QString
+  loadSettingOrDefault(const QString & key, const QString & defaultValue);
+
+  //----------------------------------------------------------------
+  // removeSetting
+  //
+  YAE_API bool
+  removeSetting(const QString & key);
+
 }
 
 

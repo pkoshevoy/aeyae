@@ -10,7 +10,6 @@
 #include <limits>
 
 // Qt includes:
-#include <QSettings>
 #include <QString>
 #include <QTime>
 #include <QXmlStreamReader>
@@ -23,67 +22,6 @@
 
 namespace yae
 {
-#ifdef __APPLE__
-  static QString kOrganization = QString::fromUtf8("sourceforge.net");
-  static QString kApplication = QString::fromUtf8("apprenticevideo");
-#else
-  static QString kOrganization = QString::fromUtf8("PavelKoshevoy");
-  static QString kApplication = QString::fromUtf8("ApprenticeVideo");
-#endif
-
-  //----------------------------------------------------------------
-  // saveSetting
-  //
-  static bool
-  saveSetting(const QString & key, const QString & value)
-  {
-    QSettings settings(QSettings::NativeFormat,
-                       QSettings::UserScope,
-                       kOrganization,
-                       kApplication);
-
-    settings.setValue(key, value);
-
-    bool ok = (settings.status() == QSettings::NoError);
-    return ok;
-  }
-
-  //----------------------------------------------------------------
-  // loadSetting
-  //
-  static bool
-  loadSetting(const QString & key, QString & value)
-  {
-    QSettings settings(QSettings::NativeFormat,
-                       QSettings::UserScope,
-                       kOrganization,
-                       kApplication);
-
-    if (!settings.contains(key))
-    {
-      return false;
-    }
-
-    value = settings.value(key).toString();
-    return true;
-  }
-
-  //----------------------------------------------------------------
-  // removeSetting
-  //
-  static bool
-  removeSetting(const QString & key)
-  {
-    QSettings settings(QSettings::NativeFormat,
-                       QSettings::UserScope,
-                       kOrganization,
-                       kApplication);
-
-    settings.remove(key);
-
-    bool ok = (settings.status() == QSettings::NoError);
-    return ok;
-  }
 
   //----------------------------------------------------------------
   // TBookmark::TBookmark
