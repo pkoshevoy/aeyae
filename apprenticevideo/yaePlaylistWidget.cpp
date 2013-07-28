@@ -374,6 +374,33 @@ namespace yae
     groups_.clear();
     numItems_ = 0;
 
+    // remove leading redundant keys from abbreviated paths:
+    while (!fringeGroups.empty() &&
+           isSizeTwoOrMore(fringeGroups.front().abbreviatedPath_))
+    {
+      const PlaylistKey & head = fringeGroups.front().abbreviatedPath_.front();
+
+      bool same = true;
+      std::list<TFringeGroup>::iterator i = fringeGroups.begin();
+      for (++i; same && i != fringeGroups.end(); ++i)
+      {
+        const std::list<PlaylistKey> & abbreviatedPath = i->abbreviatedPath_;
+        const PlaylistKey & key = abbreviatedPath.front();
+        same = isSizeTwoOrMore(abbreviatedPath) && (key == head);
+      }
+
+      if (!same)
+      {
+        break;
+      }
+
+      // remove the head of abbreviated path of each group:
+      for (i = fringeGroups.begin(); i != fringeGroups.end(); ++i)
+      {
+        i->abbreviatedPath_.pop_front();
+      }
+    }
+
     for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
          i != fringeGroups.end(); ++i)
     {
