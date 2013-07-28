@@ -126,6 +126,7 @@ namespace yae
     // bookmarks menu:
     void bookmarksPopulate();
     void bookmarksRemove();
+    void bookmarksResumePlayback();
     void bookmarksSelectItem(int index);
 
     // playback menu:
@@ -196,6 +197,7 @@ namespace yae
     void canvasSizeBackup();
     void canvasSizeRestore();
     void saveBookmark();
+    void gotoBookmark(const PlaylistBookmark & bookmark);
 
   protected:
     // virtual:

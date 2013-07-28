@@ -123,6 +123,15 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // BookmarkHashInfo
+  //
+  struct BookmarkHashInfo
+  {
+    std::string groupHash_;
+    std::list<std::string> itemHash_;
+  };
+
+  //----------------------------------------------------------------
   // PlaylistWidget
   //
   class PlaylistWidget : public QAbstractScrollArea
@@ -136,8 +145,11 @@ namespace yae
     QSize minimumSizeHint() const;
     QSize sizeHint() const;
 
-    // use this to add items to the playlist:
-    void add(const std::list<QString> & playlist);
+    // use this to add items to the playlist;
+    // optionally pass back a list of group bookmark hashes
+    // that were added to the playlist during this call:
+    void add(const std::list<QString> & playlist,
+             std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
     // return index of the current item:
     std::size_t currentItem() const;
@@ -152,6 +164,13 @@ namespace yae
     // lookup a playlist item by index:
     PlaylistGroup * lookupGroup(std::size_t index);
     PlaylistItem * lookup(std::size_t index, PlaylistGroup ** group = NULL);
+
+    // lookup a playlist item by group hash and item hash:
+    PlaylistGroup * lookupGroup(const std::string & groupHash);
+    PlaylistItem * lookup(const std::string & groupHash,
+                          const std::string & itemHash,
+                          std::size_t * returnItemIndex = NULL,
+                          PlaylistGroup ** returnGroup = NULL);
 
     enum TDirection {
       kBehind = 0,

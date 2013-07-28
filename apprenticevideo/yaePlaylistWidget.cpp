@@ -9,6 +9,7 @@
 // system includes:
 #include <iostream>
 #include <algorithm>
+#include <limits>
 
 // Qt includes:
 #include <QCryptographicHash>
@@ -70,15 +71,15 @@ namespace yae
   // getBookmarkHash
   //
   static std::string
-  getBookmarkHash(const PlaylistGroup & group)
+  getBookmarkHash(const std::list<PlaylistKey> & keyPath)
   {
     QCryptographicHash crypto(QCryptographicHash::Sha1);
-    for (std::list<PlaylistKey>::const_iterator i = group.keyPath_.begin();
-         i != group.keyPath_.end(); ++i)
+    for (std::list<PlaylistKey>::const_iterator i = keyPath.begin();
+         i != keyPath.end(); ++i)
     {
-      const PlaylistKey & pk = *i;
-      crypto.addData(pk.key_.toUtf8());
-      crypto.addData(pk.ext_.toUtf8());
+      const PlaylistKey & key = *i;
+      crypto.addData(key.key_.toUtf8());
+      crypto.addData(key.ext_.toUtf8());
     }
 
     std::string groupHash("bookmark-");
@@ -90,11 +91,11 @@ namespace yae
   // getBookmarkHash
   //
   static std::string
-  getBookmarkHash(const PlaylistItem & item)
+  getBookmarkHash(const PlaylistKey & key)
   {
     QCryptographicHash crypto(QCryptographicHash::Sha1);
-    crypto.addData(item.key_.key_.toUtf8());
-    crypto.addData(item.key_.ext_.toUtf8());
+    crypto.addData(key.key_.toUtf8());
+    crypto.addData(key.ext_.toUtf8());
 
     std::string itemHash(crypto.result().toHex().constData());
     return itemHash;
@@ -256,7 +257,8 @@ namespace yae
   // PlaylistWidget::add
   //
   void
-  PlaylistWidget::add(const std::list<QString> & playlist)
+  PlaylistWidget::add(const std::list<QString> & playlist,
+                      std::list<BookmarkHashInfo> * returnBookmarkHashList)
   {
 #if 0
     std::cerr << "PlaylistWidget::add" << std::endl;
@@ -364,11 +366,39 @@ namespace yae
       tree_.set(keys, path);
     }
 
+    typedef TPlaylistTree::FringeGroup TFringeGroup;
+    typedef std::map<PlaylistKey, QString> TSiblings;
+
     // lookup the first new item:
     const QString * firstNewItemPath = tmpTree.findFirstFringeItemValue();
 
+    // return hash keys of newly added groups and items:
+    if (returnBookmarkHashList)
+    {
+      std::list<TFringeGroup> fringeGroups;
+      tmpTree.get(fringeGroups);
+
+      for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
+           i != fringeGroups.end(); ++i)
+      {
+        // shortcuts:
+        const std::list<PlaylistKey> & keyPath = i->fullPath_;
+        const TSiblings & siblings = i->siblings_;
+
+        returnBookmarkHashList->push_back(BookmarkHashInfo());
+        BookmarkHashInfo & hashInfo = returnBookmarkHashList->back();
+        hashInfo.groupHash_ = getBookmarkHash(keyPath);
+
+        for (TSiblings::const_iterator j = siblings.begin();
+             j != siblings.end(); ++j)
+        {
+          const PlaylistKey & key = j->first;
+          hashInfo.itemHash_.push_back(getBookmarkHash(key));
+        }
+      }
+    }
+
     // flatten the tree into a list of play groups:
-    typedef TPlaylistTree::FringeGroup TFringeGroup;
     std::list<TFringeGroup> fringeGroups;
     tree_.get(fringeGroups);
     groups_.clear();
@@ -412,10 +442,9 @@ namespace yae
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = toWords(fringeGroup.abbreviatedPath_);
       group.offset_ = numItems_;
-      group.bookmarkHash_ = getBookmarkHash(group);
+      group.bookmarkHash_ = getBookmarkHash(group.keyPath_);
 
       // shortcuts:
-      typedef std::map<PlaylistKey, QString> TSiblings;
       const TSiblings & siblings = fringeGroup.siblings_;
 
       for (TSiblings::const_iterator j = siblings.begin();
@@ -432,7 +461,7 @@ namespace yae
 
         playlistItem.name_ = toWords(key.key_);
         playlistItem.ext_ = key.ext_;
-        playlistItem.bookmarkHash_ = getBookmarkHash(playlistItem);
+        playlistItem.bookmarkHash_ = getBookmarkHash(playlistItem.key_);
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
@@ -2539,6 +2568,74 @@ namespace yae
 
       YAE_ASSERT(i < groupSize || index == numItems_);
       return i < groupSize ? &group->items_[i] : NULL;
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistWidget::lookupGroup
+  //
+  PlaylistGroup *
+  PlaylistWidget::lookupGroup(const std::string & groupHash)
+  {
+    if (groupHash.empty())
+    {
+      return NULL;
+    }
+
+    // ignore the last group, it's an empty playlist tail banner:
+    const std::size_t numGroups = groups_.size() - 1;
+    for (std::size_t i = 0; i < numGroups; i++)
+    {
+      PlaylistGroup & group = groups_[i];
+      if (groupHash == group.bookmarkHash_)
+      {
+        return &group;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistWidget::lookup
+  //
+  PlaylistItem *
+  PlaylistWidget::lookup(const std::string & groupHash,
+                         const std::string & itemHash,
+                         std::size_t * returnItemIndex,
+                         PlaylistGroup ** returnGroup)
+  {
+    PlaylistGroup * group = lookupGroup(groupHash);
+    if (!group || itemHash.empty())
+    {
+      return NULL;
+    }
+
+    if (returnGroup)
+    {
+      *returnGroup = group;
+    }
+
+    std::size_t groupSize = group->items_.size();
+    for (std::size_t i = 0; i < groupSize; i++)
+    {
+      PlaylistItem & item = group->items_[i];
+      if (itemHash == item.bookmarkHash_)
+      {
+        if (*returnItemIndex)
+        {
+          *returnItemIndex = group->offset_ + i;
+        }
+
+        return &item;
+      }
+    }
+
+    if (*returnItemIndex)
+    {
+      *returnItemIndex = std::numeric_limits<std::size_t>::max();
     }
 
     return NULL;

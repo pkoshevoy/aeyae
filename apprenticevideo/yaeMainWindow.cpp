@@ -51,6 +51,22 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kResumePlaybackFromBookmark
+  //
+  static const QString kResumePlaybackFromBookmark =
+    QString::fromUtf8("ResumePlaybackFromBookmark");
+
+  //----------------------------------------------------------------
+  // kSettingTrue
+  //
+  static const QString kSettingTrue = QString::fromUtf8("true");
+
+  //----------------------------------------------------------------
+  // kSettingFalse
+  //
+  static const QString kSettingFalse = QString::fromUtf8("false");
+
+  //----------------------------------------------------------------
   // swapLayouts
   //
   static void
@@ -100,7 +116,8 @@ namespace yae
   //
   PlaylistBookmark::PlaylistBookmark():
     TBookmark(),
-    itemIndex_(std::numeric_limits<std::size_t>::max())
+    itemIndex_(std::numeric_limits<std::size_t>::max()),
+    action_(NULL)
   {}
 
 
@@ -294,6 +311,14 @@ namespace yae
 
     bookmarksMenuSeparator_ =
       menuBookmarks->insertSeparator(actionRemoveBookmarks);
+
+    QString resumeFromBookmark =
+      loadSettingOrDefault(kResumePlaybackFromBookmark, kSettingTrue);
+
+    if (resumeFromBookmark == kSettingTrue)
+    {
+      actionResumeFromBookmark->setChecked(true);
+    }
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -738,6 +763,10 @@ namespace yae
                  this, SLOT(bookmarksRemove()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionResumeFromBookmark, SIGNAL(triggered()),
+                 this, SLOT(bookmarksResumePlayback()));
+    YAE_ASSERT(ok);
+
     // initialize the subtitles menu:
     {
       subsTrackGroup_ = new QActionGroup(this);
@@ -798,12 +827,59 @@ namespace yae
                           bool beginPlaybackImmediately)
   {
     SignalBlocker blockSignals(playlistWidget_);
-    playlistWidget_->add(playlist);
 
-    if (beginPlaybackImmediately)
+    bool resumeFromBookmark =
+      actionAutomaticBookmarks->isChecked() &&
+      actionResumeFromBookmark->isChecked();
+
+    std::list<BookmarkHashInfo> hashInfo;
+    playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+
+    if (!beginPlaybackImmediately)
     {
-      playback();
+      return;
     }
+
+    if (resumeFromBookmark)
+    {
+      // look for a matching bookmark, resume playback if a bookmark exist:
+      PlaylistBookmark bookmark;
+      bool found = false;
+
+      for (std::list<BookmarkHashInfo>::const_iterator i = hashInfo.begin();
+           !found && i != hashInfo.end(); ++i)
+      {
+        // shortcuts:
+        const std::string & groupHash = i->groupHash_;
+
+        if (!yae::loadBookmark(groupHash, bookmark))
+        {
+          continue;
+        }
+
+        // shortcut:
+        const std::list<std::string> & itemHashList = i->itemHash_;
+        for (std::list<std::string>::const_iterator j = itemHashList.begin();
+             !found && j != itemHashList.end(); ++j)
+        {
+          const std::string & itemHash = *j;
+          if (itemHash == bookmark.itemHash_)
+          {
+            found = true;
+          }
+        }
+      }
+
+      if (found && playlistWidget_->lookup(bookmark.groupHash_,
+                                           bookmark.itemHash_,
+                                           &bookmark.itemIndex_))
+      {
+        gotoBookmark(bookmark);
+        return;
+      }
+    }
+
+    playback();
   }
 
   //----------------------------------------------------------------
@@ -1966,6 +2042,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::bookmarksResumePlayback
+  //
+  void
+  MainWindow::bookmarksResumePlayback()
+  {
+    if (actionResumeFromBookmark->isChecked())
+    {
+      saveSetting(kResumePlaybackFromBookmark, kSettingTrue);
+    }
+    else
+    {
+      saveSetting(kResumePlaybackFromBookmark, kSettingFalse);
+    }
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::bookmarksSelectItem
   //
   void
@@ -1977,20 +2069,7 @@ namespace yae
     }
 
     const PlaylistBookmark & bookmark = bookmarks_[index];
-    playbackStop();
-
-    SignalBlocker blockSignals(playlistWidget_);
-    actionPlay->setEnabled(false);
-
-    playlistWidget_->setCurrentItem(bookmark.itemIndex_);
-    PlaylistItem * item = playlistWidget_->lookup(bookmark.itemIndex_);
-
-    if (item)
-    {
-      load(item->path_, &bookmark);
-    }
-
-    fixupNextPrev();
+    gotoBookmark(bookmark);
   }
 
   //----------------------------------------------------------------
@@ -3071,6 +3150,28 @@ namespace yae
                       item->bookmarkHash_,
                       reader_,
                       positionInSeconds);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::gotoBookmark
+  //
+  void
+  MainWindow::gotoBookmark(const PlaylistBookmark & bookmark)
+  {
+    playbackStop();
+
+    SignalBlocker blockSignals(playlistWidget_);
+    actionPlay->setEnabled(false);
+
+    playlistWidget_->setCurrentItem(bookmark.itemIndex_);
+    PlaylistItem * item = playlistWidget_->lookup(bookmark.itemIndex_);
+
+    if (item)
+    {
+      load(item->path_, &bookmark);
+    }
+
+    fixupNextPrev();
   }
 
   //----------------------------------------------------------------

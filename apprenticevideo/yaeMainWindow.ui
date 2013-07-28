@@ -335,6 +335,7 @@ QLineEdit:disabled {
      <string>&amp;Bookmarks</string>
     </property>
     <addaction name="actionAutomaticBookmarks"/>
+    <addaction name="actionResumeFromBookmark"/>
     <addaction name="separator"/>
     <addaction name="actionRemoveBookmarks"/>
    </widget>
@@ -959,6 +960,14 @@ QLineEdit QToolButton#clear_:pressed {
     <string>Remove Bookmarks</string>
    </property>
   </action>
+  <action name="actionResumeFromBookmark">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Resume Playback From Bookmark</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -986,5 +995,22 @@ QLineEdit QToolButton#clear_:pressed {
  <resources>
   <include location="apprenticevideo.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionAutomaticBookmarks</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>actionResumeFromBookmark</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
