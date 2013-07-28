@@ -1861,7 +1861,7 @@ namespace yae
     std::size_t itemIndex = 0;
     while (true)
     {
-      PlaylistGroup * group = playlistWidget_->closestGroup(itemIndex);
+      PlaylistGroup * group = playlistWidget_->lookupGroup(itemIndex);
       std::size_t groupSize = group ? group->items_.size() : 0;
       if (!groupSize)
       {
