@@ -105,7 +105,7 @@ namespace yae
 
   protected:
     // open a movie file for playback:
-    bool load(const QString & path);
+    bool load(const QString & path, const TBookmark * bookmark = NULL);
 
   public:
     // specify a playlist of files to load:

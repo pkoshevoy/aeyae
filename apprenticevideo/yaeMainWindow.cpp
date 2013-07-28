@@ -1230,7 +1230,7 @@ namespace yae
   // MainWindow::load
   //
   bool
-  MainWindow::load(const QString & path)
+  MainWindow::load(const QString & path, const TBookmark * bookmark)
   {
     QString fn = path;
     QFileInfo fi(fn);
@@ -1528,6 +1528,11 @@ namespace yae
                                                         videoTraits,
                                                         selVideo_,
                                                         selVideoTraits_);
+    if (bookmark && bookmark->vtrack_ < numVideoTracks)
+    {
+      vtrack = bookmark->vtrack_;
+    }
+
     selectVideoTrack(reader, vtrack);
     videoTrackAction[vtrack]->setChecked(true);
 
@@ -1535,6 +1540,11 @@ namespace yae
                                                         audioTraits,
                                                         selAudio_,
                                                         selAudioTraits_);
+    if (bookmark && bookmark->atrack_ < numAudioTracks)
+    {
+      atrack = bookmark->atrack_;
+    }
+
     selectAudioTrack(reader, atrack);
     audioTrackAction[atrack]->setChecked(true);
 
@@ -1542,6 +1552,19 @@ namespace yae
                                                         subsFormat,
                                                         selSubs_,
                                                         selSubsFormat_);
+    if (bookmark)
+    {
+      if (!bookmark->subs_.empty() &&
+          bookmark->subs_.front() < subsCount)
+      {
+        strack = bookmark->subs_.front();
+      }
+      else if (bookmark->subs_.empty())
+      {
+        strack = subsCount;
+      }
+    }
+
     selectSubsTrack(reader, strack);
     subsTrackAction[strack]->setChecked(true);
 
@@ -1588,6 +1611,12 @@ namespace yae
 
     // reset timeline start, duration, playhead, in/out points:
     timelineControls_->resetFor(reader);
+
+    if (bookmark)
+    {
+      // skip to bookmarked position:
+      reader->seek(bookmark->positionInSeconds_);
+    }
 
     // renderers have to be started before the reader, because they
     // may need to specify reader output format override, which is
@@ -1813,6 +1842,7 @@ namespace yae
     bookmarksMapper_ = NULL;
 
     bookmarksMenuSeparator_->setVisible(false);
+    actionRemoveBookmarks->setEnabled(false);
 
     for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
          i != bookmarks_.end(); ++i)
@@ -1877,6 +1907,7 @@ namespace yae
           YAE_ASSERT(ok);
 
           bookmarksMenuSeparator_->setVisible(true);
+          actionRemoveBookmarks->setEnabled(true);
         }
 
         QString name =
@@ -1919,6 +1950,7 @@ namespace yae
     bookmarksMapper_ = NULL;
 
     bookmarksMenuSeparator_->setVisible(false);
+    actionRemoveBookmarks->setEnabled(false);
 
     for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
          i != bookmarks_.end(); ++i)
@@ -1950,22 +1982,14 @@ namespace yae
     actionPlay->setEnabled(false);
 
     playlistWidget_->setCurrentItem(bookmark.itemIndex_);
-    playback(true);
+    PlaylistItem * item = playlistWidget_->lookup(bookmark.itemIndex_);
 
-    std::size_t currentItem = playlistWidget_->currentItem();
-    if (currentItem == bookmark.itemIndex_)
+    if (item)
     {
-      videoSelectTrack(bookmark.vtrack_);
-      audioSelectTrack(bookmark.atrack_);
-
-      if (!bookmark.subs_.empty())
-      {
-        std::size_t strack = bookmark.subs_.front();
-        subsSelectTrack(strack);
-      }
-
-      timelineControls_->seekTo(bookmark.positionInSeconds_);
+      load(item->path_, &bookmark);
     }
+
+    fixupNextPrev();
   }
 
   //----------------------------------------------------------------
