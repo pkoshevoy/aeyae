@@ -67,28 +67,23 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // makeHashKey
-  //
-  static std::string
-  makeHashKey(const PlaylistKey & key)
-  {
-    QCryptographicHash crypto(QCryptographicHash::Sha1);
-    crypto.addData(key.key_.toUtf8());
-    crypto.addData(key.ext_.toUtf8());
-
-    std::string hash(crypto.result().toHex().constData());
-    return hash;
-  }
-
-  //----------------------------------------------------------------
   // getBookmarkHash
   //
   static std::string
   getBookmarkHash(const PlaylistGroup & group)
   {
-    std::string keyHash("bookmark-");
-    keyHash += makeHashKey(group.keyPath_.back());
-    return keyHash;
+    QCryptographicHash crypto(QCryptographicHash::Sha1);
+    for (std::list<PlaylistKey>::const_iterator i = group.keyPath_.begin();
+         i != group.keyPath_.end(); ++i)
+    {
+      const PlaylistKey & pk = *i;
+      crypto.addData(pk.key_.toUtf8());
+      crypto.addData(pk.ext_.toUtf8());
+    }
+
+    std::string groupHash("bookmark-");
+    groupHash += crypto.result().toHex().constData();
+    return groupHash;
   }
 
   //----------------------------------------------------------------
@@ -97,7 +92,12 @@ namespace yae
   static std::string
   getBookmarkHash(const PlaylistItem & item)
   {
-    return makeHashKey(item.key_);
+    QCryptographicHash crypto(QCryptographicHash::Sha1);
+    crypto.addData(item.key_.key_.toUtf8());
+    crypto.addData(item.key_.ext_.toUtf8());
+
+    std::string itemHash(crypto.result().toHex().constData());
+    return itemHash;
   }
 
 
@@ -234,6 +234,12 @@ namespace yae
     for (std::list<PlaylistKey>::const_iterator i = keys.begin();
          i != keys.end(); ++i)
     {
+      if (!words.empty())
+      {
+        // right-pointing double angle bracket:
+        words.push_back(QString::fromUtf8(" ""\xc2""\xbb"" "));
+      }
+
       const PlaylistKey & key = *i;
       splitIntoWords(key.key_, words);
 

@@ -1913,7 +1913,8 @@ namespace yae
         QString name =
           escapeAmpersand(group->name_) +
 #ifdef __APPLE__
-          QString::fromUtf8(": ") +
+          // right-pointing double angle bracket:
+          QString::fromUtf8(" ""\xc2""\xbb"" ") +
 #else
           QString::fromUtf8("\t") +
 #endif
