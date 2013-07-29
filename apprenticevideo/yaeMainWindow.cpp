@@ -1600,6 +1600,7 @@ namespace yae
       subsTrackMapper_->setMapping(trackAction, int(subsCount));
     }
 
+    bool rememberSelectedVideoTrack = false;
     std::size_t vtrack = findMatchingTrack<VideoTraits>(videoInfo,
                                                         videoTraits,
                                                         selVideo_,
@@ -1607,11 +1608,19 @@ namespace yae
     if (bookmark && bookmark->vtrack_ <= numVideoTracks)
     {
       vtrack = bookmark->vtrack_;
+      rememberSelectedVideoTrack = true;
     }
 
     selectVideoTrack(reader, vtrack);
     videoTrackAction[vtrack]->setChecked(true);
 
+    if (rememberSelectedVideoTrack)
+    {
+      reader->getSelectedVideoTrackInfo(selVideo_);
+      reader->getVideoTraits(selVideoTraits_);
+    }
+
+    bool rememberSelectedAudioTrack = false;
     std::size_t atrack = findMatchingTrack<AudioTraits>(audioInfo,
                                                         audioTraits,
                                                         selAudio_,
@@ -1619,11 +1628,19 @@ namespace yae
     if (bookmark && bookmark->atrack_ <= numAudioTracks)
     {
       atrack = bookmark->atrack_;
+      rememberSelectedAudioTrack = true;
     }
 
     selectAudioTrack(reader, atrack);
     audioTrackAction[atrack]->setChecked(true);
 
+    if (rememberSelectedAudioTrack)
+    {
+      reader->getSelectedAudioTrackInfo(selAudio_);
+      reader->getAudioTraits(selAudioTraits_);
+    }
+
+    bool rememberSelectedSubtitlesTrack = false;
     std::size_t strack = findMatchingTrack<TSubsFormat>(subsInfo,
                                                         subsFormat,
                                                         selSubs_,
@@ -1634,16 +1651,22 @@ namespace yae
           bookmark->subs_.front() < subsCount)
       {
         strack = bookmark->subs_.front();
+        rememberSelectedSubtitlesTrack = true;
       }
       else if (bookmark->subs_.empty())
       {
         strack = subsCount;
+        rememberSelectedSubtitlesTrack = true;
       }
     }
 
     selectSubsTrack(reader, strack);
     subsTrackAction[strack]->setChecked(true);
 
+    if (rememberSelectedSubtitlesTrack)
+    {
+      selSubsFormat_ = reader->subsInfo(strack, selSubs_);
+    }
 
     // update the chapter menu:
     delete chapterMapper_;
