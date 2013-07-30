@@ -124,6 +124,7 @@ namespace yae
     void fileExit();
 
     // bookmarks menu:
+    void bookmarksAutomatic();
     void bookmarksPopulate();
     void bookmarksRemove();
     void bookmarksResumePlayback();

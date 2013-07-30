@@ -948,9 +948,6 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Create Playlist Bookmarks Automatically</string>
    </property>
@@ -995,22 +992,5 @@ QLineEdit QToolButton#clear_:pressed {
  <resources>
   <include location="apprenticevideo.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>actionAutomaticBookmarks</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>actionResumeFromBookmark</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

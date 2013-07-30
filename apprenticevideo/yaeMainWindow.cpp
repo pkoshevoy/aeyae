@@ -51,6 +51,12 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kCreateBookmarksAutomatically
+  //
+  static const QString kCreateBookmarksAutomatically =
+    QString::fromUtf8("CreateBookmarksAutomatically");
+
+  //----------------------------------------------------------------
   // kResumePlaybackFromBookmark
   //
   static const QString kResumePlaybackFromBookmark =
@@ -312,13 +318,13 @@ namespace yae
     bookmarksMenuSeparator_ =
       menuBookmarks->insertSeparator(actionRemoveBookmarks);
 
+    QString automaticBookmarks =
+      loadSettingOrDefault(kCreateBookmarksAutomatically, kSettingTrue);
+    actionAutomaticBookmarks->setChecked(automaticBookmarks == kSettingTrue);
+
     QString resumeFromBookmark =
       loadSettingOrDefault(kResumePlaybackFromBookmark, kSettingTrue);
-
-    if (resumeFromBookmark == kSettingTrue)
-    {
-      actionResumeFromBookmark->setChecked(true);
-    }
+    actionResumeFromBookmark->setChecked(resumeFromBookmark == kSettingTrue);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -755,6 +761,10 @@ namespace yae
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionAutomaticBookmarks, SIGNAL(triggered()),
+                 this, SLOT(bookmarksAutomatic()));
+    YAE_ASSERT(ok);
+
     ok = connect(menuBookmarks, SIGNAL(aboutToShow()),
                  this, SLOT(bookmarksPopulate()));
     YAE_ASSERT(ok);
@@ -828,9 +838,7 @@ namespace yae
   {
     SignalBlocker blockSignals(playlistWidget_);
 
-    bool resumeFromBookmark =
-      actionAutomaticBookmarks->isChecked() &&
-      actionResumeFromBookmark->isChecked();
+    bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
     playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
@@ -1918,6 +1926,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::bookmarksAutomatic
+  //
+  void
+  MainWindow::bookmarksAutomatic()
+  {
+    if (actionAutomaticBookmarks->isChecked())
+    {
+      saveSetting(kCreateBookmarksAutomatically, kSettingTrue);
+    }
+    else
+    {
+      saveSetting(kCreateBookmarksAutomatically, kSettingFalse);
+    }
+  }
+
+  //----------------------------------------------------------------
   // escapeAmpersand
   //
   static QString
@@ -1951,11 +1975,6 @@ namespace yae
     }
 
     bookmarks_.clear();
-
-    if (!actionAutomaticBookmarks->isChecked())
-    {
-      return;
-    }
 
     std::size_t itemIndex = 0;
     while (true)
