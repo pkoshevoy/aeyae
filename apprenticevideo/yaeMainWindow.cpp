@@ -3491,7 +3491,6 @@ namespace yae
              key == Qt::Key_MediaTogglePlayPause)
     {
       togglePlayback();
-      std::cerr << "media toggle play/pause" << std::endl;
     }
     else
     {
