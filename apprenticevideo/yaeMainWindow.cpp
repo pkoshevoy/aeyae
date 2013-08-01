@@ -1329,18 +1329,51 @@ namespace yae
       }
     }
 
-    // convert to NFD normal form (Normalization Form Canonical Decomposition):
-    fn = fn.normalized(QString::NormalizationForm_D);
-    std::string filename(fn.toUtf8().constData());
-
     actionPlay->setEnabled(false);
 
+    static const QString::NormalizationForm normalizationForm[] =
+    {
+      QString::NormalizationForm_D,
+      QString::NormalizationForm_C,
+      QString::NormalizationForm_KD,
+      QString::NormalizationForm_KC
+    };
+
+    static const std::size_t numNormalizationForms =
+      sizeof(normalizationForm) / sizeof(normalizationForm[0]);
+
+    bool ok = false;
+    std::string filename;
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
-    if (!reader->open(filename.c_str()))
+
+    for (std::size_t i = 0; reader && i < numNormalizationForms; i++)
+    {
+      // find UNICODE NORMALIZATION FORM that works
+      // http://www.unicode.org/reports/tr15/
+
+      QString tmp = fn.normalized(normalizationForm[i]);
+      filename = tmp.toUtf8().constData();
+
+      if (!reader->open(filename.c_str()))
+      {
+        continue;
+      }
+
+      ok = true;
+      break;
+    }
+
+    if (!ok)
     {
 #if 0
       std::cerr << "ERROR: could not open movie: " << filename << std::endl;
 #endif
+
+      if (reader)
+      {
+        reader->destroy();
+      }
+
       return false;
     }
 
@@ -1420,8 +1453,8 @@ namespace yae
     delete audioTrackMapper_;
     audioTrackMapper_ = new QSignalMapper(this);
 
-    bool ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
-                      this, SLOT(audioSelectTrack(int)));
+    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(audioSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete videoTrackMapper_;
@@ -3443,6 +3476,22 @@ namespace yae
       {
         audioRenderer_->skipToTime(t, reader_);
       }
+    }
+    else if (key == Qt::Key_MediaNext)
+    {
+      timelineControls_->seekFromCurrentTime(7.0);
+    }
+    else if (key == Qt::Key_MediaPrevious)
+    {
+      timelineControls_->seekFromCurrentTime(-3.0);
+    }
+    else if (key == Qt::Key_MediaStop ||
+             key == Qt::Key_MediaPlay ||
+             key == Qt::Key_MediaPause ||
+             key == Qt::Key_MediaTogglePlayPause)
+    {
+      togglePlayback();
+      std::cerr << "media toggle play/pause" << std::endl;
     }
     else
     {
