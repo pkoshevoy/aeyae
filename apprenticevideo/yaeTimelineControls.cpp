@@ -49,7 +49,6 @@ namespace yae
     msec %= 1000;
     sec %= 60;
     min %= 60;
-    hour %= 24;
 
     uint64 frames = uint64(seconds * frameRate );
     uint64 frameNo = frames - uint64(frameRate * floor(seconds));
@@ -550,8 +549,18 @@ namespace yae
   void
   TimelineControls::seekFromCurrentTime(double secOffset)
   {
-    double seconds = currentTime() + secOffset;
-    seekTo(seconds);
+    double t0 = currentTime();
+    if (t0 > 1e-1)
+    {
+      double seconds = std::max<double>(0.0, t0 + secOffset);
+#if 0
+      std::cerr << "seek from " << TTime(t0).to_hhmmss_usec(":")
+                << " " << secOffset << " seconds to "
+                << TTime(seconds).to_hhmmss_usec(":")
+                << std::endl;
+#endif
+      seekTo(seconds);
+    }
   }
 
   //----------------------------------------------------------------

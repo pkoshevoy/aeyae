@@ -3739,9 +3739,10 @@ namespace yae
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;
 
-    // demuxer current position (DTS):
-    TTime dts_;
+    // demuxer current position (DTS, stream index, and byte position):
     int dtsStreamIndex_;
+    int64_t dtsBytePos_;
+    int64_t dts_;
 
     double timeIn_;
     double timeOut_;
@@ -3763,6 +3764,9 @@ namespace yae
     skipNonReferenceFrames_(false),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
+    dtsStreamIndex_(-1),
+    dtsBytePos_(0),
+    dts_(AV_NOPTS_VALUE),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
     playbackInterval_(false),
@@ -4134,11 +4138,8 @@ namespace yae
         {
           // keep track of current DTS, so that we would know which way to seek
           // relative to the current position (back/forth)
-          const AVStream * stream = context_->streams[ffmpeg.stream_index];
-          const AVRational & timebase = stream->time_base;
-          TTime dts(ffmpeg.dts * timebase.num, timebase.den);
-
-          dts_ = dts;
+          dts_ = ffmpeg.dts;
+          dtsBytePos_ = ffmpeg.pos;
           dtsStreamIndex_ = ffmpeg.stream_index;
         }
 
@@ -4394,15 +4395,8 @@ namespace yae
     }
 
     int streamIndex = -1;
-    VideoTrackPtr videoTrack;
     TTime startTime;
     TTime duration;
-    if (selectedVideoTrack_ < videoTracks_.size())
-    {
-      videoTrack = videoTracks_[selectedVideoTrack_];
-      streamIndex = videoTrack->streamIndex();
-      videoTrack->getDuration(startTime, duration);
-    }
 
     AudioTrackPtr audioTrack;
     if (selectedAudioTrack_ < audioTracks_.size())
@@ -4416,36 +4410,76 @@ namespace yae
       }
     }
 
+    VideoTrackPtr videoTrack;
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      videoTrack = videoTracks_[selectedVideoTrack_];
+
+      if (streamIndex < 0)
+      {
+        streamIndex = videoTrack->streamIndex();
+        videoTrack->getDuration(startTime, duration);
+      }
+    }
+
+    double totalTime = duration.toSeconds();
     int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
     int seekFlags = 0;
 
-    if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
+#if 0
+    if (!(context_->iformat->flags & AVFMT_NO_BYTE_SEEK) &&
+        (context_->iformat->flags & AVFMT_TS_DISCONT) &&
         strcmp(context_->iformat->name, "ogg") != 0)
     {
-      seekFlags |= AVSEEK_FLAG_BYTE;
-
-      uint64_t fileBytes =  avio_size(context_->pb);
+      uint64_t fileBytes = avio_size(context_->pb);
       double offset = startTime.toSeconds();
-      double totalTime = duration.toSeconds();
 
-      double t = (seekTime - offset) / totalTime;
-      ts = int64_t(t * double(fileBytes));
-      ts = std::max<int64_t>(0, ts);
+      if (dts_ != AV_NOPTS_VALUE)
+      {
+        // NOTE: this attempts to work around the timestamp discontinuity
+        // problem by calculating seek position relative to the
+        // current DTS position; if the seek is relatively nearby
+        // it should be reasonably accurate:
+
+        const AVStream * s = context_->streams[dtsStreamIndex_];
+        const AVRational & tb = s->time_base;
+        double dts = (dts_ * tb.num) / double(tb.den);
+
+        if (dts > offset)
+        {
+          double dt = (seekTime - dts) / (dts - offset);
+          ts = dtsBytePos_ + (int64_t)(double(dtsBytePos_) * dt);
+          ts = std::max<int64_t>(0, ts);
+          seekFlags |= AVSEEK_FLAG_BYTE;
+          streamIndex = -1;
+        }
+      }
+    }
+#endif
+
+    if (streamIndex != -1)
+    {
+      AVRational tb;
+      tb.num = 1;
+      tb.den = AV_TIME_BASE;
+
+      const AVStream * s = context_->streams[streamIndex];
+      ts = av_rescale_q(ts, tb, s->time_base);
     }
 
     int err = avformat_seek_file(context_,
-                                 -1,
+                                 streamIndex,
                                  kMinInt64,
                                  ts,
-                                 kMaxInt64,
+                                 ts, // kMaxInt64,
                                  seekFlags);
     if (err < 0)
     {
       err = avformat_seek_file(context_,
-                               -1,
+                               streamIndex,
                                kMinInt64,
                                ts,
-                               kMaxInt64,
+                               ts, // kMaxInt64,
                                seekFlags | AVSEEK_FLAG_ANY);
     }
 
