@@ -3855,6 +3855,7 @@ namespace yae
       if (!track->open())
       {
         // unsupported codec, ignore it:
+        stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
         continue;
       }
 
@@ -3868,6 +3869,11 @@ namespace yae
           stream->discard = AVDISCARD_DEFAULT;
           videoTracks_.push_back(track);
         }
+        else
+        {
+          // unsupported codec, ignore it:
+          stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
+        }
       }
       else if (codecType == AVMEDIA_TYPE_AUDIO)
       {
@@ -3877,6 +3883,11 @@ namespace yae
         {
           stream->discard = AVDISCARD_DEFAULT;
           audioTracks_.push_back(track);
+        }
+        else
+        {
+          // unsupported codec, ignore it:
+          stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
         }
       }
       else if (codecType == AVMEDIA_TYPE_SUBTITLE)
@@ -4060,6 +4071,7 @@ namespace yae
       int err = 0;
       while (!err)
       {
+        av_init_packet(&ffmpeg);
         boost::this_thread::interruption_point();
 
         // check whether it's time to rewind to the in-point:
@@ -4395,67 +4407,28 @@ namespace yae
     }
 
     int streamIndex = -1;
-    TTime startTime;
-    TTime duration;
 
     AudioTrackPtr audioTrack;
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       audioTrack = audioTracks_[selectedAudioTrack_];
-
-      if (streamIndex < 0)
-      {
-        streamIndex = audioTrack->streamIndex();
-        audioTrack->getDuration(startTime, duration);
-      }
     }
 
     VideoTrackPtr videoTrack;
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       videoTrack = videoTracks_[selectedVideoTrack_];
-
-      if (streamIndex < 0)
-      {
-        streamIndex = videoTrack->streamIndex();
-        videoTrack->getDuration(startTime, duration);
-      }
     }
 
-    double totalTime = duration.toSeconds();
+    if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
+        strcmp(context_->iformat->name, "ogg") != 0 &&
+        audioTrack)
+    {
+      streamIndex = audioTrack->streamIndex();
+    }
+
     int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
     int seekFlags = 0;
-
-#if 0
-    if (!(context_->iformat->flags & AVFMT_NO_BYTE_SEEK) &&
-        (context_->iformat->flags & AVFMT_TS_DISCONT) &&
-        strcmp(context_->iformat->name, "ogg") != 0)
-    {
-      uint64_t fileBytes = avio_size(context_->pb);
-      double offset = startTime.toSeconds();
-
-      if (dts_ != AV_NOPTS_VALUE)
-      {
-        // NOTE: this attempts to work around the timestamp discontinuity
-        // problem by calculating seek position relative to the
-        // current DTS position; if the seek is relatively nearby
-        // it should be reasonably accurate:
-
-        const AVStream * s = context_->streams[dtsStreamIndex_];
-        const AVRational & tb = s->time_base;
-        double dts = (dts_ * tb.num) / double(tb.den);
-
-        if (dts > offset)
-        {
-          double dt = (seekTime - dts) / (dts - offset);
-          ts = dtsBytePos_ + (int64_t)(double(dtsBytePos_) * dt);
-          ts = std::max<int64_t>(0, ts);
-          seekFlags |= AVSEEK_FLAG_BYTE;
-          streamIndex = -1;
-        }
-      }
-    }
-#endif
 
     if (streamIndex != -1)
     {
