@@ -3485,10 +3485,12 @@ namespace yae
     {
       timelineControls_->seekFromCurrentTime(-3.0);
     }
-    else if (key == Qt::Key_MediaStop ||
-             key == Qt::Key_MediaPlay ||
+    else if (key == Qt::Key_MediaPlay ||
+#if QT_VERSION >= 0x040700
              key == Qt::Key_MediaPause ||
-             key == Qt::Key_MediaTogglePlayPause)
+             key == Qt::Key_MediaTogglePlayPause ||
+#endif
+             key == Qt::Key_MediaStop)
     {
       togglePlayback();
     }
