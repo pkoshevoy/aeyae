@@ -3477,11 +3477,15 @@ namespace yae
         audioRenderer_->skipToTime(t, reader_);
       }
     }
-    else if (key == Qt::Key_MediaNext)
+    else if (key == Qt::Key_MediaNext ||
+             key == Qt::Key_Period ||
+             key == Qt::Key_Greater)
     {
       timelineControls_->seekFromCurrentTime(7.0);
     }
-    else if (key == Qt::Key_MediaPrevious)
+    else if (key == Qt::Key_MediaPrevious ||
+             key == Qt::Key_Comma ||
+             key == Qt::Key_Less)
     {
       timelineControls_->seekFromCurrentTime(-3.0);
     }
