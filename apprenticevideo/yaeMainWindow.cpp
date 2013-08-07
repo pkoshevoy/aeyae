@@ -3378,6 +3378,13 @@ namespace yae
   void
   MainWindow::wheelEvent(QWheelEvent * e)
   {
+    double tNow = timelineControls_->currentTime();
+    if (tNow <= 1e-1)
+    {
+      // ignore it:
+      return;
+    }
+
     // seek back and forth here:
     int delta = e->delta();
     double percent = floor(0.5 + fabs(double(delta)) / 120.0);
@@ -3386,7 +3393,7 @@ namespace yae
 
     if (!scrollWheelTimer_.isActive())
     {
-      scrollStart_ = timelineControls_->currentTime();
+      scrollStart_ = tNow;
       scrollOffset_ = 0.0;
     }
 
