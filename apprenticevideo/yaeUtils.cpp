@@ -527,6 +527,7 @@ namespace yae
     {
       QChar ch = cleanKey[i];
       QChar ch1 = ((i + 1) < size) ? cleanKey[i + 1] : QChar(0);
+      QChar ch2 = ((i + 2) < size) ? cleanKey[i + 2] : QChar(0);
 
       std::size_t foundSeparatorTag = indexOfSeparatorTag(ch);
       if (foundSeparatorTag < kSeparatorTagsNum &&
@@ -537,7 +538,10 @@ namespace yae
             ch1 != kSpace &&
             (ch1 != 0 || !token.endsWith(kPeriod)) &&
             // avoid breaking up YYYY.MM.DD dates:
-            !(isNumeric(prev) && isNumeric(ch1)))))
+            !(isNumeric(prev) && isNumeric(ch1)) &&
+            // avoid breaking up A.B.C initials:
+            !(prev.size() == 1 && prev[0].isLetter() &&
+              ch1.isLetter() && (ch2 == kPeriod || ch2 == kSpace)))))
       {
         if (!token.isEmpty())
         {
