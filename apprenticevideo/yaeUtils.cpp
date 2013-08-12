@@ -192,6 +192,28 @@ namespace yae
     return st.st_size;
   }
 
+  static const QChar kUnderscore = QChar::fromAscii('_');
+  static const QChar kHyphen = QChar::fromAscii('-');
+  static const QChar kSpace = QChar::fromAscii(' ');
+  static const QChar kPeriod = QChar::fromAscii('.');
+  static const QChar kComma = QChar::fromAscii(',');
+  static const QChar kSemicolon = QChar::fromAscii(';');
+  static const QChar kExclamation = QChar::fromAscii('!');
+  static const QChar kQuestionmark = QChar::fromAscii('?');
+
+  //----------------------------------------------------------------
+  // isPunctuation
+  //
+  static inline bool
+  isPunctuation(const QChar & ch)
+  {
+    return (ch == kPeriod ||
+            ch == kComma ||
+            ch == kSemicolon ||
+            ch == kExclamation ||
+            ch == kQuestionmark);
+  }
+
   //----------------------------------------------------------------
   // toQString
   //
@@ -203,12 +225,13 @@ namespace yae
     for (std::list<QString>::const_iterator i = keys.begin();
          i != keys.end(); ++i)
     {
-      if (i != keys.begin())
+      const QString & key = *i;
+
+      if (i != keys.begin() && !(key.size() == 1 && isPunctuation(key[0])))
       {
-        path += QString::fromUtf8(" ");
+        path += kSpace;
       }
 
-      const QString & key = *i;
       path += trimWhiteSpace ? key.trimmed() : key;
     }
 
@@ -236,7 +259,7 @@ namespace yae
   //----------------------------------------------------------------
   // isNumeric
   //
-  bool
+  static inline bool
   isNumeric(const QChar & c)
   {
     return c >= QChar('0') && c <= QChar('9');
@@ -245,11 +268,11 @@ namespace yae
   //----------------------------------------------------------------
   // isNumeric
   //
-  int
-  isNumeric(const QString & key)
+  static int
+  isNumeric(const QString & key, int start = 0)
   {
     const int size = key.size();
-    for (int i = 0; i < size; i++)
+    for (int i = start; i < size; i++)
     {
       QChar c = key[i];
       if (!isNumeric(c))
@@ -258,7 +281,55 @@ namespace yae
       }
     }
 
-    return size;
+    return (start < size) ? (size - start) : 0;
+  }
+
+  //----------------------------------------------------------------
+  // isVaguelyNumeric
+  //
+  static int
+  isVaguelyNumeric(const QString & key, int start = 0)
+  {
+    int numDigits = 0;
+    const int size = key.size();
+
+    for (int i = start; i < size; i++)
+    {
+      QChar ch = key[i];
+
+      if (!ch.isLetterOrNumber() && !isPunctuation(ch))
+      {
+        return 0;
+      }
+
+      if (isNumeric(ch))
+      {
+        numDigits++;
+      }
+    }
+
+    return (start < size && numDigits) ? (size - start) : 0;
+  }
+
+  //----------------------------------------------------------------
+  // isVersionNumber
+  //
+  static bool
+  isVersionNumber(const QString & word, int start = 0)
+  {
+    if (!word.isEmpty())
+    {
+      QChar l0 = word[start].toLower();
+      if ((l0 == QChar::fromAscii('v') ||
+           l0 == QChar::fromAscii('p') ||
+           l0 == QChar::fromAscii('#')) &&
+          isNumeric(word, start + 1))
+      {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -274,89 +345,94 @@ namespace yae
     }
 
     QString out = word;
-    out[0] = out[0].toUpper();
+
+    if (isVersionNumber(word))
+    {
+      QChar l0 = word[0].toLower();
+      out[0] = l0;
+    }
+    else if (!isVaguelyNumeric(word))
+    {
+      QChar u0 = word[0].toUpper();
+      out[0] = u0;
+    }
+
     return out;
   }
 
   //----------------------------------------------------------------
-  // splitOnVersion
+  // TPostprocessToken
+  //
+  typedef QString(*TPostprocessToken)(const QString &);
+
+  //----------------------------------------------------------------
+  // TSplitStringIntoTokens
+  //
+  typedef void(*TSplitStringIntoTokens)(const QString &,
+                                        std::list<QString> &,
+                                        TPostprocessToken);
+
+  //----------------------------------------------------------------
+  // splitVaguelyNumericTokens
   //
   static void
-  splitOnVersion(const QString & key, std::list<QString> & tokens)
+  splitVaguelyNumericTokens(const QString & key,
+                            std::list<QString> & tokens,
+                            TPostprocessToken postprocess = NULL)
   {
-    static const QChar kVersionTags[] = {
-      QChar::fromAscii('v')
-      // QChar::fromAscii('n'),
-      // QChar::fromAscii('p')
-    };
-
-    static const std::size_t numTags = sizeof(kVersionTags) / sizeof(QChar);
-
-    // attempt to split on camel case:
-    QString token;
-    QChar versionTag = 0;
-    QChar c0 = 0;
-
+    const QChar * text = key.constData();
     const int size = key.size();
-    for (int i = 0; i < size; i++)
+    int i = 0;
+    int numDigits = 0;
+
+    for (; i < size; i++, numDigits++)
     {
-      QChar c = key[i];
-
-      if (versionTag != 0)
+      const QChar & ch = text[i];
+      if (!isNumeric(ch) && !isPunctuation(ch))
       {
-        if (!isNumeric(c))
-        {
-          token += versionTag;
-        }
-        else
-        {
-          if (!token.isEmpty())
-          {
-            tokens.push_back(capitalize(token));
-          }
-
-          token = QString(versionTag);
-        }
-
-        versionTag = 0;
-        token += c;
+        break;
       }
-      else
-      {
-        std::size_t tagIndex =
-          isNumeric(c0) ?
-          indexOf(c.toLower(), kVersionTags, numTags) :
-          numTags;
-
-        if (tagIndex < numTags)
-        {
-          versionTag = c;
-        }
-        else
-        {
-          token += c;
-        }
-      }
-
-      c0 = c;
     }
 
-    if (versionTag != 0)
+    int numOthers = 0;
+    for (; i < size; i++, numOthers++)
     {
-      token += versionTag;
+      const QChar & ch = text[i];
+      if (isNumeric(ch))
+      {
+        break;
+      }
     }
 
-    if (!token.isEmpty())
+    if (numDigits && (numDigits + numOthers == size))
     {
-      tokens.push_back(capitalize(token));
+      QString digits(text, numDigits);
+      tokens.push_back(digits);
+
+      if (numDigits < size)
+      {
+        QString others(text + numDigits, size - numDigits);
+        tokens.push_back(others);
+      }
+    }
+    else if (postprocess)
+    {
+      QString token = postprocess(key);
+      tokens.push_back(token);
+    }
+    else
+    {
+      tokens.push_back(key);
     }
   }
 
   //----------------------------------------------------------------
   // splitOnCamelCase
   //
-  void
-  splitOnCamelCase(const QString & key, std::list<QString> & tokens)
+  static void
+  splitOnCamelCase(const QString & key,
+                   std::list<QString> & tokens,
+                   TPostprocessToken postprocess = NULL)
   {
     // attempt to split on camel case:
     QString token;
@@ -371,10 +447,11 @@ namespace yae
 
       if (c0.isLetter() && c1.isLetter() && c0.isLower() && !c1.isLower())
       {
-        splitOnVersion(token, tokens);
+        splitVaguelyNumericTokens(token, tokens, postprocess);
         token = QString();
       }
-      else if (isNumeric(token) && !isNumeric(c1))
+      else if (isNumeric(token) && !isNumeric(c1) &&
+               (c1.isNumber() || isVersionNumber(key, i)))
       {
         tokens.push_back(token);
         token = QString();
@@ -386,134 +463,315 @@ namespace yae
 
     if (!token.isEmpty())
     {
-      splitOnVersion(token, tokens);
+      splitVaguelyNumericTokens(token, tokens, postprocess);
     }
   }
 
   //----------------------------------------------------------------
-  // splitOnGroupTags
+  // kSeparatorTags
   //
-  void
-  splitOnGroupTags(const QString & key, std::list<QString> & tokens)
+  static const QChar kSeparatorTags[] = {
+    QChar::fromAscii(' '),
+    QChar::fromAscii('.'),
+    QChar::fromAscii('-')
+  };
+
+  //----------------------------------------------------------------
+  // kSeparatorTagsNum
+  //
+  static const std::size_t kSeparatorTagsNum =
+    sizeof(kSeparatorTags) / sizeof(kSeparatorTags[0]);
+
+  //----------------------------------------------------------------
+  // indexOfSeparatorTag
+  //
+  std::size_t
+  indexOfSeparatorTag(const QChar & ch)
   {
-    static const QChar kOpenTag[] = {
-      QChar::fromAscii('<'),
-      QChar::fromAscii('['),
-      QChar::fromAscii('{'),
-      QChar::fromAscii('('),
-      QChar::fromAscii('"')
-    };
-
-    static const QChar kCloseTag[] = {
-      QChar::fromAscii('>'),
-      QChar::fromAscii(']'),
-      QChar::fromAscii('}'),
-      QChar::fromAscii(')'),
-      QChar::fromAscii('"')
-    };
-
-    // attempt to split on open/close tags:
-    QString token;
-
-    std::size_t numTags = sizeof(kOpenTag) / sizeof(kOpenTag[0]);
-    std::size_t tagIndex0 = numTags;
-    std::size_t tagIndex1 = numTags;
-    std::size_t tagSize = 0;
-
-    const int size = key.size();
-    for (int i = 0; i < size; i++)
+    for (std::size_t i = 0; i < kSeparatorTagsNum; ++i)
     {
-      QChar c = key[i];
-
-      if (tagIndex0 == numTags)
+      if (kSeparatorTags[i] == ch)
       {
-        tagIndex0 = indexOf(c, kOpenTag, numTags);
-        tagIndex1 = numTags;
-        tagSize = 0;
-      }
-      else
-      {
-        tagIndex1 = indexOf(c, kCloseTag, numTags);
-        tagIndex1 = (tagIndex1 == tagIndex0) ? tagIndex0 : numTags;
-      }
-
-      if (tagIndex0 < numTags && !tagSize)
-      {
-        if (!token.isEmpty())
-        {
-          tokens.push_back(token);
-        }
-
-        token = QString(c);
-        tagSize = 1;
-      }
-      else
-      {
-        token += c;
-
-        if (tagIndex0 < numTags)
-        {
-          tagSize++;
-        }
-
-        if (tagIndex1 < numTags)
-        {
-          tokens.push_back(token);
-          token = QString();
-          tagIndex0 = numTags;
-          tagIndex1 = numTags;
-          tagSize = 0;
-        }
+        return i;
       }
     }
 
-    if (!token.isEmpty())
-    {
-      tokens.push_back(token);
-    }
+    return kSeparatorTagsNum;
   }
 
   //----------------------------------------------------------------
   // splitOnSeparators
   //
-  void
-  splitOnSeparators(const QString & key, std::list<QString> & tokens)
+  static void
+  splitOnSeparators(const QString & key,
+                    std::list<QString> & tokens,
+                    TPostprocessToken postprocess = NULL)
   {
-    static const QChar kUnderscore = QChar::fromAscii('_');
-    static const QChar kHyphen = QChar::fromAscii('-');
-    static const QChar kSpace = QChar::fromAscii(' ');
-    static const QChar kPeriod = QChar::fromAscii('.');
-    static const QChar kNumber = QChar::fromAscii('#');
+    // first replace all underscores with spaces:
+    QString cleanKey = key;
+    const int size = cleanKey.size();
 
-    // attempt to split based on separator character:
-    QString token;
-
-    const int size = key.size();
     for (int i = 0; i < size; i++)
     {
-      QChar c = key[i];
-      if (c == kUnderscore ||
-          c == kHyphen ||
-          c == kSpace ||
-          c == kPeriod ||
-          c == kNumber)
+      QChar ch = cleanKey[i];
+      if (ch == kUnderscore)
+      {
+        cleanKey[i] = kSpace;
+      }
+    }
+
+    // split based on separator character:
+    QString token;
+    QString prev;
+    for (int i = 0; i < size; i++)
+    {
+      QChar ch = cleanKey[i];
+      QChar ch1 = ((i + 1) < size) ? cleanKey[i + 1] : QChar(0);
+
+      std::size_t foundSeparatorTag = indexOfSeparatorTag(ch);
+      if (foundSeparatorTag < kSeparatorTagsNum &&
+
+          (ch != kPeriod ||
+           (// avoid breaking up ellipsis and numbered list punctuation:
+            ch1 != kPeriod &&
+            ch1 != kSpace &&
+            (ch1 != 0 || !token.endsWith(kPeriod)) &&
+            // avoid breaking up YYYY.MM.DD dates:
+            !(isNumeric(prev) && isNumeric(ch1)))))
       {
         if (!token.isEmpty())
         {
-          splitOnCamelCase(token, tokens);
-          token = QString();
+          splitOnCamelCase(token, tokens, postprocess);
+        }
+
+        token = QString();
+        prev = QString();
+
+        if (ch == kHyphen &&
+            (// preserve proper hyphenation:
+             ch1 == kHyphen ||
+             ch1 == kSpace) &&
+            ch1 != 0)
+        {
+          if (!tokens.empty() && tokens.back().endsWith(kHyphen))
+          {
+            tokens.back() += QString(kHyphen);
+          }
+          else
+          {
+            tokens.push_back(QString(kHyphen));
+          }
         }
       }
       else
       {
-        token += c;
+        token += ch;
+
+        if (foundSeparatorTag < kSeparatorTagsNum)
+        {
+          prev = QString();
+        }
+        else
+        {
+          prev += QString(ch);
+        }
       }
     }
 
     if (!token.isEmpty())
     {
-      splitOnCamelCase(token, tokens);
+      splitOnCamelCase(token, tokens, postprocess);
     }
+  }
+
+  //----------------------------------------------------------------
+  // kGroupTags
+  //
+  static const QChar kGroupTags[][2] = {
+    { QChar::fromAscii('<'), QChar::fromAscii('>') },
+    { QChar::fromAscii('['), QChar::fromAscii(']') },
+    { QChar::fromAscii('{'), QChar::fromAscii('}') },
+    { QChar::fromAscii('('), QChar::fromAscii(')') },
+    { QChar::fromAscii('"'), QChar::fromAscii('"') }
+  };
+
+  //----------------------------------------------------------------
+  // kGroupTagsNum
+  //
+  static const std::size_t kGroupTagsNum =
+    sizeof(kGroupTags) / sizeof(kGroupTags[0]);
+
+  //----------------------------------------------------------------
+  // indexOfGroupTag
+  //
+  std::size_t
+  indexOfGroupTag(const QChar & ch, std::size_t columnIndex)
+  {
+    for (std::size_t i = 0; i < kGroupTagsNum; ++i)
+    {
+      if (kGroupTags[i][columnIndex] == ch)
+      {
+        return i;
+      }
+    }
+
+    return kGroupTagsNum;
+  }
+
+  //----------------------------------------------------------------
+  // splitOnGroupTags
+  //
+  static bool
+  splitOnGroupTags(const QString & key,
+                   int & keyPos,
+                   const int keySize,
+                   const QChar & closingTag,
+                   std::list<QString> & tokens,
+                   TSplitStringIntoTokens splitFurther = NULL,
+                   TPostprocessToken postprocess = NULL)
+  {
+    // attempt to split on nested open/close tags:
+    QString token;
+    QChar ch;
+    bool foundClosingTag = false;
+
+    while (keyPos < keySize && !foundClosingTag)
+    {
+      ch = key[keyPos];
+      ++keyPos;
+
+      if (ch == closingTag)
+      {
+        foundClosingTag = true;
+        break;
+      }
+
+      std::size_t foundNestedTag = indexOfGroupTag(ch, 0);
+      if (foundNestedTag < kGroupTagsNum)
+      {
+        std::list<QString> nestedTokens;
+        if (splitOnGroupTags(key,
+                             keyPos,
+                             keySize,
+                             kGroupTags[foundNestedTag][1],
+                             nestedTokens,
+                             splitFurther,
+                             postprocess))
+        {
+          if (!token.isEmpty())
+          {
+            if (splitFurther)
+            {
+              std::list<QString> furtherTokens;
+              splitFurther(token, furtherTokens, postprocess);
+              tokens.splice(tokens.end(), furtherTokens);
+            }
+            else
+            {
+              tokens.push_back(token);
+            }
+          }
+
+          token = QString(ch);
+          token += nestedTokens.front();
+          nestedTokens.pop_front();
+
+          tokens.push_back(token);
+          tokens.splice(tokens.end(), nestedTokens);
+
+          token = QString();
+        }
+        else
+        {
+          token += ch;
+
+          if (!nestedTokens.empty())
+          {
+            token += nestedTokens.front();
+            nestedTokens.pop_front();
+
+            if (splitFurther)
+            {
+              std::list<QString> furtherTokens;
+              splitFurther(token, furtherTokens, postprocess);
+              tokens.splice(tokens.end(), furtherTokens);
+            }
+            else
+            {
+              tokens.push_back(token);
+            }
+
+            tokens.splice(tokens.end(), nestedTokens);
+
+            token = QString();
+          }
+        }
+      }
+      else
+      {
+        token += ch;
+      }
+    }
+
+    if (!token.isEmpty())
+    {
+      if (splitFurther)
+      {
+        std::list<QString> furtherTokens;
+        splitFurther(token, furtherTokens, postprocess);
+        tokens.splice(tokens.end(), furtherTokens);
+      }
+      else
+      {
+        tokens.push_back(token);
+      }
+    }
+
+    if (foundClosingTag && ch != 0)
+    {
+      if (!tokens.empty())
+      {
+        tokens.back() += QString(ch);
+      }
+      else
+      {
+        tokens.push_back(QString(ch));
+      }
+    }
+
+    return foundClosingTag;
+  }
+
+  //----------------------------------------------------------------
+  // splitOnGroupTags
+  //
+  static void
+  splitOnGroupTags(const QString & key,
+                   std::list<QString> & tokens,
+                   TSplitStringIntoTokens splitFurther = NULL,
+                   TPostprocessToken postprocess = NULL)
+  {
+    int keyPos = 0;
+    const int keySize = key.size();
+    const QChar closingTag = 0;
+    splitOnGroupTags(key,
+                     keyPos,
+                     keySize,
+                     closingTag,
+                     tokens,
+                     splitFurther,
+                     postprocess);
+  }
+
+  //----------------------------------------------------------------
+  // splitIntoWords
+  //
+  static void
+  splitIntoWords(const QString & key,
+                 std::list<QString> & words,
+                 TPostprocessToken postprocess)
+  {
+    splitOnGroupTags(key, words, &splitOnSeparators, postprocess);
   }
 
   //----------------------------------------------------------------
@@ -522,32 +780,7 @@ namespace yae
   void
   splitIntoWords(const QString & key, std::list<QString> & words)
   {
-    std::list<QString> groups;
-    splitOnGroupTags(key, groups);
-
-    for (std::list<QString>::const_iterator i = groups.begin();
-         i != groups.end(); ++i)
-    {
-      const QString & group = *i;
-      splitOnSeparators(group, words);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // toWords
-  //
-  QString
-  toWords(const std::list<QString> & keys)
-  {
-    std::list<QString> words;
-    for (std::list<QString>::const_iterator i = keys.begin();
-         i != keys.end(); ++i)
-    {
-      const QString & key = *i;
-      splitIntoWords(key, words);
-    }
-
-    return toQString(words, true);
+    splitOnGroupTags(key, words, &splitOnSeparators, &capitalize);
   }
 
   //----------------------------------------------------------------
@@ -557,7 +790,7 @@ namespace yae
   toWords(const QString & key)
   {
     std::list<QString> words;
-    splitIntoWords(key, words);
+    splitIntoWords(key, words, NULL);
     return toQString(words, false);
   }
 
@@ -568,31 +801,54 @@ namespace yae
   prepareForSorting(const QString & key)
   {
     std::list<QString> words;
-    splitIntoWords(key, words);
+    splitIntoWords(key, words, &capitalize);
 
+    int nwords = 0;
     QString out;
 
     for (std::list<QString>::const_iterator i = words.begin();
          i != words.end(); ++i)
     {
-      if (!out.isEmpty())
+      QString word = *i;
+
+      if (word.size() == 1 && word[0] == kHyphen)
       {
-        out += QChar::fromAscii(' ');
+        if (nwords == 1)
+        {
+          // hyde numeric list separator hyphen:
+          continue;
+        }
+
+        std::list<QString>::const_iterator j = i;
+        ++j;
+        if (j != words.end())
+        {
+          const QString & next = *j;
+          if (isVaguelyNumeric(next))
+          {
+            // hyde numeric list separator hyphen:
+            continue;
+          }
+        }
       }
 
-      QString word = *i;
+      if (!out.isEmpty() && !(word.size() == 1 && isPunctuation(word[0])))
+      {
+        out += kSpace;
+      }
 
       // if the string is all numerical then pad it on the front so that
       // it would be properly sorted (2.avi would be before 10.avi)
-      int numDigits = isNumeric(word);
+      int numDigits = isVaguelyNumeric(word);
 
       if (numDigits && numDigits < 8)
       {
-        QString padding(8 - numDigits, QChar::fromAscii(' '));
+        QString padding(8 - numDigits, kSpace);
         out += padding;
       }
 
       out += word;
+      nwords++;
     }
 
     return out;
@@ -948,7 +1204,7 @@ namespace yae
     {
         out.assign(&(tmp[0]), &(tmp[0]) + j);
     }
- 
+
     return out;
   }
 

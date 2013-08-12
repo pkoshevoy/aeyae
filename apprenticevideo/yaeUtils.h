@@ -116,24 +116,6 @@ namespace yae
   toQString(const std::list<QString> & keys, bool trimWhiteSpace = false);
 
   //----------------------------------------------------------------
-  // splitOnCamelCase
-  //
-  YAE_API void
-  splitOnCamelCase(const QString & key, std::list<QString> & tokens);
-
-  //----------------------------------------------------------------
-  // splitOnGroupTags
-  //
-  YAE_API void
-  splitOnGroupTags(const QString & key, std::list<QString> & tokens);
-
-  //----------------------------------------------------------------
-  // splitOnSeparators
-  //
-  YAE_API void
-  splitOnSeparators(const QString & key, std::list<QString> & tokens);
-
-  //----------------------------------------------------------------
   // splitIntoWords
   //
   YAE_API void
@@ -142,21 +124,7 @@ namespace yae
   //----------------------------------------------------------------
   // toWords
   //
-  YAE_API QString toWords(const std::list<QString> & keys);
-
-  //----------------------------------------------------------------
-  // toWords
-  //
   YAE_API QString toWords(const QString & key);
-
-  //----------------------------------------------------------------
-  // isNumeric
-  //
-  // if the key consists exclusively of numeric characters
-  // returns the key length;
-  // otherwise returns 0
-  //
-  YAE_API int isNumeric(const QString & key);
 
   //----------------------------------------------------------------
   // prepareForSorting

@@ -116,13 +116,14 @@ namespace yae
   bool
   PlaylistKey::operator == (const PlaylistKey & k) const
   {
-    int diff = key_.compare(k.key_);
+    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
     if (diff)
     {
       return false;
     }
 
-    return ext_ == k.ext_;
+    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
+    return !diff;
   }
 
   //----------------------------------------------------------------
@@ -131,13 +132,14 @@ namespace yae
   bool
   PlaylistKey::operator < (const PlaylistKey & k) const
   {
-    int diff = key_.compare(k.key_);
+    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
     if (diff)
     {
       return diff < 0;
     }
 
-    return ext_ < k.ext_;
+    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
+    return diff < 0;
   }
 
   //----------------------------------------------------------------
@@ -145,13 +147,14 @@ namespace yae
   //
   bool PlaylistKey::operator > (const PlaylistKey & k) const
   {
-    int diff = key_.compare(k.key_);
+    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
     if (diff)
     {
       return diff > 0;
     }
 
-    return ext_ > k.ext_;
+    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
+    return diff > 0;
   }
 
   //----------------------------------------------------------------
