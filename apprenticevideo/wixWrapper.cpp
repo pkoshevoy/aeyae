@@ -307,7 +307,7 @@ main(int argc, char ** argv)
       << std::endl;
 
   std::string guidProduct = makeGuidStr();
-  std::string guidUpgrade = makeGuidStr();
+  std::string guidUpgrade = "a4a297db-1d6c-4320-b015-80add2a8d07c";
 
   out << " <Product Name='Apprentice Video' "
       << "Id='" << guidProduct << "' "
@@ -327,21 +327,24 @@ main(int argc, char ** argv)
       << "Comments='A video player' "
       << "Manufacturer='Pavel Koshevoy' "
       << "InstallerVersion='300' "
-      << "Languages='1033' Compressed='yes' SummaryCodepage='1252' />"
+      << "Languages='1033' Compressed='yes' SummaryCodepage='1252' />\n"
       << std::endl;
 
-  out << " <DirectoryRef Id=\"TARGETDIR\">\n"
-      << "  <Merge Id=\"VCRedist\" SourceFile=\""
+  out << "  <MajorUpgrade AllowDowngrades='yes' />\n"
+      << std::endl;
+
+  out << "  <DirectoryRef Id=\"TARGETDIR\">\n"
+      << "   <Merge Id=\"VCRedist\" SourceFile=\""
       << vcRedistMsm
       << "\" DiskId=\"1\" Language=\"0\"/>\n"
-      << " </DirectoryRef>\n"
-      << " <Feature Id=\"VCRedist\" Title=\"Visual C++ Runtime\" "
+      << "  </DirectoryRef>\n\n"
+      << "  <Feature Id=\"VCRedist\" Title=\"Visual C++ Runtime\" "
       << "AllowAdvertise=\"no\" Display=\"hidden\" Level=\"1\">\n"
-      << "  <MergeRef Id=\"VCRedist\"/>\n"
-      << " </Feature>"
+      << "   <MergeRef Id=\"VCRedist\"/>\n"
+      << "  </Feature>\n"
       << std::endl;
 
-  out << "  <Media Id='1' Cabinet='product.cab' EmbedCab='yes' />\n"
+  out << "  <Media Id='1' Cabinet='product.cab' EmbedCab='yes' />\n\n"
       << "  <Directory Id='TARGETDIR' Name='SourceDir'>\n";
 
 #ifdef _WIN64
@@ -402,9 +405,9 @@ main(int argc, char ** argv)
 
       static const char * supported[] = {
         "3gp", "aac", "ac3", "aiff", "asf", "avi", "divx", "dv", "flv", "f4v",
-        "gif", "jpg", "mod", "mov", "mpeg", "mpg", "mp3", "mp4", "m2t", "m2ts",
+        "mod", "mov", "mpeg", "mpg", "mp3", "mp4", "m2t", "m2ts",
         "m2v", "m4a", "m4v", "mka", "mkv", "mts", "mxf", "ogg", "ogm", "ogv",
-        "png", "ra", "rm", "tif", "tiff", "ts", "vob", "wav", "wma", "wmv",
+        "ra", "rm", "ts", "vob", "wav", "wma", "wmv",
         "weba", "webm" };
 
       std::size_t numSupported = sizeof(supported) / sizeof(supported[0]);
@@ -421,7 +424,7 @@ main(int argc, char ** argv)
           // << "        <MIME Advertise='yes' "
           // << "ContentType='video/x-matroska' Default='yes' />\n"
             << "       </Extension>\n"
-            << "      </ProgId>"
+            << "      </ProgId>\n"
             << std::endl;
       }
     }
@@ -434,12 +437,12 @@ main(int argc, char ** argv)
           << "KeyPath='yes' />\n";
     }
 
-    out << "     </Component>"
+    out << "     </Component>\n"
         << std::endl;
   }
 
   out << "    </Directory>\n"
-      << "   </Directory>"
+      << "   </Directory>\n"
       << std::endl;
 
   out << "   <Directory Id='ProgramMenuFolder' Name='Programs'>\n"
@@ -465,11 +468,11 @@ main(int argc, char ** argv)
   }
 
   out << "   <ComponentRef Id='ProgramMenuDir' />\n"
-      << "  </Feature>\n"
+      << "  </Feature>\n\n"
       << "  <Icon Id='" << icon << "' "
       << "SourceFile='" << iconFile << "' />\n"
       << "  <Property Id='ARPPRODUCTICON' Value='" << icon << "' />\n"
-      << "  <Property Id='ARPHELPLINK' Value='" << helpLink << "' />"
+      << "  <Property Id='ARPHELPLINK' Value='" << helpLink << "' />\n"
       << std::endl;
 
   out << " </Product>\n"
