@@ -351,7 +351,7 @@ namespace yae
       QChar l0 = word[0].toLower();
       out[0] = l0;
     }
-    else if (!isVaguelyNumeric(word))
+    else if (word.size() > 2 && !isVaguelyNumeric(word))
     {
       QChar u0 = word[0].toUpper();
       out[0] = u0;
