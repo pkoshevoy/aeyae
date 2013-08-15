@@ -132,6 +132,20 @@ namespace yae
     //
     double imageAspectRatio(double & w, double & h) const;
 
+    enum TRenderMode
+    {
+      // this will result in letterbox bars or pillars rendering, the
+      // image will be scaled up or down to fit within canvas bounding box:
+      kScaleToFit = 0,
+
+      // this will avoid letterbox bars and pillars rendering, the
+      // image will be scaled up and cropped by the canvas bounding box:
+      kCropToFill = 1
+    };
+
+    // crop-to-fill may be useful in a full screen canvas:
+    void setRenderMode(TRenderMode renderMode);
+
     // this will be called from a helper thread
     // once it is done updating fontconfig cache for libass:
     static void libassInitDoneCallback(void * canvas, TLibass * libass);
@@ -215,6 +229,7 @@ namespace yae
     TLibass * libass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
+    TRenderMode renderMode_;
 
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;

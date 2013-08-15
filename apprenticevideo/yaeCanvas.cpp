@@ -1776,6 +1776,7 @@ namespace yae
     libass_(NULL),
     showTheGreeting_(true),
     subsInOverlay_(false),
+    renderMode_(Canvas::kScaleToFit),
     timerHideCursor_(this),
     timerScreenSaver_(this)
   {
@@ -2092,10 +2093,12 @@ namespace yae
   static void
   paintImage(Canvas::TPrivate * canvas,
              int canvasWidth,
-             int canvasHeight)
+             int canvasHeight,
+             Canvas::TRenderMode renderMode)
   {
-    double croppedWidth = calcImageWidth(canvas);
-    double croppedHeight = calcImageHeight(canvas);
+    double croppedWidth = 0.0;
+    double croppedHeight = 0.0;
+    canvas->imageWidthHeight(croppedWidth, croppedHeight);
 
     double dar = croppedWidth / croppedHeight;
     double car = double(canvasWidth) / double(canvasHeight);
@@ -2105,28 +2108,40 @@ namespace yae
     double w = double(canvasWidth);
     double h = double(canvasHeight);
 
-    if (dar < car)
+    if (renderMode == Canvas::kScaleToFit)
     {
-      w = double(canvasHeight) * dar;
-      x = 0.5 * (double(canvasWidth) - w);
+      if (dar < car)
+      {
+        w = double(canvasHeight) * dar;
+        x = 0.5 * (double(canvasWidth) - w);
+      }
+      else
+      {
+        h = double(canvasWidth) / dar;
+        y = 0.5 * (double(canvasHeight) - h);
+      }
     }
     else
     {
-      h = double(canvasWidth) / dar;
-      y = 0.5 * (double(canvasHeight) - h);
+      if (dar < car)
+      {
+        h = double(canvasWidth) / dar;
+        y = 0.5 * (double(canvasHeight) - h);
+      }
+      else
+      {
+        w = double(canvasHeight) * dar;
+        x = 0.5 * (double(canvasWidth) - w);
+      }
     }
 
     glViewport(GLint(x + 0.5), GLint(y + 0.5),
                GLsizei(w + 0.5), GLsizei(h + 0.5));
 
-    double uncroppedWidth = 0.0;
-    double uncroppedHeight = 0.0;
-    canvas->imageWidthHeight(uncroppedWidth, uncroppedHeight);
-
-    double left = (uncroppedWidth - croppedWidth) * 0.5;
-    double right = left + croppedWidth;
-    double top = (uncroppedHeight - croppedHeight) * 0.5;
-    double bottom = top + croppedHeight;
+    double left = 0.0;
+    double right = croppedWidth;
+    double top = 0.0;
+    double bottom = croppedHeight;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -2213,7 +2228,7 @@ namespace yae
     if (ptts)
     {
       // draw the frame:
-      paintImage(private_, canvasWidth, canvasHeight);
+      paintImage(private_, canvasWidth, canvasHeight, renderMode_);
     }
 
     // draw the overlay:
@@ -2223,7 +2238,7 @@ namespace yae
       {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        paintImage(overlay_, canvasWidth, canvasHeight);
+        paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
         glDisable(GL_BLEND);
       }
       else
@@ -3008,6 +3023,15 @@ namespace yae
     }
 
     return dar;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::setRenderMode
+  //
+  void
+  Canvas::setRenderMode(Canvas::TRenderMode renderMode)
+  {
+    renderMode_ = renderMode;
   }
 
   //----------------------------------------------------------------

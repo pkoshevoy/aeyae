@@ -158,9 +158,12 @@ namespace yae
     void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
+    void playbackFillScreen();
     void playbackSetTempo(int percent);
 
     // helper:
+    void toggleFullScreen();
+    void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
     void togglePlayback();
 
@@ -240,6 +243,7 @@ namespace yae
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
+    QShortcut * shortcutFillScreen_;
     QShortcut * shortcutShowPlaylist_;
     QShortcut * shortcutShowTimeline_;
     QShortcut * shortcutPlay_;
@@ -303,6 +307,9 @@ namespace yae
 
     // dialog for opening a URL resource:
     OpenUrlDialog * openUrl_;
+
+    // remember most recently used full screen render mode:
+    Canvas::TRenderMode renderMode_;
 
     // shrink wrap stretch factors:
     double xexpand_;

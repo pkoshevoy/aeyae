@@ -251,6 +251,8 @@ QLineEdit:disabled {
     <addaction name="separator"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
+    <addaction name="actionFillScreen"/>
+    <addaction name="separator"/>
     <addaction name="menuPlaybackSpeed"/>
    </widget>
    <widget class="QMenu" name="menuAudio">
@@ -523,7 +525,7 @@ QLineEdit QToolButton#clear_:pressed {
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Full Screen</string>
+    <string>&amp;Full Screen (letterbox)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
@@ -963,6 +965,20 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>Resume Playback From Bookmark</string>
+   </property>
+  </action>
+  <action name="actionFillScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>F&amp;ull Screen</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
  </widget>

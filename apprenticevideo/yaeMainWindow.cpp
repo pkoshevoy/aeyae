@@ -224,6 +224,7 @@ namespace yae
     playbackPaused_(false),
     scrollStart_(0.0),
     scrollOffset_(0.0),
+    renderMode_(Canvas::kScaleToFit),
     xexpand_(1.0),
     yexpand_(1.0),
     tempo_(1.0),
@@ -331,6 +332,7 @@ namespace yae
     // so I am creating these shortcuts as a workaround:
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
+    shortcutFillScreen_ = new QShortcut(this);
     shortcutShowPlaylist_ = new QShortcut(this);
     shortcutShowTimeline_ = new QShortcut(this);
     shortcutPlay_ = new QShortcut(this);
@@ -346,6 +348,7 @@ namespace yae
 
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
     shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
     shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
     shortcutPlay_->setContext(Qt::ApplicationShortcut);
@@ -641,6 +644,14 @@ namespace yae
                  actionFullScreen, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionFillScreen, SIGNAL(triggered()),
+                 this, SLOT(playbackFillScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
+                 actionFillScreen, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
@@ -682,7 +693,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(canvas_, SIGNAL(toggleFullScreen()),
-                 this, SLOT(playbackFullScreen()));
+                 this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
 
     ok = connect(actionHalfSize, SIGNAL(triggered()),
@@ -2082,7 +2093,7 @@ namespace yae
         YAE_ASSERT(ok);
 
         bookmarksMapper_->setMapping(bookmark.action_,
-                                     bookmarks_.size());
+                                     (int)(bookmarks_.size()));
 
         bookmarks_.push_back(bookmark);
       }
@@ -2503,6 +2514,13 @@ namespace yae
       return;
     }
 
+    std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+    if (videoTrack >= numVideoTracks)
+    {
+      return;
+    }
+
     canvasSizeBackup();
 
     double scale = std::min<double>(xexpand_, yexpand_);
@@ -2521,27 +2539,66 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playbackFullScreen
+  // MainWindow::toggleFullScreen
   //
   void
-  MainWindow::playbackFullScreen()
+  MainWindow::toggleFullScreen()
   {
     if (isFullScreen())
+    {
+      exitFullScreen();
+    }
+    else
+    {
+      enterFullScreen(renderMode_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::enterFullScreen
+  //
+  void
+  MainWindow::enterFullScreen(Canvas::TRenderMode renderMode)
+  {
+    if (isFullScreen() && renderMode_ == renderMode)
     {
       exitFullScreen();
       return;
     }
 
-    // enter full screen rendering:
-    SignalBlocker blockSignals(actionFullScreen);
+    SignalBlocker blockSignals;
+    blockSignals
+      << actionFullScreen
+      << actionFillScreen;
 
-    actionFullScreen->setChecked(true);
+    if (renderMode == Canvas::kScaleToFit)
+    {
+      actionFullScreen->setChecked(true);
+      actionFillScreen->setChecked(false);
+    }
+
+    if (renderMode == Canvas::kCropToFill)
+    {
+      actionFillScreen->setChecked(true);
+      actionFullScreen->setChecked(false);
+    }
+
+    canvas_->setRenderMode(renderMode);
+    renderMode_ = renderMode;
+
+    if (isFullScreen())
+    {
+      return;
+    }
+
+    // enter full screen rendering:
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
     showFullScreen();
 
     swapShortcuts(shortcutExit_, actionExit);
     swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    swapShortcuts(shortcutFillScreen_, actionFillScreen);
     swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
     swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
     swapShortcuts(shortcutPlay_, actionPlay);
@@ -2555,35 +2612,63 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackFullScreen
+  //
+  void
+  MainWindow::playbackFullScreen()
+  {
+    // enter full screen pillars-and-bars letterbox rendering:
+    enterFullScreen(Canvas::kScaleToFit);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackFillScreen
+  //
+  void
+  MainWindow::playbackFillScreen()
+  {
+    // enter full screen crop-to-fill rendering:
+    enterFullScreen(Canvas::kCropToFill);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::exitFullScreen
   //
   void
   MainWindow::exitFullScreen()
   {
-    if (isFullScreen())
+    if (!isFullScreen())
     {
-      // exit full screen rendering:
-      SignalBlocker blockSignals(actionFullScreen);
-
-      actionFullScreen->setChecked(false);
-      actionShrinkWrap->setEnabled(true);
-      menuBar()->show();
-      showNormal();
-      QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
-
-      swapShortcuts(shortcutExit_, actionExit);
-      swapShortcuts(shortcutFullScreen_, actionFullScreen);
-      swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
-      swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
-      swapShortcuts(shortcutPlay_, actionPlay);
-      swapShortcuts(shortcutNext_, actionNext);
-      swapShortcuts(shortcutPrev_, actionPrev);
-      swapShortcuts(shortcutLoop_, actionLoop);
-      swapShortcuts(shortcutCropNone_, actionCropFrameNone);
-      swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
-      swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
-      swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
+      return;
     }
+
+    // exit full screen rendering:
+    SignalBlocker blockSignals;
+    blockSignals
+      << actionFullScreen
+      << actionFillScreen;
+
+    actionFullScreen->setChecked(false);
+    actionFillScreen->setChecked(false);
+    actionShrinkWrap->setEnabled(true);
+    menuBar()->show();
+    showNormal();
+    canvas_->setRenderMode(Canvas::kScaleToFit);
+    QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+
+    swapShortcuts(shortcutExit_, actionExit);
+    swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    swapShortcuts(shortcutFillScreen_, actionFillScreen);
+    swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
+    swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+    swapShortcuts(shortcutPlay_, actionPlay);
+    swapShortcuts(shortcutNext_, actionNext);
+    swapShortcuts(shortcutPrev_, actionPrev);
+    swapShortcuts(shortcutLoop_, actionLoop);
+    swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+    swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
+    swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
   }
 
   //----------------------------------------------------------------
@@ -3535,6 +3620,8 @@ namespace yae
       contextMenu_->addAction(actionPrev);
       contextMenu_->addAction(actionNext);
       contextMenu_->addAction(actionShowPlaylist);
+      contextMenu_->addAction(actionShowPlaylist);
+      contextMenu_->addAction(menuBookmarks->menuAction());
 
       if (playlistWidget_->underMouse() &&
           playlistWidget_->countItems())
@@ -3553,6 +3640,7 @@ namespace yae
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionShrinkWrap);
       contextMenu_->addAction(actionFullScreen);
+      contextMenu_->addAction(actionFillScreen);
       contextMenu_->addAction(menuPlaybackSpeed->menuAction());
 
       if (numVideoTracks || numAudioTracks)
@@ -4015,8 +4103,6 @@ namespace yae
       {
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
-        actionShrinkWrap->setEnabled(false);
-        actionFullScreen->setEnabled(false);
 
         if (actionShowPlaylist->isChecked())
         {
@@ -4043,8 +4129,6 @@ namespace yae
 
         shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
-        actionShrinkWrap->setEnabled(true);
-        actionFullScreen->setEnabled(true);
 
         playlistWidget_->show();
         playlistWidget_->update();
