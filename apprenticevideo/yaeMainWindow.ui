@@ -331,6 +331,8 @@ QLineEdit:disabled {
     <property name="title">
      <string>Chap&amp;ters</string>
     </property>
+    <addaction name="actionNextChapter"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuBookmarks">
     <property name="title">
@@ -976,6 +978,17 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="shortcut">
     <string>Ctrl+G</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionNextChapter">
+   <property name="text">
+    <string>Skip To &amp;Next Chapter</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>

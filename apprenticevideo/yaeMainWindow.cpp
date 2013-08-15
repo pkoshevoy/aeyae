@@ -209,6 +209,7 @@ namespace yae
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),
+    chaptersGroup_(NULL),
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
     subsTrackMapper_(NULL),
@@ -788,28 +789,16 @@ namespace yae
                  this, SLOT(bookmarksResumePlayback()));
     YAE_ASSERT(ok);
 
-    // initialize the subtitles menu:
-    {
-      subsTrackGroup_ = new QActionGroup(this);
-      subsTrackMapper_ = new QSignalMapper(this);
-      ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
-                   this, SLOT(subsSelectTrack(int)));
-      YAE_ASSERT(ok);
+    ok = connect(menuChapters, SIGNAL(aboutToShow()),
+                 this, SLOT(updateChaptersMenu()));
+    YAE_ASSERT(ok);
 
-      QAction * trackAction = new QAction(tr("Disabled"), this);
-      menuSubs->addAction(trackAction);
+    ok = connect(actionNextChapter, SIGNAL(triggered()),
+                 this, SLOT(skipToNextChapter()));
+    YAE_ASSERT(ok);
 
-      trackAction->setCheckable(true);
-      trackAction->setChecked(true);
-      subsTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   subsTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      subsTrackMapper_->setMapping(trackAction, int(0));
-    }
-
-    menubar->removeAction(menuChapters->menuAction());
+    adjustMenuActions();
+    adjustMenues(reader_);
   }
 
   //----------------------------------------------------------------
@@ -1412,245 +1401,20 @@ namespace yae
               << "yae: subs tracks: " << subsCount << std::endl;
 #endif
 
-    if (audioTrackGroup_)
-    {
-      // remove old actions:
-      QList<QAction *> actions = audioTrackGroup_->actions();
-      while (!actions.empty())
-      {
-        QAction * action = actions.front();
-        actions.pop_front();
+    std::vector<TTrackInfo>  audioInfo;
+    std::vector<AudioTraits> audioTraits;
+    std::vector<TTrackInfo>  videoInfo;
+    std::vector<VideoTraits> videoTraits;
+    std::vector<TTrackInfo>  subsInfo;
+    std::vector<TSubsFormat> subsFormat;
 
-        menuAudio->removeAction(action);
-      }
-    }
-
-    if (videoTrackGroup_)
-    {
-      // remove old actions:
-      QList<QAction *> actions = videoTrackGroup_->actions();
-      while (!actions.empty())
-      {
-        QAction * action = actions.front();
-        actions.pop_front();
-
-        menuVideo->removeAction(action);
-      }
-    }
-
-    if (subsTrackGroup_)
-    {
-      // remove old actions:
-      QList<QAction *> actions = subsTrackGroup_->actions();
-      while (!actions.empty())
-      {
-        QAction * action = actions.front();
-        actions.pop_front();
-
-        menuSubs->removeAction(action);
-      }
-    }
-
-    // update the UI:
-    delete audioTrackGroup_;
-    audioTrackGroup_ = new QActionGroup(this);
-
-    delete videoTrackGroup_;
-    videoTrackGroup_ = new QActionGroup(this);
-
-    delete subsTrackGroup_;
-    subsTrackGroup_ = new QActionGroup(this);
-
-    delete audioTrackMapper_;
-    audioTrackMapper_ = new QSignalMapper(this);
-
-    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
-                 this, SLOT(audioSelectTrack(int)));
-    YAE_ASSERT(ok);
-
-    delete videoTrackMapper_;
-    videoTrackMapper_ = new QSignalMapper(this);
-
-    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
-                 this, SLOT(videoSelectTrack(int)));
-    YAE_ASSERT(ok);
-
-    delete subsTrackMapper_;
-    subsTrackMapper_ = new QSignalMapper(this);
-
-    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
-                 this, SLOT(subsSelectTrack(int)));
-    YAE_ASSERT(ok);
-
-    std::vector<TTrackInfo> audioInfo(numAudioTracks);
-    std::vector<AudioTraits> audioTraits(numAudioTracks);
-    std::vector<QAction *> audioTrackAction(numAudioTracks + 1);
-
-    for (unsigned int i = 0; i < numAudioTracks; i++)
-    {
-      reader->selectAudioTrack(i);
-      QString trackName = tr("Track %1").arg(i + 1);
-
-      TTrackInfo & info = audioInfo[i];
-      reader->getSelectedAudioTrackInfo(info);
-
-      if (info.hasLang())
-      {
-        trackName += tr(" (%1)").arg(QString::fromUtf8(info.lang()));
-      }
-
-      if (info.hasName())
-      {
-        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
-      }
-
-      AudioTraits & traits = audioTraits[i];
-      if (reader->getAudioTraits(traits))
-      {
-        trackName +=
-          tr(", %1 Hz, %2 channels").
-          arg(traits.sampleRate_).
-          arg(int(traits.channelLayout_));
-      }
-
-      QAction *& trackAction = audioTrackAction[i];
-      trackAction = new QAction(trackName, this);
-      menuAudio->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      audioTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   audioTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      audioTrackMapper_->setMapping(trackAction, i);
-    }
-
-    // add an option to disable audio:
-    {
-      QAction *& trackAction = audioTrackAction[numAudioTracks];
-      trackAction = new QAction(tr("Disabled"), this);
-      menuAudio->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      audioTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   audioTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      audioTrackMapper_->setMapping(trackAction, int(numAudioTracks));
-    }
-
-    std::vector<TTrackInfo> videoInfo(numVideoTracks);
-    std::vector<VideoTraits> videoTraits(numVideoTracks);
-    std::vector<QAction *> videoTrackAction(numVideoTracks + 1);
-
-    for (unsigned int i = 0; i < numVideoTracks; i++)
-    {
-      reader->selectVideoTrack(i);
-      QString trackName = tr("Track %1").arg(i + 1);
-
-      TTrackInfo & info = videoInfo[i];
-      reader->getSelectedVideoTrackInfo(info);
-
-      if (info.hasName())
-      {
-        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
-      }
-
-      VideoTraits & traits = videoTraits[i];
-      if (reader->getVideoTraits(traits))
-      {
-        trackName +=
-          tr(", %1 x %2, %3 fps").
-          arg(traits.encodedWidth_).
-          arg(traits.encodedHeight_).
-          arg(traits.frameRate_);
-      }
-
-      QAction *& trackAction = videoTrackAction[i];
-      trackAction = new QAction(trackName, this);
-      menuVideo->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      videoTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   videoTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      videoTrackMapper_->setMapping(trackAction, i);
-    }
-
-    // add an option to disable video:
-    {
-      QAction *& trackAction = videoTrackAction[numVideoTracks];
-      trackAction = new QAction(tr("Disabled"), this);
-      menuVideo->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      videoTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   videoTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      videoTrackMapper_->setMapping(trackAction, int(numVideoTracks));
-    }
-
-    std::vector<TTrackInfo> subsInfo(subsCount);
-    std::vector<TSubsFormat> subsFormat(subsCount);
-    std::vector<QAction *> subsTrackAction(subsCount + 1);
-
-    for (unsigned int i = 0; i < subsCount; i++)
-    {
-      QString trackName = tr("Track %1").arg(i + 1);
-
-      TTrackInfo & info = subsInfo[i];
-      TSubsFormat & subsFmt = subsFormat[i];
-      subsFmt = reader->subsInfo(i, info);
-
-      if (info.hasLang())
-      {
-        trackName += tr(" (%1)").arg(QString::fromUtf8(info.lang()));
-      }
-
-      if (info.hasName())
-      {
-        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
-      }
-
-      if (subsFmt != kSubsNone)
-      {
-        const char * label = getSubsFormatLabel(subsFmt);
-        trackName += tr(", %1").arg(QString::fromUtf8(label));
-      }
-
-      QAction *& trackAction = subsTrackAction[i];
-      trackAction = new QAction(trackName, this);
-      menuSubs->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      subsTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   subsTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      subsTrackMapper_->setMapping(trackAction, i);
-    }
-
-    // add an option to disable subs:
-    {
-      QAction *& trackAction = subsTrackAction[subsCount];
-      trackAction = new QAction(tr("Disabled"), this);
-      menuSubs->addAction(trackAction);
-
-      trackAction->setCheckable(true);
-      subsTrackGroup_->addAction(trackAction);
-
-      ok = connect(trackAction, SIGNAL(triggered()),
-                   subsTrackMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      subsTrackMapper_->setMapping(trackAction, int(subsCount));
-    }
+    adjustMenuActions(reader,
+                      audioInfo,
+                      audioTraits,
+                      videoInfo,
+                      videoTraits,
+                      subsInfo,
+                      subsFormat);
 
     bool rememberSelectedVideoTrack = false;
     std::size_t vtrack = findMatchingTrack<VideoTraits>(videoInfo,
@@ -1664,7 +1428,7 @@ namespace yae
     }
 
     selectVideoTrack(reader, vtrack);
-    videoTrackAction[vtrack]->setChecked(true);
+    videoTrackGroup_->actions().at((int)vtrack)->setChecked(true);
 
     if (rememberSelectedVideoTrack)
     {
@@ -1684,7 +1448,7 @@ namespace yae
     }
 
     selectAudioTrack(reader, atrack);
-    audioTrackAction[atrack]->setChecked(true);
+    audioTrackGroup_->actions().at((int)atrack)->setChecked(true);
 
     if (rememberSelectedAudioTrack)
     {
@@ -1713,43 +1477,11 @@ namespace yae
     }
 
     selectSubsTrack(reader, strack);
-    subsTrackAction[strack]->setChecked(true);
+    subsTrackGroup_->actions().at((int)strack)->setChecked(true);
 
     if (rememberSelectedSubtitlesTrack)
     {
       selSubsFormat_ = reader->subsInfo(strack, selSubs_);
-    }
-
-    // update the chapter menu:
-    delete chapterMapper_;
-    chapterMapper_ = new QSignalMapper(this);
-
-    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
-                 this, SLOT(skipToChapter(int)));
-    YAE_ASSERT(ok);
-
-    std::size_t numChapters = reader->countChapters();
-    menuChapters->clear();
-    for (std::size_t i = 0; i < numChapters; i++)
-    {
-      TChapter ch;
-      ok = reader->getChapterInfo(i, ch);
-      YAE_ASSERT(ok);
-
-      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + ch.start_ * 1000.0));
-
-      QString name =
-        tr("%1   %2").
-        arg(t0.toString("hh:mm:ss")).
-        arg(QString::fromUtf8(ch.name_.c_str()));
-
-      QAction * chapterAction = new QAction(name, this);
-      menuChapters->addAction(chapterAction);
-
-      ok = connect(chapterAction, SIGNAL(triggered()),
-                   chapterMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      chapterMapper_->setMapping(chapterAction, (int)i);
     }
 
     adjustMenues(reader);
@@ -2810,6 +2542,85 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::updateChaptersMenu
+  //
+  void
+  MainWindow::updateChaptersMenu()
+  {
+    const double playheadInSeconds = timelineControls_->currentTime();
+    QList<QAction *> actions = chaptersGroup_->actions();
+
+    const std::size_t numActions = actions.size();
+    const std::size_t numChapters = reader_->countChapters();
+
+    if (numChapters != numActions)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    // check-mark the current chapter:
+    SignalBlocker blockSignals(chapterMapper_);
+
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      if (reader_->getChapterInfo(i, ch))
+      {
+        double chEnd = ch.start_ + ch.duration_;
+
+        if ((playheadInSeconds >= ch.start_ &&
+             playheadInSeconds < chEnd) ||
+            (playheadInSeconds < ch.start_ && i > 0))
+        {
+          std::size_t index = (playheadInSeconds >= ch.start_) ? i : i - 1;
+
+          QAction * chapterAction = actions[(int)index];
+          chapterAction->setChecked(true);
+          return;
+        }
+      }
+      else
+      {
+        YAE_ASSERT(false);
+      }
+
+      QAction * chapterAction = actions[(int)i];
+      chapterAction->setChecked(false);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToNextChapter
+  //
+  void
+  MainWindow::skipToNextChapter()
+  {
+    const double playheadInSeconds = timelineControls_->currentTime();
+    const std::size_t numChapters = reader_->countChapters();
+
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      if (reader_->getChapterInfo(i, ch))
+      {
+        if (playheadInSeconds < ch.start_)
+        {
+          timelineControls_->seekTo(ch.start_);
+          return;
+        }
+      }
+      else
+      {
+        YAE_ASSERT(false);
+      }
+    }
+
+    // last chapter, skip to next playlist item:
+    playbackNext();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::skipToChapter
   //
   void
@@ -3118,6 +2929,9 @@ namespace yae
     timelineControls_->update();
 
     this->setWindowTitle(tr("Apprentice Video"));
+
+    adjustMenuActions();
+    adjustMenues(reader_);
   }
 
   //----------------------------------------------------------------
@@ -4056,18 +3870,344 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::adjustMenuActions
+  //
+  void
+  MainWindow::adjustMenuActions(IReader * reader,
+                                std::vector<TTrackInfo> &  audioInfo,
+                                std::vector<AudioTraits> & audioTraits,
+                                std::vector<TTrackInfo> &  videoInfo,
+                                std::vector<VideoTraits> & videoTraits,
+                                std::vector<TTrackInfo> & subsInfo,
+                                std::vector<TSubsFormat> & subsFormat)
+  {
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t subsCount = reader->subsCount();
+
+    if (audioTrackGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = audioTrackGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+
+        menuAudio->removeAction(action);
+      }
+    }
+
+    if (videoTrackGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = videoTrackGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+
+        menuVideo->removeAction(action);
+      }
+    }
+
+    if (subsTrackGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = subsTrackGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+
+        menuSubs->removeAction(action);
+      }
+    }
+
+    if (chaptersGroup_)
+    {
+      // remove old actions:
+      QList<QAction *> actions = chaptersGroup_->actions();
+      while (!actions.empty())
+      {
+        QAction * action = actions.front();
+        actions.pop_front();
+
+        menuChapters->removeAction(action);
+      }
+    }
+
+    // cleanup action groups:
+    delete audioTrackGroup_;
+    audioTrackGroup_ = new QActionGroup(this);
+
+    delete videoTrackGroup_;
+    videoTrackGroup_ = new QActionGroup(this);
+
+    delete subsTrackGroup_;
+    subsTrackGroup_ = new QActionGroup(this);
+
+    delete chaptersGroup_;
+    chaptersGroup_ = new QActionGroup(this);
+
+    // cleanup signal mappers:
+    bool ok = true;
+
+    delete audioTrackMapper_;
+    audioTrackMapper_ = new QSignalMapper(this);
+
+    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(audioSelectTrack(int)));
+    YAE_ASSERT(ok);
+
+    delete videoTrackMapper_;
+    videoTrackMapper_ = new QSignalMapper(this);
+
+    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(videoSelectTrack(int)));
+    YAE_ASSERT(ok);
+
+    delete subsTrackMapper_;
+    subsTrackMapper_ = new QSignalMapper(this);
+
+    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(subsSelectTrack(int)));
+    YAE_ASSERT(ok);
+
+    delete chapterMapper_;
+    chapterMapper_ = new QSignalMapper(this);
+
+    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
+                 this, SLOT(skipToChapter(int)));
+    YAE_ASSERT(ok);
+
+
+    audioInfo = std::vector<TTrackInfo>(numAudioTracks);
+    audioTraits = std::vector<AudioTraits>(numAudioTracks);
+
+    for (unsigned int i = 0; i < numAudioTracks; i++)
+    {
+      reader->selectAudioTrack(i);
+      QString trackName = tr("Track %1").arg(i + 1);
+
+      TTrackInfo & info = audioInfo[i];
+      reader->getSelectedAudioTrackInfo(info);
+
+      if (info.hasLang())
+      {
+        trackName += tr(" (%1)").arg(QString::fromUtf8(info.lang()));
+      }
+
+      if (info.hasName())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
+      }
+
+      AudioTraits & traits = audioTraits[i];
+      if (reader->getAudioTraits(traits))
+      {
+        trackName +=
+          tr(", %1 Hz, %2 channels").
+          arg(traits.sampleRate_).
+          arg(int(traits.channelLayout_));
+      }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuAudio->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      audioTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   audioTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      audioTrackMapper_->setMapping(trackAction, i);
+    }
+
+    // add an option to disable audio:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuAudio->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      audioTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   audioTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      audioTrackMapper_->setMapping(trackAction, int(numAudioTracks));
+    }
+
+    videoInfo = std::vector<TTrackInfo>(numVideoTracks);
+    videoTraits = std::vector<VideoTraits>(numVideoTracks);
+
+    for (unsigned int i = 0; i < numVideoTracks; i++)
+    {
+      reader->selectVideoTrack(i);
+      QString trackName = tr("Track %1").arg(i + 1);
+
+      TTrackInfo & info = videoInfo[i];
+      reader->getSelectedVideoTrackInfo(info);
+
+      if (info.hasName())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
+      }
+
+      VideoTraits & traits = videoTraits[i];
+      if (reader->getVideoTraits(traits))
+      {
+        trackName +=
+          tr(", %1 x %2, %3 fps").
+          arg(traits.encodedWidth_).
+          arg(traits.encodedHeight_).
+          arg(traits.frameRate_);
+      }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuVideo->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      videoTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   videoTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      videoTrackMapper_->setMapping(trackAction, i);
+    }
+
+    // add an option to disable video:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuVideo->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      videoTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   videoTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      videoTrackMapper_->setMapping(trackAction, int(numVideoTracks));
+    }
+
+    subsInfo = std::vector<TTrackInfo>(subsCount);
+    subsFormat = std::vector<TSubsFormat>(subsCount);
+
+    for (unsigned int i = 0; i < subsCount; i++)
+    {
+      QString trackName = tr("Track %1").arg(i + 1);
+
+      TTrackInfo & info = subsInfo[i];
+      TSubsFormat & subsFmt = subsFormat[i];
+      subsFmt = reader->subsInfo(i, info);
+
+      if (info.hasLang())
+      {
+        trackName += tr(" (%1)").arg(QString::fromUtf8(info.lang()));
+      }
+
+      if (info.hasName())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
+      }
+
+      if (subsFmt != kSubsNone)
+      {
+        const char * label = getSubsFormatLabel(subsFmt);
+        trackName += tr(", %1").arg(QString::fromUtf8(label));
+      }
+
+      QAction * trackAction = new QAction(trackName, this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, i);
+    }
+
+    // add an option to disable subs:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, int(subsCount));
+    }
+
+    // update the chapter menu:
+    std::size_t numChapters = reader->countChapters();
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      ok = reader->getChapterInfo(i, ch);
+      YAE_ASSERT(ok);
+
+      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + ch.start_ * 1000.0));
+
+      QString name =
+        tr("%1   %2").
+        arg(t0.toString("hh:mm:ss")).
+        arg(QString::fromUtf8(ch.name_.c_str()));
+
+      QAction * chapterAction = new QAction(name, this);
+      menuChapters->addAction(chapterAction);
+
+      chapterAction->setCheckable(true);
+      chaptersGroup_->addAction(chapterAction);
+
+      ok = connect(chapterAction, SIGNAL(triggered()),
+                   chapterMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      chapterMapper_->setMapping(chapterAction, (int)i);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::adjustMenuActions
+  //
+  void
+  MainWindow::adjustMenuActions()
+  {
+    std::vector<TTrackInfo>  audioInfo;
+    std::vector<AudioTraits> audioTraits;
+    std::vector<TTrackInfo>  videoInfo;
+    std::vector<VideoTraits> videoTraits;
+    std::vector<TTrackInfo>  subsInfo;
+    std::vector<TSubsFormat> subsFormat;
+
+    adjustMenuActions(reader_,
+                      audioInfo,
+                      audioTraits,
+                      videoInfo,
+                      videoTraits,
+                      subsInfo,
+                      subsFormat);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::adjustMenues
   //
   void
   MainWindow::adjustMenues(IReader * reader)
   {
+    bool ok = true;
+
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     std::size_t numSubtitles = reader->subsCount();
     std::size_t numChapters = reader->countChapters();
     std::size_t videoTrackIndex = reader->getSelectedVideoTrackIndex();
 
-    if (!numVideoTracks)
+    if (!numVideoTracks && numAudioTracks)
     {
       menubar->removeAction(menuVideo->menuAction());
     }
@@ -4082,12 +4222,12 @@ namespace yae
       menubar->removeAction(menuChapters->menuAction());
     }
 
-    if (numVideoTracks)
+    if (numVideoTracks || !numAudioTracks)
     {
       menubar->insertMenu(menuHelp->menuAction(), menuVideo);
     }
 
-    if (numSubtitles)
+    if (numSubtitles || !(numVideoTracks || numAudioTracks))
     {
       menubar->insertMenu(menuHelp->menuAction(), menuSubs);
     }
@@ -4095,6 +4235,10 @@ namespace yae
     if (numChapters > 1)
     {
       menubar->insertMenu(menuHelp->menuAction(), menuChapters);
+    }
+    else
+    {
+      menubar->removeAction(menuChapters->menuAction());
     }
 
     if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
