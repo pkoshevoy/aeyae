@@ -344,6 +344,7 @@ namespace yae
     shortcutCrop1_33_ = new QShortcut(this);
     shortcutCrop1_78_ = new QShortcut(this);
     shortcutAutoCrop_ = new QShortcut(this);
+    shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
 
@@ -360,6 +361,7 @@ namespace yae
     shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
+    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
@@ -795,6 +797,10 @@ namespace yae
 
     ok = connect(actionNextChapter, SIGNAL(triggered()),
                  this, SLOT(skipToNextChapter()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
+                 actionNextChapter, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     adjustMenuActions();
@@ -2341,6 +2347,7 @@ namespace yae
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
+    swapShortcuts(shortcutNextChapter_, actionNextChapter);
   }
 
   //----------------------------------------------------------------
@@ -2401,6 +2408,7 @@ namespace yae
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
+    swapShortcuts(shortcutNextChapter_, actionNextChapter);
   }
 
   //----------------------------------------------------------------
