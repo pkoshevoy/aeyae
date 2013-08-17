@@ -94,6 +94,9 @@ namespace yae
     Ui::AboutDialog()
   {
     Ui::AboutDialog::setupUi(this);
+
+    textBrowser->setSearchPaths(QStringList() << ":/images");
+    textBrowser->setSource(QUrl("qrc:///yaeAbout.html"));
   }
 
   //----------------------------------------------------------------

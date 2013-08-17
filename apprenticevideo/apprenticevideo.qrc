@@ -9,5 +9,6 @@
     <file>images/search.png</file>
     <file>images/clear.png</file>
     <file>images/clear-dark.png</file>
+    <file>yaeAbout.html</file>
   </qresource>
 </RCC>
