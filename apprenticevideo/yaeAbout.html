@@ -26,31 +26,31 @@ created or updated whenever playback is paused.</p>
 <p class="indent1"><b>Ctrl + N</b>
 <br />Skip to next chapter, or next playlist item.</p>
 <p class="indent1"><b>Ctrl + A</b>
-<br />Selects all items in the playlist.</p>
+<br />Select all items in the playlist.</p>
 <p class="indent1"><b>Del</b>
 <br />Remove currently selected item(s) from the playlist.</p>
 <p class="indent1"><b>Ctrl + F</b>
-<br />Switch to letterbox full screen with black pillars and bars padding the image to fit the screen.</p>
+<br />Switch to letterbox full screen mode with black pillars or bars padding the scaled image to fit the screen.</p>
 <p class="indent1"><b>Ctrl + G</b>
-<br />Switch to full screen mode with image upscaled to fill the smallest screen dimension and the excess image cropped off.</p>
+<br />Switch to full screen mode with image scaled to fill the screen and the excess image cropped off.</p>
 <p class="indent1"><b>Esc</b>
 <br />Exit (any) full screen mode.</p>
 <p class="indent1"><b>Ctrl + R</b>
-<br />In window mode this shrink the window to wrap the video frame to eliminate any slack.</p>
+<br />In window mode this will shrink the window to wrap the video frame to eliminate any slack.</p>
 <p class="indent1"><b>Ctrl + 0</b>
-<br />In window mode this resize the window to half the size of the video frame.</p>
+<br />In window mode this will resize the window to half the size of the video frame.</p>
 <p class="indent1"><b>Ctrl + 1</b>
-<br />In window mode this resize the window to the size of the video frame.</p>
+<br />In window mode this will resize the window to the size of the video frame.</p>
 <p class="indent1"><b>Ctrl + 2</b>
-<br />In window mode this resize the window to double the size of the video frame.</p>
+<br />In window mode this will resize the window to double the size of the video frame.</p>
 <p class="indent1"><b>Alt + 4</b>
 <br />Crop video to 4:3 aspect ratio.</p>
 <p class="indent1"><b>Alt + 6</b>
 <br />Crop video to 16:9 aspect ratio.</p>
 <p class="indent1"><b>Alt + C</b>
-<br />Automatically crop video to eliminate black borders, pillars and bars.</p>
+<br />Automatically crop video to eliminate black borders, pillars and bars.  This is not a continuous operation, so if the borders change during playback of the current playlist item they will not be automatically detected and eliminated.  In this case repeat auto crop manually.  However, the operation will be repeated automatically when playback switches to another playlist item.</p>
 <p class="indent1"><b>Alt + X</b>
-<br />Undo current video crop settings.</p>
+<br />Reset video crop settings to initial state (no cropping).</p>
 <p class="indent1"><b>Ctrl + T</b>
 <br />Show or hide the timeline.</p>
 <p class="indent1"><b>I</b>
@@ -59,9 +59,9 @@ created or updated whenever playback is paused.</p>
 <br />Set timeline loop out-point.</p>
 <p class="indent1"><b>N</b>
 <br />This is a crude frame step feature.  When playback is paused this will advance the current playhead position by one (average) frame duration.</p>
-<p class="indent1"><b>&gt;</b>
+<p class="indent1"><b>,</b><br /><b>&gt;</b>
 <br />Skip forward 7 seconds.</p>
-<p class="indent1"><b>&lt;</b>
+<p class="indent1"><b>.</b><br /><b>&lt;</b>
 <br />Go back 3 seconds.</p>
 <p class="indent1"><b>Ctrl + Q</b>
 <br />Quit the player.</p>
@@ -73,12 +73,12 @@ created or updated whenever playback is paused.</p>
 <p class="indent1">Use <b>Arrow</b> keys to navigate the playlist items.</p>
 
 <h3>Other Controls</h3>
-<p class="indent1"><b>Double Click</b> the video canvas to enter or exit the most recently used full screen mode (default is letterbox mode).</p>
-<p class="indent1"><b>Click</b> and drag the timeline playhead to seek.</p>
-<p class="indent1"><b>Click</b> and drag the timeline in/out triangular handles to set the timeline loop in/out point.</p>
-<p class="indent1"><b>Click</b> the playhead position display control on the left side of the timeline, then type in timeline position in HH:MM:SS:FF format and press enter to seek to that position.</p>
 <p class="indent1"><b>Right Click</b> on the playlist or video canvas to open the context menu.</p>
+<p class="indent1"><b>Double Click</b> the video canvas to enter or exit the most recently used full screen mode (default is letterbox mode).</p>
 <p class="indent1">Use the mouse <b>Scroll Wheel</b> to seek.</p>
+<p class="indent1">Click and <b>Drag</b> the timeline playhead to seek.</p>
+<p class="indent1">Click and <b>Drag</b> the timeline in/out triangular handles to set the timeline loop in/out points.</p>
+<p class="indent1"><b>Click</b> the playhead position display on the left side of the timeline, then type in timeline position in HH:MM:SS:FF format and press enter to skip to that position.  Here FF stands for frame number, however frame-accurate seeking is not guaranteed.</p>
 
 <h3>Apple Remote Control, for OS X only</h3>
 <p class="indent1">Click the <b>Right</b> button to skip forward 7 seconds.</p>
