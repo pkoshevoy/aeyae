@@ -248,7 +248,7 @@ namespace yae
                           PaStreamCallbackFlags statusFlags,
                           void * userData)
   {
-    return paComplete;
+    return paAbort;
   }
 
   //----------------------------------------------------------------
@@ -594,6 +594,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // fillWithSilence
+  //
+  static void
+  fillWithSilence(unsigned char ** dst,
+                  bool dstPlanar,
+                  std::size_t chunkSize,
+                  int channels)
+  {
+    if (dstPlanar)
+    {
+      for (int i = 0; i < channels; i++)
+      {
+        memset(dst[i], 0, chunkSize);
+      }
+    }
+    else
+    {
+      memset(dst[0], 0, chunkSize);
+    }
+  }
+
+  //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::serviceTheCallback
   //
   int
@@ -618,6 +640,11 @@ namespace yae
     unsigned char * dstBuf = (unsigned char *)output;
     unsigned char ** dst = dstPlanar ? (unsigned char **)output : &dstBuf;
 
+    std::size_t dstStride =
+      dstPlanar ? sampleSize_ : sampleSize_ * outputParams_.channelCount;
+
+    std::size_t dstChunkSize = samplesToRead * dstStride;
+
     while (!audioFrame_)
     {
       YAE_ASSERT(!audioFrameOffset_);
@@ -630,6 +657,10 @@ namespace yae
           clock_.noteTheClockHasStopped();
         }
 
+        fillWithSilence(dst,
+                        dstPlanar,
+                        dstChunkSize,
+                        outputParams_.channelCount);
         return paComplete;
       }
 
@@ -661,13 +692,8 @@ namespace yae
        sampleSize_ != srcSampleSize ||
        dstPlanar != srcPlanar);
 
-    std::size_t dstStride =
-      dstPlanar ? sampleSize_ : sampleSize_ * outputParams_.channelCount;
-
     std::size_t srcStride =
       srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
-
-    std::size_t dstChunkSize = samplesToRead * srcStride;
 
     while (dstChunkSize)
     {
@@ -683,6 +709,10 @@ namespace yae
             clock_.noteTheClockHasStopped();
           }
 
+          fillWithSilence(dst,
+                          dstPlanar,
+                          dstChunkSize,
+                          outputParams_.channelCount);
           return paComplete;
         }
 
@@ -815,6 +845,10 @@ namespace yae
 
     if (forOneFrameOnly_)
     {
+      fillWithSilence(dst,
+                      dstPlanar,
+                      dstChunkSize,
+                      outputParams_.channelCount);
       return paComplete;
     }
 
