@@ -50,7 +50,16 @@ namespace yae
 
     double secondsWhole = floor(seconds);
     double remainder = seconds - secondsWhole;
-    uint64 frameNo = int(1.5 + remainder * frameRate);
+    double fpsWhole = ceil(frameRate);
+    uint64 frameNo = 1 + int(remainder * fpsWhole);
+
+#if 0
+    std::cerr << "frame: " << frameNo
+              << ", remained: " << remainder
+              << ", fps: " << fpsWhole
+              << ", " << frameRate * remainder
+              << std::endl;
+#endif
 
     std::ostringstream os;
     os << std::setw(2) << std::setfill('0') << hour << ':'
