@@ -41,17 +41,16 @@ namespace yae
   static QString
   getTimeStamp(double seconds, double frameRate)
   {
-    int msec = int(seconds * 1000.0);
-    int sec = msec / 1000;
+    int sec = int(seconds);
     int min = sec / 60;
     int hour = min / 60;
 
-    msec %= 1000;
     sec %= 60;
     min %= 60;
 
-    uint64 frames = uint64(seconds * frameRate );
-    uint64 frameNo = frames - uint64(frameRate * floor(seconds));
+    double secondsWhole = floor(seconds);
+    double remainder = seconds - secondsWhole;
+    uint64 frameNo = int(1.0 + remainder * frameRate);
 
     std::ostringstream os;
     os << std::setw(2) << std::setfill('0') << hour << ':'
