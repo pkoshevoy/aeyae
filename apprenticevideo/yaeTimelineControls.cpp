@@ -51,7 +51,7 @@ namespace yae
     double secondsWhole = floor(seconds);
     double remainder = seconds - secondsWhole;
     double fpsWhole = ceil(frameRate);
-    uint64 frameNo = 1 + int(remainder * fpsWhole);
+    uint64 frameNo = int(remainder * fpsWhole);
 
 #if 0
     std::cerr << "frame: " << frameNo
