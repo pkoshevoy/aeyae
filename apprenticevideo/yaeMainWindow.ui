@@ -1000,7 +1000,7 @@ QLineEdit QToolButton#clear_:pressed {
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Downmix to Stereo</string>
+    <string>Mix Down To Stereo</string>
    </property>
   </action>
  </widget>

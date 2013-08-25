@@ -337,7 +337,7 @@ namespace yae
     actionResumeFromBookmark->setChecked(resumeFromBookmark == kSettingTrue);
 
     QString downmixToStereo =
-      loadSettingOrDefault(kDownmixToStereo, kSettingFalse);
+      loadSettingOrDefault(kDownmixToStereo, kSettingTrue);
     actionDownmixToStereo->setChecked(downmixToStereo == kSettingTrue);
 
     // when in fullscreen mode the menubar is hidden and all actions
