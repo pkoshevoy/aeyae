@@ -259,14 +259,13 @@ QLineEdit:disabled {
     <property name="title">
      <string>&amp;Audio</string>
     </property>
-    <addaction name="actionDownmixToStereo"/>
-    <addaction name="separator"/>
     <widget class="QMenu" name="menuAudioDevice">
      <property name="title">
       <string>Output Device</string>
      </property>
     </widget>
     <addaction name="menuAudioDevice"/>
+    <addaction name="actionDownmixToStereo"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuVideo">
