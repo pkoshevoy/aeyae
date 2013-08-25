@@ -63,6 +63,11 @@ namespace yae
     QString::fromUtf8("ResumePlaybackFromBookmark");
 
   //----------------------------------------------------------------
+  // kDownmixToStereo
+  //
+  static const QString kDownmixToStereo = QString::fromUtf8("DownmixToStereo");
+
+  //----------------------------------------------------------------
   // kSettingTrue
   //
   static const QString kSettingTrue = QString::fromUtf8("true");
@@ -330,6 +335,10 @@ namespace yae
     QString resumeFromBookmark =
       loadSettingOrDefault(kResumePlaybackFromBookmark, kSettingTrue);
     actionResumeFromBookmark->setChecked(resumeFromBookmark == kSettingTrue);
+
+    QString downmixToStereo =
+      loadSettingOrDefault(kDownmixToStereo, kSettingFalse);
+    actionDownmixToStereo->setChecked(downmixToStereo == kSettingTrue);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -712,6 +721,10 @@ namespace yae
 
     ok = connect(actionDoubleSize, SIGNAL(triggered()),
                  this, SLOT(windowDoubleSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionDownmixToStereo, SIGNAL(triggered()),
+                 this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAbout, SIGNAL(triggered()),
@@ -2448,6 +2461,35 @@ namespace yae
     }
 
     playbackPaused_ = !playbackPaused_;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::audioDownmixToStereo
+  //
+  void
+  MainWindow::audioDownmixToStereo()
+  {
+    if (actionDownmixToStereo->isChecked())
+    {
+      saveSetting(kDownmixToStereo, kSettingTrue);
+    }
+    else
+    {
+      saveSetting(kDownmixToStereo, kSettingFalse);
+    }
+
+    // reset reader:
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    reader_->threadStop();
+
+    stopRenderers();
+    prepareReaderAndRenderers(reader_, playbackPaused_);
+
+    double t = timelineControls_->currentTime();
+    reader_->seek(t);
+    reader_->threadStart();
+
+    resumeRenderers();
   }
 
   //----------------------------------------------------------------
@@ -4335,11 +4377,15 @@ namespace yae
      AudioTraits native;
      if (reader->getAudioTraits(native))
      {
+       if (getNumberOfChannels(native.channelLayout_) > 2 &&
+           actionDownmixToStereo->isChecked())
+       {
+         native.channelLayout_ = kAudioStereo;
+       }
+
        AudioTraits supported;
        audioRenderer_->match(deviceIndex, native, supported);
 
-       // FIXME: temporary for debugging on openSuSE
-       // supported.channelLayout_ = kAudioStereo;
 #if 0
        std::cerr << "supported: " << supported.channelLayout_ << std::endl
                  << "required:  " << native.channelLayout_ << std::endl;

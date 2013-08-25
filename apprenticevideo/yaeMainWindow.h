@@ -168,6 +168,7 @@ namespace yae
     void togglePlayback();
 
     // audio/video menus:
+    void audioDownmixToStereo();
     void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);

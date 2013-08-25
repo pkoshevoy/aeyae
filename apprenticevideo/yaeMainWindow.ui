@@ -259,6 +259,8 @@ QLineEdit:disabled {
     <property name="title">
      <string>&amp;Audio</string>
     </property>
+    <addaction name="actionDownmixToStereo"/>
+    <addaction name="separator"/>
     <widget class="QMenu" name="menuAudioDevice">
      <property name="title">
       <string>Output Device</string>
@@ -992,6 +994,14 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDownmixToStereo">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Downmix to Stereo</string>
    </property>
   </action>
  </widget>
