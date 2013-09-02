@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <list>
+#include <set>
 #include <math.h>
 
 // GLEW includes:
@@ -912,199 +913,218 @@ namespace yae
     playback();
   }
 
+
   //----------------------------------------------------------------
-  // getExtIgnoreList
+  // TExtIgnoreList
   //
-  static QStringList getExtIgnoreList()
+  struct TExtIgnoreList
   {
-    QStringList ext;
-    ext
-      << QString::fromUtf8("eyetvsched")
-      << QString::fromUtf8("eyetvp")
-      << QString::fromUtf8("eyetvr")
-      << QString::fromUtf8("eyetvi")
-      << QString::fromUtf8("pages")
-      << QString::fromUtf8("doc")
-      << QString::fromUtf8("xls")
-      << QString::fromUtf8("ppt")
-      << QString::fromUtf8("pdf")
-      << QString::fromUtf8("rtf")
-      << QString::fromUtf8("htm")
-      << QString::fromUtf8("css")
-      << QString::fromUtf8("less")
-      << QString::fromUtf8("rar")
-      << QString::fromUtf8("jar")
-      << QString::fromUtf8("zip")
-      << QString::fromUtf8("7z")
-      << QString::fromUtf8("gz")
-      << QString::fromUtf8("bz2")
-      << QString::fromUtf8("war")
-      << QString::fromUtf8("tar")
-      << QString::fromUtf8("tgz")
-      << QString::fromUtf8("tbz2")
-      << QString::fromUtf8("lzma")
-      << QString::fromUtf8("url")
-      << QString::fromUtf8("eml")
-      << QString::fromUtf8("html")
-      << QString::fromUtf8("xml")
-      << QString::fromUtf8("dtd")
-      << QString::fromUtf8("tdt")
-      << QString::fromUtf8("stg")
-      << QString::fromUtf8("bat")
-      << QString::fromUtf8("ini")
-      << QString::fromUtf8("cfg")
-      << QString::fromUtf8("cnf")
-      << QString::fromUtf8("csv")
-      << QString::fromUtf8("rdp")
-      << QString::fromUtf8("el")
-      << QString::fromUtf8("rb")
-      << QString::fromUtf8("cs")
-      << QString::fromUtf8("java")
-      << QString::fromUtf8("php")
-      << QString::fromUtf8("js")
-      << QString::fromUtf8("pl")
-      << QString::fromUtf8("db")
-      << QString::fromUtf8("tex")
-      << QString::fromUtf8("txt")
-      << QString::fromUtf8("text")
-      << QString::fromUtf8("srt")
-      << QString::fromUtf8("ass")
-      << QString::fromUtf8("ssa")
-      << QString::fromUtf8("idx")
-      << QString::fromUtf8("sub")
-      << QString::fromUtf8("ifo")
-      << QString::fromUtf8("info")
-      << QString::fromUtf8("nfo")
-      << QString::fromUtf8("inf")
-      << QString::fromUtf8("md5")
-      << QString::fromUtf8("crc")
-      << QString::fromUtf8("sfv")
-      << QString::fromUtf8("m3u")
-      << QString::fromUtf8("smil")
-      << QString::fromUtf8("app")
-      << QString::fromUtf8("strings")
-      << QString::fromUtf8("plist")
-      << QString::fromUtf8("framework")
-      << QString::fromUtf8("bundle")
-      << QString::fromUtf8("rcproject")
-      << QString::fromUtf8("ipmeta")
-      << QString::fromUtf8("qtx")
-      << QString::fromUtf8("qtr")
-      << QString::fromUtf8("sc")
-      << QString::fromUtf8("so")
-      << QString::fromUtf8("dylib")
-      << QString::fromUtf8("dll")
-      << QString::fromUtf8("ax")
-      << QString::fromUtf8("def")
-      << QString::fromUtf8("lib")
-      << QString::fromUtf8("a")
-      << QString::fromUtf8("r")
-      << QString::fromUtf8("t")
-      << QString::fromUtf8("y")
-      << QString::fromUtf8("o")
-      << QString::fromUtf8("obj")
-      << QString::fromUtf8("am")
-      << QString::fromUtf8("in")
-      << QString::fromUtf8("exe")
-      << QString::fromUtf8("com")
-      << QString::fromUtf8("cmd")
-      << QString::fromUtf8("cab")
-      << QString::fromUtf8("dat")
-      << QString::fromUtf8("bat")
-      << QString::fromUtf8("sys")
-      << QString::fromUtf8("msi")
-      << QString::fromUtf8("iss")
-      << QString::fromUtf8("ism")
-      << QString::fromUtf8("rul")
-      << QString::fromUtf8("py")
-      << QString::fromUtf8("sh")
-      << QString::fromUtf8("m4")
-      << QString::fromUtf8("cpp")
-      << QString::fromUtf8("hpp")
-      << QString::fromUtf8("tpp")
-      << QString::fromUtf8("ipp")
-      << QString::fromUtf8("SUNWCCh")
-      << QString::fromUtf8("inc")
-      << QString::fromUtf8("pch")
-      << QString::fromUtf8("sed")
-      << QString::fromUtf8("awk")
-      << QString::fromUtf8("h")
-      << QString::fromUtf8("hh")
-      << QString::fromUtf8("m")
-      << QString::fromUtf8("mm")
-      << QString::fromUtf8("c")
-      << QString::fromUtf8("cc")
-      << QString::fromUtf8("ui")
-      << QString::fromUtf8("as")
-      << QString::fromUtf8("asm")
-      << QString::fromUtf8("rc")
-      << QString::fromUtf8("qrc")
-      << QString::fromUtf8("cxx")
-      << QString::fromUtf8("hxx")
-      << QString::fromUtf8("txx")
-      << QString::fromUtf8("log")
-      << QString::fromUtf8("err")
-      << QString::fromUtf8("out")
-      << QString::fromUtf8("sqz")
-      << QString::fromUtf8("xss")
-      << QString::fromUtf8("xds")
-      << QString::fromUtf8("xsp")
-      << QString::fromUtf8("xcp")
-      << QString::fromUtf8("xfs")
-      << QString::fromUtf8("spfx")
-      << QString::fromUtf8("iso")
-      << QString::fromUtf8("dmg")
-      << QString::fromUtf8("dmp")
-      << QString::fromUtf8("svq")
-      << QString::fromUtf8("svn")
-      << QString::fromUtf8("itdb")
-      << QString::fromUtf8("itl")
-      << QString::fromUtf8("itc")
-      << QString::fromUtf8("ipa")
-      << QString::fromUtf8("vbox")
-      << QString::fromUtf8("vdi")
-      << QString::fromUtf8("vmdk")
-      << QString::fromUtf8("sln")
-      << QString::fromUtf8("suo")
-      << QString::fromUtf8("manifest")
-      << QString::fromUtf8("vcproj")
-      << QString::fromUtf8("csproj")
-      << QString::fromUtf8("mode1v3")
-      << QString::fromUtf8("pbxuser")
-      << QString::fromUtf8("pbxproj")
-      << QString::fromUtf8("pmproj")
-      << QString::fromUtf8("proj")
-      << QString::fromUtf8("rsrc")
-      << QString::fromUtf8("nib")
-      << QString::fromUtf8("icns")
-      << QString::fromUtf8("cw")
-      << QString::fromUtf8("amz")
-      << QString::fromUtf8("mcp")
-      << QString::fromUtf8("pro")
-      << QString::fromUtf8("mk")
-      << QString::fromUtf8("mak")
-      << QString::fromUtf8("cmake")
-      << QString::fromUtf8("dxy")
-      << QString::fromUtf8("dox")
-      << QString::fromUtf8("doxy")
-      << QString::fromUtf8("dsp")
-      << QString::fromUtf8("dsw")
-      << QString::fromUtf8("plg")
-      << QString::fromUtf8("lst")
-      << QString::fromUtf8("asx")
-      << QString::fromUtf8("otf")
-      << QString::fromUtf8("ttf")
-      << QString::fromUtf8("fon")
-      << QString::fromUtf8("license")
-      << QString::fromUtf8("ignore");
+    TExtIgnoreList()
+    {
+      const char * ext[] = {
+        "eyetvsched",
+        "eyetvp",
+        "eyetvr",
+        "eyetvi",
+        "eyetvsl",
+        "eyetvsg",
+        "pages",
+        "doc",
+        "xls",
+        "ppt",
+        "pdf",
+        "rtf",
+        "htm",
+        "css",
+        "less",
+        "rar",
+        "jar",
+        "zip",
+        "7z",
+        "gz",
+        "bz2",
+        "war",
+        "tar",
+        "tgz",
+        "tbz2",
+        "lzma",
+        "url",
+        "eml",
+        "html",
+        "xml",
+        "dtd",
+        "tdt",
+        "stg",
+        "bat",
+        "ini",
+        "cfg",
+        "cnf",
+        "csv",
+        "rdp",
+        "el",
+        "rb",
+        "cs",
+        "java",
+        "php",
+        "js",
+        "pl",
+        "db",
+        "tex",
+        "txt",
+        "text",
+        "srt",
+        "ass",
+        "ssa",
+        "idx",
+        "sub",
+        "ifo",
+        "info",
+        "nfo",
+        "inf",
+        "md5",
+        "crc",
+        "sfv",
+        "m3u",
+        "smil",
+        "app",
+        "strings",
+        "plist",
+        "framework",
+        "bundle",
+        "rcproject",
+        "ipmeta",
+        "qtx",
+        "qtr",
+        "sc",
+        "so",
+        "dylib",
+        "dll",
+        "ax",
+        "def",
+        "lib",
+        "a",
+        "r",
+        "t",
+        "y",
+        "o",
+        "obj",
+        "am",
+        "in",
+        "exe",
+        "com",
+        "cmd",
+        "cab",
+        "dat",
+        "bat",
+        "sys",
+        "msi",
+        "iss",
+        "ism",
+        "rul",
+        "py",
+        "sh",
+        "m4",
+        "cpp",
+        "hpp",
+        "tpp",
+        "ipp",
+        "SUNWCCh",
+        "inc",
+        "pch",
+        "sed",
+        "awk",
+        "h",
+        "hh",
+        "m",
+        "mm",
+        "c",
+        "cc",
+        "ui",
+        "as",
+        "asm",
+        "rc",
+        "qrc",
+        "cxx",
+        "hxx",
+        "txx",
+        "log",
+        "err",
+        "out",
+        "sqz",
+        "xss",
+        "xds",
+        "xsp",
+        "xcp",
+        "xfs",
+        "spfx",
+        "iso",
+        "dmg",
+        "dmp",
+        "svq",
+        "svn",
+        "itdb",
+        "itl",
+        "itc",
+        "ipa",
+        "vbox",
+        "vdi",
+        "vmdk",
+        "sln",
+        "suo",
+        "manifest",
+        "vcproj",
+        "csproj",
+        "mode1v3",
+        "pbxuser",
+        "pbxproj",
+        "pmproj",
+        "proj",
+        "rsrc",
+        "nib",
+        "icns",
+        "cw",
+        "amz",
+        "mcp",
+        "pro",
+        "mk",
+        "mak",
+        "cmake",
+        "dxy",
+        "dox",
+        "doxy",
+        "dsp",
+        "dsw",
+        "plg",
+        "lst",
+        "asx",
+        "otf",
+        "ttf",
+        "fon",
+        "license",
+        "ignore"
+      };
 
-    return ext;
-  }
+      const std::size_t nExt = sizeof(ext) / sizeof(const char *);
+      for (std::size_t i = 0; i < nExt; i++)
+      {
+        set_.insert(QString::fromUtf8(ext[i]));
+      }
+    }
+
+    bool contains(const QString & ext) const
+    {
+      std::set<QString>::const_iterator found = set_.find(ext);
+      return found != set_.end();
+    }
+
+  protected:
+    std::set<QString> set_;
+  };
 
   //----------------------------------------------------------------
-  // kExtIgnoreList
+  // kExtIgnore
   //
-  static QStringList kExtIgnoreList = getExtIgnoreList();
+  static const TExtIgnoreList kExtIgnore;
 
   //----------------------------------------------------------------
   // shouldIgnore
@@ -1115,7 +1135,7 @@ namespace yae
     return
       extLowered.isEmpty() ||
       extLowered.endsWith("~") ||
-      kExtIgnoreList.contains(extLowered);
+      kExtIgnore.contains(extLowered);
   }
 
   //----------------------------------------------------------------
