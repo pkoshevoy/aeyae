@@ -1141,7 +1141,8 @@ namespace yae
   //----------------------------------------------------------------
   // shouldIgnore
   //
-  static bool shouldIgnore(const QString & ext, QFileInfo & fi)
+  static bool
+  shouldIgnore(const QString & fn, const QString & ext, QFileInfo & fi)
   {
     if (fi.isDir())
     {
@@ -1151,6 +1152,12 @@ namespace yae
         return true;
       }
 
+      return false;
+    }
+
+    if (fn.size() > 1 && fn[0] == '.' && fn[1] != '.')
+    {
+      // ignore dot files:
       return false;
     }
 
@@ -1183,22 +1190,23 @@ namespace yae
       iter.next();
 
       QFileInfo fi = iter.fileInfo();
-      QString fn = fi.absoluteFilePath();
+      QString fullpath = fi.absoluteFilePath();
+      QString filename = fi.fileName();
       QString ext = fi.suffix();
-      // std::cerr << "FN: " << fn.toUtf8().constData() << std::endl;
+      // std::cerr << "FN: " << fullpath.toUtf8().constData() << std::endl;
 
-      if (!shouldIgnore(ext, fi))
+      if (!shouldIgnore(filename, ext, fi))
       {
         if (fi.isDir() && ext != kExtEyetv)
         {
           if (recursive)
           {
-            findFiles(files, fn, recursive);
+            findFiles(files, fullpath, recursive);
           }
         }
         else
         {
-          files.push_back(fn);
+          files.push_back(fullpath);
         }
       }
     }
@@ -1607,7 +1615,7 @@ namespace yae
     QFileInfo fi(folder);
     QString ext = fi.suffix();
 
-    if (!shouldIgnore(ext, fi))
+    if (!shouldIgnore(fi.fileName(), ext, fi))
     {
       if (fi.isDir() && ext != kExtEyetv)
       {
