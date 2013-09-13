@@ -809,6 +809,7 @@ namespace yae
 
     int nwords = 0;
     QString out;
+    QString prev;
 
     for (std::list<QString>::const_iterator i = words.begin();
          i != words.end(); ++i)
@@ -817,7 +818,7 @@ namespace yae
 
       if (word.size() == 1 && word[0] == kHyphen)
       {
-        if (nwords == 1 && isNumeric(word))
+        if (nwords == 1 && isNumeric(prev))
         {
           // hyde numeric list separator hyphen:
           continue;
@@ -853,6 +854,8 @@ namespace yae
 
       out += word;
       nwords++;
+
+      prev = word;
     }
 
     return out;
