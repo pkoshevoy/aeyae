@@ -1158,7 +1158,7 @@ namespace yae
     if (fn.size() > 1 && fn[0] == '.' && fn[1] != '.')
     {
       // ignore dot files:
-      return false;
+      return true;
     }
 
     return shouldIgnore(ext);
@@ -2786,21 +2786,29 @@ namespace yae
     std::list<QString> playlist;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
-      QString filename = QFileInfo(i->toLocalFile()).canonicalFilePath();
-      QFileInfo fi(filename);
+      QString fullpath = QFileInfo(i->toLocalFile()).canonicalFilePath();
+      QFileInfo fi(fullpath);
 
       if (!fi.isReadable())
       {
         continue;
       }
 
+      QString filename = fi.fileName();
+      QString ext = fi.suffix();
+
+      if (shouldIgnore(filename, ext, fi))
+      {
+        continue;
+      }
+
       if (fi.isDir() && fi.suffix() != kExtEyetv)
       {
-        findFilesAndSort(playlist, filename);
+        findFilesAndSort(playlist, fullpath);
       }
       else
       {
-        playlist.push_back(filename);
+        playlist.push_back(fullpath);
       }
     }
 
