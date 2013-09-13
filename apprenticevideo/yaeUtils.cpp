@@ -817,7 +817,7 @@ namespace yae
 
       if (word.size() == 1 && word[0] == kHyphen)
       {
-        if (nwords == 1)
+        if (nwords == 1 && isNumeric(word))
         {
           // hyde numeric list separator hyphen:
           continue;
