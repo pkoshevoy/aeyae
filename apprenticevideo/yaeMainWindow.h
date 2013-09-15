@@ -208,6 +208,12 @@ namespace yae
     void saveBookmark();
     void gotoBookmark(const PlaylistBookmark & bookmark);
 
+    bool findBookmark(const std::string & groupHash,
+                      PlaylistBookmark & bookmark) const;
+
+    bool findBookmark(std::size_t itemIndex,
+                      PlaylistBookmark & bookmark) const;
+
   protected:
     // virtual:
     bool event(QEvent * e);

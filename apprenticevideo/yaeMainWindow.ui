@@ -406,6 +406,9 @@ QLineEdit:disabled {
           <property name="focusPolicy">
            <enum>Qt::StrongFocus</enum>
           </property>
+          <property name="toolTip">
+           <string>Search the playlist for keywords and show only those items which match</string>
+          </property>
           <property name="styleSheet">
            <string notr="true">QLineEdit	{
 	background-image: url(:/images/search.png);
@@ -426,6 +429,9 @@ QLineEdit QToolButton#clear_:pressed {
     background-color: #878787;
 }
 </string>
+          </property>
+          <property name="placeholderText">
+           <string>Search And Filter</string>
           </property>
          </widget>
         </item>
@@ -844,11 +850,6 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>200%</string>
-   </property>
-  </action>
-  <action name="actionNone">
-   <property name="text">
-    <string>None</string>
    </property>
   </action>
   <action name="actionDeinterlace">

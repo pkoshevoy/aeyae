@@ -10,6 +10,7 @@
 #define YAE_PLAYLIST_WIDGET_H_
 
 // std includes:
+#include <set>
 #include <vector>
 
 // Qt includes:
@@ -151,6 +152,9 @@ namespace yae
     void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
+    // decorate these bookmarked items with a bookmark icon:
+    void setBookmarksHint(const std::set<std::string> & itemHashes);
+
     // return index of the current item:
     std::size_t currentItem() const;
 
@@ -187,6 +191,8 @@ namespace yae
     std::size_t closestItem(std::size_t itemIndex,
                             TDirection where = kAhead,
                             PlaylistGroup ** group = NULL);
+
+    void makeSureHighlightedItemIsVisible();
 
   public slots:
     // item filter:
@@ -302,7 +308,10 @@ namespace yae
     std::size_t highlighted_;
 
     // playlist filter:
-    std::list<QString> m_keywords;
+    std::list<QString> keywords_;
+
+    // a set of hash keys for bookmarked items, supplied externally:
+    std::set<std::string> bookmarks_;
 
     // repaint buffer timer:
     QTimer repaintTimer_;

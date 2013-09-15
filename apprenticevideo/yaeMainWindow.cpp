@@ -866,6 +866,9 @@ namespace yae
     std::list<BookmarkHashInfo> hashInfo;
     playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
+    // populate the bookmarks menu, set playlist widget bookmarks hint:
+    bookmarksPopulate();
+
     if (!beginPlaybackImmediately)
     {
       return;
@@ -1801,7 +1804,9 @@ namespace yae
     }
 
     bookmarks_.clear();
+    std::set<std::string> itemHashes;
 
+    std::size_t itemIndexNowPlaying = playlistWidget_->currentItem();
     std::size_t itemIndex = 0;
     while (true)
     {
@@ -1840,7 +1845,6 @@ namespace yae
 
         std::string ts = TTime(bookmark.positionInSeconds_).to_hhmmss(":");
 
-
         if (!bookmarksGroup_)
         {
           bookmarksGroup_ = new QActionGroup(this);
@@ -1867,6 +1871,11 @@ namespace yae
           QString::fromUtf8(ts.c_str());
 
         bookmark.action_ = new QAction(name, this);
+
+        bool nowPlaying = (itemIndexNowPlaying == bookmark.itemIndex_);
+        bookmark.action_->setCheckable(true);
+        bookmark.action_->setChecked(nowPlaying);
+
         menuBookmarks->insertAction(bookmarksMenuSeparator_, bookmark.action_);
         bookmarksGroup_->addAction(bookmark.action_);
 
@@ -1878,8 +1887,11 @@ namespace yae
                                      (int)(bookmarks_.size()));
 
         bookmarks_.push_back(bookmark);
+        itemHashes.insert(bookmark.itemHash_);
       }
     }
+
+    playlistWidget_->setBookmarksHint(itemHashes);
   }
 
   //----------------------------------------------------------------
@@ -2991,7 +3003,23 @@ namespace yae
 
       if (group != nextGroup)
       {
-        yae::removeBookmark(group->bookmarkHash_);
+        PlaylistBookmark bookmark;
+
+        // if current item was bookmarked, then remove it from bookmarks:
+        if (findBookmark(itemIndex, bookmark))
+        {
+          yae::removeBookmark(group->bookmarkHash_);
+
+          // populate the bookmarks menu, set playlist widget bookmarks hint:
+          bookmarksPopulate();
+        }
+
+        // if a bookmark exists for the next item group, then use it:
+        if (nextGroup && findBookmark(nextGroup->bookmarkHash_, bookmark))
+        {
+          gotoBookmark(bookmark);
+          return;
+        }
       }
     }
 
@@ -3213,6 +3241,9 @@ namespace yae
                       item->bookmarkHash_,
                       reader_,
                       positionInSeconds);
+
+    // populate the bookmarks menu, set playlist widget bookmarks hint:
+    bookmarksPopulate();
   }
 
   //----------------------------------------------------------------
@@ -3235,6 +3266,48 @@ namespace yae
     }
 
     fixupNextPrev();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::findBookmark
+  //
+  bool
+  MainWindow::findBookmark(std::size_t itemIndex,
+                           PlaylistBookmark & found) const
+  {
+    for (std::vector<PlaylistBookmark>::const_iterator i = bookmarks_.begin();
+         i != bookmarks_.end(); ++i)
+    {
+      const PlaylistBookmark & bookmark = *i;
+      if (bookmark.itemIndex_ == itemIndex)
+      {
+        found = bookmark;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::findBookmark
+  //
+  bool
+  MainWindow::findBookmark(const std::string & groupHash,
+                           PlaylistBookmark & found) const
+  {
+    for (std::vector<PlaylistBookmark>::const_iterator i = bookmarks_.begin();
+         i != bookmarks_.end(); ++i)
+    {
+      const PlaylistBookmark & bookmark = *i;
+      if (bookmark.groupHash_ == groupHash)
+      {
+        found = bookmark;
+        return true;
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -3712,6 +3785,9 @@ namespace yae
 
     resize(new_w - cdx, new_h - cdy);
     // move(new_x, new_y);
+
+    // avoid hiding the highlighted item:
+    playlistWidget_->makeSureHighlightedItemIsVisible();
   }
 
   //----------------------------------------------------------------

@@ -491,6 +491,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistWidget::setBookmarksHint
+  //
+  void
+  PlaylistWidget::setBookmarksHint(const std::set<std::string> & itemHashes)
+  {
+    bookmarks_ = itemHashes;
+    update();
+  }
+
+  //----------------------------------------------------------------
   // PlaylistWidget::currentItem
   //
   std::size_t
@@ -659,6 +669,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistWidget::makeSureHighlightedItemIsVisible
+  //
+  void
+  PlaylistWidget::makeSureHighlightedItemIsVisible()
+  {
+    scrollTo(highlighted_);
+  }
+
+  //----------------------------------------------------------------
   // keywordsMatch
   //
   static bool
@@ -686,8 +705,8 @@ namespace yae
   void
   PlaylistWidget::filterChanged(const QString & filter)
   {
-    m_keywords.clear();
-    splitIntoWords(filter, m_keywords);
+    keywords_.clear();
+    splitIntoWords(filter, keywords_);
 
     if (applyFilter())
     {
@@ -702,7 +721,7 @@ namespace yae
   bool
   PlaylistWidget::applyFilter()
   {
-    bool exclude = !m_keywords.empty();
+    bool exclude = !keywords_.empty();
     bool changed = false;
     std::size_t index = 0;
 
@@ -740,7 +759,7 @@ namespace yae
           text += tr("NOW PLAYING");
         }
 
-        if (!keywordsMatch(m_keywords, text))
+        if (!keywordsMatch(keywords_, text))
         {
           if (!item.excluded_)
           {
@@ -1765,10 +1784,14 @@ namespace yae
     QColor selectedColorBg = palette.color(QPalette::Highlight);
     QColor selectedColorFg = palette.color(QPalette::HighlightedText);
     QColor foregroundColor = palette.color(QPalette::WindowText);
-    static QColor headerColor = QColor("#202020");
-    static QColor activeColor = QColor("#ffffff");
+    static QColor loFgGroup = QColor("#202020");
+    static QColor hiFgGroup = QColor("#ffffff");
     static QColor loBgGroup = QColor("#c1c1c1");
     static QColor hiBgGroup = QColor("#939393");
+
+    enum QPalette::ColorGroup colorGroup = palette.currentColorGroup();
+    QColor activeColorBg = palette.color(QPalette::Active,
+                                         QPalette::Highlight);
 
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
@@ -1842,17 +1865,17 @@ namespace yae
             arrow[2] = QPointF(x + w, 0.5 + y - s);
           }
 
-          painter.setBrush(activeColor);
+          painter.setBrush(hiFgGroup);
           painter.setPen(Qt::NoPen);
           painter.drawPolygon(arrow, 3);
 
           if (isHighlightedGroup)
           {
-            painter.setPen(activeColor);
+            painter.setPen(hiFgGroup);
           }
           else
           {
-            painter.setPen(headerColor);
+            painter.setPen(loFgGroup);
           }
 
           QRect bx = bbox.adjusted(10 + w, 0, 0, 0);
@@ -1888,7 +1911,7 @@ namespace yae
           }
           else
           {
-            painter.setPen(headerColor);
+            painter.setPen(loFgGroup);
           }
 
           QString text =
@@ -1960,8 +1983,53 @@ namespace yae
           bbox.setRight(x0);
         }
 
+        // draw the item name:
         bbox.adjust(3, 0, -3, 0);
 
+        QString text =
+          item.ext_.isEmpty() ?
+          item.name_ :
+          tr("%1, %2").arg(item.name_).arg(item.ext_);
+
+        QRect bboxText = bbox.adjusted(0, 0, 0, -1);
+
+        painter.setPen(fg);
+        drawTextToFit(painter,
+                      bboxText,
+                      Qt::AlignBottom | Qt::AlignLeft,
+                      text);
+
+        // draw the bookmark:
+        if (bookmarks_.find(item.bookmarkHash_) != bookmarks_.end())
+        {
+          double w = 5.0;
+          double h = 7.0;
+          double x = double(bbox.right()) - w - 2.0;
+
+          QPointF bookmark[] = {
+            QPointF(0.5 + x, 0.0),
+            QPointF(0.5 + x, h),
+            QPointF(0.5 + x + w / 2.0, h - 3.0),
+            QPointF(0.5 + x + w, h),
+            QPointF(0.5 + x + w, 0.0)
+          };
+
+          QColor bookmarkColor =
+            item.selected_ ? selectedColorFg : selectedColorBg;
+
+          if (colorGroup != QPalette::Active)
+          {
+            bookmarkColor = activeColorBg;
+          }
+
+          painter.setBrush(bookmarkColor);
+          painter.setPen(Qt::NoPen);
+          painter.drawPolygon(bookmark, 5);
+
+          bbox.setRight(x - 3.0);
+        }
+
+        // draw the ( NOW PLAYING ) badge:
         if (index == current_)
         {
           QString nowPlaying = tr("NOW PLAYING");
@@ -1997,20 +2065,6 @@ namespace yae
                         nowPlaying);
           painter.setFont(textFont);
         }
-
-        painter.setPen(fg);
-
-        QRect bboxText = bbox.adjusted(0, 0, 0, -1);
-
-        QString text =
-          item.ext_.isEmpty() ?
-          item.name_ :
-          tr("%1, %2").arg(item.name_).arg(item.ext_);
-
-        drawTextToFit(painter,
-                      bboxText,
-                      Qt::AlignBottom | Qt::AlignLeft,
-                      text);
 
         painter.translate(0, item.bbox_.height());
       }
