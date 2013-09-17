@@ -310,9 +310,6 @@ namespace yae
     // playlist filter:
     std::list<QString> keywords_;
 
-    // a set of hash keys for bookmarked items, supplied externally:
-    std::set<std::string> bookmarks_;
-
     // repaint buffer timer:
     QTimer repaintTimer_;
   };

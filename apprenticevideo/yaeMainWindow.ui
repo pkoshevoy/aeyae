@@ -457,13 +457,8 @@ QLineEdit QToolButton#clear_:pressed {
        </property>
        <property name="styleSheet">
         <string notr="true">#playlistWidget_ {
-    font: 10px;
     margin: 0px;
     padding: 0px;
-    background-attachment: fixed;
-/*  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,    
-                                stop: 0.0 #efefef,
-                                stop: 1.0 #c8c8c8);*/
     background-color: #f0f0f0;
     border: 0px solid #1d1d1d;
     border-width: 0px 0px 0px 0px;

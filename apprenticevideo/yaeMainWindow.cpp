@@ -866,9 +866,6 @@ namespace yae
     std::list<BookmarkHashInfo> hashInfo;
     playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
-    // populate the bookmarks menu, set playlist widget bookmarks hint:
-    bookmarksPopulate();
-
     if (!beginPlaybackImmediately)
     {
       return;
@@ -1804,7 +1801,6 @@ namespace yae
     }
 
     bookmarks_.clear();
-    std::set<std::string> itemHashes;
 
     std::size_t itemIndexNowPlaying = playlistWidget_->currentItem();
     std::size_t itemIndex = 0;
@@ -1887,11 +1883,8 @@ namespace yae
                                      (int)(bookmarks_.size()));
 
         bookmarks_.push_back(bookmark);
-        itemHashes.insert(bookmark.itemHash_);
       }
     }
-
-    playlistWidget_->setBookmarksHint(itemHashes);
   }
 
   //----------------------------------------------------------------
@@ -3009,9 +3002,6 @@ namespace yae
         if (findBookmark(itemIndex, bookmark))
         {
           yae::removeBookmark(group->bookmarkHash_);
-
-          // populate the bookmarks menu, set playlist widget bookmarks hint:
-          bookmarksPopulate();
         }
 
         // if a bookmark exists for the next item group, then use it:
@@ -3241,9 +3231,6 @@ namespace yae
                       item->bookmarkHash_,
                       reader_,
                       positionInSeconds);
-
-    // populate the bookmarks menu, set playlist widget bookmarks hint:
-    bookmarksPopulate();
   }
 
   //----------------------------------------------------------------

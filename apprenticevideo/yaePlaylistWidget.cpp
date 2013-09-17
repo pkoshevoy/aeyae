@@ -491,16 +491,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistWidget::setBookmarksHint
-  //
-  void
-  PlaylistWidget::setBookmarksHint(const std::set<std::string> & itemHashes)
-  {
-    bookmarks_ = itemHashes;
-    update();
-  }
-
-  //----------------------------------------------------------------
   // PlaylistWidget::currentItem
   //
   std::size_t
@@ -1719,29 +1709,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // legibleTextColorForGivenBackground
-  //
-  static QColor
-  legibleTextColorForGivenBackground(const QColor & bg)
-  {
-    qreal h, s, v;
-    bg.getHsvF(&h, &s, &v);
-
-    qreal t = (1 - s) * v;
-    v = t < 0.6 ? 1 : 0;
-
-    QColor fg;
-    fg.setHsvF(h, 0, v);
-    return fg;
-  }
-
-  //----------------------------------------------------------------
   // bboxRemoveButton
   //
   static QRect
   bboxRemoveButton(const QRect & bbox)
   {
-    static const int w = 10;
+    static const int w = 14;
     return QRect(bbox.x() + bbox.width() - w - 3,
                  bbox.y() + (bbox.height() - w) / 2,
                  w,
@@ -1760,7 +1733,7 @@ namespace yae
     QRect bx = bboxRemoveButton(bbox);
     painter.setBrush(bgColor);
     painter.setPen(Qt::NoPen);
-    painter.drawRoundedRect(bx, 2, 2);
+    painter.drawRoundedRect(bx, 1, 1);
     painter.drawPixmap(bx.x() + (bx.width() - button.width()) / 2,
                        bx.y() + (bx.height() - button.height()) / 2,
                        button);
@@ -1976,11 +1949,11 @@ namespace yae
         painter.fillRect(bbox, bg);
 
         if (overlapExists(item.bbox_, mousePos) &&
-            item.bbox_.right() - mousePos.x() < 17)
+            item.bbox_.right() - mousePos.x() < 21)
         {
           const QColor & bg = item.selected_ ? selectedColorBg : loBgGroup;
           int x0 = drawRemoveButton(painter, bbox, kPixmapClear(), bg);
-          bbox.setRight(x0);
+          bbox.setRight(x0 - 1);
         }
 
         // draw the item name:
@@ -1999,37 +1972,7 @@ namespace yae
                       Qt::AlignBottom | Qt::AlignLeft,
                       text);
 
-        // draw the bookmark:
-        if (bookmarks_.find(item.bookmarkHash_) != bookmarks_.end())
-        {
-          double w = 5.0;
-          double h = 7.0;
-          double x = double(bbox.right()) - w - 2.0;
-
-          QPointF bookmark[] = {
-            QPointF(0.5 + x, 0.0),
-            QPointF(0.5 + x, h),
-            QPointF(0.5 + x + w / 2.0, h - 3.0),
-            QPointF(0.5 + x + w, h),
-            QPointF(0.5 + x + w, 0.0)
-          };
-
-          QColor bookmarkColor =
-            item.selected_ ? selectedColorFg : selectedColorBg;
-
-          if (colorGroup != QPalette::Active)
-          {
-            bookmarkColor = activeColorBg;
-          }
-
-          painter.setBrush(bookmarkColor);
-          painter.setPen(Qt::NoPen);
-          painter.drawPolygon(bookmark, 5);
-
-          bbox.setRight(x - 3.0);
-        }
-
-        // draw the ( NOW PLAYING ) badge:
+        // draw the NOW PLAYING tag:
         if (index == current_)
         {
           QString nowPlaying = tr("NOW PLAYING");
@@ -2037,10 +1980,7 @@ namespace yae
           painter.setFont(tinyFont);
           QFontMetrics fm = painter.fontMetrics();
           QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
-          QRect bx = bbox.adjusted(1, 1, -1, -1);
-
-          // add a little padding:
-          sz.setWidth(sz.width() + 8);
+          QRect bx = bbox.adjusted(4, 1, -4, -1);
 
           if (bx.width() > sz.width())
           {
@@ -2053,12 +1993,9 @@ namespace yae
             bx.setHeight(sz.height());
           }
 
-          int radius = std::min<int>(sz.width(), sz.height()) / 2;
-          painter.setBrush(selectedColorBg);
-          painter.setPen(Qt::NoPen);
-          painter.drawRoundedRect(bx, radius, radius);
+          QColor tagFg = item.selected_ ? fg : selectedColorBg;
+          painter.setPen(tagFg);
 
-          painter.setPen(legibleTextColorForGivenBackground(selectedColorBg));
           drawTextToFit(painter,
                         bx,
                         Qt::AlignVCenter | Qt::AlignCenter,
