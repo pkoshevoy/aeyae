@@ -2,7 +2,7 @@ All Platforms:
 	CMake 2.8.6 or later	http://www.cmake.org/cmake/resources/software.html
 	CMake is used to configure the build (to generate projects, or makefiles).
 
-	Qt 4.6.4 or later	http://qt.nokia.com/downloads/downloads#qt-lib
+	Qt 4.7.4 or later	http://download.qt-project.org/archive/qt/4.7/
 	Qt is the cross platform C++ UI toolkit.
 
 	boost 1.47.0 or later	http://www.boost.org/
