@@ -327,7 +327,7 @@ namespace yae
     bookmarkTimer_.setInterval(180000);
 
     bookmarksMenuSeparator_ =
-      menuBookmarks->insertSeparator(actionRemoveBookmarks);
+      menuBookmarks->insertSeparator(actionRemoveBookmarkNowPlaying);
 
     QString automaticBookmarks =
       loadSettingOrDefault(kCreateBookmarksAutomatically, kSettingTrue);
@@ -798,6 +798,10 @@ namespace yae
 
     ok = connect(menuBookmarks, SIGNAL(aboutToShow()),
                  this, SLOT(bookmarksPopulate()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionRemoveBookmarkNowPlaying, SIGNAL(triggered()),
+                 this, SLOT(bookmarksRemoveNowPlaying()));
     YAE_ASSERT(ok);
 
     ok = connect(actionRemoveBookmarks, SIGNAL(triggered()),
@@ -1791,6 +1795,7 @@ namespace yae
     bookmarksMapper_ = NULL;
 
     bookmarksMenuSeparator_->setVisible(false);
+    actionRemoveBookmarkNowPlaying->setVisible(false);
     actionRemoveBookmarks->setEnabled(false);
 
     for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
@@ -1804,6 +1809,8 @@ namespace yae
 
     std::size_t itemIndexNowPlaying = playlistWidget_->currentItem();
     std::size_t itemIndex = 0;
+    std::size_t playingBookmarkIndex = std::numeric_limits<std::size_t>::max();
+
     while (true)
     {
       PlaylistGroup * group = playlistWidget_->lookupGroup(itemIndex);
@@ -1869,6 +1876,11 @@ namespace yae
         bookmark.action_ = new QAction(name, this);
 
         bool nowPlaying = (itemIndexNowPlaying == bookmark.itemIndex_);
+        if (nowPlaying)
+        {
+          playingBookmarkIndex = bookmarks_.size();
+        }
+
         bookmark.action_->setCheckable(true);
         bookmark.action_->setChecked(nowPlaying);
 
@@ -1885,6 +1897,40 @@ namespace yae
         bookmarks_.push_back(bookmark);
       }
     }
+
+    if (playingBookmarkIndex != std::numeric_limits<std::size_t>::max())
+    {
+      actionRemoveBookmarkNowPlaying->setVisible(true);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::bookmarksRemoveNowPlaying
+  //
+  void
+  MainWindow::bookmarksRemoveNowPlaying()
+  {
+    std::size_t itemIndex = playlistWidget_->currentItem();
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    if (!item || !group)
+    {
+      return;
+    }
+
+    for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();
+         i != bookmarks_.end(); ++i)
+    {
+      PlaylistBookmark & bookmark = *i;
+      if (bookmark.groupHash_ != group->bookmarkHash_ ||
+          bookmark.itemHash_ != item->bookmarkHash_)
+      {
+        continue;
+      }
+
+      removeBookmark(bookmark.groupHash_);
+      break;
+    }
   }
 
   //----------------------------------------------------------------
@@ -1900,6 +1946,7 @@ namespace yae
     bookmarksMapper_ = NULL;
 
     bookmarksMenuSeparator_->setVisible(false);
+    actionRemoveBookmarkNowPlaying->setVisible(false);
     actionRemoveBookmarks->setEnabled(false);
 
     for (std::vector<PlaylistBookmark>::iterator i = bookmarks_.begin();

@@ -342,6 +342,7 @@ QLineEdit:disabled {
     <addaction name="actionAutomaticBookmarks"/>
     <addaction name="actionResumeFromBookmark"/>
     <addaction name="separator"/>
+    <addaction name="actionRemoveBookmarkNowPlaying"/>
     <addaction name="actionRemoveBookmarks"/>
    </widget>
    <addaction name="menuFile"/>
@@ -952,10 +953,16 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>Create Playlist Bookmarks Automatically</string>
    </property>
+   <property name="toolTip">
+    <string>Automatically create and update bookmarks during playback, or whenever playback is paused</string>
+   </property>
   </action>
   <action name="actionRemoveBookmarks">
    <property name="text">
-    <string>Remove Bookmarks</string>
+    <string>Remove All Bookmarks</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove all bookmarks currently present in the Bookmarks menu</string>
    </property>
   </action>
   <action name="actionResumeFromBookmark">
@@ -997,6 +1004,14 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>Mix Down To Stereo</string>
+   </property>
+  </action>
+  <action name="actionRemoveBookmarkNowPlaying">
+   <property name="text">
+    <string>Remove Selected Bookmark</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove bookmark for the playlist item playing now</string>
    </property>
   </action>
  </widget>
