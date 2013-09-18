@@ -1757,6 +1757,8 @@ namespace yae
     QColor selectedColorBg = palette.color(QPalette::Highlight);
     QColor selectedColorFg = palette.color(QPalette::HighlightedText);
     QColor foregroundColor = palette.color(QPalette::WindowText);
+    QColor selectedDarkerBg = selectedColorBg.darker();
+
     static QColor loFgGroup = QColor("#202020");
     static QColor hiFgGroup = QColor("#ffffff");
     static QColor loBgGroup = QColor("#c1c1c1");
@@ -1980,7 +1982,7 @@ namespace yae
           painter.setFont(tinyFont);
           QFontMetrics fm = painter.fontMetrics();
           QSize sz = fm.size(Qt::TextSingleLine, nowPlaying);
-          QRect bx = bbox.adjusted(4, 1, -4, -1);
+          QRect bx = bbox.adjusted(0, 0, -2, 0);
 
           if (bx.width() > sz.width())
           {
@@ -1993,13 +1995,29 @@ namespace yae
             bx.setHeight(sz.height());
           }
 
-          QColor tagFg = item.selected_ ? fg : selectedColorBg;
-          painter.setPen(tagFg);
+          if (item.selected_)
+          {
+            painter.setPen(fg);
+            drawTextToFit(painter,
+                          bx,
+                          Qt::AlignVCenter | Qt::AlignCenter,
+                          nowPlaying);
+          }
+          else
+          {
+            painter.setPen(selectedDarkerBg);
+            drawTextToFit(painter,
+                          bx,
+                          Qt::AlignVCenter | Qt::AlignCenter,
+                          nowPlaying);
 
-          drawTextToFit(painter,
-                        bx,
-                        Qt::AlignVCenter | Qt::AlignCenter,
-                        nowPlaying);
+            painter.setPen(selectedColorBg);
+            drawTextToFit(painter,
+                          bx,
+                          Qt::AlignVCenter | Qt::AlignCenter,
+                          nowPlaying);
+          }
+
           painter.setFont(textFont);
         }
 
