@@ -1063,8 +1063,8 @@ namespace yae
     const bool littleEndian = ptts.flags_ & pixelFormat::kLE;
 
     int localIndex = x % ptts.samples_[0];
-    std::size_t skipBits = (ptts.stride_[0]) * (x / ptts.samples_[0]);
-    std::size_t skipBytes = skipBits >> 3;
+    unsigned int skipBits = (ptts.stride_[0]) * (x / ptts.samples_[0]);
+    unsigned int skipBytes = skipBits >> 3;
 
     const unsigned char * src = data + y * rowBytes + skipBytes;
 
@@ -1081,12 +1081,17 @@ namespace yae
     else if (ptts.stride_[0] == 24)
     {
       YAE_ASSERT(!littleEndian);
-      pixel = (src[0] << 16) | (src[1] << 8) | src[2];
+      pixel = ((unsigned int)(src[0] << 16) |
+               (unsigned int)(src[1] << 8) |
+               (unsigned int)(src[2]));
     }
     else if (ptts.stride_[0] == 32)
     {
       YAE_ASSERT(!littleEndian);
-      pixel = (src[0] << 24) | (src[1] << 16) | (src[2] << 8) | src[3];
+      pixel = ((unsigned int)(src[0] << 24) |
+               (unsigned int)(src[1] << 16) |
+               (unsigned int)(src[2] << 8) |
+               (unsigned int)(src[3]));
     }
     else if (ptts.stride_[0] == 48)
     {

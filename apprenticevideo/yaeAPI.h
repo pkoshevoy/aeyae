@@ -483,8 +483,8 @@ namespace yae
       int h_;
       int numColors_;
 
-      const unsigned char * data_[4];
-      int rowBytes_[4];
+      const unsigned char * data_[8];
+      int rowBytes_[8];
 
       const char * text_;
       const char * assa_;
@@ -555,26 +555,6 @@ namespace yae
   // TAudioFramePtr
   //
   typedef boost::shared_ptr<TAudioFrame> TAudioFramePtr;
-
-  //----------------------------------------------------------------
-  // getRemixMatrix
-  //
-  YAE_API void getRemixMatrix(std::size_t srcChannels,
-                              std::size_t dstChannels,
-                              std::vector<double> & matrix);
-
-  //----------------------------------------------------------------
-  // remix
-  //
-  YAE_API void remix(std::size_t numSamples,
-                     TAudioSampleFormat sampleFormat,
-                     TAudioChannelFormat srcFormat,
-                     TAudioChannelLayout srcLayout,
-                     const unsigned char * src,
-                     TAudioChannelFormat dstFormat,
-                     TAudioChannelLayout dstLayout,
-                     unsigned char * dst,
-                     const double * channelRemixMatrix);
 
   //----------------------------------------------------------------
   // TTrackInfo

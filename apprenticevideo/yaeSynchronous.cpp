@@ -277,10 +277,15 @@ namespace yae
   void
   SharedClock::setObserver(IClockObserver * observer)
   {
-    TTimeSegmentPtr keepAlive(shared_);
-    TimeSegment & timeSegment = *keepAlive;
-    boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-    timeSegment.observer_ = observer;
+    try
+    {
+      TTimeSegmentPtr keepAlive(shared_);
+      TimeSegment & timeSegment = *keepAlive;
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      timeSegment.observer_ = observer;
+    }
+    catch (...)
+    {}
   }
 
   //----------------------------------------------------------------

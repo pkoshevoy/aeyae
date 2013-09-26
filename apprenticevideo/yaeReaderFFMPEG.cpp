@@ -272,8 +272,22 @@ namespace yae
       rect.w_ = r->w;
       rect.h_ = r->h;
       rect.numColors_ = r->nb_colors;
-      memcpy(rect.data_, r->pict.data, sizeof(r->pict.data));
-      memcpy(rect.rowBytes_, r->pict.linesize, sizeof(r->pict.linesize));
+
+      std::size_t nsrc = sizeof(r->pict.data) / sizeof(r->pict.data[0]);
+      std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
+
+      for (std::size_t j = 0; j < ndst && j < nsrc; j++)
+      {
+        rect.data_[j] = r->pict.data[j];
+        rect.rowBytes_[j] = r->pict.linesize[j];
+      }
+
+      for (std::size_t j = nsrc; j < ndst; j++)
+      {
+        rect.data_[j] = NULL;
+        rect.rowBytes_[j] = 0;
+      }
+
       rect.text_ = r->text;
       rect.assa_ = r->ass;
     }
@@ -1559,6 +1573,7 @@ namespace yae
     deinterlace_(false),
     frameQueue_(kQueueSizeSmall),
     numSamplePlanes_(0),
+    ptsBestEffort_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
     subs_(NULL)
@@ -1817,7 +1832,6 @@ namespace yae
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
-    // framesDecoded_ = 0;
 
     frameQueue_.open();
     return true;
@@ -2519,9 +2533,6 @@ namespace yae
         YAE_ASSERT(sampleFormat == kAudio16BitNative);
         return (planar ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16);
 
-      case kAudio24BitLittleEndian:
-        YAE_ASSERT(false);
-
       case kAudio32BitBigEndian:
       case kAudio32BitLittleEndian:
         YAE_ASSERT(sampleFormat == kAudio32BitNative);
@@ -2761,7 +2772,7 @@ namespace yae
       {
         os << filterChain << ",";
       }
-      else if (!filterChain || !*filterChain)
+      else if (!*filterChain)
       {
         os << "anull";
       }
@@ -2889,6 +2900,8 @@ namespace yae
   AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
     Track(context, stream),
     frameQueue_(kQueueSizeMedium),
+    nativeChannels_(0),
+    outputChannels_(0),
     nativeBytesPerSample_(0),
     outputBytesPerSample_(0),
     hasPrevPTS_(false),
@@ -4256,8 +4269,7 @@ namespace yae
                                                                  headerSize),
                                                 &TSubsPrivate::deallocator);
 
-                  if (ffmpeg.pts != AV_NOPTS_VALUE &&
-                      sub.start_display_time != AV_NOPTS_VALUE)
+                  if (ffmpeg.pts != AV_NOPTS_VALUE)
                   {
                     sf.time_.time_ = av_rescale_q(ffmpeg.pts +
                                                   sub.start_display_time,
@@ -4266,7 +4278,6 @@ namespace yae
                   }
 
                   if (ffmpeg.pts != AV_NOPTS_VALUE &&
-                      sub.end_display_time != AV_NOPTS_VALUE &&
                       sub.end_display_time > sub.start_display_time)
                   {
                     double dt =
@@ -4850,7 +4861,6 @@ namespace yae
 
   public:
     Private():
-      frame_(NULL),
       readerId_((unsigned int)~0)
     {
       if (!ffmpegInitialized_)
@@ -4867,8 +4877,6 @@ namespace yae
     }
 
     Movie movie_;
-    AVFrame * frame_;
-    AVPacket packet_;
     unsigned int readerId_;
   };
 

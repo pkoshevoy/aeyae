@@ -2685,7 +2685,7 @@ namespace yae
                                       subs.extraData_->data(0),
                                       subs.extraData_->rowBytes(0));
           }
-          else if (subExt->headerSize())
+          else if (subExt && subExt->headerSize())
           {
             libass_ = asyncInitLibass(this,
                                       subExt->header(),

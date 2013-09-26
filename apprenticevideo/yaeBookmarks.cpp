@@ -28,7 +28,8 @@ namespace yae
   //
   TBookmark::TBookmark():
     atrack_(std::numeric_limits<std::size_t>::max()),
-    vtrack_(std::numeric_limits<std::size_t>::max())
+    vtrack_(std::numeric_limits<std::size_t>::max()),
+    positionInSeconds_(0)
   {}
 
   //----------------------------------------------------------------

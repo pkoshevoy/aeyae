@@ -54,6 +54,7 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
+    forOneFrameOnly_(false),
     pause_(true)
   {
     thread_.setContext(this);

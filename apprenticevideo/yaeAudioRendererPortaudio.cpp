@@ -125,6 +125,8 @@ namespace yae
     clock_(sharedClock),
     pause_(true)
   {
+    memset(&outputParams_, 0, sizeof(outputParams_));
+
     if (initErr_ != paNoError)
     {
       std::string err("Pa_Initialize did not succeed: ");

@@ -2882,11 +2882,6 @@ namespace yae
   void
   MainWindow::moveTimeIn(double seconds)
   {
-    if (!reader_)
-    {
-      return;
-    }
-
     reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalStart(seconds);
 
@@ -2900,11 +2895,6 @@ namespace yae
   void
   MainWindow::moveTimeOut(double seconds)
   {
-    if (!reader_)
-    {
-      return;
-    }
-
     reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalEnd(seconds);
 
@@ -2918,11 +2908,6 @@ namespace yae
   void
   MainWindow::movePlayHead(double seconds)
   {
-    if (!reader_)
-    {
-      return;
-    }
-
     reader_->seek(seconds);
 
     if (playbackPaused_)
@@ -3218,11 +3203,8 @@ namespace yae
   void
   MainWindow::playbackLoop()
   {
-    if (reader_)
-    {
-      bool enableLooping = actionLoop->isChecked();
-      reader_->setPlaybackLooping(enableLooping);
-    }
+    bool enableLooping = actionLoop->isChecked();
+    reader_->setPlaybackLooping(enableLooping);
   }
 
   //----------------------------------------------------------------
@@ -3543,18 +3525,10 @@ namespace yae
   void
   MainWindow::keyPressEvent(QKeyEvent * event)
   {
-    std::size_t numAudioTracks = 0;
-    std::size_t numVideoTracks = 0;
-    std::size_t audioTrackIndex = 0;
-    std::size_t videoTrackIndex = 0;
-
-    if (reader_)
-    {
-      numAudioTracks = reader_->getNumberOfAudioTracks();
-      numVideoTracks = reader_->getNumberOfVideoTracks();
-      audioTrackIndex = reader_->getSelectedAudioTrackIndex();
-      videoTrackIndex = reader_->getSelectedVideoTrackIndex();
-    }
+    std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
+    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+    std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
+    std::size_t videoTrackIndex = reader_->getSelectedVideoTrackIndex();
 
     int key = event->key();
     if (key == Qt::Key_Escape)

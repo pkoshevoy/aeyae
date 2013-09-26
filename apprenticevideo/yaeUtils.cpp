@@ -1224,7 +1224,7 @@ namespace yae
     std::string out;
 
     std::size_t inLen = in.size();
-    const char * ssa = in.c_str();
+    const char * ssa = inLen ? in.c_str() : NULL;
     const char * end = ssa + inLen;
 
     while (ssa && ssa < end)

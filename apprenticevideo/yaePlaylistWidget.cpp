@@ -1536,9 +1536,9 @@ namespace yae
           QPoint viewOffset = getViewOffset();
 
           QPoint p0 =
-            hiGroup->collapsed_ || !hiItem ?
-            hiGroup->bbox_.center() :
-            hiItem->bbox_.center();
+            hiItem && !(hiGroup && hiGroup->collapsed_) ?
+            hiItem->bbox_.center() :
+            hiGroup->bbox_.center();
 
           QPoint p1 =
             pageUp ?
@@ -1557,7 +1557,7 @@ namespace yae
 
       if (group || found)
       {
-        if (group->collapsed_)
+        if (group && group->collapsed_)
         {
           group->collapsed_ = false;
           updateGeometries();
@@ -2142,7 +2142,7 @@ namespace yae
   PlaylistWidget::scrollTo(const PlaylistGroup * group,
                            const PlaylistItem * item)
   {
-    if (!group && !item)
+    if (!group)
     {
       return;
     }
