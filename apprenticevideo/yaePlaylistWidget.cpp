@@ -1494,9 +1494,9 @@ namespace yae
       {
         // update the anchor:
         anchor_ =
-          group->collapsed_ || !found ?
-          group->bbox_.center() :
-          found->bbox_.center();
+          found && !(group && group->collapsed_) ?
+          found->bbox_.center() :
+          group->bbox_.center();
 
         // update the selection set:
         QPoint viewOffset = getViewOffset();

@@ -275,6 +275,7 @@ namespace yae
 
       std::size_t nsrc = sizeof(r->pict.data) / sizeof(r->pict.data[0]);
       std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
+      YAE_ASSERT(nsrc == ndst);
 
       for (std::size_t j = 0; j < ndst && j < nsrc; j++)
       {
