@@ -1583,6 +1583,9 @@ namespace yae
 
     // make sure the frames are sorted from oldest to newest:
     frameQueue_.setSortFunc(&aFollowsB);
+
+    frameRate_.num = 1;
+    frameRate_.den = AV_TIME_BASE;
   }
 
   //----------------------------------------------------------------
