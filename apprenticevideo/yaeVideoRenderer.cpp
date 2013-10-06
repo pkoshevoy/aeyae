@@ -26,10 +26,11 @@ namespace yae
   public:
     TPrivate(SharedClock & clock);
 
-    bool open(IVideoCanvas * canvas, IReader * reader, bool forOneFrameOnly);
+    bool open(IVideoCanvas * canvas, IReader * reader, bool frameStepping);
     void close();
     void pause(bool pause);
     void skipToNextFrame();
+    void skipToTime(const TTime & t, IReader * reader);
     void threadLoop();
 
     mutable boost::mutex mutex_;
@@ -42,7 +43,7 @@ namespace yae
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
-    bool forOneFrameOnly_;
+    bool frameStepping_;
     bool pause_;
     TTime framePosition_;
   };
@@ -54,7 +55,7 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
-    forOneFrameOnly_(false),
+    frameStepping_(false),
     pause_(true)
   {
     thread_.setContext(this);
@@ -66,12 +67,12 @@ namespace yae
   bool
   VideoRenderer::TPrivate::open(IVideoCanvas * canvas,
                                 IReader * reader,
-                                bool forOneFrameOnly)
+                                bool frameStepping)
   {
     close();
 
     boost::lock_guard<boost::mutex> lock(mutex_);
-    forOneFrameOnly_ = forOneFrameOnly;
+    frameStepping_ = frameStepping;
     canvas_ = canvas;
     reader_ = reader;
     pause_ = true;
@@ -113,14 +114,73 @@ namespace yae
   void
   VideoRenderer::TPrivate::skipToNextFrame()
   {
-    if (!thread_.isRunning() && canvas_ && reader_)
+    if (canvas_ && reader_)
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      // run the thread:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        frameStepping_ = true;
+        pause_ = false;
+      }
+
       terminator_.stopWaiting(false);
-      forOneFrameOnly_ = true;
-      pause_ = false;
-      thread_.run();
+
+      if (!thread_.isRunning())
+      {
+        thread_.run();
+      }
+
       thread_.wait();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::skipToTime
+  //
+  void
+  VideoRenderer::TPrivate::skipToTime(const TTime & t, IReader * reader)
+  {
+    TTime currentTime;
+    double elapsedTime = 0.0;
+    bool clockIsRunning = clock_.getCurrentTime(currentTime, elapsedTime);
+
+    double clockPosition = currentTime.toSeconds();
+    double seekPosition = t.toSeconds();
+
+    TVideoFramePtr frame;
+    bool ok = true;
+    while (ok && reader && frameStepping_ && clockPosition < seekPosition)
+    {
+      ok = reader->readVideo(frame, &terminator_);
+      if (ok && frame)
+      {
+        double dt =
+          frame->traits_.frameRate_ ?
+          1.0 / frame->traits_.frameRate_ :
+          1.0 / 24.0;
+
+        clockPosition = frame->time_.toSeconds();
+        double frameEnd = clockPosition + dt;
+
+        if (seekPosition < frameEnd)
+        {
+          break;
+        }
+      }
+    }
+
+    if (frame)
+    {
+      if (clock_.allowsSettingTime())
+      {
+        clock_.setCurrentTime(frame->time_);
+      }
+
+      // dispatch the frame to the canvas for rendering:
+      if (canvas_)
+      {
+        canvas_->render(frame);
+      }
     }
   }
 
@@ -195,7 +255,8 @@ namespace yae
                     << "sleep: " << secondsToSleep << " sec"
                     << "\tf0: " << f0
                     << "\tf1: " << f1
-                    << "\tt: " << playheadPosition
+                    << "\tclock: " << clockPosition
+                    << "\tplayhead: " << playheadPosition
                     << std::endl;
 #endif
         }
@@ -215,7 +276,8 @@ namespace yae
         std::cerr << "video is late " << -df << " sec, "
                   << "\tf0: " << f0
                   << "\tf1: " << f1
-                  << "\tt: " << playheadPosition
+                  << "\tclock: " << clockPosition
+                  << "\tplayhead: " << playheadPosition
                   << "\nlate frames: " << lateFrames
                   << "\nerror total: " << lateFramesErrorSum
                   << "\naverage err: " << lateFramesErrorSum / lateFrames
@@ -289,11 +351,19 @@ namespace yae
 
         tempo = frame->tempo_;
 
+        if (clock_.allowsSettingTime())
+        {
+          double latency = 0.0;
+          bool notifyObserver = !resetTimeCounters;
+          clock_.setCurrentTime(framePosition_, latency, notifyObserver);
+          drift = df;
+        }
+
         // dispatch the frame to the canvas for rendering:
         if (canvas_)
         {
           canvas_->render(frame);
-          if (forOneFrameOnly_)
+          if (frameStepping_)
           {
             break;
           }
@@ -309,14 +379,6 @@ namespace yae
         lateFrames = 0.0;
         lateFramesErrorSum = 0.0;
         clockPositionPrev = - std::numeric_limits<double>::max();
-      }
-
-      if (clock_.allowsSettingTime())
-      {
-        double latency = 0.0;
-        bool notifyObserver = !resetTimeCounters;
-        clock_.setCurrentTime(framePosition_, latency, notifyObserver);
-        drift = df;
       }
     }
   }
@@ -360,9 +422,9 @@ namespace yae
   bool
   VideoRenderer::open(IVideoCanvas * canvas,
                       IReader * reader,
-                      bool forOneFrameOnly)
+                      bool frameStepping)
   {
-    return private_->open(canvas, reader, forOneFrameOnly);
+    return private_->open(canvas, reader, frameStepping);
   }
 
   //----------------------------------------------------------------
@@ -382,6 +444,15 @@ namespace yae
   {
     private_->skipToNextFrame();
     return private_->framePosition_;
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::skipToTime
+  //
+  void
+  VideoRenderer::skipToTime(const TTime & t, IReader * reader)
+  {
+    private_->skipToTime(t, reader);
   }
 
   //----------------------------------------------------------------

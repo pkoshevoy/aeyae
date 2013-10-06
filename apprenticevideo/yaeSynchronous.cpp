@@ -24,7 +24,7 @@ using boost::posix_time::to_simple_string;
 namespace yae
 {
 
- //----------------------------------------------------------------
+  //----------------------------------------------------------------
   // TimeSegment::TimeSegment
   //
   TimeSegment::TimeSegment():

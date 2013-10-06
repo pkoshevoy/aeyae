@@ -65,6 +65,11 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+//----------------------------------------------------------------
+// YAE_DEBUG_SEEKING_AND_FRAMESTEP
+//
+#define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
+
 
 //----------------------------------------------------------------
 // YAE_ASSERT_NO_AVERROR_OR_RETURN
@@ -912,7 +917,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
-    bool playbackInterval_;
+    bool playbackEnabled_;
     int64_t startTime_;
 
     // for adjusting frame duration (playback tempo scaling):
@@ -939,7 +944,7 @@ namespace yae
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
-    playbackInterval_(false),
+    playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
     discarded_(0)
@@ -1819,6 +1824,10 @@ namespace yae
   bool
   VideoTrack::decoderStartup()
   {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    std::cerr << "\n\t\t\t\tVIDEO TRACK DECODER STARTUP" << std::endl;
+#endif
+
     refreshTraits();
 
     startTime_ = stream_->start_time;
@@ -1847,6 +1856,10 @@ namespace yae
   bool
   VideoTrack::decoderShutdown()
   {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    std::cerr << "\n\t\t\t\tVIDEO TRACK DECODER SHUTDOWN" << std::endl;
+#endif
+
     filterGraph_.reset();
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
@@ -2021,7 +2034,7 @@ namespace yae
         }
 
         // make sure the frame is in the in/out interval:
-        if (playbackInterval_)
+        if (playbackEnabled_)
         {
           double t = vf.time_.toSeconds();
           double dt = 1.0 / double(output_.frameRate_);
@@ -2126,6 +2139,14 @@ namespace yae
           }
         }
 
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+        {
+          std::string ts =
+            vfPtr->time_.to_hhmmss_frame(vfPtr->traits_.frameRate_);
+          std::cerr << "push video frame: " << ts << std::endl;
+        }
+#endif
+
         // put the output frame into frame queue:
         if (!frameQueue_.push(vfPtr, &terminator_))
         {
@@ -2209,6 +2230,10 @@ namespace yae
   bool
   VideoTrack::threadStop()
   {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    std::cerr << "\n\t\t\t\tVIDEO TRACK THREAD STOP" << std::endl;
+#endif
+
     frameQueue_.close();
     return Track::threadStop();
   }
@@ -2337,6 +2362,10 @@ namespace yae
 
     if (alreadyDecoding)
     {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+      std::cerr << "\n\t\t\t\tSET TRAITS OVERRIDE" << std::endl;
+#endif
+
       terminator_.stopWaiting(true);
       frameQueue_.clear();
       thread_.stop();
@@ -2375,24 +2404,39 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame, terminator);
-      if (!ok || !frame || !playbackInterval_)
+      if (!ok || !frame)
       {
         break;
       }
 
       // discard outlier frames:
       double t = frame->time_.toSeconds();
-      double dt = 1.0 / double(frame->traits_.frameRate_);
-      if (t < timeOut_ && (t + dt) > timeIn_)
+      double dt = 1.0 / frame->traits_.frameRate_;
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+      static TTime prevTime(0, 1000);
+
+      std::string in =
+        TTime(timeIn_).to_hhmmss_frame(frame->traits_.frameRate_);
+      std::cerr << "\n\t\t\t\t\tTIME IN:          " << in << std::endl;
+
+      std::string ts =
+        frame->time_.to_hhmmss_frame(frame->traits_.frameRate_);
+      std::cerr << "\t\t\t\t\tPOP video frame:  " << ts << std::endl;
+
+      std::string t0 =
+        prevTime.to_hhmmss_frame(frame->traits_.frameRate_);
+      std::cerr << "\t\t\t\t\tPREV video frame: " << t0 << std::endl;
+#endif
+
+      if ((!playbackEnabled_ || t < timeOut_) && (t + dt) > timeIn_)
       {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+        std::cerr << "\t\t\t\t\tNEXT video frame: " << ts << std::endl;
+        prevTime = frame->time_;
+#endif
         break;
       }
-
-#if 0
-      std::cerr << "ignoring video frame: " << t
-                << ", expecting [" << timeIn << ", " << timeOut << ")"
-                << std::endl;
-#endif
     }
 
     return ok;
@@ -2406,7 +2450,7 @@ namespace yae
   {
     timeIn_ = timeIn;
     timeOut_ = timeOut;
-    playbackInterval_ = enabled;
+    playbackEnabled_ = enabled;
     discarded_ = 0;
   }
 
@@ -2420,6 +2464,11 @@ namespace yae
     frameQueue_.clear();
     packetQueue().waitForConsumerToBlock();
     frameQueue_.clear();
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    std::cerr << "\n\tVIDEO TRACK reset time counter, flush queues"
+              << std::endl;
+#endif
 
     // push a NULL frame into frame queue to resetTimeCounter
     // down the line:
@@ -2440,7 +2489,7 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
+    setPlaybackInterval(seekTime, timeOut_, playbackEnabled_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
@@ -3184,7 +3233,7 @@ namespace yae
       }
 
       // make sure the frame is in the in/out interval:
-      if (playbackInterval_)
+      if (playbackEnabled_)
       {
         double t = af.time_.toSeconds();
         double dt = double(numOutputSamples) / double(output_.sampleRate_);
@@ -3556,7 +3605,7 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame, terminator);
-      if (!ok || !frame || !playbackInterval_)
+      if (!ok || !frame)
       {
         break;
       }
@@ -3571,16 +3620,27 @@ namespace yae
       double t = frame->time_.toSeconds();
       double dt = double(numSamples) / double(atraits.sampleRate_);
 
-      if (t < timeOut_ && (t + dt) > timeIn_)
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+      static TTime prevTime(0, 1000);
+
+      std::string in = TTime(timeIn_).to_hhmmss_frame();
+      std::cerr << "\n\t\t\tAUDIO TIME IN:    " << in << std::endl;
+
+      std::string ts = frame->time_.to_hhmmss_frame();
+      std::cerr << "\t\t\tPOP AUDIO frame:  " << ts << std::endl;
+
+      std::string t0 = prevTime.to_hhmmss_frame();
+      std::cerr << "\t\t\tPREV AUDIO frame: " << t0 << std::endl;
+#endif
+
+      if ((!playbackEnabled_ || t < timeOut_) && (t + dt) > timeIn_)
       {
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+        std::cerr << "\t\t\tNEXT AUDIO frame: " << ts << std::endl;
+        prevTime = frame->time_;
+#endif
         break;
       }
-
-#if 0
-      std::cerr << "ignoring audio frame: " << t
-                << ", expecting [" << timeIn << ", " << timeOut << ")"
-                << std::endl;
-#endif
     }
 
     return ok;
@@ -3594,7 +3654,7 @@ namespace yae
   {
     timeIn_ = timeIn;
     timeOut_ = timeOut;
-    playbackInterval_ = enabled;
+    playbackEnabled_ = enabled;
     discarded_ = 0;
   }
 
@@ -3628,7 +3688,7 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekTime, timeOut_, playbackInterval_);
+    setPlaybackInterval(seekTime, timeOut_, playbackEnabled_);
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
@@ -3709,7 +3769,7 @@ namespace yae
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
-    void setPlaybackInterval(bool enabled);
+    void setPlaybackEnabled(bool enabled);
     void setPlaybackLooping(bool enabled);
 
     void skipLoopFilter(bool skip);
@@ -3741,6 +3801,11 @@ namespace yae
     // deadlock avoidance mechanism:
     QueueWaitMgr terminator_;
 
+    // this one is only used to avoid a deadlock waiting
+    // for audio renderer to empty out the frame queue
+    // during frame stepping (when playback is disabled)
+    QueueWaitMgr terminator2_;
+
     AVFormatContext * context_;
 
     std::vector<VideoTrackPtr> videoTracks_;
@@ -3763,9 +3828,10 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
-    bool playbackInterval_;
+    bool playbackEnabled_;
     bool looping_;
 
+    bool mustStop_;
     bool mustSeek_;
     double seekTime_;
   };
@@ -3786,8 +3852,9 @@ namespace yae
     dts_(AV_NOPTS_VALUE),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
-    playbackInterval_(false),
+    playbackEnabled_(false),
     looping_(false),
+    mustStop_(true),
     mustSeek_(false),
     seekTime_(0.0)
   {}
@@ -3983,7 +4050,7 @@ namespace yae
     }
 
     VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->setSubs(&subs_);
@@ -4012,7 +4079,7 @@ namespace yae
     }
 
     AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
     return track->open();
   }
 
@@ -4119,6 +4186,11 @@ namespace yae
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
 
+          if (mustStop_)
+          {
+            break;
+          }
+
           if (mustSeek_)
           {
             err = seekTo(seekTime_);
@@ -4135,29 +4207,51 @@ namespace yae
         {
           av_free_packet(&ffmpeg);
 
+          if (!playbackEnabled_)
+          {
+            // during framestep do not stop when end of file is reached,
+            // simply rewind to the beginning:
+            err = rewind(audioTrack, videoTrack, false);
+            continue;
+          }
+
           if (looping_)
           {
             err = rewind(audioTrack, videoTrack);
             continue;
           }
 
-          if (!playbackInterval_)
-          {
-            err = rewind(audioTrack, videoTrack, false);
-            continue;
-          }
-
-          // done:
+          // it appears playback has finished, unless user starts
+          // framestep (playback disabled) while this thread waits
+          // for all queues to empty:
           if (audioTrack)
           {
             audioTrack->packetQueue().waitForConsumerToBlock();
-            audioTrack->frameQueue_.waitForConsumerToBlock();
+            audioTrack->frameQueue_.waitForConsumerToBlock(&terminator2_);
           }
 
           if (videoTrack)
           {
             videoTrack->packetQueue().waitForConsumerToBlock();
             videoTrack->frameQueue_.waitForConsumerToBlock();
+          }
+
+          // check whether user disabled playback while
+          // we were waiting for the queues:
+          if (!playbackEnabled_)
+          {
+            // during framestep do not stop when end of file is reached,
+            // simply rewind to the beginning:
+            err = rewind(audioTrack, videoTrack, false);
+            continue;
+          }
+
+          // check whether user enabled playback looping while
+          // we were waiting for the queues:
+          if (looping_)
+          {
+            err = rewind(audioTrack, videoTrack);
+            continue;
           }
 
           break;
@@ -4332,6 +4426,14 @@ namespace yae
       return false;
     }
 
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      mustStop_ = false;
+    }
+    catch (...)
+    {}
+
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
@@ -4347,6 +4449,7 @@ namespace yae
     }
 
     terminator_.stopWaiting(false);
+    terminator2_.stopWaiting(!playbackEnabled_);
     return thread_.run();
   }
 
@@ -4356,6 +4459,14 @@ namespace yae
   bool
   Movie::threadStop()
   {
+    try
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      mustStop_ = true;
+    }
+    catch (...)
+    {}
+
     if (selectedVideoTrack_ < videoTracks_.size())
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
@@ -4369,6 +4480,7 @@ namespace yae
     }
 
     terminator_.stopWaiting(true);
+    terminator2_.stopWaiting(true);
     thread_.stop();
     return thread_.wait();
   }
@@ -4393,6 +4505,15 @@ namespace yae
         videoTrack = videoTracks_[selectedVideoTrack_];
         videoTrack->packetQueue().clear();
         videoTrack->frameQueue_.clear();
+        videoTrack->packetQueue().waitForConsumerToBlock();
+        videoTrack->frameQueue_.clear();
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+        std::string ts =
+          TTime(seekTime).to_hhmmss_frame(videoTrack->override_.frameRate_);
+        std::cerr << "\n\tCLEAR VIDEO FRAME QUEUE for seek: "
+                  << ts << std::endl;
+#endif
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
@@ -4400,6 +4521,14 @@ namespace yae
         audioTrack = audioTracks_[selectedAudioTrack_];
         audioTrack->packetQueue().clear();
         audioTrack->frameQueue_.clear();
+        audioTrack->packetQueue().waitForConsumerToBlock();
+        audioTrack->frameQueue_.clear();
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+        std::string ts = TTime(seekTime).to_hhmmss_frame();
+        std::cerr << "\n\tCLEAR AUDIO FRAME QUEUE for seek: "
+                  << ts << std::endl;
+#endif
       }
 
       return true;
@@ -4512,15 +4641,23 @@ namespace yae
     if (audioTrack)
     {
       audioTrack->packetQueue().waitForConsumerToBlock();
-      audioTrack->frameQueue_.waitForConsumerToBlock();
+      audioTrack->frameQueue_.waitForConsumerToBlock(&terminator2_);
     }
-    else if (videoTrack)
+
+    if (videoTrack)
     {
       videoTrack->packetQueue().waitForConsumerToBlock();
       videoTrack->frameQueue_.waitForConsumerToBlock();
     }
 
     boost::lock_guard<boost::mutex> lock(mutex_);
+
+    if (mustStop_)
+    {
+      // user must have switch to another item in the playlist:
+      return AVERROR(ECANCELED);
+    }
+
     double seekTime = seekToTimeIn ? timeIn_ : 0.0;
     return seekTo(seekTime);
   }
@@ -4555,13 +4692,13 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
     }
     catch (...)
@@ -4582,13 +4719,13 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
     }
     catch (...)
@@ -4596,26 +4733,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::setPlaybackInterval
+  // Movie::setPlaybackEnabled
   //
   void
-  Movie::setPlaybackInterval(bool enabled)
+  Movie::setPlaybackEnabled(bool enabled)
   {
     try
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      playbackInterval_ = enabled;
+      playbackEnabled_ = enabled;
+      terminator2_.stopWaiting(!playbackEnabled_);
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackInterval_);
+        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
       }
     }
     catch (...)
@@ -5278,12 +5416,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::setPlaybackInterval
+  // ReaderFFMPEG::setPlaybackEnabled
   //
   void
-  ReaderFFMPEG::setPlaybackInterval(bool enabled)
+  ReaderFFMPEG::setPlaybackEnabled(bool enabled)
   {
-    private_->movie_.setPlaybackInterval(enabled);
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    if (enabled)
+    {
+      std::cerr << "\nPLAYBACK ENABLED, framestep not possible" << std::endl;
+    }
+    else
+    {
+      std::cerr << "\nPLAYBACK DISABLED (paused), framestep OK" << std::endl;
+    }
+#endif
+
+    private_->movie_.setPlaybackEnabled(enabled);
   }
 
   //----------------------------------------------------------------

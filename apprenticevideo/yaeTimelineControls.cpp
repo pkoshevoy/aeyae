@@ -31,6 +31,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kSeparatorForFrameNumber
+  //
+  static const char * kSeparatorForFrameNumber = ":";
+
+  //----------------------------------------------------------------
+  // kSeparatorForCentiSeconds
+  //
+  static const char * kSeparatorForCentiSeconds = ".";
+
+  //----------------------------------------------------------------
   // kClockTemplate
   //
   static QString kClockTemplate = QString::fromUtf8("00:00:00:00");
@@ -39,7 +49,7 @@ namespace yae
   // getTimeStamp
   //
   static QString
-  getTimeStamp(double seconds, double frameRate)
+  getTimeStamp(double seconds, double frameRate, const char * frameNumSep)
   {
     int sec = int(seconds);
     int min = sec / 60;
@@ -48,23 +58,30 @@ namespace yae
     sec %= 60;
     min %= 60;
 
+    // round to nearest frame:
+    double fpsWhole = ceil(frameRate);
+    seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
+
     double secondsWhole = floor(seconds);
     double remainder = seconds - secondsWhole;
-    double fpsWhole = ceil(frameRate);
-    uint64 frameNo = int(remainder * fpsWhole);
+    double frame = remainder * fpsWhole;
+    uint64 frameNo = int(frame);
 
 #if 0
     std::cerr << "frame: " << frameNo
-              << ", remained: " << remainder
-              << ", fps: " << fpsWhole
+              << "\tseconds: " << seconds
+              << ", remainder: " << remainder
+              << ", fps " << frameRate
+              << ", fps (whole): " << fpsWhole
               << ", " << frameRate * remainder
+              << ", " << frame
               << std::endl;
 #endif
 
     std::ostringstream os;
     os << std::setw(2) << std::setfill('0') << hour << ':'
        << std::setw(2) << std::setfill('0') << min << ':'
-       << std::setw(2) << std::setfill('0') << sec << ':'
+       << std::setw(2) << std::setfill('0') << sec << frameNumSep
        << std::setw(2) << std::setfill('0') << frameNo;
 
     // crop the leading zeros up to s:ff
@@ -165,12 +182,14 @@ namespace yae
     timelineStart_(0.0),
     timelineDuration_(0.0),
     timelinePosition_(0.0),
-    frameRate_(23.976),
+    frameRate_(100.0),
     auxPlayhead_(NULL),
     auxDuration_(NULL),
     auxFocusWidget_(NULL),
     repaintTimer_(this)
   {
+    frameNumberSeparator_ = kSeparatorForCentiSeconds;
+
     padding_ = 8;
     lineWidth_ = 3;
 
@@ -401,11 +420,15 @@ namespace yae
       reader->getVideoDuration(start, duration);
     }
 
+    frameRate_ = 100.0;
+    frameNumberSeparator_ = kSeparatorForCentiSeconds;
+
     VideoTraits videoTraits;
-    if (reader->getVideoTraits(videoTraits))
+    if (reader->getVideoTraits(videoTraits) &&
+        videoTraits.frameRate_ < 100.0)
     {
-      frameRate_ =
-        videoTraits.frameRate_ < 60.0 ? videoTraits.frameRate_ : 23.976;
+      frameRate_ = videoTraits.frameRate_;
+      frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
     timelineStart_ = start.toSeconds();
@@ -460,11 +483,15 @@ namespace yae
       reader->getVideoDuration(start, duration);
     }
 
+    frameRate_ = 100.0;
+    frameNumberSeparator_ = kSeparatorForCentiSeconds;
+
     VideoTraits videoTraits;
-    if (reader->getVideoTraits(videoTraits))
+    if (reader->getVideoTraits(videoTraits) &&
+        videoTraits.frameRate_ < 100.0)
     {
-      frameRate_ =
-        videoTraits.frameRate_ < 60.0 ? videoTraits.frameRate_ : 23.976;
+      frameRate_ = videoTraits.frameRate_;
+      frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
     timelineStart_ = start.toSeconds();
@@ -918,7 +945,9 @@ namespace yae
       t = std::max(0.0, std::min(1.0, t));
 
       double seconds = t * timelineDuration_ + timelineStart_;
-      QString mousePosition = getTimeStamp(seconds, frameRate_);
+      QString mousePosition = getTimeStamp(seconds,
+                                           frameRate_,
+                                           frameNumberSeparator_);
       setToolTip(mousePosition);
       return;
     }
@@ -1046,7 +1075,7 @@ namespace yae
       }
       else if (!auxPlayhead_->hasFocus())
       {
-        QString ts = getTimeStamp(position, frameRate_);
+        QString ts = getTimeStamp(position, frameRate_, frameNumberSeparator_);
         auxPlayhead_->setText(ts);
       }
     }
@@ -1070,7 +1099,7 @@ namespace yae
       }
       else
       {
-        QString ts = getTimeStamp(duration, frameRate_);
+        QString ts = getTimeStamp(duration, frameRate_, frameNumberSeparator_);
         auxDuration_->setText(ts);
       }
     }

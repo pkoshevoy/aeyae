@@ -110,6 +110,7 @@ namespace yae
     TTime operator - (double dtSec) const;
 
     bool operator < (const TTime & t) const;
+    bool operator <= (const TTime & t) const;
 
     int64 getTime(uint64 base) const;
 
@@ -119,6 +120,11 @@ namespace yae
     void to_hhmmss_usec(std::string & ts,
                         const char * separator = "",
                         const char * usec_separator = ".") const;
+
+    void to_hhmmss_frame(std::string & ts,
+                         double frameRate = 29.97,
+                         const char * separator = ":",
+                         const char * framenum_separator = ":") const;
 
     inline std::string to_hhmmss(const char * separator = "") const
     {
@@ -133,6 +139,15 @@ namespace yae
     {
       std::string ts;
       to_hhmmss_usec(ts, separator, usec_separator);
+      return ts;
+    }
+
+    inline std::string to_hhmmss_frame(double frameRate = 29.97,
+                                       const char * separator = ":",
+                                       const char * fnum_separator = ":") const
+    {
+      std::string ts;
+      to_hhmmss_frame(ts, frameRate, separator, fnum_separator);
       return ts;
     }
 

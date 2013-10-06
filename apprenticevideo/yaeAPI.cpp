@@ -7,12 +7,13 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // std includes:
-#include <stdlib.h>
-#include <string.h>
 #include <new>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
 // yae includes:
 #include <yaeAPI.h>
@@ -154,6 +155,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::operator <=
+  //
+  bool
+  TTime::operator <= (const TTime & t) const
+  {
+    if (t.base_ == base_)
+    {
+      return time_ <= t.time_;
+    }
+
+    double dt = toSeconds() - t.toSeconds();
+    return dt <= 0;
+  }
+
+  //----------------------------------------------------------------
   // TTime::getTime
   //
   int64
@@ -208,6 +224,35 @@ namespace yae
     std::ostringstream os;
     os << ts << usec_separator
        << std::setw(6) << std::setfill('0') << (int)(usec);
+
+    ts = std::string(os.str().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // TTime::to_hhmmss_frame
+  //
+  void
+  TTime::to_hhmmss_frame(std::string & ts,
+                         double frameRate,
+                         const char * separator,
+                         const char * framenum_separator) const
+  {
+    // round to nearest frame:
+    double seconds = toSeconds();
+    double fpsWhole = ceil(frameRate);
+    seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
+
+    double secondsWhole = floor(seconds);
+    double remainder = seconds - secondsWhole;
+    double frame = remainder * fpsWhole;
+    uint64 frameNo = int(frame);
+
+    TTime tmp(seconds);
+    tmp.to_hhmmss(ts, separator);
+
+    std::ostringstream os;
+    os << ts << framenum_separator
+       << std::setw(2) << std::setfill('0') << frameNo;
 
     ts = std::string(os.str().c_str());
   }

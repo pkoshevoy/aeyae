@@ -48,7 +48,7 @@ namespace yae
 
     bool open(unsigned int deviceIndex,
               IReader * reader,
-              bool forOneFrameOnly);
+              bool frameStepping);
     void close();
 
     void pause(bool pause);
@@ -87,7 +87,7 @@ namespace yae
 
     // audio source:
     IReader * reader_;
-    bool forOneFrameOnly_;
+    bool frameStepping_;
 
     // output stream and its configuration:
     PaStream * output_;
@@ -118,7 +118,7 @@ namespace yae
     initErr_(Pa_Initialize()),
     defaultDevice_(0),
     reader_(NULL),
-    forOneFrameOnly_(false),
+    frameStepping_(false),
     output_(NULL),
     sampleSize_(0),
     audioFrameOffset_(0),
@@ -335,16 +335,17 @@ namespace yae
   bool
   AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
                                          IReader * reader,
-                                         bool forOneFrameOnly)
+                                         bool frameStepping)
   {
     if (output_)
     {
+      terminator_.stopWaiting(true);
       Pa_StopStream(output_);
       Pa_CloseStream(output_);
       output_ = NULL;
     }
 
-    forOneFrameOnly_ = forOneFrameOnly;
+    frameStepping_ = frameStepping;
     pause_ = true;
     reader_ = reader;
 
@@ -409,6 +410,9 @@ namespace yae
   AudioRendererPortaudio::TPrivate::skipToTime(const TTime & t,
                                                IReader * reader)
   {
+    terminator_.stopWaiting(true);
+    TTime tEnd = t + TTime(1, 24);
+
     do
     {
       if (audioFrame_)
@@ -426,28 +430,23 @@ namespace yae
         TTime frameDuration(numSamples * audioFrame_->tempo_, sampleRate);
         TTime frameEnd = audioFrame_->time_ + frameDuration;
 
-        if (t < frameEnd)
+        if (audioFrame_->time_ <= t && t < frameEnd)
         {
-          if (audioFrame_->time_ < t)
-          {
-            // calculate offset:
-            audioFrameOffset_ =
-              double((t - audioFrame_->time_).getTime(sampleRate)) /
-              audioFrame_->tempo_;
-          }
-          else
-          {
-            audioFrameOffset_ = 0;
-          }
-
-          // done:
+          // calculate offset:
+          audioFrameOffset_ =
+            double((t - audioFrame_->time_).getTime(sampleRate)) /
+            audioFrame_->tempo_;
           break;
         }
-        else
+        else if (audioFrame_->time_ < t || tEnd < audioFrame_->time_)
         {
           // skip the entire frame:
           audioFrame_ = TAudioFramePtr();
           audioFrameOffset_ = 0;
+        }
+        else
+        {
+          break;
         }
       }
 
@@ -807,7 +806,7 @@ namespace yae
         const std::size_t numChunks = chunks.size();
         for (std::size_t i = 0; i < numChunks; i++)
         {
-          if (forOneFrameOnly_)
+          if (frameStepping_)
           {
             memset(dst[i], 0, chunkSize);
           }
@@ -845,7 +844,7 @@ namespace yae
                             outputParams_.suggestedLatency);
     }
 
-    if (forOneFrameOnly_)
+    if (frameStepping_)
     {
       fillWithSilence(dst,
                       dstPlanar,
@@ -954,9 +953,9 @@ namespace yae
   bool
   AudioRendererPortaudio::open(unsigned int deviceIndex,
                                IReader * reader,
-                               bool forOneFrameOnly)
+                               bool frameStepping)
   {
-    return private_->open(deviceIndex, reader, forOneFrameOnly);
+    return private_->open(deviceIndex, reader, frameStepping);
   }
 
   //----------------------------------------------------------------

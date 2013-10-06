@@ -92,7 +92,7 @@ namespace yae
     virtual void getPlaybackInterval(double & timeIn, double & timeOut) const;
     virtual void setPlaybackIntervalStart(double timeIn);
     virtual void setPlaybackIntervalEnd(double timeOut);
-    virtual void setPlaybackInterval(bool enabled);
+    virtual void setPlaybackEnabled(bool enabled);
     virtual void setPlaybackLooping(bool enabled);
 
     // these are used to speed up video decoding:

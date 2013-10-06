@@ -47,12 +47,14 @@ namespace yae
     //! begin rendering video frames onto a given canvas:
     bool open(IVideoCanvas * canvas,
               IReader * reader,
-              bool forOneFrameOnly);
+              bool frameStepping);
 
     //! terminate video rendering:
     void close();
 
     const TTime & skipToNextFrame();
+
+    void skipToTime(const TTime & t, IReader * reader);
 
     //! the initial state after open(...) must be paused;
     //! use this to resume or pause the rendering thread loop;

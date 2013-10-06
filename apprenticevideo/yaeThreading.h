@@ -62,8 +62,14 @@ namespace yae
   struct Thread
   {
     Thread(TContext * context = NULL):
+      thread_(NULL),
       context_(context)
     {}
+
+    ~Thread()
+    {
+      delete thread_;
+    }
 
     void setContext(TContext * context)
     {
@@ -79,10 +85,16 @@ namespace yae
         return false;
       }
 
+      if (thread_)
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
       try
       {
         Threadable<TContext> threadable(context_);
-        thread_ = boost::thread(threadable);
+        thread_ = new boost::thread(threadable);
         return true;
       }
       catch (std::exception & e)
@@ -94,6 +106,8 @@ namespace yae
         std::cerr << "Thread::start: unexpected exception" << std::endl;
       }
 
+      delete thread_;
+      thread_ = NULL;
       return false;
     }
 
@@ -101,7 +115,10 @@ namespace yae
     {
       try
       {
-        thread_.interrupt();
+        if (thread_)
+        {
+          thread_->interrupt();
+        }
       }
       catch (std::exception & e)
       {
@@ -117,7 +134,13 @@ namespace yae
     {
       try
       {
-        thread_.join();
+        if (thread_)
+        {
+          thread_->join();
+          delete thread_;
+          thread_ = NULL;
+        }
+
         return true;
       }
       catch (std::exception & e)
@@ -134,11 +157,11 @@ namespace yae
 
     bool isRunning() const
     {
-      return thread_.joinable();
+      return thread_ && thread_->joinable();
     }
 
   protected:
-    boost::thread thread_;
+    boost::thread * thread_;
     TContext * context_;
   };
 }

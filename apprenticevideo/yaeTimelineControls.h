@@ -247,8 +247,9 @@ namespace yae
     // playback position delivered via most recent timeline event:
     double timelinePosition_;
 
-    // frame rate:
+    // these are used to format the timecode text fields:
     double frameRate_;
+    const char * frameNumberSeparator_;
 
     // text widgets for displaying (or editing) playhead position
     // and displaying total duration:

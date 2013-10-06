@@ -428,10 +428,13 @@ namespace yae
       return false;
     }
 
-    bool waitForConsumerToBlock()
+    bool waitForConsumerToBlock(QueueWaitMgr * waitMgr = NULL)
     {
+      QueueWaitTerminator terminator(waitMgr, &cond_);
+
       boost::unique_lock<boost::mutex> lock(mutex_);
-      while (!closed_ && !(consumerIsBlocked_ && !size_))
+      while (!closed_ && !(consumerIsBlocked_ && !size_) &&
+             terminator.keepWaiting())
       {
         cond_.wait(lock);
       }

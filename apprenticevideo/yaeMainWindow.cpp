@@ -52,6 +52,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kContinuousPlayback
+  //
+  static const bool kContinuousPlayback = false;
+
+  //----------------------------------------------------------------
+  // kFrameStepping
+  //
+  static const bool kFrameStepping = true;
+
+  //----------------------------------------------------------------
   // kCreateBookmarksAutomatically
   //
   static const QString kCreateBookmarksAutomatically =
@@ -1445,7 +1455,7 @@ namespace yae
     std::size_t subsCount = reader->subsCount();
 
     reader->threadStop();
-    reader->setPlaybackInterval(true);
+    reader->setPlaybackEnabled(!playbackPaused_);
 
 #if 0
     std::cerr << std::endl
@@ -2520,12 +2530,12 @@ namespace yae
               << std::endl;
 #endif
 
-    reader_->setPlaybackInterval(playbackPaused_);
+    reader_->setPlaybackEnabled(playbackPaused_);
 
     if (playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
-      prepareReaderAndRenderers(reader_);
+      prepareReaderAndRenderers(reader_, kContinuousPlayback);
       resumeRenderers();
 
       bookmarkTimer_.start();
@@ -2534,6 +2544,7 @@ namespace yae
     {
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_);
+      prepareReaderAndRenderers(reader_, kFrameStepping);
       stopRenderers();
 
       bookmarkTimer_.stop();
@@ -2873,7 +2884,7 @@ namespace yae
   void
   MainWindow::userIsSeeking(bool seeking)
   {
-    reader_->setPlaybackInterval(!seeking);
+    reader_->setPlaybackEnabled(!seeking && !playbackPaused_);
   }
 
   //----------------------------------------------------------------
@@ -2908,14 +2919,18 @@ namespace yae
   void
   MainWindow::movePlayHead(double seconds)
   {
+    videoRenderer_->pause();
+    audioRenderer_->pause();
+
     reader_->seek(seconds);
 
     if (playbackPaused_)
     {
-      bool forOneFrameOnly = true;
-      prepareReaderAndRenderers(reader_, forOneFrameOnly);
-      resumeRenderers();
+      TIgnoreClockStop ignoreClockStop(timelineControls_);
+      prepareReaderAndRenderers(reader_, kFrameStepping);
     }
+
+    resumeRenderers();
   }
 
   //----------------------------------------------------------------
@@ -3547,6 +3562,7 @@ namespace yae
              playbackPaused_ &&
              videoTrackIndex < numVideoTracks)
     {
+      TIgnoreClockStop ignoreClockStop(timelineControls_);
       TTime t = videoRenderer_->skipToNextFrame();
       if (audioTrackIndex < numAudioTracks)
       {
@@ -3835,8 +3851,11 @@ namespace yae
   // MainWindow::prepareReaderAndRenderers
   //
   void
-  MainWindow::prepareReaderAndRenderers(IReader * reader, bool forOneFrameOnly)
+  MainWindow::prepareReaderAndRenderers(IReader * reader, bool frameStepping)
   {
+    videoRenderer_->pause();
+    audioRenderer_->pause();
+
     std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
     std::size_t audioTrack = reader->getSelectedAudioTrackIndex();
 
@@ -3844,12 +3863,10 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
-    if (!forOneFrameOnly)
-    {
-      timelineControls_->observe(sharedClock);
-    }
+    timelineControls_->observe(sharedClock);
 
-    if (!forOneFrameOnly && audioTrack < numAudioTracks)
+    if (audioTrack < numAudioTracks &&
+        (videoTrack >= numVideoTracks || !frameStepping))
     {
       audioRenderer_->takeThisClock(sharedClock);
       audioRenderer_->obeyThisClock(audioRenderer_->clock());
@@ -3863,6 +3880,11 @@ namespace yae
     {
       videoRenderer_->takeThisClock(sharedClock);
       videoRenderer_->obeyThisClock(videoRenderer_->clock());
+
+      if (audioTrack < numAudioTracks)
+      {
+        audioRenderer_->obeyThisClock(videoRenderer_->clock());
+      }
     }
     else
     {
@@ -3871,19 +3893,19 @@ namespace yae
     }
 
     // update the renderers:
-    if (!forOneFrameOnly)
+    if (!frameStepping)
     {
       unsigned int audioDeviceIndex = adjustAudioTraitsOverride(reader);
-      if (!audioRenderer_->open(audioDeviceIndex, reader, forOneFrameOnly))
+      if (!audioRenderer_->open(audioDeviceIndex, reader, frameStepping))
       {
         videoRenderer_->takeThisClock(sharedClock);
         videoRenderer_->obeyThisClock(videoRenderer_->clock());
       }
     }
 
-    videoRenderer_->open(canvas_, reader, forOneFrameOnly);
+    videoRenderer_->open(canvas_, reader, frameStepping);
 
-    if (!forOneFrameOnly)
+    if (!frameStepping)
     {
       timelineControls_->adjustTo(reader);
 
