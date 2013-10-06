@@ -4654,8 +4654,8 @@ namespace yae
 
     if (mustStop_)
     {
-      // user must have switch to another item in the playlist:
-      return AVERROR(ECANCELED);
+      // user must have switched to another item in the playlist:
+      return AVERROR(EAGAIN);
     }
 
     double seekTime = seekToTimeIn ? timeIn_ : 0.0;
