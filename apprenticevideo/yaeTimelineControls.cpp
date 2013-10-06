@@ -51,13 +51,6 @@ namespace yae
   static QString
   getTimeStamp(double seconds, double frameRate, const char * frameNumSep)
   {
-    int sec = int(seconds);
-    int min = sec / 60;
-    int hour = min / 60;
-
-    sec %= 60;
-    min %= 60;
-
     // round to nearest frame:
     double fpsWhole = ceil(frameRate);
     seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
@@ -66,6 +59,13 @@ namespace yae
     double remainder = seconds - secondsWhole;
     double frame = remainder * fpsWhole;
     uint64 frameNo = int(frame);
+
+    int sec = int(seconds);
+    int min = sec / 60;
+    int hour = min / 60;
+
+    sec %= 60;
+    min %= 60;
 
 #if 0
     std::cerr << "frame: " << frameNo
