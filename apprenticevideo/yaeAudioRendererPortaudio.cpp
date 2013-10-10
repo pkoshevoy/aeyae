@@ -419,9 +419,11 @@ namespace yae
       {
         unsigned int srcSampleSize =
           getBitsPerSample(audioFrame_->traits_.sampleFormat_) / 8;
+        YAE_ASSERT(srcSampleSize > 0);
 
         int srcChannels =
           getNumberOfChannels(audioFrame_->traits_.channelLayout_);
+        YAE_ASSERT(srcChannels > 0);
 
         std::size_t srcFrameSize = audioFrame_->data_->rowBytes(0);
         std::size_t numSamples = srcFrameSize / (srcSampleSize * srcChannels);
@@ -674,9 +676,11 @@ namespace yae
 
     unsigned int srcSampleSize =
       getBitsPerSample(audioFrame_->traits_.sampleFormat_) / 8;
+    YAE_ASSERT(srcSampleSize > 0);
 
     int srcChannels =
       getNumberOfChannels(audioFrame_->traits_.channelLayout_);
+    YAE_ASSERT(srcChannels > 0);
 
     bool srcPlanar =
       audioFrame_->traits_.channelFormat_ == kAudioChannelsPlanar;
@@ -731,7 +735,11 @@ namespace yae
         const AudioTraits & t = audioFrame_->traits_;
 
         srcSampleSize = getBitsPerSample(t.sampleFormat_) / 8;
+        YAE_ASSERT(srcSampleSize > 0);
+
         srcChannels = getNumberOfChannels(t.channelLayout_);
+        YAE_ASSERT(srcChannels > 0);
+
         srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
 
         detectedStaleFrame =

@@ -141,6 +141,10 @@ namespace yae
         nlevels++;
       }
 
+      // attempt to persuade coverity scan that window_ is greater than 1:
+      YAE_ASSERT(window_ > 1);
+      window_ = std::max<unsigned int>(window_, 2);
+
       // initialize FFT contexts:
       av_rdft_end(realToComplex_);
       realToComplex_ = NULL;
@@ -475,6 +479,7 @@ namespace yae
         // what we don't have we substitute with zeros:
         zeros = std::min<std::size_t>(start - frag.position_[0], numSamples);
         YAE_ASSERT(zeros != numSamples);
+        YAE_ASSERT(dst);
 
         memset(dst, 0, zeros * stride);
         dst += zeros * stride;

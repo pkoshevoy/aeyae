@@ -1283,7 +1283,7 @@ namespace yae
         ssa = override + 1;
       }
 
-      if (!tmp.empty() || (ssa && ssa < lEnd))
+      if (!tmp.empty() || (ssa < lEnd))
       {
         if (!out.empty())
         {
@@ -1295,7 +1295,7 @@ namespace yae
           out += tmp;
         }
 
-        if (ssa && (ssa < lEnd))
+        if (ssa < lEnd)
         {
           out += std::string(ssa, lEnd);
         }

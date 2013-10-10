@@ -3612,8 +3612,13 @@ namespace yae
 
       // discard outlier frames:
       const AudioTraits & atraits = frame->traits_;
+
       unsigned int sampleSize = getBitsPerSample(atraits.sampleFormat_) / 8;
+      YAE_ASSERT(sampleSize > 0);
+
       int channels = getNumberOfChannels(atraits.channelLayout_);
+      YAE_ASSERT(channels > 0);
+
       std::size_t frameSize = frame->data_->rowBytes(0);
       std::size_t numSamples = frameSize / (channels * sampleSize);
 

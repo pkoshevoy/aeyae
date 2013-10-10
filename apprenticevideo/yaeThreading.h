@@ -40,7 +40,7 @@ namespace yae
       {
         context_->threadLoop();
       }
-      catch (std::exception & e)
+      catch (const std::exception & e)
       {
         std::cerr << "Threadable::operator(): " << e.what()
                   << std::endl;
@@ -97,7 +97,7 @@ namespace yae
         thread_ = new boost::thread(threadable);
         return true;
       }
-      catch (std::exception & e)
+      catch (const std::exception & e)
       {
         std::cerr << "Thread::start: " << e.what() << std::endl;
       }
@@ -120,7 +120,7 @@ namespace yae
           thread_->interrupt();
         }
       }
-      catch (std::exception & e)
+      catch (const std::exception & e)
       {
         std::cerr << "Thread::stop: " << e.what() << std::endl;
       }
@@ -143,7 +143,7 @@ namespace yae
 
         return true;
       }
-      catch (std::exception & e)
+      catch (const std::exception & e)
       {
         std::cerr << "Thread::wait: " << e.what() << std::endl;
       }

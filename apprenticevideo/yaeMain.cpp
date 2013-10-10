@@ -72,10 +72,10 @@ namespace yae
 };
 
 //----------------------------------------------------------------
-// main
+// mainMayThrowException
 //
 int
-main(int argc, char ** argv)
+mainMayThrowException(int argc, char ** argv)
 {
 #if defined(_WIN32) && !defined(NDEBUG)
   // restore console stdio:
@@ -137,4 +137,30 @@ main(int argc, char ** argv)
 
   app.exec();
   return 0;
+}
+
+//----------------------------------------------------------------
+// main
+//
+int
+main(int argc, char ** argv)
+{
+  int r = 0;
+
+  try
+  {
+    r = mainMayThrowException(argc, argv);
+  }
+  catch (const std::exception & e)
+  {
+    std::cerr << "ERROR: unexpected exception: " << e.what() << std::endl;
+    return 1;
+  }
+  catch (...)
+  {
+    std::cerr << "ERROR: unknown exception" << std::endl;
+    return 2;
+  }
+
+  return r;
 }
