@@ -353,9 +353,7 @@ namespace yae
 
         if (clock_.allowsSettingTime())
         {
-          double latency = 0.0;
-          bool notifyObserver = !resetTimeCounters;
-          clock_.setCurrentTime(framePosition_, latency, notifyObserver);
+          clock_.setCurrentTime(framePosition_, 0.0, true);
           drift = df;
         }
 
@@ -379,6 +377,11 @@ namespace yae
         lateFrames = 0.0;
         lateFramesErrorSum = 0.0;
         clockPositionPrev = - std::numeric_limits<double>::max();
+
+        if (clock_.allowsSettingTime())
+        {
+          clock_.setCurrentTime(framePosition_, 0.0, false);
+        }
       }
     }
   }
