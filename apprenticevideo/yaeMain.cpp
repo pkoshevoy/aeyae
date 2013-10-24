@@ -107,6 +107,16 @@ mainMayThrowException(int argc, char ** argv)
   std::cout.setf(std::ios::scientific);
   std::cerr.setf(std::ios::scientific);
   */
+
+#ifdef __APPLE__
+  if (QSysInfo::MacintoshVersion > 0x000a)
+  {
+    // add a workaround for Qt 4.7 QTBUG-32789
+    // that manifests as misaligned text on OS X Mavericks:
+    QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
+  }
+#endif
+
   yae::Application::setApplicationName("ApprenticeVideo");
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
