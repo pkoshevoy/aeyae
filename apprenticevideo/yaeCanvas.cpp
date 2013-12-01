@@ -51,6 +51,54 @@ extern "C"
 #endif
 
 //----------------------------------------------------------------
+// yae_show_program_listing
+//
+static void
+yae_show_program_listing(std::ostream & ostr,
+                         const char * program,
+                         std::size_t len = 0,
+                         const char * errorMessage = NULL)
+{
+  if (!len && program)
+  {
+    len = strlen(program);
+  }
+
+  unsigned int lineNo = 0;
+  char prev = '\n';
+  const char * i = program;
+  const char * end = program + len;
+  while (i < end)
+  {
+    if (prev == '\n')
+    {
+      lineNo++;
+
+      if (lineNo == 1 || errorMessage && (lineNo % 20) == 1)
+      {
+        ostr << "\n        ";
+        for (int i = 1; i < 80; i += 8)
+        {
+          ostr << std::left << std::setw(8) << std::setfill(' ') << i;
+        }
+        ostr << '\n';
+      }
+
+      ostr << std::left << std::setw(8) << std::setfill(' ') << lineNo;
+    }
+
+    ostr << *i;
+    prev = *i;
+    i++;
+  }
+
+  if (errorMessage)
+  {
+    ostr << '\n' << errorMessage << std::endl;
+  }
+}
+
+//----------------------------------------------------------------
 // yae_gl_arb_yuv_to_rgb
 //
 static const char * yae_gl_arb_yuv_to_rgb =
@@ -114,65 +162,6 @@ static const char * yae_gl_arb_yuv_p10_to_rgb =
   "MOV result.color.a, 1.0;\n"
   "END\n";
 
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuyv_to_yuv_shared
-//
-#define yae_gl_arb_yuyv_to_yuv_shared(out, chroma)                      \
-  "MAD t0,    x00.x, 0.5, 0.1;\n"                                       \
-  "FRC t0,    t0;\n"                                                    \
-  "MUL t0,    t0, 2.0;\n"                                               \
-  "FLR t0,    t0;\n"                                                    \
-  "SUB t1,    1.1, t0;\n"                                               \
-  "FLR t1,    t1;\n"                                                    \
-  "MOV x10,   x00;\n"                                                   \
-  "ADD x10.x, x00.x, -1;\n"                                             \
-  "MOV x01,   x00;\n"                                                   \
-  "ADD x01.x, x00.x, 1;\n"                                              \
-  "TEX u0,    x10, texture[0], RECT;\n"                                 \
-  "TEX uv,    x00, texture[0], RECT;\n"                                 \
-  "TEX v1,    x01, texture[0], RECT;\n"                                 \
-  "MUL "#out".y, u0."#chroma", t0.x;\n"                                 \
-  "MAD "#out".y, uv."#chroma", t1.x, "#out".y;\n"                       \
-  "MUL "#out".z, uv."#chroma", t0.x;\n"                                 \
-  "MAD "#out".z, v1."#chroma", t1.x, "#out".z;\n"
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuyv_to_yuv_00
-//
-#define yae_gl_arb_yuyv_to_yuv_00(out)                                  \
-  "FLR x00,   fragment.texcoord[0];\n"                                  \
-  "TEX "#out", x00, texture[0], RECT;\n"                                \
-  yae_gl_arb_yuyv_to_yuv_shared(out, a)
-
-//----------------------------------------------------------------
-// yae_gl_arb_uyvy_to_yuv_00
-//
-#define yae_gl_arb_uyvy_to_yuv_00(out)                                  \
-  "FLR x00,   fragment.texcoord[0];\n"                                  \
-  "TEX "#out", x00, texture[0], RECT;\n"                                \
-  "MOV "#out".x, "#out".a;\n"                                           \
-  yae_gl_arb_yuyv_to_yuv_shared(out, x)
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuyv_to_yuv
-//
-#define yae_gl_arb_yuyv_to_yuv(dx, dy, out)                             \
-  "FLR x00,   fragment.texcoord[0];\n"                                  \
-  "ADD x00,   x00, { "#dx", "#dy", 0, 0 };\n"                           \
-  "TEX "#out", x00, texture[0], RECT;\n"                                \
-  yae_gl_arb_yuyv_to_yuv_shared(out, a)
-
-//----------------------------------------------------------------
-// yae_gl_arb_uyvy_to_yuv
-//
-#define yae_gl_arb_uyvy_to_yuv(dx, dy, out)                             \
-  "FLR x00,   fragment.texcoord[0];\n"                                  \
-  "ADD x00,   x00, { "#dx", "#dy", 0, 0 };\n"                           \
-  "TEX "#out", x00, texture[0], RECT;\n"                                \
-  "MOV "#out".x, "#out".a;\n"                                           \
-  yae_gl_arb_yuyv_to_yuv_shared(out, x)
-
 //----------------------------------------------------------------
 // yae_gl_arb_yuyv_to_rgb_antialias
 //
@@ -184,69 +173,75 @@ static const char * yae_gl_arb_yuyv_to_rgb_antialias =
 
   "TEMP t0;\n"
   "TEMP t1;\n"
+  "TEMP tmp;\n"
   "TEMP x00;\n"
-  "TEMP x10;\n"
-  "TEMP x01;\n"
+  "TEMP q00;\n"
+  "TEMP q01;\n"
+  "TEMP q02;\n"
+  "TEMP q10;\n"
+  "TEMP q11;\n"
+  "TEMP q12;\n"
+  "TEMP www;\n"
   "TEMP yuv;\n"
-  "TEMP u0;\n"
-  "TEMP uv;\n"
-  "TEMP v1;\n"
+
+  "FLR x00,   fragment.texcoord[0];\n"
+  "MAD t0,    x00.x, 0.5, 0.1;\n"
+  "FRC t0,    t0;\n"
+  "MUL t0,    t0, 2.0;\n"
+  "FLR t0,    t0;\n"
+  "SUB t1,    1.1, t0;\n"
+  "FLR t1,    t1;\n"
+
+  // sample texture data:
+  "TEX q00,   x00, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 2, 0, 0, 0 };\n"
+  "TEX q02,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 2, 1, 0, 0 };\n"
+  "TEX q12,   tmp, texture[0], RECT;\n"
 
   // calculate interpolation weights:
   "TEMP w0;\n"
   "TEMP w1;\n"
   "FRC w0, fragment.texcoord[0];\n"
   "SUB w1, 1.0, w0;\n"
-  "TEMP weight;\n"
 
-  "MUL weight, w1.x, w1.y;\n"
-  "TEMP p00;\n"
-  yae_gl_arb_yuyv_to_yuv_00(p00)
-  "MUL yuv, p00, weight;\n"
+  "MOV tmp.x, q00.x;\n"
+  "MUL tmp.y, q00.a, t1.x;\n"
+  "MUL tmp.z, q00.a, t0.x;\n"
+  "MAD tmp.y, q01.a, t0.x, tmp.y;\n"
+  "MAD tmp.z, q01.a, t1.x, tmp.z;\n"
+  "MUL www, w1.x, w1.y;\n"
+  "MUL yuv, tmp, www;\n"
 
-  "MUL weight, w0.x, w1.y;\n"
-  "TEMP p10;\n"
-  yae_gl_arb_yuyv_to_yuv(1, 0, p10)
-  "MAD yuv, p10, weight, yuv;\n"
+  "MOV tmp.x, q01.x;\n"
+  "MUL tmp.y, q01.a, t0.x;\n"
+  "MUL tmp.z, q01.a, t1.x;\n"
+  "MAD tmp.y, q02.a, t1.x, tmp.y;\n"
+  "MAD tmp.z, q02.a, t0.x, tmp.z;\n"
+  "MUL www, w0.x, w1.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
 
-  "MUL weight, w1.x, w0.y;\n"
-  "TEMP p01;\n"
-  yae_gl_arb_yuyv_to_yuv(0, 1, p01)
-  "MAD yuv, p01, weight, yuv;\n"
+  "MOV tmp.x, q10.x;\n"
+  "MUL tmp.y, q10.a, t1.x;\n"
+  "MUL tmp.z, q10.a, t0.x;\n"
+  "MAD tmp.y, q11.a, t0.x, tmp.y;\n"
+  "MAD tmp.z, q11.a, t1.x, tmp.z;\n"
+  "MUL www, w1.x, w0.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
 
-  "MUL weight, w0.x, w0.y;\n"
-  "TEMP p11;\n"
-  yae_gl_arb_yuyv_to_yuv(1, 1, p11)
-  "MAD yuv, p11, weight, yuv;\n"
-
-  // convert to RGB:
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
-
-  "MOV result.color.a, 1.0;\n"
-  "END\n";
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuyv_to_rgb
-//
-static const char * yae_gl_arb_yuyv_to_rgb =
-  "!!ARBfp1.0\n"
-  "PARAM vr = program.local[0];\n"
-  "PARAM vg = program.local[1];\n"
-  "PARAM vb = program.local[2];\n"
-
-  "TEMP t0;\n"
-  "TEMP t1;\n"
-  "TEMP x00;\n"
-  "TEMP x10;\n"
-  "TEMP x01;\n"
-  "TEMP yuv;\n"
-  "TEMP u0;\n"
-  "TEMP uv;\n"
-  "TEMP v1;\n"
-
-  yae_gl_arb_yuyv_to_yuv_00(yuv)
+  "MOV tmp.x, q11.x;\n"
+  "MUL tmp.y, q11.a, t0.x;\n"
+  "MUL tmp.z, q11.a, t1.x;\n"
+  "MAD tmp.y, q12.a, t1.x, tmp.y;\n"
+  "MAD tmp.z, q12.a, t0.x, tmp.z;\n"
+  "MUL www, w0.x, w0.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
 
   // convert to RGB:
   "DPH result.color.r, yuv, vr;\n"
@@ -267,40 +262,125 @@ static const char * yae_gl_arb_uyvy_to_rgb_antialias =
 
   "TEMP t0;\n"
   "TEMP t1;\n"
+  "TEMP tmp;\n"
   "TEMP x00;\n"
-  "TEMP x10;\n"
-  "TEMP x01;\n"
+  "TEMP q00;\n"
+  "TEMP q01;\n"
+  "TEMP q02;\n"
+  "TEMP q10;\n"
+  "TEMP q11;\n"
+  "TEMP q12;\n"
+  "TEMP www;\n"
   "TEMP yuv;\n"
-  "TEMP u0;\n"
-  "TEMP uv;\n"
-  "TEMP v1;\n"
+
+  "FLR x00,   fragment.texcoord[0];\n"
+  "MAD t0,    x00.x, 0.5, 0.1;\n"
+  "FRC t0,    t0;\n"
+  "MUL t0,    t0, 2.0;\n"
+  "FLR t0,    t0;\n"
+  "SUB t1,    1.1, t0;\n"
+  "FLR t1,    t1;\n"
+
+  // sample texture data:
+  "TEX q00,   x00, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 2, 0, 0, 0 };\n"
+  "TEX q02,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 2, 1, 0, 0 };\n"
+  "TEX q12,   tmp, texture[0], RECT;\n"
 
   // calculate interpolation weights:
   "TEMP w0;\n"
   "TEMP w1;\n"
   "FRC w0, fragment.texcoord[0];\n"
   "SUB w1, 1.0, w0;\n"
-  "TEMP weight;\n"
 
-  "MUL weight, w1.x, w1.y;\n"
-  "TEMP p00;\n"
-  yae_gl_arb_uyvy_to_yuv_00(p00)
-  "MUL yuv, p00, weight;\n"
+  "MOV tmp.x, q00.a;\n"
+  "MUL tmp.y, q00.x, t1.x;\n"
+  "MUL tmp.z, q00.x, t0.x;\n"
+  "MAD tmp.y, q01.x, t0.x, tmp.y;\n"
+  "MAD tmp.z, q01.x, t1.x, tmp.z;\n"
+  "MUL www, w1.x, w1.y;\n"
+  "MUL yuv, tmp, www;\n"
 
-  "MUL weight, w0.x, w1.y;\n"
-  "TEMP p10;\n"
-  yae_gl_arb_uyvy_to_yuv(1, 0, p10)
-  "MAD yuv, p10, weight, yuv;\n"
+  "MOV tmp.x, q01.a;\n"
+  "MUL tmp.y, q01.x, t0.x;\n"
+  "MUL tmp.z, q01.x, t1.x;\n"
+  "MAD tmp.y, q02.x, t1.x, tmp.y;\n"
+  "MAD tmp.z, q02.x, t0.x, tmp.z;\n"
+  "MUL www, w0.x, w1.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
 
-  "MUL weight, w1.x, w0.y;\n"
-  "TEMP p01;\n"
-  yae_gl_arb_uyvy_to_yuv(0, 1, p01)
-  "MAD yuv, p01, weight, yuv;\n"
+  "MOV tmp.x, q10.a;\n"
+  "MUL tmp.y, q10.x, t1.x;\n"
+  "MUL tmp.z, q10.x, t0.x;\n"
+  "MAD tmp.y, q11.x, t0.x, tmp.y;\n"
+  "MAD tmp.z, q11.x, t1.x, tmp.z;\n"
+  "MUL www, w1.x, w0.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
 
-  "MUL weight, w0.x, w0.y;\n"
-  "TEMP p11;\n"
-  yae_gl_arb_uyvy_to_yuv(1, 1, p11)
-  "MAD yuv, p11, weight, yuv;\n"
+  "MOV tmp.x, q11.a;\n"
+  "MUL tmp.y, q11.x, t0.x;\n"
+  "MUL tmp.z, q11.x, t1.x;\n"
+  "MAD tmp.y, q12.x, t1.x, tmp.y;\n"
+  "MAD tmp.z, q12.x, t0.x, tmp.z;\n"
+  "MUL www, w0.x, w0.y;\n"
+  "MAD yuv, tmp, www, yuv;\n"
+
+  // convert to RGB:
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_rgb
+//
+static const char * yae_gl_arb_yuyv_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+
+  "TEMP t0;\n"
+  "TEMP t1;\n"
+  "TEMP tmp;\n"
+  "TEMP x00;\n"
+  "TEMP q00;\n"
+  "TEMP q01;\n"
+  "TEMP q10;\n"
+  "TEMP q11;\n"
+  "TEMP yuv;\n"
+
+  "FLR x00,   fragment.texcoord[0];\n"
+  "MAD t0,    x00.x, 0.5, 0.1;\n"
+  "FRC t0,    t0;\n"
+  "MUL t0,    t0, 2.0;\n"
+  "FLR t0,    t0;\n"
+  "SUB t1,    1.1, t0;\n"
+  "FLR t1,    t1;\n"
+
+  // sample texture data:
+  "TEX q00,   x00, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
+
+  "MOV yuv.x, q00.x;\n"
+  "MUL yuv.y, q00.a, t1.x;\n"
+  "MUL yuv.z, q00.a, t0.x;\n"
+  "MAD yuv.y, q01.a, t0.x, yuv.y;\n"
+  "MAD yuv.z, q01.a, t1.x, yuv.z;\n"
 
   // convert to RGB:
   "DPH result.color.r, yuv, vr;\n"
@@ -321,15 +401,36 @@ static const char * yae_gl_arb_uyvy_to_rgb =
 
   "TEMP t0;\n"
   "TEMP t1;\n"
+  "TEMP tmp;\n"
   "TEMP x00;\n"
-  "TEMP x10;\n"
-  "TEMP x01;\n"
+  "TEMP q00;\n"
+  "TEMP q01;\n"
+  "TEMP q10;\n"
+  "TEMP q11;\n"
   "TEMP yuv;\n"
-  "TEMP u0;\n"
-  "TEMP uv;\n"
-  "TEMP v1;\n"
 
-  yae_gl_arb_uyvy_to_yuv_00(yuv)
+  "FLR x00,   fragment.texcoord[0];\n"
+  "MAD t0,    x00.x, 0.5, 0.1;\n"
+  "FRC t0,    t0;\n"
+  "MUL t0,    t0, 2.0;\n"
+  "FLR t0,    t0;\n"
+  "SUB t1,    1.1, t0;\n"
+  "FLR t1,    t1;\n"
+
+  // sample texture data:
+  "TEX q00,   x00, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
+  "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
+
+  "MOV yuv.x, q00.a;\n"
+  "MUL yuv.y, q00.x, t1.x;\n"
+  "MUL yuv.z, q00.x, t0.x;\n"
+  "MAD yuv.y, q01.x, t0.x, yuv.y;\n"
+  "MAD yuv.z, q01.x, t1.x, yuv.z;\n"
 
   // convert to RGB:
   "DPH result.color.r, yuv, vr;\n"
@@ -338,13 +439,6 @@ static const char * yae_gl_arb_uyvy_to_rgb =
 
   "MOV result.color.a, 1.0;\n"
   "END\n";
-
-#undef yae_gl_arb_yuyv_to_yuv_shared
-#undef yae_gl_arb_yuyv_to_yuv_00
-#undef yae_gl_arb_uyvy_to_yuv_00
-#undef yae_gl_arb_yuyv_to_yuv
-#undef yae_gl_arb_uyvy_to_yuv
-
 
 //----------------------------------------------------------------
 // yae_to_opengl
@@ -728,41 +822,11 @@ load_arb_program_natively(GLenum target, const char * prog)
   GLint errorPos = -1;
   glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
 
-#if 0
-  std::string errorStr;
+#if !defined(NDEBUG)
   if (errorPos < len && errorPos >= 0)
   {
     const GLubyte * err = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
-    if (err)
-    {
-      errorStr.assign((const char *)err);
-    }
-
-    std::cerr << '\t';
-    for (int i = 1; i < 80; i += 8)
-    {
-      std::cerr << std::left << std::setw(8) << std::setfill(' ') << i;
-    }
-    std::cerr << '\n';
-
-    unsigned int lineNo = 0;
-    char prev = '\n';
-    const char * i = prog;
-    const char * end = prog + len;
-    while (i < end)
-    {
-      if (prev == '\n')
-      {
-        lineNo++;
-        std::cerr << std::left << std::setw(8) << std::setfill(' ') << lineNo;
-      }
-
-      std::cerr << *i;
-      prev = *i;
-      i++;
-    }
-
-    std::cerr << '\n' << errorStr << std::endl;
+    yae_show_program_listing(std::cerr, prog, len, (const char *)err);
   }
 #endif
 
@@ -1006,7 +1070,8 @@ namespace yae
         }
       }
 
-      // FIXME: for debugging, above code should be reused
+#if 0
+      // FIXME: for debugging, some of the above code should be reused
       // in Traits::getPlanes(..) because it is more efficient
       {
         unsigned char stride[4] = { 0 };
@@ -1014,6 +1079,7 @@ namespace yae
         YAE_ASSERT(numPlanes_ == numPlanes);
         YAE_ASSERT(memcmp(stride_, stride, sizeof(stride)) == 0);
       }
+#endif
     }
   }
 
@@ -1209,16 +1275,16 @@ namespace yae
       std::map<TPixelFormatId, TFragmentShader>::const_iterator
         found = shaders_.find(format);
 
-#if 0
+#if !defined(NDEBUG)
       // for debugging only:
       {
         const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
         std::cerr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
         if (found != shaders_.end())
         {
-          std::cerr
-            << '\n' << found->second.program_->code_ << '\n'
-            << std::endl;
+          std::cerr << '\n';
+          yae_show_program_listing(std::cerr, found->second.program_->code_);
+          std::cerr << std::endl;
         }
         else
         {

@@ -49,7 +49,7 @@ namespace yae
   class TLibass;
 
   //----------------------------------------------------------------
-  // TFragmentShader
+  // TFragmentShaderProgram
   //
   struct TFragmentShaderProgram
   {
@@ -67,7 +67,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TFragmentShaderConfiguration
+  // TFragmentShader
   //
   struct TFragmentShader
   {
@@ -116,8 +116,7 @@ namespace yae
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
 
-    // return GL_ARB_fragment_program program handle (if it exists)
-    // for a given pixel format, return 0 otherwise:
+    // lookup a fragment shader for a given pixel format, if one exits:
     const TFragmentShader * fragmentShaderFor(TPixelFormatId format) const;
 
     // specify reader ID tag so that the Canvas can discard
