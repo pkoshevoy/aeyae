@@ -1428,7 +1428,7 @@ namespace yae
     typedef AutoFree<AVFrame> TBase;
 
     FrameWithAutoCleanup():
-      TBase(avcodec_alloc_frame())
+      TBase(av_frame_alloc())
     {
       data_->opaque = NULL;
     }
@@ -1440,7 +1440,7 @@ namespace yae
 
     void reset()
     {
-      TBase::reset(avcodec_alloc_frame());
+      TBase::reset(av_frame_alloc());
       data_->opaque = NULL;
     }
   };
@@ -3953,7 +3953,9 @@ namespace yae
       {
         VideoTrackPtr track(new VideoTrack(context_, stream));
         VideoTraits traits;
-        if (track->getTraits(traits))
+        if (track->getTraits(traits) &&
+            // avfilter does not support these pixel formats:
+            traits.pixelFormat_ != kPixelFormatUYYVYY411)
         {
           stream->discard = AVDISCARD_DEFAULT;
           videoTracks_.push_back(track);
