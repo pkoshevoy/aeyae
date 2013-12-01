@@ -120,6 +120,24 @@ static const char * yae_gl_arb_yuv_to_rgb =
   "END\n";
 
 //----------------------------------------------------------------
+// yae_gl_arb_yuv_to_rgb_2d
+//
+static const char * yae_gl_arb_yuv_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
 // yae_gl_arb_yuva_to_rgba
 //
 static const char * yae_gl_arb_yuva_to_rgba =
@@ -1424,8 +1442,6 @@ namespace yae
       kPixelFormatYUV444P,
       kPixelFormatYUV410P,
       kPixelFormatYUV411P,
-      kPixelFormatNV12,
-      kPixelFormatNV21,
       kPixelFormatYUV440P,
       kPixelFormatYUVA420P,
       kPixelFormatYUVJ420P,
@@ -1673,20 +1689,24 @@ namespace yae
       };
 
       // pass the YUV->RGB color transform matrix:
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 0, &yuv_to_rgb[0]);
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    0, &yuv_to_rgb[0]);
       yae_assert_gl_no_error();
 
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 1, &yuv_to_rgb[4]);
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    1, &yuv_to_rgb[4]);
       yae_assert_gl_no_error();
 
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 2, &yuv_to_rgb[8]);
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    2, &yuv_to_rgb[8]);
       yae_assert_gl_no_error();
 
       GLdouble subsample_uv[4] = { 1.0 };
       subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
       subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
 
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 3, subsample_uv);
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    3, subsample_uv);
       yae_assert_gl_no_error();
 
       glDisable(GL_FRAGMENT_PROGRAM_ARB);
@@ -1832,7 +1852,32 @@ namespace yae
   //
   void
   TLegacyCanvas::createFragmentShaders()
-  {}
+  {
+    if (!shaderPrograms_.empty())
+    {
+      // avoid re-creating duplicate shaders:
+      YAE_ASSERT(false);
+      return;
+    }
+
+    // for YUV formats:
+    static const TPixelFormatId yuv[] = {
+      kPixelFormatYUV420P,
+      kPixelFormatYUV422P,
+      kPixelFormatYUV444P,
+      kPixelFormatYUV410P,
+      kPixelFormatYUV411P,
+      kPixelFormatYUV440P,
+      kPixelFormatYUVA420P,
+      kPixelFormatYUVJ420P,
+      kPixelFormatYUVJ422P,
+      kPixelFormatYUVJ444P,
+      kPixelFormatYUVJ440P
+    };
+
+    createFragmentShadersFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
+                             yae_gl_arb_yuv_to_rgb_2d);
+  }
 
   //----------------------------------------------------------------
   // TLegacyCanvas::clear
@@ -1972,19 +2017,8 @@ namespace yae
       return false;
     }
 
-    GLint internalFormatGL;
-    GLenum pixelFormatGL;
-    GLenum dataTypeGL;
-    GLint shouldSwapBytes;
-    unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                   internalFormatGL,
-                                                   pixelFormatGL,
-                                                   dataTypeGL,
-                                                   shouldSwapBytes);
-    if (!supportedChannels)
-    {
-      return false;
-    }
+    unsigned int supportedChannels =
+      configure_builtin_shader(builtinShader_, vtts.pixelFormat_);
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
@@ -2006,6 +2040,22 @@ namespace yae
       w_ = crop.w_;
       h_ = crop.h_;
 
+      if (supportedChannels == ptts->channels_)
+      {
+        shader_ = NULL;
+      }
+      else
+      {
+        shader_ = fragmentShaderFor(vtts.pixelFormat_);
+      }
+
+      if (!supportedChannels && !shader_)
+      {
+        return false;
+      }
+
+      const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
+
       // calculate x-min, x-max coordinates for each tile:
       std::deque<TEdge> x;
       calculateEdges(x, w_, textureEdgeMax);
@@ -2019,20 +2069,21 @@ namespace yae
       const std::size_t cols = x.size();
       tiles_.resize(rows * cols);
 
-      texId_.resize(rows * cols);
+      texId_.resize(rows * cols * shader.numPlanes_);
       glGenTextures((GLsizei)(texId_.size()), &(texId_.front()));
 
-      for (std::size_t j = 0; j < rows; j++)
+      for (std::size_t i = 0; i < tiles_.size(); ++i)
       {
-        for (std::size_t i = 0; i < cols; i++)
+        TFrameTile & tile = tiles_[i];
+        tile.x_ = x[i % cols];
+        tile.y_ = y[i / cols];
+
+        for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
-          std::size_t tileIndex = j * cols + i;
+          glActiveTexture(GL_TEXTURE0 + k);
+          yae_assert_gl_no_error();
 
-          TFrameTile & tile = tiles_[tileIndex];
-          tile.x_ = x[i];
-          tile.y_ = y[j];
-
-          GLuint texId = texId_[tileIndex];
+          GLuint texId = texId_[k + i * shader.numPlanes_];
           glBindTexture(GL_TEXTURE_2D, texId);
 
           if (!glIsTexture(texId))
@@ -2052,19 +2103,21 @@ namespace yae
                           GL_TEXTURE_MAX_LEVEL, 0);
 
           glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                          GL_TEXTURE_MAG_FILTER,
+                          shader.magFilterGL_[k]);
           glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                          GL_TEXTURE_MIN_FILTER,
+                          shader.minFilterGL_[k]);
           yae_assert_gl_no_error();
 
           glTexImage2D(GL_TEXTURE_2D,
                        0, // mipmap level
-                       internalFormatGL,
-                       tile.x_.extent_,
-                       tile.y_.extent_,
+                       shader.internalFormatGL_[k],
+                       tile.x_.extent_ / shader.subsample_x_[k],
+                       tile.y_.extent_ / shader.subsample_y_[k],
                        0, // border width
-                       pixelFormatGL,
-                       dataTypeGL,
+                       shader.pixelFormatGL_[k],
+                       shader.dataTypeGL_[k],
                        NULL);
 
           if (!yae_assert_gl_no_error())
@@ -2075,27 +2128,49 @@ namespace yae
       }
     }
 
-    // get the source data pointer:
-    const std::size_t bytesPerRow = frame_->data_->rowBytes(0);
-    const std::size_t bytesPerPixel = ptts->stride_[0] / 8;
-    const unsigned char * src =
-      frame_->data_->data(0) +
-      crop.y_ * bytesPerRow +
-      crop.x_ * bytesPerPixel;
+    if (!supportedChannels && !shader_)
+    {
+      return false;
+    }
+
+    // get the source data pointers:
+    const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
+    const unsigned char * src[4] = { NULL };
+
+    for (std::size_t k = 0; k < shader.numPlanes_; k++)
+    {
+      const unsigned int subsample_x = shader.subsample_x_[k];
+      const unsigned int subsample_y = shader.subsample_y_[k];
+      const std::size_t bytesPerRow = frame_->data_->rowBytes(k);
+      const std::size_t bytesPerPixel = ptts->stride_[k] / 8;
+      src[k] =
+        frame_->data_->data(k) +
+        (crop.y_ / subsample_y) * bytesPerRow +
+        (crop.x_ / subsample_x) * bytesPerPixel;
+    }
 
     // upload the texture data:
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+    for (std::size_t k = 0; k < shader.numPlanes_; k++)
     {
-      glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
+      unsigned int subsample_x = shader.subsample_x_[k];
+      unsigned int subsample_y = shader.subsample_y_[k];
 
-      std::size_t rowSize = frame->data_->rowBytes(0) / (ptts->stride_[0] / 8);
+      glActiveTexture(GL_TEXTURE0 + k);
+      yae_assert_gl_no_error();
+
+      glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[k]);
+
+      std::size_t rowSize =
+        frame->data_->rowBytes(k) / (ptts->stride_[k] / 8);
       glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
       yae_assert_gl_no_error();
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
       {
         const TFrameTile & tile = tiles_[i];
-        GLuint texId = texId_[i];
+
+        GLuint texId = texId_[k + i * shader.numPlanes_];
         glBindTexture(GL_TEXTURE_2D, texId);
 
         if (!glIsTexture(texId))
@@ -2104,70 +2179,78 @@ namespace yae
           continue;
         }
 
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_.offset_);
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                      tile.x_.offset_ / subsample_x);
         yae_assert_gl_no_error();
 
-        glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
+        glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                      tile.y_.offset_ / subsample_y);
         yae_assert_gl_no_error();
 
         glTexSubImage2D(GL_TEXTURE_2D,
                         0, // mipmap level
                         0, // x-offset
                         0, // y-offset
-                        tile.x_.length_,
-                        tile.y_.length_,
-                        pixelFormatGL,
-                        dataTypeGL,
-                        src);
+                        tile.x_.length_ / subsample_x,
+                        tile.y_.length_ / subsample_y,
+                        shader.pixelFormatGL_[k],
+                        shader.dataTypeGL_[k],
+                        src[k]);
         yae_assert_gl_no_error();
 
         if (tile.x_.length_ < tile.x_.extent_)
         {
           // extend on the right to avoid texture filtering artifacts:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS, (tile.x_.offset_ +
-                                                tile.x_.length_ - 1));
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                        (tile.x_.offset_ + tile.x_.length_) /
+                        subsample_x - 1);
           yae_assert_gl_no_error();
 
-          glPixelStorei(GL_UNPACK_SKIP_ROWS, tile.y_.offset_);
+          glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                        tile.y_.offset_ / subsample_y);
           yae_assert_gl_no_error();
 
           glTexSubImage2D(GL_TEXTURE_2D,
                           0, // mipmap level
 
                           // x,y offset
-                          tile.x_.length_,
+                          tile.x_.length_ / subsample_x,
                           0,
 
                           // width, height
                           1,
-                          tile.y_.length_,
+                          tile.y_.length_ / subsample_y,
 
-                          pixelFormatGL,
-                          dataTypeGL,
-                          src);
+                          shader.pixelFormatGL_[k],
+                          shader.dataTypeGL_[k],
+                          src[k]);
           yae_assert_gl_no_error();
         }
 
         if (tile.y_.length_ < tile.y_.extent_)
         {
           // extend on the bottom to avoid texture filtering artifacts:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS, tile.x_.offset_);
-          glPixelStorei(GL_UNPACK_SKIP_ROWS, (tile.y_.offset_ +
-                                              tile.y_.length_ - 1));
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                        tile.x_.offset_ / subsample_x);
+
+          glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                        (tile.y_.offset_ + tile.y_.length_) /
+                        subsample_y - 1);
+
           glTexSubImage2D(GL_TEXTURE_2D,
                           0, // mipmap level
 
                           // x,y offset
                           0,
-                          tile.y_.length_,
+                          tile.y_.length_ / subsample_y,
 
                           // width, height
-                          tile.x_.length_,
+                          tile.x_.length_ / subsample_x,
                           1,
 
-                          pixelFormatGL,
-                          dataTypeGL,
-                          src);
+                          shader.pixelFormatGL_[k],
+                          shader.dataTypeGL_[k],
+                          src[k]);
           yae_assert_gl_no_error();
         }
 
@@ -2175,27 +2258,64 @@ namespace yae
             tile.y_.length_ < tile.y_.extent_)
         {
           // extend the bottom-right corner:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS, (tile.x_.offset_ +
-                                                tile.x_.length_ - 1));
-          glPixelStorei(GL_UNPACK_SKIP_ROWS, (tile.y_.offset_ +
-                                              tile.y_.length_ - 1));
+          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                        (tile.x_.offset_ + tile.x_.length_) /
+                        subsample_x - 1);
+          glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                        (tile.y_.offset_ + tile.y_.length_) /
+                        subsample_y - 1);
+
           glTexSubImage2D(GL_TEXTURE_2D,
                           0, // mipmap level
 
                           // x,y offset
-                          tile.x_.length_,
-                          tile.y_.length_,
+                          tile.x_.length_ / subsample_x,
+                          tile.y_.length_ / subsample_y,
 
                           // width, height
                           1,
                           1,
 
-                          pixelFormatGL,
-                          dataTypeGL,
-                          src);
+                          shader.pixelFormatGL_[k],
+                          shader.dataTypeGL_[k],
+                          src[k]);
           yae_assert_gl_no_error();
         }
       }
+    }
+
+    if (shader_)
+    {
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+
+      // FIXME: should use the inverse of the matrix
+      // that produced the YUV data in the first place,
+      // instead of hard coding this matrix taken from
+      // http://www.fourcc.org/fccyvrgb.php
+      GLdouble yuv_to_rgb[] = {
+        // red:
+        1.164,    0.0,  1.596, -1.164 * 0.073 - 0.5 * 1.596,
+        // green:
+        1.164, -0.391, -0.813, -1.164 * 0.073 + 0.5 * (0.391 + 0.813),
+        // blue:
+        1.164,  2.018,    0.0, -1.164 * 0.073 - 0.5 * 2.018,
+      };
+
+      // pass the YUV->RGB color transform matrix:
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    0, &yuv_to_rgb[0]);
+      yae_assert_gl_no_error();
+
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    1, &yuv_to_rgb[4]);
+      yae_assert_gl_no_error();
+
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    2, &yuv_to_rgb[8]);
+      yae_assert_gl_no_error();
+
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
     }
 
     return true;
@@ -2226,24 +2346,35 @@ namespace yae
     double sy = ih / double(crop.h_);
     glScaled(sx, sy, 1.0);
 
+    const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
+
     glEnable(GL_TEXTURE_2D);
     for (std::size_t i = 0; i < tiles_.size(); ++i)
     {
       const TFrameTile & tile = tiles_[i];
-      GLuint texId = texId_[i];
-      glBindTexture(GL_TEXTURE_2D, texId);
-
-      if (!glIsTexture(texId))
-      {
-        YAE_ASSERT(false);
-        continue;
-      }
-
-      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
       glDisable(GL_LIGHTING);
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       glColor3f(1.f, 1.f, 1.f);
+
+      if (shader_)
+      {
+        glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+        glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      }
+      else
+      {
+        GLuint texId = texId_[i * shader.numPlanes_];
+        glBindTexture(GL_TEXTURE_2D, texId);
+
+        if (!glIsTexture(texId))
+        {
+          YAE_ASSERT(false);
+          continue;
+        }
+
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+      }
 
       glBegin(GL_QUADS);
       {
@@ -2260,6 +2391,11 @@ namespace yae
         glVertex2i(tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
+
+      if (shader_)
+      {
+        glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      }
     }
     glDisable(GL_TEXTURE_2D);
   }
