@@ -3986,9 +3986,24 @@ namespace yae
                                                        pixelFormatGL,
                                                        dataTypeGL,
                                                        shouldSwapBytes);
-        unsupported = (supportedChannels < 1 ||
-                       supportedChannels != ptts->channels_ &&
-                       !actionSkipColorConverter->isChecked());
+
+        bool skipColorConverter = actionSkipColorConverter->isChecked();
+
+        const TFragmentShader * fragmentShader =
+          (supportedChannels != ptts->channels_) ?
+          canvas_->fragmentShaderFor(vtts.pixelFormat_) :
+          NULL;
+
+        if (!supportedChannels && !fragmentShader)
+        {
+          unsupported = true;
+        }
+        else if (supportedChannels != ptts->channels_ &&
+                 !skipColorConverter &&
+                 !fragmentShader)
+        {
+          unsupported = true;
+        }
       }
 
       if (unsupported)
@@ -4018,7 +4033,7 @@ namespace yae
 
         reader->setVideoTraitsOverride(vtts);
       }
-#elif 1
+#elif 0
       vtts.pixelFormat_ = kPixelFormatYUV420P9;
       reader->setVideoTraitsOverride(vtts);
       canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));

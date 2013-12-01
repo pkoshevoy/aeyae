@@ -367,12 +367,13 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // VideoTraits::sameFrameSize
+  // VideoTraits::sameFrameSizeAndFormat
   //
   bool
-  VideoTraits::sameFrameSize(const VideoTraits & vt) const
+  VideoTraits::sameFrameSizeAndFormat(const VideoTraits & vt) const
   {
-    return (encodedWidth_ == vt.encodedWidth_ &&
+    return (pixelFormat_ == vt.pixelFormat_ &&
+            encodedWidth_ == vt.encodedWidth_ &&
             encodedHeight_ == vt.encodedHeight_ &&
             offsetTop_ == vt.offsetTop_ &&
             offsetLeft_ == vt.offsetLeft_ &&

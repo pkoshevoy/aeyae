@@ -250,7 +250,7 @@ namespace yae
   {
     VideoTraits();
 
-    bool sameFrameSize(const VideoTraits & vt) const;
+    bool sameFrameSizeAndFormat(const VideoTraits & vt) const;
 
     bool operator == (const VideoTraits & vt) const;
 

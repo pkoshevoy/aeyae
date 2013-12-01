@@ -7,7 +7,10 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#include <algorithm>
 #include <iostream>
+#include <iomanip>
+#include <iterator>
 #include <math.h>
 #include <deque>
 
@@ -46,6 +49,301 @@ extern "C"
 #include <ass/ass.h>
 }
 #endif
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuv_to_rgb
+//
+static const char * yae_gl_arb_yuv_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "PARAM subsample_uv = program.local[3];\n"
+  "TEMP yuv;\n"
+  "TEMP coord_uv;\n"
+  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuva_to_rgba
+//
+static const char * yae_gl_arb_yuva_to_rgba =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "PARAM subsample_uv = program.local[3];\n"
+  "TEMP yuv;\n"
+  "TEMP coord_uv;\n"
+  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
+  "TEX result.color.a, fragment.texcoord[0], texture[3], RECT;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuv_p10_to_rgb
+//
+static const char * yae_gl_arb_yuv_p10_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "PARAM subsample_uv = program.local[3];\n"
+  "TEMP yuv;\n"
+  "TEMP coord_uv;\n"
+  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
+  "MUL yuv, yuv, 64.0;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_yuv_shared
+//
+#define yae_gl_arb_yuyv_to_yuv_shared(out, chroma)                      \
+  "MAD t0,    x00.x, 0.5, 0.1;\n"                                       \
+  "FRC t0,    t0;\n"                                                    \
+  "MUL t0,    t0, 2.0;\n"                                               \
+  "FLR t0,    t0;\n"                                                    \
+  "SUB t1,    1.1, t0;\n"                                               \
+  "FLR t1,    t1;\n"                                                    \
+  "MOV x10,   x00;\n"                                                   \
+  "ADD x10.x, x00.x, -1;\n"                                             \
+  "MOV x01,   x00;\n"                                                   \
+  "ADD x01.x, x00.x, 1;\n"                                              \
+  "TEX u0,    x10, texture[0], RECT;\n"                                 \
+  "TEX uv,    x00, texture[0], RECT;\n"                                 \
+  "TEX v1,    x01, texture[0], RECT;\n"                                 \
+  "MUL "#out".y, u0."#chroma", t0.x;\n"                                 \
+  "MAD "#out".y, uv."#chroma", t1.x, "#out".y;\n"                       \
+  "MUL "#out".z, uv."#chroma", t0.x;\n"                                 \
+  "MAD "#out".z, v1."#chroma", t1.x, "#out".z;\n"
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_yuv_00
+//
+#define yae_gl_arb_yuyv_to_yuv_00(out)                                  \
+  "FLR x00,   fragment.texcoord[0];\n"                                  \
+  "TEX "#out", x00, texture[0], RECT;\n"                                \
+  yae_gl_arb_yuyv_to_yuv_shared(out, a)
+
+//----------------------------------------------------------------
+// yae_gl_arb_uyvy_to_yuv_00
+//
+#define yae_gl_arb_uyvy_to_yuv_00(out)                                  \
+  "FLR x00,   fragment.texcoord[0];\n"                                  \
+  "TEX "#out", x00, texture[0], RECT;\n"                                \
+  "MOV "#out".x, "#out".a;\n"                                           \
+  yae_gl_arb_yuyv_to_yuv_shared(out, x)
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_yuv
+//
+#define yae_gl_arb_yuyv_to_yuv(dx, dy, out)                             \
+  "FLR x00,   fragment.texcoord[0];\n"                                  \
+  "ADD x00,   x00, { "#dx", "#dy", 0, 0 };\n"                           \
+  "TEX "#out", x00, texture[0], RECT;\n"                                \
+  yae_gl_arb_yuyv_to_yuv_shared(out, a)
+
+//----------------------------------------------------------------
+// yae_gl_arb_uyvy_to_yuv
+//
+#define yae_gl_arb_uyvy_to_yuv(dx, dy, out)                             \
+  "FLR x00,   fragment.texcoord[0];\n"                                  \
+  "ADD x00,   x00, { "#dx", "#dy", 0, 0 };\n"                           \
+  "TEX "#out", x00, texture[0], RECT;\n"                                \
+  "MOV "#out".x, "#out".a;\n"                                           \
+  yae_gl_arb_yuyv_to_yuv_shared(out, x)
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_rgb_antialias
+//
+static const char * yae_gl_arb_yuyv_to_rgb_antialias =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+
+  "TEMP t0;\n"
+  "TEMP t1;\n"
+  "TEMP x00;\n"
+  "TEMP x10;\n"
+  "TEMP x01;\n"
+  "TEMP yuv;\n"
+  "TEMP u0;\n"
+  "TEMP uv;\n"
+  "TEMP v1;\n"
+
+  // calculate interpolation weights:
+  "TEMP w0;\n"
+  "TEMP w1;\n"
+  "FRC w0, fragment.texcoord[0];\n"
+  "SUB w1, 1.0, w0;\n"
+  "TEMP weight;\n"
+
+  "MUL weight, w1.x, w1.y;\n"
+  "TEMP p00;\n"
+  yae_gl_arb_yuyv_to_yuv_00(p00)
+  "MUL yuv, p00, weight;\n"
+
+  "MUL weight, w0.x, w1.y;\n"
+  "TEMP p10;\n"
+  yae_gl_arb_yuyv_to_yuv(1, 0, p10)
+  "MAD yuv, p10, weight, yuv;\n"
+
+  "MUL weight, w1.x, w0.y;\n"
+  "TEMP p01;\n"
+  yae_gl_arb_yuyv_to_yuv(0, 1, p01)
+  "MAD yuv, p01, weight, yuv;\n"
+
+  "MUL weight, w0.x, w0.y;\n"
+  "TEMP p11;\n"
+  yae_gl_arb_yuyv_to_yuv(1, 1, p11)
+  "MAD yuv, p11, weight, yuv;\n"
+
+  // convert to RGB:
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuyv_to_rgb
+//
+static const char * yae_gl_arb_yuyv_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+
+  "TEMP t0;\n"
+  "TEMP t1;\n"
+  "TEMP x00;\n"
+  "TEMP x10;\n"
+  "TEMP x01;\n"
+  "TEMP yuv;\n"
+  "TEMP u0;\n"
+  "TEMP uv;\n"
+  "TEMP v1;\n"
+
+  yae_gl_arb_yuyv_to_yuv_00(yuv)
+
+  // convert to RGB:
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_uyvy_to_rgb_antialias
+//
+static const char * yae_gl_arb_uyvy_to_rgb_antialias =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+
+  "TEMP t0;\n"
+  "TEMP t1;\n"
+  "TEMP x00;\n"
+  "TEMP x10;\n"
+  "TEMP x01;\n"
+  "TEMP yuv;\n"
+  "TEMP u0;\n"
+  "TEMP uv;\n"
+  "TEMP v1;\n"
+
+  // calculate interpolation weights:
+  "TEMP w0;\n"
+  "TEMP w1;\n"
+  "FRC w0, fragment.texcoord[0];\n"
+  "SUB w1, 1.0, w0;\n"
+  "TEMP weight;\n"
+
+  "MUL weight, w1.x, w1.y;\n"
+  "TEMP p00;\n"
+  yae_gl_arb_uyvy_to_yuv_00(p00)
+  "MUL yuv, p00, weight;\n"
+
+  "MUL weight, w0.x, w1.y;\n"
+  "TEMP p10;\n"
+  yae_gl_arb_uyvy_to_yuv(1, 0, p10)
+  "MAD yuv, p10, weight, yuv;\n"
+
+  "MUL weight, w1.x, w0.y;\n"
+  "TEMP p01;\n"
+  yae_gl_arb_uyvy_to_yuv(0, 1, p01)
+  "MAD yuv, p01, weight, yuv;\n"
+
+  "MUL weight, w0.x, w0.y;\n"
+  "TEMP p11;\n"
+  yae_gl_arb_uyvy_to_yuv(1, 1, p11)
+  "MAD yuv, p11, weight, yuv;\n"
+
+  // convert to RGB:
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_uyvy_to_rgb
+//
+static const char * yae_gl_arb_uyvy_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+
+  "TEMP t0;\n"
+  "TEMP t1;\n"
+  "TEMP x00;\n"
+  "TEMP x10;\n"
+  "TEMP x01;\n"
+  "TEMP yuv;\n"
+  "TEMP u0;\n"
+  "TEMP uv;\n"
+  "TEMP v1;\n"
+
+  yae_gl_arb_uyvy_to_yuv_00(yuv)
+
+  // convert to RGB:
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+#undef yae_gl_arb_yuyv_to_yuv_shared
+#undef yae_gl_arb_yuyv_to_yuv_00
+#undef yae_gl_arb_uyvy_to_yuv_00
+#undef yae_gl_arb_yuyv_to_yuv
+#undef yae_gl_arb_uyvy_to_yuv
 
 
 //----------------------------------------------------------------
@@ -417,6 +715,69 @@ yae_assert_gl_no_error()
   return false;
 }
 
+//----------------------------------------------------------------
+// load_arb_program_natively
+//
+static bool
+load_arb_program_natively(GLenum target, const char * prog)
+{
+  std::size_t len = strlen(prog);
+  glProgramStringARB(target, GL_PROGRAM_FORMAT_ASCII_ARB, len, prog);
+  GLenum err = glGetError();
+
+  GLint errorPos = -1;
+  glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+
+#if 0
+  std::string errorStr;
+  if (errorPos < len && errorPos >= 0)
+  {
+    const GLubyte * err = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
+    if (err)
+    {
+      errorStr.assign((const char *)err);
+    }
+
+    std::cerr << '\t';
+    for (int i = 1; i < 80; i += 8)
+    {
+      std::cerr << std::left << std::setw(8) << std::setfill(' ') << i;
+    }
+    std::cerr << '\n';
+
+    unsigned int lineNo = 0;
+    char prev = '\n';
+    const char * i = prog;
+    const char * end = prog + len;
+    while (i < end)
+    {
+      if (prev == '\n')
+      {
+        lineNo++;
+        std::cerr << std::left << std::setw(8) << std::setfill(' ') << lineNo;
+      }
+
+      std::cerr << *i;
+      prev = *i;
+      i++;
+    }
+
+    std::cerr << '\n' << errorStr << std::endl;
+  }
+#endif
+
+  GLint isNative = 0;
+  glGetProgramivARB(target, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &isNative);
+
+  if (errorPos == -1 &&
+      isNative == 1)
+  {
+    return true;
+  }
+
+  return false;
+}
+
 namespace yae
 {
 
@@ -532,6 +893,153 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TFragmentShaderProgram::TFragmentShaderProgram
+  //
+  TFragmentShaderProgram::TFragmentShaderProgram(const char * code):
+    code_(code),
+    handle_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // TFragmentShader::TFragmentShader
+  //
+  TFragmentShader::TFragmentShader(const TFragmentShaderProgram * program,
+                                   TPixelFormatId format):
+    program_(program),
+    numPlanes_(0)
+  {
+    memset(stride_, 0, sizeof(stride_));
+    memset(subsample_x_, 1, sizeof(subsample_x_));
+    memset(subsample_y_, 1, sizeof(subsample_y_));
+    memset(internalFormatGL_, 0, sizeof(internalFormatGL_));
+    memset(pixelFormatGL_, 0, sizeof(pixelFormatGL_));
+    memset(dataTypeGL_, 0, sizeof(dataTypeGL_));
+    memset(magFilterGL_, 0, sizeof(magFilterGL_));
+    memset(minFilterGL_, 0, sizeof(minFilterGL_));
+    memset(shouldSwapBytes_, 0, sizeof(shouldSwapBytes_));
+
+    const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
+    if (ptts)
+    {
+      // figure out how many texture objects this format requires
+      // per sample planes:
+
+      // build a histogram:
+      unsigned char nchannels[4] = { 0 };
+      for (unsigned char i = 0; i < ptts->channels_; i++)
+      {
+        nchannels[ptts->plane_[i]]++;
+      }
+
+      // count contributing histogram bins, calculate sample stride:
+      numPlanes_ = 0;
+      for (unsigned char channel = 0, i = 0; i < ptts->channels_; i++)
+      {
+        if (!nchannels[i])
+        {
+          continue;
+        }
+
+        stride_[numPlanes_] = ptts->stride_[channel];
+        unsigned char stride_bytes = stride_[numPlanes_] / 8;
+
+        const bool nativeEndian =
+          (ptts->flags_ & pixelFormat::kNativeEndian);
+
+        if (stride_bytes == 1 && ptts->depth_[0] == 8)
+        {
+          internalFormatGL_[numPlanes_] = (GLint)GL_LUMINANCE;
+          pixelFormatGL_   [numPlanes_] = (GLenum)GL_LUMINANCE;
+          dataTypeGL_      [numPlanes_] = (GLenum)GL_UNSIGNED_BYTE;
+          shouldSwapBytes_ [numPlanes_] = (GLint)0;
+        }
+        else if (stride_bytes == 2 && ptts->depth_[0] == 8)
+        {
+          internalFormatGL_[numPlanes_] = (GLint)GL_LUMINANCE8_ALPHA8;
+          pixelFormatGL_   [numPlanes_] = (GLenum)GL_LUMINANCE_ALPHA;
+          dataTypeGL_      [numPlanes_] = (GLenum)GL_UNSIGNED_BYTE;
+          shouldSwapBytes_ [numPlanes_] = (GLint)0;
+        }
+        else if (stride_bytes == 2 && ptts->depth_[0] > 8)
+        {
+          internalFormatGL_[numPlanes_] = (GLint)GL_LUMINANCE16;
+          pixelFormatGL_   [numPlanes_] = (GLenum)GL_LUMINANCE;
+          dataTypeGL_      [numPlanes_] = (GLenum)GL_UNSIGNED_SHORT;
+          shouldSwapBytes_ [numPlanes_] = (GLint)(nativeEndian ? 0 : 1);
+        }
+        else if (program)
+        {
+          // FIXME: write me!
+          YAE_ASSERT(false);
+        }
+
+        if (ptts->flags_ & pixelFormat::kYUV && nchannels[i] > 1)
+        {
+          // YUYV, UYVY, NV12, NV21 should avoid linear filtering,
+          // it blends U and V channels inappropriately;
+          // the fragment shader should perform the antialising
+          // instead, after YUV -> RGB conversion:
+          magFilterGL_[numPlanes_] = GL_NEAREST;
+          minFilterGL_[numPlanes_] = GL_NEAREST;
+        }
+        else
+        {
+          magFilterGL_[numPlanes_] = GL_LINEAR;
+          minFilterGL_[numPlanes_] = GL_LINEAR;
+        }
+
+        channel += nchannels[i];
+        numPlanes_++;
+      }
+
+      // consider chroma (UV) plane(s) sub-sampling:
+      if ((ptts->flags_ & pixelFormat::kYUV) &&
+          (ptts->flags_ & pixelFormat::kPlanar) &&
+          (ptts->chromaBoxW_ > 1 ||
+           ptts->chromaBoxH_ > 1))
+      {
+        for (unsigned char i = nchannels[0]; i < 3 && i < ptts->channels_; )
+        {
+          subsample_x_[i] = ptts->chromaBoxW_;
+          subsample_y_[i] = ptts->chromaBoxH_;
+          i += nchannels[i];
+        }
+      }
+
+      // FIXME: for debugging, above code should be reused
+      // in Traits::getPlanes(..) because it is more efficient
+      {
+        unsigned char stride[4] = { 0 };
+        unsigned int numPlanes = ptts->getPlanes(stride);
+        YAE_ASSERT(numPlanes_ == numPlanes);
+        YAE_ASSERT(memcmp(stride_, stride, sizeof(stride)) == 0);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // configure_builtin_shader
+  //
+  static unsigned int
+  configure_builtin_shader(TFragmentShader & builtinShader,
+                           TPixelFormatId yaePixelFormat)
+  {
+    builtinShader = TFragmentShader(NULL, yaePixelFormat);
+
+    unsigned int supportedChannels =
+      yae_to_opengl(yaePixelFormat,
+                    builtinShader.internalFormatGL_[0],
+                    builtinShader.pixelFormatGL_[0],
+                    builtinShader.dataTypeGL_[0],
+                    builtinShader.shouldSwapBytes_[0]);
+
+    // restrict to a single texture object:
+    builtinShader.numPlanes_ = 1;
+
+    return supportedChannels;
+  }
+
+  //----------------------------------------------------------------
   // Canvas::TPrivate
   //
   class Canvas::TPrivate
@@ -540,15 +1048,21 @@ namespace yae
     TPrivate():
       dar_(0.0),
       darCropped_(0.0),
-      verticalScalingEnabled_(false)
+      verticalScalingEnabled_(false),
+      shader_(NULL)
     {}
 
-    virtual ~TPrivate() {}
+    virtual ~TPrivate()
+    {
+      destroyFragmentShaders();
+    }
+
+    virtual void createFragmentShaders() = 0;
 
     virtual void clear(QGLWidget * canvas) = 0;
 
-    virtual bool loadFrame(QGLWidget * canvas,
-                           const TVideoFramePtr & frame) = 0;
+    virtual bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & f) = 0;
+
     virtual void draw() = 0;
 
     // helper:
@@ -688,21 +1202,106 @@ namespace yae
       frame = frame_;
     }
 
-  protected:
+    // helper:
+    const TFragmentShader *
+    fragmentShaderFor(TPixelFormatId format) const
+    {
+      std::map<TPixelFormatId, TFragmentShader>::const_iterator
+        found = shaders_.find(format);
 
+#if 0
+      // for debugging only:
+      {
+        const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
+        std::cerr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
+        if (found != shaders_.end())
+        {
+          std::cerr
+            << '\n' << found->second.program_->code_ << '\n'
+            << std::endl;
+        }
+        else
+        {
+          std::cerr << " NOT FOUND" << std::endl;
+        }
+      }
+#endif
+
+      if (found != shaders_.end())
+      {
+        return &(found->second);
+      }
+
+      return NULL;
+    }
+
+  protected:
+    // helper:
+    void destroyFragmentShaders()
+    {
+      shader_ = NULL;
+      shaders_.clear();
+
+      while (!shaderPrograms_.empty())
+      {
+        TFragmentShaderProgram & program = shaderPrograms_.front();
+
+        if (program.handle_)
+        {
+          glDeleteProgramsARB(1, &program.handle_);
+          program.handle_ = 0;
+        }
+
+        shaderPrograms_.pop_front();
+      }
+    }
+
+    // helper:
+    bool createFragmentShadersFor(const TPixelFormatId * formats,
+                                  const std::size_t numFormats,
+                                  const char * code)
+    {
+      TFragmentShaderProgram program(code);
+
+      glGenProgramsARB(1, &program.handle_);
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_);
+
+      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB, program.code_))
+      {
+        shaderPrograms_.push_back(program);
+
+        const TFragmentShaderProgram *
+          shaderProgram = &(shaderPrograms_.back());
+
+        for (std::size_t i = 0; i < numFormats; i++)
+        {
+          TPixelFormatId format = formats[i];
+          shaders_[format] = TFragmentShader(shaderProgram, format);
+        }
+
+        return true;
+      }
+
+      glDeleteProgramsARB(1, &program.handle_);
+      program.handle_ = 0;
+      return false;
+    }
+
+    // helper:
     inline bool setFrame(const TVideoFramePtr & frame)
     {
       // NOTE: this assumes that the mutex is already locked:
-      bool frameSizeChanged = false;
+      bool frameSizeOrFormatChanged = false;
 
-      if (!frame_ || !frame || !frame_->traits_.sameFrameSize(frame->traits_))
+      if (!frame_ || !frame ||
+          !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
       {
         crop_.clear();
-        frameSizeChanged = true;
+        frameSizeOrFormatChanged = true;
       }
 
       frame_ = frame;
-      return frameSizeChanged;
+      return frameSizeOrFormatChanged;
     }
 
     mutable boost::mutex mutex_;
@@ -711,6 +1310,11 @@ namespace yae
     double dar_;
     double darCropped_;
     bool verticalScalingEnabled_;
+
+    std::list<TFragmentShaderProgram> shaderPrograms_;
+    std::map<TPixelFormatId, TFragmentShader> shaders_;
+    const TFragmentShader * shader_;
+    TFragmentShader builtinShader_;
   };
 
   //----------------------------------------------------------------
@@ -718,7 +1322,8 @@ namespace yae
   //
   struct TModernCanvas : public Canvas::TPrivate
   {
-    TModernCanvas();
+    // virtual:
+    void createFragmentShaders();
 
     // virtual:
     void clear(QGLWidget * canvas);
@@ -730,15 +1335,88 @@ namespace yae
     void draw();
 
   protected:
-    GLuint texId_;
+    std::vector<GLuint> texId_;
   };
 
   //----------------------------------------------------------------
-  // TModernCanvas::TModernCanvas
+  // TModernCanvas::createFragmentShaders
   //
-  TModernCanvas::TModernCanvas():
-    texId_(0)
-  {}
+  void
+  TModernCanvas::createFragmentShaders()
+  {
+    if (!shaderPrograms_.empty())
+    {
+      // avoid re-creating duplicate shaders:
+      YAE_ASSERT(false);
+      return;
+    }
+
+    // for YUV formats:
+    static const TPixelFormatId yuv[] = {
+      kPixelFormatYUV420P,
+      kPixelFormatYUV422P,
+      kPixelFormatYUV444P,
+      kPixelFormatYUV410P,
+      kPixelFormatYUV411P,
+      kPixelFormatNV12,
+      kPixelFormatNV21,
+      kPixelFormatYUV440P,
+      kPixelFormatYUVA420P,
+      kPixelFormatYUVJ420P,
+      kPixelFormatYUVJ422P,
+      kPixelFormatYUVJ444P,
+      kPixelFormatYUVJ440P
+    };
+
+    createFragmentShadersFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
+                             yae_gl_arb_yuv_to_rgb);
+
+    // for YUVA formats:
+    static const TPixelFormatId yuva[] = {
+      kPixelFormatYUVA420P
+    };
+
+    createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
+                             yae_gl_arb_yuva_to_rgba);
+
+    // for YUVP10 formats:
+    static const TPixelFormatId yuv_p10[] = {
+      kPixelFormatYUV420P10,
+      kPixelFormatYUV422P10,
+      kPixelFormatYUV444P10
+    };
+
+    createFragmentShadersFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
+                             yae_gl_arb_yuv_p10_to_rgb);
+
+    // for YUYV formats:
+    static const TPixelFormatId yuyv[] = {
+      kPixelFormatYUYV422
+    };
+
+    if (!createFragmentShadersFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
+                                  yae_gl_arb_yuyv_to_rgb_antialias))
+    {
+      // perhaps the anti-aliased program was too much for this GPU,
+      // try one witnout anti-aliasing:
+      createFragmentShadersFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
+                               yae_gl_arb_yuyv_to_rgb);
+    }
+
+    // for UYVY formats:
+    static const TPixelFormatId uyvy[] = {
+      kPixelFormatUYVY422
+    };
+
+    if (!createFragmentShadersFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
+                                  yae_gl_arb_uyvy_to_rgb_antialias))
+    {
+      // perhaps the anti-aliased program was too much for this GPU,
+      // try one witnout anti-aliasing:
+      createFragmentShadersFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
+                               yae_gl_arb_uyvy_to_rgb);
+    }
+  }
 
   //----------------------------------------------------------------
   // TModernCanvas::clear
@@ -749,8 +1427,12 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    glDeleteTextures(1, &texId_);
-    texId_ = 0;
+    if (!texId_.empty())
+    {
+      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      texId_.clear();
+    }
+
     dar_ = 0.0;
     darCropped_ = 0.0;
     crop_.clear();
@@ -761,8 +1443,7 @@ namespace yae
   // TModernCanvas::loadFrame
   //
   bool
-  TModernCanvas::loadFrame(QGLWidget * canvas,
-                           const TVideoFramePtr & frame)
+  TModernCanvas::loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
   {
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -777,78 +1458,173 @@ namespace yae
       return false;
     }
 
-    GLint internalFormatGL;
-    GLenum pixelFormatGL;
-    GLenum dataTypeGL;
-    GLint shouldSwapBytes;
-    unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                   internalFormatGL,
-                                                   pixelFormatGL,
-                                                   dataTypeGL,
-                                                   shouldSwapBytes);
-    if (!supportedChannels)
-    {
-      return false;
-    }
+    unsigned int supportedChannels =
+      configure_builtin_shader(builtinShader_, vtts.pixelFormat_);
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    glDeleteTextures(1, &texId_);
-    texId_ = 0;
+    // take the new frame:
+    bool frameSizeOrFormatChanged = setFrame(frame);
 
-    setFrame(frame);
+    // setup new texture objects:
+    if (frameSizeOrFormatChanged)
+    {
+      if (!texId_.empty())
+      {
+        glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+        texId_.clear();
+      }
 
-    glGenTextures(1, &texId_);
-    glEnable(GL_TEXTURE_RECTANGLE_EXT);
-    glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
+      if (supportedChannels == ptts->channels_)
+      {
+        shader_ = NULL;
+      }
+      else
+      {
+        shader_ = fragmentShaderFor(vtts.pixelFormat_);
+      }
+
+      if (!supportedChannels && !shader_)
+      {
+        return false;
+      }
+
+      const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
+
+      texId_.resize(shader.numPlanes_);
+      glGenTextures((GLsizei)(texId_.size()), &(texId_.front()));
+
+      glEnable(GL_TEXTURE_RECTANGLE_ARB);
+      for (std::size_t i = 0; i < shader.numPlanes_; i++)
+      {
+        glActiveTexture(GL_TEXTURE0 + i);
+        yae_assert_gl_no_error();
+
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
 
 #ifdef __APPLE__
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_STORAGE_HINT_APPLE,
-                    GL_STORAGE_CACHED_APPLE);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                        GL_TEXTURE_STORAGE_HINT_APPLE,
+                        GL_STORAGE_CACHED_APPLE);
 #endif
 
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                        GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                        GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_EXT,
-                    GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    yae_assert_gl_no_error();
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                        GL_TEXTURE_MAG_FILTER,
+                        shader.magFilterGL_[i]);
+        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                        GL_TEXTURE_MIN_FILTER,
+                        shader.minFilterGL_[i]);
+        yae_assert_gl_no_error();
 
+        TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+        {
+          glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
+                       0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                       shader.internalFormatGL_[i],
+                       vtts.encodedWidth_ / shader.subsample_x_[i],
+                       vtts.encodedHeight_ / shader.subsample_y_[i],
+                       0, // border width
+                       shader.pixelFormatGL_[i],
+                       shader.dataTypeGL_[i],
+                       NULL);
+          yae_assert_gl_no_error();
+        }
+      }
+      glDisable(GL_TEXTURE_RECTANGLE_ARB);
+    }
+
+    if (!supportedChannels && !shader_)
+    {
+      return false;
+    }
+
+    // upload texture data:
+    const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
-      glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
+      glEnable(GL_TEXTURE_RECTANGLE_ARB);
 
-      glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    (GLint)(frame->data_->rowBytes(0) /
-                            (ptts->stride_[0] / 8)));
+      for (std::size_t i = 0; i < shader.numPlanes_; i++)
+      {
+        glActiveTexture(GL_TEXTURE0 + i);
+        yae_assert_gl_no_error();
 
-      // order of bits in a byte only matters for bitmaps:
-      // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
+
+        glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[i]);
+
+        std::size_t rowSize =
+          frame->data_->rowBytes(i) / (shader.stride_[i] / 8);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
+        yae_assert_gl_no_error();
+
+        // order of bits in a byte only matters for bitmaps:
+        // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
 
 #ifdef __APPLE__
-      if (glewIsExtensionSupported("GL_APPLE_client_storage"))
-      {
-        glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
-      }
+        if (glewIsExtensionSupported(""))
+        {
+          glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+        }
 #endif
 
-      glTexImage2D(GL_TEXTURE_RECTANGLE_EXT,
-                   0, // always level-0 for GL_TEXTURE_RECTANGLE_EXT
-                   internalFormatGL,
-                   vtts.encodedWidth_,
-                   vtts.encodedHeight_,
-                   0, // border width
-                   pixelFormatGL,
-                   dataTypeGL,
-                   frame->data_->data(0));
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
+                     0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                     shader.internalFormatGL_[i],
+                     vtts.encodedWidth_ / shader.subsample_x_[i],
+                     vtts.encodedHeight_ / shader.subsample_y_[i],
+                     0, // border width
+                     shader.pixelFormatGL_[i],
+                     shader.dataTypeGL_[i],
+                     frame->data_->data(i));
+        yae_assert_gl_no_error();
+      }
+      glDisable(GL_TEXTURE_RECTANGLE_ARB);
     }
-    glDisable(GL_TEXTURE_RECTANGLE_EXT);
+
+    if (shader_)
+    {
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+
+      // FIXME: should use the inverse of the matrix
+      // that produced the YUV data in the first place,
+      // instead of hard coding this matrix taken from
+      // http://www.fourcc.org/fccyvrgb.php
+      GLdouble yuv_to_rgb[] = {
+        // red:
+        1.164,    0.0,  1.596, -1.164 * 0.073 - 0.5 * 1.596,
+        // green:
+        1.164, -0.391, -0.813, -1.164 * 0.073 + 0.5 * (0.391 + 0.813),
+        // blue:
+        1.164,  2.018,    0.0, -1.164 * 0.073 - 0.5 * 2.018,
+      };
+
+      // pass the YUV->RGB color transform matrix:
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 0, &yuv_to_rgb[0]);
+      yae_assert_gl_no_error();
+
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 1, &yuv_to_rgb[4]);
+      yae_assert_gl_no_error();
+
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 2, &yuv_to_rgb[8]);
+      yae_assert_gl_no_error();
+
+      GLdouble subsample_uv[4] = { 1.0 };
+      subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
+      subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
+
+      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB, 3, subsample_uv);
+      yae_assert_gl_no_error();
+
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+    }
 
     return true;
   }
@@ -860,19 +1636,10 @@ namespace yae
   TModernCanvas::draw()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    if (!texId_)
+    if (texId_.empty())
     {
       return;
     }
-
-    glEnable(GL_TEXTURE_RECTANGLE_EXT);
-    glBindTexture(GL_TEXTURE_RECTANGLE_EXT, texId_);
-
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-    glDisable(GL_LIGHTING);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glColor3f(1.f, 1.f, 1.f);
 
     double w = 0.0;
     double h = 0.0;
@@ -881,22 +1648,49 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    glBegin(GL_QUADS);
+    const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
+    const std::size_t numTextures = texId_.size();
+    for (std::size_t i = 0; i < numTextures; i += shader.numPlanes_)
     {
-      glTexCoord2i(crop.x_, crop.y_);
-      glVertex2i(0, 0);
+      glEnable(GL_TEXTURE_RECTANGLE_ARB);
 
-      glTexCoord2i(crop.x_ + crop.w_, crop.y_);
-      glVertex2i(int(w), 0);
+      glDisable(GL_LIGHTING);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      glColor3f(1.f, 1.f, 1.f);
 
-      glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_);
-      glVertex2i(int(w), int(h));
+      if (shader_)
+      {
+        glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+        glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      }
+      else
+      {
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+      }
 
-      glTexCoord2i(crop.x_, crop.y_ + crop.h_);
-      glVertex2i(0, int(h));
+      glBegin(GL_QUADS);
+      {
+        glTexCoord2i(crop.x_, crop.y_);
+        glVertex2i(0, 0);
+
+        glTexCoord2i(crop.x_ + crop.w_, crop.y_);
+        glVertex2i(int(w), 0);
+
+        glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_);
+        glVertex2i(int(w), int(h));
+
+        glTexCoord2i(crop.x_, crop.y_ + crop.h_);
+        glVertex2i(0, int(h));
+      }
+      glEnd();
+      glDisable(GL_TEXTURE_RECTANGLE_ARB);
+
+      if (shader_)
+      {
+        glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      }
     }
-    glEnd();
-    glDisable(GL_TEXTURE_RECTANGLE_EXT);
   }
 
   //----------------------------------------------------------------
@@ -935,6 +1729,11 @@ namespace yae
   //
   struct TLegacyCanvas : public Canvas::TPrivate
   {
+    TLegacyCanvas();
+
+    // virtual:
+    void createFragmentShaders();
+
     // virtual:
     void clear(QGLWidget * canvas);
 
@@ -949,12 +1748,25 @@ namespace yae
     GLsizei w_;
     GLsizei h_;
 
-    // padded image texture data:
-    std::vector<unsigned char> textureData_;
-
     std::vector<TFrameTile> tiles_;
     std::vector<GLuint> texId_;
   };
+
+  //----------------------------------------------------------------
+  // TLegacyCanvas::TLegacyCanvas
+  //
+  TLegacyCanvas::TLegacyCanvas():
+    Canvas::TPrivate(),
+    w_(0),
+    h_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // TLegacyCanvas::createFragmentShaders
+  //
+  void
+  TLegacyCanvas::createFragmentShaders()
+  {}
 
   //----------------------------------------------------------------
   // TLegacyCanvas::clear
@@ -965,21 +1777,19 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    frame_ = TVideoFramePtr();
+    if (!texId_.empty())
+    {
+      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      texId_.clear();
+    }
+
     w_ = 0;
     h_ = 0;
     dar_ = 0.0;
     darCropped_ = 0.0;
     crop_.clear();
-
-    if (!texId_.empty())
-    {
-      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
-    }
-
-    texId_.clear();
-    textureData_.clear();
     tiles_.clear();
+    frame_ = TVideoFramePtr();
   }
 
   //----------------------------------------------------------------
@@ -1079,8 +1889,7 @@ namespace yae
   // TLegacyCanvas::loadFrame
   //
   bool
-  TLegacyCanvas::loadFrame(QGLWidget * canvas,
-                           const TVideoFramePtr & frame)
+  TLegacyCanvas::loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
   {
     static const GLsizei textureEdgeMax = calcTextureEdgeMax();
 
@@ -1115,18 +1924,17 @@ namespace yae
     TMakeCurrentContext currentContext(canvas);
 
     // take the new frame:
-    bool frameSizeChanged = setFrame(frame);
+    bool frameSizeOrFormatChanged = setFrame(frame);
 
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    if (frameSizeChanged || w_ != crop.w_ || h_ != crop.h_)
+    if (frameSizeOrFormatChanged || w_ != crop.w_ || h_ != crop.h_)
     {
       if (!texId_.empty())
       {
         glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
         texId_.clear();
-        textureData_.clear();
       }
 
       w_ = crop.w_;
@@ -1213,9 +2021,9 @@ namespace yae
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shouldSwapBytes);
-      glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                    (GLint)(frame->data_->rowBytes(0) /
-                            (ptts->stride_[0] / 8)));
+
+      std::size_t rowSize = frame->data_->rowBytes(0) / (ptts->stride_[0] / 8);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
       yae_assert_gl_no_error();
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -1842,8 +2650,7 @@ namespace yae
     delete overlay_;
     overlay_ = NULL;
 
-    if ((glewIsExtensionSupported("GL_EXT_texture_rectangle") ||
-         glewIsExtensionSupported("GL_ARB_texture_rectangle")))
+    if (glewIsExtensionSupported("GL_ARB_texture_rectangle"))
     {
       private_ = new TModernCanvas();
       overlay_ = new TModernCanvas();
@@ -1854,7 +2661,27 @@ namespace yae
       overlay_ = new TLegacyCanvas();
     }
 
+    if (glewIsExtensionSupported("GL_ARB_fragment_program"))
+    {
+      GLint numTextureUnits = 0;
+      glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &numTextureUnits);
+
+      if (numTextureUnits > 2)
+      {
+        private_->createFragmentShaders();
+      }
+    }
+
     libass_ = asyncInitLibass(this, NULL, 0);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::fragmentShaderFor
+  //
+  const TFragmentShader *
+  Canvas::fragmentShaderFor(TPixelFormatId format) const
+  {
+    return private_ ? private_->fragmentShaderFor(format) : NULL;
   }
 
   //----------------------------------------------------------------

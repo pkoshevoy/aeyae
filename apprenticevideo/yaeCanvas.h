@@ -49,6 +49,53 @@ namespace yae
   class TLibass;
 
   //----------------------------------------------------------------
+  // TFragmentShader
+  //
+  struct TFragmentShaderProgram
+  {
+    TFragmentShaderProgram(const char * code = NULL);
+
+    // helper:
+    inline bool loaded() const
+    { return code_ && handle_; }
+
+    // GL_ARB_fragment_program source code:
+    const char * code_;
+
+    // GL_ARB_fragment_program handle:
+    GLuint handle_;
+  };
+
+  //----------------------------------------------------------------
+  // TFragmentShaderConfiguration
+  //
+  struct TFragmentShader
+  {
+    TFragmentShader(const TFragmentShaderProgram * program = NULL,
+                    TPixelFormatId format = kInvalidPixelFormat);
+
+    // pointer to the shader program:
+    const TFragmentShaderProgram * program_;
+
+    // number of texture objects required for this pixel format:
+    unsigned char numPlanes_;
+
+    // sample stride per texture object:
+    unsigned char stride_[4];
+
+    // sample plane (sub)sampling per texture object:
+    unsigned char subsample_x_[4];
+    unsigned char subsample_y_[4];
+
+    GLint internalFormatGL_[4];
+    GLenum pixelFormatGL_[4];
+    GLenum dataTypeGL_[4];
+    GLenum magFilterGL_[4];
+    GLenum minFilterGL_[4];
+    GLint shouldSwapBytes_[4];
+  };
+
+  //----------------------------------------------------------------
   // Canvas
   //
   class YAE_API Canvas : public QGLWidget,
@@ -68,6 +115,10 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
+
+    // return GL_ARB_fragment_program program handle (if it exists)
+    // for a given pixel format, return 0 otherwise:
+    const TFragmentShader * fragmentShaderFor(TPixelFormatId format) const;
 
     // specify reader ID tag so that the Canvas can discard
     // frames originating from any other reader:
