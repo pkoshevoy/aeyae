@@ -99,6 +99,42 @@ yae_show_program_listing(std::ostream & ostr,
 }
 
 //----------------------------------------------------------------
+// yae_gl_arb_yuv_to_rgb_2d
+//
+static const char * yae_gl_arb_yuv_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "MOV result.color.a, 1.0;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuva_to_rgba_2d
+//
+static const char * yae_gl_arb_yuva_to_rgba_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "TEX result.color.a, fragment.texcoord[0], texture[3], 2D;\n"
+  "DPH result.color.r, yuv, vr;\n"
+  "DPH result.color.g, yuv, vg;\n"
+  "DPH result.color.b, yuv, vb;\n"
+  "END\n";
+
+//----------------------------------------------------------------
 // yae_gl_arb_yuv_to_rgb
 //
 static const char * yae_gl_arb_yuv_to_rgb =
@@ -113,24 +149,6 @@ static const char * yae_gl_arb_yuv_to_rgb =
   "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
   "TEX yuv.y, coord_uv, texture[1], RECT;\n"
   "TEX yuv.z, coord_uv, texture[2], RECT;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
-  "MOV result.color.a, 1.0;\n"
-  "END\n";
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuv_to_rgb_2d
-//
-static const char * yae_gl_arb_yuv_to_rgb_2d =
-  "!!ARBfp1.0\n"
-  "PARAM vr = program.local[0];\n"
-  "PARAM vg = program.local[1];\n"
-  "PARAM vb = program.local[2];\n"
-  "TEMP yuv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
-  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
@@ -1443,7 +1461,6 @@ namespace yae
       kPixelFormatYUV410P,
       kPixelFormatYUV411P,
       kPixelFormatYUV440P,
-      kPixelFormatYUVA420P,
       kPixelFormatYUVJ420P,
       kPixelFormatYUVJ422P,
       kPixelFormatYUVJ444P,
@@ -1868,7 +1885,6 @@ namespace yae
       kPixelFormatYUV410P,
       kPixelFormatYUV411P,
       kPixelFormatYUV440P,
-      kPixelFormatYUVA420P,
       kPixelFormatYUVJ420P,
       kPixelFormatYUVJ422P,
       kPixelFormatYUVJ444P,
@@ -1877,6 +1893,14 @@ namespace yae
 
     createFragmentShadersFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
                              yae_gl_arb_yuv_to_rgb_2d);
+
+    // for YUVA formats:
+    static const TPixelFormatId yuva[] = {
+      kPixelFormatYUVA420P
+    };
+
+    createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
+                             yae_gl_arb_yuva_to_rgba_2d);
   }
 
   //----------------------------------------------------------------
