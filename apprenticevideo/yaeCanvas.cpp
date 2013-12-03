@@ -854,12 +854,13 @@ load_arb_program_natively(GLenum target, const char * prog)
   std::size_t len = strlen(prog);
   glProgramStringARB(target, GL_PROGRAM_FORMAT_ASCII_ARB, len, prog);
   GLenum err = glGetError();
+  (void)err;
 
   GLint errorPos = -1;
   glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
 
 #if !defined(NDEBUG)
-  if (errorPos < len && errorPos >= 0)
+  if (errorPos < (GLint)len && errorPos >= 0)
   {
     const GLubyte * err = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
     yae_show_program_listing(std::cerr, prog, len, (const char *)err);
@@ -1137,6 +1138,8 @@ namespace yae
 
     // restrict to a single texture object:
     builtinShader.numPlanes_ = 1;
+    builtinShader.magFilterGL_[0] = GL_LINEAR;
+    builtinShader.minFilterGL_[0] = GL_LINEAR;
 
     return supportedChannels;
   }
@@ -1597,8 +1600,11 @@ namespace yae
       glEnable(GL_TEXTURE_RECTANGLE_ARB);
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        glActiveTexture(GL_TEXTURE0 + i);
-        yae_assert_gl_no_error();
+        if (shader_)
+        {
+          glActiveTexture(GL_TEXTURE0 + i);
+          yae_assert_gl_no_error();
+        }
 
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
 
@@ -1651,8 +1657,11 @@ namespace yae
 
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        glActiveTexture(GL_TEXTURE0 + i);
-        yae_assert_gl_no_error();
+        if (shader_)
+        {
+          glActiveTexture(GL_TEXTURE0 + i);
+          yae_assert_gl_no_error();
+        }
 
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
 
@@ -2104,8 +2113,11 @@ namespace yae
 
         for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
-          glActiveTexture(GL_TEXTURE0 + k);
-          yae_assert_gl_no_error();
+          if (shader_)
+          {
+            glActiveTexture(GL_TEXTURE0 + k);
+            yae_assert_gl_no_error();
+          }
 
           GLuint texId = texId_[k + i * shader.numPlanes_];
           glBindTexture(GL_TEXTURE_2D, texId);
@@ -2180,8 +2192,11 @@ namespace yae
       unsigned int subsample_x = shader.subsample_x_[k];
       unsigned int subsample_y = shader.subsample_y_[k];
 
-      glActiveTexture(GL_TEXTURE0 + k);
-      yae_assert_gl_no_error();
+      if (shader_)
+      {
+        glActiveTexture(GL_TEXTURE0 + k);
+        yae_assert_gl_no_error();
+      }
 
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[k]);
 
