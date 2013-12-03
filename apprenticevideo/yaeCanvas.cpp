@@ -107,9 +107,9 @@ static const char * yae_gl_arb_yuv_to_rgb_2d =
   "PARAM vg = program.local[1];\n"
   "PARAM vb = program.local[2];\n"
   "TEMP yuv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[1], 2D;\n"
-  "TEX yuv.y, fragment.texcoord[0], texture[2], 2D;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[3], 2D;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
@@ -125,10 +125,10 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
   "PARAM vg = program.local[1];\n"
   "PARAM vb = program.local[2];\n"
   "TEMP yuv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[1], 2D;\n"
-  "TEX yuv.y, fragment.texcoord[0], texture[2], 2D;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[3], 2D;\n"
-  "TEX result.color.a, fragment.texcoord[0], texture[4], 2D;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "TEX result.color.a, fragment.texcoord[0], texture[3], 2D;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
@@ -146,9 +146,9 @@ static const char * yae_gl_arb_yuv_to_rgb =
   "TEMP yuv;\n"
   "TEMP coord_uv;\n"
   "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[1], RECT;\n"
-  "TEX yuv.y, coord_uv, texture[2], RECT;\n"
-  "TEX yuv.z, coord_uv, texture[3], RECT;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
@@ -167,10 +167,10 @@ static const char * yae_gl_arb_yuva_to_rgba =
   "TEMP yuv;\n"
   "TEMP coord_uv;\n"
   "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[1], RECT;\n"
-  "TEX yuv.y, coord_uv, texture[2], RECT;\n"
-  "TEX yuv.z, coord_uv, texture[3], RECT;\n"
-  "TEX result.color.a, fragment.texcoord[0], texture[4], RECT;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
+  "TEX result.color.a, fragment.texcoord[0], texture[3], RECT;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
@@ -188,9 +188,9 @@ static const char * yae_gl_arb_yuv_p10_to_rgb =
   "TEMP yuv;\n"
   "TEMP coord_uv;\n"
   "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[1], RECT;\n"
-  "TEX yuv.y, coord_uv, texture[2], RECT;\n"
-  "TEX yuv.z, coord_uv, texture[3], RECT;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
+  "TEX yuv.z, coord_uv, texture[2], RECT;\n"
   "MUL yuv, yuv, 64.0;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
@@ -229,17 +229,17 @@ static const char * yae_gl_arb_yuyv_to_rgb_antialias =
   "FLR t1,    t1;\n"
 
   // sample texture data:
-  "TEX q00,   x00, texture[1], RECT;\n"
+  "TEX q00,   x00, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
-  "TEX q01,   tmp, texture[1], RECT;\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 2, 0, 0, 0 };\n"
-  "TEX q02,   tmp, texture[1], RECT;\n"
+  "TEX q02,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
-  "TEX q10,   tmp, texture[1], RECT;\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
-  "TEX q11,   tmp, texture[1], RECT;\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 2, 1, 0, 0 };\n"
-  "TEX q12,   tmp, texture[1], RECT;\n"
+  "TEX q12,   tmp, texture[0], RECT;\n"
 
   // calculate interpolation weights:
   "TEMP w0;\n"
@@ -318,17 +318,17 @@ static const char * yae_gl_arb_uyvy_to_rgb_antialias =
   "FLR t1,    t1;\n"
 
   // sample texture data:
-  "TEX q00,   x00, texture[1], RECT;\n"
+  "TEX q00,   x00, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
-  "TEX q01,   tmp, texture[1], RECT;\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 2, 0, 0, 0 };\n"
-  "TEX q02,   tmp, texture[1], RECT;\n"
+  "TEX q02,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
-  "TEX q10,   tmp, texture[1], RECT;\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
-  "TEX q11,   tmp, texture[1], RECT;\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 2, 1, 0, 0 };\n"
-  "TEX q12,   tmp, texture[1], RECT;\n"
+  "TEX q12,   tmp, texture[0], RECT;\n"
 
   // calculate interpolation weights:
   "TEMP w0;\n"
@@ -404,13 +404,13 @@ static const char * yae_gl_arb_yuyv_to_rgb =
   "FLR t1,    t1;\n"
 
   // sample texture data:
-  "TEX q00,   x00, texture[1], RECT;\n"
+  "TEX q00,   x00, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
-  "TEX q01,   tmp, texture[1], RECT;\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
-  "TEX q10,   tmp, texture[1], RECT;\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
-  "TEX q11,   tmp, texture[1], RECT;\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
 
   "MOV yuv.x, q00.x;\n"
   "MUL yuv.y, q00.a, t1.x;\n"
@@ -454,13 +454,13 @@ static const char * yae_gl_arb_uyvy_to_rgb =
   "FLR t1,    t1;\n"
 
   // sample texture data:
-  "TEX q00,   x00, texture[1], RECT;\n"
+  "TEX q00,   x00, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 0, 0, 0 };\n"
-  "TEX q01,   tmp, texture[1], RECT;\n"
+  "TEX q01,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 0, 1, 0, 0 };\n"
-  "TEX q10,   tmp, texture[1], RECT;\n"
+  "TEX q10,   tmp, texture[0], RECT;\n"
   "ADD tmp,   x00, { 1, 1, 0, 0 };\n"
-  "TEX q11,   tmp, texture[1], RECT;\n"
+  "TEX q11,   tmp, texture[0], RECT;\n"
 
   "MOV yuv.x, q00.a;\n"
   "MUL yuv.y, q00.x, t1.x;\n"
@@ -1566,11 +1566,6 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    if (glActiveTexture)
-    {
-      glActiveTexture((GLenum)(GL_TEXTURE0));
-    }
-
     // take the new frame:
     bool frameSizeOrFormatChanged = setFrame(frame);
 
@@ -1605,12 +1600,6 @@ namespace yae
       glEnable(GL_TEXTURE_RECTANGLE_ARB);
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        if (shader_)
-        {
-          glActiveTexture((GLenum)(GL_TEXTURE1 + i));
-          yae_assert_gl_no_error();
-        }
-
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
 
 #ifdef __APPLE__
@@ -1662,12 +1651,6 @@ namespace yae
 
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        if (shader_)
-        {
-          glActiveTexture((GLenum)(GL_TEXTURE1 + i));
-          yae_assert_gl_no_error();
-        }
-
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
 
         glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[i]);
@@ -1765,25 +1748,45 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
+    if (glActiveTexture)
+    {
+      glActiveTexture(GL_TEXTURE0);
+      yae_assert_gl_no_error();
+    }
+
+    glEnable(GL_TEXTURE_RECTANGLE_ARB);
+    glDisable(GL_LIGHTING);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColor3f(1.f, 1.f, 1.f);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    if (shader_)
+    {
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+    }
+
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     const std::size_t numTextures = texId_.size();
     for (std::size_t i = 0; i < numTextures; i += shader.numPlanes_)
     {
-      glEnable(GL_TEXTURE_RECTANGLE_ARB);
-
-      glDisable(GL_LIGHTING);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glColor3f(1.f, 1.f, 1.f);
-
       if (shader_)
       {
         glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
-        glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      }
+
+      if (glActiveTexture)
+      {
+        for (std::size_t k = 0; k < shader.numPlanes_; k++)
+        {
+          glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+          yae_assert_gl_no_error();
+
+          glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[k + i]);
+        }
       }
       else
       {
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
       }
 
       glBegin(GL_QUADS);
@@ -1801,13 +1804,14 @@ namespace yae
         glVertex2i(0, int(h));
       }
       glEnd();
-      glDisable(GL_TEXTURE_RECTANGLE_ARB);
-
-      if (shader_)
-      {
-        glDisable(GL_FRAGMENT_PROGRAM_ARB);
-      }
     }
+
+    if (shader_)
+    {
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+    }
+
+    glDisable(GL_TEXTURE_RECTANGLE_ARB);
   }
 
   //----------------------------------------------------------------
@@ -2061,11 +2065,6 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
 
-    if (glActiveTexture)
-    {
-      glActiveTexture((GLenum)(GL_TEXTURE0));
-    }
-
     // take the new frame:
     bool frameSizeOrFormatChanged = setFrame(frame);
 
@@ -2123,12 +2122,6 @@ namespace yae
 
         for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
-          if (shader_)
-          {
-            glActiveTexture((GLenum)(GL_TEXTURE1 + k));
-            yae_assert_gl_no_error();
-          }
-
           GLuint texId = texId_[k + i * shader.numPlanes_];
           glBindTexture(GL_TEXTURE_2D, texId);
 
@@ -2201,12 +2194,6 @@ namespace yae
     {
       unsigned int subsample_x = shader.subsample_x_[k];
       unsigned int subsample_y = shader.subsample_y_[k];
-
-      if (shader_)
-      {
-        glActiveTexture((GLenum)(GL_TEXTURE1 + k));
-        yae_assert_gl_no_error();
-      }
 
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[k]);
 
@@ -2391,38 +2378,51 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
+    if (glActiveTexture)
+    {
+      glActiveTexture(GL_TEXTURE0);
+      yae_assert_gl_no_error();
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColor3f(1.f, 1.f, 1.f);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    if (shader_)
+    {
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+    }
+
     double sx = iw / double(crop.w_);
     double sy = ih / double(crop.h_);
     glScaled(sx, sy, 1.0);
 
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
-
-    glEnable(GL_TEXTURE_2D);
-    for (std::size_t i = 0; i < tiles_.size(); ++i)
+    const std::size_t numTiles = tiles_.size();
+    for (std::size_t i = 0; i < numTiles; i++)
     {
       const TFrameTile & tile = tiles_[i];
-
-      glDisable(GL_LIGHTING);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glColor3f(1.f, 1.f, 1.f);
 
       if (shader_)
       {
         glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
-        glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      }
+
+      if (glActiveTexture)
+      {
+        for (std::size_t k = 0; k < shader.numPlanes_; k++)
+        {
+          glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+          yae_assert_gl_no_error();
+
+          glBindTexture(GL_TEXTURE_2D, texId_[k + i * shader.numPlanes_]);
+        }
       }
       else
       {
-        GLuint texId = texId_[i * shader.numPlanes_];
-        glBindTexture(GL_TEXTURE_2D, texId);
-
-        if (!glIsTexture(texId))
-        {
-          YAE_ASSERT(false);
-          continue;
-        }
-
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glBindTexture(GL_TEXTURE_2D, texId_[i * shader.numPlanes_]);
       }
 
       glBegin(GL_QUADS);
@@ -2440,12 +2440,13 @@ namespace yae
         glVertex2i(tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
-
-      if (shader_)
-      {
-        glDisable(GL_FRAGMENT_PROGRAM_ARB);
-      }
     }
+
+    if (shader_)
+    {
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+    }
+
     glDisable(GL_TEXTURE_2D);
   }
 
@@ -3314,11 +3315,6 @@ namespace yae
     {
       if (overlay_ && overlay_->pixelTraits())
       {
-        if (glActiveTexture)
-        {
-          glActiveTexture((GLenum)(GL_TEXTURE0));
-        }
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
