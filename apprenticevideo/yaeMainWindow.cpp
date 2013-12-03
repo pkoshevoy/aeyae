@@ -1114,6 +1114,7 @@ namespace yae
         "otf",
         "ttf",
         "fon",
+        "key",
         "license",
         "ignore"
       };

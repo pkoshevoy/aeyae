@@ -852,7 +852,7 @@ static bool
 load_arb_program_natively(GLenum target, const char * prog)
 {
   std::size_t len = strlen(prog);
-  glProgramStringARB(target, GL_PROGRAM_FORMAT_ASCII_ARB, len, prog);
+  glProgramStringARB(target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, prog);
   GLenum err = glGetError();
   (void)err;
 
@@ -1602,7 +1602,7 @@ namespace yae
       {
         if (shader_)
         {
-          glActiveTexture(GL_TEXTURE0 + i);
+          glActiveTexture((GLenum)(GL_TEXTURE0 + i));
           yae_assert_gl_no_error();
         }
 
@@ -1659,7 +1659,7 @@ namespace yae
       {
         if (shader_)
         {
-          glActiveTexture(GL_TEXTURE0 + i);
+          glActiveTexture((GLenum)(GL_TEXTURE0 + i));
           yae_assert_gl_no_error();
         }
 
@@ -2115,7 +2115,7 @@ namespace yae
         {
           if (shader_)
           {
-            glActiveTexture(GL_TEXTURE0 + k);
+            glActiveTexture((GLenum)(GL_TEXTURE0 + k));
             yae_assert_gl_no_error();
           }
 
@@ -2194,7 +2194,7 @@ namespace yae
 
       if (shader_)
       {
-        glActiveTexture(GL_TEXTURE0 + k);
+        glActiveTexture((GLenum)(GL_TEXTURE0 + k));
         yae_assert_gl_no_error();
       }
 
@@ -2706,7 +2706,7 @@ namespace yae
 
       if (success_ && track_ && header_.size())
       {
-        ass_process_codec_private(track_, &header_[0], header_.size());
+        ass_process_codec_private(track_, &header_[0], (int)(header_.size()));
       }
 
       return success_;

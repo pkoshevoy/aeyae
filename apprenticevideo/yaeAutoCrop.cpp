@@ -167,7 +167,7 @@ namespace yae
     }
 
     const unsigned char * data = frame->data_->data(0);
-    const unsigned int rowBytes = frame->data_->rowBytes(0);
+    const std::size_t rowBytes = frame->data_->rowBytes(0);
 
     const unsigned int w = frame->traits_.visibleWidth_;
     const unsigned int h = frame->traits_.visibleHeight_;

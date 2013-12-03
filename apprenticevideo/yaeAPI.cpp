@@ -42,7 +42,7 @@ namespace yae
   // TTime::TTime
   //
   TTime::TTime(double seconds):
-    time_(1000000.0 * seconds),
+    time_((int64)(1000000.0 * seconds)),
     base_(1000000)
   {}
 
