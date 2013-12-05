@@ -2439,8 +2439,8 @@ namespace yae
       double gv = -fixed16_to_double(rv_bu_ngu_ngv[3]);
 
       // luma scale and shift:
-      double ls = (color_range == kColorRangeFull) ? 1.0 : 255.0 / 219.0;
-      double bk = (color_range == kColorRangeFull) ? 0.0 : 16.0 / 255.0;
+      double ls = (vtts.colorRange_ == kColorRangeFull) ? 1.0 : 255.0 / 219.0;
+      double bk = (vtts.colorRange_ == kColorRangeFull) ? 0.0 :  16.0 / 255.0;
 
       // red row:
       double * r = m3x4;
