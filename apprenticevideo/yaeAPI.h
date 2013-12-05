@@ -244,6 +244,33 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TColorSpaceId
+  //
+  enum TColorSpaceId
+  {
+    kColorSpaceRGB         =  0,
+    kColorSpaceBT709       =  1, // SMPTE RP177 Annex B
+    kColorSpaceUnspecified =  2,
+    kColorSpaceFCC         =  4,
+    kColorSpaceBT470BG     =  5, // BT601-6 625 PAL
+    kColorSpaceSMPTE170M   =  6, // BT601-6 525 NTSC
+    kColorSpaceSMPTE240M   =  7,
+    kColorSpaceYCOCG       =  8,
+    kColorSpaceBT2020NCL   =  9,
+    kColorSpaceBT2020CL    = 10
+  };
+
+  //----------------------------------------------------------------
+  // TColorRangeId
+  //
+  enum TColorRangeId
+  {
+    kColorRangeUnspecified = 0,
+    kColorRangeBroadcast   = 1, // 16..235, mpeg
+    kColorRangeFull        = 2, // 0...255, jpeg
+  };
+
+  //----------------------------------------------------------------
   // VideoTraits
   //
   struct YAE_API VideoTraits
@@ -251,6 +278,7 @@ namespace yae
     VideoTraits();
 
     bool sameFrameSizeAndFormat(const VideoTraits & vt) const;
+    bool sameColorSpaceAndRange(const VideoTraits & vt) const;
 
     bool operator == (const VideoTraits & vt) const;
 
@@ -259,6 +287,10 @@ namespace yae
 
     //! frame color format:
     TPixelFormatId pixelFormat_;
+
+    //! color transform hints:
+    TColorSpaceId colorSpace_;
+    TColorRangeId colorRange_;
 
     //! encoded frame size (including any padding):
     unsigned int encodedWidth_;
@@ -278,6 +310,23 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     bool isUpsideDown_;
   };
+
+  //----------------------------------------------------------------
+  // init_abc_to_rgb_matrix
+  //
+  // Fill in the m3x4 matrix for color conversion from
+  // input color format ABC to full-range RGB:
+  //
+  // [R, G, B]T = m3x4 * [A, B, C, 1]T
+  //
+  // NOTE: ABC and RGB are expressed in the [0, 1] range,
+  //       not [0, 255].
+  //
+  // NOTE: Here ABC typically refers to YUV input color format,
+  //       however it doesn't have to be YUV.
+  //
+  YAE_API bool
+  init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts);
 
   //----------------------------------------------------------------
   // TSubsFormat

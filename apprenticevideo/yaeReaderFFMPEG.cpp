@@ -2239,6 +2239,277 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // to_yae_color_space
+  //
+  static TColorSpaceId
+  to_yae_color_space(AVColorSpace c)
+  {
+    switch (c)
+    {
+      case AVCOL_SPC_RGB:
+        return kColorSpaceRGB;
+
+      case AVCOL_SPC_BT709:
+        return kColorSpaceBT709;
+
+      case AVCOL_SPC_UNSPECIFIED:
+        return kColorSpaceUnspecified;
+
+      case AVCOL_SPC_FCC:
+        return kColorSpaceFCC;
+
+      case AVCOL_SPC_BT470BG:
+        return kColorSpaceBT470BG;
+
+      case AVCOL_SPC_SMPTE170M:
+        return kColorSpaceSMPTE170M;
+
+      case AVCOL_SPC_SMPTE240M:
+        return kColorSpaceSMPTE240M;
+
+      case AVCOL_SPC_YCOCG:
+        return kColorSpaceYCOCG;
+
+      case AVCOL_SPC_BT2020_NCL:
+        return kColorSpaceBT2020NCL;
+
+      case AVCOL_SPC_BT2020_CL:
+        return kColorSpaceBT2020CL;
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return kColorSpaceUnspecified;
+  }
+
+  //----------------------------------------------------------------
+  // to_ffmpeg_color_space
+  //
+  static AVColorSpace
+  to_ffmpeg_color_space(TColorSpaceId c)
+  {
+    switch (c)
+    {
+      case kColorSpaceRGB:
+        return AVCOL_SPC_RGB;
+
+      case kColorSpaceBT709:
+        return AVCOL_SPC_BT709;
+
+      case kColorSpaceUnspecified:
+        return AVCOL_SPC_UNSPECIFIED;
+
+      case kColorSpaceFCC:
+        return AVCOL_SPC_FCC;
+
+      case kColorSpaceBT470BG:
+        return AVCOL_SPC_BT470BG;
+
+      case kColorSpaceSMPTE170M:
+        return AVCOL_SPC_SMPTE170M;
+
+      case kColorSpaceSMPTE240M:
+        return AVCOL_SPC_SMPTE240M;
+
+      case kColorSpaceYCOCG:
+        return AVCOL_SPC_YCOCG;
+
+      case kColorSpaceBT2020NCL:
+        return AVCOL_SPC_BT2020_NCL;
+
+      case kColorSpaceBT2020CL:
+        return AVCOL_SPC_BT2020_CL;
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return AVCOL_SPC_UNSPECIFIED;
+  }
+
+  //----------------------------------------------------------------
+  // to_yae_color_range
+  //
+  static TColorRangeId
+  to_yae_color_range(AVColorRange r)
+  {
+    switch (r)
+    {
+      case AVCOL_RANGE_UNSPECIFIED:
+        return kColorRangeUnspecified;
+
+      case AVCOL_RANGE_MPEG:
+        return kColorRangeBroadcast;
+
+      case AVCOL_RANGE_JPEG:
+        return kColorRangeFull;
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return kColorRangeUnspecified;
+  }
+
+  //----------------------------------------------------------------
+  // to_ffmpeg_color_range
+  //
+  static AVColorRange
+  to_ffmpeg_color_range(TColorRangeId r)
+  {
+    switch (r)
+    {
+      case kColorRangeUnspecified:
+        return AVCOL_RANGE_UNSPECIFIED;
+
+      case kColorRangeBroadcast:
+        return AVCOL_RANGE_MPEG;
+
+      case kColorRangeFull:
+        return AVCOL_RANGE_JPEG;
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return AVCOL_RANGE_UNSPECIFIED;
+  }
+
+  //----------------------------------------------------------------
+  // fixed16_to_double
+  //
+  inline static double fixed16_to_double(int fixed16)
+  {
+    int whole = fixed16 >> 16;
+    int fract = fixed16 & 65535;
+    double t = double(whole) + double(fract) / 65536.0;
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // init_abc_to_rgb_matrix
+  //
+  // Fill in the m3x4 matrix for color conversion from
+  // input color format ABC to full-range RGB:
+  //
+  // [R, G, B]T = m3x4 * [A, B, C, 1]T
+  //
+  // NOTE: ABC and RGB are expressed in the [0, 1] range,
+  //       not [0, 255].
+  //
+  // NOTE: Here ABC typically refers to YUV input color format,
+  //       however it doesn't have to be YUV.
+  //
+  bool
+  init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts)
+  {
+    const pixelFormat::Traits * ptts =
+      pixelFormat::getTraits(vtts.pixelFormat_);
+
+    if (ptts && (ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
+    {
+      AVColorSpace color_space = to_ffmpeg_color_space(vtts.colorSpace_);
+      AVColorRange color_range = to_ffmpeg_color_range(vtts.colorRange_);
+
+      if (color_space == AVCOL_SPC_UNSPECIFIED)
+      {
+        // use frame size heuristic as a hint:
+        if (vtts.encodedWidth_ < 1280 &&
+            vtts.encodedHeight_ < 720)
+        {
+          // SD video:
+          color_space = AVCOL_SPC_SMPTE170M;
+        }
+        else
+        {
+          // HD video:
+          color_space = AVCOL_SPC_BT709;
+        }
+      }
+
+      const int * rv_bu_ngu_ngv = sws_getCoefficients(color_space);
+      double rv =  fixed16_to_double(rv_bu_ngu_ngv[0]);
+      double bu =  fixed16_to_double(rv_bu_ngu_ngv[1]);
+      double gu = -fixed16_to_double(rv_bu_ngu_ngv[2]);
+      double gv = -fixed16_to_double(rv_bu_ngu_ngv[3]);
+
+      // luma scale and shift:
+      double ls = (color_range == kColorRangeFull) ? 1.0 : 255.0 / 219.0;
+      double bk = (color_range == kColorRangeFull) ? 0.0 : 16.0 / 255.0;
+
+      // red row:
+      double * r = m3x4;
+      r[0] = ls;
+      r[1] = 0;
+      r[2] = rv;
+      r[3] = -ls * bk - 0.5 * rv;
+
+      // green row:
+      double * g = m3x4 + 4;
+      g[0] = ls;
+      g[1] = gu;
+      g[2] = gv;
+      g[3] = -ls * bk - 0.5 * (gu + gv);
+
+      // blue row:
+      double * b = m3x4 + 8;
+      b[0] = ls;
+      b[1] = bu;
+      b[2] = 0;
+      b[3] = -ls * bk - 0.5 * bu;
+    }
+    else if ((vtts.colorRange_ != kColorRangeFull) &&
+             ((ptts->flags_ & pixelFormat::kRGB) ||
+              ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ == 1) ||
+              ((ptts->flags_ & pixelFormat::kAlpha) && ptts->channels_ == 2)))
+    {
+      // luma scale and shift:
+      double ls = 255.0 / 219.0;
+      double bk = 16.0 / 255.0;
+
+      // red row:
+      double * r = m3x4;
+      r[0] = ls;
+      r[1] = 0;
+      r[2] = 0;
+      r[3] = -ls * bk;
+
+      // green row:
+      double * g = m3x4 + 4;
+      g[0] = 0;
+      g[1] = ls;
+      g[2] = 0;
+      g[3] = -ls * bk;
+
+      // blue row:
+      double * b = m3x4 + 8;
+      b[0] = 0;
+      b[1] = 0;
+      b[2] = ls;
+      b[3] = -ls * bk;
+    }
+    else
+    {
+      YAE_ASSERT(ptts->flags & pixelFormat::kRGB);
+
+      // nothing to do, use the identity matrix:
+      const double identity[] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0
+      };
+      memcpy(m3x4, identity, sizeof(identity));
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::getTraits
   //
   bool
@@ -2254,6 +2525,10 @@ namespace yae
 
     //! pixel format:
     t.pixelFormat_ = ffmpeg_to_yae(context->pix_fmt);
+
+    //! for the color conversion coefficients:
+    t.colorSpace_ = to_yae_color_space(context->colorspace);
+    t.colorRange_ = to_yae_color_range(context->color_range);
 
     //! frame rate:
     if (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den)
@@ -2885,7 +3160,7 @@ namespace yae
     // virtual:
     bool open();
 
-    // virtual: FIXME: write me!
+    // virtual:
     bool decoderStartup();
     bool decoderShutdown();
     bool decode(const TPacketPtr & packetPtr);

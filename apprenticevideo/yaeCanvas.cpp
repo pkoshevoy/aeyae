@@ -1106,17 +1106,6 @@ namespace yae
           i += nchannels[i];
         }
       }
-
-#if 0
-      // FIXME: for debugging, some of the above code should be reused
-      // in Traits::getPlanes(..) because it is more efficient
-      {
-        unsigned char stride[4] = { 0 };
-        unsigned int numPlanes = ptts->getPlanes(stride);
-        YAE_ASSERT(numPlanes_ == numPlanes);
-        YAE_ASSERT(memcmp(stride_, stride, sizeof(stride)) == 0);
-      }
-#endif
     }
   }
 
@@ -1155,7 +1144,14 @@ namespace yae
       darCropped_(0.0),
       verticalScalingEnabled_(false),
       shader_(NULL)
-    {}
+    {
+      double identity[] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0
+      };
+      memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
+    }
 
     virtual ~TPrivate()
     {
@@ -1393,16 +1389,22 @@ namespace yae
     }
 
     // helper:
-    inline bool setFrame(const TVideoFramePtr & frame)
+    inline bool setFrame(const TVideoFramePtr & frame,
+                         bool & colorSpaceOrRangeChanged)
     {
       // NOTE: this assumes that the mutex is already locked:
       bool frameSizeOrFormatChanged = false;
+
+      colorSpaceOrRangeChanged =
+        (!frame_ || !frame ||
+         !frame_->traits_.sameColorSpaceAndRange(frame->traits_));
 
       if (!frame_ || !frame ||
           !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
       {
         crop_.clear();
         frameSizeOrFormatChanged = true;
+        colorSpaceOrRangeChanged = true;
       }
 
       frame_ = frame;
@@ -1420,6 +1422,10 @@ namespace yae
     std::map<TPixelFormatId, TFragmentShader> shaders_;
     const TFragmentShader * shader_;
     TFragmentShader builtinShader_;
+
+    // 3x4 matrix for color conversion to full-range RGB,
+    // including luma scale and shift:
+    double m34_to_rgb_[12];
   };
 
   //----------------------------------------------------------------
@@ -1567,7 +1573,8 @@ namespace yae
     TMakeCurrentContext currentContext(canvas);
 
     // take the new frame:
-    bool frameSizeOrFormatChanged = setFrame(frame);
+    bool colorSpaceOrRangeChanged = false;
+    bool frameSizeOrFormatChanged = setFrame(frame, colorSpaceOrRangeChanged);
 
     // setup new texture objects:
     if (frameSizeOrFormatChanged)
@@ -1686,43 +1693,36 @@ namespace yae
 
     if (shader_)
     {
+      if (colorSpaceOrRangeChanged)
+      {
+        init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
+      }
+
       glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      {
+        // pass the color transform matrix to the shader:
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      0, &m34_to_rgb_[0]);
+        yae_assert_gl_no_error();
 
-      // FIXME: should use the inverse of the matrix
-      // that produced the YUV data in the first place,
-      // instead of hard coding this matrix taken from
-      // http://www.fourcc.org/fccyvrgb.php
-      GLdouble yuv_to_rgb[] = {
-        // red:
-        1.164,    0.0,  1.596, -1.164 * 0.073 - 0.5 * 1.596,
-        // green:
-        1.164, -0.391, -0.813, -1.164 * 0.073 + 0.5 * (0.391 + 0.813),
-        // blue:
-        1.164,  2.018,    0.0, -1.164 * 0.073 - 0.5 * 2.018,
-      };
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      1, &m34_to_rgb_[4]);
+        yae_assert_gl_no_error();
 
-      // pass the YUV->RGB color transform matrix:
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    0, &yuv_to_rgb[0]);
-      yae_assert_gl_no_error();
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      2, &m34_to_rgb_[8]);
+        yae_assert_gl_no_error();
 
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    1, &yuv_to_rgb[4]);
-      yae_assert_gl_no_error();
+        // pass the subsampling factors to the shader:
+        GLdouble subsample_uv[4] = { 1.0 };
+        subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
+        subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
 
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    2, &yuv_to_rgb[8]);
-      yae_assert_gl_no_error();
-
-      GLdouble subsample_uv[4] = { 1.0 };
-      subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
-      subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
-
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    3, subsample_uv);
-      yae_assert_gl_no_error();
-
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      3, subsample_uv);
+        yae_assert_gl_no_error();
+      }
       glDisable(GL_FRAGMENT_PROGRAM_ARB);
     }
 
@@ -2066,7 +2066,8 @@ namespace yae
     TMakeCurrentContext currentContext(canvas);
 
     // take the new frame:
-    bool frameSizeOrFormatChanged = setFrame(frame);
+    bool colorSpaceOrRangeChanged = false;
+    bool frameSizeOrFormatChanged = setFrame(frame, colorSpaceOrRangeChanged);
 
     TCropFrame crop;
     getCroppedFrame(crop);
@@ -2322,35 +2323,27 @@ namespace yae
 
     if (shader_)
     {
+      if (colorSpaceOrRangeChanged)
+      {
+        init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
+      }
+
       glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      {
+        // pass the color transform matrix to the shader:
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      0, &m34_to_rgb_[0]);
+        yae_assert_gl_no_error();
 
-      // FIXME: should use the inverse of the matrix
-      // that produced the YUV data in the first place,
-      // instead of hard coding this matrix taken from
-      // http://www.fourcc.org/fccyvrgb.php
-      GLdouble yuv_to_rgb[] = {
-        // red:
-        1.164,    0.0,  1.596, -1.164 * 0.073 - 0.5 * 1.596,
-        // green:
-        1.164, -0.391, -0.813, -1.164 * 0.073 + 0.5 * (0.391 + 0.813),
-        // blue:
-        1.164,  2.018,    0.0, -1.164 * 0.073 - 0.5 * 2.018,
-      };
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      1, &m34_to_rgb_[4]);
+        yae_assert_gl_no_error();
 
-      // pass the YUV->RGB color transform matrix:
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    0, &yuv_to_rgb[0]);
-      yae_assert_gl_no_error();
-
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    1, &yuv_to_rgb[4]);
-      yae_assert_gl_no_error();
-
-      glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                    2, &yuv_to_rgb[8]);
-      yae_assert_gl_no_error();
-
+        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                      2, &m34_to_rgb_[8]);
+        yae_assert_gl_no_error();
+      }
       glDisable(GL_FRAGMENT_PROGRAM_ARB);
     }
 

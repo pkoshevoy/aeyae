@@ -356,6 +356,8 @@ namespace yae
   VideoTraits::VideoTraits():
     frameRate_(0.0),
     pixelFormat_(kInvalidPixelFormat),
+    colorSpace_(kColorSpaceUnspecified),
+    colorRange_(kColorRangeUnspecified),
     encodedWidth_(0),
     encodedHeight_(0),
     offsetTop_(0),
@@ -381,6 +383,16 @@ namespace yae
             visibleHeight_ == vt.visibleHeight_ &&
             pixelAspectRatio_ == vt.pixelAspectRatio_ &&
             isUpsideDown_ == vt.isUpsideDown_);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::sameColorSpaceAndRange
+  //
+  bool
+  VideoTraits::sameColorSpaceAndRange(const VideoTraits & vt) const
+  {
+    return (colorSpace_ == vt.colorSpace_ &&
+            colorRange_ == vt.colorRange_);
   }
 
   //----------------------------------------------------------------
