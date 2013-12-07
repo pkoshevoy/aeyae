@@ -2495,7 +2495,7 @@ namespace yae
     }
     else
     {
-      YAE_ASSERT(ptts->flags & pixelFormat::kRGB);
+      YAE_ASSERT(ptts->flags_ & pixelFormat::kRGB);
 
       // nothing to do, use the identity matrix:
       const double identity[] = {
