@@ -11,7 +11,6 @@
 
 // Qt includes:
 #include <QString>
-#include <QTime>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
@@ -87,13 +86,8 @@ namespace yae
     xml.writeStartElement(kBookmarkTag);
     xml.writeAttribute(kItemTag, QString::fromUtf8(itemHash.c_str()));
 
-    int t = int(positionInSeconds);
-    int ss = t % 60;
-    t /= 60;
-    int mm = t % 60;
-    t /= 60;
-    QString hhmmss = QTime(t, mm, ss).toString(Qt::ISODate);
-    xml.writeTextElement(kPlayheadTag, hhmmss);
+    std::string hhmmss = TTime(positionInSeconds).to_hhmmss(":").c_str();
+    xml.writeTextElement(kPlayheadTag, QString::fromUtf8(hhmmss.c_str()));
 
     QString vtrack = QString::number(reader->getSelectedVideoTrackIndex());
     xml.writeTextElement(kVideoTrackTag, vtrack);
@@ -191,10 +185,7 @@ namespace yae
         std::string val;
         if (getXmlElemText(xml, val))
         {
-          QTime t = QTime::fromString(QString::fromUtf8(val.c_str()),
-                                      Qt::ISODate);
-          int sec = t.second() + 60 * (t.minute() + 60 * t.hour());
-          bookmark.positionInSeconds_ = double(sec);
+          bookmark.positionInSeconds_ = parse_hhmmss_xxx(val.c_str(), ":");
         }
       }
       else if (elemName == kVideoTrackTag)

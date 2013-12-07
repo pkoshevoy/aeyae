@@ -281,6 +281,17 @@ namespace yae
   YAE_API bool
   removeSetting(const QString & key);
 
+  //----------------------------------------------------------------
+  // parse_hhmmss_xxx
+  //
+  // parse hh mm ss xxx timecode string, return time expressed in seconds
+  //
+  YAE_API double
+  parse_hhmmss_xxx(const char * hhmmss,
+                   const char * separator = ":",
+                   const char * separator_xxx = NULL,
+                   const double frameRate = 0.0);
+
 }
 
 

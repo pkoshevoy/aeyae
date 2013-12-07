@@ -189,7 +189,7 @@ namespace yae
   // TTime::to_hhmmss
   //
   void
-    TTime::to_hhmmss(std::string & ts, const char * separator) const
+  TTime::to_hhmmss(std::string & ts, const char * separator) const
   {
     int64 t = time_;
     t /= base_;
