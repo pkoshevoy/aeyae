@@ -1667,16 +1667,6 @@ namespace yae
         glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
         yae_assert_gl_no_error();
 
-        // order of bits in a byte only matters for bitmaps:
-        // glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
-
-#ifdef __APPLE__
-        if (glewIsExtensionSupported(""))
-        {
-          glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
-        }
-#endif
-
         glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
                      0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
                      shader.internalFormatGL_[i],
