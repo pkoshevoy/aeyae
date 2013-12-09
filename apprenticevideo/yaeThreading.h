@@ -71,6 +71,11 @@ namespace yae
       delete thread_;
     }
 
+    inline TContext * context() const
+    {
+      return context_;
+    }
+
     void setContext(TContext * context)
     {
       YAE_ASSERT(!context || !context_);
