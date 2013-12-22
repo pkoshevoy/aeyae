@@ -3532,7 +3532,8 @@ namespace yae
                      double & offset_x,
                      double & offset_y,
                      double & scaled_w,
-                     double & scaled_h)
+                     double & scaled_h,
+                     bool fit_to_height = false)
   {
     double bbox_ar = double(bbox_w) / double(bbox_h);
     double frame_ar = double(frame_w) / double(frame_h);
@@ -3542,7 +3543,12 @@ namespace yae
     scaled_w = bbox_w;
     scaled_h = bbox_h;
 
-    if (frame_ar < bbox_ar)
+    if (!fit_to_height)
+    {
+      fit_to_height = frame_ar < bbox_ar;
+    }
+
+    if (fit_to_height)
     {
       scaled_w = bbox_h * frame_ar;
       offset_x = 0.5 * (bbox_w - scaled_w);
@@ -3573,7 +3579,8 @@ namespace yae
                      double bbox_h,
                      double frame_w,
                      double frame_h,
-                     TScaledFrame & f)
+                     TScaledFrame & f,
+                     bool fit_to_height = false)
   {
     calcFrameTransform(bbox_w,
                        bbox_h,
@@ -3582,7 +3589,8 @@ namespace yae
                        f.x_,
                        f.y_,
                        f.w_,
-                       f.h_);
+                       f.h_,
+                       fit_to_height);
   }
 
   //----------------------------------------------------------------
@@ -3603,16 +3611,19 @@ namespace yae
     double w = this->width();
     double h = this->height();
 
-    if (h > 1024.0)
+    double max_w = 1920.0;
+    double max_h = 1080.0;
+
+    if (h > max_h)
     {
-      w *= 1024.0 / h;
-      h = 1024.0;
+      w *= max_h / h;
+      h = max_h;
     }
 
-    if (w > 1024.0)
+    if (w > max_w)
     {
-      h *= 1024.0 / w;
-      w = 1024.0;
+      h *= max_w / w;
+      w = max_w;
     }
 
     double fw = w;
@@ -3669,11 +3680,17 @@ namespace yae
             }
           }
 
+          // always fit to box height regardless of frame aspect ratio;
+          // this may crop off part of the frame on the left and right,
+          // but in practice it makes subtitles more visible when watching
+          // a 4x3 video cropped from 16x9 blu-ray (FLCL, Star Trek TNG, etc...)
+          bool fit_to_height = true;
+
           double rw = double(subs.rw_ ? subs.rw_ : imageWidth);
           double rh = double(subs.rh_ ? subs.rh_ : imageHeight);
 
           TScaledFrame sf;
-          calcFrameTransform(w, h, rw, rh, sf);
+          calcFrameTransform(w, h, rw, rh, sf, fit_to_height);
 
           double sx = sf.w_ / rw;
           double sy = sf.h_ / rh;
@@ -3918,16 +3935,19 @@ namespace yae
     double w = this->width();
     double h = this->height();
 
-    if (h > 1024.0)
+    double max_w = 1920.0;
+    double max_h = 1080.0;
+
+    if (h > max_h)
     {
-      w *= 1024.0 / h;
-      h = 1024.0;
+      w *= max_h / h;
+      h = max_h;
     }
 
-    if (w > 1024.0)
+    if (w > max_w)
     {
-      h *= 1024.0 / w;
-      w = 1024.0;
+      h *= max_w / w;
+      w = max_w;
     }
 
     TVideoFramePtr vf(new TVideoFrame());
@@ -3943,7 +3963,7 @@ namespace yae
     painter.setPen(QColor(0x7f, 0x7f, 0x7f, 0x7f));
 
     QFont ft;
-    int px = std::max<int>(12, 56.0 * (std::min<double>(w, h) / 1024.0));
+    int px = std::max<int>(12, 56.0 * std::min<double>(w / max_w, h / max_h));
     ft.setPixelSize(px);
     painter.setFont(ft);
 
