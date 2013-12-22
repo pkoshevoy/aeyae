@@ -366,6 +366,7 @@ namespace yae
     shortcutCropNone_ = new QShortcut(this);
     shortcutCrop1_33_ = new QShortcut(this);
     shortcutCrop1_78_ = new QShortcut(this);
+    shortcutCrop2_40_ = new QShortcut(this);
     shortcutAutoCrop_ = new QShortcut(this);
     shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
@@ -383,6 +384,7 @@ namespace yae
     shortcutCropNone_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
     shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
 
@@ -592,6 +594,10 @@ namespace yae
 
     ok = connect(actionCropFrame2_40, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame2_40()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
+                 actionCropFrame2_40, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
@@ -2453,6 +2459,7 @@ namespace yae
     swapShortcuts(shortcutCropNone_, actionCropFrameNone);
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     swapShortcuts(shortcutNextChapter_, actionNextChapter);
   }
@@ -2514,6 +2521,7 @@ namespace yae
     swapShortcuts(shortcutCropNone_, actionCropFrameNone);
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     swapShortcuts(shortcutNextChapter_, actionNextChapter);
   }
