@@ -1,4 +1,9 @@
 All Platforms:
+
+	OpenGL 1.2 or later
+	OpenGL is used for frame rendering, so make sure you have
+	OpenGL drivers for you graphics card.
+
 	CMake 2.8.6 or later	http://www.cmake.org/cmake/resources/software.html
 	CMake is used to configure the build (to generate projects, or makefiles).
 
@@ -14,7 +19,7 @@ All Platforms:
 	portaudio v19		http://www.portaudio.com/download.html
 	Portaudio is used for audio playback.
 
-	FFmpeg 0.6.1 or later	http://ffmpeg.org/download.html
+	FFmpeg fresh from git	http://ffmpeg.org/download.html
 	FFmpeg is used for video/audio demuxing and decoding.
 
 
@@ -30,7 +35,7 @@ Windows:
 	You can try and build ffmpeg yourself from source using MinGW,
 	but it would be much easier to use the Zeranoe builds instead.
 
-	Visual C++ 2008 SP1 or 2010 SP1 are recommended.  
+	Visual C++ 2008 SP1 or 2010 SP1 are recommended.
 	The VS Express will work.
 	MinGW/MSYS development has not been tested, but should work.
 
@@ -44,7 +49,7 @@ MacOS:
 	-headerpad_max_install_names linker option -- you may try
 	building from source yourself (make sure to use the
 	-headerpad_max_install_names option),
-	or you can do a dirty hack and make /usr/bin/ld 
+	or you can do a dirty hack and make /usr/bin/ld
 	always use the -headerpad_max_install_names switch:
 
 	sudo mv /usr/bin/ld /usr/bin/ld.bin
@@ -57,4 +62,8 @@ MacOS:
 Linux:
 	Use the package management mechanism provided by your Linux
 	distribution (apt, yast, yum, etc...) to install required
-	tools and libraries.
+	tools and development libraries (git, cmake, Qt 4, boost,
+	glew, portaudio, yasm).  Use of the latest FFmpeg pulled from
+	git is recommended, because compilation against libav fork is not
+	tested and may not work.
+
