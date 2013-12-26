@@ -1280,6 +1280,35 @@ namespace yae
       return false;
     }
 
+    bool imageWidthHeightRotated(double & w, double & h, int & rotate) const
+    {
+      if (imageWidthHeight(w, h))
+      {
+        // video traits shortcut:
+        const VideoTraits & vtts = frame_->traits_;
+
+        if (vtts.cameraRotation_ % 90 == 0)
+        {
+          // must be a camera phone video that needs to be
+          // rotated for viewing:
+          if (vtts.cameraRotation_ % 180 != 0)
+          {
+            std::swap(w, h);
+          }
+
+          rotate = vtts.cameraRotation_;
+        }
+        else
+        {
+          rotate = 0;
+        }
+
+        return true;
+      }
+
+      return false;
+    }
+
     inline void overrideDisplayAspectRatio(double dar)
     {
       dar_ = dar;
@@ -3133,7 +3162,8 @@ namespace yae
   {
     double w = 0.0;
     double h = 0.0;
-    canvas->imageWidthHeight(w, h);
+    int cameraRotation = 0;
+    canvas->imageWidthHeightRotated(w, h, cameraRotation);
     return w;
   }
 
@@ -3145,7 +3175,8 @@ namespace yae
   {
     double w = 0.0;
     double h = 0.0;
-    canvas->imageWidthHeight(w, h);
+    int cameraRotation = 0;
+    canvas->imageWidthHeightRotated(w, h, cameraRotation);
     return h;
   }
 
@@ -3160,7 +3191,10 @@ namespace yae
   {
     double croppedWidth = 0.0;
     double croppedHeight = 0.0;
-    canvas->imageWidthHeight(croppedWidth, croppedHeight);
+    int cameraRotation = 0;
+    canvas->imageWidthHeightRotated(croppedWidth,
+                                    croppedHeight,
+                                    cameraRotation);
 
     double dar = croppedWidth / croppedHeight;
     double car = double(canvasWidth) / double(canvasHeight);
@@ -3208,6 +3242,21 @@ namespace yae
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(left, right, bottom, top);
+
+    if (cameraRotation && cameraRotation % 90 == 0)
+    {
+      glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0);
+      glRotated(double(cameraRotation), 0, 0, 1);
+
+      if (cameraRotation % 180 != 0)
+      {
+        glTranslated(-0.5 * croppedHeight, -0.5 * croppedWidth, 0);
+      }
+      else
+      {
+        glTranslated(-0.5 * croppedWidth, -0.5 * croppedHeight, 0);
+      }
+    }
 
     canvas->draw();
     yae_assert_gl_no_error();
@@ -3606,7 +3655,10 @@ namespace yae
 
     double imageWidth = 0.0;
     double imageHeight = 0.0;
-    private_->imageWidthHeight(imageWidth, imageHeight);
+    int cameraRotation = 0;
+    private_->imageWidthHeightRotated(imageWidth,
+                                      imageHeight,
+                                      cameraRotation);
 
     double w = this->width();
     double h = this->height();

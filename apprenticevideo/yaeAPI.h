@@ -307,6 +307,9 @@ namespace yae
     //! pixel aspect ration, used to calculate visible frame dimensions:
     double pixelAspectRatio_;
 
+    //! camera orientation angle expressed in degrees (divisible by 90):
+    int cameraRotation_;
+
     //! a flag indicating whether video is upside-down:
     bool isUpsideDown_;
   };

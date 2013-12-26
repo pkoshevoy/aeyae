@@ -2612,6 +2612,21 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     t.isUpsideDown_ = false;
 
+    //! check for rotation:
+    {
+      AVDictionaryEntry * rotate =
+        av_dict_get(stream_->metadata, "rotate", NULL, 0);
+
+      if (rotate)
+      {
+        t.cameraRotation_ = toScalar<int>(rotate->value);
+      }
+      else
+      {
+        t.cameraRotation_ = 0;
+      }
+    }
+
     return
       t.frameRate_ > 0.0 &&
       t.encodedWidth_ > 0 &&

@@ -365,6 +365,7 @@ namespace yae
     visibleWidth_(0),
     visibleHeight_(0),
     pixelAspectRatio_(1.0),
+    cameraRotation_(0),
     isUpsideDown_(false)
   {}
 
@@ -382,6 +383,7 @@ namespace yae
             visibleWidth_ == vt.visibleWidth_ &&
             visibleHeight_ == vt.visibleHeight_ &&
             pixelAspectRatio_ == vt.pixelAspectRatio_ &&
+            cameraRotation_ == vt.cameraRotation_ &&
             isUpsideDown_ == vt.isUpsideDown_);
   }
 
