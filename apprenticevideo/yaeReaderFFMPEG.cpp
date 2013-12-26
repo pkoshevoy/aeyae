@@ -3389,6 +3389,26 @@ namespace yae
 
         avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
 
+        if (hasPrevPTS_ && avFrame->pts != AV_NOPTS_VALUE)
+        {
+          // check for broken non-monotonically increasing timestamps:
+          TTime nextPTS(stream_->time_base.num * avFrame->pts,
+                       stream_->time_base.den);
+
+          if (nextPTS < prevPTS_)
+          {
+#ifndef NDEBUG
+            std::cerr
+              << "\nNOTE: non-monotonically increasing "
+              << "audio timestamps detected:" << std::endl
+              << "  prev = " << prevPTS_.to_hhmmss_usec(":") << std::endl
+              << "  next = " << nextPTS.to_hhmmss_usec(":") << std::endl
+              << std::endl;
+#endif
+            hasPrevPTS_ = false;
+          }
+        }
+
         const char * filterChain = NULL;
         bool frameTraitsChanged = false;
         if (!filterGraph_.setup(// input format:
