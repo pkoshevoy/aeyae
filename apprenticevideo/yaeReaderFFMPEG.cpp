@@ -3393,7 +3393,7 @@ namespace yae
         {
           // check for broken non-monotonically increasing timestamps:
           TTime nextPTS(stream_->time_base.num * avFrame->pts,
-                       stream_->time_base.den);
+                        stream_->time_base.den);
 
           if (nextPTS < prevPTS_)
           {
