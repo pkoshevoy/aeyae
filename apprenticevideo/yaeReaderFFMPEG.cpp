@@ -3579,7 +3579,7 @@ namespace yae
       if (!shouldAdjustTempo)
       {
         // concatenate chunks into a contiguous frame buffer:
-        sampleBuffer->resize(0, outputBytes, 1);
+        sampleBuffer->resize(0, outputBytes, 1, sizeof(double));
         unsigned char * afSampleBuffer = sampleBuffer->data(0);
 
         while (!chunks.empty())
@@ -3616,11 +3616,14 @@ namespace yae
             tempoFilter_->apply(&src, srcEnd, &dst, dstEnd);
 
             std::size_t tmpSize = dst - dstStart;
-            sampleBuffer->resize(frameSize + tmpSize);
+            if (tmpSize)
+            {
+              sampleBuffer->resize(frameSize + tmpSize, sizeof(double));
 
-            unsigned char * afSampleBuffer = sampleBuffer->data(0);
-            memcpy(afSampleBuffer + frameSize, dstStart, tmpSize);
-            frameSize += tmpSize;
+              unsigned char * afSampleBuffer = sampleBuffer->data(0);
+              memcpy(afSampleBuffer + frameSize, dstStart, tmpSize);
+              frameSize += tmpSize;
+            }
           }
 
           YAE_ASSERT(src == srcEnd);

@@ -485,15 +485,41 @@ namespace yae
                       std::size_t alignment)
   {
     std::size_t planeSize = (rowBytes * rows);
+    std::size_t alignmentOffset = 0;
+    std::size_t currentSize = rows_ * rowBytes_;
+
+    if (alignment_ == alignment && currentSize == planeSize)
+    {
+      rowBytes_ = rowBytes;
+      rows_ = rows;
+      return;
+    }
 
     if (planeSize)
     {
-      void * newData = realloc(data_, planeSize + alignment - 1);
+      // should not use realloc because it may return a pointer with
+      // a different alignment offset than was returned previousely,
+      // and will require memmove to shift previous data to the new
+      // alignment offset; it's simpler to malloc and memcpy instead:
+      void * newData = malloc(planeSize + alignment - 1);
+
       if (!newData)
       {
         throw std::bad_alloc();
       }
 
+      alignmentOffset =
+        alignment && ((std::size_t)(data_) & (alignment - 1)) ?
+        alignment -  ((std::size_t)(data_) & (alignment - 1)) : 0;
+
+      if (data_)
+      {
+        const unsigned char * src = data_ + alignmentOffset_;
+        unsigned char * dst = ((unsigned char *)newData) + alignmentOffset;
+        memcpy(dst, src, currentSize);
+      }
+
+      free(data_);
       data_ = (unsigned char *)newData;
     }
     else if (data_)
@@ -502,13 +528,10 @@ namespace yae
       data_ = NULL;
     }
 
-    alignmentOffset_ =
-      alignment && ((std::size_t)(data_) & (alignment - 1)) ?
-      alignment -  ((std::size_t)(data_) & (alignment - 1)) : 0;
-
     rowBytes_ = rowBytes;
     rows_ = rows;
     alignment_ = alignment;
+    alignmentOffset_ = alignmentOffset;
   }
 
 
