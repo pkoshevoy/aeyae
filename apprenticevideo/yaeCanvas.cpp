@@ -128,10 +128,11 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
   "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
   "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
   "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
-  "TEX result.color.a, fragment.texcoord[0], texture[3], 2D;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[3], 2D;\n"
+  "MOV result.color.a, yuv.x;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -170,10 +171,11 @@ static const char * yae_gl_arb_yuva_to_rgba =
   "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
   "TEX yuv.y, coord_uv, texture[1], RECT;\n"
   "TEX yuv.z, coord_uv, texture[2], RECT;\n"
-  "TEX result.color.a, fragment.texcoord[0], texture[3], RECT;\n"
   "DPH result.color.r, yuv, vr;\n"
   "DPH result.color.g, yuv, vg;\n"
   "DPH result.color.b, yuv, vb;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[3], RECT;\n"
+  "MOV result.color.a, yuv.x;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -1391,8 +1393,10 @@ namespace yae
                                   const std::size_t numFormats,
                                   const char * code)
     {
+      bool ok = false;
       TFragmentShaderProgram program(code);
 
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
       glGenProgramsARB(1, &program.handle_);
       glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_);
 
@@ -1409,12 +1413,16 @@ namespace yae
           shaders_[format] = TFragmentShader(shaderProgram, format);
         }
 
-        return true;
+        ok = true;
+      }
+      else
+      {
+        glDeleteProgramsARB(1, &program.handle_);
+        program.handle_ = 0;
       }
 
-      glDeleteProgramsARB(1, &program.handle_);
-      program.handle_ = 0;
-      return false;
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      return ok;
     }
 
     // helper:
@@ -1717,8 +1725,8 @@ namespace yae
         init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
       }
 
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       {
         // pass the color transform matrix to the shader:
         glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
@@ -1823,6 +1831,22 @@ namespace yae
         glVertex2i(0, int(h));
       }
       glEnd();
+    }
+
+    // un-bind the textures:
+    if (glActiveTexture)
+    {
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      {
+        glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+        yae_assert_gl_no_error();
+
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
+      }
+    }
+    else
+    {
+      glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
     }
 
     if (shader_)
@@ -2347,8 +2371,8 @@ namespace yae
         init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
       }
 
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
       {
         // pass the color transform matrix to the shader:
         glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
@@ -2452,6 +2476,22 @@ namespace yae
         glVertex2i(tile.x_.v0_, tile.y_.v1_);
       }
       glEnd();
+    }
+
+    // un-bind the textures:
+    if (glActiveTexture)
+    {
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      {
+        glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+        yae_assert_gl_no_error();
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+      }
+    }
+    else
+    {
+      glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     if (shader_)
