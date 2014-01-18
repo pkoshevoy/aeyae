@@ -366,6 +366,7 @@ namespace yae
     shortcutCropNone_ = new QShortcut(this);
     shortcutCrop1_33_ = new QShortcut(this);
     shortcutCrop1_78_ = new QShortcut(this);
+    shortcutCrop1_85_ = new QShortcut(this);
     shortcutCrop2_40_ = new QShortcut(this);
     shortcutAutoCrop_ = new QShortcut(this);
     shortcutNextChapter_ = new QShortcut(this);
@@ -384,6 +385,7 @@ namespace yae
     shortcutCropNone_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
     shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
     shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
@@ -586,6 +588,10 @@ namespace yae
 
     ok = connect(actionCropFrame1_85, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_85()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
+                 actionCropFrame1_85, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame2_35, SIGNAL(triggered()),
@@ -2459,6 +2465,7 @@ namespace yae
     swapShortcuts(shortcutCropNone_, actionCropFrameNone);
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
     swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     swapShortcuts(shortcutNextChapter_, actionNextChapter);
@@ -2521,6 +2528,7 @@ namespace yae
     swapShortcuts(shortcutCropNone_, actionCropFrameNone);
     swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
     swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
     swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
     swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     swapShortcuts(shortcutNextChapter_, actionNextChapter);

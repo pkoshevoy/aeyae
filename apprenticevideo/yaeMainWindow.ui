@@ -611,6 +611,12 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>1.85</string>
    </property>
+   <property name="shortcut">
+    <string>Alt+8</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionCropFrame2_40">
    <property name="checkable">
