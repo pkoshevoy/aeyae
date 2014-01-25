@@ -910,6 +910,7 @@ namespace Yamka
       crawler.eval(minCache_) ||
       crawler.eval(maxCache_) ||
       crawler.eval(frameDuration_) ||
+      crawler.eval(fieldDuration_) ||
       crawler.eval(timecodeScale_) ||
       crawler.eval(trackOffset_) ||
       crawler.eval(maxBlockAddID_) ||
@@ -924,6 +925,8 @@ namespace Yamka
       crawler.eval(codecDownloadURL_) ||
       crawler.eval(codecDecodeAll_) ||
       crawler.eval(trackOverlay_) ||
+      crawler.eval(codecDelay_) ||
+      crawler.eval(seekPreRoll_) ||
       crawler.eval(trackTranslate_) ||
       crawler.eval(video_) ||
       crawler.eval(audio_) ||
@@ -947,6 +950,7 @@ namespace Yamka
       !minCache_.mustSave() &&
       !maxCache_.mustSave() &&
       !frameDuration_.mustSave() &&
+      !fieldDuration_.mustSave() &&
       !timecodeScale_.mustSave() &&
       !trackOffset_.mustSave() &&
       !maxBlockAddID_.mustSave() &&
@@ -961,6 +965,8 @@ namespace Yamka
       !codecDownloadURL_.mustSave() &&
       !codecDecodeAll_.mustSave() &&
       !trackOverlay_.mustSave() &&
+      !codecDelay_.mustSave() &&
+      !seekPreRoll_.mustSave() &&
       !trackTranslate_.mustSave() &&
       !video_.mustSave() &&
       !audio_.mustSave() &&
@@ -986,6 +992,7 @@ namespace Yamka
       minCache_.calcSize() +
       maxCache_.calcSize() +
       frameDuration_.calcSize() +
+      fieldDuration_.calcSize() +
       timecodeScale_.calcSize() +
       trackOffset_.calcSize() +
       maxBlockAddID_.calcSize() +
@@ -1000,6 +1007,8 @@ namespace Yamka
       codecDownloadURL_.calcSize() +
       codecDecodeAll_.calcSize() +
       trackOverlay_.calcSize() +
+      codecDelay_.calcSize() +
+      seekPreRoll_.calcSize() +
       trackTranslate_.calcSize() +
       video_.calcSize() +
       audio_.calcSize() +
@@ -1026,6 +1035,7 @@ namespace Yamka
     *receipt += minCache_.save(storage);
     *receipt += maxCache_.save(storage);
     *receipt += frameDuration_.save(storage);
+    *receipt += fieldDuration_.save(storage);
     *receipt += timecodeScale_.save(storage);
     *receipt += trackOffset_.save(storage);
     *receipt += maxBlockAddID_.save(storage);
@@ -1040,6 +1050,8 @@ namespace Yamka
     *receipt += codecDownloadURL_.save(storage);
     *receipt += codecDecodeAll_.save(storage);
     *receipt += trackOverlay_.save(storage);
+    *receipt += codecDelay_.save(storage);
+    *receipt += seekPreRoll_.save(storage);
     *receipt += trackTranslate_.save(storage);
     *receipt += video_.save(storage);
     *receipt += audio_.save(storage);
@@ -1068,6 +1080,7 @@ namespace Yamka
     bytesToRead -= minCache_.load(storage, bytesToRead, loader);
     bytesToRead -= maxCache_.load(storage, bytesToRead, loader);
     bytesToRead -= frameDuration_.load(storage, bytesToRead, loader);
+    bytesToRead -= fieldDuration_.load(storage, bytesToRead, loader);
     bytesToRead -= timecodeScale_.load(storage, bytesToRead, loader);
     bytesToRead -= trackOffset_.load(storage, bytesToRead, loader);
     bytesToRead -= maxBlockAddID_.load(storage, bytesToRead, loader);
@@ -1082,6 +1095,8 @@ namespace Yamka
     bytesToRead -= codecDownloadURL_.load(storage, bytesToRead, loader);
     bytesToRead -= codecDecodeAll_.load(storage, bytesToRead, loader);
     bytesToRead -= trackOverlay_.load(storage, bytesToRead, loader);
+    bytesToRead -= codecDelay_.load(storage, bytesToRead, loader);
+    bytesToRead -= seekPreRoll_.load(storage, bytesToRead, loader);
     bytesToRead -= trackTranslate_.load(storage, bytesToRead, loader);
     bytesToRead -= video_.load(storage, bytesToRead, loader);
     bytesToRead -= audio_.load(storage, bytesToRead, loader);
@@ -1500,37 +1515,41 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
-  // CueTrkPos::CueTrkPos
+  // CueTrackPositions::CueTrackPositions
   //
-  CueTrkPos::CueTrkPos()
+  CueTrackPositions::CueTrackPositions()
   {
     track_.alwaysSave();
     block_.payload_.setDefault(1);
   }
 
   //----------------------------------------------------------------
-  // CueTrkPos::eval
+  // CueTrackPositions::eval
   //
   bool
-  CueTrkPos::eval(IElementCrawler & crawler)
+  CueTrackPositions::eval(IElementCrawler & crawler)
   {
     return
       crawler.eval(track_) ||
       crawler.eval(cluster_) ||
+      crawler.eval(relPos_) ||
+      crawler.eval(duration_) ||
       crawler.eval(block_) ||
       crawler.eval(codecState_) ||
       crawler.eval(ref_);
   }
 
   //----------------------------------------------------------------
-  // CueTrkPos::isDefault
+  // CueTrackPositions::isDefault
   //
   bool
-  CueTrkPos::isDefault() const
+  CueTrackPositions::isDefault() const
   {
     bool allDefault =
       // !track_.mustSave() &&
       !cluster_.mustSave() &&
+      !relPos_.mustSave() &&
+      !duration_.mustSave() &&
       !block_.mustSave() &&
       !codecState_.mustSave() &&
       !ref_.mustSave();
@@ -1539,14 +1558,16 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // CueTrkPos::calcSize
+  // CueTrackPositions::calcSize
   //
   uint64
-  CueTrkPos::calcSize() const
+  CueTrackPositions::calcSize() const
   {
     uint64 size =
       track_.calcSize() +
       cluster_.calcSize() +
+      relPos_.calcSize() +
+      duration_.calcSize() +
       block_.calcSize() +
       codecState_.calcSize() +
       ref_.calcSize();
@@ -1555,15 +1576,17 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // CueTrkPos::save
+  // CueTrackPositions::save
   //
   IStorage::IReceiptPtr
-  CueTrkPos::save(IStorage & storage) const
+  CueTrackPositions::save(IStorage & storage) const
   {
     IStorage::IReceiptPtr receipt = storage.receipt();
 
     *receipt += track_.save(storage);
     *receipt += cluster_.save(storage);
+    *receipt += relPos_.save(storage);
+    *receipt += duration_.save(storage);
     *receipt += block_.save(storage);
     *receipt += codecState_.save(storage);
     *receipt += ref_.save(storage);
@@ -1572,10 +1595,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // CueTrkPos::load
+  // CueTrackPositions::load
   //
   uint64
-  CueTrkPos::load(FileStorage & storage,
+  CueTrackPositions::load(FileStorage & storage,
                   uint64 bytesToRead,
                   IDelegateLoad * loader)
   {
@@ -1583,6 +1606,8 @@ namespace Yamka
 
     bytesToRead -= track_.load(storage, bytesToRead, loader);
     bytesToRead -= cluster_.load(storage, bytesToRead, loader);
+    bytesToRead -= relPos_.load(storage, bytesToRead, loader);
+    bytesToRead -= duration_.load(storage, bytesToRead, loader);
     bytesToRead -= block_.load(storage, bytesToRead, loader);
     bytesToRead -= codecState_.load(storage, bytesToRead, loader);
     bytesToRead -= ref_.load(storage, bytesToRead, loader);
@@ -2382,6 +2407,7 @@ namespace Yamka
   {
     return
       crawler.eval(UID_) ||
+      crawler.eval(strUID_) ||
       crawler.eval(timeStart_) ||
       crawler.eval(timeEnd_) ||
       crawler.eval(hidden_) ||
@@ -2403,6 +2429,7 @@ namespace Yamka
   {
     bool allDefault =
       !UID_.mustSave() &&
+      !strUID_.mustSave() &&
       // !timeStart_.mustSave() &&
       !timeEnd_.mustSave() &&
       // !hidden_.mustSave() &&
@@ -2426,6 +2453,7 @@ namespace Yamka
   {
     uint64 size =
       UID_.calcSize() +
+      strUID_.calcSize() +
       timeStart_.calcSize() +
       timeEnd_.calcSize() +
       hidden_.calcSize() +
@@ -2450,6 +2478,7 @@ namespace Yamka
     IStorage::IReceiptPtr receipt = storage.receipt();
 
     *receipt += UID_.save(storage);
+    *receipt += strUID_.save(storage);
     *receipt += timeStart_.save(storage);
     *receipt += timeEnd_.save(storage);
     *receipt += hidden_.save(storage);
@@ -2477,6 +2506,7 @@ namespace Yamka
     uint64 prevBytesToRead = bytesToRead;
 
     bytesToRead -= UID_.load(storage, bytesToRead, loader);
+    bytesToRead -= strUID_.load(storage, bytesToRead, loader);
     bytesToRead -= timeStart_.load(storage, bytesToRead, loader);
     bytesToRead -= timeEnd_.load(storage, bytesToRead, loader);
     bytesToRead -= hidden_.load(storage, bytesToRead, loader);
@@ -3164,6 +3194,129 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
+  // TimeSlice::eval
+  //
+  bool
+  TimeSlice::eval(IElementCrawler & crawler)
+  {
+    return
+      crawler.eval(laceNumber_);
+  }
+
+  //----------------------------------------------------------------
+  // TimeSlice::isDefault
+  //
+  bool
+  TimeSlice::isDefault() const
+  {
+    bool allDefault =
+      !laceNumber_.mustSave();
+
+    return allDefault;
+  }
+
+  //----------------------------------------------------------------
+  // TimeSlice::calcSize
+  //
+  uint64
+  TimeSlice::calcSize() const
+  {
+    uint64 size =
+      laceNumber_.calcSize();
+
+    return size;
+  }
+
+  //----------------------------------------------------------------
+  // TimeSlice::save
+  //
+  IStorage::IReceiptPtr
+  TimeSlice::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+
+    *receipt += laceNumber_.save(storage);
+
+    return receipt;
+  }
+
+  //----------------------------------------------------------------
+  // TimeSlice::load
+  //
+  uint64
+  TimeSlice::load(FileStorage & storage,
+                  uint64 bytesToRead,
+                  IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+
+    bytesToRead -= laceNumber_.load(storage, bytesToRead, loader);
+
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+
+
+  //----------------------------------------------------------------
+  // Slices::eval
+  //
+  bool
+  Slices::eval(IElementCrawler & crawler)
+  {
+    return eltsEval(timeSlices_, crawler);
+  }
+
+  //----------------------------------------------------------------
+  // Slices::isDefault
+  //
+  bool
+  Slices::isDefault() const
+  {
+    bool allDefault = timeSlices_.empty();
+    return allDefault;
+  }
+
+  //----------------------------------------------------------------
+  // Slices::calcSize
+  //
+  uint64
+  Slices::calcSize() const
+  {
+    uint64 size = eltsCalcSize(timeSlices_);
+    return size;
+  }
+
+  //----------------------------------------------------------------
+  // Slices::save
+  //
+  IStorage::IReceiptPtr
+  Slices::save(IStorage & storage) const
+  {
+    IStorage::IReceiptPtr receipt = storage.receipt();
+
+    *receipt += eltsSave(timeSlices_, storage);
+
+    return receipt;
+  }
+
+  //----------------------------------------------------------------
+  // Slices::load
+  //
+  uint64
+  Slices::load(FileStorage & storage,
+               uint64 bytesToRead,
+               IDelegateLoad * loader)
+  {
+    uint64 prevBytesToRead = bytesToRead;
+
+    bytesToRead -= eltsLoad(timeSlices_, storage, bytesToRead, loader);
+
+    uint64 bytesRead = prevBytesToRead - bytesToRead;
+    return bytesRead;
+  }
+
+
+  //----------------------------------------------------------------
   // BlockGroup::eval
   //
   bool
@@ -3178,7 +3331,8 @@ namespace Yamka
       eltsEval(refBlock_, crawler) ||
       crawler.eval(refVirtual_) ||
       crawler.eval(codecState_) ||
-      eltsEval(slices_, crawler);
+      crawler.eval(discardPadding_) ||
+      crawler.eval(slices_);
   }
 
   //----------------------------------------------------------------
@@ -3194,9 +3348,10 @@ namespace Yamka
       !refPriority_.mustSave() &&
       !refVirtual_.mustSave() &&
       !codecState_.mustSave() &&
+      !discardPadding_.mustSave() &&
+      !slices_.mustSave() &&
       blockVirtual_.empty() &&
-      refBlock_.empty() &&
-      slices_.empty();
+      refBlock_.empty();
 
     return allDefault;
   }
@@ -3216,7 +3371,8 @@ namespace Yamka
       eltsCalcSize(refBlock_) +
       refVirtual_.calcSize() +
       codecState_.calcSize() +
-      eltsCalcSize(slices_);
+      discardPadding_.calcSize() +
+      slices_.calcSize();
 
     return size;
   }
@@ -3237,7 +3393,8 @@ namespace Yamka
     *receipt += eltsSave(refBlock_, storage);
     *receipt += refVirtual_.save(storage);
     *receipt += codecState_.save(storage);
-    *receipt += eltsSave(slices_, storage);
+    *receipt += discardPadding_.save(storage);
+    *receipt += slices_.save(storage);
 
     return receipt;
   }
@@ -3260,7 +3417,8 @@ namespace Yamka
     bytesToRead -= eltsLoad(refBlock_, storage, bytesToRead, loader);
     bytesToRead -= refVirtual_.load(storage, bytesToRead, loader);
     bytesToRead -= codecState_.load(storage, bytesToRead, loader);
-    bytesToRead -= eltsLoad(slices_, storage, bytesToRead, loader);
+    bytesToRead -= discardPadding_.load(storage, bytesToRead, loader);
+    bytesToRead -= slices_.load(storage, bytesToRead, loader);
 
     uint64 bytesRead = prevBytesToRead - bytesToRead;
     return bytesRead;
@@ -4182,6 +4340,8 @@ namespace Yamka
       for (TCueTrkPosIter j = cueTrkPns.begin(); j != cueTrkPns.end(); ++j)
       {
         TCueTrkPos & cueTrkPos = *j;
+
+        // resolve CueClusterPosition reference:
         VEltPosition & clusterRef = cueTrkPos.payload_.cluster_.payload_;
         if (!clusterRef.hasPosition())
         {
@@ -4194,6 +4354,25 @@ namespace Yamka
         const TCluster * cluster = eltsFind(clusters_, absolutePosition);
         clusterRef.setElt(cluster);
         clusterRef.setOrigin(origin);
+
+        // resolve CueRelativePosition reference:
+        VEltPosition & elemRef = cueTrkPos.payload_.relPos_.payload_;
+        if (!cluster || !elemRef.hasPosition())
+        {
+          continue;
+        }
+
+        uint64 elemPositionOrigin =
+          cluster->receipt_->position() +
+          cluster->offsetToPayload_;
+
+        uint64 elemRelPosition = elemRef.position();
+        uint64 elemAbsPosition = elemPositionOrigin + elemRelPosition;
+
+        const IElement * found = eltsFind(cluster->payload_.blocks_.elts(),
+                                          elemAbsPosition);
+        elemRef.setElt(found);
+        elemRef.setOrigin(cluster);
       }
     }
 

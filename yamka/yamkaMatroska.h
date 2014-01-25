@@ -321,6 +321,9 @@ namespace Yamka
     TypedefYamkaElt(VUInt, 0x23E383, "DefaultDuration") TFrameDuration;
     TFrameDuration frameDuration_;
 
+    TypedefYamkaElt(VUInt, 0x234E7A, "DefaultDecodedFieldDur") TFieldDuration;
+    TFieldDuration fieldDuration_;
+
     TypedefYamkaElt(VFloat, 0x23314F, "TrackTimecodeScale") TTimecodeScale;
     TTimecodeScale timecodeScale_;
 
@@ -362,6 +365,12 @@ namespace Yamka
 
     TypedefYamkaElt(VUInt, 0x6FAB, "TrackOverlay") TTrackOverlay;
     TTrackOverlay trackOverlay_;
+
+    TypedefYamkaElt(VUInt, 0x56AA, "CodecDelay") TCodecDelay;
+    TCodecDelay codecDelay_;
+
+    TypedefYamkaElt(VUInt, 0x56BB, "SeekPreRoll") TSeekPreRoll;
+    TSeekPreRoll seekPreRoll_;
 
     TypedefYamkaElt(TrackTranslate, 0x6624, "TrackTranslate") TTrackTranslate;
     TTrackTranslate trackTranslate_;
@@ -464,19 +473,25 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
-  // CueTrkPos
+  // CueTrackPositions
   //
-  struct CueTrkPos : public EbmlMaster
+  struct CueTrackPositions : public EbmlMaster
   {
-    CueTrkPos();
+    CueTrackPositions();
 
     ImplementsYamkaPayloadAPI();
 
-    TypedefYamkaElt(VUInt, 0xF7, "Track") TTrack;
+    TypedefYamkaElt(VUInt, 0xF7, "CueTrack") TTrack;
     TTrack track_;
 
-    TypedefYamkaElt(VEltPosition, 0xF1, "ClusterPosition") TCluster;
+    TypedefYamkaElt(VEltPosition, 0xF1, "CueClusterPosition") TCluster;
     TCluster cluster_;
+
+    TypedefYamkaElt(VEltPosition, 0xF0, "CueRelativePosition") TRelativePos;
+    TRelativePos relPos_;
+
+    TypedefYamkaElt(VUInt, 0xB2, "CueDuration") TDuration;
+    TDuration duration_;
 
     TypedefYamkaElt(VUInt, 0x5378, "CueBlockNumber") TBlock;
     TBlock block_;
@@ -500,7 +515,7 @@ namespace Yamka
     TypedefYamkaElt(VUInt, 0xB3, "CueTime") TTime;
     TTime time_;
 
-    TypedefYamkaElt(CueTrkPos, 0xB7, "CueTrackPosition") TCueTrkPos;
+    TypedefYamkaElt(CueTrackPositions, 0xB7, "CueTrackPosition") TCueTrkPos;
     std::list<TCueTrkPos> trkPosns_;
   };
 
@@ -659,6 +674,9 @@ namespace Yamka
 
     TypedefYamkaElt(VUInt, 0x73C4, "ChapterUID") TUID;
     TUID UID_;
+
+    TypedefYamkaElt(VString, 0x5654, "ChapterStringUID") TChapterStringUID;
+    TChapterStringUID strUID_;
 
     TypedefYamkaElt(VUInt, 0x91, "ChapterTimeStart") TTimeStart;
     TTimeStart timeStart_;
@@ -847,6 +865,28 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
+  // TimeSlice
+  //
+  struct TimeSlice : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+
+    TypedefYamkaElt(VUInt, 0xCC, "SliceLaceNumber") TLaceNumber;
+    TLaceNumber laceNumber_;
+  };
+
+  //----------------------------------------------------------------
+  // Slices
+  //
+  struct Slices : public EbmlMaster
+  {
+    ImplementsYamkaPayloadAPI();
+
+    TypedefYamkaElt(TimeSlice, 0xE8, "TimeSlice") TTimeSlice;
+    std::list<TTimeSlice> timeSlices_;
+  };
+
+  //----------------------------------------------------------------
   // BlockGroup
   //
   struct BlockGroup : public EbmlMaster
@@ -877,8 +917,11 @@ namespace Yamka
     TypedefYamkaElt(VBinary, 0xA4, "CodecState") TCodecState;
     TCodecState codecState_;
 
-    TypedefYamkaElt(VBinary, 0x8E, "Slice") TSlice;
-    std::list<TSlice> slices_;
+    TypedefYamkaElt(VInt, 0x75A2, "DiscardPadding") TDiscardPadding;
+    TDiscardPadding discardPadding_;
+
+    TypedefYamkaElt(Slices, 0x8E, "Slices") TSlices;
+    TSlices slices_;
   };
 
   //----------------------------------------------------------------

@@ -67,7 +67,7 @@ main(int argc, char ** argv)
   sanity_check<TrackOperation>();
   sanity_check<Tracks>();
   sanity_check<CueRef>();
-  sanity_check<CueTrkPos>();
+  sanity_check<CueTrackPositions>();
   sanity_check<CuePoint>();
   sanity_check<Cues>();
   sanity_check<SeekEntry>();
@@ -88,6 +88,8 @@ main(int argc, char ** argv)
   sanity_check<SilentTracks>();
   sanity_check<BlockMore>();
   sanity_check<BlockAdditions>();
+  sanity_check<TimeSlice>();
+  sanity_check<Slices>();
   sanity_check<BlockGroup>();
   sanity_check<Cluster>();
   sanity_check<Segment>();

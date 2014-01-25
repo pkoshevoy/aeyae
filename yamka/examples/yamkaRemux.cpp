@@ -1203,7 +1203,7 @@ TRemuxer::remux(uint64 inPointInMsec,
         continue;
       }
 
-      const CueTrkPos & cueTrkPos =
+      const CueTrackPositions & cueTrkPos =
         cuePoint.trkPosns_.front().payload_;
       uint64 trackNo = cueTrkPos.track_.payload_.get();
       if (trackNo != srcCuesTrackNo)
@@ -1409,9 +1409,9 @@ TRemuxer::remux(uint64 inPointInMsec,
     TEightByteBuffer bvCuePoint = uintEncode(TCuePoint::kId);
     TEightByteBuffer bvCueTime = uintEncode(CuePoint::TTime::kId);
     TEightByteBuffer bvCueTrkPos = uintEncode(CuePoint::TCueTrkPos::kId);
-    TEightByteBuffer bvCueTrack = uintEncode(CueTrkPos::TTrack::kId);
-    TEightByteBuffer bvCueCluster = uintEncode(CueTrkPos::TCluster::kId);
-    TEightByteBuffer bvCueBlock = uintEncode(CueTrkPos::TBlock::kId);
+    TEightByteBuffer bvCueTrack = uintEncode(CueTrackPositions::TTrack::kId);
+    TEightByteBuffer bvCueClstr = uintEncode(CueTrackPositions::TCluster::kId);
+    TEightByteBuffer bvCueBlock = uintEncode(CueTrackPositions::TBlock::kId);
 
     for (unsigned int i = 0; i < numPages; i++)
     {
@@ -1438,9 +1438,11 @@ TRemuxer::remux(uint64 inPointInMsec,
           << bvCueTrack
           << vsizeEncode(bvTrack.n_)
           << bvTrack
-          << bvCueCluster
+          << bvCueClstr
           << vsizeEncode(bvPosition.n_)
           << bvPosition;
+
+        // FIXME: save CueRelativePosition
 
         if (cue.block_ > 1)
         {
@@ -1829,6 +1831,9 @@ TRemuxer::addCuePoint(TBlockInfo * binfo)
   cue.time_ = binfo->pts_;
   cue.track_ = binfo->trackNo_;
   cue.cluster_ = clusterRelativePosition_;
+
+  // FIXME: calculate CueRelativePosition
+
   cue.block_ = clusterBlocks_;
   cueTable_.add(cue);
 }

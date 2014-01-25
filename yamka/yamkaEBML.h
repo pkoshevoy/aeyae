@@ -153,6 +153,15 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
+  // eltsFind
+  //
+  // Find an element with storage receipt position
+  // matching a given position:
+  //
+  extern IElement *
+  eltsFind(const std::list<IElement *> & elts, uint64 position);
+
+  //----------------------------------------------------------------
   // eltsSetCrc32
   //
   // Enable saving element payload CRC-32 checksum

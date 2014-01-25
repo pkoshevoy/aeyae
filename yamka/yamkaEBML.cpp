@@ -14,6 +14,31 @@ namespace Yamka
 {
 
   //----------------------------------------------------------------
+  // eltsFind
+  //
+  IElement *
+  eltsFind(const std::list<IElement *> & elts, uint64 position)
+  {
+    typedef std::list<IElement *>::const_iterator elt_iter_t;
+
+    for (elt_iter_t i = elts.begin(); i != elts.end(); ++i)
+    {
+      IElement * elt = *i;
+      IStorage::IReceiptPtr receipt = elt->storageReceipt();
+      if (receipt)
+      {
+        uint64 eltPosition = receipt->position();
+        if (eltPosition == position)
+        {
+          return elt;
+        }
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // EbmlMaster::isComposite
   //
   bool
