@@ -13,6 +13,7 @@
 #include <yamkaFileStorage.h>
 #include <yamkaEBML.h>
 #include <yamkaMatroska.h>
+#include <yamkaMixedElements.h>
 #include <yamkaVersion.h>
 
 // system includes:
@@ -327,50 +328,66 @@ struct TBlockInfo
     keyframe_(false),
     next_(NULL),
     prev_(NULL)
-  {}
+  {
+    content_.addType<TSilentTracks>();
+    content_.addType<TBlockGroup>();
+    content_.addType<TSimpleBlock>();
+    content_.addType<TEncryptedBlock>();
+  }
 
   inline HodgePodge * getBlockData()
   {
-    if (sblockElt_.mustSave())
+    if (content_.mustSave())
     {
-      return &(sblockElt_.payload_.data_);
-    }
-    else if (bgroupElt_.mustSave())
-    {
-      return &(bgroupElt_.payload_.block_.payload_.data_);
-    }
-    else if (eblockElt_.mustSave())
-    {
-      return &(eblockElt_.payload_.data_);
+      IElement * e = content_.elts().front();
+      const uint64 id = e->getId();
+
+      if (id == TSimpleBlock::kId)
+      {
+        TSimpleBlock * sblockElt = (TSimpleBlock *)e;
+        return &(sblockElt->payload_.data_);
+      }
+      else if (id == TBlockGroup::kId)
+      {
+        TBlockGroup * bgroupElt = (TBlockGroup *)e;
+        return &(bgroupElt->payload_.block_.payload_.data_);
+      }
+      else if (id == TEncryptedBlock::kId)
+      {
+        TEncryptedBlock * eblockElt = (TEncryptedBlock *)e;
+        return &(eblockElt->payload_.data_);
+      }
     }
 
     assert(false);
     return NULL;
   }
 
+  inline bool contains(const uint64 id) const
+  {
+    if (!content_.elts().empty())
+    {
+      IElement * e = content_.elts().front();
+      const uint64 eltId = e->getId();
+      return eltId == id;
+    }
+
+    return false;
+  }
+
   IStorage::IReceiptPtr save(FileStorage & storage)
   {
-    if (sblockElt_.mustSave())
+    if (content_.mustSave())
     {
-      return sblockElt_.save(storage);
-    }
-    else if (bgroupElt_.mustSave())
-    {
-      return bgroupElt_.save(storage);
-    }
-    else if (eblockElt_.mustSave())
-    {
-      return eblockElt_.save(storage);
+      return content_.save(storage);
     }
 
     assert(false);
     return IStorage::IReceiptPtr();
   }
 
-  TSilentTracks silentElt_;
-  TSimpleBlock sblockElt_;
-  TBlockGroup bgroupElt_;
-  TEncryptedBlock eblockElt_;
+  // SilentTracks, BlockGroups, SimpleBlocks, EncryptedBlocks:
+  MixedElements content_;
 
   SimpleBlock block_;
   IStorage::IReceiptPtr header_;
@@ -594,6 +611,7 @@ struct TCue
   uint64 track_;
   uint64 cluster_;
   uint64 block_;
+  uint64 relPos_;
 };
 
 //----------------------------------------------------------------
@@ -631,7 +649,7 @@ struct TRemuxer : public LoadWithProgress
   void mux(std::size_t minLaceSize = 150);
   void startNextCluster(TBlockInfo * binfo);
   void finishCurrentCluster();
-  void addCuePoint(TBlockInfo * binfo);
+  void addCuePoint(TBlockInfo * binfo, const IStorage::IReceiptPtr & receipt);
 
   const std::map<uint64, double> & tsOffset_;
   const TTrackMap & trackSrcDst_;
@@ -647,6 +665,7 @@ struct TRemuxer : public LoadWithProgress
 
   const uint64 segmentPayloadPosition_;
   uint64 clusterRelativePosition_;
+  uint64 clusterPayloadPosition_;
 
   TLace lace_;
   TDataTable<uint64> seekTable_;
@@ -683,6 +702,7 @@ TRemuxer::TRemuxer(const std::map<uint64, double> & tsOffset,
   cuesTrackHasKeyframes_(0),
   segmentPayloadPosition_(dstSeg.payloadReceipt()->position()),
   clusterRelativePosition_(0),
+  clusterPayloadPosition_(uintMax[8]),
   t0_(0),
   t1_(0),
   extractTimeSegment_(false),
@@ -1412,6 +1432,8 @@ TRemuxer::remux(uint64 inPointInMsec,
     TEightByteBuffer bvCueTrack = uintEncode(CueTrackPositions::TTrack::kId);
     TEightByteBuffer bvCueClstr = uintEncode(CueTrackPositions::TCluster::kId);
     TEightByteBuffer bvCueBlock = uintEncode(CueTrackPositions::TBlock::kId);
+    TEightByteBuffer bvCueRelPos =
+      uintEncode(CueTrackPositions::TRelativePos::kId);
 
     for (unsigned int i = 0; i < numPages; i++)
     {
@@ -1429,6 +1451,7 @@ TRemuxer::remux(uint64 inPointInMsec,
         const TCue & cue = page->data_[j];
 
         TEightByteBuffer bvPosition = uintEncode(cue.cluster_);
+        TEightByteBuffer bvRelPos = uintEncode(cue.relPos_);
         TEightByteBuffer bvBlock = uintEncode(cue.block_);
         TEightByteBuffer bvTrack = uintEncode(cue.track_);
         TEightByteBuffer bvTime = uintEncode(cue.time_);
@@ -1440,9 +1463,10 @@ TRemuxer::remux(uint64 inPointInMsec,
           << bvTrack
           << bvCueClstr
           << vsizeEncode(bvPosition.n_)
-          << bvPosition;
-
-        // FIXME: save CueRelativePosition
+          << bvPosition
+          << bvCueRelPos
+          << vsizeEncode(bvRelPos.n_)
+          << bvRelPos;
 
         if (cue.block_ > 1)
         {
@@ -1552,9 +1576,11 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
       binfo.keyframe_ = true;
     }
     else if (trackType == Track::kTrackTypeVideo &&
-             binfo.bgroupElt_.mustSave())
+             binfo.contains(TBlockGroup::kId) &&
+             binfo.content_.mustSave())
     {
-      const BlockGroup & bg = binfo.bgroupElt_.payload_;
+      TBlockGroup * bgroupElt = binfo.content_.find<TBlockGroup>();
+      const BlockGroup & bg = bgroupElt->payload_;
       binfo.keyframe_ = bg.refBlock_.empty();
     }
   }
@@ -1585,7 +1611,7 @@ TRemuxer::updateHeader(uint64 clusterTime, TBlockInfo & binfo)
          dstBlockTime <= kMaxShort);
 
   bool dstIsKeyframe = binfo.keyframe_;
-  if (binfo.bgroupElt_.mustSave())
+  if (binfo.contains(TBlockGroup::kId))
   {
     // BlockGroup blocks do not have a keyframe flag:
     dstIsKeyframe = false;
@@ -1629,32 +1655,23 @@ TRemuxer::push(uint64 clusterTime, const IElement * elt)
 {
   TBlockInfo * info = new TBlockInfo();
 
-  uint64 eltId = elt->getId();
-  switch (eltId)
+  if (!elt || !info->content_.push_back(*elt))
   {
-    case TBlockGroup::kId:
-      info->bgroupElt_ = *((const TBlockGroup *)elt);
-      info->duration_ = info->bgroupElt_.payload_.duration_.payload_.get();
-      break;
+    assert(false);
+    delete info;
+    return NULL;
+  }
 
-    case TSimpleBlock::kId:
-      info->sblockElt_ = *((const TSimpleBlock *)elt);
-      break;
-
-    case TEncryptedBlock::kId:
-      info->eblockElt_ = *((const TEncryptedBlock *)elt);
-      break;
-
-    case TSilentTracks::kId:
-      info->silentElt_ = *((const TSilentTracks *)elt);
-      info->pts_ = clusterTime;
-      info->dts_ = clusterTime;
-      break;
-
-    default:
-      assert(false);
-      delete info;
-      return NULL;
+  const uint64 eltId = elt->getId();
+  if (eltId == TBlockGroup::kId)
+  {
+    const TBlockGroup * bgroupElt = (const TBlockGroup *)elt;
+    info->duration_ = bgroupElt->payload_.duration_.payload_.get();
+  }
+  else if (eltId == TSilentTracks::kId)
+  {
+    info->pts_ = clusterTime;
+    info->dts_ = clusterTime;
   }
 
   if (eltId != TSilentTracks::kId && !isRelevant(clusterTime, *info))
@@ -1707,28 +1724,21 @@ TRemuxer::mux(std::size_t minLaceSize)
 
   if (binfo->trackNo_ && updateHeader(clusterTime, *binfo))
   {
-    Cluster & cluster = clusterElt_.payload_;
+    IElement * e = binfo->content_.elts().front();
+    const uint64 id = e->getId();
 
-    if (binfo->sblockElt_.mustSave())
+    if (id == TSimpleBlock::kId ||
+        id == TBlockGroup::kId ||
+        id == TEncryptedBlock::kId)
     {
-      cluster.blocks_.push_back(binfo->sblockElt_);
-      binfo->sblockElt_ = cluster.blocks_.back<TSimpleBlock>();
-    }
-    else if (binfo->bgroupElt_.mustSave())
-    {
-      cluster.blocks_.push_back(binfo->bgroupElt_);
-      binfo->bgroupElt_ = cluster.blocks_.back<TBlockGroup>();
-    }
-    else if (binfo->eblockElt_.mustSave())
-    {
-      cluster.blocks_.push_back(binfo->eblockElt_);
-      binfo->eblockElt_ = cluster.blocks_.back<TEncryptedBlock>();
+      Cluster & cluster = clusterElt_.payload_;
+      cluster.blocks_.push_back(*e);
     }
 
-    binfo->save(dst_);
+    IStorage::IReceiptPtr receipt = binfo->save(dst_);
 
     clusterBlocks_++;
-    addCuePoint(binfo);
+    addCuePoint(binfo, receipt);
   }
 
   delete binfo;
@@ -1750,7 +1760,7 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
   // set the start time:
   clusterElt_.payload_.timecode_.payload_.set(binfo->pts_);
 
-  if (!binfo->trackNo_ && binfo->silentElt_.mustSave())
+  if (!binfo->trackNo_ && binfo->contains(TSilentTracks::kId))
   {
     // copy the SilentTracks, update track numbers to match:
     typedef SilentTracks::TTrack TTrkNumElt;
@@ -1758,8 +1768,11 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
 
     clusterElt_.payload_.silent_.alwaysSave();
 
+    TSilentTracks * silentElt =
+      (TSilentTracks *)binfo->content_.elts().front();
+
     const TTrkNumElts & srcSilentTracks =
-      binfo->silentElt_.payload_.tracks_;
+      silentElt->payload_.tracks_;
 
     TTrkNumElts & dstSilentTracks =
       clusterElt_.payload_.silent_.payload_.tracks_;
@@ -1783,6 +1796,7 @@ TRemuxer::startNextCluster(TBlockInfo * binfo)
   }
 
   clusterElt_.savePaddedUpToSize(dst_, uintMax[8]);
+  clusterPayloadPosition_ = clusterElt_.payloadReceipt()->position();
 
   // save relative cluster position for 2nd SeekHead:
   uint64 absPos = clusterElt_.storageReceipt()->position();
@@ -1804,7 +1818,8 @@ TRemuxer::finishCurrentCluster()
 // TRemuxer::addCuePoint
 //
 void
-TRemuxer::addCuePoint(TBlockInfo * binfo)
+TRemuxer::addCuePoint(TBlockInfo * binfo,
+                      const IStorage::IReceiptPtr & receipt)
 {
   if (!binfo->keyframe_)
   {
@@ -1831,8 +1846,7 @@ TRemuxer::addCuePoint(TBlockInfo * binfo)
   cue.time_ = binfo->pts_;
   cue.track_ = binfo->trackNo_;
   cue.cluster_ = clusterRelativePosition_;
-
-  // FIXME: calculate CueRelativePosition
+  cue.relPos_ = receipt->position() - clusterPayloadPosition_;
 
   cue.block_ = clusterBlocks_;
   cueTable_.add(cue);
@@ -2833,11 +2847,9 @@ main(int argc, char ** argv)
   MemoryStorage tmp;
   MatroskaDoc out;
 
-  // keep the original DocType:
-  out.head_.payload_.docTypeVersion_ =
-    doc.head_.payload_.docTypeVersion_;
-  out.head_.payload_.docTypeReadVersion_ =
-    doc.head_.payload_.docTypeReadVersion_;
+  // set the DocType to 4, due to CueRelativePosition:
+  out.head_.payload_.docTypeVersion_.payload_.set(4);
+  out.head_.payload_.docTypeReadVersion_.payload_.set(4);
 
   dst.file_.setSize(0);
   out.save(dst);

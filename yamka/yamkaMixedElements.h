@@ -100,8 +100,38 @@ namespace Yamka
     template <typename TElement>
     inline TElement & back() const
     {
-      TElement * elt = (TElement *)(elts_.back());
+      IElement * e = elts_.back();
+      assert(e->getId() == TElement::kId);
+
+      TElement * elt = (TElement *)(e);
       return *elt;
+    }
+
+    // lookup an element of a given type:
+    template <typename TElement>
+    inline TElement *
+    find(std::list<IElement *>::const_iterator * startHere = NULL) const
+    {
+      std::list<IElement *>::const_iterator iter =
+        startHere ? *startHere : elts_.begin();
+
+      for (; iter != elts_.end(); ++iter)
+      {
+        IElement * elt = *iter;
+        const uint64 id = elt->getId();
+
+        if (id == TElement::kId)
+        {
+          if (startHere)
+          {
+            *startHere = iter;
+          }
+
+          return (TElement *)(elt);
+        }
+      }
+
+      return NULL;
     }
 
     // accessor to the counter of elements stored here:
