@@ -20,7 +20,7 @@
 
 //----------------------------------------------------------------
 // the_pick_data_t::operator ==
-// 
+//
 bool
 the_pick_data_t::operator == (const the_pick_data_t & data) const
 {
@@ -31,7 +31,7 @@ the_pick_data_t::operator == (const the_pick_data_t & data) const
 
 //----------------------------------------------------------------
 // the_pick_data_t::operator <
-// 
+//
 bool
 the_pick_data_t::operator < (const the_pick_data_t & data) const
 {
@@ -40,7 +40,7 @@ the_pick_data_t::operator < (const the_pick_data_t & data) const
   {
     return depth() < data.depth();
   }
-  
+
   // selections closest to the view volume axis are more acurate and
   // therefore have higher priority:
   return radius() < data.radius();
@@ -48,7 +48,7 @@ the_pick_data_t::operator < (const the_pick_data_t & data) const
 
 //----------------------------------------------------------------
 // the_pick_data_t::dump
-// 
+//
 void
 the_pick_data_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -63,7 +63,7 @@ the_pick_data_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & strm, const the_pick_data_t & data)
 {
@@ -74,45 +74,45 @@ operator << (ostream & strm, const the_pick_data_t & data)
 
 //----------------------------------------------------------------
 // the_pick_rec_t::set_current_state
-// 
+//
 void
 the_pick_rec_t::set_current_state(the_registry_t * r,
 				  the_primitive_state_t state) const
 {
   the_primitive_t * prim = data_.is<the_primitive_t>(r);
   if (prim == NULL) return;
-  
+
   prim->set_current_state(state);
 }
 
 //----------------------------------------------------------------
 // the_pick_rec_t::remove_current_state
-// 
+//
 void
 the_pick_rec_t::remove_current_state(the_registry_t * r,
 				     the_primitive_state_t state) const
 {
   the_primitive_t * prim = data_.is<the_primitive_t>(r);
   if (prim == NULL) return;
-  
+
   prim->clear_state(state);
 }
 
 //----------------------------------------------------------------
 // the_pick_rec_t::clear_current_state
-// 
+//
 void
 the_pick_rec_t::clear_current_state(the_registry_t * r) const
 {
   the_primitive_t * prim = data_.is<the_primitive_t>(r);
   if (prim == NULL) return;
-  
+
   prim->clear_current_state();
 }
 
 //----------------------------------------------------------------
 // the_pick_rec_t::dump
-// 
+//
 void
 the_pick_rec_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -127,7 +127,7 @@ the_pick_rec_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & strm, const the_pick_rec_t & pick)
 {

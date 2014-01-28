@@ -25,7 +25,7 @@ using std::endl;
 
 //----------------------------------------------------------------
 // _FIXME
-// 
+//
 extern void
 _FIXME(const char * note, const char * file, int line)
 {
@@ -34,7 +34,7 @@ _FIXME(const char * note, const char * file, int line)
 
 //----------------------------------------------------------------
 // _the_failed_assertion
-// 
+//
 extern void
 _the_failed_assertion(const char * expr, const char * file, int line)
 {
@@ -44,7 +44,7 @@ _the_failed_assertion(const char * expr, const char * file, int line)
 
 //----------------------------------------------------------------
 // put_breakpoint_here
-// 
+//
 void
 put_breakpoint_here()
 {

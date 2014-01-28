@@ -16,12 +16,12 @@
 
 #ifndef NOUI
 #include "opengl/the_appearance.hxx"
-#endif // NOUI 
+#endif // NOUI
 
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & strm, the_primitive_state_t state)
 {
@@ -30,25 +30,25 @@ operator << (ostream & strm, the_primitive_state_t state)
     case THE_REGULAR_STATE_E:	return strm << "THE_REGULAR_STATE_E";
     case THE_HILITED_STATE_E:	return strm << "THE_HILITED_STATE_E";
     case THE_SELECTED_STATE_E:	return strm << "THE_SELECTED_STATE_E";
-      
+
     default:
       assert(false);
   }
-  
+
   return strm;
 }
 
 
 //----------------------------------------------------------------
 // the_primitive_t::the_primitive_t
-// 
+//
 the_primitive_t::the_primitive_t():
   the_graph_node_t()
 {}
 
 //----------------------------------------------------------------
 // the_primitive_t::the_primitive_t
-// 
+//
 the_primitive_t::the_primitive_t(const the_primitive_t & primitive):
   the_graph_node_t(primitive),
   current_state_(primitive.current_state_)
@@ -56,13 +56,13 @@ the_primitive_t::the_primitive_t(const the_primitive_t & primitive):
 
 //----------------------------------------------------------------
 // the_primitive_t::~the_primitive_t
-// 
+//
 the_primitive_t::~the_primitive_t()
 {}
 
 //----------------------------------------------------------------
 // the_primitive_t::color
-// 
+//
 the_color_t
 the_primitive_t::color() const
 {
@@ -71,7 +71,7 @@ the_primitive_t::color() const
 
 //----------------------------------------------------------------
 // the_primitive_t::dump
-// 
+//
 void
 the_primitive_t::dump(ostream & strm, unsigned int indent) const
 {

@@ -15,7 +15,7 @@
 
 //----------------------------------------------------------------
 // the_indent_str_t
-// 
+//
 class the_indent_str_t
 {
 public:
@@ -28,17 +28,17 @@ public:
     for (unsigned int i = 0; i < size_; i++) string_[i] = ch;
     string_[size_] = '\0';
   }
-  
+
   ~the_indent_str_t()
   {
     delete [] string_;
   }
-  
+
   inline const char * indent(const unsigned int & tabs) const
   {
     return &string_[size_ - tabs];
   }
-  
+
 private:
   char * string_;
   unsigned int size_;
@@ -47,13 +47,13 @@ private:
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 std::ostream &
 operator << (std::ostream & stream, const indtkn_t & t)
 {
   static const the_indent_str_t ind_space(' ', 7);
   static const the_indent_str_t ind_tab('\t', 64);
-  
+
   unsigned int tabs = t.ind / 8;
   unsigned int spcs = t.ind % 8;
   return stream << ind_tab.indent(tabs) << ind_space.indent(spcs);

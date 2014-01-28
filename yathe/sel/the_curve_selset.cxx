@@ -15,7 +15,7 @@
 
 //----------------------------------------------------------------
 // delete_point
-// 
+//
 void
 delete_point(the_registry_t * registry,
 	     the_procedure_t * proc,
@@ -23,18 +23,18 @@ delete_point(the_registry_t * registry,
 {
   the_point_t * point = registry->elem<the_point_t>(id);
   if (point == NULL) return;
-  
+
   // delete the point:
   breakdown_supporter_dependent(registry, proc->id(), id);
   registry->del(point);
   delete point;
-  
+
   the_graph_node_t::request_regeneration(proc);
 }
 
 //----------------------------------------------------------------
 // delete_curve
-// 
+//
 void
 delete_curve(the_registry_t * registry,
 	     the_procedure_t * proc,
@@ -42,31 +42,31 @@ delete_curve(the_registry_t * registry,
 {
   the_intcurve_t * curve = registry->elem<the_intcurve_t>(id);
   if (curve == NULL) return;
-  
+
   // delete all curve points:
   while (!curve->pts().empty())
   {
     unsigned int point_id = curve->pts().front().id_;
     curve->del(point_id);
-    
+
     the_graph_node_t * point = registry->elem(point_id);
     breakdown_supporter_dependent(registry, proc->id(), point_id);
     registry->del(point);
     delete point;
   }
-  
+
   // delete the curve:
   breakdown_supporter_dependent(registry, proc->id(), id);
   registry->del(curve);
   delete curve;
-  
+
   the_graph_node_t::request_regeneration(proc);
 }
 
 
 //----------------------------------------------------------------
 // the_curve_selrec_t::reset_anchors
-// 
+//
 void
 the_curve_selrec_t::reset_anchors() const
 {
@@ -80,12 +80,12 @@ the_curve_selrec_t::reset_anchors() const
 
 //----------------------------------------------------------------
 // the_curve_selrec_t::activate_all_points
-// 
+//
 void
 the_curve_selrec_t::activate_all_points()
 {
   deactivate_all();
-  
+
   const std::list<the_knot_point_t> & pts = get<the_intcurve_t>()->pts();
   for (std::list<the_knot_point_t>::const_iterator i = pts.begin();
        i != pts.end(); ++i)
@@ -97,7 +97,7 @@ the_curve_selrec_t::activate_all_points()
 
 //----------------------------------------------------------------
 // the_curve_selset_traits_t::clone
-// 
+//
 the_curve_selset_traits_t::super_t *
 the_curve_selset_traits_t::clone() const
 {
@@ -106,7 +106,7 @@ the_curve_selset_traits_t::clone() const
 
 //----------------------------------------------------------------
 // the_curve_selset_traits_t::is_valid
-// 
+//
 bool
 the_curve_selset_traits_t::is_valid(const the_curve_selrec_t & rec) const
 {
@@ -115,7 +115,7 @@ the_curve_selset_traits_t::is_valid(const the_curve_selrec_t & rec) const
 
 //----------------------------------------------------------------
 // the_curve_selset_traits_t::activate
-// 
+//
 bool
 the_curve_selset_traits_t::activate(the_curve_selrec_t & rec) const
 {
@@ -125,13 +125,13 @@ the_curve_selset_traits_t::activate(the_curve_selrec_t & rec) const
 
 //----------------------------------------------------------------
 // the_curve_selset_traits_t::deactivate
-// 
+//
 bool
 the_curve_selset_traits_t::deactivate(the_curve_selrec_t & rec) const
 {
   rec.deactivate_all();
   rec.get<the_intcurve_t>()->clear_state(THE_SELECTED_STATE_E);
-  
+
   // if the curve is invalid, get rid of it and its points permanently:
   if (!rec.get<the_intcurve_t>()->has_at_least_two_points())
   {
@@ -139,14 +139,14 @@ the_curve_selset_traits_t::deactivate(the_curve_selrec_t & rec) const
 		 selset_.proc(),
 		 rec.id());
   }
-  
+
   return true;
 }
 
 
 //----------------------------------------------------------------
 // the_curve_selset_t::the_curve_selset_t
-// 
+//
 the_curve_selset_t::the_curve_selset_t():
   the_curve_selset_t::super_t()
 {
@@ -155,14 +155,14 @@ the_curve_selset_t::the_curve_selset_t():
 
 //----------------------------------------------------------------
 // the_curve_selset_t::the_curve_selset_t
-// 
+//
 the_curve_selset_t::the_curve_selset_t(const the_curve_selset_t & selset):
   the_curve_selset_t::super_t(selset)
 {}
 
 //----------------------------------------------------------------
 // the_curve_selset_t::append_active_curve
-// 
+//
 bool
 the_curve_selset_t::
 append_active_curve(const unsigned int & curve_id)
@@ -172,7 +172,7 @@ append_active_curve(const unsigned int & curve_id)
 
 //----------------------------------------------------------------
 // the_curve_selset_t::remove_active_curve
-// 
+//
 bool
 the_curve_selset_t::
 remove_active_curve(const unsigned int & curve_id)
@@ -182,7 +182,7 @@ remove_active_curve(const unsigned int & curve_id)
 
 //----------------------------------------------------------------
 // the_curve_selset_t::set_active_curve
-// 
+//
 bool
 the_curve_selset_t::set_active_curve(const unsigned int & curve_id)
 {
@@ -191,7 +191,7 @@ the_curve_selset_t::set_active_curve(const unsigned int & curve_id)
 
 //----------------------------------------------------------------
 // the_curve_selset_t::toggle_active_curve
-// 
+//
 void
 the_curve_selset_t::
 toggle_active_curve(const unsigned int & curve_id)
@@ -201,7 +201,7 @@ toggle_active_curve(const unsigned int & curve_id)
 
 //----------------------------------------------------------------
 // the_curve_selset_t::remove_active_points
-// 
+//
 void
 the_curve_selset_t::remove_active_points()
 {
@@ -215,31 +215,31 @@ the_curve_selset_t::remove_active_points()
 
 //----------------------------------------------------------------
 // the_curve_selset_t::active_curve_of_point
-// 
+//
 unsigned int
 the_curve_selset_t::
 active_curve_of_point(const unsigned int & point_id) const
 {
   the_knot_point_t kp(point_id);
-  
+
   for (std::list<the_curve_selrec_t>::const_iterator
 	 iter = records_.begin(); iter != records_.end(); ++iter)
   {
     const the_curve_selrec_t & selrec = *iter;
     the_intcurve_t * curve = selrec.get<the_intcurve_t>();
-    
+
     if (::has(curve->pts(), kp))
     {
       return selrec.id();
     }
   }
-  
+
   return UINT_MAX;
 }
 
 //----------------------------------------------------------------
 // the_curve_selset_t::reset_anchors
-// 
+//
 void
 the_curve_selset_t::reset_anchors()
 {
@@ -253,7 +253,7 @@ the_curve_selset_t::reset_anchors()
 
 //----------------------------------------------------------------
 // the_curve_selset_t::count_active_points
-// 
+//
 size_t
 the_curve_selset_t::count_active_points() const
 {
@@ -264,13 +264,13 @@ the_curve_selset_t::count_active_points() const
     const the_curve_selrec_t & selrec = *iter;
     num_pts += selrec.records().size();
   }
-  
+
   return num_pts;
 }
 
 //----------------------------------------------------------------
 // the_curve_sel_set_t::record_with_points
-// 
+//
 const the_curve_selrec_t *
 the_curve_selset_t::
 record_with_points(const size_t & num_points) const
@@ -280,16 +280,16 @@ record_with_points(const size_t & num_points) const
   {
     const the_curve_selrec_t & selrec = *i;
     if (selrec.records().size() != num_points) continue;
-    
+
     return &selrec;
   }
-  
+
   return NULL;
 }
 
 //----------------------------------------------------------------
 // the_curve_selset_t::record
-// 
+//
 const the_curve_selrec_t *
 the_curve_selset_t::record(const unsigned int & curve_id) const
 {
@@ -298,7 +298,7 @@ the_curve_selset_t::record(const unsigned int & curve_id) const
 
 //----------------------------------------------------------------
 // the_curve_selset_t::record
-// 
+//
 the_curve_selrec_t *
 the_curve_selset_t::record(const unsigned int & curve_id)
 {
@@ -307,7 +307,7 @@ the_curve_selset_t::record(const unsigned int & curve_id)
 
 //----------------------------------------------------------------
 // the_curve_selset_t::has_active_point
-// 
+//
 bool
 the_curve_selset_t::has_active_point(const unsigned int & point_id,
 				     the_intcurve_t *& curve,
@@ -315,7 +315,7 @@ the_curve_selset_t::has_active_point(const unsigned int & point_id,
 {
   curve = NULL;
   point = NULL;
-  
+
   for (std::list<the_curve_selrec_t>::const_iterator
 	 iter = records_.begin(); iter != records_.end(); ++iter)
   {
@@ -324,29 +324,29 @@ the_curve_selset_t::has_active_point(const unsigned int & point_id,
     {
       continue;
     }
-    
+
     curve = selrec.get<the_intcurve_t>();
     point = registry()->elem<the_point_t>(point_id);
     return true;
   }
-  
+
   return false;
 }
 
 //----------------------------------------------------------------
 // the_curve_selset_t::graph
-// 
+//
 void
 the_curve_selset_t::graph(the_graph_t & graph) const
 {
   std::list<unsigned int> curve_ids;
-  
+
   for (std::list<the_curve_selrec_t>::const_iterator
 	 iter = records_.begin(); iter != records_.end(); ++iter)
   {
     const the_curve_selrec_t & selrec = *iter;
     curve_ids.push_back(selrec.id());
   }
-  
+
   graph.set_roots(registry(), curve_ids);
 }

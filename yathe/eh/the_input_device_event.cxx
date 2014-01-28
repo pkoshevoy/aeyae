@@ -20,19 +20,19 @@
 
 //----------------------------------------------------------------
 // the_input_device_event_t::save_widget
-// 
+//
 void
 the_input_device_event_t::save(std::ostream & so, const char * magic) const
 {
   if (!is_open(so)) return;
-  
+
   instance_t instance(widget_);
   if (!instance.was_saved())
   {
     // save the instance:
     instance.save(so);
   }
-  
+
   so << magic << ' ';
   save_address(so, instance.address());
   so << ' ';
@@ -40,7 +40,7 @@ the_input_device_event_t::save(std::ostream & so, const char * magic) const
 
 //----------------------------------------------------------------
 // the_input_device_event_t::load_widget
-// 
+//
 bool
 the_input_device_event_t::load(std::istream & si,
 			       const std::string & loaded_magic,
@@ -50,21 +50,21 @@ the_input_device_event_t::load(std::istream & si,
   {
     return false;
   }
-  
+
   // load the instance pointer:
   uint64_t addr = 0;
   if (!load_address(si, addr))
   {
     return false;
   }
-  
+
   // the loaded address should be known to us by now:
   instance_t instance;
   if (!instance.init(addr))
   {
     return false;
   }
-  
+
   widget_ = (the_view_t *)(instance.address());
   return true;
 }
@@ -72,7 +72,7 @@ the_input_device_event_t::load(std::istream & si,
 
 //----------------------------------------------------------------
 // the_pointer_device_event_t::the_pointer_device_event_t
-// 
+//
 the_pointer_device_event_t::the_pointer_device_event_t(the_view_t * widget,
                                                        const p2x1_t & scs_pt):
   the_input_device_event_t(widget),
@@ -81,7 +81,7 @@ the_pointer_device_event_t::the_pointer_device_event_t(the_view_t * widget,
 
 //----------------------------------------------------------------
 // the_pointer_device_event_t::save
-// 
+//
 void
 the_pointer_device_event_t::save(std::ostream & so,
                                  const char * magic) const
@@ -94,7 +94,7 @@ the_pointer_device_event_t::save(std::ostream & so,
 
 //----------------------------------------------------------------
 // the_pointer_device_event_t::load
-// 
+//
 bool
 the_pointer_device_event_t::load(std::istream & si,
                                  const std::string & loaded_magic,
@@ -104,7 +104,7 @@ the_pointer_device_event_t::load(std::istream & si,
   {
     return false;
   }
-  
+
   bool ok = ::load(si, scs_pt_);
   return ok;
 }
@@ -112,19 +112,19 @@ the_pointer_device_event_t::load(std::istream & si,
 
 //----------------------------------------------------------------
 // the_mouse_btn_t::tran_down_
-// 
+//
 unsigned int
 the_mouse_event_t::tran_down_ = 0;
 
 //----------------------------------------------------------------
 // the_mouse_event_t::tran_up_
-// 
+//
 unsigned int
 the_mouse_event_t::tran_up_ = 0;
 
 //----------------------------------------------------------------
 // the_mouse_event_t::the_mouse_event_t
-// 
+//
 the_mouse_event_t::the_mouse_event_t(the_view_t * widget,
 				     unsigned int btns,
 				     unsigned int tran,
@@ -142,7 +142,7 @@ the_mouse_event_t::the_mouse_event_t(the_view_t * widget,
 
 //----------------------------------------------------------------
 // the_mouse_event_t::save
-// 
+//
 void
 the_mouse_event_t::save(std::ostream & so) const
 {
@@ -158,7 +158,7 @@ the_mouse_event_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // the_mouse_event_t::load
-// 
+//
 bool
 the_mouse_event_t::load(std::istream & si, const std::string & magic)
 {
@@ -166,7 +166,7 @@ the_mouse_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
@@ -177,7 +177,7 @@ the_mouse_event_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // the_mouse_event_t::setup_transition_detectors
-// 
+//
 void
 the_mouse_event_t::setup_transition_detectors(unsigned int tran_down,
 					      unsigned int tran_up)
@@ -189,7 +189,7 @@ the_mouse_event_t::setup_transition_detectors(unsigned int tran_down,
 
 //----------------------------------------------------------------
 // the_wheel_event_t::the_wheel_event_t
-// 
+//
 the_wheel_event_t::the_wheel_event_t(the_view_t * widget,
 				     unsigned int btns,
 				     unsigned int tran,
@@ -207,12 +207,12 @@ the_wheel_event_t::the_wheel_event_t(the_view_t * widget,
 
 //----------------------------------------------------------------
 // the_wheel_event_t::save
-// 
+//
 void
 the_wheel_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
-  
+
   the_pointer_device_event_t::save(so, "the_wheel_event_t");
   ::save(so, btns_);
   ::save(so, tran_);
@@ -223,7 +223,7 @@ the_wheel_event_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // the_wheel_event_t::load
-// 
+//
 bool
 the_wheel_event_t::load(std::istream & si, const std::string & magic)
 {
@@ -231,7 +231,7 @@ the_wheel_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   bool ok = (::load(si, btns_) &&
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
@@ -243,19 +243,19 @@ the_wheel_event_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // the_keybd_event_t::tran_down_
-// 
+//
 unsigned int
 the_keybd_event_t::tran_down_ = ~0;
 
 //----------------------------------------------------------------
 // the_keybd_event_t::tran_up_
-// 
+//
 unsigned int
 the_keybd_event_t::tran_up_ = ~0;
 
 //----------------------------------------------------------------
 // the_keybd_event_t::setup_transition_detectors
-// 
+//
 void
 the_keybd_event_t::setup_transition_detectors(int tran_down,
 					      int tran_up)
@@ -266,7 +266,7 @@ the_keybd_event_t::setup_transition_detectors(int tran_down,
 
 //----------------------------------------------------------------
 // the_keybd_event_t::the_keybd_event_t
-// 
+//
 the_keybd_event_t::the_keybd_event_t(the_view_t * widget,
 				     unsigned int key,
 				     unsigned int tran,
@@ -281,12 +281,12 @@ the_keybd_event_t::the_keybd_event_t(the_view_t * widget,
 
 //----------------------------------------------------------------
 // the_keybd_event_t::save
-// 
+//
 void
 the_keybd_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
-  
+
   the_input_device_event_t::save(so, "the_keybd_event_t");
   ::save(so, key_);
   ::save(so, tran_);
@@ -296,7 +296,7 @@ the_keybd_event_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // the_keybd_event_t::load
-// 
+//
 bool
 the_keybd_event_t::load(std::istream & si, const std::string & magic)
 {
@@ -304,7 +304,7 @@ the_keybd_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   bool ok = (::load(si, key_) &&
 	     ::load(si, tran_) &&
 	     ::load(si, mods_) &&
@@ -314,12 +314,12 @@ the_keybd_event_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & sout, const the_keybd_event_t & ke)
 {
   sout << "the_keybd_event_t: " << endl;
-  
+
   if (ke.key() < 128)
   {
     sout << "key_    = " << ke.key() << " (" << char(ke.key()) << ')' << endl;
@@ -328,19 +328,19 @@ operator << (ostream & sout, const the_keybd_event_t & ke)
   {
     sout << "key_    = " << ke.key() << endl;
   }
-  
+
   sout << "tran_   = " << ke.tran() << endl
        << "mods_   = " << ke.mods() << endl
        << "widget_ = " << ke.widget() << endl
        << "autorepeat_ = " << ke.autorepeat() << endl;
-  
+
   return sout;
 }
 
 
 //----------------------------------------------------------------
 // the_wacom_event_t::the_wacom_event_t
-// 
+//
 the_wacom_event_t::the_wacom_event_t(the_view_t * widget,
 				     the_tablet_tool_t tool,
 				     unsigned long int tool_id,
@@ -362,20 +362,20 @@ the_wacom_event_t::the_wacom_event_t(the_view_t * widget,
 
 //----------------------------------------------------------------
 // the_wacom_event_t::save
-// 
+//
 void
 the_wacom_event_t::save(std::ostream & so) const
 {
   if (!is_open(so)) return;
-  
+
   the_pointer_device_event_t::save(so, "the_wacom_event_t");
 
   int tool = tool_;
   ::save(so, tool);
-  
+
   uint64_t tool_id = tool_id_;
   ::save_address(so, tool_id);
-  
+
   ::save(so, tilt_);
   ::save(so, pressure_);
   ::save(so, tangential_pressure_);
@@ -385,7 +385,7 @@ the_wacom_event_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // the_wacom_event_t::load
-// 
+//
 bool
 the_wacom_event_t::load(std::istream & si, const std::string & magic)
 {
@@ -393,7 +393,7 @@ the_wacom_event_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   int tool = 0;
   uint64_t tool_id = 0;
   bool ok = (::load(si, tool) &&
@@ -410,7 +410,7 @@ the_wacom_event_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // the_wacom_event_t::dump
-// 
+//
 void
 the_wacom_event_t::dump(ostream & sout, unsigned int indent) const
 {
@@ -420,20 +420,20 @@ the_wacom_event_t::dump(ostream & sout, unsigned int indent) const
     case THE_TABLET_PEN_E:
       tool_str = "Pen";
       break;
-      
+
     case THE_TABLET_ERASER_E:
       tool_str = "Eraser";
       break;
-      
+
     case THE_TABLET_CURSOR_E:
       tool_str = "Cursor";
       break;
-      
+
     default:
       tool_str = "unknown tablet tool";
       break;
   }
-  
+
   sout << INDSCP << "the_wacom_event_t(" << (void *)this << ")" << endl
        << INDSCP << "{" << endl
        << INDSTR << "tool                = " << tool_str << endl
@@ -448,7 +448,7 @@ the_wacom_event_t::dump(ostream & sout, unsigned int indent) const
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & sout, const the_wacom_event_t & we)
 {

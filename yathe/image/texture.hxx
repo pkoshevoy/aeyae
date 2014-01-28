@@ -18,7 +18,7 @@
 
 //----------------------------------------------------------------
 // texture_base_t
-// 
+//
 class texture_base_t
 {
 public:
@@ -34,19 +34,19 @@ public:
 		 GLint skip_rows = 0,
 		 GLboolean swap_bytes = GL_FALSE,
 		 GLboolean lsb_first = GL_FALSE);
-  
+
   virtual ~texture_base_t();
-  
+
   // texture data accessor:
   virtual const GLubyte * texture() const = 0;
-  
+
   // use glTexImage to allocate the OpenGL texture, return true on success:
   bool setup(const GLuint & texture_id) const;
-  
+
   // check whether this texture has been properly setup and
   // can be used successfully to upload the texture data:
   bool is_valid(const GLuint & texture_id) const;
-  
+
   // use glTexSubImage to upload the specified image region
   // into the OpenGL texture memory:
   void upload(const GLuint & texture_id,
@@ -54,31 +54,31 @@ public:
 	      GLint y,
 	      GLsizei w,
 	      GLsizei h) const;
-  
+
   // upload the entire image into the OpenGL texture memory:
   inline void upload(const GLuint & texture_id) const
   { upload(texture_id, skip_pixels_, skip_rows_, width_, height_); }
-  
+
   // apply texture parameters:
   void apply(const GLuint & texture_id) const;
-  
+
   // this is for debugging only:
   void debug() const;
-  
+
   // common texture attributes:
   GLenum type_;
   GLint internal_format_;
   GLenum format_;
-  
+
   GLsizei width_;
   GLsizei height_;
   GLint border_;
-  
+
   GLint alignment_;
   GLint row_length_;
   GLint skip_pixels_;
   GLint skip_rows_;
-  
+
   GLboolean swap_bytes_;
   GLboolean lsb_first_;
 };
@@ -92,7 +92,7 @@ class texture_t : public texture_base_t
 {
 public:
   typedef TDataPtr DataPtrType;
-  
+
   texture_t(const TDataPtr & texture,
 	    GLenum type = 0,
 	    GLint internal_format = 0,
@@ -120,11 +120,11 @@ public:
 		   lsb_first),
     texture_(texture)
   {}
-  
+
   // virtual:
   const GLubyte * texture() const
   { return texture_->data(); }
-  
+
   // the texture data:
   TDataPtr texture_;
 };

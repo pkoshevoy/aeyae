@@ -67,70 +67,70 @@ class m4x4_t
 public:
   // ZERO matrix:
   m4x4_t();
-  
+
   // rotation matrix by angle theta around vector k:
   m4x4_t(const v3x1_t & axis_of_rotation, const float & radians);
-  
+
   m4x4_t(const float & m11, const float & m12,
 	 const float & m13, const float & m14,
-	 
+
 	 const float & m21, const float & m22,
 	 const float & m23, const float & m24,
-	 
+
 	 const float & m31, const float & m32,
 	 const float & m33, const float & m34,
-	 
+
 	 const float & m41, const float & m42,
 	 const float & m43, const float & m44);
-  
+
   // same as above, except only sets up the upper-left 3x3 portion
   // of the matrix, and sets the lower-right corner to 1 and everything
   // else to zero:
   m4x4_t(const float & m11, const float & m12, const float & m13,
 	 const float & m21, const float & m22, const float & m23,
 	 const float & m31, const float & m32, const float & m33);
-  
+
   // construct a scale matrix:
   m4x4_t(const float & scale_x,
 	 const float & scale_y,
 	 const float & scale_z);
-  
+
   // construct a uniform scale matrix (by default - identity):
   m4x4_t(const float & scale);
-  
+
   // construct a translation matrix:
   m4x4_t(const v3x1_t & translate);
-  
+
   void assign(const float & m11, const float & m12,
 	      const float & m13, const float & m14,
-	      
+
 	      const float & m21, const float & m22,
 	      const float & m23, const float & m24,
-	      
+
 	      const float & m31, const float & m32,
 	      const float & m33, const float & m34,
-	      
+
 	      const float & m41, const float & m42,
 	      const float & m43, const float & m44);
-  
+
   // same as above, except only sets up the upper-left 3x3 portion
   // of the matrix, and sets the lower-right corner to 1 and everything
   // else to zero:
   void assign(const float & m11, const float & m12, const float & m13,
 	      const float & m21, const float & m22, const float & m23,
 	      const float & m31, const float & m32, const float & m33);
-  
+
   void multiply(const m4x4_t & a, m4x4_t & b) const;
   void multiply(const float & f, m4x4_t & b) const;
-  
+
   void multiply(const p4x1_t & a, p4x1_t & b) const;
   void multiply(const p3x1_t & a, p3x1_t & b) const;
   void multiply(const v3x1_t & a, v3x1_t & b) const;
-  
+
   void transpose_multiply(const p4x1_t & a, p4x1_t & b) const;
   void transpose_multiply(const p3x1_t & a, p3x1_t & b) const;
   void transpose_multiply(const v3x1_t & a, v3x1_t & b) const;
-  
+
   // matrix times matrix, in place:
   inline m4x4_t & operator *= (const m4x4_t & m)
   {
@@ -139,7 +139,7 @@ public:
     *this = r;
     return *this;
   }
-  
+
   // matrix times scalar, in place:
   inline const m4x4_t operator *= (const float & f)
   {
@@ -148,7 +148,7 @@ public:
     *this = r;
     return *this;
   }
-  
+
   // matrix times matrix:
   inline const m4x4_t operator * (const m4x4_t & m) const
   {
@@ -156,7 +156,7 @@ public:
     multiply(m, r);
     return r;
   }
-  
+
   // matrix times scalar:
   inline const m4x4_t operator * (const float & f) const
   {
@@ -164,7 +164,7 @@ public:
     multiply(f, r);
     return r;
   }
-  
+
   // matrix times point:
   inline const p3x1_t operator * (const p3x1_t & p) const
   {
@@ -172,7 +172,7 @@ public:
     multiply(p, r);
     return r;
   }
-  
+
   // matrix times point:
   inline const p4x1_t operator * (const p4x1_t & p) const
   {
@@ -180,7 +180,7 @@ public:
     multiply(p, r);
     return r;
   }
-  
+
   // matrix times vector:
   inline const v3x1_t operator * (const v3x1_t & v) const
   {
@@ -188,10 +188,10 @@ public:
     multiply(v, r);
     return r;
   }
-  
+
   // Identity matrix:
   static const m4x4_t identity();
-  
+
   // Screen transform/inverse matricies:
   static const m4x4_t screen(const float & nx,
 			     const float & ny,
@@ -205,60 +205,60 @@ public:
 				     const float & ymin,
 				     const float & xmax,
 				     const float & ymax);
-  
+
   // Perspective projection matrix:
   static const m4x4_t perspective(const float & near, const float & far);
-  
+
   // View transform matrix:
   static const m4x4_t view(const p3x1_t & lf,
 			   const p3x1_t & la,
 			   const v3x1_t & Vup);
-  
+
   // View transform inverse matrix:
   static const m4x4_t view_inverse(const p3x1_t & lf,
 				   const p3x1_t & la,
 				   const v3x1_t & Vup);
-  
+
   // Translation/inverse matricies:
   static const m4x4_t translate(const float & x,
 				const float & y,
 				const float & z);
-  
+
   static const m4x4_t translate_inverse(const float & x,
 					const float & y,
 					const float & z);
-  
+
   static const m4x4_t translate(const v3x1_t & v)
   { return translate(v.X_, v.Y_, v.Z_); }
-  
+
   static const m4x4_t translate_inverse(const v3x1_t & v)
   { return translate_inverse(v.X_, v.Y_, v.Z_); }
-  
+
   // Scale/inverse matricies:
   static const m4x4_t scale(const float & sx,
 			    const float & sy,
 			    const float & sz);
-  
+
   static const m4x4_t scale_inverse(const float & sx,
 				    const float & sy,
 				    const float & sz);
-  
+
   static const m4x4_t scale(const v3x1_t & v)
   { return scale(v.X_, v.Y_, v.Z_); }
-  
+
   static const m4x4_t scale_inverse(const v3x1_t & v)
   { return scale_inverse(v.X_, v.Y_, v.Z_); }
-  
+
   // datamember accessors:
   inline const float * operator[] (unsigned int row) const
   { return &(data_[row * 4]); }
-  
+
   inline float * data()
   { return data_; }
-  
+
   inline const float * data() const
   { return data_; }
-  
+
 protected:
   float data_[16];
 };

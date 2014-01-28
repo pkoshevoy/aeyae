@@ -23,7 +23,7 @@
 
 //----------------------------------------------------------------
 // qimage_pixel_converter_t
-// 
+//
 class qimage_pixel_converter_t : public pixel_converter_t
 {
 public:
@@ -31,19 +31,19 @@ public:
 			   const size_t & src_bytes_per_pixel,
 			   const size_t & dst_bytes_per_pixel,
 			   const GLenum & format);
-  
+
   // virtual:
   void operator() (unsigned char * dst_addr,
 		   const unsigned char * src_addr,
 		   const size_t & src_bytes_to_read) const;
-  
+
   // a reference to the image:
   const QImage & image_;
   const unsigned char * src_origin_;
   const size_t src_bytes_per_pixel_;
   const size_t dst_bytes_per_pixel_;
   const size_t src_bytes_per_line_;
-  
+
   // OpenGL format of the destination image:
   const GLenum format_;
 };

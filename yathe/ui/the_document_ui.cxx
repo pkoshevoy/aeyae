@@ -22,13 +22,13 @@
 
 //----------------------------------------------------------------
 // the_document_ui_t::doc_ui_
-// 
+//
 the_document_ui_t *
 the_document_ui_t::doc_ui_ = NULL;
 
 //----------------------------------------------------------------
 // the_document_ui_t::the_document_ui_t
-// 
+//
 the_document_ui_t::the_document_ui_t(const char * magic):
   doc_so_(new the_document_so_t(magic)),
   active_proc_ui_(NULL),
@@ -41,11 +41,11 @@ the_document_ui_t::the_document_ui_t(const char * magic):
 
 //----------------------------------------------------------------
 // the_document_ui_t::~the_document_ui_t
-// 
+//
 the_document_ui_t::~the_document_ui_t()
 {
   shutdown();
-  
+
   assert(doc_ui_ != NULL);
   if (doc_ui_ == NULL) ::exit(2);
   doc_ui_ = NULL;
@@ -53,7 +53,7 @@ the_document_ui_t::~the_document_ui_t()
 
 //----------------------------------------------------------------
 // the_document_ui_t::setup
-// 
+//
 void
 the_document_ui_t::setup(the_view_t * shared,
 			 the_view_t ** views,
@@ -65,18 +65,18 @@ the_document_ui_t::setup(the_view_t * shared,
     assert(false);
     return;
   }
-  
+
   assert(shared_ == NULL);
   shared_ = shared;
-  
+
   view_.resize(num_views);
   view_mgr_eh_.resize(num_views);
-  
+
   for (unsigned int i = 0; i < view_.size(); i++)
   {
     view_[i] = views[i];
     view_[i]->assign_document(doc_so_);
-    
+
     view_mgr_eh_[i] = new the_view_mgr_eh_t();
     view_mgr_eh_[i]->attach_view(view_[i]);
     view_mgr_eh_[i]->install();
@@ -85,7 +85,7 @@ the_document_ui_t::setup(the_view_t * shared,
 
 //----------------------------------------------------------------
 // the_document_ui_t::compile_display_lists
-// 
+//
 void
 the_document_ui_t::compile_display_lists()
 {
@@ -105,7 +105,7 @@ the_document_ui_t::compile_display_lists()
 
 //----------------------------------------------------------------
 // the_document_ui_t::proc_ui_installed
-// 
+//
 void
 the_document_ui_t::proc_ui_installed(the_procedure_ui_t * proc_ui)
 {
@@ -116,7 +116,7 @@ the_document_ui_t::proc_ui_installed(the_procedure_ui_t * proc_ui)
 
 //----------------------------------------------------------------
 // the_document_ui_t::proc_ui_uninstalled
-// 
+//
 void
 the_document_ui_t::proc_ui_uninstalled(the_procedure_ui_t * proc_ui)
 {
@@ -127,14 +127,14 @@ the_document_ui_t::proc_ui_uninstalled(the_procedure_ui_t * proc_ui)
 
 //----------------------------------------------------------------
 // the_document_ui_t::shutdown
-// 
+//
 void
 the_document_ui_t::shutdown()
 {
   // delete the document:
   delete doc_so_;
   doc_so_ = NULL;
-  
+
   // delete the view manager event handles:
   for (unsigned int i = 0; i < view_.size(); i++)
   {
@@ -144,7 +144,7 @@ the_document_ui_t::shutdown()
       delete view_mgr_eh_[i];
       view_mgr_eh_[i] = NULL;
     }
-    
+
     view_[i]->assign_document(NULL);
   }
   view_mgr_eh_.resize(0);

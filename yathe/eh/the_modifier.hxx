@@ -17,7 +17,7 @@
 // the_modifier_t
 //
 // modifiers used by different tools:
-// 
+//
 typedef enum
 {
   THE_EH_MOD_NONE_E,

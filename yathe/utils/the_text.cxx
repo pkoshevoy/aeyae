@@ -25,7 +25,7 @@
 
 //----------------------------------------------------------------
 // the_text_t::the_text_t
-// 
+//
 the_text_t::the_text_t(const char * text):
   text_(NULL),
   size_(0)
@@ -35,7 +35,7 @@ the_text_t::the_text_t(const char * text):
 
 //----------------------------------------------------------------
 // the_text_t::the_text_t
-// 
+//
 the_text_t::the_text_t(const char * text, const size_t & size):
   text_(NULL),
   size_(0)
@@ -45,7 +45,7 @@ the_text_t::the_text_t(const char * text, const size_t & size):
 
 //----------------------------------------------------------------
 // the_text_t::the_text_t
-// 
+//
 the_text_t::the_text_t(const the_text_t & text):
   text_(NULL),
   size_(0)
@@ -55,7 +55,7 @@ the_text_t::the_text_t(const the_text_t & text):
 
 //----------------------------------------------------------------
 // the_text_t::the_text_t
-// 
+//
 the_text_t::the_text_t(const std::list<char> & text):
   text_(NULL),
   size_(text.size())
@@ -71,7 +71,7 @@ the_text_t::the_text_t(const std::list<char> & text):
 
 //----------------------------------------------------------------
 // the_text_t::~the_text_t
-// 
+//
 the_text_t::~the_text_t()
 {
   clear();
@@ -79,7 +79,7 @@ the_text_t::~the_text_t()
 
 //----------------------------------------------------------------
 // the_text_t::assign
-// 
+//
 void
 the_text_t::assign(const char * text, const size_t & text_size)
 {
@@ -88,9 +88,9 @@ the_text_t::assign(const char * text, const size_t & text_size)
   {
     text_copy[i] = text[i];
   }
-  
+
   text_copy[text_size] = '\0';
-  
+
   delete [] text_;
   text_ = text_copy;
   size_ = text_size;
@@ -98,24 +98,24 @@ the_text_t::assign(const char * text, const size_t & text_size)
 
 //----------------------------------------------------------------
 // the_text_t::append
-// 
+//
 void
 the_text_t::append(const char * text, const size_t & text_size)
 {
   char * text_copy = new char [size_ + text_size + 1];
-  
+
   for (size_t i = 0; i < size_; i++)
   {
     text_copy[i] = text_[i];
   }
-  
+
   for (size_t i = 0; i < text_size; i++)
   {
     text_copy[i + size_] = text[i];
   }
-  
+
   text_copy[size_ + text_size] = '\0';
-  
+
   delete [] text_;
   text_ = text_copy;
   size_ += text_size;
@@ -123,7 +123,7 @@ the_text_t::append(const char * text, const size_t & text_size)
 
 //----------------------------------------------------------------
 // the_text_t::toShort
-// 
+//
 short int
 the_text_t::toShort(bool * ok, int base) const
 {
@@ -134,7 +134,7 @@ the_text_t::toShort(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toUShort
-// 
+//
 unsigned short int
 the_text_t::toUShort(bool * ok, int base) const
 {
@@ -145,7 +145,7 @@ the_text_t::toUShort(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toInt
-// 
+//
 int
 the_text_t::toInt(bool * ok, int base) const
 {
@@ -156,7 +156,7 @@ the_text_t::toInt(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toUInt
-// 
+//
 unsigned int
 the_text_t::toUInt(bool * ok, int base) const
 {
@@ -167,7 +167,7 @@ the_text_t::toUInt(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toLong
-// 
+//
 long int
 the_text_t::toLong(bool * ok, int base) const
 {
@@ -179,7 +179,7 @@ the_text_t::toLong(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toULong
-// 
+//
 unsigned long int
 the_text_t::toULong(bool * ok, int base) const
 {
@@ -191,7 +191,7 @@ the_text_t::toULong(bool * ok, int base) const
 
 //----------------------------------------------------------------
 // the_text_t::toFloat
-// 
+//
 float
 the_text_t::toFloat(bool * ok) const
 {
@@ -201,7 +201,7 @@ the_text_t::toFloat(bool * ok) const
 
 //----------------------------------------------------------------
 // the_text_t::toDouble
-// 
+//
 double
 the_text_t::toDouble(bool * ok) const
 {
@@ -213,7 +213,7 @@ the_text_t::toDouble(bool * ok) const
 
 //----------------------------------------------------------------
 // the_text_t::to_ascii
-// 
+//
 void
 the_text_t::to_ascii()
 {
@@ -225,7 +225,7 @@ the_text_t::to_ascii()
 
 //----------------------------------------------------------------
 // the_text_t::to_lower
-// 
+//
 void
 the_text_t::to_lower()
 {
@@ -237,7 +237,7 @@ the_text_t::to_lower()
 
 //----------------------------------------------------------------
 // the_text_t::to_upper
-// 
+//
 void
 the_text_t::to_upper()
 {
@@ -249,7 +249,7 @@ the_text_t::to_upper()
 
 //----------------------------------------------------------------
 // the_text_t::fill
-// 
+//
 void
 the_text_t::fill(const char & c, const size_t size)
 {
@@ -259,7 +259,7 @@ the_text_t::fill(const char & c, const size_t size)
     text[i] = c;
   }
   text[size] = '\0';
-  
+
   delete [] text_;
   text_ = text;
   size_ = size;
@@ -267,7 +267,7 @@ the_text_t::fill(const char & c, const size_t size)
 
 //----------------------------------------------------------------
 // the_text_t::match_head
-// 
+//
 bool
 the_text_t::match_head(const the_text_t & t, bool ignore_case) const
 {
@@ -277,7 +277,7 @@ the_text_t::match_head(const the_text_t & t, bool ignore_case) const
 
 //----------------------------------------------------------------
 // the_text_t::match_tail
-// 
+//
 bool
 the_text_t::match_tail(const the_text_t & t, bool ignore_case) const
 {
@@ -287,7 +287,7 @@ the_text_t::match_tail(const the_text_t & t, bool ignore_case) const
 
 //----------------------------------------------------------------
 // the_text_t::match_text
-// 
+//
 bool
 the_text_t::match_text(const the_text_t & t,
 		       const size_t & start,
@@ -295,27 +295,27 @@ the_text_t::match_text(const the_text_t & t,
 {
   size_t end = start + t.size_;
   if (end > size_) return false;
-  
+
   for (size_t i = start; i < end; i++)
   {
     char a = text_[i];
     char b = t.text_[i - start];
-    
+
     if (ignore_case)
     {
       a = tolower(a);
       b = tolower(b);
     }
-    
+
     if (a != b) return false;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_text_t::simplify_ws
-// 
+//
 the_text_t
 the_text_t::simplify_ws() const
 {
@@ -325,40 +325,40 @@ the_text_t::simplify_ws() const
   {
     // skipping whitespace...
   }
-  
+
   // NOTE: an all-whitespace string will simplify to an empty string:
   if (start == int(size_))
   {
     return the_text_t("");
   }
-  
+
   // find the last non-whitespace character:
   int finish = int(size_) - 1;
   for (; finish >= start && isspace(text_[finish]); finish--);
-  
+
   // intermediate storage:
   the_text_t tmp;
   tmp.fill('\0', size_t((finish + 1) - start));
-  
+
   size_t j = 0;
   bool prev_ws = false;
   for (int i = start; i <= finish; i++)
   {
     char c = isspace(text_[i]) ? ' ' : text_[i];
     if (c == ' ' && prev_ws) continue;
-    
+
     prev_ws = (c == ' ');
     tmp.text_[j] = c;
     j++;
   }
-  
+
   the_text_t out(tmp.text(), j);
   return out;
 }
 
 //----------------------------------------------------------------
 // the_text_t::split
-// 
+//
 size_t
 the_text_t::split(std::vector<the_text_t> & tokens,
 		  const char & separator,
@@ -369,7 +369,7 @@ the_text_t::split(std::vector<the_text_t> & tokens,
     tokens.resize(0);
     return 0;
   }
-  
+
   // find the separators:
   typedef std::list<size_t> list_t;
   list_t separators;
@@ -379,15 +379,15 @@ the_text_t::split(std::vector<the_text_t> & tokens,
     separators.push_back(i);
   }
   separators.push_back(size_);
-  
+
   std::list<the_text_t> tmp;
-  
+
   typedef std::list<size_t>::iterator iter_t;
   size_t a = 0;
   for (iter_t i = separators.begin(); i != separators.end(); ++i)
   {
     size_t b = *i;
-    
+
     if (b - a == 0 && empty_ok)
     {
       tmp.push_back(the_text_t(""));
@@ -396,10 +396,10 @@ the_text_t::split(std::vector<the_text_t> & tokens,
     {
       tmp.push_back(the_text_t(&text_[a], b - a));
     }
-    
+
     a = b + 1;
   }
-  
+
   tokens.resize(tmp.size());
   a = 0;
   for (std::list<the_text_t>::iterator i = tmp.begin(); i != tmp.end(); ++i)
@@ -407,13 +407,13 @@ the_text_t::split(std::vector<the_text_t> & tokens,
     tokens[a] = *i;
     a++;
   }
-  
+
   return tmp.size();
 }
 
 //----------------------------------------------------------------
 // the_text_t::contains
-// 
+//
 size_t
 the_text_t::contains(const char & symbol) const
 {
@@ -423,14 +423,14 @@ the_text_t::contains(const char & symbol) const
     if (text_[i] != symbol) continue;
     count++;
   }
-  
+
   return count;
 }
 
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 std::ostream &
 operator << (std::ostream & out, const the_text_t & text)
 {
@@ -441,7 +441,7 @@ operator << (std::ostream & out, const the_text_t & text)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 std::istream &
 operator >> (std::istream & in, the_text_t & text)
 {
@@ -453,13 +453,13 @@ operator >> (std::istream & in, the_text_t & text)
 
 //----------------------------------------------------------------
 // getline
-// 
+//
 std::istream &
 getline(std::istream & in, the_text_t & text)
 {
   std::string tmp;
   getline(in, tmp);
-  
+
   if (!tmp.empty())
   {
     std::size_t len = tmp.size();
@@ -469,20 +469,20 @@ getline(std::istream & in, the_text_t & text)
       tmp.resize(len - 1);
     }
   }
-  
+
   text.assign(tmp.data(), tmp.size());
   return in;
 }
 
 //----------------------------------------------------------------
 // to_binary
-// 
+//
 the_text_t
 to_binary(const unsigned char & byte, bool lsb_first)
 {
   the_text_t str;
   str.fill('0', 8);
-  
+
   unsigned char mask = 1;
   if (lsb_first)
   {
@@ -498,6 +498,6 @@ to_binary(const unsigned char & byte, bool lsb_first)
       str[i] = (byte & mask) ? '1' : '0';
     }
   }
-  
+
   return str;
 }

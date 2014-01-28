@@ -15,14 +15,14 @@
 
 //----------------------------------------------------------------
 // the_mutex_interface_t
-// 
+//
 class the_mutex_interface_t
 {
 protected:
   // the destructor is protected on purpose,
   // see delete_this for details:
   virtual ~the_mutex_interface_t();
-  
+
 public:
   // In order to avoid memory management problems with shared libraries,
   // whoever provides this interface instance (via it's creator), has to
@@ -31,23 +31,23 @@ public:
   // used by the app and whatever libraries it links against that
   // either use or provide this interface:
   virtual void delete_this() = 0;
-  
+
   // mutex controls:
   virtual void lock() = 0;
   virtual void unlock() = 0;
   virtual bool try_lock() = 0;
-  
+
   //----------------------------------------------------------------
   // creator_t
-  // 
+  //
   typedef the_mutex_interface_t *(*creator_t)();
-  
+
   // specify a thread creation method:
   static void set_creator(creator_t creator);
-  
+
   // create a new instance of a thread:
   static the_mutex_interface_t * create();
-  
+
 protected:
   // an abstract mutex creator:
   static creator_t creator_;

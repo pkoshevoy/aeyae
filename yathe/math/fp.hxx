@@ -20,9 +20,9 @@
 
 //----------------------------------------------------------------
 // fp_t
-// 
+//
 // A template class for fixed point number arithmetic.
-// 
+//
 template <unsigned char fraction_bits>
 class fp_t
 {
@@ -96,26 +96,26 @@ public:
   template <typename int_t>
   static inline int_t fixed_ceil_int(const fixed_t & x)
   { return int_t((x + fixed_almost_one) >> fraction_bits); }
-  
+
   // comparison operators:
   inline bool operator == (const self_t & b) const
   { return fixed_ == b.fixed_; }
-  
+
   inline bool operator != (const self_t & b) const
   { return fixed_ != b.fixed_; }
-  
+
   inline bool operator <= (const self_t & b) const
   { return fixed_ <= b.fixed_; }
-  
+
   inline bool operator >= (const self_t & b) const
   { return fixed_ >= b.fixed_; }
-  
+
   inline bool operator < (const self_t & b) const
   { return fixed_ < b.fixed_; }
-  
+
   inline bool operator > (const self_t & b) const
   { return fixed_ > b.fixed_; }
-  
+
   // bit shift operators:
   inline self_t operator << (int i) const
   {
@@ -123,18 +123,18 @@ public:
     s.fixed_ = fixed_ << i;
     return s;
   }
-  
+
   inline self_t operator >> (int i) const
   {
     self_t s;
     s.fixed_ = fixed_ >> i;
     return s;
   }
-  
+
   // modulo operator:
   inline self_t operator % (const self_t & modulo) const
   { return mod(modulo); }
-  
+
   // in place arithmetic:
   inline self_t & operator += (const self_t & b)
   {
@@ -188,7 +188,7 @@ public:
     c.fixed_ = div(fixed_, b.fixed_);
     return c;
   }
-  
+
   // rounding functions:
   template <typename int_t>
   inline int_t floor() const
@@ -215,7 +215,7 @@ public:
   {
     return (int64_t(a) << fraction_bits) / b;
   }
-  
+
   // absolute value:
   inline self_t abs() const
   {
@@ -223,7 +223,7 @@ public:
     s.fixed_ = ::abs(fixed_);
     return s;
   }
-  
+
   // return the remainder of the division by the modulo number:
   inline self_t mod(const self_t & modulo) const
   {
@@ -231,14 +231,14 @@ public:
     s.fixed_ = fixed_ % modulo.fixed_;
     return s;
   }
-  
+
   // integer representation of the fixed point real number:
   fixed_t fixed_;
 };
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 template <unsigned char fraction_bits>
 std::ostream &
 operator << (std::ostream & so, const fp_t<fraction_bits> & fp)

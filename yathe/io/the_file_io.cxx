@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const char * data)
 {
@@ -32,7 +32,7 @@ save(std::ostream & stream, const char * data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const the_text_t & data)
 {
@@ -42,54 +42,54 @@ save(std::ostream & stream, const the_text_t & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_text_t & data)
 {
   data.assign("");
-  
+
   size_t size = 0;
   stream >> size;
-  
+
   // eat the whitespace:
   stream.get();
-  
+
   if (size == 0) return true;
-  
+
   char * text = new char [size + 1];
   for (size_t i = 0; i < size; i++)
   {
     stream.get(text[i]);
   }
   text[size] = '\0';
-  
+
   data.assign(text, size);
   delete [] text;
   text = NULL;
-  
+
   return true;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const the_registry_t & registry)
 {
   // save the magic word:
   save(stream, "the_registry_t");
-  
+
   // save the registry:
   save(stream, registry.dispatcher_);
   save(stream, registry.table_);
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_registry_t & registry)
 {
@@ -99,54 +99,54 @@ load(std::istream & stream, the_registry_t & registry)
   {
     return false;
   }
-  
+
   if (magic_word != "the_registry_t")
   {
     return false;
   }
-  
+
   // load the registry:
   if (!load(stream, registry.dispatcher_))
   {
     return false;
   }
-  
+
   if (!load(stream, registry.table_))
   {
     return false;
   }
-  
+
   unsigned int size = (unsigned int)(registry.table_.size());
   for (unsigned int i = 0; i < size; i++)
   {
     the_graph_node_t * p = registry[i];
     if (p == NULL) continue;
-    
+
     p->registry_ = &registry;
   }
-  
+
   return true;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const the_id_dispatcher_t & dispatcher)
 {
   // save the magic word:
   save(stream, "the_id_dispatcher_t");
-  
+
   save(stream, dispatcher.reuse_);
   save(stream, dispatcher.id_);
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_id_dispatcher_t & dispatcher)
 {
@@ -154,17 +154,17 @@ load(std::istream & stream, the_id_dispatcher_t & dispatcher)
   the_text_t magic_word;
   load(stream, magic_word);
   if (magic_word != "the_id_dispatcher_t") return false;
-  
+
   load(stream, dispatcher.reuse_);
   load(stream, dispatcher.id_);
-  
+
   return true;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const the_graph_node_ref_t * ref)
 {
@@ -173,14 +173,14 @@ save(std::ostream & stream, const the_graph_node_ref_t * ref)
     save(stream, "NULL");
     return true;
   }
-  
+
   save(stream, ref->name());
   return ref->save(stream);
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_graph_node_ref_t *& ref)
 {
@@ -190,7 +190,7 @@ load(std::istream & stream, the_graph_node_ref_t *& ref)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const the_graph_node_t * graph_node)
 {
@@ -200,14 +200,14 @@ save(std::ostream & stream, const the_graph_node_t * graph_node)
     save(stream, "NULL");
     return true;
   }
-  
+
   save(stream, graph_node->name());
   return graph_node->save(stream);
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_graph_node_t *& graph_node)
 {
@@ -216,7 +216,7 @@ load(std::istream & stream, the_graph_node_t *& graph_node)
 
 //----------------------------------------------------------------
 // the_graph_node_file_io
-// 
+//
 the_file_io_t<the_graph_node_t> &
 the_graph_node_file_io()
 {
@@ -226,7 +226,7 @@ the_graph_node_file_io()
 
 //----------------------------------------------------------------
 // the_graph_node_ref_file_io
-// 
+//
 the_file_io_t<the_graph_node_ref_t> &
 the_graph_node_ref_file_io()
 {

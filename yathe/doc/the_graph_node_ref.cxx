@@ -18,14 +18,14 @@
 
 //----------------------------------------------------------------
 // the_graph_node_ref_t::the_graph_node_ref_t
-// 
+//
 the_graph_node_ref_t::the_graph_node_ref_t(const unsigned int & id):
   id_(id)
 {}
 
 //----------------------------------------------------------------
 // the_graph_node_ref_t::save
-// 
+//
 bool
 the_graph_node_ref_t::save(std::ostream & stream) const
 {
@@ -35,7 +35,7 @@ the_graph_node_ref_t::save(std::ostream & stream) const
 
 //----------------------------------------------------------------
 // the_graph_node_ref_t::load
-// 
+//
 bool
 the_graph_node_ref_t::load(std::istream & stream)
 {
@@ -44,7 +44,7 @@ the_graph_node_ref_t::load(std::istream & stream)
 
 //----------------------------------------------------------------
 // the_graph_node_ref_t::dump
-// 
+//
 void
 the_graph_node_ref_t::dump(ostream & strm, unsigned int indent) const
 {

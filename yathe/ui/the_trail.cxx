@@ -29,12 +29,12 @@
 
 //----------------------------------------------------------------
 // the_trail_t::trail_
-// 
+//
 the_trail_t * the_trail_t::trail_ = NULL;
 
 //----------------------------------------------------------------
 // the_trail_t::the_trail_t
-// 
+//
 the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   record_by_default_(record_by_default),
   recorded_something_(false),
@@ -52,13 +52,13 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
   // so I will enforce it here:
   assert(trail_ == NULL);
   trail_ = this;
-  
+
   bool given_record_name = false;
   bool given_replay_name = false;
-  
+
   the_text_t trail_replay_name;
   the_text_t trail_record_name(".dont_record.txt");
-  
+
   int argj = 1;
   for (int i = 1; i < argc; i++)
   {
@@ -75,7 +75,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
 	     << " -replay sample-in.txt" << endl;
 	::exit(1);
       }
-      
+
       i++;
       trail_replay_name = argv[i];
       given_replay_name = true;
@@ -88,7 +88,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
 	     << " -record sample-out.txt" << endl;
 	::exit(1);
       }
-      
+
       i++;
       trail_record_name = argv[i];
       given_record_name = true;
@@ -101,7 +101,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
 	     << " -wait seconds" << endl;
 	::exit(1);
       }
-      
+
       i++;
       seconds_to_wait_ = the_text_t(argv[i]).toUInt();
     }
@@ -112,10 +112,10 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
       argj++;
     }
   }
-  
+
   // update the argument parameter counter:
   argc = argj;
-  
+
   // sanity check:
   if (trail_replay_name == trail_record_name)
   {
@@ -123,7 +123,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
 	 << "aborting..." << endl;
     ::exit(0);
   }
-  
+
   if (given_replay_name)
   {
     replay_stream.open(trail_replay_name, ios::in);
@@ -138,7 +138,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
       cerr << "NOTE: starting event replay from " << trail_replay_name << endl;
     }
   }
-  
+
   if (given_record_name || record_by_default_)
   {
     record_stream.open(trail_record_name, ios::out);
@@ -152,10 +152,10 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
       {
 	cerr << "WARNING: ";
       }
-      
+
       cerr << "could not open " << trail_record_name
 	   << " trail file for recording"<<endl;
-      
+
       if (given_record_name)
       {
 	::exit(1);
@@ -166,7 +166,7 @@ the_trail_t::the_trail_t(int & argc, char ** argv, bool record_by_default):
 
 //----------------------------------------------------------------
 // the_trail_t::~the_trail_t
-// 
+//
 the_trail_t::~the_trail_t()
 {
   if (replay_stream.rdbuf()->is_open()) replay_stream.close();
@@ -175,7 +175,7 @@ the_trail_t::~the_trail_t()
 
 //----------------------------------------------------------------
 // the_trail_t::record
-// 
+//
 void
 the_trail_t::record(const io_base_t & trail_event)
 {
@@ -188,28 +188,28 @@ the_trail_t::record(const io_base_t & trail_event)
 
 //----------------------------------------------------------------
 // the_trail_t::timeout
-// 
+//
 void
 the_trail_t::timeout()
 {}
 
 //----------------------------------------------------------------
 // the_trail_t::replay
-// 
+//
 void
 the_trail_t::replay()
 {}
 
 //----------------------------------------------------------------
 // the_trail_t::replay_one
-// 
+//
 void
 the_trail_t::replay_one()
 {}
 
 //----------------------------------------------------------------
 // the_trail_t::replay_done
-// 
+//
 void
 the_trail_t::replay_done()
 {
@@ -218,10 +218,10 @@ the_trail_t::replay_done()
     replay_stream.close();
     cerr << "NOTE: finished event replay..." << endl;
   }
-  
+
   dont_post_events_ = false;
   dont_load_events_ = true;
-  
+
   // this is in case the trail ends in a state
   // where some key is pressed down:
   keybd_.forget_pressed_keys();
@@ -229,7 +229,7 @@ the_trail_t::replay_done()
 
 //----------------------------------------------------------------
 // the_trail_t::next_milestone_achieved
-// 
+//
 void
 the_trail_t::next_milestone_achieved()
 {
@@ -238,7 +238,7 @@ the_trail_t::next_milestone_achieved()
 
 //----------------------------------------------------------------
 // the_trail_t::stop
-// 
+//
 void
 the_trail_t::stop()
 {

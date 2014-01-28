@@ -23,7 +23,7 @@ const unsigned int PH = PD / 2; // smaller padding
 
 //----------------------------------------------------------------
 // std_spacer
-// 
+//
 Fl_Box *
 std_spacer(const unsigned int & x,
 	   const unsigned int & y,
@@ -35,33 +35,33 @@ std_spacer(const unsigned int & x,
   spacer->box(FL_FLAT_BOX);
   spacer->color(FL_WHITE);
 #endif
-  
+
   return spacer;
 }
 
 //----------------------------------------------------------------
 // estimate_text_pixels
-// 
+//
 static unsigned int
 estimate_text_pixels(const char * text, const unsigned int & font_size)
 {
   if (text == NULL) return 0;
-  
+
   int saved_ff = fl_font();
   int saved_fs = fl_size();
   fl_font(saved_ff, font_size);
-  
+
   int w = 0;
   int h = 0;
   fl_measure(text, w, h);
-  
+
   fl_font(saved_ff, saved_fs);
   return w;
 }
 
 //----------------------------------------------------------------
 // std_groupbox
-// 
+//
 Fl_Group *
 std_groupbox(const unsigned int & x,
 	     const unsigned int & y,
@@ -74,38 +74,38 @@ std_groupbox(const unsigned int & x,
   g->box(FL_FLAT_BOX);
   g->color(FL_BLUE);
 #endif
-  
+
   // make a title like in Qt:
   if (title != NULL)
   {
 #ifndef DEBUG_LAYOUT
     g->box(FL_ENGRAVED_FRAME);
 #endif
-    
+
     unsigned int tx = x + PH;
     unsigned int ty = y - PD / 2;
     unsigned int tw = estimate_text_pixels(title, FS) + PH;
-    
+
     Fl_Group * gt = new Fl_Group(x, ty, w, PD);
 #ifdef DEBUG_LAYOUT
     gt->box(FL_FLAT_BOX);
     gt->color(FL_RED);
 #endif
-    
+
     Fl_Box * label = new Fl_Box(FL_FLAT_BOX, tx, ty, tw, PD, title);
     label->labelsize(FS);
     label->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-    
+
     gt->resizable(std_spacer(tx + tw, ty, w - ((tx - x) + tw), PD));
     gt->end();
   }
-  
+
   return g;
 }
 
 //----------------------------------------------------------------
 // std_button
-// 
+//
 Fl_Button *
 std_button(const unsigned int & x,
 	   const unsigned int & y,
@@ -124,7 +124,7 @@ std_button(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_checkbox
-// 
+//
 Fl_Check_Button *
 std_checkbox(const unsigned int & x,
 	     const unsigned int & y,
@@ -144,7 +144,7 @@ std_checkbox(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_radiobutton
-// 
+//
 Fl_Round_Button *
 std_radiobutton(const unsigned int & x,
 		const unsigned int & y,
@@ -166,7 +166,7 @@ std_radiobutton(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_label
-// 
+//
 Fl_Box *
 std_label(const unsigned int & x,
 	  const unsigned int & y,
@@ -182,7 +182,7 @@ std_label(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_output
-// 
+//
 Fl_Output *
 std_output(const unsigned int & x,
 	   const unsigned int & y,
@@ -198,7 +198,7 @@ std_output(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_float_input
-// 
+//
 Fl_Float_Input *
 std_float_input(const unsigned int & x,
 		const unsigned int & y,
@@ -217,7 +217,7 @@ std_float_input(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_int_input
-// 
+//
 Fl_Int_Input *
 std_int_input(const unsigned int & x,
 		const unsigned int & y,
@@ -236,7 +236,7 @@ std_int_input(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_listbox
-// 
+//
 Fl_Select_Browser *
 std_listbox(const unsigned int & x,
 	    const unsigned int & y,
@@ -253,7 +253,7 @@ std_listbox(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_slider
-// 
+//
 extern Fl_Slider *
 std_slider(const unsigned int & x,
 	   const unsigned int & y,
@@ -273,7 +273,7 @@ std_slider(const unsigned int & x,
 
 //----------------------------------------------------------------
 // std_roller
-// 
+//
 extern Fl_Roller *
 std_roller(const unsigned int & x,
 	   const unsigned int & y,
@@ -289,33 +289,33 @@ std_roller(const unsigned int & x,
   roller->type(type);
   roller->box(FL_BORDER_FRAME);
   roller->selection_color(FL_RED);
-  
+
   return roller;
 }
 
 
 //----------------------------------------------------------------
 // the_violator_t
-// 
+//
 // FIXME: 2004/10/06: all this to avoid an infinite loop:
-// 
+//
 class the_violator_t : public Fl_Widget
 {
 public:
   the_violator_t(): Fl_Widget(0, 0, 0, 0, NULL) {}
   void draw() {}
-  
+
   void wdg_enable(Fl_Widget * widget, const bool & enable)
   {
     if (widget == NULL) return;
     if (enable == (widget->active() != 0)) return;
-    
+
     if (enable)
     {
       widget->activate();
       return;
     }
-    
+
     // avoid calling fl_fix_focus() - it causes an infinite loop:
     the_violator_t * violator = (the_violator_t *)(widget);
     violator->set_flag(INACTIVE);
@@ -327,7 +327,7 @@ public:
 
 //----------------------------------------------------------------
 // wdg_enable
-// 
+//
 void
 wdg_enable(Fl_Widget * widget, const bool & enable)
 {

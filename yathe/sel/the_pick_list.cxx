@@ -23,43 +23,43 @@
 
 //----------------------------------------------------------------
 // the_pick_list_t::default_filter_
-// 
+//
 const the_pick_filter_t
 the_pick_list_t::default_filter_;
 
 //----------------------------------------------------------------
 // the_pick_list_t::the_pick_list_t
-// 
+//
 the_pick_list_t::the_pick_list_t():
   the::unique_list<the_pick_rec_t>()
 {}
 
 //----------------------------------------------------------------
 // the_pick_list_t::the_pick_list_t
-// 
+//
 the_pick_list_t::the_pick_list_t(const the::unique_list<the_pick_rec_t> & pl):
   the::unique_list<the_pick_rec_t>(pl)
 {}
 
 //----------------------------------------------------------------
 // the_pick_list_t::pick
-// 
+//
 bool
 the_pick_list_t::pick(the_view_t & view,
 		      const p2x1_t & scs_pt,
 		      const the_pick_filter_t & filter)
 {
   clear();
-  
+
   const the_document_t * doc = view.document();
   if (doc == NULL) return false;
-  
+
   return pick(view, scs_pt, filter, &(doc->registry()));
 }
 
 //----------------------------------------------------------------
 // the_pick_list_t::pick
-// 
+//
 bool
 the_pick_list_t::pick(the_view_t & view,
 		      const p2x1_t & scs_pt,
@@ -67,17 +67,17 @@ the_pick_list_t::pick(the_view_t & view,
 		      const the_registry_t * registry)
 {
   clear();
-  
+
   const the_view_volume_t pick_vol(view.view_mgr().pick_volume(scs_pt));
-  
+
   for (unsigned int id = 0; id < registry->size(); id++)
   {
     if (filter.allow(registry, id) == false) continue;
-    
+
     std::list<the_pick_data_t> solution;
     the_primitive_t * prim = registry->elem<the_primitive_t>(id);
     prim->intersect(pick_vol, solution);
-    
+
     for (std::list<the_pick_data_t>::iterator i = solution.begin();
 	 i != solution.end(); ++i)
     {
@@ -85,14 +85,14 @@ the_pick_list_t::pick(the_view_t & view,
       push_back(the_pick_rec_t(&view, pick_vol, data));
     }
   }
-  
+
   sort();
   return !empty();
 }
 
 //----------------------------------------------------------------
 // the_pick_list_t::pick
-// 
+//
 bool
 the_pick_list_t::pick(the_view_t & view,
 		      const p2x1_t & scs_pt,
@@ -100,7 +100,7 @@ the_pick_list_t::pick(the_view_t & view,
 		      const std::list<the_primitive_t *> & selectable)
 {
   clear();
-  
+
   const the_view_volume_t pick_vol(view.view_mgr().pick_volume(scs_pt));
 
   for (std::list<the_primitive_t *>::const_iterator iter = selectable.begin();
@@ -108,7 +108,7 @@ the_pick_list_t::pick(the_view_t & view,
   {
     the_primitive_t * primitive = *iter;
     if (!filter.allow(primitive->registry(), primitive->id())) continue;
-    
+
     std::list<the_pick_data_t> solution;
     primitive->intersect(pick_vol, solution);
     for (std::list<the_pick_data_t>::iterator i = solution.begin();
@@ -118,14 +118,14 @@ the_pick_list_t::pick(the_view_t & view,
       push_back(the_pick_rec_t(&view, pick_vol, data));
     }
   }
-  
+
   sort();
   return !empty();
 }
 
 //----------------------------------------------------------------
 // the_pick_list_t::set_current_state
-// 
+//
 void
 the_pick_list_t::set_current_state(the_registry_t * r,
 				   the_primitive_state_t state) const
@@ -138,7 +138,7 @@ the_pick_list_t::set_current_state(the_registry_t * r,
 
 //----------------------------------------------------------------
 // the_pick_list_t::remove_current_state
-// 
+//
 void
 the_pick_list_t::remove_current_state(the_registry_t * r,
 				      the_primitive_state_t state) const
@@ -151,7 +151,7 @@ the_pick_list_t::remove_current_state(the_registry_t * r,
 
 //----------------------------------------------------------------
 // the_pick_list_t::clear_current_state
-// 
+//
 void
 the_pick_list_t::clear_current_state(the_registry_t * r) const
 {
@@ -163,7 +163,7 @@ the_pick_list_t::clear_current_state(the_registry_t * r) const
 
 //----------------------------------------------------------------
 // the_pick_list_t::push_back
-// 
+//
 void
 the_pick_list_t::push_back(const the_pick_rec_t & pick)
 {
@@ -173,7 +173,7 @@ the_pick_list_t::push_back(const the_pick_rec_t & pick)
 
 //----------------------------------------------------------------
 // the_pick_list_t::contains
-// 
+//
 bool
 the_pick_list_t::contains(const unsigned int & id) const
 {
@@ -181,14 +181,14 @@ the_pick_list_t::contains(const unsigned int & id) const
   {
     if ((*i).data().id() == id) return true;
   }
-  
+
   return false;
 }
 
 
 //----------------------------------------------------------------
 // setup_graph
-// 
+//
 void
 setup_graph(const the_registry_t * registry,
 	    const the_pick_list_t & root_picks,
@@ -201,6 +201,6 @@ setup_graph(const the_registry_t * registry,
     const unsigned int & root_id = (*i).data().id();
     roots.push_back(root_id);
   }
-  
+
   graph.set_roots(registry, roots);
 }

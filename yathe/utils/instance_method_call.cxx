@@ -38,34 +38,34 @@ THE SOFTWARE.
 
 //----------------------------------------------------------------
 // instance_t::map_load_
-// 
+//
 std::map<std::string, uint64_t> instance_t::map_load_;
 
 //----------------------------------------------------------------
 // instance_t::map_save_
-// 
+//
 std::map<std::string, void *> instance_t::map_save_;
 
 //----------------------------------------------------------------
 // instance_t::map_signature_
-// 
+//
 std::map<void *, std::string> instance_t::map_signature_;
 
 //----------------------------------------------------------------
 // instance_t::map_address_
-// 
+//
 std::map<uint64_t, void *> instance_t::map_address_;
 
 //----------------------------------------------------------------
 // instance_t::instance_t
-// 
+//
 instance_t::instance_t():
   address_(NULL)
 {}
 
 //----------------------------------------------------------------
 // instance_t::instance_t
-// 
+//
 instance_t::instance_t(const std::string & signature):
   signature_(signature),
   address_(NULL)
@@ -79,7 +79,7 @@ instance_t::instance_t(const std::string & signature):
 
 //----------------------------------------------------------------
 // instance_t::instance_t
-// 
+//
 instance_t::instance_t(const std::string & signature, const void * address):
   signature_(signature),
   address_(const_cast<void *>(address))
@@ -87,7 +87,7 @@ instance_t::instance_t(const std::string & signature, const void * address):
 
 //----------------------------------------------------------------
 // instance_t::instance_t
-// 
+//
 instance_t::instance_t(const void * address):
   address_(const_cast<void *>(address))
 {
@@ -100,7 +100,7 @@ instance_t::instance_t(const void * address):
 
 //----------------------------------------------------------------
 // instance_t::save
-// 
+//
 void
 instance_t::save(std::ostream & so) const
 {
@@ -109,7 +109,7 @@ instance_t::save(std::ostream & so) const
   {
     so << "instance_t ";
   }
-  
+
   // first, check whether you've already been saved before:
   std::map<std::string, void *>::iterator i = map_save_.find(signature_);
   bool update_map = (i == map_save_.end()) || (i->second != address_);
@@ -120,7 +120,7 @@ instance_t::save(std::ostream & so) const
       // erase the old mapping:
       map_signature_.erase(address_);
     }
-    
+
     // save the instance signature:
     if (ok_to_save)
     {
@@ -128,18 +128,18 @@ instance_t::save(std::ostream & so) const
       ::save(so, signature_);
       so << "instance_t ";
     }
-    
+
     // update the map so we wouldn't have to save the signature next time:
     map_save_[signature_] = address_;
     map_signature_[address_] = signature_;
   }
-  
+
   // save the instance address:
   if (ok_to_save)
   {
     so << "address_ ";
     ::save_address(so, address_);
-    
+
     if (update_map)
     {
       so << std::endl;
@@ -153,7 +153,7 @@ instance_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // instance_t::load
-// 
+//
 bool
 instance_t::load(std::istream & si, const std::string & magic)
 {
@@ -162,11 +162,11 @@ instance_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   std::string token;
   si >> token;
   if (si.eof()) return false;
-  
+
   bool load_signature = (token == "signature_");
   if (load_signature)
   {
@@ -174,33 +174,33 @@ instance_t::load(std::istream & si, const std::string & magic)
     {
       return false;
     }
-    
+
     // the next token should be "instance_t" again:
     si >> token;
     if (si.eof()) return false;
     if (token != "instance_t") return false;
-    
+
     // the next token should be "address_":
     si >> token;
     if (si.eof()) return false;
   }
-  
+
   if (token != "address_")
   {
     return false;
   }
-  
+
   uint64_t addr = 0;
   if (!load_address(si, addr))
   {
     return false;
   }
-  
+
   if (load_signature)
   {
     // update the loaded instance map:
     map_load_[signature_] = addr;
-    
+
     // lookup the current address:
     std::map<std::string, void *>::iterator i = map_save_.find(signature_);
     if (i == map_save_.end())
@@ -208,7 +208,7 @@ instance_t::load(std::istream & si, const std::string & magic)
       // no instance with this signature has been registered (saved) yet:
       return false;
     }
-    
+
     address_ = i->second;
     map_address_[addr] = address_;
   }
@@ -220,16 +220,16 @@ instance_t::load(std::istream & si, const std::string & magic)
       // unrecognized address:
       return false;
     }
-    
+
     address_ = i->second;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // instance_t::was_saved
-// 
+//
 bool
 instance_t::was_saved() const
 {
@@ -241,22 +241,22 @@ instance_t::was_saved() const
 
 //----------------------------------------------------------------
 // instance_t::init
-// 
+//
 bool
 instance_t::init(uint64_t addr)
 {
   signature_.clear();
   address_ = NULL;
-  
+
   std::map<uint64_t, void *>::iterator i = map_address_.find(addr);
   if (i == map_address_.end())
   {
     // unrecognized address:
     return false;
   }
-  
+
   address_ = i->second;
-  
+
   std::map<void *, std::string>::iterator j = map_signature_.find(address_);
   if (j == map_signature_.end())
   {
@@ -265,7 +265,7 @@ instance_t::init(uint64_t addr)
     address_ = NULL;
     return false;
   }
-  
+
   signature_ = j->second;
   return true;
 }
@@ -273,7 +273,7 @@ instance_t::init(uint64_t addr)
 
 //----------------------------------------------------------------
 // args_t::save
-// 
+//
 void
 args_t::save(std::ostream & so) const
 {
@@ -282,7 +282,7 @@ args_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // args_t::load
-// 
+//
 bool
 args_t::load(std::istream & si, const std::string & magic)
 {
@@ -292,12 +292,12 @@ args_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // method_t::methods_
-// 
+//
 std::map<std::string, const method_t *> method_t::methods_;
 
 //----------------------------------------------------------------
 // method_t::method_t
-// 
+//
 method_t::method_t(const char * signature):
   signature_(signature)
 {
@@ -306,25 +306,25 @@ method_t::method_t(const char * signature):
 
 //----------------------------------------------------------------
 // method_t::lookup
-// 
+//
 const method_t *
 method_t::lookup(const std::string & signature)
 {
   std::map<std::string, const method_t *>::iterator i =
     methods_.find(signature);
-  
+
   if (i == methods_.end())
   {
     return NULL;
   }
-  
+
   return i->second;
 }
 
 
 //----------------------------------------------------------------
 // call_t::call_t
-// 
+//
 call_t::call_t(const instance_t & instance,
 	       const char * method_signature,
 	       const boost::shared_ptr<args_t> & args):
@@ -342,7 +342,7 @@ call_t::call_t(const instance_t & instance,
 
 //----------------------------------------------------------------
 // call_t::call_t
-// 
+//
 call_t::call_t(void * address,
 	       const char * method_signature):
   instance_(address)
@@ -357,19 +357,19 @@ call_t::call_t(void * address,
 
 //----------------------------------------------------------------
 // call_t::save
-// 
+//
 void
 call_t::save(std::ostream & so) const
 {
   if (!method_) return;
   bool ok_to_save = is_open(so);
-  
+
   // save the magic token:
   if (!ok_to_save)
   {
     return;
   }
-  
+
   if (!instance_.was_saved())
   {
     // save the instance:
@@ -379,17 +379,17 @@ call_t::save(std::ostream & so) const
   so << "call_t ";
   ::save_address(so, instance_.address());
   so << ' ';
-  
+
   if (ok_to_save)
   {
     ::save(so, method_->signature());
   }
-  
+
   if (args_)
   {
     args_->save(so);
   }
-  
+
   if (ok_to_save)
   {
     so << std::endl;
@@ -398,7 +398,7 @@ call_t::save(std::ostream & so) const
 
 //----------------------------------------------------------------
 // call_t::load
-// 
+//
 bool
 call_t::load(std::istream & si, const std::string & magic)
 {
@@ -407,31 +407,31 @@ call_t::load(std::istream & si, const std::string & magic)
   {
     return false;
   }
-  
+
   // load the instance pointer:
   uint64_t addr = 0;
   if (!load_address(si, addr))
   {
     return false;
   }
-  
+
   // the loaded address should be known to us by now:
   if (!instance_.init(addr))
   {
     return false;
   }
-  
+
   // load the method signature:
   std::string signature;
   if (!::load(si, signature))
   {
     return false;
   }
-  
+
   // lookup the method matching the loaded signature:
   method_ = method_t::lookup(signature);
   if (!method_) return false;
-  
+
   // load method call arguments:
   bool ok = method_->load(si, args_);
   return ok;
@@ -439,7 +439,7 @@ call_t::load(std::istream & si, const std::string & magic)
 
 //----------------------------------------------------------------
 // call_t::execute
-// 
+//
 void
 call_t::execute() const
 {

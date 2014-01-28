@@ -22,7 +22,7 @@
 
 //----------------------------------------------------------------
 // the_sampling_method_type_t
-// 
+//
 typedef enum
 {
   THE_REGULAR_SAMPLING_METHOD_E,
@@ -35,7 +35,7 @@ typedef enum
 
 //----------------------------------------------------------------
 // the_sampling_method_type_to_str
-// 
+//
 inline const char *
 the_sampling_method_type_to_str(const the_sampling_method_type_t & smt)
 {
@@ -43,55 +43,55 @@ the_sampling_method_type_to_str(const the_sampling_method_type_t & smt)
   {
     case THE_REGULAR_SAMPLING_METHOD_E:
       return "regular";
-      
+
     case THE_RANDOM_SAMPLING_METHOD_E:
       return "random";
-      
+
     case THE_JITTERED_SAMPLING_METHOD_E:
       return "jittered";
-      
+
     case THE_BSPLINE_SAMPLING_METHOD_E:
       return "bspline";
-      
+
     case THE_STRATIFIED_BSPLINE_SAMPLING_METHOD_E:
       return "stratified_bspline";
-      
+
     default:
       break;
   }
-  
+
   assert(false);
   return NULL;
 }
 
 //----------------------------------------------------------------
 // the_str_to_sampling_method_type
-// 
+//
 inline const the_sampling_method_type_t
 the_str_to_sampling_method_type(const char * str)
 {
   if (strcmp(str, "regular") == 0)
     return THE_REGULAR_SAMPLING_METHOD_E;
-  
+
   if (strcmp(str, "random") == 0)
     return THE_RANDOM_SAMPLING_METHOD_E;
-  
+
   if (strcmp(str, "jittered") == 0)
     return THE_JITTERED_SAMPLING_METHOD_E;
-  
+
   if (strcmp(str, "bspline") == 0)
     return THE_BSPLINE_SAMPLING_METHOD_E;
-  
+
   if (strcmp(str, "stratified_bspline") == 0)
     return THE_STRATIFIED_BSPLINE_SAMPLING_METHOD_E;
-  
+
   return THE_UNKNOWN_SAMPLING_METHOD_E;
 }
 
 
 //----------------------------------------------------------------
 // the_sampling_method_t
-// 
+//
 class the_sampling_method_t
 {
 public:
@@ -100,22 +100,22 @@ public:
     samples_u_(samples_u),
     samples_v_(samples_v)
   {}
-  
+
   virtual ~the_sampling_method_t()
   {}
-  
+
   virtual float sample_u(const the_mersenne_twister_t & rng,
 			 const unsigned int & u_index) const = 0;
   virtual float sample_v(const the_mersenne_twister_t & rng,
 			 const unsigned int & v_index) const = 0;
-  
+
   // accessors:
   inline const unsigned int & samples_u() const
   { return samples_u_; }
-  
+
   inline const unsigned int & samples_v() const
   { return samples_v_; }
-  
+
 protected:
   const unsigned int samples_u_;
   const unsigned int samples_v_;
@@ -123,7 +123,7 @@ protected:
 
 //----------------------------------------------------------------
 // the_regular_sampling_method_t
-// 
+//
 class the_regular_sampling_method_t : public the_sampling_method_t
 {
 public:
@@ -131,12 +131,12 @@ public:
 				const unsigned int & samples_v):
     the_sampling_method_t(samples_u, samples_v)
   {}
-  
+
   // virtual:
   float sample_u(const the_mersenne_twister_t & /* rng */,
 		 const unsigned int & u_index) const
   { return (0.5f + float(u_index)) / float(samples_u_); }
-  
+
   float sample_v(const the_mersenne_twister_t & /* rng */,
 		 const unsigned int & v_index) const
   { return (0.5f + float(v_index)) / float(samples_v_); }
@@ -144,7 +144,7 @@ public:
 
 //----------------------------------------------------------------
 // the_jittered_sampling_method_t
-// 
+//
 class the_jittered_sampling_method_t : public the_sampling_method_t
 {
 public:
@@ -152,12 +152,12 @@ public:
 				 const unsigned int & samples_v):
     the_sampling_method_t(samples_u, samples_v)
   {}
-  
+
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & u_index) const
   { return float(rng.genrand_real2() + float(u_index)) / float(samples_u_); }
-  
+
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & v_index) const
   { return float(rng.genrand_real2() + float(v_index)) / float(samples_v_); }
@@ -165,7 +165,7 @@ public:
 
 //----------------------------------------------------------------
 // the_random_sampling_method_t
-// 
+//
 class the_random_sampling_method_t : public the_sampling_method_t
 {
 public:
@@ -173,12 +173,12 @@ public:
 			       const unsigned int & samples_v):
     the_sampling_method_t(samples_u, samples_v)
   {}
-  
+
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
   { return float(rng.genrand_real2()); }
-  
+
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
   { return float(rng.genrand_real2()); }
@@ -186,7 +186,7 @@ public:
 
 //----------------------------------------------------------------
 // the_bspline_sampling_method_t
-// 
+//
 class the_bspline_sampling_method_t : public the_sampling_method_t
 {
 public:
@@ -194,16 +194,16 @@ public:
 				const unsigned int & samples_v):
     the_sampling_method_t(samples_u, samples_v)
   {}
-  
+
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
   { return 0.5f + rnd_B3_PDF(rng); }
-  
+
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
   { return 0.5f + rnd_B3_PDF(rng); }
-  
+
 private:
   // generate a random number with unstratified probability density function
   // (PDF) matching cubic b-spline basis function:
@@ -219,7 +219,7 @@ private:
 
 //----------------------------------------------------------------
 // the_stratified_bspline_sampling_method_t
-// 
+//
 class the_stratified_bspline_sampling_method_t : public the_sampling_method_t
 {
 public:
@@ -227,16 +227,16 @@ public:
 					   const unsigned int & samples_v):
     the_sampling_method_t(samples_u, samples_v)
   {}
-  
+
   // virtual:
   float sample_u(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* u_index */) const
   { return 0.5f + rnd_B3_PDF_stratified(rng); }
-  
+
   float sample_v(const the_mersenne_twister_t & rng,
 		 const unsigned int & /* v_index */) const
   { return 0.5f + rnd_B3_PDF_stratified(rng); }
-  
+
 private:
   // helper:
   static float distb1(const float & r)
@@ -247,23 +247,23 @@ private:
       u = float((11.0 * r + u * u * (6.0 + u * (8.0 - 9.0 * u))) /
 		(4.0 + 12.0 * u * (1.0 + u * (1.0 - u))));
     }
-    
+
     return u;
   }
-  
+
   // helper:
   inline float D(const float & r) const
   {
     static const float r1 = 1.0f / 24.0f;
     static const float r2 = 1.0f - r1;
     static const float s = 24.0f / 11.0f;
-    
+
     if (r <  r1) return (powf(24.0f * r, 0.25f) - 2.0f);
     if (r >= r2) return (2.0f - powf(24.0f * (1.0f - r), 0.25f));
     if (r < 0.5f) return (distb1(s * (r - r1)) - 1.0f);
     return (1.0f - distb1(s * (r2 - r)));
   }
-  
+
   // generate a random number with stratified probability density function
   // (PDF) matching cubic b-spline basis function:
   inline float rnd_B3_PDF_stratified(const the_mersenne_twister_t & rng) const

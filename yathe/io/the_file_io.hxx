@@ -49,7 +49,7 @@ extern bool load(std::istream & stream, the_graph_node_t *& graph_node);
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const the_duplet_t<data_t> & duplet)
@@ -59,7 +59,7 @@ save(std::ostream & stream, const the_duplet_t<data_t> & duplet)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, the_duplet_t<data_t> & duplet)
@@ -70,7 +70,7 @@ load(std::istream & stream, the_duplet_t<data_t> & duplet)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const the_triplet_t<data_t> & triplet)
@@ -80,7 +80,7 @@ save(std::ostream & stream, const the_triplet_t<data_t> & triplet)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, the_triplet_t<data_t> & triplet)
@@ -91,7 +91,7 @@ load(std::istream & stream, the_triplet_t<data_t> & triplet)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const the_quadruplet_t<data_t> & quadruplet)
@@ -101,7 +101,7 @@ save(std::ostream & stream, const the_quadruplet_t<data_t> & quadruplet)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, the_quadruplet_t<data_t> & quadruplet)
@@ -112,7 +112,7 @@ load(std::istream & stream, the_quadruplet_t<data_t> & quadruplet)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const the_dynamic_array_t<data_t> & array)
@@ -120,64 +120,64 @@ save(std::ostream & stream, const the_dynamic_array_t<data_t> & array)
   std::size_t size = array.size();
   save(stream, size);
   stream << std::endl;
-  
+
   for (std::size_t i = 0; i < size; i++)
   {
     save(stream, array[i]);
     stream << std::endl;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, the_dynamic_array_t<data_t> & array)
 {
   unsigned int size = 0;
   bool ok = load(stream, size);
-  
+
   for (unsigned int i = 0; i < size && ok; i++)
   {
     ok = load(stream, array[i]);
   }
-  
+
   return ok;
 }
 
 
 //----------------------------------------------------------------
 // the_loader_t
-// 
+//
 template <typename data_t>
 class the_loader_t
 {
 public:
   //----------------------------------------------------------------
   // loader_fn_t
-  // 
+  //
   typedef bool(*loader_fn_t)(std::istream &, data_t *&);
-  
+
   //----------------------------------------------------------------
   // loader_t
-  // 
+  //
   typedef the_loader_t<data_t> loader_t;
-  
+
   the_loader_t(const the_text_t & id = the_text_t(),
 	       loader_fn_t loader = NULL):
     id_(id),
     loader_(loader)
   {}
-  
+
   inline bool operator == (const loader_t & l) const
   { return id_ == l.id_; }
-  
+
   bool load(std::istream & istr, data_t *& data) const
   { return loader_(istr, data); }
-  
+
 private:
   the_text_t id_;
   loader_fn_t loader_;
@@ -192,14 +192,14 @@ class the_file_io_t
 public:
   //----------------------------------------------------------------
   // loader_t
-  // 
+  //
   typedef the_loader_t<data_t> loader_t;
-  
+
   // add a file io handler:
   void add(const loader_t & loader)
   {
       std::size_t i = loaders_.index_of(loader);
-    
+
     if (i == ~0u)
     {
       // add a new loader:
@@ -211,53 +211,53 @@ public:
       loaders_[i] = loader;
     }
   }
-  
+
   // load data from a stream:
   bool load(std::istream & stream, data_t *& data) const
   {
     data = NULL;
-    
+
     the_text_t magic_word;
     bool ok = ::load(stream, magic_word);
     if (!ok)
     {
       return false;
     }
-    
+
     if (magic_word == "NULL")
     {
       return true;
     }
-    
+
     std::cout << "loading " << magic_word << endl;
     std::size_t i = loaders_.index_of(loader_t(magic_word, NULL));
     if (i == ~0u)
     {
       return false;
     }
-    
+
     const loader_t & loader = loaders_[i];
     return loader.load(stream, data);
   }
-  
+
 private:
   the_dynamic_array_t<loader_t> loaders_;
 };
 
 //----------------------------------------------------------------
 // the_graph_node_file_io
-// 
+//
 extern the_file_io_t<the_graph_node_t> & the_graph_node_file_io();
 
 //----------------------------------------------------------------
 // the_graph_node_ref_file_io
-// 
+//
 extern the_file_io_t<the_graph_node_ref_t> & the_graph_node_ref_file_io();
 
 
 //----------------------------------------------------------------
 // the_loader
-// 
+//
 template <typename base_t, typename data_t>
 bool
 the_loader(std::istream & stream, base_t *& base)

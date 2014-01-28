@@ -32,14 +32,14 @@ class ImageProcessingThreadObserver;
 
 //----------------------------------------------------------------
 // the_qt_terminators_t
-// 
+//
 class the_qt_terminators_t : public the_terminators_t
 {
 public:
   // virtual: concurrent access controls:
   void lock()	{ mutex_.lock(); }
   void unlock()	{ mutex_.unlock(); }
-  
+
 private:
   mutable QMutex mutex_;
 };
@@ -47,10 +47,10 @@ private:
 
 //----------------------------------------------------------------
 // the_qt_thread_t
-// 
+//
 // 1. the thread will not take ownership of the transactions.
 // 2. the thread will take ownership of the mutex.
-// 
+//
 class the_qt_thread_t : public QThread,
 			public the_thread_interface_t
 {
@@ -58,11 +58,11 @@ class the_qt_thread_t : public QThread,
 
 public:
   the_qt_thread_t();
-  
+
   // the destructor is protected on purpose,
   // see delete_this for details:
   virtual ~the_qt_thread_t();
-  
+
   // In order to avoid memory management problems with shared libraries,
   // whoever provides this interface instance (via it's creator), has to
   // provide a way to delete the instance as well.  This will avoid
@@ -70,41 +70,41 @@ public:
   // used by the app and whatever libraries it links against that
   // either use or provide this interface:
   virtual void delete_this();
-  
+
   // the creation method:
   static the_thread_interface_t * create()
   { return new the_qt_thread_t(); }
-  
+
   // the thread storage accessor:
   static the_thread_storage_t & thread_storage();
-  
+
   // virtual: start the thread:
   void start();
-  
+
   // virtual:
   void wait();
-  
+
   // virtual: put the thread to sleep:
   void take_a_nap(const unsigned long & microseconds);
-  
+
   // virtual: accessor to the transaction terminators:
   the_terminators_t & terminators();
-  
+
   // virtual:
   void handle(the_transaction_t * transaction, the_transaction_t::state_t s);
   void blab(const char * message) const;
-  
+
 signals:
   void status_update(const QString & message) const;
   void transaction_started(the_transaction_t * transaction);
   void transaction_finished(the_transaction_t * transaction);
   void thread_stopped(the_thread_interface_t * thread,
 		      bool all_transactions_completed);
-  
+
 protected:
   // virtual:
   void run();
-  
+
   // a list of active terminators for this thread:
   the_qt_terminators_t terminators_;
 };

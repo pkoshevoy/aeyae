@@ -18,13 +18,13 @@
 
 //----------------------------------------------------------------
 // the_graph_node_t::timestamp_
-// 
+//
 unsigned int
 the_graph_node_t::timestamp_ = 0;
 
 //----------------------------------------------------------------
 // the_graph_node_t::the_graph_node_t
-// 
+//
 the_graph_node_t::the_graph_node_t():
   registry_(NULL),
   id_(UINT_MAX),
@@ -34,7 +34,7 @@ the_graph_node_t::the_graph_node_t():
 
 //----------------------------------------------------------------
 // the_graph_node_t::the_graph_node_t
-// 
+//
 the_graph_node_t::the_graph_node_t(const the_graph_node_t & graph_node):
   registry_(graph_node.registry_),
   id_(graph_node.id_),
@@ -46,13 +46,13 @@ the_graph_node_t::the_graph_node_t(const the_graph_node_t & graph_node):
 
 //----------------------------------------------------------------
 // the_graph_node_t::~the_graph_node_t
-// 
+//
 the_graph_node_t::~the_graph_node_t()
 {}
 
 //----------------------------------------------------------------
 // the_graph_node_t::added_to_the_registry
-// 
+//
 void
 the_graph_node_t::added_to_the_registry(the_registry_t * registry,
 				       const unsigned int & id)
@@ -60,14 +60,14 @@ the_graph_node_t::added_to_the_registry(the_registry_t * registry,
   // sanity check:
   assert(id_ == UINT_MAX);
   assert(direct_dependents_.size() == 0);
-  
+
   registry_ = registry;
   id_ = id;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::removed_from_the_registry
-// 
+//
 void
 the_graph_node_t::removed_from_the_registry()
 {
@@ -77,7 +77,7 @@ the_graph_node_t::removed_from_the_registry()
 				  direct_supporters_.back(),
 				  id_);
   }
-  
+
   while (direct_dependents_.size() != 0)
   {
     unsigned int dep_id = direct_dependents_.front();
@@ -85,21 +85,21 @@ the_graph_node_t::removed_from_the_registry()
     registry_->del(dep);
     delete dep;
   }
-  
+
   registry_ = NULL;
   id_ = UINT_MAX;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::supports
-// 
+//
 // check wether this graph_node supports a given graph_node:
 bool
 the_graph_node_t::supports(const unsigned int & id) const
 {
   // obviously, each graph_node supports itself ;-)
   if (id == id_) return true;
-  
+
   for (std::list<unsigned int>::const_iterator i = direct_dependents_.begin();
        i != direct_dependents_.end(); ++i)
   {
@@ -107,13 +107,13 @@ the_graph_node_t::supports(const unsigned int & id) const
     the_graph_node_t * p = graph_node(dep_id);
     if (p->supports(id)) return true;
   }
-  
+
   return false;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::dependents
-// 
+//
 void
 the_graph_node_t::dependents(std::list<unsigned int> & dependents) const
 {
@@ -127,7 +127,7 @@ the_graph_node_t::dependents(std::list<unsigned int> & dependents) const
 
 //----------------------------------------------------------------
 // the_graph_node_t::supporters
-// 
+//
 void
 the_graph_node_t::supporters(std::list<unsigned int> & supporters) const
 {
@@ -141,7 +141,7 @@ the_graph_node_t::supporters(std::list<unsigned int> & supporters) const
 
 //----------------------------------------------------------------
 // the_graph_node_t::verify_supporters_regenerated
-// 
+//
 bool
 the_graph_node_t::verify_supporters_regenerated() const
 {
@@ -155,13 +155,13 @@ the_graph_node_t::verify_supporters_regenerated() const
       return false;
     }
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::verify_supporters_visited
-// 
+//
 bool
 the_graph_node_t::verify_supporters_visited() const
 {
@@ -175,13 +175,13 @@ the_graph_node_t::verify_supporters_visited() const
       return false;
     }
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::request_regeneration
-// 
+//
 void
 the_graph_node_t::request_regeneration(the_graph_node_t * start_here)
 {
@@ -191,7 +191,7 @@ the_graph_node_t::request_regeneration(the_graph_node_t * start_here)
 
 //----------------------------------------------------------------
 // the_graph_node_t::regenerate_recursive
-// 
+//
 bool
 the_graph_node_t::regenerate_recursive(the_graph_node_t * start_here)
 {
@@ -203,7 +203,7 @@ the_graph_node_t::regenerate_recursive(the_graph_node_t * start_here)
 
 //----------------------------------------------------------------
 // the_graph_node_t::regenerate_supporters
-// 
+//
 bool
 the_graph_node_t::regenerate_supporters(the_graph_node_t * stop_here)
 {
@@ -215,7 +215,7 @@ the_graph_node_t::regenerate_supporters(the_graph_node_t * stop_here)
 
 //----------------------------------------------------------------
 // the_graph_node_t::collect_nodes_sorted
-// 
+//
 void
 the_graph_node_t::collect_nodes_sorted(the_graph_node_t * start_here,
 				       std::list<unsigned int> & nodes)
@@ -226,14 +226,14 @@ the_graph_node_t::collect_nodes_sorted(the_graph_node_t * start_here,
     assert(false);
     return;
   }
-  
+
   the_graph_node_t::timestamp_++;
   start_here->collect_nodes_sorted_helper(nodes);
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::request_regeneration_helper
-// 
+//
 void
 the_graph_node_t::request_regeneration_helper()
 {
@@ -242,10 +242,10 @@ the_graph_node_t::request_regeneration_helper()
     // we've already visited this node:
     return;
   }
-  
+
   timestamp_visited_ = the_graph_node_t::timestamp_;
   regeneration_state_ = REGENERATION_REQUESTED_E;
-  
+
   for (std::list<unsigned int>::const_iterator i = direct_dependents_.begin();
        i != direct_dependents_.end(); ++i)
   {
@@ -257,7 +257,7 @@ the_graph_node_t::request_regeneration_helper()
 
 //----------------------------------------------------------------
 // the_graph_node_t::regenerate_recursive_helper
-// 
+//
 bool
 the_graph_node_t::regenerate_recursive_helper()
 {
@@ -266,7 +266,7 @@ the_graph_node_t::regenerate_recursive_helper()
     // we've already visited this node:
     return true;
   }
-  
+
   bool supporters_regenerated = verify_supporters_regenerated();
   if (!supporters_regenerated)
   {
@@ -278,22 +278,22 @@ the_graph_node_t::regenerate_recursive_helper()
   if (!regenerated())
   {
     // std::cout << "regenerating: " << name() << ", " << id_;
-    
+
     if (!regenerate())
     {
       // std::cout << ", failed..." << std::endl;
-      
+
       // node failed to regenerate:
       regeneration_state_ = REGENERATION_FAILED_E;
       return false;
     }
-    
+
     // std::cout << std::endl;
-    
+
     // node regenerated successfully:
     regeneration_state_ = REGENERATION_SUCCEEDED_E;
   }
-  
+
   bool all_ok = true;
   for (std::list<unsigned int>::const_iterator i = direct_dependents_.begin();
        i != direct_dependents_.end(); ++i)
@@ -303,13 +303,13 @@ the_graph_node_t::regenerate_recursive_helper()
     bool ok = dep->regenerate_recursive_helper();
     all_ok = all_ok && ok;
   }
-  
+
   return all_ok;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::regenerate_supporters_helper
-// 
+//
 bool
 the_graph_node_t::regenerate_supporters_helper()
 {
@@ -318,7 +318,7 @@ the_graph_node_t::regenerate_supporters_helper()
     // we've already visited this node:
     return true;
   }
-  
+
   bool all_ok = true;
   for (std::list<unsigned int>::const_iterator i = direct_supporters_.begin();
        i != direct_supporters_.end(); ++i)
@@ -333,28 +333,28 @@ the_graph_node_t::regenerate_supporters_helper()
       break;
     }
   }
-  
+
   // update the time stamp, even if the supporters failed to regenerate:
   timestamp_visited_ = the_graph_node_t::timestamp_;
-  
+
   if (all_ok && !regenerated())
   {
     all_ok = regenerate();
     regeneration_state_ = (all_ok ?
 			   REGENERATION_SUCCEEDED_E :
 			   REGENERATION_FAILED_E);
-    
+
     // FIXME:
     // std::cout << "regenerated " << name() << " " << id_ << ", "
     //	      << std::boolalpha << all_ok << endl;
   }
-  
+
   return all_ok;
 }
 
 //----------------------------------------------------------------
 // the_graph_node_t::collect_nodes_sorted_helper
-// 
+//
 void
 the_graph_node_t::collect_nodes_sorted_helper(std::list<unsigned int> & nodes)
 {
@@ -363,17 +363,17 @@ the_graph_node_t::collect_nodes_sorted_helper(std::list<unsigned int> & nodes)
     // we've already collected this node:
     return;
   }
-  
+
   bool supporters_visited = verify_supporters_visited();
   if (!supporters_visited)
   {
     // can't collect this node until all its supporters are visited:
     return;
   }
-  
+
   timestamp_visited_ = the_graph_node_t::timestamp_;
   nodes.push_back(id_);
-  
+
   for (std::list<unsigned int>::const_iterator i = direct_dependents_.begin();
        i != direct_dependents_.end(); ++i)
   {
@@ -385,7 +385,7 @@ the_graph_node_t::collect_nodes_sorted_helper(std::list<unsigned int> & nodes)
 
 //----------------------------------------------------------------
 // the_graph_node_t::save
-// 
+//
 bool
 the_graph_node_t::save(std::ostream & stream) const
 {
@@ -397,14 +397,14 @@ the_graph_node_t::save(std::ostream & stream) const
 
 //----------------------------------------------------------------
 // the_graph_node_t::load
-// 
+//
 bool
 the_graph_node_t::load(std::istream & stream)
 {
   registry_ = NULL;
   timestamp_visited_ = 0;
   regeneration_state_ = REGENERATION_REQUESTED_E;
-  
+
   ::load(stream, the_graph_node_t::id_);
   ::load(stream, the_graph_node_t::direct_dependents_);
   ::load(stream, the_graph_node_t::direct_supporters_);
@@ -413,7 +413,7 @@ the_graph_node_t::load(std::istream & stream)
 
 //----------------------------------------------------------------
 // the_graph_node_t::dump
-// 
+//
 void
 the_graph_node_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -431,7 +431,7 @@ the_graph_node_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & s, const the_graph_node_t & p)
 {
@@ -441,7 +441,7 @@ operator << (ostream & s, const the_graph_node_t & p)
 
 //----------------------------------------------------------------
 // establish_supporter_dependent
-// 
+//
 void
 establish_supporter_dependent(the_registry_t * registry,
 			      const unsigned int & supporter_id,
@@ -449,17 +449,17 @@ establish_supporter_dependent(the_registry_t * registry,
 {
   the_graph_node_t * supporter = registry->elem(supporter_id);
   if (supporter == NULL) return;
-  
+
   the_graph_node_t * dependent = registry->elem(dependent_id);
   if (dependent == NULL) return;
-  
+
   supporter->add_dependent(dependent_id);
   dependent->add_supporter(supporter_id);
 }
 
 //----------------------------------------------------------------
 // breakdown_supporter_dependent
-// 
+//
 void
 breakdown_supporter_dependent(the_registry_t * registry,
 			      const unsigned int & supporter_id,
@@ -467,10 +467,10 @@ breakdown_supporter_dependent(the_registry_t * registry,
 {
   the_graph_node_t * supporter = registry->elem(supporter_id);
   if (supporter == NULL) return;
-  
+
   the_graph_node_t * dependent = registry->elem(dependent_id);
   if (dependent == NULL) return;
-  
+
   supporter->del_dependent(dependent_id);
   dependent->del_supporter(supporter_id);
 }

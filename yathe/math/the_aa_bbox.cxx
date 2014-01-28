@@ -19,7 +19,7 @@
 
 ///----------------------------------------------------------------
 // the_aa_bbox_t::operator <<
-// 
+//
 the_aa_bbox_t &
 the_aa_bbox_t::operator << (const p3x1_t & pt)
 {
@@ -29,13 +29,13 @@ the_aa_bbox_t::operator << (const p3x1_t & pt)
   if (max_.y() < pt.y()) max_.y() = pt.y();
   if (min_.z() > pt.z()) min_.z() = pt.z();
   if (max_.z() < pt.z()) max_.z() = pt.z();
-  
+
   return *this;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::operator +=
-// 
+//
 the_aa_bbox_t &
 the_aa_bbox_t::operator += (const the_aa_bbox_t & bbox)
 {
@@ -45,12 +45,12 @@ the_aa_bbox_t::operator += (const the_aa_bbox_t & bbox)
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::operator *=
-// 
+//
 the_aa_bbox_t &
 the_aa_bbox_t::operator *= (const float & s)
 {
   if (is_empty()) return *this;
-  
+
   p3x1_t o = min_ + 0.5 * (max_ - min_);
   min_ = o + s * (min_ - o);
   max_ = o + s * (max_ - o);
@@ -59,7 +59,7 @@ the_aa_bbox_t::operator *= (const float & s)
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::operator +=
-// 
+//
 the_aa_bbox_t &
 the_aa_bbox_t::operator += (const float & r)
 {
@@ -74,17 +74,17 @@ the_aa_bbox_t::operator += (const float & r)
     min_ -= shift;
     max_ += shift;
   }
-  
+
   assert((min_.x() < max_.x()) &&
 	 (min_.y() < max_.y()) &&
 	 (min_.z() < max_.z()));
-  
+
   return *this;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::corners
-// 
+//
 void
 the_aa_bbox_t::corners(p3x1_t * corner) const
 {
@@ -100,7 +100,7 @@ the_aa_bbox_t::corners(p3x1_t * corner) const
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::is_empty
-// 
+//
 bool
 the_aa_bbox_t::is_empty() const
 {
@@ -114,12 +114,12 @@ the_aa_bbox_t::is_empty() const
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::is_linear
-// 
+//
 bool
 the_aa_bbox_t::is_linear() const
 {
   if (is_empty()) return false;
-  
+
   float dx = max_.x() - min_.x();
   float dy = max_.y() - min_.y();
   float dz = max_.z() - min_.z();
@@ -130,12 +130,12 @@ the_aa_bbox_t::is_linear() const
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::is_planar
-// 
+//
 bool
 the_aa_bbox_t::is_planar() const
 {
   if (is_empty()) return false;
-  
+
   float dx = max_.x() - min_.x();
   float dy = max_.y() - min_.y();
   float dz = max_.z() - min_.z();
@@ -146,12 +146,12 @@ the_aa_bbox_t::is_planar() const
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::is_spacial
-// 
+//
 bool
 the_aa_bbox_t::is_spacial() const
 {
   if (is_empty()) return false;
-  
+
   float dx = max_.x() - min_.x();
   float dy = max_.y() - min_.y();
   float dz = max_.z() - min_.z();
@@ -160,12 +160,12 @@ the_aa_bbox_t::is_spacial() const
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::radius
-// 
+//
 float
 the_aa_bbox_t::radius(const p3x1_t & center) const
 {
   if (is_empty()) return 0.0;
-  
+
   p3x1_t corner[] =
   {
     p3x1_t(min_.x(), min_.y(), min_.z()),
@@ -177,14 +177,14 @@ the_aa_bbox_t::radius(const p3x1_t & center) const
     p3x1_t(max_.x(), max_.y(), min_.z()),
     p3x1_t(max_.x(), max_.y(), max_.z())
   };
-  
+
   float max_dist = -FLT_MAX;
   for (unsigned int i = 0; i < 8; i++)
   {
     float dist = ~(center - corner[i]);
     if (dist > max_dist) max_dist = dist;
   }
-  
+
   return max_dist;
 }
 
@@ -198,17 +198,17 @@ the_aa_bbox_t::radius(const p3x1_t & center,
   assert(axis_w_id < 3);
   unsigned int axis_u_id = (axis_w_id + 1) % 3;
   unsigned int axis_v_id = (axis_u_id + 1) % 3;
-  
+
   p2x1_t uv_center(center[axis_u_id],
 		   center[axis_v_id]);
-  
+
   p2x1_t uv_corner[] = {
     p2x1_t(min_[axis_u_id], min_[axis_v_id]),
     p2x1_t(min_[axis_u_id], max_[axis_v_id]),
     p2x1_t(max_[axis_u_id], min_[axis_v_id]),
     p2x1_t(max_[axis_u_id], max_[axis_v_id])
   };
-  
+
   float max_dist = -FLT_MAX;
   for (unsigned int i = 0; i < 4; i++)
   {
@@ -216,13 +216,13 @@ the_aa_bbox_t::radius(const p3x1_t & center,
     float dist = ~uv_vec;
     if (dist > max_dist) max_dist = dist;
   }
-  
+
   return max_dist;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::contains
-// 
+//
 void
 the_aa_bbox_t::contains(const p3x1_t & pt,
 			bool & contained_in_x,
@@ -240,7 +240,7 @@ the_aa_bbox_t::contains(const p3x1_t & pt,
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::intersects
-// 
+//
 bool
 the_aa_bbox_t::intersects(const the_aa_bbox_t & b) const
 {
@@ -248,22 +248,22 @@ the_aa_bbox_t::intersects(const the_aa_bbox_t & b) const
     (min_[0] > b.max_[0] || b.min_[0] > max_[0]) ||
     (min_[1] > b.max_[1] || b.min_[1] > max_[1]) ||
     (min_[2] > b.max_[2] || b.min_[2] > max_[2]);
-  
+
   return !disjoint;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::clamp
-// 
+//
 void
 the_aa_bbox_t::clamp(const the_aa_bbox_t & confines)
 {
   if (confines.is_empty()) return;
-  
+
   min_[0] = std::min(confines.max_[0], std::max(confines.min_[0], min_[0]));
   min_[1] = std::min(confines.max_[1], std::max(confines.min_[1], min_[1]));
   min_[2] = std::min(confines.max_[2], std::max(confines.min_[2], min_[2]));
-  
+
   max_[0] = std::min(confines.max_[0], std::max(confines.min_[0], max_[0]));
   max_[1] = std::min(confines.max_[1], std::max(confines.min_[1], max_[1]));
   max_[2] = std::min(confines.max_[2], std::max(confines.min_[2], max_[2]));
@@ -271,7 +271,7 @@ the_aa_bbox_t::clamp(const the_aa_bbox_t & confines)
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::intersects_ray
-// 
+//
 bool
 the_aa_bbox_t::intersects_ray(const p3x1_t & o,
 			      const v3x1_t & d,
@@ -279,25 +279,25 @@ the_aa_bbox_t::intersects_ray(const p3x1_t & o,
 			      float & t_max) const
 {
   float t[3][2];
-  
+
   for (unsigned int i = 0; i < 3; i++)
   {
     float inv_d = 1.0f / d[i];
     unsigned int e = inv_d < 0.0f;
-    
+
     t[i][e]           = (min_[i] - o[i]) * inv_d;
     t[i][(e + 1) % 2] = (max_[i] - o[i]) * inv_d;
   }
-  
+
   t_min = std::max(t[0][0], std::max(t[1][0], t[2][0]));
   t_max = std::min(t[0][1], std::min(t[1][1], t[2][1]));
-  
+
   return t_min < t_max;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::largest_dimension
-// 
+//
 unsigned int
 the_aa_bbox_t::largest_dimension() const
 {
@@ -307,17 +307,17 @@ the_aa_bbox_t::largest_dimension() const
     max_[1] - min_[1],
     max_[2] - min_[2]
   };
-  
+
   unsigned int axis = 0;
   if (d[1] > d[0]) axis = 1;
   if (d[2] > d[axis]) axis = 2;
-  
+
   return axis;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::smallest_dimension
-// 
+//
 unsigned int
 the_aa_bbox_t::smallest_dimension() const
 {
@@ -327,17 +327,17 @@ the_aa_bbox_t::smallest_dimension() const
     max_[1] - min_[1],
     max_[2] - min_[2]
   };
-  
+
   unsigned int axis = 0;
   if (d[1] < d[0]) axis = 1;
   if (d[2] < d[axis]) axis = 2;
-  
+
   return axis;
 }
 
 //----------------------------------------------------------------
 // the_aa_bbox_t::dump
-// 
+//
 void
 the_aa_bbox_t::dump(ostream & strm) const
 {

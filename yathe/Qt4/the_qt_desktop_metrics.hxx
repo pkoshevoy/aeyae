@@ -23,7 +23,7 @@
 
 //----------------------------------------------------------------
 // the_qt_desktop_metrics_t
-// 
+//
 class the_qt_desktop_metrics_t : public the_desktop_metrics_t
 {
 public:
@@ -34,7 +34,7 @@ public:
     float dpi = (float)(qpdm.logicalDpiX());
     return dpi;
   }
-  
+
   float dpi_y() const
   {
     const QPaintDevice & qpdm = *(QApplication::desktop());

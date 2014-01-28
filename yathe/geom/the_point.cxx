@@ -20,7 +20,7 @@
 
 //----------------------------------------------------------------
 // USE_SMART_SOFT_POINTS
-// 
+//
 #define USE_SMART_SOFT_POINTS
 
 #ifdef USE_SMART_SOFT_POINTS
@@ -31,37 +31,37 @@
 
 //----------------------------------------------------------------
 // the_point_t::intersect
-// 
+//
 bool
 the_point_t::
 intersect(const the_view_volume_t & volume,
 	  std::list<the_pick_data_t> & data) const
 {
   const p3x1_t wcs_pt = value();
-  
+
   // shortcuts:
   p3x1_t cyl_pt;
   float & radius = cyl_pt.x();
   float & angle  = cyl_pt.y();
   float & depth  = cyl_pt.z();
-  
+
   // find the depth of this point within the volume:
   depth = volume.depth_of_wcs_pt(wcs_pt);
-  
+
   // find the UV frame within the volume at the specified depth:
   the_cyl_uv_csys_t uv_frame;
   volume.uv_frame_at_depth(depth, uv_frame);
-  
+
   // calculate the polar coordinates of this point within the UV frame:
   uv_frame.wcs_to_lcs(wcs_pt, radius, angle);
-  
+
   // if the radius of this point within the UV frame exceeds 1.0 then
   // this point is outside the volume - does not intersect:
   if (radius > 1.0)
   {
     return false;
   }
-  
+
   // this point falls within the volume boundaries:
   data.push_back(the_pick_data_t(cyl_pt, new the_point_ref_t(id())));
   return true;
@@ -69,7 +69,7 @@ intersect(const the_view_volume_t & volume,
 
 //----------------------------------------------------------------
 // the_point_t::save
-// 
+//
 bool
 the_point_t::save(std::ostream & stream) const
 {
@@ -80,7 +80,7 @@ the_point_t::save(std::ostream & stream) const
 
 //----------------------------------------------------------------
 // the_point_t::load
-// 
+//
 bool
 the_point_t::load(std::istream & stream)
 {
@@ -91,7 +91,7 @@ the_point_t::load(std::istream & stream)
 
 //----------------------------------------------------------------
 // the_point_t::dump
-// 
+//
 void
 the_point_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -104,7 +104,7 @@ the_point_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // the_hard_point_t::set_value
-// 
+//
 bool
 the_hard_point_t::set_value(const the_view_mgr_t & /* view_mgr */,
 			    const p3x1_t & wcs_pt)
@@ -116,7 +116,7 @@ the_hard_point_t::set_value(const the_view_mgr_t & /* view_mgr */,
 
 //----------------------------------------------------------------
 // the_hard_point_t::save
-// 
+//
 bool
 the_hard_point_t::save(std::ostream & stream) const
 {
@@ -126,7 +126,7 @@ the_hard_point_t::save(std::ostream & stream) const
 
 //----------------------------------------------------------------
 // the_hard_point_t::load
-// 
+//
 bool
 the_hard_point_t::load(std::istream & stream)
 {
@@ -136,7 +136,7 @@ the_hard_point_t::load(std::istream & stream)
 
 //----------------------------------------------------------------
 // the_hard_point_t::dump
-// 
+//
 void
 the_hard_point_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -150,7 +150,7 @@ the_hard_point_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // the_soft_point_t::the_soft_point_t
-// 
+//
 the_soft_point_t::the_soft_point_t():
   the_point_t(),
   ref_(NULL)
@@ -158,7 +158,7 @@ the_soft_point_t::the_soft_point_t():
 
 //----------------------------------------------------------------
 // the_soft_point_t::the_soft_point_t
-// 
+//
 the_soft_point_t::the_soft_point_t(const the_reference_t & ref):
   the_point_t()
 {
@@ -167,7 +167,7 @@ the_soft_point_t::the_soft_point_t(const the_reference_t & ref):
 
 //----------------------------------------------------------------
 // the_soft_point_t::the_soft_point_t
-// 
+//
 the_soft_point_t::the_soft_point_t(const the_soft_point_t & point):
   the_point_t(point),
   ref_(point.ref_->clone()),
@@ -176,7 +176,7 @@ the_soft_point_t::the_soft_point_t(const the_soft_point_t & point):
 
 //----------------------------------------------------------------
 // the_soft_point_t::~the_soft_point_t
-// 
+//
 the_soft_point_t::~the_soft_point_t()
 {
   delete ref_;
@@ -185,16 +185,16 @@ the_soft_point_t::~the_soft_point_t()
 
 //----------------------------------------------------------------
 // the_soft_point_t::added_to_the_registry
-// 
+//
 void
 the_soft_point_t::added_to_the_registry(the_registry_t * registry,
 					const unsigned int & id)
 {
   the_point_t::added_to_the_registry(registry, id);
-  
+
   // update the graph:
   establish_supporter_dependent(registry, ref_->id(), id);
-  
+
 #ifdef USE_SMART_SOFT_POINTS
   ref_->eval(registry, value_);
   anchor_ = value_;
@@ -203,12 +203,12 @@ the_soft_point_t::added_to_the_registry(the_registry_t * registry,
 
 //----------------------------------------------------------------
 // the_soft_point_t::regenerate
-// 
+//
 bool
 the_soft_point_t::regenerate()
 {
   the_registry_t * r = registry();
-  
+
 #ifdef USE_SMART_SOFT_POINTS
   the_curve_t * curve = ref_->references<the_curve_t>(r);
   if (curve)
@@ -236,7 +236,7 @@ the_soft_point_t::regenerate()
 	cout << endl;
       }
       */
-      
+
       const the_deviation_min_t & srs = solution.front();
       the_curve_ref_t * crv_ref = dynamic_cast<the_curve_ref_t *>(ref_);
       assert(crv_ref);
@@ -256,7 +256,7 @@ the_soft_point_t::regenerate()
     }
   }
 #endif
-  
+
   // look up the reference, evaluate the paramater with
   // respect to the reference, return the value:
   return ref_->eval(r, value_);
@@ -264,7 +264,7 @@ the_soft_point_t::regenerate()
 
 //----------------------------------------------------------------
 // the_soft_point_t::set_value
-// 
+//
 bool
 the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
 			    const p3x1_t & wcs_pt)
@@ -272,7 +272,7 @@ the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
   the_registry_t * r = registry();
   bool ok = ref_->move(r, view_mgr, wcs_pt);
   ref_->eval(r, value_);
-  
+
   if (ok)
   {
     the_graph_node_t::request_regeneration(this);
@@ -282,7 +282,7 @@ the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
 
 //----------------------------------------------------------------
 // the_soft_point_t::symbol
-// 
+//
 the_point_symbol_id_t
 the_soft_point_t::symbol() const
 {
@@ -291,7 +291,7 @@ the_soft_point_t::symbol() const
 
 //----------------------------------------------------------------
 // the_soft_point_t::save
-// 
+//
 bool
 the_soft_point_t::save(std::ostream & stream) const
 {
@@ -302,21 +302,21 @@ the_soft_point_t::save(std::ostream & stream) const
 
 //----------------------------------------------------------------
 // the_soft_point_t::load
-// 
+//
 bool
 the_soft_point_t::load(std::istream & stream)
 {
   the_graph_node_ref_t * ref = NULL;
   ::load(stream, ref);
   ref_ = dynamic_cast<the_reference_t *>(ref);
-  
+
   ::load(stream, value_);
   return the_point_t::load(stream);
 }
 
 //----------------------------------------------------------------
 // the_soft_point_t::dump
-// 
+//
 void
 the_soft_point_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -332,27 +332,27 @@ the_soft_point_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // the_point_ref_t::the_point_ref_t
-// 
+//
 the_point_ref_t::the_point_ref_t(unsigned int id):
   the_reference_t(id)
 {}
 
 //----------------------------------------------------------------
 // the_point_ref_t::eval
-// 
+//
 bool
 the_point_ref_t::eval(the_registry_t * r, p3x1_t & pt) const
 {
   the_point_t * vert = r->elem<the_point_t>(id());
   if (vert == NULL) return false;
-  
+
   pt = vert->value();
   return true;
 }
 
 //----------------------------------------------------------------
 // the_point_ref_t::dump
-// 
+//
 void
 the_point_ref_t::dump(ostream & strm, unsigned int indent) const
 {

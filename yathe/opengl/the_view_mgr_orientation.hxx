@@ -40,13 +40,13 @@ typedef enum
 
 //----------------------------------------------------------------
 // the_view_orientation_text
-// 
+//
 extern const char *
 the_view_orientation_text(const the_view_mgr_orientation_t & orientation);
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 inline ostream &
 operator << (ostream & s, const the_view_mgr_orientation_t & orientation)
 {

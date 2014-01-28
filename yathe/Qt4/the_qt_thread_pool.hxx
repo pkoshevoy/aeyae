@@ -25,19 +25,19 @@
 
 //----------------------------------------------------------------
 // the_qt_thread_pool_t
-// 
+//
 class the_qt_thread_pool_t : public QObject,
 			     public the_thread_pool_t
 {
   Q_OBJECT
-  
+
 public:
   the_qt_thread_pool_t(unsigned int num_threads);
-  
+
   // virtual:
   void handle(the_transaction_t * transaction, the_transaction_t::state_t s);
   void blab(const char * message) const;
-  
+
 signals:
   void status_update(const QString & message) const;
   void transaction_started(the_transaction_t * transaction);

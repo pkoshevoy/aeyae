@@ -25,7 +25,7 @@
 
 //----------------------------------------------------------------
 // duck_t
-// 
+//
 class duck_t
 {
 public:
@@ -36,10 +36,10 @@ public:
     y(Y),
     i(I)
   {}
-  
+
   inline bool operator == (const duck_t & d) const
   { return i == d.i && x == d.x && y == d.y; }
-  
+
   int x;
   int y;
   unsigned int i;
@@ -47,40 +47,40 @@ public:
 
 //----------------------------------------------------------------
 // Fl_Knot_Vector
-// 
+//
 class FL_EXPORT Fl_Knot_Vector : public Fl_Widget
 {
 public:
   Fl_Knot_Vector(int x, int y, int w, int h, const char * label = 0);
-  
+
   // virtual:
   int handle(int event);
-  
+
   // accessors:
   inline const std::vector<float> & value() const
   { return knots_; }
-  
+
   inline void value(const std::vector<float> & knots)
   {
     knots_ = knots;
     redraw();
   }
-  
+
 protected:
   // virtual:
   void draw();
-  
+
 private:
   inline void set_anchor()
   { anchor_ = ducks_; }
-  
+
   std::vector<float> knots_;
-  
+
   std::list<unsigned int> multiplicity_;
   std::list<float> parameter_;
   std::list<duck_t> ducks_;
   std::list<duck_t> anchor_;
-  
+
   const duck_t * active_duck_;
 };
 

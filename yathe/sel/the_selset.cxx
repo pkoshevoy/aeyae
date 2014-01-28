@@ -17,7 +17,7 @@
 
 //----------------------------------------------------------------
 // the_selset_traits_t::clone
-// 
+//
 the_selset_traits_t::super_t *
 the_selset_traits_t::clone() const
 {
@@ -26,7 +26,7 @@ the_selset_traits_t::clone() const
 
 //----------------------------------------------------------------
 // the_selset_traits_t::is_valid
-// 
+//
 bool
 the_selset_traits_t::is_valid(const unsigned int & id) const
 {
@@ -36,7 +36,7 @@ the_selset_traits_t::is_valid(const unsigned int & id) const
 
 //----------------------------------------------------------------
 // the_selset_traits_t::activate
-// 
+//
 bool
 the_selset_traits_t::activate(unsigned int & id) const
 {
@@ -52,7 +52,7 @@ the_selset_traits_t::activate(unsigned int & id) const
 
 //----------------------------------------------------------------
 // the_selset_traits_t::deactivate
-// 
+//
 bool
 the_selset_traits_t::deactivate(unsigned int & id) const
 {
@@ -60,7 +60,7 @@ the_selset_traits_t::deactivate(unsigned int & id) const
   {
     return false;
   }
-  
+
   the_primitive_t * prim = registry()->elem<the_primitive_t>(id);
   prim->clear_state(THE_SELECTED_STATE_E);
   return true;

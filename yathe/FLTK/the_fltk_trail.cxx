@@ -25,7 +25,7 @@
 
 //----------------------------------------------------------------
 // the_fltk_trail_t::the_fltk_trail_t
-// 
+//
 the_fltk_trail_t::
 the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   the_trail_t(argc, argv, record_by_default)
@@ -34,35 +34,35 @@ the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   mouse_.setup_buttons(FL_BUTTON1,
 		       FL_BUTTON2,
 		       FL_BUTTON3);
-  
+
   the_keybd_event_t::setup_transition_detectors(FL_KEYDOWN, FL_KEYUP);
-  
+
   keybd_.init_key(the_keybd_t::SHIFT, FL_Shift_L, FL_SHIFT);
   keybd_.init_key(the_keybd_t::ALT, FL_Alt_L, FL_ALT);
   keybd_.init_key(the_keybd_t::CONTROL, FL_Control_L, FL_CTRL);
   keybd_.init_key(the_keybd_t::META, FL_Meta_L, FL_META);
-  
+
   keybd_.init_key(the_keybd_t::ARROW_UP, FL_Up);
   keybd_.init_key(the_keybd_t::ARROW_DOWN, FL_Down);
   keybd_.init_key(the_keybd_t::ARROW_LEFT, FL_Left);
   keybd_.init_key(the_keybd_t::ARROW_RIGHT, FL_Right);
-  
+
   keybd_.init_key(the_keybd_t::PAGE_UP, FL_Page_Up);
   keybd_.init_key(the_keybd_t::PAGE_DOWN, FL_Page_Down);
-  
+
   keybd_.init_key(the_keybd_t::HOME, FL_Home);
   keybd_.init_key(the_keybd_t::END, FL_End);
-  
+
   keybd_.init_key(the_keybd_t::INSERT, FL_Insert);
   keybd_.init_key(the_keybd_t::DELETE, FL_Delete);
-  
+
   keybd_.init_key(the_keybd_t::ESCAPE, FL_Escape);
   keybd_.init_key(the_keybd_t::TAB, FL_Tab);
   keybd_.init_key(the_keybd_t::BACKSPACE, FL_BackSpace);
   keybd_.init_key(the_keybd_t::RETURN, FL_Enter);
   keybd_.init_key(the_keybd_t::ENTER, FL_Enter);
   keybd_.init_key(the_keybd_t::SPACE, ' ');
-  
+
   keybd_.init_key(the_keybd_t::F1, FL_F + 1);
   keybd_.init_key(the_keybd_t::F2, FL_F + 2);
   keybd_.init_key(the_keybd_t::F3, FL_F + 3);
@@ -75,10 +75,10 @@ the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_key(the_keybd_t::F10, FL_F + 10);
   keybd_.init_key(the_keybd_t::F11, FL_F + 11);
   keybd_.init_key(the_keybd_t::F12, FL_F + 12);
-  
+
   keybd_.init_key(the_keybd_t::NUMLOCK, FL_Num_Lock);
   keybd_.init_key(the_keybd_t::CAPSLOCK, FL_Caps_Lock);
-  
+
   keybd_.init_ascii('~', '~');
   keybd_.init_ascii('-', '-');
   keybd_.init_ascii('=', '=');
@@ -94,7 +94,7 @@ the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_ascii('.', '.');
   keybd_.init_ascii('/', '/');
   keybd_.init_ascii(' ', ' ');
-  
+
   keybd_.init_ascii('0', '0');
   keybd_.init_ascii('1', '1');
   keybd_.init_ascii('2', '2');
@@ -105,7 +105,7 @@ the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_ascii('7', '7');
   keybd_.init_ascii('8', '8');
   keybd_.init_ascii('9', '9');
-  
+
   keybd_.init_ascii('A', 'a');
   keybd_.init_ascii('B', 'b');
   keybd_.init_ascii('C', 'c');
@@ -132,5 +132,5 @@ the_fltk_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_ascii('X', 'x');
   keybd_.init_ascii('Y', 'y');
   keybd_.init_ascii('Z', 'z');
-  
+
 }

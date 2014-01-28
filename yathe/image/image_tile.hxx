@@ -42,18 +42,18 @@ class image_tile_t
 public:
   image_tile_t();
   ~image_tile_t();
-  
+
   // OpenGL helper:
   void draw(const GLuint & texture_id,
 	    const GLint & mag_filter = GL_NEAREST,
 	    const GLint & min_filter = GL_NEAREST) const;
-  
+
   // helper:
   void update_bbox(the_bbox_t & bbox) const;
-  
+
   //----------------------------------------------------------------
   // quad_t
-  // 
+  //
   class quad_t
   {
   public:
@@ -67,22 +67,22 @@ public:
 	   << INDSTR << "h_ = " << h_ << endl
 	   << INDSCP << "}" << endl;
     }
-    
+
     GLint x_;
     GLint y_;
     GLsizei w_;
     GLsizei h_;
   };
-  
+
   // quad coordinates:
   p3x1_t corner_[4];
-  
+
   // texture coordinates:
   GLfloat s0_;
   GLfloat s1_;
   GLfloat t0_;
   GLfloat t1_;
-  
+
   // the texture:
   boost::shared_ptr<texture_base_t> texture_;
 };
@@ -90,7 +90,7 @@ public:
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 inline ostream &
 operator << (ostream & strm, const image_tile_t::quad_t & quad)
 {

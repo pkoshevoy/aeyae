@@ -41,7 +41,7 @@ THE SOFTWARE.
 
 //----------------------------------------------------------------
 // is_open
-// 
+//
 bool
 is_open(std::ostream & so)
 {
@@ -51,7 +51,7 @@ is_open(std::ostream & so)
 
 //----------------------------------------------------------------
 // is_open
-// 
+//
 bool
 is_open(std::istream & si)
 {
@@ -61,13 +61,13 @@ is_open(std::istream & si)
 
 //----------------------------------------------------------------
 // load_address_hex
-// 
+//
 static bool
 load_address_hex(const std::string & txt, uint64_t & address)
 {
   address = uint64_t(0);
   uint64_t sixteen_to_i = 1;
-  
+
   size_t digits = txt.size();
   for (size_t i = 0; i < digits; i++)
   {
@@ -96,29 +96,29 @@ load_address_hex(const std::string & txt, uint64_t & address)
     {
       return false;
     }
-    
+
     address += d * sixteen_to_i;
     sixteen_to_i *= 16;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load_address_dec
-// 
+//
 static bool
 load_address_dec(const std::string & txt, uint64_t & address)
 {
   address = uint64_t(0);
   uint64_t ten_to_i = 1;
-  
+
   size_t digits = txt.size();
   for (size_t i = 0; i < digits; i++)
   {
     size_t pos = digits - 1 - i;
     char c = txt[pos];
-    
+
     uint64_t d = 0;
     if (c >= '0' && c <= '9')
     {
@@ -128,23 +128,23 @@ load_address_dec(const std::string & txt, uint64_t & address)
     {
       return false;
     }
-    
+
     address += d * ten_to_i;
     ten_to_i *= 10;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load_address
-// 
+//
 bool
 load_address(std::istream & si, uint64_t & address)
 {
   std::string txt;
   si >> txt;
-  
+
   if (txt.size() > 1 && txt[0] == '0' &&
       (txt[1] == 'x' || txt[1] == 'X'))
   {
@@ -156,7 +156,7 @@ load_address(std::istream & si, uint64_t & address)
 
 //----------------------------------------------------------------
 // save_address_byte
-// 
+//
 inline void
 save_address_byte(std::ostream & so, const unsigned char byte)
 {
@@ -168,7 +168,7 @@ save_address_byte(std::ostream & so, const unsigned char byte)
 
 //----------------------------------------------------------------
 // save_address_big_endian
-// 
+//
 static void
 save_address_big_endian(std::ostream & so,
 			const unsigned char * bytes,
@@ -184,7 +184,7 @@ save_address_big_endian(std::ostream & so,
 
 //----------------------------------------------------------------
 // save_address_swap_bytes
-// 
+//
 static void
 save_address_swap_bytes(std::ostream & so,
 			const unsigned char * bytes,
@@ -200,7 +200,7 @@ save_address_swap_bytes(std::ostream & so,
 
 //----------------------------------------------------------------
 // is_little_endian
-// 
+//
 static bool
 is_little_endian()
 {
@@ -211,22 +211,22 @@ is_little_endian()
 
 //----------------------------------------------------------------
 // save_addr_func_t
-// 
+//
 typedef void(*save_addr_func_t)(std::ostream &,
 				const unsigned char *,
 				unsigned int);
 
 //----------------------------------------------------------------
 // save_addr_func
-// 
+//
 static const save_addr_func_t
 save_addr_func = (is_little_endian() ?
-		  save_address_swap_bytes : 
+		  save_address_swap_bytes :
 		  save_address_big_endian);
 
 //----------------------------------------------------------------
 // save_address
-// 
+//
 void
 save_address(std::ostream & so, const void * address)
 {
@@ -235,7 +235,7 @@ save_address(std::ostream & so, const void * address)
 
 //----------------------------------------------------------------
 // save_address
-// 
+//
 void
 save_address(std::ostream & so, uint64_t address)
 {
@@ -245,7 +245,7 @@ save_address(std::ostream & so, uint64_t address)
 
 //----------------------------------------------------------------
 // encode_special_chars
-// 
+//
 const std::string
 encode_special_chars(const std::string & text_plain,
 		     const char * special_chars)
@@ -272,47 +272,47 @@ encode_special_chars(const std::string & text_plain,
       result += c;
     }
   }
-  
+
   return result;
 }
 
 //----------------------------------------------------------------
 // decode_special_chars
-// 
+//
 const std::string
 decode_special_chars(const std::string & text_encoded)
 {
   static const char escape_char = '\\';
-  
+
   std::string result;
   size_t text_size = text_encoded.size();
   for (size_t i = 0; i < text_size; i++)
   {
     char c = text_encoded[i];
-    
+
     // skip the escape character:
     if (c == escape_char)
     {
       char x = text_encoded[i + 1];
       char y = text_encoded[i + 2];
       char z = text_encoded[i + 3];
-      
+
       c = char(int(x - '0') * 100 +
 	       int(y - '0') * 10 +
 	       int(z - '0'));
       i += 3;
     }
-    
+
     result += c;
   }
-  
+
   return result;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const long long unsigned int & data)
 {
@@ -322,7 +322,7 @@ save(std::ostream & stream, const long long unsigned int & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, long long unsigned int & data)
 {
@@ -333,7 +333,7 @@ load(std::istream & stream, long long unsigned int & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const long unsigned int & data)
 {
@@ -343,7 +343,7 @@ save(std::ostream & stream, const long unsigned int & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, long unsigned int & data)
 {
@@ -354,7 +354,7 @@ load(std::istream & stream, long unsigned int & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const unsigned int & data)
 {
@@ -364,7 +364,7 @@ save(std::ostream & stream, const unsigned int & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, unsigned int & data)
 {
@@ -375,7 +375,7 @@ load(std::istream & stream, unsigned int & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const int & data)
 {
@@ -385,7 +385,7 @@ save(std::ostream & stream, const int & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, int & data)
 {
@@ -396,7 +396,7 @@ load(std::istream & stream, int & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const char & data)
 {
@@ -406,7 +406,7 @@ save(std::ostream & stream, const char & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, char & data)
 {
@@ -419,7 +419,7 @@ load(std::istream & stream, char & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const bool & data)
 {
@@ -430,7 +430,7 @@ save(std::ostream & stream, const bool & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, bool & data)
 {
@@ -443,7 +443,7 @@ load(std::istream & stream, bool & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const double & data)
 {
@@ -453,7 +453,7 @@ save(std::ostream & stream, const double & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, double & data)
 {
@@ -464,7 +464,7 @@ load(std::istream & stream, double & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const float & data)
 {
@@ -474,7 +474,7 @@ save(std::ostream & stream, const float & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, float & data)
 {
@@ -485,7 +485,7 @@ load(std::istream & stream, float & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const std::string & data)
 {
@@ -495,17 +495,17 @@ save(std::ostream & stream, const std::string & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, std::string & data)
 {
   size_t size = 0;
   stream >> size;
   data.resize(size);
-  
+
   // eat the whitespace:
   stream.get();
-  
+
   char * dst = &(data[0]);
   stream.read(dst, size);
   return true;
@@ -514,7 +514,7 @@ load(std::istream & stream, std::string & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const io_base_t & data)
 {
@@ -525,7 +525,7 @@ save(std::ostream & stream, const io_base_t & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, io_base_t & data)
 {
@@ -535,7 +535,7 @@ load(std::istream & stream, io_base_t & data)
   {
     return false;
   }
-  
+
   stream >> magic;
   bool ok = data.load(stream, magic);
   return ok;
@@ -544,12 +544,12 @@ load(std::istream & stream, io_base_t & data)
 
 //----------------------------------------------------------------
 // io_base_t::loaders_
-// 
+//
 std::map<std::string, io_base_t::creator_t> io_base_t::loaders_;
 
 //----------------------------------------------------------------
 // io_base_t::disposer
-// 
+//
 void
 io_base_t::disposer(io_base_t *& io)
 {
@@ -559,9 +559,9 @@ io_base_t::disposer(io_base_t *& io)
 
 //----------------------------------------------------------------
 // io_base_t::load
-// 
+//
 // Load registered objects from a source stream.
-// 
+//
 // Loaded objects are passed to a hanler if one is specified.
 // The handler may delete the loaded object, in which case
 // the loaded object pointer will be set to NULL.
@@ -577,29 +577,29 @@ io_base_t::load(std::istream & src,
   {
     return false;
   }
-  
+
   while (true)
   {
     std::string magic;
     src >> magic;
     if (src.eof()) break;
-    
+
     std::map<std::string, io_base_t::creator_t>::iterator i =
       loaders_.find(magic);
     if (i == loaders_.end())
     {
       return false;
     }
-    
+
     io_base_t * io = i->second();
     if (!io) return false;
-    
+
     bool ok = io->load(src, magic);
     if (ok && handler)
     {
       handler(io);
     }
-    
+
     if (ok && dst && io)
     {
       dst->push_back(io);
@@ -609,12 +609,12 @@ io_base_t::load(std::istream & src,
       // std::cout << "io_base_t::load -- deleting " << magic << std::endl;
       delete io;
     }
-    
+
     if (!ok)
     {
       return false;
     }
   }
-  
+
   return true;
 }

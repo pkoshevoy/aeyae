@@ -34,24 +34,24 @@ typedef unsigned __int64 uint64_t;
 
 //----------------------------------------------------------------
 // the_bit_tree_node_t
-// 
+//
 class the_bit_tree_node_t
 {
 public:
   the_bit_tree_node_t(const bool & is_leaf):
     leaf(is_leaf)
   {}
-  
+
   virtual ~the_bit_tree_node_t()
   {}
-  
+
   // a flag indicating whether this node is a leaf node:
   bool leaf;
-  
+
   // some global constants used when adding and looking up nodes:
   static const unsigned int node_size[];
   static const unsigned int node_mask[];
-  
+
 private:
   // disable default constructor:
   the_bit_tree_node_t();
@@ -59,7 +59,7 @@ private:
 
 //----------------------------------------------------------------
 // the_bit_tree_leaf_t
-// 
+//
 template<class T>
 class the_bit_tree_leaf_t : public the_bit_tree_node_t
 {
@@ -67,7 +67,7 @@ public:
   the_bit_tree_leaf_t():
     the_bit_tree_node_t(true)
   {}
-  
+
   T elem;
 };
 
@@ -82,7 +82,7 @@ public:
     the_bit_tree_node_t(false),
     bits_(node_size[bits_per_node], NULL)
   {}
-  
+
   ~the_bit_tree_branch_t()
   {
     for (unsigned int i = 0; i < bits_.size(); i++)
@@ -91,26 +91,26 @@ public:
       bits_[i] = NULL;
     }
   }
-  
+
   the_bit_tree_leaf_t<T> *
   add(uint64_t addr, unsigned int offset, unsigned int bits_per_node)
   {
     unsigned int z = branch_id(addr, offset, bits_per_node);
-    
+
     if (offset == 0)
     {
       if (bits_[z] == NULL) bits_[z] = new the_bit_tree_leaf_t<T>();
       return leaf(z);
     }
-    
+
     if (bits_[z] == NULL)
     {
       bits_[z] = new the_bit_tree_branch_t<T>(bits_per_node);
     }
-    
+
     return node(z)->add(addr, offset - bits_per_node, bits_per_node);
   }
-  
+
   the_bit_tree_leaf_t<T> *
   get(uint64_t addr, unsigned int offset, unsigned int bits_per_node)
   {
@@ -119,7 +119,7 @@ public:
     if (offset == 0) return leaf(z);
     return node(z)->get(addr, offset - bits_per_node, bits_per_node);
   }
-  
+
   // store leaf nodes of this tree in a list:
   void
   collect_leaf_nodes(std::list<the_bit_tree_leaf_t<T> *> & leaf_nodes)
@@ -128,24 +128,24 @@ public:
     {
       the_bit_tree_node_t * base = bits_[i];
       if (base == NULL) continue;
-      
+
       if (base->leaf == false)
       {
 	the_bit_tree_branch_t<T> * node =
 	  static_cast<the_bit_tree_branch_t<T> *>(base);
-	
+
 	node->collect_leaf_nodes(leaf_nodes);
       }
       else
       {
 	the_bit_tree_leaf_t<T> * leaf =
 	  static_cast<the_bit_tree_leaf_t<T> *>(base);
-	
+
 	leaf_nodes.push_back(leaf);
       }
     }
   }
-  
+
   // store leaf node contents of this tree in a list:
   void
   collect_leaf_contents(std::list<T> & leaf_contents) const
@@ -154,24 +154,24 @@ public:
     {
       const the_bit_tree_node_t * base = bits_[i];
       if (base == NULL) continue;
-      
+
       if (base->leaf == false)
       {
 	const the_bit_tree_branch_t<T> * node =
 	  static_cast<const the_bit_tree_branch_t<T> *>(base);
-	
+
 	node->collect_leaf_contents(leaf_contents);
       }
       else
       {
 	const the_bit_tree_leaf_t<T> * leaf =
 	  static_cast<const the_bit_tree_leaf_t<T> *>(base);
-	
+
 	leaf_contents.push_back(leaf->elem);
       }
     }
   }
-  
+
 private:
   // helper function for looking up local branch id:
   inline unsigned int
@@ -183,7 +183,7 @@ private:
     uint64_t z = (addr & mask) >> offset;
     return (unsigned int)(z);
   }
-  
+
   // helper functions for distinguishing between tree nodes and leaves:
   inline the_bit_tree_branch_t<T> *
   node(unsigned int branch)
@@ -193,7 +193,7 @@ private:
     if (base->leaf) return NULL;
     return static_cast<the_bit_tree_branch_t<T> *>(base);
   }
-  
+
   inline the_bit_tree_leaf_t<T> *
   leaf(unsigned int branch)
   {
@@ -202,7 +202,7 @@ private:
     if (!base->leaf) return NULL;
     return static_cast<the_bit_tree_leaf_t<T> *>(base);
   }
-  
+
   // datamembers:
   std::vector<the_bit_tree_node_t *> bits_;
 };
@@ -210,7 +210,7 @@ private:
 
 //----------------------------------------------------------------
 // the_bit_tree_t
-// 
+//
 template<class T>
 class the_bit_tree_t
 {
@@ -222,44 +222,44 @@ public:
     bits_per_node_(bits_per_node),
     offset_(bits_per_addr - bits_per_node)
   { root_ = new the_bit_tree_branch_t<T>(bits_per_node_); }
-  
+
   ~the_bit_tree_t()
   {
     delete root_;
     root_ = NULL;
   }
-  
+
   // lookup a given address in the tree, return NULL if not found,
   // otherwise return the leaf node corresponding to that address:
   inline const the_bit_tree_leaf_t<T> * get(const void * addr) const
   { return get(size_t(addr)); }
-  
+
   inline the_bit_tree_leaf_t<T> * get(const void * addr)
   { return get(size_t(addr)); }
-  
-  inline const the_bit_tree_leaf_t<T> * get(uint64_t addr) const 
+
+  inline const the_bit_tree_leaf_t<T> * get(uint64_t addr) const
   { return root_->get((uint64_t)addr, offset_, bits_per_node_); }
-  
+
   inline the_bit_tree_leaf_t<T> * get(uint64_t addr)
   { return root_->get(addr, offset_, bits_per_node_); }
-  
+
   // create a leaf node for a given address:
   inline the_bit_tree_leaf_t<T> * add(const void * addr)
   { return add(size_t(addr)); }
-  
+
   inline the_bit_tree_leaf_t<T> * add(uint64_t addr)
   { return root_->add(addr, offset_, bits_per_node_); }
-  
+
   // store leaf nodes of this tree in a list:
   inline void collect_leaf_nodes(std::list<the_bit_tree_leaf_t<T> *> & nodes)
   { root_->collect_leaf_nodes(nodes); }
-  
+
   inline void collect_leaf_contents(std::list<T> & leaf_contents) const
   { root_->collect_leaf_contents(leaf_contents); }
-  
+
 private:
   the_bit_tree_branch_t<T> * root_;
-  
+
   unsigned int bits_per_addr_;
   unsigned int bits_per_node_;
   unsigned int offset_;

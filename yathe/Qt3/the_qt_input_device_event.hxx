@@ -25,25 +25,25 @@ class QTabletEvent;
 
 //----------------------------------------------------------------
 // the_mouse_event
-// 
+//
 extern the_mouse_event_t
 the_mouse_event(QWidget * widget, const QMouseEvent * e);
 
 //----------------------------------------------------------------
 // the_wheel_event
-// 
+//
 extern the_wheel_event_t
 the_wheel_event(QWidget * widget, const QWheelEvent * e);
 
 //----------------------------------------------------------------
 // the_keybd_event
-// 
+//
 extern the_keybd_event_t
 the_keybd_event(QWidget * widget, const QKeyEvent * e);
 
 //----------------------------------------------------------------
 // the_wacom_event
-// 
+//
 extern the_wacom_event_t
 the_wacom_event(QWidget * widget, const QTabletEvent * e);
 

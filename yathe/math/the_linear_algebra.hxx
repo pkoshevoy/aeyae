@@ -15,7 +15,7 @@
 
 //----------------------------------------------------------------
 // the_determinant_2x2
-// 
+//
 // Calculate the determinant of a 2x2 matrix.
 //
 #define the_determinant_2x2( a11, a12, \
@@ -25,9 +25,9 @@
 
 //----------------------------------------------------------------
 // the_cramers_rule_2x2
-// 
+//
 // Solve a 2x2 linear system using the Cramer's Rule.
-// 
+//
 template <class T>
 bool
 the_cramers_rule_2x2(const T & a11, const T & a12,
@@ -41,23 +41,23 @@ the_cramers_rule_2x2(const T & a11, const T & a12,
   T d = the_determinant_2x2(a11, a12,
 			    a21, a22);
   if (fabs(d) <= determinant_tolerance || d != d) return false;
-  
+
   T d1 = the_determinant_2x2(b1, a12,
 			     b2, a22);
-  
+
   T d2 = the_determinant_2x2(a11, b1,
 			     a21, b2);
-  
+
   x1 = d1 / d;
   x2 = d2 / d;
-  
+
   return true;
 }
 
 
 //----------------------------------------------------------------
 // the_determinant_3x3
-// 
+//
 // Calculate the determinant of a 3x3 matrix.
 //
 #define the_determinant_3x3( a11, a12, a13, \
@@ -87,9 +87,9 @@ the_cramers_rule_2x2(const T & a11, const T & a12,
 
 //----------------------------------------------------------------
 // the_cramers_rule_3x3
-// 
+//
 // Solve a 3x3 linear system using the Cramer's Rule.
-// 
+//
 template <class T>
 bool
 the_cramers_rule_3x3(const T * A,
@@ -101,23 +101,23 @@ the_cramers_rule_3x3(const T * A,
 			    a21, a22, a23,
 			    a31, a32, a33);
   if (fabs(d) <= determinant_tolerance || d != d) return false;
-  
+
   T d1 = the_determinant_3x3(b1, a12, a13,
 			     b2, a22, a23,
 			     b3, a32, a33);
-  
+
   T d2 = the_determinant_3x3(a11, b1, a13,
 			     a21, b2, a23,
 			     a31, b3, a33);
-  
+
   T d3 = the_determinant_3x3(a11, a12, b1,
 			     a21, a22, b2,
 			     a31, a32, b3);
-  
+
   x1 = d1 / d;
   x2 = d2 / d;
   x3 = d3 / d;
-  
+
   return true;
 }
 

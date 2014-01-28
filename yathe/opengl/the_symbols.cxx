@@ -17,7 +17,7 @@
 
 //----------------------------------------------------------------
 // the_symbols_t::draw
-// 
+//
 void
 the_symbols_t::draw(const the_color_t & color,
 		    const p3x1_t & pos,
@@ -30,7 +30,7 @@ the_symbols_t::draw(const the_color_t & color,
 
 //----------------------------------------------------------------
 // the_symbols_t::draw
-// 
+//
 void
 the_symbols_t::draw(const unsigned int & id,
 		    const p3x1_t & pos,
@@ -63,7 +63,7 @@ the_symbols_t::draw(const unsigned int & id,
       draw_bitmap(id, offset[i][0], offset[i][1]);
     }
   }
-  
+
   // draw the symbol:
   glColor4fv(color.rgba());
   move(pos);
@@ -72,7 +72,7 @@ the_symbols_t::draw(const unsigned int & id,
 
 //----------------------------------------------------------------
 // the_symbols_t::draw
-// 
+//
 void
 the_symbols_t::draw(const unsigned int & id) const
 {
@@ -88,7 +88,7 @@ the_symbols_t::draw(const unsigned int & id) const
 
 //----------------------------------------------------------------
 // the_symbols_t::move
-// 
+//
 void
 the_symbols_t::move(const p3x1_t & pos) const
 {
@@ -97,41 +97,41 @@ the_symbols_t::move(const p3x1_t & pos) const
 
 //----------------------------------------------------------------
 // the_symbols_t::compile
-// 
+//
 void
 the_symbols_t::compile()
 {
   if (dl_offset_ != 0) return;
-  
+
   dl_offset_ = glGenLists(size());
   if (dl_offset_ == 0) return;
-  
+
   for (unsigned int i = 0; i < size(); i++)
   {
     glNewList(dl_offset_ + i, GL_COMPILE);
     draw_bitmap(i);
     glEndList();
   }
-  
+
   FIXME_OPENGL("the_symbols_t::compile");
 }
 
 //----------------------------------------------------------------
 // the_symbols_t::decompile
-// 
+//
 void
 the_symbols_t::decompile()
 {
   if (dl_offset_ == 0) return;
   glDeleteLists(dl_offset_, size());
   dl_offset_ = 0;
-  
+
   FIXME_OPENGL("the_symbols_t::decompile");
 }
 
 //----------------------------------------------------------------
 // the_symbols_t::draw_bitmap
-// 
+//
 void
 the_symbols_t::draw_bitmap(const unsigned int & id,
 			   const int & offset_x,
@@ -139,7 +139,7 @@ the_symbols_t::draw_bitmap(const unsigned int & id,
 {
   unsigned char * bmp = bitmap(id);
   if (bmp == NULL) return;
-  
+
   the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -150,20 +150,20 @@ the_symbols_t::draw_bitmap(const unsigned int & id,
 	     x_step(),
 	     y_step(),
 	     bmp);
-    
+
     FIXME_OPENGL("the_symbols_t::draw_bitmap");
   }
 }
 
 //----------------------------------------------------------------
 // the_symbols_t::draw_bitmap_mask
-// 
+//
 void
 the_symbols_t::draw_bitmap_mask(const unsigned int & id) const
 {
   unsigned char * bmp = bitmap_mask(id);
   if (bmp == NULL) return;
-  
+
   the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -174,7 +174,7 @@ the_symbols_t::draw_bitmap_mask(const unsigned int & id) const
 	     x_step(),
 	     y_step(),
 	     bmp);
-    
+
     FIXME_OPENGL("the_symbols_t::draw_bitmap_mask");
   }
 }

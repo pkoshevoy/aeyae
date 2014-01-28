@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------
 // the_appearance_t::draw_background
-// 
+//
 void
 the_appearance_t::draw_background(the_view_t & view) const
 {
@@ -30,7 +30,7 @@ the_appearance_t::draw_background(the_view_t & view) const
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    
+
     // draw the background:
     view.view_mgr().reset_opengl_viewing();
     view.view_mgr().setup_opengl_2d_viewing(p2x1_t(0.0, 0.0),
@@ -39,13 +39,13 @@ the_appearance_t::draw_background(the_view_t & view) const
     {
       glColor4fv(palette_.bg()[THE_UL_CORNER_E].rgba());
       glVertex2f(0.0, 1.0);
-    
+
       glColor4fv(palette_.bg()[THE_UR_CORNER_E].rgba());
       glVertex2f(1.0, 1.0);
-      
+
       glColor4fv(palette_.bg()[THE_LR_CORNER_E].rgba());
       glVertex2f(1.0, 0.0);
-      
+
       glColor4fv(palette_.bg()[THE_LL_CORNER_E].rgba());
       glVertex2f(0.0, 0.0);
     }
@@ -55,12 +55,12 @@ the_appearance_t::draw_background(the_view_t & view) const
 
 //----------------------------------------------------------------
 // the_appearance_t::draw_coordinate_system
-// 
+//
 void
 the_appearance_t::draw_coordinate_system(the_view_t & view) const
 {
   const the_eh_stack_t & eh_stack = view.eh_stack();
-  
+
   if (eh_stack.empty())
   {
     the_ep_grid_csys_t(view.view_mgr(),
@@ -77,7 +77,7 @@ the_appearance_t::draw_coordinate_system(the_view_t & view) const
 
 //----------------------------------------------------------------
 // the_appearance_t::draw_view_label
-// 
+//
 void
 the_appearance_t::draw_view_label(the_view_t & view) const
 {
@@ -88,7 +88,7 @@ the_appearance_t::draw_view_label(the_view_t & view) const
     view.view_mgr().reset_opengl_viewing();
     view.view_mgr().setup_opengl_2d_viewing(p2x1_t(0, float(view.height())),
 					    p2x1_t(float(view.width()), 0));
-    
+
     p3x1_t pos(THE_ASCII_FONT.x_step(),
 	       1.2f * float(THE_ASCII_FONT.height()),
 	       0);
@@ -104,14 +104,14 @@ the_appearance_t::draw_view_label(the_view_t & view) const
       {
         label += the_text_t(", orthographic");
       }
-      
+
       if (view.view_mgr().get_stereoscopic() !=
           the_view_mgr_t::NOT_STEREOSCOPIC_E)
       {
         label += the_text_t(", stereoscopic");
       }
     }
-    
+
     the_masked_text_dl_elem_t(pos,
 			      palette_.text(),
 			      palette_.mask(),
@@ -121,12 +121,12 @@ the_appearance_t::draw_view_label(the_view_t & view) const
 
 //----------------------------------------------------------------
 // the_original_appearance_t::draw_edit_plane
-// 
+//
 void
 the_original_appearance_t::draw_edit_plane(the_view_t & view) const
 {
   const the_eh_stack_t & eh_stack = view.eh_stack();
-  
+
   if (eh_stack.empty())
   {
     the_original_ep_grid_t(view.view_mgr(),
@@ -144,12 +144,12 @@ the_original_appearance_t::draw_edit_plane(the_view_t & view) const
 
 //----------------------------------------------------------------
 // the_ampad_appearance_t::draw_edit_plane
-// 
+//
 void
 the_ampad_appearance_t::draw_edit_plane(the_view_t & view) const
 {
   const the_eh_stack_t & eh_stack = view.eh_stack();
-  
+
   if (eh_stack.empty())
   {
     the_ampad_ep_grid_t(view.view_mgr(),
@@ -167,12 +167,12 @@ the_ampad_appearance_t::draw_edit_plane(the_view_t & view) const
 
 //----------------------------------------------------------------
 // the_generic_appearance_t::draw_edit_plane
-// 
+//
 void
 the_generic_appearance_t::draw_edit_plane(the_view_t & view) const
 {
   const the_eh_stack_t & eh_stack = view.eh_stack();
-  
+
   if (eh_stack.empty())
   {
     the_quad_ep_grid_t(view.view_mgr(),

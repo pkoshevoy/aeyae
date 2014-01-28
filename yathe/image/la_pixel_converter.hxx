@@ -12,7 +12,7 @@
 //                one image that interleaves the grayscale and mask data.
 //                The output pixel may be 2 bytes or 1 byte long, depending
 //                on whether compression was used.
-// 
+//
 #ifndef LA_PIXEL_CONVERTER_HXX_
 #define LA_PIXEL_CONVERTER_HXX_
 
@@ -39,10 +39,10 @@ public:
     src_pixel_bytes_ = &src_pixel_;
     msk_pixel_bytes_ = &msk_pixel_;
   }
-  
+
   inline size_t dst_bytes_per_pixel() const
   { return compressed_ ? 1 : 2; }
-  
+
   // virtual:
   void operator() (unsigned char * dst_addr,
 		   const unsigned char * src_addr,
@@ -50,26 +50,26 @@ public:
   {
     typedef typename TImage::PixelType ipix_t;
     typedef typename TMask::PixelType mpix_t;
-    
+
     size_t dst_bytes_per_pixel = this->dst_bytes_per_pixel();
-    
+
     size_t steps = src_bytes_to_read / src_bytes_per_pixel_;
     for (size_t i = 0; i < steps; i++)
     {
       unsigned char * dst = dst_addr + i * dst_bytes_per_pixel;
       const unsigned char * src = src_addr + i * src_bytes_per_pixel_;
-      
+
       size_t offset = src - src_origin_;
       const unsigned char * msk = msk_origin_ + offset;
-      
+
       // get the image and mask pixels:
       memcpy(src_pixel_bytes_, src, src_bytes_per_pixel_);
       memcpy(msk_pixel_bytes_, msk, msk_bytes_per_pixel_);
-      
+
       // clamp the pixels into the valid range for a luminance alpha texture:
       src_pixel_ = ipix_t(std::min(255, std::max(0, int(src_pixel_))));
       msk_pixel_ = mpix_t(std::min(255, std::max(0, int(msk_pixel_))));
-      
+
       // set the destination pixel:
       if (compressed_)
       {
@@ -82,28 +82,28 @@ public:
       }
     }
   }
-  
+
   // reference to the source image and image mask:
   const unsigned char * src_origin_;
   const unsigned char * msk_origin_;
-  
+
   // basic image stats:
   const size_t src_bytes_per_pixel_;
   const size_t msk_bytes_per_pixel_;
-  
+
   // these are used to convert the pixel data:
   mutable typename TImage::PixelType src_pixel_;
   mutable typename TMask::PixelType  msk_pixel_;
   unsigned char * src_pixel_bytes_;
   unsigned char * msk_pixel_bytes_;
-  
+
   bool compressed_;
 };
 
 
 //----------------------------------------------------------------
 // convert_tile
-// 
+//
 template <typename TImage, typename TMask>
 void
 convert_tile(image_tile_generator_t & generator,
@@ -121,14 +121,14 @@ convert_tile(image_tile_generator_t & generator,
 		   origin[1],
 		   spacing[0],
 		   spacing[1]);
-  
+
   const unsigned char * src = tile->GetBufferPointer();
   const unsigned char * msk = tile_mask->GetBufferPointer();
-  
+
   la_pixel_converter_t<TImage, TMask> pixel_converter(src, msk, compress);
   size_t src_bytes_per_pixel = sizeof(typename TImage::PixelType);
   size_t dst_bytes_per_pixel = pixel_converter.dst_bytes_per_pixel();
-  
+
   generator.
     convert_and_pad(src,			// source image buffer pointer
 		    src_bytes_per_pixel,	// alignment

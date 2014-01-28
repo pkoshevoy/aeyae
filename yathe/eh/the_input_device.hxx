@@ -15,38 +15,38 @@
 
 //----------------------------------------------------------------
 // the_input_device_t
-// 
+//
 class the_input_device_t
 {
 public:
   the_input_device_t()
   { time_stamp_ = latest_time_stamp_; }
-  
+
   inline void update_time_stamp()
   { time_stamp_ = latest_time_stamp_; }
-  
+
   inline bool current() const
   { return (time_stamp_ == latest_time_stamp_); }
-  
+
   inline static void advance_time_stamp()
   { latest_time_stamp_++; }
-  
+
   inline const unsigned int & time_stamp() const
   { return time_stamp_; }
-  
+
   inline static unsigned int latest_time_stamp()
   { return latest_time_stamp_; }
-  
+
 protected:
   unsigned int time_stamp_;
-  
+
   static unsigned int latest_time_stamp_;
 };
 
 
 //----------------------------------------------------------------
 // the_btn_state_t
-// 
+//
 typedef enum
 {
   THE_BTN_UP_E = 0,

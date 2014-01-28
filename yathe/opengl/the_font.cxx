@@ -17,7 +17,7 @@
 
 //----------------------------------------------------------------
 // the_font_t::print
-// 
+//
 void
 the_font_t::print(const the_text_t & str,
 		  const p3x1_t & pos,
@@ -25,10 +25,10 @@ the_font_t::print(const the_text_t & str,
 {
   the_text_t tmp(str);
   tmp.to_ascii();
-  
+
   glColor4fv(color.rgba());
   glRasterPos3fv(pos.data());
-  
+
   const size_t str_len = str.size();
   if (dl_offset_ != 0)
   {
@@ -49,7 +49,7 @@ the_font_t::print(const the_text_t & str,
 
 //----------------------------------------------------------------
 // the_font_t::print
-// 
+//
 void
 the_font_t::print(const the_text_t & str,
 		  const p3x1_t & pos,
@@ -58,14 +58,14 @@ the_font_t::print(const the_text_t & str,
 {
   the_text_t tmp(str);
   tmp.to_ascii();
-  
+
   print_mask(tmp, pos, mask_color);
   print(tmp, pos, font_color);
 }
 
 //----------------------------------------------------------------
 // the_font_t::print_mask
-// 
+//
 void
 the_font_t::print_mask(const the_text_t & str,
 		       const p3x1_t & pos,
@@ -73,10 +73,10 @@ the_font_t::print_mask(const the_text_t & str,
 {
   the_text_t tmp(str);
   tmp.to_ascii();
-  
+
   glColor4fv(color.rgba());
   glRasterPos3fv(pos.data());
-  
+
   const size_t str_len = str.size();
   for (size_t i = 0; i < str_len; i++)
   {

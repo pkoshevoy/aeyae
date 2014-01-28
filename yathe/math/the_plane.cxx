@@ -17,13 +17,13 @@
 
 //----------------------------------------------------------------
 // the_plane_t::intersect
-// 
+//
 bool
 the_plane_t::intersect(const the_ray_t & r, float & param) const
 {
   // make sure the plane and ray are not parallel to each other:
   if (fabs(r.v() * cs_.z_axis()) == 0.0) return false;
-  
+
   param = -((cs_.z_axis() * (r.p() - cs_.origin())) /
 	    (cs_.z_axis() * r.v()));
   return true;
@@ -31,27 +31,27 @@ the_plane_t::intersect(const the_ray_t & r, float & param) const
 
 //----------------------------------------------------------------
 // the_plane_t::operator *
-// 
+//
 // NOTE: this function should only be called when you are
 //       certain that a solution exists:
-// 
+//
 const p3x1_t
 the_plane_t::operator * (const the_ray_t & r) const
 {
   float param = FLT_MAX;
-  
+
 #ifndef NDEBUG
   bool ok =
 #endif
     intersect(r, param);
   assert(ok);
-  
+
   return r * param;
 }
 
 //----------------------------------------------------------------
 // the_plane_t::operator *
-// 
+//
 const p2x1_t
 the_plane_t::operator * (const p3x1_t & wcs_pt) const
 {
@@ -61,7 +61,7 @@ the_plane_t::operator * (const p3x1_t & wcs_pt) const
 
 //----------------------------------------------------------------
 // the_plane_t::operator *
-// 
+//
 const p3x1_t
 the_plane_t::operator * (const p2x1_t & lcs_pt) const
 {
@@ -70,7 +70,7 @@ the_plane_t::operator * (const p2x1_t & lcs_pt) const
 
 //----------------------------------------------------------------
 // the_plane_t::operator -
-// 
+//
 const v3x1_t
 the_plane_t::operator - (const p3x1_t & wcs_pt) const
 {
@@ -80,7 +80,7 @@ the_plane_t::operator - (const p3x1_t & wcs_pt) const
 
 //----------------------------------------------------------------
 // the_plane_t::dump
-// 
+//
 void
 the_plane_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -93,7 +93,7 @@ the_plane_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & stream, const the_plane_t & plane)
 {

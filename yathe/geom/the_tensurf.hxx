@@ -28,37 +28,37 @@ class the_grid_t;
 
 //----------------------------------------------------------------
 // the_tensurf_t
-// 
+//
 // A tensor b-spline surface defined by two uniform knot vectors
 // and supported by a quadrilateral grid.
-// 
+//
 class the_tensurf_t : public the_primitive_t
 {
 public:
   // virtual:
   the_primitive_t * clone() const
   { return new the_tensurf_t(*this); }
-  
+
   // virtual:
   const char * name() const
   { return "the_tensurf_t"; }
-  
+
   // virtual:
   bool regenerate();
-  
+
   // virtual: display a piecewise linear approximation of the surface:
   the_dl_elem_t * dl_elem() const;
-  
+
   // the tensor surface is supported by a grid:
   the_grid_t * grid() const;
-  
+
   // virtual: For debugging, dumps all segments
   void dump(ostream & strm, unsigned int indent = 0) const;
-  
+
 private:
   the_knot_vector_t knot_vector_u_;
   the_knot_vector_t knot_vector_v_;
-  
+
   std::vector<std::vector<the_vertex_t> > tri_mesh_;
 };
 

@@ -27,18 +27,18 @@ using std::endl;
 
 //----------------------------------------------------------------
 // DEBUG_THREAD
-// 
+//
 // #define DEBUG_THREAD
 
 
 //----------------------------------------------------------------
 // THREAD_STORAGE
-// 
+//
 static the_qt_thread_storage_t THREAD_STORAGE;
 
 //----------------------------------------------------------------
 // the_qt_thread_t::the_qt_thread_t
-// 
+//
 the_qt_thread_t::the_qt_thread_t():
   QThread(),
   the_thread_interface_t(the_qt_mutex_t::create())
@@ -51,13 +51,13 @@ the_qt_thread_t::the_qt_thread_t():
 
 //----------------------------------------------------------------
 // the_qt_thread_t::~the_qt_thread_t
-// 
+//
 the_qt_thread_t::~the_qt_thread_t()
 {}
 
 //----------------------------------------------------------------
 // the_qt_thread_t::delete_this
-// 
+//
 void
 the_qt_thread_t::delete_this()
 {
@@ -66,7 +66,7 @@ the_qt_thread_t::delete_this()
 
 //----------------------------------------------------------------
 // ImageProcessingThread::thread_storage
-// 
+//
 the_thread_storage_t &
 the_qt_thread_t::thread_storage()
 {
@@ -75,7 +75,7 @@ the_qt_thread_t::thread_storage()
 
 //----------------------------------------------------------------
 // the_qt_thread_t::start
-// 
+//
 void
 the_qt_thread_t::start()
 {
@@ -83,7 +83,7 @@ the_qt_thread_t::start()
 #ifdef DEBUG_THREAD
   cerr << "start of thread " << this << " requested" << endl;
 #endif
-  
+
   if (QThread::running())
   {
     if (!stopped_)
@@ -103,11 +103,11 @@ the_qt_thread_t::start()
       wait();
     }
   }
-  
+
 #ifdef DEBUG_THREAD
   cerr << "starting thread " << this << endl;
 #endif
-  
+
   // clear the termination flag:
   stopped_ = false;
   QThread::start();
@@ -115,7 +115,7 @@ the_qt_thread_t::start()
 
 //----------------------------------------------------------------
 // the_qt_thread_t::wait
-// 
+//
 void
 the_qt_thread_t::wait()
 {
@@ -124,7 +124,7 @@ the_qt_thread_t::wait()
 
 //----------------------------------------------------------------
 // the_qt_thread_t::take_a_nap
-// 
+//
 void
 the_qt_thread_t::take_a_nap(const unsigned long & microseconds)
 {
@@ -133,7 +133,7 @@ the_qt_thread_t::take_a_nap(const unsigned long & microseconds)
 
 //----------------------------------------------------------------
 // the_qt_thread_t::terminators
-// 
+//
 the_terminators_t &
 the_qt_thread_t::terminators()
 {
@@ -142,7 +142,7 @@ the_qt_thread_t::terminators()
 
 //----------------------------------------------------------------
 // the_qt_thread_t::run
-// 
+//
 void
 the_qt_thread_t::run()
 {
@@ -151,10 +151,10 @@ the_qt_thread_t::run()
     the_lock_t<the_mutex_interface_t> locker(mutex_);
     THREAD_STORAGE.setLocalData(new the_thread_observer_t(*this));
   }
-  
+
   // process the transactions:
   work();
-  
+
   // clean up the thread storage:
   THREAD_STORAGE.setLocalData(NULL);
 }

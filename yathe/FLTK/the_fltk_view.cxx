@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------
 // the_fltk_view_t::the_fltk_view_t
-// 
+//
 the_fltk_view_t::
 the_fltk_view_t(int w,
 		int h,
@@ -40,7 +40,7 @@ the_fltk_view_t(int w,
 
 //----------------------------------------------------------------
 // the_fltk_view_t::change_cursor
-// 
+//
 void
 the_fltk_view_t::change_cursor(const the_cursor_id_t & cursor_id)
 {
@@ -49,7 +49,7 @@ the_fltk_view_t::change_cursor(const the_cursor_id_t & cursor_id)
 
 //----------------------------------------------------------------
 // the_fltk_view_t::resize
-// 
+//
 void
 the_fltk_view_t::resize(int x, int y, int w, int h)
 {
@@ -59,7 +59,7 @@ the_fltk_view_t::resize(int x, int y, int w, int h)
 
 //----------------------------------------------------------------
 // the_fltk_view_t::draw
-// 
+//
 void
 the_fltk_view_t::draw()
 {
@@ -67,13 +67,13 @@ the_fltk_view_t::draw()
   {
     gl_setup();
   }
-  
+
   gl_paint();
 }
 
 //----------------------------------------------------------------
 // the_fltk_view_t::handle
-// 
+//
 int
 the_fltk_view_t::handle(int event)
 {
@@ -84,7 +84,7 @@ the_fltk_view_t::handle(int event)
     case FL_FOCUS:
     case FL_UNFOCUS:
       return 1;
-      
+
     case FL_KEYDOWN:
     case FL_KEYUP:
     {
@@ -96,7 +96,7 @@ the_fltk_view_t::handle(int event)
       // dump(THE_KEYBD);
       return ok;
     }
-    
+
     case FL_RELEASE:
     case FL_PUSH:
     case FL_DRAG:
@@ -105,16 +105,16 @@ the_fltk_view_t::handle(int event)
       the_input_device_t::advance_time_stamp();
       the_mouse_event_t me = the_mouse_event(this, event);
       eh_stack_->mouse_cb(me);
-      
+
       if (event != FL_MOVE)
       {
 	// dump(THE_MOUSE);
 	// dump(THE_KEYBD);
       }
-      
+
       return 1;
     }
-    
+
     case FL_MOUSEWHEEL:
    {
       the_input_device_t::advance_time_stamp();
@@ -124,10 +124,10 @@ the_fltk_view_t::handle(int event)
       // dump(THE_KEYBD);
       return 1;
     }
-      
+
     default:
       break;
   }
-  
+
   return Fl_Gl_Window::handle(event);
 }

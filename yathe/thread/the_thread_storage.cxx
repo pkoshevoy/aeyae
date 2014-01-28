@@ -16,7 +16,7 @@
 
 //----------------------------------------------------------------
 // the_dummy_terminators_t
-// 
+//
 class the_dummy_terminators_t : public the_terminators_t
 {
 public:
@@ -27,30 +27,30 @@ public:
 
 //----------------------------------------------------------------
 // the_dummy_thread_storage_t
-// 
+//
 class the_dummy_thread_storage_t : public the_thread_storage_t
 {
 public:
   // virtual:
   bool is_ready() const
   { return true; }
-  
+
   bool thread_stopped() const
   { return false; }
-  
+
   the_terminators_t & terminators()
   { return terminators_; }
-  
+
   unsigned int thread_id() const
   { return ~0u; }
-  
+
 private:
   the_dummy_terminators_t terminators_;
 };
 
 //----------------------------------------------------------------
 // the_dummy_thread_storage
-// 
+//
 static the_thread_storage_t &
 the_dummy_thread_storage()
 {
@@ -60,13 +60,13 @@ the_dummy_thread_storage()
 
 //----------------------------------------------------------------
 // thread_storage_provider_
-// 
+//
 static the_thread_storage_provider_t
 thread_storage_provider_ = the_dummy_thread_storage;
 
 //----------------------------------------------------------------
 // set_the_thread_storage_provider
-// 
+//
 the_thread_storage_provider_t
 set_the_thread_storage_provider(the_thread_storage_provider_t p)
 {
@@ -77,7 +77,7 @@ set_the_thread_storage_provider(the_thread_storage_provider_t p)
 
 //----------------------------------------------------------------
 // the_thread_storage
-// 
+//
 the_thread_storage_t &
 the_thread_storage()
 {

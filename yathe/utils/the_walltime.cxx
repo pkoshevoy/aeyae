@@ -23,7 +23,7 @@
 
 //----------------------------------------------------------------
 // the_walltime_t
-// 
+//
 the_walltime_t::the_walltime_t()
 {
   mark();
@@ -31,29 +31,29 @@ the_walltime_t::the_walltime_t()
 
 //----------------------------------------------------------------
 // the_walltime_t::mark
-// 
+//
 void
 the_walltime_t::mark()
 {
 #if defined(_WIN32)
-  
+
   uint64_t msec = GetTickCount64();
   sec_ = msec / 1000;
   usec_ = (msec % 1000) * 1000;
-  
+
 #else
-  
+
   struct timeval tv;
   gettimeofday(&tv, NULL);
   sec_ = tv.tv_sec + tv.tv_usec / 1000000;
   usec_ = tv.tv_usec % 1000000;
-  
+
 #endif
 }
 
 //----------------------------------------------------------------
 // the_walltime_t::operator -=
-// 
+//
 the_walltime_t &
 the_walltime_t::operator -= (const the_walltime_t & ref)
 {
@@ -67,19 +67,19 @@ the_walltime_t::operator -= (const the_walltime_t & ref)
     usec_ -= ref.usec_;
     sec_ -= ref.sec_;
   }
-  
+
   return *this;
 }
 
 //----------------------------------------------------------------
 // the_walltime_t::operator +=
-// 
+//
 the_walltime_t &
 the_walltime_t::operator += (const the_walltime_t & ref)
 {
   usec_ += ref.usec_;
   sec_ += ref.sec_ + usec_ / 1000000;
   usec_ %= 1000000;
-  
+
   return *this;
 }

@@ -21,16 +21,16 @@
 
 //----------------------------------------------------------------
 // the_boost_mutex_t
-// 
+//
 class the_boost_mutex_t : public the_mutex_interface_t
 {
 public:
   the_boost_mutex_t();
-  
+
   // the destructor is protected on purpose,
   // see delete_this for details:
   virtual ~the_boost_mutex_t();
-  
+
   // In order to avoid memory management problems with shared libraries,
   // whoever provides this interface instance (via it's creator), has to
   // provide a way to delete the instance as well.  This will avoid
@@ -38,19 +38,19 @@ public:
   // used by the app and whatever libraries it links against that
   // either use or provide this interface:
   virtual void delete_this();
-  
+
   // the creation method:
   static the_mutex_interface_t * create();
-  
+
   // virtual:
   void lock();
-  
+
   // virtual:
   void unlock();
-  
+
   // virtual:
   bool try_lock();
-  
+
 private:
   boost::mutex mutex_;
 };

@@ -18,21 +18,21 @@
 
 //----------------------------------------------------------------
 // the_gl_context_interface_t::current_
-// 
+//
 the_gl_context_interface_t *
 the_gl_context_interface_t::current_ = NULL;
 
 
 //----------------------------------------------------------------
 // the_gl_context_t::the_gl_context_t
-// 
+//
 the_gl_context_t::the_gl_context_t(the_gl_context_interface_t * context):
   context_(context)
 {}
 
 //----------------------------------------------------------------
 // the_gl_context_t::make_current
-// 
+//
 void
 the_gl_context_t::make_current()
 {
@@ -46,7 +46,7 @@ the_gl_context_t::make_current()
 
 //----------------------------------------------------------------
 // the_gl_context_t::done_current
-// 
+//
 void
 the_gl_context_t::done_current()
 {
@@ -54,13 +54,13 @@ the_gl_context_t::done_current()
   {
     return;
   }
-  
+
   context_->gl_done_current();
 }
 
 //----------------------------------------------------------------
 // the_gl_context_t::is_valid
-// 
+//
 bool
 the_gl_context_t::is_valid() const
 {
@@ -68,13 +68,13 @@ the_gl_context_t::is_valid() const
   {
     return false;
   }
-  
+
   return context_->gl_context_is_valid();
 }
 
 //----------------------------------------------------------------
 // the_gl_context_t::invalidate
-// 
+//
 void
 the_gl_context_t::invalidate()
 {
@@ -83,7 +83,7 @@ the_gl_context_t::invalidate()
 
 //----------------------------------------------------------------
 // the_gl_context_t::current
-// 
+//
 the_gl_context_t
 the_gl_context_t::current()
 {

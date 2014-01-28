@@ -18,7 +18,7 @@
 
 //----------------------------------------------------------------
 // the_interpolation
-// 
+//
 template <class T>
 inline void
 the_interpolation(const T & a, const T & b, const float & t_ab, T & result)
@@ -29,7 +29,7 @@ the_interpolation(const T & a, const T & b, const float & t_ab, T & result)
 
 //----------------------------------------------------------------
 // the_vertex_t
-// 
+//
 class the_vertex_t
 {
 public:
@@ -45,14 +45,14 @@ public:
     vn(vertex_normal),
     vt(vertex_texture_point)
   {}
-  
+
   the_vertex_t(const float * vertex,
 	       const float * vertex_normal):
     vx(vertex),
     vn(vertex_normal),
     vt(FLT_MAX, FLT_MAX)
   {}
-  
+
   the_vertex_t(const float * vertex,
 	       const float * vertex_normal,
 	       const float * vertex_texture_point):
@@ -60,7 +60,7 @@ public:
     vn(vertex_normal),
     vt(vertex_texture_point)
   {}
-  
+
   static void
   interpolate(const the_vertex_t & a,
 	      const the_vertex_t & b,
@@ -72,27 +72,27 @@ public:
     the_interpolation(a.vt, b.vt, t_ab, result.vt);
     result.vn.normalize();
   }
-  
+
   inline bool operator == (const the_vertex_t & v) const
   { return vx == v.vx && vn == v.vn && vt == v.vt; }
-  
+
   void dump(std::ostream & ostr) const
   {
     ostr << "vx " << vx[0] << ' ' << vx[1] << ' ' << vx[2];
-    
+
     if (vn[0] != FLT_MAX || vn[1] != FLT_MAX || vn[3] != FLT_MAX)
     {
       ostr << ", vn " << vn[0] << ' ' << vn[1] << ' ' << vn[2];
     }
-    
+
     if (vt[0] != FLT_MAX || vt[1] != FLT_MAX)
     {
       ostr << ", vt " << vt[0] << ' ' << vt[1];
     }
-    
+
     ostr << endl;
   }
-  
+
   p3x1_t vx; // vertex coordinate
   v3x1_t vn; // vertex normal
   p2x1_t vt; // texture coordinate
@@ -100,7 +100,7 @@ public:
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 inline std::ostream &
 operator << (std::ostream & ostr, const the_vertex_t & v)
 {

@@ -43,14 +43,14 @@ typedef enum
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 extern ostream &
 operator << (ostream & strm, the_primitive_state_t state);
 
 
 //----------------------------------------------------------------
 // the_primitive_t
-// 
+//
 // The base class for all model primitives:
 class the_primitive_t : public the_graph_node_t
 {
@@ -58,21 +58,21 @@ class the_primitive_t : public the_graph_node_t
   friend bool save(std::ostream & stream, const the_primitive_t * primitive);
   friend bool load(std::istream & stream, the_primitive_t *& primitive);
   friend bool load(std::istream & stream, the_registry_t & registry);
-  
+
 public:
   the_primitive_t();
   the_primitive_t(const the_primitive_t & primitive);
   virtual ~the_primitive_t();
-  
+
   // every primitive must be able to make a duplicate of itself:
   virtual the_primitive_t * clone() const = 0;
-  
+
   // a human-readable name, should be provided by each instantiable primitive:
   virtual const char * name() const = 0;
-  
+
   inline the_primitive_t * primitive(const unsigned int & id) const
   { return registry_->elem<the_primitive_t>(id); }
-  
+
   // current state of this primitive:
   inline the_primitive_state_t current_state() const
   {
@@ -80,38 +80,38 @@ public:
     {
       return THE_REGULAR_STATE_E;
     }
-    
+
     return current_state_.back();
   }
-  
+
   inline void set_current_state(const the_primitive_state_t & state)
   { current_state_.push_back(state); }
-  
+
   inline void clear_current_state()
   { current_state_.clear(); }
-  
+
   inline bool has_state(const the_primitive_state_t & state) const
   { return has(current_state_, state); }
-  
+
   inline void clear_state(const the_primitive_state_t & state)
   { current_state_.remove(state); }
-  
+
   // color of the model primitive:
   virtual the_color_t color() const;
-  
+
   // this is used during intersection/proximity testing (for selection):
   virtual bool
   intersect(const the_view_volume_t & /* volume */,
 	    std::list<the_pick_data_t> & /* data */) const
   { return false; }
-  
+
   // override this for a generic primitve display mechanism:
   virtual the_dl_elem_t * dl_elem() const
   { return NULL; }
-  
+
   // For debugging, dumps this model primitive table:
   virtual void dump(ostream & strm, unsigned int indent = 0) const;
-  
+
 protected:
   // a list of states that this primitive is currently in:
   std::list<the_primitive_state_t> current_state_;

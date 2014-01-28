@@ -18,7 +18,7 @@
 
 //----------------------------------------------------------------
 // the_id_dispatcher_t::the_id_dispatcher_t
-// 
+//
 the_id_dispatcher_t::
 the_id_dispatcher_t(const the_id_dispatcher_t & dispatcher):
   reuse_(dispatcher.reuse_),
@@ -27,7 +27,7 @@ the_id_dispatcher_t(const the_id_dispatcher_t & dispatcher):
 
 //----------------------------------------------------------------
 // the_id_dispatcher_t::dump
-// 
+//
 void
 the_id_dispatcher_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -41,14 +41,14 @@ the_id_dispatcher_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // the_registry_t::the_registry_t
-// 
+//
 the_registry_t::the_registry_t():
   table_(512, 512, NULL)
 {}
 
 //----------------------------------------------------------------
 // the_registry_t::the_registry_t
-// 
+//
 the_registry_t::the_registry_t(const the_registry_t & registry):
   dispatcher_(registry.dispatcher_),
   table_(registry.table_)
@@ -59,7 +59,7 @@ the_registry_t::the_registry_t(const the_registry_t & registry):
   {
     the_graph_node_t *& prim = elem(i);
     if (prim == NULL) continue;
-    
+
     prim = prim->clone();
     prim->registry_ = this;
   }
@@ -67,7 +67,7 @@ the_registry_t::the_registry_t(const the_registry_t & registry):
 
 //----------------------------------------------------------------
 // the_registry_t::~the_registry_t
-// 
+//
 the_registry_t::~the_registry_t()
 {
   clear();
@@ -75,7 +75,7 @@ the_registry_t::~the_registry_t()
 
 //----------------------------------------------------------------
 // the_registry_t::clear
-// 
+//
 void
 the_registry_t::clear()
 {
@@ -84,17 +84,17 @@ the_registry_t::clear()
   {
     the_graph_node_t * prim = table_[size - i - 1];
     if (prim == NULL) continue;
-    
+
     del(prim);
     delete prim;
   }
-  
+
   dispatcher_.reset();
 }
 
 //----------------------------------------------------------------
 // the_registry_t::add
-// 
+//
 void
 the_registry_t::add(the_graph_node_t * prim)
 {
@@ -105,7 +105,7 @@ the_registry_t::add(the_graph_node_t * prim)
 
 //----------------------------------------------------------------
 // the_registry_t::del
-// 
+//
 void
 the_registry_t::del(the_graph_node_t * prim)
 {
@@ -124,12 +124,12 @@ the_registry_t::del(the_graph_node_t * prim)
 
 //----------------------------------------------------------------
 // the_registry_t::graph
-// 
+//
 void
 the_registry_t::graph(std::list<unsigned int> & graph) const
 {
   graph.clear();
-  
+
   // first populate the graph:
   const unsigned int size = (unsigned int)(table_.size());
   for (unsigned int i = 0; i < size; i++)
@@ -141,7 +141,7 @@ the_registry_t::graph(std::list<unsigned int> & graph) const
 
 //----------------------------------------------------------------
 // the_registry_t::dump
-// 
+//
 void
 the_registry_t::dump(ostream & strm, unsigned int indent) const
 {
@@ -154,7 +154,7 @@ the_registry_t::dump(ostream & strm, unsigned int indent) const
   {
     the_graph_node_t * prim = table_[i];
     if (prim == NULL) continue;
-    
+
     strm << INDSTR << "table_[" << i << "] =" << endl;
     prim->dump(strm, INDNXT);
   }
@@ -163,17 +163,17 @@ the_registry_t::dump(ostream & strm, unsigned int indent) const
 
 //----------------------------------------------------------------
 // assert_sanity
-// 
+//
 #ifndef NDEBUG
 static void
 assert_sanity(const the_registry_t * registry, const unsigned int & id)
 {
   const the_graph_node_t * p = registry->elem(id);
   if (p == NULL) return;
-  
+
   // make sure the graph node knows it is in the registry:
   assert(p->id() == id);
-  
+
   // make sure the direct dependents of this graph node are in the
   // registry and know that they are supported by this graph node:
   const the::unique_list<unsigned int> & deps = p->direct_dependents();
@@ -186,7 +186,7 @@ assert_sanity(const the_registry_t * registry, const unsigned int & id)
     bool ok = d->direct_dependent_of(id);
     assert(ok);
   }
-  
+
   // make sure the direct supporters of this graph node are in the
   // registry and know that they are supporting this graph node:
   const the::unique_list<unsigned int> & sups = p->direct_supporters();
@@ -204,13 +204,13 @@ assert_sanity(const the_registry_t * registry, const unsigned int & id)
 
 //----------------------------------------------------------------
 // the_registry_t::assert_sanity
-// 
+//
 void
 the_registry_t::assert_sanity() const
 {
 #ifndef NDEBUG
   dump(cout);
-  
+
   // make sure dispatcher is sane:
   the_graph_node_t * p = elem(dispatcher_.id());
   assert(p == NULL);
@@ -220,10 +220,10 @@ the_registry_t::assert_sanity() const
   {
     const unsigned int & id = *i;
     assert(id != dispatcher_.id());
-    
+
     p = elem(id);
     assert(p == NULL);
-    
+
     // make sure the id is unique in the list:
     for (std::list<unsigned int>::const_iterator
 	   j = the::next(i); j != reuse.end(); ++j)
@@ -231,7 +231,7 @@ the_registry_t::assert_sanity() const
       assert(*j != id);
     }
   }
-  
+
   // make sure every graph node in the registry knows it is in the registry,
   // and so are all of its dependents and supporters:
   const unsigned int size = (unsigned int)(table_.size());

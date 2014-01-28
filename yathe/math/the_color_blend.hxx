@@ -21,31 +21,31 @@
 
 //----------------------------------------------------------------
 // the_color_blend_t
-// 
+//
 // uniformly spaced color blend:
-// 
+//
 class the_color_blend_t
 {
 public:
   the_color_blend_t() {}
   the_color_blend_t(unsigned int num_colors): color_(num_colors) {}
   ~the_color_blend_t() {}
-  
+
   // find between which two colors the parameter "t" falls,
   // blend between them and return the result:
   const the_color_t eval(float t) const;
-  
+
   // short-hand for "eval(..)":
   inline const the_color_t operator() (float t) const
   { return eval(t); }
-  
+
   // low level accessors:
   inline const std::vector<the_color_t> & color() const
   { return color_; }
-  
+
   inline std::vector<the_color_t> & color()
   { return color_; }
-  
+
 private:
   // an array of colors:
   std::vector<the_color_t> color_;

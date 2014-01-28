@@ -25,7 +25,7 @@
 
 //----------------------------------------------------------------
 // the_document_so_t
-// 
+//
 // The document state object (manages document undo/redo
 // functionality).
 //
@@ -34,16 +34,16 @@ class the_document_so_t
 public:
   the_document_so_t(const char * magic);
   ~the_document_so_t();
-  
+
   // accessor to the document:
   inline the_document_t * document() const
   { return document_.get(); }
-  
+
   // accessor to the document of a given type:
   template <class doc_t>
   inline doc_t * document() const
   { return dynamic_cast<doc_t *>(document_.get()); }
-  
+
   // document change cancellation record manipulation methods:
   struct restore_t
   {
@@ -51,83 +51,83 @@ public:
     std::stack<boost::shared_ptr<the_document_t> > undo_;
     std::stack<boost::shared_ptr<the_document_t> > redo_;
   };
-  
+
   void cancel_stack_save();
   bool cancel_stack_restore();
   bool cancel_stack_dismiss();
-  
+
   // undo/redo manipulation methods:
   void save_undo_record();
-  
+
   void undo();
   void redo();
-  
+
   // undo/redo stack status accessors:
   inline bool undo_stack_empty() { return undo_.empty(); }
   inline bool redo_stack_empty() { return redo_.empty(); }
-  
+
   // start a new document:
   void new_document(the_document_t * document);
-  
+
   // close currently open document:
   void close_document();
-  
+
   // file i/o:
   bool load_document(const the_text_t & filename);
   bool save_document(const the_text_t & filename);
-  
+
   inline bool save_document()
   { return save_document(filename_); }
-  
+
   // check the document filename:
   bool has_filename() const
   { return filename_.size() != 0; }
-  
+
   // filename accessors:
   inline void set_filename(const char * filename)
   { filename_.assign(filename); }
-  
+
   inline const the_text_t & filename() const
   { return filename_; }
-  
+
   // return true if all modifications to the document have been saved:
   inline bool changes_saved() const
   { return changes_saved_; }
-  
+
   inline void changes_saved(bool saved)
   { changes_saved_ = saved; }
-  
+
   // reset the undo/redo stacks due to big non un-doable changes:
   inline void big_changes()
   {
     clear_undo_redo();
     changes_saved_ = false;
   }
-  
+
   void clear_undo_redo();
-  
+
 private:
   // disable copy constructor and assignment operator:
   the_document_so_t(const the_document_so_t & so);
   the_document_so_t & operator = (const the_document_so_t & so);
-  
+
   // the document:
   boost::shared_ptr<the_document_t> document_;
-  
+
   // document change cancellation stack:
   std::stack<restore_t> cancel_;
-  
+
   // undo/redo stacks:
   std::stack<boost::shared_ptr<the_document_t> > undo_;
   std::stack<boost::shared_ptr<the_document_t> > redo_;
-  
+
   // this flag indicates whether all the modifications to the document
   // have been saved:
   bool changes_saved_;
-  
+
   // the magic tag associated with the document:
   the_text_t magic_;
-  
+
   // filename associated with the document:
   the_text_t filename_;
 };

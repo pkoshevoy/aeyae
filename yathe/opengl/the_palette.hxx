@@ -22,7 +22,7 @@
 
 //----------------------------------------------------------------
 // the_palette_id_t
-// 
+//
 typedef enum
 {
   THE_ORIGINAL_PALETTE_E,    // original color scheme used through 1999-2002
@@ -36,7 +36,7 @@ typedef enum
 
 //----------------------------------------------------------------
 // the_ep_grid_id_t
-// 
+//
 typedef enum
 {
   THE_LIGHT_EP_GRID_E,
@@ -45,74 +45,74 @@ typedef enum
 
 //----------------------------------------------------------------
 // the_palette_t
-// 
+//
 class the_palette_t
 {
 public:
   the_palette_t(the_palette_id_t id);
   ~the_palette_t() {}
-  
+
   // remap the palette to a different color scheme:
   void change(the_palette_id_t id);
-  
+
   // text color:
   inline const the_color_t & text() const
   { return text_; }
-  
+
   // text mask color:
   inline const the_color_t & mask() const
   { return mask_; }
-  
+
   // background colors of the UL, UR, LR, LL corners of the screen:
   inline const std::vector<the_color_t> & bg() const
   { return bg_; }
-  
+
   // edit plane grid colors:
   inline const std::vector<the_color_t> & ep() const
   { return ep_; }
-  
+
   // coordinate system colors:
   inline const std::vector<the_color_t> & cs() const
   { return cs_; }
-  
+
   // drag vector colors:
   inline const the_color_t & scs_drag() const
   { return scs_drag_; }
-  
+
   inline const std::vector<the_color_t> & wcs_drag() const
   { return wcs_drag_; }
-  
+
   // colors of the model primitives:
   inline const std::vector<the_color_t> & point() const { return point_; }
   inline const std::vector<the_color_t> & curve() const { return curve_; }
-  
+
   // pencil color:
   inline const the_color_t & pencil() const
   { return curve_[0]; }
-  
+
 private:
   // disable the default constructor:
   the_palette_t();
-  
+
   // text color:
   the_color_t text_;
-  
+
   // text mask color:
   the_color_t mask_;
-  
+
   // background colors of the UL, UR, LR, LL corners of the screen:
   std::vector<the_color_t> bg_;
-  
+
   // edit plane grid color:
   std::vector<the_color_t> ep_;
-  
+
   // coordinate system colors:
   std::vector<the_color_t> cs_;
-  
+
   // drag vector colors:
   the_color_t scs_drag_;
   std::vector<the_color_t> wcs_drag_;
-  
+
   // colors of the model primitives:
   std::vector<the_color_t> point_;
   std::vector<the_color_t> curve_;

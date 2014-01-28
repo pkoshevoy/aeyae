@@ -58,7 +58,7 @@
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 static std::istream &
 operator >> (std::istream & in, QString & str)
 {
@@ -70,7 +70,7 @@ operator >> (std::istream & in, QString & str)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & out, const QString & str)
 {
@@ -81,7 +81,7 @@ operator << (std::ostream & out, const QString & str)
 
 //----------------------------------------------------------------
 // qevent_type_to_str
-// 
+//
 // helper function:
 static const char *
 qevent_type_to_str(QEvent::Type event_type)
@@ -165,10 +165,10 @@ qevent_type_to_str(QEvent::Type event_type)
 
     case QEvent::WindowDeactivate:
       return "WindowDeactivate";
-      
+
     case QEvent::ShowToParent:
       return "ShowToParent";
-      
+
     case QEvent::HideToParent:
       return "HideToParent";
 
@@ -222,7 +222,7 @@ qevent_type_to_str(QEvent::Type event_type)
 
     case QEvent::DragLeave:
       return "DragLeave";
-      
+
     case QEvent::Drop:
       return "Drop";
 
@@ -402,7 +402,7 @@ qevent_type_to_str(QEvent::Type event_type)
 
     case QEvent::AccessibilityDescription:
       return "AccessibilityDescription";
-      
+
     case QEvent::AcceptDropsChange:
       return "AcceptDropsChange";
 
@@ -414,14 +414,14 @@ qevent_type_to_str(QEvent::Type event_type)
 
     case QEvent::User:
       return "User";
-      
+
     case QEvent::MaxUser:
       return "MaxUser";
-      
+
     default:
       break;
   }
-  
+
   static char buffer[256];
 #if defined(_WIN32) && !defined(snprintf)
 #define snprintf _snprintf_s
@@ -434,7 +434,7 @@ qevent_type_to_str(QEvent::Type event_type)
 #if 0
 //----------------------------------------------------------------
 // dump_children
-// 
+//
 static void
 dump_children(QObject * parent)
 {
@@ -451,7 +451,7 @@ dump_children(QObject * parent)
 
 //----------------------------------------------------------------
 // dump_children_tree
-// 
+//
 static void
 dump_children_tree(std::ostream & so, const QObject * parent, unsigned int indent)
 {
@@ -464,7 +464,7 @@ dump_children_tree(std::ostream & so, const QObject * parent, unsigned int inden
        << ':' << widget->width() << ':' << widget->height();
   }
   so << endl;
-  
+
   const QObjectList & children = parent->children();
   for (QObjectList::const_iterator i = children.begin();
        i != children.end(); ++i)
@@ -476,7 +476,7 @@ dump_children_tree(std::ostream & so, const QObject * parent, unsigned int inden
 
 //----------------------------------------------------------------
 // encode_special_chars
-// 
+//
 static const QString
 encode_special_chars(const QString & text,
                      const char * special_chars)
@@ -490,7 +490,7 @@ encode_special_chars(const QString & text,
 
 //----------------------------------------------------------------
 // find_object_from_path
-// 
+//
 static void
 find_object_from_path(QObject * root,
                       const QString * path,
@@ -500,20 +500,20 @@ find_object_from_path(QObject * root,
   // sanity checks:
   if (root == NULL) return;
   if (path_size < 1) return;
-  
+
   if (path[0] != root->objectName() &&
       path[0] != root->metaObject()->className())
   {
     return;
   }
-  
+
   // the base case:
   if (path_size == 1)
   {
     objects.push_back(root);
     return;
   }
-  
+
   const QObjectList & children = root->children();
   for (QObjectList::const_iterator i = children.begin();
        i != children.end(); ++i)
@@ -526,13 +526,13 @@ find_object_from_path(QObject * root,
 
 //----------------------------------------------------------------
 // QObjectTraits::special_chars_
-// 
+//
 const char *
 QObjectTraits::special_chars_ = "/ \t\n";
 
 //----------------------------------------------------------------
 // QObjectTraits::QObjectTraits
-// 
+//
 QObjectTraits::QObjectTraits():
   path_(NULL),
   path_size_(0),
@@ -543,7 +543,7 @@ QObjectTraits::QObjectTraits():
 
 //----------------------------------------------------------------
 // QObjectTraits::QObjectTraits
-// 
+//
 QObjectTraits::QObjectTraits(const QObject * obj):
   path_(NULL),
   path_size_(0),
@@ -556,12 +556,12 @@ QObjectTraits::QObjectTraits(const QObject * obj):
     const QWidget * widget = static_cast<const QWidget *>(obj);
     is_visible_ = widget->isVisible();
   }
-  
+
   QString full_path;
   convert_object_ptr_to_full_path(obj, full_path);
-  
+
   init_path(full_path);
-  
+
   std::list<QObject *> objects;
   matching_objects(objects);
   index_ = index_of(objects, const_cast<QObject *>(obj));
@@ -569,7 +569,7 @@ QObjectTraits::QObjectTraits(const QObject * obj):
 
 //----------------------------------------------------------------
 // QObjectTraits::QObjectTraits
-// 
+//
 QObjectTraits::QObjectTraits(const char * full_path,
                              const char * class_name,
                              const unsigned int & index,
@@ -585,7 +585,7 @@ QObjectTraits::QObjectTraits(const char * full_path,
 
 //----------------------------------------------------------------
 // QObjectTraits::QObjectTraits
-// 
+//
 QObjectTraits::QObjectTraits(const QObjectTraits & traits):
   path_(NULL),
   path_size_(0),
@@ -598,7 +598,7 @@ QObjectTraits::QObjectTraits(const QObjectTraits & traits):
 
 //----------------------------------------------------------------
 // QObjectTraits::~QObjectTraits
-// 
+//
 QObjectTraits::~QObjectTraits()
 {
   delete [] path_;
@@ -606,64 +606,64 @@ QObjectTraits::~QObjectTraits()
 
 //----------------------------------------------------------------
 // QObjectTraits::operator =
-// 
+//
 QObjectTraits &
 QObjectTraits::operator = (const QObjectTraits & traits)
 {
   if (&traits == this) return *this;
-  
+
   delete [] path_;
   path_ = NULL;
-  
+
   path_size_ = traits.path_size_;
   path_ = new QString [path_size_];
   for (unsigned int i = 0; i < path_size_; i++)
   {
     path_[i] = traits.path_[i];
   }
-  
+
   class_name_ = traits.class_name_;
   index_ = traits.index_;
   is_visible_ = traits.is_visible_;
-  
+
   return *this;
 }
 
 //----------------------------------------------------------------
 // QObjectTraits::object
-// 
+//
 QObject *
 QObjectTraits::object() const
 {
   std::list<QObject *> objects;
   matching_objects(objects);
-  
+
   if (objects.empty()) return NULL;
   if (is_size_one(objects)) return objects.front();
-  
+
   // try to disambiguate between the duplicates:
   std::list<QObject *>::iterator iter = iterator_at_index(objects, index_);
   if (iter == objects.end()) return NULL;
-  
+
   return *iter;
 }
 
 //----------------------------------------------------------------
 // QObjectTraits::widget
-// 
+//
 QWidget *
 QObjectTraits::widget() const
 {
   QObject * obj = object();
   if (obj == NULL) return NULL;
   if (obj->isWidgetType() == false) return NULL;
-  
+
   return static_cast<QWidget *>(obj);
 }
 
 //----------------------------------------------------------------
 // QObjectTraits::convert_object_ptr_to_full_path
-// 
+//
 void
 QObjectTraits::convert_object_ptr_to_full_path(const QObject * object,
                                                QString & full_path)
@@ -675,18 +675,18 @@ QObjectTraits::convert_object_ptr_to_full_path(const QObject * object,
     {
       name = object->metaObject()->className();
     }
-    
+
     full_path = ('/' +
                  encode_special_chars(name, special_chars_) +
                  full_path);
-    
+
     object = object->parent();
   }
 }
 
 //----------------------------------------------------------------
 // QObjectTraits::split_the_path_into_components
-// 
+//
 void
 QObjectTraits::split_the_path_into_components(const QString & full_path,
                                               QList<QString> & path_names)
@@ -696,13 +696,13 @@ QObjectTraits::split_the_path_into_components(const QString & full_path,
 
   std::string utf8_path(full_path.toUtf8().constData());
   std::string utf8_name;
-  
+
   std::size_t path_len = utf8_path.size();
   for (std::size_t i = 1; i < path_len; i++)
   {
     char p = utf8_path[i - 1]; // previous character.
     char c = utf8_path[i];     // current character.
-    
+
     if (((p != escape) && (c == separator)) ||
         ((i + 1) == path_len))
     {
@@ -722,7 +722,7 @@ QObjectTraits::split_the_path_into_components(const QString & full_path,
 
 //----------------------------------------------------------------
 // QObjectTraits::save
-// 
+//
 void
 QObjectTraits::save(std::ostream & ostr) const
 {
@@ -730,7 +730,7 @@ QObjectTraits::save(std::ostream & ostr) const
   {
     ostr << '/' << encode_special_chars(path_[i], special_chars_);
   }
-  
+
   ostr << ' '
        << class_name_ << ' '
        << index_ << ' '
@@ -739,34 +739,34 @@ QObjectTraits::save(std::ostream & ostr) const
 
 //----------------------------------------------------------------
 // QObjectTraits::load
-// 
+//
 void
 QObjectTraits::load(std::istream & istr)
 {
   QString full_path;
   istr >> full_path;
-  
+
   istr >> class_name_;
   istr >> index_;
   istr >> is_visible_;
-  
+
   init_path(full_path);
 }
 
 //----------------------------------------------------------------
 // QObjectTraits::init_path
-// 
+//
 void
 QObjectTraits::init_path(const QString & full_path)
 {
   delete [] path_;
   path_ = NULL;
   path_size_ = 0;
-  
+
   // split the full path to object into a list of component path names:
   QList<QString> path_names;
   split_the_path_into_components(full_path, path_names);
-  
+
   path_size_ = path_names.size();
   path_ = new QString [path_size_];
   for (unsigned int i = 0; i < path_size_; i++)
@@ -777,7 +777,7 @@ QObjectTraits::init_path(const QString & full_path)
 
 //----------------------------------------------------------------
 // QObjectTraits::matching_objects
-// 
+//
 void
 QObjectTraits::matching_objects(std::list<QObject *> & objects) const
 {
@@ -788,34 +788,34 @@ QObjectTraits::matching_objects(std::list<QObject *> & objects) const
   {
     find_object_from_path(*i, path_, path_size_, objects);
   }
-  
+
   if (objects.empty()) return;
   if (is_size_one(objects)) return;
-  
+
   // try to disambiguate between the duplicates:
   std::list<QObject *> unique;
-  
+
   for (std::list<QObject *>::iterator jter = objects.begin();
        jter != objects.end(); ++jter)
   {
     QObject * obj = *jter;
     if (class_name_ != obj->metaObject()->className()) continue;
-    
+
     if (obj->isWidgetType())
     {
       QWidget * widget = static_cast<QWidget *>(obj);
       if (widget->isVisible() != is_visible_) continue;
     }
-    
+
     unique.push_back(obj);
   }
-  
+
   objects = unique;
 }
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 std::ostream &
 operator << (std::ostream & ostr, const QObjectTraits & traits)
 {
@@ -825,7 +825,7 @@ operator << (std::ostream & ostr, const QObjectTraits & traits)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 std::istream &
 operator >> (std::istream & istr, QObjectTraits & traits)
 {
@@ -836,7 +836,7 @@ operator >> (std::istream & istr, QObjectTraits & traits)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & ostr, const QEvent::Type & t)
 {
@@ -845,7 +845,7 @@ operator << (std::ostream & ostr, const QEvent::Type & t)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & ostr, const QPoint & p)
 {
@@ -854,7 +854,7 @@ operator << (std::ostream & ostr, const QPoint & p)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & ostr, const QPointF & p)
 {
@@ -863,7 +863,7 @@ operator << (std::ostream & ostr, const QPointF & p)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & ostr, const QSize & s)
 {
@@ -872,7 +872,7 @@ operator << (std::ostream & ostr, const QSize & s)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 static std::ostream &
 operator << (std::ostream & ostr, const QObject * object)
 {
@@ -882,7 +882,7 @@ operator << (std::ostream & ostr, const QObject * object)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 static std::istream &
 operator >> (std::istream & istr, QEvent::Type & t)
 {
@@ -894,7 +894,7 @@ operator >> (std::istream & istr, QEvent::Type & t)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 static std::istream &
 operator >> (std::istream & istr, QPoint & p)
 {
@@ -908,7 +908,7 @@ operator >> (std::istream & istr, QPoint & p)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 static std::istream &
 operator >> (std::istream & istr, QPointF & p)
 {
@@ -918,7 +918,7 @@ operator >> (std::istream & istr, QPointF & p)
 
 //----------------------------------------------------------------
 // operator >>
-// 
+//
 static std::istream &
 operator >> (std::istream & istr, QSize & s)
 {
@@ -933,10 +933,10 @@ operator >> (std::istream & istr, QSize & s)
 
 //----------------------------------------------------------------
 // the_trail_line_id_t
-// 
+//
 // Each line of the trail file will have an ID, which will simplify
 // the parsing of the line.
-// 
+//
 typedef enum {
   OBJECT_ID_E = 0,
   EVENT_E = 1
@@ -945,7 +945,7 @@ typedef enum {
 
 //----------------------------------------------------------------
 // the_qt_trail_t::the_qt_trail_t
-// 
+//
 the_qt_trail_t::
 the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   QApplication(argc, argv),
@@ -956,39 +956,39 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   mouse_.setup_buttons(Qt::LeftButton,
                        Qt::MidButton,
                        Qt::RightButton);
-  
+
   the_keybd_event_t::setup_transition_detectors(QEvent::KeyPress,
                                                 QEvent::KeyRelease);
-  
+
   keybd_.init_key(the_keybd_t::SHIFT, Qt::Key_Shift, Qt::ShiftModifier);
   keybd_.init_key(the_keybd_t::ALT, Qt::Key_Alt, Qt::AltModifier);
   keybd_.init_key(the_keybd_t::CONTROL, Qt::Key_Control, Qt::ControlModifier);
   keybd_.init_key(the_keybd_t::META, Qt::Key_Meta, Qt::MetaModifier);
-  
+
   keybd_.init_key(the_keybd_t::ARROW_UP, Qt::Key_Up);
   keybd_.init_key(the_keybd_t::ARROW_DOWN, Qt::Key_Down);
   keybd_.init_key(the_keybd_t::ARROW_LEFT, Qt::Key_Left);
   keybd_.init_key(the_keybd_t::ARROW_RIGHT, Qt::Key_Right);
-  
+
   keybd_.init_key(the_keybd_t::PAGE_UP, Qt::Key_PageUp);
   keybd_.init_key(the_keybd_t::PAGE_DOWN, Qt::Key_PageDown);
-  
+
   keybd_.init_key(the_keybd_t::HOME, Qt::Key_Home);
   keybd_.init_key(the_keybd_t::END, Qt::Key_End);
-  
+
 # ifdef DELETE
 # undef DELETE
 # endif
   keybd_.init_key(the_keybd_t::DELETE, Qt::Key_Delete);
   keybd_.init_key(the_keybd_t::INSERT, Qt::Key_Insert);
-  
+
   keybd_.init_key(the_keybd_t::ESCAPE, Qt::Key_Escape);
   keybd_.init_key(the_keybd_t::TAB, Qt::Key_Tab);
   keybd_.init_key(the_keybd_t::BACKSPACE, Qt::Key_Backspace);
   keybd_.init_key(the_keybd_t::RETURN, Qt::Key_Return);
   keybd_.init_key(the_keybd_t::ENTER, Qt::Key_Enter);
   keybd_.init_key(the_keybd_t::SPACE, Qt::Key_Space);
-  
+
   keybd_.init_key(the_keybd_t::F1, Qt::Key_F1);
   keybd_.init_key(the_keybd_t::F2, Qt::Key_F2);
   keybd_.init_key(the_keybd_t::F3, Qt::Key_F3);
@@ -1001,10 +1001,10 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_key(the_keybd_t::F10, Qt::Key_F10);
   keybd_.init_key(the_keybd_t::F11, Qt::Key_F11);
   keybd_.init_key(the_keybd_t::F12, Qt::Key_F12);
-  
+
   keybd_.init_key(the_keybd_t::NUMLOCK, Qt::Key_NumLock);
   keybd_.init_key(the_keybd_t::CAPSLOCK, Qt::Key_CapsLock);
-  
+
   keybd_.init_ascii('~', Qt::Key_AsciiTilde);
   keybd_.init_ascii('-', Qt::Key_Minus);
   keybd_.init_ascii('=', Qt::Key_Equal);
@@ -1020,7 +1020,7 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_ascii('.', Qt::Key_Period);
   keybd_.init_ascii('/', Qt::Key_Slash);
   keybd_.init_ascii(' ', Qt::Key_Space);
-  
+
   keybd_.init_ascii('0', Qt::Key_0);
   keybd_.init_ascii('1', Qt::Key_1);
   keybd_.init_ascii('2', Qt::Key_2);
@@ -1031,7 +1031,7 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
   keybd_.init_ascii('7', Qt::Key_7);
   keybd_.init_ascii('8', Qt::Key_8);
   keybd_.init_ascii('9', Qt::Key_9);
-  
+
   keybd_.init_ascii('A', Qt::Key_A);
   keybd_.init_ascii('B', Qt::Key_B);
   keybd_.init_ascii('C', Qt::Key_C);
@@ -1062,19 +1062,19 @@ the_qt_trail_t(int & argc, char ** argv, bool record_by_default):
 
 //----------------------------------------------------------------
 // the_qt_trail_t::~the_qt_trail_t
-// 
+//
 the_qt_trail_t::~the_qt_trail_t()
 {}
 
 //----------------------------------------------------------------
 // the_user_input_event
-// 
+//
 // verify whether a given event is a direct result of user input:
 static bool
 the_user_input_event(const QObject * object, const QEvent * event)
 {
   if ((event == NULL) || (object == NULL)) return false;
-  
+
   switch (event->type())
   {
     case QEvent::MouseButtonPress:
@@ -1106,7 +1106,7 @@ the_user_input_event(const QObject * object, const QEvent * event)
     case QEvent::WindowDeactivate:
       */
       return true;
-      
+
     case QEvent::Move:
     case QEvent::Resize:
     {
@@ -1114,18 +1114,18 @@ the_user_input_event(const QObject * object, const QEvent * event)
       const QWidget * widget = static_cast<const QWidget *>(object);
       return (widget->isWindow() && widget->isVisible());
     }
-    
+
     default:
       break;
   }
-  
+
   // cerr << "NOT USER EVENT: " << qevent_type_to_str(event->type()) << endl;
   return false;
 }
 
 //----------------------------------------------------------------
 // lock_t
-// 
+//
 class lock_t
 {
 public:
@@ -1136,7 +1136,7 @@ public:
 
 //----------------------------------------------------------------
 // the_qt_trail_t::notify
-// 
+//
 bool
 the_qt_trail_t::notify(QObject * object, QEvent * event)
 {
@@ -1145,7 +1145,7 @@ the_qt_trail_t::notify(QObject * object, QEvent * event)
     // special case:
     return QApplication::notify(object, event);
   }
-  
+
   static unsigned int recursion_depth_ = 0;
   lock_t lock(recursion_depth_);
 
@@ -1155,11 +1155,11 @@ the_qt_trail_t::notify(QObject * object, QEvent * event)
     cerr << recursion_depth_ << ". ignore: " << QObjectTraits(object)
          << ", event: " << qevent_type_to_str(event->type()) << endl;
 #endif
-    
+
     // ignore any "new" events during trail playback:
     return true;
   }
-  
+
 #if 0
   // FIXME: if (!dont_save_events_)
   {
@@ -1167,10 +1167,10 @@ the_qt_trail_t::notify(QObject * object, QEvent * event)
          << ", event: " << qevent_type_to_str(event->type()) << endl;
   }
 #endif
-  
+
   // process the event:
   update_devices(object, event);
-  
+
   // only certain events should be saved:
   if (the_user_input_event(object, event) &&
       record_stream.rdbuf()->is_open() &&
@@ -1187,7 +1187,7 @@ the_qt_trail_t::notify(QObject * object, QEvent * event)
          << endl;
   }
 #endif
-  
+
   // WARNING: this call will block if the object processing the event
   // will start a modal dialog:
   bool res = false;
@@ -1203,18 +1203,18 @@ the_qt_trail_t::notify(QObject * object, QEvent * event)
   {
     cerr << "EXCEPTION: unknown exception intercepted" << endl;
   }
-  
+
   return res;
 }
 
 //----------------------------------------------------------------
 // REPLAY_EVENT_ID
-// 
+//
 static const QEvent::Type REPLAY_EVENT_ID = QEvent::User;
 
 //----------------------------------------------------------------
 // the_replay_event_t
-// 
+//
 class the_replay_event_t : public QEvent
 {
 public:
@@ -1241,12 +1241,12 @@ protected:
 
 //----------------------------------------------------------------
 // REPLAY_THREAD
-// 
+//
 static the_qt_trail_thread_t REPLAY_THREAD;
 
 //----------------------------------------------------------------
 // the_qt_trail_t::timeout
-// 
+//
 void
 the_qt_trail_t::timeout()
 {
@@ -1255,7 +1255,7 @@ the_qt_trail_t::timeout()
 
 //----------------------------------------------------------------
 // the_qt_trail_t::customEvent
-// 
+//
 void
 the_qt_trail_t::customEvent(QEvent * event)
 {
@@ -1265,13 +1265,13 @@ the_qt_trail_t::customEvent(QEvent * event)
     replay_one();
     return;
   }
-  
+
   event->ignore();
 }
 
 //----------------------------------------------------------------
 // io_base_handler
-// 
+//
 static void
 io_base_handler(io_base_t *& loaded)
 {
@@ -1285,30 +1285,30 @@ io_base_handler(io_base_t *& loaded)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::replay
-// 
+//
 void
 the_qt_trail_t::replay()
 {
   // FIXME: REPLAY_THREAD.start();
-  
+
   // register loaders:
   QCoreApplication::processEvents();
   io_base_t::loaders_["instance_t"] = &instance_t::create;
   io_base_t::loaders_["call_t"] = &call_t::create;
   io_base_t::load(replay_stream, &io_base_handler);
   replay_done();
-  
+
   // FIXME:  ::exit(0);
 }
 
 //----------------------------------------------------------------
 // the_qt_trail_t::replay_done
-// 
+//
 void
 the_qt_trail_t::replay_done()
 {
   the_trail_t::replay_done();
-  
+
 #if 0
   QWidgetList top_level_widgets = QApplication::topLevelWidgets();
   for (QWidgetList::iterator i = top_level_widgets.begin();
@@ -1321,30 +1321,30 @@ the_qt_trail_t::replay_done()
 
 //----------------------------------------------------------------
 // MILESTONE
-// 
+//
 unsigned int MILESTONE = ~0;
 
 //----------------------------------------------------------------
 // the_qt_trail_t::replay_one
-// 
+//
 void
 the_qt_trail_t::replay_one()
 {
   if (dont_load_events_) return;
-  
+
   QObject * object = NULL;
   QEvent  * event  = NULL;
-  
+
   // load the event milestone marker:
   {
     static bool waiting_for_milestone = false;
     static QTime timer;
-    
+
     if (!waiting_for_milestone)
     {
       replay_stream >> MILESTONE;
     }
-    
+
     if (MILESTONE > milestone_)
     {
       if (!waiting_for_milestone)
@@ -1355,7 +1355,7 @@ the_qt_trail_t::replay_one()
         waiting_for_milestone = true;
         timer.start();
       }
-      
+
       unsigned seconds_waiting = timer.elapsed() / 1000;
       if (seconds_waiting > seconds_to_wait_)
       {
@@ -1364,7 +1364,7 @@ the_qt_trail_t::replay_one()
           // don't ask any questions -- terminate trail playback:
           cerr << "NOTE: " << seconds_waiting
                << " seconds passed -- trail may be out of sequence" << endl;
-          
+
           replay_done();
           return;
         }
@@ -1373,16 +1373,16 @@ the_qt_trail_t::replay_one()
           dont_load_events_ = true;
           dont_save_events_ = true;
           dont_post_events_ = false;
-          
+
           QMessageBox mb;
           mb.setIcon(QMessageBox::Question);
           mb.setWindowTitle(QString::fromUtf8("trail may be out of sequence"));
-          
+
           std::ostringstream os;
           os << "Milestone " << MILESTONE << " hasn't arrived within "
              << seconds_to_wait_ << " seconds." << endl;
           mb.setText(QString::fromUtf8(os.str().c_str()));
-          
+
           os.str("");
           os << seconds_waiting
              << " seconds passed -- trail may be out of sequence." << endl
@@ -1392,21 +1392,21 @@ the_qt_trail_t::replay_one()
              << "Click [Skip] to ignore this milestone." << endl
              << "Click [Wait] to continue waiting for the milestone." << endl;
           mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
-          
+
           QAbstractButton * btn_stop =
             mb.addButton(tr("Stop"), QMessageBox::ActionRole);
-          
+
           QAbstractButton * btn_skip =
             mb.addButton(tr("Skip"), QMessageBox::ActionRole);
-          
+
           QAbstractButton * btn_wait =
             mb.addButton(tr("Wait"), QMessageBox::ActionRole);
-          
+
           mb.exec();
-          
+
           dont_save_events_ = false;
           dont_post_events_ = true;
-          
+
           if (mb.clickedButton() == btn_stop)
           {
             replay_done();
@@ -1430,10 +1430,10 @@ the_qt_trail_t::replay_one()
         return;
       }
     }
-    
+
     waiting_for_milestone = false;
   }
-  
+
   unsigned int line_id = ~0;
   bool ok = true;
   while (ok)
@@ -1445,7 +1445,7 @@ the_qt_trail_t::replay_one()
       ok = false;
       break;
     }
-    
+
     if (line_id == OBJECT_ID_E)
     {
       ok = load_object(replay_stream);
@@ -1465,17 +1465,17 @@ the_qt_trail_t::replay_one()
       break;
     }
   }
-  
+
   if (!ok)
   {
     replay_done();
     return;
   }
-  
+
 #ifndef NDEBUG
   cout << line_num_ << ", " << qevent_type_to_str(event->type()) << endl;
 #endif
-  
+
   if (event->type() == QEvent::MouseButtonPress ||
       event->type() == QEvent::MouseButtonDblClick ||
       event->type() == QEvent::TabletPress)
@@ -1485,21 +1485,21 @@ the_qt_trail_t::replay_one()
     critical_event_counter++;
     cout << critical_event_counter << " critical event --------------" << endl;
 #endif
-    
+
     if (single_step_replay_)
     {
       dont_load_events_ = true;
       dont_save_events_ = true;
       dont_post_events_ = false;
-      
+
       QMessageBox mb;
       mb.setIcon(QMessageBox::Question);
       mb.setWindowTitle(QString::fromUtf8("trail arrived at a critical event"));
-      
+
       std::ostringstream os;
       os << qevent_type_to_str(event->type()) << endl;
       mb.setText(QString::fromUtf8(os.str().c_str()));
-      
+
       os.str("");
       os << "Critical event \"" << qevent_type_to_str(event->type()) << "\""
          << " at line " << line_num_ << " is pending execution." << endl
@@ -1508,21 +1508,21 @@ the_qt_trail_t::replay_one()
          << "Click [Stop] to stop trail playback immediately "
          << "without executing the next event." << endl;
       mb.setDetailedText(QString::fromUtf8(os.str().c_str()));
-      
+
       QAbstractButton * btn_next =
         mb.addButton(tr("Next"), QMessageBox::ActionRole);
-      
+
       QAbstractButton * btn_dont =
         mb.addButton(tr("Don't ask"), QMessageBox::ActionRole);
-      
+
       QAbstractButton * btn_stop =
         mb.addButton(tr("Stop"), QMessageBox::ActionRole);
-      
+
       mb.exec();
-      
+
       dont_save_events_ = false;
       dont_post_events_ = true;
-      
+
       if (mb.clickedButton() == btn_next)
       {
         // fall through -- execute the event
@@ -1539,9 +1539,9 @@ the_qt_trail_t::replay_one()
       }
     }
   }
-  
+
   dont_post_events_ = false;
-  
+
   if (object)
   {
 #if 0
@@ -1556,10 +1556,10 @@ the_qt_trail_t::replay_one()
       }
     }
 #endif
-    
+
     // FIXME: not safe:
     QWidget * widget = dynamic_cast<QWidget *>(object);
-    
+
     switch (event->type())
     {
       case QEvent::Move:
@@ -1571,7 +1571,7 @@ the_qt_trail_t::replay_one()
                                   widget->size().height()));
       }
       break;
-      
+
       case QEvent::Resize:
       {
         QResizeEvent * e_resize = (QResizeEvent *)event;
@@ -1579,11 +1579,11 @@ the_qt_trail_t::replay_one()
                        e_resize->size().height());
       }
       break;
-      
+
       case QEvent::Close:
         widget->close();
         break;
-        
+
       case QEvent::ShortcutOverride:
       case QEvent::KeyPress:
       case QEvent::KeyRelease:
@@ -1593,13 +1593,13 @@ the_qt_trail_t::replay_one()
         // gone out of sequence:
         if (widget->isEnabled()) notify(object, event);
         break;
-        
+
       default:
         notify(object, event);
         break;
     }
   }
-  
+
   // FIXME: is this safe?
   delete event;
   dont_post_events_ = true;
@@ -1608,7 +1608,7 @@ the_qt_trail_t::replay_one()
 
 //----------------------------------------------------------------
 // the_qt_trail_t::stop
-// 
+//
 void
 the_qt_trail_t::stop()
 {
@@ -1618,15 +1618,15 @@ the_qt_trail_t::stop()
 
 //----------------------------------------------------------------
 // the_qt_trail_t::update_devices
-// 
+//
 void
 the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
 {
   // FIXME:
   return;
-  
+
   if ((object == NULL) || (event == NULL)) return;
-  
+
   // process events originating from direct manipulation devices,
   // such as the keyboard, mouse, or tablet:
   switch (event->type())
@@ -1644,26 +1644,26 @@ the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
                                     static_cast<const QMouseEvent *>(event)));
     }
     break;
-    
+
     case QEvent::ShortcutOverride:
     case QEvent::KeyPress:
     case QEvent::KeyRelease:
     {
       const QKeyEvent * ke = static_cast<const QKeyEvent *>(event);
       QWidget * widget = static_cast<QWidget *>(object);
-      
+
       the_input_device_t::advance_time_stamp();
       keybd_.update(the_keybd_event(widget, ke));
-      
+
       // FIXME: if (!ke->isAutoRepeat()) ::dump(THE_KEYBD);
     }
     break;
-    
+
     case QEvent::Shortcut:
       // FIXME: for some reason on Windows this is necessary:
       keybd_.forget_pressed_keys();
       break;
-      
+
     case QEvent::TabletMove:
     case QEvent::TabletPress:
     case QEvent::TabletRelease:
@@ -1674,7 +1674,7 @@ the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
                                     static_cast<const QTabletEvent *>(event)));
     }
     break;
-    
+
     default:
       return;
   }
@@ -1682,7 +1682,7 @@ the_qt_trail_t::update_devices(QObject * object, const QEvent * event)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::save_event
-// 
+//
 void
 the_qt_trail_t::save_event(std::ostream &       ostr,
                            const QObject * object,
@@ -1690,9 +1690,9 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
 {
   // FIXME:
   return;
-  
+
   if ((event == NULL) || (object == NULL)) return;
-  
+
 #if 0
   if (replay_stream.rdbuf()->is_open() == false)
   {
@@ -1706,26 +1706,26 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
     }
   }
 #endif
-  
+
   // save the milestone marker:
   ostr << milestone_ << '\t';
-  
+
   // save the destination object if necessary:
   QObjectTraits traits(object);
   the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
     tree_save_.get(object);
-  
+
   if ((leaf == NULL) || (traits != leaf->elem.traits()))
   {
     leaf = tree_save_.add(object);
     leaf->elem.init(const_cast<QObject *>(object), traits);
-    
+
     // this line will contain object information:
     ostr << OBJECT_ID_E << ' ';
     save_address(ostr, object);
     ostr << ' ' << traits << endl << '\t';
   }
-  
+
   // save the event:
   switch (event->type())
   {
@@ -1737,13 +1737,13 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
       saveQMouseEvent(ostr, object, (QMouseEvent *)event);
     }
     break;
-    
+
     case QEvent::Wheel:
     {
       saveQWheelEvent(ostr, object, (QWheelEvent *)event);
     }
     break;
-    
+
     case QEvent::ShortcutOverride:
     case QEvent::KeyPress:
     case QEvent::KeyRelease:
@@ -1751,7 +1751,7 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
       saveQKeyEvent(ostr, object, (QKeyEvent *)event);
     }
     break;
-    
+
     case QEvent::TabletMove:
     case QEvent::TabletPress:
     case QEvent::TabletRelease:
@@ -1759,37 +1759,37 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
       saveQTabletEvent(ostr, object, (QTabletEvent *)event);
     }
     break;
-    
+
     case QEvent::Move:
     {
       saveQMoveEvent(ostr, object, (QMoveEvent *)event);
     }
     break;
-    
+
     case QEvent::Resize:
     {
       saveQResizeEvent(ostr, object, (QResizeEvent *)event);
     }
     break;
-    
+
     case QEvent::Close:
     {
       saveQCloseEvent(ostr, object, (QCloseEvent *)event);
     }
     break;
-    
+
     case QEvent::Timer:
     {
       saveQTimerEvent(ostr, object, (QTimerEvent *)event);
     }
     break;
-    
+
     case QEvent::Shortcut:
     {
       saveQShortcutEvent(ostr, object, (QShortcutEvent *)event);
     }
     break;
-    
+
     default:
     {
       saveQEvent(ostr, object, event);
@@ -1800,7 +1800,7 @@ the_qt_trail_t::save_event(std::ostream &       ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::load_object
-// 
+//
 bool
 the_qt_trail_t::load_object(std::istream & istr)
 {
@@ -1813,13 +1813,13 @@ the_qt_trail_t::load_object(std::istream & istr)
          << ", trail milestone " << MILESTONE << endl;
     return false;
   }
-  
+
   QObjectTraits traits;
   istr >> traits;
   line_num_++;
-  
+
   QObject * new_ptr = traits.object();
-  
+
   if (new_ptr == NULL)
   {
     cerr << "WARNING: line: " << line_num_
@@ -1828,7 +1828,7 @@ the_qt_trail_t::load_object(std::istream & istr)
          << ", current milestone " << milestone_
          << ", trail milestone " << MILESTONE << endl;
     traits.object();
-    
+
 #if 0
     QWidgetList top_level_widgets = QApplication::topLevelWidgets();
     for (QWidgetList::iterator i = top_level_widgets.begin();
@@ -1837,20 +1837,20 @@ the_qt_trail_t::load_object(std::istream & istr)
       dump_children_tree(cerr, *i, 0);
     }
 #endif
-    
+
     return true;
   }
-  
+
   the_bit_tree_leaf_t<the_traits_mapping_t> * leaf =
     tree_load_.add(old_ptr);
   leaf->elem.init(new_ptr, traits);
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_qt_trail_t::load_event
-// 
+//
 bool
 the_qt_trail_t::load_event(std::istream &  istr,
                            QObject *& object,
@@ -1858,14 +1858,14 @@ the_qt_trail_t::load_event(std::istream &  istr,
 {
   object = NULL;
   event = NULL;
-  
+
   uint64_t old_object = 0;
   load_address(istr, old_object);
-  
+
   object = NULL;
   the_bit_tree_leaf_t<the_traits_mapping_t> * old_object_traits =
     tree_load_.get(old_object);
-  
+
   if (!old_object_traits)
   {
     cerr << "WARNING: unknown object pointer: ";
@@ -1877,10 +1877,10 @@ the_qt_trail_t::load_event(std::istream &  istr,
   else
   {
     object = (QObject *)(old_object_traits->elem.addr());
-    
+
     const QObjectTraits & traits = old_object_traits->elem.traits();
     QObject * new_object = traits.object();
-    
+
     if (new_object == NULL)
     {
       cerr << "WARNING: line: " << line_num_
@@ -1891,7 +1891,7 @@ the_qt_trail_t::load_event(std::istream &  istr,
       old_object_traits->elem.init(NULL, traits);
       object = NULL;
     }
-    
+
     if (new_object != object)
     {
       cerr << "WARNING: line: " << line_num_
@@ -1899,16 +1899,16 @@ the_qt_trail_t::load_event(std::istream &  istr,
            << traits
            << ", current milestone " << milestone_
            << ", trail milestone " << MILESTONE << endl;
-      
+
       if (old_object_traits->elem.addr() == NULL)
       {
         old_object_traits->elem.init(new_object, traits);
       }
-      
+
       object = new_object;
     }
   }
-  
+
   QEvent::Type event_type;
   if ((istr >> event_type).eof())
   {
@@ -1917,7 +1917,7 @@ the_qt_trail_t::load_event(std::istream &  istr,
          << ", trail milestone " << MILESTONE << endl;
     return false;
   }
-  
+
   switch (event_type)
   {
     case QEvent::MouseButtonPress:
@@ -1928,13 +1928,13 @@ the_qt_trail_t::load_event(std::istream &  istr,
       event = loadQMouseEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Wheel:
     {
       event = loadQWheelEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::ShortcutOverride:
     case QEvent::KeyPress:
     case QEvent::KeyRelease:
@@ -1942,7 +1942,7 @@ the_qt_trail_t::load_event(std::istream &  istr,
       event = loadQKeyEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::TabletMove:
     case QEvent::TabletPress:
     case QEvent::TabletRelease:
@@ -1950,51 +1950,51 @@ the_qt_trail_t::load_event(std::istream &  istr,
       event = loadQTabletEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Move:
     {
       event = loadQMoveEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Resize:
     {
       event = loadQResizeEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Close:
     {
       event = loadQCloseEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Timer:
     {
       event = loadQTimerEvent(istr, event_type);
     }
     break;
-    
+
     case QEvent::Shortcut:
     {
       event = loadQShortcutEvent(istr, event_type);
     }
     break;
-    
+
     default:
     {
       event = loadQEvent(istr, event_type);
     }
     break;
   }
-  
+
   line_num_++;
   return true;
 }
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQEvent
-// 
+//
 void
 the_qt_trail_t::saveQEvent(std::ostream & ostr,
                            const QObject * object,
@@ -2008,7 +2008,7 @@ the_qt_trail_t::saveQEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQMouseEvent
-// 
+//
 void
 the_qt_trail_t::saveQMouseEvent(std::ostream & ostr,
                                 const QObject * object,
@@ -2026,7 +2026,7 @@ the_qt_trail_t::saveQMouseEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQWheelEvent
-// 
+//
 void
 the_qt_trail_t::saveQWheelEvent(std::ostream & ostr,
                                 const QObject * object,
@@ -2045,14 +2045,14 @@ the_qt_trail_t::saveQWheelEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQKeyEvent
-// 
+//
 void
 the_qt_trail_t::saveQKeyEvent(std::ostream & ostr,
                               const QObject * object,
                               const QKeyEvent * event)
 {
   assert(event->key() != -1);
-  
+
   ostr << EVENT_E << ' '
        << object << ' '
        << event->type() << ' '
@@ -2060,7 +2060,7 @@ the_qt_trail_t::saveQKeyEvent(std::ostream & ostr,
        << event->modifiers() << ' '
        << event->isAutoRepeat() << ' '
        << event->count() << ' ';
-  
+
   if (event->text().size() > 0)
   {
     ostr << true << ' ' << event->text().toUtf8().toBase64().data() << endl;
@@ -2073,7 +2073,7 @@ the_qt_trail_t::saveQKeyEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQTabletEvent
-// 
+//
 void
 the_qt_trail_t::saveQTabletEvent(std::ostream & ostr,
                                  const QObject * object,
@@ -2099,7 +2099,7 @@ the_qt_trail_t::saveQTabletEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQMoveEvent
-// 
+//
 void
 the_qt_trail_t::saveQMoveEvent(std::ostream & ostr,
                                const QObject * object,
@@ -2114,7 +2114,7 @@ the_qt_trail_t::saveQMoveEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQResizeEvent
-// 
+//
 void
 the_qt_trail_t::saveQResizeEvent(std::ostream & ostr,
                                  const QObject * object,
@@ -2129,7 +2129,7 @@ the_qt_trail_t::saveQResizeEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQCloseEvent
-// 
+//
 void
 the_qt_trail_t::saveQCloseEvent(std::ostream & ostr,
                                 const QObject * object,
@@ -2142,7 +2142,7 @@ the_qt_trail_t::saveQCloseEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQTimerEvent
-// 
+//
 void
 the_qt_trail_t::saveQTimerEvent(std::ostream & ostr,
                                 const QObject * object,
@@ -2156,7 +2156,7 @@ the_qt_trail_t::saveQTimerEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::saveQShortcutEvent
-// 
+//
 void
 the_qt_trail_t::saveQShortcutEvent(std::ostream & ostr,
                                    const QObject * object,
@@ -2173,7 +2173,7 @@ the_qt_trail_t::saveQShortcutEvent(std::ostream & ostr,
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQEvent
-// 
+//
 QEvent *
 the_qt_trail_t::loadQEvent(std::istream &, QEvent::Type t)
 {
@@ -2183,7 +2183,7 @@ the_qt_trail_t::loadQEvent(std::istream &, QEvent::Type t)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQMouseEvent
-// 
+//
 QMouseEvent *
 the_qt_trail_t::loadQMouseEvent(std::istream & istr, QEvent::Type t)
 {
@@ -2204,7 +2204,7 @@ the_qt_trail_t::loadQMouseEvent(std::istream & istr, QEvent::Type t)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQWheelEvent
-// 
+//
 QWheelEvent *
 the_qt_trail_t::loadQWheelEvent(std::istream & istr, QEvent::Type)
 {
@@ -2226,7 +2226,7 @@ the_qt_trail_t::loadQWheelEvent(std::istream & istr, QEvent::Type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQKeyEvent
-// 
+//
 QKeyEvent *
 the_qt_trail_t::loadQKeyEvent(std::istream & istr, QEvent::Type t)
 {
@@ -2237,36 +2237,36 @@ the_qt_trail_t::loadQKeyEvent(std::istream & istr, QEvent::Type t)
   bool   has_txt;
   istr >> k >> mods >> autorepeat >> count >> has_txt;
   QKeyEvent * event = NULL;
-  
+
   QString txt = QString::null;
   if (has_txt)
   {
     QString txt_base64;
     istr >> txt_base64;
-    
+
     txt = QString(QByteArray::fromBase64(txt_base64.toUtf8()));
   }
-  
+
   event = new QKeyEvent(t,
                         k,
                         QFlags<Qt::KeyboardModifier>(mods),
                         txt,
                         autorepeat,
                         count);
-  
+
   return event;
 }
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQTabletEvent
-// 
+//
 QTabletEvent *
 the_qt_trail_t::loadQTabletEvent(std::istream & istr, QEvent::Type event_type)
 {
   QPoint position;
   QPoint global_position;
   QPointF highres_global_pos;
-  
+
   int    device         = 0;
   int    pointer        = 0;
   qreal  pressure       = 0;
@@ -2277,7 +2277,7 @@ the_qt_trail_t::loadQTabletEvent(std::istream & istr, QEvent::Type event_type)
   int    z              = 0;
   int    mods           = 0;
   qint64 unique_id      = 0;
-  
+
   istr >> position
        >> global_position
        >> highres_global_pos
@@ -2291,7 +2291,7 @@ the_qt_trail_t::loadQTabletEvent(std::istream & istr, QEvent::Type event_type)
        >> z
        >> mods
        >> unique_id;
-  
+
   QTabletEvent * event = new QTabletEvent(event_type,
                                           position,
                                           global_position,
@@ -2311,7 +2311,7 @@ the_qt_trail_t::loadQTabletEvent(std::istream & istr, QEvent::Type event_type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQMoveEvent
-// 
+//
 QMoveEvent *
 the_qt_trail_t::loadQMoveEvent(std::istream & istr, QEvent::Type)
 {
@@ -2324,7 +2324,7 @@ the_qt_trail_t::loadQMoveEvent(std::istream & istr, QEvent::Type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQResizeEvent
-// 
+//
 QResizeEvent *
 the_qt_trail_t::loadQResizeEvent(std::istream & istr, QEvent::Type)
 {
@@ -2337,7 +2337,7 @@ the_qt_trail_t::loadQResizeEvent(std::istream & istr, QEvent::Type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQCloseEvent
-// 
+//
 QCloseEvent *
 the_qt_trail_t::loadQCloseEvent(std::istream &, QEvent::Type)
 {
@@ -2347,7 +2347,7 @@ the_qt_trail_t::loadQCloseEvent(std::istream &, QEvent::Type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQTimerEvent
-// 
+//
 QTimerEvent *
 the_qt_trail_t::loadQTimerEvent(std::istream & istr, QEvent::Type)
 {
@@ -2359,7 +2359,7 @@ the_qt_trail_t::loadQTimerEvent(std::istream & istr, QEvent::Type)
 
 //----------------------------------------------------------------
 // the_qt_trail_t::loadQShortcutEvent
-// 
+//
 QShortcutEvent *
 the_qt_trail_t::loadQShortcutEvent(std::istream & istr, QEvent::Type)
 {
@@ -2375,7 +2375,7 @@ the_qt_trail_t::loadQShortcutEvent(std::istream & istr, QEvent::Type)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const QSize & data)
 {
@@ -2385,7 +2385,7 @@ save(std::ostream & stream, const QSize & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, QSize & data)
 {
@@ -2397,7 +2397,7 @@ load(std::istream & stream, QSize & data)
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, const QRect & data)
 {
@@ -2410,7 +2410,7 @@ save(std::ostream & stream, const QRect & data)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, QRect & data)
 {
@@ -2423,7 +2423,7 @@ load(std::istream & stream, QRect & data)
 
 //----------------------------------------------------------------
 // the_qt_signal_blocker_t::the_qt_signal_blocker_t
-// 
+//
 the_qt_signal_blocker_t::the_qt_signal_blocker_t(QObject * obj)
 {
   if (obj)
@@ -2434,7 +2434,7 @@ the_qt_signal_blocker_t::the_qt_signal_blocker_t(QObject * obj)
 
 //----------------------------------------------------------------
 // the_qt_signal_blocker_t::~the_qt_signal_blocker_t
-// 
+//
 the_qt_signal_blocker_t::~the_qt_signal_blocker_t()
 {
   for (std::list<QObject *>::iterator i = blocked_.begin();
@@ -2447,7 +2447,7 @@ the_qt_signal_blocker_t::~the_qt_signal_blocker_t()
 
 //----------------------------------------------------------------
 // the_qt_signal_blocker_t::operator <<
-// 
+//
 the_qt_signal_blocker_t &
 the_qt_signal_blocker_t::operator << (QObject * obj)
 {
@@ -2456,6 +2456,6 @@ the_qt_signal_blocker_t::operator << (QObject * obj)
     obj->blockSignals(true);
     blocked_.push_back(obj);
   }
-  
+
   return *this;
 }

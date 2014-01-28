@@ -17,13 +17,13 @@
 
 // Qt includes:
 #include <qapplication.h>
-#include <qpaintdevice.h> 
-#include <qpaintdevicemetrics.h> 
+#include <qpaintdevice.h>
+#include <qpaintdevicemetrics.h>
 #include <qdesktopwidget.h>
 
 //----------------------------------------------------------------
 // the_qt_desktop_metrics_t
-// 
+//
 class the_qt_desktop_metrics_t : public the_desktop_metrics_t
 {
 public:
@@ -34,7 +34,7 @@ public:
     float dpi = (float)(qpdm.logicalDpiX());
     return dpi;
   }
-  
+
   float dpi_y() const
   {
     QPaintDeviceMetrics qpdm = QPaintDeviceMetrics(QApplication::desktop());

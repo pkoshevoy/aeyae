@@ -16,7 +16,7 @@
 
 //----------------------------------------------------------------
 // the_dlink_t
-// 
+//
 // the_dlink_t is a helper class used to implement a linked list,
 // a stack, and a loop of objects:
 template<class T>
@@ -31,14 +31,14 @@ public:
     prev(ptr_to_prev),
     next(ptr_to_next)
   {}
-  
+
   // the element contained in this link:
   T elem;
-  
+
   // pointers to the previous/next link:
   the_dlink_t<T> * prev;
   the_dlink_t<T> * next;
-  
+
 private:
   // disable the default constructor:
   the_dlink_t();

@@ -15,6 +15,6 @@
 
 //----------------------------------------------------------------
 // the_input_device_t::latest_time_stamp_
-// 
+//
 unsigned int
 the_input_device_t::latest_time_stamp_ = 0;

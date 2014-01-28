@@ -58,24 +58,24 @@
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 m4x4_t::m4x4_t()
 {
   M00_ = 0.0;
   M01_ = 0.0;
   M02_ = 0.0;
   M03_ = 0.0;
-  
+
   M10_ = 0.0;
   M11_ = 0.0;
   M12_ = 0.0;
   M13_ = 0.0;
-  
+
   M20_ = 0.0;
   M21_ = 0.0;
   M22_ = 0.0;
   M23_ = 0.0;
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -84,17 +84,17 @@ m4x4_t::m4x4_t()
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 m4x4_t::m4x4_t(const v3x1_t & axis, const float & radians)
 {
   const float & x = axis.x();
   const float & y = axis.y();
   const float & z = axis.z();
-  
+
   const float ct = cosf(radians);
   const float st = sinf(radians);
   const float vt = 1 - ct; // versine of theta
-  
+
   assign(x * x * vt + ct,     x * y * vt - z * st, x * z * vt + y * st, 0,
 	 x * y * vt + z * st, y * y * vt + ct,     y * z * vt - x * st, 0,
 	 x * z * vt - y * st, y * z * vt + x * st, z * z * vt + ct,     0,
@@ -103,16 +103,16 @@ m4x4_t::m4x4_t(const v3x1_t & axis, const float & radians)
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 m4x4_t::m4x4_t(const float & m11, const float & m12,
 	       const float & m13, const float & m14,
-	       
+
 	       const float & m21, const float & m22,
 	       const float & m23, const float & m24,
-	       
+
 	       const float & m31, const float & m32,
 	       const float & m33, const float & m34,
-	       
+
 	       const float & m41, const float & m42,
 	       const float & m43, const float & m44)
 {
@@ -120,17 +120,17 @@ m4x4_t::m4x4_t(const float & m11, const float & m12,
   M01_ = m12;
   M02_ = m13;
   M03_ = m14;
-  
+
   M10_ = m21;
   M11_ = m22;
   M12_ = m23;
   M13_ = m24;
-  
+
   M20_ = m31;
   M21_ = m32;
   M22_ = m33;
   M23_ = m34;
-  
+
   M30_ = m41;
   M31_ = m42;
   M32_ = m43;
@@ -139,7 +139,7 @@ m4x4_t::m4x4_t(const float & m11, const float & m12,
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 m4x4_t::m4x4_t(const float & m11, const float & m12, const float & m13,
 	       const float & m21, const float & m22, const float & m23,
 	       const float & m31, const float & m32, const float & m33)
@@ -148,17 +148,17 @@ m4x4_t::m4x4_t(const float & m11, const float & m12, const float & m13,
   M01_ = m12;
   M02_ = m13;
   M03_ = 0.0;
-  
+
   M10_ = m21;
   M11_ = m22;
   M12_ = m23;
   M13_ = 0.0;
-  
+
   M20_ = m31;
   M21_ = m32;
   M22_ = m33;
   M23_ = 0.0;
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -167,9 +167,9 @@ m4x4_t::m4x4_t(const float & m11, const float & m12, const float & m13,
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 // construct a scale matrix:
-// 
+//
 m4x4_t::m4x4_t(const float & scale_x,
 	       const float & scale_y,
 	       const float & scale_z)
@@ -178,17 +178,17 @@ m4x4_t::m4x4_t(const float & scale_x,
   M01_ = 0.0;
   M02_ = 0.0;
   M03_ = 0.0;
-  
+
   M10_ = 0.0;
   M11_ = scale_y;
   M12_ = 0.0;
   M13_ = 0.0;
-  
+
   M20_ = 0.0;
   M21_ = 0.0;
   M22_ = scale_z;
   M23_ = 0.0;
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -197,26 +197,26 @@ m4x4_t::m4x4_t(const float & scale_x,
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 // construct a uniform scale matrix:
-// 
+//
 m4x4_t::m4x4_t(const float & scale)
 {
   M00_ = scale;
   M01_ = 0.0;
   M02_ = 0.0;
   M03_ = 0.0;
-  
+
   M10_ = 0.0;
   M11_ = scale;
   M12_ = 0.0;
   M13_ = 0.0;
-  
+
   M20_ = 0.0;
   M21_ = 0.0;
   M22_ = scale;
   M23_ = 0.0;
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -225,26 +225,26 @@ m4x4_t::m4x4_t(const float & scale)
 
 //----------------------------------------------------------------
 // m4x4_t::m4x4_t
-// 
+//
 // construct a translation matrix:
-// 
+//
 m4x4_t::m4x4_t(const v3x1_t & translate)
 {
   M00_ = 1.0;
   M01_ = 0.0;
   M02_ = 0.0;
   M03_ = translate.x();
-  
+
   M10_ = 0.0;
   M11_ = 1.0;
   M12_ = 0.0;
   M13_ = translate.y();
-  
+
   M20_ = 0.0;
   M21_ = 0.0;
   M22_ = 1.0;
   M23_ = translate.z();
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -253,17 +253,17 @@ m4x4_t::m4x4_t(const v3x1_t & translate)
 
 //----------------------------------------------------------------
 // m4x4_t::assign
-// 
+//
 void
 m4x4_t::assign(const float & m11, const float & m12,
 	       const float & m13, const float & m14,
-	       
+
 	       const float & m21, const float & m22,
 	       const float & m23, const float & m24,
-	       
+
 	       const float & m31, const float & m32,
 	       const float & m33, const float & m34,
-	       
+
 	       const float & m41, const float & m42,
 	       const float & m43, const float & m44)
 {
@@ -271,17 +271,17 @@ m4x4_t::assign(const float & m11, const float & m12,
   M01_ = m12;
   M02_ = m13;
   M03_ = m14;
-  
+
   M10_ = m21;
   M11_ = m22;
   M12_ = m23;
   M13_ = m24;
-  
+
   M20_ = m31;
   M21_ = m32;
   M22_ = m33;
   M23_ = m34;
-  
+
   M30_ = m41;
   M31_ = m42;
   M32_ = m43;
@@ -290,7 +290,7 @@ m4x4_t::assign(const float & m11, const float & m12,
 
 //----------------------------------------------------------------
 // m4x4_t::assign
-// 
+//
 void
 m4x4_t::assign(const float & m11, const float & m12, const float & m13,
 	       const float & m21, const float & m22, const float & m23,
@@ -300,17 +300,17 @@ m4x4_t::assign(const float & m11, const float & m12, const float & m13,
   M01_ = m12;
   M02_ = m13;
   M03_ = 0.0;
-  
+
   M10_ = m21;
   M11_ = m22;
   M12_ = m23;
   M13_ = 0.0;
-  
+
   M20_ = m31;
   M21_ = m32;
   M22_ = m33;
   M23_ = 0.0;
-  
+
   M30_ = 0.0;
   M31_ = 0.0;
   M32_ = 0.0;
@@ -319,7 +319,7 @@ m4x4_t::assign(const float & m11, const float & m12, const float & m13,
 
 //----------------------------------------------------------------
 // m4x4_t::multiply
-// 
+//
 void
 m4x4_t::multiply(const m4x4_t & a, m4x4_t & b) const
 {
@@ -327,17 +327,17 @@ m4x4_t::multiply(const m4x4_t & a, m4x4_t & b) const
   b.M01_ = (M00_ * a.M01_ + M01_ * a.M11_ + M02_ * a.M21_ + M03_ * a.M31_);
   b.M02_ = (M00_ * a.M02_ + M01_ * a.M12_ + M02_ * a.M22_ + M03_ * a.M32_);
   b.M03_ = (M00_ * a.M03_ + M01_ * a.M13_ + M02_ * a.M23_ + M03_ * a.M33_);
-  
+
   b.M10_ = (M10_ * a.M00_ + M11_ * a.M10_ + M12_ * a.M20_ + M13_ * a.M30_);
   b.M11_ = (M10_ * a.M01_ + M11_ * a.M11_ + M12_ * a.M21_ + M13_ * a.M31_);
   b.M12_ = (M10_ * a.M02_ + M11_ * a.M12_ + M12_ * a.M22_ + M13_ * a.M32_);
   b.M13_ = (M10_ * a.M03_ + M11_ * a.M13_ + M12_ * a.M23_ + M13_ * a.M33_);
-  
+
   b.M20_ = (M20_ * a.M00_ + M21_ * a.M10_ + M22_ * a.M20_ + M23_ * a.M30_);
   b.M21_ = (M20_ * a.M01_ + M21_ * a.M11_ + M22_ * a.M21_ + M23_ * a.M31_);
   b.M22_ = (M20_ * a.M02_ + M21_ * a.M12_ + M22_ * a.M22_ + M23_ * a.M32_);
   b.M23_ = (M20_ * a.M03_ + M21_ * a.M13_ + M22_ * a.M23_ + M23_ * a.M33_);
-  
+
   b.M30_ = (M30_ * a.M00_ + M31_ * a.M10_ + M32_ * a.M20_ + M33_ * a.M30_);
   b.M31_ = (M30_ * a.M01_ + M31_ * a.M11_ + M32_ * a.M21_ + M33_ * a.M31_);
   b.M32_ = (M30_ * a.M02_ + M31_ * a.M12_ + M32_ * a.M22_ + M33_ * a.M32_);
@@ -346,7 +346,7 @@ m4x4_t::multiply(const m4x4_t & a, m4x4_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::multiply
-// 
+//
 void
 m4x4_t::multiply(const float & a, m4x4_t & b) const
 {
@@ -354,17 +354,17 @@ m4x4_t::multiply(const float & a, m4x4_t & b) const
   b.M01_ = M01_ * a;
   b.M02_ = M02_ * a;
   b.M03_ = M03_ * a;
-  
+
   b.M10_ = M10_ * a;
   b.M11_ = M11_ * a;
   b.M12_ = M12_ * a;
   b.M13_ = M13_ * a;
-  
+
   b.M20_ = M20_ * a;
   b.M21_ = M21_ * a;
   b.M22_ = M22_ * a;
   b.M23_ = M23_ * a;
-  
+
   b.M30_ = M30_ * a;
   b.M31_ = M31_ * a;
   b.M32_ = M32_ * a;
@@ -373,7 +373,7 @@ m4x4_t::multiply(const float & a, m4x4_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::multiply
-// 
+//
 void
 m4x4_t::multiply(const p4x1_t & a, p4x1_t & b) const
 {
@@ -385,7 +385,7 @@ m4x4_t::multiply(const p4x1_t & a, p4x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::multiply
-// 
+//
 void
 m4x4_t::multiply(const p3x1_t & a, p3x1_t & b) const
 {
@@ -398,7 +398,7 @@ m4x4_t::multiply(const p3x1_t & a, p3x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::multiply
-// 
+//
 void
 m4x4_t::multiply(const v3x1_t & a, v3x1_t & b) const
 {
@@ -409,7 +409,7 @@ m4x4_t::multiply(const v3x1_t & a, v3x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::transpose_multiply
-// 
+//
 void
 m4x4_t::transpose_multiply(const p4x1_t & a, p4x1_t & b) const
 {
@@ -421,7 +421,7 @@ m4x4_t::transpose_multiply(const p4x1_t & a, p4x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::transpose_multiply
-// 
+//
 void
 m4x4_t::transpose_multiply(const p3x1_t & a, p3x1_t & b) const
 {
@@ -434,7 +434,7 @@ m4x4_t::transpose_multiply(const p3x1_t & a, p3x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::transpose_multiply
-// 
+//
 void
 m4x4_t::transpose_multiply(const v3x1_t & a, v3x1_t & b) const
 {
@@ -445,8 +445,8 @@ m4x4_t::transpose_multiply(const v3x1_t & a, v3x1_t & b) const
 
 //----------------------------------------------------------------
 // m4x4_t::identity
-// 
-const m4x4_t 
+//
+const m4x4_t
 m4x4_t::identity()
 {
   m4x4_t i;
@@ -459,8 +459,8 @@ m4x4_t::identity()
 
 //----------------------------------------------------------------
 // m4x4_t::screen
-// 
-const m4x4_t 
+//
+const m4x4_t
 m4x4_t::screen(const float & nx,
 	       const float & ny,
 	       const float & xmin,
@@ -475,18 +475,18 @@ m4x4_t::screen(const float & nx,
   float sy = -ny / (ymax - ymin);
   float s_max = (sy > sx) ? sy : sx;
   m4x4_t scale = m4x4_t::scale(s_max, s_max, 1);
-  
+
   m4x4_t translate_2 = m4x4_t::translate(-(xmax + xmin) / 2,
 					 -(ymax + ymin) / 2,
 					 0);
-  
+
   return (translate_1 * scale * translate_2);
 }
 
 //----------------------------------------------------------------
 // m4x4_t::screen_inverse
-// 
-const m4x4_t 
+//
+const m4x4_t
 m4x4_t::screen_inverse(const float & nx,
 		       const float & ny,
 		       const float & xmin,
@@ -501,18 +501,18 @@ m4x4_t::screen_inverse(const float & nx,
   float sy = (ymin - ymax) / ny;
   float s_min = (sy < sx) ? sy : sx;
   m4x4_t scale_inv = m4x4_t::scale(s_min, s_min, 1);
-  
+
   m4x4_t translate_2_inv = m4x4_t::translate((xmax + xmin) / 2,
 					     (ymax + ymin) / 2,
 					     0);
-  
+
   return (translate_2_inv * scale_inv * translate_1_inv);
 }
 
 //----------------------------------------------------------------
 // m4x4_t::perspective
-// 
-const m4x4_t 
+//
+const m4x4_t
 m4x4_t::perspective(const float & near_plane, const float & far_plane)
 {
   m4x4_t m;
@@ -526,68 +526,68 @@ m4x4_t::perspective(const float & near_plane, const float & far_plane)
 
 //----------------------------------------------------------------
 // m4x4_t::view
-// 
+//
 const m4x4_t
 m4x4_t::view(const p3x1_t & lf, const p3x1_t & la, const v3x1_t & v_up)
 {
   v3x1_t w = !(la - lf);  // w = |la - lf|
   v3x1_t u = !(v_up % w); // u = |v_up x w|
   v3x1_t v = w % u;       // v = w x u
-  
+
   m4x4_t r;
-  
+
   r.M00_ = u.X_;
   r.M01_ = u.Y_;
   r.M02_ = u.Z_;
-  
+
   r.M10_ = v.X_;
   r.M11_ = v.Y_;
   r.M12_ = v.Z_;
-  
+
   r.M20_ = w.X_;
   r.M21_ = w.Y_;
   r.M22_ = w.Z_;
-  
+
   r.M33_ = 1.0;
-  
+
   m4x4_t t = m4x4_t::translate(-lf.X_, -lf.Y_, -lf.Z_);
   return (r * t);
 }
 
 //----------------------------------------------------------------
 // m4x4_t::view_inverse
-// 
+//
 const m4x4_t
 m4x4_t::view_inverse(const p3x1_t & lf, const p3x1_t & la, const v3x1_t & v_up)
 {
   v3x1_t w = !(la - lf);  // w = |la - lf|
   v3x1_t u = !(v_up % w); // u = |v_up x w|
   v3x1_t v = w % u;       // v = w x u
-  
+
   m4x4_t r_inv;
-  
+
   r_inv.M00_ = u.X_;
   r_inv.M01_ = v.X_;
   r_inv.M02_ = w.X_;
-  
+
   r_inv.M10_ = u.Y_;
   r_inv.M11_ = v.Y_;
   r_inv.M12_ = w.Y_;
-  
+
   r_inv.M20_ = u.Z_;
   r_inv.M21_ = v.Z_;
   r_inv.M22_ = w.Z_;
-  
+
   r_inv.M33_ = 1.0;
-  
+
   m4x4_t t_inv = m4x4_t::translate(lf.X_, lf.Y_, lf.Z_);
-  
+
   return (t_inv * r_inv);
 }
 
 //----------------------------------------------------------------
 // m4x4_t::translate
-// 
+//
 const m4x4_t
 m4x4_t::translate(const float & x, const float & y, const float & z)
 {
@@ -604,7 +604,7 @@ m4x4_t::translate(const float & x, const float & y, const float & z)
 
 //----------------------------------------------------------------
 // m4x4_t::translate_inverse
-// 
+//
 const m4x4_t
 m4x4_t::translate_inverse(const float & x, const float & y, const float & z)
 {
@@ -621,7 +621,7 @@ m4x4_t::translate_inverse(const float & x, const float & y, const float & z)
 
 //----------------------------------------------------------------
 // m4x4_t::scale
-// 
+//
 const m4x4_t
 m4x4_t::scale(const float & sx, const float & sy, const float & sz)
 {
@@ -635,7 +635,7 @@ m4x4_t::scale(const float & sx, const float & sy, const float & sz)
 
 //----------------------------------------------------------------
 // m4x4_t::scale_inverse
-// 
+//
 const m4x4_t
 m4x4_t::scale_inverse(const float & sx, const float & sy, const float & sz)
 {
@@ -649,7 +649,7 @@ m4x4_t::scale_inverse(const float & sx, const float & sy, const float & sz)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 ostream &
 operator << (ostream & strm, const m4x4_t & m)
 {

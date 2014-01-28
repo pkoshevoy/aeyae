@@ -16,7 +16,7 @@
 
 //----------------------------------------------------------------
 // qimage_pixel_converter_t::qimage_pixel_converter_t
-// 
+//
 qimage_pixel_converter_t::
 qimage_pixel_converter_t(const QImage & image,
 			 const size_t & src_bytes_per_pixel,
@@ -33,7 +33,7 @@ qimage_pixel_converter_t(const QImage & image,
 
 //----------------------------------------------------------------
 // qimage_pixel_converter_t::operator
-// 
+//
 void
 qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 				      const unsigned char * src_addr,
@@ -44,7 +44,7 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
   #define RGBA_G 2
   #define RGBA_B 1
   #define RGBA_A 0
-  
+
   #define BGRA_B 3
   #define BGRA_G 2
   #define BGRA_R 1
@@ -54,23 +54,23 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
   #define RGBA_G 1
   #define RGBA_B 2
   #define RGBA_A 3
-  
+
   #define BGRA_B 0
   #define BGRA_G 1
   #define BGRA_R 2
   #define BGRA_A 3
 #endif
-  
+
   size_t steps = src_bytes_to_read / src_bytes_per_pixel_;
   for (size_t i = 0; i < steps; i++)
   {
     const unsigned char * src = src_addr + i * src_bytes_per_pixel_;
     unsigned char * dst = dst_addr + i * dst_bytes_per_pixel_;
-    
+
     size_t src_offset = src - src_origin_;
     int y = (int)(src_offset / src_bytes_per_line_);
     int x = (int)((src_offset % src_bytes_per_line_) / src_bytes_per_pixel_);
-    
+
     QRgb argb = image_.pixel(x, y);
     switch (format_)
     {
@@ -80,7 +80,7 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 	dst[0] = gray;
       }
       break;
-      
+
       case GL_LUMINANCE_ALPHA:
       {
 	int gray = qGray(argb);
@@ -97,7 +97,7 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 	}
       }
       break;
-      
+
       case GL_RGB:
       {
 	dst[RGBA_R] = (unsigned char)(qRed(argb));
@@ -105,7 +105,7 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 	dst[RGBA_B] = (unsigned char)(qBlue(argb));
       }
       break;
-      
+
       case GL_RGBA:
       {
 	dst[RGBA_R] = (unsigned char)(qRed(argb));
@@ -114,7 +114,7 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 	dst[RGBA_A] = (unsigned char)(qAlpha(argb));
       }
       break;
-      
+
       case GL_BGRA_EXT:
       {
 	dst[BGRA_R] = (unsigned char)(qRed(argb));
@@ -123,17 +123,17 @@ qimage_pixel_converter_t::operator() (unsigned char * dst_addr,
 	dst[BGRA_A] = (unsigned char)(qAlpha(argb));
       }
       break;
-      
+
       default:
 	assert(0);
     }
   }
-  
+
 #undef RGBA_R
 #undef RGBA_G
 #undef RGBA_B
 #undef RGBA_A
-  
+
 #undef BGRA_R
 #undef BGRA_G
 #undef BGRA_B

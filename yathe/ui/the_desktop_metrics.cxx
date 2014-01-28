@@ -19,12 +19,12 @@
 
 //----------------------------------------------------------------
 // metrics
-// 
+//
 static the_dynamic_array_t<the_desktop_metrics_t *> metrics(0, 1, NULL);
 
 //----------------------------------------------------------------
 // the_desktop_metrics
-// 
+//
 const the_desktop_metrics_t *
 the_desktop_metrics(unsigned int desktop)
 {
@@ -32,13 +32,13 @@ the_desktop_metrics(unsigned int desktop)
   {
     return NULL;
   }
-  
+
   return metrics[desktop];
 }
 
 //----------------------------------------------------------------
 // the_desktop_metrics
-// 
+//
 void
 the_desktop_metrics(the_desktop_metrics_t * m, unsigned int desktop)
 {

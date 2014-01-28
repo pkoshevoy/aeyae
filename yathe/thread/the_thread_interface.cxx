@@ -27,13 +27,13 @@ using std::endl;
 
 //----------------------------------------------------------------
 // DEBUG_THREAD
-// 
+//
 // #define DEBUG_THREAD
 
 
 //----------------------------------------------------------------
 // MUTEX
-// 
+//
 static the_mutex_interface_t * MUTEX()
 {
   static the_mutex_interface_t * mutex_ = NULL;
@@ -41,20 +41,20 @@ static the_mutex_interface_t * MUTEX()
   {
     mutex_ = the_mutex_interface_t::create();
   }
-  
+
   return mutex_;
 }
 
 
 //----------------------------------------------------------------
 // the_thread_interface_t::creator_
-// 
+//
 the_thread_interface_t::creator_t
 the_thread_interface_t::creator_ = NULL;
 
 //----------------------------------------------------------------
 // the_thread_interface_t::the_thread_interface_t
-// 
+//
 the_thread_interface_t::the_thread_interface_t(the_mutex_interface_t * mutex):
   mutex_(mutex),
   stopped_(true),
@@ -71,7 +71,7 @@ the_thread_interface_t::the_thread_interface_t(the_mutex_interface_t * mutex):
 
 //----------------------------------------------------------------
 // the_thread_interface_t::~the_thread_interface_t
-// 
+//
 the_thread_interface_t::~the_thread_interface_t()
 {
   mutex_->delete_this();
@@ -79,7 +79,7 @@ the_thread_interface_t::~the_thread_interface_t()
 
 //----------------------------------------------------------------
 // the_thread_interface_t::set_creator
-// 
+//
 void
 the_thread_interface_t::set_creator(the_thread_interface_t::creator_t creator)
 {
@@ -88,7 +88,7 @@ the_thread_interface_t::set_creator(the_thread_interface_t::creator_t creator)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::create
-// 
+//
 the_thread_interface_t *
 the_thread_interface_t::create()
 {
@@ -98,7 +98,7 @@ the_thread_interface_t::create()
 
 //----------------------------------------------------------------
 // the_thread_interface_t::set_mutex
-// 
+//
 void
 the_thread_interface_t::set_mutex(the_mutex_interface_t * mutex)
 {
@@ -108,7 +108,7 @@ the_thread_interface_t::set_mutex(the_mutex_interface_t * mutex)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::set_idle_sleep_duration
-// 
+//
 void
 the_thread_interface_t::set_idle_sleep_duration(bool enable,
 						unsigned int microseconds)
@@ -119,7 +119,7 @@ the_thread_interface_t::set_idle_sleep_duration(bool enable,
 
 //----------------------------------------------------------------
 // the_thread_interface_t::push_back
-// 
+//
 void
 the_thread_interface_t::push_back(the_transaction_t * transaction)
 {
@@ -129,7 +129,7 @@ the_thread_interface_t::push_back(the_transaction_t * transaction)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::push_front
-// 
+//
 void
 the_thread_interface_t::push_front(the_transaction_t * transaction)
 {
@@ -139,7 +139,7 @@ the_thread_interface_t::push_front(the_transaction_t * transaction)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::push_back
-// 
+//
 void
 the_thread_interface_t::push_back(std::list<the_transaction_t *> & schedule)
 {
@@ -149,7 +149,7 @@ the_thread_interface_t::push_back(std::list<the_transaction_t *> & schedule)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::has_work
-// 
+//
 bool
 the_thread_interface_t::has_work() const
 {
@@ -158,7 +158,7 @@ the_thread_interface_t::has_work() const
 
 //----------------------------------------------------------------
 // the_thread_interface_t::start
-// 
+//
 void
 the_thread_interface_t::start(the_transaction_t * transaction)
 {
@@ -168,7 +168,7 @@ the_thread_interface_t::start(the_transaction_t * transaction)
 
 //----------------------------------------------------------------
 // the_thread_interface_t::stop
-// 
+//
 void
 the_thread_interface_t::stop()
 {
@@ -185,7 +185,7 @@ the_thread_interface_t::stop()
 
 //----------------------------------------------------------------
 // the_thread_interface_t::flush
-// 
+//
 void
 the_thread_interface_t::flush()
 {
@@ -202,12 +202,12 @@ the_thread_interface_t::flush()
 
 //----------------------------------------------------------------
 // the_thread_interface_t::terminate_transactions
-// 
+//
 void
 the_thread_interface_t::terminate_transactions()
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
-  
+
   // remove any further pending transactions:
   while (!transactions_.empty())
   {
@@ -217,18 +217,18 @@ the_thread_interface_t::terminate_transactions()
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
   terminators().terminate();
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::stop_and_go
-// 
+//
 void
 the_thread_interface_t::stop_and_go(the_transaction_t * transaction)
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
-  
+
   // remove any further pending transactions:
   while (!transactions_.empty())
   {
@@ -238,25 +238,25 @@ the_thread_interface_t::stop_and_go(the_transaction_t * transaction)
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
   // terminate the currently executing transaction:
   terminators().terminate();
-  
+
   // schedule the next transaction:
   transactions_.push_back(transaction);
-  
+
   // start the thread if it isn't already running:
   start();
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::stop_and_go
-// 
+//
 void
 the_thread_interface_t::stop_and_go(std::list<the_transaction_t *> & schedule)
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
-  
+
   // remove any further pending transactions:
   while (!transactions_.empty())
   {
@@ -266,25 +266,25 @@ the_thread_interface_t::stop_and_go(std::list<the_transaction_t *> & schedule)
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
   // terminate the currently executing transaction:
   terminators().terminate();
-  
+
   // schedule the new transactions:
   transactions_.splice(transactions_.end(), schedule);
-  
+
   // start the thread if it isn't already running:
   start();
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::flush_and_go
-// 
+//
 void
 the_thread_interface_t::flush_and_go(the_transaction_t * transaction)
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
-  
+
   // remove any further pending transactions:
   while (!transactions_.empty())
   {
@@ -294,23 +294,23 @@ the_thread_interface_t::flush_and_go(the_transaction_t * transaction)
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
   // schedule the next transaction:
   transactions_.push_back(transaction);
-  
+
   // start the thread if it isn't already running:
   start();
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::flush_and_go
-// 
+//
 void
 the_thread_interface_t::
 flush_and_go(std::list<the_transaction_t *> & schedule)
 {
   the_lock_t<the_mutex_interface_t> locker(mutex_);
-  
+
   // remove any further pending transactions:
   while (!transactions_.empty())
   {
@@ -320,17 +320,17 @@ flush_and_go(std::list<the_transaction_t *> & schedule)
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
   // schedule the next transaction:
   transactions_.splice(transactions_.end(), schedule);
-  
+
   // start the thread if it isn't already running:
   start();
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::work
-// 
+//
 bool
 the_thread_interface_t::work()
 {
@@ -339,7 +339,7 @@ the_thread_interface_t::work()
 					      thread_pool_->mutex_ : NULL,
 					      false);
   bool all_transactions_completed = true;
-  
+
   while (!stopped_)
   {
     // get the next transaction:
@@ -347,7 +347,7 @@ the_thread_interface_t::work()
     {
       lock_pool.arm();
       lock_this.arm();
-      
+
       if (thread_pool_ != NULL)
       {
 	// call back the thread pool:
@@ -356,7 +356,7 @@ the_thread_interface_t::work()
 #endif
 	thread_pool_->handle_thread(thread_pool_cb_data_);
       }
-      
+
       if (transactions_.empty())
       {
 	if (sleep_when_idle_ && !stopped_)
@@ -388,7 +388,7 @@ the_thread_interface_t::work()
 	lock_pool.disarm();
       }
     }
-    
+
     try
     {
       active_transaction_ = t;
@@ -419,18 +419,18 @@ the_thread_interface_t::work()
 		"unknown exception intercepted");
     }
   }
-  
+
   stopped_ = true;
-  
+
   // make sure that all terminators have executed:
 #ifndef NDEBUG
   bool ok = the_terminator_t::verify_termination();
   assert(ok);
 #endif
-  
+
   all_transactions_completed = (all_transactions_completed &&
 				transactions_.empty());
-  
+
   // abort pending transaction:
   while (!transactions_.empty())
   {
@@ -440,24 +440,24 @@ the_thread_interface_t::work()
 #endif
     t->notify(this, the_transaction_t::SKIPPED_E);
   }
-  
+
 #ifdef DEBUG_THREAD
   cerr << "thread " << this << " is finished" << endl;
 #endif
-  
+
   if (thread_pool_ != NULL)
   {
     lock_pool.arm();
     lock_this.arm();
     thread_pool_->handle_thread(thread_pool_cb_data_);
   }
-  
+
   return all_transactions_completed;
 }
 
 //----------------------------------------------------------------
 // the_thread_interface_t::handle
-// 
+//
 void
 the_thread_interface_t::handle(the_transaction_t * transaction,
 			       the_transaction_t::state_t s)
@@ -469,7 +469,7 @@ the_thread_interface_t::handle(the_transaction_t * transaction,
     case the_transaction_t::DONE_E:
       delete transaction;
       break;
-      
+
     default:
       break;
   }
@@ -477,7 +477,7 @@ the_thread_interface_t::handle(the_transaction_t * transaction,
 
 //----------------------------------------------------------------
 // the_thread_interface_t::blab
-// 
+//
 void
 the_thread_interface_t::blab(const char * message) const
 {
@@ -490,4 +490,3 @@ the_thread_interface_t::blab(const char * message) const
     thread_pool_->blab(message);
   }
 }
-

@@ -29,22 +29,22 @@ using std::endl;
 
 //----------------------------------------------------------------
 // the_scoped_gl_attrib_t::the_scoped_gl_attrib_t
-// 
+//
 the_scoped_gl_attrib_t::the_scoped_gl_attrib_t(GLbitfield mask):
   applied_(false)
 {
   // return;
-  
+
   mask = mask ^ GL_LINE_BIT;
   mask = mask ^ GL_ENABLE_BIT;
   if (!mask) return;
-  
+
   GLenum err = glGetError();
   if (err == GL_NO_ERROR)
   {
     glPushAttrib(mask);
     err = glGetError();
-    
+
     if (err == GL_NO_ERROR)
     {
       applied_ = true;
@@ -59,7 +59,7 @@ the_scoped_gl_attrib_t::the_scoped_gl_attrib_t(GLbitfield mask):
 
 //----------------------------------------------------------------
 // the_scoped_gl_attrib_t::~the_scoped_gl_attrib_t
-// 
+//
 the_scoped_gl_attrib_t::~the_scoped_gl_attrib_t()
 {
   if (applied_)
@@ -71,7 +71,7 @@ the_scoped_gl_attrib_t::~the_scoped_gl_attrib_t()
 
 //----------------------------------------------------------------
 // the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t
-// 
+//
 the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t(GLbitfield mask):
   applied_(false)
 {
@@ -80,7 +80,7 @@ the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t(GLbitfield mask):
   {
     glPushClientAttrib(mask);
     err = glGetError();
-    
+
     if (err == GL_NO_ERROR)
     {
       applied_ = true;
@@ -95,7 +95,7 @@ the_scoped_gl_client_attrib_t::the_scoped_gl_client_attrib_t(GLbitfield mask):
 
 //----------------------------------------------------------------
 // the_scoped_gl_client_attrib_t::~the_scoped_gl_client_attrib_t
-// 
+//
 the_scoped_gl_client_attrib_t::~the_scoped_gl_client_attrib_t()
 {
   if (applied_)
@@ -107,7 +107,7 @@ the_scoped_gl_client_attrib_t::~the_scoped_gl_client_attrib_t()
 
 //----------------------------------------------------------------
 // the_scoped_gl_matrix_t::the_scoped_gl_matrix_t
-// 
+//
 the_scoped_gl_matrix_t::the_scoped_gl_matrix_t(GLenum mode):
   applied_(false)
 {
@@ -117,7 +117,7 @@ the_scoped_gl_matrix_t::the_scoped_gl_matrix_t(GLenum mode):
     glMatrixMode(mode);
     glPushMatrix();
     err = glGetError();
-    
+
     if (err == GL_NO_ERROR)
     {
       applied_ = true;
@@ -132,7 +132,7 @@ the_scoped_gl_matrix_t::the_scoped_gl_matrix_t(GLenum mode):
 
 //----------------------------------------------------------------
 // the_scoped_gl_matrix_t::
-// 
+//
 the_scoped_gl_matrix_t::~the_scoped_gl_matrix_t()
 {
   if (applied_)
@@ -144,25 +144,25 @@ the_scoped_gl_matrix_t::~the_scoped_gl_matrix_t()
 
 //----------------------------------------------------------------
 // OpenGLCapabilities::OpenGLCapabilities
-// 
+//
 OpenGLCapabilities::OpenGLCapabilities()
 {
   const GLubyte * vendor = glGetString(GL_VENDOR);
   assert(vendor != NULL);
   vendor_.assign((const char *)(vendor));
-  
+
   const GLubyte * version = glGetString(GL_VERSION);
   assert(version != NULL);
   version_.assign((const char *)(version));
-  
+
   const GLubyte * renderer = glGetString(GL_RENDERER);
   assert(renderer != NULL);
   renderer_.assign((const char *)(renderer));
-  
+
   const GLubyte * extensions = glGetString(GL_EXTENSIONS);
   assert(extensions != NULL);
   extensions_.assign((const char *)extensions);
-  
+
   std::list<char> char_list;
   std::list<std::string> ext_list;
   for (unsigned int i = 0;; i++)
@@ -181,7 +181,7 @@ OpenGLCapabilities::OpenGLCapabilities()
     }
   }
   extension_array_.assign(ext_list.begin(), ext_list.end());
-  
+
   max_texture_ = 64;
   hardware_mipmap_ = checkExtension("GL_SGIS_generate_mipmap");
   compressed_textures_ = checkExtension("GL_ARB_texture_compression");
@@ -189,7 +189,7 @@ OpenGLCapabilities::OpenGLCapabilities()
 
 //----------------------------------------------------------------
 // OpenGLCapabilities::checkExtension
-// 
+//
 bool
 OpenGLCapabilities::checkExtension(const char * query) const
 {
@@ -204,13 +204,13 @@ OpenGLCapabilities::checkExtension(const char * query) const
       }
     }
   }
-  
+
   return false;
 }
 
 //----------------------------------------------------------------
 // OpenGLCapabilities::maxTextureSize
-// 
+//
 unsigned int
 OpenGLCapabilities::maxTextureSize(GLenum internal_format,
 				   GLenum format,
@@ -231,7 +231,7 @@ OpenGLCapabilities::maxTextureSize(GLenum internal_format,
 		 NULL);// texels
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) break;
-    
+
     GLint width = 0;
     glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D,
 			     0, // level
@@ -239,13 +239,13 @@ OpenGLCapabilities::maxTextureSize(GLenum internal_format,
 			     &width);
     if (width != GLint(size * 2)) break;
   }
-  
+
   return size;
 }
 
 //----------------------------------------------------------------
 // OpenGLCapabilities::dump
-// 
+//
 void
 OpenGLCapabilities::dump() const
 {
@@ -257,7 +257,7 @@ OpenGLCapabilities::dump() const
   {
     cerr << extension_array_[i] << endl;
   }
-  
+
   cerr << endl
        << "MAX TILE SIZE: " << max_texture_ << endl
        << "HARDWARE MIPMAP: " << hardware_mipmap_ << endl
@@ -266,7 +266,7 @@ OpenGLCapabilities::dump() const
 
 //----------------------------------------------------------------
 // OpenGL
-// 
+//
 OpenGLCapabilities & OpenGL()
 {
   static OpenGLCapabilities * open_gl_ = NULL;
@@ -274,33 +274,33 @@ OpenGLCapabilities & OpenGL()
   {
     // FIXME: this should probably be done somewhere else:
     the_document_ui_t::doc_ui()->shared()->gl_make_current();
-    
+
     open_gl_ = new OpenGLCapabilities();
   }
-  
+
   return *open_gl_;
 }
 
 //----------------------------------------------------------------
 // OpenGL
-// 
+//
 OpenGLCapabilities &
 OpenGL(unsigned int view_id, the_view_t * view)
 {
   static the_dynamic_array_t<OpenGLCapabilities *> open_gl_(16, 16, NULL);
-  
+
   if (view != NULL)
   {
     if (open_gl_.size() <= view_id)
     {
       open_gl_.resize(view_id + 1);
     }
-    
+
     view->gl_make_current();
     delete open_gl_[view_id];
     open_gl_[view_id] = new OpenGLCapabilities();
   }
-  
+
   assert(open_gl_.size() > view_id);
   assert(open_gl_[view_id] != NULL);
   return *(open_gl_[view_id]);

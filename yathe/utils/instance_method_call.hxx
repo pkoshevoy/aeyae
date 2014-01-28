@@ -51,7 +51,7 @@ THE SOFTWARE.
 
 //----------------------------------------------------------------
 // instance_t
-// 
+//
 class instance_t : public io_base_t
 {
 public:
@@ -59,45 +59,45 @@ public:
   instance_t(const std::string & signature);
   instance_t(const std::string & signature, const void * address);
   instance_t(const void * address);
-  
+
   static io_base_t * create()
   { return new instance_t(); }
-  
+
   // instance pointer accessor:
   inline void * address() const
   { return address_; }
-  
+
   // instance signature accessor:
   inline const std::string & signature() const
   { return signature_; }
-  
+
   // virtual:
   void save(std::ostream & so) const;
   bool load(std::istream & si, const std::string & magic);
 
   // check whether the instance has been saved before:
   bool was_saved() const;
-  
+
   // initialize this instance from an old address by looking up
   // a matching signature and new address in the maps:
   bool init(uint64_t old_address);
-  
+
 protected:
   // instance signature:
   std::string signature_;
-  
+
   // current address of the instance:
   void * address_;
-  
+
   // map from loaded signature to loaded address:
   static std::map<std::string, uint64_t> map_load_;
-  
+
   // map from instance signature to current address:
   static std::map<std::string, void *> map_save_;
-  
+
   // map from the current address to instance signature:
   static std::map<void *, std::string> map_signature_;
-  
+
   // map from loaded address to current address:
   static std::map<uint64_t, void *> map_address_;
 };
@@ -105,18 +105,18 @@ protected:
 
 //----------------------------------------------------------------
 // type_instance_t
-// 
+//
 template <typename class_t>
 class type_instance_t : public instance_t
 {
 public:
   type_instance_t(): instance_t() {}
-  
+
   type_instance_t(const char * sig, const void * addr, bool increment = true)
   {
     init(sig, addr, increment);
   }
-  
+
   inline type_instance_t<class_t> &
   init(const char * sig, const void * addr, bool increment = true)
   {
@@ -124,18 +124,18 @@ public:
     std::ostringstream oss;
     oss << sig << ".v" << index_;
     instance_t::signature_ = oss.str().c_str();
-    
+
     address_ = const_cast<void *>(addr);
     return *this;
   }
-  
+
   static size_t index_;
 };
 
 
 //----------------------------------------------------------------
 // DECLARE_INSTANCE
-// 
+//
 #ifndef DECLARE_INSTANCE
 #define DECLARE_INSTANCE( CLASS, INSTANCE )	\
   type_instance_t<CLASS> INSTANCE
@@ -143,7 +143,7 @@ public:
 
 //----------------------------------------------------------------
 // DECLARED_INSTANCE_INIT
-// 
+//
 #ifndef DEFINE_INSTANCE
 #define DEFINE_INSTANCE( INSTANCE, CLASS, ADDRESS )	\
   INSTANCE.init(#CLASS, ADDRESS)
@@ -152,7 +152,7 @@ public:
 
 //----------------------------------------------------------------
 // type_instance_t::index_
-// 
+//
 template <typename class_t>
 size_t
 type_instance_t<class_t>::index_ = 0;
@@ -160,7 +160,7 @@ type_instance_t<class_t>::index_ = 0;
 
 //----------------------------------------------------------------
 // args_t
-// 
+//
 class args_t : public io_base_t
 {
 public:
@@ -172,60 +172,60 @@ public:
 
 //----------------------------------------------------------------
 // arg1_t
-// 
+//
 template <typename arg_t>
 class arg1_t : public args_t
 {
 public:
   arg1_t() {}
   arg1_t(arg_t arg): arg_(arg) {}
-  
+
   // virtual:
   void save(std::ostream & so) const
   {
     so << "arg1_t ";
     ::save(so, arg_);
   }
-  
+
   bool load(std::istream & si, const std::string & magic)
   {
     if (magic != "arg1_t")
     {
       return false;
     }
-    
+
     bool ok = ::load(si, arg_);
     return ok;
   }
-  
+
   arg_t arg_;
 };
 
 
 //----------------------------------------------------------------
 // method_t
-// 
+//
 class method_t
 {
 public:
   method_t(const char * signature);
   virtual ~method_t() {}
-  
+
   // lookup a method by its signature:
   static const method_t * lookup(const std::string & signature);
-  
+
   // instance signature accessor:
   inline const std::string & signature() const
   { return signature_; }
-  
+
   // API for executing a loaded method call:
   virtual void execute(const instance_t & instance,
 		       const boost::shared_ptr<args_t> & args) const = 0;
-  
+
   // each method must know how to load its arguments:
   virtual bool load(std::istream & si,
 		    boost::shared_ptr<args_t> & args) const = 0;
-  
+
 protected:
   const std::string signature_;
   static std::map<std::string, const method_t *> methods_;
@@ -234,7 +234,7 @@ protected:
 
 //----------------------------------------------------------------
 // method_void_t
-// 
+//
 template <typename class_t, typename func_t>
 class method_void_t : public method_t
 {
@@ -243,7 +243,7 @@ public:
     method_t(signature),
     func_(func)
   {}
-  
+
   // virtual:
   void execute(const instance_t & instance,
 	       const boost::shared_ptr<args_t> & /* args */) const
@@ -254,7 +254,7 @@ public:
       assert(false);
       return;
     }
-    
+
     // call the member function:
     assert(func_);
     if (func_)
@@ -262,40 +262,40 @@ public:
       (c->*func_)();
     }
   }
-  
+
   // virtual:
   bool load(std::istream & /* si */, boost::shared_ptr<args_t> & args) const
   {
     args = boost::shared_ptr<args_t>();
     return true;
   }
-  
+
 protected:
   func_t func_;
 };
 
 //----------------------------------------------------------------
 // void_method_void_t
-// 
+//
 template <typename class_t>
 class void_method_void_t : public method_t
 {
 public:
   typedef void (class_t::*func_t)();
   typedef void (class_t::*const_func_t)() const;
-  
+
   void_method_void_t(const char * signature, func_t func):
     method_t(signature),
     func_(func),
     const_func_(NULL)
   {}
-  
+
   void_method_void_t(const char * signature, const_func_t func):
     method_t(signature),
     func_(NULL),
     const_func_(func)
   {}
-  
+
   // virtual:
   void execute(const instance_t & instance,
 	       const boost::shared_ptr<args_t> & /* args */) const
@@ -306,7 +306,7 @@ public:
       assert(false);
       return;
     }
-    
+
     // call the member function:
     if (func_)
     {
@@ -321,14 +321,14 @@ public:
       assert(false);
     }
   }
-  
+
   // virtual:
   bool load(std::istream & /* si */, boost::shared_ptr<args_t> & args) const
   {
     args = boost::shared_ptr<args_t>();
     return true;
   }
-  
+
 protected:
   func_t func_;
   const_func_t const_func_;
@@ -337,7 +337,7 @@ protected:
 
 //----------------------------------------------------------------
 // method_arg1_t
-// 
+//
 template <typename class_t, typename func_t, typename arg_t>
 class method_arg1_t : public method_t
 {
@@ -346,7 +346,7 @@ public:
     method_t(signature),
     func_(func)
   {}
-  
+
   // virtual:
   void execute(const instance_t & instance,
 	       const boost::shared_ptr<args_t> & args) const
@@ -357,7 +357,7 @@ public:
       assert(false);
       return;
     }
-    
+
     // call the member function:
     const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
     assert(func_);
@@ -366,20 +366,20 @@ public:
       (c->*func_)(arg1->arg_);
     }
   }
-  
+
   // virtual:
   bool load(std::istream & si, boost::shared_ptr<args_t> & args) const
   {
     std::string magic;
     si >> magic;
-    
+
     arg1_t<arg_t> * arg1 = new arg1_t<arg_t>();
     bool ok = arg1->load(si, magic);
-    
+
     args = boost::shared_ptr<args_t>(arg1);
     return ok;
   }
-  
+
 protected:
   func_t func_;
 };
@@ -387,7 +387,7 @@ protected:
 
 //----------------------------------------------------------------
 // void_method_arg1_t
-// 
+//
 template <typename class_t, typename arg_t>
 class void_method_arg1_t : public method_t
 {
@@ -396,7 +396,7 @@ public:
   typedef void (class_t::*func_cref_t)(const arg_t &);
   typedef void (class_t::*const_func_t)(arg_t) const;
   typedef void (class_t::*const_func_cref_t)(const arg_t &) const;
-  
+
   void_method_arg1_t(const char * signature, func_t func):
     method_t(signature),
     func_(func),
@@ -404,7 +404,7 @@ public:
     const_func_(NULL),
     const_func_cref_(NULL)
   {}
-  
+
   void_method_arg1_t(const char * signature, func_cref_t func):
     method_t(signature),
     func_(NULL),
@@ -412,7 +412,7 @@ public:
     const_func_(NULL),
     const_func_cref_(NULL)
   {}
-  
+
   void_method_arg1_t(const char * signature, const_func_t func):
     method_t(signature),
     func_(NULL),
@@ -420,7 +420,7 @@ public:
     const_func_(func),
     const_func_cref_(NULL)
   {}
-  
+
   void_method_arg1_t(const char * signature, const_func_cref_t func):
     method_t(signature),
     func_(NULL),
@@ -428,7 +428,7 @@ public:
     const_func_(NULL),
     const_func_cref_(func)
   {}
-  
+
   // virtual:
   void execute(const instance_t & instance,
 	       const boost::shared_ptr<args_t> & args) const
@@ -439,7 +439,7 @@ public:
       assert(false);
       return;
     }
-    
+
     // call the member function:
     const arg1_t<arg_t> * arg1 = (const arg1_t<arg_t> *)(args.get());
     if (func_)
@@ -463,20 +463,20 @@ public:
       assert(false);
     }
   }
-  
+
   // virtual:
   bool load(std::istream & si, boost::shared_ptr<args_t> & args) const
   {
     std::string magic;
     si >> magic;
-    
+
     arg1_t<arg_t> * arg1 = new arg1_t<arg_t>();
     bool ok = arg1->load(si, magic);
-    
+
     args = boost::shared_ptr<args_t>(arg1);
     return ok;
   }
-  
+
 protected:
   func_t func_;
   func_cref_t func_cref_;
@@ -519,7 +519,7 @@ protected:
 
 //----------------------------------------------------------------
 // REGISTER_OVERLOADED_METHOD_ARG1
-// 
+//
 #ifndef REGISTER_OVERLOADED_METHOD_ARG1
 #define REGISTER_OVERLOADED_METHOD_ARG1( CLASS, METHOD, ARG )		\
   static void_method_arg1_t<CLASS, ARG>					\
@@ -530,7 +530,7 @@ protected:
 
 //----------------------------------------------------------------
 // REGISTER_METHOD_VOID_EXPLICITLY
-// 
+//
 #ifndef REGISTER_METHOD_VOID_EXPLICITLY
 #define REGISTER_METHOD_VOID_EXPLICITLY( CLASS, METHOD, TYPE )		\
   static method_void_t<CLASS, TYPE>					\
@@ -540,7 +540,7 @@ protected:
 
 //----------------------------------------------------------------
 // REGISTER_METHOD_ARG1_EXPLICITLY
-// 
+//
 #ifndef REGISTER_METHOD_ARG1_EXPLICITLY
 #define REGISTER_METHOD_ARG1_EXPLICITLY( CLASS, METHOD, ARG, TYPE )    	\
   static method_arg1_t<CLASS, TYPE, ARG>	       			\
@@ -550,17 +550,17 @@ protected:
 
 //----------------------------------------------------------------
 // call_t
-// 
+//
 class call_t : public io_base_t
 {
 public:
   call_t(const instance_t & instance = instance_t(),
 	 const char * method_signature = NULL,
 	 const boost::shared_ptr<args_t> & args = boost::shared_ptr<args_t>());
-  
+
   call_t(void * address,
 	 const char * method_signature);
-  
+
   // helpers:
   template <typename arg_t>
   call_t & init(const instance_t & instance,
@@ -569,19 +569,19 @@ public:
   {
     assert(instance.signature().size());
     instance_ = instance;
-    
+
     // lookup the method:
     if (method_signature)
     {
       method_ = method_t::lookup(method_signature);
       assert(method_);
     }
-    
+
     typedef arg1_t<arg_t> one_arg_t;
     args_ = boost::shared_ptr<one_arg_t>(new one_arg_t(arg));
     return *this;
   }
-  
+
   template <typename arg_t>
   call_t & init(const void * address,
 		const char * method_signature,
@@ -589,17 +589,17 @@ public:
   {
     return init<arg_t>(instance_t(address), method_signature, arg);
   }
-  
+
   // virtual:
   void save(std::ostream & so) const;
   bool load(std::istream & si, const std::string & magic);
-  
+
   // execute the call:
   void execute() const;
-  
+
   static io_base_t * create()
   { return new call_t(); }
-  
+
 protected:
   instance_t instance_;
   const method_t * method_;

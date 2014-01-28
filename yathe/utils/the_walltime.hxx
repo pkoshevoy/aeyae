@@ -27,16 +27,16 @@ typedef __int64 int64_t;
 
 //----------------------------------------------------------------
 // the_walltime_t
-// 
+//
 struct the_walltime_t
 {
   the_walltime_t();
-  
+
   void mark();
-  
+
   the_walltime_t & operator -= (const the_walltime_t & ref);
   the_walltime_t & operator += (const the_walltime_t & ref);
-  
+
   // return a difference in seconds between this and a given wall time:
   inline double operator - (const the_walltime_t & t) const
   {
@@ -44,11 +44,11 @@ struct the_walltime_t
     double usec = double(usec_) - double(t.usec_);
     return sec + usec * 1e-6;
   }
-  
+
   // return this wall time in seconds:
   inline double seconds() const
   { return double(sec_) + double(usec_) * 1e-6; }
-  
+
   int64_t sec_;
   unsigned int usec_;
 };

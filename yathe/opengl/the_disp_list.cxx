@@ -26,7 +26,7 @@
 
 //----------------------------------------------------------------
 // the_point_dl_elem_t::the_point_dl_elem_t
-// 
+//
 the_point_dl_elem_t::the_point_dl_elem_t(const p3x1_t & p,
 					 const the_color_t & c):
   the_dl_elem_t(),
@@ -36,7 +36,7 @@ the_point_dl_elem_t::the_point_dl_elem_t(const p3x1_t & p,
 
 //----------------------------------------------------------------
 // the_point_dl_elem_t::draw
-// 
+//
 void
 the_point_dl_elem_t::draw() const
 {
@@ -52,7 +52,7 @@ the_point_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_point_dl_elem_t::update_bbox
-// 
+//
 void
 the_point_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -61,20 +61,20 @@ the_point_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_point_dl_elem_t::pick
-// 
+//
 bool
 the_point_dl_elem_t::pick(const the_view_volume_t & pick_volume,
 			  float & volume_axis_parameter,
 			  float & distance_to_volume_axis) const
 {
   volume_axis_parameter = pick_volume.depth_of_wcs_pt(pt_);
-  
+
   the_cyl_uv_csys_t uv_frame;
   pick_volume.uv_frame_at_depth(volume_axis_parameter, uv_frame);
-  
+
   float angle;
   uv_frame.wcs_to_lcs(pt_, distance_to_volume_axis, angle);
-  
+
   return (distance_to_volume_axis <= 1.0 &&
 	  volume_axis_parameter >= 0.0 &&
 	  volume_axis_parameter <= 1.0);
@@ -83,7 +83,7 @@ the_point_dl_elem_t::pick(const the_view_volume_t & pick_volume,
 
 //----------------------------------------------------------------
 // the_line_strip_dl_elem_t::the_line_strip_dl_elem_t
-// 
+//
 the_line_strip_dl_elem_t::the_line_strip_dl_elem_t(const the_color_t & c0,
 						   const the_color_t & c1,
 						   const float & line_width):
@@ -96,18 +96,18 @@ the_line_strip_dl_elem_t::the_line_strip_dl_elem_t(const the_color_t & c0,
 
 //----------------------------------------------------------------
 // the_line_strip_dl_elem_t::draw
-// 
+//
 void
 the_line_strip_dl_elem_t::draw() const
 {
   if (pt_.empty()) return;
-  
+
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
     glLineWidth(line_width_);
     glDisable(GL_LIGHTING);
     glDisable(GL_LINE_SMOOTH);
-    
+
 #if 1
     glBegin(GL_LINE_STRIP);
     {
@@ -128,7 +128,7 @@ the_line_strip_dl_elem_t::draw() const
 	     i = ++(pt_.begin()); i != pt_.end(); ++i, index++)
       {
 	const p3x1_t & next = *i;
-	
+
 	glColor4fv(color_[index % 2].rgba());
 	glVertex3fv(prev->data());
 	glVertex3fv(next.data());
@@ -142,7 +142,7 @@ the_line_strip_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_line_strip_dl_elem_t::update_bbox
-// 
+//
 void
 the_line_strip_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -155,7 +155,7 @@ the_line_strip_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_line_dl_elem_t::the_line_dl_elem_t
-// 
+//
 the_line_dl_elem_t::the_line_dl_elem_t(const p3x1_t & a,
 				       const p3x1_t & b,
 				       const the_color_t & c,
@@ -169,7 +169,7 @@ the_line_dl_elem_t::the_line_dl_elem_t(const p3x1_t & a,
 
 //----------------------------------------------------------------
 // the_line_dl_elem_t::draw
-// 
+//
 void
 the_line_dl_elem_t::draw() const
 {
@@ -189,7 +189,7 @@ the_line_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_line_dl_elem_t::update_bbox
-// 
+//
 void
 the_line_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -198,7 +198,7 @@ the_line_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_line_dl_elem_t::reset
-// 
+//
 void
 the_line_dl_elem_t::reset(const p3x1_t & a, const p3x1_t & b)
 {
@@ -208,7 +208,7 @@ the_line_dl_elem_t::reset(const p3x1_t & a, const p3x1_t & b)
 
 //----------------------------------------------------------------
 // the_line_dl_elem_t::pick
-// 
+//
 bool
 the_line_dl_elem_t::pick(const the_view_volume_t & pick_volume,
 			 float & volume_axis_parameter,
@@ -222,24 +222,24 @@ the_line_dl_elem_t::pick(const the_view_volume_t & pick_volume,
 			  volume_axis_parameter,
 			  line_parameter,
 			  wcs_distance)) return false;
-  
+
   if (line_parameter < 0.0 ||
       line_parameter > 1.0 ||
       volume_axis_parameter < 0.0 ||
       volume_axis_parameter > 1.0) return false;
-  
+
   // make sure the distance to volume axis is within tolerance:
   p3x1_t cyl_pt;
   pick_volume.wcs_to_cyl(line_ray * line_parameter, cyl_pt);
   distance_to_volume_axis = cyl_pt.x();
-  
+
   return (distance_to_volume_axis <= 1.0);
 }
 
 
 //----------------------------------------------------------------
 // the_gradient_line_dl_elem_t::the_gradient_line_dl_elem_t
-// 
+//
 the_gradient_line_dl_elem_t::
 the_gradient_line_dl_elem_t(const p3x1_t & a,
 			    const p3x1_t & b,
@@ -252,7 +252,7 @@ the_gradient_line_dl_elem_t(const p3x1_t & a,
 
 //----------------------------------------------------------------
 // the_gradient_line_dl_elem_t::draw
-// 
+//
 void the_gradient_line_dl_elem_t::draw() const
 {
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
@@ -273,7 +273,7 @@ void the_gradient_line_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // draw_vertex
-// 
+//
 static void
 draw_vertex(const the_vertex_t & vertex)
 {
@@ -284,7 +284,7 @@ draw_vertex(const the_vertex_t & vertex)
 
 //----------------------------------------------------------------
 // the_triangle_dl_elem_t::the_triangle_dl_elem_t
-// 
+//
 the_triangle_dl_elem_t::
 the_triangle_dl_elem_t(const std::vector<the_vertex_t> & points,
 		       const bool & calc_normal):
@@ -296,7 +296,7 @@ the_triangle_dl_elem_t(const std::vector<the_vertex_t> & points,
     v3x1_t x_axis = !(pt_[1].vx - pt_[0].vx);
     v3x1_t y_axis_candidate = !(pt_[2].vx - pt_[1].vx);
     v3x1_t normal = !(x_axis % y_axis_candidate);
-    
+
     pt_[0].vn = normal;
     pt_[1].vn = normal;
     pt_[2].vn = normal;
@@ -305,22 +305,22 @@ the_triangle_dl_elem_t(const std::vector<the_vertex_t> & points,
 
 //----------------------------------------------------------------
 // the_triangle_dl_elem_t::draw
-// 
+//
 void
 the_triangle_dl_elem_t::draw() const
 {
   glBegin(GL_TRIANGLES);
-  
+
   draw_vertex(pt_[0]);
   draw_vertex(pt_[1]);
   draw_vertex(pt_[2]);
-  
+
   glEnd();
 }
 
 //----------------------------------------------------------------
 // the_triangle_dl_elem_t::update_bbox
-// 
+//
 void
 the_triangle_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -332,7 +332,7 @@ the_triangle_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_color_triangle_dl_elem_t::the_color_triangle_dl_elem_t
-// 
+//
 the_color_triangle_dl_elem_t::
 the_color_triangle_dl_elem_t(const the_color_t & color,
 			     const std::vector<the_vertex_t> & points,
@@ -343,20 +343,20 @@ the_color_triangle_dl_elem_t(const the_color_t & color,
 
 //----------------------------------------------------------------
 // the_color_triangle_dl_elem_t::draw
-// 
+//
 void
 the_color_triangle_dl_elem_t::draw() const
 {
   glMaterialfv(GL_FRONT, GL_DIFFUSE, color_.rgba());
   glMaterialfv(GL_BACK,  GL_DIFFUSE, color_.rgba());
-  
+
   the_triangle_dl_elem_t::draw();
 }
 
 
 //----------------------------------------------------------------
 // the_polygon_dl_elem_t::the_polygon_dl_elem_t
-// 
+//
 the_polygon_dl_elem_t::
 the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 		      const bool & calc_normal):
@@ -371,10 +371,10 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
       std::numeric_limits<size_t>::max(),
       std::numeric_limits<size_t>::max()
     };
-    
+
     // shortcut to the array size:
     const size_t & num_pts = pt_.size();
-    
+
     // find a point such that it is not coincident with the initial point:
     for (size_t i = pt_index[0] + 1; i < num_pts; i++)
     {
@@ -385,16 +385,16 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 	break;
       }
     }
-    
+
     // sanity check:
     if (pt_index[1] == std::numeric_limits<size_t>::max())
     {
       dump();
       assert(false);
     }
-    
+
     v3x1_t x_axis = !(pt_[pt_index[1]].vx - pt_[pt_index[0]].vx);
-    
+
     // find a point that would have the smallest dot product with the vector
     // formed by the first two points:
     float min_cos_theta = FLT_MAX;
@@ -408,17 +408,17 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 	pt_index[2] = j;
       }
     }
-    
+
     // sanity check:
     if (pt_index[2] == std::numeric_limits<size_t>::max())
     {
       dump();
       assert(false);
     }
-    
+
     v3x1_t y_axis_candidate = !(pt_[pt_index[2]].vx - pt_[pt_index[1]].vx);
     v3x1_t normal = !(x_axis % y_axis_candidate);
-    
+
     for (size_t k = 0; k < num_pts; k++)
     {
       pt_[k].vn = normal;
@@ -428,24 +428,24 @@ the_polygon_dl_elem_t(const std::vector<the_vertex_t> & points,
 
 //----------------------------------------------------------------
 // the_polygon_dl_elem_t::draw
-// 
+//
 void
 the_polygon_dl_elem_t::draw() const
 {
   glBegin(GL_POLYGON);
-  
+
   const size_t & num_pts = pt_.size();
   for (size_t i = 0; i < num_pts; i++)
   {
     draw_vertex(pt_[i]);
   }
-  
+
   glEnd();
 }
 
 //----------------------------------------------------------------
 // the_polygon_dl_elem_t::update_bbox
-// 
+//
 void
 the_polygon_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -458,31 +458,31 @@ the_polygon_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_polygon_dl_elem_t::split
-// 
+//
 void
 the_polygon_dl_elem_t::split(const the_plane_t & plane,
 			     std::list<the_vertex_t> & neg_list,
 			     std::list<the_vertex_t> & pos_list)
 {
   const size_t & num_points = pt_.size();
-  
+
   // find distance from each point to the plane:
   std::vector<float> point_plane_dist(num_points);
   for (size_t i = 0; i < num_points; i++)
   {
     point_plane_dist[i] = plane.dist(pt_[i].vx);
   }
-  
+
   for (size_t i = 0; i < num_points; i++)
   {
     size_t j = (i + 1) % num_points;
-    
+
     const float & di = point_plane_dist[i];
     const float & dj = point_plane_dist[j];
-    
+
     const the_vertex_t & pi = pt_[i];
     const the_vertex_t & pj = pt_[j];
-    
+
     if (di < 0.0)
     {
       neg_list.push_back(pi);
@@ -491,7 +491,7 @@ the_polygon_dl_elem_t::split(const the_plane_t & plane,
     {
       pos_list.push_back(pi);
     }
-    
+
     // find edge/plane intersections:
     if ((di < 0.0 && dj >= 0.0) ||
 	(dj < 0.0 && di >= 0.0))
@@ -507,7 +507,7 @@ the_polygon_dl_elem_t::split(const the_plane_t & plane,
 
 //----------------------------------------------------------------
 // the_polygon_dl_elem_t::dump
-// 
+//
 void
 the_polygon_dl_elem_t::dump() const
 {
@@ -520,7 +520,7 @@ the_polygon_dl_elem_t::dump() const
 
 //----------------------------------------------------------------
 // the_color_polygon_dl_elem_t::the_color_polygon_dl_elem_t
-// 
+//
 the_color_polygon_dl_elem_t::
 the_color_polygon_dl_elem_t(const the_color_t & color,
 			    const std::vector<the_vertex_t> & points,
@@ -531,20 +531,20 @@ the_color_polygon_dl_elem_t(const the_color_t & color,
 
 //----------------------------------------------------------------
 // the_color_polygon_dl_elem_t::draw
-// 
+//
 void
 the_color_polygon_dl_elem_t::draw() const
 {
   glMaterialfv(GL_FRONT, GL_DIFFUSE, color_.rgba());
   glMaterialfv(GL_BACK,  GL_DIFFUSE, color_.rgba());
-  
+
   the_polygon_dl_elem_t::draw();
 }
 
 
 //----------------------------------------------------------------
 // the_text_dl_elem_t::draw
-// 
+//
 void
 the_text_dl_elem_t::draw() const
 {
@@ -558,7 +558,7 @@ the_text_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_masked_text_dl_elem_t::draw
-// 
+//
 void
 the_masked_text_dl_elem_t::draw() const
 {
@@ -572,7 +572,7 @@ the_masked_text_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_symbol_dl_elem_t::draw
-// 
+//
 void
 the_symbol_dl_elem_t::draw() const
 {
@@ -587,7 +587,7 @@ the_symbol_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_masked_symbol_dl_elem_t::draw
-// 
+//
 void
 the_masked_symbol_dl_elem_t::draw() const
 {
@@ -600,7 +600,7 @@ the_masked_symbol_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_bitmap_dl_elem_t::draw
-// 
+//
 void
 the_bitmap_dl_elem_t::draw() const
 {
@@ -608,7 +608,7 @@ the_bitmap_dl_elem_t::draw() const
   GLfloat i2r[2] = { 0.f };
   GLfloat i2g[2] = { 0.f };
   GLfloat i2b[2] = { 0.f };
-  
+
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_PIXEL_MODE_BIT);
   the_scoped_gl_client_attrib_t push_client_attr(GL_UNPACK_ALIGNMENT);
   {
@@ -616,7 +616,7 @@ the_bitmap_dl_elem_t::draw() const
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     glRasterPos3fv(the_point_dl_elem_t::pt_.data());
-    
+
     if (must_flip_bitmap_)
     {
       glPixelZoom(1.f, -1.f);
@@ -639,7 +639,7 @@ the_bitmap_dl_elem_t::draw() const
                -float(h_ - y_),
                NULL);
     }
-    
+
     if (mask_)
     {
       // draw the icon mask:
@@ -647,15 +647,15 @@ the_bitmap_dl_elem_t::draw() const
       i2r[1] = mask_color_.r();
       i2g[1] = mask_color_.g();
       i2b[1] = mask_color_.b();
-      
+
       glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, i2a);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_R, 2, i2r);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_G, 2, i2g);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 2, i2b);
-      
+
       glDrawPixels(w_, h_, GL_COLOR_INDEX, GL_BITMAP, mask_);
     }
-    
+
     if (icon_)
     {
       // draw the icon:
@@ -663,15 +663,15 @@ the_bitmap_dl_elem_t::draw() const
       i2r[1] = color_.r();
       i2g[1] = color_.g();
       i2b[1] = color_.b();
-      
+
       glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, i2a);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_R, 2, i2r);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_G, 2, i2g);
       glPixelMapfv(GL_PIXEL_MAP_I_TO_B, 2, i2b);
-      
+
       glDrawPixels(w_, h_, GL_COLOR_INDEX, GL_BITMAP, icon_);
     }
-    
+
     PERROR_OPENGL("the_bitmap_dl_elem_t::draw");
   }
 }
@@ -679,29 +679,29 @@ the_bitmap_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_arrow_dl_elem_t::draw
-// 
+//
 void
 the_arrow_dl_elem_t::draw() const
 {
   static const float two_pi = float(M_PI * 2.0);
   if ((pt_a_ - pt_b_).norm_sqrd() <= THE_EPSILON) return;
-  
+
   p3x1_t pt_c = (pt_b_ + ((0.78f * stripe_len_) /
 			  (~(pt_a_ - pt_b_)) * (pt_a_ - pt_b_)));
-  
+
   // use a color zebra to draw the arrow blades:
   const the_color_t * zebra[] =
   {
     &blade_color_,
     &color_
   };
-  
+
   the_scoped_gl_attrib_t push_attr(GL_LINE_BIT | GL_ENABLE_BIT);
   {
     glLineWidth(the_line_dl_elem_t::line_width_);
     glDisable(GL_LIGHTING);
     glEnable(GL_POLYGON_SMOOTH);
-    
+
     // draw the arrow shaft:
     v3x1_t v = pt_a_ - pt_b_;
     v3x1_t v_unit = !v;
@@ -710,7 +710,7 @@ the_arrow_dl_elem_t::draw() const
     for (unsigned int i = 0; i < num_stripes; i++)
     {
       p3x1_t curr_pt = prev_pt + v_unit * stripe_len_;
-      
+
       glColor4fv(zebra[i % 2]->rgba());
       glBegin(GL_LINES);
       {
@@ -718,10 +718,10 @@ the_arrow_dl_elem_t::draw() const
 	glVertex3fv(curr_pt.data());
       }
       glEnd();
-      
+
       prev_pt = curr_pt;
     }
-    
+
     glColor4fv(zebra[num_stripes % 2]->rgba());
     glBegin(GL_LINES);
     {
@@ -729,22 +729,22 @@ the_arrow_dl_elem_t::draw() const
       glVertex3fv(pt_a_.data());
     }
     glEnd();
-    
+
     // draw the blades:
     v3x1_t cs_z = !(pt_a_ - pt_b_);
     v3x1_t cs_y = !norm_;
     v3x1_t cs_x = !(cs_y % cs_z);
     the_cyl_coord_sys_t cyl_cs(cs_x, cs_y, cs_z, pt_b_);
-    
+
     float radius = 0.3f * stripe_len_;
-    
+
     for (unsigned int i = 0; i < num_blades_; i++)
     {
       glColor4fv(zebra[i % 2]->rgba());
-      
+
       float angle = ((float)(i) * two_pi) / (float)(num_blades_);
       p3x1_t blade_pt = cyl_cs.to_wcs(p3x1_t(radius, angle, stripe_len_));
-      
+
       glBegin(GL_POLYGON);
       {
 	glVertex3fv(pt_b_.data());
@@ -777,7 +777,7 @@ the_arrow_dl_elem_t::set_stripe_len(const the_view_volume_t & view_volume,
 
 //----------------------------------------------------------------
 // the_scs_arrow_dl_elem_t::the_scs_arrow_dl_elem_t
-// 
+//
 the_scs_arrow_dl_elem_t::
 the_scs_arrow_dl_elem_t(const float &      window_width,
 			const float &      window_height,
@@ -796,25 +796,25 @@ the_scs_arrow_dl_elem_t(const float &      window_width,
 
 //----------------------------------------------------------------
 // the_scs_arrow_dl_elem_t::draw
-// 
+//
 void
 the_scs_arrow_dl_elem_t::draw() const
 {
   if ((pt_a_ - pt_b_).norm_sqrd() <= THE_EPSILON) return;
-  
+
   p3x1_t pt_a(pt_a_.x() * window_width_, pt_a_.y() * window_height_, 0.0);
   p3x1_t pt_b(pt_b_.x() * window_width_, pt_b_.y() * window_height_, 0.0);
-  
+
   // draw the blades:
   v3x1_t cs_z = !(pt_a - pt_b);
   v3x1_t cs_y(0.0, 0.0, 1.0);
   v3x1_t cs_x = !(cs_y % cs_z);
   the_cyl_coord_sys_t cyl_cs(cs_x, cs_y, cs_z, pt_b);
-  
+
   float radius = 0.3f * blade_length_;
   p3x1_t blade_a = cyl_cs.to_wcs(p3x1_t(radius, 0, blade_length_));
   p3x1_t blade_b = cyl_cs.to_wcs(p3x1_t(radius, float(M_PI), blade_length_));
-  
+
   // draw the arrow:
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
@@ -835,7 +835,7 @@ the_scs_arrow_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_scs_arrow_dl_elem_t::update_bbox
-// 
+//
 void
 the_scs_arrow_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -845,7 +845,7 @@ the_scs_arrow_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_height_map_dl_elem_t::the_height_map_dl_elem_t
-// 
+//
 the_height_map_dl_elem_t::
 the_height_map_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
 			 const std::vector<the_color_t> & color):
@@ -856,7 +856,7 @@ the_height_map_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
 
 //----------------------------------------------------------------
 // the_height_map_dl_elem_t::draw
-// 
+//
 void
 the_height_map_dl_elem_t::draw() const
 {
@@ -865,18 +865,18 @@ the_height_map_dl_elem_t::draw() const
   float z_min = min.z();
   float z_max = max.z();
   float z_range = (z_max - z_min);
-  
+
   size_t rows = vertex_.size();
   size_t cols = vertex_[0].size();
-  
+
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT | GL_POLYGON_BIT);
   {
     glDisable(GL_LIGHTING);
     glEnable(GL_POLYGON_OFFSET_FILL);
-    
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glPolygonOffset(1.0, 1.0);
-    
+
     for (size_t i = 1; i < rows; i++)
     {
       glBegin(GL_QUAD_STRIP);
@@ -886,7 +886,7 @@ the_height_map_dl_elem_t::draw() const
 	float ta = (a.z() - z_min) / z_range;
 	glColor4fv(color_blend_(ta).rgba());
 	glVertex3fv(a.data());
-	
+
 	const p3x1_t & b = vertex_[i][j];
 	float tb = (b.z() - z_min) / z_range;
 	glColor4fv(color_blend_(tb).rgba());
@@ -894,11 +894,11 @@ the_height_map_dl_elem_t::draw() const
       }
       glEnd();
     }
-    
+
     glColor4fv(the_color_t::BLACK.rgba());
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_POLYGON_OFFSET_FILL);
-    
+
     for (size_t i = 1; i < rows; i++)
     {
       glBegin(GL_QUAD_STRIP);
@@ -914,7 +914,7 @@ the_height_map_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_height_map_dl_elem_t::update_bbox
-// 
+//
 void
 the_height_map_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -927,14 +927,14 @@ the_height_map_dl_elem_t::update_bbox(the_bbox_t & bbox) const
       bbox << vertex_[i][j];
     }
   }
-  
+
   // cache the results:
   bbox_ = bbox;
 }
 
 //----------------------------------------------------------------
 // the_tex_surf_data_dl_elem_t::the_tex_surf_data_dl_elem_t
-// 
+//
 the_tex_surf_data_dl_elem_t::
 the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
 			    const std::vector< std::vector<v3x1_t> > & normal,
@@ -957,7 +957,7 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    
+
     glTexImage1D(GL_TEXTURE_1D,
 		 0,
 		 GL_RGBA8,
@@ -966,14 +966,14 @@ the_tex_surf_data_dl_elem_t(const std::vector< std::vector<p3x1_t> > & vertex,
 		 GL_RGBA,
 		 GL_UNSIGNED_INT,
 		 &(color_[0]));
-    
+
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
   }
 }
 
 //----------------------------------------------------------------
 // the_tex_surf_data_dl_elem_t::~the_tex_surf_data_dl_elem_t
-// 
+//
 the_tex_surf_data_dl_elem_t::~the_tex_surf_data_dl_elem_t()
 {
   glDeleteTextures(1, &texture_id_);
@@ -981,7 +981,7 @@ the_tex_surf_data_dl_elem_t::~the_tex_surf_data_dl_elem_t()
 
 //----------------------------------------------------------------
 // the_tex_surf_data_dl_elem_t::draw
-// 
+//
 void
 the_tex_surf_data_dl_elem_t::draw() const
 {
@@ -989,13 +989,13 @@ the_tex_surf_data_dl_elem_t::draw() const
   float z_min = bbox_.wcs_min().z();
   float z_max = bbox_.wcs_max().z();
   float z_range = (z_max - z_min);
-  
+
   size_t rows = vertex_.size();
   size_t cols = vertex_[0].size();
-  
+
   glMaterialfv(GL_FRONT, GL_DIFFUSE, the_color_t::WHITE.rgba());
   glMaterialfv(GL_BACK,  GL_DIFFUSE, the_color_t::WHITE.rgba());
-  
+
   the_scoped_gl_attrib_t push_attr(GL_TEXTURE_BIT);
   {
     glEnable(GL_TEXTURE_1D);
@@ -1011,7 +1011,7 @@ the_tex_surf_data_dl_elem_t::draw() const
 	glTexCoord1f(ta);
 	glNormal3fv(na.data());
 	glVertex3fv(va.data());
-	
+
 	const p3x1_t & vb = vertex_[i][j];
 	const v3x1_t & nb = normal_[i][j];
 	float tb = (vb.z() - z_min) / z_range;
@@ -1027,7 +1027,7 @@ the_tex_surf_data_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_tex_surf_data_dl_elem_t::update_bbox
-// 
+//
 void
 the_tex_surf_data_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -1040,7 +1040,7 @@ the_tex_surf_data_dl_elem_t::update_bbox(the_bbox_t & bbox) const
       bbox << vertex_[i][j];
     }
   }
-  
+
   // cache the results:
   bbox_ = bbox;
 }
@@ -1048,7 +1048,7 @@ the_tex_surf_data_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_coord_sys_dl_elem_t::the_coord_sys_dl_elem_t
-// 
+//
 the_coord_sys_dl_elem_t::
 the_coord_sys_dl_elem_t(const the_view_volume_t & volume,
 			const float & window_width,
@@ -1098,7 +1098,7 @@ the_coord_sys_dl_elem_t(const the_view_volume_t & volume,
 
 //----------------------------------------------------------------
 // the_coord_sys_dl_elem_t::the_coord_sys_dl_elem_t
-// 
+//
 the_coord_sys_dl_elem_t::
 the_coord_sys_dl_elem_t(const the_coord_sys_t & cs,
 			const the_color_t & blade_color,
@@ -1136,20 +1136,20 @@ the_coord_sys_dl_elem_t(const the_coord_sys_t & cs,
 
 //----------------------------------------------------------------
 // the_coord_sys_dl_elem_t::draw
-// 
+//
 void
 the_coord_sys_dl_elem_t::draw() const
 {
   x_arrow_.draw();
   y_arrow_.draw();
   z_arrow_.draw();
-  
+
   const p3x1_t & origin = x_arrow_.pt_a();
   float scale = 1.05f;
   v3x1_t x_axis = scale * (x_arrow_.pt_b() - origin);
   v3x1_t y_axis = scale * (y_arrow_.pt_b() - origin);
   v3x1_t z_axis = scale * (z_arrow_.pt_b() - origin);
-  
+
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
@@ -1161,7 +1161,7 @@ the_coord_sys_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_coord_sys_dl_elem_t::update_bbox
-// 
+//
 void
 the_coord_sys_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -1173,7 +1173,7 @@ the_coord_sys_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_bbox_dl_elem_t::the_bbox_dl_elem_t
-// 
+//
 the_bbox_dl_elem_t::the_bbox_dl_elem_t(const the_bbox_t & bbox,
 				       const the_color_t & color):
   the_dl_elem_t(),
@@ -1183,18 +1183,18 @@ the_bbox_dl_elem_t::the_bbox_dl_elem_t(const the_bbox_t & bbox,
 
 //----------------------------------------------------------------
 // the_bbox_dl_elem_t::draw
-// 
+//
 void
 the_bbox_dl_elem_t::draw() const
 {
   p3x1_t corner[8];
   bbox_.wcs_corners(corner);
-  
+
   the_scoped_gl_attrib_t push_attr(GL_ENABLE_BIT);
   {
     glDisable(GL_LIGHTING);
     glColor4fv(color_.rgba());
-    
+
     glBegin(GL_LINE_LOOP);
     {
       glVertex3fv(corner[0].data());
@@ -1203,7 +1203,7 @@ the_bbox_dl_elem_t::draw() const
       glVertex3fv(corner[3].data());
     }
     glEnd();
-    
+
     glBegin(GL_LINE_LOOP);
     {
       glVertex3fv(corner[4].data());
@@ -1212,7 +1212,7 @@ the_bbox_dl_elem_t::draw() const
       glVertex3fv(corner[7].data());
     }
     glEnd();
-    
+
     glBegin(GL_LINES);
     {
       glVertex3fv(corner[0].data());
@@ -1230,7 +1230,7 @@ the_bbox_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_bbox_dl_elem_t::update_bbox
-// 
+//
 void
 the_bbox_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -1240,7 +1240,7 @@ the_bbox_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_ep_grid_dl_elem_t::the_ep_grid_dl_elem_t
-// 
+//
 the_ep_grid_dl_elem_t::the_ep_grid_dl_elem_t(the_ep_grid_t * ep_grid):
   the_dl_elem_t(),
   ep_grid_(ep_grid)
@@ -1248,7 +1248,7 @@ the_ep_grid_dl_elem_t::the_ep_grid_dl_elem_t(the_ep_grid_t * ep_grid):
 
 //----------------------------------------------------------------
 // the_ep_grid_dl_elem_t::~the_ep_grid_dl_elem_t
-// 
+//
 the_ep_grid_dl_elem_t::~the_ep_grid_dl_elem_t()
 {
   delete ep_grid_;
@@ -1257,7 +1257,7 @@ the_ep_grid_dl_elem_t::~the_ep_grid_dl_elem_t()
 
 //----------------------------------------------------------------
 // the_ep_grid_dl_elem_t::draw
-// 
+//
 void
 the_ep_grid_dl_elem_t::draw() const
 {
@@ -1267,7 +1267,7 @@ the_ep_grid_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_view_volume_dl_elem_t::the_view_volume_dl_elem_t
-// 
+//
 the_view_volume_dl_elem_t::
 the_view_volume_dl_elem_t(const the_view_volume_t & view_volume):
   view_volume_(new the_view_volume_t(view_volume))
@@ -1275,7 +1275,7 @@ the_view_volume_dl_elem_t(const the_view_volume_t & view_volume):
 
 //----------------------------------------------------------------
 // the_view_volume_dl_elem_t::~the_view_volume_dl_elem_t
-// 
+//
 the_view_volume_dl_elem_t::~the_view_volume_dl_elem_t()
 {
   delete view_volume_;
@@ -1284,7 +1284,7 @@ the_view_volume_dl_elem_t::~the_view_volume_dl_elem_t()
 
 //----------------------------------------------------------------
 // the_view_volume_dl_elem_t::draw
-// 
+//
 void
 the_view_volume_dl_elem_t::draw() const
 {
@@ -1293,31 +1293,31 @@ the_view_volume_dl_elem_t::draw() const
     the_color_t::RED,
     the_color_t::WHITE
   };
-  
+
   const float two_pi = float(2.0 * M_PI);
   const unsigned int num_seg = 10;
   const float half_seg = 1.0f / float(num_seg) * float(M_PI);
-  
+
   for (unsigned int i = 0; i < num_seg; i++)
   {
     const float a = half_seg + (float(i) /
 				 float(num_seg)) * two_pi;
     const float b = half_seg + (float((i + 1) % num_seg) /
 				 float(num_seg)) * two_pi;
-    
+
     const unsigned int num_layers = 2;
     for (unsigned int j = 0; j < num_layers; j++)
     {
       std::vector<the_vertex_t> pt(4);
-      
+
       float h0 = float(j) / float(num_layers);
       float h1 = float(j + 1) / float(num_layers);
-      
+
       view_volume_->cyl_to_wcs(p3x1_t(1.0, a, h0), pt[0].vx);
       view_volume_->cyl_to_wcs(p3x1_t(1.0, b, h0), pt[1].vx);
       view_volume_->cyl_to_wcs(p3x1_t(1.0, b, h1), pt[2].vx);
       view_volume_->cyl_to_wcs(p3x1_t(1.0, a, h1), pt[3].vx);
-      
+
       the_color_polygon_dl_elem_t face(zebra[((i % 2) + j) % 2], pt);
       face.draw();
     }
@@ -1327,7 +1327,7 @@ the_view_volume_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_disp_list_dl_elem_t::the_disp_list_dl_elem_t
-// 
+//
 the_disp_list_dl_elem_t::
 the_disp_list_dl_elem_t(const the_disp_list_t & display_list):
   the_dl_elem_t(),
@@ -1336,7 +1336,7 @@ the_disp_list_dl_elem_t(const the_disp_list_t & display_list):
 
 //----------------------------------------------------------------
 // the_disp_list_dl_elem_t::draw
-// 
+//
 void
 the_disp_list_dl_elem_t::draw() const
 {
@@ -1345,7 +1345,7 @@ the_disp_list_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_disp_list_dl_elem_t::update_bbox
-// 
+//
 void
 the_disp_list_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
@@ -1355,7 +1355,7 @@ the_disp_list_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_instance_dl_elem_t::the_instance_dl_elem_t
-// 
+//
 the_instance_dl_elem_t::
 the_instance_dl_elem_t(const the_disp_list_t & display_list,
 		       const m4x4_t & lcs_to_wcs):
@@ -1365,7 +1365,7 @@ the_instance_dl_elem_t(const the_disp_list_t & display_list,
 
 //----------------------------------------------------------------
 // the_instance_dl_elem_t::draw
-// 
+//
 void
 the_instance_dl_elem_t::draw() const
 {
@@ -1382,15 +1382,15 @@ the_instance_dl_elem_t::draw() const
 
 //----------------------------------------------------------------
 // the_instance_dl_elem_t::update_bbox
-// 
+//
 void
 the_instance_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 {
   if (dl_.bbox().is_empty()) return;
-  
+
   p3x1_t corners[8];
   dl_.bbox().wcs_corners(corners);
-  
+
   for (unsigned int i = 0; i < 8; i++)
   {
     bbox << lcs_to_wcs_ * corners[i];
@@ -1400,7 +1400,7 @@ the_instance_dl_elem_t::update_bbox(the_bbox_t & bbox) const
 
 //----------------------------------------------------------------
 // the_disp_list_t::the_disp_list_t
-// 
+//
 the_disp_list_t::the_disp_list_t():
   std::list<the_dl_elem_t *>(),
   list_id_(0),
@@ -1409,7 +1409,7 @@ the_disp_list_t::the_disp_list_t():
 
 //----------------------------------------------------------------
 // the_disp_list_t::the_disp_list_t
-// 
+//
 the_disp_list_t::the_disp_list_t(const the_bbox_t & bbox):
   std::list<the_dl_elem_t *>(),
   list_id_(0),
@@ -1419,7 +1419,7 @@ the_disp_list_t::the_disp_list_t(const the_bbox_t & bbox):
 
 //----------------------------------------------------------------
 // the_disp_list_t::~the_disp_list_t
-// 
+//
 the_disp_list_t::~the_disp_list_t()
 {
   the_disp_list_t::clear();
@@ -1427,18 +1427,18 @@ the_disp_list_t::~the_disp_list_t()
 
 //----------------------------------------------------------------
 // the_disp_list_t::clear
-// 
+//
 void
 the_disp_list_t::clear()
 {
   if (empty()) return;
-  
+
   the_gl_context_t current(the_gl_context_t::current());
   if (context_.is_valid())
   {
     context_.make_current();
   }
-  
+
   while (!empty())
   {
     the_dl_elem_t * de = remove_head(*this);
@@ -1446,52 +1446,52 @@ the_disp_list_t::clear()
     // std::cerr << de->name() << std::endl;
     delete de;
   }
-  
+
   bbox_.clear();
-  
+
   if (list_id_ != 0)
   {
     glDeleteLists(list_id_, 1);
     list_id_ = 0;
   }
-  
+
   if (current.is_valid())
   {
     current.make_current();
   }
-  
+
   // forget the context:
   context_.invalidate();
 }
 
 //----------------------------------------------------------------
 // the_disp_list_t::push_back
-// 
+//
 bool
 the_disp_list_t::push_back(the_dl_elem_t * const & elem)
 {
   if (elem == NULL) return false;
-  
+
   // std::cerr << this << ", adding " << elem << ", ";
   // std::cerr << elem->name() << std::endl;
   std::list<the_dl_elem_t *>::push_back(elem);
   elem->update_bbox(bbox_);
   up_to_date_ = false;
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_disp_list_t::draw
-// 
+//
 void
 the_disp_list_t::draw() const
 {
   if (empty()) return;
-  
+
   // store the context:
   context_ = the_gl_context_t::current();
-  
+
   for (std::list<the_dl_elem_t *>::const_iterator i = begin(); i != end(); ++i)
   {
     the_dl_elem_t * e = *i;
@@ -1502,33 +1502,33 @@ the_disp_list_t::draw() const
 
 //----------------------------------------------------------------
 // the_disp_list_t::compile
-// 
+//
 void
 the_disp_list_t::compile(GLenum mode)
 {
   if (empty()) return;
-  
+
   if (list_id_ == 0)
   {
     // try to allocate a display list:
     list_id_ = glGenLists(1);
   }
-  
+
   if (list_id_ == 0 && mode == GL_COMPILE)
   {
     // if we couldn't get a display list, and that's all we wanted -- return:
     return;
   }
-  
+
   if (list_id_ != 0)
   {
     // if we have a display list -- activate it:
     glNewList(list_id_, mode);
   }
-  
+
   // draw the geometry:
   draw();
-  
+
   if (list_id_ != 0)
   {
     // if we have a display list -- deactivate it:
@@ -1539,12 +1539,12 @@ the_disp_list_t::compile(GLenum mode)
 
 //----------------------------------------------------------------
 // the_disp_list_t::execute
-// 
+//
 void
 the_disp_list_t::execute() const
 {
   if (empty()) return;
-  
+
   if (list_id_ == 0)
   {
     draw();

@@ -15,7 +15,7 @@
 
 //----------------------------------------------------------------
 // the_log_t::the_log_t
-// 
+//
 the_log_t::the_log_t():
   mutex_(NULL)
 {
@@ -24,7 +24,7 @@ the_log_t::the_log_t():
 
 //----------------------------------------------------------------'
 // the_log_t::~the_log_t
-// 
+//
 the_log_t::~the_log_t()
 {
   mutex_->delete_this();
@@ -32,7 +32,7 @@ the_log_t::~the_log_t()
 
 //----------------------------------------------------------------
 // the_log_t::log_no_lock
-// 
+//
 void
 the_log_t::log_no_lock(std::ostream & (*f)(std::ostream &))
 {
@@ -41,7 +41,7 @@ the_log_t::log_no_lock(std::ostream & (*f)(std::ostream &))
 
 //----------------------------------------------------------------
 // the_log_t::operator
-// 
+//
 the_log_t &
 the_log_t::operator << (std::ostream & (*f)(std::ostream &))
 {
@@ -52,7 +52,7 @@ the_log_t::operator << (std::ostream & (*f)(std::ostream &))
 
 //----------------------------------------------------------------
 // the_log_t::precision
-// 
+//
 std::streamsize
 the_log_t::precision()
 {
@@ -63,7 +63,7 @@ the_log_t::precision()
 
 //----------------------------------------------------------------
 // the_log_t::precision
-// 
+//
 std::streamsize
 the_log_t::precision(std::streamsize n)
 {
@@ -74,7 +74,7 @@ the_log_t::precision(std::streamsize n)
 
 //----------------------------------------------------------------
 // the_log_t::flags
-// 
+//
 std::ios::fmtflags
 the_log_t::flags() const
 {
@@ -85,7 +85,7 @@ the_log_t::flags() const
 
 //----------------------------------------------------------------
 // the_log_t::flags
-// 
+//
 std::ios::fmtflags
 the_log_t::flags(std::ios::fmtflags fmt)
 {
@@ -96,7 +96,7 @@ the_log_t::flags(std::ios::fmtflags fmt)
 
 //----------------------------------------------------------------
 // the_log_t::setf
-// 
+//
 void
 the_log_t::setf(std::ios::fmtflags fmt)
 {
@@ -106,7 +106,7 @@ the_log_t::setf(std::ios::fmtflags fmt)
 
 //----------------------------------------------------------------
 // the_log_t::setf
-// 
+//
 void
 the_log_t::setf(std::ios::fmtflags fmt, std::ios::fmtflags msk)
 {
@@ -116,7 +116,7 @@ the_log_t::setf(std::ios::fmtflags fmt, std::ios::fmtflags msk)
 
 //----------------------------------------------------------------
 // the_log_t::unsetf
-// 
+//
 void
 the_log_t::unsetf(std::ios::fmtflags fmt)
 {
@@ -126,7 +126,7 @@ the_log_t::unsetf(std::ios::fmtflags fmt)
 
 //----------------------------------------------------------------
 // the_log_t::copyfmt
-// 
+//
 void
 the_log_t::copyfmt(std::ostream & ostm)
 {
@@ -137,7 +137,7 @@ the_log_t::copyfmt(std::ostream & ostm)
 
 //----------------------------------------------------------------
 // null_log
-// 
+//
 the_null_log_t *
 null_log()
 {
@@ -146,14 +146,14 @@ null_log()
   {
     log = new the_null_log_t;
   }
-  
+
   return log;
 }
 
 
 //----------------------------------------------------------------
 // cerr_log
-// 
+//
 the_stream_log_t *
 cerr_log()
 {
@@ -162,14 +162,14 @@ cerr_log()
   {
     log = new the_stream_log_t(std::cerr);
   }
-  
+
   return log;
 }
 
 
 //----------------------------------------------------------------
 // cout_log
-// 
+//
 the_stream_log_t *
 cout_log()
 {
@@ -178,6 +178,6 @@ cout_log()
   {
     log = new the_stream_log_t(std::cout);
   }
-  
+
   return log;
 }

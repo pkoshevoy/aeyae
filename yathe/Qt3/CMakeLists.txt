@@ -16,15 +16,15 @@ if (QT3_FOUND)
     ${QT3_INCLUDE_DIR}
     $ENV{THE_SRC_DIR}
     )
-  
+
   set(moc3_hxx
-    the_qt_trail.hxx	
+    the_qt_trail.hxx
     the_qt_view.hxx
     the_qt_thread.hxx
     )
-  
+
   qt3_wrap_cpp(moc3_cxx ${moc3_hxx})
-  
+
   add_library(the_ui_qt3 STATIC
     ${moc3_cxx}
     qimage_pixel_converter.cxx

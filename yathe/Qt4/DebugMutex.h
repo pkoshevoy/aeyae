@@ -18,7 +18,7 @@
 
 //----------------------------------------------------------------
 // DebugMutex
-// 
+//
 class DebugMutex : public QMutex
 {
 public:
@@ -27,14 +27,14 @@ public:
     std::cerr << "mutex " << this << " -> lock" << std::endl;
     QMutex::lock();
   }
-  
+
   bool tryLock()
   {
     bool ok = QMutex::tryLock();
     std::cerr << "mutex " << this << " -> tryLock: " << ok << std::endl;
     return ok;
   }
-  
+
   void unlock()
   {
     std::cerr << "mutex " << this << " -> unlock" << std::endl;

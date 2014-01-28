@@ -21,26 +21,26 @@
 
 //----------------------------------------------------------------
 // FIXME
-// 
+//
 #define FIXME( note ) \
 _FIXME( note, __FILE__, __LINE__ )
 
 //----------------------------------------------------------------
 // _FIXME
-// 
+//
 extern void
 _FIXME(const char * note, const char * file_name, int line_num);
 
 
 //----------------------------------------------------------------
 // the_assertion
-// 
+//
 #define the_assertion( expr ) ((expr) ? ((void) 0) : \
 _the_failed_assertion(#expr, __FILE__, __LINE__ )
 
 //----------------------------------------------------------------
 // _the_failed_assertion
-// 
+//
 extern void
 _the_failed_assertion(const char * expr, const char * file_name, int line_num);
 
@@ -53,7 +53,7 @@ extern void dump_new_delete_stats();
 
 //----------------------------------------------------------------
 // put_breakpoint_here
-// 
+//
 extern void put_breakpoint_here();
 
 

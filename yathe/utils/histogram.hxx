@@ -14,7 +14,7 @@
 
 //----------------------------------------------------------------
 // smoothout_orientation_histogram
-// 
+//
 extern void
 smoothout_orientation_histogram(double * orientation,
 				const unsigned int & bins,
@@ -22,7 +22,7 @@ smoothout_orientation_histogram(double * orientation,
 
 //----------------------------------------------------------------
 // isolate_orientation_histogram_peaks
-// 
+//
 extern bool
 isolate_orientation_histogram_peaks(double * histogram,
 				    const unsigned int & bins,
@@ -30,7 +30,7 @@ isolate_orientation_histogram_peaks(double * histogram,
 
 //----------------------------------------------------------------
 // calc_histogram_donations
-// 
+//
 extern unsigned int
 calc_histogram_donations(const unsigned int & bins,
 			 const double & r0,
@@ -41,7 +41,7 @@ calc_histogram_donations(const unsigned int & bins,
 
 //----------------------------------------------------------------
 // calc_orientation_histogram_donations
-// 
+//
 extern unsigned int
 calc_orientation_histogram_donations(const unsigned int & bins,
 				     const double & angle,
@@ -50,7 +50,7 @@ calc_orientation_histogram_donations(const unsigned int & bins,
 
 //----------------------------------------------------------------
 // update_orientation_histogram
-// 
+//
 extern void
 update_orientation_histogram(double * orientation,
 			     const unsigned int & bins,

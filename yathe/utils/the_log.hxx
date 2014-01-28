@@ -25,19 +25,19 @@
 
 //----------------------------------------------------------------
 // the_log_t
-// 
+//
 class the_log_t
 {
 protected:
   void log_no_lock(std::ostream & (*f)(std::ostream &));
-  
+
 public:
   the_log_t();
   virtual ~the_log_t();
-  
+
   virtual the_log_t &
   operator << (std::ostream & (*f)(std::ostream &));
-  
+
   template <typename data_t>
   the_log_t &
   operator << (const data_t & data)
@@ -46,19 +46,19 @@ public:
     line_ << data;
     return *this;
   }
-  
+
   std::streamsize precision();
   std::streamsize precision(std::streamsize n);
-  
+
   std::ios::fmtflags flags() const;
   std::ios::fmtflags flags(std::ios::fmtflags fmt);
-  
+
   void setf(std::ios::fmtflags fmt);
   void setf(std::ios::fmtflags fmt, std::ios::fmtflags msk);
   void unsetf(std::ios::fmtflags fmt);
-  
+
   void copyfmt(std::ostream & ostm);
-  
+
   std::ostringstream line_;
   mutable the_mutex_interface_t * mutex_;
 };
@@ -73,7 +73,7 @@ public:
   // virtual:
   the_log_t & operator << (std::ostream & (*)(std::ostream &))
   { return *this; }
-  
+
   template <typename data_t>
   the_log_t & operator << (const data_t &)
   { return *this; }
@@ -88,7 +88,7 @@ public:
   the_stream_log_t(std::ostream & ostm):
     ostm_(ostm)
   {}
-  
+
   // virtual:
   the_log_t & operator << (std::ostream & (*f)(std::ostream &))
   {
@@ -98,18 +98,18 @@ public:
     the_log_t::line_.str("");
     return *this;
   }
-  
+
   template <typename data_t>
   the_log_t & operator << (const data_t & data)
   { return the_log_t::operator << (data); }
-  
+
   std::ostream & ostm_;
 };
 
 
 //----------------------------------------------------------------
 // the_text_log_t
-// 
+//
 class the_text_log_t : public the_log_t
 {
 public:
@@ -122,30 +122,30 @@ public:
     the_log_t::line_.str("");
     return *this;
   }
-  
+
   template <typename data_t>
   the_log_t & operator << (const data_t & data)
   { return the_log_t::operator << (data); }
-  
+
   inline std::string text()
   { return text_; }
-  
+
   std::string text_;
 };
 
 //----------------------------------------------------------------
 // null_log
-// 
+//
 extern the_null_log_t * null_log();
 
 //----------------------------------------------------------------
 // cerr_log
-// 
+//
 extern the_stream_log_t * cerr_log();
 
 //----------------------------------------------------------------
 // cout_log
-// 
+//
 extern the_stream_log_t * cout_log();
 
 

@@ -58,45 +58,45 @@ class io_base_t;
 
 //----------------------------------------------------------------
 // is_open
-// 
+//
 extern bool
 is_open(std::ostream & so);
 
 //----------------------------------------------------------------
 // is_open
-// 
+//
 extern bool
 is_open(std::istream & si);
 
 //----------------------------------------------------------------
 // load_address
-// 
+//
 extern bool
 load_address(std::istream & si, uint64_t & address);
 
 //----------------------------------------------------------------
 // save_address
-// 
+//
 extern void
 save_address(std::ostream & so, const void * address);
 
 //----------------------------------------------------------------
 // save_address
-// 
+//
 extern void
 save_address(std::ostream & so, uint64_t address);
 
 
 //----------------------------------------------------------------
 // encode_special_chars
-// 
+//
 extern const std::string
 encode_special_chars(const std::string & text_plain,
 		     const char * special_chars = " \t\n");
 
 //----------------------------------------------------------------
 // decode_special_chars
-// 
+//
 extern const std::string
 decode_special_chars(const std::string & text_encoded);
 
@@ -134,7 +134,7 @@ extern bool load(std::istream & stream, io_base_t & data);
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream,
@@ -145,13 +145,13 @@ save(std::ostream & stream,
   {
     save(stream, data[i]);
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, data_t * data, const unsigned int & size)
@@ -161,41 +161,41 @@ load(std::istream & stream, data_t * data, const unsigned int & size)
   {
     ok = load(stream, data[i]);
   }
-  
+
   return ok;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename first_t, typename second_t>
 bool
 save(std::ostream & stream, const std::pair<first_t, second_t> & pair)
 {
   bool ok = save(stream, pair.first);
   if (!ok) return false;
-  
+
   return save(stream, pair.second);
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename first_t, typename second_t>
 bool
 load(std::istream & stream, std::pair<first_t, second_t> & pair)
 {
   bool ok = load(stream, pair.first);
   if (!ok) return false;
-  
+
   return load(stream, pair.second);
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const std::list<data_t> & l)
@@ -203,7 +203,7 @@ save(std::ostream & stream, const std::list<data_t> & l)
   // save the list:
   save(stream, (unsigned int)(l.size()));
   stream << std::endl;
-  
+
   for (typename std::list<data_t>::const_iterator i = l.begin();
        i != l.end();
        ++i)
@@ -211,19 +211,19 @@ save(std::ostream & stream, const std::list<data_t> & l)
     save(stream, *i);
     stream << std::endl;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, std::list<data_t> & l)
 {
   l.clear();
-  
+
   unsigned int size = 0;
   bool ok = load(stream, size);
   for (unsigned int i = 0; i < size && ok; i++)
@@ -232,33 +232,33 @@ load(std::istream & stream, std::list<data_t> & l)
     ok = load(stream, data);
     l.push_back(data);
   }
-  
+
   return ok;
 }
 
 
 //----------------------------------------------------------------
 // save
-// 
+//
 template <typename data_t>
 bool
 save(std::ostream & stream, const std::vector<data_t> & array)
 {
   std::size_t size = array.size();
   bool ok = save(stream, size);
-  
+
   for (std::size_t i = 0; i < size && ok; i++)
   {
     ok = save(stream, array[i]);
     stream << std::endl;
   }
-  
+
   return ok;
 }
 
 //----------------------------------------------------------------
 // load
-// 
+//
 template <typename data_t>
 bool
 load(std::istream & stream, std::vector<data_t> & array)
@@ -266,35 +266,35 @@ load(std::istream & stream, std::vector<data_t> & array)
   unsigned int size = 0;
   bool ok = load(stream, size);
   array.resize(size);
-  
+
   for (unsigned int i = 0; i < size && ok; i++)
   {
     ok = load(stream, array[i]);
   }
-  
+
   return ok;
 }
 
 
 //----------------------------------------------------------------
 // io_base_t
-// 
+//
 class io_base_t
 {
 public:
   typedef io_base_t * (*creator_t)();
-  
+
   // file I/O API:
   virtual ~io_base_t() {}
   virtual void save(std::ostream & so) const = 0;
   virtual bool load(std::istream & si, const std::string & magic) = 0;
-  
+
   // typedef for function handling loaded io_base_t objects:
   typedef void (*handler_t)(io_base_t *&);
-  
+
   // default handler for loaded io_base_t object simply deletes them:
   static void disposer(io_base_t *& io);
-  
+
   // Load registered objects from a source stream.
   // Loaded objects are passed to a hanler if one is specified.
   // The handler may delete the loaded object, in which case
@@ -305,7 +305,7 @@ public:
   static bool load(std::istream & src,
 		   handler_t handler = &io_base_t::disposer,
 		   std::list<io_base_t *> * dst = NULL);
-  
+
   static std::map<std::string, creator_t> loaders_;
 };
 

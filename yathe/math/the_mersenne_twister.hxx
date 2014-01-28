@@ -22,9 +22,9 @@
 //       initialize it in a thread safe manner - lock, seed, unlock.
 
 // the following is an excerpt from mt19937ar.c:
-/* 
+/*
    Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.                          
+   All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -37,8 +37,8 @@
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
 
-     3. The names of its contributors may not be used to endorse or promote 
-        products derived from this software without specific prior written 
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
         permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -64,10 +64,10 @@
 
 //----------------------------------------------------------------
 // the_mersenne_twister_t
-// 
-// Before using, initialize the state by using init_genrand(seed)  
+//
+// Before using, initialize the state by using init_genrand(seed)
 // or init_by_array(init_key, key_length).
-// 
+//
 class the_mersenne_twister_t
 {
   // period parameters:
@@ -79,7 +79,7 @@ class the_mersenne_twister_t
     UPPER_MASK = 0x80000000UL, // most significant w-r bits
     LOWER_MASK = 0x7fffffffUL  // least significant r bits
   };
-  
+
 public:
   the_mersenne_twister_t():
     mti(N + 1)
@@ -87,74 +87,74 @@ public:
     // use a default initial seed:
     init_genrand(5489UL);
   }
-  
+
   //----------------------------------------------------------------
   // init_genrand
-  // 
+  //
   // initializes mt[N] with a seed:
-  // 
+  //
   void init_genrand(const unsigned long & s)
   {
     mt[0] = s & 0xffffffffUL;
-    
+
     for (mti = 1; mti < N; mti++)
     {
       mt[mti] = (1812433253UL * (mt[mti - 1] ^ (mt[mti - 1] >> 30)) + mti);
-      
+
       // See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier.
       // In the previous versions, MSBs of the seed affect
       // only MSBs of the array mt[].
       // 2002/01/09 modified by Makoto Matsumoto
-      
+
       // for machines with WORDSIZE > 32:
       mt[mti] &= 0xffffffffUL;
     }
   }
-  
+
   //----------------------------------------------------------------
   // init_by_array
-  // 
+  //
   // initialize by an array with array-length.
   // init_key is the array for initializing keys.
   // key_length is its length.
   // slight change for C++, 2004/2/26.
-  // 
+  //
   void init_by_array(const unsigned long * init_key,
 		     const unsigned int & key_length)
   {
     init_genrand(19650218UL);
-    
+
     unsigned int i = 1;
     unsigned int j = 0;
-    
+
     for (unsigned int k = (N > key_length ? N : key_length); k != 0; k--)
     {
       // non linear:
       mt[i] = ((mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 30)) * 1664525UL)) +
 	       init_key[j] + j);
-      
+
       // for machines with WORDSIZE > 32:
       mt[i] &= 0xffffffffUL;
-      
+
       i++;
       if (i >= N)
       {
 	mt[0] = mt[N - 1];
 	i = 1;
       }
-      
+
       j++;
       if (j >= key_length) j = 0;
     }
-    
+
     for (unsigned int k = N - 1; k != 0; k--)
     {
       // non linear:
       mt[i] = (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 30)) * 1566083941UL)) - i;
-      
+
       // for machines with WORDSIZE > 32:
       mt[i] &= 0xffffffffUL;
-      
+
       i++;
       if (i >= N)
       {
@@ -162,16 +162,16 @@ public:
 	i = 1;
       }
     }
-    
+
     // MSB is 1; assuring non-zero initial array:
     mt[0] = 0x80000000UL;
   }
-  
+
   //----------------------------------------------------------------
   // genrand_int32
-  // 
+  //
   // generates a random number on [0, 0xffffffff] interval
-  // 
+  //
   unsigned long genrand_int32() const
   {
     // x = 0, 1;
@@ -181,7 +181,7 @@ public:
       0x0UL,
       MATRIX_A
     };
-    
+
     unsigned long y;
     if (mti >= N)
     {
@@ -191,60 +191,60 @@ public:
 	y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
 	mt[kk] = mt[kk + M] ^ (y >> 1) ^ mag01[y & 0x1UL];
       }
-      
+
       for (unsigned int kk = N - M; kk < N - 1; kk++)
       {
 	y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
 	mt[kk] = mt[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1UL];
       }
-      
+
       y = (mt[N - 1] & UPPER_MASK) | (mt[0] & LOWER_MASK);
       mt[N - 1] = mt[M - 1] ^ (y >> 1) ^ mag01[y & 0x1UL];
-      
+
       mti = 0;
     }
-    
+
     y = mt[mti++];
-    
+
     // Tempering:
     y ^= (y >> 11);
     y ^= (y << 7) & 0x9d2c5680UL;
     y ^= (y << 15) & 0xefc60000UL;
     y ^= (y >> 18);
-    
+
     return y;
   }
-  
+
   // generates a random number on [0, 0x7fffffff] interval
   inline long genrand_int31() const
   {
     return (long)(genrand_int32() >> 1);
   }
-  
+
   // These real versions are due to Isaku Wada,
   // added on 2002/01/09:
-  
+
   // generates a random number on [0, 1] real interval:
   inline double genrand_real1() const
   {
     // divided by 2^32 - 1
-    return genrand_int32() * (1.0 / 4294967295.0); 
+    return genrand_int32() * (1.0 / 4294967295.0);
   }
-  
+
   // generates a random number on [0, 1) real interval:
   inline double genrand_real2() const
   {
     // divided by 2^32:
     return genrand_int32() * (1.0 / 4294967296.0);
   }
-  
+
   // generates a random number on (0, 1) real interval:
   inline double genrand_real3() const
   {
     // divided by 2^32:
     return (((double)genrand_int32()) + 0.5) * (1.0 / 4294967296.0);
   }
-  
+
   // generates a random number on [0, 1) with 53-bit resolution:
   inline double genrand_res53() const
   {
@@ -252,11 +252,11 @@ public:
     unsigned long b = genrand_int32() >> 6;
     return (a * 67108864.0 + b) * (1.0 / 9007199254740992.0);
   }
-  
+
 private:
   // the array for the state vector:
   mutable unsigned long mt[N];
-  
+
   // mti == N + 1 means mt[N] is not initialized:
   mutable unsigned int mti;
 };

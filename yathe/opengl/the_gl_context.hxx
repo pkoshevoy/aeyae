@@ -15,35 +15,35 @@
 
 //----------------------------------------------------------------
 // the_gl_context_interface_t
-// 
+//
 // Abstract class for toolkit-independent opengl context API.
 // A subclass must be made for each toolkit.
-// 
+//
 struct the_gl_context_interface_t
 {
   virtual ~the_gl_context_interface_t() {}
-  
+
   virtual bool gl_context_is_valid() const = 0;
   virtual void gl_make_current() = 0;
   virtual void gl_done_current() = 0;
-  
+
   static the_gl_context_interface_t * current_;
 };
 
 //----------------------------------------------------------------
 // the_gl_context_t
-// 
+//
 struct the_gl_context_t
 {
   the_gl_context_t(the_gl_context_interface_t * context = NULL);
-  
+
   void make_current();
   void done_current();
   bool is_valid() const;
   void invalidate();
-  
+
   static the_gl_context_t current();
-  
+
 protected:
   the_gl_context_interface_t * context_;
 };

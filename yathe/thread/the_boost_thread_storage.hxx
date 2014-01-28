@@ -32,7 +32,7 @@ public:
   {
     return (boost::thread_specific_ptr<the_thread_observer_t>::get() != NULL);
   }
-  
+
   // virtual: check whether the thread has been stopped:
   bool thread_stopped() const
   {
@@ -40,7 +40,7 @@ public:
       boost::thread_specific_ptr<the_thread_observer_t>::get()->
       thread_.stopped();
   }
-  
+
   // virtual: terminator access:
   the_terminators_t & terminators()
   {
@@ -48,7 +48,7 @@ public:
       boost::thread_specific_ptr<the_thread_observer_t>::get()->
       thread_.terminators();
   }
-  
+
   // virtual:
   unsigned int thread_id() const
   {

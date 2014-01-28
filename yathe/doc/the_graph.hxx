@@ -25,43 +25,43 @@ class the_registry_t;
 
 //----------------------------------------------------------------
 // the_graph_t
-// 
+//
 class the_graph_t : public std::list<unsigned int>
 {
 public:
   the_graph_t();
-  
+
   the_graph_t(const the_registry_t * registry);
-  
+
   the_graph_t(const the_registry_t * registry,
 	      const unsigned int & root);
-  
+
   the_graph_t(const the_registry_t * registry,
 	      const std::list<unsigned int> & roots);
-  
+
   void set_graph(const the_registry_t * registry,
 		 const std::list<unsigned int> & graph);
-  
+
   // set root nodes to regenerate:
   void set_roots(const the_registry_t * registry,
 		 const std::list<unsigned int> & roots);
-  
+
   void dependency_sort();
-  
+
   // regenerate the graph nodes according to their pecking order
   // (supporter before dependent) if any of the graph nodes fail
   // to regenerate return false, but not before completing
   // regeneration of the remaining graph nodes:
   bool regenerate() const;
-  
+
   // For debugging, dumps this model graph node id dispatcher:
   void dump(std::ostream & strm, unsigned int indent = 0) const;
-  
+
 private:
   // this will be called after sorting the graph:
   inline void remove_duplicates()
   { if (!empty()) unique(); }
-  
+
   // the registry that owns the graph nodes stored in this graph:
   const the_registry_t * registry_;
 };

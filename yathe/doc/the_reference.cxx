@@ -17,14 +17,14 @@
 
 //----------------------------------------------------------------
 // the_reference_t::the_reference_t
-// 
+//
 the_reference_t::the_reference_t(const unsigned int & id):
   the_graph_node_ref_t(id)
 {}
 
 //----------------------------------------------------------------
 // the_reference_t::dump
-// 
+//
 void
 the_reference_t::dump(ostream & strm, unsigned int indent) const
 {

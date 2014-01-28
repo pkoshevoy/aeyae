@@ -21,7 +21,7 @@
 
 //----------------------------------------------------------------
 // the_transaction_t::the_transaction_t
-// 
+//
 the_transaction_t::the_transaction_t():
   mutex_(the_mutex_interface_t::create()),
   request_(NOTHING_E),
@@ -34,7 +34,7 @@ the_transaction_t::the_transaction_t():
 
 //----------------------------------------------------------------
 // the_transaction_t::~the_transaction_t
-// 
+//
 the_transaction_t::~the_transaction_t()
 {
   if (mutex_ != NULL)
@@ -46,7 +46,7 @@ the_transaction_t::~the_transaction_t()
 
 //----------------------------------------------------------------
 // the_transaction_t::notify
-// 
+//
 void
 the_transaction_t::notify(the_transaction_handler_t * handler,
 			  state_t s,
@@ -54,7 +54,7 @@ the_transaction_t::notify(the_transaction_handler_t * handler,
 {
   set_state(s);
   blab(handler, message);
-  
+
   if (notify_cb_ == NULL)
   {
     handler->handle(this, s);
@@ -67,13 +67,13 @@ the_transaction_t::notify(the_transaction_handler_t * handler,
 
 //----------------------------------------------------------------
 // the_transaction_t::blab
-// 
+//
 void
 the_transaction_t::blab(the_transaction_handler_t * handler,
 			const char * message)
 {
   if (message == NULL) return;
-  
+
   if (status_cb_ == NULL)
   {
     handler->blab(message);
@@ -86,7 +86,7 @@ the_transaction_t::blab(the_transaction_handler_t * handler,
 
 //----------------------------------------------------------------
 // the_transaction_t::callback_request
-// 
+//
 bool
 the_transaction_t::callback_request()
 {
@@ -94,20 +94,20 @@ the_transaction_t::callback_request()
   {
     return false;
   }
-  
+
   // change the request state:
   {
     the_lock_t<the_mutex_interface_t> locker(mutex_);
     request_ = WAITING_E;
   }
-  
+
   // execute the status callback:
   status_cb_(status_cb_data_, this, NULL);
-  
+
   while (true)
   {
     sleep_msec(100);
-    
+
     // check the request state:
     the_lock_t<the_mutex_interface_t> locker(mutex_);
     if (request_ == NOTHING_E)
@@ -115,13 +115,13 @@ the_transaction_t::callback_request()
       break;
     }
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // the_transaction_t::callback
-// 
+//
 void
 the_transaction_t::callback()
 {
@@ -132,7 +132,7 @@ the_transaction_t::callback()
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 std::ostream &
 operator << (std::ostream & so, const the_transaction_t::state_t & state)
 {
@@ -141,23 +141,23 @@ operator << (std::ostream & so, const the_transaction_t::state_t & state)
     case the_transaction_t::PENDING_E:
       so << "pending";
       return so;
-      
+
     case the_transaction_t::SKIPPED_E:
       so << "skipped";
       return so;
-      
+
     case the_transaction_t::STARTED_E:
       so << "started";
       return so;
-      
+
     case the_transaction_t::ABORTED_E:
       so << "aborted";
       return so;
-      
+
     case the_transaction_t::DONE_E:
       so << "done";
       return so;
-      
+
     default:
       so << int(state);
       assert(0);

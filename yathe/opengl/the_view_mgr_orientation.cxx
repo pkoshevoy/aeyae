@@ -19,7 +19,7 @@
 
 //----------------------------------------------------------------
 // the_view_name
-// 
+//
 const char *
 the_view_orientation_text(const the_view_mgr_orientation_t & orientation)
 {
@@ -34,16 +34,16 @@ the_view_orientation_text(const the_view_mgr_orientation_t & orientation)
     case THE_BACK_VIEW_E:	return "Back";
     case THE_XY_VIEW_E:		return "XY";
   }
-  
+
   assert(false);
   return NULL;
 }
 
 //----------------------------------------------------------------
 // THE_ORIENTATION_LF
-// 
+//
 // this array should be accessed via the_view_type_t:
-// 
+//
 const v3x1_t
 THE_ORIENTATION_LF[] =
 {
@@ -59,9 +59,9 @@ THE_ORIENTATION_LF[] =
 
 //----------------------------------------------------------------
 // THE_ORIENTATION_UP
-// 
+//
 // this array should be accessed via the_view_type_t:
-// 
+//
 const v3x1_t
 THE_ORIENTATION_UP[] =
 {
@@ -77,7 +77,7 @@ THE_ORIENTATION_UP[] =
 
 //----------------------------------------------------------------
 // save
-// 
+//
 bool
 save(std::ostream & stream, the_view_mgr_orientation_t o)
 {
@@ -87,7 +87,7 @@ save(std::ostream & stream, the_view_mgr_orientation_t o)
 
 //----------------------------------------------------------------
 // load
-// 
+//
 bool
 load(std::istream & stream, the_view_mgr_orientation_t & o)
 {

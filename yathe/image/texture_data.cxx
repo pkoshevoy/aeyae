@@ -18,12 +18,12 @@
 
 //----------------------------------------------------------------
 // _1MB
-// 
+//
 static const size_t _1MB = 1024 * 1024;
 
 //----------------------------------------------------------------
 // DEBUG_TEXTURE_DATA
-// 
+//
 // #define DEBUG_TEXTURE_DATA
 
 #ifdef DEBUG_TEXTURE_DATA
@@ -40,12 +40,12 @@ static size_t total = 0;
 
 //----------------------------------------------------------------
 // texture_data_t::texture_data_t
-// 
+//
 texture_data_t::texture_data_t(size_t bytes)
 {
   data_ = malloc(bytes);
   size_ = bytes;
-  
+
   if (data_ == NULL)
   {
     std::ostringstream os;
@@ -54,7 +54,7 @@ texture_data_t::texture_data_t(size_t bytes)
     the_exception_t e(os.str().c_str());
     throw e;
   }
-  
+
 #ifdef DEBUG_TEXTURE_DATA
   QMutexLocker locker(&mutex);
   total += size_;
@@ -65,11 +65,11 @@ texture_data_t::texture_data_t(size_t bytes)
 
 //----------------------------------------------------------------
 // texture_data_t::~texture_data_t
-// 
+//
 texture_data_t::~texture_data_t()
 {
   free(data_);
-  
+
 #ifdef DEBUG_TEXTURE_DATA
   QMutexLocker locker(&mutex);
   total -= size_;

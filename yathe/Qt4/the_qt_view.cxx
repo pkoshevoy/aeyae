@@ -27,7 +27,7 @@
 
 //----------------------------------------------------------------
 // the_qt_view_t::the_qt_view_t
-// 
+//
 the_qt_view_t::the_qt_view_t(QWidget * parent,
 			     const char * name,
 			     QGLWidget * shared,
@@ -43,7 +43,7 @@ the_qt_view_t::the_qt_view_t(QWidget * parent,
 
 //----------------------------------------------------------------
 // the_qt_view_t::initializeGL
-// 
+//
 // QT/OpenGL stuff:
 void
 the_qt_view_t::initializeGL()
@@ -54,7 +54,7 @@ the_qt_view_t::initializeGL()
 
 //----------------------------------------------------------------
 // the_qt_view_t::resizeGL
-// 
+//
 void
 the_qt_view_t::resizeGL(int w, int h)
 {
@@ -64,7 +64,7 @@ the_qt_view_t::resizeGL(int w, int h)
 
 //----------------------------------------------------------------
 // the_qt_view_t::paintGL
-// 
+//
 void
 the_qt_view_t::paintGL()
 {
@@ -73,7 +73,7 @@ the_qt_view_t::paintGL()
 
 //----------------------------------------------------------------
 // the_qt_view_t::change_cursor
-// 
+//
 void
 the_qt_view_t::change_cursor(const the_cursor_id_t & cursor_id)
 {
@@ -99,7 +99,7 @@ the_qt_view_t::change_cursor(const the_cursor_id_t & cursor_id)
 
 //----------------------------------------------------------------
 // the_qt_view_t::showEvent
-// 
+//
 void
 the_qt_view_t::showEvent(QShowEvent * e)
 {
@@ -108,7 +108,7 @@ the_qt_view_t::showEvent(QShowEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::mousePressEvent
-// 
+//
 void
 the_qt_view_t::mousePressEvent(QMouseEvent * e)
 {
@@ -120,7 +120,7 @@ the_qt_view_t::mousePressEvent(QMouseEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::mouseReleaseEvent
-// 
+//
 void
 the_qt_view_t::mouseReleaseEvent(QMouseEvent * e)
 {
@@ -132,7 +132,7 @@ the_qt_view_t::mouseReleaseEvent(QMouseEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::mouseDoubleClickEvent
-// 
+//
 void
 the_qt_view_t::mouseDoubleClickEvent(QMouseEvent * e)
 {
@@ -144,7 +144,7 @@ the_qt_view_t::mouseDoubleClickEvent(QMouseEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::mouseMoveEvent
-// 
+//
 void
 the_qt_view_t::mouseMoveEvent(QMouseEvent * e)
 {
@@ -156,7 +156,7 @@ the_qt_view_t::mouseMoveEvent(QMouseEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::wheelEvent
-// 
+//
 void
 the_qt_view_t::wheelEvent(QWheelEvent * e)
 {
@@ -168,7 +168,7 @@ the_qt_view_t::wheelEvent(QWheelEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::keyPressEvent
-// 
+//
 void
 the_qt_view_t::keyPressEvent(QKeyEvent * e)
 {
@@ -180,7 +180,7 @@ the_qt_view_t::keyPressEvent(QKeyEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::keyReleaseEvent
-// 
+//
 void
 the_qt_view_t::keyReleaseEvent(QKeyEvent * e)
 {
@@ -192,7 +192,7 @@ the_qt_view_t::keyReleaseEvent(QKeyEvent * e)
 
 //----------------------------------------------------------------
 // the_qt_view_t::tabletEvent
-// 
+//
 void
 the_qt_view_t::tabletEvent(QTabletEvent * e)
 {

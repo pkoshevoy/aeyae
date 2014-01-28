@@ -24,7 +24,7 @@ class the_pick_filter_t
 public:
   the_pick_filter_t() {}
   virtual ~the_pick_filter_t() {}
-  
+
   virtual bool allow(const the_registry_t * registry,
 		     const unsigned int & id) const
   { return registry->elem(id) != NULL; }
@@ -32,7 +32,7 @@ public:
 
 //----------------------------------------------------------------
 // the_pick_filter_t<prim_t>
-// 
+//
 template <class prim_t>
 class the_pick_filter : public the_pick_filter_t
 {

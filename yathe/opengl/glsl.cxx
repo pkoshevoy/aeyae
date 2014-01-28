@@ -24,7 +24,7 @@ using std::endl;
 
 //----------------------------------------------------------------
 // glsl_init
-// 
+//
 bool
 glsl_init()
 {
@@ -34,13 +34,13 @@ glsl_init()
     cerr << "GLEW init failed: " << glewGetErrorString(err) << endl;
     return false;
   }
-  
+
   return true;
 }
 
 //----------------------------------------------------------------
 // glsl_has_vertex_program
-// 
+//
 bool
 glsl_has_vertex_program()
 {
@@ -49,7 +49,7 @@ glsl_has_vertex_program()
 
 //----------------------------------------------------------------
 // glsl_has_fragment_program
-// 
+//
 bool
 glsl_has_fragment_program()
 {
@@ -58,54 +58,54 @@ glsl_has_fragment_program()
 
 //----------------------------------------------------------------
 // glsl_get_shader
-// 
+//
 GLuint
 glsl_get_shader(const char * source_code, bool fragment)
 {
-  
+
 #ifndef NDEBUG
   cerr << "compiling shader: " << endl << source_code << endl;
 #endif
-  
+
   GLuint handle =
     fragment
     ? glCreateShader(GL_FRAGMENT_SHADER)
     : glCreateShader(GL_VERTEX_SHADER);
   FIXME_OPENGL("glCreateShader");
-  
+
   if (handle != 0)
   {
     glShaderSource(handle, 1, &source_code, NULL);
     FIXME_OPENGL("glShaderSource");
-    
+
     // compile the shader source code:
     glCompileShader(handle);
-    
+
     GLint shader_compiled;
     glGetShaderiv(handle, GL_COMPILE_STATUS, &shader_compiled);
-    
+
     if (shader_compiled == GL_FALSE)
     {
       glsl_shader_log(cerr, handle);
       FIXME_OPENGL("glCompileShader");
-      
+
       glDeleteShader(handle);
       handle = 0;
     }
   }
-  
+
   return handle;
 }
 
 //----------------------------------------------------------------
 // glsl_get_program
-// 
+//
 GLuint
 glsl_get_program(const GLuint * shaders, unsigned int num_shaders)
 {
   GLuint handle = glCreateProgram();
   FIXME_OPENGL("glCreateProgram");
-  
+
   if (handle != 0)
   {
     for (unsigned int i = 0; i < num_shaders; i++)
@@ -113,29 +113,29 @@ glsl_get_program(const GLuint * shaders, unsigned int num_shaders)
       glAttachShader(handle, shaders[i]);
       FIXME_OPENGL(the_text_t("glAttachShader ") + the_text_t::number(i));
     }
-    
+
     // link the shaders into an executable:
     glLinkProgram(handle);
-    
+
     GLint program_linked;
     glGetProgramiv(handle, GL_LINK_STATUS, &program_linked);
-    
+
     if (program_linked == GL_FALSE)
     {
       glsl_program_log(cerr, handle);
       FIXME_OPENGL("glLinkProgram");
-      
+
       glDeleteProgram(handle);
       handle = 0;
     }
   }
-  
+
   return handle;
 }
 
 //----------------------------------------------------------------
 // glsl_get_vertex_program
-// 
+//
 GLuint
 glsl_get_vertex_program(const char * source_code)
 {
@@ -143,22 +143,22 @@ glsl_get_vertex_program(const char * source_code)
   {
     return 0;
   }
-  
+
   GLuint shader_handle = glsl_get_vertex_shader(source_code);
   if (shader_handle == 0)
   {
     return 0;
   }
-  
+
   GLuint handle = glsl_get_program(&shader_handle, 1);
   glDeleteShader(shader_handle);
-  
+
   return handle;
 }
 
 //----------------------------------------------------------------
 // glsl_get_fragment_program
-// 
+//
 GLuint
 glsl_get_fragment_program(const char * source_code)
 {
@@ -166,22 +166,22 @@ glsl_get_fragment_program(const char * source_code)
   {
     return 0;
   }
-  
+
   GLuint shader_handle = glsl_get_fragment_shader(source_code);
   if (shader_handle == 0)
   {
     return 0;
   }
-  
+
   GLuint handle = glsl_get_program(&shader_handle, 1);
   glDeleteShader(shader_handle);
-  
+
   return handle;
 }
 
 //----------------------------------------------------------------
 // glsl_use_program
-// 
+//
 void
 glsl_use_program(GLuint handle)
 {
@@ -191,7 +191,7 @@ glsl_use_program(GLuint handle)
 
 //----------------------------------------------------------------
 // glsl_uni_addr
-// 
+//
 GLint
 glsl_uni_addr(GLuint program, const char * name)
 {
@@ -200,14 +200,14 @@ glsl_uni_addr(GLuint program, const char * name)
   {
     cerr << "uniform named \"" << name << "\" not found" << endl;
   }
-  
+
   FIXME_OPENGL(the_text_t("glsl_uni_addr ") + name);
   return addr;
 }
 
 //----------------------------------------------------------------
 // glsl_uni_1i
-// 
+//
 void
 glsl_uni_1i(GLint addr, GLint value)
 {
@@ -216,7 +216,7 @@ glsl_uni_1i(GLint addr, GLint value)
 
 //----------------------------------------------------------------
 // glsl_uni_2f
-// 
+//
 void
 glsl_uni_2f(GLint addr, GLfloat v0, GLfloat v1)
 {
@@ -225,7 +225,7 @@ glsl_uni_2f(GLint addr, GLfloat v0, GLfloat v1)
 
 //----------------------------------------------------------------
 // glsl_uni_3f
-// 
+//
 void
 glsl_uni_3f(GLint addr, GLfloat v0, GLfloat v1, GLfloat v2)
 {
@@ -235,7 +235,7 @@ glsl_uni_3f(GLint addr, GLfloat v0, GLfloat v1, GLfloat v2)
 
 //----------------------------------------------------------------
 // glsl_texture_image_units
-// 
+//
 GLint
 glsl_texture_image_units()
 {
@@ -247,9 +247,9 @@ glsl_texture_image_units()
 
 //----------------------------------------------------------------
 // glsl_activate_texture_unit
-// 
+//
 // Set a given texture unit active:
-// 
+//
 void
 glsl_activate_texture_unit(GLint index)
 {
@@ -259,13 +259,13 @@ glsl_activate_texture_unit(GLint index)
 
 //----------------------------------------------------------------
 // glsl_log
-// 
+//
 void
 glsl_log(std::ostream & so, GLuint handle, bool shader)
 {
   GLint buffer_size = 0;
   the_text_t info;
-  
+
   if (shader)
   {
     glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &buffer_size);
@@ -274,11 +274,11 @@ glsl_log(std::ostream & so, GLuint handle, bool shader)
   {
     glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &buffer_size);
   }
-  
+
   if (buffer_size <= 0) return;
 
   info.fill('\0', buffer_size);
-  
+
   if (shader)
   {
     glGetShaderInfoLog(handle, buffer_size, NULL, &(info[0]));

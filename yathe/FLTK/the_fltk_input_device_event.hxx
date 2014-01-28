@@ -30,19 +30,19 @@
 
 //----------------------------------------------------------------
 // the_mouse_event
-// 
+//
 extern the_mouse_event_t
 the_mouse_event(Fl_Widget * widget, const int & event);
 
 //----------------------------------------------------------------
 // the_wheel_event
-// 
+//
 extern the_wheel_event_t
 the_wheel_event(Fl_Widget * widget, const int & event);
 
 //----------------------------------------------------------------
 // the_keybd_event
-// 
+//
 extern the_keybd_event_t
 the_keybd_event(Fl_Widget * widget, const int & event);
 

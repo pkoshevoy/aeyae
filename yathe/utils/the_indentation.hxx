@@ -32,7 +32,7 @@ using std::ws;
 
 //----------------------------------------------------------------
 // indtkn_t
-// 
+//
 class indtkn_t
 {
 public:
@@ -47,7 +47,7 @@ private:
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 extern std::ostream &
 operator << (std::ostream & stream, const indtkn_t & t);
 
@@ -59,17 +59,17 @@ static const unsigned int INDSTP = 2;
 
 //----------------------------------------------------------------
 // INDSTR
-// 
+//
 #define INDSTR indtkn_t(indent + INDSTP)
 
 //----------------------------------------------------------------
 // INDSCP
-// 
+//
 #define INDSCP indtkn_t(indent)
 
 //----------------------------------------------------------------
 // INDNXT
-// 
+//
 #define INDNXT (indent + INDSTP)
 
 

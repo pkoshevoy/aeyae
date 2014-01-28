@@ -29,22 +29,22 @@ public:
   the_document_eh_t(the_document_ui_t * doc_ui):
     doc_ui_(doc_ui)
   {}
-  
+
   // accessor to the document ui:
   inline the_document_ui_t & doc_ui() const
   { return *doc_ui_; }
-  
+
   // accessors to the document state object:
   inline the_document_so_t & doc_so()
   { return doc_ui_->doc_so(); }
-  
+
   inline const the_document_so_t & doc_so() const
   { return doc_ui_->doc_so(); }
-  
+
   // accessor to the document:
   inline doc_t * document() const
   { return dynamic_cast<doc_t *>(doc_so().document()); }
-  
+
 private:
   the_document_ui_t * doc_ui_;
 };

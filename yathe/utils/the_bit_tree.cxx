@@ -20,7 +20,7 @@
 
 //----------------------------------------------------------------
 // the_bit_tree_node_t::node_size
-// 
+//
 const unsigned int
 the_bit_tree_node_t::node_size[] =
 {
@@ -37,7 +37,7 @@ the_bit_tree_node_t::node_size[] =
 
 //----------------------------------------------------------------
 // the_bit_tree_node_t::node_mask
-// 
+//
 const unsigned int
 the_bit_tree_node_t::node_mask[] =
 {

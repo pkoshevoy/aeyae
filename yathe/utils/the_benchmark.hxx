@@ -18,18 +18,18 @@
 
 //----------------------------------------------------------------
 // the_benchmark_t
-// 
+//
 class the_benchmark_t
 {
 public:
   the_benchmark_t(const char * name_utf8);
   ~the_benchmark_t();
-  
+
   static void setup(const char * saveto_filename_utf8);
   static void reset();
-  
+
   struct record_t;
-  
+
 private:
   record_t * record_;
 };
@@ -37,9 +37,9 @@ private:
 
 //----------------------------------------------------------------
 // THE_STR1
-// 
+//
 // macro for converting its parameter to a string literal
-// 
+//
 #define THE_STR1(a) THE_STR1_HIDDEN(a)
 #define THE_STR1_HIDDEN(a) #a
 
@@ -47,13 +47,13 @@ private:
 // THE_CAT2
 //
 // macro for concatenating 2 parameters together
-// 
+//
 #define THE_CAT2(a, b) THE_CAT2_HIDDEN(a, b)
 #define THE_CAT2_HIDDEN(a, b) a ## b
 
 //----------------------------------------------------------------
 // THE_BENCHMARK
-// 
+//
 #define THE_BENCHMARK(name)				\
   the_benchmark_t THE_CAT2(benchmark_, __LINE__)	\
     (#name ", " __FILE__ ":" THE_STR1(__LINE__))

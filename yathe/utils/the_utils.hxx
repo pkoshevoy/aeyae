@@ -39,28 +39,28 @@
 
 //----------------------------------------------------------------
 // THE_PATH_SEPARATOR
-// 
+//
 extern const char * THE_PATH_SEPARATOR;
 
 //----------------------------------------------------------------
 // array2d
-// 
+//
 #define array2d( T ) std::vector<std::vector<T> >
 
 //----------------------------------------------------------------
 // array3d
-// 
+//
 #define array3d( T ) std::vector<std::vector<std::vector<T> > >
 
 //----------------------------------------------------------------
 // TWO_PI
-// 
+//
 static const double TWO_PI = 2.0 * M_PI;
 
 
 //----------------------------------------------------------------
 // clamp_angle
-// 
+//
 inline double
 clamp_angle(const double & absolute_angle)
 {
@@ -71,7 +71,7 @@ clamp_angle(const double & absolute_angle)
 
 //----------------------------------------------------------------
 // calc_angle
-// 
+//
 inline double
 calc_angle(const double & x,
            const double & y,
@@ -83,18 +83,18 @@ calc_angle(const double & x,
 
 //----------------------------------------------------------------
 // sleep_msec
-// 
+//
 extern void sleep_msec(size_t msec);
 
 //----------------------------------------------------------------
 // drand
-// 
+//
 inline static double drand()
 { return double(rand()) / double(RAND_MAX); }
 
 //----------------------------------------------------------------
 // integer_power
-// 
+//
 template <typename scalar_t>
 inline scalar_t
 integer_power(scalar_t x, size_t p)
@@ -106,13 +106,13 @@ integer_power(scalar_t x, size_t p)
     x *= x;
     p >>= 1;
   }
-  
+
   return result;
 }
 
 //----------------------------------------------------------------
 // closest_power_of_two_larger_than_given
-// 
+//
 template <typename scalar_t>
 inline scalar_t
 closest_power_of_two_larger_than_given(const scalar_t & given)
@@ -122,14 +122,14 @@ closest_power_of_two_larger_than_given(const scalar_t & given)
   for (size_t i = 0;
        (i < n) && (closest < given);
        i++, closest *= scalar_t(2)) {}
-  
+
   return closest;
 }
 
 
 //----------------------------------------------------------------
 // divide
-// 
+//
 template <typename data_t>
 data_t
 divide(const data_t & numerator, const data_t & denominator)
@@ -140,7 +140,7 @@ divide(const data_t & numerator, const data_t & denominator)
 
 //----------------------------------------------------------------
 // clear_stack
-// 
+//
 template <typename data_t>
 void
 clear_stack(std::stack<data_t> & s)
@@ -153,7 +153,7 @@ clear_stack(std::stack<data_t> & s)
 
 //----------------------------------------------------------------
 // resize
-// 
+//
 template <class data_t>
 void
 resize(array2d(data_t) & array,
@@ -169,7 +169,7 @@ resize(array2d(data_t) & array,
 
 //----------------------------------------------------------------
 // assign
-// 
+//
 template <class data_t>
 void
 assign(array2d(data_t) & array,
@@ -186,7 +186,7 @@ assign(array2d(data_t) & array,
 
 //----------------------------------------------------------------
 // resize
-// 
+//
 template <class data_t>
 void
 resize(array3d(data_t) & array,
@@ -207,7 +207,7 @@ resize(array3d(data_t) & array,
 
 //----------------------------------------------------------------
 // assign
-// 
+//
 template <class data_t>
 void
 assign(array3d(data_t) & array,
@@ -230,7 +230,7 @@ assign(array3d(data_t) & array,
 
 //----------------------------------------------------------------
 // push_back_unique
-// 
+//
 template <class container_t, typename data_t>
 void
 push_back_unique(container_t & container,
@@ -239,13 +239,13 @@ push_back_unique(container_t & container,
   typename container_t::const_iterator where =
     std::find(container.begin(), container.end(), data);
   if (where != container.end()) return;
-  
+
   container.push_back(data);
 }
 
 //----------------------------------------------------------------
 // push_front_unique
-// 
+//
 template <class container_t, typename data_t>
 void
 push_front_unique(container_t & container,
@@ -254,13 +254,13 @@ push_front_unique(container_t & container,
   typename container_t::const_iterator where =
     std::find(container.begin(), container.end(), data);
   if (where != container.end()) return;
-  
+
   container.push_front(data);
 }
 
 //----------------------------------------------------------------
 // remove_head
-// 
+//
 template <typename data_t>
 data_t
 remove_head(std::list<data_t> & container)
@@ -272,7 +272,7 @@ remove_head(std::list<data_t> & container)
 
 //----------------------------------------------------------------
 // remove_tail
-// 
+//
 template <typename data_t>
 data_t
 remove_tail(std::list<data_t> & container)
@@ -284,7 +284,7 @@ remove_tail(std::list<data_t> & container)
 
 //----------------------------------------------------------------
 // remove_head
-// 
+//
 template <typename data_t>
 data_t
 remove_head(std::vector<data_t> & container)
@@ -296,7 +296,7 @@ remove_head(std::vector<data_t> & container)
 
 //----------------------------------------------------------------
 // remove_tail
-// 
+//
 template <typename data_t>
 data_t
 remove_tail(std::vector<data_t> & container)
@@ -308,7 +308,7 @@ remove_tail(std::vector<data_t> & container)
 
 //----------------------------------------------------------------
 // is_size_two_or_larger
-// 
+//
 template <typename container_t>
 inline bool
 is_size_two_or_larger(const container_t & c)
@@ -320,7 +320,7 @@ is_size_two_or_larger(const container_t & c)
 
 //----------------------------------------------------------------
 // is_size_three_or_larger
-// 
+//
 template <typename container_t>
 inline bool
 is_size_three_or_larger(const container_t & c)
@@ -332,7 +332,7 @@ is_size_three_or_larger(const container_t & c)
 
 //----------------------------------------------------------------
 // is_size_one
-// 
+//
 template <typename container_t>
 inline bool
 is_size_one(const container_t & c)
@@ -345,7 +345,7 @@ is_size_one(const container_t & c)
 
 //----------------------------------------------------------------
 // replace
-// 
+//
 template <class container_t, typename data_t>
 bool
 replace(container_t & container, const data_t & a, const data_t & b)
@@ -353,7 +353,7 @@ replace(container_t & container, const data_t & a, const data_t & b)
   typename container_t::iterator end = container.end();
   typename container_t::iterator i = std::find(container.begin(), end, a);
   if (i == end) return false;
-  
+
   *i = b;
   return true;
 }
@@ -361,7 +361,7 @@ replace(container_t & container, const data_t & a, const data_t & b)
 
 //----------------------------------------------------------------
 // iterator_at_index
-// 
+//
 template <typename data_t>
 typename std::list<data_t>::const_iterator
 iterator_at_index(const std::list<data_t> & container,
@@ -374,7 +374,7 @@ iterator_at_index(const std::list<data_t> & container,
 
 //----------------------------------------------------------------
 // iterator_at_index
-// 
+//
 template <typename data_t>
 typename std::list<data_t>::iterator
 iterator_at_index(std::list<data_t> & container,
@@ -387,7 +387,7 @@ iterator_at_index(std::list<data_t> & container,
 
 //----------------------------------------------------------------
 // index_of
-// 
+//
 template <typename data_t>
 size_t
 index_of(const std::list<data_t> & container, const data_t & data)
@@ -397,26 +397,26 @@ index_of(const std::list<data_t> & container, const data_t & data)
   {
     if (data == *iter) return i;
   }
-  
+
   return ~0;
 }
 
 //----------------------------------------------------------------
 // has
-// 
+//
 template <typename data_t>
 bool
 has(const std::list<data_t> & container, const data_t & data)
 {
   typename std::list<data_t>::const_iterator iter =
     std::find(container.begin(), container.end(), data);
-  
+
   return iter != container.end();
 }
 
 //----------------------------------------------------------------
 // expand
-// 
+//
 template <class container_t>
 container_t &
 expand(container_t & a,
@@ -434,14 +434,14 @@ expand(container_t & a,
       a.push_back(*i);
     }
   }
-  
+
   return a;
 }
 
 
 //----------------------------------------------------------------
 // dump
-// 
+//
 template <typename stream_t, typename data_t>
 stream_t &
 dump(stream_t & so, const std::list<data_t> & c)
@@ -451,14 +451,14 @@ dump(stream_t & so, const std::list<data_t> & c)
   {
     so << *i << ' ';
   }
-  
+
   return so;
 }
 
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 template <typename stream_t, typename data_t>
 std::ostream &
 operator << (stream_t & so, const std::list<data_t> & c)
@@ -469,7 +469,7 @@ operator << (stream_t & so, const std::list<data_t> & c)
 
 //----------------------------------------------------------------
 // operator +
-// 
+//
 // Construct an on-the-fly linked list containing two elements:
 //
 template <typename T>
@@ -484,7 +484,7 @@ operator + (const T & a, const T & b)
 
 //----------------------------------------------------------------
 // operator +
-// 
+//
 // Construct an on-the-fly linked list containing list a with item b appended:
 template <typename T>
 inline std::list<T>
@@ -497,7 +497,7 @@ operator + (const std::list<T> & a, const T & b)
 
 //----------------------------------------------------------------
 // inserter_t
-// 
+//
 template <class container_t, typename data_t>
 class inserter_t
 {
@@ -509,7 +509,7 @@ public:
     iter_(iter),
     expand_(expand)
   {}
-  
+
   inline inserter_t<container_t, data_t> & operator << (const data_t & data)
   {
     if (iter_ == container_.end())
@@ -528,17 +528,17 @@ public:
       *iter_ = data;
       ++iter_;
     }
-    
+
     return *this;
   }
-  
+
 private:
   // reference to the container:
   container_t & container_;
-  
+
   // current index into the container:
   typename container_t::iterator iter_;
-  
+
   // a flag indicating whether the container should be expanded to
   // accomodate the insertions:
   bool expand_;
@@ -546,7 +546,7 @@ private:
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 template <typename data_t>
 inserter_t<std::vector<data_t>, data_t>
 operator << (std::vector<data_t> & container, const data_t & data)
@@ -558,7 +558,7 @@ operator << (std::vector<data_t> & container, const data_t & data)
 
 //----------------------------------------------------------------
 // operator <<
-// 
+//
 template <typename data_t>
 inserter_t<std::list<data_t>, data_t>
 operator << (std::list<data_t> & container, const data_t & data)
@@ -571,7 +571,7 @@ operator << (std::list<data_t> & container, const data_t & data)
 
 //----------------------------------------------------------------
 // calc_euclidian_distance_sqrd
-// 
+//
 template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
@@ -583,13 +583,13 @@ calc_euclidian_distance_sqrd(const std::vector<data_t> & a,
     data_t d = a[i] - b[i];
     distance_sqrd += d * d;
   }
-  
+
   return distance_sqrd;
 }
 
 //----------------------------------------------------------------
 // calc_euclidian_distance
-// 
+//
 template <size_t dimensions, typename data_t>
 data_t
 calc_euclidian_distance(const std::vector<data_t> & a,
@@ -608,19 +608,19 @@ data_t
 calc_frobenius_norm_sqrd(const std::vector<data_t> & vec)
 {
   data_t L2_norm_sqrd = data_t(0);
-  
+
   const size_t len = vec.size();
   for (size_t i = 0; i < len; i++)
   {
     L2_norm_sqrd += vec[i] * vec[i];
   }
-  
+
   return L2_norm_sqrd;
 }
 
 //----------------------------------------------------------------
 // calc_frobenius_norm
-// 
+//
 template <typename data_t>
 data_t
 calc_frobenius_norm(const std::vector<data_t> & vec)
@@ -632,13 +632,13 @@ calc_frobenius_norm(const std::vector<data_t> & vec)
 
 //----------------------------------------------------------------
 // normalize
-// 
+//
 template <typename data_t>
 void
 normalize(std::vector<data_t> & vec)
 {
   data_t norm = calc_frobenius_norm<data_t>(vec);
-  
+
   const size_t len = vec.size();
   for (size_t i = 0; i < len; i++)
   {
@@ -649,7 +649,7 @@ normalize(std::vector<data_t> & vec)
 
 //----------------------------------------------------------------
 // the_sign
-// 
+//
 template <class T>
 inline T
 the_sign(const T & a)
@@ -662,9 +662,9 @@ the_sign(const T & a)
 
 //----------------------------------------------------------------
 // copy_a_to_b
-// 
+//
 // list -> array:
-// 
+//
 template <class T>
 void
 copy_a_to_b(const std::list<T> & container_a,
@@ -675,16 +675,16 @@ copy_a_to_b(const std::list<T> & container_a,
 
 //----------------------------------------------------------------
 // copy_a_to_b
-// 
+//
 // list -> array:
-// 
+//
 template <class T>
 void
 copy_a_to_b(const std::list<T> & container_a,
             the_dynamic_array_t<T> & container_b)
 {
   container_b.resize(container_a.size());
-  
+
   const size_t size = container_a.size();
   typename std::list<T>::const_iterator iter = container_a.begin();
   for (size_t i = 0; i < size; i++, ++iter)
@@ -695,16 +695,16 @@ copy_a_to_b(const std::list<T> & container_a,
 
 //----------------------------------------------------------------
 // copy_a_to_b
-// 
+//
 // dynamic_array -> array
-// 
+//
 template <class T>
 void
 copy_a_to_b(const the_dynamic_array_t<T> & container_a,
             std::vector<T> & container_b)
 {
   container_b.resize(container_a.size());
-  
+
   const size_t & size = container_a.size();
   for (size_t i = 0; i < size; i++)
   {
@@ -715,7 +715,7 @@ copy_a_to_b(const the_dynamic_array_t<T> & container_a,
 
 //----------------------------------------------------------------
 // the_lock_t
-// 
+//
 template <typename T>
 class the_lock_t
 {
@@ -724,15 +724,15 @@ public:
     lock_(lock),
     armed_(false)
   { if (lock_immediately) arm(); }
-  
+
   the_lock_t(T & lock, bool lock_immediately = true):
     lock_(&lock),
     armed_(false)
   { if (lock_immediately) arm(); }
-  
+
   ~the_lock_t()
   { disarm(); }
-  
+
   inline void arm()
   {
     if (!armed_ && lock_ != NULL)
@@ -741,7 +741,7 @@ public:
       armed_ = true;
     }
   }
-  
+
   inline void disarm()
   {
     if (armed_ && lock_ != NULL)
@@ -750,19 +750,19 @@ public:
       armed_ = false;
     }
   }
-  
+
 private:
   the_lock_t();
   the_lock_t(const the_lock_t &);
   the_lock_t & operator = (const the_lock_t &);
-  
+
   T * lock_;
   bool armed_;
 };
 
 //----------------------------------------------------------------
 // the_unlock_t
-// 
+//
 template <typename T>
 class the_unlock_t
 {
@@ -775,7 +775,7 @@ public:
       assert(lock_->try_lock() == false);
     }
   }
-  
+
   the_unlock_t(T & lock):
     lock_(&lock)
   {
@@ -784,7 +784,7 @@ public:
       assert(lock_->try_lock() == false);
     }
   }
-  
+
   ~the_unlock_t()
   {
     if (lock_ != NULL)
@@ -792,18 +792,18 @@ public:
       lock_->unlock();
     }
   }
-  
+
 private:
   the_unlock_t();
   the_unlock_t(const the_unlock_t &);
   the_unlock_t & operator = (const the_unlock_t &);
-  
+
   T * lock_;
 };
 
 //----------------------------------------------------------------
 // the_scoped_variable_t
-// 
+//
 template <typename T>
 class the_scoped_variable_t
 {
@@ -817,7 +817,7 @@ public:
   {
     var_ = in_;
   }
-  
+
   ~the_scoped_variable_t()
   {
     var_ = out_;
@@ -826,7 +826,7 @@ public:
 private:
   the_scoped_variable_t(const the_scoped_variable_t &);
   the_scoped_variable_t & operator = (const the_scoped_variable_t &);
-  
+
   T & var_;
   const T in_;
   const T out_;
@@ -834,7 +834,7 @@ private:
 
 //----------------------------------------------------------------
 // the_scoped_increment_t
-// 
+//
 template <typename T>
 class the_scoped_increment_t
 {
@@ -844,22 +844,22 @@ public:
   {
     var_++;
   }
-  
+
   ~the_scoped_increment_t()
   {
     var_--;
   }
-  
+
 private:
   the_scoped_increment_t(const the_scoped_increment_t &);
   the_scoped_increment_t & operator = (const the_scoped_increment_t &);
-  
+
   T & var_;
 };
 
 //----------------------------------------------------------------
 // THROW_ARG2_IF_FALSE
-// 
+//
 #ifndef THROW_ARG2_IF_FALSE
 #define THROW_ARG2_IF_FALSE(predicate, arg2) \
 if (predicate) {} else throw arg2
@@ -869,14 +869,14 @@ if (predicate) {} else throw arg2
 // restore_console_stdio
 //
 // Reopen stdin, stdout, stderr on windows, no-op everywhere else
-// 
+//
 extern bool
 restore_console_stdio();
 
 
 //----------------------------------------------------------------
 // off_t
-// 
+//
 #ifdef _WIN32
 #define off_t __int64
 #endif
@@ -885,7 +885,7 @@ namespace the
 {
   //----------------------------------------------------------------
   // next
-  // 
+  //
   template <class iterator_t>
   iterator_t
   next(const iterator_t & curr)
@@ -893,10 +893,10 @@ namespace the
     iterator_t tmp(curr);
     return ++tmp;
   }
-  
+
   //----------------------------------------------------------------
   // prev
-  // 
+  //
   template <class iterator_t>
   iterator_t
   prev(const iterator_t & curr)
@@ -907,91 +907,91 @@ namespace the
 
   //----------------------------------------------------------------
   // open_utf8
-  // 
+  //
   extern int open_utf8(const char * filename_utf8,
                        int oflag,
                        int pmode);
 
   //----------------------------------------------------------------
   // open_utf8
-  // 
+  //
   extern void open_utf8(std::fstream & fstream_to_open,
                         const char * filename_utf8,
                         std::ios_base::openmode mode);
 
   //----------------------------------------------------------------
   // fopen_utf8
-  // 
+  //
   extern FILE * fopen_utf8(const char * filename_utf8,
                            const char * mode);
 
   //----------------------------------------------------------------
   // fseek64
-  // 
+  //
   extern int fseek64(FILE * file, off_t offset, int whence);
 
   //----------------------------------------------------------------
   // ftell64
-  // 
+  //
   extern off_t ftell64(const FILE * file);
 
   //----------------------------------------------------------------
   // rename_utf8
-  // 
+  //
   extern int rename_utf8(const char * old_utf8, const char * new_utf8);
 
   //----------------------------------------------------------------
   // remove_utf8
-  // 
+  //
   extern int remove_utf8(const char * filename_utf8);
 
   //----------------------------------------------------------------
   // rmdir_utf8
-  // 
+  //
   extern int rmdir_utf8(const char * path_utf8);
 
   //----------------------------------------------------------------
   // mkdir_utf8
-  // 
+  //
   extern int mkdir_utf8(const char * path_utf8);
 
   //----------------------------------------------------------------
   // rmdir_recursively_utf8
-  // 
+  //
   // avoid using these dangerous functions, try using
   // find_matching_files(..) and remove_files(..) instead
-  // 
+  //
   extern bool rmdir_recursively_utf8(const std::string & dir_to_remove);
   extern bool rmdir_recursively_utf8(const char * dir_to_remove);
-  
+
   //----------------------------------------------------------------
   // find_matching_files
-  // 
+  //
   // assemble a list of filenames in a given folder that match
   // a specified filename prefix and extension suffix
   //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   extern bool
   find_matching_files(std::list<std::string> & found,
                       const char * folder,
                       const char * prefix = "",
                       const char * suffix = "");
-  
+
   //----------------------------------------------------------------
   // remove_files
   //
   // remove files found with find_matching_files(..)
   //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   extern bool
   remove_files(const char * folder,
                const std::list<std::string> & filenames);
 
   //----------------------------------------------------------------
   // close_enough
-  // 
+  //
   inline static bool
   close_enough(const float & ref,
                const float & given,
@@ -1003,7 +1003,7 @@ namespace the
 
   //----------------------------------------------------------------
   // close_enough
-  // 
+  //
   inline static bool
   close_enough(const double & ref,
                const double & given,
@@ -1015,70 +1015,70 @@ namespace the
 
   //----------------------------------------------------------------
   // get_current_executable_path
-  // 
+  //
   extern bool
   get_current_executable_path(std::string & exe_path_utf8);
 
   //----------------------------------------------------------------
   // get_latest_err_str
-  // 
+  //
   extern std::string
   get_latest_err_str();
 
   //----------------------------------------------------------------
   // launch_app
-  // 
+  //
   extern bool
   launch_app(const std::string & exe_path_utf8,
              const std::list<std::string> & args_utf8,
              const std::string & work_dir_utf8 = std::string(),
              bool wait_to_finish = true);
-  
+
   //----------------------------------------------------------------
   // is_absolute_path
-  // 
+  //
   extern bool
   is_absolute_path(const std::string & path_utf8);
 
   //----------------------------------------------------------------
   // simplify_path
-  // 
+  //
   extern bool
   simplify_path(const std::string & path_utf8,
                 std::string & full_path_utf8);
-  
+
   //----------------------------------------------------------------
   // parse_file_path
-  // 
+  //
   // split a given file path into the folder name
   // (excluding the last separator),
   // and the file name.
-  // 
+  //
   // NOTE: returns false if no file path separator was found.
-  // 
+  //
   extern bool
   parse_file_path(const std::string & file_path,
                   std::string & folder,
                   std::string & name);
-  
+
   //----------------------------------------------------------------
   // string_length
-  // 
+  //
   template <typename TChar>
   std::size_t
   string_length(const TChar * str)
   {
     std::size_t length = 0;
-    
+
     for (; str && *str; ++str, ++length)
       ;
-    
+
     return length;
   }
-  
+
   //----------------------------------------------------------------
   // string_match_head
-  // 
+  //
   template <typename TChar>
   bool
   string_match_head(const TChar * str, const TChar * head)
@@ -1093,30 +1093,30 @@ namespace the
         return false;
       }
     }
-    
+
     return !b || !*b;
   }
-  
+
   //----------------------------------------------------------------
   // string_match_tail
-  // 
+  //
   template <typename TChar>
   bool
   string_match_tail(const TChar * str, const TChar * tail)
   {
     const TChar * a = str;
     const TChar * b = tail;
-    
+
     std::size_t len_a = string_length(a);
     std::size_t len_b = string_length(b);
-    
+
     if (len_a < len_b)
     {
       return false;
     }
-    
+
     a += len_a - len_b;
-    
+
     for (; a && b && *a && *b; ++a, ++b)
     {
       if (*a != *b)
@@ -1124,13 +1124,13 @@ namespace the
         return false;
       }
     }
-    
+
     return !b || !*b;
   }
-  
+
   //----------------------------------------------------------------
   // string_match_head
-  // 
+  //
   template <typename TString>
   bool
   string_match_head(const TString & str, const TString & head)
@@ -1138,10 +1138,10 @@ namespace the
     typedef typename TString::charT TChar;
     return string_match_head<TChar>(str.c_str(), head.c_str());
   }
-  
+
   //----------------------------------------------------------------
   // string_match_tail
-  // 
+  //
   template <typename TString>
   bool
   string_match_tail(const TString & str, const TString & tail)
@@ -1152,7 +1152,7 @@ namespace the
 
   //----------------------------------------------------------------
   // convert_to_string
-  // 
+  //
   template <typename TData>
   std::string
   convert_to_string(const TData & data)
@@ -1166,9 +1166,9 @@ namespace the
 
   //----------------------------------------------------------------
   // open_folder_t
-  // 
+  //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   struct open_folder_t
   {
     // NOTE: the constructor may throw exceptions if the folder
@@ -1193,7 +1193,7 @@ namespace the
     // intentionally disabled:
     open_folder_t(const open_folder_t &);
     open_folder_t & operator = (const open_folder_t &);
-        
+
   protected:
     // private implementation details:
     class private_t;
@@ -1202,9 +1202,9 @@ namespace the
 
   //----------------------------------------------------------------
   // open_file_t
-  // 
+  //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   struct open_file_t
   {
     // NOTE: the constructor may throw exceptions if the file
@@ -1213,16 +1213,16 @@ namespace the
 
     // NOTE: the destructor will close the file:
     ~open_file_t();
-        
+
     // the file handle:
     FILE * file_;
   };
 
   //----------------------------------------------------------------
   // progress_reporter_base_t
-  // 
+  //
   // NOTE: progress is expressed as a scaler value in the range [0, 1]
-  // 
+  //
   struct progress_reporter_base_t
   {
     progress_reporter_base_t(unsigned int items_total = 0,
@@ -1238,33 +1238,33 @@ namespace the
     // update progress for 1 item (returns true to carry on, false to abort),
     // calls report_progress periodically (according to selected precision):
     virtual bool update_progress(double item_progress);
-        
+
     // indicate that 1 item has completed:
     virtual void item_finished();
 
     // this will be called periodically (according to selected precision),
     // returns true to carry on, false to abort;
     virtual bool report_progress(double fraction_completed) = 0;
-    
+
   protected:
     unsigned int items_total_;
     unsigned int items_completed_;
     double item_progress_;
     double precision_;
-    
+
   private:
     int reported_progress_;
   };
-  
+
   //----------------------------------------------------------------
   // copy_file
-  // 
+  //
   // copy a file from a given source file
   // to the specified destination file,
   // may throw std::exception
-  // 
+  //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   extern bool
   copy_file(const std::string & src,
             const std::string & dst,
@@ -1272,13 +1272,13 @@ namespace the
 
   //----------------------------------------------------------------
   // copy_folder_contents
-  // 
+  //
   // recursively copy folder contents of a given source folder
   // to the specified destination folder,
   // may throw std::exception
-  // 
+  //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   extern bool
   copy_folder_contents(const std::string & src,
                        const std::string & dst,
@@ -1286,13 +1286,13 @@ namespace the
 
   //----------------------------------------------------------------
   // copy_files
-  // 
+  //
   // carry out the recursive file/folder copy operation;
   // returns true/false to indicate success/failure,
   // may throw a std::exception
-  // 
+  //
   // NOTE: all strings are UTF-8 encoded
-  // 
+  //
   extern bool
   copy_files(const std::string & from,
              const std::string & to,
@@ -1300,22 +1300,22 @@ namespace the
 
   //----------------------------------------------------------------
   // is_path_to_folder
-  // 
+  //
   extern bool
   is_path_to_folder(const std::string & path_utf8);
 
   //----------------------------------------------------------------
   // path_exists
-  // 
+  //
   extern bool
   path_exists(const std::string & path_utf8);
 
   //----------------------------------------------------------------
   // count_files
-  // 
+  //
   // recursively count files stored at the specified path,
   // may throw std::exception
-  // 
+  //
   extern unsigned int
   count_files(const std::string & path_utf8);
 
