@@ -27,6 +27,7 @@
 // the_point_t
 //
 // Base class for the Vertex datatypes:
+//
 class the_point_t : public the_primitive_t
 {
 public:
@@ -50,10 +51,10 @@ public:
 
   // these functions can be used to move the point:
   virtual bool set_value(const the_view_mgr_t & view_mgr,
-			 const p3x1_t & wcs_pt) = 0;
+                         const p3x1_t & wcs_pt) = 0;
 
   inline bool move(const the_view_mgr_t & view_mgr,
-		   const v3x1_t & wcs_vec)
+                   const v3x1_t & wcs_vec)
   { return set_value(view_mgr, anchor_ + wcs_vec); }
 
   // anchor point managment:
@@ -68,7 +69,7 @@ public:
 
   // virtual: this is used during intersection/proximity testing:
   bool intersect(const the_view_volume_t & volume,
-		 std::list<the_pick_data_t> & data) const;
+                 std::list<the_pick_data_t> & data) const;
 
   // virtual: file io:
   bool save(std::ostream & stream) const;
@@ -85,6 +86,9 @@ protected:
 
 //----------------------------------------------------------------
 // the_hard_point_t
+//
+// a fixed point in space, position does not change with regeneration
+// unless its value is explicitely changed.
 //
 class the_hard_point_t : public the_point_t
 {
@@ -116,7 +120,7 @@ public:
 
   // virtual:
   bool set_value(const the_view_mgr_t & view_mgr,
-		 const p3x1_t & wcs_pt);
+                 const p3x1_t & wcs_pt);
 
   // virtual:
   the_point_symbol_id_t symbol() const
@@ -133,44 +137,38 @@ private:
   p3x1_t value_;
 };
 
-
 //----------------------------------------------------------------
 // the_soft_point_t
 //
-// Soft Vertex datatype:
-class the_soft_point_t : public the_point_t
+// a point in space, position is calculated via a reference
+// to supporting geometric object;  position may change
+// with regeneration whenever the supporting geometry moves or changes.
+//
+class the_supported_point_t : public the_point_t
 {
 public:
-  the_soft_point_t();
-  the_soft_point_t(const the_reference_t & ref);
-  the_soft_point_t(const the_soft_point_t & point);
-  ~the_soft_point_t();
-
-  // virtual:
-  the_primitive_t * clone() const
-  { return new the_soft_point_t(*this); }
-
-  // virtual:
-  const char * name() const
-  { return "the_soft_point_t"; }
+  the_supported_point_t();
+  the_supported_point_t(const the_reference_t & ref);
+  the_supported_point_t(const the_supported_point_t & point);
+  ~the_supported_point_t();
 
   // virtual:
   void added_to_the_registry(the_registry_t * registry,
-			     const unsigned int & id);
+                             const unsigned int & id);
+
+  // virtual:
+  bool regenerate();
 
   // accessor to the stored reference:
   inline the_reference_t * ref() const
   { return ref_; }
-
-  // virtual:
-  bool regenerate();
 
   const p3x1_t & value() const
   { return value_; }
 
   // virtual:
   bool set_value(const the_view_mgr_t & view_mgr,
-		 const p3x1_t & wcs_pt);
+                 const p3x1_t & wcs_pt);
 
   // virtual:
   the_point_symbol_id_t symbol() const;
@@ -182,7 +180,7 @@ public:
   // virtual: For debugging, dumps the value:
   void dump(ostream & strm, unsigned int indent = 0) const;
 
-private:
+protected:
   // the reference (the part that makes this point soft):
   the_reference_t * ref_;
 
@@ -192,9 +190,72 @@ private:
 
 
 //----------------------------------------------------------------
+// the_soft_point_t
+//
+// a point in space, position is calculated via a reference
+// to supporting geometric object;  position may change
+// with regeneration whenever the supporting geometry moves or changes.
+//
+class the_soft_point_t : public the_supported_point_t
+{
+public:
+  the_soft_point_t();
+  the_soft_point_t(const the_reference_t & ref);
+  the_soft_point_t(const the_soft_point_t & point);
+
+  // virtual:
+  the_primitive_t * clone() const
+  { return new the_soft_point_t(*this); }
+
+  // virtual:
+  const char * name() const
+  { return "the_soft_point_t"; }
+
+  // virtual: For debugging, dumps the value:
+  void dump(ostream & strm, unsigned int indent = 0) const;
+};
+
+
+//----------------------------------------------------------------
+// the_sticky_point_t
+//
+// a point in space, position is calculated as the closest point on
+// the supporting geometric object to the previously know position
+// of this point;  position may change with regeneration whenever
+// the supporting geometry moves or changes.
+//
+class the_sticky_point_t : public the_supported_point_t
+{
+public:
+  the_sticky_point_t();
+  the_sticky_point_t(const the_reference_t & ref);
+  the_sticky_point_t(const the_sticky_point_t & point);
+
+  // virtual:
+  the_primitive_t * clone() const
+  { return new the_sticky_point_t(*this); }
+
+  // virtual:
+  const char * name() const
+  { return "the_sticky_point_t"; }
+
+  // virtual:
+  void added_to_the_registry(the_registry_t * registry,
+                             const unsigned int & id);
+
+  // virtual:
+  bool regenerate();
+
+  // virtual: For debugging, dumps the value:
+  void dump(ostream & strm, unsigned int indent = 0) const;
+};
+
+
+//----------------------------------------------------------------
 // the_point_ref_t
 //
-// Reference to a vertex:
+// Reference to a point primitive
+//
 class the_point_ref_t : public the_reference_t
 {
 public:
@@ -213,8 +274,8 @@ public:
 
   // virtual:
   bool move(the_registry_t * /* registry */,
-	    const the_view_mgr_t & /* view_mgr */,
-	    const p3x1_t & /* wcs_pt */)
+            const the_view_mgr_t & /* view_mgr */,
+            const p3x1_t & /* wcs_pt */)
   { return false; }
 
   // virtual:

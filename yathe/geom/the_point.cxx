@@ -10,23 +10,15 @@
 // Description  : The 3D point primitive.
 
 // local includes:
+#include "geom/the_curve.hxx"
 #include "geom/the_point.hxx"
 #include "doc/the_reference.hxx"
+#include "math/the_deviation.hxx"
 #include "math/the_view_volume.hxx"
 #include "sel/the_pick_rec.hxx"
 
 // system includes:
 #include <assert.h>
-
-//----------------------------------------------------------------
-// USE_SMART_SOFT_POINTS
-//
-#define USE_SMART_SOFT_POINTS
-
-#ifdef USE_SMART_SOFT_POINTS
-#include <geom/the_curve.hxx>
-#include <math/the_deviation.hxx>
-#endif
 
 
 //----------------------------------------------------------------
@@ -35,7 +27,7 @@
 bool
 the_point_t::
 intersect(const the_view_volume_t & volume,
-	  std::list<the_pick_data_t> & data) const
+          std::list<the_pick_data_t> & data) const
 {
   const p3x1_t wcs_pt = value();
 
@@ -107,7 +99,7 @@ the_point_t::dump(ostream & strm, unsigned int indent) const
 //
 bool
 the_hard_point_t::set_value(const the_view_mgr_t & /* view_mgr */,
-			    const p3x1_t & wcs_pt)
+                            const p3x1_t & wcs_pt)
 {
   value_ = wcs_pt;
   the_graph_node_t::request_regeneration(this);
@@ -149,113 +141,60 @@ the_hard_point_t::dump(ostream & strm, unsigned int indent) const
 
 
 //----------------------------------------------------------------
-// the_soft_point_t::the_soft_point_t
+// the_supported_point_t::the_supported_point_t
 //
-the_soft_point_t::the_soft_point_t():
+the_supported_point_t::the_supported_point_t():
   the_point_t(),
   ref_(NULL)
 {}
 
 //----------------------------------------------------------------
-// the_soft_point_t::the_soft_point_t
+// the_supported_point_t::the_supported_point_t
 //
-the_soft_point_t::the_soft_point_t(const the_reference_t & ref):
+the_supported_point_t::the_supported_point_t(const the_reference_t & ref):
   the_point_t()
 {
   ref_ = ref.clone();
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::the_soft_point_t
+// the_supported_point_t::the_supported_point_t
 //
-the_soft_point_t::the_soft_point_t(const the_soft_point_t & point):
-  the_point_t(point),
-  ref_(point.ref_->clone()),
-  value_(point.value_)
+the_supported_point_t::the_supported_point_t(const the_supported_point_t & pt):
+  the_point_t(pt),
+  ref_(pt.ref_->clone()),
+  value_(pt.value_)
 {}
 
 //----------------------------------------------------------------
-// the_soft_point_t::~the_soft_point_t
+// the_supported_point_t::~the_supported_point_t
 //
-the_soft_point_t::~the_soft_point_t()
+the_supported_point_t::~the_supported_point_t()
 {
   delete ref_;
   ref_ = NULL;
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::added_to_the_registry
+// the_supported_point_t::added_to_the_registry
 //
 void
-the_soft_point_t::added_to_the_registry(the_registry_t * registry,
-					const unsigned int & id)
+the_supported_point_t::added_to_the_registry(the_registry_t * registry,
+                                             const unsigned int & id)
 {
   the_point_t::added_to_the_registry(registry, id);
 
   // update the graph:
   establish_supporter_dependent(registry, ref_->id(), id);
-
-#ifdef USE_SMART_SOFT_POINTS
-  ref_->eval(registry, value_);
-  anchor_ = value_;
-#endif
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::regenerate
+// the_supported_point_t::regenerate
 //
 bool
-the_soft_point_t::regenerate()
+the_supported_point_t::regenerate()
 {
   the_registry_t * r = registry();
-
-#ifdef USE_SMART_SOFT_POINTS
-  the_curve_t * curve = ref_->references<the_curve_t>(r);
-  if (curve)
-  {
-    /*
-    if (has_state(THE_SELECTED_STATE_E))
-    {
-      cout << "regenerating an active soft point" << endl;
-    }
-    */
-    the_point_curve_deviation_t deviation(value_, curve->geom());
-    std::list<the_deviation_min_t> solution;
-    if (deviation.find_local_minima(solution))
-    {
-      solution.sort();
-      /*
-      if (has_state(THE_SELECTED_STATE_E))
-      {
-	for (std::list<the_deviation_min_t>::const_iterator
-	       i = solution.begin(); i != solution.end(); ++i)
-	{
-	  const the_deviation_min_t & sr = *i;
-	  cout << sr.s_ << '\t' << sr.r_ << endl;
-	}
-	cout << endl;
-      }
-      */
-
-      const the_deviation_min_t & srs = solution.front();
-      the_curve_ref_t * crv_ref = dynamic_cast<the_curve_ref_t *>(ref_);
-      assert(crv_ref);
-      /*
-      float delta = fabs(srs.s_ - crv_ref->param());
-      if (has_state(THE_SELECTED_STATE_E))
-      {
-	cout << srs.s_ << " - " << crv_ref->param() << " = " << delta << endl;
-	if (delta > 0.9)
-	{
-	  std::list<the_deviation_min_t> tmp;
-	  deviation.find_local_minima(tmp);
-	}
-      }
-      */
-      crv_ref->set_param(srs.s_);
-    }
-  }
-#endif
 
   // look up the reference, evaluate the paramater with
   // respect to the reference, return the value:
@@ -263,11 +202,11 @@ the_soft_point_t::regenerate()
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::set_value
+// the_supported_point_t::set_value
 //
 bool
-the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
-			    const p3x1_t & wcs_pt)
+the_supported_point_t::set_value(const the_view_mgr_t & view_mgr,
+                                 const p3x1_t & wcs_pt)
 {
   the_registry_t * r = registry();
   bool ok = ref_->move(r, view_mgr, wcs_pt);
@@ -281,19 +220,19 @@ the_soft_point_t::set_value(const the_view_mgr_t & view_mgr,
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::symbol
+// the_supported_point_t::symbol
 //
 the_point_symbol_id_t
-the_soft_point_t::symbol() const
+the_supported_point_t::symbol() const
 {
   return ref_->symbol();
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::save
+// the_supported_point_t::save
 //
 bool
-the_soft_point_t::save(std::ostream & stream) const
+the_supported_point_t::save(std::ostream & stream) const
 {
   ::save(stream, ref_);
   ::save(stream, value_);
@@ -301,10 +240,10 @@ the_soft_point_t::save(std::ostream & stream) const
 }
 
 //----------------------------------------------------------------
-// the_soft_point_t::load
+// the_supported_point_t::load
 //
 bool
-the_soft_point_t::load(std::istream & stream)
+the_supported_point_t::load(std::istream & stream)
 {
   the_graph_node_ref_t * ref = NULL;
   ::load(stream, ref);
@@ -315,6 +254,43 @@ the_soft_point_t::load(std::istream & stream)
 }
 
 //----------------------------------------------------------------
+// the_supported_point_t::dump
+//
+void
+the_supported_point_t::dump(ostream & strm, unsigned int indent) const
+{
+  strm << INDSCP << "the_supported_point_t(" << (void *)this << ")" << endl
+       << INDSCP << "{" << endl;
+  the_point_t::dump(strm, INDNXT);
+  strm << INDSTR << "ref_ =" << endl;
+  ref_->dump(strm, INDNXT);
+  strm << INDSTR << "value_ = " << value_ << ";" << endl
+       << INDSCP << "}" << endl << endl;
+}
+
+
+//----------------------------------------------------------------
+// the_soft_point_t::the_soft_point_t
+//
+the_soft_point_t::the_soft_point_t():
+  the_supported_point_t()
+{}
+
+//----------------------------------------------------------------
+// the_soft_point_t::the_soft_point_t
+//
+the_soft_point_t::the_soft_point_t(const the_reference_t & ref):
+  the_supported_point_t(ref)
+{}
+
+//----------------------------------------------------------------
+// the_soft_point_t::the_soft_point_t
+//
+the_soft_point_t::the_soft_point_t(const the_soft_point_t & point):
+  the_supported_point_t(point)
+{}
+
+//----------------------------------------------------------------
 // the_soft_point_t::dump
 //
 void
@@ -322,11 +298,91 @@ the_soft_point_t::dump(ostream & strm, unsigned int indent) const
 {
   strm << INDSCP << "the_soft_point_t(" << (void *)this << ")" << endl
        << INDSCP << "{" << endl;
-  the_point_t::dump(strm, INDNXT);
-  strm << INDSTR << "ref_ =" << endl;
-  ref_->dump(strm, INDNXT);
-  strm << INDSTR << "value_ = " << value_ << ";" << endl
-       << INDSCP << "}" << endl << endl;
+  the_supported_point_t::dump(strm, INDNXT);
+  strm << INDSCP << "}" << endl << endl;
+}
+
+
+//----------------------------------------------------------------
+// the_sticky_point_t::the_sticky_point_t
+//
+the_sticky_point_t::the_sticky_point_t():
+  the_supported_point_t()
+{}
+
+//----------------------------------------------------------------
+// the_sticky_point_t::the_sticky_point_t
+//
+the_sticky_point_t::the_sticky_point_t(const the_reference_t & ref):
+  the_supported_point_t(ref)
+{}
+
+//----------------------------------------------------------------
+// the_sticky_point_t::the_sticky_point_t
+//
+the_sticky_point_t::the_sticky_point_t(const the_sticky_point_t & point):
+  the_supported_point_t(point)
+{}
+
+//----------------------------------------------------------------
+// the_sticky_point_t::added_to_the_registry
+//
+void
+the_sticky_point_t::added_to_the_registry(the_registry_t * registry,
+                                        const unsigned int & id)
+{
+  the_point_t::added_to_the_registry(registry, id);
+
+  // update the graph:
+  establish_supporter_dependent(registry, ref_->id(), id);
+
+  ref_->eval(registry, value_);
+  anchor_ = value_;
+}
+
+//----------------------------------------------------------------
+// the_sticky_point_t::regenerate
+//
+bool
+the_sticky_point_t::regenerate()
+{
+  the_registry_t * r = registry();
+
+  // FIXME: re-implement to be generic and independent of
+  // supporting geometry reference type:
+
+  the_curve_t * curve = ref_->references<the_curve_t>(r);
+  if (curve)
+  {
+    the_point_curve_deviation_t deviation(value_, curve->geom());
+    std::list<the_deviation_min_t> solution;
+    if (deviation.find_local_minima(solution))
+    {
+      solution.sort();
+
+      const the_deviation_min_t & srs = solution.front();
+      the_curve_ref_t * crv_ref = dynamic_cast<the_curve_ref_t *>(ref_);
+      assert(crv_ref);
+
+      crv_ref->set_param(srs.s_);
+    }
+  }
+
+  // look up the reference, evaluate the paramater with
+  // respect to the reference, return the value:
+  return ref_->eval(r, value_);
+}
+
+//----------------------------------------------------------------
+// the_sticky_point_t::dump
+//
+void
+the_sticky_point_t::dump(ostream & strm, unsigned int indent) const
+{
+  strm << INDSCP << "the_sticky_point_t(" << (void *)this << ")" << endl
+       << INDSCP << "{" << endl;
+  the_supported_point_t::dump(strm, INDNXT);
+  strm << INDSCP << "}" << endl << endl;
 }
 
 
