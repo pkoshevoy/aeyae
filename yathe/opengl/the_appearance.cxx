@@ -188,14 +188,31 @@ the_generic_appearance_t::draw_edit_plane(the_view_t & view) const
 }
 
 
-//----------------------------------------------------------------
-// THE_DEFAULT_APPEARANCE
-// 
-// static const the_original_appearance_t THE_DEFAULT_APPEARANCE;
-// static const the_generic_appearance_t THE_DEFAULT_APPEARANCE;
-static const the_ampad_appearance_t THE_DEFAULT_APPEARANCE;
+namespace yathe
+{
+  //----------------------------------------------------------------
+  // default_appearance
+  //
+  static const the_appearance_t * default_appearance =
+    new the_ampad_appearance_t();
 
-//----------------------------------------------------------------
-// THE_APPEARANCE
-// 
-const the_appearance_t & THE_APPEARANCE = THE_DEFAULT_APPEARANCE;
+  //----------------------------------------------------------------
+  // set_default_appearance
+  //
+  void set_default_appearance(const the_appearance_t * a)
+  {
+    if (a && a != default_appearance)
+    {
+      delete default_appearance;
+      default_appearance = a;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_default_appearance
+  //
+  const the_appearance_t * get_default_appearance()
+  {
+    return default_appearance;
+  }
+}

@@ -91,8 +91,17 @@ public:
 
 //----------------------------------------------------------------
 // THE_APPEARANCE
-// 
-extern const the_appearance_t & THE_APPEARANCE;
+//
+namespace yathe
+{
+  extern void set_default_appearance(const the_appearance_t * a);
+  extern const the_appearance_t * get_default_appearance();
+}
+
+//----------------------------------------------------------------
+// THE_APPEARANCE
+//
+#define THE_APPEARANCE (*yathe::get_default_appearance())
 
 
 #endif // THE_APPEARANCE_HXX_
