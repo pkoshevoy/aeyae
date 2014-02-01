@@ -811,4 +811,16 @@ if (WIN32)
 
 endif (WIN32)
 
-install(TARGETS ${PROGNAME} DESTINATION bin)
+install(TARGETS
+  ${PROGNAME}
+  DESTINATION bin
+  )
+
+install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-64.png"
+  DESTINATION share/icons
+  RENAME "${PROGNAME}.png"
+  )
+
+install(FILES "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop"
+  DESTINATION share/applications
+  )
