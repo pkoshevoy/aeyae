@@ -1655,6 +1655,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // kSettingTrue
+  //
+  static const QString kSettingTrue = QString::fromUtf8("true");
+
+  //----------------------------------------------------------------
+  // kSettingFalse
+  //
+  static const QString kSettingFalse = QString::fromUtf8("false");
+
+  //----------------------------------------------------------------
+  // saveBooleanSetting
+  //
+  bool
+  saveBooleanSetting(const QString & key, bool value)
+  {
+    const QString & textValue = value ? kSettingTrue : kSettingFalse;
+    return saveSetting(key, textValue);
+  }
+
+  //----------------------------------------------------------------
   // loadSetting
   //
   bool
@@ -1683,6 +1703,22 @@ namespace yae
     QString value;
     if (loadSetting(key, value))
     {
+      return value;
+    }
+
+    return defaultValue;
+  }
+
+  //----------------------------------------------------------------
+  // loadBooleanSettingOrDefault
+  //
+  bool
+  loadBooleanSettingOrDefault(const QString & key, bool defaultValue)
+  {
+    QString textValue;
+    if (loadSetting(key, textValue))
+    {
+      bool value = (textValue == kSettingTrue);
       return value;
     }
 

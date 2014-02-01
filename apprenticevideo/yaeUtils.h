@@ -264,6 +264,12 @@ namespace yae
   saveSetting(const QString & key, const QString & value);
 
   //----------------------------------------------------------------
+  // saveBooleanSetting
+  //
+  YAE_API bool
+  saveBooleanSetting(const QString & key, bool value);
+
+  //----------------------------------------------------------------
   // loadSetting
   //
   YAE_API bool
@@ -274,6 +280,12 @@ namespace yae
   //
   YAE_API QString
   loadSettingOrDefault(const QString & key, const QString & defaultValue);
+
+  //----------------------------------------------------------------
+  // loadBooleanSettingOrDefault
+  //
+  YAE_API bool
+  loadBooleanSettingOrDefault(const QString & key, bool defaultValue);
 
   //----------------------------------------------------------------
   // removeSetting

@@ -145,6 +145,10 @@ namespace yae
     void setGreeting(const QString & greeting);
     bool updateGreeting();
 
+    // if enabled, skip using a fragment shader (even if one is available)
+    // for non-native pixel formats:
+    void skipColorConverter(bool enable);
+
     // NOTE: In order to avoid blurring interlaced frames vertical scaling
     // is disabled by default.  However, if the video is not interlaced
     // and display aspect ratio is less than encoded frame aspect ratio

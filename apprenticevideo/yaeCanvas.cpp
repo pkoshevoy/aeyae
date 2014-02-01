@@ -1144,6 +1144,7 @@ namespace yae
     TPrivate():
       dar_(0.0),
       darCropped_(0.0),
+      skipColorConverter_(false),
       verticalScalingEnabled_(false),
       shader_(NULL)
     {
@@ -1174,6 +1175,28 @@ namespace yae
       return (frame_ ?
               pixelFormat::getTraits(frame_->traits_.pixelFormat_) :
               NULL);
+    }
+
+    void skipColorConverter(QGLWidget * canvas, bool enable)
+    {
+      if (skipColorConverter_ == enable)
+      {
+        return;
+      }
+
+      TVideoFramePtr frame;
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        frame = frame_;
+        frame_.reset();
+      }
+
+      skipColorConverter_ = enable;
+
+      if (frame)
+      {
+        loadFrame(canvas, frame);
+      }
     }
 
     void enableVerticalScaling(bool enable)
@@ -1338,6 +1361,11 @@ namespace yae
     const TFragmentShader *
     fragmentShaderFor(TPixelFormatId format) const
     {
+      if (skipColorConverter_)
+      {
+        return NULL;
+      }
+
       std::map<TPixelFormatId, TFragmentShader>::const_iterator
         found = shaders_.find(format);
 
@@ -1453,6 +1481,7 @@ namespace yae
     TCropFrame crop_;
     double dar_;
     double darCropped_;
+    bool skipColorConverter_;
     bool verticalScalingEnabled_;
 
     std::list<TFragmentShaderProgram> shaderPrograms_;
@@ -4088,6 +4117,15 @@ namespace yae
     bool ok = overlay_->loadFrame(this, vf);
     YAE_ASSERT(ok);
     return ok;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::skipColorConverter
+  //
+  void
+  Canvas::skipColorConverter(bool enable)
+  {
+    private_->skipColorConverter(this, enable);
   }
 
   //----------------------------------------------------------------

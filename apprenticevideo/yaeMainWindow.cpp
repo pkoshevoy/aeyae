@@ -74,19 +74,34 @@ namespace yae
     QString::fromUtf8("ResumePlaybackFromBookmark");
 
   //----------------------------------------------------------------
+  // kAudioDevice
+  //
+  static const QString kAudioDevice =
+    QString::fromUtf8("AudioDevice");
+
+  //----------------------------------------------------------------
   // kDownmixToStereo
   //
-  static const QString kDownmixToStereo = QString::fromUtf8("DownmixToStereo");
+  static const QString kDownmixToStereo =
+    QString::fromUtf8("DownmixToStereo");
 
   //----------------------------------------------------------------
-  // kSettingTrue
+  // kSkipColorConverter
   //
-  static const QString kSettingTrue = QString::fromUtf8("true");
+  static const QString kSkipColorConverter =
+    QString::fromUtf8("SkipColorConverter");
 
   //----------------------------------------------------------------
-  // kSettingFalse
+  // kSkipLoopFilter
   //
-  static const QString kSettingFalse = QString::fromUtf8("false");
+  static const QString kSkipLoopFilter =
+    QString::fromUtf8("SkipLoopFilter");
+
+  //----------------------------------------------------------------
+  // kSkipNonReferenceFrames
+  //
+  static const QString kSkipNonReferenceFrames =
+    QString::fromUtf8("SkipNonReferenceFrames");
 
   //----------------------------------------------------------------
   // swapLayouts
@@ -339,17 +354,35 @@ namespace yae
     bookmarksMenuSeparator_ =
       menuBookmarks->insertSeparator(actionRemoveBookmarkNowPlaying);
 
-    QString automaticBookmarks =
-      loadSettingOrDefault(kCreateBookmarksAutomatically, kSettingTrue);
-    actionAutomaticBookmarks->setChecked(automaticBookmarks == kSettingTrue);
+    bool automaticBookmarks =
+      loadBooleanSettingOrDefault(kCreateBookmarksAutomatically, true);
+    actionAutomaticBookmarks->setChecked(automaticBookmarks);
 
-    QString resumeFromBookmark =
-      loadSettingOrDefault(kResumePlaybackFromBookmark, kSettingTrue);
-    actionResumeFromBookmark->setChecked(resumeFromBookmark == kSettingTrue);
+    bool resumeFromBookmark =
+      loadBooleanSettingOrDefault(kResumePlaybackFromBookmark, true);
+    actionResumeFromBookmark->setChecked(resumeFromBookmark);
 
-    QString downmixToStereo =
-      loadSettingOrDefault(kDownmixToStereo, kSettingTrue);
-    actionDownmixToStereo->setChecked(downmixToStereo == kSettingTrue);
+    bool downmixToStereo =
+      loadBooleanSettingOrDefault(kDownmixToStereo, true);
+    actionDownmixToStereo->setChecked(downmixToStereo);
+
+    bool skipColorConverter =
+      loadBooleanSettingOrDefault(kSkipColorConverter, false);
+    actionSkipColorConverter->setChecked(skipColorConverter);
+
+    bool skipLoopFilter =
+      loadBooleanSettingOrDefault(kSkipLoopFilter, false);
+    actionSkipLoopFilter->setChecked(skipLoopFilter);
+
+    bool skipNonReferenceFrames =
+      loadBooleanSettingOrDefault(kSkipNonReferenceFrames, false);
+    actionSkipNonReferenceFrames->setChecked(skipNonReferenceFrames);
+
+    QString audioDevice;
+    if (loadSetting(kAudioDevice, audioDevice))
+    {
+      audioDevice_ = audioDevice.toUtf8().constData();
+    }
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -1784,14 +1817,8 @@ namespace yae
   void
   MainWindow::bookmarksAutomatic()
   {
-    if (actionAutomaticBookmarks->isChecked())
-    {
-      saveSetting(kCreateBookmarksAutomatically, kSettingTrue);
-    }
-    else
-    {
-      saveSetting(kCreateBookmarksAutomatically, kSettingFalse);
-    }
+    saveBooleanSetting(kCreateBookmarksAutomatically,
+                       actionAutomaticBookmarks->isChecked());
   }
 
   //----------------------------------------------------------------
@@ -1990,14 +2017,8 @@ namespace yae
   void
   MainWindow::bookmarksResumePlayback()
   {
-    if (actionResumeFromBookmark->isChecked())
-    {
-      saveSetting(kResumePlaybackFromBookmark, kSettingTrue);
-    }
-    else
-    {
-      saveSetting(kResumePlaybackFromBookmark, kSettingFalse);
-    }
+    saveBooleanSetting(kResumePlaybackFromBookmark,
+                       actionResumeFromBookmark->isChecked());
   }
 
   //----------------------------------------------------------------
@@ -2243,6 +2264,9 @@ namespace yae
     std::cerr << "playbackColorConverter" << std::endl;
 #endif
 
+    bool skipColorConverter = actionSkipColorConverter->isChecked();
+    saveBooleanSetting(kSkipColorConverter, skipColorConverter);
+
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
     stopRenderers();
@@ -2267,7 +2291,11 @@ namespace yae
 #if 0
     std::cerr << "playbackLoopFilter" << std::endl;
 #endif
-    reader_->skipLoopFilter(actionSkipLoopFilter->isChecked());
+
+    bool skipLoopFilter = actionSkipLoopFilter->isChecked();
+    saveBooleanSetting(kSkipLoopFilter, skipLoopFilter);
+
+    reader_->skipLoopFilter(skipLoopFilter);
   }
 
   //----------------------------------------------------------------
@@ -2279,7 +2307,11 @@ namespace yae
 #if 0
     std::cerr << "playbackNonReferenceFrames" << std::endl;
 #endif
-    reader_->skipNonReferenceFrames(actionSkipNonReferenceFrames->isChecked());
+
+    bool skipNonReferenceFrames = actionSkipNonReferenceFrames->isChecked();
+    saveBooleanSetting(kSkipNonReferenceFrames, skipNonReferenceFrames);
+
+    reader_->skipNonReferenceFrames(skipNonReferenceFrames);
   }
 
   //----------------------------------------------------------------
@@ -2577,14 +2609,7 @@ namespace yae
   void
   MainWindow::audioDownmixToStereo()
   {
-    if (actionDownmixToStereo->isChecked())
-    {
-      saveSetting(kDownmixToStereo, kSettingTrue);
-    }
-    else
-    {
-      saveSetting(kDownmixToStereo, kSettingFalse);
-    }
+    saveBooleanSetting(kDownmixToStereo, actionDownmixToStereo->isChecked());
 
     // reset reader:
     TIgnoreClockStop ignoreClockStop(timelineControls_);
@@ -2610,6 +2635,8 @@ namespace yae
     std::cerr << "audioSelectDevice: "
               << audioDevice.toUtf8().constData() << std::endl;
 #endif
+
+    saveSetting(kAudioDevice, audioDevice);
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     reader_->threadStop();
@@ -4005,6 +4032,7 @@ namespace yae
                                                        shouldSwapBytes);
 
         bool skipColorConverter = actionSkipColorConverter->isChecked();
+        canvas_->skipColorConverter(skipColorConverter);
 
         const TFragmentShader * fragmentShader =
           (supportedChannels != ptts->channels_) ?
