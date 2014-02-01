@@ -2531,13 +2531,13 @@ namespace yae
     t.colorRange_ = to_yae_color_range(context->color_range);
 
     //! frame rate:
-    if (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den)
+    if (stream_->avg_frame_rate.num > 0 && stream_->avg_frame_rate.den > 0)
     {
       t.frameRate_ =
         double(stream_->avg_frame_rate.num) /
         double(stream_->avg_frame_rate.den);
     }
-    else if (stream_->r_frame_rate.num && stream_->r_frame_rate.den)
+    else if (stream_->r_frame_rate.num > 0 && stream_->r_frame_rate.den > 0)
     {
       t.frameRate_ =
         double(stream_->r_frame_rate.num) /
