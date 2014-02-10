@@ -2141,6 +2141,8 @@ namespace yae
   void
   MainWindow::playbackCropFrameNone()
   {
+    autocropTimer_.stop();
+    canvas_->cropAutoDetectStop();
     canvas_->cropFrame(0.0);
     adjustCanvasHeight();
   }
@@ -3430,7 +3432,6 @@ namespace yae
             {
               if (actionCropFrameAutoDetect->isChecked())
               {
-                canvas_->cropAutoDetectStop();
                 actionCropFrameNone->trigger();
               }
               else
