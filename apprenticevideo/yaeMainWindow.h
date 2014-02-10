@@ -246,7 +246,9 @@ namespace yae
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
-    static void autoCropCallback(void * context, const TCropFrame & cf);
+    static TVideoFramePtr autoCropCallback(void * context,
+                                           const TCropFrame & detected,
+                                           bool detectionFinished);
 
 #ifdef __APPLE__
     // for Apple Remote:

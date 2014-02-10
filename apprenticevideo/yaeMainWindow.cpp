@@ -4616,11 +4616,25 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::autoCropCallback
   //
-  void
-  MainWindow::autoCropCallback(void * callbackContext, const TCropFrame & cf)
+  TVideoFramePtr
+  MainWindow::autoCropCallback(void * callbackContext,
+                               const TCropFrame & cf,
+                               bool detectionFinished)
   {
     MainWindow * mainWindow = (MainWindow *)callbackContext;
-    qApp->postEvent(mainWindow, new AutoCropEvent(cf));
+
+    if (detectionFinished)
+    {
+      qApp->postEvent(mainWindow, new AutoCropEvent(cf));
+    }
+    else if (mainWindow->playbackPaused_ ||
+             mainWindow->videoRenderer_->isPaused())
+    {
+      // use the same frame again:
+      return mainWindow->canvas_->currentFrame();
+    }
+
+    return TVideoFramePtr();
   }
 
 #ifdef __APPLE__

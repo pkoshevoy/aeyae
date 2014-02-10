@@ -60,6 +60,9 @@ namespace yae
     //! use this to resume or pause the rendering thread loop;
     void pause(bool paused = true);
 
+    //! check whether the renderer is paused:
+    bool isPaused() const;
+
     //! shortcut:
     inline void resume()
     { pause(false); }

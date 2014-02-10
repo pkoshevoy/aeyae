@@ -55,7 +55,13 @@ namespace yae
   //----------------------------------------------------------------
   // TAutoCropCallback
   //
-  typedef void(*TAutoCropCallback)(void *, const TCropFrame &);
+  // NOTE: The callback may return a non-NULL video frame to be fed
+  // to the auto-crop detector.  This helps when video playback is
+  // paused and frames are not delivered via setFrame as ususal.
+  //
+  typedef TVideoFramePtr(*TAutoCropCallback)(void * /* callback context */,
+                                             const TCropFrame & /* results */,
+                                             bool /* detection finished */);
 
 
   //----------------------------------------------------------------

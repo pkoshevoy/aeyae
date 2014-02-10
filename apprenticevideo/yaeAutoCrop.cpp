@@ -660,6 +660,18 @@ namespace yae
 
         if (!done_ && !frame)
         {
+          if (found)
+          {
+            frame = callback_(callbackContext_, crop[found - 1], false);
+          }
+          else
+          {
+            frame = callback_(callbackContext_, TCropFrame(), false);
+          }
+        }
+
+        if (!done_ && !frame)
+        {
           cond_.wait(lock);
         }
       }
@@ -690,11 +702,11 @@ namespace yae
 
     if (!done_ && found)
     {
-      callback_(callbackContext_, crop[found - 1]);
+      callback_(callbackContext_, crop[found - 1], true);
     }
     else
     {
-      callback_(callbackContext_, TCropFrame());
+      callback_(callbackContext_, TCropFrame(), true);
     }
   }
 

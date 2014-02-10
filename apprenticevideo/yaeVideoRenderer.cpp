@@ -29,6 +29,7 @@ namespace yae
     bool open(IVideoCanvas * canvas, IReader * reader, bool frameStepping);
     void close();
     void pause(bool pause);
+    bool isPaused() const;
     void skipToNextFrame();
     void skipToTime(const TTime & t, IReader * reader);
     void threadLoop();
@@ -106,6 +107,15 @@ namespace yae
   VideoRenderer::TPrivate::pause(bool paused)
   {
     pause_ = paused;
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::isPaused
+  //
+  bool
+  VideoRenderer::TPrivate::isPaused() const
+  {
+    return pause_;
   }
 
   //----------------------------------------------------------------
@@ -465,5 +475,14 @@ namespace yae
   VideoRenderer::pause(bool paused)
   {
     private_->pause(paused);
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::isPaused
+  //
+  bool
+  VideoRenderer::isPaused() const
+  {
+    return private_->isPaused();
   }
 }
