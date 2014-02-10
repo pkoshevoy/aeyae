@@ -1894,8 +1894,19 @@ namespace yae
   {
     try
     {
-      // make a local shallow copy of the packet:
-      AVPacket packet = packetPtr->ffmpeg_;
+      AVPacket packet;
+
+      if (packetPtr)
+      {
+        // make a local shallow copy of the packet:
+        packet = packetPtr->ffmpeg_;
+      }
+      else
+      {
+        // flush out buffered frames with an empty packet:
+        memset(&packet, 0, sizeof(packet));
+        av_init_packet(&packet);
+      }
 
       // Decode video frame
       int gotFrame = 0;
@@ -1908,7 +1919,7 @@ namespace yae
                             &packet);
       if (!gotFrame)
       {
-        return true;
+        return packetPtr ? true : false;
       }
 
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
@@ -2210,7 +2221,13 @@ namespace yae
           break;
         }
 
-        if (!decode(packetPtr))
+        if (!packetPtr)
+        {
+          // flush out buffered frames with an empty packet:
+          while (decode(packetPtr))
+            ;
+        }
+        else if (!decode(packetPtr))
         {
           break;
         }
@@ -3346,8 +3363,20 @@ namespace yae
   {
     try
     {
-      // make a local shallow copy of the packet:
-      AVPacket packet = packetPtr->ffmpeg_;
+      AVPacket packet;
+
+      if (packetPtr)
+      {
+        // make a local shallow copy of the packet:
+        packet = packetPtr->ffmpeg_;
+      }
+      else
+      {
+        // flush out buffered up frames with an empty packet:
+        memset(&packet, 0, sizeof(packet));
+        av_init_packet(&packet);
+      }
+
       AVCodecContext * codecContext = this->codecContext();
 
       // Decode audio frame, piecewise:
@@ -3361,7 +3390,7 @@ namespace yae
       int64 outputChannelLayout =
         av_get_default_channel_layout(outputChannels_);
 
-      while (packet.size)
+      while (!packetPtr || packet.size)
       {
         // Decode audio frame
         int gotFrame = 0;
@@ -3384,7 +3413,15 @@ namespace yae
 
         if (!gotFrame || !avFrame->nb_samples)
         {
-          continue;
+          if (packetPtr)
+          {
+            continue;
+          }
+          else
+          {
+            // done flushing:
+            return false;
+          }
         }
 
         avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
@@ -3670,7 +3707,13 @@ namespace yae
           break;
         }
 
-        if (!decode(packetPtr))
+        if (!packetPtr)
+        {
+          // flush out buffered frames with an empty packet:
+          while (decode(packetPtr))
+            ;
+        }
+        else if (!decode(packetPtr))
         {
           break;
         }
@@ -4526,6 +4569,18 @@ namespace yae
         if (err)
         {
           av_free_packet(&ffmpeg);
+
+          if (audioTrack)
+          {
+            // flush out buffered frames with an empty packet:
+            audioTrack->packetQueue().push(TPacketPtr(), &terminator_);
+          }
+
+          if (videoTrack)
+          {
+            // flush out buffered frames with an empty packet:
+            videoTrack->packetQueue().push(TPacketPtr(), &terminator_);
+          }
 
           if (!playbackEnabled_)
           {
