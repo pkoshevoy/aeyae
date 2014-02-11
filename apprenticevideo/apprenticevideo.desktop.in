@@ -1,9 +1,9 @@
 [Desktop Entry]
 Comment=https://sourceforge.net/projects/apprenticevideo/
-Exec=apprenticevideo %U
+Exec=@CMAKE_INSTALL_PREFIX@/bin/apprenticevideo %U
 GenericName=Media Player
 Categories=Qt;AudioVideo;Video;Player;
-Icon=apprenticevideo
+Icon=@CMAKE_INSTALL_PREFIX@/share/icons/apprenticevideo.png
 MimeType=video/x-theora+ogg;video/x-ogm+ogg;video/x-msvideo;video/x-ms-wmv;video/x-ms-asf;video/x-matroska;video/x-flv;video/webm;video/vnd.rn-realvideo;video/quicktime;video/ogg;video/mpeg;video/mp4;video/mp2t;video/dv;video/3gpp2;video/3gpp;audio/x-wav;audio/x-vorbis+ogg;audio/x-speex+ogg;audio/x-matroska;audio/x-flac+ogg;audio/x-aiff;audio/x-adpcm;audio/webm;audio/vnd.rn-realaudio;audio/ogg;audio/mpeg;audio/mp4;audio/mp2;audio/flac;audio/basic;audio/ac3;audio/aac;
 Name=Apprentice Video
 Path=

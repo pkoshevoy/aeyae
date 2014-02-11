@@ -821,6 +821,10 @@ install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-64.png"
   RENAME "${PROGNAME}.png"
   )
 
-install(FILES "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop"
+configure_file(
+  "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+  "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop")
+
+install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
   DESTINATION share/applications
   )
