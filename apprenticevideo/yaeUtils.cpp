@@ -1751,10 +1751,23 @@ namespace yae
                    const char * separator_xxx,
                    const double frameRate)
   {
-    const std::size_t len = hhmmss ? strlen(hhmmss) : 0;
+    std::size_t len = hhmmss ? strlen(hhmmss) : 0;
     if (!len)
     {
       return 0.0;
+    }
+
+    bool negative = false;
+    while (*hhmmss == '-')
+    {
+      negative = !negative;
+      hhmmss++;
+      len--;
+
+      if (!len)
+      {
+        return 0.0;
+      }
     }
 
     const bool has_xxx_separator = separator_xxx && *separator_xxx;
@@ -1883,7 +1896,7 @@ namespace yae
       }
     }
 
-    return seconds;
+    return negative ? -seconds : seconds;
   }
 }
 

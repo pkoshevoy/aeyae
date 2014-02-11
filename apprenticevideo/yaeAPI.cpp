@@ -186,13 +186,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TTime::to_hhmmss
+  // to_hhmmss
   //
-  void
-  TTime::to_hhmmss(std::string & ts, const char * separator) const
+  static bool
+  to_hhmmss(int64 time,
+            uint64 base,
+            std::string & ts,
+            const char * separator,
+            bool includeNegativeSign = false)
   {
-    int64 t = time_;
-    t /= base_;
+    bool negative = (time < 0);
+
+    int64 t = negative ? -time : time;
+    t /= base;
 
     int64 seconds = t % 60;
     t /= 60;
@@ -201,11 +207,28 @@ namespace yae
     int64 hours = t / 60;
 
     std::ostringstream os;
+
+    if (negative && includeNegativeSign && (seconds || minutes || hours))
+    {
+      os << '-';
+    }
+
     os << std::setw(2) << std::setfill('0') << (int)(hours) << separator
        << std::setw(2) << std::setfill('0') << (int)(minutes) << separator
        << std::setw(2) << std::setfill('0') << (int)(seconds);
 
     ts = std::string(os.str().c_str());
+
+    return negative;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::to_hhmmss
+  //
+  void
+  TTime::to_hhmmss(std::string & ts, const char * separator) const
+  {
+    yae::to_hhmmss(time_, base_, ts, separator, true);
   }
 
   //----------------------------------------------------------------
@@ -216,12 +239,19 @@ namespace yae
                         const char * separator,
                         const char * usec_separator) const
   {
-    to_hhmmss(ts, separator);
+    bool negative = yae::to_hhmmss(time_, base_, ts, separator);
 
-    int64 remainder = time_ % base_;
+    int64 t = negative ? -time_ : time_;
+    int64 remainder = t % base_;
     int64 usec = (1000000 * remainder) / base_;
 
     std::ostringstream os;
+
+    if (negative && (usec || t >= base_))
+    {
+      os << '-';
+    }
+
     os << ts << usec_separator
        << std::setw(6) << std::setfill('0') << (int)(usec);
 
@@ -237,8 +267,16 @@ namespace yae
                          const char * separator,
                          const char * framenum_separator) const
   {
+    bool negative = (time_ < 0);
+
     // round to nearest frame:
     double seconds = toSeconds();
+
+    if (negative)
+    {
+      seconds = -seconds;
+    }
+
     double fpsWhole = ceil(frameRate);
     seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
 
@@ -251,6 +289,12 @@ namespace yae
     tmp.to_hhmmss(ts, separator);
 
     std::ostringstream os;
+
+    if (negative && (frameNo || tmp.time_ >= tmp.base_))
+    {
+      os << '-';
+    }
+
     os << ts << framenum_separator
        << std::setw(2) << std::setfill('0') << frameNo;
 
