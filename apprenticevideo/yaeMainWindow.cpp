@@ -3855,6 +3855,9 @@ namespace yae
     resize(new_w - cdx, new_h - cdy);
     // move(new_x, new_y);
 
+    // repaint the frame:
+    canvas_->refresh();
+
     // avoid hiding the highlighted item:
     playlistWidget_->makeSureHighlightedItemIsVisible();
   }

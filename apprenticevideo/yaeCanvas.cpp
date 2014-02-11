@@ -4243,7 +4243,11 @@ namespace yae
   void
   Canvas::setRenderMode(Canvas::TRenderMode renderMode)
   {
-    renderMode_ = renderMode;
+    if (renderMode_ != renderMode)
+    {
+      renderMode_ = renderMode;
+      refresh();
+    }
   }
 
   //----------------------------------------------------------------
