@@ -3315,12 +3315,15 @@ namespace yae
     std::size_t itemIndex = playlistWidget_->currentItem();
     PlaylistGroup * group = NULL;
     PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
-    double positionInSeconds = timelineControls_->currentTime();
 
-    yae::saveBookmark(group->bookmarkHash_,
-                      item->bookmarkHash_,
-                      reader_,
-                      positionInSeconds);
+    if (group && item)
+    {
+      double positionInSeconds = timelineControls_->currentTime();
+      yae::saveBookmark(group->bookmarkHash_,
+                        item->bookmarkHash_,
+                        reader_,
+                        positionInSeconds);
+    }
   }
 
   //----------------------------------------------------------------
