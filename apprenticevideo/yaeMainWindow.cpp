@@ -1978,7 +1978,7 @@ namespace yae
         continue;
       }
 
-      removeBookmark(bookmark.groupHash_);
+      yae::removeBookmark(bookmark.groupHash_);
       break;
     }
   }
@@ -2005,7 +2005,7 @@ namespace yae
       PlaylistBookmark & bookmark = *i;
       delete bookmark.action_;
 
-      removeBookmark(bookmark.groupHash_);
+      yae::removeBookmark(bookmark.groupHash_);
     }
 
     bookmarks_.clear();
@@ -3323,6 +3323,9 @@ namespace yae
                         item->bookmarkHash_,
                         reader_,
                         positionInSeconds);
+
+      // refresh the bookmarks list:
+      bookmarksPopulate();
     }
   }
 
