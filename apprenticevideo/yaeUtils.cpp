@@ -845,7 +845,7 @@ namespace yae
 
       // if the string is all numerical then pad it on the front so that
       // it would be properly sorted (2.avi would be before 10.avi)
-      int numDigits = isVaguelyNumeric(word);
+      int numDigits = isNumeric(word);
 
       if (numDigits && numDigits < 8)
       {
