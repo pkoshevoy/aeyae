@@ -159,6 +159,10 @@ public:
   // virtual:
   bool regenerate();
 
+  // re-parameterize the reference, presumably because
+  // supporting geometry parameterization has radically changed:
+  virtual bool reparameterize();
+
   // accessor to the stored reference:
   inline the_reference_t * ref() const
   { return ref_; }
@@ -276,6 +280,11 @@ public:
   bool move(the_registry_t * /* registry */,
             const the_view_mgr_t & /* view_mgr */,
             const p3x1_t & /* wcs_pt */)
+  { return false; }
+
+  // virtual:
+  bool reparameterize(the_registry_t * /* registry */,
+                      const p3x1_t & /* wcs_pt */)
   { return false; }
 
   // virtual:

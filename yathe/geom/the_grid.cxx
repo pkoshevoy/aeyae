@@ -1027,6 +1027,18 @@ the_grid_ref_t::move(the_registry_t * registry,
 }
 
 //----------------------------------------------------------------
+// the_grid_ref_t::reparameterize
+//
+bool
+the_grid_ref_t::reparameterize(the_registry_t * registry,
+                               const p3x1_t & wcs_pt)
+{
+  // FIXME: write me!
+  assert(false);
+  return false;
+}
+
+//----------------------------------------------------------------
 // the_grid_ref_t::equal
 //
 bool

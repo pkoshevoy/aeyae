@@ -202,6 +202,16 @@ the_supported_point_t::regenerate()
 }
 
 //----------------------------------------------------------------
+// the_supported_point_t::reparameterize
+//
+bool
+the_supported_point_t::reparameterize()
+{
+  the_registry_t * r = registry();
+  return ref_->reparameterize(r, value_);
+}
+
+//----------------------------------------------------------------
 // the_supported_point_t::set_value
 //
 bool

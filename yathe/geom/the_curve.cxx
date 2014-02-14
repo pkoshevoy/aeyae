@@ -197,7 +197,10 @@ the_curve_ref_t::move(the_registry_t * registry,
 		      const p3x1_t & wcs_pt)
 {
   the_curve_t * curve = registry->elem<the_curve_t>(id());
-  if (curve == NULL) return false;
+  if (curve == NULL)
+  {
+    return false;
+  }
 
   the_view_volume_t volume = view_mgr.view_volume();
   p2x1_t scs_pt = volume.to_scs(wcs_pt);
@@ -207,7 +210,36 @@ the_curve_ref_t::move(the_registry_t * registry,
 				      view_mgr.height()) * 0.5f);
   the_volume_curve_deviation_t deviation(volume, curve->geom());
   std::list<the_deviation_min_t> solution;
-  if (deviation.find_local_minima(solution) == false) return false;
+  if (deviation.find_local_minima(solution) == false)
+  {
+    return false;
+  }
+
+  solution.sort();
+  const the_deviation_min_t & best = solution.front();
+  param_ = best.s_;
+  return true;
+}
+
+//----------------------------------------------------------------
+// the_curve_ref_t::reparameterize
+//
+bool
+the_curve_ref_t::reparameterize(the_registry_t * registry,
+                                const p3x1_t & wcs_pt)
+{
+  the_curve_t * curve = registry->elem<the_curve_t>(id());
+  if (curve == NULL)
+  {
+    return false;
+  }
+
+  the_point_curve_deviation_t deviation(wcs_pt, curve->geom());
+  std::list<the_deviation_min_t> solution;
+  if (!deviation.find_local_minima(solution))
+  {
+    return false;
+  }
 
   solution.sort();
   const the_deviation_min_t & best = solution.front();

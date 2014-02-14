@@ -170,6 +170,10 @@ public:
 	    const the_view_mgr_t & view_mgr,
 	    const p3x1_t & wcs_pt);
 
+  // virtual: if possible, adjust this reference:
+  bool reparameterize(the_registry_t * registry,
+                      const p3x1_t & wcs_pt);
+
   // virtual: Equality test:
   bool equal(const the_reference_t * ref) const;
 

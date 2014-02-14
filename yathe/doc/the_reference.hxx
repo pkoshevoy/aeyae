@@ -47,6 +47,10 @@ public:
 		    const the_view_mgr_t & view_mgr,
 		    const p3x1_t & wcs_pt) = 0;
 
+  // if possible, adjust this reference:
+  virtual bool reparameterize(the_registry_t * registry,
+                              const p3x1_t & wcs_pt) = 0;
+
   // symbol id used to display this reference:
   virtual the_point_symbol_id_t symbol() const = 0;
 

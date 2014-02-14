@@ -180,6 +180,16 @@ the_graph_node_t::verify_supporters_visited() const
 }
 
 //----------------------------------------------------------------
+// the_graph_node_t::regenerate
+//
+bool
+the_graph_node_t::regenerate(the_graph_node_t * node)
+{
+  the_graph_node_t::timestamp_++;
+  return node->regenerate();
+}
+
+//----------------------------------------------------------------
 // the_graph_node_t::request_regeneration
 //
 void

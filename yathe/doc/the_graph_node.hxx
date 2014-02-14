@@ -123,6 +123,9 @@ public:
   // check whether all supporters of this node have been visited:
   bool verify_supporters_visited() const;
 
+  // regenerate a given node only, do not regenerate its dependents:
+  static bool regenerate(the_graph_node_t * node);
+
   // request regeneration of a given node and its descendants:
   static void request_regeneration(the_graph_node_t * start_here);
 
