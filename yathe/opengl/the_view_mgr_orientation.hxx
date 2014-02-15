@@ -35,7 +35,9 @@ typedef enum
   THE_RIGHT_VIEW_E,
   THE_FRONT_VIEW_E,
   THE_BACK_VIEW_E,
-  THE_XY_VIEW_E
+  THE_XY_VIEW_E, // top, 180 rotated
+  THE_YZ_VIEW_E, // front
+  THE_ZX_VIEW_E  // left
 } the_view_mgr_orientation_t;
 
 //----------------------------------------------------------------

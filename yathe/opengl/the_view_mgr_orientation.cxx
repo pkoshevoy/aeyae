@@ -33,6 +33,8 @@ the_view_orientation_text(const the_view_mgr_orientation_t & orientation)
     case THE_FRONT_VIEW_E:	return "Front";
     case THE_BACK_VIEW_E:	return "Back";
     case THE_XY_VIEW_E:		return "XY";
+    case THE_YZ_VIEW_E:		return "YZ";
+    case THE_ZX_VIEW_E:		return "ZX";
   }
 
   assert(false);
@@ -54,7 +56,9 @@ THE_ORIENTATION_LF[] =
   v3x1_t(  0.0, -1.0,  0.0), // right
   v3x1_t(  1.0,  0.0,  0.0), // front
   v3x1_t( -1.0,  0.0,  0.0), // back
-  v3x1_t(  0.0,  0.0,  1.0)  // bottom
+  v3x1_t(  0.0,  0.0,  1.0), // xy
+  v3x1_t(  1.0,  0.0,  0.0), // yz
+  v3x1_t(  0.0,  1.0,  0.0)  // zx
 };
 
 //----------------------------------------------------------------
@@ -72,7 +76,9 @@ THE_ORIENTATION_UP[] =
   v3x1_t(  0.0,  0.0, 1.0), // right
   v3x1_t(  0.0,  0.0, 1.0), // front
   v3x1_t(  0.0,  0.0, 1.0), // back
-  v3x1_t(  0.0,  1.0, 0.0)  // xy
+  v3x1_t(  0.0,  1.0, 0.0), // xy
+  v3x1_t(  0.0,  0.0, 1.0), // yz
+  v3x1_t(  1.0,  0.0, 0.0)  // zx
 };
 
 //----------------------------------------------------------------
