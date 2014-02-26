@@ -4410,9 +4410,9 @@ namespace Yamka
 
     // load any additional SeekHeads, if they exist:
     bool ok = true;
-    for (TSeekHeadIter i = seekHeads_.begin(); i != seekHeads_.end(); ++i)
+    for (std::size_t i = 0; i < seekHeads_.size(); ++i)
     {
-      TSeekHead & seekHead = *i;
+      TSeekHead & seekHead = seekHeads_[i];
       seekHead.payload_.voids_.clear();
 
       std::list<TSeekEntry> & seeks = seekHead.payload_.seek_;
