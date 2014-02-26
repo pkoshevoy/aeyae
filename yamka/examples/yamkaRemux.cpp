@@ -2849,7 +2849,7 @@ main(int argc, char ** argv)
 
   // set the DocType to 4, due to CueRelativePosition:
   out.head_.payload_.docTypeVersion_.payload_.set(4);
-  out.head_.payload_.docTypeReadVersion_.payload_.set(4);
+  out.head_.payload_.docTypeReadVersion_.payload_.set(2);
 
   dst.file_.setSize(0);
   out.save(dst);
