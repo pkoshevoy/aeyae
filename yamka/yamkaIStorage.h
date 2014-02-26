@@ -69,7 +69,7 @@ namespace Yamka
 
       // increase number of stored bytes for this receipt
       // by adding number of stored bytes in a given receipt:
-      IReceipt & operator += (const IReceiptPtr & receipt);
+      virtual IReceipt & operator += (const IReceiptPtr & receipt);
 
       // create a receipt for a contiguous region of data
       // contained within this receipt:
