@@ -28,6 +28,40 @@ namespace Yamka
     return add(receipt->numBytes());
   }
 
+  //----------------------------------------------------------------
+  // IStorage::IReceipt::saveTo
+  //
+  IStorage::IReceiptPtr
+  IStorage::IReceipt::saveTo(IStorage & storage, std::size_t maxChunkSz) const
+  {
+    IReceiptPtr receipt = storage.receipt();
+
+    std::vector<unsigned char> chunkBuffer(maxChunkSz);
+    unsigned char * chunk = &chunkBuffer[0];
+
+    const uint64 dataSize = this->numBytes();
+    uint64 offset = 0;
+
+    while (offset < dataSize)
+    {
+      uint64 chunkSize = std::min<uint64>(maxChunkSz, dataSize - offset);
+
+      IReceiptPtr src = this->receipt(offset, chunkSize);
+      assert(src);
+
+      bool ok = src->load(chunk);
+      assert(ok);
+
+      IReceiptPtr dst = storage.save(chunk, (std::size_t)chunkSize);
+      assert(dst);
+
+      *receipt += dst;
+      offset += chunkSize;
+    }
+
+    return receipt;
+  }
+
 
   //----------------------------------------------------------------
   // IStorage::skipWithReceipt

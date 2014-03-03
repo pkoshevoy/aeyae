@@ -74,6 +74,11 @@ namespace Yamka
       // create a receipt for a contiguous region of data
       // contained within this receipt:
       virtual IReceiptPtr receipt(uint64 offset, uint64 size) const = 0;
+
+      // piece-wise load data referenced by this receipt and save it
+      // to the given storage, return resulting storage receipt:
+      virtual IReceiptPtr saveTo(IStorage & storage,
+                                 std::size_t maxChunkSize = 4096) const;
     };
 
     // If a storage implementation does not actually load/save
