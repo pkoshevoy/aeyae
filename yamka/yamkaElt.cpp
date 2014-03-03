@@ -293,7 +293,7 @@ namespace Yamka
     *receipt_ += payloadSizeReceipt;
 
     // save payload receipt:
-    offsetToPayload_ = storage.receipt()->position() - receipt_->position();
+    offsetToPayload_ = elementIdSize + vsizeBytesToUse;
     offsetToCrc32_ = kUndefinedOffset;
 
     // save CRC-32 element placeholder:
@@ -312,7 +312,7 @@ namespace Yamka
       }
 
       *receipt_ += receiptCrc32;
-      offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
+      offsetToCrc32_ = offsetToPayload_;
     }
 
     // save the payload:
