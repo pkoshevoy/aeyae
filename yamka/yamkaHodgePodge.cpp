@@ -230,7 +230,7 @@ namespace Yamka
       return 0;
     }
 
-    return cache_[(std::size_t)(pos_ + offset - cacheStart_)];
+    return cache_[(std::size_t)(pos_ + offset - receiptStart_ - cacheStart_)];
   }
 
   //----------------------------------------------------------------
@@ -245,7 +245,7 @@ namespace Yamka
       return 0;
     }
 
-    return cache_[(std::size_t)(pos_ - cacheStart_)];
+    return cache_[(std::size_t)(pos_ - receiptStart_ - cacheStart_)];
   }
 
   //----------------------------------------------------------------
@@ -290,6 +290,8 @@ namespace Yamka
         receipt_ = dataReceipt;
         return true;
       }
+
+      receiptStart_ += size;
     }
 
     receipt_ = IStorage::IReceiptPtr();
@@ -310,13 +312,18 @@ namespace Yamka
 
     if (updateReceipt(position))
     {
+      uint64 receiptSize = receiptEnd_ - receiptStart_;
+
       cacheStart_ = position - (position % kCacheSize);
-      cacheEnd_ = std::min<uint64>(cacheStart_ + kCacheSize, receiptEnd_);
+      cacheEnd_ = std::min<uint64>(cacheStart_ + kCacheSize, receiptSize);
+
       std::size_t chunkSize = (std::size_t)(cacheEnd_ - cacheStart_);
       cache_.resize(kCacheSize);
 
       IStorage::IReceiptPtr chunk =
-        receipt_->receipt(receiptStart_ + cacheStart_, chunkSize);
+        cacheStart_ || chunkSize != receiptSize ?
+        receipt_->receipt(cacheStart_, chunkSize) :
+        receipt_;
 
       return chunk->load(&cache_[0]);
     }
