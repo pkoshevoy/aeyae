@@ -13,6 +13,7 @@
 #include <yamkaFileStorage.h>
 #include <yamkaEBML.h>
 #include <yamkaMatroska.h>
+#include <yamkaHodgePodge.h>
 
 // system includes:
 #include <iostream>
@@ -203,7 +204,90 @@ main(int argc, char ** argv)
 
   // close the file:
   ebmlSrc = FileStorage();
-  std::cerr << "done..." << std::endl;
 
+  // test memory storage:
+  {
+    FileStorage d2f(std::string("yamka-direct-to-file.ebml"),
+                    File::kReadWrite);
+    assert(d2f.file_.isOpen());
+    d2f.file_.setSize(0);
+
+    FileStorage m2f(std::string("yamka-memory-to-file.ebml"),
+                    File::kReadWrite);
+    assert(m2f.file_.isOpen());
+    m2f.file_.setSize(0);
+
+    EbmlDoc doc;
+    doc.head_.payload_.docType_.payload_.set(std::string("storage-test"));
+    doc.head_.payload_.docTypeVersion_.payload_.set(1);
+    doc.head_.payload_.docTypeReadVersion_.payload_.set(1);
+
+    IStorage::IReceiptPtr rd2f = doc.save(d2f);
+
+    IStorage::IReceiptPtr rmem = doc.save(MemoryStorage::Instance);
+    IStorage::IReceiptPtr rm2f = rmem->saveTo(m2f);
+
+    assert(rd2f->numBytes() == rm2f->numBytes());
+  }
+
+  // make sure direct-to-file and memory-to-file produce the same results:
+  {
+    FileStorage d2f(std::string("yamka-direct-to-file.ebml"),
+                    File::kReadOnly);
+    assert(d2f.file_.isOpen());
+    uint64 sz_d2f = d2f.file_.size();
+
+    FileStorage m2f(std::string("yamka-memory-to-file.ebml"),
+                    File::kReadOnly);
+    assert(m2f.file_.isOpen());
+    uint64 sz_m2f = m2f.file_.size();
+
+    assert(sz_d2f == sz_m2f);
+
+    std::vector<unsigned char> dat_d2f(sz_d2f);
+    IStorage::IReceiptPtr rd2f = d2f.load(&dat_d2f[0], sz_d2f);
+
+    std::vector<unsigned char> dat_m2f(sz_m2f);
+    IStorage::IReceiptPtr rmem = m2f.load(&dat_m2f[0], sz_m2f);
+
+    assert(dat_d2f == dat_m2f);
+  }
+
+  // check HodgePodgeConstIter
+  {
+    const std::string text[] = {
+      std::string("a. Line One"),
+      std::string("2) Second Line"),
+      std::string("III, Line The Third")
+    };
+
+    HodgePodge hodgePodge;
+    for (std::size_t i = 0; i < 3; i++)
+    {
+      hodgePodge.add(receiptForConstMemory(&(text[i][0]), text[i].size()));
+    }
+
+    HodgePodgeConstIter iter0(hodgePodge);
+    HodgePodgeConstIter iter1(hodgePodge);
+    std::size_t offset = 0;
+
+    for (std::size_t i = 0; i < 3; i++)
+    {
+      const unsigned char * txt = (unsigned char *)&(text[i][0]);
+      const std::size_t txtLen = text[i].size();
+      const unsigned char * src = txt;
+      const unsigned char * end = src + txtLen;
+
+      for (; src < end; ++src, ++offset, ++iter1)
+      {
+        unsigned char c0 = iter0[offset];
+        unsigned char c1 = *iter1;
+        assert(c0 == c1);
+        assert(*src == c0);
+      }
+    }
+  }
+
+  std::cerr << "done..." << std::endl;
   return 0;
 }
