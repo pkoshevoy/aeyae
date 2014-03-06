@@ -187,6 +187,8 @@ namespace Yamka
     typedef std::vector<unsigned char> TStorage;
     typedef TSharedPtr<TStorage> TStoragePtr;
 
+    static MemoryStorage Instance;
+
     // virtual:
     IReceiptPtr receipt() const;
 

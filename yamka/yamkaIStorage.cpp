@@ -245,6 +245,119 @@ namespace Yamka
     return IStorage::IReceiptPtr(r);
   }
 
+  //----------------------------------------------------------------
+  // HodgePodgeSubReceipt
+  //
+  struct HodgePodgeSubReceipt : public IStorage::IReceipt,
+                                private HodgePodgeConstIter
+  {
+    HodgePodgeSubReceipt(const HodgePodge & src,
+                         uint64 offset,
+                         uint64 extent):
+      HodgePodgeConstIter(src, offset),
+      extent_(extent)
+    {
+      uint64 nbytes = src.numBytes();
+      assert(offset <= nbytes);
+
+      if (nbytes < offset + extent_)
+      {
+        assert(false);
+        extent_ = nbytes - offset;
+      }
+    }
+
+    // virtual:
+    uint64 position() const
+    { return HodgePodgeConstIter::pos_; }
+
+    // virtual:
+    uint64 numBytes() const
+    { return extent_; }
+
+    // virtual:
+    HodgePodgeSubReceipt & setNumBytes(uint64 numBytes)
+    {
+      // not supported:
+      (void) numBytes;
+      assert(false);
+      return *this;
+    }
+
+    // virtual: not supported
+    HodgePodgeSubReceipt & add(uint64 numBytes)
+    {
+      // not supported:
+      (void) numBytes;
+      assert(false);
+      return *this;
+    }
+
+    // virtual:
+    bool save(const unsigned char * data, std::size_t size)
+    {
+      // not supported:
+      (void) data;
+      (void) size;
+      return false;
+    }
+
+    // virtual:
+    bool load(unsigned char * data)
+    {
+      unsigned char * dst = data;
+      uint64 iter = HodgePodgeConstIter::pos_;
+      uint64 todo = extent_;
+
+      while (todo)
+      {
+        // figure out size of contiguous data chunk:
+        if (!HodgePodgeConstIter::updateReceipt(iter))
+        {
+          assert(false);
+          return false;
+        }
+
+        uint64 receiptSize = receiptEnd_ - receiptStart_;
+        uint64 skip = iter - receiptStart_;
+        uint64 size = std::min(todo, receiptEnd_ - iter);
+
+        IStorage::IReceiptPtr chunk =
+          skip || size != receiptSize ?
+          receipt_->receipt(skip, size) :
+          receipt_;
+
+        chunk->load(dst);
+
+        iter += size;
+        todo -= size;
+        dst += size;
+      }
+
+      return true;
+    }
+
+    // virtual: not supported for non-contiguous memory storage:
+    bool calcCrc32(Crc32 & computeCrc32,
+                   const IStorage::IReceiptPtr & receiptSkip)
+    {
+      (void) computeCrc32;
+      (void) receiptSkip;
+      return false;
+    }
+
+    // virtual:
+    IStorage::IReceiptPtr receipt(uint64 offset, uint64 size) const
+    {
+      return IStorage::IReceiptPtr
+        (new HodgePodgeSubReceipt(HodgePodgeConstIter::hodgePodge_,
+                                  offset,
+                                  size));
+    }
+
+  protected:
+    uint64 extent_;
+  };
 
   //----------------------------------------------------------------
   // HodgePodgeStorageReceipt
@@ -322,14 +435,20 @@ namespace Yamka
     // virtual:
     IStorage::IReceiptPtr receipt(uint64 offset, uint64 size) const
     {
-      HodgePodgeConstIter iter(hodgePodge_);
-      return iter.receipt(offset, size);
+      return IStorage::IReceiptPtr
+        (new HodgePodgeSubReceipt(hodgePodge_, offset, size));
     }
 
     // where the receipts are kept:
     HodgePodge hodgePodge_;
   };
 
+
+  //----------------------------------------------------------------
+  // MemoryStorage::Instance
+  //
+  MemoryStorage
+  MemoryStorage::Instance;
 
   //----------------------------------------------------------------
   // MemoryStorage::receipt
@@ -505,7 +624,7 @@ namespace Yamka
     assert(position <= bytesPtr_->size());
 
     return IStorage::IReceiptPtr(new Receipt(bytesPtr_,
-                                             position,
+                                             position_ + (std::size_t)offset,
                                              (std::size_t)size));
   }
 
@@ -598,6 +717,7 @@ namespace Yamka
   IStorage::IReceiptPtr
   MemReceipt::receipt(uint64 offset, uint64 size) const
   {
+    assert(offset + size <= numBytes_);
     unsigned char * addr = addr_ + (std::size_t)offset;
     return IStorage::IReceiptPtr(new MemReceipt(addr, (std::size_t)size));
   }
@@ -627,6 +747,7 @@ namespace Yamka
   IStorage::IReceiptPtr
   ConstMemReceipt::receipt(uint64 offset, uint64 size) const
   {
+    assert(offset + size <= numBytes_);
     const unsigned char * addr = addr_ + (std::size_t)offset;
     return IStorage::IReceiptPtr(new ConstMemReceipt(addr, (std::size_t)size));
   }
