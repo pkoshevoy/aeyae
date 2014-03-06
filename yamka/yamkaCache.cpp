@@ -294,7 +294,7 @@ namespace Yamka
 
       uint64 a0 = (head < addr) ? addr : head;
       uint64 a1 = (line->tail_ < addr1) ? (line->tail_) : addr1;
-      if (a1 < a0)
+      if (a1 <= a0)
       {
         // cache line was partially loaded:
         assert(line->tail_ - line->head_ < lineSize_);
