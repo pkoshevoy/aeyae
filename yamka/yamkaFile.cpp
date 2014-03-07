@@ -106,6 +106,11 @@ namespace Yamka
   std::FILE *
   fopen_utf8(const char * filename_utf8, const char * mode)
   {
+    if (!filename_utf8 || !filename_utf8[0])
+    {
+      return NULL;
+    }
+
     std::FILE * file = NULL;
 
 #ifdef _WIN32
