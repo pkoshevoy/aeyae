@@ -28,7 +28,10 @@ namespace Yamka
   void
   HodgePodge::add(const IStorage::IReceiptPtr & dataReceipt)
   {
-    receipts_.push_back(dataReceipt);
+    if (dataReceipt->numBytes())
+    {
+      receipts_.push_back(dataReceipt);
+    }
   }
 
   //----------------------------------------------------------------
@@ -39,8 +42,11 @@ namespace Yamka
                   std::size_t size,
                   IStorage & storage)
   {
-    IStorage::IReceiptPtr dataReceipt = storage.save(data, size);
-    receipts_.push_back(dataReceipt);
+    if (size)
+    {
+      IStorage::IReceiptPtr dataReceipt = storage.save(data, size);
+      receipts_.push_back(dataReceipt);
+    }
   }
 
   //----------------------------------------------------------------
@@ -283,6 +289,14 @@ namespace Yamka
     {
       const IStorage::IReceiptPtr & dataReceipt = *i;
       uint64 size = dataReceipt->numBytes();
+
+      if (!size)
+      {
+        // there should be no empty receipts in the quilt:
+        assert(false);
+        continue;
+      }
+
       receiptEnd_ = receiptStart_ + size;
 
       if (position >= receiptStart_ && position < receiptEnd_)
