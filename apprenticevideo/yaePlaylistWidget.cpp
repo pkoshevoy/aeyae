@@ -552,7 +552,7 @@ namespace yae
 
       std::size_t groupSize = group.items_.size();
       std::size_t groupEnd = group.offset_ + groupSize;
-      if (groupEnd < index)
+      if (groupEnd <= index)
       {
         prev = &group;
       }
