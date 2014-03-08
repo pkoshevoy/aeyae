@@ -4539,7 +4539,7 @@ namespace yae
         playlistWidget_->setFocus();
       }
     }
-    else
+    else if (numVideoTracks)
     {
       if (!actionShowPlaylist->isEnabled())
       {
