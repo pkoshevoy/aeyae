@@ -1421,6 +1421,111 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // kNormalizationForm
+  //
+  static const QString::NormalizationForm kNormalizationForm[] =
+  {
+    QString::NormalizationForm_D,
+    QString::NormalizationForm_C,
+    QString::NormalizationForm_KD,
+    QString::NormalizationForm_KC
+  };
+
+  //----------------------------------------------------------------
+  // kNumNormalizationForms
+  //
+  static const std::size_t kNumNormalizationForms =
+    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
+
+  //----------------------------------------------------------------
+  // MainWindow::openFile
+  //
+  IReader *
+  MainWindow::openFile(const QString & fn)
+  {
+    ReaderFFMPEG * reader = ReaderFFMPEG::create();
+
+    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
+    {
+      // find UNICODE NORMALIZATION FORM that works
+      // http://www.unicode.org/reports/tr15/
+      QString tmp = fn.normalized(kNormalizationForm[i]);
+      std::string filename = tmp.toUtf8().constData();
+
+      if (reader->open(filename.c_str()))
+      {
+        return reader;
+      }
+    }
+
+    reader->destroy();
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::testEachFile
+  //
+  bool
+  MainWindow::testEachFile(const std::list<QString> & playlist)
+  {
+    std::size_t numOpened = 0;
+    std::size_t numTotal = 0;
+
+    for (std::list<QString>::const_iterator j = playlist.begin();
+         j != playlist.end(); ++j)
+    {
+      const QString & fn = *j;
+      numTotal++;
+
+      IReader * reader = MainWindow::openFile(fn);
+      if (reader)
+      {
+        numOpened++;
+        reader->destroy();
+      }
+    }
+
+    bool ok = (numOpened == numTotal);
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // canaryTest
+  //
+  static bool
+  canaryTest(const QString & fn)
+  {
+    QProcess canary;
+
+    QString exePath = QCoreApplication::applicationFilePath();
+    QStringList args;
+    args << QString::fromUtf8("--canary");
+    args << fn;
+
+    // send in the canary:
+    canary.start(exePath, args);
+
+    if (!canary.waitForFinished(5000))
+    {
+      // failed to finish in 5 seconds, assume it hanged:
+      return false;
+    }
+
+    int exitCode = canary.exitCode();
+    QProcess::ExitStatus canaryStatus = canary.exitStatus();
+
+    if (canaryStatus != QProcess::NormalExit || exitCode)
+    {
+      // dead canary:
+      return false;
+    }
+
+    // seems to be safe enough to at least open the file,
+    // may still die during playback:
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::load
   //
   bool
@@ -1441,49 +1546,14 @@ namespace yae
 
     actionPlay->setEnabled(false);
 
-    static const QString::NormalizationForm normalizationForm[] =
-    {
-      QString::NormalizationForm_D,
-      QString::NormalizationForm_C,
-      QString::NormalizationForm_KD,
-      QString::NormalizationForm_KC
-    };
-
-    static const std::size_t numNormalizationForms =
-      sizeof(normalizationForm) / sizeof(normalizationForm[0]);
-
-    bool ok = false;
-    std::string filename;
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
-
-    for (std::size_t i = 0; reader && i < numNormalizationForms; i++)
-    {
-      // find UNICODE NORMALIZATION FORM that works
-      // http://www.unicode.org/reports/tr15/
-
-      QString tmp = fn.normalized(normalizationForm[i]);
-      filename = tmp.toUtf8().constData();
-
-      if (!reader->open(filename.c_str()))
-      {
-        continue;
-      }
-
-      ok = true;
-      break;
-    }
-
-    if (!ok)
+    IReader * reader = canaryTest(fn) ? MainWindow::openFile(fn) : NULL;
+    if (!reader)
     {
 #if 0
-      std::cerr << "ERROR: could not open movie: " << filename << std::endl;
+      std::cerr
+        << "ERROR: could not open file: " << fn.toUtf8().constData()
+        << std::endl;
 #endif
-
-      if (reader)
-      {
-        reader->destroy();
-      }
-
       return false;
     }
 

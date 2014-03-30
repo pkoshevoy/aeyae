@@ -103,6 +103,9 @@ namespace yae
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
 
+    static IReader * openFile(const QString & fn);
+    static bool testEachFile(const std::list<QString> & playlist);
+
   protected:
     // open a movie file for playback:
     bool load(const QString & path, const TBookmark * bookmark = NULL);

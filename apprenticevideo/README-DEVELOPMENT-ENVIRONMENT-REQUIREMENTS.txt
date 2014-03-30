@@ -28,6 +28,11 @@ All Platforms:
 	FontConfig 2.10+	http://www.freedesktop.org/wiki/Software/fontconfig/
 	FontConfig is required by libass for accessing system fonts.
 
+Optional (any platform):
+	If you would like to enable MOD file playback (MOD, XM, S3M,
+	IT, etc...), compile libmodplug and make sure to enable
+	modplug support when configuring ffmpeg build.
+
 Windows:
 	Dependency Walker 2.2	http://www.dependencywalker.com/
 	depends.exe is used for automatic external dependency detection
@@ -80,4 +85,3 @@ Linux:
 	glew, portaudio, yasm).  Use of the latest FFmpeg pulled from
 	git is recommended, because compilation against libav fork is not
 	tested and may not work.
-

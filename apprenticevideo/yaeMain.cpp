@@ -121,6 +121,33 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
   yae::Application app(argc, argv);
+  QStringList args = app.arguments();
+
+  // check for canary invocation:
+  bool canary = false;
+  std::list<QString> playlist;
+
+  for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
+  {
+    const QString & arg = *i;
+    if (arg == QString::fromUtf8("--canary"))
+    {
+      canary = true;
+    }
+    else
+    {
+      playlist.push_back(arg);
+    }
+  }
+
+  if (canary)
+  {
+    yae::MainWindow::testEachFile(playlist);
+
+    // if it didn't crash, then it's all good:
+    return 0;
+  }
+
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
 
@@ -134,14 +161,6 @@ mainMayThrowException(int argc, char ** argv)
 
   // initialize the canvas:
   yae::mainWindow->canvas()->initializePrivateBackend();
-
-  std::list<QString> playlist;
-  QStringList args = app.arguments();
-  for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
-  {
-    QString filename = *i;
-    playlist.push_back(filename);
-  }
 
   yae::mainWindow->setPlaylist(playlist);
 
