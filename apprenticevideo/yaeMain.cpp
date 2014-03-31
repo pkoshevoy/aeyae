@@ -26,6 +26,11 @@
 // GLEW includes:
 #include <GL/glew.h>
 
+// APPLE includes:
+#ifdef __APPLE__
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
 // Qt includes:
 #include <QApplication>
 #include <QFileOpenEvent>
@@ -147,6 +152,12 @@ mainMayThrowException(int argc, char ** argv)
     // if it didn't crash, then it's all good:
     return 0;
   }
+
+#ifdef __APPLE__
+  // show the Dock icon on
+  ProcessSerialNumber psn = { 0, kCurrentProcess };
+  TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+#endif
 
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
