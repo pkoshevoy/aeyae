@@ -1288,6 +1288,17 @@ namespace yae
       QPoint viewOffset = getViewOffset();
       QPoint pt = e->pos() + viewOffset;
 
+      // check whether the [x] button was double-clicked:
+      {
+        std::size_t groupIndex = groups_.size();
+        std::size_t itemIndex = numItems_;
+        if (isMouseOverRemoveButton(pt, groupIndex, itemIndex))
+        {
+          removeItems(groupIndex, itemIndex);
+          return;
+        }
+      }
+
       PlaylistGroup * group = lookupGroup(pt);
       std::size_t index = lookupItemIndex(group, pt);
       if (index < numItems_)
