@@ -154,7 +154,7 @@ mainMayThrowException(int argc, char ** argv)
   }
 
 #ifdef __APPLE__
-  // show the Dock icon on
+  // show the Dock icon:
   ProcessSerialNumber psn = { 0, kCurrentProcess };
   TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 #endif
