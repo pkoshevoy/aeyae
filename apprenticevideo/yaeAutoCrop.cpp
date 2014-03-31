@@ -259,6 +259,7 @@ namespace yae
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
+                    << ", max = " << best << " @ " << offset
                     << std::endl;
 #endif
           if (best < response)
@@ -266,7 +267,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+          else if (best > 1.124 && negative.isFull() && response < 1.0 &&
                    improved < 1.0)
           {
             break;
@@ -308,6 +309,7 @@ namespace yae
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
+                    << ", max = " << best << " @ " << offset
                     << std::endl;
 #endif
           if (best < response)
@@ -315,7 +317,7 @@ namespace yae
             best = response;
             offset = x + 1 - positive.size();
           }
-          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+          else if (best > 1.124 && negative.isFull() && response < 1.0 &&
                    improved < 1.0)
           {
             break;
@@ -362,6 +364,7 @@ namespace yae
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
+                    << ", max = " << best << " @ " << offset
                     << std::endl;
 #endif
           if (best < response)
@@ -369,7 +372,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+          else if (best > 1.124 && negative.isFull() && response < 1.0 &&
                    improved < 1.0)
           {
             break;
@@ -411,6 +414,7 @@ namespace yae
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
+                    << ", max = " << best << " @ " << offset
                     << std::endl;
 #endif
           if (best < response)
@@ -418,7 +422,7 @@ namespace yae
             best = response;
             offset = y + 1 - positive.size();
           }
-          else if (best > 1.1 && negative.isFull() && response < 1.0 &&
+          else if (best > 1.124 && negative.isFull() && response < 1.0 &&
                    improved < 1.0)
           {
             break;
@@ -549,22 +553,22 @@ namespace yae
     }
 
     double lOffset =
-      leftHistogram.size() < (ny * 2) && lbest.size_ > (ny / 2) ?
+      leftHistogram.size() < (ny * 2) && lbest.size_ > (ny / 3) ?
       double(lbest.sum_) / double(lbest.size_) :
       0.0;
 
     double rOffset =
-      rightHistogram.size() < (ny * 2) && rbest.size_ > (ny / 2) ?
+      rightHistogram.size() < (ny * 2) && rbest.size_ > (ny / 3) ?
       double(rbest.sum_) / double(rbest.size_) :
       0.0;
 
     double tOffset =
-      topHistogram.size() < (nx * 2) && tbest.size_ > (nx / 2) ?
+      topHistogram.size() < (nx * 2) && tbest.size_ > (nx / 3) ?
       double(tbest.sum_) / double(tbest.size_) :
       0.0;
 
     double bOffset =
-      bottomHistogram.size() < (nx * 2) && bbest.size_ > (nx / 2) ?
+      bottomHistogram.size() < (nx * 2) && bbest.size_ > (nx / 3) ?
       double(bbest.sum_) / double(bbest.size_) :
       0.0;
 
