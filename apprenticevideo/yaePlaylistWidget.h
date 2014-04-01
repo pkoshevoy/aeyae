@@ -83,6 +83,9 @@ namespace yae
     // a flag indicating whether this item is excluded from the list:
     bool excluded_;
 
+    // a flag indicating whether this item failed to load:
+    bool failed_;
+
     // a hash string identifying this item:
     std::string bookmarkHash_;
   };

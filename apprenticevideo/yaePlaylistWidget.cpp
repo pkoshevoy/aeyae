@@ -162,7 +162,8 @@ namespace yae
   //
   PlaylistItem::PlaylistItem():
     selected_(false),
-    excluded_(false)
+    excluded_(false),
+    failed_(false)
   {}
 
 
@@ -1775,9 +1776,11 @@ namespace yae
     static QColor loBgGroup = QColor("#c1c1c1");
     static QColor hiBgGroup = QColor("#939393");
 
-    enum QPalette::ColorGroup colorGroup = palette.currentColorGroup();
     QColor activeColorBg = palette.color(QPalette::Active,
                                          QPalette::Highlight);
+
+    QColor disabledColorFg = palette.color(QPalette::Disabled,
+                                           QPalette::Text);
 
     QFont textFont = painter.font();
     textFont.setPixelSize(10);
@@ -1979,7 +1982,7 @@ namespace yae
 
         QRect bboxText = bbox.adjusted(0, 0, 0, -1);
 
-        painter.setPen(fg);
+        painter.setPen(item.failed_ ? disabledColorFg : fg);
         drawTextToFit(painter,
                       bboxText,
                       Qt::AlignBottom | Qt::AlignLeft,

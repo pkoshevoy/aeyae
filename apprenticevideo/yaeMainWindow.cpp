@@ -3219,7 +3219,9 @@ namespace yae
 
     while ((item = playlistWidget_->lookup(current)))
     {
-      if (load(item->path_))
+      item->failed_ = !load(item->path_);
+
+      if (!item->failed_)
       {
         ok = true;
         break;
@@ -3415,7 +3417,7 @@ namespace yae
 
     if (item)
     {
-      load(item->path_, &bookmark);
+      item->failed_ = !load(item->path_, &bookmark);
     }
 
     fixupNextPrev();
