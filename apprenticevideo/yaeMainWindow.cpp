@@ -4116,7 +4116,7 @@ namespace yae
 
         const TFragmentShader * fragmentShader =
           (supportedChannels != ptts->channels_) ?
-          canvas_->fragmentShaderFor(vtts.pixelFormat_) :
+          canvas_->fragmentShaderFor(vtts) :
           NULL;
 
         if (!supportedChannels && !fragmentShader)

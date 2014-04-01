@@ -99,6 +99,14 @@ yae_show_program_listing(std::ostream & ostr,
 }
 
 //----------------------------------------------------------------
+// yae_gl_arb_passthrough_2d
+//
+static const char * yae_gl_arb_passthrough_2d =
+  "!!ARBfp1.0\n"
+  "TEX result.color, fragment.texcoord[0], texture[0], 2D;\n"
+  "END\n";
+
+//----------------------------------------------------------------
 // yae_gl_arb_yuv_to_rgb_2d
 //
 static const char * yae_gl_arb_yuv_to_rgb_2d =
@@ -133,6 +141,14 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
   "DPH result.color.b, yuv, vb;\n"
   "TEX yuv.x, fragment.texcoord[0], texture[3], 2D;\n"
   "MOV result.color.a, yuv.x;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_passthrough
+//
+static const char * yae_gl_arb_passthrough =
+  "!!ARBfp1.0\n"
+  "TEX result.color, fragment.texcoord[0], texture[0], RECT;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -1004,6 +1020,20 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // TFragmentShaderProgram::destroy
+  //
+  void
+  TFragmentShaderProgram::destroy()
+  {
+    if (handle_)
+    {
+      glDeleteProgramsARB(1, &handle_);
+      handle_ = 0;
+    }
+  }
+
+
+  //----------------------------------------------------------------
   // TFragmentShader::TFragmentShader
   //
   TFragmentShader::TFragmentShader(const TFragmentShaderProgram * program,
@@ -1072,8 +1102,13 @@ namespace yae
         }
         else if (program)
         {
-          // FIXME: write me!
-          YAE_ASSERT(false);
+          unsigned int supportedChannels =
+            yae_to_opengl(format,
+                          internalFormatGL_[numPlanes_],
+                          pixelFormatGL_   [numPlanes_],
+                          dataTypeGL_      [numPlanes_],
+                          shouldSwapBytes_ [numPlanes_]);
+          YAE_ASSERT(supportedChannels == nchannels[i]);
         }
 
         if (ptts->flags_ & pixelFormat::kYUV && nchannels[i] > 1)
@@ -1118,7 +1153,8 @@ namespace yae
   configure_builtin_shader(TFragmentShader & builtinShader,
                            TPixelFormatId yaePixelFormat)
   {
-    builtinShader = TFragmentShader(NULL, yaePixelFormat);
+    const TFragmentShaderProgram * shaderProgram = builtinShader.program_;
+    builtinShader = TFragmentShader(shaderProgram, yaePixelFormat);
 
     unsigned int supportedChannels =
       yae_to_opengl(yaePixelFormat,
@@ -1136,12 +1172,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Canvas::TPrivate
+  // TBaseCanvas
   //
-  class Canvas::TPrivate
+  class TBaseCanvas
   {
   public:
-    TPrivate():
+    TBaseCanvas():
       dar_(0.0),
       darCropped_(0.0),
       skipColorConverter_(false),
@@ -1156,9 +1192,10 @@ namespace yae
       memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
     }
 
-    virtual ~TPrivate()
+    virtual ~TBaseCanvas()
     {
       destroyFragmentShaders();
+      builtinShaderProgram_.destroy();
     }
 
     virtual void createFragmentShaders() = 0;
@@ -1397,6 +1434,22 @@ namespace yae
 
   protected:
     // helper:
+    const TFragmentShader *
+    findSomeShaderFor(TPixelFormatId format) const
+    {
+      const TFragmentShader * shader = fragmentShaderFor(format);
+      if (!shader && builtinShader_.program_)
+      {
+        shader = &builtinShader_;
+#if !defined(NDEBUG)
+        std::cerr << "WILL USE PASS-THROUGH SHADER" << std::endl;
+#endif
+      }
+
+      return shader;
+    }
+
+    // helper:
     void destroyFragmentShaders()
     {
       shader_ = NULL;
@@ -1405,15 +1458,37 @@ namespace yae
       while (!shaderPrograms_.empty())
       {
         TFragmentShaderProgram & program = shaderPrograms_.front();
-
-        if (program.handle_)
-        {
-          glDeleteProgramsARB(1, &program.handle_);
-          program.handle_ = 0;
-        }
-
+        program.destroy();
         shaderPrograms_.pop_front();
       }
+    }
+
+    // helper:
+    bool createBuiltinFragmentShader(const char * code)
+    {
+      bool ok = false;
+      builtinShaderProgram_.destroy();
+      builtinShaderProgram_.code_ = code;
+
+      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      glGenProgramsARB(1, &builtinShaderProgram_.handle_);
+      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                       builtinShaderProgram_.handle_);
+
+      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
+                                    builtinShaderProgram_.code_))
+      {
+        builtinShader_.program_ = &builtinShaderProgram_;
+        ok = true;
+      }
+      else
+      {
+        glDeleteProgramsARB(1, &builtinShaderProgram_.handle_);
+        builtinShaderProgram_.handle_ = 0;
+        builtinShader_.program_ = NULL;
+      }
+      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      return ok;
     }
 
     // helper:
@@ -1484,10 +1559,14 @@ namespace yae
     bool skipColorConverter_;
     bool verticalScalingEnabled_;
 
+    TFragmentShaderProgram builtinShaderProgram_;
+    TFragmentShader builtinShader_;
+
     std::list<TFragmentShaderProgram> shaderPrograms_;
     std::map<TPixelFormatId, TFragmentShader> shaders_;
+
+    // shader selected for current frame:
     const TFragmentShader * shader_;
-    TFragmentShader builtinShader_;
 
     // 3x4 matrix for color conversion to full-range RGB,
     // including luma scale and shift:
@@ -1497,7 +1576,7 @@ namespace yae
   //----------------------------------------------------------------
   // TModernCanvas
   //
-  struct TModernCanvas : public Canvas::TPrivate
+  struct TModernCanvas : public TBaseCanvas
   {
     // virtual:
     void createFragmentShaders();
@@ -1590,6 +1669,9 @@ namespace yae
       createFragmentShadersFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
                                yae_gl_arb_uyvy_to_rgb);
     }
+
+    // for natively supported formats:
+    createBuiltinFragmentShader(yae_gl_arb_passthrough);
   }
 
   //----------------------------------------------------------------
@@ -1651,14 +1733,7 @@ namespace yae
         texId_.clear();
       }
 
-      if (supportedChannels == ptts->channels_)
-      {
-        shader_ = NULL;
-      }
-      else
-      {
-        shader_ = fragmentShaderFor(vtts.pixelFormat_);
-      }
+      shader_ = findSomeShaderFor(vtts.pixelFormat_);
 
       if (!supportedChannels && !shader_)
       {
@@ -1920,7 +1995,7 @@ namespace yae
   // This is a subclass implementing frame rendering on OpenGL
   // hardware that doesn't support GL_EXT_texture_rectangle
   //
-  struct TLegacyCanvas : public Canvas::TPrivate
+  struct TLegacyCanvas : public TBaseCanvas
   {
     TLegacyCanvas();
 
@@ -1949,7 +2024,7 @@ namespace yae
   // TLegacyCanvas::TLegacyCanvas
   //
   TLegacyCanvas::TLegacyCanvas():
-    Canvas::TPrivate(),
+    TBaseCanvas(),
     w_(0),
     h_(0)
   {}
@@ -1991,6 +2066,9 @@ namespace yae
 
     createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
                              yae_gl_arb_yuva_to_rgba_2d);
+
+    // for natively supported formats:
+    createBuiltinFragmentShader(yae_gl_arb_passthrough_2d);
   }
 
   //----------------------------------------------------------------
@@ -2072,12 +2150,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // calcTextureEdgeMax
+  // getTextureEdgeMax
   //
   static GLsizei
-  calcTextureEdgeMax()
+  getTextureEdgeMax()
   {
-    GLsizei edgeMax = 64;
+    static GLsizei edgeMax = 64;
+
+    if (edgeMax > 64)
+    {
+      return edgeMax;
+    }
 
     for (unsigned int i = 0; i < 8; i++, edgeMax *= 2)
     {
@@ -2089,7 +2172,7 @@ namespace yae
                    0,
                    GL_RGBA,
                    GL_UNSIGNED_BYTE,
-                   NULL);// texels
+                   NULL);
       GLenum err = glGetError();
       if (err != GL_NO_ERROR)
       {
@@ -2116,8 +2199,6 @@ namespace yae
   bool
   TLegacyCanvas::loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
   {
-    static const GLsizei textureEdgeMax = calcTextureEdgeMax();
-
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
 
@@ -2136,6 +2217,7 @@ namespace yae
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
+    static const GLsizei textureEdgeMax = getTextureEdgeMax();
 
     // take the new frame:
     bool colorSpaceOrRangeChanged = false;
@@ -2154,15 +2236,7 @@ namespace yae
 
       w_ = crop.w_;
       h_ = crop.h_;
-
-      if (supportedChannels == ptts->channels_)
-      {
-        shader_ = NULL;
-      }
-      else
-      {
-        shader_ = fragmentShaderFor(vtts.pixelFormat_);
-      }
+      shader_ = findSomeShaderFor(vtts.pixelFormat_);
 
       if (!supportedChannels && !shader_)
       {
@@ -2530,6 +2604,194 @@ namespace yae
 
     glDisable(GL_TEXTURE_2D);
   }
+
+
+  //----------------------------------------------------------------
+  // Canvas::TPrivate
+  //
+  class Canvas::TPrivate
+  {
+    TLegacyCanvas * legacy_;
+    TModernCanvas * modern_;
+    TBaseCanvas * renderer_;
+
+    // maximum texture size supported by the GL_EXT_texture_rectangle;
+    // frames with width/height in excess of this value will be processed
+    // using the legacy canvas renderer, which cuts frames into tiles
+    // of supported size and renders them seamlessly:
+    unsigned int maxTexSize_;
+
+  public:
+    TPrivate():
+      legacy_(new TLegacyCanvas()),
+      modern_(NULL),
+      maxTexSize_(getTextureEdgeMax())
+    {
+      if (glewIsExtensionSupported("GL_ARB_texture_rectangle"))
+      {
+        modern_ = new TModernCanvas();
+      }
+
+      if (glewIsExtensionSupported("GL_ARB_fragment_program"))
+      {
+        GLint numTextureUnits = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &numTextureUnits);
+
+        if (numTextureUnits > 2)
+        {
+          legacy_->createFragmentShaders();
+
+          if (modern_)
+          {
+            modern_->createFragmentShaders();
+          }
+        }
+      }
+
+      renderer_ = legacy_;
+    }
+
+    ~TPrivate()
+    {
+      delete legacy_;
+      delete modern_;
+    }
+
+    void clear(QGLWidget * canvas)
+    {
+      renderer_->clear(canvas);
+    }
+
+    TBaseCanvas * rendererFor(const VideoTraits & vtts) const
+    {
+      if (modern_)
+      {
+        if (renderer_ == modern_)
+        {
+          if (maxTexSize_ < vtts.encodedWidth_ ||
+              maxTexSize_ < vtts.encodedHeight_)
+          {
+            // use tiled legacy OpenGL renderer:
+            return legacy_;
+          }
+        }
+        else if (maxTexSize_ >= vtts.encodedWidth_ &&
+                 maxTexSize_ >= vtts.encodedHeight_)
+        {
+          // use to modern OpenGL renderer:
+          return modern_;
+        }
+      }
+
+      // keep using the current renderer:
+      return renderer_;
+    }
+
+    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
+    {
+      if (modern_)
+      {
+        TBaseCanvas * renderer = rendererFor(frame->traits_);
+        if (renderer != renderer_)
+        {
+          // switch to a different renderer:
+          renderer_->clear(canvas);
+          renderer_ = renderer;
+        }
+      }
+
+      renderer_->loadFrame(canvas, frame);
+    }
+
+    void draw()
+    {
+      renderer_->draw();
+    }
+
+    inline const pixelFormat::Traits * pixelTraits() const
+    {
+      return renderer_->pixelTraits();
+    }
+
+    void skipColorConverter(QGLWidget * canvas, bool enable)
+    {
+      legacy_->skipColorConverter(canvas, enable);
+
+      if (modern_)
+      {
+        modern_->skipColorConverter(canvas, enable);
+      }
+    }
+
+    void enableVerticalScaling(bool enable)
+    {
+      legacy_->enableVerticalScaling(enable);
+
+      if (modern_)
+      {
+        modern_->enableVerticalScaling(enable);
+      }
+    }
+
+    bool getCroppedFrame(TCropFrame & crop) const
+    {
+      return renderer_->getCroppedFrame(crop);
+    }
+
+    bool imageWidthHeight(double & w, double & h) const
+    {
+      return renderer_->imageWidthHeight(w, h);
+    }
+
+    bool imageWidthHeightRotated(double & w, double & h, int & rotate) const
+    {
+      return renderer_->imageWidthHeightRotated(w, h, rotate);
+    }
+
+    inline void overrideDisplayAspectRatio(double dar)
+    {
+      legacy_->overrideDisplayAspectRatio(dar);
+
+      if (modern_)
+      {
+        modern_->overrideDisplayAspectRatio(dar);
+      }
+    }
+
+    inline void cropFrame(double darCropped)
+    {
+      legacy_->cropFrame(darCropped);
+
+      if (modern_)
+      {
+        modern_->cropFrame(darCropped);
+      }
+    }
+
+    inline void cropFrame(const TCropFrame & crop)
+    {
+      legacy_->cropFrame(crop);
+
+      if (modern_)
+      {
+        modern_->cropFrame(crop);
+      }
+    }
+
+    inline void getFrame(TVideoFramePtr & frame) const
+    {
+      renderer_->getFrame(frame);
+    }
+
+    const TFragmentShader *
+    fragmentShaderFor(const VideoTraits & vtts) const
+    {
+      TBaseCanvas * renderer = rendererFor(vtts);
+      return renderer->fragmentShaderFor(vtts.pixelFormat_);
+    }
+  };
+
+
 
 #ifdef YAE_USE_LIBASS
   //----------------------------------------------------------------
@@ -2983,27 +3245,8 @@ namespace yae
     delete overlay_;
     overlay_ = NULL;
 
-    if (glewIsExtensionSupported("GL_ARB_texture_rectangle"))
-    {
-      private_ = new TModernCanvas();
-      overlay_ = new TModernCanvas();
-    }
-    else
-    {
-      private_ = new TLegacyCanvas();
-      overlay_ = new TLegacyCanvas();
-    }
-
-    if (glewIsExtensionSupported("GL_ARB_fragment_program"))
-    {
-      GLint numTextureUnits = 0;
-      glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &numTextureUnits);
-
-      if (numTextureUnits > 2)
-      {
-        private_->createFragmentShaders();
-      }
-    }
+    private_ = new TPrivate();
+    overlay_ = new TPrivate();
 
     libass_ = asyncInitLibass(this, NULL, 0);
   }
@@ -3012,9 +3255,9 @@ namespace yae
   // Canvas::fragmentShaderFor
   //
   const TFragmentShader *
-  Canvas::fragmentShaderFor(TPixelFormatId format) const
+  Canvas::fragmentShaderFor(const VideoTraits & vtts) const
   {
-    return private_ ? private_->fragmentShaderFor(format) : NULL;
+    return private_ ? private_->fragmentShaderFor(vtts) : NULL;
   }
 
   //----------------------------------------------------------------

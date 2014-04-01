@@ -55,6 +55,9 @@ namespace yae
   {
     TFragmentShaderProgram(const char * code = NULL);
 
+    // delete the program:
+    void destroy();
+
     // helper:
     inline bool loaded() const
     { return code_ && handle_; }
@@ -117,7 +120,7 @@ namespace yae
     void initializePrivateBackend();
 
     // lookup a fragment shader for a given pixel format, if one exits:
-    const TFragmentShader * fragmentShaderFor(TPixelFormatId format) const;
+    const TFragmentShader * fragmentShaderFor(const VideoTraits & vtts) const;
 
     // specify reader ID tag so that the Canvas can discard
     // frames originating from any other reader:
