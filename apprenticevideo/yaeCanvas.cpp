@@ -2217,7 +2217,10 @@ namespace yae
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(canvas);
-    static const GLsizei textureEdgeMax = getTextureEdgeMax();
+
+    // avoid creating excessively oversized tiles:
+    static const GLsizei textureEdgeMax =
+      std::min<GLsizei>(4096, std::max<GLsizei>(64, getTextureEdgeMax() / 2));
 
     // take the new frame:
     bool colorSpaceOrRangeChanged = false;
