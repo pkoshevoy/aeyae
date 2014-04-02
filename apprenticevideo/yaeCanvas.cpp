@@ -2703,7 +2703,7 @@ namespace yae
         }
       }
 
-      renderer_->loadFrame(canvas, frame);
+      return renderer_->loadFrame(canvas, frame);
     }
 
     void draw()
