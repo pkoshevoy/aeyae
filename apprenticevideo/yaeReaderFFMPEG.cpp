@@ -1381,68 +1381,37 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // AutoFree
+  // FrameWithAutoCleanup
   //
-  template <typename TData>
-  struct AutoFree
+  struct FrameWithAutoCleanup
   {
-    AutoFree(TData * data):
-      data_(data)
+    FrameWithAutoCleanup():
+      frame_(av_frame_alloc())
     {}
 
-    ~AutoFree()
+    ~FrameWithAutoCleanup()
     {
-      av_free(data_);
+      av_frame_free(&frame_);
     }
 
-    inline TData * get() const
+    inline AVFrame * get() const
     {
-      return data_;
+      return frame_;
     }
 
-    inline operator TData * () const
+    inline AVFrame * reset()
     {
-      return data_;
-    }
-
-    inline void reset(TData * data)
-    {
-      av_free(data_);
-      data_ = data;
+      av_frame_unref(frame_);
+      return frame_;
     }
 
   protected:
-    TData * data_;
+    AVFrame * frame_;
 
   private:
     // intentionally disabled:
-    AutoFree(const AutoFree &);
-    AutoFree & operator = (const AutoFree &);
-  };
-
-  //----------------------------------------------------------------
-  // FrameWithAutoCleanup
-  //
-  struct FrameWithAutoCleanup : AutoFree<AVFrame>
-  {
-    typedef AutoFree<AVFrame> TBase;
-
-    FrameWithAutoCleanup():
-      TBase(av_frame_alloc())
-    {
-      data_->opaque = NULL;
-    }
-
-    operator AVPicture * () const
-    {
-      return (AVPicture *)data_;
-    }
-
-    void reset()
-    {
-      TBase::reset(av_frame_alloc());
-      data_->opaque = NULL;
-    }
+    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
+    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
   };
 
   //----------------------------------------------------------------
@@ -1910,8 +1879,7 @@ namespace yae
 
       // Decode video frame
       int gotFrame = 0;
-      AVFrame * avFrame = frameAutoCleanup_;
-      avcodec_get_frame_defaults(avFrame);
+      AVFrame * avFrame = frameAutoCleanup_.reset();
       AVCodecContext * codecContext = this->codecContext();
       avcodec_decode_video2(codecContext,
                             avFrame,
@@ -3373,7 +3341,7 @@ namespace yae
       }
       else
       {
-        // flush out buffered up frames with an empty packet:
+        // flush out buffered frames with an empty packet:
         memset(&packet, 0, sizeof(packet));
         av_init_packet(&packet);
       }
@@ -3395,8 +3363,7 @@ namespace yae
       {
         // Decode audio frame
         int gotFrame = 0;
-        AVFrame * avFrame = frameAutoCleanup_;
-        avcodec_get_frame_defaults(avFrame);
+        AVFrame * avFrame = frameAutoCleanup_.reset();
 
         int bytesUsed = avcodec_decode_audio4(codecContext,
                                               avFrame,
