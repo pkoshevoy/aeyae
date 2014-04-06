@@ -241,9 +241,9 @@ namespace yae
   {
     bool negative = yae::to_hhmmss(time_, base_, ts, separator);
 
-    int64 t = negative ? -time_ : time_;
-    int64 remainder = t % base_;
-    int64 usec = (1000000 * remainder) / base_;
+    uint64 t = negative ? -time_ : time_;
+    uint64 remainder = t % base_;
+    uint64 usec = (1000000 * remainder) / base_;
 
     std::ostringstream os;
 
@@ -290,7 +290,7 @@ namespace yae
 
     std::ostringstream os;
 
-    if (negative && (frameNo || tmp.time_ >= tmp.base_))
+    if (negative && (frameNo || (uint64)tmp.time_ >= tmp.base_))
     {
       os << '-';
     }
@@ -545,7 +545,8 @@ namespace yae
       // a different alignment offset than was returned previousely,
       // and will require memmove to shift previous data to the new
       // alignment offset; it's simpler to malloc and memcpy instead:
-      void * newData = malloc(planeSize + alignment - 1);
+      unsigned char * newData =
+        (unsigned char *)malloc(planeSize + alignment - 1);
 
       if (!newData)
       {
@@ -553,18 +554,18 @@ namespace yae
       }
 
       alignmentOffset =
-        alignment && ((std::size_t)(data_) & (alignment - 1)) ?
-        alignment -  ((std::size_t)(data_) & (alignment - 1)) : 0;
+        alignment && ((std::size_t)(newData) & (alignment - 1)) ?
+        alignment -  ((std::size_t)(newData) & (alignment - 1)) : 0;
 
       if (data_)
       {
         const unsigned char * src = data_ + alignmentOffset_;
-        unsigned char * dst = ((unsigned char *)newData) + alignmentOffset;
+        unsigned char * dst = newData + alignmentOffset;
         memcpy(dst, src, currentSize);
       }
 
       free(data_);
-      data_ = (unsigned char *)newData;
+      data_ = newData;
     }
     else if (data_)
     {
