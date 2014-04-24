@@ -1036,6 +1036,7 @@ namespace yae
         "ssa",
         "idx",
         "sub",
+        "sup",
         "ifo",
         "info",
         "nfo",
