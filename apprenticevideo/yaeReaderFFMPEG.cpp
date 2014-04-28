@@ -70,6 +70,14 @@ extern "C"
 //
 #define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
 
+static std::ostream &
+dump_averror(std::ostream & os, int err)
+{
+  char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+  av_strerror(err, errbuf, sizeof(errbuf));
+  os << "AVERROR: " << errbuf << std::endl;
+  return os;
+}
 
 //----------------------------------------------------------------
 // YAE_ASSERT_NO_AVERROR_OR_RETURN
@@ -78,9 +86,7 @@ extern "C"
   do {                                                  \
     if (err < 0)                                        \
     {                                                   \
-      char tmp[1024];                                   \
-      av_strerror(err, tmp, sizeof(tmp));               \
-      std::cerr << "AVERROR: " << tmp << std::endl;     \
+      dump_averror(std::cerr, err);                     \
       YAE_ASSERT(false);                                \
       return ret;                                       \
     }                                                   \
@@ -4117,6 +4123,11 @@ namespace yae
     std::size_t countChapters() const;
     bool getChapterInfo(std::size_t i, TChapter & c) const;
 
+    inline bool requestDemuxerInterrupt()
+    { interruptDemuxer_ = true; }
+
+    static int demuxerInterruptCallback(void * context);
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -4127,13 +4138,13 @@ namespace yae
     Thread<Movie> thread_;
     mutable boost::mutex mutex_;
 
-    // deadlock avoidance mechanism:
-    QueueWaitMgr terminator_;
+    // output queue(s) deadlock avoidance mechanism:
+    QueueWaitMgr outputTerminator_;
 
     // this one is only used to avoid a deadlock waiting
     // for audio renderer to empty out the frame queue
     // during frame stepping (when playback is disabled)
-    QueueWaitMgr terminator2_;
+    QueueWaitMgr framestepTerminator_;
 
     AVFormatContext * context_;
 
@@ -4157,6 +4168,7 @@ namespace yae
 
     double timeIn_;
     double timeOut_;
+    bool interruptDemuxer_;
     bool playbackEnabled_;
     bool looping_;
 
@@ -4181,6 +4193,7 @@ namespace yae
     dts_(AV_NOPTS_VALUE),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
+    interruptDemuxer_(false),
     playbackEnabled_(false),
     looping_(false),
     mustStop_(true),
@@ -4215,6 +4228,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::demuxerInterruptCallback
+  //
+  int
+  Movie::demuxerInterruptCallback(void * context)
+  {
+    Movie * movie = (Movie *)context;
+    if (movie->interruptDemuxer_)
+    {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  //----------------------------------------------------------------
   // Movie::open
   //
   bool
@@ -4222,6 +4250,13 @@ namespace yae
   {
     // FIXME: avoid closing/reopening the same resource:
     close();
+
+    YAE_ASSERT(!context_);
+    context_ = avformat_alloc_context();
+
+    YAE_ASSERT(!interruptDemuxer_);
+    context_->interrupt_callback.callback = &Movie::demuxerInterruptCallback;
+    context_->interrupt_callback.opaque = this;
 
     AVDictionary * options = NULL;
 
@@ -4536,18 +4571,33 @@ namespace yae
 
         if (err)
         {
+#ifndef NDEBUG
+          dump_averror(std::cerr, err);
+#endif
           av_free_packet(&ffmpeg);
+
+          if (interruptDemuxer_)
+          {
+            interruptDemuxer_ = false;
+
+            if (err == AVERROR_EXIT || err == AVERROR_EOF || err == -1)
+            {
+              // blocking function call intentionally interrupted, try again:
+              err = 0;
+              continue;
+            }
+          }
 
           if (audioTrack)
           {
             // flush out buffered frames with an empty packet:
-            audioTrack->packetQueue().push(TPacketPtr(), &terminator_);
+            audioTrack->packetQueue().push(TPacketPtr(), &outputTerminator_);
           }
 
           if (videoTrack)
           {
             // flush out buffered frames with an empty packet:
-            videoTrack->packetQueue().push(TPacketPtr(), &terminator_);
+            videoTrack->packetQueue().push(TPacketPtr(), &outputTerminator_);
           }
 
           if (!playbackEnabled_)
@@ -4570,7 +4620,8 @@ namespace yae
           if (audioTrack)
           {
             audioTrack->packetQueue().waitForConsumerToBlock();
-            audioTrack->frameQueue_.waitForConsumerToBlock(&terminator2_);
+            audioTrack->frameQueue_.
+              waitForConsumerToBlock(&framestepTerminator_);
           }
 
           if (videoTrack)
@@ -4615,7 +4666,7 @@ namespace yae
           if (videoTrack &&
               videoTrack->streamIndex() == ffmpeg.stream_index)
           {
-            if (!videoTrack->packetQueue().push(packet, &terminator_))
+            if (!videoTrack->packetQueue().push(packet, &outputTerminator_))
             {
               break;
             }
@@ -4623,7 +4674,7 @@ namespace yae
           else if (audioTrack &&
                    audioTrack->streamIndex() == ffmpeg.stream_index)
           {
-            if (!audioTrack->packetQueue().push(packet, &terminator_))
+            if (!audioTrack->packetQueue().push(packet, &outputTerminator_))
             {
               break;
             }
@@ -4737,10 +4788,11 @@ namespace yae
                     }
                   }
                 }
+
                 err = 0;
               }
 
-              subs->queue_.push(sf, &terminator_);
+              subs->queue_.push(sf, &outputTerminator_);
             }
           }
         }
@@ -4771,7 +4823,13 @@ namespace yae
 
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       mustStop_ = false;
     }
     catch (...)
@@ -4791,8 +4849,8 @@ namespace yae
       t->packetQueue().waitForConsumerToBlock();
     }
 
-    terminator_.stopWaiting(false);
-    terminator2_.stopWaiting(!playbackEnabled_);
+    outputTerminator_.stopWaiting(false);
+    framestepTerminator_.stopWaiting(!playbackEnabled_);
     return thread_.run();
   }
 
@@ -4804,7 +4862,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       mustStop_ = true;
     }
     catch (...)
@@ -4822,8 +4886,9 @@ namespace yae
       t->threadStop();
     }
 
-    terminator_.stopWaiting(true);
-    terminator2_.stopWaiting(true);
+    outputTerminator_.stopWaiting(true);
+    framestepTerminator_.stopWaiting(true);
+
     thread_.stop();
     return thread_.wait();
   }
@@ -4836,7 +4901,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       mustSeek_ = true;
       seekTime_ = seekTime;
 
@@ -4927,6 +4998,7 @@ namespace yae
       ts = av_rescale_q(ts, tb, s->time_base);
     }
 
+    interruptDemuxer_ = false;
     int err = avformat_seek_file(context_,
                                  streamIndex,
                                  kMinInt64,
@@ -4984,7 +5056,7 @@ namespace yae
     if (audioTrack)
     {
       audioTrack->packetQueue().waitForConsumerToBlock();
-      audioTrack->frameQueue_.waitForConsumerToBlock(&terminator2_);
+      audioTrack->frameQueue_.waitForConsumerToBlock(&framestepTerminator_);
     }
 
     if (videoTrack)
@@ -4993,7 +5065,12 @@ namespace yae
       videoTrack->frameQueue_.waitForConsumerToBlock();
     }
 
-    boost::lock_guard<boost::mutex> lock(mutex_);
+    boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+    while (!lock.try_lock())
+    {
+      requestDemuxerInterrupt();
+      boost::this_thread::yield();
+    }
 
     if (mustStop_)
     {
@@ -5011,14 +5088,8 @@ namespace yae
   void
   Movie::getPlaybackInterval(double & timeIn, double & timeOut) const
   {
-    try
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      timeIn = timeIn_;
-      timeOut = timeOut_;
-    }
-    catch (...)
-    {}
+    timeIn = timeIn_;
+    timeOut = timeOut_;
   }
 
   //----------------------------------------------------------------
@@ -5029,7 +5100,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       timeIn_ = timeIn;
 
       if (selectedVideoTrack_ < videoTracks_.size())
@@ -5056,7 +5133,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       timeOut_ = timeOut;
 
       if (selectedVideoTrack_ < videoTracks_.size())
@@ -5083,9 +5166,15 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       playbackEnabled_ = enabled;
-      terminator2_.stopWaiting(!playbackEnabled_);
+      framestepTerminator_.stopWaiting(!playbackEnabled_);
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
@@ -5111,7 +5200,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       looping_ = enabled;
     }
     catch (...)
@@ -5126,7 +5221,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       skipLoopFilter_ = skip;
 
       if (selectedVideoTrack_ < videoTracks_.size())
@@ -5147,7 +5248,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
       skipNonReferenceFrames_ = skip;
 
       if (selectedVideoTrack_ < videoTracks_.size())
@@ -5168,7 +5275,13 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
+
 
       // first set audio tempo -- this may fail:
       if (selectedAudioTrack_ < audioTracks_.size())
@@ -5201,7 +5314,12 @@ namespace yae
   {
     try
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
+      while (!lock.try_lock())
+      {
+        requestDemuxerInterrupt();
+        boost::this_thread::yield();
+      }
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
