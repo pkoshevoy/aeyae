@@ -1496,6 +1496,12 @@ namespace yae
   static bool
   canaryTest(const QString & fn)
   {
+    if (fn.endsWith(QString::fromUtf8(".m3u"), Qt::CaseInsensitive) ||
+        fn.endsWith(QString::fromUtf8(".m3u8"), Qt::CaseInsensitive))
+    {
+      return true;
+    }
+
     QProcess canary;
 
     QString exePath = QCoreApplication::applicationFilePath();
@@ -1506,9 +1512,9 @@ namespace yae
     // send in the canary:
     canary.start(exePath, args);
 
-    if (!canary.waitForFinished(5000))
+    if (!canary.waitForFinished(30000))
     {
-      // failed to finish in 5 seconds, assume it hanged:
+      // failed to finish in 30 seconds, assume it hanged:
       return false;
     }
 
