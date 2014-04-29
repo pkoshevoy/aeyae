@@ -19,6 +19,14 @@ CP='rsync -a --copy-unsafe-links'
 DARWIN_REV=`uname -r`
 
 #----------------------------------------------------------------
+# INSTALL_NAME_TOOL=
+# 
+INSTALL_NAME_TOOL=`which install_name_tool`
+if [ -x '/opt/local/bin/install_name_tool' ]; then
+	INSTALL_NAME_TOOL='/opt/local/bin/install_name_tool'
+fi
+
+#----------------------------------------------------------------
 # XCODEBUILD
 #
 XCODEBUILD='xcodebuild'
@@ -628,8 +636,8 @@ DeployFile()
 				if [ $? != 0 ]; then exit 11; fi
 			quiet_popd
 
-			echo install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
-			install_name_tool -change "${i}" "${DST_NAME}" "${FILE}"
+			echo "${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
+			"${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
 			if [ $? != 0 ]; then
 				# install_name_tool failure may be fixed by using
 				# the -headerpad_max_install_names linker flag
