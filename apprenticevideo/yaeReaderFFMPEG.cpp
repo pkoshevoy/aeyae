@@ -4123,9 +4123,7 @@ namespace yae
     std::size_t countChapters() const;
     bool getChapterInfo(std::size_t i, TChapter & c) const;
 
-    inline bool requestDemuxerInterrupt()
-    { interruptDemuxer_ = true; }
-
+    void requestDemuxerInterruptAndLock(boost::unique_lock<boost::mutex> & lk);
     static int demuxerInterruptCallback(void * context);
 
   private:
@@ -4225,6 +4223,19 @@ namespace yae
     }
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::requestDemuxerInterruptAndLock
+  //
+  void
+  Movie::requestDemuxerInterruptAndLock(boost::unique_lock<boost::mutex> & lk)
+  {
+    while (!lk.try_lock())
+    {
+      interruptDemuxer_ = true;
+      boost::this_thread::yield();
+    }
   }
 
   //----------------------------------------------------------------
@@ -4824,11 +4835,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       mustStop_ = false;
     }
@@ -4863,11 +4870,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       mustStop_ = true;
     }
@@ -4902,11 +4905,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       mustSeek_ = true;
       seekTime_ = seekTime;
@@ -5066,11 +5065,7 @@ namespace yae
     }
 
     boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-    while (!lock.try_lock())
-    {
-      requestDemuxerInterrupt();
-      boost::this_thread::yield();
-    }
+    requestDemuxerInterruptAndLock(lock);
 
     if (mustStop_)
     {
@@ -5101,11 +5096,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       timeIn_ = timeIn;
 
@@ -5134,11 +5125,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       timeOut_ = timeOut;
 
@@ -5167,11 +5154,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       playbackEnabled_ = enabled;
       framestepTerminator_.stopWaiting(!playbackEnabled_);
@@ -5201,11 +5184,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       looping_ = enabled;
     }
@@ -5222,11 +5201,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       skipLoopFilter_ = skip;
 
@@ -5249,11 +5224,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       skipNonReferenceFrames_ = skip;
 
@@ -5276,12 +5247,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
-
+      requestDemuxerInterruptAndLock(lock);
 
       // first set audio tempo -- this may fail:
       if (selectedAudioTrack_ < audioTracks_.size())
@@ -5315,11 +5281,7 @@ namespace yae
     try
     {
       boost::unique_lock<boost::mutex> lock(mutex_, boost::defer_lock);
-      while (!lock.try_lock())
-      {
-        requestDemuxerInterrupt();
-        boost::this_thread::yield();
-      }
+      requestDemuxerInterruptAndLock(lock);
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
