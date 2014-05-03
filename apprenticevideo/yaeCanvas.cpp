@@ -2614,6 +2614,10 @@ namespace yae
   //
   class Canvas::TPrivate
   {
+    std::string openglVendorInfo_;
+    std::string openglRendererInfo_;
+    std::string openglVersionInfo_;
+
     TLegacyCanvas * legacy_;
     TModernCanvas * modern_;
     TBaseCanvas * renderer_;
@@ -2626,11 +2630,22 @@ namespace yae
 
   public:
     TPrivate():
+      openglVendorInfo_((const char *)glGetString(GL_VENDOR)),
+      openglRendererInfo_((const char *)glGetString(GL_RENDERER)),
+      openglVersionInfo_((const char *)glGetString(GL_VERSION)),
       legacy_(new TLegacyCanvas()),
       modern_(NULL),
       maxTexSize_(getTextureEdgeMax())
     {
-      if (glewIsExtensionSupported("GL_ARB_texture_rectangle"))
+      // rectangular textures do not work correctly on VirtualBox VMs,
+      // so try to detect this and fall back to power-of-2 textures:
+      bool virtualBoxVM =
+        (openglVendorInfo_ == "Humper" &&
+         openglRendererInfo_ == "Chromium" &&
+         openglVersionInfo_ == "2.1 Chromium 1.9");
+
+      if (glewIsExtensionSupported("GL_ARB_texture_rectangle") &&
+          !virtualBoxVM)
       {
         modern_ = new TModernCanvas();
       }
