@@ -234,6 +234,92 @@ namespace yae
 #endif
 
   //----------------------------------------------------------------
+  // setTimelineCss
+  //
+  static void
+  setTimelineCss(QWidget * timeline, bool noVideo = false)
+  {
+    static const char * cssVideo =
+      "QWidget#timelineSeparator_ {\n"
+      "  background-color: #000000;\n"
+      "}\n"
+      "\n"
+      "QWidget {\n"
+      "	background-color: #000000;\n"
+      "}\n"
+      "\n"
+      "QLineEdit {\n"
+      "    color: #e0e0e0;\n"
+      "    border: 0px solid #404040;\n"
+      "    border-radius: 3px;\n"
+      "    background-color: #000000;\n"
+      "}\n"
+      "\n"
+      "QLineEdit:disabled {\n"
+      "	color: #404040;\n"
+      "}\n";
+
+    static const char * cssAudio =
+      "QWidget#timelineSeparator_ {\n"
+      "  background-color: %1;\n"
+      "}\n"
+      "\n"
+      "QWidget {\n"
+      "	background-color: %2;\n"
+      "}\n"
+      "\n"
+      "QLineEdit {\n"
+      "    color: %3;\n"
+      "    border: 0px solid %2;\n"
+      "    border-radius: 3px;\n"
+      "    background-color: %2;\n"
+      "}\n"
+      "\n"
+      "QLineEdit:disabled {\n"
+      "	color: %4;\n"
+      "}\n";
+
+    QString css;
+
+    if (noVideo)
+    {
+      QPalette palette;
+
+      css =
+        QString::fromUtf8(cssAudio).
+        arg(palette.color(QPalette::Window).darker().name(),
+            palette.color(QPalette::Window).name(),
+            palette.color(QPalette::WindowText).name(),
+            palette.color(QPalette::Disabled,
+                          QPalette::WindowText).name());
+    }
+    else
+    {
+      css = QString::fromUtf8(cssVideo);
+    }
+
+    timeline->setStyleSheet(css);
+  }
+
+  //----------------------------------------------------------------
+  // setTimelineCssForVideo
+  //
+  static void
+  setTimelineCssForVideo(QWidget * timeline)
+  {
+    setTimelineCss(timeline, false);
+  }
+
+  //----------------------------------------------------------------
+  // setTimelineCssForAudio
+  //
+  static void
+  setTimelineCssForAudio(QWidget * timeline)
+  {
+    setTimelineCss(timeline, true);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
@@ -305,6 +391,7 @@ namespace yae
     videoRenderer_ = VideoRenderer::create();
 
     // show the timeline:
+    setTimelineCssForVideo(timelineWidgets_);
     actionShowTimeline->setChecked(true);
     timelineWidgets_->show();
 
@@ -880,7 +967,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     adjustMenuActions();
-    adjustMenues(reader_);
+    adjustMenus(reader_);
   }
 
   //----------------------------------------------------------------
@@ -1671,7 +1758,7 @@ namespace yae
       selSubsFormat_ = reader->subsInfo(strack, selSubs_);
     }
 
-    adjustMenues(reader);
+    adjustMenus(reader);
 
     reader_->close();
     stopRenderers();
@@ -3208,7 +3295,7 @@ namespace yae
     this->setWindowTitle(tr("Apprentice Video"));
 
     adjustMenuActions();
-    adjustMenues(reader_);
+    adjustMenus(reader_);
   }
 
   //----------------------------------------------------------------
@@ -4210,7 +4297,7 @@ namespace yae
       }
     }
 
-    adjustMenues(reader);
+    adjustMenus(reader);
   }
 
   //----------------------------------------------------------------
@@ -4552,10 +4639,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::adjustMenues
+  // MainWindow::adjustMenus
   //
   void
-  MainWindow::adjustMenues(IReader * reader)
+  MainWindow::adjustMenus(IReader * reader)
   {
     bool ok = true;
 
@@ -4603,6 +4690,7 @@ namespace yae
     {
       if (actionShowPlaylist->isEnabled())
       {
+        setTimelineCssForAudio(timelineWidgets_);
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
 
@@ -4622,6 +4710,7 @@ namespace yae
     {
       if (!actionShowPlaylist->isEnabled())
       {
+        setTimelineCssForVideo(timelineWidgets_);
         swapLayouts(canvasContainer_, playlistContainer_);
 
         if (actionShowPlaylist->isChecked())

@@ -37,77 +37,14 @@
     </item>
     <item>
      <widget class="QWidget" name="timelineWidgets_" native="true">
-      <property name="styleSheet">
-       <string notr="true">/*
-QWidget {
-	background-color: #1f1f1f;
-}
-
-QLineEdit {
-    color: #ffffff;
-    border-width: 1px;
-    border-color: #97aac1;
-    border-style: solid;
-    border-radius: 3px;
-    padding: 1px;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                stop: 0.0 #52617a,
-                stop: 0.499 #183764,
-                stop: 0.5 #0b173e,
-                stop: 1.0 #276a8e);
-}
-
-QLineEdit:disabled {
-	color: #192f4f;
-}
-*/
-/*
-QWidget {
-	background-color: #000000;
-}
-
-QLineEdit {
-    color: #40a0ff;
-    border-width: 1px;
-    border-color: #204080;
-    border-style: solid;
-    border-radius: 3px;
-    padding: 1px;
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                stop: 0.0 #1b1c20,
-                stop: 0.49 #1b1f2f,
-                stop: 0.5 #070d1e,
-                stop: 1.0 #152141);
-}
-
-QLineEdit:disabled {
-	color: #192f4f;
-}
-*/
-QWidget {
-	background-color: #000000;
-}
-
-QLineEdit {
-    color: #e0e0e0;
-    border: 0px solid #404040;
-    border-radius: 3px;
-    background-color: #000000;
-}
-
-QLineEdit:disabled {
-	color: #404040;
-}
-</string>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <property name="spacing">
-        <number>0</number>
-       </property>
+      <layout class="QGridLayout" name="gridLayout">
        <property name="margin">
         <number>0</number>
        </property>
-       <item>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="1" column="0">
         <widget class="QWidget" name="playheadContainer_" native="true">
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <property name="spacing">
@@ -117,7 +54,7 @@ QLineEdit:disabled {
            <number>8</number>
           </property>
           <property name="topMargin">
-           <number>4</number>
+           <number>3</number>
           </property>
           <property name="rightMargin">
            <number>4</number>
@@ -144,7 +81,7 @@ QLineEdit:disabled {
          </layout>
         </widget>
        </item>
-       <item>
+       <item row="1" column="1">
         <widget class="yae::TimelineControls" name="timelineControls_" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -154,7 +91,7 @@ QLineEdit:disabled {
          </property>
         </widget>
        </item>
-       <item>
+       <item row="1" column="2">
         <widget class="QWidget" name="durationContainer_" native="true">
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="spacing">
@@ -164,7 +101,7 @@ QLineEdit:disabled {
            <number>4</number>
           </property>
           <property name="topMargin">
-           <number>4</number>
+           <number>3</number>
           </property>
           <property name="rightMargin">
            <number>8</number>
@@ -192,6 +129,22 @@ QLineEdit:disabled {
            </widget>
           </item>
          </layout>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="3">
+        <widget class="QWidget" name="timelineSeparator_" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>1</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>1</height>
+          </size>
+         </property>
         </widget>
        </item>
       </layout>

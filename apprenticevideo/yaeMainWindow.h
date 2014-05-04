@@ -245,7 +245,7 @@ namespace yae
                            std::vector<TTrackInfo> & subsInfo,
                            std::vector<TSubsFormat> & subsFormat);
     void adjustMenuActions();
-    void adjustMenues(IReader * reader);
+    void adjustMenus(IReader * reader);
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 

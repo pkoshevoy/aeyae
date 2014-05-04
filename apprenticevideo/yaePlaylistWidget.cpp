@@ -1818,14 +1818,11 @@ namespace yae
                    group.bbox_.width(),
                    group.bbox_.height());
 
-        const QColor & bg = isHighlightedGroup ? hiBgGroup : loBgGroup;
-        painter.setBrush(bg);
-        painter.setBrushOrigin(bbox.topLeft());
-        painter.setPen(Qt::NoPen);
-        painter.drawRect(bbox);
-
         if (!group.keyPath_.empty())
         {
+          const QColor & bg = isHighlightedGroup ? hiBgGroup : loBgGroup;
+          painter.fillRect(bbox, bg);
+
           if (overlapExists(group.bbox_, mousePos) &&
               group.bbox_.right() - mousePos.x() < 17)
           {
@@ -1891,26 +1888,30 @@ namespace yae
         }
         else
         {
-          QRect bx = bbox.adjusted(2, 1, -2, -1);
-          painter.setFont(smallFont);
+          std::size_t zebraIndex = index % 2;
+          QColor bg = zebraBg[zebraIndex];
+          QColor fg = disabledColorFg;
 
           if (group.offset_ == highlighted_ && numItems_)
           {
-            painter.setPen(Qt::white);
+            bg = selectedColorBg;
+            fg = selectedColorFg;
           }
-          else
-          {
-            painter.setPen(loFgGroup);
-          }
+
+          painter.fillRect(bbox, bg);
+
+          QRect bx = bbox.adjusted(2, 1, -2, -1);
+          painter.setFont(smallFont);
 
           QString text =
             (numShown_ == 1 ? tr("%1 item,  %2") : tr("%1 items,  %2")).
             arg(numShown_).
             arg(group.name_);
 
+          painter.setPen(fg);
           drawTextToFit(painter,
                         bx,
-                        Qt::AlignBottom | Qt::AlignRight,
+                        Qt::AlignTop | Qt::AlignRight,
                         text);
           painter.setFont(textFont);
         }
