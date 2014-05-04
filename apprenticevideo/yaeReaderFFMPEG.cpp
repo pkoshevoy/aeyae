@@ -4233,7 +4233,7 @@ namespace yae
   {
     YAE_ASSERT(!interruptDemuxer_);
 
-    while (!lk.timed_lock(boost::posix_time::seconds(1)))
+    while (!lk.timed_lock(boost::posix_time::milliseconds(1000)))
     {
       interruptDemuxer_ = true;
       boost::this_thread::yield();
@@ -4247,7 +4247,7 @@ namespace yae
   Movie::demuxerInterruptCallback(void * context)
   {
     Movie * movie = (Movie *)context;
-    if (movie->interruptDemuxer_ && !movie->mustSeek_)
+    if (movie->interruptDemuxer_)
     {
       return 1;
     }
@@ -4562,6 +4562,7 @@ namespace yae
         }
 
         // service seek request, read a packet:
+        bool demuxerInterrupted = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
 
@@ -4582,13 +4583,8 @@ namespace yae
 
             if (interruptDemuxer_)
             {
+              demuxerInterrupted = true;
               interruptDemuxer_ = false;
-
-              if (err != 0)
-              {
-                err = 0;
-                continue;
-              }
             }
           }
         }
@@ -4599,6 +4595,13 @@ namespace yae
           dump_averror(std::cerr, err);
 #endif
           av_free_packet(&ffmpeg);
+
+          if (demuxerInterrupted)
+          {
+            boost::this_thread::yield();
+            err = 0;
+            continue;
+          }
 
           if (audioTrack)
           {
