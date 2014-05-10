@@ -1,3 +1,4 @@
+
 // -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
@@ -2987,6 +2988,11 @@ namespace yae
       }
     }
 
+    void setCustomFonts(const std::list<TFontAttachment> & customFonts)
+    {
+      customFonts_ = customFonts;
+    }
+
     inline bool isReady() const
     {
       return success_ != 0;
@@ -3070,6 +3076,13 @@ namespace yae
 
       success_ = ass_fonts_update(renderer_);
 
+      for (std::list<TFontAttachment>::const_iterator
+             i = customFonts_.begin(); i != customFonts_.end(); ++i)
+      {
+        const TFontAttachment & font = *i;
+        ass_add_memory_font(library_, renderer_, font.data_, font.size_);
+      }
+
       if (removeAfterUse)
       {
         // remove the temporary fontconfig file:
@@ -3126,6 +3139,7 @@ namespace yae
     ASS_Renderer * renderer_;
     ASS_Track * track_;
     std::vector<char> header_;
+    std::list<TFontAttachment> customFonts_;
     std::list<TLine> buffer_;
     std::size_t bufferSize_;
 #endif
@@ -3141,17 +3155,17 @@ namespace yae
   //----------------------------------------------------------------
   // asyncInitLibass
   //
-  static TLibass *
-  asyncInitLibass(Canvas * canvas,
-                  const unsigned char * header,
-                  const std::size_t headerSize)
+  TLibass *
+  Canvas::asyncInitLibass(const unsigned char * header,
+                          const std::size_t headerSize)
   {
     TLibass * libass = NULL;
 
 #ifdef YAE_USE_LIBASS
     libass = new TLibass();
-    libass->setCallback(canvas, &Canvas::libassInitDoneCallback);
+    libass->setCallback(this, &Canvas::libassInitDoneCallback);
     libass->setHeader(header, headerSize);
+    libass->setCustomFonts(customFonts_);
 
     if (!libassInitThread.isRunning())
     {
@@ -3183,6 +3197,17 @@ namespace yae
     }
 #endif
   }
+
+  //----------------------------------------------------------------
+  // TFontAttachment::TFontAttachment
+  //
+  TFontAttachment::TFontAttachment(const char * filename,
+                                   const unsigned char * data,
+                                   std::size_t size):
+    filename_(filename),
+    data_(data),
+    size_(size)
+  {}
 
   //----------------------------------------------------------------
   // Canvas::Canvas
@@ -3266,7 +3291,7 @@ namespace yae
     private_ = new TPrivate();
     overlay_ = new TPrivate();
 
-    libass_ = asyncInitLibass(this, NULL, 0);
+    libass_ = asyncInitLibass();
   }
 
   //----------------------------------------------------------------
@@ -3285,6 +3310,17 @@ namespace yae
   Canvas::acceptFramesWithReaderId(unsigned int readerId)
   {
     payload_.setExpectedReaderId(readerId);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::libassAddFont
+  //
+  void
+  Canvas::libassAddFont(const char * filename,
+                        const unsigned char * data,
+                        const std::size_t size)
+  {
+    customFonts_.push_back(TFontAttachment(filename, data, size));
   }
 
   //----------------------------------------------------------------
@@ -3313,6 +3349,7 @@ namespace yae
     showTheGreeting_ = false;
     subsInOverlay_ = false;
     subs_.clear();
+    customFonts_.clear();
   }
 
   //----------------------------------------------------------------
@@ -4097,14 +4134,12 @@ namespace yae
           {
             if (subs.traits_ == kSubsSSA && subs.extraData_)
             {
-              libass_ = asyncInitLibass(this,
-                                        subs.extraData_->data(0),
+              libass_ = asyncInitLibass(subs.extraData_->data(0),
                                         subs.extraData_->rowBytes(0));
             }
             else if (subExt->headerSize())
             {
-              libass_ = asyncInitLibass(this,
-                                        subExt->header(),
+              libass_ = asyncInitLibass(subExt->header(),
                                         subExt->headerSize());
             }
           }
@@ -4142,14 +4177,12 @@ namespace yae
         {
           if (subs.traits_ == kSubsSSA && subs.extraData_)
           {
-            libass_ = asyncInitLibass(this,
-                                      subs.extraData_->data(0),
+            libass_ = asyncInitLibass(subs.extraData_->data(0),
                                       subs.extraData_->rowBytes(0));
           }
           else if (subExt && subExt->headerSize())
           {
-            libass_ = asyncInitLibass(this,
-                                      subExt->header(),
+            libass_ = asyncInitLibass(subExt->header(),
                                       subExt->headerSize());
           }
         }

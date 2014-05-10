@@ -16,6 +16,9 @@
 // GLEW includes:
 #include <GL/glew.h>
 
+// boost includes:
+#include <boost/algorithm/string.hpp>
+
 // Qt includes:
 #include <QActionGroup>
 #include <QApplication>
@@ -1773,6 +1776,61 @@ namespace yae
     {
       // skip to bookmarked position:
       reader->seek(bookmark->positionInSeconds_);
+    }
+
+    // process attachments:
+    std::size_t numAttachments = reader->getNumberOfAttachments();
+    for (std::size_t i = 0; i < numAttachments; i++)
+    {
+      const TAttachment * att = reader->getAttachmentInfo(i);
+
+      typedef std::map<std::string, std::string>::const_iterator TIter;
+      TIter mimetypeFound = att->metadata_.find(std::string("mimetype"));
+      TIter filenameFound = att->metadata_.find(std::string("filename"));
+
+      const char * filename =
+        filenameFound != att->metadata_.end() ?
+        filenameFound->second.c_str() :
+        NULL;
+
+      if (mimetypeFound != att->metadata_.end())
+      {
+        static const std::string fontTypes[] = {
+          std::string("application/x-truetype-font"),
+          std::string("application/vnd.ms-opentype"),
+          std::string("application/x-font-ttf"),
+          std::string("application/x-font")
+        };
+
+        static const std::size_t numFontTypes =
+          sizeof(fontTypes) / sizeof(fontTypes[0]);
+
+        std::string mimetype(mimetypeFound->second);
+        boost::algorithm::to_lower(mimetype);
+
+        for (std::size_t j = 0; j < numFontTypes; j++)
+        {
+          if (mimetype == fontTypes[j])
+          {
+            canvas_->libassAddFont(filename, att->data_, att->size_);
+            break;
+          }
+        }
+      }
+#if 0
+      else
+      {
+        std::cerr << "attachment: " << att->size_ << " bytes" << std::endl;
+
+        for (std::map<std::string, std::string>::const_iterator
+               j = att->metadata_.begin(); j != att->metadata_.end(); ++j)
+        {
+          std::cerr << "  " << j->first << ": " << j->second << std::endl;
+        }
+
+        std::cerr << std::endl;
+      }
+#endif
     }
 
     // renderers have to be started before the reader, because they

@@ -49,9 +49,23 @@ namespace yae
   class TLibass;
 
   //----------------------------------------------------------------
+  // TFontAttachment
+  //
+  struct YAE_API TFontAttachment
+  {
+    TFontAttachment(const char * filename = NULL,
+                    const unsigned char * data = NULL,
+                    std::size_t size = 0);
+
+    const char * filename_;
+    const unsigned char * data_;
+    std::size_t size_;
+  };
+
+  //----------------------------------------------------------------
   // TFragmentShaderProgram
   //
-  struct TFragmentShaderProgram
+  struct YAE_API TFragmentShaderProgram
   {
     TFragmentShaderProgram(const char * code = NULL);
 
@@ -72,7 +86,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFragmentShader
   //
-  struct TFragmentShader
+  struct YAE_API TFragmentShader
   {
     TFragmentShader(const TFragmentShaderProgram * program = NULL,
                     TPixelFormatId format = kInvalidPixelFormat);
@@ -125,6 +139,12 @@ namespace yae
     // specify reader ID tag so that the Canvas can discard
     // frames originating from any other reader:
     void acceptFramesWithReaderId(unsigned int readerId);
+
+    // this is called to add custom fonts that may have been
+    // embedded in the video file:
+    void libassAddFont(const char * filename,
+                       const unsigned char * data,
+                       const std::size_t size);
 
     // discard currently stored image data, repaint the canvas:
     void clear();
@@ -215,6 +235,9 @@ namespace yae
     void wakeScreenSaver();
 
   protected:
+    TLibass * asyncInitLibass(const unsigned char * header = NULL,
+                              const std::size_t headerSize = 0);
+
     // virtual:
     bool event(QEvent * event);
     void mouseMoveEvent(QMouseEvent * event);
@@ -304,6 +327,9 @@ namespace yae
     // automatic frame margin detection:
     TAutoCropDetect autoCrop_;
     Thread<TAutoCropDetect> autoCropThread_;
+
+    // extra fonts embedded in the video file, will be passed along to libass:
+    std::list<TFontAttachment> customFonts_;
   };
 }
 
