@@ -120,6 +120,10 @@ namespace yae
     virtual std::size_t countChapters() const = 0;
     virtual bool getChapterInfo(std::size_t i, TChapter & c) const = 0;
 
+    // attachments (fonts, thumbnails, etc...)
+    virtual std::size_t getNumberOfAttachments() const = 0;
+    virtual const TAttachment * getAttachmentInfo(std::size_t i) const = 0;
+
     // frames produced by this reader will be tagged with a reader ID,
     // so that renderers can disambiguate between frames produced
     // by different readers:

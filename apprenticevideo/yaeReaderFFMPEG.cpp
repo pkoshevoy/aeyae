@@ -4123,6 +4123,9 @@ namespace yae
     std::size_t countChapters() const;
     bool getChapterInfo(std::size_t i, TChapter & c) const;
 
+    inline const std::vector<TAttachment> & attachments() const
+    { return attachments_; }
+
     void requestMutex(boost::unique_lock<boost::timed_mutex> & lk);
     static int demuxerInterruptCallback(void * context);
 
@@ -4146,6 +4149,7 @@ namespace yae
 
     AVFormatContext * context_;
 
+    std::vector<TAttachment> attachments_;
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
     std::vector<TSubsTrackPtr> subs_;
@@ -4307,6 +4311,31 @@ namespace yae
     {
       AVStream * stream = context_->streams[i];
 
+      // extract attachments:
+      if (stream->codec->codec_type == AVMEDIA_TYPE_ATTACHMENT)
+      {
+        attachments_.push_back(TAttachment(stream->codec->extradata,
+                                           stream->codec->extradata_size));
+        TAttachment & att = attachments_.back();
+
+        const AVDictionaryEntry * prev = NULL;
+        while (true)
+        {
+          AVDictionaryEntry * found =
+            av_dict_get(stream->metadata, "", prev, AV_DICT_IGNORE_SUFFIX);
+
+          if (!found)
+          {
+            break;
+          }
+
+          att.metadata_[std::string(found->key)] = std::string(found->value);
+          prev = found;
+        }
+
+        continue;
+      }
+
       // assume codec is unsupported,
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
@@ -4400,6 +4429,7 @@ namespace yae
     const std::size_t numAudioTracks = audioTracks_.size();
     selectAudioTrack(numAudioTracks);
 
+    attachments_.clear();
     videoTracks_.clear();
     audioTracks_.clear();
     subs_.clear();
@@ -5958,6 +5988,29 @@ namespace yae
   ReaderFFMPEG::getChapterInfo(std::size_t i, TChapter & c) const
   {
     return private_->movie_.getChapterInfo(i, c);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getNumberOfAttachments
+  //
+  std::size_t
+  ReaderFFMPEG::getNumberOfAttachments() const
+  {
+    return private_->movie_.attachments().size();
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getAttachmentInfo
+  //
+  const TAttachment *
+  ReaderFFMPEG::getAttachmentInfo(std::size_t i) const
+  {
+    if (i < private_->movie_.attachments().size())
+    {
+      return &(private_->movie_.attachments()[i]);
+    }
+
+    return NULL;
   }
 
   //----------------------------------------------------------------
