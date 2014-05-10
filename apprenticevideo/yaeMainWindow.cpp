@@ -287,7 +287,7 @@ namespace yae
 
       css =
         QString::fromUtf8(cssAudio).
-        arg(palette.color(QPalette::Window).darker().name(),
+        arg(palette.color(QPalette::Mid).name(),
             palette.color(QPalette::Window).name(),
             palette.color(QPalette::WindowText).name(),
             palette.color(QPalette::Disabled,
