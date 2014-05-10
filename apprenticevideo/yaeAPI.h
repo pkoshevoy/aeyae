@@ -15,6 +15,7 @@
 // system includes:
 #include <assert.h>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -661,6 +662,18 @@ namespace yae
     // expressed in seconds:
     double start_;
     double duration_;
+  };
+
+  //----------------------------------------------------------------
+  // TAttachment
+  //
+  struct YAE_API TAttachment
+  {
+    TAttachment(const unsigned char * data = NULL, std::size_t size = 0);
+
+    const unsigned char * data_;
+    std::size_t size_;
+    std::map<std::string, std::string> metadata_;
   };
 
 }

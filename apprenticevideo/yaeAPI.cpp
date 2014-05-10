@@ -853,4 +853,13 @@ namespace yae
     duration_(dt)
   {}
 
+
+  //----------------------------------------------------------------
+  // TAttachment::TAttachment
+  //
+  TAttachment::TAttachment(const unsigned char * data, std::size_t size):
+    data_(data),
+    size_(size)
+  {}
+
 }
