@@ -1,4 +1,3 @@
-
 // -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
@@ -17,6 +16,10 @@
 
 // GLEW includes:
 #include <GL/glew.h>
+
+// FreeType includes:
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 // yae includes:
 #include <yaeAPI.h>
@@ -3049,6 +3052,29 @@ namespace yae
                               detectChange);
     }
 
+    bool add_embedded_font(const unsigned char * data, std::size_t size)
+    {
+      bool ok = false;
+
+      FT_Library ft;
+      if (FT_Init_FreeType(&ft) == 0)
+      {
+        FT_Face face;
+        if (FT_New_Memory_Face(ft, data, size, 0, &face) == 0)
+        {
+          ok = true;
+          ass_add_font(library_,
+                       (char *)face->family_name,
+                       (char *)data,
+                       (int)size);
+          FT_Done_Face(face);
+        }
+        FT_Done_FreeType(ft);
+      }
+
+      return ok;
+    }
+
     int init()
     {
       uninit();
@@ -3080,7 +3106,13 @@ namespace yae
              i = customFonts_.begin(); i != customFonts_.end(); ++i)
       {
         const TFontAttachment & font = *i;
-        ass_add_memory_font(library_, renderer_, font.data_, font.size_);
+        if (!add_embedded_font(font.data_, font.size_))
+        {
+#if !defined(NDEBUG)
+          std::cerr << "failed to load embedded font: " << font.filename_
+                    << std::endl;
+#endif
+        }
       }
 
       if (removeAfterUse)

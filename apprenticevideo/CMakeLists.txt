@@ -124,7 +124,6 @@ find_library(NUT_LIBRARY nut PATHS ${FFMPEG_LIBS_PATH} DOC "nut library")
 find_library(CELT_LIBRARY celt0 PATHS ${FFMPEG_LIBS_PATH} DOC "celt library")
 find_library(OPUS_LIBRARY opus PATHS ${FFMPEG_LIBS_PATH} DOC "opus library")
 find_library(MODPLUG_LIBRARY modplug PATHS ${FFMPEG_LIBS_PATH} DOC "modplug library")
-#find_library(FREETYPE_LIBRARY freetype PATHS ${FFMPEG_LIBS_PATH} DOC "freetype library")
 find_library(GNUTLS_LIBRARY gnutls PATHS ${FFMPEG_LIBS_PATH} DOC "gnutls library")
 find_library(DIRACENC_LIBRARY dirac_encoder PATHS ${FFMPEG_LIBS_PATH} DOC "dirac_encoder library")
 find_library(RTMP_LIBRARY rtmp PATHS ${FFMPEG_LIBS_PATH} DOC "rtmp library")
@@ -160,9 +159,6 @@ find_library(LIBFRIBIDI_LIBRARY fribidi libfribidi
 find_library(LIBFONTCONFIG_LIBRARY fontconfig libfontconfig
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libfontconfig (for ssa/ass subtitle renderering)")
-find_library(LIBFREETYPE_LIBRARY freetype libfreetype
-  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "libfreetype (for ssa/ass subtitle renderering)")
 find_library(LIBICONV_LIBRARY iconv libiconv
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libiconv (for ssa/ass subtitle renderering)")
@@ -301,6 +297,22 @@ find_path(GLEW_INCLUDE_DIR
 if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
+
+set(FREETYPE_DIR "$ENV{FREETYPE_DIR}"
+  CACHE PATH "root path for freetype lib/ and include/ folders"
+  )
+find_path(FREETYPE_INCLUDE_DIR
+  ft2build.h freetype2/freetype/freetype.h
+  PATHS ${FREETYPE_DIR}/include
+  )
+find_library(LIBFREETYPE_LIBRARY
+  freetype libfreetype
+  PATHS ${FREETYPE_DIR}/lib ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "freetype library (for ssa/ass subtitle renderering)"
+  )
+if (FREETYPE_INCLUDE_DIR)
+  include_directories(AFTER ${FREETYPE_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIR}/freetype2)
+endif (FREETYPE_INCLUDE_DIR)
 
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
@@ -546,10 +558,6 @@ endif (OPUS_LIBRARY)
 if (MODPLUG_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${MODPLUG_LIBRARY})
 endif (MODPLUG_LIBRARY)
-
-#if (FREETYPE_LIBRARY)
-#  set(TARGET_LIBS ${TARGET_LIBS} ${FREETYPE_LIBRARY})
-#endif (FREETYPE_LIBRARY)
 
 if (GNUTLS_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${GNUTLS_LIBRARY})
