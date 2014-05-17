@@ -17,10 +17,6 @@
 // GLEW includes:
 #include <GL/glew.h>
 
-// FreeType includes:
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeCanvas.h>

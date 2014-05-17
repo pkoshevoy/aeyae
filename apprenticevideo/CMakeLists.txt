@@ -159,6 +159,9 @@ find_library(LIBFRIBIDI_LIBRARY fribidi libfribidi
 find_library(LIBFONTCONFIG_LIBRARY fontconfig libfontconfig
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libfontconfig (for ssa/ass subtitle renderering)")
+find_library(LIBFREETYPE_LIBRARY freetype libfreetype
+  PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "libfreetype (for ssa/ass subtitle renderering)")
 find_library(LIBICONV_LIBRARY iconv libiconv
   PATHS ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
   DOC "libiconv (for ssa/ass subtitle renderering)")
@@ -297,22 +300,6 @@ find_path(GLEW_INCLUDE_DIR
 if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif (GLEW_INCLUDE_DIR)
-
-set(FREETYPE_DIR "$ENV{FREETYPE_DIR}"
-  CACHE PATH "root path for freetype lib/ and include/ folders"
-  )
-find_path(FREETYPE_INCLUDE_DIR
-  ft2build.h freetype2/freetype/freetype.h
-  PATHS ${FREETYPE_DIR}/include
-  )
-find_library(LIBFREETYPE_LIBRARY
-  freetype libfreetype
-  PATHS ${FREETYPE_DIR}/lib ${LIBASS_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "freetype library (for ssa/ass subtitle renderering)"
-  )
-if (FREETYPE_INCLUDE_DIR)
-  include_directories(AFTER ${FREETYPE_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIR}/freetype2)
-endif (FREETYPE_INCLUDE_DIR)
 
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
