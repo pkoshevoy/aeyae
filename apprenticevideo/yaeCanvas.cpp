@@ -3052,29 +3052,6 @@ namespace yae
                               detectChange);
     }
 
-    bool add_embedded_font(const unsigned char * data, std::size_t size)
-    {
-      bool ok = false;
-
-      FT_Library ft;
-      if (FT_Init_FreeType(&ft) == 0)
-      {
-        FT_Face face;
-        if (FT_New_Memory_Face(ft, data, size, 0, &face) == 0)
-        {
-          ok = true;
-          ass_add_font(library_,
-                       (char *)face->family_name,
-                       (char *)data,
-                       (int)size);
-          FT_Done_Face(face);
-        }
-        FT_Done_FreeType(ft);
-      }
-
-      return ok;
-    }
-
     int init()
     {
       uninit();
@@ -3082,6 +3059,16 @@ namespace yae
       library_ = ass_library_init();
       renderer_ = ass_renderer_init(library_);
       track_ = ass_new_track(library_);
+
+      for (std::list<TFontAttachment>::const_iterator
+             i = customFonts_.begin(); i != customFonts_.end(); ++i)
+      {
+        const TFontAttachment & font = *i;
+        ass_add_font(library_,
+                     (char *)font.filename_,
+                     (char *)font.data_,
+                     (int)font.size_);
+      }
 
       // lookup Fontconfig configuration file path:
       std::string fontsConf;
@@ -3091,7 +3078,7 @@ namespace yae
       const char * defaultFont = NULL;
       const char * defaultFamily = NULL;
       int useFontconfig = 1;
-      int updateFontCache = 0;
+      int updateFontCache = 1;
 
       ass_set_fonts(renderer_,
                     defaultFont,
@@ -3099,21 +3086,7 @@ namespace yae
                     useFontconfig,
                     fontsConf.size() ? fontsConf.c_str() : NULL,
                     updateFontCache);
-
-      success_ = ass_fonts_update(renderer_);
-
-      for (std::list<TFontAttachment>::const_iterator
-             i = customFonts_.begin(); i != customFonts_.end(); ++i)
-      {
-        const TFontAttachment & font = *i;
-        if (!add_embedded_font(font.data_, font.size_))
-        {
-#if !defined(NDEBUG)
-          std::cerr << "failed to load embedded font: " << font.filename_
-                    << std::endl;
-#endif
-        }
-      }
+      success_ = 1;
 
       if (removeAfterUse)
       {
