@@ -495,6 +495,9 @@ namespace yae
     shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
+    shortcutAspectRatioNone_ = new QShortcut(this);
+    shortcutAspectRatio1_33_ = new QShortcut(this);
+    shortcutAspectRatio1_78_ = new QShortcut(this);
 
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
@@ -512,6 +515,9 @@ namespace yae
     shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
     shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
@@ -653,8 +659,16 @@ namespace yae
                  this, SLOT(playbackAspectRatioAuto()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
+                 actionAspectRatioAuto, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAspectRatio1_33, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_33()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
+                 actionAspectRatio1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_60, SIGNAL(triggered()),
@@ -663,6 +677,10 @@ namespace yae
 
     ok = connect(actionAspectRatio1_78, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_78()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
+                 actionAspectRatio1_78, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_85, SIGNAL(triggered()),
@@ -2652,6 +2670,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::swapShortcuts
+  //
+  void
+  MainWindow::swapShortcuts()
+  {
+    yae::swapShortcuts(shortcutExit_, actionExit);
+    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    yae::swapShortcuts(shortcutFillScreen_, actionFillScreen);
+    yae::swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
+    yae::swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+    yae::swapShortcuts(shortcutPlay_, actionPlay);
+    yae::swapShortcuts(shortcutNext_, actionNext);
+    yae::swapShortcuts(shortcutPrev_, actionPrev);
+    yae::swapShortcuts(shortcutLoop_, actionLoop);
+    yae::swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+    yae::swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
+    yae::swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    yae::swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
+    yae::swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
+    yae::swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
+    yae::swapShortcuts(shortcutNextChapter_, actionNextChapter);
+    yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);
+    yae::swapShortcuts(shortcutAspectRatio1_33_, actionAspectRatio1_33);
+    yae::swapShortcuts(shortcutAspectRatio1_78_, actionAspectRatio1_78);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::toggleFullScreen
   //
   void
@@ -2709,22 +2754,7 @@ namespace yae
     menuBar()->hide();
     showFullScreen();
 
-    swapShortcuts(shortcutExit_, actionExit);
-    swapShortcuts(shortcutFullScreen_, actionFullScreen);
-    swapShortcuts(shortcutFillScreen_, actionFillScreen);
-    swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
-    swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
-    swapShortcuts(shortcutPlay_, actionPlay);
-    swapShortcuts(shortcutNext_, actionNext);
-    swapShortcuts(shortcutPrev_, actionPrev);
-    swapShortcuts(shortcutLoop_, actionLoop);
-    swapShortcuts(shortcutCropNone_, actionCropFrameNone);
-    swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
-    swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
-    swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
-    swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
-    swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
-    swapShortcuts(shortcutNextChapter_, actionNextChapter);
+    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -2772,22 +2802,7 @@ namespace yae
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
 
-    swapShortcuts(shortcutExit_, actionExit);
-    swapShortcuts(shortcutFullScreen_, actionFullScreen);
-    swapShortcuts(shortcutFillScreen_, actionFillScreen);
-    swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
-    swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
-    swapShortcuts(shortcutPlay_, actionPlay);
-    swapShortcuts(shortcutNext_, actionNext);
-    swapShortcuts(shortcutPrev_, actionPrev);
-    swapShortcuts(shortcutLoop_, actionLoop);
-    swapShortcuts(shortcutCropNone_, actionCropFrameNone);
-    swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
-    swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
-    swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
-    swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
-    swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
-    swapShortcuts(shortcutNextChapter_, actionNextChapter);
+    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -3298,6 +3313,12 @@ namespace yae
     bookmarkTimer_.stop();
 
     std::size_t itemIndex = playlistWidget_->currentItem();
+    std::size_t nNext = playlistWidget_->countItemsAhead();
+    std::size_t iNext = playlistWidget_->closestItem(itemIndex + 1);
+
+    PlaylistItem * next =
+      nNext && iNext > itemIndex ? playlistWidget_->lookup(iNext) : NULL;
+
     PlaylistGroup * group = NULL;
     PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
 
@@ -3326,6 +3347,14 @@ namespace yae
           return;
         }
       }
+    }
+
+    if (!next && actionRepeatPlaylist->isChecked())
+    {
+      // repeat the playlist:
+      std::size_t first = playlistWidget_->closestItem(0);
+      playlistWidget_->setCurrentItem(first, true);
+      return;
     }
 
     playbackNext();

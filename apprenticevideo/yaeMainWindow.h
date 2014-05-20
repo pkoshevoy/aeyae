@@ -246,6 +246,7 @@ namespace yae
                            std::vector<TSubsFormat> & subsFormat);
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
+    void swapShortcuts();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
@@ -283,6 +284,9 @@ namespace yae
     QShortcut * shortcutCrop1_85_;
     QShortcut * shortcutCrop2_40_;
     QShortcut * shortcutNextChapter_;
+    QShortcut * shortcutAspectRatioNone_;
+    QShortcut * shortcutAspectRatio1_33_;
+    QShortcut * shortcutAspectRatio1_78_;
 
     // playlist shortcuts:
     QAction * actionRemove_;

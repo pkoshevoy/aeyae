@@ -196,6 +196,7 @@
     <addaction name="actionPrev"/>
     <addaction name="actionNext"/>
     <addaction name="actionShowPlaylist"/>
+    <addaction name="actionRepeatPlaylist"/>
     <addaction name="separator"/>
     <addaction name="actionLoop"/>
     <addaction name="actionSetInPoint"/>
@@ -461,6 +462,9 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>16:9</string>
    </property>
+   <property name="shortcut">
+    <string>Alt+Shift+6</string>
+   </property>
   </action>
   <action name="actionAspectRatio1_33">
    <property name="checkable">
@@ -469,6 +473,9 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>4:3</string>
    </property>
+   <property name="shortcut">
+    <string>Alt+Shift+4</string>
+   </property>
   </action>
   <action name="actionAspectRatioAuto">
    <property name="checkable">
@@ -476,6 +483,9 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>Automatic</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Shift+X</string>
    </property>
   </action>
   <action name="actionFullScreen">
@@ -977,6 +987,17 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="toolTip">
     <string>Remove bookmark for the playlist item playing now</string>
+   </property>
+  </action>
+  <action name="actionRepeatPlaylist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Repeat Playlist</string>
+   </property>
+   <property name="toolTip">
+    <string>Repeat playlist from the beginning once the last playlist item completes playback</string>
    </property>
   </action>
  </widget>
