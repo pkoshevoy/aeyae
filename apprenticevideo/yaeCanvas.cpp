@@ -2956,11 +2956,10 @@ namespace yae
     TLibass():
       callbackContext_(NULL),
       callback_(NULL),
-      finished_(false),
-      success_(0),
-      library_(NULL),
-      renderer_(NULL),
-      track_(NULL),
+      initialized_(false),
+      assLibrary_(NULL),
+      assRenderer_(NULL),
+      assTrack_(NULL),
       bufferSize_(0)
     {}
 
@@ -2994,15 +2993,15 @@ namespace yae
 
     inline bool isReady() const
     {
-      return success_ != 0;
+      return initialized_;
     }
 
     void setFrameSize(int w, int h)
     {
-      ass_set_frame_size(renderer_, w, h);
+      ass_set_frame_size(assRenderer_, w, h);
 
       double ar = double(w) / double(h);
-      ass_set_aspect_ratio(renderer_, ar, ar);
+      ass_set_aspect_ratio(assRenderer_, ar, ar);
     }
 
     void processData(const unsigned char * data, std::size_t size, int64 pts)
@@ -3021,7 +3020,7 @@ namespace yae
         if (pts < first.pts_)
         {
           // user skipped back in time, purge cached subs:
-          ass_flush_events(track_);
+          ass_flush_events(assTrack_);
           buffer_.clear();
           bufferSize_ = 0;
         }
@@ -3037,30 +3036,30 @@ namespace yae
       }
 
       buffer_.push_back(line);
-      ass_process_data(track_, (char *)data, (int)size);
+      ass_process_data(assTrack_, (char *)data, (int)size);
     }
 
     ASS_Image * renderFrame(int64 now, int * detectChange)
     {
-      return ass_render_frame(renderer_,
-                              track_,
+      return ass_render_frame(assRenderer_,
+                              assTrack_,
                               (long long)now,
                               detectChange);
     }
 
-    int init()
+    void init()
     {
       uninit();
 
-      library_ = ass_library_init();
-      renderer_ = ass_renderer_init(library_);
-      track_ = ass_new_track(library_);
+      assLibrary_ = ass_library_init();
+      assRenderer_ = ass_renderer_init(assLibrary_);
+      assTrack_ = ass_new_track(assLibrary_);
 
       for (std::list<TFontAttachment>::const_iterator
              i = customFonts_.begin(); i != customFonts_.end(); ++i)
       {
         const TFontAttachment & font = *i;
-        ass_add_font(library_,
+        ass_add_font(assLibrary_,
                      (char *)font.filename_,
                      (char *)font.data_,
                      (int)font.size_);
@@ -3076,13 +3075,12 @@ namespace yae
       int useFontconfig = 1;
       int updateFontCache = 1;
 
-      ass_set_fonts(renderer_,
+      ass_set_fonts(assRenderer_,
                     defaultFont,
                     defaultFamily,
                     useFontconfig,
                     fontsConf.size() ? fontsConf.c_str() : NULL,
                     updateFontCache);
-      success_ = 1;
 
       if (removeAfterUse)
       {
@@ -3090,40 +3088,39 @@ namespace yae
         QFile::remove(QString::fromUtf8(fontsConf.c_str()));
       }
 
-      if (success_ && track_ && header_.size())
+      if (assTrack_ && header_.size())
       {
-        ass_process_codec_private(track_, &header_[0], (int)(header_.size()));
+        ass_process_codec_private(assTrack_,
+                                  &header_[0],
+                                  (int)(header_.size()));
       }
-
-      return success_;
     }
 
     void uninit()
     {
-      if (track_)
+      if (assTrack_)
       {
-        ass_free_track(track_);
-        track_ = NULL;
+        ass_free_track(assTrack_);
+        assTrack_ = NULL;
 
-        ass_renderer_done(renderer_);
-        renderer_ = NULL;
+        ass_renderer_done(assRenderer_);
+        assRenderer_ = NULL;
 
-        ass_library_done(library_);
-        library_ = NULL;
+        ass_library_done(assLibrary_);
+        assLibrary_ = NULL;
       }
     }
 
     void threadLoop()
     {
       // begin:
-      finished_ = false;
-      success_ = 0;
+      initialized_ = false;
 
       // this can take a while to rebuild the font cache:
       init();
 
       // done:
-      finished_ = true;
+      initialized_ = true;
 
       if (callback_)
       {
@@ -3133,12 +3130,11 @@ namespace yae
 
     void * callbackContext_;
     TLibassInitDoneCallback callback_;
-    bool finished_;
-    int success_;
+    bool initialized_;
 
-    ASS_Library * library_;
-    ASS_Renderer * renderer_;
-    ASS_Track * track_;
+    ASS_Library * assLibrary_;
+    ASS_Renderer * assRenderer_;
+    ASS_Track * assTrack_;
     std::vector<char> header_;
     std::list<TFontAttachment> customFonts_;
     std::list<TLine> buffer_;
@@ -3443,13 +3439,6 @@ namespace yae
         event->accept();
 
 #ifdef YAE_USE_LIBASS
-#if 0
-        std::cerr << "LIBASS INIT DONE: "
-                  << libassInitDoneEvent->libass_->finished_
-                  << ", success: "
-                  << libassInitDoneEvent->libass_->success_
-                  << std::endl;
-#endif
         stopAsyncInitLibassThread();
         updateOverlay(true);
         refresh();
