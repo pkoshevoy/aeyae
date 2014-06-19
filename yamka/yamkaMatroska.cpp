@@ -4837,10 +4837,14 @@ namespace Yamka
       receiptPayload->calcCrc32(crc32, receiptCrc32);
       unsigned int checksumCrc32 = crc32.checksum();
 
+      // store CRC in little endian layout:
+      TEightByteBuffer crc32LittleEndian =
+        uintEncode(checksumCrc32, 4).reverseByteOrder();
+
       TByteVec bytesCrc32;
       bytesCrc32 << uintEncode(kIdCrc32)
                  << vsizeEncode(4)
-                 << uintEncode(checksumCrc32, 4);
+                 << crc32LittleEndian;
 
       Yamka::save(receiptCrc32, bytesCrc32);
     }

@@ -39,6 +39,22 @@ namespace Yamka
   //
   struct TEightByteBuffer
   {
+    TEightByteBuffer(unsigned int n = 0):
+      n_(n)
+    {}
+
+    inline TEightByteBuffer reverseByteOrder() const
+    {
+      TEightByteBuffer buf(n_);
+
+      for (unsigned int i = 0; i < n_; i++)
+      {
+        buf.v_[n_ - i - 1] = v_[i];
+      }
+
+      return buf;
+    }
+
     unsigned char v_[8];
     unsigned int n_;
   };
@@ -222,7 +238,7 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // uintEncode
+  // vsizeEncode
   //
   inline TEightByteBuffer
   vsizeEncode(uint64 vsize, uint64 nbytes)
@@ -234,7 +250,7 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // uintEncode
+  // vsizeEncode
   //
   inline TEightByteBuffer
   vsizeEncode(uint64 vsize)
@@ -254,7 +270,7 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // uintEncode
+  // vsizeSignedEncode
   //
   inline TEightByteBuffer
   vsizeSignedEncode(int64 vsize)

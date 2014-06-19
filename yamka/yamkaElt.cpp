@@ -568,7 +568,7 @@ namespace Yamka
 
       if (freshChecksum != checksumCrc32_)
       {
-#if !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
+#if 1 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
         std::cerr << indent() << "WARNING: " << getName()
                   << " 0x" << uintEncode(getId())
                   << " -- checksum mismatch, loaded "
@@ -632,12 +632,17 @@ namespace Yamka
       return 0;
     }
 
-    unsigned char bytesCrc32[4];
-    if (!storage.load(bytesCrc32, 4))
+    // load CRC (it is stored in little endian layout)
+    TEightByteBuffer crc32LittleEndian(4);
+
+    if (!storage.load(crc32LittleEndian.v_, crc32LittleEndian.n_))
     {
       // failed to load CRC-32 checksum:
       return 0;
     }
+
+    // convert to big-endian layout expected by uintDecode:
+    TEightByteBuffer crc32BigEndian = crc32LittleEndian.reverseByteOrder();
 
     // update the receipt:
     receiptCrc32->add(uintNumBytes(kIdCrc32) + vsizeSize + 4);
@@ -646,7 +651,8 @@ namespace Yamka
     storageStart.doNotRestore();
 
     setCrc32(true);
-    checksumCrc32_ = (unsigned int)uintDecode(bytesCrc32, 4);
+    checksumCrc32_ = (unsigned int)uintDecode(crc32BigEndian.v_,
+                                              crc32BigEndian.n_);
     offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
 
     uint64 bytesRead = receiptCrc32->numBytes();
