@@ -4889,6 +4889,11 @@ namespace Yamka
 
         prev_ = &cluster;
       }
+      else if (elt.getId() == MatroskaDoc::TSegment::kId)
+      {
+        // new segment, forget any previous cluster:
+        prev_ = NULL;
+      }
 
       bool done = evalPayload(elt.getPayload());
       return done;
