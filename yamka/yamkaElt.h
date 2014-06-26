@@ -197,8 +197,11 @@ namespace Yamka
     // kAlwaysSave, kComputeCrc32
     unsigned char storageFlags_;
 
-    // loaded/computed CRC-32 checksum:
-    mutable unsigned int checksumCrc32_;
+    // CRC-32 checksum loaded from storage or computed-when-saved:
+    mutable unsigned int storedCrc32_;
+
+    // checksum computed-when-loaded, for comparison with stored checksum:
+    mutable unsigned int computedCrc32_;
 
     // storage receipts for this element and the payload (including CRC-32):
     mutable IStorage::IReceiptPtr receipt_;

@@ -4847,10 +4847,55 @@ namespace Yamka
                  << crc32LittleEndian;
 
       Yamka::save(receiptCrc32, bytesCrc32);
+
+      elt.storedCrc32_ = checksumCrc32;
+      elt.computedCrc32_ = checksumCrc32;
     }
 
     return done;
   }
+
+  //----------------------------------------------------------------
+  // RecalculateClusterPrevSize
+  //
+  struct RecalculateClusterPrevSize : public IElementCrawler
+  {
+    RecalculateClusterPrevSize():
+      prev_(NULL)
+    {}
+
+    // virtual:
+    bool eval(IElement & elt)
+    {
+      if (elt.getId() == Segment::TCluster::kId)
+      {
+        Segment::TCluster & cluster = dynamic_cast<Segment::TCluster &>(elt);
+
+        if (prev_ && cluster.payload_.prevSize_.mustSave())
+        {
+          uint64 prevSize = 0;
+          if (prev_->storageReceipt())
+          {
+            prevSize = prev_->storageReceipt()->numBytes();
+          }
+          else
+          {
+            prevSize = prev_->calcSize();
+            assert(false);
+          }
+
+          cluster.payload_.prevSize_.payload_.set(prevSize);
+        }
+
+        prev_ = &cluster;
+      }
+
+      bool done = evalPayload(elt.getPayload());
+      return done;
+    }
+
+    const Segment::TCluster * prev_;
+  };
 
   //----------------------------------------------------------------
   // MatroskaDoc::save
@@ -4882,6 +4927,12 @@ namespace Yamka
     // reduce number of bytes required to store VEltPosition:
     {
       OptimizeReferences crawler;
+      nonConst.eval(crawler);
+    }
+
+    // recalculate Cluster PrevSize:
+    {
+      RecalculateClusterPrevSize crawler;
       nonConst.eval(crawler);
     }
 
@@ -5148,8 +5199,12 @@ namespace Yamka
         Segment::TCluster & cluster = dynamic_cast<Segment::TCluster &>(elt);
 
         // remove cluster position element:
-        cluster.payload_.position_.payload_.setElt(NULL);
-        cluster.payload_.position_.payload_.setOrigin(NULL);
+        cluster.payload_.position_.payload_ = VEltPosition();
+        cluster.payload_.position_.storageFlags_ = 0;
+
+        // remove prev cluster size element:
+        cluster.payload_.prevSize_.payload_ = VUInt();
+        cluster.payload_.prevSize_.storageFlags_ = 0;
       }
       else if (elt.getId() == Cluster::TSimpleBlock::kId)
       {

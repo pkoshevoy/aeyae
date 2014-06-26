@@ -90,6 +90,7 @@ struct Examiner : public IElementCrawler
   {
     IStorage::IReceiptPtr storageReceipt = elt.storageReceipt();
     IStorage::IReceiptPtr payloadReceipt = elt.payloadReceipt();
+    IStorage::IReceiptPtr crc32Receipt = elt.crc32Receipt();
 
     uint64 eltId = elt.getId();
     IPayload & payload = elt.getPayload();
@@ -106,19 +107,60 @@ struct Examiner : public IElementCrawler
           << " @ "
           << std::hex << "0x"
           << storageReceipt->position()
-          << std::dec;
+          << std::dec
+          << " ("
+          << storageReceipt->position()
+          << ")";
       }
 
       std::cout << " -- " << elt.getName();
 
+      if (verbosity_ == kShowFileOffsets)
+      {
+        std::cout << ", " << storageReceipt->numBytes() << " bytes";
+      }
+
       if (payloadReceipt && verbosity_ == kShowFileOffsets)
       {
-        std::cout << ", payload "
-                  << payloadReceipt->numBytes()
-                  << " bytes";
+        std::cout << " (" << payloadReceipt->numBytes() << " payload)";
       }
 
       std::cout << std::endl;
+
+      if (crc32Receipt)
+      {
+        std::cout
+          << indent(indentation_)
+          << " CRC-32";
+
+        if (verbosity_ == kShowFileOffsets)
+        {
+          std::cout
+            << " @ "
+            << std::hex << "0x"
+            << crc32Receipt->position()
+            << std::dec
+            << " ("
+            << crc32Receipt->position()
+            << ")";
+        }
+
+        std::cout
+          << std::hex << ", stored checksum 0x"
+          << elt.storedCrc32_
+          << std::dec;
+
+        if (elt.computedCrc32_ && elt.computedCrc32_ != elt.storedCrc32_)
+        {
+          std::cout
+            << ", does not match computed checksum "
+            << std::hex << "0x"
+            << elt.computedCrc32_
+            << std::dec;
+        }
+
+        std::cout << std::endl;
+      }
 
       if (eltId == Segment::TCluster::kId)
       {

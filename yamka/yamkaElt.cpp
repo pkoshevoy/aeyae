@@ -30,7 +30,8 @@ namespace Yamka
   //
   IElement::IElement():
     storageFlags_(0),
-    checksumCrc32_(0),
+    storedCrc32_(0),
+    computedCrc32_(0),
     offsetToPayload_(IElement::kUndefinedOffset),
     offsetToCrc32_(IElement::kUndefinedOffset),
     fixedSize_(0)
@@ -440,7 +441,8 @@ namespace Yamka
 
     // clear the payload checksum:
     setCrc32(false);
-    checksumCrc32_ = 0;
+    storedCrc32_ = 0;
+    computedCrc32_ = 0;
 
     // save the payload storage receipt so that element position references
     // can be resolved later:
@@ -564,16 +566,16 @@ namespace Yamka
 
       Crc32 crc32;
       receiptPayload->calcCrc32(crc32, receiptCrc32);
-      unsigned int freshChecksum = crc32.checksum();
+      computedCrc32_ = crc32.checksum();
 
-      if (freshChecksum != checksumCrc32_)
+      if (computedCrc32_ != storedCrc32_)
       {
 #if 1 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
         std::cerr << indent() << "WARNING: " << getName()
                   << " 0x" << uintEncode(getId())
                   << " -- checksum mismatch, loaded "
-                  << std::hex << checksumCrc32_
-                  << ", computed " << freshChecksum
+                  << std::hex << storedCrc32_
+                  << ", computed " << computedCrc32_
                   << ", CRC-32 @ 0x" << receiptCrc32->position()
                   << ", payload @ 0x" << receiptPayload->position()
                   << ":" << receiptPayload->numBytes()
@@ -651,8 +653,8 @@ namespace Yamka
     storageStart.doNotRestore();
 
     setCrc32(true);
-    checksumCrc32_ = (unsigned int)uintDecode(crc32BigEndian.v_,
-                                              crc32BigEndian.n_);
+    storedCrc32_ = (unsigned int)uintDecode(crc32BigEndian.v_,
+                                            crc32BigEndian.n_);
     offsetToCrc32_ = receiptCrc32->position() - receipt_->position();
 
     uint64 bytesRead = receiptCrc32->numBytes();
