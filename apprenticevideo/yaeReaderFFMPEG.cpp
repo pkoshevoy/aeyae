@@ -2402,7 +2402,12 @@ namespace yae
     const pixelFormat::Traits * ptts =
       pixelFormat::getTraits(vtts.pixelFormat_);
 
-    if (ptts && (ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
+    if (!ptts)
+    {
+      return false;
+    }
+
+    if ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
     {
       AVColorSpace color_space = to_ffmpeg_color_space(vtts.colorSpace_);
       AVColorRange color_range = to_ffmpeg_color_range(vtts.colorRange_);
