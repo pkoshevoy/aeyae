@@ -161,6 +161,7 @@ mainMayThrowException(int argc, char ** argv)
 
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
+  yae::mainWindow->raise();
 
   // initialize OpenGL GLEW wrapper:
   GLenum err = glewInit();
