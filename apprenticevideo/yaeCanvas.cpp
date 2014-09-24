@@ -2898,7 +2898,10 @@ namespace yae
       QString::number(appPid);
 
     fontsConf = QDir::toNativeSeparators(fn).toUtf8().constData();
+
+#if !defined(NDEBUG)
     std::cerr << "fonts.conf: " << fontsConf << std::endl;
+#endif
 
     std::FILE * fout = fopenUtf8(fontsConf.c_str(), "w");
     if (!fout)
@@ -2907,7 +2910,10 @@ namespace yae
     }
 
     std::string xml = os.str().c_str();
+
+#if !defined(NDEBUG)
     std::cerr << "fonts.conf content:\n" << xml << std::endl;
+#endif
 
     std::size_t nout = fwrite(xml.c_str(), 1, xml.size(), fout);
     fclose(fout);

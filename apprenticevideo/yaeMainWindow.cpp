@@ -1599,13 +1599,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // hasFileExt
+  //
+  inline static bool
+  hasFileExt(const QString & fn, const char * ext)
+  {
+    return fn.endsWith(QString::fromUtf8(ext), Qt::CaseInsensitive);
+  }
+
+  //----------------------------------------------------------------
   // canaryTest
   //
   static bool
   canaryTest(const QString & fn)
   {
-    if (fn.endsWith(QString::fromUtf8(".m3u"), Qt::CaseInsensitive) ||
-        fn.endsWith(QString::fromUtf8(".m3u8"), Qt::CaseInsensitive))
+    bool modFile =
+      hasFileExt(fn, ".xm") ||
+      hasFileExt(fn, ".ult") ||
+      hasFileExt(fn, ".s3m") ||
+      hasFileExt(fn, ".ptm") ||
+      hasFileExt(fn, ".plm") ||
+      hasFileExt(fn, ".mus") ||
+      hasFileExt(fn, ".mtm") ||
+      hasFileExt(fn, ".mod") ||
+      hasFileExt(fn, ".med") ||
+      hasFileExt(fn, ".mdl") ||
+      hasFileExt(fn, ".md") ||
+      hasFileExt(fn, ".lbm") ||
+      hasFileExt(fn, ".it") ||
+      hasFileExt(fn, ".hsp") ||
+      hasFileExt(fn, ".dsm") ||
+      hasFileExt(fn, ".dmf") ||
+      hasFileExt(fn, ".dat") ||
+      hasFileExt(fn, ".cfg") ||
+      hasFileExt(fn, ".bmw") ||
+      hasFileExt(fn, ".ams") ||
+      hasFileExt(fn, ".669");
+
+    if (!modFile)
     {
       return true;
     }
