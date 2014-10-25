@@ -315,7 +315,7 @@ if (APPLE)
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif (APPLE)
 
-add_custom_target("update revision" ALL
+add_custom_target("update_revision" ALL
   DEPENDS
 #  ${YAE_VERSIONED_FILES}
   "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
@@ -372,7 +372,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "update revision")
+add_dependencies(${PROGNAME} "update_revision")
 
 set(TARGET_LIBS
   ${GLEW_LIBRARY}
@@ -747,7 +747,7 @@ if (WIN32)
     "${PROJECT_BINARY_DIR}/yaeVersion.h"
     )
 
-  add_dependencies(wixWrapper "update revision")
+  add_dependencies(wixWrapper "update_revision")
 
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
