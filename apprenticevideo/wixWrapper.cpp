@@ -254,7 +254,7 @@ main(int argc, char ** argv)
         if (detect("] ", line, head, path))
         {
           line = head;
-          if (detect("e", line, head, tail) || // load failure
+          if (// detect("e", line, head, tail) || // load failure
               detect("?", line, head, tail) || // missing
               detect("^", line, head, tail) || // duplicate
               detect("!", line, head, tail))   // invalid
