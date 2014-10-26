@@ -47,6 +47,9 @@ namespace yae
     bool frameStepping_;
     bool pause_;
     TTime framePosition_;
+
+    TVideoFramePtr frame_a_;
+    TVideoFramePtr frame_b_;
   };
 
   //----------------------------------------------------------------
@@ -202,6 +205,8 @@ namespace yae
   {
     TTime t0;
 
+    TVideoFramePtr frame_a;
+    TVideoFramePtr frame_b;
     framePosition_ = TTime();
     double frameDuration = 0.0;
     double tempo = 1.0;
@@ -217,8 +222,8 @@ namespace yae
       while (pause_ && !boost::this_thread::interruption_requested())
       {
         boost::this_thread::disable_interruption here;
-        boost::this_thread::sleep(boost::posix_time::milliseconds
-                                  (long(secondsToPause * 1000.0)));
+        boost::this_thread::sleep(boost::posix_time::microseconds
+                                  (long(secondsToPause * 1e+6)));
       }
 
       boost::this_thread::interruption_point();
@@ -241,6 +246,15 @@ namespace yae
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
 
+#if 0
+      std::cerr
+        << "f0: " << f0 << std::endl
+        << "f1: " << f1 << std::endl
+        << "df: " << df << std::endl
+        << "t:  "  << playheadPosition << std::endl
+        << std::endl;
+#endif
+
       if (df < -0.067 && clockIsRunning && !playbackLoopedAround)
       {
         lateFramesErrorSum -= df;
@@ -252,7 +266,7 @@ namespace yae
         lateFrames = 0.0;
       }
 
-      if (df > 0.0 && !playbackLoopedAround)
+      if (df > 1e-3 && !playbackLoopedAround && frame_b)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDurationScaled);
@@ -260,7 +274,7 @@ namespace yae
 
         if (df > 0.067)
         {
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
           std::cerr << "FRAME IS VALID FOR " << df << " sec\n"
                     << "sleep: " << secondsToSleep << " sec"
                     << "\tf0: " << f0
@@ -271,9 +285,13 @@ namespace yae
 #endif
         }
 
+#if 0
+        std::cerr << "sleep for: " << secondsToSleep << std::endl;
+#endif
+
         boost::this_thread::disable_interruption here;
-        boost::this_thread::sleep(boost::posix_time::milliseconds
-                                  (long(secondsToSleep * 1000.0)));
+        boost::this_thread::sleep(boost::posix_time::microseconds
+                                  (long(secondsToSleep * 1e+6)));
         continue;
       }
 
@@ -306,7 +324,6 @@ namespace yae
 
       // read a frame:
       TVideoFramePtr frame;
-      bool resetTimeCounters = false;
       while (ok)
       {
         ok = reader_->readVideo(frame, &terminator_);
@@ -319,17 +336,35 @@ namespace yae
                       << playheadPosition
                       << std::endl << std::endl;
 #endif
-            resetTimeCounters = true;
+            frame_a = frame_b;
+            frame_b.reset();
+            framePosition_ = frame_a ? frame_a->time_ : TTime();
             break;
           }
 
-          framePosition_ = frame->time_;
-          double t = framePosition_.toSeconds();
+          if (!frame_a)
+          {
+#if 0
+            std::cerr << "First FRAME @ " << frame->time_.toSeconds()
+                      << ", clock is running: " << clockIsRunning
+                      << ", playhead: " << playheadPosition
+                      << std::endl;
+#endif
+            frame_a = frame;
+            frame_b = frame;
+            framePosition_ = frame_a->time_;
+            break;
+          }
 
+          frame_a = frame_b;
+          frame_b = frame;
+          framePosition_ = frame_a->time_;
+
+          double t = framePosition_.toSeconds();
           if (t > f0 || frameDuration == 0.0)
           {
 #if 0
-            std::cerr << "RENDER VIDEO @ " << t
+            std::cerr << "Next FRAME @ " << t
                       << ", clock is running: " << clockIsRunning
                       << ", playhead: " << playheadPosition
                       << std::endl;
@@ -342,8 +377,11 @@ namespace yae
       if (!ok)
       {
 #if 0
-        std::cerr << "reader_->readVideo: " << ok << std::endl;
+        std::cerr
+          << "reader_->readVideo FAILED, aborting..."
+          << std::endl;
 #endif
+
         if (clock_.allowsSettingTime())
         {
           clock_.noteTheClockHasStopped();
@@ -352,33 +390,43 @@ namespace yae
         break;
       }
 
-      if (!resetTimeCounters)
+      if (frame_a)
       {
-        frameDuration =
-          frame->traits_.frameRate_ ?
-          1.0 / frame->traits_.frameRate_ :
-          1.0 / double(framePosition_.base_);
-
-        tempo = frame->tempo_;
+        tempo = frame_a->tempo_;
 
         if (clock_.allowsSettingTime())
         {
-          clock_.setCurrentTime(framePosition_, 0.0, true);
+          clock_.setCurrentTime(frame_a->time_, 0.0, true);
           drift = df;
         }
 
         // dispatch the frame to the canvas for rendering:
         if (canvas_)
         {
-          canvas_->render(frame);
-          if (frameStepping_)
-          {
-            break;
-          }
+#if 0
+          std::cerr
+            << "RENDER VIDEO @ " << frame_a->time_.toSeconds()
+            << ", clock is running: " << clockIsRunning
+            << ", playhead: " << playheadPosition
+            << std::endl;
+#endif
+          canvas_->render(frame_a);
+        }
+      }
+
+      if (frame_b)
+      {
+        frameDuration = (frame_b->time_ - frame_a->time_).toSeconds();
+
+        if (frameStepping_)
+        {
+          break;
         }
       }
       else
       {
+        frame_a.reset();
+
         t0 = TTime();
         framePosition_ = TTime();
         frameDuration = 0.0;
