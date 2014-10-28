@@ -114,11 +114,18 @@ mainMayThrowException(int argc, char ** argv)
   */
 
 #ifdef __APPLE__
-  if (QSysInfo::MacintoshVersion > 0x000a)
+  if (QSysInfo::MacintoshVersion == 0x000a)
   {
     // add a workaround for Qt 4.7 QTBUG-32789
     // that manifests as misaligned text on OS X Mavericks:
     QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
+  }
+  else if (QSysInfo::MacintoshVersion >= 0x000b)
+  {
+    // add a workaround for Qt 4.8 QTBUG-40833
+    // that manifests as misaligned text on OS X Yosemite:
+    QFont::insertSubstitution(".Helvetica Neue DeskInterface",
+                              "Helvetica Neue");
   }
 #endif
 
