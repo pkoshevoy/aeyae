@@ -435,6 +435,12 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>&amp;Open</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionExit">
    <property name="text">
@@ -696,10 +702,22 @@ QLineEdit QToolButton#clear_:pressed {
    <property name="text">
     <string>Open &amp;URL</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+U</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
   </action>
   <action name="actionOpenFolder">
    <property name="text">
     <string>Open Fol&amp;der</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+O</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionShowPlaylist">

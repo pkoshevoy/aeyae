@@ -3596,6 +3596,11 @@ namespace yae
       return;
     }
 
+    if (!reader_->isSeekable())
+    {
+      return;
+    }
+
     std::size_t itemIndex = playlistWidget_->currentItem();
     PlaylistGroup * group = NULL;
     PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
@@ -4732,6 +4737,13 @@ namespace yae
       YAE_ASSERT(ok);
       chapterMapper_->setMapping(chapterAction, (int)i);
     }
+
+    bool isSeekable = reader->isSeekable();
+    shortcutLoop_->setEnabled(isSeekable);
+    actionLoop->setEnabled(isSeekable);
+    actionSetInPoint->setEnabled(isSeekable);
+    actionSetOutPoint->setEnabled(isSeekable);
+    lineEditPlayhead_->setReadOnly(!isSeekable);
   }
 
   //----------------------------------------------------------------

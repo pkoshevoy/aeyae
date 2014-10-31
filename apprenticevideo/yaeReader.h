@@ -80,6 +80,9 @@ namespace yae
     virtual bool getAudioTraitsOverride(AudioTraits & override) const = 0;
     virtual bool getVideoTraitsOverride(VideoTraits & override) const = 0;
 
+    //! check whether it is possible to set the current position:
+    virtual bool isSeekable() const = 0;
+
     //! set current position to a given value (or an earlier value nearby):
     virtual bool seek(double t) = 0;
 

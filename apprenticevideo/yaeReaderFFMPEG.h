@@ -81,6 +81,7 @@ namespace yae
     virtual bool getAudioTraitsOverride(AudioTraits & override) const;
     virtual bool getVideoTraitsOverride(VideoTraits & override) const;
 
+    virtual bool isSeekable() const;
     virtual bool seek(double t);
 
     virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0);

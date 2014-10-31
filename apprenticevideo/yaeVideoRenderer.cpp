@@ -272,7 +272,7 @@ namespace yae
         double secondsToSleep = std::min(df, frameDurationScaled);
         secondsToSleep = std::min(1.0, secondsToSleep);
 
-        if (df > 0.067)
+        if (df > 0.5)
         {
 #ifndef NDEBUG
           std::cerr << "FRAME IS VALID FOR " << df << " sec\n"

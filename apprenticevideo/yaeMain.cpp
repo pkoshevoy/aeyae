@@ -74,7 +74,7 @@ namespace yae
       return true;
     }
   };
-};
+}
 
 //----------------------------------------------------------------
 // mainMayThrowException
@@ -169,6 +169,7 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
   yae::mainWindow->raise();
+  yae::mainWindow->setFocus(Qt::ActiveWindowFocusReason);
 
   // initialize OpenGL GLEW wrapper:
   GLenum err = glewInit();

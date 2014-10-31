@@ -4096,6 +4096,7 @@ namespace yae
     bool threadStart();
     bool threadStop();
 
+    bool isSeekable() const;
     bool requestSeekTime(double seekTime);
 
   protected:
@@ -4936,6 +4937,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::isSeekable
+  //
+  bool
+  Movie::isSeekable() const
+  {
+    if (!context_ || !context_->pb->seekable)
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // Movie::requestSeekTime
   //
   bool
@@ -4999,7 +5014,13 @@ namespace yae
   {
     if (!context_)
     {
-      return -1;
+      return AVERROR_UNKNOWN;
+    }
+
+    if (!isSeekable())
+    {
+      // don't bother attemptin to seek an un-seekable stream:
+      return 0;
     }
 
     int streamIndex = -1;
@@ -5042,6 +5063,14 @@ namespace yae
                                  ts,
                                  ts, // kMaxInt64,
                                  seekFlags);
+
+    if (err == AVERROR(EPERM))
+    {
+      // must be a live stream, or otherwise unseekable stream,
+      // ignore the error:
+      return 0;
+    }
+
     if (err < 0)
     {
       err = avformat_seek_file(context_,
@@ -5054,9 +5083,10 @@ namespace yae
 
     if (err < 0)
     {
-#if 0
-      std::cerr << "Movie::seek(" << seekTime << ") returned " << err
-                << std::endl;
+#ifndef NDEBUG
+      std::cerr
+        << "avformat_seek_file (" << seekTime << ") returned " << err
+        << std::endl;
 #endif
       return err;
     }
@@ -5776,6 +5806,15 @@ namespace yae
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::isSeekable
+  //
+  bool
+  ReaderFFMPEG::isSeekable() const
+  {
+    return private_->movie_.isSeekable();
   }
 
   //----------------------------------------------------------------

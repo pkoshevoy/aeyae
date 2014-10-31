@@ -434,7 +434,9 @@ namespace yae
     timelineStart_ = start.toSeconds();
     timelinePosition_ = timelineStart_;
 
-    unknownDuration_ = (duration.time_ == std::numeric_limits<int64>::max());
+    unknownDuration_ = (!reader->isSeekable() ||
+                        duration.time_ == std::numeric_limits<int64>::max());
+
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :
                          duration.toSeconds());
@@ -539,7 +541,7 @@ namespace yae
   void
   TimelineControls::setInPoint()
   {
-    if (currentState_ == kIdle)
+    if (!unknownDuration_ && currentState_ == kIdle)
     {
       markerTimeIn_.position_ = markerPlayhead_.position_;
       double seconds = (timelineDuration_ * markerTimeIn_.position_ +
@@ -562,7 +564,7 @@ namespace yae
   void
   TimelineControls::setOutPoint()
   {
-    if (currentState_ == kIdle)
+    if (!unknownDuration_ && currentState_ == kIdle)
     {
       markerTimeOut_.position_ = markerPlayhead_.position_;
       double seconds = (timelineDuration_ * markerTimeOut_.position_ +
