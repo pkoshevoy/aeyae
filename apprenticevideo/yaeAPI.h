@@ -20,8 +20,10 @@
 #include <vector>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
+#endif
 
 //----------------------------------------------------------------
 // YAE_API

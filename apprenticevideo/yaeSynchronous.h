@@ -13,10 +13,12 @@
 #include <yaeAPI.h>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <boost/date_time/posix_time/time_formatters.hpp>
+#endif
 
 
 namespace yae

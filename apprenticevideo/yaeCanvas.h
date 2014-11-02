@@ -10,8 +10,10 @@
 #define YAE_CANVAS_H_
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#endif
 
 // Qt includes:
 #include <QEvent>

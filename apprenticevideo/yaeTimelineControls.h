@@ -10,7 +10,9 @@
 #define YAE_TIMELINE_CONTROLS_H_
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
+#endif
 
 // Qt includes:
 #include <QWidget>

@@ -17,7 +17,9 @@
 #include <yaeReader.h>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 
 namespace yae

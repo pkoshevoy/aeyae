@@ -14,7 +14,9 @@
 #include <list>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
+#endif
 
 // yae includes:
 #include <yaeAPI.h>
