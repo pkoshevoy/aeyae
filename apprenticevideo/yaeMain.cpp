@@ -31,6 +31,10 @@
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
+#ifndef _WIN32
+#include <signal.h>
+#endif
+
 // Qt includes:
 #include <QApplication>
 #include <QFileOpenEvent>
@@ -106,6 +110,11 @@ mainMayThrowException(int argc, char ** argv)
     }
   }
 #endif
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
   /*
   std::cout.precision(4);
   std::cerr.precision(4);
