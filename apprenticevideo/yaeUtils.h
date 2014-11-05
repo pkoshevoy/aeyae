@@ -22,6 +22,39 @@
 #include <QString>
 #include <QPainter>
 
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
+     QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+#define YAE_QT4 1
+#define YAE_QT5 0
+#else
+#define YAE_QT4 0
+#define YAE_QT5 1
+#endif
+
+#if YAE_QT4
+#include <QDesktopServices>
+#elif YAE_QT5
+#include <QStandardPaths>
+#endif
+
+
+//----------------------------------------------------------------
+// YAE_STANDARD_LOCATION
+//
+#if YAE_QT4
+#define YAE_STANDARD_LOCATION(x) \
+  QDesktopServices::storageLocation(QDesktopServices::x)
+#endif
+
+//----------------------------------------------------------------
+// YAE_STANDARD_LOCATION
+//
+#if YAE_QT5
+#define YAE_STANDARD_LOCATION(x) \
+  QStandardPaths::writableLocation(QStandardPaths::x)
+#endif
+
+
 namespace yae
 {
 

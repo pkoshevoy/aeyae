@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8.0)
 project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
 find_package(OpenGL REQUIRED)
@@ -10,11 +11,13 @@ find_package(OpenGL REQUIRED)
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost 1.35 COMPONENTS thread date_time system REQUIRED)
 
-find_package(Qt4)
-if (QT4_FOUND)
-else (QT4_FOUND)
-  message(FATAL_ERROR "Cannot build without Qt4.  Please set QT4_DIR.")
-endif (QT4_FOUND)
+set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
+  "search path for .cmake files")
+
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+if (NOT Qt5_FOUND)
+  find_package(Qt4 REQUIRED)
+endif (NOT Qt5_FOUND)
 
 if (QT4_FOUND)
   if (QT_QTDBUS_FOUND)
@@ -202,6 +205,10 @@ if (QT4_FOUND)
   qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif (QT4_FOUND)
 
+if (Qt5_FOUND)
+  qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+endif (Qt5_FOUND)
+
 set(project_sources
   yaeAPI.h
   yaeAPI.cpp
@@ -359,6 +366,11 @@ if (QT4_FOUND)
   qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
   qt4_wrap_ui(project_uis_hxx ${project_uis})
 endif (QT4_FOUND)
+
+if (Qt5_FOUND)
+  qt5_wrap_cpp(project_moc_cxx ${project_moc_hxx} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+  qt5_wrap_ui(project_uis_hxx ${project_uis})
+endif (Qt5_FOUND)
 
 set(project_sources
   ${project_sources}
@@ -716,6 +728,15 @@ if (APPLE)
     set(TARGET_LIBS ${TARGET_LIBS} ${IOKIT_FRAMEWORK})
   endif (IOKIT_FRAMEWORK)
 endif (APPLE)
+
+if (Qt5_FOUND)
+  set(TARGET_LIBS ${TARGET_LIBS}
+    Qt5::Core
+    Qt5::Gui
+    Qt5::OpenGL
+    Qt5::Widgets
+    )
+endif (Qt5_FOUND)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}

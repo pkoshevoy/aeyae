@@ -123,8 +123,8 @@ namespace yae
   //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   //
-  AboutDialog::AboutDialog(QWidget * parent, Qt::WFlags f):
-    QDialog(parent, f),
+  AboutDialog::AboutDialog(QWidget * parent):
+    QDialog(parent),
     Ui::AboutDialog()
   {
     Ui::AboutDialog::setupUi(this);
@@ -136,8 +136,8 @@ namespace yae
   //----------------------------------------------------------------
   // AspectRatioDialog::AspectRatioDialog
   //
-  AspectRatioDialog::AspectRatioDialog(QWidget * parent, Qt::WFlags f):
-    QDialog(parent, f),
+  AspectRatioDialog::AspectRatioDialog(QWidget * parent):
+    QDialog(parent),
     Ui::AspectRatioDialog()
   {
     Ui::AspectRatioDialog::setupUi(this);
@@ -146,8 +146,8 @@ namespace yae
   //----------------------------------------------------------------
   // OpenUrlDialog::OpenUrlDialog
   //
-  OpenUrlDialog::OpenUrlDialog(QWidget * parent, Qt::WFlags f):
-    QDialog(parent, f),
+  OpenUrlDialog::OpenUrlDialog(QWidget * parent):
+    QDialog(parent),
     Ui::OpenUrlDialog()
   {
     Ui::OpenUrlDialog::setupUi(this);
@@ -1924,10 +1924,7 @@ namespace yae
   void
   MainWindow::fileOpenFolder()
   {
-    QString startHere =
-      QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
-                                        // QDesktopServices::HomeLocation
-                                        );
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
 
     QString folder =
       QFileDialog::getExistingDirectory(this,
@@ -2017,10 +2014,8 @@ namespace yae
          "*.webm "
          ")");
 
-    QString startHere =
-      QDesktopServices::storageLocation(QDesktopServices::MoviesLocation
-                                        // QDesktopServices::HomeLocation
-                                        );
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+
 #ifndef __APPLE__
     QStringList filenames =
       QFileDialog::getOpenFileNames(this,

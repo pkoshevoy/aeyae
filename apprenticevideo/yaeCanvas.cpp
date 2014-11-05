@@ -29,7 +29,6 @@
 
 // Qt includes:
 #include <QApplication>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QTimer>
@@ -74,7 +73,7 @@ yae_show_program_listing(std::ostream & ostr,
     {
       lineNo++;
 
-      if (lineNo == 1 || errorMessage && (lineNo % 20) == 1)
+      if (lineNo == 1 || (errorMessage && (lineNo % 20) == 1))
       {
         ostr << "\n        ";
         for (int i = 1; i < 80; i += 8)
@@ -2843,14 +2842,9 @@ namespace yae
     removeAfterUse = true;
     int64 appPid = QCoreApplication::applicationPid();
 
-    QString tempDir =
-      QDesktopServices::storageLocation(QDesktopServices::TempLocation);
-
-    QString fontsDir =
-      QDesktopServices::storageLocation(QDesktopServices::FontsLocation);
-
-    QString cacheDir =
-      QDesktopServices::storageLocation(QDesktopServices::CacheLocation);
+    QString tempDir = YAE_STANDARD_LOCATION(TempLocation);
+    QString fontsDir = YAE_STANDARD_LOCATION(FontsLocation);
+    QString cacheDir = YAE_STANDARD_LOCATION(CacheLocation);
 
     QString fontconfigCache =
       cacheDir + QString::fromUtf8("/apprenticevideo-fontconfig-cache");

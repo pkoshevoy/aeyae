@@ -193,14 +193,14 @@ namespace yae
     return st.st_size;
   }
 
-  static const QChar kUnderscore = QChar::fromAscii('_');
-  static const QChar kHyphen = QChar::fromAscii('-');
-  static const QChar kSpace = QChar::fromAscii(' ');
-  static const QChar kPeriod = QChar::fromAscii('.');
-  static const QChar kComma = QChar::fromAscii(',');
-  static const QChar kSemicolon = QChar::fromAscii(';');
-  static const QChar kExclamation = QChar::fromAscii('!');
-  static const QChar kQuestionmark = QChar::fromAscii('?');
+  static const QChar kUnderscore = QChar('_');
+  static const QChar kHyphen = QChar('-');
+  static const QChar kSpace = QChar(' ');
+  static const QChar kPeriod = QChar('.');
+  static const QChar kComma = QChar(',');
+  static const QChar kSemicolon = QChar(';');
+  static const QChar kExclamation = QChar('!');
+  static const QChar kQuestionmark = QChar('?');
 
   //----------------------------------------------------------------
   // isPunctuation
@@ -321,9 +321,9 @@ namespace yae
     if (!word.isEmpty())
     {
       QChar l0 = word[start].toLower();
-      if ((l0 == QChar::fromAscii('v') ||
-           l0 == QChar::fromAscii('p') ||
-           l0 == QChar::fromAscii('#')) &&
+      if ((l0 == QChar('v') ||
+           l0 == QChar('p') ||
+           l0 == QChar('#')) &&
           isNumeric(word, start + 1))
       {
         return true;
@@ -472,9 +472,9 @@ namespace yae
   // kSeparatorTags
   //
   static const QChar kSeparatorTags[] = {
-    QChar::fromAscii(' '),
-    QChar::fromAscii('.'),
-    QChar::fromAscii('-')
+    QChar(' '),
+    QChar('.'),
+    QChar('-')
   };
 
   //----------------------------------------------------------------
@@ -593,11 +593,11 @@ namespace yae
   // kGroupTags
   //
   static const QChar kGroupTags[][2] = {
-    { QChar::fromAscii('<'), QChar::fromAscii('>') },
-    { QChar::fromAscii('['), QChar::fromAscii(']') },
-    { QChar::fromAscii('{'), QChar::fromAscii('}') },
-    { QChar::fromAscii('('), QChar::fromAscii(')') },
-    { QChar::fromAscii('"'), QChar::fromAscii('"') }
+    { QChar('<'), QChar('>') },
+    { QChar('['), QChar(']') },
+    { QChar('{'), QChar('}') },
+    { QChar('('), QChar(')') },
+    { QChar('"'), QChar('"') }
   };
 
   //----------------------------------------------------------------

@@ -287,7 +287,12 @@ namespace yae
       else
       {
         QUrl url;
+
+#if YAE_QT4
         url.setEncodedUrl(path.toUtf8(), QUrl::StrictMode);
+#elif YAE_QT5
+        url.setUrl(path, QUrl::StrictMode);
+#endif
 
         if (url.isValid())
         {
@@ -1326,8 +1331,8 @@ namespace yae
       int max = sb->maximum();
       int delta = -(e->delta());
 
-      if (val == min && delta < 0 ||
-          val == max && delta > 0)
+      if ((val == min && delta < 0) ||
+          (val == max && delta > 0))
       {
         // prevent wheel event from propagating to the parent widget:
         e->accept();
@@ -2348,8 +2353,8 @@ namespace yae
       const PlaylistGroup & group = groups_[i0];
       if (!group.excluded_ &&
           (overlapExists(group.bbox_, pt) ||
-           findClosest && !group.collapsed_ &&
-           overlapExists(group.bboxItems_, pt)))
+           (findClosest && !group.collapsed_ &&
+            overlapExists(group.bboxItems_, pt))))
       {
 #if 0
         std::cerr << "lookupGroup, found: "

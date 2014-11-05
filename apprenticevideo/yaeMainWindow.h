@@ -48,7 +48,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    AboutDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+    AboutDialog(QWidget * parent = 0);
   };
 
 
@@ -61,7 +61,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    AspectRatioDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+    AspectRatioDialog(QWidget * parent = 0);
   };
 
 
@@ -74,7 +74,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    OpenUrlDialog(QWidget * parent = 0, Qt::WFlags f = 0);
+    OpenUrlDialog(QWidget * parent = 0);
   };
 
   //----------------------------------------------------------------
