@@ -19,7 +19,7 @@ if (Qt5_FOUND)
   find_package(Qt5DBus)
 else (Qt5_FOUND)
   find_package(Qt4 REQUIRED)
-endif (NOT Qt5_FOUND)
+endif (Qt5_FOUND)
 
 if (QT4_FOUND)
   if (QT_QTDBUS_FOUND)
