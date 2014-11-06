@@ -15,7 +15,9 @@ set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
 find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
-if (NOT Qt5_FOUND)
+if (Qt5_FOUND)
+  find_package(Qt5DBus)
+else (Qt5_FOUND)
   find_package(Qt4 REQUIRED)
 endif (NOT Qt5_FOUND)
 
@@ -363,12 +365,12 @@ if (APPLE)
 endif (APPLE)
 
 if (QT4_FOUND)
-  qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+  qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
   qt4_wrap_ui(project_uis_hxx ${project_uis})
 endif (QT4_FOUND)
 
 if (Qt5_FOUND)
-  qt5_wrap_cpp(project_moc_cxx ${project_moc_hxx} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+  qt5_wrap_cpp(project_moc_cxx ${project_moc_hxx})
   qt5_wrap_ui(project_uis_hxx ${project_uis})
 endif (Qt5_FOUND)
 
@@ -737,6 +739,12 @@ if (Qt5_FOUND)
     Qt5::Widgets
     )
 endif (Qt5_FOUND)
+
+if (Qt5DBus_FOUND)
+  set(TARGET_LIBS ${TARGET_LIBS}
+    Qt5::DBus
+    )
+endif (Qt5DBus_FOUND)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
