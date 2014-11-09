@@ -248,7 +248,7 @@ namespace yae
       "}\n"
       "\n"
       "QWidget {\n"
-      "	background-color: #000000;\n"
+      "    background-color: #000000;\n"
       "}\n"
       "\n"
       "QLineEdit {\n"
@@ -259,7 +259,7 @@ namespace yae
       "}\n"
       "\n"
       "QLineEdit:disabled {\n"
-      "	color: #404040;\n"
+      "    color: #404040;\n"
       "}\n";
 
     static const char * cssAudio =
@@ -268,7 +268,7 @@ namespace yae
       "}\n"
       "\n"
       "QWidget {\n"
-      "	background-color: %2;\n"
+      "    background-color: %2;\n"
       "}\n"
       "\n"
       "QLineEdit {\n"
@@ -279,7 +279,7 @@ namespace yae
       "}\n"
       "\n"
       "QLineEdit:disabled {\n"
-      "	color: %4;\n"
+      "    color: %4;\n"
       "}\n";
 
     QString css;
@@ -3351,10 +3351,9 @@ namespace yae
     if (item && group)
     {
       PlaylistGroup * nextGroup = NULL;
-      std::size_t nextIndex =
-        playlistWidget_->closestItem(itemIndex + 1,
-                                     PlaylistWidget::kAhead,
-                                     &nextGroup);
+      playlistWidget_->closestItem(itemIndex + 1,
+                                   PlaylistWidget::kAhead,
+                                   &nextGroup);
 
       if (group != nextGroup)
       {
@@ -3927,7 +3926,7 @@ namespace yae
     }
     else
     {
-      event->ignore();
+      QMainWindow::keyPressEvent(event);
     }
   }
 
@@ -4112,6 +4111,12 @@ namespace yae
     int new_w = std::min(ideal_w, max_w);
     int new_h = std::min(ideal_h, max_h);
 
+    // apply the new window geometry:
+    QRect rectClient = geometry();
+    int cdx = rectWindow.width() - rectClient.width();
+    int cdy = rectWindow.height() - rectClient.height();
+
+#if 0
     int max_x0 = rectMax.x();
     int max_y0 = rectMax.y();
     int max_x1 = max_x0 + max_w - 1;
@@ -4128,12 +4133,6 @@ namespace yae
     int new_x = new_x0 + shift_x;
     int new_y = new_y0 + shift_y;
 
-    // apply the new window geometry:
-    QRect rectClient = geometry();
-    int cdx = rectWindow.width() - rectClient.width();
-    int cdy = rectWindow.height() - rectClient.height();
-
-#if 0
     std::cerr << "\ncanvas size set: " << xexpand << ", " << yexpand
               << std::endl
               << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
@@ -4281,7 +4280,6 @@ namespace yae
   MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
   {
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     reader->selectVideoTrack(videoTrackIndex);
 
@@ -4769,8 +4767,6 @@ namespace yae
   void
   MainWindow::adjustMenus(IReader * reader)
   {
-    bool ok = true;
-
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     std::size_t numSubtitles = reader->subsCount();

@@ -175,8 +175,8 @@ namespace yae
   //
   TimelineControls::TimelineControls(QWidget * parent, Qt::WindowFlags f):
     QWidget(parent, f),
-    ignoreClockStopped_(false),
     activeMarker_(NULL),
+    ignoreClockStopped_(false),
     reader_(NULL),
     unknownDuration_(false),
     timelineStart_(0.0),

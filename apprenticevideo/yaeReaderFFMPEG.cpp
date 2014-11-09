@@ -1633,33 +1633,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // insertPacketTime
-  //
-  static void
-  insertPacketTime(std::list<PacketTime> & packetTimes,
-                   const PacketTime & t)
-  {
-    if (packetTimes.empty())
-    {
-      packetTimes.push_front(t);
-      return;
-    }
-
-    for (std::list<PacketTime>::iterator i = packetTimes.begin();
-         i != packetTimes.end(); ++i)
-    {
-      const PacketTime & ti = *i;
-      if (t.pts_ > ti.pts_)
-      {
-        packetTimes.insert(i, t);
-        return;
-      }
-    }
-
-    packetTimes.push_back(t);
-  }
-
-  //----------------------------------------------------------------
   // verifyPTS
   //
   // verify that presentation timestamps are monotonically increasing
@@ -2410,7 +2383,6 @@ namespace yae
     if ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
     {
       AVColorSpace color_space = to_ffmpeg_color_space(vtts.colorSpace_);
-      AVColorRange color_range = to_ffmpeg_color_range(vtts.colorRange_);
 
       if (color_space == AVCOL_SPC_UNSPECIFIED)
       {
@@ -4192,10 +4164,10 @@ namespace yae
   Movie::Movie():
     thread_(this),
     context_(NULL),
-    skipLoopFilter_(false),
-    skipNonReferenceFrames_(false),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
+    skipLoopFilter_(false),
+    skipNonReferenceFrames_(false),
     dtsStreamIndex_(-1),
     dtsBytePos_(0),
     dts_(AV_NOPTS_VALUE),

@@ -217,7 +217,7 @@ const char* AppleRemoteDeviceName = "AppleIRController";
 		io_object_t matchingService = 0, foundService = 0;
 		BOOL finalMatch = NO;
 		
-		while (matchingService = IOIteratorNext(hidObjectIterator))
+		while ((matchingService = IOIteratorNext(hidObjectIterator)))
 		{
 			if (!finalMatch)
 			{
@@ -231,7 +231,7 @@ const char* AppleRemoteDeviceName = "AppleIRController";
 					}
 				}
 				
-				if (className = IORegistryEntryCreateCFProperty((io_registry_entry_t)matchingService, CFSTR("IOClass"), kCFAllocatorDefault, 0))
+				if ((className = IORegistryEntryCreateCFProperty((io_registry_entry_t)matchingService, CFSTR("IOClass"), kCFAllocatorDefault, 0)))
 				{
 					if ([(NSString *)className isEqual:[NSString stringWithUTF8String:[self remoteControlDeviceName]]])
 					{

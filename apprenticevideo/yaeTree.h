@@ -127,7 +127,6 @@ namespace yae
       for (typename std::map<TKey, TTree>::const_iterator i = tree_.begin();
            i != tree_.end(); ++i)
       {
-        const TKey & key = i->first;
         const TTree & next = i->second;
 
         if (next.tree_.empty())
@@ -139,7 +138,6 @@ namespace yae
       for (typename std::map<TKey, TTree>::const_iterator i = tree_.begin();
            i != tree_.end(); ++i)
       {
-        const TKey & key = i->first;
         const TTree & next = i->second;
 
         if (!next.tree_.empty())

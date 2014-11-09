@@ -154,8 +154,6 @@ namespace yae
   VideoRenderer::TPrivate::skipToTime(const TTime & t, IReader * reader)
   {
     TTime currentTime;
-    double elapsedTime = 0.0;
-    bool clockIsRunning = clock_.getCurrentTime(currentTime, elapsedTime);
 
     double clockPosition = currentTime.toSeconds();
     double seekPosition = t.toSeconds();

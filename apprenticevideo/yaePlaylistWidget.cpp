@@ -57,15 +57,6 @@ namespace yae
     return p;
   }
 
-  //----------------------------------------------------------------
-  // kPixmapClearDark
-  //
-  static QPixmap & kPixmapClearDark()
-  {
-    static QPixmap p = QPixmap(":/images/clear-dark.png");
-    return p;
-  }
-
 
   //----------------------------------------------------------------
   // getBookmarkHash
@@ -1436,7 +1427,6 @@ namespace yae
         if (hiGroup || hiItem)
         {
           int vh = viewport()->height() - kGroupNameHeight;
-          QPoint viewOffset = getViewOffset();
 
           QPoint p0 =
             hiGroup->collapsed_ || !hiItem  ?
@@ -1550,7 +1540,6 @@ namespace yae
         if (hiGroup || hiItem)
         {
           int vh = viewport()->height() - kGroupNameHeight;
-          QPoint viewOffset = getViewOffset();
 
           QPoint p0 =
             hiItem && !(hiGroup && hiGroup->collapsed_) ?
@@ -2253,18 +2242,6 @@ namespace yae
     }
 
     return groups.size();
-  }
-
-  //----------------------------------------------------------------
-  // lookupFirstGroup
-  //
-  inline static PlaylistGroup *
-  lookupFirstGroup(std::vector<PlaylistGroup> & groups)
-  {
-    std::size_t numGroups = groups.size();
-    std::size_t i = lookupFirstGroupIndex(groups);
-    PlaylistGroup * found = i < numGroups ? &groups[i] : NULL;
-    return found;
   }
 
   //----------------------------------------------------------------
