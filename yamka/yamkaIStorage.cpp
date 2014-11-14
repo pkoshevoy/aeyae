@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system includes:
+#include <stdexcept>
+
 // yamka includes:
 #include <yamkaIStorage.h>
 #include <yamkaHodgePodge.h>
@@ -64,6 +67,15 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
+  // IStorage::seekTo
+  //
+  void
+  IStorage::seekTo(uint64 absolutePosition)
+  {
+    throw std::runtime_error(std::string("IStorage::seekTo not supported"));
+  }
+
+  //----------------------------------------------------------------
   // IStorage::skipWithReceipt
   //
   IStorage::IReceiptPtr
@@ -77,6 +89,63 @@ namespace Yamka
 
     dataReceipt->add(numBytes);
     return dataReceipt;
+  }
+
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::Seek
+  //
+  IStorage::Seek::Seek(IStorage & storage):
+    storage_(storage),
+    savedPosition_(storage.receipt()->position()),
+    restoreOnExit_(true)
+  {}
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::~Seek
+  //
+  IStorage::Seek::~Seek()
+  {
+    if (restoreOnExit_)
+    {
+      restorePosition();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::doNotRestore
+  //
+  void
+  IStorage::Seek::doNotRestore()
+  {
+    restoreOnExit_ = false;
+  }
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::doRestore
+  //
+  void
+  IStorage::Seek::doRestore()
+  {
+    restoreOnExit_ = true;
+  }
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::restorePosition
+  //
+  void
+  IStorage::Seek::restorePosition()
+  {
+    storage_.seekTo(savedPosition_);
+  }
+
+  //----------------------------------------------------------------
+  // IStorage::Seek::absolutePosition
+  //
+  uint64
+  IStorage::Seek::absolutePosition() const
+  {
+    return savedPosition_;
   }
 
 

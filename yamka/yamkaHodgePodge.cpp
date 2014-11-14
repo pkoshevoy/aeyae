@@ -53,7 +53,7 @@ namespace Yamka
   // HodgePodge::load
   //
   uint64
-  HodgePodge::load(FileStorage & storage, uint64 bytesToRead)
+  HodgePodge::load(IStorage & storage, uint64 bytesToRead)
   {
     IStorage::IReceiptPtr dataReceipt = storage.skipWithReceipt(bytesToRead);
     if (!dataReceipt)

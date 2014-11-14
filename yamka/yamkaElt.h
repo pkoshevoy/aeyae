@@ -12,7 +12,6 @@
 // yamka includes:
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
-#include <yamkaFileStorage.h>
 
 // system includes:
 #include <stdexcept>
@@ -63,7 +62,7 @@ namespace Yamka
     virtual ~IDelegateLoad() {}
 
     // return number of payload bytes consumed:
-    virtual uint64 load(FileStorage & storage,
+    virtual uint64 load(IStorage & storage,
                         uint64 payloadBytesToRead,
                         uint64 eltId,
                         IPayload & payload) = 0;
@@ -146,7 +145,7 @@ namespace Yamka
     // NOTE: the file position is not advanced unless some of the
     // element is loaded successfully:
     virtual uint64
-    load(FileStorage & storage,
+    load(IStorage & storage,
          uint64 storageSize,
          IDelegateLoad * loader = NULL);
 
@@ -175,7 +174,7 @@ namespace Yamka
     bool shouldComputeCrc32() const;
 
     // helper for loading CRC-32 checksum element:
-    uint64 loadCrc32(FileStorage & storage, uint64 bytesToRead);
+    uint64 loadCrc32(IStorage & storage, uint64 bytesToRead);
 
     // special value used to indcate that payload (or CRC-32 element)
     // position is unknown relative to this elements storage position:

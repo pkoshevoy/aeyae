@@ -83,7 +83,7 @@ namespace Yamka
   // ChapTranslate::load
   //
   uint64
-  ChapTranslate::load(FileStorage & storage,
+  ChapTranslate::load(IStorage & storage,
                       uint64 bytesToRead,
                       IDelegateLoad * loader)
   {
@@ -214,7 +214,7 @@ namespace Yamka
   // SegInfo::load
   //
   uint64
-  SegInfo::load(FileStorage & storage,
+  SegInfo::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
@@ -299,7 +299,7 @@ namespace Yamka
   // TrackTranslate::load
   //
   uint64
-  TrackTranslate::load(FileStorage & storage,
+  TrackTranslate::load(IStorage & storage,
                        uint64 bytesToRead,
                        IDelegateLoad * loader)
   {
@@ -436,7 +436,7 @@ namespace Yamka
   // Video::load
   //
   uint64
-  Video::load(FileStorage & storage,
+  Video::load(IStorage & storage,
               uint64 bytesToRead,
               IDelegateLoad * loader)
   {
@@ -539,7 +539,7 @@ namespace Yamka
   // Audio::load
   //
   uint64
-  Audio::load(FileStorage & storage,
+  Audio::load(IStorage & storage,
               uint64 bytesToRead,
               IDelegateLoad * loader)
   {
@@ -619,7 +619,7 @@ namespace Yamka
   // ContentCompr::load
   //
   uint64
-  ContentCompr::load(FileStorage & storage,
+  ContentCompr::load(IStorage & storage,
                      uint64 bytesToRead,
                      IDelegateLoad * loader)
   {
@@ -704,7 +704,7 @@ namespace Yamka
   // ContentEncrypt::load
   //
   uint64
-  ContentEncrypt::load(FileStorage & storage,
+  ContentEncrypt::load(IStorage & storage,
                        uint64 bytesToRead,
                        IDelegateLoad * loader)
   {
@@ -799,7 +799,7 @@ namespace Yamka
   // ContentEnc::load
   //
   uint64
-  ContentEnc::load(FileStorage & storage,
+  ContentEnc::load(IStorage & storage,
                    uint64 bytesToRead,
                    IDelegateLoad * loader)
   {
@@ -863,7 +863,7 @@ namespace Yamka
   //
   uint64
   ContentEncodings::
-  load(FileStorage & storage,
+  load(IStorage & storage,
        uint64 bytesToRead,
        IDelegateLoad * loader)
   {
@@ -1064,7 +1064,7 @@ namespace Yamka
   // Track::load
   //
   uint64
-  Track::load(FileStorage & storage,
+  Track::load(IStorage & storage,
               uint64 bytesToRead,
               IDelegateLoad * loader)
   {
@@ -1159,9 +1159,9 @@ namespace Yamka
   // TrackPlane::load
   //
   uint64
-  TrackPlane::load(FileStorage & storage,
-                       uint64 bytesToRead,
-                       IDelegateLoad * loader)
+  TrackPlane::load(IStorage & storage,
+                   uint64 bytesToRead,
+                   IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
 
@@ -1219,7 +1219,7 @@ namespace Yamka
   // TrackCombinePlanes::load
   //
   uint64
-  TrackCombinePlanes::load(FileStorage & storage,
+  TrackCombinePlanes::load(IStorage & storage,
                            uint64 bytesToRead,
                            IDelegateLoad * loader)
   {
@@ -1278,7 +1278,7 @@ namespace Yamka
   // TrackJoinBlocks::load
   //
   uint64
-  TrackJoinBlocks::load(FileStorage & storage,
+  TrackJoinBlocks::load(IStorage & storage,
                         uint64 bytesToRead,
                         IDelegateLoad * loader)
   {
@@ -1346,7 +1346,7 @@ namespace Yamka
   // TrackOperation::load
   //
   uint64
-  TrackOperation::load(FileStorage & storage,
+  TrackOperation::load(IStorage & storage,
                        uint64 bytesToRead,
                        IDelegateLoad * loader)
   {
@@ -1415,7 +1415,7 @@ namespace Yamka
   // Tracks::load
   //
   uint64
-  Tracks::load(FileStorage & storage,
+  Tracks::load(IStorage & storage,
                uint64 bytesToRead,
                IDelegateLoad * loader)
   {
@@ -1498,7 +1498,7 @@ namespace Yamka
   // CueRef::load
   //
   uint64
-  CueRef::load(FileStorage & storage,
+  CueRef::load(IStorage & storage,
                uint64 bytesToRead,
                IDelegateLoad * loader)
   {
@@ -1598,9 +1598,9 @@ namespace Yamka
   // CueTrackPositions::load
   //
   uint64
-  CueTrackPositions::load(FileStorage & storage,
-                  uint64 bytesToRead,
-                  IDelegateLoad * loader)
+  CueTrackPositions::load(IStorage & storage,
+                          uint64 bytesToRead,
+                          IDelegateLoad * loader)
   {
     uint64 prevBytesToRead = bytesToRead;
 
@@ -1680,7 +1680,7 @@ namespace Yamka
   // CuePoint::load
   //
   uint64
-  CuePoint::load(FileStorage & storage,
+  CuePoint::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -1740,7 +1740,7 @@ namespace Yamka
   // Cues::load
   //
   uint64
-  Cues::load(FileStorage & storage,
+  Cues::load(IStorage & storage,
              uint64 bytesToRead,
              IDelegateLoad * loader)
   {
@@ -1808,7 +1808,7 @@ namespace Yamka
   // SeekEntry::load
   //
   uint64
-  SeekEntry::load(FileStorage & storage,
+  SeekEntry::load(IStorage & storage,
                   uint64 bytesToRead,
                   IDelegateLoad * loader)
   {
@@ -1868,7 +1868,7 @@ namespace Yamka
   // SeekHead::load
   //
   uint64
-  SeekHead::load(FileStorage & storage,
+  SeekHead::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2025,7 +2025,7 @@ namespace Yamka
   // AttdFile::load
   //
   uint64
-  AttdFile::load(FileStorage & storage,
+  AttdFile::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2089,7 +2089,7 @@ namespace Yamka
   // Attachments::load
   //
   uint64
-  Attachments::load(FileStorage & storage,
+  Attachments::load(IStorage & storage,
                     uint64 bytesToRead,
                     IDelegateLoad * loader)
   {
@@ -2148,7 +2148,7 @@ namespace Yamka
   // ChapTrk::load
   //
   uint64
-  ChapTrk::load(FileStorage & storage,
+  ChapTrk::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
@@ -2228,7 +2228,7 @@ namespace Yamka
   // ChapDisp::load
   //
   uint64
-  ChapDisp::load(FileStorage & storage,
+  ChapDisp::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2298,7 +2298,7 @@ namespace Yamka
   // ChapProcCmd::load
   //
   uint64
-  ChapProcCmd::load(FileStorage & storage,
+  ChapProcCmd::load(IStorage & storage,
                     uint64 bytesToRead,
                     IDelegateLoad * loader)
   {
@@ -2372,7 +2372,7 @@ namespace Yamka
   // ChapProc::load
   //
   uint64
-  ChapProc::load(FileStorage & storage,
+  ChapProc::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2499,7 +2499,7 @@ namespace Yamka
   // ChapAtom::load
   //
   uint64
-  ChapAtom::load(FileStorage & storage,
+  ChapAtom::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2601,7 +2601,7 @@ namespace Yamka
   // Edition::load
   //
   uint64
-  Edition::load(FileStorage & storage,
+  Edition::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
@@ -2665,7 +2665,7 @@ namespace Yamka
   // Chapters::load
   //
   uint64
-  Chapters::load(FileStorage & storage,
+  Chapters::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -2684,6 +2684,7 @@ namespace Yamka
   TagTargets::TagTargets()
   {
     typeValue_.payload_.setDefault(50);
+    typeValue_.alwaysSave();
   }
 
   //----------------------------------------------------------------
@@ -2758,7 +2759,7 @@ namespace Yamka
   // TagTargets::load
   //
   uint64
-  TagTargets::load(FileStorage & storage,
+  TagTargets::load(IStorage & storage,
                    uint64 bytesToRead,
                    IDelegateLoad * loader)
   {
@@ -2853,7 +2854,7 @@ namespace Yamka
   // SimpleTag::load
   //
   uint64
-  SimpleTag::load(FileStorage & storage,
+  SimpleTag::load(IStorage & storage,
                   uint64 bytesToRead,
                   IDelegateLoad * loader)
   {
@@ -2925,7 +2926,7 @@ namespace Yamka
   // Tag::load
   //
   uint64
-  Tag::load(FileStorage & storage,
+  Tag::load(IStorage & storage,
             uint64 bytesToRead,
             IDelegateLoad * loader)
   {
@@ -2985,7 +2986,7 @@ namespace Yamka
   // Tags::load
   //
   uint64
-  Tags::load(FileStorage & storage,
+  Tags::load(IStorage & storage,
              uint64 bytesToRead,
              IDelegateLoad * loader)
   {
@@ -3044,7 +3045,7 @@ namespace Yamka
   // SilentTracks::load
   //
   uint64
-  SilentTracks::load(FileStorage & storage,
+  SilentTracks::load(IStorage & storage,
                      uint64 bytesToRead,
                      IDelegateLoad * loader)
   {
@@ -3120,7 +3121,7 @@ namespace Yamka
   // BlockMore::load
   //
   uint64
-  BlockMore::load(FileStorage & storage,
+  BlockMore::load(IStorage & storage,
                   uint64 bytesToRead,
                   IDelegateLoad * loader)
   {
@@ -3180,7 +3181,7 @@ namespace Yamka
   // BlockAdditions::load
   //
   uint64
-  BlockAdditions::load(FileStorage & storage,
+  BlockAdditions::load(IStorage & storage,
                        uint64 bytesToRead,
                        IDelegateLoad * loader)
   {
@@ -3244,7 +3245,7 @@ namespace Yamka
   // TimeSlice::load
   //
   uint64
-  TimeSlice::load(FileStorage & storage,
+  TimeSlice::load(IStorage & storage,
                   uint64 bytesToRead,
                   IDelegateLoad * loader)
   {
@@ -3303,7 +3304,7 @@ namespace Yamka
   // Slices::load
   //
   uint64
-  Slices::load(FileStorage & storage,
+  Slices::load(IStorage & storage,
                uint64 bytesToRead,
                IDelegateLoad * loader)
   {
@@ -3403,7 +3404,7 @@ namespace Yamka
   // BlockGroup::load
   //
   uint64
-  BlockGroup::load(FileStorage & storage,
+  BlockGroup::load(IStorage & storage,
                    uint64 bytesToRead,
                    IDelegateLoad * loader)
   {
@@ -4093,7 +4094,7 @@ namespace Yamka
   // Cluster::load
   //
   uint64
-  Cluster::load(FileStorage & storage,
+  Cluster::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
@@ -4217,7 +4218,7 @@ namespace Yamka
   // Segment::load
   //
   uint64
-  Segment::load(FileStorage & storage,
+  Segment::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
@@ -4391,7 +4392,7 @@ namespace Yamka
   // Segment::loadViaSeekHead
   //
   bool
-  Segment::loadViaSeekHead(FileStorage & storage,
+  Segment::loadViaSeekHead(IStorage & storage,
                            IDelegateLoad * loader,
                            bool loadClusters)
   {
@@ -4469,12 +4470,18 @@ namespace Yamka
         eltReference.setElt(&seekHead2);
 
         // load the SeekHead:
-        if (!storage.file_.seek(absolutePosition, File::kAbsolutePosition))
+        try
+        {
+          storage.seekTo(absolutePosition);
+        }
+        catch (...)
         {
           assert(false);
           ok = false;
+          continue;
         }
-        else if (!seekHead2.load(storage, uintMax[8], loader))
+
+        if (!seekHead2.load(storage, uintMax[8], loader))
         {
           assert(false);
           ok = false;
@@ -4543,7 +4550,11 @@ namespace Yamka
         uint64 relativePosition = eltReference.position();
         uint64 absolutePosition = originPosition + relativePosition;
 
-        if (!storage.file_.seek(absolutePosition, File::kAbsolutePosition))
+        try
+        {
+          storage.seekTo(absolutePosition);
+        }
+        catch (...)
         {
           assert(false);
           ok = false;
@@ -4600,13 +4611,20 @@ namespace Yamka
 
       IStorage::IReceiptPtr lastCluster = clusters_.back().storageReceipt();
       uint64 nextPosition = lastCluster->position() + lastCluster->numBytes();
-      if (storage.file_.seek(nextPosition, File::kAbsolutePosition))
+
+      try
       {
+        storage.seekTo(nextPosition);
+
         std::list<TCluster> moreClusters;
         if (eltsLoad(moreClusters, storage, uintMax[8], loader))
         {
           clusters_.splice(clusters_.end(), moreClusters);
         }
+      }
+      catch (...)
+      {
+        assert(false);
       }
     }
 
@@ -4675,10 +4693,10 @@ namespace Yamka
   // printProgress
   //
   static void
-  printProgress(FileStorage & storage, uint64 storageSize)
+  printProgress(IStorage & storage, uint64 storageSize)
   {
     // print progress:
-    uint64 pos = storage.file_.absolutePosition();
+    uint64 pos = storage.receipt()->position();
     double pct = 100.0 * (double(pos) / double(storageSize));
     printf("\r%3.6f%%  ", pct);
   }
@@ -4694,7 +4712,7 @@ namespace Yamka
   // LoadWithProgress::load
   //
   uint64
-  LoadWithProgress::load(FileStorage & storage,
+  LoadWithProgress::load(IStorage & storage,
                          uint64 payloadBytesToRead,
                          uint64 eltId,
                          IPayload & payload)
@@ -4969,7 +4987,7 @@ namespace Yamka
   // MatroskaDoc::load
   //
   uint64
-  MatroskaDoc::load(FileStorage & storage,
+  MatroskaDoc::load(IStorage & storage,
                     uint64 bytesToRead,
                     IDelegateLoad * loader)
   {
@@ -4985,7 +5003,7 @@ namespace Yamka
   // MatroskaDoc::loadAndKeepReceipts
   //
   uint64
-  MatroskaDoc::loadAndKeepReceipts(FileStorage & storage,
+  MatroskaDoc::loadAndKeepReceipts(IStorage & storage,
                                    uint64 bytesToRead,
                                    IDelegateLoad * loader)
   {
@@ -5056,14 +5074,14 @@ namespace Yamka
     {}
 
     // virtual:
-    uint64 load(FileStorage & storage,
+    uint64 load(IStorage & storage,
                 uint64 payloadBytesToRead,
                 uint64 eltId,
                 IPayload & payload)
     {
       if (loadedSeekHead_)
       {
-        storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+        storage.skip(payloadBytesToRead);
         return payloadBytesToRead;
       }
 
@@ -5093,7 +5111,7 @@ namespace Yamka
   // MatroskaDoc::loadSeekHead
   //
   bool
-  MatroskaDoc::loadSeekHead(FileStorage & storage,
+  MatroskaDoc::loadSeekHead(IStorage & storage,
                             uint64 bytesToRead)
   {
     typedef std::list<TSegment>::iterator TSegmentIter;
@@ -5121,7 +5139,7 @@ namespace Yamka
   // MatroskaDoc::loadViaSeekHead
   //
   bool
-  MatroskaDoc::loadViaSeekHead(FileStorage & storage,
+  MatroskaDoc::loadViaSeekHead(IStorage & storage,
                                IDelegateLoad * loader,
                                bool loadClusters)
   {

@@ -9,7 +9,7 @@
 // yamka includes:
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
-#include <yamkaFileStorage.h>
+#include <yamkaIStorage.h>
 #include <yamkaMixedElements.h>
 
 // system includes:
@@ -174,7 +174,7 @@ namespace Yamka
   // MixedElements::load
   //
   uint64
-  MixedElements::load(FileStorage & storage,
+  MixedElements::load(IStorage & storage,
                       uint64 bytesToRead,
                       IDelegateLoad * loader)
   {
@@ -203,7 +203,7 @@ namespace Yamka
   //
   uint64
   MixedElements::loadOneElement(IElement *& elt,
-                                FileStorage & storage,
+                                IStorage & storage,
                                 uint64 bytesToRead,
                                 IDelegateLoad * loader)
   {
@@ -216,7 +216,7 @@ namespace Yamka
 
     uint64 eltId = 0;
     {
-      File::Seek autoRestorePosition(storage.file_);
+      IStorage::Seek autoRestorePosition(storage);
       eltId = loadEbmlId(storage);
     }
 

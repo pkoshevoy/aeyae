@@ -12,7 +12,7 @@
 // yamka includes:
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
-#include <yamkaFileStorage.h>
+#include <yamkaIStorage.h>
 
 // system includes:
 #include <list>
@@ -98,7 +98,7 @@ namespace Yamka
   template <typename elts_t>
   uint64
   eltsLoad(elts_t & elts,
-           FileStorage & storage,
+           IStorage & storage,
            uint64 bytesToRead,
            IDelegateLoad * loader)
   {

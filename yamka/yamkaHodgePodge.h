@@ -10,7 +10,7 @@
 #define YAMKA_HODGE_PODGE_H_
 
 // yamka includes:
-#include <yamkaFileStorage.h>
+#include <yamkaIStorage.h>
 #include <yamkaBytes.h>
 
 // boost includes:
@@ -84,7 +84,7 @@ namespace Yamka
              IStorage & storage);
 
     // discard all receipts, then load data and store the receipt:
-    uint64 load(FileStorage & storage, uint64 bytesToRead);
+    uint64 load(IStorage & storage, uint64 bytesToRead);
 
     // save the data and return storage receipt to the saved data:
     IStorage::IReceiptPtr save(IStorage & storage) const;

@@ -220,7 +220,7 @@ struct LoaderSkipClusterPayload : public LoadWithProgress
   {}
 
   // virtual:
-  uint64 load(FileStorage & storage,
+  uint64 load(IStorage & storage,
               uint64 payloadBytesToRead,
               uint64 eltId,
               IPayload & payload)
@@ -231,7 +231,7 @@ struct LoaderSkipClusterPayload : public LoadWithProgress
     const bool payloadIsCues = (eltId == TCues::kId);
     if (payloadIsCluster || (payloadIsCues && skipCues_))
     {
-      storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+      storage.skip(payloadBytesToRead);
       return payloadBytesToRead;
     }
 
@@ -375,7 +375,7 @@ struct TBlockInfo
     return false;
   }
 
-  IStorage::IReceiptPtr save(FileStorage & storage)
+  IStorage::IReceiptPtr save(IStorage & storage)
   {
     if (content_.mustSave())
     {
@@ -1304,7 +1304,7 @@ TRemuxer::remux(uint64 inPointInMsec,
     uint64 numBytes = clusterElt.storageReceipt()->numBytes();
     clusterElt.discardReceipts();
 
-    src_.file_.seek(position);
+    src_.seekTo(position);
     uint64 bytesRead = clusterElt.load(src_, numBytes, this);
     assert(bytesRead == numBytes);
 
@@ -1967,7 +1967,7 @@ addAttachment(MatroskaDoc & doc, const TTodo & todo, char ** argv)
   }
 
   // don't load anything into memory, use a storage receipt instead:
-  att.file_.seek(0);
+  att.seekTo(0);
   IStorage::IReceiptPtr attReceipt = att.receipt();
   attReceipt->setNumBytes(attSize);
 
@@ -2046,7 +2046,7 @@ copyCodecPrivate(MatroskaDoc & doc, const TTodo & todo, char ** argv)
               << std::endl;
 
     ref = MatroskaDoc();
-    aux.file_.seek(0);
+    aux.seekTo(0);
 
     printCurrentTime("ref.loadAndKeepReceipts");
     ref.loadAndKeepReceipts(aux, auxSize, &skipClusters);
@@ -2748,7 +2748,7 @@ main(int argc, char ** argv)
               << std::endl;
 
     doc = MatroskaDoc();
-    src.file_.seek(0);
+    src.seekTo(0);
 
     printCurrentTime("doc.loadAndKeepReceipts");
     doc.loadAndKeepReceipts(src, srcSize, &skipClusters);
@@ -2962,7 +2962,7 @@ main(int argc, char ** argv)
       IStorage::IReceiptPtr receipt = seekHead.storageReceipt();
 
       File::Seek autoRestorePosition(dst.file_);
-      dst.file_.seek(receipt->position());
+      dst.seekTo(receipt->position());
 
       seekHead.save(dst);
     }

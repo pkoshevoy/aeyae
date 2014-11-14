@@ -13,6 +13,7 @@
 #include <yamkaCrc32.h>
 #include <yamkaStdInt.h>
 #include <yamkaSharedPtr.h>
+#include <yamkaFile.h>
 
 
 namespace Yamka
@@ -81,6 +82,46 @@ namespace Yamka
                                  std::size_t maxChunkSize = 4096) const;
     };
 
+    //----------------------------------------------------------------
+    // Seek
+    //
+    struct Seek
+    {
+      // save current seek position:
+      Seek(IStorage & storage);
+
+      // if required, then restore saved seek position:
+      ~Seek();
+
+      // call this to disable restoring the previous file position:
+      void doNotRestore();
+
+      // call this to enable restoring the previous file position:
+      void doRestore();
+
+      // call this to immediately restore the previous file position:
+      void restorePosition();
+
+      // accessor to the absolute storage position
+      // at the moment a Seek instance was created:
+      uint64 absolutePosition() const;
+
+      // synonyms:
+      inline void enable()
+      { doRestore(); }
+
+      inline void disable()
+      { doNotRestore(); }
+
+    private:
+      Seek(const Seek &);
+      Seek & operator = (const Seek &);
+
+      IStorage & storage_;
+      uint64 savedPosition_;
+      bool restoreOnExit_;
+    };
+
     // If a storage implementation does not actually load/save
     // any data it should override this to return true.
     // A NULL storage implementation is useful for file layout optimization.
@@ -99,6 +140,12 @@ namespace Yamka
     // NOTE: IStorage::peek does not change current storage position,
     // returns number of bytes loaded:
     virtual std::size_t peek(unsigned char * data, std::size_t size) = 0;
+
+    // NOTE: seeking is not guaranteed to be supported, not all subclasses
+    // provide a meaningful implementation, default implementation will
+    // throw a runtime exception; seeking will also throw a runtime
+    // exception if the call fails for any other reason:
+    virtual void seekTo(uint64 absolutePosition);
 
     // NOTE: IStorage::skip always skips from current storage position,
     // returns number of bytes skipped:

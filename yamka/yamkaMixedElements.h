@@ -12,7 +12,7 @@
 // yamka includes:
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
-#include <yamkaFileStorage.h>
+#include <yamkaIStorage.h>
 
 // system includes:
 #include <list>
@@ -80,7 +80,7 @@ namespace Yamka
 
     // attempt to load as many elements as possible,
     // return total number of bytes consumed:
-    uint64 load(FileStorage & storage,
+    uint64 load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader);
 
@@ -89,7 +89,7 @@ namespace Yamka
     // return number of bytes consumed to load the element,
     // return 0 if an element could not be loaded:
     uint64 loadOneElement(IElement *& elt,
-                          FileStorage & storage,
+                          IStorage & storage,
                           uint64 bytesToRead,
                           IDelegateLoad * loader);
 

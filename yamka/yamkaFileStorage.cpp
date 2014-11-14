@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system includes:
+#include <sstream>
+
 // yamka includes:
 #include <yamkaFileStorage.h>
 
@@ -81,10 +84,28 @@ namespace Yamka
   {
     if (!file_.seek(numBytes, File::kRelativeToCurrent))
     {
+      assert(false);
       return 0;
     }
 
     return numBytes;
+  }
+
+  //----------------------------------------------------------------
+  // FileStorage::seekTo
+  //
+  void
+  FileStorage::seekTo(uint64 absolutePosition)
+  {
+    if (!file_.seek(absolutePosition, File::kAbsolutePosition))
+    {
+      std::ostringstream oss;
+      oss << "FileStorage::seekTo(" << absolutePosition << ") failed";
+
+      throw std::runtime_error(oss.str());
+    }
+
+    assert(absolutePosition == receipt()->position());
   }
 
   //----------------------------------------------------------------

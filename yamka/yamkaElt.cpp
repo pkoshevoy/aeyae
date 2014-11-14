@@ -9,7 +9,7 @@
 // yamka includes:
 #include <yamkaElt.h>
 #include <yamkaPayload.h>
-#include <yamkaFileStorage.h>
+#include <yamkaIStorage.h>
 
 // system includes:
 #include <stdexcept>
@@ -385,7 +385,7 @@ namespace Yamka
   // IElement::load
   //
   uint64
-  IElement::load(FileStorage & storage,
+  IElement::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -399,7 +399,7 @@ namespace Yamka
     IStorage::IReceiptPtr storageReceipt = storage.receipt();
 
     // save current seek position, so it can be restored if necessary:
-    File::Seek storageStart(storage.file_);
+    IStorage::Seek storageStart(storage);
 
     uint64 eltId = loadEbmlId(storage);
     if (eltId != getId())
@@ -411,7 +411,7 @@ namespace Yamka
 #if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
     Indent::More indentMore(Indent::depth_);
     {
-      File::Seek restore(storage.file_);
+      IStorage::Seek restore(storage);
       uint64 vsizeSize = 0;
       uint64 vsize = vsizeDecode(storage, vsizeSize);
       std::cout << indent()
@@ -547,12 +547,12 @@ namespace Yamka
                 << " -- skipping " << alienDataSize
                 << " bytes of unrecognized alien data @ 0x"
                 << std::hex
-                << storage.file_.absolutePosition()
+                << storage.receipt()->position()
                 << std::dec
                 << std::endl;
 #endif
 
-      storage.file_.seek(alienDataSize, File::kRelativeToCurrent);
+      storage.skip(alienDataSize);
       payloadBytesReadTotal = payloadSize;
     }
 
@@ -601,7 +601,7 @@ namespace Yamka
   // IElement::loadCrc32
   //
   uint64
-  IElement::loadCrc32(FileStorage & storage,
+  IElement::loadCrc32(IStorage & storage,
                       uint64 bytesToRead)
   {
     if (!bytesToRead)
@@ -610,7 +610,7 @@ namespace Yamka
     }
 
     // save current seek position, so it can be restored if necessary:
-    File::Seek storageStart(storage.file_);
+    IStorage::Seek storageStart(storage);
     IStorage::IReceiptPtr receiptCrc32 = storage.receipt();
 
     uint64 eltId = loadEbmlId(storage);

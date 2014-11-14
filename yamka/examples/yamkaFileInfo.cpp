@@ -50,7 +50,7 @@ usage(char ** argv, const char * message = NULL)
 struct PartialReader : public IDelegateLoad
 {
   // virtual:
-  uint64 load(FileStorage & storage,
+  uint64 load(IStorage & storage,
               uint64 payloadBytesToRead,
               uint64 eltId,
               IPayload & payload)
@@ -62,7 +62,7 @@ struct PartialReader : public IDelegateLoad
     }
 
     // skip/postpone reading the cluster (to shorten file load time):
-    storage.file_.seek(payloadBytesToRead, File::kRelativeToCurrent);
+    storage.skip(payloadBytesToRead);
     return payloadBytesToRead;
   }
 };

@@ -1058,7 +1058,7 @@ namespace Yamka
     void resolveReferences(const IElement * origin);
 
     // load the segment from storage based on SeekHead data:
-    bool loadViaSeekHead(FileStorage & storage,
+    bool loadViaSeekHead(IStorage & storage,
                          IDelegateLoad * loader,
                          bool loadClusters);
 
@@ -1115,7 +1115,7 @@ namespace Yamka
     LoadWithProgress(uint64 storageSize = 1);
 
     // virtual:
-    uint64 load(FileStorage & storage,
+    uint64 load(IStorage & storage,
                 uint64 payloadBytesToRead,
                 uint64 eltId,
                 IPayload & payload);
@@ -1194,7 +1194,7 @@ namespace Yamka
     ImplementsYamkaPayloadAPI();
 
     // same as load, but doesn't discard element storage receipts:
-    uint64 loadAndKeepReceipts(FileStorage & storage,
+    uint64 loadAndKeepReceipts(IStorage & storage,
                                uint64 bytesToRead,
                                IDelegateLoad * loader = NULL);
 
@@ -1206,11 +1206,11 @@ namespace Yamka
     void resolveReferences();
 
     // partiually load each segment up to and including the first SeekHead:
-    bool loadSeekHead(FileStorage & storage,
+    bool loadSeekHead(IStorage & storage,
                       uint64 bytesToRead);
 
     // load each segment from storage based on segment SeekHead data:
-    bool loadViaSeekHead(FileStorage & storage,
+    bool loadViaSeekHead(IStorage & storage,
                          IDelegateLoad * loader = NULL,
                          bool loadClusters = false);
 

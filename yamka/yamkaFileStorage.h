@@ -34,6 +34,12 @@ namespace Yamka
     std::size_t peek(unsigned char * data, std::size_t size);
     uint64      skip(uint64 numBytes);
 
+    // virtual: must override this as the base class implementation
+    // simply throws a runtime exception.
+    //
+    // NOTE: this will throw an exception if the seek fails:
+    void        seekTo(uint64 absolutePosition);
+
     //----------------------------------------------------------------
     // Receipt
     //

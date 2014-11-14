@@ -10,7 +10,6 @@
 #define YAMKA_PAYLOAD_H_
 
 // yamka includes:
-#include <yamkaFileStorage.h>
 #include <yamkaHodgePodge.h>
 #include <yamkaIStorage.h>
 #include <yamkaStdInt.h>
@@ -59,7 +58,7 @@ namespace Yamka
 
     // attempt to load the payload, return number of bytes read successfully:
     virtual uint64
-    load(FileStorage & storage,
+    load(IStorage & storage,
          uint64 bytesToRead,
          IDelegateLoad * delegateLoader = NULL) = 0;
 
@@ -115,7 +114,7 @@ namespace Yamka
   bool isDefault() const;                                               \
   Yamka::uint64 calcSize() const;                                       \
   Yamka::IStorage::IReceiptPtr save(Yamka::IStorage & storage) const;   \
-  Yamka::uint64 load(Yamka::FileStorage & storage,                      \
+  Yamka::uint64 load(Yamka::IStorage & storage,                         \
                      Yamka::uint64 bytesToRead,                         \
                      Yamka::IDelegateLoad * loader = NULL)
 
@@ -348,7 +347,7 @@ namespace Yamka
 
     // attempt to load the payload, return number of bytes read successfully:
     uint64
-    load(FileStorage & storage, uint64 bytesToRead, IDelegateLoad *)
+    load(IStorage & storage, uint64 bytesToRead, IDelegateLoad *)
     {
       if (bytesToRead != fixedSize)
       {

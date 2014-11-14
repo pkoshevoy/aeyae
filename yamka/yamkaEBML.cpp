@@ -128,7 +128,7 @@ namespace Yamka
   // EbmlHead::load
   //
   uint64
-  EbmlHead::load(FileStorage & storage,
+  EbmlHead::load(IStorage & storage,
                  uint64 bytesToRead,
                  IDelegateLoad * loader)
   {
@@ -201,7 +201,7 @@ namespace Yamka
   // EbmlDoc::load
   //
   uint64
-  EbmlDoc::load(FileStorage & storage,
+  EbmlDoc::load(IStorage & storage,
                 uint64 bytesToRead,
                 IDelegateLoad * loader)
   {
