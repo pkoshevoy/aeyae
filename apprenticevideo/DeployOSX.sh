@@ -20,7 +20,7 @@ DARWIN_REV=`uname -r`
 
 #----------------------------------------------------------------
 # INSTALL_NAME_TOOL=
-# 
+#
 INSTALL_NAME_TOOL=`which install_name_tool`
 if [ -x '/opt/local/bin/install_name_tool' ]; then
 	INSTALL_NAME_TOOL='/opt/local/bin/install_name_tool'

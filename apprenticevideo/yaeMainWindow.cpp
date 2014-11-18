@@ -3931,6 +3931,132 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ConnectionMap
+  //
+  struct ConnectionMap
+  {
+    //----------------------------------------------------------------
+    // ConnectionTo
+    //
+    struct ConnectionTo
+    {
+      QObject * receiver_;
+      std::string method_;
+    };
+
+    //----------------------------------------------------------------
+    // add
+    //
+    void
+    add(QObject * sender, const char * signal,
+        QObject * receiver, const char * method)
+    {
+      ConnectionTo dst;
+      dst.receiver_ = receiver;
+      dst.method_ = method;
+
+      connections_[sender][std::string(signal)].push_back(dst);
+    }
+
+    //----------------------------------------------------------------
+    // has
+    //
+    bool
+    has(QObject * sender) const
+    {
+      std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >::
+        const_iterator found = connections_.find(sender);
+      return (found != connections_.end());
+    }
+
+    //----------------------------------------------------------------
+    // reconnect
+    //
+    bool
+    reconnect(QObject * obj, QObject * ref) const
+    {
+      std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >::
+        const_iterator found = connections_.find(ref);
+      if (found == connections_.end())
+      {
+        return true;
+      }
+
+      bool ok = true;
+      const std::map<std::string, std::list<ConnectionTo> > & signal_map =
+        found->second;
+
+      for (std::map<std::string, std::list<ConnectionTo> >::const_iterator
+             i = signal_map.begin(); i != signal_map.end(); ++i)
+      {
+        const std::string & signal_name = i->first;
+        const std::list<ConnectionTo> & receivers = i->second;
+
+        for (std::list<ConnectionTo>::const_iterator
+               j = receivers.begin(); j != receivers.end(); ++j)
+        {
+          const ConnectionTo & c = *j;
+
+          if (!obj->connect(obj, signal_name.c_str(),
+                            c.receiver_, c.method_.c_str()))
+          {
+            ok = false;
+            YAE_ASSERT(ok);
+          }
+        }
+      }
+
+      return ok;
+    }
+
+    std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >
+    connections_;
+  };
+
+  //----------------------------------------------------------------
+  // addMenuCopyTo
+  //
+  static void
+  addMenuCopyTo(QMenu * dst, QMenu * src,
+                const ConnectionMap * connectionMap = NULL)
+  {
+    QList<QAction *> actions = src->actions();
+    if (actions.empty() && !(connectionMap && connectionMap->has(src)))
+    {
+      return;
+    }
+
+    QMenu * subMenu = new QMenu(dst);
+    subMenu->setTitle(src->title());
+
+    for (QList<QAction *>::iterator i = actions.begin();
+         i != actions.end(); ++i)
+    {
+      QAction * action = *i;
+      if (action->menu())
+      {
+        addMenuCopyTo(subMenu, action->menu(), connectionMap);
+      }
+      else
+      {
+        subMenu->addAction(action);
+      }
+    }
+
+    if (actions.empty())
+    {
+      // copy signal/slot connections instead:
+      if (!connectionMap->reconnect(subMenu, src))
+      {
+        delete subMenu;
+        return;
+      }
+    }
+
+    dst->addAction(subMenu->menuAction());
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::mousePressEvent
   //
   void
@@ -3955,7 +4081,7 @@ namespace yae
       contextMenu_->addAction(actionNext);
       contextMenu_->addAction(actionShowPlaylist);
       contextMenu_->addAction(actionShowPlaylist);
-      contextMenu_->addAction(menuBookmarks->menuAction());
+      addMenuCopyTo(contextMenu_, menuBookmarks);
 
       if (playlistWidget_->underMouse() &&
           playlistWidget_->countItems())
@@ -3975,7 +4101,7 @@ namespace yae
       contextMenu_->addAction(actionShrinkWrap);
       contextMenu_->addAction(actionFullScreen);
       contextMenu_->addAction(actionFillScreen);
-      contextMenu_->addAction(menuPlaybackSpeed->menuAction());
+      addMenuCopyTo(contextMenu_, menuPlaybackSpeed);
 
       if (numVideoTracks || numAudioTracks)
       {
@@ -3983,22 +4109,27 @@ namespace yae
 
         if (numAudioTracks)
         {
-          contextMenu_->addAction(menuAudio->menuAction());
+          ConnectionMap connectionMap;
+          connectionMap.add(menuAudioDevice, SIGNAL(aboutToShow()),
+                            this, SLOT(populateAudioDeviceMenu()));
+
+          populateAudioDeviceMenu();
+          addMenuCopyTo(contextMenu_, menuAudio, &connectionMap);
         }
 
         if (numVideoTracks)
         {
-          contextMenu_->addAction(menuVideo->menuAction());
+          addMenuCopyTo(contextMenu_, menuVideo);
         }
 
         if (numSubtitles)
         {
-          contextMenu_->addAction(menuSubs->menuAction());
+          addMenuCopyTo(contextMenu_, menuSubs);
         }
 
         if (numChapters > 1)
         {
-          contextMenu_->addAction(menuChapters->menuAction());
+          addMenuCopyTo(contextMenu_, menuChapters);
         }
       }
 
@@ -4790,16 +4921,19 @@ namespace yae
 
     if (numVideoTracks || !numAudioTracks)
     {
+      menubar->removeAction(menuVideo->menuAction());
       menubar->insertMenu(menuHelp->menuAction(), menuVideo);
     }
 
     if (numSubtitles || !(numVideoTracks || numAudioTracks))
     {
+      menubar->removeAction(menuSubs->menuAction());
       menubar->insertMenu(menuHelp->menuAction(), menuSubs);
     }
 
     if (numChapters > 1)
     {
+      menubar->removeAction(menuChapters->menuAction());
       menubar->insertMenu(menuHelp->menuAction(), menuChapters);
     }
     else
