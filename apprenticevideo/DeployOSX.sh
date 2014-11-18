@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # -*- Mode: shell-script; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: t -*-
 
 #----------------------------------------------------------------
@@ -11,7 +11,7 @@ BUNDLE_PATH=${1}
 #
 # Use rsync because it's much faster than 'cp -r'.
 #
-CP='rsync -a --copy-unsafe-links'
+CP='rsync -a --copy-unsafe-links --chmod=ug+rwX'
 
 #----------------------------------------------------------------
 # DARWIN_REV
@@ -345,6 +345,7 @@ PrepForDeployment()
 #
 # $1 -- library name
 # $2 -- cpu arch
+# $3 -- search path (optional)
 #
 resolve_library()
 {
@@ -362,6 +363,11 @@ resolve_library()
 	NAME=`basename "${NAME}"`
 	SRCH_HERE="${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
+
+	if [ -n "${3}" ]; then
+		SRCH_HERE="${3}:${SRCH_HERE}"
+	fi
+
 	echo "${SRCH_HERE}" | awk 'BEGIN{RS=":"}{print}' | while read i; do
 		if [ ! -e "${i}" ]; then continue; fi
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
@@ -423,19 +429,21 @@ GetPathToParentDir()
 # $1 -- bundle contents directory path (foo.app/Contents)
 # $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
 # $3 -- path to the file holding a list of previously deployed files
+# $4 -- library search path
 #
 DeployFileOnce()
 {
 	BASEPATH="${1}"
 	FILEPATH="${2}"
 	DONELIST="${3}"
+	SEARCH_PATH="${4}"
 
 	# avoid deploying the same file multiple times:
 	IS_DEPLOYED=`grep "${FILEPATH}" "${DONELIST}"`
 	if [ -z "${IS_DEPLOYED}" ]; then
 		echo "${FILEPATH}" >> "${DONELIST}"
 		echo checking "${FILEPATH}"
-		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}")
+		(DeployFile "${BASEPATH}" "${FILEPATH}" "${DONELIST}" "${SEARCH_PATH}")
 		local EXITCODE=$?
 		echo
 		if [ $EXITCODE != 0 ]; then
@@ -445,17 +453,57 @@ DeployFileOnce()
 }
 
 #----------------------------------------------------------------
+# GetRunpath
+#
+# $1 -- path to an executable or a shared library
+#
+GetRunpath()
+{
+	otool -l "${1}" | \
+	while read i; do
+		if [ "${i}" = 'cmd LC_RPATH' ]; then
+			read cmdsize
+			read lc_rpath
+			lc_rpath=$(echo "${lc_rpath}" | cut -d' ' -f2)
+			printf "${lc_rpath}:"
+		fi
+	done
+}
+
+#----------------------------------------------------------------
+# PrependPath
+#
+# $1 -- new path entries
+# $2 -- existing path
+#
+PrependPath()
+{
+	echo "${1}" | \
+		awk 'BEGIN{RS=":"}{print}' | \
+		while read i; do \
+			if [[ "${2}" == *"${i}"* ]]; then
+				continue
+			else
+				printf "${i}:"
+			fi
+		done
+	printf "${2}\n"
+}
+
+#----------------------------------------------------------------
 # DeployFile
 #
 # $1 -- bundle contents directory path (foo.app/Contents)
 # $2 -- binary to deploy (MacOS/foo, Plug-ins/bar.bundle/Contents/MacOS/bar)
 # $3 -- path to the file holding a list of previously deployed files
+# $4 -- library search path
 #
 DeployFile()
 {
 	BASEPATH="${1}"
 	FILEPATH="${2}"
 	DONELIST="${3}"
+	SEARCH_PATH="${4}"
 
 #	echo
 #	echo BASEPATH: ${BASEPATH}
@@ -465,6 +513,9 @@ DeployFile()
 		printf "MISSING: %s\n" "${BASEPATH}/${FILEPATH}"
 		exit 11
 	fi
+
+	SEARCH_RPATH=`GetRunpath "${FILEPATH}"`
+	SEARCH_PATH=`PrependPath "${SEARCH_RPATH}" "${SEARCH_PATH}"`
 
 	FILE=`basename "${FILEPATH}"`
 	FDIR=`dirname "${FILEPATH}"`
@@ -493,8 +544,17 @@ DeployFile()
 		FILE_ARCH=`lipo -info "${FILE}" | rev | cut -d' ' -f1 | rev`
 		IS_FRAMEWORK=`echo "${NEEDS}" | grep '\.framework/'`
 		IS_DEBUG=`echo "${NEEDS}" | grep _debug`
+		AT_RPATH=`echo "${NEEDS}" | grep '@rpath/'`
 		AT_LOAD_PATH=`echo "${NEEDS}" | grep '@loader_path/'`
 		AT_EXEC_PATH=`echo "${NEEDS}" | grep '@executable_path/'`
+
+		if [ -z "${IS_FRAMEWORK}" -a \
+			 -z "${AT_LOAD_PATH}" -a \
+			 -z "${AT_EXEC_PATH}" -a \
+			 -z "${AT_RPATH}" ]; then
+			ORIGIN_DIR=$(dirname "${NEEDS}")
+			SEARCH_PATH=`PrependPath "${ORIGIN_DIR}" "${SEARCH_PATH}"`
+		fi
 
 		printf "%40s : " "${FILE}"
 
@@ -504,145 +564,154 @@ DeployFile()
 			printf "dylib, "
 		fi
 
-		if [ -n "${IS_DEBUG}" ]; then
-			printf "debug, "
-			IS_QTLIB=`echo "${NEEDS}" | grep Qt`
-			if [ -n "${IS_QTLIB}" ]; then
-				NO_DEBUG=`echo "${NEEDS}" | sed 's/_debug//'`
-				printf "changing %s to %s, " "${NEEDS}" "${NO_DEBUG}"
-				NEEDS="${NO_DEBUG}"
-			fi
-		fi
+#		if [ -n "${IS_DEBUG}" ]; then
+#			printf "debug, "
+#			IS_QTLIB=`echo "${NEEDS}" | grep Qt`
+#			if [ -n "${IS_QTLIB}" ]; then
+#				NO_DEBUG=`echo "${NEEDS}" | sed 's/_debug//'`
+#				printf "changing %s to %s, " "${NEEDS}" "${NO_DEBUG}"
+#				NEEDS="${NO_DEBUG}"
+#			fi
+#		fi
 
 		if [ -n "${AT_LOAD_PATH}" ]; then
 			printf "@load, "
 		elif [ -n "${AT_EXEC_PATH}" ]; then
 			printf "@exec, "
+		elif [ -n "${AT_RPATH}" ]; then
+			printf "@rpath, "
 		fi
 		printf "%s\n" `basename "${NEEDS}"`
 
-		if [ -n "${AT_LOAD_PATH}" ]; then
+		if [ -n "${AT_LOAD_PATH}" -o -n "${AT_RPATH}" ]; then
 			REF=`echo "${NEEDS}" | cut -d/ -f2-`
-			DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}"
-			if [ $? != 0 ]; then exit 11; fi
-		else
-			if [ -n "${AT_EXEC_PATH}" ]; then
-#				echo CHANGING EXEC PATH to LOAD PATH:
-				REF=`echo "${NEEDS}" | cut -d/ -f2- | cut -c4-`
-				NEEDS="${BASEPATH}"/"${REF}"
-			fi
-
-			printf "%s (in %s) NEEDS %s\n" "${FILE}" "${FDIR}" "${NEEDS}"
-
-			if [ -n "${IS_FRAMEWORK}" ]; then
-				DST="Frameworks"
-			else
-				DST="Auxiliaries"
-			fi
-
-			HAS_VERSION=`echo "${NEEDS}" | grep /Versions/`
-			if [ -n "${HAS_VERSION}" ]; then
-				FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-4 | rev`
-			elif [ -n "${IS=FRAMEWORK}" ]; then
-				FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-2 | rev`
-			else
-				FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-1 | rev`
-			fi
-#			echo FN_DST: ${FN_DST}
-
-			DST_DIR=`dirname "${DST}/${FN_DST}"`
-#			echo DST_DIR: ${DST_DIR}
-
-			if [ ! -e "${BASEPATH}/${DST_DIR}" ]; then
-				echo mkdir -p "${BASEPATH}/${DST_DIR}"
-				mkdir -p "${BASEPATH}/${DST_DIR}"
-			fi
-
-			OFFSET=`GetPathToParentDir "${FDIR}"`
-#			echo FDIR: ${FDIR} -- OFFSET: ${OFFSET}
-
-			DST_NAME="@loader_path/${OFFSET}/${DST}/${FN_DST}"
-
-#			echo CHECK IF EXISTS: "${BASEPATH}/${DST}/${FN_DST}"
-			if [ ! -e "${BASEPATH}/${DST}/${FN_DST}" ]; then
-				SRC="${NEEDS}"
-				if [ ! -e "${SRC}" ]; then
-#					echo resolve_library "${SRC}" "${FILE_ARCH}"
-					SRC=`resolve_library "${SRC}" "${FILE_ARCH}"`
-#					echo resolve_library returned \""${SRC}"\"
-					if [ -e "${SRC}" ]; then
-						echo "RESOLVED ${NEEDS} --- ${SRC}"
-					fi
-				fi
-
-				SRC=`resolve_symlink "${SRC}"`
-#				echo resolve_symlink returned \""${SRC}"\"
-
-				if [ ! -e "${SRC}" ]; then
-					echo "MISSING: ${NEEDS}"
-					exit 11
-				fi
-
-				echo ${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
-				${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
-
-				# copy resources bundled together with the framework:
-				SRC_BASE=`dirname "${SRC}"`
-				if [ -e "${SRC_BASE}/Resources" ]; then
-					DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
-					echo mkdir -p "${DST_BASE}/Resources";
-					mkdir -p "${DST_BASE}/Resources";
-					quiet_pushd "${DST_BASE}/Resources"
-						pwd
-						echo COPYING "${SRC_BASE}/Resources"
-						(cd "${SRC_BASE}/Resources"; tar c .) | tar xv
-					quiet_popd
-				fi
-
-				if [ -n "${HAS_VERSION}" ]; then
-					VERTMP=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
-					VERSION=`basename "${VERTMP}"`
-
-					VERTMP=`dirname "${VERTMP}"`
-					VERSIONS="${VERTMP}"
-
-					quiet_pushd "${VERSIONS}"
-						pwd
-						if [ ! -e Current ]; then
-							echo ln -s "${VERSION}" Current
-							ln -s "${VERSION}" Current
-						fi
-					quiet_popd
-
-					VERTMP=`dirname "${VERTMP}"`
-					VERSIONS="${VERTMP}"
-					quiet_pushd "${VERSIONS}"
-						pwd
-
-						if [ -e "Versions/${VERSION}/Resources" ]; then
-							echo ln -s "Versions/${VERSION}/Resources" .
-							ln -s "Versions/${VERSION}/Resources" .
-						fi
-
-						DSTTMP=`basename "${FN_DST}"`
-						echo ln -s "Versions/${VERSION}/${DSTTMP}" .
-						ln -s "Versions/${VERSION}/${DSTTMP}" .
-					quiet_popd
-				fi
-			fi
-
-			quiet_pushd "${BASEPATH}"
-				DeployFileOnce "${BASEPATH}" "${DST}/${FN_DST}" "${DONELIST}"
+			if [ -e "${REF}" ]; then
+				DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}" "${SEARCH_PATH}"
 				if [ $? != 0 ]; then exit 11; fi
-			quiet_popd
+			else
+				FOUND=`resolve_library "${REF}" "${FILE_ARCH}" "${SEARCH_PATH}"`
+				if [ ! -e "${FOUND}" ]; then exit 21; fi
 
-			echo "${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
-			"${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
-			if [ $? != 0 ]; then
-				# install_name_tool failure may be fixed by using
-				# the -headerpad_max_install_names linker flag
-				exit 13;
+				NEEDS="${FOUND}"
 			fi
+		fi
+
+		if [ -n "${AT_EXEC_PATH}" ]; then
+#			echo CHANGING EXEC PATH to LOAD PATH:
+			REF=`echo "${NEEDS}" | cut -d/ -f2- | cut -c4-`
+			NEEDS="${BASEPATH}"/"${REF}"
+		fi
+
+		printf "%s (in %s) NEEDS %s\n" "${FILE}" "${FDIR}" "${NEEDS}"
+
+		if [ -n "${IS_FRAMEWORK}" ]; then
+			DST="Frameworks"
+		else
+			DST="Auxiliaries"
+		fi
+
+		HAS_VERSION=`echo "${NEEDS}" | grep /Versions/`
+		if [ -n "${HAS_VERSION}" ]; then
+			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-4 | rev`
+		elif [ -n "${IS_FRAMEWORK}" ]; then
+			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-2 | rev`
+		else
+			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-1 | rev`
+		fi
+#		echo FN_DST: ${FN_DST}
+
+		DST_DIR=`dirname "${DST}/${FN_DST}"`
+#		echo DST_DIR: ${DST_DIR}
+
+		if [ ! -e "${BASEPATH}/${DST_DIR}" ]; then
+			echo mkdir -p "${BASEPATH}/${DST_DIR}"
+			mkdir -p "${BASEPATH}/${DST_DIR}"
+		fi
+
+		OFFSET=`GetPathToParentDir "${FDIR}"`
+#		echo FDIR: ${FDIR} -- OFFSET: ${OFFSET}
+
+		DST_NAME="@loader_path/${OFFSET}/${DST}/${FN_DST}"
+
+#		echo CHECK IF EXISTS: "${BASEPATH}/${DST}/${FN_DST}"
+		if [ ! -e "${BASEPATH}/${DST}/${FN_DST}" ]; then
+			SRC="${NEEDS}"
+			if [ ! -e "${SRC}" ]; then
+#				echo resolve_library "${SRC}" "${FILE_ARCH}"
+				SRC=`resolve_library "${SRC}" "${FILE_ARCH}"`
+#				echo resolve_library returned \""${SRC}"\"
+				if [ -e "${SRC}" ]; then
+					echo "RESOLVED ${NEEDS} --- ${SRC}"
+				fi
+			fi
+
+			SRC=`resolve_symlink "${SRC}"`
+#			echo resolve_symlink returned \""${SRC}"\"
+
+			if [ ! -e "${SRC}" ]; then
+				echo "MISSING: ${NEEDS}"
+				exit 11
+			fi
+
+			echo ${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
+			${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
+
+			# copy resources bundled together with the framework:
+			SRC_BASE=`dirname "${SRC}"`
+			if [ -e "${SRC_BASE}/Resources" ]; then
+				DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
+				echo mkdir -p "${DST_BASE}/Resources";
+				mkdir -p "${DST_BASE}/Resources";
+				quiet_pushd "${DST_BASE}/Resources"
+					pwd
+					echo COPYING "${SRC_BASE}/Resources"
+					(cd "${SRC_BASE}/Resources"; tar c .) | tar xv
+				quiet_popd
+			fi
+
+			if [ -n "${HAS_VERSION}" ]; then
+				VERTMP=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
+				VERSION=`basename "${VERTMP}"`
+
+				VERTMP=`dirname "${VERTMP}"`
+				VERSIONS="${VERTMP}"
+
+				quiet_pushd "${VERSIONS}"
+					pwd
+					if [ ! -e Current ]; then
+						echo ln -s "${VERSION}" Current
+						ln -s "${VERSION}" Current
+					fi
+				quiet_popd
+
+				VERTMP=`dirname "${VERTMP}"`
+				VERSIONS="${VERTMP}"
+				quiet_pushd "${VERSIONS}"
+					pwd
+
+					if [ -e "Versions/${VERSION}/Resources" ]; then
+						echo ln -s "Versions/${VERSION}/Resources" .
+						ln -s "Versions/${VERSION}/Resources" .
+					fi
+
+					DSTTMP=`basename "${FN_DST}"`
+					echo ln -s "Versions/${VERSION}/${DSTTMP}" .
+					ln -s "Versions/${VERSION}/${DSTTMP}" .
+				quiet_popd
+			fi
+		fi
+
+		quiet_pushd "${BASEPATH}"
+			DeployFileOnce "${BASEPATH}" "${DST}/${FN_DST}" "${DONELIST}" "${SEARCH_PATH}"
+			if [ $? != 0 ]; then exit 11; fi
+		quiet_popd
+
+		echo "${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
+		"${INSTALL_NAME_TOOL}" -change "${i}" "${DST_NAME}" "${FILE}"
+		if [ $? != 0 ]; then
+			# install_name_tool failure may be fixed by using
+			# the -headerpad_max_install_names linker flag
+			exit 13;
 		fi
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
