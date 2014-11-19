@@ -4020,6 +4020,9 @@ namespace yae
   addMenuCopyTo(QMenu * dst, QMenu * src,
                 const ConnectionMap * connectionMap = NULL)
   {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
+    dst->addAction(src->menuAction());
+#else
     QList<QAction *> actions = src->actions();
     if (actions.empty() && !(connectionMap && connectionMap->has(src)))
     {
@@ -4054,6 +4057,7 @@ namespace yae
     }
 
     dst->addAction(subMenu->menuAction());
+#endif
   }
 
   //----------------------------------------------------------------
