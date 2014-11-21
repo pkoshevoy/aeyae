@@ -46,14 +46,14 @@ namespace yae
                const AudioTraits & source,
                AudioTraits & output) const;
 
-    bool open(unsigned int deviceIndex,
-              IReader * reader,
-              bool frameStepping);
+    bool open(unsigned int deviceIndex, IReader * reader);
     void close();
 
     void pause(bool pause);
 
+    void maybeReadOneFrame(IReader * reader);
     void skipToTime(const TTime & t, IReader * reader);
+    void skipForward(const TTime & dt, IReader * reader);
 
   private:
     static bool openStream(PaDeviceIndex outputDevice,
@@ -87,7 +87,6 @@ namespace yae
 
     // audio source:
     IReader * reader_;
-    bool frameStepping_;
 
     // output stream and its configuration:
     PaStream * output_;
@@ -118,7 +117,6 @@ namespace yae
     initErr_(Pa_Initialize()),
     defaultDevice_(0),
     reader_(NULL),
-    frameStepping_(false),
     output_(NULL),
     sampleSize_(0),
     audioFrameOffset_(0),
@@ -334,8 +332,7 @@ namespace yae
   //
   bool
   AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
-                                         IReader * reader,
-                                         bool frameStepping)
+                                         IReader * reader)
   {
     if (output_)
     {
@@ -345,7 +342,6 @@ namespace yae
       output_ = NULL;
     }
 
-    frameStepping_ = frameStepping;
     pause_ = true;
     reader_ = reader;
 
@@ -391,7 +387,7 @@ namespace yae
   {
     pause_ = false;
     terminator_.stopWaiting(true);
-    open(0, NULL, false);
+    open(0, NULL);
   }
 
   //----------------------------------------------------------------
@@ -401,6 +397,35 @@ namespace yae
   AudioRendererPortaudio::TPrivate::pause(bool paused)
   {
     pause_ = paused;
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::maybeReadOneFrame
+  //
+  void
+  AudioRendererPortaudio::TPrivate::maybeReadOneFrame(IReader * reader)
+  {
+    while (!audioFrame_)
+    {
+      YAE_ASSERT(!audioFrameOffset_);
+
+      // fetch the next audio frame from the reader:
+      if (!reader->readAudio(audioFrame_, &terminator_))
+      {
+        if (clock_.allowsSettingTime())
+        {
+          clock_.noteTheClockHasStopped();
+        }
+
+        break;
+      }
+
+      if (!audioFrame_)
+      {
+        // resetTimeCounters:
+        continue;
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -452,27 +477,8 @@ namespace yae
         }
       }
 
-      while (!audioFrame_)
-      {
-        YAE_ASSERT(!audioFrameOffset_);
+      maybeReadOneFrame(reader);
 
-        // fetch the next audio frame from the reader:
-        if (!reader->readAudio(audioFrame_, &terminator_))
-        {
-          if (clock_.allowsSettingTime())
-          {
-            clock_.noteTheClockHasStopped();
-          }
-
-          break;
-        }
-
-        if (!audioFrame_)
-        {
-          // resetTimeCounters:
-          continue;
-        }
-      }
     } while (audioFrame_);
 
     if (audioFrame_ && clock_.allowsSettingTime())
@@ -490,6 +496,23 @@ namespace yae
 #endif
       clock_.setCurrentTime(framePosition,
                             outputParams_.suggestedLatency);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::skipForward
+  //
+  void
+  AudioRendererPortaudio::TPrivate::skipForward(const TTime & dt,
+                                                IReader * reader)
+  {
+    maybeReadOneFrame(reader);
+
+    if (audioFrame_)
+    {
+      TTime t = audioFrame_->time_;
+      t += dt;
+      skipToTime(t, reader);
     }
   }
 
@@ -814,15 +837,7 @@ namespace yae
         const std::size_t numChunks = chunks.size();
         for (std::size_t i = 0; i < numChunks; i++)
         {
-          if (frameStepping_)
-          {
-            memset(dst[i], 0, chunkSize);
-          }
-          else
-          {
-            memcpy(dst[i], chunks[i], chunkSize);
-          }
-
+          memcpy(dst[i], chunks[i], chunkSize);
           dst[i] += chunkSize;
         }
 
@@ -850,15 +865,6 @@ namespace yae
 #endif
       clock_.setCurrentTime(framePosition,
                             outputParams_.suggestedLatency);
-    }
-
-    if (frameStepping_)
-    {
-      fillWithSilence(dst,
-                      dstPlanar,
-                      dstChunkSize,
-                      outputParams_.channelCount);
-      return paComplete;
     }
 
     return paContinue;
@@ -959,11 +965,9 @@ namespace yae
   // AudioRendererPortaudio::open
   //
   bool
-  AudioRendererPortaudio::open(unsigned int deviceIndex,
-                               IReader * reader,
-                               bool frameStepping)
+  AudioRendererPortaudio::open(unsigned int deviceIndex, IReader * reader)
   {
-    return private_->open(deviceIndex, reader, frameStepping);
+    return private_->open(deviceIndex, reader);
   }
 
   //----------------------------------------------------------------
@@ -991,5 +995,14 @@ namespace yae
   AudioRendererPortaudio::skipToTime(const TTime & t, IReader * reader)
   {
     private_->skipToTime(t, reader);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::skipForward
+  //
+  void
+  AudioRendererPortaudio::skipForward(const TTime & dt, IReader * reader)
+  {
+    private_->skipForward(dt, reader);
   }
 }

@@ -247,6 +247,7 @@ namespace yae
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
     void swapShortcuts();
+    void skipToNextFrame();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 

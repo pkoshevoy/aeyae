@@ -3235,8 +3235,7 @@ namespace yae
 
     if (playbackPaused_)
     {
-      TIgnoreClockStop ignoreClockStop(timelineControls_);
-      prepareReaderAndRenderers(reader_, kFrameStepping);
+      skipToNextFrame();
     }
 
     resumeRenderers();
@@ -3874,11 +3873,6 @@ namespace yae
   void
   MainWindow::keyPressEvent(QKeyEvent * event)
   {
-    std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
-    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
-    std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
-    std::size_t videoTrackIndex = reader_->getSelectedVideoTrackIndex();
-
     int key = event->key();
     if (key == Qt::Key_Escape)
     {
@@ -3892,16 +3886,9 @@ namespace yae
     {
       emit setOutPoint();
     }
-    else if (key == Qt::Key_N &&
-             playbackPaused_ &&
-             videoTrackIndex < numVideoTracks)
+    else if (key == Qt::Key_N)
     {
-      TIgnoreClockStop ignoreClockStop(timelineControls_);
-      TTime t = videoRenderer_->skipToNextFrame();
-      if (audioTrackIndex < numAudioTracks)
-      {
-        audioRenderer_->skipToTime(t, reader_);
-      }
+      skipToNextFrame();
     }
     else if (key == Qt::Key_MediaNext ||
              key == Qt::Key_Period ||
@@ -3927,6 +3914,54 @@ namespace yae
     else
     {
       QMainWindow::keyPressEvent(event);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToNextFrame
+  //
+  void
+  MainWindow::skipToNextFrame()
+  {
+    if (!playbackPaused_)
+    {
+      return;
+    }
+
+    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+    std::size_t videoTrackIndex = reader_->getSelectedVideoTrackIndex();
+
+    if (videoTrackIndex >= numVideoTracks)
+    {
+      return;
+    }
+
+    std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
+    std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
+    bool hasAudio = audioTrackIndex < numAudioTracks;
+
+    TIgnoreClockStop ignoreClockStop(timelineControls_);
+
+    bool done = false;
+    while (!done)
+    {
+      TTime t;
+      done = videoRenderer_->skipToNextFrame(t);
+
+      if (hasAudio && done)
+      {
+        // nudge the audio reader to the same position:
+        audioRenderer_->skipToTime(t, reader_);
+      }
+      else if (hasAudio)
+      {
+        // nudge the audio reader instead:
+        audioRenderer_->skipForward(TTime(1001, 24000), reader_);
+      }
+      else
+      {
+        break;
+      }
     }
   }
 
@@ -4368,17 +4403,13 @@ namespace yae
     if (!frameStepping)
     {
       unsigned int audioDeviceIndex = adjustAudioTraitsOverride(reader);
-      if (!audioRenderer_->open(audioDeviceIndex, reader, frameStepping))
+      if (!audioRenderer_->open(audioDeviceIndex, reader))
       {
         videoRenderer_->takeThisClock(sharedClock);
         videoRenderer_->obeyThisClock(videoRenderer_->clock());
       }
-    }
 
-    videoRenderer_->open(canvas_, reader, frameStepping);
-
-    if (!frameStepping)
-    {
+      videoRenderer_->open(canvas_, reader);
       timelineControls_->adjustTo(reader);
 
       // request playback at currently selected playback rate:

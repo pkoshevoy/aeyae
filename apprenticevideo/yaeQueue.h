@@ -136,6 +136,17 @@ namespace yae
       sortFunc_ = sortFunc;
     }
 
+    void setMaxSizeUnlimited()
+    {
+      // change max queue size:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        maxSize_ = std::numeric_limits<std::size_t>::max();
+      }
+
+      cond_.notify_all();
+    }
+
     void setMaxSize(std::size_t maxSize)
     {
       // change max queue size:
@@ -430,7 +441,7 @@ namespace yae
       return false;
     }
 
-    bool waitForConsumerToBlock(QueueWaitMgr * waitMgr = NULL)
+    bool waitIndefinitelyForConsumerToBlock(QueueWaitMgr * waitMgr = NULL)
     {
       QueueWaitTerminator terminator(waitMgr, &cond_);
 
@@ -442,6 +453,27 @@ namespace yae
       }
 
       return consumerIsBlocked_;
+    }
+
+    bool waitForConsumerToBlock(double secToWait)
+    {
+      boost::system_time whenToGiveUp(boost::get_system_time());
+      whenToGiveUp += boost::posix_time::microseconds(long(secToWait * 1e+6));
+
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      while (!closed_ && !(consumerIsBlocked_ && !size_))
+      {
+        if (!cond_.timed_wait(lock, whenToGiveUp))
+        {
+          boost::system_time now(boost::get_system_time());
+          if (whenToGiveUp <= now)
+          {
+            break;
+          }
+        }
+      }
+
+      return consumerIsBlocked_ || closed_;
     }
 
     void startNewSequence(const TData & sequenceEndData)

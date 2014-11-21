@@ -647,9 +647,9 @@ namespace yae
       codec_(NULL),
       render_(false),
       format_(kSubsNone),
-      index_(index),
-      queue_(kQueueSizeLarge)
+      index_(index)
     {
+      queue_.setMaxSizeUnlimited();
       open();
     }
 
@@ -2720,8 +2720,8 @@ namespace yae
   VideoTrack::resetTimeCounters(double seekTime)
   {
     packetQueue().clear();
-    frameQueue_.clear();
-    packetQueue().waitForConsumerToBlock();
+    do { frameQueue_.clear(); }
+    while (!packetQueue().waitForConsumerToBlock(1e-2));
     frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
@@ -3977,8 +3977,8 @@ namespace yae
   AudioTrack::resetTimeCounters(double seekTime)
   {
     packetQueue().clear();
-    frameQueue_.clear();
-    packetQueue().waitForConsumerToBlock();
+    do { frameQueue_.clear(); }
+    while (!packetQueue().waitForConsumerToBlock(1e-2));
     frameQueue_.clear();
 
     // push a NULL frame into frame queue to resetTimeCounter
@@ -4642,15 +4642,20 @@ namespace yae
           // for all queues to empty:
           if (audioTrack)
           {
-            audioTrack->packetQueue().waitForConsumerToBlock();
+            audioTrack->packetQueue().
+              waitIndefinitelyForConsumerToBlock();
+
             audioTrack->frameQueue_.
-              waitForConsumerToBlock(&framestepTerminator_);
+              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
           }
 
           if (videoTrack)
           {
-            videoTrack->packetQueue().waitForConsumerToBlock();
-            videoTrack->frameQueue_.waitForConsumerToBlock();
+            videoTrack->packetQueue().
+              waitIndefinitelyForConsumerToBlock();
+
+            videoTrack->frameQueue_.
+              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
           }
 
           // check whether user disabled playback while
@@ -4858,14 +4863,14 @@ namespace yae
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
       t->threadStart();
-      t->packetQueue().waitForConsumerToBlock();
+      t->packetQueue().waitIndefinitelyForConsumerToBlock();
     }
 
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
       t->threadStart();
-      t->packetQueue().waitForConsumerToBlock();
+      t->packetQueue().waitIndefinitelyForConsumerToBlock();
     }
 
     outputTerminator_.stopWaiting(false);
@@ -4943,8 +4948,8 @@ namespace yae
       {
         videoTrack = videoTracks_[selectedVideoTrack_];
         videoTrack->packetQueue().clear();
-        videoTrack->frameQueue_.clear();
-        videoTrack->packetQueue().waitForConsumerToBlock();
+        do { videoTrack->frameQueue_.clear(); }
+        while (!videoTrack->packetQueue().waitForConsumerToBlock(1e-2));
         videoTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
@@ -4959,8 +4964,8 @@ namespace yae
       {
         audioTrack = audioTracks_[selectedAudioTrack_];
         audioTrack->packetQueue().clear();
-        audioTrack->frameQueue_.clear();
-        audioTrack->packetQueue().waitForConsumerToBlock();
+        do { audioTrack->frameQueue_.clear(); }
+        while (!audioTrack->packetQueue().waitForConsumerToBlock(1e-2));
         audioTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
@@ -5094,14 +5099,20 @@ namespace yae
     // wait for the the frame queues to empty out:
     if (audioTrack)
     {
-      audioTrack->packetQueue().waitForConsumerToBlock();
-      audioTrack->frameQueue_.waitForConsumerToBlock(&framestepTerminator_);
+      audioTrack->packetQueue().
+        waitIndefinitelyForConsumerToBlock();
+
+      audioTrack->frameQueue_.
+        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
     }
 
     if (videoTrack)
     {
-      videoTrack->packetQueue().waitForConsumerToBlock();
-      videoTrack->frameQueue_.waitForConsumerToBlock();
+      videoTrack->packetQueue().
+        waitIndefinitelyForConsumerToBlock();
+
+      videoTrack->frameQueue_.
+        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
     }
 
     boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);

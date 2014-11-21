@@ -67,9 +67,7 @@ namespace yae
                        AudioTraits & output) const = 0;
 
     //! initialize a given audio rendering device:
-    virtual bool open(unsigned int deviceIndex,
-                      IReader * reader,
-                      bool frameStepping) = 0;
+    virtual bool open(unsigned int deviceIndex, IReader * reader) = 0;
 
     //! terminate audio rendering:
     virtual void close() = 0;
@@ -84,6 +82,7 @@ namespace yae
 
     //! this is used for single-frame stepping while playback is paused:
     virtual void skipToTime(const TTime & t, IReader * reader) = 0;
+    virtual void skipForward(const TTime & dt, IReader * reader) = 0;
   };
 }
 

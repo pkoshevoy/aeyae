@@ -26,13 +26,19 @@ namespace yae
   public:
     TPrivate(SharedClock & clock);
 
-    bool open(IVideoCanvas * canvas, IReader * reader, bool frameStepping);
+    bool open(IVideoCanvas * canvas, IReader * reader);
     void close();
     void pause(bool pause);
     bool isPaused() const;
-    void skipToNextFrame();
-    void skipToTime(const TTime & t, IReader * reader);
+    bool skipToNextFrame();
+
     void threadLoop();
+    bool readOneFrame(QueueWaitMgr & terminator,
+                      double & frameDuration,
+                      double & f0,
+                      double & df,
+                      double & tempo,
+                      double & drift);
 
     mutable boost::mutex mutex_;
     Thread<TPrivate> thread_;
@@ -44,7 +50,6 @@ namespace yae
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
-    bool frameStepping_;
     bool pause_;
     TTime framePosition_;
 
@@ -59,7 +64,6 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
-    frameStepping_(false),
     pause_(true)
   {
     thread_.setContext(this);
@@ -70,13 +74,11 @@ namespace yae
   //
   bool
   VideoRenderer::TPrivate::open(IVideoCanvas * canvas,
-                                IReader * reader,
-                                bool frameStepping)
+                                IReader * reader)
   {
     close();
 
     boost::lock_guard<boost::mutex> lock(mutex_);
-    frameStepping_ = frameStepping;
     canvas_ = canvas;
     reader_ = reader;
     pause_ = true;
@@ -124,75 +126,35 @@ namespace yae
   //----------------------------------------------------------------
   // VideoRenderer::TPrivate::skipToNextFrame
   //
-  void
+  bool
   VideoRenderer::TPrivate::skipToNextFrame()
   {
     if (canvas_ && reader_)
     {
-      // run the thread:
+      QueueWaitMgr terminator;
+      terminator.stopWaiting(true);
+
+      double frameDuration = 0.0;
+      double f0 = double(framePosition_.time_) / double(framePosition_.base_);
+      double df = frameDuration;
+      double tempo = 1.0;
+      double drift = 0.0;
+
+      while (true)
       {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-        frameStepping_ = true;
-        pause_ = false;
-      }
-
-      terminator_.stopWaiting(false);
-
-      if (!thread_.isRunning())
-      {
-        thread_.run();
-      }
-
-      thread_.wait();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // VideoRenderer::TPrivate::skipToTime
-  //
-  void
-  VideoRenderer::TPrivate::skipToTime(const TTime & t, IReader * reader)
-  {
-    TTime currentTime;
-
-    double clockPosition = currentTime.toSeconds();
-    double seekPosition = t.toSeconds();
-
-    TVideoFramePtr frame;
-    bool ok = true;
-    while (ok && reader && frameStepping_ && clockPosition < seekPosition)
-    {
-      ok = reader->readVideo(frame, &terminator_);
-      if (ok && frame)
-      {
-        double dt =
-          frame->traits_.frameRate_ ?
-          1.0 / frame->traits_.frameRate_ :
-          1.0 / 24.0;
-
-        clockPosition = frame->time_.toSeconds();
-        double frameEnd = clockPosition + dt;
-
-        if (seekPosition < frameEnd)
+        if (!readOneFrame(terminator, frameDuration, f0, df, tempo, drift))
         {
-          break;
+          return false;
+        }
+
+        if (frame_a_ && frame_b_)
+        {
+          return true;
         }
       }
     }
 
-    if (frame)
-    {
-      if (clock_.allowsSettingTime())
-      {
-        clock_.setCurrentTime(frame->time_);
-      }
-
-      // dispatch the frame to the canvas for rendering:
-      if (canvas_)
-      {
-        canvas_->render(frame);
-      }
-    }
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -203,9 +165,10 @@ namespace yae
   {
     TTime t0;
 
-    TVideoFramePtr frame_a;
-    TVideoFramePtr frame_b;
+    frame_a_ = TVideoFramePtr();
+    frame_b_ = TVideoFramePtr();
     framePosition_ = TTime();
+
     double frameDuration = 0.0;
     double tempo = 1.0;
     double drift = 0.0;
@@ -264,7 +227,7 @@ namespace yae
         lateFrames = 0.0;
       }
 
-      if (df > 1e-3 && !playbackLoopedAround && frame_b)
+      if (df > 1e-3 && !playbackLoopedAround && frame_b_)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDurationScaled);
@@ -321,109 +284,24 @@ namespace yae
       }
 
       // read a frame:
-      TVideoFramePtr frame;
-      while (ok)
-      {
-        ok = reader_->readVideo(frame, &terminator_);
-        if (ok)
-        {
-          if (!frame)
-          {
-#if 0
-            std::cerr << "\nRESET VIDEO TIME COUNTERS, playhead: "
-                      << playheadPosition
-                      << std::endl << std::endl;
-#endif
-            frame_a = frame_b;
-            frame_b.reset();
-            framePosition_ = frame_a ? frame_a->time_ : TTime();
-            break;
-          }
-
-          if (!frame_a)
-          {
-#if 0
-            std::cerr << "First FRAME @ " << frame->time_.toSeconds()
-                      << ", clock is running: " << clockIsRunning
-                      << ", playhead: " << playheadPosition
-                      << std::endl;
-#endif
-            frame_a = frame;
-            frame_b = frame;
-            framePosition_ = frame_a->time_;
-            break;
-          }
-
-          frame_a = frame_b;
-          frame_b = frame;
-          framePosition_ = frame_a->time_;
-
-          double t = framePosition_.toSeconds();
-          if (t > f0 || frameDuration == 0.0)
-          {
-#if 0
-            std::cerr << "Next FRAME @ " << t
-                      << ", clock is running: " << clockIsRunning
-                      << ", playhead: " << playheadPosition
-                      << std::endl;
-#endif
-            break;
-          }
-        }
-      }
-
+      ok = readOneFrame(terminator_,
+                        frameDuration,
+                        f0,
+                        df,
+                        tempo,
+                        drift);
       if (!ok)
       {
-#if 0
-        std::cerr
-          << "reader_->readVideo FAILED, aborting..."
-          << std::endl;
-#endif
-
-        if (clock_.allowsSettingTime())
-        {
-          clock_.noteTheClockHasStopped();
-        }
-
         break;
       }
 
-      if (frame_a)
+      if (frame_b_)
       {
-        tempo = frame_a->tempo_;
-
-        if (clock_.allowsSettingTime())
-        {
-          clock_.setCurrentTime(frame_a->time_, 0.0, true);
-          drift = df;
-        }
-
-        // dispatch the frame to the canvas for rendering:
-        if (canvas_)
-        {
-#if 0
-          std::cerr
-            << "RENDER VIDEO @ " << frame_a->time_.toSeconds()
-            << ", clock is running: " << clockIsRunning
-            << ", playhead: " << playheadPosition
-            << std::endl;
-#endif
-          canvas_->render(frame_a);
-        }
-      }
-
-      if (frame_b)
-      {
-        frameDuration = (frame_b->time_ - frame_a->time_).toSeconds();
-
-        if (frameStepping_)
-        {
-          break;
-        }
+        frameDuration = (frame_b_->time_ - frame_a_->time_).toSeconds();
       }
       else
       {
-        frame_a.reset();
+        frame_a_.reset();
 
         t0 = TTime();
         framePosition_ = TTime();
@@ -441,6 +319,106 @@ namespace yae
       }
     }
   }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::readOneFrame
+  //
+  bool
+  VideoRenderer::TPrivate::readOneFrame(QueueWaitMgr & terminator,
+                                        double & frameDuration,
+                                        double & f0,
+                                        double & df,
+                                        double & tempo,
+                                        double & drift)
+  {
+    TVideoFramePtr frame;
+    bool ok = true;
+    while (ok)
+    {
+      ok = reader_->readVideo(frame, &terminator);
+      if (!ok)
+      {
+        break;
+      }
+
+      if (!frame)
+      {
+#if 0
+        std::cerr << "\nRESET VIDEO TIME COUNTERS" << std::endl;
+#endif
+        frame_a_ = frame_b_;
+        frame_b_.reset();
+        framePosition_ = frame_a_ ? frame_a_->time_ : TTime();
+        break;
+      }
+
+      if (!frame_a_)
+      {
+#if 0
+        std::cerr << "First FRAME @ " << frame->time_.toSeconds()
+                  << std::endl;
+#endif
+        frame_a_ = frame;
+        frame_b_ = frame;
+        framePosition_ = frame_a_->time_;
+        break;
+      }
+
+      frame_a_ = frame_b_ ? frame_b_ : frame;
+      frame_b_ = frame;
+      framePosition_ = frame_a_->time_;
+
+      double t = framePosition_.toSeconds();
+      if (t > f0 || frameDuration == 0.0)
+      {
+#if 0
+        std::cerr << "Next FRAME @ " << t << std::endl;
+#endif
+        break;
+      }
+    }
+
+    if (!ok)
+    {
+#if 0
+      std::cerr
+        << "reader_->readVideo FAILED, aborting..."
+        << std::endl;
+#endif
+
+      if (clock_.allowsSettingTime())
+      {
+        clock_.noteTheClockHasStopped();
+      }
+
+      return false;
+    }
+
+    if (frame_a_)
+    {
+      tempo = frame_a_->tempo_;
+
+      if (clock_.allowsSettingTime())
+      {
+        clock_.setCurrentTime(frame_a_->time_, 0.0, true);
+        drift = df;
+      }
+
+      // dispatch the frame to the canvas for rendering:
+      if (canvas_)
+      {
+#if 0
+        std::cerr
+          << "RENDER VIDEO @ " << frame_a_->time_.toSeconds()
+          << std::endl;
+#endif
+        canvas_->render(frame_a_);
+      }
+    }
+
+    return true;
+  }
+
 
   //----------------------------------------------------------------
   // VideoRenderer::VideoRenderer
@@ -479,11 +457,9 @@ namespace yae
   // VideoRenderer::open
   //
   bool
-  VideoRenderer::open(IVideoCanvas * canvas,
-                      IReader * reader,
-                      bool frameStepping)
+  VideoRenderer::open(IVideoCanvas * canvas, IReader * reader)
   {
-    return private_->open(canvas, reader, frameStepping);
+    return private_->open(canvas, reader);
   }
 
   //----------------------------------------------------------------
@@ -498,20 +474,12 @@ namespace yae
   //----------------------------------------------------------------
   // VideoRenderer::skipToNextFrame
   //
-  const TTime &
-  VideoRenderer::skipToNextFrame()
+  bool
+  VideoRenderer::skipToNextFrame(TTime & framePosition)
   {
-    private_->skipToNextFrame();
-    return private_->framePosition_;
-  }
-
-  //----------------------------------------------------------------
-  // VideoRenderer::skipToTime
-  //
-  void
-  VideoRenderer::skipToTime(const TTime & t, IReader * reader)
-  {
-    private_->skipToTime(t, reader);
+    bool done = private_->skipToNextFrame();
+    framePosition = private_->framePosition_;
+    return done;
   }
 
   //----------------------------------------------------------------
