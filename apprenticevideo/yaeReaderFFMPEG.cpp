@@ -2557,8 +2557,11 @@ namespace yae
     }
 
     //! encoded frame size (including any padding):
-    t.encodedWidth_ = context->coded_width;
-    t.encodedHeight_ = context->coded_height;
+    t.encodedWidth_ =
+      context->coded_width ? context->coded_width : context->width;
+
+    t.encodedHeight_ =
+      context->coded_height ? context->coded_height : context->height;
 
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
