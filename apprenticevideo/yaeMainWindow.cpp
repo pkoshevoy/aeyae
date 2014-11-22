@@ -3942,8 +3942,6 @@ namespace yae
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
 
-    boost::system_time ta(boost::get_system_time());
-
     bool done = false;
     while (!done)
     {
