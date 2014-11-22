@@ -38,7 +38,12 @@ if (MSYS OR MINGW)
 endif (MSYS OR MINGW)
 
 if (WIN32)
-  add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
+  add_definitions(-D_USE_MATH_DEFINES)
+  add_definitions(-DNOMINMAX)
+
+  # for windows xp:
+  add_definitions(-D_WIN32_WINNT=0x0501)
+  add_definitions(-DWINVER=0x0501)
 endif (WIN32)
 
 add_definitions(-DYAE_STATIC)
