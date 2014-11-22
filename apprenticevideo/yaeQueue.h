@@ -96,6 +96,34 @@ namespace yae
     QueueWaitMgr * waitMgr_;
   };
 
+
+  //----------------------------------------------------------------
+  // TemporaryValueOverride
+  //
+  template <typename TValue>
+  struct TemporaryValueOverride
+  {
+    TemporaryValueOverride(TValue & value, const TValue & temporaryValue):
+      restore_(value),
+      value_(value)
+    {
+      value_ = temporaryValue;
+    }
+
+    ~TemporaryValueOverride()
+    {
+      value_ = restore_;
+    }
+
+  private:
+    TemporaryValueOverride(const TemporaryValueOverride &);
+    TemporaryValueOverride & operator = (const TemporaryValueOverride &);
+
+    const TValue restore_;
+    TValue & value_;
+  };
+
+
   //----------------------------------------------------------------
   // Queue
   //
@@ -110,6 +138,7 @@ namespace yae
 
     Queue(std::size_t maxSize = 1):
       closed_(true),
+      producerIsBlocked_(false),
       consumerIsBlocked_(false),
       size_(0),
       maxSize_(maxSize),
@@ -265,6 +294,7 @@ namespace yae
 #if 0 // ndef NDEBUG
             std::cerr << this << " push wait, size " << size_ << std::endl;
 #endif
+            TemporaryValueOverride<bool> temp(producerIsBlocked_, true);
             cond_.wait(lock);
           }
 
@@ -307,12 +337,11 @@ namespace yae
 #if 0 // ndef NDEBUG
             std::cerr << this << " pop wait, size " << size_ << std::endl;
 #endif
-            consumerIsBlocked_ = true;
+            TemporaryValueOverride<bool> temp(consumerIsBlocked_, true);
             cond_.notify_all();
             cond_.wait(lock);
           }
 
-          consumerIsBlocked_ = false;
           if (!size_)
           {
 #if 0 // ndef NDEBUG
@@ -476,6 +505,18 @@ namespace yae
       return consumerIsBlocked_ || closed_;
     }
 
+    bool producerIsBlocked() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return producerIsBlocked_;
+    }
+
+    bool consumerIsBlocked() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return consumerIsBlocked_;
+    }
+
     void startNewSequence(const TData & sequenceEndData)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -523,6 +564,7 @@ namespace yae
     }
 
     bool closed_;
+    bool producerIsBlocked_;
     bool consumerIsBlocked_;
     std::list<TSequence> sequences_;
     std::size_t size_;

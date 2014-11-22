@@ -93,6 +93,12 @@ namespace yae
     virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr) = 0;
     virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr) = 0;
 
+    //! when blocked on video -- read video to unblock and break the deadlock:
+    virtual bool blockedOnVideo() const = 0;
+
+    //! when blocked on audio -- read audio to unblock and break the deadlock:
+    virtual bool blockedOnAudio() const = 0;
+
     virtual bool threadStart() = 0;
     virtual bool threadStop() = 0;
 

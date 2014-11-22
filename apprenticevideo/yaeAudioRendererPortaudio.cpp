@@ -438,6 +438,11 @@ namespace yae
     terminator_.stopWaiting(true);
     TTime tEnd = t + TTime(1, 24);
 
+#if 0 // ndef NDEBUG
+      std::cerr << "TRY TO SKIP AUDIO TO @ " << t.toSeconds()
+                << std::endl;
+#endif
+
     do
     {
       if (audioFrame_)
@@ -457,7 +462,13 @@ namespace yae
         TTime frameDuration(numSamples * audioFrame_->tempo_, sampleRate);
         TTime frameEnd = audioFrame_->time_ + frameDuration;
 
-        if (audioFrame_->time_ <= t && t < frameEnd)
+        // check whether the frame is too far in the past:
+        bool frameTooOld = frameEnd <= t;
+
+        // check whether the frame is too far in the future:
+        bool frameTooNew = t < audioFrame_->time_;
+
+        if (!frameTooOld && !frameTooNew)
         {
           // calculate offset:
           audioFrameOffset_ =
@@ -465,14 +476,14 @@ namespace yae
             audioFrame_->tempo_;
           break;
         }
-        else if (audioFrame_->time_ < t || tEnd < audioFrame_->time_)
+
+        // skip the entire frame:
+        audioFrame_ = TAudioFramePtr();
+        audioFrameOffset_ = 0;
+
+        if (frameTooNew)
         {
-          // skip the entire frame:
-          audioFrame_ = TAudioFramePtr();
-          audioFrameOffset_ = 0;
-        }
-        else
-        {
+          // avoid skipping too far ahead:
           break;
         }
       }
@@ -481,7 +492,7 @@ namespace yae
 
     } while (audioFrame_);
 
-    if (audioFrame_ && clock_.allowsSettingTime())
+    if (audioFrame_)
     {
       unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
       TTime framePosition = audioFrame_->time_;
@@ -490,12 +501,17 @@ namespace yae
                           audioFrame_->tempo_ *
                           double(audioFrameOffset_)),
               sampleRate);
-#if 0
+
+#if 0 // ndef NDEBUG
       std::cerr << "SKIP AUDIO TO @ " << framePosition.toSeconds()
                 << std::endl;
 #endif
-      clock_.setCurrentTime(framePosition,
-                            outputParams_.suggestedLatency);
+
+      if (clock_.allowsSettingTime())
+      {
+        clock_.setCurrentTime(framePosition,
+                              outputParams_.suggestedLatency);
+      }
     }
   }
 
@@ -511,7 +527,12 @@ namespace yae
     if (audioFrame_)
     {
       TTime t = audioFrame_->time_;
+      t += TTime(std::size_t(0.5 +
+                             audioFrame_->tempo_ *
+                             double(audioFrameOffset_)),
+                 audioFrame_->traits_.sampleRate_);
       t += dt;
+
       skipToTime(t, reader);
     }
   }

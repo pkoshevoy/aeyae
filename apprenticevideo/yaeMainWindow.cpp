@@ -3942,26 +3942,36 @@ namespace yae
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
 
+    boost::system_time ta(boost::get_system_time());
+
     bool done = false;
     while (!done)
     {
+      if (hasAudio && reader_->blockedOnAudio())
+      {
+        // VFR source (a slide show) may require the audio output
+        // queues to be pulled in order to allow the demuxer
+        // to push new packets into audio/video queues:
+
+        TTime dt(1001, 60000);
+        audioRenderer_->skipForward(dt, reader_);
+      }
+
       TTime t;
       done = videoRenderer_->skipToNextFrame(t);
 
-      if (hasAudio && done)
+      if (!done)
       {
-        // nudge the audio reader to the same position:
-        audioRenderer_->skipToTime(t, reader_);
+        if (!hasAudio)
+        {
+          break;
+        }
+
+        continue;
       }
-      else if (hasAudio)
-      {
-        // nudge the audio reader instead:
-        audioRenderer_->skipForward(TTime(1001, 24000), reader_);
-      }
-      else
-      {
-        break;
-      }
+
+      // attempt to nudge the audio reader to the same position:
+      audioRenderer_->skipToTime(t, reader_);
     }
   }
 

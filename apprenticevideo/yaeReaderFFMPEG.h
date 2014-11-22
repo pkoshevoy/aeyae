@@ -89,6 +89,9 @@ namespace yae
     virtual bool readVideo(TVideoFramePtr & frame, QueueWaitMgr * mgr = 0);
     virtual bool readAudio(TAudioFramePtr & frame, QueueWaitMgr * mgr = 0);
 
+    virtual bool blockedOnVideo() const;
+    virtual bool blockedOnAudio() const;
+
     virtual bool threadStart();
     virtual bool threadStop();
 

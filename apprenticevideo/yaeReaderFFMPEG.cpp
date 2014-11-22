@@ -70,6 +70,9 @@ extern "C"
 //
 #define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
 
+//----------------------------------------------------------------
+// dump_averror
+//
 static std::ostream &
 dump_averror(std::ostream & os, int err)
 {
@@ -883,6 +886,9 @@ namespace yae
     void getDuration(TTime & start, TTime & duration) const;
 
     // accessor to the packet queue:
+    inline const TPacketQueue & packetQueue() const
+    { return packetQueue_; }
+
     inline TPacketQueue & packetQueue()
     { return packetQueue_; }
 
@@ -4107,6 +4113,9 @@ namespace yae
     void requestMutex(boost::unique_lock<boost::timed_mutex> & lk);
     static int demuxerInterruptCallback(void * context);
 
+    bool blockedOnVideo() const;
+    bool blockedOnAudio() const;
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -5461,6 +5470,82 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // blockedOn
+  //
+  static bool
+  blockedOn(const Track * a, const Track * b)
+  {
+    if (!a || !b)
+    {
+      return false;
+    }
+
+    bool blocked = (a->packetQueue().producerIsBlocked() &&
+                    b->packetQueue().consumerIsBlocked());
+    return blocked;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::blockedOnVideo
+  //
+  bool
+  Movie::blockedOnVideo() const
+  {
+    VideoTrackPtr videoTrack;
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      videoTrack = videoTracks_[selectedVideoTrack_];
+    }
+
+    AudioTrackPtr audioTrack;
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      audioTrack = audioTracks_[selectedAudioTrack_];
+    }
+
+    bool blocked = blockedOn(videoTrack.get(), audioTrack.get());
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    if (blocked)
+    {
+      std::cerr << "BLOCKED ON VIDEO" << std::endl;
+    }
+#endif
+
+    return blocked;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::blockedOnAudio
+  //
+  bool
+  Movie::blockedOnAudio() const
+  {
+    VideoTrackPtr videoTrack;
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      videoTrack = videoTracks_[selectedVideoTrack_];
+    }
+
+    AudioTrackPtr audioTrack;
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      audioTrack = audioTracks_[selectedAudioTrack_];
+    }
+
+    bool blocked = blockedOn(audioTrack.get(), videoTrack.get());
+
+#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
+    if (blocked)
+    {
+      std::cerr << "BLOCKED ON AUDIO" << std::endl;
+    }
+#endif
+
+    return blocked;
+  }
+
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -5851,6 +5936,24 @@ namespace yae
     }
 
     return ok;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::blockedOnVideo
+  //
+  bool
+  ReaderFFMPEG::blockedOnVideo() const
+  {
+    return private_->movie_.blockedOnVideo();
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::blockedOnAudio
+  //
+  bool
+  ReaderFFMPEG::blockedOnAudio() const
+  {
+    return private_->movie_.blockedOnAudio();
   }
 
   //----------------------------------------------------------------
