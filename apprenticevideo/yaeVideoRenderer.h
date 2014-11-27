@@ -47,7 +47,10 @@ namespace yae
     //! begin rendering video frames onto a given canvas:
     bool open(IVideoCanvas * canvas, IReader * reader);
 
-    //! terminate video rendering:
+    //! stop the renderer thread but keep current canvas and reader:
+    void stop();
+
+    //! stop the renderer thread and discard current canvas and reader:
     void close();
 
     //! try to skip to next frame

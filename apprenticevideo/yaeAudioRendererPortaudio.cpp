@@ -47,6 +47,7 @@ namespace yae
                AudioTraits & output) const;
 
     bool open(unsigned int deviceIndex, IReader * reader);
+    void stop();
     void close();
 
     void pause(bool pause);
@@ -334,25 +335,20 @@ namespace yae
   AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
                                          IReader * reader)
   {
-    if (output_)
-    {
-      terminator_.stopWaiting(true);
-      Pa_StopStream(output_);
-      Pa_CloseStream(output_);
-      output_ = NULL;
-    }
+    stop();
 
     pause_ = true;
     reader_ = reader;
+
+    // avoid stale leftovers:
+    audioFrame_ = TAudioFramePtr();
+    audioFrameOffset_ = 0;
+    sampleSize_ = 0;
 
     if (!reader_)
     {
       return true;
     }
-
-    // avoid stale leftovers:
-    audioFrame_ = TAudioFramePtr();
-    audioFrameOffset_ = 0;
 
     std::size_t selTrack = reader_->getSelectedAudioTrackIndex();
     std::size_t numTracks = reader_->getNumberOfAudioTracks();
@@ -380,13 +376,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AudioRendererPortaudio::TPrivate::stop
+  //
+  void
+  AudioRendererPortaudio::TPrivate::stop()
+  {
+    pause_ = false;
+    terminator_.stopWaiting(true);
+
+    if (output_)
+    {
+      Pa_StopStream(output_);
+      Pa_CloseStream(output_);
+      output_ = NULL;
+    }
+  }
+
+  //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::close
   //
   void
   AudioRendererPortaudio::TPrivate::close()
   {
-    pause_ = false;
-    terminator_.stopWaiting(true);
     open(0, NULL);
   }
 
@@ -989,6 +1000,15 @@ namespace yae
   AudioRendererPortaudio::open(unsigned int deviceIndex, IReader * reader)
   {
     return private_->open(deviceIndex, reader);
+  }
+
+  //----------------------------------------------------------------
+  // AudioRendererPortaudio::stop
+  //
+  void
+  AudioRendererPortaudio::stop()
+  {
+    private_->stop();
   }
 
   //----------------------------------------------------------------

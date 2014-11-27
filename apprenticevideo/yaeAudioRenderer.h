@@ -70,6 +70,9 @@ namespace yae
     virtual bool open(unsigned int deviceIndex, IReader * reader) = 0;
 
     //! terminate audio rendering:
+    virtual void stop() = 0;
+
+    //! terminate audio rendering, discard current reader:
     virtual void close() = 0;
 
     //! the initial state after open(...) must be paused;

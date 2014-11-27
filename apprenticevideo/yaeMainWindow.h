@@ -232,7 +232,7 @@ namespace yae
     void canvasSizeSet(double xexpand, double yexpand);
     void stopRenderers();
     void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
-    void resumeRenderers();
+    void resumeRenderers(bool loadNextFrameIfPaused = false);
     void renderOneFrame();
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);

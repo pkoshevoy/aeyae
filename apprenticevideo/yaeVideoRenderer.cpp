@@ -27,6 +27,7 @@ namespace yae
     TPrivate(SharedClock & clock);
 
     bool open(IVideoCanvas * canvas, IReader * reader);
+    void stop();
     void close();
     void pause(bool pause);
     bool isPaused() const;
@@ -76,27 +77,20 @@ namespace yae
   VideoRenderer::TPrivate::open(IVideoCanvas * canvas,
                                 IReader * reader)
   {
-    close();
+    stop();
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     canvas_ = canvas;
     reader_ = reader;
     pause_ = true;
-
-    if (!reader_)
-    {
-      return true;
-    }
-
-    terminator_.stopWaiting(false);
-    return thread_.run();
+    return true;
   }
 
   //----------------------------------------------------------------
-  // VideoRenderer::TPrivate::close
+  // VideoRenderer::TPrivate::stop
   //
   void
-  VideoRenderer::TPrivate::close()
+  VideoRenderer::TPrivate::stop()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     pause_ = false;
@@ -106,12 +100,32 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // VideoRenderer::TPrivate::close
+  //
+  void
+  VideoRenderer::TPrivate::close()
+  {
+    stop();
+    canvas_ = NULL;
+    reader_ = NULL;
+    frame_a_ = TVideoFramePtr();
+    frame_b_ = TVideoFramePtr();
+    framePosition_ = TTime();
+  }
+
+  //----------------------------------------------------------------
   // VideoRenderer::TPrivate::pause
   //
   void
-  VideoRenderer::TPrivate::pause(bool paused)
+  VideoRenderer::TPrivate::pause(bool pauseThread)
   {
-    pause_ = paused;
+    pause_ = pauseThread;
+
+    if (!pause_ && !thread_.isRunning())
+    {
+      terminator_.stopWaiting(false);
+      thread_.run();
+    }
   }
 
   //----------------------------------------------------------------
@@ -460,6 +474,15 @@ namespace yae
   VideoRenderer::open(IVideoCanvas * canvas, IReader * reader)
   {
     return private_->open(canvas, reader);
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::stop
+  //
+  void
+  VideoRenderer::stop()
+  {
+    private_->stop();
   }
 
   //----------------------------------------------------------------

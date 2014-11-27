@@ -1813,7 +1813,8 @@ namespace yae
     adjustMenus(reader);
 
     reader_->close();
-    stopRenderers();
+    videoRenderer_->close();
+    audioRenderer_->close();
 
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
@@ -1893,12 +1894,12 @@ namespace yae
     // and starts the decoding loops:
     reader->threadStart();
 
-    // allow renderers to read from output frame queues:
-    resumeRenderers();
-
     // replace the previous reader:
     reader_->destroy();
     reader_ = reader;
+
+    // allow renderers to read from output frame queues:
+    resumeRenderers(true);
 
     this->setWindowTitle(tr("Apprentice Video: %1").
                          arg(QFileInfo(path).fileName()));
@@ -2491,8 +2492,6 @@ namespace yae
       tc_(tc)
     {
       count_++;
-      YAE_ASSERT(count_ < 2);
-
       if (count_ < 2)
       {
         tc_->ignoreClockStoppedEvent(true);
@@ -2547,7 +2546,7 @@ namespace yae
     reader_->seek(t);
     reader_->threadStart();
 
-    resumeRenderers();
+    resumeRenderers(true);
   }
 
   //----------------------------------------------------------------
@@ -2845,11 +2844,12 @@ namespace yae
 #endif
 
     reader_->setPlaybackEnabled(playbackPaused_);
+    playbackPaused_ = !playbackPaused_;
 
-    if (playbackPaused_)
+    if (!playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
-      prepareReaderAndRenderers(reader_, kContinuousPlayback);
+      prepareReaderAndRenderers(reader_, playbackPaused_);
       resumeRenderers();
 
       bookmarkTimer_.start();
@@ -2858,14 +2858,12 @@ namespace yae
     {
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_);
-      prepareReaderAndRenderers(reader_, kFrameStepping);
+      prepareReaderAndRenderers(reader_, playbackPaused_);
       stopRenderers();
 
       bookmarkTimer_.stop();
       saveBookmark();
     }
-
-    playbackPaused_ = !playbackPaused_;
   }
 
   //----------------------------------------------------------------
@@ -2966,7 +2964,7 @@ namespace yae
     reader_->seek(t);
     reader_->threadStart();
 
-    resumeRenderers();
+    resumeRenderers(true);
   }
 
   //----------------------------------------------------------------
@@ -3233,12 +3231,7 @@ namespace yae
 
     reader_->seek(seconds);
 
-    if (playbackPaused_)
-    {
-      skipToNextFrame();
-    }
-
-    resumeRenderers();
+    resumeRenderers(true);
   }
 
   //----------------------------------------------------------------
@@ -4355,8 +4348,8 @@ namespace yae
   void
   MainWindow::stopRenderers()
   {
-    videoRenderer_->close();
-    audioRenderer_->close();
+    videoRenderer_->stop();
+    audioRenderer_->stop();
 
     videoRenderer_->pause();
     audioRenderer_->pause();
@@ -4416,8 +4409,12 @@ namespace yae
         videoRenderer_->takeThisClock(sharedClock);
         videoRenderer_->obeyThisClock(videoRenderer_->clock());
       }
+    }
 
-      videoRenderer_->open(canvas_, reader);
+    videoRenderer_->open(canvas_, reader);
+
+    if (!frameStepping)
+    {
       timelineControls_->adjustTo(reader);
 
       // request playback at currently selected playback rate:
@@ -4441,10 +4438,19 @@ namespace yae
   // MainWindow::resumeRenderers
   //
   void
-  MainWindow::resumeRenderers()
+  MainWindow::resumeRenderers(bool loadNextFrameIfPaused)
   {
-    audioRenderer_->resume();
-    videoRenderer_->resume();
+    if (!playbackPaused_)
+    {
+      // allow renderers to read from output frame queues:
+      audioRenderer_->resume();
+      videoRenderer_->resume();
+    }
+    else if (loadNextFrameIfPaused)
+    {
+      // render the next video frame:
+      skipToNextFrame();
+    }
   }
 
   //----------------------------------------------------------------
