@@ -121,7 +121,7 @@ namespace yae
   {
     pause_ = pauseThread;
 
-    if (!pause_ && !thread_.isRunning())
+    if (reader_ && canvas_ && !pause_ && !thread_.isRunning())
     {
       terminator_.stopWaiting(false);
       thread_.run();
