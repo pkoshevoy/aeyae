@@ -3327,6 +3327,9 @@ namespace yae
   void
   MainWindow::playbackFinished()
   {
+    // this is to make the UI more responsive when playing through a slideshow:
+    qApp->processEvents();
+
     // remove current bookmark:
     bookmarkTimer_.stop();
 
@@ -3934,9 +3937,10 @@ namespace yae
     bool hasAudio = audioTrackIndex < numAudioTracks;
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
+    const IReader * reader = reader_;
 
     bool done = false;
-    while (!done)
+    while (!done && reader && reader == reader_)
     {
       if (hasAudio && reader_->blockedOnAudio())
       {
@@ -3953,16 +3957,16 @@ namespace yae
 
       if (!done)
       {
-        if (!hasAudio)
-        {
-          break;
-        }
-
+        // avoid blocking the UI indefinitely:
+        qApp->processEvents();
         continue;
       }
 
-      // attempt to nudge the audio reader to the same position:
-      audioRenderer_->skipToTime(t, reader_);
+      if (hasAudio)
+      {
+        // attempt to nudge the audio reader to the same position:
+        audioRenderer_->skipToTime(t, reader_);
+      }
     }
   }
 
@@ -4120,8 +4124,7 @@ namespace yae
       contextMenu_->addAction(actionPrev);
       contextMenu_->addAction(actionNext);
       contextMenu_->addAction(actionShowPlaylist);
-      contextMenu_->addAction(actionShowPlaylist);
-      addMenuCopyTo(contextMenu_, menuBookmarks);
+      contextMenu_->addAction(actionRepeatPlaylist);
 
       if (playlistWidget_->underMouse() &&
           playlistWidget_->countItems())
@@ -4172,6 +4175,9 @@ namespace yae
           addMenuCopyTo(contextMenu_, menuChapters);
         }
       }
+
+      contextMenu_->addSeparator();
+      addMenuCopyTo(contextMenu_, menuBookmarks);
 
       contextMenu_->popup(globalPt);
     }
