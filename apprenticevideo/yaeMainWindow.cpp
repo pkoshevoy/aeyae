@@ -3998,133 +3998,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ConnectionMap
-  //
-  struct ConnectionMap
-  {
-    //----------------------------------------------------------------
-    // ConnectionTo
-    //
-    struct ConnectionTo
-    {
-      QObject * receiver_;
-      std::string method_;
-    };
-
-    //----------------------------------------------------------------
-    // add
-    //
-    void
-    add(QObject * sender, const char * signal,
-        QObject * receiver, const char * method)
-    {
-      ConnectionTo dst;
-      dst.receiver_ = receiver;
-      dst.method_ = method;
-
-      connections_[sender][std::string(signal)].push_back(dst);
-    }
-
-    //----------------------------------------------------------------
-    // has
-    //
-    bool
-    has(QObject * sender) const
-    {
-      std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >::
-        const_iterator found = connections_.find(sender);
-      return (found != connections_.end());
-    }
-
-    //----------------------------------------------------------------
-    // reconnect
-    //
-    bool
-    reconnect(QObject * obj, QObject * ref) const
-    {
-      std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >::
-        const_iterator found = connections_.find(ref);
-      if (found == connections_.end())
-      {
-        return true;
-      }
-
-      bool ok = true;
-      const std::map<std::string, std::list<ConnectionTo> > & signal_map =
-        found->second;
-
-      for (std::map<std::string, std::list<ConnectionTo> >::const_iterator
-             i = signal_map.begin(); i != signal_map.end(); ++i)
-      {
-        const std::string & signal_name = i->first;
-        const std::list<ConnectionTo> & receivers = i->second;
-
-        for (std::list<ConnectionTo>::const_iterator
-               j = receivers.begin(); j != receivers.end(); ++j)
-        {
-          const ConnectionTo & c = *j;
-
-          if (!obj->connect(obj, signal_name.c_str(),
-                            c.receiver_, c.method_.c_str()))
-          {
-            ok = false;
-            YAE_ASSERT(ok);
-          }
-        }
-      }
-
-      return ok;
-    }
-
-    std::map<QObject *, std::map<std::string, std::list<ConnectionTo> > >
-    connections_;
-  };
-
-  //----------------------------------------------------------------
   // addMenuCopyTo
   //
   static void
-  addMenuCopyTo(QMenu * dst, QMenu * src,
-                const ConnectionMap * connectionMap = NULL)
+  addMenuCopyTo(QMenu * dst, QMenu * src)
   {
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
     dst->addAction(src->menuAction());
-#else
-    QList<QAction *> actions = src->actions();
-    if (actions.empty() && !(connectionMap && connectionMap->has(src)))
-    {
-      return;
-    }
-
-    QMenu * subMenu = new QMenu(dst);
-    subMenu->setTitle(src->title());
-
-    for (QList<QAction *>::iterator i = actions.begin();
-         i != actions.end(); ++i)
-    {
-      QAction * action = *i;
-      if (action->menu())
-      {
-        addMenuCopyTo(subMenu, action->menu(), connectionMap);
-      }
-      else
-      {
-        subMenu->addAction(action);
-      }
-    }
-
-    if (actions.empty())
-    {
-      // copy signal/slot connections instead:
-      if (!connectionMap->reconnect(subMenu, src))
-      {
-        delete subMenu;
-        return;
-      }
-    }
-
-    dst->addAction(subMenu->menuAction());
-#endif
   }
 
   //----------------------------------------------------------------
@@ -4173,18 +4052,14 @@ namespace yae
       contextMenu_->addAction(actionFillScreen);
       addMenuCopyTo(contextMenu_, menuPlaybackSpeed);
 
+      contextMenu_->addSeparator();
+      addMenuCopyTo(contextMenu_, menuBookmarks);
+
       if (numVideoTracks || numAudioTracks)
       {
-        contextMenu_->addSeparator();
-
         if (numAudioTracks)
         {
-          ConnectionMap connectionMap;
-          connectionMap.add(menuAudioDevice, SIGNAL(aboutToShow()),
-                            this, SLOT(populateAudioDeviceMenu()));
-
-          populateAudioDeviceMenu();
-          addMenuCopyTo(contextMenu_, menuAudio, &connectionMap);
+          addMenuCopyTo(contextMenu_, menuAudio);
         }
 
         if (numVideoTracks)
@@ -4202,9 +4077,6 @@ namespace yae
           addMenuCopyTo(contextMenu_, menuChapters);
         }
       }
-
-      contextMenu_->addSeparator();
-      addMenuCopyTo(contextMenu_, menuBookmarks);
 
       contextMenu_->popup(globalPt);
     }
