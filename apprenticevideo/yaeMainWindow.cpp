@@ -3103,6 +3103,7 @@ namespace yae
     {
       canvas_->clear();
       canvas_->setGreeting(canvas_->greeting());
+      fixupNextPrev();
     }
     else
     {

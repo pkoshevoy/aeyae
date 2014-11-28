@@ -4616,10 +4616,10 @@ namespace yae
             // avoid constantly rewinding when playback is paused,
             // slow down a little:
             boost::this_thread::interruption_point();
-            boost::this_thread::sleep(boost::posix_time::milliseconds(42));
+            boost::this_thread::sleep(boost::posix_time::milliseconds(333));
           }
 #ifndef NDEBUG
-          // else
+          else
           {
             dump_averror(std::cerr, err);
           }
@@ -4852,12 +4852,28 @@ namespace yae
         }
       }
     }
-    catch (...)
+    catch (const std::exception & e)
     {
-#if 0
-      std::cerr << "\nMovie::threadLoop caught exception" << std::endl;
+#ifndef NDEBUG
+      std::cerr
+        << "\nMovie::threadLoop caught exception: " << e.what()
+        << std::endl;
 #endif
     }
+    catch (...)
+    {
+#ifndef NDEBUG
+      std::cerr
+        << "\nMovie::threadLoop caught unexpected exception"
+        << std::endl;
+#endif
+    }
+
+#ifndef NDEBUG
+    std::cerr
+      << "\nMovie::threadLoop terminated"
+      << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------

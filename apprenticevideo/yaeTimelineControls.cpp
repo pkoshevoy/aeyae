@@ -781,6 +781,11 @@ namespace yae
       const SharedClock & c = stoppedClock_.front();
       if (sharedClock_.sharesCurrentTimeWith(c))
       {
+#ifndef NDEBUG
+        std::cerr
+          << "NOTE: clock stopped"
+          << std::endl;
+#endif
         emit clockStopped(c);
       }
 #ifndef NDEBUG
