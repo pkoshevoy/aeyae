@@ -989,13 +989,14 @@ namespace yae
     delete openUrl_;
     openUrl_ = NULL;
 
+    reader_->close();
     audioRenderer_->close();
-    audioRenderer_->destroy();
-
     videoRenderer_->close();
-    videoRenderer_->destroy();
 
     reader_->destroy();
+    audioRenderer_->destroy();
+    videoRenderer_->destroy();
+
     canvas_->cropAutoDetectStop();
     delete canvas_;
   }
@@ -2080,6 +2081,8 @@ namespace yae
   MainWindow::fileExit()
   {
     reader_->close();
+    videoRenderer_->close();
+    audioRenderer_->close();
     MainWindow::close();
     qApp->quit();
   }
@@ -3103,6 +3106,7 @@ namespace yae
     {
       canvas_->clear();
       canvas_->setGreeting(canvas_->greeting());
+      actionPlay->setEnabled(false);
       fixupNextPrev();
     }
     else
@@ -3407,7 +3411,8 @@ namespace yae
     timelineControls_->resetFor(reader);
 
     reader_->close();
-    stopRenderers();
+    videoRenderer_->close();
+    audioRenderer_->close();
 
     reader_->destroy();
     reader_ = reader;
@@ -3473,9 +3478,16 @@ namespace yae
     std::size_t index = playlistWidget_->currentItem();
     std::size_t nNext = playlistWidget_->countItemsAhead();
     std::size_t nPrev = playlistWidget_->countItemsBehind();
-    std::size_t iNext = playlistWidget_->closestItem(index + 1);
-    std::size_t iPrev = playlistWidget_->closestItem(index - 1,
-                                                     PlaylistWidget::kBehind);
+
+    std::size_t iNext =
+      nNext ?
+      playlistWidget_->closestItem(index + 1) :
+      index;
+
+    std::size_t iPrev =
+      nPrev ?
+      playlistWidget_->closestItem(index - 1, PlaylistWidget::kBehind) :
+      index;
 
     PlaylistItem * prev =
       nPrev && iPrev < index ? playlistWidget_->lookup(iPrev) : NULL;
