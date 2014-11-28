@@ -4611,8 +4611,18 @@ namespace yae
 
         if (err)
         {
+          if (!playbackEnabled_ && err == AVERROR_EOF)
+          {
+            // avoid constantly rewinding when playback is paused,
+            // slow down a little:
+            boost::this_thread::interruption_point();
+            boost::this_thread::sleep(boost::posix_time::milliseconds(42));
+          }
 #ifndef NDEBUG
-          dump_averror(std::cerr, err);
+          // else
+          {
+            dump_averror(std::cerr, err);
+          }
 #endif
           av_free_packet(&ffmpeg);
 

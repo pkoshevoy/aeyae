@@ -23,6 +23,7 @@
 
 namespace yae
 {
+  struct YAE_API SharedClock;
 
   //----------------------------------------------------------------
   // IClockObserver
@@ -35,8 +36,9 @@ namespace yae
   struct IClockObserver
   {
     virtual ~IClockObserver() {}
-    virtual void noteCurrentTimeChanged(const TTime & t0) = 0;
-    virtual void noteTheClockHasStopped() = 0;
+    virtual void noteCurrentTimeChanged(const SharedClock & c,
+                                        const TTime & t0) = 0;
+    virtual void noteTheClockHasStopped(const SharedClock & c) = 0;
   };
 
   //----------------------------------------------------------------

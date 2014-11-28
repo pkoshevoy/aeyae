@@ -132,7 +132,7 @@ namespace yae
 
       if (timeSegment.observer_ && notifyObserver)
       {
-        timeSegment.observer_->noteCurrentTimeChanged(t0);
+        timeSegment.observer_->noteCurrentTimeChanged(*this, t0);
       }
 
       return true;
@@ -297,7 +297,7 @@ namespace yae
 
       if (timeSegment.observer_)
       {
-        timeSegment.observer_->noteTheClockHasStopped();
+        timeSegment.observer_->noteTheClockHasStopped(*this);
       }
 
       return true;

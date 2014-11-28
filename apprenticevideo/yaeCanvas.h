@@ -170,6 +170,10 @@ namespace yae
     void setGreeting(const QString & greeting);
     bool updateGreeting();
 
+    // accessor to the current greeting message:
+    inline const QString & greeting() const
+    { return greeting_; }
+
     // if enabled, skip using a fragment shader (even if one is available)
     // for non-native pixel formats:
     void skipColorConverter(bool enable);

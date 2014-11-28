@@ -91,6 +91,10 @@ namespace yae
     // itself as the observer of previous shared clock.
     void observe(const SharedClock & sharedClock);
 
+    // accessor to the current shared clock:
+    inline const SharedClock & sharedClock() const
+    { return sharedClock_; }
+
     void resetFor(IReader * reader);
     void adjustTo(IReader * reader);
 
@@ -104,8 +108,9 @@ namespace yae
     double currentTime() const;
 
     // virtual: thread safe, asynchronous, non-blocking:
-    void noteCurrentTimeChanged(const TTime & currentTime);
-    void noteTheClockHasStopped();
+    void noteCurrentTimeChanged(const SharedClock & c,
+                                const TTime & currentTime);
+    void noteTheClockHasStopped(const SharedClock & c);
 
     // helper used to block the "clock has stopped" events
     // to avoid aborting playback prematurely:
@@ -124,7 +129,7 @@ namespace yae
     void moveTimeOut(double t);
     void movePlayHead(double t);
     void userIsSeeking(bool seeking);
-    void clockStopped();
+    void clockStopped(const SharedClock & c);
 
   public slots:
     void setInPoint();
@@ -137,6 +142,7 @@ namespace yae
 
   protected slots:
     void repaintTimerExpired();
+    void slideshowTimerExpired();
 
   protected:
     // virtual:
@@ -164,7 +170,12 @@ namespace yae
     //
     struct ClockStoppedEvent : public QEvent
     {
-      ClockStoppedEvent(): QEvent(QEvent::User) {}
+      ClockStoppedEvent(const SharedClock & c):
+        QEvent(QEvent::User),
+        clock_(c)
+      {}
+
+      SharedClock clock_;
     };
 
     //----------------------------------------------------------------
@@ -234,9 +245,6 @@ namespace yae
     SharedClock sharedClock_;
     bool ignoreClockStopped_;
 
-    // current reader:
-    IReader * reader_;
-
     // a flag indicating whether source duration is known or not:
     bool unknownDuration_;
 
@@ -265,6 +273,12 @@ namespace yae
     // repaint buffering:
     QTimer repaintTimer_;
     QTime repaintTimerStartTime_;
+
+    // delay signaling stopped-clock when source duration is unknown
+    // or has just one frame (a single picture):
+    std::list<SharedClock> stoppedClock_;
+    QTimer slideshowTimer_;
+    QTime slideshowTimerStart_;
   };
 }
 

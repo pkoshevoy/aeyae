@@ -447,7 +447,6 @@ namespace yae
                                                IReader * reader)
   {
     terminator_.stopWaiting(true);
-    TTime tEnd = t + TTime(1, 24);
 
 #if 0 // ndef NDEBUG
       std::cerr << "TRY TO SKIP AUDIO TO @ " << t.toSeconds()

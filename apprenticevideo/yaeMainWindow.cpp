@@ -55,16 +55,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kContinuousPlayback
-  //
-  static const bool kContinuousPlayback = false;
-
-  //----------------------------------------------------------------
-  // kFrameStepping
-  //
-  static const bool kFrameStepping = true;
-
-  //----------------------------------------------------------------
   // kCreateBookmarksAutomatically
   //
   static const QString kCreateBookmarksAutomatically =
@@ -919,8 +909,8 @@ namespace yae
                  this, SLOT(movePlayHead(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(clockStopped()),
-                 this, SLOT(playbackFinished()));
+    ok = connect(timelineControls_, SIGNAL(clockStopped(const SharedClock &)),
+                 this, SLOT(playbackFinished(const SharedClock &)));
     YAE_ASSERT(ok);
 
     ok = connect(menuAudioDevice, SIGNAL(aboutToShow()),
@@ -1750,16 +1740,7 @@ namespace yae
     if (bookmark && bookmark->vtrack_ <= numVideoTracks)
     {
       vtrack = bookmark->vtrack_;
-      rememberSelectedVideoTrack = true;
-    }
-
-    selectVideoTrack(reader, vtrack);
-    videoTrackGroup_->actions().at((int)vtrack)->setChecked(true);
-
-    if (rememberSelectedVideoTrack)
-    {
-      reader->getSelectedVideoTrackInfo(selVideo_);
-      reader->getVideoTraits(selVideoTraits_);
+      rememberSelectedVideoTrack = numVideoTracks > 0;
     }
 
     bool rememberSelectedAudioTrack = false;
@@ -1770,7 +1751,32 @@ namespace yae
     if (bookmark && bookmark->atrack_ <= numAudioTracks)
     {
       atrack = bookmark->atrack_;
-      rememberSelectedAudioTrack = true;
+      rememberSelectedAudioTrack = numAudioTracks > 0;
+    }
+
+    if (vtrack >= numVideoTracks &&
+        atrack >= numAudioTracks)
+    {
+      // avoid disabling both audio and video due to
+      // previous custom or bookmarked track selections:
+
+      if (numVideoTracks)
+      {
+        vtrack = 0;
+      }
+      else if (numAudioTracks)
+      {
+        atrack = 0;
+      }
+    }
+
+    selectVideoTrack(reader, vtrack);
+    videoTrackGroup_->actions().at((int)vtrack)->setChecked(true);
+
+    if (rememberSelectedVideoTrack)
+    {
+      reader->getSelectedVideoTrackInfo(selVideo_);
+      reader->getVideoTraits(selVideoTraits_);
     }
 
     selectAudioTrack(reader, atrack);
@@ -3096,6 +3102,7 @@ namespace yae
     if (!item)
     {
       canvas_->clear();
+      canvas_->setGreeting(canvas_->greeting());
     }
     else
     {
@@ -3325,10 +3332,17 @@ namespace yae
   // MainWindow::playbackFinished
   //
   void
-  MainWindow::playbackFinished()
+  MainWindow::playbackFinished(const SharedClock & c)
   {
-    // this is to make the UI more responsive when playing through a slideshow:
-    qApp->processEvents();
+    if (!timelineControls_->sharedClock().sharesCurrentTimeWith(c))
+    {
+#ifndef NDEBUG
+      std::cerr
+        << "NOTE: ignoring stale playbackFinished"
+        << std::endl;
+#endif
+      return;
+    }
 
     // remove current bookmark:
     bookmarkTimer_.stop();
@@ -4466,7 +4480,6 @@ namespace yae
   MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
   {
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-
     reader->selectVideoTrack(videoTrackIndex);
 
     VideoTraits vtts;
@@ -5016,7 +5029,7 @@ namespace yae
         playlistWidget_->setFocus();
       }
     }
-    else if (numVideoTracks)
+    else if (numVideoTracks || !numAudioTracks)
     {
       if (!actionShowPlaylist->isEnabled())
       {

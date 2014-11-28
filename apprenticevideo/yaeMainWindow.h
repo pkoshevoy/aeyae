@@ -200,7 +200,7 @@ namespace yae
     void movePlayHead(double seconds);
     void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
-    void playbackFinished();
+    void playbackFinished(const SharedClock & c);
     void playbackStop();
     void playback(bool forward = true);
     void scrollWheelTimerExpired();

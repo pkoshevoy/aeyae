@@ -177,7 +177,6 @@ namespace yae
     QWidget(parent, f),
     activeMarker_(NULL),
     ignoreClockStopped_(false),
-    reader_(NULL),
     unknownDuration_(false),
     timelineStart_(0.0),
     timelineDuration_(0.0),
@@ -186,7 +185,8 @@ namespace yae
     auxPlayhead_(NULL),
     auxDuration_(NULL),
     auxFocusWidget_(NULL),
-    repaintTimer_(this)
+    repaintTimer_(this),
+    slideshowTimer_(this)
   {
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
 
@@ -233,6 +233,13 @@ namespace yae
 
     bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
                       this, SLOT(repaintTimerExpired()));
+    YAE_ASSERT(ok);
+
+    slideshowTimer_.setSingleShot(true);
+    slideshowTimer_.setInterval(1000);
+
+    ok = connect(&slideshowTimer_, SIGNAL(timeout()),
+                 this, SLOT(slideshowTimerExpired()));
     YAE_ASSERT(ok);
   }
 
@@ -365,8 +372,11 @@ namespace yae
   // TimelineControls::noteCurrentTimeChanged
   //
   void
-  TimelineControls::noteCurrentTimeChanged(const TTime & currentTime)
+  TimelineControls::noteCurrentTimeChanged(const SharedClock & c,
+                                           const TTime & currentTime)
   {
+    (void) c;
+
     bool postThePayload = payload_.set(currentTime);
     if (postThePayload)
     {
@@ -379,11 +389,11 @@ namespace yae
   // TimelineControls::noteTheClockHasStopped
   //
   void
-  TimelineControls::noteTheClockHasStopped()
+  TimelineControls::noteTheClockHasStopped(const SharedClock & c)
   {
     if (!ignoreClockStopped_)
     {
-      qApp->postEvent(this, new ClockStoppedEvent());
+      qApp->postEvent(this, new ClockStoppedEvent(c));
     }
   }
 
@@ -740,7 +750,7 @@ namespace yae
       // this shouldn't happen, but for some reason it does on the Mac,
       // sometimes the timer remains active but the timeout signal is
       // never delivered; this is a workaround:
-#if 0
+#ifndef NDEBUG
       std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
 #endif
       repaintTimer_.stop();
@@ -758,6 +768,32 @@ namespace yae
   {
     updateAuxPlayhead(timelinePosition_);
     update();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::slideshowTimerExpired
+  //
+  void
+  TimelineControls::slideshowTimerExpired()
+  {
+    while (!stoppedClock_.empty())
+    {
+      const SharedClock & c = stoppedClock_.front();
+      if (sharedClock_.sharesCurrentTimeWith(c))
+      {
+        emit clockStopped(c);
+      }
+#ifndef NDEBUG
+      else
+      {
+        std::cerr
+          << "NOTE: ignoring stale delayed stopped clock"
+          << std::endl;
+      }
+#endif
+
+      stoppedClock_.pop_front();
+    }
   }
 
   //----------------------------------------------------------------
@@ -788,7 +824,41 @@ namespace yae
         dynamic_cast<ClockStoppedEvent *>(e);
       if (clockStoppedEvent)
       {
-        emit clockStopped();
+        const SharedClock & c = clockStoppedEvent->clock_;
+        if (sharedClock_.sharesCurrentTimeWith(c))
+        {
+          stoppedClock_.push_back(c);
+
+          if (unknownDuration_ || timelineDuration_ * frameRate_ < 2.0)
+          {
+            // this is probably a slideshow, delay it:
+            if (!slideshowTimer_.isActive())
+            {
+              slideshowTimer_.start();
+              slideshowTimerStart_.start();
+            }
+            else if (slideshowTimerStart_.elapsed() >
+                     slideshowTimer_.interval() * 2)
+            {
+#ifndef NDEBUG
+              std::cerr << "STOPPED CLOCK TIMEOUT WAS LATE" << std::endl;
+#endif
+              slideshowTimerExpired();
+            }
+          }
+          else
+          {
+            slideshowTimerExpired();
+          }
+
+          return true;
+        }
+
+#ifndef NDEBUG
+        std::cerr
+          << "NOTE: ignoring stale ClockStoppedEvent"
+          << std::endl;
+#endif
         return true;
       }
     }
