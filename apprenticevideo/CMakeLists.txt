@@ -817,7 +817,7 @@ if (WIN32)
     file(TO_NATIVE_PATH "${VC_CRT_MSM}" NATIVE_VC_CRT_MSM)
   endif (MINGW OR MSYS)
 
-  add_custom_target("create installer"
+  add_custom_target("create_installer"
     ALL DEPENDS
     wixWrapper
     "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
