@@ -241,7 +241,8 @@ namespace yae
         lateFrames = 0.0;
       }
 
-      if (df > 1e-3 && !playbackLoopedAround && frame_b_ && f1 > f0)
+      if (df > 1e-3 && clockIsRunning && !playbackLoopedAround &&
+          frame_b_ && f1 > f0)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDurationScaled);

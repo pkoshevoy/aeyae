@@ -2867,8 +2867,8 @@ namespace yae
     {
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_);
-      prepareReaderAndRenderers(reader_, playbackPaused_);
       stopRenderers();
+      prepareReaderAndRenderers(reader_, playbackPaused_);
 
       bookmarkTimer_.stop();
       saveBookmark();
