@@ -221,12 +221,13 @@ namespace yae
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
 
-#if 0
+#ifndef NDEBUG
       std::cerr
-        << "f0: " << f0 << std::endl
-        << "f1: " << f1 << std::endl
+        << "t:  " << TTime(playheadPosition).to_hhmmss_usec(":") << std::endl
+        << "dt: " << frameDuration << std::endl
+        << "f0: " << TTime(f0).to_hhmmss_usec(":") << std::endl
+        << "f1: " << TTime(f1).to_hhmmss_usec(":") << std::endl
         << "df: " << df << std::endl
-        << "t:  "  << playheadPosition << std::endl
         << std::endl;
 #endif
 
@@ -241,8 +242,8 @@ namespace yae
         lateFrames = 0.0;
       }
 
-      if (df > 1e-3 && clockIsRunning && !playbackLoopedAround &&
-          frame_b_ && f1 > f0)
+      if (df > 1e-3 && !playbackLoopedAround &&
+          frame_b_ && frame_a_->time_ < frame_b_->time_)
       {
         // wait until the next frame is required:
         double secondsToSleep = std::min(df, frameDurationScaled);
@@ -329,6 +330,11 @@ namespace yae
 
         if (clock_.allowsSettingTime())
         {
+#ifndef NDEBUG
+      std::cerr
+        << "VIDEO (p) SET CLOCK: " << framePosition_.to_hhmmss_usec(":")
+        << std::endl;
+#endif
           clock_.setCurrentTime(framePosition_, 0.0, false);
         }
       }
@@ -358,7 +364,7 @@ namespace yae
 
       if (!frame)
       {
-#if 0
+#ifndef NDEBUG
         std::cerr << "\nRESET VIDEO TIME COUNTERS" << std::endl;
 #endif
         frame_a_ = frame_b_;
@@ -369,8 +375,8 @@ namespace yae
 
       if (!frame_a_)
       {
-#if 0
-        std::cerr << "First FRAME @ " << frame->time_.toSeconds()
+#ifndef NDEBUG
+        std::cerr << "First FRAME @ " << to_hhmmss_usec(frame)
                   << std::endl;
 #endif
         frame_a_ = frame;
@@ -386,8 +392,8 @@ namespace yae
       double t = framePosition_.toSeconds();
       if (t > f0 || frameDuration == 0.0)
       {
-#if 0
-        std::cerr << "Next FRAME @ " << t << std::endl;
+#ifndef NDEBUG
+        std::cerr << "Next FRAME @ " << to_hhmmss_usec(frame_a_) << std::endl;
 #endif
         break;
       }
@@ -395,7 +401,7 @@ namespace yae
 
     if (!ok)
     {
-#if 0
+#if 0 // ndef NDEBUG
       std::cerr
         << "reader_->readVideo FAILED, aborting..."
         << std::endl;
@@ -415,6 +421,11 @@ namespace yae
 
       if (clock_.allowsSettingTime())
       {
+#ifndef NDEBUG
+      std::cerr
+        << "VIDEO (a) SET CLOCK: " << to_hhmmss_usec(frame_a_)
+        << std::endl;
+#endif
         clock_.setCurrentTime(frame_a_->time_, 0.0, true);
         drift = df;
       }
@@ -422,9 +433,9 @@ namespace yae
       // dispatch the frame to the canvas for rendering:
       if (canvas_)
       {
-#if 0
+#ifndef NDEBUG
         std::cerr
-          << "RENDER VIDEO @ " << frame_a_->time_.toSeconds()
+          << "RENDER VIDEO @ " << to_hhmmss_usec(frame_a_)
           << std::endl;
 #endif
         canvas_->render(frame_a_);

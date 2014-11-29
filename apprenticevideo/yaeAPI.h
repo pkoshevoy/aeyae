@@ -115,6 +115,12 @@ namespace yae
     bool operator < (const TTime & t) const;
     bool operator <= (const TTime & t) const;
 
+    inline bool operator > (const TTime & t) const
+    { return t < *this; }
+
+    inline bool operator >= (const TTime & t) const
+    { return t <= *this; }
+
     int64 getTime(uint64 base) const;
 
     void to_hhmmss(std::string & ts,
@@ -625,6 +631,18 @@ namespace yae
   // TAudioFramePtr
   //
   typedef boost::shared_ptr<TAudioFrame> TAudioFramePtr;
+
+  //----------------------------------------------------------------
+  // to_hhmmss_usec
+  //
+  inline std::string to_hhmmss_usec(const TVideoFramePtr & vf)
+  { return vf->time_.to_hhmmss_usec(":"); }
+
+  //----------------------------------------------------------------
+  // to_hhmmss_usec
+  //
+  inline std::string to_hhmmss_usec(const TAudioFramePtr & af)
+  { return af->time_.to_hhmmss_usec(":"); }
 
   //----------------------------------------------------------------
   // TTrackInfo

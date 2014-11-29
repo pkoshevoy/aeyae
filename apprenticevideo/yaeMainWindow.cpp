@@ -3238,6 +3238,12 @@ namespace yae
   void
   MainWindow::movePlayHead(double seconds)
   {
+#ifndef NDEBUG
+      std::cerr
+        << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_usec(":")
+        << std::endl;
+#endif
+
     videoRenderer_->pause();
     audioRenderer_->pause();
 
@@ -3966,6 +3972,7 @@ namespace yae
     TIgnoreClockStop ignoreClockStop(timelineControls_);
     const IReader * reader = reader_;
 
+    QTime startTime = QTime::currentTime();
     bool done = false;
     while (!done && reader && reader == reader_)
     {
@@ -3984,8 +3991,12 @@ namespace yae
 
       if (!done)
       {
-        // avoid blocking the UI indefinitely:
-        qApp->processEvents();
+        if (startTime.elapsed() > 2000)
+        {
+          // avoid blocking the UI indefinitely:
+          break;
+        }
+
         continue;
       }
 

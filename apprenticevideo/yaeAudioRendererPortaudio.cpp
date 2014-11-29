@@ -519,6 +519,11 @@ namespace yae
 
       if (clock_.allowsSettingTime())
       {
+#ifndef NDEBUG
+      std::cerr
+        << "AUDIO (s) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
+        << std::endl;
+#endif
         clock_.setCurrentTime(framePosition,
                               outputParams_.suggestedLatency);
       }
@@ -891,8 +896,10 @@ namespace yae
 
     if (clock_.allowsSettingTime())
     {
-#if 0
-      std::cerr << "RENDER AUDIO @ " << framePosition.toSeconds() << std::endl;
+#ifndef NDEBUG
+      std::cerr
+        << "AUDIO (c) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
+        << std::endl;
 #endif
       clock_.setCurrentTime(framePosition,
                             outputParams_.suggestedLatency);
