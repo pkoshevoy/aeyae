@@ -130,6 +130,10 @@ namespace yae
     // so that renderers can disambiguate between frames produced
     // by different readers:
     virtual void setReaderId(unsigned int readerId);
+
+    // a reference to the clock that audio/video renderers use
+    // to synchronize their output:
+    virtual void setSharedClock(const SharedClock & clock);
   };
 
 }

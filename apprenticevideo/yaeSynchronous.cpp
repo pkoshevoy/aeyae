@@ -21,6 +21,12 @@
 // namespace access:
 using boost::posix_time::to_simple_string;
 
+//----------------------------------------------------------------
+// YAE_DEBUG_SHARED_CLOCK
+//
+#define YAE_DEBUG_SHARED_CLOCK 0
+
+
 namespace yae
 {
 
@@ -28,7 +34,8 @@ namespace yae
   // TimeSegment::TimeSegment
   //
   TimeSegment::TimeSegment():
-    waitForMe_(boost::get_system_time()),
+    realtime_(false),
+    waitForMe_(boost::system_time()),
     delayInSeconds_(0.0),
     stopped_(false),
     observer_(NULL)
@@ -110,31 +117,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::setCurrentTime
+  // SharedClock::setRealtime
   //
   bool
-  SharedClock::setCurrentTime(const TTime & t0,
-                              double latency,
-                              bool notifyObserver)
+  SharedClock::setRealtime(bool enabled)
   {
     TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
 
     if (!copied_)
     {
-      boost::system_time now(boost::get_system_time());
-      now += boost::posix_time::microseconds(long(latency * 1e+6));
-
-      TimeSegment & timeSegment = *keepAlive;
+#if YAE_DEBUG_SHARED_CLOCK
+      std::cerr
+        << "\nNOTE: master clock realtime enabled: " << enabled
+        << std::endl
+        << std::endl;
+#endif
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-
-      timeSegment.origin_ = now;
-      timeSegment.t0_ = t0;
-
-      if (timeSegment.observer_ && notifyObserver)
-      {
-        timeSegment.observer_->noteCurrentTimeChanged(*this, t0);
-      }
-
+      timeSegment.realtime_ = enabled;
       return true;
     }
 
@@ -142,10 +142,104 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SharedClock::resetCurrentTime
+  //
+  bool
+  SharedClock::resetCurrentTime()
+  {
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
+
+    if (!copied_)
+    {
+#if YAE_DEBUG_SHARED_CLOCK
+      std::cerr
+        << "\nNOTE: master clock reset\n"
+        << std::endl;
+#endif
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      timeSegment.origin_ = boost::get_system_time();
+      timeSegment.t0_ = TTime();
+      timeSegment.waitForMe_ = boost::system_time();
+      timeSegment.delayInSeconds_ = 0.0;
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::setCurrentTime
+  //
+  bool
+  SharedClock::setCurrentTime(const TTime & t,
+                              double latency,
+                              bool notifyObserver)
+  {
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
+
+    TTime t0;
+    double elapsedTime = 0.0;
+    bool masterClockIsAccurate = false;
+    bool hasTime = getCurrentTime(t0, elapsedTime, masterClockIsAccurate);
+
+    if (!copied_)
+    {
+      boost::system_time now(boost::get_system_time());
+      now += boost::posix_time::microseconds(long(latency * 1e+6));
+
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      if (timeSegment.realtime_)
+      {
+        TTime ct = t0 + elapsedTime;
+        double dt = (ct - t).toSeconds();
+        if (hasTime && dt > 0.5)
+        {
+#if YAE_DEBUG_SHARED_CLOCK
+          std::cerr
+            << "\nNOTE: badly muxed file?\n"
+            << "rollback denied: " << t.to_hhmmss_usec(":") << std::endl
+            << "current time at: " << ct.to_hhmmss_usec(":") << std::endl
+            << "dt: " << dt << std::endl
+            << std::endl;
+#endif
+          return false;
+        }
+      }
+
+      timeSegment.origin_ = now;
+      timeSegment.t0_ = t;
+
+      if (timeSegment.observer_ && notifyObserver)
+      {
+        timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+      }
+
+      return true;
+    }
+    else if (notifyObserver &&
+             timeSegment.observer_ &&
+             !masterClockIsAccurate)
+    {
+      timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // kRealtimeTolerance
+  //
+  static const double kRealtimeTolerance = 0.1;
+
+  //----------------------------------------------------------------
   // SharedClock::getCurrentTime
   //
   bool
-  SharedClock::getCurrentTime(TTime & t0, double & elapsedTime) const
+  SharedClock::getCurrentTime(TTime & t0,
+                              double & elapsedTime,
+                              bool & masterClockIsAccurate) const
   {
     TTimeSegmentPtr keepAlive(shared_);
     const TimeSegment & timeSegment = *keepAlive;
@@ -156,6 +250,7 @@ namespace yae
     if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
       elapsedTime = 0.0;
+      masterClockIsAccurate = true;
       return false;
     }
 
@@ -163,6 +258,9 @@ namespace yae
     boost::posix_time::time_duration delta = now - timeSegment.origin_;
 
     elapsedTime = double(delta.total_milliseconds()) * 1e-3;
+    masterClockIsAccurate =
+      timeSegment.realtime_ &&
+      elapsedTime <= kRealtimeTolerance;
 
     return true;
   }
@@ -178,8 +276,13 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
 
     boost::system_time now(boost::get_system_time());
-    boost::posix_time::time_duration delta = now - timeSegment.waitForMe_;
-    double timeSinceLastDelay = double(delta.total_milliseconds()) / 1000.0;
+    double timeSinceLastDelay = std::numeric_limits<double>::max();
+
+    if (!timeSegment.waitForMe_.is_not_a_date_time())
+    {
+      boost::posix_time::time_duration delta = now - timeSegment.waitForMe_;
+      timeSinceLastDelay = 1e-3 * double(delta.total_milliseconds());
+    }
 
     if (timeSinceLastDelay > timeSegment.delayInSeconds_)
     {
@@ -187,10 +290,11 @@ namespace yae
       timeSegment.delayInSeconds_ = delayInSeconds;
       waitingFor_ = timeSegment.waitForMe_;
 
-#if 0
-      std::cerr << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
-                << ", " << delayInSeconds
-                << std::endl;
+#if YAE_DEBUG_SHARED_CLOCK
+      std::cerr
+        << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
+        << ", " << TTime(delayInSeconds).to_hhmmss_usec(":")
+        << std::endl;
 #endif
     }
   }
@@ -201,9 +305,16 @@ namespace yae
   struct TStopTime
   {
     TStopTime(TimeSegment & timeSegment, bool stop):
+#if YAE_DEBUG_SHARED_CLOCK
+      startTime_(boost::get_system_time()),
+#endif
       timeSegment_(timeSegment),
       stopped_(false)
     {
+#if YAE_DEBUG_SHARED_CLOCK
+      std::cerr << "STOP TIME, begin" << std::endl;
+#endif
+
       if (stop)
       {
         boost::lock_guard<boost::mutex> lock(timeSegment_.mutex_);
@@ -224,9 +335,23 @@ namespace yae
         timeSegment_.stopped_ = false;
         timeSegment_.origin_ = boost::get_system_time();
       }
+
+#if YAE_DEBUG_SHARED_CLOCK
+      boost::system_time now(boost::get_system_time());
+      boost::posix_time::time_duration delta = now - startTime_;
+      double elapsedTime = double(delta.total_milliseconds()) * 1e-3;
+
+      std::cerr
+        << "STOP TIME, end: " << TTime(elapsedTime).to_hhmmss_usec(":")
+        << std::endl;
+#endif
     }
 
   private:
+#if YAE_DEBUG_SHARED_CLOCK
+    boost::system_time startTime_;
+#endif
+
     TimeSegment & timeSegment_;
     bool stopped_;
   };
@@ -240,35 +365,98 @@ namespace yae
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
 
-    boost::system_time waitFor;
-    double delayInSeconds = 0.0;
+    boost::posix_time::ptime
+      startTime(boost::posix_time::microsec_clock::universal_time());
+    long msecToWait = 0;
+
+    // check whether someone requested a slow-down:
     {
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-      waitFor = timeSegment.waitForMe_;
-      delayInSeconds = timeSegment.delayInSeconds_;
+      if (timeSegment.waitForMe_.is_not_a_date_time() ||
+          timeSegment.waitForMe_ <= waitingFor_ ||
+          timeSegment.delayInSeconds_ <= 0.0)
+      {
+        // nothing to do:
+        return;
+      }
+
+      waitingFor_ = timeSegment.waitForMe_;
+      msecToWait = long(0.5 + 1e+3 * timeSegment.delayInSeconds_);
     }
 
-    if (waitingFor_ < waitFor)
-    {
-      waitingFor_ = waitFor;
-
-#if 0
-      std::cerr << "waiting: " << to_simple_string(waitFor) << std::endl;
+#if YAE_DEBUG_SHARED_CLOCK
+    std::cerr
+      << "\nWAITING FOR: " << to_simple_string(waitingFor_)
+      << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+      << std::endl
+      << std::endl;
 #endif
 
-      TStopTime stopTime(timeSegment, allowsSettingTime());
-      boost::this_thread::sleep(boost::posix_time::milliseconds
-                                (long(0.5 + delayInSeconds * 1000.0)));
-    }
-#if 0
-    else
+    TStopTime stopTime(timeSegment, allowsSettingTime());
+    while (true)
     {
-      std::cerr << "waitFor: " << to_simple_string(waitingFor_)
-                << std::endl
-                << "waiting: " << to_simple_string(waitFor)
-                << std::endl;
-    }
+      boost::posix_time::ptime
+        now(boost::posix_time::microsec_clock::universal_time());
+      long msecElapsed = (now - startTime).total_milliseconds();
+
+      if (msecElapsed >= msecToWait)
+      {
+#if YAE_DEBUG_SHARED_CLOCK
+        std::cerr
+          << "\nWAIT FINISHED: " << to_simple_string(waitingFor_)
+          << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+          << std::endl
+          << std::endl;
 #endif
+        return;
+      }
+
+      long msecSleep = std::min<long>(msecToWait - msecElapsed, 20);
+      boost::this_thread::sleep(boost::posix_time::milliseconds(msecSleep));
+
+      // check whether the request has changed or was cancelled:
+      {
+        boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+        if (timeSegment.waitForMe_ != waitingFor_)
+        {
+          // nothing to do:
+#if YAE_DEBUG_SHARED_CLOCK
+          std::cerr
+            << "\nWAIT CANCELLED: " << to_simple_string(waitingFor_)
+            << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+            << std::endl
+            << std::endl;
+#endif
+          return;
+        }
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::cancelWaitForOthers
+  //
+  void
+  SharedClock::cancelWaitForOthers()
+  {
+    TTimeSegmentPtr keepAlive(shared_);
+    TimeSegment & timeSegment = *keepAlive;
+    {
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      if (!timeSegment.waitForMe_.is_not_a_date_time())
+      {
+#if YAE_DEBUG_SHARED_CLOCK
+        std::cerr
+          << "\nCANCEL WAIT REQUEST: "
+          << to_simple_string(timeSegment.waitForMe_)
+          << ", " << TTime(timeSegment.delayInSeconds_).to_hhmmss_usec(":")
+          << std::endl
+          << std::endl;
+#endif
+        timeSegment.waitForMe_ = boost::system_time();
+        timeSegment.delayInSeconds_ = 0.0;
+      }
+    }
   }
 
   //----------------------------------------------------------------

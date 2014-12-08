@@ -3239,9 +3239,9 @@ namespace yae
   MainWindow::movePlayHead(double seconds)
   {
 #ifndef NDEBUG
-      std::cerr
-        << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_usec(":")
-        << std::endl;
+    std::cerr
+      << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_usec(":")
+      << std::endl;
 #endif
 
     videoRenderer_->pause();
@@ -4288,6 +4288,7 @@ namespace yae
 
     SharedClock sharedClock;
     timelineControls_->observe(sharedClock);
+    reader->setSharedClock(sharedClock);
 
     if (audioTrack < numAudioTracks &&
         (videoTrack >= numVideoTracks || !frameStepping))

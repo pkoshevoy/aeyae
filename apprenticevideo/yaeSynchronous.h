@@ -48,6 +48,11 @@ namespace yae
   {
     TimeSegment();
 
+    // this indicates whether the clock is in the real-time mode,
+    // requires monotonically increasing current time
+    // and disallows rolling back time:
+    bool realtime_;
+
     // this keeps track of "when" the time segment was specified:
     boost::system_time origin_;
 
@@ -106,6 +111,16 @@ namespace yae
     //! only when this clock is the master clock:
     bool allowsSettingTime() const;
 
+    // realtime requires monotonically increasing
+    // current time and disallows rolling back time:
+    bool setRealtime(bool realtime);
+
+    // check whether the master clock has been updated recently:
+    bool isMasterClockBehindRealtime() const;
+
+    //! reset to initial state, do not notify the observer:
+    bool resetCurrentTime();
+
     //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0,
                         double latencyInSeconds = 0.0,
@@ -115,11 +130,18 @@ namespace yae
     //! returns false when clock is not set or is stopped while the clock
     //! owner is waiting for someone to catch up;
     //! returns true when clock is running:
-    bool getCurrentTime(TTime & t0, double & elapsedTime) const;
+    bool getCurrentTime(TTime & t0,
+                        double & elapsedTime,
+                        bool & withinRealtimeTolerance) const;
 
     //! announce that you are late so others would stop and wait for you:
     void waitForMe(double waitInSeconds = 1.0);
     void waitForOthers();
+
+    //! the reader may call this after seeking
+    //! to terminate waitForOthers early, to avoid
+    //! stuttering playback when seeking backwards:
+    void cancelWaitForOthers();
 
     void setObserver(IClockObserver * observer);
 

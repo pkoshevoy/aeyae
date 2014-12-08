@@ -22,6 +22,11 @@
 // yae includes:
 #include <yaeAudioRendererPortaudio.h>
 
+//----------------------------------------------------------------
+// YAE_DEBUG_AUDIO_RENDERER
+//
+#define YAE_DEBUG_AUDIO_RENDERER 0
+
 
 namespace yae
 {
@@ -52,7 +57,7 @@ namespace yae
 
     void pause(bool pause);
 
-    void maybeReadOneFrame(IReader * reader);
+    void maybeReadOneFrame(IReader * reader, TTime & framePosition);
     void skipToTime(const TTime & t, IReader * reader);
     void skipForward(const TTime & dt, IReader * reader);
 
@@ -249,7 +254,7 @@ namespace yae
                           PaStreamCallbackFlags statusFlags,
                           void * userData)
   {
-    return paAbort;
+    return paContinue;
   }
 
   //----------------------------------------------------------------
@@ -414,7 +419,8 @@ namespace yae
   // AudioRendererPortaudio::TPrivate::maybeReadOneFrame
   //
   void
-  AudioRendererPortaudio::TPrivate::maybeReadOneFrame(IReader * reader)
+  AudioRendererPortaudio::TPrivate::maybeReadOneFrame(IReader * reader,
+                                                      TTime & framePosition)
   {
     while (!audioFrame_)
     {
@@ -433,9 +439,27 @@ namespace yae
 
       if (!audioFrame_)
       {
-        // resetTimeCounters:
+#if YAE_DEBUG_AUDIO_RENDERER
+        std::cerr
+          << "\nRESET AUDIO TIME COUNTERS\n"
+          << std::endl;
+#endif
+        clock_.resetCurrentTime();
         continue;
       }
+    }
+
+    if (audioFrame_)
+    {
+      framePosition = audioFrame_->time_ +
+        TTime(std::size_t(double(audioFrameOffset_) *
+                          audioFrame_->tempo_ +
+                          0.5),
+              audioFrame_->traits_.sampleRate_);
+    }
+    else
+    {
+      framePosition = TTime();
     }
   }
 
@@ -448,11 +472,13 @@ namespace yae
   {
     terminator_.stopWaiting(true);
 
-#if 0 // ndef NDEBUG
-      std::cerr << "TRY TO SKIP AUDIO TO @ " << t.toSeconds()
-                << std::endl;
+#if YAE_DEBUG_AUDIO_RENDERER
+    std::cerr
+      << "TRY TO SKIP AUDIO TO @ " << t.to_hhmmss_usec(":")
+      << std::endl;
 #endif
 
+    TTime framePosition;
     do
     {
       if (audioFrame_)
@@ -498,31 +524,24 @@ namespace yae
         }
       }
 
-      maybeReadOneFrame(reader);
+      maybeReadOneFrame(reader, framePosition);
 
     } while (audioFrame_);
 
     if (audioFrame_)
     {
-      unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
-      TTime framePosition = audioFrame_->time_;
-      framePosition +=
-        TTime(std::size_t(0.5 +
-                          audioFrame_->tempo_ *
-                          double(audioFrameOffset_)),
-              sampleRate);
-
-#if 0 // ndef NDEBUG
-      std::cerr << "SKIP AUDIO TO @ " << framePosition.toSeconds()
-                << std::endl;
+#if YAE_DEBUG_AUDIO_RENDERER
+      std::cerr
+        << "SKIP AUDIO TO @ " << framePosition.to_hhmmss_usec(":")
+        << std::endl;
 #endif
 
       if (clock_.allowsSettingTime())
       {
-#ifndef NDEBUG
-      std::cerr
-        << "AUDIO (s) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
-        << std::endl;
+#if YAE_DEBUG_AUDIO_RENDERER
+        std::cerr
+          << "AUDIO (s) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
+          << std::endl;
 #endif
         clock_.setCurrentTime(framePosition,
                               outputParams_.suggestedLatency);
@@ -537,18 +556,12 @@ namespace yae
   AudioRendererPortaudio::TPrivate::skipForward(const TTime & dt,
                                                 IReader * reader)
   {
-    maybeReadOneFrame(reader);
-
+    TTime framePosition;
+    maybeReadOneFrame(reader, framePosition);
     if (audioFrame_)
     {
-      TTime t = audioFrame_->time_;
-      t += TTime(std::size_t(0.5 +
-                             audioFrame_->tempo_ *
-                             double(audioFrameOffset_)),
-                 audioFrame_->traits_.sampleRate_);
-      t += dt;
-
-      skipToTime(t, reader);
+      framePosition += dt;
+      skipToTime(framePosition, reader);
     }
   }
 
@@ -647,12 +660,35 @@ namespace yae
            PaStreamCallbackFlags statusFlags,
            void * userData)
   {
-    TPrivate * context = (TPrivate *)userData;
-    return context->serviceTheCallback(input,
-                                       output,
-                                       samplesToRead,
-                                       timeInfo,
-                                       statusFlags);
+    try
+    {
+      TPrivate * context = (TPrivate *)userData;
+      return context->serviceTheCallback(input,
+                                         output,
+                                         samplesToRead,
+                                         timeInfo,
+                                         statusFlags);
+    }
+    catch (const std::exception & e)
+    {
+#ifndef NDEBUG
+      std::cerr
+        << "AudioRendererPortaudio::TPrivate::callback: "
+        << "abort due to exception: " << e.what()
+        << std::endl;
+#endif
+    }
+    catch (...)
+    {
+#ifndef NDEBUG
+      std::cerr
+        << "AudioRendererPortaudio::TPrivate::callback: "
+        << "abort due to unexpected exception"
+        << std::endl;
+#endif
+    }
+
+    return paContinue;
   }
 
   //----------------------------------------------------------------
@@ -707,30 +743,15 @@ namespace yae
 
     std::size_t dstChunkSize = samplesToRead * dstStride;
 
-    while (!audioFrame_)
+    TTime framePosition;
+    maybeReadOneFrame(reader_, framePosition);
+    if (!audioFrame_)
     {
-      YAE_ASSERT(!audioFrameOffset_);
-
-      // fetch the next audio frame from the reader:
-      if (!reader_->readAudio(audioFrame_, &terminator_))
-      {
-        if (clock_.allowsSettingTime())
-        {
-          clock_.noteTheClockHasStopped();
-        }
-
-        fillWithSilence(dst,
-                        dstPlanar,
-                        dstChunkSize,
-                        outputParams_.channelCount);
-        return paComplete;
-      }
-
-      if (!audioFrame_)
-      {
-        // resetTimeCounters:
-        continue;
-      }
+      fillWithSilence(dst,
+                      dstPlanar,
+                      dstChunkSize,
+                      outputParams_.channelCount);
+      return paContinue;
     }
 
     unsigned int srcSampleSize =
@@ -746,10 +767,6 @@ namespace yae
 
     unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
     TTime frameDuration(samplesToRead, sampleRate);
-    TTime framePosition(audioFrame_->time_);
-    framePosition +=
-      TTime(std::size_t(0.5 + audioFrame_->tempo_ * double(audioFrameOffset_)),
-            sampleRate);
 
     bool detectedStaleFrame =
       (outputParams_.channelCount != srcChannels ||
@@ -761,62 +778,42 @@ namespace yae
 
     while (dstChunkSize)
     {
-      while (!audioFrame_)
+      maybeReadOneFrame(reader_, framePosition);
+      if (!audioFrame_)
       {
-        YAE_ASSERT(!audioFrameOffset_);
-
-        // fetch the next audio frame from the reader:
-        if (!reader_->readAudio(audioFrame_, &terminator_))
-        {
-          if (clock_.allowsSettingTime())
-          {
-            clock_.noteTheClockHasStopped();
-          }
-
-          fillWithSilence(dst,
-                          dstPlanar,
-                          dstChunkSize,
-                          outputParams_.channelCount);
-          return paComplete;
-        }
-
-        if (!audioFrame_)
-        {
-          // resetTimeCounters:
-#if 0
-          std::cerr << "\nRESET AUDIO TIME COUNTERS"
-                    << std::endl << std::endl;
-#endif
-          framePosition = TTime();
-          continue;
-        }
-
-        const AudioTraits & t = audioFrame_->traits_;
-
-        srcSampleSize = getBitsPerSample(t.sampleFormat_) / 8;
-        YAE_ASSERT(srcSampleSize > 0);
-
-        srcChannels = getNumberOfChannels(t.channelLayout_);
-        YAE_ASSERT(srcChannels > 0);
-
-        srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
-
-        detectedStaleFrame =
-          (outputParams_.channelCount != srcChannels ||
-           sampleSize_ != srcSampleSize ||
-           dstPlanar != srcPlanar);
-
-        srcStride = srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
+        fillWithSilence(dst,
+                        dstPlanar,
+                        dstChunkSize,
+                        outputParams_.channelCount);
+        return paContinue;
       }
+
+      const AudioTraits & t = audioFrame_->traits_;
+
+      srcSampleSize = getBitsPerSample(t.sampleFormat_) / 8;
+      YAE_ASSERT(srcSampleSize > 0);
+
+      srcChannels = getNumberOfChannels(t.channelLayout_);
+      YAE_ASSERT(srcChannels > 0);
+
+      srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
+
+      detectedStaleFrame =
+        (outputParams_.channelCount != srcChannels ||
+         sampleSize_ != srcSampleSize ||
+         dstPlanar != srcPlanar);
+
+      srcStride = srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
 
       clock_.waitForOthers();
 
       if (detectedStaleFrame)
       {
-#if 0
-        std::cerr << "expected " << outputParams_.channelCount
-                  << " channels, received " << srcChannels
-                  << std::endl;
+#ifndef NDEBUG
+        std::cerr
+          << "expected " << outputParams_.channelCount
+          << " channels, received " << srcChannels
+          << std::endl;
 #endif
 
         audioFrame_ = TAudioFramePtr();
@@ -896,7 +893,7 @@ namespace yae
 
     if (clock_.allowsSettingTime())
     {
-#ifndef NDEBUG
+#if YAE_DEBUG_AUDIO_RENDERER
       std::cerr
         << "AUDIO (c) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
         << std::endl;
