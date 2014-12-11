@@ -130,6 +130,30 @@ namespace yae
 #endif
   };
 
+
+  //----------------------------------------------------------------
+  // startNewSequence
+  //
+  // push a special frame into frame queue to resetTimeCounters
+  // down the line (the renderer):
+  //
+  template <typename FramePtr>
+  static void
+  startNewSequence(Queue<FramePtr> & frameQueue, bool dropPendingFrames)
+  {
+    typedef typename FramePtr::element_type Frame;
+    FramePtr framePtr(new Frame());
+    Frame & frame = *framePtr;
+    frame.rendererHints_ = kRendererHintResetTimeCounters;
+    if (dropPendingFrames)
+    {
+      frame.rendererHints_ |= kRendererHintDropPendingFrames;
+    }
+
+    frameQueue.startNewSequence(framePtr);
+  }
+
+
   //----------------------------------------------------------------
   // Packet
   //
@@ -1489,7 +1513,7 @@ namespace yae
 
     // reset time counters, setup to output frames
     // starting from a given time point:
-    int resetTimeCounters(double seekTime);
+    int resetTimeCounters(double seekTime, bool dropPendingFrames);
 
     // adjust frame duration:
     bool setDeinterlacing(bool enabled);
@@ -2672,7 +2696,7 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame, terminator);
-      if (!ok || !frame)
+      if (!ok || !frame || resetTimeCountersIndicated(frame.get()))
       {
         break;
       }
@@ -2730,17 +2754,20 @@ namespace yae
   // VideoTrack::resetTimeCounters
   //
   int
-  VideoTrack::resetTimeCounters(double seekTime)
+  VideoTrack::resetTimeCounters(double seekTime, bool dropPendingFrames)
   {
     packetQueue().clear();
 
-    // NOTE: this drops any pending frames preventing their playback;
-    // This is desirable when the user is seeking, but it prevents
-    // proper in-out point playback because some frames will be dropped
-    // when the video is rewound to the in-point:
-    do { frameQueue_.clear(); }
-    while (!packetQueue().waitForConsumerToBlock(1e-2));
-    frameQueue_.clear();
+    if (dropPendingFrames)
+    {
+      // NOTE: this drops any pending frames preventing their playback;
+      // This is desirable when the user is seeking, but it prevents
+      // proper in-out point playback because some frames will be dropped
+      // when the video is rewound to the in-point:
+      do { frameQueue_.clear(); }
+      while (!packetQueue().waitForConsumerToBlock(1e-2));
+      frameQueue_.clear();
+    }
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
     std::cerr
@@ -2748,9 +2775,9 @@ namespace yae
       << std::endl;
 #endif
 
-    // push a NULL frame into frame queue to resetTimeCounter
-    // down the line:
-    frameQueue_.startNewSequence(TVideoFramePtr());
+    // push a special frame into frame queue to resetTimeCounters
+    // down the line (the renderer):
+    startNewSequence(frameQueue_, dropPendingFrames);
 
     int err = 0;
     if (stream_ && stream_->codec)
@@ -3190,7 +3217,7 @@ namespace yae
 
     // reset time counters, setup to output frames
     // starting from a given time point:
-    int resetTimeCounters(double seekTime);
+    int resetTimeCounters(double seekTime, bool dropPendingFrames);
 
     // adjust frame duration:
     bool setTempo(double tempo);
@@ -3938,7 +3965,7 @@ namespace yae
     while (ok)
     {
       ok = frameQueue_.pop(frame, terminator);
-      if (!ok || !frame)
+      if (!ok || !frame || resetTimeCountersIndicated(frame.get()))
       {
         break;
       }
@@ -4007,17 +4034,20 @@ namespace yae
   // AudioTrack::resetTimeCounters
   //
   int
-  AudioTrack::resetTimeCounters(double seekTime)
+  AudioTrack::resetTimeCounters(double seekTime, bool dropPendingFrames)
   {
     packetQueue().clear();
 
-    // NOTE: this drops any pending frames preventing their playback;
-    // This is desirable when the user is seeking, but it prevents
-    // proper in-out point playback because some frames will be dropped
-    // when the video is rewound to the in-point:
-    do { frameQueue_.clear(); }
-    while (!packetQueue().waitForConsumerToBlock(1e-2));
-    frameQueue_.clear();
+    if (dropPendingFrames)
+    {
+      // NOTE: this drops any pending frames preventing their playback;
+      // This is desirable when the user is seeking, but it prevents
+      // proper in-out point playback because some frames will be dropped
+      // when the video is rewound to the in-point:
+      do { frameQueue_.clear(); }
+      while (!packetQueue().waitForConsumerToBlock(1e-2));
+      frameQueue_.clear();
+    }
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
     std::cerr
@@ -4025,9 +4055,9 @@ namespace yae
       << std::endl;
 #endif
 
-    // push a NULL frame into frame queue to resetTimeCounter
-    // down the line:
-    frameQueue_.startNewSequence(TAudioFramePtr());
+    // push a special frame into frame queue to resetTimeCounters
+    // down the line (the renderer):
+    startNewSequence(frameQueue_, dropPendingFrames);
 
     int err = 0;
     if (stream_ && stream_->codec)
@@ -4116,7 +4146,7 @@ namespace yae
     bool requestSeekTime(double seekTime);
 
   protected:
-    int seekTo(double seekTime);
+    int seekTo(double seekTime, bool dropPendingFrames);
 
   public:
     int rewind(const AudioTrackPtr & audioTrack,
@@ -4633,7 +4663,8 @@ namespace yae
 
           if (mustSeek_)
           {
-            err = seekTo(seekTime_);
+            bool dropPendingFrames = true;
+            err = seekTo(seekTime_, dropPendingFrames);
             mustSeek_ = false;
           }
 
@@ -5064,7 +5095,7 @@ namespace yae
   // Movie::seekTo
   //
   int
-  Movie::seekTo(double seekTime)
+  Movie::seekTo(double seekTime, bool dropPendingFrames)
   {
     if (!context_)
     {
@@ -5147,12 +5178,12 @@ namespace yae
 
     if (videoTrack)
     {
-      err = videoTrack->resetTimeCounters(seekTime);
+      err = videoTrack->resetTimeCounters(seekTime, dropPendingFrames);
     }
 
     if (!err && audioTrack)
     {
-      err = audioTrack->resetTimeCounters(seekTime);
+      err = audioTrack->resetTimeCounters(seekTime, dropPendingFrames);
     }
 
     clock_.cancelWaitForOthers();
@@ -5205,7 +5236,8 @@ namespace yae
     }
 
     double seekTime = seekToTimeIn ? timeIn_ : 0.0;
-    return seekTo(seekTime);
+    bool dropPendingFrames = false;
+    return seekTo(seekTime, dropPendingFrames);
   }
 
   //----------------------------------------------------------------
@@ -5290,19 +5322,21 @@ namespace yae
       playbackEnabled_ = enabled;
       clock_.setRealtime(playbackEnabled_);
       framestepTerminator_.stopWaiting(!playbackEnabled_);
-#if 0
-      if (selectedVideoTrack_ < videoTracks_.size())
-      {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
-      }
 
-      if (selectedAudioTrack_ < audioTracks_.size())
+      if (playbackEnabled_ && looping_)
       {
-        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        if (selectedVideoTrack_ < videoTracks_.size())
+        {
+          VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+          videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        }
+
+        if (selectedAudioTrack_ < audioTracks_.size())
+        {
+          AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+          audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        }
       }
-#endif
     }
     catch (...)
     {}

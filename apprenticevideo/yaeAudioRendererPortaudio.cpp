@@ -437,7 +437,7 @@ namespace yae
         break;
       }
 
-      if (!audioFrame_)
+      if (resetTimeCountersIndicated(audioFrame_.get()))
       {
 #if YAE_DEBUG_AUDIO_RENDERER
         std::cerr
@@ -445,6 +445,7 @@ namespace yae
           << std::endl;
 #endif
         clock_.resetCurrentTime();
+        audioFrame_.reset();
         continue;
       }
     }

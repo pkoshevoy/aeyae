@@ -159,14 +159,14 @@ namespace yae
       double tempo = 1.0;
       double drift = 0.0;
 
-      while (true)
+      for (unsigned int i = 0; i < 2; i++)
       {
         if (!readOneFrame(terminator, frameDuration, f0, df, tempo, drift))
         {
           return false;
         }
 
-        if (frame_a_ && frame_b_)
+        if (frame_a_ && frame_a_ != frame_b_)
         {
           return true;
         }
@@ -381,13 +381,25 @@ namespace yae
         break;
       }
 
-      if (!frame)
+      if (resetTimeCountersIndicated(frame.get()))
       {
 #if YAE_DEBUG_VIDEO_RENDERER
         std::cerr << "\nRESET VIDEO TIME COUNTERS" << std::endl;
 #endif
-        // frame_a_ = frame_b_;
-        frame_a_.reset();
+
+        if (dropPendingFramesIndicated(frame.get()))
+        {
+          // this happens afer a seek prompted by the user,
+          // pending frame is unneeded and can be discarded:
+          frame_a_.reset();
+        }
+        else
+        {
+          // this happens when playback or framestepping loops around,
+          // pending frame still has to be rendered:
+          frame_a_ = frame_b_;
+        }
+
         frame_b_.reset();
         framePosition_ = frame_a_ ? frame_a_->time_ : TTime();
         clock_.resetCurrentTime();
