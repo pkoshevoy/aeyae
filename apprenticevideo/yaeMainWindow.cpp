@@ -4828,8 +4828,6 @@ namespace yae
     }
 
     bool isSeekable = reader->isSeekable();
-    shortcutLoop_->setEnabled(isSeekable);
-    actionLoop->setEnabled(isSeekable);
     actionSetInPoint->setEnabled(isSeekable);
     actionSetOutPoint->setEnabled(isSeekable);
     lineEditPlayhead_->setReadOnly(!isSeekable);
