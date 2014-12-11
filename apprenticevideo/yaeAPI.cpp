@@ -754,7 +754,11 @@ namespace yae
                  sideData_  == s.sideData_ &&
                  tEnd_      == s.tEnd_ &&
                  private_   == s.private_ &&
-                 TBase::operator == (s));
+                 time_      == s.time_ &&
+                 tempo_     == s.tempo_ &&
+                 traits_    == s.traits_ &&
+                 data_      == s.data_);
+
     return same;
   }
 

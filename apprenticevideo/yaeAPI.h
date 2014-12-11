@@ -508,23 +508,28 @@ namespace yae
   typedef boost::shared_ptr<TPlanarBuffer> TPlanarBufferPtr;
 
   //----------------------------------------------------------------
-  // TFrame
+  // TRendererHints
   //
-  template <typename traits_t>
-  struct YAE_API TFrame
+  enum TRendererHints
   {
-    typedef traits_t TTraits;
-    typedef TFrame<traits_t> TSelf;
+    kRendererHintNone = 0,
+    kRendererHintResetTimeCounters = 1,
+    kRendererHintDropPendingFrames = 1 << 1
+  };
 
-    TFrame(): readerId_((unsigned int)~0), tempo_(1.0) {}
+  //----------------------------------------------------------------
+  // TFrameBase
+  //
+  struct YAE_API TFrameBase
+  {
+    TFrameBase(unsigned int rendererHints = 0):
+      rendererHints_(rendererHints),
+      readerId_((unsigned int)~0),
+      tempo_(1.0)
+    {}
 
-    bool operator == (const TSelf & s) const
-    {
-      return (time_   == s.time_ &&
-              tempo_  == s.tempo_ &&
-              traits_ == s.traits_ &&
-              data_   == s.data_);
-    }
+    //! renderer hints bitmask:
+    unsigned int rendererHints_;
 
     //! reader ID tag:
     unsigned int readerId_;
@@ -535,12 +540,38 @@ namespace yae
     //! frame duration tempo scaling:
     double tempo_;
 
-    //! frame traits:
-    TTraits traits_;
-
     //! frame buffer:
     TIPlanarBufferPtr data_;
   };
+
+  //----------------------------------------------------------------
+  // TFrame
+  //
+  template <typename Traits>
+  struct YAE_API TFrame : public TFrameBase
+  {
+    typedef Traits TTraits;
+    typedef TFrame<Traits> TSelf;
+
+    //! frame traits:
+    TTraits traits_;
+  };
+
+  //----------------------------------------------------------------
+  // resetTimeCountersIndicated
+  //
+  inline bool resetTimeCountersIndicated(const TFrameBase * frame)
+  {
+    return frame && !!(frame->rendererHints_ & kRendererHintResetTimeCounters);
+  }
+
+  //----------------------------------------------------------------
+  // dropPendingFramesIndicated
+  //
+  inline bool dropPendingFramesIndicated(const TFrameBase * frame)
+  {
+    return frame && !!(frame->rendererHints_ & kRendererHintDropPendingFrames);
+  }
 
   //----------------------------------------------------------------
   // TSubsFrame
