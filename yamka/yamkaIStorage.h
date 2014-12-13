@@ -36,6 +36,85 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
+  // Seek
+  //
+  // A helper class used to seek (temporarily) to a given offset:
+  //
+  template <typename TFile>
+  struct Seek
+  {
+    // save current seek position:
+    Seek(TFile & file):
+      file_(file),
+      prev_(file.absolutePosition()),
+      restoreOnExit_(true)
+    {}
+
+    // save current seek position,
+    // then seek to a given offset,
+    // throw exception if seek fails:
+    Seek(TFile & file, TFileOffset absolutePosition):
+      file_(file),
+      prev_(file.absolutePosition()),
+      restoreOnExit_(true)
+    {
+      seekTo(absolutePosition);
+    }
+
+    // if required, then restore saved seek position:
+    ~Seek()
+    {
+      if (restoreOnExit_)
+      {
+        restorePosition();
+      }
+    }
+
+    // call this to disable restoring the previous file position:
+    void doNotRestore()
+    { restoreOnExit_ = false; }
+
+    // call this to enable restoring the previous file position:
+    void doRestore()
+    { restoreOnExit_ = true; }
+
+    // call this to immediately restore the previous file position:
+    void restorePosition()
+    { seekTo(prev_); }
+
+    // accessor to the absolute position of the file
+    // at the moment a Seek instance was created:
+    TFileOffset absolutePosition() const
+    { return prev_; }
+
+    // synonyms:
+    inline void enable()
+    { doRestore(); }
+
+    inline void disable()
+    { doNotRestore(); }
+
+  private:
+    Seek(const Seek &);
+    Seek & operator = (const Seek &);
+
+    // helper
+    void seekTo(TFileOffset absolutePosition)
+    {
+      file_.seekTo(absolutePosition);
+      if (file_.absolutePosition() != absolutePosition)
+      {
+        std::runtime_error e(std::string("failed to seek"));
+        throw e;
+      }
+    }
+
+    TFile & file_;
+    TFileOffset prev_;
+    bool restoreOnExit_;
+  };
+
+  //----------------------------------------------------------------
   // IStorage
   //
   // NOTE: storage is assumed to be not thread safe, multiple threads
@@ -45,6 +124,11 @@ namespace Yamka
   struct IStorage
   {
     virtual ~IStorage() {}
+
+    //----------------------------------------------------------------
+    // TSeek
+    //
+    typedef Seek<IStorage> TSeek;
 
     // forward declaration:
     struct IReceipt;
@@ -96,46 +180,6 @@ namespace Yamka
                                  std::size_t maxChunkSize = 4096) const;
     };
 
-    //----------------------------------------------------------------
-    // Seek
-    //
-    struct Seek
-    {
-      // save current seek position:
-      Seek(IStorage & storage);
-
-      // if required, then restore saved seek position:
-      ~Seek();
-
-      // call this to disable restoring the previous file position:
-      void doNotRestore();
-
-      // call this to enable restoring the previous file position:
-      void doRestore();
-
-      // call this to immediately restore the previous file position:
-      void restorePosition();
-
-      // accessor to the absolute storage position
-      // at the moment a Seek instance was created:
-      uint64 absolutePosition() const;
-
-      // synonyms:
-      inline void enable()
-      { doRestore(); }
-
-      inline void disable()
-      { doNotRestore(); }
-
-    private:
-      Seek(const Seek &);
-      Seek & operator = (const Seek &);
-
-      IStorage & storage_;
-      uint64 savedPosition_;
-      bool restoreOnExit_;
-    };
-
     // If a storage implementation does not actually load/save
     // any data it should override this to return true.
     // A NULL storage implementation is useful for file layout optimization.
@@ -168,6 +212,9 @@ namespace Yamka
     // NOTE: this is the same as skip(numBytes) above, except this function
     // returns a storage receipt for the storage location that was skipped:
     IReceiptPtr skipWithReceipt(uint64 numBytes);
+
+    inline TFileOffset absolutePosition() const
+    { return receipt()->position(); }
   };
 
   //----------------------------------------------------------------
@@ -274,7 +321,7 @@ namespace Yamka
   };
 
   //----------------------------------------------------------------
-  // MemoryStorage
+  // HodgePodgeStorage
   //
   // Non-contiguous storage of binary data in memory
   //
@@ -283,12 +330,12 @@ namespace Yamka
   //
   // Stored data may be accessed again only via storage receipt.
   //
-  struct MemoryStorage : public IStorage
+  struct HodgePodgeStorage : public IStorage
   {
     typedef std::vector<unsigned char> TStorage;
     typedef TSharedPtr<TStorage> TStoragePtr;
 
-    static MemoryStorage Instance;
+    static HodgePodgeStorage Instance;
 
     // virtual:
     IReceiptPtr receipt() const;

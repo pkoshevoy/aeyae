@@ -216,7 +216,7 @@ namespace Yamka
 
     uint64 eltId = 0;
     {
-      IStorage::Seek autoRestorePosition(storage);
+      IStorage::TSeek autoRestorePosition(storage);
       eltId = loadEbmlId(storage);
     }
 

@@ -38,7 +38,6 @@ add_library(yamka STATIC
   yamka.h
   yamkaBytes.h
   yamkaCache.h
-  yamkaConstMemoryStorage.h
   yamkaCrc32.h
   yamkaEBML.h
   yamkaElt.h
@@ -47,13 +46,13 @@ add_library(yamka STATIC
   yamkaHodgePodge.h
   yamkaIStorage.h
   yamkaMatroska.h
+  yamkaMemoryStorage.h
   yamkaMixedElements.h
   yamkaPayload.h
   yamkaSharedPtr.h
   yamkaStdInt.h
   yamkaBytes.cpp
   yamkaCache.cpp
-  yamkaConstMemoryStorage.cpp
   yamkaCrc32.cpp
   yamkaEBML.cpp
   yamkaElt.cpp
@@ -62,6 +61,7 @@ add_library(yamka STATIC
   yamkaHodgePodge.cpp
   yamkaIStorage.cpp
   yamkaMatroska.cpp
+  yamkaMemoryStorage.cpp
   yamkaMixedElements.cpp
   yamkaPayload.cpp
   yamkaStdInt.cpp

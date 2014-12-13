@@ -61,6 +61,11 @@ namespace Yamka
     ~File();
 
     //----------------------------------------------------------------
+    // TSeek
+    //
+    typedef Seek<File> TSeek;
+
+    //----------------------------------------------------------------
     // AccessMode
     //
     enum AccessMode
@@ -101,59 +106,12 @@ namespace Yamka
     bool seek(TFileOffset offset,
               TPositionReference relativeTo = kAbsolutePosition);
 
+    // helper:
+    inline bool seekTo(TFileOffset absolutePosition)
+    { return seek(absolutePosition, kAbsolutePosition); }
+
     // return current absolute file position:
     TFileOffset absolutePosition() const;
-
-    //----------------------------------------------------------------
-    // Seek
-    //
-    // A helper class used to seek (temporarily) to a given offset:
-    //
-    struct Seek
-    {
-      // save current seek position:
-      Seek(File & file);
-
-      // save current seek position,
-      // then seek to a given offset,
-      // throw exception if seek fails:
-      Seek(File & file, TFileOffset offset,
-           TPositionReference relativeTo = kAbsolutePosition);
-
-      // if required, then restore saved seek position:
-      ~Seek();
-
-      // call this to disable restoring the previous file position:
-      void doNotRestore();
-
-      // call this to enable restoring the previous file position:
-      void doRestore();
-
-      // call this to immediately restore the previous file position:
-      void restorePosition();
-
-      // accessor to the absolute position of the file
-      // at the moment a Seek instance was created:
-      TFileOffset absolutePosition() const;
-
-      // synonyms:
-      inline void enable()
-      { doRestore(); }
-
-      inline void disable()
-      { doNotRestore(); }
-
-    private:
-      Seek(const Seek &);
-      Seek & operator = (const Seek &);
-
-      // helper
-      void seek(TFileOffset offset, TPositionReference relativeTo);
-
-      File & file_;
-      TFileOffset prev_;
-      bool restoreOnExit_;
-    };
 
     // helper to get current file size:
     TFileOffset size();

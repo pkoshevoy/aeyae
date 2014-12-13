@@ -399,7 +399,7 @@ namespace Yamka
     IStorage::IReceiptPtr storageReceipt = storage.receipt();
 
     // save current seek position, so it can be restored if necessary:
-    IStorage::Seek storageStart(storage);
+    IStorage::TSeek storageStart(storage);
 
     uint64 eltId = loadEbmlId(storage);
     if (eltId != getId())
@@ -411,7 +411,7 @@ namespace Yamka
 #if 0 // !defined(NDEBUG) && (defined(DEBUG) || defined(_DEBUG))
     Indent::More indentMore(Indent::depth_);
     {
-      IStorage::Seek restore(storage);
+      IStorage::TSeek restore(storage);
       uint64 vsizeSize = 0;
       uint64 vsize = vsizeDecode(storage, vsizeSize);
       std::cout << indent()
@@ -610,7 +610,7 @@ namespace Yamka
     }
 
     // save current seek position, so it can be restored if necessary:
-    IStorage::Seek storageStart(storage);
+    IStorage::TSeek storageStart(storage);
     IStorage::IReceiptPtr receiptCrc32 = storage.receipt();
 
     uint64 eltId = loadEbmlId(storage);

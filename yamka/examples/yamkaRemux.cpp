@@ -2844,7 +2844,7 @@ main(int argc, char ** argv)
                  std::string(" for writing")).c_str());
   }
 
-  MemoryStorage tmp;
+  HodgePodgeStorage tmp;
   MatroskaDoc out;
 
   // set the DocType to 4, due to CueRelativePosition:
@@ -2961,7 +2961,7 @@ main(int argc, char ** argv)
       TSeekHead & seekHead = segmentElt.payload_.seekHeads_.front();
       IStorage::IReceiptPtr receipt = seekHead.storageReceipt();
 
-      File::Seek autoRestorePosition(dst.file_);
+      File::TSeek autoRestorePosition(dst.file_);
       dst.seekTo(receipt->position());
 
       seekHead.save(dst);

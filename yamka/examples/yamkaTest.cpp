@@ -14,7 +14,7 @@
 #include <yamkaEBML.h>
 #include <yamkaMatroska.h>
 #include <yamkaHodgePodge.h>
-#include <yamkaConstMemoryStorage.h>
+#include <yamkaMemoryStorage.h>
 
 // system includes:
 #include <iostream>
@@ -226,7 +226,7 @@ main(int argc, char ** argv)
 
     IStorage::IReceiptPtr rd2f = doc.save(d2f);
 
-    IStorage::IReceiptPtr rmem = doc.save(MemoryStorage::Instance);
+    IStorage::IReceiptPtr rmem = doc.save(HodgePodgeStorage::Instance);
     IStorage::IReceiptPtr rm2f = rmem->saveTo(m2f);
 
     assert(rd2f->numBytes() == rm2f->numBytes());
@@ -234,7 +234,7 @@ main(int argc, char ** argv)
     std::vector<unsigned char> mem((std::size_t)(rmem->numBytes()));
     rmem->load(&mem[0]);
 
-    ConstMemoryStorage ro(&mem[0], mem.size());
+    TConstMemoryStorage ro(&mem[0], mem.size());
     EbmlDoc doc2;
     Yamka::uint64 bytesConsumed = doc2.load(ro, mem.size());
     assert(bytesConsumed == doc.calcSize());

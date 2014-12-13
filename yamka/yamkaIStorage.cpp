@@ -93,63 +93,6 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
-  // IStorage::Seek::Seek
-  //
-  IStorage::Seek::Seek(IStorage & storage):
-    storage_(storage),
-    savedPosition_(storage.receipt()->position()),
-    restoreOnExit_(true)
-  {}
-
-  //----------------------------------------------------------------
-  // IStorage::Seek::~Seek
-  //
-  IStorage::Seek::~Seek()
-  {
-    if (restoreOnExit_)
-    {
-      restorePosition();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // IStorage::Seek::doNotRestore
-  //
-  void
-  IStorage::Seek::doNotRestore()
-  {
-    restoreOnExit_ = false;
-  }
-
-  //----------------------------------------------------------------
-  // IStorage::Seek::doRestore
-  //
-  void
-  IStorage::Seek::doRestore()
-  {
-    restoreOnExit_ = true;
-  }
-
-  //----------------------------------------------------------------
-  // IStorage::Seek::restorePosition
-  //
-  void
-  IStorage::Seek::restorePosition()
-  {
-    storage_.seekTo(savedPosition_);
-  }
-
-  //----------------------------------------------------------------
-  // IStorage::Seek::absolutePosition
-  //
-  uint64
-  IStorage::Seek::absolutePosition() const
-  {
-    return savedPosition_;
-  }
-
-
-  //----------------------------------------------------------------
   // NullStorage::NullStorage
   //
   NullStorage::NullStorage(uint64 currentPosition):
@@ -471,7 +414,7 @@ namespace Yamka
     // virtual:
     bool save(const unsigned char * data, std::size_t size)
     {
-      MemoryStorage memoryStorage;
+      HodgePodgeStorage memoryStorage;
       hodgePodge_.set(data, size, memoryStorage);
       return true;
     }
@@ -514,38 +457,38 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
-  // MemoryStorage::Instance
+  // HodgePodgeStorage::Instance
   //
-  MemoryStorage
-  MemoryStorage::Instance;
+  HodgePodgeStorage
+  HodgePodgeStorage::Instance;
 
   //----------------------------------------------------------------
-  // MemoryStorage::receipt
+  // HodgePodgeStorage::receipt
   //
   IStorage::IReceiptPtr
-  MemoryStorage::receipt() const
+  HodgePodgeStorage::receipt() const
   {
     IStorage::IReceiptPtr receipt(new HodgePodgeStorageReceipt());
     return receipt;
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::save
+  // HodgePodgeStorage::save
   //
   IStorage::IReceiptPtr
-  MemoryStorage::save(const unsigned char * data, std::size_t size)
+  HodgePodgeStorage::save(const unsigned char * data, std::size_t z)
   {
-    TStoragePtr bytes(new TStorage(data, data + size));
-    IStorage::IReceiptPtr receipt(new MemoryStorage::Receipt(bytes, 0, size));
+    TStoragePtr bytes(new TStorage(data, data + z));
+    IStorage::IReceiptPtr receipt(new HodgePodgeStorage::Receipt(bytes, 0, z));
     receipt.reset(new HodgePodgeStorageReceipt(receipt));
     return receipt;
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::load
+  // HodgePodgeStorage::load
   //
   IStorage::IReceiptPtr
-  MemoryStorage::load(unsigned char * data, std::size_t size)
+  HodgePodgeStorage::load(unsigned char * data, std::size_t size)
   {
     (void) data;
     (void) size;
@@ -554,10 +497,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::peek
+  // HodgePodgeStorage::peek
   //
   std::size_t
-  MemoryStorage::peek(unsigned char * data, std::size_t size)
+  HodgePodgeStorage::peek(unsigned char * data, std::size_t size)
   {
     (void) data;
     (void) size;
@@ -566,10 +509,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::skip
+  // HodgePodgeStorage::skip
   //
   uint64
-  MemoryStorage::skip(uint64 numBytes)
+  HodgePodgeStorage::skip(uint64 numBytes)
   {
     (void) numBytes;
     assert(false);
@@ -577,39 +520,39 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::Receipt
+  // HodgePodgeStorage::Receipt::Receipt
   //
-  MemoryStorage::Receipt::Receipt(const MemoryStorage::TStoragePtr & bytesPtr,
-                                  std::size_t position,
-                                  std::size_t numBytes):
-    bytesPtr_(bytesPtr),
+  HodgePodgeStorage::Receipt::Receipt(const HodgePodgeStorage::TStoragePtr & s,
+                                      std::size_t position,
+                                      std::size_t numBytes):
+    bytesPtr_(s),
     position_(position),
     numBytes_(numBytes)
   {}
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::position
+  // HodgePodgeStorage::Receipt::position
   //
   uint64
-  MemoryStorage::Receipt::position() const
+  HodgePodgeStorage::Receipt::position() const
   {
     return position_;
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::numBytes
+  // HodgePodgeStorage::Receipt::numBytes
   //
   uint64
-  MemoryStorage::Receipt::numBytes() const
+  HodgePodgeStorage::Receipt::numBytes() const
   {
     return numBytes_;
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::setNumBytes
+  // HodgePodgeStorage::Receipt::setNumBytes
   //
-  MemoryStorage::Receipt &
-  MemoryStorage::Receipt::setNumBytes(uint64 numBytes)
+  HodgePodgeStorage::Receipt &
+  HodgePodgeStorage::Receipt::setNumBytes(uint64 numBytes)
   {
     numBytes_ = (std::size_t)numBytes;
     assert(position_ + numBytes_ <= bytesPtr_->size());
@@ -617,10 +560,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::add
+  // HodgePodgeStorage::Receipt::add
   //
-  MemoryStorage::Receipt &
-  MemoryStorage::Receipt::add(uint64 numBytes)
+  HodgePodgeStorage::Receipt &
+  HodgePodgeStorage::Receipt::add(uint64 numBytes)
   {
     numBytes_ += (std::size_t)numBytes;
     assert(position_ + numBytes_ <= bytesPtr_->size());
@@ -628,10 +571,11 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::save
+  // HodgePodgeStorage::Receipt::save
   //
   bool
-  MemoryStorage::Receipt::save(const unsigned char * data, std::size_t size)
+  HodgePodgeStorage::Receipt::save(const unsigned char * data,
+                                   std::size_t size)
   {
     if (!size)
     {
@@ -655,10 +599,10 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::load
+  // HodgePodgeStorage::Receipt::load
   //
   bool
-  MemoryStorage::Receipt::load(unsigned char * data)
+  HodgePodgeStorage::Receipt::load(unsigned char * data)
   {
     const TStorage & bytes = *bytesPtr_;
     const std::size_t capacity = bytes.size();
@@ -674,20 +618,20 @@ namespace Yamka
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::calcCrc32
+  // HodgePodgeStorage::Receipt::calcCrc32
   //
   bool
-  MemoryStorage::Receipt::calcCrc32(Crc32 & computeCrc32,
-                                    const IStorage::IReceiptPtr & receiptSkip)
+  HodgePodgeStorage::Receipt::calcCrc32(Crc32 & computeCrc32,
+                                        const IStorage::IReceiptPtr & skip)
   {
     return false;
   }
 
   //----------------------------------------------------------------
-  // MemoryStorage::Receipt::receipt
+  // HodgePodgeStorage::Receipt::receipt
   //
   IStorage::IReceiptPtr
-  MemoryStorage::Receipt::receipt(uint64 offset, uint64 size) const
+  HodgePodgeStorage::Receipt::receipt(uint64 offset, uint64 size) const
   {
     std::size_t position = position_ + (std::size_t)(offset + size);
     assert(position <= bytesPtr_->size());

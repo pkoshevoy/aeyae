@@ -163,7 +163,7 @@ namespace Yamka
   {
     try
     {
-      File::Seek temp(file_, addr_);
+      File::TSeek temp(file_, addr_);
       if (file_.save(data, size))
       {
         numBytes_ = std::max<uint64>(numBytes_, size);
@@ -184,7 +184,7 @@ namespace Yamka
   {
     try
     {
-      File::Seek temp(file_, addr_);
+      File::TSeek temp(file_, addr_);
       if (file_.load(data, (std::size_t)numBytes_))
       {
         return true;

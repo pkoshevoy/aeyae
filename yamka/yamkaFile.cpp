@@ -467,89 +467,6 @@ namespace Yamka
 
 
   //----------------------------------------------------------------
-  // File::Seek::Seek
-  //
-  File::Seek::Seek(File & file):
-    file_(file),
-    prev_(file.absolutePosition()),
-    restoreOnExit_(true)
-  {}
-
-  //----------------------------------------------------------------
-  // File::Seek::Seek
-  //
-  File::Seek::Seek(File & file,
-                   TFileOffset offset,
-                   TPositionReference relativeTo):
-    file_(file),
-    prev_(file.absolutePosition()),
-    restoreOnExit_(true)
-  {
-    seek(offset, relativeTo);
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::~Seek
-  //
-  File::Seek::~Seek()
-  {
-    if (restoreOnExit_)
-    {
-      restorePosition();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::doNotRestore
-  //
-  void
-  File::Seek::doNotRestore()
-  {
-    restoreOnExit_ = false;
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::doRestore
-  //
-  void
-  File::Seek::doRestore()
-  {
-    restoreOnExit_ = true;
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::restorePosition
-  //
-  void
-  File::Seek::restorePosition()
-  {
-    seek(prev_, kAbsolutePosition);
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::absolutePosition
-  //
-  TFileOffset
-  File::Seek::absolutePosition() const
-  {
-    return prev_;
-  }
-
-  //----------------------------------------------------------------
-  // File::Seek::seek
-  //
-  void
-  File::Seek::seek(TFileOffset offset, TPositionReference relativeTo)
-  {
-    if (!file_.seek(offset, relativeTo))
-    {
-      std::runtime_error e(std::string("failed to seek"));
-      throw e;
-    }
-  }
-
-
-  //----------------------------------------------------------------
   // File::~File
   //
   File::~File()
@@ -707,7 +624,7 @@ namespace Yamka
     }
 
     File * file = const_cast<File *>(this);
-    File::Seek temp(*file);
+    File::TSeek temp(*file);
     if (!file->seek(TFileOffset(seekToPosition), kAbsolutePosition))
     {
       return false;
