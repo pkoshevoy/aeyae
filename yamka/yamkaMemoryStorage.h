@@ -217,14 +217,14 @@ namespace Yamka
       // virtual:
       bool load(unsigned char * data)
       {
-        TFile::TSeek temp(file_, addr_);
+        typename TFile::TSeek temp(file_, addr_);
         return file_.load(data, (std::size_t)numBytes_);
       }
 
       // virtual:
       bool save(const unsigned char * data, std::size_t size)
       {
-        TFile::TSeek temp(file_, addr_);
+        typename TFile::TSeek temp(file_, addr_);
         return file_.save(data, size);
       }
 

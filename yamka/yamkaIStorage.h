@@ -9,6 +9,9 @@
 #ifndef YAMKA_ISTORAGE_H_
 #define YAMKA_ISTORAGE_H_
 
+// system includes:
+#include <stdexcept>
+
 // yamka includes:
 #include <yamkaCrc32.h>
 #include <yamkaStdInt.h>
