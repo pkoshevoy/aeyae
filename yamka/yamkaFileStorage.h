@@ -71,7 +71,7 @@ namespace Yamka
 
     protected:
       File file_;
-      File::TOff addr_;
+      TFileOffset addr_;
       uint64 numBytes_;
     };
 

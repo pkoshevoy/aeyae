@@ -14,10 +14,12 @@
 #include <yamkaEBML.h>
 #include <yamkaMatroska.h>
 #include <yamkaHodgePodge.h>
+#include <yamkaConstMemoryStorage.h>
 
 // system includes:
 #include <iostream>
 #include <typeinfo>
+#include <vector>
 
 // namespace access:
 using namespace Yamka;
@@ -219,8 +221,8 @@ main(int argc, char ** argv)
 
     EbmlDoc doc;
     doc.head_.payload_.docType_.payload_.set(std::string("storage-test"));
-    doc.head_.payload_.docTypeVersion_.payload_.set(1);
-    doc.head_.payload_.docTypeReadVersion_.payload_.set(1);
+    doc.head_.payload_.docTypeVersion_.payload_.set(16);
+    doc.head_.payload_.docTypeReadVersion_.payload_.set(78);
 
     IStorage::IReceiptPtr rd2f = doc.save(d2f);
 
@@ -228,6 +230,20 @@ main(int argc, char ** argv)
     IStorage::IReceiptPtr rm2f = rmem->saveTo(m2f);
 
     assert(rd2f->numBytes() == rm2f->numBytes());
+
+    std::vector<unsigned char> mem((std::size_t)(rmem->numBytes()));
+    rmem->load(&mem[0]);
+
+    ConstMemoryStorage ro(&mem[0], mem.size());
+    EbmlDoc doc2;
+    Yamka::uint64 bytesConsumed = doc2.load(ro, mem.size());
+    assert(bytesConsumed == doc.calcSize());
+    assert(doc.head_.payload_.docType_.payload_.get() ==
+           doc2.head_.payload_.docType_.payload_.get());
+    assert(doc.head_.payload_.docTypeVersion_.payload_.get() ==
+           doc2.head_.payload_.docTypeVersion_.payload_.get());
+    assert(doc.head_.payload_.docTypeReadVersion_.payload_.get() ==
+           doc2.head_.payload_.docTypeReadVersion_.payload_.get());
   }
 
   // make sure direct-to-file and memory-to-file produce the same results:
@@ -244,11 +260,11 @@ main(int argc, char ** argv)
 
     assert(sz_d2f == sz_m2f);
 
-    std::vector<unsigned char> dat_d2f(sz_d2f);
-    IStorage::IReceiptPtr rd2f = d2f.load(&dat_d2f[0], sz_d2f);
+    std::vector<unsigned char> dat_d2f((std::size_t)sz_d2f);
+    IStorage::IReceiptPtr rd2f = d2f.load(&dat_d2f[0], (std::size_t)sz_d2f);
 
-    std::vector<unsigned char> dat_m2f(sz_m2f);
-    IStorage::IReceiptPtr rmem = m2f.load(&dat_m2f[0], sz_m2f);
+    std::vector<unsigned char> dat_m2f((std::size_t)sz_m2f);
+    IStorage::IReceiptPtr rmem = m2f.load(&dat_m2f[0], (std::size_t)sz_m2f);
 
     assert(dat_d2f == dat_m2f);
   }

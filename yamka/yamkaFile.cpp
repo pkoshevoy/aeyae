@@ -248,21 +248,21 @@ namespace Yamka
     //----------------------------------------------------------------
     // seek
     //
-    bool seek(File::TOff offset, File::PositionReference relativeTo)
+    bool seek(TFileOffset offset, TPositionReference relativeTo)
     {
-      File::TOff pos = offset;
+      TFileOffset pos = offset;
 
-      if (relativeTo == File::kRelativeToCurrent)
+      if (relativeTo == kRelativeToCurrent)
       {
-        relativeTo = File::kAbsolutePosition;
+        relativeTo = kAbsolutePosition;
         pos = pos_ + offset;
       }
 
-      assert(relativeTo != File::kRelativeToCurrent);
+      assert(relativeTo != kRelativeToCurrent);
 
 #if 0 // !defined(NDEBUG) && (defined(_DEBUG) || defined(DEBUG))
-      File::TOff dst =
-        relativeTo == File::kOffsetFromEnd ?
+      TFileOffset dst =
+        relativeTo == kOffsetFromEnd ?
         size() + offset :
         pos;
 #endif
@@ -277,7 +277,7 @@ namespace Yamka
 
       pos_ = ftello(file_);
 #else
-      pos_ = (relativeTo == File::kOffsetFromEnd) ? end_ : pos;
+      pos_ = (relativeTo == kOffsetFromEnd) ? end_ : pos;
 #endif
 
 #if 0 // !defined(NDEBUG) && (defined(_DEBUG) || defined(DEBUG))
@@ -291,7 +291,7 @@ namespace Yamka
     //----------------------------------------------------------------
     // absolutePosition
     //
-    File::TOff absolutePosition() const
+    TFileOffset absolutePosition() const
     {
       return pos_;
     }
@@ -299,19 +299,19 @@ namespace Yamka
     //----------------------------------------------------------------
     // size
     //
-    File::TOff size()
+    TFileOffset size()
     {
       if (cache_)
       {
         return end_;
       }
 
-      File::TOff prev = ftello(file_);
+      TFileOffset prev = ftello(file_);
       int err = fseeko(file_, 0, SEEK_END);
 
       if (!err)
       {
-        File::TOff end = ftello(file_);
+        TFileOffset end = ftello(file_);
         err = fseeko(file_, prev, SEEK_SET);
 
         if (!err)
@@ -321,13 +321,13 @@ namespace Yamka
       }
 
       assert(false);
-      return std::numeric_limits<File::TOff>::max();
+      return std::numeric_limits<TFileOffset>::max();
     }
 
     //----------------------------------------------------------------
     // setSize
     //
-    bool setSize(File::TOff size)
+    bool setSize(TFileOffset size)
     {
       int fd = fileno(file_);
       int error = ftruncate(fd, size);
@@ -438,10 +438,10 @@ namespace Yamka
     std::FILE * file_;
 
     // file position:
-    File::TOff pos_;
+    TFileOffset pos_;
 
     // file end position:
-    File::TOff end_;
+    TFileOffset end_;
 
     // I/O cache:
     TCache * cache_;
@@ -478,7 +478,9 @@ namespace Yamka
   //----------------------------------------------------------------
   // File::Seek::Seek
   //
-  File::Seek::Seek(File & file, TOff offset, PositionReference relativeTo):
+  File::Seek::Seek(File & file,
+                   TFileOffset offset,
+                   TPositionReference relativeTo):
     file_(file),
     prev_(file.absolutePosition()),
     restoreOnExit_(true)
@@ -527,7 +529,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // File::Seek::absolutePosition
   //
-  File::TOff
+  TFileOffset
   File::Seek::absolutePosition() const
   {
     return prev_;
@@ -537,7 +539,7 @@ namespace Yamka
   // File::Seek::seek
   //
   void
-  File::Seek::seek(TOff offset, PositionReference relativeTo)
+  File::Seek::seek(TFileOffset offset, TPositionReference relativeTo)
   {
     if (!file_.seek(offset, relativeTo))
     {
@@ -623,7 +625,7 @@ namespace Yamka
   // File::seek
   //
   bool
-  File::seek(File::TOff offset, File::PositionReference relativeTo)
+  File::seek(TFileOffset offset, TPositionReference relativeTo)
   {
     return private_->shared_->seek(offset, relativeTo);
   }
@@ -631,7 +633,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // File::absolutePosition
   //
-  File::TOff
+  TFileOffset
   File::absolutePosition() const
   {
     return private_->shared_->absolutePosition();
@@ -640,7 +642,7 @@ namespace Yamka
   //----------------------------------------------------------------
   // File::size
   //
-  File::TOff
+  TFileOffset
   File::size()
   {
     return private_->shared_->size();
@@ -650,7 +652,7 @@ namespace Yamka
   // File::setSize
   //
   bool
-  File::setSize(File::TOff size)
+  File::setSize(TFileOffset size)
   {
     return private_->shared_->setSize(size);
   }
@@ -686,7 +688,7 @@ namespace Yamka
   // File::peek
   //
   std::size_t
-  File::peek(void * data, std::size_t size)
+  File::peek(void * data, std::size_t size) const
   {
     return private_->shared_->peek((unsigned char *)data, size);
   }
@@ -695,35 +697,37 @@ namespace Yamka
   // File::calcCrc32
   //
   bool
-  File::calcCrc32(File::TOff seekToPosition,
-                  File::TOff totalBytesToRead,
-                  Crc32 & computeCrc32)
+  File::calcCrc32(uint64 seekToPosition,
+                  uint64 totalBytesToRead,
+                  Crc32 & computeCrc32) const
   {
     if (!totalBytesToRead)
     {
       return true;
     }
 
-    if (!seek(seekToPosition, File::kAbsolutePosition))
+    File * file = const_cast<File *>(this);
+    File::Seek temp(*file);
+    if (!file->seek(TFileOffset(seekToPosition), kAbsolutePosition))
     {
       return false;
     }
 
     std::size_t bytesPerPass =
-      (std::size_t)(std::min<File::TOff>(4096, totalBytesToRead));
+      (std::size_t)(std::min<uint64>(4096, totalBytesToRead));
 
     std::vector<unsigned char> data(bytesPerPass);
     unsigned char * dataPtr = &data[0];
-    File::TOff bytesToRead = totalBytesToRead;
+    uint64 bytesToRead = totalBytesToRead;
 
     while (bytesToRead)
     {
       std::size_t bytesToReadNow =
-        (File::TOff(bytesPerPass) < bytesToRead) ?
+        (uint64(bytesPerPass) < bytesToRead) ?
         bytesPerPass :
         (std::size_t)bytesToRead;
 
-      if (!this->load(dataPtr, bytesToReadNow))
+      if (!file->load(dataPtr, bytesToReadNow))
       {
         return false;
       }

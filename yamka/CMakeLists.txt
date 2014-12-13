@@ -38,6 +38,7 @@ add_library(yamka STATIC
   yamka.h
   yamkaBytes.h
   yamkaCache.h
+  yamkaConstMemoryStorage.h
   yamkaCrc32.h
   yamkaEBML.h
   yamkaElt.h
@@ -52,6 +53,7 @@ add_library(yamka STATIC
   yamkaStdInt.h
   yamkaBytes.cpp
   yamkaCache.cpp
+  yamkaConstMemoryStorage.cpp
   yamkaCrc32.cpp
   yamkaEBML.cpp
   yamkaElt.cpp

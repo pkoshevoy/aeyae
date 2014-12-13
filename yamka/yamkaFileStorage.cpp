@@ -82,7 +82,7 @@ namespace Yamka
   uint64
   FileStorage::skip(uint64 numBytes)
   {
-    if (!file_.seek(numBytes, File::kRelativeToCurrent))
+    if (!file_.seek(numBytes, kRelativeToCurrent))
     {
       assert(false);
       return 0;
@@ -97,7 +97,7 @@ namespace Yamka
   void
   FileStorage::seekTo(uint64 absolutePosition)
   {
-    if (!file_.seek(absolutePosition, File::kAbsolutePosition))
+    if (!file_.seek(absolutePosition, kAbsolutePosition))
     {
       std::ostringstream oss;
       oss << "FileStorage::seekTo(" << absolutePosition << ") failed";
@@ -201,35 +201,9 @@ namespace Yamka
   //
   bool
   FileStorage::Receipt::calcCrc32(Crc32 & computeCrc32,
-                                  const IReceiptPtr & receiptSkip)
+                                  const IReceiptPtr & skip)
   {
-    try
-    {
-      File::Seek temp(file_);
-      File::TOff skipAddr = addr_;
-      File::TOff skipBytes = 0;
-
-      if (receiptSkip)
-      {
-        skipAddr = receiptSkip->position();
-        skipBytes = receiptSkip->numBytes();
-      }
-
-      File::TOff p0 = std::min<File::TOff>(addr_, skipAddr);
-      File::TOff n0 = skipAddr - p0;
-
-      File::TOff p1 = std::min<File::TOff>(skipAddr + skipBytes,
-                                           addr_ + numBytes_);
-      File::TOff n1 = addr_ + numBytes_ - p1;
-
-      bool done = (file_.calcCrc32(p0, n0, computeCrc32) &&
-                   file_.calcCrc32(p1, n1, computeCrc32));
-      return done;
-    }
-    catch (...)
-    {}
-
-    return false;
+    return Yamka::calcCrc32<File>(file_, this, skip, computeCrc32);
   }
 
   //----------------------------------------------------------------

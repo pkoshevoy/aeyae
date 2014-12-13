@@ -12,6 +12,7 @@
 // yamka includes:
 #include <yamkaCache.h>
 #include <yamkaCrc32.h>
+#include <yamkaIStorage.h>
 
 // boost includes:
 #include <boost/cstdint.hpp>
@@ -96,27 +97,12 @@ namespace Yamka
     // accessor to the filename (UTF-8):
     const std::string & filename() const;
 
-    //----------------------------------------------------------------
-    // TOff
-    //
-    typedef boost::int64_t TOff;
-
-    //----------------------------------------------------------------
-    // PositionReference
-    //
-    enum PositionReference
-    {
-      kAbsolutePosition = SEEK_SET,
-      kRelativeToCurrent = SEEK_CUR,
-      kOffsetFromEnd = SEEK_END
-    };
-
     // seek to a specified file position:
-    bool seek(TOff offset,
-              PositionReference relativeTo = kAbsolutePosition);
+    bool seek(TFileOffset offset,
+              TPositionReference relativeTo = kAbsolutePosition);
 
     // return current absolute file position:
-    TOff absolutePosition() const;
+    TFileOffset absolutePosition() const;
 
     //----------------------------------------------------------------
     // Seek
@@ -131,8 +117,8 @@ namespace Yamka
       // save current seek position,
       // then seek to a given offset,
       // throw exception if seek fails:
-      Seek(File & file, TOff offset,
-           PositionReference relativeTo = kAbsolutePosition);
+      Seek(File & file, TFileOffset offset,
+           TPositionReference relativeTo = kAbsolutePosition);
 
       // if required, then restore saved seek position:
       ~Seek();
@@ -148,7 +134,7 @@ namespace Yamka
 
       // accessor to the absolute position of the file
       // at the moment a Seek instance was created:
-      TOff absolutePosition() const;
+      TFileOffset absolutePosition() const;
 
       // synonyms:
       inline void enable()
@@ -162,18 +148,18 @@ namespace Yamka
       Seek & operator = (const Seek &);
 
       // helper
-      void seek(TOff offset, PositionReference relativeTo);
+      void seek(TFileOffset offset, TPositionReference relativeTo);
 
       File & file_;
-      TOff prev_;
+      TFileOffset prev_;
       bool restoreOnExit_;
     };
 
     // helper to get current file size:
-    TOff size();
+    TFileOffset size();
 
     // truncate or extend file to a given size:
-    bool setSize(TOff size);
+    bool setSize(TFileOffset size);
 
     // write out at current file position a specified number of bytes
     // from the source buffer:
@@ -186,12 +172,12 @@ namespace Yamka
     // unlike load/save/read/write peek does not change the current
     // file position; otherwise peek behaves like load and
     // returns the number of bytes successfully loaded:
-    std::size_t peek(void * dst, std::size_t numBytes);
+    std::size_t peek(void * dst, std::size_t numBytes) const;
 
     // calculate CRC-32 checksum over a region of this file:
-    bool calcCrc32(TOff seekToPosition,
-                   TOff numBytesToRead,
-                   Crc32 & computeCrc32);
+    bool calcCrc32(uint64 seekToPosition,
+                   uint64 numBytesToRead,
+                   Crc32 & computeCrc32) const;
 
     // remove a given file:
     static bool remove(const char * filenameUTF8);

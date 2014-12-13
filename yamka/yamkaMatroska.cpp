@@ -2709,8 +2709,8 @@ namespace Yamka
   TagTargets::isDefault() const
   {
     bool allDefault =
-      !typeValue_.mustSave() &&
-      !type_.mustSave() &&
+      typeValue_.payload_.isDefault() &&
+      type_.payload_.isDefault() &&
       trackUIDs_.empty() &&
       editionUIDs_.empty() &&
       chapterUIDs_.empty() &&

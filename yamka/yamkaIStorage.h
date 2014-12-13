@@ -13,13 +13,27 @@
 #include <yamkaCrc32.h>
 #include <yamkaStdInt.h>
 #include <yamkaSharedPtr.h>
-#include <yamkaFile.h>
 
 
 namespace Yamka
 {
   // forward declarations:
   struct HodgePodge;
+
+  //----------------------------------------------------------------
+  // TFileOffset
+  //
+  typedef boost::int64_t TFileOffset;
+
+  //----------------------------------------------------------------
+  // TPositionReference
+  //
+  enum TPositionReference
+  {
+    kAbsolutePosition = SEEK_SET,
+    kRelativeToCurrent = SEEK_CUR,
+    kOffsetFromEnd = SEEK_END
+  };
 
   //----------------------------------------------------------------
   // IStorage
@@ -155,6 +169,46 @@ namespace Yamka
     // returns a storage receipt for the storage location that was skipped:
     IReceiptPtr skipWithReceipt(uint64 numBytes);
   };
+
+  //----------------------------------------------------------------
+  // calcCrc32
+  //
+  template <typename TFile>
+  bool
+  calcCrc32(const TFile & file,
+            const IStorage::IReceipt * receipt,
+            const IStorage::IReceiptPtr & skip,
+            Crc32 & computeCrc32)
+  {
+    try
+    {
+      TFileOffset receiptAddr = receipt->position();
+      TFileOffset receiptSize = receipt->numBytes();
+      TFileOffset skipAddr = receiptAddr;
+      TFileOffset skipBytes = 0;
+
+      if (skip)
+      {
+        skipAddr = skip->position();
+        skipBytes = skip->numBytes();
+      }
+
+      TFileOffset p0 = std::min<TFileOffset>(receiptAddr, skipAddr);
+      TFileOffset n0 = skipAddr - p0;
+
+      TFileOffset p1 = std::min<TFileOffset>(skipAddr + skipBytes,
+                                             receiptAddr + receiptSize);
+      TFileOffset n1 = receiptAddr + receiptSize - p1;
+
+      bool done = (file.calcCrc32(p0, n0, computeCrc32) &&
+                   file.calcCrc32(p1, n1, computeCrc32));
+      return done;
+    }
+    catch (...)
+    {}
+
+    return false;
+  }
 
   //----------------------------------------------------------------
   // NullStorage
