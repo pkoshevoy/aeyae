@@ -324,6 +324,9 @@ PrepForDeployment()
 
 				echo $CP "${QT_DIR}"/plugins/"${PLUGIN}" .
 				$CP "${QT_DIR}"/plugins/"${PLUGIN}" .
+
+				# remove libfb_base.prl, codesign doesn't understand it:
+				find . -type f -iname '*.prl' -exec rm -f {} \;
 				shift
 			done
 
@@ -656,8 +659,20 @@ DeployFile()
 			echo ${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
 			${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
 
-			# copy resources bundled together with the framework:
+			# copy framework Info.plist so that codesign would work:
 			SRC_BASE=`dirname "${SRC}"`
+			if [ -e "${SRC_BASE}/../../Contents/Info.plist" ]; then
+				DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
+				echo mkdir -p "${DST_BASE}/Resources";
+				mkdir -p "${DST_BASE}/Resources";
+				quiet_pushd "${DST_BASE}/Resources"
+					pwd
+					echo COPYING "${SRC_BASE}/../../Contents/Info.plist"
+					(cd "${SRC_BASE}/../../Contents"; tar c Info.plist) | tar xv
+				quiet_popd
+			fi
+
+			# copy resources bundled together with the framework:
 			if [ -e "${SRC_BASE}/Resources" ]; then
 				DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
 				echo mkdir -p "${DST_BASE}/Resources";
