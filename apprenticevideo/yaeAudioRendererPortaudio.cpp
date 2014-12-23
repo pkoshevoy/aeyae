@@ -327,6 +327,7 @@ namespace yae
 
     if (testStream)
     {
+      Pa_StopStream(testStream);
       Pa_CloseStream(testStream);
       testStream = NULL;
     }
