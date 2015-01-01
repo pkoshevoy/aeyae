@@ -231,7 +231,7 @@ namespace yae
   //----------------------------------------------------------------
   // kRealtimeTolerance
   //
-  static const double kRealtimeTolerance = 0.1;
+  static const double kRealtimeTolerance = 2.0;
 
   //----------------------------------------------------------------
   // SharedClock::getCurrentTime
