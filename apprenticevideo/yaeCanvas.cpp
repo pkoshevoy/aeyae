@@ -22,7 +22,7 @@
 #include <yaeCanvas.h>
 #include <yaePixelFormatTraits.h>
 #include <yaeThreading.h>
-#include <yaeUtils.h>
+#include <yaeUtilsQt.h>
 
 // boost includes:
 #include <boost/thread.hpp>

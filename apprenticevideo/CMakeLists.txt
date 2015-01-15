@@ -255,6 +255,8 @@ set(project_sources
   yaeTree.h
   yaeUtils.h
   yaeUtils.cpp
+  yaeUtilsQt.h
+  yaeUtilsQt.cpp
   yaeVideoRenderer.h
   yaeVideoRenderer.cpp
   )

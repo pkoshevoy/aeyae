@@ -45,7 +45,7 @@
 #include <yaeAudioRendererPortaudio.h>
 #include <yaeVideoRenderer.h>
 #include <yaeVersion.h>
-#include <yaeUtils.h>
+#include <yaeUtilsQt.h>
 
 // local includes:
 #include <yaeMainWindow.h>

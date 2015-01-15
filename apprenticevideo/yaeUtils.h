@@ -18,42 +18,6 @@
 // yae includes:
 #include <yaeAPI.h>
 
-// Qt includes:
-#include <QString>
-#include <QPainter>
-
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
-     QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-#define YAE_QT4 1
-#define YAE_QT5 0
-#else
-#define YAE_QT4 0
-#define YAE_QT5 1
-#endif
-
-#if YAE_QT4
-#include <QDesktopServices>
-#elif YAE_QT5
-#include <QStandardPaths>
-#endif
-
-
-//----------------------------------------------------------------
-// YAE_STANDARD_LOCATION
-//
-#if YAE_QT4
-#define YAE_STANDARD_LOCATION(x) \
-  QDesktopServices::storageLocation(QDesktopServices::x)
-#endif
-
-//----------------------------------------------------------------
-// YAE_STANDARD_LOCATION
-//
-#if YAE_QT5
-#define YAE_STANDARD_LOCATION(x) \
-  QStandardPaths::writableLocation(QStandardPaths::x)
-#endif
-
 
 namespace yae
 {
@@ -134,6 +98,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // indexOf
+  //
+  template <typename TData>
+  std::size_t
+  indexOf(const TData & item, const TData * items, std::size_t numItems)
+  {
+    for (std::size_t i = 0; i < numItems; ++i, ++items)
+    {
+      if (item == *items)
+      {
+        return i;
+      }
+    }
+
+    return numItems;
+  }
+
+  //----------------------------------------------------------------
   // compare
   //
   template <typename TData>
@@ -141,28 +123,6 @@ namespace yae
   {
     return memcmp(&a, &b, sizeof(TData));
   }
-
-  //----------------------------------------------------------------
-  // toQString
-  //
-  YAE_API QString
-  toQString(const std::list<QString> & keys, bool trimWhiteSpace = false);
-
-  //----------------------------------------------------------------
-  // splitIntoWords
-  //
-  YAE_API void
-  splitIntoWords(const QString & key, std::list<QString> & tokens);
-
-  //----------------------------------------------------------------
-  // toWords
-  //
-  YAE_API QString toWords(const QString & key);
-
-  //----------------------------------------------------------------
-  // prepareForSorting
-  //
-  YAE_API QString prepareForSorting(const QString & key);
 
   //----------------------------------------------------------------
   // floor_log2
@@ -210,52 +170,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // overlapExists
-  //
-  YAE_API bool
-  overlapExists(const QRect & a, const QRect & b);
-
-  //----------------------------------------------------------------
-  // overlapExists
-  //
-  YAE_API bool
-  overlapExists(const QRect & a, const QPoint & b);
-
-  //----------------------------------------------------------------
-  // shortenTextToFit
-  //
-  YAE_API bool
-  shortenTextToFit(QPainter & painter,
-                   const QRect & bbox,
-                   int textAlignment,
-                   const QString & text,
-                   QString & textLeft,
-                   QString & textRight);
-
-  //----------------------------------------------------------------
-  // drawTextToFit
-  //
-  YAE_API void
-  drawTextToFit(QPainter & painter,
-                const QRect & bbox,
-                int textAlignment,
-                const QString & text,
-                QRect * bboxText = NULL);
-
-  //----------------------------------------------------------------
-  // drawTextWithShadowToFit
-  //
-  YAE_API void
-  drawTextWithShadowToFit(QPainter & painter,
-                          const QRect & bboxBig,
-                          int textAlignment,
-                          const QString & text,
-                          const QPen & bgPen,
-                          bool outlineShadow = true,
-                          int shadowOffset = 1,
-                          QRect * bboxText = NULL);
-
-  //----------------------------------------------------------------
   // stripHtmlTags
   //
   YAE_API std::string
@@ -272,59 +186,6 @@ namespace yae
   //
   YAE_API std::string
   convertEscapeCodes(const std::string & in);
-
-  //----------------------------------------------------------------
-  // parseEyetvInfo
-  //
-  YAE_API bool
-  parseEyetvInfo(const QString & eyetvPath,
-                 QString & program,
-                 QString & episode,
-                 QString & timestamp);
-
-  //----------------------------------------------------------------
-  // xmlEncode
-  //
-  // this properly handles special characters &, <, >, ", etc...
-  //
-  YAE_API QString
-  xmlEncode(const QString & text);
-
-  //----------------------------------------------------------------
-  // saveSetting
-  //
-  YAE_API bool
-  saveSetting(const QString & key, const QString & value);
-
-  //----------------------------------------------------------------
-  // saveBooleanSetting
-  //
-  YAE_API bool
-  saveBooleanSetting(const QString & key, bool value);
-
-  //----------------------------------------------------------------
-  // loadSetting
-  //
-  YAE_API bool
-  loadSetting(const QString & key, QString & value);
-
-  //----------------------------------------------------------------
-  // loadSettingOrDefault
-  //
-  YAE_API QString
-  loadSettingOrDefault(const QString & key, const QString & defaultValue);
-
-  //----------------------------------------------------------------
-  // loadBooleanSettingOrDefault
-  //
-  YAE_API bool
-  loadBooleanSettingOrDefault(const QString & key, bool defaultValue);
-
-  //----------------------------------------------------------------
-  // removeSetting
-  //
-  YAE_API bool
-  removeSetting(const QString & key);
 
   //----------------------------------------------------------------
   // parse_hhmmss_xxx

@@ -16,7 +16,7 @@
 
 // yae includes:
 #include <yaeBookmarks.h>
-#include <yaeUtils.h>
+#include <yaeUtilsQt.h>
 
 
 namespace yae

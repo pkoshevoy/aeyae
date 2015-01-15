@@ -22,7 +22,7 @@
 
 // yae includes:
 #include <yaePlaylistWidget.h>
-#include <yaeUtils.h>
+#include <yaeUtilsQt.h>
 
 
 namespace yae
