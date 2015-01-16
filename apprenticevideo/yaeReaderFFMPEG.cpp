@@ -1393,6 +1393,7 @@ namespace yae
   bool
   VideoFilterGraph::push(AVFrame * frame)
   {
+    // std::cerr << "VF.push: " << frame->best_effort_timestamp << std::endl;
     int err = av_buffersrc_add_frame_flags(src_, frame, 0);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
@@ -1411,6 +1412,7 @@ namespace yae
       return false;
     }
 
+    // std::cerr << "VF.pull: " << frame->best_effort_timestamp << std::endl;
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
   }
@@ -2775,6 +2777,9 @@ namespace yae
       << std::endl;
 #endif
 
+    // drop filtergraph contents:
+    filterGraph_.reset();
+
     // push a special frame into frame queue to resetTimeCounters
     // down the line (the renderer):
     startNewSequence(frameQueue_, dropPendingFrames);
@@ -4054,6 +4059,9 @@ namespace yae
       << "\n\tAUDIO TRACK reset time counters, start new sequence\n"
       << std::endl;
 #endif
+
+    // drop filtergraph contents:
+    filterGraph_.reset();
 
     // push a special frame into frame queue to resetTimeCounters
     // down the line (the renderer):

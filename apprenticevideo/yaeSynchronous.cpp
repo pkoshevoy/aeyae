@@ -24,7 +24,7 @@ using boost::posix_time::to_simple_string;
 //----------------------------------------------------------------
 // YAE_DEBUG_SHARED_CLOCK
 //
-#define YAE_DEBUG_SHARED_CLOCK 0
+#define YAE_DEBUG_SHARED_CLOCK 1
 
 
 namespace yae
@@ -222,6 +222,9 @@ namespace yae
              timeSegment.observer_ &&
              !masterClockIsAccurate)
     {
+#ifdef YAE_DEBUG_SHARED_CLOCK
+      std::cerr << "MASTER CLOCK IS NOT ACCURATE" << std::endl;
+#endif
       timeSegment.observer_->noteCurrentTimeChanged(*this, t);
     }
 
@@ -231,7 +234,7 @@ namespace yae
   //----------------------------------------------------------------
   // kRealtimeTolerance
   //
-  static const double kRealtimeTolerance = 2.0;
+  static const double kRealtimeTolerance = 0.2;
 
   //----------------------------------------------------------------
   // SharedClock::getCurrentTime

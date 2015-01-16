@@ -361,6 +361,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ResetClockOnExit
+  //
+  struct ResetClockOnExit
+  {
+    SharedClock & clock_;
+    bool enabled_;
+
+    ResetClockOnExit(SharedClock & clock, bool enabled = false):
+      clock_(clock),
+      enabled_(enabled)
+    {}
+
+    ~ResetClockOnExit()
+    {
+      if (enabled_)
+      {
+        clock_.resetCurrentTime();
+      }
+    }
+
+    bool enable(bool enabled)
+    {
+      enabled_ = enabled;
+    }
+  };
+
+  //----------------------------------------------------------------
   // VideoRenderer::TPrivate::readOneFrame
   //
   bool
@@ -371,8 +398,10 @@ namespace yae
                                         double & tempo,
                                         double & drift)
   {
+    ResetClockOnExit resetClockOnExit(clock_, false);
     TVideoFramePtr frame;
     bool ok = true;
+
     while (ok)
     {
       ok = reader_->readVideo(frame, &terminator);
@@ -402,7 +431,7 @@ namespace yae
 
         frame_b_.reset();
         framePosition_ = frame_a_ ? frame_a_->time_ : TTime();
-        clock_.resetCurrentTime();
+        resetClockOnExit.enable(true);
         break;
       }
 
