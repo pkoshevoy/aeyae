@@ -1331,19 +1331,3 @@ namespace yae
     return ok;
   }
 }
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-extern "C"
-{
-  //----------------------------------------------------------------
-  // strtoll
-  //
-  long long int
-  strtoll(const char * nptr, char ** endptr, int base)
-  {
-    YAE_ASSERT(sizeof(long long int) == sizeof(__int64));
-    return _strtoi64(nptr, endptr, base);
-  }
-}
-
-#endif

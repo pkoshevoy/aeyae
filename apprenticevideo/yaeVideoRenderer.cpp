@@ -381,7 +381,7 @@ namespace yae
       }
     }
 
-    bool enable(bool enabled)
+    void enable(bool enabled)
     {
       enabled_ = enabled;
     }
