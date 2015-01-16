@@ -78,6 +78,17 @@ namespace yae
 
     bool open(const char * fn, const AudioTraits & atts)
     {
+      int nchan = getNumberOfChannels(atts.channelLayout_);
+      int sampleRate = (unsigned int)(atts.sampleRate_);
+      int bitsPerSample = getBitsPerSample(atts.sampleFormat_);
+      return open(fn, nchan, sampleRate, bitsPerSample);
+    }
+
+    bool open(const char * fn,
+              unsigned int nchan,
+              unsigned int sampleRate,
+              unsigned int bitsPerSample)
+    {
       close();
 
       file_ = fopenUtf8(fn, "wb");
@@ -86,15 +97,23 @@ namespace yae
         return false;
       }
 
-      numChannels_ = getNumberOfChannels(atts.channelLayout_);
-      bitsPerSample_ = getBitsPerSample(atts.sampleFormat_);
-      sampleRate_ = (unsigned int)(atts.sampleRate_);
+      numChannels_ = nchan;
+      sampleRate_ = sampleRate;
+      bitsPerSample_ = bitsPerSample;
 
       return open(fn);
     }
 
+    bool save(unsigned int numSamples,
+              const unsigned char * samples,
+              const char * newFilePrefix = NULL)
+    {
+      std::size_t size = (numSamples * numChannels_ * bitsPerSample_) / 8;
+      return save(samples, size, newFilePrefix);
+    }
+
     bool save(const unsigned char * data,
-              std::size_t size,
+              std::size_t dataSize,
               const char * newFilePrefix = NULL)
     {
       if (newFilePrefix)
@@ -114,7 +133,7 @@ namespace yae
       }
 
       const unsigned char * src = data;
-      const unsigned char * end = data + size;
+      const unsigned char * end = data + dataSize;
 
       while (src < end)
       {
