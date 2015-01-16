@@ -37,7 +37,8 @@ namespace yae
       nstart_(0),
       sampleRate_(0),
       numChannels_(0),
-      bitsPerSample_(0)
+      bitsPerSample_(0),
+      floatSamples_(false)
     {}
 
     ~WavFile()
@@ -81,13 +82,15 @@ namespace yae
       int nchan = getNumberOfChannels(atts.channelLayout_);
       int sampleRate = (unsigned int)(atts.sampleRate_);
       int bitsPerSample = getBitsPerSample(atts.sampleFormat_);
-      return open(fn, nchan, sampleRate, bitsPerSample);
+      bool floatSamples = atts.sampleFormat_ == kAudio32BitFloat;
+      return open(fn, nchan, sampleRate, bitsPerSample, floatSamples);
     }
 
     bool open(const char * fn,
               unsigned int nchan,
               unsigned int sampleRate,
-              unsigned int bitsPerSample)
+              unsigned int bitsPerSample,
+              bool floatSamples = false)
     {
       close();
 
@@ -100,6 +103,7 @@ namespace yae
       numChannels_ = nchan;
       sampleRate_ = sampleRate;
       bitsPerSample_ = bitsPerSample;
+      floatSamples_ = floatSamples;
 
       return open(fn);
     }
@@ -210,8 +214,8 @@ namespace yae
       uint4b = 16;
       fwrite(&uint4b, 1, 4, file_);
 
-      // PCM:
-      uint2b = 1;
+      // PCM == 1, IEEE FLOAT == 3:
+      uint2b = floatSamples_ ? 3 : 1;
       fwrite(&uint2b, 1, 2, file_);
 
       // number of channels:
@@ -246,6 +250,7 @@ namespace yae
     unsigned int sampleRate_;
     unsigned int numChannels_;
     unsigned int bitsPerSample_;
+    bool floatSamples_;
   };
 }
 
