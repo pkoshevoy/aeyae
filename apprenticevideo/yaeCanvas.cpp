@@ -1804,6 +1804,7 @@ namespace yae
 
         std::size_t rowSize =
           frame->data_->rowBytes(i) / (shader.stride_[i] / 8);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
         yae_assert_gl_no_error();
 
@@ -2348,6 +2349,7 @@ namespace yae
 
       std::size_t rowSize =
         frame->data_->rowBytes(k) / (ptts->stride_[k] / 8);
+      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
       yae_assert_gl_no_error();
 
