@@ -1674,6 +1674,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // alignmentFor
+  //
+  inline static int
+  alignmentFor(std::size_t rowBytes)
+  {
+    int a =
+      !(rowBytes % 8) ? 8 :
+      !(rowBytes % 4) ? 4 :
+      !(rowBytes % 2) ? 2 :
+      1;
+    return a;
+  }
+
+  //----------------------------------------------------------------
+  // alignmentFor
+  //
+  inline static int
+  alignmentFor(const unsigned char * data, std::size_t rowBytes)
+  {
+    int a = alignmentFor((std::size_t)data);
+    int b = alignmentFor(rowBytes);
+    return a < b ? a : b;
+  }
+
+  //----------------------------------------------------------------
   // TModernCanvas::clear
   //
   void
@@ -1802,9 +1827,10 @@ namespace yae
 
         glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[i]);
 
+        const unsigned char * data = frame->data_->data(i);
         std::size_t rowSize =
           frame->data_->rowBytes(i) / (shader.stride_[i] / 8);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, alignmentFor(data, rowSize));
         glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
         yae_assert_gl_no_error();
 
@@ -1816,7 +1842,7 @@ namespace yae
                      0, // border width
                      shader.pixelFormatGL_[i],
                      shader.dataTypeGL_[i],
-                     frame->data_->data(i));
+                     data);
         yae_assert_gl_no_error();
       }
       glDisable(GL_TEXTURE_RECTANGLE_ARB);
@@ -2347,9 +2373,10 @@ namespace yae
 
       glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[k]);
 
+      const unsigned char * data = frame->data_->data(k);
       std::size_t rowSize =
         frame->data_->rowBytes(k) / (ptts->stride_[k] / 8);
-      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+      glPixelStorei(GL_UNPACK_ALIGNMENT, alignmentFor(data, rowSize));
       glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
       yae_assert_gl_no_error();
 
