@@ -1198,8 +1198,8 @@ namespace yae
                int srcHeight,
                const AVRational & srcTimeBase,
                const AVRational & srcPAR,
-               PixelFormat srcPixFmt,
-               PixelFormat dstPixFmt,
+               AVPixelFormat srcPixFmt,
+               AVPixelFormat dstPixFmt,
                const char * filterChain = NULL,
                bool * frameTraitsChanged = NULL);
 
@@ -1212,8 +1212,8 @@ namespace yae
     int srcHeight_;
     AVRational srcTimeBase_;
     AVRational srcPAR_;
-    PixelFormat srcPixFmt_;
-    PixelFormat dstPixFmt_[2];
+    AVPixelFormat srcPixFmt_;
+    AVPixelFormat dstPixFmt_[2];
 
     AVFilterContext * src_;
     AVFilterContext * sink_;
@@ -1263,9 +1263,9 @@ namespace yae
     srcWidth_  = 0;
     srcHeight_ = 0;
 
-    srcPixFmt_    = PIX_FMT_NONE;
-    dstPixFmt_[0] = PIX_FMT_NONE;
-    dstPixFmt_[1] = PIX_FMT_NONE;
+    srcPixFmt_    = AV_PIX_FMT_NONE;
+    dstPixFmt_[0] = AV_PIX_FMT_NONE;
+    dstPixFmt_[1] = AV_PIX_FMT_NONE;
   }
 
   //----------------------------------------------------------------
@@ -1276,8 +1276,8 @@ namespace yae
                           int srcHeight,
                           const AVRational & srcTimeBase,
                           const AVRational & srcPAR,
-                          PixelFormat srcPixFmt,
-                          PixelFormat dstPixFmt,
+                          AVPixelFormat srcPixFmt,
+                          AVPixelFormat dstPixFmt,
                           const char * filterChain,
                           bool * frameTraitsChanged)
   {
@@ -1904,7 +1904,9 @@ namespace yae
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
       framesDecoded_++;
 
-      enum PixelFormat ffmpegPixelFormat = yae_to_ffmpeg(output_.pixelFormat_);
+      enum AVPixelFormat ffmpegPixelFormat =
+        yae_to_ffmpeg(output_.pixelFormat_);
+
       const char * filterChain = NULL;
       if (deinterlace_)
       {
@@ -1919,7 +1921,7 @@ namespace yae
                               avFrame->height,
                               stream_->time_base,
                               codecContext->sample_aspect_ratio,
-                              (PixelFormat)avFrame->format,
+                              (AVPixelFormat)avFrame->format,
                               ffmpegPixelFormat,
                               filterChain,
                               &frameTraitsChanged))

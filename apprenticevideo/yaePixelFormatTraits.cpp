@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#include <string.h>
 
 // yae includes:
 #include <yaePixelFormats.h>
@@ -24,6 +25,11 @@ namespace yae
   {
     friend class TraitsInitVector;
 
+    TraitsInit()
+    {
+      memset(this, 0, sizeof(TraitsInit));
+    }
+
   protected:
     inline TraitsInit & name(const char * name)
     {
@@ -31,7 +37,7 @@ namespace yae
       return *this;
     }
 
-    inline TraitsInit & flags(unsigned char flags)
+    inline TraitsInit & flags(unsigned int flags)
     {
       flags_ = flags;
       return *this;
@@ -114,6 +120,30 @@ namespace yae
       samples_[3] = d;
       return *this;
     }
+
+    inline TraitsInit & bayer(unsigned char a_even,
+                              unsigned char b_even,
+                              unsigned char a_odd,
+                              unsigned char b_odd)
+    {
+      bayer_[0] = a_even;
+      bayer_[1] = b_even;
+      bayer_[2] = a_odd;
+      bayer_[3] = b_odd;
+      return *this;
+    }
+
+    inline TraitsInit & reverseEndian()
+    {
+      flags_ ^= (kLE | kBE);
+      return *this;
+    }
+
+    inline TraitsInit & addFlags(unsigned int flags)
+    {
+      flags_ |= flags;
+      return *this;
+    }
   };
 
   //----------------------------------------------------------------
@@ -132,6 +162,11 @@ namespace yae
         resize(id + 1);
       }
 
+      return operator[](id);
+    }
+
+    TraitsInit copy(TPixelFormatId id) const
+    {
       return operator[](id);
     }
   };
@@ -181,43 +216,19 @@ namespace yae
       .samples( 1, 1, 1 );
 
     //! packed RGB 8:8:8, 24bpp, BGRBGR...
-    set(kPixelFormatBGR24) = TraitsInit()
+    set(kPixelFormatBGR24) = copy(kPixelFormatRGB24)
       .name( "BGR24" )
-      .flags( kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 8, 8, 8 )
-      .lshift( 16, 8, 0 )
-      .stride( 24, 24, 24 )
-      .samples( 1, 1, 1 );
+      .lshift( 16, 8, 0 );
 
     //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples)
-    set(kPixelFormatYUV422P) = TraitsInit()
+    set(kPixelFormatYUV422P) = copy(kPixelFormatYUV420P)
       .name( "YUV422P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .chromaBoxH( 1 );
 
     //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples)
-    set(kPixelFormatYUV444P) = TraitsInit()
+    set(kPixelFormatYUV444P) = copy(kPixelFormatYUV422P)
       .name( "YUV444P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .chromaBoxW( 1 );
 
     //! planar YUV 4:1:0, 9bpp, (1 Cr & Cb sample per 4x4 Y samples)
     set(kPixelFormatYUV410P) = TraitsInit()
@@ -244,6 +255,9 @@ namespace yae
       .lshift( 0, 0, 0 )
       .stride( 8, 8, 8 )
       .samples( 1, 1, 1 );
+
+    set(kPixelFormatYUVJ411P) = copy(kPixelFormatYUV411P)
+      .name( "YUVJ411P" );
 
     //! Y, 8bpp
     set(kPixelFormatGRAY8) = TraitsInit()
@@ -274,30 +288,13 @@ namespace yae
 
     //! Y, 1bpp, 0 is black, 1 is white, in each byte pixels are
     //! ordered from the msb to the lsb
-    set(kPixelFormatMONOBLACK) = TraitsInit()
-      .name( "MONOBLACK" )
-      .flags( kPlanar )
-      .channels( 1 )
-      .chromaBoxW( 0 )
-      .chromaBoxH( 0 )
-      .plane( 0 )
-      .depth( 1 )
-      .lshift( 0 )
-      .stride( 1 )
-      .samples( 1 );
+    set(kPixelFormatMONOBLACK) = copy(kPixelFormatMONOWHITE)
+      .name( "MONOBLACK" );
 
     //! 8 bit with kPixelFormatRGB32 palette
-    set(kPixelFormatPAL8) = TraitsInit()
+    set(kPixelFormatPAL8) = copy(kPixelFormatGRAY8)
       .name( "PAL8" )
-      .flags( kPlanar | kPaletted )
-      .channels( 1 )
-      .chromaBoxW( 0 )
-      .chromaBoxH( 0 )
-      .plane( 0 )
-      .depth( 8 )
-      .lshift( 0 )
-      .stride( 8 )
-      .samples( 1 );
+      .flags( kPlanar | kPaletted );
 
     //! packed YUV 4:2:2, 16bpp, Cb Y0 Cr Y1
     set(kPixelFormatUYVY422) = TraitsInit()
@@ -354,58 +351,27 @@ namespace yae
       .samples( 1, 1, 1 );
 
     //! packed RGB 1:2:1, 8bpp, (msb)1B 2G 1R(lsb)
-    set(kPixelFormatBGR4_BYTE) = TraitsInit()
+    set(kPixelFormatBGR4_BYTE) = copy(kPixelFormatBGR4)
       .name( "BGR4_BYTE" )
-      .flags( kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 1, 2, 1 )
       .lshift( 7, 5, 4 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .stride( 8, 8, 8 );
 
     //! packed RGB 3:3:2, 8bpp, (msb)3R 3G 2B(lsb)
-    set(kPixelFormatRGB8) = TraitsInit()
+    set(kPixelFormatRGB8) = copy(kPixelFormatBGR8)
       .name( "RGB8" )
-      .flags( kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 3, 3, 2 )
-      .lshift( 0, 3, 5 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .lshift( 0, 3, 5 );
 
     //! packed RGB 1:2:1 bitstream, 4bpp, (msb)1R 2G 1B(lsb), a byte
     //! contains two pixels, the first pixel in the byte is the one
     //! composed by the 4 msb bits
-    set(kPixelFormatRGB4) = TraitsInit()
+    set(kPixelFormatRGB4) = copy(kPixelFormatBGR4)
       .name( "RGB4" )
-      .flags( kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 1, 2, 1 )
-      .lshift( 0, 1, 3 )
-      .stride( 4, 4, 4 )
-      .samples( 1, 1, 1 );
+      .lshift( 0, 1, 3 );
 
     //! packed RGB 1:2:1, 8bpp, (msb)1R 2G 1B(lsb)
-    set(kPixelFormatRGB4_BYTE) = TraitsInit()
+    set(kPixelFormatRGB4_BYTE) = copy(kPixelFormatBGR4_BYTE)
       .name( "RGB4_BYTE" )
-      .flags( kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 1, 2, 1 )
-      .lshift( 4, 5, 7 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .lshift( 4, 5, 7 );
 
     //! planar YUV 4:2:0, 12bpp, 1 plane for Y and 1 plane for the UV
     //! channels, which are interleaved (first byte U and the
@@ -423,19 +389,11 @@ namespace yae
       .samples( 1, 1, 1 );
 
     //! as above, but U and V bytes are swapped
-    set(kPixelFormatNV21) = TraitsInit()
+    set(kPixelFormatNV21) = copy(kPixelFormatNV12)
       .name( "NV21" )
-      .flags( kYUV | kPacked | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 1 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 8, 0 )
-      .stride( 8, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 0, 8, 0 );
 
-    //! packed ARGB 8:8:8:8, 32bpp, ARGBARGB...
+    //! packed ARGB 8:8:8:8, 32bpp, ARGB ARGB ...
     set(kPixelFormatARGB) = TraitsInit()
       .name( "ARGB" )
       .flags( kAlpha | kRGB | kPacked )
@@ -448,92 +406,44 @@ namespace yae
       .stride( 32, 32, 32, 32 )
       .samples( 1, 1, 1, 1 );
 
-    //! packed RGBA 8:8:8:8, 32bpp, RGBARGBA...
-    set(kPixelFormatRGBA) = TraitsInit()
+    //! packed RGBA 8:8:8:8, 32bpp, RGBA RGBA ...
+    set(kPixelFormatRGBA) = copy(kPixelFormatARGB)
       .name( "RGBA" )
-      .flags( kAlpha | kRGB | kPacked )
-      .channels( 4 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0, 0 )
-      .depth( 8, 8, 8, 8 )
-      .lshift( 0, 8, 16, 24 )
-      .stride( 32, 32, 32, 32 )
-      .samples( 1, 1, 1, 1 );
+      .lshift( 0, 8, 16, 24 );
 
-    //! packed ABGR 8:8:8:8, 32bpp, ABGRABGR...
-    set(kPixelFormatABGR) = TraitsInit()
+    //! packed ABGR 8:8:8:8, 32bpp, ABGR ABGR ...
+    set(kPixelFormatABGR) = copy(kPixelFormatARGB)
       .name( "ABGR" )
-      .flags( kAlpha | kRGB | kPacked )
-      .channels( 4 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0, 0 )
-      .depth( 8, 8, 8, 8 )
-      .lshift( 24, 16, 8, 0 )
-      .stride( 32, 32, 32, 32 )
-      .samples( 1, 1, 1, 1 );
+      .lshift( 24, 16, 8, 0 );
 
     //! packed BGRA 8:8:8:8, 32bpp, BGRABGRA...
-    set(kPixelFormatBGRA) = TraitsInit()
+    set(kPixelFormatBGRA) = copy(kPixelFormatARGB)
       .name( "BGRA" )
-      .flags( kAlpha | kRGB | kPacked )
-      .channels( 4 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0, 0 )
-      .depth( 8, 8, 8, 8 )
-      .lshift( 16, 8, 0, 24 )
-      .stride( 32, 32, 32, 32 )
-      .samples( 1, 1, 1, 1 );
+      .lshift( 16, 8, 0, 24 );
 
     //! Y, 16bpp, big-endian
-    set(kPixelFormatGRAY16BE) = TraitsInit()
+    set(kPixelFormatGRAY16BE) = copy(kPixelFormatGRAY8)
       .name( "GRAY16BE" )
-      .flags( kBE | kPlanar )
-      .channels( 1 )
-      .chromaBoxW( 0 )
-      .chromaBoxH( 0 )
-      .plane( 0 )
+      .addFlags( kBE )
       .depth( 16 )
-      .lshift( 0 )
-      .stride( 16 )
-      .samples( 1 );
+      .stride( 16 );
 
-    //! Y, 16bpp, little-endian
-    set(kPixelFormatGRAY16LE) = TraitsInit()
-      .name( "GRAY16LE" )
-      .flags( kLE | kPlanar )
-      .channels( 1 )
-      .chromaBoxW( 0 )
-      .chromaBoxH( 0 )
-      .plane( 0 )
-      .depth( 16 )
-      .lshift( 0 )
-      .stride( 16 )
-      .samples( 1 );
+    //! same as above, but little-endian
+    set(kPixelFormatGRAY16LE) = copy(kPixelFormatGRAY16BE)
+      .reverseEndian()
+      .name("GRAY16LE");
 
     //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples)
-    set(kPixelFormatYUV440P) = TraitsInit()
+    set(kPixelFormatYUV440P) = copy(kPixelFormatYUV420P)
       .name( "YUV440P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+      .chromaBoxW( 1 );
 
     //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
     //! samples)
-    set(kPixelFormatYUVA420P) = TraitsInit()
+    set(kPixelFormatYUVA420P) = copy(kPixelFormatYUV420P)
       .name( "YUVA420P" )
-      .flags( kAlpha | kYUV | kPlanar )
+      .addFlags( kAlpha )
       .channels( 4 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
       .plane( 0, 1, 2, 3 )
       .depth( 8, 8, 8, 8 )
       .lshift( 0, 0, 0, 0 )
@@ -542,31 +452,18 @@ namespace yae
 
     //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
     //! each R/G/B component is stored as big-endian
-    set(kPixelFormatRGB48BE) = TraitsInit()
+    set(kPixelFormatRGB48BE) = copy(kPixelFormatRGB24)
       .name( "RGB48BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
+      .addFlags( kBE )
       .depth( 16, 16, 16 )
       .lshift( 0, 16, 32 )
-      .stride( 48, 48, 48 )
-      .samples( 1, 1, 1 );
+      .stride( 48, 48, 48 );
 
     //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
     //! each R/G/B component is stored as little-endian
-    set(kPixelFormatRGB48LE) = TraitsInit()
-      .name( "RGB48LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 16, 32 )
-      .stride( 48, 48, 48 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatRGB48LE) = copy(kPixelFormatRGB48BE)
+      .reverseEndian()
+      .name("RGB48LE");
 
     //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), big-endian
     set(kPixelFormatRGB565BE) = TraitsInit()
@@ -582,239 +479,107 @@ namespace yae
       .samples( 1, 1, 1 );
 
     //! packed RGB 5:6:5, 16bpp, (msb) 5R 6G 5B(lsb), little-endian
-    set(kPixelFormatRGB565LE) = TraitsInit()
-      .name( "RGB565LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 6, 5 )
-      .lshift( 0, 5, 11 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatRGB565LE) = copy(kPixelFormatRGB565BE)
+      .reverseEndian()
+      .name("RGB565LE");
 
     //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), big-endian,
     //! most significant bit to 0
-    set(kPixelFormatRGB555BE) = TraitsInit()
+    set(kPixelFormatRGB555BE) = copy(kPixelFormatRGB565BE)
       .name( "RGB555BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
       .depth( 5, 5, 5 )
-      .lshift( 1, 6, 11 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 1, 6, 11 );
 
     //! packed RGB 5:5:5, 16bpp, (msb)1A 5R 5G 5B(lsb), little-endian,
     //! most significant bit to 0
-    set(kPixelFormatRGB555LE) = TraitsInit()
-      .name( "RGB555LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 5, 5 )
-      .lshift( 1, 6, 11 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatRGB555LE) = copy(kPixelFormatRGB555BE)
+      .reverseEndian()
+      .name("RGB555LE");
 
     //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), big-endian
-    set(kPixelFormatBGR565BE) = TraitsInit()
+    set(kPixelFormatBGR565BE) = copy(kPixelFormatRGB565BE)
       .name( "BGR565BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 6, 5 )
-      .lshift( 11, 5, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 11, 5, 0 );
 
     //! packed BGR 5:6:5, 16bpp, (msb) 5B 6G 5R(lsb), little-endian
-    set(kPixelFormatBGR565LE) = TraitsInit()
-      .name( "BGR565LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 6, 5 )
-      .lshift( 11, 5, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatBGR565LE) = copy(kPixelFormatBGR565BE)
+      .reverseEndian()
+      .name("BGR565LE");
 
     //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), big-endian,
     //! most significant bit to 1
-    set(kPixelFormatBGR555BE) = TraitsInit()
+    set(kPixelFormatBGR555BE) = copy(kPixelFormatRGB555BE)
       .name( "BGR555BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 5, 5 )
-      .lshift( 11, 6, 1 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 11, 6, 1 );
 
     //! packed BGR 5:5:5, 16bpp, (msb)1A 5B 5G 5R(lsb), little-endian,
     //! most significant bit to 1
-    set(kPixelFormatBGR555LE) = TraitsInit()
-      .name( "BGR555LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 5, 5, 5 )
-      .lshift( 11, 6, 1 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatBGR555LE) = copy(kPixelFormatBGR555BE)
+      .reverseEndian()
+      .name("BGR555LE");
 
     //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
     //! little-endian
-    set(kPixelFormatYUV420P16LE) = TraitsInit()
+    set(kPixelFormatYUV420P16LE) = copy(kPixelFormatYUV420P)
       .name( "YUV420P16LE" )
-      .flags( kLE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
+      .addFlags( kLE )
       .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .stride( 16, 16, 16 );
 
     //! planar YUV 4:2:0, 24bpp, (1 Cr & Cb sample per 2x2 Y samples),
     //! big-endian
-    set(kPixelFormatYUV420P16BE) = TraitsInit()
-      .name( "YUV420P16BE" )
-      .flags( kBE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUV420P16BE) = copy(kPixelFormatYUV420P16LE)
+      .reverseEndian()
+      .name("YUV420P16BE");
 
     //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
     //! little-endian
-    set(kPixelFormatYUV422P16LE) = TraitsInit()
+    set(kPixelFormatYUV422P16LE) = copy(kPixelFormatYUV420P16LE)
       .name( "YUV422P16LE" )
-      .flags( kLE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .chromaBoxH( 1 );
 
     //! planar YUV 4:2:2, 32bpp, (1 Cr & Cb sample per 2x1 Y samples),
     //! big-endian
-    set(kPixelFormatYUV422P16BE) = TraitsInit()
-      .name( "YUV422P16BE" )
-      .flags( kBE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUV422P16BE) = copy(kPixelFormatYUV422P16LE)
+      .reverseEndian()
+      .name("YUV422P16BE");
 
     //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
     //! little-endian
-    set(kPixelFormatYUV444P16LE) = TraitsInit()
+    set(kPixelFormatYUV444P16LE) = copy(kPixelFormatYUV422P16LE)
       .name( "YUV444P16LE" )
-      .flags( kLE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .chromaBoxW( 1 );
 
     //! planar YUV 4:4:4, 48bpp, (1 Cr & Cb sample per 1x1 Y samples),
     //! big-endian
-    set(kPixelFormatYUV444P16BE) = TraitsInit()
-      .name( "YUV444P16BE" )
-      .flags( kBE | kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 16, 16, 16 )
-      .lshift( 0, 0, 0 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUV444P16BE) = copy(kPixelFormatYUV444P16LE)
+      .reverseEndian()
+      .name("YUV444P16BE");
 
     //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), big-endian,
     //! most significant bits to 0
-    set(kPixelFormatRGB444BE) = TraitsInit()
+    set(kPixelFormatRGB444BE) = copy(kPixelFormatRGB565BE)
       .name( "RGB444BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
       .depth( 4, 4, 4 )
-      .lshift( 4, 8, 12 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 4, 8, 12 );
 
     //! packed RGB 4:4:4, 16bpp, (msb)4A 4R 4G 4B(lsb), little-endian,
     //! most significant bits to 0
-    set(kPixelFormatRGB444LE) = TraitsInit()
-      .name( "RGB444LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 4, 4, 4 )
-      .lshift( 4, 8, 12 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatRGB444LE) = copy(kPixelFormatRGB444BE)
+      .reverseEndian()
+      .name("RGB444LE");
 
     //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), big-endian,
     //! most significant bits to 1
-    set(kPixelFormatBGR444BE) = TraitsInit()
+    set(kPixelFormatBGR444BE) = copy(kPixelFormatRGB444BE)
       .name( "BGR444BE" )
-      .flags( kBE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 4, 4, 4 )
-      .lshift( 12, 8, 4 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .lshift( 12, 8, 4 );
 
     //! packed BGR 4:4:4, 16bpp, (msb)4A 4B 4G 4R(lsb), little-endian,
     //! most significant bits to 1
-    set(kPixelFormatBGR444LE) = TraitsInit()
-      .name( "BGR444LE" )
-      .flags( kLE | kRGB | kPacked )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 0, 0 )
-      .depth( 4, 4, 4 )
-      .lshift( 12, 8, 4 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatBGR444LE) = copy(kPixelFormatBGR444BE)
+      .reverseEndian()
+      .name("BGR444LE");
 
     //! 8bit gray, 8bit alpha
     set(kPixelFormatY400A) = TraitsInit()
@@ -830,134 +595,491 @@ namespace yae
       .samples( 1, 1 );
 
     //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples), JPEG
-    set(kPixelFormatYUVJ420P) = TraitsInit()
-      .name( "YUVJ420P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUVJ420P) = copy(kPixelFormatYUV420P)
+      .name( "YUVJ420P" );
 
     //! planar YUV 4:2:2, 16bpp, (1 Cr & Cb sample per 2x1 Y samples), JPEG
-    set(kPixelFormatYUVJ422P) = TraitsInit()
-      .name( "YUVJ422P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUVJ422P) = copy(kPixelFormatYUV422P)
+      .name( "YUVJ422P" );
 
     //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples), JPEG
-    set(kPixelFormatYUVJ444P) = TraitsInit()
-      .name( "YUVJ444P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUVJ444P) = copy(kPixelFormatYUV444P)
+      .name( "YUVJ444P" );
 
-    //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples)
-    set(kPixelFormatYUVJ440P) = TraitsInit()
-      .name( "YUVJ440P" )
-      .flags( kYUV | kPlanar )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
-      .depth( 8, 8, 8 )
-      .lshift( 0, 0, 0 )
-      .stride( 8, 8, 8 )
-      .samples( 1, 1, 1 );
+    //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
+    set(kPixelFormatYUVJ440P) = copy(kPixelFormatYUV440P)
+      .name( "YUVJ440P" );
 
     //! planar YUV 4:2:0, 9-bits per channel:
-    set(kPixelFormatYUV420P9) = TraitsInit()
-      .name( "YUV420P9" )
-      .flags( kYUV | kPlanar | kNativeEndian )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
+    set(kPixelFormatYUV420P9BE) = copy(kPixelFormatYUV420P)
+      .name( "YUV420P9BE" )
+      .addFlags( kBE )
       .depth( 9, 9, 9 )
       .lshift( 7, 7, 7 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .stride( 16, 16, 16 );
+
+    set(kPixelFormatYUV420P9LE) = copy(kPixelFormatYUV420P9BE)
+      .reverseEndian()
+      .name("YUV420P9LE");
 
     //! planar YUV 4:2:2, 9-bits per channel:
-    set(kPixelFormatYUV422P9) = TraitsInit()
-      .name( "YUV422P9" )
-      .flags( kYUV | kPlanar | kNativeEndian )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 9, 9, 9 )
-      .lshift( 7, 7, 7 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    set(kPixelFormatYUV422P9BE) = copy(kPixelFormatYUV420P9BE)
+      .name( "YUV422P9BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUV422P9LE) = copy(kPixelFormatYUV422P9BE)
+      .reverseEndian()
+      .name("YUV422P9LE");
 
     //! planar YUV 4:4:4, 9-bits per channel:
-    set(kPixelFormatYUV444P9) = TraitsInit()
-      .name( "YUV444P9" )
-      .flags( kYUV | kPlanar | kNativeEndian )
+    set(kPixelFormatYUV444P9BE) = copy(kPixelFormatYUV422P9BE)
+      .name( "YUV444P9BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUV444P9LE) = copy(kPixelFormatYUV444P9BE)
+      .reverseEndian()
+      .name("YUV444P9LE");
+
+    //! planar YUV 4:2:0, 10-bits per channel:
+    set(kPixelFormatYUV420P10BE) = copy(kPixelFormatYUV420P9BE)
+      .name( "YUV420P10BE" )
+      .depth( 10, 10, 10 )
+      .lshift( 6, 6, 6 );
+
+    set(kPixelFormatYUV420P10LE) = copy(kPixelFormatYUV420P10BE)
+      .reverseEndian()
+      .name("YUV420P10LE");
+
+    //! planar YUV 4:2:2, 10-bits per channel:
+    set(kPixelFormatYUV422P10BE) = copy(kPixelFormatYUV420P10BE)
+      .name( "YUV422P10BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUV422P10LE) = copy(kPixelFormatYUV422P10BE)
+      .reverseEndian()
+      .name("YUV422P10LE");
+
+    //! planar YUV 4:4:4, 10-bits per channel:
+    set(kPixelFormatYUV444P10BE) = copy(kPixelFormatYUV422P10BE)
+      .name( "YUV444P10BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUV444P10LE) = copy(kPixelFormatYUV444P10BE)
+      .reverseEndian()
+      .name("YUV444P10LE");
+
+
+    set(kPixelFormatRGBA64BE) = copy(kPixelFormatARGB)
+      .name( "RGBA64BE" )
+      .addFlags( kBE )
+      .depth( 16, 16, 16, 16 )
+      .lshift( 0, 16, 32, 48 )
+      .stride( 64, 64, 64, 64 );
+
+    set(kPixelFormatRGBA64LE) = copy(kPixelFormatRGBA64BE)
+      .reverseEndian()
+      .name("RGBA64LE");
+
+
+    set(kPixelFormatBGRA64BE) = copy(kPixelFormatRGBA64BE)
+      .name( "BGRA64BE" )
+      .lshift( 32, 16, 0, 48 );
+
+    set(kPixelFormatBGRA64LE) = copy(kPixelFormatBGRA64LE)
+      .reverseEndian()
+      .name("BGRA64LE");
+
+
+    set(kPixelFormatGBRP) = TraitsInit()
+      .name( "GBRP" )
+      .flags( kRGB | kPlanar )
       .channels( 3 )
       .chromaBoxW( 1 )
       .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 9, 9, 9 )
-      .lshift( 7, 7, 7 )
-      .stride( 16, 16, 16 )
+      .plane( 2, 0, 1 )
+      .depth( 8, 8, 8 )
+      .lshift( 0, 0, 0 )
+      .stride( 8, 8, 8 )
       .samples( 1, 1, 1 );
 
-    //! planar YUV 4:2:0, 10-bits per channel:
-    set(kPixelFormatYUV420P10) = TraitsInit()
-      .name( "YUV420P10" )
-      .flags( kYUV | kPlanar | kNativeEndian )
+
+    set(kPixelFormatGBRP9BE) = copy(kPixelFormatGBRP)
+      .name( "GBRP9BE" )
+      .addFlags( kBE )
+      .depth( 9, 9, 9 )
+      .lshift( 7, 7, 7 )
+      .stride( 16, 16, 16 );
+
+    set(kPixelFormatGBRP9LE) = copy(kPixelFormatGBRP9BE)
+      .reverseEndian()
+      .name("GBRP9LE");
+
+
+    set(kPixelFormatGBRP10BE) = copy(kPixelFormatGBRP9BE)
+      .name( "GBRP10BE" )
+      .depth( 10, 10, 10 )
+      .lshift( 6, 6, 6 );
+
+    set(kPixelFormatGBRP10LE) = copy(kPixelFormatGBRP10BE)
+      .reverseEndian()
+      .name("GBRP10LE");
+
+
+    set(kPixelFormatGBRP16BE) = copy(kPixelFormatGBRP9BE)
+      .name( "GBRP16BE" )
+      .depth( 16, 16, 16 )
+      .lshift( 0, 0, 0 );
+
+    set(kPixelFormatGBRP16LE) = copy(kPixelFormatGBRP16BE)
+      .reverseEndian()
+      .name("GBRP16LE");
+
+
+    set(kPixelFormatYUVA420P9BE) = copy(kPixelFormatYUVA420P)
+      .name( "YUVA420P9BE" )
+      .addFlags( kBE )
+      .depth( 9, 9, 9, 9 )
+      .lshift( 7, 7, 7, 7 )
+      .stride( 16, 16, 16, 16 );
+
+    set(kPixelFormatYUVA420P9LE) = copy(kPixelFormatYUVA420P9BE)
+      .reverseEndian()
+      .name("YUVA420P9LE");
+
+
+    set(kPixelFormatYUVA422P9BE) = copy(kPixelFormatYUVA420P9BE)
+      .name( "YUVA422P9BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUVA422P9LE) = copy(kPixelFormatYUVA422P9BE)
+      .reverseEndian()
+      .name("YUVA422P9LE");
+
+
+    set(kPixelFormatYUVA444P9BE) = copy(kPixelFormatYUVA422P9BE)
+      .name( "YUVA444P9BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUVA444P9LE) = copy(kPixelFormatYUVA444P9BE)
+      .reverseEndian()
+      .name("YUVA444P9LE");
+
+
+    set(kPixelFormatYUVA420P10BE) = copy(kPixelFormatYUVA420P9BE)
+      .name( "YUVA420P10BE" )
+      .depth( 10, 10, 10, 10 )
+      .lshift( 6, 6, 6, 6 );
+
+    set(kPixelFormatYUVA420P10LE) = copy(kPixelFormatYUVA420P10BE)
+      .reverseEndian()
+      .name("YUVA420P10LE");
+
+
+    set(kPixelFormatYUVA422P10BE) = copy(kPixelFormatYUVA420P10BE)
+      .name( "YUVA422P10BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUVA422P10LE) = copy(kPixelFormatYUVA422P10BE)
+      .reverseEndian()
+      .name("YUVA422P10LE");
+
+
+    set(kPixelFormatYUVA444P10BE) = copy(kPixelFormatYUVA422P10BE)
+      .name( "YUVA444P10BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUVA444P10LE) = copy(kPixelFormatYUVA444P10BE)
+      .reverseEndian()
+      .name("YUVA444P10LE");
+
+
+    set(kPixelFormatYUVA420P16BE) = copy(kPixelFormatYUVA420P9BE)
+      .name( "YUVA420P16BE" )
+      .depth( 16, 16, 16, 16 )
+      .lshift( 0, 0, 0, 0 );
+
+    set(kPixelFormatYUVA420P16LE) = copy(kPixelFormatYUVA420P16BE)
+      .reverseEndian()
+      .name("YUVA420P16LE");
+
+
+    set(kPixelFormatYUVA422P16BE) = copy(kPixelFormatYUVA420P16BE)
+      .name( "YUVA422P16BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUVA422P16LE) = copy(kPixelFormatYUVA422P16BE)
+      .reverseEndian()
+      .name("YUVA422P16LE");
+
+
+    set(kPixelFormatYUVA444P16BE) = copy(kPixelFormatYUVA422P16BE)
+      .name( "YUVA444P16BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUVA444P16LE) = copy(kPixelFormatYUVA444P16BE)
+      .reverseEndian()
+      .name("YUVA444P16LE");
+
+
+    set(kPixelFormatXYZ12BE) = TraitsInit()
+      .name( "XYZ12BE" )
+      .flags( kBE | kXYZ | kPacked )
+      .channels( 3 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 0, 0, 0 )
+      .depth( 12, 12, 12 )
+      .lshift( 4, 20, 36 )
+      .stride( 48, 48, 48 )
+      .samples( 1, 1, 1 );
+
+    set(kPixelFormatXYZ12LE) = copy(kPixelFormatXYZ12BE)
+      .reverseEndian()
+      .name("XYZ12LE");
+
+    //! planar YUV 4:2:2, 16bpp, 1 plane for Y and 1 plane for the UV
+    //! channels, which are interleaved (first byte U and the
+    //! following byte V), 8 bits per channel
+    set(kPixelFormatNV16) = copy(kPixelFormatNV12)
+      .name( "NV16" )
+      .chromaBoxH( 1 );
+
+    //! planar YUV 4:2:2, 20bpp, 1 plane for Y and 1 plane for the UV
+    //! channels, which are interleaved (first byte U and the
+    //! following byte V), 10 bits per channel
+    set(kPixelFormatNV20BE) = copy(kPixelFormatNV16)
+      .name( "NV20BE" )
+      .addFlags( kBE )
+      .depth( 10, 10, 10 )
+      .lshift( 6, 6, 22 )
+      .stride( 16, 32, 32 );
+
+    set(kPixelFormatNV20LE) = copy(kPixelFormatNV20BE)
+      .reverseEndian()
+      .name("NV20LE");
+
+
+    set(kPixelFormatYVYU422) = copy(kPixelFormatUYVY422)
+      .name( "YVYU422" )
+      .lshift( 0, 24, 8 );
+
+
+    set(kPixelFormatYA16BE) = copy(kPixelFormatY400A)
+      .name( "YA16BE" )
+      .addFlags( kBE )
+      .depth( 16, 16 )
+      .lshift( 0, 16 )
+      .stride( 16, 16 );
+
+    set(kPixelFormatYA16LE) = copy(kPixelFormatYA16BE)
+      .reverseEndian()
+      .name("YA16LE");
+
+
+    set(kPixelFormat0RGB) = copy(kPixelFormatRGB24)
+      .name( "0RGB" )
+      .lshift( 8, 16, 24 )
+      .stride( 32, 32, 32 );
+
+    set(kPixelFormatRGB0) = copy(kPixelFormat0RGB)
+      .name( "RGB0" )
+      .lshift( 0, 8, 16 );
+
+    set(kPixelFormat0BGR) = copy(kPixelFormat0RGB)
+      .name( "0BGR" )
+      .lshift( 24, 16, 8 );
+
+    set(kPixelFormatBGR0) = copy(kPixelFormat0RGB)
+      .name( "BGR0" )
+      .lshift( 16, 8, 0 );
+
+
+    set(kPixelFormatYUVA422P) = copy(kPixelFormatYUVA420P)
+      .name( "YUVA422P" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUVA444P) = copy(kPixelFormatYUVA422P)
+      .name( "YUVA444P" )
+      .chromaBoxW( 1 );
+
+
+    set(kPixelFormatYUV420P12LE) = copy(kPixelFormatYUV420P16LE)
+      .name( "YUV420P12LE" )
+      .depth( 12, 12, 12 )
+      .lshift( 4, 4, 4 );
+
+    set(kPixelFormatYUV420P12BE) = copy(kPixelFormatYUV420P12LE)
+      .reverseEndian()
+      .name("YUV420P12BE");
+
+
+    set(kPixelFormatYUV420P14LE) = copy(kPixelFormatYUV420P16LE)
+      .name( "YUV420P14LE" )
+      .depth( 14, 14, 14 )
+      .lshift( 2, 2, 2 );
+
+    set(kPixelFormatYUV420P14BE) = copy(kPixelFormatYUV420P14LE)
+      .reverseEndian()
+      .name("YUV420P14BE");
+
+
+    set(kPixelFormatYUV422P12BE) = copy(kPixelFormatYUV420P12BE)
+      .name( "YUV422P12BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUV422P12LE) = copy(kPixelFormatYUV422P12BE)
+      .reverseEndian()
+      .name("YUV422P12LE");
+
+
+    set(kPixelFormatYUV422P14BE) = copy(kPixelFormatYUV420P14BE)
+      .name( "YUV422P14BE" )
+      .chromaBoxH( 1 );
+
+    set(kPixelFormatYUV422P14LE) = copy(kPixelFormatYUV422P14BE)
+      .reverseEndian()
+      .name("YUV422P14LE");
+
+
+    set(kPixelFormatYUV444P12BE) = copy(kPixelFormatYUV422P12BE)
+      .name( "YUV444P12BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUV444P12LE) = copy(kPixelFormatYUV444P12BE)
+      .reverseEndian()
+      .name("YUV444P12LE");
+
+
+    set(kPixelFormatYUV444P14BE) = copy(kPixelFormatYUV422P14BE)
+      .name( "YUV444P14BE" )
+      .chromaBoxW( 1 );
+
+    set(kPixelFormatYUV444P14LE) = copy(kPixelFormatYUV444P14BE)
+      .reverseEndian()
+      .name("YUV444P14LE");
+
+
+    set(kPixelFormatGBRP12BE) = copy(kPixelFormatGBRP16BE)
+      .name( "GBRP12BE" )
+      .depth( 12, 12, 12 )
+      .lshift( 4, 4, 4 );
+
+    set(kPixelFormatGBRP12LE) = copy(kPixelFormatGBRP12BE)
+      .reverseEndian()
+      .name("GBRP12LE");
+
+
+    set(kPixelFormatGBRP14BE) = copy(kPixelFormatGBRP16BE)
+      .name( "GBRP14BE" )
+      .depth( 14, 14, 14 )
+      .lshift( 2, 2, 2 );
+
+    set(kPixelFormatGBRP14LE) = copy(kPixelFormatGBRP14BE)
+      .reverseEndian()
+      .name("GBRP14LE");
+
+
+    set(kPixelFormatGBRAP) = copy(kPixelFormatGBRP)
+      .name( "GBRAP" )
+      .addFlags( kAlpha )
+      .channels( 4 )
+      .plane( 2, 0, 1, 3 )
+      .depth( 8, 8, 8, 8 )
+      .lshift( 0, 0, 0, 0 )
+      .stride( 8, 8, 8, 8 )
+      .samples( 1, 1, 1, 1 );
+
+
+    set(kPixelFormatGBRAP16BE) = copy(kPixelFormatGBRAP)
+      .name( "GBRAP16BE" )
+      .addFlags( kBE )
+      .depth( 16, 16, 16, 16 )
+      .lshift( 0, 0, 0, 0 )
+      .stride( 16, 16, 16, 16 );
+
+    set(kPixelFormatGBRAP16LE) = copy(kPixelFormatGBRAP16BE)
+      .reverseEndian()
+      .name("GBRAP16LE");
+
+    // even lines:  G R  G R
+    //  odd lines:  B G  B G
+    set(kPixelFormatBayerBGGR8) = TraitsInit()
+      .name( "BayerBGGR8" )
+      .flags( kBayer | kPacked )
       .channels( 3 )
       .chromaBoxW( 2 )
       .chromaBoxH( 2 )
-      .plane( 0, 1, 2 )
-      .depth( 10, 10, 10 )
-      .lshift( 6, 6, 6 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+      .bayer( 1, 0, 2, 1 )
+      .plane( 0, 0, 0, 0 )
+      .depth( 8, 8, 8, 8 )
+      .lshift( 0, 8, 0, 8 )
+      .stride( 16, 16, 16, 16 )
+      .samples( 1, 2, 1 );
 
-    //! planar YUV 4:2:2, 10-bits per channel:
-    set(kPixelFormatYUV422P10) = TraitsInit()
-      .name( "YUV422P10" )
-      .flags( kYUV | kPlanar | kNativeEndian )
-      .channels( 3 )
-      .chromaBoxW( 2 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 10, 10, 10 )
-      .lshift( 6, 6, 6 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    // even lines:  G B  G B
+    //  odd lines:  R G  R G
+    set(kPixelFormatBayerRGGB8) = copy(kPixelFormatBayerBGGR8)
+      .name( "BayerRGGB8" )
+      .bayer( 1, 2, 0, 1 );
 
-    //! planar YUV 4:4:4, 10-bits per channel:
-    set(kPixelFormatYUV444P10) = TraitsInit()
-      .name( "YUV444P10" )
-      .flags( kYUV | kPlanar | kNativeEndian )
-      .channels( 3 )
-      .chromaBoxW( 1 )
-      .chromaBoxH( 1 )
-      .plane( 0, 1, 2 )
-      .depth( 10, 10, 10 )
-      .lshift( 6, 6, 6 )
-      .stride( 16, 16, 16 )
-      .samples( 1, 1, 1 );
+    // even lines:  R G  R G
+    //  odd lines:  G B  G B
+    set(kPixelFormatBayerGBRG8) = copy(kPixelFormatBayerBGGR8)
+      .name( "BayerGBRG8" )
+      .bayer( 0, 1, 1, 2 );
+
+    // even lines:  B G  B G
+    //  odd lines:  G R  G R
+    set(kPixelFormatBayerGRBG8) = copy(kPixelFormatBayerBGGR8)
+      .name( "BayerGRBG8" )
+      .bayer( 2, 1, 1, 0 );
+
+
+    // even lines:  G R  G R
+    //  odd lines:  B G  B G
+    set(kPixelFormatBayerBGGR16LE) = copy(kPixelFormatBayerBGGR8)
+      .name( "BayerBGGR16LE" )
+      .addFlags( kLE )
+      .depth( 16, 16, 16, 16 )
+      .lshift( 0, 16, 0, 16 )
+      .stride( 32, 32, 32, 32 );
+
+    set(kPixelFormatBayerBGGR16BE) = copy(kPixelFormatBayerBGGR16LE)
+      .reverseEndian()
+      .name("BayerBGGR16BE");
+
+
+    // even lines:  G B  G B
+    //  odd lines:  R G  R G
+    set(kPixelFormatBayerRGGB16LE) = copy(kPixelFormatBayerBGGR16LE)
+      .name( "BayerRGGB16LE" )
+      .bayer( 1, 2, 0, 1 );
+
+    set(kPixelFormatBayerRGGB16BE) = copy(kPixelFormatBayerRGGB16LE)
+      .reverseEndian()
+      .name("BayerRGGB16BE");
+
+
+    // even lines:  R G  R G
+    //  odd lines:  G B  G B
+    set(kPixelFormatBayerGBRG16LE) = copy(kPixelFormatBayerBGGR16LE)
+      .name( "BayerGBRG16LE" )
+      .bayer( 0, 1, 1, 2 );
+
+    set(kPixelFormatBayerGBRG16BE) = copy(kPixelFormatBayerGBRG16LE)
+      .reverseEndian()
+      .name("BayerGBRG16BE");
+
+
+    // even lines:  B G  B G
+    //  odd lines:  G R  G R
+    set(kPixelFormatBayerGRBG16LE) = copy(kPixelFormatBayerBGGR16LE)
+      .name( "BayerGRBG16LE" )
+      .bayer( 2, 1, 1, 0 );
+
+    set(kPixelFormatBayerGRBG16BE) = copy(kPixelFormatBayerGRBG16LE)
+      .reverseEndian()
+      .name("BayerGRBG16BE");
 
   }
 

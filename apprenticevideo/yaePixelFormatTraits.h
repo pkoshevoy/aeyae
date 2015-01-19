@@ -24,19 +24,21 @@ namespace yae
     //
     enum TFlags
     {
-      kLE = 1 << 0,      // little-endian
-      kBE = 1 << 1,      // big-endian
-      kAlpha = 1 << 2,   // has an alpha channel
-      kYUV = 1 << 3,     // has color (YUV)
-      kRGB = 1 << 4,     // has color (RGB)
-      kPacked = 1 << 5,  // has a plane with interleaved channel samples
-      kPlanar = 1 << 6,  // has a contiguous plane per channel samples
-      kPaletted = 1 << 7 // requires a color palette
+      kLE = 1 << 0,        // little-endian
+      kBE = 1 << 1,        // big-endian
+      kAlpha = 1 << 2,     // has an alpha channel
+      kYUV = 1 << 3,       // has color (YUV)
+      kRGB = 1 << 4,       // has color (RGB)
+      kXYZ = 1 << 5,       // has color (XYZ)
+      kBayer = 1 << 6,     // has color (RGB), in 2x2 Bayer configuration
+      kPacked = 1 << 7,    // has a plane with interleaved channel samples
+      kPlanar = 1 << 8,    // has a contiguous plane per channel samples
+      kPaletted = 1 << 9,  // requires a color palette
     };
 
-    enum { kColor = (kYUV | kRGB) };
+    enum { kColor = (kYUV | kRGB | kXYZ | kBayer) };
 
-#ifdef __BIG_ENDIAN__
+#if defined(__BIG_ENDIAN__) && __BIG_ENDIAN__
     enum { kNativeEndian = kBE };
 #else
     enum { kNativeEndian = kLE };
@@ -51,7 +53,7 @@ namespace yae
       const char * name_;
 
       // additional info (big endian, little endian, etc...)
-      unsigned char flags_;
+      unsigned int flags_;
 
       // number of pixel component channels:
       // 1 -- gray, alpha, or paletted
@@ -85,6 +87,30 @@ namespace yae
       // number of samples in the set per channel,
       // necessary for complex formats like UYYVYY411:
       unsigned char samples_[4];
+
+      // NOTE:
+      //
+      //  * Bayer sample layout matrix (2 x 2)
+      //  is stored in row-major order
+      //
+      //  * Bayer pixel format chroma box is always 2 x 2
+      //    as is the Bayer sample layout matrix
+      //
+      //  * samples_ are always 1, 2, 1
+      //    because Green is always represented twice
+      //
+      //  * lshift_, plane_, depth_, and stride_ correspond to the
+      //    color component specified in the bayer_ matrix
+      //
+      //
+      // Example of Bayer sample layout, BGGR:
+      //
+      //   even lines:  G R    1 0
+      //    odd lines:  B G    2 1
+      //
+      //   bayer_ == [ 1, 0, 2, 1 ]
+      //
+      unsigned char bayer_[4];
 
       // NOTE:
       // number of least significant bits to right-shift

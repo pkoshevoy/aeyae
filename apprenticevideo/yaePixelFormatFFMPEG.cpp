@@ -22,194 +22,435 @@ namespace yae
   // ffmpeg_to_yae
   //
   TPixelFormatId
-  ffmpeg_to_yae(enum PixelFormat ffmpegPixelFormat)
+  ffmpeg_to_yae(enum AVPixelFormat ffmpegPixelFormat)
   {
     switch (ffmpegPixelFormat)
     {
-      case PIX_FMT_YUV420P:
+      case AV_PIX_FMT_YUV420P:
         return kPixelFormatYUV420P;
 
-      case PIX_FMT_YUYV422:
+      case AV_PIX_FMT_YUYV422:
         return kPixelFormatYUYV422;
 
-      case PIX_FMT_RGB24:
+      case AV_PIX_FMT_RGB24:
         return kPixelFormatRGB24;
 
-      case PIX_FMT_BGR24:
+      case AV_PIX_FMT_BGR24:
         return kPixelFormatBGR24;
 
-      case PIX_FMT_YUV422P:
+      case AV_PIX_FMT_YUV422P:
         return kPixelFormatYUV422P;
 
-      case PIX_FMT_YUV444P:
+      case AV_PIX_FMT_YUV444P:
         return kPixelFormatYUV444P;
 
-      case PIX_FMT_YUV410P:
+      case AV_PIX_FMT_YUV410P:
         return kPixelFormatYUV410P;
 
-      case PIX_FMT_YUV411P:
+      case AV_PIX_FMT_YUV411P:
         return kPixelFormatYUV411P;
 
-      case PIX_FMT_GRAY8:
+      case AV_PIX_FMT_GRAY8:
         return kPixelFormatGRAY8;
 
-      case PIX_FMT_MONOWHITE:
+      case AV_PIX_FMT_MONOWHITE:
         return kPixelFormatMONOWHITE;
 
-      case PIX_FMT_MONOBLACK:
+      case AV_PIX_FMT_MONOBLACK:
         return kPixelFormatMONOBLACK;
 
-      case PIX_FMT_PAL8:
+      case AV_PIX_FMT_PAL8:
         return kPixelFormatPAL8;
 
-      case PIX_FMT_UYVY422:
+      case AV_PIX_FMT_UYVY422:
         return kPixelFormatUYVY422;
 
-      case PIX_FMT_UYYVYY411:
+      case AV_PIX_FMT_UYYVYY411:
         return kPixelFormatUYYVYY411;
 
-      case PIX_FMT_BGR8:
+      case AV_PIX_FMT_BGR8:
         return kPixelFormatBGR8;
 
-      case PIX_FMT_BGR4:
+      case AV_PIX_FMT_BGR4:
         return kPixelFormatBGR4;
 
-      case PIX_FMT_BGR4_BYTE:
+      case AV_PIX_FMT_BGR4_BYTE:
         return kPixelFormatBGR4_BYTE;
 
-      case PIX_FMT_RGB8:
+      case AV_PIX_FMT_RGB8:
         return kPixelFormatRGB8;
 
-      case PIX_FMT_RGB4:
+      case AV_PIX_FMT_RGB4:
         return kPixelFormatRGB4;
 
-      case PIX_FMT_RGB4_BYTE:
+      case AV_PIX_FMT_RGB4_BYTE:
         return kPixelFormatRGB4_BYTE;
 
-      case PIX_FMT_NV12:
+      case AV_PIX_FMT_NV12:
         return kPixelFormatNV12;
 
-      case PIX_FMT_NV21:
+      case AV_PIX_FMT_NV21:
         return kPixelFormatNV21;
 
-      case PIX_FMT_ARGB:
+      case AV_PIX_FMT_ARGB:
         return kPixelFormatARGB;
 
-      case PIX_FMT_RGBA:
+      case AV_PIX_FMT_RGBA:
         return kPixelFormatRGBA;
 
-      case PIX_FMT_ABGR:
+      case AV_PIX_FMT_ABGR:
         return kPixelFormatABGR;
 
-      case PIX_FMT_BGRA:
+      case AV_PIX_FMT_BGRA:
         return kPixelFormatBGRA;
 
-      case PIX_FMT_GRAY16BE:
+      case AV_PIX_FMT_GRAY16BE:
         return kPixelFormatGRAY16BE;
 
-      case PIX_FMT_GRAY16LE:
+      case AV_PIX_FMT_GRAY16LE:
         return kPixelFormatGRAY16LE;
 
-      case PIX_FMT_YUV440P:
+      case AV_PIX_FMT_YUV440P:
         return kPixelFormatYUV440P;
 
-      case PIX_FMT_YUVA420P:
+      case AV_PIX_FMT_YUVA420P:
         return kPixelFormatYUVA420P;
 
-      case PIX_FMT_RGB48BE:
+      case AV_PIX_FMT_RGB48BE:
         return kPixelFormatRGB48BE;
 
-      case PIX_FMT_RGB48LE:
+      case AV_PIX_FMT_RGB48LE:
         return kPixelFormatRGB48LE;
 
-      case PIX_FMT_RGB565BE:
+      case AV_PIX_FMT_RGB565BE:
         return kPixelFormatRGB565BE;
 
-      case PIX_FMT_RGB565LE:
+      case AV_PIX_FMT_RGB565LE:
         return kPixelFormatRGB565LE;
 
-      case PIX_FMT_RGB555BE:
+      case AV_PIX_FMT_RGB555BE:
         return kPixelFormatRGB555BE;
 
-      case PIX_FMT_RGB555LE:
+      case AV_PIX_FMT_RGB555LE:
         return kPixelFormatRGB555LE;
 
-      case PIX_FMT_BGR565BE:
+      case AV_PIX_FMT_BGR565BE:
         return kPixelFormatBGR565BE;
 
-      case PIX_FMT_BGR565LE:
+      case AV_PIX_FMT_BGR565LE:
         return kPixelFormatBGR565LE;
 
-      case PIX_FMT_BGR555BE:
+      case AV_PIX_FMT_BGR555BE:
         return kPixelFormatBGR555BE;
 
-      case PIX_FMT_BGR555LE:
+      case AV_PIX_FMT_BGR555LE:
         return kPixelFormatBGR555LE;
 
-      case PIX_FMT_YUV420P16LE:
+      case AV_PIX_FMT_YUV420P16LE:
         return kPixelFormatYUV420P16LE;
 
-      case PIX_FMT_YUV420P16BE:
+      case AV_PIX_FMT_YUV420P16BE:
         return kPixelFormatYUV420P16BE;
 
-      case PIX_FMT_YUV422P16LE:
+      case AV_PIX_FMT_YUV422P16LE:
         return kPixelFormatYUV422P16LE;
 
-      case PIX_FMT_YUV422P16BE:
+      case AV_PIX_FMT_YUV422P16BE:
         return kPixelFormatYUV422P16BE;
 
-      case PIX_FMT_YUV444P16LE:
+      case AV_PIX_FMT_YUV444P16LE:
         return kPixelFormatYUV444P16LE;
 
-      case PIX_FMT_YUV444P16BE:
+      case AV_PIX_FMT_YUV444P16BE:
         return kPixelFormatYUV444P16BE;
 
-      case PIX_FMT_RGB444BE:
+      case AV_PIX_FMT_RGB444BE:
         return kPixelFormatRGB444BE;
 
-      case PIX_FMT_RGB444LE:
+      case AV_PIX_FMT_RGB444LE:
         return kPixelFormatRGB444LE;
 
-      case PIX_FMT_BGR444BE:
+      case AV_PIX_FMT_BGR444BE:
         return kPixelFormatBGR444BE;
 
-      case PIX_FMT_BGR444LE:
+      case AV_PIX_FMT_BGR444LE:
         return kPixelFormatBGR444LE;
 
-      case PIX_FMT_Y400A:
+      case AV_PIX_FMT_Y400A:
         return kPixelFormatY400A;
 
-      case PIX_FMT_YUVJ420P:
+      case AV_PIX_FMT_YUVJ420P:
         return kPixelFormatYUVJ420P;
 
-      case PIX_FMT_YUVJ422P:
+      case AV_PIX_FMT_YUVJ422P:
         return kPixelFormatYUVJ422P;
 
-      case PIX_FMT_YUVJ444P:
+      case AV_PIX_FMT_YUVJ444P:
         return kPixelFormatYUVJ444P;
 
-      case PIX_FMT_YUVJ440P:
+      case AV_PIX_FMT_YUVJ440P:
         return kPixelFormatYUVJ440P;
 
-      case PIX_FMT_YUV420P9:
-        return kPixelFormatYUV420P9;
+      case AV_PIX_FMT_YUV420P9BE:
+        return kPixelFormatYUV420P9BE;
 
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 0, 0)
-      case PIX_FMT_YUV422P9:
-        return kPixelFormatYUV422P9;
-#endif
+      case AV_PIX_FMT_YUV420P9LE:
+        return kPixelFormatYUV420P9LE;
 
-      case PIX_FMT_YUV444P9:
-        return kPixelFormatYUV444P9;
+      case AV_PIX_FMT_YUV422P9BE:
+        return kPixelFormatYUV422P9BE;
 
-      case PIX_FMT_YUV420P10:
-        return kPixelFormatYUV420P10;
+      case AV_PIX_FMT_YUV422P9LE:
+        return kPixelFormatYUV422P9LE;
 
-      case PIX_FMT_YUV422P10:
-        return kPixelFormatYUV422P10;
+      case AV_PIX_FMT_YUV444P9BE:
+        return kPixelFormatYUV444P9BE;
 
-      case PIX_FMT_YUV444P10:
-        return kPixelFormatYUV444P10;
+      case AV_PIX_FMT_YUV444P9LE:
+        return kPixelFormatYUV444P9LE;
+
+      case AV_PIX_FMT_YUV420P10BE:
+        return kPixelFormatYUV420P10BE;
+
+      case AV_PIX_FMT_YUV420P10LE:
+        return kPixelFormatYUV420P10LE;
+
+      case AV_PIX_FMT_YUV422P10BE:
+        return kPixelFormatYUV422P10BE;
+
+      case AV_PIX_FMT_YUV422P10LE:
+        return kPixelFormatYUV422P10LE;
+
+      case AV_PIX_FMT_YUV444P10BE:
+        return kPixelFormatYUV444P10BE;
+
+      case AV_PIX_FMT_YUV444P10LE:
+        return kPixelFormatYUV444P10LE;
+
+      case AV_PIX_FMT_RGBA64BE:
+        return kPixelFormatRGBA64BE;
+
+      case AV_PIX_FMT_RGBA64LE:
+        return kPixelFormatRGBA64LE;
+
+      case AV_PIX_FMT_BGRA64BE:
+        return kPixelFormatBGRA64BE;
+
+      case AV_PIX_FMT_BGRA64LE:
+        return kPixelFormatBGRA64LE;
+
+      case AV_PIX_FMT_GBRP:
+        return kPixelFormatGBRP;
+
+      case AV_PIX_FMT_GBRP9BE:
+        return kPixelFormatGBRP9BE;
+
+      case AV_PIX_FMT_GBRP9LE:
+        return kPixelFormatGBRP9LE;
+
+      case AV_PIX_FMT_GBRP10BE:
+        return kPixelFormatGBRP10BE;
+
+      case AV_PIX_FMT_GBRP10LE:
+        return kPixelFormatGBRP10LE;
+
+      case AV_PIX_FMT_GBRP16BE:
+        return kPixelFormatGBRP16BE;
+
+      case AV_PIX_FMT_GBRP16LE:
+        return kPixelFormatGBRP16LE;
+
+      case AV_PIX_FMT_YUVA420P9BE:
+        return kPixelFormatYUVA420P9BE;
+
+      case AV_PIX_FMT_YUVA420P9LE:
+        return kPixelFormatYUVA420P9LE;
+
+      case AV_PIX_FMT_YUVA422P9BE:
+        return kPixelFormatYUVA422P9BE;
+
+      case AV_PIX_FMT_YUVA422P9LE:
+        return kPixelFormatYUVA422P9LE;
+
+      case AV_PIX_FMT_YUVA444P9BE:
+        return kPixelFormatYUVA444P9BE;
+
+      case AV_PIX_FMT_YUVA444P9LE:
+        return kPixelFormatYUVA444P9LE;
+
+      case AV_PIX_FMT_YUVA420P10BE:
+        return kPixelFormatYUVA420P10BE;
+
+      case AV_PIX_FMT_YUVA420P10LE:
+        return kPixelFormatYUVA420P10LE;
+
+      case AV_PIX_FMT_YUVA422P10BE:
+        return kPixelFormatYUVA422P10BE;
+
+      case AV_PIX_FMT_YUVA422P10LE:
+        return kPixelFormatYUVA422P10LE;
+
+      case AV_PIX_FMT_YUVA444P10BE:
+        return kPixelFormatYUVA444P10BE;
+
+      case AV_PIX_FMT_YUVA444P10LE:
+        return kPixelFormatYUVA444P10LE;
+
+      case AV_PIX_FMT_YUVA420P16BE:
+        return kPixelFormatYUVA420P16BE;
+
+      case AV_PIX_FMT_YUVA420P16LE:
+        return kPixelFormatYUVA420P16LE;
+
+      case AV_PIX_FMT_YUVA422P16BE:
+        return kPixelFormatYUVA422P16BE;
+
+      case AV_PIX_FMT_YUVA422P16LE:
+        return kPixelFormatYUVA422P16LE;
+
+      case AV_PIX_FMT_YUVA444P16BE:
+        return kPixelFormatYUVA444P16BE;
+
+      case AV_PIX_FMT_YUVA444P16LE:
+        return kPixelFormatYUVA444P16LE;
+
+      case AV_PIX_FMT_XYZ12BE:
+        return kPixelFormatXYZ12BE;
+
+      case AV_PIX_FMT_XYZ12LE:
+        return kPixelFormatXYZ12LE;
+
+      case AV_PIX_FMT_NV16:
+        return kPixelFormatNV16;
+
+      case AV_PIX_FMT_NV20BE:
+        return kPixelFormatNV20BE;
+
+      case AV_PIX_FMT_NV20LE:
+        return kPixelFormatNV20LE;
+
+      case AV_PIX_FMT_YVYU422:
+        return kPixelFormatYVYU422;
+
+      case AV_PIX_FMT_YA16BE:
+        return kPixelFormatYA16BE;
+
+      case AV_PIX_FMT_YA16LE:
+        return kPixelFormatYA16LE;
+
+      case AV_PIX_FMT_0RGB:
+        return kPixelFormat0RGB;
+
+      case AV_PIX_FMT_RGB0:
+        return kPixelFormatRGB0;
+
+      case AV_PIX_FMT_0BGR:
+        return kPixelFormat0BGR;
+
+      case AV_PIX_FMT_BGR0:
+        return kPixelFormatBGR0;
+
+      case AV_PIX_FMT_YUVA422P:
+        return kPixelFormatYUVA422P;
+
+      case AV_PIX_FMT_YUVA444P:
+        return kPixelFormatYUVA444P;
+
+      case AV_PIX_FMT_YUV420P12BE:
+        return kPixelFormatYUV420P12BE;
+
+      case AV_PIX_FMT_YUV420P12LE:
+        return kPixelFormatYUV420P12LE;
+
+      case AV_PIX_FMT_YUV420P14BE:
+        return kPixelFormatYUV420P14BE;
+
+      case AV_PIX_FMT_YUV420P14LE:
+        return kPixelFormatYUV420P14LE;
+
+      case AV_PIX_FMT_YUV422P12BE:
+        return kPixelFormatYUV422P12BE;
+
+      case AV_PIX_FMT_YUV422P12LE:
+        return kPixelFormatYUV422P12LE;
+
+      case AV_PIX_FMT_YUV422P14BE:
+        return kPixelFormatYUV422P14BE;
+
+      case AV_PIX_FMT_YUV422P14LE:
+        return kPixelFormatYUV422P14LE;
+
+      case AV_PIX_FMT_YUV444P12BE:
+        return kPixelFormatYUV444P12BE;
+
+      case AV_PIX_FMT_YUV444P12LE:
+        return kPixelFormatYUV444P12LE;
+
+      case AV_PIX_FMT_YUV444P14BE:
+        return kPixelFormatYUV444P14BE;
+
+      case AV_PIX_FMT_YUV444P14LE:
+        return kPixelFormatYUV444P14LE;
+
+      case AV_PIX_FMT_GBRP12BE:
+        return kPixelFormatGBRP12BE;
+
+      case AV_PIX_FMT_GBRP12LE:
+        return kPixelFormatGBRP12LE;
+
+      case AV_PIX_FMT_GBRP14BE:
+        return kPixelFormatGBRP14BE;
+
+      case AV_PIX_FMT_GBRP14LE:
+        return kPixelFormatGBRP14LE;
+
+      case AV_PIX_FMT_GBRAP:
+        return kPixelFormatGBRAP;
+
+      case AV_PIX_FMT_GBRAP16BE:
+        return kPixelFormatGBRAP16BE;
+
+      case AV_PIX_FMT_GBRAP16LE:
+        return kPixelFormatGBRAP16LE;
+
+      case AV_PIX_FMT_YUVJ411P:
+        return kPixelFormatYUVJ411P;
+
+      case AV_PIX_FMT_BAYER_BGGR8:
+        return kPixelFormatBayerBGGR8;
+
+      case AV_PIX_FMT_BAYER_RGGB8:
+        return kPixelFormatBayerRGGB8;
+
+      case AV_PIX_FMT_BAYER_GBRG8:
+        return kPixelFormatBayerGBRG8;
+
+      case AV_PIX_FMT_BAYER_GRBG8:
+        return kPixelFormatBayerGRBG8;
+
+      case AV_PIX_FMT_BAYER_BGGR16LE:
+        return kPixelFormatBayerBGGR16LE;
+
+      case AV_PIX_FMT_BAYER_BGGR16BE:
+        return kPixelFormatBayerBGGR16BE;
+
+      case AV_PIX_FMT_BAYER_RGGB16LE:
+        return kPixelFormatBayerRGGB16LE;
+
+      case AV_PIX_FMT_BAYER_RGGB16BE:
+        return kPixelFormatBayerRGGB16BE;
+
+      case AV_PIX_FMT_BAYER_GBRG16LE:
+        return kPixelFormatBayerGBRG16LE;
+
+      case AV_PIX_FMT_BAYER_GBRG16BE:
+        return kPixelFormatBayerGBRG16BE;
+
+      case AV_PIX_FMT_BAYER_GRBG16LE:
+        return kPixelFormatBayerGRBG16LE;
+
+      case AV_PIX_FMT_BAYER_GRBG16BE:
+        return kPixelFormatBayerGRBG16BE;
 
       default:
         break;
@@ -221,200 +462,441 @@ namespace yae
   //----------------------------------------------------------------
   // yae_to_ffmpeg
   //
-  enum PixelFormat
+  enum AVPixelFormat
   yae_to_ffmpeg(TPixelFormatId yaePixelFormat)
   {
     switch (yaePixelFormat)
     {
       case kPixelFormatYUV420P:
-        return PIX_FMT_YUV420P;
+        return AV_PIX_FMT_YUV420P;
 
       case kPixelFormatYUYV422:
-        return PIX_FMT_YUYV422;
+        return AV_PIX_FMT_YUYV422;
 
       case kPixelFormatRGB24:
-        return PIX_FMT_RGB24;
+        return AV_PIX_FMT_RGB24;
 
       case kPixelFormatBGR24:
-        return PIX_FMT_BGR24;
+        return AV_PIX_FMT_BGR24;
 
       case kPixelFormatYUV422P:
-        return PIX_FMT_YUV422P;
+        return AV_PIX_FMT_YUV422P;
 
       case kPixelFormatYUV444P:
-        return PIX_FMT_YUV444P;
+        return AV_PIX_FMT_YUV444P;
 
       case kPixelFormatYUV410P:
-        return PIX_FMT_YUV410P;
+        return AV_PIX_FMT_YUV410P;
 
       case kPixelFormatYUV411P:
-        return PIX_FMT_YUV411P;
+        return AV_PIX_FMT_YUV411P;
 
       case kPixelFormatGRAY8:
-        return PIX_FMT_GRAY8;
+        return AV_PIX_FMT_GRAY8;
 
       case kPixelFormatMONOWHITE:
-        return PIX_FMT_MONOWHITE;
+        return AV_PIX_FMT_MONOWHITE;
 
       case kPixelFormatMONOBLACK:
-        return PIX_FMT_MONOBLACK;
+        return AV_PIX_FMT_MONOBLACK;
 
       case kPixelFormatPAL8:
-        return PIX_FMT_PAL8;
+        return AV_PIX_FMT_PAL8;
 
       case kPixelFormatUYVY422:
-        return PIX_FMT_UYVY422;
+        return AV_PIX_FMT_UYVY422;
 
       case kPixelFormatUYYVYY411:
-        return PIX_FMT_UYYVYY411;
+        return AV_PIX_FMT_UYYVYY411;
 
       case kPixelFormatBGR8:
-        return PIX_FMT_BGR8;
+        return AV_PIX_FMT_BGR8;
 
       case kPixelFormatBGR4:
-        return PIX_FMT_BGR4;
+        return AV_PIX_FMT_BGR4;
 
       case kPixelFormatBGR4_BYTE:
-        return PIX_FMT_BGR4_BYTE;
+        return AV_PIX_FMT_BGR4_BYTE;
 
       case kPixelFormatRGB8:
-        return PIX_FMT_RGB8;
+        return AV_PIX_FMT_RGB8;
 
       case kPixelFormatRGB4:
-        return PIX_FMT_RGB4;
+        return AV_PIX_FMT_RGB4;
 
       case kPixelFormatRGB4_BYTE:
-        return PIX_FMT_RGB4_BYTE;
+        return AV_PIX_FMT_RGB4_BYTE;
 
       case kPixelFormatNV12:
-        return PIX_FMT_NV12;
+        return AV_PIX_FMT_NV12;
 
       case kPixelFormatNV21:
-        return PIX_FMT_NV21;
+        return AV_PIX_FMT_NV21;
 
       case kPixelFormatARGB:
-        return PIX_FMT_ARGB;
+        return AV_PIX_FMT_ARGB;
 
       case kPixelFormatRGBA:
-        return PIX_FMT_RGBA;
+        return AV_PIX_FMT_RGBA;
 
       case kPixelFormatABGR:
-        return PIX_FMT_ABGR;
+        return AV_PIX_FMT_ABGR;
 
       case kPixelFormatBGRA:
-        return PIX_FMT_BGRA;
+        return AV_PIX_FMT_BGRA;
 
       case kPixelFormatGRAY16BE:
-        return PIX_FMT_GRAY16BE;
+        return AV_PIX_FMT_GRAY16BE;
 
       case kPixelFormatGRAY16LE:
-        return PIX_FMT_GRAY16LE;
+        return AV_PIX_FMT_GRAY16LE;
 
       case kPixelFormatYUV440P:
-        return PIX_FMT_YUV440P;
+        return AV_PIX_FMT_YUV440P;
 
       case kPixelFormatYUVA420P:
-        return PIX_FMT_YUVA420P;
+        return AV_PIX_FMT_YUVA420P;
 
       case kPixelFormatRGB48BE:
-        return PIX_FMT_RGB48BE;
+        return AV_PIX_FMT_RGB48BE;
 
       case kPixelFormatRGB48LE:
-        return PIX_FMT_RGB48LE;
+        return AV_PIX_FMT_RGB48LE;
 
       case kPixelFormatRGB565BE:
-        return PIX_FMT_RGB565BE;
+        return AV_PIX_FMT_RGB565BE;
 
       case kPixelFormatRGB565LE:
-        return PIX_FMT_RGB565LE;
+        return AV_PIX_FMT_RGB565LE;
 
       case kPixelFormatRGB555BE:
-        return PIX_FMT_RGB555BE;
+        return AV_PIX_FMT_RGB555BE;
 
       case kPixelFormatRGB555LE:
-        return PIX_FMT_RGB555LE;
+        return AV_PIX_FMT_RGB555LE;
 
       case kPixelFormatBGR565BE:
-        return PIX_FMT_BGR565BE;
+        return AV_PIX_FMT_BGR565BE;
 
       case kPixelFormatBGR565LE:
-        return PIX_FMT_BGR565LE;
+        return AV_PIX_FMT_BGR565LE;
 
       case kPixelFormatBGR555BE:
-        return PIX_FMT_BGR555BE;
+        return AV_PIX_FMT_BGR555BE;
 
       case kPixelFormatBGR555LE:
-        return PIX_FMT_BGR555LE;
+        return AV_PIX_FMT_BGR555LE;
 
       case kPixelFormatYUV420P16LE:
-        return PIX_FMT_YUV420P16LE;
+        return AV_PIX_FMT_YUV420P16LE;
 
       case kPixelFormatYUV420P16BE:
-        return PIX_FMT_YUV420P16BE;
+        return AV_PIX_FMT_YUV420P16BE;
 
       case kPixelFormatYUV422P16LE:
-        return PIX_FMT_YUV422P16LE;
+        return AV_PIX_FMT_YUV422P16LE;
 
       case kPixelFormatYUV422P16BE:
-        return PIX_FMT_YUV422P16BE;
+        return AV_PIX_FMT_YUV422P16BE;
 
       case kPixelFormatYUV444P16LE:
-        return PIX_FMT_YUV444P16LE;
+        return AV_PIX_FMT_YUV444P16LE;
 
       case kPixelFormatYUV444P16BE:
-        return PIX_FMT_YUV444P16BE;
+        return AV_PIX_FMT_YUV444P16BE;
 
       case kPixelFormatRGB444BE:
-        return PIX_FMT_RGB444BE;
+        return AV_PIX_FMT_RGB444BE;
 
       case kPixelFormatRGB444LE:
-        return PIX_FMT_RGB444LE;
+        return AV_PIX_FMT_RGB444LE;
 
       case kPixelFormatBGR444BE:
-        return PIX_FMT_BGR444BE;
+        return AV_PIX_FMT_BGR444BE;
 
       case kPixelFormatBGR444LE:
-        return PIX_FMT_BGR444LE;
+        return AV_PIX_FMT_BGR444LE;
 
       case kPixelFormatY400A:
-        return PIX_FMT_Y400A;
+        return AV_PIX_FMT_Y400A;
 
       case kPixelFormatYUVJ420P:
-        return PIX_FMT_YUVJ420P;
+        return AV_PIX_FMT_YUVJ420P;
 
       case kPixelFormatYUVJ422P:
-        return PIX_FMT_YUVJ422P;
+        return AV_PIX_FMT_YUVJ422P;
 
       case kPixelFormatYUVJ444P:
-        return PIX_FMT_YUVJ444P;
+        return AV_PIX_FMT_YUVJ444P;
 
       case kPixelFormatYUVJ440P:
-        return PIX_FMT_YUVJ440P;
+        return AV_PIX_FMT_YUVJ440P;
 
-      case kPixelFormatYUV420P9:
-        return PIX_FMT_YUV420P9;
+      case kPixelFormatYUV420P9BE:
+        return AV_PIX_FMT_YUV420P9BE;
 
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 0, 0)
-      case kPixelFormatYUV422P9:
-        return PIX_FMT_YUV422P9;
-#endif
+      case kPixelFormatYUV420P9LE:
+        return AV_PIX_FMT_YUV420P9LE;
 
-      case kPixelFormatYUV444P9:
-        return PIX_FMT_YUV444P9;
+      case kPixelFormatYUV422P9BE:
+        return AV_PIX_FMT_YUV422P9BE;
 
-      case kPixelFormatYUV420P10:
-        return PIX_FMT_YUV420P10;
+      case kPixelFormatYUV422P9LE:
+        return AV_PIX_FMT_YUV422P9LE;
 
-      case kPixelFormatYUV422P10:
-        return PIX_FMT_YUV422P10;
+      case kPixelFormatYUV444P9BE:
+        return AV_PIX_FMT_YUV444P9BE;
 
-      case kPixelFormatYUV444P10:
-        return PIX_FMT_YUV444P10;
+      case kPixelFormatYUV444P9LE:
+        return AV_PIX_FMT_YUV444P9LE;
+
+      case kPixelFormatYUV420P10BE:
+        return AV_PIX_FMT_YUV420P10BE;
+
+      case kPixelFormatYUV420P10LE:
+        return AV_PIX_FMT_YUV420P10LE;
+
+      case kPixelFormatYUV422P10BE:
+        return AV_PIX_FMT_YUV422P10BE;
+
+      case kPixelFormatYUV422P10LE:
+        return AV_PIX_FMT_YUV422P10LE;
+
+      case kPixelFormatYUV444P10BE:
+        return AV_PIX_FMT_YUV444P10BE;
+
+      case kPixelFormatYUV444P10LE:
+        return AV_PIX_FMT_YUV444P10LE;
+
+      case kPixelFormatRGBA64BE:
+        return AV_PIX_FMT_RGBA64BE;
+
+      case kPixelFormatRGBA64LE:
+        return AV_PIX_FMT_RGBA64LE;
+
+      case kPixelFormatBGRA64BE:
+        return AV_PIX_FMT_BGRA64BE;
+
+      case kPixelFormatBGRA64LE:
+        return AV_PIX_FMT_BGRA64LE;
+
+      case kPixelFormatGBRP:
+        return AV_PIX_FMT_GBRP;
+
+      case kPixelFormatGBRP9BE:
+        return AV_PIX_FMT_GBRP9BE;
+
+      case kPixelFormatGBRP9LE:
+        return AV_PIX_FMT_GBRP9LE;
+
+      case kPixelFormatGBRP10BE:
+        return AV_PIX_FMT_GBRP10BE;
+
+      case kPixelFormatGBRP10LE:
+        return AV_PIX_FMT_GBRP10LE;
+
+      case kPixelFormatGBRP16BE:
+        return AV_PIX_FMT_GBRP16BE;
+
+      case kPixelFormatGBRP16LE:
+        return AV_PIX_FMT_GBRP16LE;
+
+      case kPixelFormatYUVA420P9BE:
+        return AV_PIX_FMT_YUVA420P9BE;
+
+      case kPixelFormatYUVA420P9LE:
+        return AV_PIX_FMT_YUVA420P9LE;
+
+      case kPixelFormatYUVA422P9BE:
+        return AV_PIX_FMT_YUVA422P9BE;
+
+      case kPixelFormatYUVA422P9LE:
+        return AV_PIX_FMT_YUVA422P9LE;
+
+      case kPixelFormatYUVA444P9BE:
+        return AV_PIX_FMT_YUVA444P9BE;
+
+      case kPixelFormatYUVA444P9LE:
+        return AV_PIX_FMT_YUVA444P9LE;
+
+      case kPixelFormatYUVA420P10BE:
+        return AV_PIX_FMT_YUVA420P10BE;
+
+      case kPixelFormatYUVA420P10LE:
+        return AV_PIX_FMT_YUVA420P10LE;
+
+      case kPixelFormatYUVA422P10BE:
+        return AV_PIX_FMT_YUVA422P10BE;
+
+      case kPixelFormatYUVA422P10LE:
+        return AV_PIX_FMT_YUVA422P10LE;
+
+      case kPixelFormatYUVA444P10BE:
+        return AV_PIX_FMT_YUVA444P10BE;
+
+      case kPixelFormatYUVA444P10LE:
+        return AV_PIX_FMT_YUVA444P10LE;
+
+      case kPixelFormatYUVA420P16BE:
+        return AV_PIX_FMT_YUVA420P16BE;
+
+      case kPixelFormatYUVA420P16LE:
+        return AV_PIX_FMT_YUVA420P16LE;
+
+      case kPixelFormatYUVA422P16BE:
+        return AV_PIX_FMT_YUVA422P16BE;
+
+      case kPixelFormatYUVA422P16LE:
+        return AV_PIX_FMT_YUVA422P16LE;
+
+      case kPixelFormatYUVA444P16BE:
+        return AV_PIX_FMT_YUVA444P16BE;
+
+      case kPixelFormatYUVA444P16LE:
+        return AV_PIX_FMT_YUVA444P16LE;
+
+      case kPixelFormatXYZ12BE:
+        return AV_PIX_FMT_XYZ12BE;
+
+      case kPixelFormatXYZ12LE:
+        return AV_PIX_FMT_XYZ12LE;
+
+      case kPixelFormatNV16:
+        return AV_PIX_FMT_NV16;
+
+      case kPixelFormatNV20BE:
+        return AV_PIX_FMT_NV20BE;
+
+      case kPixelFormatNV20LE:
+        return AV_PIX_FMT_NV20LE;
+
+      case kPixelFormatYVYU422:
+        return AV_PIX_FMT_YVYU422;
+
+      case kPixelFormatYA16BE:
+        return AV_PIX_FMT_YA16BE;
+
+      case kPixelFormatYA16LE:
+        return AV_PIX_FMT_YA16LE;
+
+      case kPixelFormat0RGB:
+        return AV_PIX_FMT_0RGB;
+
+      case kPixelFormatRGB0:
+        return AV_PIX_FMT_RGB0;
+
+      case kPixelFormat0BGR:
+        return AV_PIX_FMT_0BGR;
+
+      case kPixelFormatBGR0:
+        return AV_PIX_FMT_BGR0;
+
+      case kPixelFormatYUVA422P:
+        return AV_PIX_FMT_YUVA422P;
+
+      case kPixelFormatYUVA444P:
+        return AV_PIX_FMT_YUVA444P;
+
+      case kPixelFormatYUV420P12BE:
+        return AV_PIX_FMT_YUV420P12BE;
+
+      case kPixelFormatYUV420P12LE:
+        return AV_PIX_FMT_YUV420P12LE;
+
+      case kPixelFormatYUV420P14BE:
+        return AV_PIX_FMT_YUV420P14BE;
+
+      case kPixelFormatYUV420P14LE:
+        return AV_PIX_FMT_YUV420P14LE;
+
+      case kPixelFormatYUV422P12BE:
+        return AV_PIX_FMT_YUV422P12BE;
+
+      case kPixelFormatYUV422P12LE:
+        return AV_PIX_FMT_YUV422P12LE;
+
+      case kPixelFormatYUV422P14BE:
+        return AV_PIX_FMT_YUV422P14BE;
+
+      case kPixelFormatYUV422P14LE:
+        return AV_PIX_FMT_YUV422P14LE;
+
+      case kPixelFormatYUV444P12BE:
+        return AV_PIX_FMT_YUV444P12BE;
+
+      case kPixelFormatYUV444P12LE:
+        return AV_PIX_FMT_YUV444P12LE;
+
+      case kPixelFormatYUV444P14BE:
+        return AV_PIX_FMT_YUV444P14BE;
+
+      case kPixelFormatYUV444P14LE:
+        return AV_PIX_FMT_YUV444P14LE;
+
+      case kPixelFormatGBRP12BE:
+        return AV_PIX_FMT_GBRP12BE;
+
+      case kPixelFormatGBRP12LE:
+        return AV_PIX_FMT_GBRP12LE;
+
+      case kPixelFormatGBRP14BE:
+        return AV_PIX_FMT_GBRP14BE;
+
+      case kPixelFormatGBRP14LE:
+        return AV_PIX_FMT_GBRP14LE;
+
+      case kPixelFormatGBRAP:
+        return AV_PIX_FMT_GBRAP;
+
+      case kPixelFormatGBRAP16BE:
+        return AV_PIX_FMT_GBRAP16BE;
+
+      case kPixelFormatGBRAP16LE:
+        return AV_PIX_FMT_GBRAP16LE;
+
+      case kPixelFormatYUVJ411P:
+        return AV_PIX_FMT_YUVJ411P;
+
+      case kPixelFormatBayerBGGR8:
+        return AV_PIX_FMT_BAYER_BGGR8;
+
+      case kPixelFormatBayerRGGB8:
+        return AV_PIX_FMT_BAYER_RGGB8;
+
+      case kPixelFormatBayerGBRG8:
+        return AV_PIX_FMT_BAYER_GBRG8;
+
+      case kPixelFormatBayerGRBG8:
+        return AV_PIX_FMT_BAYER_GRBG8;
+
+      case kPixelFormatBayerBGGR16LE:
+        return AV_PIX_FMT_BAYER_BGGR16LE;
+
+      case kPixelFormatBayerBGGR16BE:
+        return AV_PIX_FMT_BAYER_BGGR16BE;
+
+      case kPixelFormatBayerRGGB16LE:
+        return AV_PIX_FMT_BAYER_RGGB16LE;
+
+      case kPixelFormatBayerRGGB16BE:
+        return AV_PIX_FMT_BAYER_RGGB16BE;
+
+      case kPixelFormatBayerGBRG16LE:
+        return AV_PIX_FMT_BAYER_GBRG16LE;
+
+      case kPixelFormatBayerGBRG16BE:
+        return AV_PIX_FMT_BAYER_GBRG16BE;
+
+      case kPixelFormatBayerGRBG16LE:
+        return AV_PIX_FMT_BAYER_GRBG16LE;
+
+      case kPixelFormatBayerGRBG16BE:
+        return AV_PIX_FMT_BAYER_GRBG16BE;
 
       default:
         break;
     }
 
-    return PIX_FMT_NONE;
+    return AV_PIX_FMT_NONE;
   }
 }

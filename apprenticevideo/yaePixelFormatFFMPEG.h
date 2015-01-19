@@ -30,12 +30,12 @@ namespace yae
   // ffmpeg_to_yae
   //
   YAE_API TPixelFormatId
-  ffmpeg_to_yae(enum PixelFormat ffmpegPixelFormat);
+  ffmpeg_to_yae(enum AVPixelFormat ffmpegPixelFormat);
 
   //----------------------------------------------------------------
   // yae_to_ffmpeg
   //
-  YAE_API enum PixelFormat
+  YAE_API enum AVPixelFormat
   yae_to_ffmpeg(TPixelFormatId yaePixelFormat);
 }
 

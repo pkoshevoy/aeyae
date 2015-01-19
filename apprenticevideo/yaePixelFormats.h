@@ -114,8 +114,7 @@ namespace yae
     //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples)
     kPixelFormatYUV440P = 28,
 
-    //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
-    //! samples)
+    //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A samples)
     kPixelFormatYUVA420P = 29,
 
     //! packed RGB 16:16:16, 48bpp, 16R, 16G, 16B, the 2-byte value for
@@ -209,15 +208,223 @@ namespace yae
     //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
     kPixelFormatYUVJ440P = 54,
 
-    //! planar YUV, 9-bits per channel:
-    kPixelFormatYUV420P9 = 55,
-    kPixelFormatYUV422P9 = 56,
-    kPixelFormatYUV444P9 = 57,
+    //! planar YUV, 9 bits per channel:
+    kPixelFormatYUV420P9BE = 55,
+    kPixelFormatYUV420P9LE = 56,
+    kPixelFormatYUV422P9BE = 57,
+    kPixelFormatYUV422P9LE = 58,
+    kPixelFormatYUV444P9BE = 59,
+    kPixelFormatYUV444P9LE = 60,
 
-    //! planar YUV, 10-bits per channel:
-    kPixelFormatYUV420P10 = 58,
-    kPixelFormatYUV422P10 = 59,
-    kPixelFormatYUV444P10 = 60,
+    //! planar YUV, 10 bits per channel:
+    kPixelFormatYUV420P10BE = 61,
+    kPixelFormatYUV420P10LE = 62,
+    kPixelFormatYUV422P10BE = 63,
+    kPixelFormatYUV422P10LE = 64,
+    kPixelFormatYUV444P10BE = 65,
+    kPixelFormatYUV444P10LE = 66,
+
+    kPixelFormatRGBA64BE = 67,
+    kPixelFormatRGBA64LE = 68,
+    kPixelFormatBGRA64BE = 69,
+    kPixelFormatBGRA64LE = 70,
+
+    kPixelFormatGBRP = 71,
+
+    kPixelFormatGBRP9BE = 72,
+    kPixelFormatGBRP9LE = 73,
+    kPixelFormatGBRP10BE = 74,
+    kPixelFormatGBRP10LE = 75,
+    kPixelFormatGBRP16BE = 76,
+    kPixelFormatGBRP16LE = 77,
+
+    //! planar YUVA, 9 bits per channel:
+    kPixelFormatYUVA420P9BE = 78,
+    kPixelFormatYUVA420P9LE = 79,
+    kPixelFormatYUVA422P9BE = 80,
+    kPixelFormatYUVA422P9LE = 81,
+    kPixelFormatYUVA444P9BE = 82,
+    kPixelFormatYUVA444P9LE = 83,
+
+    //! planar YUVA, 10 bits per channel:
+    kPixelFormatYUVA420P10BE = 84,
+    kPixelFormatYUVA420P10LE = 85,
+    kPixelFormatYUVA422P10BE = 86,
+    kPixelFormatYUVA422P10LE = 87,
+    kPixelFormatYUVA444P10BE = 88,
+    kPixelFormatYUVA444P10LE = 89,
+
+    //! planar YUVA, 16 bits per channel:
+    kPixelFormatYUVA420P16BE = 90,
+    kPixelFormatYUVA420P16LE = 91,
+    kPixelFormatYUVA422P16BE = 92,
+    kPixelFormatYUVA422P16LE = 93,
+    kPixelFormatYUVA444P16BE = 94,
+    kPixelFormatYUVA444P16LE = 95,
+
+    //! packed XYZ:
+    kPixelFormatXYZ12BE = 96,
+    kPixelFormatXYZ12LE = 97,
+
+    //! interleaved chroma YUV 4:2:2
+    kPixelFormatNV16 = 98,
+    kPixelFormatNV20BE = 99,
+    kPixelFormatNV20LE = 100,
+
+    //! packed YUV 4:2:2, 16bpp
+    kPixelFormatYVYU422 = 101,
+
+    //! luminance + alpha, 16 bits per channel:
+    kPixelFormatYA16BE = 102,
+    kPixelFormatYA16LE = 103,
+
+    //! packed RGB 8:8:8, 32bpp, 0RGB 0RGB ...
+    kPixelFormat0RGB = 104,
+
+    //! packed RGB 8:8:8, 32bpp, RGB0 RGB0 ...
+    kPixelFormatRGB0 = 105,
+
+    //! packed BGR 8:8:8, 32bpp, 0BGR 0BGR ...
+    kPixelFormat0BGR = 106,
+
+    //! packed BGR 8:8:8, 32bpp, BGR0 BGR0 ...
+    kPixelFormatBGR0 = 107,
+
+
+    //! planar YUV 4:2:2, 24bpp, (1 Cr & Cb sample per 2x1 Y & A samples)
+    kPixelFormatYUVA422P = 108,
+
+    //! planar YUV 4:4:4, 32bpp, (1 Cr & Cb sample per 1x1 Y & A samples)
+    kPixelFormatYUVA444P = 109,
+
+    //! planar YUV 4:2:0, 18bpp, (1 Cr & Cb sample per 2x2 Y samples)
+    kPixelFormatYUV420P12BE = 110,
+    kPixelFormatYUV420P12LE = 111,
+
+    //! planar YUV 4:2:0, 21bpp, (1 Cr & Cb sample per 2x2 Y samples)
+    kPixelFormatYUV420P14BE = 112,
+    kPixelFormatYUV420P14LE = 113,
+
+    //! planar YUV 4:2:2, 24bpp, (1 Cr & Cb sample per 2x1 Y samples)
+    kPixelFormatYUV422P12BE = 114,
+    kPixelFormatYUV422P12LE = 115,
+
+    //! planar YUV 4:2:2, 28bpp, (1 Cr & Cb sample per 2x1 Y samples)
+    kPixelFormatYUV422P14BE = 116,
+    kPixelFormatYUV422P14LE = 117,
+
+    //! planar YUV 4:4:4, 36bpp, (1 Cr & Cb sample per 1x1 Y samples)
+    kPixelFormatYUV444P12BE = 118,
+    kPixelFormatYUV444P12LE = 119,
+
+    //! planar YUV 4:4:4, 42bpp, (1 Cr & Cb sample per 1x1 Y samples)
+    kPixelFormatYUV444P14BE = 120,
+    kPixelFormatYUV444P14LE = 121,
+
+    //! planar GBR 4:4:4, 36bpp
+    kPixelFormatGBRP12BE = 122,
+    kPixelFormatGBRP12LE = 123,
+
+    //! planar GBR 4:4:4, 42bpp
+    kPixelFormatGBRP14BE = 124,
+    kPixelFormatGBRP14LE = 125,
+
+    //! planar GBRA 4:4:4:4, 32bpp
+    kPixelFormatGBRAP = 126,
+
+    //! planar GBRA 4:4:4:4, 64bpp
+    kPixelFormatGBRAP16BE = 127,
+    kPixelFormatGBRAP16LE = 128,
+
+    //! planar YUV 4:1:1, 12bpp, (1 Cr & Cb sample per 4x1 Y samples) full scale (JPEG)
+    kPixelFormatYUVJ411P = 129,
+
+    //! Bayer, BGBG..(odd line), GRGR..(even line), 8 bits per channel
+    kPixelFormatBayerBGGR8 = 130,
+
+    //! Bayer, RGRG..(odd line), GBGB..(even line), 8 bits per channel
+    kPixelFormatBayerRGGB8 = 131,
+
+    //! Bayer, GBGB..(odd line), RGRG..(even line), 8 bits per channel
+    kPixelFormatBayerGBRG8 = 132,
+
+    //! Bayer, GRGR..(odd line), BGBG..(even line), 8 bits per channel
+    kPixelFormatBayerGRBG8 = 133,
+
+    //! Bayer, BGBG..(odd line), GRGR..(even line), 16 bits per channel
+    kPixelFormatBayerBGGR16LE = 134,
+    kPixelFormatBayerBGGR16BE = 135,
+
+    //! Bayer, RGRG..(odd line), GBGB..(even line), 16 bits per channel
+    kPixelFormatBayerRGGB16LE = 136,
+    kPixelFormatBayerRGGB16BE = 137,
+
+    //! Bayer, GBGB..(odd line), RGRG..(even line), 16 bits per channel
+    kPixelFormatBayerGBRG16LE = 138,
+    kPixelFormatBayerGBRG16BE = 139,
+
+    //! Bayer, GRGR..(odd line), BGBG..(even line), 16 bits per channel
+    kPixelFormatBayerGRBG16LE = 140,
+    kPixelFormatBayerGRBG16BE = 141,
+
+  //----------------------------------------------------------------
+  // YAE_NATIVE_ENDIAN
+  //
+#if defined(__BIG_ENDIAN__) && __BIG_ENDIAN__
+#define YAE_NATIVE_ENDIAN(kPixelFormat)         \
+  kPixelFormat = kPixelFormat ## BE
+#else
+#define YAE_NATIVE_ENDIAN(kPixelFormat)         \
+  kPixelFormat = kPixelFormat ## LE
+#endif
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAY16),
+    YAE_NATIVE_ENDIAN (kPixelFormatRGB48),
+    YAE_NATIVE_ENDIAN (kPixelFormatRGB565),
+    YAE_NATIVE_ENDIAN (kPixelFormatRGB555),
+    YAE_NATIVE_ENDIAN (kPixelFormatBGR565),
+    YAE_NATIVE_ENDIAN (kPixelFormatBGR555),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV420P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV422P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV444P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatRGB444),
+    YAE_NATIVE_ENDIAN (kPixelFormatBGR444),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV420P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV422P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV444P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV420P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV422P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV444P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatRGBA64),
+    YAE_NATIVE_ENDIAN (kPixelFormatBGRA64),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRP9),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRP10),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRP16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA420P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA422P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA444P9),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA420P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA422P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA444P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA420P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA422P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA444P16),
+    YAE_NATIVE_ENDIAN (kPixelFormatXYZ12),
+    YAE_NATIVE_ENDIAN (kPixelFormatNV20),
+    YAE_NATIVE_ENDIAN (kPixelFormatYA16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV420P12),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV420P14),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV422P12),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV422P14),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV444P12),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV444P14),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRP12),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRP14),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRAP16),
+    YAE_NATIVE_ENDIAN (kPixelFormatBayerBGGR16),
+    YAE_NATIVE_ENDIAN (kPixelFormatBayerRGGB16),
+    YAE_NATIVE_ENDIAN (kPixelFormatBayerGBRG16),
+    YAE_NATIVE_ENDIAN (kPixelFormatBayerGRBG16),
+#undef YAE_NATIVE_ENDIAN
   };
 }
 
