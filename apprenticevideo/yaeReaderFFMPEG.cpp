@@ -3135,7 +3135,7 @@ namespace yae
       std::ostringstream os;
       if (*filterChain && strcmp(filterChain, "anull") != 0)
       {
-        os << filterChain << ",";
+        os << filterChain;
       }
       else if (!*filterChain)
       {
