@@ -35,7 +35,8 @@ namespace Yamka
     //
     typedef Seek<ConstFileInMemory> TSeek;
 
-    ConstFileInMemory(const unsigned char * data, std::size_t size);
+    ConstFileInMemory(const unsigned char * data = NULL,
+                      std::size_t size = 0);
 
     // read at current file position a specified number of bytes
     // into the destination buffer:
@@ -76,7 +77,7 @@ namespace Yamka
 
   protected:
     const unsigned char * data_;
-    const std::size_t size_;
+    std::size_t size_;
     TFileOffset posn_;
   };
 
@@ -90,7 +91,7 @@ namespace Yamka
     //
     typedef unsigned char * TDataPtr;
 
-    FileInMemory(unsigned char * data, std::size_t size);
+    FileInMemory(unsigned char * data = NULL, std::size_t size = 0);
 
     // write out at current file position a specified number of bytes
     // from the source buffer:
@@ -107,7 +108,7 @@ namespace Yamka
   template <typename TFile>
   struct Storage : public IStorage
   {
-    Storage(typename TFile::TDataPtr data, std::size_t size):
+    Storage(typename TFile::TDataPtr data = NULL, std::size_t size = 0):
       file_(data, size)
     {}
 
@@ -251,6 +252,10 @@ namespace Yamka
       uint64 addr_;
       uint64 numBytes_;
     };
+
+    // accessor:
+    inline const TFile & file() const
+    { return file_; }
 
   protected:
     // storage:
