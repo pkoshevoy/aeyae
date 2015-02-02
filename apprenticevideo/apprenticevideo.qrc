@@ -1,7 +1,7 @@
 <RCC>
   <qresource>
     <file>images/apprenticevideo-about.png</file>
-    <file>images/apprenticevideo-64.png</file>
+    <file>images/apprenticevideo-256.png</file>
     <file>images/yae-256.png</file>
     <file>images/timeIn.png</file>
     <file>images/timeOut.png</file>

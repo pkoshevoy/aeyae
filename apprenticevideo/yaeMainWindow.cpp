@@ -360,7 +360,7 @@ namespace yae
     contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
 
 #if !defined(__APPLE__) && !defined(_WIN32)
-    QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-64.png");
+    QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-256.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
 

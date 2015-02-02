@@ -847,7 +847,7 @@ install(TARGETS
   DESTINATION bin
   )
 
-install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-64.png"
+install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-256.png"
   DESTINATION share/icons
   RENAME "${PROGNAME}.png"
   )

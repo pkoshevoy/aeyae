@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="apprenticevideo.qrc">
-    <normaloff>:/images/apprenticevideo-64.png</normaloff>:/images/apprenticevideo-64.png</iconset>
+    <normaloff>:/images/apprenticevideo-256.png</normaloff>:/images/apprenticevideo-256.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
