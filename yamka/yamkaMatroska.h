@@ -708,8 +708,8 @@ namespace Yamka
     TypedefYamkaElt(ChapProc, 0x6944, "ChapProcess") TProcess;
     std::list<TProcess> process_;
 
-    TypedefYamkaElt(ChapAtom, 0xB6, "SubChapterAtom") TSubChapAtom;
-    std::list<TSubChapAtom> subChapAtom_;
+    TypedefYamkaElt(ChapAtom, 0xB6, "ChapterAtom") TChapAtom;
+    std::list<TChapAtom> subChapAtom_;
   };
 
   //----------------------------------------------------------------
@@ -733,7 +733,7 @@ namespace Yamka
     TypedefYamkaElt(VUInt, 0x45DD, "EditionFlagOrdered") TFlagOrdered;
     TFlagOrdered flagOrdered_;
 
-    TypedefYamkaElt(ChapAtom, 0xB6, "ChapterAtom") TChapAtom;
+    typedef ChapAtom::TChapAtom TChapAtom;
     std::list<TChapAtom> chapAtoms_;
   };
 

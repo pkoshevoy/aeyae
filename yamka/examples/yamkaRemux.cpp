@@ -57,11 +57,8 @@ typedef Cluster::TSilent TSilentTracks;
 typedef Chapters::TEdition TEdition;
 typedef std::list<TEdition>::const_iterator TEditionConstIter;
 
-typedef Edition::TChapAtom TChapAtom;
+typedef ChapAtom::TChapAtom TChapAtom;
 typedef std::list<TChapAtom>::const_iterator TChapAtomConstIter;
-
-typedef ChapAtom::TSubChapAtom TSubChapAtom;
-typedef std::list<TSubChapAtom>::const_iterator TSubChapAtomConstIter;
 
 typedef ChapAtom::TDisplay TChapDisplay;
 typedef std::list<TChapDisplay>::const_iterator TChapDisplayConstIter;
@@ -2462,59 +2459,91 @@ loadChapters(MatroskaDoc & doc, const TTodo & todo, char ** argv)
 //----------------------------------------------------------------
 // findChapAtom
 //
-static const ChapAtom *
-findChapAtom(const ChapAtom & ca, const std::string & chName)
+static bool
+findChapAtom(const std::string & chName,
+             const std::list<TChapAtom> & atoms,
+             TChapAtomConstIter & found,
+             TChapAtomConstIter & end)
 {
-  const ChapAtom * found = NULL;
-  for (TChapDisplayConstIter di = ca.display_.begin();
-       !found && di != ca.display_.end(); ++di)
+  for (TChapAtomConstIter
+         i = atoms.begin(), iend = atoms.end(); i != iend; ++i)
   {
-    const ChapDisp & cd = di->payload_;
-    if (cd.string_.payload_.get() == chName)
+    const ChapAtom & a = i->payload_;
+
+    // check whether this chapter atom matches:
+    for (TChapDisplayConstIter
+           j = a.display_.begin(), jend = a.display_.end(); j != jend; ++j)
     {
-      found = &ca;
+      const ChapDisp & d = j->payload_;
+      if (d.string_.payload_.get() == chName)
+      {
+        found = i;
+        end = atoms.end();
+        return true;
+      }
+    }
+
+    // check sub-atoms:
+    if (findChapAtom(chName, a.subChapAtom_, found, end))
+    {
+      return true;
     }
   }
 
-  for (TSubChapAtomConstIter ci = ca.subChapAtom_.begin();
-       !found && ci != ca.subChapAtom_.end(); ++ci)
-  {
-    found = findChapAtom(ci->payload_, chName);
-  }
-
-  return found;
+  return false;
 }
 
 //----------------------------------------------------------------
 // findChapter
 //
-static const ChapAtom *
-findChapter(const Chapters & chapters, const std::string & chName)
+static bool
+findChapter(const std::string & chName,
+            const Chapters & chapters,
+            TChapAtomConstIter & found,
+            TChapAtomConstIter & end)
 {
-  const ChapAtom * found = NULL;
-
-  for (TEditionConstIter ei = chapters.editions_.begin();
-       !found && ei != chapters.editions_.end(); ++ei)
+  for (TEditionConstIter i = chapters.editions_.begin();
+       i != chapters.editions_.end(); ++i)
   {
-    const Edition & ed = ei->payload_;
-    for (TChapAtomConstIter ca = ed.chapAtoms_.begin();
-         !found && ca != ed.chapAtoms_.end(); ++ca)
+    const Edition & ed = i->payload_;
+    if (findChapAtom(chName, ed.chapAtoms_, found, end))
     {
-      found = findChapAtom(ca->payload_, chName);
+      return true;
     }
   }
 
-  return found;
+  return false;
 }
 
 //----------------------------------------------------------------
 // copyChapAtom
 //
 static bool
-copyChapAtom(ChapAtom & dst, const ChapAtom & src, uint64 t0ms, uint64 t1ms)
+copyChapAtom(ChapAtom & dst,
+             const TChapAtomConstIter & srcIter,
+             const TChapAtomConstIter & srcEnd,
+             uint64 t0ms,
+             uint64 t1ms)
 {
+  const ChapAtom & src = srcIter->payload_;
   uint64 ta = src.timeStart_.payload_.get() / (NANOSEC_PER_SEC / 1000);
   uint64 tb = src.timeEnd_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+
+  if (tb <= ta)
+  {
+    // find next chapter:
+    TChapAtomConstIter srcNext = srcIter;
+    ++srcNext;
+    if (srcNext != srcEnd)
+    {
+      const ChapAtom & next = srcNext->payload_;
+      tb = next.timeStart_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+    }
+    else
+    {
+      tb = ta < t1ms ? t1ms : ta;
+    }
+  }
 
   if (!(t0ms < tb && ta < t1ms))
   {
@@ -2529,12 +2558,12 @@ copyChapAtom(ChapAtom & dst, const ChapAtom & src, uint64 t0ms, uint64 t1ms)
   dst.timeEnd_.payload_.set(tb * (NANOSEC_PER_SEC / 1000));
 
   dst.subChapAtom_.clear();
-  for (TSubChapAtomConstIter ci = src.subChapAtom_.begin();
-       ci != src.subChapAtom_.end(); ++ci)
+  for (TChapAtomConstIter ci = src.subChapAtom_.begin(),
+         ciEnd = src.subChapAtom_.end(); ci != ciEnd; ++ci)
   {
-    dst.subChapAtom_.push_back(TSubChapAtom());
+    dst.subChapAtom_.push_back(TChapAtom());
     if (!copyChapAtom(dst.subChapAtom_.back().payload_,
-                      ci->payload_, t0ms, t1ms))
+                      ci, ciEnd, t0ms, t1ms))
     {
       dst.subChapAtom_.pop_back();
     }
@@ -2549,20 +2578,20 @@ copyChapAtom(ChapAtom & dst, const ChapAtom & src, uint64 t0ms, uint64 t1ms)
 static void
 copyChapters(Chapters & dst, const Chapters & src, uint64 t0ms, uint64 t1ms)
 {
-  for (TEditionConstIter ei = src.editions_.begin();
-       ei != src.editions_.end(); ++ei)
+  for (TEditionConstIter ei = src.editions_.begin(),
+         eiEnd = src.editions_.end(); ei != eiEnd; ++ei)
   {
     const Edition & ed = ei->payload_;
 
     dst.editions_.push_back(TEdition());
     Edition & e = dst.editions_.back().payload_;
 
-    for (TChapAtomConstIter ca = ed.chapAtoms_.begin();
-         ca != ed.chapAtoms_.end(); ++ca)
+    for (TChapAtomConstIter ca = ed.chapAtoms_.begin(),
+           caEnd = ed.chapAtoms_.end(); ca != caEnd; ++ca)
     {
       e.chapAtoms_.push_back(TChapAtom());
       if (!copyChapAtom(e.chapAtoms_.back().payload_,
-                        ca->payload_, t0ms, t1ms))
+                        ca, caEnd, t0ms, t1ms))
       {
         e.chapAtoms_.pop_back();
       }
@@ -3049,17 +3078,34 @@ main(int argc, char ** argv)
       if (extractViaChapters)
       {
         // figure out tStart, tEnd:
-        const Chapters & chaps = segmentIn.chapters_.payload_;
+        const ChapAtom * c0 = NULL;
+        const ChapAtom * c1 = NULL;
 
-        const ChapAtom * c0 =
-          extractChapters[0].size() ?
-          findChapter(chaps, extractChapters[0]) :
-          NULL;
+        // lookup segment end points:
+        {
+          const Chapters & chaps = segmentIn.chapters_.payload_;
 
-        const ChapAtom * c1 =
-          extractChapters[1].size() ?
-          findChapter(chaps, extractChapters[1]) :
-          NULL;
+          TChapAtomConstIter found;
+          TChapAtomConstIter end;
+
+          if (extractChapters[0].size() &&
+              findChapter(extractChapters[0], chaps, found, end))
+          {
+            c0 = &(found->payload_);
+          }
+
+          if (extractChapters[1].size() &&
+              findChapter(extractChapters[1], chaps, found, end))
+          {
+            // actually, we want the next chapter:
+            ++found;
+
+            if (found != end)
+            {
+              c1 = &(found->payload_);
+            }
+          }
+        }
 
         if (c0)
         {
