@@ -59,6 +59,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kExtEyetv
+  //
+  extern YAE_API const QString kExtEyetv;
+
+  //----------------------------------------------------------------
   // toQString
   //
   YAE_API QString
@@ -178,6 +183,26 @@ namespace yae
   //
   YAE_API bool
   removeSetting(const QString & key);
+
+  //----------------------------------------------------------------
+  // findFiles
+  //
+  YAE_API bool
+  findFiles(std::list<QString> & files,
+            const QString & startHere,
+            bool recursive = true);
+
+  //----------------------------------------------------------------
+  // addFolderToPlaylist
+  //
+  YAE_API bool
+  addFolderToPlaylist(std::list<QString> & playlist, const QString & folder);
+
+  //----------------------------------------------------------------
+  // addToPlaylist
+  //
+  YAE_API bool
+  addToPlaylist(std::list<QString> & playlist, const QString & path);
 
 }
 

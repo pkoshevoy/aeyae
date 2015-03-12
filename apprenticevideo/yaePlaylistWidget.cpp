@@ -29,11 +29,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kExtEyetv
-  //
-  const QString kExtEyetv = QString::fromUtf8("eyetv");
-
-  //----------------------------------------------------------------
   // kGroupNameHeight
   //
   static const int kGroupNameHeight = 24;

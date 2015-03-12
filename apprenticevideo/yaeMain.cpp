@@ -41,6 +41,7 @@
 
 // yae includes:
 #include <yaeMainWindow.h>
+#include <yaeUtilsQt.h>
 
 
 namespace yae
@@ -72,7 +73,7 @@ namespace yae
       // handle the apple event to open a document:
       QString filename = static_cast<QFileOpenEvent *>(e)->file();
       std::list<QString> playlist;
-      playlist.push_back(filename);
+      yae::addToPlaylist(playlist, filename);
       mainWindow->setPlaylist(playlist);
 
       return true;
@@ -157,7 +158,7 @@ mainMayThrowException(int argc, char ** argv)
     }
     else
     {
-      playlist.push_back(arg);
+      yae::addToPlaylist(playlist, arg);
     }
   }
 

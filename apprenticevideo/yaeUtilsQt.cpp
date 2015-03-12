@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system includes:
+#include <set>
+
 // yae includes:
 #include <yaeAPI.h>
 #include <yaeUtilsQt.h>
@@ -22,6 +25,10 @@
 
 namespace yae
 {
+  //----------------------------------------------------------------
+  // kExtEyetv
+  //
+  const QString kExtEyetv = QString::fromUtf8("eyetv");
 
 #ifdef __APPLE__
   static QString kOrganization = QString::fromUtf8("sourceforge.net");
@@ -1330,4 +1337,386 @@ namespace yae
     bool ok = (settings.status() == QSettings::NoError);
     return ok;
   }
+
+  //----------------------------------------------------------------
+  // TExtIgnoreList
+  //
+  struct TExtIgnoreList
+  {
+    TExtIgnoreList()
+    {
+      const char * ext[] = {
+        "eyetvsched",
+        "eyetvp",
+        "eyetvr",
+        "eyetvi",
+        "eyetvsl",
+        "eyetvsg",
+        "pages",
+        "doc",
+        "xls",
+        "ppt",
+        "pdf",
+        "rtf",
+        "htm",
+        "css",
+        "less",
+        "rar",
+        "jar",
+        "zip",
+        "7z",
+        "gz",
+        "bz2",
+        "war",
+        "tar",
+        "tgz",
+        "tbz2",
+        "lzma",
+        "url",
+        "eml",
+        "html",
+        "xml",
+        "dtd",
+        "tdt",
+        "stg",
+        "bat",
+        "ini",
+        "cfg",
+        "cnf",
+        "csv",
+        "rdp",
+        "el",
+        "rb",
+        "cs",
+        "java",
+        "php",
+        "js",
+        "pl",
+        "db",
+        "tex",
+        "txt",
+        "text",
+        "srt",
+        "ass",
+        "ssa",
+        "idx",
+        "sub",
+        "sup",
+        "ifo",
+        "info",
+        "nfo",
+        "inf",
+        "md5",
+        "crc",
+        "sfv",
+        "m3u",
+        "smil",
+        "app",
+        "strings",
+        "plist",
+        "framework",
+        "bundle",
+        "rcproject",
+        "ipmeta",
+        "qtx",
+        "qtr",
+        "sc",
+        "so",
+        "dylib",
+        "dll",
+        "ax",
+        "def",
+        "lib",
+        "a",
+        "r",
+        "t",
+        "y",
+        "o",
+        "obj",
+        "am",
+        "in",
+        "exe",
+        "com",
+        "cmd",
+        "cab",
+        "dat",
+        "bat",
+        "sys",
+        "msi",
+        "iss",
+        "ism",
+        "rul",
+        "py",
+        "sh",
+        "m4",
+        "cpp",
+        "hpp",
+        "tpp",
+        "ipp",
+        "SUNWCCh",
+        "inc",
+        "pch",
+        "sed",
+        "awk",
+        "h",
+        "hh",
+        "m",
+        "mm",
+        "c",
+        "cc",
+        "ui",
+        "as",
+        "asm",
+        "rc",
+        "qrc",
+        "cxx",
+        "hxx",
+        "txx",
+        "log",
+        "err",
+        "out",
+        "sqz",
+        "xss",
+        "xds",
+        "xsp",
+        "xcp",
+        "xfs",
+        "spfx",
+        "iso",
+        "dmg",
+        "dmp",
+        "svq",
+        "svn",
+        "itdb",
+        "itl",
+        "itc",
+        "ipa",
+        "vbox",
+        "vdi",
+        "vmdk",
+        "sln",
+        "suo",
+        "manifest",
+        "vcproj",
+        "csproj",
+        "mode1v3",
+        "pbxuser",
+        "pbxproj",
+        "pmproj",
+        "proj",
+        "rsrc",
+        "nib",
+        "icns",
+        "cw",
+        "amz",
+        "mcp",
+        "pro",
+        "mk",
+        "mak",
+        "cmake",
+        "dxy",
+        "dox",
+        "doxy",
+        "dsp",
+        "dsw",
+        "plg",
+        "lst",
+        "asx",
+        "otf",
+        "ttf",
+        "fon",
+        "key",
+        "license",
+        "ignore"
+      };
+
+      const std::size_t nExt = sizeof(ext) / sizeof(const char *);
+      for (std::size_t i = 0; i < nExt; i++)
+      {
+        set_.insert(QString::fromUtf8(ext[i]));
+      }
+    }
+
+    bool contains(const QString & ext) const
+    {
+      std::set<QString>::const_iterator found = set_.find(ext);
+      return found != set_.end();
+    }
+
+  protected:
+    std::set<QString> set_;
+  };
+
+  //----------------------------------------------------------------
+  // kExtIgnore
+  //
+  static const TExtIgnoreList kExtIgnore;
+
+  //----------------------------------------------------------------
+  // shouldIgnore
+  //
+  static bool shouldIgnore(const QString & ext)
+  {
+    QString extLowered = ext.toLower();
+    return
+      extLowered.isEmpty() ||
+      extLowered.endsWith("~") ||
+      kExtIgnore.contains(extLowered);
+  }
+
+  //----------------------------------------------------------------
+  // shouldIgnore
+  //
+  static bool
+  shouldIgnore(const QString & fn, const QString & ext, QFileInfo & fi)
+  {
+    if (fi.isDir())
+    {
+      QString extLowered = ext.toLower();
+      if (extLowered == QString::fromUtf8("eyetvsched"))
+      {
+        return true;
+      }
+
+      return false;
+    }
+
+    if (fn.size() > 1 && fn[0] == '.' && fn[1] != '.')
+    {
+      // ignore dot files:
+      return true;
+    }
+
+    return shouldIgnore(ext);
+  }
+
+  //----------------------------------------------------------------
+  // findFiles
+  //
+  bool
+  findFiles(std::list<QString> & files,
+            const QString & startHere,
+            bool recursive)
+  {
+    QStringList extFilters;
+    if (QFileInfo(startHere).suffix() == kExtEyetv)
+    {
+      extFilters << QString::fromUtf8("*.mpg");
+    }
+
+    QDirIterator iter(startHere,
+                      extFilters,
+                      QDir::NoDotAndDotDot |
+                      QDir::AllEntries |
+                      QDir::Readable,
+                      QDirIterator::FollowSymlinks);
+
+    bool found = false;
+    while (iter.hasNext())
+    {
+      iter.next();
+
+      QFileInfo fi = iter.fileInfo();
+      QString fullpath = fi.absoluteFilePath();
+      QString filename = fi.fileName();
+      QString ext = fi.suffix();
+      // std::cerr << "FN: " << fullpath.toUtf8().constData() << std::endl;
+
+      if (!shouldIgnore(filename, ext, fi))
+      {
+        if (fi.isDir() && ext != kExtEyetv)
+        {
+          if (recursive)
+          {
+            if (findFiles(files, fullpath, recursive))
+            {
+              found = true;
+            }
+          }
+        }
+        else
+        {
+          files.push_back(fullpath);
+          found = true;
+        }
+      }
+    }
+
+    return found;
+  }
+
+  //----------------------------------------------------------------
+  // findFilesAndSort
+  //
+  static bool
+  findFilesAndSort(std::list<QString> & files,
+                   const QString & startHere,
+                   bool recursive = true)
+  {
+    if (findFiles(files, startHere, recursive))
+    {
+      files.sort();
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // addFolderToPlaylist
+  //
+  bool
+  addFolderToPlaylist(std::list<QString> & playlist, const QString & folder)
+  {
+    if (folder.isEmpty())
+    {
+      return false;
+    }
+
+    QFileInfo fi(folder);
+    QString ext = fi.suffix();
+
+    // find all files in the folder, sorted alphabetically
+    if (!shouldIgnore(fi.fileName(), ext, fi))
+    {
+      if (fi.isDir() && ext != kExtEyetv)
+      {
+        return findFilesAndSort(playlist, folder, true);
+      }
+
+      playlist.push_back(folder);
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // addToPlaylist
+  //
+  bool
+  addToPlaylist(std::list<QString> & playlist, const QString & path)
+  {
+    QFileInfo fi(path);
+    if (fi.exists() && !fi.isReadable())
+    {
+      return false;
+    }
+
+    QString filename = fi.fileName();
+    QString ext = fi.suffix();
+    if (shouldIgnore(filename, ext, fi))
+    {
+      return false;
+    }
+
+    if (fi.isDir() && fi.suffix() != kExtEyetv)
+    {
+      return addFolderToPlaylist(playlist, path);
+    }
+
+    playlist.push_back(path);
+    return true;
+  }
+
 }
