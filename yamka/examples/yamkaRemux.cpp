@@ -1866,25 +1866,26 @@ TRemuxer::addCuePoint(TBlockInfo * binfo,
 static void
 usage(char ** argv, const char * message = NULL)
 {
-  std::cerr << "NOTE: remuxing input files containing multiple segments "
-            << "with mismatched tracks will not work correctly"
-            << std::endl;
-
   std::cerr << "USAGE: " << argv[0]
             << " -i input.mkv -o output.mkv\n"
-            << " [-t trackNo | +t trackNo]*\n"
+            << " [-t track_number | +t track_number]*\n"
             << " [-t0|-k0  hh mm ss msec]\n"
             << " [-t1 hh mm ss msec]\n"
-            << " [-c0 firstChapter]\n"
-            << " [-c1 lastChapter]\n"
+            << " [-c0 extract_from_chapter_name]\n"
+            << " [-c1 extract_upto_and_including_chapter_name]\n"
             << " [--fix-keyframe-flag]\n"
             << " [--attach mime/type attachment.xyz]\n"
             << " [--copy-codec-private fromhere.mkv]\n"
             << " [--save-chapters output.txt]\n"
             << " [--load-chapters input.txt]\n"
-            << " [--lang trackNo lang]\n"
-            << " [+dt trackNo msecToAdd]\n"
+            << " [--lang track_number lang]\n"
+            << " [+dt track_number msec_shift_positive_or_negative]\n"
             << std::endl;
+
+  std::cerr << "NOTE: remuxing input files containing multiple segments "
+            << "with mismatched tracks will not work correctly\n"
+            << std::endl;
+
 
   std::cerr << "EXAMPLE: " << argv[0]
             << " -i input.mkv -o output.mkv +t 1 +t 2"
@@ -1896,6 +1897,9 @@ usage(char ** argv, const char * message = NULL)
   {
     std::cerr << "ERROR: " << message << std::endl;
   }
+
+  std::cerr << "VERSION: r" << YAMKA_REVISION
+            << std::endl;
 
   ::exit(1);
 }
@@ -2663,8 +2667,6 @@ main(int argc, char ** argv)
   get_main_args_utf8(argc, argv);
 #endif
 
-  printCurrentTime("start");
-
   std::string srcPath;
   std::string dstPath;
   std::list<uint64> tracksToKeep;
@@ -2902,6 +2904,8 @@ main(int argc, char ** argv)
                  std::string(" for reading")).c_str());
   }
 
+  printCurrentTime("start");
+
   bool extractViaChapters =
     extractChapters[0].size() ||
     extractChapters[1].size();
@@ -2936,12 +2940,12 @@ main(int argc, char ** argv)
     doc.loadAndKeepReceipts(src, srcSize, &skipClusters);
   }
 
+  printCurrentTime("doc.load... finished");
+
   if (doc.segments_.empty())
   {
     usage(argv, (std::string("failed to load any matroska segments").c_str()));
   }
-
-  printCurrentTime("doc.load... finished");
 
   // execute the todo list:
   for (std::list<TTodo>::const_iterator i = todoList.begin();
@@ -3062,7 +3066,7 @@ main(int argc, char ** argv)
 
     segInfo = segInfoIn;
     segInfo.muxingApp_.payload_.set(segInfo.muxingApp_.payload_.getDefault());
-    segInfo.writingApp_.payload_.set("yamkaRemux rev." YAMKA_REVISION);
+    segInfo.writingApp_.payload_.set("yamkaRemux r" YAMKA_REVISION);
 
     // segment timecode scale, such that
     // timeInNanosec := timecodeScale * (clusterTime + blockTime):
