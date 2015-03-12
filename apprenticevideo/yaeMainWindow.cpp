@@ -3719,7 +3719,7 @@ namespace yae
           addMenuCopyTo(contextMenu_, menuSubs);
         }
 
-        if (numChapters > 1)
+        if (numChapters)
         {
           addMenuCopyTo(contextMenu_, menuChapters);
         }
@@ -4513,7 +4513,7 @@ namespace yae
       menubar->removeAction(menuSubs->menuAction());
     }
 
-    if (numChapters < 2 )
+    if (!numChapters)
     {
       menubar->removeAction(menuChapters->menuAction());
     }
@@ -4530,7 +4530,7 @@ namespace yae
       menubar->insertMenu(menuHelp->menuAction(), menuSubs);
     }
 
-    if (numChapters > 1)
+    if (numChapters)
     {
       menubar->removeAction(menuChapters->menuAction());
       menubar->insertMenu(menuHelp->menuAction(), menuChapters);
