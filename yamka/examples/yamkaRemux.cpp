@@ -53,9 +53,18 @@ typedef Cluster::TBlockGroup TBlockGroup;
 typedef Cluster::TSimpleBlock TSimpleBlock;
 typedef Cluster::TEncryptedBlock TEncryptedBlock;
 typedef Cluster::TSilent TSilentTracks;
+
 typedef Chapters::TEdition TEdition;
+typedef std::list<TEdition>::const_iterator TEditionConstIter;
+
 typedef Edition::TChapAtom TChapAtom;
+typedef std::list<TChapAtom>::const_iterator TChapAtomConstIter;
+
+typedef ChapAtom::TSubChapAtom TSubChapAtom;
+typedef std::list<TSubChapAtom>::const_iterator TSubChapAtomConstIter;
+
 typedef ChapAtom::TDisplay TChapDisplay;
+typedef std::list<TChapDisplay>::const_iterator TChapDisplayConstIter;
 
 typedef std::deque<TSeekHead>::iterator TSeekHeadIter;
 typedef std::list<TCluster>::iterator TClusterIter;
@@ -651,7 +660,9 @@ struct TRemuxer : public LoadWithProgress
   void finishCurrentCluster();
   void addCuePoint(TBlockInfo * binfo, const IStorage::IReceiptPtr & receipt);
 
+  // time shift per source track, in msec, may be negative:
   const std::map<uint64, double> & tsOffset_;
+
   const TTrackMap & trackSrcDst_;
   const TTrackMap & trackDstSrc_;
   const TSegment & srcSeg_;
@@ -1542,9 +1553,9 @@ TRemuxer::isRelevant(uint64 clusterTime, TBlockInfo & binfo)
   }
 
   // lookup timestamp offset:
-  double dtSeconds = getOffset(tsOffset_, srcTrackNo);
-  int64 dt = (int64)(double(NANOSEC_PER_SEC / lace_.timecodeScale_) *
-                     dtSeconds);
+  double dtMsec = getOffset(tsOffset_, srcTrackNo);
+  int64 dt = (int64)(double(NANOSEC_PER_SEC / (1000 * lace_.timecodeScale_)) *
+                     dtMsec);
 
   const uint64 blockSize = blockData->numBytes();
   HodgePodgeConstIter blockDataIter(*blockData);
@@ -1867,13 +1878,15 @@ usage(char ** argv, const char * message = NULL)
             << " [-t trackNo | +t trackNo]*\n"
             << " [-t0|-k0  hh mm ss msec]\n"
             << " [-t1 hh mm ss msec]\n"
+            << " [-c0 firstChapter]\n"
+            << " [-c1 lastChapter]\n"
             << " [--fix-keyframe-flag]\n"
             << " [--attach mime/type attachment.xyz]\n"
             << " [--copy-codec-private fromhere.mkv]\n"
             << " [--save-chapters output.txt]\n"
             << " [--load-chapters input.txt]\n"
             << " [--lang trackNo lang]\n"
-            << " [+dt trackNo secondsToAdd]\n"
+            << " [+dt trackNo msecToAdd]\n"
             << std::endl;
 
   std::cerr << "EXAMPLE: " << argv[0]
@@ -2445,6 +2458,123 @@ loadChapters(MatroskaDoc & doc, const TTodo & todo, char ** argv)
   }
 }
 
+
+//----------------------------------------------------------------
+// findChapAtom
+//
+static const ChapAtom *
+findChapAtom(const ChapAtom & ca, const std::string & chName)
+{
+  const ChapAtom * found = NULL;
+  for (TChapDisplayConstIter di = ca.display_.begin();
+       !found && di != ca.display_.end(); ++di)
+  {
+    const ChapDisp & cd = di->payload_;
+    if (cd.string_.payload_.get() == chName)
+    {
+      found = &ca;
+    }
+  }
+
+  for (TSubChapAtomConstIter ci = ca.subChapAtom_.begin();
+       !found && ci != ca.subChapAtom_.end(); ++ci)
+  {
+    found = findChapAtom(ci->payload_, chName);
+  }
+
+  return found;
+}
+
+//----------------------------------------------------------------
+// findChapter
+//
+static const ChapAtom *
+findChapter(const Chapters & chapters, const std::string & chName)
+{
+  const ChapAtom * found = NULL;
+
+  for (TEditionConstIter ei = chapters.editions_.begin();
+       !found && ei != chapters.editions_.end(); ++ei)
+  {
+    const Edition & ed = ei->payload_;
+    for (TChapAtomConstIter ca = ed.chapAtoms_.begin();
+         !found && ca != ed.chapAtoms_.end(); ++ca)
+    {
+      found = findChapAtom(ca->payload_, chName);
+    }
+  }
+
+  return found;
+}
+
+//----------------------------------------------------------------
+// copyChapAtom
+//
+static bool
+copyChapAtom(ChapAtom & dst, const ChapAtom & src, uint64 t0ms, uint64 t1ms)
+{
+  uint64 ta = src.timeStart_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+  uint64 tb = src.timeEnd_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+
+  if (!(t0ms < tb && ta < t1ms))
+  {
+    return false;
+  }
+
+  ta = std::max(t0ms, std::min(t1ms, ta)) - t0ms;
+  tb = std::max(t0ms, std::min(t1ms, tb)) - t0ms;
+
+  dst = src;
+  dst.timeStart_.payload_.set(ta * (NANOSEC_PER_SEC / 1000));
+  dst.timeEnd_.payload_.set(tb * (NANOSEC_PER_SEC / 1000));
+
+  dst.subChapAtom_.clear();
+  for (TSubChapAtomConstIter ci = src.subChapAtom_.begin();
+       ci != src.subChapAtom_.end(); ++ci)
+  {
+    dst.subChapAtom_.push_back(TSubChapAtom());
+    if (!copyChapAtom(dst.subChapAtom_.back().payload_,
+                      ci->payload_, t0ms, t1ms))
+    {
+      dst.subChapAtom_.pop_back();
+    }
+  }
+
+  return true;
+}
+
+//----------------------------------------------------------------
+// copyChapters
+//
+static void
+copyChapters(Chapters & dst, const Chapters & src, uint64 t0ms, uint64 t1ms)
+{
+  for (TEditionConstIter ei = src.editions_.begin();
+       ei != src.editions_.end(); ++ei)
+  {
+    const Edition & ed = ei->payload_;
+
+    dst.editions_.push_back(TEdition());
+    Edition & e = dst.editions_.back().payload_;
+
+    for (TChapAtomConstIter ca = ed.chapAtoms_.begin();
+         ca != ed.chapAtoms_.end(); ++ca)
+    {
+      e.chapAtoms_.push_back(TChapAtom());
+      if (!copyChapAtom(e.chapAtoms_.back().payload_,
+                        ca->payload_, t0ms, t1ms))
+      {
+        e.chapAtoms_.pop_back();
+      }
+    }
+
+    if (e.chapAtoms_.empty())
+    {
+      dst.editions_.pop_back();
+    }
+  }
+}
+
 //----------------------------------------------------------------
 // setTrackLang
 //
@@ -2518,6 +2648,10 @@ main(int argc, char ** argv)
   uint64 t0 = 0;
   uint64 t1 = 0;
 
+  // segment extraction time points may be specified by chapter names:
+  std::string extractChapters[2];
+
+  // time shift per source track, in msec, may be negative:
   std::map<uint64, double> tsOffset;
 
   // yamkaRemux r166, r167 wiped out the SimpleBlock keyframe flag
@@ -2696,6 +2830,21 @@ main(int argc, char ** argv)
 
       t1 = ms + 1000 * (ss + 60 * (mm + 60 * hh));
     }
+    else if (strcmp(argv[i], "-c0") == 0 ||
+             strcmp(argv[i], "-c1") == 0)
+    {
+      if ((argc - i) <= 1)
+      {
+        usage(argv, (std::string("could not parse ") + argv[i] +
+                     std::string(" parameter")));
+      }
+
+      int index = argv[i][2] - '0';
+      extractFromKeyframe |= !index;
+
+      i++;
+      extractChapters[index] = argv[i];
+    }
     else if (strcmp(argv[i], "--fix-keyframe-flag") == 0)
     {
       fixKeyFlag = true;
@@ -2707,7 +2856,7 @@ main(int argc, char ** argv)
     }
   }
 
-  if (t0 > t1)
+  if (t1 && t0 > t1)
   {
     usage(argv,
           "start time (-t0 hh mm ss ms) is greater than "
@@ -2724,7 +2873,11 @@ main(int argc, char ** argv)
                  std::string(" for reading")).c_str());
   }
 
-  bool extractTimeSegment = (t0 < t1);
+  bool extractViaChapters =
+    extractChapters[0].size() ||
+    extractChapters[1].size();
+
+  bool extractTimeSegment = t0 != 0 || extractViaChapters;
   bool skipCues = !extractTimeSegment;
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
@@ -2836,6 +2989,7 @@ main(int argc, char ** argv)
     segmentTrackFrames[segmentIndex].resize(numTracks);
   }
 
+
   FileStorage dst(dstPath, File::kReadWrite);
   if (!dst.file_.isOpen())
   {
@@ -2884,6 +3038,53 @@ main(int argc, char ** argv)
     // segment timecode scale, such that
     // timeInNanosec := timecodeScale * (clusterTime + blockTime):
     uint64 timecodeScale = segInfo.timecodeScale_.payload_.get();
+    double segmentDuration = segInfo.duration_.payload_.get();
+    uint64 timeBase = NANOSEC_PER_SEC / timecodeScale;
+    uint64 segmentDurationMsec = uint64(segmentDuration * 1000) / timeBase;
+
+    uint64 tStart = t0;
+    uint64 tEnd = t1;
+    if (extractTimeSegment)
+    {
+      if (extractViaChapters)
+      {
+        // figure out tStart, tEnd:
+        const Chapters & chaps = segmentIn.chapters_.payload_;
+
+        const ChapAtom * c0 =
+          extractChapters[0].size() ?
+          findChapter(chaps, extractChapters[0]) :
+          NULL;
+
+        const ChapAtom * c1 =
+          extractChapters[1].size() ?
+          findChapter(chaps, extractChapters[1]) :
+          NULL;
+
+        if (c0)
+        {
+          // get chapter time in msec:
+          tStart = c0->timeStart_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+        }
+
+        if (c1)
+        {
+          // get chapter time in msec:
+          tEnd = c1->timeStart_.payload_.get() / (NANOSEC_PER_SEC / 1000);
+        }
+      }
+
+      if (tEnd < tStart)
+      {
+        tEnd = segmentDurationMsec;
+      }
+
+      double adjustedDuration =
+        double((tEnd - tStart) * (timeBase / 1000));
+      segInfo.duration_.payload_.set(adjustedDuration);
+    }
+
+    std::map<uint64, double> timeShift = tsOffset;
 
     // copy track info:
     TTracks & tracksElt = segment.tracks_;
@@ -2900,6 +3101,8 @@ main(int argc, char ** argv)
       Track & track = tracks.back().payload_;
 
       uint64 trackNoIn = trackOutIn[trackNo];
+      timeShift[trackNoIn] = timeShift[trackNoIn] - double(tStart);
+
       const Track * trackIn = getTrack(tracksIn, trackNoIn);
       if (trackIn)
       {
@@ -2926,7 +3129,11 @@ main(int argc, char ** argv)
     }
 
     TChapters & chaptersElt = segmentElt.payload_.chapters_;
-    chaptersElt = segmentIn.chapters_;
+    copyChapters(chaptersElt.payload_,
+                 segmentIn.chapters_.payload_,
+                 tStart,
+                 tEnd);
+
     if (chaptersElt.mustSave())
     {
       seekHead.indexThis(&segmentElt, &chaptersElt);
@@ -2944,7 +3151,7 @@ main(int argc, char ** argv)
     printCurrentTime("begin segment remux");
 
     // on-the-fly remux Clusters/BlockGroups/SimpleBlocks:
-    TRemuxer remuxer(tsOffset,
+    TRemuxer remuxer(timeShift,
                      trackInOut,
                      trackOutIn,
                      *i,
@@ -2952,7 +3159,7 @@ main(int argc, char ** argv)
                      src,
                      dst,
                      tmp);
-    remuxer.remux(t0, t1, extractFromKeyframe, fixKeyFlag);
+    remuxer.remux(tStart, tEnd, extractFromKeyframe, fixKeyFlag);
 
     printCurrentTime("finished segment remux");
 
