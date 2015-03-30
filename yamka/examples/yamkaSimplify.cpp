@@ -456,9 +456,8 @@ main(int argc, char ** argv)
     printCurrentTime("doc.loadViaSeekHead finished");
   }
 
-  if (!ok ||
-      !doc.segments_.empty() &&
-      doc.segments_.front().payload_.clusters_.empty())
+  if (!ok || (!doc.segments_.empty() &&
+              doc.segments_.front().payload_.clusters_.empty()))
   {
     std::cout << "failed to find Clusters via SeekHead, "
               << "attempting brute force"
