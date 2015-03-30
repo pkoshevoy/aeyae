@@ -2910,7 +2910,7 @@ main(int argc, char ** argv)
     extractChapters[0].size() ||
     extractChapters[1].size();
 
-  bool extractTimeSegment = t0 != 0 || extractViaChapters;
+  bool extractTimeSegment = t0 != 0 || t1 != 0 || extractViaChapters;
   bool skipCues = !extractTimeSegment;
   uint64 srcSize = src.file_.size();
   MatroskaDoc doc;
