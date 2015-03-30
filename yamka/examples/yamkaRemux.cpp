@@ -634,7 +634,8 @@ struct TRemuxer : public LoadWithProgress
            FileStorage & dst,
            IStorage & tmp);
 
-  void remux(uint64 t0,
+  void remux(const EbmlHead & ebmlHead,
+             uint64 t0,
              uint64 t1,
              bool extractFromKeyframe,
              bool fixKeyFlag);
@@ -1181,10 +1182,20 @@ isH264Keyframe(const HodgePodge * data)
 }
 
 //----------------------------------------------------------------
+// isCueRelativePositionSupported
+//
+static bool
+isCueRelativePositionSupported(const EbmlHead & ebmlHead)
+{
+  return ebmlHead.docTypeVersion_.payload_.get() >= 4;
+}
+
+//----------------------------------------------------------------
 // TRemuxer::remux
 //
 void
-TRemuxer::remux(uint64 inPointInMsec,
+TRemuxer::remux(const EbmlHead & ebmlHead,
+                uint64 inPointInMsec,
                 uint64 outPointInMsec,
                 bool extractFromKeyframe,
                 bool fixKeyFlag)
@@ -1434,6 +1445,7 @@ TRemuxer::remux(uint64 inPointInMsec,
       numPages++;
     }
 
+    bool useCueRelPos = isCueRelativePositionSupported(ebmlHead);
     TEightByteBuffer bvCuePoint = uintEncode(TCuePoint::kId);
     TEightByteBuffer bvCueTime = uintEncode(CuePoint::TTime::kId);
     TEightByteBuffer bvCueTrkPos = uintEncode(CuePoint::TCueTrkPos::kId);
@@ -1471,10 +1483,15 @@ TRemuxer::remux(uint64 inPointInMsec,
           << bvTrack
           << bvCueClstr
           << vsizeEncode(bvPosition.n_)
-          << bvPosition
-          << bvCueRelPos
-          << vsizeEncode(bvRelPos.n_)
-          << bvRelPos;
+          << bvPosition;
+
+        if (useCueRelPos)
+        {
+          cueTrkPosPayload
+            << bvCueRelPos
+            << vsizeEncode(bvRelPos.n_)
+            << bvRelPos;
+        }
 
         if (cue.block_ > 1)
         {
@@ -1851,7 +1868,7 @@ TRemuxer::addCuePoint(TBlockInfo * binfo,
   needCuePointForTrack_[(std::size_t)(binfo->trackNo_)] = false;
 
   TCue cue;
-  cue.time_ = binfo->pts_;
+  cue.time_ = binfo->dts_;
   cue.track_ = binfo->trackNo_;
   cue.cluster_ = clusterRelativePosition_;
   cue.relPos_ = receipt->position() - clusterPayloadPosition_;
@@ -3034,9 +3051,11 @@ main(int argc, char ** argv)
   HodgePodgeStorage tmp;
   MatroskaDoc out;
 
-  // set the DocType to 4, due to CueRelativePosition:
-  out.head_.payload_.docTypeVersion_.payload_.set(4);
-  out.head_.payload_.docTypeReadVersion_.payload_.set(2);
+  // copy the DocType...
+  out.head_.payload_.docTypeVersion_.payload_ =
+    doc.head_.payload_.docTypeVersion_.payload_;
+  out.head_.payload_.docTypeReadVersion_.payload_ =
+    doc.head_.payload_.docTypeReadVersion_.payload_;
 
   dst.file_.setSize(0);
   out.save(dst);
@@ -3209,7 +3228,11 @@ main(int argc, char ** argv)
                      src,
                      dst,
                      tmp);
-    remuxer.remux(tStart, tEnd, extractFromKeyframe, fixKeyFlag);
+    remuxer.remux(out.head_.payload_,
+                  tStart,
+                  tEnd,
+                  extractFromKeyframe,
+                  fixKeyFlag);
 
     printCurrentTime("finished segment remux");
 
