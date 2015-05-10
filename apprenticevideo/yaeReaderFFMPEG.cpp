@@ -50,7 +50,6 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
-#include <libavfilter/avcodec.h>
 #include <libavfilter/avfilter.h>
 #include <libavfilter/avfiltergraph.h>
 #include <libavfilter/buffersink.h>
@@ -58,8 +57,10 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libavutil/avstring.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/error.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/mathematics.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
@@ -76,7 +77,13 @@ extern "C"
 static std::ostream &
 dump_averror(std::ostream & os, int err)
 {
-  char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+#ifdef AV_ERROR_MAX_STRING_SIZE
+  static const std::size_t buffer_size = AV_ERROR_MAX_STRING_SIZE;
+#else
+  static const std::size_t buffer_size = 256;
+#endif
+
+  char errbuf[buffer_size] = { 0 };
   av_strerror(err, errbuf, sizeof(errbuf));
   os << "AVERROR: " << errbuf << std::endl;
   return os;
@@ -90,6 +97,15 @@ dump_averror(std::ostream & os, int err)
     if (err < 0)                                        \
     {                                                   \
       dump_averror(std::cerr, err);                     \
+      YAE_ASSERT(false);                                \
+      return ret;                                       \
+    }                                                   \
+  } while (0)
+
+#define YAE_ASSERT_OR_RETURN(predicate, ret)            \
+  do {                                                  \
+    if (!(predicate))                                   \
+    {                                                   \
       YAE_ASSERT(false);                                \
       return ret;                                       \
     }                                                   \
@@ -515,6 +531,7 @@ namespace yae
       case AV_CODEC_ID_SRT:
         return kSubsSRT;
 
+#if LIBAVCODEC_VERSION_INT > AV_VERSION_INT(56, 1, 0)
       case AV_CODEC_ID_MICRODVD:
         return kSubsMICRODVD;
 
@@ -538,6 +555,7 @@ namespace yae
 
       case AV_CODEC_ID_WEBVTT:
         return kSubsWEBVTT;
+#endif
 
       default:
         break;
@@ -1015,7 +1033,7 @@ namespace yae
     close();
 
     codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-    if (!codec_ && stream_->codec->codec_id != CODEC_ID_TEXT)
+    if (!codec_ && stream_->codec->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
       return false;
@@ -1269,6 +1287,66 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // lookup_src
+  //
+  static AVFilterContext *
+  lookup_src(AVFilterContext * filter, const char * name)
+  {
+    if (!filter)
+    {
+      return NULL;
+    }
+
+    if (filter->nb_inputs == 0 &&
+        filter->nb_outputs == 1 &&
+        strcmp(filter->filter->name, name) == 0)
+    {
+      return filter;
+    }
+
+    for (unsigned int i = 0; i < filter->nb_inputs; i++)
+    {
+      AVFilterContext * found = lookup_src(filter->inputs[i]->src, name);
+      if (found)
+      {
+        return found;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // lookup_sink
+  //
+  static AVFilterContext *
+  lookup_sink(AVFilterContext * filter, const char * name)
+  {
+    if (!filter)
+    {
+      return NULL;
+    }
+
+    if (filter->nb_inputs == 1 &&
+        filter->nb_outputs == 0 &&
+        strcmp(filter->filter->name, name) == 0)
+    {
+      return filter;
+    }
+
+    for (unsigned int i = 0; i < filter->nb_outputs; i++)
+    {
+      AVFilterContext * found = lookup_sink(filter->outputs[i]->dst, name);
+      if (found)
+      {
+        return found;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // VideoFilterGraph::setup
   //
   bool
@@ -1308,81 +1386,43 @@ namespace yae
     srcTimeBase_ = srcTimeBase;
     srcPAR_ = srcPAR;
 
-    AVFilter * srcFilterDef = avfilter_get_by_name("buffer");
-    AVFilter * dstFilterDef = avfilter_get_by_name("buffersink");
-
-    graph_ = avfilter_graph_alloc();
-
-    std::string srcCfg;
-    {
-      std::ostringstream os;
-
-      const char * txtPixFmt = av_get_pix_fmt_name(srcPixFmt_);
-      os << "video_size=" << srcWidth_ << "x" << srcHeight_
-         << ":pix_fmt=" << txtPixFmt
-         << ":time_base=" << srcTimeBase_.num
-         << "/" << srcTimeBase_.den
-         << ":pixel_aspect=" << srcPAR_.num
-         << "/" << srcPAR_.den;
-      srcCfg = os.str().c_str();
-    }
-
-    int err = avfilter_graph_create_filter(&src_,
-                                           srcFilterDef,
-                                           "in",
-                                           srcCfg.c_str(),
-                                           NULL,
-                                           graph_);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    AVBufferSinkParams params;
-    params.pixel_fmts = dstPixFmt_;
-    err = avfilter_graph_create_filter(&sink_,
-                                       dstFilterDef,
-                                       "out",
-                                       NULL,
-                                       &params,
-                                       graph_);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    out_ = avfilter_inout_alloc();
-    err = out_ ? 0 : AVERROR(ENOMEM);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    out_->name = av_strdup("in");
-    out_->filter_ctx = src_;
-    out_->pad_idx = 0;
-    out_->next = NULL;
-
-    in_ = avfilter_inout_alloc();
-    err = in_ ? 0 : AVERROR(ENOMEM);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    in_->name = av_strdup("out");
-    in_->filter_ctx = sink_;
-    in_->pad_idx = 0;
-    in_->next = NULL;
-
     std::string filters;
     {
       std::ostringstream os;
-      if (*filterChain && strcmp(filterChain, "null") != 0)
+
+      const char * srcPixFmtTxt = av_get_pix_fmt_name(srcPixFmt_);
+      os << "buffer"
+         << "=width=" << srcWidth_
+         << ":height=" << srcHeight_
+         << ":pix_fmt=" << srcPixFmtTxt
+         << ":time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
+         << ":sar=" << srcPAR_.num << '/' << srcPAR_.den;
+
+      if (filterChain && *filterChain && strcmp(filterChain, "null") != 0)
       {
-        os << filterChain << ",";
+        os << ',' << filterChain;
       }
 
-      const char * txtPixFmt = av_get_pix_fmt_name(dstPixFmt_[0]);
-      os << "format=" << txtPixFmt;
+      const char * dstPixFmtTxt = av_get_pix_fmt_name(dstPixFmt_[0]);
+      os << ",format"
+         << "=pix_fmts=" << dstPixFmtTxt
+         << ",buffersink";
 
       filters = os.str().c_str();
       filterChain_ = filterChain;
     }
 
-    err = avfilter_graph_parse_ptr(graph_, filters.c_str(), &in_, &out_, NULL);
+    graph_ = avfilter_graph_alloc();
+    int err = avfilter_graph_parse2(graph_, filters.c_str(), &in_, &out_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
+                      "buffer");
+    sink_ = lookup_sink(src_, "buffersink");
+    YAE_ASSERT_OR_RETURN(src_ && sink_, false);
 
     return true;
   }
@@ -1393,8 +1433,7 @@ namespace yae
   bool
   VideoFilterGraph::push(AVFrame * frame)
   {
-    // std::cerr << "VF.push: " << frame->best_effort_timestamp << std::endl;
-    int err = av_buffersrc_add_frame_flags(src_, frame, 0);
+    int err = av_buffersrc_add_frame(src_, frame);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
@@ -1412,7 +1451,6 @@ namespace yae
       return false;
     }
 
-    // std::cerr << "VF.pull: " << frame->best_effort_timestamp << std::endl;
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
   }
@@ -1798,6 +1836,17 @@ namespace yae
     return true;
   }
 
+#if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(56, 1, 0)
+  //----------------------------------------------------------------
+  // av_stream_get_r_frame_rate
+  //
+  inline const AVRational &
+  av_stream_get_r_frame_rate(const AVStream * s)
+  {
+    return s->avg_frame_rate;
+  }
+#endif
+
   //----------------------------------------------------------------
   // VideoTrack::decoderStartup
   //
@@ -1820,7 +1869,7 @@ namespace yae
     frameRate_ =
       (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den) ?
       stream_->avg_frame_rate :
-      stream_->r_frame_rate;
+      av_stream_get_r_frame_rate(stream_);
 
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
@@ -1865,6 +1914,17 @@ namespace yae
 
     double now_;
   };
+
+#if LIBAVUTIL_VERSION_INT <= AV_VERSION_INT(54, 3, 0)
+  //----------------------------------------------------------------
+  // av_frame_get_best_effort_timestamp
+  //
+  inline int64_t
+  av_frame_get_best_effort_timestamp(const AVFrame * frame)
+  {
+    return frame->pkt_pts;
+  }
+#endif
 
   //----------------------------------------------------------------
   // VideoTrack::decode
@@ -1952,9 +2012,7 @@ namespace yae
         bool gotPTS = false;
         vf.time_.base_ = stream_->time_base.den;
         vf.time_.time_ = (stream_->time_base.num *
-                          avFrame->best_effort_timestamp);
-
-        // std::cerr << "T: " << avFrame->best_effort_timestamp << std::endl;
+                          av_frame_get_best_effort_timestamp(avFrame));
 
         if (!gotPTS && !hasPrevPTS_)
         {
@@ -1965,9 +2023,9 @@ namespace yae
 
         if (!gotPTS)
         {
-          if (ptsBestEffort_ < avFrame->best_effort_timestamp)
+          if (ptsBestEffort_ < av_frame_get_best_effort_timestamp(avFrame))
           {
-            ptsBestEffort_ = avFrame->best_effort_timestamp;
+            ptsBestEffort_ = av_frame_get_best_effort_timestamp(avFrame);
           }
           else
           {
@@ -1976,7 +2034,7 @@ namespace yae
 
           vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
-                             "avFrame->best_effort_timestamp");
+                             "av_frame_get_best_effort_timestamp(avFrame)");
         }
 
         if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
@@ -2534,17 +2592,19 @@ namespace yae
     t.colorRange_ = to_yae_color_range(context->color_range);
 
     //! frame rate:
+    const AVRational & r_frame_rate = av_stream_get_r_frame_rate(stream_);
+
     if (stream_->avg_frame_rate.num > 0 && stream_->avg_frame_rate.den > 0)
     {
       t.frameRate_ =
         double(stream_->avg_frame_rate.num) /
         double(stream_->avg_frame_rate.den);
     }
-    else if (stream_->r_frame_rate.num > 0 && stream_->r_frame_rate.den > 0)
+    else if (r_frame_rate.num > 0 && r_frame_rate.den > 0)
     {
       t.frameRate_ =
-        double(stream_->r_frame_rate.num) /
-        double(stream_->r_frame_rate.den);
+        double(r_frame_rate.num) /
+        double(r_frame_rate.den);
 
       if (context_->metadata)
       {
@@ -3013,6 +3073,25 @@ namespace yae
     dstChannelLayout_[1] = -1;
   }
 
+  //----------------------------------------------------------------
+  // av_opt_set_list
+  //
+  template <typename TData>
+  int
+  av_opt_set_list(void * obj,
+                  const char * name,
+                  const TData * values,
+                  TData endValue,
+                  int search_flags)
+  {
+    int numValues = 0;
+    for (const TData * v = values; v && *v != endValue; ++v, ++numValues) ;
+    return av_opt_set_bin(obj,
+                          name,
+                          (const unsigned char *)values,
+                          numValues * sizeof(TData),
+                          search_flags);
+  }
 
   //----------------------------------------------------------------
   // AudioFilterGraph::setup
@@ -3064,93 +3143,44 @@ namespace yae
     srcChannelLayout_    = srcChannelLayout;
     dstChannelLayout_[0] = dstChannelLayout;
 
-    AVFilter * srcFilterDef = avfilter_get_by_name("abuffer");
-    AVFilter * dstFilterDef = avfilter_get_by_name("abuffersink");
-
-    graph_ = avfilter_graph_alloc();
-
-    std::string srcCfg;
-    {
-      std::ostringstream os;
-
-      const char * txtSampleFmt = av_get_sample_fmt_name(srcSampleFmt_);
-      os << "time_base=" << srcTimeBase_.num << "/" << srcTimeBase_.den << ':'
-         << "sample_rate=" << srcSampleRate_ << ':'
-         << "sample_fmt=" << txtSampleFmt << ':'
-         << "channel_layout=0x" << std::hex << srcChannelLayout;
-      srcCfg = os.str().c_str();
-    }
-
-    int err = avfilter_graph_create_filter(&src_,
-                                           srcFilterDef,
-                                           "in",
-                                           srcCfg.c_str(),
-                                           NULL,
-                                           graph_);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    err = avfilter_graph_create_filter(&sink_,
-                                       dstFilterDef,
-                                       "out",
-                                       NULL,
-                                       NULL,
-                                       graph_);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    err = av_opt_set_int_list(sink_, "sample_fmts",
-                              dstSampleFmt_, AV_SAMPLE_FMT_NONE,
-                              AV_OPT_SEARCH_CHILDREN);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    err = av_opt_set_int_list(sink_, "channel_layouts",
-                              dstChannelLayout_, -1,
-                              AV_OPT_SEARCH_CHILDREN);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    err = av_opt_set_int_list(sink_, "sample_rates",
-                              dstSampleRate_, -1,
-                              AV_OPT_SEARCH_CHILDREN);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    out_ = avfilter_inout_alloc();
-    err = out_ ? 0 : AVERROR(ENOMEM);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    out_->name = av_strdup("in");
-    out_->filter_ctx = src_;
-    out_->pad_idx = 0;
-    out_->next = NULL;
-
-    in_ = avfilter_inout_alloc();
-    err = in_ ? 0 : AVERROR(ENOMEM);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-
-    in_->name = av_strdup("out");
-    in_->filter_ctx = sink_;
-    in_->pad_idx = 0;
-    in_->next = NULL;
-
     std::string filters;
     {
       std::ostringstream os;
-      if (*filterChain && strcmp(filterChain, "anull") != 0)
+
+      const char * srcSampleFmtTxt = av_get_sample_fmt_name(srcSampleFmt_);
+      os << "abuffer"
+         << "=time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
+         << ":sample_rate=" << srcSampleRate_
+         << ":sample_fmt=" << srcSampleFmtTxt
+         << ":channel_layout=0x" << std::hex << srcChannelLayout << std::dec;
+
+      if (filterChain && *filterChain && strcmp(filterChain, "anull") != 0)
       {
-        os << filterChain;
+        os << ',' << filterChain;
       }
-      else if (!*filterChain)
-      {
-        os << "anull";
-      }
+
+      const char * dstSampleFmtTxt = av_get_sample_fmt_name(dstSampleFmt);
+      os << ",aformat"
+         << "=sample_fmts=" << dstSampleFmtTxt
+         << ":sample_rates=" << dstSampleRate
+         << ":channel_layouts=0x" << std::hex << dstChannelLayout << std::dec
+         << ",abuffersink";
 
       filters = os.str().c_str();
       filterChain_ = filterChain;
     }
 
-    err = avfilter_graph_parse_ptr(graph_, filters.c_str(), &in_, &out_, NULL);
+    graph_ = avfilter_graph_alloc();
+    int err = avfilter_graph_parse2(graph_, filters.c_str(), &in_, &out_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
+                      "abuffer");
+    sink_ = lookup_sink(src_, "abuffersink");
+    YAE_ASSERT_OR_RETURN(src_ && sink_, false);
 
     return true;
   }
@@ -3161,7 +3191,7 @@ namespace yae
   bool
   AudioFilterGraph::push(AVFrame * frame)
   {
-    int err = av_buffersrc_add_frame_flags(src_, frame, 0);
+    int err = av_buffersrc_add_frame(src_, frame);
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;

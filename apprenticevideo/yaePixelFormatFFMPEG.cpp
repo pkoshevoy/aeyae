@@ -13,6 +13,7 @@
 extern "C"
 {
 #include <libavutil/avutil.h>
+#include <libavutil/pixfmt.h>
 }
 
 
@@ -338,6 +339,7 @@ namespace yae
       case AV_PIX_FMT_YA16LE:
         return kPixelFormatYA16LE;
 
+#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(54, 3, 0)
       case AV_PIX_FMT_0RGB:
         return kPixelFormat0RGB;
 
@@ -451,6 +453,7 @@ namespace yae
 
       case AV_PIX_FMT_BAYER_GRBG16BE:
         return kPixelFormatBayerGRBG16BE;
+#endif
 
       default:
         break;
@@ -779,6 +782,7 @@ namespace yae
       case kPixelFormatYA16LE:
         return AV_PIX_FMT_YA16LE;
 
+#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(54, 3, 0)
       case kPixelFormat0RGB:
         return AV_PIX_FMT_0RGB;
 
@@ -892,6 +896,7 @@ namespace yae
 
       case kPixelFormatBayerGRBG16BE:
         return AV_PIX_FMT_BAYER_GRBG16BE;
+#endif
 
       default:
         break;
