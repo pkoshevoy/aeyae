@@ -1907,7 +1907,6 @@ namespace yae
 
     if (glActiveTexture)
     {
-      yae_assert_gl_no_error();
       glActiveTexture(GL_TEXTURE0);
       yae_assert_gl_no_error();
     }
@@ -1969,7 +1968,6 @@ namespace yae
     {
       for (std::size_t k = 0; k < shader.numPlanes_; k++)
       {
-        yae_assert_gl_no_error();
         glActiveTexture((GLenum)(GL_TEXTURE0 + k));
         yae_assert_gl_no_error();
 
