@@ -1110,7 +1110,7 @@ namespace yae
 
       duration.time_ = stream_->time_base.num * stream_->duration;
       duration.base_ = stream_->time_base.den;
-      return false;
+      return true;
     }
 
     if (!context_)
@@ -1712,10 +1712,13 @@ namespace yae
   verifyPTS(bool hasPrevPTS, const TTime & prevPTS, const TTime & nextPTS,
             const char * debugMessage = NULL)
   {
-    bool ok = (!hasPrevPTS ||
-               (prevPTS.base_ == nextPTS.base_ ?
-                prevPTS.time_ < nextPTS.time_ :
-                prevPTS.toSeconds() < nextPTS.toSeconds()));
+    bool ok = (nextPTS.time_ != AV_NOPTS_VALUE &&
+               nextPTS.base_ != AV_NOPTS_VALUE &&
+               nextPTS.base_ != 0 &&
+               (!hasPrevPTS ||
+                (prevPTS.base_ == nextPTS.base_ ?
+                 prevPTS.time_ < nextPTS.time_ :
+                 prevPTS.toSeconds() < nextPTS.toSeconds())));
 #if 0
     if (ok && debugMessage)
     {
@@ -2010,10 +2013,10 @@ namespace yae
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
-        bool gotPTS = false;
         vf.time_.base_ = stream_->time_base.den;
         vf.time_.time_ = (stream_->time_base.num *
                           av_frame_get_best_effort_timestamp(avFrame));
+        bool gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t");
 
         if (!gotPTS && !hasPrevPTS_)
         {
@@ -4168,6 +4171,7 @@ namespace yae
     bool threadStop();
 
     bool isSeekable() const;
+    bool hasDuration() const;
     bool requestSeekTime(double seekTime);
 
   protected:
@@ -5058,6 +5062,15 @@ namespace yae
       return false;
     }
 
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::hasDuration
+  //
+  bool
+  Movie::hasDuration() const
+  {
     TTime start;
     TTime duration;
 
@@ -5150,7 +5163,7 @@ namespace yae
 
     if (!isSeekable())
     {
-      // don't bother attemptin to seek an un-seekable stream:
+      // don't bother attempting to seek an un-seekable stream:
       return 0;
     }
 
@@ -5195,15 +5208,15 @@ namespace yae
                                  ts, // kMaxInt64,
                                  seekFlags);
 
-    if (err == AVERROR(EPERM))
-    {
-      // must be a live stream, or otherwise unseekable stream,
-      // ignore the error:
-      return 0;
-    }
-
     if (err < 0)
     {
+      if (!ts)
+      {
+        // must be trying to rewind a stream of undefined duration:
+        YAE_ASSERT(!hasDuration());
+        seekFlags |= AVSEEK_FLAG_BYTE;
+      }
+
       err = avformat_seek_file(context_,
                                streamIndex,
                                kMinInt64,
@@ -6050,7 +6063,7 @@ namespace yae
   bool
   ReaderFFMPEG::isSeekable() const
   {
-    return private_->movie_.isSeekable();
+    return private_->movie_.isSeekable() && private_->movie_.hasDuration();
   }
 
   //----------------------------------------------------------------
