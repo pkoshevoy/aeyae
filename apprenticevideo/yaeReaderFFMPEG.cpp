@@ -925,7 +925,7 @@ namespace yae
     { return codec_; }
 
     // get track duration:
-    void getDuration(TTime & start, TTime & duration) const;
+    bool getDuration(TTime & start, TTime & duration) const;
 
     // accessor to the packet queue:
     inline const TPacketQueue & packetQueue() const
@@ -1091,13 +1091,13 @@ namespace yae
   //----------------------------------------------------------------
   // Track::getDuration
   //
-  void
+  bool
   Track::getDuration(TTime & start, TTime & duration) const
   {
     if (!stream_)
     {
       YAE_ASSERT(false);
-      return;
+      return false;
     }
 
     if (stream_->duration != int64_t(AV_NOPTS_VALUE))
@@ -1110,13 +1110,13 @@ namespace yae
 
       duration.time_ = stream_->time_base.num * stream_->duration;
       duration.base_ = stream_->time_base.den;
-      return;
+      return false;
     }
 
     if (!context_)
     {
       YAE_ASSERT(false);
-      return;
+      return false;
     }
 
     if (context_->duration != int64_t(AV_NOPTS_VALUE))
@@ -1129,7 +1129,7 @@ namespace yae
 
       duration.time_ = context_->duration;
       duration.base_ = AV_TIME_BASE;
-      return;
+      return true;
     }
 
     int64 fileSize = avio_size(context_->pb);
@@ -1147,7 +1147,7 @@ namespace yae
 
       duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
       duration.base_ = AV_TIME_BASE;
-      return;
+      return true;
     }
 
     if (context_->nb_streams == 1 && stream_->codec->bit_rate)
@@ -1159,12 +1159,13 @@ namespace yae
 
       duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
       duration.base_ = AV_TIME_BASE;
-      return;
+      return true;
     }
 
     // unknown duration:
     duration.time_ = std::numeric_limits<int64>::max();
     duration.base_ = AV_TIME_BASE;
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -2019,22 +2020,6 @@ namespace yae
           ptsBestEffort_ = 0;
           vf.time_.time_ = stream_->time_base.num * startTime_;
           gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
-        }
-
-        if (!gotPTS)
-        {
-          if (ptsBestEffort_ < av_frame_get_best_effort_timestamp(avFrame))
-          {
-            ptsBestEffort_ = av_frame_get_best_effort_timestamp(avFrame);
-          }
-          else
-          {
-            ptsBestEffort_++;
-          }
-
-          vf.time_.time_ = stream_->time_base.num * ptsBestEffort_;
-          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_,
-                             "av_frame_get_best_effort_timestamp(avFrame)");
         }
 
         if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
@@ -5073,7 +5058,28 @@ namespace yae
       return false;
     }
 
-    return true;
+    TTime start;
+    TTime duration;
+
+    if (selectedVideoTrack_ < videoTracks_.size())
+    {
+      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      if (t->getDuration(start, duration))
+      {
+        return true;
+      }
+    }
+
+    if (selectedAudioTrack_ < audioTracks_.size())
+    {
+      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      if (t->getDuration(start, duration))
+      {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
