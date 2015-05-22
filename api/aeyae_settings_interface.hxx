@@ -9,7 +9,13 @@
 #ifndef AEYAE_SETTINGS_INTERFACE_HXX_
 #define AEYAE_SETTINGS_INTERFACE_HXX_
 
+// yae
 #include <yaeAPI.h>
+
+// standard C++ library:
+#include <cstddef>
+#include <limits>
+
 
 namespace yae
 {
@@ -153,6 +159,8 @@ namespace yae
     template <typename TValue>
     struct IScalar
     {
+      typedef TValue value_type;
+
       virtual ~IScalar() {}
 
       virtual TValue value() const = 0;
@@ -171,6 +179,14 @@ namespace yae
 
       virtual const char * valueMaxLabel() const = 0;
       virtual void setValueMaxLabel(const char * label) = 0;
+
+      // in case the setting should be presented as a list of values:
+      virtual const TValue * possibleValuesArray() const = 0;
+      virtual std::size_t possibleValuesArraySize() const = 0;
+      virtual bool possibleValuesAreConstrained() const = 0;
+      virtual void setPossibleValues(const TValue * values,
+                                     std::size_t numValues,
+                                     bool constrained = false) = 0;
     };
 
   };
@@ -178,7 +194,7 @@ namespace yae
   //----------------------------------------------------------------
   // ISetting
   //
-  template <typename TDetails,
+  template <typename TTraits,
             ISettingBase::DataType settingDataType,
             ISettingBase::HciRepresentation settingHciRepresentation>
   struct ISetting : public ISettingBase
@@ -187,10 +203,10 @@ namespace yae
     enum { kDefaultHciRepresentation = settingHciRepresentation };
 
     virtual DataType dataType() const
-    { return kDataType; }
+    { return settingDataType; }
 
     virtual HciRepresentation hciHint() const
-    { return kDefaultHciRepresentation; }
+    { return settingHciRepresentation; }
 
     virtual const TTraits & traits() const = 0;
     virtual TTraits & traits() = 0;

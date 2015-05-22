@@ -9,7 +9,14 @@
 #ifndef AEYAE_SETTINGS_HXX_
 #define AEYAE_SETTINGS_HXX_
 
+// aeyae
 #include <aeyae_settings_interface.hxx>
+
+// standard C++ library:
+#include <string>
+#include <utility>
+#include <vector>
+
 
 namespace yae
 {
@@ -163,17 +170,16 @@ namespace yae
     //----------------------------------------------------------------
     // TScalar
     //
-    template <typename TValue,
-              TValue defaultMin = std::numeric_limits<TValue>::min(),
-              TValue defaultMax = std::numeric_limits<TValue>::max()>
+    template <typename TValue>
     struct TScalar : public ISettingBase::IScalar<TValue>
     {
       TScalar(TValue v = TValue(0)):
         value_(v),
-        valueMin_(defaultMin),
-        valueMax_(defaultMax),
+        valueMin_(std::numeric_limits<TValue>::min()),
+        valueMax_(std::numeric_limits<TValue>::max()),
         valueMinConstrained_(false),
-        valueMaxConstrained_(false)
+        valueMaxConstrained_(false),
+        possibleConstrained_(false)
       {}
 
       virtual TValue value() const
@@ -181,6 +187,17 @@ namespace yae
 
       virtual bool setValue(TValue v)
       {
+        if (possibleConstrained_)
+        {
+          typename std::vector<TValue>::const_iterator found =
+            std::find(possible_.begin(), possible_.end(), v);
+
+          if (found == possible_.end())
+          {
+            return false;
+          }
+        }
+
         bool ok = ((!valueMinConstrained_ || valueMin_ <= v) &&
                    (!valueMaxConstrained_ || v <= valueMax_));
         if (ok)
@@ -227,13 +244,32 @@ namespace yae
       virtual void setValueMaxLabel(const char * label)
       { valueMaxLabel_.assign(label); }
 
+      virtual const TValue * possibleValuesArray() const
+      { return possible_.empty() ? NULL : &possible_[0]; }
+
+      virtual std::size_t possibleValuesArraySize() const
+      { return possible_.size(); }
+
+      virtual bool possibleValuesAreConstrained() const
+      { return possibleConstrained_; }
+
+      virtual void setPossibleValues(const TValue * values,
+                                     std::size_t numValues,
+                                     bool constrained = false)
+      {
+        possible_.assign(values, values + numValues);
+        possibleConstrained_ = constrained;
+      }
+
       TValue value_;
       TValue valueMin_;
       TValue valueMax_;
       bool valueMinConstrained_;
       bool valueMaxConstrained_;
+      bool possibleConstrained_;
       std::string valueMinLabel_;
       std::string valueMaxLabel_;
+      std::vector<TValue> possible_;
     };
 
     //----------------------------------------------------------------
@@ -244,13 +280,28 @@ namespace yae
     {
       typedef TImplement<TInterface, TTraits> TSelf;
 
+      TImplement(const char * id = "",
+                 const char * label = "",
+                 const char * units = "",
+                 const char * tooltip = "",
+                 bool optional = false,
+                 const char * summary = "")
+      {
+        attrs_.setId(id);
+        attrs_.setLabel(label);
+        attrs_.setUnits(units);
+        attrs_.setTooltip(tooltip);
+        attrs_.setOptionalSetting(optional);
+        attrs_.setOptionalSettingSummary(summary);
+      }
+
       virtual TSelf * clone() const
       { return new TSelf(*this); }
 
       virtual const TAttributes & attributes() const
       { return attrs_; }
 
-      virtual IAttributes & attributes()
+      virtual TAttributes & attributes()
       { return attrs_; }
 
       virtual const TTraits & traits() const
@@ -259,11 +310,103 @@ namespace yae
       virtual TTraits & traits()
       { return traits_; }
 
+      inline TSelf & setId(const char * id)
+      {
+        attrs_.setId(id);
+        return *this;
+      }
+
+      inline TSelf & setLabel(const char * label)
+      {
+        attrs_.setLabel(label);
+        return *this;
+      }
+
+      inline TSelf & setUnits(const char * units)
+      {
+        attrs_.setUnits(units);
+        return *this;
+      }
+
+      inline TSelf & setTooltip(const char * tooltip)
+      {
+        attrs_.setTooltip(tooltip);
+        return *this;
+      }
+
+      inline TSelf & setOptional(bool optional)
+      {
+        attrs_.setOptionalSetting(optional);
+        return *this;
+      }
+
+      inline TSelf & setSummary(const char * summary)
+      {
+        attrs_.setOptionalSettingSummary(summary);
+        return *this;
+      }
+
     protected:
-      TSettingAttributes attrs_;
-      TGroup group_;
+      TAttributes attrs_;
+      TTraits traits_;
     };
 
+    //----------------------------------------------------------------
+    // TImplementScalar
+    //
+    template <typename TInterface, typename TTraits>
+    struct TImplementScalar : public TImplement<TInterface, TTraits>
+    {
+      typedef TImplement<TInterface, TTraits> TBase;
+      typedef TImplementScalar<TInterface, TTraits> TSelf;
+
+      virtual TSelf * clone() const
+      { return new TSelf(*this); }
+
+      virtual ISettingBase::HciRepresentation hciHint() const
+      {
+        return
+          TBase::traits_.possibleValuesArraySize() ? ISettingBase::kComboBox :
+          TBase::traits_.isValueMinConstrained() &&
+          TBase::traits_.isValueMaxConstrained() ?
+          ISettingBase::kSlider : ISettingBase::kSpinBox;
+      }
+
+      inline TSelf & setValue(typename TTraits::value_type v)
+      {
+        if (!TBase::attrs_.setValue(v))
+        {
+          YAE_ASSERT(false);
+        }
+
+        return *this;
+      }
+    };
+
+    //----------------------------------------------------------------
+    // TImplementReal
+    //
+    template <typename TInterface, typename TTraits>
+    struct TImplementReal : public TImplementScalar<TInterface, TTraits>
+    {
+      typedef TImplementScalar<TInterface, TTraits> TBase;
+      typedef TImplementReal<TInterface, TTraits> TSelf;
+
+      virtual TSelf * clone() const
+      { return new TSelf(*this); }
+
+      TImplementReal(const char * id = "",
+                     const char * label = "",
+                     const char * units = "",
+                     const char * tooltip = "",
+                     bool optional = false,
+                     const char * summary = ""):
+        TBase(id, label, units, tooltip, optional, summary)
+      {
+        TBase::attrs_.setValueMin
+          (-std::numeric_limits<typename TTraits::value_type>::max());
+      }
+    };
   }
 
 
@@ -291,34 +434,32 @@ namespace yae
   //----------------------------------------------------------------
   // TSettingInt32
   //
-  typedef settings::TImplement<ISettingInt32,
-                               settings::TScalar<int> > TSettingInt32;
+  typedef settings::TImplementScalar<
+    ISettingInt32, settings::TScalar<int> > TSettingInt32;
 
   //----------------------------------------------------------------
   // TSettingUInt32
   //
-  typedef settings::TImplement<ISettingUInt32,
-                               settings::TScalar<unsigned int> > TSettingUInt32;
+  typedef settings::TImplementScalar<
+    ISettingUInt32, settings::TScalar<unsigned int> > TSettingUInt32;
 
   //----------------------------------------------------------------
   // TSettingInt64
   //
-  typedef settings::TImplement<ISettingInt64,
-                               settings::TScalar<int64_t> > TSettingInt64;
+  typedef settings::TImplementScalar<
+    ISettingInt64, settings::TScalar<int64_t> > TSettingInt64;
 
   //----------------------------------------------------------------
   // TSettingUInt64
   //
-  typedef settings::TImplement<ISettingUInt64,
-                               settings::TScalar<uint64_t> > TSettingUInt64;
+  typedef settings::TImplementScalar<
+    ISettingUInt64, settings::TScalar<uint64_t> > TSettingUInt64;
 
   //----------------------------------------------------------------
   // TSettingDouble
   //
-  typedef settings::TImplement<
-    ISettingDouble,
-    settings::TScalar<double, -std::numeric_limits<double>::max(),
-    std::numeric_limits<double>::max()> > TSettingDouble;
+  typedef settings::TImplementReal<
+    ISettingDouble, settings::TScalar<double> > TSettingDouble;
 
 }
 
