@@ -102,6 +102,71 @@ namespace yae
     virtual const IAttributes & attributes() const = 0;
     virtual IAttributes & attributes() = 0;
 
+    // shortcuts to attribute setters:
+    inline ISettingBase & setId(const char * id)
+    {
+      attributes().setId(id);
+      return *this;
+    }
+
+    inline ISettingBase & setLabel(const char * label)
+    {
+      attributes().setLabel(label);
+      return *this;
+    }
+
+    inline ISettingBase & setUnits(const char * units)
+    {
+      attributes().setUnits(units);
+      return *this;
+    }
+
+    inline ISettingBase & setTooltip(const char * tooltip)
+    {
+      attributes().setTooltip(tooltip);
+      return *this;
+    }
+
+    inline ISettingBase & setOptional(bool optional)
+    {
+      attributes().setOptionalSetting(optional);
+      return *this;
+    }
+
+    inline ISettingBase & setSpecified(bool specified)
+    {
+      attributes().setOptionalSettingSpecified(specified);
+      return *this;
+    }
+
+    inline ISettingBase & setSummary(const char * summary)
+    {
+      attributes().setOptionalSettingSummary(summary);
+      return *this;
+    }
+
+    // shortcuts to attribute accessors:
+    inline const char * id() const
+    { return attributes().id(); }
+
+    inline const char * label() const
+    { return attributes().label(); }
+
+    inline const char * units() const
+    { return attributes().units(); }
+
+    inline const char * tooltip() const
+    { return attributes().tooltip(); }
+
+    inline bool optional() const
+    { return attributes().isOptionalSetting(); }
+
+    inline bool specified() const
+    { return attributes().isOptionalSettingSpecified(); }
+
+    inline const char * summary() const
+    { return attributes().optionalSettingSummary(); }
+
     //----------------------------------------------------------------
     // IGroup
     //
@@ -196,17 +261,17 @@ namespace yae
   //
   template <typename TTraits,
             ISettingBase::DataType settingDataType,
-            ISettingBase::HciRepresentation settingHciRepresentation>
+            ISettingBase::HciRepresentation settingHciHint>
   struct ISetting : public ISettingBase
   {
     enum { kDataType = settingDataType };
-    enum { kDefaultHciRepresentation = settingHciRepresentation };
+    enum { kDefaultHciRepresentation = settingHciHint };
 
     virtual DataType dataType() const
     { return settingDataType; }
 
     virtual HciRepresentation hciHint() const
-    { return settingHciRepresentation; }
+    { return settingHciHint; }
 
     virtual const TTraits & traits() const = 0;
     virtual TTraits & traits() = 0;

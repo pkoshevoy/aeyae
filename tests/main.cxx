@@ -15,17 +15,36 @@
 
 using namespace yae;
 
-BOOST_AUTO_TEST_CASE( aeyae_settings )
+BOOST_AUTO_TEST_CASE(aeyae_settings)
 {
-  TSettingBool onoff("test_toggle_id");
-  BOOST_CHECK(!onoff.attributes().isOptionalSetting());
+  const char * onoffId = "some-nasty-guid";
+  const char * onoffLabel = "On/Off";
+  const char * onoffUnits = "n/a";
+  const char * onoffTooltip = "This is a tooltip";
+  const char * onoffSummary = "A brief explanation of the setting";
+  TSettingBool onoff(onoffId);
+  BOOST_CHECK(strcmp(onoff.id(), onoffId) == 0);
+  BOOST_CHECK(!onoff.traits().value());
+
+  onoff.traits().setValue(true);
+  BOOST_CHECK(onoff.traits().value());
+
+  BOOST_CHECK(!onoff.optional());
+  BOOST_CHECK(!onoff.specified());
 
   onoff.
     setOptional(true).
-    setLabel("Hello World").
-    setTooltip("This should be a checkbox").
-    setSummary("Summary explanation of the setting");
-  BOOST_CHECK(onoff.attributes().isOptionalSetting());
+    setSpecified(true).
+    setLabel(onoffLabel).
+    setUnits(onoffUnits).
+    setTooltip(onoffTooltip).
+    setSummary(onoffSummary);
+  BOOST_CHECK(onoff.optional());
+  BOOST_CHECK(onoff.specified());
+  BOOST_CHECK(strcmp(onoff.label(), onoffLabel) == 0);
+  BOOST_CHECK(strcmp(onoff.units(), onoffUnits) == 0);
+  BOOST_CHECK(strcmp(onoff.tooltip(), onoffTooltip) == 0);
+  BOOST_CHECK(strcmp(onoff.summary(), onoffSummary) == 0);
 
   TSettingGroup group("all_settings", "All Settings");
   group.traits().addSetting(&onoff);

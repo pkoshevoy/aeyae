@@ -29,6 +29,11 @@ namespace yae
     //
     struct TAttributes : public ISettingBase::IAttributes
     {
+      TAttributes():
+        optional_(false),
+        specified_(false)
+      {}
+
       virtual const char * id() const
       { return id_.c_str(); }
 
@@ -109,6 +114,10 @@ namespace yae
     //
     struct TBool : public ISettingBase::IBool
     {
+      TBool():
+        value_(false)
+      {}
+
       virtual bool value() const
       { return value_; }
 
@@ -123,6 +132,10 @@ namespace yae
     //
     struct TEnum : public ISettingBase::IEnum
     {
+      TEnum():
+        selected_(0)
+      {}
+
       virtual std::size_t size() const
       { return enums_.size(); }
 
@@ -309,42 +322,6 @@ namespace yae
 
       virtual TTraits & traits()
       { return traits_; }
-
-      inline TSelf & setId(const char * id)
-      {
-        attrs_.setId(id);
-        return *this;
-      }
-
-      inline TSelf & setLabel(const char * label)
-      {
-        attrs_.setLabel(label);
-        return *this;
-      }
-
-      inline TSelf & setUnits(const char * units)
-      {
-        attrs_.setUnits(units);
-        return *this;
-      }
-
-      inline TSelf & setTooltip(const char * tooltip)
-      {
-        attrs_.setTooltip(tooltip);
-        return *this;
-      }
-
-      inline TSelf & setOptional(bool optional)
-      {
-        attrs_.setOptionalSetting(optional);
-        return *this;
-      }
-
-      inline TSelf & setSummary(const char * summary)
-      {
-        attrs_.setOptionalSettingSummary(summary);
-        return *this;
-      }
 
     protected:
       TAttributes attrs_;
