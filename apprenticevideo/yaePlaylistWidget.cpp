@@ -329,8 +329,7 @@ namespace yae
           QString timestamp;
           if (!parseEyetvInfo(path, program, episode, timestamp))
           {
-            YAE_ASSERT(false);
-            continue;
+            break;
           }
 
           if (episode.isEmpty())
@@ -357,8 +356,11 @@ namespace yae
         fi = QFileInfo(next);
       }
 
-      tmpTree.set(keys, path);
-      tree_.set(keys, path);
+      if (!keys.empty())
+      {
+        tmpTree.set(keys, path);
+        tree_.set(keys, path);
+      }
     }
 
     typedef TPlaylistTree::FringeGroup TFringeGroup;
