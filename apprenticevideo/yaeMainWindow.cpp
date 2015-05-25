@@ -1032,7 +1032,7 @@ namespace yae
     {
       // look for a matching bookmark, resume playback if a bookmark exist:
       PlaylistBookmark bookmark;
-      bool found = false;
+      const PlaylistItem * found = NULL;
 
       for (std::list<BookmarkHashInfo>::const_iterator i = hashInfo.begin();
            !found && i != hashInfo.end(); ++i)
@@ -1053,14 +1053,18 @@ namespace yae
           const std::string & itemHash = *j;
           if (itemHash == bookmark.itemHash_)
           {
-            found = true;
+            found = playlistWidget_->lookup(bookmark.groupHash_,
+                                            bookmark.itemHash_,
+                                            &bookmark.itemIndex_);
+            if (found->excluded_)
+            {
+              found = NULL;
+            }
           }
         }
       }
 
-      if (found && playlistWidget_->lookup(bookmark.groupHash_,
-                                           bookmark.itemHash_,
-                                           &bookmark.itemIndex_))
+      if (found)
       {
         gotoBookmark(bookmark);
         return;
