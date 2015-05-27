@@ -23,7 +23,7 @@ namespace yae
   //----------------------------------------------------------------
   // ISetting
   //
-  struct ISettingBase
+  struct YAE_API ISettingBase
   {
 
     //----------------------------------------------------------------
@@ -66,7 +66,7 @@ namespace yae
     //----------------------------------------------------------------
     // IAttributes
     //
-    struct IAttributes
+    struct YAE_API IAttributes
     {
       virtual ~IAttributes() {}
 
@@ -170,7 +170,7 @@ namespace yae
     //----------------------------------------------------------------
     // IGroup
     //
-    struct IGroup
+    struct YAE_API IGroup
     {
       virtual ~IGroup() {}
 
@@ -182,7 +182,7 @@ namespace yae
     //----------------------------------------------------------------
     // IBool
     //
-    struct IBool
+    struct YAE_API IBool
     {
       virtual ~IBool() {}
 
@@ -193,7 +193,7 @@ namespace yae
     //----------------------------------------------------------------
     // IEnum
     //
-    struct IEnum
+    struct YAE_API IEnum
     {
       virtual ~IEnum() {}
 
@@ -210,7 +210,7 @@ namespace yae
     //----------------------------------------------------------------
     // IString
     //
-    struct IString
+    struct YAE_API IString
     {
       virtual ~IString() {}
 
@@ -222,7 +222,7 @@ namespace yae
     // IScalar
     //
     template <typename TValue>
-    struct IScalar
+    struct YAE_API IScalar
     {
       typedef TValue value_type;
 
