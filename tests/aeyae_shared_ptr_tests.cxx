@@ -6,8 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#include "yae_shared_ptr.hxx"
-#include "yae_type_name.hxx"
+#include <boost/test/unit_test.hpp>
+
+#include "aeyae_shared_ptr.hxx"
+#include "aeyae_type_name.hxx"
 
 #include <iostream>
 
@@ -96,11 +98,7 @@ struct eee : public aaa
   {}
 };
 
-//----------------------------------------------------------------
-// main
-//
-int
-main(int argc, const char ** argv)
+BOOST_AUTO_TEST_CASE(aeyae_shared_ptr)
 {
   typedef yae::shared_ptr<aaa> APtr;
   typedef yae::shared_ptr<bbb, aaa> BPtr;
@@ -120,102 +118,53 @@ main(int argc, const char ** argv)
   DWPtr wd;
   EWPtr we;
 
-  using yae::dump_smart_ptr;
-
   // test pointer casts:
   {
     APtr aa(new aaa("aa"));
-    dump_smart_ptr(std::cerr << "\naa: ", aa);
-    dump_smart_ptr(std::cerr << "aa.cast<aaa>: ", aa.cast<aaa>());
-    assert(aa.cast<aaa>());
-    dump_smart_ptr(std::cerr << "aa.cast<bbb>: ", aa.cast<bbb>());
-    assert(!aa.cast<bbb>());
-    dump_smart_ptr(std::cerr << "aa.cast<ccc>: ", aa.cast<ccc>());
-    assert(!aa.cast<ccc>());
-    dump_smart_ptr(std::cerr << "aa.cast<ddd>: ", aa.cast<ddd>());
-    assert(!aa.cast<ddd>());
-    dump_smart_ptr(std::cerr << "aa.cast<eee>: ", aa.cast<eee>());
-    assert(!aa.cast<eee>());
-    std::cerr << std::endl;
+    BOOST_CHECK(aa.cast<aaa>());
+    BOOST_CHECK(!aa.cast<bbb>());
+    BOOST_CHECK(!aa.cast<ccc>());
+    BOOST_CHECK(!aa.cast<ddd>());
+    BOOST_CHECK(!aa.cast<eee>());
 
     wa = aa;
-    dump_smart_ptr(std::cerr << "wa.lock(): ", wa.lock()) << std::endl;
 
     APtr ab(new bbb("ab"));
-    dump_smart_ptr(std::cerr << "\nab: ", ab);
-    dump_smart_ptr(std::cerr << "ab.cast<aaa>: ", ab.cast<aaa>());
-    assert(ab.cast<aaa>());
-    dump_smart_ptr(std::cerr << "ab.cast<bbb>: ", ab.cast<bbb>());
-    assert(ab.cast<bbb>());
-    dump_smart_ptr(std::cerr << "ab.cast<ccc>: ", ab.cast<ccc>());
-    assert(!ab.cast<ccc>());
-    dump_smart_ptr(std::cerr << "ab.cast<ddd>: ", ab.cast<ddd>());
-    assert(!ab.cast<ddd>());
-    dump_smart_ptr(std::cerr << "ab.cast<eee>: ", ab.cast<eee>());
-    assert(!ab.cast<eee>());
-    std::cerr << std::endl;
+    BOOST_CHECK(ab.cast<aaa>());
+    BOOST_CHECK(ab.cast<bbb>());
+    BOOST_CHECK(!ab.cast<ccc>());
+    BOOST_CHECK(!ab.cast<ddd>());
+    BOOST_CHECK(!ab.cast<eee>());
 
     wb = ab;
-    dump_smart_ptr(std::cerr << "wb.lock(): ", wb.lock()) << std::endl;
 
     APtr ac(new ccc("ac"));
-    dump_smart_ptr(std::cerr << "\nac: ", ac);
-    dump_smart_ptr(std::cerr << "ac.cast<aaa>: ", ac.cast<aaa>());
-    assert(ac.cast<aaa>());
-    dump_smart_ptr(std::cerr << "ac.cast<bbb>: ", ac.cast<bbb>());
-    assert(ac.cast<bbb>());
-    dump_smart_ptr(std::cerr << "ac.cast<ccc>: ", ac.cast<ccc>());
-    assert(ac.cast<ccc>());
-    dump_smart_ptr(std::cerr << "ac.cast<ddd>: ", ac.cast<ddd>());
-    assert(!ac.cast<ddd>());
-    dump_smart_ptr(std::cerr << "ac.cast<eee>: ", ac.cast<eee>());
-    assert(!ac.cast<eee>());
-    std::cerr << std::endl;
+    BOOST_CHECK(ac.cast<aaa>());
+    BOOST_CHECK(ac.cast<bbb>());
+    BOOST_CHECK(ac.cast<ccc>());
+    BOOST_CHECK(!ac.cast<ddd>());
+    BOOST_CHECK(!ac.cast<eee>());
 
     wc = ac;
-    dump_smart_ptr(std::cerr << "wc.lock(): ", wc.lock()) << std::endl;
 
     APtr ad(new ddd("ad"));
-    dump_smart_ptr(std::cerr << "\nad: ", ad);
-    dump_smart_ptr(std::cerr << "ad.cast<aaa>: ", ad.cast<aaa>());
-    assert(ad.cast<aaa>());
-    dump_smart_ptr(std::cerr << "ad.cast<bbb>: ", ad.cast<bbb>());
-    assert(ad.cast<bbb>());
-    dump_smart_ptr(std::cerr << "ad.cast<ccc>: ", ad.cast<ccc>());
-    assert(!ad.cast<ccc>());
-    dump_smart_ptr(std::cerr << "ad.cast<ddd>: ", ad.cast<ddd>());
-    assert(ad.cast<ddd>());
-    dump_smart_ptr(std::cerr << "ad.cast<eee>: ", ad.cast<eee>());
-    assert(!ad.cast<eee>());
-    std::cerr << std::endl;
+    BOOST_CHECK(ad.cast<aaa>());
+    BOOST_CHECK(ad.cast<bbb>());
+    BOOST_CHECK(!ad.cast<ccc>());
+    BOOST_CHECK(ad.cast<ddd>());
+    BOOST_CHECK(!ad.cast<eee>());
 
     wd = ad;
-    dump_smart_ptr(std::cerr << "wd.lock(): ", wd.lock()) << std::endl;
 
     APtr ae(new eee("ae"));
-    dump_smart_ptr(std::cerr << "\nae: ", ae);
-    dump_smart_ptr(std::cerr << "ae.cast<aaa>: ", ae.cast<aaa>());
-    assert(ae.cast<aaa>());
-    dump_smart_ptr(std::cerr << "ae.cast<bbb>: ", ae.cast<bbb>());
-    assert(!ae.cast<bbb>());
-    dump_smart_ptr(std::cerr << "ae.cast<ccc>: ", ae.cast<ccc>());
-    assert(!ae.cast<ccc>());
-    dump_smart_ptr(std::cerr << "ae.cast<ddd>: ", ae.cast<ddd>());
-    assert(!ae.cast<ddd>());
-    dump_smart_ptr(std::cerr << "ae.cast<eee>: ", ae.cast<eee>());
-    assert(ae.cast<eee>());
-    std::cerr << std::endl;
+    BOOST_CHECK(ae.cast<aaa>());
+    BOOST_CHECK(!ae.cast<bbb>());
+    BOOST_CHECK(!ae.cast<ccc>());
+    BOOST_CHECK(!ae.cast<ddd>());
+    BOOST_CHECK(ae.cast<eee>());
 
     we = ae;
-    dump_smart_ptr(std::cerr << "we.lock(): ", we.lock()) << std::endl;
   }
-
-  dump_smart_ptr(std::cerr << "wa.lock(): ", wa.lock());
-  dump_smart_ptr(std::cerr << "wb.lock(): ", wb.lock());
-  dump_smart_ptr(std::cerr << "wc.lock(): ", wc.lock());
-  dump_smart_ptr(std::cerr << "wd.lock(): ", wd.lock());
-  dump_smart_ptr(std::cerr << "we.lock(): ", we.lock());
-  std::cerr << std::endl;
 
   APtr a(new aaa("AAA"));
   BPtr b(new bbb("BBB"));
@@ -224,24 +173,14 @@ main(int argc, const char ** argv)
 
   APtr aa = b;
   BPtr bb = aa;
-  EPtr ee = APtr(new eee("EEE"));
+  BOOST_CHECK_EQUAL(bb.get(), aa.get());
 
-  dump_smart_ptr(std::cerr << "wa = d, wa.lock(): ", (wa = d, wa.lock()));
-  dump_smart_ptr(std::cerr << "wd = wa, wd.lock(): ", (wd = wa, wd.lock()));
-  dump_smart_ptr(std::cerr << "wa = wb, wa.lock(): ", (wa = wd, wa.lock()));
+  EPtr ee = APtr(new eee("EEE"));
+  BOOST_CHECK_EQUAL(ee->data_, std::string("EEE"));
 
   DPtr().swap(d);
-  dump_smart_ptr(std::cerr << "DPtr().swap(d); wd.lock(): ", wd.lock());
-  std::cerr << std::endl;
+  BOOST_CHECK(!d);
 
-  dump_smart_ptr(std::cerr << "a: ", a) << std::endl;
-  dump_smart_ptr(std::cerr << "b: ", b) << std::endl;
-  dump_smart_ptr(std::cerr << "c: ", c) << std::endl;
   d.reset(new ddd("DDD.2"));
-  dump_smart_ptr(std::cerr << "d: ", d) << std::endl;
-  dump_smart_ptr(std::cerr << "aa: ", aa) << std::endl;
-  dump_smart_ptr(std::cerr << "bb: ", bb) << std::endl;
-  dump_smart_ptr(std::cerr << "ee: ", ee) << std::endl;
-
-  return 0;
+  BOOST_CHECK(d);
 }

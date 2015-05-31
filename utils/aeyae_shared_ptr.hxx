@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <iostream>
 
 namespace yae
 {
@@ -205,7 +206,7 @@ namespace yae
       ref_counter_(new ref_counter())
     {
       ref_counter_->increment_shared();
-      this->operator=(from_ptr.cast<TData>());
+      this->operator=(from_ptr.template cast<TData>());
     }
 
     ~shared_ptr()
@@ -228,6 +229,9 @@ namespace yae
 
     inline operator bool() const noexcept
     { return this->get() != nullptr; }
+
+    inline operator const void * () const noexcept
+    { return this->get(); }
 
     inline bool unique() const noexcept
     { return this->use_count() == 1; }
@@ -295,6 +299,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // operator <<
+  //
+  template <typename TChar,
+            typename TBasicOstreamTraits,
+            typename TData,
+            typename TBase,
+            typename TDeallocator>
+  std::basic_ostream<TChar, TBasicOstreamTraits> &
+  operator << (std::basic_ostream<TChar, TBasicOstreamTraits> & os,
+               const shared_ptr<TData, TBase, TDeallocator> & ptr)
+  {
+    return os << ptr.get();
+  }
+
+
+  //----------------------------------------------------------------
   // weak_ptr
   //
   template <typename TData,
@@ -332,7 +352,7 @@ namespace yae
       ref_counter_(new ref_counter())
     {
       ref_counter_->increment_weak();
-      this->operator=(from_ptr.cast<TData>());
+      this->operator=(from_ptr.template cast<TData>());
     }
 
     template <typename TFrom>
@@ -340,7 +360,7 @@ namespace yae
       ref_counter_(new ref_counter())
     {
       ref_counter_->increment_weak();
-      this->operator=(from_ptr.cast<TData>());
+      this->operator=(from_ptr.template cast<TData>());
     }
 
     ~weak_ptr()
@@ -373,12 +393,12 @@ namespace yae
     template <typename TFrom>
     weak_ptr &
     operator = (const weak_ptr<TFrom, TBase, TDeallocator> & ptr) noexcept
-    { return this->operator=(ptr.cast<TData>()); }
+    { return this->operator=(ptr.template cast<TData>()); }
 
     template <typename TFrom>
     weak_ptr &
     operator = (const shared_ptr<TFrom, TBase, TDeallocator> & ptr) noexcept
-    { return this->operator=(ptr.cast<TData>()); }
+    { return this->operator=(ptr.template cast<TData>()); }
 
     inline std::size_t use_count() const
     { return ref_counter_->shared(); }

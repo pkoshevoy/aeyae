@@ -37,23 +37,6 @@ namespace yae
 #endif
     return r;
   }
-
-  //----------------------------------------------------------------
-  // dump_smart_ptr
-  //
-  template <typename TPtr>
-  std::ostream &
-  dump_smart_ptr(std::ostream & os, const TPtr & ptr)
-  {
-    typename TPtr::element_type tmp;
-    os << type_name<TPtr>(ptr)
-       << ", use_count: " << ptr.use_count()
-       << ", element_type: "
-       << type_name<typename TPtr::element_type>(tmp)
-       << ", value: " << ptr.get()
-       << std::endl;
-    return os;
-  }
 }
 
 

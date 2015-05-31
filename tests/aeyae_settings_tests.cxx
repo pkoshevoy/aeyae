@@ -6,8 +6,6 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#define BOOST_TEST_MODULE "aeyae test suite"
-#include <boost/test/included/unit_test.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <aeyae_settings_interface.hxx>

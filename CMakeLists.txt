@@ -4,7 +4,8 @@ project(aeyae)
 
 include_directories(AFTER
   .
-  ${PROJECT_SOURCE_DIR}/../sf-apprenticevideo
+  api
+  apprenticevideo
   )
 
 add_subdirectory(tests)
