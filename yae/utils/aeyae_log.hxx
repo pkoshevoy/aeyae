@@ -16,6 +16,7 @@
 // standard C++ library:
 #include <map>
 #include <mutex>
+#include <string>
 
 
 namespace yae
@@ -118,7 +119,7 @@ namespace yae
       {
         IMessageCarrier * carrier = i->second;
 
-        if (carrier && priority >= carrier->priorityThreshold())
+        if (carrier && messagePriority >= carrier->priorityThreshold())
         {
           carrier->deliver(messagePriority, source, message);
         }

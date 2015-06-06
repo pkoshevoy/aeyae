@@ -6,16 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef AEYAE_API_H_
-#define AEYAE_API_H_
+#ifndef AEYAE_API_HXX_
+#define AEYAE_API_HXX_
 
-// system includes:
+// standard C++ library:
 #include <assert.h>
-
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/cstdint.hpp>
-#endif
+#include <cstdint>
 
 
 //----------------------------------------------------------------
@@ -76,13 +72,13 @@ namespace yae
   //----------------------------------------------------------------
   // uint64
   //
-  typedef boost::uint64_t uint64;
+  typedef std::uint64_t uint64;
 
   //----------------------------------------------------------------
   // int64
   //
-  typedef boost::int64_t int64;
+  typedef std::int64_t int64;
 }
 
 
-#endif // AEYAE_API_H_
+#endif // AEYAE_API_HXX_
