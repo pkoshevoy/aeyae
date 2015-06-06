@@ -9,11 +9,13 @@
 #ifndef YAE_API_H_
 #define YAE_API_H_
 
+// aeyae includes:
+#include <yae/api/aeyae_api.hxx>
+
 // yae includes:
 #include <yaePixelFormats.h>
 
 // system includes:
-#include <assert.h>
 #include <list>
 #include <map>
 #include <string>
@@ -21,75 +23,12 @@
 
 // boost includes:
 #ifndef Q_MOC_RUN
-#include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
-#endif
-
-//----------------------------------------------------------------
-// YAE_API
-//
-// http://gcc.gnu.org/wiki/Visibility
-//
-#if defined _WIN32
-#  ifdef YAE_DLL_EXPORTS
-#    define YAE_API __declspec(dllexport)
-#  elif !defined(YAE_STATIC)
-#    define YAE_API __declspec(dllimport)
-#  else
-#    define YAE_API
-#  endif
-#else
-#  if __GNUC__ >= 4
-#    define YAE_API __attribute__ ((visibility("default")))
-#  else
-#    define YAE_API
-#  endif
-#endif
-
-
-//----------------------------------------------------------------
-// YAE_ALIGN
-//
-#if defined(_MSC_VER)
-# define YAE_ALIGN(N, T) __declspec(align(N)) T
-#elif __GNUC__ >= 4
-# define YAE_ALIGN(N, T) T __attribute__ ((aligned(N)))
-#else
-# define YAE_ALIGN(N, T) T
-#endif
-
-//----------------------------------------------------------------
-// YAE_ASSERT
-//
-#if defined(NDEBUG)
-# define YAE_ASSERT(expr)
-#else
-# if defined(__APPLE__)
-#  if defined(__ppc__)
-#   define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
-#  else
-#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
-#  endif
-# elif __GNUC__
-#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
-# else
-#  define YAE_ASSERT(expr) assert(expr)
-# endif
 #endif
 
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // uint64
-  //
-  typedef boost::uint64_t uint64;
-
-  //----------------------------------------------------------------
-  // int64
-  //
-  typedef boost::int64_t int64;
 
   //----------------------------------------------------------------
   // TTime

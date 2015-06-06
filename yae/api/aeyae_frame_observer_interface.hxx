@@ -9,10 +9,8 @@
 #ifndef AEYAE_FRAME_OBSERVER_INTERFACE_HXX_
 #define AEYAE_FRAME_OBSERVER_INTERFACE_HXX_
 
-// yae
-#include <yaeAPI.h>
-
-// aeyae
+// aeyae:
+#include "aeyae_api.hxx"
 #include "aeyae_plugin_interface.hxx"
 
 

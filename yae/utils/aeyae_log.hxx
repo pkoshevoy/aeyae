@@ -9,15 +9,13 @@
 #ifndef AEYAE_LOG_HXX_
 #define AEYAE_LOG_HXX_
 
+// aeyae:
+#include "../api/aeyae_api.hxx"
+#include "../api/aeyae_message_carrier_interface.hxx"
+
 // standard C++ library:
 #include <map>
 #include <mutex>
-
-// yae:
-#include <yaeAPI.h>
-
-// aeyae:
-#include "aeyae_message_carrier_interface.hxx"
 
 
 namespace yae

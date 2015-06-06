@@ -10,10 +10,8 @@
 #ifndef AEYAE_PLUGIN_INTERFACE_HXX_
 #define AEYAE_PLUGIN_INTERFACE_HXX_
 
-// yae
-#include <yaeAPI.h>
-
-// aeyae
+// aeyae:
+#include "aeyae_api.hxx"
 #include "aeyae_settings_interface.hxx"
 
 // standard C++ library:

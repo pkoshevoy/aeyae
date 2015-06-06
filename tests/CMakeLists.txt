@@ -2,9 +2,7 @@ find_package(Boost REQUIRED)
 
 include_directories(AFTER
   .
-  ../api
-  ../utils
-  ../apprenticevideo
+  ..
   ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
   )

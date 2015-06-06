@@ -4,8 +4,9 @@ project(aeyae)
 
 include_directories(AFTER
   .
-  api
   apprenticevideo
   )
 
 add_subdirectory(tests)
+
+add_subdirectory(apprenticevideo)

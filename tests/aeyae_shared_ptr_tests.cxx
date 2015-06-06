@@ -6,12 +6,15 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard C++ library:
+#include <iostream>
+
+// boost library:
 #include <boost/test/unit_test.hpp>
 
-#include "aeyae_shared_ptr.hxx"
-#include "aeyae_type_name.hxx"
-
-#include <iostream>
+// aeyae:
+#include "yae/utils/aeyae_shared_ptr.hxx"
+#include "yae/utils/aeyae_type_name.hxx"
 
 
 //----------------------------------------------------------------

@@ -9,8 +9,9 @@
 #ifndef AEYAE_SETTINGS_HXX_
 #define AEYAE_SETTINGS_HXX_
 
-// aeyae
-#include <aeyae_settings_interface.hxx>
+// aeyae:
+#include "aeyae_api.hxx"
+#include "aeyae_settings_interface.hxx"
 
 // standard C++ library:
 #include <string>

@@ -9,10 +9,8 @@
 #ifndef AEYAE_MESSAGE_CARRIER_INTERFACE_HXX_
 #define AEYAE_MESSAGE_CARRIER_INTERFACE_HXX_
 
-// yae
-#include <yaeAPI.h>
-
-// aeyae
+// aeyae:
+#include "aeyae_api.hxx"
 #include "aeyae_plugin_interface.hxx"
 
 

@@ -46,6 +46,10 @@ if (WIN32)
   add_definitions(-DWINVER=0x0501)
 endif (WIN32)
 
+if (APPLE)
+  add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
+endif (APPLE)
+
 add_definitions(-DYAE_STATIC)
 
 # NOTE: this is necessary when linking to static GLEW libs:
@@ -53,6 +57,7 @@ add_definitions(-DGLEW_STATIC=1)
 
 include_directories(AFTER
   .
+  ..
   ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}

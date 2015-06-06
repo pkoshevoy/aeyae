@@ -6,12 +6,15 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// boost library:
 #include <boost/test/unit_test.hpp>
 
-#include <aeyae_settings_interface.hxx>
-#include <aeyae_settings.hxx>
+// aeyae:
+#include "yae/api/aeyae_settings_interface.hxx"
+#include "yae/api/aeyae_settings.hxx"
 
 using namespace yae;
+
 
 BOOST_AUTO_TEST_CASE(aeyae_settings)
 {
