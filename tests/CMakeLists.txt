@@ -16,7 +16,7 @@ add_executable(aeyae-tests
   # aeyae_log_tests.cxx
   )
 
-target_compile_features(aeyae-tests PRIVATE cxx_constexpr)
+set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
 
 target_link_libraries(aeyae-tests
   ${Boost_LIBRARIES}

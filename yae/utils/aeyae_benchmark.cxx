@@ -11,6 +11,7 @@
 
 // standard C++ library:
 #include <chrono>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <map>
@@ -30,7 +31,7 @@ indent(const char * text, std::size_t depth)
 {
   static const char * whitespace =
     "                                                                ";
-  static const std::size_t whitespace_max = strlen(whitespace);
+  static const std::size_t whitespace_max = std::strlen(whitespace);
 
   std::ostringstream os;
   for (std::size_t i = 0, n = depth / whitespace_max; i < n; i++)

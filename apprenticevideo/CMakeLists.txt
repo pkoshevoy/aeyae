@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 3.1.0)
 
 project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
@@ -757,6 +757,8 @@ if (Qt5DBus_FOUND)
     Qt5::DBus
     )
 endif (Qt5DBus_FOUND)
+
+set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}

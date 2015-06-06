@@ -58,8 +58,13 @@ BOOST_AUTO_TEST_CASE(aeyae_benchmark)
   {
     std::ostringstream oss;
     YAE_BENCHMARK_SHOW(oss);
+
+#ifndef NDEBUG
     BOOST_CHECK_EQUAL(oss.str().c_str(),
                       "\nBenchmark timesheets per thread:\n\n");
+#else
+    BOOST_CHECK_EQUAL(oss.str().c_str(), "");
+#endif
   }
 
   std::thread t1(&func_b);
@@ -76,36 +81,43 @@ BOOST_AUTO_TEST_CASE(aeyae_benchmark)
   std::string result(oss.str().c_str());
 
   std::string::size_type found_t1 = result.find(t1_id, 0);
-  BOOST_CHECK(found_t1 != std::string::npos);
-
-  std::string::size_type found_t2 = result.find(t1_id, 0);
-  BOOST_CHECK(found_t2 != std::string::npos);
-
   std::string::size_type found_b1 =
     result.find(" func_b                                   :        1  call,",
                 found_t1);
-  BOOST_CHECK(found_b1 != std::string::npos);
-
   std::string::size_type found_a1 =
     result.find("  func_a                                  :     1000 calls,",
                 found_b1);
-  BOOST_CHECK(found_a1 != std::string::npos);
 
+  std::string::size_type found_t2 = result.find(t1_id, 0);
   std::string::size_type found_b2 =
     result.find(" func_b                                   :        1  call,",
                 found_t2);
-  BOOST_CHECK(found_b2 != std::string::npos);
-
   std::string::size_type found_a2 =
     result.find("  func_a                                  :     1000 calls,",
                 found_b2);
-  BOOST_CHECK(found_a2 != std::string::npos);
+
+#ifndef NDEBUG
+  BOOST_CHECK(std::string::npos != found_t1);
+  BOOST_CHECK(std::string::npos != found_b1);
+  BOOST_CHECK(std::string::npos != found_a1);
+
+  BOOST_CHECK(std::string::npos != found_t2);
+  BOOST_CHECK(std::string::npos != found_b2);
+  BOOST_CHECK(std::string::npos != found_a2);
+#else
+  BOOST_CHECK_EQUAL(result, std::string());
+#endif
 
   YAE_BENCHMARK_CLEAR();
   {
     std::ostringstream oss;
     YAE_BENCHMARK_SHOW(oss);
+
+#ifndef NDEBUG
     BOOST_CHECK_EQUAL(oss.str().c_str(),
                       "\nBenchmark timesheets per thread:\n\n");
+#else
+    BOOST_CHECK_EQUAL(oss.str().c_str(), "");
+#endif
   }
 }
