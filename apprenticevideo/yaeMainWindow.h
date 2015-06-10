@@ -18,18 +18,18 @@
 #include <QTimer>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeBookmarks.h>
-#include <yaeCanvas.h>
-#include <yaeReader.h>
-#include <yaeAudioRenderer.h>
-#include <yaeVideoRenderer.h>
-#include <yaeTimelineControls.h>
-#ifdef __APPLE__
-#include <yaeAppleRemoteControl.h>
-#endif
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_audio_renderer.h"
+#include "yae/video/yae_video_renderer.h"
 
 // local includes:
+#include "yaeBookmarks.h"
+#include "yaeCanvas.h"
+#include "yaeTimelineControls.h"
+#ifdef __APPLE__
+#include "yaeAppleRemoteControl.h"
+#endif
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
 #include "ui_yaeMainWindow.h"
@@ -315,6 +315,9 @@ namespace yae
     QActionGroup * bookmarksGroup_;
     QSignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
+
+    // file reader prototype factory instance:
+    IReaderPtr readerPrototype_;
 
     // file reader:
     IReader * reader_;

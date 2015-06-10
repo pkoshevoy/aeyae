@@ -10,8 +10,8 @@
 #define YAE_BOOKMARKS_H_
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeReader.h>
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_reader.h"
 
 
 namespace yae

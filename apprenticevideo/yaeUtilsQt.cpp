@@ -10,7 +10,9 @@
 #include <set>
 
 // yae includes:
-#include <yaeAPI.h>
+#include "yae/video/yae_video.h"
+
+// local includes:
 #include <yaeUtilsQt.h>
 
 // Qt includes:

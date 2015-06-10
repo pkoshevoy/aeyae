@@ -38,16 +38,19 @@
 #include <QDirIterator>
 
 // yae includes:
-#include <yaeReaderFFMPEG.h>
-#include <yaePixelFormats.h>
-#include <yaePixelFormatTraits.h>
-#include <yaeAudioRendererPortaudio.h>
-#include <yaeVideoRenderer.h>
-#include <yaeVersion.h>
-#include <yaeUtilsQt.h>
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video_renderer.h"
 
 // local includes:
-#include <yaeMainWindow.h>
+#include "yaeAudioRendererPortaudio.h"
+#include "yaeMainWindow.h"
+#include "yaeUtilsQt.h"
+#include "yaeVersion.h"
+
+// forward declarations:
+extern yae::IReaderPtr readerPrototype;
 
 
 namespace yae
@@ -378,7 +381,9 @@ namespace yae
     canvas_ = new Canvas(contextFormat);
     canvasLayout->addWidget(canvas_);
 
-    reader_ = ReaderFFMPEG::create();
+    YAE_ASSERT(readerPrototype);
+    reader_ = readerPrototype->clone();
+
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
 
@@ -1233,7 +1238,7 @@ namespace yae
   IReader *
   MainWindow::openFile(const QString & fn)
   {
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
+    IReader * reader = readerPrototype->clone();
 
     for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
     {
@@ -3052,7 +3057,7 @@ namespace yae
   void
   MainWindow::playbackStop()
   {
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
+    IReader * reader = readerPrototype->clone();
     timelineControls_->observe(SharedClock());
     timelineControls_->resetFor(reader);
 

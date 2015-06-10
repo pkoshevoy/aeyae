@@ -17,13 +17,6 @@
 // GLEW includes:
 #include <GL/glew.h>
 
-// yae includes:
-#include <yaeAPI.h>
-#include <yaeCanvas.h>
-#include <yaePixelFormatTraits.h>
-#include <yaeThreading.h>
-#include <yaeUtilsQt.h>
-
 // boost includes:
 #include <boost/thread.hpp>
 
@@ -48,6 +41,16 @@ extern "C"
 #include <ass/ass.h>
 }
 #endif
+
+// yae includes:
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/thread/yae_threading.h"
+
+// local includes:
+#include <yaeCanvas.h>
+#include <yaeUtilsQt.h>
+
 
 //----------------------------------------------------------------
 // yae_show_program_listing

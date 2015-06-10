@@ -24,9 +24,9 @@
 #include <QTime>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeReader.h>
-#include <yaeSynchronous.h>
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_synchronous.h"
 
 
 namespace yae

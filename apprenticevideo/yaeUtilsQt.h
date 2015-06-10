@@ -16,7 +16,7 @@
 #include <sstream>
 
 // yae includes:
-#include <yaeUtils.h>
+#include "yae/utils/yae_utils.h"
 
 // Qt includes:
 #include <QString>

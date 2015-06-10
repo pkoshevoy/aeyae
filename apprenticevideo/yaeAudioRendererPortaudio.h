@@ -13,9 +13,9 @@
 #include <string>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeAudioRenderer.h>
-#include <yaeReader.h>
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_audio_renderer.h"
+#include "yae/video/yae_reader.h"
 
 
 namespace yae

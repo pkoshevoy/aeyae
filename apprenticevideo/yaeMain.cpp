@@ -40,6 +40,11 @@
 #include <QFileOpenEvent>
 
 // yae includes:
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_reader.h"
+#include "yae/utils/yae_utils.h"
+
+// local includes:
 #include <yaeMainWindow.h>
 #include <yaeUtilsQt.h>
 
@@ -80,6 +85,16 @@ namespace yae
     }
   };
 }
+
+//----------------------------------------------------------------
+// plugins
+//
+yae::TPluginRegistry plugins;
+
+//----------------------------------------------------------------
+// readerPrototype
+//
+yae::IReaderPtr readerPrototype;
 
 //----------------------------------------------------------------
 // mainMayThrowException
@@ -160,6 +175,27 @@ mainMayThrowException(int argc, char ** argv)
     {
       yae::addToPlaylist(playlist, arg);
     }
+  }
+
+  // load plugins:
+  std::string exeFolderPath;
+  if (yae::getCurrentExecutableFolder(exeFolderPath) &&
+      plugins.load(exeFolderPath.c_str()))
+  {
+    std::list<yae::IReaderPtr> readers;
+    if (plugins.find<yae::IReader>(readers))
+    {
+      readerPrototype = readers.front();
+    }
+  }
+
+  if (!readerPrototype)
+  {
+    std::cerr
+      << "ERROR: failed to find IReader plugin here: "
+      << exeFolderPath
+      << std::endl;
+    return -1;
   }
 
   if (canary)

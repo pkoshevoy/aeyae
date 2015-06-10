@@ -22,8 +22,8 @@
 #include <QTimer>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeTree.h>
+#include "yae/video/yae_video.h"
+#include "yae/utils/yae_tree.h"
 
 
 namespace yae

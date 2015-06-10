@@ -25,11 +25,11 @@
 #include <QUrl>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeAutoCrop.h>
-#include <yaeVideoCanvas.h>
-#include <yaeSynchronous.h>
-#include <yaeThreading.h>
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_auto_crop.h"
+#include "yae/video/yae_video_canvas.h"
+#include "yae/video/yae_synchronous.h"
+#include "yae/thread/yae_threading.h"
 
 
 //----------------------------------------------------------------

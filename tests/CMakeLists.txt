@@ -8,12 +8,12 @@ include_directories(AFTER
   )
 
 add_executable(aeyae-tests
-  aeyae_tests.cxx
-  aeyae_settings_tests.cxx
-  aeyae_shared_ptr_tests.cxx
-  aeyae_benchmark_tests.cxx
-  # aeyae_frame_observer_tests.cxx
-  # aeyae_log_tests.cxx
+  yae_tests.cpp
+  yae_settings_tests.cpp
+  yae_shared_ptr_tests.cpp
+  yae_benchmark_tests.cpp
+  # yae_frame_observer_tests.cpp
+  # yae_log_tests.cpp
   )
 
 set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
