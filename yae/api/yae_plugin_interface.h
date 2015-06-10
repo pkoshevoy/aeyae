@@ -66,7 +66,10 @@ namespace yae
     {
       inline static void destroy(IPlugin * plugin)
       {
-        plugin->destroy();
+        if (plugin)
+        {
+          plugin->destroy();
+        }
       }
     };
   };
