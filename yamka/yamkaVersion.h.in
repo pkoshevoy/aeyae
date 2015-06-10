@@ -1,0 +1,14 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created   : Sun Feb 12 12:47:59 MST 2012
+// Copyright : Pavel Koshevoy
+// License   : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+#ifndef YAMKA_VERSION_H_
+#define YAMKA_VERSION_H_
+
+#define YAMKA_REVISION "@PROJ_WC_REVISION@"
+
+#endif // YAMKA_VERSION_H_
