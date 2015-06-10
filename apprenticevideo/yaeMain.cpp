@@ -180,7 +180,9 @@ mainMayThrowException(int argc, char ** argv)
   // load plugins:
   std::string exeFolderPath;
   if (yae::getCurrentExecutableFolder(exeFolderPath) &&
-      plugins.load(exeFolderPath.c_str()))
+      plugins.load(yae::joinPaths(exeFolderPath,
+                                  "../../../../../plugins"
+                                  "/yae_reader_ffmpeg/Debug/").c_str()))
   {
     std::list<yae::IReaderPtr> readers;
     if (plugins.find<yae::IReader>(readers))

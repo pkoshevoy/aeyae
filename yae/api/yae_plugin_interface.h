@@ -79,6 +79,16 @@ namespace yae
   //
   typedef yae::shared_ptr<IPlugin, IPlugin, IPlugin::Deallocator> IPluginPtr;
 
+  //----------------------------------------------------------------
+  // TPluginFactory
+  //
+  // a plugin file will provide an extern "C" function
+  // called yae_create_plugin, taking an int as a parameter
+  // to indicate an index of the plugin to create, incase
+  // the module provides multiple plugins.
+  //
+  typedef yae::IPlugin *(*TPluginFactory)(std::size_t /* index */);
+
 }
 
 

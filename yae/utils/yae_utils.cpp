@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <iostream>
 #include <sstream>
@@ -319,10 +320,59 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getModuleFilename
+  //
+  bool
+  getModuleFilename(const void * symbol, std::string & filenameUtf8)
+  {
+#if defined(_WIN32)
+    DWORD flags =
+      GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT |
+      GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS;
+
+    HMODULE module;
+    BOOL ok = ::GetModuleHandleExW(flags,
+                                   (LPCWSTR)(const_cast<void *>(symbol)),
+                                   &module);
+    if (!ok)
+    {
+      return false;
+    }
+
+    wchar_t wpath[_MAX_PATH] = { 0 };
+    DWORD nameLen = ::GetModuleFileNameW(module, wpath, _MAX_PATH);
+    if (nameLen >= _MAX_PATH)
+    {
+      return false;
+    }
+
+    filenameUtf8 = utf16_to_utf8(wpath);
+    return true;
+
+#elif defined(__APPLE__) || defined(__linux__)
+
+    Dl_info dlInfo;
+
+    if (!dladdr(symbol, &dlInfo))
+    {
+      return false;
+    }
+
+    filenameUtf8.assign(dlInfo.dli_fname);
+    return true;
+
+#endif
+
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // getCurrentExecutablePath
   //
   bool
-  getCurrentExecutablePath(std::string & exePathUtf8)
+  getCurrentExecutablePath(std::string & filepathUtf8)
   {
     bool ok = false;
 
@@ -353,7 +403,7 @@ namespace yae
                                  sizeof(txt),
                                  kCFStringEncodingUTF8))
           {
-            exePathUtf8.assign(txt);
+            filepathUtf8.assign(txt);
             ok = true;
           }
 
@@ -369,13 +419,13 @@ namespace yae
 
     if (readlink("/proc/self/exe", path, sizeof(path)) > 0)
     {
-        exePathUtf8.assign(path);
+        filepathUtf8.assign(path);
         ok = true;
     }
 
 #endif
 
-    YAE_ASSERT(!exePathUtf8.empty());
+    YAE_ASSERT(!filepathUtf8.empty());
     return ok;
   }
 
@@ -383,16 +433,59 @@ namespace yae
   // getCurrentExecutableFolder
   //
   bool
-  getCurrentExecutableFolder(std::string & exeFolderPathUtf8)
+  getCurrentExecutableFolder(std::string & folderpathUtf8)
   {
-    std::string exePathUtf8;
-    if (!getCurrentExecutablePath(exePathUtf8))
+    std::string filepathUtf8;
+    if (!getCurrentExecutablePath(filepathUtf8))
     {
       return false;
     }
 
     std::string name;
-    return parseFilePath(exePathUtf8, exeFolderPathUtf8, name);
+    return parseFilePath(filepathUtf8, folderpathUtf8, name);
+  }
+
+  //----------------------------------------------------------------
+  // loadLibrary
+  //
+  void *
+  loadLibrary(const char * filepathUtf8)
+  {
+#if defined(_WIN32)
+
+    std::wstring wpath = utf8_to_utf16(filepathUtf8);
+    HMODULE module = (HMODULE)LoadLibraryW(wpath.c_str());
+    return (void *)module;
+
+#elif defined(__APPLE__) || defined(__linux__)
+
+    void * module = dlopen(filepathUtf8, RTLD_NOW);
+    return module;
+
+#endif
+
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // getSymbol
+  //
+  void *
+  getSymbol(void * module, const char * symbol)
+  {
+#if defined(_WIN32)
+    return ::GetProcAddress((HMODULE)module, symbol);
+
+#elif defined(__APPLE__) || defined(__linux__)
+    return ::dlsym(module, symbol);
+
+#endif
+
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return NULL;
   }
 
   //----------------------------------------------------------------

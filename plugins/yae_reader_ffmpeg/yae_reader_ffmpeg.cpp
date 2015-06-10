@@ -6105,3 +6105,20 @@ namespace yae
     private_->movie_.setSharedClock(clock);
   }
 }
+
+extern "C"
+{
+  //----------------------------------------------------------------
+  // yae_create_plugin
+  //
+  yae::IPlugin *
+  yae_create_plugin(std::size_t i)
+  {
+    if (i == 0)
+    {
+      return yae::ReaderFFMPEG::create();
+    }
+
+    return NULL;
+  }
+}

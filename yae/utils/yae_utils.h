@@ -78,6 +78,12 @@ namespace yae
                 std::string & name);
 
   //----------------------------------------------------------------
+  // getModuleFilename
+  //
+  YAE_API bool
+  getModuleFilename(const void * symbol, std::string & filepathUtf8);
+
+  //----------------------------------------------------------------
   // getCurrentExecutablePath
   //
   YAE_API bool
@@ -88,6 +94,18 @@ namespace yae
   //
   YAE_API bool
   getCurrentExecutableFolder(std::string & exeFolderPathUtf8);
+
+  //----------------------------------------------------------------
+  // loadLibrary
+  //
+  YAE_API void *
+  loadLibrary(const char * filepathUtf8);
+
+  //----------------------------------------------------------------
+  // getSymbol
+  //
+  YAE_API void *
+  getSymbol(void * module, const char * symbol);
 
   //----------------------------------------------------------------
   // TOpenFolder
