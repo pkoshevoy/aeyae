@@ -42,9 +42,15 @@
 #include <vector>
 #include <math.h>
 
+// boost:
+#include <boost/filesystem.hpp>
+
 // aeyae:
 #include "yae_utils.h"
 #include "../video/yae_video.h"
+
+// namespace shortcut:
+namespace fs = boost::filesystem;
 
 
 namespace yae
@@ -494,158 +500,53 @@ namespace yae
   struct TOpenFolder::Private
   {
     //----------------------------------------------------------------
-    // Dirent
-    //
-    // Some systems don't define the dName element sufficiently long.
-    // In this case the user has to provide additional space.
-    // There must be room for at least NAME_MAX + 1 characters
-    // in the d_name array
-    //
-    typedef union
-    {
-      struct dirent d;
-      char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
-
-    } Dirent;
-
-    //----------------------------------------------------------------
     // Private
     //
-    Private(const std::string & folderPath):
-      dir_(NULL)
+    Private(const std::string & folderPathUtf8):
+      path_(fs::absolute(fs::path(folderPathUtf8))),
+      iter_(path_)
     {
-      memset(&dirent_, 0, sizeof(dirent_));
-
-      // cleanup the folder path:
-      {
-        char * tmp = ::realpath(folderPath.c_str(), NULL);
-        folderPath_ = tmp;
-        ::free(tmp);
-      }
-
-      dir_ = ::opendir(folderPath_.c_str());
-      if (!dir_)
+      if (iter_ == fs::directory_iterator())
       {
         std::ostringstream oss;
-        oss << "opendir failed for \"" << folderPath_ << "\"";
+        oss << "\"" << path_.string() << "\" folder is empty";
         throw std::runtime_error(oss.str().c_str());
-      }
-
-      struct dirent * found = NULL;
-      int err = ::readdir_r(dir_, &dirent_.d, &found);
-      if (err)
-      {
-        std::ostringstream oss;
-        oss << "readdir_r failed for \"" << folderPath_ << "\"";
-        throw std::runtime_error(oss.str().c_str());
-      }
-
-      if (dirent_.d.d_type == DT_UNKNOWN)
-      {
-        recoverItemType(folderPath_, dirent_.d);
-      }
-    }
-
-    ~Private()
-    {
-      if (dir_ != NULL)
-      {
-        ::closedir(dir_);
-        dir_ = NULL;
       }
     }
 
     bool parseNextItem()
     {
-      if (dir_ == NULL)
-      {
-        return false;
-      }
-
-      struct dirent * found = NULL;
-      int error = ::readdir_r(dir_, &dirent_.d, &found);
-      bool ok = (error == 0) && (found != NULL);
-
-      if (ok && dirent_.d.d_type == DT_UNKNOWN)
-      {
-        recoverItemType(folderPath_, dirent_.d);
-      }
-
+      ++iter_;
+      bool ok = iter_ != fs::directory_iterator();
       return ok;
     }
 
     inline const std::string & folderPath() const
     {
-      return folderPath_;
+      return path_.string();
     }
 
     inline bool itemIsFolder() const
     {
       return
-        (dir_ != NULL) &&
-        (dirent_.d.d_type == DT_DIR);
+        (iter_ != fs::directory_iterator()) &&
+        (fs::is_directory(iter_->path()));
     }
 
     inline std::string itemName() const
     {
-      return std::string(dirent_.d.d_name);
+      return iter_->path().filename().string();
     }
 
     inline std::string itemPath() const
     {
-      return joinPaths(folderPath_, itemName());
+      return iter_->path().string();
     }
 
   protected:
 
-    //----------------------------------------------------------------
-    // recoverItemType
-    //
-    static void
-    recoverItemType(const std::string & folderPath, struct dirent & d)
-    {
-      std::string path = joinPaths(folderPath, std::string(d.d_name));
-
-      struct stat st;
-      int err = ::stat(path.c_str(), &st);
-      if (err)
-      {
-        return;
-      }
-
-      if (S_ISDIR(st.st_mode))
-      {
-        d.d_type = DT_DIR;
-      }
-      else if (S_ISREG(st.st_mode))
-      {
-        d.d_type = DT_REG;
-      }
-      else if (S_ISCHR(st.st_mode))
-      {
-        d.d_type = DT_CHR;
-      }
-      else if (S_ISBLK(st.st_mode))
-      {
-        d.d_type = DT_BLK;
-      }
-      else if (S_ISFIFO(st.st_mode))
-      {
-        d.d_type = DT_FIFO;
-      }
-      else if (S_ISLNK(st.st_mode))
-      {
-        d.d_type = DT_LNK;
-      }
-      else if (S_ISSOCK(st.st_mode))
-      {
-        d.d_type = DT_SOCK;
-      }
-    }
-
-    std::string folderPath_;
-    Dirent dirent_;
-    DIR * dir_;
+    fs::path path_;
+    fs::directory_iterator iter_;
   };
 
   //----------------------------------------------------------------

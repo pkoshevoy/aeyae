@@ -23,6 +23,10 @@
 #include <iostream>
 #include <stdexcept>
 
+// boost:
+#include <boost/locale.hpp>
+#include <boost/filesystem/path.hpp>
+
 // GLEW includes:
 #include <GL/glew.h>
 
@@ -102,6 +106,12 @@ yae::IReaderPtr readerPrototype;
 int
 mainMayThrowException(int argc, char ** argv)
 {
+  // Create and install global locale (UTF-8)
+  std::locale::global(boost::locale::generator().generate(""));
+
+  // Make boost.filesystem use it
+  boost::filesystem::path::imbue(std::locale());
+
 #if defined(_WIN32) && !defined(NDEBUG)
   // restore console stdio:
   {
@@ -180,9 +190,7 @@ mainMayThrowException(int argc, char ** argv)
   // load plugins:
   std::string exeFolderPath;
   if (yae::getCurrentExecutableFolder(exeFolderPath) &&
-      plugins.load(yae::joinPaths(exeFolderPath,
-                                  "../../../../../plugins"
-                                  "/yae_reader_ffmpeg/Debug/").c_str()))
+      plugins.load(exeFolderPath.c_str()))
   {
     std::list<yae::IReaderPtr> readers;
     if (plugins.find<yae::IReader>(readers))

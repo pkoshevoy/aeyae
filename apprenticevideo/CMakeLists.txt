@@ -9,7 +9,19 @@ include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 find_package(OpenGL REQUIRED)
 
 set(Boost_USE_MULTITHREAD ON)
-find_package(Boost 1.35 COMPONENTS thread date_time system REQUIRED)
+find_package(Boost
+  COMPONENTS
+  thread
+  date_time
+  system
+  filesystem
+  locale
+  REQUIRED)
+add_definitions(-DBOOST_ALL_DYN_LINK)
+add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
+
+add_definitions(-D__STDC_CONSTANT_MACROS)
+add_definitions(-D__STDC_LIMIT_MACROS)
 
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
@@ -431,7 +443,7 @@ if (APPLE)
 
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
     COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
-    ARGS ${PROJECT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    ARGS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)
@@ -518,3 +530,5 @@ configure_file(
 install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
   DESTINATION share/applications
   )
+
+add_dependencies(${PROGNAME} aeyae yae_reader_ffmpeg)

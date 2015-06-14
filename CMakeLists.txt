@@ -1,10 +1,23 @@
 cmake_minimum_required(VERSION 3.1.0)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 project(aeyae)
 
 set(Boost_USE_MULTITHREAD ON)
-find_package(Boost COMPONENTS thread date_time system REQUIRED)
+find_package(Boost
+  COMPONENTS
+  thread
+  date_time
+  system
+  filesystem
+  locale
+  REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
+add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 
 add_definitions(-D__STDC_CONSTANT_MACROS)
 add_definitions(-D__STDC_LIMIT_MACROS)

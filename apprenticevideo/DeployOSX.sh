@@ -297,6 +297,9 @@ PrepForDeployment()
 	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
 		pwd
 
+		echo $CP "${BUNDLE_PATH}"/../aeyae-plugin-reader-ffmpeg.yae .
+		$CP "${BUNDLE_PATH}"/../aeyae-plugin-reader-ffmpeg.yae .
+
 		find . -type f -print | while read i; do
 
 			# find out which Qt was linked against and
