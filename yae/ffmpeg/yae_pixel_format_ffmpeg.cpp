@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard C++ library:
+#include <cstring>
+
 // ffmpeg includes:
 extern "C"
 {
@@ -1178,7 +1181,7 @@ namespace yae
         0, 1, 0, 0,
         0, 0, 1, 0
       };
-      memcpy(m3x4, identity, sizeof(identity));
+      std::memcpy(m3x4, identity, sizeof(identity));
     }
 
     return true;

@@ -133,6 +133,9 @@ find_library(HOGWEED_LIBRARY hogweed
 find_library(GMP_LIBRARY gmp
   PATHS ${FFMPEG_LIBS_PATH}
   DOC "gmp library")
+find_library(DL_LIBRARY dl
+  PATHS ${FFMPEG_LIBS_PATH}
+  DOC "dl library")
 
 
 if (WIN32)
@@ -398,6 +401,10 @@ endif (LIBENCA_LIBRARY)
 if (LIBICUUC_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${LIBICUUC_LIBRARY})
 endif (LIBICUUC_LIBRARY)
+
+if (DL_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${DL_LIBRARY})
+endif (DL_LIBRARY)
 
 if (WIN32)
   set(TARGET_LIBS
