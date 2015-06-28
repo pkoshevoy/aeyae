@@ -7,6 +7,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 project(aeyae)
 
+find_package(Threads REQUIRED)
+
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS
@@ -78,6 +80,7 @@ set(FFMPEG_LIBS_PATH "$ENV{FFMPEG_LIBS_PATH}"
 
 set(TARGET_LIBS
   ${Boost_LIBRARIES}
+  ${CMAKE_THREAD_LIBS_INIT}
   )
 
 

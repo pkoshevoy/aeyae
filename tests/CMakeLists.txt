@@ -1,3 +1,4 @@
+find_package(Threads REQUIRED)
 find_package(Boost REQUIRED)
 
 include_directories(AFTER
@@ -20,5 +21,6 @@ set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
 
 target_link_libraries(aeyae-tests
   ${Boost_LIBRARIES}
+  ${CMAKE_THREAD_LIBS_INIT}
   aeyae
   )
