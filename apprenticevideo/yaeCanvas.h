@@ -238,7 +238,8 @@ namespace yae
 
   public slots:
     void hideCursor();
-    void wakeScreenSaver();
+    void screenSaverInhibit();
+    void screenSaverUnInhibit();
 
   protected:
     TLibass * asyncInitLibass(const unsigned char * header = NULL,
@@ -320,8 +321,9 @@ namespace yae
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;
 
-    // a single shot timer for preventing screen saver:
+    // single shot timers for (un)inhibiting screen saver:
     QTimer timerScreenSaver_;
+    QTimer timerScreenSaverUnInhibit_;
 
     // keep track of previously displayed subtitles
     // in order to avoid re-rendering the same subtitles with every frame:
