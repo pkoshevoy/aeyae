@@ -18,6 +18,8 @@
 #include <boost/thread.hpp>
 
 // Qt includes:
+#define GL_GLEXT_PROTOTYPES
+#include <QtOpenGL>
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
