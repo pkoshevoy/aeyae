@@ -53,6 +53,15 @@ namespace yae
   //
   YAE_API bool removeBookmark(const std::string & groupHash);
 
+  //----------------------------------------------------------------
+  // BookmarkHashInfo
+  //
+  struct YAE_API BookmarkHashInfo
+  {
+    std::string groupHash_;
+    std::list<std::string> itemHash_;
+  };
+
 }
 
 

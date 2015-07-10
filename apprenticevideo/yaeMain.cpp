@@ -27,9 +27,6 @@
 #include <boost/locale.hpp>
 #include <boost/filesystem/path.hpp>
 
-// GLEW includes:
-#include <GL/glew.h>
-
 // APPLE includes:
 #ifdef __APPLE__
 #include <ApplicationServices/ApplicationServices.h>
@@ -224,14 +221,6 @@ mainMayThrowException(int argc, char ** argv)
 
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->show();
-
-  // initialize OpenGL GLEW wrapper:
-  GLenum err = glewInit();
-  if (err != GLEW_OK)
-  {
-    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
-    YAE_ASSERT(false);
-  }
 
   // initialize the canvas:
   yae::mainWindow->canvas()->initializePrivateBackend();

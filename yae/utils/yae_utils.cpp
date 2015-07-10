@@ -44,6 +44,7 @@
 
 // boost:
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 // aeyae:
 #include "yae_utils.h"
@@ -1023,6 +1024,17 @@ namespace yae
     }
 
     return negative ? -seconds : seconds;
+  }
+
+  //----------------------------------------------------------------
+  // to_lower
+  //
+  std::string
+  to_lower(const std::string & in)
+  {
+    std::string out(in);
+    boost::algorithm::to_lower(out);
+    return out;
   }
 }
 

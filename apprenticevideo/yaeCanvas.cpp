@@ -14,9 +14,6 @@
 #include <math.h>
 #include <deque>
 
-// GLEW includes:
-#include <GL/glew.h>
-
 // boost includes:
 #include <boost/thread.hpp>
 
@@ -497,6 +494,37 @@ static const char * yae_gl_arb_uyvy_to_rgb =
   "END\n";
 
 //----------------------------------------------------------------
+// yae_is_opengl_extension_supported
+//
+bool
+yae_is_opengl_extension_supported(const char * extension)
+{
+  static bool ready = false;
+  static std::set<std::string> ext;
+
+  // Extension names should not have spaces:
+  GLubyte * found = (GLubyte *) ::strchr(extension, ' ');
+  if (found || *extension == '\0')
+  {
+    return false;
+  }
+
+  if (!ready)
+  {
+    const GLubyte * extensions = glGetString(GL_EXTENSIONS);
+    std::istringstream ss((const char *)extensions);
+    std::copy(std::istream_iterator<std::string>(ss),
+              std::istream_iterator<std::string>(),
+              std::inserter(ext, ext.begin()));
+    ready = true;
+  }
+
+  std::set<std::string>::const_iterator i = ext.find(std::string(extension));
+  bool supported = (i != ext.end());
+  return supported;
+}
+
+//----------------------------------------------------------------
 // yae_to_opengl
 //
 unsigned int
@@ -515,7 +543,7 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
     case yae::kPixelFormatUYVY422:
       //! packed YUV 4:2:2, 16bpp, Cb Y0 Cr Y1
 
-      if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+      if (yae_is_opengl_extension_supported("GL_APPLE_ycbcr_422"))
       {
         internalFormat = 3;
         format = GL_YCBCR_422_APPLE;
@@ -859,8 +887,7 @@ yae_assert_gl_no_error()
     return true;
   }
 
-  const GLubyte * str = gluErrorString(err);
-  std::cerr << "GL_ERROR: " << str << std::endl;
+  std::cerr << "glGetError: " << err << std::endl;
   YAE_ASSERT(false);
   return false;
 }
@@ -2675,13 +2702,13 @@ namespace yae
          openglRendererInfo_ == "Chromium" &&
          openglVersionInfo_ == "2.1 Chromium 1.9");
 
-      if (glewIsExtensionSupported("GL_ARB_texture_rectangle") &&
+      if (yae_is_opengl_extension_supported("GL_ARB_texture_rectangle") &&
           !virtualBoxVM)
       {
         modern_ = new TModernCanvas();
       }
 
-      if (glewIsExtensionSupported("GL_ARB_fragment_program"))
+      if (yae_is_opengl_extension_supported("GL_ARB_fragment_program"))
       {
         GLint numTextureUnits = 0;
         glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &numTextureUnits);
@@ -3642,7 +3669,7 @@ namespace yae
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(left, right, bottom, top);
+    glOrtho(left, right, bottom, top, -1.0, 1.0);
 
     if (cameraRotation && cameraRotation % 90 == 0)
     {
@@ -3703,7 +3730,7 @@ namespace yae
 
       glMatrixMode(GL_PROJECTION);
       glLoadIdentity();
-      gluOrtho2D(0, canvasWidth, canvasHeight, 0);
+      glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0);
 
       float zebra[2][3] = {
         { 1.0f, 1.0f, 1.0f },

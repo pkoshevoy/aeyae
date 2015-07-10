@@ -31,6 +31,11 @@
 #include "yae/video/yae_synchronous.h"
 #include "yae/thread/yae_threading.h"
 
+//----------------------------------------------------------------
+// yae_is_opengl_extension_supported
+//
+YAE_API bool
+yae_is_opengl_extension_supported(const char * extension);
 
 //----------------------------------------------------------------
 // yae_to_opengl

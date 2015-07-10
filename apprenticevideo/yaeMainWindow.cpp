@@ -12,9 +12,6 @@
 #include <list>
 #include <math.h>
 
-// GLEW includes:
-#include <GL/glew.h>
-
 // boost includes:
 #include <boost/algorithm/string.hpp>
 
@@ -4098,7 +4095,7 @@ namespace yae
           else if ((ptts->flags_ & pixelFormat::kColor) ||
                    (ptts->flags_ & pixelFormat::kPaletted))
           {
-            if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+            if (yae_is_opengl_extension_supported("GL_APPLE_ycbcr_422"))
             {
               vtts.pixelFormat_ = kPixelFormatYUYV422;
             }

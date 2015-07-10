@@ -904,8 +904,8 @@ namespace yae
 
     QRect bbox(bboxBig.x() + shadowOffset,
                bboxBig.y() + shadowOffset,
-               bboxBig.width() - shadowOffset,
-               bboxBig.height() - shadowOffset);
+               bboxBig.width() - shadowOffset * 2,
+               bboxBig.height() - shadowOffset * 2);
 
     QString textLeft;
     QString textRight;

@@ -311,6 +311,13 @@ namespace yae
                    const char * separator = ":",
                    const char * separator_xxx = NULL,
                    const double frameRate = 0.0);
+
+  //----------------------------------------------------------------
+  // to_lower
+  //
+  YAE_API std::string
+  to_lower(const std::string & in);
+
 }
 
 
