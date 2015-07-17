@@ -51,6 +51,23 @@ namespace yae
   YAE_API TColorRangeId
   to_yae_color_range(AVColorRange r);
 
+  //----------------------------------------------------------------
+  // init_abc_to_rgb_matrix
+  //
+  // Fill in the m3x4 matrix for color conversion from
+  // input color format ABC to full-range RGB:
+  //
+  // [R, G, B]T = m3x4 * [A, B, C, 1]T
+  //
+  // NOTE: ABC and RGB are expressed in the [0, 1] range,
+  //       not [0, 255].
+  //
+  // NOTE: Here ABC typically refers to YUV input color format,
+  //       however it doesn't have to be YUV.
+  //
+  YAE_API bool
+  init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts);
+
 }
 
 

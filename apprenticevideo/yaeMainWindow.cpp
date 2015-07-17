@@ -371,11 +371,7 @@ namespace yae
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
 
-    // request vsync if available:
-    QGLFormat contextFormat;
-    contextFormat.setSwapInterval(1);
-
-    canvas_ = new Canvas(contextFormat);
+    canvas_ = new Canvas();
     canvasLayout->addWidget(canvas_);
 
     YAE_ASSERT(readerPrototype);

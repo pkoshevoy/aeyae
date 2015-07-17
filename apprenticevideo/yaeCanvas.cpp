@@ -1027,18 +1027,69 @@ namespace yae
   //
   struct TMakeCurrentContext
   {
-    TMakeCurrentContext(QGLWidget * canvas):
-      canvas_(canvas)
+    TMakeCurrentContext(IOpenGLContext & context):
+      context_(context)
     {
-      canvas_->makeCurrent();
+      context_.makeCurrent();
     }
 
     ~TMakeCurrentContext()
     {
-      canvas_->doneCurrent();
+      context_.doneCurrent();
     }
 
-    QGLWidget * canvas_;
+    IOpenGLContext & context_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TFragmentShaderProgram
+  //
+  struct YAE_API TFragmentShaderProgram
+  {
+    TFragmentShaderProgram(const char * code = NULL);
+
+    // delete the program:
+    void destroy();
+
+    // helper:
+    inline bool loaded() const
+    { return code_ && handle_; }
+
+    // GL_ARB_fragment_program source code:
+    const char * code_;
+
+    // GL_ARB_fragment_program handle:
+    GLuint handle_;
+  };
+
+  //----------------------------------------------------------------
+  // TFragmentShader
+  //
+  struct YAE_API TFragmentShader
+  {
+    TFragmentShader(const TFragmentShaderProgram * program = NULL,
+                    TPixelFormatId format = kInvalidPixelFormat);
+
+    // pointer to the shader program:
+    const TFragmentShaderProgram * program_;
+
+    // number of texture objects required for this pixel format:
+    unsigned char numPlanes_;
+
+    // sample stride per texture object:
+    unsigned char stride_[4];
+
+    // sample plane (sub)sampling per texture object:
+    unsigned char subsample_x_[4];
+    unsigned char subsample_y_[4];
+
+    GLint internalFormatGL_[4];
+    GLenum pixelFormatGL_[4];
+    GLenum dataTypeGL_[4];
+    GLenum magFilterGL_[4];
+    GLenum minFilterGL_[4];
+    GLint shouldSwapBytes_[4];
   };
 
 
@@ -1231,9 +1282,10 @@ namespace yae
 
     virtual void createFragmentShaders() = 0;
 
-    virtual void clear(QGLWidget * canvas) = 0;
+    virtual void clear(IOpenGLContext & context) = 0;
 
-    virtual bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & f) = 0;
+    virtual bool loadFrame(IOpenGLContext & context,
+                           const TVideoFramePtr & frame) = 0;
 
     virtual void draw() = 0;
 
@@ -1245,7 +1297,7 @@ namespace yae
               NULL);
     }
 
-    void skipColorConverter(QGLWidget * canvas, bool enable)
+    void skipColorConverter(IOpenGLContext & context, bool enable)
     {
       if (skipColorConverter_ == enable)
       {
@@ -1263,7 +1315,7 @@ namespace yae
 
       if (frame)
       {
-        loadFrame(canvas, frame);
+        loadFrame(context, frame);
       }
     }
 
@@ -1613,10 +1665,10 @@ namespace yae
     void createFragmentShaders();
 
     // virtual:
-    void clear(QGLWidget * canvas);
+    void clear(IOpenGLContext & context);
 
     // virtual:
-    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
+    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
     void draw();
@@ -1734,10 +1786,10 @@ namespace yae
   // TModernCanvas::clear
   //
   void
-  TModernCanvas::clear(QGLWidget * canvas)
+  TModernCanvas::clear(IOpenGLContext & context)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    TMakeCurrentContext currentContext(canvas);
+    TMakeCurrentContext currentContext(context);
 
     if (!texId_.empty())
     {
@@ -1755,7 +1807,8 @@ namespace yae
   // TModernCanvas::loadFrame
   //
   bool
-  TModernCanvas::loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
+  TModernCanvas::loadFrame(IOpenGLContext & context,
+                           const TVideoFramePtr & frame)
   {
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -1774,7 +1827,7 @@ namespace yae
       configure_builtin_shader(builtinShader_, vtts.pixelFormat_);
 
     boost::lock_guard<boost::mutex> lock(mutex_);
-    TMakeCurrentContext currentContext(canvas);
+    TMakeCurrentContext currentContext(context);
 
     // take the new frame:
     bool colorSpaceOrRangeChanged = false;
@@ -1882,9 +1935,9 @@ namespace yae
 
     if (shader_)
     {
-      if (colorSpaceOrRangeChanged)
+      if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
-        init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
+        frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
@@ -1946,8 +1999,7 @@ namespace yae
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
     glDisable(GL_LIGHTING);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glColor3f(1.f, 1.f, 1.f);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     if (shader_)
     {
@@ -2061,10 +2113,10 @@ namespace yae
     void createFragmentShaders();
 
     // virtual:
-    void clear(QGLWidget * canvas);
+    void clear(IOpenGLContext & context);
 
     // virtual:
-    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame);
+    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
     void draw();
@@ -2133,10 +2185,10 @@ namespace yae
   // TLegacyCanvas::clear
   //
   void
-  TLegacyCanvas::clear(QGLWidget * canvas)
+  TLegacyCanvas::clear(IOpenGLContext & context)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    TMakeCurrentContext currentContext(canvas);
+    TMakeCurrentContext currentContext(context);
 
     if (!texId_.empty())
     {
@@ -2255,7 +2307,8 @@ namespace yae
   // TLegacyCanvas::loadFrame
   //
   bool
-  TLegacyCanvas::loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
+  TLegacyCanvas::loadFrame(IOpenGLContext & context,
+                           const TVideoFramePtr & frame)
   {
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -2274,7 +2327,7 @@ namespace yae
       configure_builtin_shader(builtinShader_, vtts.pixelFormat_);
 
     boost::lock_guard<boost::mutex> lock(mutex_);
-    TMakeCurrentContext currentContext(canvas);
+    TMakeCurrentContext currentContext(context);
 
     // avoid creating excessively oversized tiles:
     static const GLsizei textureEdgeMax =
@@ -2532,9 +2585,9 @@ namespace yae
 
     if (shader_)
     {
-      if (colorSpaceOrRangeChanged)
+      if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
-        init_abc_to_rgb_matrix(&m34_to_rgb_[0], vtts);
+        frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
@@ -2735,9 +2788,9 @@ namespace yae
       delete modern_;
     }
 
-    void clear(QGLWidget * canvas)
+    void clear(IOpenGLContext & context)
     {
-      renderer_->clear(canvas);
+      renderer_->clear(context);
     }
 
     TBaseCanvas * rendererFor(const VideoTraits & vtts) const
@@ -2765,7 +2818,7 @@ namespace yae
       return renderer_;
     }
 
-    bool loadFrame(QGLWidget * canvas, const TVideoFramePtr & frame)
+    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame)
     {
       if (modern_)
       {
@@ -2773,12 +2826,12 @@ namespace yae
         if (renderer != renderer_)
         {
           // switch to a different renderer:
-          renderer_->clear(canvas);
+          renderer_->clear(context);
           renderer_ = renderer;
         }
       }
 
-      return renderer_->loadFrame(canvas, frame);
+      return renderer_->loadFrame(context, frame);
     }
 
     void draw()
@@ -2791,13 +2844,13 @@ namespace yae
       return renderer_->pixelTraits();
     }
 
-    void skipColorConverter(QGLWidget * canvas, bool enable)
+    void skipColorConverter(IOpenGLContext & context, bool enable)
     {
-      legacy_->skipColorConverter(canvas, enable);
+      legacy_->skipColorConverter(context, enable);
 
       if (modern_)
       {
-        modern_->skipColorConverter(canvas, enable);
+        modern_->skipColorConverter(context, enable);
       }
     }
 
@@ -3270,11 +3323,9 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas::Canvas
   //
-  Canvas::Canvas(const QGLFormat & format,
-                 QWidget * parent,
-                 const QGLWidget * shareWidget,
-                 Qt::WindowFlags f):
-    QGLWidget(format, parent, shareWidget, f),
+  Canvas::Canvas(QWidget * parent, Qt::WindowFlags f):
+    QOpenGLWidget(parent, f),
+    context_(*this),
     private_(NULL),
     overlay_(NULL),
     libass_(NULL),
@@ -3287,7 +3338,6 @@ namespace yae
     setObjectName("yae::Canvas");
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_OpaquePaintEvent, true);
-    setAutoBufferSwap(true);
     setAutoFillBackground(false);
     setMouseTracking(true);
 
@@ -3341,7 +3391,7 @@ namespace yae
   void
   Canvas::initializePrivateBackend()
   {
-    TMakeCurrentContext currentContext(this);
+    TMakeCurrentContext currentContext(context_);
 
     stopAsyncInitLibassThread();
     delete libass_;
@@ -3394,7 +3444,7 @@ namespace yae
   void
   Canvas::clear()
   {
-    private_->clear(this);
+    private_->clear(context_);
     clearOverlay();
     refresh();
   }
@@ -3405,7 +3455,7 @@ namespace yae
   void
   Canvas::clearOverlay()
   {
-    overlay_->clear(this);
+    overlay_->clear(context_);
 
     stopAsyncInitLibassThread();
     delete libass_;
@@ -3428,8 +3478,8 @@ namespace yae
       return;
     }
 
-    QGLWidget::updateGL();
-    QGLWidget::doneCurrent();
+    QOpenGLWidget::update();
+    QOpenGLWidget::doneCurrent();
   }
 
   //----------------------------------------------------------------
@@ -3520,7 +3570,7 @@ namespace yae
       }
     }
 
-    return QGLWidget::event(event);
+    return QOpenGLWidget::event(event);
   }
 
   //----------------------------------------------------------------
@@ -3548,7 +3598,7 @@ namespace yae
   void
   Canvas::resizeEvent(QResizeEvent * event)
   {
-    QGLWidget::resizeEvent(event);
+    QOpenGLWidget::resizeEvent(event);
 
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
@@ -3562,7 +3612,7 @@ namespace yae
   void
   Canvas::initializeGL()
   {
-    QGLWidget::initializeGL();
+    QOpenGLWidget::initializeGL();
 
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
@@ -3778,7 +3828,7 @@ namespace yae
       if (overlay_ && overlay_->pixelTraits())
       {
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
         glDisable(GL_BLEND);
       }
@@ -3800,7 +3850,7 @@ namespace yae
       return false;
     }
 
-    bool ok = private_->loadFrame(this, frame);
+    bool ok = private_->loadFrame(context_, frame);
     showTheGreeting_ = false;
     setSubs(frame->subs_);
 
@@ -4382,7 +4432,7 @@ namespace yae
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
-    subsInOverlay_ = overlay_->loadFrame(this, vf);
+    subsInOverlay_ = overlay_->loadFrame(context_, vf);
     YAE_ASSERT(subsInOverlay_);
     return subsInOverlay_;
   }
@@ -4471,7 +4521,7 @@ namespace yae
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
-    bool ok = overlay_->loadFrame(this, vf);
+    bool ok = overlay_->loadFrame(context_, vf);
     YAE_ASSERT(ok);
     return ok;
   }
@@ -4482,7 +4532,7 @@ namespace yae
   void
   Canvas::skipColorConverter(bool enable)
   {
-    private_->skipColorConverter(this, enable);
+    private_->skipColorConverter(context_, enable);
   }
 
   //----------------------------------------------------------------

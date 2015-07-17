@@ -402,6 +402,7 @@ namespace yae
     pixelFormat_(kInvalidPixelFormat),
     colorSpace_(kColorSpaceUnspecified),
     colorRange_(kColorRangeUnspecified),
+    initAbcToRgbMatrix_(NULL),
     encodedWidth_(0),
     encodedHeight_(0),
     offsetTop_(0),

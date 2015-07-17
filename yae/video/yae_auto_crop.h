@@ -11,8 +11,6 @@
 
 // aeyae:
 #include "yae_video.h"
-#include "yae_pixel_format_traits.h"
-#include "../thread/yae_threading.h"
 
 
 namespace yae
@@ -70,19 +68,16 @@ namespace yae
   struct YAE_API TAutoCropDetect
   {
     TAutoCropDetect();
+    ~TAutoCropDetect();
 
     void reset(void * callbackContext, TAutoCropCallback callback);
     void setFrame(const TVideoFramePtr & frame);
     void threadLoop();
     void stop();
 
-    mutable boost::mutex mutex_;
-    mutable boost::condition_variable cond_;
-    void * callbackContext_;
-    TAutoCropCallback callback_;
-    TVideoFramePtr frame_;
-    TCropFrame crop_;
-    bool done_;
+  private:
+    struct TPrivate;
+    TPrivate * private_;
   };
 
 }

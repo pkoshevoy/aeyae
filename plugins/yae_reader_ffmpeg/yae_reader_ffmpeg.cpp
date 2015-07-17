@@ -2101,6 +2101,7 @@ namespace yae
           discarded_ = 0;
         }
 
+        YAE_ASSERT(output_.initAbcToRgbMatrix_);
         vf.traits_ = output_;
 
 
@@ -2309,6 +2310,7 @@ namespace yae
     //! for the color conversion coefficients:
     t.colorSpace_ = to_yae_color_space(context->colorspace);
     t.colorRange_ = to_yae_color_range(context->color_range);
+    t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
 
     //! frame rate:
     const AVRational & r_frame_rate = av_stream_get_r_frame_rate(stream_);

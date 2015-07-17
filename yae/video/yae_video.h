@@ -238,6 +238,27 @@ namespace yae
     TColorSpaceId colorSpace_;
     TColorRangeId colorRange_;
 
+    //----------------------------------------------------------------
+    // TInitAbcToRgbMatrix
+    //
+    // Fill in the m3x4 matrix for color conversion from
+    // input color format ABC to full-range RGB:
+    //
+    // [R, G, B]T = m3x4 * [A, B, C, 1]T
+    //
+    // NOTE: ABC and RGB are expressed in the [0, 1] range,
+    //       not [0, 255].
+    //
+    // NOTE: Here ABC typically refers to YUV input color format,
+    //       however it doesn't have to be YUV.
+    //
+    typedef bool(*TInitAbcToRgbMatrix)(double * m3x4,
+                                       const VideoTraits & vtts);
+
+    //! function pointer for the callback that can fill-in
+    //! the color conversion matrix:
+    TInitAbcToRgbMatrix initAbcToRgbMatrix_;
+
     //! encoded frame size (including any padding):
     unsigned int encodedWidth_;
     unsigned int encodedHeight_;
@@ -259,23 +280,6 @@ namespace yae
     //! a flag indicating whether video is upside-down:
     bool isUpsideDown_;
   };
-
-  //----------------------------------------------------------------
-  // init_abc_to_rgb_matrix
-  //
-  // Fill in the m3x4 matrix for color conversion from
-  // input color format ABC to full-range RGB:
-  //
-  // [R, G, B]T = m3x4 * [A, B, C, 1]T
-  //
-  // NOTE: ABC and RGB are expressed in the [0, 1] range,
-  //       not [0, 255].
-  //
-  // NOTE: Here ABC typically refers to YUV input color format,
-  //       however it doesn't have to be YUV.
-  //
-  YAE_API bool
-  init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts);
 
   //----------------------------------------------------------------
   // TSubsFormat

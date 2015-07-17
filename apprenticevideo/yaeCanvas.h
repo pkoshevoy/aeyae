@@ -19,7 +19,7 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include <QTimer>
 #include <QList>
 #include <QUrl>
@@ -52,8 +52,18 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 
 namespace yae
 {
-  class Canvas;
-  class TLibass;
+  class  Canvas;
+  class  TLibass;
+  struct TFragmentShader;
+
+  //----------------------------------------------------------------
+  // IOpenGLContext
+  //
+  struct YAE_API IOpenGLContext
+  {
+    virtual void makeCurrent() = 0;
+    virtual void doneCurrent() = 0;
+  };
 
   //----------------------------------------------------------------
   // TFontAttachment
@@ -70,70 +80,34 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TFragmentShaderProgram
-  //
-  struct YAE_API TFragmentShaderProgram
-  {
-    TFragmentShaderProgram(const char * code = NULL);
-
-    // delete the program:
-    void destroy();
-
-    // helper:
-    inline bool loaded() const
-    { return code_ && handle_; }
-
-    // GL_ARB_fragment_program source code:
-    const char * code_;
-
-    // GL_ARB_fragment_program handle:
-    GLuint handle_;
-  };
-
-  //----------------------------------------------------------------
-  // TFragmentShader
-  //
-  struct YAE_API TFragmentShader
-  {
-    TFragmentShader(const TFragmentShaderProgram * program = NULL,
-                    TPixelFormatId format = kInvalidPixelFormat);
-
-    // pointer to the shader program:
-    const TFragmentShaderProgram * program_;
-
-    // number of texture objects required for this pixel format:
-    unsigned char numPlanes_;
-
-    // sample stride per texture object:
-    unsigned char stride_[4];
-
-    // sample plane (sub)sampling per texture object:
-    unsigned char subsample_x_[4];
-    unsigned char subsample_y_[4];
-
-    GLint internalFormatGL_[4];
-    GLenum pixelFormatGL_[4];
-    GLenum dataTypeGL_[4];
-    GLenum magFilterGL_[4];
-    GLenum minFilterGL_[4];
-    GLint shouldSwapBytes_[4];
-  };
-
-  //----------------------------------------------------------------
   // Canvas
   //
-  class YAE_API Canvas : public QGLWidget,
+  class YAE_API Canvas : public QOpenGLWidget,
                          public IVideoCanvas
   {
     Q_OBJECT;
 
   public:
+    typedef QOpenGLWidget TOpenGLWidget;
     class TPrivate;
 
-    Canvas(const QGLFormat & format,
-           QWidget * parent = 0,
-           const QGLWidget * shareWidget = 0,
-           Qt::WindowFlags f = 0);
+    struct OpenGLContext : public IOpenGLContext
+    {
+      OpenGLContext(TOpenGLWidget & widget):
+        widget_(widget)
+      {}
+
+      virtual void makeCurrent()
+      { widget_.makeCurrent(); }
+
+      virtual void doneCurrent()
+      { widget_.doneCurrent(); }
+
+    protected:
+      TOpenGLWidget & widget_;
+    };
+
+    Canvas(QWidget * parent = 0, Qt::WindowFlags f = 0);
     ~Canvas();
 
     // initialize private backend rendering object,
@@ -315,6 +289,7 @@ namespace yae
       TPayload & payload_;
     };
 
+    OpenGLContext context_;
     RenderFrameEvent::TPayload payload_;
     TPrivate * private_;
     TPrivate * overlay_;

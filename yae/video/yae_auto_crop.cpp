@@ -606,21 +606,41 @@ namespace yae
             abs(a.h_ - b.h_) <= tolerance);
   }
 
+  //----------------------------------------------------------------
+  // TAutoCropDetect::TPrivate
+  //
+  struct TAutoCropDetect::TPrivate
+  {
+    TPrivate();
+
+    void reset(void * callbackContext, TAutoCropCallback callback);
+    void setFrame(const TVideoFramePtr & frame);
+    void threadLoop();
+    void stop();
+
+    mutable boost::mutex mutex_;
+    mutable boost::condition_variable cond_;
+    void * callbackContext_;
+    TAutoCropCallback callback_;
+    TVideoFramePtr frame_;
+    TCropFrame crop_;
+    bool done_;
+  };
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::TAutoCropDetect
+  // TAutoCropDetect::TPrivate::TPrivate
   //
-  TAutoCropDetect::TAutoCropDetect():
+  TAutoCropDetect::TPrivate::TPrivate():
     callbackContext_(NULL),
     callback_(NULL),
     done_(false)
   {}
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::reset
+  // TAutoCropDetect::TPrivate::reset
   //
   void
-  TAutoCropDetect::reset(void * callbackContext, TAutoCropCallback callback)
+  TAutoCropDetect::TPrivate::reset(void * callbackContext, TAutoCropCallback callback)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     callbackContext_ = callbackContext;
@@ -629,10 +649,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::setFrame
+  // TAutoCropDetect::TPrivate::setFrame
   //
   void
-  TAutoCropDetect::setFrame(const TVideoFramePtr & frame)
+  TAutoCropDetect::TPrivate::setFrame(const TVideoFramePtr & frame)
   {
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -643,10 +663,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::threadLoop
+  // TAutoCropDetect::TPrivate::threadLoop
   //
   void
-  TAutoCropDetect::threadLoop()
+  TAutoCropDetect::TPrivate::threadLoop()
   {
     TCropFrame crop[3];
     int found = 0;
@@ -715,10 +735,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::stop
+  // TAutoCropDetect::TPrivate::stop
   //
   void
-  TAutoCropDetect::stop()
+  TAutoCropDetect::TPrivate::stop()
   {
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -726,6 +746,58 @@ namespace yae
     }
 
     cond_.notify_all();
+  }
+
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::TAutoCropDetect
+  //
+  TAutoCropDetect::TAutoCropDetect():
+    private_(new TPrivate())
+  {}
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::~TAutoCropDetect
+  //
+  TAutoCropDetect::~TAutoCropDetect()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::reset
+  //
+  void
+  TAutoCropDetect::reset(void * callbackContext, TAutoCropCallback callback)
+  {
+    private_->reset(callbackContext, callback);
+  }
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::setFrame
+  //
+  void
+  TAutoCropDetect::setFrame(const TVideoFramePtr & frame)
+  {
+    private_->setFrame(frame);
+  }
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::threadLoop
+  //
+  void
+  TAutoCropDetect::threadLoop()
+  {
+    private_->threadLoop();
+  }
+
+  //----------------------------------------------------------------
+  // TAutoCropDetect::stop
+  //
+  void
+  TAutoCropDetect::stop()
+  {
+    private_->stop();
   }
 
 }
