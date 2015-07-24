@@ -10,5 +10,9 @@
     <file>images/clear.png</file>
     <file>images/clear-dark.png</file>
     <file>yaeAbout.html</file>
+    <file>qml/Playlist.qml</file>
+    <file>qml/Marker.qml</file>
+    <file>qml/Tracer.qml</file>
+    <file>qml/Style.qml</file>
   </qresource>
 </RCC>

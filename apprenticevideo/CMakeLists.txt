@@ -26,7 +26,7 @@ add_definitions(-D__STDC_LIMIT_MACROS)
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+find_package(Qt5 COMPONENTS Core Gui Widgets Quick QuickWidgets Qml OpenGL)
 if (Qt5_FOUND)
   find_package(Qt5DBus)
 else (Qt5_FOUND)
@@ -74,6 +74,7 @@ set(project_moc_hxx
   yaeCanvas.h
   yaeMainWindow.h
   yaeTimelineControls.h
+  yaePlaylistModel.h
   yaePlaylistWidget.h
   yaeLineEdit.h
   )
@@ -100,6 +101,8 @@ set(project_sources
   yaeBookmarks.cpp
   yaeCanvas.h
   yaeCanvas.cpp
+  yaeCanvasRenderer.h
+  yaeCanvasRenderer.cpp
   yaeLineEdit.h
   yaeLineEdit.cpp
   yaeMain.cpp
@@ -107,6 +110,10 @@ set(project_sources
   yaeMainWindow.cpp
   yaeTimelineControls.h
   yaeTimelineControls.cpp
+  yaePlaylist.h
+  yaePlaylist.cpp
+  yaePlaylistModel.h
+  yaePlaylistModel.cpp
   yaePlaylistWidget.h
   yaePlaylistWidget.cpp
   yaeUtilsQt.h
@@ -413,6 +420,9 @@ if (Qt5_FOUND)
     Qt5::Gui
     Qt5::OpenGL
     Qt5::Widgets
+    Qt5::Quick
+    Qt5::QuickWidgets
+    Qt5::Qml
     )
 endif (Qt5_FOUND)
 

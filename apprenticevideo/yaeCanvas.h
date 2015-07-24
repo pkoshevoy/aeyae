@@ -16,8 +16,9 @@
 #endif
 
 // Qt includes:
+#define GL_GLEXT_PROTOTYPES
+#include <QtOpenGL>
 #include <QEvent>
-#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QOpenGLWidget>
 #include <QTimer>
@@ -31,39 +32,15 @@
 #include "yae/video/yae_synchronous.h"
 #include "yae/thread/yae_threading.h"
 
-//----------------------------------------------------------------
-// yae_is_opengl_extension_supported
-//
-YAE_API bool
-yae_is_opengl_extension_supported(const char * extension);
+// local includes:
+#include "yaeCanvasRenderer.h"
 
-//----------------------------------------------------------------
-// yae_to_opengl
-//
-// returns number of sample planes supported by OpenGL,
-// passes back parameters to use with glTexImage2D
-//
-YAE_API unsigned int
-yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
-              GLint & internalFormat,
-              GLenum & format,
-              GLenum & dataType,
-              GLint & shouldSwapBytes);
 
 namespace yae
 {
-  class  Canvas;
-  class  TLibass;
-  struct TFragmentShader;
-
-  //----------------------------------------------------------------
-  // IOpenGLContext
-  //
-  struct YAE_API IOpenGLContext
-  {
-    virtual void makeCurrent() = 0;
-    virtual void doneCurrent() = 0;
-  };
+  // forward declarations:
+  class Canvas;
+  class TLibass;
 
   //----------------------------------------------------------------
   // TFontAttachment
@@ -89,7 +66,6 @@ namespace yae
 
   public:
     typedef QOpenGLWidget TOpenGLWidget;
-    class TPrivate;
 
     struct OpenGLContext : public IOpenGLContext
     {
@@ -291,8 +267,8 @@ namespace yae
 
     OpenGLContext context_;
     RenderFrameEvent::TPayload payload_;
-    TPrivate * private_;
-    TPrivate * overlay_;
+    CanvasRenderer * private_;
+    CanvasRenderer * overlay_;
     TLibass * libass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
