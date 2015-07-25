@@ -48,7 +48,9 @@ extern "C"
 
 // local includes:
 #include <yaeCanvas.h>
+#include <yaeCanvasQPainterUtils.h>
 #include <yaeUtilsQt.h>
+
 
 namespace yae
 {
@@ -452,54 +454,18 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas::Canvas
   //
-  Canvas::Canvas(QWidget * parent, Qt::WindowFlags f):
-    QOpenGLWidget(parent, f),
-    context_(*this),
+  Canvas::Canvas(const boost::shared_ptr<IOpenGLContext> & ctx):
+    eventReceiver_(*this),
+    context_(ctx),
     private_(NULL),
     overlay_(NULL),
     libass_(NULL),
     showTheGreeting_(true),
     subsInOverlay_(false),
     renderMode_(Canvas::kScaleToFit),
-    timerHideCursor_(this),
-    timerScreenSaver_(this)
-  {
-    setObjectName("yae::Canvas");
-    setAttribute(Qt::WA_NoSystemBackground);
-    setAttribute(Qt::WA_OpaquePaintEvent, true);
-    setAutoFillBackground(false);
-    setMouseTracking(true);
-
-    timerHideCursor_.setSingleShot(true);
-    timerHideCursor_.setInterval(3000);
-
-    timerScreenSaver_.setSingleShot(true);
-    timerScreenSaver_.setInterval(29000);
-
-    timerScreenSaverUnInhibit_.setSingleShot(true);
-    timerScreenSaverUnInhibit_.setInterval(59000);
-
-    bool ok = true;
-    ok = connect(&timerHideCursor_, SIGNAL(timeout()),
-                 this, SLOT(hideCursor()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&timerScreenSaver_, SIGNAL(timeout()),
-                 this, SLOT(screenSaverInhibit()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&timerScreenSaverUnInhibit_, SIGNAL(timeout()),
-                 this, SLOT(screenSaverUnInhibit()));
-    YAE_ASSERT(ok);
-
-    greeting_ = tr("drop videos/music here\n\n"
-                   "press spacebar to pause/resume\n\n"
-                   "alt-left/alt-right to navigate playlist\n\n"
-#ifdef __APPLE__
-                   "use apple remote for volume and seeking\n\n"
-#endif
-                   "explore the menus for more options");
-  }
+    w_(0),
+    h_(0)
+  {}
 
   //----------------------------------------------------------------
   // Canvas::~Canvas
@@ -520,7 +486,7 @@ namespace yae
   void
   Canvas::initializePrivateBackend()
   {
-    TMakeCurrentContext currentContext(context_);
+    TMakeCurrentContext currentContext(context());
 
     stopAsyncInitLibassThread();
     delete libass_;
@@ -573,7 +539,7 @@ namespace yae
   void
   Canvas::clear()
   {
-    private_->clear(context_);
+    private_->clear(context());
     clearOverlay();
     refresh();
   }
@@ -584,7 +550,7 @@ namespace yae
   void
   Canvas::clearOverlay()
   {
-    overlay_->clear(context_);
+    overlay_->clear(context());
 
     stopAsyncInitLibassThread();
     delete libass_;
@@ -602,13 +568,23 @@ namespace yae
   void
   Canvas::refresh()
   {
-    if (!isVisible())
+    if (!delegate_)
     {
-      return;
-    }
+      YAE_ASSERT(false);
 
-    QOpenGLWidget::update();
-    QOpenGLWidget::doneCurrent();
+      // FIXME: must implement buffer swapping
+      TMakeCurrentContext current(context());
+      paintCanvas();
+    }
+    else
+    {
+      if (!delegate_->isVisible())
+      {
+        return;
+      }
+
+      delegate_->requestRepaint();
+    }
   }
 
   //----------------------------------------------------------------
@@ -621,7 +597,7 @@ namespace yae
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(this, new RenderFrameEvent(payload_));
+      qApp->postEvent(&eventReceiver_, new RenderFrameEvent(payload_));
     }
 
     if (autoCropThread_.isRunning())
@@ -657,7 +633,7 @@ namespace yae
   // Canvas::event
   //
   bool
-  Canvas::event(QEvent * event)
+  Canvas::processEvent(QEvent * event)
   {
     if (event->type() == QEvent::User)
     {
@@ -699,71 +675,27 @@ namespace yae
       }
     }
 
-    return QOpenGLWidget::event(event);
+    return false;
   }
 
   //----------------------------------------------------------------
-  // Canvas::mouseMoveEvent
+  // Canvas::resize
   //
   void
-  Canvas::mouseMoveEvent(QMouseEvent * event)
+  Canvas::resize(int w, int h)
   {
-    setCursor(QCursor(Qt::ArrowCursor));
-    timerHideCursor_.start();
-  }
+    if (w_ == w && h_ == h)
+    {
+      return;
+    }
 
-  //----------------------------------------------------------------
-  // Canvas::mouseDoubleClickEvent
-  //
-  void
-  Canvas::mouseDoubleClickEvent(QMouseEvent * event)
-  {
-    emit toggleFullScreen();
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::resizeEvent
-  //
-  void
-  Canvas::resizeEvent(QResizeEvent * event)
-  {
-    QOpenGLWidget::resizeEvent(event);
+    w_ = w;
+    h_ = h;
 
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
       updateOverlay(true);
     }
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::initializeGL
-  //
-  void
-  Canvas::initializeGL()
-  {
-    QOpenGLWidget::initializeGL();
-
-    glDisable(GL_LIGHTING);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_FOG);
-    glDisable(GL_POLYGON_OFFSET_FILL);
-    glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
-
-    glUseProgram(0);
-    yae_assert_gl_no_error();
-
-    // glShadeModel(GL_SMOOTH);
-    glShadeModel(GL_FLAT);
-    glClearDepth(0);
-    glClearStencil(0);
-    glClearAccum(0, 0, 0, 1);
-    glClearColor(0, 0, 0, 1);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    glAlphaFunc(GL_ALWAYS, 0.0f);
   }
 
   //----------------------------------------------------------------
@@ -875,15 +807,118 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Canvas::paintGL
+  // reset_opengl_to_initial_state
+  //
+  static void
+  reset_opengl_to_initial_state()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    yae_assert_gl_no_error();
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    yae_assert_gl_no_error();
+
+    int maxAttribs = 0;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
+    yae_assert_gl_no_error();
+
+    for (int i = 0; i < maxAttribs; ++i)
+    {
+      glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0);
+      yae_assert_gl_no_error();
+
+      glDisableVertexAttribArray(i);
+      yae_assert_gl_no_error();
+    }
+
+    glActiveTexture(GL_TEXTURE0);
+    yae_assert_gl_no_error();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_LIGHTING);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_FOG);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_DEPTH_TEST);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_STENCIL_TEST);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_SCISSOR_TEST);
+    yae_assert_gl_no_error();
+
+    glColorMask(true, true, true, true);
+    yae_assert_gl_no_error();
+
+    glClearColor(0, 0, 0, 0);
+    yae_assert_gl_no_error();
+
+    glDepthMask(true);
+    yae_assert_gl_no_error();
+
+    glDepthFunc(GL_LESS);
+    yae_assert_gl_no_error();
+
+    glClearDepth(1);
+    yae_assert_gl_no_error();
+
+    glStencilMask(0xff);
+    yae_assert_gl_no_error();
+
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    yae_assert_gl_no_error();
+
+    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_LINE_SMOOTH);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_ALPHA_TEST);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_TEXTURE_2D);
+    yae_assert_gl_no_error();
+
+    glDisable(GL_BLEND);
+    yae_assert_gl_no_error();
+
+    glBlendFunc(GL_ONE, GL_ZERO);
+    yae_assert_gl_no_error();
+
+    glUseProgram(0);
+    yae_assert_gl_no_error();
+
+    glShadeModel(GL_FLAT);
+    glClearDepth(0);
+    glClearStencil(0);
+    glClearAccum(0, 0, 0, 0);
+    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
+    glAlphaFunc(GL_ALWAYS, 0.0f);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::paintCanvas
   //
   void
-  Canvas::paintGL()
+  Canvas::paintCanvas()
   {
-    if (width() == 0 || height() == 0)
+    if (canvasWidth() == 0 || canvasHeight() == 0)
     {
       return;
     }
+
+    // reset OpenGL to default/initial state:
+    reset_opengl_to_initial_state();
 
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
@@ -903,8 +938,8 @@ namespace yae
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    int canvasWidth = width();
-    int canvasHeight = height();
+    int canvasWidth = this->canvasWidth();
+    int canvasHeight = this->canvasHeight();
 
     // draw a checkerboard to help visualize the alpha channel:
     if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
@@ -966,7 +1001,7 @@ namespace yae
       }
       else
       {
-        qApp->postEvent(this, new UpdateOverlayEvent());
+        qApp->postEvent(&eventReceiver_, new UpdateOverlayEvent());
       }
     }
   }
@@ -982,15 +1017,15 @@ namespace yae
       return false;
     }
 
-    bool ok = private_->loadFrame(context_, frame);
+    bool ok = private_->loadFrame(context(), frame);
     showTheGreeting_ = false;
     setSubs(frame->subs_);
 
     refresh();
 
-    if (ok && !timerScreenSaver_.isActive())
+    if (ok && delegate_)
     {
-      timerScreenSaver_.start();
+      delegate_->inhibitScreenSaver();
     }
 
     return ok;
@@ -1040,44 +1075,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TQImageBuffer
-  //
-  struct TQImageBuffer : public IPlanarBuffer
-  {
-    QImage qimg_;
-
-    TQImageBuffer(int w, int h, QImage::Format fmt):
-      qimg_(w, h, fmt)
-    {
-      unsigned char * dst = qimg_.bits();
-      int rowBytes = qimg_.bytesPerLine();
-      memset(dst, 0, rowBytes * h);
-    }
-
-    // virtual:
-    void destroy()
-    { delete this; }
-
-    // virtual:
-    std::size_t planes() const
-    { return 1; }
-
-    // virtual:
-    unsigned char * data(std::size_t plane) const
-    {
-      const uchar * bits = qimg_.bits();
-      return const_cast<unsigned char *>(bits);
-    }
-
-    // virtual:
-    std::size_t rowBytes(std::size_t planeIndex) const
-    {
-      int n = qimg_.bytesPerLine();
-      return (std::size_t)n;
-    }
-  };
-
-  //----------------------------------------------------------------
   // drawPlainText
   //
   static bool
@@ -1108,79 +1105,6 @@ namespace yae
 
     return false;
   }
-
-  //----------------------------------------------------------------
-  // TPainterWrapper
-  //
-  struct TPainterWrapper
-  {
-    TPainterWrapper(int w, int h):
-      painter_(NULL),
-      w_(w),
-      h_(h)
-    {}
-
-    ~TPainterWrapper()
-    {
-      delete painter_;
-    }
-
-    inline TVideoFramePtr & getFrame()
-    {
-      if (!frame_)
-      {
-        frame_.reset(new TVideoFrame());
-
-        TQImageBuffer * imageBuffer =
-          new TQImageBuffer(w_, h_, QImage::Format_ARGB32);
-        // imageBuffer->qimg_.fill(0);
-
-        frame_->data_.reset(imageBuffer);
-      }
-
-      return frame_;
-    }
-
-    inline QImage & getImage()
-    {
-      TVideoFramePtr & vf = getFrame();
-      TQImageBuffer * imageBuffer = (TQImageBuffer *)(vf->data_.get());
-      return imageBuffer->qimg_;
-    }
-
-    inline QPainter & getPainter()
-    {
-      if (!painter_)
-      {
-        QImage & image = getImage();
-        painter_ = new QPainter(&image);
-
-        painter_->setPen(Qt::white);
-        painter_->setRenderHint(QPainter::SmoothPixmapTransform, true);
-
-        QFont ft;
-        int px = std::max<int>(20, 56.0 * (h_ / 1024.0));
-        ft.setPixelSize(px);
-        painter_->setFont(ft);
-      }
-
-      return *painter_;
-    }
-
-    inline void painterEnd()
-    {
-      if (painter_)
-      {
-        painter_->end();
-      }
-    }
-
-  private:
-    TVideoFramePtr frame_;
-    QPainter * painter_;
-    int w_;
-    int h_;
-  };
 
   //----------------------------------------------------------------
   // calcFrameTransform
@@ -1272,8 +1196,8 @@ namespace yae
                                       imageHeight,
                                       cameraRotation);
 
-    double w = this->width();
-    double h = this->height();
+    double w = this->canvasWidth();
+    double h = this->canvasHeight();
 
     double max_w = 1920.0;
     double max_h = 1080.0;
@@ -1564,7 +1488,7 @@ namespace yae
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
-    subsInOverlay_ = overlay_->loadFrame(context_, vf);
+    subsInOverlay_ = overlay_->loadFrame(context(), vf);
     YAE_ASSERT(subsInOverlay_);
     return subsInOverlay_;
   }
@@ -1592,8 +1516,8 @@ namespace yae
       return false;
     }
 
-    double w = this->width();
-    double h = this->height();
+    double w = this->canvasWidth();
+    double h = this->canvasHeight();
 
     double max_w = 1920.0;
     double max_h = 1080.0;
@@ -1653,7 +1577,7 @@ namespace yae
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
-    bool ok = overlay_->loadFrame(context_, vf);
+    bool ok = overlay_->loadFrame(context(), vf);
     YAE_ASSERT(ok);
     return ok;
   }
@@ -1664,7 +1588,7 @@ namespace yae
   void
   Canvas::skipColorConverter(bool enable)
   {
-    private_->skipColorConverter(context_, enable);
+    private_->skipColorConverter(context(), enable);
   }
 
   //----------------------------------------------------------------
@@ -1796,127 +1720,6 @@ namespace yae
   Canvas::libassInitDoneCallback(void * context, TLibass * libass)
   {
     Canvas * canvas = (Canvas *)context;
-    qApp->postEvent(canvas, new LibassInitDoneEvent(libass));
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::hideCursor
-  //
-  void
-  Canvas::hideCursor()
-  {
-    setCursor(QCursor(Qt::BlankCursor));
-  }
-
-  //----------------------------------------------------------------
-  // screenSaverUnInhibitCookie
-  //
-  static unsigned int screenSaverUnInhibitCookie = 0;
-
-  //----------------------------------------------------------------
-  // Canvas::screenSaverInhibit
-  //
-  void
-  Canvas::screenSaverInhibit()
-  {
-#ifdef __APPLE__
-    UpdateSystemActivity(UsrActivity);
-#elif defined(_WIN32)
-    // http://www.codeproject.com/KB/system/disablescreensave.aspx
-    //
-    // Call the SystemParametersInfo function to query and reset the
-    // screensaver time-out value.  Use the user's default settings
-    // in case your application terminates abnormally.
-    //
-
-    static UINT spiGetter[] = { SPI_GETLOWPOWERTIMEOUT,
-                                SPI_GETPOWEROFFTIMEOUT,
-                                SPI_GETSCREENSAVETIMEOUT };
-
-    static UINT spiSetter[] = { SPI_SETLOWPOWERTIMEOUT,
-                                SPI_SETPOWEROFFTIMEOUT,
-                                SPI_SETSCREENSAVETIMEOUT };
-
-    std::size_t numParams = sizeof(spiGetter) / sizeof(spiGetter[0]);
-    for (std::size_t i = 0; i < numParams; i++)
-    {
-      UINT val = 0;
-      BOOL ok = SystemParametersInfo(spiGetter[i], 0, &val, 0);
-      YAE_ASSERT(ok);
-      if (ok)
-      {
-        ok = SystemParametersInfo(spiSetter[i], val, NULL, 0);
-        YAE_ASSERT(ok);
-      }
-    }
-
-#else
-    // try using DBUS to talk to the screensaver...
-    bool done = false;
-
-    if (QDBusConnection::sessionBus().isConnected())
-    {
-      QDBusInterface screensaver("org.freedesktop.ScreenSaver",
-                                 "/ScreenSaver");
-      if (screensaver.isValid())
-      {
-        // apparently SimulateUserActivity is not enough to keep Ubuntu
-        // from starting the screensaver
-        screensaver.call(QDBus::NoBlock, "SimulateUserActivity");
-
-        // try to inhibit the screensaver as well:
-        if (!screenSaverUnInhibitCookie)
-        {
-          QDBusMessage out =
-            screensaver.call(QDBus::Block,
-                             "Inhibit",
-                             QVariant(QApplication::applicationName()),
-                             QVariant("video playback"));
-
-          if (out.type() == QDBusMessage::ReplyMessage &&
-              !out.arguments().empty())
-          {
-            screenSaverUnInhibitCookie = out.arguments().front().toUInt();
-          }
-        }
-
-        if (screenSaverUnInhibitCookie)
-        {
-          timerScreenSaverUnInhibit_.start();
-        }
-
-        done = true;
-      }
-    }
-
-    if (!done)
-    {
-      // FIXME: not sure how to do this yet
-      std::cerr << "screenSaverInhibit" << std::endl;
-    }
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // Canvas::screenSaverUnInhibit
-  //
-  void
-  Canvas::screenSaverUnInhibit()
-  {
-#if !defined(__APPLE__) && !defined(_WIN32)
-    if (screenSaverUnInhibitCookie &&
-        QDBusConnection::sessionBus().isConnected())
-    {
-      QDBusInterface screensaver("org.freedesktop.ScreenSaver",
-                                 "/ScreenSaver");
-      if (screensaver.isValid())
-      {
-        screensaver.call(QDBus::NoBlock,
-                         "UnInhibit",
-                         QVariant(screenSaverUnInhibitCookie));
-        screenSaverUnInhibitCookie = 0;
-      }
-    }
-#endif
+    qApp->postEvent(&canvas->eventReceiver_, new LibassInitDoneEvent(libass));
   }
 }

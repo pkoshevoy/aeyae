@@ -371,7 +371,17 @@ namespace yae
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
 
-    canvas_ = new Canvas();
+    QString greeting =
+      tr("drop videos/music here\n\n"
+         "press spacebar to pause/resume\n\n"
+         "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+         "use apple remote for volume and seeking\n\n"
+#endif
+         "explore the menus for more options");
+
+    canvas_ = new TCanvas();
+    canvas_->setGreeting(greeting);
     canvasLayout->addWidget(canvas_);
 
     YAE_ASSERT(readerPrototype);
@@ -858,7 +868,7 @@ namespace yae
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
 
-    ok = connect(canvas_, SIGNAL(toggleFullScreen()),
+    ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
 
@@ -1001,7 +1011,7 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::canvas
   //
-  Canvas *
+  TCanvas *
   MainWindow::canvas() const
   {
     return canvas_;

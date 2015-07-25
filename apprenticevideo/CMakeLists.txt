@@ -72,11 +72,13 @@ find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GL
 
 set(project_moc_hxx
   yaeCanvas.h
+  yaeCanvasWidget.h
+  yaeLineEdit.h
   yaeMainWindow.h
-  yaeTimelineControls.h
   yaePlaylistModel.h
   yaePlaylistWidget.h
-  yaeLineEdit.h
+  yaeScreenSaverInhibitor.h
+  yaeTimelineControls.h
   )
 
 set(project_uis
@@ -101,6 +103,9 @@ set(project_sources
   yaeBookmarks.cpp
   yaeCanvas.h
   yaeCanvas.cpp
+  yaeCanvasWidget.h
+  yaeCanvasQPainterUtils.h
+  yaeCanvasQPainterUtils.cpp
   yaeCanvasRenderer.h
   yaeCanvasRenderer.cpp
   yaeLineEdit.h
@@ -116,6 +121,8 @@ set(project_sources
   yaePlaylistModel.cpp
   yaePlaylistWidget.h
   yaePlaylistWidget.cpp
+  yaeScreenSaverInhibitor.h
+  yaeScreenSaverInhibitor.cpp
   yaeUtilsQt.h
   yaeUtilsQt.cpp
   )

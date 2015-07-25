@@ -12,6 +12,10 @@
 // system includes:
 #include <string>
 
+// Qt includes:
+#define GL_GLEXT_PROTOTYPES
+#include <QtOpenGL>
+
 // yae includes:
 #include "yae/video/yae_auto_crop.h"
 #include "yae/video/yae_pixel_format_traits.h"

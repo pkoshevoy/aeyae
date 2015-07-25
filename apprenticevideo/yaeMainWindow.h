@@ -25,7 +25,7 @@
 
 // local includes:
 #include "yaeBookmarks.h"
-#include "yaeCanvas.h"
+#include "yaeCanvasWidget.h"
 #include "yaeTimelineControls.h"
 #ifdef __APPLE__
 #include "yaeAppleRemoteControl.h"
@@ -38,6 +38,11 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // TCanvas
+  //
+  typedef TCanvasWidget<QOpenGLWidget> TCanvas;
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -101,7 +106,7 @@ namespace yae
     ~MainWindow();
 
     // accessor to the OpenGL rendering canvas:
-    Canvas * canvas() const;
+    TCanvas * canvas() const;
 
     static IReader * openFile(const QString & fn);
     static bool testEachFile(const std::list<QString> & playlist);
@@ -324,7 +329,7 @@ namespace yae
     unsigned int readerId_;
 
     // frame canvas:
-    Canvas * canvas_;
+    TCanvas * canvas_;
 
     // audio device:
     std::string audioDevice_;

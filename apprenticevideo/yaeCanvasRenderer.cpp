@@ -18,10 +18,6 @@
 // boost includes:
 #include <boost/thread.hpp>
 
-// Qt includes:
-#define GL_GLEXT_PROTOTYPES
-#include <QtOpenGL>
-
 // local includes:
 #include "yaeCanvasRenderer.h"
 

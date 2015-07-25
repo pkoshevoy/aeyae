@@ -16,14 +16,9 @@
 #endif
 
 // Qt includes:
-#define GL_GLEXT_PROTOTYPES
-#include <QtOpenGL>
 #include <QEvent>
-#include <QMouseEvent>
-#include <QOpenGLWidget>
-#include <QTimer>
-#include <QList>
-#include <QUrl>
+#include <QObject>
+#include <QString>
 
 // yae includes:
 #include "yae/video/yae_video.h"
@@ -39,7 +34,6 @@
 namespace yae
 {
   // forward declarations:
-  class Canvas;
   class TLibass;
 
   //----------------------------------------------------------------
@@ -59,32 +53,37 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas
   //
-  class YAE_API Canvas : public QOpenGLWidget,
-                         public IVideoCanvas
+  struct YAE_API Canvas : public IVideoCanvas
   {
-    Q_OBJECT;
-
-  public:
-    typedef QOpenGLWidget TOpenGLWidget;
-
-    struct OpenGLContext : public IOpenGLContext
+    //----------------------------------------------------------------
+    // IDelegate
+    //
+    struct YAE_API IDelegate
     {
-      OpenGLContext(TOpenGLWidget & widget):
-        widget_(widget)
-      {}
+      virtual ~IDelegate() {}
 
-      virtual void makeCurrent()
-      { widget_.makeCurrent(); }
-
-      virtual void doneCurrent()
-      { widget_.doneCurrent(); }
-
-    protected:
-      TOpenGLWidget & widget_;
+      virtual bool isVisible() = 0;
+      virtual void requestRepaint() = 0;
+      virtual void inhibitScreenSaver() = 0;
     };
 
-    Canvas(QWidget * parent = 0, Qt::WindowFlags f = 0);
+    Canvas(const boost::shared_ptr<IOpenGLContext> & context);
     ~Canvas();
+
+    inline int canvasWidth() const
+    { return w_; }
+
+    inline int canvasHeight() const
+    { return h_; }
+
+    inline IOpenGLContext & context()
+    { return *context_; }
+
+    inline void setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+    { delegate_ = delegate; }
+
+    inline const boost::shared_ptr<IDelegate> & delegate() const
+    { return delegate_; }
 
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
@@ -188,27 +187,33 @@ namespace yae
     // once it is done updating fontconfig cache for libass:
     static void libassInitDoneCallback(void * canvas, TLibass * libass);
 
-  signals:
-    void toggleFullScreen();
-
-  public slots:
-    void hideCursor();
-    void screenSaverInhibit();
-    void screenSaverUnInhibit();
-
-  protected:
     TLibass * asyncInitLibass(const unsigned char * header = NULL,
                               const std::size_t headerSize = 0);
 
-    // virtual:
-    bool event(QEvent * event);
-    void mouseMoveEvent(QMouseEvent * event);
-    void mouseDoubleClickEvent(QMouseEvent * event);
-    void resizeEvent(QResizeEvent * event);
+    // helper:
+    void resize(int w, int h);
+    void paintCanvas();
 
-    // virtual: Qt/OpenGL stuff:
-    void initializeGL();
-    void paintGL();
+    //----------------------------------------------------------------
+    // UpdateOverlayEvent
+    //
+    struct UpdateOverlayEvent : public QEvent
+    {
+      UpdateOverlayEvent(): QEvent(QEvent::User) {}
+    };
+
+    //----------------------------------------------------------------
+    // LibassInitDoneEvent
+    //
+    struct LibassInitDoneEvent : public QEvent
+    {
+      LibassInitDoneEvent(TLibass * libass):
+        QEvent(QEvent::User),
+        libass_(libass)
+      {}
+
+      TLibass * libass_;
+    };
 
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -265,7 +270,38 @@ namespace yae
       TPayload & payload_;
     };
 
-    OpenGLContext context_;
+  protected:
+    // NOTE: events will be delivered on the main thread:
+    bool processEvent(QEvent * event);
+
+    //----------------------------------------------------------------
+    // TEventReceiver
+    //
+    struct TEventReceiver : public QObject
+    {
+      TEventReceiver(Canvas & canvas):
+        canvas_(canvas)
+      {}
+
+      // virtual:
+      bool event(QEvent * event)
+      {
+        if (canvas_.processEvent(event))
+        {
+          return true;
+        }
+
+        return QObject::event(event);
+      }
+
+      Canvas & canvas_;
+    };
+
+    friend struct TEventReceiver;
+    TEventReceiver eventReceiver_;
+
+    boost::shared_ptr<IOpenGLContext> context_;
+    boost::shared_ptr<IDelegate> delegate_;
     RenderFrameEvent::TPayload payload_;
     CanvasRenderer * private_;
     CanvasRenderer * overlay_;
@@ -274,12 +310,9 @@ namespace yae
     bool subsInOverlay_;
     TRenderMode renderMode_;
 
-    // a single shot timer for hiding the cursor:
-    QTimer timerHideCursor_;
-
-    // single shot timers for (un)inhibiting screen saver:
-    QTimer timerScreenSaver_;
-    QTimer timerScreenSaverUnInhibit_;
+    // canvas size:
+    int w_;
+    int h_;
 
     // keep track of previously displayed subtitles
     // in order to avoid re-rendering the same subtitles with every frame:
