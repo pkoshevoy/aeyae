@@ -71,7 +71,6 @@ set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ f
 find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
 
 set(project_moc_hxx
-  yaeCanvas.h
   yaeCanvasWidget.h
   yaeLineEdit.h
   yaeMainWindow.h
