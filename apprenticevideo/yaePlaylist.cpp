@@ -12,11 +12,7 @@
 #include <limits>
 
 // boost includes:
-#include <boost/algorithm/hex.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/endian/conversion.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/uuid/sha1.hpp>
 
 // Qt includes:
 #include <QCryptographicHash>
@@ -40,38 +36,11 @@ namespace mvc
 {
 
   //----------------------------------------------------------------
-  // getDigestAsHexString
-  //
-  static std::string
-  getDigestAsHexString(boost::uuids::detail::sha1 & crypto)
-  {
-    unsigned int digest[5];
-    crypto.get_digest(digest);
-
-#ifdef BOOST_LITTLE_ENDIAN
-    // convert to big-endian:
-    for (std::size_t i = 0; i < 5; i++)
-    {
-      boost::endian::native_to_big_inplace(digest[i]);
-    }
-#endif
-
-    const char * begin = (char *)&(digest[0]);
-    const char * end = begin + sizeof(digest);
-
-    std::ostringstream os;
-    boost::algorithm::hex(begin, end, std::ostream_iterator<char>(os));
-
-    return std::string(os.str().c_str());
-  }
-
-  //----------------------------------------------------------------
   // getBookmarkHash
   //
   static std::string
   getBookmarkHash(const std::list<PlaylistKey> & keyPath)
   {
-#if 1
     QCryptographicHash crypto(QCryptographicHash::Sha1);
     for (std::list<PlaylistKey>::const_iterator i = keyPath.begin();
          i != keyPath.end(); ++i)
@@ -84,22 +53,6 @@ namespace mvc
     std::string groupHash("bookmark-");
     groupHash += crypto.result().toHex().constData();
     return groupHash;
-#else
-    boost::uuids::detail::sha1 crypto;
-
-    for (std::list<PlaylistKey>::const_iterator i = keyPath.begin();
-         i != keyPath.end(); ++i)
-    {
-      const PlaylistKey & key = *i;
-      crypto.process_bytes(key.key_.c_str(), key.key_.size());
-      crypto.process_bytes(key.ext_.c_str(), key.ext_.size());
-    }
-
-    std::string groupHash("bookmark-");
-    groupHash += getDigestAsHexString(crypto);
-
-    return groupHash;
-#endif
   }
 
   //----------------------------------------------------------------
@@ -108,22 +61,12 @@ namespace mvc
   static std::string
   getBookmarkHash(const PlaylistKey & key)
   {
-#if 1
     QCryptographicHash crypto(QCryptographicHash::Sha1);
     crypto.addData(key.key_.toUtf8());
     crypto.addData(key.ext_.toUtf8());
 
     std::string itemHash(crypto.result().toHex().constData());
     return itemHash;
-#else
-    boost::uuids::detail::sha1 crypto;
-
-    crypto.process_bytes(key.key_.c_str(), key.key_.size());
-    crypto.process_bytes(key.ext_.c_str(), key.ext_.size());
-
-    std::string itemHash = getDigestAsHexString(crypto);
-    return itemHash;
-#endif
   }
 
 
