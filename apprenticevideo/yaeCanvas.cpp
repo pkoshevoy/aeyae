@@ -570,11 +570,13 @@ namespace yae
   {
     if (!delegate_)
     {
+#if 0
       YAE_ASSERT(false);
 
       // FIXME: must implement buffer swapping
       TMakeCurrentContext current(context());
       paintCanvas();
+#endif
     }
     else
     {
@@ -607,6 +609,14 @@ namespace yae
 
     return true;
   }
+
+  //----------------------------------------------------------------
+  // InitializeBackendEvent
+  //
+  struct InitializeBackendEvent : public QEvent
+  {
+    InitializeBackendEvent(): QEvent(QEvent::User) {}
+  };
 
   //----------------------------------------------------------------
   // UpdateOverlayEvent
@@ -646,6 +656,17 @@ namespace yae
         renderEvent->payload_.get(frame);
         loadFrame(frame);
 
+        return true;
+      }
+
+      InitializeBackendEvent * initBackendEvent =
+        dynamic_cast<InitializeBackendEvent *>(event);
+      if (initBackendEvent)
+      {
+        event->accept();
+
+        initializePrivateBackend();
+        refresh();
         return true;
       }
 
@@ -778,14 +799,9 @@ namespace yae
     glViewport(GLint(x + 0.5), GLint(y + 0.5),
                GLsizei(w + 0.5), GLsizei(h + 0.5));
 
-    double left = 0.0;
-    double right = croppedWidth;
-    double top = 0.0;
-    double bottom = croppedHeight;
-
-    glMatrixMode(GL_PROJECTION);
+    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(left, right, bottom, top, -1.0, 1.0);
+    glOrtho(0.0, croppedWidth, croppedHeight, 0.0, -1.0, 1.0);
 
     if (cameraRotation && cameraRotation % 90 == 0)
     {
@@ -804,6 +820,68 @@ namespace yae
 
     canvas->draw();
     yae_assert_gl_no_error();
+
+#if 0
+    // FIXME:
+    {
+      glDisable(GL_LIGHTING);
+      glEnable(GL_LINE_SMOOTH);
+      glLineWidth(2.0);
+      glBegin(GL_LINES);
+      {
+        glColor3ub(0x7f, 0x00, 0x10);
+        glVertex2i(croppedWidth / 10, croppedHeight / 10);
+        glVertex2i(2 * croppedWidth / 10, croppedHeight / 10);
+        glColor3ub(0xff, 0x00, 0x20);
+        glVertex2i(2 * croppedWidth / 10, croppedHeight / 10);
+        glVertex2i(3 * croppedWidth / 10, croppedHeight / 10);
+
+        glColor3ub(0x10, 0x7f, 0x00);
+        glVertex2i(croppedWidth / 10, croppedHeight / 10);
+        glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10);
+        glColor3ub(0x20, 0xff, 0x00);
+        glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10);
+        glVertex2i(croppedWidth / 10, 3 * croppedHeight / 10);
+      }
+      glEnd();
+    }
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // paintCheckerBoard
+  //
+  static void
+  paintCheckerBoard(int canvasWidth, int canvasHeight)
+  {
+    glViewport(0, 0, canvasWidth, canvasHeight);
+
+    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0);
+
+    float zebra[2][3] = {
+      { 1.0f, 1.0f, 1.0f },
+      { 0.7f, 0.7f, 0.7f }
+    };
+
+    int edgeSize = 24;
+    bool evenRow = false;
+    for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
+    {
+      int y1 = std::min(y + edgeSize, canvasHeight);
+
+      bool evenCol = false;
+      for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
+      {
+        int x1 = std::min(x + edgeSize, canvasWidth);
+
+        float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
+        glColor3fv(color);
+
+        glRecti(x, y, x1, y1);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -912,6 +990,13 @@ namespace yae
   void
   Canvas::paintCanvas()
   {
+    if (!private_ || (!overlay_ && (showTheGreeting_ || subsInOverlay_)))
+    {
+      // qApp->postEvent(&eventReceiver_, new InitializeBackendEvent());
+      initializePrivateBackend();
+      updateOverlay(true);
+    }
+
     if (canvasWidth() == 0 || canvasHeight() == 0)
     {
       return;
@@ -919,6 +1004,9 @@ namespace yae
 
     // reset OpenGL to default/initial state:
     reset_opengl_to_initial_state();
+
+    TGLSaveMatrixState pushMatrix1(GL_MODELVIEW);
+    glLoadIdentity();
 
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
@@ -935,9 +1023,6 @@ namespace yae
       }
     }
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
     int canvasWidth = this->canvasWidth();
     int canvasHeight = this->canvasHeight();
 
@@ -945,34 +1030,7 @@ namespace yae
     if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
                                  pixelFormat::kPaletted)))
     {
-      glViewport(0, 0, canvasWidth, canvasHeight);
-
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0);
-
-      float zebra[2][3] = {
-        { 1.0f, 1.0f, 1.0f },
-        { 0.7f, 0.7f, 0.7f }
-      };
-
-      int edgeSize = 24;
-      bool evenRow = false;
-      for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
-      {
-        int y1 = std::min(y + edgeSize, canvasHeight);
-
-        bool evenCol = false;
-        for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
-        {
-          int x1 = std::min(x + edgeSize, canvasWidth);
-
-          float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
-          glColor3fv(color);
-
-          glRecti(x, y, x1, y1);
-        }
-      }
+      paintCheckerBoard(canvasWidth, canvasHeight);
 
       glEnable(GL_BLEND);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1179,7 +1237,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Canvas::loadSubs
+  // Canvas::updateOverlay
   //
   bool
   Canvas::updateOverlay(bool reparse)

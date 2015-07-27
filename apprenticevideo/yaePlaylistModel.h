@@ -29,6 +29,23 @@ namespace mvc
     Q_OBJECT;
 
   public:
+
+    //----------------------------------------------------------------
+    // Roles
+    //
+    enum Roles {
+      kRoleType = Qt::UserRole + 1,
+      kRolePath,
+      kRoleLabel,
+      kRoleImage,
+      kToleCollapsed,
+      kRoleExcluded,
+      kRoleSelected,
+      kRolePlaying,
+      kRoleFailed,
+      kRoleItemCount
+   };
+
     PlaylistModel(QObject * parent = NULL);
 
     // virtual:
@@ -38,6 +55,9 @@ namespace mvc
 
     // virtual:
     QModelIndex parent(const QModelIndex & child) const;
+
+    // virtual:
+    QHash<int, QByteArray> roleNames() const;
 
     // virtual:
     int rowCount(const QModelIndex & parent = QModelIndex()) const;

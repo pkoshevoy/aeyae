@@ -78,6 +78,28 @@ namespace mvc
   }
 
   //----------------------------------------------------------------
+  // PlaylistModel::roleNames
+  //
+  QHash<int, QByteArray>
+  PlaylistModel::roleNames() const
+  {
+    QHash<int, QByteArray> roles;
+
+    roles[kRoleType] = "type";
+    roles[kRolePath] = "path";
+    roles[kRoleLabel] = "label";
+    roles[kRoleImage] = "image";
+    roles[kToleCollapsed] = "collapsed";
+    roles[kRoleExcluded] = "excluded";
+    roles[kRoleSelected] = "selected";
+    roles[kRolePlaying] = "playing";
+    roles[kRoleFailed] = "failed";
+    roles[kRoleItemCount] = "itemCount";
+
+    return roles;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModel::rowCount
   //
   int

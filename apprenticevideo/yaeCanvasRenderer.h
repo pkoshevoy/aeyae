@@ -60,7 +60,7 @@ namespace yae
   //
   struct YAE_API IOpenGLContext
   {
-    virtual void makeCurrent() = 0;
+    virtual bool makeCurrent() = 0;
     virtual void doneCurrent() = 0;
   };
 
@@ -70,17 +70,59 @@ namespace yae
   struct TMakeCurrentContext
   {
     TMakeCurrentContext(IOpenGLContext & context):
-      context_(context)
+      context_(context),
+      current_(false)
     {
-      context_.makeCurrent();
+      current_ = context_.makeCurrent();
+      YAE_ASSERT(current_);
     }
 
     ~TMakeCurrentContext()
     {
-      context_.doneCurrent();
+      if (current_)
+      {
+        context_.doneCurrent();
+      }
     }
 
     IOpenGLContext & context_;
+    bool current_;
+  };
+
+  //----------------------------------------------------------------
+  // TGLSaveState
+  //
+  struct TGLSaveState
+  {
+    TGLSaveState(GLbitfield mask);
+    ~TGLSaveState();
+
+  protected:
+    bool applied_;
+  };
+
+  //----------------------------------------------------------------
+  // TGLSaveClientState
+  //
+  struct TGLSaveClientState
+  {
+    TGLSaveClientState(GLbitfield mask);
+    ~TGLSaveClientState();
+
+  protected:
+    bool applied_;
+  };
+
+  //----------------------------------------------------------------
+  // TGLSaveMatrixState
+  //
+  struct TGLSaveMatrixState
+  {
+    TGLSaveMatrixState(GLenum mode);
+    ~TGLSaveMatrixState();
+
+  protected:
+    GLenum matrixMode_;
   };
 
   //----------------------------------------------------------------

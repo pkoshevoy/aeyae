@@ -903,74 +903,68 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // TGLSaveState
+  // TGLSaveState::TGLSaveState
   //
-  struct TGLSaveState
+  TGLSaveState::TGLSaveState(GLbitfield mask):
+    applied_(false)
   {
-    TGLSaveState(GLbitfield mask):
-      applied_(false)
-    {
-      glPushAttrib(mask);
-      applied_ = yae_assert_gl_no_error();
-    }
-
-    ~TGLSaveState()
-    {
-      if (applied_)
-      {
-        glPopAttrib();
-      }
-    }
-
-  protected:
-    bool applied_;
-  };
+    glPushAttrib(mask);
+    applied_ = yae_assert_gl_no_error();
+  }
 
   //----------------------------------------------------------------
-  // TGLSaveClientState
+  // TGLSaveState::~TGLSaveState
   //
-  struct TGLSaveClientState
+  TGLSaveState::~TGLSaveState()
   {
-    TGLSaveClientState(GLbitfield mask):
-      applied_(false)
+    if (applied_)
     {
-      glPushClientAttrib(mask);
-      applied_ = yae_assert_gl_no_error();
+      glPopAttrib();
     }
+  }
 
-    ~TGLSaveClientState()
-    {
-      if (applied_)
-      {
-        glPopClientAttrib();
-      }
-    }
-
-  protected:
-    bool applied_;
-  };
 
   //----------------------------------------------------------------
-  // TGLSaveMatrixState
+  // TGLSaveClientState::TGLSaveClientState
   //
-  struct TGLSaveMatrixState
+  TGLSaveClientState::TGLSaveClientState(GLbitfield mask):
+    applied_(false)
   {
-    TGLSaveMatrixState(GLenum mode):
-      matrixMode_(mode)
-    {
-      glMatrixMode(matrixMode_);
-      glPushMatrix();
-    }
+    glPushClientAttrib(mask);
+    applied_ = yae_assert_gl_no_error();
+  }
 
-    ~TGLSaveMatrixState()
+  //----------------------------------------------------------------
+  // TGLSaveClientState::~TGLSaveClientState
+  //
+  TGLSaveClientState::~TGLSaveClientState()
+  {
+    if (applied_)
     {
-      glMatrixMode(matrixMode_);
-      glPopMatrix();
+      glPopClientAttrib();
     }
+  }
 
-  protected:
-    GLenum matrixMode_;
-  };
+
+  //----------------------------------------------------------------
+  // TGLSaveMatrixState::TGLSaveMatrixState
+  //
+  TGLSaveMatrixState::TGLSaveMatrixState(GLenum mode):
+    matrixMode_(mode)
+  {
+    glMatrixMode(matrixMode_);
+    glPushMatrix();
+  }
+
+  //----------------------------------------------------------------
+  // TGLSaveMatrixState::~TGLSaveMatrixState
+  //
+  TGLSaveMatrixState::~TGLSaveMatrixState()
+  {
+    glMatrixMode(matrixMode_);
+    glPopMatrix();
+  }
+
 
   //----------------------------------------------------------------
   // powerOfTwoLEQ
@@ -1442,7 +1436,7 @@ namespace yae
       std::map<TPixelFormatId, TFragmentShader>::const_iterator
         found = shaders_.find(format);
 
-#if !defined(NDEBUG)
+#if 0 // !defined(NDEBUG)
       // for debugging only:
       {
         const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
@@ -1477,7 +1471,7 @@ namespace yae
       if (!shader && builtinShader_.program_)
       {
         shader = &builtinShader_;
-#if !defined(NDEBUG)
+#if 0 // !defined(NDEBUG)
         std::cerr << "WILL USE PASS-THROUGH SHADER" << std::endl;
 #endif
       }
@@ -2576,8 +2570,6 @@ namespace yae
     {
       return;
     }
-
-    TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
 
     double iw = 0.0;
     double ih = 0.0;
