@@ -11,8 +11,9 @@
 
 // Qt includes:
 #include <QMutex>
-#include <QQuickFramebufferObject>
+#include <QOffscreenSurface>
 #include <QOpenGLContext>
+#include <QQuickFramebufferObject>
 #include <QQuickWindow>
 #include <QSurface>
 #include <QThreadStorage>

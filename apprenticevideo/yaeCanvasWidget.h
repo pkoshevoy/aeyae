@@ -89,7 +89,7 @@ namespace yae
       {}
 
       virtual bool makeCurrent()
-      { return widget_.makeCurrent(); }
+      { widget_.makeCurrent(); return true; }
 
       virtual void doneCurrent()
       { widget_.doneCurrent(); }

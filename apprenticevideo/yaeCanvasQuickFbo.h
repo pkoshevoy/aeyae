@@ -14,7 +14,6 @@
 
 // Qt includes:
 #include <QtQuick/QQuickFramebufferObject>
-#include <QOffscreenSurface>
 
 
 namespace yae
@@ -24,7 +23,7 @@ namespace yae
   //
   class CanvasQuickFbo : public QQuickFramebufferObject
   {
-    Q_OBJECT
+    Q_OBJECT;
 
   public:
     CanvasQuickFbo();
