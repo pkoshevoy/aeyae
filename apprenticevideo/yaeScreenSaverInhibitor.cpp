@@ -6,7 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard C++:
+#include <iostream>
+
 // Qt includes:
+#include <QApplication>
 #include <QTimer>
 
 // platform includes:

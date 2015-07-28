@@ -35,8 +35,7 @@ namespace yae
   {
     OpenGLContext():
       mutex_(QMutex::Recursive),
-      initialized_(false),
-      prev_(NULL)
+      initialized_(false)
     {
       surface_.create();
     }
@@ -152,7 +151,7 @@ namespace yae
       virtual bool isVisible()
       {
         QOpenGLFramebufferObject * fbo = renderer_.framebufferObject();
-        return true != NULL;
+        return fbo != NULL;
       }
 
       virtual void requestRepaint()
