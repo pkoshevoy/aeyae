@@ -89,7 +89,7 @@ namespace mvc
     roles[kRolePath] = "path";
     roles[kRoleLabel] = "label";
     roles[kRoleImage] = "image";
-    roles[kToleCollapsed] = "collapsed";
+    roles[kRoleCollapsed] = "collapsed";
     roles[kRoleExcluded] = "excluded";
     roles[kRoleSelected] = "selected";
     roles[kRolePlaying] = "playing";
@@ -168,9 +168,19 @@ namespace mvc
 
     if (group)
     {
-      if (role == Qt::DisplayRole)
+      if (role == kRoleLabel || role == Qt::DisplayRole)
       {
         return QVariant(group->name_);
+      }
+
+      if (role == kRoleCollapsed)
+      {
+        return QVariant(group->collapsed_);
+      }
+
+      if (role == kRoleExcluded)
+      {
+        return QVariant(group->excluded_);
       }
 
       return QVariant();
@@ -181,9 +191,24 @@ namespace mvc
 
     if (item)
     {
-      if (role == Qt::DisplayRole)
+      if (role == Qt::DisplayRole || role == kRoleLabel)
       {
         return QVariant(item->name_);
+      }
+
+      if (role == kRoleFailed)
+      {
+        return QVariant(item->failed_);
+      }
+
+      if (role == kRoleExcluded)
+      {
+        return QVariant(item->excluded_);
+      }
+
+      if (role == kRoleSelected)
+      {
+        return QVariant(item->selected_);
       }
 
       return QVariant();

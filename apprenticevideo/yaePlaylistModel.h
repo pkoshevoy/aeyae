@@ -38,7 +38,7 @@ namespace mvc
       kRolePath,
       kRoleLabel,
       kRoleImage,
-      kToleCollapsed,
+      kRoleCollapsed,
       kRoleExcluded,
       kRoleSelected,
       kRolePlaying,
