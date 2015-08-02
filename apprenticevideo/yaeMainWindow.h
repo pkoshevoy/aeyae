@@ -24,12 +24,15 @@
 #include "yae/video/yae_video_renderer.h"
 
 // local includes:
-#include "yaeBookmarks.h"
-#include "yaeCanvasWidget.h"
-#include "yaeTimelineControls.h"
 #ifdef __APPLE__
 #include "yaeAppleRemoteControl.h"
 #endif
+#include "yaeBookmarks.h"
+#include "yaePlaylistModel.h"
+#include "yaeQuickWidget.h"
+#include "yaeTimelineControls.h"
+
+// Qt uic generated files:
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
 #include "ui_yaeMainWindow.h"
@@ -38,11 +41,6 @@
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // TCanvas
-  //
-  typedef TCanvasWidget<QOpenGLWidget> TCanvas;
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -106,7 +104,7 @@ namespace yae
     ~MainWindow();
 
     // accessor to the OpenGL rendering canvas:
-    TCanvas * canvas() const;
+    Canvas * canvas() const;
 
     static IReader * openFile(const QString & fn);
     static bool testEachFile(const std::list<QString> & playlist);
@@ -329,7 +327,9 @@ namespace yae
     unsigned int readerId_;
 
     // frame canvas:
-    TCanvas * canvas_;
+    yae::mvc::PlaylistModel playlistModel_;
+    TQuickWidget * canvasWidget_;
+    Canvas * canvas_;
 
     // audio device:
     std::string audioDevice_;

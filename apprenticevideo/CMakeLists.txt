@@ -73,6 +73,7 @@ find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GL
 set(project_moc_hxx
   yaeCanvasQuickFbo.h
   yaeCanvasWidget.h
+  yaeQuickWidget.h
   yaeLineEdit.h
   yaeMainWindow.h
   yaePlaylistModel.h
@@ -123,6 +124,8 @@ set(project_sources
   yaePlaylistModel.cpp
   yaePlaylistWidget.h
   yaePlaylistWidget.cpp
+  yaeQuickWidget.h
+  yaeQuickWidget.cpp
   yaeScreenSaverInhibitor.h
   yaeScreenSaverInhibitor.cpp
   yaeUtilsQt.h

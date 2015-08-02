@@ -1,7 +1,7 @@
 import QtQuick 2.4
 import QtQml 2.2
 import QtQml.Models 2.2
-import com.aragog.appenticevideo 1.0
+import com.aragog.apprenticevideo 1.0
 import '.'
 
 Item
@@ -56,7 +56,7 @@ Item
     ]
   }
 
-
+  /*
   // FIXME: for debugging
   function listProperties(item)
   {
@@ -137,12 +137,6 @@ Item
 
           console.log("item.model: " + item.model +
                       ", rootIndex: " + item.model.rootIndex);
-          // item.model.rootIndex = item.model.modelIndex(index)
-          /*
-          item.model = DelegateModel {
-            model: playlistModel
-            rootIndex: modelIndex(index)
-          }*/
         }
       }
     }
@@ -207,5 +201,5 @@ Item
       }
     }
   }
-
+  */
 }

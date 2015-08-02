@@ -42,6 +42,12 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
               GLint & shouldSwapBytes);
 
 //----------------------------------------------------------------
+// yae_reset_opengl_to_initial_state
+//
+YAE_API void
+yae_reset_opengl_to_initial_state();
+
+//----------------------------------------------------------------
 // yae_assert_gl_no_error
 //
 YAE_API bool

@@ -66,7 +66,9 @@ namespace yae
   public:
     Application(int & argc, char ** argv):
       QApplication(argc, argv)
-    {}
+    {
+      QApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
+    }
 
   protected:
     bool event(QEvent * e)

@@ -19,20 +19,21 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
-#include <QWheelEvent>
-#include <QDragEnterEvent>
-#include <QVBoxLayout>
-#include <QFileDialog>
-#include <QMimeData>
-#include <QUrl>
-#include <QSpacerItem>
-#include <QDesktopWidget>
-#include <QMenu>
-#include <QShortcut>
-#include <QFileInfo>
-#include <QProcess>
 #include <QDesktopServices>
 #include <QDirIterator>
+#include <QDragEnterEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QMenu>
+#include <QMimeData>
+#include <QProcess>
+#include <QQmlContext>
+#include <QQuickItem>
+#include <QShortcut>
+#include <QSpacerItem>
+#include <QUrl>
+#include <QVBoxLayout>
+#include <QWheelEvent>
 
 // yae includes:
 #include "yae/utils/yae_plugin_registry.h"
@@ -42,6 +43,7 @@
 
 // local includes:
 #include "yaeAudioRendererPortaudio.h"
+#include "yaeCanvasQuickFbo.h"
 #include "yaeMainWindow.h"
 #include "yaeUtilsQt.h"
 #include "yaeVersion.h"
@@ -312,6 +314,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(QQuickItem * item)
+  {
+    if (!item)
+    {
+      return NULL;
+    }
+
+    yae::CanvasQuickFbo * fbo = qobject_cast<yae::CanvasQuickFbo *>(item);
+    if (fbo)
+    {
+      return &fbo->canvas_;
+    }
+
+    QList<QQuickItem *> children = item->childItems();
+    for (QList<QQuickItem *>::iterator
+           i = children.begin(), end = children.end(); i != end; ++i)
+    {
+      yae::Canvas * found = getCanvas(*i);
+      if (found)
+      {
+        return found;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
@@ -331,6 +364,7 @@ namespace yae
     bookmarksMenuSeparator_(NULL),
     reader_(NULL),
     readerId_(0),
+    canvasWidget_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
@@ -380,9 +414,22 @@ namespace yae
 #endif
          "explore the menus for more options");
 
-    canvas_ = new TCanvas();
+    qmlRegisterType<yae::CanvasQuickFbo>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "CanvasQuickFbo");
+
+    canvasWidget_ = new TQuickWidget(this);
+    canvasWidget_->setAcceptDrops(true);
+    canvasWidget_->rootContext()->setContextProperty("playlistModel",
+                                                     &playlistModel_);
+    canvasWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
+    canvasLayout->addWidget(canvasWidget_);
+
+    canvas_ = yae::getCanvas(canvasWidget_->rootObject());
+    YAE_ASSERT(canvas_);
     canvas_->setGreeting(greeting);
-    canvasLayout->addWidget(canvas_);
 
     YAE_ASSERT(readerPrototype);
     reader_ = readerPrototype->clone();
@@ -868,7 +915,7 @@ namespace yae
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
 
-    ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
+    ok = connect(canvasWidget_, SIGNAL(doubleClick()),
                  this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
 
@@ -1005,13 +1052,12 @@ namespace yae
     videoRenderer_->destroy();
 
     canvas_->cropAutoDetectStop();
-    delete canvas_;
   }
 
   //----------------------------------------------------------------
   // MainWindow::canvas
   //
-  TCanvas *
+  Canvas *
   MainWindow::canvas() const
   {
     return canvas_;
@@ -3759,7 +3805,7 @@ namespace yae
       return;
     }
 
-    QRect rectCanvas = canvas_->geometry();
+    QRect rectCanvas = canvasWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3810,7 +3856,7 @@ namespace yae
     int ww = rectWindow.width();
     int wh = rectWindow.height();
 
-    QRect rectCanvas = canvas_->geometry();
+    QRect rectCanvas = canvasWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3900,7 +3946,7 @@ namespace yae
 
       if (dar)
       {
-        double s = double(canvas_->width()) / w;
+        double s = double(canvasWidget_->width()) / w;
         canvasSizeSet(s, s);
       }
     }

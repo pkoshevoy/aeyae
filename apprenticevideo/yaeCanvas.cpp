@@ -760,6 +760,10 @@ namespace yae
     canvas->imageWidthHeightRotated(croppedWidth,
                                     croppedHeight,
                                     cameraRotation);
+    if (!croppedWidth || !croppedHeight)
+    {
+      return;
+    }
 
     double dar = croppedWidth / croppedHeight;
     double car = double(canvasWidth) / double(canvasHeight);
@@ -822,7 +826,7 @@ namespace yae
     yae_assert_gl_no_error();
 
 #if 0
-    // FIXME:
+    // FIXME: for debugging
     {
       glDisable(GL_LIGHTING);
       glEnable(GL_LINE_SMOOTH);
@@ -846,6 +850,9 @@ namespace yae
       glEnd();
     }
 #endif
+
+    // reset OpenGL to default/initial state:
+    yae_reset_opengl_to_initial_state();
   }
 
   //----------------------------------------------------------------
@@ -885,111 +892,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // reset_opengl_to_initial_state
-  //
-  static void
-  reset_opengl_to_initial_state()
-  {
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    yae_assert_gl_no_error();
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    yae_assert_gl_no_error();
-
-    int maxAttribs = 0;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
-    yae_assert_gl_no_error();
-
-    for (int i = 0; i < maxAttribs; ++i)
-    {
-      glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0);
-      yae_assert_gl_no_error();
-
-      glDisableVertexAttribArray(i);
-      yae_assert_gl_no_error();
-    }
-
-    glActiveTexture(GL_TEXTURE0);
-    yae_assert_gl_no_error();
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_LIGHTING);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_FOG);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_DEPTH_TEST);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_STENCIL_TEST);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_SCISSOR_TEST);
-    yae_assert_gl_no_error();
-
-    glColorMask(true, true, true, true);
-    yae_assert_gl_no_error();
-
-    glClearColor(0, 0, 0, 0);
-    yae_assert_gl_no_error();
-
-    glDepthMask(true);
-    yae_assert_gl_no_error();
-
-    glDepthFunc(GL_LESS);
-    yae_assert_gl_no_error();
-
-    glClearDepth(1);
-    yae_assert_gl_no_error();
-
-    glStencilMask(0xff);
-    yae_assert_gl_no_error();
-
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    yae_assert_gl_no_error();
-
-    glStencilFunc(GL_ALWAYS, 0, 0xff);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_POLYGON_OFFSET_FILL);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_LINE_SMOOTH);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_ALPHA_TEST);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_TEXTURE_2D);
-    yae_assert_gl_no_error();
-
-    glDisable(GL_BLEND);
-    yae_assert_gl_no_error();
-
-    glBlendFunc(GL_ONE, GL_ZERO);
-    yae_assert_gl_no_error();
-
-    glUseProgram(0);
-    yae_assert_gl_no_error();
-
-    glShadeModel(GL_FLAT);
-    glClearDepth(0);
-    glClearStencil(0);
-    glClearAccum(0, 0, 0, 0);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    glAlphaFunc(GL_ALWAYS, 0.0f);
-  }
-
-  //----------------------------------------------------------------
   // Canvas::paintCanvas
   //
   void
   Canvas::paintCanvas()
   {
+    // reset OpenGL to default/initial state:
+    yae_reset_opengl_to_initial_state();
+
     if (!private_ || (!overlay_ && (showTheGreeting_ || subsInOverlay_)))
     {
       // qApp->postEvent(&eventReceiver_, new InitializeBackendEvent());
@@ -1001,9 +911,6 @@ namespace yae
     {
       return;
     }
-
-    // reset OpenGL to default/initial state:
-    reset_opengl_to_initial_state();
 
     TGLSaveMatrixState pushMatrix1(GL_MODELVIEW);
     glLoadIdentity();
