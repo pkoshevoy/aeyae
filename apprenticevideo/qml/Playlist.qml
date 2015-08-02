@@ -56,7 +56,7 @@ Item
     ]
   }
 
-  /*
+
   // FIXME: for debugging
   function listProperties(item)
   {
@@ -160,7 +160,8 @@ Item
         width: playlistView.width
 
         // size-to-fit:
-        height: (groupItemsGridView.cellHeight *
+        height: (!groupItemsGridView.count ? 0 :
+                 groupItemsGridView.cellHeight *
                  Math.max(1.0,
                           Math.ceil(groupItemsGridView.count /
                                     Math.floor(playlistView.width /
@@ -201,5 +202,5 @@ Item
       }
     }
   }
-  */
+
 }

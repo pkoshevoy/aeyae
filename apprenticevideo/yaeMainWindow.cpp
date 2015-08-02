@@ -1077,6 +1077,9 @@ namespace yae
     std::list<BookmarkHashInfo> hashInfo;
     playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
+    // FIXME:
+    playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+
     if (!beginPlaybackImmediately)
     {
       return;

@@ -82,9 +82,9 @@ namespace yae
   void
   TQuickWidget::mouseMoveEvent(QMouseEvent * e)
   {
-    (void)e;
-    QQuickWidget::setCursor(QCursor(Qt::ArrowCursor));
     timerHideCursor_.start();
+    QQuickWidget::setCursor(QCursor(Qt::ArrowCursor));
+    QQuickWidget::mouseMoveEvent(e);
   }
 
   //----------------------------------------------------------------
