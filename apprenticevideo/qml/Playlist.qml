@@ -44,9 +44,10 @@ Item
   CanvasQuickFbo
   {
     id: renderer
+    objectName: "renderer"
+
     anchors.fill: parent
     anchors.margins: 0
-    // objectName: "CanvasQuickFbo"
 
     // flip it right-side-up:
     transform:
@@ -67,12 +68,62 @@ Item
   }
 
 
+  function calc_cell_width(w, h)
+  {
+    var n = Math.min(5, Math.floor(w / 160.0));
+    return n < 1.0 ? w : w / n;
+  }
+
+  function calc_title_height(min_height, w)
+  {
+    return Math.max(min_height, 24.0 * playlistView.width / 800.0);
+  }
+
+  function calc_greeting_font_size(w, h)
+  {
+    return Math.max(12, 56.0 * Math.min(w / 1920.0, h / 1080.0));
+  }
+
+  function calc_zebra_index(index, cell_width, view_width)
+  {
+    var columns = Math.round(view_width / cell_width);
+    var col = index % columns
+    var row = (index - col) / columns;
+    return (row % 2 + col) % 2;
+  }
+
+  property var header_bg: "#7fcfcfcf"
+  property var header_fg: "#ffffffff"
+  property var zebra_bg: [ "#7fafafaf", "#7f9f9f9f"  ]
+  property var zebra_fg: [ "#ffffffff", "#ffefefef"  ]
+  property var greeting_message: "Hi!"
 
   ListView {
     id: playlistView
+    objectName: "playlistView"
+
     anchors.fill: parent
     model: playlistModel
     delegate: groupDelegate
+    footer: greetingComponent
+  }
+
+  Component {
+    id: greetingComponent
+
+    Text {
+      width: playlistView.width
+      height: playlistView.height
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      font.pixelSize: calc_greeting_font_size(width, height)
+      wrapMode: "Wrap"
+      elide: "ElideMiddle"
+      text: greeting_message
+      color: "#7f7f7f7f"
+      style: Text.Outline;
+      styleColor: "black";
+    }
   }
 
   Component {
@@ -82,16 +133,15 @@ Item
 
       Rectangle {
         id: groupItem
-        color: "#7fFFFFFF"
-        height: 25
+        color: header_bg
+        height: calc_title_height(24.0, playlistView.width)
         width: playlistView.width
         anchors.left: parent.left
         anchors.right: parent.right
 
         Rectangle {
           id: disclosureBtn
-          color: "red"
-          // x: 5
+          color: "black"
           width: groupItem.height - 8
           height: groupItem.height - 8
           anchors.left: parent.left
@@ -110,11 +160,13 @@ Item
           anchors.verticalCenter: parent.verticalCenter
           anchors.right: parent.right
           anchors.left: disclosureBtn.right
-          anchors.leftMargin: 8
+          anchors.leftMargin: groupItem.height / 2
           elide: "ElideMiddle"
-          font.pixelSize: 14
+          font.pixelSize: groupItem.height * 0.55
           text: label
-          color: "white"
+          color: header_fg
+          style: Text.Outline;
+          styleColor: "black";
         }
       }
 
@@ -142,11 +194,6 @@ Item
     }
   }
 
-  function calc_cell_width(w, h) {
-    var n = Math.min(5, Math.floor(w / 160.0))
-    return n < 1.0 ? w : w / n;
-  }
-
   Component {
     id: groupItemsColumnDelegate
 
@@ -161,6 +208,7 @@ Item
 
         // size-to-fit:
         height: (!groupItemsGridView.count ? 0 :
+                 calc_title_height(24.0, playlistView.width) +
                  groupItemsGridView.cellHeight *
                  Math.max(1.0,
                           Math.ceil(groupItemsGridView.count /
@@ -173,28 +221,49 @@ Item
           width: parent.width
           cellWidth: calc_cell_width(playlistView.width,
                                      playlistView.height)
-          cellHeight: this.cellWidth * 9.0 / 16.0
+          cellHeight: Math.floor(this.cellWidth * 9.0 / 16.0)
 
           model: DelegateModel {
             id: modelDelegate
             model: playlistModel
 
-            delegate: Rectangle {
+            delegate: Item {
               height: groupItemsGridView.cellHeight
               width: groupItemsGridView.cellWidth
-              border.color: "black"
-              border.width: 1
-              color: "#7f1f2f7f" // argb
 
-              Text {
-                anchors.verticalCenter: parent.verticalCenter
+              Rectangle {
                 anchors.fill: parent
-                x: 5
-                font.pixelSize: 11
-                wrapMode: "Wrap"
-                elide: "ElideMiddle"
-                text: label
-                color: ((index % 2) ? "green" : "blue")
+                anchors.rightMargin: 1
+                anchors.bottomMargin: 1
+                color: (calc_zebra_index(index,
+                                         groupItemsGridView.cellWidth,
+                                         playlistView.width) ?
+                        zebra_bg[1] : zebra_bg[0]) // argb
+
+                Image {
+                  opacity: 0.2
+                  anchors.fill: parent
+                  fillMode: Image.PreserveAspectFit
+                  source: "qrc:///images/apprenticevideo-256.png"
+                }
+
+                Text {
+                  // anchors.verticalCenter: parent.verticalCenter
+                  verticalAlignment: Text.AlignBottom
+                  anchors.fill: parent
+                  anchors.margins: 5
+                  font.pixelSize: (calc_title_height(24.0, playlistView.width) *
+                                   0.45);
+                  wrapMode: "Wrap"
+                  elide: "ElideMiddle"
+                  text: label
+                  color: (calc_zebra_index(index,
+                                           groupItemsGridView.cellWidth,
+                                           playlistView.width) ?
+                          zebra_fg[1] : zebra_fg[0])
+                  style: Text.Outline;
+                  styleColor: "black";
+                }
               }
             }
           }

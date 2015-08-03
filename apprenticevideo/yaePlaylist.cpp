@@ -455,7 +455,7 @@ namespace mvc
         }
       }
     }
-
+#if 0
     // add a tail group:
     {
       groups_.push_back(PlaylistGroup());
@@ -464,7 +464,7 @@ namespace mvc
       group.name_ = QObject::tr("end of playlist");
       group.offset_ = numItems_;
     }
-
+#endif
     if (applyFilter())
     {
       highlighted_ = closestItem(highlighted_);

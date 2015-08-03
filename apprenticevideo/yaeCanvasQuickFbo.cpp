@@ -226,20 +226,7 @@ namespace yae
   //
   CanvasQuickFbo::CanvasQuickFbo():
     canvas_(boost::shared_ptr<OpenGLContext>(new OpenGLContext))
-  {
-#if 1
-    QString greeting =
-      QObject::tr("drop videos/music here\n\n"
-                  "press spacebar to pause/resume\n\n"
-                  "alt-left/alt-right to navigate playlist\n\n"
-#ifdef __APPLE__
-                  "use apple remote for volume and seeking\n\n"
-#endif
-                  "explore the menus for more options");
-
-    canvas_.setGreeting(greeting);
-#endif
-  }
+  {}
 
   //----------------------------------------------------------------
   // CanvasQuickFbo::createRenderer

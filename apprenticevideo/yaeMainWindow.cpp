@@ -425,11 +425,11 @@ namespace yae
                                                      &playlistModel_);
     canvasWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
     canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
+    canvasWidget_->rootObject()->setProperty("greeting_message", greeting);
     canvasLayout->addWidget(canvasWidget_);
 
     canvas_ = yae::getCanvas(canvasWidget_->rootObject());
     YAE_ASSERT(canvas_);
-    canvas_->setGreeting(greeting);
 
     YAE_ASSERT(readerPrototype);
     reader_ = readerPrototype->clone();
@@ -2820,7 +2820,6 @@ namespace yae
     if (!item)
     {
       canvas_->clear();
-      canvas_->setGreeting(canvas_->greeting());
       actionPlay->setEnabled(false);
       fixupNextPrev();
     }
