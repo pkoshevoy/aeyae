@@ -126,47 +126,24 @@ namespace mvc
   }
 
   //----------------------------------------------------------------
-  // valid_
-  //
-  static std::set<const PlaylistNode *> valid_;
-
-  //----------------------------------------------------------------
   // PlaylistNode::PlaylistNode
   //
   PlaylistNode::PlaylistNode():
     row_(~0)
-  {
-    valid_.insert(this);
-  }
+  {}
 
   //----------------------------------------------------------------
   // PlaylistNode::PlaylistNode
   //
   PlaylistNode::PlaylistNode(const PlaylistNode & other):
     row_(other.row_)
-  {
-    valid_.insert(this);
-  }
+  {}
 
   //----------------------------------------------------------------
   // PlaylistNode::~PlaylistNode
   //
   PlaylistNode::~PlaylistNode()
-  {
-    std::set<const PlaylistNode *>::iterator found = valid_.find(this);
-    YAE_ASSERT(found != valid_.end());
-    valid_.erase(found);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistNode::isValid
-  //
-  bool
-  PlaylistNode::isValid(const PlaylistNode * node)
-  {
-    std::set<const PlaylistNode *>::iterator found = valid_.find(node);
-    return found != valid_.end();
-  }
+  {}
 
 
   //----------------------------------------------------------------
@@ -178,7 +155,7 @@ namespace mvc
     failed_(false)
   {}
 
-  
+
   //----------------------------------------------------------------
   // PlaylistGroup::PlaylistGroup
   //

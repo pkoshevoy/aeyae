@@ -37,7 +37,9 @@ namespace mvc
       kRoleType = Qt::UserRole + 1,
       kRolePath,
       kRoleLabel,
-      kRoleImage,
+      kRoleBadge,
+      kRoleGroupHash,
+      kRoleItemHash,
       kRoleCollapsed,
       kRoleExcluded,
       kRoleSelected,
@@ -70,16 +72,8 @@ namespace mvc
     QVariant data(const QModelIndex & index, int role) const;
 
     // lookup a node associated with a given model index:
-    PlaylistNode * getNode(const QModelIndex & index) const;
-
-    template <typename TNode>
-    inline TNode *
-    getNode(const QModelIndex & index) const
-    {
-      PlaylistNode * found = getNode(index);
-      TNode * node = dynamic_cast<TNode *>(found);
-      return node;
-    }
+    PlaylistNode * getNode(const QModelIndex & index,
+                           const PlaylistNode *& parentNode) const;
 
     void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);

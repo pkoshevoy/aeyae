@@ -39,7 +39,10 @@ namespace mvc
       return row < n ? createIndex(row, column, &playlist_) : QModelIndex();
     }
 
-    PlaylistGroup * group = getNode<PlaylistGroup>(parent);
+    const PlaylistNode * parentNode = NULL;
+    PlaylistNode * node = getNode(parent, parentNode);
+    PlaylistGroup * group = dynamic_cast<PlaylistGroup *>(node);
+
     if (group)
     {
       const std::size_t n = group->items_.size();
@@ -64,8 +67,6 @@ namespace mvc
       return QModelIndex();
     }
 
-    YAE_ASSERT(PlaylistNode::isValid(parent));
-
     const PlaylistGroup * group =
       dynamic_cast<PlaylistGroup *>(parent);
 
@@ -88,7 +89,9 @@ namespace mvc
     roles[kRoleType] = "type";
     roles[kRolePath] = "path";
     roles[kRoleLabel] = "label";
-    roles[kRoleImage] = "image";
+    roles[kRoleBadge] = "badge";
+    roles[kRoleGroupHash] = "groupHash";
+    roles[kRoleItemHash] = "itemHash";
     roles[kRoleCollapsed] = "collapsed";
     roles[kRoleExcluded] = "excluded";
     roles[kRoleSelected] = "selected";
@@ -105,7 +108,9 @@ namespace mvc
   int
   PlaylistModel::rowCount(const QModelIndex & parent) const
   {
-    const PlaylistNode * node = getNode(parent);
+    const PlaylistNode * parentNode = NULL;
+    const PlaylistNode * node = getNode(parent, parentNode);
+
     if (&playlist_ == node)
     {
       return playlist_.groups_.size();
@@ -137,7 +142,8 @@ namespace mvc
   bool
   PlaylistModel::hasChildren(const QModelIndex & parent) const
   {
-    const PlaylistNode * node = getNode(parent);
+    const PlaylistNode * parentNode = NULL;
+    const PlaylistNode * node = getNode(parent, parentNode);
 
     if (&playlist_ == node)
     {
@@ -161,7 +167,8 @@ namespace mvc
   QVariant
   PlaylistModel::data(const QModelIndex & index, int role) const
   {
-    const PlaylistNode * node = getNode(index);
+    const PlaylistNode * parentNode = NULL;
+    const PlaylistNode * node = getNode(index, parentNode);
 
     const PlaylistGroup * group =
       dynamic_cast<const PlaylistGroup *>(node);
@@ -171,6 +178,11 @@ namespace mvc
       if (role == kRoleLabel || role == Qt::DisplayRole)
       {
         return QVariant(group->name_);
+      }
+
+      if (role == kRoleGroupHash)
+      {
+        return QVariant(QString::fromUtf8(group->bookmarkHash_.c_str()));
       }
 
       if (role == kRoleCollapsed)
@@ -183,6 +195,11 @@ namespace mvc
         return QVariant(group->excluded_);
       }
 
+      if (role == kRoleItemCount)
+      {
+        return QVariant((qulonglong)(group->items_.size()));
+      }
+
       return QVariant();
     }
 
@@ -191,14 +208,32 @@ namespace mvc
 
     if (item)
     {
+      const PlaylistGroup * parentGroup =
+        dynamic_cast<const PlaylistGroup *>(parentNode);
+
       if (role == Qt::DisplayRole || role == kRoleLabel)
       {
         return QVariant(item->name_);
       }
 
-      if (role == kRoleFailed)
+      if (role == kRolePath)
       {
-        return QVariant(item->failed_);
+        return QVariant(item->path_);
+      }
+
+      if (role == kRoleBadge)
+      {
+        return QVariant(item->ext_);
+      }
+
+      if (role == kRoleGroupHash)
+      {
+        return QVariant(QString::fromUtf8(parentGroup->bookmarkHash_.c_str()));
+      }
+
+      if (role == kRoleItemHash)
+      {
+        return QVariant(QString::fromUtf8(item->bookmarkHash_.c_str()));
       }
 
       if (role == kRoleExcluded)
@@ -211,6 +246,16 @@ namespace mvc
         return QVariant(item->selected_);
       }
 
+      if (role == kRolePlaying)
+      {
+        return QVariant(playlist_.currentItem() == item->row_);
+      }
+
+      if (role == kRoleFailed)
+      {
+        return QVariant(item->failed_);
+      }
+
       return QVariant();
     }
 
@@ -221,20 +266,18 @@ namespace mvc
   // PlaylistModel::getNode
   //
   PlaylistNode *
-  PlaylistModel::getNode(const QModelIndex & index) const
+  PlaylistModel::getNode(const QModelIndex & index,
+                         const PlaylistNode *& parentNode) const
   {
     if (!index.isValid())
     {
+      parentNode = NULL;
       return &playlist_;
     }
 
     PlaylistNode * parent =
       static_cast<PlaylistNode *>(index.internalPointer());
-
-    if (parent)
-    {
-      YAE_ASSERT(PlaylistNode::isValid(parent));
-    }
+    parentNode = parent;
 
     if (&playlist_ == parent)
     {

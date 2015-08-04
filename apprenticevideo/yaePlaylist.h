@@ -57,10 +57,7 @@ namespace mvc
   {
     PlaylistNode();
     PlaylistNode(const PlaylistNode & other);
-
     virtual ~PlaylistNode();
-
-    static bool isValid(const PlaylistNode * node);
 
     std::size_t row_;
   };
