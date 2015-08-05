@@ -40,6 +40,7 @@ namespace mvc
       kRoleBadge,
       kRoleGroupHash,
       kRoleItemHash,
+      kRoleThumbnail,
       kRoleCollapsed,
       kRoleExcluded,
       kRoleSelected,

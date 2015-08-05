@@ -17,6 +17,7 @@
 
 // yae includes:
 #include "yae/utils/yae_utils.h"
+#include "yae/video/yae_reader.h"
 
 // Qt includes:
 #include <QString>
@@ -203,6 +204,20 @@ namespace yae
   //
   YAE_API bool
   addToPlaylist(std::list<QString> & playlist, const QString & path);
+
+  //----------------------------------------------------------------
+  // openFile
+  //
+  YAE_API IReaderPtr
+  openFile(const yae::IReaderPtr & readerPrototype,
+           const QString & fn);
+
+  //----------------------------------------------------------------
+  // testEachFile
+  //
+  YAE_API bool
+  testEachFile(const yae::IReaderPtr & readerPrototype,
+               const std::list<QString> & playlist);
 
 }
 

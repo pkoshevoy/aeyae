@@ -116,6 +116,8 @@ set(project_sources
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
+  yaeThumbnailProvider.h
+  yaeThumbnailProvider.cpp
   yaeTimelineControls.h
   yaeTimelineControls.cpp
   yaePlaylist.h

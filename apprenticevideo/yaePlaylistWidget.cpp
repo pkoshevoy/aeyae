@@ -68,8 +68,7 @@ namespace yae
       crypto.addData(key.ext_.toUtf8());
     }
 
-    std::string groupHash("bookmark-");
-    groupHash += crypto.result().toHex().constData();
+    std::string groupHash(crypto.result().toHex().constData());
     return groupHash;
   }
 

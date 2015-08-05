@@ -23,6 +23,18 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // getBookmarkHash
+  //
+  static QString
+  getBookmarkHash(const std::string & groupHash)
+  {
+    std::string bookmark("bookmark-");
+    bookmark += groupHash;
+    return QString::fromUtf8(bookmark.c_str());
+  }
+
+
+  //----------------------------------------------------------------
   // TBookmark::TBookmark
   //
   TBookmark::TBookmark():
@@ -108,7 +120,7 @@ namespace yae
     xml.writeEndElement();
     xml.writeEndDocument();
 
-    bool ok = saveSetting(QString::fromUtf8(groupHash.c_str()), value);
+    bool ok = saveSetting(getBookmarkHash(groupHash), value);
     return ok;
   }
 
@@ -152,7 +164,7 @@ namespace yae
   loadBookmark(const std::string & groupHash, TBookmark & bookmark)
   {
     QString value;
-    if (!loadSetting(QString::fromUtf8(groupHash.c_str()), value))
+    if (!loadSetting(getBookmarkHash(groupHash), value))
     {
       return false;
     }
@@ -224,7 +236,7 @@ namespace yae
   bool
   removeBookmark(const std::string & groupHash)
   {
-    bool ok = removeSetting(QString::fromUtf8(groupHash.c_str()));
+    bool ok = removeSetting(getBookmarkHash(groupHash));
     return ok;
   }
 

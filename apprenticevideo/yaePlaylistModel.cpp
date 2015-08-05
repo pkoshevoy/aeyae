@@ -92,6 +92,7 @@ namespace mvc
     roles[kRoleBadge] = "badge";
     roles[kRoleGroupHash] = "groupHash";
     roles[kRoleItemHash] = "itemHash";
+    roles[kRoleThumbnail] = "thumbnail";
     roles[kRoleCollapsed] = "collapsed";
     roles[kRoleExcluded] = "excluded";
     roles[kRoleSelected] = "selected";
@@ -182,7 +183,7 @@ namespace mvc
 
       if (role == kRoleGroupHash)
       {
-        return QVariant(QString::fromUtf8(group->bookmarkHash_.c_str()));
+        return QVariant(QString::fromUtf8(group->hash_.c_str()));
       }
 
       if (role == kRoleCollapsed)
@@ -228,12 +229,22 @@ namespace mvc
 
       if (role == kRoleGroupHash)
       {
-        return QVariant(QString::fromUtf8(parentGroup->bookmarkHash_.c_str()));
+        return QVariant(QString::fromUtf8(parentGroup->hash_.c_str()));
       }
 
       if (role == kRoleItemHash)
       {
-        return QVariant(QString::fromUtf8(item->bookmarkHash_.c_str()));
+        return QVariant(QString::fromUtf8(item->hash_.c_str()));
+      }
+
+      if (role == kRoleThumbnail)
+      {
+        std::ostringstream oss;
+        oss << "image://thumbnails/"
+            << parentGroup->hash_
+            << '/'
+            << item->hash_;
+        return QVariant(QString::fromUtf8(oss.str().c_str()));
       }
 
       if (role == kRoleExcluded)
@@ -323,7 +334,7 @@ namespace mvc
       const PlaylistGroup & a = *ia;
       const PlaylistGroup & b = *ib;
 
-      if (a.bookmarkHash_ != b.bookmarkHash_)
+      if (a.hash_ != b.hash_)
       {
         // new list (b) contains a group that was not in original (a),
         // try to find where it ends:

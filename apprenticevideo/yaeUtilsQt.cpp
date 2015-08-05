@@ -1766,4 +1766,73 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // kNormalizationForm
+  //
+  static const QString::NormalizationForm kNormalizationForm[] =
+  {
+    QString::NormalizationForm_D,
+    QString::NormalizationForm_C,
+    QString::NormalizationForm_KD,
+    QString::NormalizationForm_KC
+  };
+
+  //----------------------------------------------------------------
+  // kNumNormalizationForms
+  //
+  static const std::size_t kNumNormalizationForms =
+    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
+
+  //----------------------------------------------------------------
+  // openFile
+  //
+  IReaderPtr
+  openFile(const yae::IReaderPtr & readerPrototype, const QString & fn)
+  {
+    IReaderPtr reader(readerPrototype->clone());
+
+    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
+    {
+      // find UNICODE NORMALIZATION FORM that works
+      // http://www.unicode.org/reports/tr15/
+      QString tmp = fn.normalized(kNormalizationForm[i]);
+      std::string filename = tmp.toUtf8().constData();
+
+      if (reader->open(filename.c_str()))
+      {
+        return reader;
+      }
+    }
+
+    reader.reset();
+    return reader;
+  }
+
+  //----------------------------------------------------------------
+  // testEachFile
+  //
+  bool
+  testEachFile(const yae::IReaderPtr & readerPrototype,
+               const std::list<QString> & playlist)
+  {
+    std::size_t numOpened = 0;
+    std::size_t numTotal = 0;
+
+    for (std::list<QString>::const_iterator j = playlist.begin();
+         j != playlist.end(); ++j)
+    {
+      const QString & fn = *j;
+      numTotal++;
+
+      IReaderPtr reader = yae::openFile(readerPrototype, fn);
+      if (reader)
+      {
+        numOpened++;
+      }
+    }
+
+    bool ok = (numOpened == numTotal);
+    return ok;
+  }
+
 }

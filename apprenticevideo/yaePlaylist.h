@@ -91,7 +91,7 @@ namespace mvc
     bool failed_;
 
     // a hash string identifying this item:
-    std::string bookmarkHash_;
+    std::string hash_;
   };
 
   //----------------------------------------------------------------
@@ -121,7 +121,7 @@ namespace mvc
     bool excluded_;
 
     // a hash string identifying this group:
-    std::string bookmarkHash_;
+    std::string hash_;
   };
 
   //----------------------------------------------------------------

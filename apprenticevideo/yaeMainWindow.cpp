@@ -45,11 +45,9 @@
 #include "yaeAudioRendererPortaudio.h"
 #include "yaeCanvasQuickFbo.h"
 #include "yaeMainWindow.h"
+#include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 #include "yaeVersion.h"
-
-// forward declarations:
-extern yae::IReaderPtr readerPrototype;
 
 
 namespace yae
@@ -347,7 +345,7 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
-  MainWindow::MainWindow():
+  MainWindow::MainWindow(const IReaderPtr & readerPrototype):
     QMainWindow(NULL, 0),
     audioDeviceGroup_(NULL),
     audioDeviceMapper_(NULL),
@@ -362,7 +360,7 @@ namespace yae
     bookmarksGroup_(NULL),
     bookmarksMapper_(NULL),
     bookmarksMenuSeparator_(NULL),
-    reader_(NULL),
+    readerPrototype_(readerPrototype),
     readerId_(0),
     canvasWidget_(NULL),
     canvas_(NULL),
@@ -419,20 +417,40 @@ namespace yae
                                          0, // minor
                                          "CanvasQuickFbo");
 
+    // setup the canvas widget (QML quick widget):
     canvasWidget_ = new TQuickWidget(this);
-    canvasWidget_->setAcceptDrops(true);
-    canvasWidget_->rootContext()->setContextProperty("playlistModel",
-                                                     &playlistModel_);
-    canvasWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
-    canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
-    canvasWidget_->rootObject()->setProperty("greeting_message", greeting);
-    canvasLayout->addWidget(canvasWidget_);
+    {
+      canvasWidget_->setAcceptDrops(true);
+      canvasWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    canvas_ = yae::getCanvas(canvasWidget_->rootObject());
-    YAE_ASSERT(canvas_);
+      // add image://thumbnails/... provider:
+      QQmlEngine * engine = canvasWidget_->engine();
+      ThumbnailProvider * imageProvider =
+        new ThumbnailProvider(readerPrototype_, playlistModel_.playlist_);
+      engine->addImageProvider(QString::fromUtf8("thumbnails"),
+                               imageProvider);
 
-    YAE_ASSERT(readerPrototype);
-    reader_ = readerPrototype->clone();
+      // set playlist model:
+      QQmlContext * context = canvasWidget_->rootContext();
+      context->setContextProperty("playlistModel", &playlistModel_);
+
+      // start the widget:
+      canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
+
+      // set playlist-footer greeting message:
+      QQuickItem * root = canvasWidget_->rootObject();
+      root->setProperty("greeting_message", greeting);
+
+      // get a shortcut to the Canvas (owned by the QML canvas widget):
+      canvas_ = yae::getCanvas(root);
+      YAE_ASSERT(canvas_);
+
+      // insert QML canvas widget in main window layout:
+      canvasLayout->addWidget(canvasWidget_);
+    }
+
+    YAE_ASSERT(readerPrototype_);
+    reader_.reset(readerPrototype_->clone());
 
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
@@ -1268,75 +1286,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // kNormalizationForm
-  //
-  static const QString::NormalizationForm kNormalizationForm[] =
-  {
-    QString::NormalizationForm_D,
-    QString::NormalizationForm_C,
-    QString::NormalizationForm_KD,
-    QString::NormalizationForm_KC
-  };
-
-  //----------------------------------------------------------------
-  // kNumNormalizationForms
-  //
-  static const std::size_t kNumNormalizationForms =
-    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
-
-  //----------------------------------------------------------------
-  // MainWindow::openFile
-  //
-  IReader *
-  MainWindow::openFile(const QString & fn)
-  {
-    IReader * reader = readerPrototype->clone();
-
-    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
-    {
-      // find UNICODE NORMALIZATION FORM that works
-      // http://www.unicode.org/reports/tr15/
-      QString tmp = fn.normalized(kNormalizationForm[i]);
-      std::string filename = tmp.toUtf8().constData();
-
-      if (reader->open(filename.c_str()))
-      {
-        return reader;
-      }
-    }
-
-    reader->destroy();
-    return NULL;
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::testEachFile
-  //
-  bool
-  MainWindow::testEachFile(const std::list<QString> & playlist)
-  {
-    std::size_t numOpened = 0;
-    std::size_t numTotal = 0;
-
-    for (std::list<QString>::const_iterator j = playlist.begin();
-         j != playlist.end(); ++j)
-    {
-      const QString & fn = *j;
-      numTotal++;
-
-      IReader * reader = MainWindow::openFile(fn);
-      if (reader)
-      {
-        numOpened++;
-        reader->destroy();
-      }
-    }
-
-    bool ok = (numOpened == numTotal);
-    return ok;
-  }
-
-  //----------------------------------------------------------------
   // hasFileExt
   //
   inline static bool
@@ -1430,7 +1379,9 @@ namespace yae
 
     actionPlay->setEnabled(false);
 
-    IReader * reader = canaryTest(fn) ? MainWindow::openFile(fn) : NULL;
+    IReaderPtr reader =
+      canaryTest(fn) ? yae::openFile(readerPrototype_, fn) : IReaderPtr();
+
     if (!reader)
     {
 #if 0
@@ -1649,7 +1600,6 @@ namespace yae
     reader->threadStart();
 
     // replace the previous reader:
-    reader_->destroy();
     reader_ = reader;
 
     // allow renderers to read from output frame queues:
@@ -3108,7 +3058,7 @@ namespace yae
   void
   MainWindow::playbackStop()
   {
-    IReader * reader = readerPrototype->clone();
+    IReaderPtr reader(readerPrototype_->clone());
     timelineControls_->observe(SharedClock());
     timelineControls_->resetFor(reader);
 
@@ -3116,7 +3066,6 @@ namespace yae
     videoRenderer_->close();
     audioRenderer_->close();
 
-    reader_->destroy();
     reader_ = reader;
 
     timelineControls_->update();
@@ -3666,7 +3615,7 @@ namespace yae
     bool hasAudio = audioTrackIndex < numAudioTracks;
 
     TIgnoreClockStop ignoreClockStop(timelineControls_);
-    const IReader * reader = reader_;
+    IReaderPtr reader = reader_;
 
     QTime startTime = QTime::currentTime();
     bool done = false;

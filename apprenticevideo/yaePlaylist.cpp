@@ -36,10 +36,10 @@ namespace mvc
 {
 
   //----------------------------------------------------------------
-  // getBookmarkHash
+  // getKeyPathHash
   //
   static std::string
-  getBookmarkHash(const std::list<PlaylistKey> & keyPath)
+  getKeyPathHash(const std::list<PlaylistKey> & keyPath)
   {
     QCryptographicHash crypto(QCryptographicHash::Sha1);
     for (std::list<PlaylistKey>::const_iterator i = keyPath.begin();
@@ -50,16 +50,15 @@ namespace mvc
       crypto.addData(key.ext_.toUtf8());
     }
 
-    std::string groupHash("bookmark-");
-    groupHash += crypto.result().toHex().constData();
+    std::string groupHash(crypto.result().toHex().constData());
     return groupHash;
   }
 
   //----------------------------------------------------------------
-  // getBookmarkHash
+  // getKeyHash
   //
   static std::string
-  getBookmarkHash(const PlaylistKey & key)
+  getKeyHash(const PlaylistKey & key)
   {
     QCryptographicHash crypto(QCryptographicHash::Sha1);
     crypto.addData(key.key_.toUtf8());
@@ -348,13 +347,13 @@ namespace mvc
 
         returnBookmarkHashList->push_back(BookmarkHashInfo());
         BookmarkHashInfo & hashInfo = returnBookmarkHashList->back();
-        hashInfo.groupHash_ = getBookmarkHash(keyPath);
+        hashInfo.groupHash_ = getKeyPathHash(keyPath);
 
         for (TSiblings::const_iterator j = siblings.begin();
              j != siblings.end(); ++j)
         {
           const PlaylistKey & key = j->first;
-          hashInfo.itemHash_.push_back(getBookmarkHash(key));
+          hashInfo.itemHash_.push_back(getKeyHash(key));
         }
       }
     }
@@ -404,7 +403,7 @@ namespace mvc
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = yae::mvc::toWords(fringeGroup.abbreviatedPath_);
       group.offset_ = numItems_;
-      group.bookmarkHash_ = getBookmarkHash(group.keyPath_);
+      group.hash_ = getKeyPathHash(group.keyPath_);
 
       // shortcuts:
       const TSiblings & siblings = fringeGroup.siblings_;
@@ -424,7 +423,7 @@ namespace mvc
 
         playlistItem.name_ = yae::toWords(key.key_);
         playlistItem.ext_ = key.ext_;
-        playlistItem.bookmarkHash_ = getBookmarkHash(playlistItem.key_);
+        playlistItem.hash_ = getKeyHash(playlistItem.key_);
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
@@ -432,16 +431,7 @@ namespace mvc
         }
       }
     }
-#if 0
-    // add a tail group:
-    {
-      groups_.push_back(PlaylistGroup());
-      PlaylistGroup & group = groups_.back();
-      group.row_ = groups_.size() - 1;
-      group.name_ = QObject::tr("end of playlist");
-      group.offset_ = numItems_;
-    }
-#endif
+
     if (applyFilter())
     {
       highlighted_ = closestItem(highlighted_);
@@ -1143,9 +1133,7 @@ namespace mvc
       return lookupLastGroup(groups_);
     }
 
-    // ignore the last group, it's an empty playlist tail banner:
-    const std::size_t numGroups = groups_.size() - 1;
-
+    const std::size_t numGroups = groups_.size();
     std::size_t i0 = 0;
     std::size_t i1 = numGroups;
 
@@ -1222,12 +1210,11 @@ namespace mvc
       return NULL;
     }
 
-    // ignore the last group, it's an empty playlist tail banner:
-    const std::size_t numGroups = groups_.size() - 1;
+    const std::size_t numGroups = groups_.size();
     for (std::size_t i = 0; i < numGroups; i++)
     {
       PlaylistGroup & group = groups_[i];
-      if (groupHash == group.bookmarkHash_)
+      if (groupHash == group.hash_)
       {
         return &group;
       }
@@ -1260,7 +1247,7 @@ namespace mvc
     for (std::size_t i = 0; i < groupSize; i++)
     {
       PlaylistItem & item = group->items_[i];
-      if (itemHash == item.bookmarkHash_)
+      if (itemHash == item.hash_)
       {
         if (*returnItemIndex)
         {

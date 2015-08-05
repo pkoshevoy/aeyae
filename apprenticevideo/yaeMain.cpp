@@ -95,11 +95,6 @@ namespace yae
 yae::TPluginRegistry plugins;
 
 //----------------------------------------------------------------
-// readerPrototype
-//
-yae::IReaderPtr readerPrototype;
-
-//----------------------------------------------------------------
 // mainMayThrowException
 //
 int
@@ -186,6 +181,11 @@ mainMayThrowException(int argc, char ** argv)
     }
   }
 
+  //----------------------------------------------------------------
+  // readerPrototype
+  //
+  yae::IReaderPtr readerPrototype;
+
   // load plugins:
   std::string exeFolderPath;
   if (yae::getCurrentExecutableFolder(exeFolderPath) &&
@@ -209,7 +209,7 @@ mainMayThrowException(int argc, char ** argv)
 
   if (canary)
   {
-    yae::MainWindow::testEachFile(playlist);
+    yae::testEachFile(readerPrototype, playlist);
 
     // if it didn't crash, then it's all good:
     return 0;
@@ -221,7 +221,7 @@ mainMayThrowException(int argc, char ** argv)
   TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 #endif
 
-  yae::mainWindow = new yae::MainWindow();
+  yae::mainWindow = new yae::MainWindow(readerPrototype);
   yae::mainWindow->show();
 
   // initialize the canvas:

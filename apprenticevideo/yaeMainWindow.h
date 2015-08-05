@@ -100,14 +100,11 @@ namespace yae
     Q_OBJECT;
 
   public:
-    MainWindow();
+    MainWindow(const IReaderPtr & readerPrototype);
     ~MainWindow();
 
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
-
-    static IReader * openFile(const QString & fn);
-    static bool testEachFile(const std::list<QString> & playlist);
 
   protected:
     // open a movie file for playback:
@@ -323,7 +320,7 @@ namespace yae
     IReaderPtr readerPrototype_;
 
     // file reader:
-    IReader * reader_;
+    IReaderPtr reader_;
     unsigned int readerId_;
 
     // frame canvas:

@@ -244,7 +244,7 @@ Item
                   opacity: 0.2
                   anchors.fill: parent
                   fillMode: Image.PreserveAspectFit
-                  source: "qrc:///images/apprenticevideo-256.png"
+                  source: thumbnail // "qrc:///images/apprenticevideo-256.png"
                 }
 
                 Text {
