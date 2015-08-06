@@ -105,7 +105,7 @@ namespace yae
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
       {
-        vtts.pixelFormat_ = kPixelFormatBGR24;
+        vtts.pixelFormat_ = kPixelFormatRGB24;
         qimageFormat = QImage::Format_RGB888;
       }
     }
@@ -177,9 +177,12 @@ namespace yae
       image = QImage(data,
                      frame->traits_.visibleWidth_,
                      frame->traits_.visibleHeight_,
+                     rowSize,
                      qimageFormat,
                      &TCleanup::cleanup,
                      new TCleanup(frame));
+
+      image = image.scaledToHeight(90, Qt::SmoothTransformation);
 
       *size = image.size();
     }

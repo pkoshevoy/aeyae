@@ -92,10 +92,10 @@ Item
     return (row % 2 + col) % 2;
   }
 
-  property var header_bg: "#7fcfcfcf"
+  property var header_bg: "#7f1f1f1f"
   property var header_fg: "#ffffffff"
-  property var zebra_bg: [ "#7fafafaf", "#7f9f9f9f"  ]
-  property var zebra_fg: [ "#ffffffff", "#ffefefef"  ]
+  property var zebra_bg: [ "#7f000000", "#7f1f1f1f"  ]
+  property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
   property var greeting_message: "Hi!"
 
   ListView {
@@ -111,18 +111,23 @@ Item
   Component {
     id: greetingComponent
 
-    Text {
+    Rectangle {
       width: playlistView.width
       height: playlistView.height
-      horizontalAlignment: Text.AlignHCenter
-      verticalAlignment: Text.AlignVCenter
-      font.pixelSize: calc_greeting_font_size(width, height)
-      wrapMode: "Wrap"
-      elide: "ElideMiddle"
-      text: greeting_message
-      color: "#7f7f7f7f"
-      style: Text.Outline;
-      styleColor: "black";
+      color: "#df000000"
+
+      Text {
+        anchors.fill: parent
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        font.pixelSize: calc_greeting_font_size(width, height)
+        wrapMode: "Wrap"
+        elide: "ElideMiddle"
+        text: greeting_message
+        color: "#7f7f7f7f"
+        style: Text.Outline;
+        styleColor: "black";
+      }
     }
   }
 
@@ -241,8 +246,9 @@ Item
                         zebra_bg[1] : zebra_bg[0]) // argb
 
                 Image {
-                  opacity: 0.2
+                  opacity: 1.0
                   anchors.fill: parent
+                  anchors.margins: 8
                   fillMode: Image.PreserveAspectFit
                   source: thumbnail // "qrc:///images/apprenticevideo-256.png"
                 }
