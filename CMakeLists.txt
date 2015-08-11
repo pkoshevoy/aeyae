@@ -476,6 +476,12 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_audio_tempo_filter.h
   yae/ffmpeg/yae_pixel_format_ffmpeg.cpp
   yae/ffmpeg/yae_pixel_format_ffmpeg.h
+  yae/ffmpeg/yae_ffmpeg_audio_filter_graph.cpp
+  yae/ffmpeg/yae_ffmpeg_audio_filter_graph.h
+  yae/ffmpeg/yae_ffmpeg_utils.cpp
+  yae/ffmpeg/yae_ffmpeg_utils.h
+  yae/ffmpeg/yae_ffmpeg_video_filter_graph.cpp
+  yae/ffmpeg/yae_ffmpeg_video_filter_graph.h
 
   yae/thread/yae_queue.h
   yae/thread/yae_threading.h

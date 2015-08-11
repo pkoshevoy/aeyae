@@ -55,6 +55,9 @@ namespace yae
                                   QSize * size,
                                   const QSize & requestedSize)
   {
+    // FIXME: this could be a parameter of the thumbnail provider:
+    static const QSize envelope(160, 90);
+
     // parse the id (group-hash/item-hash)
     std::string groupHashItemHash(id.toUtf8().constData());
     std::size_t t = groupHashItemHash.find_first_of('/');
@@ -91,7 +94,8 @@ namespace yae
     const pixelFormat::Traits * ptts =
       pixelFormat::getTraits(vtts.pixelFormat_);
 
-    vtts.pixelFormat_ = kPixelFormatGRAY8;
+    VideoTraits override = vtts;
+    override.pixelFormat_ = kPixelFormatGRAY8;
     QImage::Format qimageFormat = QImage::Format_Grayscale8;
 
     if (ptts)
@@ -99,21 +103,58 @@ namespace yae
       if ((ptts->flags_ & pixelFormat::kAlpha) &&
           (ptts->flags_ & pixelFormat::kColor))
       {
-        vtts.pixelFormat_ = kPixelFormatBGRA;
+        override.pixelFormat_ = kPixelFormatBGRA;
         qimageFormat = QImage::Format_ARGB32;
       }
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
       {
-        vtts.pixelFormat_ = kPixelFormatRGB24;
+        override.pixelFormat_ = kPixelFormatRGB24;
         qimageFormat = QImage::Format_RGB888;
       }
     }
 
-    reader->setVideoTraitsOverride(vtts);
+    const double envelope_dar =
+      double(envelope.width()) /
+      double(envelope.height());
 
-    if (!reader->getVideoTraitsOverride(vtts) ||
-        !(ptts = pixelFormat::getTraits(vtts.pixelFormat_)))
+    double src_w = double(vtts.visibleWidth_) * vtts.pixelAspectRatio_;
+    double src_h = double(vtts.visibleHeight_);
+
+    bool src_rotated = (override.cameraRotation_ % 180 != 0);
+    if (src_rotated)
+    {
+      std::swap(src_w, src_h);
+    }
+
+    *size = requestedSize.isValid() ? requestedSize : envelope;
+    const double dar = src_w / src_h;
+
+    if (dar < envelope_dar)
+    {
+      override.encodedHeight_ = size->height();
+      override.encodedWidth_ = (int)(double(override.encodedHeight_) * dar);
+    }
+    else
+    {
+      override.encodedWidth_ = size->width();
+      override.encodedHeight_ = (int)(double(override.encodedWidth_) / dar);
+    }
+
+    // crop, deinterlace, flip, rotate, scale, color-convert:
+    override.offsetTop_ = 0;
+    override.offsetLeft_ = 0;
+    override.visibleWidth_ = override.encodedWidth_;
+    override.visibleHeight_ = override.encodedHeight_;
+    override.pixelAspectRatio_ = 1.0;
+    override.cameraRotation_ = 0;
+    override.isUpsideDown_ = false;
+
+    reader->setVideoTraitsOverride(override);
+    reader->setDeinterlacing(true);
+
+    if (!reader->getVideoTraitsOverride(override) ||
+        !(ptts = pixelFormat::getTraits(override.pixelFormat_)))
     {
       return QImage();
     }
@@ -121,25 +162,25 @@ namespace yae
 #if 1
     std::cerr
       << "yae: thumbnail format: " << ptts->name_
-      << ", par: " << vtts.pixelAspectRatio_
-      << ", " << vtts.visibleWidth_
-      << " x " << vtts.visibleHeight_;
+      << ", par: " << override.pixelAspectRatio_
+      << ", " << override.visibleWidth_
+      << " x " << override.visibleHeight_;
 
-    if (vtts.pixelAspectRatio_ != 0.0)
+    if (override.pixelAspectRatio_ != 0.0)
     {
       std::cerr
         << ", dar: "
-        << (double(vtts.visibleWidth_) *
-            vtts.pixelAspectRatio_ /
-            double(vtts.visibleHeight_))
-        << ", " << int(vtts.visibleWidth_ *
-                       vtts.pixelAspectRatio_ +
+        << (double(override.visibleWidth_) *
+            override.pixelAspectRatio_ /
+            double(override.visibleHeight_))
+        << ", " << int(override.visibleWidth_ *
+                       override.pixelAspectRatio_ +
                        0.5)
-        << " x " << vtts.visibleHeight_;
+        << " x " << override.visibleHeight_;
     }
 
     std::cerr
-      << ", fps: " << vtts.frameRate_
+      << ", fps: " << override.frameRate_
       << std::endl;
 #endif
 
