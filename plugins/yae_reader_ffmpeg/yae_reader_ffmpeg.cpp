@@ -55,6 +55,7 @@ extern "C"
 }
 
 // yae includes:
+#include "yae/api/yae_settings.h"
 #include "yae/ffmpeg/yae_audio_fragment.h"
 #include "yae/ffmpeg/yae_audio_tempo_filter.h"
 #include "yae/ffmpeg/yae_ffmpeg_audio_filter_graph.h"
@@ -1687,23 +1688,134 @@ namespace yae
       enum AVPixelFormat ffmpegPixelFormat =
         yae_to_ffmpeg(output_.pixelFormat_);
 
-      const char * filterChain = NULL;
+      // configure the filter chain:
+      std::ostringstream filters;
+
+      bool overrideNeedsScale =
+        (native_.encodedWidth_ != override_.encodedWidth_ ||
+         native_.encodedHeight_ != override_.encodedHeight_);
+
+      bool nativeNeedsCrop =
+        (native_.offsetTop_ != 0 ||
+         native_.offsetLeft_ != 0 ||
+         native_.visibleWidth_ != native_.encodedWidth_ ||
+         native_.visibleHeight_ != native_.encodedHeight_);
+
+      bool overrideNeedsCrop =
+        (override_.offsetTop_ != 0 ||
+         override_.offsetLeft_ != 0 ||
+         override_.visibleWidth_ != override_.encodedWidth_ ||
+         override_.visibleHeight_ != override_.encodedHeight_);
+
+      YAE_ASSERT(!(overrideNeedsCrop && overrideNeedsScale));
+
+      bool shouldCrop = nativeNeedsCrop && overrideNeedsScale;
+
+      if (shouldCrop)
+      {
+        filters
+          << "crop=x=" << native_.offsetLeft_
+          << ":y=" << native_.offsetTop_
+          << ":out_w=" << native_.visibleWidth_
+          << ":out_h=" << native_.visibleHeight_;
+      }
+
       if (deinterlace_)
       {
+        if (!filters.str().empty())
+        {
+          filters << ',';
+        }
+
         // when non-reference frames are discarded deinterlacing filter
         // loses ability to detect interlaced frames, therefore
         // it is better to simply drop a field:
-        filterChain = skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:0:1";
+        filters << (skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:0:1");
       }
 
+      bool transposeAngle =
+        (override_.cameraRotation_ - native_.cameraRotation_) % 180;
+
+      bool flipAngle =
+        transposeAngle ? 0 :
+        (override_.cameraRotation_ - native_.cameraRotation_) % 360;
+
+      bool toggleUpsideDown =
+        (native_.isUpsideDown_ != override_.isUpsideDown_);
+
+      if (toggleUpsideDown || flipAngle)
+      {
+        if (!filters.str().empty())
+        {
+          filters << ',';
+        }
+
+        if (toggleUpsideDown && flipAngle)
+        {
+          // cancel-out two vertical flips:
+          filters << "hflip";
+        }
+        else if (flipAngle)
+        {
+          filters << "hflip,vflip";
+        }
+        else
+        {
+          filters << "vflip";
+        }
+      }
+
+      if (overrideNeedsScale)
+      {
+        if (!filters.str().empty())
+        {
+          filters << ',';
+        }
+
+        if (transposeAngle != 0)
+        {
+          filters
+            << "scale=w=" << override_.encodedHeight_
+            << ":h=" << override_.encodedWidth_;
+        }
+        else
+        {
+          filters
+            << "scale=w=" << override_.encodedWidth_
+            << ":h=" << override_.encodedHeight_;
+        }
+      }
+
+      double arNative =
+        double(avFrame->sample_aspect_ratio.num) /
+        double(avFrame->sample_aspect_ratio.den);
+
+      if (fabs(arNative - override_.pixelAspectRatio_) > 1e-4)
+      {
+        filters << ",setsar=sar=" << override_.pixelAspectRatio_;
+      }
+
+      if (transposeAngle)
+      {
+        if (!filters.str().empty())
+        {
+          filters << ',';
+        }
+
+        filters << ((transposeAngle > 0) ?
+                    "transpose=dir=clock" :
+                    "transpose=dir=cclock");
+      }
+
+      std::string filterChain(filters.str().c_str());
       bool frameTraitsChanged = false;
       if (!filterGraph_.setup(avFrame->width,
                               avFrame->height,
                               stream_->time_base,
-                              codecContext->sample_aspect_ratio,
+                              avFrame->sample_aspect_ratio,
                               (AVPixelFormat)avFrame->format,
                               ffmpegPixelFormat,
-                              filterChain,
+                              filterChain.c_str(),
                               &frameTraitsChanged))
       {
         YAE_ASSERT(false);
@@ -3441,6 +3553,8 @@ namespace yae
 
     void setSharedClock(const SharedClock & clock);
 
+    yae::TSettingGroup * settings();
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -3492,6 +3606,11 @@ namespace yae
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;
+
+    // top-level settings group:
+    yae::TSettingGroup settings_;
+    yae::TSettingUInt32 setOutputWidth_;
+    yae::TSettingUInt32 setOutputHeight_;
   };
 
 
@@ -3515,8 +3634,13 @@ namespace yae
     looping_(false),
     mustStop_(true),
     mustSeek_(false),
-    seekTime_(0.0)
-  {}
+    seekTime_(0.0),
+    setOutputWidth_("output_width", "Output Width", "px"),
+    setOutputHeight_("output_height", "Output Height", "px")
+  {
+    settings_.traits().addSetting(&setOutputWidth_);
+    settings_.traits().addSetting(&setOutputHeight_);
+  }
 
   //----------------------------------------------------------------
   // Movie::~Movie
@@ -4953,6 +5077,15 @@ namespace yae
     clock_.setRealtime(playbackEnabled_);
   }
 
+  //----------------------------------------------------------------
+  // Movie::settings
+  //
+  TSettingGroup *
+  Movie::settings()
+  {
+    return &settings_;
+  }
+
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -5067,7 +5200,7 @@ namespace yae
   ISettingGroup *
   ReaderFFMPEG::settings()
   {
-    return NULL;
+    return private_->movie_.settings();
   }
 
   //----------------------------------------------------------------

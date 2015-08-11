@@ -11,6 +11,7 @@
 
 // aeyae:
 #include "../api/yae_api.h"
+#include "../video/yae_video.h"
 
 // standard C++ library:
 #include <string>

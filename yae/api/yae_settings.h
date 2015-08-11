@@ -31,7 +31,7 @@ namespace yae
     struct TAttributes : public ISettingBase::IAttributes
     {
       TAttributes():
-        optional_(false),
+        optional_(true),
         specified_(false)
       {}
 
@@ -222,13 +222,13 @@ namespace yae
         return ok;
       }
 
-      virtual void setMinValue(TValue v)
+      virtual void setValueMin(TValue v)
       {
         valueMin_ = v;
         valueMinConstrained_ = true;
       }
 
-      virtual bool isMinValueConstrained() const
+      virtual bool isValueMinConstrained() const
       { return valueMinConstrained_; }
 
       virtual TValue valueMin() const
@@ -249,7 +249,7 @@ namespace yae
       virtual const char * valueMinLabel() const
       { return valueMinLabel_.c_str(); }
 
-      virtual void setMinValueLabel(const char * label)
+      virtual void setValueMinLabel(const char * label)
       { valueMinLabel_.assign(label); }
 
       virtual const char * valueMaxLabel() const
@@ -298,7 +298,7 @@ namespace yae
                  const char * label = "",
                  const char * units = "",
                  const char * tooltip = "",
-                 bool optional = false,
+                 bool optional = true,
                  const char * summary = "")
       {
         attrs_.setId(id);
@@ -341,6 +341,15 @@ namespace yae
       virtual TSelf * clone() const
       { return new TSelf(*this); }
 
+      TImplementScalar(const char * id = "",
+                       const char * label = "",
+                       const char * units = "",
+                       const char * tooltip = "",
+                       bool optional = true,
+                       const char * summary = ""):
+        TBase(id, label, units, tooltip, optional, summary)
+      {}
+
       virtual ISettingBase::HciRepresentation hciHint() const
       {
         return
@@ -377,7 +386,7 @@ namespace yae
                      const char * label = "",
                      const char * units = "",
                      const char * tooltip = "",
-                     bool optional = false,
+                     bool optional = true,
                      const char * summary = ""):
         TBase(id, label, units, tooltip, optional, summary)
       {

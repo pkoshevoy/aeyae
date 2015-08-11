@@ -58,7 +58,7 @@ namespace yae
     static const char * kGUID;
     virtual const char * guid() const;
 
-    //! plugin parameters for this reader, currently NULL:
+    //! plugin parameters for this reader:
     virtual ISettingGroup * settings();
 
     //! assemble a list of supported URL protocols:
