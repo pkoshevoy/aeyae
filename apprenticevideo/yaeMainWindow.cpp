@@ -4109,6 +4109,13 @@ namespace yae
           }
         }
 
+        // NOTE: overriding frame size implies scaling, so don't do it
+        // unless you really want to scale the images in the reader;
+        // In general, leave scaling to OpenGL:
+        vtts.encodedWidth_ = 0;
+        vtts.encodedHeight_ = 0;
+        vtts.pixelAspectRatio_ = 0.0;
+
         reader->setVideoTraitsOverride(vtts);
       }
 #elif 0

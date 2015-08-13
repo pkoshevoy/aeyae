@@ -114,10 +114,6 @@ namespace yae
       }
     }
 
-    const double envelope_dar =
-      double(envelope.width()) /
-      double(envelope.height());
-
     double src_w = double(vtts.visibleWidth_) * vtts.pixelAspectRatio_;
     double src_h = double(vtts.visibleHeight_);
 
@@ -128,20 +124,10 @@ namespace yae
     }
 
     *size = requestedSize.isValid() ? requestedSize : envelope;
-    const double dar = src_w / src_h;
-
-    if (dar < envelope_dar)
-    {
-      override.encodedHeight_ = size->height();
-      override.encodedWidth_ = (int)(double(override.encodedHeight_) * dar);
-    }
-    else
-    {
-      override.encodedWidth_ = size->width();
-      override.encodedHeight_ = (int)(double(override.encodedWidth_) / dar);
-    }
 
     // crop, deinterlace, flip, rotate, scale, color-convert:
+    override.encodedHeight_ = size->height();
+    override.encodedWidth_ = size->width();
     override.offsetTop_ = 0;
     override.offsetLeft_ = 0;
     override.visibleWidth_ = override.encodedWidth_;
@@ -158,31 +144,6 @@ namespace yae
     {
       return QImage();
     }
-
-#if 1
-    std::cerr
-      << "yae: thumbnail format: " << ptts->name_
-      << ", par: " << override.pixelAspectRatio_
-      << ", " << override.visibleWidth_
-      << " x " << override.visibleHeight_;
-
-    if (override.pixelAspectRatio_ != 0.0)
-    {
-      std::cerr
-        << ", dar: "
-        << (double(override.visibleWidth_) *
-            override.pixelAspectRatio_ /
-            double(override.visibleHeight_))
-        << ", " << int(override.visibleWidth_ *
-                       override.pixelAspectRatio_ +
-                       0.5)
-        << " x " << override.visibleHeight_;
-    }
-
-    std::cerr
-      << ", fps: " << override.frameRate_
-      << std::endl;
-#endif
 
     QImage image;
 

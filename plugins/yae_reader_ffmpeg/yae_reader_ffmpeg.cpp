@@ -1290,10 +1290,6 @@ namespace yae
     VideoTraits native_;
     VideoTraits output_;
 
-    // output sample buffer properties;
-    unsigned char numSamplePlanes_;
-    std::size_t samplePlaneSize_[4];
-    std::size_t sampleLineSize_[4];
     AVRational frameRate_;
 
     int64 ptsBestEffort_;
@@ -1307,6 +1303,8 @@ namespace yae
     std::vector<TSubsTrackPtr> * subs_;
 
     VideoFilterGraph filterGraph_;
+
+    std::vector<unsigned char> temp_;
   };
 
   //----------------------------------------------------------------
@@ -1341,7 +1339,6 @@ namespace yae
     skipNonReferenceFrames_(false),
     deinterlace_(false),
     frameQueue_(kQueueSizeSmall),
-    numSamplePlanes_(0),
     ptsBestEffort_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
@@ -1364,11 +1361,19 @@ namespace yae
   {
     if (Track::open())
     {
+      framesDecoded_ = 0;
+
       skipLoopFilter(skipLoopFilter_);
       skipNonReferenceFrames(skipNonReferenceFrames_);
 
       bool ok = getTraits(override_);
-      framesDecoded_ = 0;
+      native_ = override_;
+      output_ = override_;
+
+      // do not override width/height/sar unintentionally:
+      override_.encodedWidth_ = 0;
+      override_.encodedHeight_ = 0;
+      override_.pixelAspectRatio_ = 0.0;
 
       return ok;
     }
@@ -1458,13 +1463,67 @@ namespace yae
     // shortcut to native frame format traits:
     getTraits(native_);
 
-    // frame size may have changed, so update the override accordingly:
-    override_.encodedWidth_ = native_.encodedWidth_;
-    override_.encodedHeight_ = native_.encodedHeight_;
-    override_.visibleWidth_ = native_.visibleWidth_;
-    override_.visibleHeight_ = native_.visibleHeight_;
-
+    // frame size may have changed, so update output traits accordingly:
     output_ = override_;
+
+    if (override_.encodedWidth_ || override_.encodedHeight_)
+    {
+      // NOTE: the override provides a scale-to-fit frame envelope,
+      // not the actual frame size:
+
+      const double envelope_par =
+        (override_.pixelAspectRatio_ ?
+         override_.pixelAspectRatio_ :
+         native_.pixelAspectRatio_);
+
+      const double envelope_dar =
+        envelope_par *
+        (double(override_.encodedWidth_) /
+         double(override_.encodedHeight_));
+
+      const double native_dar =
+        native_.pixelAspectRatio_ *
+        (double(native_.encodedWidth_) /
+         double(native_.encodedHeight_));
+
+      if (native_dar < envelope_dar)
+      {
+        output_.encodedWidth_ = override_.visibleHeight_ * native_dar;
+        output_.encodedHeight_ = override_.visibleHeight_;
+        output_.offsetLeft_ = 0;
+        output_.offsetTop_ = 0;
+        output_.visibleWidth_ = output_.encodedWidth_;
+        output_.visibleHeight_ = output_.encodedHeight_;
+      }
+      else
+      {
+        output_.encodedWidth_ = override_.visibleWidth_;
+        output_.encodedHeight_ = override_.visibleWidth_ / native_dar;
+        output_.offsetLeft_ = 0;
+        output_.offsetTop_ = 0;
+        output_.visibleWidth_ = output_.encodedWidth_;
+        output_.visibleHeight_ = output_.encodedHeight_;
+      }
+    }
+    else
+    {
+      output_.encodedWidth_ = native_.encodedWidth_;
+      output_.encodedHeight_ = native_.encodedHeight_;
+      output_.offsetLeft_ = native_.offsetLeft_;
+      output_.offsetTop_ = native_.offsetTop_;
+      output_.visibleWidth_ = native_.visibleWidth_;
+      output_.visibleHeight_ = native_.visibleHeight_;
+    }
+
+    if (override_.pixelAspectRatio_)
+    {
+      output_.pixelAspectRatio_ = override_.pixelAspectRatio_;
+    }
+    else
+    {
+      output_.pixelAspectRatio_ = native_.pixelAspectRatio_;
+    }
+
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)
     {
@@ -1484,74 +1543,11 @@ namespace yae
     // pixel format shortcut:
     const pixelFormat::Traits * ptts =
       pixelFormat::getTraits(output_.pixelFormat_);
+
     if (!ptts)
     {
       YAE_ASSERT(false);
       return false;
-    }
-
-    // get number of contiguous sample planes,
-    // sample set stride (in bits) for each plane:
-    unsigned char samplePlaneStride[4] = { 0 };
-    numSamplePlanes_ = ptts->getPlanes(samplePlaneStride);
-
-    if (output_.pixelFormat_ != native_.pixelFormat_)
-    {
-      const unsigned int kRowAlignment = 32;
-      output_.encodedWidth_ =
-        (override_.encodedWidth_ + (kRowAlignment - 1)) &
-        ~(kRowAlignment - 1);
-    }
-
-    if (ptts->chromaBoxW_ > 1)
-    {
-      unsigned int remainder = output_.encodedWidth_ % ptts->chromaBoxW_;
-      if (remainder)
-      {
-        output_.encodedWidth_ += ptts->chromaBoxW_ - remainder;
-      }
-    }
-
-    if (ptts->chromaBoxH_ > 1)
-    {
-      unsigned int remainder = output_.encodedHeight_ % ptts->chromaBoxH_;
-      if (remainder)
-      {
-        output_.encodedHeight_ += ptts->chromaBoxH_ - remainder;
-      }
-    }
-
-    // calculate number of bytes for each sample plane:
-    std::size_t totalPixels = output_.encodedWidth_ * output_.encodedHeight_;
-
-    memset(samplePlaneSize_, 0, sizeof(samplePlaneSize_));
-    samplePlaneSize_[0] =
-      totalPixels * (samplePlaneStride[0] / ptts->samples_[0]) / 8;
-
-    memset(sampleLineSize_, 0, sizeof(sampleLineSize_));
-    sampleLineSize_[0] =
-      output_.encodedWidth_ * (samplePlaneStride[0] / ptts->samples_[0]) / 8;
-
-    for (unsigned char i = 1; i < numSamplePlanes_; i++)
-    {
-      samplePlaneSize_[i] = totalPixels * samplePlaneStride[i] / 8;
-      sampleLineSize_[i] = output_.encodedWidth_ * samplePlaneStride[i] / 8;
-    }
-
-    // account for sub-sampling of UV plane(s):
-    std::size_t chromaBoxArea = ptts->chromaBoxW_ * ptts->chromaBoxH_;
-    if (chromaBoxArea > 1)
-    {
-      unsigned char uvSamplePlanes =
-        (ptts->flags_ & pixelFormat::kAlpha) ?
-        numSamplePlanes_ - 2 :
-        numSamplePlanes_ - 1;
-
-      for (unsigned char i = 1; i < 1 + uvSamplePlanes; i++)
-      {
-        samplePlaneSize_[i] /= chromaBoxArea;
-        sampleLineSize_[i] /= ptts->chromaBoxW_;
-      }
     }
 
     return true;
@@ -1691,25 +1687,20 @@ namespace yae
       // configure the filter chain:
       std::ostringstream filters;
 
-      bool overrideNeedsScale =
-        (native_.encodedWidth_ != override_.encodedWidth_ ||
-         native_.encodedHeight_ != override_.encodedHeight_);
+      bool outputNeedsScale =
+        (override_.encodedWidth_ || override_.encodedHeight_) &&
+        (native_.visibleWidth_ != output_.visibleWidth_ ||
+         native_.visibleHeight_ != output_.visibleHeight_);
 
       bool nativeNeedsCrop =
-        (native_.offsetTop_ != 0 ||
-         native_.offsetLeft_ != 0 ||
-         native_.visibleWidth_ != native_.encodedWidth_ ||
-         native_.visibleHeight_ != native_.encodedHeight_);
+        (native_.offsetTop_ != 0 || native_.offsetLeft_ != 0);
 
-      bool overrideNeedsCrop =
-        (override_.offsetTop_ != 0 ||
-         override_.offsetLeft_ != 0 ||
-         override_.visibleWidth_ != override_.encodedWidth_ ||
-         override_.visibleHeight_ != override_.encodedHeight_);
+      bool outputNeedsCrop =
+        (output_.offsetTop_ != 0 || output_.offsetLeft_ != 0);
 
-      YAE_ASSERT(!(overrideNeedsCrop && overrideNeedsScale));
+      YAE_ASSERT(!(outputNeedsCrop && outputNeedsScale));
 
-      bool shouldCrop = nativeNeedsCrop && overrideNeedsScale;
+      bool shouldCrop = nativeNeedsCrop && outputNeedsScale;
 
       if (shouldCrop)
       {
@@ -1734,14 +1725,14 @@ namespace yae
       }
 
       bool transposeAngle =
-        (override_.cameraRotation_ - native_.cameraRotation_) % 180;
+        (output_.cameraRotation_ - native_.cameraRotation_) % 180;
 
       bool flipAngle =
         transposeAngle ? 0 :
-        (override_.cameraRotation_ - native_.cameraRotation_) % 360;
+        (output_.cameraRotation_ - native_.cameraRotation_) % 360;
 
       bool toggleUpsideDown =
-        (native_.isUpsideDown_ != override_.isUpsideDown_);
+        (native_.isUpsideDown_ != output_.isUpsideDown_);
 
       if (toggleUpsideDown || flipAngle)
       {
@@ -1765,7 +1756,7 @@ namespace yae
         }
       }
 
-      if (overrideNeedsScale)
+      if (outputNeedsScale)
       {
         if (!filters.str().empty())
         {
@@ -1775,24 +1766,25 @@ namespace yae
         if (transposeAngle != 0)
         {
           filters
-            << "scale=w=" << override_.encodedHeight_
-            << ":h=" << override_.encodedWidth_;
+            << "scale=w=" << output_.visibleHeight_
+            << ":h=" << output_.visibleWidth_;
         }
         else
         {
           filters
-            << "scale=w=" << override_.encodedWidth_
-            << ":h=" << override_.encodedHeight_;
+            << "scale=w=" << output_.visibleWidth_
+            << ":h=" << output_.visibleHeight_;
         }
       }
 
-      double arNative =
-        double(avFrame->sample_aspect_ratio.num) /
-        double(avFrame->sample_aspect_ratio.den);
-
-      if (fabs(arNative - override_.pixelAspectRatio_) > 1e-4)
+      if (override_.pixelAspectRatio_)
       {
-        filters << ",setsar=sar=" << override_.pixelAspectRatio_;
+        if (!filters.str().empty())
+        {
+          filters << ',';
+        }
+
+        filters << "setsar=sar=" << output_.pixelAspectRatio_;
       }
 
       if (transposeAngle)
@@ -1925,56 +1917,63 @@ namespace yae
         YAE_ASSERT(output_.initAbcToRgbMatrix_);
         vf.traits_ = output_;
 
-
-        if (avFrame->linesize[0] > 0)
+        if (avFrame->linesize[0] < 0)
         {
-          // use AVFrame directly:
-          TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(avFrame),
-                                         &IPlanarBuffer::deallocator);
-          vf.traits_.encodedWidth_ = avFrame->width;
-          vf.traits_.encodedHeight_ = avFrame->height;
-          vf.data_ = sampleBuffer;
-        }
-        else
-        {
-          // upside-down frame, copy the sample planes:
-          TPlanarBufferPtr sampleBuffer(new TPlanarBuffer(numSamplePlanes_),
-                                        &IPlanarBuffer::deallocator);
-          for (unsigned char i = 0; i < numSamplePlanes_; i++)
-          {
-            std::size_t rowBytes = sampleLineSize_[i];
-            std::size_t rows = samplePlaneSize_[i] / rowBytes;
-            sampleBuffer->resize(i, rowBytes, rows);
-          }
-          vf.data_ = sampleBuffer;
-
+          // upside-down frame, actually flip it around (unlike vflip):
           const pixelFormat::Traits * ptts =
             pixelFormat::getTraits(output_.pixelFormat_);
 
-          for (unsigned char i = 0; i < numSamplePlanes_; i++)
+          unsigned char stride[4] = { 0 };
+          std::size_t numSamplePlanes = ptts->getPlanes(stride);
+
+          std::size_t lumaPlane =
+            (ptts->flags_ & pixelFormat::kPlanar) ? 0 : numSamplePlanes;
+
+          std::size_t alphaPlane =
+            ((ptts->flags_ & pixelFormat::kAlpha) &&
+             (ptts->flags_ & pixelFormat::kPlanar)) ?
+            numSamplePlanes - 1 : numSamplePlanes;
+
+          for (unsigned char i = 0; i < numSamplePlanes; i++)
           {
-            std::size_t dstRowBytes = sampleBuffer->rowBytes(i);
-            std::size_t dstRows = sampleBuffer->rows(i);
-            unsigned char * dst = sampleBuffer->data(i);
-
-            std::size_t srcRowBytes = avFrame->linesize[i];
-            std::size_t srcRows = avFrame->height;
-            if (i > 0)
+            std::size_t rows = avFrame->height;
+            if (i != lumaPlane && i != alphaPlane)
             {
-              srcRows /= ptts->chromaBoxH_;
+              rows /= ptts->chromaBoxH_;
             }
-            const unsigned char * src = avFrame->data[i];
 
-            std::size_t copyRowBytes = std::min(srcRowBytes, dstRowBytes);
-            std::size_t copyRows = std::min(srcRows, dstRows);
-            for (std::size_t i = 0; i < copyRows; i++)
+            int rowBytes = -avFrame->linesize[i];
+            if (rowBytes <= 0)
             {
-              memcpy(dst, src, copyRowBytes);
-              src += srcRowBytes;
-              dst += dstRowBytes;
+              continue;
+            }
+
+            temp_.resize(rowBytes);
+            unsigned char * temp = &temp_[0];
+            unsigned char * tail = avFrame->data[i];
+            unsigned char * head = tail + avFrame->linesize[i] * (rows - 1);
+
+            avFrame->data[i] = head;
+            avFrame->linesize[i] = rowBytes;
+
+            while (head < tail)
+            {
+              memcpy(temp, head, rowBytes);
+              memcpy(head, tail, rowBytes);
+              memcpy(tail, temp, rowBytes);
+
+              head += rowBytes;
+              tail -= rowBytes;
             }
           }
         }
+
+        // use AVFrame directly:
+        TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(avFrame),
+                                       &IPlanarBuffer::deallocator);
+        vf.traits_.encodedWidth_ = avFrame->width;
+        vf.traits_.encodedHeight_ = avFrame->height;
+        vf.data_ = sampleBuffer;
 
         // don't forget about tempo scaling:
         {

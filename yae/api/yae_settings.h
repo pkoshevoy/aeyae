@@ -448,6 +448,28 @@ namespace yae
   typedef settings::TImplementReal<
     ISettingDouble, settings::TScalar<double> > TSettingDouble;
 
+  //----------------------------------------------------------------
+  // settingById
+  //
+  template <typename TSetting>
+  TSetting *
+  settingById(const ISettingGroup & settings, const char * id)
+  {
+    const ISettingBase::IGroup & group = settings.traits();
+    const std::size_t n = group.size();
+
+    for (std::size_t i = 0; i < n; i++)
+    {
+      ISettingBase * si = group.setting(i);
+      if (strcmp(si->id(), id) == 0)
+      {
+        return dynamic_cast<TSetting *>(si);
+      }
+    }
+
+    return NULL;
+  }
+
 }
 
 
