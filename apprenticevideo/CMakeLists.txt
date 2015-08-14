@@ -475,7 +475,6 @@ if (APPLE)
     COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
     ARGS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
     MAIN_DEPENDENCY DeployOSX.sh
-    DEPENDS ${PROGNAME} aeyae yae_reader_ffmpeg
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)

@@ -1304,9 +1304,8 @@ namespace yae
   //----------------------------------------------------------------
   // TBaseCanvas
   //
-  class TBaseCanvas
+  struct TBaseCanvas
   {
-  public:
     TBaseCanvas():
       dar_(0.0),
       darCropped_(0.0),

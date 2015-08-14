@@ -2420,6 +2420,7 @@ namespace yae
     return setTraitsOverride(override_, deint);
   }
 
+#if 0
   //----------------------------------------------------------------
   // ffmpeg_to_yae
   //
@@ -2479,6 +2480,7 @@ namespace yae
 
     return true;
   }
+#endif
 
   //----------------------------------------------------------------
   // yae_to_ffmpeg
@@ -3552,8 +3554,6 @@ namespace yae
 
     void setSharedClock(const SharedClock & clock);
 
-    yae::TSettingGroup * settings();
-
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -3605,11 +3605,6 @@ namespace yae
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;
-
-    // top-level settings group:
-    yae::TSettingGroup settings_;
-    yae::TSettingUInt32 setOutputWidth_;
-    yae::TSettingUInt32 setOutputHeight_;
   };
 
 
@@ -3633,13 +3628,8 @@ namespace yae
     looping_(false),
     mustStop_(true),
     mustSeek_(false),
-    seekTime_(0.0),
-    setOutputWidth_("output_width", "Output Width", "px"),
-    setOutputHeight_("output_height", "Output Height", "px")
-  {
-    settings_.traits().addSetting(&setOutputWidth_);
-    settings_.traits().addSetting(&setOutputHeight_);
-  }
+    seekTime_(0.0)
+  {}
 
   //----------------------------------------------------------------
   // Movie::~Movie
@@ -5076,15 +5066,6 @@ namespace yae
     clock_.setRealtime(playbackEnabled_);
   }
 
-  //----------------------------------------------------------------
-  // Movie::settings
-  //
-  TSettingGroup *
-  Movie::settings()
-  {
-    return &settings_;
-  }
-
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::Private
@@ -5199,7 +5180,7 @@ namespace yae
   ISettingGroup *
   ReaderFFMPEG::settings()
   {
-    return private_->movie_.settings();
+    return NULL;
   }
 
   //----------------------------------------------------------------

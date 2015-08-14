@@ -66,6 +66,7 @@ namespace yae
   //
   struct YAE_API IOpenGLContext
   {
+    virtual ~IOpenGLContext() {}
     virtual bool makeCurrent() = 0;
     virtual void doneCurrent() = 0;
   };

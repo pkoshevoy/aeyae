@@ -1046,6 +1046,7 @@ namespace mvc
     }
   }
 
+#if 0
   //----------------------------------------------------------------
   // lookupFirstGroupIndex
   //
@@ -1072,6 +1073,7 @@ namespace mvc
 
     return groups.size();
   }
+#endif
 
   //----------------------------------------------------------------
   // lookupLastGroupIndex

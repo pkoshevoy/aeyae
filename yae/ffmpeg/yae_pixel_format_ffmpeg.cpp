@@ -1028,6 +1028,7 @@ namespace yae
     return kColorRangeUnspecified;
   }
 
+#if 0
   //----------------------------------------------------------------
   // to_ffmpeg_color_range
   //
@@ -1052,6 +1053,7 @@ namespace yae
     YAE_ASSERT(false);
     return AVCOL_RANGE_UNSPECIFIED;
   }
+#endif
 
   //----------------------------------------------------------------
   // fixed16_to_double
