@@ -182,6 +182,15 @@ namespace yae
       fbo_.canvas_.setDelegate(delegate_);
     };
 
+    ~CanvasQuickFboRenderer()
+    {
+      delegate_.reset();
+
+      // make sure canvas isn't holding a delegate with a reference to
+      // a deleted renderer:
+      fbo_.canvas_.setDelegate(delegate_);
+    }
+
     // virtual:
     void render()
     {
