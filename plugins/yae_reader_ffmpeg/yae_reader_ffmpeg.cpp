@@ -1466,7 +1466,12 @@ namespace yae
     // frame size may have changed, so update output traits accordingly:
     output_ = override_;
 
-    if (override_.encodedWidth_ || override_.encodedHeight_)
+    int transposeAngle =
+      (override_.cameraRotation_ - native_.cameraRotation_) % 180;
+
+    if (override_.encodedWidth_ ||
+        override_.encodedHeight_ ||
+        transposeAngle != 0)
     {
       // NOTE: the override provides a scale-to-fit frame envelope,
       // not the actual frame size:
@@ -1478,8 +1483,11 @@ namespace yae
 
       const double envelope_dar =
         envelope_par *
-        (double(override_.encodedWidth_) /
-         double(override_.encodedHeight_));
+        (transposeAngle ?
+         (double(override_.encodedHeight_) /
+          double(override_.encodedWidth_)) :
+         (double(override_.encodedWidth_) /
+          double(override_.encodedHeight_)));
 
       const double native_dar =
         native_.pixelAspectRatio_ *
@@ -1488,8 +1496,17 @@ namespace yae
 
       if (native_dar < envelope_dar)
       {
-        output_.encodedWidth_ = override_.visibleHeight_ * native_dar;
-        output_.encodedHeight_ = override_.visibleHeight_;
+        if (transposeAngle)
+        {
+          output_.encodedWidth_ = override_.visibleWidth_ * native_dar;
+          output_.encodedHeight_ = override_.visibleWidth_;
+        }
+        else
+        {
+          output_.encodedWidth_ = override_.visibleHeight_ * native_dar;
+          output_.encodedHeight_ = override_.visibleHeight_;
+        }
+
         output_.offsetLeft_ = 0;
         output_.offsetTop_ = 0;
         output_.visibleWidth_ = output_.encodedWidth_;
@@ -1497,8 +1514,17 @@ namespace yae
       }
       else
       {
-        output_.encodedWidth_ = override_.visibleWidth_;
-        output_.encodedHeight_ = override_.visibleWidth_ / native_dar;
+        if (transposeAngle)
+        {
+          output_.encodedWidth_ = override_.visibleHeight_;
+          output_.encodedHeight_ = override_.visibleHeight_ / native_dar;
+        }
+        else
+        {
+          output_.encodedWidth_ = override_.visibleWidth_;
+          output_.encodedHeight_ = override_.visibleWidth_ / native_dar;
+        }
+
         output_.offsetLeft_ = 0;
         output_.offsetTop_ = 0;
         output_.visibleWidth_ = output_.encodedWidth_;
@@ -1724,7 +1750,7 @@ namespace yae
         filters << (skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:0:1");
       }
 
-      bool transposeAngle =
+      int transposeAngle =
         (output_.cameraRotation_ - native_.cameraRotation_) % 180;
 
       bool flipAngle =
@@ -1763,18 +1789,9 @@ namespace yae
           filters << ',';
         }
 
-        if (transposeAngle != 0)
-        {
-          filters
-            << "scale=w=" << output_.visibleHeight_
-            << ":h=" << output_.visibleWidth_;
-        }
-        else
-        {
-          filters
-            << "scale=w=" << output_.visibleWidth_
-            << ":h=" << output_.visibleHeight_;
-        }
+        filters
+          << "scale=w=" << output_.visibleWidth_
+          << ":h=" << output_.visibleHeight_;
       }
 
       if (override_.pixelAspectRatio_)
@@ -1794,7 +1811,7 @@ namespace yae
           filters << ',';
         }
 
-        filters << ((transposeAngle > 0) ?
+        filters << ((transposeAngle < 0) ?
                     "transpose=dir=clock" :
                     "transpose=dir=cclock");
       }
@@ -1973,6 +1990,8 @@ namespace yae
                                        &IPlanarBuffer::deallocator);
         vf.traits_.encodedWidth_ = avFrame->width;
         vf.traits_.encodedHeight_ = avFrame->height;
+        vf.traits_.visibleWidth_ = vf.traits_.encodedWidth_;
+        vf.traits_.visibleHeight_ = vf.traits_.encodedHeight_;
         vf.data_ = sampleBuffer;
 
         // don't forget about tempo scaling:
@@ -3484,6 +3503,9 @@ namespace yae
     // NOTE: destructor will close the movie:
     ~Movie();
 
+    inline yae::TSettingGroup * settings()
+    { return &settings_; }
+
     bool getUrlProtocols(std::list<std::string> & protocols) const;
 
     bool open(const char * resourcePath);
@@ -3605,6 +3627,11 @@ namespace yae
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;
+
+    // top-level settings group:
+    yae::TSettingGroup settings_;
+    yae::TSettingUInt32 videoQueueSize_;
+    yae::TSettingUInt32 audioQueueSize_;
   };
 
 
@@ -3628,8 +3655,19 @@ namespace yae
     looping_(false),
     mustStop_(true),
     mustSeek_(false),
-    seekTime_(0.0)
-  {}
+    seekTime_(0.0),
+    videoQueueSize_("video_queue_size"),
+    audioQueueSize_("audio_queue_size")
+  {
+    settings_.traits().addSetting(&videoQueueSize_);
+    settings_.traits().addSetting(&audioQueueSize_);
+
+    videoQueueSize_.traits().setValueMin(1);
+    videoQueueSize_.traits().setValue(kQueueSizeSmall);
+
+    audioQueueSize_.traits().setValueMin(1);
+    audioQueueSize_.traits().setValue(kQueueSizeMedium);
+  }
 
   //----------------------------------------------------------------
   // Movie::~Movie
@@ -3891,6 +3929,7 @@ namespace yae
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->setSubs(&subs_);
+    track->frameQueue_.setMaxSize(videoQueueSize_.traits().value());
 
     return track->open();
   }
@@ -3917,6 +3956,8 @@ namespace yae
 
     AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
     track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+    track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
+
     return track->open();
   }
 
@@ -5180,7 +5221,7 @@ namespace yae
   ISettingGroup *
   ReaderFFMPEG::settings()
   {
-    return NULL;
+    return private_->movie_.settings();
   }
 
   //----------------------------------------------------------------

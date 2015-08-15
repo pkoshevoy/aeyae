@@ -7,6 +7,7 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // yae includes:
+#include "yae/api/yae_settings.h"
 #include "yae/video/yae_pixel_format_traits.h"
 
 // local includes:
@@ -58,6 +59,8 @@ namespace yae
     // FIXME: this could be a parameter of the thumbnail provider:
     static const QSize envelope(160, 90);
 
+    QImage image;
+
     // parse the id (group-hash/item-hash)
     std::string groupHashItemHash(id.toUtf8().constData());
     std::size_t t = groupHashItemHash.find_first_of('/');
@@ -72,22 +75,30 @@ namespace yae
                                                      &group);
     if (!item)
     {
-      return QImage();
+      return image;
     }
 
     IReaderPtr reader = yae::openFile(readerPrototype_, item->path_);
+    if (!reader)
+    {
+      return image;
+    }
+
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     if (!numVideoTracks)
     {
-      return QImage();
+      return image;
     }
 
     reader->selectVideoTrack(0);
+    reader->skipLoopFilter(true);
+    reader->skipNonReferenceFrames(true);
+    reader->setDeinterlacing(false);
 
     VideoTraits vtts;
     if (!reader->getVideoTraits(vtts))
     {
-      return QImage();
+      return image;
     }
 
     // pixel format shortcut:
@@ -137,15 +148,16 @@ namespace yae
     override.isUpsideDown_ = false;
 
     reader->setVideoTraitsOverride(override);
-    reader->setDeinterlacing(true);
 
     if (!reader->getVideoTraitsOverride(override) ||
         !(ptts = pixelFormat::getTraits(override.pixelFormat_)))
     {
-      return QImage();
-    }
+      std::cerr
+        << "FIXME: pkoshevoy: failed to setup thumbnail reader"
+        << std::endl;
 
-    QImage image;
+      return image;
+    }
 
     TTime start;
     TTime duration;
@@ -156,6 +168,19 @@ namespace yae
       reader->seek(t0 + offset);
     }
 
+    ISettingGroup * readerSettings = reader->settings();
+    if (readerSettings)
+    {
+      ISettingUInt32 * frameQueueSize =
+        settingById<ISettingUInt32>(*readerSettings, "video_queue_size");
+
+      if (frameQueueSize)
+      {
+        frameQueueSize->traits().setValue(1);
+      }
+    }
+
+    reader->setPlaybackEnabled(true);
     reader->threadStart();
 
     TVideoFramePtr frame;
@@ -164,7 +189,7 @@ namespace yae
            (!frame || yae::resetTimeCountersIndicated(frame.get())))
     {}
 
-    if (frame)
+    if (frame && frame->data_)
     {
       // FIXME:
       //
@@ -184,9 +209,24 @@ namespace yae
                      &TCleanup::cleanup,
                      new TCleanup(frame));
 
-      image = image.scaledToHeight(90, Qt::SmoothTransformation);
+      bool sizeAcceptable =
+        (image.height() <= size->height() &&
+         image.width() <= size->width());
+      YAE_ASSERT(sizeAcceptable);
+
+      if (!sizeAcceptable)
+      {
+        image = image.scaledToHeight(90, Qt::SmoothTransformation);
+      }
 
       *size = image.size();
+#if 0
+      image.save(QString::fromUtf8
+                 ("/Users/pavel/Pictures/Thumbnails/%1-%2.jpg").
+                 arg(groupHash.c_str()).
+                 arg(itemHash.c_str()),
+                 "JPEG");
+#endif
     }
 
     return image;

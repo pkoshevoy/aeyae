@@ -201,7 +201,6 @@ endif (WIN32)
 if (APPLE)
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES}
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.deploy"
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif (APPLE)
 
@@ -466,15 +465,9 @@ if (APPLE)
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 
-  set_source_files_properties("${PROJECT_BINARY_DIR}/${PROGNAME}.deploy"
-    PROPERTIES
-    SYMBOLIC TRUE)
-
-  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/${PROGNAME}.deploy"
-# TARGET ${PROGNAME} POST_BUILD
+  add_custom_command(TARGET ${PROGNAME} POST_BUILD
     COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
     ARGS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
-    MAIN_DEPENDENCY DeployOSX.sh
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)
