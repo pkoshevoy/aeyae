@@ -152,10 +152,6 @@ namespace yae
     if (!reader->getVideoTraitsOverride(override) ||
         !(ptts = pixelFormat::getTraits(override.pixelFormat_)))
     {
-      std::cerr
-        << "FIXME: pkoshevoy: failed to setup thumbnail reader"
-        << std::endl;
-
       return image;
     }
 
