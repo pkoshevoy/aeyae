@@ -41,27 +41,21 @@ namespace yae
   // ThumbnailProvider::ThumbnailProvider
   //
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
-                                       yae::mvc::Playlist & playlist):
+                                       yae::mvc::Playlist & playlist,
+                                       const QSize & envelopeSize):
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
     readerPrototype_(readerPrototype),
-    playlist_(playlist)
+    playlist_(playlist),
+    envelopeSize_(envelopeSize)
   {}
 
   //----------------------------------------------------------------
-  // ThumbnailProvider::requestImage
+  // getItemFilePath
   //
-  QImage
-  ThumbnailProvider::requestImage(const QString & id,
-                                  QSize * size,
-                                  const QSize & requestedSize)
+  static QString
+  getItemFilePath(yae::mvc::Playlist & playlist, const QString & id)
   {
-    // FIXME: this could be a parameter of the thumbnail provider:
-    static const QSize envelope(160, 90);
-
-    QImage image;
-
-    // parse the id (group-hash/item-hash)
     std::string groupHashItemHash(id.toUtf8().constData());
     std::size_t t = groupHashItemHash.find_first_of('/');
     std::string groupHash = groupHashItemHash.substr(0, t);
@@ -69,25 +63,78 @@ namespace yae
 
     std::size_t itemIndex = ~0;
     yae::mvc::PlaylistGroup * group = NULL;
-    yae::mvc::PlaylistItem * item = playlist_.lookup(groupHash,
-                                                     itemHash,
-                                                     &itemIndex,
-                                                     &group);
+    yae::mvc::PlaylistItem * item = playlist.lookup(groupHash,
+                                                    itemHash,
+                                                    &itemIndex,
+                                                    &group);
     if (!item)
     {
-      return image;
+      YAE_ASSERT(false);
+      return QString();
     }
 
-    IReaderPtr reader = yae::openFile(readerPrototype_, item->path_);
-    if (!reader)
+    return item->path_;
+  }
+
+#if 0
+  //----------------------------------------------------------------
+  // getIcon
+  //
+  static TVideoFramePtr
+  getIcon(const char * resourcePath)
+  {
+    TVideoFramePtr frame;
+
+    QImage image(QString::fromUtf8(resourcePath));
+    if (image.isNull())
     {
-      return image;
+      YAE_ASSERT(false);
+      return frame;
     }
+
+    frame.reset(new TVideoFrame());
+    frame->data_.reset(new TQImageBuffer(image));
+
+    VideoTraits & vtts = frame->traits_;
+    QImage::Format qimageFormat = image.format();
+
+    vtts.pixelFormat_ =
+#ifdef _BIG_ENDIAN
+      (qimageFormat == QImage::Format_ARGB32) ? kPixelFormatARGB :
+#else
+      (qimageFormat == QImage::Format_ARGB32) ? kPixelFormatBGRA :
+#endif
+      (qimageFormat == QImage::Format_RGB888) ? kPixelFormatRGB24 :
+      (qimageFormat == QImage::Format_Grayscale8) ? kPixelFormatGRAY8 :
+      kInvalidPixelFormat;
+
+    YAE_ASSERT(vtts.pixelFormat_ != kInvalidPixelFormat);
+
+    vtts.encodedWidth_ = image.bytesPerLine() / 4;
+    vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
+    vtts.offsetTop_ = 0;
+    vtts.offsetLeft_ = 0;
+    vtts.visibleWidth_ = vtts.encodedWidth_;
+    vtts.visibleHeight_ = vtts.encodedHeight_;
+    vtts.pixelAspectRatio_ = 1.0;
+    vtts.isUpsideDown_ = false;
+
+    return frame;
+  }
+#endif
+
+  //----------------------------------------------------------------
+  // getThumbnail
+  //
+  static TVideoFramePtr
+  getThumbnail(const yae::IReaderPtr & reader, const QSize & envelope)
+  {
+    TVideoFramePtr frame;
 
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     if (!numVideoTracks)
     {
-      return image;
+      return frame;
     }
 
     reader->selectVideoTrack(0);
@@ -98,7 +145,7 @@ namespace yae
     VideoTraits vtts;
     if (!reader->getVideoTraits(vtts))
     {
-      return image;
+      return frame;
     }
 
     // pixel format shortcut:
@@ -107,7 +154,6 @@ namespace yae
 
     VideoTraits override = vtts;
     override.pixelFormat_ = kPixelFormatGRAY8;
-    QImage::Format qimageFormat = QImage::Format_Grayscale8;
 
     if (ptts)
     {
@@ -115,34 +161,19 @@ namespace yae
           (ptts->flags_ & pixelFormat::kColor))
       {
         override.pixelFormat_ = kPixelFormatBGRA;
-        qimageFormat = QImage::Format_ARGB32;
       }
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
       {
         override.pixelFormat_ = kPixelFormatRGB24;
-        qimageFormat = QImage::Format_RGB888;
       }
     }
 
-    double src_w = double(vtts.visibleWidth_) * vtts.pixelAspectRatio_;
-    double src_h = double(vtts.visibleHeight_);
-
-    bool src_rotated = (override.cameraRotation_ % 180 != 0);
-    if (src_rotated)
-    {
-      std::swap(src_w, src_h);
-    }
-
-    *size = requestedSize.isValid() ? requestedSize : envelope;
-
     // crop, deinterlace, flip, rotate, scale, color-convert:
-    override.encodedHeight_ = size->height();
-    override.encodedWidth_ = size->width();
     override.offsetTop_ = 0;
     override.offsetLeft_ = 0;
-    override.visibleWidth_ = override.encodedWidth_;
-    override.visibleHeight_ = override.encodedHeight_;
+    override.visibleWidth_ = envelope.width();
+    override.visibleHeight_ = envelope.height();
     override.pixelAspectRatio_ = 1.0;
     override.cameraRotation_ = 0;
     override.isUpsideDown_ = false;
@@ -152,7 +183,7 @@ namespace yae
     if (!reader->getVideoTraitsOverride(override) ||
         !(ptts = pixelFormat::getTraits(override.pixelFormat_)))
     {
-      return image;
+      return frame;
     }
 
     TTime start;
@@ -179,52 +210,131 @@ namespace yae
     reader->setPlaybackEnabled(true);
     reader->threadStart();
 
-    TVideoFramePtr frame;
     QueueWaitMgr waitMgr_;
     while (reader->readVideo(frame, &waitMgr_) &&
-           (!frame || yae::resetTimeCountersIndicated(frame.get())))
+           (!frame || !frame->data_ ||
+            yae::resetTimeCountersIndicated(frame.get())))
     {}
 
-    if (frame && frame->data_)
-    {
-      // FIXME:
-      //
-      // * the image should be scaled-down to requested size,
-      //   or another appropriate thumbnail size
-      //
-      // * pixel aspect ratio should be square
-      //
-      const unsigned char * data = frame->data_->data(0);
-      std::size_t rowSize = frame->data_->rowBytes(0);
+    return frame;
+  }
 
-      image = QImage(data,
-                     frame->traits_.visibleWidth_,
-                     frame->traits_.visibleHeight_,
-                     rowSize,
-                     qimageFormat,
-                     &TCleanup::cleanup,
-                     new TCleanup(frame));
+  //----------------------------------------------------------------
+  // ThumbnailProvider::requestImage
+  //
+  static QImage
+  getThumbnail(const yae::IReaderPtr & readerPrototype,
+               const QSize & thumbnailMaxSize,
+               yae::mvc::Playlist & playlist,
+               const QString & id)
+  {
+    static QImage iconAudio
+      (QString::fromUtf8(":/images/audio-speaker.png"));
+
+    static QImage iconVideo
+      (QString::fromUtf8(":/images/video-frame.png"));
+
+    static QImage iconBroken
+      (QString::fromUtf8(":/images/broken-glass.png"));
+
+    QImage image;
+
+    QString itemFilePath = getItemFilePath(playlist, id);
+    IReaderPtr reader = yae::openFile(readerPrototype, itemFilePath);
+    if (!reader)
+    {
+      return iconBroken;
+    }
+
+    TVideoFramePtr frame = getThumbnail(reader, thumbnailMaxSize);
+    if (!frame || !frame->data_)
+    {
+      std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+      if (numAudioTracks)
+      {
+        return iconAudio;
+      }
+
+      std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+      if (numVideoTracks)
+      {
+        return iconVideo;
+      }
+
+      return iconBroken;
+    }
+
+    // shortcut:
+    const VideoTraits & vtts = frame->traits_;
+
+    // pixel format shortcut:
+    const pixelFormat::Traits * ptts =
+      pixelFormat::getTraits(vtts.pixelFormat_);
+
+    QImage::Format qimageFormat =
+#ifdef _BIG_ENDIAN
+      (vtts.pixelFormat_ == kPixelFormatARGB) ? QImage::Format_ARGB32 :
+#else
+      (vtts.pixelFormat_ == kPixelFormatBGRA) ? QImage::Format_ARGB32 :
+#endif
+      (vtts.pixelFormat_ == kPixelFormatRGB24) ? QImage::Format_RGB888 :
+      QImage::Format_Grayscale8;
+
+    const unsigned char * data = frame->data_->data(0);
+    std::size_t rowSize = frame->data_->rowBytes(0);
+
+    image = QImage(data,
+                   frame->traits_.visibleWidth_,
+                   frame->traits_.visibleHeight_,
+                   rowSize,
+                   qimageFormat,
+                   &TCleanup::cleanup,
+                   new TCleanup(frame));
+
+#if 0
+    image.save(QString::fromUtf8
+               ("/Users/pavel/Pictures/Thumbnails/%1-%2.jpg").
+               arg(groupHash.c_str()).
+               arg(itemHash.c_str()),
+               "JPEG");
+#endif
+
+    return image;
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::requestImage
+  //
+  QImage
+  ThumbnailProvider::requestImage(const QString & id,
+                                  QSize * size,
+                                  const QSize & requestedSize)
+  {
+    QImage image = cache_[id];
+
+    const QSize & thumbnailMaxSize =
+      requestedSize.isValid() ? requestedSize : envelopeSize_;
+
+    if (image.isNull())
+    {
+      image = getThumbnail(readerPrototype_,
+                           thumbnailMaxSize,
+                           playlist_,
+                           id);
 
       bool sizeAcceptable =
-        (image.height() <= size->height() &&
-         image.width() <= size->width());
-      YAE_ASSERT(sizeAcceptable);
+        (image.height() <= thumbnailMaxSize.height() &&
+         image.width() <= thumbnailMaxSize.width());
 
       if (!sizeAcceptable)
       {
         image = image.scaledToHeight(90, Qt::SmoothTransformation);
       }
 
-      *size = image.size();
-#if 0
-      image.save(QString::fromUtf8
-                 ("/Users/pavel/Pictures/Thumbnails/%1-%2.jpg").
-                 arg(groupHash.c_str()).
-                 arg(itemHash.c_str()),
-                 "JPEG");
-#endif
+      cache_[id] = image;
     }
 
+    *size = image.size();
     return image;
   }
 

@@ -26,6 +26,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TQImageBuffer::TQImageBuffer
+  //
+  TQImageBuffer::TQImageBuffer(const QImage & qimg):
+    qimg_(qimg)
+  {}
+
+  //----------------------------------------------------------------
   // TQImageBuffer::destroy
   //
   void

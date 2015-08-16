@@ -1371,8 +1371,8 @@ namespace yae
       output_ = override_;
 
       // do not override width/height/sar unintentionally:
-      override_.encodedWidth_ = 0;
-      override_.encodedHeight_ = 0;
+      override_.visibleWidth_ = 0;
+      override_.visibleHeight_ = 0;
       override_.pixelAspectRatio_ = 0.0;
 
       return ok;
@@ -1469,8 +1469,8 @@ namespace yae
     int transposeAngle =
       (override_.cameraRotation_ - native_.cameraRotation_) % 180;
 
-    if (override_.encodedWidth_ ||
-        override_.encodedHeight_ ||
+    if (override_.visibleWidth_ ||
+        override_.visibleHeight_ ||
         transposeAngle != 0)
     {
       // NOTE: the override provides a scale-to-fit frame envelope,
@@ -1484,51 +1484,51 @@ namespace yae
       const double envelope_dar =
         envelope_par *
         (transposeAngle ?
-         (double(override_.encodedHeight_) /
-          double(override_.encodedWidth_)) :
-         (double(override_.encodedWidth_) /
-          double(override_.encodedHeight_)));
+         (double(override_.visibleHeight_) /
+          double(override_.visibleWidth_)) :
+         (double(override_.visibleWidth_) /
+          double(override_.visibleHeight_)));
 
       const double native_dar =
         native_.pixelAspectRatio_ *
-        (double(native_.encodedWidth_) /
-         double(native_.encodedHeight_));
+        (double(native_.visibleWidth_) /
+         double(native_.visibleHeight_));
 
       if (native_dar < envelope_dar)
       {
         if (transposeAngle)
         {
-          output_.encodedWidth_ = override_.visibleWidth_ * native_dar;
-          output_.encodedHeight_ = override_.visibleWidth_;
+          output_.visibleWidth_ = override_.visibleWidth_ * native_dar + 0.5;
+          output_.visibleHeight_ = override_.visibleWidth_;
         }
         else
         {
-          output_.encodedWidth_ = override_.visibleHeight_ * native_dar;
-          output_.encodedHeight_ = override_.visibleHeight_;
+          output_.visibleWidth_ = override_.visibleHeight_ * native_dar + 0.5;
+          output_.visibleHeight_ = override_.visibleHeight_;
         }
 
         output_.offsetLeft_ = 0;
         output_.offsetTop_ = 0;
-        output_.visibleWidth_ = output_.encodedWidth_;
-        output_.visibleHeight_ = output_.encodedHeight_;
+        output_.encodedWidth_ = output_.visibleWidth_;
+        output_.encodedHeight_ = output_.visibleHeight_;
       }
       else
       {
         if (transposeAngle)
         {
-          output_.encodedWidth_ = override_.visibleHeight_;
-          output_.encodedHeight_ = override_.visibleHeight_ / native_dar;
+          output_.visibleWidth_ = override_.visibleHeight_;
+          output_.visibleHeight_ = override_.visibleHeight_ / native_dar + 0.5;
         }
         else
         {
-          output_.encodedWidth_ = override_.visibleWidth_;
-          output_.encodedHeight_ = override_.visibleWidth_ / native_dar;
+          output_.visibleWidth_ = override_.visibleWidth_;
+          output_.visibleHeight_ = override_.visibleWidth_ / native_dar + 0.5;
         }
 
         output_.offsetLeft_ = 0;
         output_.offsetTop_ = 0;
-        output_.visibleWidth_ = output_.encodedWidth_;
-        output_.visibleHeight_ = output_.encodedHeight_;
+        output_.encodedWidth_ = output_.visibleWidth_;
+        output_.encodedHeight_ = output_.visibleHeight_;
       }
     }
     else
@@ -1714,7 +1714,7 @@ namespace yae
       std::ostringstream filters;
 
       bool outputNeedsScale =
-        (override_.encodedWidth_ || override_.encodedHeight_) &&
+        (override_.visibleWidth_ || override_.visibleHeight_) &&
         (native_.visibleWidth_ != output_.visibleWidth_ ||
          native_.visibleHeight_ != output_.visibleHeight_);
 
@@ -1988,10 +1988,10 @@ namespace yae
         // use AVFrame directly:
         TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(avFrame),
                                        &IPlanarBuffer::deallocator);
-        vf.traits_.encodedWidth_ = avFrame->width;
-        vf.traits_.encodedHeight_ = avFrame->height;
-        vf.traits_.visibleWidth_ = vf.traits_.encodedWidth_;
-        vf.traits_.visibleHeight_ = vf.traits_.encodedHeight_;
+        vf.traits_.visibleWidth_ = avFrame->width;
+        vf.traits_.visibleHeight_ = avFrame->height;
+        vf.traits_.encodedWidth_ = vf.traits_.visibleWidth_;
+        vf.traits_.encodedHeight_ = vf.traits_.visibleHeight_;
         vf.data_ = sampleBuffer;
 
         // don't forget about tempo scaling:
@@ -4437,7 +4437,7 @@ namespace yae
   bool
   Movie::isSeekable() const
   {
-    if (!context_ || !context_->pb->seekable)
+    if (!context_ || !context_->pb || !context_->pb->seekable)
     {
       return false;
     }

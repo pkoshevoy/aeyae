@@ -26,6 +26,7 @@ namespace yae
   struct TQImageBuffer : public IPlanarBuffer
   {
     TQImageBuffer(int w, int h, QImage::Format fmt);
+    TQImageBuffer(const QImage & qimg);
 
     // virtual:
     void destroy();

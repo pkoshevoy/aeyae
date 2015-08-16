@@ -157,7 +157,9 @@ Item
             anchors.fill: parent
 
             // Toggle the 'collapsed' property
-            onClicked: playlistModel.setProperty(index, "collapsed", !collapsed)
+            onClicked: playlistModel.setProperty(index,
+                                                 "collapsed",
+                                                 !collapsed)
           }
         }
 
@@ -213,12 +215,13 @@ Item
 
         // size-to-fit:
         height: (!groupItemsGridView.count ? 0 :
-                 calc_title_height(24.0, playlistView.width) +
+                 1 + // calc_title_height(24.0, playlistView.width) +
                  groupItemsGridView.cellHeight *
                  Math.max(1.0,
                           Math.ceil(groupItemsGridView.count /
                                     Math.floor(playlistView.width /
-                                               groupItemsGridView.cellWidth))));
+                                               groupItemsGridView.
+                                               cellWidth))));
 
         GridView {
           id: groupItemsGridView
@@ -238,8 +241,8 @@ Item
 
               Rectangle {
                 anchors.fill: parent
-                anchors.rightMargin: 1
-                anchors.bottomMargin: 1
+                // anchors.rightMargin: 1
+                // anchors.bottomMargin: 1
                 color: (calc_zebra_index(index,
                                          groupItemsGridView.cellWidth,
                                          playlistView.width) ?
@@ -248,7 +251,7 @@ Item
                 Image {
                   opacity: 1.0
                   anchors.fill: parent
-                  anchors.margins: 8
+                  // anchors.margins: 8
                   fillMode: Image.PreserveAspectFit
                   source: thumbnail // "qrc:///images/apprenticevideo-256.png"
                 }

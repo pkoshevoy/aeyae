@@ -9,6 +9,9 @@
 #ifndef YAE_THUMBNAIL_PROVIDER_H_
 #define YAE_THUMBNAIL_PROVIDER_H_
 
+// standard C++ library:
+#include <map>
+
 // Qt includes:
 #include <QImage>
 #include <QQuickImageProvider>
@@ -31,7 +34,10 @@ namespace yae
   struct ThumbnailProvider : public QQuickImageProvider
   {
     ThumbnailProvider(const IReaderPtr & readerPrototype,
-                      yae::mvc::Playlist & playlist);
+                      yae::mvc::Playlist & playlist,
+
+                      // default thumbnail size:
+                      const QSize & envelopeSize = QSize(160, 90));
 
     // virtual:
     QImage requestImage(const QString & id,
@@ -41,6 +47,8 @@ namespace yae
   protected:
     IReaderPtr readerPrototype_;
     yae::mvc::Playlist & playlist_;
+    QSize envelopeSize_;
+    std::map<QString, QImage> cache_;
   };
 
 }
