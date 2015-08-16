@@ -1364,29 +1364,16 @@ namespace yae
   bool
   MainWindow::load(const QString & path, const TBookmark * bookmark)
   {
-    QString fn = path;
-    QFileInfo fi(fn);
-    if (fi.suffix() == kExtEyetv)
-    {
-      std::list<QString> found;
-      findFiles(found, path, false);
-
-      if (!found.empty())
-      {
-        fn = found.front();
-      }
-    }
-
     actionPlay->setEnabled(false);
 
     IReaderPtr reader =
-      canaryTest(fn) ? yae::openFile(readerPrototype_, fn) : IReaderPtr();
+      canaryTest(path) ? yae::openFile(readerPrototype_, path) : IReaderPtr();
 
     if (!reader)
     {
 #if 0
       std::cerr
-        << "ERROR: could not open file: " << fn.toUtf8().constData()
+        << "ERROR: could not open file: " << path.toUtf8().constData()
         << std::endl;
 #endif
       return false;

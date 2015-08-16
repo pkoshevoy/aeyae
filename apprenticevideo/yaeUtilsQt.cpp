@@ -1787,8 +1787,22 @@ namespace yae
   // openFile
   //
   IReaderPtr
-  openFile(const yae::IReaderPtr & readerPrototype, const QString & fn)
+  openFile(const yae::IReaderPtr & readerPrototype, const QString & path)
   {
+    QString fn = path;
+    QFileInfo fi(fn);
+
+    if (fi.suffix() == kExtEyetv)
+    {
+      std::list<QString> found;
+      findFiles(found, path, false);
+
+      if (!found.empty())
+      {
+        fn = found.front();
+      }
+    }
+
     IReaderPtr reader(readerPrototype->clone());
 
     for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
