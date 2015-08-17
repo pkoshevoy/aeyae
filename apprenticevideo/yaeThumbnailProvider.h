@@ -37,7 +37,9 @@ namespace yae
                       yae::mvc::Playlist & playlist,
 
                       // default thumbnail size:
-                      const QSize & envelopeSize = QSize(160, 90));
+                      const QSize & envelopeSize = QSize(384, 216)
+                      // const QSize & envelopeSize = QSize(160, 90)
+                      );
 
     // virtual:
     QImage requestImage(const QString & id,

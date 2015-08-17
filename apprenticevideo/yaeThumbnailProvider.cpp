@@ -229,7 +229,7 @@ namespace yae
                const QString & id)
   {
     static QImage iconAudio
-      (QString::fromUtf8(":/images/audio-speaker.png"));
+      (QString::fromUtf8(":/images/music-note.png"));
 
     static QImage iconVideo
       (QString::fromUtf8(":/images/video-frame.png"));

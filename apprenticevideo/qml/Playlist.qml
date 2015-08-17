@@ -169,6 +169,7 @@ Item
           anchors.left: disclosureBtn.right
           anchors.leftMargin: groupItem.height / 2
           elide: "ElideMiddle"
+          font.bold: true
           font.pixelSize: groupItem.height * 0.55
           text: label
           color: header_fg
@@ -261,6 +262,7 @@ Item
                   verticalAlignment: Text.AlignBottom
                   anchors.fill: parent
                   anchors.margins: 5
+                  font.bold: true
                   font.pixelSize: (calc_title_height(24.0, playlistView.width) *
                                    0.45);
                   wrapMode: "Wrap"
