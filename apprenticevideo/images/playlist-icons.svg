@@ -17,7 +17,7 @@
    version="1.1"
    inkscape:version="0.91 r13725"
    sodipodi:docname="playlist-icons.svg"
-   inkscape:export-filename="/Users/pavel/Pictures/music-note.png"
+   inkscape:export-filename="/Users/pavel/Pictures/group-collapsed.png"
    inkscape:export-xdpi="90"
    inkscape:export-ydpi="90"
    enable-background="new">
@@ -43,11 +43,11 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="4.8871592"
-     inkscape:cx="346.3562"
-     inkscape:cy="482.39902"
+     inkscape:zoom="5.1913044"
+     inkscape:cx="340"
+     inkscape:cy="500.00001"
      inkscape:document-units="px"
-     inkscape:current-layer="g4415"
+     inkscape:current-layer="svg3426"
      showgrid="true"
      inkscape:snap-others="true"
      inkscape:snap-global="true"
@@ -55,7 +55,8 @@
      inkscape:window-height="1360"
      inkscape:window-x="0"
      inkscape:window-y="0"
-     inkscape:window-maximized="1">
+     inkscape:window-maximized="1"
+     inkscape:snap-bbox="true">
     <inkscape:grid
        type="xygrid"
        id="grid3434" />
@@ -247,7 +248,7 @@
      inkscape:groupmode="layer"
      id="layer5"
      inkscape:label="music note"
-     style="display:inline">
+     style="display:none">
     <ellipse
        style="fill:none;fill-opacity:0.49803922;stroke:#7f7f7f;stroke-width:20;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.49803922"
        id="path4387"
@@ -263,7 +264,7 @@
        sodipodi:nodetypes="ccsscssc" />
   </g>
   <g
-     style=""
+     style="display:none"
      inkscape:label="music note copy"
      id="g4415"
      inkscape:groupmode="layer">
@@ -284,5 +285,61 @@
        style="fill:#000000;fill-opacity:0.49803922;fill-rule:evenodd;stroke:#000000;stroke-width:8;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.49803922"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer6"
+     inkscape:label="circle"
+     style="display:none">
+    <circle
+       style="fill:#000000;fill-opacity:0.49803922;stroke:#7f7f7f;stroke-width:7.99999857;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.49803922"
+       id="path4430"
+       cx="340"
+       cy="407.08661"
+       r="111" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer7"
+     inkscape:label="items-exposed"
+     style="display:none">
+    <path
+       sodipodi:type="star"
+       style="fill:#ffffff;fill-opacity:0.49803922;stroke:#7f7f7f;stroke-width:8;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.49803922"
+       id="path4445"
+       sodipodi:sides="3"
+       sodipodi:cx="340"
+       sodipodi:cy="407.08661"
+       sodipodi:r1="110"
+       sodipodi:r2="55"
+       sodipodi:arg1="1.5707963"
+       sodipodi:arg2="2.6179939"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 340,517.08661 -47.6314,-82.5 -47.6314,-82.5 95.2628,0 95.26279,0 -47.63139,82.5 z"
+       inkscape:transform-center-y="27.5" />
+  </g>
+  <g
+     style="display:inline"
+     inkscape:label="items-collapsed"
+     id="g4437"
+     inkscape:groupmode="layer">
+    <path
+       sodipodi:type="star"
+       style="fill:#ffffff;fill-opacity:0.49803922;stroke:#7f7f7f;stroke-width:8;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.49803922"
+       id="path4449"
+       sodipodi:sides="3"
+       sodipodi:cx="340"
+       sodipodi:cy="407.08661"
+       sodipodi:r1="110"
+       sodipodi:r2="55"
+       sodipodi:arg1="0"
+       sodipodi:arg2="1.0471976"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 450,407.08661 -82.5,47.6314 -82.5,47.63139 0,-95.26279 0,-95.2628 82.5,47.6314 z"
+       inkscape:transform-center-x="-27.5" />
   </g>
 </svg>

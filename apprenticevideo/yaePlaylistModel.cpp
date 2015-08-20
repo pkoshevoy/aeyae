@@ -274,6 +274,33 @@ namespace mvc
   }
 
   //----------------------------------------------------------------
+  // PlaylistModel::setData
+  //
+  bool
+  PlaylistModel::setData(const QModelIndex & index,
+                         const QVariant & value,
+                         int role)
+  {
+    const PlaylistNode * parentNode = NULL;
+    PlaylistNode * node = getNode(index, parentNode);
+    PlaylistGroup * group = dynamic_cast<PlaylistGroup *>(node);
+
+    // std::cerr << "PlaylistModel::setData, role: " << role << std::endl;
+
+    if (group)
+    {
+      if (role == kRoleCollapsed)
+      {
+        group->collapsed_ = value.toBool();
+        emit dataChanged(index, index);
+        return true;
+      }
+    }
+
+    return QAbstractItemModel::setData(index, value, role);
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModel::getNode
   //
   PlaylistNode *

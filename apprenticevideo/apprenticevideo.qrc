@@ -14,6 +14,8 @@
     <file>images/broken-glass.png</file>
     <file>images/music-key.png</file>
     <file>images/music-note.png</file>
+    <file>images/group-exposed.png</file>
+    <file>images/group-collapsed.png</file>
     <file>yaeAbout.html</file>
     <file>qml/Playlist.qml</file>
   </qresource>

@@ -72,6 +72,9 @@ namespace mvc
     // virtual:
     QVariant data(const QModelIndex & index, int role) const;
 
+    // virtual:
+    bool setData(const QModelIndex & index, const QVariant & value, int role);
+
     // lookup a node associated with a given model index:
     PlaylistNode * getNode(const QModelIndex & index,
                            const PlaylistNode *& parentNode) const;
