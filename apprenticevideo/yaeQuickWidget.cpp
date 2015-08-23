@@ -86,7 +86,7 @@ namespace yae
     QQuickWidget::setCursor(QCursor(Qt::ArrowCursor));
     QQuickWidget::mouseMoveEvent(e);
   }
-
+#if 0
   //----------------------------------------------------------------
   // TQuickWidget::mouseDoubleClickEvent
   //
@@ -96,5 +96,5 @@ namespace yae
     emit doubleClick();
     QQuickWidget::mouseDoubleClickEvent(e);
   }
-
+#endif
 }

@@ -26,8 +26,6 @@
 
 namespace yae
 {
-namespace mvc
-{
 
   //----------------------------------------------------------------
   // PlaylistKey
@@ -148,15 +146,16 @@ namespace mvc
     std::size_t countItemsBehind() const;
 
     // lookup a playlist item by index:
-    PlaylistGroup * lookupGroup(std::size_t index);
-    PlaylistItem * lookup(std::size_t index, PlaylistGroup ** group = NULL);
+    PlaylistGroup * lookupGroup(std::size_t index) const;
+    PlaylistItem * lookup(std::size_t index,
+                          PlaylistGroup ** group = NULL) const;
 
     // lookup a playlist item by group hash and item hash:
-    PlaylistGroup * lookupGroup(const std::string & groupHash);
+    PlaylistGroup * lookupGroup(const std::string & groupHash) const;
     PlaylistItem * lookup(const std::string & groupHash,
                           const std::string & itemHash,
                           std::size_t * returnItemIndex = NULL,
-                          PlaylistGroup ** returnGroup = NULL);
+                          PlaylistGroup ** returnGroup = NULL) const;
 
     enum TDirection {
       kBehind = 0,
@@ -166,13 +165,13 @@ namespace mvc
     // lookup non-excluded group closest (in a given direction)
     // to the specified item index:
     PlaylistGroup * closestGroup(std::size_t itemIndex,
-                                 TDirection where = kAhead);
+                                 TDirection where = kAhead) const;
 
     // lookup non-excluded item closest (in a given direction)
     // to the specified item index:
     std::size_t closestItem(std::size_t itemIndex,
                             TDirection where = kAhead,
-                            PlaylistGroup ** group = NULL);
+                            PlaylistGroup ** group = NULL) const;
 
     // item filter:
     bool filterChanged(const QString & filter);
@@ -190,6 +189,7 @@ namespace mvc
   protected:
     // helpers:
     bool applyFilter();
+    void updateOffsets();
 
     // a playlist tree:
     TPlaylistTree tree_;
@@ -218,7 +218,6 @@ namespace mvc
     std::list<QString> keywords_;
   };
 
-}
 }
 
 #endif // YAE_PLAYLIST_H_

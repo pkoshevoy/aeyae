@@ -34,7 +34,7 @@ namespace yae
   struct ThumbnailProvider : public QQuickImageProvider
   {
     ThumbnailProvider(const IReaderPtr & readerPrototype,
-                      yae::mvc::Playlist & playlist,
+                      const yae::Playlist & playlist,
 
                       // default thumbnail size:
                       const QSize & envelopeSize = QSize(384, 216)
@@ -48,7 +48,7 @@ namespace yae
 
   protected:
     IReaderPtr readerPrototype_;
-    yae::mvc::Playlist & playlist_;
+    const yae::Playlist & playlist_;
     QSize envelopeSize_;
     std::map<QString, QImage> cache_;
   };

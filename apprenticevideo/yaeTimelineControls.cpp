@@ -108,57 +108,7 @@ namespace yae
   Marker::Marker():
     position_(0.0),
     positionAnchor_(0.0)
-  {
-    hotspot_[0] = 0;
-    hotspot_[1] = 0;
-  }
-
-  //----------------------------------------------------------------
-  // Marker::overlaps
-  //
-  bool
-  Marker::overlaps(const QPoint & coords,
-
-                   // these parameters are used to derive current
-                   // marker position:
-                   const int & xOrigin,
-                   const int & yOrigin,
-                   const int & unitLength) const
-  {
-    QRect bbox = image_.rect();
-
-    int x0 = coords.x() - (xOrigin +
-                           int(0.5 + unitLength * position_) -
-                           hotspot_[0]);
-
-    int y0 = coords.y() - (yOrigin - hotspot_[1]);
-
-    // the mouse coordinates are tested with [-3, 3] margin
-    // in order to make it easier to click on small handles:
-    for (int i = -3; i <= 3; i++)
-    {
-      for (int j = -3; j <= 3; j++)
-      {
-        int x = x0 + i;
-        int y = y0 + j;
-
-        if (!bbox.contains(x, y))
-        {
-          continue;
-        }
-
-        QRgb rgba = image_.pixel(x, y);
-        int alpha = qAlpha(rgba);
-
-        if (alpha > 0)
-        {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
+  {}
 
   //----------------------------------------------------------------
   // Marker::setAnchor
@@ -173,18 +123,13 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls::TimelineControls
   //
-  TimelineControls::TimelineControls(QWidget * parent, Qt::WindowFlags f):
-    QWidget(parent, f),
-    activeMarker_(NULL),
+  TimelineControls::TimelineControls():
     ignoreClockStopped_(false),
     unknownDuration_(false),
     timelineStart_(0.0),
     timelineDuration_(0.0),
     timelinePosition_(0.0),
     frameRate_(100.0),
-    auxPlayhead_(NULL),
-    auxDuration_(NULL),
-    auxFocusWidget_(NULL),
     repaintTimer_(this),
     slideshowTimer_(this)
   {
@@ -192,32 +137,6 @@ namespace yae
 
     padding_ = 8;
     lineWidth_ = 3;
-
-    setMinimumHeight(padding_ * 2 + lineWidth_);
-    setMinimumWidth(padding_ * 2 + 64);
-    setAutoFillBackground(true);
-    setFocusPolicy(Qt::ClickFocus);
-    setMouseTracking(true);
-
-    QPalette pal = palette();
-    pal.setColor(QPalette::Window, QColor(0, 0, 0));
-    pal.setColor(QPalette::Text, QColor(200, 200, 200));
-    setPalette(pal);
-
-    // load graphics for direct manipulation handles:
-    markerTimeIn_.image_ = QImage(":/images/timeIn.png");
-    markerTimeOut_.image_ = QImage(":/images/timeOut.png");
-    markerPlayhead_.image_ = QImage(":/images/playHead.png");
-
-    // setup hotspots:
-    markerTimeIn_.hotspot_[0] = markerTimeIn_.image_.width() - 1;
-    markerTimeIn_.hotspot_[1] = 12;
-
-    markerTimeOut_.hotspot_[0] = 0;
-    markerTimeOut_.hotspot_[1] = 12;
-
-    markerPlayhead_.hotspot_[0] = markerPlayhead_.image_.width() / 2;
-    markerPlayhead_.hotspot_[1] = 8;
 
     // setup marker positions:
     markerTimeIn_.position_ = timelineStart_;
@@ -248,71 +167,6 @@ namespace yae
   //
   TimelineControls::~TimelineControls()
   {}
-
-  //----------------------------------------------------------------
-  // TimelineControls::setAuxWidgets
-  //
-  void
-  TimelineControls::setAuxWidgets(QLineEdit * playhead,
-                                  QLineEdit * duration,
-                                  QWidget * focusWidget)
-  {
-    auxFocusWidget_ = focusWidget;
-
-    if (auxPlayhead_)
-    {
-      auxPlayhead_->disconnect();
-    }
-
-    if (auxDuration_)
-    {
-      auxDuration_->disconnect();
-    }
-
-    auxPlayhead_ = playhead;
-    auxDuration_ = duration;
-
-    QFont clockFont = font();
-    clockFont.setBold(true);
-    clockFont.setPixelSize(11);
-    clockFont.setStyle(QFont::StyleNormal);
-#if QT_VERSION < 0x040700
-    clockFont.setStyleHint(QFont::Courier);
-#else
-    clockFont.setStyleHint(QFont::Monospace);
-#endif
-    clockFont.setStyleStrategy(QFont::PreferDefault);
-    clockFont.setWeight(QFont::Normal);
-
-    QFontMetrics fm(clockFont);
-    QSize bbox = fm.size(Qt::TextSingleLine, kClockTemplate);
-    bbox += QSize(4, 8);
-
-    bool ok = true;
-
-    if (auxPlayhead_)
-    {
-      auxPlayhead_->setFont(clockFont);
-      auxPlayhead_->setMinimumSize(bbox);
-      auxPlayhead_->setMaximumSize(bbox);
-      auxPlayhead_->setEnabled(timelineDuration_);
-
-      ok = connect(auxPlayhead_, SIGNAL(returnPressed()),
-                   this, SLOT(seekToAuxPlayhead()));
-      YAE_ASSERT(ok);
-    }
-
-    if (auxDuration_)
-    {
-      auxDuration_->setFont(clockFont);
-      auxDuration_->setMinimumSize(bbox);
-      auxDuration_->setMaximumSize(bbox);
-      auxDuration_->setEnabled(timelineDuration_);
-    }
-
-    updateAuxPlayhead(timelineStart_);
-    updateAuxDuration(timelineStart_ + timelineDuration_);
-  }
 
   //----------------------------------------------------------------
   // TimelineControls::timelineStart
@@ -451,19 +305,6 @@ namespace yae
                          std::numeric_limits<double>::max() :
                          duration.toSeconds());
 
-    if (auxPlayhead_)
-    {
-      auxPlayhead_->setEnabled(timelineDuration_);
-    }
-
-    if (auxDuration_)
-    {
-      auxDuration_->setEnabled(timelineDuration_);
-    }
-
-    updateAuxPlayhead(timelineStart_);
-    updateAuxDuration(timelineStart_ + timelineDuration_);
-
     markerPlayhead_.position_ = 0.0;
     markerPlayhead_.setAnchor();
 
@@ -473,8 +314,7 @@ namespace yae
     markerTimeOut_.position_ = 1.0;
     markerTimeOut_.setAnchor();
 
-    setToolTip(QString());
-    update();
+    // update();
   }
 
   //----------------------------------------------------------------
@@ -519,19 +359,6 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    if (auxPlayhead_)
-    {
-      auxPlayhead_->setEnabled(timelineDuration_);
-    }
-
-    if (auxDuration_)
-    {
-      auxDuration_->setEnabled(timelineDuration_);
-    }
-
-    updateAuxPlayhead(t);
-    updateAuxDuration(T1);
-
     markerPlayhead_.position_ = (t - T0) / dT;
     markerPlayhead_.setAnchor();
 
@@ -541,8 +368,7 @@ namespace yae
     markerTimeOut_.position_ = (t1 - T0) / dT;
     markerTimeOut_.setAnchor();
 
-    setToolTip(QString());
-    update();
+    // update();
   }
 
   //----------------------------------------------------------------
@@ -564,7 +390,7 @@ namespace yae
       }
 
       emit moveTimeIn(seconds);
-      update();
+      // update();
     }
   }
 
@@ -587,7 +413,7 @@ namespace yae
       }
 
       emit moveTimeOut(seconds);
-      update();
+      // update();
     }
   }
 
@@ -627,11 +453,10 @@ namespace yae
 
     markerPlayhead_.position_ = t;
     seconds = t * timelineDuration_ + timelineStart_;
-    updateAuxPlayhead(seconds);
 
     emit movePlayHead(seconds);
 
-    update();
+    // update();
   }
 
   //----------------------------------------------------------------
@@ -715,30 +540,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::seekToAuxPlayhead
-  //
-  void
-  TimelineControls::seekToAuxPlayhead()
-  {
-    QString hhmmssff = auxPlayhead_->text();
-    seekTo(hhmmssff);
-
-    if (auxFocusWidget_)
-    {
-      auxFocusWidget_->setFocus();
-    }
-  }
-
-  //----------------------------------------------------------------
   // TimelineControls::requestRepaint
   //
   void
   TimelineControls::requestRepaint()
   {
+#if 0 // FIXME:
     if (isHidden())
     {
       return;
     }
+#endif
 
     if (!repaintTimer_.isActive())
     {
@@ -755,8 +567,7 @@ namespace yae
 #endif
       repaintTimer_.stop();
 
-      updateAuxPlayhead(timelinePosition_);
-      repaint();
+      // update();
     }
   }
 
@@ -766,8 +577,7 @@ namespace yae
   void
   TimelineControls::repaintTimerExpired()
   {
-    updateAuxPlayhead(timelinePosition_);
-    update();
+    // update();
   }
 
   //----------------------------------------------------------------
@@ -868,318 +678,7 @@ namespace yae
       }
     }
 
-    return QWidget::event(e);
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::paintEvent
-  //
-  void
-  TimelineControls::paintEvent(QPaintEvent * e)
-  {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    p.setPen(Qt::NoPen);
-
-    int xOrigin = 0;
-    int yOriginInOut = 0;
-    int yOriginPlayhead = 0;
-    int unitLength = 0;
-    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
-
-    if (!timelineDuration_ || unknownDuration_)
-    {
-      p.setBrush(QColor(0x40, 0x40, 0x40));
-      p.drawRect(xOrigin,
-                 yOriginPlayhead,
-                 unitLength,
-                 lineWidth_);
-      return;
-    }
-
-    int inExt = int(0.5 + double(unitLength) * markerTimeIn_.position_);
-    int outExt = int(0.5 + double(unitLength) * markerTimeOut_.position_);
-    int playExt = int(0.5 + double(unitLength) * markerPlayhead_.position_);
-
-    p.setBrush(QColor(0x80, 0x80, 0x80));
-    p.drawRect(xOrigin,
-               yOriginPlayhead,
-               inExt,
-               lineWidth_);
-
-    p.setBrush(QColor(0x40, 0x80, 0xff));
-    p.drawRect(xOrigin + inExt,
-               yOriginPlayhead,
-               outExt - inExt,
-               lineWidth_);
-
-    p.setBrush(QColor(0x80, 0x80, 0x80));
-    p.drawRect(xOrigin + outExt,
-               yOriginPlayhead,
-               unitLength - outExt,
-               lineWidth_);
-
-    p.drawImage(xOrigin + inExt - markerTimeIn_.hotspot_[0],
-                yOriginInOut - markerTimeIn_.hotspot_[1],
-                markerTimeIn_.image_);
-
-    p.drawImage(xOrigin + outExt - markerTimeOut_.hotspot_[0],
-                yOriginInOut - markerTimeOut_.hotspot_[1],
-                markerTimeOut_.image_);
-
-    p.drawImage(xOrigin + playExt - markerPlayhead_.hotspot_[0],
-                yOriginPlayhead - markerPlayhead_.hotspot_[1],
-                markerPlayhead_.image_);
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::mousePressEvent
-  //
-  void
-  TimelineControls::mousePressEvent(QMouseEvent * e)
-  {
-    if (!timelineDuration_ || unknownDuration_)
-    {
-      return;
-    }
-
-    QPoint pt = e->pos();
-
-    int xOrigin = 0;
-    int yOriginInOut = 0;
-    int yOriginPlayhead = 0;
-    int unitLength = 0;
-    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
-
-    dragStart_ = pt;
-    markerTimeIn_.setAnchor();
-    markerTimeOut_.setAnchor();
-    markerPlayhead_.setAnchor();
-
-    if (markerPlayhead_.overlaps(pt, xOrigin, yOriginPlayhead, unitLength))
-    {
-      // std::cout << "PLAYHEAD" << std::endl;
-      currentState_ = kDraggingPlayheadMarker;
-      activeMarker_ = &markerPlayhead_;
-      emit userIsSeeking(true);
-    }
-    else if (markerTimeOut_.overlaps(pt, xOrigin, yOriginInOut, unitLength))
-    {
-      // std::cout << "OUT POINT" << std::endl;
-      currentState_ = kDraggingTimeOutMarker;
-      activeMarker_ = &markerTimeOut_;
-    }
-    else if (markerTimeIn_.overlaps(pt, xOrigin, yOriginInOut, unitLength))
-    {
-      // std::cout << "IN POINT" << std::endl;
-      currentState_ = kDraggingTimeInMarker;
-      activeMarker_ = &markerTimeIn_;
-    }
-    else
-    {
-      currentState_ = kIdle;
-      activeMarker_ = NULL;
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::mouseReleaseEvent
-  //
-  void
-  TimelineControls::mouseReleaseEvent(QMouseEvent * e)
-  {
-    if (currentState_ == kDraggingPlayheadMarker)
-    {
-      emit userIsSeeking(false);
-    }
-
-    currentState_ = kIdle;
-    activeMarker_ = NULL;
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::mouseMoveEvent
-  //
-  void
-  TimelineControls::mouseMoveEvent(QMouseEvent * e)
-  {
-    if (!timelineDuration_ || unknownDuration_)
-    {
-      return;
-    }
-
-    QPoint pt = e->pos();
-
-    int xOrigin = 0;
-    int yOriginInOut = 0;
-    int yOriginPlayhead = 0;
-    int unitLength = 0;
-    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
-
-    if (currentState_ == kIdle || !activeMarker_)
-    {
-      double t = double(pt.x() - xOrigin) / double(unitLength);
-      t = std::max(0.0, std::min(1.0, t));
-
-      double seconds = t * timelineDuration_ + timelineStart_;
-      QString mousePosition = getTimeStamp(seconds,
-                                           frameRate_,
-                                           frameNumberSeparator_);
-      setToolTip(mousePosition);
-      return;
-    }
-
-    int dx = pt.x() - dragStart_.x();
-
-    double t =
-      activeMarker_->positionAnchor_ +
-      double(dx) / double(unitLength);
-
-    t = std::max(0.0, std::min(1.0, t));
-
-    activeMarker_->position_ = t;
-    double seconds = t * timelineDuration_ + timelineStart_;
-
-    if (currentState_ == kDraggingTimeInMarker)
-    {
-      double t1 = std::max(activeMarker_->position_,
-                           markerTimeOut_.positionAnchor_);
-
-      if (t1 != markerTimeOut_.position_)
-      {
-        markerTimeOut_.position_ = t1;
-        double seconds = t1 * timelineDuration_ + timelineStart_;
-        emit moveTimeOut(seconds);
-      }
-
-      emit moveTimeIn(seconds);
-    }
-
-    if (currentState_ == kDraggingTimeOutMarker)
-    {
-      double t0 = std::min(activeMarker_->position_,
-                           markerTimeIn_.positionAnchor_);
-
-      if (t0 != markerTimeIn_.position_)
-      {
-        markerTimeIn_.position_ = t0;
-        double seconds = t0 * timelineDuration_ + timelineStart_;
-        emit moveTimeIn(seconds);
-      }
-
-      emit moveTimeOut(seconds);
-    }
-
-    if (currentState_ == kDraggingPlayheadMarker)
-    {
-      updateAuxPlayhead(seconds);
-      emit movePlayHead(seconds);
-    }
-
-    update();
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::mouseDoubleClickEvent
-  //
-  void
-  TimelineControls::mouseDoubleClickEvent(QMouseEvent * e)
-  {
-    int xOrigin = 0;
-    int yOriginInOut = 0;
-    int yOriginPlayhead = 0;
-    int unitLength = 0;
-    getMarkerCSys(xOrigin, yOriginInOut, yOriginPlayhead, unitLength);
-
-    QPoint pt = e->pos();
-    double t = double(pt.x() - xOrigin) / double(unitLength);
-    t = std::max(0.0, std::min(1.0, t));
-    double seconds = t * timelineDuration_ + timelineStart_;
-    seekTo(seconds);
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::keyPressEvent
-  //
-  void
-  TimelineControls::keyPressEvent(QKeyEvent * e)
-  {
-    int key = e->key();
-
-    if (activeMarker_ &&
-        currentState_ != kIdle &&
-        key == Qt::Key_Escape)
-    {
-      activeMarker_->position_ = activeMarker_->positionAnchor_;
-      currentState_ = kIdle;
-      activeMarker_ = NULL;
-
-      update();
-    }
-    else
-    {
-      e->ignore();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::getMarkerCSys
-  //
-  void
-  TimelineControls::getMarkerCSys(int & xOrigin,
-                                  int & yOriginInOut,
-                                  int & yOriginPlayhead,
-                                  int & unitLength) const
-  {
-    xOrigin = padding_;
-    int mh = minimumHeight();
-    yOriginInOut = (height() - mh) / 2 + (mh - padding_);
-    yOriginPlayhead = yOriginInOut - lineWidth_;
-    unitLength = width() - padding_ * 2;
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::updateAuxPlayhead
-  //
-  void
-  TimelineControls::updateAuxPlayhead(double position)
-  {
-    if (auxPlayhead_)
-    {
-      if (!auxPlayhead_->isEnabled())
-      {
-        auxPlayhead_->setText(kClockTemplate);
-      }
-      else if (!auxPlayhead_->hasFocus())
-      {
-        QString ts = getTimeStamp(position, frameRate_, frameNumberSeparator_);
-        auxPlayhead_->setText(ts);
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::updateAuxDuration
-  //
-  void
-  TimelineControls::updateAuxDuration(double duration)
-  {
-    if (auxDuration_)
-    {
-      if (!auxDuration_->isEnabled())
-      {
-        auxDuration_->setText(kClockTemplate);
-      }
-      else if (unknownDuration_)
-      {
-        auxDuration_->setText(tr("N/A"));
-      }
-      else
-      {
-        QString ts = getTimeStamp(duration, frameRate_, frameNumberSeparator_);
-        auxDuration_->setText(ts);
-      }
-    }
+    return QQuickItem::event(e);
   }
 
 }

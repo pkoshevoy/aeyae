@@ -12,8 +12,6 @@
 
 namespace yae
 {
-namespace mvc
-{
 
   //----------------------------------------------------------------
   // PlaylistModel::PlaylistModel
@@ -259,7 +257,8 @@ namespace mvc
 
       if (role == kRolePlaying)
       {
-        return QVariant(playlist_.currentItem() == item->row_);
+        std::size_t itemIndex = parentGroup->offset_ + item->row_;
+        return QVariant(playlist_.currentItem() == itemIndex);
       }
 
       if (role == kRoleFailed)
@@ -292,8 +291,22 @@ namespace mvc
       if (role == kRoleCollapsed)
       {
         group->collapsed_ = value.toBool();
-        emit dataChanged(index, index);
+        emitDataChanged(kRoleCollapsed, index);
         return true;
+      }
+    }
+
+    const PlaylistItem * item =
+      dynamic_cast<const PlaylistItem *>(node);
+
+    if (item)
+    {
+      const PlaylistGroup * parentGroup =
+        dynamic_cast<const PlaylistGroup *>(parentNode);
+
+      if (role == kRolePlaying)
+      {
+        setCurrentItem(parentGroup->offset_ + item->row_, true);
       }
     }
 
@@ -385,5 +398,149 @@ namespace mvc
 #endif
   }
 
-}
+  //----------------------------------------------------------------
+  // PlaylistModel::filterChanged
+  //
+  bool
+  PlaylistModel::filterChanged(const QString & filter)
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setCurrentItem
+  //
+  void
+  PlaylistModel::setCurrentItem(std::size_t itemIndex, bool force)
+  {
+    QModelIndex prev = modelIndexForItem(playlist_.currentItem());
+
+    playlist_.setCurrentItem(itemIndex, force);
+
+    QModelIndex curr = modelIndexForItem(playlist_.currentItem());
+
+    if (prev != curr)
+    {
+      emitDataChanged(kRolePlaying, prev);
+      emitDataChanged(kRolePlaying, curr);
+
+      // FIXME: how to ensure the item is visible in the view?
+      emit currentItemChanged(playlist_.currentItem());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::selectAll
+  //
+  void
+  PlaylistModel::selectAll()
+  {
+    playlist_.selectAll();
+
+    for (std::vector<PlaylistGroup>::const_iterator
+           i = playlist_.groups_.begin(); i != playlist_.groups_.end(); ++i)
+    {
+      const PlaylistGroup & group = *i;
+      std::size_t groupSize = group.items_.size();
+
+      QModelIndex i0 = modelIndexForItem(group.offset_);
+      QModelIndex i1 = modelIndexForItem(group.offset_ + groupSize - 1);
+      emitDataChanged(kRoleSelected, i0, i1);
+    }
+  }
+#if 0
+  //----------------------------------------------------------------
+  // PlaylistModel::selectGroup
+  //
+  void
+  PlaylistModel::selectGroup(PlaylistGroup * group)
+  {
+    // FIXME: what about items that are unselected as the result?
+
+    playlist_.selectGroup(group);
+
+    std::size_t groupSize = group->items_.size();
+    QModelIndex i0 = modelIndexForItem(group->offset_);
+    QModelIndex i1 = modelIndexForItem(group->offset_ + groupSize - 1);
+    emitDataChanged(kRoleSelected, i0, i1);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::selectItem
+  //
+  void
+  PlaylistModel::selectItem(std::size_t indexSel, bool exclusive)
+  {
+    // FIXME: what about items that are unselected as the result?
+
+    playlist_.selectItem(indexSel, exclusive);
+
+    QModelIndex index = modelIndexForItem(indexSel);
+    emitDataChanged(kRoleSelected, i0, i1);
+  }
+#endif
+  //----------------------------------------------------------------
+  // PlaylistModel::removeSelected
+  //
+  void
+  PlaylistModel::removeSelected()
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::removeItems
+  //
+  void
+  PlaylistModel::removeItems(std::size_t groupIndex, std::size_t itemIndex)
+  {
+    // FIXME: write me!
+    YAE_ASSERT(false);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::modelIndexForItem
+  //
+  QModelIndex
+  PlaylistModel::modelIndexForItem(std::size_t itemIndex) const
+  {
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlist_.lookup(itemIndex, &group);
+
+    if (!item)
+    {
+      return QModelIndex();
+    }
+
+    return createIndex(item->row_, 0, group);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::emitDataChanged
+  //
+  void
+  PlaylistModel::emitDataChanged(Roles role, const QModelIndex & index)
+  {
+    if (!index.isValid())
+    {
+      return;
+    }
+
+    emit dataChanged(index, index, QVector<int>(1, role));
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::emitDataChanged
+  //
+  void
+  PlaylistModel::emitDataChanged(Roles role,
+                                 const QModelIndex & first,
+                                 const QModelIndex & last)
+  {
+    emit dataChanged(first, last, QVector<int>(1, role));
+  }
+
 }

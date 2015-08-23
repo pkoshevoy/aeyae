@@ -15,11 +15,8 @@
 #endif
 
 // Qt includes:
-#include <QWidget>
-#include <QUrl>
-#include <QImage>
+#include <QQuickItem>
 #include <QEvent>
-#include <QLineEdit>
 #include <QTimer>
 #include <QTime>
 
@@ -39,24 +36,8 @@ namespace yae
   {
     Marker();
 
-    // check whether the marker image overlaps given coordinates
-    // where marker image pixel alpha channel is greater than zero:
-    bool overlaps(const QPoint & coords,
-
-                  // these parameters are used to derive current
-                  // marker position:
-                  const int & xOrigin,
-                  const int & yOrigin,
-                  const int & unitLength) const;
-
     // set anchor position to current marker position:
     void setAnchor();
-
-    // image of the marker:
-    QImage image_;
-
-    // marker hot-spot position within the image:
-    int hotspot_[2];
 
     // current marker position on the timeline:
     double position_;
@@ -68,23 +49,14 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls
   //
-  class TimelineControls : public QWidget,
+  class TimelineControls : public QQuickItem,
                            public IClockObserver
   {
     Q_OBJECT;
 
   public:
-    TimelineControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
+    TimelineControls();
     ~TimelineControls();
-
-    // optional widgets used to display (or edit) playhead
-    // position and total duration:
-    void setAuxWidgets(QLineEdit * playhead,
-                       QLineEdit * duration,
-
-                       // after user enters new playhead position
-                       // focus will be given to this widget:
-                       QWidget * focusWidget);
 
     // NOTE: this instance of TimelineControls will register itself
     // as an observer of the given shared clock; it will unregister
@@ -137,7 +109,6 @@ namespace yae
     void seekFromCurrentTime(double offsetSeconds);
     void seekTo(double absoluteSeconds);
     void seekTo(const QString & HhMmSsFf);
-    void seekToAuxPlayhead();
     void requestRepaint();
 
   protected slots:
@@ -147,23 +118,6 @@ namespace yae
   protected:
     // virtual:
     bool event(QEvent * e);
-    void paintEvent(QPaintEvent * e);
-    void mousePressEvent(QMouseEvent * e);
-    void mouseReleaseEvent(QMouseEvent * e);
-    void mouseMoveEvent(QMouseEvent * e);
-    void mouseDoubleClickEvent(QMouseEvent * e);
-    void keyPressEvent(QKeyEvent * e);
-
-    // accessors to coordinate system origin and x-axis unit length
-    // on which the direct manipulation handles are drawn,
-    // expressed in widget coordinate space:
-    void getMarkerCSys(int & xOrigin,
-                       int & yOriginInOut,
-                       int & yOriginPlayhead,
-                       int & unitLength) const;
-
-    void updateAuxPlayhead(double position);
-    void updateAuxDuration(double duration);
 
     //----------------------------------------------------------------
     // ClockStoppedEvent
@@ -228,8 +182,6 @@ namespace yae
     Marker markerTimeIn_;
     Marker markerTimeOut_;
     Marker markerPlayhead_;
-    Marker * activeMarker_;
-    QPoint dragStart_;
 
     // current state of playback controls:
     TState currentState_;
@@ -260,15 +212,6 @@ namespace yae
     // these are used to format the timecode text fields:
     double frameRate_;
     const char * frameNumberSeparator_;
-
-    // text widgets for displaying (or editing) playhead position
-    // and displaying total duration:
-    QLineEdit * auxPlayhead_;
-    QLineEdit * auxDuration_;
-
-    // after user enters new playhead position (via auxPlayead_)
-    // focus will be given to this widget:
-    QWidget * auxFocusWidget_;
 
     // repaint buffering:
     QTimer repaintTimer_;

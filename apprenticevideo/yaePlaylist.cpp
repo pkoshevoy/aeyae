@@ -32,8 +32,6 @@ namespace fs = boost::filesystem;
 
 namespace yae
 {
-namespace mvc
-{
 
   //----------------------------------------------------------------
   // getKeyPathHash
@@ -250,7 +248,7 @@ namespace mvc
       }
 
       fi = QFileInfo(humanReadablePath);
-      QString name = yae::toWords(fi.completeBaseName());
+      QString name = toWords(fi.completeBaseName());
 
       if (name.isEmpty())
       {
@@ -401,7 +399,7 @@ namespace mvc
       PlaylistGroup & group = groups_.back();
       group.row_ = groups_.size() - 1;
       group.keyPath_ = fringeGroup.fullPath_;
-      group.name_ = yae::mvc::toWords(fringeGroup.abbreviatedPath_);
+      group.name_ = toWords(fringeGroup.abbreviatedPath_);
       group.offset_ = numItems_;
       group.hash_ = getKeyPathHash(group.keyPath_);
 
@@ -421,7 +419,7 @@ namespace mvc
         playlistItem.key_ = key;
         playlistItem.path_ = value;
 
-        playlistItem.name_ = yae::toWords(key.key_);
+        playlistItem.name_ = toWords(key.key_);
         playlistItem.ext_ = key.ext_;
         playlistItem.hash_ = getKeyHash(playlistItem.key_);
 
@@ -437,6 +435,7 @@ namespace mvc
       highlighted_ = closestItem(highlighted_);
     }
 
+    updateOffsets();
     setCurrentItem(highlighted_, true);
   }
 
@@ -481,7 +480,7 @@ namespace mvc
   //
   PlaylistGroup *
   Playlist::closestGroup(std::size_t index,
-                         Playlist::TDirection where)
+                         Playlist::TDirection where) const
   {
     if (numItems_ == numShown_)
     {
@@ -489,12 +488,12 @@ namespace mvc
       return lookupGroup(index);
     }
 
-    PlaylistGroup * prev = NULL;
+    const PlaylistGroup * prev = NULL;
 
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<PlaylistGroup>::const_iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *i;
       if (group.excluded_)
       {
         continue;
@@ -517,16 +516,16 @@ namespace mvc
 
           for (std::size_t j = index - group.offset_; j < groupSize; j += step)
           {
-            PlaylistItem & item = group.items_[j];
+            const PlaylistItem & item = group.items_[j];
             if (!item.excluded_)
             {
-              return &group;
+              return const_cast<PlaylistGroup *>(&group);
             }
           }
         }
         else if (where == kAhead)
         {
-          return &group;
+          return const_cast<PlaylistGroup *>(&group);
         }
 
         if (where == kBehind)
@@ -538,7 +537,7 @@ namespace mvc
 
     if (where == kBehind)
     {
-      return prev;
+      return const_cast<PlaylistGroup *>(prev);
     }
 
     return NULL;
@@ -550,7 +549,7 @@ namespace mvc
   std::size_t
   Playlist::closestItem(std::size_t index,
                         Playlist::TDirection where,
-                        PlaylistGroup ** returnGroup)
+                        PlaylistGroup ** returnGroup) const
   {
     if (numItems_ == numShown_)
     {
@@ -639,7 +638,13 @@ namespace mvc
     keywords_.clear();
     splitIntoWords(filter, keywords_);
 
-    return applyFilter();
+    if (applyFilter())
+    {
+      updateOffsets();
+      return true;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -895,6 +900,8 @@ namespace mvc
       i = groups_.erase(i);
     }
 
+    updateOffsets();
+
     if (highlighted_ >= numItems_)
     {
       highlighted_ = numItems_ ? numItems_ - 1 : 0;
@@ -1015,6 +1022,8 @@ namespace mvc
       groups_.erase(iter);
     }
 
+    updateOffsets();
+
     if (newCurrent >= numItems_)
     {
       newCurrent = numItems_ ? numItems_ - 1 : 0;
@@ -1106,19 +1115,19 @@ namespace mvc
   // lookupLastGroup
   //
   inline static PlaylistGroup *
-  lookupLastGroup(std::vector<PlaylistGroup> & groups)
+  lookupLastGroup(const std::vector<PlaylistGroup> & groups)
   {
     std::size_t numGroups = groups.size();
     std::size_t i = lookupLastGroupIndex(groups);
-    PlaylistGroup * found = i < numGroups ? &groups[i] : NULL;
-    return found;
+    const PlaylistGroup * found = i < numGroups ? &groups[i] : NULL;
+    return const_cast<PlaylistGroup *>(found);
   }
 
   //----------------------------------------------------------------
   // Playlist::lookupGroup
   //
   PlaylistGroup *
-  Playlist::lookupGroup(std::size_t index)
+  Playlist::lookupGroup(std::size_t index) const
   {
 #if 0
     std::cerr << "Playlist::lookupGroup: " << index << std::endl;
@@ -1132,7 +1141,7 @@ namespace mvc
     if (index >= numItems_)
     {
       YAE_ASSERT(index == numItems_);
-      return lookupLastGroup(groups_);
+      return NULL;
     }
 
     const std::size_t numGroups = groups_.size();
@@ -1143,7 +1152,7 @@ namespace mvc
     {
       std::size_t i = i0 + (i1 - i0) / 2;
 
-      PlaylistGroup & group = groups_[i];
+      const PlaylistGroup & group = groups_[i];
       std::size_t numItems = group.items_.size();
       std::size_t groupEnd = group.offset_ + numItems;
 
@@ -1159,13 +1168,13 @@ namespace mvc
 
     if (i0 < numGroups)
     {
-      PlaylistGroup & group = groups_[i0];
+      const PlaylistGroup & group = groups_[i0];
       std::size_t numItems = group.items_.size();
       std::size_t groupEnd = group.offset_ + numItems;
 
       if (index < groupEnd)
       {
-        return &group;
+        return const_cast<PlaylistGroup *>(&group);
       }
     }
 
@@ -1177,7 +1186,7 @@ namespace mvc
   // Playlist::lookup
   //
   PlaylistItem *
-  Playlist::lookup(std::size_t index, PlaylistGroup ** returnGroup)
+  Playlist::lookup(std::size_t index, PlaylistGroup ** returnGroup) const
   {
 #if 0
     std::cerr << "Playlist::lookup: " << index << std::endl;
@@ -1195,7 +1204,11 @@ namespace mvc
       std::size_t i = index - group->offset_;
 
       YAE_ASSERT(i < groupSize || index == numItems_);
-      return i < groupSize ? &group->items_[i] : NULL;
+
+      return
+        (i < groupSize) ?
+        const_cast<PlaylistItem *>(&group->items_[i]) :
+        NULL;
     }
 
     return NULL;
@@ -1205,7 +1218,7 @@ namespace mvc
   // Playlist::lookupGroup
   //
   PlaylistGroup *
-  Playlist::lookupGroup(const std::string & groupHash)
+  Playlist::lookupGroup(const std::string & groupHash) const
   {
     if (groupHash.empty())
     {
@@ -1215,10 +1228,10 @@ namespace mvc
     const std::size_t numGroups = groups_.size();
     for (std::size_t i = 0; i < numGroups; i++)
     {
-      PlaylistGroup & group = groups_[i];
+      const PlaylistGroup & group = groups_[i];
       if (groupHash == group.hash_)
       {
-        return &group;
+        return const_cast<PlaylistGroup *>(&group);
       }
     }
 
@@ -1232,7 +1245,7 @@ namespace mvc
   Playlist::lookup(const std::string & groupHash,
                    const std::string & itemHash,
                    std::size_t * returnItemIndex,
-                   PlaylistGroup ** returnGroup)
+                   PlaylistGroup ** returnGroup) const
   {
     PlaylistGroup * group = lookupGroup(groupHash);
     if (!group || itemHash.empty())
@@ -1256,7 +1269,7 @@ namespace mvc
           *returnItemIndex = group->offset_ + i;
         }
 
-        return &item;
+        return const_cast<PlaylistItem *>(&item);
       }
     }
 
@@ -1267,5 +1280,46 @@ namespace mvc
 
     return NULL;
   }
-}
+
+  //----------------------------------------------------------------
+  // Playlist::updateOffsets
+  //
+  void
+  Playlist::updateOffsets()
+  {
+#if 0
+    std::cerr << "Playlist::updateOffsets" << std::endl;
+#endif
+
+    std::size_t offset = 0;
+    numShown_ = 0;
+    numShownGroups_ = 0;
+
+    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+         i != groups_.end(); ++i)
+    {
+      PlaylistGroup & group = *i;
+      group.offset_ = offset;
+
+      if (!group.excluded_)
+      {
+        numShownGroups_++;
+      }
+
+      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+           j != group.items_.end(); ++j)
+      {
+        PlaylistItem & item = *j;
+
+        if (!item.excluded_)
+        {
+          numShown_++;
+        }
+      }
+
+      offset += group.items_.size();
+    }
+
+    numItems_ = offset;
+  }
 }

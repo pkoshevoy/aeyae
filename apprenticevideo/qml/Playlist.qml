@@ -233,7 +233,22 @@ Item
                 source: thumbnail
               }
 
+              Rectangle {
+                color: "#7f7f7f7f"
+                anchors.margins: 0;
+                anchors.leftMargin: -3;
+                anchors.rightMargin: -3;
+                anchors.bottom: labelTag.bottom
+                anchors.left: labelTag.left
+                width: (labelTag.contentWidth -
+                        anchors.leftMargin -
+                        anchors.rightMargin)
+                height: labelTag.contentHeight
+                radius: 3
+              }
+
               Text {
+                id: labelTag
                 verticalAlignment: Text.AlignBottom
                 anchors.fill: parent
                 anchors.margins: 5
@@ -243,14 +258,43 @@ Item
                 wrapMode: "Wrap"
                 elide: "ElideMiddle"
                 text: label
-                color: (calc_zebra_index(index,
-                                         groupItemsGridView.cellWidth,
-                                         playlistView.width) ?
-                        zebra_fg[1] : zebra_fg[0])
+                color: "white";
 
                 style: Text.Outline;
-                styleColor: "black";
+                styleColor: "#7f7f7f7f";
               }
+
+              Rectangle {
+                color: "#7f7f7f7f"
+                anchors.margins: 0;
+                anchors.leftMargin: -3;
+                anchors.rightMargin: -3;
+                anchors.fill: nowPlayingTag
+                visible: playing
+                radius: 3
+              }
+
+              Text {
+                id: nowPlayingTag
+                visible: playing
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 5
+                font.bold: true
+                font.pixelSize: (calc_title_height(24.0, playlistView.width) *
+                                 0.30);
+                text: qsTr("NOW PLAYING")
+                color: "white"
+              }
+
+              MouseArea {
+                anchors.fill: parent
+
+                onDoubleClicked: {
+                  model.playing = true;
+                }
+              }
+
             }
           }
         }

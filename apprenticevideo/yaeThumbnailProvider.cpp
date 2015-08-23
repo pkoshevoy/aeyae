@@ -41,7 +41,7 @@ namespace yae
   // ThumbnailProvider::ThumbnailProvider
   //
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
-                                       yae::mvc::Playlist & playlist,
+                                       const Playlist & playlist,
                                        const QSize & envelopeSize):
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
@@ -54,7 +54,7 @@ namespace yae
   // getItemFilePath
   //
   static QString
-  getItemFilePath(yae::mvc::Playlist & playlist, const QString & id)
+  getItemFilePath(const Playlist & playlist, const QString & id)
   {
     std::string groupHashItemHash(id.toUtf8().constData());
     std::size_t t = groupHashItemHash.find_first_of('/');
@@ -62,11 +62,11 @@ namespace yae
     std::string itemHash = groupHashItemHash.substr(t + 1);
 
     std::size_t itemIndex = ~0;
-    yae::mvc::PlaylistGroup * group = NULL;
-    yae::mvc::PlaylistItem * item = playlist.lookup(groupHash,
-                                                    itemHash,
-                                                    &itemIndex,
-                                                    &group);
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlist.lookup(groupHash,
+                                          itemHash,
+                                          &itemIndex,
+                                          &group);
     if (!item)
     {
       YAE_ASSERT(false);
@@ -191,7 +191,10 @@ namespace yae
     if (reader->isSeekable() && reader->getVideoDuration(start, duration))
     {
       double t0 = start.toSeconds();
-      double offset = std::min<double>(duration.toSeconds() * 1e-2, 90.0);
+      // double offset = std::min<double>(duration.toSeconds() * 2e-2, 90.0);
+      double offset = std::min<double>(duration.toSeconds() * 8e-2, 288.0);
+
+      // FIXME: check for a bookmark, seek to the bookmarked position:
       reader->seek(t0 + offset);
     }
 
@@ -225,7 +228,7 @@ namespace yae
   static QImage
   getThumbnail(const yae::IReaderPtr & readerPrototype,
                const QSize & thumbnailMaxSize,
-               yae::mvc::Playlist & playlist,
+               const Playlist & playlist,
                const QString & id)
   {
     static QImage iconAudio

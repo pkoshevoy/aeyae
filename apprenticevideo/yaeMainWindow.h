@@ -204,7 +204,6 @@ namespace yae
     void playbackStop();
     void playback(bool forward = true);
     void scrollWheelTimerExpired();
-    void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
     void adjustCanvasHeight();
     void canvasSizeBackup();
@@ -324,9 +323,10 @@ namespace yae
     unsigned int readerId_;
 
     // frame canvas:
-    yae::mvc::PlaylistModel playlistModel_;
+    yae::PlaylistModel playlistModel_;
     TQuickWidget * canvasWidget_;
     Canvas * canvas_;
+    TimelineControls * timelineControls_;
 
     // audio device:
     std::string audioDevice_;

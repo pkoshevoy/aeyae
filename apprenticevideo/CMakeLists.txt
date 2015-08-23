@@ -77,7 +77,6 @@ set(project_moc_hxx
   yaeLineEdit.h
   yaeMainWindow.h
   yaePlaylistModel.h
-  yaePlaylistWidget.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
   )
@@ -125,8 +124,6 @@ set(project_sources
   yaePlaylist.cpp
   yaePlaylistModel.h
   yaePlaylistModel.cpp
-  yaePlaylistWidget.h
-  yaePlaylistWidget.cpp
   yaeQuickWidget.h
   yaeQuickWidget.cpp
   yaeScreenSaverInhibitor.h

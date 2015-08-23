@@ -224,7 +224,7 @@ namespace yae
     bool heldDown_;
   };
 #endif
-
+#if 0
   //----------------------------------------------------------------
   // setTimelineCss
   //
@@ -310,7 +310,7 @@ namespace yae
   {
     setTimelineCss(timeline, true);
   }
-
+#endif
   //----------------------------------------------------------------
   // getCanvas
   //
@@ -364,6 +364,7 @@ namespace yae
     readerId_(0),
     canvasWidget_(NULL),
     canvas_(NULL),
+    timelineControls_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
     playbackPaused_(false),
@@ -384,7 +385,7 @@ namespace yae
     setupUi(this);
     setAcceptDrops(true);
     setFocusPolicy(Qt::StrongFocus);
-    setFocusProxy(playlistWidget_);
+    // setFocusProxy(playlistWidget_);
     actionPlay->setText(tr("Pause"));
 
     contextMenu_ = new QMenu(this);
@@ -394,11 +395,11 @@ namespace yae
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-256.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
-
+#if 0
     timelineControls_->setAuxWidgets(lineEditPlayhead_,
                                      lineEditDuration_,
                                      this);
-
+#endif
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
@@ -426,13 +427,17 @@ namespace yae
       // add image://thumbnails/... provider:
       QQmlEngine * engine = canvasWidget_->engine();
       ThumbnailProvider * imageProvider =
-        new ThumbnailProvider(readerPrototype_, playlistModel_.playlist_);
+        new ThumbnailProvider(readerPrototype_, playlistModel_.playlist());
       engine->addImageProvider(QString::fromUtf8("thumbnails"),
                                imageProvider);
 
       // set playlist model:
       QQmlContext * context = canvasWidget_->rootContext();
       context->setContextProperty("playlistModel", &playlistModel_);
+
+      // set timeline controls:
+      timelineControls_ = new TimelineControls();
+      context->setContextProperty("timelineControls", timelineControls_);
 
       // start the widget:
       canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
@@ -454,7 +459,7 @@ namespace yae
 
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
-
+#if 0
     // show the timeline:
     setTimelineCssForVideo(timelineWidgets_);
     actionShowTimeline->setChecked(true);
@@ -463,7 +468,7 @@ namespace yae
     // hide the playlist:
     actionShowPlaylist->setChecked(false);
     playlistDock_->hide();
-
+#endif
     // setup the Open URL dialog:
     {
       std::list<std::string> protocols;
@@ -858,22 +863,22 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(actionRemove_, SIGNAL(triggered()),
-                 playlistWidget_, SLOT(removeSelected()));
+                 &playlistModel_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSelectAll_, SIGNAL(triggered()),
-                 playlistWidget_, SLOT(selectAll()));
+                 &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutRemove_, SIGNAL(activated()),
-                 playlistWidget_, SLOT(removeSelected()));
+                 &playlistModel_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutSelectAll_, SIGNAL(activated()),
-                 playlistWidget_, SLOT(selectAll()));
+                 &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
-    ok = connect(playlistWidget_, SIGNAL(currentItemChanged(std::size_t)),
+    ok = connect(&playlistModel_, SIGNAL(currentItemChanged(std::size_t)),
                  this, SLOT(playlistItemChanged(std::size_t)));
     YAE_ASSERT(ok);
 
@@ -996,19 +1001,15 @@ namespace yae
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
                  this, SLOT(scrollWheelTimerExpired()));
     YAE_ASSERT(ok);
-
-    ok = connect(playlistDock_, SIGNAL(visibilityChanged(bool)),
-                 this, SLOT(playlistVisibilityChanged(bool)));
-    YAE_ASSERT(ok);
-
+#if 0
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
-                 playlistWidget_, SLOT(filterChanged(const QString &)));
+                 &playlistModel_, SLOT(filterChanged(const QString &)));
     YAE_ASSERT(ok);
 
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
-
+#endif
     ok = connect(&autocropTimer_, SIGNAL(timeout()),
                  this, SLOT(playbackCropFrameAutoDetect()));
     YAE_ASSERT(ok);
@@ -1088,12 +1089,12 @@ namespace yae
   MainWindow::setPlaylist(const std::list<QString> & playlist,
                           bool beginPlaybackImmediately)
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
 
     bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
-    playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+    playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
     // FIXME:
     playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
@@ -1128,7 +1129,7 @@ namespace yae
           const std::string & itemHash = *j;
           if (itemHash == bookmark.itemHash_)
           {
-            found = playlistWidget_->lookup(bookmark.groupHash_,
+            found = playlistModel_.lookup(bookmark.groupHash_,
                                             bookmark.itemHash_,
                                             &bookmark.itemIndex_);
             if (found->excluded_)
@@ -1785,19 +1786,19 @@ namespace yae
 
     bookmarks_.clear();
 
-    std::size_t itemIndexNowPlaying = playlistWidget_->currentItem();
+    std::size_t itemIndexNowPlaying = playlistModel_.currentItem();
     std::size_t itemIndex = 0;
     std::size_t playingBookmarkIndex = std::numeric_limits<std::size_t>::max();
 
     while (true)
     {
-      PlaylistGroup * group = playlistWidget_->lookupGroup(itemIndex);
+      PlaylistGroup * group = playlistModel_.lookupGroup(itemIndex);
       std::size_t groupSize = group ? group->items_.size() : 0;
       if (!groupSize)
       {
         break;
       }
-
+      YAE_ASSERT(itemIndex == group->offset_);
       itemIndex += groupSize;
 
       if (group->excluded_)
@@ -1807,7 +1808,7 @@ namespace yae
 
       // check whether there is a bookmark for an item in this group:
       PlaylistBookmark bookmark;
-      if (!yae::loadBookmark(group->bookmarkHash_, bookmark))
+      if (!yae::loadBookmark(group->hash_, bookmark))
       {
         continue;
       }
@@ -1816,7 +1817,7 @@ namespace yae
       for (std::size_t i = 0; i < groupSize; i++)
       {
         const PlaylistItem & item = group->items_[i];
-        if (item.excluded_ || item.bookmarkHash_ != bookmark.itemHash_)
+        if (item.excluded_ || item.hash_ != bookmark.itemHash_)
         {
           continue;
         }
@@ -1888,9 +1889,9 @@ namespace yae
   void
   MainWindow::bookmarksRemoveNowPlaying()
   {
-    std::size_t itemIndex = playlistWidget_->currentItem();
+    std::size_t itemIndex = playlistModel_.currentItem();
     PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
     if (!item || !group)
     {
       return;
@@ -1900,8 +1901,8 @@ namespace yae
          i != bookmarks_.end(); ++i)
     {
       PlaylistBookmark & bookmark = *i;
-      if (bookmark.groupHash_ != group->bookmarkHash_ ||
-          bookmark.itemHash_ != item->bookmarkHash_)
+      if (bookmark.groupHash_ != group->hash_ ||
+          bookmark.itemHash_ != item->hash_)
       {
         continue;
       }
@@ -2270,18 +2271,13 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
-    SignalBlocker blockSignals(actionShowPlaylist);
-    canvasSizeBackup();
+    bool showPlaylist = actionShowPlaylist->isChecked();
 
-    if (playlistDock_->isVisible())
+    QQuickItem * playlistView =
+      canvasWidget_->rootObject()->findChild<QQuickItem *>("playlistView");
+    if (playlistView)
     {
-      actionShowPlaylist->setChecked(false);
-      playlistDock_->hide();
-    }
-    else
-    {
-      actionShowPlaylist->setChecked(true);
-      playlistDock_->show();
+      playlistView->setVisible(showPlaylist);
     }
   }
 
@@ -2292,7 +2288,7 @@ namespace yae
   MainWindow::playbackShowTimeline()
   {
     SignalBlocker blockSignals(actionShowTimeline);
-
+#if 0
     QRect mainGeom = geometry();
     int ctrlHeight = timelineWidgets_->height();
     bool fullScreen = this->isFullScreen();
@@ -2318,6 +2314,7 @@ namespace yae
 
       timelineWidgets_->show();
     }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2753,7 +2750,7 @@ namespace yae
   {
     playbackStop();
 
-    PlaylistItem * item = playlistWidget_->lookup(index);
+    PlaylistItem * item = playlistModel_.lookup(index);
     if (!item)
     {
       canvas_->clear();
@@ -2991,21 +2988,21 @@ namespace yae
     // remove current bookmark:
     bookmarkTimer_.stop();
 
-    std::size_t itemIndex = playlistWidget_->currentItem();
-    std::size_t nNext = playlistWidget_->countItemsAhead();
-    std::size_t iNext = playlistWidget_->closestItem(itemIndex + 1);
+    std::size_t itemIndex = playlistModel_.currentItem();
+    std::size_t nNext = playlistModel_.countItemsAhead();
+    std::size_t iNext = playlistModel_.closestItem(itemIndex + 1);
 
     PlaylistItem * next =
-      nNext && iNext > itemIndex ? playlistWidget_->lookup(iNext) : NULL;
+      nNext && iNext > itemIndex ? playlistModel_.lookup(iNext) : NULL;
 
     PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
 
     if (item && group)
     {
       PlaylistGroup * nextGroup = NULL;
-      playlistWidget_->closestItem(itemIndex + 1,
-                                   PlaylistWidget::kAhead,
+      playlistModel_.closestItem(itemIndex + 1,
+                                   Playlist::kAhead,
                                    &nextGroup);
 
       if (group != nextGroup)
@@ -3015,11 +3012,11 @@ namespace yae
         // if current item was bookmarked, then remove it from bookmarks:
         if (findBookmark(itemIndex, bookmark))
         {
-          yae::removeBookmark(group->bookmarkHash_);
+          yae::removeBookmark(group->hash_);
         }
 
         // if a bookmark exists for the next item group, then use it:
-        if (nextGroup && findBookmark(nextGroup->bookmarkHash_, bookmark))
+        if (nextGroup && findBookmark(nextGroup->hash_, bookmark))
         {
           gotoBookmark(bookmark);
           return;
@@ -3030,8 +3027,8 @@ namespace yae
     if (!next && actionRepeatPlaylist->isChecked())
     {
       // repeat the playlist:
-      std::size_t first = playlistWidget_->closestItem(0);
-      playlistWidget_->setCurrentItem(first, true);
+      std::size_t first = playlistModel_.closestItem(0);
+      playlistModel_.setCurrentItem(first, true);
       return;
     }
 
@@ -3069,14 +3066,14 @@ namespace yae
   void
   MainWindow::playback(bool forward)
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t current = playlistWidget_->currentItem();
+    std::size_t current = playlistModel_.currentItem();
     PlaylistItem * item = NULL;
     bool ok = false;
 
-    while ((item = playlistWidget_->lookup(current)))
+    while ((item = playlistModel_.lookup(current)))
     {
       item->failed_ = !load(item->path_);
 
@@ -3088,15 +3085,15 @@ namespace yae
 
       if (forward)
       {
-        current = playlistWidget_->closestItem(current + 1);
+        current = playlistModel_.closestItem(current + 1);
       }
       else
       {
-        current = playlistWidget_->closestItem(current - 1,
-                                               PlaylistWidget::kBehind);
+        current = playlistModel_.closestItem(current - 1,
+                                               Playlist::kBehind);
       }
 
-      playlistWidget_->setCurrentItem(current);
+      playlistModel_.setCurrentItem(current);
     }
 
     fixupNextPrev();
@@ -3113,25 +3110,25 @@ namespace yae
   void
   MainWindow::fixupNextPrev()
   {
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t nNext = playlistWidget_->countItemsAhead();
-    std::size_t nPrev = playlistWidget_->countItemsBehind();
+    std::size_t index = playlistModel_.currentItem();
+    std::size_t nNext = playlistModel_.countItemsAhead();
+    std::size_t nPrev = playlistModel_.countItemsBehind();
 
     std::size_t iNext =
       nNext ?
-      playlistWidget_->closestItem(index + 1) :
+      playlistModel_.closestItem(index + 1) :
       index;
 
     std::size_t iPrev =
       nPrev ?
-      playlistWidget_->closestItem(index - 1, PlaylistWidget::kBehind) :
+      playlistModel_.closestItem(index - 1, Playlist::kBehind) :
       index;
 
     PlaylistItem * prev =
-      nPrev && iPrev < index ? playlistWidget_->lookup(iPrev) : NULL;
+      nPrev && iPrev < index ? playlistModel_.lookup(iPrev) : NULL;
 
     PlaylistItem * next =
-      nNext && iNext > index ? playlistWidget_->lookup(iNext) : NULL;
+      nNext && iNext > index ? playlistModel_.lookup(iNext) : NULL;
 
     actionPrev->setEnabled(iPrev < index);
     actionNext->setEnabled(iNext > index);
@@ -3163,14 +3160,14 @@ namespace yae
   {
     playbackStop();
 
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t iNext = playlistWidget_->closestItem(index + 1);
+    std::size_t index = playlistModel_.currentItem();
+    std::size_t iNext = playlistModel_.closestItem(index + 1);
     if (iNext > index)
     {
-      playlistWidget_->setCurrentItem(iNext);
+      playlistModel_.setCurrentItem(iNext);
     }
 
     playback(true);
@@ -3182,15 +3179,15 @@ namespace yae
   void
   MainWindow::playbackPrev()
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t iPrev = playlistWidget_->closestItem(index - 1,
-                                                     PlaylistWidget::kBehind);
+    std::size_t index = playlistModel_.currentItem();
+    std::size_t iPrev = playlistModel_.closestItem(index - 1,
+                                                     Playlist::kBehind);
     if (iPrev < index)
     {
-      playlistWidget_->setCurrentItem(iPrev);
+      playlistModel_.setCurrentItem(iPrev);
     }
 
     playback(false);
@@ -3226,20 +3223,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playlistVisibilityChanged
-  //
-  void
-  MainWindow::playlistVisibilityChanged(bool visible)
-  {
-    if (actionShowPlaylist->isEnabled())
-    {
-      actionShowPlaylist->setChecked(visible);
-    }
-
-    QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::saveBookmark
   //
   void
@@ -3255,15 +3238,15 @@ namespace yae
       return;
     }
 
-    std::size_t itemIndex = playlistWidget_->currentItem();
+    std::size_t itemIndex = playlistModel_.currentItem();
     PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
 
     if (group && item)
     {
       double positionInSeconds = timelineControls_->currentTime();
-      yae::saveBookmark(group->bookmarkHash_,
-                        item->bookmarkHash_,
+      yae::saveBookmark(group->hash_,
+                        item->hash_,
                         reader_,
                         positionInSeconds);
 
@@ -3280,11 +3263,11 @@ namespace yae
   {
     playbackStop();
 
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    playlistWidget_->setCurrentItem(bookmark.itemIndex_);
-    PlaylistItem * item = playlistWidget_->lookup(bookmark.itemIndex_);
+    playlistModel_.setCurrentItem(bookmark.itemIndex_);
+    PlaylistItem * item = playlistModel_.lookup(bookmark.itemIndex_);
 
     if (item)
     {
@@ -3675,8 +3658,8 @@ namespace yae
       contextMenu_->addAction(actionShowPlaylist);
       contextMenu_->addAction(actionRepeatPlaylist);
 
-      if (playlistWidget_->underMouse() &&
-          playlistWidget_->countItems())
+      if (// playlistModel_.underMouse() && // if showing playlist...
+          playlistModel_.countItems())
       {
         contextMenu_->addSeparator();
         contextMenu_->addAction(actionRemove_);
@@ -3865,9 +3848,10 @@ namespace yae
 
     // repaint the frame:
     canvas_->refresh();
-
+#if 0
     // avoid hiding the highlighted item:
-    playlistWidget_->makeSureHighlightedItemIsVisible();
+    playlistModel_.makeSureHighlightedItemIsVisible();
+#endif
   }
 
   //----------------------------------------------------------------
@@ -4469,7 +4453,9 @@ namespace yae
     bool isSeekable = reader->isSeekable();
     actionSetInPoint->setEnabled(isSeekable);
     actionSetOutPoint->setEnabled(isSeekable);
+#if 0
     lineEditPlayhead_->setReadOnly(!isSeekable);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -4542,47 +4528,52 @@ namespace yae
     {
       menubar->removeAction(menuChapters->menuAction());
     }
-
+#if 0
     if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
     {
       if (actionShowPlaylist->isEnabled())
       {
-        setTimelineCssForAudio(timelineWidgets_);
+        // setTimelineCssForAudio(timelineWidgets_);
         shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
 
         if (actionShowPlaylist->isChecked())
         {
+#if 0
           playlistDock_->hide();
+#endif
         }
 
         swapLayouts(canvasContainer_, playlistContainer_);
 
-        playlistWidget_->show();
-        playlistWidget_->update();
-        playlistWidget_->setFocus();
+        playlistModel_.show();
+        playlistModel_.update();
+        playlistModel_.setFocus();
       }
     }
     else if (numVideoTracks || !numAudioTracks)
     {
       if (!actionShowPlaylist->isEnabled())
       {
-        setTimelineCssForVideo(timelineWidgets_);
+        // setTimelineCssForVideo(timelineWidgets_);
         swapLayouts(canvasContainer_, playlistContainer_);
 
         if (actionShowPlaylist->isChecked())
         {
+#if 0
           playlistDock_->show();
+#endif
         }
 
         shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
 
-        playlistWidget_->show();
-        playlistWidget_->update();
+        playlistModel_.show();
+        playlistModel_.update();
         this->setFocus();
       }
     }
+#endif
   }
 
   //----------------------------------------------------------------
