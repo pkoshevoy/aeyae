@@ -170,8 +170,8 @@ namespace yae
     numItems_(0),
     numShown_(0),
     numShownGroups_(0),
-    current_(0),
-    highlighted_(0)
+    playing_(0),
+    current_(0)
   {
     add(std::list<QString>());
   }
@@ -425,27 +425,27 @@ namespace yae
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
-          highlighted_ = numItems_;
+          current_ = numItems_;
         }
       }
     }
 
     if (applyFilter())
     {
-      highlighted_ = closestItem(highlighted_);
+      current_ = closestItem(current_);
     }
 
     updateOffsets();
-    setCurrentItem(highlighted_, true);
+    setPlayingItem(current_, true);
   }
 
   //----------------------------------------------------------------
-  // Playlist::currentItem
+  // Playlist::playingItem
   //
   std::size_t
-  Playlist::currentItem() const
+  Playlist::playingItem() const
   {
-    return current_;
+    return playing_;
   }
 
   //----------------------------------------------------------------
@@ -463,7 +463,7 @@ namespace yae
   std::size_t
   Playlist::countItemsAhead() const
   {
-    return (current_ < numItems_) ? (numItems_ - current_) : 0;
+    return (playing_ < numItems_) ? (numItems_ - playing_) : 0;
   }
 
   //----------------------------------------------------------------
@@ -472,7 +472,7 @@ namespace yae
   std::size_t
   Playlist::countItemsBehind() const
   {
-    return (current_ < numItems_) ? current_ : numItems_;
+    return (playing_ < numItems_) ? playing_ : numItems_;
   }
 
   //----------------------------------------------------------------
@@ -686,7 +686,7 @@ namespace yae
           item.name_ + QString::fromUtf8(".") +
           item.ext_;
 
-        if (index == current_)
+        if (index == playing_)
         {
           text += QObject::tr("NOW PLAYING");
         }
@@ -718,20 +718,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Playlist::playbackNext
+  // Playlist::setPlayingItem
   //
   void
-  Playlist::setCurrentItem(std::size_t index, bool force)
+  Playlist::setPlayingItem(std::size_t index, bool force)
   {
 #if 0
-    std::cerr << "Playlist::setCurrentItem" << std::endl;
+    std::cerr << "Playlist::setPlayingItem" << std::endl;
 #endif
 
-    if (index != current_ || force)
+    if (index != playing_ || force)
     {
-      current_ = (index < numItems_) ? index : numItems_;
-      highlighted_ = current_;
-      selectItem(current_);
+      playing_ = (index < numItems_) ? index : numItems_;
+      current_ = playing_;
+      selectItem(playing_);
     }
   }
 
@@ -839,8 +839,8 @@ namespace yae
 
     std::size_t oldIndex = 0;
     std::size_t newIndex = 0;
-    std::size_t newCurrent = current_;
-    bool currentRemoved = false;
+    std::size_t newPlaying = playing_;
+    bool playingRemoved = false;
 
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
          i != groups_.end(); )
@@ -868,18 +868,18 @@ namespace yae
           continue;
         }
 
-        if (oldIndex < current_)
+        if (oldIndex < playing_)
         {
-          // adjust the current index:
-          newCurrent--;
+          // adjust the playing index:
+          newPlaying--;
         }
-        else if (oldIndex == current_)
+        else if (oldIndex == playing_)
         {
-          // current item has changed:
-          currentRemoved = true;
+          // playing item has changed:
+          playingRemoved = true;
         }
 
-        highlighted_ = newIndex;
+        current_ = newIndex;
 
         // 1. remove the item from the tree:
         std::list<PlaylistKey> keyPath = group.keyPath_;
@@ -902,28 +902,28 @@ namespace yae
 
     updateOffsets();
 
-    if (highlighted_ >= numItems_)
+    if (current_ >= numItems_)
     {
-      highlighted_ = numItems_ ? numItems_ - 1 : 0;
+      current_ = numItems_ ? numItems_ - 1 : 0;
     }
 
     // must account for the excluded items:
-    highlighted_ = closestItem(highlighted_, kBehind);
+    current_ = closestItem(current_, kBehind);
 
-    if (highlighted_ < numItems_)
+    if (current_ < numItems_)
     {
-      PlaylistItem * item = lookup(highlighted_);
+      PlaylistItem * item = lookup(current_);
       item->selected_ = true;
     }
 
-    if (currentRemoved)
+    if (playingRemoved)
     {
-      setCurrentItem(highlighted_, true);
+      setPlayingItem(current_, true);
     }
     else
     {
-      current_ = newCurrent;
-      highlighted_ = current_;
+      playing_ = newPlaying;
+      current_ = playing_;
     }
   }
 
@@ -933,8 +933,8 @@ namespace yae
   void
   Playlist::removeItems(std::size_t groupIndex, std::size_t itemIndex)
   {
-    bool currentRemoved = false;
-    std::size_t newCurrent = current_;
+    bool playingRemoved = false;
+    std::size_t newPlaying = playing_;
 
     PlaylistGroup & group = groups_[groupIndex];
     if (group.excluded_)
@@ -957,21 +957,21 @@ namespace yae
         tree_.remove(keyPath);
       }
 
-      if (itemIndex < current_)
+      if (itemIndex < playing_)
       {
-        // adjust the current index:
-        newCurrent = current_ - 1;
+        // adjust the playing index:
+        newPlaying = playing_ - 1;
       }
-      else if (itemIndex == current_)
+      else if (itemIndex == playing_)
       {
-        // current item has changed:
-        currentRemoved = true;
-        newCurrent = current_;
+        // playing item has changed:
+        playingRemoved = true;
+        newPlaying = playing_;
       }
 
-      if (itemIndex < highlighted_)
+      if (itemIndex < current_)
       {
-        highlighted_--;
+        current_--;
       }
 
       group.items_.erase(iter);
@@ -991,25 +991,25 @@ namespace yae
 
       std::size_t groupSize = group.items_.size();
       std::size_t groupEnd = group.offset_ + groupSize;
+      if (groupEnd < playing_)
+      {
+        // adjust the playing index:
+        newPlaying = playing_ - groupSize;
+      }
+      else if (group.offset_ <= playing_)
+      {
+        // playing item has changed:
+        playingRemoved = true;
+        newPlaying = group.offset_;
+      }
+
       if (groupEnd < current_)
       {
-        // adjust the current index:
-        newCurrent = current_ - groupSize;
+        current_ -= groupSize;
       }
       else if (group.offset_ <= current_)
       {
-        // current item has changed:
-        currentRemoved = true;
-        newCurrent = group.offset_;
-      }
-
-      if (groupEnd < highlighted_)
-      {
-        highlighted_ -= groupSize;
-      }
-      else if (group.offset_ <= highlighted_)
-      {
-        highlighted_ = group.offset_;
+        current_ = group.offset_;
       }
 
       group.items_.clear();
@@ -1024,35 +1024,92 @@ namespace yae
 
     updateOffsets();
 
-    if (newCurrent >= numItems_)
+    if (newPlaying >= numItems_)
     {
-      newCurrent = numItems_ ? numItems_ - 1 : 0;
+      newPlaying = numItems_ ? numItems_ - 1 : 0;
     }
 
-    if (highlighted_ >= numItems_)
+    if (current_ >= numItems_)
     {
-      highlighted_ = numItems_ ? numItems_ - 1 : 0;
+      current_ = numItems_ ? numItems_ - 1 : 0;
     }
 
     // must account for the excluded items:
-    newCurrent = closestItem(newCurrent, kBehind);
-    highlighted_ = closestItem(highlighted_, kBehind);
+    newPlaying = closestItem(newPlaying, kBehind);
+    current_ = closestItem(current_, kBehind);
 
-    if (highlighted_ < numItems_)
+    if (current_ < numItems_)
     {
-      PlaylistItem * item = lookup(highlighted_);
+      PlaylistItem * item = lookup(current_);
       item->selected_ = true;
     }
 
-    if (currentRemoved)
+    if (playingRemoved)
     {
-      setCurrentItem(newCurrent, true);
+      setPlayingItem(newPlaying, true);
     }
     else
     {
-      current_ = newCurrent;
-      highlighted_ = current_;
+      playing_ = newPlaying;
+      current_ = playing_;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::changeCurrentItem
+  //
+  void
+  Playlist::changeCurrentItem(int itemsPerRow, int delta)
+  {
+    // FIXME: move this into Playlist
+    std::cerr
+      << "FIXME: PlaylistModel::changeCurrentItem("
+      << itemsPerRow << ", " << delta << ")"
+      << std::endl;
+#if 0
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlist_.lookup(playlist_.currentItem(), &group);
+    std::size_t groupSize = group ? group->items_.size() : 0;
+    if (delta < 0)
+    {
+      if (!item)
+      {
+        if (playlist_.countItemsShown())
+        {
+          setCurrentItem(playlist_.countItems() - 1);
+        }
+      }
+      else if (item->row_ < -delta)
+      {
+        if (group->offset_)
+        {
+          // skip to the end of previous group:
+          setCurrentItem(group->offset_ - 1);
+        }
+        else if (item->row_)
+        {
+          // skip to the beginning of the playlist:
+          setCurrentItem(0);
+        }
+      }
+      else
+      {
+        setCurrentItem(group->offset_ + item->row_ + delta);
+      }
+    }
+    else if (delta > 0)
+    {
+      if (item->row_ + delta < groupSize)
+      {
+        setCurrentItem(group->offset_ + item->row_ + delta);
+      }
+      else
+      {
+        // skip to the start of next group:
+        setCurrentItem(group->offset_ + groupSize);
+      }
+    }
+#endif
   }
 
 #if 0

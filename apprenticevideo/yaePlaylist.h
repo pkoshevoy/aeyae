@@ -135,8 +135,8 @@ namespace yae
     void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
-    // return index of the current item:
-    std::size_t currentItem() const;
+    // return index of the playing item:
+    std::size_t playingItem() const;
 
     // return number of items in the playlist:
     std::size_t countItems() const;
@@ -177,7 +177,7 @@ namespace yae
     bool filterChanged(const QString & filter);
 
     // playlist navigation controls:
-    void setCurrentItem(std::size_t index, bool force = false);
+    void setPlayingItem(std::size_t index, bool force = false);
 
     // selection set management:
     void selectAll();
@@ -185,6 +185,21 @@ namespace yae
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
+
+    // accessors:
+    inline const std::vector<PlaylistGroup> & groups() const
+    { return groups_; }
+
+    inline std::size_t countItemsShown() const
+    { return numShown_; }
+
+    inline std::size_t countGroupsShown() const
+    { return numShownGroups_; }
+
+    inline std::size_t currentItem() const
+    { return current_; }
+
+    void changeCurrentItem(int itemsPerRow, int delta);
 
   protected:
     // helpers:
@@ -194,11 +209,9 @@ namespace yae
     // a playlist tree:
     TPlaylistTree tree_;
 
-  public:
     // a list of playlist item groups, derived from playlist tree fringes:
     std::vector<PlaylistGroup> groups_;
 
-  protected:
     // total number of items:
     std::size_t numItems_;
 
@@ -208,11 +221,11 @@ namespace yae
     // number of non-excluded item groups:
     std::size_t numShownGroups_;
 
-    // current item index:
-    std::size_t current_;
+    // playing item index:
+    std::size_t playing_;
 
-    // highlighted item index:
-    std::size_t highlighted_;
+    // index of currently highlighted item:
+    std::size_t current_;
 
     // playlist filter:
     std::list<QString> keywords_;

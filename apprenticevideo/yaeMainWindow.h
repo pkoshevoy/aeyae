@@ -177,7 +177,8 @@ namespace yae
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
-    void playlistItemChanged(std::size_t index);
+    void playlistPlayingItemChanged(std::size_t index);
+    void playlistCurrentItemChanged(std::size_t index);
 
     // window menu:
     void windowHalfSize();

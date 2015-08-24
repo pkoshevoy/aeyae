@@ -11,6 +11,7 @@
 
 // Qt includes:
 #include <QAbstractItemModel>
+#include <QItemSelectionModel>
 
 // local includes:
 #include "yaePlaylist.h"
@@ -81,8 +82,8 @@ namespace yae
     inline const Playlist & playlist() const
     { return playlist_; }
 
-    inline std::size_t currentItem() const
-    { return playlist_.currentItem(); }
+    inline std::size_t playingItem() const
+    { return playlist_.playingItem(); }
 
     // return number of items in the playlist:
     inline std::size_t countItems() const
@@ -140,7 +141,8 @@ namespace yae
     bool filterChanged(const QString & filter);
 
     // playlist navigation controls:
-    void setCurrentItem(std::size_t index, bool force = false);
+    void setPlayingItem(std::size_t index, bool force = false);
+    void setCurrentItem(std::size_t index);
 
     // selection set management:
     void selectAll();
@@ -156,10 +158,16 @@ namespace yae
 
     QModelIndex modelIndexForItem(std::size_t itemIndex) const;
 
+    Q_INVOKABLE void changeCurrentItem(int itemsPerRow, int delta);
+    Q_INVOKABLE QItemSelectionModel * itemSelectionModel();
+
   signals:
     // this signal may be emitted if the user activates an item,
     // or otherwise changes the playlist to invalidate the
-    // existing current item:
+    // existing playing item:
+    void playingItemChanged(std::size_t index);
+
+    // highlight item change notification:
     void currentItemChanged(std::size_t index);
 
   protected:
@@ -170,6 +178,7 @@ namespace yae
                          const QModelIndex & last);
 
     mutable Playlist playlist_;
+    QItemSelectionModel sel_;
   };
 }
 

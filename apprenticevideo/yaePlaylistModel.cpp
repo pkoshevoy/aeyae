@@ -17,7 +17,8 @@ namespace yae
   // PlaylistModel::PlaylistModel
   //
   PlaylistModel::PlaylistModel(QObject * parent):
-    QAbstractItemModel(parent)
+    QAbstractItemModel(parent),
+    sel_(this, this)
   {}
 
   //----------------------------------------------------------------
@@ -33,7 +34,7 @@ namespace yae
 
     if (!parent.isValid())
     {
-      const std::size_t n = playlist_.groups_.size();
+      const std::size_t n = playlist_.groups().size();
       return row < n ? createIndex(row, column, &playlist_) : QModelIndex();
     }
 
@@ -112,7 +113,7 @@ namespace yae
 
     if (&playlist_ == node)
     {
-      return playlist_.groups_.size();
+      return playlist_.groups().size();
     }
 
     const PlaylistGroup * group =
@@ -258,7 +259,7 @@ namespace yae
       if (role == kRolePlaying)
       {
         std::size_t itemIndex = parentGroup->offset_ + item->row_;
-        return QVariant(playlist_.currentItem() == itemIndex);
+        return QVariant(playlist_.playingItem() == itemIndex);
       }
 
       if (role == kRoleFailed)
@@ -306,7 +307,7 @@ namespace yae
 
       if (role == kRolePlaying)
       {
-        setCurrentItem(parentGroup->offset_ + item->row_, true);
+        setPlayingItem(parentGroup->offset_ + item->row_, true);
       }
     }
 
@@ -332,9 +333,12 @@ namespace yae
 
     if (&playlist_ == parent)
     {
-      const std::size_t n = playlist_.groups_.size();
+      const std::size_t n = playlist_.groups().size();
       std::size_t row = index.row();
-      return (row < n) ? &(playlist_.groups_[row]) : NULL;
+      return
+        (row < n) ?
+        const_cast<PlaylistGroup *>(&(playlist_.groups()[row])) :
+        NULL;
     }
 
     PlaylistGroup * group =
@@ -363,10 +367,10 @@ namespace yae
 
     typedef std::vector<PlaylistGroup>::const_iterator TIter;
 
-    TIter ia = playlist_.groups_.begin();
-    TIter iaEnd = playlist_.groups_.end();
-    TIter ib = newlist.groups_.begin();
-    TIter ibEnd = newlist.groups_.end();
+    TIter ia = playlist_.groups().begin();
+    TIter iaEnd = playlist_.groups().end();
+    TIter ib = newlist.groups().begin();
+    TIter ibEnd = newlist.groups().end();
 
     // figure out what new groups were added:
     while (ia != iaEnd && ib != ibEnd)
@@ -382,18 +386,31 @@ namespace yae
     }
 
 #elif 0
-    int n0 = playlist_.groups_.size();
+    int n0 = playlist_.groups().size();
     emit rowsAboutToBeRemoved(QModelIndex(), 0, n0);
     playlist_.add(playlist, returnAddedHashes);
     emit rowsRemoved(QModelIndex(), 0, n0);
 
-    int n1 = playlist_.groups_.size();
+    int n1 = playlist_.groups().size();
     emit rowsInserted(QModelIndex(), 0, n1);
 #else
     // emit modelAboutToBeReset();
     beginResetModel();
     playlist_.add(playlist, returnAddedHashes);
     endResetModel();
+
+    // FIXME: should this be playingItem or currentItem?
+    sel_.setCurrentIndex(modelIndexForItem(playlist_.playingItem()),
+                         QItemSelectionModel::ClearAndSelect);
+
+    QModelIndex currSel = sel_.currentIndex();
+    std::cerr
+      << "FIXME: "
+      << " currentIndex.row: " << currSel.row()
+      << " currentIndex.internalId: " << currSel.internalId()
+      << " parentIndex.row: " << currSel.parent().row()
+      << " parentIndex.internalId: " << currSel.parent().internalId()
+      << std::endl;
     // emit modelReset();
 #endif
   }
@@ -410,16 +427,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::setCurrentItem
+  // PlaylistModel::setPlayingItem
   //
   void
-  PlaylistModel::setCurrentItem(std::size_t itemIndex, bool force)
+  PlaylistModel::setPlayingItem(std::size_t itemIndex, bool force)
   {
-    QModelIndex prev = modelIndexForItem(playlist_.currentItem());
+    QModelIndex prev = modelIndexForItem(playlist_.playingItem());
 
-    playlist_.setCurrentItem(itemIndex, force);
+    playlist_.setPlayingItem(itemIndex, force);
 
-    QModelIndex curr = modelIndexForItem(playlist_.currentItem());
+    QModelIndex curr = modelIndexForItem(playlist_.playingItem());
 
     if (prev != curr)
     {
@@ -427,8 +444,20 @@ namespace yae
       emitDataChanged(kRolePlaying, curr);
 
       // FIXME: how to ensure the item is visible in the view?
-      emit currentItemChanged(playlist_.currentItem());
+      emit playingItemChanged(playlist_.playingItem());
     }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setCurrentItem
+  //
+  void
+  PlaylistModel::setCurrentItem(std::size_t itemIndex)
+  {
+    // FIXME:
+    // playlist_.setCurrentItem(itemIndex);
+    // emit currentItemChanged(playlist_.currentItem());
+    setPlayingItem(itemIndex);
   }
 
   //----------------------------------------------------------------
@@ -440,7 +469,7 @@ namespace yae
     playlist_.selectAll();
 
     for (std::vector<PlaylistGroup>::const_iterator
-           i = playlist_.groups_.begin(); i != playlist_.groups_.end(); ++i)
+           i = playlist_.groups().begin(); i != playlist_.groups().end(); ++i)
     {
       const PlaylistGroup & group = *i;
       std::size_t groupSize = group.items_.size();
@@ -516,6 +545,71 @@ namespace yae
     }
 
     return createIndex(item->row_, 0, group);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::changeCurrentItem
+  //
+  void
+  PlaylistModel::changeCurrentItem(int itemsPerRow, int delta)
+  {
+    // FIXME: move this into Playlist
+    std::cerr
+      << "FIXME: PlaylistModel::changeCurrentItem("
+      << itemsPerRow << ", " << delta << ")"
+      << std::endl;
+
+    PlaylistGroup * group = NULL;
+    PlaylistItem * item = playlist_.lookup(playlist_.currentItem(), &group);
+    std::size_t groupSize = group ? group->items_.size() : 0;
+    if (delta < 0)
+    {
+      if (!item)
+      {
+        if (playlist_.countItemsShown())
+        {
+          setCurrentItem(playlist_.countItems() - 1);
+        }
+      }
+      else if (item->row_ < -delta)
+      {
+        if (group->offset_)
+        {
+          // skip to the end of previous group:
+          setCurrentItem(group->offset_ - 1);
+        }
+        else if (item->row_)
+        {
+          // skip to the beginning of the playlist:
+          setCurrentItem(0);
+        }
+      }
+      else
+      {
+        setCurrentItem(group->offset_ + item->row_ + delta);
+      }
+    }
+    else if (delta > 0)
+    {
+      if (item->row_ + delta < groupSize)
+      {
+        setCurrentItem(group->offset_ + item->row_ + delta);
+      }
+      else
+      {
+        // skip to the start of next group:
+        setCurrentItem(group->offset_ + groupSize);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::itemSelectionModel
+  //
+  QItemSelectionModel *
+  PlaylistModel::itemSelectionModel()
+  {
+    return &sel_;
   }
 
   //----------------------------------------------------------------

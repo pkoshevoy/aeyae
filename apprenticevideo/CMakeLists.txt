@@ -79,6 +79,7 @@ set(project_moc_hxx
   yaePlaylistModel.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
+  yaeUtilsQml.h
   )
 
 set(project_uis
@@ -130,6 +131,8 @@ set(project_sources
   yaeScreenSaverInhibitor.cpp
   yaeUtilsQt.h
   yaeUtilsQt.cpp
+  yaeUtilsQml.h
+  yaeUtilsQml.cpp
   )
 
 if (APPLE)
