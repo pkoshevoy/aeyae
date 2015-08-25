@@ -240,7 +240,7 @@
     <string>16:9</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+6</string>
+    <string>Ctrl+Alt+6</string>
    </property>
   </action>
   <action name="actionAspectRatio1_33">
@@ -251,7 +251,7 @@
     <string>4:3</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+4</string>
+    <string>Ctrl+Alt+4</string>
    </property>
   </action>
   <action name="actionAspectRatioAuto">
@@ -262,7 +262,7 @@
     <string>Automatic</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+X</string>
+    <string>Ctrl+Alt+X</string>
    </property>
   </action>
   <action name="actionFullScreen">

@@ -210,32 +210,15 @@ Item
 
 
   property var header_bg: "#df1f1f1f"
-  // property var header_bg: "#df000000"
   property var header_fg: "#ffffffff"
   property var zebra_bg: [ "#00000000", "#3f000000"  ]
   property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
   property var greeting_message: "Hi!"
 
-  /*
-    Component {
-    id: listViewHighlight
-
-    Rectangle {
-    color: "#FFFF00";
-    y: playlistView.currentItem.y
-    width: playlistView.width;
-    height: playlistView.currentItem.height
-    anchors.margins: -3
-
-    Behavior on y { SpringAnimation { spring: 3; damping: 0.2 } }
-    }
-    }
-  */
-
   ListView {
     id: playlistView
     objectName: "playlistView"
-    focus: true; // playlistView.visible
+    focus: playlistView.visible
 
     visible: true
     anchors.fill: parent
@@ -243,7 +226,6 @@ Item
     delegate: groupDelegate
     footer: greetingComponent
 
-    // highlight: listViewHighlight
     highlightFollowsCurrentItem: false
     currentIndex: -1
   }
@@ -355,11 +337,6 @@ Item
           // console.log("item.model: " + item.model +
           //             ", rootIndex: " + item.model.rootIndex);
         }
-
-        Keys.onPressed: {
-          console.log("groupsLoader, onPressed: " + event.key);
-          event.accepted = false;
-        }
       }
 
       Keys.onPressed: {
@@ -400,7 +377,6 @@ Item
 
             if (event.key == Qt.Key_Left)
             {
-              // yae_playlist_model.changeCurrentItem(itemsPerRow, -1);
               if (found.itemIndex > 0)
               {
                 found.gridView.moveCurrentIndexLeft();
@@ -415,7 +391,6 @@ Item
             }
             else if (event.key == Qt.Key_Right)
             {
-              // yae_playlist_model.changeCurrentItem(itemsPerRow, 1);
               if (found.itemIndex + 1 < found.gridView.count)
               {
                 found.gridView.moveCurrentIndexRight();
@@ -430,10 +405,13 @@ Item
             }
             else if (event.key == Qt.Key_Up)
             {
-              // yae_playlist_model.changeCurrentItem(itemsPerRow, -itemsPerRow);
               if (found.itemIndex > itemsPerRow)
               {
                 found.gridView.moveCurrentIndexUp();
+              }
+              else if (found.itemIndex > 0)
+              {
+                found.gridView.currentIndex = 0;
               }
               else if (found.groupIndex > 0)
               {
@@ -449,10 +427,13 @@ Item
             }
             else if (event.key == Qt.Key_Down)
             {
-              // yae_playlist_model.changeCurrentItem(itemsPerRow, itemsPerRow);
               if (found.itemIndex + itemsPerRow < found.gridView.count)
               {
                 found.gridView.moveCurrentIndexDown();
+              }
+              else if (found.itemIndex + 1 < found.gridView.count)
+              {
+                found.gridView.currentIndex = found.gridView.count - 1;
               }
               else if (found.groupIndex + 1 < playlistView.count)
               {
@@ -474,6 +455,7 @@ Item
                                           found.item.y,
                                           found.item.width,
                                           found.item.height);
+          /*
           console.log("NEXT item " + found.item + ", bbox: " + bbox +
                       ", title: " + found.item.label +
                       ", group index: " + found.groupIndex +
@@ -481,8 +463,11 @@ Item
                       ", item index: " + found.itemIndex +
                       " (" + found.gridView.count + ")");
 
+          console.log("contentY: " + playlistView.contentY +
+                      ", bbox.y: " + bbox.y + ")");
+          */
           var itemY = playlistView.contentY + bbox.y;
-          if (itemY < 0)
+          if (bbox.y < 0)
           {
             playlistView.contentY = itemY;
           }
@@ -490,8 +475,10 @@ Item
           var itemY1 = itemY + bbox.height;
           var viewY1 = playlistView.contentY + playlistView.height;
           var delta = itemY1 - viewY1;
+          /*
           console.log("itemY1(" + itemY1 + ") - viewY1(" + viewY1 +
                       ") = delta(" + delta + ")");
+          */
           if (itemY1 > viewY1)
           {
             playlistView.contentY += delta;
@@ -510,12 +497,6 @@ Item
           event.accepted = true;
         }
       }
-      /*
-        Keys.onPressed: {
-        console.log("Column Item, onPressed: " + event.key);
-        event.accepted = false;
-        }
-      */
     }
   }
 
@@ -582,18 +563,6 @@ Item
         highlight: gridViewHighlight
         highlightFollowsCurrentItem: false
         currentIndex: -1
-
-        /*
-          Keys.onSelectPressed: {
-          console.log("GridView, onSelectPressed");
-          event.accepted = true;
-          }
-        */
-
-        Keys.onPressed: {
-          console.log("GridView, onPressed: " + event.key);
-          event.accepted = false;
-        }
 
         model: DelegateModel {
           id: modelDelegate
@@ -702,12 +671,6 @@ Item
                 onDoubleClicked: {
                   model.playing = true;
                 }
-              }
-
-
-              Keys.onPressed: {
-                console.log("GridView Item, onPressed: " + event.key);
-                event.accepted = false;
               }
 
             }
