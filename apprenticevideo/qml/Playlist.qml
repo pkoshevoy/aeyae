@@ -82,10 +82,24 @@ Item
     }
   }
 
-  function calc_cell_width(w, h)
+  function calc_cell_width(w)
   {
     var n = Math.min(5, Math.floor(w / 160.0));
     return n < 1.0 ? w : w / n;
+  }
+
+  function calc_items_per_row()
+  {
+    var c = calc_cell_width(playlistView.width)
+    var n = Math.floor(playlistView.width / c);
+    return n;
+  }
+
+  function calc_rows(viewWidth, cellWidth, numItems)
+  {
+    var cellsPerRow = Math.floor(viewWidth / cellWidth);
+    var n = Math.max(1, Math.ceil(numItems / cellsPerRow));
+    return n;
   }
 
   function calc_title_height(min_height, w)
@@ -157,25 +171,6 @@ Item
     return gridView;
   }
 
-  function lookup_current_item(gridView, suggestedItemIndex)
-  {
-    if (suggestedItemIndex == null)
-    {
-      suggestedItemIndex = 0;
-    }
-
-    if (gridView.currentIndex == -1)
-    {
-      gridView.currentIndex = suggestedItemIndex;
-    }
-
-    var itemContainer = gridView.currentItem;
-    var item = yae_qml_utils.find_qobject(itemContainer,
-                                          "itemDelegate");
-    return item;
-  }
-
-
   function lookup_current_gridview_and_item()
   {
     if (playlistView.currentIndex == -1)
@@ -208,6 +203,172 @@ Item
     };
   }
 
+  function set_current_item(groupRow, itemRow)
+  {
+    var groupContainer;
+    var gridView;
+
+    if (playlistView.currentIndex != groupRow)
+    {
+      gridView = yae_qml_utils.find_qobject(playlistView.currentItem,
+                                            "groupItemsGridView");
+      if (gridView)
+      {
+        gridView.currentIndex = -1;
+      }
+    }
+
+    playlistView.currentIndex = groupRow;
+
+    gridView = yae_qml_utils.find_qobject(playlistView.currentItem,
+                                          "groupItemsGridView");
+    if (gridView && gridView.currentIndex != itemRow)
+    {
+      gridView.currentIndex = itemRow;
+    }
+  }
+
+  function scroll_to(item)
+  {
+    var bbox = playlistView.mapFromItem(item,
+                                        item.x,
+                                        item.y,
+                                        item.width,
+                                        item.height);
+    var itemY = playlistView.contentY + bbox.y;
+    if (bbox.y < 0)
+    {
+      playlistView.contentY = itemY;
+    }
+
+    var itemY1 = itemY + bbox.height;
+    var viewY1 = playlistView.contentY + playlistView.height;
+    var delta = itemY1 - viewY1;
+
+    if (itemY1 > viewY1)
+    {
+      playlistView.contentY += delta;
+    }
+  }
+
+
+  function move_cursor(selectionFlags, funcMoveCursor)
+  {
+    var current = lookup_current_gridview_and_item();
+    if (!current.item)
+    {
+      return;
+    }
+
+    funcMoveCursor(current);
+
+    yae_playlist_model.setCurrentItem(playlistView.currentIndex,
+                                      current.gridView.currentIndex,
+                                      selectionFlags);
+  }
+
+  function move_cursor_left(selectionFlags)
+  {
+    move_cursor(selectionFlags, function(current) {
+
+      if (current.itemIndex > 0)
+      {
+        current.gridView.moveCurrentIndexLeft();
+      }
+      else if (current.groupIndex > 0)
+      {
+        current.gridView.currentIndex = -1;
+        playlistView.decrementCurrentIndex();
+        current.gridView = lookup_current_gridview(0);
+        current.gridView.currentIndex = current.gridView.count - 1;
+      }
+    });
+  }
+
+  function move_cursor_right(selectionFlags)
+  {
+    move_cursor(selectionFlags, function(current) {
+
+      if (current.itemIndex + 1 < current.gridView.count)
+      {
+        current.gridView.moveCurrentIndexRight();
+      }
+      else if (current.groupIndex + 1 < playlistView.count)
+      {
+        current.gridView.currentIndex = -1;
+        playlistView.incrementCurrentIndex();
+        current.gridView = lookup_current_gridview(0);
+        current.gridView.currentIndex = 0;
+      }
+    });
+  }
+
+  function move_cursor_up(selectionFlags)
+  {
+    move_cursor(selectionFlags, function(current) {
+
+      var itemsPerRow = calc_items_per_row();
+      if (current.itemIndex > itemsPerRow)
+      {
+        current.gridView.moveCurrentIndexUp();
+      }
+      else if (current.itemIndex > 0)
+      {
+        current.gridView.currentIndex = 0;
+      }
+      else if (current.groupIndex > 0)
+      {
+        current.gridView.currentIndex = -1;
+        playlistView.decrementCurrentIndex();
+        current.gridView = lookup_current_gridview(0);
+        current.gridView.currentIndex = current.gridView.count - 1;
+      }
+      else
+      {
+        current.gridView.currentIndex = 0;
+      }
+    });
+  }
+
+  function move_cursor_down(selectionFlags)
+  {
+    move_cursor(selectionFlags, function(current) {
+
+      var itemsPerRow = calc_items_per_row();
+      if (current.itemIndex + itemsPerRow < current.gridView.count)
+      {
+        current.gridView.moveCurrentIndexDown();
+      }
+      else if (current.itemIndex + 1 < current.gridView.count)
+      {
+        current.gridView.currentIndex = current.gridView.count - 1;
+      }
+      else if (current.groupIndex + 1 < playlistView.count)
+      {
+        current.gridView.currentIndex = -1;
+        playlistView.incrementCurrentIndex();
+        current.gridView = lookup_current_gridview(0);
+        current.gridView.currentIndex = 0;
+      }
+      else
+      {
+        current.gridView.currentIndex = current.gridView.count - 1;
+      }
+    });
+  }
+
+  function set_playing_item()
+  {
+    var current = lookup_current_gridview_and_item();
+    if (!current.item)
+    {
+      return;
+    }
+
+    yae_playlist_model.setPlayingItem(playlistView.currentIndex,
+                                      current.gridView.currentIndex);
+  }
+
 
   property var header_bg: "#df1f1f1f"
   property var header_fg: "#ffffffff"
@@ -228,6 +389,16 @@ Item
 
     highlightFollowsCurrentItem: false
     currentIndex: -1
+
+    Connections {
+      target: yae_playlist_model
+      onCurrentItemChanged: {
+        console.log("onCurrentItemChanged: " + groupRow + ", " + itemRow);
+        set_current_item(groupRow, itemRow);
+        var found = lookup_current_gridview_and_item();
+        scroll_to(found.item);
+      }
+    }
   }
 
   Component {
@@ -341,6 +512,8 @@ Item
 
       Keys.onPressed: {
         console.log("groupDelegateColumn Keys.onPressed");
+        dump_properties(event);
+
         if (event.key == Qt.Key_Left ||
             event.key == Qt.Key_Right ||
             event.key == Qt.Key_Up ||
@@ -350,138 +523,33 @@ Item
             event.key == Qt.Key_Home ||
             event.key == Qt.Key_End)
         {
-          var found = lookup_current_gridview_and_item();
-          if (found.item)
+          var selectionFlags = ItemSelectionModel.ClearAndSelect;
+
+          // FIXME: this won't work correctly for select/unselect:
+          if (event.modifiers & Qt.ControlModifier)
           {
-            var bbox = playlistView.mapFromItem(found.item,
-                                                found.item.x,
-                                                found.item.y,
-                                                found.item.width,
-                                                found.item.height);
-            console.log("current item " + found.item + ", bbox: " + bbox +
-                        ", title: " + found.item.label +
-                        ", group index: " + found.groupIndex +
-                        " (" + playlistView.count + ")" +
-                        ", item index: " + found.itemIndex +
-                        " (" + found.gridView.count + ")");
-            // yae_qml_utils.dump_object_tree(found.item);
-            // yae_qml_utils.dump_object_info(found.item);
-            // dump_properties(found.item);
-
-            // yae_qml_utils.dump_object_tree(found.item);
-            // dump_properties(found.item, "    ");
-
-            var itemsPerRow = Math.floor(playlistView.width /
-                                         calc_cell_width(playlistView.width,
-                                                         playlistView.height));
-
-            if (event.key == Qt.Key_Left)
-            {
-              if (found.itemIndex > 0)
-              {
-                found.gridView.moveCurrentIndexLeft();
-              }
-              else if (found.groupIndex > 0)
-              {
-                found.gridView.currentIndex = -1;
-                playlistView.decrementCurrentIndex();
-                found.gridView = lookup_current_gridview(0);
-                found.gridView.currentIndex = found.gridView.count - 1;
-              }
-            }
-            else if (event.key == Qt.Key_Right)
-            {
-              if (found.itemIndex + 1 < found.gridView.count)
-              {
-                found.gridView.moveCurrentIndexRight();
-              }
-              else if (found.groupIndex + 1 < playlistView.count)
-              {
-                found.gridView.currentIndex = -1;
-                playlistView.incrementCurrentIndex();
-                found.gridView = lookup_current_gridview(0);
-                found.gridView.currentIndex = 0;
-              }
-            }
-            else if (event.key == Qt.Key_Up)
-            {
-              if (found.itemIndex > itemsPerRow)
-              {
-                found.gridView.moveCurrentIndexUp();
-              }
-              else if (found.itemIndex > 0)
-              {
-                found.gridView.currentIndex = 0;
-              }
-              else if (found.groupIndex > 0)
-              {
-                found.gridView.currentIndex = -1;
-                playlistView.decrementCurrentIndex();
-                found.gridView = lookup_current_gridview(0);
-                found.gridView.currentIndex = found.gridView.count - 1;
-              }
-              else
-              {
-                found.gridView.currentIndex = 0;
-              }
-            }
-            else if (event.key == Qt.Key_Down)
-            {
-              if (found.itemIndex + itemsPerRow < found.gridView.count)
-              {
-                found.gridView.moveCurrentIndexDown();
-              }
-              else if (found.itemIndex + 1 < found.gridView.count)
-              {
-                found.gridView.currentIndex = found.gridView.count - 1;
-              }
-              else if (found.groupIndex + 1 < playlistView.count)
-              {
-                found.gridView.currentIndex = -1;
-                playlistView.incrementCurrentIndex();
-                found.gridView = lookup_current_gridview(0);
-                found.gridView.currentIndex = 0;
-              }
-              else
-              {
-                found.gridView.currentIndex = found.gridView.count - 1;
-              }
-            }
+            selectionFlags = ItemSelectionModel.ToggleCurrent;
+          }
+          else if (event.modifiers & Qt.ShiftModifier)
+          {
+            selectionFlags = ItemSelectionModel.SelectCurrent;
           }
 
-          found = lookup_current_gridview_and_item();
-          bbox = playlistView.mapFromItem(found.item,
-                                          found.item.x,
-                                          found.item.y,
-                                          found.item.width,
-                                          found.item.height);
-          /*
-          console.log("NEXT item " + found.item + ", bbox: " + bbox +
-                      ", title: " + found.item.label +
-                      ", group index: " + found.groupIndex +
-                      " (" + playlistView.count + ")" +
-                      ", item index: " + found.itemIndex +
-                      " (" + found.gridView.count + ")");
-
-          console.log("contentY: " + playlistView.contentY +
-                      ", bbox.y: " + bbox.y + ")");
-          */
-          var itemY = playlistView.contentY + bbox.y;
-          if (bbox.y < 0)
+          if (event.key == Qt.Key_Left)
           {
-            playlistView.contentY = itemY;
+            move_cursor_left(selectionFlags);
           }
-
-          var itemY1 = itemY + bbox.height;
-          var viewY1 = playlistView.contentY + playlistView.height;
-          var delta = itemY1 - viewY1;
-          /*
-          console.log("itemY1(" + itemY1 + ") - viewY1(" + viewY1 +
-                      ") = delta(" + delta + ")");
-          */
-          if (itemY1 > viewY1)
+          else if (event.key == Qt.Key_Right)
           {
-            playlistView.contentY += delta;
+            move_cursor_right(selectionFlags);
+          }
+          else if (event.key == Qt.Key_Up)
+          {
+            move_cursor_up(selectionFlags);
+          }
+          else if (event.key == Qt.Key_Down)
+          {
+            move_cursor_down(selectionFlags);
           }
 
           event.accepted = true;
@@ -490,6 +558,7 @@ Item
                  event.key == Qt.Key_Enter ||
                  event.key == Qt.Key_Space)
         {
+          set_playing_item();
           event.accepted = true;
         }
         else if (event.key == Qt.Key_Escape)
@@ -515,11 +584,9 @@ Item
       // size-to-fit:
       height: (!groupItemsGridView.count ? 0 :
                groupItemsGridView.cellHeight *
-               (0.5 + Math.max(1.0,
-                               Math.ceil(groupItemsGridView.count /
-                                         Math.floor(playlistView.width /
-                                                    groupItemsGridView.
-                                                    cellWidth)))));
+               (0.5 + calc_rows(playlistView.width,
+                                groupItemsGridView.cellWidth,
+                                groupItemsGridView.count)));
 
       Rectangle {
         color: "red"
@@ -556,8 +623,7 @@ Item
         anchors.topMargin: 2
         width: parent.width
         height: parent.height - anchors.topMargin
-        cellWidth: calc_cell_width(playlistView.width,
-                                   playlistView.height)
+        cellWidth: calc_cell_width(playlistView.width)
         cellHeight: Math.floor(this.cellWidth * 9.0 / 16.0)
 
         highlight: gridViewHighlight
@@ -668,8 +734,23 @@ Item
 
                 anchors.fill: parent
 
+                onClicked: {
+                  // dump_properties(mouse);
+
+                  var i = groupItemsGridView.indexAt(mouse.x, mouse.y);
+                  console.log("indexAt(" + mouse.x + ", " + mouse.y +
+                              ") = " + i);
+                  dump_properties(playlistView);
+                  dump_properties(groupItemsGridView);
+
+                  mouse.accepted = true;
+                }
+
                 onDoubleClicked: {
+                  // dump_properties(mouse);
+
                   model.playing = true;
+                  mouse.accepted = true;
                 }
               }
 

@@ -1339,6 +1339,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Playlist::lookup
+  //
+  PlaylistItem *
+  Playlist::lookup(PlaylistGroup *& group, int groupRow, int itemRow) const
+  {
+    if (groupRow < 0 || groupRow >= groups_.size())
+    {
+      group = NULL;
+      return NULL;
+    }
+
+    group = const_cast<PlaylistGroup *>(&(groups_[groupRow]));
+    if (itemRow < 0 || itemRow >= group->items_.size())
+    {
+      return NULL;
+    }
+
+    const PlaylistItem & item = group->items_[itemRow];
+    return const_cast<PlaylistItem *>(&item);
+  }
+
+  //----------------------------------------------------------------
   // Playlist::updateOffsets
   //
   void

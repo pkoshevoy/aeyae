@@ -157,6 +157,10 @@ namespace yae
                           std::size_t * returnItemIndex = NULL,
                           PlaylistGroup ** returnGroup = NULL) const;
 
+    PlaylistItem * lookup(PlaylistGroup *& parent,
+                          int groupRow,
+                          int itemRow) const;
+
     enum TDirection {
       kBehind = 0,
       kAhead = 1

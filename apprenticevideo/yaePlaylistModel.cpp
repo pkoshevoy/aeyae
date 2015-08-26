@@ -19,7 +19,14 @@ namespace yae
   PlaylistModel::PlaylistModel(QObject * parent):
     QAbstractItemModel(parent),
     sel_(this, this)
-  {}
+  {
+    bool ok = true;
+    ok = connect(&sel_, SIGNAL(currentChanged(const QModelIndex &,
+                                              const QModelIndex &)),
+                 this, SLOT(currentIndexChanged(const QModelIndex &,
+                                                const QModelIndex &)));
+    YAE_ASSERT(ok);
+  }
 
   //----------------------------------------------------------------
   // PlaylistModel::index
@@ -307,7 +314,7 @@ namespace yae
 
       if (role == kRolePlaying)
       {
-        setPlayingItem(parentGroup->offset_ + item->row_, true);
+        setPlayingItem(parentGroup->offset_ + item->row_);
       }
     }
 
@@ -430,11 +437,11 @@ namespace yae
   // PlaylistModel::setPlayingItem
   //
   void
-  PlaylistModel::setPlayingItem(std::size_t itemIndex, bool force)
+  PlaylistModel::setPlayingItem(std::size_t itemIndex)
   {
     QModelIndex prev = modelIndexForItem(playlist_.playingItem());
 
-    playlist_.setPlayingItem(itemIndex, force);
+    playlist_.setPlayingItem(itemIndex, true);
 
     QModelIndex curr = modelIndexForItem(playlist_.playingItem());
 
@@ -446,18 +453,6 @@ namespace yae
       // FIXME: how to ensure the item is visible in the view?
       emit playingItemChanged(playlist_.playingItem());
     }
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::setCurrentItem
-  //
-  void
-  PlaylistModel::setCurrentItem(std::size_t itemIndex)
-  {
-    // FIXME:
-    // playlist_.setCurrentItem(itemIndex);
-    // emit currentItemChanged(playlist_.currentItem());
-    setPlayingItem(itemIndex);
   }
 
   //----------------------------------------------------------------
@@ -548,59 +543,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::changeCurrentItem
+  // PlaylistModel::makeModelIndex
   //
-  void
-  PlaylistModel::changeCurrentItem(int itemsPerRow, int delta)
+  QModelIndex
+  PlaylistModel::makeModelIndex(int groupRow, int itemRow) const
   {
-    // FIXME: move this into Playlist
-    std::cerr
-      << "FIXME: PlaylistModel::changeCurrentItem("
-      << itemsPerRow << ", " << delta << ")"
-      << std::endl;
-
     PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlist_.lookup(playlist_.currentItem(), &group);
-    std::size_t groupSize = group ? group->items_.size() : 0;
-    if (delta < 0)
-    {
-      if (!item)
-      {
-        if (playlist_.countItemsShown())
-        {
-          setCurrentItem(playlist_.countItems() - 1);
-        }
-      }
-      else if (item->row_ < -delta)
-      {
-        if (group->offset_)
-        {
-          // skip to the end of previous group:
-          setCurrentItem(group->offset_ - 1);
-        }
-        else if (item->row_)
-        {
-          // skip to the beginning of the playlist:
-          setCurrentItem(0);
-        }
-      }
-      else
-      {
-        setCurrentItem(group->offset_ + item->row_ + delta);
-      }
-    }
-    else if (delta > 0)
-    {
-      if (item->row_ + delta < groupSize)
-      {
-        setCurrentItem(group->offset_ + item->row_ + delta);
-      }
-      else
-      {
-        // skip to the start of next group:
-        setCurrentItem(group->offset_ + groupSize);
-      }
-    }
+    PlaylistItem * item = playlist_.lookup(group, groupRow, itemRow);
+
+    return
+      item ? createIndex(item->row_, 0, group) :
+      group ? createIndex(group->row_, 0, &playlist_) :
+      QModelIndex();
   }
 
   //----------------------------------------------------------------
@@ -610,6 +564,59 @@ namespace yae
   PlaylistModel::itemSelectionModel()
   {
     return &sel_;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setCurrentItem
+  //
+  void
+  PlaylistModel::setCurrentItem(int groupRow, int itemRow, int cmd)
+  {
+    QModelIndex index = makeModelIndex(groupRow, itemRow);
+    sel_.setCurrentIndex(index, (QItemSelectionModel::SelectionFlags)cmd);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setPlayingItem
+  //
+  void
+  PlaylistModel::setPlayingItem(int groupRow, int itemRow)
+  {
+    QModelIndex index = makeModelIndex(groupRow, itemRow);
+    sel_.setCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
+    setData(index, QVariant(true), kRolePlaying);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::currentIndexChanged
+  //
+  void
+  PlaylistModel::currentIndexChanged(const QModelIndex & current,
+                                     const QModelIndex & prev)
+  {
+    const PlaylistNode * parentNode = NULL;
+    PlaylistNode * node = getNode(current, parentNode);
+
+    const PlaylistGroup * group =
+      dynamic_cast<const PlaylistGroup *>(parentNode);
+
+    if (group)
+    {
+      PlaylistItem * item = dynamic_cast<PlaylistItem *>(node);
+      int groupRow = group ? group->row_ : -1;
+      int itemRow = item ? item->row_ : -1;
+      emit currentItemChanged(group->row_, item->row_);
+      return;
+    }
+
+    group = dynamic_cast<const PlaylistGroup *>(node);
+    if (group)
+    {
+      emit currentItemChanged(group->row_, -1);
+      return;
+    }
+
+    emit currentItemChanged(-1, -1);
   }
 
   //----------------------------------------------------------------

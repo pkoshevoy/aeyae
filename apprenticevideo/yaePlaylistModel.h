@@ -141,8 +141,7 @@ namespace yae
     bool filterChanged(const QString & filter);
 
     // playlist navigation controls:
-    void setPlayingItem(std::size_t index, bool force = false);
-    void setCurrentItem(std::size_t index);
+    void setPlayingItem(std::size_t index);
 
     // selection set management:
     void selectAll();
@@ -158,8 +157,16 @@ namespace yae
 
     QModelIndex modelIndexForItem(std::size_t itemIndex) const;
 
-    Q_INVOKABLE void changeCurrentItem(int itemsPerRow, int delta);
+    QModelIndex makeModelIndex(int groupRow, int itemRow) const;
+
     Q_INVOKABLE QItemSelectionModel * itemSelectionModel();
+
+    Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow, int selCmd);
+
+    Q_INVOKABLE void setPlayingItem(int groupRow, int itemRow);
+
+    void currentIndexChanged(const QModelIndex & current,
+                             const QModelIndex & prev);
 
   signals:
     // this signal may be emitted if the user activates an item,
@@ -168,7 +175,7 @@ namespace yae
     void playingItemChanged(std::size_t index);
 
     // highlight item change notification:
-    void currentItemChanged(std::size_t index);
+    void currentItemChanged(int groupRow, int itemRow);
 
   protected:
     void emitDataChanged(Roles role, const QModelIndex & index);

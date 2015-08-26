@@ -902,10 +902,6 @@ namespace yae
                  this, SLOT(playlistPlayingItemChanged(std::size_t)));
     YAE_ASSERT(ok);
 
-    ok = connect(&playlistModel_, SIGNAL(currentItemChanged(std::size_t)),
-                 this, SLOT(playlistCurrentItemChanged(std::size_t)));
-    YAE_ASSERT(ok);
-
     ok = connect(actionFullScreen, SIGNAL(triggered()),
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
@@ -2788,15 +2784,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playlistCurrentItemChanged
-  //
-  void
-  MainWindow::playlistCurrentItemChanged(std::size_t index)
-  {
-    // FIXME: write me: scroll playlist view to expose the highlighted item
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::windowHalfSize
   //
   void
@@ -3061,7 +3048,7 @@ namespace yae
     {
       // repeat the playlist:
       std::size_t first = playlistModel_.closestItem(0);
-      playlistModel_.setPlayingItem(first, true);
+      playlistModel_.setPlayingItem(first);
       return;
     }
 
