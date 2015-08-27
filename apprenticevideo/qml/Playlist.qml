@@ -35,9 +35,14 @@ Item
       indentation = "";
     }
 
-    console.log("\n" + indentation + item);
+    console.log("\n\n" + indentation + item);
     for (var p in item)
     {
+      if (typeof(item[p]) == "function")
+      {
+        continue;
+      }
+
       console.log(indentation + p + ": " + item[p]);
     }
   }
@@ -79,6 +84,34 @@ Item
       {
         dump_item_tree(item.children[i], indentation + "  ");
       }
+    }
+  }
+
+  function dump_path_to(item, indentation)
+  {
+    if (!indentation)
+    {
+      indentation = "";
+    }
+
+    var str = indentation;
+    if (item.objectName)
+    {
+      str += item.objectName + " ";
+    }
+
+    str += item;
+
+    if (typeof(item.index) == "number")
+    {
+      str += ", index: " + item.index;
+    }
+
+    console.log(str);
+
+    if (item.parent)
+    {
+      dump_path_to(item.parent, indentation + "  ");
     }
   }
 
@@ -601,8 +634,12 @@ Item
 
         Rectangle {
           visible: groupItemsGridView.currentItem != null
-          x: groupItemsGridView.currentItem.x
-          y: groupItemsGridView.currentItem.y
+          x: (groupItemsGridView.currentItem ?
+              groupItemsGridView.currentItem.x :
+              0)
+          y: (groupItemsGridView.currentItem ?
+              groupItemsGridView.currentItem.y :
+              0)
           z: 1
           width: groupItemsGridView.cellWidth;
           height: groupItemsGridView.cellHeight
@@ -661,7 +698,7 @@ Item
                 opacity: 1.0
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
-                source: model.thumbnail
+                source: model.thumbnail // Unable to assign [undefined] to QUrl
               }
 
               Rectangle {
@@ -709,7 +746,7 @@ Item
                 anchors.leftMargin: -3;
                 anchors.rightMargin: -3;
                 anchors.fill: nowPlayingTag
-                visible: model.playing
+                visible: model.playing // Unable to assign [undefined] to bool
                 radius: 3
               }
 
@@ -717,7 +754,7 @@ Item
                 id: nowPlayingTag
                 objectName: "nowPlayingTag"
 
-                visible: model.playing
+                visible: model.playing // Unable to assign [undefined] to bool
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.margins: 5
@@ -735,20 +772,14 @@ Item
                 anchors.fill: parent
 
                 onClicked: {
-                  // dump_properties(mouse);
-
-                  var i = groupItemsGridView.indexAt(mouse.x, mouse.y);
-                  console.log("indexAt(" + mouse.x + ", " + mouse.y +
-                              ") = " + i);
-                  dump_properties(playlistView);
-                  dump_properties(groupItemsGridView);
-
+                  set_current_item(groupItemsGridView.model.rootIndex.row,
+                                   model.index);
                   mouse.accepted = true;
                 }
 
                 onDoubleClicked: {
-                  // dump_properties(mouse);
-
+                  set_current_item(groupItemsGridView.model.rootIndex.row,
+                                   model.index);
                   model.playing = true;
                   mouse.accepted = true;
                 }
