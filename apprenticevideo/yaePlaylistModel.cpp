@@ -444,6 +444,7 @@ namespace yae
     playlist_.setPlayingItem(itemIndex, true);
 
     QModelIndex curr = modelIndexForItem(playlist_.playingItem());
+    // sel_.setCurrentIndex(curr, QItemSelectionModel::NoUpdate);
 
     if (prev != curr)
     {

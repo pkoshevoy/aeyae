@@ -426,7 +426,7 @@ Item
     Connections {
       target: yae_playlist_model
       onCurrentItemChanged: {
-        console.log("onCurrentItemChanged: " + groupRow + ", " + itemRow);
+        // console.log("onCurrentItemChanged: " + groupRow + ", " + itemRow);
         set_current_item(groupRow, itemRow);
         var found = lookup_current_gridview_and_item();
         scroll_to(found.item);
@@ -544,8 +544,8 @@ Item
       }
 
       Keys.onPressed: {
-        console.log("groupDelegateColumn Keys.onPressed");
-        dump_properties(event);
+        // console.log("groupDelegateColumn Keys.onPressed");
+        // dump_properties(event);
 
         if (event.key == Qt.Key_Left ||
             event.key == Qt.Key_Right ||
@@ -695,10 +695,19 @@ Item
                 id: thumbnailImage
                 objectName: "thumbnailImage"
 
+                // model.thumbnail is 'undefined' while the is being loaded,
+                // and causes this error:
+                //   Unable to assign [undefined] to QUrl
+                //
+                // (model.thumbnail || "") is a workaround expression
+                // that is evaluates to string type assignable to QUrl
+                // and avoids the above error:
+                //
+                source: (model.thumbnail || "")
+
                 opacity: 1.0
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
-                source: model.thumbnail // Unable to assign [undefined] to QUrl
               }
 
               Rectangle {
@@ -741,12 +750,21 @@ Item
                 id: nowPlayingBackgroundRect
                 objectName: "nowPlayingBackgroundRect"
 
+                // model.playing is 'undefined' while the is being loaded,
+                // and causes this error:
+                //   Unable to assign [undefined] to bool
+                //
+                // (model.playing || false) is a workaround expression
+                // that evaluates to the expected boolean type
+                // and avoids the above error:
+                //
+                visible: (model.playing || false)
+
                 color: "#7f7f7f7f"
                 anchors.margins: 0;
                 anchors.leftMargin: -3;
                 anchors.rightMargin: -3;
                 anchors.fill: nowPlayingTag
-                visible: model.playing // Unable to assign [undefined] to bool
                 radius: 3
               }
 
@@ -754,7 +772,16 @@ Item
                 id: nowPlayingTag
                 objectName: "nowPlayingTag"
 
-                visible: model.playing // Unable to assign [undefined] to bool
+                // model.playing is 'undefined' while the is being loaded,
+                // and causes this error:
+                //   Unable to assign [undefined] to bool
+                //
+                // (model.playing || false) is a workaround expression
+                // that evaluates to the expected boolean type
+                // and avoids the above error:
+                //
+                visible: (model.playing || false)
+
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.margins: 5
