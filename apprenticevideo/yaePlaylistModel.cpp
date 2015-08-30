@@ -411,13 +411,6 @@ namespace yae
                          QItemSelectionModel::ClearAndSelect);
 
     QModelIndex currSel = sel_.currentIndex();
-    std::cerr
-      << "FIXME: "
-      << " currentIndex.row: " << currSel.row()
-      << " currentIndex.internalId: " << currSel.internalId()
-      << " parentIndex.row: " << currSel.parent().row()
-      << " parentIndex.internalId: " << currSel.parent().internalId()
-      << std::endl;
     // emit modelReset();
 #endif
   }

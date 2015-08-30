@@ -3,117 +3,15 @@ import QtQml 2.2
 import QtQml.Models 2.2
 import com.aragog.apprenticevideo 1.0
 import '.'
+import 'Utils.js' as Utils
 
 Item
 {
-  id: root
-  width: 320
-  height: 480
-
-  CanvasQuickFbo
-  {
-    id: renderer
-    objectName: "renderer"
-
-    anchors.fill: parent
-    anchors.margins: 0
-
-    // flip it right-side-up:
-    transform:
-    [
-      Scale { yScale: -1; },
-      Translate { y: renderer.height; }
-    ]
-  }
-
-
-  // FIXME: for debugging
-  function dump_properties(item, indentation)
-  {
-    if (!indentation)
-    {
-      indentation = "";
-    }
-
-    console.log("\n\n" + indentation + item);
-    for (var p in item)
-    {
-      if (typeof(item[p]) == "function")
-      {
-        continue;
-      }
-
-      console.log(indentation + p + ": " + item[p]);
-    }
-  }
-
-  function dump_item_tree(item, indentation)
-  {
-    if (!indentation)
-    {
-      indentation = "";
-    }
-
-    var str = indentation;
-    if (item.objectName)
-    {
-      str += item.objectName + " ";
-    }
-    str += item;
-
-    if (item.children && item.children.length > 0)
-    {
-      str += ", " + item.children.length + " children"
-    }
-
-    if (item.parent)
-    {
-      str += ", parent: ";
-      if (parent.objectName)
-      {
-        str += item.parent.objectName + " ";
-      }
-      str += item.parent;
-    }
-    console.log(str);
-
-    if (item.children)
-    {
-      var n = item.children.length;
-      for (var i = 0; i < n; i++)
-      {
-        dump_item_tree(item.children[i], indentation + "  ");
-      }
-    }
-  }
-
-  function dump_path_to(item, indentation)
-  {
-    if (!indentation)
-    {
-      indentation = "";
-    }
-
-    var str = indentation;
-    if (item.objectName)
-    {
-      str += item.objectName + " ";
-    }
-
-    str += item;
-
-    if (typeof(item.index) == "number")
-    {
-      str += ", index: " + item.index;
-    }
-
-    console.log(str);
-
-    if (item.parent)
-    {
-      dump_path_to(item.parent, indentation + "  ");
-    }
-  }
+  property var header_bg: "#df1f1f1f"
+  property var header_fg: "#ffffffff"
+  property var zebra_bg: [ "#00000000", "#3f000000"  ]
+  property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
+  property var greeting_message: "Hi!"
 
   function calc_cell_width(w)
   {
@@ -402,13 +300,6 @@ Item
                                       current.gridView.currentIndex);
   }
 
-
-  property var header_bg: "#df1f1f1f"
-  property var header_fg: "#ffffffff"
-  property var zebra_bg: [ "#00000000", "#3f000000"  ]
-  property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
-  property var greeting_message: "Hi!"
-
   ListView {
     id: playlistView
     objectName: "playlistView"
@@ -545,7 +436,7 @@ Item
 
       Keys.onPressed: {
         // console.log("groupDelegateColumn Keys.onPressed");
-        // dump_properties(event);
+        // Utils.dump_properties(event);
 
         if (event.key == Qt.Key_Left ||
             event.key == Qt.Key_Right ||

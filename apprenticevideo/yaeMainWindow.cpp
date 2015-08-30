@@ -460,11 +460,12 @@ namespace yae
       context->setContextProperty("yae_qml_utils", UtilsQml::singleton());
 
       // start the widget:
-      canvasWidget_->setSource(QUrl("qrc:///qml/Playlist.qml"));
+      canvasWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
 
       // set playlist-footer greeting message:
       QQuickItem * root = canvasWidget_->rootObject();
-      root->setProperty("greeting_message", greeting);
+      QQuickItem * playlist = root->findChild<QQuickItem *>("playlist");
+      playlist->setProperty("greeting_message", greeting);
 
       // get a shortcut to the Canvas (owned by the QML canvas widget):
       canvas_ = yae::getCanvas(root);

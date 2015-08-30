@@ -98,7 +98,9 @@ if (Qt5_FOUND)
 endif (Qt5_FOUND)
 
 set(project_sources
+  qml/Player.qml
   qml/Playlist.qml
+  qml/Utils.js
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
   yaeBookmarks.h
