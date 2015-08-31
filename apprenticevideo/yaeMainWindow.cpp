@@ -363,7 +363,7 @@ namespace yae
     bookmarksMenuSeparator_(NULL),
     readerPrototype_(readerPrototype),
     readerId_(0),
-    canvasWidget_(NULL),
+    playerWidget_(NULL),
     canvas_(NULL),
     timelineControls_(NULL),
     audioRenderer_(NULL),
@@ -386,7 +386,7 @@ namespace yae
     setupUi(this);
     setAcceptDrops(true);
     // setFocusPolicy(Qt::StrongFocus);
-    // setFocusProxy(canvasWidget_);
+    // setFocusProxy(playerWidget_);
     actionPlay->setText(tr("Pause"));
 
     contextMenu_ = new QMenu(this);
@@ -435,45 +435,47 @@ namespace yae
                                    "UtilsQml");
 
     // setup the canvas widget (QML quick widget):
-    canvasWidget_ = new TQuickWidget(this);
-    {
-      canvasWidget_->setFocusPolicy(Qt::StrongFocus);
-      canvasWidget_->setAcceptDrops(true);
-      canvasWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    playerWidget_ = new TQuickWidget(this);
+    playerWidget_->setFocusPolicy(Qt::StrongFocus);
+    playerWidget_->setAcceptDrops(true);
+    playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-      // add image://thumbnails/... provider:
-      QQmlEngine * engine = canvasWidget_->engine();
-      ThumbnailProvider * imageProvider =
-        new ThumbnailProvider(readerPrototype_, playlistModel_.playlist());
-      engine->addImageProvider(QString::fromUtf8("thumbnails"),
+    // add image://thumbnails/... provider:
+    QQmlEngine * qmlEngine = playerWidget_->engine();
+    ThumbnailProvider * imageProvider =
+      new ThumbnailProvider(readerPrototype_, playlistModel_.playlist());
+    qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
                                imageProvider);
 
-      // set playlist model:
-      QQmlContext * context = canvasWidget_->rootContext();
-      context->setContextProperty("yae_playlist_model", &playlistModel_);
+    // set playlist model:
+    QQmlContext * qmlContext = playerWidget_->rootContext();
+    qmlContext->setContextProperty("yae_playlist_model", &playlistModel_);
 
-      // set timeline controls:
-      timelineControls_ = new TimelineControls();
-      context->setContextProperty("yae_timeline_controls", timelineControls_);
+    // set timeline controls:
+    timelineControls_ = new TimelineControls();
+    qmlContext->setContextProperty("yae_timeline_controls", timelineControls_);
 
-      // set QML helper:
-      context->setContextProperty("yae_qml_utils", UtilsQml::singleton());
+    // set QML helper:
+    qmlContext->setContextProperty("yae_qml_utils", UtilsQml::singleton());
 
-      // start the widget:
-      canvasWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
+    // start the widget:
+    playerWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
 
-      // set playlist-footer greeting message:
-      QQuickItem * root = canvasWidget_->rootObject();
-      QQuickItem * playlist = root->findChild<QQuickItem *>("playlist");
+    // shortcut to the root QML item:
+    QQuickItem * playerItem = playerWidget_->rootObject();
+
+    // set playlist-footer greeting message:
+    {
+      QQuickItem * playlist = playerItem->findChild<QQuickItem *>("playlist");
       playlist->setProperty("greeting_message", greeting);
-
-      // get a shortcut to the Canvas (owned by the QML canvas widget):
-      canvas_ = yae::getCanvas(root);
-      YAE_ASSERT(canvas_);
-
-      // insert QML canvas widget in main window layout:
-      canvasLayout->addWidget(canvasWidget_);
     }
+
+    // get a shortcut to the Canvas (owned by the QML canvas widget):
+    canvas_ = yae::getCanvas(playerItem);
+    YAE_ASSERT(canvas_);
+
+    // insert QML canvas widget in main window layout:
+    canvasLayout->addWidget(playerWidget_);
 
     YAE_ASSERT(readerPrototype_);
     reader_.reset(readerPrototype_->clone());
@@ -675,6 +677,10 @@ namespace yae
     playRateMapper->setMapping(actionTempo200, 200);
 
     bool ok = true;
+    ok = connect(playerItem, SIGNAL(toggleFullScreen()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
     ok = connect(playRateMapper, SIGNAL(mapped(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
@@ -958,11 +964,11 @@ namespace yae
     ok = connect(actionDeinterlace, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
-
-    ok = connect(canvasWidget_, SIGNAL(doubleClick()),
+    /*
+    ok = connect(playerWidget_, SIGNAL(doubleClick()),
                  this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
-
+    */
     ok = connect(actionHalfSize, SIGNAL(triggered()),
                  this, SLOT(windowHalfSize()));
     YAE_ASSERT(ok);
@@ -1115,9 +1121,6 @@ namespace yae
     bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
-    playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
-
-    // FIXME:
     playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
     if (!beginPlaybackImmediately)
@@ -2295,7 +2298,7 @@ namespace yae
     bool showPlaylist = actionShowPlaylist->isChecked();
 
     QQuickItem * playlistView =
-      canvasWidget_->rootObject()->findChild<QQuickItem *>("playlistView");
+      playerWidget_->rootObject()->findChild<QQuickItem *>("playlistView");
     if (playlistView)
     {
       playlistView->setVisible(showPlaylist);
@@ -2398,6 +2401,24 @@ namespace yae
     yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);
     yae::swapShortcuts(shortcutAspectRatio1_33_, actionAspectRatio1_33);
     yae::swapShortcuts(shortcutAspectRatio1_78_, actionAspectRatio1_78);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::requestToggleFullScreen
+  //
+  void
+  MainWindow::requestToggleFullScreen()
+  {
+    // all this to work-around apparent QML bug where
+    // toggling full-screen on double-click leaves Flickable in
+    // a state where it never receives the button-up event
+    // and ends up interpreting all mouse movement as dragging,
+    // very annoying...
+    //
+    // The workaround is to delay fullscreen toggle to allow
+    // Flickable time to receive the button-up event
+
+    QTimer::singleShot(150, this, SLOT(toggleFullScreen()));
   }
 
   //----------------------------------------------------------------
@@ -3747,7 +3768,7 @@ namespace yae
       return;
     }
 
-    QRect rectCanvas = canvasWidget_->geometry();
+    QRect rectCanvas = playerWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3798,7 +3819,7 @@ namespace yae
     int ww = rectWindow.width();
     int wh = rectWindow.height();
 
-    QRect rectCanvas = canvasWidget_->geometry();
+    QRect rectCanvas = playerWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3889,7 +3910,7 @@ namespace yae
 
       if (dar)
       {
-        double s = double(canvasWidget_->width()) / w;
+        double s = double(playerWidget_->width()) / w;
         canvasSizeSet(s, s);
       }
     }

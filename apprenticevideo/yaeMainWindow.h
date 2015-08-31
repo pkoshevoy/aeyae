@@ -166,6 +166,7 @@ namespace yae
     void playbackSetTempo(int percent);
 
     // helper:
+    void requestToggleFullScreen();
     void toggleFullScreen();
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
@@ -324,7 +325,7 @@ namespace yae
 
     // frame canvas:
     yae::PlaylistModel playlistModel_;
-    TQuickWidget * canvasWidget_;
+    TQuickWidget * playerWidget_;
     Canvas * canvas_;
     TimelineControls * timelineControls_;
 

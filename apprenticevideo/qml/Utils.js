@@ -28,6 +28,25 @@ function dump_properties(item, indentation)
   }
 }
 
+function dump_functions(item, indentation)
+{
+  if (!indentation)
+  {
+    indentation = "";
+  }
+
+  console.log("\n\n" + indentation + item);
+  for (var p in item)
+  {
+    if (typeof(item[p]) != "function")
+    {
+      continue;
+    }
+
+    console.log(indentation + p + ": " + item[p]);
+  }
+}
+
 function dump_item_tree(item, indentation)
 {
   if (!indentation)

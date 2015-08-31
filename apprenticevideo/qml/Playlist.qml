@@ -300,7 +300,8 @@ Item
                                       current.gridView.currentIndex);
   }
 
-  ListView {
+  ListView
+  {
     id: playlistView
     objectName: "playlistView"
     focus: playlistView.visible
@@ -314,7 +315,8 @@ Item
     highlightFollowsCurrentItem: false
     currentIndex: -1
 
-    Connections {
+    Connections
+    {
       target: yae_playlist_model
       onCurrentItemChanged: {
         // console.log("onCurrentItemChanged: " + groupRow + ", " + itemRow);
@@ -323,19 +325,32 @@ Item
         scroll_to(found.item);
       }
     }
+
+    MouseArea
+    {
+      id: mouseArea
+      objectName: "playlistViewMouseArea"
+
+      anchors.fill: parent
+      propagateComposedEvents: true
+    }
+
   }
 
-  Component {
+  Component
+  {
     id: greetingComponent
 
-    Rectangle {
+    Rectangle
+    {
       objectName: "greetingComponentRect"
 
       width: playlistView.width
       height: playlistView.height
       color: "#df000000"
 
-      Text {
+      Text
+      {
         anchors.fill: parent
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -350,16 +365,19 @@ Item
     }
   }
 
-  Component {
+  Component
+  {
     id: groupDelegate
 
-    Column {
+    Column
+    {
       id: groupDelegateColumn
       objectName: "groupDelegateColumn"
       focus: true
       width: playlistView.width
 
-      Rectangle {
+      Rectangle
+      {
         id: groupItem
         objectName: "groupItem"
         focus: true
@@ -370,7 +388,8 @@ Item
         anchors.left: parent.left
         anchors.right: parent.right
 
-        Image {
+        Image
+        {
           id: disclosureBtn
           objectName: "disclosureBtn"
 
@@ -384,17 +403,20 @@ Item
                    "qrc:///images/group-collapsed.png" :
                    "qrc:///images/group-exposed.png");
 
-          MouseArea {
+          MouseArea
+          {
             anchors.fill: parent
 
             // Toggle the 'collapsed' item data role
             onClicked: {
+              console.log("Playlist group: CLICKED!")
               model.collapsed = !model.collapsed;
             }
           }
         }
 
-        Text {
+        Text
+        {
           anchors.verticalCenter: parent.verticalCenter
           anchors.right: parent.right
           anchors.left: disclosureBtn.right
@@ -409,7 +431,8 @@ Item
         }
       }
 
-      Loader {
+      Loader
+      {
         id: groupsLoader
         objectName: "groupsLoader"
         focus: true
@@ -422,7 +445,8 @@ Item
         visible: !model.collapsed
 
         sourceComponent: groupItemsColumnDelegate
-        onStatusChanged: if (status == Loader.Ready) {
+        onStatusChanged: if (status == Loader.Ready)
+        {
           // console.log("loaded: " + label + ", index: " + index)
           // console.log(item)
           item.model.rootIndex = item.model.modelIndex(index)
@@ -493,10 +517,12 @@ Item
     }
   }
 
-  Component {
+  Component
+  {
     id: groupItemsColumnDelegate
 
-    Rectangle {
+    Rectangle
+    {
       id: groupItemsColumnDelegateRect
       objectName: "groupItemsColumnDelegateRect"
       focus: true
@@ -512,7 +538,8 @@ Item
                                 groupItemsGridView.cellWidth,
                                 groupItemsGridView.count)));
 
-      Rectangle {
+      Rectangle
+      {
         color: "red"
         height: 1
         width: playlistView.width
@@ -520,10 +547,12 @@ Item
         anchors.right: parent.right
       }
 
-      Component {
+      Component
+      {
         id: gridViewHighlight
 
-        Rectangle {
+        Rectangle
+        {
           visible: groupItemsGridView.currentItem != null
           x: (groupItemsGridView.currentItem ?
               groupItemsGridView.currentItem.x :
@@ -542,7 +571,8 @@ Item
         }
       }
 
-      GridView {
+      GridView
+      {
         id: groupItemsGridView
         objectName: "groupItemsGridView"
         focus: true
@@ -558,11 +588,13 @@ Item
         highlightFollowsCurrentItem: false
         currentIndex: -1
 
-        model: DelegateModel {
+        model: DelegateModel
+        {
           id: modelDelegate
           model: yae_playlist_model
 
-          delegate: Item {
+          delegate: Item
+          {
             id: itemDelegate
             objectName: "itemDelegate"
             focus: true
@@ -572,7 +604,8 @@ Item
 
             property var label: model.label
 
-            Rectangle {
+            Rectangle
+            {
               id: backgroundRect
               objectName: "backgroundRect"
 
@@ -582,7 +615,8 @@ Item
                                        playlistView.width) ?
                       zebra_bg[1] : zebra_bg[0]) // argb
 
-              Image {
+              Image
+              {
                 id: thumbnailImage
                 objectName: "thumbnailImage"
 
@@ -601,7 +635,8 @@ Item
                 fillMode: Image.PreserveAspectFit
               }
 
-              Rectangle {
+              Rectangle
+              {
                 id: labelBackgroundRect
                 objectName: "labelBackgroundRect"
 
@@ -618,7 +653,8 @@ Item
                 radius: 3
               }
 
-              Text {
+              Text
+              {
                 id: labelTag
                 objectName: "labelTag"
 
@@ -637,7 +673,8 @@ Item
                 styleColor: "#7f7f7f7f";
               }
 
-              Rectangle {
+              Rectangle
+              {
                 id: nowPlayingBackgroundRect
                 objectName: "nowPlayingBackgroundRect"
 
@@ -659,7 +696,8 @@ Item
                 radius: 3
               }
 
-              Text {
+              Text
+              {
                 id: nowPlayingTag
                 objectName: "nowPlayingTag"
 
@@ -683,19 +721,24 @@ Item
                 color: "white"
               }
 
-              MouseArea {
+              MouseArea
+              {
                 id: mouseArea
                 objectName: "mouseArea"
 
                 anchors.fill: parent
+                // propagateComposedEvents: true
+                // preventStealing: true
 
                 onClicked: {
+                  // console.log("Playlist item: CLICKED!")
                   set_current_item(groupItemsGridView.model.rootIndex.row,
                                    model.index);
                   mouse.accepted = true;
                 }
 
                 onDoubleClicked: {
+                  // console.log("Playlist item: DOUBLE CLICKED!")
                   set_current_item(groupItemsGridView.model.rootIndex.row,
                                    model.index);
                   model.playing = true;

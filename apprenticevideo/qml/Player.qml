@@ -9,6 +9,12 @@ Item
   id: player
   objectName: "player"
 
+  signal exitFullScreen()
+  signal toggleFullScreen()
+  signal skipForward()
+  signal skipBack()
+  signal stepOneFrameForward()
+
   CanvasQuickFbo
   {
     id: renderer
@@ -25,9 +31,26 @@ Item
     ]
   }
 
-  Playlist {
+  MouseArea
+  {
+    anchors.fill: parent
+    anchors.margins: 0
+    // propagateComposedEvents: true
+    // preventStealing: true
+
+    onDoubleClicked: {
+      console.log("Player: DOUBLE CLICKED!")
+      toggleFullScreen();
+      mouse.accepted = true;
+    }
+  }
+
+  Playlist
+  {
     id: playlist
     objectName: "playlist"
     anchors.fill: parent
+    anchors.margins: 0
   }
+
 }
