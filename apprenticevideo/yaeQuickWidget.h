@@ -31,9 +31,6 @@ namespace yae
   public:
     TQuickWidget(QWidget * parent = 0);
 
-  signals:
-    void doubleClick();
-
   public slots:
     void hideCursor();
 
@@ -42,7 +39,6 @@ namespace yae
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
     void mouseMoveEvent(QMouseEvent * e);
-    // void mouseDoubleClickEvent(QMouseEvent * e);
 
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;
