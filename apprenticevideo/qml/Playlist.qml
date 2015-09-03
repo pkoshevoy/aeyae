@@ -7,11 +7,16 @@ import 'Utils.js' as Utils
 
 Item
 {
+  objectName: "Playlist.qml Item"
+
+  property alias view: playlistView
+
   property var header_bg: "#df1f1f1f"
   property var header_fg: "#ffffffff"
   property var zebra_bg: [ "#00000000", "#3f000000"  ]
   property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
   property var greeting_message: "Hi!"
+  property var greeting_color: "#7f7f7f7f"
 
   function calc_cell_width(w)
   {
@@ -111,8 +116,21 @@ Item
 
     var groupContainer = playlistView.currentItem;
 
-    var gridView = yae_qml_utils.find_qobject(groupContainer,
-                                              "groupItemsGridView");
+    var gridView =
+        groupContainer ?
+        yae_qml_utils.find_qobject(groupContainer, "groupItemsGridView") :
+        null;
+
+    if (!gridView)
+    {
+      return {
+        groupIndex: -1,
+        itemIndex: -1,
+        gridView: null,
+        item: null
+      }
+    }
+
     if (gridView.currentIndex == -1)
     {
       gridView.currentIndex = 0;
@@ -300,11 +318,70 @@ Item
                                       current.gridView.currentIndex);
   }
 
+  function handle_event_on_key_pressed(event)
+  {
+    // console.log("handle_event_on_key_pressed");
+    // Utils.dump_properties(event);
+
+    event.accepted = false;
+
+    if (event.key == Qt.Key_Left ||
+        event.key == Qt.Key_Right ||
+        event.key == Qt.Key_Up ||
+        event.key == Qt.Key_Down ||
+        event.key == Qt.Key_PageUp ||
+        event.key == Qt.Key_PageDown ||
+        event.key == Qt.Key_Home ||
+        event.key == Qt.Key_End)
+    {
+      var selectionFlags = ItemSelectionModel.ClearAndSelect;
+
+      // FIXME: this won't work correctly for select/unselect:
+      if (event.modifiers & Qt.ControlModifier)
+      {
+        selectionFlags = ItemSelectionModel.ToggleCurrent;
+      }
+      else if (event.modifiers & Qt.ShiftModifier)
+      {
+        selectionFlags = ItemSelectionModel.SelectCurrent;
+      }
+
+      if (event.key == Qt.Key_Left)
+      {
+        move_cursor_left(selectionFlags);
+      }
+      else if (event.key == Qt.Key_Right)
+      {
+        move_cursor_right(selectionFlags);
+      }
+      else if (event.key == Qt.Key_Up)
+      {
+        move_cursor_up(selectionFlags);
+      }
+      else if (event.key == Qt.Key_Down)
+      {
+        move_cursor_down(selectionFlags);
+      }
+
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_Return ||
+             event.key == Qt.Key_Enter ||
+             event.key == Qt.Key_Space)
+    {
+      set_playing_item();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_Escape)
+    {
+      event.accepted = true;
+    }
+  }
+
   ListView
   {
     id: playlistView
     objectName: "playlistView"
-    focus: playlistView.visible
 
     visible: true
     anchors.fill: parent
@@ -358,9 +435,9 @@ Item
         wrapMode: "Wrap"
         elide: "ElideMiddle"
         text: greeting_message
-        color: "#7f7f7f7f"
-        style: Text.Outline;
-        styleColor: "black";
+        color: greeting_color
+        style: Text.Outline
+        styleColor: "black"
       }
     }
   }
@@ -373,14 +450,12 @@ Item
     {
       id: groupDelegateColumn
       objectName: "groupDelegateColumn"
-      focus: true
       width: playlistView.width
 
       Rectangle
       {
         id: groupItem
         objectName: "groupItem"
-        focus: true
 
         color: header_bg
         height: calc_title_height(24.0, playlistView.width)
@@ -435,7 +510,6 @@ Item
       {
         id: groupsLoader
         objectName: "groupsLoader"
-        focus: true
 
         // This is a workaround for a bug/feature in the Loader element.
         // If sourceComponent is set to null the Loader element retains
@@ -451,67 +525,9 @@ Item
           // console.log(item)
           item.model.rootIndex = item.model.modelIndex(index)
           item.visible = true
-          item.focus = true
 
           // console.log("item.model: " + item.model +
           //             ", rootIndex: " + item.model.rootIndex);
-        }
-      }
-
-      Keys.onPressed: {
-        // console.log("groupDelegateColumn Keys.onPressed");
-        // Utils.dump_properties(event);
-
-        if (event.key == Qt.Key_Left ||
-            event.key == Qt.Key_Right ||
-            event.key == Qt.Key_Up ||
-            event.key == Qt.Key_Down ||
-            event.key == Qt.Key_PageUp ||
-            event.key == Qt.Key_PageDown ||
-            event.key == Qt.Key_Home ||
-            event.key == Qt.Key_End)
-        {
-          var selectionFlags = ItemSelectionModel.ClearAndSelect;
-
-          // FIXME: this won't work correctly for select/unselect:
-          if (event.modifiers & Qt.ControlModifier)
-          {
-            selectionFlags = ItemSelectionModel.ToggleCurrent;
-          }
-          else if (event.modifiers & Qt.ShiftModifier)
-          {
-            selectionFlags = ItemSelectionModel.SelectCurrent;
-          }
-
-          if (event.key == Qt.Key_Left)
-          {
-            move_cursor_left(selectionFlags);
-          }
-          else if (event.key == Qt.Key_Right)
-          {
-            move_cursor_right(selectionFlags);
-          }
-          else if (event.key == Qt.Key_Up)
-          {
-            move_cursor_up(selectionFlags);
-          }
-          else if (event.key == Qt.Key_Down)
-          {
-            move_cursor_down(selectionFlags);
-          }
-
-          event.accepted = true;
-        }
-        else if (event.key == Qt.Key_Return ||
-                 event.key == Qt.Key_Enter ||
-                 event.key == Qt.Key_Space)
-        {
-          set_playing_item();
-          event.accepted = true;
-        }
-        else if (event.key == Qt.Key_Escape)
-        {
-          event.accepted = true;
         }
       }
     }
@@ -525,7 +541,6 @@ Item
     {
       id: groupItemsColumnDelegateRect
       objectName: "groupItemsColumnDelegateRect"
-      focus: true
 
       color: header_bg
       property alias model : groupItemsGridView.model
@@ -575,7 +590,6 @@ Item
       {
         id: groupItemsGridView
         objectName: "groupItemsGridView"
-        focus: true
 
         anchors.fill: parent
         anchors.topMargin: 2
@@ -597,7 +611,6 @@ Item
           {
             id: itemDelegate
             objectName: "itemDelegate"
-            focus: true
 
             height: groupItemsGridView.cellHeight
             width: groupItemsGridView.cellWidth

@@ -2295,12 +2295,14 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
-    bool showPlaylist = actionShowPlaylist->isChecked();
+    QQuickItem * playerItem = playerWidget_->rootObject();
 
     QQuickItem * playlistView =
-      playerWidget_->rootObject()->findChild<QQuickItem *>("playlistView");
+      playerItem->findChild<QQuickItem *>("playlistView");
+
     if (playlistView)
     {
+      bool showPlaylist = actionShowPlaylist->isChecked();
       playlistView->setVisible(showPlaylist);
     }
   }

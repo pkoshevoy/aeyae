@@ -32,6 +32,9 @@ namespace yae
 
     Q_INVOKABLE void
     dump_object_tree(QObject * object) const;
+
+    Q_INVOKABLE void
+    dump_object_tree_info(QObject * object) const;
   };
 }
 
