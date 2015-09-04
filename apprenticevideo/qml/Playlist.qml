@@ -383,7 +383,6 @@ Item
     id: playlistView
     objectName: "playlistView"
 
-    visible: true
     anchors.fill: parent
     model: yae_playlist_model
     delegate: groupDelegate

@@ -2298,7 +2298,7 @@ namespace yae
     QQuickItem * playerItem = playerWidget_->rootObject();
 
     QQuickItem * playlistView =
-      playerItem->findChild<QQuickItem *>("playlistView");
+      playerItem->findChild<QQuickItem *>("playlist");
 
     if (playlistView)
     {
@@ -2313,34 +2313,16 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
-    SignalBlocker blockSignals(actionShowTimeline);
-#if 0
-    QRect mainGeom = geometry();
-    int ctrlHeight = timelineWidgets_->height();
-    bool fullScreen = this->isFullScreen();
+    QQuickItem * playerItem = playerWidget_->rootObject();
 
-    if (timelineWidgets_->isVisible())
+    QQuickItem * timeline =
+      playerItem->findChild<QQuickItem *>("timeline");
+
+    if (timeline)
     {
-      actionShowTimeline->setChecked(false);
-      timelineWidgets_->hide();
-
-      if (!fullScreen)
-      {
-        resize(width(), mainGeom.height() - ctrlHeight);
-      }
+      bool showTimeline = actionShowTimeline->isChecked();
+      timeline->setVisible(showTimeline);
     }
-    else
-    {
-      actionShowTimeline->setChecked(true);
-
-      if (!fullScreen)
-      {
-        resize(width(), mainGeom.height() + ctrlHeight);
-      }
-
-      timelineWidgets_->show();
-    }
-#endif
   }
 
   //----------------------------------------------------------------

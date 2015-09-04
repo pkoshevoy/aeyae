@@ -100,6 +100,7 @@ endif (Qt5_FOUND)
 set(project_sources
   qml/Player.qml
   qml/Playlist.qml
+  qml/Timeline.qml
   qml/Utils.js
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
