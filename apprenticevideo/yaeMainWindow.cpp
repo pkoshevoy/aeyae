@@ -482,16 +482,7 @@ namespace yae
 
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
-#if 0
-    // show the timeline:
-    setTimelineCssForVideo(timelineWidgets_);
-    actionShowTimeline->setChecked(true);
-    timelineWidgets_->show();
 
-    // hide the playlist:
-    actionShowPlaylist->setChecked(false);
-    playlistDock_->hide();
-#endif
     // setup the Open URL dialog:
     {
       std::list<std::string> protocols;
@@ -929,7 +920,7 @@ namespace yae
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowPlaylist, SIGNAL(triggered()),
+    ok = connect(actionShowPlaylist, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowPlaylist()));
     YAE_ASSERT(ok);
 
@@ -937,7 +928,7 @@ namespace yae
                  actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowTimeline, SIGNAL(triggered()),
+    ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
 
@@ -1079,6 +1070,12 @@ namespace yae
 
     adjustMenuActions();
     adjustMenus(reader_);
+
+    // show the timeline:
+    actionShowTimeline->setChecked(true);
+
+    // hide the playlist:
+    actionShowPlaylist->setChecked(false);
   }
 
   //----------------------------------------------------------------

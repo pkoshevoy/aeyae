@@ -30,29 +30,36 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // Marker
-  //
-  struct Marker
-  {
-    Marker();
-
-    // set anchor position to current marker position:
-    void setAnchor();
-
-    // current marker position on the timeline:
-    double position_;
-
-    // marker position at the start of a mouse drag that may have moved it:
-    double positionAnchor_;
-  };
-
-  //----------------------------------------------------------------
   // TimelineControls
   //
   class TimelineControls : public QQuickItem,
                            public IClockObserver
   {
     Q_OBJECT;
+
+    Q_PROPERTY(QString auxPlayhead
+               READ auxPlayhead
+               WRITE setAuxPlayhead
+               NOTIFY auxPlayheadChanged);
+
+    Q_PROPERTY(QString auxDuration
+               READ auxDuration
+               NOTIFY auxDurationChanged);
+
+    Q_PROPERTY(double markerTimeIn
+               READ markerTimeIn
+               WRITE setMarkerTimeIn
+               NOTIFY markerTimeInChanged);
+
+    Q_PROPERTY(double markerTimeOut
+               READ markerTimeOut
+               WRITE setMarkerTimeOut
+               NOTIFY markerTimeOutChanged);
+
+    Q_PROPERTY(double markerPlayhead
+               READ markerPlayhead
+               WRITE setMarkerPlayhead
+               NOTIFY markerPlayheadChanged);
 
   public:
     TimelineControls();
@@ -96,7 +103,33 @@ namespace yae
       kDraggingPlayheadMarker
     };
 
+    inline const QString & auxPlayhead() const
+    { return auxPlayhead_; }
+
+    inline const QString & auxDuration() const
+    { return auxDuration_; }
+
+    inline double markerTimeIn() const
+    { return markerTimeIn_; }
+
+    inline double markerTimeOut() const
+    { return markerTimeOut_; }
+
+    inline double markerPlayhead() const
+    { return markerPlayhead_; }
+
+    void setAuxPlayhead(const QString & playhead);
+    void setMarkerTimeIn(double marker);
+    void setMarkerTimeOut(double marker);
+    void setMarkerPlayhead(double marker);
+
   signals:
+    void auxPlayheadChanged();
+    void auxDurationChanged();
+    void markerTimeInChanged();
+    void markerTimeOutChanged();
+    void markerPlayheadChanged();
+
     void moveTimeIn(double t);
     void moveTimeOut(double t);
     void movePlayHead(double t);
@@ -108,16 +141,20 @@ namespace yae
     void setOutPoint();
     void seekFromCurrentTime(double offsetSeconds);
     void seekTo(double absoluteSeconds);
-    void seekTo(const QString & HhMmSsFf);
-    void requestRepaint();
+    bool seekTo(const QString & HhMmSsFf);
 
   protected slots:
-    void repaintTimerExpired();
     void slideshowTimerExpired();
 
   protected:
     // virtual:
     bool event(QEvent * e);
+
+    bool updateAuxPlayhead(const QString & position);
+    bool updateAuxDuration(const QString & duration);
+    bool updateMarkerTimeIn(double marker);
+    bool updateMarkerTimeOut(double marker);
+    bool updateMarkerPlayhead(double marker);
 
     //----------------------------------------------------------------
     // ClockStoppedEvent
@@ -179,9 +216,9 @@ namespace yae
 
     // direct manipulation handles representing in/out time points
     // and current playback position marker (playhead):
-    Marker markerTimeIn_;
-    Marker markerTimeOut_;
-    Marker markerPlayhead_;
+    double markerTimeIn_;
+    double markerTimeOut_;
+    double markerPlayhead_;
 
     // current state of playback controls:
     TState currentState_;
@@ -213,9 +250,9 @@ namespace yae
     double frameRate_;
     const char * frameNumberSeparator_;
 
-    // repaint buffering:
-    QTimer repaintTimer_;
-    QTime repaintTimerStartTime_;
+    // textual representation of playhead position and total duration:
+    QString auxPlayhead_;
+    QString auxDuration_;
 
     // delay signaling stopped-clock when source duration is unknown
     // or has just one frame (a single picture):

@@ -121,15 +121,58 @@ Item
     anchors.leftMargin: height / 3
     anchors.rightMargin: height / 3
 
+    MouseArea
+    {
+      id: mouseArea
+      hoverEnabled: true
+
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: parent.top
+      anchors.bottom: parent.top
+      anchors.leftMargin: -(parent.height / 3.0)
+      anchors.rightMargin: -(parent.height / 3.0)
+
+      // NOTE: it appears mouse hover is skewed
+      // possibly due to arrow cursor hot spot not being at (0, 0),
+      // therefore the bottom margin is artificially padded by 4 pixels:
+      anchors.topMargin: -(parent.height / 9.0)
+      anchors.bottomMargin: -(parent.height / 9.0 + 4)
+
+      /*
+      // FIXME: for hover area testing
+      Rectangle
+      {
+        anchors.fill: parent
+        anchors.margins: 0
+        color: "#3f00ff00"
+      }
+      */
+
+      onDoubleClicked: {
+        // Utils.dump_properties(mouseArea);
+        var padding = (parent.height / 3.0)
+        var t = (mouse.x - padding) / (this.width - padding * 2.0);
+        yae_timeline_controls.markerPlayhead = t;
+        mouse.accepted = true;
+      }
+    }
+
     Rectangle
     {
+      function calc_height()
+      {
+        var h = parent.height * (mouseArea.containsMouse ? 1.0 : 0.5) / 9.0;
+        return h;
+      }
+
       id: timelineIn
       objectName: "timelineIn"
       color: "#33ffffff"
-      y: -this.height / 2
+      y: -this.height / 2.0
       anchors.left: parent.left
-      height: parent.height / 12
-      width: parent.width / 5
+      height: this.calc_height();
+      width: parent.width * yae_timeline_controls.markerTimeIn;
     }
 
     Rectangle
@@ -137,10 +180,11 @@ Item
       id: timelinePlayhead
       objectName: "timelinePlayhead"
       color: "#f12b24"
-      y: -this.height / 2
+      y: -this.height / 2.0
       anchors.left: timelineIn.right
-      height: parent.height / 12
-      width: parent.width / 5 * 2
+      height: timelineIn.height
+      width: parent.width * (yae_timeline_controls.markerPlayhead -
+                             yae_timeline_controls.markerTimeIn);
     }
 
     Rectangle
@@ -148,10 +192,11 @@ Item
       id: timelineOut
       objectName: "timelineOut"
       color: "#84ffffff"
-      y: -this.height / 2
+      y: -this.height / 2.0
       anchors.left: timelinePlayhead.right
-      height: parent.height / 12
-      width: parent.width / 5
+      height: timelineIn.height
+      width: parent.width * (yae_timeline_controls.markerTimeOut -
+                             yae_timeline_controls.markerPlayhead);
     }
 
     Rectangle
@@ -159,10 +204,10 @@ Item
       id: timelineEnd
       objectName: "timelineEnd"
       color: "#33ffffff"
-      y: -this.height / 2
+      y: -this.height / 2.0
       anchors.left: timelineOut.right
       anchors.right: parent.right
-      height: parent.height / 12
+      height: timelineIn.height
     }
 
     Rectangle
@@ -170,11 +215,12 @@ Item
       id: inPoint
       objectName: "inPoint"
       color: timelinePlayhead.color
-      y: -this.height / 2
+      y: -this.height / 2.0
       x: timelinePlayhead.x - this.radius
-      height: parent.height / 5
+      height: timelineIn.height * 1.67
       width: this.height
-      radius: this.width / 2
+      radius: this.height / 2.0
+      visible: mouseArea.containsMouse
     }
 
     Rectangle
@@ -182,11 +228,12 @@ Item
       id: outPoint
       objectName: "outPoint"
       color: "#e6e6e6"
-      y: -this.height / 2
+      y: -this.height / 2.0
       x: timelineEnd.x - this.radius
-      height: parent.height / 5
+      height: inPoint.height
       width: this.height
-      radius: this.width / 2
+      radius: this.height / 2.0
+      visible: mouseArea.containsMouse
     }
 
     Rectangle
@@ -194,11 +241,12 @@ Item
       id: playhead
       objectName: "playhead"
       color: timelinePlayhead.color
-      y: -this.height / 2
+      y: -this.height / 2.0
       x: timelineOut.x - this.radius
-      height: parent.height / 4
+      height: timelineIn.height * 2.0
       width: this.height
-      radius: this.width / 2
+      radius: this.height / 2.0
+      visible: mouseArea.containsMouse
     }
 
     Text
@@ -211,10 +259,11 @@ Item
       anchors.leftMargin: 3
       anchors.rightMargin: 3
 
-      text: "00:00:00:00"
+      text: yae_timeline_controls.auxPlayhead
       color: "#7fffffff"
       // style: Text.Outline
       // styleColor: "#33ffffff"
+      font.family: "monospace"
       font.pixelSize: parent.height / 3
 
       Rectangle

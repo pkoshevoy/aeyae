@@ -46,6 +46,11 @@ namespace yae
   static QString kClockTemplate = QString::fromUtf8("00:00:00:00");
 
   //----------------------------------------------------------------
+  // kUnknownDuration
+  //
+  static QString kUnknownDuration = QString::fromUtf8("--:--:--:--");
+
+  //----------------------------------------------------------------
   // getTimeStamp
   //
   static QString
@@ -84,9 +89,10 @@ namespace yae
        << std::setw(2) << std::setfill('0') << sec << frameNumSep
        << std::setw(2) << std::setfill('0') << frameNo;
 
-    // crop the leading zeros up to s:ff
     std::string str(os.str().c_str());
     const char * text = str.c_str();
+#if 0
+    // crop the leading zeros up to s:ff
     const char * tend = text + 7;
 
     while (text < tend)
@@ -98,27 +104,10 @@ namespace yae
 
       ++text;
     }
+#endif
 
     return QString::fromUtf8(text);
   }
-
-  //----------------------------------------------------------------
-  // Marker::Marker
-  //
-  Marker::Marker():
-    position_(0.0),
-    positionAnchor_(0.0)
-  {}
-
-  //----------------------------------------------------------------
-  // Marker::setAnchor
-  //
-  void
-  Marker::setAnchor()
-  {
-    positionAnchor_ = position_;
-  }
-
 
   //----------------------------------------------------------------
   // TimelineControls::TimelineControls
@@ -130,8 +119,9 @@ namespace yae
     timelineDuration_(0.0),
     timelinePosition_(0.0),
     frameRate_(100.0),
-    repaintTimer_(this),
-    slideshowTimer_(this)
+    slideshowTimer_(this),
+    auxPlayhead_(kClockTemplate),
+    auxDuration_(kUnknownDuration)
   {
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
 
@@ -139,26 +129,18 @@ namespace yae
     lineWidth_ = 3;
 
     // setup marker positions:
-    markerTimeIn_.position_ = timelineStart_;
-    markerTimeOut_.position_ = timelineStart_ + timelineDuration_;
-    markerPlayhead_.position_ = timelineStart_;
+    markerTimeIn_ = timelineStart_;
+    markerTimeOut_ = timelineStart_ + timelineDuration_;
+    markerPlayhead_ = timelineStart_;
 
     // current state of playback controls:
     currentState_ = TimelineControls::kIdle;
 
-    // this is to avoid too much repainting:
-    repaintTimer_.setSingleShot(true);
-    repaintTimer_.setInterval(100);
-
-    bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
-                      this, SLOT(repaintTimerExpired()));
-    YAE_ASSERT(ok);
-
     slideshowTimer_.setSingleShot(true);
     slideshowTimer_.setInterval(1000);
 
-    ok = connect(&slideshowTimer_, SIGNAL(timeout()),
-                 this, SLOT(slideshowTimerExpired()));
+    bool ok = connect(&slideshowTimer_, SIGNAL(timeout()),
+                      this, SLOT(slideshowTimerExpired()));
     YAE_ASSERT(ok);
   }
 
@@ -192,9 +174,7 @@ namespace yae
   double
   TimelineControls::timeIn() const
   {
-    double seconds =
-      markerTimeIn_.position_ * timelineDuration_ + timelineStart_;
-
+    double seconds = markerTimeIn_ * timelineDuration_ + timelineStart_;
     return seconds;
   }
 
@@ -204,9 +184,7 @@ namespace yae
   double
   TimelineControls::timeOut() const
   {
-    double seconds =
-      markerTimeOut_.position_ * timelineDuration_ + timelineStart_;
-
+    double seconds = markerTimeOut_ * timelineDuration_ + timelineStart_;
     return seconds;
   }
 
@@ -216,9 +194,7 @@ namespace yae
   double
   TimelineControls::currentTime() const
   {
-      double seconds =
-        markerPlayhead_.position_ * timelineDuration_ + timelineStart_;
-
+      double seconds = markerPlayhead_ * timelineDuration_ + timelineStart_;
       return seconds;
   }
 
@@ -305,14 +281,19 @@ namespace yae
                          std::numeric_limits<double>::max() :
                          duration.toSeconds());
 
-    markerPlayhead_.position_ = 0.0;
-    markerPlayhead_.setAnchor();
+    QString ts = getTimeStamp(timelineStart_,
+                              frameRate_,
+                              frameNumberSeparator_);
+    updateAuxPlayhead(ts);
 
-    markerTimeIn_.position_ = 0.0;
-    markerTimeIn_.setAnchor();
+    ts = getTimeStamp(timelineStart_ + timelineDuration_,
+                      frameRate_,
+                      frameNumberSeparator_);
+    updateAuxDuration(ts);
 
-    markerTimeOut_.position_ = 1.0;
-    markerTimeOut_.setAnchor();
+    updateMarkerPlayhead(0.0);
+    updateMarkerTimeIn(0.0);
+    updateMarkerTimeOut(1.0);
 
     // update();
   }
@@ -359,16 +340,80 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    markerPlayhead_.position_ = (t - T0) / dT;
-    markerPlayhead_.setAnchor();
+    QString ts_p = getTimeStamp(t, frameRate_, frameNumberSeparator_);
+    updateAuxPlayhead(ts_p);
 
-    markerTimeIn_.position_ = (t0 - T0) / dT;
-    markerTimeIn_.setAnchor();
+    QString ts_d = getTimeStamp(T1, frameRate_, frameNumberSeparator_);
+    updateAuxDuration(ts_d);
 
-    markerTimeOut_.position_ = (t1 - T0) / dT;
-    markerTimeOut_.setAnchor();
+    updateMarkerPlayhead((t - T0) / dT);
+    updateMarkerTimeIn((t0 - T0) / dT);
+    updateMarkerTimeOut((t1 - T0) / dT);
 
     // update();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::setAuxPlayhead
+  //
+  void
+  TimelineControls::setAuxPlayhead(const QString & playhead)
+  {
+    seekTo(playhead);
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::setMarkerTimeIn
+  //
+  void
+  TimelineControls::setMarkerTimeIn(double marker)
+  {
+    if (updateMarkerTimeIn(marker))
+    {
+      if (markerTimeOut_ < markerTimeIn_)
+      {
+        setMarkerTimeOut(markerTimeIn_);
+      }
+
+      double seconds = (timelineDuration_ * markerTimeIn_ + timelineStart_);
+      emit moveTimeIn(seconds);
+     }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::setMarkerTimeOut
+  //
+  void
+  TimelineControls::setMarkerTimeOut(double marker)
+  {
+    if (updateMarkerTimeOut(marker))
+    {
+      if (markerTimeIn_ > markerTimeOut_)
+      {
+        setMarkerTimeIn(markerTimeOut_);
+      }
+
+      double seconds = (timelineDuration_ * markerTimeOut_ + timelineStart_);
+      emit moveTimeOut(seconds);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::setMarkerPlayhead
+  //
+  void
+  TimelineControls::setMarkerPlayhead(double marker)
+  {
+    if (!timelineDuration_ || unknownDuration_)
+    {
+      return;
+    }
+
+    if (updateMarkerPlayhead(marker))
+    {
+      double seconds = markerPlayhead_ * timelineDuration_ + timelineStart_;
+      emit movePlayHead(seconds);
+    }
   }
 
   //----------------------------------------------------------------
@@ -379,18 +424,7 @@ namespace yae
   {
     if (!unknownDuration_ && currentState_ == kIdle)
     {
-      markerTimeIn_.position_ = markerPlayhead_.position_;
-      double seconds = (timelineDuration_ * markerTimeIn_.position_ +
-                        timelineStart_);
-
-      if (markerTimeOut_.position_ < markerTimeIn_.position_)
-      {
-        markerTimeOut_.position_ = markerTimeIn_.position_;
-        emit moveTimeOut(seconds);
-      }
-
-      emit moveTimeIn(seconds);
-      // update();
+      setMarkerTimeIn(markerPlayhead_);
     }
   }
 
@@ -402,18 +436,7 @@ namespace yae
   {
     if (!unknownDuration_ && currentState_ == kIdle)
     {
-      markerTimeOut_.position_ = markerPlayhead_.position_;
-      double seconds = (timelineDuration_ * markerTimeOut_.position_ +
-                        timelineStart_);
-
-      if (markerTimeIn_.position_ > markerTimeOut_.position_)
-      {
-        markerTimeIn_.position_ = markerTimeOut_.position_;
-        emit moveTimeIn(seconds);
-      }
-
-      emit moveTimeOut(seconds);
-      // update();
+      setMarkerTimeOut(markerPlayhead_);
     }
   }
 
@@ -448,15 +471,8 @@ namespace yae
       return;
     }
 
-    double t = (seconds - timelineStart_) / timelineDuration_;
-    t = std::min(1.0, std::max(0.0, t));
-
-    markerPlayhead_.position_ = t;
-    seconds = t * timelineDuration_ + timelineStart_;
-
-    emit movePlayHead(seconds);
-
-    // update();
+    double marker = (seconds - timelineStart_) / timelineDuration_;
+    setMarkerPlayhead(marker);
   }
 
   //----------------------------------------------------------------
@@ -519,7 +535,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls::seekTo
   //
-  void
+  bool
   TimelineControls::seekTo(const QString & hhmmssff)
   {
     int hh = 0;
@@ -530,54 +546,14 @@ namespace yae
     unsigned int parsed = parseTimeCode(hhmmssff, hh, mm, ss, ff);
     if (!parsed)
     {
-      return;
+      return false;
     }
 
     double seconds = ss + 60.0 * (mm + 60.0 * hh);
     double msec = double(ff) / frameRate_;
 
     seekTo(seconds + msec);
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::requestRepaint
-  //
-  void
-  TimelineControls::requestRepaint()
-  {
-#if 0 // FIXME:
-    if (isHidden())
-    {
-      return;
-    }
-#endif
-
-    if (!repaintTimer_.isActive())
-    {
-      repaintTimer_.start();
-      repaintTimerStartTime_.start();
-    }
-    else if (repaintTimerStartTime_.elapsed() > 500)
-    {
-      // this shouldn't happen, but for some reason it does on the Mac,
-      // sometimes the timer remains active but the timeout signal is
-      // never delivered; this is a workaround:
-#ifndef NDEBUG
-      std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
-#endif
-      repaintTimer_.stop();
-
-      // update();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TimelineControls::repaintTimerExpired
-  //
-  void
-  TimelineControls::repaintTimerExpired()
-  {
-    // update();
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -629,9 +605,8 @@ namespace yae
         timelinePosition_ = currentTime.toSeconds();
 
         double t = timelinePosition_ - timelineStart_;
-        markerPlayhead_.position_ = t / timelineDuration_;
+        updateMarkerPlayhead(t / timelineDuration_);
 
-        requestRepaint();
         return true;
       }
 
@@ -679,6 +654,98 @@ namespace yae
     }
 
     return QQuickItem::event(e);
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::updateAuxPlayhead
+  //
+  bool
+  TimelineControls::updateAuxPlayhead(const QString & playhead)
+  {
+    if (playhead == auxPlayhead_)
+    {
+      return false;
+    }
+
+    auxPlayhead_ = playhead;
+    emit auxPlayheadChanged();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::updateAuxDuration
+  //
+  bool
+  TimelineControls::updateAuxDuration(const QString & duration)
+  {
+    if (duration == auxDuration_)
+    {
+      return false;
+    }
+
+    auxDuration_ = duration;
+    emit auxDurationChanged();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::updateMarkerTimeIn
+  //
+  bool
+  TimelineControls::updateMarkerTimeIn(double marker)
+  {
+    double t = std::min(1.0, std::max(0.0, marker));
+    if (t == markerTimeIn_)
+    {
+      return false;
+    }
+
+    markerTimeIn_ = t;
+    emit markerTimeInChanged();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::updateMarkerTimeOut
+  //
+  bool
+  TimelineControls::updateMarkerTimeOut(double marker)
+  {
+    double t = std::min(1.0, std::max(0.0, marker));
+    if (t == markerTimeOut_)
+    {
+      return false;
+    }
+
+    markerTimeOut_ = t;
+    emit markerTimeOutChanged();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineControls::updateMarkerPlayhead
+  //
+  bool
+  TimelineControls::updateMarkerPlayhead(double marker)
+  {
+    double t = std::min(1.0, std::max(0.0, marker));
+    if (t == markerPlayhead_)
+    {
+      return false;
+    }
+
+    markerPlayhead_ = t;
+    emit markerPlayheadChanged();
+
+    double seconds = markerPlayhead_ * timelineDuration_ + timelineStart_;
+    QString ts = getTimeStamp(seconds, frameRate_, frameNumberSeparator_);
+    updateAuxPlayhead(ts);
+
+    return true;
   }
 
 }
