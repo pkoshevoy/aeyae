@@ -116,10 +116,34 @@ Item
 
   Item
   {
+    id: container
+    objectName: "container"
+
     anchors.fill: parent
     anchors.margins: 0
     anchors.leftMargin: height / 3
     anchors.rightMargin: height / 3
+
+    function timeline_height_thin()
+    {
+      var h = this.height / 18.0
+      return h;
+    }
+
+    function timeline_height_thick()
+    {
+      var h = this.height / 9.0
+      return h;
+    }
+
+    function timeline_height()
+    {
+      var h =
+          mouseArea.containsMouse ?
+          timeline_height_thick() :
+          timeline_height_thin();
+      return h;
+    }
 
     MouseArea
     {
@@ -160,18 +184,12 @@ Item
 
     Rectangle
     {
-      function calc_height()
-      {
-        var h = parent.height * (mouseArea.containsMouse ? 1.0 : 0.5) / 9.0;
-        return h;
-      }
-
       id: timelineIn
       objectName: "timelineIn"
       color: "#33ffffff"
       y: -this.height / 2.0
       anchors.left: parent.left
-      height: this.calc_height();
+      height: container.timeline_height();
       width: parent.width * yae_timeline_controls.markerTimeIn;
     }
 
@@ -210,43 +228,58 @@ Item
       height: timelineIn.height
     }
 
-    Rectangle
+    TimelineMarkerDragItem
+    {
+      id: "dragItem"
+      objectName: "dragItem"
+    }
+
+    TimelineMarker
     {
       id: inPoint
       objectName: "inPoint"
       color: timelinePlayhead.color
-      y: -this.height / 2.0
-      x: timelinePlayhead.x - this.radius
-      height: timelineIn.height * 1.67
-      width: this.height
-      radius: this.height / 2.0
+      position: timelinePlayhead
+      container: container
+      dragItem: dragItem
+      height: container.timeline_height_thick() * 1.67
       visible: mouseArea.containsMouse
+
+      moveMarker: function(t) {
+        yae_timeline_controls.markerTimeIn = t;
+      }
     }
 
-    Rectangle
+    TimelineMarker
     {
       id: outPoint
       objectName: "outPoint"
       color: "#e6e6e6"
-      y: -this.height / 2.0
-      x: timelineEnd.x - this.radius
+      position: timelineEnd
+      container: container
+      dragItem: dragItem
       height: inPoint.height
-      width: this.height
-      radius: this.height / 2.0
       visible: mouseArea.containsMouse
+
+      moveMarker: function(t) {
+        yae_timeline_controls.markerTimeOut = t;
+      }
     }
 
-    Rectangle
+    TimelineMarker
     {
       id: playhead
       objectName: "playhead"
       color: timelinePlayhead.color
-      y: -this.height / 2.0
-      x: timelineOut.x - this.radius
-      height: timelineIn.height * 2.0
-      width: this.height
-      radius: this.height / 2.0
+      position: timelineOut
+      container: container
+      dragItem: dragItem
+      height: container.timeline_height_thick() * 2.0
       visible: mouseArea.containsMouse
+
+      moveMarker: function(t) {
+        yae_timeline_controls.markerPlayhead = t;
+      }
     }
 
     Text

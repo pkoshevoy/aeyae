@@ -101,6 +101,8 @@ set(project_sources
   qml/Player.qml
   qml/Playlist.qml
   qml/Timeline.qml
+  qml/TimelineMarker.qml
+  qml/TimelineMarkerDragItem.qml
   qml/Utils.js
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
