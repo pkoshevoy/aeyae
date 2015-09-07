@@ -672,6 +672,26 @@ namespace yae
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(playerItem, SIGNAL(exitFullScreen()),
+                 this, SLOT(exitFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(togglePlayback()),
+                 this, SLOT(togglePlayback()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipForward()),
+                 this, SLOT(skipForward()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipBack()),
+                 this, SLOT(skipBack()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(stepOneFrameForward()),
+                 this, SLOT(skipToNextFrame()));
+    YAE_ASSERT(ok);
+
     ok = connect(playRateMapper, SIGNAL(mapped(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
@@ -2548,6 +2568,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::skipForward
+  //
+  void
+  MainWindow::skipForward()
+  {
+    timelineControls_->seekFromCurrentTime(7.0);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipBack
+  //
+  void
+  MainWindow::skipBack()
+  {
+    timelineControls_->seekFromCurrentTime(-3.0);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::audioDownmixToStereo
   //
   void
@@ -3561,13 +3599,13 @@ namespace yae
              key == Qt::Key_Period ||
              key == Qt::Key_Greater)
     {
-      timelineControls_->seekFromCurrentTime(7.0);
+      skipForward();
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
              key == Qt::Key_Less)
     {
-      timelineControls_->seekFromCurrentTime(-3.0);
+      skipBack();
     }
     else if (key == Qt::Key_MediaPlay ||
 #if QT_VERSION >= 0x040700

@@ -171,6 +171,9 @@ namespace yae
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
     void togglePlayback();
+    void skipToNextFrame();
+    void skipForward();
+    void skipBack();
 
     // audio/video menus:
     void audioDownmixToStereo();
@@ -247,7 +250,6 @@ namespace yae
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
     void swapShortcuts();
-    void skipToNextFrame();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 

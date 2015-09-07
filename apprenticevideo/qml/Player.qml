@@ -12,17 +12,58 @@ Item
 
   signal exitFullScreen()
   signal toggleFullScreen()
+  signal togglePlayback()
+  signal stepOneFrameForward()
   signal skipForward()
   signal skipBack()
-  signal stepOneFrameForward()
 
   focus: true;
 
   Keys.onPressed:
   {
+    event.accepted = false;
+
     if (playlist.view.visible)
     {
       playlist.handle_event_on_key_pressed(event);
+    }
+
+    if (event.accepted)
+    {
+      return;
+    }
+
+    if (event.key == Qt.Key_Escape)
+    {
+      exitFullScreen();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_MediaTogglePlayPause ||
+             event.key == Qt.Key_MediaPause ||
+             event.key == Qt.Key_MediaPlay ||
+             event.key == Qt.Key_MediaStop)
+    {
+      togglePlayback();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_N)
+    {
+      stepOneFrameForward();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_MediaNext ||
+             event.key == Qt.Key_Period ||
+             event.key == Qt.Key_Greater)
+    {
+      skipForward();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_MediaPrevious ||
+             event.key == Qt.Key_Comma ||
+             event.key == Qt.Key_Less)
+    {
+      skipBack();
+      event.accepted = true;
     }
   }
 
