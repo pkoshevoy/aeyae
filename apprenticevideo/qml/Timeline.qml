@@ -306,6 +306,8 @@ Item
                     "monospace")
       font.pixelSize: parent.height / 3
 
+      selectionColor: "#3fffffff"
+      selectedTextColor: "black"
       color: "#7fffffff"
       selectByMouse: true
 
