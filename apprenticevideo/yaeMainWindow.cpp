@@ -638,6 +638,14 @@ namespace yae
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
 
+    ok = connect(playerItem, SIGNAL(skipToInPoint()),
+                 this, SLOT(skipToInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipToOutPoint()),
+                 this, SLOT(skipToOutPoint()));
+    YAE_ASSERT(ok);
+
     ok = connect(playerItem, SIGNAL(skipForward()),
                  this, SLOT(skipForward()));
     YAE_ASSERT(ok);
@@ -2401,6 +2409,24 @@ namespace yae
       bookmarkTimer_.stop();
       saveBookmark();
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToInPoint
+  //
+  void
+  MainWindow::skipToInPoint()
+  {
+    timelineControls_->seekTo(timelineControls_->timeIn());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToOutPoint
+  //
+  void
+  MainWindow::skipToOutPoint()
+  {
+    timelineControls_->seekTo(timelineControls_->timeOut());
   }
 
   //----------------------------------------------------------------

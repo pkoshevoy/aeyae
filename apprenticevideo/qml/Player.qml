@@ -13,6 +13,8 @@ Item
   signal exitFullScreen()
   signal toggleFullScreen()
   signal togglePlayback()
+  signal skipToInPoint()
+  signal skipToOutPoint()
   signal stepOneFrameForward()
   signal skipForward()
   signal skipBack()
@@ -46,21 +48,35 @@ Item
       togglePlayback();
       event.accepted = true;
     }
-    else if (event.key == Qt.Key_N)
+    else if (event.key == Qt.Key_Home)
+    {
+      skipToInPoint();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_End)
+    {
+      skipToOutPoint();
+      event.accepted = true;
+    }
+    else if (event.key == Qt.Key_N ||
+             event.key == Qt.Key_Right ||
+             event.key == Qt.Key_Down)
     {
       stepOneFrameForward();
       event.accepted = true;
     }
     else if (event.key == Qt.Key_MediaNext ||
              event.key == Qt.Key_Period ||
-             event.key == Qt.Key_Greater)
+             event.key == Qt.Key_Greater ||
+             event.key == Qt.Key_PageDown)
     {
       skipForward();
       event.accepted = true;
     }
     else if (event.key == Qt.Key_MediaPrevious ||
              event.key == Qt.Key_Comma ||
-             event.key == Qt.Key_Less)
+             event.key == Qt.Key_Less ||
+             event.key == Qt.Key_PageUp)
     {
       skipBack();
       event.accepted = true;
