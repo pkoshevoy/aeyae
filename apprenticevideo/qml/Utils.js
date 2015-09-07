@@ -114,3 +114,8 @@ function dump_path_to(item, indentation)
     dump_path_to(item.parent, indentation + "  ");
   }
 }
+
+function calc_greeting_font_size(w, h)
+{
+  return Math.max(12, 56.0 * Math.min(w / 1920.0, h / 1080.0));
+}

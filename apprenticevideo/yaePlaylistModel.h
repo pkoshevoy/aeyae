@@ -27,6 +27,10 @@ namespace yae
   {
     Q_OBJECT;
 
+    Q_PROPERTY(quint64 itemCount
+               READ itemCount
+               NOTIFY itemCountChanged);
+
   public:
 
     //----------------------------------------------------------------
@@ -77,6 +81,10 @@ namespace yae
     // lookup a node associated with a given model index:
     PlaylistNode * getNode(const QModelIndex & index,
                            const PlaylistNode *& parentNode) const;
+
+    // properties:
+    inline quint64 itemCount() const
+    { return (quint64)countItems(); }
 
     // popular playlist methods:
     inline const Playlist & playlist() const
@@ -169,6 +177,8 @@ namespace yae
                              const QModelIndex & prev);
 
   signals:
+    void itemCountChanged();
+
     // this signal may be emitted if the user activates an item,
     // or otherwise changes the playlist to invalidate the
     // existing playing item:

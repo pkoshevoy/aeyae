@@ -466,8 +466,8 @@ namespace yae
 
     // set playlist-footer greeting message:
     {
-      QQuickItem * playlist = playerItem->findChild<QQuickItem *>("playlist");
-      playlist->setProperty("greeting_message", greeting);
+      QQuickItem * item = playerItem->findChild<QQuickItem *>("greeting");
+      item->setProperty("text", greeting);
     }
 
     // get a shortcut to the Canvas (owned by the QML canvas widget):
@@ -2199,7 +2199,7 @@ namespace yae
   MainWindow::playbackShowPlaylist()
   {
     QQuickItem * playerItem = playerWidget_->rootObject();
-
+#if 0
     QQuickItem * playlistView =
       playerItem->findChild<QQuickItem *>("playlist");
 
@@ -2208,6 +2208,14 @@ namespace yae
       bool showPlaylist = actionShowPlaylist->isChecked();
       playlistView->setVisible(showPlaylist);
     }
+#else
+    bool showPlaylist = actionShowPlaylist->isChecked();
+    const char * state =
+      showPlaylist ? "playlist" :
+      playlistModel_.countItems() ? "playback" :
+      "welcome";
+    playerItem->setState(QString::fromUtf8(state));
+#endif
   }
 
   //----------------------------------------------------------------

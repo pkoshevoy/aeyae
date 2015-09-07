@@ -114,6 +114,35 @@ Item
     }
   }
 
+  Rectangle
+  {
+    id: welcome
+    objectName: "welcome"
+
+    anchors.fill: parent
+    anchors.margins: 0
+
+    visible: false
+    color: "#df000000"
+
+    Text
+    {
+      id: greeting
+      objectName: "greeting"
+
+      anchors.fill: parent
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      font.pixelSize: Utils.calc_greeting_font_size(width, height)
+      wrapMode: "Wrap"
+      elide: "ElideMiddle"
+      text: "Hi!"
+      color: "#7f7f7f7f"
+      style: Text.Outline
+      styleColor: "black"
+    }
+  }
+
   Playlist
   {
     id: playlist
@@ -138,4 +167,21 @@ Item
     height: (playlist.calc_title_height(24.0, playlist.width) * 3 / 2)
   }
 
+
+  states: [
+    State { name: "welcome";
+            PropertyChanges { target: welcome; visible: true; }
+            PropertyChanges { target: playlist; visible: false; }
+          },
+    State { name: "playlist"
+            PropertyChanges { target: welcome; visible: false; }
+            PropertyChanges { target: playlist; visible: true; }
+          },
+    State { name: "playback";
+            PropertyChanges { target: welcome; visible: false; }
+            PropertyChanges { target: playlist; visible: false; }
+          }
+  ]
+
+  state: "welcome"
 }

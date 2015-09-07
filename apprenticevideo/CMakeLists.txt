@@ -23,6 +23,8 @@ add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-D__STDC_CONSTANT_MACROS)
 add_definitions(-D__STDC_LIMIT_MACROS)
 
+add_definitions(-DQT_QML_DEBUG)
+
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
@@ -103,6 +105,7 @@ set(project_sources
   qml/Timeline.qml
   qml/TimelineMarker.qml
   qml/TimelineMarkerDragItem.qml
+  qml/YDebug.qml
   qml/Utils.js
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp

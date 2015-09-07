@@ -413,6 +413,8 @@ namespace yae
     QModelIndex currSel = sel_.currentIndex();
     // emit modelReset();
 #endif
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
@@ -423,6 +425,9 @@ namespace yae
   {
     // FIXME: write me!
     YAE_ASSERT(false);
+
+    emit itemCountChanged();
+
     return false;
   }
 
@@ -507,6 +512,8 @@ namespace yae
   {
     // FIXME: write me!
     YAE_ASSERT(false);
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
@@ -517,6 +524,8 @@ namespace yae
   {
     // FIXME: write me!
     YAE_ASSERT(false);
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------

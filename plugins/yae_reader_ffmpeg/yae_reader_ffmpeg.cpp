@@ -4349,7 +4349,7 @@ namespace yae
 #endif
     }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "\nMovie::threadLoop terminated"
       << std::endl;

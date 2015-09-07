@@ -13,10 +13,13 @@ Item
 
   property var header_bg: "#df1f1f1f"
   property var header_fg: "#ffffffff"
-  property var zebra_bg: [ "#00000000", "#3f000000"  ]
-  property var zebra_fg: [ "#ffdfdfdf", "#ffffffff"  ]
-  property var greeting_message: "Hi!"
-  property var greeting_color: "#7f7f7f7f"
+  property var zebra_bg_0: "#00000000"
+  property var zebra_bg_1: "#3f000000"
+  property var separator_color: "#7f7f7f7f"
+  property var footer_fg: "#7fffffff"
+  property var highlight_color: "#3fff0000"
+  property var label_bg: "#7f7f7f7f"
+  property var label_fg: "white"
 
   function calc_cell_width(w)
   {
@@ -43,17 +46,24 @@ Item
     return Math.max(min_height, 24.0 * playlistView.width / 800.0);
   }
 
-  function calc_greeting_font_size(w, h)
-  {
-    return Math.max(12, 56.0 * Math.min(w / 1920.0, h / 1080.0));
-  }
-
   function calc_zebra_index(index, cell_width, view_width)
   {
     var columns = Math.round(view_width / cell_width);
     var col = index % columns
     var row = (index - col) / columns;
     return (row % 2 + col) % 2;
+  }
+
+  function assign_playlistview_current_index(index)
+  {
+    // save current playlistView.contentY
+    var content_y = playlistView.contentY;
+
+    // this has a side effect of changing playlistView.contentY
+    playlistView.currentIndex = index;
+
+    // restore original playlistView.contentY
+    playlistView.contentY = content_y;
   }
 
   function find_current_item()
@@ -64,9 +74,10 @@ Item
       return null;
     }
 
-    playlistView.currentIndex = sel.parent.row;
+    var savedCurrentIndex = playlistView.currentIndex;
+    assign_playlistview_current_index(sel.parent.row);
     var groupContainer = playlistView.currentItem;
-    playlistView.currentIndex = -1;
+    assign_playlistview_current_index(savedCurrentIndex);
 
     var gridView = yae_qml_utils.find_qobject(groupContainer,
                                               "groupItemsGridView");
@@ -98,7 +109,7 @@ Item
 
     if (playlistView.currentIndex == -1)
     {
-      playlistView.currentIndex = suggestedGroupIndex;
+      assign_playlistview_current_index(suggestedGroupIndex);
     }
 
     var groupContainer = playlistView.currentItem;
@@ -111,7 +122,7 @@ Item
   {
     if (playlistView.currentIndex == -1)
     {
-      playlistView.currentIndex = 0;
+      assign_playlistview_current_index(0);
     }
 
     var groupContainer = playlistView.currentItem;
@@ -152,6 +163,17 @@ Item
     };
   }
 
+  function get_item_y(item)
+  {
+    if (!item)
+    {
+      return -1;
+    }
+
+    var pt = playlistView.mapFromItem(item, 0, 0);
+    return playlistView.contentY + pt.y
+  }
+
   function set_current_item(groupRow, itemRow)
   {
     var groupContainer;
@@ -167,7 +189,7 @@ Item
       }
     }
 
-    playlistView.currentIndex = groupRow;
+    assign_playlistview_current_index(groupRow);
 
     gridView = yae_qml_utils.find_qobject(playlistView.currentItem,
                                           "groupItemsGridView");
@@ -175,28 +197,58 @@ Item
     {
       gridView.currentIndex = itemRow;
     }
+
+    /*
+    // for debugging:
+    var found = lookup_current_gridview_and_item();
+
+    if (found)
+    {
+      calc_delta_scroll_to(found.item)
+    }
+    */
+  }
+
+  function calc_delta_scroll_to(item)
+  {
+    var delta_y = 0;
+
+    var view_y0 = playlistView.contentY
+    var view_y1 = view_y0 + playlistView.height
+
+    var item_y0 = get_item_y(item);
+    var item_y1 = item_y0 + item.height
+
+    if (item_y0 < view_y0)
+    {
+      delta_y = item_y0 - view_y0;
+    }
+    else if (item_y1 > view_y1)
+    {
+      delta_y = item_y1 - view_y1;
+    }
+
+    /*
+    // for debugging:
+    console.log("\n\nscroll to: " +
+                "\nitem_y0: " + item_y0 +
+                "\nitem_y1: " + item_y1 +
+                "\nview_y0: " + view_y0 +
+                "\nview_y1: " + view_y1 +
+                "\ndelta_y: " + delta_y + "\n\n");
+    */
+    return delta_y;
   }
 
   function scroll_to(item)
   {
-    var bbox = playlistView.mapFromItem(item,
-                                        item.x,
-                                        item.y,
-                                        item.width,
-                                        item.height);
-    var itemY = playlistView.contentY + bbox.y;
-    if (bbox.y < 0)
-    {
-      playlistView.contentY = itemY;
-    }
+    var delta = calc_delta_scroll_to(item);
 
-    var itemY1 = itemY + bbox.height;
-    var viewY1 = playlistView.contentY + playlistView.height;
-    var delta = itemY1 - viewY1;
-
-    if (itemY1 > viewY1)
+    if (delta != 0)
     {
+      // console.log("delta: " + delta);
       playlistView.contentY += delta;
+      // console.log("contentY: " + playlistView.contentY + "\n\n");
     }
   }
 
@@ -227,7 +279,7 @@ Item
       else if (current.groupIndex > 0)
       {
         current.gridView.currentIndex = -1;
-        playlistView.decrementCurrentIndex();
+        assign_playlistview_current_index(playlistView.currentIndex - 1);
         current.gridView = lookup_current_gridview(0);
         current.gridView.currentIndex = current.gridView.count - 1;
       }
@@ -245,7 +297,7 @@ Item
       else if (current.groupIndex + 1 < playlistView.count)
       {
         current.gridView.currentIndex = -1;
-        playlistView.incrementCurrentIndex();
+        assign_playlistview_current_index(playlistView.currentIndex + 1);
         current.gridView = lookup_current_gridview(0);
         current.gridView.currentIndex = 0;
       }
@@ -268,7 +320,7 @@ Item
       else if (current.groupIndex > 0)
       {
         current.gridView.currentIndex = -1;
-        playlistView.decrementCurrentIndex();
+        assign_playlistview_current_index(playlistView.currentIndex - 1);
         current.gridView = lookup_current_gridview(0);
         current.gridView.currentIndex = current.gridView.count - 1;
       }
@@ -295,7 +347,7 @@ Item
       else if (current.groupIndex + 1 < playlistView.count)
       {
         current.gridView.currentIndex = -1;
-        playlistView.incrementCurrentIndex();
+        assign_playlistview_current_index(playlistView.currentIndex + 1);
         current.gridView = lookup_current_gridview(0);
         current.gridView.currentIndex = 0;
       }
@@ -386,10 +438,17 @@ Item
     anchors.fill: parent
     model: yae_playlist_model
     delegate: groupDelegate
-    footer: greetingComponent
+    footer: footerComponent
 
     highlightFollowsCurrentItem: false
     currentIndex: -1
+
+    /*
+    // for debugging:
+    onContentYChanged: {
+      console.log("CONTENT Y CHANGED: " + contentY);
+    }
+    */
 
     Connections
     {
@@ -415,29 +474,44 @@ Item
 
   Component
   {
-    id: greetingComponent
+    id: footerComponent
 
     Rectangle
     {
-      objectName: "greetingComponentRect"
+      id: footer
+      objectName: "footerComponentRect"
 
       width: playlistView.width
-      height: playlistView.height
-      color: "#df000000"
+      height: calc_title_height(24.0, playlistView.width) + 2
+      color: header_bg
+
+      Rectangle
+      {
+        color: separator_color
+        height: 1
+        width: playlistView.width
+        anchors.left: parent.left
+        anchors.right: parent.right
+      }
 
       Text
       {
         anchors.fill: parent
-        horizontalAlignment: Text.AlignHCenter
+        anchors.topMargin: 2
+        anchors.leftMargin: footer.height / 2
+        anchors.rightMargin: footer.height / 2
+        horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
-        font.pixelSize: calc_greeting_font_size(width, height)
-        wrapMode: "Wrap"
         elide: "ElideMiddle"
-        text: greeting_message
-        color: greeting_color
-        style: Text.Outline
-        styleColor: "black"
+        font.pixelSize: footer.height * 0.45
+        text: ((yae_playlist_model.itemCount == 1) ?
+               "1 item, end of playlist" :
+               "" + yae_playlist_model.itemCount + " items, end of playlist");
+        color: "white"
       }
+
+      // YDebug { id: ydebug; z: 1; container: playlistView; }
+      // onYChanged: { ydebug.refresh(); }
     }
   }
 
@@ -503,6 +577,9 @@ Item
           style: Text.Outline;
           styleColor: "black";
         }
+
+        // YDebug { id: ydebug; z: 1; container: playlistView; }
+        // onYChanged: { ydebug.refresh(); }
       }
 
       Loader
@@ -554,7 +631,7 @@ Item
 
       Rectangle
       {
-        color: "red"
+        color: separator_color
         height: 1
         width: playlistView.width
         anchors.left: parent.left
@@ -577,7 +654,7 @@ Item
           z: 1
           width: groupItemsGridView.cellWidth;
           height: groupItemsGridView.cellHeight
-          color: "#3fff0000";
+          color: highlight_color;
           anchors.margins: -2
 
           Behavior on x { SpringAnimation { spring: 3; damping: 0.2 } }
@@ -616,6 +693,9 @@ Item
 
             property var label: model.label
 
+            // YDebug { id: ydebug; z: 1; container: playlistView; }
+            // onYChanged: { ydebug.refresh(); }
+
             Rectangle
             {
               id: backgroundRect
@@ -625,7 +705,7 @@ Item
               color: (calc_zebra_index(index,
                                        groupItemsGridView.cellWidth,
                                        playlistView.width) ?
-                      zebra_bg[1] : zebra_bg[0]) // argb
+                      zebra_bg_1 : zebra_bg_0) // argb
 
               Image
               {
@@ -652,7 +732,7 @@ Item
                 id: labelBackgroundRect
                 objectName: "labelBackgroundRect"
 
-                color: "#7f7f7f7f"
+                color: label_bg
                 anchors.margins: 0;
                 anchors.leftMargin: -3;
                 anchors.rightMargin: -3;
@@ -679,10 +759,10 @@ Item
                 wrapMode: "Wrap"
                 elide: "ElideMiddle"
                 text: model.label
-                color: "white";
+                color: label_fg;
 
                 style: Text.Outline;
-                styleColor: "#7f7f7f7f";
+                styleColor: label_bg;
               }
 
               Rectangle
@@ -700,7 +780,7 @@ Item
                 //
                 visible: (model.playing || false)
 
-                color: "#7f7f7f7f"
+                color: label_bg
                 anchors.margins: 0;
                 anchors.leftMargin: -3;
                 anchors.rightMargin: -3;
@@ -730,7 +810,7 @@ Item
                 font.pixelSize: (calc_title_height(24.0, playlistView.width) *
                                  0.30);
                 text: qsTr("NOW PLAYING")
-                color: "white"
+                color: label_fg
               }
 
               MouseArea
@@ -759,6 +839,7 @@ Item
               }
 
             }
+
           }
         }
       }

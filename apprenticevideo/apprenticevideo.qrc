@@ -22,6 +22,7 @@
     <file>qml/Timeline.qml</file>
     <file>qml/TimelineMarker.qml</file>
     <file>qml/TimelineMarkerDragItem.qml</file>
+    <file>qml/YDebug.qml</file>
     <file>qml/Utils.js</file>
   </qresource>
 </RCC>

@@ -24,7 +24,7 @@ using boost::posix_time::to_simple_string;
 //----------------------------------------------------------------
 // YAE_DEBUG_SHARED_CLOCK
 //
-#define YAE_DEBUG_SHARED_CLOCK 1
+#define YAE_DEBUG_SHARED_CLOCK 0
 
 
 namespace yae
