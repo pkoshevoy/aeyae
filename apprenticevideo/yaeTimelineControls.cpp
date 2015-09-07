@@ -48,7 +48,7 @@ namespace yae
   //----------------------------------------------------------------
   // kUnknownDuration
   //
-  static QString kUnknownDuration = QString::fromUtf8("--:--:--:--");
+  static QString kUnknownDuration = QString::fromUtf8("  :  :  :  ");
 
   //----------------------------------------------------------------
   // getTimeStamp
@@ -294,8 +294,6 @@ namespace yae
     updateMarkerPlayhead(0.0);
     updateMarkerTimeIn(0.0);
     updateMarkerTimeOut(1.0);
-
-    // update();
   }
 
   //----------------------------------------------------------------
@@ -349,8 +347,6 @@ namespace yae
     updateMarkerPlayhead((t - T0) / dT);
     updateMarkerTimeIn((t0 - T0) / dT);
     updateMarkerTimeOut((t1 - T0) / dT);
-
-    // update();
   }
 
   //----------------------------------------------------------------

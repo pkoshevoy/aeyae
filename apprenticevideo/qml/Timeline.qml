@@ -294,10 +294,39 @@ Item
 
       text: yae_timeline_controls.auxPlayhead
       color: "#7fffffff"
-      // style: Text.Outline
-      // styleColor: "#33ffffff"
-      font.family: "monospace"
+      font.family: ("Droid Sans Mono, DejaVu Sans Mono, " +
+                    "Bitstream Vera Sans Mono, Consolas, " +
+                    "Lucida Console, Lucida Sans Typewriter, " +
+                    "Menlo, Monaco, Courier New, Courier, " +
+                    "monospace")
       font.pixelSize: parent.height / 3
+
+      Rectangle
+      {
+        z: -1
+        anchors.fill: parent
+        anchors.margins: 0
+        anchors.leftMargin: -3
+        anchors.rightMargin: -3
+
+        color: "#3f7f7f7f"
+        radius: 3
+      }
+    }
+
+    Text
+    {
+      id: durationAux
+      objectName: "durationAux"
+
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.leftMargin: 3
+      anchors.rightMargin: 3
+
+      text: yae_timeline_controls.auxDuration
+      color: "#7fffffff"
+      font: playheadAux.font
 
       Rectangle
       {

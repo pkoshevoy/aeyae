@@ -14,6 +14,9 @@
 // Qt includes:
 #include <QMetaProperty>
 
+// yae includes:
+#include "yae/api/yae_api.h"
+
 // local includes:
 #include "yaeUtilsQml.h"
 

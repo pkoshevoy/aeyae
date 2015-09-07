@@ -2975,8 +2975,6 @@ namespace yae
 
     reader_ = reader;
 
-    timelineControls_->update();
-
     this->setWindowTitle(tr("Apprentice Video"));
 
     adjustMenuActions();
