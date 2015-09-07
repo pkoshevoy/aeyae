@@ -104,6 +104,10 @@ Item
     anchors.fill: parent
     anchors.margins: 0
 
+    onClicked: {
+      parent.focus = true;
+    }
+
     onDoubleClicked: {
       toggleFullScreen();
       mouse.accepted = true;

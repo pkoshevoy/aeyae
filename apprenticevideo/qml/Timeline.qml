@@ -7,6 +7,9 @@ import 'Utils.js' as Utils
 
 Item
 {
+  id: timeline
+  objectName: "timeline"
+
   Rectangle
   {
     anchors.fill: parent
@@ -282,24 +285,41 @@ Item
       }
     }
 
-    Text
+    TextInput
     {
       id: playheadAux
       objectName: "playheadAux"
+
+      property var timestamp: yae_timeline_controls.auxPlayhead
 
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       anchors.leftMargin: 3
       anchors.rightMargin: 3
 
-      text: yae_timeline_controls.auxPlayhead
-      color: "#7fffffff"
+      text: (activeFocus ? timestamp : yae_timeline_controls.auxPlayhead)
+
       font.family: ("Droid Sans Mono, DejaVu Sans Mono, " +
                     "Bitstream Vera Sans Mono, Consolas, " +
                     "Lucida Console, Lucida Sans Typewriter, " +
                     "Menlo, Monaco, Courier New, Courier, " +
                     "monospace")
       font.pixelSize: parent.height / 3
+
+      color: "#7fffffff"
+      selectByMouse: true
+
+      onFocusChanged: if (activeFocus) {
+        timestamp = yae_timeline_controls.auxPlayhead;
+      }
+
+      KeyNavigation.tab: timeline.parent
+      KeyNavigation.backtab: timeline.parent
+
+      onAccepted: {
+        yae_timeline_controls.auxPlayhead = text;
+        timeline.parent.focus = true;
+      }
 
       Rectangle
       {
