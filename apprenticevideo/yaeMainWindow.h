@@ -249,7 +249,6 @@ namespace yae
                            std::vector<TSubsFormat> & subsFormat);
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
-    void swapShortcuts();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
@@ -269,27 +268,6 @@ namespace yae
 
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;
-
-    // shortcuts used during full-screen mode (when menubar is invisible)
-    QShortcut * shortcutExit_;
-    QShortcut * shortcutFullScreen_;
-    QShortcut * shortcutFillScreen_;
-    QShortcut * shortcutShowPlaylist_;
-    QShortcut * shortcutShowTimeline_;
-    QShortcut * shortcutPlay_;
-    QShortcut * shortcutNext_;
-    QShortcut * shortcutPrev_;
-    QShortcut * shortcutLoop_;
-    QShortcut * shortcutCropNone_;
-    QShortcut * shortcutAutoCrop_;
-    QShortcut * shortcutCrop1_33_;
-    QShortcut * shortcutCrop1_78_;
-    QShortcut * shortcutCrop1_85_;
-    QShortcut * shortcutCrop2_40_;
-    QShortcut * shortcutNextChapter_;
-    QShortcut * shortcutAspectRatioNone_;
-    QShortcut * shortcutAspectRatio1_33_;
-    QShortcut * shortcutAspectRatio1_78_;
 
     // playlist shortcuts:
     QAction * actionRemove_;

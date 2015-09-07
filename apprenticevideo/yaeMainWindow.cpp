@@ -555,50 +555,8 @@ namespace yae
       audioDevice_ = audioDevice.toUtf8().constData();
     }
 
-    // when in fullscreen mode the menubar is hidden and all actions
-    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
-    // so I am creating these shortcuts as a workaround:
-    shortcutExit_ = new QShortcut(this);
-    shortcutFullScreen_ = new QShortcut(this);
-    shortcutFillScreen_ = new QShortcut(this);
-    shortcutShowPlaylist_ = new QShortcut(this);
-    shortcutShowTimeline_ = new QShortcut(this);
-    shortcutPlay_ = new QShortcut(this);
-    shortcutNext_ = new QShortcut(this);
-    shortcutPrev_ = new QShortcut(this);
-    shortcutLoop_ = new QShortcut(this);
-    shortcutCropNone_ = new QShortcut(this);
-    shortcutCrop1_33_ = new QShortcut(this);
-    shortcutCrop1_78_ = new QShortcut(this);
-    shortcutCrop1_85_ = new QShortcut(this);
-    shortcutCrop2_40_ = new QShortcut(this);
-    shortcutAutoCrop_ = new QShortcut(this);
-    shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
-    shortcutAspectRatioNone_ = new QShortcut(this);
-    shortcutAspectRatio1_33_ = new QShortcut(this);
-    shortcutAspectRatio1_78_ = new QShortcut(this);
-
-    shortcutExit_->setContext(Qt::ApplicationShortcut);
-    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
-    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
-    shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
-    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
-    shortcutPlay_->setContext(Qt::ApplicationShortcut);
-    shortcutNext_->setContext(Qt::ApplicationShortcut);
-    shortcutPrev_->setContext(Qt::ApplicationShortcut);
-    shortcutLoop_->setContext(Qt::ApplicationShortcut);
-    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
-    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
-    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
-    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
-    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
-    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
-    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
-    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
-    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
-    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
@@ -756,24 +714,12 @@ namespace yae
                  this, SLOT(fileExit()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutExit_, SIGNAL(activated()),
-                 actionExit, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionAspectRatioAuto, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatioAuto()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
-                 actionAspectRatioAuto, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionAspectRatio1_33, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_33()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
-                 actionAspectRatio1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_60, SIGNAL(triggered()),
@@ -782,10 +728,6 @@ namespace yae
 
     ok = connect(actionAspectRatio1_78, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_78()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
-                 actionAspectRatio1_78, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_85, SIGNAL(triggered()),
@@ -808,16 +750,8 @@ namespace yae
                  this, SLOT(playbackCropFrameNone()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutCropNone_, SIGNAL(activated()),
-                 actionCropFrameNone, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionCropFrame1_33, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_33()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
-                 actionCropFrame1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame1_60, SIGNAL(triggered()),
@@ -828,16 +762,8 @@ namespace yae
                  this, SLOT(playbackCropFrame1_78()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
-                 actionCropFrame1_78, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionCropFrame1_85, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_85()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
-                 actionCropFrame1_85, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame2_35, SIGNAL(triggered()),
@@ -848,48 +774,24 @@ namespace yae
                  this, SLOT(playbackCropFrame2_40()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
-                 actionCropFrame2_40, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameAutoDetect()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
-                 actionCropFrameAutoDetect, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPlay, SIGNAL(triggered()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutPlay_, SIGNAL(activated()),
-                 actionPlay, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionNext, SIGNAL(triggered()),
                  this, SLOT(playbackNext()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutNext_, SIGNAL(activated()),
-                 actionNext, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPrev, SIGNAL(triggered()),
                  this, SLOT(playbackPrev()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutPrev_, SIGNAL(activated()),
-                 actionPrev, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionLoop, SIGNAL(triggered()),
                  this, SLOT(playbackLoop()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutLoop_, SIGNAL(activated()),
-                 actionLoop, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSetInPoint, SIGNAL(triggered()),
@@ -924,16 +826,8 @@ namespace yae
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 actionFullScreen, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionFillScreen, SIGNAL(triggered()),
                  this, SLOT(playbackFillScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
-                 actionFillScreen, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
@@ -944,16 +838,8 @@ namespace yae
                  this, SLOT(playbackShowPlaylist()));
     YAE_ASSERT(ok);
 
-    ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
-                 actionShowPlaylist, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowTimeline()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
-                 actionShowTimeline, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
@@ -975,11 +861,7 @@ namespace yae
     ok = connect(actionDeinterlace, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
-    /*
-    ok = connect(playerWidget_, SIGNAL(doubleClick()),
-                 this, SLOT(toggleFullScreen()));
-    YAE_ASSERT(ok);
-    */
+
     ok = connect(actionHalfSize, SIGNAL(triggered()),
                  this, SLOT(windowHalfSize()));
     YAE_ASSERT(ok);
@@ -1082,10 +964,6 @@ namespace yae
 
     ok = connect(actionNextChapter, SIGNAL(triggered()),
                  this, SLOT(skipToNextChapter()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
-                 actionNextChapter, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     adjustMenuActions();
@@ -2367,44 +2245,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // swapShortcuts
-  //
-  static inline void
-  swapShortcuts(QShortcut * a, QAction * b)
-  {
-    QKeySequence tmp = a->key();
-    a->setKey(b->shortcut());
-    b->setShortcut(tmp);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::swapShortcuts
-  //
-  void
-  MainWindow::swapShortcuts()
-  {
-    yae::swapShortcuts(shortcutExit_, actionExit);
-    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
-    yae::swapShortcuts(shortcutFillScreen_, actionFillScreen);
-    yae::swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
-    yae::swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
-    yae::swapShortcuts(shortcutPlay_, actionPlay);
-    yae::swapShortcuts(shortcutNext_, actionNext);
-    yae::swapShortcuts(shortcutPrev_, actionPrev);
-    yae::swapShortcuts(shortcutLoop_, actionLoop);
-    yae::swapShortcuts(shortcutCropNone_, actionCropFrameNone);
-    yae::swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
-    yae::swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
-    yae::swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
-    yae::swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
-    yae::swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
-    yae::swapShortcuts(shortcutNextChapter_, actionNextChapter);
-    yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);
-    yae::swapShortcuts(shortcutAspectRatio1_33_, actionAspectRatio1_33);
-    yae::swapShortcuts(shortcutAspectRatio1_78_, actionAspectRatio1_78);
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::requestToggleFullScreen
   //
   void
@@ -2479,8 +2319,6 @@ namespace yae
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
     showFullScreen();
-
-    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -2527,8 +2365,6 @@ namespace yae
     showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
-
-    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -4595,7 +4431,6 @@ namespace yae
       if (actionShowPlaylist->isEnabled())
       {
         // setTimelineCssForAudio(timelineWidgets_);
-        shortcutShowPlaylist_->setEnabled(false);
         actionShowPlaylist->setEnabled(false);
 
         if (actionShowPlaylist->isChecked())
@@ -4626,7 +4461,6 @@ namespace yae
 #endif
         }
 
-        shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
 
         playlistModel_.show();
