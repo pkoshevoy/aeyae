@@ -143,14 +143,27 @@ Item
     }
   }
 
+  Rectangle
+  {
+    id: playlistBackground
+    objectName: "playlistBackground"
+    visible: playlist.visible
+
+    anchors.fill: parent
+    anchors.margins: 0
+    color: playlist.header_bg
+  }
+
   Playlist
   {
     id: playlist
     objectName: "playlist"
     visible: true
+    clip: true
 
-    anchors.margins: 0
     anchors.fill: parent
+    anchors.margins: 0
+    anchors.bottomMargin: timeline.visible ? timeline.height : 0
   }
 
   Timeline
@@ -160,10 +173,9 @@ Item
     visible: true
 
     anchors.margins: 0
-    anchors.top: playlist.bottom
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.topMargin: -this.height
+    anchors.bottom: parent.bottom
     height: (playlist.calc_title_height(24.0, playlist.width) * 3 / 2)
   }
 

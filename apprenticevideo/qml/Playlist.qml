@@ -476,14 +476,13 @@ Item
   {
     id: footerComponent
 
-    Rectangle
+    Item
     {
       id: footer
       objectName: "footerComponentRect"
 
       width: playlistView.width
       height: calc_title_height(24.0, playlistView.width) + 2
-      color: header_bg
 
       Rectangle
       {
@@ -507,7 +506,7 @@ Item
         text: ((yae_playlist_model.itemCount == 1) ?
                "1 item, end of playlist" :
                "" + yae_playlist_model.itemCount + " items, end of playlist");
-        color: "white"
+        color: footer_fg
       }
 
       // YDebug { id: ydebug; z: 1; container: playlistView; }
@@ -525,12 +524,11 @@ Item
       objectName: "groupDelegateColumn"
       width: playlistView.width
 
-      Rectangle
+      Item
       {
         id: groupItem
         objectName: "groupItem"
 
-        color: header_bg
         height: calc_title_height(24.0, playlistView.width)
         width: playlistView.width
         anchors.left: parent.left
@@ -613,12 +611,11 @@ Item
   {
     id: groupItemsColumnDelegate
 
-    Rectangle
+    Item
     {
       id: groupItemsColumnDelegateRect
       objectName: "groupItemsColumnDelegateRect"
 
-      color: header_bg
       property alias model : groupItemsGridView.model
       width: playlistView.width
 

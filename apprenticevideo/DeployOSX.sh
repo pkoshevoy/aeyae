@@ -818,4 +818,4 @@ PrepForDeployment "${BUNDLE_PATH}" accessible codecs graphicssystems imageformat
 
 #---------------------------------------------------------------------
 echo NEXT: deploy the app bundle
-DeployAppBundle "${BUNDLE_PATH}"
+# DeployAppBundle "${BUNDLE_PATH}"
