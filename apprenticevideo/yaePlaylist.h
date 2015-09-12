@@ -10,7 +10,7 @@
 #define YAE_PLAYLIST_H_
 
 // std includes:
-#include <set>
+#include <memory>
 #include <vector>
 
 // Qt includes:
@@ -123,6 +123,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TPlaylistGroupPtr
+  //
+  typedef std::shared_ptr<PlaylistGroup> TPlaylistGroupPtr;
+
+  //----------------------------------------------------------------
   // Playlist
   //
   struct Playlist : public PlaylistNode
@@ -191,7 +196,7 @@ namespace yae
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
 
     // accessors:
-    inline const std::vector<PlaylistGroup> & groups() const
+    inline const std::vector<TPlaylistGroupPtr> & groups() const
     { return groups_; }
 
     inline std::size_t countItemsShown() const
@@ -214,7 +219,7 @@ namespace yae
     TPlaylistTree tree_;
 
     // a list of playlist item groups, derived from playlist tree fringes:
-    std::vector<PlaylistGroup> groups_;
+    std::vector<TPlaylistGroupPtr> groups_;
 
     // total number of items:
     std::size_t numItems_;

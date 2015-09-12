@@ -154,12 +154,6 @@ namespace yae
     // selection set management:
     void selectAll();
 
-#if 0
-    // FIXME: what about items that are unselected as the result?
-    void selectGroup(PlaylistGroup * group);
-    void selectItem(std::size_t indexSel, bool exclusive = true);
-#endif
-
     void removeSelected();
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
 

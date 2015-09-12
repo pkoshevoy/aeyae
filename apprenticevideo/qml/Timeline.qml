@@ -10,6 +10,16 @@ Item
   id: timeline
   objectName: "timeline"
 
+  property var color_excluded: "#33ffffff";
+  property var color_included: "#84ffffff";
+  property var color_played: "#f12b24";
+  property var color_out_pt: "#e6e6e6";
+
+  property var color_text_fg: "#7fffffff";
+  property var color_text_bg: "#3f7f7f7f";
+  property var color_selection_fg: "black";
+  property var color_selection_bg: "#3fffffff";
+
   Rectangle
   {
     anchors.fill: parent
@@ -189,7 +199,7 @@ Item
     {
       id: timelineIn
       objectName: "timelineIn"
-      color: "#33ffffff"
+      color: color_excluded
       y: -this.height / 2.0
       anchors.left: parent.left
       height: container.timeline_height();
@@ -200,7 +210,7 @@ Item
     {
       id: timelinePlayhead
       objectName: "timelinePlayhead"
-      color: "#f12b24"
+      color: color_played
       y: -this.height / 2.0
       anchors.left: timelineIn.right
       height: timelineIn.height
@@ -212,7 +222,7 @@ Item
     {
       id: timelineOut
       objectName: "timelineOut"
-      color: "#84ffffff"
+      color: color_included
       y: -this.height / 2.0
       anchors.left: timelinePlayhead.right
       height: timelineIn.height
@@ -224,7 +234,7 @@ Item
     {
       id: timelineEnd
       objectName: "timelineEnd"
-      color: "#33ffffff"
+      color: color_excluded
       y: -this.height / 2.0
       anchors.left: timelineOut.right
       anchors.right: parent.right
@@ -257,7 +267,7 @@ Item
     {
       id: outPoint
       objectName: "outPoint"
-      color: "#e6e6e6"
+      color: color_out_pt
       position: timelineEnd
       container: container
       dragItem: dragItem
@@ -306,9 +316,9 @@ Item
                     "monospace")
       font.pixelSize: parent.height / 3
 
-      selectionColor: "#3fffffff"
-      selectedTextColor: "black"
-      color: "#7fffffff"
+      selectionColor: color_selection_bg
+      selectedTextColor: color_selection_fg
+      color: color_text_fg
       selectByMouse: true
 
       onFocusChanged: if (activeFocus) {
@@ -331,7 +341,7 @@ Item
         anchors.leftMargin: -3
         anchors.rightMargin: -3
 
-        color: "#3f7f7f7f"
+        color: color_text_bg
         radius: 3
       }
     }
@@ -347,7 +357,7 @@ Item
       anchors.rightMargin: 3
 
       text: yae_timeline_controls.auxDuration
-      color: "#7fffffff"
+      color: color_text_fg
       font: playheadAux.font
 
       Rectangle
@@ -358,7 +368,7 @@ Item
         anchors.leftMargin: -3
         anchors.rightMargin: -3
 
-        color: "#3f7f7f7f"
+        color: color_text_bg
         radius: 3
       }
     }

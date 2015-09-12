@@ -205,6 +205,55 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TPlaylistGroupKey
+  //
+  typedef std::list<PlaylistKey> TPlaylistGroupKey;
+
+  //----------------------------------------------------------------
+  // TPlaylistGroupMap
+  //
+  typedef std::map<TPlaylistGroupKey, TPlaylistGroupPtr> TPlaylistGroupMap;
+
+  //----------------------------------------------------------------
+  // TPlaylistGroupVec
+  //
+  typedef std::vector<TPlaylistGroupPtr> TPlaylistGroupVec;
+
+  //----------------------------------------------------------------
+  // setup_group_map
+  //
+  static void
+  setup_group_map(TPlaylistGroupMap & groupMap,
+                  const TPlaylistGroupVec & groups)
+  {
+    for (TPlaylistGroupVec::const_iterator i = groups.begin();
+         i != groups.end(); ++i)
+    {
+      const PlaylistGroup & group = *(*i);
+      groupMap[group.keyPath_] = (*i);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_group_ptr
+  //
+  static TPlaylistGroupPtr
+  get_group_ptr(TPlaylistGroupMap & groups, const TPlaylistGroupKey & key)
+  {
+    TPlaylistGroupMap::iterator lower_bound = groups.lower_bound(key);
+
+    if (lower_bound == groups.end() ||
+        groups.key_comp()(key, lower_bound->first))
+    {
+      TPlaylistGroupPtr group(new PlaylistGroup());
+      groups.insert(lower_bound, std::make_pair(key, group));
+      return group;
+    }
+
+    return lower_bound->second;
+  }
+
+  //----------------------------------------------------------------
   // Playlist::add
   //
   void
@@ -359,8 +408,6 @@ namespace yae
     // flatten the tree into a list of play groups:
     std::list<TFringeGroup> fringeGroups;
     tree_.get(fringeGroups);
-    groups_.clear();
-    numItems_ = 0;
 
     // remove leading redundant keys from abbreviated paths:
     while (!fringeGroups.empty() &&
@@ -389,14 +436,24 @@ namespace yae
       }
     }
 
+    // setup a map for fast group lookup:
+    TPlaylistGroupMap groupMap;
+    setup_group_map(groupMap, groups_);
+
+    // re-create the group vector:
+    groups_.clear();
+    numItems_ = 0;
+
+    std::vector<TPlaylistGroupPtr> groupVec;
     for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
          i != fringeGroups.end(); ++i)
     {
       // shortcut:
       const TFringeGroup & fringeGroup = *i;
+      groups_.push_back(get_group_ptr(groupMap, fringeGroup.fullPath_));
 
-      groups_.push_back(PlaylistGroup());
-      PlaylistGroup & group = groups_.back();
+      PlaylistGroup & group = *(groups_.back());
+      group.items_.clear();
       group.row_ = groups_.size() - 1;
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = toWords(fringeGroup.abbreviatedPath_);
@@ -490,10 +547,10 @@ namespace yae
 
     const PlaylistGroup * prev = NULL;
 
-    for (std::vector<PlaylistGroup>::const_iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::const_iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      const PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *(*i);
       if (group.excluded_)
       {
         continue;
@@ -657,10 +714,10 @@ namespace yae
     bool changed = false;
     std::size_t index = 0;
 
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      PlaylistGroup & group = *i;
+      PlaylistGroup & group = *(*i);
 
       std::size_t groupSize = group.items_.size();
       std::size_t numExcluded = 0;
@@ -741,10 +798,10 @@ namespace yae
   void
   Playlist::selectAll()
   {
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      PlaylistGroup & group = *i;
+      PlaylistGroup & group = *(*i);
       if (group.excluded_)
       {
         continue;
@@ -784,10 +841,10 @@ namespace yae
 #endif
     bool itemSelected = false;
 
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      PlaylistGroup & group = *i;
+      PlaylistGroup & group = *(*i);
       if (group.excluded_)
       {
         continue;
@@ -842,10 +899,10 @@ namespace yae
     std::size_t newPlaying = playing_;
     bool playingRemoved = false;
 
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); )
     {
-      PlaylistGroup & group = *i;
+      PlaylistGroup & group = *(*i);
 
       if (group.excluded_)
       {
@@ -936,7 +993,7 @@ namespace yae
     bool playingRemoved = false;
     std::size_t newPlaying = playing_;
 
-    PlaylistGroup & group = groups_[groupIndex];
+    PlaylistGroup & group = *(groups_[groupIndex]);
     if (group.excluded_)
     {
       YAE_ASSERT(false);
@@ -1018,7 +1075,8 @@ namespace yae
     // if the group is empty and has a key path, remove it:
     if (group.items_.empty() && !group.keyPath_.empty())
     {
-      std::vector<PlaylistGroup>::iterator iter = groups_.begin() + groupIndex;
+      std::vector<TPlaylistGroupPtr>::iterator
+        iter = groups_.begin() + groupIndex;
       groups_.erase(iter);
     }
 
@@ -1119,10 +1177,10 @@ namespace yae
   // return index of the first non-excluded group:
   //
   static std::size_t
-  lookupFirstGroupIndex(const std::vector<PlaylistGroup> & groups)
+  lookupFirstGroupIndex(const std::vector<TPlaylistGroupPtr> & groups)
   {
     std::size_t index = 0;
-    for (std::vector<PlaylistGroup>::const_iterator i = groups.begin();
+    for (std::vector<TPlaylistGroupPtr>::const_iterator i = groups.begin();
          i != groups.end(); ++i, ++index)
     {
       const PlaylistGroup & group = *i;
@@ -1147,13 +1205,13 @@ namespace yae
   // return index of the last non-excluded group:
   //
   static std::size_t
-  lookupLastGroupIndex(const std::vector<PlaylistGroup> & groups)
+  lookupLastGroupIndex(const std::vector<TPlaylistGroupPtr> & groups)
   {
     std::size_t index = groups.size();
-    for (std::vector<PlaylistGroup>::const_reverse_iterator
+    for (std::vector<TPlaylistGroupPtr>::const_reverse_iterator
            i = groups.rbegin(); i != groups.rend(); ++i, --index)
     {
-      const PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *(*i);
       if (!group.excluded_)
       {
 #if 0
@@ -1172,11 +1230,11 @@ namespace yae
   // lookupLastGroup
   //
   inline static PlaylistGroup *
-  lookupLastGroup(const std::vector<PlaylistGroup> & groups)
+  lookupLastGroup(const std::vector<TPlaylistGroupPtr> & groups)
   {
     std::size_t numGroups = groups.size();
     std::size_t i = lookupLastGroupIndex(groups);
-    const PlaylistGroup * found = i < numGroups ? &groups[i] : NULL;
+    const PlaylistGroup * found = i < numGroups ? groups[i].get() : NULL;
     return const_cast<PlaylistGroup *>(found);
   }
 
@@ -1209,7 +1267,7 @@ namespace yae
     {
       std::size_t i = i0 + (i1 - i0) / 2;
 
-      const PlaylistGroup & group = groups_[i];
+      const PlaylistGroup & group = *(groups_[i]);
       std::size_t numItems = group.items_.size();
       std::size_t groupEnd = group.offset_ + numItems;
 
@@ -1225,7 +1283,7 @@ namespace yae
 
     if (i0 < numGroups)
     {
-      const PlaylistGroup & group = groups_[i0];
+      const PlaylistGroup & group = *(groups_[i0]);
       std::size_t numItems = group.items_.size();
       std::size_t groupEnd = group.offset_ + numItems;
 
@@ -1285,7 +1343,7 @@ namespace yae
     const std::size_t numGroups = groups_.size();
     for (std::size_t i = 0; i < numGroups; i++)
     {
-      const PlaylistGroup & group = groups_[i];
+      const PlaylistGroup & group = *(groups_[i]);
       if (groupHash == group.hash_)
       {
         return const_cast<PlaylistGroup *>(&group);
@@ -1350,7 +1408,7 @@ namespace yae
       return NULL;
     }
 
-    group = const_cast<PlaylistGroup *>(&(groups_[groupRow]));
+    group = const_cast<PlaylistGroup *>(groups_[groupRow].get());
     if (itemRow < 0 || itemRow >= group->items_.size())
     {
       return NULL;
@@ -1374,10 +1432,10 @@ namespace yae
     numShown_ = 0;
     numShownGroups_ = 0;
 
-    for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
+    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      PlaylistGroup & group = *i;
+      PlaylistGroup & group = *(*i);
       group.offset_ = offset;
 
       if (!group.excluded_)

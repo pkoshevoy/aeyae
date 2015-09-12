@@ -344,7 +344,7 @@ namespace yae
       std::size_t row = index.row();
       return
         (row < n) ?
-        const_cast<PlaylistGroup *>(&(playlist_.groups()[row])) :
+        const_cast<PlaylistGroup *>(playlist_.groups()[row].get()) :
         NULL;
     }
 
@@ -368,40 +368,6 @@ namespace yae
   PlaylistModel::add(const std::list<QString> & playlist,
                      std::list<BookmarkHashInfo> * returnAddedHashes)
   {
-#if 0
-    Playlist newlist(playlist_);
-    newlist.add(playlist, returnAddedHashes);
-
-    typedef std::vector<PlaylistGroup>::const_iterator TIter;
-
-    TIter ia = playlist_.groups().begin();
-    TIter iaEnd = playlist_.groups().end();
-    TIter ib = newlist.groups().begin();
-    TIter ibEnd = newlist.groups().end();
-
-    // figure out what new groups were added:
-    while (ia != iaEnd && ib != ibEnd)
-    {
-      const PlaylistGroup & a = *ia;
-      const PlaylistGroup & b = *ib;
-
-      if (a.hash_ != b.hash_)
-      {
-        // new list (b) contains a group that was not in original (a),
-        // try to find where it ends:
-      }
-    }
-
-#elif 0
-    int n0 = playlist_.groups().size();
-    emit rowsAboutToBeRemoved(QModelIndex(), 0, n0);
-    playlist_.add(playlist, returnAddedHashes);
-    emit rowsRemoved(QModelIndex(), 0, n0);
-
-    int n1 = playlist_.groups().size();
-    emit rowsInserted(QModelIndex(), 0, n1);
-#else
-    // emit modelAboutToBeReset();
     beginResetModel();
     playlist_.add(playlist, returnAddedHashes);
     endResetModel();
@@ -411,8 +377,6 @@ namespace yae
                          QItemSelectionModel::ClearAndSelect);
 
     QModelIndex currSel = sel_.currentIndex();
-    // emit modelReset();
-#endif
 
     emit itemCountChanged();
   }
@@ -462,10 +426,10 @@ namespace yae
   {
     playlist_.selectAll();
 
-    for (std::vector<PlaylistGroup>::const_iterator
+    for (std::vector<TPlaylistGroupPtr>::const_iterator
            i = playlist_.groups().begin(); i != playlist_.groups().end(); ++i)
     {
-      const PlaylistGroup & group = *i;
+      const PlaylistGroup & group = *(*i);
       std::size_t groupSize = group.items_.size();
 
       QModelIndex i0 = modelIndexForItem(group.offset_);
@@ -473,37 +437,7 @@ namespace yae
       emitDataChanged(kRoleSelected, i0, i1);
     }
   }
-#if 0
-  //----------------------------------------------------------------
-  // PlaylistModel::selectGroup
-  //
-  void
-  PlaylistModel::selectGroup(PlaylistGroup * group)
-  {
-    // FIXME: what about items that are unselected as the result?
 
-    playlist_.selectGroup(group);
-
-    std::size_t groupSize = group->items_.size();
-    QModelIndex i0 = modelIndexForItem(group->offset_);
-    QModelIndex i1 = modelIndexForItem(group->offset_ + groupSize - 1);
-    emitDataChanged(kRoleSelected, i0, i1);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::selectItem
-  //
-  void
-  PlaylistModel::selectItem(std::size_t indexSel, bool exclusive)
-  {
-    // FIXME: what about items that are unselected as the result?
-
-    playlist_.selectItem(indexSel, exclusive);
-
-    QModelIndex index = modelIndexForItem(indexSel);
-    emitDataChanged(kRoleSelected, i0, i1);
-  }
-#endif
   //----------------------------------------------------------------
   // PlaylistModel::removeSelected
   //

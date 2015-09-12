@@ -177,6 +177,8 @@ Item
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     height: (playlist.calc_title_height(24.0, playlist.width) * 3 / 2)
+
+    // color_played: "#4080ff"
   }
 
 

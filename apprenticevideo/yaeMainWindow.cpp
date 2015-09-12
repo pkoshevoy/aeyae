@@ -1439,6 +1439,16 @@ namespace yae
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
 
+    // hide the welcome screen:
+    {
+      QQuickItem * playerItem = playerWidget_->rootObject();
+      std::string playerState = playerItem->state().toUtf8().constData();
+      if (playerState == "welcome")
+      {
+        playerItem->setState(QString::fromUtf8("playback"));
+      }
+    }
+
     // reset timeline start, duration, playhead, in/out points:
     timelineControls_->resetFor(reader);
 
@@ -2199,23 +2209,12 @@ namespace yae
   MainWindow::playbackShowPlaylist()
   {
     QQuickItem * playerItem = playerWidget_->rootObject();
-#if 0
-    QQuickItem * playlistView =
-      playerItem->findChild<QQuickItem *>("playlist");
-
-    if (playlistView)
-    {
-      bool showPlaylist = actionShowPlaylist->isChecked();
-      playlistView->setVisible(showPlaylist);
-    }
-#else
     bool showPlaylist = actionShowPlaylist->isChecked();
     const char * state =
       showPlaylist ? "playlist" :
       playlistModel_.countItems() ? "playback" :
       "welcome";
     playerItem->setState(QString::fromUtf8(state));
-#endif
   }
 
   //----------------------------------------------------------------
