@@ -146,7 +146,8 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
   //
-  PlaylistItem::PlaylistItem():
+  PlaylistItem::PlaylistItem(PlaylistGroup & group):
+    group_(group),
     selected_(false),
     excluded_(false),
     failed_(false)
@@ -205,52 +206,39 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TPlaylistGroupKey
+  // init_lookup
   //
-  typedef std::list<PlaylistKey> TPlaylistGroupKey;
-
-  //----------------------------------------------------------------
-  // TPlaylistGroupMap
-  //
-  typedef std::map<TPlaylistGroupKey, TPlaylistGroupPtr> TPlaylistGroupMap;
-
-  //----------------------------------------------------------------
-  // TPlaylistGroupVec
-  //
-  typedef std::vector<TPlaylistGroupPtr> TPlaylistGroupVec;
-
-  //----------------------------------------------------------------
-  // setup_group_map
-  //
+  template <typename TNode>
   static void
-  setup_group_map(TPlaylistGroupMap & groupMap,
-                  const TPlaylistGroupVec & groups)
+  init_lookup(std::map<typename TNode::TKey, std::shared_ptr<TNode> > & lookup,
+              const std::vector<std::shared_ptr<TNode> > & nodes)
   {
-    for (TPlaylistGroupVec::const_iterator i = groups.begin();
-         i != groups.end(); ++i)
+    typedef std::shared_ptr<TNode> TNodePtr;
+    typedef std::vector<std::shared_ptr<TNode> > TNodes;
+    typedef typename TNodes::const_iterator TNodesIter;
+
+    lookup.clear();
+
+    for (TNodesIter i = nodes.begin(); i != nodes.end(); ++i)
     {
-      const PlaylistGroup & group = *(*i);
-      groupMap[group.keyPath_] = (*i);
+      const TNodePtr & node = *i;
+      lookup[node->key()] = node;
     }
   }
 
   //----------------------------------------------------------------
-  // get_group_ptr
+  // lookup
   //
-  static TPlaylistGroupPtr
-  get_group_ptr(TPlaylistGroupMap & groups, const TPlaylistGroupKey & key)
+  template <typename TNode>
+  static std::shared_ptr<TNode>
+  lookup(const std::map<typename TNode::TKey, std::shared_ptr<TNode> > & nodes,
+         const typename TNode::TKey & key)
   {
-    TPlaylistGroupMap::iterator lower_bound = groups.lower_bound(key);
+    typedef std::shared_ptr<TNode> TNodePtr;
+    typedef std::map<typename TNode::TKey, std::shared_ptr<TNode> > TNodeMap;
 
-    if (lower_bound == groups.end() ||
-        groups.key_comp()(key, lower_bound->first))
-    {
-      TPlaylistGroupPtr group(new PlaylistGroup());
-      groups.insert(lower_bound, std::make_pair(key, group));
-      return group;
-    }
-
-    return lower_bound->second;
+    typename TNodeMap::const_iterator found = nodes.find(key);
+    return (found == nodes.end()) ? TNodePtr() : found->second;
   }
 
   //----------------------------------------------------------------
@@ -258,7 +246,19 @@ namespace yae
   //
   void
   Playlist::add(const std::list<QString> & playlist,
-                std::list<BookmarkHashInfo> * returnBookmarkHashList)
+
+                // optionally pass back a list of hashes for the added items:
+                std::list<BookmarkHashInfo> * returnBookmarkHashList,
+
+                // optionally notify an observer about newly added groups:
+                TObservePlaylistGroup callbackBeforeAddingGroup,
+                TObservePlaylistGroup callbackAfterAddingGroup,
+                void * contextAddGroup,
+
+                // optionally notify an observer about newly added items:
+                TObservePlaylistItem callbackBeforeAddingItem,
+                TObservePlaylistItem callbackAfterAddingItem,
+                void * contextAddItem)
   {
 #if 0
     std::cerr << "Playlist::add" << std::endl;
@@ -437,12 +437,12 @@ namespace yae
     }
 
     // setup a map for fast group lookup:
-    TPlaylistGroupMap groupMap;
-    setup_group_map(groupMap, groups_);
+    std::map<PlaylistGroup::TKey, TPlaylistGroupPtr> groupMap;
+    init_lookup(groupMap, groups_);
 
-    // re-create the group vector:
-    groups_.clear();
+    // update the group vector:
     numItems_ = 0;
+    std::size_t groupCount = 0;
 
     std::vector<TPlaylistGroupPtr> groupVec;
     for (std::list<TFringeGroup>::const_iterator i = fringeGroups.begin();
@@ -450,15 +450,46 @@ namespace yae
     {
       // shortcut:
       const TFringeGroup & fringeGroup = *i;
-      groups_.push_back(get_group_ptr(groupMap, fringeGroup.fullPath_));
 
-      PlaylistGroup & group = *(groups_.back());
-      group.items_.clear();
-      group.row_ = groups_.size() - 1;
-      group.keyPath_ = fringeGroup.fullPath_;
-      group.name_ = toWords(fringeGroup.abbreviatedPath_);
+      TPlaylistGroupPtr groupPtr =
+        yae::lookup(groupMap, fringeGroup.fullPath_);
+      bool newGroup = !groupPtr;
+
+      if (newGroup)
+      {
+        if (callbackBeforeAddingGroup)
+        {
+          callbackBeforeAddingGroup(contextAddGroup, groupCount);
+        }
+
+        groupPtr.reset(new PlaylistGroup());
+        groupMap[fringeGroup.fullPath_] = groupPtr;
+        groups_.insert(groups_.begin() + groupCount, groupPtr);
+      }
+
+      PlaylistGroup & group = *groupPtr;
       group.offset_ = numItems_;
-      group.hash_ = getKeyPathHash(group.keyPath_);
+      group.row_ = groupCount;
+      groupCount++;
+
+      if (newGroup)
+      {
+        group.keyPath_ = fringeGroup.fullPath_;
+        group.name_ = toWords(fringeGroup.abbreviatedPath_);
+        group.hash_ = getKeyPathHash(group.keyPath_);
+
+        if (callbackAfterAddingGroup)
+        {
+          callbackAfterAddingGroup(contextAddGroup, group.row_);
+        }
+     }
+
+      // setup a map for fast item lookup:
+      std::map<PlaylistItem::TKey, TPlaylistItemPtr> itemMap;
+      init_lookup(itemMap, group.items_);
+
+      // update the items vector:
+      std::size_t groupSize = 0;
 
       // shortcuts:
       const TSiblings & siblings = fringeGroup.siblings_;
@@ -469,20 +500,42 @@ namespace yae
         const PlaylistKey & key = j->first;
         const QString & value = j->second;
 
-        group.items_.push_back(PlaylistItem());
-        PlaylistItem & playlistItem = group.items_.back();
+        TPlaylistItemPtr itemPtr = yae::lookup(itemMap, key);
+        bool newItem = !itemPtr;
 
-        playlistItem.row_ = group.items_.size() - 1;
-        playlistItem.key_ = key;
-        playlistItem.path_ = value;
+        if (newItem)
+        {
+          if (callbackBeforeAddingItem)
+          {
+            callbackBeforeAddingItem(contextAddItem, group.row_, groupSize);
+          }
 
-        playlistItem.name_ = toWords(key.key_);
-        playlistItem.ext_ = key.ext_;
-        playlistItem.hash_ = getKeyHash(playlistItem.key_);
+          itemPtr.reset(new PlaylistItem(group));
+          itemMap[key] = itemPtr;
+          group.items_.insert(group.items_.begin() + groupSize, itemPtr);
+        }
 
-        if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
+        PlaylistItem & item = *itemPtr;
+        item.row_ = groupSize;
+        groupSize++;
+
+        if (newItem)
+        {
+          item.key_ = key;
+          item.path_ = value;
+          item.name_ = toWords(key.key_);
+          item.ext_ = key.ext_;
+          item.hash_ = getKeyHash(item.key_);
+        }
+
+        if (firstNewItemPath && *firstNewItemPath == item.path_)
         {
           current_ = numItems_;
+        }
+
+        if (newItem && callbackAfterAddingItem)
+        {
+          callbackAfterAddingItem(contextAddItem, group.row_, item.row_);
         }
       }
     }
@@ -494,6 +547,28 @@ namespace yae
 
     updateOffsets();
     setPlayingItem(current_, true);
+
+#if 0
+    for (std::size_t i = 0; i < groups_.size(); i++)
+    {
+      const PlaylistGroup & group = *(groups_[i]);
+      std::cerr
+        << "\ngroup " << i
+        << ", row: " << group.row_
+        << ", offset: " << group.offset_
+        << ", size: " << group.items_.size()
+        << std::endl;
+
+      for (std::size_t j = 0; j < group.items_.size(); j++)
+      {
+        const PlaylistItem & item = *(group.items_[j]);
+        std::cerr
+          << "  item " << j
+          << ", row: " << item.row_
+          << std::endl;
+      }
+    }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -535,7 +610,7 @@ namespace yae
   //----------------------------------------------------------------
   // Playlist::closestGroup
   //
-  PlaylistGroup *
+  TPlaylistGroupPtr
   Playlist::closestGroup(std::size_t index,
                          Playlist::TDirection where) const
   {
@@ -545,12 +620,14 @@ namespace yae
       return lookupGroup(index);
     }
 
-    const PlaylistGroup * prev = NULL;
+    TPlaylistGroupPtr prev;
 
     for (std::vector<TPlaylistGroupPtr>::const_iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
-      const PlaylistGroup & group = *(*i);
+      const TPlaylistGroupPtr & groupPtr = *i;
+      const PlaylistGroup & group = *groupPtr;
+
       if (group.excluded_)
       {
         continue;
@@ -560,7 +637,7 @@ namespace yae
       std::size_t groupEnd = group.offset_ + groupSize;
       if (groupEnd <= index)
       {
-        prev = &group;
+        prev = groupPtr;
       }
 
       if (index < groupEnd)
@@ -573,16 +650,16 @@ namespace yae
 
           for (std::size_t j = index - group.offset_; j < groupSize; j += step)
           {
-            const PlaylistItem & item = group.items_[j];
+            const PlaylistItem & item = *(group.items_[j]);
             if (!item.excluded_)
             {
-              return const_cast<PlaylistGroup *>(&group);
+              return groupPtr;
             }
           }
         }
         else if (where == kAhead)
         {
-          return const_cast<PlaylistGroup *>(&group);
+          return groupPtr;
         }
 
         if (where == kBehind)
@@ -594,10 +671,10 @@ namespace yae
 
     if (where == kBehind)
     {
-      return const_cast<PlaylistGroup *>(prev);
+      return prev;
     }
 
-    return NULL;
+    return TPlaylistGroupPtr();
   }
 
   //----------------------------------------------------------------
@@ -606,7 +683,7 @@ namespace yae
   std::size_t
   Playlist::closestItem(std::size_t index,
                         Playlist::TDirection where,
-                        PlaylistGroup ** returnGroup) const
+                        TPlaylistGroupPtr * returnGroup) const
   {
     if (numItems_ == numShown_)
     {
@@ -619,7 +696,7 @@ namespace yae
       return index;
     }
 
-    PlaylistGroup * group = closestGroup(index, where);
+    TPlaylistGroupPtr group = closestGroup(index, where);
     if (returnGroup)
     {
       *returnGroup = group;
@@ -637,7 +714,7 @@ namespace yae
     }
 
     // find the closest item within this group:
-    const std::vector<PlaylistItem> & items = group->items_;
+    const std::vector<TPlaylistItemPtr> & items = group->items_;
     const std::size_t groupSize = items.size();
     const int step = where == kAhead ? 1 : -1;
 
@@ -648,7 +725,7 @@ namespace yae
 
     for (; i < groupSize; i += step)
     {
-      const PlaylistItem & item = items[i];
+      const PlaylistItem & item = *(items[i]);
       if (!item.excluded_)
       {
         return (group->offset_ + i);
@@ -722,10 +799,10 @@ namespace yae
       std::size_t groupSize = group.items_.size();
       std::size_t numExcluded = 0;
 
-      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
            j != group.items_.end(); ++j, index++)
       {
-        PlaylistItem & item = *j;
+        PlaylistItem & item = *(*j);
 
         if (!exclude)
         {
@@ -807,7 +884,7 @@ namespace yae
         continue;
       }
 
-      selectGroup(&group);
+      selectGroup(group);
     }
   }
 
@@ -815,12 +892,12 @@ namespace yae
   // Playlist::selectGroup
   //
   void
-  Playlist::selectGroup(PlaylistGroup * group)
+  Playlist::selectGroup(PlaylistGroup & group)
   {
-    for (std::vector<PlaylistItem>::iterator i = group->items_.begin();
-         i != group->items_.end(); ++i)
+    for (std::vector<TPlaylistItemPtr>::iterator i = group.items_.begin();
+         i != group.items_.end(); ++i)
     {
-      PlaylistItem & item = *i;
+      PlaylistItem & item = *(*i);
       if (item.excluded_)
       {
         continue;
@@ -854,10 +931,10 @@ namespace yae
 
       if (exclusive)
       {
-        for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+        for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
              j != group.items_.end(); ++j)
         {
-          PlaylistItem & item = *j;
+          PlaylistItem & item = *(*j);
           if (item.excluded_)
           {
             continue;
@@ -869,7 +946,7 @@ namespace yae
 
       if (group.offset_ <= indexSel && indexSel < groupEnd)
       {
-        PlaylistItem & item = group.items_[indexSel - group.offset_];
+        PlaylistItem & item = *(group.items_[indexSel - group.offset_]);
         item.selected_ = true;
         itemSelected = true;
 
@@ -913,10 +990,10 @@ namespace yae
         continue;
       }
 
-      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
            j != group.items_.end(); oldIndex++)
       {
-        PlaylistItem & item = *j;
+        PlaylistItem & item = *(*j);
 
         if (item.excluded_ || !item.selected_)
         {
@@ -969,7 +1046,7 @@ namespace yae
 
     if (current_ < numItems_)
     {
-      PlaylistItem * item = lookup(current_);
+      TPlaylistItemPtr item = lookup(current_);
       item->selected_ = true;
     }
 
@@ -1003,12 +1080,12 @@ namespace yae
     if (itemIndex < numItems_)
     {
       // remove one item:
-      std::vector<PlaylistItem>::iterator iter =
+      std::vector<TPlaylistItemPtr>::iterator iter =
         group.items_.begin() + (itemIndex - group.offset_);
 
       // remove item from the tree:
       {
-        PlaylistItem & item = *iter;
+        PlaylistItem & item = *(*iter);
         std::list<PlaylistKey> keyPath = group.keyPath_;
         keyPath.push_back(item.key_);
         tree_.remove(keyPath);
@@ -1036,11 +1113,11 @@ namespace yae
     else
     {
       // remove entire group:
-      for (std::vector<PlaylistItem>::iterator iter = group.items_.begin();
+      for (std::vector<TPlaylistItemPtr>::iterator iter = group.items_.begin();
            iter != group.items_.end(); ++iter)
       {
         // remove item from the tree:
-        PlaylistItem & item = *iter;
+        PlaylistItem & item = *(*iter);
         std::list<PlaylistKey> keyPath = group.keyPath_;
         keyPath.push_back(item.key_);
         tree_.remove(keyPath);
@@ -1098,7 +1175,7 @@ namespace yae
 
     if (current_ < numItems_)
     {
-      PlaylistItem * item = lookup(current_);
+      TPlaylistItemPtr item = lookup(current_);
       item->selected_ = true;
     }
 
@@ -1114,90 +1191,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Playlist::changeCurrentItem
+  // Playlist::setCurrentItem
   //
-  void
-  Playlist::changeCurrentItem(int itemsPerRow, int delta)
+  bool
+  Playlist::setCurrentItem(int groupRow, int itemRow)
   {
-    // FIXME: move this into Playlist
-    std::cerr
-      << "FIXME: PlaylistModel::changeCurrentItem("
-      << itemsPerRow << ", " << delta << ")"
-      << std::endl;
-#if 0
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlist_.lookup(playlist_.currentItem(), &group);
-    std::size_t groupSize = group ? group->items_.size() : 0;
-    if (delta < 0)
-    {
-      if (!item)
-      {
-        if (playlist_.countItemsShown())
-        {
-          setCurrentItem(playlist_.countItems() - 1);
-        }
-      }
-      else if (item->row_ < -delta)
-      {
-        if (group->offset_)
-        {
-          // skip to the end of previous group:
-          setCurrentItem(group->offset_ - 1);
-        }
-        else if (item->row_)
-        {
-          // skip to the beginning of the playlist:
-          setCurrentItem(0);
-        }
-      }
-      else
-      {
-        setCurrentItem(group->offset_ + item->row_ + delta);
-      }
-    }
-    else if (delta > 0)
-    {
-      if (item->row_ + delta < groupSize)
-      {
-        setCurrentItem(group->offset_ + item->row_ + delta);
-      }
-      else
-      {
-        // skip to the start of next group:
-        setCurrentItem(group->offset_ + groupSize);
-      }
-    }
-#endif
-  }
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = lookup(group, groupRow, itemRow);
 
-#if 0
-  //----------------------------------------------------------------
-  // lookupFirstGroupIndex
-  //
-  // return index of the first non-excluded group:
-  //
-  static std::size_t
-  lookupFirstGroupIndex(const std::vector<TPlaylistGroupPtr> & groups)
-  {
     std::size_t index = 0;
-    for (std::vector<TPlaylistGroupPtr>::const_iterator i = groups.begin();
-         i != groups.end(); ++i, ++index)
+
+    if (group)
     {
-      const PlaylistGroup & group = *i;
-      if (!group.excluded_)
-      {
-#if 0
-        std::cerr << "lookupGroup, first: "
-                  << group.name_.toUtf8().constData()
-                  << std::endl;
-#endif
-        return index;
-      }
+      index += group->offset_;
     }
 
-    return groups.size();
+    if (item)
+    {
+      index += item->row_;
+    }
+
+    index = closestItem(index);
+
+    if (index == current_)
+    {
+      return false;
+    }
+
+    current_ = index;
+    return true;
   }
-#endif
 
   //----------------------------------------------------------------
   // lookupLastGroupIndex
@@ -1229,19 +1252,26 @@ namespace yae
   //----------------------------------------------------------------
   // lookupLastGroup
   //
-  inline static PlaylistGroup *
+  inline static TPlaylistGroupPtr
   lookupLastGroup(const std::vector<TPlaylistGroupPtr> & groups)
   {
     std::size_t numGroups = groups.size();
     std::size_t i = lookupLastGroupIndex(groups);
-    const PlaylistGroup * found = i < numGroups ? groups[i].get() : NULL;
-    return const_cast<PlaylistGroup *>(found);
+
+    TPlaylistGroupPtr found;
+
+    if (i < numGroups)
+    {
+      found = groups[i];
+    }
+
+    return found;
   }
 
   //----------------------------------------------------------------
   // Playlist::lookupGroup
   //
-  PlaylistGroup *
+  TPlaylistGroupPtr
   Playlist::lookupGroup(std::size_t index) const
   {
 #if 0
@@ -1283,13 +1313,13 @@ namespace yae
 
     if (i0 < numGroups)
     {
-      const PlaylistGroup & group = *(groups_[i0]);
-      std::size_t numItems = group.items_.size();
-      std::size_t groupEnd = group.offset_ + numItems;
+      const TPlaylistGroupPtr & group = groups_[i0];
+      std::size_t numItems = group->items_.size();
+      std::size_t groupEnd = group->offset_ + numItems;
 
       if (index < groupEnd)
       {
-        return const_cast<PlaylistGroup *>(&group);
+        return group;
       }
     }
 
@@ -1300,14 +1330,14 @@ namespace yae
   //----------------------------------------------------------------
   // Playlist::lookup
   //
-  PlaylistItem *
-  Playlist::lookup(std::size_t index, PlaylistGroup ** returnGroup) const
+  TPlaylistItemPtr
+  Playlist::lookup(std::size_t index, TPlaylistGroupPtr * returnGroup) const
   {
 #if 0
     std::cerr << "Playlist::lookup: " << index << std::endl;
 #endif
 
-    PlaylistGroup * group = lookupGroup(index);
+    TPlaylistGroupPtr group = lookupGroup(index);
     if (returnGroup)
     {
       *returnGroup = group;
@@ -1322,50 +1352,50 @@ namespace yae
 
       return
         (i < groupSize) ?
-        const_cast<PlaylistItem *>(&group->items_[i]) :
-        NULL;
+        group->items_[i] :
+        TPlaylistItemPtr();
     }
 
-    return NULL;
+    return TPlaylistItemPtr();
   }
 
   //----------------------------------------------------------------
   // Playlist::lookupGroup
   //
-  PlaylistGroup *
+  TPlaylistGroupPtr
   Playlist::lookupGroup(const std::string & groupHash) const
   {
     if (groupHash.empty())
     {
-      return NULL;
+      return TPlaylistGroupPtr();
     }
 
     const std::size_t numGroups = groups_.size();
     for (std::size_t i = 0; i < numGroups; i++)
     {
-      const PlaylistGroup & group = *(groups_[i]);
-      if (groupHash == group.hash_)
+      const TPlaylistGroupPtr & group = groups_[i];
+      if (groupHash == group->hash_)
       {
-        return const_cast<PlaylistGroup *>(&group);
+        return group;
       }
     }
 
-    return NULL;
+    return TPlaylistGroupPtr();
   }
 
   //----------------------------------------------------------------
   // Playlist::lookup
   //
-  PlaylistItem *
+  TPlaylistItemPtr
   Playlist::lookup(const std::string & groupHash,
                    const std::string & itemHash,
                    std::size_t * returnItemIndex,
-                   PlaylistGroup ** returnGroup) const
+                   TPlaylistGroupPtr * returnGroup) const
   {
-    PlaylistGroup * group = lookupGroup(groupHash);
+    TPlaylistGroupPtr group = lookupGroup(groupHash);
     if (!group || itemHash.empty())
     {
-      return NULL;
+      return TPlaylistItemPtr();
     }
 
     if (returnGroup)
@@ -1376,15 +1406,15 @@ namespace yae
     std::size_t groupSize = group->items_.size();
     for (std::size_t i = 0; i < groupSize; i++)
     {
-      PlaylistItem & item = group->items_[i];
-      if (itemHash == item.hash_)
+      const TPlaylistItemPtr & item = group->items_[i];
+      if (itemHash == item->hash_)
       {
         if (*returnItemIndex)
         {
           *returnItemIndex = group->offset_ + i;
         }
 
-        return const_cast<PlaylistItem *>(&item);
+        return item;
       }
     }
 
@@ -1393,29 +1423,29 @@ namespace yae
       *returnItemIndex = std::numeric_limits<std::size_t>::max();
     }
 
-    return NULL;
+    return TPlaylistItemPtr();
   }
 
   //----------------------------------------------------------------
   // Playlist::lookup
   //
-  PlaylistItem *
-  Playlist::lookup(PlaylistGroup *& group, int groupRow, int itemRow) const
+  TPlaylistItemPtr
+  Playlist::lookup(TPlaylistGroupPtr & group, int groupRow, int itemRow) const
   {
     if (groupRow < 0 || groupRow >= groups_.size())
     {
-      group = NULL;
-      return NULL;
+      group = TPlaylistGroupPtr();
+      return TPlaylistItemPtr();
     }
 
-    group = const_cast<PlaylistGroup *>(groups_[groupRow].get());
+    group = groups_[groupRow];
     if (itemRow < 0 || itemRow >= group->items_.size())
     {
-      return NULL;
+      return TPlaylistItemPtr();
     }
 
-    const PlaylistItem & item = group->items_[itemRow];
-    return const_cast<PlaylistItem *>(&item);
+    const TPlaylistItemPtr & item = group->items_[itemRow];
+    return item;
   }
 
   //----------------------------------------------------------------
@@ -1443,10 +1473,10 @@ namespace yae
         numShownGroups_++;
       }
 
-      for (std::vector<PlaylistItem>::iterator j = group.items_.begin();
+      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
            j != group.items_.end(); ++j)
       {
-        PlaylistItem & item = *j;
+        PlaylistItem & item = *(*j);
 
         if (!item.excluded_)
         {

@@ -61,11 +61,24 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // PlaylistGroup
+  //
+  struct PlaylistGroup;
+
+  //----------------------------------------------------------------
   // PlaylistItem
   //
   struct PlaylistItem : public PlaylistNode
   {
-    PlaylistItem();
+    PlaylistItem(PlaylistGroup & group);
+
+    typedef PlaylistKey TKey;
+
+    inline const TKey & key() const
+    { return key_; }
+
+    // reference to the parent group holding this item:
+    PlaylistGroup & group_;
 
     // playlist item key within the fringe group it belongs to:
     PlaylistKey key_;
@@ -93,21 +106,31 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TPlaylistItemPtr
+  //
+  typedef std::shared_ptr<PlaylistItem> TPlaylistItemPtr;
+
+  //----------------------------------------------------------------
   // PlaylistGroup
   //
   struct PlaylistGroup : public PlaylistNode
   {
     PlaylistGroup();
 
+    typedef std::list<PlaylistKey> TKey;
+
+    inline const TKey & key() const
+    { return keyPath_; }
+
     // complete key path to the fringe group that corresponds to this
     // playlist group:
-    std::list<PlaylistKey> keyPath_;
+    TKey keyPath_;
 
     // human friendly text describing this playlist item group:
     QString name_;
 
     // playlist items belonging to this group:
-    std::vector<PlaylistItem> items_;
+    std::vector<TPlaylistItemPtr> items_;
 
     // number of items stored in other playlist groups preceding this group:
     std::size_t offset_;
@@ -128,6 +151,16 @@ namespace yae
   typedef std::shared_ptr<PlaylistGroup> TPlaylistGroupPtr;
 
   //----------------------------------------------------------------
+  // TObservePlaylistGroup
+  //
+  typedef void(*TObservePlaylistGroup)(void * context, int groupRow);
+
+  //----------------------------------------------------------------
+  // TObservePlaylistItem
+  //
+  typedef void(*TObservePlaylistItem)(void * ctxt, int groupRow, int itemRow);
+
+  //----------------------------------------------------------------
   // Playlist
   //
   struct Playlist : public PlaylistNode
@@ -138,7 +171,19 @@ namespace yae
     // optionally pass back a list of group bookmark hashes
     // that were added to the playlist during this call:
     void add(const std::list<QString> & playlist,
-             std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
+
+             // optionally pass back a list of hashes for the added items:
+             std::list<BookmarkHashInfo> * returnAddedHashes = NULL,
+
+             // optionally notify an observer about newly added groups:
+             TObservePlaylistGroup callbackBeforeAddingGroup = NULL,
+             TObservePlaylistGroup callbackAfterAddingGroup = NULL,
+             void * contextAddGroup = NULL,
+
+             // optionally notify an observer about newly added items:
+             TObservePlaylistItem callbackBeforeAddingItem = NULL,
+             TObservePlaylistItem callbackAfterAddingItem = NULL,
+             void * contextAddItem = NULL);
 
     // return index of the playing item:
     std::size_t playingItem() const;
@@ -151,20 +196,20 @@ namespace yae
     std::size_t countItemsBehind() const;
 
     // lookup a playlist item by index:
-    PlaylistGroup * lookupGroup(std::size_t index) const;
-    PlaylistItem * lookup(std::size_t index,
-                          PlaylistGroup ** group = NULL) const;
+    TPlaylistGroupPtr lookupGroup(std::size_t index) const;
+    TPlaylistItemPtr lookup(std::size_t index,
+                            TPlaylistGroupPtr * group = NULL) const;
 
     // lookup a playlist item by group hash and item hash:
-    PlaylistGroup * lookupGroup(const std::string & groupHash) const;
-    PlaylistItem * lookup(const std::string & groupHash,
-                          const std::string & itemHash,
-                          std::size_t * returnItemIndex = NULL,
-                          PlaylistGroup ** returnGroup = NULL) const;
+    TPlaylistGroupPtr lookupGroup(const std::string & groupHash) const;
+    TPlaylistItemPtr lookup(const std::string & groupHash,
+                            const std::string & itemHash,
+                            std::size_t * returnItemIndex = NULL,
+                            TPlaylistGroupPtr * returnGroup = NULL) const;
 
-    PlaylistItem * lookup(PlaylistGroup *& parent,
-                          int groupRow,
-                          int itemRow) const;
+    TPlaylistItemPtr lookup(TPlaylistGroupPtr & parent,
+                            int groupRow,
+                            int itemRow) const;
 
     enum TDirection {
       kBehind = 0,
@@ -173,14 +218,14 @@ namespace yae
 
     // lookup non-excluded group closest (in a given direction)
     // to the specified item index:
-    PlaylistGroup * closestGroup(std::size_t itemIndex,
-                                 TDirection where = kAhead) const;
+    TPlaylistGroupPtr closestGroup(std::size_t itemIndex,
+                                   TDirection where = kAhead) const;
 
     // lookup non-excluded item closest (in a given direction)
     // to the specified item index:
     std::size_t closestItem(std::size_t itemIndex,
                             TDirection where = kAhead,
-                            PlaylistGroup ** group = NULL) const;
+                            TPlaylistGroupPtr * group = NULL) const;
 
     // item filter:
     bool filterChanged(const QString & filter);
@@ -190,7 +235,7 @@ namespace yae
 
     // selection set management:
     void selectAll();
-    void selectGroup(PlaylistGroup * group);
+    void selectGroup(PlaylistGroup & group);
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
@@ -205,10 +250,8 @@ namespace yae
     inline std::size_t countGroupsShown() const
     { return numShownGroups_; }
 
-    inline std::size_t currentItem() const
-    { return current_; }
-
-    void changeCurrentItem(int itemsPerRow, int delta);
+    // returns true if current index has changed:
+    bool setCurrentItem(int groupRow, int itemRow);
 
   protected:
     // helpers:

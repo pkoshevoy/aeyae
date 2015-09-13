@@ -120,47 +120,32 @@ Item
 
   function lookup_current_gridview_and_item()
   {
-    if (playlistView.currentIndex == -1)
-    {
-      assign_playlistview_current_index(0);
-    }
+    var found = {
+      groupIndex: -1,
+      itemIndex: -1,
+      gridView: null,
+      item: null
+    };
 
     var groupContainer = playlistView.currentItem;
-
-    var gridView =
-        groupContainer ?
-        yae_qml_utils.find_qobject(groupContainer, "groupItemsGridView") :
-        null;
-
-    if (!gridView)
+    if (groupContainer)
     {
-      return {
-        groupIndex: -1,
-        itemIndex: -1,
-        gridView: null,
-        item: null
+      found.groupIndex = playlistView.currentIndex;
+      found.gridView = yae_qml_utils.find_qobject(groupContainer,
+                                                  "groupItemsGridView");
+
+      var itemContainer = found.gridView.currentItem;
+      if (itemContainer)
+      {
+        // yae_qml_utils.dump_object_tree(itemContainer);
+        found.itemIndex = found.gridView.currentIndex;
+        found.item = yae_qml_utils.find_qobject(itemContainer,
+                                                "itemDelegate");
+        // yae_qml_utils.dump_object_tree(item);
       }
     }
 
-    if (gridView.currentIndex == -1)
-    {
-      gridView.currentIndex = 0;
-    }
-
-    var itemContainer = gridView.currentItem;
-
-    // yae_qml_utils.dump_object_tree(itemContainer);
-
-    var item = yae_qml_utils.find_qobject(itemContainer,
-                                          "itemDelegate");
-    // yae_qml_utils.dump_object_tree(item);
-
-    return {
-      groupIndex: playlistView.currentIndex,
-      itemIndex: gridView.currentIndex,
-      gridView: gridView,
-      item: item
-    };
+    return found;
   }
 
   function get_item_y(item)
@@ -176,6 +161,7 @@ Item
 
   function set_current_item(groupRow, itemRow)
   {
+    // console.log("set_current_item(" + groupRow + ", " + itemRow + ")");
     var groupContainer;
     var gridView;
 
@@ -196,6 +182,12 @@ Item
     if (gridView && gridView.currentIndex != itemRow)
     {
       gridView.currentIndex = itemRow;
+      /*
+      console.log("set_current_item(" + groupRow + ", " + itemRow + ") = " +
+                  (gridView.currentItem ?
+                   gridView.currentItem.label :
+                   "null"));
+      */
     }
 
     /*
@@ -204,13 +196,19 @@ Item
 
     if (found)
     {
-      calc_delta_scroll_to(found.item)
+      // Utils.dump_properties(found.item);
+      calc_delta_scroll_to(found.item);
     }
     */
   }
 
   function calc_delta_scroll_to(item)
   {
+    if (!item)
+    {
+      return 0;
+    }
+
     var delta_y = 0;
 
     var view_y0 = playlistView.contentY
@@ -445,6 +443,13 @@ Item
 
     /*
     // for debugging:
+    onCurrentIndexChanged: {
+      console.log("FIXME: PlaylistView, currentIndex changed: " +
+                  currentIndex);
+    }
+    */
+    /*
+    // for debugging:
     onContentYChanged: {
       console.log("CONTENT Y CHANGED: " + contentY);
     }
@@ -509,7 +514,7 @@ Item
         color: footer_fg
       }
 
-      // YDebug { id: ydebug; z: 1; container: playlistView; }
+      // YDebug { id: ydebug; z: 3; container: playlistView; }
       // onYChanged: { ydebug.refresh(); }
     }
   }
@@ -555,7 +560,7 @@ Item
 
             // Toggle the 'collapsed' item data role
             onClicked: {
-              console.log("Playlist group: CLICKED!")
+              // console.log("Playlist group: CLICKED!")
               model.collapsed = !model.collapsed;
             }
           }
@@ -576,7 +581,7 @@ Item
           styleColor: "black";
         }
 
-        // YDebug { id: ydebug; z: 1; container: playlistView; }
+        // YDebug { id: ydebug; z: 3; container: playlistView; }
         // onYChanged: { ydebug.refresh(); }
       }
 
@@ -648,7 +653,7 @@ Item
           y: (groupItemsGridView.currentItem ?
               groupItemsGridView.currentItem.y :
               0)
-          z: 1
+          z: 2
           width: groupItemsGridView.cellWidth;
           height: groupItemsGridView.cellHeight
           color: highlight_color;
@@ -675,6 +680,14 @@ Item
         highlightFollowsCurrentItem: false
         currentIndex: -1
 
+        /*
+        // for debugging:
+        onCurrentIndexChanged: {
+          console.log("FIXME: GridView, currentIndex changed: " +
+                      currentIndex);
+        }
+        */
+
         model: DelegateModel
         {
           id: modelDelegate
@@ -690,7 +703,7 @@ Item
 
             property var label: model.label
 
-            // YDebug { id: ydebug; z: 1; container: playlistView; }
+            // YDebug { id: ydebug; z: 3; container: playlistView; }
             // onYChanged: { ydebug.refresh(); }
 
             Rectangle

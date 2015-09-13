@@ -62,11 +62,11 @@ namespace yae
     std::string itemHash = groupHashItemHash.substr(t + 1);
 
     std::size_t itemIndex = ~0;
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlist.lookup(groupHash,
-                                          itemHash,
-                                          &itemIndex,
-                                          &group);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist.lookup(groupHash,
+                                            itemHash,
+                                            &itemIndex,
+                                            &group);
     if (!item)
     {
       YAE_ASSERT(false);

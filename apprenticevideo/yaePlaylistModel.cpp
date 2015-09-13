@@ -17,16 +17,8 @@ namespace yae
   // PlaylistModel::PlaylistModel
   //
   PlaylistModel::PlaylistModel(QObject * parent):
-    QAbstractItemModel(parent),
-    sel_(this, this)
-  {
-    bool ok = true;
-    ok = connect(&sel_, SIGNAL(currentChanged(const QModelIndex &,
-                                              const QModelIndex &)),
-                 this, SLOT(currentIndexChanged(const QModelIndex &,
-                                                const QModelIndex &)));
-    YAE_ASSERT(ok);
-  }
+    QAbstractItemModel(parent)
+  {}
 
   //----------------------------------------------------------------
   // PlaylistModel::index
@@ -342,10 +334,7 @@ namespace yae
     {
       const std::size_t n = playlist_.groups().size();
       std::size_t row = index.row();
-      return
-        (row < n) ?
-        const_cast<PlaylistGroup *>(playlist_.groups()[row].get()) :
-        NULL;
+      return (row < n) ? playlist_.groups()[row].get() : NULL;
     }
 
     PlaylistGroup * group =
@@ -355,7 +344,7 @@ namespace yae
     {
       const std::size_t n = group->items_.size();
       std::size_t row = index.row();
-      return (row < n) ? &(group->items_[row]) : NULL;
+      return (row < n) ? group->items_[row].get() : NULL;
     }
 
     return NULL;
@@ -368,16 +357,37 @@ namespace yae
   PlaylistModel::add(const std::list<QString> & playlist,
                      std::list<BookmarkHashInfo> * returnAddedHashes)
   {
-    beginResetModel();
-    playlist_.add(playlist, returnAddedHashes);
-    endResetModel();
+    emit currentItemChanged(-1, -1);
+
+    QPersistentModelIndex prev = modelIndexForItem(playlist_.playingItem());
+
+    playlist_.add(playlist,
+                  returnAddedHashes,
+
+                  &PlaylistModel::callbackBeforeAddGroup,
+                  &PlaylistModel::callbackAfterAddGroup,
+                  this,
+
+                  &PlaylistModel::callbackBeforeAddItem,
+                  &PlaylistModel::callbackAfterAddItem,
+                  this);
+
+    QPersistentModelIndex curr = modelIndexForItem(playlist_.playingItem());
+
+    if (prev != curr)
+    {
+      emitDataChanged(kRolePlaying, prev);
+      emitDataChanged(kRolePlaying, curr);
+
+      emit playingItemChanged(playlist_.playingItem());
+    }
 
     // FIXME: should this be playingItem or currentItem?
-    sel_.setCurrentIndex(modelIndexForItem(playlist_.playingItem()),
-                         QItemSelectionModel::ClearAndSelect);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist_.lookup(playlist_.playingItem(), &group);
 
-    QModelIndex currSel = sel_.currentIndex();
-
+    emit currentItemChanged(group ? group->row_ : -1,
+                            item ? item->row_ : -1);
     emit itemCountChanged();
   }
 
@@ -413,7 +423,6 @@ namespace yae
       emitDataChanged(kRolePlaying, prev);
       emitDataChanged(kRolePlaying, curr);
 
-      // FIXME: how to ensure the item is visible in the view?
       emit playingItemChanged(playlist_.playingItem());
     }
   }
@@ -468,15 +477,15 @@ namespace yae
   QModelIndex
   PlaylistModel::modelIndexForItem(std::size_t itemIndex) const
   {
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlist_.lookup(itemIndex, &group);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist_.lookup(itemIndex, &group);
 
     if (!item)
     {
       return QModelIndex();
     }
 
-    return createIndex(item->row_, 0, group);
+    return createIndex(item->row_, 0, group.get());
   }
 
   //----------------------------------------------------------------
@@ -485,22 +494,13 @@ namespace yae
   QModelIndex
   PlaylistModel::makeModelIndex(int groupRow, int itemRow) const
   {
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlist_.lookup(group, groupRow, itemRow);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist_.lookup(group, groupRow, itemRow);
 
     return
-      item ? createIndex(item->row_, 0, group) :
+      item ? createIndex(item->row_, 0, group.get()) :
       group ? createIndex(group->row_, 0, &playlist_) :
       QModelIndex();
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::itemSelectionModel
-  //
-  QItemSelectionModel *
-  PlaylistModel::itemSelectionModel()
-  {
-    return &sel_;
   }
 
   //----------------------------------------------------------------
@@ -509,8 +509,10 @@ namespace yae
   void
   PlaylistModel::setCurrentItem(int groupRow, int itemRow, int cmd)
   {
-    QModelIndex index = makeModelIndex(groupRow, itemRow);
-    sel_.setCurrentIndex(index, (QItemSelectionModel::SelectionFlags)cmd);
+    if (playlist_.setCurrentItem(groupRow, itemRow))
+    {
+      emit currentItemChanged(groupRow, itemRow);
+    }
   }
 
   //----------------------------------------------------------------
@@ -520,8 +522,42 @@ namespace yae
   PlaylistModel::setPlayingItem(int groupRow, int itemRow)
   {
     QModelIndex index = makeModelIndex(groupRow, itemRow);
-    sel_.setCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
     setData(index, QVariant(true), kRolePlaying);
+    setCurrentItem(groupRow, itemRow, QItemSelectionModel::ClearAndSelect);
+  }
+#if 0
+  //----------------------------------------------------------------
+  // PlaylistModel::modelIndexToRows
+  //
+  void
+  PlaylistModel::modelIndexToRows(const QModelIndex & index,
+                                  int & groupRow,
+                                  int & itemRow) const
+  {
+    const PlaylistNode * parentNode = NULL;
+    PlaylistNode * node = getNode(index, parentNode);
+
+    const PlaylistGroup * group =
+      dynamic_cast<const PlaylistGroup *>(parentNode);
+
+    if (group)
+    {
+      PlaylistItem * item = dynamic_cast<PlaylistItem *>(node);
+      groupRow = group ? group->row_ : -1;
+      itemRow = item ? item->row_ : -1;
+      return;
+    }
+
+    group = dynamic_cast<const PlaylistGroup *>(node);
+    if (group)
+    {
+      groupRow = group->row_;
+      itemRow = -1;
+      return;
+    }
+
+    groupRow = -1;
+    itemRow = -1;
   }
 
   //----------------------------------------------------------------
@@ -555,7 +591,7 @@ namespace yae
 
     emit currentItemChanged(-1, -1);
   }
-
+#endif
   //----------------------------------------------------------------
   // PlaylistModel::emitDataChanged
   //
@@ -581,4 +617,103 @@ namespace yae
     emit dataChanged(first, last, QVector<int>(1, role));
   }
 
+  //----------------------------------------------------------------
+  // PlaylistModel::callbackBeforeAddGroup
+  //
+  void
+  PlaylistModel::callbackBeforeAddGroup(void * context, int groupRow)
+  {
+    PlaylistModel * model = (PlaylistModel *)context;
+    model->observeBeforeAddGroup(groupRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::observeBeforeAddGroup
+  //
+  void
+  PlaylistModel::observeBeforeAddGroup(int groupRow)
+  {
+#if 0
+    std::cerr
+      << "FIXME: observeBeforeAddGroup, groupRow: " << groupRow
+      << std::endl;
+#endif
+    QModelIndex parent = makeModelIndex(-1, -1);
+    beginInsertRows(parent, groupRow, groupRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::callbackAfterAddGroup
+  //
+  void
+  PlaylistModel::callbackAfterAddGroup(void * context, int groupRow)
+  {
+    PlaylistModel * model = (PlaylistModel *)context;
+    model->observeAfterAddGroup(groupRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::observeAfterAddGroup
+  //
+  void
+  PlaylistModel::observeAfterAddGroup(int groupRow)
+  {
+#if 0
+    std::cerr
+      << "FIXME: observeAfterAddGroup, groupRow: " << groupRow
+      << std::endl;
+#endif
+    endInsertRows();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::callbackBeforeAddItem
+  //
+  void
+  PlaylistModel::callbackBeforeAddItem(void * ctxt, int groupRow, int itemRow)
+  {
+    PlaylistModel * model = (PlaylistModel *)ctxt;
+    model->observeBeforeAddItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::observeBeforeAddItem
+  //
+  void
+  PlaylistModel::observeBeforeAddItem(int groupRow, int itemRow)
+  {
+#if 0
+    std::cerr
+      << "FIXME: observeBeforeAddItem, groupRow: " << groupRow
+      << ", itemRow: " << itemRow
+      << std::endl;
+#endif
+    QModelIndex parent = makeModelIndex(groupRow, -1);
+    beginInsertRows(parent, itemRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::callbackAfterAddItem
+  //
+  void
+  PlaylistModel::callbackAfterAddItem(void * ctxt, int groupRow, int itemRow)
+  {
+    PlaylistModel * model = (PlaylistModel *)ctxt;
+    model->observeAfterAddItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::observeAfterAddItem
+  //
+  void
+  PlaylistModel::observeAfterAddItem(int groupRow, int itemRow)
+  {
+#if 0
+    std::cerr
+      << "FIXME: observeAfterAddItem, groupRow: " << groupRow
+      << ", itemRow: " << itemRow
+      << std::endl;
+#endif
+    endInsertRows();
+  }
 }

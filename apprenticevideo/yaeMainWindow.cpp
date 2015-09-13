@@ -445,7 +445,7 @@ namespace yae
     ThumbnailProvider * imageProvider =
       new ThumbnailProvider(readerPrototype_, playlistModel_.playlist());
     qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
-                               imageProvider);
+                                imageProvider);
 
     // set playlist model:
     QQmlContext * qmlContext = playerWidget_->rootContext();
@@ -1035,7 +1035,7 @@ namespace yae
     {
       // look for a matching bookmark, resume playback if a bookmark exist:
       PlaylistBookmark bookmark;
-      const PlaylistItem * found = NULL;
+      TPlaylistItemPtr found;
 
       for (std::list<BookmarkHashInfo>::const_iterator i = hashInfo.begin();
            !found && i != hashInfo.end(); ++i)
@@ -1057,8 +1057,8 @@ namespace yae
           if (itemHash == bookmark.itemHash_)
           {
             found = playlistModel_.lookup(bookmark.groupHash_,
-                                            bookmark.itemHash_,
-                                            &bookmark.itemIndex_);
+                                          bookmark.itemHash_,
+                                          &bookmark.itemIndex_);
             if (found->excluded_)
             {
               found = NULL;
@@ -1729,7 +1729,7 @@ namespace yae
 
     while (true)
     {
-      PlaylistGroup * group = playlistModel_.lookupGroup(itemIndex);
+      TPlaylistGroupPtr group = playlistModel_.lookupGroup(itemIndex);
       std::size_t groupSize = group ? group->items_.size() : 0;
       if (!groupSize)
       {
@@ -1753,7 +1753,7 @@ namespace yae
       // check whether the item hash matches a group item:
       for (std::size_t i = 0; i < groupSize; i++)
       {
-        const PlaylistItem & item = group->items_[i];
+        const PlaylistItem & item = *(group->items_[i]);
         if (item.excluded_ || item.hash_ != bookmark.itemHash_)
         {
           continue;
@@ -1827,8 +1827,8 @@ namespace yae
   MainWindow::bookmarksRemoveNowPlaying()
   {
     std::size_t itemIndex = playlistModel_.playingItem();
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
     if (!item || !group)
     {
       return;
@@ -2680,7 +2680,7 @@ namespace yae
   {
     playbackStop();
 
-    PlaylistItem * item = playlistModel_.lookup(index);
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (!item)
     {
       canvas_->clear();
@@ -2922,18 +2922,19 @@ namespace yae
     std::size_t nNext = playlistModel_.countItemsAhead();
     std::size_t iNext = playlistModel_.closestItem(itemIndex + 1);
 
-    PlaylistItem * next =
-      nNext && iNext > itemIndex ? playlistModel_.lookup(iNext) : NULL;
+    TPlaylistItemPtr next((nNext && iNext > itemIndex) ?
+                          playlistModel_.lookup(iNext) :
+                          NULL);
 
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
 
     if (item && group)
     {
-      PlaylistGroup * nextGroup = NULL;
+      TPlaylistGroupPtr nextGroup;
       playlistModel_.closestItem(itemIndex + 1,
-                                   Playlist::kAhead,
-                                   &nextGroup);
+                                 Playlist::kAhead,
+                                 &nextGroup);
 
       if (group != nextGroup)
       {
@@ -2998,7 +2999,7 @@ namespace yae
     actionPlay->setEnabled(false);
 
     std::size_t current = playlistModel_.playingItem();
-    PlaylistItem * item = NULL;
+    TPlaylistItemPtr item;
     bool ok = false;
 
     while ((item = playlistModel_.lookup(current)))
@@ -3017,8 +3018,7 @@ namespace yae
       }
       else
       {
-        current = playlistModel_.closestItem(current - 1,
-                                               Playlist::kBehind);
+        current = playlistModel_.closestItem(current - 1, Playlist::kBehind);
       }
 
       playlistModel_.setPlayingItem(current);
@@ -3052,11 +3052,13 @@ namespace yae
       playlistModel_.closestItem(index - 1, Playlist::kBehind) :
       index;
 
-    PlaylistItem * prev =
-      nPrev && iPrev < index ? playlistModel_.lookup(iPrev) : NULL;
+    TPlaylistItemPtr prev((nPrev && iPrev < index) ?
+                          playlistModel_.lookup(iPrev) :
+                          NULL);
 
-    PlaylistItem * next =
-      nNext && iNext > index ? playlistModel_.lookup(iNext) : NULL;
+    TPlaylistItemPtr next((nNext && iNext > index) ?
+                          playlistModel_.lookup(iNext) :
+                          NULL);
 
     actionPrev->setEnabled(iPrev < index);
     actionNext->setEnabled(iNext > index);
@@ -3112,7 +3114,7 @@ namespace yae
 
     std::size_t index = playlistModel_.playingItem();
     std::size_t iPrev = playlistModel_.closestItem(index - 1,
-                                                     Playlist::kBehind);
+                                                   Playlist::kBehind);
     if (iPrev < index)
     {
       playlistModel_.setPlayingItem(iPrev);
@@ -3167,8 +3169,8 @@ namespace yae
     }
 
     std::size_t itemIndex = playlistModel_.playingItem();
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistModel_.lookup(itemIndex, &group);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
 
     if (group && item)
     {
@@ -3195,7 +3197,7 @@ namespace yae
     actionPlay->setEnabled(false);
 
     playlistModel_.setPlayingItem(bookmark.itemIndex_);
-    PlaylistItem * item = playlistModel_.lookup(bookmark.itemIndex_);
+    TPlaylistItemPtr item = playlistModel_.lookup(bookmark.itemIndex_);
 
     if (item)
     {
@@ -4508,8 +4510,8 @@ namespace yae
   void
   MainWindow::selectAudioTrack(IReader * reader, std::size_t audioTrackIndex)
   {
-     reader->selectAudioTrack(audioTrackIndex);
-     adjustAudioTraitsOverride(reader);
+    reader->selectAudioTrack(audioTrackIndex);
+    adjustAudioTraitsOverride(reader);
   }
 
   //----------------------------------------------------------------
@@ -4534,35 +4536,35 @@ namespace yae
   unsigned int
   MainWindow::adjustAudioTraitsOverride(IReader * reader)
   {
-     unsigned int numDevices = audioRenderer_->countAvailableDevices();
-     unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
-     if (deviceIndex >= numDevices)
-     {
-       deviceIndex = audioRenderer_->getDefaultDeviceIndex();
-       audioRenderer_->getDeviceName(deviceIndex, audioDevice_);
-     }
+    unsigned int numDevices = audioRenderer_->countAvailableDevices();
+    unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
+    if (deviceIndex >= numDevices)
+    {
+      deviceIndex = audioRenderer_->getDefaultDeviceIndex();
+      audioRenderer_->getDeviceName(deviceIndex, audioDevice_);
+    }
 
-     AudioTraits native;
-     if (reader->getAudioTraits(native))
-     {
-       if (getNumberOfChannels(native.channelLayout_) > 2 &&
-           actionDownmixToStereo->isChecked())
-       {
-         native.channelLayout_ = kAudioStereo;
-       }
+    AudioTraits native;
+    if (reader->getAudioTraits(native))
+    {
+      if (getNumberOfChannels(native.channelLayout_) > 2 &&
+          actionDownmixToStereo->isChecked())
+      {
+        native.channelLayout_ = kAudioStereo;
+      }
 
-       AudioTraits supported;
-       audioRenderer_->match(deviceIndex, native, supported);
+      AudioTraits supported;
+      audioRenderer_->match(deviceIndex, native, supported);
 
 #if 0
-       std::cerr << "supported: " << supported.channelLayout_ << std::endl
-                 << "required:  " << native.channelLayout_ << std::endl;
+      std::cerr << "supported: " << supported.channelLayout_ << std::endl
+                << "required:  " << native.channelLayout_ << std::endl;
 #endif
 
-       reader->setAudioTraitsOverride(supported);
-     }
+      reader->setAudioTraitsOverride(supported);
+    }
 
-     return deviceIndex;
+    return deviceIndex;
   }
 
   //----------------------------------------------------------------

@@ -104,21 +104,26 @@ namespace yae
     inline std::size_t countItemsBehind() const
     { return playlist_.countItemsBehind(); }
 
-    inline PlaylistGroup * lookupGroup(std::size_t index) const
+    inline TPlaylistGroupPtr lookupGroup(std::size_t index) const
     { return playlist_.lookupGroup(index); }
 
-    inline PlaylistItem * lookup(std::size_t index,
-                                 PlaylistGroup ** group = NULL) const
-    { return playlist_.lookup(index, group); }
+    inline TPlaylistItemPtr
+    lookup(std::size_t index, TPlaylistGroupPtr * group = NULL) const
+    {
+      return playlist_.lookup(index, group);
+    }
 
-    inline PlaylistGroup * lookupGroup(const std::string & groupHash) const
-    { return playlist_.lookupGroup(groupHash); }
+    inline TPlaylistGroupPtr
+    lookupGroup(const std::string & groupHash) const
+    {
+      return playlist_.lookupGroup(groupHash);
+    }
 
-    inline PlaylistItem *
+    inline TPlaylistItemPtr
     lookup(const std::string & groupHash,
            const std::string & itemHash,
            std::size_t * returnItemIndex = NULL,
-           PlaylistGroup ** returnGroup = NULL) const
+           TPlaylistGroupPtr * returnGroup = NULL) const
     {
       return playlist_.lookup(groupHash,
                               itemHash,
@@ -126,7 +131,7 @@ namespace yae
                               returnGroup);
     }
 
-    inline PlaylistGroup *
+    inline TPlaylistGroupPtr
     closestGroup(std::size_t itemIndex,
                  Playlist::TDirection where = Playlist::kAhead) const
     {
@@ -136,11 +141,12 @@ namespace yae
     inline std::size_t
     closestItem(std::size_t itemIndex,
                 Playlist::TDirection where = Playlist::kAhead,
-                PlaylistGroup ** group = NULL) const
+                TPlaylistGroupPtr * group = NULL) const
     {
       return playlist_.closestItem(itemIndex, where, group);
     }
 
+    // optionally pass back a list of hashes for the added items:
     void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
@@ -161,14 +167,9 @@ namespace yae
 
     QModelIndex makeModelIndex(int groupRow, int itemRow) const;
 
-    Q_INVOKABLE QItemSelectionModel * itemSelectionModel();
-
     Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow, int selCmd);
 
     Q_INVOKABLE void setPlayingItem(int groupRow, int itemRow);
-
-    void currentIndexChanged(const QModelIndex & current,
-                             const QModelIndex & prev);
 
   signals:
     void itemCountChanged();
@@ -182,14 +183,30 @@ namespace yae
     void currentItemChanged(int groupRow, int itemRow);
 
   protected:
+#if 0
+    void modelIndexToRows(const QModelIndex & index,
+                          int & groupRow,
+                          int & itemRow) const;
+#endif
     void emitDataChanged(Roles role, const QModelIndex & index);
 
     void emitDataChanged(Roles role,
                          const QModelIndex & first,
                          const QModelIndex & last);
 
+    static void callbackBeforeAddGroup(void * context, int groupRow);
+    void observeBeforeAddGroup(int groupRow);
+
+    static void callbackAfterAddGroup(void * context, int groupRow);
+    void observeAfterAddGroup(int groupRow);
+
+    static void callbackBeforeAddItem(void * ctxt, int groupRow, int itemRow);
+    void observeBeforeAddItem(int groupRow, int itemRow);
+
+    static void callbackAfterAddItem(void * ctxt, int groupRow, int itemRow);
+    void observeAfterAddItem(int groupRow, int itemRow);
+
     mutable Playlist playlist_;
-    QItemSelectionModel sel_;
   };
 }
 
