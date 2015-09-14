@@ -18,6 +18,7 @@ Item
   property var separator_color: "#7f7f7f7f"
   property var footer_fg: "#7fffffff"
   property var highlight_color: "#3fff0000"
+  property var selection_color: "#ff0000"
   property var label_bg: "#7f7f7f7f"
   property var label_fg: "white"
 
@@ -159,9 +160,9 @@ Item
     return playlistView.contentY + pt.y
   }
 
-  function set_current_item(groupRow, itemRow)
+  function sync_current_item(groupRow, itemRow)
   {
-    // console.log("set_current_item(" + groupRow + ", " + itemRow + ")");
+    // console.log("sync_current_item(" + groupRow + ", " + itemRow + ")");
     var groupContainer;
     var gridView;
 
@@ -183,7 +184,7 @@ Item
     {
       gridView.currentIndex = itemRow;
       /*
-      console.log("set_current_item(" + groupRow + ", " + itemRow + ") = " +
+      console.log("sync_current_item(" + groupRow + ", " + itemRow + ") = " +
                   (gridView.currentItem ?
                    gridView.currentItem.label :
                    "null"));
@@ -200,6 +201,19 @@ Item
       calc_delta_scroll_to(found.item);
     }
     */
+  }
+
+  function set_current_item(groupRow, itemRow, selectionFlags)
+  {
+    sync_current_item(groupRow, itemRow);
+    var found = lookup_current_gridview_and_item();
+    if (!found.item)
+    {
+      return;
+    }
+
+    // yae_qml_utils.dump_object_tree(found.item);
+    found.item.set_selected(selectionFlags);
   }
 
   function calc_delta_scroll_to(item)
@@ -261,9 +275,12 @@ Item
 
     funcMoveCursor(current);
 
+    set_current_item(playlistView.currentIndex,
+                     current.gridView.currentIndex,
+                     selectionFlags);
+
     yae_playlist_model.setCurrentItem(playlistView.currentIndex,
-                                      current.gridView.currentIndex,
-                                      selectionFlags);
+                                      current.gridView.currentIndex);
   }
 
   function move_cursor_left(selectionFlags)
@@ -368,6 +385,22 @@ Item
                                       current.gridView.currentIndex);
   }
 
+  function get_selection_flags(event)
+  {
+    var selectionFlags = ItemSelectionModel.ClearAndSelect;
+
+    if (event.modifiers & Qt.ControlModifier)
+    {
+      selectionFlags = ItemSelectionModel.ToggleCurrent;
+    }
+    else if (event.modifiers & Qt.ShiftModifier)
+    {
+      selectionFlags = ItemSelectionModel.SelectCurrent;
+    }
+
+    return selectionFlags;
+  }
+
   function handle_event_on_key_pressed(event)
   {
     // console.log("handle_event_on_key_pressed");
@@ -384,18 +417,9 @@ Item
         event.key == Qt.Key_Home ||
         event.key == Qt.Key_End)
     {
-      var selectionFlags = ItemSelectionModel.ClearAndSelect;
+      var selectionFlags = get_selection_flags(event);
 
       // FIXME: this won't work correctly for select/unselect:
-      if (event.modifiers & Qt.ControlModifier)
-      {
-        selectionFlags = ItemSelectionModel.ToggleCurrent;
-      }
-      else if (event.modifiers & Qt.ShiftModifier)
-      {
-        selectionFlags = ItemSelectionModel.SelectCurrent;
-      }
-
       if (event.key == Qt.Key_Left)
       {
         move_cursor_left(selectionFlags);
@@ -460,7 +484,7 @@ Item
       target: yae_playlist_model
       onCurrentItemChanged: {
         // console.log("onCurrentItemChanged: " + groupRow + ", " + itemRow);
-        set_current_item(groupRow, itemRow);
+        sync_current_item(groupRow, itemRow);
         var found = lookup_current_gridview_and_item();
         scroll_to(found.item);
       }
@@ -514,7 +538,7 @@ Item
         color: footer_fg
       }
 
-      // YDebug { id: ydebug; z: 3; container: playlistView; }
+      // YDebug { id: ydebug; z: 4; container: playlistView; }
       // onYChanged: { ydebug.refresh(); }
     }
   }
@@ -575,13 +599,13 @@ Item
           elide: "ElideMiddle"
           font.bold: true
           font.pixelSize: groupItem.height * 0.55
-          text: label
+          text: (model.label || "")
           color: header_fg
           style: Text.Outline;
           styleColor: "black";
         }
 
-        // YDebug { id: ydebug; z: 3; container: playlistView; }
+        // YDebug { id: ydebug; z: 4; container: playlistView; }
         // onYChanged: { ydebug.refresh(); }
       }
 
@@ -644,7 +668,7 @@ Item
       {
         id: gridViewHighlight
 
-        Rectangle
+        Item
         {
           visible: groupItemsGridView.currentItem != null
           x: (groupItemsGridView.currentItem ?
@@ -653,14 +677,22 @@ Item
           y: (groupItemsGridView.currentItem ?
               groupItemsGridView.currentItem.y :
               0)
-          z: 2
+          z: 3
           width: groupItemsGridView.cellWidth;
           height: groupItemsGridView.cellHeight
-          color: highlight_color;
-          anchors.margins: -2
+          anchors.margins: 0
 
           Behavior on x { SpringAnimation { spring: 3; damping: 0.2 } }
           Behavior on y { SpringAnimation { spring: 3; damping: 0.2 } }
+
+          Rectangle
+          {
+            id: overlay
+            objectName: "overlay"
+            anchors.fill: parent
+            anchors.margins: 0
+            color: highlight_color;
+          }
         }
       }
 
@@ -680,14 +712,6 @@ Item
         highlightFollowsCurrentItem: false
         currentIndex: -1
 
-        /*
-        // for debugging:
-        onCurrentIndexChanged: {
-          console.log("FIXME: GridView, currentIndex changed: " +
-                      currentIndex);
-        }
-        */
-
         model: DelegateModel
         {
           id: modelDelegate
@@ -703,7 +727,24 @@ Item
 
             property var label: model.label
 
-            // YDebug { id: ydebug; z: 3; container: playlistView; }
+            function set_selected(selectionFlags)
+            {
+              if (selectionFlags == ItemSelectionModel.ToggleCurrent)
+              {
+                model.selected = !model.selected;
+              }
+              else if (selectionFlags == ItemSelectionModel.SelectCurrent)
+              {
+                model.selected = true;
+              }
+              else
+              {
+                yae_playlist_model.unselectAll();
+                model.selected = true;
+              }
+            }
+
+            // YDebug { id: ydebug; z: 4; container: playlistView; }
             // onYChanged: { ydebug.refresh(); }
 
             Rectangle
@@ -732,7 +773,7 @@ Item
                 //
                 source: (model.thumbnail || "")
 
-                opacity: 1.0
+                opacity: 1
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectFit
               }
@@ -744,8 +785,8 @@ Item
 
                 color: label_bg
                 anchors.margins: 0;
-                anchors.leftMargin: -3;
-                anchors.rightMargin: -3;
+                anchors.leftMargin: -parent.height * 0.02;
+                anchors.rightMargin: -parent.height * 0.02;
                 anchors.bottom: labelTag.bottom
                 anchors.left: labelTag.left
                 width: (labelTag.contentWidth -
@@ -762,13 +803,13 @@ Item
 
                 verticalAlignment: Text.AlignBottom
                 anchors.fill: parent
-                anchors.margins: 5
+                anchors.margins: parent.height * 0.05
                 font.bold: true
                 font.pixelSize: (calc_title_height(24.0, playlistView.width) *
                                  0.45);
                 wrapMode: "Wrap"
                 elide: "ElideMiddle"
-                text: model.label
+                text: (model.label || "")
                 color: label_fg;
 
                 style: Text.Outline;
@@ -792,8 +833,8 @@ Item
 
                 color: label_bg
                 anchors.margins: 0;
-                anchors.leftMargin: -3;
-                anchors.rightMargin: -3;
+                anchors.leftMargin: -parent.height * 0.02;
+                anchors.rightMargin: -parent.height * 0.02;
                 anchors.fill: nowPlayingTag
                 radius: 3
               }
@@ -815,7 +856,7 @@ Item
 
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 5
+                anchors.margins: parent.height * 0.05
                 font.bold: true
                 font.pixelSize: (calc_title_height(24.0, playlistView.width) *
                                  0.30);
@@ -833,22 +874,49 @@ Item
                 // preventStealing: true
 
                 onClicked: {
+                  // FIXME: this won't work correctly for select/unselect:
+                  var selectionFlags = get_selection_flags(mouse);
+
                   // console.log("Playlist item: CLICKED!")
                   set_current_item(groupItemsGridView.model.rootIndex.row,
-                                   model.index);
+                                   model.index,
+                                   selectionFlags);
                   mouse.accepted = true;
                 }
 
                 onDoubleClicked: {
                   // console.log("Playlist item: DOUBLE CLICKED!")
-                  set_current_item(groupItemsGridView.model.rootIndex.row,
-                                   model.index);
+                  sync_current_item(groupItemsGridView.model.rootIndex.row,
+                                    model.index);
                   model.playing = true;
                   mouse.accepted = true;
                 }
               }
-
             }
+
+            Item
+            {
+              id: selectionDeco
+              objectName: "selectionDeco"
+              z: 2
+
+              anchors.fill: parent
+              anchors.margins: 0
+              visible: (model.selected || false)
+
+              Rectangle
+              {
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: parent.height * 0.02
+                anchors.rightMargin: parent.height * 0.02
+                anchors.bottomMargin: height
+                height: parent.height * 0.02;
+                color: selection_color
+              }
+            }
+
 
           }
         }

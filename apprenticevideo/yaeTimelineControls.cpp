@@ -286,9 +286,11 @@ namespace yae
                               frameNumberSeparator_);
     updateAuxPlayhead(ts);
 
-    ts = getTimeStamp(timelineStart_ + timelineDuration_,
-                      frameRate_,
-                      frameNumberSeparator_);
+    ts =
+      unknownDuration_ ? kUnknownDuration :
+      getTimeStamp(timelineStart_ + timelineDuration_,
+                   frameRate_,
+                   frameNumberSeparator_);
     updateAuxDuration(ts);
 
     updateMarkerPlayhead(0.0);

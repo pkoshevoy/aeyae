@@ -14,6 +14,7 @@
 #include <vector>
 
 // Qt includes:
+#include <QObject>
 #include <QString>
 
 // yae includes:
@@ -163,8 +164,12 @@ namespace yae
   //----------------------------------------------------------------
   // Playlist
   //
-  struct Playlist : public PlaylistNode
+  class Playlist : public QObject,
+                   public PlaylistNode
   {
+    Q_OBJECT;
+
+  public:
     Playlist();
 
     // use this to add items to the playlist;
@@ -173,17 +178,7 @@ namespace yae
     void add(const std::list<QString> & playlist,
 
              // optionally pass back a list of hashes for the added items:
-             std::list<BookmarkHashInfo> * returnAddedHashes = NULL,
-
-             // optionally notify an observer about newly added groups:
-             TObservePlaylistGroup callbackBeforeAddingGroup = NULL,
-             TObservePlaylistGroup callbackAfterAddingGroup = NULL,
-             void * contextAddGroup = NULL,
-
-             // optionally notify an observer about newly added items:
-             TObservePlaylistItem callbackBeforeAddingItem = NULL,
-             TObservePlaylistItem callbackAfterAddingItem = NULL,
-             void * contextAddItem = NULL);
+             std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
     // return index of the playing item:
     std::size_t playingItem() const;
@@ -235,7 +230,9 @@ namespace yae
 
     // selection set management:
     void selectAll();
+    void unselectAll();
     void selectGroup(PlaylistGroup & group);
+    void unselectGroup(PlaylistGroup & group);
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
@@ -251,12 +248,29 @@ namespace yae
     { return numShownGroups_; }
 
     // returns true if current index has changed:
+    bool setCurrentItem(std::size_t index);
     bool setCurrentItem(int groupRow, int itemRow);
+
+    // return true if selected status has changed:
+    bool setSelectedItem(std::size_t index);
+    bool setSelectedItem(PlaylistItem & item, bool selected);
+
+  signals:
+    void addingGroup(int groupRow);
+    void addedGroup(int groupRow);
+
+    void addingItem(int groupRow, int itemRow);
+    void addedItem(int groupRow, int itemRow);
+
+    void playingChanged(std::size_t now, std::size_t prev);
+    void currentChanged(int groupRow, int itemRow);
+    void selectedChanged(int groupRow, int itemRow);
 
   protected:
     // helpers:
     bool applyFilter();
     void updateOffsets();
+    void setPlayingItem(std::size_t index, const TPlaylistItemPtr & prev);
 
     // a playlist tree:
     TPlaylistTree tree_;

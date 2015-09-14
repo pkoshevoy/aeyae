@@ -11,7 +11,6 @@
 
 // Qt includes:
 #include <QAbstractItemModel>
-#include <QItemSelectionModel>
 
 // local includes:
 #include "yaePlaylist.h"
@@ -159,17 +158,28 @@ namespace yae
 
     // selection set management:
     void selectAll();
+    void unselectAll();
 
     void removeSelected();
     void removeItems(std::size_t groupIndex, std::size_t itemIndex);
 
+  public:
     QModelIndex modelIndexForItem(std::size_t itemIndex) const;
-
     QModelIndex makeModelIndex(int groupRow, int itemRow) const;
 
-    Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow, int selCmd);
-
+    Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow);
     Q_INVOKABLE void setPlayingItem(int groupRow, int itemRow);
+
+  protected slots:
+    void onAddingGroup(int groupRow);
+    void onAddedGroup(int groupRow);
+
+    void onAddingItem(int groupRow, int itemRow);
+    void onAddedItem(int groupRow, int itemRow);
+
+    void onPlayingChanged(std::size_t now, std::size_t prev);
+    void onCurrentChanged(int groupRow, int itemRow);
+    void onSelectedChanged(int groupRow, int itemRow);
 
   signals:
     void itemCountChanged();
@@ -194,17 +204,6 @@ namespace yae
                          const QModelIndex & first,
                          const QModelIndex & last);
 
-    static void callbackBeforeAddGroup(void * context, int groupRow);
-    void observeBeforeAddGroup(int groupRow);
-
-    static void callbackAfterAddGroup(void * context, int groupRow);
-    void observeAfterAddGroup(int groupRow);
-
-    static void callbackBeforeAddItem(void * ctxt, int groupRow, int itemRow);
-    void observeBeforeAddItem(int groupRow, int itemRow);
-
-    static void callbackAfterAddItem(void * ctxt, int groupRow, int itemRow);
-    void observeAfterAddItem(int groupRow, int itemRow);
 
     mutable Playlist playlist_;
   };
