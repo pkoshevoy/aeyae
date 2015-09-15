@@ -1016,222 +1016,109 @@ namespace yae
     std::cerr << "Playlist::removeSelected" << std::endl;
 #endif
 
-    std::size_t oldIndex = 0;
-    std::size_t newIndex = 0;
-    std::size_t newPlaying = playing_;
-    std::size_t currentNow = current_;
+    int playingNow = playing_;
+    int currentNow = current_;
     bool playingRemoved = false;
 
     // try to keep track of the original playing item,
     // its index may change:
     std::weak_ptr<PlaylistItem> playingOld = lookup(playing_);
 
-    for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
-         i != groups_.end(); )
+    for (int groupRow = groups_.size() - 1; groupRow >= 0; groupRow--)
     {
-      PlaylistGroup & group = *(*i);
+      PlaylistGroup & group = *(groups_[groupRow]);
+      YAE_ASSERT(groupRow == group.row_);
 
       if (group.excluded_)
       {
-        std::size_t groupSize = group.items_.size();
-        oldIndex += groupSize;
-        newIndex += groupSize;
-        ++i;
         continue;
       }
 
-      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
-           j != group.items_.end(); oldIndex++)
+      for (int itemRow = group.items_.size() - 1; itemRow >= 0; itemRow--)
       {
-        PlaylistItem & item = *(*j);
+        PlaylistItem & item = *(group.items_[itemRow]);
+        YAE_ASSERT(itemRow == item.row_);
 
         if (item.excluded_ || !item.selected_)
         {
-          ++j;
-          newIndex++;
           continue;
         }
 
-        if (oldIndex < playing_)
-        {
-          // adjust the playing index:
-          newPlaying--;
-        }
-        else if (oldIndex == playing_)
-        {
-          // playing item has changed:
-          playingRemoved = true;
-        }
-
-        currentNow = newIndex;
-
-        // 1. remove the item from the tree:
-        std::list<PlaylistKey> keyPath = group.keyPath_;
-        keyPath.push_back(item.key_);
-        tree_.remove(keyPath);
-
-        // 2. remove the item from the group:
-        j = group.items_.erase(j);
+        // remove one item:
+        removeItem(group, itemRow, playingNow, currentNow);
       }
 
       // if the group is empty and has a key path, remove it:
-      if (!group.items_.empty() || group.keyPath_.empty() || group.excluded_)
+      if (group.items_.empty() && !group.keyPath_.empty() && !group.excluded_)
       {
-        ++i;
-        continue;
+        emit removingGroup(groupRow);
+
+        std::vector<TPlaylistGroupPtr>::iterator
+          iter = groups_.begin() + groupRow;
+        groups_.erase(iter);
+
+        emit removedGroup(groupRow);
       }
-
-      i = groups_.erase(i);
     }
 
-    updateOffsets();
-
-    if (currentNow >= numItems_)
-    {
-      currentNow = numItems_ ? numItems_ - 1 : 0;
-    }
-
-    // must account for the excluded items:
-    currentNow = closestItem(currentNow, kBehind);
-
-    if (currentNow < numItems_)
-    {
-      setSelectedItem(currentNow);
-    }
-
-    if (playingRemoved)
-    {
-      setPlayingItem(currentNow, playingOld.lock());
-    }
-    else
-    {
-      setPlayingItem(newPlaying, playingOld.lock());
-    }
+    removeItemsFinalize(playingOld.lock(), playingNow, currentNow);
   }
 
   //----------------------------------------------------------------
   // Playlist::removeItems
   //
   void
-  Playlist::removeItems(std::size_t groupIndex, std::size_t itemIndex)
+  Playlist::removeItems(int groupRow, int itemRow)
   {
-    bool playingRemoved = false;
-    std::size_t newPlaying = playing_;
-    std::size_t currentNow = current_;
+#if 0
+    std::cerr << "Playlist::removeItems" << std::endl;
+#endif
 
-    PlaylistGroup & group = *(groups_[groupIndex]);
-    if (group.excluded_)
+    int playingNow = playing_;
+    int currentNow = current_;
+
+    TPlaylistGroupPtr groupPtr;
+    TPlaylistItemPtr itemPtr = lookup(groupPtr, groupRow, itemRow);
+
+    if (!groupPtr || (itemRow < numItems_ && !itemPtr))
     {
       YAE_ASSERT(false);
       return;
     }
 
+    PlaylistGroup & group = *groupPtr;
+
     // try to keep track of the original playing item,
     // its index may change:
     std::weak_ptr<PlaylistItem> playingOld = lookup(playing_);
 
-    if (itemIndex < numItems_)
+    if (itemPtr)
     {
       // remove one item:
-      std::vector<TPlaylistItemPtr>::iterator iter =
-        group.items_.begin() + (itemIndex - group.offset_);
-
-      // remove item from the tree:
-      {
-        PlaylistItem & item = *(*iter);
-        std::list<PlaylistKey> keyPath = group.keyPath_;
-        keyPath.push_back(item.key_);
-        tree_.remove(keyPath);
-      }
-
-      if (itemIndex < playing_)
-      {
-        // adjust the playing index:
-        newPlaying = playing_ - 1;
-      }
-      else if (itemIndex == playing_)
-      {
-        // playing item has changed:
-        playingRemoved = true;
-        newPlaying = playing_;
-      }
-
-      if (itemIndex < currentNow)
-      {
-        currentNow--;
-      }
-
-      group.items_.erase(iter);
+      removeItem(group, itemRow, playingNow, currentNow);
     }
     else
     {
       // remove entire group:
-      for (std::vector<TPlaylistItemPtr>::iterator iter = group.items_.begin();
-           iter != group.items_.end(); ++iter)
+      for (int i = group.items_.size() - 1; i >= 0; i--)
       {
-        // remove item from the tree:
-        PlaylistItem & item = *(*iter);
-        std::list<PlaylistKey> keyPath = group.keyPath_;
-        keyPath.push_back(item.key_);
-        tree_.remove(keyPath);
+        removeItem(group, i, playingNow, currentNow);
       }
-
-      std::size_t groupSize = group.items_.size();
-      std::size_t groupEnd = group.offset_ + groupSize;
-      if (groupEnd < playing_)
-      {
-        // adjust the playing index:
-        newPlaying = playing_ - groupSize;
-      }
-      else if (group.offset_ <= playing_)
-      {
-        // playing item has changed:
-        playingRemoved = true;
-        newPlaying = group.offset_;
-      }
-
-      if (groupEnd < currentNow)
-      {
-        currentNow -= groupSize;
-      }
-      else if (group.offset_ <= currentNow)
-      {
-        currentNow = group.offset_;
-      }
-
-      group.items_.clear();
     }
 
     // if the group is empty and has a key path, remove it:
     if (group.items_.empty() && !group.keyPath_.empty())
     {
-      std::vector<TPlaylistGroupPtr>::iterator
-        iter = groups_.begin() + groupIndex;
-      groups_.erase(iter);
+      int groupRow = group.row_;
+      emit removingGroup(groupRow);
+
+      std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin() + groupRow;
+      groups_.erase(i);
+
+      emit removedGroup(groupRow);
     }
 
-    updateOffsets();
-
-    if (newPlaying >= numItems_)
-    {
-      newPlaying = numItems_ ? numItems_ - 1 : 0;
-    }
-
-    if (currentNow >= numItems_)
-    {
-      currentNow = numItems_ ? numItems_ - 1 : 0;
-    }
-
-    // must account for the excluded items:
-    newPlaying = closestItem(newPlaying, kBehind);
-    currentNow = closestItem(currentNow, kBehind);
-
-    if (currentNow < numItems_)
-    {
-      setSelectedItem(currentNow);
-    }
-
-    setPlayingItem(newPlaying, playingOld.lock());
+    removeItemsFinalize(playingOld.lock(), playingNow, currentNow);
   }
 
   //----------------------------------------------------------------
@@ -1563,6 +1450,7 @@ namespace yae
     {
       PlaylistGroup & group = *(*i);
       group.offset_ = offset;
+      group.row_ = i - groups_.begin();
 
       if (!group.excluded_)
       {
@@ -1573,6 +1461,7 @@ namespace yae
            j != group.items_.end(); ++j)
       {
         PlaylistItem & item = *(*j);
+        item.row_ = j - group.items_.begin();
 
         if (!item.excluded_)
         {
@@ -1604,11 +1493,81 @@ namespace yae
       indexOld += prev->row_;
     }
 
-
     playing_ = (index < numItems_) ? index : numItems_;
     emit playingChanged(playing_, indexOld);
 
     setCurrentItem(playing_);
     selectItem(playing_);
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::removeItem
+  //
+  void
+  Playlist::removeItem(PlaylistGroup & group,
+                       int itemRow,
+                       int & playingNow,
+                       int & currentNow)
+  {
+    if (itemRow >= group.items_.size())
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    emit removingItem(group.row_, itemRow);
+
+    // remove one item:
+    std::vector<TPlaylistItemPtr>::iterator i = group.items_.begin() + itemRow;
+    PlaylistItem & item = *(*i);
+
+    int index = group.offset_ + itemRow;
+
+    if (index <= playingNow)
+    {
+      // adjust the playing index:
+      playingNow--;
+    }
+
+    if (index <= currentNow)
+    {
+      // adjust the current index:
+      currentNow--;
+    }
+
+    // 1. remove the item from the tree:
+    std::list<PlaylistKey> keyPath = group.keyPath_;
+    keyPath.push_back(item.key_);
+    tree_.remove(keyPath);
+
+    // 2. remove the item from the group:
+    group.items_.erase(i);
+
+    emit removedItem(group.row_, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::removeItemsFinalize
+  //
+  void
+  Playlist::removeItemsFinalize(const TPlaylistItemPtr & playingOld,
+                                int playingNow,
+                                int currentNow)
+  {
+    updateOffsets();
+
+    if (playingNow < 0)
+    {
+      playingNow = closestItem(0, kBehind);
+    }
+
+    setPlayingItem(playingNow, playingOld);
+
+    if (currentNow < 0)
+    {
+      currentNow = closestItem(0, kBehind);
+    }
+
+    setCurrentItem(currentNow);
   }
 }

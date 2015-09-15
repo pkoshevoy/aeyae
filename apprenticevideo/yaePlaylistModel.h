@@ -177,6 +177,12 @@ namespace yae
     void onAddingItem(int groupRow, int itemRow);
     void onAddedItem(int groupRow, int itemRow);
 
+    void onRemovingGroup(int groupRow);
+    void onRemovedGroup(int groupRow);
+
+    void onRemovingItem(int groupRow, int itemRow);
+    void onRemovedItem(int groupRow, int itemRow);
+
     void onPlayingChanged(std::size_t now, std::size_t prev);
     void onCurrentChanged(int groupRow, int itemRow);
     void onSelectedChanged(int groupRow, int itemRow);

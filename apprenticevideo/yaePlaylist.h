@@ -235,7 +235,7 @@ namespace yae
     void unselectGroup(PlaylistGroup & group);
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void removeSelected();
-    void removeItems(std::size_t groupIndex, std::size_t itemIndex);
+    void removeItems(int groupRow, int itemRow = -1);
 
     // accessors:
     inline const std::vector<TPlaylistGroupPtr> & groups() const
@@ -262,6 +262,12 @@ namespace yae
     void addingItem(int groupRow, int itemRow);
     void addedItem(int groupRow, int itemRow);
 
+    void removingGroup(int groupRow);
+    void removedGroup(int groupRow);
+
+    void removingItem(int groupRow, int itemRow);
+    void removedItem(int groupRow, int itemRow);
+
     void playingChanged(std::size_t now, std::size_t prev);
     void currentChanged(int groupRow, int itemRow);
     void selectedChanged(int groupRow, int itemRow);
@@ -271,6 +277,16 @@ namespace yae
     bool applyFilter();
     void updateOffsets();
     void setPlayingItem(std::size_t index, const TPlaylistItemPtr & prev);
+
+    // this exist purely for code de-duplication:
+    void removeItem(PlaylistGroup & group,
+                    int itemRow,
+                    int & playingNow,
+                    int & currentNow);
+
+    void removeItemsFinalize(const TPlaylistItemPtr & playingOld,
+                             int playingNow,
+                             int currentNow);
 
     // a playlist tree:
     TPlaylistTree tree_;

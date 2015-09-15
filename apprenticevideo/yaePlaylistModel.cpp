@@ -37,6 +37,22 @@ namespace yae
                  this, SLOT(onAddedItem(int, int)));
     YAE_ASSERT(ok);
 
+    ok = connect(&playlist_, SIGNAL(removingGroup(int)),
+                 this, SLOT(onRemovingGroup(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlist_, SIGNAL(removedGroup(int)),
+                 this, SLOT(onRemovedGroup(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlist_, SIGNAL(removingItem(int, int)),
+                 this, SLOT(onRemovingItem(int, int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlist_, SIGNAL(removedItem(int, int)),
+                 this, SLOT(onRemovedItem(int, int)));
+    YAE_ASSERT(ok);
+
     ok = connect(&playlist_, SIGNAL(playingChanged(std::size_t, std::size_t)),
                  this, SLOT(onPlayingChanged(std::size_t, std::size_t)));
     YAE_ASSERT(ok);
@@ -337,11 +353,13 @@ namespace yae
       if (role == kRolePlaying)
       {
         setPlayingItem(parentGroup->offset_ + item->row_);
+        return true;
       }
 
       if (role == kRoleSelected)
       {
         playlist_.setSelectedItem(*item, true);
+        return true;
       }
     }
 
@@ -446,8 +464,7 @@ namespace yae
   void
   PlaylistModel::removeSelected()
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
+    playlist_.removeSelected();
 
     emit itemCountChanged();
   }
@@ -458,8 +475,7 @@ namespace yae
   void
   PlaylistModel::removeItems(std::size_t groupIndex, std::size_t itemIndex)
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
+    playlist_.removeItems(groupIndex, itemIndex);
 
     emit itemCountChanged();
   }
@@ -584,6 +600,66 @@ namespace yae
       << std::endl;
 #endif
     endInsertRows();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::onRemovingGroup
+  //
+  void
+  PlaylistModel::onRemovingGroup(int groupRow)
+  {
+#if 0
+    std::cerr
+      << "PlaylistModel::onRemovingGroup, groupRow: " << groupRow
+      << std::endl;
+#endif
+    QModelIndex parent = makeModelIndex(-1, -1);
+    beginRemoveRows(parent, groupRow, groupRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::onRemovedGroup
+  //
+  void
+  PlaylistModel::onRemovedGroup(int groupRow)
+  {
+#if 0
+    std::cerr
+      << "PlaylistModel::onRemovedGroup, groupRow: " << groupRow
+      << std::endl;
+#endif
+    endRemoveRows();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::onRemovingItem
+  //
+  void
+  PlaylistModel::onRemovingItem(int groupRow, int itemRow)
+  {
+#if 0
+    std::cerr
+      << "PlaylistModel::onRemovingItem, groupRow: " << groupRow
+      << ", itemRow: " << itemRow
+      << std::endl;
+#endif
+    QModelIndex parent = makeModelIndex(groupRow, -1);
+    beginRemoveRows(parent, itemRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::onRemovedItem
+  //
+  void
+  PlaylistModel::onRemovedItem(int groupRow, int itemRow)
+  {
+#if 0
+    std::cerr
+      << "PlaylistModel::onRemovedItem, groupRow: " << groupRow
+      << ", itemRow: " << itemRow
+      << std::endl;
+#endif
+    endRemoveRows();
   }
 
   //----------------------------------------------------------------
