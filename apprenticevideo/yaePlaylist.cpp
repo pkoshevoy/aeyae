@@ -565,6 +565,8 @@ namespace yae
 
     updateOffsets();
     setPlayingItem(currentNow, playingOld.lock());
+    setCurrentItem(currentNow);
+    selectItem(currentNow);
 
 #if 0
     dump(*this, "Playlist::add:\n");
@@ -864,6 +866,9 @@ namespace yae
 
     TPlaylistItemPtr prev = lookup(playing_);
     setPlayingItem(index, prev);
+
+    setCurrentItem(playing_);
+    selectItem(playing_);
   }
 
   //----------------------------------------------------------------
@@ -1494,10 +1499,12 @@ namespace yae
     }
 
     playing_ = (index < numItems_) ? index : numItems_;
-    emit playingChanged(playing_, indexOld);
 
-    setCurrentItem(playing_);
-    selectItem(playing_);
+    TPlaylistItemPtr playingNow = lookup(playing_);
+    if (playingNow != prev)
+    {
+      emit playingChanged(playing_, indexOld);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1523,13 +1530,13 @@ namespace yae
 
     int index = group.offset_ + itemRow;
 
-    if (index <= playingNow)
+    if (index < playingNow)
     {
       // adjust the playing index:
       playingNow--;
     }
 
-    if (index <= currentNow)
+    if (index < currentNow)
     {
       // adjust the current index:
       currentNow--;
@@ -1556,18 +1563,16 @@ namespace yae
   {
     updateOffsets();
 
-    if (playingNow < 0)
-    {
-      playingNow = closestItem(0, kBehind);
-    }
+    int lastIndex = (int)numItems_ - 1;
+
+    playingNow = std::max<int>(0, std::min<int>(playingNow, lastIndex));
+    currentNow = std::max<int>(0, std::min<int>(currentNow, lastIndex));
+
+    playingNow = closestItem(playingNow, kBehind);
+    currentNow = closestItem(currentNow, kBehind);
 
     setPlayingItem(playingNow, playingOld);
-
-    if (currentNow < 0)
-    {
-      currentNow = closestItem(0, kBehind);
-    }
-
     setCurrentItem(currentNow);
+    selectItem(currentNow);
   }
 }
