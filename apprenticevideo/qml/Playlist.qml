@@ -47,6 +47,12 @@ Item
     return Math.max(min_height, 24.0 * playlistView.width / 800.0);
   }
 
+  function make_odd(x)
+  {
+    var n = Math.floor(x / 2) * 2 + 1;
+    return n;
+  }
+
   function calc_zebra_index(index, cell_width, view_width)
   {
     var columns = Math.round(view_width / cell_width);
@@ -835,7 +841,10 @@ Item
                 anchors.margins: 0;
                 anchors.leftMargin: -parent.height * 0.02;
                 anchors.rightMargin: -parent.height * 0.02;
-                anchors.fill: nowPlayingTag
+                anchors.left: nowPlayingTag.left
+                anchors.right: nowPlayingTag.right
+                anchors.bottom: nowPlayingTag.bottom
+                height: make_odd(nowPlayingTag.height)
                 radius: 3
               }
 
@@ -854,7 +863,9 @@ Item
                 //
                 visible: (model.playing || false)
 
-                anchors.right: parent.right
+                anchors.right: (removeItemMouseArea.view.visible ?
+                                removeItemMouseArea.left :
+                                parent.right);
                 anchors.top: parent.top
                 anchors.margins: parent.height * 0.05
                 font.bold: true
@@ -862,6 +873,69 @@ Item
                                  0.30);
                 text: qsTr("NOW PLAYING")
                 color: label_fg
+              }
+
+              MouseArea
+              {
+                id: removeItemMouseArea
+                objectName: "removeItemMouseArea"
+                anchors.right: parent.right
+                anchors.verticalCenter: nowPlayingBackgroundRect.verticalCenter
+                anchors.margins: parent.height * 0.05
+
+                height: Math.max(13, make_odd(nowPlayingBackgroundRect.height))
+                width: height
+                hoverEnabled: true
+
+                property alias view: removeItem
+
+                Rectangle
+                {
+                  id: removeItem
+                  objectName: "removeItem"
+                  anchors.fill: parent
+                  anchors.margins: 0
+                  radius: 3
+                  color: (removeItemMouseArea.containsMouse ?
+                          label_bg : "#00000000")
+
+                  Item
+                  {
+                    id: removeItemFg
+                    anchors.fill: parent
+                    anchors.margins: 0
+
+                    opacity: removeItemMouseArea.containsMouse ? 1.0 : 0.5
+                    layer.enabled: true
+                    layer.smooth: true
+
+                    transform: [ Rotation {
+                      angle: -45;
+                      origin.x: removeItemFg.width / 2.0;
+                      origin.y: removeItemFg.height / 2.0;
+                    } ]
+
+                    Rectangle
+                    {
+                      id: 'v'
+                      anchors.verticalCenter: parent.verticalCenter
+                      anchors.horizontalCenter: parent.horizontalCenter
+                      width: Math.max(3, make_odd(parent.height * 0.1))
+                      height: Math.max(11, make_odd(parent.height * 0.8))
+                      color: label_fg
+                    }
+
+                    Rectangle
+                    {
+                      id: 'h'
+                      anchors.verticalCenter: parent.verticalCenter
+                      anchors.horizontalCenter: parent.horizontalCenter
+                      width: v.height
+                      height: v.width
+                      color: v.color
+                    }
+                  }
+                }
               }
 
               MouseArea
