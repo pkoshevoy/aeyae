@@ -119,3 +119,9 @@ function calc_greeting_font_size(w, h)
 {
   return Math.max(12, 56.0 * Math.min(w / 1920.0, h / 1080.0));
 }
+
+function make_odd(x)
+{
+  var n = Math.floor(x / 2) * 2 + 1;
+  return n;
+}

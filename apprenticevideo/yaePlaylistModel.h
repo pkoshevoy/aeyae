@@ -169,6 +169,7 @@ namespace yae
 
     Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow);
     Q_INVOKABLE void setPlayingItem(int groupRow, int itemRow);
+    Q_INVOKABLE void removeItems(int groupRow, int itemRow);
 
   protected slots:
     void onAddingGroup(int groupRow);

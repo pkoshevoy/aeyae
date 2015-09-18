@@ -7,7 +7,8 @@ import 'Utils.js' as Utils
 
 Item
 {
-  objectName: "Playlist.qml Item"
+  id: playlist
+  objectName: "playlist"
 
   property alias view: playlistView
 
@@ -28,6 +29,12 @@ Item
     return n < 1.0 ? w : w / n;
   }
 
+  function calc_cell_height(cell_width)
+  {
+    var h = Math.floor(cell_width * 9.0 / 16.0);
+    return h;
+  }
+
   function calc_items_per_row()
   {
     var c = calc_cell_width(playlistView.width)
@@ -45,12 +52,6 @@ Item
   function calc_title_height(min_height, w)
   {
     return Math.max(min_height, 24.0 * playlistView.width / 800.0);
-  }
-
-  function make_odd(x)
-  {
-    var n = Math.floor(x / 2) * 2 + 1;
-    return n;
   }
 
   function calc_zebra_index(index, cell_width, view_width)
@@ -73,40 +74,6 @@ Item
     playlistView.contentY = content_y;
   }
 
-  function find_current_item()
-  {
-    var sel = yae_playlist_model.itemSelectionModel().currentIndex;
-    if (!sel.parent)
-    {
-      return null;
-    }
-
-    var savedCurrentIndex = playlistView.currentIndex;
-    assign_playlistview_current_index(sel.parent.row);
-    var groupContainer = playlistView.currentItem;
-    assign_playlistview_current_index(savedCurrentIndex);
-
-    var gridView = yae_qml_utils.find_qobject(groupContainer,
-                                              "groupItemsGridView");
-    // yae_qml_utils.dump_object_tree(gridView);
-
-    gridView.currentIndex = sel.row;
-    var itemContainer = gridView.currentItem;
-    gridView.currentIndex = -1;
-
-    // yae_qml_utils.dump_object_tree(itemContainer);
-
-    var item = yae_qml_utils.find_qobject(itemContainer,
-                                          "itemDelegate");
-    // yae_qml_utils.dump_object_tree(item);
-
-    return {
-      gridView: gridView,
-      item: item
-    };
-  }
-
-
   function lookup_current_gridview(suggestedGroupIndex)
   {
     if (suggestedGroupIndex == null)
@@ -121,7 +88,7 @@ Item
 
     var groupContainer = playlistView.currentItem;
     var gridView = yae_qml_utils.find_qobject(groupContainer,
-                                              "groupItemsGridView");
+                                              "gridView");
     return gridView;
   }
 
@@ -139,7 +106,7 @@ Item
     {
       found.groupIndex = playlistView.currentIndex;
       found.gridView = yae_qml_utils.find_qobject(groupContainer,
-                                                  "groupItemsGridView");
+                                                  "gridView");
 
       var itemContainer = found.gridView.currentItem;
       if (itemContainer)
@@ -175,7 +142,7 @@ Item
     if (playlistView.currentIndex != groupRow)
     {
       gridView = yae_qml_utils.find_qobject(playlistView.currentItem,
-                                            "groupItemsGridView");
+                                            "gridView");
       if (gridView)
       {
         gridView.currentIndex = -1;
@@ -185,7 +152,7 @@ Item
     assign_playlistview_current_index(groupRow);
 
     gridView = yae_qml_utils.find_qobject(playlistView.currentItem,
-                                          "groupItemsGridView");
+                                          "gridView");
     if (gridView && gridView.currentIndex != itemRow)
     {
       gridView.currentIndex = itemRow;
@@ -569,6 +536,9 @@ Item
         anchors.left: parent.left
         anchors.right: parent.right
 
+        readonly property var cellHeight: (
+          calc_cell_height(calc_cell_width(playlistView.width)));
+
         Image
         {
           id: disclosureBtn
@@ -598,10 +568,14 @@ Item
 
         Text
         {
+          id: groupTag
+          objectName: "groupTag"
+
           anchors.verticalCenter: parent.verticalCenter
           anchors.right: parent.right
           anchors.left: disclosureBtn.right
           anchors.leftMargin: groupItem.height / 2
+
           elide: "ElideMiddle"
           font.bold: true
           font.pixelSize: groupItem.height * 0.55
@@ -609,6 +583,25 @@ Item
           color: header_fg
           style: Text.Outline;
           styleColor: "black";
+        }
+
+        XButton
+        {
+          id: xbutton
+          objectName: "xbutton"
+
+          anchors.right: parent.right
+          anchors.verticalCenter: groupTag.verticalCenter
+          anchors.rightMargin: groupItem.cellHeight * 0.05
+
+          height: Math.max(13, Utils.make_odd(groupItem.cellHeight * 0.1))
+          width: height
+
+          on_click: function (mouse)
+          {
+            yae_playlist_model.removeItems(model.index, -1);
+            mouse.accepted = true;
+          }
         }
 
         // YDebug { id: ydebug; z: 4; container: playlistView; }
@@ -651,15 +644,15 @@ Item
       id: groupItemsColumnDelegateRect
       objectName: "groupItemsColumnDelegateRect"
 
-      property alias model : groupItemsGridView.model
+      property alias model : gridView.model
       width: playlistView.width
 
       // size-to-fit:
-      height: (!groupItemsGridView.count ? 0 :
-               groupItemsGridView.cellHeight *
+      height: (!gridView.count ? 0 :
+               gridView.cellHeight *
                (0.5 + calc_rows(playlistView.width,
-                                groupItemsGridView.cellWidth,
-                                groupItemsGridView.count)));
+                                gridView.cellWidth,
+                                gridView.count)));
 
       Rectangle
       {
@@ -676,16 +669,16 @@ Item
 
         Item
         {
-          visible: groupItemsGridView.currentItem != null
-          x: (groupItemsGridView.currentItem ?
-              groupItemsGridView.currentItem.x :
+          visible: gridView.currentItem != null
+          x: (gridView.currentItem ?
+              gridView.currentItem.x :
               0)
-          y: (groupItemsGridView.currentItem ?
-              groupItemsGridView.currentItem.y :
+          y: (gridView.currentItem ?
+              gridView.currentItem.y :
               0)
           z: 3
-          width: groupItemsGridView.cellWidth;
-          height: groupItemsGridView.cellHeight
+          width: gridView.cellWidth;
+          height: gridView.cellHeight
           anchors.margins: 0
 
           Behavior on x { SpringAnimation { spring: 3; damping: 0.2 } }
@@ -704,15 +697,15 @@ Item
 
       GridView
       {
-        id: groupItemsGridView
-        objectName: "groupItemsGridView"
+        id: gridView
+        objectName: "gridView"
 
         anchors.fill: parent
         anchors.topMargin: 2
         width: parent.width
         height: parent.height - anchors.topMargin
         cellWidth: calc_cell_width(playlistView.width)
-        cellHeight: Math.floor(this.cellWidth * 9.0 / 16.0)
+        cellHeight: calc_cell_height(this.cellWidth)
 
         highlight: gridViewHighlight
         highlightFollowsCurrentItem: false
@@ -728,8 +721,8 @@ Item
             id: itemDelegate
             objectName: "itemDelegate"
 
-            height: groupItemsGridView.cellHeight
-            width: groupItemsGridView.cellWidth
+            height: gridView.cellHeight
+            width: gridView.cellWidth
 
             property var label: model.label
 
@@ -760,7 +753,7 @@ Item
 
               anchors.fill: parent
               color: (calc_zebra_index(index,
-                                       groupItemsGridView.cellWidth,
+                                       gridView.cellWidth,
                                        playlistView.width) ?
                       zebra_bg_1 : zebra_bg_0) // argb
 
@@ -824,8 +817,8 @@ Item
 
               Rectangle
               {
-                id: nowPlayingBackgroundRect
-                objectName: "nowPlayingBackgroundRect"
+                id: nowPlayingRect
+                objectName: "nowPlayingRect"
 
                 // model.playing is 'undefined' while the is being loaded,
                 // and causes this error:
@@ -844,7 +837,7 @@ Item
                 anchors.left: nowPlayingTag.left
                 anchors.right: nowPlayingTag.right
                 anchors.bottom: nowPlayingTag.bottom
-                height: make_odd(nowPlayingTag.height)
+                height: Utils.make_odd(nowPlayingTag.height)
                 radius: 3
               }
 
@@ -863,8 +856,8 @@ Item
                 //
                 visible: (model.playing || false)
 
-                anchors.right: (removeItemMouseArea.view.visible ?
-                                removeItemMouseArea.left :
+                anchors.right: (xbutton.view.visible ?
+                                xbutton.left :
                                 parent.right);
                 anchors.top: parent.top
                 anchors.margins: parent.height * 0.05
@@ -873,69 +866,6 @@ Item
                                  0.30);
                 text: qsTr("NOW PLAYING")
                 color: label_fg
-              }
-
-              MouseArea
-              {
-                id: removeItemMouseArea
-                objectName: "removeItemMouseArea"
-                anchors.right: parent.right
-                anchors.verticalCenter: nowPlayingBackgroundRect.verticalCenter
-                anchors.margins: parent.height * 0.05
-
-                height: Math.max(13, make_odd(nowPlayingBackgroundRect.height))
-                width: height
-                hoverEnabled: true
-
-                property alias view: removeItem
-
-                Rectangle
-                {
-                  id: removeItem
-                  objectName: "removeItem"
-                  anchors.fill: parent
-                  anchors.margins: 0
-                  radius: 3
-                  color: (removeItemMouseArea.containsMouse ?
-                          label_bg : "#00000000")
-
-                  Item
-                  {
-                    id: removeItemFg
-                    anchors.fill: parent
-                    anchors.margins: 0
-
-                    opacity: removeItemMouseArea.containsMouse ? 1.0 : 0.5
-                    layer.enabled: true
-                    layer.smooth: true
-
-                    transform: [ Rotation {
-                      angle: -45;
-                      origin.x: removeItemFg.width / 2.0;
-                      origin.y: removeItemFg.height / 2.0;
-                    } ]
-
-                    Rectangle
-                    {
-                      id: 'v'
-                      anchors.verticalCenter: parent.verticalCenter
-                      anchors.horizontalCenter: parent.horizontalCenter
-                      width: Math.max(3, make_odd(parent.height * 0.1))
-                      height: Math.max(11, make_odd(parent.height * 0.8))
-                      color: label_fg
-                    }
-
-                    Rectangle
-                    {
-                      id: 'h'
-                      anchors.verticalCenter: parent.verticalCenter
-                      anchors.horizontalCenter: parent.horizontalCenter
-                      width: v.height
-                      height: v.width
-                      color: v.color
-                    }
-                  }
-                }
               }
 
               MouseArea
@@ -952,7 +882,7 @@ Item
                   var selectionFlags = get_selection_flags(mouse);
 
                   // console.log("Playlist item: CLICKED!")
-                  set_current_item(groupItemsGridView.model.rootIndex.row,
+                  set_current_item(gridView.model.rootIndex.row,
                                    model.index,
                                    selectionFlags);
                   mouse.accepted = true;
@@ -960,9 +890,29 @@ Item
 
                 onDoubleClicked: {
                   // console.log("Playlist item: DOUBLE CLICKED!")
-                  sync_current_item(groupItemsGridView.model.rootIndex.row,
+                  sync_current_item(gridView.model.rootIndex.row,
                                     model.index);
                   model.playing = true;
+                  mouse.accepted = true;
+                }
+              }
+
+              XButton
+              {
+                id: xbutton
+                objectName: "xbutton"
+
+                anchors.right: parent.right
+                anchors.verticalCenter: nowPlayingRect.verticalCenter
+                anchors.margins: parent.height * 0.05
+
+                height: Math.max(13, Utils.make_odd(gridView.cellHeight * 0.1))
+                width: height
+
+                on_click: function (mouse)
+                {
+                  yae_playlist_model.removeItems(gridView.model.rootIndex.row,
+                                                 model.index);
                   mouse.accepted = true;
                 }
               }

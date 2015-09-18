@@ -1478,6 +1478,8 @@ namespace yae
     }
 
     numItems_ = offset;
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------

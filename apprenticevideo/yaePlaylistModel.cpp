@@ -21,6 +21,10 @@ namespace yae
   {
     bool ok = true;
 
+    ok = connect(&playlist_, SIGNAL(itemCountChanged()),
+                 this, SIGNAL(itemCountChanged()));
+    YAE_ASSERT(ok);
+
     ok = connect(&playlist_, SIGNAL(addingGroup(int)),
                  this, SLOT(onAddingGroup(int)));
     YAE_ASSERT(ok);
@@ -413,8 +417,6 @@ namespace yae
     emit currentItemChanged(-1, -1);
 
     playlist_.add(playlist, returnAddedHashes);
-
-    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
@@ -425,8 +427,6 @@ namespace yae
   {
     // FIXME: write me!
     YAE_ASSERT(false);
-
-    emit itemCountChanged();
 
     return false;
   }
@@ -465,8 +465,6 @@ namespace yae
   PlaylistModel::removeSelected()
   {
     playlist_.removeSelected();
-
-    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
@@ -476,8 +474,6 @@ namespace yae
   PlaylistModel::removeItems(std::size_t groupIndex, std::size_t itemIndex)
   {
     playlist_.removeItems(groupIndex, itemIndex);
-
-    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
@@ -540,6 +536,15 @@ namespace yae
     QModelIndex index = makeModelIndex(groupRow, itemRow);
     setData(index, QVariant(true), kRolePlaying);
     setCurrentItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::removeItems
+  //
+  void
+  PlaylistModel::removeItems(int groupRow, int itemRow)
+  {
+    playlist_.removeItems(groupRow, itemRow);
   }
 
   //----------------------------------------------------------------

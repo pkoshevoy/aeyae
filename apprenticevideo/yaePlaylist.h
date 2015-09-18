@@ -256,6 +256,8 @@ namespace yae
     bool setSelectedItem(PlaylistItem & item, bool selected);
 
   signals:
+    void itemCountChanged();
+
     void addingGroup(int groupRow);
     void addedGroup(int groupRow);
 
