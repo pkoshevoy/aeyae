@@ -2691,6 +2691,18 @@ namespace yae
     {
       playback();
     }
+
+    if (!playlistModel_.countItems())
+    {
+      QQuickItem * playerItem = playerWidget_->rootObject();
+      std::string playerState = playerItem->state().toUtf8().constData();
+
+      if (playerState == "playback")
+      {
+        // show the welcome screen:
+        playerItem->setState(QString::fromUtf8("welcome"));
+      }
+    }
   }
 
   //----------------------------------------------------------------
