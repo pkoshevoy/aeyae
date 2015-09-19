@@ -157,11 +157,11 @@ namespace yae
     void setPlayingItem(std::size_t index);
 
     // selection set management:
+    void selectItems(int groupRow, int itemRow, int selectionFlags);
     void selectAll();
     void unselectAll();
 
     void removeSelected();
-    void removeItems(std::size_t groupIndex, std::size_t itemIndex);
 
   public:
     QModelIndex modelIndexForItem(std::size_t itemIndex) const;

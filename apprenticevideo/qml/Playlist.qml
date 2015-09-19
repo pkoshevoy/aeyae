@@ -95,8 +95,8 @@ Item
   function lookup_current_gridview_and_item()
   {
     var found = {
-      groupIndex: -1,
-      itemIndex: -1,
+      groupRow: -1,
+      itemRow: -1,
       gridView: null,
       item: null
     };
@@ -104,7 +104,7 @@ Item
     var groupContainer = playlistView.currentItem;
     if (groupContainer)
     {
-      found.groupIndex = playlistView.currentIndex;
+      found.groupRow = playlistView.currentIndex;
       found.gridView = yae_qml_utils.find_qobject(groupContainer,
                                                   "gridView");
 
@@ -112,7 +112,7 @@ Item
       if (itemContainer)
       {
         // yae_qml_utils.dump_object_tree(itemContainer);
-        found.itemIndex = found.gridView.currentIndex;
+        found.itemRow = found.gridView.currentIndex;
         found.item = yae_qml_utils.find_qobject(itemContainer,
                                                 "itemDelegate");
         // yae_qml_utils.dump_object_tree(item);
@@ -176,17 +176,10 @@ Item
     */
   }
 
-  function set_current_item(groupRow, itemRow, selectionFlags)
+  function select_items(groupRow, itemRow, selectionFlags)
   {
+    yae_playlist_model.selectItems(groupRow, itemRow, selectionFlags);
     sync_current_item(groupRow, itemRow);
-    var found = lookup_current_gridview_and_item();
-    if (!found.item)
-    {
-      return;
-    }
-
-    // yae_qml_utils.dump_object_tree(found.item);
-    found.item.set_selected(selectionFlags);
   }
 
   function calc_delta_scroll_to(item)
@@ -246,11 +239,17 @@ Item
       return;
     }
 
+    if (selectionFlags == ItemSelectionModel.SelectCurrent)
+    {
+      // set the selection anchor, if not already set:
+      select_items(current.groupRow, current.itemRow, selectionFlags);
+    }
+
     funcMoveCursor(current);
 
-    set_current_item(playlistView.currentIndex,
-                     current.gridView.currentIndex,
-                     selectionFlags);
+    select_items(playlistView.currentIndex,
+                 current.gridView.currentIndex,
+                 selectionFlags);
 
     yae_playlist_model.setCurrentItem(playlistView.currentIndex,
                                       current.gridView.currentIndex);
@@ -260,11 +259,11 @@ Item
   {
     move_cursor(selectionFlags, function(current) {
 
-      if (current.itemIndex > 0)
+      if (current.itemRow > 0)
       {
         current.gridView.moveCurrentIndexLeft();
       }
-      else if (current.groupIndex > 0)
+      else if (current.groupRow > 0)
       {
         current.gridView.currentIndex = -1;
         assign_playlistview_current_index(playlistView.currentIndex - 1);
@@ -278,11 +277,11 @@ Item
   {
     move_cursor(selectionFlags, function(current) {
 
-      if (current.itemIndex + 1 < current.gridView.count)
+      if (current.itemRow + 1 < current.gridView.count)
       {
         current.gridView.moveCurrentIndexRight();
       }
-      else if (current.groupIndex + 1 < playlistView.count)
+      else if (current.groupRow + 1 < playlistView.count)
       {
         current.gridView.currentIndex = -1;
         assign_playlistview_current_index(playlistView.currentIndex + 1);
@@ -297,15 +296,15 @@ Item
     move_cursor(selectionFlags, function(current) {
 
       var itemsPerRow = calc_items_per_row();
-      if (current.itemIndex > itemsPerRow)
+      if (current.itemRow > itemsPerRow)
       {
         current.gridView.moveCurrentIndexUp();
       }
-      else if (current.itemIndex > 0)
+      else if (current.itemRow > 0)
       {
         current.gridView.currentIndex = 0;
       }
-      else if (current.groupIndex > 0)
+      else if (current.groupRow > 0)
       {
         current.gridView.currentIndex = -1;
         assign_playlistview_current_index(playlistView.currentIndex - 1);
@@ -324,15 +323,15 @@ Item
     move_cursor(selectionFlags, function(current) {
 
       var itemsPerRow = calc_items_per_row();
-      if (current.itemIndex + itemsPerRow < current.gridView.count)
+      if (current.itemRow + itemsPerRow < current.gridView.count)
       {
         current.gridView.moveCurrentIndexDown();
       }
-      else if (current.itemIndex + 1 < current.gridView.count)
+      else if (current.itemRow + 1 < current.gridView.count)
       {
         current.gridView.currentIndex = current.gridView.count - 1;
       }
-      else if (current.groupIndex + 1 < playlistView.count)
+      else if (current.groupRow + 1 < playlistView.count)
       {
         current.gridView.currentIndex = -1;
         assign_playlistview_current_index(playlistView.currentIndex + 1);
@@ -882,9 +881,9 @@ Item
                   var selectionFlags = get_selection_flags(mouse);
 
                   // console.log("Playlist item: CLICKED!")
-                  set_current_item(gridView.model.rootIndex.row,
-                                   model.index,
-                                   selectionFlags);
+                  select_items(gridView.model.rootIndex.row,
+                               model.index,
+                               selectionFlags);
                   mouse.accepted = true;
                 }
 

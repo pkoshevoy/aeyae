@@ -203,7 +203,8 @@ namespace yae
     numShown_(0),
     numShownGroups_(0),
     playing_(0),
-    current_(0)
+    current_(0),
+    selectionAnchor_(0)
   {
     add(std::list<QString>());
   }
@@ -877,6 +878,8 @@ namespace yae
   void
   Playlist::selectAll()
   {
+    discardSelectionAnchor();
+
     for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -900,6 +903,8 @@ namespace yae
   void
   Playlist::unselectAll()
   {
+    discardSelectionAnchor();
+
     for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
     {
@@ -918,6 +923,8 @@ namespace yae
   void
   Playlist::selectGroup(PlaylistGroup & group)
   {
+    discardSelectionAnchor();
+
     for (std::vector<TPlaylistItemPtr>::iterator i = group.items_.begin();
          i != group.items_.end(); ++i)
     {
@@ -941,6 +948,8 @@ namespace yae
   void
   Playlist::unselectGroup(PlaylistGroup & group)
   {
+    discardSelectionAnchor();
+
     for (std::vector<TPlaylistItemPtr>::iterator i = group.items_.begin();
          i != group.items_.end(); ++i)
     {
@@ -957,12 +966,35 @@ namespace yae
   // Playlist::selectItem
   //
   void
-  Playlist::selectItem(std::size_t indexSel, bool exclusive)
+  Playlist::selectItem(std::size_t index, bool exclusive)
+  {
+    discardSelectionAnchor();
+
+    if (exclusive)
+    {
+      selectItems(index, index, exclusive);
+      return;
+    }
+
+    TPlaylistItemPtr itemPtr = lookup(index);
+    if (!itemPtr)
+    {
+      return;
+    }
+
+    PlaylistItem & item = *itemPtr;
+    setSelectedItem(item, true);
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::selectItems
+  //
+  void
+  Playlist::selectItems(std::size_t i0, std::size_t i1, bool exclusive)
   {
 #if 0
-    std::cerr << "Playlist::selectItem: " << indexSel << std::endl;
+    std::cerr << "Playlist::selectItems: " << i0 << ", " << i1 << std::endl;
 #endif
-    bool itemSelected = false;
 
     for (std::vector<TPlaylistGroupPtr>::iterator i = groups_.begin();
          i != groups_.end(); ++i)
@@ -975,31 +1007,23 @@ namespace yae
 
       std::size_t groupEnd = group.offset_ + group.items_.size();
 
-      if (exclusive)
+      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
+           j != group.items_.end(); ++j)
       {
-        for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
-             j != group.items_.end(); ++j)
+        PlaylistItem & item = *(*j);
+        if (item.excluded_)
         {
-          PlaylistItem & item = *(*j);
-          if (item.excluded_)
-          {
-            continue;
-          }
-
-          setSelectedItem(item, false);
+          continue;
         }
-      }
 
-      if (group.offset_ <= indexSel && indexSel < groupEnd)
-      {
-        PlaylistItem & item = *(group.items_[indexSel - group.offset_]);
-        setSelectedItem(item, true);
-        itemSelected = true;
-
-        if (!exclusive)
+        std::size_t index = group.offset_ + item.row_;
+        if (i0 <= index && index <= i1)
         {
-          // done:
-          break;
+          setSelectedItem(item, true);
+        }
+        else if (exclusive)
+        {
+          setSelectedItem(item, false);
         }
       }
     }
@@ -1007,8 +1031,29 @@ namespace yae
 #if 0
     dump(*this, "Playlist::selectItem:\n");
 #endif
+  }
 
-    YAE_ASSERT(itemSelected || indexSel == numItems_);
+  //----------------------------------------------------------------
+  // Playlist::selectionAnchor
+  //
+  std::size_t
+  Playlist::selectionAnchor()
+  {
+    if (selectionAnchor_ >= numItems_)
+    {
+      selectionAnchor_ = current_;
+    }
+
+    return selectionAnchor_;
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::discardSelectionAnchor
+  //
+  void
+  Playlist::discardSelectionAnchor()
+  {
+    selectionAnchor_ = numItems_;
   }
 
   //----------------------------------------------------------------
@@ -1158,24 +1203,29 @@ namespace yae
   bool
   Playlist::setCurrentItem(int groupRow, int itemRow)
   {
-    TPlaylistGroupPtr group;
-    TPlaylistItemPtr item = lookup(group, groupRow, itemRow);
-
-    std::size_t index = 0;
-
-    if (group)
-    {
-      index += group->offset_;
-    }
-
-    if (item)
-    {
-      index += item->row_;
-    }
+    std::size_t index = lookupIndex(groupRow, itemRow);
 
     index = closestItem(index);
 
     return setCurrentItem(index);
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::toggleSelectedItem
+  //
+  bool
+  Playlist::toggleSelectedItem(std::size_t index)
+  {
+    discardSelectionAnchor();
+
+    TPlaylistItemPtr itemPtr = lookup(index);
+    if (!itemPtr)
+    {
+      return false;
+    }
+
+    PlaylistItem & item = *itemPtr;
+    return setSelectedItem(item, !item.selected_);
   }
 
   //----------------------------------------------------------------
@@ -1184,6 +1234,8 @@ namespace yae
   bool
   Playlist::setSelectedItem(std::size_t index)
   {
+    discardSelectionAnchor();
+
     TPlaylistItemPtr item = lookup(index);
     if (!item)
     {
@@ -1434,6 +1486,30 @@ namespace yae
 
     const TPlaylistItemPtr & item = group->items_[itemRow];
     return item;
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::lookupIndex
+  //
+  std::size_t
+  Playlist::lookupIndex(int groupRow, int itemRow) const
+  {
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = lookup(group, groupRow, itemRow);
+
+    std::size_t index = 0;
+
+    if (group)
+    {
+      index += group->offset_;
+    }
+
+    if (item)
+    {
+      index += item->row_;
+    }
+
+    return index;
   }
 
   //----------------------------------------------------------------

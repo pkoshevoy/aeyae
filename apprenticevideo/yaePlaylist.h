@@ -206,6 +206,8 @@ namespace yae
                             int groupRow,
                             int itemRow) const;
 
+    std::size_t lookupIndex(int groupRow, int itemRow) const;
+
     enum TDirection {
       kBehind = 0,
       kAhead = 1
@@ -233,7 +235,13 @@ namespace yae
     void unselectAll();
     void selectGroup(PlaylistGroup & group);
     void unselectGroup(PlaylistGroup & group);
+
     void selectItem(std::size_t indexSel, bool exclusive = true);
+    void selectItems(std::size_t i0, std::size_t i1, bool exclusive);
+
+    std::size_t selectionAnchor();
+    void discardSelectionAnchor();
+
     void removeSelected();
     void removeItems(int groupRow, int itemRow = -1);
 
@@ -252,6 +260,7 @@ namespace yae
     bool setCurrentItem(int groupRow, int itemRow);
 
     // return true if selected status has changed:
+    bool toggleSelectedItem(std::size_t index);
     bool setSelectedItem(std::size_t index);
     bool setSelectedItem(PlaylistItem & item, bool selected);
 
@@ -310,6 +319,9 @@ namespace yae
 
     // index of currently highlighted item:
     std::size_t current_;
+
+    // index of current item at the start of extended selection:
+    std::size_t selectionAnchor_;
 
     // playlist filter:
     std::list<QString> keywords_;

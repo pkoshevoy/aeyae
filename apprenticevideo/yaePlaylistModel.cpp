@@ -9,6 +9,9 @@
 // yae includes:
 #include <yaePlaylistModel.h>
 
+// Qt includes:
+#include <QItemSelectionModel>
+
 
 namespace yae
 {
@@ -362,7 +365,7 @@ namespace yae
 
       if (role == kRoleSelected)
       {
-        playlist_.setSelectedItem(*item, true);
+        playlist_.setSelectedItem(*item, value.toBool());
         return true;
       }
     }
@@ -441,6 +444,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistModel::selectItems
+  //
+  void
+  PlaylistModel::selectItems(int groupRow, int itemRow, int selectionFlags)
+  {
+    std::size_t itemIndex = playlist_.lookupIndex(groupRow, itemRow);
+
+    if (selectionFlags == QItemSelectionModel::SelectCurrent)
+    {
+      std::size_t anchorIndex = playlist_.selectionAnchor();
+
+      // extend/shrink selection from selection anchor item to given item
+      std::size_t i0 = itemIndex < anchorIndex ? itemIndex : anchorIndex;
+      std::size_t i1 = itemIndex < anchorIndex ? anchorIndex : itemIndex;
+
+      bool exclusive = true;
+      playlist_.selectItems(i0, i1, exclusive);
+      return;
+    }
+
+    if (selectionFlags == QItemSelectionModel::ToggleCurrent)
+    {
+      playlist_.toggleSelectedItem(itemIndex);
+      return;
+    }
+
+    playlist_.selectItem(itemIndex);
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModel::selectAll
   //
   void
@@ -465,15 +498,6 @@ namespace yae
   PlaylistModel::removeSelected()
   {
     playlist_.removeSelected();
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::removeItems
-  //
-  void
-  PlaylistModel::removeItems(std::size_t groupIndex, std::size_t itemIndex)
-  {
-    playlist_.removeItems(groupIndex, itemIndex);
   }
 
   //----------------------------------------------------------------
