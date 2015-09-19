@@ -179,6 +179,7 @@ Item
   function select_items(groupRow, itemRow, selectionFlags)
   {
     yae_playlist_model.selectItems(groupRow, itemRow, selectionFlags);
+    yae_playlist_model.setCurrentItem(groupRow, itemRow);
     sync_current_item(groupRow, itemRow);
   }
 
@@ -250,9 +251,6 @@ Item
     select_items(playlistView.currentIndex,
                  current.gridView.currentIndex,
                  selectionFlags);
-
-    yae_playlist_model.setCurrentItem(playlistView.currentIndex,
-                                      current.gridView.currentIndex);
   }
 
   function move_cursor_left(selectionFlags)
@@ -391,7 +389,6 @@ Item
     {
       var selectionFlags = get_selection_flags(event);
 
-      // FIXME: this won't work correctly for select/unselect:
       if (event.key == Qt.Key_Left)
       {
         move_cursor_left(selectionFlags);
@@ -877,10 +874,8 @@ Item
                 // preventStealing: true
 
                 onClicked: {
-                  // FIXME: this won't work correctly for select/unselect:
-                  var selectionFlags = get_selection_flags(mouse);
-
                   // console.log("Playlist item: CLICKED!")
+                  var selectionFlags = get_selection_flags(mouse);
                   select_items(gridView.model.rootIndex.row,
                                model.index,
                                selectionFlags);
