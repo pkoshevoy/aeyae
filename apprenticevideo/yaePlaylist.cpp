@@ -1503,7 +1503,7 @@ namespace yae
     playing_ = (index < numItems_) ? index : numItems_;
 
     TPlaylistItemPtr playingNow = lookup(playing_);
-    if (playingNow != prev)
+    if (!playingNow || playingNow != prev)
     {
       emit playingChanged(playing_, indexOld);
     }
