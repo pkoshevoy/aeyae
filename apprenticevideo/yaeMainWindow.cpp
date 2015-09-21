@@ -149,7 +149,6 @@ namespace yae
   //
   PlaylistBookmark::PlaylistBookmark():
     TBookmark(),
-    itemIndex_(std::numeric_limits<std::size_t>::max()),
     action_(NULL)
   {}
 
@@ -419,10 +418,10 @@ namespace yae
                                          0, // minor
                                          "CanvasQuickFbo");
 
-    qmlRegisterType<yae::PlaylistModel>("com.aragog.apprenticevideo",
-                                        1, // major
-                                        0, // minor
-                                        "PlaylistModel");
+    qmlRegisterType<yae::TPlaylistModel>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "TPlaylistModel");
 
     qmlRegisterType<yae::TimelineControls>("com.aragog.apprenticevideo",
                                            1, // major
@@ -443,7 +442,7 @@ namespace yae
     // add image://thumbnails/... provider:
     QQmlEngine * qmlEngine = playerWidget_->engine();
     ThumbnailProvider * imageProvider =
-      new ThumbnailProvider(readerPrototype_, playlistModel_.playlist());
+      new ThumbnailProvider(readerPrototype_, playlistModel_);
     qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
                                 imageProvider);
 
@@ -810,6 +809,10 @@ namespace yae
                  this, SIGNAL(setOutPoint()));
     YAE_ASSERT(ok);
 
+    ok = connect(&playlistModel_, SIGNAL(itemCountChanged()),
+                 this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionRemove_, SIGNAL(triggered()),
                  &playlistModel_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
@@ -826,8 +829,10 @@ namespace yae
                  &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playlistModel_, SIGNAL(playingItemChanged(std::size_t)),
-                 this, SLOT(playlistPlayingItemChanged(std::size_t)));
+    ok = connect(&playlistModel_,
+                 SIGNAL(playingItemChanged(const QModelIndex &)),
+                 this,
+                 SLOT(playlistPlayingItemChanged(const QModelIndex &)));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -929,15 +934,7 @@ namespace yae
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
                  this, SLOT(scrollWheelTimerExpired()));
     YAE_ASSERT(ok);
-#if 0
-    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
-                 &playlistModel_, SLOT(filterChanged(const QString &)));
-    YAE_ASSERT(ok);
 
-    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
-                 this, SLOT(fixupNextPrev()));
-    YAE_ASSERT(ok);
-#endif
     ok = connect(&autocropTimer_, SIGNAL(timeout()),
                  this, SLOT(playbackCropFrameAutoDetect()));
     YAE_ASSERT(ok);
@@ -1057,12 +1054,8 @@ namespace yae
           if (itemHash == bookmark.itemHash_)
           {
             found = playlistModel_.lookup(bookmark.groupHash_,
-                                          bookmark.itemHash_,
-                                          &bookmark.itemIndex_);
-            if (found->excluded_)
-            {
-              found = NULL;
-            }
+                                          bookmark.itemHash_);
+            bookmark.item_ = found;
           }
         }
       }
@@ -1723,25 +1716,18 @@ namespace yae
 
     bookmarks_.clear();
 
-    std::size_t itemIndexNowPlaying = playlistModel_.playingItem();
-    std::size_t itemIndex = 0;
+    QModelIndex itemIndexNowPlaying = playlistModel_.playingItem();
     std::size_t playingBookmarkIndex = std::numeric_limits<std::size_t>::max();
 
-    while (true)
-    {
-      TPlaylistGroupPtr group = playlistModel_.lookupGroup(itemIndex);
-      std::size_t groupSize = group ? group->items_.size() : 0;
-      if (!groupSize)
-      {
-        break;
-      }
-      YAE_ASSERT(itemIndex == group->offset_);
-      itemIndex += groupSize;
+    QModelIndex rootIndex = playlistModel_.makeModelIndex(-1, -1);
+    const int numGroups = playlistModel_.rowCount(rootIndex);
 
-      if (group->excluded_)
-      {
-        continue;
-      }
+    for (int i = 0; i < numGroups; i++)
+    {
+      QModelIndex groupIndex = playlistModel_.makeModelIndex(i, -1);
+
+      TPlaylistGroupPtr group;
+      playlistModel_.lookup(groupIndex, &group);
 
       // check whether there is a bookmark for an item in this group:
       PlaylistBookmark bookmark;
@@ -1751,16 +1737,19 @@ namespace yae
       }
 
       // check whether the item hash matches a group item:
-      for (std::size_t i = 0; i < groupSize; i++)
+      const int groupSize = playlistModel_.rowCount(groupIndex);
+      for (int j = 0; j < groupSize; j++)
       {
-        const PlaylistItem & item = *(group->items_[i]);
-        if (item.excluded_ || item.hash_ != bookmark.itemHash_)
+        QModelIndex itemIndex = playlistModel_.makeModelIndex(i, j);
+        TPlaylistItemPtr item = playlistModel_.lookup(itemIndex);
+
+        if (!item || item->hash_ != bookmark.itemHash_)
         {
           continue;
         }
 
         // found a match, add it to the bookmarks menu:
-        bookmark.itemIndex_ = group->offset_ + i;
+        bookmark.item_ = item;
 
         std::string ts = TTime(bookmark.positionInSeconds_).to_hhmmss(":");
 
@@ -1785,13 +1774,13 @@ namespace yae
 #else
           QString::fromUtf8("\t") +
 #endif
-          escapeAmpersand(item.name_) +
+          escapeAmpersand(item->name_) +
           QString::fromUtf8(", ") +
           QString::fromUtf8(ts.c_str());
 
         bookmark.action_ = new QAction(name, this);
 
-        bool nowPlaying = (itemIndexNowPlaying == bookmark.itemIndex_);
+        bool nowPlaying = (itemIndexNowPlaying == itemIndex);
         if (nowPlaying)
         {
           playingBookmarkIndex = bookmarks_.size();
@@ -1826,7 +1815,7 @@ namespace yae
   void
   MainWindow::bookmarksRemoveNowPlaying()
   {
-    std::size_t itemIndex = playlistModel_.playingItem();
+    QModelIndex itemIndex = playlistModel_.playingItem();
     TPlaylistGroupPtr group;
     TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
     if (!item || !group)
@@ -2212,7 +2201,7 @@ namespace yae
     bool showPlaylist = actionShowPlaylist->isChecked();
     const char * state =
       showPlaylist ? "playlist" :
-      playlistModel_.countItems() ? "playback" :
+      playlistModel_.hasItems() ? "playback" :
       "welcome";
     playerItem->setState(QString::fromUtf8(state));
   }
@@ -2676,7 +2665,7 @@ namespace yae
   // MainWindow::playlistPlayingItemChanged
   //
   void
-  MainWindow::playlistPlayingItemChanged(std::size_t index)
+  MainWindow::playlistPlayingItemChanged(const QModelIndex & index)
   {
     playbackStop();
 
@@ -2692,7 +2681,7 @@ namespace yae
       playback();
     }
 
-    if (!playlistModel_.countItems())
+    if (!playlistModel_.hasItems())
     {
       QQuickItem * playerItem = playerWidget_->rootObject();
       std::string playerState = playerItem->state().toUtf8().constData();
@@ -2930,32 +2919,25 @@ namespace yae
     // remove current bookmark:
     bookmarkTimer_.stop();
 
-    std::size_t itemIndex = playlistModel_.playingItem();
-    std::size_t nNext = playlistModel_.countItemsAhead();
-    std::size_t iNext = playlistModel_.closestItem(itemIndex + 1);
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
-    TPlaylistItemPtr next((nNext && iNext > itemIndex) ?
-                          playlistModel_.lookup(iNext) :
-                          NULL);
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
+    TPlaylistItemPtr next = playlistModel_.lookup(iNext);
 
-    TPlaylistGroupPtr group;
-    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
-
-    if (item && group)
+    if (item && next && (&(item->group_) != &(next->group_)))
     {
-      TPlaylistGroupPtr nextGroup;
-      playlistModel_.closestItem(itemIndex + 1,
-                                 Playlist::kAhead,
-                                 &nextGroup);
+      const PlaylistGroup * itemGroup = &(item->group_);
+      const PlaylistGroup * nextGroup = &(next->group_);
 
-      if (group != nextGroup)
+      if (itemGroup != nextGroup)
       {
         PlaylistBookmark bookmark;
 
         // if current item was bookmarked, then remove it from bookmarks:
-        if (findBookmark(itemIndex, bookmark))
+        if (findBookmark(item, bookmark))
         {
-          yae::removeBookmark(group->hash_);
+          yae::removeBookmark(itemGroup->hash_);
         }
 
         // if a bookmark exists for the next item group, then use it:
@@ -2970,7 +2952,7 @@ namespace yae
     if (!next && actionRepeatPlaylist->isChecked())
     {
       // repeat the playlist:
-      std::size_t first = playlistModel_.closestItem(0);
+      QModelIndex first = playlistModel_.firstItem();
       playlistModel_.setPlayingItem(first);
       return;
     }
@@ -3010,7 +2992,7 @@ namespace yae
     // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t current = playlistModel_.playingItem();
+    QModelIndex current = playlistModel_.playingItem();
     TPlaylistItemPtr item;
     bool ok = false;
 
@@ -3026,11 +3008,11 @@ namespace yae
 
       if (forward)
       {
-        current = playlistModel_.closestItem(current + 1);
+        current = playlistModel_.nextItem(current);
       }
       else
       {
-        current = playlistModel_.closestItem(current - 1, Playlist::kBehind);
+        current = playlistModel_.prevItem(current);
       }
 
       playlistModel_.setPlayingItem(current);
@@ -3050,30 +3032,19 @@ namespace yae
   void
   MainWindow::fixupNextPrev()
   {
-    std::size_t index = playlistModel_.playingItem();
-    std::size_t nNext = playlistModel_.countItemsAhead();
-    std::size_t nPrev = playlistModel_.countItemsBehind();
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
-    std::size_t iNext =
-      nNext ?
-      playlistModel_.closestItem(index + 1) :
-      index;
+    QModelIndex iPrev =
+      index.isValid() ?
+      playlistModel_.prevItem(index) :
+      playlistModel_.lastItem();
 
-    std::size_t iPrev =
-      nPrev ?
-      playlistModel_.closestItem(index - 1, Playlist::kBehind) :
-      index;
+    TPlaylistItemPtr prev = playlistModel_.lookup(iPrev);
+    TPlaylistItemPtr next = playlistModel_.lookup(iNext);
 
-    TPlaylistItemPtr prev((nPrev && iPrev < index) ?
-                          playlistModel_.lookup(iPrev) :
-                          NULL);
-
-    TPlaylistItemPtr next((nNext && iNext > index) ?
-                          playlistModel_.lookup(iNext) :
-                          NULL);
-
-    actionPrev->setEnabled(iPrev < index);
-    actionNext->setEnabled(iNext > index);
+    actionPrev->setEnabled(!!prev);
+    actionNext->setEnabled(index.isValid());
 
     if (prev)
     {
@@ -3105,13 +3076,10 @@ namespace yae
     // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistModel_.playingItem();
-    std::size_t iNext = playlistModel_.closestItem(index + 1);
-    if (iNext > index)
-    {
-      playlistModel_.setPlayingItem(iNext);
-    }
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
+    playlistModel_.setPlayingItem(iNext);
     playback(true);
   }
 
@@ -3124,14 +3092,13 @@ namespace yae
     // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistModel_.playingItem();
-    std::size_t iPrev = playlistModel_.closestItem(index - 1,
-                                                   Playlist::kBehind);
-    if (iPrev < index)
-    {
-      playlistModel_.setPlayingItem(iPrev);
-    }
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iPrev =
+      index.isValid() ?
+      playlistModel_.prevItem(index) :
+      playlistModel_.lastItem();
 
+    playlistModel_.setPlayingItem(iPrev);
     playback(false);
   }
 
@@ -3180,7 +3147,7 @@ namespace yae
       return;
     }
 
-    std::size_t itemIndex = playlistModel_.playingItem();
+    QModelIndex itemIndex = playlistModel_.playingItem();
     TPlaylistGroupPtr group;
     TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
 
@@ -3208,11 +3175,13 @@ namespace yae
     // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    playlistModel_.setPlayingItem(bookmark.itemIndex_);
-    TPlaylistItemPtr item = playlistModel_.lookup(bookmark.itemIndex_);
+    QModelIndex index = playlistModel_.lookupModelIndex(bookmark.groupHash_,
+                                                        bookmark.itemHash_);
 
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (item)
     {
+      playlistModel_.setPlayingItem(index);
       item->failed_ = !load(item->path_, &bookmark);
     }
 
@@ -3223,14 +3192,14 @@ namespace yae
   // MainWindow::findBookmark
   //
   bool
-  MainWindow::findBookmark(std::size_t itemIndex,
+  MainWindow::findBookmark(const TPlaylistItemPtr & item,
                            PlaylistBookmark & found) const
   {
     for (std::vector<PlaylistBookmark>::const_iterator i = bookmarks_.begin();
          i != bookmarks_.end(); ++i)
     {
       const PlaylistBookmark & bookmark = *i;
-      if (bookmark.itemIndex_ == itemIndex)
+      if (bookmark.item_ == item)
       {
         found = bookmark;
         return true;
@@ -3600,8 +3569,7 @@ namespace yae
       contextMenu_->addAction(actionShowPlaylist);
       contextMenu_->addAction(actionRepeatPlaylist);
 
-      if (// playlistModel_.underMouse() && // if showing playlist...
-          playlistModel_.countItems())
+      if (playlistModel_.hasItems())
       {
         contextMenu_->addSeparator();
         contextMenu_->addAction(actionRemove_);

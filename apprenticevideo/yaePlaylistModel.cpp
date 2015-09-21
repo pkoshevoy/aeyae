@@ -7,7 +7,7 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // yae includes:
-#include <yaePlaylistModel.h>
+#include "yaePlaylistModel.h"
 
 // Qt includes:
 #include <QItemSelectionModel>
@@ -147,7 +147,6 @@ namespace yae
     roles[kRoleItemHash] = "itemHash";
     roles[kRoleThumbnail] = "thumbnail";
     roles[kRoleCollapsed] = "collapsed";
-    roles[kRoleExcluded] = "excluded";
     roles[kRoleSelected] = "selected";
     roles[kRolePlaying] = "playing";
     roles[kRoleFailed] = "failed";
@@ -244,11 +243,6 @@ namespace yae
         return QVariant(group->collapsed_);
       }
 
-      if (role == kRoleExcluded)
-      {
-        return QVariant(group->excluded_);
-      }
-
       if (role == kRoleItemCount)
       {
         return QVariant((qulonglong)(group->items_.size()));
@@ -298,11 +292,6 @@ namespace yae
             << '/'
             << item->hash_;
         return QVariant(QString::fromUtf8(oss.str().c_str()));
-      }
-
-      if (role == kRoleExcluded)
-      {
-        return QVariant(item->excluded_);
       }
 
       if (role == kRoleSelected)
@@ -370,44 +359,13 @@ namespace yae
       }
     }
 
+    if (role == kRolePlaying && !item && !group)
+    {
+      setPlayingItem(playlist_.numItems());
+      return true;
+    }
+
     return QAbstractItemModel::setData(index, value, role);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::getNode
-  //
-  PlaylistNode *
-  PlaylistModel::getNode(const QModelIndex & index,
-                         const PlaylistNode *& parentNode) const
-  {
-    if (!index.isValid())
-    {
-      parentNode = NULL;
-      return &playlist_;
-    }
-
-    PlaylistNode * parent =
-      static_cast<PlaylistNode *>(index.internalPointer());
-    parentNode = parent;
-
-    if (&playlist_ == parent)
-    {
-      const std::size_t n = playlist_.groups().size();
-      std::size_t row = index.row();
-      return (row < n) ? playlist_.groups()[row].get() : NULL;
-    }
-
-    PlaylistGroup * group =
-      dynamic_cast<PlaylistGroup *>(parent);
-
-    if (group)
-    {
-      const std::size_t n = group->items_.size();
-      std::size_t row = index.row();
-      return (row < n) ? group->items_[row].get() : NULL;
-    }
-
-    return NULL;
   }
 
   //----------------------------------------------------------------
@@ -423,24 +381,64 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::filterChanged
+  // PlaylistModel::makeModelIndex
   //
-  bool
-  PlaylistModel::filterChanged(const QString & filter)
+  QModelIndex
+  PlaylistModel::makeModelIndex(int groupRow, int itemRow) const
   {
-    // FIXME: write me!
-    YAE_ASSERT(false);
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist_.lookup(group, groupRow, itemRow);
 
-    return false;
+    if (item)
+    {
+      PlaylistNode * parent = group.get();
+      return createIndex(item->row_, 0, parent);
+    }
+
+    if (group)
+    {
+      PlaylistNode * playlistNode = &playlist_;
+      return createIndex(group->row_, 0, playlistNode);
+    }
+
+    return QModelIndex();
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::setPlayingItem
+  // PlaylistModel::mapToGroupRowItemRow
   //
   void
-  PlaylistModel::setPlayingItem(std::size_t itemIndex)
+  PlaylistModel::mapToGroupRowItemRow(const QModelIndex & modelIndex,
+                                      int & groupRow,
+                                      int & itemRow)
   {
-    playlist_.setPlayingItem(itemIndex, true);
+    groupRow = -1;
+    itemRow = -1;
+
+    if (!modelIndex.isValid())
+    {
+      return;
+    }
+
+    QModelIndex parentIndex = modelIndex.parent();
+    if (parentIndex.isValid())
+    {
+      groupRow = parentIndex.row();
+      itemRow = modelIndex.row();
+    }
+    else
+    {
+      groupRow = modelIndex.row();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::selectAll
+  //
+  void
+  PlaylistModel::selectAll()
+  {
+    playlist_.selectAll();
   }
 
   //----------------------------------------------------------------
@@ -474,72 +472,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::selectAll
-  //
-  void
-  PlaylistModel::selectAll()
-  {
-    playlist_.selectAll();
-  }
-
-  //----------------------------------------------------------------
   // PlaylistModel::unselectAll
   //
   void
   PlaylistModel::unselectAll()
   {
     playlist_.unselectAll();
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::removeSelected
-  //
-  void
-  PlaylistModel::removeSelected()
-  {
-    playlist_.removeSelected();
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::modelIndexForItem
-  //
-  QModelIndex
-  PlaylistModel::modelIndexForItem(std::size_t itemIndex) const
-  {
-    TPlaylistGroupPtr group;
-    TPlaylistItemPtr item = playlist_.lookup(itemIndex, &group);
-
-    if (!item)
-    {
-      return QModelIndex();
-    }
-
-    PlaylistNode * parent = group.get();
-    return createIndex(item->row_, 0, parent);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistModel::makeModelIndex
-  //
-  QModelIndex
-  PlaylistModel::makeModelIndex(int groupRow, int itemRow) const
-  {
-    TPlaylistGroupPtr group;
-    TPlaylistItemPtr item = playlist_.lookup(group, groupRow, itemRow);
-
-    if (item)
-    {
-      PlaylistNode * parent = group.get();
-      return createIndex(item->row_, 0, parent);
-    }
-
-    if (group)
-    {
-      PlaylistNode * playlistNode = &playlist_;
-      return createIndex(group->row_, 0, playlistNode);
-    }
-
-    return QModelIndex();
   }
 
   //----------------------------------------------------------------
@@ -552,6 +490,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistModel::setCurrentItem
+  //
+  void
+  PlaylistModel::setCurrentItem(const QModelIndex & index)
+  {
+    int groupRow = -1;
+    int itemRow = -1;
+    mapToGroupRowItemRow(index, groupRow, itemRow);
+    setCurrentItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModel::setPlayingItem
   //
   void
@@ -559,7 +509,21 @@ namespace yae
   {
     QModelIndex index = makeModelIndex(groupRow, itemRow);
     setData(index, QVariant(true), kRolePlaying);
+
+    // FIXME: should this be called here?
     setCurrentItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setPlayingItem
+  //
+  void
+  PlaylistModel::setPlayingItem(const QModelIndex & index)
+  {
+    int groupRow = -1;
+    int itemRow = -1;
+    mapToGroupRowItemRow(index, groupRow, itemRow);
+    setPlayingItem(groupRow, itemRow);
   }
 
   //----------------------------------------------------------------
@@ -569,6 +533,186 @@ namespace yae
   PlaylistModel::removeItems(int groupRow, int itemRow)
   {
     playlist_.removeItems(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::removeItems
+  //
+  void
+  PlaylistModel::removeItems(const QModelIndex & index)
+  {
+    int groupRow = -1;
+    int itemRow = -1;
+    mapToGroupRowItemRow(index, groupRow, itemRow);
+    removeItems(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::removeSelected
+  //
+  void
+  PlaylistModel::removeSelected()
+  {
+    playlist_.removeSelected();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::nextItem
+  //
+  QModelIndex
+  PlaylistModel::nextItem(const QModelIndex & index,
+                          Playlist::TDirection where) const
+  {
+    std::size_t itemIndex = mapToItemIndex(index);
+    if (itemIndex >= playlist_.numItems())
+    {
+      return makeModelIndex(-1, -1);
+    }
+
+    if (where == Playlist::kAhead)
+    {
+      return mapToModelIndex(itemIndex + 1);
+    }
+
+    if (itemIndex > 0)
+    {
+      return mapToModelIndex(itemIndex - 1);
+    }
+
+    return makeModelIndex(-1, -1);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::lookupModelIndex
+  //
+  QModelIndex
+  PlaylistModel::lookupModelIndex(const std::string & groupHash,
+                                  const std::string & itemHash) const
+  {
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr found = lookup(groupHash, itemHash, &group);
+
+    if (!group && !found)
+    {
+      return makeModelIndex(-1, -1);
+    }
+
+    if (!found)
+    {
+      return makeModelIndex(group->row_, -1);
+    }
+
+    const PlaylistItem & item = *found;
+    return makeModelIndex(group->row_, item.row_);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::lookup
+  //
+  TPlaylistItemPtr
+  PlaylistModel::lookup(const QModelIndex & modelIndex,
+                        TPlaylistGroupPtr * returnGroup) const
+  {
+    int groupRow = -1;
+    int itemRow = -1;
+    mapToGroupRowItemRow(modelIndex, groupRow, itemRow);
+
+    const std::size_t numGroups = playlist_.groups().size();
+    if (groupRow < 0 || groupRow >= numGroups)
+    {
+      YAE_ASSERT(groupRow < int(numGroups));
+      return TPlaylistItemPtr();
+    }
+
+    TPlaylistGroupPtr groupPtr = playlist_.groups()[groupRow];
+    if (returnGroup)
+    {
+      *returnGroup = groupPtr;
+    }
+
+    const PlaylistGroup & group = *groupPtr;
+    const std::size_t numItems = group.items_.size();
+    if (itemRow < 0 || itemRow >= numItems)
+    {
+      YAE_ASSERT(itemRow < int(numItems));
+      return TPlaylistItemPtr();
+    }
+
+    return group.items_[itemRow];
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::lookupItemFilePath
+  //
+  QString
+  PlaylistModel::lookupItemFilePath(const QString & id) const
+  {
+    return playlist_.lookupItemFilePath(id);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::mapToItemIndex
+  //
+  std::size_t
+  PlaylistModel::mapToItemIndex(const QModelIndex & modelIndex) const
+  {
+    if (!modelIndex.isValid())
+    {
+      return std::numeric_limits<std::size_t>::max();
+    }
+
+    PlaylistNode * parent =
+      static_cast<PlaylistNode *>(modelIndex.internalPointer());
+
+    if (&playlist_ == parent)
+    {
+      std::size_t numGroups = playlist_.groups().size();
+      std::size_t groupRow = modelIndex.row();
+
+      if (groupRow >= numGroups)
+      {
+        return std::numeric_limits<std::size_t>::max();
+      }
+
+      const PlaylistGroup & group = *(playlist_.groups()[groupRow]);
+      return group.offset_;
+    }
+
+    PlaylistGroup * group =
+      dynamic_cast<PlaylistGroup *>(parent);
+
+    if (group)
+    {
+      std::size_t numItems = group->items_.size();
+      std::size_t itemRow = modelIndex.row();
+
+      if (itemRow >= numItems)
+      {
+        return playlist_.numItems();
+      }
+
+      return group->offset_ + itemRow;
+    }
+
+    return std::numeric_limits<std::size_t>::max();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::mapToModelIndex
+  //
+  QModelIndex
+  PlaylistModel::mapToModelIndex(std::size_t itemIndex) const
+  {
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlist_.lookup(itemIndex, &group);
+
+    if (!item)
+    {
+      return QModelIndex();
+    }
+
+    PlaylistNode * parent = group.get();
+    return createIndex(item->row_, 0, parent);
   }
 
   //----------------------------------------------------------------
@@ -703,11 +847,11 @@ namespace yae
       << ", prev " << prev
       << std::endl;
 #endif
-    QModelIndex ix0 = modelIndexForItem(prev);
-    QModelIndex ix1 = modelIndexForItem(now);
+    QModelIndex ix0 = mapToModelIndex(prev);
+    QModelIndex ix1 = mapToModelIndex(now);
     emitDataChanged(kRolePlaying, ix0);
     emitDataChanged(kRolePlaying, ix1);
-    emit playingItemChanged(now);
+    emit playingItemChanged(ix1);
   }
 
   //----------------------------------------------------------------
@@ -741,73 +885,52 @@ namespace yae
     emitDataChanged(kRoleSelected, index);
   }
 
-#if 0
   //----------------------------------------------------------------
-  // PlaylistModel::modelIndexToRows
+  // PlaylistModel::getNode
   //
-  void
-  PlaylistModel::modelIndexToRows(const QModelIndex & index,
-                                  int & groupRow,
-                                  int & itemRow) const
+  PlaylistNode *
+  PlaylistModel::getNode(const QModelIndex & index,
+                         const PlaylistNode *& parentNode) const
   {
-    const PlaylistNode * parentNode = NULL;
-    PlaylistNode * node = getNode(index, parentNode);
+    if (!index.isValid())
+    {
+      parentNode = NULL;
+      return &playlist_;
+    }
 
-    const PlaylistGroup * group =
-      dynamic_cast<const PlaylistGroup *>(parentNode);
+    PlaylistNode * parent =
+      static_cast<PlaylistNode *>(index.internalPointer());
+    parentNode = parent;
+
+    if (&playlist_ == parent)
+    {
+      const std::size_t n = playlist_.groups().size();
+      std::size_t row = index.row();
+      return (row < n) ? playlist_.groups()[row].get() : NULL;
+    }
+
+    PlaylistGroup * group =
+      dynamic_cast<PlaylistGroup *>(parent);
 
     if (group)
     {
-      PlaylistItem * item = dynamic_cast<PlaylistItem *>(node);
-      groupRow = group ? group->row_ : -1;
-      itemRow = item ? item->row_ : -1;
-      return;
+      const std::size_t n = group->items_.size();
+      std::size_t row = index.row();
+      return (row < n) ? group->items_[row].get() : NULL;
     }
 
-    group = dynamic_cast<const PlaylistGroup *>(node);
-    if (group)
-    {
-      groupRow = group->row_;
-      itemRow = -1;
-      return;
-    }
-
-    groupRow = -1;
-    itemRow = -1;
+    return NULL;
   }
 
   //----------------------------------------------------------------
-  // PlaylistModel::currentIndexChanged
+  // PlaylistModel::setPlayingItem
   //
   void
-  PlaylistModel::currentIndexChanged(const QModelIndex & current,
-                                     const QModelIndex & prev)
+  PlaylistModel::setPlayingItem(std::size_t itemIndex)
   {
-    const PlaylistNode * parentNode = NULL;
-    PlaylistNode * node = getNode(current, parentNode);
-
-    const PlaylistGroup * group =
-      dynamic_cast<const PlaylistGroup *>(parentNode);
-
-    if (group)
-    {
-      PlaylistItem * item = dynamic_cast<PlaylistItem *>(node);
-      int groupRow = group ? group->row_ : -1;
-      int itemRow = item ? item->row_ : -1;
-      emit currentItemChanged(group->row_, item->row_);
-      return;
-    }
-
-    group = dynamic_cast<const PlaylistGroup *>(node);
-    if (group)
-    {
-      emit currentItemChanged(group->row_, -1);
-      return;
-    }
-
-    emit currentItemChanged(-1, -1);
+    playlist_.setPlayingItem(itemIndex, true);
   }
-#endif
+
   //----------------------------------------------------------------
   // PlaylistModel::emitDataChanged
   //

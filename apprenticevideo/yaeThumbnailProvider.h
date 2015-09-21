@@ -22,7 +22,7 @@
 #include "yae/video/yae_reader.h"
 
 // local includes:
-#include "yaePlaylist.h"
+#include "yaeMainWindow.h"
 
 
 namespace yae
@@ -34,7 +34,7 @@ namespace yae
   struct ThumbnailProvider : public QQuickImageProvider
   {
     ThumbnailProvider(const IReaderPtr & readerPrototype,
-                      const yae::Playlist & playlist,
+                      const TPlaylistModel & playlist,
 
                       // default thumbnail size:
                       const QSize & envelopeSize = QSize(384, 216)
@@ -48,7 +48,7 @@ namespace yae
 
   protected:
     IReaderPtr readerPrototype_;
-    const yae::Playlist & playlist_;
+    const TPlaylistModel & playlist_;
     QSize envelopeSize_;
     std::map<QString, QImage> cache_;
   };

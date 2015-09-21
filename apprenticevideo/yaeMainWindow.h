@@ -28,7 +28,9 @@
 #include "yaeAppleRemoteControl.h"
 #endif
 #include "yaeBookmarks.h"
+#include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
+#include "yaePlaylistModelProxy.h"
 #include "yaeQuickWidget.h"
 #include "yaeTimelineControls.h"
 
@@ -41,6 +43,15 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // TPlaylistModel
+  //
+#if 0
+  typedef PlaylistModelProxy TPlaylistModel;
+#else
+  typedef PlaylistModel TPlaylistModel;
+#endif
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -87,7 +98,7 @@ namespace yae
   {
     PlaylistBookmark();
 
-    std::size_t itemIndex_;
+    TPlaylistItemPtr item_;
     QAction * action_;
   };
 
@@ -183,7 +194,7 @@ namespace yae
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
-    void playlistPlayingItemChanged(std::size_t index);
+    void playlistPlayingItemChanged(const QModelIndex & index);
 
     // window menu:
     void windowHalfSize();
@@ -220,7 +231,7 @@ namespace yae
     bool findBookmark(const std::string & groupHash,
                       PlaylistBookmark & bookmark) const;
 
-    bool findBookmark(std::size_t itemIndex,
+    bool findBookmark(const TPlaylistItemPtr & item,
                       PlaylistBookmark & bookmark) const;
 
   protected:
@@ -306,7 +317,7 @@ namespace yae
     unsigned int readerId_;
 
     // frame canvas:
-    yae::PlaylistModel playlistModel_;
+    TPlaylistModel playlistModel_;
     TQuickWidget * playerWidget_;
     Canvas * canvas_;
     TimelineControls * timelineControls_;

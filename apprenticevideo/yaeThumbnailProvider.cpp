@@ -41,7 +41,7 @@ namespace yae
   // ThumbnailProvider::ThumbnailProvider
   //
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
-                                       const Playlist & playlist,
+                                       const TPlaylistModel & playlist,
                                        const QSize & envelopeSize):
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
@@ -49,32 +49,6 @@ namespace yae
     playlist_(playlist),
     envelopeSize_(envelopeSize)
   {}
-
-  //----------------------------------------------------------------
-  // getItemFilePath
-  //
-  static QString
-  getItemFilePath(const Playlist & playlist, const QString & id)
-  {
-    std::string groupHashItemHash(id.toUtf8().constData());
-    std::size_t t = groupHashItemHash.find_first_of('/');
-    std::string groupHash = groupHashItemHash.substr(0, t);
-    std::string itemHash = groupHashItemHash.substr(t + 1);
-
-    std::size_t itemIndex = ~0;
-    TPlaylistGroupPtr group;
-    TPlaylistItemPtr item = playlist.lookup(groupHash,
-                                            itemHash,
-                                            &itemIndex,
-                                            &group);
-    if (!item)
-    {
-      YAE_ASSERT(false);
-      return QString();
-    }
-
-    return item->path_;
-  }
 
 #if 0
   //----------------------------------------------------------------
@@ -228,7 +202,7 @@ namespace yae
   static QImage
   getThumbnail(const yae::IReaderPtr & readerPrototype,
                const QSize & thumbnailMaxSize,
-               const Playlist & playlist,
+               const TPlaylistModel & playlist,
                const QString & id)
   {
     static QImage iconAudio
@@ -242,7 +216,7 @@ namespace yae
 
     QImage image;
 
-    QString itemFilePath = getItemFilePath(playlist, id);
+    QString itemFilePath = playlist.lookupItemFilePath(id);
     IReaderPtr reader = yae::openFile(readerPrototype, itemFilePath);
     if (!reader)
     {

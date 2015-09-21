@@ -44,7 +44,6 @@ namespace yae
       kRoleItemHash,
       kRoleThumbnail,
       kRoleCollapsed,
-      kRoleExcluded,
       kRoleSelected,
       kRolePlaying,
       kRoleFailed,
@@ -77,99 +76,102 @@ namespace yae
     // virtual:
     bool setData(const QModelIndex & index, const QVariant & value, int role);
 
-    // lookup a node associated with a given model index:
-    PlaylistNode * getNode(const QModelIndex & index,
-                           const PlaylistNode *& parentNode) const;
-
-    // properties:
-    inline quint64 itemCount() const
-    { return (quint64)countItems(); }
-
-    // popular playlist methods:
-    inline const Playlist & playlist() const
-    { return playlist_; }
-
-    inline std::size_t playingItem() const
-    { return playlist_.playingItem(); }
-
-    // return number of items in the playlist:
-    inline std::size_t countItems() const
-    { return playlist_.countItems(); }
-
-    // this is used to check whether previous/next navigation is possible:
-    inline std::size_t countItemsAhead() const
-    { return playlist_.countItemsAhead(); }
-
-    inline std::size_t countItemsBehind() const
-    { return playlist_.countItemsBehind(); }
-
-    inline TPlaylistGroupPtr lookupGroup(std::size_t index) const
-    { return playlist_.lookupGroup(index); }
-
-    inline TPlaylistItemPtr
-    lookup(std::size_t index, TPlaylistGroupPtr * group = NULL) const
-    {
-      return playlist_.lookup(index, group);
-    }
-
-    inline TPlaylistGroupPtr
-    lookupGroup(const std::string & groupHash) const
-    {
-      return playlist_.lookupGroup(groupHash);
-    }
-
-    inline TPlaylistItemPtr
-    lookup(const std::string & groupHash,
-           const std::string & itemHash,
-           std::size_t * returnItemIndex = NULL,
-           TPlaylistGroupPtr * returnGroup = NULL) const
-    {
-      return playlist_.lookup(groupHash,
-                              itemHash,
-                              returnItemIndex,
-                              returnGroup);
-    }
-
-    inline TPlaylistGroupPtr
-    closestGroup(std::size_t itemIndex,
-                 Playlist::TDirection where = Playlist::kAhead) const
-    {
-      return playlist_.closestGroup(itemIndex, where);
-    }
-
-    inline std::size_t
-    closestItem(std::size_t itemIndex,
-                Playlist::TDirection where = Playlist::kAhead,
-                TPlaylistGroupPtr * group = NULL) const
-    {
-      return playlist_.closestItem(itemIndex, where, group);
-    }
-
     // optionally pass back a list of hashes for the added items:
     void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
-  public slots:
-    // item filter:
-    bool filterChanged(const QString & filter);
-
-    // playlist navigation controls:
-    void setPlayingItem(std::size_t index);
-
-    // selection set management:
-    void selectItems(int groupRow, int itemRow, int selectionFlags);
-    void selectAll();
-    void unselectAll();
-
-    void removeSelected();
-
-  public:
-    QModelIndex modelIndexForItem(std::size_t itemIndex) const;
+    // helper: create a model index for a given
+    // group row index and item row index:
     QModelIndex makeModelIndex(int groupRow, int itemRow) const;
 
+    // inverse of makeModelIndex
+    static void mapToGroupRowItemRow(const QModelIndex & index,
+                                     int & groupRow,
+                                     int & itemRow);
+  public slots:
+    // selection set management:
+    Q_INVOKABLE void selectAll();
+    Q_INVOKABLE void selectItems(int groupRow, int itemRow, int selFlags);
+    Q_INVOKABLE void unselectAll();
+
     Q_INVOKABLE void setCurrentItem(int groupRow, int itemRow);
+    Q_INVOKABLE void setCurrentItem(const QModelIndex & index);
+
     Q_INVOKABLE void setPlayingItem(int groupRow, int itemRow);
+    Q_INVOKABLE void setPlayingItem(const QModelIndex & index);
+
     Q_INVOKABLE void removeItems(int groupRow, int itemRow);
+    Q_INVOKABLE void removeItems(const QModelIndex & index);
+    Q_INVOKABLE void removeSelected();
+
+    // property: number of items in the playlist:
+    inline quint64 itemCount() const
+    { return (quint64)playlist_.numItems(); }
+
+    // helper: model index for the first group/item:
+    inline QModelIndex firstItem() const
+    { return makeModelIndex(0, 0); }
+
+    inline QModelIndex lastItem() const
+    {
+      return
+        playlist_.numItems() ?
+        mapToModelIndex(playlist_.numItems() - 1) :
+        firstItem();
+    }
+
+    // check whether there are any items:
+    inline bool hasItems() const
+    { return firstItem().isValid(); }
+
+    // popular playlist methods:
+    QModelIndex playingItem() const
+    { return mapToModelIndex(playlist_.playingItem()); }
+
+    // return index of the item closest to a given index
+    // in the specified traversal direction:
+    QModelIndex nextItem(const QModelIndex & index,
+                         Playlist::TDirection where) const;
+
+    inline QModelIndex nextItem(const QModelIndex & index) const
+    { return nextItem(index, Playlist::kAhead); }
+
+    inline QModelIndex prevItem(const QModelIndex & index) const
+    { return nextItem(index, Playlist::kBehind); }
+
+    // lookup item index for a given pair of group/item hashes:
+    QModelIndex lookupModelIndex(const std::string & groupHash,
+                                 const std::string & itemHash) const;
+
+    // lookup a given item:
+    TPlaylistItemPtr lookup(const QModelIndex & modelIndex,
+                            TPlaylistGroupPtr * returnGroup = NULL) const;
+
+    inline TPlaylistItemPtr
+    lookup(const std::string & groupHash,
+           const std::string & itemHash,
+           TPlaylistGroupPtr * returnGroup = NULL) const
+    {
+      return playlist_.lookup(groupHash, itemHash, returnGroup);
+    }
+
+    // lookup the url/file path an item identified by a groupHash/itemHash id:
+    QString lookupItemFilePath(const QString & id) const;
+
+    // convert to/from model index and flat item vector index:
+    std::size_t mapToItemIndex(const QModelIndex & modelIndex) const;
+    QModelIndex mapToModelIndex(std::size_t itemIndex) const;
+
+  signals:
+    void itemCountChanged();
+
+    // this signal may be emitted if the user activates an item,
+    // or otherwise changes the playlist to invalidate the
+    // existing playing item:
+    void playingItemChanged(const QModelIndex & index);
+
+    // highlight item change notification:
+    void currentItemChanged(int groupRow, int itemRow);
 
   protected slots:
     void onAddingGroup(int groupRow);
@@ -188,30 +190,20 @@ namespace yae
     void onCurrentChanged(int groupRow, int itemRow);
     void onSelectedChanged(int groupRow, int itemRow);
 
-  signals:
-    void itemCountChanged();
-
-    // this signal may be emitted if the user activates an item,
-    // or otherwise changes the playlist to invalidate the
-    // existing playing item:
-    void playingItemChanged(std::size_t index);
-
-    // highlight item change notification:
-    void currentItemChanged(int groupRow, int itemRow);
-
   protected:
-#if 0
-    void modelIndexToRows(const QModelIndex & index,
-                          int & groupRow,
-                          int & itemRow) const;
-#endif
+    // lookup a node associated with a given model index:
+    PlaylistNode * getNode(const QModelIndex & index,
+                           const PlaylistNode *& parentNode) const;
+
+    void setPlayingItem(std::size_t index);
+
     void emitDataChanged(Roles role, const QModelIndex & index);
 
     void emitDataChanged(Roles role,
                          const QModelIndex & first,
                          const QModelIndex & last);
 
-
+  public:
     mutable Playlist playlist_;
   };
 }

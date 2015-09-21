@@ -11,6 +11,7 @@
 
 // std includes:
 #include <memory>
+#include <set>
 #include <vector>
 
 // Qt includes:
@@ -96,9 +97,6 @@ namespace yae
     // a flag indicating whether this item is currently selected:
     bool selected_;
 
-    // a flag indicating whether this item is excluded from the list:
-    bool excluded_;
-
     // a flag indicating whether this item failed to load:
     bool failed_;
 
@@ -138,9 +136,6 @@ namespace yae
 
     // a flag indicating whether this group is collapsed for brevity:
     bool collapsed_;
-
-    // a flag indicating whether this group is excluded from the list:
-    bool excluded_;
 
     // a hash string identifying this group:
     std::string hash_;
@@ -184,11 +179,8 @@ namespace yae
     std::size_t playingItem() const;
 
     // return number of items in the playlist:
-    std::size_t countItems() const;
-
-    // this is used to check whether previous/next navigation is possible:
-    std::size_t countItemsAhead() const;
-    std::size_t countItemsBehind() const;
+    inline std::size_t numItems() const
+    { return numItems_; }
 
     // lookup a playlist item by index:
     TPlaylistGroupPtr lookupGroup(std::size_t index) const;
@@ -199,8 +191,10 @@ namespace yae
     TPlaylistGroupPtr lookupGroup(const std::string & groupHash) const;
     TPlaylistItemPtr lookup(const std::string & groupHash,
                             const std::string & itemHash,
-                            std::size_t * returnItemIndex = NULL,
                             TPlaylistGroupPtr * returnGroup = NULL) const;
+
+    // lookup the url/file path an item identified by a groupHash/itemHash id:
+    QString lookupItemFilePath(const QString & id) const;
 
     TPlaylistItemPtr lookup(TPlaylistGroupPtr & parent,
                             int groupRow,
@@ -222,10 +216,18 @@ namespace yae
     // to the specified item index:
     std::size_t closestItem(std::size_t itemIndex,
                             TDirection where = kAhead,
-                            TPlaylistGroupPtr * group = NULL) const;
+                            TPlaylistGroupPtr * returnGroup = NULL) const;
 
-    // item filter:
-    bool filterChanged(const QString & filter);
+    inline std::size_t nextItem(std::size_t itemIndex,
+                                TDirection where = kAhead,
+                                TPlaylistGroupPtr * returnGroup = NULL) const
+    {
+      std::size_t i =
+        (where == kAhead) ? itemIndex + 1 :
+        (itemIndex > 0) ? itemIndex - 1 : 0;
+
+      return closestItem(i, where, returnGroup);
+    }
 
     // playlist navigation controls:
     void setPlayingItem(std::size_t index, bool force = false);
@@ -235,9 +237,11 @@ namespace yae
     void unselectAll();
     void selectGroup(PlaylistGroup & group);
     void unselectGroup(PlaylistGroup & group);
+    void unselectItem(std::size_t indexSel);
 
     void selectItem(std::size_t indexSel, bool exclusive = true);
     void selectItems(std::size_t i0, std::size_t i1, bool exclusive);
+    void selectItems(const std::set<std::size_t> & items, bool exclusive);
 
     std::size_t selectionAnchor();
     void discardSelectionAnchor();
@@ -248,12 +252,6 @@ namespace yae
     // accessors:
     inline const std::vector<TPlaylistGroupPtr> & groups() const
     { return groups_; }
-
-    inline std::size_t countItemsShown() const
-    { return numShown_; }
-
-    inline std::size_t countGroupsShown() const
-    { return numShownGroups_; }
 
     // returns true if current index has changed:
     bool setCurrentItem(std::size_t index);
@@ -285,7 +283,6 @@ namespace yae
 
   protected:
     // helpers:
-    bool applyFilter();
     void updateOffsets();
     void setPlayingItem(std::size_t index, const TPlaylistItemPtr & prev);
 
@@ -308,12 +305,6 @@ namespace yae
     // total number of items:
     std::size_t numItems_;
 
-    // number of non-excluded items:
-    std::size_t numShown_;
-
-    // number of non-excluded item groups:
-    std::size_t numShownGroups_;
-
     // playing item index:
     std::size_t playing_;
 
@@ -322,9 +313,6 @@ namespace yae
 
     // index of current item at the start of extended selection:
     std::size_t selectionAnchor_;
-
-    // playlist filter:
-    std::list<QString> keywords_;
   };
 
 }

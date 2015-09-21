@@ -80,6 +80,7 @@ set(project_moc_hxx
   yaeMainWindow.h
   yaePlaylist.h
   yaePlaylistModel.h
+  yaePlaylistModelProxy.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
   yaeUtilsQml.h
@@ -135,6 +136,8 @@ set(project_sources
   yaePlaylist.cpp
   yaePlaylistModel.h
   yaePlaylistModel.cpp
+  yaePlaylistModelProxy.h
+  yaePlaylistModelProxy.cpp
   yaeQuickWidget.h
   yaeQuickWidget.cpp
   yaeScreenSaverInhibitor.h
