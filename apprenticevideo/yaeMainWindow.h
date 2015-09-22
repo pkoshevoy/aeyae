@@ -47,7 +47,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistModel
   //
-#if 0
+#if 1
   typedef PlaylistModelProxy TPlaylistModel;
 #else
   typedef PlaylistModel TPlaylistModel;

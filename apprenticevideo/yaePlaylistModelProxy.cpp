@@ -24,6 +24,10 @@ namespace yae
   {
     bool ok = true;
 
+    ok = connect(&model_, SIGNAL(itemCountChanged()),
+                 this, SIGNAL(itemCountChanged()));
+    YAE_ASSERT(ok);
+
     ok = connect(&model_, SIGNAL(playingItemChanged(const QModelIndex &)),
                  this, SLOT(onSourcePlayingChanged(const QModelIndex &)));
     YAE_ASSERT(ok);
@@ -51,19 +55,28 @@ namespace yae
   QModelIndex
   PlaylistModelProxy::makeModelIndex(int groupRow, int itemRow) const
   {
-    if (groupRow < 0)
+    QModelIndex rootIndex = QSortFilterProxyModel::index(-1, -1);
+    const int numGroups = rowCount(rootIndex);
+
+    if (groupRow < 0 || groupRow >= numGroups)
     {
-      return QSortFilterProxyModel::index(-1, 0);
+      return rootIndex;
     }
 
+    QModelIndex groupIndex =
+      QSortFilterProxyModel::index(groupRow, 0, rootIndex);
     if (itemRow < 0)
     {
-      QModelIndex parent = makeModelIndex(-1, -1);
-      return QSortFilterProxyModel::index(groupRow, 0, parent);
+      return groupIndex;
     }
 
-    QModelIndex parent = makeModelIndex(groupRow, -1);
-    return QSortFilterProxyModel::index(itemRow, 0, parent);
+    const int groupSize = rowCount(groupIndex);
+    if (itemRow >= groupSize)
+    {
+      return rootIndex;
+    }
+
+    return QSortFilterProxyModel::index(itemRow, 0, groupIndex);
   }
 
   //----------------------------------------------------------------
