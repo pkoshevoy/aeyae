@@ -163,7 +163,10 @@ Item
 
     anchors.fill: parent
     anchors.margins: 0
-    anchors.bottomMargin: timeline.visible ? timeline.height : 0
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: parent.top
+    anchors.bottom: (timeline.visible ? timeline.top : parent.bottom)
   }
 
   Timeline
@@ -176,7 +179,7 @@ Item
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    height: (playlist.calc_title_height(24.0, playlist.width) * 3 / 2)
+    height: (playlist.calc_title_height(24.0, playlist.width) * 1.5)
 
     // color_played: "#4080ff"
   }

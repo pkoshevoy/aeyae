@@ -102,6 +102,7 @@ if (Qt5_FOUND)
 endif (Qt5_FOUND)
 
 set(project_sources
+  qml/FilterIcon.qml
   qml/Player.qml
   qml/Playlist.qml
   qml/Timeline.qml

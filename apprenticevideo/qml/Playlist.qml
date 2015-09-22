@@ -421,12 +421,49 @@ Item
     }
   }
 
+  Item
+  {
+    id: filter
+    objectName: "filter"
+
+    anchors.margins: 0
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: parent.top
+    height: (calc_title_height(24.0, playlistView.width) * 1.5)
+
+    FilterIcon
+    {
+      id: filterIcon
+      objectName: "filterIcon"
+
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      anchors.leftMargin: parent.height * 0.05
+
+      height: parent.height * 0.7
+      width: height
+
+      on_click: function (mouse)
+      {
+        console.log("FilterIcon: clicked!");
+        mouse.accepted = true;
+      }
+    }
+
+  }
+
   ListView
   {
     id: playlistView
     objectName: "playlistView"
 
-    anchors.fill: parent
+    anchors.margins: 0
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: filter.bottom
+    anchors.bottom: parent.bottom
+
     model: yae_playlist_model
     delegate: groupDelegate
     footer: footerComponent

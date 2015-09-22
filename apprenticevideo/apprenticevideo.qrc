@@ -17,6 +17,7 @@
     <file>images/group-exposed.png</file>
     <file>images/group-collapsed.png</file>
     <file>yaeAbout.html</file>
+    <file>qml/FilterIcon.qml</file>
     <file>qml/Player.qml</file>
     <file>qml/Playlist.qml</file>
     <file>qml/Timeline.qml</file>
