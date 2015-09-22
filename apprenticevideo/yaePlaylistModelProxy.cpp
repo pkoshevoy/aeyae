@@ -415,4 +415,38 @@ namespace yae
     emit currentItemChanged(proxyGroupRow, proxyItemRow);
   }
 
+  //----------------------------------------------------------------
+  // PlaylistModelProxy::filterAcceptsRow
+  //
+  bool
+  PlaylistModelProxy::filterAcceptsRow(int sourceRow,
+                                       const QModelIndex & sourceParent) const
+  {
+    bool acceptable = QSortFilterProxyModel::filterAcceptsRow(sourceRow,
+                                                              sourceParent);
+    if (acceptable)
+    {
+      return true;
+    }
+
+    if (sourceParent.isValid())
+    {
+      return acceptable;
+    }
+
+    // must check whether any children of this group match the filter,
+    // and reject the group if none of the children match.
+    QModelIndex groupIndex = model_.makeModelIndex(sourceRow, -1);
+    const int groupSize = model_.rowCount(groupIndex);
+    for (int i = 0; i < groupSize; i++)
+    {
+      if (filterAcceptsRow(i, groupIndex))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 }

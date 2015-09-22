@@ -127,6 +127,10 @@ namespace yae
     void onSourceCurrentChanged(int groupRow, int itemRow);
 
   protected:
+    // virtual:
+    bool filterAcceptsRow(int sourceRow,
+                          const QModelIndex & sourceParent) const;
+
     // reference to playlist model being proxied:
     PlaylistModel model_;
   };
