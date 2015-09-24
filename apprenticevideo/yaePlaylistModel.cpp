@@ -150,6 +150,7 @@ namespace yae
     roles[kRoleSelected] = "selected";
     roles[kRolePlaying] = "playing";
     roles[kRoleFailed] = "failed";
+    roles[kRoleFilterKey] = "filterKey";
     roles[kRoleItemCount] = "itemCount";
 
     return roles;
@@ -308,6 +309,22 @@ namespace yae
       if (role == kRoleFailed)
       {
         return QVariant(item->failed_);
+      }
+
+      if (role == kRoleFilterKey)
+      {
+        QString text =
+          parentGroup->name_ + QString::fromUtf8(" ") +
+          item->name_ + QString::fromUtf8(".") +
+          item->ext_;
+
+        std::size_t itemIndex = parentGroup->offset_ + item->row_;
+        if (itemIndex == playlist_.playingItem())
+        {
+          text += tr("NOW PLAYING");
+        }
+
+        return text;
       }
 
       return QVariant();

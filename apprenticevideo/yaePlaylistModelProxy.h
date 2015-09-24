@@ -50,6 +50,8 @@ namespace yae
                                             int & itemRow)
     { PlaylistModel::mapToGroupRowItemRow(proxyIndex, groupRow, itemRow); }
 
+    Q_INVOKABLE void setItemFilter(const QString & filter);
+
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void selectItems(int groupRow, int itemRow, int selFlags);
     Q_INVOKABLE void unselectAll();

@@ -47,6 +47,7 @@ namespace yae
       kRoleSelected,
       kRolePlaying,
       kRoleFailed,
+      kRoleFilterKey,
       kRoleItemCount
    };
 

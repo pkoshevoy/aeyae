@@ -8,6 +8,7 @@
 
 // yae includes:
 #include "yaePlaylistModelProxy.h"
+#include "yaeUtilsQt.h"
 
 // Qt includes:
 #include <QItemSelectionModel>
@@ -37,6 +38,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     QSortFilterProxyModel::setSourceModel(&model_);
+    QSortFilterProxyModel::setFilterRole(PlaylistModel::kRoleFilterKey);
   }
 
   //----------------------------------------------------------------
@@ -77,6 +79,34 @@ namespace yae
     }
 
     return QSortFilterProxyModel::index(itemRow, 0, groupIndex);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModelProxy::setItemFilter
+  //
+  void
+  PlaylistModelProxy::setItemFilter(const QString & filter)
+  {
+    std::list<QString> keywords;
+    splitIntoWords(filter, keywords);
+    if (keywords.empty())
+    {
+      QSortFilterProxyModel::setFilterRegExp(QString());
+      return;
+    }
+
+    QString pattern = QString("^");
+    for (std::list<QString>::const_iterator i = keywords.begin();
+         i != keywords.end(); ++i)
+    {
+      pattern += QString::fromUtf8("(?=.*");
+      pattern += *i;
+      pattern += QString::fromUtf8(")");
+    }
+    pattern += QString::fromUtf8(".+");
+
+    QRegExp rx(pattern, Qt::CaseInsensitive, QRegExp::RegExp2);
+    QSortFilterProxyModel::setFilterRegExp(rx);
   }
 
   //----------------------------------------------------------------

@@ -159,7 +159,6 @@ Item
     id: playlist
     objectName: "playlist"
     visible: true
-    clip: true
 
     anchors.fill: parent
     anchors.margins: 0
