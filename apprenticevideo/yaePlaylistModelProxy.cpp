@@ -107,6 +107,8 @@ namespace yae
 
     QRegExp rx(pattern, Qt::CaseInsensitive, QRegExp::RegExp2);
     QSortFilterProxyModel::setFilterRegExp(rx);
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
