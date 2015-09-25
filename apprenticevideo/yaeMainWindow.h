@@ -181,6 +181,7 @@ namespace yae
     void toggleFullScreen();
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
+    void exitPlaylist();
     void togglePlayback();
     void skipToInPoint();
     void skipToOutPoint();

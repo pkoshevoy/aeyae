@@ -52,7 +52,7 @@ Item
 
   function calc_title_height(min_height, w)
   {
-    return Math.max(min_height, 24.0 * playlistView.width / 800.0);
+    return Math.max(min_height, 24.0 * playlist.width / 800.0);
   }
 
   function calc_zebra_index(index, cell_width, view_width)
@@ -416,10 +416,6 @@ Item
       set_playing_item();
       event.accepted = true;
     }
-    else if (event.key == Qt.Key_Escape)
-    {
-      event.accepted = true;
-    }
   }
 
   Item
@@ -432,7 +428,7 @@ Item
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.top: parent.top
-    height: (calc_title_height(24.0, playlistView.width) * 1.5)
+    height: (calc_title_height(24.0, playlist.width) * 1.5)
 
     Rectangle
     {
@@ -442,101 +438,7 @@ Item
 
       gradient: Gradient {
         GradientStop { position: 0.000000; color: '#b0000000'; }
-        GradientStop { position: 0.010417; color: '#ad000000'; }
-        GradientStop { position: 0.020833; color: '#aa000000'; }
-        GradientStop { position: 0.031250; color: '#a7000000'; }
-        GradientStop { position: 0.041667; color: '#a4000000'; }
-        GradientStop { position: 0.052083; color: '#a1000000'; }
-        GradientStop { position: 0.062500; color: '#9e000000'; }
-        GradientStop { position: 0.072917; color: '#9b000000'; }
-        GradientStop { position: 0.083333; color: '#98000000'; }
-        GradientStop { position: 0.093750; color: '#96000000'; }
-        GradientStop { position: 0.104167; color: '#94000000'; }
-        GradientStop { position: 0.114583; color: '#91000000'; }
-        GradientStop { position: 0.125000; color: '#8f000000'; }
-        GradientStop { position: 0.135417; color: '#8d000000'; }
-        GradientStop { position: 0.145833; color: '#89000000'; }
-        GradientStop { position: 0.156250; color: '#87000000'; }
-        GradientStop { position: 0.166667; color: '#85000000'; }
-        GradientStop { position: 0.177083; color: '#83000000'; }
-        GradientStop { position: 0.187500; color: '#80000000'; }
-        GradientStop { position: 0.197917; color: '#7e000000'; }
-        GradientStop { position: 0.208333; color: '#7a000000'; }
-        GradientStop { position: 0.218750; color: '#78000000'; }
-        GradientStop { position: 0.229167; color: '#75000000'; }
-        GradientStop { position: 0.239583; color: '#72000000'; }
-        GradientStop { position: 0.250000; color: '#6f000000'; }
-        GradientStop { position: 0.260417; color: '#6d000000'; }
-        GradientStop { position: 0.270833; color: '#6a000000'; }
-        GradientStop { position: 0.281250; color: '#67000000'; }
-        GradientStop { position: 0.291667; color: '#64000000'; }
-        GradientStop { position: 0.302083; color: '#63000000'; }
-        GradientStop { position: 0.312500; color: '#60000000'; }
-        GradientStop { position: 0.322917; color: '#5d000000'; }
-        GradientStop { position: 0.333333; color: '#5a000000'; }
-        GradientStop { position: 0.343750; color: '#58000000'; }
-        GradientStop { position: 0.354167; color: '#54000000'; }
-        GradientStop { position: 0.364583; color: '#52000000'; }
-        GradientStop { position: 0.375000; color: '#4f000000'; }
-        GradientStop { position: 0.385417; color: '#4c000000'; }
-        GradientStop { position: 0.395833; color: '#49000000'; }
-        GradientStop { position: 0.406250; color: '#47000000'; }
-        GradientStop { position: 0.416667; color: '#44000000'; }
-        GradientStop { position: 0.427083; color: '#42000000'; }
-        GradientStop { position: 0.437500; color: '#40000000'; }
-        GradientStop { position: 0.447917; color: '#3d000000'; }
-        GradientStop { position: 0.458333; color: '#3a000000'; }
-        GradientStop { position: 0.468750; color: '#38000000'; }
-        GradientStop { position: 0.479167; color: '#35000000'; }
-        GradientStop { position: 0.489583; color: '#33000000'; }
-        GradientStop { position: 0.500000; color: '#31000000'; }
-        GradientStop { position: 0.510417; color: '#2e000000'; }
-        GradientStop { position: 0.520833; color: '#2c000000'; }
-        GradientStop { position: 0.531250; color: '#2a000000'; }
-        GradientStop { position: 0.541667; color: '#28000000'; }
-        GradientStop { position: 0.552083; color: '#26000000'; }
-        GradientStop { position: 0.562500; color: '#24000000'; }
-        GradientStop { position: 0.572917; color: '#22000000'; }
-        GradientStop { position: 0.583333; color: '#21000000'; }
-        GradientStop { position: 0.593750; color: '#1f000000'; }
-        GradientStop { position: 0.604167; color: '#1d000000'; }
-        GradientStop { position: 0.614583; color: '#1b000000'; }
-        GradientStop { position: 0.625000; color: '#1a000000'; }
-        GradientStop { position: 0.635417; color: '#18000000'; }
-        GradientStop { position: 0.645833; color: '#17000000'; }
-        GradientStop { position: 0.656250; color: '#16000000'; }
-        GradientStop { position: 0.666667; color: '#14000000'; }
-        GradientStop { position: 0.677083; color: '#13000000'; }
-        GradientStop { position: 0.687500; color: '#12000000'; }
-        GradientStop { position: 0.697917; color: '#10000000'; }
-        GradientStop { position: 0.708333; color: '#0f000000'; }
-        GradientStop { position: 0.718750; color: '#0f000000'; }
-        GradientStop { position: 0.729167; color: '#0d000000'; }
-        GradientStop { position: 0.739583; color: '#0c000000'; }
-        GradientStop { position: 0.750000; color: '#0b000000'; }
-        GradientStop { position: 0.760417; color: '#0b000000'; }
-        GradientStop { position: 0.770833; color: '#0a000000'; }
-        GradientStop { position: 0.781250; color: '#09000000'; }
-        GradientStop { position: 0.791667; color: '#08000000'; }
-        GradientStop { position: 0.802083; color: '#07000000'; }
-        GradientStop { position: 0.812500; color: '#07000000'; }
-        GradientStop { position: 0.822917; color: '#06000000'; }
-        GradientStop { position: 0.833333; color: '#06000000'; }
-        GradientStop { position: 0.843750; color: '#05000000'; }
-        GradientStop { position: 0.854167; color: '#04000000'; }
-        GradientStop { position: 0.864583; color: '#04000000'; }
-        GradientStop { position: 0.875000; color: '#03000000'; }
-        GradientStop { position: 0.885417; color: '#03000000'; }
-        GradientStop { position: 0.895833; color: '#03000000'; }
-        GradientStop { position: 0.906250; color: '#03000000'; }
-        GradientStop { position: 0.916667; color: '#03000000'; }
-        GradientStop { position: 0.927083; color: '#02000000'; }
-        GradientStop { position: 0.937500; color: '#02000000'; }
-        GradientStop { position: 0.947917; color: '#02000000'; }
-        GradientStop { position: 0.958333; color: '#01000000'; }
-        GradientStop { position: 0.968750; color: '#01000000'; }
-        GradientStop { position: 0.979167; color: '#01000000'; }
-        GradientStop { position: 0.989583; color: '#01000000'; }
+        GradientStop { position: 0.500000; color: '#90000000'; }
         GradientStop { position: 1.000000; color: '#01000000'; }
       }
     }
@@ -549,6 +451,9 @@ Item
 
       Rectangle
       {
+        id: filterRect
+        objectName: "filterRect"
+
         anchors.fill: parent
         anchors.margins: filter.height * 0.05
         radius: 3
@@ -582,7 +487,7 @@ Item
         anchors.leftMargin: filter.height * 0.25
 
         font.bold: true
-        font.pixelSize: calc_title_height(24.0, playlistView.width) * 0.55
+        font.pixelSize: calc_title_height(24.0, playlist.width) * 0.55
 
         selectionColor: label_fg
         selectedTextColor: label_bg
@@ -598,6 +503,9 @@ Item
 
         Text
         {
+          id: placeholder
+          objectName: "placeholder"
+
           anchors.fill: parent
           anchors.margins: 0
 
@@ -631,6 +539,38 @@ Item
     }
   }
 
+  Item
+  {
+    id: scrollbar
+    objectName: "scrollbar"
+
+    anchors.top: playlistView.top
+    anchors.right: playlist.right
+    anchors.bottom: playlistView.bottom
+    anchors.bottomMargin: filter.height
+
+    width: calc_title_height(24.0, playlist.width) * 0.5
+    visible: playlistView.visibleArea.heightRatio < 1.0
+
+    Rectangle
+    {
+      anchors.left: scrollbar.left
+      anchors.right: scrollbar.right
+      anchors.leftMargin: scrollbar.width * 0.2
+      anchors.rightMargin: scrollbar.width * 0.2
+
+      opacity: 0.5
+      color: filter_bg
+      radius: width * 0.3
+
+      y: (playlistView.visibleArea.yPosition *
+          (playlistView.height - width * 5));
+
+      height: (playlistView.visibleArea.heightRatio *
+               (playlistView.height - width * 5) + width * 5);
+    }
+  }
+
   ListView
   {
     id: playlistView
@@ -638,7 +578,7 @@ Item
 
     anchors.margins: 0
     anchors.left: parent.left
-    anchors.right: parent.right
+    anchors.right: scrollbar.left
     anchors.top: filter.bottom
     anchors.bottom: parent.bottom
 
@@ -694,28 +634,34 @@ Item
       id: footer
       objectName: "footerComponentRect"
 
-      width: playlistView.width
-      height: calc_title_height(24.0, playlistView.width) + 2
+      width: playlist.width
+      height: footnote.height * 3 + 2
 
       Rectangle
       {
         color: separator_color
         height: 1
-        width: playlistView.width
+        width: playlist.width
         anchors.left: parent.left
         anchors.right: parent.right
       }
 
       Text
       {
-        anchors.fill: parent
+        id: footnote
+        objectName: "footnote"
+
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.topMargin: 2
-        anchors.leftMargin: footer.height / 2
-        anchors.rightMargin: footer.height / 2
+        anchors.leftMargin: height / 2
+        anchors.rightMargin: height / 2 + scrollbar.width
+        height: calc_title_height(24.0, playlist.width)
         horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
         elide: "ElideMiddle"
-        font.pixelSize: footer.height * 0.45
+        font.pixelSize: height * 0.45
         text: ((yae_playlist_model.itemCount == 1) ?
                "1 item, end of playlist" :
                "" + yae_playlist_model.itemCount + " items, end of playlist");
@@ -752,8 +698,8 @@ Item
         id: groupItem
         objectName: "groupItem"
 
-        height: calc_title_height(24.0, playlistView.width)
-        width: playlistView.width
+        height: calc_title_height(24.0, playlist.width)
+        width: parent.width
         anchors.left: parent.left
         anchors.right: parent.right
 
@@ -872,15 +818,13 @@ Item
       // size-to-fit:
       height: (!gridView.count ? 0 :
                gridView.cellHeight *
-               (0.3 + calc_rows(playlistView.width,
-                                gridView.cellWidth,
-                                gridView.count)));
+               (0.3 + calc_rows(width, gridView.cellWidth, gridView.count)));
 
       Rectangle
       {
         color: separator_color
         height: 1
-        width: playlistView.width
+        width: parent.width
         anchors.left: parent.left
         anchors.right: parent.right
       }
@@ -926,7 +870,7 @@ Item
         anchors.topMargin: 2
         width: parent.width
         height: parent.height - anchors.topMargin
-        cellWidth: calc_cell_width(playlistView.width)
+        cellWidth: calc_cell_width(width)
         cellHeight: calc_cell_height(this.cellWidth)
 
         highlight: gridViewHighlight
@@ -974,10 +918,9 @@ Item
               objectName: "backgroundRect"
 
               anchors.fill: parent
-              color: (calc_zebra_index(index,
-                                       gridView.cellWidth,
-                                       playlistView.width) ?
-                      zebra_bg_1 : zebra_bg_0) // argb
+              clip: true
+              color: (calc_zebra_index(index, gridView.cellWidth, width) ?
+                      zebra_bg_1 : zebra_bg_0); // argb
 
               Image
               {
@@ -1005,8 +948,8 @@ Item
 
                 color: label_bg
                 anchors.margins: 0;
-                anchors.leftMargin: -parent.height * 0.02;
-                anchors.rightMargin: -parent.height * 0.02;
+                anchors.leftMargin: -gridView.cellHeight * 0.02;
+                anchors.rightMargin: -gridView.cellHeight * 0.02;
                 anchors.bottom: labelTag.bottom
                 anchors.left: labelTag.left
                 width: (labelTag.contentWidth -
@@ -1025,7 +968,7 @@ Item
                 anchors.fill: parent
                 anchors.margins: parent.height * 0.05
                 font.bold: true
-                font.pixelSize: (calc_title_height(24.0, playlistView.width) *
+                font.pixelSize: (calc_title_height(24.0, playlist.width) *
                                  0.45);
                 wrapMode: "Wrap"
                 elide: "ElideMiddle"
@@ -1053,13 +996,25 @@ Item
 
                 color: label_bg
                 anchors.margins: 0;
-                anchors.leftMargin: -parent.height * 0.02;
-                anchors.rightMargin: -parent.height * 0.02;
+                anchors.leftMargin: -gridView.cellHeight * 0.02;
+                anchors.rightMargin: -gridView.cellHeight * 0.02;
                 anchors.left: nowPlayingTag.left
                 anchors.right: nowPlayingTag.right
                 anchors.bottom: nowPlayingTag.bottom
                 height: Utils.make_odd(nowPlayingTag.height)
                 radius: 3
+
+                Rectangle
+                {
+                  z: 2
+
+                  anchors.bottom: parent.bottom
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.bottomMargin: -height * 2
+                  height: gridView.cellHeight * 0.02
+                  color: selection_color
+                }
               }
 
               Text
@@ -1083,7 +1038,7 @@ Item
                 anchors.top: parent.top
                 anchors.margins: parent.height * 0.05
                 font.bold: true
-                font.pixelSize: (calc_title_height(24.0, playlistView.width) *
+                font.pixelSize: (calc_title_height(24.0, playlist.width) *
                                  0.30);
                 text: qsTr("NOW PLAYING")
                 color: label_fg
@@ -1105,6 +1060,7 @@ Item
                                model.index,
                                selectionFlags);
                   mouse.accepted = true;
+                  playlist.parent.focus = true;
                 }
 
                 onDoubleClicked: {
@@ -1113,6 +1069,7 @@ Item
                                     model.index);
                   model.playing = true;
                   mouse.accepted = true;
+                  playlist.parent.focus = true;
                 }
               }
 
@@ -1152,10 +1109,10 @@ Item
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.leftMargin: parent.height * 0.02
-                anchors.rightMargin: parent.height * 0.02
+                anchors.leftMargin: gridView.cellHeight * 0.02
+                anchors.rightMargin: gridView.cellHeight * 0.02
                 anchors.bottomMargin: height
-                height: parent.height * 0.02;
+                height: gridView.cellHeight * 0.02;
                 color: selection_color
               }
             }

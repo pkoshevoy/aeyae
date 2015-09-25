@@ -633,6 +633,10 @@ namespace yae
                  this, SLOT(exitFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(playerItem, SIGNAL(exitPlaylist()),
+                 this, SLOT(exitPlaylist()));
+    YAE_ASSERT(ok);
+
     ok = connect(playerItem, SIGNAL(togglePlayback()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
@@ -2369,6 +2373,15 @@ namespace yae
     showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::exitPlaylist
+  //
+  void
+  MainWindow::exitPlaylist()
+  {
+    actionShowPlaylist->setChecked(false);
   }
 
   //----------------------------------------------------------------

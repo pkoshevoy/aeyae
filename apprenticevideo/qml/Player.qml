@@ -10,6 +10,7 @@ Item
   id: player
   objectName: "player"
 
+  signal exitPlaylist()
   signal exitFullScreen()
   signal toggleFullScreen()
   signal togglePlayback()
@@ -37,7 +38,14 @@ Item
 
     if (event.key == Qt.Key_Escape)
     {
-      exitFullScreen();
+      if (state == "playlist")
+      {
+        exitPlaylist();
+      }
+      else
+      {
+        exitFullScreen();
+      }
       event.accepted = true;
     }
     else if (event.key == Qt.Key_MediaTogglePlayPause ||
