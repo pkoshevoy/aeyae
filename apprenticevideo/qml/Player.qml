@@ -174,6 +174,8 @@ Item
     anchors.right: parent.right
     anchors.top: parent.top
     anchors.bottom: (timeline.visible ? timeline.top : parent.bottom)
+
+    scrollbar.anchors.bottomMargin: (timeline.visible ? timeline.height : 0)
   }
 
   Timeline

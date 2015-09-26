@@ -11,6 +11,7 @@ Item
   objectName: "playlist"
 
   property alias view: playlistView
+  property alias scrollbar: scrollbar
 
   property var header_bg: "#df1f1f1f"
   property var header_fg: "#ffffffff"
@@ -532,6 +533,7 @@ Item
         on_click: function (mouse)
         {
           textInput.text = "";
+          playlist.parent.focus = true
           mouse.accepted = true;
         }
       }
@@ -545,29 +547,28 @@ Item
     objectName: "scrollbar"
 
     anchors.top: playlistView.top
-    anchors.right: playlist.right
+    anchors.right: playlistView.right
     anchors.bottom: playlistView.bottom
-    anchors.bottomMargin: filter.height
 
     width: calc_title_height(24.0, playlist.width) * 0.5
     visible: playlistView.visibleArea.heightRatio < 1.0
 
     Rectangle
     {
-      anchors.left: scrollbar.left
-      anchors.right: scrollbar.right
-      anchors.leftMargin: scrollbar.width * 0.2
-      anchors.rightMargin: scrollbar.width * 0.2
+      id: slider
+      objectName: "slider"
 
-      opacity: 0.5
-      color: filter_bg
-      radius: width * 0.3
-
+      x: parent.width * 0.2
       y: (playlistView.visibleArea.yPosition *
-          (playlistView.height - width * 5));
+          (parent.height - width * 5));
 
+      width: parent.width * 0.6
       height: (playlistView.visibleArea.heightRatio *
-               (playlistView.height - width * 5) + width * 5);
+               (parent.height - width * 5) + width * 5);
+
+      radius: width * 0.3
+      color: filter_bg
+      opacity: 0.5
     }
   }
 
@@ -578,7 +579,7 @@ Item
 
     anchors.margins: 0
     anchors.left: parent.left
-    anchors.right: scrollbar.left
+    anchors.right: parent.right
     anchors.top: filter.bottom
     anchors.bottom: parent.bottom
 
@@ -681,7 +682,9 @@ Item
     {
       id: groupDelegateColumn
       objectName: "groupDelegateColumn"
-      width: playlistView.width
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.rightMargin: scrollbar.width
 
       Item
       {
@@ -699,7 +702,6 @@ Item
         objectName: "groupItem"
 
         height: calc_title_height(24.0, playlist.width)
-        width: parent.width
         anchors.left: parent.left
         anchors.right: parent.right
 
@@ -781,6 +783,9 @@ Item
         id: groupsLoader
         objectName: "groupsLoader"
 
+        anchors.left: parent.left
+        anchors.right: parent.right
+
         // This is a workaround for a bug/feature in the Loader element.
         // If sourceComponent is set to null the Loader element retains
         // the same height it had when sourceComponent was set. Setting visible
@@ -813,7 +818,7 @@ Item
       objectName: "groupItemsColumnDelegateRect"
 
       property alias model : gridView.model
-      width: playlistView.width
+      width: parent.width
 
       // size-to-fit:
       height: (!gridView.count ? 0 :
