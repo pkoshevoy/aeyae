@@ -25,7 +25,7 @@ Item
     objectName: "bbox"
 
     anchors.left: sortBy.left
-    anchors.right: sortByNameOrTimeAscOrDesc.right
+    anchors.right: sortByNameOrTimeAscOrDescOrder.right
     anchors.top: sort.top
     anchors.bottom: sortBy.bottom
   }
@@ -151,7 +151,7 @@ Item
 
     font.bold: true
     font.pixelSize: font_size
-    text: qsTr(", ")
+    text: qsTr(", in ")
     color: text_color;
 
     style: Text.Outline;
@@ -251,5 +251,22 @@ Item
 
       visible: (yae_playlist_model.sortOrder == Qt.DescendingOrder)
     }
+  }
+
+  Text
+  {
+    id: sortByNameOrTimeAscOrDescOrder
+    objectName: "sortByNameOrTimeAscOrDescOrder"
+
+    anchors.top: parent.top
+    anchors.left: sortByNameOrTimeAscOrDesc.right
+
+    font.bold: true
+    font.pixelSize: font_size
+    text: qsTr(" order")
+    color: text_color;
+
+    style: Text.Outline;
+    styleColor: text_outline_color;
   }
 }
