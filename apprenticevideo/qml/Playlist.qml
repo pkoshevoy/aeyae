@@ -447,8 +447,8 @@ Item
       anchors.bottomMargin: -(parent.height * 2)
 
       gradient: Gradient {
-        GradientStop { position: 0.000000; color: '#b0000000'; }
-        GradientStop { position: 0.500000; color: '#90000000'; }
+        GradientStop { position: 0.000000; color: '#ff000000'; }
+        GradientStop { position: 0.500000; color: '#b0000000'; }
         GradientStop { position: 1.000000; color: '#01000000'; }
       }
     }
@@ -577,6 +577,7 @@ Item
   {
     id: scrollbar
     objectName: "scrollbar"
+    z: 2
 
     anchors.top: playlistView.top
     anchors.right: playlistView.right
