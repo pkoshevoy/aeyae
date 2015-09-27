@@ -56,7 +56,7 @@ Item
 
     font.bold: true
     font.pixelSize: font_size
-    text: qsTr("name ")
+    text: qsTr("name")
     color: text_color;
 
     style: Text.Outline;
@@ -95,7 +95,7 @@ Item
 
     font.bold: true
     font.pixelSize: font_size
-    text: qsTr("or ")
+    text: qsTr(" or ")
     color: text_color;
 
     style: Text.Outline;
@@ -168,7 +168,7 @@ Item
 
     font.bold: true
     font.pixelSize: font_size
-    text: qsTr("ascending ")
+    text: qsTr("ascending")
     color: text_color;
 
     style: Text.Outline;
@@ -207,7 +207,7 @@ Item
 
     font.bold: true
     font.pixelSize: font_size
-    text: qsTr("or ")
+    text: qsTr(" or ")
     color: text_color;
 
     style: Text.Outline;
