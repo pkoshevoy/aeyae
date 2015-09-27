@@ -3,7 +3,7 @@ import QtQml 2.2
 
 Item
 {
-  id: "timelineMakerDragItem"
+  id: "timelineMarkerDragItem"
   objectName: "timelineMarkerDragItem"
   width: 0
   height: 0

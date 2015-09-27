@@ -164,12 +164,8 @@ namespace yae
   void
   UtilsQml::dump_object_tree_info(QObject * object) const
   {
-#if 0
     std::ostringstream oss;
     yae::dump_object_tree_info(oss, object);
     std::cerr << oss.str();
-#else
-    yae::dump_object_tree_info(std::cerr, object);
-#endif
   }
 }

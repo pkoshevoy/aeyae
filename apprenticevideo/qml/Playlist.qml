@@ -10,7 +10,6 @@ Item
   id: playlist
   objectName: "playlist"
 
-  property alias view: playlistView
   property alias scrollbar: scrollbar
 
   property var header_bg: "#df1f1f1f"
@@ -75,12 +74,14 @@ Item
   {
     // save current playlistView.contentY
     var content_y = playlistView.contentY;
+    var origin_y = playlistView.originY;
+    var delta_y = content_y - origin_y;
 
     // this has a side effect of changing playlistView.contentY
     playlistView.currentIndex = index;
 
     // restore original playlistView.contentY
-    playlistView.contentY = content_y;
+    playlistView.contentY = playlistView.originY + delta_y;
   }
 
   function lookup_current_gridview(suggestedGroupIndex)
@@ -586,6 +587,24 @@ Item
     width: calc_title_height(24.0, playlist.width) * 0.5
     visible: playlistView.visibleArea.heightRatio < 1.0
 
+    Item
+    {
+      id: "dragItem"
+      objectName: "dragItem"
+      width: 0
+      height: 0
+
+      property var dragStart: null
+      property var sliderSize: 0
+      property var itemMoved: null
+
+      onYChanged: {
+        if (itemMoved) {
+          itemMoved();
+        }
+      }
+    }
+
     Rectangle
     {
       id: slider
@@ -602,6 +621,43 @@ Item
       radius: width * 0.3
       color: filter_bg
       opacity: 0.5
+
+      function move_slider()
+      {
+        var t = (dragItem.y / (scrollbar.height - dragItem.sliderSize));
+        var y_top = playlistView.contentHeight - playlistView.height;
+
+        playlistView.contentY = (
+          playlistView.originY + Math.max(0, Math.min(y_top, t * y_top)));
+      }
+
+      MouseArea
+      {
+        id: dragArea
+        objectName: "dragArea"
+        anchors.fill: parent
+        drag.target: dragItem
+        drag.axis: Drag.YAxis
+        drag.threshold: 0
+
+        onPressed: {
+          dragItem.x = slider.x;
+          dragItem.y = slider.y;
+          dragItem.dragStart = dragItem.y;
+          dragItem.sliderSize = slider.height;
+
+          dragItem.itemMoved = function() {
+            if (dragArea.drag.active) {
+              slider.move_slider();
+            }
+          }
+        }
+
+        onReleased: {
+          dragItem.itemMoved = undefined;
+          slider.move_slider();
+        }
+      }
     }
   }
 
@@ -656,7 +712,6 @@ Item
       anchors.fill: parent
       propagateComposedEvents: true
     }
-
   }
 
   Component
@@ -666,7 +721,7 @@ Item
     Item
     {
       id: footer
-      objectName: "footerComponentRect"
+      objectName: "footer"
 
       width: playlist.width
       height: footnote.height * 3 + 2

@@ -26,7 +26,7 @@ Item
   {
     event.accepted = false;
 
-    if (playlist.view.visible)
+    if (playlist.visible)
     {
       playlist.handle_event_on_key_pressed(event);
     }
