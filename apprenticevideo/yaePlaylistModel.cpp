@@ -150,6 +150,8 @@ namespace yae
     roles[kRoleSelected] = "selected";
     roles[kRolePlaying] = "playing";
     roles[kRoleFailed] = "failed";
+    roles[kRoleTimestamp] = "msecTimestampUtc";
+    roles[kRoleFlatIndex] = "flatIndex";
     roles[kRoleFilterKey] = "filterKey";
     roles[kRoleItemCount] = "itemCount";
 
@@ -229,7 +231,9 @@ namespace yae
 
     if (group)
     {
-      if (role == kRoleLabel || role == Qt::DisplayRole)
+      if (role == Qt::DisplayRole ||
+          role == kRoleLabel ||
+          role == kRoleFilterKey)
       {
         return QVariant(group->name_);
       }
@@ -244,9 +248,19 @@ namespace yae
         return QVariant(group->collapsed_);
       }
 
+      if (role == kRoleTimestamp)
+      {
+        return QVariant(group->msecUtcUpdated_);
+      }
+
+      if (role == kRoleFlatIndex)
+      {
+        return QVariant((quint64)(group->offset_));
+      }
+
       if (role == kRoleItemCount)
       {
-        return QVariant((qulonglong)(group->items_.size()));
+        return QVariant((quint64)(group->items_.size()));
       }
 
       return QVariant();
@@ -309,6 +323,16 @@ namespace yae
       if (role == kRoleFailed)
       {
         return QVariant(item->failed_);
+      }
+
+      if (role == kRoleTimestamp)
+      {
+        return QVariant(item->msecUtcUpdated_);
+      }
+
+      if (role == kRoleFlatIndex)
+      {
+        return QVariant((quint64)(parentGroup->offset_ + item->row_));
       }
 
       if (role == kRoleFilterKey)
@@ -447,6 +471,19 @@ namespace yae
     {
       groupRow = modelIndex.row();
     }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModel::setItemFilter
+  //
+  void
+  PlaylistModel::setItemFilter(const QString & filter)
+  {
+    std::cerr
+      << "PlaylistModel::setItemFilter("
+      << filter.toUtf8().constData()
+      << ")"
+      << std::endl;
   }
 
   //----------------------------------------------------------------

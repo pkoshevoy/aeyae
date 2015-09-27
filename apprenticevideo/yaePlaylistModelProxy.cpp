@@ -38,7 +38,11 @@ namespace yae
     YAE_ASSERT(ok);
 
     QSortFilterProxyModel::setSourceModel(&model_);
+    QSortFilterProxyModel::setDynamicSortFilter(false);
     QSortFilterProxyModel::setFilterRole(PlaylistModel::kRoleFilterKey);
+
+    setSortBy(PlaylistModelProxy::SortByName);
+    setSortOrder(Qt::AscendingOrder);
   }
 
   //----------------------------------------------------------------
@@ -49,6 +53,9 @@ namespace yae
                           std::list<BookmarkHashInfo> * returnAddedHashes)
   {
     model_.add(playlist, returnAddedHashes);
+    Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
+    QSortFilterProxyModel::sort(0, so);
+    QSortFilterProxyModel::invalidate();
   }
 
   //----------------------------------------------------------------
@@ -87,26 +94,26 @@ namespace yae
   void
   PlaylistModelProxy::setItemFilter(const QString & filter)
   {
+    QString pattern;
+
     std::list<QString> keywords;
     splitIntoWords(filter, keywords);
-    if (keywords.empty())
-    {
-      QSortFilterProxyModel::setFilterRegExp(QString());
-      return;
-    }
 
-    QString pattern = QString("^");
-    for (std::list<QString>::const_iterator i = keywords.begin();
-         i != keywords.end(); ++i)
+    if (!keywords.empty())
     {
-      pattern += QString::fromUtf8("(?=.*");
-      pattern += *i;
-      pattern += QString::fromUtf8(")");
+      for (std::list<QString>::const_iterator i = keywords.begin();
+           i != keywords.end(); ++i)
+      {
+        pattern += QString::fromUtf8("(?=.*");
+        pattern += *i;
+        pattern += QString::fromUtf8(")");
+      }
+      pattern += QString::fromUtf8(".+");
     }
-    pattern += QString::fromUtf8(".+");
 
     QRegExp rx(pattern, Qt::CaseInsensitive, QRegExp::RegExp2);
     QSortFilterProxyModel::setFilterRegExp(rx);
+    QSortFilterProxyModel::invalidate();
 
     emit itemCountChanged();
   }
@@ -294,6 +301,67 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistModelProxy::sortBy
+  //
+  PlaylistModelProxy::SortBy
+  PlaylistModelProxy::sortBy() const
+  {
+    const int sr = QSortFilterProxyModel::sortRole();
+
+    PlaylistModelProxy::SortBy sb =
+      (sr == PlaylistModel::kRoleTimestamp) ?
+      PlaylistModelProxy::SortByTime :
+      PlaylistModelProxy::SortByName;
+
+    return sb;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModelProxy::setSortBy
+  //
+  void
+  PlaylistModelProxy::setSortBy(PlaylistModelProxy::SortBy sb)
+  {
+    const int sr = QSortFilterProxyModel::sortRole();
+
+    int srNew =
+      (sb == PlaylistModelProxy::SortByTime) ?
+      PlaylistModel::kRoleTimestamp :
+      PlaylistModel::kRoleFlatIndex;
+
+    if (sr == srNew)
+    {
+      return;
+    }
+
+    QSortFilterProxyModel::setSortRole(srNew);
+    Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
+    QSortFilterProxyModel::sort(0, so);
+    QSortFilterProxyModel::invalidate();
+
+    emit sortByChanged();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModelProxy::setSortOrder
+  //
+  void
+  PlaylistModelProxy::setSortOrder(Qt::SortOrder soNew)
+  {
+    const Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
+
+    if (so == soNew)
+    {
+      return;
+    }
+
+    QSortFilterProxyModel::sort(0, soNew);
+    QSortFilterProxyModel::invalidate();
+
+    emit sortOrderChanged();
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModelProxy::itemCount
   //
   quint64
@@ -456,10 +524,6 @@ namespace yae
   {
     bool acceptable = QSortFilterProxyModel::filterAcceptsRow(sourceRow,
                                                               sourceParent);
-    if (acceptable)
-    {
-      return true;
-    }
 
     if (sourceParent.isValid())
     {

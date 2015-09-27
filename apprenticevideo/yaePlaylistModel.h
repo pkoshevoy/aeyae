@@ -47,6 +47,8 @@ namespace yae
       kRoleSelected,
       kRolePlaying,
       kRoleFailed,
+      kRoleTimestamp,
+      kRoleFlatIndex,
       kRoleFilterKey,
       kRoleItemCount
    };
@@ -90,6 +92,9 @@ namespace yae
                                      int & groupRow,
                                      int & itemRow);
   public slots:
+    // no-op
+    Q_INVOKABLE void setItemFilter(const QString & filter);
+
     // selection set management:
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void selectItems(int groupRow, int itemRow, int selFlags);

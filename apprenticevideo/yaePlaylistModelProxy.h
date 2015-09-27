@@ -30,14 +30,32 @@ namespace yae
                READ itemCount
                NOTIFY itemCountChanged);
 
+    Q_PROPERTY(SortBy sortBy
+               READ sortBy
+               WRITE setSortBy
+               NOTIFY sortByChanged);
+
+    Q_PROPERTY(Qt::SortOrder sortOrder
+               READ sortOrder
+               WRITE setSortOrder
+               NOTIFY sortOrderChanged);
+
     // not supported:
     void setSourceModel(QAbstractItemModel *) final {}
 
   public:
+
+    enum SortBy
+    {
+      SortByName = 0,
+      SortByTime = 1
+    };
+    Q_ENUM(SortBy);
+
     PlaylistModelProxy(QObject * parent = NULL);
 
     // optionally pass back a list of hashes for the added items:
-   void add(const std::list<QString> & playlist,
+    void add(const std::list<QString> & playlist,
              std::list<BookmarkHashInfo> * returnAddedHashes = NULL);
 
     // helper: create a proxy model index for a given
@@ -65,6 +83,10 @@ namespace yae
     Q_INVOKABLE void removeItems(int groupRow, int itemRow);
     Q_INVOKABLE void removeItems(const QModelIndex & index);
     Q_INVOKABLE void removeSelected();
+
+    SortBy sortBy() const;
+    void setSortBy(SortBy s);
+    void setSortOrder(Qt::SortOrder o);
 
     // count included (not filtered out) items:
     quint64 itemCount() const;
@@ -115,6 +137,8 @@ namespace yae
 
   signals:
     void itemCountChanged();
+    void sortByChanged();
+    void sortOrderChanged();
 
     // this signal may be emitted if the user activates an item,
     // or otherwise changes the playlist to invalidate the

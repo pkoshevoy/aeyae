@@ -16,6 +16,7 @@
 
 // Qt includes:
 #include <QCryptographicHash>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QUrl>
 
@@ -39,29 +40,41 @@ namespace yae
   static void
   dump(const Playlist & playlist, const char * message)
   {
-    std::cerr << "\n\n" << message;
+    std::ostringstream oss;
+    oss << "\n\n" << message;
 
     const std::vector<TPlaylistGroupPtr> & groups = playlist.groups();
     for (std::size_t i = 0; i < groups.size(); i++)
     {
       const PlaylistGroup & group = *(groups[i]);
-      std::cerr
+      oss
         << "\ngroup " << i
+        << ", time: "
+        << (QDateTime::fromMSecsSinceEpoch(group.msecUtcUpdated_).
+            toString(Qt::ISODate)).toUtf8().constData()
         << ", row: " << group.row_
         << ", offset: " << group.offset_
         << ", size: " << group.items_.size()
+        << ", name: " << group.name_.toUtf8().constData()
         << std::endl;
 
       for (std::size_t j = 0; j < group.items_.size(); j++)
       {
         const PlaylistItem & item = *(group.items_[j]);
-        std::cerr
+        oss
           << "  item " << j
+          << ", time: "
+          << (QDateTime::fromMSecsSinceEpoch(item.msecUtcUpdated_).
+              toString(Qt::ISODate)).toUtf8().constData()
           << ", row: " << item.row_
           << ", selected: " << item.selected_
+          << ", name: " << item.name_.toUtf8().constData()
+          << ", ext: " << item.ext_.toUtf8().constData()
           << std::endl;
       }
     }
+
+    std::cerr << oss.str();
   }
 
   //----------------------------------------------------------------
@@ -157,14 +170,16 @@ namespace yae
   // PlaylistNode::PlaylistNode
   //
   PlaylistNode::PlaylistNode():
-    row_(~0)
+    row_(~0),
+    msecUtcUpdated_(QDateTime::currentMSecsSinceEpoch())
   {}
 
   //----------------------------------------------------------------
   // PlaylistNode::PlaylistNode
   //
   PlaylistNode::PlaylistNode(const PlaylistNode & other):
-    row_(other.row_)
+    row_(other.row_),
+    msecUtcUpdated_(other.msecUtcUpdated_)
   {}
 
   //----------------------------------------------------------------
@@ -541,6 +556,12 @@ namespace yae
           item.name_ = toWords(key.key_);
           item.ext_ = key.ext_;
           item.hash_ = getKeyHash(item.key_);
+
+          QFileInfo fi(item.path_);
+          if (fi.exists())
+          {
+            item.msecUtcUpdated_ = fi.lastModified().toMSecsSinceEpoch();
+          }
         }
 
         if (firstNewItemPath && *firstNewItemPath == item.path_)
@@ -1307,13 +1328,16 @@ namespace yae
       group.offset_ = offset;
       group.row_ = i - groups_.begin();
 
-      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin();
-           j != group.items_.end(); ++j)
+      qint64 lastModified = std::numeric_limits<qint64>::min();
+      for (std::vector<TPlaylistItemPtr>::iterator j = group.items_.begin(),
+             j0 = j, j1 = group.items_.end(); j != j1; ++j)
       {
         PlaylistItem & item = *(*j);
-        item.row_ = j - group.items_.begin();
+        item.row_ = j - j0;
+        lastModified = std::max<qint64>(lastModified, item.msecUtcUpdated_);
       }
 
+      group.msecUtcUpdated_ = lastModified;
       offset += group.items_.size();
     }
 

@@ -60,6 +60,12 @@ namespace yae
     virtual ~PlaylistNode();
 
     std::size_t row_;
+
+    // last-modified timestamp expressed in milliseconds since
+    // 1970-01-01T00:00:00.000, Coordinated Universal Time
+    //
+    // initial value is set to current time when the node is constructed:
+    qint64 msecUtcUpdated_;
   };
 
   //----------------------------------------------------------------

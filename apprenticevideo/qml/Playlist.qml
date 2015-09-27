@@ -24,6 +24,13 @@ Item
   property var label_bg: "#7f7f7f7f"
   property var label_fg: "white"
   property var filter_bg: "#7f7f7f"
+  property var sort_fg: "#9f9f9f"
+
+  readonly property var cellWidth: (
+    calc_cell_width(playlistView.width));
+
+  readonly property var cellHeight: (
+    calc_cell_height(playlist.cellWidth));
 
   function calc_cell_width(w)
   {
@@ -425,6 +432,8 @@ Item
     objectName: "filter"
     z: 2
 
+    property alias container: container
+
     anchors.margins: 0
     anchors.left: parent.left
     anchors.right: parent.right
@@ -446,6 +455,11 @@ Item
 
     Item
     {
+      id: container
+      objectName: "container"
+
+      property alias text: textInput
+
       anchors.fill: parent
       anchors.margins: 0
       opacity: (textInput.activeFocus ? 1.0 : 0.5)
@@ -539,6 +553,24 @@ Item
       }
 
     }
+  }
+
+  SortAndOrder
+  {
+    id: sortAndOrder
+    objectName: "sortAndOrder"
+    z: 2
+
+    anchors.top: filter.bottom
+    anchors.left: parent.left
+    anchors.topMargin: -underscore_thickness
+    anchors.leftMargin: filter.height * 0.25
+    height: (calc_title_height(24.0, playlist.width) * 0.45);
+
+    text_color: sort_fg
+    text_outline_color: zebra_bg_1
+    underscore_color: selection_color
+    underscore_thickness: cellHeight * 0.02
   }
 
   Item
@@ -693,20 +725,17 @@ Item
 
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 0.2 * groupItem.cellHeight
+        height: 0.2 * cellHeight
       }
 
       Item
       {
-        id: groupItem
-        objectName: "groupItem"
+        id: groupItems
+        objectName: "groupItems"
 
         height: calc_title_height(24.0, playlist.width)
         anchors.left: parent.left
         anchors.right: parent.right
-
-        readonly property var cellHeight: (
-          calc_cell_height(calc_cell_width(playlistView.width)));
 
         Image
         {
@@ -714,7 +743,7 @@ Item
           objectName: "disclosureBtn"
 
           width: height
-          height: Math.max(9, groupItem.height * 0.5)
+          height: Math.max(9, groupItems.height * 0.5)
           anchors.leftMargin: filter.height * 0.25
           antialiasing: true
 
@@ -744,11 +773,11 @@ Item
           anchors.verticalCenter: parent.verticalCenter
           anchors.right: parent.right
           anchors.left: disclosureBtn.right
-          anchors.leftMargin: groupItem.height / 2
+          anchors.leftMargin: groupItems.height / 2
 
           elide: "ElideMiddle"
           font.bold: true
-          font.pixelSize: groupItem.height * 0.55
+          font.pixelSize: groupItems.height * 0.55
           text: (model.label || "")
           color: header_fg
           style: Text.Outline;
@@ -762,9 +791,9 @@ Item
 
           anchors.right: parent.right
           anchors.verticalCenter: groupTag.verticalCenter
-          anchors.rightMargin: groupItem.cellHeight * 0.05
+          anchors.rightMargin: cellHeight * 0.05
 
-          height: Math.max(13, Utils.make_odd(groupItem.cellHeight * 0.1))
+          height: Math.max(13, Utils.make_odd(cellHeight * 0.1))
           width: height
 
           on_click: function (mouse)
@@ -1001,8 +1030,8 @@ Item
 
                 color: label_bg
                 anchors.margins: 0;
-                anchors.leftMargin: -gridView.cellHeight * 0.02;
-                anchors.rightMargin: -gridView.cellHeight * 0.02;
+                anchors.leftMargin: -underscore.height
+                anchors.rightMargin: -underscore.height
                 anchors.left: nowPlayingTag.left
                 anchors.right: nowPlayingTag.right
                 anchors.bottom: nowPlayingTag.bottom
@@ -1011,12 +1040,17 @@ Item
 
                 Rectangle
                 {
+                  id: underscore
+                  objectName: "underscore"
+
                   z: 2
 
                   anchors.bottom: parent.bottom
                   anchors.left: parent.left
                   anchors.right: parent.right
                   anchors.bottomMargin: -height * 2
+
+                  antialiasing: true
                   height: gridView.cellHeight * 0.02
                   color: selection_color
                 }
@@ -1114,10 +1148,13 @@ Item
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.leftMargin: gridView.cellHeight * 0.02
-                anchors.rightMargin: gridView.cellHeight * 0.02
+
+                anchors.leftMargin: height
+                anchors.rightMargin: height
                 anchors.bottomMargin: height
-                height: gridView.cellHeight * 0.02;
+
+                antialiasing: true
+                height: gridView.cellHeight * 0.02
                 color: selection_color
               }
             }
