@@ -1,6 +1,5 @@
 import QtQuick 2.4
 import QtQml 2.2
-import QtQml.Models 2.2
 import com.aragog.apprenticevideo 1.0
 import '.'
 import 'Utils.js' as Utils

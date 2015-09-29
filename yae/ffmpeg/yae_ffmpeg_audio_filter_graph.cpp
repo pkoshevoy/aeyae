@@ -8,6 +8,7 @@
 
 // standard C++ library:
 #include <sstream>
+#include <cstring>
 
 // aeyae:
 #include "yae_ffmpeg_audio_filter_graph.h"
@@ -125,7 +126,7 @@ namespace yae
          << ":sample_fmt=" << srcSampleFmtTxt
          << ":channel_layout=0x" << std::hex << srcChannelLayout << std::dec;
 
-      if (filterChain && *filterChain && strcmp(filterChain, "anull") != 0)
+      if (filterChain && *filterChain && std::strcmp(filterChain, "anull") != 0)
       {
         os << ',' << filterChain;
       }

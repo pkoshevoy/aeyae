@@ -10,6 +10,8 @@
 #define YAE_SETTINGS_H_
 
 // standard C++ library:
+#include <algorithm>
+#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
@@ -461,7 +463,7 @@ namespace yae
     for (std::size_t i = 0; i < n; i++)
     {
       ISettingBase * si = group.setting(i);
-      if (strcmp(si->id(), id) == 0)
+      if (std::strcmp(si->id(), id) == 0)
       {
         return dynamic_cast<TSetting *>(si);
       }

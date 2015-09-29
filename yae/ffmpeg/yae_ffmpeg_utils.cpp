@@ -11,6 +11,7 @@
 
 // standard C++ library:
 #include <string>
+#include <cstring>
 
 
 namespace yae
@@ -47,7 +48,7 @@ namespace yae
 
     if (filter->nb_inputs == 0 &&
         filter->nb_outputs == 1 &&
-        strcmp(filter->filter->name, name) == 0)
+        std::strcmp(filter->filter->name, name) == 0)
     {
       return filter;
     }
@@ -77,7 +78,7 @@ namespace yae
 
     if (filter->nb_inputs == 1 &&
         filter->nb_outputs == 0 &&
-        strcmp(filter->filter->name, name) == 0)
+        std::strcmp(filter->filter->name, name) == 0)
     {
       return filter;
     }

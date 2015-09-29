@@ -8,6 +8,7 @@
 
 // standard C++ library:
 #include <sstream>
+#include <cstring>
 
 // aeyae:
 #include "yae_ffmpeg_utils.h"
@@ -114,7 +115,7 @@ namespace yae
          << ":time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
          << ":sar=" << srcPAR_.num << '/' << srcPAR_.den;
 
-      if (filterChain && *filterChain && strcmp(filterChain, "null") != 0)
+      if (filterChain && *filterChain && std::strcmp(filterChain, "null") != 0)
       {
         os << ',' << filterChain;
       }
