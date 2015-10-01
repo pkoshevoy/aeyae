@@ -56,6 +56,8 @@ namespace yae
     Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
     QSortFilterProxyModel::sort(0, so);
     QSortFilterProxyModel::invalidate();
+
+    emit itemCountChanged();
   }
 
   //----------------------------------------------------------------
