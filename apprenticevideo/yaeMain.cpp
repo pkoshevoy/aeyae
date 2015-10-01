@@ -225,6 +225,7 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow->show();
 
   // initialize the canvas:
+  yae::mainWindow->initCanvasQml();
   yae::mainWindow->canvas()->initializePrivateBackend();
 
   yae::mainWindow->setPlaylist(playlist);

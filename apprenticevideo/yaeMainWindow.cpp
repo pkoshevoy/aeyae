@@ -384,8 +384,6 @@ namespace yae
 
     setupUi(this);
     setAcceptDrops(true);
-    // setFocusPolicy(Qt::StrongFocus);
-    // setFocusProxy(playerWidget_);
     actionPlay->setText(tr("Pause"));
 
     contextMenu_ = new QMenu(this);
@@ -395,43 +393,10 @@ namespace yae
     QString fnIcon = QString::fromUtf8(":/images/apprenticevideo-256.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
-#if 0
-    timelineControls_->setAuxWidgets(lineEditPlayhead_,
-                                     lineEditDuration_,
-                                     this);
-#endif
+
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
-
-    QString greeting =
-      tr("drop videos/music here\n\n"
-         "press spacebar to pause/resume\n\n"
-         "alt-left/alt-right to navigate playlist\n\n"
-#ifdef __APPLE__
-         "use apple remote for volume and seeking\n\n"
-#endif
-         "explore the menus for more options");
-
-    qmlRegisterType<yae::CanvasQuickFbo>("com.aragog.apprenticevideo",
-                                         1, // major
-                                         0, // minor
-                                         "CanvasQuickFbo");
-
-    qmlRegisterType<yae::TPlaylistModel>("com.aragog.apprenticevideo",
-                                         1, // major
-                                         0, // minor
-                                         "TPlaylistModel");
-
-    qmlRegisterType<yae::TimelineControls>("com.aragog.apprenticevideo",
-                                           1, // major
-                                           0, // minor
-                                           "TimelineControls");
-
-    qmlRegisterType<yae::UtilsQml>("com.aragog.apprenticevideo",
-                                   1, // major
-                                   0, // minor
-                                   "UtilsQml");
 
     // setup the canvas widget (QML quick widget):
     playerWidget_ = new TQuickWidget(this);
@@ -439,39 +404,8 @@ namespace yae
     playerWidget_->setAcceptDrops(true);
     playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    // add image://thumbnails/... provider:
-    QQmlEngine * qmlEngine = playerWidget_->engine();
-    ThumbnailProvider * imageProvider =
-      new ThumbnailProvider(readerPrototype_, playlistModel_);
-    qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
-                                imageProvider);
-
-    // set playlist model:
-    QQmlContext * qmlContext = playerWidget_->rootContext();
-    qmlContext->setContextProperty("yae_playlist_model", &playlistModel_);
-
     // set timeline controls:
     timelineControls_ = new TimelineControls();
-    qmlContext->setContextProperty("yae_timeline_controls", timelineControls_);
-
-    // set QML helper:
-    qmlContext->setContextProperty("yae_qml_utils", UtilsQml::singleton());
-
-    // start the widget:
-    playerWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
-
-    // shortcut to the root QML item:
-    QQuickItem * playerItem = playerWidget_->rootObject();
-
-    // set playlist-footer greeting message:
-    {
-      QQuickItem * item = playerItem->findChild<QQuickItem *>("greeting");
-      item->setProperty("text", greeting);
-    }
-
-    // get a shortcut to the Canvas (owned by the QML canvas widget):
-    canvas_ = yae::getCanvas(playerItem);
-    YAE_ASSERT(canvas_);
 
     // insert QML canvas widget in main window layout:
     canvasLayout->addWidget(playerWidget_);
@@ -625,42 +559,6 @@ namespace yae
     playRateMapper->setMapping(actionTempo200, 200);
 
     bool ok = true;
-    ok = connect(playerItem, SIGNAL(toggleFullScreen()),
-                 this, SLOT(requestToggleFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(exitFullScreen()),
-                 this, SLOT(exitFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(exitPlaylist()),
-                 this, SLOT(exitPlaylist()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(togglePlayback()),
-                 this, SLOT(togglePlayback()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(skipToInPoint()),
-                 this, SLOT(skipToInPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(skipToOutPoint()),
-                 this, SLOT(skipToOutPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(skipForward()),
-                 this, SLOT(skipForward()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(skipBack()),
-                 this, SLOT(skipBack()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playerItem, SIGNAL(stepOneFrameForward()),
-                 this, SLOT(skipToNextFrame()));
-    YAE_ASSERT(ok);
-
     ok = connect(playRateMapper, SIGNAL(mapped(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
@@ -977,12 +875,6 @@ namespace yae
 
     adjustMenuActions();
     adjustMenus(reader_);
-
-    // show the timeline:
-    actionShowTimeline->setChecked(true);
-
-    // hide the playlist:
-    actionShowPlaylist->setChecked(false);
   }
 
   //----------------------------------------------------------------
@@ -1011,6 +903,116 @@ namespace yae
   MainWindow::canvas() const
   {
     return canvas_;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::initCanvasQml
+  //
+  void
+  MainWindow::initCanvasQml()
+  {
+    QString greeting =
+      tr("drop videos/music here\n\n"
+         "press spacebar to pause/resume\n\n"
+         "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+         "use apple remote for volume and seeking\n\n"
+#endif
+         "explore the menus for more options");
+
+    qmlRegisterType<yae::CanvasQuickFbo>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "CanvasQuickFbo");
+
+    qmlRegisterType<yae::TPlaylistModel>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "TPlaylistModel");
+
+    qmlRegisterType<yae::TimelineControls>("com.aragog.apprenticevideo",
+                                           1, // major
+                                           0, // minor
+                                           "TimelineControls");
+
+    qmlRegisterType<yae::UtilsQml>("com.aragog.apprenticevideo",
+                                   1, // major
+                                   0, // minor
+                                   "UtilsQml");
+    // add image://thumbnails/... provider:
+    QQmlEngine * qmlEngine = playerWidget_->engine();
+    ThumbnailProvider * imageProvider =
+      new ThumbnailProvider(readerPrototype_, playlistModel_);
+    qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
+                                imageProvider);
+
+    // set playlist model:
+    QQmlContext * qmlContext = playerWidget_->rootContext();
+    qmlContext->setContextProperty("yae_playlist_model", &playlistModel_);
+    qmlContext->setContextProperty("yae_timeline_controls", timelineControls_);
+    qmlContext->setContextProperty("yae_qml_utils", UtilsQml::singleton());
+
+    // start the widget:
+    playerWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
+
+    // shortcut to the root QML item:
+    QQuickItem * playerItem = playerWidget_->rootObject();
+
+    // set playlist-footer greeting message:
+    {
+      QQuickItem * item = playerItem->findChild<QQuickItem *>("greeting");
+      if (item)
+      {
+        item->setProperty("text", greeting);
+      }
+    }
+
+    // get a shortcut to the Canvas (owned by the QML canvas widget):
+    canvas_ = yae::getCanvas(playerItem);
+    YAE_ASSERT(canvas_);
+
+    bool ok = true;
+    ok = connect(playerItem, SIGNAL(toggleFullScreen()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(exitFullScreen()),
+                 this, SLOT(exitFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(exitPlaylist()),
+                 this, SLOT(exitPlaylist()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(togglePlayback()),
+                 this, SLOT(togglePlayback()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipToInPoint()),
+                 this, SLOT(skipToInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipToOutPoint()),
+                 this, SLOT(skipToOutPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipForward()),
+                 this, SLOT(skipForward()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipBack()),
+                 this, SLOT(skipBack()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(stepOneFrameForward()),
+                 this, SLOT(skipToNextFrame()));
+    YAE_ASSERT(ok);
+
+    // show the timeline:
+    actionShowTimeline->setChecked(true);
+
+    // hide the playlist:
+    actionShowPlaylist->setChecked(false);
   }
 
   //----------------------------------------------------------------
@@ -2202,6 +2204,11 @@ namespace yae
   MainWindow::playbackShowPlaylist()
   {
     QQuickItem * playerItem = playerWidget_->rootObject();
+    if (!playerItem)
+    {
+      return;
+    }
+
     bool showPlaylist = actionShowPlaylist->isChecked();
     const char * state =
       showPlaylist ? "playlist" :
@@ -2217,6 +2224,10 @@ namespace yae
   MainWindow::playbackShowTimeline()
   {
     QQuickItem * playerItem = playerWidget_->rootObject();
+    if (!playerItem)
+    {
+      return;
+    }
 
     QQuickItem * timeline =
       playerItem->findChild<QQuickItem *>("timeline");

@@ -114,6 +114,8 @@ namespace yae
     MainWindow(const IReaderPtr & readerPrototype);
     ~MainWindow();
 
+    void initCanvasQml();
+
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
 
