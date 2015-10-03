@@ -4,7 +4,23 @@
 #----------------------------------------------------------------
 # BUNDLE_PATH
 #
-BUNDLE_PATH=${1}
+BUNDLE_PATH=$(cd "${1}"; pwd)
+
+BINARIES_DIR=$(cd "${BUNDLE_PATH}"/..; pwd)
+SCRIPTS_DIR=$(dirname "${0}")
+QML_SRC_DIR="${SCRIPTS_DIR}/qml"
+
+#----------------------------------------------------------------
+# QT_MACDEPLOY
+#
+if [ -x "${2}" ]; then
+	QT_MACDEPLOY="${2}"
+else
+	QT_MACDEPLOY=/Users/pavel/qt5/5.5/clang_64/bin/macdeployqt
+fi
+
+QT_INSTALL_DIR=$(dirname "${QT_MACDEPLOY}")
+QT_MACDEPLOY=$(basename "${QT_MACDEPLOY}")
 
 #----------------------------------------------------------------
 # CP
@@ -16,12 +32,12 @@ CP='rsync -a --copy-unsafe-links --chmod=ug+rwX'
 #----------------------------------------------------------------
 # DARWIN_REV
 #
-DARWIN_REV=`uname -r`
+DARWIN_REV=$(uname -r)
 
 #----------------------------------------------------------------
 # INSTALL_NAME_TOOL=
 #
-INSTALL_NAME_TOOL=`which install_name_tool`
+INSTALL_NAME_TOOL=$(which install_name_tool)
 if [ -x '/opt/local/bin/install_name_tool' ]; then
 	INSTALL_NAME_TOOL='/opt/local/bin/install_name_tool'
 fi
@@ -130,33 +146,33 @@ get_xcode_config()
 	CONFIG_ARCH=""
 
 	quiet_pushd "${PROJ_DIR}"
-		A=`xcodebuild -project "${PROJ}".xcodeproj -list`
+		A=$(xcodebuild -project "${PROJ}".xcodeproj -list)
 		if [ $? != 0 ]; then exit 1; fi
 
 		if [ ${ARCH} == "x86_64" ]; then
-			AB=`echo "${A}" | grep 64`
+			AB=$(echo "${A}" | grep 64)
 			if [ -n "${AB}" ]; then
 				CONFIG_ARCH="64"
 			fi
 		fi
 
 		DEBUG_CONFIG=""
-		B=`echo "${A}" | grep Development`
+		B=$(echo "${A}" | grep Development)
 		if [ -n "${B}" ]; then
 			DEBUG_CONFIG="Development${CONFIG_ARCH}"
 		else
-			B=`echo "${A}" | grep Debug`
+			B=$(echo "${A}" | grep Debug)
 			if [ -n "${B}" ]; then
 				DEBUG_CONFIG="Debug${CONFIG_ARCH}"
 			fi
 		fi
 
 		RELEASE_CONFIG=""
-		B=`echo "${A}" | grep Deployment`
+		B=$(echo "${A}" | grep Deployment)
 		if [ -n "${B}" ]; then
 			RELEASE_CONFIG="Deployment${CONFIG_ARCH}"
 		else
-			B=`echo "${A}" | grep Release`
+			B=$(echo "${A}" | grep Release)
 			if [ -n "${B}" ]; then
 				RELEASE_CONFIG="Release${CONFIG_ARCH}"
 			fi
@@ -204,7 +220,7 @@ build_xcodeproj()
 		unset ARCH_CFG
 	fi
 
-	XCODE_CONFIG=`get_xcode_config "${PROJ_DIR}" "${PROJ}" "${REQUESTED_CONFIG}"`
+	XCODE_CONFIG=$(get_xcode_config "${PROJ_DIR}" "${PROJ}" "${REQUESTED_CONFIG}")
 
 	quiet_pushd "${PROJ_DIR}"
 		if [ -n "${TARGET}" ]; then
@@ -239,7 +255,7 @@ build_qmake()
 		qmake "${PROJ}".pro -spec macx-xcode
 		if [ $? != 0 ]; then exit 3; fi
 
-		XCODE_CONFIG=`get_xcode_config "${PROJ_DIR}" "${PROJ}" "${CONFIG}"`
+		XCODE_CONFIG=$(get_xcode_config "${PROJ_DIR}" "${PROJ}" "${CONFIG}")
 		if [ -z "${XCODE_CONFIG}" ]; then
 			echo ABORT: You must modify ${PROJ_DIR}/${PROJ}.pro for ${CONFIG} build
 			exit 1
@@ -290,29 +306,26 @@ PrepForDeployment()
 	BUNDLE_PATH=${1}
 	shift 1
 
-	# let Qt do it's part:
-	# macdeployqt "${BUNDLE_PATH}" -verbose=3 -no-plugins
-
 	# deploy Qt plugins manually:
 	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
 		pwd
 
-		echo $CP "${BUNDLE_PATH}"/../aeyae-plugin-reader-ffmpeg.yae .
-		$CP "${BUNDLE_PATH}"/../aeyae-plugin-reader-ffmpeg.yae .
+		echo $CP "${PWD}/../../../aeyae-plugin-reader-ffmpeg.yae" .
+		$CP "${PWD}/../../../aeyae-plugin-reader-ffmpeg.yae" . || exit -1
 
 		find . -type f -print | while read i; do
 
 			# find out which Qt was linked against and
 			# copy plugins from the same version of Qt
-			QT_DIR=`otool -L "${i}" | grep QtCore | grep framework | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev`
+			QT_DIR=$(otool -L "${i}" | grep QtCore | grep framework | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f6- | rev)
 			if [ -z "${QT_DIR}" ]; then
-				QT_DIR=`otool -L "${i}" | grep QtCore | grep dylib | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f3- | rev`
+				QT_DIR=$(otool -L "${i}" | grep QtCore | grep dylib | cut -f2 | cut -d' ' -f1 | rev | cut -d'/' -f3- | rev)
 				if [ -z "${QT_DIR}" ]; then
 					continue;
 				fi
 			fi
 
-			QT_DIR_IS_ABSOLUTE_PATH=`echo "${QT_DIR}" | grep -v '@loader_path' | grep -v '@executable_path'`
+			QT_DIR_IS_ABSOLUTE_PATH=$(echo "${QT_DIR}" | grep -v '@loader_path' | grep -v '@executable_path')
 			if [ -z "${QT_DIR_IS_ABSOLUTE_PATH}" ]; then
 				continue;
 			fi
@@ -326,7 +339,7 @@ PrepForDeployment()
 				fi
 
 				echo $CP "${QT_DIR}"/plugins/"${PLUGIN}" .
-				$CP "${QT_DIR}"/plugins/"${PLUGIN}" .
+				$CP "${QT_DIR}"/plugins/"${PLUGIN}" . || exit -2
 
 				# remove libfb_base.prl, codesign doesn't understand it:
 				find . -type f -iname '*.prl' -exec rm -f {} \;
@@ -363,11 +376,11 @@ resolve_library()
 
 	local NATIVE_ARCH="${2}"
 	if [ -z "${NATIVE_ARCH}" ]; then
-		NATIVE_ARCH=`arch`
+		NATIVE_ARCH=$(arch)
 	fi
 
-	NAME=`basename "${NAME}"`
-	SRCH_HERE="${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
+	NAME=$(basename "${NAME}")
+	SRCH_HERE="${BINARIES_DIR}":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
 
 	if [ -n "${3}" ]; then
@@ -377,9 +390,9 @@ resolve_library()
 	echo "${SRCH_HERE}" | awk 'BEGIN{RS=":"}{print}' | while read i; do
 		if [ ! -e "${i}" ]; then continue; fi
 		find "${i}" -name "${NAME}" -print 2>/dev/null | while read j; do
-			DNAME=`dirname "${j}"`
-			DNAME=`(cd "${DNAME}"; pwd)`
-			BNAME=`basename "${j}"`
+			DNAME=$(dirname "${j}")
+			DNAME=$(cd "${DNAME}"; pwd)
+			BNAME=$(basename "${j}")
 			NAME="${DNAME}/${BNAME}"
 			if [ -e "${NAME}" ]; then
 				echo "${NAME}"
@@ -402,12 +415,12 @@ resolve_library()
 resolve_symlink()
 {
 	SRC="${1}"
-	DST=`readlink "${SRC}"`
+	DST=$(readlink "${SRC}")
 	if [ -z "${DST}" ]; then
 		echo "${SRC}"
 	else
-		REL_DIR=`dirname "${SRC}"`
-		ABS_DIR=`(cd "${REL_DIR}"; pwd)`
+		REL_DIR=$(dirname "${SRC}")
+		ABS_DIR=$(cd "${REL_DIR}"; pwd)
 		resolve_symlink "${ABS_DIR}/${DST}"
 	fi
 }
@@ -424,8 +437,8 @@ resolve_symlink()
 GetPathToParentDir()
 {
 	RELATIVE_PATH="${1}"
-	ABSOLUTE_PATH=`echo "${RELATIVE_PATH}" | sed 's/\.\.\///g'`
-	PARENT_PATH=`echo "${ABSOLUTE_PATH}" | sed 's/[^\/]*/../g'`
+	ABSOLUTE_PATH=$(echo "${RELATIVE_PATH}" | sed 's/\.\.\///g')
+	PARENT_PATH=$(echo "${ABSOLUTE_PATH}" | sed 's/[^\/]*/../g')
 	echo "${PARENT_PATH}"
 }
 
@@ -445,7 +458,7 @@ DeployFileOnce()
 	SEARCH_PATH="${4}"
 
 	# avoid deploying the same file multiple times:
-	IS_DEPLOYED=`grep "${FILEPATH}" "${DONELIST}"`
+	IS_DEPLOYED=$(grep "${FILEPATH}" "${DONELIST}")
 	if [ -z "${IS_DEPLOYED}" ]; then
 		echo "${FILEPATH}" >> "${DONELIST}"
 		echo checking "${FILEPATH}"
@@ -520,26 +533,26 @@ DeployFile()
 		exit 11
 	fi
 
-	SEARCH_RPATH=`GetRunpath "${FILEPATH}"`
-	SEARCH_PATH=`PrependPath "${SEARCH_RPATH}" "${SEARCH_PATH}"`
+	SEARCH_RPATH=$(GetRunpath "${FILEPATH}")
+	SEARCH_PATH=$(PrependPath "${SEARCH_RPATH}" "${SEARCH_PATH}")
 
-	FILE=`basename "${FILEPATH}"`
-	FDIR=`dirname "${FILEPATH}"`
+	FILE=$(basename "${FILEPATH}")
+	FDIR=$(dirname "${FILEPATH}")
 	quiet_pushd "${FDIR}"
 
 #	echo FILE: ${FILE}
 #	echo FDIR: ${FDIR}
 
-	IS_PLUGIN=`echo "${FILEPATH}" | grep -i 'plug'`
+	IS_PLUGIN=$(echo "${FILEPATH}" | grep -i 'plug')
 	if [ -n "${IS_PLUGIN}" ]; then
 		printf "PLUGIN\n"
 	fi
 
 	otool -L "${FILE}" | grep -v "${FILE}" | rev | cut -d'(' -f2 | rev | while read i; do
 		NEEDS="${i}"
-		IS_USR_LIB=`echo "${NEEDS}" | grep '/usr/lib/'`
-		IS_SYS_LIB=`echo "${NEEDS}" | grep '/System/Library/'`
-		IS_CUDA_DRIVER=`echo "${NEEDS}" | grep '/usr/local/cuda/lib/libcuda.dylib'`
+		IS_USR_LIB=$(echo "${NEEDS}" | grep '/usr/lib/')
+		IS_SYS_LIB=$(echo "${NEEDS}" | grep '/System/Library/')
+		IS_CUDA_DRIVER=$(echo "${NEEDS}" | grep '/usr/local/cuda/lib/libcuda.dylib')
 		if [ -n "${IS_USR_LIB}" -o \
 		     -n "${IS_SYS_LIB}" -o \
 		     -n "${IS_CUDA_DRIVER}" ]; then
@@ -547,19 +560,19 @@ DeployFile()
 			continue
 		fi
 
-		FILE_ARCH=`lipo -info "${FILE}" | rev | cut -d' ' -f1 | rev`
-		IS_FRAMEWORK=`echo "${NEEDS}" | grep '\.framework/'`
-		IS_DEBUG=`echo "${NEEDS}" | grep _debug`
-		AT_RPATH=`echo "${NEEDS}" | grep '@rpath/'`
-		AT_LOAD_PATH=`echo "${NEEDS}" | grep '@loader_path/'`
-		AT_EXEC_PATH=`echo "${NEEDS}" | grep '@executable_path/'`
+		FILE_ARCH=$(lipo -info "${FILE}" | rev | cut -d' ' -f1 | rev)
+		IS_FRAMEWORK=$(echo "${NEEDS}" | grep '\.framework/')
+		IS_DEBUG=$(echo "${NEEDS}" | grep _debug)
+		AT_RPATH=$(echo "${NEEDS}" | grep '@rpath/')
+		AT_LOAD_PATH=$(echo "${NEEDS}" | grep '@loader_path/')
+		AT_EXEC_PATH=$(echo "${NEEDS}" | grep '@executable_path/')
 
 		if [ -z "${IS_FRAMEWORK}" -a \
 			 -z "${AT_LOAD_PATH}" -a \
 			 -z "${AT_EXEC_PATH}" -a \
 			 -z "${AT_RPATH}" ]; then
 			ORIGIN_DIR=$(dirname "${NEEDS}")
-			SEARCH_PATH=`PrependPath "${ORIGIN_DIR}" "${SEARCH_PATH}"`
+			SEARCH_PATH=$(PrependPath "${ORIGIN_DIR}" "${SEARCH_PATH}")
 		fi
 
 		printf "%40s : " "${FILE}"
@@ -572,9 +585,9 @@ DeployFile()
 
 #		if [ -n "${IS_DEBUG}" ]; then
 #			printf "debug, "
-#			IS_QTLIB=`echo "${NEEDS}" | grep Qt`
+#			IS_QTLIB=$(echo "${NEEDS}" | grep Qt)
 #			if [ -n "${IS_QTLIB}" ]; then
-#				NO_DEBUG=`echo "${NEEDS}" | sed 's/_debug//'`
+#				NO_DEBUG=$(echo "${NEEDS}" | sed 's/_debug//')
 #				printf "changing %s to %s, " "${NEEDS}" "${NO_DEBUG}"
 #				NEEDS="${NO_DEBUG}"
 #			fi
@@ -587,15 +600,15 @@ DeployFile()
 		elif [ -n "${AT_RPATH}" ]; then
 			printf "@rpath, "
 		fi
-		printf "%s\n" `basename "${NEEDS}"`
+		printf "%s\n" $(basename "${NEEDS}")
 
 		if [ -n "${AT_LOAD_PATH}" -o -n "${AT_RPATH}" ]; then
-			REF=`echo "${NEEDS}" | cut -d/ -f2-`
+			REF=$(echo "${NEEDS}" | cut -d/ -f2-)
 			if [ -e "${REF}" ]; then
 				DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}" "${SEARCH_PATH}"
 				if [ $? != 0 ]; then exit 11; fi
 			else
-				FOUND=`resolve_library "${REF}" "${FILE_ARCH}" "${SEARCH_PATH}"`
+				FOUND=$(resolve_library "${REF}" "${FILE_ARCH}" "${SEARCH_PATH}")
 				if [ ! -e "${FOUND}" ]; then exit 21; fi
 
 				NEEDS="${FOUND}"
@@ -604,7 +617,7 @@ DeployFile()
 
 		if [ -n "${AT_EXEC_PATH}" ]; then
 #			echo CHANGING EXEC PATH to LOAD PATH:
-			REF=`echo "${NEEDS}" | cut -d/ -f2- | cut -c4-`
+			REF=$(echo "${NEEDS}" | cut -d/ -f2- | cut -c4-)
 			NEEDS="${BASEPATH}"/"${REF}"
 		fi
 
@@ -616,17 +629,17 @@ DeployFile()
 			DST="Auxiliaries"
 		fi
 
-		HAS_VERSION=`echo "${NEEDS}" | grep /Versions/`
+		HAS_VERSION=$(echo "${NEEDS}" | grep /Versions/)
 		if [ -n "${HAS_VERSION}" ]; then
-			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-4 | rev`
+			FN_DST=$(echo "${NEEDS}" | rev | cut -d/ -f-4 | rev)
 		elif [ -n "${IS_FRAMEWORK}" ]; then
-			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-2 | rev`
+			FN_DST=$(echo "${NEEDS}" | rev | cut -d/ -f-2 | rev)
 		else
-			FN_DST=`echo "${NEEDS}" | rev | cut -d/ -f-1 | rev`
+			FN_DST=$(echo "${NEEDS}" | rev | cut -d/ -f-1 | rev)
 		fi
 #		echo FN_DST: ${FN_DST}
 
-		DST_DIR=`dirname "${DST}/${FN_DST}"`
+		DST_DIR=$(dirname "${DST}/${FN_DST}")
 #		echo DST_DIR: ${DST_DIR}
 
 		if [ ! -e "${BASEPATH}/${DST_DIR}" ]; then
@@ -634,7 +647,7 @@ DeployFile()
 			mkdir -p "${BASEPATH}/${DST_DIR}"
 		fi
 
-		OFFSET=`GetPathToParentDir "${FDIR}"`
+		OFFSET=$(GetPathToParentDir "${FDIR}")
 #		echo FDIR: ${FDIR} -- OFFSET: ${OFFSET}
 
 		DST_NAME="@loader_path/${OFFSET}/${DST}/${FN_DST}"
@@ -644,14 +657,14 @@ DeployFile()
 			SRC="${NEEDS}"
 			if [ ! -e "${SRC}" ]; then
 #				echo resolve_library "${SRC}" "${FILE_ARCH}"
-				SRC=`resolve_library "${SRC}" "${FILE_ARCH}"`
+				SRC=$(resolve_library "${SRC}" "${FILE_ARCH}")
 #				echo resolve_library returned \""${SRC}"\"
 				if [ -e "${SRC}" ]; then
 					echo "RESOLVED ${NEEDS} --- ${SRC}"
 				fi
 			fi
 
-			SRC=`resolve_symlink "${SRC}"`
+			SRC=$(resolve_symlink "${SRC}")
 #			echo resolve_symlink returned \""${SRC}"\"
 
 			if [ ! -e "${SRC}" ]; then
@@ -660,12 +673,12 @@ DeployFile()
 			fi
 
 			echo ${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
-			${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}"
+			${CP} "${SRC}" "${BASEPATH}/${DST}/${FN_DST}" || exit -3
 
 			# copy framework Info.plist so that codesign would work:
-			SRC_BASE=`dirname "${SRC}"`
+			SRC_BASE=$(dirname "${SRC}")
 			if [ -e "${SRC_BASE}/../../Contents/Info.plist" ]; then
-				DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
+				DST_BASE=$(dirname "${BASEPATH}/${DST}/${FN_DST}")
 				echo mkdir -p "${DST_BASE}/Resources";
 				mkdir -p "${DST_BASE}/Resources";
 				quiet_pushd "${DST_BASE}/Resources"
@@ -677,7 +690,7 @@ DeployFile()
 
 			# copy resources bundled together with the framework:
 			if [ -e "${SRC_BASE}/Resources" ]; then
-				DST_BASE=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
+				DST_BASE=$(dirname "${BASEPATH}/${DST}/${FN_DST}")
 				echo mkdir -p "${DST_BASE}/Resources";
 				mkdir -p "${DST_BASE}/Resources";
 				quiet_pushd "${DST_BASE}/Resources"
@@ -688,10 +701,10 @@ DeployFile()
 			fi
 
 			if [ -n "${HAS_VERSION}" ]; then
-				VERTMP=`dirname "${BASEPATH}/${DST}/${FN_DST}"`
-				VERSION=`basename "${VERTMP}"`
+				VERTMP=$(dirname "${BASEPATH}/${DST}/${FN_DST}")
+				VERSION=$(basename "${VERTMP}")
 
-				VERTMP=`dirname "${VERTMP}"`
+				VERTMP=$(dirname "${VERTMP}")
 				VERSIONS="${VERTMP}"
 
 				quiet_pushd "${VERSIONS}"
@@ -702,7 +715,7 @@ DeployFile()
 					fi
 				quiet_popd
 
-				VERTMP=`dirname "${VERTMP}"`
+				VERTMP=$(dirname "${VERTMP}")
 				VERSIONS="${VERTMP}"
 				quiet_pushd "${VERSIONS}"
 					pwd
@@ -712,7 +725,7 @@ DeployFile()
 						ln -s "Versions/${VERSION}/Resources" .
 					fi
 
-					DSTTMP=`basename "${FN_DST}"`
+					DSTTMP=$(basename "${FN_DST}")
 					echo ln -s "Versions/${VERSION}/${DSTTMP}" .
 					ln -s "Versions/${VERSION}/${DSTTMP}" .
 				quiet_popd
@@ -751,10 +764,10 @@ DeployAppBundle()
 	fi
 
 	# create a temp file to keep the list of deployed files:
-	DONELIST=`mktemp -t DeployOSX.sh` || exit 12
+	DONELIST=$(mktemp -t DeployOSX.sh) || exit 12
 
 	quiet_pushd "${BUNDLE_PATH}"/Contents
-	BASE=`pwd`
+	BASE=$(pwd)
 	find MacOS -type f -print | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
@@ -812,9 +825,18 @@ DeployAppBundle()
 	rm -f "${DONELIST}"
 }
 
+
+#---------------------------------------------------------------------
+echo NEXT: copy Qt frameworks into the app bundle
+quiet_pushd "${QT_INSTALL_DIR}"
+# NOTE: macdeployqt must be run from the bin/ folder where it's installed
+# otherwise it fails to deploy the QML modules:
+./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" -qmldir="${QML_SRC_DIR}" -always-overwrite -verbose=3
+quiet_popd
+
 #---------------------------------------------------------------------
 echo NEXT: copy required frameworks into the app bundle
-PrepForDeployment "${BUNDLE_PATH}" accessible codecs graphicssystems imageformats
+PrepForDeployment "${BUNDLE_PATH}"
 
 #---------------------------------------------------------------------
 echo NEXT: deploy the app bundle

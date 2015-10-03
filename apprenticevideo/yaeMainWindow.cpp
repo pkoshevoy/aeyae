@@ -2755,7 +2755,7 @@ namespace yae
     if (!about)
     {
       about = new AboutDialog(this);
-      about->setWindowTitle(tr("Apprentice Video (revision %1)").
+      about->setWindowTitle(tr("Apprentice Video (%1)").
                             arg(QString::fromUtf8(YAE_REVISION)));
     }
 

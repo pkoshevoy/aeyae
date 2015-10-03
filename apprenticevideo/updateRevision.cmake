@@ -10,11 +10,17 @@
 find_package(Git)
 if(GIT_FOUND)
   message("git found: ${GIT_EXECUTABLE}")
-  execute_process(COMMAND ${GIT_EXECUTABLE} log -1
-    --pretty=format:git-%cd-%h
-    --date=short
+  execute_process(COMMAND ${GIT_EXECUTABLE} symbolic-ref --short HEAD -q
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    OUTPUT_VARIABLE PROJ_WC_REVISION)
+    OUTPUT_VARIABLE PROJ_GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND ${GIT_EXECUTABLE} log -1
+    --pretty=format:%h.%cd
+    --date=format:%Y%m%d.%H%M%S.%Z%z
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    OUTPUT_VARIABLE PROJ_GIT_REVISION
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(PROJ_WC_REVISION "git.${PROJ_GIT_BRANCH}.${PROJ_GIT_REVISION}")
   message("PROJ_WC_REVISION: ${PROJ_WC_REVISION}")
 else()
   set(PROJ_WC_REVISION "0")

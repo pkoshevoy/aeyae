@@ -23,7 +23,7 @@ add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-D__STDC_CONSTANT_MACROS)
 add_definitions(-D__STDC_LIMIT_MACROS)
 
-add_definitions(-DQT_QML_DEBUG)
+# add_definitions(-DQT_QML_DEBUG)
 
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
@@ -47,9 +47,6 @@ endif (QT4_FOUND)
 
 # add_definitions(-DYAE_STATIC)
 
-# NOTE: this is necessary when linking to static GLEW libs:
-add_definitions(-DGLEW_STATIC=1)
-
 include_directories(AFTER
   .
   ..
@@ -68,9 +65,6 @@ endif (WIN32 AND NOT (MINGW OR MSYS))
 
 set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}" CACHE PATH "root path for portaudio lib/ and include/ folders")
 find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "portaudio library")
-
-set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
 
 set(project_moc_hxx
   yaeCanvasQuickFbo.h
@@ -193,19 +187,6 @@ if (PORTAUDIO_INCLUDE_DIR)
   include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
 endif (PORTAUDIO_INCLUDE_DIR)
 
-find_path(GLEW_INCLUDE_DIR
-  GL/glew.h
-  PATHS
-  ${GLEW_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (GLEW_INCLUDE_DIR)
-  include_directories(AFTER ${GLEW_INCLUDE_DIR})
-endif (GLEW_INCLUDE_DIR)
-
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
 if (WIN32)
@@ -287,7 +268,6 @@ add_dependencies(${PROGNAME} "update_revision")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
-  ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}

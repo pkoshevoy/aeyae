@@ -68,6 +68,12 @@ namespace yae
       QApplication(argc, argv)
     {
       QApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
+
+#ifdef __APPLE__
+      QString appDir = QApplication::applicationDirPath();
+      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
+      QApplication::addLibraryPath(plugInsDir);
+#endif
     }
 
   protected:
