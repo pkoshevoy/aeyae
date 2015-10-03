@@ -15,7 +15,7 @@ if(GIT_FOUND)
     OUTPUT_VARIABLE PROJ_GIT_BRANCH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   execute_process(COMMAND ${GIT_EXECUTABLE} log -1
-    --pretty=format:%h.%cd
+    --pretty=format:%cd.%h
     --date=format:%Y%m%d.%H%M%S.%Z%z
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     OUTPUT_VARIABLE PROJ_GIT_REVISION
