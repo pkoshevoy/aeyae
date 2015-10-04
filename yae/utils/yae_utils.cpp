@@ -29,11 +29,12 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <io.h>
+#else
+#include <dirent.h>
+#include <dlfcn.h>
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <dlfcn.h>
 #include <fcntl.h>
 #include <iostream>
 #include <sstream>
@@ -389,7 +390,7 @@ namespace yae
 
     if (GetModuleFileNameW(0, path, pathLen) != 0)
     {
-      exe_path_utf8 = utf16_to_utf8(path);
+      filepathUtf8 = utf16_to_utf8(path);
       ok = true;
     }
 

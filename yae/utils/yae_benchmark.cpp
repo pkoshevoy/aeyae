@@ -7,15 +7,16 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard C++ library:
-#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <map>
-#include <mutex>
 #include <string>
 #include <sstream>
-#include <thread>
+
+// boost library:
+#include <boost/chrono/chrono.hpp>
+#include <boost/thread.hpp>
 
 // aeyae:
 #include "yae_benchmark.h"
@@ -88,24 +89,24 @@ namespace yae
     };
 
   protected:
-    static std::mutex mutex_;
+    static boost::mutex mutex_;
 
     // thread-specific timesheets
-    static std::map<std::thread::id, Timesheet> tss_;
+    static std::map<boost::thread::id, Timesheet> tss_;
 
     std::string key_;
-    std::chrono::time_point<std::chrono::steady_clock> t0_;
+    boost::chrono::time_point<boost::chrono::steady_clock> t0_;
   };
 
   //----------------------------------------------------------------
   // TBenchmark::Private::mutex_
   //
-  std::mutex TBenchmark::Private::mutex_;
+  boost::mutex TBenchmark::Private::mutex_;
 
   //----------------------------------------------------------------
   // TBenchmark::Private::tss_
   //
-  std::map<std::thread::id, TBenchmark::Private::Timesheet>
+  std::map<boost::thread::id, TBenchmark::Private::Timesheet>
   TBenchmark::Private::tss_;
 
 
@@ -134,12 +135,12 @@ namespace yae
   // TBenchmark::Private::Private
   //
   TBenchmark::Private::Private(const char * description):
-    t0_(std::chrono::steady_clock::now())
+    t0_(boost::chrono::steady_clock::now())
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    boost::lock_guard<boost::mutex> lock(mutex_);
 
     // lookup the timesheet for the current thread:
-    std::thread::id threadId = std::this_thread::get_id();
+    boost::thread::id threadId = boost::this_thread::get_id();
     Timesheet & ts = tss_[threadId];
 
     // shortcut to timesheet entries:
@@ -169,16 +170,17 @@ namespace yae
   //
   TBenchmark::Private::~Private()
   {
-    std::chrono::time_point<std::chrono::steady_clock>
-      t1 = std::chrono::steady_clock::now();
+    boost::chrono::time_point<boost::chrono::steady_clock>
+      t1 = boost::chrono::steady_clock::now();
 
     uint64 dt =
-      std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0_).count();
+      boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
+      count();
 
-    std::lock_guard<std::mutex> lock(mutex_);
+    boost::lock_guard<boost::mutex> lock(mutex_);
 
     // lookup the timesheet for the current thread:
-    std::thread::id threadId = std::this_thread::get_id();
+    boost::thread::id threadId = boost::this_thread::get_id();
     Timesheet & ts = tss_[threadId];
 
     // lookup this benchmark timesheet entry:
@@ -198,15 +200,15 @@ namespace yae
   TBenchmark::Private::show(std::ostream & os)
   {
     static const uint64 timebase = 1000000;
-    std::lock_guard<std::mutex> lock(mutex_);
+    boost::lock_guard<boost::mutex> lock(mutex_);
 
     std::ostringstream oss;
     oss <<  "\nBenchmark timesheets per thread:\n";
 
-    for (std::map<std::thread::id, Timesheet>::const_iterator
+    for (std::map<boost::thread::id, Timesheet>::const_iterator
            j = tss_.begin(); j != tss_.end(); ++j)
     {
-      std::thread::id threadId = j->first;
+      boost::thread::id threadId = j->first;
       oss << "\n Thread " << threadId << " Timesheet:\n";
 
       // shortcuts:
@@ -251,7 +253,7 @@ namespace yae
   void
   TBenchmark::Private::clear()
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    boost::lock_guard<boost::mutex> lock(mutex_);
     tss_.clear();
   }
 

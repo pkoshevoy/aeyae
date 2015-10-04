@@ -11,9 +11,14 @@
 
 // system includes:
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <iostream>
+
+// boost library:
+#include <boost/atomic.hpp>
+
+// aeyae:
+#include "../api/yae_api.h"
 
 
 namespace yae
@@ -24,45 +29,52 @@ namespace yae
   struct ref_count_base
   {
     ref_count_base(): shared_(0), weak_(0) {}
-    virtual ~ref_count_base() = default;
+    virtual ~ref_count_base() {}
 
+#if __cplusplus < 201103L
+  private:
+    ref_count_base(const ref_count_base &);
+    ref_count_base & operator = (const ref_count_base &);
+  public:
+#else
     ref_count_base(ref_count_base &&) = delete;
     ref_count_base(const ref_count_base &) = delete;
     ref_count_base & operator = (ref_count_base &&) = delete;
     ref_count_base & operator = (const ref_count_base &) = delete;
+#endif
 
-    inline std::size_t shared() const noexcept
+    inline std::size_t shared() const YAE_NOEXCEPT
     { return shared_; }
 
-    inline std::size_t weak() const noexcept
+    inline std::size_t weak() const YAE_NOEXCEPT
     { return weak_; }
 
-    inline std::size_t increment_shared() noexcept
+    inline std::size_t increment_shared() YAE_NOEXCEPT
     { return ++shared_; }
 
-    inline std::size_t decrement_shared() noexcept
+    inline std::size_t decrement_shared() YAE_NOEXCEPT
     {
       std::size_t num_shared = --shared_;
       react_if_no_longer_referenced(num_shared, weak_);
       return num_shared;
     }
 
-    inline std::size_t increment_weak() noexcept
+    inline std::size_t increment_weak() YAE_NOEXCEPT
     { return ++weak_; }
 
-    inline std::size_t decrement_weak() noexcept
+    inline std::size_t decrement_weak() YAE_NOEXCEPT
     {
       std::size_t num_weak = --weak_;
       react_if_no_longer_referenced(shared_, num_weak);
       return num_weak;
     }
 
-    virtual void destroy_data_ptr() noexcept = 0;
+    virtual void destroy_data_ptr() YAE_NOEXCEPT = 0;
 
   protected:
     inline void
     react_if_no_longer_referenced(std::size_t num_shared,
-                                  std::size_t num_weak) noexcept
+                                  std::size_t num_weak) YAE_NOEXCEPT
     {
       if (!num_shared)
       {
@@ -75,8 +87,8 @@ namespace yae
       }
     }
 
-    std::atomic<std::size_t> shared_;
-    std::atomic<std::size_t> weak_;
+    boost::atomic<std::size_t> shared_;
+    boost::atomic<std::size_t> weak_;
   };
 
   //----------------------------------------------------------------
@@ -95,10 +107,17 @@ namespace yae
     virtual ~ref_count()
     { assert(!ptr_); }
 
+#if __cplusplus < 201103L
+  private:
+    ref_count(const ref_count &);
+    ref_count & operator = (const ref_count &);
+  public:
+#else
     ref_count(ref_count &&) = delete;
     ref_count(const ref_count &) = delete;
     ref_count & operator = (ref_count &&) = delete;
     ref_count & operator = (const ref_count &) = delete;
+#endif
 
     TBase * ptr_;
   };
@@ -143,17 +162,24 @@ namespace yae
     //
     struct ref_counter : public ref_count<TBase>
     {
-      ref_counter() = default;
-
       virtual ~ref_counter()
       { destroy_data_ptr(); }
 
+#if __cplusplus < 201103L
+    private:
+      ref_counter(const ref_counter &);
+      ref_counter & operator = (const ref_counter &);
+    public:
+      ref_counter() {}
+#else
+      ref_counter() = default;
       ref_counter(ref_counter &&) = delete;
       ref_counter(const ref_counter &) = delete;
       ref_counter & operator = (ref_counter &&) = delete;
       ref_counter & operator = (const ref_counter &) = delete;
+#endif
 
-      virtual void destroy_data_ptr() noexcept override
+      virtual void destroy_data_ptr() YAE_NOEXCEPT YAE_OVERRIDE
       {
         TData * data_ptr = static_cast<TData *>(ref_count<TBase>::ptr_);
         TDeallocator::destroy(data_ptr);
@@ -196,11 +222,13 @@ namespace yae
       ref_counter_->increment_shared();
     }
 
+#if __cplusplus >= 201103L
     shared_ptr(shared_ptr&& from_ptr):
       ref_counter_(from_ptr.ref_counter_)
     {
       ref_counter_->increment_shared();
     }
+#endif
 
     template <typename TFrom>
     shared_ptr(const shared_ptr<TFrom, TBase, TDeallocator> & from_ptr):
@@ -213,7 +241,7 @@ namespace yae
     ~shared_ptr()
     { ref_counter_->decrement_shared(); }
 
-    shared_ptr & operator = (const shared_ptr & from_ptr) noexcept
+    shared_ptr & operator = (const shared_ptr & from_ptr) YAE_NOEXCEPT
     {
       if (ref_counter_ != from_ptr.ref_counter_)
       {
@@ -225,58 +253,58 @@ namespace yae
       return (*this);
     }
 
-    inline std::size_t use_count() const noexcept
+    inline std::size_t use_count() const YAE_NOEXCEPT
     { return ref_counter_->shared(); }
 
-    inline operator bool() const noexcept
+    inline operator bool() const YAE_NOEXCEPT
     { return this->get() != nullptr; }
 
-    inline operator const void * () const noexcept
+    inline operator const void * () const YAE_NOEXCEPT
     { return this->get(); }
 
-    inline bool unique() const noexcept
+    inline bool unique() const YAE_NOEXCEPT
     { return this->use_count() == 1; }
 
     inline void reset(TData * data_ptr = nullptr)
     { this->operator=(shared_ptr(data_ptr)); }
 
-    inline void swap(shared_ptr & ptr) noexcept
+    inline void swap(shared_ptr & ptr) YAE_NOEXCEPT
     { std::swap(ref_counter_, ptr.ref_counter_); }
 
-    inline operator std::size_t () const noexcept
+    inline operator std::size_t () const YAE_NOEXCEPT
     { return reinterpret_cast<std::size_t>(get()); }
 
-    inline bool operator == (std::size_t value) const noexcept
+    inline bool operator == (std::size_t value) const YAE_NOEXCEPT
     { return (get() == reinterpret_cast<TData *>(value)); }
 
-    inline bool	operator != (std::size_t value) const noexcept
+    inline bool	operator != (std::size_t value) const YAE_NOEXCEPT
     { return (!operator == (value)); }
 
-    inline bool	operator == (int value) const noexcept
+    inline bool	operator == (int value) const YAE_NOEXCEPT
     { return (operator == (std::size_t(value))); }
 
-    inline bool	operator != (int value) const noexcept
+    inline bool	operator != (int value) const YAE_NOEXCEPT
     { return (!operator == (std::size_t(value))); }
 
-    inline bool operator == (const shared_ptr & other) const noexcept
+    inline bool operator == (const shared_ptr & other) const YAE_NOEXCEPT
     { return (get() == other.get()); }
 
-    inline bool operator != (const shared_ptr & other) const noexcept
+    inline bool operator != (const shared_ptr & other) const YAE_NOEXCEPT
     { return !(operator == (other)); }
 
-    inline TData * get() const noexcept
+    inline TData * get() const YAE_NOEXCEPT
     { return static_cast<TData *>(ref_counter_->ptr_); }
 
-    inline operator TData * () const noexcept
+    inline operator TData * () const YAE_NOEXCEPT
     { return get(); }
 
-    inline operator unsigned char * () const noexcept
+    inline operator unsigned char * () const YAE_NOEXCEPT
     { return reinterpret_cast<unsigned char *>(get()); }
 
-    inline TData * operator -> () const noexcept
+    inline TData * operator -> () const YAE_NOEXCEPT
     { return get(); }
 
-    inline TData & operator * () const noexcept
+    inline TData & operator * () const YAE_NOEXCEPT
     { return *get(); }
 
     // shared pointer dynamic cast method:
@@ -367,7 +395,7 @@ namespace yae
     ~weak_ptr()
     { ref_counter_->decrement_weak(); }
 
-    weak_ptr & operator = (const weak_ptr & from_ptr) noexcept
+    weak_ptr & operator = (const weak_ptr & from_ptr) YAE_NOEXCEPT
     {
       if (ref_counter_ != from_ptr.ref_counter_)
       {
@@ -379,7 +407,7 @@ namespace yae
       return (*this);
     }
 
-    weak_ptr & operator = (const shared_ptr_type & from_ptr) noexcept
+    weak_ptr & operator = (const shared_ptr_type & from_ptr) YAE_NOEXCEPT
     {
       if (ref_counter_ != from_ptr.ref_counter_)
       {
@@ -393,24 +421,24 @@ namespace yae
 
     template <typename TFrom>
     weak_ptr &
-    operator = (const weak_ptr<TFrom, TBase, TDeallocator> & ptr) noexcept
+    operator = (const weak_ptr<TFrom, TBase, TDeallocator> & ptr) YAE_NOEXCEPT
     { return this->operator=(ptr.template cast<TData>()); }
 
     template <typename TFrom>
     weak_ptr &
-    operator = (const shared_ptr<TFrom, TBase, TDeallocator> & ptr) noexcept
+    operator = (const shared_ptr<TFrom, TBase, TDeallocator> & ptr) YAE_NOEXCEPT
     { return this->operator=(ptr.template cast<TData>()); }
 
     inline std::size_t use_count() const
     { return ref_counter_->shared(); }
 
-    inline bool expired() const noexcept
+    inline bool expired() const YAE_NOEXCEPT
     { return !ref_counter_->shared(); }
 
-    inline void swap(weak_ptr & ptr) noexcept
+    inline void swap(weak_ptr & ptr) YAE_NOEXCEPT
     { std::swap(ref_counter_, ptr.ref_counter_); }
 
-    inline void reset() noexcept
+    inline void reset() YAE_NOEXCEPT
     { this->operator=(weak_ptr()); }
 
     inline shared_ptr_type lock() const

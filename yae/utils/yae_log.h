@@ -15,8 +15,10 @@
 
 // standard C++ library:
 #include <map>
-#include <mutex>
 #include <string>
+
+// boost library:
+#include <boost/thread.hpp>
 
 
 namespace yae
@@ -41,16 +43,22 @@ namespace yae
       clear();
     }
 
+#if __cplusplus < 201103L
+  private:
+    TLog(const TLog &);
+    TLog & operator = (const TLog &);
+  public:
+#else
     TLog(TLog &&) = delete;
     TLog(const TLog &) = delete;
-
     TLog & operator = (TLog &&) = delete;
     TLog & operator = (const TLog &) = delete;
+#endif
 
     // dispose of all carriers assiciated with this log instance:
     inline void clear()
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
 
       for (std::map<std::string, IMessageCarrier *>::iterator
              i = carriers_.begin(); i != carriers_.end(); ++i)
@@ -70,7 +78,7 @@ namespace yae
     inline void assign(const std::string & carrierId,
                        IMessageCarrier * carrier)
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
 
       IMessageCarrier * prevCarrier = carriers_[carrierId];
 
@@ -88,7 +96,7 @@ namespace yae
     // dispose of a carrier associated with a given carrierId:
     inline void remove(const std::string & carrierId)
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
 
       std::map<std::string, IMessageCarrier *>::iterator
         found = carriers_.find(carrierId);
@@ -112,7 +120,7 @@ namespace yae
                         const char * source,
                         const char * message)
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
 
       for (std::map<std::string, IMessageCarrier *>::iterator
              i = carriers_.begin(); i != carriers_.end(); ++i)
@@ -139,7 +147,7 @@ namespace yae
     { deliver(IMessageCarrier::kDebug, source, message); }
 
   protected:
-    mutable std::mutex mutex_;
+    mutable boost::mutex mutex_;
     std::map<std::string, IMessageCarrier *> carriers_;
   };
 

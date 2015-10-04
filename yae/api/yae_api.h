@@ -9,9 +9,20 @@
 #ifndef YAE_API_H_
 #define YAE_API_H_
 
-// standard C++ library:
+// standard C:
+#include <stdint.h>
 #include <assert.h>
-#include <cstdint>
+
+// standard C++:
+#if __cplusplus < 201103L
+// C++03
+#define YAE_NOEXCEPT
+#define YAE_OVERRIDE
+#else
+// C++11
+#define YAE_NOEXCEPT noexcept
+#define YAE_OVERRIDE override
+#endif
 
 
 //----------------------------------------------------------------
@@ -72,12 +83,12 @@ namespace yae
   //----------------------------------------------------------------
   // uint64
   //
-  typedef std::uint64_t uint64;
+  typedef ::uint64_t uint64;
 
   //----------------------------------------------------------------
   // int64
   //
-  typedef std::int64_t int64;
+  typedef ::int64_t int64;
 }
 
 

@@ -17,6 +17,8 @@ find_package(Boost
   system
   filesystem
   locale
+  chrono
+  atomic
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
@@ -36,6 +38,10 @@ endif (WIN32)
 if (APPLE)
   add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
 endif (APPLE)
+
+if (WIN32 AND NOT (MINGW OR MSYS))
+  include_directories(AFTER apprenticevideo/msIntTypes)
+endif (WIN32 AND NOT (MINGW OR MSYS))
 
 
 set(FFMPEG_HEADERS_PATH "$ENV{FFMPEG_HEADERS_PATH}"
