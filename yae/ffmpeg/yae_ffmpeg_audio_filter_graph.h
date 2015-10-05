@@ -33,7 +33,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioFilterGraph
   //
-  struct AudioFilterGraph
+  struct YAE_API AudioFilterGraph
   {
     AudioFilterGraph();
     ~AudioFilterGraph();

@@ -69,6 +69,9 @@ namespace yae
   YAE_API AVFilterContext *
   lookup_src(AVFilterContext * filter, const char * name);
 
+  //----------------------------------------------------------------
+  // lookup_sink
+  //
   YAE_API AVFilterContext *
   lookup_sink(AVFilterContext * filter, const char * name);
 

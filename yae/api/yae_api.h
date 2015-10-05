@@ -16,10 +16,12 @@
 // standard C++:
 #if __cplusplus < 201103L
 // C++03
+#define YAE_FINAL
 #define YAE_NOEXCEPT
 #define YAE_OVERRIDE
 #else
 // C++11
+#define YAE_FINAL final
 #define YAE_NOEXCEPT noexcept
 #define YAE_OVERRIDE override
 #endif
@@ -31,16 +33,20 @@
 // http://gcc.gnu.org/wiki/Visibility
 //
 #if defined _WIN32
+#  define YAE_API_EXPORT __declspec(dllexport)
+#  define YAE_API_IMPORT __declspec(dllexport)
 #  ifdef YAE_DLL_EXPORTS
-#    define YAE_API __declspec(dllexport)
+#    define YAE_API YAE_API_EXPORT
 #  elif !defined(YAE_STATIC)
-#    define YAE_API __declspec(dllimport)
+#    define YAE_API YAE_API_IMPORT
 #  else
 #    define YAE_API
 #  endif
 #else
+#  define YAE_API_EXPORT __attribute__ ((visibility("default")))
+#  define YAE_API_IMPORT YAE_API_EXPORT
 #  if __GNUC__ >= 4
-#    define YAE_API __attribute__ ((visibility("default")))
+#    define YAE_API YAE_API_EXPORT
 #  else
 #    define YAE_API
 #  endif

@@ -865,6 +865,65 @@ yae_assert_gl_no_error()
   return false;
 }
 
+//----------------------------------------------------------------
+// YAE_HAS_GL_ACTIVE_TEXTURE
+//
+#define YAE_HAS_GL_ACTIVE_TEXTURE 1
+
+namespace yae
+{
+
+  //----------------------------------------------------------------
+  // YAE_GL_FRAGMENT_PROGRAM_ARB
+  //
+  struct YAE_API OpenGLFunctionPointers
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+    : public QOpenGLFunctions
+#endif
+  {
+    PFNGLPROGRAMSTRINGARBPROC glProgramStringARB;
+    PFNGLGETPROGRAMIVARBPROC glGetProgramivARB;
+    PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB;
+    PFNGLBINDPROGRAMARBPROC glBindProgramARB;
+    PFNGLGENPROGRAMSARBPROC glGenProgramsARB;
+    PFNGLPROGRAMLOCALPARAMETER4DVARBPROC glProgramLocalParameter4dvARB;
+
+    OpenGLFunctionPointers()
+    {
+      QOpenGLContext * opengl = QOpenGLContext::currentContext();
+
+      glProgramStringARB = (PFNGLPROGRAMSTRINGARBPROC)
+        opengl->getProcAddress("glProgramStringARB");
+
+      glGetProgramivARB = (PFNGLGETPROGRAMIVARBPROC)
+        opengl->getProcAddress("glGetProgramivARB");
+
+      glDeleteProgramsARB = (PFNGLDELETEPROGRAMSARBPROC)
+        opengl->getProcAddress("glDeleteProgramsARB");
+
+      glBindProgramARB = (PFNGLBINDPROGRAMARBPROC)
+        opengl->getProcAddress("glBindProgramARB");
+
+      glGenProgramsARB = (PFNGLGENPROGRAMSARBPROC)
+        opengl->getProcAddress("glGenProgramsARB");
+
+      glProgramLocalParameter4dvARB = (PFNGLPROGRAMLOCALPARAMETER4DVARBPROC)
+        opengl->getProcAddress("glProgramLocalParameter4dvARB");
+    }
+
+    static OpenGLFunctionPointers & get();
+  };
+
+  //----------------------------------------------------------------
+  // OpenGLFunctionPointers::get
+  //
+  OpenGLFunctionPointers &
+  OpenGLFunctionPointers::get()
+  {
+    static OpenGLFunctionPointers singleton;
+    return singleton;
+  }
+}
 
 //----------------------------------------------------------------
 // yae_reset_opengl_to_initial_state
@@ -872,10 +931,12 @@ yae_assert_gl_no_error()
 void
 yae_reset_opengl_to_initial_state()
 {
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  yae::OpenGLFunctionPointers & opengl = yae::OpenGLFunctionPointers::get();
+
+  opengl.glBindBuffer(GL_ARRAY_BUFFER, 0);
   yae_assert_gl_no_error();
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  opengl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   yae_assert_gl_no_error();
 
   int maxAttribs = 0;
@@ -884,14 +945,14 @@ yae_reset_opengl_to_initial_state()
 
   for (int i = 0; i < maxAttribs; ++i)
   {
-    glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    opengl.glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0);
     yae_assert_gl_no_error();
 
-    glDisableVertexAttribArray(i);
+    opengl.glDisableVertexAttribArray(i);
     yae_assert_gl_no_error();
   }
 
-  glActiveTexture(GL_TEXTURE0);
+  opengl.glActiveTexture(GL_TEXTURE0);
   yae_assert_gl_no_error();
 
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -954,7 +1015,7 @@ yae_reset_opengl_to_initial_state()
   glBlendFunc(GL_ONE, GL_ZERO);
   yae_assert_gl_no_error();
 
-  glUseProgram(0);
+  opengl.glUseProgram(0);
   yae_assert_gl_no_error();
 
   glShadeModel(GL_FLAT);
@@ -970,10 +1031,15 @@ yae_reset_opengl_to_initial_state()
 // load_arb_program_natively
 //
 static bool
-load_arb_program_natively(GLenum target, const char * prog)
+load_arb_program_natively(yae::OpenGLFunctionPointers & opengl,
+                          GLenum target,
+                          const char * prog)
 {
   std::size_t len = strlen(prog);
-  glProgramStringARB(target, GL_PROGRAM_FORMAT_ASCII_ARB, (GLsizei)len, prog);
+  opengl.glProgramStringARB(target,
+                            GL_PROGRAM_FORMAT_ASCII_ARB,
+                            (GLsizei)len,
+                            prog);
   GLenum err = glGetError();
   (void)err;
 
@@ -989,7 +1055,9 @@ load_arb_program_natively(GLenum target, const char * prog)
 #endif
 
   GLint isNative = 0;
-  glGetProgramivARB(target, GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB, &isNative);
+  opengl.glGetProgramivARB(target,
+                           GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB,
+                           &isNative);
 
   if (errorPos == -1 &&
       isNative == 1)
@@ -1156,7 +1224,8 @@ namespace yae
   {
     if (handle_)
     {
-      glDeleteProgramsARB(1, &handle_);
+      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+      opengl.glDeleteProgramsARB(1, &handle_);
       handle_ = 0;
     }
   }
@@ -1596,16 +1665,20 @@ namespace yae
     // helper:
     bool createBuiltinFragmentShader(const char * code)
     {
+      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+
       bool ok = false;
       builtinShaderProgram_.destroy();
       builtinShaderProgram_.code_ = code;
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      glGenProgramsARB(1, &builtinShaderProgram_.handle_);
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                       builtinShaderProgram_.handle_);
 
-      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
+      opengl.glGenProgramsARB(1, &builtinShaderProgram_.handle_);
+      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                              builtinShaderProgram_.handle_);
+
+      if (load_arb_program_natively(opengl,
+                                    GL_FRAGMENT_PROGRAM_ARB,
                                     builtinShaderProgram_.code_))
       {
         builtinShader_.program_ = &builtinShaderProgram_;
@@ -1613,7 +1686,7 @@ namespace yae
       }
       else
       {
-        glDeleteProgramsARB(1, &builtinShaderProgram_.handle_);
+        opengl.glDeleteProgramsARB(1, &builtinShaderProgram_.handle_);
         builtinShaderProgram_.handle_ = 0;
         builtinShader_.program_ = NULL;
       }
@@ -1626,14 +1699,18 @@ namespace yae
                                   const std::size_t numFormats,
                                   const char * code)
     {
+      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+
       bool ok = false;
       TFragmentShaderProgram program(code);
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      glGenProgramsARB(1, &program.handle_);
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_);
+      opengl.glGenProgramsARB(1, &program.handle_);
+      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_);
 
-      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB, program.code_))
+      if (load_arb_program_natively(opengl,
+                                    GL_FRAGMENT_PROGRAM_ARB,
+                                    program.code_))
       {
         shaderPrograms_.push_back(program);
 
@@ -1650,7 +1727,7 @@ namespace yae
       }
       else
       {
-        glDeleteProgramsARB(1, &program.handle_);
+        opengl.glDeleteProgramsARB(1, &program.handle_);
         program.handle_ = 0;
       }
 
@@ -1982,25 +2059,28 @@ namespace yae
 
     if (shader_)
     {
+      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+
       if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
         frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                              shader_->program_->handle_);
       {
         // pass the color transform matrix to the shader:
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      0, &m34_to_rgb_[0]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             0, &m34_to_rgb_[0]);
         yae_assert_gl_no_error();
 
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      1, &m34_to_rgb_[4]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             1, &m34_to_rgb_[4]);
         yae_assert_gl_no_error();
 
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      2, &m34_to_rgb_[8]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             2, &m34_to_rgb_[8]);
         yae_assert_gl_no_error();
 
         // pass the subsampling factors to the shader:
@@ -2008,8 +2088,8 @@ namespace yae
         subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
         subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
 
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      3, subsample_uv);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             3, subsample_uv);
         yae_assert_gl_no_error();
       }
       glDisable(GL_FRAGMENT_PROGRAM_ARB);
@@ -2037,11 +2117,11 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    if (glActiveTexture)
-    {
-      glActiveTexture(GL_TEXTURE0);
-      yae_assert_gl_no_error();
-    }
+    OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+    opengl.glActiveTexture(GL_TEXTURE0);
+    yae_assert_gl_no_error();
+#endif
 
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
     glDisable(GL_LIGHTING);
@@ -2055,27 +2135,26 @@ namespace yae
 
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     const std::size_t numTextures = texId_.size();
+
     for (std::size_t i = 0; i < numTextures; i += shader.numPlanes_)
     {
       if (shader_)
       {
-        glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+        opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                shader_->program_->handle_);
       }
 
-      if (glActiveTexture)
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
       {
-        for (std::size_t k = 0; k < shader.numPlanes_; k++)
-        {
-          glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-          yae_assert_gl_no_error();
+        opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+        yae_assert_gl_no_error();
 
-          glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[k + i]);
-        }
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[k + i]);
       }
-      else
-      {
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
-      }
+#else
+      glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
+#endif
 
       glBegin(GL_QUADS);
       {
@@ -2095,20 +2174,17 @@ namespace yae
     }
 
     // un-bind the textures:
-    if (glActiveTexture)
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+    for (std::size_t k = 0; k < shader.numPlanes_; k++)
     {
-      for (std::size_t k = 0; k < shader.numPlanes_; k++)
-      {
-        glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-        yae_assert_gl_no_error();
+      opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+      yae_assert_gl_no_error();
 
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
-      }
-    }
-    else
-    {
       glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
     }
+#else
+    glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
+#endif
 
     if (shader_)
     {
@@ -2632,25 +2708,28 @@ namespace yae
 
     if (shader_)
     {
+      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+
       if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
         frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
       glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                              shader_->program_->handle_);
       {
         // pass the color transform matrix to the shader:
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      0, &m34_to_rgb_[0]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             0, &m34_to_rgb_[0]);
         yae_assert_gl_no_error();
 
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      1, &m34_to_rgb_[4]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             1, &m34_to_rgb_[4]);
         yae_assert_gl_no_error();
 
-        glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                      2, &m34_to_rgb_[8]);
+        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                             2, &m34_to_rgb_[8]);
         yae_assert_gl_no_error();
       }
       glDisable(GL_FRAGMENT_PROGRAM_ARB);
@@ -2678,11 +2757,11 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    if (glActiveTexture)
-    {
-      glActiveTexture(GL_TEXTURE0);
-      yae_assert_gl_no_error();
-    }
+    OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+    opengl.glActiveTexture(GL_TEXTURE0);
+    yae_assert_gl_no_error();
+#endif
 
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_LIGHTING);
@@ -2701,29 +2780,28 @@ namespace yae
 
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     const std::size_t numTiles = tiles_.size();
+
     for (std::size_t i = 0; i < numTiles; i++)
     {
       const TFrameTile & tile = tiles_[i];
 
       if (shader_)
       {
-        glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, shader_->program_->handle_);
+        opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                shader_->program_->handle_);
       }
 
-      if (glActiveTexture)
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
       {
-        for (std::size_t k = 0; k < shader.numPlanes_; k++)
-        {
-          glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-          yae_assert_gl_no_error();
+        opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+        yae_assert_gl_no_error();
 
-          glBindTexture(GL_TEXTURE_2D, texId_[k + i * shader.numPlanes_]);
-        }
+        glBindTexture(GL_TEXTURE_2D, texId_[k + i * shader.numPlanes_]);
       }
-      else
-      {
-        glBindTexture(GL_TEXTURE_2D, texId_[i * shader.numPlanes_]);
-      }
+#else
+      glBindTexture(GL_TEXTURE_2D, texId_[i * shader.numPlanes_]);
+#endif
 
       glBegin(GL_QUADS);
       {
@@ -2743,20 +2821,17 @@ namespace yae
     }
 
     // un-bind the textures:
-    if (glActiveTexture)
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+    for (std::size_t k = 0; k < shader.numPlanes_; k++)
     {
-      for (std::size_t k = 0; k < shader.numPlanes_; k++)
-      {
-        glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-        yae_assert_gl_no_error();
+      opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
+      yae_assert_gl_no_error();
 
-        glBindTexture(GL_TEXTURE_2D, 0);
-      }
-    }
-    else
-    {
       glBindTexture(GL_TEXTURE_2D, 0);
     }
+#else
+    glBindTexture(GL_TEXTURE_2D, 0);
+#endif
 
     if (shader_)
     {

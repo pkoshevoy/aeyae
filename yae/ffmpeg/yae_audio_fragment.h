@@ -43,7 +43,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioFragment
   //
-  struct AudioFragment
+  struct YAE_API AudioFragment
   {
 
     //----------------------------------------------------------------

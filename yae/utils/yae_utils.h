@@ -118,7 +118,7 @@ namespace yae
     ~TOpenFolder();
 
     // accessor to the folder path:
-    const std::string & folderPath() const;
+    std::string folderPath() const;
 
     // parse the next item in the folder:
     bool parseNextItem();

@@ -34,7 +34,7 @@ namespace yae
   //----------------------------------------------------------------
   // IAudioTempoFilter
   //
-  struct IAudioTempoFilter
+  struct YAE_API IAudioTempoFilter
   {
     virtual ~IAudioTempoFilter() {}
 

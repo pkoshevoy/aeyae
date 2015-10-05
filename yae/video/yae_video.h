@@ -538,7 +538,7 @@ namespace yae
       const char * assa_;
     };
 
-    struct IPrivate
+    struct YAE_API IPrivate
     {
     protected:
       virtual ~IPrivate() {}

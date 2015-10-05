@@ -33,7 +33,7 @@ namespace yae
   //!
   //! NOTE: this is an notification interface, therefore the implementation
   //! must be thread-safe, asynchronous, non-blocking...
-  struct IClockObserver
+  struct YAE_API IClockObserver
   {
     virtual ~IClockObserver() {}
     virtual void noteCurrentTimeChanged(const SharedClock & c,

@@ -523,7 +523,7 @@ namespace yae
       return ok;
     }
 
-    inline const std::string & folderPath() const
+    inline std::string folderPath() const
     {
       return path_.string();
     }
@@ -569,7 +569,7 @@ namespace yae
   //----------------------------------------------------------------
   // TOpenFolder::folderPath
   //
-  const std::string &
+  std::string
   TOpenFolder::folderPath() const
   {
     return private_->folderPath();
@@ -1045,7 +1045,7 @@ extern "C"
   //----------------------------------------------------------------
   // strtoll
   //
-  long long int
+  YAE_API long long int
   strtoll(const char * nptr, char ** endptr, int base)
   {
     YAE_ASSERT(sizeof(long long int) == sizeof(__int64));

@@ -477,7 +477,7 @@ namespace yae
 
     // setup a map for fast group lookup:
     std::map<PlaylistGroup::TKey, TPlaylistGroupPtr> groupMap;
-    init_lookup(groupMap, groups_);
+    init_lookup<PlaylistGroup>(groupMap, groups_);
 
     // update the group vector:
     numItems_ = 0;
@@ -491,7 +491,7 @@ namespace yae
       const TFringeGroup & fringeGroup = *i;
 
       TPlaylistGroupPtr groupPtr =
-        yae::lookup(groupMap, fringeGroup.fullPath_);
+        yae::lookup<PlaylistGroup>(groupMap, fringeGroup.fullPath_);
       bool newGroup = !groupPtr;
 
       if (newGroup)
@@ -519,7 +519,7 @@ namespace yae
 
       // setup a map for fast item lookup:
       std::map<PlaylistItem::TKey, TPlaylistItemPtr> itemMap;
-      init_lookup(itemMap, group.items_);
+      init_lookup<PlaylistItem>(itemMap, group.items_);
 
       // update the items vector:
       std::size_t groupSize = 0;
@@ -533,7 +533,7 @@ namespace yae
         const PlaylistKey & key = j->first;
         const QString & value = j->second;
 
-        TPlaylistItemPtr itemPtr = yae::lookup(itemMap, key);
+        TPlaylistItemPtr itemPtr = yae::lookup<PlaylistItem>(itemMap, key);
         bool newItem = !itemPtr;
 
         if (newItem)

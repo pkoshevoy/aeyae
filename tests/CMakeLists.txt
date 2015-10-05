@@ -1,5 +1,13 @@
 find_package(Threads REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost
+  COMPONENTS
+  atomic
+  chrono
+  date_time
+  system
+  thread
+  unit_test_framework
+  REQUIRED)
 
 include_directories(AFTER
   .
@@ -18,6 +26,8 @@ add_executable(aeyae-tests
   )
 
 set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
+
+target_compile_definitions(aeyae-tests PRIVATE -DBOOST_TEST_DYN_LINK)
 
 target_link_libraries(aeyae-tests
   ${Boost_LIBRARIES}

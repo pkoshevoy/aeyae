@@ -9,10 +9,10 @@
 // standard C++ library:
 #include <iostream>
 #include <sstream>
-#include <thread>
 
 // boost library:
 #include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
 
 // aeyae:
 #include "yae/utils/yae_benchmark.h"
@@ -67,11 +67,11 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
 #endif
   }
 
-  std::thread t1(&func_b);
-  std::string t1_id = to_string(t1.get_id());
+  boost::thread t1(&func_b);
+  std::string t1_id = ::to_string(t1.get_id());
 
-  std::thread t2(&func_b);
-  std::string t2_id = to_string(t2.get_id());
+  boost::thread t2(&func_b);
+  std::string t2_id = ::to_string(t2.get_id());
 
   t1.join();
   t2.join();

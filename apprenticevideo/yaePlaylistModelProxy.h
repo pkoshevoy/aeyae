@@ -41,7 +41,7 @@ namespace yae
                NOTIFY sortOrderChanged);
 
     // not supported:
-    void setSourceModel(QAbstractItemModel *) final {}
+    void setSourceModel(QAbstractItemModel *) YAE_FINAL {}
 
   public:
 

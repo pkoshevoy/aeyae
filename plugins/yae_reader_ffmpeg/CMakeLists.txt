@@ -1,5 +1,7 @@
 project(yae_reader_ffmpeg)
 
+find_package(Boost REQUIRED)
+
 # setup header search paths:
 include_directories(AFTER
   .

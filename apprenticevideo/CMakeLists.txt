@@ -474,6 +474,10 @@ if (WIN32)
     "${PROJECT_BINARY_DIR}/yaeVersion.h"
     )
 
+  target_link_libraries(wixWrapper
+    ${Boost_LIBRARIES}
+    )
+
   add_dependencies(wixWrapper "update_revision")
 
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC
@@ -493,7 +497,6 @@ if (WIN32)
     CACHE FILEPATH "VCRedist CRT .msm merge module")
 
   if (MINGW OR MSYS)
-    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_EXE "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe")
     string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico")
     string(REPLACE "/" "\\\\" NATIVE_DEPENDS_EXE "${DEPENDENCY_WALKER}")
     string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
@@ -501,7 +504,6 @@ if (WIN32)
     string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
     string(REPLACE "/" "\\\\" NATIVE_VC_CRT_MSM "${VC_CRT_MSM}")
   else (MINGW OR MSYS)
-    file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${PROGNAME}.exe" NATIVE_PROGRAM_EXE)
     file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
     file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
     file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
@@ -519,7 +521,7 @@ if (WIN32)
   add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
     COMMAND wixWrapper
     ARGS
-    "${NATIVE_PROGRAM_EXE}"
+    $<TARGET_FILE:${PROGNAME}>
     "${NATIVE_PROGRAM_ICON}"
     "http://sourceforge.net/projects/apprenticevideo/"
     "${NATIVE_DEPENDS_EXE}"

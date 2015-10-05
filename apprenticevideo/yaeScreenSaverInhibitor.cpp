@@ -6,6 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 // standard C++:
 #include <iostream>
 

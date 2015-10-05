@@ -21,8 +21,15 @@
 #include <vector>
 #include <list>
 
+// boost:
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+
 // local imports:
 #include <yaeVersion.h>
+
+// namespace shortcut:
+namespace fs = boost::filesystem;
 
 
 //----------------------------------------------------------------
@@ -143,7 +150,7 @@ main(int argc, char ** argv)
   }
 
   std::string dependsLog("depends-exe-log.txt");
-  std::string module(argv[1]);
+  std::string module = fs::path(argv[1]).make_preferred().string();
   std::string iconFile(argv[2]);
   std::string helpLink(argv[3]);
   std::string dependsExe(argv[4]);

@@ -119,7 +119,7 @@ namespace yae
       sum_(0)
     {}
 
-    int size_;
+    unsigned int size_;
     int sum_;
   };
 
@@ -127,7 +127,7 @@ namespace yae
   // updateBin
   //
   inline static void
-  updateBin(TBin & bin, int offset, int weight = 1)
+  updateBin(TBin & bin, int offset, unsigned int weight = 1)
   {
     bin.sum_ += offset * weight;
     bin.size_ += weight;
