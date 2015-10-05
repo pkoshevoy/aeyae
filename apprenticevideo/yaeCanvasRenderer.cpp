@@ -881,33 +881,52 @@ namespace yae
     : public QOpenGLFunctions
 #endif
   {
-    PFNGLPROGRAMSTRINGARBPROC glProgramStringARB;
-    PFNGLGETPROGRAMIVARBPROC glGetProgramivARB;
-    PFNGLDELETEPROGRAMSARBPROC glDeleteProgramsARB;
-    PFNGLBINDPROGRAMARBPROC glBindProgramARB;
-    PFNGLGENPROGRAMSARBPROC glGenProgramsARB;
-    PFNGLPROGRAMLOCALPARAMETER4DVARBPROC glProgramLocalParameter4dvARB;
+    typedef void (*TProgramStringARB)(GLenum target,
+                                      GLenum format,
+                                      GLsizei len,
+                                      const void * string);
+    TProgramStringARB glProgramStringARB;
+
+    typedef void (*TGetProgramivARB)(GLenum target,
+                                     GLenum pname,
+                                     GLint * params);
+    TGetProgramivARB glGetProgramivARB;
+
+    typedef void (*TDeleteProgramsARB)(GLsizei n,
+                                       const GLuint * programs);
+    TDeleteProgramsARB glDeleteProgramsARB;
+
+    typedef void (*TBindProgramARB)(GLenum target, GLuint program);
+    TBindProgramARB glBindProgramARB;
+
+    typedef void (*TGenProgramsARB)(GLsizei n, GLuint * programs);
+    TGenProgramsARB glGenProgramsARB;
+
+    typedef void (* TProgramLocalParameter4dvARB)(GLenum target,
+                                                  GLuint index,
+                                                  const GLdouble * params);
+    TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB;
 
     OpenGLFunctionPointers()
     {
       QOpenGLContext * opengl = QOpenGLContext::currentContext();
 
-      glProgramStringARB = (PFNGLPROGRAMSTRINGARBPROC)
+      glProgramStringARB = (TProgramStringARB)
         opengl->getProcAddress("glProgramStringARB");
 
-      glGetProgramivARB = (PFNGLGETPROGRAMIVARBPROC)
+      glGetProgramivARB = (TGetProgramivARB)
         opengl->getProcAddress("glGetProgramivARB");
 
-      glDeleteProgramsARB = (PFNGLDELETEPROGRAMSARBPROC)
+      glDeleteProgramsARB = (TDeleteProgramsARB)
         opengl->getProcAddress("glDeleteProgramsARB");
 
-      glBindProgramARB = (PFNGLBINDPROGRAMARBPROC)
+      glBindProgramARB = (TBindProgramARB)
         opengl->getProcAddress("glBindProgramARB");
 
-      glGenProgramsARB = (PFNGLGENPROGRAMSARBPROC)
+      glGenProgramsARB = (TGenProgramsARB)
         opengl->getProcAddress("glGenProgramsARB");
 
-      glProgramLocalParameter4dvARB = (PFNGLPROGRAMLOCALPARAMETER4DVARBPROC)
+      glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
         opengl->getProcAddress("glProgramLocalParameter4dvARB");
     }
 
