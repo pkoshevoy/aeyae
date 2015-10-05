@@ -28,7 +28,7 @@ namespace yae
   //----------------------------------------------------------------
   // ReaderFFMPEG
   //
-  struct YAE_API_EXPORT ReaderFFMPEG : public IReader
+  struct ReaderFFMPEG : public IReader
   {
   private:
     //! intentionally disabled:

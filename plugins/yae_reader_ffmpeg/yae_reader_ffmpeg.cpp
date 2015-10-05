@@ -5760,7 +5760,7 @@ extern "C"
   //----------------------------------------------------------------
   // yae_create_plugin
   //
-  yae::IPlugin *
+  YAE_API_EXPORT yae::IPlugin *
   yae_create_plugin(std::size_t i)
   {
     if (i == 0)
