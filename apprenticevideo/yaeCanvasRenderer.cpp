@@ -909,6 +909,9 @@ namespace yae
 
     OpenGLFunctionPointers()
     {
+#if YAE_HAS_GL_ACTIVE_TEXTURE
+      QOpenGLFunctions::initializeOpenGLFunctions();
+#endif
       QOpenGLContext * opengl = QOpenGLContext::currentContext();
 
       glProgramStringARB = (TProgramStringARB)
