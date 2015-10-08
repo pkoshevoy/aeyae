@@ -626,28 +626,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // keywordsMatch
-  //
-  static bool
-  keywordsMatch(const std::list<QString> & keywords, const QString  & text)
-  {
-    for (std::list<QString>::const_iterator i = keywords.begin();
-         i != keywords.end(); ++i)
-    {
-      const QString & keyword = *i;
-      if (!text.contains(keyword, Qt::CaseInsensitive))
-      {
-        return false;
-      }
-    }
-
-#if 0
-    std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
-#endif
-    return true;
-  }
-
-  //----------------------------------------------------------------
   // Playlist::setPlayingItem
   //
   void
@@ -870,7 +848,6 @@ namespace yae
 
     int playingNow = playing_;
     int currentNow = current_;
-    bool playingRemoved = false;
 
     // try to keep track of the original playing item,
     // its index may change:

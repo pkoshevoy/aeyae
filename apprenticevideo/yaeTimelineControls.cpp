@@ -119,9 +119,9 @@ namespace yae
     timelineDuration_(0.0),
     timelinePosition_(0.0),
     frameRate_(100.0),
-    slideshowTimer_(this),
     auxPlayhead_(kClockTemplate),
-    auxDuration_(kUnknownDuration)
+    auxDuration_(kUnknownDuration),
+    slideshowTimer_(this)
   {
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
 

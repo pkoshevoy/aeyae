@@ -244,10 +244,6 @@ namespace yae
     // shortcut:
     const VideoTraits & vtts = frame->traits_;
 
-    // pixel format shortcut:
-    const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(vtts.pixelFormat_);
-
     QImage::Format qimageFormat =
 #ifdef _BIG_ENDIAN
       (vtts.pixelFormat_ == kPixelFormatARGB) ? QImage::Format_ARGB32 :

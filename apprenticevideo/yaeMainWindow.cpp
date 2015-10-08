@@ -97,20 +97,6 @@ namespace yae
     QString::fromUtf8("SkipNonReferenceFrames");
 
   //----------------------------------------------------------------
-  // swapLayouts
-  //
-  static void
-  swapLayouts(QWidget * a, QWidget * b)
-  {
-    QWidget tmp;
-    QLayout * la = a->layout();
-    QLayout * lb = b->layout();
-    tmp.setLayout(la);
-    a->setLayout(lb);
-    b->setLayout(la);
-  }
-
-  //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   //
   AboutDialog::AboutDialog(QWidget * parent):
