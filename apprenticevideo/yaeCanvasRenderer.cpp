@@ -870,6 +870,46 @@ yae_assert_gl_no_error()
 //
 #define YAE_HAS_GL_ACTIVE_TEXTURE 1
 
+//----------------------------------------------------------------
+// TProgramStringARB
+//
+typedef void (APIENTRYP TProgramStringARB)(GLenum target,
+                                           GLenum format,
+                                           GLsizei len,
+                                           const void * string);
+
+//----------------------------------------------------------------
+// TGetProgramivARB
+//
+typedef void (APIENTRYP TGetProgramivARB)(GLenum target,
+                                          GLenum pname,
+                                          GLint * params);
+
+//----------------------------------------------------------------
+// TDeleteProgramsARB
+//
+typedef void (APIENTRYP TDeleteProgramsARB)(GLsizei n,
+                                            const GLuint * programs);
+
+//----------------------------------------------------------------
+// TBindProgramARB
+//
+typedef void (APIENTRYP TBindProgramARB)(GLenum target,
+                                         GLuint program);
+
+//----------------------------------------------------------------
+// TGenProgramsARB
+//
+typedef void (APIENTRYP TGenProgramsARB)(GLsizei n,
+                                         GLuint * programs);
+
+//----------------------------------------------------------------
+// TProgramLocalParameter4dvARB
+//
+typedef void (APIENTRYP TProgramLocalParameter4dvARB)(GLenum target,
+                                                      GLuint index,
+                                                      const GLdouble *);
+
 namespace yae
 {
 
@@ -881,30 +921,11 @@ namespace yae
     : public QOpenGLFunctions
 #endif
   {
-    typedef void (*TProgramStringARB)(GLenum target,
-                                      GLenum format,
-                                      GLsizei len,
-                                      const void * string);
     TProgramStringARB glProgramStringARB;
-
-    typedef void (*TGetProgramivARB)(GLenum target,
-                                     GLenum pname,
-                                     GLint * params);
     TGetProgramivARB glGetProgramivARB;
-
-    typedef void (*TDeleteProgramsARB)(GLsizei n,
-                                       const GLuint * programs);
     TDeleteProgramsARB glDeleteProgramsARB;
-
-    typedef void (*TBindProgramARB)(GLenum target, GLuint program);
     TBindProgramARB glBindProgramARB;
-
-    typedef void (*TGenProgramsARB)(GLsizei n, GLuint * programs);
     TGenProgramsARB glGenProgramsARB;
-
-    typedef void (* TProgramLocalParameter4dvARB)(GLenum target,
-                                                  GLuint index,
-                                                  const GLdouble * params);
     TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB;
 
     OpenGLFunctionPointers()
@@ -914,22 +935,22 @@ namespace yae
 #endif
       QOpenGLContext * opengl = QOpenGLContext::currentContext();
 
-      glProgramStringARB = (TProgramStringARB)
+      this->glProgramStringARB = (TProgramStringARB)
         opengl->getProcAddress("glProgramStringARB");
 
-      glGetProgramivARB = (TGetProgramivARB)
+      this->glGetProgramivARB = (TGetProgramivARB)
         opengl->getProcAddress("glGetProgramivARB");
 
-      glDeleteProgramsARB = (TDeleteProgramsARB)
+      this->glDeleteProgramsARB = (TDeleteProgramsARB)
         opengl->getProcAddress("glDeleteProgramsARB");
 
-      glBindProgramARB = (TBindProgramARB)
+      this->glBindProgramARB = (TBindProgramARB)
         opengl->getProcAddress("glBindProgramARB");
 
-      glGenProgramsARB = (TGenProgramsARB)
+      this->glGenProgramsARB = (TGenProgramsARB)
         opengl->getProcAddress("glGenProgramsARB");
 
-      glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
+      this->glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
         opengl->getProcAddress("glProgramLocalParameter4dvARB");
     }
 
