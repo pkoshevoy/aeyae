@@ -604,6 +604,8 @@ namespace yae
   Playlist::closestGroup(std::size_t index,
                          Playlist::TDirection where) const
   {
+    (void) where;
+
     // no items have been excluded:
     return lookupGroup(index);
   }
@@ -616,6 +618,8 @@ namespace yae
                         Playlist::TDirection where,
                         TPlaylistGroupPtr * returnGroup) const
   {
+    (void) where;
+
     // no items have been excluded:
     if (returnGroup)
     {
@@ -856,12 +860,12 @@ namespace yae
     for (int groupRow = groups_.size() - 1; groupRow >= 0; groupRow--)
     {
       PlaylistGroup & group = *(groups_[groupRow]);
-      YAE_ASSERT(groupRow == group.row_);
+      YAE_ASSERT(groupRow == int(group.row_));
 
       for (int itemRow = group.items_.size() - 1; itemRow >= 0; itemRow--)
       {
         PlaylistItem & item = *(group.items_[itemRow]);
-        YAE_ASSERT(itemRow == item.row_);
+        YAE_ASSERT(itemRow == int(item.row_));
 
         if (!item.selected_)
         {
@@ -904,7 +908,7 @@ namespace yae
     TPlaylistGroupPtr groupPtr;
     TPlaylistItemPtr itemPtr = lookup(groupPtr, groupRow, itemRow);
 
-    if (!groupPtr || (itemRow < numItems_ && !itemPtr))
+    if (!groupPtr || (itemRow < int(numItems_) && !itemPtr))
     {
       YAE_ASSERT(false);
       return;
@@ -1241,14 +1245,14 @@ namespace yae
   TPlaylistItemPtr
   Playlist::lookup(TPlaylistGroupPtr & group, int groupRow, int itemRow) const
   {
-    if (groupRow < 0 || groupRow >= groups_.size())
+    if (groupRow < 0 || groupRow >= int(groups_.size()))
     {
       group = TPlaylistGroupPtr();
       return TPlaylistItemPtr();
     }
 
     group = groups_[groupRow];
-    if (itemRow < 0 || itemRow >= group->items_.size())
+    if (itemRow < 0 || itemRow >= int(group->items_.size()))
     {
       return TPlaylistItemPtr();
     }
@@ -1357,7 +1361,7 @@ namespace yae
                        int & playingNow,
                        int & currentNow)
   {
-    if (itemRow >= group.items_.size())
+    if (itemRow >= int(group.items_.size()))
     {
       YAE_ASSERT(false);
       return;

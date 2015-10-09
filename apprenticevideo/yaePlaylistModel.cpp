@@ -88,7 +88,7 @@ namespace yae
     {
       const std::size_t n = playlist_.groups().size();
       PlaylistNode * playlistNode = &playlist_;
-      return row < n ? createIndex(row, column, playlistNode) : QModelIndex();
+      return row < int(n) ? createIndex(row, column, playlistNode) : QModelIndex();
     }
 
     const PlaylistNode * parentNode = NULL;
@@ -98,7 +98,7 @@ namespace yae
     if (group)
     {
       const std::size_t n = group->items_.size();
-      return row < n ? createIndex(row, column, group) : QModelIndex();
+      return row < int(n) ? createIndex(row, column, group) : QModelIndex();
     }
 
     YAE_ASSERT(false);
@@ -672,7 +672,7 @@ namespace yae
     mapToGroupRowItemRow(modelIndex, groupRow, itemRow);
 
     const std::size_t numGroups = playlist_.groups().size();
-    if (groupRow < 0 || groupRow >= numGroups)
+    if (groupRow < 0 || groupRow >= int(numGroups))
     {
       YAE_ASSERT(groupRow < int(numGroups));
       return TPlaylistItemPtr();
@@ -686,7 +686,7 @@ namespace yae
 
     const PlaylistGroup & group = *groupPtr;
     const std::size_t numItems = group.items_.size();
-    if (itemRow < 0 || itemRow >= numItems)
+    if (itemRow < 0 || itemRow >= int(numItems))
     {
       YAE_ASSERT(itemRow < int(numItems));
       return TPlaylistItemPtr();

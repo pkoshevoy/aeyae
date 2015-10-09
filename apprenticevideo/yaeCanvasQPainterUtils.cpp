@@ -56,6 +56,7 @@ namespace yae
   unsigned char *
   TQImageBuffer::data(std::size_t plane) const
   {
+    (void)plane;
     const uchar * bits = qimg_.bits();
     return const_cast<unsigned char *>(bits);
   }
@@ -66,6 +67,7 @@ namespace yae
   std::size_t
   TQImageBuffer::rowBytes(std::size_t planeIndex) const
   {
+    (void)planeIndex;
     int n = qimg_.bytesPerLine();
     return (std::size_t)n;
   }

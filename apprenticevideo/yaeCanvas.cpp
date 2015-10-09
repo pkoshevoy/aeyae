@@ -1191,13 +1191,13 @@ namespace yae
     int iw = int(fw);
     int ih = int(fh);
 
-    TPainterWrapper wrapper((int)w, (int)h);
+    TPainterWrapper wrapper(iw, ih);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
 
-    QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
+    QRect canvasBBox(16, 16, iw - 32, ih - 32);
     TVideoFramePtr frame = currentFrame();
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
