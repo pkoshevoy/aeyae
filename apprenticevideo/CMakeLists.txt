@@ -142,6 +142,7 @@ set(project_sources
   yaeUtilsQt.cpp
   yaeUtilsQml.h
   yaeUtilsQml.cpp
+  yaeVersion.cpp
   )
 
 if (APPLE)
@@ -471,6 +472,7 @@ endif (APPLE)
 if (WIN32)
   add_executable(wixWrapper
     wixWrapper.cpp
+    yaeVersion.cpp
     "${PROJECT_BINARY_DIR}/yaeVersion.h"
     )
 

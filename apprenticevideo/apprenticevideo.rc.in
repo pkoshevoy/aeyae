@@ -3,8 +3,8 @@
 IDI_ICON1               ICON    DISCARDABLE     "apprenticevideo.ico"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION	0,0,0,@PROJ_WC_REVISION@
- PRODUCTVERSION	0,0,0,@PROJ_WC_REVISION@
+ FILEVERSION	@PROJ_YY_MM_DD_HHMM@
+ PRODUCTVERSION	@PROJ_YY_MM_DD_HHMM@
  FILEFLAGSMASK	0x3fL
 #ifdef _DEBUG
  FILEFLAGS	0x1L
@@ -19,15 +19,15 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "Comments", "http://sourceforge.net/projects/apprenticevideo/develop"
+            VALUE "Comments", "https://github.com/pkoshevoy/aeyae"
             VALUE "CompanyName", "Pavel Koshevoy"
-            VALUE "FileDescription", "Apprentice Video"
-            VALUE "FileVersion", "0.0.0.@PROJ_WC_REVISION@"
+            VALUE "FileDescription", "Apprentice Video, @PROJ_WC_REVISION@"
+            VALUE "FileVersion", "@PROJ_YY_MM_DD_HHMM@"
             VALUE "InternalName", "apprenticevideo"
-            VALUE "LegalCopyright", "Copyright © 2011 Pavel Koshevoy"
+            VALUE "LegalCopyright", "Copyright © 2015 Pavel Koshevoy"
             VALUE "OriginalFilename", "apprenticevideo.exe"
             VALUE "ProductName", "Apprentice Video"
-            VALUE "ProductVersion", "0.0.0.@PROJ_WC_REVISION@"
+            VALUE "ProductVersion", "@PROJ_YY_MM_DD_HHMM@"
         END
     END
     BLOCK "VarFileInfo"

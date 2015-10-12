@@ -16,11 +16,17 @@ if(GIT_FOUND)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   execute_process(COMMAND ${GIT_EXECUTABLE} log -1
     --pretty=format:%cd.%h
-    --date=format:%Y%m%d.%H%M%S.%Z%z
+    --date=format:%Y%m%d.%H%M%S
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     OUTPUT_VARIABLE PROJ_GIT_REVISION
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(PROJ_WC_REVISION "git.${PROJ_GIT_BRANCH}.${PROJ_GIT_REVISION}")
+  execute_process(COMMAND ${GIT_EXECUTABLE} log -1
+    --pretty=format:%cd
+    --date=format:%Y.%m.%d.%H%M
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    OUTPUT_VARIABLE PROJ_YY_MM_DD_HHMM
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
   message("PROJ_WC_REVISION: ${PROJ_WC_REVISION}")
 else()
   set(PROJ_WC_REVISION "0")

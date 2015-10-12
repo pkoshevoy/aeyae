@@ -485,6 +485,11 @@ yae_is_opengl_extension_supported(const char * extension)
   if (!ready)
   {
     const GLubyte * extensions = glGetString(GL_EXTENSIONS);
+    if (!extensions)
+    {
+      return false;
+    }
+
     std::istringstream ss((const char *)extensions);
     std::copy(std::istream_iterator<std::string>(ss),
               std::istream_iterator<std::string>(),
@@ -975,6 +980,7 @@ void
 yae_reset_opengl_to_initial_state()
 {
   yae::OpenGLFunctionPointers & opengl = yae::OpenGLFunctionPointers::get();
+  yae_assert_gl_no_error();
 
   opengl.glBindBuffer(GL_ARRAY_BUFFER, 0);
   yae_assert_gl_no_error();
@@ -2889,13 +2895,19 @@ namespace yae
   // CanvasRenderer::CanvasRenderer
   //
   CanvasRenderer::CanvasRenderer():
-    openglVendorInfo_((const char *)glGetString(GL_VENDOR)),
-    openglRendererInfo_((const char *)glGetString(GL_RENDERER)),
-    openglVersionInfo_((const char *)glGetString(GL_VERSION)),
     legacy_(new TLegacyCanvas()),
     modern_(NULL),
     maxTexSize_(getTextureEdgeMax())
   {
+    const char * vendor = ((const char *)glGetString(GL_VENDOR));
+    openglVendorInfo_ = vendor ? vendor : "";
+
+    const char * renderer = ((const char *)glGetString(GL_RENDERER));
+    openglRendererInfo_ = renderer ? renderer : "";
+
+    const char * version = ((const char *)glGetString(GL_VERSION));
+    openglVersionInfo_ = version ? version : "";
+
     // rectangular textures do not work correctly on VirtualBox VMs,
     // so try to detect this and fall back to power-of-2 textures:
     bool virtualBoxVM =

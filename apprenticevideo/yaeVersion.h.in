@@ -10,5 +10,23 @@
 #define YAE_VERSION_H_
 
 #define YAE_REVISION "@PROJ_WC_REVISION@"
+#define YAE_REVISION_TIMESTAMP "@PROJ_YY_MM_DD_HHMM@"
+
+//----------------------------------------------------------------
+// yae_version
+//
+// major = (year - 2000),
+// because it reasonably fits in [0, 255] range
+//
+// minor = (month),
+// also fits in [0, 255] range
+//
+// patch = (((day - 1) * 24 + hour) * 60 + minute),
+// fits in [0, 65535] range
+//
+extern "C" void yae_version(unsigned int *major,
+                            unsigned int *minor,
+                            unsigned int *patch);
+
 
 #endif // YAE_VERSION_H_
