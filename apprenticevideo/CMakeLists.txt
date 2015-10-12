@@ -216,6 +216,7 @@ add_custom_command(OUTPUT
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
   -DPROGNAME="${PROGNAME}"
   -DSubversion_SVN_EXECUTABLE="${Subversion_SVN_EXECUTABLE}"
+  -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
   -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
 set(project_sources ${project_sources} ${YAE_VERSIONED_FILES})
