@@ -2228,8 +2228,9 @@ namespace yae
       t.pixelAspectRatio_ = (double(context->sample_aspect_ratio.num) /
                              double(context->sample_aspect_ratio.den));
     }
-    else if (stream_->sample_aspect_ratio.num &&
-             stream_->sample_aspect_ratio.den)
+
+    if (stream_->sample_aspect_ratio.num &&
+        stream_->sample_aspect_ratio.den)
     {
       t.pixelAspectRatio_ = (double(stream_->sample_aspect_ratio.num) /
                              double(stream_->sample_aspect_ratio.den));
