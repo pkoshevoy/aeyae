@@ -27,6 +27,11 @@
 #include <boost/locale.hpp>
 #include <boost/filesystem/path.hpp>
 
+#ifndef YAE_USE_QT5
+// GLEW includes:
+#include <GL/glew.h>
+#endif
+
 // APPLE includes:
 #ifdef __APPLE__
 #include <ApplicationServices/ApplicationServices.h>
@@ -38,6 +43,7 @@
 
 // Qt includes:
 #include <QApplication>
+#include <QDir>
 #include <QFileOpenEvent>
 
 // yae includes:
@@ -67,8 +73,6 @@ namespace yae
     Application(int & argc, char ** argv):
       QApplication(argc, argv)
     {
-      QApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
-
 #ifdef __APPLE__
       QString appDir = QApplication::applicationDirPath();
       QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
@@ -167,6 +171,9 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setApplicationName("ApprenticeVideo");
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
+  // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+  // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
+  // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
@@ -230,8 +237,18 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow = new yae::MainWindow(readerPrototype);
   yae::mainWindow->show();
 
-  // initialize the canvas:
-  yae::mainWindow->initCanvasQml();
+#ifndef YAE_USE_QT5
+  // initialize OpenGL GLEW wrapper:
+  GLenum err = glewInit();
+  if (err != GLEW_OK)
+  {
+    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
+    YAE_ASSERT(false);
+  }
+#endif
+
+  // initialize the player widget canvas, connect additional signals/slots:
+  yae::mainWindow->initPlayerWidget();
   yae::mainWindow->canvas()->initializePrivateBackend();
 
   yae::mainWindow->setPlaylist(playlist);

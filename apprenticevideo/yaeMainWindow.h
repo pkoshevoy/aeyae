@@ -9,6 +9,13 @@
 #ifndef YAE_MAIN_WINDOW_H_
 #define YAE_MAIN_WINDOW_H_
 
+#ifdef YAE_USE_QT5
+#define YAE_USE_PLAYER_QUICK_WIDGET 1
+#else
+#define YAE_USE_PLAYER_QUICK_WIDGET 0
+#endif
+#define YAE_USE_PLAYLIST_MODEL_PROXY 1
+
 // Qt includes:
 #include <QDialog>
 #include <QMainWindow>
@@ -26,12 +33,18 @@
 // local includes:
 #ifdef __APPLE__
 #include "yaeAppleRemoteControl.h"
+#include "yaeAppleUtils.h"
 #endif
 #include "yaeBookmarks.h"
+#if !(YAE_USE_PLAYER_QUICK_WIDGET)
+#include "yaeCanvasWidget.h"
+#endif
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
 #include "yaeQuickWidget.h"
+#endif
 #include "yaeTimelineControls.h"
 
 // Qt uic generated files:
@@ -45,9 +58,20 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TPlayerWidget
+  //
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
+  typedef TQuickWidget TPlayerWidget;
+#elif defined(YAE_USE_QT5)
+  typedef CanvasWidget<QOpenGLWidget> TPlayerWidget;
+#else
+  typedef CanvasWidget<QGLWidget> TPlayerWidget;
+#endif
+
+  //----------------------------------------------------------------
   // TPlaylistModel
   //
-#if 1
+#if (YAE_USE_PLAYLIST_MODEL_PROXY)
   typedef PlaylistModelProxy TPlaylistModel;
 #else
   typedef PlaylistModel TPlaylistModel;
@@ -114,7 +138,7 @@ namespace yae
     MainWindow(const IReaderPtr & readerPrototype);
     ~MainWindow();
 
-    void initCanvasQml();
+    void initPlayerWidget();
 
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
@@ -265,6 +289,7 @@ namespace yae
                            std::vector<TSubsFormat> & subsFormat);
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
+    void swapShortcuts();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
@@ -284,6 +309,27 @@ namespace yae
 
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;
+
+    // shortcuts used during full-screen mode (when menubar is invisible)
+    QShortcut * shortcutExit_;
+    QShortcut * shortcutFullScreen_;
+    QShortcut * shortcutFillScreen_;
+    QShortcut * shortcutShowPlaylist_;
+    QShortcut * shortcutShowTimeline_;
+    QShortcut * shortcutPlay_;
+    QShortcut * shortcutNext_;
+    QShortcut * shortcutPrev_;
+    QShortcut * shortcutLoop_;
+    QShortcut * shortcutCropNone_;
+    QShortcut * shortcutAutoCrop_;
+    QShortcut * shortcutCrop1_33_;
+    QShortcut * shortcutCrop1_78_;
+    QShortcut * shortcutCrop1_85_;
+    QShortcut * shortcutCrop2_40_;
+    QShortcut * shortcutNextChapter_;
+    QShortcut * shortcutAspectRatioNone_;
+    QShortcut * shortcutAspectRatio1_33_;
+    QShortcut * shortcutAspectRatio1_78_;
 
     // playlist shortcuts:
     QAction * actionRemove_;
@@ -320,10 +366,10 @@ namespace yae
     unsigned int readerId_;
 
     // frame canvas:
-    TPlaylistModel playlistModel_;
-    TQuickWidget * playerWidget_;
+    TPlayerWidget * playerWidget_;
     Canvas * canvas_;
     TimelineControls * timelineControls_;
+    TPlaylistModel playlistModel_;
 
     // audio device:
     std::string audioDevice_;

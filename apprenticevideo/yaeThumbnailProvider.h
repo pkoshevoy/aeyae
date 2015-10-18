@@ -14,7 +14,9 @@
 
 // Qt includes:
 #include <QImage>
+#ifdef YAE_USE_QT5
 #include <QQuickImageProvider>
+#endif
 #include <QSize>
 #include <QString>
 
@@ -31,7 +33,10 @@ namespace yae
   //----------------------------------------------------------------
   // ThumbnailProvider
   //
-  struct ThumbnailProvider : public QQuickImageProvider
+  struct ThumbnailProvider
+#ifdef YAE_USE_QT5
+    : public QQuickImageProvider
+#endif
   {
     ThumbnailProvider(const IReaderPtr & readerPrototype,
                       const TPlaylistModel & playlist,

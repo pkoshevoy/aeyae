@@ -66,19 +66,27 @@ endif (WIN32 AND NOT (MINGW OR MSYS))
 set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}" CACHE PATH "root path for portaudio lib/ and include/ folders")
 find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "portaudio library")
 
+set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ folders")
+find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
+
 set(project_moc_hxx
-  yaeCanvasQuickFbo.h
   yaeCanvasWidget.h
-  yaeQuickWidget.h
-  yaeLineEdit.h
   yaeMainWindow.h
   yaePlaylist.h
   yaePlaylistModel.h
   yaePlaylistModelProxy.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
-  yaeUtilsQml.h
   )
+
+if (Qt5_FOUND)
+  set(project_moc_hxx
+    ${project_moc_hxx}
+    yaeCanvasQuickFbo.h
+    yaeQuickWidget.h
+    yaeUtilsQml.h
+    )
+endif (Qt5_FOUND)
 
 set(project_uis
   yaeAbout.ui
@@ -87,25 +95,7 @@ set(project_uis
   yaeOpenUrlDialog.ui
   )
 
-if (QT4_FOUND)
-  qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
-endif (QT4_FOUND)
-
-if (Qt5_FOUND)
-  qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
-endif (Qt5_FOUND)
-
 set(project_sources
-  qml/FilterIcon.qml
-  qml/Player.qml
-  qml/Playlist.qml
-  qml/Timeline.qml
-  qml/TimelineMarker.qml
-  qml/TimelineMarkerDragItem.qml
-  qml/SortAndOrder.qml
-  qml/XButton.qml
-  qml/YDebug.qml
-  qml/Utils.js
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
   yaeBookmarks.h
@@ -113,14 +103,10 @@ set(project_sources
   yaeCanvas.h
   yaeCanvas.cpp
   yaeCanvasWidget.h
-  yaeCanvasQuickFbo.h
-  yaeCanvasQuickFbo.cpp
   yaeCanvasQPainterUtils.h
   yaeCanvasQPainterUtils.cpp
   yaeCanvasRenderer.h
   yaeCanvasRenderer.cpp
-  yaeLineEdit.h
-  yaeLineEdit.cpp
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
@@ -134,16 +120,42 @@ set(project_sources
   yaePlaylistModel.cpp
   yaePlaylistModelProxy.h
   yaePlaylistModelProxy.cpp
-  yaeQuickWidget.h
-  yaeQuickWidget.cpp
   yaeScreenSaverInhibitor.h
   yaeScreenSaverInhibitor.cpp
   yaeUtilsQt.h
   yaeUtilsQt.cpp
-  yaeUtilsQml.h
-  yaeUtilsQml.cpp
   yaeVersion.cpp
   )
+
+if (QT4_FOUND)
+  add_definitions(-DYAE_USE_QT4)
+  qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+endif (QT4_FOUND)
+
+if (Qt5_FOUND)
+  add_definitions(-DYAE_USE_QT5)
+  qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+
+  set(project_sources
+    ${project_sources}
+    qml/FilterIcon.qml
+    qml/Player.qml
+    qml/Playlist.qml
+    qml/Timeline.qml
+    qml/TimelineMarker.qml
+    qml/TimelineMarkerDragItem.qml
+    qml/SortAndOrder.qml
+    qml/XButton.qml
+    qml/YDebug.qml
+    qml/Utils.js
+    yaeCanvasQuickFbo.h
+    yaeCanvasQuickFbo.cpp
+    yaeQuickWidget.h
+    yaeQuickWidget.cpp
+    yaeUtilsQml.h
+    yaeUtilsQml.cpp
+    )
+endif (Qt5_FOUND)
 
 if (APPLE)
   include_directories(AFTER martinkahr-apple_remote_control)
@@ -152,6 +164,8 @@ if (APPLE)
     ${project_sources}
     yaeAppleRemoteControl.h
     yaeAppleRemoteControl.mm
+    yaeAppleUtils.h
+    yaeAppleUtils.mm
     martinkahr-apple_remote_control/AppleRemote.h
     martinkahr-apple_remote_control/AppleRemote.m
     martinkahr-apple_remote_control/HIDRemoteControlDevice.h
@@ -187,6 +201,19 @@ find_path(PORTAUDIO_INCLUDE_DIR
 if (PORTAUDIO_INCLUDE_DIR)
   include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
 endif (PORTAUDIO_INCLUDE_DIR)
+
+find_path(GLEW_INCLUDE_DIR
+  GL/glew.h
+  PATHS
+  ${GLEW_DIR}/include
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (GLEW_INCLUDE_DIR)
+  include_directories(AFTER ${GLEW_INCLUDE_DIR})
+endif (GLEW_INCLUDE_DIR)
 
 set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
 
@@ -270,6 +297,7 @@ add_dependencies(${PROGNAME} "update_revision")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}

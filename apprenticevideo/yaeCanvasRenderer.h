@@ -13,8 +13,17 @@
 #include <string>
 
 // Qt includes:
+#ifdef YAE_USE_QT5
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
+#include <QOpenGLFunctions_1_0>
+#include <QOpenGLFunctions_1_1>
+#include <QOpenGLFunctions_1_4>
+#include <QOpenGLFunctions_2_0>
+#elif defined(YAE_USE_QT4)
+// GLEW includes:
+#include <GL/glew.h>
+#endif
 
 // yae includes:
 #include "yae/video/yae_auto_crop.h"
@@ -60,6 +69,63 @@ namespace yae
   struct TLegacyCanvas;
   struct TModernCanvas;
   struct TFragmentShader;
+
+#ifdef YAE_USE_QT5
+  //----------------------------------------------------------------
+  // ogl_11
+  //
+  inline static QOpenGLFunctions_1_1 & ogl_11()
+  {
+    return *(QOpenGLContext::currentContext()->
+             versionFunctions<QOpenGLFunctions_1_1>());
+  }
+
+  //----------------------------------------------------------------
+  // ogl_14
+  //
+  inline static QOpenGLFunctions_1_4 & ogl_14()
+  {
+    return *(QOpenGLContext::currentContext()->
+             versionFunctions<QOpenGLFunctions_1_4>());
+  }
+
+  //----------------------------------------------------------------
+  // ogl_20
+  //
+  inline static QOpenGLFunctions_2_0 & ogl_20()
+  {
+    return *(QOpenGLContext::currentContext()->
+             versionFunctions<QOpenGLFunctions_2_0>());
+  }
+
+#define YAE_OGL_10_HERE() QOpenGLFunctions_1_0 & ogl_10 = yae::ogl_10()
+#define YAE_OGL_11_HERE() QOpenGLFunctions_1_1 & ogl_11 = yae::ogl_11()
+#define YAE_OGL_14_HERE() QOpenGLFunctions_1_4 & ogl_14 = yae::ogl_14()
+#define YAE_OGL_20_HERE() QOpenGLFunctions_2_0 & ogl_20 = yae::ogl_20()
+#define YAE_OPENGL_HERE() \
+  yae::OpenGLFunctionPointers & opengl = yae::OpenGLFunctionPointers::get()
+
+
+#define YAE_OGL_10(x) ogl_10.x
+#define YAE_OGL_11(x) ogl_11.x
+#define YAE_OGL_14(x) ogl_14.x
+#define YAE_OGL_20(x) ogl_20.x
+#define YAE_OPENGL(x) opengl.x
+
+#else
+#define YAE_OGL_10_HERE()
+#define YAE_OGL_11_HERE()
+#define YAE_OGL_14_HERE()
+#define YAE_OGL_20_HERE()
+#define YAE_OPENGL_HERE()
+
+#define YAE_OGL_10(x) x
+#define YAE_OGL_11(x) x
+#define YAE_OGL_14(x) x
+#define YAE_OGL_20(x) x
+#define YAE_OPENGL(x) x
+
+#endif
 
   //----------------------------------------------------------------
   // IOpenGLContext

@@ -20,6 +20,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDesktopServices>
+#include <QDesktopWidget>
 #include <QDirIterator>
 #include <QDragEnterEvent>
 #include <QFileDialog>
@@ -27,8 +28,10 @@
 #include <QMenu>
 #include <QMimeData>
 #include <QProcess>
+#ifdef YAE_USE_QT5
 #include <QQmlContext>
 #include <QQuickItem>
+#endif
 #include <QShortcut>
 #include <QSpacerItem>
 #include <QUrl>
@@ -43,10 +46,12 @@
 
 // local includes:
 #include "yaeAudioRendererPortaudio.h"
+#ifdef YAE_USE_QT5
 #include "yaeCanvasQuickFbo.h"
+#include "yaeUtilsQml.h"
+#endif
 #include "yaeMainWindow.h"
 #include "yaeThumbnailProvider.h"
-#include "yaeUtilsQml.h"
 #include "yaeUtilsQt.h"
 #include "yaeVersion.h"
 
@@ -95,6 +100,20 @@ namespace yae
   //
   static const QString kSkipNonReferenceFrames =
     QString::fromUtf8("SkipNonReferenceFrames");
+
+  //----------------------------------------------------------------
+  // swapLayouts
+  //
+  static void
+  swapLayouts(QWidget * a, QWidget * b)
+  {
+    QWidget tmp;
+    QLayout * la = a->layout();
+    QLayout * lb = b->layout();
+    tmp.setLayout(la);
+    a->setLayout(lb);
+    b->setLayout(la);
+  }
 
   //----------------------------------------------------------------
   // AboutDialog::AboutDialog
@@ -297,6 +316,8 @@ namespace yae
     setTimelineCss(timeline, true);
   }
 #endif
+
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
   //----------------------------------------------------------------
   // getCanvas
   //
@@ -327,6 +348,28 @@ namespace yae
 
     return NULL;
   }
+
+  //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(TPlayerWidget * playerWidget)
+  {
+    // shortcut to the root QML item:
+    QQuickItem * item = playerWidget->rootObject();
+    return getCanvas(item);
+  }
+#else
+
+  //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(TPlayerWidget * playerWidget)
+  {
+    return playerWidget;
+  }
+#endif
 
   //----------------------------------------------------------------
   // MainWindow::MainWindow
@@ -380,20 +423,34 @@ namespace yae
     this->setWindowIcon(QIcon(fnIcon));
 #endif
 
+    // set timeline controls:
+    timelineControls_ = new TimelineControls();
+
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
-    playerWidget_ = new TQuickWidget(this);
+#if !(YAE_USE_PLAYER_QUICK_WIDGET)
+    QString greeting =
+      tr("drop videos/music here\n\n"
+         "press spacebar to pause/resume\n\n"
+         "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+         "use apple remote for volume and seeking\n\n"
+#endif
+         "explore the menus for more options");
+
+    playerWidget_ = new TPlayerWidget();
+    playerWidget_->setGreeting(greeting);
+#else
+    playerWidget_ = new TPlayerWidget(this);
+    playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
+#endif
     playerWidget_->setFocusPolicy(Qt::StrongFocus);
     playerWidget_->setAcceptDrops(true);
-    playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
 
-    // set timeline controls:
-    timelineControls_ = new TimelineControls();
-
-    // insert QML canvas widget in main window layout:
+    // insert player widget into the main window layout:
     canvasLayout->addWidget(playerWidget_);
 
     YAE_ASSERT(readerPrototype_);
@@ -474,8 +531,50 @@ namespace yae
       audioDevice_ = audioDevice.toUtf8().constData();
     }
 
+    // when in fullscreen mode the menubar is hidden and all actions
+    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
+    // so I am creating these shortcuts as a workaround:
+    shortcutExit_ = new QShortcut(this);
+    shortcutFullScreen_ = new QShortcut(this);
+    shortcutFillScreen_ = new QShortcut(this);
+    shortcutShowPlaylist_ = new QShortcut(this);
+    shortcutShowTimeline_ = new QShortcut(this);
+    shortcutPlay_ = new QShortcut(this);
+    shortcutNext_ = new QShortcut(this);
+    shortcutPrev_ = new QShortcut(this);
+    shortcutLoop_ = new QShortcut(this);
+    shortcutCropNone_ = new QShortcut(this);
+    shortcutCrop1_33_ = new QShortcut(this);
+    shortcutCrop1_78_ = new QShortcut(this);
+    shortcutCrop1_85_ = new QShortcut(this);
+    shortcutCrop2_40_ = new QShortcut(this);
+    shortcutAutoCrop_ = new QShortcut(this);
+    shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
     shortcutSelectAll_ = new QShortcut(this);
+    shortcutAspectRatioNone_ = new QShortcut(this);
+    shortcutAspectRatio1_33_ = new QShortcut(this);
+    shortcutAspectRatio1_78_ = new QShortcut(this);
+
+    shortcutExit_->setContext(Qt::ApplicationShortcut);
+    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
+    shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
+    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
+    shortcutPlay_->setContext(Qt::ApplicationShortcut);
+    shortcutNext_->setContext(Qt::ApplicationShortcut);
+    shortcutPrev_->setContext(Qt::ApplicationShortcut);
+    shortcutLoop_->setContext(Qt::ApplicationShortcut);
+    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
+    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
+    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
+    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
+    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
 
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutSelectAll_->setContext(Qt::ApplicationShortcut);
@@ -609,12 +708,24 @@ namespace yae
                  this, SLOT(fileExit()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutExit_, SIGNAL(activated()),
+                 actionExit, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAspectRatioAuto, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatioAuto()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
+                 actionAspectRatioAuto, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAspectRatio1_33, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_33()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
+                 actionAspectRatio1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_60, SIGNAL(triggered()),
@@ -623,6 +734,10 @@ namespace yae
 
     ok = connect(actionAspectRatio1_78, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatio1_78()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
+                 actionAspectRatio1_78, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAspectRatio1_85, SIGNAL(triggered()),
@@ -645,8 +760,16 @@ namespace yae
                  this, SLOT(playbackCropFrameNone()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutCropNone_, SIGNAL(activated()),
+                 actionCropFrameNone, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrame1_33, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_33()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
+                 actionCropFrame1_33, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame1_60, SIGNAL(triggered()),
@@ -657,8 +780,16 @@ namespace yae
                  this, SLOT(playbackCropFrame1_78()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
+                 actionCropFrame1_78, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrame1_85, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrame1_85()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
+                 actionCropFrame1_85, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrame2_35, SIGNAL(triggered()),
@@ -669,24 +800,48 @@ namespace yae
                  this, SLOT(playbackCropFrame2_40()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
+                 actionCropFrame2_40, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameAutoDetect()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
+                 actionCropFrameAutoDetect, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPlay, SIGNAL(triggered()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutPlay_, SIGNAL(activated()),
+                 actionPlay, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionNext, SIGNAL(triggered()),
                  this, SLOT(playbackNext()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutNext_, SIGNAL(activated()),
+                 actionNext, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPrev, SIGNAL(triggered()),
                  this, SLOT(playbackPrev()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutPrev_, SIGNAL(activated()),
+                 actionPrev, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionLoop, SIGNAL(triggered()),
                  this, SLOT(playbackLoop()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutLoop_, SIGNAL(activated()),
+                 actionLoop, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSetInPoint, SIGNAL(triggered()),
@@ -727,8 +882,16 @@ namespace yae
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
+                 actionFullScreen, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionFillScreen, SIGNAL(triggered()),
                  this, SLOT(playbackFillScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
+                 actionFillScreen, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionShrinkWrap, SIGNAL(triggered()),
@@ -739,8 +902,16 @@ namespace yae
                  this, SLOT(playbackShowPlaylist()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
+    ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
+                 actionShowPlaylist, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+     ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowTimeline()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
+                 actionShowTimeline, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
@@ -762,6 +933,12 @@ namespace yae
     ok = connect(actionDeinterlace, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
+
+#if !(YAE_USE_PLAYER_QUICK_WIDGET)
+    ok = connect(&(playerWidget_->sigs_), SIGNAL(toggleFullScreen()),
+                 this, SLOT(toggleFullScreen()));
+    YAE_ASSERT(ok);
+#endif
 
     ok = connect(actionHalfSize, SIGNAL(triggered()),
                  this, SLOT(windowHalfSize()));
@@ -859,6 +1036,10 @@ namespace yae
                  this, SLOT(skipToNextChapter()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
+                 actionNextChapter, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     adjustMenuActions();
     adjustMenus(reader_);
   }
@@ -880,6 +1061,7 @@ namespace yae
     videoRenderer_->destroy();
 
     canvas_->cropAutoDetectStop();
+    delete playerWidget_;
   }
 
   //----------------------------------------------------------------
@@ -892,11 +1074,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::initCanvasQml
+  // MainWindow::initPlayerWidget
   //
   void
-  MainWindow::initCanvasQml()
+  MainWindow::initPlayerWidget()
   {
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
     QString greeting =
       tr("drop videos/music here\n\n"
          "press spacebar to pause/resume\n\n"
@@ -953,10 +1136,6 @@ namespace yae
       }
     }
 
-    // get a shortcut to the Canvas (owned by the QML canvas widget):
-    canvas_ = yae::getCanvas(playerItem);
-    YAE_ASSERT(canvas_);
-
     bool ok = true;
     ok = connect(playerItem, SIGNAL(toggleFullScreen()),
                  this, SLOT(requestToggleFullScreen()));
@@ -993,6 +1172,11 @@ namespace yae
     ok = connect(playerItem, SIGNAL(stepOneFrameForward()),
                  this, SLOT(skipToNextFrame()));
     YAE_ASSERT(ok);
+#endif
+
+    // get a shortcut to the Canvas (owned by the QML canvas widget):
+    canvas_ = yae::getCanvas(playerWidget_);
+    YAE_ASSERT(canvas_);
 
     // show the timeline:
     actionShowTimeline->setChecked(true);
@@ -1426,12 +1610,14 @@ namespace yae
 
     // hide the welcome screen:
     {
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
       QQuickItem * playerItem = playerWidget_->rootObject();
       std::string playerState = playerItem->state().toUtf8().constData();
       if (playerState == "welcome")
       {
         playerItem->setState(QString::fromUtf8("playback"));
       }
+#endif
     }
 
     // reset timeline start, duration, playhead, in/out points:
@@ -2189,6 +2375,7 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
     QQuickItem * playerItem = playerWidget_->rootObject();
     if (!playerItem)
     {
@@ -2201,6 +2388,10 @@ namespace yae
       playlistModel_.hasItems() ? "playback" :
       "welcome";
     playerItem->setState(QString::fromUtf8(state));
+#else
+    // FIXME: write me!
+    std::cerr << "FIXME: pkoshevoy: show playlist!" << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2209,6 +2400,7 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
     QQuickItem * playerItem = playerWidget_->rootObject();
     if (!playerItem)
     {
@@ -2223,6 +2415,10 @@ namespace yae
       bool showTimeline = actionShowTimeline->isChecked();
       timeline->setVisible(showTimeline);
     }
+#else
+    // FIXME: write me!
+    std::cerr << "FIXME: pkoshevoy: show timeline!" << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2247,6 +2443,44 @@ namespace yae
 
     double scale = std::min<double>(xexpand_, yexpand_);
     canvasSizeSet(scale, scale);
+  }
+
+  //----------------------------------------------------------------
+  // swapShortcuts
+  //
+  static inline void
+  swapShortcuts(QShortcut * a, QAction * b)
+  {
+    QKeySequence tmp = a->key();
+    a->setKey(b->shortcut());
+    b->setShortcut(tmp);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::swapShortcuts
+  //
+  void
+  MainWindow::swapShortcuts()
+  {
+    yae::swapShortcuts(shortcutExit_, actionExit);
+    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
+    yae::swapShortcuts(shortcutFillScreen_, actionFillScreen);
+    yae::swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
+    yae::swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
+    yae::swapShortcuts(shortcutPlay_, actionPlay);
+    yae::swapShortcuts(shortcutNext_, actionNext);
+    yae::swapShortcuts(shortcutPrev_, actionPrev);
+    yae::swapShortcuts(shortcutLoop_, actionLoop);
+    yae::swapShortcuts(shortcutCropNone_, actionCropFrameNone);
+    yae::swapShortcuts(shortcutCrop1_33_, actionCropFrame1_33);
+    yae::swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
+    yae::swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
+    yae::swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
+    yae::swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
+    yae::swapShortcuts(shortcutNextChapter_, actionNextChapter);
+    yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);
+    yae::swapShortcuts(shortcutAspectRatio1_33_, actionAspectRatio1_33);
+    yae::swapShortcuts(shortcutAspectRatio1_78_, actionAspectRatio1_78);
   }
 
   //----------------------------------------------------------------
@@ -2324,6 +2558,8 @@ namespace yae
     actionShrinkWrap->setEnabled(false);
     menuBar()->hide();
     showFullScreen();
+
+    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -2370,6 +2606,8 @@ namespace yae
     showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+
+    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -2693,6 +2931,7 @@ namespace yae
 
     if (!playlistModel_.hasItems())
     {
+#if (YAE_USE_PLAYER_QUICK_WIDGET)
       QQuickItem * playerItem = playerWidget_->rootObject();
       std::string playerState = playerItem->state().toUtf8().constData();
 
@@ -2701,6 +2940,10 @@ namespace yae
         // show the welcome screen:
         playerItem->setState(QString::fromUtf8("welcome"));
       }
+#else
+    // FIXME: write me!
+    std::cerr << "FIXME: pkoshevoy: playlist item changed!" << std::endl;
+#endif
     }
   }
 
@@ -2757,11 +3000,22 @@ namespace yae
     std::list<QString> playlist;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
-      QString fullpath = QFileInfo(i->toLocalFile()).canonicalFilePath();
+      QUrl url = *i;
+
+#ifdef __APPLE__
+      if (url.toString().startsWith("file:///.file/id="))
+      {
+        std::string strUrl = url.toString().toUtf8().constData();
+        strUrl = yae::absoluteUrlFrom(strUrl.c_str());
+        url = QUrl(QString::fromUtf8(strUrl.c_str()));
+      }
+#endif
+
+      QString fullpath = QFileInfo(url.toLocalFile()).canonicalFilePath();
       if (!addToPlaylist(playlist, fullpath))
       {
-        QString url = i->toString();
-        addToPlaylist(playlist, url);
+        QString strUrl = url.toString();
+        addToPlaylist(playlist, strUrl);
       }
     }
 
@@ -3768,7 +4022,8 @@ namespace yae
 
     // repaint the frame:
     canvas_->refresh();
-#if 0
+
+#if 0 // FIXME: write me!
     // avoid hiding the highlighted item:
     playlistModel_.makeSureHighlightedItemIsVisible();
 #endif
@@ -4373,9 +4628,6 @@ namespace yae
     bool isSeekable = reader->isSeekable();
     actionSetInPoint->setEnabled(isSeekable);
     actionSetOutPoint->setEnabled(isSeekable);
-#if 0
-    lineEditPlayhead_->setReadOnly(!isSeekable);
-#endif
   }
 
   //----------------------------------------------------------------

@@ -996,7 +996,12 @@ namespace yae
       return;
     }
 
+#ifdef YAE_USE_QT5
     emit dataChanged(index, index, QVector<int>(1, role));
+#else
+    (void)role;
+    emit dataChanged(index, index);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1007,6 +1012,11 @@ namespace yae
                                  const QModelIndex & first,
                                  const QModelIndex & last)
   {
+#ifdef YAE_USE_QT5
     emit dataChanged(first, last, QVector<int>(1, role));
+#else
+    (void)role;
+    emit dataChanged(first, last);
+#endif
   }
 }

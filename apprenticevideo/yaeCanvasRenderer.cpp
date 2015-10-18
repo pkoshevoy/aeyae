@@ -484,7 +484,8 @@ yae_is_opengl_extension_supported(const char * extension)
 
   if (!ready)
   {
-    const GLubyte * extensions = glGetString(GL_EXTENSIONS);
+    YAE_OGL_11_HERE();
+    const GLubyte * extensions = YAE_OGL_11(glGetString(GL_EXTENSIONS));
     if (!extensions)
     {
       return false;
@@ -859,7 +860,8 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 bool
 yae_assert_gl_no_error()
 {
-  GLenum err = glGetError();
+  YAE_OGL_11_HERE();
+  GLenum err = YAE_OGL_11(glGetError());
   if (err == GL_NO_ERROR)
   {
     return true;
@@ -867,14 +869,12 @@ yae_assert_gl_no_error()
 
   std::cerr << "glGetError: " << err << std::endl;
   YAE_ASSERT(false);
+  // char *crash = NULL;
+  // *crash = *crash;
   return false;
 }
 
-//----------------------------------------------------------------
-// YAE_HAS_GL_ACTIVE_TEXTURE
-//
-#define YAE_HAS_GL_ACTIVE_TEXTURE 1
-
+#ifdef YAE_USE_QT5
 //----------------------------------------------------------------
 // TProgramStringARB
 //
@@ -921,10 +921,7 @@ namespace yae
   //----------------------------------------------------------------
   // YAE_GL_FRAGMENT_PROGRAM_ARB
   //
-  struct YAE_API OpenGLFunctionPointers
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-    : public QOpenGLFunctions
-#endif
+  struct YAE_API OpenGLFunctionPointers : public QOpenGLFunctions
   {
     TProgramStringARB glProgramStringARB;
     TGetProgramivARB glGetProgramivARB;
@@ -935,9 +932,7 @@ namespace yae
 
     OpenGLFunctionPointers()
     {
-#if YAE_HAS_GL_ACTIVE_TEXTURE
       QOpenGLFunctions::initializeOpenGLFunctions();
-#endif
       QOpenGLContext * opengl = QOpenGLContext::currentContext();
 
       this->glProgramStringARB = (TProgramStringARB)
@@ -972,6 +967,7 @@ namespace yae
     return singleton;
   }
 }
+#endif
 
 //----------------------------------------------------------------
 // yae_reset_opengl_to_initial_state
@@ -979,134 +975,136 @@ namespace yae
 void
 yae_reset_opengl_to_initial_state()
 {
-  yae::OpenGLFunctionPointers & opengl = yae::OpenGLFunctionPointers::get();
+  YAE_OPENGL_HERE();
   yae_assert_gl_no_error();
 
-  opengl.glBindBuffer(GL_ARRAY_BUFFER, 0);
+  YAE_OPENGL(glBindBuffer(GL_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
 
-  opengl.glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  YAE_OPENGL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
 
+  YAE_OGL_11_HERE();
   int maxAttribs = 0;
-  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
+  YAE_OGL_11(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs));
   yae_assert_gl_no_error();
 
   for (int i = 0; i < maxAttribs; ++i)
   {
-    opengl.glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    YAE_OPENGL(glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0));
     yae_assert_gl_no_error();
 
-    opengl.glDisableVertexAttribArray(i);
+    YAE_OPENGL(glDisableVertexAttribArray(i));
     yae_assert_gl_no_error();
   }
 
-  opengl.glActiveTexture(GL_TEXTURE0);
+  YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
   yae_assert_gl_no_error();
 
-  glBindTexture(GL_TEXTURE_2D, 0);
+  YAE_OPENGL(glBindTexture(GL_TEXTURE_2D, 0));
   yae_assert_gl_no_error();
 
-  glDisable(GL_LIGHTING);
+  YAE_OPENGL(glDisable(GL_LIGHTING));
   yae_assert_gl_no_error();
 
-  glDisable(GL_FOG);
+  YAE_OPENGL(glDisable(GL_FOG));
   yae_assert_gl_no_error();
 
-  glDisable(GL_DEPTH_TEST);
+  YAE_OPENGL(glDisable(GL_DEPTH_TEST));
   yae_assert_gl_no_error();
 
-  glDisable(GL_STENCIL_TEST);
+  YAE_OPENGL(glDisable(GL_STENCIL_TEST));
   yae_assert_gl_no_error();
 
-  glDisable(GL_SCISSOR_TEST);
+  YAE_OPENGL(glDisable(GL_SCISSOR_TEST));
   yae_assert_gl_no_error();
 
-  glColorMask(true, true, true, true);
+  YAE_OPENGL(glColorMask(true, true, true, true));
   yae_assert_gl_no_error();
 
-  glClearColor(0, 0, 0, 0);
+  YAE_OPENGL(glClearColor(0, 0, 0, 0));
   yae_assert_gl_no_error();
 
-  glDepthMask(true);
+  YAE_OPENGL(glDepthMask(true));
   yae_assert_gl_no_error();
 
-  glDepthFunc(GL_LESS);
+  YAE_OPENGL(glDepthFunc(GL_LESS));
   yae_assert_gl_no_error();
 
-  glClearDepth(1);
+  YAE_OGL_11(glClearDepth(1));
   yae_assert_gl_no_error();
 
-  glStencilMask(0xff);
+  YAE_OPENGL(glStencilMask(0xff));
   yae_assert_gl_no_error();
 
-  glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+  YAE_OPENGL(glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP));
   yae_assert_gl_no_error();
 
-  glStencilFunc(GL_ALWAYS, 0, 0xff);
+  YAE_OPENGL(glStencilFunc(GL_ALWAYS, 0, 0xff));
   yae_assert_gl_no_error();
 
-  glDisable(GL_POLYGON_OFFSET_FILL);
+  YAE_OPENGL(glDisable(GL_POLYGON_OFFSET_FILL));
   yae_assert_gl_no_error();
 
-  glDisable(GL_LINE_SMOOTH);
+  YAE_OPENGL(glDisable(GL_LINE_SMOOTH));
   yae_assert_gl_no_error();
 
-  glDisable(GL_ALPHA_TEST);
+  YAE_OPENGL(glDisable(GL_ALPHA_TEST));
   yae_assert_gl_no_error();
 
-  glDisable(GL_TEXTURE_2D);
+  YAE_OPENGL(glDisable(GL_TEXTURE_2D));
   yae_assert_gl_no_error();
 
-  glDisable(GL_BLEND);
+  YAE_OPENGL(glDisable(GL_BLEND));
   yae_assert_gl_no_error();
 
-  glBlendFunc(GL_ONE, GL_ZERO);
+  YAE_OPENGL(glBlendFunc(GL_ONE, GL_ZERO));
   yae_assert_gl_no_error();
 
-  opengl.glUseProgram(0);
+  YAE_OPENGL(glUseProgram(0));
   yae_assert_gl_no_error();
 
-  glShadeModel(GL_FLAT);
-  glClearDepth(0);
-  glClearStencil(0);
-  glClearAccum(0, 0, 0, 0);
-  glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-  glAlphaFunc(GL_ALWAYS, 0.0f);
+  YAE_OGL_11(glShadeModel(GL_FLAT));
+  YAE_OGL_11(glClearDepth(0));
+  YAE_OPENGL(glClearStencil(0));
+  YAE_OGL_11(glClearAccum(0, 0, 0, 0));
+  YAE_OPENGL(glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST));
+  YAE_OPENGL(glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST));
+  YAE_OGL_11(glAlphaFunc(GL_ALWAYS, 0.0f));
 }
 
 //----------------------------------------------------------------
 // load_arb_program_natively
 //
 static bool
-load_arb_program_natively(yae::OpenGLFunctionPointers & opengl,
-                          GLenum target,
-                          const char * prog)
+load_arb_program_natively(GLenum target, const char * prog)
 {
+  YAE_OPENGL_HERE();
+  YAE_OGL_11_HERE();
+
   std::size_t len = strlen(prog);
-  opengl.glProgramStringARB(target,
-                            GL_PROGRAM_FORMAT_ASCII_ARB,
-                            (GLsizei)len,
-                            prog);
-  GLenum err = glGetError();
+  YAE_OPENGL(glProgramStringARB(target,
+                                GL_PROGRAM_FORMAT_ASCII_ARB,
+                                (GLsizei)len,
+                                prog));
+  GLenum err = YAE_OGL_11(glGetError());
   (void)err;
 
   GLint errorPos = -1;
-  glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos);
+  YAE_OGL_11(glGetIntegerv(GL_PROGRAM_ERROR_POSITION_ARB, &errorPos));
 
 #if !defined(NDEBUG)
   if (errorPos < (GLint)len && errorPos >= 0)
   {
-    const GLubyte * err = glGetString(GL_PROGRAM_ERROR_STRING_ARB);
+    const GLubyte * err = YAE_OGL_11(glGetString(GL_PROGRAM_ERROR_STRING_ARB));
     yae_show_program_listing(std::cerr, prog, len, (const char *)err);
   }
 #endif
 
   GLint isNative = 0;
-  opengl.glGetProgramivARB(target,
-                           GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB,
-                           &isNative);
+  YAE_OPENGL(glGetProgramivARB(target,
+                               GL_PROGRAM_UNDER_NATIVE_LIMITS_ARB,
+                               &isNative));
 
   if (errorPos == -1 &&
       isNative == 1)
@@ -1126,7 +1124,8 @@ namespace yae
   TGLSaveState::TGLSaveState(GLbitfield mask):
     applied_(false)
   {
-    glPushAttrib(mask);
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glPushAttrib(mask));
     applied_ = yae_assert_gl_no_error();
   }
 
@@ -1137,7 +1136,8 @@ namespace yae
   {
     if (applied_)
     {
-      glPopAttrib();
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glPopAttrib());
     }
   }
 
@@ -1148,7 +1148,8 @@ namespace yae
   TGLSaveClientState::TGLSaveClientState(GLbitfield mask):
     applied_(false)
   {
-    glPushClientAttrib(mask);
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glPushClientAttrib(mask));
     applied_ = yae_assert_gl_no_error();
   }
 
@@ -1159,7 +1160,8 @@ namespace yae
   {
     if (applied_)
     {
-      glPopClientAttrib();
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glPopClientAttrib());
     }
   }
 
@@ -1170,8 +1172,9 @@ namespace yae
   TGLSaveMatrixState::TGLSaveMatrixState(GLenum mode):
     matrixMode_(mode)
   {
-    glMatrixMode(matrixMode_);
-    glPushMatrix();
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glMatrixMode(matrixMode_));
+    YAE_OGL_11(glPushMatrix());
   }
 
   //----------------------------------------------------------------
@@ -1179,8 +1182,9 @@ namespace yae
   //
   TGLSaveMatrixState::~TGLSaveMatrixState()
   {
-    glMatrixMode(matrixMode_);
-    glPopMatrix();
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glMatrixMode(matrixMode_));
+    YAE_OGL_11(glPopMatrix());
   }
 
 
@@ -1273,8 +1277,8 @@ namespace yae
   {
     if (handle_)
     {
-      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
-      opengl.glDeleteProgramsARB(1, &handle_);
+      YAE_OPENGL_HERE();
+      YAE_OPENGL(glDeleteProgramsARB(1, &handle_));
       handle_ = 0;
     }
   }
@@ -1654,7 +1658,7 @@ namespace yae
       std::map<TPixelFormatId, TFragmentShader>::const_iterator
         found = shaders_.find(format);
 
-#if 0 // !defined(NDEBUG)
+#if !defined(NDEBUG)
       // for debugging only:
       {
         const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
@@ -1714,20 +1718,20 @@ namespace yae
     // helper:
     bool createBuiltinFragmentShader(const char * code)
     {
-      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+      YAE_OPENGL_HERE();
+      YAE_OGL_11_HERE();
 
       bool ok = false;
       builtinShaderProgram_.destroy();
       builtinShaderProgram_.code_ = code;
 
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
 
-      opengl.glGenProgramsARB(1, &builtinShaderProgram_.handle_);
-      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                              builtinShaderProgram_.handle_);
+      YAE_OPENGL(glGenProgramsARB(1, &builtinShaderProgram_.handle_));
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                  builtinShaderProgram_.handle_));
 
-      if (load_arb_program_natively(opengl,
-                                    GL_FRAGMENT_PROGRAM_ARB,
+      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
                                     builtinShaderProgram_.code_))
       {
         builtinShader_.program_ = &builtinShaderProgram_;
@@ -1735,11 +1739,11 @@ namespace yae
       }
       else
       {
-        opengl.glDeleteProgramsARB(1, &builtinShaderProgram_.handle_);
+        YAE_OPENGL(glDeleteProgramsARB(1, &builtinShaderProgram_.handle_));
         builtinShaderProgram_.handle_ = 0;
         builtinShader_.program_ = NULL;
       }
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
       return ok;
     }
 
@@ -1748,17 +1752,18 @@ namespace yae
                                   const std::size_t numFormats,
                                   const char * code)
     {
-      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+      YAE_OPENGL_HERE();
+
+      YAE_OGL_11_HERE();
 
       bool ok = false;
       TFragmentShaderProgram program(code);
 
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      opengl.glGenProgramsARB(1, &program.handle_);
-      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
+      YAE_OPENGL(glGenProgramsARB(1, &program.handle_));
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_));
 
-      if (load_arb_program_natively(opengl,
-                                    GL_FRAGMENT_PROGRAM_ARB,
+      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
                                     program.code_))
       {
         shaderPrograms_.push_back(program);
@@ -1776,11 +1781,11 @@ namespace yae
       }
       else
       {
-        opengl.glDeleteProgramsARB(1, &program.handle_);
+        YAE_OPENGL(glDeleteProgramsARB(1, &program.handle_));
         program.handle_ = 0;
       }
 
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
       return ok;
     }
 
@@ -1966,7 +1971,9 @@ namespace yae
 
     if (!texId_.empty())
     {
-      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glDeleteTextures((GLsizei)(texId_.size()),
+                                  &(texId_.front())));
       texId_.clear();
     }
 
@@ -2001,6 +2008,7 @@ namespace yae
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(context);
+    YAE_OGL_11_HERE();
 
     // take the new frame:
     bool colorSpaceOrRangeChanged = false;
@@ -2011,7 +2019,8 @@ namespace yae
     {
       if (!texId_.empty())
       {
-        glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+        YAE_OGL_11(glDeleteTextures((GLsizei)(texId_.size()),
+                                    &(texId_.front())));
         texId_.clear();
       }
 
@@ -2025,47 +2034,47 @@ namespace yae
       const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
 
       texId_.resize(shader.numPlanes_);
-      glGenTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      YAE_OGL_11(glGenTextures((GLsizei)(texId_.size()), &(texId_.front())));
 
-      glEnable(GL_TEXTURE_RECTANGLE_ARB);
+      YAE_OGL_11(glEnable(GL_TEXTURE_RECTANGLE_ARB));
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]));
 
 #ifdef __APPLE__
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
-                        GL_TEXTURE_STORAGE_HINT_APPLE,
-                        GL_STORAGE_CACHED_APPLE);
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                                   GL_TEXTURE_STORAGE_HINT_APPLE,
+                                   GL_STORAGE_CACHED_APPLE));
 #endif
 
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
-                        GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
-                        GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                                   GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                                   GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
-                        GL_TEXTURE_MAG_FILTER,
-                        shader.magFilterGL_[i]);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
-                        GL_TEXTURE_MIN_FILTER,
-                        shader.minFilterGL_[i]);
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                                   GL_TEXTURE_MAG_FILTER,
+                                   shader.magFilterGL_[i]));
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_RECTANGLE_ARB,
+                                   GL_TEXTURE_MIN_FILTER,
+                                   shader.minFilterGL_[i]));
         yae_assert_gl_no_error();
 
         TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
         {
-          glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
-                       0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
-                       shader.internalFormatGL_[i],
-                       vtts.encodedWidth_ / shader.subsample_x_[i],
-                       vtts.encodedHeight_ / shader.subsample_y_[i],
-                       0, // border width
-                       shader.pixelFormatGL_[i],
-                       shader.dataTypeGL_[i],
-                       NULL);
+          YAE_OGL_11(glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
+                                  0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                                  shader.internalFormatGL_[i],
+                                  vtts.encodedWidth_ / shader.subsample_x_[i],
+                                  vtts.encodedHeight_ / shader.subsample_y_[i],
+                                  0, // border width
+                                  shader.pixelFormatGL_[i],
+                                  shader.dataTypeGL_[i],
+                                  NULL));
           yae_assert_gl_no_error();
         }
       }
-      glDisable(GL_TEXTURE_RECTANGLE_ARB);
+      YAE_OGL_11(glDisable(GL_TEXTURE_RECTANGLE_ARB));
     }
 
     if (!supportedChannels && !shader_)
@@ -2077,59 +2086,61 @@ namespace yae
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     {
-      glEnable(GL_TEXTURE_RECTANGLE_ARB);
+      YAE_OGL_11(glEnable(GL_TEXTURE_RECTANGLE_ARB));
 
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);)
 
-        glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[i]);
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                                 shader.shouldSwapBytes_[i]));
 
         const unsigned char * data = frame->data_->data(i);
         std::size_t rowSize =
           frame->data_->rowBytes(i) / (shader.stride_[i] / 8);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, alignmentFor(data, rowSize));
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT,
+                                 alignmentFor(data, rowSize)));
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
         yae_assert_gl_no_error();
 
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
-                     0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
-                     shader.internalFormatGL_[i],
-                     vtts.encodedWidth_ / shader.subsample_x_[i],
-                     vtts.encodedHeight_ / shader.subsample_y_[i],
-                     0, // border width
-                     shader.pixelFormatGL_[i],
-                     shader.dataTypeGL_[i],
-                     data);
+        YAE_OGL_11(glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
+                                0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                                shader.internalFormatGL_[i],
+                                vtts.encodedWidth_ / shader.subsample_x_[i],
+                                vtts.encodedHeight_ / shader.subsample_y_[i],
+                                0, // border width
+                                shader.pixelFormatGL_[i],
+                                shader.dataTypeGL_[i],
+                                data));
         yae_assert_gl_no_error();
       }
-      glDisable(GL_TEXTURE_RECTANGLE_ARB);
+      YAE_OGL_11(glDisable(GL_TEXTURE_RECTANGLE_ARB));
     }
 
     if (shader_)
     {
-      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+      YAE_OPENGL_HERE();
 
       if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
         frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                              shader_->program_->handle_);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                  shader_->program_->handle_));
       {
         // pass the color transform matrix to the shader:
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             0, &m34_to_rgb_[0]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 0, &m34_to_rgb_[0]));
         yae_assert_gl_no_error();
 
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             1, &m34_to_rgb_[4]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 1, &m34_to_rgb_[4]));
         yae_assert_gl_no_error();
 
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             2, &m34_to_rgb_[8]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 2, &m34_to_rgb_[8]));
         yae_assert_gl_no_error();
 
         // pass the subsampling factors to the shader:
@@ -2137,11 +2148,11 @@ namespace yae
         subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
         subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
 
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             3, subsample_uv);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 3, subsample_uv));
         yae_assert_gl_no_error();
       }
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
     return true;
@@ -2166,20 +2177,22 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-    opengl.glActiveTexture(GL_TEXTURE0);
-    yae_assert_gl_no_error();
-#endif
+    YAE_OPENGL_HERE();
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
 
-    glEnable(GL_TEXTURE_RECTANGLE_ARB);
-    glDisable(GL_LIGHTING);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_RECTANGLE_ARB));
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE));
 
     if (shader_)
     {
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
@@ -2189,58 +2202,64 @@ namespace yae
     {
       if (shader_)
       {
-        opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                                shader_->program_->handle_);
+        YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    shader_->program_->handle_));
       }
 
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      if (glActiveTexture)
       {
-        opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-        yae_assert_gl_no_error();
+        for (std::size_t k = 0; k < shader.numPlanes_; k++)
+        {
+          YAE_OPENGL(glActiveTexture((GLenum)(GL_TEXTURE0 + k)));
+          yae_assert_gl_no_error();
 
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[k + i]);
+          YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[k + i]));
+        }
       }
-#else
-      glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);
-#endif
-
-      glBegin(GL_QUADS);
+      else
       {
-        glTexCoord2i(crop.x_, crop.y_);
-        glVertex2i(0, 0);
-
-        glTexCoord2i(crop.x_ + crop.w_, crop.y_);
-        glVertex2i(int(w), 0);
-
-        glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_);
-        glVertex2i(int(w), int(h));
-
-        glTexCoord2i(crop.x_, crop.y_ + crop.h_);
-        glVertex2i(0, int(h));
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]));
       }
-      glEnd();
+
+      YAE_OGL_11(glBegin(GL_QUADS));
+      {
+        YAE_OGL_11(glTexCoord2i(crop.x_, crop.y_));
+        YAE_OGL_11(glVertex2i(0, 0));
+
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_, crop.y_));
+        YAE_OGL_11(glVertex2i(int(w), 0));
+
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_));
+        YAE_OGL_11(glVertex2i(int(w), int(h)));
+
+        YAE_OGL_11(glTexCoord2i(crop.x_, crop.y_ + crop.h_));
+        YAE_OGL_11(glVertex2i(0, int(h)));
+      }
+      YAE_OGL_11(glEnd());
     }
 
     // un-bind the textures:
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-    for (std::size_t k = 0; k < shader.numPlanes_; k++)
+    if (glActiveTexture)
     {
-      opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-      yae_assert_gl_no_error();
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      {
+        YAE_OPENGL(glActiveTexture((GLenum)(GL_TEXTURE0 + k)));
+        yae_assert_gl_no_error();
 
-      glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0));
+      }
     }
-#else
-    glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);
-#endif
+    else
+    {
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0));
+    }
 
     if (shader_)
     {
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
-    glDisable(GL_TEXTURE_RECTANGLE_ARB);
+    YAE_OGL_11(glDisable(GL_TEXTURE_RECTANGLE_ARB));
   }
 
   //----------------------------------------------------------------
@@ -2361,10 +2380,12 @@ namespace yae
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(context);
+    YAE_OGL_11_HERE();
 
     if (!texId_.empty())
     {
-      glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      YAE_OGL_11(glDeleteTextures((GLsizei)(texId_.size()),
+                                  &(texId_.front())));
       texId_.clear();
     }
 
@@ -2444,28 +2465,29 @@ namespace yae
       return edgeMax;
     }
 
+    YAE_OGL_11_HERE();
     for (unsigned int i = 0; i < 8; i++, edgeMax *= 2)
     {
-      glTexImage2D(GL_PROXY_TEXTURE_2D,
-                   0, // level
-                   GL_RGBA,
-                   edgeMax * 2, // width
-                   edgeMax * 2, // height
-                   0,
-                   GL_RGBA,
-                   GL_UNSIGNED_BYTE,
-                   NULL);
-      GLenum err = glGetError();
+      YAE_OGL_11(glTexImage2D(GL_PROXY_TEXTURE_2D,
+                              0, // level
+                              GL_RGBA,
+                              edgeMax * 2, // width
+                              edgeMax * 2, // height
+                              0,
+                              GL_RGBA,
+                              GL_UNSIGNED_BYTE,
+                              NULL));
+      GLenum err = YAE_OGL_11(glGetError());
       if (err != GL_NO_ERROR)
       {
         break;
       }
 
       GLint width = 0;
-      glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D,
-                               0, // level
-                               GL_TEXTURE_WIDTH,
-                               &width);
+      YAE_OGL_11(glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D,
+                                          0, // level
+                                          GL_TEXTURE_WIDTH,
+                                          &width));
       if (width != GLint(edgeMax * 2))
       {
         break;
@@ -2500,6 +2522,7 @@ namespace yae
 
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(context);
+    YAE_OGL_11_HERE();
 
     // avoid creating excessively oversized tiles:
     static const GLsizei textureEdgeMax =
@@ -2516,7 +2539,8 @@ namespace yae
     {
       if (!texId_.empty())
       {
-        glDeleteTextures((GLsizei)(texId_.size()), &(texId_.front()));
+        YAE_OGL_11(glDeleteTextures((GLsizei)(texId_.size()),
+                                    &(texId_.front())));
         texId_.clear();
       }
 
@@ -2545,7 +2569,7 @@ namespace yae
       tiles_.resize(rows * cols);
 
       texId_.resize(rows * cols * shader.numPlanes_);
-      glGenTextures((GLsizei)(texId_.size()), &(texId_.front()));
+      YAE_OGL_11(glGenTextures((GLsizei)(texId_.size()), &(texId_.front())));
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
       {
@@ -2556,41 +2580,41 @@ namespace yae
         for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
           GLuint texId = texId_[k + i * shader.numPlanes_];
-          glBindTexture(GL_TEXTURE_2D, texId);
+          YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId));
 
-          if (!glIsTexture(texId))
+          if (!YAE_OGL_11(glIsTexture(texId)))
           {
             YAE_ASSERT(false);
             return false;
           }
 
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_BASE_LEVEL, 0);
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_MAX_LEVEL, 0);
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_BASE_LEVEL, 0));
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_MAX_LEVEL, 0));
 
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_MAG_FILTER,
-                          shader.magFilterGL_[k]);
-          glTexParameteri(GL_TEXTURE_2D,
-                          GL_TEXTURE_MIN_FILTER,
-                          shader.minFilterGL_[k]);
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_MAG_FILTER,
+                                     shader.magFilterGL_[k]));
+          YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                     GL_TEXTURE_MIN_FILTER,
+                                     shader.minFilterGL_[k]));
           yae_assert_gl_no_error();
 
-          glTexImage2D(GL_TEXTURE_2D,
-                       0, // mipmap level
-                       shader.internalFormatGL_[k],
-                       tile.x_.extent_ / shader.subsample_x_[k],
-                       tile.y_.extent_ / shader.subsample_y_[k],
-                       0, // border width
-                       shader.pixelFormatGL_[k],
-                       shader.dataTypeGL_[k],
-                       NULL);
+          YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                                  0, // mipmap level
+                                  shader.internalFormatGL_[k],
+                                  tile.x_.extent_ / shader.subsample_x_[k],
+                                  tile.y_.extent_ / shader.subsample_y_[k],
+                                  0, // border width
+                                  shader.pixelFormatGL_[k],
+                                  shader.dataTypeGL_[k],
+                                  NULL));
 
           if (!yae_assert_gl_no_error())
           {
@@ -2628,13 +2652,16 @@ namespace yae
       unsigned int subsample_x = shader.subsample_x_[k];
       unsigned int subsample_y = shader.subsample_y_[k];
 
-      glPixelStorei(GL_UNPACK_SWAP_BYTES, shader.shouldSwapBytes_[k]);
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                               shader.shouldSwapBytes_[k]));
 
       const unsigned char * data = frame->data_->data(k);
       std::size_t rowSize =
         frame->data_->rowBytes(k) / (ptts->stride_[k] / 8);
-      glPixelStorei(GL_UNPACK_ALIGNMENT, alignmentFor(data, rowSize));
-      glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize));
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT,
+                               alignmentFor(data, rowSize)));
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH,
+                               (GLint)(rowSize)));
       yae_assert_gl_no_error();
 
       for (std::size_t i = 0; i < tiles_.size(); ++i)
@@ -2642,86 +2669,86 @@ namespace yae
         const TFrameTile & tile = tiles_[i];
 
         GLuint texId = texId_[k + i * shader.numPlanes_];
-        glBindTexture(GL_TEXTURE_2D, texId);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId));
 
-        if (!glIsTexture(texId))
+        if (!YAE_OGL_11(glIsTexture(texId)))
         {
           YAE_ASSERT(false);
           continue;
         }
 
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS,
-                      tile.x_.offset_ / subsample_x);
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                                 tile.x_.offset_ / subsample_x));
         yae_assert_gl_no_error();
 
-        glPixelStorei(GL_UNPACK_SKIP_ROWS,
-                      tile.y_.offset_ / subsample_y);
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                                 tile.y_.offset_ / subsample_y));
         yae_assert_gl_no_error();
 
-        glTexSubImage2D(GL_TEXTURE_2D,
-                        0, // mipmap level
-                        0, // x-offset
-                        0, // y-offset
-                        tile.x_.length_ / subsample_x,
-                        tile.y_.length_ / subsample_y,
-                        shader.pixelFormatGL_[k],
-                        shader.dataTypeGL_[k],
-                        src[k]);
+        YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                   0, // mipmap level
+                                   0, // x-offset
+                                   0, // y-offset
+                                   tile.x_.length_ / subsample_x,
+                                   tile.y_.length_ / subsample_y,
+                                   shader.pixelFormatGL_[k],
+                                   shader.dataTypeGL_[k],
+                                   src[k]));
         yae_assert_gl_no_error();
 
         if (tile.x_.length_ < tile.x_.extent_)
         {
           // extend on the right to avoid texture filtering artifacts:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
-                        (tile.x_.offset_ + tile.x_.length_) /
-                        subsample_x - 1);
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                                   (tile.x_.offset_ + tile.x_.length_) /
+                                   subsample_x - 1));
           yae_assert_gl_no_error();
 
-          glPixelStorei(GL_UNPACK_SKIP_ROWS,
-                        tile.y_.offset_ / subsample_y);
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                                   tile.y_.offset_ / subsample_y));
           yae_assert_gl_no_error();
 
-          glTexSubImage2D(GL_TEXTURE_2D,
-                          0, // mipmap level
+          YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                     0, // mipmap level
 
-                          // x,y offset
-                          tile.x_.length_ / subsample_x,
-                          0,
+                                     // x,y offset
+                                     tile.x_.length_ / subsample_x,
+                                     0,
 
-                          // width, height
-                          1,
-                          tile.y_.length_ / subsample_y,
+                                     // width, height
+                                     1,
+                                     tile.y_.length_ / subsample_y,
 
-                          shader.pixelFormatGL_[k],
-                          shader.dataTypeGL_[k],
-                          src[k]);
+                                     shader.pixelFormatGL_[k],
+                                     shader.dataTypeGL_[k],
+                                     src[k]));
           yae_assert_gl_no_error();
         }
 
         if (tile.y_.length_ < tile.y_.extent_)
         {
           // extend on the bottom to avoid texture filtering artifacts:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
-                        tile.x_.offset_ / subsample_x);
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                                   tile.x_.offset_ / subsample_x));
 
-          glPixelStorei(GL_UNPACK_SKIP_ROWS,
-                        (tile.y_.offset_ + tile.y_.length_) /
-                        subsample_y - 1);
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                                   (tile.y_.offset_ + tile.y_.length_) /
+                                   subsample_y - 1));
 
-          glTexSubImage2D(GL_TEXTURE_2D,
-                          0, // mipmap level
+          YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                     0, // mipmap level
 
-                          // x,y offset
-                          0,
-                          tile.y_.length_ / subsample_y,
+                                     // x,y offset
+                                     0,
+                                     tile.y_.length_ / subsample_y,
 
-                          // width, height
-                          tile.x_.length_ / subsample_x,
-                          1,
+                                     // width, height
+                                     tile.x_.length_ / subsample_x,
+                                     1,
 
-                          shader.pixelFormatGL_[k],
-                          shader.dataTypeGL_[k],
-                          src[k]);
+                                     shader.pixelFormatGL_[k],
+                                     shader.dataTypeGL_[k],
+                                     src[k]));
           yae_assert_gl_no_error();
         }
 
@@ -2729,27 +2756,27 @@ namespace yae
             tile.y_.length_ < tile.y_.extent_)
         {
           // extend the bottom-right corner:
-          glPixelStorei(GL_UNPACK_SKIP_PIXELS,
-                        (tile.x_.offset_ + tile.x_.length_) /
-                        subsample_x - 1);
-          glPixelStorei(GL_UNPACK_SKIP_ROWS,
-                        (tile.y_.offset_ + tile.y_.length_) /
-                        subsample_y - 1);
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS,
+                                   (tile.x_.offset_ + tile.x_.length_) /
+                                   subsample_x - 1));
+          YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS,
+                                   (tile.y_.offset_ + tile.y_.length_) /
+                                   subsample_y - 1));
 
-          glTexSubImage2D(GL_TEXTURE_2D,
-                          0, // mipmap level
+          YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                     0, // mipmap level
 
-                          // x,y offset
-                          tile.x_.length_ / subsample_x,
-                          tile.y_.length_ / subsample_y,
+                                     // x,y offset
+                                     tile.x_.length_ / subsample_x,
+                                     tile.y_.length_ / subsample_y,
 
-                          // width, height
-                          1,
-                          1,
+                                     // width, height
+                                     1,
+                                     1,
 
-                          shader.pixelFormatGL_[k],
-                          shader.dataTypeGL_[k],
-                          src[k]);
+                                     shader.pixelFormatGL_[k],
+                                     shader.dataTypeGL_[k],
+                                     src[k]));
           yae_assert_gl_no_error();
         }
       }
@@ -2757,31 +2784,31 @@ namespace yae
 
     if (shader_)
     {
-      OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
+      YAE_OPENGL_HERE();
 
       if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
       {
         frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
       }
 
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
-      opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                              shader_->program_->handle_);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                  shader_->program_->handle_));
       {
         // pass the color transform matrix to the shader:
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             0, &m34_to_rgb_[0]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 0, &m34_to_rgb_[0]));
         yae_assert_gl_no_error();
 
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             1, &m34_to_rgb_[4]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 1, &m34_to_rgb_[4]));
         yae_assert_gl_no_error();
 
-        opengl.glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                             2, &m34_to_rgb_[8]);
+        YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
+                                                 2, &m34_to_rgb_[8]));
         yae_assert_gl_no_error();
       }
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
     return true;
@@ -2806,26 +2833,29 @@ namespace yae
     TCropFrame crop;
     getCroppedFrame(crop);
 
-    OpenGLFunctionPointers & opengl = OpenGLFunctionPointers::get();
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-    opengl.glActiveTexture(GL_TEXTURE0);
-    yae_assert_gl_no_error();
-#endif
+    YAE_OPENGL_HERE();
+    YAE_OGL_11_HERE();
 
-    glEnable(GL_TEXTURE_2D);
-    glDisable(GL_LIGHTING);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glColor3f(1.f, 1.f, 1.f);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
 
     if (shader_)
     {
-      glEnable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
     double sx = iw / double(crop.w_);
     double sy = ih / double(crop.h_);
-    glScaled(sx, sy, 1.0);
+    YAE_OGL_11(glScaled(sx, sy, 1.0));
 
     const TFragmentShader & shader = shader_ ? *shader_ : builtinShader_;
     const std::size_t numTiles = tiles_.size();
@@ -2836,58 +2866,66 @@ namespace yae
 
       if (shader_)
       {
-        opengl.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                                shader_->program_->handle_);
+        YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                    shader_->program_->handle_));
       }
 
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      if (glActiveTexture)
       {
-        opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-        yae_assert_gl_no_error();
+        for (std::size_t k = 0; k < shader.numPlanes_; k++)
+        {
+          YAE_OPENGL(glActiveTexture((GLenum)(GL_TEXTURE0 + k)));
+          yae_assert_gl_no_error();
 
-        glBindTexture(GL_TEXTURE_2D, texId_[k + i * shader.numPlanes_]);
+          YAE_OGL_11(glBindTexture(GL_TEXTURE_2D,
+                                   texId_[k + i * shader.numPlanes_]));
+        }
       }
-#else
-      glBindTexture(GL_TEXTURE_2D, texId_[i * shader.numPlanes_]);
-#endif
-
-      glBegin(GL_QUADS);
+      else
       {
-        glTexCoord2d(tile.x_.t0_, tile.y_.t0_);
-        glVertex2i(tile.x_.v0_, tile.y_.v0_);
-
-        glTexCoord2d(tile.x_.t1_, tile.y_.t0_);
-        glVertex2i(tile.x_.v1_, tile.y_.v0_);
-
-        glTexCoord2d(tile.x_.t1_, tile.y_.t1_);
-        glVertex2i(tile.x_.v1_, tile.y_.v1_);
-
-        glTexCoord2d(tile.x_.t0_, tile.y_.t1_);
-        glVertex2i(tile.x_.v0_, tile.y_.v1_);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_2D,
+                                 texId_[i * shader.numPlanes_]));
       }
-      glEnd();
+
+      YAE_OGL_11(glBegin(GL_QUADS));
+      {
+        YAE_OGL_11(glTexCoord2d(tile.x_.t0_, tile.y_.t0_));
+        YAE_OGL_11(glVertex2i(tile.x_.v0_, tile.y_.v0_));
+
+        YAE_OGL_11(glTexCoord2d(tile.x_.t1_, tile.y_.t0_));
+        YAE_OGL_11(glVertex2i(tile.x_.v1_, tile.y_.v0_));
+
+        YAE_OGL_11(glTexCoord2d(tile.x_.t1_, tile.y_.t1_));
+        YAE_OGL_11(glVertex2i(tile.x_.v1_, tile.y_.v1_));
+
+        YAE_OGL_11(glTexCoord2d(tile.x_.t0_, tile.y_.t1_));
+        YAE_OGL_11(glVertex2i(tile.x_.v0_, tile.y_.v1_));
+      }
+      YAE_OGL_11(glEnd());
     }
 
     // un-bind the textures:
-#if YAE_HAS_GL_ACTIVE_TEXTURE
-    for (std::size_t k = 0; k < shader.numPlanes_; k++)
+    if (glActiveTexture)
     {
-      opengl.glActiveTexture((GLenum)(GL_TEXTURE0 + k));
-      yae_assert_gl_no_error();
+      for (std::size_t k = 0; k < shader.numPlanes_; k++)
+      {
+        YAE_OPENGL(glActiveTexture((GLenum)(GL_TEXTURE0 + k)));
+        yae_assert_gl_no_error();
 
-      glBindTexture(GL_TEXTURE_2D, 0);
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+      }
     }
-#else
-    glBindTexture(GL_TEXTURE_2D, 0);
-#endif
+    else
+    {
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    }
 
     if (shader_)
     {
-      glDisable(GL_FRAGMENT_PROGRAM_ARB);
+      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
-    glDisable(GL_TEXTURE_2D);
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
   }
 
 
@@ -2899,20 +2937,25 @@ namespace yae
     modern_(NULL),
     maxTexSize_(getTextureEdgeMax())
   {
-    const char * vendor = ((const char *)glGetString(GL_VENDOR));
+    YAE_OGL_11_HERE();
+
+    const char * vendor =
+      ((const char *)YAE_OGL_11(glGetString(GL_VENDOR)));
     openglVendorInfo_ = vendor ? vendor : "";
 
-    const char * renderer = ((const char *)glGetString(GL_RENDERER));
+    const char * renderer =
+      ((const char *)YAE_OGL_11(glGetString(GL_RENDERER)));
     openglRendererInfo_ = renderer ? renderer : "";
 
-    const char * version = ((const char *)glGetString(GL_VERSION));
+    const char * version =
+      ((const char *)YAE_OGL_11(glGetString(GL_VERSION)));
     openglVersionInfo_ = version ? version : "";
 
     // rectangular textures do not work correctly on VirtualBox VMs,
     // so try to detect this and fall back to power-of-2 textures:
     bool virtualBoxVM =
-      (openglVendorInfo_ == "Humper" &&
-       openglRendererInfo_ == "Chromium" &&
+      (openglVendorInfo_ == "Humper" ||
+       openglRendererInfo_ == "Chromium" ||
        openglVersionInfo_ == "2.1 Chromium 1.9");
 
     if (yae_is_opengl_extension_supported("GL_ARB_texture_rectangle") &&
@@ -2924,7 +2967,8 @@ namespace yae
     if (yae_is_opengl_extension_supported("GL_ARB_fragment_program"))
     {
       GLint numTextureUnits = 0;
-      glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &numTextureUnits);
+      YAE_OGL_11(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,
+                               &numTextureUnits));
 
       if (numTextureUnits > 2)
       {

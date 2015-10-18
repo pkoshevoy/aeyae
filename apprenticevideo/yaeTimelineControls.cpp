@@ -651,7 +651,7 @@ namespace yae
       }
     }
 
-    return QQuickItem::event(e);
+    return TQtBase::event(e);
   }
 
   //----------------------------------------------------------------

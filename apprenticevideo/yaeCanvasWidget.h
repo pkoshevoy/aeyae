@@ -9,9 +9,20 @@
 #ifndef YAE_CANVAS_WIDGET_H_
 #define YAE_CANVAS_WIDGET_H_
 
+#if defined(YAE_USE_QT4)
+// GLEW includes:
+#include <GL/glew.h>
+#endif
+
 // Qt includes:
 #include <QCursor>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#if defined(YAE_USE_QT4)
+#include <QGLWidget>
+#elif defined(YAE_USE_QT5)
 #include <QOpenGLWidget>
+#endif
 #include <QTimer>
 
 // local includes:
@@ -69,10 +80,10 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TCanvasWidget
+  // CanvasWidget
   //
   template <typename TWidget>
-  struct TCanvasWidget : public TWidget, public Canvas
+  struct CanvasWidget : public TWidget, public Canvas
   {
     //----------------------------------------------------------------
     // TOpenGLWidget
@@ -103,7 +114,7 @@ namespace yae
     //
     struct TDelegate : public Canvas::IDelegate
     {
-      TDelegate(TCanvasWidget<TWidget> & canvas):
+      TDelegate(CanvasWidget<TWidget> & canvas):
         canvas_(canvas)
       {}
 
@@ -123,12 +134,12 @@ namespace yae
       }
 
     protected:
-      TCanvasWidget<TWidget> & canvas_;
+      CanvasWidget<TWidget> & canvas_;
       ScreenSaverInhibitor ssi_;
     };
 
 
-    TCanvasWidget():
+    CanvasWidget():
       Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
       sigs_(*this)
     {
@@ -139,6 +150,37 @@ namespace yae
     }
 
   protected:
+
+    // virtual:
+    void dragEnterEvent(QDragEnterEvent * e)
+    {
+      QWidget * p = TWidget::parentWidget();
+      if (p)
+      {
+        // let the parent widget handle it:
+        e->ignore();
+      }
+      else
+      {
+        TWidget::dragEnterEvent(e);
+      }
+    }
+
+    // virtual:
+    void dropEvent(QDropEvent * e)
+    {
+      QWidget * p = TWidget::parentWidget();
+      if (p)
+      {
+        // let the parent widget handle it:
+        e->ignore();
+      }
+      else
+      {
+        TWidget::dropEvent(e);
+      }
+    }
+
     // virtual:
     void mouseMoveEvent(QMouseEvent * event)
     {

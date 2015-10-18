@@ -825,13 +825,16 @@ DeployAppBundle()
 	rm -f "${DONELIST}"
 }
 
+# NOTE: for debugging only: skip deploying the bundle dependencies:
+# exit 0
 
 #---------------------------------------------------------------------
 echo NEXT: copy Qt frameworks into the app bundle
 quiet_pushd "${QT_INSTALL_DIR}"
 # NOTE: macdeployqt must be run from the bin/ folder where it's installed
 # otherwise it fails to deploy the QML modules:
-./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" -qmldir="${QML_SRC_DIR}" -always-overwrite -verbose=3
+./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" -no-strip \
+  -qmldir="${QML_SRC_DIR}" -always-overwrite -verbose=3
 quiet_popd
 
 #---------------------------------------------------------------------

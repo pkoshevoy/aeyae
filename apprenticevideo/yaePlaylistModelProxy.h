@@ -50,7 +50,11 @@ namespace yae
       SortByName = 0,
       SortByTime = 1
     };
+#ifdef YAE_USE_QT5
     Q_ENUM(SortBy);
+#else
+    Q_ENUMS(SortBy);
+#endif
 
     PlaylistModelProxy(QObject * parent = NULL);
 

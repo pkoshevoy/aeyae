@@ -18,8 +18,12 @@
 #include <boost/thread.hpp>
 
 // Qt includes:
+#ifdef YAE_USE_QT5
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
+#else
+#include <GL/glew.h>
+#endif
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -800,25 +804,27 @@ namespace yae
       }
     }
 
-    glViewport(GLint(x + 0.5), GLint(y + 0.5),
-               GLsizei(w + 0.5), GLsizei(h + 0.5));
+    YAE_OGL_11_HERE();
+
+    YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
+                      GLsizei(w + 0.5), GLsizei(h + 0.5)));
 
     TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, croppedWidth, croppedHeight, 0.0, -1.0, 1.0);
+    YAE_OGL_11(glLoadIdentity());
+    YAE_OGL_11(glOrtho(0.0, croppedWidth, croppedHeight, 0.0, -1.0, 1.0));
 
     if (cameraRotation && cameraRotation % 90 == 0)
     {
-      glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0);
-      glRotated(double(cameraRotation), 0, 0, 1);
+      YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
+      YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
 
       if (cameraRotation % 180 != 0)
       {
-        glTranslated(-0.5 * croppedHeight, -0.5 * croppedWidth, 0);
+        YAE_OGL_11(glTranslated(-0.5 * croppedHeight, -0.5 * croppedWidth, 0));
       }
       else
       {
-        glTranslated(-0.5 * croppedWidth, -0.5 * croppedHeight, 0);
+        YAE_OGL_11(glTranslated(-0.5 * croppedWidth, -0.5 * croppedHeight, 0));
       }
     }
 
@@ -828,26 +834,26 @@ namespace yae
 #if 0
     // FIXME: for debugging
     {
-      glDisable(GL_LIGHTING);
-      glEnable(GL_LINE_SMOOTH);
-      glLineWidth(2.0);
-      glBegin(GL_LINES);
+      YAE_OGL_11(glDisable(GL_LIGHTING));
+      YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+      YAE_OGL_11(glLineWidth(2.0));
+      YAE_OGL_11(glBegin(GL_LINES));
       {
-        glColor3ub(0x7f, 0x00, 0x10);
-        glVertex2i(croppedWidth / 10, croppedHeight / 10);
-        glVertex2i(2 * croppedWidth / 10, croppedHeight / 10);
-        glColor3ub(0xff, 0x00, 0x20);
-        glVertex2i(2 * croppedWidth / 10, croppedHeight / 10);
-        glVertex2i(3 * croppedWidth / 10, croppedHeight / 10);
+        YAE_OGL_11(glColor3ub(0x7f, 0x00, 0x10));
+        YAE_OGL_11(glVertex2i(croppedWidth / 10, croppedHeight / 10));
+        YAE_OGL_11(glVertex2i(2 * croppedWidth / 10, croppedHeight / 10));
+        YAE_OGL_11(glColor3ub(0xff, 0x00, 0x20));
+        YAE_OGL_11(glVertex2i(2 * croppedWidth / 10, croppedHeight / 10));
+        YAE_OGL_11(glVertex2i(3 * croppedWidth / 10, croppedHeight / 10));
 
-        glColor3ub(0x10, 0x7f, 0x00);
-        glVertex2i(croppedWidth / 10, croppedHeight / 10);
-        glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10);
-        glColor3ub(0x20, 0xff, 0x00);
-        glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10);
-        glVertex2i(croppedWidth / 10, 3 * croppedHeight / 10);
+        YAE_OGL_11(glColor3ub(0x10, 0x7f, 0x00));
+        YAE_OGL_11(glVertex2i(croppedWidth / 10, croppedHeight / 10));
+        YAE_OGL_11(glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10));
+        YAE_OGL_11(glColor3ub(0x20, 0xff, 0x00));
+        YAE_OGL_11(glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10));
+        YAE_OGL_11(glVertex2i(croppedWidth / 10, 3 * croppedHeight / 10));
       }
-      glEnd();
+      YAE_OGL_11(glEnd());
     }
 #endif
 
@@ -861,11 +867,12 @@ namespace yae
   static void
   paintCheckerBoard(int canvasWidth, int canvasHeight)
   {
-    glViewport(0, 0, canvasWidth, canvasHeight);
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glViewport(0, 0, canvasWidth, canvasHeight));
 
     TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0);
+    YAE_OGL_11(glLoadIdentity());
+    YAE_OGL_11(glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0));
 
     float zebra[2][3] = {
       { 1.0f, 1.0f, 1.0f },
@@ -884,9 +891,9 @@ namespace yae
         int x1 = std::min(x + edgeSize, canvasWidth);
 
         float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
-        glColor3fv(color);
+        YAE_OGL_11(glColor3fv(color));
 
-        glRecti(x, y, x1, y1);
+        YAE_OGL_11(glRecti(x, y, x1, y1));
       }
     }
   }
@@ -913,7 +920,8 @@ namespace yae
     }
 
     TGLSaveMatrixState pushMatrix1(GL_MODELVIEW);
-    glLoadIdentity();
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glLoadIdentity());
 
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
@@ -921,8 +929,8 @@ namespace yae
     if (!ptts)
     {
       // unsupported pixel format:
-      glClearColor(0, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
+      YAE_OGL_11(glClearColor(0, 0, 0, 1));
+      YAE_OGL_11(glClear(GL_COLOR_BUFFER_BIT));
 
       if (!showTheGreeting_)
       {
@@ -939,13 +947,13 @@ namespace yae
     {
       paintCheckerBoard(canvasWidth, canvasHeight);
 
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      YAE_OGL_11(glEnable(GL_BLEND));
+      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     }
     else
     {
-      glClearColor(0, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
+      YAE_OGL_11(glClearColor(0, 0, 0, 1));
+      YAE_OGL_11(glClear(GL_COLOR_BUFFER_BIT));
     }
 
     if (ptts)
@@ -959,10 +967,10 @@ namespace yae
     {
       if (overlay_ && overlay_->pixelTraits())
       {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        YAE_OGL_11(glEnable(GL_BLEND));
+        YAE_OGL_11(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
         paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
-        glDisable(GL_BLEND);
+        YAE_OGL_11(glDisable(GL_BLEND));
       }
       else
       {

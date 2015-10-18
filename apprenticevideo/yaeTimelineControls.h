@@ -15,7 +15,11 @@
 #endif
 
 // Qt includes:
+#ifdef YAE_USE_QT5
 #include <QQuickItem>
+#else
+#include <QObject>
+#endif
 #include <QEvent>
 #include <QTimer>
 #include <QTime>
@@ -32,9 +36,23 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls
   //
-  class TimelineControls : public QQuickItem,
-                           public IClockObserver
+  class TimelineControls :
+#ifdef YAE_USE_QT5
+    public QQuickItem,
+#else
+    public QObject,
+#endif
+    public IClockObserver
   {
+    //----------------------------------------------------------------
+    // TQtBase
+    //
+#ifdef YAE_USE_QT5
+    typedef QQuickItem TQtBase;
+#else
+    typedef QObject TQtBase;
+#endif
+
     Q_OBJECT;
 
     Q_PROPERTY(QString auxPlayhead

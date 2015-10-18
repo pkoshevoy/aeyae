@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// Qt headers:
+#include <QtGlobal>
+
 // yae includes:
 #include "yae/api/yae_settings.h"
 #include "yae/video/yae_pixel_format_traits.h"
@@ -43,8 +46,10 @@ namespace yae
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
                                        const TPlaylistModel & playlist,
                                        const QSize & envelopeSize):
+#ifdef YAE_USE_QT5
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
+#endif
     readerPrototype_(readerPrototype),
     playlist_(playlist),
     envelopeSize_(envelopeSize)
@@ -205,6 +210,17 @@ namespace yae
                const TPlaylistModel & playlist,
                const QString & id)
   {
+    static QVector<QRgb> palette(256);
+    static bool palette_ready = false;
+    if (!palette_ready)
+    {
+      for (std::size_t i = 0; i < 256; i++)
+      {
+        palette[i] = qRgb(i, i, i);
+      }
+      palette_ready = true;
+    }
+
     static QImage iconAudio
       (QString::fromUtf8(":/images/music-note.png"));
 
@@ -251,11 +267,17 @@ namespace yae
       (vtts.pixelFormat_ == kPixelFormatBGRA) ? QImage::Format_ARGB32 :
 #endif
       (vtts.pixelFormat_ == kPixelFormatRGB24) ? QImage::Format_RGB888 :
-      QImage::Format_Grayscale8;
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+      QImage::Format_Indexed8
+#else
+      QImage::Format_Grayscale8
+#endif
+               ;
 
     const unsigned char * data = frame->data_->data(0);
     std::size_t rowSize = frame->data_->rowBytes(0);
 
+#ifdef YAE_USE_QT5
     image = QImage(data,
                    frame->traits_.visibleWidth_,
                    frame->traits_.visibleHeight_,
@@ -263,6 +285,24 @@ namespace yae
                    qimageFormat,
                    &TCleanup::cleanup,
                    new TCleanup(frame));
+#else
+    image = QImage(data,
+                   frame->traits_.visibleWidth_,
+                   frame->traits_.visibleHeight_,
+                   rowSize,
+                   qimageFormat);
+#endif
+
+    if (qimageFormat == QImage::Format_Indexed8)
+    {
+      image.setColorTable(palette);
+    }
+
+#ifndef YAE_USE_QT5
+    // make a deep copy to avoid leaving QImage with dangling pointers
+    // to frame data:
+    image = image.copy();
+#endif
 
 #if 0
     image.save(QString::fromUtf8
