@@ -30,6 +30,7 @@ set_target_properties(yae_reader_ffmpeg PROPERTIES
   SUFFIX ".yae"
   )
 
-set_property(TARGET yae_reader_ffmpeg PROPERTY CXX_STANDARD 11)
+set_property(TARGET yae_reader_ffmpeg PROPERTY CXX_STANDARD 98)
+# set_property(TARGET yae_reader_ffmpeg PROPERTY CXX_STANDARD 11)
 
 add_dependencies(yae_reader_ffmpeg aeyae)

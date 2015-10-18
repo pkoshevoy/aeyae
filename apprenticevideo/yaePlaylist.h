@@ -113,7 +113,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistItemPtr
   //
-  typedef std::shared_ptr<PlaylistItem> TPlaylistItemPtr;
+  typedef boost::shared_ptr<PlaylistItem> TPlaylistItemPtr;
 
   //----------------------------------------------------------------
   // PlaylistGroup
@@ -150,7 +150,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistGroupPtr
   //
-  typedef std::shared_ptr<PlaylistGroup> TPlaylistGroupPtr;
+  typedef boost::shared_ptr<PlaylistGroup> TPlaylistGroupPtr;
 
   //----------------------------------------------------------------
   // TObservePlaylistGroup

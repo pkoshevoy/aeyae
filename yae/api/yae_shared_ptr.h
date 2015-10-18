@@ -101,7 +101,7 @@ namespace yae
 
     ref_count():
       ref_count_base(),
-      ptr_(nullptr)
+      ptr_(NULL)
     {}
 
     virtual ~ref_count()
@@ -183,7 +183,7 @@ namespace yae
       {
         TData * data_ptr = static_cast<TData *>(ref_count<TBase>::ptr_);
         TDeallocator::destroy(data_ptr);
-        ref_count<TBase>::ptr_ = nullptr;
+        ref_count<TBase>::ptr_ = NULL;
       }
     };
 
@@ -257,7 +257,7 @@ namespace yae
     { return ref_counter_->shared(); }
 
     inline operator bool() const YAE_NOEXCEPT
-    { return this->get() != nullptr; }
+    { return this->get() != NULL; }
 
     inline operator const void * () const YAE_NOEXCEPT
     { return this->get(); }
@@ -265,7 +265,7 @@ namespace yae
     inline bool unique() const YAE_NOEXCEPT
     { return this->use_count() == 1; }
 
-    inline void reset(TData * data_ptr = nullptr)
+    inline void reset(TData * data_ptr = NULL)
     { this->operator=(shared_ptr(data_ptr)); }
 
     inline void swap(shared_ptr & ptr) YAE_NOEXCEPT

@@ -472,7 +472,8 @@ if (Qt5DBus_FOUND)
     )
 endif (Qt5DBus_FOUND)
 
-set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
+# set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
@@ -491,9 +492,28 @@ if (APPLE)
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 
+  if (Qt4_FOUND)
+    get_filename_component(QT_QMAKE_EXECUTABLE_DIR
+      ${QT_QMAKE_EXECUTABLE} DIRECTORY)
+    # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
+  endif (Qt4_FOUND)
+
+  if (Qt5_FOUND)
+    get_filename_component(QT_QMAKE_EXECUTABLE_DIR
+      ${Qt5_DIR}/../../../bin ABSOLUTE)
+    # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
+  endif (Qt5_FOUND)
+
+  find_program(MACDEPLOYQT NAMES macdeployqt
+    HINTS ${QT_QMAKE_EXECUTABLE_DIR}
+    DOC
+    "macdeployqt - Qt utility used to include frameworks required by the application into its bundle")
+
   add_custom_command(TARGET ${PROGNAME} POST_BUILD
     COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
-    ARGS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    ARGS
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    ${MACDEPLOYQT}
     COMMENT "pull in external dependencies"
     )
 endif (APPLE)

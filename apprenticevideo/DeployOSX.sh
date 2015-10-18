@@ -16,7 +16,7 @@ QML_SRC_DIR="${SCRIPTS_DIR}/qml"
 if [ -x "${2}" ]; then
 	QT_MACDEPLOY="${2}"
 else
-	QT_MACDEPLOY=/Users/pavel/qt5/5.5/clang_64/bin/macdeployqt
+	QT_MACDEPLOY="macdeployqt"
 fi
 
 QT_INSTALL_DIR=$(dirname "${QT_MACDEPLOY}")
@@ -829,13 +829,27 @@ DeployAppBundle()
 # exit 0
 
 #---------------------------------------------------------------------
-echo NEXT: copy Qt frameworks into the app bundle
-quiet_pushd "${QT_INSTALL_DIR}"
-# NOTE: macdeployqt must be run from the bin/ folder where it's installed
-# otherwise it fails to deploy the QML modules:
-./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" -no-strip \
-  -qmldir="${QML_SRC_DIR}" -always-overwrite -verbose=3
-quiet_popd
+if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
+	echo NEXT: copy Qt frameworks into the app bundle
+
+	# NOTE: macdeployqt must be run from the bin/ folder where it's installed
+	# otherwise it fails to deploy the QML modules:
+	quiet_pushd "${QT_INSTALL_DIR}"
+
+	IS_QT4=$(./qmake -query | grep "QT_VERSION:4")
+
+	if [ -n "${IS_QT4}" ]; then
+		./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -no-strip
+	else
+		./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -no-strip \
+		  -qmldir="${QML_SRC_DIR}" \
+		  -always-overwrite
+	fi
+
+	quiet_popd
+fi
 
 #---------------------------------------------------------------------
 echo NEXT: copy required frameworks into the app bundle

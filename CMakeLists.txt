@@ -521,7 +521,8 @@ add_library(aeyae SHARED
   yae/video/yae_video_renderer.h
   )
 
-set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
+set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
+# set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
 
 target_compile_definitions(aeyae PRIVATE -DYAE_DLL_EXPORTS)
 

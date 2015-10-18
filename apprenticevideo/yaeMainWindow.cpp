@@ -3007,7 +3007,7 @@ namespace yae
       {
         std::string strUrl = url.toString().toUtf8().constData();
         strUrl = yae::absoluteUrlFrom(strUrl.c_str());
-        url = QUrl(QString::fromUtf8(strUrl.c_str()));
+        url = QUrl::fromEncoded(QByteArray(strUrl.c_str()));
       }
 #endif
 
