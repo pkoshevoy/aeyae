@@ -978,17 +978,20 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL_HERE();
   yae_assert_gl_no_error();
 
+#ifdef YAE_USE_QT5
   YAE_OPENGL(glBindBuffer(GL_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
 
   YAE_OPENGL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
+#endif
 
   YAE_OGL_11_HERE();
   int maxAttribs = 0;
   YAE_OGL_11(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs));
   yae_assert_gl_no_error();
 
+#ifdef YAE_USE_QT5
   for (int i = 0; i < maxAttribs; ++i)
   {
     YAE_OPENGL(glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0));
@@ -997,6 +1000,7 @@ yae_reset_opengl_to_initial_state()
     YAE_OPENGL(glDisableVertexAttribArray(i));
     yae_assert_gl_no_error();
   }
+#endif
 
   YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
   yae_assert_gl_no_error();
@@ -1061,8 +1065,10 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL(glBlendFunc(GL_ONE, GL_ZERO));
   yae_assert_gl_no_error();
 
+#ifdef YAE_USE_QT5
   YAE_OPENGL(glUseProgram(0));
   yae_assert_gl_no_error();
+#endif
 
   YAE_OGL_11(glShadeModel(GL_FLAT));
   YAE_OGL_11(glClearDepth(0));
