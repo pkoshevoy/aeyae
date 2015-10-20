@@ -51,6 +51,7 @@ namespace yae
   {
     std::string result(utf8_url);
 
+#if !(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060)
     CFStringRef cfStr = CFStringCreateWithCString(kCFAllocatorDefault,
                                                   utf8_url,
                                                   kCFStringEncodingUTF8);
@@ -78,6 +79,7 @@ namespace yae
 
       CFRelease(cfStr);
     }
+#endif
 
     return result;
   }
