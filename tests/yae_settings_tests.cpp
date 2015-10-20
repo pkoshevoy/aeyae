@@ -30,6 +30,9 @@ BOOST_AUTO_TEST_CASE(yae_settings)
   onoff.traits().setValue(true);
   BOOST_CHECK(onoff.traits().value());
 
+  BOOST_CHECK(onoff.optional());
+  onoff.setOptional(false);
+
   BOOST_CHECK(!onoff.optional());
   BOOST_CHECK(!onoff.specified());
 

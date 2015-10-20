@@ -22,22 +22,24 @@
 //
 struct aaa
 {
+#if !(__cplusplus < 201103L)
   aaa(std::string&& data):
     data_(std::move(data))
   {
     // std::cerr << data_ << ", aaa(std::string&&)" << std::endl;
   }
 
-  aaa(const std::string & data = std::string("aaa")):
-    data_(data)
-  {
-    // std::cerr << data_ << ", aaa(const std::string &)" << std::endl;
-  }
-
   aaa(aaa&& rhs):
     data_(std::move(rhs.data_))
   {
     // std::cerr << data_ << ", aaa(aaa&&)" << std::endl;
+  }
+#endif
+
+  aaa(const std::string & data = std::string("aaa")):
+    data_(data)
+  {
+    // std::cerr << data_ << ", aaa(const std::string &)" << std::endl;
   }
 
   aaa(const aaa & rhs):
