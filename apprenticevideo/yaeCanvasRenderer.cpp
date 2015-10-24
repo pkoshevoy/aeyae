@@ -1002,8 +1002,11 @@ yae_reset_opengl_to_initial_state()
   }
 #endif
 
-  YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-  yae_assert_gl_no_error();
+  if (glActiveTexture)
+  {
+    YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+    yae_assert_gl_no_error();
+  }
 
   YAE_OPENGL(glBindTexture(GL_TEXTURE_2D, 0));
   yae_assert_gl_no_error();

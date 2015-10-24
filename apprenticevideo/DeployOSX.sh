@@ -622,12 +622,7 @@ DeployFile()
 		fi
 
 		printf "%s (in %s) NEEDS %s\n" "${FILE}" "${FDIR}" "${NEEDS}"
-
-		if [ -n "${IS_FRAMEWORK}" ]; then
-			DST="Frameworks"
-		else
-			DST="Auxiliaries"
-		fi
+		DST="Frameworks"
 
 		HAS_VERSION=$(echo "${NEEDS}" | grep /Versions/)
 		if [ -n "${HAS_VERSION}" ]; then

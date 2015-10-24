@@ -27,11 +27,6 @@
 #include <boost/locale.hpp>
 #include <boost/filesystem/path.hpp>
 
-#ifndef YAE_USE_QT5
-// GLEW includes:
-#include <GL/glew.h>
-#endif
-
 // APPLE includes:
 #ifdef __APPLE__
 #include <ApplicationServices/ApplicationServices.h>
@@ -236,16 +231,6 @@ mainMayThrowException(int argc, char ** argv)
 
   yae::mainWindow = new yae::MainWindow(readerPrototype);
   yae::mainWindow->show();
-
-#ifndef YAE_USE_QT5
-  // initialize OpenGL GLEW wrapper:
-  GLenum err = glewInit();
-  if (err != GLEW_OK)
-  {
-    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
-    YAE_ASSERT(false);
-  }
-#endif
 
   // initialize the player widget canvas, connect additional signals/slots:
   yae::mainWindow->initPlayerWidget();
