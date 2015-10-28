@@ -509,6 +509,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::append
+  //
+  void
+  Canvas::append(Canvas::ILayer * layer)
+  {
+    if (!layer || has(layers_, layer))
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    layer->setContext(context_);
+    layer->setDelegate(delegate_);
+    layers_.push_back(layer);
+  }
+
+  //----------------------------------------------------------------
   // Canvas::fragmentShaderFor
   //
   const TFragmentShader *
@@ -644,7 +661,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // Canvas::event
+  // Canvas::processEvent
   //
   bool
   Canvas::processEvent(QEvent * event)
@@ -700,6 +717,22 @@ namespace yae
       }
     }
 
+    // allow the layers to process the event:
+    for (std::list<ILayer *>::reverse_iterator i = layers_.rbegin();
+         i != layers_.rend(); ++i)
+    {
+      ILayer * layer = *i;
+      if (!layer->isEnabled())
+      {
+        continue;
+      }
+
+      if (layer->processEvent(this, event))
+      {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -720,6 +753,14 @@ namespace yae
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
       updateOverlay(true);
+    }
+
+    // resize the layers:
+    for (std::list<ILayer *>::iterator i = layers_.begin();
+         i != layers_.end(); ++i)
+    {
+      ILayer * layer = *i;
+      layer->resizeTo(this);
     }
   }
 
@@ -951,18 +992,6 @@ namespace yae
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
 
-    if (!ptts)
-    {
-      // unsupported pixel format:
-      YAE_OGL_11(glClearColor(0, 0, 0, 1));
-      YAE_OGL_11(glClear(GL_COLOR_BUFFER_BIT));
-
-      if (!showTheGreeting_)
-      {
-        return;
-      }
-    }
-
     int canvasWidth = this->canvasWidth();
     int canvasHeight = this->canvasHeight();
 
@@ -1001,6 +1030,19 @@ namespace yae
       {
         qApp->postEvent(&eventReceiver_, new UpdateOverlayEvent());
       }
+    }
+
+    // draw the layers:
+    for (std::list<ILayer *>::iterator i = layers_.begin();
+         i != layers_.end(); ++i)
+    {
+      ILayer * layer = *i;
+      if (!layer->isEnabled())
+      {
+        continue;
+      }
+
+      layer->paint(this);
     }
   }
 

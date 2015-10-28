@@ -20,6 +20,7 @@
 #include "yae/video/yae_reader.h"
 
 // Qt includes:
+#include <QEvent>
 #include <QString>
 #include <QPainter>
 
@@ -218,6 +219,12 @@ namespace yae
   YAE_API bool
   testEachFile(const yae::IReaderPtr & readerPrototype,
                const std::list<QString> & playlist);
+
+  //----------------------------------------------------------------
+  // toString
+  //
+  YAE_API std::string
+  toString(QEvent::Type et);
 
 }
 

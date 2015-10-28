@@ -63,11 +63,19 @@ endif (WIN32 AND NOT (MINGW OR MSYS))
 
 
 
-set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}" CACHE PATH "root path for portaudio lib/ and include/ folders")
-find_library(PORTAUDIO_LIBRARY portaudio PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "portaudio library")
+set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
+  CACHE
+  PATH "root path for portaudio lib/ and include/ folders")
+find_library(PORTAUDIO_LIBRARY portaudio
+  PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "portaudio library")
 
-set(GLEW_DIR "$ENV{GLEW_DIR}" CACHE PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH} DOC "GLEW library")
+set(GLEW_DIR "$ENV{GLEW_DIR}"
+  CACHE
+  PATH "root path for GLEW lib/ and include/ folders")
+find_library(GLEW_LIBRARY GLEW
+  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "GLEW library")
 
 set(project_moc_hxx
   yaeCanvasWidget.h
@@ -75,6 +83,7 @@ set(project_moc_hxx
   yaePlaylist.h
   yaePlaylistModel.h
   yaePlaylistModelProxy.h
+  yaePlaylistView.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
   )
@@ -120,6 +129,8 @@ set(project_sources
   yaePlaylistModel.cpp
   yaePlaylistModelProxy.h
   yaePlaylistModelProxy.cpp
+  yaePlaylistView.h
+  yaePlaylistView.cpp
   yaeScreenSaverInhibitor.h
   yaeScreenSaverInhibitor.cpp
   yaeUtilsQt.h

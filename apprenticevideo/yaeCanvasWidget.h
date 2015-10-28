@@ -146,60 +146,37 @@ namespace yae
       TWidget::setAttribute(Qt::WA_NoSystemBackground);
       TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
       TWidget::setAutoFillBackground(false);
+      TWidget::setMouseTracking(true);
       Canvas::setDelegate(boost::shared_ptr<TDelegate>(new TDelegate(*this)));
     }
 
   protected:
-
     // virtual:
-    void dragEnterEvent(QDragEnterEvent * e)
+    bool event(QEvent * event)
     {
-      QWidget * p = TWidget::parentWidget();
-      if (p)
+      QEvent::Type et = event->type();
+
+      if (et == QEvent::MouseMove)
       {
-        // let the parent widget handle it:
-        e->ignore();
+        TWidget::setCursor(QCursor(Qt::ArrowCursor));
+        sigs_.startHideCursorTimer();
       }
-      else
+      else if (et == QEvent::MouseButtonDblClick)
       {
-        TWidget::dragEnterEvent(e);
+        sigs_.emitToggleFullScreen();
       }
-    }
-
-    // virtual:
-    void dropEvent(QDropEvent * e)
-    {
-      QWidget * p = TWidget::parentWidget();
-      if (p)
+      else if (et == QEvent::Resize)
       {
-        // let the parent widget handle it:
-        e->ignore();
+        TWidget::resizeEvent((QResizeEvent *)event);
+        Canvas::resize(TWidget::width(), TWidget::height());
       }
-      else
+
+      if (Canvas::processEvent(event))
       {
-        TWidget::dropEvent(e);
+        return true;
       }
-    }
 
-    // virtual:
-    void mouseMoveEvent(QMouseEvent * event)
-    {
-      TWidget::setCursor(QCursor(Qt::ArrowCursor));
-      sigs_.startHideCursorTimer();
-    }
-
-    // virtual:
-    void mouseDoubleClickEvent(QMouseEvent * event)
-    {
-      (void)event;
-      sigs_.emitToggleFullScreen();
-    }
-
-    // virtual:
-    void resizeEvent(QResizeEvent * event)
-    {
-      TWidget::resizeEvent(event);
-      Canvas::resize(TWidget::width(), TWidget::height());
+      return TWidget::event(event);
     }
 
     // virtual:

@@ -42,6 +42,7 @@
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
+#include "yaePlaylistView.h"
 #if (YAE_USE_PLAYER_QUICK_WIDGET)
 #include "yaeQuickWidget.h"
 #endif
@@ -368,6 +369,7 @@ namespace yae
     // frame canvas:
     TPlayerWidget * playerWidget_;
     Canvas * canvas_;
+    PlaylistView playlistView_;
     TimelineControls * timelineControls_;
     TPlaylistModel playlistModel_;
 

@@ -18,13 +18,16 @@
 // Qt includes:
 #include <QDateTime>
 #include <QDirIterator>
+#include <QEvent>
 #include <QFile>
+#include <QMetaEnum>
 #include <QPainter>
 #include <QStringList>
 #include <QSettings>
 #include <QTextStream>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
 
 namespace yae
 {
@@ -1849,4 +1852,20 @@ namespace yae
     return ok;
   }
 
+  //----------------------------------------------------------------
+  // toString
+  //
+  std::string
+  toString(QEvent::Type et)
+  {
+    static int eventEnumIndex =
+      QEvent::staticMetaObject.indexOfEnumerator("Type");
+
+    std::string name =
+      QEvent::staticMetaObject.
+      enumerator(eventEnumIndex).
+      valueToKey(et);
+
+    return name;
+  }
 }

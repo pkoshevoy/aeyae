@@ -35,6 +35,7 @@ namespace yae
 {
   // forward declarations:
   class TLibass;
+  struct Canvas;
 
   //----------------------------------------------------------------
   // TFontAttachment
@@ -67,6 +68,42 @@ namespace yae
       virtual void inhibitScreenSaver() = 0;
     };
 
+    //----------------------------------------------------------------
+    // ILayer
+    //
+    struct YAE_API ILayer
+    {
+      ILayer(): enabled_(true) {}
+      virtual ~ILayer() {}
+
+      inline void setContext(const boost::shared_ptr<IOpenGLContext> & context)
+      { context_ = context; }
+
+      inline const boost::shared_ptr<IOpenGLContext> & context() const
+      { return context_; }
+
+      inline void setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+      { delegate_ = delegate; }
+
+      inline const boost::shared_ptr<IDelegate> & delegate() const
+      { return delegate_; }
+
+      inline bool isEnabled() const
+      { return enabled_; }
+
+      inline void setEnabled(bool enable = true)
+      { enabled_ = enable; }
+
+      virtual void resizeTo(const Canvas * canvas) = 0;
+      virtual void paint(Canvas * canvas) = 0;
+      virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
+
+    protected:
+      boost::shared_ptr<IOpenGLContext> context_;
+      boost::shared_ptr<IDelegate> delegate_;
+      bool enabled_;
+    };
+
     Canvas(const boost::shared_ptr<IOpenGLContext> & context);
     ~Canvas();
 
@@ -88,6 +125,12 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
+
+    // generic mechanism for delegating canvas painting and event processing:
+    // NOTE: 1. the last appended layer is front-most
+    //       2. painting -- back-to-front, for all layers
+    //       3. event handling -- front-to-back, until handled
+    void append(ILayer * layer);
 
     // lookup a fragment shader for a given pixel format, if one exits:
     const TFragmentShader * fragmentShaderFor(const VideoTraits & vtts) const;
@@ -327,6 +370,11 @@ namespace yae
 
     // extra fonts embedded in the video file, will be passed along to libass:
     std::list<TFontAttachment> customFonts_;
+
+    // a list of painting and event handling delegates,
+    // traversed front-to-back for painting
+    // and back-to-front for event processing:
+    std::list<ILayer *> layers_;
   };
 }
 

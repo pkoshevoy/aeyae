@@ -443,6 +443,8 @@ namespace yae
 
     playerWidget_ = new TPlayerWidget();
     playerWidget_->setGreeting(greeting);
+    playerWidget_->append(&playlistView_);
+    playlistView_.setModel(&playlistModel_);
 #else
     playerWidget_ = new TPlayerWidget(this);
     playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
