@@ -52,6 +52,20 @@ namespace yae
     inline double bottom() const
     { return y_ + h_; }
 
+    BBox & operator *= (double scale)
+    {
+      w_ *= scale;
+      h_ *= scale;
+      return *this;
+    }
+
+    BBox & operator += (double translate)
+    {
+      x_ += translate;
+      y_ += translate;
+      return *this;
+    }
+
     double x_;
     double y_;
     double w_;
@@ -73,12 +87,15 @@ namespace yae
     kPropertyTop,
     kPropertyBottom,
     kPropertyHCenter,
-    kPropertyVCenter
+    kPropertyVCenter,
+    kPropertyBBoxContent,
+    kPropertyBBox
   };
 
   //----------------------------------------------------------------
   // IProperties
   //
+  template <typename TData>
   struct IProperties
   {
     virtual ~IProperties() {}
@@ -89,18 +106,29 @@ namespace yae
     //    will throw a runtime exception.
     // 2. accessing an unsupported property will throw a runtime exception.
     //
-    virtual double get(Property property) const = 0;
+    virtual void get(Property property, TData & data) const = 0;
   };
+
+  //----------------------------------------------------------------
+  // TDoubleProp
+  //
+  typedef IProperties<double> TDoubleProp;
+
+  //----------------------------------------------------------------
+  // TBBoxProp
+  //
+  typedef IProperties<BBox> TBBoxProp;
 
   //----------------------------------------------------------------
   // Expression
   //
-  struct Expression : public IProperties
+  template <typename TData>
+  struct Expression : public IProperties<TData>
   {
-    virtual double evaluate() const = 0;
+    virtual void evaluate(TData & result) const = 0;
 
     // virtual:
-    double get(Property property) const
+    void get(Property property, TData & result) const
     {
       if (property != kPropertyExpression)
       {
@@ -108,14 +136,29 @@ namespace yae
         throw std::runtime_error("requested a non-expression property");
       }
 
-      return evaluate();
+      evaluate(result);
     }
   };
 
   //----------------------------------------------------------------
+  // TDoubleExpr
+  //
+  typedef Expression<double> TDoubleExpr;
+
+  //----------------------------------------------------------------
   // TExpressionPtr
   //
-  typedef boost::shared_ptr<Expression> TExpressionPtr;
+  typedef boost::shared_ptr<TDoubleExpr> TDoubleExprPtr;
+
+  //----------------------------------------------------------------
+  // TBBoxExpr
+  //
+  typedef Expression<BBox> TBBoxExpr;
+
+  //----------------------------------------------------------------
+  // TBBoxExprPtr
+  //
+  typedef boost::shared_ptr<TBBoxExpr> TBBoxExprPtr;
 
   //----------------------------------------------------------------
   // DataRef
@@ -124,9 +167,19 @@ namespace yae
   struct DataRef
   {
     //----------------------------------------------------------------
+    // value_type
+    //
+    typedef TData value_type;
+
+    //----------------------------------------------------------------
+    // TDataProperties
+    //
+    typedef IProperties<TData> TDataProperties;
+
+    //----------------------------------------------------------------
     // DataRef
     //
-    DataRef(const IProperties * reference = NULL,
+    DataRef(const TDataProperties * reference = NULL,
             Property property = kPropertyUnspecified,
             double scale = 1.0,
             double translate = 0.0,
@@ -155,7 +208,7 @@ namespace yae
 
     // constructor helpers:
     inline static DataRef<TData>
-    reference(const IProperties * ref, Property prop)
+    reference(const TDataProperties * ref, Property prop)
     { return DataRef<TData>(ref, prop); }
 
     inline static DataRef<TData>
@@ -163,15 +216,15 @@ namespace yae
     { return DataRef<TData>(t); }
 
     inline static DataRef<TData>
-    expression(const IProperties * ref, double s = 1.0, double t = 0.0)
+    expression(const TDataProperties * ref, double s = 1.0, double t = 0.0)
     { return DataRef<TData>(ref, kPropertyExpression, s, t); }
 
     inline static DataRef<TData>
-    scale(const IProperties * ref, Property prop, double s = 1.0)
+    scale(const TDataProperties * ref, Property prop, double s = 1.0)
     { return DataRef<TData>(ref, prop, s, 0.0); }
 
     inline static DataRef<TData>
-    offset(const IProperties * ref, Property prop, double t = 0.0)
+    offset(const TDataProperties * ref, Property prop, double t = 0.0)
     { return DataRef<TData>(ref, prop, 1.0, t); }
 
     // check whether this property reference is valid:
@@ -186,7 +239,7 @@ namespace yae
     { return cached_; }
 
     // caching is used to avoid re-calculating the same property:
-    void uncache()
+    void uncache() const
     {
       visited_ = false;
       cached_ = false;
@@ -220,7 +273,8 @@ namespace yae
       {
         visited_ = true;
 
-        TData v = ref_->get(property_);
+        TData v;
+        ref_->get(property_, v);
         v *= scale_;
         v += translate_;
         value_ = v;
@@ -231,7 +285,7 @@ namespace yae
     }
 
     // reference properties:
-    const IProperties * ref_;
+    const TDataProperties * ref_;
     Property property_;
     double scale_;
     double translate_;
@@ -246,6 +300,11 @@ namespace yae
   // ItemRef
   //
   typedef DataRef<double> ItemRef;
+
+  //----------------------------------------------------------------
+  // BBoxRef
+  //
+  typedef DataRef<BBox> BBoxRef;
 
   //----------------------------------------------------------------
   // Margins
@@ -271,12 +330,12 @@ namespace yae
   {
     void uncache();
 
-    void fill(const IProperties * reference, double offset = 0.0);
-    void center(const IProperties * reference);
-    void topLeft(const IProperties * reference, double offset = 0.0);
-    void topRight(const IProperties * reference, double offset = 0.0);
-    void bottomLeft(const IProperties * reference, double offset = 0.0);
-    void bottomRight(const IProperties * reference, double offset = 0.0);
+    void fill(const TDoubleProp * reference, double offset = 0.0);
+    void center(const TDoubleProp * reference);
+    void topLeft(const TDoubleProp * reference, double offset = 0.0);
+    void topRight(const TDoubleProp * reference, double offset = 0.0);
+    void bottomLeft(const TDoubleProp * reference, double offset = 0.0);
+    void bottomRight(const TDoubleProp * reference, double offset = 0.0);
 
     ItemRef left_;
     ItemRef right_;
@@ -289,7 +348,8 @@ namespace yae
   //----------------------------------------------------------------
   // Item
   //
-  struct Item : public IProperties
+  struct Item : public TDoubleProp,
+                public TBBoxProp
   {
 
     //----------------------------------------------------------------
@@ -306,14 +366,18 @@ namespace yae
     // NOTE: default implementation returns an empty bbox
     // because it has no content besides nested children.
     virtual void calcContentBBox(BBox & bbox) const;
-#if 0
-    void calcOuterBBox(BBox & bbox) const;
-    void calcInnerBBox(BBox & bbox) const;
-#endif
+
     virtual void layout();
     virtual void uncache();
 
-    virtual double get(Property property) const;
+    // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
+    void get(Property property, BBox & value) const;
+
+    const BBox & bboxContent() const;
+    const BBox & bbox() const;
 
     double width() const;
     double height() const;
@@ -333,12 +397,20 @@ namespace yae
       return static_cast<TItem &>(child);
     }
 
-    inline ItemRef addExpr(Expression * e,
+    inline ItemRef addExpr(TDoubleExpr * e,
                            double scale = 1.0,
                            double translate = 0.0)
     {
-      expressions_.push_back(TExpressionPtr(e));
+      exprDouble_.push_back(TDoubleExprPtr(e));
       return ItemRef::expression(e, scale, translate);
+    }
+
+    inline BBoxRef addExpr(TBBoxExpr * e,
+                           double scale = 1.0,
+                           double translate = 0.0)
+    {
+      exprBBox_.push_back(TBBoxExprPtr(e));
+      return BBoxRef::expression(e, scale, translate);
     }
 
     // FIXME: for debugging only:
@@ -368,15 +440,20 @@ namespace yae
     ItemRef width_;
     ItemRef height_;
 
-    // cached bounding box of this item, updated during layout:
-    BBox bbox_;
-
-    // cached bounding box of this item content
-    // and bounding boxes of the nested items:
-    BBox bboxContent_;
-
     // storage of expressions associated with this Item:
-    std::list<TExpressionPtr> expressions_;
+    std::list<TDoubleExprPtr> exprDouble_;
+    std::list<TBBoxExprPtr> exprBBox_;
+
+    // bounding box of this items content:
+    const BBoxRef bboxContent_;
+
+    // bounding box of this item:
+    const BBoxRef bbox_;
+
+  private:
+    // intentionally disabled:
+    Item(const Item & item);
+    Item & operator = (const Item & item);
   };
 
   //----------------------------------------------------------------
@@ -485,7 +562,7 @@ namespace yae
 
   protected:
 
-    Item root_;
+    ItemPtr root_;
     PlaylistModelProxy * model_;
     double w_;
     double h_;

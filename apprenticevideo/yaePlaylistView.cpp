@@ -69,7 +69,7 @@ namespace yae
   //----------------------------------------------------------------
   // GridCellLeft
   //
-  struct GridCellLeft : public Expression
+  struct GridCellLeft : public TDoubleExpr
   {
     GridCellLeft(const Item * root, std::size_t cell):
       root_(root),
@@ -77,14 +77,13 @@ namespace yae
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       double rootWidth = root_->width();
       unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
       std::size_t cellCol = cell_ % cellsPerRow;
       double ox = root_->left();
-      double x = ox + rootWidth * double(cellCol) / double(cellsPerRow);
-      return x;
+      result = ox + rootWidth * double(cellCol) / double(cellsPerRow);
     }
 
     const Item * root_;
@@ -94,7 +93,7 @@ namespace yae
   //----------------------------------------------------------------
   // GridCellTop
   //
-  struct GridCellTop : public Expression
+  struct GridCellTop : public TDoubleExpr
   {
     GridCellTop(const Item * root, std::size_t cell):
       root_(root),
@@ -102,7 +101,7 @@ namespace yae
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       std::size_t numCells = root_->children_.size();
       double rootWidth = root_->width();
@@ -113,8 +112,7 @@ namespace yae
       double gridHeight = cellHeight * double(rowsOfCells);
       std::size_t cellRow = cell_ / cellsPerRow;
       double oy = root_->top();
-      double y = oy + gridHeight * double(cellRow) / double(rowsOfCells);
-      return y;
+      result = oy + gridHeight * double(cellRow) / double(rowsOfCells);
     }
 
     const Item * root_;
@@ -124,18 +122,17 @@ namespace yae
   //----------------------------------------------------------------
   // GridCellWidth
   //
-  struct GridCellWidth : public Expression
+  struct GridCellWidth : public TDoubleExpr
   {
     GridCellWidth(const Item * root):
       root_(root)
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       double rootWidth = root_->width();
-      double cellWidth = calcCellWidth(rootWidth);
-      return cellWidth;
+      result = calcCellWidth(rootWidth);
     }
 
     const Item * root_;
@@ -144,19 +141,18 @@ namespace yae
   //----------------------------------------------------------------
   // GridCellHeight
   //
-  struct GridCellHeight : public Expression
+  struct GridCellHeight : public TDoubleExpr
   {
     GridCellHeight(const Item * root):
       root_(root)
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       double rootWidth = root_->width();
       double cellWidth = calcCellWidth(rootWidth);
-      double cellHeight = calcCellHeight(cellWidth);
-      return cellHeight;
+      result = calcCellHeight(cellWidth);
     }
 
     const Item * root_;
@@ -165,7 +161,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcTitleHeight
   //
-  struct CalcTitleHeight : public Expression
+  struct CalcTitleHeight : public TDoubleExpr
   {
     CalcTitleHeight(const Item * root, double minHeight):
       root_(root),
@@ -173,11 +169,10 @@ namespace yae
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       double rootWidth = root_->width();
-      double titleHeight = calcTitleHeight(minHeight_, rootWidth);
-      return titleHeight;
+      result = calcTitleHeight(minHeight_, rootWidth);
     }
 
     const Item * root_;
@@ -187,7 +182,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderTop
   //
-  struct CalcSliderTop : public Expression
+  struct CalcSliderTop : public TDoubleExpr
   {
     CalcSliderTop(const Scrollable * view, const Item * slider):
       view_(view),
@@ -195,15 +190,15 @@ namespace yae
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
-      double top = view_->top();
+      result = view_->top();
 
       double sceneHeight = view_->content_.height();
       double viewHeight = view_->height();
       if (sceneHeight <= viewHeight)
       {
-        return top;
+        return;
       }
 
       double range = sceneHeight - viewHeight;
@@ -211,7 +206,7 @@ namespace yae
       double minHeight = slider_->width() * 5.0;
       double height = minHeight + (viewHeight - minHeight) * scale;
       double y = (viewHeight - height) * view_->position_;
-      return top + y;
+      result += y;
     }
 
     const Scrollable * view_;
@@ -221,7 +216,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderHeight
   //
-  struct CalcSliderHeight : public Expression
+  struct CalcSliderHeight : public TDoubleExpr
   {
     CalcSliderHeight(const Scrollable * view, const Item * slider):
       view_(view),
@@ -229,24 +224,72 @@ namespace yae
     {}
 
     // virtual:
-    double evaluate() const
+    void evaluate(double & result) const
     {
       double sceneHeight = view_->content_.height();
       double viewHeight = view_->height();
       if (sceneHeight <= viewHeight)
       {
-        return viewHeight;
+        result = viewHeight;
+        return;
       }
 
       double range = sceneHeight - viewHeight;
       double scale = viewHeight / sceneHeight;
       double minHeight = slider_->width() * 5.0;
-      double height = minHeight + (viewHeight - minHeight) * scale;
-      return height;
+      result = minHeight + (viewHeight - minHeight) * scale;
     }
 
     const Scrollable * view_;
     const Item * slider_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcContentBBox
+  //
+  struct CalcContentBBox : public TBBoxExpr
+  {
+    CalcContentBBox(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(BBox & result) const
+    {
+      result = BBox();
+      root_->calcContentBBox(result);
+
+      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
+           i != root_->children_.end(); ++i)
+      {
+        const ItemPtr & child = *i;
+        const BBox & bboxOfChild = child->bbox();
+        result.expand(bboxOfChild);
+      }
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcBBox
+  //
+  struct CalcBBox : public TBBoxExpr
+  {
+    CalcBBox(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(BBox & result) const
+    {
+      result.x_ = root_->left();
+      result.y_ = root_->top();
+      result.w_ = root_->width();
+      result.h_ = root_->height();
+    }
+
+    const Item * root_;
   };
 
   //----------------------------------------------------------------
@@ -346,7 +389,7 @@ namespace yae
   // Anchors::fill
   //
   void
-  Anchors::fill(const IProperties * ref, double offset)
+  Anchors::fill(const TDoubleProp * ref, double offset)
   {
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -358,7 +401,7 @@ namespace yae
   // Anchors::center
   //
   void
-  Anchors::center(const IProperties * ref)
+  Anchors::center(const TDoubleProp * ref)
   {
     hcenter_ = ItemRef::offset(ref, kPropertyHCenter);
     vcenter_ = ItemRef::offset(ref, kPropertyVCenter);
@@ -368,7 +411,7 @@ namespace yae
   // Anchors::topLeft
   //
   void
-  Anchors::topLeft(const IProperties * ref, double offset)
+  Anchors::topLeft(const TDoubleProp * ref, double offset)
   {
     top_ = ItemRef::offset(ref, kPropertyTop, offset);
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
@@ -378,7 +421,7 @@ namespace yae
   // Anchors::topRight
   //
   void
-  Anchors::topRight(const IProperties * ref, double offset)
+  Anchors::topRight(const TDoubleProp * ref, double offset)
   {
     top_ = ItemRef::offset(ref, kPropertyTop, offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -388,7 +431,7 @@ namespace yae
   // Anchors::bottomLeft
   //
   void
-  Anchors::bottomLeft(const IProperties * ref, double offset)
+  Anchors::bottomLeft(const TDoubleProp * ref, double offset)
   {
     bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
@@ -398,7 +441,7 @@ namespace yae
   // Anchors::bottomRight
   //
   void
-  Anchors::bottomRight(const IProperties * ref, double offset)
+  Anchors::bottomRight(const TDoubleProp * ref, double offset)
   {
     bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -410,7 +453,9 @@ namespace yae
   //
   Item::Item(const char * id):
     parent_(NULL),
-    color_(0)
+    color_(0),
+    bboxContent_(addExpr(new CalcContentBBox(this))),
+    bbox_(addExpr(new CalcBBox(this)))
   {
     if (id)
     {
@@ -426,67 +471,19 @@ namespace yae
   {
     bbox.clear();
   }
-#if 0
-  //----------------------------------------------------------------
-  // Item::calcOuterBBox
-  //
-  void
-  Item::calcOuterBBox(BBox & bbox) const
-  {
-    double ml = (margins_.left_.get() < 0 ? 0 : margins_.left_.get());
-    double mr = (margins_.right_.get() < 0 ? 0 : margins_.right_.get());
-    double mt = (margins_.top_.get() < 0 ? 0 : margins_.top_.get());
-    double mb = (margins_.bottom_.get() < 0 ? 0 : margins_.bottom_.get());
 
-    double r = bbox_.right();
-    double b = bbox_.bottom();
-
-    bbox.x_ = bbox_.x_ - ml;
-    bbox.y_ = bbox_.y_ - mt;
-    bbox.w_ = r + mr - bbox.x_;
-    bbox.h_ = b + mb - bbox.y_;
-  }
-
-  //----------------------------------------------------------------
-  // Item::calcInnerBBox
-  //
-  void
-  Item::calcInnerBBox(BBox & bbox) const
-  {
-    double ml = (margins_.left_.get() > 0 ? 0 : margins_.left_.get());
-    double mr = (margins_.right_.get() > 0 ? 0 : margins_.right_.get());
-    double mt = (margins_.top_.get() > 0 ? 0 : margins_.top_.get());
-    double mb = (margins_.bottom_.get() > 0 ? 0 : margins_.bottom_.get());
-
-    double r = bbox_.right();
-    double b = bbox_.bottom();
-
-    bbox.x_ = bbox_.x_ - ml;
-    bbox.y_ = bbox_.y_ - mt;
-    bbox.w_ = r + mr - bbox.x_;
-    bbox.h_ = b + mb - bbox.y_;
-  }
-#endif
   //----------------------------------------------------------------
   // Item::layout
   //
   void
   Item::layout()
   {
-    calcContentBBox(bboxContent_);
-
     for (std::vector<ItemPtr>::iterator i = children_.begin();
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
       child->layout();
-      bboxContent_.expand(child->bbox_);
     }
-
-    bbox_.x_ = left();
-    bbox_.y_ = top();
-    bbox_.w_ = width();
-    bbox_.h_ = height();
   }
 
   //----------------------------------------------------------------
@@ -502,57 +499,98 @@ namespace yae
       child->uncache();
     }
 
-    bbox_.clear();
-    bboxContent_.clear();
-
-    width_.uncache();
-    height_.uncache();
     anchors_.uncache();
     margins_.uncache();
+    width_.uncache();
+    height_.uncache();
+    bboxContent_.uncache();
+    bbox_.uncache();
   }
 
   //----------------------------------------------------------------
   // Item::get
   //
-  double
-  Item::get(Property property) const
+  void
+  Item::get(Property property, double & value) const
   {
     if (property == kPropertyWidth)
     {
-      return this->width();
+      value = this->width();
     }
     else if (property == kPropertyHeight)
     {
-      return this->height();
+      value = this->height();
     }
     else if (property == kPropertyLeft)
     {
-      return this->left();
+      value = this->left();
     }
     else if (property == kPropertyRight)
     {
-      return this->right();
+      value = this->right();
     }
     else if (property == kPropertyTop)
     {
-      return this->top();
+      value = this->top();
     }
     else if (property == kPropertyBottom)
     {
-      return this->bottom();
+      value = this->bottom();
     }
     else if (property == kPropertyHCenter)
     {
-      return this->hcenter();
+      value = this->hcenter();
     }
     else if (property == kPropertyVCenter)
     {
-      return this->vcenter();
+      value = this->vcenter();
     }
+    else
+    {
+      YAE_ASSERT(false);
+      throw std::runtime_error("unsupported item property of type <double>");
+      value = std::numeric_limits<double>::max();
+    }
+  }
 
-    YAE_ASSERT(false);
-    throw std::runtime_error("unsupported item property");
-    return std::numeric_limits<double>::max();
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  void
+  Item::get(Property property, BBox & value) const
+  {
+    if (property == kPropertyBBoxContent)
+    {
+      value = this->bboxContent();
+    }
+    else if (property == kPropertyBBox)
+    {
+      value = this->bbox();
+    }
+    else
+    {
+      YAE_ASSERT(false);
+      throw std::runtime_error("unsupported item property of type <BBox>");
+      value = BBox();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Item::bboxContent
+  //
+  const BBox &
+  Item::bboxContent() const
+  {
+    return bboxContent_.get();
+  }
+
+  //----------------------------------------------------------------
+  // Item::bbox
+  //
+  const BBox &
+  Item::bbox() const
+  {
+    return bbox_.get();
   }
 
   //----------------------------------------------------------------
@@ -581,7 +619,7 @@ namespace yae
 
     // width is based on the bounding box of item content:
     double l = left();
-    double r = bboxContent_.right();
+    double r = bboxContent().right();
     double w = r - l;
     width_.cache(w);
     return w;
@@ -613,7 +651,7 @@ namespace yae
 
     // height is based on the bounding box of item content:
     double t = top();
-    double b = bboxContent_.bottom();
+    double b = bboxContent().bottom();
     double h = b - t;
     height_.cache(h);
     return h;
@@ -763,11 +801,12 @@ namespace yae
   void
   Item::dump(std::ostream & os, const std::string & indent) const
   {
+    const BBox & bbox = this->bbox();
     os << indent
-       << "x: " << bbox_.x_
-       << ", y: " << bbox_.y_
-       << ", w: " << bbox_.w_
-       << ", h: " << bbox_.h_
+       << "x: " << bbox.x_
+       << ", y: " << bbox.y_
+       << ", w: " << bbox.w_
+       << ", h: " << bbox.h_
        << ", id: " << id_
        << std::endl;
 
@@ -871,19 +910,7 @@ namespace yae
   void
   Item::paint() const
   {
-    paintBBox(bbox_, color_);
-
-#if 0
-    BBox outerBBox;
-    calcOuterBBox(outerBBox);
-    paintBBox(outerBBox);
-#endif
-
-#if 0
-    BBox innerBBox;
-    calcInnerBBox(innerBBox);
-    paintBBox(innerBBox);
-#endif
+    paintBBox(bbox(), color_);
 
     double x = left();
     double y = top();
@@ -1200,7 +1227,8 @@ namespace yae
     w_(0.0),
     h_(0.0),
     position_(0.0),
-    sceneSize_(0.0)
+    sceneSize_(0.0),
+    root_(new Item("playlist"))
   {
     layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
       TLayoutPtr(new GroupListLayout());
@@ -1220,11 +1248,13 @@ namespace yae
   {
     w_ = canvas->canvasWidth();
     h_ = canvas->canvasHeight();
-    root_.width_ = ItemRef::constant(w_);
-    root_.height_ = ItemRef::constant(h_);
-    root_.uncache();
-    root_.layout();
-    // root_.dump(std::cerr);
+
+    Item & root = *root_;
+    root.width_ = ItemRef::constant(w_);
+    root.height_ = ItemRef::constant(h_);
+    root.uncache();
+    root.layout();
+    // root.dump(std::cerr);
   }
 
   //----------------------------------------------------------------
@@ -1256,7 +1286,7 @@ namespace yae
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
 
-    root_.paint();
+    root_->paint();
 
 #if 0
     // FIXME: for debugging
@@ -1449,24 +1479,26 @@ namespace yae
       return;
     }
 
-    root_ = Item("playlist");
-    root_.anchors_.left_ = ItemRef::constant(0.0);
-    root_.anchors_.top_ = ItemRef::constant(0.0);
-    root_.width_ = ItemRef::constant(w_);
-    root_.height_ = ItemRef::constant(h_);
+    root_.reset(new Item("playlist"));
+    Item & root = *root_;
+
+    root.anchors_.left_ = ItemRef::constant(0.0);
+    root.anchors_.top_ = ItemRef::constant(0.0);
+    root.width_ = ItemRef::constant(w_);
+    root.height_ = ItemRef::constant(h_);
 
     // FIXME:
-    root_.color_ = 0x01010100;
+    root.color_ = 0x01010100;
 
-    delegate->layout(root_,
+    delegate->layout(root,
                      layoutDelegates_,
                      *model_,
                      rootIndex);
 
 #ifndef NDEBUG
     // FIXME: for debugging only:
-    root_.layout();
-    root_.dump(std::cerr);
+    root.layout();
+    root.dump(std::cerr);
 #endif
   }
 
