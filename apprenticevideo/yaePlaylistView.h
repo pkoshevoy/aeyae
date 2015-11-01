@@ -23,8 +23,6 @@
 
 namespace yae
 {
-  // forward declarations:
-  struct Item;
 
   //----------------------------------------------------------------
   // BBox
@@ -61,76 +59,193 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // ItemRef
+  // Property
   //
-  struct ItemRef
+  enum Property
+  {
+    kPropertyUnspecified,
+    kPropertyConstant,
+    kPropertyExpression,
+    kPropertyWidth,
+    kPropertyHeight,
+    kPropertyLeft,
+    kPropertyRight,
+    kPropertyTop,
+    kPropertyBottom,
+    kPropertyHCenter,
+    kPropertyVCenter
+  };
+
+  //----------------------------------------------------------------
+  // IProperties
+  //
+  struct IProperties
+  {
+    virtual ~IProperties() {}
+
+    // property accessors:
+    //
+    // 1. accessing a property specified via a cyclical reference
+    //    will throw a runtime exception.
+    // 2. accessing an unsupported property will throw a runtime exception.
+    //
+    virtual double get(Property property) const = 0;
+  };
+
+  //----------------------------------------------------------------
+  // Expression
+  //
+  struct Expression : public IProperties
+  {
+    virtual double evaluate() const = 0;
+
+    // virtual:
+    double get(Property property) const
+    {
+      if (property != kPropertyExpression)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("requested a non-expression property");
+      }
+
+      return evaluate();
+    }
+  };
+
+  //----------------------------------------------------------------
+  // TExpressionPtr
+  //
+  typedef boost::shared_ptr<Expression> TExpressionPtr;
+
+  //----------------------------------------------------------------
+  // DataRef
+  //
+  template <typename TData>
+  struct DataRef
   {
     //----------------------------------------------------------------
-    // Property
+    // DataRef
     //
-    enum Property
-    {
-      kUnspecified,
-      kConstant,
-      kWidth,
-      kHeight,
-      kLeft,
-      kRight,
-      kTop,
-      kBottom,
-      kHCenter,
-      kVCenter
-    };
+    DataRef(const IProperties * reference = NULL,
+            Property property = kPropertyUnspecified,
+            double scale = 1.0,
+            double translate = 0.0,
+            const TData & defaultValue = TData()):
+      ref_(reference),
+      property_(property),
+      scale_(scale),
+      translate_(translate),
+      visited_(false),
+      cached_(false),
+      value_(defaultValue)
+    {}
 
     //----------------------------------------------------------------
-    // ItemRef
+    // DataRef
     //
-    ItemRef(const Item * referenceItem = NULL,
-            Property property = kUnspecified,
-            double offset = 0.0,
-            double scale = 1.0);
+    DataRef(const TData & constantValue):
+      ref_(NULL),
+      property_(kPropertyConstant),
+      scale_(1.0),
+      translate_(0.0),
+      visited_(false),
+      cached_(false),
+      value_(constantValue)
+    {}
 
     // constructor helpers:
-    inline static ItemRef scale(const Item * ref, Property prop, double t = 1)
-    { return ItemRef(ref, prop, 0.0, t); }
+    inline static DataRef<TData>
+    reference(const IProperties * ref, Property prop)
+    { return DataRef<TData>(ref, prop); }
 
-    inline static ItemRef offset(const Item * ref, Property prop, double t = 0)
-    { return ItemRef(ref, prop, t, 1.0); }
+    inline static DataRef<TData>
+    constant(const TData & t)
+    { return DataRef<TData>(t); }
 
-    inline static ItemRef constant(double t)
-    { return ItemRef(NULL, kConstant, t, 1.0); }
+    inline static DataRef<TData>
+    expression(const IProperties * ref, double s = 1.0, double t = 0.0)
+    { return DataRef<TData>(ref, kPropertyExpression, s, t); }
 
-    // check whether this reference item is valid:
+    inline static DataRef<TData>
+    scale(const IProperties * ref, Property prop, double s = 1.0)
+    { return DataRef<TData>(ref, prop, s, 0.0); }
+
+    inline static DataRef<TData>
+    offset(const IProperties * ref, Property prop, double t = 0.0)
+    { return DataRef<TData>(ref, prop, 1.0, t); }
+
+    // check whether this property reference is valid:
     inline bool isValid() const
-    { return property_ != kUnspecified; }
+    { return property_ != kPropertyUnspecified; }
 
     // check whether this reference is relative:
     inline bool isRelative() const
-    { return item_ != NULL; }
+    { return ref_ != NULL; }
 
     inline bool isCached() const
     { return cached_; }
 
     // caching is used to avoid re-calculating the same property:
-    void uncache();
+    void uncache()
+    {
+      visited_ = false;
+      cached_ = false;
+    }
 
     // cache an externally computed value:
-    void cache(double value) const;
+    void cache(const TData & value) const
+    {
+      cached_ = true;
+      value_ = value;
+    }
 
-    // NOTE: this must handle cyclical items!
-    double get() const;
+    const TData & get() const
+    {
+      if (cached_)
+      {
+        return value_;
+      }
+
+      if (!ref_)
+      {
+        YAE_ASSERT(property_ == kPropertyConstant);
+      }
+      else if (visited_)
+      {
+        // cycle detected:
+        YAE_ASSERT(false);
+        throw std::runtime_error("property reference cycle detected");
+      }
+      else
+      {
+        visited_ = true;
+
+        TData v = ref_->get(property_);
+        v *= scale_;
+        v += translate_;
+        value_ = v;
+      }
+
+      cached_ = true;
+      return value_;
+    }
 
     // reference properties:
-    const Item * item_;
+    const IProperties * ref_;
     Property property_;
-    double offset_;
     double scale_;
+    double translate_;
 
   protected:
     mutable bool visited_;
     mutable bool cached_;
-    mutable double value_;
+    mutable TData value_;
   };
+
+  //----------------------------------------------------------------
+  // ItemRef
+  //
+  typedef DataRef<double> ItemRef;
 
   //----------------------------------------------------------------
   // Margins
@@ -156,12 +271,12 @@ namespace yae
   {
     void uncache();
 
-    void fill(const Item * reference, double offset = 0.0);
-    void center(const Item * reference);
-    void topLeft(const Item * reference, double offset = 0.0);
-    void topRight(const Item * reference, double offset = 0.0);
-    void bottomLeft(const Item * reference, double offset = 0.0);
-    void bottomRight(const Item * reference, double offset = 0.0);
+    void fill(const IProperties * reference, double offset = 0.0);
+    void center(const IProperties * reference);
+    void topLeft(const IProperties * reference, double offset = 0.0);
+    void topRight(const IProperties * reference, double offset = 0.0);
+    void bottomLeft(const IProperties * reference, double offset = 0.0);
+    void bottomRight(const IProperties * reference, double offset = 0.0);
 
     ItemRef left_;
     ItemRef right_;
@@ -174,7 +289,7 @@ namespace yae
   //----------------------------------------------------------------
   // Item
   //
-  struct Item
+  struct Item : public IProperties
   {
 
     //----------------------------------------------------------------
@@ -182,7 +297,7 @@ namespace yae
     //
     typedef boost::shared_ptr<Item> ItemPtr;
 
-    Item();
+    Item(const char * id = NULL);
     virtual ~Item() {}
 
     // calculate the bounding box of item content, if any,
@@ -191,12 +306,14 @@ namespace yae
     // NOTE: default implementation returns an empty bbox
     // because it has no content besides nested children.
     virtual void calcContentBBox(BBox & bbox) const;
-#if 1
+#if 0
     void calcOuterBBox(BBox & bbox) const;
     void calcInnerBBox(BBox & bbox) const;
 #endif
-    void layout();
-    void uncache();
+    virtual void layout();
+    virtual void uncache();
+
+    virtual double get(Property property) const;
 
     double width() const;
     double height() const;
@@ -207,11 +324,35 @@ namespace yae
     double hcenter() const;
     double vcenter() const;
 
-    // FIXME: for debugging only:
-    void dump(std::ostream & os,
-              const std::string & indent = std::string()) const;
+    template <typename TItem>
+    inline TItem & addNew(const char * id = NULL)
+    {
+      children_.push_back(ItemPtr(new TItem(id)));
+      Item & child = *(children_.back());
+      child.parent_ = this;
+      return static_cast<TItem &>(child);
+    }
 
-    virtual void paint(unsigned char color) const;
+    inline ItemRef addExpr(Expression * e,
+                           double scale = 1.0,
+                           double translate = 0.0)
+    {
+      expressions_.push_back(TExpressionPtr(e));
+      return ItemRef::expression(e, scale, translate);
+    }
+
+    // FIXME: for debugging only:
+    virtual void dump(std::ostream & os,
+                      const std::string & indent = std::string()) const;
+
+    // an item has no visual representation, but a Rectangle subclass does:
+    virtual void paint() const;
+
+    // item id, mostly used for debugging:
+    std::string id_;
+
+    // FIXME: for debugging only:
+    unsigned int color_;
 
     // parent item:
     const Item * parent_;
@@ -233,6 +374,9 @@ namespace yae
     // cached bounding box of this item content
     // and bounding boxes of the nested items:
     BBox bboxContent_;
+
+    // storage of expressions associated with this Item:
+    std::list<TExpressionPtr> expressions_;
   };
 
   //----------------------------------------------------------------
@@ -240,6 +384,61 @@ namespace yae
   //
   typedef Item::ItemPtr ItemPtr;
 
+  //----------------------------------------------------------------
+  // Rectangle
+  //
+  struct Rectangle : public Item
+  {
+    Rectangle(const char * id = NULL);
+
+    virtual void paint() const;
+
+    // corner radius:
+    ItemRef radius_;
+
+    // border:
+    ItemRef border_;
+    // ColorRef borderColor_;
+  };
+
+  //----------------------------------------------------------------
+  // Scrollable
+  //
+  struct Scrollable : public Item
+  {
+    Scrollable(const char * id = NULL);
+
+    virtual void layout();
+    virtual void uncache();
+    virtual void paint() const;
+
+    virtual void dump(std::ostream & os,
+                      const std::string & indent = std::string()) const;
+
+    // item container:
+    Item content_;
+
+    // [0, 1] view position relative to content size
+    // where 0 corresponds to the beginning of content
+    // and 1 corresponds to the end of content
+    double position_;
+  };
+
+  //----------------------------------------------------------------
+  // ILayoutDelegate
+  //
+  struct YAE_API ILayoutDelegate
+  {
+    typedef boost::shared_ptr<ILayoutDelegate> TLayoutPtr;
+    typedef PlaylistModel::LayoutHint TLayoutHint;
+
+    virtual ~ILayoutDelegate() {}
+
+    virtual void layout(Item & rootItem,
+                        const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                        const PlaylistModelProxy & model,
+                        const QModelIndex & rootIndex) = 0;
+  };
 
   //----------------------------------------------------------------
   // PlaylistView
@@ -250,6 +449,9 @@ namespace yae
     Q_OBJECT;
 
   public:
+    typedef ILayoutDelegate::TLayoutPtr TLayoutPtr;
+    typedef ILayoutDelegate::TLayoutHint TLayoutHint;
+
     PlaylistView();
 
     // virtual:
@@ -282,32 +484,6 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
-    inline static double calc_cell_width(double w)
-    {
-      double n = std::min<double>(5.0, std::floor(w / 160.0));
-      return (n < 1.0) ? w : (w / n);
-    }
-
-    inline static double calc_cell_height(double cell_width)
-    {
-      double h = std::floor(cell_width * 9.0 / 16.0);
-      return h;
-    }
-
-    inline unsigned int calc_items_per_row() const
-    {
-      double c = calc_cell_width(w_);
-      double n = std::floor(w_ / c);
-      return (unsigned int)n;
-    }
-
-    inline static unsigned
-    calc_rows(double viewWidth, double cellWidth, unsigned int numItems)
-    {
-      double cellsPerRow = std::floor(viewWidth / cellWidth);
-      double n = std::max(1.0, std::ceil(double(numItems) / cellsPerRow));
-      return n;
-    }
 
     Item root_;
     PlaylistModelProxy * model_;
@@ -315,6 +491,7 @@ namespace yae
     double h_;
     double position_;
     double sceneSize_;
+    std::map<TLayoutHint, TLayoutPtr> layoutDelegates_;
   };
 
 };

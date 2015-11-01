@@ -848,7 +848,7 @@ namespace yae
     YAE_OGL_11_HERE();
 
     YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
-                      GLsizei(w + 0.5), GLsizei(h + 0.5)));
+                          GLsizei(w + 0.5), GLsizei(h + 0.5)));
 
     TGLSaveMatrixState pushMatrix(GL_PROJECTION);
     YAE_OGL_11(glLoadIdentity());

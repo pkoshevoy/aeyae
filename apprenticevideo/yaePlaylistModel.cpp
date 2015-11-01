@@ -88,7 +88,9 @@ namespace yae
     {
       const std::size_t n = playlist_.groups().size();
       PlaylistNode * playlistNode = &playlist_;
-      return row < int(n) ? createIndex(row, column, playlistNode) : QModelIndex();
+      return ((row < int(n)) ?
+              createIndex(row, column, playlistNode) :
+              QModelIndex());
     }
 
     const PlaylistNode * parentNode = NULL;
@@ -154,6 +156,7 @@ namespace yae
     roles[kRoleFlatIndex] = "flatIndex";
     roles[kRoleFilterKey] = "filterKey";
     roles[kRoleItemCount] = "itemCount";
+    roles[kRoleLayoutHint] = "layoutHint";
 
     return roles;
   }
@@ -263,6 +266,14 @@ namespace yae
         return QVariant((quint64)(group->items_.size()));
       }
 
+      if (role == kRoleLayoutHint)
+      {
+        // FIXME: this hardcodes the thumbnail grid layout:
+        QVariant v;
+        v.setValue<LayoutHint>(kLayoutHintItemGrid);
+        return v;
+      }
+
       return QVariant();
     }
 
@@ -351,7 +362,22 @@ namespace yae
         return text;
       }
 
+      if (role == kRoleLayoutHint)
+      {
+        // FIXME: this hardcodes the thumbnail grid layout:
+        QVariant v;
+        v.setValue<LayoutHint>(kLayoutHintItemGridCell);
+        return v;
+      }
+
       return QVariant();
+    }
+
+    if (role == kRoleLayoutHint && node == &playlist_)
+    {
+      QVariant v;
+      v.setValue<LayoutHint>(kLayoutHintGroupList);
+      return v;
     }
 
     return QVariant();

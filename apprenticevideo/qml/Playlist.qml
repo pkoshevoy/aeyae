@@ -59,7 +59,7 @@ Item
 
   function calc_title_height(min_height, w)
   {
-    return Math.max(min_height, 24.0 * playlist.width / 800.0);
+    return Math.max(min_height, 24.0 * w / 800.0);
   }
 
   function calc_zebra_index(index, cell_width, view_width)

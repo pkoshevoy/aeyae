@@ -16,6 +16,202 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // calcCellWidth
+  //
+  inline static double
+  calcCellWidth(double rowWidth)
+  {
+    double n = std::min<double>(5.0, std::floor(rowWidth / 160.0));
+    return (n < 1.0) ? rowWidth : (rowWidth / n);
+  }
+
+  //----------------------------------------------------------------
+  // calcCellHeight
+  //
+  inline static double
+  calcCellHeight(double cellWidth)
+  {
+    double h = std::floor(cellWidth * 9.0 / 16.0);
+    return h;
+  }
+
+  //----------------------------------------------------------------
+  // calcItemsPerRow
+  //
+  inline static unsigned int
+  calcItemsPerRow(double rowWidth)
+  {
+    double c = calcCellWidth(rowWidth);
+    double n = std::floor(rowWidth / c);
+    return (unsigned int)n;
+  }
+
+  //----------------------------------------------------------------
+  // calcRows
+  //
+  inline static unsigned int
+  calcRows(double viewWidth, double cellWidth, unsigned int numItems)
+  {
+    double cellsPerRow = std::floor(viewWidth / cellWidth);
+    double n = std::max(1.0, std::ceil(double(numItems) / cellsPerRow));
+    return n;
+  }
+
+  //----------------------------------------------------------------
+  // calcTitleHeight
+  //
+  inline static double
+  calcTitleHeight(double minHeight, double w)
+  {
+    return std::max<double>(minHeight, 24.0 * w / 800.0);
+  }
+
+  //----------------------------------------------------------------
+  // GridCellLeft
+  //
+  struct GridCellLeft : public Expression
+  {
+    GridCellLeft(const Item * root, std::size_t cell):
+      root_(root),
+      cell_(cell)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double rootWidth = root_->width();
+      unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
+      std::size_t cellCol = cell_ % cellsPerRow;
+      double ox = root_->left();
+      double x = ox + rootWidth * double(cellCol) / double(cellsPerRow);
+      return x;
+    }
+
+    const Item * root_;
+    std::size_t cell_;
+  };
+
+  //----------------------------------------------------------------
+  // GridCellTop
+  //
+  struct GridCellTop : public Expression
+  {
+    GridCellTop(const Item * root, std::size_t cell):
+      root_(root),
+      cell_(cell)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      std::size_t numCells = root_->children_.size();
+      double rootWidth = root_->width();
+      double cellWidth = calcCellWidth(rootWidth);
+      double cellHeight = calcCellHeight(cellWidth);
+      unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
+      unsigned int rowsOfCells = calcRows(rootWidth, cellWidth, numCells);
+      double gridHeight = cellHeight * double(rowsOfCells);
+      std::size_t cellRow = cell_ / cellsPerRow;
+      double oy = root_->top();
+      double y = oy + gridHeight * double(cellRow) / double(rowsOfCells);
+      return y;
+    }
+
+    const Item * root_;
+    std::size_t cell_;
+  };
+
+  //----------------------------------------------------------------
+  // GridCellWidth
+  //
+  struct GridCellWidth : public Expression
+  {
+    GridCellWidth(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double rootWidth = root_->width();
+      double cellWidth = calcCellWidth(rootWidth);
+      return cellWidth;
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // GridCellHeight
+  //
+  struct GridCellHeight : public Expression
+  {
+    GridCellHeight(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double rootWidth = root_->width();
+      double cellWidth = calcCellWidth(rootWidth);
+      double cellHeight = calcCellHeight(cellWidth);
+      return cellHeight;
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcTitleHeight
+  //
+  struct CalcTitleHeight : public Expression
+  {
+    CalcTitleHeight(const Item * root, double minHeight):
+      root_(root),
+      minHeight_(minHeight)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double rootWidth = root_->width();
+      double titleHeight = calcTitleHeight(minHeight_, rootWidth);
+      return titleHeight;
+    }
+
+    const Item * root_;
+    double minHeight_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcContentTop
+  //
+  struct CalcContentTop : public Expression
+  {
+    CalcContentTop(const Scrollable * view):
+      view_(view)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double sceneHeight = view_->content_.height();
+      double viewHeight = view_->height();
+      if (sceneHeight <= viewHeight)
+      {
+        return 0.0;
+      }
+
+      double range = sceneHeight - viewHeight;
+      double top = view_->position_ * range;
+      return -top;
+    }
+
+    const Scrollable * view_;
+  };
+
+  //----------------------------------------------------------------
   // BBox::clear
   //
   void
@@ -58,95 +254,6 @@ namespace yae
         h_ = b - y_;
       }
     }
-  }
-
-
-  //----------------------------------------------------------------
-  // ItemRef::ItemRef
-  //
-  ItemRef::ItemRef(const Item * referenceItem,
-                   Property property,
-                   double offset,
-                   double scale):
-    item_(referenceItem),
-    property_(property),
-    offset_(offset),
-    scale_(scale),
-    visited_(false),
-    cached_(false),
-    value_(std::numeric_limits<double>::max())
-  {}
-
-  //----------------------------------------------------------------
-  // ItemRef::uncache
-  //
-  void
-  ItemRef::uncache()
-  {
-    visited_ = false;
-    cached_ = false;
-    value_ = std::numeric_limits<double>::max();
-  }
-
-  //----------------------------------------------------------------
-  // ItemRef::cache
-  //
-  void
-  ItemRef::cache(double value) const
-  {
-    cached_ = true;
-    value_ = value;
-  }
-
-  //----------------------------------------------------------------
-  // ItemRef::get
-  //
-  double
-  ItemRef::get() const
-  {
-    if (cached_)
-    {
-      return value_;
-    }
-
-    if (!item_)
-    {
-      YAE_ASSERT(property_ == ItemRef::kConstant);
-      value_ = offset_;
-    }
-    else if (visited_)
-    {
-      // item cycle detected:
-      YAE_ASSERT(false);
-      value_ = std::numeric_limits<double>::max();
-    }
-    else
-    {
-      visited_ = true;
-
-      value_ =
-        (property_ == ItemRef::kWidth) ? item_->width() :
-        (property_ == ItemRef::kHeight) ? item_->height() :
-        (property_ == ItemRef::kLeft) ? item_->left() :
-        (property_ == ItemRef::kRight) ? item_->right() :
-        (property_ == ItemRef::kTop) ? item_->top() :
-        (property_ == ItemRef::kBottom) ? item_->bottom() :
-        (property_ == ItemRef::kHCenter) ? item_->hcenter() :
-        (property_ == ItemRef::kVCenter) ? item_->vcenter() :
-        std::numeric_limits<double>::max();
-
-      if (value_ != std::numeric_limits<double>::max())
-      {
-        value_ = offset_ + scale_ * value_;
-      }
-      else
-      {
-        YAE_ASSERT(false);
-      }
-    }
-
-    cached_ = true;
-    return value_;
   }
 
 
@@ -201,71 +308,77 @@ namespace yae
   // Anchors::fill
   //
   void
-  Anchors::fill(const Item * item, double offset)
+  Anchors::fill(const IProperties * ref, double offset)
   {
-    left_ = ItemRef::offset(item, ItemRef::kLeft, offset);
-    right_ = ItemRef::offset(item, ItemRef::kRight, -offset);
-    top_ = ItemRef::offset(item, ItemRef::kTop, offset);
-    bottom_ = ItemRef::offset(item, ItemRef::kBottom, -offset);
+    left_ = ItemRef::offset(ref, kPropertyLeft, offset);
+    right_ = ItemRef::offset(ref, kPropertyRight, -offset);
+    top_ = ItemRef::offset(ref, kPropertyTop, offset);
+    bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
   }
 
   //----------------------------------------------------------------
   // Anchors::center
   //
   void
-  Anchors::center(const Item * item)
+  Anchors::center(const IProperties * ref)
   {
-    hcenter_ = ItemRef::offset(item, ItemRef::kHCenter);
-    vcenter_ = ItemRef::offset(item, ItemRef::kVCenter);
+    hcenter_ = ItemRef::offset(ref, kPropertyHCenter);
+    vcenter_ = ItemRef::offset(ref, kPropertyVCenter);
   }
 
   //----------------------------------------------------------------
   // Anchors::topLeft
   //
   void
-  Anchors::topLeft(const Item * item, double offset)
+  Anchors::topLeft(const IProperties * ref, double offset)
   {
-    top_ = ItemRef::offset(item, ItemRef::kTop, offset);
-    left_ = ItemRef::offset(item, ItemRef::kLeft, offset);
+    top_ = ItemRef::offset(ref, kPropertyTop, offset);
+    left_ = ItemRef::offset(ref, kPropertyLeft, offset);
   }
 
   //----------------------------------------------------------------
   // Anchors::topRight
   //
   void
-  Anchors::topRight(const Item * item, double offset)
+  Anchors::topRight(const IProperties * ref, double offset)
   {
-    top_ = ItemRef::offset(item, ItemRef::kTop, offset);
-    right_ = ItemRef::offset(item, ItemRef::kRight, -offset);
+    top_ = ItemRef::offset(ref, kPropertyTop, offset);
+    right_ = ItemRef::offset(ref, kPropertyRight, -offset);
   }
 
   //----------------------------------------------------------------
   // Anchors::bottomLeft
   //
   void
-  Anchors::bottomLeft(const Item * item, double offset)
+  Anchors::bottomLeft(const IProperties * ref, double offset)
   {
-    bottom_ = ItemRef::offset(item, ItemRef::kBottom, -offset);
-    left_ = ItemRef::offset(item, ItemRef::kLeft, offset);
+    bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
+    left_ = ItemRef::offset(ref, kPropertyLeft, offset);
   }
 
   //----------------------------------------------------------------
   // Anchors::bottomRight
   //
   void
-  Anchors::bottomRight(const Item * item, double offset)
+  Anchors::bottomRight(const IProperties * ref, double offset)
   {
-    bottom_ = ItemRef::offset(item, ItemRef::kBottom, -offset);
-    right_ = ItemRef::offset(item, ItemRef::kRight, -offset);
+    bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
+    right_ = ItemRef::offset(ref, kPropertyRight, -offset);
   }
 
 
   //----------------------------------------------------------------
   // Item::Item
   //
-  Item::Item():
-    parent_(NULL)
-  {}
+  Item::Item(const char * id):
+    parent_(NULL),
+    color_(0)
+  {
+    if (id)
+    {
+      id_.assign(id);
+    }
+  }
 
   //----------------------------------------------------------------
   // Item::calcContentBBox
@@ -275,7 +388,7 @@ namespace yae
   {
     bbox.clear();
   }
-#if 1
+#if 0
   //----------------------------------------------------------------
   // Item::calcOuterBBox
   //
@@ -358,6 +471,50 @@ namespace yae
     height_.uncache();
     anchors_.uncache();
     margins_.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  double
+  Item::get(Property property) const
+  {
+    if (property == kPropertyWidth)
+    {
+      return this->width();
+    }
+    else if (property == kPropertyHeight)
+    {
+      return this->height();
+    }
+    else if (property == kPropertyLeft)
+    {
+      return this->left();
+    }
+    else if (property == kPropertyRight)
+    {
+      return this->right();
+    }
+    else if (property == kPropertyTop)
+    {
+      return this->top();
+    }
+    else if (property == kPropertyBottom)
+    {
+      return this->bottom();
+    }
+    else if (property == kPropertyHCenter)
+    {
+      return this->hcenter();
+    }
+    else if (property == kPropertyVCenter)
+    {
+      return this->vcenter();
+    }
+
+    YAE_ASSERT(false);
+    throw std::runtime_error("unsupported item property");
+    return std::numeric_limits<double>::max();
   }
 
   //----------------------------------------------------------------
@@ -573,6 +730,7 @@ namespace yae
        << ", y: " << bbox_.y_
        << ", w: " << bbox_.w_
        << ", h: " << bbox_.h_
+       << ", id: " << id_
        << std::endl;
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
@@ -587,32 +745,70 @@ namespace yae
   // paintBBox
   //
   static void
-  paintBBox(const BBox & bbox,
-            unsigned char r,
-            unsigned char g,
-            unsigned char b)
+  paintBBox(const BBox & bbox, unsigned int c = 0)
   {
     double x0 = bbox.x_;
     double y0 = bbox.y_;
     double x1 = bbox.w_ + x0;
     double y1 = bbox.h_ + y0;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glBegin(GL_LINES));
+    double r0 = std::min(bbox.w_, bbox.h_) * 0.2;
+    double w0 = bbox.w_ - 2.0 * r0;
+    double h0 = bbox.h_ - 2.0 * r0;
+
+    double color[16];
+    for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
     {
-      YAE_OGL_11(glColor3ub(r, g, b));
+      rgba[0] = drand48();
+      rgba[1] = drand48();
+      rgba[2] = drand48();
+      rgba[3] = 0.33;
+    }
+
+    YAE_OGL_11_HERE();
+    if (!c)
+    {
+      double t = drand48();
+      YAE_OGL_11(glColor4d(t, t, t, 0.33));
+    }
+    else
+    {
+      unsigned char r = 0xff & (c >> 24);
+      unsigned char g = 0xff & (c >> 16);
+      unsigned char b = 0xff & (c >> 8);
+      unsigned char a = 0xff & (c);
+      YAE_OGL_11(glColor4ub(r, g, b, a));
+    }
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      // YAE_OGL_11(glColor4dv(color));
       YAE_OGL_11(glVertex2d(x0, y0));
+
+      // YAE_OGL_11(glColor4dv(color + 4));
       YAE_OGL_11(glVertex2d(x0, y1));
-      // YAE_OGL_11(glColor3ub(r, g, b));
-      YAE_OGL_11(glVertex2d(x0, y0));
+
+      // YAE_OGL_11(glColor4dv(color + 8));
       YAE_OGL_11(glVertex2d(x1, y0));
 
-      // YAE_OGL_11(glColor3ub(r, g, b));
+      // YAE_OGL_11(glColor4dv(color + 12));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    YAE_OGL_11(glBegin(GL_LINE_LOOP));
+    {
+      YAE_OGL_11(glColor4dv(color + 0));
+      YAE_OGL_11(glVertex2d(x0, y0));
+
+      YAE_OGL_11(glColor4dv(color + 4));
       YAE_OGL_11(glVertex2d(x0, y1));
+
+      YAE_OGL_11(glColor4dv(color + 12));
       YAE_OGL_11(glVertex2d(x1, y1));
-      // YAE_OGL_11(glColor3ub(r, g, b));
+
+      YAE_OGL_11(glColor4dv(color + 8));
       YAE_OGL_11(glVertex2d(x1, y0));
-      YAE_OGL_11(glVertex2d(x1, y1));
     }
     YAE_OGL_11(glEnd());
   }
@@ -621,27 +817,296 @@ namespace yae
   // Item::paint
   //
   void
-  Item::paint(unsigned char c) const
+  Item::paint() const
   {
-    paintBBox(bbox_, c, 0, 0);
+    paintBBox(bbox_, color_);
 
-#if 1
+#if 0
     BBox outerBBox;
     calcOuterBBox(outerBBox);
-    paintBBox(outerBBox, 0, c, c);
+    paintBBox(outerBBox);
+#endif
 
+#if 0
     BBox innerBBox;
     calcInnerBBox(innerBBox);
-    paintBBox(innerBBox, 0, c, 0);
+    paintBBox(innerBBox);
 #endif
+
+    double x = left();
+    double y = top();
+
+    // TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
+    // YAE_OGL_11_HERE();
+    // YAE_OGL_11(glTranslated(x, y, 0.0));
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
-      unsigned int c1 = 64 + (((unsigned int)(c) - 64) + 32) % 192;
-      child->paint(c1);
+      child->paint();
     }
+  }
+
+
+  //----------------------------------------------------------------
+  // TLayoutPtr
+  //
+  typedef ILayoutDelegate::TLayoutPtr TLayoutPtr;
+
+  //----------------------------------------------------------------
+  // TLayoutHint
+  //
+  typedef PlaylistModel::LayoutHint TLayoutHint;
+
+  //----------------------------------------------------------------
+  // findLayoutDelegate
+  //
+  static ILayoutDelegate::TLayoutPtr
+  findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
+                     TLayoutHint layoutHint)
+  {
+    std::map<TLayoutHint, TLayoutPtr>::const_iterator found =
+      delegates.find(layoutHint);
+
+    if (found != delegates.end())
+    {
+      return found->second;
+    }
+
+    YAE_ASSERT(false);
+    return TLayoutPtr();
+  }
+
+  //----------------------------------------------------------------
+  // findLayoutDelegate
+  //
+  static ILayoutDelegate::TLayoutPtr
+  findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
+                     const PlaylistModelProxy & model,
+                     const QModelIndex & modelIndex)
+  {
+    QVariant v = model.data(modelIndex, PlaylistModel::kRoleLayoutHint);
+
+    if (v.canConvert<TLayoutHint>())
+    {
+      TLayoutHint layoutHint = v.value<TLayoutHint>();
+      return findLayoutDelegate(delegates, layoutHint);
+    }
+
+    YAE_ASSERT(false);
+    return TLayoutPtr();
+  }
+
+
+  //----------------------------------------------------------------
+  // GroupListLayout
+  //
+  struct GroupListLayout : public ILayoutDelegate
+  {
+    void layout(Item & root,
+                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistModelProxy & model,
+                const QModelIndex & rootIndex)
+    {
+      Item & filter = root.addNew<Item>("filter");
+      filter.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
+      filter.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
+      filter.width_ = ItemRef::reference(&root, kPropertyWidth);
+      filter.height_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 1.5);
+
+      // FIXME:
+      filter.color_ = 0xffffff7f;
+
+      // FIXME: what about scrollbar?
+      Scrollable & view = root.addNew<Scrollable>("scrollable");
+      view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
+      view.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
+      view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
+      view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
+
+      // FIXME:
+      view.color_ = 0xff0000ff;
+
+      Item & groups = view.content_;
+      groups.anchors_.left_ = ItemRef::reference(&view, kPropertyLeft);
+      groups.anchors_.right_ = ItemRef::reference(&view, kPropertyRight);
+      groups.anchors_.top_ = ItemRef::constant(0.0);
+
+      // FIXME:
+      groups.color_ = 0x7fff0000;
+
+      const int numGroups = model.rowCount(rootIndex);
+      for (int i = 0; i < numGroups; i++)
+      {
+        Item & group = groups.addNew<Item>("group");
+        group.anchors_.left_ = ItemRef::reference(&groups, kPropertyLeft);
+        group.anchors_.right_ = ItemRef::reference(&groups, kPropertyRight);
+
+        // FIXME:
+        group.color_ = 0x7fff7f00;
+
+        if (i < 1)
+        {
+          group.anchors_.top_ = ItemRef::reference(&groups, kPropertyTop);
+        }
+        else
+        {
+          Item & prev = *(groups.children_[i - 1]);
+          group.anchors_.top_ = ItemRef::reference(&prev, kPropertyBottom);
+        }
+
+        QModelIndex childIndex = model.index(i, 0, rootIndex);
+        ILayoutDelegate::TLayoutPtr childLayout =
+           findLayoutDelegate(layouts, model, childIndex);
+
+        if (childLayout)
+        {
+          childLayout->layout(group,
+                              layouts,
+                              model,
+                              childIndex);
+        }
+      }
+    }
+  };
+
+  //----------------------------------------------------------------
+  // ItemGridLayout
+  //
+  struct ItemGridLayout : public ILayoutDelegate
+  {
+    void layout(Item & group,
+                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistModelProxy & model,
+                const QModelIndex & groupIndex)
+    {
+      Item & spacer = group.addNew<Item>("spacer");
+      spacer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+      spacer.anchors_.top_ = ItemRef::reference(&group, kPropertyTop);
+      spacer.width_ = ItemRef::reference(&group, kPropertyWidth);
+      spacer.height_ = spacer.addExpr(new GridCellHeight(&group), 0.2);
+
+      // FIXME:
+      spacer.color_ = 0x01010100;
+
+      Item & title = group.addNew<Item>("title");
+      title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+      title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
+      title.width_ = ItemRef::reference(&group, kPropertyWidth);
+      title.height_ = title.addExpr(new CalcTitleHeight(&group, 24.0));
+
+      // FIXME:
+      title.color_ = 0x7f7f7f7f;
+
+      Item & grid = group.addNew<Item>("grid");
+      grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
+      grid.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+      grid.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
+
+      // FIXME:
+      grid.color_ = 0x01010100;
+
+      const int numCells = model.rowCount(groupIndex);
+      for (int i = 0; i < numCells; i++)
+      {
+        Item & cell = grid.addNew<Item>("cell");
+        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(&grid, i));
+        cell.anchors_.top_ = cell.addExpr(new GridCellTop(&grid, i));
+        cell.width_ = cell.addExpr(new GridCellWidth(&grid));
+        cell.height_ = cell.addExpr(new GridCellHeight(&grid));
+
+        // FIXME:
+        cell.color_ = 0xff7f007f;
+
+        QModelIndex childIndex = model.index(i, 0, groupIndex);
+        ILayoutDelegate::TLayoutPtr childLayout =
+           findLayoutDelegate(layouts, model, childIndex);
+
+        if (childLayout)
+        {
+          childLayout->layout(cell, layouts, model, childIndex);
+        }
+      }
+    }
+  };
+
+  //----------------------------------------------------------------
+  // ItemGridCellLayout
+  //
+  struct ItemGridCellLayout : public ILayoutDelegate
+  {
+    void layout(Item & item,
+                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistModelProxy & model,
+                const QModelIndex & itemIndex)
+    {
+      // FIXME: write me!
+    }
+  };
+
+  //----------------------------------------------------------------
+  // Scrollable::Scrollable
+  //
+  Scrollable::Scrollable(const char * id):
+    Item(id),
+    content_("content"),
+    position_(0.0)
+  {}
+
+  //----------------------------------------------------------------
+  // Scrollable::layout
+  //
+  void
+  Scrollable::layout()
+  {
+    Item::layout();
+    content_.layout();
+  }
+
+  //----------------------------------------------------------------
+  // Scrollable::uncache
+  //
+  void
+  Scrollable::uncache()
+  {
+    Item::uncache();
+    content_.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Scrollable::paint
+  //
+  void
+  Scrollable::paint() const
+  {
+    double sceneHeight = content_.height();
+    double viewHeight = this->height();
+
+    double x = left();
+    double y = top();
+
+    double dy = 0.0;
+    if (sceneHeight > viewHeight)
+    {
+      double range = sceneHeight - viewHeight;
+      dy = position_ * range;
+    }
+
+    TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glTranslated(x, y + dy, 0.0));
+    content_.paint();
+  }
+
+  //----------------------------------------------------------------
+  // Scrollable::dump
+  //
+  void
+  Scrollable::dump(std::ostream & os, const std::string & indent) const
+  {
+    Item::dump(os, indent);
+    content_.dump(os, indent + "  ");
   }
 
 
@@ -656,6 +1121,15 @@ namespace yae
     position_(0.0),
     sceneSize_(0.0)
   {
+    layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
+      TLayoutPtr(new GroupListLayout());
+
+    layoutDelegates_[PlaylistModel::kLayoutHintItemGrid] =
+      TLayoutPtr(new ItemGridLayout());
+
+    layoutDelegates_[PlaylistModel::kLayoutHintItemGridCell] =
+      TLayoutPtr(new ItemGridCellLayout());
+
 #if 0 // FIXME: just for testing
     root_.margins_.set(20.0);
     root_.children_.push_back(ItemPtr(new Item()));
@@ -667,10 +1141,10 @@ namespace yae
 
     root_.children_.push_back(ItemPtr(new Item()));
     Item & g1 = *(root_.children_.back());
-    g1.anchors_.top_ = ItemRef::offset(&g0, ItemRef::kBottom, 20.0);
-    g1.anchors_.left_ = ItemRef::offset(&g0, ItemRef::kRight, 20.0);
-    g1.width_ = ItemRef::scale(&g0, ItemRef::kWidth, 0.5);
-    g1.height_ = ItemRef::scale(&g0, ItemRef::kHeight, 0.5);
+    g1.anchors_.top_ = ItemRef::offset(&g0, kPropertyBottom, 20.0);
+    g1.anchors_.left_ = ItemRef::offset(&g0, kPropertyRight, 20.0);
+    g1.width_ = ItemRef::scale(&g0, kPropertyWidth, 0.5);
+    g1.height_ = ItemRef::scale(&g0, kPropertyHeight, 0.5);
     g1.margins_.set(-10);
 
     g0.children_.push_back(ItemPtr(new Item()));
@@ -689,7 +1163,12 @@ namespace yae
   void
   PlaylistView::resizeTo(const Canvas * canvas)
   {
-    // FIXME: rebuild the view!
+    w_ = canvas->canvasWidth();
+    h_ = canvas->canvasHeight();
+    root_.width_ = ItemRef::constant(w_);
+    root_.height_ = ItemRef::constant(h_);
+    root_.uncache();
+    root_.layout();
   }
 
   //----------------------------------------------------------------
@@ -707,15 +1186,21 @@ namespace yae
     YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
                           GLsizei(w + 0.5), GLsizei(h + 0.5)));
 
-    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
+    TGLSaveMatrixState pushMatrix0(GL_MODELVIEW);
+    YAE_OGL_11(glLoadIdentity());
+    TGLSaveMatrixState pushMatrix1(GL_PROJECTION);
     YAE_OGL_11(glLoadIdentity());
     YAE_OGL_11(glOrtho(0.0, w, h, 0.0, -1.0, 1.0));
 
-      YAE_OGL_11(glDisable(GL_LIGHTING));
-      YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
-      YAE_OGL_11(glLineWidth(2.0));
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+    YAE_OGL_11(glLineWidth(1.0));
 
-      root_.paint(64);
+    YAE_OGL_11(glEnable(GL_BLEND));
+    YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    YAE_OGL_11(glShadeModel(GL_SMOOTH));
+
+    root_.paint();
 
 #if 0
     // FIXME: for debugging
@@ -890,6 +1375,35 @@ namespace yae
   PlaylistView::layoutChanged()
   {
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
+
+    QModelIndex rootIndex = model_->index(0, 0).parent();
+    TLayoutPtr delegate = findLayoutDelegate(layoutDelegates_,
+                                             *model_,
+                                             rootIndex);
+    if (!delegate)
+    {
+      return;
+    }
+
+    root_ = Item("playlist");
+    root_.anchors_.left_ = ItemRef::constant(0.0);
+    root_.anchors_.top_ = ItemRef::constant(0.0);
+    root_.width_ = ItemRef::constant(w_);
+    root_.height_ = ItemRef::constant(h_);
+
+    // FIXME:
+    root_.color_ = 0x01010100;
+
+    delegate->layout(root_,
+                     layoutDelegates_,
+                     *model_,
+                     rootIndex);
+
+#ifndef NDEBUG
+    // FIXME: for debugging only:
+    root_.layout();
+    root_.dump(std::cerr);
+#endif
   }
 
   //----------------------------------------------------------------

@@ -50,8 +50,25 @@ namespace yae
       kRoleTimestamp,
       kRoleFlatIndex,
       kRoleFilterKey,
-      kRoleItemCount
-   };
+      kRoleItemCount,
+      kRoleLayoutHint
+    };
+
+    //----------------------------------------------------------------
+    // LayoutHint
+    //
+    enum LayoutHint {
+      kLayoutHintGroupList = 1,
+      kLayoutHintItemList,
+      kLayoutHintItemListRow,
+      kLayoutHintItemGrid,
+      kLayoutHintItemGridCell
+    };
+#ifdef YAE_USE_QT5
+    Q_ENUM(LayoutHint);
+#else
+    Q_ENUMS(LayoutHint);
+#endif
 
     PlaylistModel(QObject * parent = NULL);
 
@@ -213,6 +230,11 @@ namespace yae
     mutable Playlist playlist_;
   };
 }
+
+//----------------------------------------------------------------
+// yae::PlaylistModel::LayoutHint
+//
+Q_DECLARE_METATYPE(yae::PlaylistModel::LayoutHint);
 
 
 #endif // YAE_PLAYLIST_MODEL_H_

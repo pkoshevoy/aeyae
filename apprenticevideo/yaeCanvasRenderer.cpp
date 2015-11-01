@@ -2072,7 +2072,7 @@ namespace yae
         TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
         {
           YAE_OGL_11(glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
-                                  0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                                  0, // always 0 for GL_TEXTURE_RECTANGLE_ARB
                                   shader.internalFormatGL_[i],
                                   vtts.encodedWidth_ / shader.subsample_x_[i],
                                   vtts.encodedHeight_ / shader.subsample_y_[i],
@@ -2099,7 +2099,7 @@ namespace yae
 
       for (std::size_t i = 0; i < shader.numPlanes_; i++)
       {
-        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]);)
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]));
 
         YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
                                  shader.shouldSwapBytes_[i]));
@@ -2113,7 +2113,7 @@ namespace yae
         yae_assert_gl_no_error();
 
         YAE_OGL_11(glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
-                                0, // always level-0 for GL_TEXTURE_RECTANGLE_ARB
+                                0, // always 0 for GL_TEXTURE_RECTANGLE_ARB
                                 shader.internalFormatGL_[i],
                                 vtts.encodedWidth_ / shader.subsample_x_[i],
                                 vtts.encodedHeight_ / shader.subsample_y_[i],
