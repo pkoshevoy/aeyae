@@ -59,6 +59,26 @@ extern "C"
 namespace yae
 {
 
+#ifndef YAE_USE_QT5
+  //----------------------------------------------------------------
+  // initializeGlew
+  //
+  static bool
+  initializeGlew()
+  {
+    GLenum err = glewInit();
+    if (err != GLEW_OK)
+    {
+      std::cerr
+        << "GLEW init failed: " << glewGetErrorString(err)
+        << std::endl;
+      YAE_ASSERT(false);
+    }
+
+    return true;
+  }
+#endif
+
 #ifdef YAE_USE_LIBASS
   //----------------------------------------------------------------
   // getFontsConf
@@ -491,6 +511,11 @@ namespace yae
   Canvas::initializePrivateBackend()
   {
     TMakeCurrentContext currentContext(context());
+
+#ifndef YAE_USE_QT5
+    // initialize OpenGL GLEW wrapper:
+    static bool initialized = initializeGlew();
+#endif
 
     stopAsyncInitLibassThread();
     delete libass_;
@@ -938,26 +963,6 @@ namespace yae
       }
     }
   }
-
-#ifndef YAE_USE_QT5
-  //----------------------------------------------------------------
-  // initializeGlew
-  //
-  static bool
-  initializeGlew()
-  {
-    GLenum err = glewInit();
-    if (err != GLEW_OK)
-    {
-      std::cerr
-        << "GLEW init failed: " << glewGetErrorString(err)
-        << std::endl;
-      YAE_ASSERT(false);
-    }
-
-    return true;
-  }
-#endif
 
   //----------------------------------------------------------------
   // Canvas::paintCanvas

@@ -742,6 +742,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // drand
+  //
+  inline static double
+  drand()
+  {
+#ifdef _WIN32
+    int r = rand();
+    return double(r) / double(RAND_MAX);
+#else
+    return drand48();
+#endif
+  }
+
+  //----------------------------------------------------------------
   // paintBBox
   //
   static void
@@ -759,16 +773,16 @@ namespace yae
     double color[16];
     for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
     {
-      rgba[0] = drand48();
-      rgba[1] = drand48();
-      rgba[2] = drand48();
+      rgba[0] = drand();
+      rgba[1] = drand();
+      rgba[2] = drand();
       rgba[3] = 0.33;
     }
 
     YAE_OGL_11_HERE();
     if (!c)
     {
-      double t = drand48();
+      double t = drand();
       YAE_OGL_11(glColor4d(t, t, t, 0.33));
     }
     else
