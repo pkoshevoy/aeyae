@@ -116,8 +116,7 @@ namespace yae
     inline IOpenGLContext & context()
     { return *context_; }
 
-    inline void setDelegate(const boost::shared_ptr<IDelegate> & delegate)
-    { delegate_ = delegate; }
+    void setDelegate(const boost::shared_ptr<IDelegate> & delegate);
 
     inline const boost::shared_ptr<IDelegate> & delegate() const
     { return delegate_; }

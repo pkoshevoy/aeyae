@@ -505,6 +505,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::setDelegate
+  //
+  void
+  Canvas::setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+  {
+    delegate_ = delegate;
+    for (std::list<ILayer *>::reverse_iterator i = layers_.rbegin();
+         i != layers_.rend(); ++i)
+    {
+      ILayer * layer = *i;
+      layer->setDelegate(delegate_);
+    }
+  }
+
+  //----------------------------------------------------------------
   // Canvas::initializePrivateBackend
   //
   void
