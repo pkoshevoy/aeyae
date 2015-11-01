@@ -185,12 +185,47 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // CalcContentTop
+  // CalcSliderTop
   //
-  struct CalcContentTop : public Expression
+  struct CalcSliderTop : public Expression
   {
-    CalcContentTop(const Scrollable * view):
-      view_(view)
+    CalcSliderTop(const Scrollable * view, const Item * slider):
+      view_(view),
+      slider_(slider)
+    {}
+
+    // virtual:
+    double evaluate() const
+    {
+      double top = view_->top();
+
+      double sceneHeight = view_->content_.height();
+      double viewHeight = view_->height();
+      if (sceneHeight <= viewHeight)
+      {
+        return top;
+      }
+
+      double range = sceneHeight - viewHeight;
+      double scale = viewHeight / sceneHeight;
+      double minHeight = slider_->width() * 5.0;
+      double height = minHeight + (viewHeight - minHeight) * scale;
+      double y = (viewHeight - height) * view_->position_;
+      return top + y;
+    }
+
+    const Scrollable * view_;
+    const Item * slider_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcSliderHeight
+  //
+  struct CalcSliderHeight : public Expression
+  {
+    CalcSliderHeight(const Scrollable * view, const Item * slider):
+      view_(view),
+      slider_(slider)
     {}
 
     // virtual:
@@ -200,15 +235,18 @@ namespace yae
       double viewHeight = view_->height();
       if (sceneHeight <= viewHeight)
       {
-        return 0.0;
+        return viewHeight;
       }
 
       double range = sceneHeight - viewHeight;
-      double top = view_->position_ * range;
-      return -top;
+      double scale = viewHeight / sceneHeight;
+      double minHeight = slider_->width() * 5.0;
+      double height = minHeight + (viewHeight - minHeight) * scale;
+      return height;
     }
 
     const Scrollable * view_;
+    const Item * slider_;
   };
 
   //----------------------------------------------------------------
@@ -932,15 +970,25 @@ namespace yae
       // FIXME:
       filter.color_ = 0xffffff7f;
 
-      // FIXME: what about scrollbar?
       Scrollable & view = root.addNew<Scrollable>("scrollable");
-      view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
-      view.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
-      view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
-      view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
 
       // FIXME:
       view.color_ = 0xff0000ff;
+
+      Item & scrollbar = root.addNew<Item>("scrollbar");
+
+      // FIXME:
+      scrollbar.color_ = 0x80ff0000;
+
+      scrollbar.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
+      scrollbar.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
+      scrollbar.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
+      scrollbar.width_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 0.5);
+
+      view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
+      view.anchors_.right_ = ItemRef::reference(&scrollbar, kPropertyLeft);
+      view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
+      view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
 
       Item & groups = view.content_;
       groups.anchors_.left_ = ItemRef::reference(&view, kPropertyLeft);
@@ -982,6 +1030,16 @@ namespace yae
                               childIndex);
         }
       }
+
+      // configure scrollbar:
+      Item & slider = scrollbar.addNew<Item>("slider");
+      slider.anchors_.hcenter_ = ItemRef::offset(&scrollbar, kPropertyHCenter);
+      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(&view, &slider));
+      slider.width_ = ItemRef::scale(&scrollbar, kPropertyWidth, 0.6);
+      slider.height_ = slider.addExpr(new CalcSliderHeight(&view, &slider));
+
+      // FIXME:
+      slider.color_ = 0x7f7f7f7f;
     }
   };
 
@@ -1042,6 +1100,15 @@ namespace yae
           childLayout->layout(cell, layouts, model, childIndex);
         }
       }
+
+      Item & footer = group.addNew<Item>("footer");
+      footer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+      footer.anchors_.top_ = ItemRef::reference(&grid, kPropertyBottom);
+      footer.width_ = ItemRef::reference(&group, kPropertyWidth);
+      footer.height_ = footer.addExpr(new GridCellHeight(&group), 0.3);
+
+      // FIXME:
+      footer.color_ = 0x02020200;
     }
   };
 
@@ -1143,32 +1210,6 @@ namespace yae
 
     layoutDelegates_[PlaylistModel::kLayoutHintItemGridCell] =
       TLayoutPtr(new ItemGridCellLayout());
-
-#if 0 // FIXME: just for testing
-    root_.margins_.set(20.0);
-    root_.children_.push_back(ItemPtr(new Item()));
-    Item & g0 = *(root_.children_.back());
-    g0.anchors_.topLeft(&root_);
-    g0.width_ = ItemRef::constant(160.0);
-    g0.height_ = ItemRef::constant(90.0);
-    g0.margins_.set(20);
-
-    root_.children_.push_back(ItemPtr(new Item()));
-    Item & g1 = *(root_.children_.back());
-    g1.anchors_.top_ = ItemRef::offset(&g0, kPropertyBottom, 20.0);
-    g1.anchors_.left_ = ItemRef::offset(&g0, kPropertyRight, 20.0);
-    g1.width_ = ItemRef::scale(&g0, kPropertyWidth, 0.5);
-    g1.height_ = ItemRef::scale(&g0, kPropertyHeight, 0.5);
-    g1.margins_.set(-10);
-
-    g0.children_.push_back(ItemPtr(new Item()));
-    Item & g2 = *(g0.children_.back());
-    g2.anchors_.fill(&g0, 5);
-    g2.margins_.set(5);
-
-    root_.layout();
-    root_.dump(std::cerr);
-#endif
   }
 
   //----------------------------------------------------------------
@@ -1183,6 +1224,7 @@ namespace yae
     root_.height_ = ItemRef::constant(h_);
     root_.uncache();
     root_.layout();
+    // root_.dump(std::cerr);
   }
 
   //----------------------------------------------------------------
@@ -1253,7 +1295,15 @@ namespace yae
     if (et != QEvent::Paint &&
         et != QEvent::MouseMove &&
         et != QEvent::CursorChange &&
-        et != QEvent::Resize)
+        et != QEvent::Resize &&
+        et != QEvent::MacGLWindowChange &&
+        et != QEvent::Leave &&
+        et != QEvent::Enter &&
+        et != QEvent::WindowDeactivate &&
+        et != QEvent::WindowActivate &&
+        et != QEvent::FocusOut &&
+        et != QEvent::FocusIn &&
+        et != QEvent::ShortcutOverride)
     {
       std::cerr
         << "PlaylistView::processEvent: "
