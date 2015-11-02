@@ -73,6 +73,76 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Color
+  //
+  struct Color
+  {
+    Color(unsigned int rgb = 0, double a = 1.0):
+      argb_(rgb)
+    {
+      this->a() = (unsigned char)(std::max(0.0, std::min(255.0, 255.0 * a)));
+    }
+
+    inline const unsigned char & a() const { return this->operator[](0); }
+    inline const unsigned char & r() const { return this->operator[](1); }
+    inline const unsigned char & g() const { return this->operator[](2); }
+    inline const unsigned char & b() const { return this->operator[](3); }
+
+    inline unsigned char & a() { return this->operator[](0); }
+    inline unsigned char & r() { return this->operator[](1); }
+    inline unsigned char & g() { return this->operator[](2); }
+    inline unsigned char & b() { return this->operator[](3); }
+
+    inline const unsigned char & operator[] (unsigned int i) const
+    {
+      const unsigned char * argb = (const unsigned char *)&argb_;
+#if __LITTLE_ENDIAN__
+      return argb[3 - i];
+#else
+      return argb[i];
+#endif
+    }
+
+    inline unsigned char & operator[] (unsigned int i)
+    {
+      unsigned char * argb = (unsigned char *)&argb_;
+#if __LITTLE_ENDIAN__
+      return argb[3 - i];
+#else
+      return argb[i];
+#endif
+    }
+
+    Color & operator *= (double scale)
+    {
+      unsigned char * argb = (unsigned char *)&argb_;
+      argb[0] = (unsigned char)(std::min(255.0, double(argb[0]) * scale));
+      argb[1] = (unsigned char)(std::min(255.0, double(argb[1]) * scale));
+      argb[2] = (unsigned char)(std::min(255.0, double(argb[2]) * scale));
+      argb[3] = (unsigned char)(std::min(255.0, double(argb[3]) * scale));
+    }
+
+    Color & operator += (double translate)
+    {
+      unsigned char * argb = (unsigned char *)&argb_;
+
+      argb[0] = (unsigned char)
+        (std::max(0.0, std::min(255.0, double(argb[0]) + translate)));
+
+      argb[1] = (unsigned char)
+        (std::max(0.0, std::min(255.0, double(argb[1]) + translate)));
+
+      argb[2] = (unsigned char)
+        (std::max(0.0, std::min(255.0, double(argb[2]) + translate)));
+
+      argb[3] = (unsigned char)
+        (std::max(0.0, std::min(255.0, double(argb[3]) + translate)));
+    }
+
+    unsigned int argb_;
+  };
+
+  //----------------------------------------------------------------
   // Property
   //
   enum Property
@@ -307,6 +377,11 @@ namespace yae
   typedef DataRef<BBox> BBoxRef;
 
   //----------------------------------------------------------------
+  // ColorRef
+  //
+  typedef DataRef<Color> ColorRef;
+
+  //----------------------------------------------------------------
   // Margins
   //
   struct Margins
@@ -473,9 +548,11 @@ namespace yae
     // corner radius:
     ItemRef radius_;
 
-    // border:
+    // border width:
     ItemRef border_;
-    // ColorRef borderColor_;
+
+    ColorRef color_;
+    ColorRef colorBorder_;
   };
 
   //----------------------------------------------------------------

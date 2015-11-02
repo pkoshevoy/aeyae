@@ -910,14 +910,7 @@ namespace yae
   void
   Item::paint() const
   {
-    paintBBox(bbox(), color_);
-
-    double x = left();
-    double y = top();
-
-    // TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-    // YAE_OGL_11_HERE();
-    // YAE_OGL_11(glTranslated(x, y, 0.0));
+    // paintBBox(bbox(), color_);
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
@@ -988,14 +981,11 @@ namespace yae
                 const PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
-      Item & filter = root.addNew<Item>("filter");
+      Rectangle & filter = root.addNew<Rectangle>("filter");
       filter.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       filter.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
       filter.width_ = ItemRef::reference(&root, kPropertyWidth);
       filter.height_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 1.5);
-
-      // FIXME:
-      filter.color_ = 0xffffff7f;
 
       Scrollable & view = root.addNew<Scrollable>("scrollable");
 
@@ -1059,14 +1049,11 @@ namespace yae
       }
 
       // configure scrollbar:
-      Item & slider = scrollbar.addNew<Item>("slider");
+      Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
       slider.anchors_.hcenter_ = ItemRef::offset(&scrollbar, kPropertyHCenter);
       slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(&view, &slider));
       slider.width_ = ItemRef::scale(&scrollbar, kPropertyWidth, 0.6);
       slider.height_ = slider.addExpr(new CalcSliderHeight(&view, &slider));
-
-      // FIXME:
-      slider.color_ = 0x7f7f7f7f;
     }
   };
 
@@ -1089,14 +1076,11 @@ namespace yae
       // FIXME:
       spacer.color_ = 0x01010100;
 
-      Item & title = group.addNew<Item>("title");
+      Rectangle & title = group.addNew<Rectangle>("title");
       title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
       title.width_ = ItemRef::reference(&group, kPropertyWidth);
       title.height_ = title.addExpr(new CalcTitleHeight(&group, 24.0));
-
-      // FIXME:
-      title.color_ = 0x7f7f7f7f;
 
       Item & grid = group.addNew<Item>("grid");
       grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
@@ -1109,14 +1093,11 @@ namespace yae
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
       {
-        Item & cell = grid.addNew<Item>("cell");
+        Rectangle & cell = grid.addNew<Rectangle>("cell");
         cell.anchors_.left_ = cell.addExpr(new GridCellLeft(&grid, i));
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(&grid, i));
         cell.width_ = cell.addExpr(new GridCellWidth(&grid));
         cell.height_ = cell.addExpr(new GridCellHeight(&grid));
-
-        // FIXME:
-        cell.color_ = 0xff7f007f;
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
         ILayoutDelegate::TLayoutPtr childLayout =
@@ -1152,6 +1133,80 @@ namespace yae
       // FIXME: write me!
     }
   };
+
+
+  //----------------------------------------------------------------
+  // Rectangle::Rectangle
+  //
+  Rectangle::Rectangle(const char * id):
+    Item(id),
+    radius_(ItemRef::constant(0.0)),
+    border_(ItemRef::constant(1.0)),
+    color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
+    colorBorder_(ColorRef::constant(Color(0xffffff, 0.5)))
+  {}
+
+  //----------------------------------------------------------------
+  // paintRect
+  //
+  static void
+  paintRect(const BBox & bbox,
+            double radius,
+            double border,
+            const Color & color,
+            const Color & colorBorder)
+  {
+    double x0 = bbox.x_;
+    double y0 = bbox.y_;
+    double x1 = bbox.w_ + x0;
+    double y1 = bbox.h_ + y0;
+
+    double r0 = std::min(bbox.w_, bbox.h_) * 0.2;
+    double w0 = bbox.w_ - 2.0 * r0;
+    double h0 = bbox.h_ - 2.0 * r0;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(), color.g(), color.b(), color.a()));
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glVertex2d(x0, y0));
+      YAE_OGL_11(glVertex2d(x0, y1));
+      YAE_OGL_11(glVertex2d(x1, y0));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    if (border > 0.0)
+    {
+      YAE_OGL_11(glColor4ub(colorBorder.r(),
+                            colorBorder.g(),
+                            colorBorder.b(),
+                            colorBorder.a()));
+      YAE_OGL_11(glLineWidth(border));
+      YAE_OGL_11(glBegin(GL_LINE_LOOP));
+      {
+        YAE_OGL_11(glVertex2d(x0, y0));
+        YAE_OGL_11(glVertex2d(x0, y1));
+        YAE_OGL_11(glVertex2d(x1, y1));
+        YAE_OGL_11(glVertex2d(x1, y0));
+      }
+      YAE_OGL_11(glEnd());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Rectangle::paint
+  //
+  void
+  Rectangle::paint() const
+  {
+    paintRect(this->bbox(),
+              radius_.get(),
+              border_.get(),
+              color_.get(),
+              colorBorder_.get());
+    Item::paint();
+  }
 
   //----------------------------------------------------------------
   // Scrollable::Scrollable
