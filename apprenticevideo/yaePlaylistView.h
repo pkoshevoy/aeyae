@@ -120,6 +120,7 @@ namespace yae
       argb[1] = (unsigned char)(std::min(255.0, double(argb[1]) * scale));
       argb[2] = (unsigned char)(std::min(255.0, double(argb[2]) * scale));
       argb[3] = (unsigned char)(std::min(255.0, double(argb[3]) * scale));
+      return *this;
     }
 
     Color & operator += (double translate)
@@ -137,6 +138,8 @@ namespace yae
 
       argb[3] = (unsigned char)
         (std::max(0.0, std::min(255.0, double(argb[3]) + translate)));
+
+      return *this;
     }
 
     unsigned int argb_;
