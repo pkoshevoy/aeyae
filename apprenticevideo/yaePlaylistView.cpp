@@ -6,6 +6,11 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard C++:
+#include <cmath>
+#include <iomanip>
+#include <limits>
+
 // local interfaces:
 #include "yaeCanvasQPainterUtils.h"
 #include "yaePlaylistView.h"
@@ -843,10 +848,6 @@ namespace yae
     double x1 = bbox.w_ + x0;
     double y1 = bbox.h_ + y0;
 
-    double r0 = std::min(bbox.w_, bbox.h_) * 0.2;
-    double w0 = bbox.w_ - 2.0 * r0;
-    double h0 = bbox.h_ - 2.0 * r0;
-
     double color[16];
     for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
     {
@@ -1143,7 +1144,7 @@ namespace yae
     radius_(ItemRef::constant(0.0)),
     border_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
-    colorBorder_(ColorRef::constant(Color(0xffffff, 0.5)))
+    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
   {}
 
   //----------------------------------------------------------------
@@ -1151,7 +1152,6 @@ namespace yae
   //
   static void
   paintRect(const BBox & bbox,
-            double radius,
             double border,
             const Color & color,
             const Color & colorBorder)
@@ -1161,12 +1161,11 @@ namespace yae
     double x1 = bbox.w_ + x0;
     double y1 = bbox.h_ + y0;
 
-    double r0 = std::min(bbox.w_, bbox.h_) * 0.2;
-    double w0 = bbox.w_ - 2.0 * r0;
-    double h0 = bbox.h_ - 2.0 * r0;
-
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(), color.g(), color.b(), color.a()));
+    YAE_OGL_11(glColor4ub(color.r(),
+                          color.g(),
+                          color.b(),
+                          color.a()));
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {
       YAE_OGL_11(glVertex2d(x0, y0));
@@ -1178,6 +1177,7 @@ namespace yae
 
     if (border > 0.0)
     {
+#if 1
       YAE_OGL_11(glColor4ub(colorBorder.r(),
                             colorBorder.g(),
                             colorBorder.b(),
@@ -1191,6 +1191,365 @@ namespace yae
         YAE_OGL_11(glVertex2d(x1, y0));
       }
       YAE_OGL_11(glEnd());
+#else
+#if 0
+      double color[16];
+      for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
+      {
+        rgba[0] = drand();
+        rgba[1] = drand();
+        rgba[2] = drand();
+        rgba[3] = 0.33;
+        /*
+        std::cerr
+          << "// " << (rgba - color) / 4 << "\n"
+          << rgba[0] << ", "
+          << rgba[1] << ", "
+          << rgba[2] << ", "
+          << rgba[3] << ","
+          << std::endl;
+        */
+      }
+#else
+      double color[16] = {
+        1.0, 0.0, 0.0, 0.33,
+        0.0, 1.0, 0.0, 0.33,
+        1.0, 1.0, 1.0, 0.33,
+        0.0, 0.5, 1.0, 0.33
+      };
+#endif
+
+      YAE_OGL_11(glLineWidth(border));
+      YAE_OGL_11(glBegin(GL_LINE_LOOP));
+      {
+        YAE_OGL_11(glColor4dv(color + 0));
+        YAE_OGL_11(glVertex2d(x0, y0));
+
+        YAE_OGL_11(glColor4dv(color + 4));
+        YAE_OGL_11(glVertex2d(x0, y1));
+
+        YAE_OGL_11(glColor4dv(color + 12));
+        YAE_OGL_11(glVertex2d(x1, y1));
+
+        YAE_OGL_11(glColor4dv(color + 8));
+        YAE_OGL_11(glVertex2d(x1, y0));
+      }
+      YAE_OGL_11(glEnd());
+#endif
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Vec
+  //
+  template <typename TData, unsigned int Cardinality>
+  struct Vec
+  {
+    enum { kCardinality = Cardinality };
+    enum { kDimension = Cardinality };
+    typedef TData value_type;
+    typedef Vec<TData, Cardinality> TVec;
+    TData coord_[Cardinality];
+
+    inline TVec & operator *= (const TData & scale)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] *= scale;
+      }
+
+      return *this;
+    }
+
+    inline TVec operator * (const TData & scale) const
+    {
+      TVec result(*this);
+      result *= scale;
+      return result;
+    }
+
+    inline TVec & operator += (const TData & normDelta)
+    {
+      TData n0 = norm();
+      if (n0 > 0.0)
+      {
+        TData n1 = n0 + normDelta;
+        TData scale = n1 / n0;
+        return this->operator *= (scale);
+      }
+
+      const TData v = normDelta / std::sqrt(TData(Cardinality));
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] = v;
+      }
+      return *this;
+    }
+
+    inline TVec operator + (const TData & normDelta) const
+    {
+      TVec result(*this);
+      result += normDelta;
+      return result;
+    }
+
+    inline TVec & operator -= (const TData & normDelta)
+    {
+      return this->operator += (-normDelta);
+    }
+
+    inline TVec operator - (const TData & normDelta) const
+    {
+      return this->operator + (-normDelta);
+    }
+
+    inline TData operator * (const TVec & other) const
+    {
+      TData result = TData(0);
+
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        result += (coord_[i] * other.coord_[i]);
+      }
+
+      return result;
+    }
+
+    inline TVec & operator += (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] += other.coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec operator + (const TVec & other) const
+    {
+      TVec result(*this);
+      result += other;
+      return result;
+    }
+
+    inline TVec & operator -= (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] -= other.coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec operator - (const TVec & other) const
+    {
+      TVec result(*this);
+      result -= other;
+      return result;
+    }
+
+    inline TVec & negate()
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] = -coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec negated() const
+    {
+      TVec result(*this);
+      result.negate();
+      return result;
+    }
+
+    inline TData normSqrd() const
+    {
+      TData result = TData(0);
+
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        result += (coord_[i] * coord_[i]);
+      }
+
+      return result;
+    }
+
+    inline TData norm() const
+    {
+      return std::sqrt(this->normSqrd());
+    }
+
+    inline bool
+    normalize(const TData & epsilon = std::numeric_limits<TData>::min())
+    {
+      TData n = this->norm();
+      if (n > epsilon)
+      {
+        this->operator *= (TData(1) / n);
+        return true;
+      }
+
+      this->operator *= (TData(0));
+      return false;
+    }
+
+    inline TVec
+    normalized(const TData & epsilon = std::numeric_limits<TData>::min()) const
+    {
+      TVec result(*this);
+      result.normalize(epsilon);
+      return result;
+    }
+
+    inline TVec & operator < (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        if (!(coord_[i] < other.coord_[i]))
+        {
+          return false;
+        }
+      }
+
+      return true;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // operator -
+  //
+  template <typename TData, unsigned int Cardinality>
+  inline static Vec<TData, Cardinality>
+  operator - (const Vec<TData, Cardinality> & vec)
+  {
+    return vec.negated();
+  }
+
+  //----------------------------------------------------------------
+  // operator *
+  //
+  template <typename TData, unsigned int Cardinality>
+  inline static Vec<TData, Cardinality>
+  operator * (const TData & scale, const Vec<TData, Cardinality> & vec)
+  {
+    return vec * scale;
+  }
+
+  //----------------------------------------------------------------
+  // TVec2D
+  //
+  typedef Vec<double, 2> TVec2D;
+
+  //----------------------------------------------------------------
+  // vec2d
+  //
+  inline static TVec2D
+  vec2d(double x, double y)
+  {
+    TVec2D v;
+    v.coord_[0] = x;
+    v.coord_[1] = y;
+    return v;
+  }
+
+  //----------------------------------------------------------------
+  // paintRect
+  //
+  static void
+  paintRoundedRect(const BBox & bbox,
+                   double radius,
+                   double border,
+                   const Color & color,
+                   const Color & colorBorder)
+  {
+    radius = std::min(radius, 0.5 * std::min(bbox.w_, bbox.h_));
+    double r0 = radius - border;
+
+    double cx[2];
+    cx[0] = bbox.x_ + bbox.w_ - radius;
+    cx[1] = bbox.x_ + radius;
+
+    double cy[2];
+    cy[0] = bbox.y_ + radius;
+    cy[1] = bbox.y_ + bbox.h_ - radius;
+
+    std::vector<TVec2D> triangleFan;
+    std::vector<TVec2D> triangleStrip;
+
+    // start the fan:
+    TVec2D center = vec2d(bbox.x_ + 0.5 * bbox.w_,
+                          bbox.y_ + 0.5 * bbox.h_);
+    triangleFan.push_back(center);
+
+    unsigned int ix[] = { 0, 1, 1, 0 };
+    unsigned int iy[] = { 0, 0, 1, 1 };
+
+    unsigned int nsteps = (unsigned int)std::ceil(radius);
+    for (unsigned int i = 0; i < 4; i++)
+    {
+      double ox = cx[ix[i]];
+      double oy = cy[iy[i]];
+
+      for (unsigned int j = 0; j <= nsteps; j++)
+      {
+        double t = double(i * nsteps + j) / double(nsteps * 2);
+        double a = M_PI * t;
+        double tcos = std::cos(a);
+        double tsin = std::sin(a);
+
+        triangleFan.push_back(vec2d(ox + tcos * radius,
+                                    oy - tsin * radius));
+
+        triangleStrip.push_back(triangleFan.back());
+        triangleStrip.push_back(vec2d(ox + tcos * r0,
+                                      oy - tsin * r0));
+      }
+    }
+
+    // close the loop:
+    TVec2D f1 = triangleFan[1];
+    TVec2D s1 = triangleStrip[0];
+    TVec2D s2 = triangleStrip[1];
+    triangleFan.push_back(f1);
+    triangleStrip.push_back(s1);
+    triangleStrip.push_back(s2);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(),
+                          color.g(),
+                          color.b(),
+                          color.a()));
+    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
+    {
+      for (std::vector<TVec2D>::const_iterator i = triangleFan.begin(),
+             end = triangleFan.end(); i != end; ++i)
+      {
+        const TVec2D & v = *i;
+        YAE_OGL_11(glVertex2dv(v.coord_));
+      }
+    }
+    YAE_OGL_11(glEnd());
+
+    if (border > 0.0)
+    {
+      YAE_OGL_11(glColor4ub(colorBorder.r(),
+                            colorBorder.g(),
+                            colorBorder.b(),
+                            colorBorder.a()));
+      YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+      {
+        for (std::vector<TVec2D>::const_iterator i = triangleStrip.begin(),
+               end = triangleStrip.end(); i != end; ++i)
+        {
+          const TVec2D & v = *i;
+          YAE_OGL_11(glVertex2dv(v.coord_));
+        }
+      }
+      YAE_OGL_11(glEnd());
     }
   }
 
@@ -1200,11 +1559,28 @@ namespace yae
   void
   Rectangle::paint() const
   {
-    paintRect(this->bbox(),
-              radius_.get(),
-              border_.get(),
-              color_.get(),
-              colorBorder_.get());
+    const BBox & bbox = this->bbox();
+    double radius = radius_.get();
+    double border = border_.get();
+    const Color & color = color_.get();
+    const Color & colorBorder = colorBorder_.get();
+
+    if (radius > 0.0)
+    {
+      paintRoundedRect(bbox,
+                       radius,
+                       border,
+                       color,
+                       colorBorder);
+    }
+    else
+    {
+      paintRect(bbox,
+                border,
+                color,
+                colorBorder);
+    }
+
     Item::paint();
   }
 
@@ -1335,6 +1711,7 @@ namespace yae
 
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+    YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
     YAE_OGL_11(glLineWidth(1.0));
 
     YAE_OGL_11(glEnable(GL_BLEND));
