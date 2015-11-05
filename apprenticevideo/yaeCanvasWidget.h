@@ -139,7 +139,9 @@ namespace yae
     };
 
 
-    CanvasWidget():
+    template <typename TWidgetInitParam>
+    CanvasWidget(const TWidgetInitParam & initParam):
+      TWidget(initParam),
       Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
       sigs_(*this)
     {

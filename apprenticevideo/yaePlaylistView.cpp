@@ -11,6 +11,9 @@
 #include <iomanip>
 #include <limits>
 
+// Qt library:
+#include <QFontMetricsF>
+
 // local interfaces:
 #include "yaeCanvasQPainterUtils.h"
 #include "yaePlaylistView.h"
@@ -87,7 +90,7 @@ namespace yae
       double rootWidth = root_->width();
       unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
       std::size_t cellCol = cell_ % cellsPerRow;
-      double ox = root_->left();
+      double ox = root_->left() + 2;
       result = ox + rootWidth * double(cellCol) / double(cellsPerRow);
     }
 
@@ -116,7 +119,7 @@ namespace yae
       unsigned int rowsOfCells = calcRows(rootWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
       std::size_t cellRow = cell_ / cellsPerRow;
-      double oy = root_->top();
+      double oy = root_->top() + 2;
       result = oy + gridHeight * double(cellRow) / double(rowsOfCells);
     }
 
@@ -137,7 +140,7 @@ namespace yae
     void evaluate(double & result) const
     {
       double rootWidth = root_->width();
-      result = calcCellWidth(rootWidth);
+      result = calcCellWidth(rootWidth) - 2;
     }
 
     const Item * root_;
@@ -157,7 +160,7 @@ namespace yae
     {
       double rootWidth = root_->width();
       double cellWidth = calcCellWidth(rootWidth);
-      result = calcCellHeight(cellWidth);
+      result = calcCellHeight(cellWidth) - 2;
     }
 
     const Item * root_;
@@ -206,7 +209,6 @@ namespace yae
         return;
       }
 
-      double range = sceneHeight - viewHeight;
       double scale = viewHeight / sceneHeight;
       double minHeight = slider_->width() * 5.0;
       double height = minHeight + (viewHeight - minHeight) * scale;
@@ -239,7 +241,6 @@ namespace yae
         return;
       }
 
-      double range = sceneHeight - viewHeight;
       double scale = viewHeight / sceneHeight;
       double minHeight = slider_->width() * 5.0;
       result = minHeight + (viewHeight - minHeight) * scale;
@@ -247,6 +248,112 @@ namespace yae
 
     const Scrollable * view_;
     const Item * slider_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcXContent
+  //
+  struct CalcXContent : public TSegmentExpr
+  {
+    CalcXContent(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      result.length_ = root_->calcContentWidth();
+      result.origin_ =
+        root_->anchors_.left_.isValid() ?
+        root_->left() :
+
+        root_->anchors_.right_.isValid() ?
+        root_->right() - result.length_ :
+
+        root_->hcenter() - result.length_ * 0.5;
+
+      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
+           i != root_->children_.end(); ++i)
+      {
+        const ItemPtr & child = *i;
+        const Segment & footprint = child->x();
+        result.expand(footprint);
+      }
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcYContent
+  //
+  struct CalcYContent : public TSegmentExpr
+  {
+    CalcYContent(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      result.length_ = root_->calcContentHeight();
+      result.origin_ =
+        root_->anchors_.top_.isValid() ?
+        root_->top() :
+
+        root_->anchors_.bottom_.isValid() ?
+        root_->bottom() - result.length_ :
+
+        root_->vcenter() - result.length_ * 0.5;
+
+      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
+           i != root_->children_.end(); ++i)
+      {
+        const ItemPtr & child = *i;
+        const Segment & footprint = child->y();
+        result.expand(footprint);
+      }
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcX
+  //
+  struct CalcX : public TSegmentExpr
+  {
+    CalcX(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      result.origin_ = root_->left();
+      result.length_ = root_->width();
+    }
+
+    const Item * root_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcY
+  //
+  struct CalcY : public TSegmentExpr
+  {
+    CalcY(const Item * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      result.origin_ = root_->top();
+      result.length_ = root_->height();
+    }
+
+    const Item * root_;
   };
 
   //----------------------------------------------------------------
@@ -262,7 +369,27 @@ namespace yae
     void evaluate(BBox & result) const
     {
       result = BBox();
-      root_->calcContentBBox(result);
+
+      result.w_ = root_->calcContentWidth();
+      result.h_ = root_->calcContentHeight();
+
+      result.x_ =
+        root_->anchors_.left_.isValid() ?
+        root_->left() :
+
+        root_->anchors_.right_.isValid() ?
+        root_->right() - result.w_ :
+
+        root_->hcenter() - result.w_ * 0.5;
+
+      result.y_ =
+        root_->anchors_.top_.isValid() ?
+        root_->top() :
+
+        root_->anchors_.bottom_.isValid() ?
+        root_->bottom() - result.h_ :
+
+        root_->vcenter() - result.h_ * 0.5;
 
       for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
            i != root_->children_.end(); ++i)
@@ -296,6 +423,66 @@ namespace yae
 
     const Item * root_;
   };
+
+  //----------------------------------------------------------------
+  // CalcTextBBox
+  //
+  struct CalcTextBBox : public TBBoxExpr
+  {
+    CalcTextBBox(const Text * root):
+      root_(root)
+    {}
+
+    // virtual:
+    void evaluate(BBox & result) const
+    {
+      root_->calcTextBBox(result);
+    }
+
+    const Text * root_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Segment::clear
+  //
+  void
+  Segment::clear()
+  {
+    origin_ = 0.0;
+    length_ = 0.0;
+  }
+
+  //----------------------------------------------------------------
+  // Segment::isEmpty
+  //
+  bool
+  Segment::isEmpty() const
+  {
+    return (length_ == 0.0);
+  }
+
+  //----------------------------------------------------------------
+  // Segment::expand
+  //
+  void
+  Segment::expand(const Segment & segment)
+  {
+    if (!segment.isEmpty())
+    {
+      if (isEmpty())
+      {
+        *this = segment;
+      }
+      else
+      {
+        double e = std::max<double>(end(), segment.end());
+        origin_ = std::min<double>(origin_, segment.origin_);
+        length_ = e - origin_;
+      }
+    }
+  }
+
 
   //----------------------------------------------------------------
   // BBox::clear
@@ -457,10 +644,15 @@ namespace yae
   // Item::Item
   //
   Item::Item(const char * id):
-    parent_(NULL),
     color_(0),
+    parent_(NULL),
+    xContent_(addExpr(new CalcXContent(this))),
+    yContent_(addExpr(new CalcYContent(this))),
+    x_(addExpr(new CalcX(this))),
+    y_(addExpr(new CalcY(this))),
     bboxContent_(addExpr(new CalcContentBBox(this))),
-    bbox_(addExpr(new CalcBBox(this)))
+    bbox_(addExpr(new CalcBBox(this))),
+    visible_(BoolRef::constant(true))
   {
     if (id)
     {
@@ -469,26 +661,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::calcContentBBox
+  // Item::calcContentWidth
   //
-  void
-  Item::calcContentBBox(BBox & bbox) const
+  double
+  Item::calcContentWidth() const
   {
-    bbox.clear();
+    return 0.0;
   }
 
   //----------------------------------------------------------------
-  // Item::layout
+  // Item::calcContentHeight
   //
-  void
-  Item::layout()
+  double
+  Item::calcContentHeight() const
   {
-    for (std::vector<ItemPtr>::iterator i = children_.begin();
-         i != children_.end(); ++i)
-    {
-      const ItemPtr & child = *i;
-      child->layout();
-    }
+    return 0.0;
   }
 
   //----------------------------------------------------------------
@@ -562,6 +749,36 @@ namespace yae
   // Item::get
   //
   void
+  Item::get(Property property, Segment & value) const
+  {
+    if (property == kPropertyXContent)
+    {
+      value = this->xContent();
+    }
+    else if (property == kPropertyYContent)
+    {
+      value = this->yContent();
+    }
+    else if (property == kPropertyX)
+    {
+      value = this->x();
+    }
+    else if (property == kPropertyY)
+    {
+      value = this->y();
+    }
+    else
+    {
+      YAE_ASSERT(false);
+      throw std::runtime_error("unsupported item property of type <Segment>");
+      value = Segment();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  void
   Item::get(Property property, BBox & value) const
   {
     if (property == kPropertyBBoxContent)
@@ -578,6 +795,60 @@ namespace yae
       throw std::runtime_error("unsupported item property of type <BBox>");
       value = BBox();
     }
+  }
+
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  void
+  Item::get(Property property, bool & value) const
+  {
+    if (property == kPropertyVisible)
+    {
+      value = this->visible();
+    }
+    else
+    {
+      YAE_ASSERT(false);
+      throw std::runtime_error("unsupported item property of type <bool>");
+      value = false;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Item::xContent
+  //
+  const Segment &
+  Item::xContent() const
+  {
+    return xContent_.get();
+  }
+
+  //----------------------------------------------------------------
+  // Item::yContent
+  //
+  const Segment &
+  Item::yContent() const
+  {
+    return yContent_.get();
+  }
+
+  //----------------------------------------------------------------
+  // Item::x
+  //
+  const Segment &
+  Item::x() const
+  {
+    return x_.get();
+  }
+
+  //----------------------------------------------------------------
+  // Item::y
+  //
+  const Segment &
+  Item::y() const
+  {
+    return y_.get();
   }
 
   //----------------------------------------------------------------
@@ -618,14 +889,33 @@ namespace yae
 
       double w = r - l;
       width_.cache(w);
-
       return w;
     }
 
+#if 0
     // width is based on the bounding box of item content:
-    double l = left();
-    double r = bboxContent().right();
-    double w = r - l;
+    const BBox & bboxContent = this->bboxContent();
+    double w = 0.0;
+
+    if (!bboxContent.isEmpty())
+    {
+      double l = anchors_.left_.isValid() ? left() : bboxContent.left();
+      double r = anchors_.left_.isValid() ? bboxContent.right() : right();
+      w = r - l;
+    }
+#else
+    // height is based on horizontal footprint of item content:
+    const Segment & xContent = this->xContent();
+    double w = 0.0;
+
+    if (!xContent.isEmpty())
+    {
+      double l = anchors_.left_.isValid() ? left() : xContent.end();
+      double r = anchors_.left_.isValid() ? xContent.end() : right();
+      w = r - l;
+    }
+#endif
+
     width_.cache(w);
     return w;
   }
@@ -650,14 +940,32 @@ namespace yae
 
       double h = b - t;
       height_.cache(h);
-
       return h;
     }
-
+#if 0
     // height is based on the bounding box of item content:
-    double t = top();
-    double b = bboxContent().bottom();
-    double h = b - t;
+    const BBox & bboxContent = this->bboxContent();
+    double h = 0.0;
+
+    if (!bboxContent.isEmpty())
+    {
+      double t = anchors_.top_.isValid() ? top() : bboxContent.top();
+      double b = anchors_.top_.isValid() ? bboxContent.bottom() : bottom();
+      h = b - t;
+    }
+#else
+    // height is based on vertical footprint of item content:
+    const Segment & yContent = this->yContent();
+    double h = 0.0;
+
+    if (!yContent.isEmpty())
+    {
+      double t = anchors_.top_.isValid() ? top() : yContent.end();
+      double b = anchors_.top_.isValid() ? yContent.end() : bottom();
+      h = b - t;
+    }
+#endif
+
     height_.cache(h);
     return h;
   }
@@ -801,6 +1109,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::visible
+  //
+  bool
+  Item::visible() const
+  {
+    return visible_.get();
+  }
+
+  //----------------------------------------------------------------
   // Item::dump
   //
   void
@@ -911,6 +1228,11 @@ namespace yae
   void
   Item::paint() const
   {
+    if (!Item::visible_.get())
+    {
+      return;
+    }
+
     // paintBBox(bbox(), color_);
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
@@ -971,6 +1293,20 @@ namespace yae
     return TLayoutPtr();
   }
 
+  //----------------------------------------------------------------
+  // layoutFilterItem
+  //
+  static void
+  layoutFilterItem(Item & root,
+                   const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                   const PlaylistModelProxy & model,
+                   const QModelIndex & rootIndex)
+  {
+      Rectangle & filter = root.addNew<Rectangle>("bg");
+      filter.anchors_.fill(&root);
+      filter.margins_.set(2);
+      filter.radius_ = ItemRef::constant(3);
+  }
 
   //----------------------------------------------------------------
   // GroupListLayout
@@ -982,11 +1318,12 @@ namespace yae
                 const PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
-      Rectangle & filter = root.addNew<Rectangle>("filter");
+      Item & filter = root.addNew<Item>("filter");
       filter.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       filter.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
       filter.width_ = ItemRef::reference(&root, kPropertyWidth);
       filter.height_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 1.5);
+      layoutFilterItem(filter, layouts, model, rootIndex);
 
       Scrollable & view = root.addNew<Scrollable>("scrollable");
 
@@ -999,12 +1336,13 @@ namespace yae
       scrollbar.color_ = 0x80ff0000;
 
       scrollbar.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
-      scrollbar.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
-      scrollbar.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
-      scrollbar.width_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 0.5);
+      scrollbar.anchors_.top_ = ItemRef::offset(&filter, kPropertyBottom, 5);
+      scrollbar.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
+      scrollbar.width_ = filter.addExpr(new CalcTitleHeight(&root, 50.0), 0.2);
 
       view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       view.anchors_.right_ = ItemRef::reference(&scrollbar, kPropertyLeft);
+      // view.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
       view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
       view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
 
@@ -1051,10 +1389,11 @@ namespace yae
 
       // configure scrollbar:
       Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
-      slider.anchors_.hcenter_ = ItemRef::offset(&scrollbar, kPropertyHCenter);
       slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(&view, &slider));
-      slider.width_ = ItemRef::scale(&scrollbar, kPropertyWidth, 0.6);
+      slider.anchors_.left_ = ItemRef::offset(&scrollbar, kPropertyLeft, 2);
+      slider.anchors_.right_ = ItemRef::offset(&scrollbar, kPropertyRight, -2);
       slider.height_ = slider.addExpr(new CalcSliderHeight(&view, &slider));
+      slider.radius_ = ItemRef::scale(&slider, kPropertyWidth, 0.5);
     }
   };
 
@@ -1099,6 +1438,7 @@ namespace yae
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(&grid, i));
         cell.width_ = cell.addExpr(new GridCellWidth(&grid));
         cell.height_ = cell.addExpr(new GridCellHeight(&grid));
+        cell.border_ = ItemRef::constant(1);
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
         ILayoutDelegate::TLayoutPtr childLayout =
@@ -1126,14 +1466,244 @@ namespace yae
   //
   struct ItemGridCellLayout : public ILayoutDelegate
   {
-    void layout(Item & item,
+    void layout(Item & root,
                 const std::map<TLayoutHint, TLayoutPtr> & layouts,
                 const PlaylistModelProxy & model,
                 const QModelIndex & itemIndex)
     {
-      // FIXME: write me!
+      QString url =
+        model.data(itemIndex, PlaylistModel::kRoleThumbnail).toString();
+
+      QString txt =
+        model.data(itemIndex, PlaylistModel::kRoleLabel).toString();
+
+      bool isSelected =
+        model.data(itemIndex, PlaylistModel::kRoleSelected).toBool();
+
+      bool isPlaying =
+        model.data(itemIndex, PlaylistModel::kRolePlaying).toBool();
+
+      std::cerr
+        << "\n  thumbnail: " << url.toUtf8().constData()
+        << "\n      label: " << txt.toUtf8().constData()
+        << "\n   selected: " << isSelected
+        << "\nnow playing: " << isPlaying
+        << std::endl;
+
+      Image & thumbnail = root.addNew<Image>("thumbnail");
+      thumbnail.anchors_.fill(&root);
+      thumbnail.load(url);
+
+      Text & title = root.addNew<Text>("title");
+      title.anchors_.bottomLeft(&root);
+      title.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
+      title.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
+      title.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, 10);
+      title.text_ = txt;
+
+      Item & rm = root.addNew<Item>("remove item");
+      rm.anchors_.topRight(&root);
+      rm.margins_.set(3); // FIXME:
+
+      Text & playing = root.addNew<Text>("now playing");
+      playing.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
+      playing.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
+      playing.text_ = QObject::tr("NOW PLAYING");
+
+      Rectangle & underline = root.addNew<Rectangle>("underline");
+      underline.anchors_.left_ = ItemRef::offset(&playing, kPropertyLeft, -1);
+      underline.anchors_.right_ = ItemRef::offset(&playing, kPropertyRight, 1);
+      underline.anchors_.top_ = ItemRef::offset(&playing, kPropertyBottom, 2);
+      underline.height_ = ItemRef::constant(2);
+      underline.color_ = ColorRef::constant(Color(0xff0000));
+
+      rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
+      rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
+
+      Rectangle & sel = root.addNew<Rectangle>("selected");
+      sel.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
+      sel.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
+      sel.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
+      sel.margins_.set(3);
+      sel.height_ = ItemRef::constant(2);
+      sel.color_ = ColorRef::constant(Color(0xff0000));
     }
   };
+
+  //----------------------------------------------------------------
+  // Image::TPrivate
+  //
+  struct Image::TPrivate
+  {
+    void load(const QString & url)
+    {
+      // FIXME: use ThumbnailProvider to load the image:
+      url_ = url;
+    }
+
+    void paint()
+    {
+      // FIXME: write me!
+    }
+
+    QString url_;
+    QImage img_;
+  };
+
+  //----------------------------------------------------------------
+  // Image::Image
+  //
+  Image::Image(const char * id):
+    Item(id),
+    p_(new Image::TPrivate())
+  {}
+
+  //----------------------------------------------------------------
+  // Image::~Image
+  //
+  Image::~Image()
+  {
+    delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // Image::load
+  //
+  void
+  Image::load(const QString & url)
+  {
+    p_->load(url);
+  }
+
+  //----------------------------------------------------------------
+  // Image::paint
+  //
+  void
+  Image::paint() const
+  {
+    if (!Item::visible_.get())
+    {
+      return;
+    }
+
+    p_->paint();
+  }
+
+  //----------------------------------------------------------------
+  // Text::TPrivate
+  //
+  struct Text::TPrivate
+  {
+    void paint(const Text & text)
+    {
+      // FIXME: write me!
+    }
+
+    QImage img_;
+  };
+
+  //----------------------------------------------------------------
+  // Text::Text
+  //
+  Text::Text(const char * id):
+    Item(id),
+    p_(new Text::TPrivate()),
+    elide_(Qt::ElideNone),
+    flags_(Qt::TextWordWrap),
+    format_(Qt::PlainText)
+  {
+    fontPixelSize_ = ItemRef::constant(font_.pixelSize());
+    bboxText_ = addExpr(new CalcTextBBox(this));
+  }
+
+  //----------------------------------------------------------------
+  // Text::~Text
+  //
+  Text::~Text()
+  {
+    delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // Text::calcTextBBox
+  //
+  void
+  Text::calcTextBBox(BBox & bbox) const
+  {
+    static const qreal kQRealMax = std::numeric_limits<qreal>::max();
+
+    double maxWidth =
+      maxWidth_.isValid() || maxWidth_.isCached() ?
+      maxWidth_.get() : kQRealMax;
+
+    double maxHeight =
+      maxHeight_.isValid() || maxHeight_.isCached() ?
+      maxHeight_.get() : kQRealMax;
+
+    QFontMetricsF fm(font_);
+    int flags = alignment_ | flags_;
+
+    QString text = text_;
+    if (elide_ != Qt::ElideNone)
+    {
+      flags |= Qt::TextSingleLine;
+      text = fm.elidedText(text_, elide_, maxWidth, flags);
+    }
+
+    QRectF maxRect(qreal(0), qreal(0), maxWidth, maxHeight);
+    QRectF rect = fm.boundingRect(maxRect, flags, text);
+
+    bbox.x_ = rect.x();
+    bbox.y_ = rect.y();
+    bbox.w_ = rect.width();
+    bbox.h_ = rect.height();
+  }
+
+  //----------------------------------------------------------------
+  // Text::calcContentWidth
+  //
+  double
+  Text::calcContentWidth() const
+  {
+    const BBox & t = bboxText_.get();
+    return t.w_;
+  }
+
+  //----------------------------------------------------------------
+  // Text::calcContentHeight
+  //
+  double
+  Text::calcContentHeight() const
+  {
+    const BBox & t = bboxText_.get();
+    return t.h_;
+  }
+
+  //----------------------------------------------------------------
+  // Text::uncache
+  //
+  void
+  Text::uncache()
+  {
+    fontPixelSize_.uncache();
+    maxWidth_.uncache();
+    bboxText_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Text::paint
+  //
+  void
+  Text::paint() const
+  {
+    if (!Item::visible_.get())
+    {
+      return;
+    }
+
+    p_->paint(*this);
+  }
 
 
   //----------------------------------------------------------------
@@ -1142,7 +1712,7 @@ namespace yae
   Rectangle::Rectangle(const char * id):
     Item(id),
     radius_(ItemRef::constant(0.0)),
-    border_(ItemRef::constant(1.0)),
+    border_(ItemRef::constant(0.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
   {}
@@ -1239,222 +1809,6 @@ namespace yae
     }
   }
 
-  //----------------------------------------------------------------
-  // Vec
-  //
-  template <typename TData, unsigned int Cardinality>
-  struct Vec
-  {
-    enum { kCardinality = Cardinality };
-    enum { kDimension = Cardinality };
-    typedef TData value_type;
-    typedef Vec<TData, Cardinality> TVec;
-    TData coord_[Cardinality];
-
-    inline TVec & operator *= (const TData & scale)
-    {
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        coord_[i] *= scale;
-      }
-
-      return *this;
-    }
-
-    inline TVec operator * (const TData & scale) const
-    {
-      TVec result(*this);
-      result *= scale;
-      return result;
-    }
-
-    inline TVec & operator += (const TData & normDelta)
-    {
-      TData n0 = norm();
-      if (n0 > 0.0)
-      {
-        TData n1 = n0 + normDelta;
-        TData scale = n1 / n0;
-        return this->operator *= (scale);
-      }
-
-      const TData v = normDelta / std::sqrt(TData(Cardinality));
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        coord_[i] = v;
-      }
-      return *this;
-    }
-
-    inline TVec operator + (const TData & normDelta) const
-    {
-      TVec result(*this);
-      result += normDelta;
-      return result;
-    }
-
-    inline TVec & operator -= (const TData & normDelta)
-    {
-      return this->operator += (-normDelta);
-    }
-
-    inline TVec operator - (const TData & normDelta) const
-    {
-      return this->operator + (-normDelta);
-    }
-
-    inline TData operator * (const TVec & other) const
-    {
-      TData result = TData(0);
-
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        result += (coord_[i] * other.coord_[i]);
-      }
-
-      return result;
-    }
-
-    inline TVec & operator += (const TVec & other)
-    {
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        coord_[i] += other.coord_[i];
-      }
-
-      return *this;
-    }
-
-    inline TVec operator + (const TVec & other) const
-    {
-      TVec result(*this);
-      result += other;
-      return result;
-    }
-
-    inline TVec & operator -= (const TVec & other)
-    {
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        coord_[i] -= other.coord_[i];
-      }
-
-      return *this;
-    }
-
-    inline TVec operator - (const TVec & other) const
-    {
-      TVec result(*this);
-      result -= other;
-      return result;
-    }
-
-    inline TVec & negate()
-    {
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        coord_[i] = -coord_[i];
-      }
-
-      return *this;
-    }
-
-    inline TVec negated() const
-    {
-      TVec result(*this);
-      result.negate();
-      return result;
-    }
-
-    inline TData normSqrd() const
-    {
-      TData result = TData(0);
-
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        result += (coord_[i] * coord_[i]);
-      }
-
-      return result;
-    }
-
-    inline TData norm() const
-    {
-      return std::sqrt(this->normSqrd());
-    }
-
-    inline bool
-    normalize(const TData & epsilon = std::numeric_limits<TData>::min())
-    {
-      TData n = this->norm();
-      if (n > epsilon)
-      {
-        this->operator *= (TData(1) / n);
-        return true;
-      }
-
-      this->operator *= (TData(0));
-      return false;
-    }
-
-    inline TVec
-    normalized(const TData & epsilon = std::numeric_limits<TData>::min()) const
-    {
-      TVec result(*this);
-      result.normalize(epsilon);
-      return result;
-    }
-
-    inline TVec & operator < (const TVec & other)
-    {
-      for (unsigned int i = 0; i < Cardinality; i++)
-      {
-        if (!(coord_[i] < other.coord_[i]))
-        {
-          return false;
-        }
-      }
-
-      return true;
-    }
-  };
-
-  //----------------------------------------------------------------
-  // operator -
-  //
-  template <typename TData, unsigned int Cardinality>
-  inline static Vec<TData, Cardinality>
-  operator - (const Vec<TData, Cardinality> & vec)
-  {
-    return vec.negated();
-  }
-
-  //----------------------------------------------------------------
-  // operator *
-  //
-  template <typename TData, unsigned int Cardinality>
-  inline static Vec<TData, Cardinality>
-  operator * (const TData & scale, const Vec<TData, Cardinality> & vec)
-  {
-    return vec * scale;
-  }
-
-  //----------------------------------------------------------------
-  // TVec2D
-  //
-  typedef Vec<double, 2> TVec2D;
-
-  //----------------------------------------------------------------
-  // vec2d
-  //
-  inline static TVec2D
-  vec2d(double x, double y)
-  {
-    TVec2D v;
-    v.coord_[0] = x;
-    v.coord_[1] = y;
-    return v;
-  }
 
   //----------------------------------------------------------------
   // paintRect
@@ -1554,11 +1908,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Rectangle::uncache
+  //
+  void
+  Rectangle::uncache()
+  {
+    radius_.uncache();
+    border_.uncache();
+    color_.uncache();
+    colorBorder_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
   // Rectangle::paint
   //
   void
   Rectangle::paint() const
   {
+    if (!Item::visible_.get())
+    {
+      return;
+    }
+
     const BBox & bbox = this->bbox();
     double radius = radius_.get();
     double border = border_.get();
@@ -1594,16 +1966,6 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // Scrollable::layout
-  //
-  void
-  Scrollable::layout()
-  {
-    Item::layout();
-    content_.layout();
-  }
-
-  //----------------------------------------------------------------
   // Scrollable::uncache
   //
   void
@@ -1619,6 +1981,11 @@ namespace yae
   void
   Scrollable::paint() const
   {
+    if (!Item::visible_.get())
+    {
+      return;
+    }
+
     double sceneHeight = content_.height();
     double viewHeight = this->height();
 
@@ -1654,12 +2021,10 @@ namespace yae
   //
   PlaylistView::PlaylistView():
     Canvas::ILayer(),
+    root_(new Item("playlist")),
     model_(NULL),
     w_(0.0),
-    h_(0.0),
-    position_(0.0),
-    sceneSize_(0.0),
-    root_(new Item("playlist"))
+    h_(0.0)
   {
     layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
       TLayoutPtr(new GroupListLayout());
@@ -1684,8 +2049,6 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
     root.uncache();
-    root.layout();
-    // root.dump(std::cerr);
   }
 
   //----------------------------------------------------------------
@@ -1711,12 +2074,16 @@ namespace yae
 
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+    YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
     YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
+    YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
     YAE_OGL_11(glLineWidth(1.0));
 
     YAE_OGL_11(glEnable(GL_BLEND));
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
+
+    // YAE_OGL_11(glEnable(GL_MULTISAMPLE_ARB));
 
     root_->paint();
 
@@ -1928,8 +2295,6 @@ namespace yae
                      rootIndex);
 
 #ifndef NDEBUG
-    // FIXME: for debugging only:
-    root.layout();
     root.dump(std::cerr);
 #endif
   }

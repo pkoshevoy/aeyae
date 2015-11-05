@@ -441,7 +441,12 @@ namespace yae
 #endif
          "explore the menus for more options");
 
-    playerWidget_ = new TPlayerWidget();
+    // request vsync if available:
+    QGLFormat contextFormat;
+    contextFormat.setSwapInterval(1);
+    contextFormat.setSampleBuffers(true);
+
+    playerWidget_ = new TPlayerWidget(contextFormat);
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playlistView_.setModel(&playlistModel_);

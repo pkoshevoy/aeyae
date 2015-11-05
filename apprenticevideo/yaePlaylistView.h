@@ -15,6 +15,9 @@
 
 // Qt interfaces:
 #include <QObject>
+#include <QFont>
+#include <QString>
+#include <QFontMetricsF>
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -23,9 +26,265 @@
 
 namespace yae
 {
+  //----------------------------------------------------------------
+  // Vec
+  //
+  template <typename TData, unsigned int Cardinality>
+  struct Vec
+  {
+    enum { kCardinality = Cardinality };
+    enum { kDimension = Cardinality };
+    typedef TData value_type;
+    typedef Vec<TData, Cardinality> TVec;
+    TData coord_[Cardinality];
+
+    inline TVec & operator *= (const TData & scale)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] *= scale;
+      }
+
+      return *this;
+    }
+
+    inline TVec operator * (const TData & scale) const
+    {
+      TVec result(*this);
+      result *= scale;
+      return result;
+    }
+
+    inline TVec & operator += (const TData & normDelta)
+    {
+      TData n0 = norm();
+      if (n0 > 0.0)
+      {
+        TData n1 = n0 + normDelta;
+        TData scale = n1 / n0;
+        return this->operator *= (scale);
+      }
+
+      const TData v = normDelta / std::sqrt(TData(Cardinality));
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] = v;
+      }
+      return *this;
+    }
+
+    inline TVec operator + (const TData & normDelta) const
+    {
+      TVec result(*this);
+      result += normDelta;
+      return result;
+    }
+
+    inline TVec & operator -= (const TData & normDelta)
+    {
+      return this->operator += (-normDelta);
+    }
+
+    inline TVec operator - (const TData & normDelta) const
+    {
+      return this->operator + (-normDelta);
+    }
+
+    inline TData operator * (const TVec & other) const
+    {
+      TData result = TData(0);
+
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        result += (coord_[i] * other.coord_[i]);
+      }
+
+      return result;
+    }
+
+    inline TVec & operator += (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] += other.coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec operator + (const TVec & other) const
+    {
+      TVec result(*this);
+      result += other;
+      return result;
+    }
+
+    inline TVec & operator -= (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] -= other.coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec operator - (const TVec & other) const
+    {
+      TVec result(*this);
+      result -= other;
+      return result;
+    }
+
+    inline TVec & negate()
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] = -coord_[i];
+      }
+
+      return *this;
+    }
+
+    inline TVec negated() const
+    {
+      TVec result(*this);
+      result.negate();
+      return result;
+    }
+
+    inline TData normSqrd() const
+    {
+      TData result = TData(0);
+
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        result += (coord_[i] * coord_[i]);
+      }
+
+      return result;
+    }
+
+    inline TData norm() const
+    {
+      return std::sqrt(this->normSqrd());
+    }
+
+    inline bool
+    normalize(const TData & epsilon = std::numeric_limits<TData>::min())
+    {
+      TData n = this->norm();
+      if (n > epsilon)
+      {
+        this->operator *= (TData(1) / n);
+        return true;
+      }
+
+      this->operator *= (TData(0));
+      return false;
+    }
+
+    inline TVec
+    normalized(const TData & epsilon = std::numeric_limits<TData>::min()) const
+    {
+      TVec result(*this);
+      result.normalize(epsilon);
+      return result;
+    }
+
+    inline TVec & operator < (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        if (!(coord_[i] < other.coord_[i]))
+        {
+          return false;
+        }
+      }
+
+      return true;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // operator -
+  //
+  template <typename TData, unsigned int Cardinality>
+  inline static Vec<TData, Cardinality>
+  operator - (const Vec<TData, Cardinality> & vec)
+  {
+    return vec.negated();
+  }
+
+  //----------------------------------------------------------------
+  // operator *
+  //
+  template <typename TData, unsigned int Cardinality>
+  inline static Vec<TData, Cardinality>
+  operator * (const TData & scale, const Vec<TData, Cardinality> & vec)
+  {
+    return vec * scale;
+  }
+
+  //----------------------------------------------------------------
+  // TVec2D
+  //
+  typedef Vec<double, 2> TVec2D;
+
+  //----------------------------------------------------------------
+  // vec2d
+  //
+  inline static TVec2D
+  vec2d(double x, double y)
+  {
+    TVec2D v;
+    v.coord_[0] = x;
+    v.coord_[1] = y;
+    return v;
+  }
+
+  //----------------------------------------------------------------
+  // Segment
+  //
+  // 1D bounding box
+  //
+  struct Segment
+  {
+    Segment():
+      origin_(0.0),
+      length_(0.0)
+    {}
+
+    void clear();
+    bool isEmpty() const;
+    void expand(const Segment & bbox);
+
+    inline double start() const
+    { return origin_; }
+
+    inline double end() const
+    { return origin_ + length_; }
+
+    Segment & operator *= (double scale)
+    {
+      length_ *= scale;
+      return *this;
+    }
+
+    Segment & operator += (double translate)
+    {
+      origin_ += translate;
+      return *this;
+    }
+
+    double origin_;
+    double length_;
+  };
 
   //----------------------------------------------------------------
   // BBox
+  //
+  // 2D bounding box
   //
   struct BBox
   {
@@ -161,8 +420,13 @@ namespace yae
     kPropertyBottom,
     kPropertyHCenter,
     kPropertyVCenter,
+    kPropertyXContent,
+    kPropertyYContent,
+    kPropertyX,
+    kPropertyY,
     kPropertyBBoxContent,
-    kPropertyBBox
+    kPropertyBBox,
+    kPropertyVisible
   };
 
   //----------------------------------------------------------------
@@ -188,9 +452,19 @@ namespace yae
   typedef IProperties<double> TDoubleProp;
 
   //----------------------------------------------------------------
+  // TSegmentProp
+  //
+  typedef IProperties<Segment> TSegmentProp;
+
+  //----------------------------------------------------------------
   // TBBoxProp
   //
   typedef IProperties<BBox> TBBoxProp;
+
+  //----------------------------------------------------------------
+  // TBoolProp
+  //
+  typedef IProperties<bool> TBoolProp;
 
   //----------------------------------------------------------------
   // Expression
@@ -224,6 +498,16 @@ namespace yae
   typedef boost::shared_ptr<TDoubleExpr> TDoubleExprPtr;
 
   //----------------------------------------------------------------
+  // TSegmentExpr
+  //
+  typedef Expression<Segment> TSegmentExpr;
+
+  //----------------------------------------------------------------
+  // TSegmentExprPtr
+  //
+  typedef boost::shared_ptr<TSegmentExpr> TSegmentExprPtr;
+
+  //----------------------------------------------------------------
   // TBBoxExpr
   //
   typedef Expression<BBox> TBBoxExpr;
@@ -232,6 +516,16 @@ namespace yae
   // TBBoxExprPtr
   //
   typedef boost::shared_ptr<TBBoxExpr> TBBoxExprPtr;
+
+  //----------------------------------------------------------------
+  // TBoolExpr
+  //
+  typedef Expression<bool> TBoolExpr;
+
+  //----------------------------------------------------------------
+  // TBoolExprPtr
+  //
+  typedef boost::shared_ptr<TBoolExpr> TBoolExprPtr;
 
   //----------------------------------------------------------------
   // DataRef
@@ -375,9 +669,19 @@ namespace yae
   typedef DataRef<double> ItemRef;
 
   //----------------------------------------------------------------
+  // SegmentRef
+  //
+  typedef DataRef<Segment> SegmentRef;
+
+  //----------------------------------------------------------------
   // BBoxRef
   //
   typedef DataRef<BBox> BBoxRef;
+
+  //----------------------------------------------------------------
+  // BoolRef
+  //
+  typedef DataRef<bool> BoolRef;
 
   //----------------------------------------------------------------
   // ColorRef
@@ -427,7 +731,9 @@ namespace yae
   // Item
   //
   struct Item : public TDoubleProp,
-                public TBBoxProp
+                public TSegmentProp,
+                public TBBoxProp,
+                public TBoolProp
   {
 
     //----------------------------------------------------------------
@@ -438,21 +744,33 @@ namespace yae
     Item(const char * id = NULL);
     virtual ~Item() {}
 
-    // calculate the bounding box of item content, if any,
+    // calculate dimensions of item content, if any,
     // not counting nested item children.
     //
-    // NOTE: default implementation returns an empty bbox
+    // NOTE: default implementation returns 0.0
     // because it has no content besides nested children.
-    virtual void calcContentBBox(BBox & bbox) const;
+    virtual double calcContentWidth() const;
+    virtual double calcContentHeight() const;
 
-    virtual void layout();
+    // discard cached properties so they would get re-calculated (on-demand):
     virtual void uncache();
 
     // virtual:
     void get(Property property, double & value) const;
 
     // virtual:
+    void get(Property property, Segment & value) const;
+
+    // virtual:
     void get(Property property, BBox & value) const;
+
+    // virtual:
+    void get(Property property, bool & value) const;
+
+    const Segment & xContent() const;
+    const Segment & yContent() const;
+    const Segment & x() const;
+    const Segment & y() const;
 
     const BBox & bboxContent() const;
     const BBox & bbox() const;
@@ -465,6 +783,8 @@ namespace yae
     double bottom() const;
     double hcenter() const;
     double vcenter() const;
+
+    bool visible() const;
 
     template <typename TItem>
     inline TItem & addNew(const char * id = NULL)
@@ -483,12 +803,28 @@ namespace yae
       return ItemRef::expression(e, scale, translate);
     }
 
+    inline SegmentRef addExpr(TSegmentExpr * e,
+                              double scale = 1.0,
+                              double translate = 0.0)
+    {
+      exprSegment_.push_back(TSegmentExprPtr(e));
+      return SegmentRef::expression(e, scale, translate);
+    }
+
     inline BBoxRef addExpr(TBBoxExpr * e,
                            double scale = 1.0,
                            double translate = 0.0)
     {
       exprBBox_.push_back(TBBoxExprPtr(e));
       return BBoxRef::expression(e, scale, translate);
+    }
+
+    inline BoolRef addExpr(TBoolExpr * e,
+                           double scale = 1.0,
+                           double translate = 0.0)
+    {
+      exprBool_.push_back(TBoolExprPtr(e));
+      return BoolRef::expression(e, scale, translate);
     }
 
     // FIXME: for debugging only:
@@ -520,13 +856,26 @@ namespace yae
 
     // storage of expressions associated with this Item:
     std::list<TDoubleExprPtr> exprDouble_;
+    std::list<TSegmentExprPtr> exprSegment_;
     std::list<TBBoxExprPtr> exprBBox_;
+    std::list<TBoolExprPtr> exprBool_;
 
-    // bounding box of this items content:
+    // 1D bounding segments of this items content:
+    const SegmentRef xContent_;
+    const SegmentRef yContent_;
+
+    // 1D bounding segments of this item:
+    const SegmentRef x_;
+    const SegmentRef y_;
+
+    // 2D bounding box of this items content:
     const BBoxRef bboxContent_;
 
-    // bounding box of this item:
+    // 2D bounding box of this item:
     const BBoxRef bbox_;
+
+    // flag indicating whether this item and its children are visible:
+    BoolRef visible_;
 
   private:
     // intentionally disabled:
@@ -540,13 +889,82 @@ namespace yae
   typedef Item::ItemPtr ItemPtr;
 
   //----------------------------------------------------------------
+  // Image
+  //
+  class Image : public Item
+  {
+    Image(const Image &);
+    Image & operator = (const Image &);
+
+    // keep implementation details private:
+    struct TPrivate;
+    TPrivate * p_;
+
+  public:
+    Image(const char * id = NULL);
+    ~Image();
+
+    void load(const QString & url);
+
+    // virtual:
+    void paint() const;
+  };
+
+  //----------------------------------------------------------------
+  // Text
+  //
+  class Text : public Item
+  {
+    Text(const Text &);
+    Text & operator = (const Text &);
+
+    // keep implementation details private:
+    struct TPrivate;
+    TPrivate * p_;
+
+    BBoxRef bboxText_;
+
+  public:
+    Text(const char * id = NULL);
+    ~Text();
+
+    // helper:
+    void calcTextBBox(BBox & bbox) const;
+
+    // virtual:
+    double calcContentWidth() const;
+    double calcContentHeight() const;
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paint() const;
+
+    Qt::TextElideMode elide_;
+    Qt::TextFlag flags_;
+    Qt::TextFormat format_;
+    Qt::AlignmentFlag alignment_;
+    QString text_;
+
+    QFont font_;
+    ItemRef fontPixelSize_;
+    ItemRef maxWidth_;
+    ItemRef maxHeight_;
+  };
+
+  //----------------------------------------------------------------
   // Rectangle
   //
   struct Rectangle : public Item
   {
     Rectangle(const char * id = NULL);
 
-    virtual void paint() const;
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paint() const;
 
     // corner radius:
     ItemRef radius_;
@@ -565,12 +983,13 @@ namespace yae
   {
     Scrollable(const char * id = NULL);
 
-    virtual void layout();
-    virtual void uncache();
-    virtual void paint() const;
+    // virtual:
+    void uncache();
+    void paint() const;
 
-    virtual void dump(std::ostream & os,
-                      const std::string & indent = std::string()) const;
+    // virtual:
+    void dump(std::ostream & os,
+              const std::string & indent = std::string()) const;
 
     // item container:
     Item content_;
@@ -641,14 +1060,11 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
-
+    std::map<TLayoutHint, TLayoutPtr> layoutDelegates_;
     ItemPtr root_;
     PlaylistModelProxy * model_;
     double w_;
     double h_;
-    double position_;
-    double sceneSize_;
-    std::map<TLayoutHint, TLayoutPtr> layoutDelegates_;
   };
 
 };
