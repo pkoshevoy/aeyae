@@ -1154,20 +1154,37 @@ namespace yae
   //----------------------------------------------------------------
   // Item::paint
   //
-  void
-  Item::paint() const
+  bool
+  Item::paint(const Segment & xregion, const Segment & yregion) const
   {
     if (!Item::visible())
     {
-      return;
+      return false;
     }
+
+    const Segment & yfootprint = this->y();
+    if (yregion.disjoint(yfootprint))
+    {
+      return false;
+    }
+
+    const Segment & xfootprint = this->x();
+    if (xregion.disjoint(xfootprint))
+    {
+      return false;
+    }
+
+    // std::cerr << "FIXME: paint: " << id_ << std::endl;
+    this->paintContent();
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
-      child->paint();
+      child->paint(xregion, yregion);
     }
+
+    return true;
   }
 
 
@@ -1495,7 +1512,7 @@ namespace yae
   // Image::paint
   //
   void
-  Image::paint() const
+  Image::paintContent() const
   {
     if (!Item::visible())
     {
@@ -1612,7 +1629,7 @@ namespace yae
   // Text::paint
   //
   void
-  Text::paint() const
+  Text::paintContent() const
   {
     if (!Item::visible())
     {
@@ -1841,7 +1858,7 @@ namespace yae
   // Rectangle::paint
   //
   void
-  Rectangle::paint() const
+  Rectangle::paintContent() const
   {
     if (!Item::visible())
     {
@@ -1871,8 +1888,6 @@ namespace yae
                 color,
                 colorBorder);
     }
-
-    Item::paint();
   }
 
   //----------------------------------------------------------------
@@ -1897,19 +1912,19 @@ namespace yae
   //----------------------------------------------------------------
   // Scrollable::paint
   //
-  void
-  Scrollable::paint() const
+  bool
+  Scrollable::paint(const Segment & xregion, const Segment & yregion) const
   {
-    if (!Item::visible())
+    if (!Item::paint(xregion, yregion))
     {
-      return;
+      return false;
     }
 
     double sceneHeight = content_.height();
     double viewHeight = this->height();
 
-    double x = left();
-    double y = top();
+    const Segment & x = this->x();
+    const Segment & y = this->y();
 
     double dy = 0.0;
     if (sceneHeight > viewHeight)
@@ -1920,8 +1935,10 @@ namespace yae
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(x, y + dy, 0.0));
-    content_.paint();
+    YAE_OGL_11(glTranslated(x.origin_, y.origin_ + dy, 0.0));
+    content_.paint(Segment(0.0, x.length_), Segment(dy, y.length_));
+
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -2002,7 +2019,10 @@ namespace yae
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
 
-    root_->paint();
+    // std::cerr << "\n----------------------------------------------------\n";
+    const Segment & xregion = root_->x();
+    const Segment & yregion = root_->y();
+    root_->paint(xregion, yregion);
   }
 
   //----------------------------------------------------------------
@@ -2185,7 +2205,7 @@ namespace yae
                      *model_,
                      rootIndex);
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     root.dump(std::cerr);
 #endif
   }

@@ -278,14 +278,20 @@ namespace yae
   //
   struct Segment
   {
-    Segment():
-      origin_(0.0),
-      length_(0.0)
+    Segment(double origin = 0.0, double length = 0.0):
+      origin_(origin),
+      length_(length)
     {}
 
     void clear();
     bool isEmpty() const;
-    void expand(const Segment & bbox);
+    void expand(const Segment & seg);
+
+    inline bool disjoint(const Segment & b) const
+    { return this->start() > b.end() || b.start() > this->end(); }
+
+    inline bool overlap(const Segment & b) const
+    { return !this->disjoint(b); }
 
     inline double start() const
     { return origin_; }
@@ -327,6 +333,16 @@ namespace yae
     bool isEmpty() const;
     void expand(const BBox & bbox);
 
+    inline bool disjoint(const BBox & b) const
+    {
+      return
+        (this->left() > b.right() || b.left() > this->right()) ||
+        (this->top() > b.bottom() || b.top() > this->bottom());
+    }
+
+    inline bool overlap(const BBox & b) const
+    { return !this->disjoint(b); }
+
     inline double left() const
     { return x_; }
 
@@ -338,6 +354,12 @@ namespace yae
 
     inline double bottom() const
     { return y_ + h_; }
+
+    inline Segment x() const
+    { return Segment(x_, w_); }
+
+    inline Segment y() const
+    { return Segment(y_, h_); }
 
     BBox & operator *= (double scale)
     {
@@ -884,8 +906,13 @@ namespace yae
     virtual void dump(std::ostream & os,
                       const std::string & indent = std::string()) const;
 
-    // an item has no visual representation, but a Rectangle subclass does:
-    virtual void paint() const;
+    // NOTE: override this to provide custom visual representation:
+    virtual void paintContent() const {}
+
+    // NOTE: this will call paintContent,
+    // followed by a call to paint each nested item:
+    virtual bool paint(const Segment & xregion,
+                       const Segment & yregion) const;
 
     // item id, mostly used for debugging:
     std::string id_;
@@ -956,7 +983,7 @@ namespace yae
     void uncache();
 
     // virtual:
-    void paint() const;
+    void paintContent() const;
 
     TVarRef url_;
   };
@@ -990,7 +1017,7 @@ namespace yae
     void uncache();
 
     // virtual:
-    void paint() const;
+    void paintContent() const;
 
     QFont font_;
     Qt::TextElideMode elide_;
@@ -1015,7 +1042,7 @@ namespace yae
     void uncache();
 
     // virtual:
-    void paint() const;
+    void paintContent() const;
 
     // corner radius:
     ItemRef radius_;
@@ -1036,7 +1063,7 @@ namespace yae
 
     // virtual:
     void uncache();
-    void paint() const;
+    bool paint(const Segment & xregion, const Segment & yregion) const;
 
     // virtual:
     void dump(std::ostream & os,
