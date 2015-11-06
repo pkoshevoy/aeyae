@@ -18,6 +18,7 @@
 #include <QFont>
 #include <QString>
 #include <QFontMetricsF>
+#include <QVariant>
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -244,6 +245,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TVar
+  //
+  struct TVar : public QVariant
+  {
+    TVar():
+      QVariant()
+    {}
+
+    template <typename TData>
+    TVar(const TData & value):
+      QVariant(value)
+    {}
+
+    inline TVar & operator *= (double scale)
+    {
+      (void)scale;
+      return *this;
+    }
+
+    inline TVar & operator += (double translate)
+    {
+      (void)translate;
+      return *this;
+    }
+  };
+
+  //----------------------------------------------------------------
   // Segment
   //
   // 1D bounding box
@@ -467,6 +495,11 @@ namespace yae
   typedef IProperties<bool> TBoolProp;
 
   //----------------------------------------------------------------
+  // TVarProp
+  //
+  typedef IProperties<TVar> TVarProp;
+
+  //----------------------------------------------------------------
   // Expression
   //
   template <typename TData>
@@ -526,6 +559,16 @@ namespace yae
   // TBoolExprPtr
   //
   typedef boost::shared_ptr<TBoolExpr> TBoolExprPtr;
+
+  //----------------------------------------------------------------
+  // TVarExpr
+  //
+  typedef Expression<TVar> TVarExpr;
+
+  //----------------------------------------------------------------
+  // TVarExprPtr
+  //
+  typedef boost::shared_ptr<TVarExpr> TVarExprPtr;
 
   //----------------------------------------------------------------
   // DataRef
@@ -684,6 +727,11 @@ namespace yae
   typedef DataRef<bool> BoolRef;
 
   //----------------------------------------------------------------
+  // TVarRef
+  //
+  typedef DataRef<TVar> TVarRef;
+
+  //----------------------------------------------------------------
   // ColorRef
   //
   typedef DataRef<Color> ColorRef;
@@ -824,6 +872,14 @@ namespace yae
       return BoolRef::expression(e, scale, translate);
     }
 
+    inline TVarRef addExpr(TVarExpr * e,
+                           double scale = 1.0,
+                           double translate = 0.0)
+    {
+      exprTVar_.push_back(TVarExprPtr(e));
+      return TVarRef::expression(e, scale, translate);
+    }
+
     // FIXME: for debugging only:
     virtual void dump(std::ostream & os,
                       const std::string & indent = std::string()) const;
@@ -856,6 +912,7 @@ namespace yae
     std::list<TSegmentExprPtr> exprSegment_;
     std::list<TBBoxExprPtr> exprBBox_;
     std::list<TBoolExprPtr> exprBool_;
+    std::list<TVarExprPtr> exprTVar_;
 
     // 1D bounding segments of this items content:
     const SegmentRef xContent_;
@@ -866,7 +923,7 @@ namespace yae
     const SegmentRef y_;
 
     // flag indicating whether this item and its children are visible:
-    BoolRef visible_;
+    TVarRef visible_;
 
   private:
     // intentionally disabled:
@@ -895,10 +952,13 @@ namespace yae
     Image(const char * id = NULL);
     ~Image();
 
-    void load(const QString & url);
+    // virtual:
+    void uncache();
 
     // virtual:
     void paint() const;
+
+    TVarRef url_;
   };
 
   //----------------------------------------------------------------
@@ -932,13 +992,13 @@ namespace yae
     // virtual:
     void paint() const;
 
+    QFont font_;
     Qt::TextElideMode elide_;
     Qt::TextFlag flags_;
     Qt::TextFormat format_;
     Qt::AlignmentFlag alignment_;
-    QString text_;
 
-    QFont font_;
+    TVarRef text_;
     ItemRef fontPixelSize_;
     ItemRef maxWidth_;
     ItemRef maxHeight_;

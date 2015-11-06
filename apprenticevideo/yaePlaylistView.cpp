@@ -374,6 +374,29 @@ namespace yae
     const Text * root_;
   };
 
+  //----------------------------------------------------------------
+  // ModelQuery
+  //
+  struct ModelQuery : public TVarExpr
+  {
+    ModelQuery(const PlaylistModelProxy & model,
+               const QModelIndex & index,
+               int role):
+      model_(model),
+      index_(index),
+      role_(role)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      static_cast<QVariant &>(result) = model_.data(index_, role_);
+    }
+
+    const PlaylistModelProxy & model_;
+    QModelIndex index_;
+    int role_;
+  };
 
   //----------------------------------------------------------------
   // Segment::clear
@@ -582,7 +605,7 @@ namespace yae
     yContent_(addExpr(new CalcYContent(this))),
     x_(addExpr(new CalcX(this))),
     y_(addExpr(new CalcY(this))),
-    visible_(BoolRef::constant(true))
+    visible_(TVarRef::constant(TVar(true)))
   {
     if (id)
     {
@@ -629,6 +652,7 @@ namespace yae
     yContent_.uncache();
     x_.uncache();
     y_.uncache();
+    visible_.uncache();
   }
 
   //----------------------------------------------------------------
@@ -1017,7 +1041,7 @@ namespace yae
   bool
   Item::visible() const
   {
-    return visible_.get();
+    return visible_.get().toBool();
   }
 
   //----------------------------------------------------------------
@@ -1133,7 +1157,7 @@ namespace yae
   void
   Item::paint() const
   {
-    if (!Item::visible_.get())
+    if (!Item::visible())
     {
       return;
     }
@@ -1372,46 +1396,34 @@ namespace yae
     void layout(Item & root,
                 const std::map<TLayoutHint, TLayoutPtr> & layouts,
                 const PlaylistModelProxy & model,
-                const QModelIndex & itemIndex)
+                const QModelIndex & index)
     {
-      QString url =
-        model.data(itemIndex, PlaylistModel::kRoleThumbnail).toString();
-
-      QString txt =
-        model.data(itemIndex, PlaylistModel::kRoleLabel).toString();
-
-      bool isSelected =
-        model.data(itemIndex, PlaylistModel::kRoleSelected).toBool();
-
-      bool isPlaying =
-        model.data(itemIndex, PlaylistModel::kRolePlaying).toBool();
-
-      std::cerr
-        << "\n  thumbnail: " << url.toUtf8().constData()
-        << "\n      label: " << txt.toUtf8().constData()
-        << "\n   selected: " << isSelected
-        << "\nnow playing: " << isPlaying
-        << std::endl;
-
       Image & thumbnail = root.addNew<Image>("thumbnail");
       thumbnail.anchors_.fill(&root);
-      thumbnail.load(url);
+      thumbnail.url_ = thumbnail.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
       Text & title = root.addNew<Text>("title");
       title.anchors_.bottomLeft(&root);
       title.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
       title.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
       title.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, 10);
-      title.text_ = txt;
+      title.text_ = title.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
 
       Item & rm = root.addNew<Item>("remove item");
-      rm.anchors_.topRight(&root);
-      rm.margins_.set(3); // FIXME:
 
       Text & playing = root.addNew<Text>("now playing");
       playing.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
       playing.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
-      playing.text_ = QObject::tr("NOW PLAYING");
+      playing.visible_ = playing.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
+      playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+
+      rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
+      rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
+      rm.anchors_.topRight(&root);
+      rm.margins_.set(3);
 
       Rectangle & underline = root.addNew<Rectangle>("underline");
       underline.anchors_.left_ = ItemRef::offset(&playing, kPropertyLeft, -1);
@@ -1419,9 +1431,8 @@ namespace yae
       underline.anchors_.top_ = ItemRef::offset(&playing, kPropertyBottom, 2);
       underline.height_ = ItemRef::constant(2);
       underline.color_ = ColorRef::constant(Color(0xff0000));
-
-      rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
-      rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
+      underline.visible_ = underline.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & sel = root.addNew<Rectangle>("selected");
       sel.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
@@ -1430,6 +1441,8 @@ namespace yae
       sel.margins_.set(3);
       sel.height_ = ItemRef::constant(2);
       sel.color_ = ColorRef::constant(Color(0xff0000));
+      sel.visible_ = sel.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleSelected));
     }
   };
 
@@ -1470,12 +1483,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Image::load
+  // Image::uncache
   //
   void
-  Image::load(const QString & url)
+  Image::uncache()
   {
-    p_->load(url);
+    url_.uncache();
   }
 
   //----------------------------------------------------------------
@@ -1484,7 +1497,7 @@ namespace yae
   void
   Image::paint() const
   {
-    if (!Item::visible_.get())
+    if (!Item::visible())
     {
       return;
     }
@@ -1546,11 +1559,11 @@ namespace yae
     QFontMetricsF fm(font_);
     int flags = alignment_ | flags_;
 
-    QString text = text_;
+    QString text = text_.get().toString();
     if (elide_ != Qt::ElideNone)
     {
       flags |= Qt::TextSingleLine;
-      text = fm.elidedText(text_, elide_, maxWidth, flags);
+      text = fm.elidedText(text, elide_, maxWidth, flags);
     }
 
     QRectF maxRect(qreal(0), qreal(0), maxWidth, maxHeight);
@@ -1591,6 +1604,7 @@ namespace yae
     fontPixelSize_.uncache();
     maxWidth_.uncache();
     bboxText_.uncache();
+    text_.uncache();
     Item::uncache();
   }
 
@@ -1600,7 +1614,7 @@ namespace yae
   void
   Text::paint() const
   {
-    if (!Item::visible_.get())
+    if (!Item::visible())
     {
       return;
     }
@@ -1829,7 +1843,7 @@ namespace yae
   void
   Rectangle::paint() const
   {
-    if (!Item::visible_.get())
+    if (!Item::visible())
     {
       return;
     }
@@ -1886,7 +1900,7 @@ namespace yae
   void
   Scrollable::paint() const
   {
-    if (!Item::visible_.get())
+    if (!Item::visible())
     {
       return;
     }
