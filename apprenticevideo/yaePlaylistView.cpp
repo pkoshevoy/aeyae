@@ -357,74 +357,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // CalcContentBBox
-  //
-  struct CalcContentBBox : public TBBoxExpr
-  {
-    CalcContentBBox(const Item * root):
-      root_(root)
-    {}
-
-    // virtual:
-    void evaluate(BBox & result) const
-    {
-      result = BBox();
-
-      result.w_ = root_->calcContentWidth();
-      result.h_ = root_->calcContentHeight();
-
-      result.x_ =
-        root_->anchors_.left_.isValid() ?
-        root_->left() :
-
-        root_->anchors_.right_.isValid() ?
-        root_->right() - result.w_ :
-
-        root_->hcenter() - result.w_ * 0.5;
-
-      result.y_ =
-        root_->anchors_.top_.isValid() ?
-        root_->top() :
-
-        root_->anchors_.bottom_.isValid() ?
-        root_->bottom() - result.h_ :
-
-        root_->vcenter() - result.h_ * 0.5;
-
-      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
-           i != root_->children_.end(); ++i)
-      {
-        const ItemPtr & child = *i;
-        const BBox & bboxOfChild = child->bbox();
-        result.expand(bboxOfChild);
-      }
-    }
-
-    const Item * root_;
-  };
-
-  //----------------------------------------------------------------
-  // CalcBBox
-  //
-  struct CalcBBox : public TBBoxExpr
-  {
-    CalcBBox(const Item * root):
-      root_(root)
-    {}
-
-    // virtual:
-    void evaluate(BBox & result) const
-    {
-      result.x_ = root_->left();
-      result.y_ = root_->top();
-      result.w_ = root_->width();
-      result.h_ = root_->height();
-    }
-
-    const Item * root_;
-  };
-
-  //----------------------------------------------------------------
   // CalcTextBBox
   //
   struct CalcTextBBox : public TBBoxExpr
@@ -650,8 +582,6 @@ namespace yae
     yContent_(addExpr(new CalcYContent(this))),
     x_(addExpr(new CalcX(this))),
     y_(addExpr(new CalcY(this))),
-    bboxContent_(addExpr(new CalcContentBBox(this))),
-    bbox_(addExpr(new CalcBBox(this))),
     visible_(BoolRef::constant(true))
   {
     if (id)
@@ -699,8 +629,6 @@ namespace yae
     yContent_.uncache();
     x_.uncache();
     y_.uncache();
-    bboxContent_.uncache();
-    bbox_.uncache();
   }
 
   //----------------------------------------------------------------
@@ -783,21 +711,35 @@ namespace yae
   // Item::get
   //
   void
-  Item::get(Property property, BBox & value) const
+  Item::get(Property property, BBox & bbox) const
   {
     if (property == kPropertyBBoxContent)
     {
-      value = this->bboxContent();
+      const Segment & x = this->xContent();
+      const Segment & y = this->yContent();
+
+      bbox.x_ = x.origin_;
+      bbox.w_ = x.length_;
+
+      bbox.y_ = y.origin_;
+      bbox.h_ = y.length_;
     }
     else if (property == kPropertyBBox)
     {
-      value = this->bbox();
+      const Segment & x = this->x();
+      const Segment & y = this->y();
+
+      bbox.x_ = x.origin_;
+      bbox.w_ = x.length_;
+
+      bbox.y_ = y.origin_;
+      bbox.h_ = y.length_;
     }
     else
     {
       YAE_ASSERT(false);
       throw std::runtime_error("unsupported item property of type <BBox>");
-      value = BBox();
+      bbox = BBox();
     }
   }
 
@@ -856,24 +798,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::bboxContent
-  //
-  const BBox &
-  Item::bboxContent() const
-  {
-    return bboxContent_.get();
-  }
-
-  //----------------------------------------------------------------
-  // Item::bbox
-  //
-  const BBox &
-  Item::bbox() const
-  {
-    return bbox_.get();
-  }
-
-  //----------------------------------------------------------------
   // Item::width
   //
   double
@@ -896,18 +820,6 @@ namespace yae
       return w;
     }
 
-#if 0
-    // width is based on the bounding box of item content:
-    const BBox & bboxContent = this->bboxContent();
-    double w = 0.0;
-
-    if (!bboxContent.isEmpty())
-    {
-      double l = anchors_.left_.isValid() ? left() : bboxContent.left();
-      double r = anchors_.left_.isValid() ? bboxContent.right() : right();
-      w = r - l;
-    }
-#else
     // height is based on horizontal footprint of item content:
     const Segment & xContent = this->xContent();
     double w = 0.0;
@@ -918,7 +830,6 @@ namespace yae
       double r = anchors_.left_.isValid() ? xContent.end() : right();
       w = r - l;
     }
-#endif
 
     width_.cache(w);
     return w;
@@ -946,18 +857,7 @@ namespace yae
       height_.cache(h);
       return h;
     }
-#if 0
-    // height is based on the bounding box of item content:
-    const BBox & bboxContent = this->bboxContent();
-    double h = 0.0;
 
-    if (!bboxContent.isEmpty())
-    {
-      double t = anchors_.top_.isValid() ? top() : bboxContent.top();
-      double b = anchors_.top_.isValid() ? bboxContent.bottom() : bottom();
-      h = b - t;
-    }
-#else
     // height is based on vertical footprint of item content:
     const Segment & yContent = this->yContent();
     double h = 0.0;
@@ -968,7 +868,6 @@ namespace yae
       double b = anchors_.top_.isValid() ? yContent.end() : bottom();
       h = b - t;
     }
-#endif
 
     height_.cache(h);
     return h;
@@ -1127,7 +1026,9 @@ namespace yae
   void
   Item::dump(std::ostream & os, const std::string & indent) const
   {
-    const BBox & bbox = this->bbox();
+    BBox bbox;
+    this->get(kPropertyBBox, bbox);
+
     os << indent
        << "x: " << bbox.x_
        << ", y: " << bbox.y_
@@ -1236,8 +1137,6 @@ namespace yae
     {
       return;
     }
-
-    // paintBBox(bbox(), color_);
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
@@ -1935,7 +1834,9 @@ namespace yae
       return;
     }
 
-    const BBox & bbox = this->bbox();
+    BBox bbox;
+    this->get(kPropertyBBox, bbox);
+
     double radius = radius_.get();
     double border = border_.get();
     const Color & color = color_.get();
@@ -2087,35 +1988,7 @@ namespace yae
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
 
-    // YAE_OGL_11(glEnable(GL_MULTISAMPLE_ARB));
-
     root_->paint();
-
-#if 0
-    // FIXME: for debugging
-    {
-      YAE_OGL_11(glDisable(GL_LIGHTING));
-      YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
-      YAE_OGL_11(glLineWidth(2.0));
-      YAE_OGL_11(glBegin(GL_LINES));
-      {
-        YAE_OGL_11(glColor3ub(0x7f, 0x00, 0x10));
-        YAE_OGL_11(glVertex2i(w / 10, h / 10));
-        YAE_OGL_11(glVertex2i(2 * w / 10, h / 10));
-        YAE_OGL_11(glColor3ub(0xff, 0x00, 0x20));
-        YAE_OGL_11(glVertex2i(2 * w / 10, h / 10));
-        YAE_OGL_11(glVertex2i(3 * w / 10, h / 10));
-
-        YAE_OGL_11(glColor3ub(0x10, 0x7f, 0x00));
-        YAE_OGL_11(glVertex2i(w / 10, h / 10));
-        YAE_OGL_11(glVertex2i(w / 10, 2 * h / 10));
-        YAE_OGL_11(glColor3ub(0x20, 0xff, 0x00));
-        YAE_OGL_11(glVertex2i(w / 10, 2 * h / 10));
-        YAE_OGL_11(glVertex2i(w / 10, 3 * h / 10));
-      }
-      YAE_OGL_11(glEnd());
-    }
-#endif
   }
 
   //----------------------------------------------------------------

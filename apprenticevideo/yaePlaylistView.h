@@ -772,9 +772,6 @@ namespace yae
     const Segment & x() const;
     const Segment & y() const;
 
-    const BBox & bboxContent() const;
-    const BBox & bbox() const;
-
     double width() const;
     double height() const;
     double left() const;
@@ -867,12 +864,6 @@ namespace yae
     // 1D bounding segments of this item:
     const SegmentRef x_;
     const SegmentRef y_;
-
-    // 2D bounding box of this items content:
-    const BBoxRef bboxContent_;
-
-    // 2D bounding box of this item:
-    const BBoxRef bbox_;
 
     // flag indicating whether this item and its children are visible:
     BoolRef visible_;
