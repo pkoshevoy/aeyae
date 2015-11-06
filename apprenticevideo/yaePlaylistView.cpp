@@ -695,6 +695,10 @@ namespace yae
     margins_.uncache();
     width_.uncache();
     height_.uncache();
+    xContent_.uncache();
+    yContent_.uncache();
+    x_.uncache();
+    y_.uncache();
     bboxContent_.uncache();
     bbox_.uncache();
   }
@@ -910,7 +914,7 @@ namespace yae
 
     if (!xContent.isEmpty())
     {
-      double l = anchors_.left_.isValid() ? left() : xContent.end();
+      double l = anchors_.left_.isValid() ? left() : xContent.start();
       double r = anchors_.left_.isValid() ? xContent.end() : right();
       w = r - l;
     }
@@ -960,7 +964,7 @@ namespace yae
 
     if (!yContent.isEmpty())
     {
-      double t = anchors_.top_.isValid() ? top() : yContent.end();
+      double t = anchors_.top_.isValid() ? top() : yContent.start();
       double b = anchors_.top_.isValid() ? yContent.end() : bottom();
       h = b - t;
     }
