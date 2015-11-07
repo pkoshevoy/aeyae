@@ -198,6 +198,223 @@ namespace yae
     GLenum matrixMode_;
   };
 
+
+  //----------------------------------------------------------------
+  // TFragmentShaderProgram
+  //
+  struct YAE_API TFragmentShaderProgram
+  {
+    TFragmentShaderProgram(const char * code = NULL);
+
+    // delete the program:
+    void destroy();
+
+    // helper:
+    inline bool loaded() const
+    { return code_ && handle_; }
+
+    // GL_ARB_fragment_program source code:
+    const char * code_;
+
+    // GL_ARB_fragment_program handle:
+    GLuint handle_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TFragmentShader
+  //
+  struct YAE_API TFragmentShader
+  {
+    TFragmentShader(const TFragmentShaderProgram * program = NULL,
+                    TPixelFormatId format = kInvalidPixelFormat);
+
+    // pointer to the shader program:
+    const TFragmentShaderProgram * program_;
+
+    // number of texture objects required for this pixel format:
+    unsigned char numPlanes_;
+
+    // sample stride per texture object:
+    unsigned char stride_[4];
+
+    // sample plane (sub)sampling per texture object:
+    unsigned char subsample_x_[4];
+    unsigned char subsample_y_[4];
+
+    GLint internalFormatGL_[4];
+    GLenum pixelFormatGL_[4];
+    GLenum dataTypeGL_[4];
+    GLenum magFilterGL_[4];
+    GLenum minFilterGL_[4];
+    GLint shouldSwapBytes_[4];
+  };
+
+
+  //----------------------------------------------------------------
+  // TBaseCanvas
+  //
+  struct TBaseCanvas
+  {
+    TBaseCanvas();
+    virtual ~TBaseCanvas();
+
+    virtual void createFragmentShaders() = 0;
+
+    virtual void clear(IOpenGLContext & context) = 0;
+
+    virtual bool loadFrame(IOpenGLContext & context,
+                           const TVideoFramePtr & frame) = 0;
+
+    virtual void draw() = 0;
+
+    // helper:
+    const pixelFormat::Traits * pixelTraits() const;
+
+    void skipColorConverter(IOpenGLContext & context, bool enable);
+
+    void enableVerticalScaling(bool enable);
+
+    bool getCroppedFrame(TCropFrame & crop) const;
+
+    bool imageWidthHeight(double & w, double & h) const;
+    bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
+
+    void overrideDisplayAspectRatio(double dar);
+
+    void cropFrame(double darCropped);
+    void cropFrame(const TCropFrame & crop);
+
+    void getFrame(TVideoFramePtr & frame) const;
+
+    // helper:
+    const TFragmentShader *
+    fragmentShaderFor(TPixelFormatId format) const;
+
+  protected:
+    // helper:
+    const TFragmentShader *
+    findSomeShaderFor(TPixelFormatId format) const;
+
+    // helper:
+    void destroyFragmentShaders();
+
+    // helper:
+    bool createBuiltinFragmentShader(const char * code);
+
+    // helper:
+    bool createFragmentShadersFor(const TPixelFormatId * formats,
+                                  const std::size_t numFormats,
+                                  const char * code);
+
+    // helper:
+    bool setFrame(const TVideoFramePtr & frame,
+                  bool & colorSpaceOrRangeChanged);
+
+    mutable boost::mutex mutex_;
+    TVideoFramePtr frame_;
+    TCropFrame crop_;
+    double dar_;
+    double darCropped_;
+    bool skipColorConverter_;
+    bool verticalScalingEnabled_;
+
+    TFragmentShaderProgram builtinShaderProgram_;
+    TFragmentShader builtinShader_;
+
+    std::list<TFragmentShaderProgram> shaderPrograms_;
+    std::map<TPixelFormatId, TFragmentShader> shaders_;
+
+    // shader selected for current frame:
+    const TFragmentShader * shader_;
+
+    // 3x4 matrix for color conversion to full-range RGB,
+    // including luma scale and shift:
+    double m34_to_rgb_[12];
+  };
+
+  //----------------------------------------------------------------
+  // TModernCanvas
+  //
+  struct TModernCanvas : public TBaseCanvas
+  {
+    // virtual:
+    void createFragmentShaders();
+
+    // virtual:
+    void clear(IOpenGLContext & context);
+
+    // virtual:
+    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
+
+    // virtual:
+    void draw();
+
+  protected:
+    std::vector<GLuint> texId_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TEdge
+  //
+  struct TEdge
+  {
+    // texture:
+    GLsizei offset_;
+    GLsizei extent_;
+    GLsizei length_;
+
+    // padding:
+    GLsizei v0_;
+    GLsizei v1_;
+
+    // texture coordinates:
+    GLdouble t0_;
+    GLdouble t1_;
+  };
+
+  //----------------------------------------------------------------
+  // TFrameTile
+  //
+  struct TFrameTile
+  {
+    TEdge x_;
+    TEdge y_;
+  };
+
+  //----------------------------------------------------------------
+  // TLegacyCanvas
+  //
+  // This is a subclass implementing frame rendering on OpenGL
+  // hardware that doesn't support GL_EXT_texture_rectangle
+  //
+  struct TLegacyCanvas : public TBaseCanvas
+  {
+    TLegacyCanvas();
+
+    // virtual:
+    void createFragmentShaders();
+
+    // virtual:
+    void clear(IOpenGLContext & context);
+
+    // virtual:
+    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
+
+    // virtual:
+    void draw();
+
+  protected:
+    // unpadded image dimensions:
+    GLsizei w_;
+    GLsizei h_;
+
+    std::vector<TFrameTile> tiles_;
+    std::vector<GLuint> texId_;
+  };
+
+
   //----------------------------------------------------------------
   // CanvasRenderer
   //
@@ -250,7 +467,7 @@ namespace yae
     const TFragmentShader *
     fragmentShaderFor(const VideoTraits & vtts) const;
   };
-
 }
+
 
 #endif // YAE_CANVAS_RENDERER_H_

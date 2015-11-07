@@ -1220,57 +1220,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TFragmentShaderProgram
-  //
-  struct YAE_API TFragmentShaderProgram
-  {
-    TFragmentShaderProgram(const char * code = NULL);
-
-    // delete the program:
-    void destroy();
-
-    // helper:
-    inline bool loaded() const
-    { return code_ && handle_; }
-
-    // GL_ARB_fragment_program source code:
-    const char * code_;
-
-    // GL_ARB_fragment_program handle:
-    GLuint handle_;
-  };
-
-  //----------------------------------------------------------------
-  // TFragmentShader
-  //
-  struct YAE_API TFragmentShader
-  {
-    TFragmentShader(const TFragmentShaderProgram * program = NULL,
-                    TPixelFormatId format = kInvalidPixelFormat);
-
-    // pointer to the shader program:
-    const TFragmentShaderProgram * program_;
-
-    // number of texture objects required for this pixel format:
-    unsigned char numPlanes_;
-
-    // sample stride per texture object:
-    unsigned char stride_[4];
-
-    // sample plane (sub)sampling per texture object:
-    unsigned char subsample_x_[4];
-    unsigned char subsample_y_[4];
-
-    GLint internalFormatGL_[4];
-    GLenum pixelFormatGL_[4];
-    GLenum dataTypeGL_[4];
-    GLenum magFilterGL_[4];
-    GLenum minFilterGL_[4];
-    GLint shouldSwapBytes_[4];
-  };
-
-
-  //----------------------------------------------------------------
   // TFragmentShaderProgram::TFragmentShaderProgram
   //
   TFragmentShaderProgram::TFragmentShaderProgram(const char * code):
@@ -1433,436 +1382,443 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TBaseCanvas
+  // TBaseCanvas::TBaseCanvas
   //
-  struct TBaseCanvas
+  TBaseCanvas::TBaseCanvas():
+    dar_(0.0),
+    darCropped_(0.0),
+    skipColorConverter_(false),
+    verticalScalingEnabled_(false),
+    shader_(NULL)
   {
-    TBaseCanvas():
-      dar_(0.0),
-      darCropped_(0.0),
-      skipColorConverter_(false),
-      verticalScalingEnabled_(false),
-      shader_(NULL)
+    double identity[] = {
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0
+    };
+
+    memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::~TBaseCanvas
+  //
+  TBaseCanvas::~TBaseCanvas()
+  {
+    destroyFragmentShaders();
+    builtinShaderProgram_.destroy();
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::pixelTraits
+  //
+  const pixelFormat::Traits *
+  TBaseCanvas::pixelTraits() const
+  {
+    return (frame_ ?
+            pixelFormat::getTraits(frame_->traits_.pixelFormat_) :
+            NULL);
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::skipColorConverter
+  //
+  void
+  TBaseCanvas::skipColorConverter(IOpenGLContext & context, bool enable)
+  {
+    if (skipColorConverter_ == enable)
     {
-      double identity[] = {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0
-      };
-      memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
+      return;
     }
 
-    virtual ~TBaseCanvas()
+    TVideoFramePtr frame;
     {
-      destroyFragmentShaders();
-      builtinShaderProgram_.destroy();
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      frame = frame_;
+      frame_.reset();
     }
 
-    virtual void createFragmentShaders() = 0;
+    skipColorConverter_ = enable;
 
-    virtual void clear(IOpenGLContext & context) = 0;
-
-    virtual bool loadFrame(IOpenGLContext & context,
-                           const TVideoFramePtr & frame) = 0;
-
-    virtual void draw() = 0;
-
-    // helper:
-    inline const pixelFormat::Traits * pixelTraits() const
+    if (frame)
     {
-      return (frame_ ?
-              pixelFormat::getTraits(frame_->traits_.pixelFormat_) :
-              NULL);
+      loadFrame(context, frame);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::enableVerticalScaling
+  //
+  void
+  TBaseCanvas::enableVerticalScaling(bool enable)
+  {
+    verticalScalingEnabled_ = enable;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::getCroppedFrame
+  //
+  bool
+  TBaseCanvas::getCroppedFrame(TCropFrame & crop) const
+  {
+    if (!frame_)
+    {
+      return false;
     }
 
-    void skipColorConverter(IOpenGLContext & context, bool enable)
+    if (crop_.isEmpty())
     {
-      if (skipColorConverter_ == enable)
+      const VideoTraits & vtts = frame_->traits_;
+
+      crop.x_ = vtts.offsetLeft_;
+      crop.y_ = vtts.offsetTop_;
+      crop.w_ = vtts.visibleWidth_;
+      crop.h_ = vtts.visibleHeight_;
+
+      if (darCropped_)
       {
-        return;
-      }
+        double par = (vtts.pixelAspectRatio_ != 0.0 &&
+                      vtts.pixelAspectRatio_ != 1.0 ?
+                      vtts.pixelAspectRatio_ : 1.0);
 
-      TVideoFramePtr frame;
-      {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-        frame = frame_;
-        frame_.reset();
-      }
+        double dar = double(par * crop.w_) / double(crop.h_);
 
-      skipColorConverter_ = enable;
-
-      if (frame)
-      {
-        loadFrame(context, frame);
-      }
-    }
-
-    void enableVerticalScaling(bool enable)
-    {
-      verticalScalingEnabled_ = enable;
-    }
-
-    bool getCroppedFrame(TCropFrame & crop) const
-    {
-      if (!frame_)
-      {
-        return false;
-      }
-
-      if (crop_.isEmpty())
-      {
-        const VideoTraits & vtts = frame_->traits_;
-
-        crop.x_ = vtts.offsetLeft_;
-        crop.y_ = vtts.offsetTop_;
-        crop.w_ = vtts.visibleWidth_;
-        crop.h_ = vtts.visibleHeight_;
-
-        if (darCropped_)
+        if (dar < darCropped_)
         {
-          double par = (vtts.pixelAspectRatio_ != 0.0 &&
-                        vtts.pixelAspectRatio_ != 1.0 ?
-                        vtts.pixelAspectRatio_ : 1.0);
+          // adjust height:
+          int h = int(0.5 + double(par * crop.w_) / darCropped_);
+          crop.y_ += (crop.h_ - h) / 2;
+          crop.h_ = h;
+        }
+        else
+        {
+          // adjust width:
+          int w = int(0.5 + double(crop.h_ / par) * darCropped_);
+          crop.x_ += (crop.w_ - w) / 2;
+          crop.w_ = w;
+        }
+      }
+    }
+    else
+    {
+      crop = crop_;
+    }
 
-          double dar = double(par * crop.w_) / double(crop.h_);
+    return true;
+  }
 
-          if (dar < darCropped_)
-          {
-            // adjust height:
-            int h = int(0.5 + double(par * crop.w_) / darCropped_);
-            crop.y_ += (crop.h_ - h) / 2;
-            crop.h_ = h;
-          }
-          else
-          {
-            // adjust width:
-            int w = int(0.5 + double(crop.h_ / par) * darCropped_);
-            crop.x_ += (crop.w_ - w) / 2;
-            crop.w_ = w;
-          }
+  //----------------------------------------------------------------
+  // TBaseCanvas::imageWidthHeight
+  //
+  bool
+  TBaseCanvas::imageWidthHeight(double & w, double & h) const
+  {
+    TCropFrame crop;
+    if (getCroppedFrame(crop))
+    {
+      // video traits shortcut:
+      const VideoTraits & vtts = frame_->traits_;
+
+      w = crop.w_;
+      h = crop.h_;
+
+      if (!verticalScalingEnabled_)
+      {
+        if (dar_ != 0.0)
+        {
+          w = floor(0.5 + dar_ * h);
+        }
+        else if (vtts.pixelAspectRatio_ != 0.0)
+        {
+          w = floor(0.5 + w * vtts.pixelAspectRatio_);
         }
       }
       else
       {
-        crop = crop_;
+        if (dar_ != 0.0)
+        {
+          double wh = w / h;
+
+          if (dar_ > wh)
+          {
+            w = floor(0.5 + dar_ * h);
+          }
+          else if (dar_ < wh)
+          {
+            h = floor(0.5 + w / dar_);
+          }
+        }
+        else if (vtts.pixelAspectRatio_ > 1.0)
+        {
+          w = floor(0.5 + w * vtts.pixelAspectRatio_);
+        }
+        else if (vtts.pixelAspectRatio_ < 1.0)
+        {
+          h = floor(0.5 + h / vtts.pixelAspectRatio_);
+        }
       }
 
       return true;
     }
 
-    bool imageWidthHeight(double & w, double & h) const
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::imageWidthHeightRotated
+  //
+  bool
+  TBaseCanvas::imageWidthHeightRotated(double & w,
+                                       double & h,
+                                       int & rotate) const
+  {
+    if (imageWidthHeight(w, h))
     {
-      TCropFrame crop;
-      if (getCroppedFrame(crop))
+      // video traits shortcut:
+      const VideoTraits & vtts = frame_->traits_;
+
+      if (vtts.cameraRotation_ % 90 == 0)
       {
-        // video traits shortcut:
-        const VideoTraits & vtts = frame_->traits_;
-
-        w = crop.w_;
-        h = crop.h_;
-
-        if (!verticalScalingEnabled_)
+        // must be a camera phone video that needs to be
+        // rotated for viewing:
+        if (vtts.cameraRotation_ % 180 != 0)
         {
-          if (dar_ != 0.0)
-          {
-            w = floor(0.5 + dar_ * h);
-          }
-          else if (vtts.pixelAspectRatio_ != 0.0)
-          {
-            w = floor(0.5 + w * vtts.pixelAspectRatio_);
-          }
-        }
-        else
-        {
-          if (dar_ != 0.0)
-          {
-            double wh = w / h;
-
-            if (dar_ > wh)
-            {
-              w = floor(0.5 + dar_ * h);
-            }
-            else if (dar_ < wh)
-            {
-              h = floor(0.5 + w / dar_);
-            }
-          }
-          else if (vtts.pixelAspectRatio_ > 1.0)
-          {
-            w = floor(0.5 + w * vtts.pixelAspectRatio_);
-          }
-          else if (vtts.pixelAspectRatio_ < 1.0)
-          {
-            h = floor(0.5 + h / vtts.pixelAspectRatio_);
-          }
+          std::swap(w, h);
         }
 
-        return true;
+        rotate = vtts.cameraRotation_;
+      }
+      else
+      {
+        rotate = 0;
       }
 
-      return false;
+      return true;
     }
 
-    bool imageWidthHeightRotated(double & w, double & h, int & rotate) const
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::overrideDisplayAspectRatio
+  //
+  void
+  TBaseCanvas::overrideDisplayAspectRatio(double dar)
+  {
+    dar_ = dar;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::cropFrame
+  //
+  void
+  TBaseCanvas::cropFrame(double darCropped)
+  {
+    crop_.clear();
+    darCropped_ = darCropped;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::cropFrame
+  //
+  void
+  TBaseCanvas::cropFrame(const TCropFrame & crop)
+  {
+    darCropped_ = 0.0;
+    crop_ = crop;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::getFrame
+  //
+  void
+  TBaseCanvas::getFrame(TVideoFramePtr & frame) const
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    frame = frame_;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::fragmentShaderFor
+  //
+  const TFragmentShader *
+  TBaseCanvas::fragmentShaderFor(TPixelFormatId format) const
+  {
+    if (skipColorConverter_)
     {
-      if (imageWidthHeight(w, h))
-      {
-        // video traits shortcut:
-        const VideoTraits & vtts = frame_->traits_;
-
-        if (vtts.cameraRotation_ % 90 == 0)
-        {
-          // must be a camera phone video that needs to be
-          // rotated for viewing:
-          if (vtts.cameraRotation_ % 180 != 0)
-          {
-            std::swap(w, h);
-          }
-
-          rotate = vtts.cameraRotation_;
-        }
-        else
-        {
-          rotate = 0;
-        }
-
-        return true;
-      }
-
-      return false;
-    }
-
-    inline void overrideDisplayAspectRatio(double dar)
-    {
-      dar_ = dar;
-    }
-
-    inline void cropFrame(double darCropped)
-    {
-      crop_.clear();
-      darCropped_ = darCropped;
-    }
-
-    inline void cropFrame(const TCropFrame & crop)
-    {
-      darCropped_ = 0.0;
-      crop_ = crop;
-    }
-
-    inline void getFrame(TVideoFramePtr & frame) const
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      frame = frame_;
-    }
-
-    // helper:
-    const TFragmentShader *
-    fragmentShaderFor(TPixelFormatId format) const
-    {
-      if (skipColorConverter_)
-      {
-        return NULL;
-      }
-
-      std::map<TPixelFormatId, TFragmentShader>::const_iterator
-        found = shaders_.find(format);
-
-#if !defined(NDEBUG)
-      // for debugging only:
-      {
-        const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
-        std::cerr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
-        if (found != shaders_.end())
-        {
-          std::cerr << '\n';
-          yae_show_program_listing(std::cerr, found->second.program_->code_);
-          std::cerr << std::endl;
-        }
-        else
-        {
-          std::cerr << " NOT FOUND" << std::endl;
-        }
-      }
-#endif
-
-      if (found != shaders_.end())
-      {
-        return &(found->second);
-      }
-
       return NULL;
     }
 
-  protected:
-    // helper:
-    const TFragmentShader *
-    findSomeShaderFor(TPixelFormatId format) const
+    std::map<TPixelFormatId, TFragmentShader>::const_iterator
+      found = shaders_.find(format);
+
+#if !defined(NDEBUG)
+    // for debugging only:
     {
-      const TFragmentShader * shader = fragmentShaderFor(format);
-      if (!shader && builtinShader_.program_)
+      const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
+      std::cerr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
+      if (found != shaders_.end())
       {
-        shader = &builtinShader_;
-#if 0 // !defined(NDEBUG)
-        std::cerr << "WILL USE PASS-THROUGH SHADER" << std::endl;
+        std::cerr << '\n';
+        yae_show_program_listing(std::cerr, found->second.program_->code_);
+        std::cerr << std::endl;
+      }
+      else
+      {
+        std::cerr << " NOT FOUND" << std::endl;
+      }
+    }
 #endif
-      }
 
-      return shader;
-    }
-
-    // helper:
-    void destroyFragmentShaders()
+    if (found != shaders_.end())
     {
-      shader_ = NULL;
-      shaders_.clear();
-
-      while (!shaderPrograms_.empty())
-      {
-        TFragmentShaderProgram & program = shaderPrograms_.front();
-        program.destroy();
-        shaderPrograms_.pop_front();
-      }
+      return &(found->second);
     }
 
-    // helper:
-    bool createBuiltinFragmentShader(const char * code)
-    {
-      YAE_OPENGL_HERE();
-      YAE_OGL_11_HERE();
-
-      bool ok = false;
-      builtinShaderProgram_.destroy();
-      builtinShaderProgram_.code_ = code;
-
-      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
-
-      YAE_OPENGL(glGenProgramsARB(1, &builtinShaderProgram_.handle_));
-      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                                  builtinShaderProgram_.handle_));
-
-      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
-                                    builtinShaderProgram_.code_))
-      {
-        builtinShader_.program_ = &builtinShaderProgram_;
-        ok = true;
-      }
-      else
-      {
-        YAE_OPENGL(glDeleteProgramsARB(1, &builtinShaderProgram_.handle_));
-        builtinShaderProgram_.handle_ = 0;
-        builtinShader_.program_ = NULL;
-      }
-      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
-      return ok;
-    }
-
-    // helper:
-    bool createFragmentShadersFor(const TPixelFormatId * formats,
-                                  const std::size_t numFormats,
-                                  const char * code)
-    {
-      YAE_OPENGL_HERE();
-
-      YAE_OGL_11_HERE();
-
-      bool ok = false;
-      TFragmentShaderProgram program(code);
-
-      YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
-      YAE_OPENGL(glGenProgramsARB(1, &program.handle_));
-      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_));
-
-      if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
-                                    program.code_))
-      {
-        shaderPrograms_.push_back(program);
-
-        const TFragmentShaderProgram *
-          shaderProgram = &(shaderPrograms_.back());
-
-        for (std::size_t i = 0; i < numFormats; i++)
-        {
-          TPixelFormatId format = formats[i];
-          shaders_[format] = TFragmentShader(shaderProgram, format);
-        }
-
-        ok = true;
-      }
-      else
-      {
-        YAE_OPENGL(glDeleteProgramsARB(1, &program.handle_));
-        program.handle_ = 0;
-      }
-
-      YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
-      return ok;
-    }
-
-    // helper:
-    inline bool setFrame(const TVideoFramePtr & frame,
-                         bool & colorSpaceOrRangeChanged)
-    {
-      // NOTE: this assumes that the mutex is already locked:
-      bool frameSizeOrFormatChanged = false;
-
-      colorSpaceOrRangeChanged =
-        (!frame_ || !frame ||
-         !frame_->traits_.sameColorSpaceAndRange(frame->traits_));
-
-      if (!frame_ || !frame ||
-          !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
-      {
-        crop_.clear();
-        frameSizeOrFormatChanged = true;
-        colorSpaceOrRangeChanged = true;
-      }
-
-      frame_ = frame;
-      return frameSizeOrFormatChanged;
-    }
-
-    mutable boost::mutex mutex_;
-    TVideoFramePtr frame_;
-    TCropFrame crop_;
-    double dar_;
-    double darCropped_;
-    bool skipColorConverter_;
-    bool verticalScalingEnabled_;
-
-    TFragmentShaderProgram builtinShaderProgram_;
-    TFragmentShader builtinShader_;
-
-    std::list<TFragmentShaderProgram> shaderPrograms_;
-    std::map<TPixelFormatId, TFragmentShader> shaders_;
-
-    // shader selected for current frame:
-    const TFragmentShader * shader_;
-
-    // 3x4 matrix for color conversion to full-range RGB,
-    // including luma scale and shift:
-    double m34_to_rgb_[12];
-  };
+    return NULL;
+  }
 
   //----------------------------------------------------------------
-  // TModernCanvas
+  // TBaseCanvas::findSomeShaderFor
   //
-  struct TModernCanvas : public TBaseCanvas
+  const TFragmentShader *
+  TBaseCanvas::findSomeShaderFor(TPixelFormatId format) const
   {
-    // virtual:
-    void createFragmentShaders();
+    const TFragmentShader * shader = fragmentShaderFor(format);
+    if (!shader && builtinShader_.program_)
+    {
+      shader = &builtinShader_;
+#if 0 // !defined(NDEBUG)
+      std::cerr << "WILL USE PASS-THROUGH SHADER" << std::endl;
+#endif
+    }
 
-    // virtual:
-    void clear(IOpenGLContext & context);
+    return shader;
+  }
 
-    // virtual:
-    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
+  //----------------------------------------------------------------
+  // TBaseCanvas::destroyFragmentShaders
+  //
+  void
+  TBaseCanvas::destroyFragmentShaders()
+  {
+    shader_ = NULL;
+    shaders_.clear();
 
-    // virtual:
-    void draw();
+    while (!shaderPrograms_.empty())
+    {
+      TFragmentShaderProgram & program = shaderPrograms_.front();
+      program.destroy();
+      shaderPrograms_.pop_front();
+    }
+  }
 
-  protected:
-    std::vector<GLuint> texId_;
-  };
+  //----------------------------------------------------------------
+  // TBaseCanvas::createBuiltinFragmentShader
+  //
+  bool
+  TBaseCanvas::createBuiltinFragmentShader(const char * code)
+  {
+    YAE_OPENGL_HERE();
+    YAE_OGL_11_HERE();
+
+    bool ok = false;
+    builtinShaderProgram_.destroy();
+    builtinShaderProgram_.code_ = code;
+
+    YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
+
+    YAE_OPENGL(glGenProgramsARB(1, &builtinShaderProgram_.handle_));
+    YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
+                                builtinShaderProgram_.handle_));
+
+    if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
+                                  builtinShaderProgram_.code_))
+    {
+      builtinShader_.program_ = &builtinShaderProgram_;
+      ok = true;
+    }
+    else
+    {
+      YAE_OPENGL(glDeleteProgramsARB(1, &builtinShaderProgram_.handle_));
+      builtinShaderProgram_.handle_ = 0;
+      builtinShader_.program_ = NULL;
+    }
+    YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::createFragmentShadersFor
+  //
+  bool
+  TBaseCanvas::createFragmentShadersFor(const TPixelFormatId * formats,
+                                        const std::size_t numFormats,
+                                        const char * code)
+  {
+    YAE_OPENGL_HERE();
+
+    YAE_OGL_11_HERE();
+
+    bool ok = false;
+    TFragmentShaderProgram program(code);
+
+    YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
+    YAE_OPENGL(glGenProgramsARB(1, &program.handle_));
+    YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, program.handle_));
+
+    if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
+                                  program.code_))
+    {
+      shaderPrograms_.push_back(program);
+
+      const TFragmentShaderProgram *
+        shaderProgram = &(shaderPrograms_.back());
+
+      for (std::size_t i = 0; i < numFormats; i++)
+      {
+        TPixelFormatId format = formats[i];
+        shaders_[format] = TFragmentShader(shaderProgram, format);
+      }
+
+      ok = true;
+    }
+    else
+    {
+      YAE_OPENGL(glDeleteProgramsARB(1, &program.handle_));
+      program.handle_ = 0;
+    }
+
+    YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::setFrame
+  //
+  bool
+  TBaseCanvas::setFrame(const TVideoFramePtr & frame,
+                        bool & colorSpaceOrRangeChanged)
+  {
+    // NOTE: this assumes that the mutex is already locked:
+    bool frameSizeOrFormatChanged = false;
+
+    colorSpaceOrRangeChanged =
+      (!frame_ || !frame ||
+       !frame_->traits_.sameColorSpaceAndRange(frame->traits_));
+
+    if (!frame_ || !frame ||
+        !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
+    {
+      crop_.clear();
+      frameSizeOrFormatChanged = true;
+      colorSpaceOrRangeChanged = true;
+    }
+
+    frame_ = frame;
+    return frameSizeOrFormatChanged;
+  }
+
 
   //----------------------------------------------------------------
   // TModernCanvas::createFragmentShaders
@@ -2271,64 +2227,6 @@ namespace yae
     YAE_OGL_11(glDisable(GL_TEXTURE_RECTANGLE_ARB));
   }
 
-  //----------------------------------------------------------------
-  // TEdge
-  //
-  struct TEdge
-  {
-    // texture:
-    GLsizei offset_;
-    GLsizei extent_;
-    GLsizei length_;
-
-    // padding:
-    GLsizei v0_;
-    GLsizei v1_;
-
-    // texture coordinates:
-    GLdouble t0_;
-    GLdouble t1_;
-  };
-
-  //----------------------------------------------------------------
-  // TFrameTile
-  //
-  struct TFrameTile
-  {
-    TEdge x_;
-    TEdge y_;
-  };
-
-  //----------------------------------------------------------------
-  // TLegacyCanvas
-  //
-  // This is a subclass implementing frame rendering on OpenGL
-  // hardware that doesn't support GL_EXT_texture_rectangle
-  //
-  struct TLegacyCanvas : public TBaseCanvas
-  {
-    TLegacyCanvas();
-
-    // virtual:
-    void createFragmentShaders();
-
-    // virtual:
-    void clear(IOpenGLContext & context);
-
-    // virtual:
-    bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
-
-    // virtual:
-    void draw();
-
-  protected:
-    // unpadded image dimensions:
-    GLsizei w_;
-    GLsizei h_;
-
-    std::vector<TFrameTile> tiles_;
-    std::vector<GLuint> texId_;
-  };
 
   //----------------------------------------------------------------
   // TLegacyCanvas::TLegacyCanvas

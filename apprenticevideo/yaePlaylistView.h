@@ -1145,7 +1145,7 @@ namespace yae
     double h_;
   };
 
-};
+}
 
 
 #endif // YAE_PLAYLIST_VIEW_H_
