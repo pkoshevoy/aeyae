@@ -15,7 +15,7 @@
 #include <QFontMetricsF>
 
 // local interfaces:
-#include "yaeCanvasQPainterUtils.h"
+#include "yaeCanvasRenderer.h"
 #include "yaePlaylistView.h"
 #include "yaeUtilsQt.h"
 
@@ -1434,8 +1434,8 @@ namespace yae
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.font_.setBold(false);
-      label.fontSize_ = label.addExpr
-        (new CalcTitleHeight(root.parent_, 24.0), 0.5 * dpiScale);
+      label.fontSize_ =
+        ItemRef::scale(&root, kPropertyHeight, 0.15 * dpiScale);
 
       Item & rm = root.addNew<Item>("remove item");
 
@@ -1446,12 +1446,8 @@ namespace yae
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.font_.setBold(false);
-#if 1
-      playing.fontSize_ = playing.addExpr
-        (new CalcTitleHeight(root.parent_, 24.0), 0.42 * dpiScale);
-#else
-      playing.fontSize_ = label.fontSize_;
-#endif
+      playing.fontSize_ =
+        ItemRef::scale(&root, kPropertyHeight, 0.12 * dpiScale);
 
       rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
@@ -1539,260 +1535,284 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // kSupersampleText
+  //
+  static const double kSupersampleText = 2.0;
+
+  //----------------------------------------------------------------
   // Text::TPrivate
   //
   struct Text::TPrivate
   {
-    TPrivate():
-      texId_(0)
-    {}
+    TPrivate();
+    ~TPrivate();
 
-    ~TPrivate()
-    {
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glDeleteTextures(1, &texId_));
-    }
-
-    //----------------------------------------------------------------
-    // upload
-    //
-    bool
-    upload(const Text & item)
-    {
-      QRectF maxRect;
-      item.getMaxRect(maxRect);
-
-      BBox bboxContent;
-      item.get(kPropertyBBoxContent, bboxContent);
-
-      int iw = (int)ceil(bboxContent.w_);
-      int ih = (int)ceil(bboxContent.h_);
-      GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
-      GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
-
-      QImage img(iw, ih, QImage::Format_ARGB32);
-      {
-        img.fill(QColor(0x7f, 0x7f, 0x7f, 0));
-
-        QPainter painter(&img);
-        QFont font = item.font_;
-        double fontSize = item.fontSize_.get();
-        font.setPointSizeF(fontSize);
-        painter.setFont(font);
-
-        // FIXME: this should be a Text property:
-        painter.setPen(QColor(0xff, 0xff, 0xff));
-
-        int flags = item.textFlags();
-#ifdef NDEBUG
-        painter.drawText(maxRect, flags, text_);
-#else
-        QRectF result;
-        painter.drawText(maxRect, flags, text_, &result);
-
-        if (result.width() != bboxContent.w_ ||
-            result.height() != bboxContent.h_)
-        {
-          YAE_ASSERT(false);
-
-          QFontMetricsF fm(font);
-          QRectF v3 = fm.boundingRect(maxRect, flags, text_);
-
-          BBox v2;
-          item.calcTextBBox(v2);
-
-          std::cerr
-            << "\nfont size: " << fontSize
-            << ", text: " << text_.toUtf8().constData()
-            << "\nexpected: " << bboxContent.w_ << " x " << bboxContent.h_
-            << "\n  result: " << result.width() << " x " << result.height()
-            << "\nv2 retry: " << v2.w_ << " x " << v2.h_
-            << "\nv3 retry: " << v3.width() << " x " << v3.height()
-            << std::endl;
-        }
-#endif
-      }
-
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-      YAE_OGL_11(glDeleteTextures(1, &texId_));
-      YAE_OGL_11(glGenTextures(1, &texId_));
-
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-      if (!YAE_OGL_11(glIsTexture(texId_)))
-      {
-        YAE_ASSERT(false);
-        return false;
-      }
-
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_GENERATE_MIPMAP,
-                                 GL_TRUE));
-
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_WRAP_S,
-                                 GL_CLAMP_TO_EDGE));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_WRAP_T,
-                                 GL_CLAMP_TO_EDGE));
-
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_BASE_LEVEL,
-                                 0));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_MAX_LEVEL,
-                                 0));
-
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_MAG_FILTER,
-                                 GL_LINEAR));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                                 GL_TEXTURE_MIN_FILTER,
-                                 GL_LINEAR));
-      yae_assert_gl_no_error();
-
-      GLint internalFormat = 0;
-      GLenum pixelFormat = 0;
-      GLenum dataType = 0;
-      GLint shouldSwapBytes = 0;
-
-      yae_to_opengl(yae::kPixelFormatBGRA,
-                    internalFormat,
-                    pixelFormat,
-                    dataType,
-                    shouldSwapBytes);
-
-      YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
-                              0, // mipmap level
-                              internalFormat,
-                              widthPowerOfTwo,
-                              heightPowerOfTwo,
-                              0, // border width
-                              pixelFormat,
-                              dataType,
-                              NULL));
-      yae_assert_gl_no_error();
-
-
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
-                               shouldSwapBytes));
-
-      const QImage & constImg = img;
-      const unsigned char * data = constImg.bits();
-      const int rowSize = constImg.bytesPerLine() / 4;
-      const int padding = alignmentFor(data, rowSize);
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
-                                 0, // mipmap level
-                                 0, // x-offset
-                                 0, // y-offset
-                                 iw,
-                                 ih,
-                                 pixelFormat,
-                                 dataType,
-                                 data));
-      yae_assert_gl_no_error();
-
-      // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-
-      return true;
-    }
-
-    //----------------------------------------------------------------
-    // paint
-    //
-    void
-    paint(const Text & item)
-    {
-      BBox bboxContent;
-      item.get(kPropertyBBoxContent, bboxContent);
-
-      double x0 = bboxContent.x_;
-      double y0 = bboxContent.y_;
-
-      int iw = (int)ceil(bboxContent.w_);
-      int ih = (int)ceil(bboxContent.h_);
-
-      GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
-      GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
-
-      double u0 = (0.5) / double(widthPowerOfTwo);
-      double u1 = (bboxContent.w_ - 0.5) / double(widthPowerOfTwo);
-
-      double v0 = (0.5) / double(heightPowerOfTwo);
-      double v1 = (bboxContent.h_ - 0.5) / double(heightPowerOfTwo);
-
-      double x1 = x0 + bboxContent.w_;
-      double y1 = y0 + bboxContent.h_;
-
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-      if (glActiveTexture)
-      {
-        YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-        yae_assert_gl_no_error();
-      }
-
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-
-      YAE_OGL_11(glDisable(GL_LIGHTING));
-      YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-      YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
-      YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
-
-      // YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-      // YAE_OGL_11(glColor4ub(0x7f, 0xff, 0x3f, 0xff));
-      YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-      {
-        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
-        // YAE_OGL_11(glTexCoord2d(0.0, 0.0));
-        YAE_OGL_11(glTexCoord2d(u0, v0));
-        YAE_OGL_11(glVertex2d(x0, y0));
-
-        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
-        // YAE_OGL_11(glTexCoord2d(0.0, 1.0));
-        YAE_OGL_11(glTexCoord2d(u0, v1));
-        YAE_OGL_11(glVertex2d(x0, y1));
-
-        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
-        // YAE_OGL_11(glTexCoord2d(1.0, 0.0));
-        YAE_OGL_11(glTexCoord2d(u1, v0));
-        YAE_OGL_11(glVertex2d(x1, y0));
-
-        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
-        // YAE_OGL_11(glTexCoord2d(1.0, 1.0));
-        YAE_OGL_11(glTexCoord2d(u1, v1));
-        YAE_OGL_11(glVertex2d(x1, y1));
-      }
-      YAE_OGL_11(glEnd());
-
-      // unbind:
-      if (glActiveTexture)
-      {
-        YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-        yae_assert_gl_no_error();
-      }
-
-      // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-    }
+    void uncache();
+    bool upload(const Text & item);
+    void paint(const Text & item);
 
     QString text_;
     GLuint texId_;
     BoolRef ready_;
   };
+
+  //----------------------------------------------------------------
+  // Text::TPrivate::TPrivate
+  //
+  Text::TPrivate::TPrivate():
+    texId_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // Text::TPrivate::~TPrivate
+  //
+  Text::TPrivate::~TPrivate()
+  {
+    uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Text::TPrivate::uncache
+  //
+  void
+  Text::TPrivate::uncache()
+  {
+    ready_.uncache();
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    texId_ = 0;
+  }
+
+  //----------------------------------------------------------------
+  // Text::TPrivate::upload
+  //
+  bool
+  Text::TPrivate::upload(const Text & item)
+  {
+    QRectF maxRect;
+    item.getMaxRect(maxRect);
+
+    maxRect.setWidth(maxRect.width() * kSupersampleText);
+    maxRect.setHeight(maxRect.height() * kSupersampleText);
+
+    BBox bboxContent;
+    item.get(kPropertyBBoxContent, bboxContent);
+
+    int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
+    int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+    QImage img(iw, ih, QImage::Format_ARGB32);
+    {
+      img.fill(QColor(0x7f, 0x7f, 0x7f, 0));
+
+      QPainter painter(&img);
+      QFont font = item.font_;
+      double fontSize = item.fontSize_.get();
+      font.setPointSizeF(fontSize * kSupersampleText);
+      painter.setFont(font);
+
+      // FIXME: this should be a Text property:
+      painter.setPen(QColor(0xff, 0xff, 0xff));
+
+      int flags = item.textFlags();
+#ifdef NDEBUG
+      painter.drawText(maxRect, flags, text_);
+#else
+      QRectF result;
+      painter.drawText(maxRect, flags, text_, &result);
+
+      if (result.width() / kSupersampleText != bboxContent.w_ ||
+          result.height() / kSupersampleText != bboxContent.h_)
+      {
+        YAE_ASSERT(false);
+
+        QFontMetricsF fm(font);
+        QRectF v3 = fm.boundingRect(maxRect, flags, text_);
+
+        BBox v2;
+        item.calcTextBBox(v2);
+
+        std::cerr
+          << "\nfont size: " << fontSize
+          << ", text: " << text_.toUtf8().constData()
+          << "\nexpected: " << bboxContent.w_ << " x " << bboxContent.h_
+          << "\n  result: " << result.width() << " x " << result.height()
+          << "\nv2 retry: " << v2.w_ << " x " << v2.h_
+          << "\nv3 retry: " << v3.width() << " x " << v3.height()
+          << std::endl;
+      }
+#endif
+    }
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    YAE_OGL_11(glGenTextures(1, &texId_));
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+    if (!YAE_OGL_11(glIsTexture(texId_)))
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_GENERATE_MIPMAP,
+                               GL_TRUE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_S,
+                               GL_CLAMP_TO_EDGE));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_T,
+                               GL_CLAMP_TO_EDGE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_BASE_LEVEL,
+                               0));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAX_LEVEL,
+                               0));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAG_FILTER,
+                               GL_LINEAR));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MIN_FILTER,
+                               GL_LINEAR));
+    yae_assert_gl_no_error();
+
+    GLint internalFormat = 0;
+    GLenum pixelFormat = 0;
+    GLenum dataType = 0;
+    GLint shouldSwapBytes = 0;
+
+    yae_to_opengl(yae::kPixelFormatBGRA,
+                  internalFormat,
+                  pixelFormat,
+                  dataType,
+                  shouldSwapBytes);
+
+    YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                            0, // mipmap level
+                            internalFormat,
+                            widthPowerOfTwo,
+                            heightPowerOfTwo,
+                            0, // border width
+                            pixelFormat,
+                            dataType,
+                            NULL));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                             shouldSwapBytes));
+
+    const QImage & constImg = img;
+    const unsigned char * data = constImg.bits();
+    const int rowSize = constImg.bytesPerLine() / 4;
+    const int padding = alignmentFor(data, rowSize);
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                               0, // mipmap level
+                               0, // x-offset
+                               0, // y-offset
+                               iw,
+                               ih,
+                               pixelFormat,
+                               dataType,
+                               data));
+    yae_assert_gl_no_error();
+
+    // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Text::TPrivate::paint
+  //
+  void
+  Text::TPrivate::paint(const Text & item)
+  {
+    BBox bboxContent;
+    item.get(kPropertyBBoxContent, bboxContent);
+
+    double x0 = bboxContent.x_;
+    double y0 = bboxContent.y_;
+
+    int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
+    int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
+
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+    double u0 = 0.0;
+    double u1 = ((bboxContent.w_ * kSupersampleText - 1.0) /
+                 double(widthPowerOfTwo));
+
+    double v0 = 0.0;
+    double v1 = ((bboxContent.h_ * kSupersampleText - 1.0) /
+                 double(heightPowerOfTwo));
+
+    double x1 = x0 + bboxContent.w_;
+    double y1 = y0 + bboxContent.h_;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glTexCoord2d(u0, v0));
+      YAE_OGL_11(glVertex2d(x0, y0));
+
+      YAE_OGL_11(glTexCoord2d(u0, v1));
+      YAE_OGL_11(glVertex2d(x0, y1));
+
+      YAE_OGL_11(glTexCoord2d(u1, v0));
+      YAE_OGL_11(glVertex2d(x1, y0));
+
+      YAE_OGL_11(glTexCoord2d(u1, v1));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    // un-bind:
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+  }
+
 
   //----------------------------------------------------------------
   // UploadTexture
@@ -1885,7 +1905,7 @@ namespace yae
 
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize);
+    font.setPointSizeF(fontSize * kSupersampleText);
     QFontMetricsF fm(font);
 
     p_->text_ = text_.get().toString();
@@ -1894,11 +1914,13 @@ namespace yae
       p_->text_ = fm.elidedText(p_->text_, elide_, maxRect.width(), flags);
     }
 
+    maxRect.setWidth(maxRect.width() * kSupersampleText);
+    maxRect.setHeight(maxRect.height() * kSupersampleText);
     QRectF rect = fm.boundingRect(maxRect, flags, p_->text_);
-    bbox.x_ = rect.x();
-    bbox.y_ = rect.y();
-    bbox.w_ = rect.width();
-    bbox.h_ = rect.height();
+    bbox.x_ = rect.x() / kSupersampleText;
+    bbox.y_ = rect.y() / kSupersampleText;
+    bbox.w_ = rect.width() / kSupersampleText;
+    bbox.h_ = rect.height() / kSupersampleText;
   }
 
   //----------------------------------------------------------------
@@ -1931,7 +1953,7 @@ namespace yae
     maxWidth_.uncache();
     bboxText_.uncache();
     text_.uncache();
-    p_->ready_.uncache();
+    p_->uncache();
     Item::uncache();
   }
 
@@ -2297,6 +2319,8 @@ namespace yae
     Item & root = *root_;
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
+
+    TMakeCurrentContext currentContext(*context());
     root.uncache();
   }
 
@@ -2502,6 +2526,7 @@ namespace yae
       return;
     }
 
+    TMakeCurrentContext currentContext(*context());
     root_.reset(new Item("playlist"));
     Item & root = *root_;
 

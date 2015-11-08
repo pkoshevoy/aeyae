@@ -11,6 +11,12 @@
 
 // system includes:
 #include <string>
+#include <stdexcept>
+
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
 
 // Qt includes:
 #ifdef YAE_USE_QT5
