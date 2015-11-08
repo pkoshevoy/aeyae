@@ -10,6 +10,7 @@
 #define YAE_CANVAS_RENDERER_H_
 
 // system includes:
+#include <deque>
 #include <string>
 #include <stdexcept>
 
