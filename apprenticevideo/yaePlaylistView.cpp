@@ -1572,7 +1572,7 @@ namespace yae
 
       QImage img(iw, ih, QImage::Format_ARGB32);
       {
-        img.fill(0);
+        img.fill(QColor(0x7f, 0x7f, 0x7f, 0));
 
         QPainter painter(&img);
         QFont font = item.font_;
