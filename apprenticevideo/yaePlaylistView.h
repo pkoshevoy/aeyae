@@ -405,20 +405,20 @@ namespace yae
     inline const unsigned char & operator[] (unsigned int i) const
     {
       const unsigned char * argb = (const unsigned char *)&argb_;
-#if __LITTLE_ENDIAN__
-      return argb[3 - i];
-#else
+#if __BIG_ENDIAN__
       return argb[i];
+#else
+      return argb[3 - i];
 #endif
     }
 
     inline unsigned char & operator[] (unsigned int i)
     {
       unsigned char * argb = (unsigned char *)&argb_;
-#if __LITTLE_ENDIAN__
-      return argb[3 - i];
-#else
+#if __BIG_ENDIAN__
       return argb[i];
+#else
+      return argb[3 - i];
 #endif
     }
 

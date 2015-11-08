@@ -1420,6 +1420,12 @@ namespace yae
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
+#ifdef __APPLE__
+      static const double dpiScale = 1.0;
+#else
+      static const double dpiScale = 72.0 / 96.0;
+#endif
+
       Text & label = root.addNew<Text>("label");
       label.anchors_.bottomLeft(&root);
       label.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
@@ -1427,9 +1433,9 @@ namespace yae
       label.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, -10);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-      label.font_.setBold(true);
+      label.font_.setBold(false);
       label.fontSize_ = label.addExpr
-        (new CalcTitleHeight(root.parent_, 24.0), 0.5);
+        (new CalcTitleHeight(root.parent_, 24.0), 0.5 * dpiScale);
 
       Item & rm = root.addNew<Item>("remove item");
 
@@ -1439,10 +1445,10 @@ namespace yae
       playing.visible_ = playing.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-      playing.font_.setBold(true);
+      playing.font_.setBold(false);
 #if 1
       playing.fontSize_ = playing.addExpr
-        (new CalcTitleHeight(root.parent_, 24.0), 0.42);
+        (new CalcTitleHeight(root.parent_, 24.0), 0.42 * dpiScale);
 #else
       playing.fontSize_ = label.fontSize_;
 #endif
@@ -1553,6 +1559,9 @@ namespace yae
     bool
     upload(const Text & item)
     {
+      QRectF maxRect;
+      item.getMaxRect(maxRect);
+
       BBox bboxContent;
       item.get(kPropertyBBoxContent, bboxContent);
 
@@ -1563,13 +1572,8 @@ namespace yae
 
       QImage img(iw, ih, QImage::Format_ARGB32);
       {
-        int flags = item.textFlags();
+        img.fill(0);
 
-#if 0
-        img.fill(0xff << 24);
-#else
-        img.fill(0x7f7f7f7f);
-#endif
         QPainter painter(&img);
         QFont font = item.font_;
         double fontSize = item.fontSize_.get();
@@ -1579,9 +1583,7 @@ namespace yae
         // FIXME: this should be a Text property:
         painter.setPen(QColor(0xff, 0xff, 0xff));
 
-        QRectF maxRect;
-        item.getMaxRect(maxRect);
-
+        int flags = item.textFlags();
 #ifdef NDEBUG
         painter.drawText(maxRect, flags, text_);
 #else
@@ -1736,8 +1738,6 @@ namespace yae
       double y1 = y0 + bboxContent.h_;
 
       YAE_OGL_11_HERE();
-      // YAE_OGL_11(glDisable(GL_BLEND));
-
       YAE_OGL_11(glEnable(GL_TEXTURE_2D));
       if (glActiveTexture)
       {
@@ -1823,6 +1823,11 @@ namespace yae
     elide_(Qt::ElideNone)
   {
     font_.setHintingPreference(QFont::PreferFullHinting);
+    font_.setStyleStrategy((QFont::StyleStrategy)
+                           (QFont::PreferOutline |
+                            QFont::PreferAntialias |
+                            QFont::OpenGLCompatible));
+
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(this));
     p_->ready_ = addExpr(new UploadTexture(*this));
