@@ -1420,26 +1420,37 @@ namespace yae
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
-      Text & title = root.addNew<Text>("title");
-      title.anchors_.bottomLeft(&root);
-      title.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
-      title.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
-      title.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, 10);
-      title.text_ = title.addExpr
+      Text & label = root.addNew<Text>("label");
+      label.anchors_.bottomLeft(&root);
+      label.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
+      label.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
+      label.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, -10);
+      label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
+      label.font_.setBold(true);
+      label.fontSize_ = label.addExpr
+        (new CalcTitleHeight(root.parent_, 24.0), 0.5);
 
       Item & rm = root.addNew<Item>("remove item");
 
       Text & playing = root.addNew<Text>("now playing");
-      playing.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
+      playing.anchors_.top_ = ItemRef::offset(&root, kPropertyTop, 5);
       playing.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
       playing.visible_ = playing.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+      playing.font_.setBold(true);
+#if 1
+      playing.fontSize_ = playing.addExpr
+        (new CalcTitleHeight(root.parent_, 24.0), 0.42);
+#else
+      playing.fontSize_ = label.fontSize_;
+#endif
 
       rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
-      rm.anchors_.topRight(&root);
+      rm.anchors_.top_ = ItemRef::reference(&playing, kPropertyTop);
+      rm.anchors_.right_ = ItemRef::offset(&root, kPropertyRight, -5);
       rm.margins_.set(3);
 
       Rectangle & underline = root.addNew<Rectangle>("underline");
@@ -1480,7 +1491,6 @@ namespace yae
     }
 
     QString url_;
-    QImage img_;
   };
 
   //----------------------------------------------------------------
@@ -1527,12 +1537,279 @@ namespace yae
   //
   struct Text::TPrivate
   {
-    void paint(const Text & text)
+    TPrivate():
+      texId_(0)
+    {}
+
+    ~TPrivate()
     {
-      // FIXME: write me!
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glDeleteTextures(1, &texId_));
     }
 
-    QImage img_;
+    //----------------------------------------------------------------
+    // upload
+    //
+    bool
+    upload(const Text & item)
+    {
+      BBox bboxContent;
+      item.get(kPropertyBBoxContent, bboxContent);
+
+      int iw = (int)ceil(bboxContent.w_);
+      int ih = (int)ceil(bboxContent.h_);
+      GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+      GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+      QImage img(iw, ih, QImage::Format_ARGB32);
+      {
+        int flags = item.textFlags();
+
+#if 0
+        img.fill(0xff << 24);
+#else
+        img.fill(0x7f7f7f7f);
+#endif
+        QPainter painter(&img);
+        QFont font = item.font_;
+        double fontSize = item.fontSize_.get();
+        font.setPointSizeF(fontSize);
+        painter.setFont(font);
+
+        // FIXME: this should be a Text property:
+        painter.setPen(QColor(0xff, 0xff, 0xff));
+
+        QRectF maxRect;
+        item.getMaxRect(maxRect);
+
+#ifdef NDEBUG
+        painter.drawText(maxRect, flags, text_);
+#else
+        QRectF result;
+        painter.drawText(maxRect, flags, text_, &result);
+
+        if (result.width() != bboxContent.w_ ||
+            result.height() != bboxContent.h_)
+        {
+          YAE_ASSERT(false);
+
+          QFontMetricsF fm(font);
+          QRectF v3 = fm.boundingRect(maxRect, flags, text_);
+
+          BBox v2;
+          item.calcTextBBox(v2);
+
+          std::cerr
+            << "\nfont size: " << fontSize
+            << ", text: " << text_.toUtf8().constData()
+            << "\nexpected: " << bboxContent.w_ << " x " << bboxContent.h_
+            << "\n  result: " << result.width() << " x " << result.height()
+            << "\nv2 retry: " << v2.w_ << " x " << v2.h_
+            << "\nv3 retry: " << v3.width() << " x " << v3.height()
+            << std::endl;
+        }
+#endif
+      }
+
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+      YAE_OGL_11(glDeleteTextures(1, &texId_));
+      YAE_OGL_11(glGenTextures(1, &texId_));
+
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+      if (!YAE_OGL_11(glIsTexture(texId_)))
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_GENERATE_MIPMAP,
+                                 GL_TRUE));
+
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_WRAP_S,
+                                 GL_CLAMP_TO_EDGE));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_WRAP_T,
+                                 GL_CLAMP_TO_EDGE));
+
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_BASE_LEVEL,
+                                 0));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_MAX_LEVEL,
+                                 0));
+
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_MAG_FILTER,
+                                 GL_LINEAR));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                                 GL_TEXTURE_MIN_FILTER,
+                                 GL_LINEAR));
+      yae_assert_gl_no_error();
+
+      GLint internalFormat = 0;
+      GLenum pixelFormat = 0;
+      GLenum dataType = 0;
+      GLint shouldSwapBytes = 0;
+
+      yae_to_opengl(yae::kPixelFormatBGRA,
+                    internalFormat,
+                    pixelFormat,
+                    dataType,
+                    shouldSwapBytes);
+
+      YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                              0, // mipmap level
+                              internalFormat,
+                              widthPowerOfTwo,
+                              heightPowerOfTwo,
+                              0, // border width
+                              pixelFormat,
+                              dataType,
+                              NULL));
+      yae_assert_gl_no_error();
+
+
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                               shouldSwapBytes));
+
+      const QImage & constImg = img;
+      const unsigned char * data = constImg.bits();
+      const int rowSize = constImg.bytesPerLine() / 4;
+      const int padding = alignmentFor(data, rowSize);
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                 0, // mipmap level
+                                 0, // x-offset
+                                 0, // y-offset
+                                 iw,
+                                 ih,
+                                 pixelFormat,
+                                 dataType,
+                                 data));
+      yae_assert_gl_no_error();
+
+      // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // paint
+    //
+    void
+    paint(const Text & item)
+    {
+      BBox bboxContent;
+      item.get(kPropertyBBoxContent, bboxContent);
+
+      double x0 = bboxContent.x_;
+      double y0 = bboxContent.y_;
+
+      int iw = (int)ceil(bboxContent.w_);
+      int ih = (int)ceil(bboxContent.h_);
+
+      GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+      GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+      double u0 = (0.5) / double(widthPowerOfTwo);
+      double u1 = (bboxContent.w_ - 0.5) / double(widthPowerOfTwo);
+
+      double v0 = (0.5) / double(heightPowerOfTwo);
+      double v1 = (bboxContent.h_ - 0.5) / double(heightPowerOfTwo);
+
+      double x1 = x0 + bboxContent.w_;
+      double y1 = y0 + bboxContent.h_;
+
+      YAE_OGL_11_HERE();
+      // YAE_OGL_11(glDisable(GL_BLEND));
+
+      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+      if (glActiveTexture)
+      {
+        YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+        yae_assert_gl_no_error();
+      }
+
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+
+      YAE_OGL_11(glDisable(GL_LIGHTING));
+      YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+      YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+      YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+      // YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+      // YAE_OGL_11(glColor4ub(0x7f, 0xff, 0x3f, 0xff));
+      YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+      {
+        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
+        // YAE_OGL_11(glTexCoord2d(0.0, 0.0));
+        YAE_OGL_11(glTexCoord2d(u0, v0));
+        YAE_OGL_11(glVertex2d(x0, y0));
+
+        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
+        // YAE_OGL_11(glTexCoord2d(0.0, 1.0));
+        YAE_OGL_11(glTexCoord2d(u0, v1));
+        YAE_OGL_11(glVertex2d(x0, y1));
+
+        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
+        // YAE_OGL_11(glTexCoord2d(1.0, 0.0));
+        YAE_OGL_11(glTexCoord2d(u1, v0));
+        YAE_OGL_11(glVertex2d(x1, y0));
+
+        // YAE_OGL_11(glColor4d(drand(), drand(), drand(), 0xff));
+        // YAE_OGL_11(glTexCoord2d(1.0, 1.0));
+        YAE_OGL_11(glTexCoord2d(u1, v1));
+        YAE_OGL_11(glVertex2d(x1, y1));
+      }
+      YAE_OGL_11(glEnd());
+
+      // unbind:
+      if (glActiveTexture)
+      {
+        YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+        yae_assert_gl_no_error();
+      }
+
+      // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    }
+
+    QString text_;
+    GLuint texId_;
+    BoolRef ready_;
+  };
+
+  //----------------------------------------------------------------
+  // UploadTexture
+  //
+  struct UploadTexture : public TBoolExpr
+  {
+    UploadTexture(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = item_.p_->upload(item_);
+    }
+
+    const Text & item_;
   };
 
   //----------------------------------------------------------------
@@ -1541,12 +1818,14 @@ namespace yae
   Text::Text(const char * id):
     Item(id),
     p_(new Text::TPrivate()),
-    elide_(Qt::ElideNone),
-    flags_(Qt::TextWordWrap),
-    format_(Qt::PlainText)
+    font_("Impact, Charcoal, sans-serif"),
+    alignment_(Qt::AlignLeft),
+    elide_(Qt::ElideNone)
   {
-    fontPixelSize_ = ItemRef::constant(font_.pixelSize());
+    font_.setHintingPreference(QFont::PreferFullHinting);
+    fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(this));
+    p_->ready_ = addExpr(new UploadTexture(*this));
   }
 
   //----------------------------------------------------------------
@@ -1558,34 +1837,59 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Text::textFlags
+  //
+  int
+  Text::textFlags() const
+  {
+    Qt::TextFlag textFlags = (elide_ == Qt::ElideNone ?
+                              Qt::TextWordWrap :
+                              Qt::TextSingleLine);
+
+    int flags = alignment_ | textFlags;
+    return flags;
+  }
+
+  //----------------------------------------------------------------
+  // Text::getConstraints
+  //
+  void
+  Text::getMaxRect(QRectF & maxRect) const
+  {
+    double maxWidth =
+      maxWidth_.isValid() || maxWidth_.isCached() ?
+      maxWidth_.get() : double(std::numeric_limits<short int>::max());
+
+    double maxHeight =
+      maxHeight_.isValid() || maxHeight_.isCached() ?
+      maxHeight_.get() : double(std::numeric_limits<short int>::max());
+
+    maxRect = QRectF(qreal(0), qreal(0), qreal(maxWidth), qreal(maxHeight));
+  }
+
+  //----------------------------------------------------------------
   // Text::calcTextBBox
   //
   void
   Text::calcTextBBox(BBox & bbox) const
   {
-    static const qreal kQRealMax = std::numeric_limits<qreal>::max();
+    int flags = textFlags();
 
-    double maxWidth =
-      maxWidth_.isValid() || maxWidth_.isCached() ?
-      maxWidth_.get() : kQRealMax;
+    QRectF maxRect;
+    getMaxRect(maxRect);
 
-    double maxHeight =
-      maxHeight_.isValid() || maxHeight_.isCached() ?
-      maxHeight_.get() : kQRealMax;
+    QFont font = font_;
+    double fontSize = fontSize_.get();
+    font.setPointSizeF(fontSize);
+    QFontMetricsF fm(font);
 
-    QFontMetricsF fm(font_);
-    int flags = alignment_ | flags_;
-
-    QString text = text_.get().toString();
+    p_->text_ = text_.get().toString();
     if (elide_ != Qt::ElideNone)
     {
-      flags |= Qt::TextSingleLine;
-      text = fm.elidedText(text, elide_, maxWidth, flags);
+      p_->text_ = fm.elidedText(p_->text_, elide_, maxRect.width(), flags);
     }
 
-    QRectF maxRect(qreal(0), qreal(0), maxWidth, maxHeight);
-    QRectF rect = fm.boundingRect(maxRect, flags, text);
-
+    QRectF rect = fm.boundingRect(maxRect, flags, p_->text_);
     bbox.x_ = rect.x();
     bbox.y_ = rect.y();
     bbox.w_ = rect.width();
@@ -1618,10 +1922,11 @@ namespace yae
   void
   Text::uncache()
   {
-    fontPixelSize_.uncache();
+    fontSize_.uncache();
     maxWidth_.uncache();
     bboxText_.uncache();
     text_.uncache();
+    p_->ready_.uncache();
     Item::uncache();
   }
 
@@ -1636,7 +1941,10 @@ namespace yae
       return;
     }
 
-    p_->paint(*this);
+    if (p_->ready_.get())
+    {
+      p_->paint(*this);
+    }
   }
 
 

@@ -1198,28 +1198,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // powerOfTwoLEQ
-  //
-  // calculate largest power-of-two less then or equal to the given
-  //
-  template <typename TScalar>
-  inline static TScalar
-  powerOfTwoLEQ(const TScalar & given)
-  {
-    const std::size_t n = sizeof(given) * 8;
-    TScalar smaller = TScalar(0);
-    TScalar closest = TScalar(1);
-    for (std::size_t i = 0; (i < n) && (closest <= given); i++)
-    {
-      smaller = closest;
-      closest *= TScalar(2);
-    }
-
-    return smaller;
-  }
-
-
-  //----------------------------------------------------------------
   // TFragmentShaderProgram::TFragmentShaderProgram
   //
   TFragmentShaderProgram::TFragmentShaderProgram(const char * code):
@@ -1917,7 +1895,7 @@ namespace yae
   //----------------------------------------------------------------
   // alignmentFor
   //
-  inline static int
+  int
   alignmentFor(const unsigned char * data, std::size_t rowBytes)
   {
     int a = alignmentFor((std::size_t)data);
@@ -2219,8 +2197,15 @@ namespace yae
       YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0));
     }
 
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
     if (shader_)
     {
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0));
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
@@ -2308,7 +2293,7 @@ namespace yae
   //----------------------------------------------------------------
   // calculateEdges
   //
-  static void
+  void
   calculateEdges(std::deque<TEdge> & edges,
                  GLsizei edgeSize,
                  GLsizei textureEdgeMax)
@@ -2362,7 +2347,7 @@ namespace yae
   //----------------------------------------------------------------
   // getTextureEdgeMax
   //
-  static GLsizei
+  GLsizei
   getTextureEdgeMax()
   {
     static GLsizei edgeMax = 64;
@@ -2827,8 +2812,15 @@ namespace yae
       YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
     }
 
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
     if (shader_)
     {
+      YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0));
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
 

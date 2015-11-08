@@ -200,6 +200,47 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // powerOfTwoLEQ
+  //
+  // calculate largest power-of-two less then or equal to the given
+  //
+  template <typename TScalar>
+  inline static TScalar
+  powerOfTwoLEQ(const TScalar & given)
+  {
+    const std::size_t n = sizeof(given) * 8;
+    TScalar smaller = TScalar(0);
+    TScalar closest = TScalar(1);
+    for (std::size_t i = 0; (i < n) && (closest <= given); i++)
+    {
+      smaller = closest;
+      closest *= TScalar(2);
+    }
+
+    return smaller;
+  }
+
+  //----------------------------------------------------------------
+  // powerOfTwoGEQ
+  //
+  // calculate least power-of-two greater then or equal to the given
+  //
+  template <typename TScalar>
+  inline static TScalar
+  powerOfTwoGEQ(const TScalar & given)
+  {
+    TScalar leq = powerOfTwoLEQ<TScalar>(given);
+    return (leq == given) ? leq : leq * TScalar(2);
+  }
+
+  //----------------------------------------------------------------
+  // alignmentFor
+  //
+  extern int
+  alignmentFor(const unsigned char * data, std::size_t rowBytes);
+
+
+  //----------------------------------------------------------------
   // TFragmentShaderProgram
   //
   struct YAE_API TFragmentShaderProgram
@@ -382,6 +423,20 @@ namespace yae
     TEdge x_;
     TEdge y_;
   };
+
+  //----------------------------------------------------------------
+  // calculateEdges
+  //
+  extern void
+  calculateEdges(std::deque<TEdge> & edges,
+                 GLsizei edgeSize,
+                 GLsizei textureEdgeMax);
+
+  //----------------------------------------------------------------
+  // getTextureEdgeMax
+  //
+  extern GLsizei
+  getTextureEdgeMax();
 
   //----------------------------------------------------------------
   // TLegacyCanvas

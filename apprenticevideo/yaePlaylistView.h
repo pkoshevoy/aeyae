@@ -971,10 +971,6 @@ namespace yae
     Image(const Image &);
     Image & operator = (const Image &);
 
-    // keep implementation details private:
-    struct TPrivate;
-    TPrivate * p_;
-
   public:
     Image(const char * id = NULL);
     ~Image();
@@ -984,6 +980,9 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+
+    struct TPrivate;
+    TPrivate * p_;
 
     TVarRef url_;
   };
@@ -996,17 +995,17 @@ namespace yae
     Text(const Text &);
     Text & operator = (const Text &);
 
-    // keep implementation details private:
-    struct TPrivate;
-    TPrivate * p_;
-
     BBoxRef bboxText_;
 
   public:
     Text(const char * id = NULL);
     ~Text();
 
-    // helper:
+    // helper: flag bitmask used for QFontMetricsF and QPainter::drawText
+    int textFlags() const;
+
+    // helpers:
+    void getMaxRect(QRectF & bbox) const;
     void calcTextBBox(BBox & bbox) const;
 
     // virtual:
@@ -1019,14 +1018,15 @@ namespace yae
     // virtual:
     void paintContent() const;
 
+    struct TPrivate;
+    TPrivate * p_;
+
     QFont font_;
-    Qt::TextElideMode elide_;
-    Qt::TextFlag flags_;
-    Qt::TextFormat format_;
     Qt::AlignmentFlag alignment_;
+    Qt::TextElideMode elide_;
 
     TVarRef text_;
-    ItemRef fontPixelSize_;
+    ItemRef fontSize_; // in points
     ItemRef maxWidth_;
     ItemRef maxHeight_;
   };

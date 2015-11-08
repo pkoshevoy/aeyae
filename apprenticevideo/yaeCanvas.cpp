@@ -1543,8 +1543,8 @@ namespace yae
     vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
     vtts.offsetTop_ = 0;
     vtts.offsetLeft_ = 0;
-    vtts.visibleWidth_ = (int)w;
-    vtts.visibleHeight_ = (int)h;
+    vtts.visibleWidth_ = iw;
+    vtts.visibleHeight_ = ih;
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
