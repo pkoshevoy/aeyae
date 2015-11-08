@@ -599,7 +599,6 @@ namespace yae
   // Item::Item
   //
   Item::Item(const char * id):
-    color_(0),
     parent_(NULL),
     xContent_(addExpr(new CalcXContent(this))),
     yContent_(addExpr(new CalcYContent(this))),
@@ -607,10 +606,14 @@ namespace yae
     y_(addExpr(new CalcY(this))),
     visible_(TVarRef::constant(TVar(true)))
   {
+#ifndef NDEBUG
     if (id)
     {
       id_.assign(id);
     }
+#else
+    (void)id;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1045,31 +1048,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::dump
-  //
-  void
-  Item::dump(std::ostream & os, const std::string & indent) const
-  {
-    BBox bbox;
-    this->get(kPropertyBBox, bbox);
-
-    os << indent
-       << "x: " << bbox.x_
-       << ", y: " << bbox.y_
-       << ", w: " << bbox.w_
-       << ", h: " << bbox.h_
-       << ", id: " << id_
-       << std::endl;
-
-    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
-         i != children_.end(); ++i)
-    {
-      const ItemPtr & child = *i;
-      child->dump(os, indent + "  ");
-    }
-  }
-
-  //----------------------------------------------------------------
   // drand
   //
   inline static double
@@ -1081,74 +1059,6 @@ namespace yae
 #else
     return drand48();
 #endif
-  }
-
-  //----------------------------------------------------------------
-  // paintBBox
-  //
-  static void
-  paintBBox(const BBox & bbox, unsigned int c = 0)
-  {
-    double x0 = bbox.x_;
-    double y0 = bbox.y_;
-    double x1 = bbox.w_ + x0;
-    double y1 = bbox.h_ + y0;
-
-    double color[16];
-    for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
-    {
-      rgba[0] = drand();
-      rgba[1] = drand();
-      rgba[2] = drand();
-      rgba[3] = 0.33;
-    }
-
-    YAE_OGL_11_HERE();
-    if (!c)
-    {
-      double t = drand();
-      YAE_OGL_11(glColor4d(t, t, t, 0.33));
-    }
-    else
-    {
-      unsigned char r = 0xff & (c >> 24);
-      unsigned char g = 0xff & (c >> 16);
-      unsigned char b = 0xff & (c >> 8);
-      unsigned char a = 0xff & (c);
-      YAE_OGL_11(glColor4ub(r, g, b, a));
-    }
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      // YAE_OGL_11(glColor4dv(color));
-      YAE_OGL_11(glVertex2d(x0, y0));
-
-      // YAE_OGL_11(glColor4dv(color + 4));
-      YAE_OGL_11(glVertex2d(x0, y1));
-
-      // YAE_OGL_11(glColor4dv(color + 8));
-      YAE_OGL_11(glVertex2d(x1, y0));
-
-      // YAE_OGL_11(glColor4dv(color + 12));
-      YAE_OGL_11(glVertex2d(x1, y1));
-    }
-    YAE_OGL_11(glEnd());
-
-    YAE_OGL_11(glBegin(GL_LINE_LOOP));
-    {
-      YAE_OGL_11(glColor4dv(color + 0));
-      YAE_OGL_11(glVertex2d(x0, y0));
-
-      YAE_OGL_11(glColor4dv(color + 4));
-      YAE_OGL_11(glVertex2d(x0, y1));
-
-      YAE_OGL_11(glColor4dv(color + 12));
-      YAE_OGL_11(glVertex2d(x1, y1));
-
-      YAE_OGL_11(glColor4dv(color + 8));
-      YAE_OGL_11(glVertex2d(x1, y0));
-    }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------
@@ -1174,7 +1084,6 @@ namespace yae
       return false;
     }
 
-    // std::cerr << "FIXME: paint: " << id_ << std::endl;
     this->paintContent();
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
@@ -1187,6 +1096,32 @@ namespace yae
     return true;
   }
 
+#ifndef NDEBUG
+  //----------------------------------------------------------------
+  // Item::dump
+  //
+  void
+  Item::dump(std::ostream & os, const std::string & indent) const
+  {
+    BBox bbox;
+    this->get(kPropertyBBox, bbox);
+
+    os << indent
+       << "x: " << bbox.x_
+       << ", y: " << bbox.y_
+       << ", w: " << bbox.w_
+       << ", h: " << bbox.h_
+       << ", id: " << id_
+       << std::endl;
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->dump(os, indent + "  ");
+    }
+  }
+#endif
 
   //----------------------------------------------------------------
   // TLayoutPtr
@@ -1271,14 +1206,7 @@ namespace yae
 
       Scrollable & view = root.addNew<Scrollable>("scrollable");
 
-      // FIXME:
-      view.color_ = 0xff0000ff;
-
       Item & scrollbar = root.addNew<Item>("scrollbar");
-
-      // FIXME:
-      scrollbar.color_ = 0x80ff0000;
-
       scrollbar.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
       scrollbar.anchors_.top_ = ItemRef::offset(&filter, kPropertyBottom, 5);
       scrollbar.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
@@ -1286,7 +1214,6 @@ namespace yae
 
       view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       view.anchors_.right_ = ItemRef::reference(&scrollbar, kPropertyLeft);
-      // view.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
       view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
       view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
 
@@ -1295,18 +1222,12 @@ namespace yae
       groups.anchors_.right_ = ItemRef::reference(&view, kPropertyRight);
       groups.anchors_.top_ = ItemRef::constant(0.0);
 
-      // FIXME:
-      groups.color_ = 0x7fff0000;
-
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
       {
         Item & group = groups.addNew<Item>("group");
         group.anchors_.left_ = ItemRef::reference(&groups, kPropertyLeft);
         group.anchors_.right_ = ItemRef::reference(&groups, kPropertyRight);
-
-        // FIXME:
-        group.color_ = 0x7fff7f00;
 
         if (i < 1)
         {
@@ -1357,9 +1278,6 @@ namespace yae
       spacer.width_ = ItemRef::reference(&group, kPropertyWidth);
       spacer.height_ = spacer.addExpr(new GridCellHeight(&group), 0.2);
 
-      // FIXME:
-      spacer.color_ = 0x01010100;
-
       Rectangle & title = group.addNew<Rectangle>("title");
       title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
@@ -1370,9 +1288,6 @@ namespace yae
       grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
       grid.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       grid.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
-
-      // FIXME:
-      grid.color_ = 0x01010100;
 
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
@@ -1399,9 +1314,6 @@ namespace yae
       footer.anchors_.top_ = ItemRef::reference(&grid, kPropertyBottom);
       footer.width_ = ItemRef::reference(&group, kPropertyWidth);
       footer.height_ = footer.addExpr(new GridCellHeight(&group), 0.3);
-
-      // FIXME:
-      footer.color_ = 0x02020200;
     }
   };
 
@@ -2016,7 +1928,6 @@ namespace yae
 
     if (border > 0.0)
     {
-#if 1
       YAE_OGL_11(glColor4ub(colorBorder.r(),
                             colorBorder.g(),
                             colorBorder.b(),
@@ -2030,51 +1941,6 @@ namespace yae
         YAE_OGL_11(glVertex2d(x1, y0));
       }
       YAE_OGL_11(glEnd());
-#else
-#if 0
-      double color[16];
-      for (double * rgba = color, * end = color + 16; rgba < end; rgba += 4)
-      {
-        rgba[0] = drand();
-        rgba[1] = drand();
-        rgba[2] = drand();
-        rgba[3] = 0.33;
-        /*
-        std::cerr
-          << "// " << (rgba - color) / 4 << "\n"
-          << rgba[0] << ", "
-          << rgba[1] << ", "
-          << rgba[2] << ", "
-          << rgba[3] << ","
-          << std::endl;
-        */
-      }
-#else
-      double color[16] = {
-        1.0, 0.0, 0.0, 0.33,
-        0.0, 1.0, 0.0, 0.33,
-        1.0, 1.0, 1.0, 0.33,
-        0.0, 0.5, 1.0, 0.33
-      };
-#endif
-
-      YAE_OGL_11(glLineWidth(border));
-      YAE_OGL_11(glBegin(GL_LINE_LOOP));
-      {
-        YAE_OGL_11(glColor4dv(color + 0));
-        YAE_OGL_11(glVertex2d(x0, y0));
-
-        YAE_OGL_11(glColor4dv(color + 4));
-        YAE_OGL_11(glVertex2d(x0, y1));
-
-        YAE_OGL_11(glColor4dv(color + 12));
-        YAE_OGL_11(glVertex2d(x1, y1));
-
-        YAE_OGL_11(glColor4dv(color + 8));
-        YAE_OGL_11(glVertex2d(x1, y0));
-      }
-      YAE_OGL_11(glEnd());
-#endif
     }
   }
 
@@ -2276,6 +2142,7 @@ namespace yae
     return true;
   }
 
+#ifndef NDEBUG
   //----------------------------------------------------------------
   // Scrollable::dump
   //
@@ -2285,6 +2152,7 @@ namespace yae
     Item::dump(os, indent);
     content_.dump(os, indent + "  ");
   }
+#endif
 
 
   //----------------------------------------------------------------
@@ -2356,7 +2224,6 @@ namespace yae
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
 
-    // std::cerr << "\n----------------------------------------------------\n";
     const Segment & xregion = root_->x();
     const Segment & yregion = root_->y();
     root_->paint(xregion, yregion);
@@ -2382,10 +2249,12 @@ namespace yae
         et != QEvent::FocusIn &&
         et != QEvent::ShortcutOverride)
     {
+#ifndef NDEBUG
       std::cerr
         << "PlaylistView::processEvent: "
         << yae::toString(et)
         << std::endl;
+#endif
     }
 
     return false;
@@ -2492,11 +2361,12 @@ namespace yae
   PlaylistView::dataChanged(const QModelIndex & topLeft,
                             const QModelIndex & bottomRight)
   {
+#ifndef NDEBUG
     std::cerr
       << "PlaylistView::dataChanged, topLeft: " << toString(topLeft)
       << ", bottomRight: " << toString(bottomRight)
       << std::endl;
-
+#endif
     Canvas::ILayer::delegate_->requestRepaint();
   }
 
@@ -2506,7 +2376,9 @@ namespace yae
   void
   PlaylistView::layoutAboutToBeChanged()
   {
+#ifndef NDEBUG
     std::cerr << "PlaylistView::layoutAboutToBeChanged" << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2515,8 +2387,9 @@ namespace yae
   void
   PlaylistView::layoutChanged()
   {
+#ifndef NDEBUG
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
-
+#endif
     QModelIndex rootIndex = model_->index(0, 0).parent();
     TLayoutPtr delegate = findLayoutDelegate(layoutDelegates_,
                                              *model_,
@@ -2535,9 +2408,6 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
-    // FIXME:
-    root.color_ = 0x01010100;
-
     delegate->layout(root,
                      layoutDelegates_,
                      *model_,
@@ -2554,7 +2424,9 @@ namespace yae
   void
   PlaylistView::modelAboutToBeReset()
   {
+#ifndef NDEBUG
     std::cerr << "PlaylistView::modelAboutToBeReset" << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2563,7 +2435,9 @@ namespace yae
   void
   PlaylistView::modelReset()
   {
+#ifndef NDEBUG
     std::cerr << "PlaylistView::modelReset" << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2573,10 +2447,12 @@ namespace yae
   PlaylistView::rowsAboutToBeInserted(const QModelIndex & parent,
                                       int start, int end)
   {
+#ifndef NDEBUG
     std::cerr
       << "PlaylistView::rowsAboutToBeInserted, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2585,10 +2461,12 @@ namespace yae
   void
   PlaylistView::rowsInserted(const QModelIndex & parent, int start, int end)
   {
+#ifndef NDEBUG
     std::cerr
       << "PlaylistView::rowsInserted, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2598,10 +2476,12 @@ namespace yae
   PlaylistView::rowsAboutToBeRemoved(const QModelIndex & parent,
                                      int start, int end)
   {
+#ifndef NDEBUG
     std::cerr
       << "PlaylistView::rowsAboutToBeRemoved, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2610,10 +2490,12 @@ namespace yae
   void
   PlaylistView::rowsRemoved(const QModelIndex & parent, int start, int end)
   {
+#ifndef NDEBUG
     std::cerr
       << "PlaylistView::rowsRemoved, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
+#endif
   }
 
 }

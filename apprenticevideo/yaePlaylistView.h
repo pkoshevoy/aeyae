@@ -480,13 +480,24 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // IPropertiesBase
+  //
+  struct IPropertiesBase
+  {
+    virtual ~IPropertiesBase() {}
+  };
+
+  //----------------------------------------------------------------
+  // TPropertiesBasePtr
+  //
+  typedef boost::shared_ptr<IPropertiesBase> TPropertiesBasePtr;
+
+  //----------------------------------------------------------------
   // IProperties
   //
   template <typename TData>
-  struct IProperties
+  struct IProperties : public IPropertiesBase
   {
-    virtual ~IProperties() {}
-
     // property accessors:
     //
     // 1. accessing a property specified via a cyclical reference
@@ -548,19 +559,9 @@ namespace yae
   typedef Expression<double> TDoubleExpr;
 
   //----------------------------------------------------------------
-  // TExpressionPtr
-  //
-  typedef boost::shared_ptr<TDoubleExpr> TDoubleExprPtr;
-
-  //----------------------------------------------------------------
   // TSegmentExpr
   //
   typedef Expression<Segment> TSegmentExpr;
-
-  //----------------------------------------------------------------
-  // TSegmentExprPtr
-  //
-  typedef boost::shared_ptr<TSegmentExpr> TSegmentExprPtr;
 
   //----------------------------------------------------------------
   // TBBoxExpr
@@ -568,29 +569,14 @@ namespace yae
   typedef Expression<BBox> TBBoxExpr;
 
   //----------------------------------------------------------------
-  // TBBoxExprPtr
-  //
-  typedef boost::shared_ptr<TBBoxExpr> TBBoxExprPtr;
-
-  //----------------------------------------------------------------
   // TBoolExpr
   //
   typedef Expression<bool> TBoolExpr;
 
   //----------------------------------------------------------------
-  // TBoolExprPtr
-  //
-  typedef boost::shared_ptr<TBoolExpr> TBoolExprPtr;
-
-  //----------------------------------------------------------------
   // TVarExpr
   //
   typedef Expression<TVar> TVarExpr;
-
-  //----------------------------------------------------------------
-  // TVarExprPtr
-  //
-  typedef boost::shared_ptr<TVarExpr> TVarExprPtr;
 
   //----------------------------------------------------------------
   // DataRef
@@ -613,13 +599,9 @@ namespace yae
     //
     DataRef(const TDataProperties * reference = NULL,
             Property property = kPropertyUnspecified,
-            double scale = 1.0,
-            double translate = 0.0,
             const TData & defaultValue = TData()):
       ref_(reference),
       property_(property),
-      scale_(scale),
-      translate_(translate),
       visited_(false),
       cached_(false),
       value_(defaultValue)
@@ -631,8 +613,6 @@ namespace yae
     DataRef(const TData & constantValue):
       ref_(NULL),
       property_(kPropertyConstant),
-      scale_(1.0),
-      translate_(0.0),
       visited_(false),
       cached_(false),
       value_(constantValue)
@@ -648,16 +628,8 @@ namespace yae
     { return DataRef<TData>(t); }
 
     inline static DataRef<TData>
-    expression(const TDataProperties * ref, double s = 1.0, double t = 0.0)
-    { return DataRef<TData>(ref, kPropertyExpression, s, t); }
-
-    inline static DataRef<TData>
-    scale(const TDataProperties * ref, Property prop, double s = 1.0)
-    { return DataRef<TData>(ref, prop, s, 0.0); }
-
-    inline static DataRef<TData>
-    offset(const TDataProperties * ref, Property prop, double t = 0.0)
-    { return DataRef<TData>(ref, prop, 1.0, t); }
+    expression(const TDataProperties * ref)
+    { return DataRef<TData>(ref, kPropertyExpression); }
 
     // check whether this property reference is valid:
     inline bool isValid() const
@@ -707,8 +679,6 @@ namespace yae
 
         TData v;
         ref_->get(property_, v);
-        v *= scale_;
-        v += translate_;
         value_ = v;
       }
 
@@ -719,8 +689,6 @@ namespace yae
     // reference properties:
     const TDataProperties * ref_;
     Property property_;
-    double scale_;
-    double translate_;
 
   protected:
     mutable bool visited_;
@@ -731,7 +699,90 @@ namespace yae
   //----------------------------------------------------------------
   // ItemRef
   //
-  typedef DataRef<double> ItemRef;
+  struct ItemRef : public DataRef<double>
+  {
+    typedef DataRef<double> TDataRef;
+    typedef IProperties<double> TDataProperties;
+
+    //----------------------------------------------------------------
+    // ItemRef
+    //
+    ItemRef(const TDataProperties * reference = NULL,
+            Property property = kPropertyUnspecified,
+            double scale = 1.0,
+            double translate = 0.0,
+            const double & defaultValue = 0.0):
+      TDataRef(reference, property, defaultValue),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    //----------------------------------------------------------------
+    // ItemRef
+    //
+    ItemRef(const double & constantValue):
+      TDataRef(constantValue),
+      scale_(1.0),
+      translate_(0.0)
+    {}
+
+    // constructor helpers:
+    inline static ItemRef
+    reference(const TDataProperties * ref, Property prop)
+    { return ItemRef(ref, prop); }
+
+    inline static ItemRef
+    constant(const double & t)
+    { return ItemRef(t); }
+
+    inline static ItemRef
+    expression(const TDataProperties * ref, double s = 1.0, double t = 0.0)
+    { return ItemRef(ref, kPropertyExpression, s, t); }
+
+    inline static ItemRef
+    scale(const TDataProperties * ref, Property prop, double s = 1.0)
+    { return ItemRef(ref, prop, s, 0.0); }
+
+    inline static ItemRef
+    offset(const TDataProperties * ref, Property prop, double t = 0.0)
+    { return ItemRef(ref, prop, 1.0, t); }
+
+    const double & get() const
+    {
+      if (TDataRef::cached_)
+      {
+        return TDataRef::value_;
+      }
+
+      if (!TDataRef::ref_)
+      {
+        YAE_ASSERT(TDataRef::property_ == kPropertyConstant);
+      }
+      else if (TDataRef::visited_)
+      {
+        // cycle detected:
+        YAE_ASSERT(false);
+        throw std::runtime_error("property reference cycle detected");
+      }
+      else
+      {
+        TDataRef::visited_ = true;
+
+        double v;
+        ref_->get(TDataRef::property_, v);
+        v *= scale_;
+        v += translate_;
+        TDataRef::value_ = v;
+      }
+
+      TDataRef::cached_ = true;
+      return TDataRef::value_;
+    }
+
+    // reference properties:
+    double scale_;
+    double translate_;
+  };
 
   //----------------------------------------------------------------
   // SegmentRef
@@ -862,49 +913,20 @@ namespace yae
       return static_cast<TItem &>(child);
     }
 
+    template <typename TData>
+    inline DataRef<TData> addExpr(Expression<TData> * e)
+    {
+      expr_.push_back(TPropertiesBasePtr(e));
+      return DataRef<TData>::expression(e);
+    }
+
     inline ItemRef addExpr(TDoubleExpr * e,
                            double scale = 1.0,
                            double translate = 0.0)
     {
-      exprDouble_.push_back(TDoubleExprPtr(e));
+      expr_.push_back(TPropertiesBasePtr(e));
       return ItemRef::expression(e, scale, translate);
     }
-
-    inline SegmentRef addExpr(TSegmentExpr * e,
-                              double scale = 1.0,
-                              double translate = 0.0)
-    {
-      exprSegment_.push_back(TSegmentExprPtr(e));
-      return SegmentRef::expression(e, scale, translate);
-    }
-
-    inline BBoxRef addExpr(TBBoxExpr * e,
-                           double scale = 1.0,
-                           double translate = 0.0)
-    {
-      exprBBox_.push_back(TBBoxExprPtr(e));
-      return BBoxRef::expression(e, scale, translate);
-    }
-
-    inline BoolRef addExpr(TBoolExpr * e,
-                           double scale = 1.0,
-                           double translate = 0.0)
-    {
-      exprBool_.push_back(TBoolExprPtr(e));
-      return BoolRef::expression(e, scale, translate);
-    }
-
-    inline TVarRef addExpr(TVarExpr * e,
-                           double scale = 1.0,
-                           double translate = 0.0)
-    {
-      exprTVar_.push_back(TVarExprPtr(e));
-      return TVarRef::expression(e, scale, translate);
-    }
-
-    // FIXME: for debugging only:
-    virtual void dump(std::ostream & os,
-                      const std::string & indent = std::string()) const;
 
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}
@@ -914,11 +936,14 @@ namespace yae
     virtual bool paint(const Segment & xregion,
                        const Segment & yregion) const;
 
+#ifndef NDEBUG
+    // FIXME: for debugging only:
+    virtual void dump(std::ostream & os,
+                      const std::string & indent = std::string()) const;
+
     // item id, mostly used for debugging:
     std::string id_;
-
-    // FIXME: for debugging only:
-    unsigned int color_;
+#endif
 
     // parent item:
     const Item * parent_;
@@ -935,11 +960,7 @@ namespace yae
     ItemRef height_;
 
     // storage of expressions associated with this Item:
-    std::list<TDoubleExprPtr> exprDouble_;
-    std::list<TSegmentExprPtr> exprSegment_;
-    std::list<TBBoxExprPtr> exprBBox_;
-    std::list<TBoolExprPtr> exprBool_;
-    std::list<TVarExprPtr> exprTVar_;
+    std::list<TPropertiesBasePtr> expr_;
 
     // 1D bounding segments of this items content:
     const SegmentRef xContent_;
@@ -1065,9 +1086,11 @@ namespace yae
     void uncache();
     bool paint(const Segment & xregion, const Segment & yregion) const;
 
+#ifndef NDEBUG
     // virtual:
     void dump(std::ostream & os,
               const std::string & indent = std::string()) const;
+#endif
 
     // item container:
     Item content_;
