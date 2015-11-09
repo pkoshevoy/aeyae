@@ -472,8 +472,8 @@ namespace yae
     kPropertyVCenter,
     kPropertyXContent,
     kPropertyYContent,
-    kPropertyX,
-    kPropertyY,
+    kPropertyXExtent,
+    kPropertyYExtent,
     kPropertyBBoxContent,
     kPropertyBBox,
     kPropertyVisible
@@ -862,7 +862,7 @@ namespace yae
     //
     typedef boost::shared_ptr<Item> ItemPtr;
 
-    Item(const char * id = NULL);
+    Item(const char * id);
     virtual ~Item() {}
 
     // calculate dimensions of item content, if any,
@@ -890,8 +890,8 @@ namespace yae
 
     const Segment & xContent() const;
     const Segment & yContent() const;
-    const Segment & x() const;
-    const Segment & y() const;
+    const Segment & xExtent() const;
+    const Segment & yExtent() const;
 
     double width() const;
     double height() const;
@@ -904,8 +904,12 @@ namespace yae
 
     bool visible() const;
 
+    // child item lookup, will throw a runtime exception
+    // if a child with a matching id is not found here:
+    const Item & operator[](const char * id) const;
+
     template <typename TItem>
-    inline TItem & addNew(const char * id = NULL)
+    inline TItem & addNew(const char * id)
     {
       children_.push_back(ItemPtr(new TItem(id)));
       Item & child = *(children_.back());
@@ -940,10 +944,10 @@ namespace yae
     // FIXME: for debugging only:
     virtual void dump(std::ostream & os,
                       const std::string & indent = std::string()) const;
-
-    // item id, mostly used for debugging:
-    std::string id_;
 #endif
+
+    // item id, used for item lookup:
+    std::string id_;
 
     // parent item:
     const Item * parent_;
@@ -967,8 +971,8 @@ namespace yae
     const SegmentRef yContent_;
 
     // 1D bounding segments of this item:
-    const SegmentRef x_;
-    const SegmentRef y_;
+    const SegmentRef xExtent_;
+    const SegmentRef yExtent_;
 
     // flag indicating whether this item and its children are visible:
     TVarRef visible_;
@@ -1111,10 +1115,11 @@ namespace yae
 
     virtual ~ILayoutDelegate() {}
 
-    virtual void layout(Item & rootItem,
+    virtual void layout(Item & playlist,
+                        Item & item,
                         const std::map<TLayoutHint, TLayoutPtr> & layouts,
                         const PlaylistModelProxy & model,
-                        const QModelIndex & rootIndex) = 0;
+                        const QModelIndex & itemIndex) = 0;
   };
 
   //----------------------------------------------------------------

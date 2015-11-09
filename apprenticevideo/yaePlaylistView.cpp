@@ -79,22 +79,22 @@ namespace yae
   //
   struct GridCellLeft : public TDoubleExpr
   {
-    GridCellLeft(const Item * root, std::size_t cell):
-      root_(root),
+    GridCellLeft(const Item * grid, std::size_t cell):
+      grid_(grid),
       cell_(cell)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double rootWidth = root_->width();
-      unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
+      double gridWidth = grid_->width();
+      unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
       std::size_t cellCol = cell_ % cellsPerRow;
-      double ox = root_->left() + 2;
-      result = ox + rootWidth * double(cellCol) / double(cellsPerRow);
+      double ox = grid_->left() + 2;
+      result = ox + gridWidth * double(cellCol) / double(cellsPerRow);
     }
 
-    const Item * root_;
+    const Item * grid_;
     std::size_t cell_;
   };
 
@@ -103,27 +103,27 @@ namespace yae
   //
   struct GridCellTop : public TDoubleExpr
   {
-    GridCellTop(const Item * root, std::size_t cell):
-      root_(root),
+    GridCellTop(const Item * grid, std::size_t cell):
+      grid_(grid),
       cell_(cell)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      std::size_t numCells = root_->children_.size();
-      double rootWidth = root_->width();
-      double cellWidth = calcCellWidth(rootWidth);
+      std::size_t numCells = grid_->children_.size();
+      double gridWidth = grid_->width();
+      double cellWidth = calcCellWidth(gridWidth);
       double cellHeight = calcCellHeight(cellWidth);
-      unsigned int cellsPerRow = calcItemsPerRow(rootWidth);
-      unsigned int rowsOfCells = calcRows(rootWidth, cellWidth, numCells);
+      unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
+      unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
       std::size_t cellRow = cell_ / cellsPerRow;
-      double oy = root_->top() + 2;
+      double oy = grid_->top() + 2;
       result = oy + gridHeight * double(cellRow) / double(rowsOfCells);
     }
 
-    const Item * root_;
+    const Item * grid_;
     std::size_t cell_;
   };
 
@@ -132,18 +132,18 @@ namespace yae
   //
   struct GridCellWidth : public TDoubleExpr
   {
-    GridCellWidth(const Item * root):
-      root_(root)
+    GridCellWidth(const Item * grid):
+      grid_(grid)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double rootWidth = root_->width();
-      result = calcCellWidth(rootWidth) - 2;
+      double gridWidth = grid_->width();
+      result = calcCellWidth(gridWidth) - 2;
     }
 
-    const Item * root_;
+    const Item * grid_;
   };
 
   //----------------------------------------------------------------
@@ -151,19 +151,19 @@ namespace yae
   //
   struct GridCellHeight : public TDoubleExpr
   {
-    GridCellHeight(const Item * root):
-      root_(root)
+    GridCellHeight(const Item * grid):
+      grid_(grid)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double rootWidth = root_->width();
-      double cellWidth = calcCellWidth(rootWidth);
+      double gridWidth = grid_->width();
+      double cellWidth = calcCellWidth(gridWidth);
       result = calcCellHeight(cellWidth) - 2;
     }
 
-    const Item * root_;
+    const Item * grid_;
   };
 
   //----------------------------------------------------------------
@@ -171,19 +171,19 @@ namespace yae
   //
   struct CalcTitleHeight : public TDoubleExpr
   {
-    CalcTitleHeight(const Item * root, double minHeight):
-      root_(root),
+    CalcTitleHeight(const Item * titleContainer, double minHeight):
+      titleContainer_(titleContainer),
       minHeight_(minHeight)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double rootWidth = root_->width();
-      result = calcTitleHeight(minHeight_, rootWidth);
+      double titleContainerWidth = titleContainer_->width();
+      result = calcTitleHeight(minHeight_, titleContainerWidth);
     }
 
-    const Item * root_;
+    const Item * titleContainer_;
     double minHeight_;
   };
 
@@ -255,33 +255,33 @@ namespace yae
   //
   struct CalcXContent : public TSegmentExpr
   {
-    CalcXContent(const Item * root):
-      root_(root)
+    CalcXContent(const Item * item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.length_ = root_->calcContentWidth();
+      result.length_ = item_->calcContentWidth();
       result.origin_ =
-        root_->anchors_.left_.isValid() ?
-        root_->left() :
+        item_->anchors_.left_.isValid() ?
+        item_->left() :
 
-        root_->anchors_.right_.isValid() ?
-        root_->right() - result.length_ :
+        item_->anchors_.right_.isValid() ?
+        item_->right() - result.length_ :
 
-        root_->hcenter() - result.length_ * 0.5;
+        item_->hcenter() - result.length_ * 0.5;
 
-      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
-           i != root_->children_.end(); ++i)
+      for (std::vector<ItemPtr>::const_iterator i = item_->children_.begin();
+           i != item_->children_.end(); ++i)
       {
         const ItemPtr & child = *i;
-        const Segment & footprint = child->x();
+        const Segment & footprint = child->xExtent();
         result.expand(footprint);
       }
     }
 
-    const Item * root_;
+    const Item * item_;
   };
 
   //----------------------------------------------------------------
@@ -289,33 +289,33 @@ namespace yae
   //
   struct CalcYContent : public TSegmentExpr
   {
-    CalcYContent(const Item * root):
-      root_(root)
+    CalcYContent(const Item * item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.length_ = root_->calcContentHeight();
+      result.length_ = item_->calcContentHeight();
       result.origin_ =
-        root_->anchors_.top_.isValid() ?
-        root_->top() :
+        item_->anchors_.top_.isValid() ?
+        item_->top() :
 
-        root_->anchors_.bottom_.isValid() ?
-        root_->bottom() - result.length_ :
+        item_->anchors_.bottom_.isValid() ?
+        item_->bottom() - result.length_ :
 
-        root_->vcenter() - result.length_ * 0.5;
+        item_->vcenter() - result.length_ * 0.5;
 
-      for (std::vector<ItemPtr>::const_iterator i = root_->children_.begin();
-           i != root_->children_.end(); ++i)
+      for (std::vector<ItemPtr>::const_iterator i = item_->children_.begin();
+           i != item_->children_.end(); ++i)
       {
         const ItemPtr & child = *i;
-        const Segment & footprint = child->y();
+        const Segment & footprint = child->yExtent();
         result.expand(footprint);
       }
     }
 
-    const Item * root_;
+    const Item * item_;
   };
 
   //----------------------------------------------------------------
@@ -323,18 +323,18 @@ namespace yae
   //
   struct CalcX : public TSegmentExpr
   {
-    CalcX(const Item * root):
-      root_(root)
+    CalcX(const Item * item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.origin_ = root_->left();
-      result.length_ = root_->width();
+      result.origin_ = item_->left();
+      result.length_ = item_->width();
     }
 
-    const Item * root_;
+    const Item * item_;
   };
 
   //----------------------------------------------------------------
@@ -342,18 +342,18 @@ namespace yae
   //
   struct CalcY : public TSegmentExpr
   {
-    CalcY(const Item * root):
-      root_(root)
+    CalcY(const Item * item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.origin_ = root_->top();
-      result.length_ = root_->height();
+      result.origin_ = item_->top();
+      result.length_ = item_->height();
     }
 
-    const Item * root_;
+    const Item * item_;
   };
 
   //----------------------------------------------------------------
@@ -361,17 +361,17 @@ namespace yae
   //
   struct CalcTextBBox : public TBBoxExpr
   {
-    CalcTextBBox(const Text * root):
-      root_(root)
+    CalcTextBBox(const Text * item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(BBox & result) const
     {
-      root_->calcTextBBox(result);
+      item_->calcTextBBox(result);
     }
 
-    const Text * root_;
+    const Text * item_;
   };
 
   //----------------------------------------------------------------
@@ -602,8 +602,8 @@ namespace yae
     parent_(NULL),
     xContent_(addExpr(new CalcXContent(this))),
     yContent_(addExpr(new CalcYContent(this))),
-    x_(addExpr(new CalcX(this))),
-    y_(addExpr(new CalcY(this))),
+    xExtent_(addExpr(new CalcX(this))),
+    yExtent_(addExpr(new CalcY(this))),
     visible_(TVarRef::constant(TVar(true)))
   {
 #ifndef NDEBUG
@@ -653,8 +653,8 @@ namespace yae
     height_.uncache();
     xContent_.uncache();
     yContent_.uncache();
-    x_.uncache();
-    y_.uncache();
+    xExtent_.uncache();
+    yExtent_.uncache();
     visible_.uncache();
   }
 
@@ -718,13 +718,13 @@ namespace yae
     {
       value = this->yContent();
     }
-    else if (property == kPropertyX)
+    else if (property == kPropertyXExtent)
     {
-      value = this->x();
+      value = this->xExtent();
     }
-    else if (property == kPropertyY)
+    else if (property == kPropertyYExtent)
     {
-      value = this->y();
+      value = this->yExtent();
     }
     else
     {
@@ -753,14 +753,14 @@ namespace yae
     }
     else if (property == kPropertyBBox)
     {
-      const Segment & x = this->x();
-      const Segment & y = this->y();
+      const Segment & xExtent = this->xExtent();
+      const Segment & yExtent = this->yExtent();
 
-      bbox.x_ = x.origin_;
-      bbox.w_ = x.length_;
+      bbox.x_ = xExtent.origin_;
+      bbox.w_ = xExtent.length_;
 
-      bbox.y_ = y.origin_;
-      bbox.h_ = y.length_;
+      bbox.y_ = yExtent.origin_;
+      bbox.h_ = yExtent.length_;
     }
     else
     {
@@ -807,21 +807,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::x
+  // Item::xExtent
   //
   const Segment &
-  Item::x() const
+  Item::xExtent() const
   {
-    return x_.get();
+    return xExtent_.get();
   }
 
   //----------------------------------------------------------------
-  // Item::y
+  // Item::yExtent
   //
   const Segment &
-  Item::y() const
+  Item::yExtent() const
   {
-    return y_.get();
+    return yExtent_.get();
   }
 
   //----------------------------------------------------------------
@@ -1048,6 +1048,57 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::operator
+  //
+  const Item &
+  Item::operator[](const char * id) const
+  {
+    if (strcmp(id, "/") == 0)
+    {
+      const Item * p = this;
+      while (p->parent_)
+      {
+        p = parent_;
+      }
+
+      return *p;
+    }
+
+    if (strcmp(id, ".") == 0)
+    {
+      return *this;
+    }
+
+    if (strcmp(id, "..") == 0)
+    {
+      if (parent_)
+      {
+        return *parent_;
+      }
+
+      std::ostringstream oss;
+      oss << id_ << ": has not parent";
+      throw std::runtime_error(oss.str().c_str());
+      return *this;
+    }
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      if (child->id_ == id)
+      {
+        return *child;
+      }
+    }
+
+    std::ostringstream oss;
+    oss << id_ << ": item not found: " << id;
+    throw std::runtime_error(oss.str().c_str());
+    return *this;
+  }
+
+  //----------------------------------------------------------------
   // drand
   //
   inline static double
@@ -1072,13 +1123,13 @@ namespace yae
       return false;
     }
 
-    const Segment & yfootprint = this->y();
+    const Segment & yfootprint = this->yExtent();
     if (yregion.disjoint(yfootprint))
     {
       return false;
     }
 
-    const Segment & xfootprint = this->x();
+    const Segment & xfootprint = this->xExtent();
     if (xregion.disjoint(xfootprint))
     {
       return false;
@@ -1176,13 +1227,13 @@ namespace yae
   // layoutFilterItem
   //
   static void
-  layoutFilterItem(Item & root,
+  layoutFilterItem(Item & item,
                    const std::map<TLayoutHint, TLayoutPtr> & layouts,
                    const PlaylistModelProxy & model,
-                   const QModelIndex & rootIndex)
+                   const QModelIndex & itemIndex)
   {
-      Rectangle & filter = root.addNew<Rectangle>("bg");
-      filter.anchors_.fill(&root);
+      Rectangle & filter = item.addNew<Rectangle>("bg");
+      filter.anchors_.fill(&item);
       filter.margins_.set(2);
       filter.radius_ = ItemRef::constant(3);
   }
@@ -1192,16 +1243,25 @@ namespace yae
   //
   struct GroupListLayout : public ILayoutDelegate
   {
-    void layout(Item & root,
+    void layout(Item & playlist,
+                Item & root,
                 const std::map<TLayoutHint, TLayoutPtr> & layouts,
                 const PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
+      // setup an invisible item so its height property expression
+      // could be computed once and the result reused in other places
+      // that need to compute the same property expression:
+      Item & titleHeight = playlist.addNew<Item>("title_height");
+      titleHeight.visible_ = TVarRef::constant(TVar(false));
+      titleHeight.height_ =
+        titleHeight.addExpr(new CalcTitleHeight(&root, 24.0));
+
       Item & filter = root.addNew<Item>("filter");
       filter.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       filter.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
       filter.width_ = ItemRef::reference(&root, kPropertyWidth);
-      filter.height_ = filter.addExpr(new CalcTitleHeight(&root, 24.0), 1.5);
+      filter.height_ = ItemRef::scale(&titleHeight, kPropertyHeight, 1.5);
       layoutFilterItem(filter, layouts, model, rootIndex);
 
       Scrollable & view = root.addNew<Scrollable>("scrollable");
@@ -1210,7 +1270,8 @@ namespace yae
       scrollbar.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
       scrollbar.anchors_.top_ = ItemRef::offset(&filter, kPropertyBottom, 5);
       scrollbar.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
-      scrollbar.width_ = filter.addExpr(new CalcTitleHeight(&root, 50.0), 0.2);
+      scrollbar.width_ =
+        scrollbar.addExpr(new CalcTitleHeight(&root, 50.0), 0.2);
 
       view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
       view.anchors_.right_ = ItemRef::reference(&scrollbar, kPropertyLeft);
@@ -1245,7 +1306,8 @@ namespace yae
 
         if (childLayout)
         {
-          childLayout->layout(group,
+          childLayout->layout(playlist,
+                              group,
                               layouts,
                               model,
                               childIndex);
@@ -1267,7 +1329,8 @@ namespace yae
   //
   struct ItemGridLayout : public ILayoutDelegate
   {
-    void layout(Item & group,
+    void layout(Item & playlist,
+                Item & group,
                 const std::map<TLayoutHint, TLayoutPtr> & layouts,
                 const PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
@@ -1282,7 +1345,10 @@ namespace yae
       title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
       title.width_ = ItemRef::reference(&group, kPropertyWidth);
-      title.height_ = title.addExpr(new CalcTitleHeight(&group, 24.0));
+
+      // reuse pre-computed title height property:
+      title.height_ = ItemRef::reference(&(playlist["title_height"]),
+                                         kPropertyHeight);
 
       Item & grid = group.addNew<Item>("grid");
       grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
@@ -1305,7 +1371,7 @@ namespace yae
 
         if (childLayout)
         {
-          childLayout->layout(cell, layouts, model, childIndex);
+          childLayout->layout(playlist, cell, layouts, model, childIndex);
         }
       }
 
@@ -1322,13 +1388,14 @@ namespace yae
   //
   struct ItemGridCellLayout : public ILayoutDelegate
   {
-    void layout(Item & root,
+    void layout(Item & playlist,
+                Item & cell,
                 const std::map<TLayoutHint, TLayoutPtr> & layouts,
                 const PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
-      Image & thumbnail = root.addNew<Image>("thumbnail");
-      thumbnail.anchors_.fill(&root);
+      Image & thumbnail = cell.addNew<Image>("thumbnail");
+      thumbnail.anchors_.fill(&cell);
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
@@ -1338,36 +1405,36 @@ namespace yae
       static const double dpiScale = 72.0 / 96.0;
 #endif
 
-      Text & label = root.addNew<Text>("label");
-      label.anchors_.bottomLeft(&root);
-      label.anchors_.left_ = ItemRef::offset(&root, kPropertyLeft, 5);
-      label.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
-      label.maxWidth_ = ItemRef::offset(&root, kPropertyWidth, -10);
+      Text & label = cell.addNew<Text>("label");
+      label.anchors_.bottomLeft(&cell);
+      label.anchors_.left_ = ItemRef::offset(&cell, kPropertyLeft, 5);
+      label.anchors_.bottom_ = ItemRef::offset(&cell, kPropertyBottom, -5);
+      label.maxWidth_ = ItemRef::offset(&cell, kPropertyWidth, -10);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.font_.setBold(false);
       label.fontSize_ =
-        ItemRef::scale(&root, kPropertyHeight, 0.15 * dpiScale);
+        ItemRef::scale(&cell, kPropertyHeight, 0.15 * dpiScale);
 
-      Item & rm = root.addNew<Item>("remove item");
+      Item & rm = cell.addNew<Item>("remove item");
 
-      Text & playing = root.addNew<Text>("now playing");
-      playing.anchors_.top_ = ItemRef::offset(&root, kPropertyTop, 5);
+      Text & playing = cell.addNew<Text>("now playing");
+      playing.anchors_.top_ = ItemRef::offset(&cell, kPropertyTop, 5);
       playing.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
       playing.visible_ = playing.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.font_.setBold(false);
       playing.fontSize_ =
-        ItemRef::scale(&root, kPropertyHeight, 0.12 * dpiScale);
+        ItemRef::scale(&cell, kPropertyHeight, 0.12 * dpiScale);
 
       rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.anchors_.top_ = ItemRef::reference(&playing, kPropertyTop);
-      rm.anchors_.right_ = ItemRef::offset(&root, kPropertyRight, -5);
+      rm.anchors_.right_ = ItemRef::offset(&cell, kPropertyRight, -5);
       rm.margins_.set(3);
 
-      Rectangle & underline = root.addNew<Rectangle>("underline");
+      Rectangle & underline = cell.addNew<Rectangle>("underline");
       underline.anchors_.left_ = ItemRef::offset(&playing, kPropertyLeft, -1);
       underline.anchors_.right_ = ItemRef::offset(&playing, kPropertyRight, 1);
       underline.anchors_.top_ = ItemRef::offset(&playing, kPropertyBottom, 2);
@@ -1376,10 +1443,10 @@ namespace yae
       underline.visible_ = underline.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
 
-      Rectangle & sel = root.addNew<Rectangle>("selected");
-      sel.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
-      sel.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
-      sel.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
+      Rectangle & sel = cell.addNew<Rectangle>("selected");
+      sel.anchors_.left_ = ItemRef::reference(&cell, kPropertyLeft);
+      sel.anchors_.right_ = ItemRef::reference(&cell, kPropertyRight);
+      sel.anchors_.bottom_ = ItemRef::reference(&cell, kPropertyBottom);
       sel.margins_.set(3);
       sel.height_ = ItemRef::constant(2);
       sel.color_ = ColorRef::constant(Color(0xff0000));
@@ -2124,8 +2191,8 @@ namespace yae
     double sceneHeight = content_.height();
     double viewHeight = this->height();
 
-    const Segment & x = this->x();
-    const Segment & y = this->y();
+    const Segment & xExtent = this->xExtent();
+    const Segment & yExtent = this->yExtent();
 
     double dy = 0.0;
     if (sceneHeight > viewHeight)
@@ -2136,8 +2203,9 @@ namespace yae
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(x.origin_, y.origin_ + dy, 0.0));
-    content_.paint(Segment(0.0, x.length_), Segment(dy, y.length_));
+    YAE_OGL_11(glTranslated(xExtent.origin_, yExtent.origin_ + dy, 0.0));
+    content_.paint(Segment(0.0, xExtent.length_),
+                   Segment(dy, yExtent.length_));
 
     return true;
   }
@@ -2224,8 +2292,8 @@ namespace yae
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
 
-    const Segment & xregion = root_->x();
-    const Segment & yregion = root_->y();
+    const Segment & xregion = root_->xExtent();
+    const Segment & yregion = root_->yExtent();
     root_->paint(xregion, yregion);
   }
 
@@ -2409,6 +2477,7 @@ namespace yae
     root.height_ = ItemRef::constant(h_);
 
     delegate->layout(root,
+                     root,
                      layoutDelegates_,
                      *model_,
                      rootIndex);
