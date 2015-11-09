@@ -1371,8 +1371,8 @@ namespace yae
 
         text.anchors_.left_ = ItemRef::reference(&chevron, kPropertyRight);
         text.anchors_.right_ = ItemRef::reference(&xbtn, kPropertyLeft);
-        text.anchors_.vcenter_ = ItemRef::offset(&title, kPropertyVCenter, -1);
-        text.height_ = ItemRef::offset(&title, kPropertyHeight, -1);
+        text.anchors_.vcenter_ = ItemRef::reference(&title, kPropertyVCenter);
+        text.height_ = ItemRef::reference(&title, kPropertyHeight);
         text.text_ = text.addExpr
           (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
         text.fontSize_ =
@@ -1383,8 +1383,14 @@ namespace yae
         xbtn.anchors_.topRight(&title);
       }
 
+      Rectangle & separator = group.addNew<Rectangle>("separator");
+      separator.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
+      separator.anchors_.left_ = ItemRef::offset(&group, kPropertyLeft, 2);
+      separator.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
+      separator.height_ = ItemRef::constant(2.0);
+
       Item & grid = group.addNew<Item>("grid");
-      grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
+      grid.anchors_.top_ = ItemRef::reference(&separator, kPropertyBottom);
       grid.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       grid.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
 
