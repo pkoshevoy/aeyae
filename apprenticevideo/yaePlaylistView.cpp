@@ -616,14 +616,10 @@ namespace yae
     yExtent_(addExpr(new CalcY(this))),
     visible_(TVarRef::constant(TVar(true)))
   {
-#ifndef NDEBUG
     if (id)
     {
       id_.assign(id);
     }
-#else
-    (void)id;
-#endif
   }
 
   //----------------------------------------------------------------
