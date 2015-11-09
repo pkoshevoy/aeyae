@@ -24,6 +24,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kDpiScale
+  //
+#ifdef __APPLE__
+  static const double kDpiScale = 1.0;
+#else
+  static const double kDpiScale = 72.0 / 96.0;
+#endif
+
+
+  //----------------------------------------------------------------
   // calcCellWidth
   //
   inline static double
@@ -1341,14 +1351,37 @@ namespace yae
       spacer.width_ = ItemRef::reference(&group, kPropertyWidth);
       spacer.height_ = spacer.addExpr(new GridCellHeight(&group), 0.2);
 
-      Rectangle & title = group.addNew<Rectangle>("title");
-      title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
-      title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
-      title.width_ = ItemRef::reference(&group, kPropertyWidth);
+      Item & title = group.addNew<Item>("title");
+      {
+        title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+        title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
+        title.width_ = ItemRef::reference(&group, kPropertyWidth);
 
-      // reuse pre-computed title height property:
-      title.height_ = ItemRef::reference(&(playlist["title_height"]),
-                                         kPropertyHeight);
+        // reuse pre-computed title height property:
+        title.height_ = ItemRef::reference(&(playlist["title_height"]),
+                                           kPropertyHeight);
+
+        Item & chevron = title.addNew<Item>("chevron");
+        chevron.width_ = ItemRef::reference(&title, kPropertyHeight);
+        chevron.height_ = ItemRef::reference(&title, kPropertyHeight);
+        chevron.anchors_.topLeft(&title);
+
+        Text & text = title.addNew<Text>("text");
+        Item & xbtn = title.addNew<Item>("x button");
+
+        text.anchors_.left_ = ItemRef::reference(&chevron, kPropertyRight);
+        text.anchors_.right_ = ItemRef::reference(&xbtn, kPropertyLeft);
+        text.anchors_.vcenter_ = ItemRef::offset(&title, kPropertyVCenter, -1);
+        text.height_ = ItemRef::offset(&title, kPropertyHeight, -1);
+        text.text_ = text.addExpr
+          (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
+        text.fontSize_ =
+          ItemRef::scale(&text, kPropertyHeight, 0.55 * kDpiScale);
+
+        xbtn.width_ = ItemRef::reference(&title, kPropertyHeight);
+        xbtn.height_ = ItemRef::reference(&title, kPropertyHeight);
+        xbtn.anchors_.topRight(&title);
+      }
 
       Item & grid = group.addNew<Item>("grid");
       grid.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
@@ -1399,12 +1432,6 @@ namespace yae
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
-#ifdef __APPLE__
-      static const double dpiScale = 1.0;
-#else
-      static const double dpiScale = 72.0 / 96.0;
-#endif
-
       Text & label = cell.addNew<Text>("label");
       label.anchors_.bottomLeft(&cell);
       label.anchors_.left_ = ItemRef::offset(&cell, kPropertyLeft, 5);
@@ -1414,7 +1441,7 @@ namespace yae
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.font_.setBold(false);
       label.fontSize_ =
-        ItemRef::scale(&cell, kPropertyHeight, 0.15 * dpiScale);
+        ItemRef::scale(&cell, kPropertyHeight, 0.15 * kDpiScale);
 
       Item & rm = cell.addNew<Item>("remove item");
 
@@ -1426,7 +1453,7 @@ namespace yae
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.font_.setBold(false);
       playing.fontSize_ =
-        ItemRef::scale(&cell, kPropertyHeight, 0.12 * dpiScale);
+        ItemRef::scale(&cell, kPropertyHeight, 0.12 * kDpiScale);
 
       rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
