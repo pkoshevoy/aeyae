@@ -299,17 +299,23 @@ namespace yae
     inline double end() const
     { return origin_ + length_; }
 
-    Segment & operator *= (double scale)
+    inline Segment & operator *= (double scale)
     {
       length_ *= scale;
       return *this;
     }
 
-    Segment & operator += (double translate)
+    inline Segment & operator += (double translate)
     {
       origin_ += translate;
       return *this;
     }
+
+    inline double center() const
+    { return origin_ + 0.5 * length_; }
+
+    inline double radius() const
+    { return 0.5 * length_; }
 
     double origin_;
     double length_;
@@ -361,19 +367,30 @@ namespace yae
     inline Segment y() const
     { return Segment(y_, h_); }
 
-    BBox & operator *= (double scale)
+    inline BBox & operator *= (double scale)
     {
       w_ *= scale;
       h_ *= scale;
       return *this;
     }
 
-    BBox & operator += (double translate)
+    inline BBox & operator += (double translate)
     {
       x_ += translate;
       y_ += translate;
       return *this;
     }
+
+    inline TVec2D center() const
+    {
+      TVec2D pt;
+      pt.coord_[0] = x_ + 0.5 * w_;
+      pt.coord_[1] = y_ + 0.5 * h_;
+      return pt;
+    }
+
+    inline double radius() const
+    { return 0.5 * (h_ < w_ ? h_ : w_); }
 
     double x_;
     double y_;
@@ -1075,6 +1092,43 @@ namespace yae
     // border width:
     ItemRef border_;
 
+    ColorRef color_;
+    ColorRef colorBorder_;
+  };
+
+  //----------------------------------------------------------------
+  // Triangle
+  //
+  struct Triangle : public Item
+  {
+    Triangle(const char * id = NULL);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+
+    TVarRef collapsed_;
+    ItemRef border_;
+    ColorRef color_;
+    ColorRef colorBorder_;
+  };
+
+  //----------------------------------------------------------------
+  // XButton
+  //
+  struct XButton : public Item
+  {
+    XButton(const char * id = NULL);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+
+    ItemRef border_;
     ColorRef color_;
     ColorRef colorBorder_;
   };

@@ -1349,21 +1349,31 @@ namespace yae
 
       Item & title = group.addNew<Item>("title");
       {
-        title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
         title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
-        title.width_ = ItemRef::reference(&group, kPropertyWidth);
+        title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
+        title.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
 
         // reuse pre-computed title height property:
         title.height_ = ItemRef::reference(&(playlist["title_height"]),
                                            kPropertyHeight);
 
+        // open/close disclosure [>] button:
         Item & chevron = title.addNew<Item>("chevron");
         chevron.width_ = ItemRef::reference(&title, kPropertyHeight);
         chevron.height_ = ItemRef::reference(&title, kPropertyHeight);
         chevron.anchors_.topLeft(&title);
 
+        Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+        collapsed.anchors_.fill(&chevron);
+        collapsed.margins_.top_ =
+          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.2);
+        collapsed.margins_.bottom_ =
+          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.3);
+        collapsed.collapsed_ = collapsed.addExpr
+          (new ModelQuery(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
         Text & text = title.addNew<Text>("text");
-        Item & xbtn = title.addNew<Item>("x button");
+        Item & xbtn = title.addNew<Item>("xbtn");
 
         text.anchors_.left_ = ItemRef::reference(&chevron, kPropertyRight);
         text.anchors_.right_ = ItemRef::reference(&xbtn, kPropertyLeft);
@@ -1374,9 +1384,17 @@ namespace yae
         text.fontSize_ =
           ItemRef::scale(&text, kPropertyHeight, 0.55 * kDpiScale);
 
+        // remove group [x] button:
         xbtn.width_ = ItemRef::reference(&title, kPropertyHeight);
         xbtn.height_ = ItemRef::reference(&title, kPropertyHeight);
         xbtn.anchors_.topRight(&title);
+
+        XButton & xbutton = xbtn.addNew<XButton>("xbutton");
+        xbutton.anchors_.fill(&xbtn);
+        xbutton.margins_.top_ =
+          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.25);
+        xbutton.margins_.bottom_ =
+          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.25);
       }
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
@@ -2188,6 +2206,227 @@ namespace yae
                 colorBorder);
     }
   }
+
+
+  //----------------------------------------------------------------
+  // Triangle::Triangle
+  //
+  Triangle::Triangle(const char * id):
+    Item(id),
+    collapsed_(TVarRef::constant(TVar(false))),
+    border_(ItemRef::constant(1.0)),
+    color_(ColorRef::constant(Color(0xffffff, 1.0))),
+    colorBorder_(ColorRef::constant(Color(0x7f7f7f, 0.25)))
+  {}
+
+  //----------------------------------------------------------------
+  // Triangle::uncache
+  //
+  void
+  Triangle::uncache()
+  {
+    collapsed_.uncache();
+    border_.uncache();
+    color_.uncache();
+    colorBorder_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Triangle::paintContent
+  //
+  void
+  Triangle::paintContent() const
+  {
+    static const double sin_30 = 0.5;
+    static const double cos_30 = 0.866025403784439;
+
+    if (!Item::visible())
+    {
+      return;
+    }
+
+    bool collapsed = collapsed_.get().toBool();
+    const Color & color = color_.get();
+    const Segment & xseg = this->xExtent();
+    const Segment & yseg = this->yExtent();
+
+    double radius = 0.5 * (yseg.length_ < xseg.length_ ?
+                           yseg.length_ :
+                           xseg.length_);
+
+    TVec2D center = vec2d(xseg.center(), yseg.center());
+    TVec2D p[3];
+
+    if (collapsed)
+    {
+      p[0] = center + radius * vec2d(1.0, 0.0);
+      p[1] = center + radius * vec2d(-sin_30, -cos_30);
+      p[2] = center + radius * vec2d(-sin_30, cos_30);
+    }
+    else
+    {
+      p[0] = center + radius * vec2d(cos_30, -sin_30);
+      p[1] = center + radius * vec2d(-cos_30, -sin_30);
+      p[2] = center + radius * vec2d(0.0, 1.0);
+    }
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(),
+                          color.g(),
+                          color.b(),
+                          color.a()));
+    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
+    {
+      YAE_OGL_11(glVertex2dv(center.coord_));
+      YAE_OGL_11(glVertex2dv(p[0].coord_));
+      YAE_OGL_11(glVertex2dv(p[1].coord_));
+      YAE_OGL_11(glVertex2dv(p[2].coord_));
+      YAE_OGL_11(glVertex2dv(p[0].coord_));
+    }
+    YAE_OGL_11(glEnd());
+
+    double border = border_.get();
+    if (border > 0.0)
+    {
+      const Color & colorBorder = colorBorder_.get();
+      YAE_OGL_11(glColor4ub(colorBorder.r(),
+                            colorBorder.g(),
+                            colorBorder.b(),
+                            colorBorder.a()));
+      YAE_OGL_11(glLineWidth(border));
+      YAE_OGL_11(glBegin(GL_LINE_LOOP));
+      {
+        YAE_OGL_11(glVertex2dv(p[0].coord_));
+        YAE_OGL_11(glVertex2dv(p[1].coord_));
+        YAE_OGL_11(glVertex2dv(p[2].coord_));
+      }
+      YAE_OGL_11(glEnd());
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // XButton::XButton
+  //
+  XButton::XButton(const char * id):
+    Item(id),
+    border_(ItemRef::constant(0.0)),
+    color_(ColorRef::constant(Color(0xffffff, 0.5))),
+    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
+  {}
+
+  //----------------------------------------------------------------
+  // XButton::uncache
+  //
+  void
+  XButton::uncache()
+  {
+    border_.uncache();
+    color_.uncache();
+    colorBorder_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // XButton::paintContent
+  //
+  void
+  XButton::paintContent() const
+  {
+    static const double cos_45 = 0.707106781186548;
+
+    if (!Item::visible())
+    {
+      return;
+    }
+
+    const Color & color = color_.get();
+    const Segment & xseg = this->xExtent();
+    const Segment & yseg = this->yExtent();
+
+    double radius = 0.5 * (yseg.length_ < xseg.length_ ?
+                           yseg.length_ :
+                           xseg.length_);
+
+    TVec2D dx = vec2d(0.33 * radius, 0.0);
+    TVec2D dy = vec2d(0.0, 0.33 * radius);
+    TVec2D center = vec2d(xseg.center(), yseg.center());
+
+    TVec2D v[4] = {
+      vec2d(cos_45, -cos_45),
+      vec2d(-cos_45, -cos_45),
+      vec2d(-cos_45, cos_45),
+      vec2d(cos_45, cos_45)
+    };
+
+    TVec2D p[12];
+    p[0]  = center + dx;
+    p[1]  = center + dx + radius * v[0];
+    p[2]  = center - dy + radius * v[0];
+    p[3]  = center - dy;
+    p[4]  = center - dy + radius * v[1];
+    p[5]  = center - dx + radius * v[1];
+    p[6]  = center - dx;
+    p[7]  = center - dx + radius * v[2];
+    p[8]  = center + dy + radius * v[2];
+    p[9]  = center + dy;
+    p[10] = center + dy + radius * v[3];
+    p[11] = center + dx + radius * v[3];
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(),
+                          color.g(),
+                          color.b(),
+                          color.a()));
+    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
+    {
+      YAE_OGL_11(glVertex2dv(center.coord_));
+      YAE_OGL_11(glVertex2dv(p[0].coord_));
+      YAE_OGL_11(glVertex2dv(p[1].coord_));
+      YAE_OGL_11(glVertex2dv(p[2].coord_));
+      YAE_OGL_11(glVertex2dv(p[3].coord_));
+      YAE_OGL_11(glVertex2dv(p[4].coord_));
+      YAE_OGL_11(glVertex2dv(p[5].coord_));
+      YAE_OGL_11(glVertex2dv(p[6].coord_));
+      YAE_OGL_11(glVertex2dv(p[7].coord_));
+      YAE_OGL_11(glVertex2dv(p[8].coord_));
+      YAE_OGL_11(glVertex2dv(p[9].coord_));
+      YAE_OGL_11(glVertex2dv(p[10].coord_));
+      YAE_OGL_11(glVertex2dv(p[11].coord_));
+      YAE_OGL_11(glVertex2dv(p[0].coord_));
+    }
+    YAE_OGL_11(glEnd());
+
+    double border = border_.get();
+    if (border > 0.0)
+    {
+      const Color & colorBorder = colorBorder_.get();
+      YAE_OGL_11(glColor4ub(colorBorder.r(),
+                            colorBorder.g(),
+                            colorBorder.b(),
+                            colorBorder.a()));
+      YAE_OGL_11(glLineWidth(border));
+      YAE_OGL_11(glBegin(GL_LINE_LOOP));
+      {
+        YAE_OGL_11(glVertex2dv(p[0].coord_));
+        YAE_OGL_11(glVertex2dv(p[1].coord_));
+        YAE_OGL_11(glVertex2dv(p[2].coord_));
+        YAE_OGL_11(glVertex2dv(p[3].coord_));
+        YAE_OGL_11(glVertex2dv(p[4].coord_));
+        YAE_OGL_11(glVertex2dv(p[5].coord_));
+        YAE_OGL_11(glVertex2dv(p[6].coord_));
+        YAE_OGL_11(glVertex2dv(p[7].coord_));
+        YAE_OGL_11(glVertex2dv(p[8].coord_));
+        YAE_OGL_11(glVertex2dv(p[9].coord_));
+        YAE_OGL_11(glVertex2dv(p[10].coord_));
+        YAE_OGL_11(glVertex2dv(p[11].coord_));
+        YAE_OGL_11(glVertex2dv(p[0].coord_));
+      }
+      YAE_OGL_11(glEnd());
+    }
+  }
+
 
   //----------------------------------------------------------------
   // Scrollable::Scrollable
