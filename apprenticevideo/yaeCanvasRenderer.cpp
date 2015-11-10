@@ -875,87 +875,34 @@ yae_assert_gl_no_error()
 }
 
 #ifdef YAE_USE_QT5
-//----------------------------------------------------------------
-// TProgramStringARB
-//
-typedef void (APIENTRYP TProgramStringARB)(GLenum target,
-                                           GLenum format,
-                                           GLsizei len,
-                                           const void * string);
-
-//----------------------------------------------------------------
-// TGetProgramivARB
-//
-typedef void (APIENTRYP TGetProgramivARB)(GLenum target,
-                                          GLenum pname,
-                                          GLint * params);
-
-//----------------------------------------------------------------
-// TDeleteProgramsARB
-//
-typedef void (APIENTRYP TDeleteProgramsARB)(GLsizei n,
-                                            const GLuint * programs);
-
-//----------------------------------------------------------------
-// TBindProgramARB
-//
-typedef void (APIENTRYP TBindProgramARB)(GLenum target,
-                                         GLuint program);
-
-//----------------------------------------------------------------
-// TGenProgramsARB
-//
-typedef void (APIENTRYP TGenProgramsARB)(GLsizei n,
-                                         GLuint * programs);
-
-//----------------------------------------------------------------
-// TProgramLocalParameter4dvARB
-//
-typedef void (APIENTRYP TProgramLocalParameter4dvARB)(GLenum target,
-                                                      GLuint index,
-                                                      const GLdouble *);
-
 namespace yae
 {
-
   //----------------------------------------------------------------
-  // YAE_GL_FRAGMENT_PROGRAM_ARB
+  // OpenGLFunctionPointers::OpenGLFunctionPointers
   //
-  struct YAE_API OpenGLFunctionPointers : public QOpenGLFunctions
+  OpenGLFunctionPointers::OpenGLFunctionPointers()
   {
-    TProgramStringARB glProgramStringARB;
-    TGetProgramivARB glGetProgramivARB;
-    TDeleteProgramsARB glDeleteProgramsARB;
-    TBindProgramARB glBindProgramARB;
-    TGenProgramsARB glGenProgramsARB;
-    TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB;
+    QOpenGLFunctions::initializeOpenGLFunctions();
+    QOpenGLContext * opengl = QOpenGLContext::currentContext();
 
-    OpenGLFunctionPointers()
-    {
-      QOpenGLFunctions::initializeOpenGLFunctions();
-      QOpenGLContext * opengl = QOpenGLContext::currentContext();
+    this->glProgramStringARB = (TProgramStringARB)
+      opengl->getProcAddress("glProgramStringARB");
 
-      this->glProgramStringARB = (TProgramStringARB)
-        opengl->getProcAddress("glProgramStringARB");
+    this->glGetProgramivARB = (TGetProgramivARB)
+      opengl->getProcAddress("glGetProgramivARB");
 
-      this->glGetProgramivARB = (TGetProgramivARB)
-        opengl->getProcAddress("glGetProgramivARB");
+    this->glDeleteProgramsARB = (TDeleteProgramsARB)
+      opengl->getProcAddress("glDeleteProgramsARB");
 
-      this->glDeleteProgramsARB = (TDeleteProgramsARB)
-        opengl->getProcAddress("glDeleteProgramsARB");
+    this->glBindProgramARB = (TBindProgramARB)
+      opengl->getProcAddress("glBindProgramARB");
 
-      this->glBindProgramARB = (TBindProgramARB)
-        opengl->getProcAddress("glBindProgramARB");
+    this->glGenProgramsARB = (TGenProgramsARB)
+      opengl->getProcAddress("glGenProgramsARB");
 
-      this->glGenProgramsARB = (TGenProgramsARB)
-        opengl->getProcAddress("glGenProgramsARB");
-
-      this->glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
-        opengl->getProcAddress("glProgramLocalParameter4dvARB");
-    }
-
-    static OpenGLFunctionPointers & get();
-  };
+    this->glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
+      opengl->getProcAddress("glProgramLocalParameter4dvARB");
+  }
 
   //----------------------------------------------------------------
   // OpenGLFunctionPointers::get

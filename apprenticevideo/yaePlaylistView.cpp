@@ -1781,6 +1781,8 @@ namespace yae
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    YAE_OPENGL_HERE();
     if (glActiveTexture)
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
