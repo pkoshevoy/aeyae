@@ -836,6 +836,7 @@ namespace yae
     void uncache();
 
     void set(double m);
+    void set(const ItemRef & ref);
 
     ItemRef left_;
     ItemRef right_;
@@ -932,6 +933,14 @@ namespace yae
       Item & child = *(children_.back());
       child.parent_ = this;
       return static_cast<TItem &>(child);
+    }
+
+    template <typename TItem>
+    inline TItem & addNewHidden(const char * id)
+    {
+      TItem & item = addNew<TItem>(id);
+      item.visible_ = TVarRef::constant(TVar(false));
+      return item;
     }
 
     template <typename TData>
@@ -1049,6 +1058,9 @@ namespace yae
     // helpers:
     void getMaxRect(QRectF & bbox) const;
     void calcTextBBox(BBox & bbox) const;
+    double fontAscent() const;
+    double fontDescent() const;
+    double fontHeight() const;
 
     // virtual:
     double calcContentWidth() const;

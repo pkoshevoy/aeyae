@@ -329,11 +329,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // CalcX
+  // CalcXExtent
   //
-  struct CalcX : public TSegmentExpr
+  struct CalcXExtent : public TSegmentExpr
   {
-    CalcX(const Item * item):
+    CalcXExtent(const Item * item):
       item_(item)
     {}
 
@@ -348,11 +348,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // CalcY
+  // CalcYExtent
   //
-  struct CalcY : public TSegmentExpr
+  struct CalcYExtent : public TSegmentExpr
   {
-    CalcY(const Item * item):
+    CalcYExtent(const Item * item):
       item_(item)
     {}
 
@@ -364,6 +364,60 @@ namespace yae
     }
 
     const Item * item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFontAscent
+  //
+  struct GetFontAscent : public TDoubleExpr
+  {
+    GetFontAscent(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = item_.fontAscent();
+    }
+
+    const Text & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFontDescent
+  //
+  struct GetFontDescent : public TDoubleExpr
+  {
+    GetFontDescent(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = item_.fontDescent();
+    }
+
+    const Text & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFontHeight
+  //
+  struct GetFontHeight : public TDoubleExpr
+  {
+    GetFontHeight(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = item_.fontHeight();
+    }
+
+    const Text & item_;
   };
 
   //----------------------------------------------------------------
@@ -527,6 +581,18 @@ namespace yae
     bottom_ = ItemRef::constant(m);
   }
 
+  //----------------------------------------------------------------
+  // Margins::set
+  //
+  void
+  Margins::set(const ItemRef & ref)
+  {
+    left_ = ref;
+    right_ = ref;
+    top_ = ref;
+    bottom_ = ref;
+  }
+
 
   //----------------------------------------------------------------
   // Anchors::uncache
@@ -612,8 +678,8 @@ namespace yae
     parent_(NULL),
     xContent_(addExpr(new CalcXContent(this))),
     yContent_(addExpr(new CalcYContent(this))),
-    xExtent_(addExpr(new CalcX(this))),
-    yExtent_(addExpr(new CalcY(this))),
+    xExtent_(addExpr(new CalcXExtent(this))),
+    yExtent_(addExpr(new CalcYExtent(this))),
     visible_(TVarRef::constant(TVar(true)))
   {
     if (id)
@@ -859,9 +925,23 @@ namespace yae
 
     if (!xContent.isEmpty())
     {
-      double l = anchors_.left_.isValid() ? left() : xContent.start();
-      double r = anchors_.left_.isValid() ? xContent.end() : right();
-      w = r - l;
+      if (anchors_.left_.isValid())
+      {
+        double l = left();
+        double r = xContent.end();
+        w = r - l;
+      }
+      else if (anchors_.right_.isValid())
+      {
+        double l = xContent.start();
+        double r = right();
+        w = r - l;
+      }
+      else
+      {
+        YAE_ASSERT(anchors_.hcenter_.isValid());
+        w = xContent.length_;
+      }
     }
 
     width_.cache(w);
@@ -897,9 +977,23 @@ namespace yae
 
     if (!yContent.isEmpty())
     {
-      double t = anchors_.top_.isValid() ? top() : yContent.start();
-      double b = anchors_.top_.isValid() ? yContent.end() : bottom();
-      h = b - t;
+      if (anchors_.top_.isValid())
+      {
+        double t = top();
+        double b = yContent.end();
+        h = b - t;
+      }
+      else if (anchors_.bottom_.isValid())
+      {
+        double t = yContent.start();
+        double b = bottom();
+        h = b - t;
+      }
+      else
+      {
+        YAE_ASSERT(anchors_.vcenter_.isValid());
+        h = yContent.length_;
+      }
     }
 
     height_.cache(h);
@@ -1258,8 +1352,7 @@ namespace yae
       // setup an invisible item so its height property expression
       // could be computed once and the result reused in other places
       // that need to compute the same property expression:
-      Item & titleHeight = playlist.addNew<Item>("title_height");
-      titleHeight.visible_ = TVarRef::constant(TVar(false));
+      Item & titleHeight = playlist.addNewHidden<Item>("title_height");
       titleHeight.height_ =
         titleHeight.addExpr(new CalcTitleHeight(&root, 24.0));
 
@@ -1288,6 +1381,21 @@ namespace yae
       groups.anchors_.left_ = ItemRef::reference(&view, kPropertyLeft);
       groups.anchors_.right_ = ItemRef::reference(&view, kPropertyRight);
       groups.anchors_.top_ = ItemRef::constant(0.0);
+
+      Item & cellWidth = playlist.addNewHidden<Item>("cell_width");
+      cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(&groups));
+
+      Item & cellHeight = playlist.addNewHidden<Item>("cell_height");
+      cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(&groups));
+
+      Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
+      nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
+      nowPlaying.anchors_.left_ = ItemRef::constant(0.0);
+      nowPlaying.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+      nowPlaying.font_.setBold(false);
+      nowPlaying.fontSize_ = ItemRef::scale(&cellHeight,
+                                            kPropertyHeight,
+                                            0.12 * kDpiScale);
 
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
@@ -1341,64 +1449,67 @@ namespace yae
                 const PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
     {
+      // reuse pre-computed properties:
+      const Item & cellWidth = playlist["cell_width"];
+      const Item & cellHeight = playlist["cell_height"];
+      const Item & titleHeight = playlist["title_height"];
+      const Text & nowPlaying =
+        dynamic_cast<const Text &>(playlist["now_playing"]);
+
       Item & spacer = group.addNew<Item>("spacer");
       spacer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       spacer.anchors_.top_ = ItemRef::reference(&group, kPropertyTop);
       spacer.width_ = ItemRef::reference(&group, kPropertyWidth);
-      spacer.height_ = spacer.addExpr(new GridCellHeight(&group), 0.2);
+      spacer.height_ = ItemRef::scale(&titleHeight, kPropertyHeight, 0.2);
 
       Item & title = group.addNew<Item>("title");
       {
-        title.anchors_.top_ = ItemRef::reference(&spacer, kPropertyBottom);
+        title.anchors_.top_ = ItemRef::offset(&spacer, kPropertyBottom, 5);
         title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
         title.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
 
-        // reuse pre-computed title height property:
-        title.height_ = ItemRef::reference(&(playlist["title_height"]),
-                                           kPropertyHeight);
+        Item & chevron = title.addNew<Item>("chevron");
+        Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+        Text & text = title.addNew<Text>("text");
+        Item & rm = title.addNew<Item>("rm");
+        XButton & xbutton = rm.addNew<XButton>("xbutton");
+        ItemRef fontDescent =
+          xbutton.addExpr(new GetFontDescent(text), 0.5);
+        ItemRef fontDescentNowPlaying =
+          xbutton.addExpr(new GetFontDescent(nowPlaying), 0.5);
 
         // open/close disclosure [>] button:
-        Item & chevron = title.addNew<Item>("chevron");
-        chevron.width_ = ItemRef::reference(&title, kPropertyHeight);
-        chevron.height_ = ItemRef::reference(&title, kPropertyHeight);
-        chevron.anchors_.topLeft(&title);
+        chevron.width_ = ItemRef::reference(&text, kPropertyHeight);
+        chevron.height_ = ItemRef::reference(&text, kPropertyHeight);
+        chevron.anchors_.top_ = ItemRef::reference(&text, kPropertyTop);
+        chevron.anchors_.left_ = ItemRef::offset(&title, kPropertyLeft);
 
-        Triangle & collapsed = chevron.addNew<Triangle>("collapse");
         collapsed.anchors_.fill(&chevron);
-        collapsed.margins_.top_ =
-          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.2);
-        collapsed.margins_.bottom_ =
-          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.3);
+        collapsed.margins_.set(fontDescent);
         collapsed.collapsed_ = collapsed.addExpr
           (new ModelQuery(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
-        Text & text = title.addNew<Text>("text");
-        Item & xbtn = title.addNew<Item>("xbtn");
-
+        text.anchors_.top_ = ItemRef::reference(&title, kPropertyTop);
         text.anchors_.left_ = ItemRef::reference(&chevron, kPropertyRight);
-        text.anchors_.right_ = ItemRef::reference(&xbtn, kPropertyLeft);
-        text.anchors_.vcenter_ = ItemRef::reference(&title, kPropertyVCenter);
-        text.height_ = ItemRef::reference(&title, kPropertyHeight);
+        text.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
         text.text_ = text.addExpr
           (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
         text.fontSize_ =
-          ItemRef::scale(&text, kPropertyHeight, 0.55 * kDpiScale);
+          ItemRef::scale(&cellHeight, kPropertyHeight, 0.16 * kDpiScale);
+        text.elide_ = Qt::ElideMiddle;
 
         // remove group [x] button:
-        xbtn.width_ = ItemRef::reference(&title, kPropertyHeight);
-        xbtn.height_ = ItemRef::reference(&title, kPropertyHeight);
-        xbtn.anchors_.topRight(&title);
+        rm.width_ = ItemRef::reference(&nowPlaying, kPropertyHeight);
+        rm.height_ = ItemRef::reference(&text, kPropertyHeight);
+        rm.anchors_.top_ = ItemRef::reference(&text, kPropertyTop);
+        rm.anchors_.right_ = ItemRef::offset(&title, kPropertyRight, -5);
 
-        XButton & xbutton = xbtn.addNew<XButton>("xbutton");
-        xbutton.anchors_.fill(&xbtn);
-        xbutton.margins_.top_ =
-          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.25);
-        xbutton.margins_.bottom_ =
-          ItemRef::scale(&(playlist["title_height"]), kPropertyHeight, 0.25);
+        xbutton.anchors_.fill(&rm);
+        xbutton.margins_.set(fontDescentNowPlaying);
       }
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
-      separator.anchors_.top_ = ItemRef::reference(&title, kPropertyBottom);
+      separator.anchors_.top_ = ItemRef::offset(&title, kPropertyBottom, 5);
       separator.anchors_.left_ = ItemRef::offset(&group, kPropertyLeft, 2);
       separator.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
       separator.height_ = ItemRef::constant(2.0);
@@ -1414,8 +1525,8 @@ namespace yae
         Rectangle & cell = grid.addNew<Rectangle>("cell");
         cell.anchors_.left_ = cell.addExpr(new GridCellLeft(&grid, i));
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(&grid, i));
-        cell.width_ = cell.addExpr(new GridCellWidth(&grid));
-        cell.height_ = cell.addExpr(new GridCellHeight(&grid));
+        cell.width_ = ItemRef::reference(&cellWidth, kPropertyWidth);
+        cell.height_ = ItemRef::reference(&cellHeight, kPropertyHeight);
         cell.border_ = ItemRef::constant(1);
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
@@ -1432,7 +1543,7 @@ namespace yae
       footer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
       footer.anchors_.top_ = ItemRef::reference(&grid, kPropertyBottom);
       footer.width_ = ItemRef::reference(&group, kPropertyWidth);
-      footer.height_ = footer.addExpr(new GridCellHeight(&group), 0.3);
+      footer.height_ = ItemRef::scale(&cellHeight, kPropertyHeight, 0.3);
     }
   };
 
@@ -1467,7 +1578,7 @@ namespace yae
 
       Text & playing = cell.addNew<Text>("now playing");
       playing.anchors_.top_ = ItemRef::offset(&cell, kPropertyTop, 5);
-      playing.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
+      playing.anchors_.right_ = ItemRef::offset(&rm, kPropertyLeft, -5);
       playing.visible_ = playing.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
@@ -1479,7 +1590,11 @@ namespace yae
       rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
       rm.anchors_.top_ = ItemRef::reference(&playing, kPropertyTop);
       rm.anchors_.right_ = ItemRef::offset(&cell, kPropertyRight, -5);
-      rm.margins_.set(3);
+
+      XButton & xbutton = rm.addNew<XButton>("xbutton");
+      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing), 0.5);
+      xbutton.anchors_.fill(&rm);
+      xbutton.margins_.set(fontDescent);
 
       Rectangle & underline = cell.addNew<Rectangle>("underline");
       underline.anchors_.left_ = ItemRef::offset(&playing, kPropertyLeft, -1);
@@ -1904,18 +2019,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Text::getConstraints
+  // Text::getMaxRect
   //
   void
   Text::getMaxRect(QRectF & maxRect) const
   {
     double maxWidth =
-      maxWidth_.isValid() || maxWidth_.isCached() ?
-      maxWidth_.get() : double(std::numeric_limits<short int>::max());
+      maxWidth_.isValid() || maxWidth_.isCached() ? maxWidth_.get() :
+#if 0 // FIXME: reference cycle
+      (width_.isValid() || (anchors_.left_.isValid() &&
+                            anchors_.right_.isValid())) ? width() :
+#endif
+      double(std::numeric_limits<short int>::max());
 
     double maxHeight =
-      maxHeight_.isValid() || maxHeight_.isCached() ?
-      maxHeight_.get() : double(std::numeric_limits<short int>::max());
+      maxHeight_.isValid() || maxHeight_.isCached() ? maxHeight_.get() :
+#if 0 // FIXME: reference cycle
+      (height_.isValid() || (anchors_.top_.isValid() &&
+                             anchors_.bottom_.isValid())) ? height() :
+#endif
+      double(std::numeric_limits<short int>::max());
 
     maxRect = QRectF(qreal(0), qreal(0), qreal(maxWidth), qreal(maxHeight));
   }
@@ -1949,6 +2072,48 @@ namespace yae
     bbox.y_ = rect.y() / kSupersampleText;
     bbox.w_ = rect.width() / kSupersampleText;
     bbox.h_ = rect.height() / kSupersampleText;
+  }
+
+  //----------------------------------------------------------------
+  // Text::fontAscent
+  //
+  double
+  Text::fontAscent() const
+  {
+    QFont font = font_;
+    double fontSize = fontSize_.get();
+    font.setPointSizeF(fontSize * kSupersampleText);
+    QFontMetricsF fm(font);
+    double ascent = fm.ascent();
+    return ascent;
+  }
+
+  //----------------------------------------------------------------
+  // Text::fontDescent
+  //
+  double
+  Text::fontDescent() const
+  {
+    QFont font = font_;
+    double fontSize = fontSize_.get();
+    font.setPointSizeF(fontSize * kSupersampleText);
+    QFontMetricsF fm(font);
+    double descent = fm.descent();
+    return descent;
+  }
+
+  //----------------------------------------------------------------
+  // Text::fontHeight
+  //
+  double
+  Text::fontHeight() const
+  {
+    QFont font = font_;
+    double fontSize = fontSize_.get();
+    font.setPointSizeF(fontSize * kSupersampleText);
+    QFontMetricsF fm(font);
+    double fh = fm.height();
+    return fh;
   }
 
   //----------------------------------------------------------------
