@@ -637,16 +637,16 @@ namespace yae
 
     // constructor helpers:
     inline static DataRef<TData>
-    reference(const TDataProperties * ref, Property prop)
-    { return DataRef<TData>(ref, prop); }
+    reference(const TDataProperties & ref, Property prop)
+    { return DataRef<TData>(&ref, prop); }
 
     inline static DataRef<TData>
     constant(const TData & t)
     { return DataRef<TData>(t); }
 
     inline static DataRef<TData>
-    expression(const TDataProperties * ref)
-    { return DataRef<TData>(ref, kPropertyExpression); }
+    expression(const TDataProperties & ref)
+    { return DataRef<TData>(&ref, kPropertyExpression); }
 
     // check whether this property reference is valid:
     inline bool isValid() const
@@ -745,24 +745,24 @@ namespace yae
 
     // constructor helpers:
     inline static ItemRef
-    reference(const TDataProperties * ref, Property prop)
-    { return ItemRef(ref, prop); }
+    reference(const TDataProperties & ref, Property prop)
+    { return ItemRef(&ref, prop); }
 
     inline static ItemRef
     constant(const double & t)
     { return ItemRef(t); }
 
     inline static ItemRef
-    expression(const TDataProperties * ref, double s = 1.0, double t = 0.0)
-    { return ItemRef(ref, kPropertyExpression, s, t); }
+    expression(const TDataProperties & ref, double s = 1.0, double t = 0.0)
+    { return ItemRef(&ref, kPropertyExpression, s, t); }
 
     inline static ItemRef
-    scale(const TDataProperties * ref, Property prop, double s = 1.0)
-    { return ItemRef(ref, prop, s, 0.0); }
+    scale(const TDataProperties & ref, Property prop, double s = 1.0)
+    { return ItemRef(&ref, prop, s, 0.0); }
 
     inline static ItemRef
-    offset(const TDataProperties * ref, Property prop, double t = 0.0)
-    { return ItemRef(ref, prop, 1.0, t); }
+    offset(const TDataProperties & ref, Property prop, double t = 0.0)
+    { return ItemRef(&ref, prop, 1.0, t); }
 
     const double & get() const
     {
@@ -851,12 +851,12 @@ namespace yae
   {
     void uncache();
 
-    void fill(const TDoubleProp * reference, double offset = 0.0);
-    void center(const TDoubleProp * reference);
-    void topLeft(const TDoubleProp * reference, double offset = 0.0);
-    void topRight(const TDoubleProp * reference, double offset = 0.0);
-    void bottomLeft(const TDoubleProp * reference, double offset = 0.0);
-    void bottomRight(const TDoubleProp * reference, double offset = 0.0);
+    void fill(const TDoubleProp & reference, double offset = 0.0);
+    void center(const TDoubleProp & reference);
+    void topLeft(const TDoubleProp & reference, double offset = 0.0);
+    void topRight(const TDoubleProp & reference, double offset = 0.0);
+    void bottomLeft(const TDoubleProp & reference, double offset = 0.0);
+    void bottomRight(const TDoubleProp & reference, double offset = 0.0);
 
     ItemRef left_;
     ItemRef right_;
@@ -947,7 +947,7 @@ namespace yae
     inline DataRef<TData> addExpr(Expression<TData> * e)
     {
       expr_.push_back(TPropertiesBasePtr(e));
-      return DataRef<TData>::expression(e);
+      return DataRef<TData>::expression(*e);
     }
 
     inline ItemRef addExpr(TDoubleExpr * e,
@@ -955,7 +955,7 @@ namespace yae
                            double translate = 0.0)
     {
       expr_.push_back(TPropertiesBasePtr(e));
-      return ItemRef::expression(e, scale, translate);
+      return ItemRef::expression(*e, scale, translate);
     }
 
     // NOTE: override this to provide custom visual representation:
@@ -1056,8 +1056,6 @@ namespace yae
     int textFlags() const;
 
     // helpers:
-    void getMaxRect(QRectF & bbox) const;
-    void calcTextBBox(BBox & bbox) const;
     double fontAscent() const;
     double fontDescent() const;
     double fontHeight() const;

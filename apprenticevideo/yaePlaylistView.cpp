@@ -32,6 +32,11 @@ namespace yae
   static const double kDpiScale = 72.0 / 96.0;
 #endif
 
+  //----------------------------------------------------------------
+  // kSupersampleText
+  //
+  static const double kSupersampleText = 2.0;
+
 
   //----------------------------------------------------------------
   // calcCellWidth
@@ -89,7 +94,7 @@ namespace yae
   //
   struct GridCellLeft : public TDoubleExpr
   {
-    GridCellLeft(const Item * grid, std::size_t cell):
+    GridCellLeft(const Item & grid, std::size_t cell):
       grid_(grid),
       cell_(cell)
     {}
@@ -97,14 +102,14 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_->width();
+      double gridWidth = grid_.width();
       unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
       std::size_t cellCol = cell_ % cellsPerRow;
-      double ox = grid_->left() + 2;
+      double ox = grid_.left() + 2;
       result = ox + gridWidth * double(cellCol) / double(cellsPerRow);
     }
 
-    const Item * grid_;
+    const Item & grid_;
     std::size_t cell_;
   };
 
@@ -113,7 +118,7 @@ namespace yae
   //
   struct GridCellTop : public TDoubleExpr
   {
-    GridCellTop(const Item * grid, std::size_t cell):
+    GridCellTop(const Item & grid, std::size_t cell):
       grid_(grid),
       cell_(cell)
     {}
@@ -121,19 +126,19 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      std::size_t numCells = grid_->children_.size();
-      double gridWidth = grid_->width();
+      std::size_t numCells = grid_.children_.size();
+      double gridWidth = grid_.width();
       double cellWidth = calcCellWidth(gridWidth);
       double cellHeight = calcCellHeight(cellWidth);
       unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
       unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
       std::size_t cellRow = cell_ / cellsPerRow;
-      double oy = grid_->top() + 2;
+      double oy = grid_.top() + 2;
       result = oy + gridHeight * double(cellRow) / double(rowsOfCells);
     }
 
-    const Item * grid_;
+    const Item & grid_;
     std::size_t cell_;
   };
 
@@ -142,18 +147,18 @@ namespace yae
   //
   struct GridCellWidth : public TDoubleExpr
   {
-    GridCellWidth(const Item * grid):
+    GridCellWidth(const Item & grid):
       grid_(grid)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_->width();
+      double gridWidth = grid_.width();
       result = calcCellWidth(gridWidth) - 2;
     }
 
-    const Item * grid_;
+    const Item & grid_;
   };
 
   //----------------------------------------------------------------
@@ -161,19 +166,19 @@ namespace yae
   //
   struct GridCellHeight : public TDoubleExpr
   {
-    GridCellHeight(const Item * grid):
+    GridCellHeight(const Item & grid):
       grid_(grid)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_->width();
+      double gridWidth = grid_.width();
       double cellWidth = calcCellWidth(gridWidth);
       result = calcCellHeight(cellWidth) - 2;
     }
 
-    const Item * grid_;
+    const Item & grid_;
   };
 
   //----------------------------------------------------------------
@@ -181,7 +186,7 @@ namespace yae
   //
   struct CalcTitleHeight : public TDoubleExpr
   {
-    CalcTitleHeight(const Item * titleContainer, double minHeight):
+    CalcTitleHeight(const Item & titleContainer, double minHeight):
       titleContainer_(titleContainer),
       minHeight_(minHeight)
     {}
@@ -189,11 +194,11 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      double titleContainerWidth = titleContainer_->width();
+      double titleContainerWidth = titleContainer_.width();
       result = calcTitleHeight(minHeight_, titleContainerWidth);
     }
 
-    const Item * titleContainer_;
+    const Item & titleContainer_;
     double minHeight_;
   };
 
@@ -202,7 +207,7 @@ namespace yae
   //
   struct CalcSliderTop : public TDoubleExpr
   {
-    CalcSliderTop(const Scrollable * view, const Item * slider):
+    CalcSliderTop(const Scrollable & view, const Item & slider):
       view_(view),
       slider_(slider)
     {}
@@ -210,24 +215,24 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      result = view_->top();
+      result = view_.top();
 
-      double sceneHeight = view_->content_.height();
-      double viewHeight = view_->height();
+      double sceneHeight = view_.content_.height();
+      double viewHeight = view_.height();
       if (sceneHeight <= viewHeight)
       {
         return;
       }
 
       double scale = viewHeight / sceneHeight;
-      double minHeight = slider_->width() * 5.0;
+      double minHeight = slider_.width() * 5.0;
       double height = minHeight + (viewHeight - minHeight) * scale;
-      double y = (viewHeight - height) * view_->position_;
+      double y = (viewHeight - height) * view_.position_;
       result += y;
     }
 
-    const Scrollable * view_;
-    const Item * slider_;
+    const Scrollable & view_;
+    const Item & slider_;
   };
 
   //----------------------------------------------------------------
@@ -235,7 +240,7 @@ namespace yae
   //
   struct CalcSliderHeight : public TDoubleExpr
   {
-    CalcSliderHeight(const Scrollable * view, const Item * slider):
+    CalcSliderHeight(const Scrollable & view, const Item & slider):
       view_(view),
       slider_(slider)
     {}
@@ -243,8 +248,8 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      double sceneHeight = view_->content_.height();
-      double viewHeight = view_->height();
+      double sceneHeight = view_.content_.height();
+      double viewHeight = view_.height();
       if (sceneHeight <= viewHeight)
       {
         result = viewHeight;
@@ -252,12 +257,12 @@ namespace yae
       }
 
       double scale = viewHeight / sceneHeight;
-      double minHeight = slider_->width() * 5.0;
+      double minHeight = slider_.width() * 5.0;
       result = minHeight + (viewHeight - minHeight) * scale;
     }
 
-    const Scrollable * view_;
-    const Item * slider_;
+    const Scrollable & view_;
+    const Item & slider_;
   };
 
   //----------------------------------------------------------------
@@ -265,25 +270,25 @@ namespace yae
   //
   struct CalcXContent : public TSegmentExpr
   {
-    CalcXContent(const Item * item):
+    CalcXContent(const Item & item):
       item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.length_ = item_->calcContentWidth();
+      result.length_ = item_.calcContentWidth();
       result.origin_ =
-        item_->anchors_.left_.isValid() ?
-        item_->left() :
+        item_.anchors_.left_.isValid() ?
+        item_.left() :
 
-        item_->anchors_.right_.isValid() ?
-        item_->right() - result.length_ :
+        item_.anchors_.right_.isValid() ?
+        item_.right() - result.length_ :
 
-        item_->hcenter() - result.length_ * 0.5;
+        item_.hcenter() - result.length_ * 0.5;
 
-      for (std::vector<ItemPtr>::const_iterator i = item_->children_.begin();
-           i != item_->children_.end(); ++i)
+      for (std::vector<ItemPtr>::const_iterator i = item_.children_.begin();
+           i != item_.children_.end(); ++i)
       {
         const ItemPtr & child = *i;
         const Segment & footprint = child->xExtent();
@@ -291,7 +296,7 @@ namespace yae
       }
     }
 
-    const Item * item_;
+    const Item & item_;
   };
 
   //----------------------------------------------------------------
@@ -299,25 +304,25 @@ namespace yae
   //
   struct CalcYContent : public TSegmentExpr
   {
-    CalcYContent(const Item * item):
+    CalcYContent(const Item & item):
       item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.length_ = item_->calcContentHeight();
+      result.length_ = item_.calcContentHeight();
       result.origin_ =
-        item_->anchors_.top_.isValid() ?
-        item_->top() :
+        item_.anchors_.top_.isValid() ?
+        item_.top() :
 
-        item_->anchors_.bottom_.isValid() ?
-        item_->bottom() - result.length_ :
+        item_.anchors_.bottom_.isValid() ?
+        item_.bottom() - result.length_ :
 
-        item_->vcenter() - result.length_ * 0.5;
+        item_.vcenter() - result.length_ * 0.5;
 
-      for (std::vector<ItemPtr>::const_iterator i = item_->children_.begin();
-           i != item_->children_.end(); ++i)
+      for (std::vector<ItemPtr>::const_iterator i = item_.children_.begin();
+           i != item_.children_.end(); ++i)
       {
         const ItemPtr & child = *i;
         const Segment & footprint = child->yExtent();
@@ -325,7 +330,7 @@ namespace yae
       }
     }
 
-    const Item * item_;
+    const Item & item_;
   };
 
   //----------------------------------------------------------------
@@ -333,18 +338,18 @@ namespace yae
   //
   struct CalcXExtent : public TSegmentExpr
   {
-    CalcXExtent(const Item * item):
+    CalcXExtent(const Item & item):
       item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.origin_ = item_->left();
-      result.length_ = item_->width();
+      result.origin_ = item_.left();
+      result.length_ = item_.width();
     }
 
-    const Item * item_;
+    const Item & item_;
   };
 
   //----------------------------------------------------------------
@@ -352,18 +357,52 @@ namespace yae
   //
   struct CalcYExtent : public TSegmentExpr
   {
-    CalcYExtent(const Item * item):
+    CalcYExtent(const Item & item):
       item_(item)
     {}
 
     // virtual:
     void evaluate(Segment & result) const
     {
-      result.origin_ = item_->top();
-      result.length_ = item_->height();
+      result.origin_ = item_.top();
+      result.length_ = item_.height();
     }
 
-    const Item * item_;
+    const Item & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFontSize
+  //
+  struct GetFontSize : public TDoubleExpr
+  {
+    GetFontSize(const Item & titleHeight, double titleHeightScale,
+                const Item & cellHeight, double cellHeightScale):
+      titleHeight_(titleHeight),
+      cellHeight_(cellHeight),
+      titleHeightScale_(titleHeightScale),
+      cellHeightScale_(cellHeightScale)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double t = 0.0;
+      titleHeight_.get(kPropertyHeight, t);
+      t *= titleHeightScale_;
+
+      double c = 0.0;
+      cellHeight_.get(kPropertyHeight, c);
+      c *= cellHeightScale_;
+
+      result = std::min(t, c);
+    }
+
+    const Item & titleHeight_;
+    const Item & cellHeight_;
+
+    double titleHeightScale_;
+    double cellHeightScale_;
   };
 
   //----------------------------------------------------------------
@@ -421,21 +460,106 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // getMaxRect
+  //
+  static void
+  getMaxRect(const Text & item, QRectF & maxRect)
+  {
+    double maxWidth =
+      (item.maxWidth_.isValid() ||
+       item.maxWidth_.isCached()) ? item.maxWidth_.get() :
+      (item.width_.isValid() ||
+       (item.anchors_.left_.isValid() &&
+        item.anchors_.right_.isValid())) ? item.width() :
+      double(std::numeric_limits<short int>::max());
+
+    double maxHeight =
+      (item.maxHeight_.isValid() ||
+       item.maxHeight_.isCached()) ? item.maxHeight_.get() :
+      (item.height_.isValid() ||
+       (item.anchors_.top_.isValid() &&
+        item.anchors_.bottom_.isValid())) ? item.height() :
+      double(std::numeric_limits<short int>::max());
+
+    maxRect = QRectF(qreal(0), qreal(0), qreal(maxWidth), qreal(maxHeight));
+  }
+
+  //----------------------------------------------------------------
+  // getElidedText
+  //
+  static QString
+  getElidedText(double maxWidth,
+                const Text & item,
+                const QFontMetricsF & fm,
+                int flags)
+  {
+    QString text = item.text_.get().toString();
+
+    if (item.elide_ != Qt::ElideNone)
+    {
+      QString textElided = fm.elidedText(text, item.elide_, maxWidth, flags);
+#if 0
+      if (text != textElided)
+      {
+        std::cerr
+          << "original: " << text.toUtf8().constData() << std::endl
+          << "  elided: " << textElided.toUtf8().constData() << std::endl;
+        YAE_ASSERT(false);
+      }
+#endif
+      text = textElided;
+    }
+
+    return text;
+  }
+
+  //----------------------------------------------------------------
+  // calcTextBBox
+  //
+  static void
+  calcTextBBox(const Text & item,
+               BBox & bbox,
+               double maxWidth,
+               double maxHeight)
+  {
+    QFont font = item.font_;
+    double fontSize = item.fontSize_.get();
+    font.setPointSizeF(fontSize * kSupersampleText);
+    QFontMetricsF fm(font);
+
+    QRectF maxRect(0.0, 0.0,
+                   maxWidth * kSupersampleText,
+                   maxHeight * kSupersampleText);
+
+    int flags = item.textFlags();
+    QString text =
+      getElidedText(maxWidth * kSupersampleText, item, fm, flags);
+
+    QRectF rect = fm.boundingRect(maxRect, flags, text);
+    bbox.x_ = rect.x() / kSupersampleText;
+    bbox.y_ = rect.y() / kSupersampleText;
+    bbox.w_ = rect.width() / kSupersampleText;
+    bbox.h_ = rect.height() / kSupersampleText;
+  }
+
+  //----------------------------------------------------------------
   // CalcTextBBox
   //
   struct CalcTextBBox : public TBBoxExpr
   {
-    CalcTextBBox(const Text * item):
+    CalcTextBBox(const Text & item):
       item_(item)
     {}
 
     // virtual:
     void evaluate(BBox & result) const
     {
-      item_->calcTextBBox(result);
+      QRectF maxRect;
+      getMaxRect(item_, maxRect);
+      calcTextBBox(item_, result, maxRect.width(), maxRect.height());
     }
 
-    const Text * item_;
+    const Text & item_;
   };
 
   //----------------------------------------------------------------
@@ -612,7 +736,7 @@ namespace yae
   // Anchors::fill
   //
   void
-  Anchors::fill(const TDoubleProp * ref, double offset)
+  Anchors::fill(const TDoubleProp & ref, double offset)
   {
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -624,7 +748,7 @@ namespace yae
   // Anchors::center
   //
   void
-  Anchors::center(const TDoubleProp * ref)
+  Anchors::center(const TDoubleProp & ref)
   {
     hcenter_ = ItemRef::offset(ref, kPropertyHCenter);
     vcenter_ = ItemRef::offset(ref, kPropertyVCenter);
@@ -634,7 +758,7 @@ namespace yae
   // Anchors::topLeft
   //
   void
-  Anchors::topLeft(const TDoubleProp * ref, double offset)
+  Anchors::topLeft(const TDoubleProp & ref, double offset)
   {
     top_ = ItemRef::offset(ref, kPropertyTop, offset);
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
@@ -644,7 +768,7 @@ namespace yae
   // Anchors::topRight
   //
   void
-  Anchors::topRight(const TDoubleProp * ref, double offset)
+  Anchors::topRight(const TDoubleProp & ref, double offset)
   {
     top_ = ItemRef::offset(ref, kPropertyTop, offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -654,7 +778,7 @@ namespace yae
   // Anchors::bottomLeft
   //
   void
-  Anchors::bottomLeft(const TDoubleProp * ref, double offset)
+  Anchors::bottomLeft(const TDoubleProp & ref, double offset)
   {
     bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
     left_ = ItemRef::offset(ref, kPropertyLeft, offset);
@@ -664,7 +788,7 @@ namespace yae
   // Anchors::bottomRight
   //
   void
-  Anchors::bottomRight(const TDoubleProp * ref, double offset)
+  Anchors::bottomRight(const TDoubleProp & ref, double offset)
   {
     bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
@@ -676,10 +800,10 @@ namespace yae
   //
   Item::Item(const char * id):
     parent_(NULL),
-    xContent_(addExpr(new CalcXContent(this))),
-    yContent_(addExpr(new CalcYContent(this))),
-    xExtent_(addExpr(new CalcXExtent(this))),
-    yExtent_(addExpr(new CalcYExtent(this))),
+    xContent_(addExpr(new CalcXContent(*this))),
+    yContent_(addExpr(new CalcYContent(*this))),
+    xExtent_(addExpr(new CalcXExtent(*this))),
+    yExtent_(addExpr(new CalcYExtent(*this))),
     visible_(TVarRef::constant(TVar(true)))
   {
     if (id)
@@ -1333,7 +1457,7 @@ namespace yae
                    const QModelIndex & itemIndex)
   {
       Rectangle & filter = item.addNew<Rectangle>("bg");
-      filter.anchors_.fill(&item);
+      filter.anchors_.fill(item);
       filter.margins_.set(2);
       filter.radius_ = ItemRef::constant(3);
   }
@@ -1354,64 +1478,68 @@ namespace yae
       // that need to compute the same property expression:
       Item & titleHeight = playlist.addNewHidden<Item>("title_height");
       titleHeight.height_ =
-        titleHeight.addExpr(new CalcTitleHeight(&root, 24.0));
+        titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
 
       Item & filter = root.addNew<Item>("filter");
-      filter.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
-      filter.anchors_.top_ = ItemRef::reference(&root, kPropertyTop);
-      filter.width_ = ItemRef::reference(&root, kPropertyWidth);
-      filter.height_ = ItemRef::scale(&titleHeight, kPropertyHeight, 1.5);
+      filter.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+      filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+      filter.width_ = ItemRef::reference(root, kPropertyWidth);
+      filter.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.5);
       layoutFilterItem(filter, layouts, model, rootIndex);
 
       Scrollable & view = root.addNew<Scrollable>("scrollable");
 
       Item & scrollbar = root.addNew<Item>("scrollbar");
-      scrollbar.anchors_.right_ = ItemRef::reference(&root, kPropertyRight);
-      scrollbar.anchors_.top_ = ItemRef::offset(&filter, kPropertyBottom, 5);
-      scrollbar.anchors_.bottom_ = ItemRef::offset(&root, kPropertyBottom, -5);
+      scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+      scrollbar.anchors_.top_ = ItemRef::offset(filter, kPropertyBottom, 5);
+      scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
       scrollbar.width_ =
-        scrollbar.addExpr(new CalcTitleHeight(&root, 50.0), 0.2);
+        scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
 
-      view.anchors_.left_ = ItemRef::reference(&root, kPropertyLeft);
-      view.anchors_.right_ = ItemRef::reference(&scrollbar, kPropertyLeft);
-      view.anchors_.top_ = ItemRef::reference(&filter, kPropertyBottom);
-      view.anchors_.bottom_ = ItemRef::reference(&root, kPropertyBottom);
+      view.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+      view.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
+      view.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
+      view.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
 
       Item & groups = view.content_;
-      groups.anchors_.left_ = ItemRef::reference(&view, kPropertyLeft);
-      groups.anchors_.right_ = ItemRef::reference(&view, kPropertyRight);
+      groups.anchors_.left_ = ItemRef::reference(view, kPropertyLeft);
+      groups.anchors_.right_ = ItemRef::reference(view, kPropertyRight);
       groups.anchors_.top_ = ItemRef::constant(0.0);
 
       Item & cellWidth = playlist.addNewHidden<Item>("cell_width");
-      cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(&groups));
+      cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(groups));
 
       Item & cellHeight = playlist.addNewHidden<Item>("cell_height");
-      cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(&groups));
+      cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(groups));
+
+      Item & fontSize = playlist.addNewHidden<Item>("font_size");
+      fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
+                                                          cellHeight, 0.15));
 
       Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
       nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
       nowPlaying.anchors_.left_ = ItemRef::constant(0.0);
       nowPlaying.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       nowPlaying.font_.setBold(false);
-      nowPlaying.fontSize_ = ItemRef::scale(&cellHeight,
+      nowPlaying.fontSize_ = ItemRef::scale(fontSize,
                                             kPropertyHeight,
-                                            0.12 * kDpiScale);
+                                            0.8 * kDpiScale);
 
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
       {
         Item & group = groups.addNew<Item>("group");
-        group.anchors_.left_ = ItemRef::reference(&groups, kPropertyLeft);
-        group.anchors_.right_ = ItemRef::reference(&groups, kPropertyRight);
+        group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
+        group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
 
         if (i < 1)
         {
-          group.anchors_.top_ = ItemRef::reference(&groups, kPropertyTop);
+          group.anchors_.top_ = ItemRef::reference(groups, kPropertyTop);
         }
         else
         {
           Item & prev = *(groups.children_[i - 1]);
-          group.anchors_.top_ = ItemRef::reference(&prev, kPropertyBottom);
+          group.anchors_.top_ = ItemRef::reference(prev, kPropertyBottom);
         }
 
         QModelIndex childIndex = model.index(i, 0, rootIndex);
@@ -1430,11 +1558,11 @@ namespace yae
 
       // configure scrollbar:
       Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
-      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(&view, &slider));
-      slider.anchors_.left_ = ItemRef::offset(&scrollbar, kPropertyLeft, 2);
-      slider.anchors_.right_ = ItemRef::offset(&scrollbar, kPropertyRight, -2);
-      slider.height_ = slider.addExpr(new CalcSliderHeight(&view, &slider));
-      slider.radius_ = ItemRef::scale(&slider, kPropertyWidth, 0.5);
+      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(view, slider));
+      slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
+      slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
+      slider.height_ = slider.addExpr(new CalcSliderHeight(view, slider));
+      slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     }
   };
 
@@ -1450,6 +1578,7 @@ namespace yae
                 const QModelIndex & groupIndex)
     {
       // reuse pre-computed properties:
+      const Item & fontSize = playlist["font_size"];
       const Item & cellWidth = playlist["cell_width"];
       const Item & cellHeight = playlist["cell_height"];
       const Item & titleHeight = playlist["title_height"];
@@ -1457,16 +1586,16 @@ namespace yae
         dynamic_cast<const Text &>(playlist["now_playing"]);
 
       Item & spacer = group.addNew<Item>("spacer");
-      spacer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
-      spacer.anchors_.top_ = ItemRef::reference(&group, kPropertyTop);
-      spacer.width_ = ItemRef::reference(&group, kPropertyWidth);
-      spacer.height_ = ItemRef::scale(&titleHeight, kPropertyHeight, 0.2);
+      spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
+      spacer.width_ = ItemRef::reference(group, kPropertyWidth);
+      spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
 
       Item & title = group.addNew<Item>("title");
       {
-        title.anchors_.top_ = ItemRef::offset(&spacer, kPropertyBottom, 5);
-        title.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
-        title.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
+        title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
+        title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+        title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
 
         Item & chevron = title.addNew<Item>("chevron");
         Triangle & collapsed = chevron.addNew<Triangle>("collapse");
@@ -1474,59 +1603,59 @@ namespace yae
         Item & rm = title.addNew<Item>("rm");
         XButton & xbutton = rm.addNew<XButton>("xbutton");
         ItemRef fontDescent =
-          xbutton.addExpr(new GetFontDescent(text), 0.5);
+          xbutton.addExpr(new GetFontDescent(text));
         ItemRef fontDescentNowPlaying =
-          xbutton.addExpr(new GetFontDescent(nowPlaying), 0.5);
+          xbutton.addExpr(new GetFontDescent(nowPlaying));
 
         // open/close disclosure [>] button:
-        chevron.width_ = ItemRef::reference(&text, kPropertyHeight);
-        chevron.height_ = ItemRef::reference(&text, kPropertyHeight);
-        chevron.anchors_.top_ = ItemRef::reference(&text, kPropertyTop);
-        chevron.anchors_.left_ = ItemRef::offset(&title, kPropertyLeft);
+        chevron.width_ = ItemRef::reference(text, kPropertyHeight);
+        chevron.height_ = ItemRef::reference(text, kPropertyHeight);
+        chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+        chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
-        collapsed.anchors_.fill(&chevron);
+        collapsed.anchors_.fill(chevron);
         collapsed.margins_.set(fontDescent);
         collapsed.collapsed_ = collapsed.addExpr
           (new ModelQuery(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
-        text.anchors_.top_ = ItemRef::reference(&title, kPropertyTop);
-        text.anchors_.left_ = ItemRef::reference(&chevron, kPropertyRight);
-        text.anchors_.right_ = ItemRef::reference(&rm, kPropertyLeft);
+        text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
+        text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+        text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
         text.text_ = text.addExpr
           (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
         text.fontSize_ =
-          ItemRef::scale(&cellHeight, kPropertyHeight, 0.16 * kDpiScale);
+          ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
         text.elide_ = Qt::ElideMiddle;
 
         // remove group [x] button:
-        rm.width_ = ItemRef::reference(&nowPlaying, kPropertyHeight);
-        rm.height_ = ItemRef::reference(&text, kPropertyHeight);
-        rm.anchors_.top_ = ItemRef::reference(&text, kPropertyTop);
-        rm.anchors_.right_ = ItemRef::offset(&title, kPropertyRight, -5);
+        rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+        rm.height_ = ItemRef::reference(text, kPropertyHeight);
+        rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+        rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
 
-        xbutton.anchors_.fill(&rm);
+        xbutton.anchors_.fill(rm);
         xbutton.margins_.set(fontDescentNowPlaying);
       }
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
-      separator.anchors_.top_ = ItemRef::offset(&title, kPropertyBottom, 5);
-      separator.anchors_.left_ = ItemRef::offset(&group, kPropertyLeft, 2);
-      separator.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
+      separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
+      separator.anchors_.left_ = ItemRef::offset(group, kPropertyLeft, 2);
+      separator.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
       separator.height_ = ItemRef::constant(2.0);
 
       Item & grid = group.addNew<Item>("grid");
-      grid.anchors_.top_ = ItemRef::reference(&separator, kPropertyBottom);
-      grid.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
-      grid.anchors_.right_ = ItemRef::reference(&group, kPropertyRight);
+      grid.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
+      grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
 
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
       {
         Rectangle & cell = grid.addNew<Rectangle>("cell");
-        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(&grid, i));
-        cell.anchors_.top_ = cell.addExpr(new GridCellTop(&grid, i));
-        cell.width_ = ItemRef::reference(&cellWidth, kPropertyWidth);
-        cell.height_ = ItemRef::reference(&cellHeight, kPropertyHeight);
+        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(grid, i));
+        cell.anchors_.top_ = cell.addExpr(new GridCellTop(grid, i));
+        cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
+        cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
         cell.border_ = ItemRef::constant(1);
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
@@ -1540,10 +1669,10 @@ namespace yae
       }
 
       Item & footer = group.addNew<Item>("footer");
-      footer.anchors_.left_ = ItemRef::reference(&group, kPropertyLeft);
-      footer.anchors_.top_ = ItemRef::reference(&grid, kPropertyBottom);
-      footer.width_ = ItemRef::reference(&group, kPropertyWidth);
-      footer.height_ = ItemRef::scale(&cellHeight, kPropertyHeight, 0.3);
+      footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
+      footer.width_ = ItemRef::reference(group, kPropertyWidth);
+      footer.height_ = ItemRef::scale(cellHeight, kPropertyHeight, 0.3);
     }
   };
 
@@ -1558,57 +1687,58 @@ namespace yae
                 const PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
+      const Item & fontSize = playlist["font_size"];
       Image & thumbnail = cell.addNew<Image>("thumbnail");
-      thumbnail.anchors_.fill(&cell);
+      thumbnail.anchors_.fill(cell);
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
       Text & label = cell.addNew<Text>("label");
-      label.anchors_.bottomLeft(&cell);
-      label.anchors_.left_ = ItemRef::offset(&cell, kPropertyLeft, 5);
-      label.anchors_.bottom_ = ItemRef::offset(&cell, kPropertyBottom, -5);
-      label.maxWidth_ = ItemRef::offset(&cell, kPropertyWidth, -10);
+      label.anchors_.bottomLeft(cell);
+      label.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
+      label.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -5);
+      label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -10);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.font_.setBold(false);
-      label.fontSize_ =
-        ItemRef::scale(&cell, kPropertyHeight, 0.15 * kDpiScale);
+      label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
 
       Item & rm = cell.addNew<Item>("remove item");
 
       Text & playing = cell.addNew<Text>("now playing");
-      playing.anchors_.top_ = ItemRef::offset(&cell, kPropertyTop, 5);
-      playing.anchors_.right_ = ItemRef::offset(&rm, kPropertyLeft, -5);
+      playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
+      playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
       playing.visible_ = playing.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.font_.setBold(false);
-      playing.fontSize_ =
-        ItemRef::scale(&cell, kPropertyHeight, 0.12 * kDpiScale);
+      playing.fontSize_ = ItemRef::scale(fontSize,
+                                         kPropertyHeight,
+                                         0.8 * kDpiScale);
 
-      rm.width_ = ItemRef::reference(&playing, kPropertyHeight);
-      rm.height_ = ItemRef::reference(&playing, kPropertyHeight);
-      rm.anchors_.top_ = ItemRef::reference(&playing, kPropertyTop);
-      rm.anchors_.right_ = ItemRef::offset(&cell, kPropertyRight, -5);
+      rm.width_ = ItemRef::reference(playing, kPropertyHeight);
+      rm.height_ = ItemRef::reference(playing, kPropertyHeight);
+      rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
+      rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
 
       XButton & xbutton = rm.addNew<XButton>("xbutton");
-      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing), 0.5);
-      xbutton.anchors_.fill(&rm);
+      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+      xbutton.anchors_.fill(rm);
       xbutton.margins_.set(fontDescent);
 
       Rectangle & underline = cell.addNew<Rectangle>("underline");
-      underline.anchors_.left_ = ItemRef::offset(&playing, kPropertyLeft, -1);
-      underline.anchors_.right_ = ItemRef::offset(&playing, kPropertyRight, 1);
-      underline.anchors_.top_ = ItemRef::offset(&playing, kPropertyBottom, 2);
+      underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
+      underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
+      underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
       underline.height_ = ItemRef::constant(2);
       underline.color_ = ColorRef::constant(Color(0xff0000));
       underline.visible_ = underline.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & sel = cell.addNew<Rectangle>("selected");
-      sel.anchors_.left_ = ItemRef::reference(&cell, kPropertyLeft);
-      sel.anchors_.right_ = ItemRef::reference(&cell, kPropertyRight);
-      sel.anchors_.bottom_ = ItemRef::reference(&cell, kPropertyBottom);
+      sel.anchors_.left_ = ItemRef::reference(cell, kPropertyLeft);
+      sel.anchors_.right_ = ItemRef::reference(cell, kPropertyRight);
+      sel.anchors_.bottom_ = ItemRef::reference(cell, kPropertyBottom);
       sel.margins_.set(3);
       sel.height_ = ItemRef::constant(2);
       sel.color_ = ColorRef::constant(Color(0xff0000));
@@ -1676,11 +1806,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // kSupersampleText
-  //
-  static const double kSupersampleText = 2.0;
-
-  //----------------------------------------------------------------
   // Text::TPrivate
   //
   struct Text::TPrivate
@@ -1692,7 +1817,6 @@ namespace yae
     bool upload(const Text & item);
     void paint(const Text & item);
 
-    QString text_;
     GLuint texId_;
     BoolRef ready_;
   };
@@ -1732,7 +1856,7 @@ namespace yae
   Text::TPrivate::upload(const Text & item)
   {
     QRectF maxRect;
-    item.getMaxRect(maxRect);
+    getMaxRect(item, maxRect);
 
     maxRect.setWidth(maxRect.width() * kSupersampleText);
     maxRect.setHeight(maxRect.height() * kSupersampleText);
@@ -1755,15 +1879,18 @@ namespace yae
       font.setPointSizeF(fontSize * kSupersampleText);
       painter.setFont(font);
 
+      QFontMetricsF fm(font);
+      int flags = item.textFlags();
+      QString text = getElidedText(maxRect.width(), item, fm, flags);
+
       // FIXME: this should be a Text property:
       painter.setPen(QColor(0xff, 0xff, 0xff));
 
-      int flags = item.textFlags();
 #ifdef NDEBUG
-      painter.drawText(maxRect, flags, text_);
+      painter.drawText(maxRect, flags, text);
 #else
       QRectF result;
-      painter.drawText(maxRect, flags, text_, &result);
+      painter.drawText(maxRect, flags, text, &result);
 
       if (result.width() / kSupersampleText != bboxContent.w_ ||
           result.height() / kSupersampleText != bboxContent.h_)
@@ -1771,14 +1898,14 @@ namespace yae
         YAE_ASSERT(false);
 
         QFontMetricsF fm(font);
-        QRectF v3 = fm.boundingRect(maxRect, flags, text_);
+        QRectF v3 = fm.boundingRect(maxRect, flags, text);
 
         BBox v2;
-        item.calcTextBBox(v2);
+        calcTextBBox(item, v2, maxRect.width(), maxRect.height());
 
         std::cerr
           << "\nfont size: " << fontSize
-          << ", text: " << text_.toUtf8().constData()
+          << ", text: " << text.toUtf8().constData()
           << "\nexpected: " << bboxContent.w_ << " x " << bboxContent.h_
           << "\n  result: " << result.width() << " x " << result.height()
           << "\nv2 retry: " << v2.w_ << " x " << v2.h_
@@ -1992,7 +2119,7 @@ namespace yae
                             QFont::OpenGLCompatible));
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
-    bboxText_ = addExpr(new CalcTextBBox(this));
+    bboxText_ = addExpr(new CalcTextBBox(*this));
     p_->ready_ = addExpr(new UploadTexture(*this));
   }
 
@@ -2019,62 +2146,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Text::getMaxRect
-  //
-  void
-  Text::getMaxRect(QRectF & maxRect) const
-  {
-    double maxWidth =
-      maxWidth_.isValid() || maxWidth_.isCached() ? maxWidth_.get() :
-#if 0 // FIXME: reference cycle
-      (width_.isValid() || (anchors_.left_.isValid() &&
-                            anchors_.right_.isValid())) ? width() :
-#endif
-      double(std::numeric_limits<short int>::max());
-
-    double maxHeight =
-      maxHeight_.isValid() || maxHeight_.isCached() ? maxHeight_.get() :
-#if 0 // FIXME: reference cycle
-      (height_.isValid() || (anchors_.top_.isValid() &&
-                             anchors_.bottom_.isValid())) ? height() :
-#endif
-      double(std::numeric_limits<short int>::max());
-
-    maxRect = QRectF(qreal(0), qreal(0), qreal(maxWidth), qreal(maxHeight));
-  }
-
-  //----------------------------------------------------------------
-  // Text::calcTextBBox
-  //
-  void
-  Text::calcTextBBox(BBox & bbox) const
-  {
-    int flags = textFlags();
-
-    QRectF maxRect;
-    getMaxRect(maxRect);
-
-    QFont font = font_;
-    double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
-    QFontMetricsF fm(font);
-
-    p_->text_ = text_.get().toString();
-    if (elide_ != Qt::ElideNone)
-    {
-      p_->text_ = fm.elidedText(p_->text_, elide_, maxRect.width(), flags);
-    }
-
-    maxRect.setWidth(maxRect.width() * kSupersampleText);
-    maxRect.setHeight(maxRect.height() * kSupersampleText);
-    QRectF rect = fm.boundingRect(maxRect, flags, p_->text_);
-    bbox.x_ = rect.x() / kSupersampleText;
-    bbox.y_ = rect.y() / kSupersampleText;
-    bbox.w_ = rect.width() / kSupersampleText;
-    bbox.h_ = rect.height() / kSupersampleText;
-  }
-
-  //----------------------------------------------------------------
   // Text::fontAscent
   //
   double
@@ -2084,7 +2155,7 @@ namespace yae
     double fontSize = fontSize_.get();
     font.setPointSizeF(fontSize * kSupersampleText);
     QFontMetricsF fm(font);
-    double ascent = fm.ascent();
+    double ascent = fm.ascent() / kSupersampleText;
     return ascent;
   }
 
@@ -2098,7 +2169,7 @@ namespace yae
     double fontSize = fontSize_.get();
     font.setPointSizeF(fontSize * kSupersampleText);
     QFontMetricsF fm(font);
-    double descent = fm.descent();
+    double descent = fm.descent() / kSupersampleText;
     return descent;
   }
 
@@ -2112,7 +2183,7 @@ namespace yae
     double fontSize = fontSize_.get();
     font.setPointSizeF(fontSize * kSupersampleText);
     QFontMetricsF fm(font);
-    double fh = fm.height();
+    double fh = fm.height() / kSupersampleText;
     return fh;
   }
 
@@ -2132,6 +2203,17 @@ namespace yae
   double
   Text::calcContentHeight() const
   {
+    if (elide_ != Qt::ElideNone)
+    {
+      // single line:
+      BBox bbox;
+      calcTextBBox(*this, bbox,
+                   double(std::numeric_limits<short int>::max()),
+                   double(std::numeric_limits<short int>::max()));
+      return bbox.h_;
+    }
+
+    // possible line-wrapping:
     const BBox & t = bboxText_.get();
     return t.h_;
   }
