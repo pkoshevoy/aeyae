@@ -40,6 +40,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // drand
+  //
+  inline static double
+  drand()
+  {
+#ifdef _WIN32
+    int r = rand();
+    return double(r) / double(RAND_MAX);
+#else
+    return drand48();
+#endif
+  }
+
+  //----------------------------------------------------------------
   // calcCellWidth
   //
   inline static double
@@ -605,6 +619,195 @@ namespace yae
 
     const TItem & item_;
   };
+
+  //----------------------------------------------------------------
+  // uploadTexture2D
+  //
+  static bool
+  uploadTexture2D(const QImage & img,
+                  GLuint & texId,
+                  GLuint & iw,
+                  GLuint & ih)
+  {
+    QImage::Format imgFormat = img.format();
+
+    TPixelFormatId formatId = pixelFormatIdFor(imgFormat);
+    const pixelFormat::Traits * ptts = pixelFormat::getTraits(formatId);
+    if (!ptts)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    unsigned char stride[4] = { 0 };
+    unsigned char planes = ptts->getPlanes(stride);
+    if (planes > 1 || stride[0] % 8)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    iw = img.width();
+    ih = img.height();
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+    YAE_OGL_11(glDeleteTextures(1, &texId));
+    YAE_OGL_11(glGenTextures(1, &texId));
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId));
+    if (!YAE_OGL_11(glIsTexture(texId)))
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_GENERATE_MIPMAP,
+                               GL_TRUE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_S,
+                               GL_CLAMP_TO_EDGE));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_T,
+                               GL_CLAMP_TO_EDGE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_BASE_LEVEL,
+                               0));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAX_LEVEL,
+                               0));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAG_FILTER,
+                               GL_LINEAR));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MIN_FILTER,
+                               GL_LINEAR));
+    yae_assert_gl_no_error();
+
+    GLint internalFormat = 0;
+    GLenum pixelFormatGL = 0;
+    GLenum dataType = 0;
+    GLint shouldSwapBytes = 0;
+
+    yae_to_opengl(formatId,
+                  internalFormat,
+                  pixelFormatGL,
+                  dataType,
+                  shouldSwapBytes);
+
+    YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                            0, // mipmap level
+                            internalFormat,
+                            widthPowerOfTwo,
+                            heightPowerOfTwo,
+                            0, // border width
+                            pixelFormatGL,
+                            dataType,
+                            NULL));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                             shouldSwapBytes));
+
+    const QImage & constImg = img;
+    const unsigned char * data = constImg.bits();
+    const unsigned char bytesPerPixel = stride[0] >> 3;
+    const int rowSize = constImg.bytesPerLine() / bytesPerPixel;
+    const int padding = alignmentFor(data, rowSize);
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                               0, // mipmap level
+                               0, // x-offset
+                               0, // y-offset
+                               iw,
+                               ih,
+                               pixelFormatGL,
+                               dataType,
+                               data));
+    yae_assert_gl_no_error();
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // paintTexture2D
+  //
+  static void
+  paintTexture2D(const BBox & bbox, GLuint texId, GLuint iw, GLuint ih)
+  {
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
+
+    double u0 = 0.0;
+    double u1 = (double(iw - 1) / double(widthPowerOfTwo));
+
+    double v0 = 0.0;
+    double v1 = (double(ih - 1) / double(heightPowerOfTwo));
+
+    double x0 = bbox.x_;
+    double y0 = bbox.y_;
+    double x1 = x0 + bbox.w_;
+    double y1 = y0 + bbox.h_;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    YAE_OPENGL_HERE();
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glTexCoord2d(u0, v0));
+      YAE_OGL_11(glVertex2d(x0, y0));
+
+      YAE_OGL_11(glTexCoord2d(u0, v1));
+      YAE_OGL_11(glVertex2d(x0, y1));
+
+      YAE_OGL_11(glTexCoord2d(u1, v0));
+      YAE_OGL_11(glVertex2d(x1, y0));
+
+      YAE_OGL_11(glTexCoord2d(u1, v1));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    // un-bind:
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+  }
 
 
   //----------------------------------------------------------------
@@ -1344,20 +1547,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // drand
-  //
-  inline static double
-  drand()
-  {
-#ifdef _WIN32
-    int r = rand();
-    return double(r) / double(RAND_MAX);
-#else
-    return drand48();
-#endif
-  }
-
-  //----------------------------------------------------------------
   // Item::paint
   //
   bool
@@ -1869,9 +2058,9 @@ namespace yae
     void paint(const Image & item);
 
     boost::shared_ptr<ImagePrivate> image_;
+    GLuint texId_;
     GLuint iw_;
     GLuint ih_;
-    GLuint texId_;
     BoolRef ready_;
   };
 
@@ -1880,7 +2069,9 @@ namespace yae
   //
   Image::TPrivate::TPrivate():
     image_(new ImagePrivate()),
-    texId_(0)
+    texId_(0),
+    iw_(0),
+    ih_(0)
   {}
 
   //----------------------------------------------------------------
@@ -1968,125 +2159,12 @@ namespace yae
   bool
   Image::TPrivate::uploadTexture(const Image & item)
   {
-    const QImage img(image_->getImage());
-    QImage::Format imgFormat = img.format();
-
-    TPixelFormatId formatId = pixelFormatIdFor(imgFormat);
-    const pixelFormat::Traits * ptts = pixelFormat::getTraits(formatId);
-    if (!ptts)
-    {
-      YAE_ASSERT(false);
-      return false;
-    }
-
-    unsigned char stride[4] = { 0 };
-    unsigned char planes = ptts->getPlanes(stride);
-    if (planes > 1 || stride[0] % 8)
-    {
-      YAE_ASSERT(false);
-      return false;
-    }
-
-    iw_ = img.width();
-    ih_ = img.height();
-    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
-    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-    YAE_OGL_11(glDeleteTextures(1, &texId_));
-    YAE_OGL_11(glGenTextures(1, &texId_));
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-    if (!YAE_OGL_11(glIsTexture(texId_)))
-    {
-      YAE_ASSERT(false);
-      return false;
-    }
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_GENERATE_MIPMAP,
-                               GL_TRUE));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_WRAP_S,
-                               GL_CLAMP_TO_EDGE));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_WRAP_T,
-                               GL_CLAMP_TO_EDGE));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_BASE_LEVEL,
-                               0));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MAX_LEVEL,
-                               0));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MAG_FILTER,
-                               GL_LINEAR));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MIN_FILTER,
-                               GL_LINEAR));
-    yae_assert_gl_no_error();
-
-    GLint internalFormat = 0;
-    GLenum pixelFormatGL = 0;
-    GLenum dataType = 0;
-    GLint shouldSwapBytes = 0;
-
-    yae_to_opengl(formatId,
-                  internalFormat,
-                  pixelFormatGL,
-                  dataType,
-                  shouldSwapBytes);
-
-    YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
-                            0, // mipmap level
-                            internalFormat,
-                            widthPowerOfTwo,
-                            heightPowerOfTwo,
-                            0, // border width
-                            pixelFormatGL,
-                            dataType,
-                            NULL));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
-                             shouldSwapBytes));
-
-    const QImage & constImg = img;
-    const unsigned char * data = constImg.bits();
-    const unsigned char bytesPerPixel = stride[0] >> 3;
-    const int rowSize = constImg.bytesPerLine() / bytesPerPixel;
-    const int padding = alignmentFor(data, rowSize);
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
-                               0, // mipmap level
-                               0, // x-offset
-                               0, // y-offset
-                               iw_,
-                               ih_,
-                               pixelFormatGL,
-                               dataType,
-                               data));
-    yae_assert_gl_no_error();
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    bool ok = yae::uploadTexture2D(image_->getImage(), texId_, iw_, ih_);
 
     // no need to keep a duplicate image around once the texture is ready:
     image_->clearImage();
 
-    return true;
+    return ok;
   }
 
   //----------------------------------------------------------------
@@ -2130,64 +2208,7 @@ namespace yae
       bbox.h_ = h;
     }
 
-    double x0 = bbox.x_;
-    double y0 = bbox.y_;
-    double supersample = 1.0;
-
-    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
-    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
-
-    double u0 = 0.0;
-    double u1 = ((iw_ * supersample - 1.0) / double(widthPowerOfTwo));
-
-    double v0 = 0.0;
-    double v1 = ((ih_ * supersample - 1.0) / double(heightPowerOfTwo));
-
-    double x1 = x0 + bbox.w_;
-    double y1 = y0 + bbox.h_;
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-
-    YAE_OPENGL_HERE();
-    if (glActiveTexture)
-    {
-      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-      yae_assert_gl_no_error();
-    }
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-
-    YAE_OGL_11(glDisable(GL_LIGHTING));
-    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      YAE_OGL_11(glTexCoord2d(u0, v0));
-      YAE_OGL_11(glVertex2d(x0, y0));
-
-      YAE_OGL_11(glTexCoord2d(u0, v1));
-      YAE_OGL_11(glVertex2d(x0, y1));
-
-      YAE_OGL_11(glTexCoord2d(u1, v0));
-      YAE_OGL_11(glVertex2d(x1, y0));
-
-      YAE_OGL_11(glTexCoord2d(u1, v1));
-      YAE_OGL_11(glVertex2d(x1, y1));
-    }
-    YAE_OGL_11(glEnd());
-
-    // un-bind:
-    if (glActiveTexture)
-    {
-      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-      yae_assert_gl_no_error();
-    }
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    paintTexture2D(bbox, texId_, iw_, ih_);
   }
 
   //----------------------------------------------------------------
@@ -2255,6 +2276,8 @@ namespace yae
     void paint(const Text & item);
 
     GLuint texId_;
+    GLuint iw_;
+    GLuint ih_;
     BoolRef ready_;
   };
 
@@ -2262,7 +2285,9 @@ namespace yae
   // Text::TPrivate::TPrivate
   //
   Text::TPrivate::TPrivate():
-    texId_(0)
+    texId_(0),
+    iw_(0),
+    ih_(0)
   {}
 
   //----------------------------------------------------------------
@@ -2303,8 +2328,6 @@ namespace yae
 
     int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
     int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
-    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
-    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
 
     QImage img(iw, ih, QImage::Format_ARGB32);
     {
@@ -2352,99 +2375,8 @@ namespace yae
 #endif
     }
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-    YAE_OGL_11(glDeleteTextures(1, &texId_));
-    YAE_OGL_11(glGenTextures(1, &texId_));
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-    if (!YAE_OGL_11(glIsTexture(texId_)))
-    {
-      YAE_ASSERT(false);
-      return false;
-    }
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_GENERATE_MIPMAP,
-                               GL_TRUE));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_WRAP_S,
-                               GL_CLAMP_TO_EDGE));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_WRAP_T,
-                               GL_CLAMP_TO_EDGE));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_BASE_LEVEL,
-                               0));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MAX_LEVEL,
-                               0));
-
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MAG_FILTER,
-                               GL_LINEAR));
-    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
-                               GL_TEXTURE_MIN_FILTER,
-                               GL_LINEAR));
-    yae_assert_gl_no_error();
-
-    GLint internalFormat = 0;
-    GLenum pixelFormatGL = 0;
-    GLenum dataType = 0;
-    GLint shouldSwapBytes = 0;
-
-    yae_to_opengl(yae::kPixelFormatBGRA,
-                  internalFormat,
-                  pixelFormatGL,
-                  dataType,
-                  shouldSwapBytes);
-
-    YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
-                            0, // mipmap level
-                            internalFormat,
-                            widthPowerOfTwo,
-                            heightPowerOfTwo,
-                            0, // border width
-                            pixelFormatGL,
-                            dataType,
-                            NULL));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
-                             shouldSwapBytes));
-
-    const QImage & constImg = img;
-    const unsigned char * data = constImg.bits();
-    const int rowSize = constImg.bytesPerLine() / 4;
-    const int padding = alignmentFor(data, rowSize);
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
-    yae_assert_gl_no_error();
-
-    YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
-                               0, // mipmap level
-                               0, // x-offset
-                               0, // y-offset
-                               iw,
-                               ih,
-                               pixelFormatGL,
-                               dataType,
-                               data));
-    yae_assert_gl_no_error();
-
-    // YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-
-    return true;
+    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_);
+    return ok;
   }
 
   //----------------------------------------------------------------
@@ -2455,69 +2387,7 @@ namespace yae
   {
     BBox bboxContent;
     item.get(kPropertyBBoxContent, bboxContent);
-
-    double x0 = bboxContent.x_;
-    double y0 = bboxContent.y_;
-
-    int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
-    int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
-
-    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
-    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
-
-    double u0 = 0.0;
-    double u1 = ((bboxContent.w_ * kSupersampleText - 1.0) /
-                 double(widthPowerOfTwo));
-
-    double v0 = 0.0;
-    double v1 = ((bboxContent.h_ * kSupersampleText - 1.0) /
-                 double(heightPowerOfTwo));
-
-    double x1 = x0 + bboxContent.w_;
-    double y1 = y0 + bboxContent.h_;
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-
-    YAE_OPENGL_HERE();
-    if (glActiveTexture)
-    {
-      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-      yae_assert_gl_no_error();
-    }
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
-
-    YAE_OGL_11(glDisable(GL_LIGHTING));
-    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      YAE_OGL_11(glTexCoord2d(u0, v0));
-      YAE_OGL_11(glVertex2d(x0, y0));
-
-      YAE_OGL_11(glTexCoord2d(u0, v1));
-      YAE_OGL_11(glVertex2d(x0, y1));
-
-      YAE_OGL_11(glTexCoord2d(u1, v0));
-      YAE_OGL_11(glVertex2d(x1, y0));
-
-      YAE_OGL_11(glTexCoord2d(u1, v1));
-      YAE_OGL_11(glVertex2d(x1, y1));
-    }
-    YAE_OGL_11(glEnd());
-
-    // un-bind:
-    if (glActiveTexture)
-    {
-      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
-      yae_assert_gl_no_error();
-    }
-
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    paintTexture2D(bboxContent, texId_, iw_, ih_);
   }
 
 
