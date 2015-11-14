@@ -9,8 +9,8 @@
 #ifndef YAE_THUMBNAIL_PROVIDER_H_
 #define YAE_THUMBNAIL_PROVIDER_H_
 
-// standard C++ library:
-#include <map>
+// boost includes:
+#include <boost/shared_ptr.hpp>
 
 // Qt includes:
 #include <QImage>
@@ -24,7 +24,7 @@
 #include "yae/video/yae_reader.h"
 
 // local includes:
-#include "yaeMainWindow.h"
+#include "yaePlaylistModelProxy.h"
 
 
 namespace yae
@@ -46,18 +46,31 @@ namespace yae
                       // const QSize & envelopeSize = QSize(160, 90)
                       );
 
+    virtual ~ThumbnailProvider();
+
     // virtual:
     QImage requestImage(const QString & id,
                         QSize * size,
                         const QSize & requestedSize);
 
-  protected:
-    IReaderPtr readerPrototype_;
-    const TPlaylistModel & playlist_;
-    QSize envelopeSize_;
-    std::map<QString, QImage> cache_;
-  };
+    //----------------------------------------------------------------
+    // ICallback
+    //
+    struct ICallback
+    {
+      virtual ~ICallback() {}
+      virtual void imageReady(const QImage & image) = 0;
+    };
 
+    void requestImageAsync(const QString & id,
+                           const QSize & requestedSize,
+                           const boost::weak_ptr<ICallback> & callback);
+
+    void discardImage(const QString & id);
+
+    struct TPrivate;
+    TPrivate * private_;
+  };
 }
 
 

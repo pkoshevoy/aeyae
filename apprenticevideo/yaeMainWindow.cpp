@@ -450,6 +450,12 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playlistView_.setModel(&playlistModel_);
+
+    // add image://thumbnails/... provider:
+    boost::shared_ptr<ThumbnailProvider>
+      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
+    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
+                                   imageProvider);
 #else
     playerWidget_ = new TPlayerWidget(this);
     playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);

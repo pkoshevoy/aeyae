@@ -15,6 +15,11 @@
 // local includes:
 #include "yaePlaylistModel.h"
 
+//----------------------------------------------------------------
+// YAE_USE_PLAYLIST_MODEL_PROXY
+//
+#define YAE_USE_PLAYLIST_MODEL_PROXY 1
+
 
 namespace yae
 {
@@ -164,6 +169,15 @@ namespace yae
     // reference to playlist model being proxied:
     PlaylistModel model_;
   };
+
+  //----------------------------------------------------------------
+  // TPlaylistModel
+  //
+#if (YAE_USE_PLAYLIST_MODEL_PROXY)
+  typedef PlaylistModelProxy TPlaylistModel;
+#else
+  typedef PlaylistModel TPlaylistModel;
+#endif
 
 }
 

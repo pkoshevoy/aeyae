@@ -13,6 +13,7 @@
 
 // Qt library:
 #include <QFontMetricsF>
+#include <QUrl>
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"
@@ -1448,11 +1449,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // findLayoutDelegate
+  //
+  static ILayoutDelegate::TLayoutPtr
+  findLayoutDelegate(const PlaylistView & view,
+                     const PlaylistModelProxy & model,
+                     const QModelIndex & modelIndex)
+  {
+    return findLayoutDelegate(view.layouts(), model, modelIndex);
+  }
+
+  //----------------------------------------------------------------
   // layoutFilterItem
   //
   static void
-  layoutFilterItem(Item & item,
-                   const std::map<TLayoutHint, TLayoutPtr> & layouts,
+  layoutFilterItem(Item & playlist,
+                   Item & item,
+                   const PlaylistView & view,
                    const PlaylistModelProxy & model,
                    const QModelIndex & itemIndex)
   {
@@ -1469,7 +1482,7 @@ namespace yae
   {
     void layout(Item & playlist,
                 Item & root,
-                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
@@ -1485,9 +1498,9 @@ namespace yae
       filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       filter.width_ = ItemRef::reference(root, kPropertyWidth);
       filter.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.5);
-      layoutFilterItem(filter, layouts, model, rootIndex);
+      layoutFilterItem(playlist, filter, view, model, rootIndex);
 
-      Scrollable & view = root.addNew<Scrollable>("scrollable");
+      Scrollable & sview = root.addNew<Scrollable>("scrollable");
 
       Item & scrollbar = root.addNew<Item>("scrollbar");
       scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
@@ -1496,14 +1509,14 @@ namespace yae
       scrollbar.width_ =
         scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
 
-      view.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-      view.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
-      view.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
-      view.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+      sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+      sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
+      sview.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
+      sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
 
-      Item & groups = view.content_;
-      groups.anchors_.left_ = ItemRef::reference(view, kPropertyLeft);
-      groups.anchors_.right_ = ItemRef::reference(view, kPropertyRight);
+      Item & groups = sview.content_;
+      groups.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
+      groups.anchors_.right_ = ItemRef::reference(sview, kPropertyRight);
       groups.anchors_.top_ = ItemRef::constant(0.0);
 
       Item & cellWidth = playlist.addNewHidden<Item>("cell_width");
@@ -1544,24 +1557,20 @@ namespace yae
 
         QModelIndex childIndex = model.index(i, 0, rootIndex);
         ILayoutDelegate::TLayoutPtr childLayout =
-           findLayoutDelegate(layouts, model, childIndex);
+           findLayoutDelegate(view, model, childIndex);
 
         if (childLayout)
         {
-          childLayout->layout(playlist,
-                              group,
-                              layouts,
-                              model,
-                              childIndex);
+          childLayout->layout(playlist, group, view, model, childIndex);
         }
       }
 
       // configure scrollbar:
       Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
-      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(view, slider));
+      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
       slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
       slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-      slider.height_ = slider.addExpr(new CalcSliderHeight(view, slider));
+      slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
       slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     }
   };
@@ -1573,7 +1582,7 @@ namespace yae
   {
     void layout(Item & playlist,
                 Item & group,
-                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
     {
@@ -1660,11 +1669,11 @@ namespace yae
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
         ILayoutDelegate::TLayoutPtr childLayout =
-           findLayoutDelegate(layouts, model, childIndex);
+           findLayoutDelegate(view, model, childIndex);
 
         if (childLayout)
         {
-          childLayout->layout(playlist, cell, layouts, model, childIndex);
+          childLayout->layout(playlist, cell, view, model, childIndex);
         }
       }
 
@@ -1683,12 +1692,13 @@ namespace yae
   {
     void layout(Item & playlist,
                 Item & cell,
-                const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
       const Item & fontSize = playlist["font_size"];
       Image & thumbnail = cell.addNew<Image>("thumbnail");
+      thumbnail.setContext(view);
       thumbnail.anchors_.fill(cell);
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
@@ -1748,22 +1758,131 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ImagePrivate
+  //
+  struct ImagePrivate : public ThumbnailProvider::ICallback
+  {
+    typedef PlaylistView::TImageProviderPtr TImageProviderPtr;
+
+    ImagePrivate():
+      view_(NULL)
+    {}
+
+    inline void setContext(const PlaylistView & view)
+    {
+      view_ = &view;
+    }
+
+    // virtual:
+    void imageReady(const QImage & image)
+    {
+      // update the image:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        img_ = image;
+      }
+
+      if (view_)
+      {
+        view_->delegate()->requestRepaint();
+      }
+    }
+
+    void clearImage()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      img_ = QImage();
+    }
+
+    bool isNull() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return img_.isNull();
+    }
+
+    mutable boost::mutex mutex_;
+    const PlaylistView * view_;
+    TImageProviderPtr provider_;
+    QString resource_;
+    QString id_;
+    QImage img_;
+  };
+
+  //----------------------------------------------------------------
   // Image::TPrivate
   //
   struct Image::TPrivate
   {
-    void load(const QString & url)
+    typedef PlaylistView::TImageProviders TImageProviders;
+
+    TPrivate():
+      image_(new ImagePrivate())
+    {}
+
+    inline void setContext(const PlaylistView & view)
     {
-      // FIXME: use ThumbnailProvider to load the image:
-      url_ = url;
+      image_->setContext(view);
     }
 
-    void paint()
+    void load(const QString & resource)
     {
+      // shortcut:
+      ImagePrivate & image = *image_;
+
+      if (image.resource_ == resource && !image.isNull())
+      {
+        // already loaded:
+        return;
+      }
+
+      static const QString kImage = QString::fromUtf8("image");
+      QUrl url(resource);
+      if (url.scheme() != kImage || !image.view_)
+      {
+        YAE_ASSERT(false);
+        return;
+      }
+
+      QString host = url.host();
+      const TImageProviders & providers = image.view_->imageProviders();
+      TImageProviders::const_iterator found = providers.find(host);
+      if (found == providers.end())
+      {
+        YAE_ASSERT(false);
+        return;
+      }
+
+      QString id = url.path();
+      if (image.provider_)
+      {
+        image.provider_->discardImage(image.id_);
+      }
+
+      image.provider_ = found->second;
+      image.resource_ = resource;
+      image.id_ = id;
+      image.clearImage();
+#if 0
+      std::cerr
+        << "\nFIXME: image request: "
+        << host.toUtf8().constData() << ", "
+        << id.toUtf8().constData() << '\n'
+        << std::endl;
+#endif
+      static const QSize kDefaultSize;
+      ThumbnailProvider & provider = *(image.provider_);
+      boost::weak_ptr<ThumbnailProvider::ICallback> callback(image_);
+      provider.requestImageAsync(image.id_, kDefaultSize, callback);
+    }
+
+    void paint(const QString & thumbnail)
+    {
+      load(thumbnail);
+
       // FIXME: write me!
     }
 
-    QString url_;
+    boost::shared_ptr<ImagePrivate> image_;
   };
 
   //----------------------------------------------------------------
@@ -1783,6 +1902,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Image::setContext
+  //
+  void
+  Image::setContext(const PlaylistView & view)
+  {
+    p_->setContext(view);
+  }
+
+  //----------------------------------------------------------------
   // Image::uncache
   //
   void
@@ -1792,7 +1920,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Image::paint
+  // Image::paintContent
   //
   void
   Image::paintContent() const
@@ -1802,7 +1930,7 @@ namespace yae
       return;
     }
 
-    p_->paint();
+    p_->paint(url_.get().toString());
   }
 
   //----------------------------------------------------------------
@@ -2912,6 +3040,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistView::addImageProvider
+  //
+  void
+  PlaylistView::addImageProvider(const QString & providerId,
+                                 const PlaylistView::TImageProviderPtr & p)
+  {
+    imageProviders_[providerId] = p;
+  }
+
+  //----------------------------------------------------------------
   // toString
   //
   static std::string
@@ -2976,9 +3114,7 @@ namespace yae
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
 #endif
     QModelIndex rootIndex = model_->index(0, 0).parent();
-    TLayoutPtr delegate = findLayoutDelegate(layoutDelegates_,
-                                             *model_,
-                                             rootIndex);
+    TLayoutPtr delegate = findLayoutDelegate(*this, *model_, rootIndex);
     if (!delegate)
     {
       return;
@@ -2993,11 +3129,7 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
-    delegate->layout(root,
-                     root,
-                     layoutDelegates_,
-                     *model_,
-                     rootIndex);
+    delegate->layout(root, root, *this, *model_, rootIndex);
 
 #if 0 // ndef NDEBUG
     root.dump(std::cerr);

@@ -6,11 +6,20 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard C++ library:
+#include <map>
+
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
+
 // Qt headers:
 #include <QtGlobal>
 
 // yae includes:
 #include "yae/api/yae_settings.h"
+#include "yae/thread/yae_threading.h"
 #include "yae/video/yae_pixel_format_traits.h"
 
 // local includes:
@@ -39,21 +48,6 @@ namespace yae
 
     TVideoFramePtr frame_;
   };
-
-  //----------------------------------------------------------------
-  // ThumbnailProvider::ThumbnailProvider
-  //
-  ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
-                                       const TPlaylistModel & playlist,
-                                       const QSize & envelopeSize):
-#ifdef YAE_USE_QT5
-    QQuickImageProvider(QQmlImageProviderBase::Image,
-                        QQmlImageProviderBase::ForceAsynchronousImageLoading),
-#endif
-    readerPrototype_(readerPrototype),
-    playlist_(playlist),
-    envelopeSize_(envelopeSize)
-  {}
 
 #if 0
   //----------------------------------------------------------------
@@ -316,12 +310,96 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ThumbnailProvider::requestImage
+  // ThumbnailProvider::TPrivate
+  //
+  struct ThumbnailProvider::TPrivate
+  {
+    typedef ThumbnailProvider::ICallback ICallback;
+
+    TPrivate(const IReaderPtr & readerPrototype,
+             const TPlaylistModel & playlist,
+             const QSize & envelopeSize);
+    ~TPrivate();
+
+    QImage requestImage(const QString & id,
+                        QSize * size,
+                        const QSize & requestedSize);
+
+    void requestImageAsync(const QString & id,
+                           const QSize & requestedSize,
+                           const boost::weak_ptr<ICallback> & callback);
+
+    void discardImage(const QString & id);
+
+    void threadLoop();
+
+    //----------------------------------------------------------------
+    // Request
+    //
+    struct Request
+    {
+      Request(const QString & id = QString(),
+              const QSize & size = QSize(),
+              const boost::weak_ptr<ICallback> & callback =
+              boost::weak_ptr<ICallback>(),
+              std::size_t priority = 0):
+        id_(id),
+        size_(size),
+        callback_(callback),
+        priority_(priority)
+      {}
+
+      QString id_;
+      QSize size_;
+      boost::weak_ptr<ICallback> callback_;
+      boost::uint64_t priority_;
+    };
+
+    IReaderPtr readerPrototype_;
+    const TPlaylistModel & playlist_;
+    QSize envelopeSize_;
+
+    // thumbnail request queue and image cache:
+    mutable boost::mutex mutex_;
+    mutable boost::condition_variable ready_;
+    boost::uint64_t requestCounter_;
+    std::map<QString, Request> request_;
+    std::map<boost::uint64_t, Request *> priority_;
+    std::map<QString, QImage> cache_;
+
+    // request processing worker thread:
+    Thread<ThumbnailProvider::TPrivate> thread_;
+  };
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::TPrivate
+  //
+  ThumbnailProvider::TPrivate::TPrivate(const IReaderPtr & readerPrototype,
+                                        const TPlaylistModel & playlist,
+                                        const QSize & envelopeSize):
+    readerPrototype_(readerPrototype),
+    playlist_(playlist),
+    envelopeSize_(envelopeSize),
+    requestCounter_(0),
+    thread_(this)
+  {}
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::~TPrivate
+  //
+  ThumbnailProvider::TPrivate::~TPrivate()
+  {
+    thread_.stop();
+    thread_.wait();
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::requestImage
   //
   QImage
-  ThumbnailProvider::requestImage(const QString & id,
-                                  QSize * size,
-                                  const QSize & requestedSize)
+  ThumbnailProvider::TPrivate::requestImage(const QString & id,
+                                            QSize * size,
+                                            const QSize & requestedSize)
   {
     QImage image = cache_[id];
 
@@ -347,8 +425,163 @@ namespace yae
       cache_[id] = image;
     }
 
-    *size = image.size();
+    if (size)
+    {
+      *size = image.size();
+    }
+
     return image;
   }
 
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::requestImageAsync
+  //
+  void
+  ThumbnailProvider::TPrivate::
+  requestImageAsync(const QString & id,
+                    const QSize & requestedSize,
+                    const boost::weak_ptr<ICallback> & callback)
+  {
+    if (!thread_.isRunning())
+    {
+      thread_.run();
+    }
+
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    std::map<QString, Request>::iterator found = request_.lower_bound(id);
+    if (found == request_.end() || request_.key_comp()(id, found->first))
+    {
+      // create new request:
+      Request request(id, requestedSize, callback, requestCounter_);
+      found = request_.insert(found, std::make_pair(id, request));
+      priority_[request.priority_] = &(found->second);
+    }
+    else
+    {
+      // re-prioritize previous request:
+      Request & request = found->second;
+      priority_.erase(request.priority_);
+      request.priority_ = requestCounter_;
+      priority_[request.priority_] = &request;
+    }
+
+    requestCounter_++;
+    ready_.notify_all();
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::discardImage
+  //
+  void
+  ThumbnailProvider::TPrivate::discardImage(const QString & id)
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    cache_.erase(id);
+
+    std::map<QString, Request>::iterator found = request_.find(id);
+    if (found != request_.end())
+    {
+      Request & request = found->second;
+      priority_.erase(request.priority_);
+      request_.erase(found);
+      ready_.notify_all();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::threadLoop
+  //
+  void
+  ThumbnailProvider::TPrivate::threadLoop()
+  {
+    while (true)
+    {
+      try
+      {
+        Request request;
+        {
+          boost::this_thread::interruption_point();
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          while (request_.empty())
+          {
+            ready_.wait(lock);
+            boost::this_thread::interruption_point();
+          }
+
+          std::map<boost::uint64_t, Request *>::reverse_iterator
+            next = priority_.rbegin();
+
+          request = *(next->second);
+          priority_.erase(request.priority_);
+          request_.erase(request.id_);
+        }
+
+        boost::shared_ptr<ICallback> callback = request.callback_.lock();
+        if (!callback)
+        {
+          continue;
+        }
+
+        QImage image = requestImage(request.id_, NULL, request.size_);
+        callback->imageReady(image);
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::ThumbnailProvider
+  //
+  ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
+                                       const TPlaylistModel & playlist,
+                                       const QSize & envelopeSize):
+#ifdef YAE_USE_QT5
+    QQuickImageProvider(QQmlImageProviderBase::Image,
+                        QQmlImageProviderBase::ForceAsynchronousImageLoading),
+#endif
+    private_(new TPrivate(readerPrototype, playlist, envelopeSize))
+  {}
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::~ThumbnailProvider
+  //
+  ThumbnailProvider::~ThumbnailProvider()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::requestImage
+  //
+  QImage
+  ThumbnailProvider::requestImage(const QString & id,
+                                  QSize * size,
+                                  const QSize & requestedSize)
+  {
+    return private_->requestImage(id, size, requestedSize);
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::requestImageAsync
+  //
+  void
+  ThumbnailProvider::requestImageAsync(const QString & id,
+                                       const QSize & requestedSize,
+                                       const boost::weak_ptr<ICallback> & cb)
+  {
+    private_->requestImageAsync(id, requestedSize, cb);
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::discardImage
+  //
+  void
+  ThumbnailProvider::discardImage(const QString & id)
+  {
+    private_->discardImage(id);
+  }
 }

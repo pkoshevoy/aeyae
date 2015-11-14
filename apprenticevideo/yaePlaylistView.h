@@ -11,7 +11,11 @@
 
 // standard libraries:
 #include <cmath>
+#include <map>
 #include <vector>
+
+// boost includes:
+#include <boost/shared_ptr.hpp>
 
 // Qt interfaces:
 #include <QObject>
@@ -23,10 +27,14 @@
 // local interfaces:
 #include "yaeCanvas.h"
 #include "yaePlaylistModelProxy.h"
+#include "yaeThumbnailProvider.h"
 
 
 namespace yae
 {
+  // forward declarations:
+  class PlaylistView;
+
   //----------------------------------------------------------------
   // Vec
   //
@@ -1026,15 +1034,20 @@ namespace yae
     Image(const char * id = NULL);
     ~Image();
 
+    // for thumbnail providers, repaint requests, etc...
+    void setContext(const PlaylistView & view);
+
     // virtual:
     void uncache();
 
     // virtual:
     void paintContent() const;
 
+    // this gets complicated due to asynchronous loading of images:
     struct TPrivate;
     TPrivate * p_;
 
+    // what to load, requires a matching image provider:
     TVarRef url_;
   };
 
@@ -1181,7 +1194,7 @@ namespace yae
 
     virtual void layout(Item & playlist,
                         Item & item,
-                        const std::map<TLayoutHint, TLayoutPtr> & layouts,
+                        const PlaylistView & view,
                         const PlaylistModelProxy & model,
                         const QModelIndex & itemIndex) = 0;
   };
@@ -1197,6 +1210,10 @@ namespace yae
   public:
     typedef ILayoutDelegate::TLayoutPtr TLayoutPtr;
     typedef ILayoutDelegate::TLayoutHint TLayoutHint;
+    typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
+
+    typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
+    typedef std::map<QString, TImageProviderPtr> TImageProviders;
 
     PlaylistView();
 
@@ -1211,6 +1228,16 @@ namespace yae
 
     // data source:
     void setModel(PlaylistModelProxy * model);
+
+    void addImageProvider(const QString & providerId,
+                          const TImageProviderPtr & p);
+
+    // accessors:
+    inline const TImageProviders & imageProviders() const
+    { return imageProviders_; }
+
+    inline const TLayoutDelegates & layouts() const
+    { return layoutDelegates_; }
 
   public slots:
 
@@ -1230,9 +1257,10 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
-    std::map<TLayoutHint, TLayoutPtr> layoutDelegates_;
-    ItemPtr root_;
     PlaylistModelProxy * model_;
+    TLayoutDelegates layoutDelegates_;
+    TImageProviders imageProviders_;
+    ItemPtr root_;
     double w_;
     double h_;
   };

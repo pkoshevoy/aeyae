@@ -14,7 +14,6 @@
 #else
 #define YAE_USE_PLAYER_QUICK_WIDGET 0
 #endif
-#define YAE_USE_PLAYLIST_MODEL_PROXY 1
 
 // Qt includes:
 #include <QDialog>
@@ -67,15 +66,6 @@ namespace yae
   typedef CanvasWidget<QOpenGLWidget> TPlayerWidget;
 #else
   typedef CanvasWidget<QGLWidget> TPlayerWidget;
-#endif
-
-  //----------------------------------------------------------------
-  // TPlaylistModel
-  //
-#if (YAE_USE_PLAYLIST_MODEL_PROXY)
-  typedef PlaylistModelProxy TPlaylistModel;
-#else
-  typedef PlaylistModel TPlaylistModel;
 #endif
 
   //----------------------------------------------------------------

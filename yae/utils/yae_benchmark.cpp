@@ -154,12 +154,12 @@ namespace yae
     std::map<std::string, Timesheet::Entry>::iterator
       lower_bound = entries.lower_bound(key_);
 
-    if (lower_bound == ts.entries_.end() ||
-        ts.entries_.key_comp()(key_, lower_bound->first))
+    if (lower_bound == entries.end() ||
+        entries.key_comp()(key_, lower_bound->first))
     {
       // initialize a new measurement
       Timesheet::Entry newEntry(ts.depth_, entryPath, description);
-      ts.entries_.insert(lower_bound, std::make_pair(key_, newEntry));
+      entries.insert(lower_bound, std::make_pair(key_, newEntry));
     }
 
     ts.depth_++;
