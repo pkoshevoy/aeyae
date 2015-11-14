@@ -227,6 +227,14 @@ namespace yae
     QImage image;
 
     QString itemFilePath = playlist.lookupItemFilePath(id);
+#if 0
+    std::cerr
+      << "\nFIXME: getThumbnail"
+      << "\n item id: " << id.toUtf8().constData()
+      << "\nfilepath: " << itemFilePath.toUtf8().constData()
+      << std::endl;
+#endif
+
     IReaderPtr reader = yae::openFile(readerPrototype, itemFilePath);
     if (!reader)
     {
@@ -401,7 +409,11 @@ namespace yae
                                             QSize * size,
                                             const QSize & requestedSize)
   {
-    QImage image = cache_[id];
+    QImage image;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      image = cache_[id];
+    }
 
     const QSize & thumbnailMaxSize =
       requestedSize.isValid() ? requestedSize : envelopeSize_;
@@ -422,6 +434,7 @@ namespace yae
         image = image.scaledToHeight(90, Qt::SmoothTransformation);
       }
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       cache_[id] = image;
     }
 
@@ -498,6 +511,7 @@ namespace yae
     {
       try
       {
+        // process the highest priority request:
         Request request;
         {
           boost::this_thread::interruption_point();
@@ -517,19 +531,21 @@ namespace yae
         }
 
         boost::shared_ptr<ICallback> callback = request.callback_.lock();
-        if (!callback)
+        if (callback)
         {
-          continue;
+          QImage image = requestImage(request.id_, NULL, request.size_);
+          callback->imageReady(image);
         }
-
-        QImage image = requestImage(request.id_, NULL, request.size_);
-        callback->imageReady(image);
       }
       catch (...)
       {
         break;
       }
     }
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    priority_.clear();
+    request_.clear();
   }
 
 

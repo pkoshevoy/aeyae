@@ -226,6 +226,12 @@ namespace yae
   YAE_API std::string
   toString(QEvent::Type et);
 
+  //----------------------------------------------------------------
+  // pixelFormatIdFor
+  //
+  YAE_API TPixelFormatId
+  pixelFormatIdFor(QImage::Format imgFormat);
+
 }
 
 

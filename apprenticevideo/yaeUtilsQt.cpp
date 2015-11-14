@@ -1868,4 +1868,30 @@ namespace yae
 
     return name;
   }
+
+  //----------------------------------------------------------------
+  // pixelFormatIdFor
+  //
+  TPixelFormatId
+  pixelFormatIdFor(QImage::Format qimageFormat)
+  {
+    TPixelFormatId pixelFormat =
+#ifdef _BIG_ENDIAN
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatARGB :
+#else
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatBGRA :
+#endif
+      (qimageFormat == QImage::Format_RGB888) ? kPixelFormatRGB24 :
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+      (qimageFormat == QImage::Format_Indexed8) ? kPixelFormatGRAY8 :
+#else
+      (qimageFormat == QImage::Format_Grayscale8) ? kPixelFormatGRAY8 :
+#endif
+      kInvalidPixelFormat;
+
+    return pixelFormat;
+  }
+
 }

@@ -588,6 +588,26 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // UploadTexture
+  //
+  template <typename TItem>
+  struct UploadTexture : public TBoolExpr
+  {
+    UploadTexture(const TItem & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = item_.p_->uploadTexture(item_);
+    }
+
+    const TItem & item_;
+  };
+
+
+  //----------------------------------------------------------------
   // Segment::clear
   //
   void
@@ -1764,14 +1784,20 @@ namespace yae
   {
     typedef PlaylistView::TImageProviderPtr TImageProviderPtr;
 
+    enum Status
+    {
+      kImageNotReady,
+      kImageRequested,
+      kImageReady
+    };
+
     ImagePrivate():
-      view_(NULL)
+      view_(NULL),
+      status_(kImageNotReady)
     {}
 
     inline void setContext(const PlaylistView & view)
-    {
-      view_ = &view;
-    }
+    { view_ = &view; }
 
     // virtual:
     void imageReady(const QImage & image)
@@ -1780,6 +1806,7 @@ namespace yae
       {
         boost::lock_guard<boost::mutex> lock(mutex_);
         img_ = image;
+        status_ = kImageReady;
       }
 
       if (view_)
@@ -1792,19 +1819,32 @@ namespace yae
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       img_ = QImage();
+      status_ = kImageNotReady;
     }
 
-    bool isNull() const
+    inline void setImageStatusImageRequested()
+    { status_ = kImageRequested; }
+
+    inline bool isImageRequested() const
+    { return status_ == kImageRequested; }
+
+    inline bool isImageReady() const
+    { return status_ == kImageReady; }
+
+    QImage getImage() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      return img_.isNull();
+      return img_;
     }
 
-    mutable boost::mutex mutex_;
     const PlaylistView * view_;
     TImageProviderPtr provider_;
     QString resource_;
     QString id_;
+
+  protected:
+    mutable boost::mutex mutex_;
+    Status status_;
     QImage img_;
   };
 
@@ -1815,75 +1855,340 @@ namespace yae
   {
     typedef PlaylistView::TImageProviders TImageProviders;
 
-    TPrivate():
-      image_(new ImagePrivate())
-    {}
+    TPrivate();
+    ~TPrivate();
 
     inline void setContext(const PlaylistView & view)
     {
       image_->setContext(view);
     }
 
-    void load(const QString & resource)
-    {
-      // shortcut:
-      ImagePrivate & image = *image_;
-
-      if (image.resource_ == resource && !image.isNull())
-      {
-        // already loaded:
-        return;
-      }
-
-      static const QString kImage = QString::fromUtf8("image");
-      QUrl url(resource);
-      if (url.scheme() != kImage || !image.view_)
-      {
-        YAE_ASSERT(false);
-        return;
-      }
-
-      QString host = url.host();
-      const TImageProviders & providers = image.view_->imageProviders();
-      TImageProviders::const_iterator found = providers.find(host);
-      if (found == providers.end())
-      {
-        YAE_ASSERT(false);
-        return;
-      }
-
-      QString id = url.path();
-      if (image.provider_)
-      {
-        image.provider_->discardImage(image.id_);
-      }
-
-      image.provider_ = found->second;
-      image.resource_ = resource;
-      image.id_ = id;
-      image.clearImage();
-#if 0
-      std::cerr
-        << "\nFIXME: image request: "
-        << host.toUtf8().constData() << ", "
-        << id.toUtf8().constData() << '\n'
-        << std::endl;
-#endif
-      static const QSize kDefaultSize;
-      ThumbnailProvider & provider = *(image.provider_);
-      boost::weak_ptr<ThumbnailProvider::ICallback> callback(image_);
-      provider.requestImageAsync(image.id_, kDefaultSize, callback);
-    }
-
-    void paint(const QString & thumbnail)
-    {
-      load(thumbnail);
-
-      // FIXME: write me!
-    }
+    void uncache();
+    bool load(const QString & thumbnail);
+    bool uploadTexture(const Image & item);
+    void paint(const Image & item);
 
     boost::shared_ptr<ImagePrivate> image_;
+    GLuint iw_;
+    GLuint ih_;
+    GLuint texId_;
+    BoolRef ready_;
   };
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::TPrivate
+  //
+  Image::TPrivate::TPrivate():
+    image_(new ImagePrivate()),
+    texId_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::~TPrivate
+  //
+  Image::TPrivate::~TPrivate()
+  {
+    uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::uncache
+  //
+  void
+  Image::TPrivate::uncache()
+  {
+    ready_.uncache();
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    texId_ = 0;
+  }
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::load
+  //
+  bool
+  Image::TPrivate::load(const QString & resource)
+  {
+    // shortcut:
+    ImagePrivate & image = *image_;
+
+    if (image.resource_ == resource)
+    {
+      if (image.isImageReady())
+      {
+        // already loaded:
+        return true;
+      }
+      else if (image.isImageRequested())
+      {
+        // wait for the image request to be processed:
+        return false;
+      }
+    }
+
+    static const QString kImage = QString::fromUtf8("image");
+    QUrl url(resource);
+    if (url.scheme() != kImage || !image.view_)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    QString host = url.host();
+    const TImageProviders & providers = image.view_->imageProviders();
+    TImageProviders::const_iterator found = providers.find(host);
+    if (found == providers.end())
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    QString id = url.path();
+
+    // trim the leading '/' character:
+    id = id.right(id.size() - 1);
+
+    image.provider_ = found->second;
+    image.resource_ = resource;
+    image.id_ = id;
+    image.clearImage();
+    image.setImageStatusImageRequested();
+
+    static const QSize kDefaultSize(256, 128);
+    ThumbnailProvider & provider = *(image.provider_);
+    boost::weak_ptr<ThumbnailProvider::ICallback> callback(image_);
+    provider.requestImageAsync(image.id_, kDefaultSize, callback);
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::uploadTexture
+  //
+  bool
+  Image::TPrivate::uploadTexture(const Image & item)
+  {
+    const QImage img(image_->getImage());
+    QImage::Format imgFormat = img.format();
+
+    TPixelFormatId formatId = pixelFormatIdFor(imgFormat);
+    const pixelFormat::Traits * ptts = pixelFormat::getTraits(formatId);
+    if (!ptts)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    unsigned char stride[4] = { 0 };
+    unsigned char planes = ptts->getPlanes(stride);
+    if (planes > 1 || stride[0] % 8)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    iw_ = img.width();
+    ih_ = img.height();
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    YAE_OGL_11(glGenTextures(1, &texId_));
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+    if (!YAE_OGL_11(glIsTexture(texId_)))
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_GENERATE_MIPMAP,
+                               GL_TRUE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_S,
+                               GL_CLAMP_TO_EDGE));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_WRAP_T,
+                               GL_CLAMP_TO_EDGE));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_BASE_LEVEL,
+                               0));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAX_LEVEL,
+                               0));
+
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MAG_FILTER,
+                               GL_LINEAR));
+    YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
+                               GL_TEXTURE_MIN_FILTER,
+                               GL_LINEAR));
+    yae_assert_gl_no_error();
+
+    GLint internalFormat = 0;
+    GLenum pixelFormatGL = 0;
+    GLenum dataType = 0;
+    GLint shouldSwapBytes = 0;
+
+    yae_to_opengl(formatId,
+                  internalFormat,
+                  pixelFormatGL,
+                  dataType,
+                  shouldSwapBytes);
+
+    YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                            0, // mipmap level
+                            internalFormat,
+                            widthPowerOfTwo,
+                            heightPowerOfTwo,
+                            0, // border width
+                            pixelFormatGL,
+                            dataType,
+                            NULL));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES,
+                             shouldSwapBytes));
+
+    const QImage & constImg = img;
+    const unsigned char * data = constImg.bits();
+    const unsigned char bytesPerPixel = stride[0] >> 3;
+    const int rowSize = constImg.bytesPerLine() / bytesPerPixel;
+    const int padding = alignmentFor(data, rowSize);
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+    yae_assert_gl_no_error();
+
+    YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                               0, // mipmap level
+                               0, // x-offset
+                               0, // y-offset
+                               iw_,
+                               ih_,
+                               pixelFormatGL,
+                               dataType,
+                               data));
+    yae_assert_gl_no_error();
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+
+    // no need to keep a duplicate image around once the texture is ready:
+    image_->clearImage();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Image::TPrivate::paint
+  //
+  void
+  Image::TPrivate::paint(const Image & item)
+  {
+    if (!texId_ && !load(item.url_.get().toString()))
+    {
+      // image is not yet loaded:
+      return;
+    }
+
+    if (!ready_.get())
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    // FIXME: write me!
+    BBox bbox;
+    item.get(kPropertyBBox, bbox);
+
+    double arBBox = bbox.aspectRatio();
+    double arImage = double(iw_) / double(ih_);
+
+    if (arImage < arBBox)
+    {
+      // letterbox pillars:
+      double w = bbox.h_ * arImage;
+      double dx = (bbox.w_ - w) * 0.5;
+      bbox.x_ += dx;
+      bbox.w_ = w;
+    }
+    else if (arBBox < arImage)
+    {
+      double h = bbox.w_ / arImage;
+      double dy = (bbox.h_ - h) * 0.5;
+      bbox.y_ += dy;
+      bbox.h_ = h;
+    }
+
+    double x0 = bbox.x_;
+    double y0 = bbox.y_;
+    double supersample = 1.0;
+
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
+
+    double u0 = 0.0;
+    double u1 = ((iw_ * supersample - 1.0) / double(widthPowerOfTwo));
+
+    double v0 = 0.0;
+    double v1 = ((ih_ * supersample - 1.0) / double(heightPowerOfTwo));
+
+    double x1 = x0 + bbox.w_;
+    double y1 = y0 + bbox.h_;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    YAE_OPENGL_HERE();
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glTexCoord2d(u0, v0));
+      YAE_OGL_11(glVertex2d(x0, y0));
+
+      YAE_OGL_11(glTexCoord2d(u0, v1));
+      YAE_OGL_11(glVertex2d(x0, y1));
+
+      YAE_OGL_11(glTexCoord2d(u1, v0));
+      YAE_OGL_11(glVertex2d(x1, y0));
+
+      YAE_OGL_11(glTexCoord2d(u1, v1));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    // un-bind:
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+  }
 
   //----------------------------------------------------------------
   // Image::Image
@@ -1891,7 +2196,9 @@ namespace yae
   Image::Image(const char * id):
     Item(id),
     p_(new Image::TPrivate())
-  {}
+  {
+    p_->ready_ = addExpr(new UploadTexture<Image>(*this));
+  }
 
   //----------------------------------------------------------------
   // Image::~Image
@@ -1917,6 +2224,8 @@ namespace yae
   Image::uncache()
   {
     url_.uncache();
+    // p_->uncache();
+    Item::uncache();
   }
 
   //----------------------------------------------------------------
@@ -1930,7 +2239,7 @@ namespace yae
       return;
     }
 
-    p_->paint(url_.get().toString());
+    p_->paint(*this);
   }
 
   //----------------------------------------------------------------
@@ -1942,7 +2251,7 @@ namespace yae
     ~TPrivate();
 
     void uncache();
-    bool upload(const Text & item);
+    bool uploadTexture(const Text & item);
     void paint(const Text & item);
 
     GLuint texId_;
@@ -1978,10 +2287,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Text::TPrivate::upload
+  // Text::TPrivate::uploadTexture
   //
   bool
-  Text::TPrivate::upload(const Text & item)
+  Text::TPrivate::uploadTexture(const Text & item)
   {
     QRectF maxRect;
     getMaxRect(item, maxRect);
@@ -2082,13 +2391,13 @@ namespace yae
     yae_assert_gl_no_error();
 
     GLint internalFormat = 0;
-    GLenum pixelFormat = 0;
+    GLenum pixelFormatGL = 0;
     GLenum dataType = 0;
     GLint shouldSwapBytes = 0;
 
     yae_to_opengl(yae::kPixelFormatBGRA,
                   internalFormat,
-                  pixelFormat,
+                  pixelFormatGL,
                   dataType,
                   shouldSwapBytes);
 
@@ -2098,7 +2407,7 @@ namespace yae
                             widthPowerOfTwo,
                             heightPowerOfTwo,
                             0, // border width
-                            pixelFormat,
+                            pixelFormatGL,
                             dataType,
                             NULL));
     yae_assert_gl_no_error();
@@ -2127,7 +2436,7 @@ namespace yae
                                0, // y-offset
                                iw,
                                ih,
-                               pixelFormat,
+                               pixelFormatGL,
                                dataType,
                                data));
     yae_assert_gl_no_error();
@@ -2213,24 +2522,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // UploadTexture
-  //
-  struct UploadTexture : public TBoolExpr
-  {
-    UploadTexture(const Text & item):
-      item_(item)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = item_.p_->upload(item_);
-    }
-
-    const Text & item_;
-  };
-
-  //----------------------------------------------------------------
   // Text::Text
   //
   Text::Text(const char * id):
@@ -2248,7 +2539,7 @@ namespace yae
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(*this));
-    p_->ready_ = addExpr(new UploadTexture(*this));
+    p_->ready_ = addExpr(new UploadTexture<Text>(*this));
   }
 
   //----------------------------------------------------------------
@@ -2873,8 +3164,8 @@ namespace yae
   //
   PlaylistView::PlaylistView():
     Canvas::ILayer(),
-    root_(new Item("playlist")),
     model_(NULL),
+    root_(new Item("playlist")),
     w_(0.0),
     h_(0.0)
   {

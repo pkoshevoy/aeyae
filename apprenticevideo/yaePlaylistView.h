@@ -400,6 +400,9 @@ namespace yae
     inline double radius() const
     { return 0.5 * (h_ < w_ ? h_ : w_); }
 
+    inline double aspectRatio() const
+    { return h_ == 0.0 ? 0.0 : (w_ / h_); }
+
     double x_;
     double y_;
     double w_;
