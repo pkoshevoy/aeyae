@@ -1716,9 +1716,15 @@ namespace yae
                    const QModelIndex & itemIndex)
   {
       Rectangle & filter = item.addNew<Rectangle>("bg");
-      filter.anchors_.fill(item);
-      filter.margins_.set(2);
+      filter.anchors_.fill(item, 2);
       filter.radius_ = ItemRef::constant(3);
+
+      FilterIcon & icon = filter.addNew<FilterIcon>("filter_icon");
+      icon.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+      icon.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
+      icon.width_ = ItemRef::reference(filter, kPropertyHeight);
+      icon.height_ = ItemRef::reference(filter, kPropertyHeight);
+      icon.color_ = ColorRef::constant(Color(0x9f9f9f, 1.0));
   }
 
   //----------------------------------------------------------------
@@ -3012,6 +3018,136 @@ namespace yae
       }
       YAE_OGL_11(glEnd());
     }
+  }
+
+
+  //----------------------------------------------------------------
+  // FilterIcon::FilterIcon
+  //
+  FilterIcon::FilterIcon(const char * id):
+    Item(id),
+    color_(ColorRef::constant(Color(0xffffff, 0.5)))
+  {}
+
+  //----------------------------------------------------------------
+  // FilterIcon::uncache
+  //
+  void
+  FilterIcon::uncache()
+  {
+    color_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // FilterIcon::paintContent
+  //
+  void
+  FilterIcon::paintContent() const
+  {
+    static const double circle[][2] = {
+      { 1, 0 },
+      { 0.9914448613738104, 0.13052619222005157 },
+      { 0.9659258262890683, 0.25881904510252074 },
+      { 0.9238795325112867, 0.3826834323650898 },
+      { 0.8660254037844387, 0.5 },
+      { 0.7933533402912352, 0.6087614290087207 },
+      { 0.7071067811865476, 0.7071067811865475 },
+      { 0.6087614290087207, 0.7933533402912352 },
+      { 0.5, 0.8660254037844386 },
+      { 0.38268343236508984, 0.9238795325112867 },
+      { 0.25881904510252074, 0.9659258262890683 },
+      { 0.1305261922200517, 0.9914448613738104 },
+      { 0, 1 },
+      { -0.13052619222005138, 0.9914448613738105 },
+      { -0.25881904510252085, 0.9659258262890683 },
+      { -0.3826834323650897, 0.9238795325112867 },
+      { -0.5, 0.8660254037844387 },
+      { -0.6087614290087207, 0.7933533402912352 },
+      { -0.7071067811865475, 0.7071067811865476 },
+      { -0.7933533402912349, 0.6087614290087209 },
+      { -0.8660254037844387, 0.5 },
+      { -0.9238795325112867, 0.3826834323650899 },
+      { -0.9659258262890682, 0.258819045102521 },
+      { -0.9914448613738104, 0.13052619222005157 },
+      { -1, 0 },
+      { -0.9914448613738104, -0.13052619222005177 },
+      { -0.9659258262890684, -0.25881904510252035 },
+      { -0.9238795325112868, -0.38268343236508967 },
+      { -0.8660254037844386, -0.5 },
+      { -0.7933533402912354, -0.6087614290087203 },
+      { -0.7071067811865477, -0.7071067811865475 },
+      { -0.6087614290087209, -0.7933533402912349 },
+      { -0.5, -0.8660254037844384 },
+      { -0.38268343236509034, -0.9238795325112865 },
+      { -0.25881904510252063, -0.9659258262890683 },
+      { -0.13052619222005163, -0.9914448613738104 },
+      { 0, -1 },
+      { 0.13052619222005127, -0.9914448613738105 },
+      { 0.2588190451025203, -0.9659258262890684 },
+      { 0.38268343236509, -0.9238795325112866 },
+      { 0.5, -0.8660254037844386 },
+      { 0.6087614290087205, -0.7933533402912352 },
+      { 0.7071067811865474, -0.7071067811865477 },
+      { 0.7933533402912349, -0.6087614290087209 },
+      { 0.8660254037844384, -0.5 },
+      { 0.9238795325112865, -0.3826834323650904 },
+      { 0.9659258262890683, -0.2588190451025207 },
+      { 0.9914448613738104, -0.13052619222005168 }
+    };
+
+    if (!Item::visible())
+    {
+      return;
+    }
+
+    const Color & color = color_.get();
+    const Segment & xseg = this->xExtent();
+    const Segment & yseg = this->yExtent();
+
+    TVec2D center = vec2d(xseg.center(), yseg.center());
+    double radius = 0.5 * (yseg.length_ < xseg.length_ ?
+                           yseg.length_ :
+                           xseg.length_);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(),
+                          color.g(),
+                          color.b(),
+                          color.a()));
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      for (unsigned int i = 0; i < 49; i++)
+      {
+        unsigned int j = i % 48;
+        TVec2D v = vec2d(circle[j][0], -circle[j][1]);
+        TVec2D p0 = center + (0.32 * radius) * v;
+        TVec2D p1 = center + (0.45 * radius) * v;
+        YAE_OGL_11(glVertex2dv(p0.coord_));
+        YAE_OGL_11(glVertex2dv(p1.coord_));
+      }
+    }
+    YAE_OGL_11(glEnd());
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      TVec2D u = vec2d(circle[6][0], -circle[6][1]);
+      TVec2D v = vec2d(circle[42][0], -circle[42][1]);
+
+      double w = 0.085 * radius;
+      double r0 = 0.45 * radius;
+      double r1 = 0.75 * radius;
+
+      TVec2D p0 = center + (r0 * v + w * u).resized(r0);
+      TVec2D p1 = center + (r1 * v + w * u).resized(r1);
+      TVec2D p2 = center + (r0 * v - w * u).resized(r0);
+      TVec2D p3 = center + (r1 * v - w * u).resized(r1);
+      YAE_OGL_11(glVertex2dv(p0.coord_));
+      YAE_OGL_11(glVertex2dv(p1.coord_));
+      YAE_OGL_11(glVertex2dv(p2.coord_));
+      YAE_OGL_11(glVertex2dv(p3.coord_));
+    }
+    YAE_OGL_11(glEnd());
   }
 
 

@@ -201,6 +201,16 @@ namespace yae
       return result;
     }
 
+    inline TVec
+    resized(const TData & newsize)
+    {
+      TVec result(*this);
+      double size = result.norm();
+      double scale = size ? (newsize / size) : 1.0;
+      result *= (scale);
+      return result;
+    }
+
     inline TVec & operator < (const TVec & other)
     {
       for (unsigned int i = 0; i < Cardinality; i++)
@@ -1037,7 +1047,7 @@ namespace yae
     Image & operator = (const Image &);
 
   public:
-    Image(const char * id = NULL);
+    Image(const char * id);
     ~Image();
 
     // for thumbnail providers, repaint requests, etc...
@@ -1068,7 +1078,7 @@ namespace yae
     BBoxRef bboxText_;
 
   public:
-    Text(const char * id = NULL);
+    Text(const char * id);
     ~Text();
 
     // helper: flag bitmask used for QFontMetricsF and QPainter::drawText
@@ -1107,7 +1117,7 @@ namespace yae
   //
   struct Rectangle : public Item
   {
-    Rectangle(const char * id = NULL);
+    Rectangle(const char * id);
 
     // virtual:
     void uncache();
@@ -1130,7 +1140,7 @@ namespace yae
   //
   struct Triangle : public Item
   {
-    Triangle(const char * id = NULL);
+    Triangle(const char * id);
 
     // virtual:
     void uncache();
@@ -1149,7 +1159,7 @@ namespace yae
   //
   struct XButton : public Item
   {
-    XButton(const char * id = NULL);
+    XButton(const char * id);
 
     // virtual:
     void uncache();
@@ -1163,11 +1173,27 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // FilterIcon
+  //
+  struct FilterIcon : public Item
+  {
+    FilterIcon(const char * id);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+
+    ColorRef color_;
+  };
+
+  //----------------------------------------------------------------
   // Scrollable
   //
   struct Scrollable : public Item
   {
-    Scrollable(const char * id = NULL);
+    Scrollable(const char * id);
 
     // virtual:
     void uncache();
