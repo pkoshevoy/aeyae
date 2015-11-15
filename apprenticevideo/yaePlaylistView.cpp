@@ -622,6 +622,7 @@ namespace yae
 
       if (!v.canConvert<TData>())
       {
+        YAE_ASSERT(false);
         throw std::runtime_error("unexpected model data type");
       }
 
@@ -755,8 +756,9 @@ namespace yae
     const QImage & constImg = img;
     const unsigned char * data = constImg.bits();
     const unsigned char bytesPerPixel = stride[0] >> 3;
-    const int rowSize = constImg.bytesPerLine() / bytesPerPixel;
-    const int padding = alignmentFor(data, rowSize);
+    const int bytesPerRow = constImg.bytesPerLine();
+    const int rowSize = bytesPerRow / bytesPerPixel;
+    const int padding = alignmentFor(data, bytesPerRow);
 
     YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, (GLint)(padding)));
     YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
@@ -3582,6 +3584,9 @@ namespace yae
       << ", start: " << start << ", end: " << end
       << std::endl;
 #endif
+
+    // FIXME: this can be more efficient:
+    layoutChanged();
   }
 
 }

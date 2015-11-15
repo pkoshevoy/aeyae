@@ -16,6 +16,7 @@
 
 // Qt headers:
 #include <QtGlobal>
+#include <QFileInfo>
 
 // yae includes:
 #include "yae/api/yae_settings.h"
@@ -308,10 +309,9 @@ namespace yae
 
 #if 0
     image.save(QString::fromUtf8
-               ("/Users/pavel/Pictures/Thumbnails/%1-%2.jpg").
-               arg(groupHash.c_str()).
-               arg(itemHash.c_str()),
-               "JPEG");
+               ("/Users/pavel/Pictures/Thumbnails/%1.bmp").
+               arg(QFileInfo(itemFilePath).completeBaseName()),
+               "BMP");
 #endif
 
     return image;
