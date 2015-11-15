@@ -862,7 +862,10 @@ namespace yae
   {
     void uncache();
 
-    void fill(const TDoubleProp & reference, double offset = 0.0);
+    inline void fill(const TDoubleProp & reference, double offset = 0.0)
+    { inset(reference, offset, offset); }
+
+    void inset(const TDoubleProp & reference, double ox, double oy);
     void center(const TDoubleProp & reference);
     void topLeft(const TDoubleProp & reference, double offset = 0.0);
     void topRight(const TDoubleProp & reference, double offset = 0.0);
@@ -950,7 +953,7 @@ namespace yae
     inline TItem & addNewHidden(const char * id)
     {
       TItem & item = addNew<TItem>(id);
-      item.visible_ = TVarRef::constant(TVar(false));
+      item.visible_ = BoolRef::constant(false);
       return item;
     }
 
@@ -1012,7 +1015,7 @@ namespace yae
     const SegmentRef yExtent_;
 
     // flag indicating whether this item and its children are visible:
-    TVarRef visible_;
+    BoolRef visible_;
 
   private:
     // intentionally disabled:
@@ -1135,7 +1138,7 @@ namespace yae
     // virtual:
     void paintContent() const;
 
-    TVarRef collapsed_;
+    BoolRef collapsed_;
     ItemRef border_;
     ColorRef color_;
     ColorRef colorBorder_;

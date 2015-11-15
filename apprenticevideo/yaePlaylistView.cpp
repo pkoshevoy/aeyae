@@ -602,6 +602,43 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TModelQuery
+  //
+  template <typename TData>
+  struct TModelQuery : public Expression<TData>
+  {
+    TModelQuery(const PlaylistModelProxy & model,
+                const QModelIndex & index,
+                int role):
+      model_(model),
+      index_(index),
+      role_(role)
+    {}
+
+    // virtual:
+    void evaluate(TData & result) const
+    {
+      QVariant v = model_.data(index_, role_);
+
+      if (!v.canConvert<TData>())
+      {
+        throw std::runtime_error("unexpected model data type");
+      }
+
+      result = v.value<TData>();
+    }
+
+    const PlaylistModelProxy & model_;
+    QModelIndex index_;
+    int role_;
+  };
+
+  //----------------------------------------------------------------
+  // TQueryBool
+  //
+  typedef TModelQuery<bool> TQueryBool;
+
+  //----------------------------------------------------------------
   // UploadTexture
   //
   template <typename TItem>
@@ -957,15 +994,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Anchors::fill
+  // Anchors::inset
   //
   void
-  Anchors::fill(const TDoubleProp & ref, double offset)
+  Anchors::inset(const TDoubleProp & ref, double ox, double oy)
   {
-    left_ = ItemRef::offset(ref, kPropertyLeft, offset);
-    right_ = ItemRef::offset(ref, kPropertyRight, -offset);
-    top_ = ItemRef::offset(ref, kPropertyTop, offset);
-    bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
+    left_ = ItemRef::offset(ref, kPropertyLeft, ox);
+    right_ = ItemRef::offset(ref, kPropertyRight, -ox);
+    top_ = ItemRef::offset(ref, kPropertyTop, oy);
+    bottom_ = ItemRef::offset(ref, kPropertyBottom, -oy);
   }
 
   //----------------------------------------------------------------
@@ -1028,7 +1065,7 @@ namespace yae
     yContent_(addExpr(new CalcYContent(*this))),
     xExtent_(addExpr(new CalcXExtent(*this))),
     yExtent_(addExpr(new CalcYExtent(*this))),
-    visible_(TVarRef::constant(TVar(true)))
+    visible_(BoolRef::constant(true))
   {
     if (id)
     {
@@ -1492,7 +1529,7 @@ namespace yae
   bool
   Item::visible() const
   {
-    return visible_.get().toBool();
+    return visible_.get();
   }
 
   //----------------------------------------------------------------
@@ -1702,6 +1739,10 @@ namespace yae
       titleHeight.height_ =
         titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
 
+      Rectangle & background = root.addNew<Rectangle>("background");
+      background.anchors_.fill(root);
+      background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
+
       Item & filter = root.addNew<Item>("filter");
       filter.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
@@ -1834,7 +1875,7 @@ namespace yae
         collapsed.anchors_.fill(chevron);
         collapsed.margins_.set(fontDescent);
         collapsed.collapsed_ = collapsed.addExpr
-          (new ModelQuery(model, groupIndex, PlaylistModel::kRoleCollapsed));
+          (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
         text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
         text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
@@ -1869,12 +1910,11 @@ namespace yae
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
       {
-        Rectangle & cell = grid.addNew<Rectangle>("cell");
+        Item & cell = grid.addNew<Item>("cell");
         cell.anchors_.left_ = cell.addExpr(new GridCellLeft(grid, i));
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(grid, i));
         cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
         cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
-        cell.border_ = ItemRef::constant(1);
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
         ILayoutDelegate::TLayoutPtr childLayout =
@@ -1912,28 +1952,39 @@ namespace yae
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
+      Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
       Text & label = cell.addNew<Text>("label");
       label.anchors_.bottomLeft(cell);
-      label.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
-      label.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -5);
-      label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -10);
+      label.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
+      label.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -7);
+      label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.font_.setBold(false);
       label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
 
+      labelBg.anchors_.inset(label, -3, -1);
+      labelBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
+      labelBg.radius_ = ItemRef::constant(3.0);
+
       Item & rm = cell.addNew<Item>("remove item");
 
+      Rectangle & playingBg = cell.addNew<Rectangle>("playingBg");
       Text & playing = cell.addNew<Text>("now playing");
       playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
       playing.visible_ = playing.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
+        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.font_.setBold(false);
       playing.fontSize_ = ItemRef::scale(fontSize,
                                          kPropertyHeight,
                                          0.8 * kDpiScale);
+
+      playingBg.anchors_.inset(playing, -3, -1);
+      playingBg.visible_ = BoolRef::reference(playing, kPropertyVisible);
+      playingBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
+      playingBg.radius_ = ItemRef::constant(3.0);
 
       rm.width_ = ItemRef::reference(playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(playing, kPropertyHeight);
@@ -1952,7 +2003,7 @@ namespace yae
       underline.height_ = ItemRef::constant(2);
       underline.color_ = ColorRef::constant(Color(0xff0000));
       underline.visible_ = underline.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRolePlaying));
+        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & sel = cell.addNew<Rectangle>("selected");
       sel.anchors_.left_ = ItemRef::reference(cell, kPropertyLeft);
@@ -1962,7 +2013,7 @@ namespace yae
       sel.height_ = ItemRef::constant(2);
       sel.color_ = ColorRef::constant(Color(0xff0000));
       sel.visible_ = sel.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleSelected));
+        (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
     }
   };
 
@@ -2749,7 +2800,7 @@ namespace yae
   //
   Triangle::Triangle(const char * id):
     Item(id),
-    collapsed_(TVarRef::constant(TVar(false))),
+    collapsed_(BoolRef::constant(false)),
     border_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0xffffff, 1.0))),
     colorBorder_(ColorRef::constant(Color(0x7f7f7f, 0.25)))
@@ -2782,7 +2833,7 @@ namespace yae
       return;
     }
 
-    bool collapsed = collapsed_.get().toBool();
+    bool collapsed = collapsed_.get();
     const Color & color = color_.get();
     const Segment & xseg = this->xExtent();
     const Segment & yseg = this->yExtent();
