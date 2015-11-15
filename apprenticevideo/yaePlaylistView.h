@@ -656,6 +656,12 @@ namespace yae
       value_(constantValue)
     {}
 
+    inline void reset()
+    {
+      ref_ = NULL;
+      property_ = kPropertyUnspecified;
+    }
+
     // constructor helpers:
     inline static DataRef<TData>
     reference(const TDataProperties & ref, Property prop)
@@ -764,6 +770,13 @@ namespace yae
       translate_(0.0)
     {}
 
+    inline void reset()
+    {
+      TDataRef::reset();
+      scale_ = 1.0;
+      translate_ = 0.0;
+    }
+
     // constructor helpers:
     inline static ItemRef
     reference(const TDataProperties & ref, Property prop)
@@ -855,8 +868,6 @@ namespace yae
     Margins();
 
     void uncache();
-
-    void set(double m);
     void set(const ItemRef & ref);
 
     ItemRef left_;

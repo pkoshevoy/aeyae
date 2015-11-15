@@ -144,7 +144,7 @@ namespace yae
       std::size_t numCells = grid_.children_.size();
       double gridWidth = grid_.width();
       double cellWidth = calcCellWidth(gridWidth);
-      double cellHeight = calcCellHeight(cellWidth);
+      double cellHeight = cellWidth; // calcCellHeight(cellWidth);
       unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
       unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
@@ -190,7 +190,7 @@ namespace yae
     {
       double gridWidth = grid_.width();
       double cellWidth = calcCellWidth(gridWidth);
-      result = calcCellHeight(cellWidth) - 2;
+      result = cellWidth - 2; // calcCellHeight(cellWidth) - 2;
     }
 
     const Item & grid_;
@@ -941,7 +941,7 @@ namespace yae
   //
   Margins::Margins()
   {
-    set(0);
+    set(ItemRef::constant(0));
   }
 
   //----------------------------------------------------------------
@@ -954,18 +954,6 @@ namespace yae
     right_.uncache();
     top_.uncache();
     bottom_.uncache();
-  }
-
-  //----------------------------------------------------------------
-  // Margins::set
-  //
-  void
-  Margins::set(double m)
-  {
-    left_ = ItemRef::constant(m);
-    right_ = ItemRef::constant(m);
-    top_ = ItemRef::constant(m);
-    bottom_ = ItemRef::constant(m);
   }
 
   //----------------------------------------------------------------
@@ -1497,7 +1485,10 @@ namespace yae
   {
     if (anchors_.hcenter_.isValid())
     {
-      double c = anchors_.hcenter_.get();
+      double hc = anchors_.hcenter_.get();
+      double ml = margins_.left_.get();
+      double mr = margins_.right_.get();
+      double c = hc + ml - mr;
       return c;
     }
 
@@ -1515,7 +1506,10 @@ namespace yae
   {
     if (anchors_.vcenter_.isValid())
     {
-      double c = anchors_.vcenter_.get();
+      double vc = anchors_.vcenter_.get();
+      double mt = margins_.top_.get();
+      double mb = margins_.bottom_.get();
+      double c = vc + mt - mb;
       return c;
     }
 
@@ -1741,6 +1735,11 @@ namespace yae
       text.text_ = TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
       text.fontSize_ =
         ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+#if 0
+      text.font_ = QFont("Sans Serif");
+      text.font_.setBold(true);
+      // text.margins_.top_ = text.addExpr(new GetFontDescent(text), 0, 1);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1933,7 +1932,7 @@ namespace yae
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
       {
-        Item & cell = grid.addNew<Item>("cell");
+        Rectangle & cell = grid.addNew<Rectangle>("cell");
         cell.anchors_.left_ = cell.addExpr(new GridCellLeft(grid, i));
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(grid, i));
         cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
@@ -1972,6 +1971,8 @@ namespace yae
       Image & thumbnail = cell.addNew<Image>("thumbnail");
       thumbnail.setContext(view);
       thumbnail.anchors_.fill(cell);
+      thumbnail.anchors_.bottom_.reset();
+      thumbnail.height_ = ItemRef::scale(cell, kPropertyHeight, 0.75);
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
@@ -2029,10 +2030,9 @@ namespace yae
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & sel = cell.addNew<Rectangle>("selected");
-      sel.anchors_.left_ = ItemRef::reference(cell, kPropertyLeft);
-      sel.anchors_.right_ = ItemRef::reference(cell, kPropertyRight);
-      sel.anchors_.bottom_ = ItemRef::reference(cell, kPropertyBottom);
-      sel.margins_.set(3);
+      sel.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
+      sel.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
+      sel.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
       sel.height_ = ItemRef::constant(2);
       sel.color_ = ColorRef::constant(Color(0xff0000));
       sel.visible_ = sel.addExpr
