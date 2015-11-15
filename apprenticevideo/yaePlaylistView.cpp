@@ -1055,7 +1055,8 @@ namespace yae
     yContent_(addExpr(new CalcYContent(*this))),
     xExtent_(addExpr(new CalcXExtent(*this))),
     yExtent_(addExpr(new CalcYExtent(*this))),
-    visible_(BoolRef::constant(true))
+    visible_(BoolRef::constant(true)),
+    painted_(false)
   {
     if (id)
     {
@@ -1587,22 +1588,26 @@ namespace yae
   {
     if (!Item::visible())
     {
+      unpaint();
       return false;
     }
 
     const Segment & yfootprint = this->yExtent();
     if (yregion.disjoint(yfootprint))
     {
+      unpaint();
       return false;
     }
 
     const Segment & xfootprint = this->xExtent();
     if (xregion.disjoint(xfootprint))
     {
+      unpaint();
       return false;
     }
 
     this->paintContent();
+    painted_ = true;
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
@@ -1612,6 +1617,28 @@ namespace yae
     }
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // Item::unpaint
+  //
+  void
+  Item::unpaint() const
+  {
+    if (!painted_)
+    {
+      return;
+    }
+
+    this->unpaintContent();
+    painted_ = false;
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->unpaint();
+    }
   }
 
 #ifndef NDEBUG
@@ -2086,6 +2113,18 @@ namespace yae
       status_ = kImageNotReady;
     }
 
+    void clearImageAndCancelRequest()
+    {
+      if (provider_)
+      {
+        provider_->cancelRequest(id_);
+      }
+
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      img_ = QImage();
+      status_ = kImageNotReady;
+    }
+
     inline void setImageStatusImageRequested()
     { status_ = kImageRequested; }
 
@@ -2127,7 +2166,7 @@ namespace yae
       image_->setContext(view);
     }
 
-    void uncache();
+    void unpaint();
     bool load(const QString & thumbnail);
     bool uploadTexture(const Image & item);
     void paint(const Image & item);
@@ -2154,15 +2193,19 @@ namespace yae
   //
   Image::TPrivate::~TPrivate()
   {
-    uncache();
+    unpaint();
   }
 
   //----------------------------------------------------------------
-  // Image::TPrivate::uncache
+  // Image::TPrivate::unpaint
   //
   void
-  Image::TPrivate::uncache()
+  Image::TPrivate::unpaint()
   {
+    // shortcut:
+    ImagePrivate & image = *image_;
+    image.clearImageAndCancelRequest();
+
     ready_.uncache();
 
     YAE_OGL_11_HERE();
@@ -2320,7 +2363,6 @@ namespace yae
   Image::uncache()
   {
     url_.uncache();
-    // p_->uncache();
     Item::uncache();
   }
 
@@ -2330,12 +2372,16 @@ namespace yae
   void
   Image::paintContent() const
   {
-    if (!Item::visible())
-    {
-      return;
-    }
-
     p_->paint(*this);
+  }
+
+  //----------------------------------------------------------------
+  // Image::unpaintContent
+  //
+  void
+  Image::unpaintContent() const
+  {
+    p_->unpaint();
   }
 
   //----------------------------------------------------------------
@@ -2602,22 +2648,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Text::paint
+  // Text::paintContent
   //
   void
   Text::paintContent() const
   {
-    if (!Item::visible())
-    {
-      return;
-    }
-
     if (p_->ready_.get())
     {
       p_->paint(*this);
     }
   }
 
+  //----------------------------------------------------------------
+  // Text::unpaintContent
+  //
+  void
+  Text::unpaintContent() const
+  {
+    p_->uncache();
+  }
 
   //----------------------------------------------------------------
   // Rectangle::Rectangle
@@ -2793,11 +2842,6 @@ namespace yae
   void
   Rectangle::paintContent() const
   {
-    if (!Item::visible())
-    {
-      return;
-    }
-
     BBox bbox;
     this->get(kPropertyBBox, bbox);
 
@@ -2856,11 +2900,6 @@ namespace yae
   {
     static const double sin_30 = 0.5;
     static const double cos_30 = 0.866025403784439;
-
-    if (!Item::visible())
-    {
-      return;
-    }
 
     bool collapsed = collapsed_.get();
     const Color & color = color_.get();
@@ -2951,11 +2990,6 @@ namespace yae
   XButton::paintContent() const
   {
     static const double cos_45 = 0.707106781186548;
-
-    if (!Item::visible())
-    {
-      return;
-    }
 
     const Color & color = color_.get();
     const Segment & xseg = this->xExtent();
@@ -3119,11 +3153,6 @@ namespace yae
       { 0.9914448613738104, -0.13052619222005168 }
     };
 
-    if (!Item::visible())
-    {
-      return;
-    }
-
     const Color & color = color_.get();
     const Segment & xseg = this->xExtent();
     const Segment & yseg = this->yExtent();
@@ -3201,6 +3230,7 @@ namespace yae
   {
     if (!Item::paint(xregion, yregion))
     {
+      content_.unpaint();
       return false;
     }
 
@@ -3224,6 +3254,16 @@ namespace yae
                    Segment(dy, yExtent.length_));
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollable::unpaint
+  //
+  void
+  Scrollable::unpaint()
+  {
+    Item::unpaint();
+    content_.unpaint();
   }
 
 #ifndef NDEBUG

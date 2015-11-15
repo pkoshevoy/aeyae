@@ -42,11 +42,15 @@ namespace yae
                       const TPlaylistModel & playlist,
 
                       // default thumbnail size:
-                      const QSize & envelopeSize = QSize(384, 216)
-                      // const QSize & envelopeSize = QSize(160, 90)
-                      );
+                      const QSize & envelopeSize = QSize(384, 216),
+
+                      // maximum number of images that may be cached in memory:
+                      std::size_t cacheCapacity = 1024);
 
     virtual ~ThumbnailProvider();
+
+    // limit how many images to keep in memory:
+    void setCacheCapacity(std::size_t cacheCapacity);
 
     // virtual:
     QImage requestImage(const QString & id,
@@ -66,7 +70,7 @@ namespace yae
                            const QSize & requestedSize,
                            const boost::weak_ptr<ICallback> & callback);
 
-    void discardImage(const QString & id);
+    void cancelRequest(const QString & id);
 
     struct TPrivate;
     TPrivate * private_;

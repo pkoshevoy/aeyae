@@ -326,9 +326,16 @@ namespace yae
 
     TPrivate(const IReaderPtr & readerPrototype,
              const TPlaylistModel & playlist,
-             const QSize & envelopeSize);
+             const QSize & envelopeSize,
+             std::size_t cacheCapacity);
     ~TPrivate();
 
+    void setCacheCapacity(std::size_t cacheCapacity);
+
+  private:
+    void clearCacheFor(std::size_t n);
+
+  public:
     QImage requestImage(const QString & id,
                         QSize * size,
                         const QSize & requestedSize);
@@ -337,7 +344,7 @@ namespace yae
                            const QSize & requestedSize,
                            const boost::weak_ptr<ICallback> & callback);
 
-    void discardImage(const QString & id);
+    void cancelRequest(const QString & id);
 
     void threadLoop();
 
@@ -350,7 +357,7 @@ namespace yae
               const QSize & size = QSize(),
               const boost::weak_ptr<ICallback> & callback =
               boost::weak_ptr<ICallback>(),
-              std::size_t priority = 0):
+              boost::uint64_t priority = 0):
         id_(id),
         size_(size),
         callback_(callback),
@@ -363,6 +370,24 @@ namespace yae
       boost::uint64_t priority_;
     };
 
+    //----------------------------------------------------------------
+    // Payload
+    //
+    struct Payload
+    {
+      Payload(const QString & id = QString(),
+              const QImage & image = QImage(),
+              boost::uint64_t mru = 0):
+        id_(id),
+        image_(image),
+        mru_(mru)
+      {}
+
+      QString id_;
+      QImage image_;
+      boost::uint64_t mru_;
+    };
+
     IReaderPtr readerPrototype_;
     const TPlaylistModel & playlist_;
     QSize envelopeSize_;
@@ -370,10 +395,20 @@ namespace yae
     // thumbnail request queue and image cache:
     mutable boost::mutex mutex_;
     mutable boost::condition_variable ready_;
-    boost::uint64_t requestCounter_;
+    boost::uint64_t submitted_;
+    boost::uint64_t completed_;
     std::map<QString, Request> request_;
     std::map<boost::uint64_t, Request *> priority_;
-    std::map<QString, QImage> cache_;
+
+    // how many items can be kept in the cache:
+    std::size_t cacheCapacity_;
+
+    // image cache, along with MRU timestamp:
+    std::map<QString, Payload> cache_;
+
+    // most-recently-used map of image ids, used
+    // to decide which image should be removed from the cache:
+    std::map<boost::uint64_t, Payload *> mru_;
 
     // request processing worker thread:
     Thread<ThumbnailProvider::TPrivate> thread_;
@@ -384,11 +419,14 @@ namespace yae
   //
   ThumbnailProvider::TPrivate::TPrivate(const IReaderPtr & readerPrototype,
                                         const TPlaylistModel & playlist,
-                                        const QSize & envelopeSize):
+                                        const QSize & envelopeSize,
+                                        std::size_t cacheCapacity):
     readerPrototype_(readerPrototype),
     playlist_(playlist),
     envelopeSize_(envelopeSize),
-    requestCounter_(0),
+    submitted_(0),
+    completed_(0),
+    cacheCapacity_(cacheCapacity),
     thread_(this)
   {}
 
@@ -402,6 +440,32 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::setCacheCapacity
+  //
+  void
+  ThumbnailProvider::TPrivate::setCacheCapacity(std::size_t cacheCapacity)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    cacheCapacity_ = cacheCapacity;
+    clearCacheFor(0);
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::TPrivate::clearCacheFor
+  //
+  void
+  ThumbnailProvider::TPrivate::clearCacheFor(std::size_t n)
+  {
+    // discard cache entries until there is room for the requested entries:
+    while (!cache_.empty() && cache_.size() + n >= cacheCapacity_)
+    {
+      Payload oldest = *(mru_.begin()->second);
+      cache_.erase(oldest.id_);
+      mru_.erase(oldest.mru_);
+    }
+  }
+
+  //----------------------------------------------------------------
   // ThumbnailProvider::TPrivate::requestImage
   //
   QImage
@@ -409,21 +473,34 @@ namespace yae
                                             QSize * size,
                                             const QSize & requestedSize)
   {
-    QImage image;
+    Payload * payload = NULL;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      image = cache_[id];
+      std::map<QString, Payload>::iterator found = cache_.find(id);
+
+      if (found != cache_.end())
+      {
+        payload = &(found->second);
+        mru_.erase(payload->mru_);
+        payload->mru_ = completed_;
+        completed_++;
+        mru_[payload->mru_] = payload;
+      }
+      else
+      {
+        clearCacheFor(1);
+      }
     }
 
     const QSize & thumbnailMaxSize =
       requestedSize.isValid() ? requestedSize : envelopeSize_;
 
-    if (image.isNull())
+    if (!payload)
     {
-      image = getThumbnail(readerPrototype_,
-                           thumbnailMaxSize,
-                           playlist_,
-                           id);
+      QImage image = getThumbnail(readerPrototype_,
+                                  thumbnailMaxSize,
+                                  playlist_,
+                                  id);
 
       bool sizeAcceptable =
         (image.height() <= thumbnailMaxSize.height() &&
@@ -435,15 +512,20 @@ namespace yae
       }
 
       boost::unique_lock<boost::mutex> lock(mutex_);
-      cache_[id] = image;
+      std::map<QString, Payload>::iterator where = cache_.
+        insert(std::make_pair(id, Payload(id, image, completed_))).first;
+      completed_++;
+
+      payload = &(where->second);
+      mru_[payload->mru_] = payload;
     }
 
     if (size)
     {
-      *size = image.size();
+      *size = payload->image_.size();
     }
 
-    return image;
+    return payload->image_;
   }
 
   //----------------------------------------------------------------
@@ -465,7 +547,7 @@ namespace yae
     if (found == request_.end() || request_.key_comp()(id, found->first))
     {
       // create new request:
-      Request request(id, requestedSize, callback, requestCounter_);
+      Request request(id, requestedSize, callback, submitted_);
       found = request_.insert(found, std::make_pair(id, request));
       priority_[request.priority_] = &(found->second);
     }
@@ -474,24 +556,23 @@ namespace yae
       // re-prioritize previous request:
       Request & request = found->second;
       priority_.erase(request.priority_);
-      request.priority_ = requestCounter_;
+      request.priority_ = submitted_;
       priority_[request.priority_] = &request;
     }
 
-    requestCounter_++;
+    submitted_++;
     ready_.notify_all();
   }
 
   //----------------------------------------------------------------
-  // ThumbnailProvider::TPrivate::discardImage
+  // ThumbnailProvider::TPrivate::cancelRequest
   //
   void
-  ThumbnailProvider::TPrivate::discardImage(const QString & id)
+  ThumbnailProvider::TPrivate::cancelRequest(const QString & id)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    cache_.erase(id);
-
     std::map<QString, Request>::iterator found = request_.find(id);
+
     if (found != request_.end())
     {
       Request & request = found->second;
@@ -554,12 +635,16 @@ namespace yae
   //
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
                                        const TPlaylistModel & playlist,
-                                       const QSize & envelopeSize):
+                                       const QSize & envelopeSize,
+                                       std::size_t cacheCapacity):
 #ifdef YAE_USE_QT5
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
 #endif
-    private_(new TPrivate(readerPrototype, playlist, envelopeSize))
+    private_(new TPrivate(readerPrototype,
+                          playlist,
+                          envelopeSize,
+                          cacheCapacity))
   {}
 
   //----------------------------------------------------------------
@@ -568,6 +653,15 @@ namespace yae
   ThumbnailProvider::~ThumbnailProvider()
   {
     delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // ThumbnailProvider::setCacheCapacity
+  //
+  void
+  ThumbnailProvider::setCacheCapacity(std::size_t cacheCapacity)
+  {
+    private_->setCacheCapacity(cacheCapacity);
   }
 
   //----------------------------------------------------------------
@@ -593,11 +687,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ThumbnailProvider::discardImage
+  // ThumbnailProvider::cancelRequest
   //
   void
-  ThumbnailProvider::discardImage(const QString & id)
+  ThumbnailProvider::cancelRequest(const QString & id)
   {
-    private_->discardImage(id);
+    private_->cancelRequest(id);
   }
 }

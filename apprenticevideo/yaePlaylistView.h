@@ -1001,6 +1001,15 @@ namespace yae
     virtual bool paint(const Segment & xregion,
                        const Segment & yregion) const;
 
+    // NOTE: unpaint will be called for an off-screen item
+    // to give it an opportunity to release unneeded resources
+    // (textures, images, display lists, etc...)
+    virtual void unpaintContent() const {}
+
+    // NOTE: this will call unpaintContent,
+    // followed by a call to unpaint each nested item:
+    virtual void unpaint() const;
+
 #ifndef NDEBUG
     // FIXME: for debugging only:
     virtual void dump(std::ostream & os,
@@ -1038,6 +1047,9 @@ namespace yae
     // flag indicating whether this item and its children are visible:
     BoolRef visible_;
 
+  protected:
+    mutable bool painted_;
+
   private:
     // intentionally disabled:
     Item(const Item & item);
@@ -1069,6 +1081,7 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+    void unpaintContent() const;
 
     // this gets complicated due to asynchronous loading of images:
     struct TPrivate;
@@ -1109,6 +1122,7 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+    void unpaintContent() const;
 
     struct TPrivate;
     TPrivate * p_;
@@ -1210,6 +1224,7 @@ namespace yae
     // virtual:
     void uncache();
     bool paint(const Segment & xregion, const Segment & yregion) const;
+    void unpaint();
 
 #ifndef NDEBUG
     // virtual:
