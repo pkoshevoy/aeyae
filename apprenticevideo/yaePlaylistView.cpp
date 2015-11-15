@@ -1705,40 +1705,40 @@ namespace yae
   // layoutFilterItem
   //
   static void
-  layoutFilterItem(Item & playlist,
-                   Item & item,
+  layoutFilterItem(Item & item,
                    const PlaylistView & view,
                    const PlaylistModelProxy & model,
                    const QModelIndex & itemIndex)
   {
-      // reuse pre-computed properties:
-      const Item & fontSize = playlist["font_size"];
+    // reuse pre-computed properties:
+    const Item & playlist = *(view.root());
+    const Item & fontSize = playlist["font_size"];
 
-      Rectangle & filter = item.addNew<Rectangle>("bg");
-      filter.anchors_.fill(item, 2);
-      filter.radius_ = ItemRef::constant(3);
+    Rectangle & filter = item.addNew<Rectangle>("bg");
+    filter.anchors_.fill(item, 2);
+    filter.radius_ = ItemRef::constant(3);
 
-      FilterIcon & icon = filter.addNew<FilterIcon>("filter_icon");
-      icon.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
-      icon.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
-      icon.width_ = ItemRef::reference(filter, kPropertyHeight);
-      icon.height_ = ItemRef::reference(filter, kPropertyHeight);
-      icon.color_ = ColorRef::constant(Color(0x9f9f9f, 1.0));
+    FilterIcon & icon = filter.addNew<FilterIcon>("filter_icon");
+    icon.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+    icon.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
+    icon.width_ = ItemRef::reference(filter, kPropertyHeight);
+    icon.height_ = ItemRef::reference(filter, kPropertyHeight);
+    icon.color_ = ColorRef::constant(Color(0x9f9f9f, 1.0));
 
-      // FIXME: this should be a text edit item:
-      Text & text = filter.addNew<Text>("filter_text");
-      text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
-      text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
-      text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
-      text.elide_ = Qt::ElideLeft;
-      text.color_ = ColorRef::constant(Color(0xffffff, 0.25));
-      text.text_ = TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
-      text.fontSize_ =
-        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    // FIXME: this should be a text edit item:
+    Text & text = filter.addNew<Text>("filter_text");
+    text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+    text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+    text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+    text.elide_ = Qt::ElideLeft;
+    text.color_ = ColorRef::constant(Color(0xffffff, 0.25));
+    text.text_ = TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
+    text.fontSize_ =
+      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
 #if 0
-      text.font_ = QFont("Sans Serif");
-      text.font_.setBold(true);
-      // text.margins_.top_ = text.addExpr(new GetFontDescent(text), 0, 1);
+    text.font_ = QFont("Sans Serif");
+    text.font_.setBold(true);
+    // text.margins_.top_ = text.addExpr(new GetFontDescent(text), 0, 1);
 #endif
   }
 
@@ -1747,12 +1747,13 @@ namespace yae
   //
   struct GroupListLayout : public ILayoutDelegate
   {
-    void layout(Item & playlist,
-                Item & root,
+    void layout(Item & root,
                 const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
+      Item & playlist = *(view.root());
+
       // setup an invisible item so its height property expression
       // could be computed once and the result reused in other places
       // that need to compute the same property expression:
@@ -1799,7 +1800,7 @@ namespace yae
       fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
                                                           cellHeight, 0.15));
 
-      layoutFilterItem(playlist, filter, view, model, rootIndex);
+      layoutFilterItem(filter, view, model, rootIndex);
 
       Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
       nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
@@ -1833,7 +1834,7 @@ namespace yae
 
         if (childLayout)
         {
-          childLayout->layout(playlist, group, view, model, childIndex);
+          childLayout->layout(group, view, model, childIndex);
         }
       }
 
@@ -1852,13 +1853,13 @@ namespace yae
   //
   struct ItemGridLayout : public ILayoutDelegate
   {
-    void layout(Item & playlist,
-                Item & group,
+    void layout(Item & group,
                 const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
     {
       // reuse pre-computed properties:
+      const Item & playlist = *(view.root());
       const Item & fontSize = playlist["font_size"];
       const Item & cellWidth = playlist["cell_width"];
       const Item & cellHeight = playlist["cell_height"];
@@ -1944,7 +1945,7 @@ namespace yae
 
         if (childLayout)
         {
-          childLayout->layout(playlist, cell, view, model, childIndex);
+          childLayout->layout(cell, view, model, childIndex);
         }
       }
 
@@ -1961,12 +1962,12 @@ namespace yae
   //
   struct ItemGridCellLayout : public ILayoutDelegate
   {
-    void layout(Item & playlist,
-                Item & cell,
+    void layout(Item & cell,
                 const PlaylistView & view,
                 const PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
+      const Item & playlist = *(view.root());
       const Item & fontSize = playlist["font_size"];
       Image & thumbnail = cell.addNew<Image>("thumbnail");
       thumbnail.setContext(view);
@@ -3499,7 +3500,7 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
-    delegate->layout(root, root, *this, *model_, rootIndex);
+    delegate->layout(root, *this, *model_, rootIndex);
 
 #if 0 // ndef NDEBUG
     root.dump(std::cerr);

@@ -1236,8 +1236,7 @@ namespace yae
 
     virtual ~ILayoutDelegate() {}
 
-    virtual void layout(Item & playlist,
-                        Item & item,
+    virtual void layout(Item & item,
                         const PlaylistView & view,
                         const PlaylistModelProxy & model,
                         const QModelIndex & itemIndex) = 0;
@@ -1282,6 +1281,9 @@ namespace yae
 
     inline const TLayoutDelegates & layouts() const
     { return layoutDelegates_; }
+
+    inline const ItemPtr & root() const
+    { return root_; }
 
   public slots:
 
