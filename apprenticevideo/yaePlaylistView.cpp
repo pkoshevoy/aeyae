@@ -1715,6 +1715,9 @@ namespace yae
                    const PlaylistModelProxy & model,
                    const QModelIndex & itemIndex)
   {
+      // reuse pre-computed properties:
+      const Item & fontSize = playlist["font_size"];
+
       Rectangle & filter = item.addNew<Rectangle>("bg");
       filter.anchors_.fill(item, 2);
       filter.radius_ = ItemRef::constant(3);
@@ -1725,6 +1728,17 @@ namespace yae
       icon.width_ = ItemRef::reference(filter, kPropertyHeight);
       icon.height_ = ItemRef::reference(filter, kPropertyHeight);
       icon.color_ = ColorRef::constant(Color(0x9f9f9f, 1.0));
+
+      // FIXME: this should be a text edit item:
+      Text & text = filter.addNew<Text>("filter_text");
+      text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+      text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+      text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+      text.elide_ = Qt::ElideLeft;
+      text.color_ = ColorRef::constant(Color(0xffffff, 0.25));
+      text.text_ = TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
+      text.fontSize_ =
+        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
   }
 
   //----------------------------------------------------------------
@@ -1754,7 +1768,6 @@ namespace yae
       filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       filter.width_ = ItemRef::reference(root, kPropertyWidth);
       filter.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.5);
-      layoutFilterItem(playlist, filter, view, model, rootIndex);
 
       Scrollable & sview = root.addNew<Scrollable>("scrollable");
 
@@ -1784,6 +1797,8 @@ namespace yae
       Item & fontSize = playlist.addNewHidden<Item>("font_size");
       fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
                                                           cellHeight, 0.15));
+
+      layoutFilterItem(playlist, filter, view, model, rootIndex);
 
       Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
       nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
@@ -2400,8 +2415,11 @@ namespace yae
       int flags = item.textFlags();
       QString text = getElidedText(maxRect.width(), item, fm, flags);
 
-      // FIXME: this should be a Text property:
-      painter.setPen(QColor(0xff, 0xff, 0xff));
+      const Color & color = item.color_.get();
+      painter.setPen(QColor(color.r(),
+                            color.g(),
+                            color.b(),
+                            color.a()));
 
 #ifdef NDEBUG
       painter.drawText(maxRect, flags, text);
@@ -2456,7 +2474,8 @@ namespace yae
     p_(new Text::TPrivate()),
     font_("Impact, Charcoal, sans-serif"),
     alignment_(Qt::AlignLeft),
-    elide_(Qt::ElideNone)
+    elide_(Qt::ElideNone),
+    color_(ColorRef::constant(Color(0xffffff, 1.0)))
   {
     font_.setHintingPreference(QFont::PreferFullHinting);
     font_.setStyleStrategy((QFont::StyleStrategy)
@@ -2574,6 +2593,7 @@ namespace yae
     maxWidth_.uncache();
     bboxText_.uncache();
     text_.uncache();
+    color_.uncache();
     p_->uncache();
     Item::uncache();
   }

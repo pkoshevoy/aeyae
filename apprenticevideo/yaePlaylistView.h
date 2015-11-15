@@ -1110,6 +1110,7 @@ namespace yae
     ItemRef fontSize_; // in points
     ItemRef maxWidth_;
     ItemRef maxHeight_;
+    ColorRef color_;
   };
 
   //----------------------------------------------------------------
