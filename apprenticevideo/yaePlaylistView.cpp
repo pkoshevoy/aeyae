@@ -13,7 +13,12 @@
 
 // Qt library:
 #include <QFontMetricsF>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QTabletEvent>
+#include <QTouchEvent>
 #include <QUrl>
+#include <QWheelEvent>
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"
@@ -1625,6 +1630,56 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::overlaps
+  //
+  bool
+  Item::overlaps(const TVec2D & pt) const
+  {
+    if (!Item::visible())
+    {
+      return false;
+    }
+
+    const Segment & yfootprint = this->yExtent();
+    if (yfootprint.disjoint(pt.y()))
+    {
+      return false;
+    }
+
+    const Segment & xfootprint = this->xExtent();
+    if (xfootprint.disjoint(pt.x()))
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Item::getMouseArea
+  //
+  bool
+  Item::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  {
+    if (!overlaps(pt))
+    {
+      return false;
+    }
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      if (child->getMouseArea(pt, ma, offset))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Item::paint
   //
   bool
@@ -1715,7 +1770,7 @@ namespace yae
   //----------------------------------------------------------------
   // TLayoutPtr
   //
-  typedef ILayoutDelegate::TLayoutPtr TLayoutPtr;
+  typedef PlaylistView::TLayoutPtr TLayoutPtr;
 
   //----------------------------------------------------------------
   // TLayoutHint
@@ -1725,7 +1780,7 @@ namespace yae
   //----------------------------------------------------------------
   // findLayoutDelegate
   //
-  static ILayoutDelegate::TLayoutPtr
+  static TLayoutPtr
   findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
                      TLayoutHint layoutHint)
   {
@@ -1744,7 +1799,7 @@ namespace yae
   //----------------------------------------------------------------
   // findLayoutDelegate
   //
-  static ILayoutDelegate::TLayoutPtr
+  static TLayoutPtr
   findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
                      const PlaylistModelProxy & model,
                      const QModelIndex & modelIndex)
@@ -1764,7 +1819,7 @@ namespace yae
   //----------------------------------------------------------------
   // findLayoutDelegate
   //
-  static ILayoutDelegate::TLayoutPtr
+  static TLayoutPtr
   findLayoutDelegate(const PlaylistView & view,
                      const PlaylistModelProxy & model,
                      const QModelIndex & modelIndex)
@@ -1939,7 +1994,7 @@ namespace yae
   //----------------------------------------------------------------
   // GroupListLayout
   //
-  struct GroupListLayout : public ILayoutDelegate
+  struct GroupListLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & root,
                 const PlaylistView & view,
@@ -1969,7 +2024,7 @@ namespace yae
 
       Item & scrollbar = root.addNew<Item>("scrollbar");
       scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-      scrollbar.anchors_.top_ = ItemRef::offset(filter, kPropertyBottom, 5);
+      scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
       scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
       scrollbar.width_ =
         scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
@@ -2024,8 +2079,7 @@ namespace yae
         }
 
         QModelIndex childIndex = model.index(i, 0, rootIndex);
-        ILayoutDelegate::TLayoutPtr childLayout =
-           findLayoutDelegate(view, model, childIndex);
+        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
 
         if (childLayout)
         {
@@ -2040,13 +2094,22 @@ namespace yae
       slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
       slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
       slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
+
+      MouseArea & maScrollview = sview.addNew<MouseArea>("ma_scrollview");
+      maScrollview.anchors_.fill(sview);
+
+      MouseArea & maScrollbar = scrollbar.addNew<MouseArea>("ma_scrollbar");
+      maScrollbar.anchors_.fill(scrollbar);
+
+      MouseArea & maSlider = slider.addNew<MouseArea>("ma_slider");
+      maSlider.anchors_.fill(slider);
     }
   };
 
   //----------------------------------------------------------------
   // ItemGridLayout
   //
-  struct ItemGridLayout : public ILayoutDelegate
+  struct ItemGridLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & group,
                 const PlaylistView & view,
@@ -2112,6 +2175,12 @@ namespace yae
 
         xbutton.anchors_.fill(rm);
         xbutton.margins_.set(fontDescentNowPlaying);
+
+        MouseArea & maCollapse = collapsed.addNew<MouseArea>("ma_collapse");
+        maCollapse.anchors_.fill(collapsed);
+
+        MouseArea & maRmGroup = xbutton.addNew<MouseArea>("ma_rm_group");
+        maRmGroup.anchors_.fill(xbutton);
       }
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
@@ -2135,8 +2204,7 @@ namespace yae
         cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
 
         QModelIndex childIndex = model.index(i, 0, groupIndex);
-        ILayoutDelegate::TLayoutPtr childLayout =
-           findLayoutDelegate(view, model, childIndex);
+        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
 
         if (childLayout)
         {
@@ -2155,7 +2223,7 @@ namespace yae
   //----------------------------------------------------------------
   // ItemGridCellLayout
   //
-  struct ItemGridCellLayout : public ILayoutDelegate
+  struct ItemGridCellLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & cell,
                 const PlaylistView & view,
@@ -2233,8 +2301,107 @@ namespace yae
       sel.color_ = ColorRef::constant(Color(0xff0000));
       sel.visible_ = sel.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
+
+      MouseArea & maRmItem = xbutton.addNew<MouseArea>("ma_rm_item");
+      maRmItem.anchors_.fill(xbutton);
     }
   };
+
+
+  //----------------------------------------------------------------
+  // MouseArea::MouseArea
+  //
+  MouseArea::MouseArea(const char * id):
+    Item(id)
+  {}
+
+  //----------------------------------------------------------------
+  // MouseArea::getMouseArea
+  //
+  bool
+  MouseArea::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  {
+    if (!Item::overlaps(pt))
+    {
+      return false;
+    }
+
+    ma = this;
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mousePressed
+  //
+  void
+  MouseArea::mousePressed(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mousePressed(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mouseReleased
+  //
+  void
+  MouseArea::mouseReleased(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mouseReleased(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mouseMove
+  //
+  void
+  MouseArea::mouseMove(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mouseMove(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mouseDrag
+  //
+  void
+  MouseArea::mouseDrag(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mouseDrag(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mouseClicked
+  //
+  void
+  MouseArea::mouseClicked(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mouseClicked(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // MouseArea::mouseDoubleClicked
+  //
+  void
+  MouseArea::mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e)
+  {
+    std::cerr
+      << "FIXME: " << id_
+      << ": mouseDoubleClicked(" << pt.x() << ", " << pt.y() << ")"
+      << std::endl;
+  }
+
 
   //----------------------------------------------------------------
   // ImagePrivate
@@ -2920,8 +3087,8 @@ namespace yae
     std::vector<TVec2D> triangleStrip;
 
     // start the fan:
-    TVec2D center = vec2d(bbox.x_ + 0.5 * bbox.w_,
-                          bbox.y_ + 0.5 * bbox.h_);
+    TVec2D center(bbox.x_ + 0.5 * bbox.w_,
+                  bbox.y_ + 0.5 * bbox.h_);
     triangleFan.push_back(center);
 
     unsigned int ix[] = { 0, 1, 1, 0 };
@@ -2940,12 +3107,12 @@ namespace yae
         double tcos = std::cos(a);
         double tsin = std::sin(a);
 
-        triangleFan.push_back(vec2d(ox + tcos * radius,
-                                    oy - tsin * radius));
+        triangleFan.push_back(TVec2D(ox + tcos * radius,
+                                     oy - tsin * radius));
 
         triangleStrip.push_back(triangleFan.back());
-        triangleStrip.push_back(vec2d(ox + tcos * r0,
-                                      oy - tsin * r0));
+        triangleStrip.push_back(TVec2D(ox + tcos * r0,
+                                       oy - tsin * r0));
       }
     }
 
@@ -3079,20 +3246,20 @@ namespace yae
                            yseg.length_ :
                            xseg.length_);
 
-    TVec2D center = vec2d(xseg.center(), yseg.center());
+    TVec2D center(xseg.center(), yseg.center());
     TVec2D p[3];
 
     if (collapsed)
     {
-      p[0] = center + radius * vec2d(1.0, 0.0);
-      p[1] = center + radius * vec2d(-sin_30, -cos_30);
-      p[2] = center + radius * vec2d(-sin_30, cos_30);
+      p[0] = center + radius * TVec2D(1.0, 0.0);
+      p[1] = center + radius * TVec2D(-sin_30, -cos_30);
+      p[2] = center + radius * TVec2D(-sin_30, cos_30);
     }
     else
     {
-      p[0] = center + radius * vec2d(cos_30, -sin_30);
-      p[1] = center + radius * vec2d(-cos_30, -sin_30);
-      p[2] = center + radius * vec2d(0.0, 1.0);
+      p[0] = center + radius * TVec2D(cos_30, -sin_30);
+      p[1] = center + radius * TVec2D(-cos_30, -sin_30);
+      p[2] = center + radius * TVec2D(0.0, 1.0);
     }
 
     YAE_OGL_11_HERE();
@@ -3168,15 +3335,15 @@ namespace yae
                            yseg.length_ :
                            xseg.length_);
 
-    TVec2D dx = vec2d(0.33 * radius, 0.0);
-    TVec2D dy = vec2d(0.0, 0.33 * radius);
-    TVec2D center = vec2d(xseg.center(), yseg.center());
+    TVec2D dx(0.33 * radius, 0.0);
+    TVec2D dy(0.0, 0.33 * radius);
+    TVec2D center(xseg.center(), yseg.center());
 
     TVec2D v[4] = {
-      vec2d(cos_45, -cos_45),
-      vec2d(-cos_45, -cos_45),
-      vec2d(-cos_45, cos_45),
-      vec2d(cos_45, cos_45)
+      TVec2D(cos_45, -cos_45),
+      TVec2D(-cos_45, -cos_45),
+      TVec2D(-cos_45, cos_45),
+      TVec2D(cos_45, cos_45)
     };
 
     TVec2D p[12];
@@ -3326,7 +3493,7 @@ namespace yae
     const Segment & xseg = this->xExtent();
     const Segment & yseg = this->yExtent();
 
-    TVec2D center = vec2d(xseg.center(), yseg.center());
+    TVec2D center(xseg.center(), yseg.center());
     double radius = 0.5 * (yseg.length_ < xseg.length_ ?
                            yseg.length_ :
                            xseg.length_);
@@ -3341,7 +3508,7 @@ namespace yae
       for (unsigned int i = 0; i < 49; i++)
       {
         unsigned int j = i % 48;
-        TVec2D v = vec2d(circle[j][0], -circle[j][1]);
+        TVec2D v(circle[j][0], -circle[j][1]);
         TVec2D p0 = center + (0.32 * radius) * v;
         TVec2D p1 = center + (0.45 * radius) * v;
         YAE_OGL_11(glVertex2dv(p0.coord_));
@@ -3352,8 +3519,8 @@ namespace yae
 
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {
-      TVec2D u = vec2d(circle[6][0], -circle[6][1]);
-      TVec2D v = vec2d(circle[42][0], -circle[42][1]);
+      TVec2D u(circle[6][0], -circle[6][1]);
+      TVec2D v(circle[42][0], -circle[42][1]);
 
       double w = 0.085 * radius;
       double r0 = 0.45 * radius;
@@ -3392,6 +3559,56 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getContentView
+  //
+  static void
+  getContentView(const Scrollable & sview,
+                   TVec2D & origin,
+                   Segment & xView,
+                   Segment & yView)
+  {
+    double sceneHeight = sview.content_.height();
+    double viewHeight = sview.height();
+
+    const Segment & xExtent = sview.xExtent();
+    const Segment & yExtent = sview.yExtent();
+
+    double dy = 0.0;
+    if (sceneHeight > viewHeight)
+    {
+      double range = sceneHeight - viewHeight;
+      dy = sview.position_ * range;
+    }
+
+    origin.x() = xExtent.origin_;
+    origin.y() = yExtent.origin_ + dy;
+    xView = Segment(0.0, xExtent.length_);
+    yView = Segment(dy, yExtent.length_);
+  }
+
+  //----------------------------------------------------------------
+  // Scrollable::getMouseArea
+  //
+  bool
+  Scrollable::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  {
+    TVec2D origin;
+    Segment xView;
+    Segment yView;
+    getContentView(*this, origin, xView, yView);
+
+    TVec2D ptInViewCoords = pt - origin;
+    TVec2D offsetToView = offset + origin;
+    if (content_.getMouseArea(ptInViewCoords, ma, offsetToView))
+    {
+      offset = offsetToView;
+      return true;
+    }
+
+    return Item::getMouseArea(pt, ma, offset);
+  }
+
+  //----------------------------------------------------------------
   // Scrollable::paint
   //
   bool
@@ -3403,24 +3620,15 @@ namespace yae
       return false;
     }
 
-    double sceneHeight = content_.height();
-    double viewHeight = this->height();
-
-    const Segment & xExtent = this->xExtent();
-    const Segment & yExtent = this->yExtent();
-
-    double dy = 0.0;
-    if (sceneHeight > viewHeight)
-    {
-      double range = sceneHeight - viewHeight;
-      dy = position_ * range;
-    }
+    TVec2D origin;
+    Segment xView;
+    Segment yView;
+    getContentView(*this, origin, xView, yView);
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(xExtent.origin_, yExtent.origin_ + dy, 0.0));
-    content_.paint(Segment(0.0, xExtent.length_),
-                   Segment(dy, yExtent.length_));
+    YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
+    content_.paint(xView, yView);
 
     return true;
   }
@@ -3456,7 +3664,10 @@ namespace yae
     model_(NULL),
     root_(new Item("playlist")),
     w_(0.0),
-    h_(0.0)
+    h_(0.0),
+    mouseArea_(NULL),
+    mouseButtonPressed_(false),
+    mouseDragStarted_(false)
   {
     layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
       TLayoutPtr(new GroupListLayout());
@@ -3548,6 +3759,103 @@ namespace yae
         << yae::toString(et)
         << std::endl;
 #endif
+    }
+
+    if (et == QEvent::MouseButtonPress ||
+        et == QEvent::MouseButtonRelease ||
+        et == QEvent::MouseButtonDblClick ||
+        et == QEvent::MouseMove)
+    {
+      QMouseEvent * e = static_cast<QMouseEvent *>(event);
+      return processMouseEvent(canvas, e);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::processMouseEvent
+  //
+  bool
+  PlaylistView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
+  {
+    QEvent::Type et = e->type();
+    QPointF pos = e->posF();
+    TVec2D pt(pos.x(), pos.y());
+
+    if (et == QEvent::MouseButtonPress)
+    {
+      if (mouseButtonPressed_ && mouseArea_)
+      {
+        TVec2D mouseAreaPt = mousePressedPt_ - mouseAreaOffset_;
+        mouseArea_->mouseReleased(mouseAreaPt, NULL);
+        mouseArea_ = NULL;
+      }
+
+      mouseButtonPressed_ = true;
+      mouseDragStarted_ = false;
+      mousePressedPt_ = pt;
+      mouseArea_ = NULL;
+
+      if (!root_->getMouseArea(pt, mouseArea_, mouseAreaOffset_))
+      {
+        return false;
+      }
+
+      TVec2D mouseAreaPt = pt - mouseAreaOffset_;
+      mouseArea_->mousePressed(mouseAreaPt, e);
+      return true;
+    }
+
+    if (et == QEvent::MouseMove)
+    {
+      mouseDragStarted_ = mouseButtonPressed_;
+
+      if (!mouseArea_)
+      {
+        return false;
+      }
+
+      TVec2D mouseAreaPt = pt - mouseAreaOffset_;
+      if (mouseDragStarted_)
+      {
+        mouseArea_->mouseDrag(mouseAreaPt, e);
+        return true;
+      }
+
+      mouseArea_->mouseMove(mouseAreaPt, e);
+    }
+    else if (et == QEvent::MouseButtonRelease)
+    {
+      bool pressed = mouseButtonPressed_;
+      bool clicked = (mouseButtonPressed_ && !mouseDragStarted_);
+
+      mouseButtonPressed_ = false;
+      mouseDragStarted_ = false;
+
+      if (mouseArea_ && pressed)
+      {
+        TVec2D mouseAreaPt = pt - mouseAreaOffset_;
+        if (clicked)
+        {
+          mouseArea_->mouseClicked(mouseAreaPt, e);
+        }
+        else
+        {
+          mouseArea_->mouseReleased(mouseAreaPt, e);
+        }
+
+        return true;
+      }
+    }
+    else if (et == QEvent::MouseButtonDblClick)
+    {
+      if (mouseArea_)
+      {
+        TVec2D mouseAreaPt = pt - mouseAreaOffset_;
+        mouseArea_->mouseDoubleClicked(mouseAreaPt, e);
+        return true;
+      }
     }
 
     return false;
@@ -3701,6 +4009,20 @@ namespace yae
     }
 
     TMakeCurrentContext currentContext(*context());
+
+    if (mouseArea_)
+    {
+      if (mouseButtonPressed_)
+      {
+        TVec2D mouseAreaPt = mousePressedPt_ - mouseAreaOffset_;
+        mouseArea_->mouseReleased(mouseAreaPt, NULL);
+        mouseButtonPressed_ = false;
+      }
+
+      mouseDragStarted_ = false;
+      mouseArea_ = NULL;
+    }
+
     root_.reset(new Item("playlist"));
     Item & root = *root_;
 

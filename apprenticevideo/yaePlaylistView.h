@@ -18,10 +18,11 @@
 #include <boost/shared_ptr.hpp>
 
 // Qt interfaces:
-#include <QObject>
 #include <QFont>
-#include <QString>
 #include <QFontMetricsF>
+#include <QMouseEvent>
+#include <QObject>
+#include <QString>
 #include <QVariant>
 
 // local interfaces:
@@ -34,6 +35,7 @@ namespace yae
 {
   // forward declarations:
   class PlaylistView;
+  class MouseArea;
 
   //----------------------------------------------------------------
   // Vec
@@ -248,19 +250,29 @@ namespace yae
   //----------------------------------------------------------------
   // TVec2D
   //
-  typedef Vec<double, 2> TVec2D;
-
-  //----------------------------------------------------------------
-  // vec2d
-  //
-  inline static TVec2D
-  vec2d(double x, double y)
+  struct TVec2D : public Vec<double, 2>
   {
-    TVec2D v;
-    v.coord_[0] = x;
-    v.coord_[1] = y;
-    return v;
-  }
+    typedef Vec<double, 2> TBase;
+
+    inline TVec2D(double x = 0.0, double y = 0.0)
+    {
+      TBase::coord_[0] = x;
+      TBase::coord_[1] = y;
+    }
+
+    inline TVec2D(const TBase & v): TBase(v) {}
+    inline TVec2D & operator = (const TBase & v)
+    {
+      TBase::operator = (v);
+      return *this;
+    }
+
+    inline const double & x() const { return TBase::coord_[0]; }
+    inline const double & y() const { return TBase::coord_[1]; }
+
+    inline double & x() { return TBase::coord_[0]; }
+    inline double & y() { return TBase::coord_[1]; }
+  };
 
   //----------------------------------------------------------------
   // TVar
@@ -310,6 +322,12 @@ namespace yae
 
     inline bool overlap(const Segment & b) const
     { return !this->disjoint(b); }
+
+    inline bool disjoint(double pt) const
+    { return this->start() > pt || pt > this->end(); }
+
+    inline bool overlap(double pt) const
+    { return !this->disjoint(pt); }
 
     inline double start() const
     { return origin_; }
@@ -993,6 +1011,16 @@ namespace yae
       return ItemRef::expression(*e, scale, translate);
     }
 
+    // helper:
+    bool overlaps(const TVec2D & pt) const;
+
+    // depth-first search for the mouse area overlapping a given point,
+    // pass back origin offset for mapping from view coordinate space
+    // to mouse area coordinate space (mouseAreaPt = viewPt - offset):
+    virtual bool getMouseArea(const TVec2D & pt,
+                              MouseArea *& ma,
+                              TVec2D & offset);
+
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}
 
@@ -1060,6 +1088,24 @@ namespace yae
   // ItemPtr
   //
   typedef Item::ItemPtr ItemPtr;
+
+  //----------------------------------------------------------------
+  // MouseArea
+  //
+  struct MouseArea : public Item
+  {
+    MouseArea(const char * id);
+
+    // virtual:
+    bool getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset);
+
+    virtual void mousePressed(const TVec2D & pt, const QMouseEvent * e);
+    virtual void mouseReleased(const TVec2D & pt, const QMouseEvent * e);
+    virtual void mouseMove(const TVec2D & pt, const QMouseEvent * e);
+    virtual void mouseDrag(const TVec2D & pt, const QMouseEvent * e);
+    virtual void mouseClicked(const TVec2D & pt, const QMouseEvent * e);
+    virtual void mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e);
+  };
 
   //----------------------------------------------------------------
   // Image
@@ -1224,6 +1270,7 @@ namespace yae
 
     // virtual:
     void uncache();
+    bool getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset);
     bool paint(const Segment & xregion, const Segment & yregion) const;
     void unpaint();
 
@@ -1245,16 +1292,14 @@ namespace yae
   //----------------------------------------------------------------
   // ILayoutDelegate
   //
+  template <typename TView, typename TModel>
   struct YAE_API ILayoutDelegate
   {
-    typedef boost::shared_ptr<ILayoutDelegate> TLayoutPtr;
-    typedef PlaylistModel::LayoutHint TLayoutHint;
-
     virtual ~ILayoutDelegate() {}
 
     virtual void layout(Item & item,
-                        const PlaylistView & view,
-                        const PlaylistModelProxy & model,
+                        const TView & view,
+                        const TModel & model,
                         const QModelIndex & itemIndex) = 0;
   };
 
@@ -1267,8 +1312,9 @@ namespace yae
     Q_OBJECT;
 
   public:
-    typedef ILayoutDelegate::TLayoutPtr TLayoutPtr;
-    typedef ILayoutDelegate::TLayoutHint TLayoutHint;
+    typedef ILayoutDelegate<PlaylistView, PlaylistModelProxy> TLayoutDelegate;
+    typedef boost::shared_ptr<TLayoutDelegate> TLayoutPtr;
+    typedef PlaylistModel::LayoutHint TLayoutHint;
     typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
 
     typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
@@ -1284,6 +1330,9 @@ namespace yae
 
     // virtual:
     bool processEvent(Canvas * canvas, QEvent * event);
+
+    // helper:
+    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 
     // data source:
     void setModel(PlaylistModelProxy * model);
@@ -1325,6 +1374,14 @@ namespace yae
     ItemPtr root_;
     double w_;
     double h_;
+
+    // pointer to mouse area where mouse press event occurred,
+    // will be cleared if layout changes or mouse release event occurs
+    MouseArea * mouseArea_;
+    TVec2D mousePressedPt_;
+    TVec2D mouseAreaOffset_;
+    bool mouseButtonPressed_;
+    bool mouseDragStarted_;
   };
 
 }
