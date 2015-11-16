@@ -1130,6 +1130,7 @@ namespace yae
     QFont font_;
     Qt::AlignmentFlag alignment_;
     Qt::TextElideMode elide_;
+    double supersample_;
 
     TVarRef text_;
     ItemRef fontSize_; // in points

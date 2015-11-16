@@ -539,22 +539,22 @@ namespace yae
   {
     QFont font = item.font_;
     double fontSize = item.fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    font.setPointSizeF(fontSize * item.supersample_);
     QFontMetricsF fm(font);
 
     QRectF maxRect(0.0, 0.0,
-                   maxWidth * kSupersampleText,
-                   maxHeight * kSupersampleText);
+                   maxWidth * item.supersample_,
+                   maxHeight * item.supersample_);
 
     int flags = item.textFlags();
     QString text =
-      getElidedText(maxWidth * kSupersampleText, item, fm, flags);
+      getElidedText(maxWidth * item.supersample_, item, fm, flags);
 
     QRectF rect = fm.boundingRect(maxRect, flags, text);
-    bbox.x_ = rect.x() / kSupersampleText;
-    bbox.y_ = rect.y() / kSupersampleText;
-    bbox.w_ = rect.width() / kSupersampleText;
-    bbox.h_ = rect.height() / kSupersampleText;
+    bbox.x_ = rect.x() / item.supersample_;
+    bbox.y_ = rect.y() / item.supersample_;
+    bbox.w_ = rect.width() / item.supersample_;
+    bbox.h_ = rect.height() / item.supersample_;
   }
 
   //----------------------------------------------------------------
@@ -638,6 +638,50 @@ namespace yae
   // TQueryBool
   //
   typedef TModelQuery<bool> TQueryBool;
+
+  //----------------------------------------------------------------
+  // IsModelSortedBy
+  //
+  struct IsModelSortedBy : public TBoolExpr
+  {
+    IsModelSortedBy(const PlaylistModelProxy & model,
+                    PlaylistModelProxy::SortBy sortBy):
+      model_(model),
+      sortBy_(sortBy)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      PlaylistModelProxy::SortBy modelSortedBy = model_.sortBy();
+      result = (modelSortedBy == sortBy_);
+    }
+
+    const PlaylistModelProxy & model_;
+    PlaylistModelProxy::SortBy sortBy_;
+  };
+
+  //----------------------------------------------------------------
+  // IsModelSortOrder
+  //
+  struct IsModelSortOrder : public TBoolExpr
+  {
+    IsModelSortOrder(const PlaylistModelProxy & model,
+                     Qt::SortOrder sortOrder):
+      model_(model),
+      sortOrder_(sortOrder)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      Qt::SortOrder modelSortOrder = model_.sortOrder();
+      result = (modelSortOrder == sortOrder_);
+    }
+
+    const PlaylistModelProxy & model_;
+    Qt::SortOrder sortOrder_;
+  };
 
   //----------------------------------------------------------------
   // UploadTexture
@@ -1767,6 +1811,129 @@ namespace yae
     text.font_.setBold(true);
     // text.margins_.top_ = text.addExpr(new GetFontDescent(text), 0, 1);
 #endif
+
+    // layout sort-and-order:
+    ColorRef underlineColor = ColorRef::constant(Color(0xff0000, 1.0));
+    ColorRef sortColor = ColorRef::constant(Color(0xffffff, 0.5));
+    ItemRef smallFontSize = ItemRef::scale(fontSize,
+                                           kPropertyHeight,
+                                           0.7 * kDpiScale);
+    QFont smallFont("Arial Black");
+    smallFont.setBold(true);
+
+    Item & sortAndOrder = item.addNew<Item>("sort_and_order");
+    sortAndOrder.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
+    sortAndOrder.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
+    sortAndOrder.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.25);
+
+    Rectangle & ulName = sortAndOrder.addNew<Rectangle>("underline_name");
+    Rectangle & ulTime = sortAndOrder.addNew<Rectangle>("underline_time");
+    Rectangle & ulAsc = sortAndOrder.addNew<Rectangle>("underline_asc");
+    Rectangle & ulDesc = sortAndOrder.addNew<Rectangle>("underline_desc");
+
+    Text & sortBy = sortAndOrder.addNew<Text>("sort_by");
+    sortBy.anchors_.left_ = ItemRef::reference(sortAndOrder, kPropertyLeft);
+    sortBy.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    sortBy.text_ = TVarRef::constant(TVar(QObject::tr("sort by ")));
+    sortBy.color_ = sortColor;
+    sortBy.font_ = smallFont;
+    sortBy.fontSize_ = smallFontSize;
+
+    Text & byName = sortAndOrder.addNew<Text>("by_name");
+    byName.anchors_.left_ = ItemRef::reference(sortBy, kPropertyRight);
+    byName.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    byName.text_ = TVarRef::constant(TVar(QObject::tr("name")));
+    byName.color_ = sortColor;
+    byName.font_ = smallFont;
+    byName.fontSize_ = smallFontSize;
+
+    Text & nameOr = sortAndOrder.addNew<Text>("name_or");
+    nameOr.anchors_.left_ = ItemRef::reference(byName, kPropertyRight);
+    nameOr.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    nameOr.text_ = TVarRef::constant(TVar(QObject::tr(" or ")));
+    nameOr.color_ = sortColor;
+    nameOr.font_ = smallFont;
+    nameOr.fontSize_ = smallFontSize;
+
+    Text & orTime = sortAndOrder.addNew<Text>("or_time");
+    orTime.anchors_.left_ = ItemRef::reference(nameOr, kPropertyRight);
+    orTime.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    orTime.text_ = TVarRef::constant(TVar(QObject::tr("time")));
+    orTime.color_ = sortColor;
+    orTime.font_ = smallFont;
+    orTime.fontSize_ = smallFontSize;
+
+    Text & comma = sortAndOrder.addNew<Text>("comma");
+    comma.anchors_.left_ = ItemRef::reference(orTime, kPropertyRight);
+    comma.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    comma.text_ = TVarRef::constant(TVar(QObject::tr(", in ")));
+    comma.color_ = sortColor;
+    comma.font_ = smallFont;
+    comma.fontSize_ = smallFontSize;
+
+    Text & inAsc = sortAndOrder.addNew<Text>("in_asc");
+    inAsc.anchors_.left_ = ItemRef::reference(comma, kPropertyRight);
+    inAsc.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    inAsc.text_ = TVarRef::constant(TVar(QObject::tr("ascending")));
+    inAsc.color_ = sortColor;
+    inAsc.font_ = smallFont;
+    inAsc.fontSize_ = smallFontSize;
+
+    Text & ascOr = sortAndOrder.addNew<Text>("asc_or");
+    ascOr.anchors_.left_ = ItemRef::reference(inAsc, kPropertyRight);
+    ascOr.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    ascOr.text_ = TVarRef::constant(TVar(QObject::tr(" or ")));
+    ascOr.color_ = sortColor;
+    ascOr.font_ = smallFont;
+    ascOr.fontSize_ = smallFontSize;
+
+    Text & orDesc = sortAndOrder.addNew<Text>("or_desc");
+    orDesc.anchors_.left_ = ItemRef::reference(ascOr, kPropertyRight);
+    orDesc.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    orDesc.text_ = TVarRef::constant(TVar(QObject::tr("descending")));
+    orDesc.color_ = sortColor;
+    orDesc.font_ = smallFont;
+    orDesc.fontSize_ = smallFontSize;
+
+    Text & order = sortAndOrder.addNew<Text>("order");
+    order.anchors_.left_ = ItemRef::reference(orDesc, kPropertyRight);
+    order.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
+    order.text_ = TVarRef::constant(TVar(QObject::tr(" order")));
+    order.color_ = sortColor;
+    order.font_ = smallFont;
+    order.fontSize_ = smallFontSize;
+
+    ulName.anchors_.left_ = ItemRef::offset(byName, kPropertyLeft, -1);
+    ulName.anchors_.right_ = ItemRef::offset(byName, kPropertyRight, 1);
+    ulName.anchors_.top_ = ItemRef::offset(byName, kPropertyBottom, 0);
+    ulName.height_ = ItemRef::constant(2);
+    ulName.color_ = underlineColor;
+    ulName.visible_ = ulName.
+      addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByName));
+
+    ulTime.anchors_.left_ = ItemRef::offset(orTime, kPropertyLeft, -1);
+    ulTime.anchors_.right_ = ItemRef::offset(orTime, kPropertyRight, 1);
+    ulTime.anchors_.top_ = ItemRef::offset(orTime, kPropertyBottom, 0);
+    ulTime.height_ = ItemRef::constant(2);
+    ulTime.color_ = underlineColor;
+    ulTime.visible_ = ulTime.
+      addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByTime));
+
+    ulAsc.anchors_.left_ = ItemRef::offset(inAsc, kPropertyLeft, -1);
+    ulAsc.anchors_.right_ = ItemRef::offset(inAsc, kPropertyRight, 1);
+    ulAsc.anchors_.top_ = ItemRef::offset(inAsc, kPropertyBottom, 0);
+    ulAsc.height_ = ItemRef::constant(2);
+    ulAsc.color_ = underlineColor;
+    ulAsc.visible_ = ulAsc.
+      addExpr(new IsModelSortOrder(model, Qt::AscendingOrder));
+
+    ulDesc.anchors_.left_ = ItemRef::offset(orDesc, kPropertyLeft, -1);
+    ulDesc.anchors_.right_ = ItemRef::offset(orDesc, kPropertyRight, 1);
+    ulDesc.anchors_.top_ = ItemRef::offset(orDesc, kPropertyBottom, 0);
+    ulDesc.height_ = ItemRef::constant(2);
+    ulDesc.color_ = underlineColor;
+    ulDesc.visible_ = ulDesc.
+      addExpr(new IsModelSortOrder(model, Qt::DescendingOrder));
   }
 
   //----------------------------------------------------------------
@@ -1811,6 +1978,7 @@ namespace yae
       sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
       sview.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
       sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+      sview.margins_.top_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.75);
 
       Item & groups = sview.content_;
       groups.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
@@ -2441,14 +2609,14 @@ namespace yae
     QRectF maxRect;
     getMaxRect(item, maxRect);
 
-    maxRect.setWidth(maxRect.width() * kSupersampleText);
-    maxRect.setHeight(maxRect.height() * kSupersampleText);
+    maxRect.setWidth(maxRect.width() * item.supersample_);
+    maxRect.setHeight(maxRect.height() * item.supersample_);
 
     BBox bboxContent;
     item.get(kPropertyBBoxContent, bboxContent);
 
-    int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
-    int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
+    int iw = (int)ceil(bboxContent.w_ * item.supersample_);
+    int ih = (int)ceil(bboxContent.h_ * item.supersample_);
 
     QImage img(iw, ih, QImage::Format_ARGB32);
     {
@@ -2457,7 +2625,7 @@ namespace yae
       QPainter painter(&img);
       QFont font = item.font_;
       double fontSize = item.fontSize_.get();
-      font.setPointSizeF(fontSize * kSupersampleText);
+      font.setPointSizeF(fontSize * item.supersample_);
       painter.setFont(font);
 
       QFontMetricsF fm(font);
@@ -2476,8 +2644,8 @@ namespace yae
       QRectF result;
       painter.drawText(maxRect, flags, text, &result);
 
-      if (result.width() / kSupersampleText != bboxContent.w_ ||
-          result.height() / kSupersampleText != bboxContent.h_)
+      if (result.width() / item.supersample_ != bboxContent.w_ ||
+          result.height() / item.supersample_ != bboxContent.h_)
       {
         YAE_ASSERT(false);
 
@@ -2524,6 +2692,7 @@ namespace yae
     font_("Impact, Charcoal, sans-serif"),
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
+    supersample_(kSupersampleText),
     color_(ColorRef::constant(Color(0xffffff, 1.0)))
   {
     font_.setHintingPreference(QFont::PreferFullHinting);
@@ -2567,9 +2736,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    font.setPointSizeF(fontSize * supersample_);
     QFontMetricsF fm(font);
-    double ascent = fm.ascent() / kSupersampleText;
+    double ascent = fm.ascent() / supersample_;
     return ascent;
   }
 
@@ -2581,9 +2750,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    font.setPointSizeF(fontSize * supersample_);
     QFontMetricsF fm(font);
-    double descent = fm.descent() / kSupersampleText;
+    double descent = fm.descent() / supersample_;
     return descent;
   }
 
@@ -2595,9 +2764,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    font.setPointSizeF(fontSize * supersample_);
     QFontMetricsF fm(font);
-    double fh = fm.height() / kSupersampleText;
+    double fh = fm.height() / supersample_;
     return fh;
   }
 
