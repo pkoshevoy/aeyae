@@ -36,7 +36,7 @@ namespace yae
   //----------------------------------------------------------------
   // kSupersampleText
   //
-  static const double kSupersampleText = 2.0;
+  static const double kSupersampleText = 1.5;
 
 
   //----------------------------------------------------------------
