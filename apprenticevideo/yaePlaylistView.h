@@ -1048,7 +1048,7 @@ namespace yae
     std::string id_;
 
     // parent item:
-    const Item * parent_;
+    Item * parent_;
 
     // nested items:
     std::vector<ItemPtr> children_;
@@ -1099,12 +1099,12 @@ namespace yae
     // virtual:
     bool getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset);
 
-    virtual void mousePressed(const TVec2D & pt, const QMouseEvent * e);
-    virtual void mouseReleased(const TVec2D & pt, const QMouseEvent * e);
-    virtual void mouseMove(const TVec2D & pt, const QMouseEvent * e);
-    virtual void mouseDrag(const TVec2D & pt, const QMouseEvent * e);
-    virtual void mouseClicked(const TVec2D & pt, const QMouseEvent * e);
-    virtual void mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mousePressed(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mouseReleased(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mouseMove(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mouseDrag(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mouseClicked(const TVec2D & pt, const QMouseEvent * e);
+    virtual bool mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e);
   };
 
   //----------------------------------------------------------------
@@ -1262,11 +1262,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // Scrollable
+  // Scrollview
   //
-  struct Scrollable : public Item
+  struct Scrollview : public Item
   {
-    Scrollable(const char * id);
+    Scrollview(const char * id);
 
     // virtual:
     void uncache();

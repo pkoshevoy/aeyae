@@ -227,7 +227,7 @@ namespace yae
   //
   struct CalcSliderTop : public TDoubleExpr
   {
-    CalcSliderTop(const Scrollable & view, const Item & slider):
+    CalcSliderTop(const Scrollview & view, const Item & slider):
       view_(view),
       slider_(slider)
     {}
@@ -251,7 +251,7 @@ namespace yae
       result += y;
     }
 
-    const Scrollable & view_;
+    const Scrollview & view_;
     const Item & slider_;
   };
 
@@ -260,7 +260,7 @@ namespace yae
   //
   struct CalcSliderHeight : public TDoubleExpr
   {
-    CalcSliderHeight(const Scrollable & view, const Item & slider):
+    CalcSliderHeight(const Scrollview & view, const Item & slider):
       view_(view),
       slider_(slider)
     {}
@@ -281,7 +281,7 @@ namespace yae
       result = minHeight + (viewHeight - minHeight) * scale;
     }
 
-    const Scrollable & view_;
+    const Scrollview & view_;
     const Item & slider_;
   };
 
@@ -1992,6 +1992,75 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SliderMouseArea
+  //
+  struct SliderMouseArea : public MouseArea
+  {
+    SliderMouseArea(const char * id):
+      MouseArea(id),
+      canvasLayer_(NULL),
+      scrollview_(NULL),
+      scrollbar_(NULL),
+      startPos_(0.0)
+    {}
+
+    // virtual:
+    bool mousePressed(const TVec2D & pt, const QMouseEvent * e)
+    {
+      if (!(e->button() == Qt::LeftButton) ||
+          !(canvasLayer_ && scrollview_ && scrollbar_))
+      {
+        return false;
+      }
+
+      startPos_ = scrollview_->position_;
+      startPt_ = pt;
+      return true;
+    }
+
+    // virtual:
+    bool mouseReleased(const TVec2D & pt, const QMouseEvent * e)
+    {
+      if (e->button() != Qt::LeftButton)
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    // virtual:
+    bool mouseDrag(const TVec2D & pt, const QMouseEvent * e)
+    {
+      if (!(e->buttons() & Qt::LeftButton) ||
+          !(canvasLayer_ && scrollview_ && scrollbar_))
+      {
+        return false;
+      }
+
+      double bh = scrollbar_->height();
+      double sh = this->height();
+      double yRange = bh - sh;
+
+      double dy = pt.y() - startPt_.y();
+      double dt = dy / yRange;
+      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
+      scrollview_->position_ = t;
+
+      this->parent_->uncache();
+      canvasLayer_->delegate()->requestRepaint();
+
+      return true;
+    }
+
+    const Canvas::ILayer * canvasLayer_;
+    Scrollview * scrollview_;
+    Item * scrollbar_;
+    double startPos_;
+    TVec2D startPt_;
+  };
+
+  //----------------------------------------------------------------
   // GroupListLayout
   //
   struct GroupListLayout : public PlaylistView::TLayoutDelegate
@@ -2014,13 +2083,13 @@ namespace yae
       background.anchors_.fill(root);
       background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
 
+      Scrollview & sview = root.addNew<Scrollview>("scrollview");
       Item & filter = root.addNew<Item>("filter");
       filter.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       filter.width_ = ItemRef::reference(root, kPropertyWidth);
       filter.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.5);
 
-      Scrollable & sview = root.addNew<Scrollable>("scrollable");
 
       Item & scrollbar = root.addNew<Item>("scrollbar");
       scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
@@ -2101,8 +2170,11 @@ namespace yae
       MouseArea & maScrollbar = scrollbar.addNew<MouseArea>("ma_scrollbar");
       maScrollbar.anchors_.fill(scrollbar);
 
-      MouseArea & maSlider = slider.addNew<MouseArea>("ma_slider");
+      SliderMouseArea & maSlider = slider.addNew<SliderMouseArea>("ma_slider");
       maSlider.anchors_.fill(slider);
+      maSlider.canvasLayer_ = &view;
+      maSlider.scrollview_ = &sview;
+      maSlider.scrollbar_ = &scrollbar;
     }
   };
 
@@ -2333,73 +2405,79 @@ namespace yae
   //----------------------------------------------------------------
   // MouseArea::mousePressed
   //
-  void
+  bool
   MouseArea::mousePressed(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mousePressed(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
   //----------------------------------------------------------------
   // MouseArea::mouseReleased
   //
-  void
+  bool
   MouseArea::mouseReleased(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mouseReleased(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
   //----------------------------------------------------------------
   // MouseArea::mouseMove
   //
-  void
+  bool
   MouseArea::mouseMove(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mouseMove(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
   //----------------------------------------------------------------
   // MouseArea::mouseDrag
   //
-  void
+  bool
   MouseArea::mouseDrag(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mouseDrag(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
   //----------------------------------------------------------------
   // MouseArea::mouseClicked
   //
-  void
+  bool
   MouseArea::mouseClicked(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mouseClicked(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
   //----------------------------------------------------------------
   // MouseArea::mouseDoubleClicked
   //
-  void
+  bool
   MouseArea::mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e)
   {
     std::cerr
       << "FIXME: " << id_
       << ": mouseDoubleClicked(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+    return false;
   }
 
 
@@ -3540,19 +3618,19 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Scrollable::Scrollable
+  // Scrollview::Scrollview
   //
-  Scrollable::Scrollable(const char * id):
+  Scrollview::Scrollview(const char * id):
     Item(id),
     content_("content"),
     position_(0.0)
   {}
 
   //----------------------------------------------------------------
-  // Scrollable::uncache
+  // Scrollview::uncache
   //
   void
-  Scrollable::uncache()
+  Scrollview::uncache()
   {
     Item::uncache();
     content_.uncache();
@@ -3562,7 +3640,7 @@ namespace yae
   // getContentView
   //
   static void
-  getContentView(const Scrollable & sview,
+  getContentView(const Scrollview & sview,
                    TVec2D & origin,
                    Segment & xView,
                    Segment & yView)
@@ -3581,16 +3659,16 @@ namespace yae
     }
 
     origin.x() = xExtent.origin_;
-    origin.y() = yExtent.origin_ + dy;
+    origin.y() = yExtent.origin_ - dy;
     xView = Segment(0.0, xExtent.length_);
     yView = Segment(dy, yExtent.length_);
   }
 
   //----------------------------------------------------------------
-  // Scrollable::getMouseArea
+  // Scrollview::getMouseArea
   //
   bool
-  Scrollable::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  Scrollview::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
   {
     TVec2D origin;
     Segment xView;
@@ -3609,10 +3687,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Scrollable::paint
+  // Scrollview::paint
   //
   bool
-  Scrollable::paint(const Segment & xregion, const Segment & yregion) const
+  Scrollview::paint(const Segment & xregion, const Segment & yregion) const
   {
     if (!Item::paint(xregion, yregion))
     {
@@ -3634,10 +3712,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Scrollable::unpaint
+  // Scrollview::unpaint
   //
   void
-  Scrollable::unpaint()
+  Scrollview::unpaint()
   {
     Item::unpaint();
     content_.unpaint();
@@ -3645,10 +3723,10 @@ namespace yae
 
 #ifndef NDEBUG
   //----------------------------------------------------------------
-  // Scrollable::dump
+  // Scrollview::dump
   //
   void
-  Scrollable::dump(std::ostream & os, const std::string & indent) const
+  Scrollview::dump(std::ostream & os, const std::string & indent) const
   {
     Item::dump(os, indent);
     content_.dump(os, indent + "  ");
@@ -3794,6 +3872,7 @@ namespace yae
 
       mouseButtonPressed_ = true;
       mouseDragStarted_ = false;
+      mouseAreaOffset_ = TVec2D();
       mousePressedPt_ = pt;
       mouseArea_ = NULL;
 
@@ -3803,24 +3882,28 @@ namespace yae
       }
 
       TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-      mouseArea_->mousePressed(mouseAreaPt, e);
-      return true;
+      return mouseArea_->mousePressed(mouseAreaPt, e);
     }
 
     if (et == QEvent::MouseMove)
     {
       mouseDragStarted_ = mouseButtonPressed_;
 
-      if (!mouseArea_)
+      if (!mouseDragStarted_)
       {
-        return false;
+        mouseAreaOffset_ = TVec2D();
+        mouseArea_ = NULL;
+
+        if (!root_->getMouseArea(pt, mouseArea_, mouseAreaOffset_))
+        {
+          return false;
+        }
       }
 
       TVec2D mouseAreaPt = pt - mouseAreaOffset_;
       if (mouseDragStarted_)
       {
-        mouseArea_->mouseDrag(mouseAreaPt, e);
-        return true;
+        return mouseArea_->mouseDrag(mouseAreaPt, e);
       }
 
       mouseArea_->mouseMove(mouseAreaPt, e);
@@ -3838,14 +3921,12 @@ namespace yae
         TVec2D mouseAreaPt = pt - mouseAreaOffset_;
         if (clicked)
         {
-          mouseArea_->mouseClicked(mouseAreaPt, e);
+          return mouseArea_->mouseClicked(mouseAreaPt, e);
         }
         else
         {
-          mouseArea_->mouseReleased(mouseAreaPt, e);
+          return mouseArea_->mouseReleased(mouseAreaPt, e);
         }
-
-        return true;
       }
     }
     else if (et == QEvent::MouseButtonDblClick)
@@ -3853,8 +3934,7 @@ namespace yae
       if (mouseArea_)
       {
         TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-        mouseArea_->mouseDoubleClicked(mouseAreaPt, e);
-        return true;
+        return mouseArea_->mouseDoubleClicked(mouseAreaPt, e);
       }
     }
 
