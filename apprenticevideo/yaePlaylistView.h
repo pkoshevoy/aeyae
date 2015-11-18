@@ -1186,6 +1186,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Gradient
+  //
+  struct Gradient : public Item
+  {
+    enum Orientation { kHorizontal, kVertical };
+
+    Gradient(const char * id);
+
+    // virtual:
+    void paintContent() const;
+
+    std::map<double, Color> color_;
+    Orientation orientation_;
+  };
+
+  //----------------------------------------------------------------
   // Rectangle
   //
   struct Rectangle : public Item
