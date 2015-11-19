@@ -154,14 +154,14 @@ namespace yae
         return fbo != NULL;
       }
 
+      virtual void repaint()
+      {
+        renderer_.update();
+      }
+
       virtual void requestRepaint()
       {
         renderer_.update();
-        // renderer_.fbo_.update();
-        // QQuickItem::Flags f = renderer_.fbo_.flags();
-        // YAE_ASSERT(f & QQuickItem::ItemHasContents);
-
-        // renderer_.fbo_.window()->update();
       }
 
       virtual void inhibitScreenSaver()

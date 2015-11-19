@@ -126,8 +126,12 @@ namespace yae
 
       virtual void repaint()
       {
+#if defined(YAE_USE_QT4)
         canvas_.paintCanvas();
         canvas_.TWidget::swapBuffers();
+#else
+        canvas_.TWidget::update();
+#endif
      }
 
       virtual void requestRepaint()

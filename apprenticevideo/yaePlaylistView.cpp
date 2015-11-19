@@ -3135,6 +3135,7 @@ namespace yae
     double t0 = i->first;
     const Color * c0 = &(i->second);
 
+    YAE_OGL_11_HERE();
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     for (++i; i != color_.end(); ++i)
     {
@@ -3935,7 +3936,7 @@ namespace yae
   PlaylistView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
   {
     QEvent::Type et = e->type();
-    QPointF pos = e->posF();
+    QPoint pos = e->pos();
     TVec2D pt(pos.x(), pos.y());
 
     if (et == QEvent::MouseButtonPress)
