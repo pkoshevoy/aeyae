@@ -2007,7 +2007,7 @@ namespace yae
     // virtual:
     bool mousePressed(const TVec2D & pt, const QMouseEvent * e)
     {
-      if (!(e->button() == Qt::LeftButton) ||
+      if (!e || !(e->button() == Qt::LeftButton) ||
           !(canvasLayer_ && scrollview_ && scrollbar_))
       {
         return false;
@@ -2021,7 +2021,7 @@ namespace yae
     // virtual:
     bool mouseReleased(const TVec2D & pt, const QMouseEvent * e)
     {
-      if (e->button() != Qt::LeftButton)
+      if (!e || e->button() != Qt::LeftButton)
       {
         return false;
       }
@@ -2032,7 +2032,7 @@ namespace yae
     // virtual:
     bool mouseDrag(const TVec2D & pt, const QMouseEvent * e)
     {
-      if (!(e->buttons() & Qt::LeftButton) ||
+      if (!e || !(e->buttons() & Qt::LeftButton) ||
           !(canvasLayer_ && scrollview_ && scrollbar_))
       {
         return false;
@@ -2417,10 +2417,12 @@ namespace yae
   bool
   MouseArea::mousePressed(const TVec2D & pt, const QMouseEvent * e)
   {
+#if 0
     std::cerr
       << "FIXME: " << id_
       << ": mousePressed(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+#endif
     return false;
   }
 
@@ -2443,10 +2445,12 @@ namespace yae
   bool
   MouseArea::mouseMove(const TVec2D & pt, const QMouseEvent * e)
   {
+#if 0
     std::cerr
       << "FIXME: " << id_
       << ": mouseMove(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+#endif
     return false;
   }
 
@@ -2456,10 +2460,12 @@ namespace yae
   bool
   MouseArea::mouseDrag(const TVec2D & pt, const QMouseEvent * e)
   {
+#if 0
     std::cerr
       << "FIXME: " << id_
       << ": mouseDrag(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+#endif
     return false;
   }
 
@@ -2469,10 +2475,12 @@ namespace yae
   bool
   MouseArea::mouseClicked(const TVec2D & pt, const QMouseEvent * e)
   {
+#if 0
     std::cerr
       << "FIXME: " << id_
       << ": mouseClicked(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+#endif
     return false;
   }
 
@@ -2482,10 +2490,12 @@ namespace yae
   bool
   MouseArea::mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e)
   {
+#if 0
     std::cerr
       << "FIXME: " << id_
       << ": mouseDoubleClicked(" << pt.x() << ", " << pt.y() << ")"
       << std::endl;
+#endif
     return false;
   }
 

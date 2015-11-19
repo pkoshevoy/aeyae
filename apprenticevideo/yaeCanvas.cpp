@@ -646,7 +646,7 @@ namespace yae
         return;
       }
 
-      delegate_->requestRepaint();
+      delegate_->repaint();
     }
   }
 
@@ -727,6 +727,15 @@ namespace yae
         event->accept();
 
         initializePrivateBackend();
+        refresh();
+        return true;
+      }
+
+      RepaintEvent * repaintEvent =
+        dynamic_cast<RepaintEvent *>(event);
+      if (repaintEvent)
+      {
+        event->accept();
         refresh();
         return true;
       }
@@ -989,6 +998,8 @@ namespace yae
     // initialize OpenGL GLEW wrapper:
     static bool initialized = initializeGlew();
 #endif
+
+    TMakeCurrentContext lock(context());
 
     // reset OpenGL to default/initial state:
     yae_reset_opengl_to_initial_state();

@@ -2391,6 +2391,8 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
+    bool showPlaylist = actionShowPlaylist->isChecked();
+
 #if (YAE_USE_PLAYER_QUICK_WIDGET)
     QQuickItem * playerItem = playerWidget_->rootObject();
     if (!playerItem)
@@ -2398,15 +2400,13 @@ namespace yae
       return;
     }
 
-    bool showPlaylist = actionShowPlaylist->isChecked();
     const char * state =
       showPlaylist ? "playlist" :
       playlistModel_.hasItems() ? "playback" :
       "welcome";
     playerItem->setState(QString::fromUtf8(state));
 #else
-    // FIXME: write me!
-    std::cerr << "FIXME: pkoshevoy: show playlist!" << std::endl;
+    playlistView_.setEnabled(showPlaylist);
 #endif
   }
 

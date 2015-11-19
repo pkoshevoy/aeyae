@@ -15,6 +15,7 @@
 #endif
 
 // Qt includes:
+#include <QApplication>
 #include <QCursor>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -123,9 +124,15 @@ namespace yae
         return canvas_.TWidget::isVisible();
       }
 
+      virtual void repaint()
+      {
+        canvas_.paintCanvas();
+        canvas_.TWidget::swapBuffers();
+     }
+
       virtual void requestRepaint()
       {
-        canvas_.TWidget::update();
+        qApp->postEvent(&canvas_, new Canvas::RepaintEvent());
       }
 
       virtual void inhibitScreenSaver()

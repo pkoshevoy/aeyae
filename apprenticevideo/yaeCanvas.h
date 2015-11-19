@@ -64,6 +64,7 @@ namespace yae
       virtual ~IDelegate() {}
 
       virtual bool isVisible() = 0;
+      virtual void repaint() = 0;
       virtual void requestRepaint() = 0;
       virtual void inhibitScreenSaver() = 0;
     };
@@ -237,24 +238,11 @@ namespace yae
     void paintCanvas();
 
     //----------------------------------------------------------------
-    // UpdateOverlayEvent
+    // RepaintEvent
     //
-    struct UpdateOverlayEvent : public QEvent
+    struct RepaintEvent : public QEvent
     {
-      UpdateOverlayEvent(): QEvent(QEvent::User) {}
-    };
-
-    //----------------------------------------------------------------
-    // LibassInitDoneEvent
-    //
-    struct LibassInitDoneEvent : public QEvent
-    {
-      LibassInitDoneEvent(TLibass * libass):
-        QEvent(QEvent::User),
-        libass_(libass)
-      {}
-
-      TLibass * libass_;
+      RepaintEvent(): QEvent(QEvent::User) {}
     };
 
     //----------------------------------------------------------------
