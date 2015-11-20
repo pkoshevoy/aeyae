@@ -93,7 +93,14 @@ namespace yae
       { return enabled_; }
 
       inline void setEnabled(bool enable = true)
-      { enabled_ = enable; }
+      {
+        enabled_ = enable;
+
+        if (delegate_)
+        {
+          delegate_->requestRepaint();
+        }
+      }
 
       virtual void resizeTo(const Canvas * canvas) = 0;
       virtual void paint(Canvas * canvas) = 0;
