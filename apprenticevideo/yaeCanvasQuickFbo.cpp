@@ -73,6 +73,7 @@ namespace yae
       }
 
       // this shouldn't happen:
+      YAE_ASSERT(false);
       prev_.pop_back();
       mutex_.unlock();
       return false;

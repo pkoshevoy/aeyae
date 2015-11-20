@@ -35,7 +35,7 @@ namespace yae
 {
   // forward declarations:
   class PlaylistView;
-  class MouseArea;
+  struct MouseArea;
 
   //----------------------------------------------------------------
   // Vec

@@ -127,6 +127,7 @@ namespace yae
       virtual void repaint()
       {
 #if defined(YAE_USE_QT4)
+        TMakeCurrentContext lock(canvas_.Canvas::context());
         canvas_.paintCanvas();
         canvas_.TWidget::swapBuffers();
 #else
@@ -196,7 +197,6 @@ namespace yae
     void paintGL()
     {
       Canvas::paintCanvas();
-      // Canvas::refresh();
     }
 
   public:

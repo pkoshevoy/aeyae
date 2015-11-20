@@ -994,12 +994,13 @@ namespace yae
   void
   Canvas::paintCanvas()
   {
+    // this is just to prevent concurrent OpenGL access to the same context:
+    TMakeCurrentContext lock(context(), false);
+
 #ifndef YAE_USE_QT5
     // initialize OpenGL GLEW wrapper:
     static bool initialized = initializeGlew();
 #endif
-
-    TMakeCurrentContext lock(context());
 
     // reset OpenGL to default/initial state:
     yae_reset_opengl_to_initial_state();

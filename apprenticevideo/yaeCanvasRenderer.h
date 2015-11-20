@@ -196,17 +196,32 @@ namespace yae
   //
   struct YAE_API IOpenGLContext
   {
+    IOpenGLContext(): n_(0) {}
     virtual ~IOpenGLContext() {}
 
-    inline bool lock()
+    inline bool lock(bool callMakeCurrent = true)
     {
       mutex_.lock();
-      return this->makeCurrent();
+      n_ += callMakeCurrent ? 1 : 2;
+
+      if (n_ == 1)
+      {
+        this->makeCurrent();
+      }
+
+      return true;
     }
 
     inline void unlock()
     {
-      this->doneCurrent();
+      YAE_ASSERT(n_ > 0);
+      n_--;
+
+      if (n_ == 0)
+      {
+        this->doneCurrent();
+      }
+
       mutex_.unlock();
     }
 
@@ -216,12 +231,27 @@ namespace yae
 
   private:
     boost::recursive_mutex mutex_;
+    std::size_t n_;
   };
 
   //----------------------------------------------------------------
   // TMakeCurrentContext
   //
-  typedef boost::lock_guard<IOpenGLContext> TMakeCurrentContext;
+  struct TMakeCurrentContext
+  {
+    TMakeCurrentContext(IOpenGLContext & context, bool makeCurrent = true):
+      context_(context)
+    {
+      context_.lock(makeCurrent);
+    }
+
+    ~TMakeCurrentContext()
+    {
+      context_.unlock();
+    }
+
+    IOpenGLContext & context_;
+  };
 
   //----------------------------------------------------------------
   // TGLSaveState
