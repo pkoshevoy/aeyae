@@ -61,11 +61,13 @@ namespace yae
       std::ostringstream oss;
       oss << row;
 
+#if 0
       if (ix.model())
       {
         QString v = ix.data().toString();
         oss << " (" << v.toUtf8().constData() << ")";
       }
+#endif
 
       if (!path.empty())
       {
@@ -4272,6 +4274,15 @@ namespace yae
            i != inputHandlers_.rend(); ++i)
       {
         InputHandler & handler = *i;
+
+        if (!dragged_ && pressed_ != &handler &&
+            handler.input_->onPress(handler.csysOrigin_, startPt_))
+        {
+          // previous handler didn't handle the drag event, try another:
+          pressed_->input_->onCancel();
+          pressed_ = &handler;
+        }
+
         if (handler.input_->onDrag(handler.csysOrigin_, startPt_, pt))
         {
           dragged_ = &handler;
@@ -4421,6 +4432,9 @@ namespace yae
       << ", bottomRight: " << toString(bottomRight)
       << std::endl;
 #endif
+
+    // FIXME: this may be more efficient:
+    root_->uncache();
     Canvas::ILayer::delegate_->requestRepaint();
   }
 

@@ -9,6 +9,9 @@
 #ifndef YAE_CANVAS_WIDGET_H_
 #define YAE_CANVAS_WIDGET_H_
 
+// standard C++:
+#include <iostream>
+
 #if defined(YAE_USE_QT4)
 // GLEW includes:
 #include <GL/glew.h>
@@ -168,30 +171,47 @@ namespace yae
     // virtual:
     bool event(QEvent * event)
     {
-      QEvent::Type et = event->type();
-
-      if (et == QEvent::MouseMove)
+      try
       {
-        TWidget::setCursor(QCursor(Qt::ArrowCursor));
-        sigs_.startHideCursorTimer();
+        QEvent::Type et = event->type();
+
+        if (et == QEvent::MouseMove)
+        {
+          TWidget::setCursor(QCursor(Qt::ArrowCursor));
+          sigs_.startHideCursorTimer();
+        }
+        else if (et == QEvent::Resize)
+        {
+          TWidget::resizeEvent((QResizeEvent *)event);
+          Canvas::resize(TWidget::width(), TWidget::height());
+        }
+
+        if (Canvas::processEvent(event))
+        {
+          return true;
+        }
+
+        if (et == QEvent::MouseButtonDblClick)
+        {
+          sigs_.emitToggleFullScreen();
+        }
+
+        return TWidget::event(event);
       }
-      else if (et == QEvent::Resize)
+      catch (const std::exception & e)
       {
-        TWidget::resizeEvent((QResizeEvent *)event);
-        Canvas::resize(TWidget::width(), TWidget::height());
+        std::cerr
+          << "ERROR: CanvasWidget::event(...) caught unexpected exception: "
+          << e.what() << std::endl;
+      }
+      catch (...)
+      {
+        std::cerr
+          << "ERROR: CanvasWidget::event(...) caught unknown exception"
+          << std::endl;
       }
 
-      if (Canvas::processEvent(event))
-      {
-        return true;
-      }
-
-      if (et == QEvent::MouseButtonDblClick)
-      {
-        sigs_.emitToggleFullScreen();
-      }
-
-      return TWidget::event(event);
+      return false;
     }
 
     // virtual:

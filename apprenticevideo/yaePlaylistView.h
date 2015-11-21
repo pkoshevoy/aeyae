@@ -1302,7 +1302,7 @@ namespace yae
       {
         for (const Item * i = this; i && !modelItem_; i = i->parent_)
         {
-          modelItem_ = this->isParent<TModelItem>();
+          modelItem_ = i->isParent<TModelItem>();
         }
       }
 
