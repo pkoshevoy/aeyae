@@ -175,10 +175,6 @@ namespace yae
         TWidget::setCursor(QCursor(Qt::ArrowCursor));
         sigs_.startHideCursorTimer();
       }
-      else if (et == QEvent::MouseButtonDblClick)
-      {
-        sigs_.emitToggleFullScreen();
-      }
       else if (et == QEvent::Resize)
       {
         TWidget::resizeEvent((QResizeEvent *)event);
@@ -188,6 +184,11 @@ namespace yae
       if (Canvas::processEvent(event))
       {
         return true;
+      }
+
+      if (et == QEvent::MouseButtonDblClick)
+      {
+        sigs_.emitToggleFullScreen();
       }
 
       return TWidget::event(event);

@@ -46,6 +46,41 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // toString
+  //
+  static std::string
+  toString(const QModelIndex & index)
+  {
+    std::string path;
+
+    QModelIndex ix = index;
+    do
+    {
+      int row = ix.row();
+
+      std::ostringstream oss;
+      oss << row;
+
+      if (ix.model())
+      {
+        QString v = ix.data().toString();
+        oss << " (" << v.toUtf8().constData() << ")";
+      }
+
+      if (!path.empty())
+      {
+        oss << '.' << path;
+      }
+
+      path = oss.str().c_str();
+      ix = ix.parent();
+    }
+    while (ix.isValid());
+
+    return path;
+  }
+
+  //----------------------------------------------------------------
   // drand
   //
   inline static double
@@ -2077,11 +2112,9 @@ namespace yae
   {
     ScrollviewDrag(const char * id,
                    const Canvas::ILayer & canvasLayer,
-                   Scrollview & scrollview,
                    Item & scrollbar):
       InputArea(id),
       canvasLayer_(canvasLayer),
-      scrollview_(scrollview),
       scrollbar_(scrollbar),
       startPos_(0.0)
     {}
@@ -2090,7 +2123,8 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      startPos_ = scrollview_.position_;
+      Scrollview & scrollview = parent<Scrollview>();
+      startPos_ = scrollview.position_;
       return true;
     }
 
@@ -2099,14 +2133,16 @@ namespace yae
                 const TVec2D & rootCSysDragStart,
                 const TVec2D & rootCSysDragEnd)
     {
-      double sh = scrollview_.height();
-      double ch = scrollview_.content_.height();
+      Scrollview & scrollview = parent<Scrollview>();
+
+      double sh = scrollview.height();
+      double ch = scrollview.content_.height();
       double yRange = sh - ch;
 
       double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
       double dt = dy / yRange;
       double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
-      scrollview_.position_ = t;
+      scrollview.position_ = t;
 
       scrollbar_.uncache();
       canvasLayer_.delegate()->requestRepaint();
@@ -2115,7 +2151,6 @@ namespace yae
     }
 
     const Canvas::ILayer & canvasLayer_;
-    Scrollview & scrollview_;
     Item & scrollbar_;
     double startPos_;
   };
@@ -2169,6 +2204,11 @@ namespace yae
     Item & scrollbar_;
     double startPos_;
   };
+
+  //----------------------------------------------------------------
+  // TPlaylistModelItem
+  //
+  typedef ModelItem<PlaylistModelProxy> TPlaylistModelItem;
 
   //----------------------------------------------------------------
   // GroupListLayout
@@ -2252,7 +2292,9 @@ namespace yae
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
       {
-        Item & group = groups.addNew<Item>("group");
+        QModelIndex childIndex = model.index(i, 0, rootIndex);
+        TPlaylistModelItem & group = groups.
+          add(new TPlaylistModelItem("group", childIndex));
         group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
         group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
 
@@ -2266,9 +2308,7 @@ namespace yae
           group.anchors_.top_ = ItemRef::reference(prev, kPropertyBottom);
         }
 
-        QModelIndex childIndex = model.index(i, 0, rootIndex);
         TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
-
         if (childLayout)
         {
           childLayout->layout(group, view, model, childIndex);
@@ -2276,7 +2316,7 @@ namespace yae
       }
 
       ScrollviewDrag & maScrollview =
-        sview.add(new ScrollviewDrag("ma_sview", view, sview, scrollbar));
+        sview.add(new ScrollviewDrag("ma_sview", view, scrollbar));
       maScrollview.anchors_.fill(sview);
 
       InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
@@ -2297,42 +2337,57 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TClickablePlaylistModelItem
+  //
+  typedef ClickableItem<PlaylistModelProxy> TClickablePlaylistModelItem;
+
+  //----------------------------------------------------------------
   // GroupCollapse
   //
-  struct GroupCollapse : public InputArea
+  struct GroupCollapse : public TClickablePlaylistModelItem
   {
-    GroupCollapse(const char * id,
-                  const PlaylistView & view,
-                  PlaylistModelProxy & model,
-                  const QModelIndex & index):
-      InputArea(id),
-      view_(view),
-      model_(model),
-      index_(index)
+    GroupCollapse(const char * id, const PlaylistView & view):
+      TClickablePlaylistModelItem(id),
+      view_(view)
     {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      return true;
-    }
 
     // virtual:
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
+      TClickablePlaylistModelItem::TModel & model = this->model();
+      const QModelIndex & modelIndex = this->modelIndex();
       int role = PlaylistModel::kRoleCollapsed;
-      bool collapsed = model_.data(index_, role).toBool();
-      model_.setData(index_, QVariant(!collapsed), role);
+      bool collapsed = modelIndex.data(role).toBool();
+      model.setData(modelIndex, QVariant(!collapsed), role);
       view_.root()->uncache();
       view_.delegate()->requestRepaint();
       return true;
     }
 
     const PlaylistView & view_;
-    PlaylistModelProxy & model_;
-    QModelIndex index_;
+  };
+
+  //----------------------------------------------------------------
+  // ItemPlay
+  //
+  struct ItemPlay : public TClickablePlaylistModelItem
+  {
+    ItemPlay(const char * id):
+      TClickablePlaylistModelItem(id)
+    {}
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
+      const QModelIndex & modelIndex = this->modelIndex();
+      std::cerr << "FIXME: DOUBLE CLICK: " << toString(modelIndex) << std::endl;
+
+      TClickablePlaylistModelItem::TModel & model = this->model();
+      model.setPlayingItem(modelIndex);
+      return true;
+    }
   };
 
   //----------------------------------------------------------------
@@ -2424,7 +2479,7 @@ namespace yae
       payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
 
       GroupCollapse & maCollapse = collapsed.
-        add(new GroupCollapse("ma_collapse", view, model, groupIndex));
+        add(new GroupCollapse("ma_collapse", view));
       maCollapse.anchors_.fill(collapsed);
 
       Item & grid = payload.addNew<Item>("grid");
@@ -2435,15 +2490,18 @@ namespace yae
       const int numCells = model.rowCount(groupIndex);
       for (int i = 0; i < numCells; i++)
       {
-        Rectangle & cell = grid.addNew<Rectangle>("cell");
+        QModelIndex childIndex = model.index(i, 0, groupIndex);
+        TPlaylistModelItem & cell = grid.
+          add(new TPlaylistModelItem("cell", childIndex));
         cell.anchors_.left_ = cell.addExpr(new GridCellLeft(grid, i));
         cell.anchors_.top_ = cell.addExpr(new GridCellTop(grid, i));
         cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
         cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
 
-        QModelIndex childIndex = model.index(i, 0, groupIndex);
-        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
+        ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
+        maPlay.anchors_.fill(cell);
 
+        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
         if (childLayout)
         {
           childLayout->layout(cell, view, model, childIndex);
@@ -2470,6 +2528,10 @@ namespace yae
     {
       const Item & playlist = *(view.root());
       const Item & fontSize = playlist["font_size"];
+
+      Rectangle & frame = cell.addNew<Rectangle>("frame");
+      frame.anchors_.fill(cell);
+
       Image & thumbnail = cell.addNew<Image>("thumbnail");
       thumbnail.setContext(view);
       thumbnail.anchors_.fill(cell);
@@ -2585,12 +2647,10 @@ namespace yae
   void
   InputArea::onCancel()
   {
-    if (!(parent_ && onCancel_))
+    if (onCancel_)
     {
-      return;
+      onCancel_->process(parent<Item>());
     }
-
-    onCancel_->process(*parent_);
   }
 
   //----------------------------------------------------------------
@@ -2600,9 +2660,9 @@ namespace yae
   InputArea::onMouseOver(const TVec2D & itemCSysOrigin,
                          const TVec2D & rootCSysPoint)
   {
-    if (parent_ && onMouseOver_)
+    if (onMouseOver_)
     {
-      return onMouseOver_->process(*parent_,
+      return onMouseOver_->process(parent<Item>(),
                                    itemCSysOrigin,
                                    rootCSysPoint);
     }
@@ -2617,9 +2677,9 @@ namespace yae
   InputArea::onPress(const TVec2D & itemCSysOrigin,
                      const TVec2D & rootCSysPoint)
   {
-    if (parent_ && onPress_)
+    if (onPress_)
     {
-      return onPress_->process(*parent_,
+      return onPress_->process(parent<Item>(),
                                itemCSysOrigin,
                                rootCSysPoint);
     }
@@ -2634,9 +2694,9 @@ namespace yae
   InputArea::onClick(const TVec2D & itemCSysOrigin,
                      const TVec2D & rootCSysPoint)
   {
-    if (parent_ && onClick_)
+    if (onClick_)
     {
-      return onClick_->process(*parent_,
+      return onClick_->process(parent<Item>(),
                                itemCSysOrigin,
                                rootCSysPoint);
     }
@@ -2651,9 +2711,9 @@ namespace yae
   InputArea::onDoubleClick(const TVec2D & itemCSysOrigin,
                            const TVec2D & rootCSysPoint)
   {
-    if (parent_ && onDoubleClick_)
+    if (onDoubleClick_)
     {
-      return onDoubleClick_->process(*parent_,
+      return onDoubleClick_->process(parent<Item>(),
                                      itemCSysOrigin,
                                      rootCSysPoint);
     }
@@ -2669,9 +2729,9 @@ namespace yae
                     const TVec2D & rootCSysDragStart,
                     const TVec2D & rootCSysDragEnd)
   {
-    if (parent_ && onDrag_)
+    if (onDrag_)
     {
-      return onDrag_->process(*parent_,
+      return onDrag_->process(parent<Item>(),
                               itemCSysOrigin,
                               rootCSysDragStart,
                               rootCSysDragEnd);
@@ -2688,9 +2748,9 @@ namespace yae
                        const TVec2D & rootCSysDragStart,
                        const TVec2D & rootCSysDragEnd)
   {
-    if (parent_ && onDragEnd_)
+    if (onDragEnd_)
     {
-      return onDragEnd_->process(*parent_,
+      return onDragEnd_->process(parent<Item>(),
                                  itemCSysOrigin,
                                  rootCSysDragStart,
                                  rootCSysDragEnd);
@@ -4346,34 +4406,6 @@ namespace yae
                                  const PlaylistView::TImageProviderPtr & p)
   {
     imageProviders_[providerId] = p;
-  }
-
-  //----------------------------------------------------------------
-  // toString
-  //
-  static std::string
-  toString(const QModelIndex & index)
-  {
-    std::string path;
-
-    QModelIndex ix = index;
-    do
-    {
-      int row = ix.row();
-
-      std::ostringstream oss;
-      oss << row;
-      if (!path.empty())
-      {
-        oss << '.' << path;
-      }
-
-      path = oss.str().c_str();
-      ix = ix.parent();
-    }
-    while (ix.isValid());
-
-    return path;
   }
 
   //----------------------------------------------------------------

@@ -959,6 +959,26 @@ namespace yae
     Item(const char * id);
     virtual ~Item() {}
 
+    //----------------------------------------------------------------
+    // setParent
+    //
+    virtual void setParent(Item * parentItem)
+    { parent_ = parentItem; }
+
+    //----------------------------------------------------------------
+    // isParent
+    //
+    template <typename TParent>
+    TParent * isParent() const
+    { return dynamic_cast<TParent *>(parent_); }
+
+    //----------------------------------------------------------------
+    // parent
+    //
+    template <typename TParent>
+    TParent & parent() const
+    { return dynamic_cast<TParent &>(*parent_); }
+
     // calculate dimensions of item content, if any,
     // not counting nested item children.
     //
@@ -1008,7 +1028,7 @@ namespace yae
     {
       YAE_ASSERT(newItem);
       children_.push_back(ItemPtr(newItem));
-      newItem->parent_ = this;
+      newItem->setParent(this);
       return *newItem;
     }
 
@@ -1017,7 +1037,7 @@ namespace yae
     {
       children_.push_back(ItemPtr(new TItem(id)));
       Item & child = *(children_.back());
-      child.parent_ = this;
+      child.setParent(this);
       return static_cast<TItem &>(child);
     }
 
@@ -1147,6 +1167,33 @@ namespace yae
   typedef Item::ItemPtr ItemPtr;
 
   //----------------------------------------------------------------
+  // ModelItem
+  //
+  template <typename Model>
+  struct ModelItem : public Item
+  {
+    typedef Model TModel;
+
+    ModelItem(const char * id, const QModelIndex & modelIndex):
+      Item(id),
+      modelIndex_(modelIndex)
+    {}
+
+    inline Model & model() const
+    {
+      return *(const_cast<Model *>
+               (dynamic_cast<const Model *>
+                (modelIndex_.model())));
+    }
+
+    inline const QModelIndex & modelIndex() const
+    { return modelIndex_; }
+
+  protected:
+    QModelIndex modelIndex_;
+  };
+
+  //----------------------------------------------------------------
   // InputArea
   //
   struct InputArea : public Item
@@ -1233,6 +1280,75 @@ namespace yae
     TOnDrag onDrag_;
     TOnDrag onDragEnd_;
   };
+
+  //----------------------------------------------------------------
+  // ModelInputArea
+  //
+  template <typename Model>
+  struct ModelInputArea : public InputArea
+  {
+    typedef Model TModel;
+    typedef ModelItem<Model> TModelItem;
+
+    ModelInputArea(const char * id):
+      InputArea(id),
+      modelItem_(NULL)
+    {}
+
+    // lookup the closest ancestor model item associated with this input area:
+    TModelItem & lookupModelItem() const
+    {
+      if (!modelItem_)
+      {
+        for (const Item * i = this; i && !modelItem_; i = i->parent_)
+        {
+          modelItem_ = this->isParent<TModelItem>();
+        }
+      }
+
+      if (!modelItem_)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("ModelInputArea requires ModelItem ancestor");
+      }
+
+      return *modelItem_;
+    }
+
+    inline Model & model() const
+    { return lookupModelItem().model(); }
+
+    inline const QModelIndex & modelIndex() const
+    { return lookupModelItem().modelIndex(); }
+
+    // virtual:
+    void uncache()
+    {
+      InputArea::uncache();
+      modelItem_ = NULL;
+    }
+
+  protected:
+    // cached model item associated with this input area:
+    mutable TModelItem * modelItem_;
+  };
+
+  //----------------------------------------------------------------
+  // ClickableItem
+  //
+  template <typename Model>
+  struct ClickableItem : public ModelInputArea<Model>
+  {
+    ClickableItem(const char * id):
+      ModelInputArea<Model>(id)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+  };
+
 
   //----------------------------------------------------------------
   // Image
@@ -1449,14 +1565,14 @@ namespace yae
   //----------------------------------------------------------------
   // ILayoutDelegate
   //
-  template <typename TView, typename TModel>
+  template <typename TView, typename Model>
   struct YAE_API ILayoutDelegate
   {
     virtual ~ILayoutDelegate() {}
 
     virtual void layout(Item & item,
                         const TView & view,
-                        TModel & model,
+                        Model & model,
                         const QModelIndex & itemIndex) = 0;
   };
 
