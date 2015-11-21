@@ -1999,11 +1999,68 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SliderInputArea
+  // ScrollviewDrag
   //
-  struct SliderInputArea : public InputArea
+  struct ScrollviewDrag : public InputArea
   {
-    SliderInputArea(const char * id):
+    ScrollviewDrag(const char * id):
+      InputArea(id),
+      canvasLayer_(NULL),
+      scrollview_(NULL),
+      scrollbar_(NULL),
+      startPos_(0.0)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (!(canvasLayer_ && scrollview_ && scrollbar_))
+      {
+        return false;
+      }
+
+      startPos_ = scrollview_->position_;
+      return true;
+    }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      if (!(canvasLayer_ && scrollview_ && scrollbar_))
+      {
+        return false;
+      }
+
+      double sh = scrollview_->height();
+      double ch = scrollview_->content_.height();
+      double yRange = sh - ch;
+
+      double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
+      double dt = dy / yRange;
+      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
+      scrollview_->position_ = t;
+
+      scrollbar_->uncache();
+      canvasLayer_->delegate()->requestRepaint();
+
+      return true;
+    }
+
+    const Canvas::ILayer * canvasLayer_;
+    Scrollview * scrollview_;
+    Item * scrollbar_;
+    double startPos_;
+  };
+
+  //----------------------------------------------------------------
+  // SliderDrag
+  //
+  struct SliderDrag : public InputArea
+  {
+    SliderDrag(const char * id):
       InputArea(id),
       canvasLayer_(NULL),
       scrollview_(NULL),
@@ -2160,8 +2217,11 @@ namespace yae
         }
       }
 
-      InputArea & maScrollview = sview.addNew<InputArea>("ma_scrollview");
+      ScrollviewDrag & maScrollview = sview.addNew<ScrollviewDrag>("ma_sview");
       maScrollview.anchors_.fill(sview);
+      maScrollview.canvasLayer_ = &view;
+      maScrollview.scrollview_ = &sview;
+      maScrollview.scrollbar_ = &scrollbar;
 
       InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
       maScrollbar.anchors_.fill(scrollbar);
@@ -2174,7 +2234,7 @@ namespace yae
       slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
       slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
 
-      SliderInputArea & maSlider = slider.addNew<SliderInputArea>("ma_slider");
+      SliderDrag & maSlider = slider.addNew<SliderDrag>("ma_slider");
       maSlider.anchors_.fill(slider);
       maSlider.canvasLayer_ = &view;
       maSlider.scrollview_ = &sview;
