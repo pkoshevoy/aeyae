@@ -11,6 +11,7 @@
 
 // standard libraries:
 #include <cmath>
+#include <list>
 #include <map>
 #include <vector>
 
@@ -35,7 +36,7 @@ namespace yae
 {
   // forward declarations:
   class PlaylistView;
-  struct MouseArea;
+  struct InputArea;
 
   //----------------------------------------------------------------
   // Vec
@@ -919,6 +920,28 @@ namespace yae
     ItemRef vcenter_;
   };
 
+
+  //----------------------------------------------------------------
+  // InputHandler
+  //
+  struct InputHandler
+  {
+    InputHandler(InputArea * inputArea = NULL,
+                 const TVec2D & csysOrigin = TVec2D()):
+      input_(inputArea),
+      csysOrigin_(csysOrigin)
+    {}
+
+    InputArea * input_;
+    TVec2D csysOrigin_;
+  };
+
+  //----------------------------------------------------------------
+  // TInputHandlerRIter
+  //
+  typedef std::list<InputHandler>::reverse_iterator TInputHandlerRIter;
+
+
   //----------------------------------------------------------------
   // Item
   //
@@ -1014,12 +1037,36 @@ namespace yae
     // helper:
     bool overlaps(const TVec2D & pt) const;
 
-    // depth-first search for the mouse area overlapping a given point,
-    // pass back origin offset for mapping from view coordinate space
-    // to mouse area coordinate space (mouseAreaPt = viewPt - offset):
-    virtual bool getMouseArea(const TVec2D & pt,
-                              MouseArea *& ma,
-                              TVec2D & offset);
+    // breadth-first search for the input areas overlapping a given point
+    virtual void
+    getInputHandlers(// coordinate system origin of
+                     // the input area, expressed in the
+                     // coordinate system of the root item:
+                     const TVec2D & itemCSysOrigin,
+
+                     // point expressed in the coord. system of the item,
+                     // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                     const TVec2D & itemCSysPoint,
+
+                     // pass back input areas overlapping above point,
+                     // along with its coord. system origin expressed
+                     // in the coordinate system of the root item:
+                     std::list<InputHandler> & inputHandlers);
+
+    inline bool
+    getInputHandlers(// point expressed in the coord. system of the item,
+                     // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                     const TVec2D & itemCSysPoint,
+
+                     // pass back input areas overlapping above point,
+                     // along with its coord. system origin expressed
+                     // in the coordinate system of the root item:
+                     std::list<InputHandler> & inputHandlers)
+    {
+      inputHandlers.clear();
+      this->getInputHandlers(TVec2D(0.0, 0.0), itemCSysPoint, inputHandlers);
+      return !inputHandlers.empty();
+    }
 
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}
@@ -1090,21 +1137,91 @@ namespace yae
   typedef Item::ItemPtr ItemPtr;
 
   //----------------------------------------------------------------
-  // MouseArea
+  // InputArea
   //
-  struct MouseArea : public Item
+  struct InputArea : public Item
   {
-    MouseArea(const char * id);
+    InputArea(const char * id);
 
     // virtual:
-    bool getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset);
+    void getInputHandlers(// coordinate system origin of
+                          // the input area, expressed in the
+                          // coordinate system of the root item:
+                          const TVec2D & itemCSysOrigin,
 
-    virtual bool mousePressed(const TVec2D & pt, const QMouseEvent * e);
-    virtual bool mouseReleased(const TVec2D & pt, const QMouseEvent * e);
-    virtual bool mouseMove(const TVec2D & pt, const QMouseEvent * e);
-    virtual bool mouseDrag(const TVec2D & pt, const QMouseEvent * e);
-    virtual bool mouseClicked(const TVec2D & pt, const QMouseEvent * e);
-    virtual bool mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e);
+                          // point expressed in the coord. system of the item,
+                          // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                          const TVec2D & itemCSysPoint,
+
+                          // pass back input areas overlapping above point,
+                          // along with its coord. system origin expressed
+                          // in the coordinate system of the root item:
+                          std::list<InputHandler> & inputHandlers);
+
+    // NOTE: default implementation will simply call the onXxx_ delegate
+    // if one is provided, otherwise it will return false:
+
+    virtual void onCancel();
+
+    virtual bool onMouseOver(const TVec2D & itemCSysOrigin,
+                             const TVec2D & rootCSysPoint);
+
+    virtual bool onPress(const TVec2D & itemCSysOrigin,
+                         const TVec2D & rootCSysPoint);
+
+    virtual bool onClick(const TVec2D & itemCSysOrigin,
+                         const TVec2D & rootCSysPoint);
+
+    virtual bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                               const TVec2D & rootCSysPoint);
+
+    virtual bool onDrag(const TVec2D & itemCSysOrigin,
+                        const TVec2D & rootCSysDragStart,
+                        const TVec2D & rootCSysDragEnd);
+
+    // NOTE: default implementation of onDragEnd will call onDragEnd_
+    // if one is provided, otherwise it will call onDrag(...):
+    virtual bool onDragEnd(const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysDragStart,
+                           const TVec2D & rootCSysDragEnd);
+
+    struct OnCancel
+    {
+      virtual ~OnCancel() {}
+      virtual void process(Item & inputAreaParent) = 0;
+    };
+
+    struct OnInput
+    {
+      virtual ~OnInput() {}
+      virtual bool process(Item & inputAreaParent,
+                           const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysPoint) = 0;
+    };
+
+    struct OnDrag
+    {
+      virtual ~OnDrag() {}
+      virtual bool process(Item & inputAreaParent,
+                           const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysDragStart,
+                           const TVec2D & rootCSysDragEnd) = 0;
+    };
+
+    typedef boost::shared_ptr<OnCancel> TOnCancel;
+    typedef boost::shared_ptr<OnInput> TOnInput;
+    typedef boost::shared_ptr<OnDrag> TOnDrag;
+
+    // one does not have to subclass the InputArea to override
+    // default behavior -- simply provide a delegate for
+    // the behavior that should be customized:
+    TOnCancel onCancel_;
+    TOnInput onMouseOver_;
+    TOnInput onPress_;
+    TOnInput onClick_;
+    TOnInput onDoubleClick_;
+    TOnDrag onDrag_;
+    TOnDrag onDragEnd_;
   };
 
   //----------------------------------------------------------------
@@ -1286,9 +1403,23 @@ namespace yae
 
     // virtual:
     void uncache();
-    bool getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset);
     bool paint(const Segment & xregion, const Segment & yregion) const;
     void unpaint();
+
+    // virtual:
+    void getInputHandlers(// coordinate system origin of
+                          // the input area, expressed in the
+                          // coordinate system of the root item:
+                          const TVec2D & itemCSysOrigin,
+
+                          // point expressed in the coord. system of the item,
+                          // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                          const TVec2D & itemCSysPoint,
+
+                          // pass back input areas overlapping above point,
+                          // along with its coord. system origin expressed
+                          // in the coordinate system of the root item:
+                          std::list<InputHandler> & inputHandlers);
 
 #ifndef NDEBUG
     // virtual:
@@ -1391,13 +1522,15 @@ namespace yae
     double w_;
     double h_;
 
-    // pointer to mouse area where mouse press event occurred,
-    // will be cleared if layout changes or mouse release event occurs
-    MouseArea * mouseArea_;
-    TVec2D mousePressedPt_;
-    TVec2D mouseAreaOffset_;
-    bool mouseButtonPressed_;
-    bool mouseDragStarted_;
+    // input handlers corresponding to the point where a mouse
+    // button press occurred, will be cleared if layout changes
+    // or mouse button release occurs:
+    std::list<InputHandler> inputHandlers_;
+
+    // mouse event handling house keeping helpers:
+    InputHandler * pressed_;
+    InputHandler * dragged_;
+    TVec2D startPt_;
   };
 
 }

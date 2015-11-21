@@ -1656,27 +1656,34 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::getMouseArea
+  // Item::getInputHandlers
   //
-  bool
-  Item::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  void
+  Item::getInputHandlers(// coordinate system origin of
+                         // the input area, expressed in the
+                         // coordinate system of the root item:
+                         const TVec2D & itemCSysOrigin,
+
+                         // point expressed in the coord. system of the item,
+                         // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                         const TVec2D & itemCSysPoint,
+
+                         // pass back input areas overlapping above point,
+                         // along with its coord. system origin expressed
+                         // in the coordinate system of the root item:
+                         std::list<InputHandler> & inputHandlers)
   {
-    if (!overlaps(pt))
+    if (!overlaps(itemCSysPoint))
     {
-      return false;
+      return;
     }
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
-      if (child->getMouseArea(pt, ma, offset))
-      {
-        return true;
-      }
+      child->getInputHandlers(itemCSysOrigin, itemCSysPoint, inputHandlers);
     }
-
-    return false;
   }
 
   //----------------------------------------------------------------
@@ -1992,12 +1999,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SliderMouseArea
+  // SliderInputArea
   //
-  struct SliderMouseArea : public MouseArea
+  struct SliderInputArea : public InputArea
   {
-    SliderMouseArea(const char * id):
-      MouseArea(id),
+    SliderInputArea(const char * id):
+      InputArea(id),
       canvasLayer_(NULL),
       scrollview_(NULL),
       scrollbar_(NULL),
@@ -2005,35 +2012,24 @@ namespace yae
     {}
 
     // virtual:
-    bool mousePressed(const TVec2D & pt, const QMouseEvent * e)
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
     {
-      if (!e || !(e->button() == Qt::LeftButton) ||
-          !(canvasLayer_ && scrollview_ && scrollbar_))
+      if (!(canvasLayer_ && scrollview_ && scrollbar_))
       {
         return false;
       }
 
       startPos_ = scrollview_->position_;
-      startPt_ = pt;
       return true;
     }
 
     // virtual:
-    bool mouseReleased(const TVec2D & pt, const QMouseEvent * e)
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
     {
-      if (!e || e->button() != Qt::LeftButton)
-      {
-        return false;
-      }
-
-      return true;
-    }
-
-    // virtual:
-    bool mouseDrag(const TVec2D & pt, const QMouseEvent * e)
-    {
-      if (!e || !(e->buttons() & Qt::LeftButton) ||
-          !(canvasLayer_ && scrollview_ && scrollbar_))
+      if (!(canvasLayer_ && scrollview_ && scrollbar_))
       {
         return false;
       }
@@ -2042,7 +2038,7 @@ namespace yae
       double sh = this->height();
       double yRange = bh - sh;
 
-      double dy = pt.y() - startPt_.y();
+      double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
       double dt = dy / yRange;
       double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
       scrollview_->position_ = t;
@@ -2057,7 +2053,6 @@ namespace yae
     Scrollview * scrollview_;
     Item * scrollbar_;
     double startPos_;
-    TVec2D startPt_;
   };
 
   //----------------------------------------------------------------
@@ -2165,7 +2160,13 @@ namespace yae
         }
       }
 
-      // configure scrollbar:
+      InputArea & maScrollview = sview.addNew<InputArea>("ma_scrollview");
+      maScrollview.anchors_.fill(sview);
+
+      InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
+      maScrollbar.anchors_.fill(scrollbar);
+
+      // configure scrollbar slider:
       Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
       slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
       slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
@@ -2173,13 +2174,7 @@ namespace yae
       slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
       slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
 
-      MouseArea & maScrollview = sview.addNew<MouseArea>("ma_scrollview");
-      maScrollview.anchors_.fill(sview);
-
-      MouseArea & maScrollbar = scrollbar.addNew<MouseArea>("ma_scrollbar");
-      maScrollbar.anchors_.fill(scrollbar);
-
-      SliderMouseArea & maSlider = slider.addNew<SliderMouseArea>("ma_slider");
+      SliderInputArea & maSlider = slider.addNew<SliderInputArea>("ma_slider");
       maSlider.anchors_.fill(slider);
       maSlider.canvasLayer_ = &view;
       maSlider.scrollview_ = &sview;
@@ -2257,10 +2252,10 @@ namespace yae
         xbutton.anchors_.fill(rm);
         xbutton.margins_.set(fontDescentNowPlaying);
 
-        MouseArea & maCollapse = collapsed.addNew<MouseArea>("ma_collapse");
+        InputArea & maCollapse = collapsed.addNew<InputArea>("ma_collapse");
         maCollapse.anchors_.fill(collapsed);
 
-        MouseArea & maRmGroup = xbutton.addNew<MouseArea>("ma_rm_group");
+        InputArea & maRmGroup = xbutton.addNew<InputArea>("ma_rm_group");
         maRmGroup.anchors_.fill(xbutton);
       }
 
@@ -2383,120 +2378,165 @@ namespace yae
       sel.visible_ = sel.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
 
-      MouseArea & maRmItem = xbutton.addNew<MouseArea>("ma_rm_item");
+      InputArea & maRmItem = xbutton.addNew<InputArea>("ma_rm_item");
       maRmItem.anchors_.fill(xbutton);
     }
   };
 
 
   //----------------------------------------------------------------
-  // MouseArea::MouseArea
+  // InputArea::InputArea
   //
-  MouseArea::MouseArea(const char * id):
+  InputArea::InputArea(const char * id):
     Item(id)
   {}
 
   //----------------------------------------------------------------
-  // MouseArea::getMouseArea
+  // InputArea::getInputHandlers
   //
-  bool
-  MouseArea::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  void
+  InputArea::getInputHandlers(// coordinate system origin of
+                              // the input area, expressed in the
+                              // coordinate system of the root item:
+                              const TVec2D & itemCSysOrigin,
+
+                              // point expressed in the coord.sys. of the item,
+                              // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                              const TVec2D & itemCSysPoint,
+
+                              // pass back input areas overlapping above point,
+                              // along with its coord. system origin expressed
+                              // in the coordinate system of the root item:
+                              std::list<InputHandler> & inputHandlers)
   {
-    if (!Item::overlaps(pt))
+    if (!Item::overlaps(itemCSysPoint))
     {
-      return false;
+      return;
     }
 
-    ma = this;
-    return true;
+    inputHandlers.push_back(InputHandler(this, itemCSysOrigin));
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mousePressed
+  // InputArea::onCancel
+  //
+  void
+  InputArea::onCancel()
+  {
+    if (!(parent_ && onCancel_))
+    {
+      return;
+    }
+
+    onCancel_->process(*parent_);
+  }
+
+  //----------------------------------------------------------------
+  // InputArea::onMouseOver
   //
   bool
-  MouseArea::mousePressed(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onMouseOver(const TVec2D & itemCSysOrigin,
+                         const TVec2D & rootCSysPoint)
   {
-#if 0
-    std::cerr
-      << "FIXME: " << id_
-      << ": mousePressed(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
-#endif
+    if (parent_ && onMouseOver_)
+    {
+      return onMouseOver_->process(*parent_,
+                                   itemCSysOrigin,
+                                   rootCSysPoint);
+    }
+
     return false;
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mouseReleased
+  // InputArea::onPress
   //
   bool
-  MouseArea::mouseReleased(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onPress(const TVec2D & itemCSysOrigin,
+                     const TVec2D & rootCSysPoint)
   {
-    std::cerr
-      << "FIXME: " << id_
-      << ": mouseReleased(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
+    if (parent_ && onPress_)
+    {
+      return onPress_->process(*parent_,
+                               itemCSysOrigin,
+                               rootCSysPoint);
+    }
+
     return false;
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mouseMove
+  // InputArea::onClick
   //
   bool
-  MouseArea::mouseMove(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onClick(const TVec2D & itemCSysOrigin,
+                     const TVec2D & rootCSysPoint)
   {
-#if 0
-    std::cerr
-      << "FIXME: " << id_
-      << ": mouseMove(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
-#endif
+    if (parent_ && onClick_)
+    {
+      return onClick_->process(*parent_,
+                               itemCSysOrigin,
+                               rootCSysPoint);
+    }
+
     return false;
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mouseDrag
+  // InputArea::onDoubleClick
   //
   bool
-  MouseArea::mouseDrag(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onDoubleClick(const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysPoint)
   {
-#if 0
-    std::cerr
-      << "FIXME: " << id_
-      << ": mouseDrag(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
-#endif
+    if (parent_ && onDoubleClick_)
+    {
+      return onDoubleClick_->process(*parent_,
+                                     itemCSysOrigin,
+                                     rootCSysPoint);
+    }
+
     return false;
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mouseClicked
+  // InputArea::onDrag
   //
   bool
-  MouseArea::mouseClicked(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onDrag(const TVec2D & itemCSysOrigin,
+                    const TVec2D & rootCSysDragStart,
+                    const TVec2D & rootCSysDragEnd)
   {
-#if 0
-    std::cerr
-      << "FIXME: " << id_
-      << ": mouseClicked(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
-#endif
+    if (parent_ && onDrag_)
+    {
+      return onDrag_->process(*parent_,
+                              itemCSysOrigin,
+                              rootCSysDragStart,
+                              rootCSysDragEnd);
+    }
+
     return false;
   }
 
   //----------------------------------------------------------------
-  // MouseArea::mouseDoubleClicked
+  // InputArea::onDragEnd
   //
   bool
-  MouseArea::mouseDoubleClicked(const TVec2D & pt, const QMouseEvent * e)
+  InputArea::onDragEnd(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysDragStart,
+                       const TVec2D & rootCSysDragEnd)
   {
-#if 0
-    std::cerr
-      << "FIXME: " << id_
-      << ": mouseDoubleClicked(" << pt.x() << ", " << pt.y() << ")"
-      << std::endl;
-#endif
-    return false;
+    if (parent_ && onDragEnd_)
+    {
+      return onDragEnd_->process(*parent_,
+                                 itemCSysOrigin,
+                                 rootCSysDragStart,
+                                 rootCSysDragEnd);
+    }
+
+    return this->onDrag(itemCSysOrigin,
+                        rootCSysDragStart,
+                        rootCSysDragEnd);
   }
 
 
@@ -3743,25 +3783,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Scrollview::getMouseArea
+  // Scrollview::getInputHandlers
   //
-  bool
-  Scrollview::getMouseArea(const TVec2D & pt, MouseArea *& ma, TVec2D & offset)
+  void
+  Scrollview::getInputHandlers(// coordinate system origin of
+                               // the input area, expressed in the
+                               // coordinate system of the root item:
+                               const TVec2D & itemCSysOrigin,
+
+                               // point expressed in the coord.sys. of the item,
+                               // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                               const TVec2D & itemCSysPoint,
+
+                               // pass back input areas overlapping above point,
+                               // along with its coord. system origin expressed
+                               // in the coordinate system of the root item:
+                               std::list<InputHandler> & inputHandlers)
   {
+    Item::getInputHandlers(itemCSysOrigin, itemCSysPoint, inputHandlers);
+
     TVec2D origin;
     Segment xView;
     Segment yView;
     getContentView(*this, origin, xView, yView);
 
-    TVec2D ptInViewCoords = pt - origin;
-    TVec2D offsetToView = offset + origin;
-    if (content_.getMouseArea(ptInViewCoords, ma, offsetToView))
-    {
-      offset = offsetToView;
-      return true;
-    }
-
-    return Item::getMouseArea(pt, ma, offset);
+    TVec2D ptInViewCoords = itemCSysPoint - origin;
+    TVec2D offsetToView = itemCSysOrigin + origin;
+    content_.getInputHandlers(offsetToView, ptInViewCoords, inputHandlers);
   }
 
   //----------------------------------------------------------------
@@ -3821,9 +3869,8 @@ namespace yae
     root_(new Item("playlist")),
     w_(0.0),
     h_(0.0),
-    mouseArea_(NULL),
-    mouseButtonPressed_(false),
-    mouseDragStarted_(false)
+    pressed_(NULL),
+    dragged_(NULL)
   {
     layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
       TLayoutPtr(new GroupListLayout());
@@ -3935,86 +3982,129 @@ namespace yae
   bool
   PlaylistView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
   {
+    if (!e)
+    {
+      return false;
+    }
+
     QEvent::Type et = e->type();
+    if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
+          (e->button() == Qt::LeftButton)))
+    {
+      return false;
+    }
+
     QPoint pos = e->pos();
     TVec2D pt(pos.x(), pos.y());
 
     if (et == QEvent::MouseButtonPress)
     {
-      if (mouseButtonPressed_ && mouseArea_)
-      {
-        TVec2D mouseAreaPt = mousePressedPt_ - mouseAreaOffset_;
-        mouseArea_->mouseReleased(mouseAreaPt, NULL);
-        mouseArea_ = NULL;
-      }
+      pressed_ = NULL;
+      dragged_ = NULL;
+      startPt_ = pt;
 
-      mouseButtonPressed_ = true;
-      mouseDragStarted_ = false;
-      mouseAreaOffset_ = TVec2D();
-      mousePressedPt_ = pt;
-      mouseArea_ = NULL;
-
-      if (!root_->getMouseArea(pt, mouseArea_, mouseAreaOffset_))
+      if (!root_->getInputHandlers(pt, inputHandlers_))
       {
         return false;
       }
 
-      TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-      return mouseArea_->mousePressed(mouseAreaPt, e);
+      for (TInputHandlerRIter i = inputHandlers_.rbegin();
+           i != inputHandlers_.rend(); ++i)
+      {
+        InputHandler & handler = *i;
+        if (handler.input_->onPress(handler.csysOrigin_, pt))
+        {
+          pressed_ = &handler;
+          return true;
+        }
+      }
+
+      return false;
     }
-
-    if (et == QEvent::MouseMove)
+    else if (et == QEvent::MouseMove)
     {
-      mouseDragStarted_ = mouseButtonPressed_;
-
-      if (!mouseDragStarted_)
+      if (inputHandlers_.empty())
       {
-        mouseAreaOffset_ = TVec2D();
-        mouseArea_ = NULL;
-        root_->getMouseArea(pt, mouseArea_, mouseAreaOffset_);
-      }
+        std::list<InputHandler> handlers;
+        if (!root_->getInputHandlers(pt, handlers))
+        {
+          return false;
+        }
 
-      if (!mouseArea_)
-      {
+        for (TInputHandlerRIter i = handlers.rbegin();
+             i != handlers.rend(); ++i)
+        {
+          InputHandler & handler = *i;
+          if (handler.input_->onMouseOver(handler.csysOrigin_, pt))
+          {
+            return true;
+          }
+        }
+
         return false;
       }
 
-      TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-      if (mouseDragStarted_)
+      // FIXME: must add DPI-aware drag threshold to avoid triggering
+      // spurious drag events:
+      for (TInputHandlerRIter i = inputHandlers_.rbegin();
+           i != inputHandlers_.rend(); ++i)
       {
-        return mouseArea_->mouseDrag(mouseAreaPt, e);
+        InputHandler & handler = *i;
+        if (handler.input_->onDrag(handler.csysOrigin_, startPt_, pt))
+        {
+          dragged_ = &handler;
+          return true;
+        }
       }
 
-      mouseArea_->mouseMove(mouseAreaPt, e);
+      return false;
     }
     else if (et == QEvent::MouseButtonRelease)
     {
-      bool pressed = mouseButtonPressed_;
-      bool clicked = (mouseButtonPressed_ && !mouseDragStarted_);
-
-      mouseButtonPressed_ = false;
-      mouseDragStarted_ = false;
-
-      if (mouseArea_ && pressed)
+      bool accept = false;
+      if (pressed_)
       {
-        TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-        if (clicked)
+        if (dragged_)
         {
-          return mouseArea_->mouseClicked(mouseAreaPt, e);
+          accept = dragged_->input_->onDragEnd(dragged_->csysOrigin_,
+                                               startPt_,
+                                               pt);
         }
         else
         {
-          return mouseArea_->mouseReleased(mouseAreaPt, e);
+          accept = pressed_->input_->onClick(pressed_->csysOrigin_, pt);
         }
       }
+
+      pressed_ = NULL;
+      dragged_ = NULL;
+      inputHandlers_.clear();
+
+      return accept;
     }
     else if (et == QEvent::MouseButtonDblClick)
     {
-      if (mouseArea_)
+      pressed_ = NULL;
+      dragged_ = NULL;
+      inputHandlers_.clear();
+
+      std::list<InputHandler> handlers;
+      if (!root_->getInputHandlers(pt, handlers))
       {
-        TVec2D mouseAreaPt = pt - mouseAreaOffset_;
-        return mouseArea_->mouseDoubleClicked(mouseAreaPt, e);
+        return false;
       }
+
+      for (TInputHandlerRIter i = handlers.rbegin();
+           i != handlers.rend(); ++i)
+      {
+        InputHandler & handler = *i;
+        if (handler.input_->onDoubleClick(handler.csysOrigin_, pt))
+        {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     return false;
@@ -4169,18 +4259,18 @@ namespace yae
 
     TMakeCurrentContext currentContext(*context());
 
-    if (mouseArea_)
+    if (pressed_)
     {
-      if (mouseButtonPressed_)
+      if (dragged_)
       {
-        TVec2D mouseAreaPt = mousePressedPt_ - mouseAreaOffset_;
-        mouseArea_->mouseReleased(mouseAreaPt, NULL);
-        mouseButtonPressed_ = false;
+        dragged_->input_->onCancel();
+        dragged_ = NULL;
       }
 
-      mouseDragStarted_ = false;
-      mouseArea_ = NULL;
+      pressed_->input_->onCancel();
+      pressed_ = NULL;
     }
+    inputHandlers_.clear();
 
     root_.reset(new Item("playlist"));
     Item & root = *root_;
