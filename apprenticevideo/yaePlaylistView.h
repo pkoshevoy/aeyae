@@ -1001,6 +1001,16 @@ namespace yae
     // child item lookup, will throw a runtime exception
     // if a child with a matching id is not found here:
     const Item & operator[](const char * id) const;
+    Item & operator[](const char * id);
+
+    template <typename TItem>
+    inline TItem & add(TItem * newItem)
+    {
+      YAE_ASSERT(newItem);
+      children_.push_back(ItemPtr(newItem));
+      newItem->parent_ = this;
+      return *newItem;
+    }
 
     template <typename TItem>
     inline TItem & addNew(const char * id)
@@ -1446,7 +1456,7 @@ namespace yae
 
     virtual void layout(Item & item,
                         const TView & view,
-                        const TModel & model,
+                        TModel & model,
                         const QModelIndex & itemIndex) = 0;
   };
 

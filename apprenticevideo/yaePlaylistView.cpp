@@ -10,6 +10,7 @@
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <sstream>
 
 // Qt library:
 #include <QFontMetricsF>
@@ -392,6 +393,36 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // itemHeightDueToItemContent
+  //
+  static double
+  itemHeightDueToItemContent(const Item & item);
+
+  //----------------------------------------------------------------
+  // InvisibleItemZeroHeight
+  //
+  struct InvisibleItemZeroHeight : public TDoubleExpr
+  {
+    InvisibleItemZeroHeight(const Item & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      if (item_.visible())
+      {
+        result = itemHeightDueToItemContent(item_);
+        return;
+      }
+
+      result = 0.0;
+    }
+
+    const Item & item_;
+  };
+
+  //----------------------------------------------------------------
   // GetFontSize
   //
   struct GetFontSize : public TDoubleExpr
@@ -643,6 +674,26 @@ namespace yae
   // TQueryBool
   //
   typedef TModelQuery<bool> TQueryBool;
+
+  //----------------------------------------------------------------
+  // QueryBoolInverse
+  //
+  struct QueryBoolInverse : public TQueryBool
+  {
+    QueryBoolInverse(const PlaylistModelProxy & model,
+                     const QModelIndex & index,
+                     int role):
+      TQueryBool(model, index, role)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool inverseResult = false;
+      TQueryBool::evaluate(inverseResult);
+      result = !inverseResult;
+    }
+  };
 
   //----------------------------------------------------------------
   // IsModelSortedBy
@@ -1374,6 +1425,39 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // itemHeightDueToItemContent
+  //
+  static double
+  itemHeightDueToItemContent(const Item & item)
+  {
+    double h = 0.0;
+
+    const Segment & yContent = item.yContent();
+    if (!yContent.isEmpty())
+    {
+      if (item.anchors_.top_.isValid())
+      {
+        double t = item.top();
+        double b = yContent.end();
+        h = b - t;
+      }
+      else if (item.anchors_.bottom_.isValid())
+      {
+        double t = yContent.start();
+        double b = item.bottom();
+        h = b - t;
+      }
+      else
+      {
+        YAE_ASSERT(item.anchors_.vcenter_.isValid());
+        h = yContent.length_;
+      }
+    }
+
+    return h;
+  }
+
+  //----------------------------------------------------------------
   // Item::height
   //
   double
@@ -1397,30 +1481,7 @@ namespace yae
     }
 
     // height is based on vertical footprint of item content:
-    const Segment & yContent = this->yContent();
-    double h = 0.0;
-
-    if (!yContent.isEmpty())
-    {
-      if (anchors_.top_.isValid())
-      {
-        double t = top();
-        double b = yContent.end();
-        h = b - t;
-      }
-      else if (anchors_.bottom_.isValid())
-      {
-        double t = yContent.start();
-        double b = bottom();
-        h = b - t;
-      }
-      else
-      {
-        YAE_ASSERT(anchors_.vcenter_.isValid());
-        h = yContent.length_;
-      }
-    }
-
+    double h = itemHeightDueToItemContent(*this);
     height_.cache(h);
     return h;
   }
@@ -1579,17 +1640,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Item::operator
+  // Item::operator[]
   //
   const Item &
   Item::operator[](const char * id) const
   {
+    Item & item = const_cast<Item &>(*this);
+    Item & found = item.operator[](id);
+    return found;
+  }
+
+  //----------------------------------------------------------------
+  // Item::operator[]
+  //
+  Item &
+  Item::operator[](const char * id)
+  {
     if (strcmp(id, "/") == 0)
     {
-      const Item * p = this;
+      Item * p = this;
       while (p->parent_)
       {
-        p = parent_;
+        p = p->parent_;
       }
 
       return *p;
@@ -1613,7 +1685,7 @@ namespace yae
       return *this;
     }
 
-    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+    for (std::vector<ItemPtr>::iterator i = children_.begin();
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
@@ -2003,11 +2075,14 @@ namespace yae
   //
   struct ScrollviewDrag : public InputArea
   {
-    ScrollviewDrag(const char * id):
+    ScrollviewDrag(const char * id,
+                   const Canvas::ILayer & canvasLayer,
+                   Scrollview & scrollview,
+                   Item & scrollbar):
       InputArea(id),
-      canvasLayer_(NULL),
-      scrollview_(NULL),
-      scrollbar_(NULL),
+      canvasLayer_(canvasLayer),
+      scrollview_(scrollview),
+      scrollbar_(scrollbar),
       startPos_(0.0)
     {}
 
@@ -2015,12 +2090,7 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      if (!(canvasLayer_ && scrollview_ && scrollbar_))
-      {
-        return false;
-      }
-
-      startPos_ = scrollview_->position_;
+      startPos_ = scrollview_.position_;
       return true;
     }
 
@@ -2029,29 +2099,24 @@ namespace yae
                 const TVec2D & rootCSysDragStart,
                 const TVec2D & rootCSysDragEnd)
     {
-      if (!(canvasLayer_ && scrollview_ && scrollbar_))
-      {
-        return false;
-      }
-
-      double sh = scrollview_->height();
-      double ch = scrollview_->content_.height();
+      double sh = scrollview_.height();
+      double ch = scrollview_.content_.height();
       double yRange = sh - ch;
 
       double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
       double dt = dy / yRange;
       double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
-      scrollview_->position_ = t;
+      scrollview_.position_ = t;
 
-      scrollbar_->uncache();
-      canvasLayer_->delegate()->requestRepaint();
+      scrollbar_.uncache();
+      canvasLayer_.delegate()->requestRepaint();
 
       return true;
     }
 
-    const Canvas::ILayer * canvasLayer_;
-    Scrollview * scrollview_;
-    Item * scrollbar_;
+    const Canvas::ILayer & canvasLayer_;
+    Scrollview & scrollview_;
+    Item & scrollbar_;
     double startPos_;
   };
 
@@ -2060,11 +2125,14 @@ namespace yae
   //
   struct SliderDrag : public InputArea
   {
-    SliderDrag(const char * id):
+    SliderDrag(const char * id,
+               const Canvas::ILayer & canvasLayer,
+               Scrollview & scrollview,
+               Item & scrollbar):
       InputArea(id),
-      canvasLayer_(NULL),
-      scrollview_(NULL),
-      scrollbar_(NULL),
+      canvasLayer_(canvasLayer),
+      scrollview_(scrollview),
+      scrollbar_(scrollbar),
       startPos_(0.0)
     {}
 
@@ -2072,12 +2140,7 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      if (!(canvasLayer_ && scrollview_ && scrollbar_))
-      {
-        return false;
-      }
-
-      startPos_ = scrollview_->position_;
+      startPos_ = scrollview_.position_;
       return true;
     }
 
@@ -2086,29 +2149,24 @@ namespace yae
                 const TVec2D & rootCSysDragStart,
                 const TVec2D & rootCSysDragEnd)
     {
-      if (!(canvasLayer_ && scrollview_ && scrollbar_))
-      {
-        return false;
-      }
-
-      double bh = scrollbar_->height();
+      double bh = scrollbar_.height();
       double sh = this->height();
       double yRange = bh - sh;
 
       double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
       double dt = dy / yRange;
       double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
-      scrollview_->position_ = t;
+      scrollview_.position_ = t;
 
-      this->parent_->uncache();
-      canvasLayer_->delegate()->requestRepaint();
+      parent_->uncache();
+      canvasLayer_.delegate()->requestRepaint();
 
       return true;
     }
 
-    const Canvas::ILayer * canvasLayer_;
-    Scrollview * scrollview_;
-    Item * scrollbar_;
+    const Canvas::ILayer & canvasLayer_;
+    Scrollview & scrollview_;
+    Item & scrollbar_;
     double startPos_;
   };
 
@@ -2119,7 +2177,7 @@ namespace yae
   {
     void layout(Item & root,
                 const PlaylistView & view,
-                const PlaylistModelProxy & model,
+                PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
       Item & playlist = *(view.root());
@@ -2217,11 +2275,9 @@ namespace yae
         }
       }
 
-      ScrollviewDrag & maScrollview = sview.addNew<ScrollviewDrag>("ma_sview");
+      ScrollviewDrag & maScrollview =
+        sview.add(new ScrollviewDrag("ma_sview", view, sview, scrollbar));
       maScrollview.anchors_.fill(sview);
-      maScrollview.canvasLayer_ = &view;
-      maScrollview.scrollview_ = &sview;
-      maScrollview.scrollbar_ = &scrollbar;
 
       InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
       maScrollbar.anchors_.fill(scrollbar);
@@ -2234,12 +2290,49 @@ namespace yae
       slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
       slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
 
-      SliderDrag & maSlider = slider.addNew<SliderDrag>("ma_slider");
+      SliderDrag & maSlider =
+        slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
       maSlider.anchors_.fill(slider);
-      maSlider.canvasLayer_ = &view;
-      maSlider.scrollview_ = &sview;
-      maSlider.scrollbar_ = &scrollbar;
     }
+  };
+
+  //----------------------------------------------------------------
+  // GroupCollapse
+  //
+  struct GroupCollapse : public InputArea
+  {
+    GroupCollapse(const char * id,
+                  const PlaylistView & view,
+                  PlaylistModelProxy & model,
+                  const QModelIndex & index):
+      InputArea(id),
+      view_(view),
+      model_(model),
+      index_(index)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      return true;
+    }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      int role = PlaylistModel::kRoleCollapsed;
+      bool collapsed = model_.data(index_, role).toBool();
+      model_.setData(index_, QVariant(!collapsed), role);
+      view_.root()->uncache();
+      view_.delegate()->requestRepaint();
+      return true;
+    }
+
+    const PlaylistView & view_;
+    PlaylistModelProxy & model_;
+    QModelIndex index_;
   };
 
   //----------------------------------------------------------------
@@ -2249,7 +2342,7 @@ namespace yae
   {
     void layout(Item & group,
                 const PlaylistView & view,
-                const PlaylistModelProxy & model,
+                PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
     {
       // reuse pre-computed properties:
@@ -2268,56 +2361,51 @@ namespace yae
       spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
 
       Item & title = group.addNew<Item>("title");
-      {
-        title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
-        title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-        title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+      title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
+      title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
 
-        Item & chevron = title.addNew<Item>("chevron");
-        Triangle & collapsed = chevron.addNew<Triangle>("collapse");
-        Text & text = title.addNew<Text>("text");
-        Item & rm = title.addNew<Item>("rm");
-        XButton & xbutton = rm.addNew<XButton>("xbutton");
-        ItemRef fontDescent =
-          xbutton.addExpr(new GetFontDescent(text));
-        ItemRef fontDescentNowPlaying =
-          xbutton.addExpr(new GetFontDescent(nowPlaying));
+      Item & chevron = title.addNew<Item>("chevron");
+      Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+      Text & text = title.addNew<Text>("text");
+      Item & rm = title.addNew<Item>("rm");
+      XButton & xbutton = rm.addNew<XButton>("xbutton");
+      ItemRef fontDescent =
+        xbutton.addExpr(new GetFontDescent(text));
+      ItemRef fontDescentNowPlaying =
+        xbutton.addExpr(new GetFontDescent(nowPlaying));
 
-        // open/close disclosure [>] button:
-        chevron.width_ = ItemRef::reference(text, kPropertyHeight);
-        chevron.height_ = ItemRef::reference(text, kPropertyHeight);
-        chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-        chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+      // open/close disclosure [>] button:
+      chevron.width_ = ItemRef::reference(text, kPropertyHeight);
+      chevron.height_ = ItemRef::reference(text, kPropertyHeight);
+      chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+      chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
-        collapsed.anchors_.fill(chevron);
-        collapsed.margins_.set(fontDescent);
-        collapsed.collapsed_ = collapsed.addExpr
-          (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
+      collapsed.anchors_.fill(chevron);
+      collapsed.margins_.set(fontDescent);
+      collapsed.collapsed_ = collapsed.addExpr
+        (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
-        text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
-        text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
-        text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
-        text.text_ = text.addExpr
-          (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-        text.fontSize_ =
-          ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
-        text.elide_ = Qt::ElideMiddle;
+      text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
+      text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+      text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
+      text.text_ = text.addExpr
+        (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
+      text.fontSize_ =
+        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+      text.elide_ = Qt::ElideMiddle;
 
-        // remove group [x] button:
-        rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
-        rm.height_ = ItemRef::reference(text, kPropertyHeight);
-        rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-        rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+      // remove group [x] button:
+      rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+      rm.height_ = ItemRef::reference(text, kPropertyHeight);
+      rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+      rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
 
-        xbutton.anchors_.fill(rm);
-        xbutton.margins_.set(fontDescentNowPlaying);
+      xbutton.anchors_.fill(rm);
+      xbutton.margins_.set(fontDescentNowPlaying);
 
-        InputArea & maCollapse = collapsed.addNew<InputArea>("ma_collapse");
-        maCollapse.anchors_.fill(collapsed);
-
-        InputArea & maRmGroup = xbutton.addNew<InputArea>("ma_rm_group");
-        maRmGroup.anchors_.fill(xbutton);
-      }
+      InputArea & maRmGroup = xbutton.addNew<InputArea>("ma_rm_group");
+      maRmGroup.anchors_.fill(xbutton);
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
       separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
@@ -2325,7 +2413,21 @@ namespace yae
       separator.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
       separator.height_ = ItemRef::constant(2.0);
 
-      Item & grid = group.addNew<Item>("grid");
+      Item & payload = group.addNew<Item>("payload");
+      payload.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
+      payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+      payload.visible_ = payload.addExpr
+        (new QueryBoolInverse(model,
+                              groupIndex,
+                              PlaylistModel::kRoleCollapsed));
+      payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+
+      GroupCollapse & maCollapse = collapsed.
+        add(new GroupCollapse("ma_collapse", view, model, groupIndex));
+      maCollapse.anchors_.fill(collapsed);
+
+      Item & grid = payload.addNew<Item>("grid");
       grid.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
       grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
       grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
@@ -2348,7 +2450,7 @@ namespace yae
         }
       }
 
-      Item & footer = group.addNew<Item>("footer");
+      Item & footer = payload.addNew<Item>("footer");
       footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
       footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
       footer.width_ = ItemRef::reference(group, kPropertyWidth);
@@ -2363,7 +2465,7 @@ namespace yae
   {
     void layout(Item & cell,
                 const PlaylistView & view,
-                const PlaylistModelProxy & model,
+                PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
       const Item & playlist = *(view.root());
