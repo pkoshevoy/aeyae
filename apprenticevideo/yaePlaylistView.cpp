@@ -654,6 +654,29 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // PlaylistFooter
+  //
+  struct PlaylistFooter : public TVarExpr
+  {
+    PlaylistFooter(const PlaylistModelProxy & model):
+      model_(model)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      quint64 n = model_.itemCount();
+      QString t = (n == 1) ?
+        QObject::tr("1 item, end of playlist") :
+        QObject::tr("%1 items, end of playlist").arg(n);
+
+      result = QVariant(t);
+    }
+
+    const PlaylistModelProxy & model_;
+  };
+
+  //----------------------------------------------------------------
   // ModelQuery
   //
   struct ModelQuery : public TVarExpr
@@ -2543,7 +2566,7 @@ namespace yae
       sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
       sview.anchors_.top_ = ItemRef::reference(filterItem, kPropertyBottom);
       sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
-      sview.margins_.top_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.75);
+      sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
 
       Item & groups = sview.content_;
       groups.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
@@ -2596,6 +2619,50 @@ namespace yae
           childLayout->layout(group, view, model, childIndex);
         }
       }
+
+      // add a footer:
+      {
+        Item & footer = groups.addNew<Item>("footer");
+        if (numGroups < 1)
+        {
+          footer.anchors_.top_ =
+            ItemRef::reference(groups, kPropertyTop);
+        }
+        else
+        {
+          Item & lastGroup = *(groups.children_[numGroups - 1]);
+          footer.anchors_.top_ =
+            ItemRef::reference(lastGroup, kPropertyBottom);
+        }
+
+        footer.anchors_.left_ = ItemRef::offset(groups, kPropertyLeft, 2);
+        footer.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
+        footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+
+        Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
+        separator.anchors_.fill(footer);
+        separator.anchors_.bottom_.reset();
+        separator.height_ = ItemRef::constant(2.0);
+
+        QFont smallFont("Arial Black");
+        smallFont.setBold(true);
+        ItemRef smallFontSize = ItemRef::scale(fontSize,
+                                               kPropertyHeight,
+                                               0.7 * kDpiScale);
+
+        Text & footNote = footer.addNew<Text>("footNote");
+        footNote.anchors_.vcenter_ =
+          ItemRef::reference(footer, kPropertyVCenter);
+        footNote.anchors_.right_ =
+          ItemRef::reference(footer, kPropertyRight);
+        footNote.margins_.right_ =
+          ItemRef::scale(fontSize, kPropertyHeight, 0.8 * kDpiScale);
+
+        footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
+        footNote.font_ = smallFont;
+        footNote.fontSize_ = smallFontSize;
+        footNote.color_ = ColorRef::constant(Color(0xffffff, 0.5));
+     }
 
       FlickableArea & maScrollview =
         sview.add(new FlickableArea("ma_sview", view, scrollbar));
@@ -2808,7 +2875,7 @@ namespace yae
       footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
       footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
       footer.width_ = ItemRef::reference(group, kPropertyWidth);
-      footer.height_ = ItemRef::scale(cellHeight, kPropertyHeight, 0.3);
+      footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
     }
   };
 
@@ -3255,7 +3322,7 @@ namespace yae
     image.clearImage();
     image.setImageStatusImageRequested();
 
-    static const QSize kDefaultSize(256, 128);
+    static const QSize kDefaultSize(256, 256);
     ThumbnailProvider & provider = *(image.provider_);
     boost::weak_ptr<ThumbnailProvider::ICallback> callback(image_);
     provider.requestImageAsync(image.id_, kDefaultSize, callback);
