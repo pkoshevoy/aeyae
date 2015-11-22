@@ -24,6 +24,7 @@
 #include <QMouseEvent>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <QVariant>
 
 // local interfaces:
@@ -977,7 +978,47 @@ namespace yae
     //
     template <typename TParent>
     TParent & parent() const
-    { return dynamic_cast<TParent &>(*parent_); }
+    {
+      TParent * p = this->isParent<TParent>();
+      if (!p)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("parent item is not of the expected type");
+      }
+
+      return *p;
+    }
+
+    //----------------------------------------------------------------
+    // hasAncestor
+    //
+    template <typename TItem>
+    TItem * hasAncestor() const
+    {
+      TItem * found = NULL;
+      for (const Item * i = this; i && !found; i = i->parent_)
+      {
+        found = i->isParent<TItem>();
+      }
+
+      return found;
+    }
+
+    //----------------------------------------------------------------
+    // ancestor
+    //
+    template <typename TItem>
+    TItem & ancestor() const
+    {
+      TItem * a = this->hasAncestor<TItem>();
+      if (!a)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("item has no ancestors of the expected type");
+      }
+
+      return *a;
+    }
 
     // calculate dimensions of item content, if any,
     // not counting nested item children.
@@ -1028,7 +1069,7 @@ namespace yae
     {
       YAE_ASSERT(newItem);
       children_.push_back(ItemPtr(newItem));
-      newItem->setParent(this);
+      newItem->Item::setParent(this);
       return *newItem;
     }
 
@@ -1037,7 +1078,7 @@ namespace yae
     {
       children_.push_back(ItemPtr(new TItem(id)));
       Item & child = *(children_.back());
-      child.setParent(this);
+      child.Item::setParent(this);
       return static_cast<TItem &>(child);
     }
 
@@ -1300,10 +1341,7 @@ namespace yae
     {
       if (!modelItem_)
       {
-        for (const Item * i = this; i && !modelItem_; i = i->parent_)
-        {
-          modelItem_ = i->isParent<TModelItem>();
-        }
+        modelItem_ = this->hasAncestor<TModelItem>();
       }
 
       if (!modelItem_)
@@ -1347,6 +1385,46 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     { return true; }
+  };
+
+
+  //----------------------------------------------------------------
+  // FlickableArea
+  //
+  class FlickableArea : public QObject,
+                        public InputArea
+  {
+    Q_OBJECT;
+
+    FlickableArea(const FlickableArea &);
+    FlickableArea & operator = (const FlickableArea &);
+
+  public:
+    FlickableArea(const char * id,
+                  const Canvas::ILayer & canvasLayer,
+                  Item & scrollbar);
+    ~FlickableArea();
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint);
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd);
+
+    // virtual:
+    bool onDragEnd(const TVec2D & itemCSysOrigin,
+                   const TVec2D & rootCSysDragStart,
+                   const TVec2D & rootCSysDragEnd);
+
+  protected slots:
+    void onTimeout();
+
+  protected:
+    struct TPrivate;
+    TPrivate * p_;
   };
 
 

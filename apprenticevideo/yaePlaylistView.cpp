@@ -12,6 +12,9 @@
 #include <limits>
 #include <sstream>
 
+// boost library:
+#include <boost/chrono.hpp>
+
 // Qt library:
 #include <QFontMetricsF>
 #include <QKeyEvent>
@@ -2107,55 +2110,242 @@ namespace yae
       addExpr(new IsModelSortOrder(model, Qt::DescendingOrder));
   }
 
+
   //----------------------------------------------------------------
-  // ScrollviewDrag
+  // FlickableArea::TPrivate
   //
-  struct ScrollviewDrag : public InputArea
+  struct FlickableArea::TPrivate
   {
-    ScrollviewDrag(const char * id,
-                   const Canvas::ILayer & canvasLayer,
-                   Item & scrollbar):
-      InputArea(id),
+    TPrivate(const Canvas::ILayer & canvasLayer, Item & scrollbar):
       canvasLayer_(canvasLayer),
       scrollbar_(scrollbar),
-      startPos_(0.0)
+      startPos_(0.0),
+      nsamples_(0),
+      v0_(0.0)
     {}
 
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
+    void addSample(double dt, double y)
     {
-      Scrollview & scrollview = parent<Scrollview>();
-      startPos_ = scrollview.position_;
-      return true;
+      int i = nsamples_ % TPrivate::kMaxSamples;
+      samples_[i].x() = dt;
+      samples_[i].y() = y;
+      nsamples_++;
     }
 
-    // virtual:
-    bool onDrag(const TVec2D & itemCSysOrigin,
-                const TVec2D & rootCSysDragStart,
-                const TVec2D & rootCSysDragEnd)
+    double estimateVelocity(int i0, int i1) const
     {
-      Scrollview & scrollview = parent<Scrollview>();
+      if (nsamples_ < 2 || i0 == i1)
+      {
+        return 0.0;
+      }
 
-      double sh = scrollview.height();
-      double ch = scrollview.content_.height();
-      double yRange = sh - ch;
+      const TVec2D & a = samples_[i0];
+      const TVec2D & b = samples_[i1];
 
-      double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
-      double dt = dy / yRange;
-      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
-      scrollview.position_ = t;
+      double t0 = a.x();
+      double t1 = b.x();
+      double dt = t1 - t0;
+      if (dt <= 0.0)
+      {
+        YAE_ASSERT(false);
+        return 0.0;
+      }
 
-      scrollbar_.uncache();
-      canvasLayer_.delegate()->requestRepaint();
+      double y0 = a.y();
+      double y1 = b.y();
+      double dy = y1 - y0;
 
-      return true;
+      double v = dy / dt;
+      return v;
+    }
+
+    double estimateVelocity(int nsamples) const
+    {
+      int n = std::min<int>(nsamples, nsamples_);
+      int i0 = (nsamples_ - n) % TPrivate::kMaxSamples;
+      int i1 = (nsamples_ - 1) % TPrivate::kMaxSamples;
+      return estimateVelocity(i0, i1);
     }
 
     const Canvas::ILayer & canvasLayer_;
     Item & scrollbar_;
     double startPos_;
+
+    // flicking animation parameters:
+    QTimer timer_;
+    boost::chrono::steady_clock::time_point tStart_;
+
+    // for each sample point: x = t - tStart, y = dragEnd(t)
+    enum { kMaxSamples = 5 };
+    TVec2D samples_[kMaxSamples];
+    std::size_t nsamples_;
+
+    // velocity estimate based on available samples:
+    double v0_;
   };
+
+  //----------------------------------------------------------------
+  // FlickableArea::FlickableArea
+  //
+  FlickableArea::FlickableArea(const char * id,
+                               const Canvas::ILayer & canvasLayer,
+                               Item & scrollbar):
+    InputArea(id),
+    p_(new TPrivate(canvasLayer, scrollbar))
+  {
+    bool ok = connect(&p_->timer_, SIGNAL(timeout()),
+                      this, SLOT(onTimeout()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::~FlickableArea
+  //
+  FlickableArea::~FlickableArea()
+  {
+    delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::onPress
+  //
+  bool
+  FlickableArea::onPress(const TVec2D & itemCSysOrigin,
+                         const TVec2D & rootCSysPoint)
+  {
+    p_->timer_.stop();
+
+    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    p_->startPos_ = scrollview.position_;
+    p_->tStart_ = boost::chrono::steady_clock::now();
+    p_->nsamples_ = 0;
+    p_->addSample(0.0, rootCSysPoint.y());
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::onDrag
+  //
+  bool
+  FlickableArea::onDrag(const TVec2D & itemCSysOrigin,
+                        const TVec2D & rootCSysDragStart,
+                        const TVec2D & rootCSysDragEnd)
+  {
+    p_->timer_.stop();
+
+    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    double sh = scrollview.height();
+    double ch = scrollview.content_.height();
+    double yRange = sh - ch;
+    double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
+    double ds = dy / yRange;
+
+    double s = std::min<double>(1.0, std::max<double>(0.0, p_->startPos_ + ds));
+    scrollview.position_ = s;
+
+    p_->scrollbar_.uncache();
+    p_->canvasLayer_.delegate()->requestRepaint();
+
+    double secondsElapsed = boost::chrono::duration<double>
+      (boost::chrono::steady_clock::now() - p_->tStart_).count();
+    p_->addSample(secondsElapsed, rootCSysDragEnd.y());
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::onDragEnd
+  //
+  bool
+  FlickableArea::onDragEnd(const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysDragStart,
+                           const TVec2D & rootCSysDragEnd)
+  {
+    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    double sh = scrollview.height();
+    double ch = scrollview.content_.height();
+    double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
+
+    double secondsElapsed = boost::chrono::duration<double>
+      (boost::chrono::steady_clock::now() - p_->tStart_).count();
+    p_->addSample(secondsElapsed, rootCSysDragEnd.y());
+
+    double vi = p_->estimateVelocity(3);
+    p_->v0_ = dy / secondsElapsed;
+
+    double k = vi / p_->v0_;
+
+#if 0
+    std::cerr << "FIXME: v0: " << p_->v0_ << ", k: " << k << std::endl;
+#endif
+
+    if (k > 0.1)
+    {
+      p_->timer_.start(42);
+      onTimeout();
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::onTimeout
+  //
+  void
+  FlickableArea::onTimeout()
+  {
+    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    double sh = scrollview.height();
+    double ch = scrollview.content_.height();
+    double yRange = sh - ch;
+
+    boost::chrono::steady_clock::time_point tNow =
+      boost::chrono::steady_clock::now();
+
+    double secondsElapsed = boost::chrono::duration<double>
+      (tNow - p_->tStart_).count();
+
+    double v0 = p_->v0_;
+    double dy = v0 * secondsElapsed;
+    double ds = dy / yRange;
+    double s =
+      std::min<double>(1.0, std::max<double>(0.0, scrollview.position_ + ds));
+
+    scrollview.position_ = s;
+    p_->tStart_ = tNow;
+    p_->scrollbar_.uncache();
+    p_->canvasLayer_.delegate()->requestRepaint();
+
+    if (s == 0.0 || s == 1.0 || v0 == 0.0)
+    {
+      // stop the animation:
+      p_->timer_.stop();
+      return;
+    }
+
+    // deceleration (friction) coefficient:
+    const double k = sh * 0.1;
+
+    double v1 = v0 * (1.0 - k * secondsElapsed / fabs(v0));
+    if (v0 * v1 < 0.0)
+    {
+      // bounce detected:
+      p_->timer_.stop();
+      return;
+    }
+
+#if 0
+    std::cerr
+      << "FIXME: v0: " << v0
+      << ", v1: " << v1
+      << ", dv: " << v1 - v0 << std::endl;
+#endif
+
+    YAE_ASSERT(fabs(v1) < fabs(v0));
+    p_->v0_ = v1;
+  }
+
 
   //----------------------------------------------------------------
   // SliderDrag
@@ -2191,8 +2381,8 @@ namespace yae
       double yRange = bh - sh;
 
       double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
-      double dt = dy / yRange;
-      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + dt));
+      double ds = dy / yRange;
+      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + ds));
       scrollview_.position_ = t;
 
       parent_->uncache();
@@ -2317,8 +2507,8 @@ namespace yae
         }
       }
 
-      ScrollviewDrag & maScrollview =
-        sview.add(new ScrollviewDrag("ma_sview", view, scrollbar));
+      FlickableArea & maScrollview =
+        sview.add(new FlickableArea("ma_sview", view, scrollbar));
       maScrollview.anchors_.fill(sview);
 
       InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
@@ -2384,8 +2574,6 @@ namespace yae
                        const TVec2D & rootCSysPoint)
     {
       const QModelIndex & modelIndex = this->modelIndex();
-      std::cerr << "FIXME: DOUBLE CLICK: " << toString(modelIndex) << std::endl;
-
       TClickablePlaylistModelItem::TModel & model = this->model();
       model.setPlayingItem(modelIndex);
       return true;
