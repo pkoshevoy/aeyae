@@ -909,13 +909,18 @@ namespace yae
     TPlaylistGroupPtr groupPtr;
     TPlaylistItemPtr itemPtr = lookup(groupPtr, groupRow, itemRow);
 
-    if (!groupPtr || (itemRow < int(numItems_) && !itemPtr))
+    if (!groupPtr)
     {
       YAE_ASSERT(false);
       return;
     }
 
     PlaylistGroup & group = *groupPtr;
+    if (!(itemPtr || itemRow < 0 || itemRow >= group.items_.size()))
+    {
+      YAE_ASSERT(false);
+      return;
+    }
 
     // try to keep track of the original playing item,
     // its index may change:

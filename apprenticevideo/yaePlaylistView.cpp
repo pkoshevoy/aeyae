@@ -2561,6 +2561,26 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // RemoveModelItems
+  //
+  struct RemoveModelItems : public TClickablePlaylistModelItem
+  {
+    RemoveModelItems(const char * id):
+      TClickablePlaylistModelItem(id)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      TClickablePlaylistModelItem::TModel & model = this->model();
+      const QModelIndex & modelIndex = this->modelIndex();
+      model.removeItems(modelIndex);
+      return true;
+    }
+  };
+
+  //----------------------------------------------------------------
   // ItemPlay
   //
   struct ItemPlay : public TClickablePlaylistModelItem
@@ -2649,9 +2669,6 @@ namespace yae
       xbutton.anchors_.fill(rm);
       xbutton.margins_.set(fontDescentNowPlaying);
 
-      InputArea & maRmGroup = xbutton.addNew<InputArea>("ma_rm_group");
-      maRmGroup.anchors_.fill(xbutton);
-
       Rectangle & separator = group.addNew<Rectangle>("separator");
       separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
       separator.anchors_.left_ = ItemRef::offset(group, kPropertyLeft, 2);
@@ -2671,6 +2688,10 @@ namespace yae
       GroupCollapse & maCollapse = collapsed.
         add(new GroupCollapse("ma_collapse", view));
       maCollapse.anchors_.fill(collapsed);
+
+      RemoveModelItems & maRmGroup = xbutton.
+        add(new RemoveModelItems("ma_remove_group"));
+      maRmGroup.anchors_.fill(xbutton);
 
       Item & grid = payload.addNew<Item>("grid");
       grid.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
@@ -2792,7 +2813,8 @@ namespace yae
       sel.visible_ = sel.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
 
-      InputArea & maRmItem = xbutton.addNew<InputArea>("ma_rm_item");
+      RemoveModelItems & maRmItem = xbutton.
+        add(new RemoveModelItems("ma_remove_item"));
       maRmItem.anchors_.fill(xbutton);
     }
   };
