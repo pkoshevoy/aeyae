@@ -1277,6 +1277,10 @@ namespace yae
     virtual bool onMouseOver(const TVec2D & itemCSysOrigin,
                              const TVec2D & rootCSysPoint);
 
+    virtual bool onScroll(const TVec2D & itemCSysOrigin,
+                          const TVec2D & rootCSysPoint,
+                          double degrees);
+
     virtual bool onPress(const TVec2D & itemCSysOrigin,
                          const TVec2D & rootCSysPoint);
 
@@ -1302,6 +1306,15 @@ namespace yae
       virtual void process(Item & inputAreaParent) = 0;
     };
 
+    struct OnScroll
+    {
+      virtual ~OnScroll() {}
+      virtual bool process(Item & inputAreaParent,
+                           const TVec2D & itemCSysOrigin,
+                           const TVec2D & rootCSysPoint,
+                           double degrees) = 0;
+    };
+
     struct OnInput
     {
       virtual ~OnInput() {}
@@ -1320,6 +1333,7 @@ namespace yae
     };
 
     typedef boost::shared_ptr<OnCancel> TOnCancel;
+    typedef boost::shared_ptr<OnScroll> TOnScroll;
     typedef boost::shared_ptr<OnInput> TOnInput;
     typedef boost::shared_ptr<OnDrag> TOnDrag;
 
@@ -1328,6 +1342,7 @@ namespace yae
     // the behavior that should be customized:
     TOnCancel onCancel_;
     TOnInput onMouseOver_;
+    TOnScroll onScroll_;
     TOnInput onPress_;
     TOnInput onClick_;
     TOnInput onDoubleClick_;
@@ -1423,6 +1438,11 @@ namespace yae
                   const Canvas::ILayer & canvasLayer,
                   Item & scrollbar);
     ~FlickableArea();
+
+    // virtual:
+    bool onScroll(const TVec2D & itemCSysOrigin,
+                  const TVec2D & rootCSysPoint,
+                  double degrees);
 
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
@@ -1701,8 +1721,9 @@ namespace yae
     // virtual:
     bool processEvent(Canvas * canvas, QEvent * event);
 
-    // helper:
+    // helpers:
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
+    bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
 
     // data source:
     void setModel(PlaylistModelProxy * model);

@@ -2336,6 +2336,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FlickableArea::onScroll
+  //
+  bool
+  FlickableArea::onScroll(const TVec2D & itemCSysOrigin,
+                          const TVec2D & rootCSysPoint,
+                          double degrees)
+  {
+    p_->timer_.stop();
+
+    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    double sh = scrollview.height();
+    double ch = scrollview.content_.height();
+    double yRange = sh - ch;
+    double y = scrollview.position_ * yRange + sh * degrees / 360.0;
+    double s = std::min<double>(1.0, std::max<double>(0.0, y / yRange));
+    scrollview.position_ = s;
+
+    p_->scrollbar_.uncache();
+    p_->canvasLayer_.delegate()->requestRepaint();
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // FlickableArea::onPress
   //
   bool
@@ -3029,6 +3053,25 @@ namespace yae
       return onMouseOver_->process(parent<Item>(),
                                    itemCSysOrigin,
                                    rootCSysPoint);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // InputArea::onScroll
+  //
+  bool
+  InputArea::onScroll(const TVec2D & itemCSysOrigin,
+                      const TVec2D & rootCSysPoint,
+                      double degrees)
+  {
+    if (onScroll_)
+    {
+      return onScroll_->process(parent<Item>(),
+                                itemCSysOrigin,
+                                rootCSysPoint,
+                                degrees);
     }
 
     return false;
@@ -4530,6 +4573,10 @@ namespace yae
   {
     QEvent::Type et = event->type();
     if (et != QEvent::Paint &&
+        et != QEvent::Wheel &&
+        et != QEvent::MouseButtonPress &&
+        et != QEvent::MouseButtonRelease &&
+        et != QEvent::MouseButtonDblClick &&
         et != QEvent::MouseMove &&
         et != QEvent::CursorChange &&
         et != QEvent::Resize &&
@@ -4557,6 +4604,12 @@ namespace yae
     {
       QMouseEvent * e = static_cast<QMouseEvent *>(event);
       return processMouseEvent(canvas, e);
+    }
+
+    if (et == QEvent::Wheel)
+    {
+      QWheelEvent * e = static_cast<QWheelEvent *>(event);
+      return processWheelEvent(canvas, e);
     }
 
     return false;
@@ -4703,6 +4756,54 @@ namespace yae
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::processWheelEvent
+  //
+  bool
+  PlaylistView::processWheelEvent(Canvas * canvas, QWheelEvent * e)
+  {
+    if (!e)
+    {
+      return false;
+    }
+
+    QPoint pos = e->pos();
+    TVec2D pt(pos.x(), pos.y());
+
+    std::list<InputHandler> handlers;
+    if (!root_->getInputHandlers(pt, handlers))
+    {
+      return false;
+    }
+
+    // Quoting from QWheelEvent docs:
+    //
+    //  " Most mouse types work in steps of 15 degrees,
+    //    in which case the delta value is a multiple of 120;
+    //    i.e., 120 units * 1/8 = 15 degrees. "
+    //
+    int delta = e->delta();
+    double degrees = double(delta) * 0.125;
+
+#if 0
+    std::cerr
+      << "FIXME: wheel: delta: " << delta
+      << ", degrees: " << degrees
+      << std::endl;
+#endif
+
+    for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
+    {
+      InputHandler & handler = *i;
+      if (handler.input_->onScroll(handler.csysOrigin_, pt, degrees))
+      {
+        break;
+      }
+    }
+
+    return true;
   }
 
   //----------------------------------------------------------------
