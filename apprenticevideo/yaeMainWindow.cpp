@@ -2937,6 +2937,10 @@ namespace yae
     if (!item)
     {
       canvas_->clear();
+#if !(YAE_USE_PLAYER_QUICK_WIDGET)
+      // FIXME: this could be handled as a playlist view state instead:
+      canvas_->setGreeting(canvas_->greeting());
+#endif
       actionPlay->setEnabled(false);
       fixupNextPrev();
     }

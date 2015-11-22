@@ -1207,6 +1207,7 @@ namespace yae
   //
   typedef Item::ItemPtr ItemPtr;
 
+
   //----------------------------------------------------------------
   // ModelItem
   //
@@ -1222,6 +1223,12 @@ namespace yae
 
     inline Model & model() const
     {
+      if (!modelIndex_.model())
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("model index is invalid");
+      }
+
       return *(const_cast<Model *>
                (dynamic_cast<const Model *>
                 (modelIndex_.model())));
@@ -1233,6 +1240,12 @@ namespace yae
   protected:
     QModelIndex modelIndex_;
   };
+
+  //----------------------------------------------------------------
+  // TPlaylistModelItem
+  //
+  typedef ModelItem<PlaylistModelProxy> TPlaylistModelItem;
+
 
   //----------------------------------------------------------------
   // InputArea
@@ -1386,6 +1399,12 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     { return true; }
   };
+
+
+  //----------------------------------------------------------------
+  // TClickablePlaylistModelItem
+  //
+  typedef ClickableItem<PlaylistModelProxy> TClickablePlaylistModelItem;
 
 
   //----------------------------------------------------------------

@@ -1947,20 +1947,106 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SetSortBy
+  //
+  struct SetSortBy : public InputArea
+  {
+    SetSortBy(const char * id,
+              const PlaylistView & view,
+              PlaylistModelProxy & model,
+              Item & filter,
+              PlaylistModelProxy::SortBy sortBy):
+      InputArea(id),
+      view_(view),
+      model_(model),
+      filter_(filter),
+      sortBy_(sortBy)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.delegate()->requestRepaint();
+      filter_.uncache();
+      model_.setSortBy(sortBy_);
+      return true;
+    }
+
+    const PlaylistView & view_;
+    PlaylistModelProxy & model_;
+    Item & filter_;
+    PlaylistModelProxy::SortBy sortBy_;
+  };
+
+  //----------------------------------------------------------------
+  // SetSortOrder
+  //
+  struct SetSortOrder : public InputArea
+  {
+    SetSortOrder(const char * id,
+                 const PlaylistView & view,
+                 PlaylistModelProxy & model,
+                 Item & filter,
+                 Qt::SortOrder sortOrder):
+      InputArea(id),
+      view_(view),
+      model_(model),
+      filter_(filter),
+      sortOrder_(sortOrder)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.delegate()->requestRepaint();
+      filter_.uncache();
+      model_.setSortOrder(sortOrder_);
+      return true;
+    }
+
+    const PlaylistView & view_;
+    PlaylistModelProxy & model_;
+    Item & filter_;
+    Qt::SortOrder sortOrder_;
+  };
+
+  //----------------------------------------------------------------
   // layoutFilterItem
   //
   static void
   layoutFilterItem(Item & item,
                    const PlaylistView & view,
-                   const PlaylistModelProxy & model,
+                   PlaylistModelProxy & model,
                    const QModelIndex & itemIndex)
   {
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
     const Item & fontSize = playlist["font_size"];
 
+    Gradient & filterShadow = item.addNew<Gradient>("filterShadow");
+    filterShadow.anchors_.fill(item);
+    filterShadow.anchors_.bottom_.reset();
+    filterShadow.height_ = ItemRef::reference(item, kPropertyHeight);
+    filterShadow.color_[0.0] = Color(0x1f1f1f, 1.0);
+    filterShadow.color_[0.42] = Color(0x1f1f1f, 0.9);
+    filterShadow.color_[1.0] = Color(0x1f1f1f, 0.0);
+
     Rectangle & filter = item.addNew<Rectangle>("bg");
     filter.anchors_.fill(item, 2);
+    filter.anchors_.bottom_.reset();
+    filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
     filter.radius_ = ItemRef::constant(3);
 
     FilterIcon & icon = filter.addNew<FilterIcon>("filter_icon");
@@ -2108,6 +2194,26 @@ namespace yae
     ulDesc.color_ = underlineColor;
     ulDesc.visible_ = ulDesc.
       addExpr(new IsModelSortOrder(model, Qt::DescendingOrder));
+
+    SetSortBy & sortByName = item.
+      add(new SetSortBy("ma_sort_by_name", view, model, item,
+                        PlaylistModelProxy::SortByName));
+    sortByName.anchors_.fill(byName);
+
+    SetSortBy & sortByTime = item.
+      add(new SetSortBy("ma_sort_by_time", view, model, item,
+                        PlaylistModelProxy::SortByTime));
+    sortByTime.anchors_.fill(orTime);
+
+    SetSortOrder & sortOrderAsc = item.
+      add(new SetSortOrder("ma_order_asc", view, model, item,
+                           Qt::AscendingOrder));
+    sortOrderAsc.anchors_.fill(inAsc);
+
+    SetSortOrder & sortOrderDesc = item.
+      add(new SetSortOrder("ma_order_desc", view, model, item,
+                           Qt::DescendingOrder));
+    sortOrderDesc.anchors_.fill(orDesc);
   }
 
 
@@ -2262,9 +2368,6 @@ namespace yae
                            const TVec2D & rootCSysDragStart,
                            const TVec2D & rootCSysDragEnd)
   {
-    Scrollview & scrollview = Item::ancestor<Scrollview>();
-    double sh = scrollview.height();
-    double ch = scrollview.content_.height();
     double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
 
     double secondsElapsed = boost::chrono::duration<double>
@@ -2398,11 +2501,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TPlaylistModelItem
-  //
-  typedef ModelItem<PlaylistModelProxy> TPlaylistModelItem;
-
-  //----------------------------------------------------------------
   // GroupListLayout
   //
   struct GroupListLayout : public PlaylistView::TLayoutDelegate
@@ -2426,20 +2524,12 @@ namespace yae
       background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
 
       Scrollview & sview = root.addNew<Scrollview>("scrollview");
-      Gradient & filterBg = root.addNew<Gradient>("filterBg");
-      Item & filter = root.addNew<Item>("filter");
 
-      filterBg.anchors_.fill(root);
-      filterBg.anchors_.bottom_.reset();
-      filterBg.height_ = ItemRef::scale(filter, kPropertyHeight, 3.0);
-      filterBg.color_[0.0] = Color(0x1f1f1f, 1.0);
-      filterBg.color_[0.42] = Color(0x1f1f1f, 0.9);
-      filterBg.color_[1.0] = Color(0x1f1f1f, 0.0);
-
-      filter.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-      filter.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-      filter.width_ = ItemRef::reference(root, kPropertyWidth);
-      filter.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.5);
+      Item & filterItem = root.addNew<Item>("filterItem");
+      filterItem.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+      filterItem.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+      filterItem.width_ = ItemRef::reference(root, kPropertyWidth);
+      filterItem.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
 
 
       Item & scrollbar = root.addNew<Item>("scrollbar");
@@ -2451,7 +2541,7 @@ namespace yae
 
       sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
-      sview.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
+      sview.anchors_.top_ = ItemRef::reference(filterItem, kPropertyBottom);
       sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
       sview.margins_.top_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.75);
 
@@ -2470,7 +2560,7 @@ namespace yae
       fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
                                                           cellHeight, 0.15));
 
-      layoutFilterItem(filter, view, model, rootIndex);
+      layoutFilterItem(filterItem, view, model, rootIndex);
 
       Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
       nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
@@ -2527,11 +2617,6 @@ namespace yae
       maSlider.anchors_.fill(slider);
     }
   };
-
-  //----------------------------------------------------------------
-  // TClickablePlaylistModelItem
-  //
-  typedef ClickableItem<PlaylistModelProxy> TClickablePlaylistModelItem;
 
   //----------------------------------------------------------------
   // GroupCollapse
@@ -4668,7 +4753,7 @@ namespace yae
 #ifndef NDEBUG
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
 #endif
-    QModelIndex rootIndex = model_->index(0, 0).parent();
+    QModelIndex rootIndex = model_->index(-1, -1);
     TLayoutPtr delegate = findLayoutDelegate(*this, *model_, rootIndex);
     if (!delegate)
     {
