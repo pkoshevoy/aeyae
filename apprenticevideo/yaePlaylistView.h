@@ -1235,7 +1235,7 @@ namespace yae
                 (modelIndex_.model())));
     }
 
-    inline const QModelIndex & modelIndex() const
+    inline const QPersistentModelIndex & modelIndex() const
     { return modelIndex_; }
 
   protected:
@@ -1385,7 +1385,7 @@ namespace yae
     inline Model & model() const
     { return lookupModelItem().model(); }
 
-    inline const QModelIndex & modelIndex() const
+    inline const QPersistentModelIndex & modelIndex() const
     { return lookupModelItem().modelIndex(); }
 
     // virtual:
@@ -1481,7 +1481,7 @@ namespace yae
     ~Image();
 
     // for thumbnail providers, repaint requests, etc...
-    void setContext(const PlaylistView & view);
+    void setContext(PlaylistView & view);
 
     // virtual:
     void uncache();
@@ -1689,7 +1689,7 @@ namespace yae
     virtual ~ILayoutDelegate() {}
 
     virtual void layout(Item & item,
-                        const TView & view,
+                        TView & view,
                         Model & model,
                         const QModelIndex & itemIndex) = 0;
   };
@@ -1711,7 +1711,19 @@ namespace yae
     typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
     typedef std::map<QString, TImageProviderPtr> TImageProviders;
 
+    //----------------------------------------------------------------
+    // RequestRepaintEvent
+    //
+    enum { kRequestRepaintEvent };
+    typedef BufferedEvent<kRequestRepaintEvent> RequestRepaintEvent;
+
     PlaylistView();
+
+    // virtual:
+    bool event(QEvent * event);
+
+    // virtual:
+    void requestRepaint();
 
     // virtual:
     void resizeTo(const Canvas * canvas);
@@ -1760,6 +1772,7 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
+    RequestRepaintEvent::TPayload requestRepaintEvent_;
     PlaylistModelProxy * model_;
     TLayoutDelegates layoutDelegates_;
     TImageProviders imageProviders_;

@@ -580,7 +580,7 @@ namespace yae
   void
   Canvas::acceptFramesWithReaderId(unsigned int readerId)
   {
-    payload_.setExpectedReaderId(readerId);
+    renderFrameEvent_.setExpectedReaderId(readerId);
   }
 
   //----------------------------------------------------------------
@@ -651,16 +651,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::requestRepaint
+  //
+  void
+  Canvas::requestRepaint()
+  {
+    bool postThePayload = paintCanvasEvent_.setDelivered(false);
+    if (postThePayload)
+    {
+      // send an event:
+      qApp->postEvent(&eventReceiver_, new PaintCanvasEvent(paintCanvasEvent_));
+    }
+  }
+
+  //----------------------------------------------------------------
   // Canvas::render
   //
   bool
   Canvas::render(const TVideoFramePtr & frame)
   {
-    bool postThePayload = payload_.set(frame);
+    bool postThePayload = renderFrameEvent_.set(frame);
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(&eventReceiver_, new RenderFrameEvent(payload_));
+      qApp->postEvent(&eventReceiver_, new RenderFrameEvent(renderFrameEvent_));
     }
 
     if (autoCropThread_.isRunning())
@@ -708,6 +722,15 @@ namespace yae
   {
     if (event->type() == QEvent::User)
     {
+      PaintCanvasEvent * repaintEvent = dynamic_cast<PaintCanvasEvent *>(event);
+      if (repaintEvent)
+      {
+        refresh();
+        repaintEvent->payload_.setDelivered(true);
+        event->accept();
+        return true;
+      }
+
       RenderFrameEvent * renderEvent = dynamic_cast<RenderFrameEvent *>(event);
       if (renderEvent)
       {
@@ -727,15 +750,6 @@ namespace yae
         event->accept();
 
         initializePrivateBackend();
-        refresh();
-        return true;
-      }
-
-      RepaintEvent * repaintEvent =
-        dynamic_cast<RepaintEvent *>(event);
-      if (repaintEvent)
-      {
-        event->accept();
         refresh();
         return true;
       }

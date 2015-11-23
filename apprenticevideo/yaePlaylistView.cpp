@@ -16,6 +16,7 @@
 #include <boost/chrono.hpp>
 
 // Qt library:
+#include <QApplication>
 #include <QFontMetricsF>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -725,7 +726,7 @@ namespace yae
     }
 
     const PlaylistModelProxy & model_;
-    QModelIndex index_;
+    QPersistentModelIndex index_;
     int role_;
   };
 
@@ -758,7 +759,7 @@ namespace yae
     }
 
     const PlaylistModelProxy & model_;
-    QModelIndex index_;
+    QPersistentModelIndex index_;
     int role_;
   };
 
@@ -1780,10 +1781,10 @@ namespace yae
     for (std::vector<ItemPtr>::iterator i = children_.begin();
          i != children_.end(); ++i)
     {
-      const ItemPtr & child = *i;
-      if (child->id_ == id)
+      Item & child = *(*i);
+      if (child.id_ == id)
       {
-        return *child;
+        return child;
       }
     }
 
@@ -2004,7 +2005,7 @@ namespace yae
   struct SetSortBy : public InputArea
   {
     SetSortBy(const char * id,
-              const PlaylistView & view,
+              PlaylistView & view,
               PlaylistModelProxy & model,
               Item & filter,
               PlaylistModelProxy::SortBy sortBy):
@@ -2030,7 +2031,7 @@ namespace yae
       return true;
     }
 
-    const PlaylistView & view_;
+    PlaylistView & view_;
     PlaylistModelProxy & model_;
     Item & filter_;
     PlaylistModelProxy::SortBy sortBy_;
@@ -2042,7 +2043,7 @@ namespace yae
   struct SetSortOrder : public InputArea
   {
     SetSortOrder(const char * id,
-                 const PlaylistView & view,
+                 PlaylistView & view,
                  PlaylistModelProxy & model,
                  Item & filter,
                  Qt::SortOrder sortOrder):
@@ -2068,7 +2069,7 @@ namespace yae
       return true;
     }
 
-    const PlaylistView & view_;
+    PlaylistView & view_;
     PlaylistModelProxy & model_;
     Item & filter_;
     Qt::SortOrder sortOrder_;
@@ -2079,7 +2080,7 @@ namespace yae
   //
   static void
   layoutFilterItem(Item & item,
-                   const PlaylistView & view,
+                   PlaylistView & view,
                    PlaylistModelProxy & model,
                    const QModelIndex & itemIndex)
   {
@@ -2582,7 +2583,7 @@ namespace yae
   struct GroupListLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & root,
-                const PlaylistView & view,
+                PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
@@ -2728,7 +2729,7 @@ namespace yae
   //
   struct GroupCollapse : public TClickablePlaylistModelItem
   {
-    GroupCollapse(const char * id, const PlaylistView & view):
+    GroupCollapse(const char * id, PlaylistView & view):
       TClickablePlaylistModelItem(id),
       view_(view)
     {}
@@ -2738,16 +2739,15 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     {
       TClickablePlaylistModelItem::TModel & model = this->model();
-      const QModelIndex & modelIndex = this->modelIndex();
+      const QPersistentModelIndex & modelIndex = this->modelIndex();
       int role = PlaylistModel::kRoleCollapsed;
       bool collapsed = modelIndex.data(role).toBool();
       model.setData(modelIndex, QVariant(!collapsed), role);
-      view_.root()->uncache();
-      view_.delegate()->requestRepaint();
+      view_.requestRepaint();
       return true;
     }
 
-    const PlaylistView & view_;
+    PlaylistView & view_;
   };
 
   //----------------------------------------------------------------
@@ -2764,7 +2764,7 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     {
       TClickablePlaylistModelItem::TModel & model = this->model();
-      const QModelIndex & modelIndex = this->modelIndex();
+      const QPersistentModelIndex & modelIndex = this->modelIndex();
       model.removeItems(modelIndex);
       return true;
     }
@@ -2783,7 +2783,7 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      const QModelIndex & modelIndex = this->modelIndex();
+      const QPersistentModelIndex & modelIndex = this->modelIndex();
       TClickablePlaylistModelItem::TModel & model = this->model();
       model.setPlayingItem(modelIndex);
       return true;
@@ -2796,7 +2796,7 @@ namespace yae
   struct ItemGridLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & group,
-                const PlaylistView & view,
+                PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & groupIndex)
     {
@@ -2923,7 +2923,7 @@ namespace yae
   struct ItemGridCellLayout : public PlaylistView::TLayoutDelegate
   {
     void layout(Item & cell,
-                const PlaylistView & view,
+                PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & index)
     {
@@ -3202,7 +3202,7 @@ namespace yae
       status_(kImageNotReady)
     {}
 
-    inline void setContext(const PlaylistView & view)
+    inline void setContext(PlaylistView & view)
     { view_ = &view; }
 
     // virtual:
@@ -3276,7 +3276,7 @@ namespace yae
     TPrivate();
     ~TPrivate();
 
-    inline void setContext(const PlaylistView & view)
+    inline void setContext(PlaylistView & view)
     {
       image_->setContext(view);
     }
@@ -3466,7 +3466,7 @@ namespace yae
   // Image::setContext
   //
   void
-  Image::setContext(const PlaylistView & view)
+  Image::setContext(PlaylistView & view)
   {
     p_->setContext(view);
   }
@@ -4526,6 +4526,46 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistView::event
+  //
+  bool
+  PlaylistView::event(QEvent * event)
+  {
+    QEvent::Type et = event->type();
+    if (et == QEvent::User)
+    {
+      RequestRepaintEvent * repaintEvent =
+        dynamic_cast<RequestRepaintEvent *>(event);
+      if (repaintEvent)
+      {
+        Item & root = *root_;
+        root.uncache();
+        Canvas::ILayer::delegate_->requestRepaint();
+
+        repaintEvent->payload_.setDelivered(true);
+        repaintEvent->accept();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::requestRepaint
+  //
+  void
+  PlaylistView::requestRepaint()
+  {
+    bool postThePayload = requestRepaintEvent_.setDelivered(false);
+    if (postThePayload)
+    {
+      // send an event:
+      qApp->postEvent(this, new RequestRepaintEvent(requestRepaintEvent_));
+    }
+  }
+
+  //----------------------------------------------------------------
   // PlaylistView::resize
   //
   void
@@ -4903,16 +4943,14 @@ namespace yae
   PlaylistView::dataChanged(const QModelIndex & topLeft,
                             const QModelIndex & bottomRight)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "PlaylistView::dataChanged, topLeft: " << toString(topLeft)
       << ", bottomRight: " << toString(bottomRight)
       << std::endl;
 #endif
 
-    // FIXME: this may be more efficient:
-    root_->uncache();
-    Canvas::ILayer::delegate_->requestRepaint();
+    requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -4992,6 +5030,7 @@ namespace yae
 #ifndef NDEBUG
     std::cerr << "PlaylistView::modelReset" << std::endl;
 #endif
+    layoutChanged();
   }
 
   //----------------------------------------------------------------
@@ -5001,7 +5040,7 @@ namespace yae
   PlaylistView::rowsAboutToBeInserted(const QModelIndex & parent,
                                       int start, int end)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "PlaylistView::rowsAboutToBeInserted, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
@@ -5015,7 +5054,7 @@ namespace yae
   void
   PlaylistView::rowsInserted(const QModelIndex & parent, int start, int end)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "PlaylistView::rowsInserted, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
@@ -5030,12 +5069,43 @@ namespace yae
   PlaylistView::rowsAboutToBeRemoved(const QModelIndex & parent,
                                      int start, int end)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "PlaylistView::rowsAboutToBeRemoved, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
 #endif
+
+    Item & root = *root_;
+    Scrollview & sview = dynamic_cast<Scrollview &>(root["scrollview"]);
+    Item & groups = sview.content_["groups"];
+
+    if (parent.isValid())
+    {
+      // removing group items:
+      int groupIndex = parent.row();
+
+      TPlaylistModelItem & group =
+        dynamic_cast<TPlaylistModelItem &>(*(groups.children_[groupIndex]));
+
+      Item & grid = group["payload"]["grid"];
+      YAE_ASSERT(start >= 0 && end < int(grid.children_.size()));
+
+      for (int i = end; i >= start; i--)
+      {
+        grid.children_.erase(grid.children_.begin() + i);
+      }
+    }
+    else
+    {
+      // removing item groups:
+      YAE_ASSERT(start >= 0 && end < int(groups.children_.size()));
+
+      for (int i = end; i >= start; i--)
+      {
+        groups.children_.erase(groups.children_.begin() + i);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -5044,15 +5114,14 @@ namespace yae
   void
   PlaylistView::rowsRemoved(const QModelIndex & parent, int start, int end)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "PlaylistView::rowsRemoved, parent: " << toString(parent)
       << ", start: " << start << ", end: " << end
       << std::endl;
 #endif
 
-    // FIXME: this can be more efficient:
-    layoutChanged();
+    requestRepaint();
   }
 
 }

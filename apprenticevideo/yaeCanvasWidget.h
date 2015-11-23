@@ -140,7 +140,7 @@ namespace yae
 
       virtual void requestRepaint()
       {
-        qApp->postEvent(&canvas_, new Canvas::RepaintEvent());
+        canvas_.requestRepaint();
       }
 
       virtual void inhibitScreenSaver()

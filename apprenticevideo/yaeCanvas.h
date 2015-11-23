@@ -38,6 +38,48 @@ namespace yae
   struct Canvas;
 
   //----------------------------------------------------------------
+  // BufferedEvent
+  //
+  template <int EventId>
+  struct BufferedEvent : public QEvent
+  {
+    //----------------------------------------------------------------
+    // kId
+    //
+    enum { kId = EventId };
+
+    //----------------------------------------------------------------
+    // TPayload
+    //
+    struct TPayload
+    {
+      TPayload():
+        delivered_(true)
+      {}
+
+      bool setDelivered(bool delivered)
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        bool postThePayload = delivered_;
+        delivered_ = delivered;
+        return postThePayload;
+      }
+
+    private:
+      mutable boost::mutex mutex_;
+      bool delivered_;
+    };
+
+    BufferedEvent(TPayload & payload):
+      QEvent(QEvent::User),
+      payload_(payload)
+    {}
+
+    TPayload & payload_;
+  };
+
+
+  //----------------------------------------------------------------
   // TFontAttachment
   //
   struct YAE_API TFontAttachment
@@ -102,6 +144,7 @@ namespace yae
         }
       }
 
+      virtual void requestRepaint() = 0;
       virtual void resizeTo(const Canvas * canvas) = 0;
       virtual void paint(Canvas * canvas) = 0;
       virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
@@ -158,6 +201,10 @@ namespace yae
 
     // helper:
     void refresh();
+
+    // NOTE: thread safe, will post a PaintCanvasEvent if there isn't one
+    // already posted-but-not-delivered (to avoid flooding the event queue):
+    void requestRepaint();
 
     // virtual: this will be called from a secondary thread:
     bool render(const TVideoFramePtr & frame);
@@ -245,12 +292,10 @@ namespace yae
     void paintCanvas();
 
     //----------------------------------------------------------------
-    // RepaintEvent
+    // PaintCanvasEvent
     //
-    struct RepaintEvent : public QEvent
-    {
-      RepaintEvent(): QEvent(QEvent::User) {}
-    };
+    enum { kPaintCanvasEvent };
+    typedef BufferedEvent<kPaintCanvasEvent> PaintCanvasEvent;
 
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -339,7 +384,8 @@ namespace yae
 
     boost::shared_ptr<IOpenGLContext> context_;
     boost::shared_ptr<IDelegate> delegate_;
-    RenderFrameEvent::TPayload payload_;
+    PaintCanvasEvent::TPayload paintCanvasEvent_;
+    RenderFrameEvent::TPayload renderFrameEvent_;
     CanvasRenderer * private_;
     CanvasRenderer * overlay_;
     TLibass * libass_;
