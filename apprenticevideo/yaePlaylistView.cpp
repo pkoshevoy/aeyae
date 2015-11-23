@@ -151,27 +151,56 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // GridCellLeft
+  // GroupTop
   //
-  struct GridCellLeft : public TDoubleExpr
+  struct GroupTop : public TDoubleExpr
   {
-    GridCellLeft(const Item & grid, std::size_t cell):
-      grid_(grid),
-      cell_(cell)
+    GroupTop(const TPlaylistModelItem & item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_.width();
+      Item & groups = item_.parent<Item>();
+      unsigned int groupIndex = item_.modelIndex().row();
+
+      if (groupIndex < 1)
+      {
+        result = groups.top();
+      }
+      else
+      {
+        Item & prevGroup = *(groups.children_[groupIndex - 1]);
+        result = prevGroup.bottom();
+      }
+    }
+
+    const TPlaylistModelItem & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GridCellLeft
+  //
+  struct GridCellLeft : public TDoubleExpr
+  {
+    GridCellLeft(const TPlaylistModelItem & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      Item & grid = item_.parent<Item>();
+      double gridWidth = grid.width();
       unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
-      std::size_t cellCol = cell_ % cellsPerRow;
-      double ox = grid_.left() + 2;
+      unsigned int cellIndex = item_.modelIndex().row();
+      std::size_t cellCol = cellIndex % cellsPerRow;
+      double ox = grid.left() + 2;
       result = ox + gridWidth * double(cellCol) / double(cellsPerRow);
     }
 
-    const Item & grid_;
-    std::size_t cell_;
+    const TPlaylistModelItem & item_;
   };
 
   //----------------------------------------------------------------
@@ -179,28 +208,28 @@ namespace yae
   //
   struct GridCellTop : public TDoubleExpr
   {
-    GridCellTop(const Item & grid, std::size_t cell):
-      grid_(grid),
-      cell_(cell)
+    GridCellTop(const TPlaylistModelItem & item):
+      item_(item)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      std::size_t numCells = grid_.children_.size();
-      double gridWidth = grid_.width();
+      Item & grid = item_.parent<Item>();
+      std::size_t numCells = grid.children_.size();
+      double gridWidth = grid.width();
       double cellWidth = calcCellWidth(gridWidth);
       double cellHeight = cellWidth; // calcCellHeight(cellWidth);
       unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
       unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
-      std::size_t cellRow = cell_ / cellsPerRow;
-      double oy = grid_.top() + 2;
+      unsigned int cellIndex = item_.modelIndex().row();
+      std::size_t cellRow = cellIndex / cellsPerRow;
+      double oy = grid.top() + 2;
       result = oy + gridHeight * double(cellRow) / double(rowsOfCells);
     }
 
-    const Item & grid_;
-    std::size_t cell_;
+    const TPlaylistModelItem & item_;
   };
 
   //----------------------------------------------------------------
@@ -2592,10 +2621,13 @@ namespace yae
       sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
       sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
 
-      Item & groups = sview.content_;
-      groups.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
-      groups.anchors_.right_ = ItemRef::reference(sview, kPropertyRight);
-      groups.anchors_.top_ = ItemRef::constant(0.0);
+      sview.content_.anchors_.left_ = ItemRef::constant(0.0);
+      sview.content_.anchors_.top_ = ItemRef::constant(0.0);
+      sview.content_.width_ = ItemRef::reference(sview, kPropertyWidth);
+
+      Item & groups = sview.content_.addNew<Item>("groups");
+      groups.anchors_.fill(sview.content_);
+      groups.anchors_.bottom_.reset();
 
       Item & cellWidth = playlist.addNewHidden<Item>("cell_width");
       cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(groups));
@@ -2626,16 +2658,7 @@ namespace yae
           add(new TPlaylistModelItem("group", childIndex));
         group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
         group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
-
-        if (i < 1)
-        {
-          group.anchors_.top_ = ItemRef::reference(groups, kPropertyTop);
-        }
-        else
-        {
-          Item & prev = *(groups.children_[i - 1]);
-          group.anchors_.top_ = ItemRef::reference(prev, kPropertyBottom);
-        }
+        group.anchors_.top_ = group.addExpr(new GroupTop(group));
 
         TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
         if (childLayout)
@@ -2646,21 +2669,12 @@ namespace yae
 
       // add a footer:
       {
-        Item & footer = groups.addNew<Item>("footer");
-        if (numGroups < 1)
-        {
-          footer.anchors_.top_ =
-            ItemRef::reference(groups, kPropertyTop);
-        }
-        else
-        {
-          Item & lastGroup = *(groups.children_[numGroups - 1]);
-          footer.anchors_.top_ =
-            ItemRef::reference(lastGroup, kPropertyBottom);
-        }
-
-        footer.anchors_.left_ = ItemRef::offset(groups, kPropertyLeft, 2);
-        footer.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
+        Item & footer = sview.content_.addNew<Item>("footer");
+        footer.anchors_.left_ =
+          ItemRef::offset(sview.content_, kPropertyLeft, 2);
+        footer.anchors_.right_ =
+          ItemRef::reference(sview.content_, kPropertyRight);
+        footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
         footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
 
         Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
@@ -2880,8 +2894,8 @@ namespace yae
         QModelIndex childIndex = model.index(i, 0, groupIndex);
         TPlaylistModelItem & cell = grid.
           add(new TPlaylistModelItem("cell", childIndex));
-        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(grid, i));
-        cell.anchors_.top_ = cell.addExpr(new GridCellTop(grid, i));
+        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(cell));
+        cell.anchors_.top_ = cell.addExpr(new GridCellTop(cell));
         cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
         cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
 

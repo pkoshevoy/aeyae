@@ -23,6 +23,7 @@
 #include <QFontMetricsF>
 #include <QMouseEvent>
 #include <QObject>
+#include <QPersistentModelIndex>
 #include <QString>
 #include <QTimer>
 #include <QVariant>
@@ -1238,7 +1239,7 @@ namespace yae
     { return modelIndex_; }
 
   protected:
-    QModelIndex modelIndex_;
+    QPersistentModelIndex modelIndex_;
   };
 
   //----------------------------------------------------------------
