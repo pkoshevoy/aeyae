@@ -916,7 +916,7 @@ namespace yae
     }
 
     PlaylistGroup & group = *groupPtr;
-    if (!(itemPtr || itemRow < 0 || itemRow >= group.items_.size()))
+    if (!(itemPtr || itemRow < 0 || itemRow >= int(group.items_.size())))
     {
       YAE_ASSERT(false);
       return;
