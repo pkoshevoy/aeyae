@@ -46,7 +46,7 @@ namespace yae
   //----------------------------------------------------------------
   // kSupersampleText
   //
-  static const double kSupersampleText = 1.5;
+  static const double kSupersampleText = 1.0;
 
 
   //----------------------------------------------------------------
@@ -858,7 +858,8 @@ namespace yae
   uploadTexture2D(const QImage & img,
                   GLuint & texId,
                   GLuint & iw,
-                  GLuint & ih)
+                  GLuint & ih,
+                  GLenum textureFilter)
   {
     QImage::Format imgFormat = img.format();
 
@@ -915,10 +916,10 @@ namespace yae
 
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_TEXTURE_MAG_FILTER,
-                               GL_LINEAR));
+                               textureFilter));
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_TEXTURE_MIN_FILTER,
-                               GL_LINEAR));
+                               textureFilter));
     yae_assert_gl_no_error();
 
     GLint internalFormat = 0;
@@ -994,8 +995,8 @@ namespace yae
 
     double x0 = bbox.x_;
     double y0 = bbox.y_;
-    double x1 = x0 + bbox.w_;
-    double y1 = y0 + bbox.h_;
+    double x1 = x0 + (bbox.w_ - 1.0);
+    double y1 = y0 + (bbox.h_ - 1.0);
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
@@ -3392,7 +3393,8 @@ namespace yae
   bool
   Image::TPrivate::uploadTexture(const Image & item)
   {
-    bool ok = yae::uploadTexture2D(image_->getImage(), texId_, iw_, ih_);
+    bool ok = yae::uploadTexture2D(image_->getImage(), texId_, iw_, ih_,
+                                   GL_LINEAR);
 
     // no need to keep a duplicate image around once the texture is ready:
     image_->clearImage();
@@ -3614,7 +3616,9 @@ namespace yae
 #endif
     }
 
-    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_);
+    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_,
+                                   item.supersample_ == 1.0 ?
+                                   GL_NEAREST : GL_LINEAR);
     return ok;
   }
 
