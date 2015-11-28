@@ -445,7 +445,7 @@ namespace yae
     // request vsync if available:
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
-    contextFormat.setSampleBuffers(true);
+    contextFormat.setSampleBuffers(false);
     playerWidget_ = new TPlayerWidget(contextFormat);
 #elif defined(YAE_USE_QT5)
     playerWidget_ = new TPlayerWidget(this);

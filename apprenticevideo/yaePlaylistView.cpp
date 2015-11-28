@@ -4685,7 +4685,7 @@ namespace yae
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
     YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
-    YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
+    YAE_OGL_11(glDisable(GL_POLYGON_SMOOTH));
     YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
     YAE_OGL_11(glLineWidth(1.0));
 
