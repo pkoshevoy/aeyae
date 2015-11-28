@@ -23,7 +23,7 @@
 
 namespace yae
 {
-  struct YAE_API SharedClock;
+  struct SharedClock;
 
   //----------------------------------------------------------------
   // IClockObserver
