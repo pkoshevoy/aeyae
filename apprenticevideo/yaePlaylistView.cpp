@@ -896,6 +896,7 @@ namespace yae
       return false;
     }
 
+    TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_GENERATE_MIPMAP,
                                GL_TRUE));
@@ -974,6 +975,67 @@ namespace yae
                                dataType,
                                data));
     yae_assert_gl_no_error();
+
+    if (ih < heightPowerOfTwo)
+    {
+      // copy the padding row:
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, ih - 1));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                 0, // mipmap level
+                                 0, // x-offset
+                                 ih, // y-offset
+                                 iw,
+                                 1,
+                                 pixelFormatGL,
+                                 dataType,
+                                 data));
+    }
+
+    if (iw < widthPowerOfTwo)
+    {
+      // copy the padding column:
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, iw - 1));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                 0, // mipmap level
+                                 iw, // x-offset
+                                 0, // y-offset
+                                 1,
+                                 ih,
+                                 pixelFormatGL,
+                                 dataType,
+                                 data));
+    }
+
+    if (ih < heightPowerOfTwo && iw < widthPowerOfTwo)
+    {
+      // copy the bottom-right padding corner:
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, ih - 1));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, iw - 1));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexSubImage2D(GL_TEXTURE_2D,
+                                 0, // mipmap level
+                                 iw, // x-offset
+                                 ih, // y-offset
+                                 1,
+                                 1,
+                                 pixelFormatGL,
+                                 dataType,
+                                 data));
+    }
+
     YAE_OGL_11(glDisable(GL_TEXTURE_2D));
     return true;
   }
@@ -988,15 +1050,15 @@ namespace yae
     GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
 
     double u0 = 0.0;
-    double u1 = (double(iw - 1) / double(widthPowerOfTwo));
+    double u1 = double(iw) / double(widthPowerOfTwo);
 
     double v0 = 0.0;
-    double v1 = (double(ih - 1) / double(heightPowerOfTwo));
+    double v1 = double(ih) / double(heightPowerOfTwo);
 
     double x0 = bbox.x_;
     double y0 = bbox.y_;
-    double x1 = x0 + (bbox.w_ - 1.0);
-    double y1 = y0 + (bbox.h_ - 1.0);
+    double x1 = x0 + bbox.w_;
+    double y1 = y0 + bbox.h_;
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
@@ -2132,7 +2194,7 @@ namespace yae
     ItemRef smallFontSize = ItemRef::scale(fontSize,
                                            kPropertyHeight,
                                            0.7 * kDpiScale);
-    QFont smallFont("Arial Black");
+    QFont smallFont;
     smallFont.setBold(true);
 
     Item & sortAndOrder = item.addNew<Item>("sort_and_order");
@@ -2684,7 +2746,7 @@ namespace yae
         separator.anchors_.bottom_.reset();
         separator.height_ = ItemRef::constant(2.0);
 
-        QFont smallFont("Arial Black");
+        QFont smallFont;
         smallFont.setBold(true);
         ItemRef smallFontSize = ItemRef::scale(fontSize,
                                                kPropertyHeight,
@@ -2950,7 +3012,6 @@ namespace yae
       label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-      label.font_.setBold(false);
       label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
 
       labelBg.anchors_.inset(label, -3, -1);
@@ -3628,9 +3689,16 @@ namespace yae
   void
   Text::TPrivate::paint(const Text & item)
   {
-    BBox bboxContent;
-    item.get(kPropertyBBoxContent, bboxContent);
-    paintTexture2D(bboxContent, texId_, iw_, ih_);
+    BBox bbox;
+    item.get(kPropertyBBoxContent, bbox);
+
+    // avoid rendering at fractional pixel coordinates:
+    bbox.x_ = std::floor(bbox.x_);
+    bbox.y_ = std::floor(bbox.y_);
+    bbox.w_ = std::ceil(bbox.w_);
+    bbox.h_ = std::ceil(bbox.h_);
+
+    paintTexture2D(bbox, texId_, iw_, ih_);
   }
 
 
@@ -3640,7 +3708,6 @@ namespace yae
   Text::Text(const char * id):
     Item(id),
     p_(new Text::TPrivate()),
-    font_("Impact, Charcoal, sans-serif"),
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
     supersample_(kSupersampleText),
@@ -3651,6 +3718,12 @@ namespace yae
                            (QFont::PreferOutline |
                             QFont::PreferAntialias |
                             QFont::OpenGLCompatible));
+#if defined(_WIN32) || defined(__APPLE__)
+    font_.setFamily("Impact, Charcoal, sans-serif");
+#else
+    font_.setStretch(QFont::Condensed);
+    font_.setWeight(QFont::Black);
+#endif
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(*this));
