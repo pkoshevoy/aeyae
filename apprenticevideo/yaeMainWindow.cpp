@@ -1057,7 +1057,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     adjustMenuActions();
-    adjustMenus(reader_);
+    adjustMenus(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -1523,7 +1523,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader,
+    adjustMenuActions(reader.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,
@@ -1569,7 +1569,7 @@ namespace yae
       }
     }
 
-    selectVideoTrack(reader, vtrack);
+    selectVideoTrack(reader.get(), vtrack);
     videoTrackGroup_->actions().at((int)vtrack)->setChecked(true);
 
     if (rememberSelectedVideoTrack)
@@ -1578,7 +1578,7 @@ namespace yae
       reader->getVideoTraits(selVideoTraits_);
     }
 
-    selectAudioTrack(reader, atrack);
+    selectAudioTrack(reader.get(), atrack);
     audioTrackGroup_->actions().at((int)atrack)->setChecked(true);
 
     if (rememberSelectedAudioTrack)
@@ -1607,7 +1607,7 @@ namespace yae
       }
     }
 
-    selectSubsTrack(reader, strack);
+    selectSubsTrack(reader.get(), strack);
     subsTrackGroup_->actions().at((int)strack)->setChecked(true);
 
     if (rememberSelectedSubtitlesTrack)
@@ -1615,7 +1615,7 @@ namespace yae
       selSubsFormat_ = reader->subsInfo(strack, selSubs_);
     }
 
-    adjustMenus(reader);
+    adjustMenus(reader.get());
 
     reader_->close();
     videoRenderer_->close();
@@ -1637,7 +1637,7 @@ namespace yae
     }
 
     // reset timeline start, duration, playhead, in/out points:
-    timelineControls_->resetFor(reader);
+    timelineControls_->resetFor(reader.get());
 
     if (bookmark)
     {
@@ -1705,7 +1705,7 @@ namespace yae
     // too late if the reader already started the decoding loops;
     // renderers are started paused, so after the reader is started
     // the rendrers have to be resumed:
-    prepareReaderAndRenderers(reader, playbackPaused_);
+    prepareReaderAndRenderers(reader.get(), playbackPaused_);
 
     // this opens the output frame queues for renderers
     // and starts the decoding loops:
@@ -2321,8 +2321,8 @@ namespace yae
     stopRenderers();
 
     std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
-    selectVideoTrack(reader_, videoTrack);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    selectVideoTrack(reader_.get(), videoTrack);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -2654,7 +2654,7 @@ namespace yae
     if (!playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
-      prepareReaderAndRenderers(reader_, playbackPaused_);
+      prepareReaderAndRenderers(reader_.get(), playbackPaused_);
       resumeRenderers();
 
       bookmarkTimer_.start();
@@ -2664,7 +2664,7 @@ namespace yae
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_);
       stopRenderers();
-      prepareReaderAndRenderers(reader_, playbackPaused_);
+      prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
       bookmarkTimer_.stop();
       saveBookmark();
@@ -2720,7 +2720,7 @@ namespace yae
     reader_->threadStop();
 
     stopRenderers();
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -2747,7 +2747,7 @@ namespace yae
     stopRenderers();
 
     audioDevice_.assign(audioDevice.toUtf8().constData());
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -2770,10 +2770,10 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
-    selectAudioTrack(reader_, index);
+    selectAudioTrack(reader_.get(), index);
     reader_->getSelectedAudioTrackInfo(selAudio_);
     reader_->getAudioTraits(selAudioTraits_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -2796,10 +2796,10 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
-    selectVideoTrack(reader_, index);
+    selectVideoTrack(reader_.get(), index);
     reader_->getSelectedVideoTrackInfo(selVideo_);
     reader_->getVideoTraits(selVideoTraits_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -2822,9 +2822,9 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
-    selectSubsTrack(reader_, index);
+    selectSubsTrack(reader_.get(), index);
     selSubsFormat_ = reader_->subsInfo(index, selSubs_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
     double t = timelineControls_->currentTime();
     reader_->seek(t);
@@ -3253,7 +3253,7 @@ namespace yae
   {
     IReaderPtr reader(readerPrototype_->clone());
     timelineControls_->observe(SharedClock());
-    timelineControls_->resetFor(reader);
+    timelineControls_->resetFor(reader.get());
 
     reader_->close();
     videoRenderer_->close();
@@ -3264,7 +3264,7 @@ namespace yae
     this->setWindowTitle(tr("Apprentice Video"));
 
     adjustMenuActions();
-    adjustMenus(reader_);
+    adjustMenus(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -3440,7 +3440,7 @@ namespace yae
       double positionInSeconds = timelineControls_->currentTime();
       yae::saveBookmark(group->hash_,
                         item->hash_,
-                        reader_,
+                        reader_.get(),
                         positionInSeconds);
 
       // refresh the bookmarks list:
@@ -3793,7 +3793,7 @@ namespace yae
         // to push new packets into audio/video queues:
 
         TTime dt(1001, 60000);
-        audioRenderer_->skipForward(dt, reader_);
+        audioRenderer_->skipForward(dt, reader_.get());
       }
 
       TTime t;
@@ -3813,7 +3813,7 @@ namespace yae
       if (hasAudio)
       {
         // attempt to nudge the audio reader to the same position:
-        audioRenderer_->skipToTime(t, reader_);
+        audioRenderer_->skipToTime(t, reader_.get());
       }
     }
   }
@@ -4663,7 +4663,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader_,
+    adjustMenuActions(reader_.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,

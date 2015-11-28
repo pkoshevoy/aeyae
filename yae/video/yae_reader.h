@@ -13,9 +13,11 @@
 #include <string>
 #include <list>
 
+// boost library:
+#include <boost/shared_ptr.hpp>
+
 // aeyae:
 #include "../api/yae_plugin_interface.h"
-#include "../api/yae_shared_ptr.h"
 #include "../thread/yae_queue.h"
 #include "../video/yae_synchronous.h"
 #include "../video/yae_video.h"
@@ -134,7 +136,7 @@ namespace yae
   //----------------------------------------------------------------
   // IReaderPtr
   //
-  typedef yae::shared_ptr<IReader, IPlugin, IPlugin::Deallocator> IReaderPtr;
+  typedef boost::shared_ptr<IReader> IReaderPtr;
 
 }
 

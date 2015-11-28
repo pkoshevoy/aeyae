@@ -15,7 +15,6 @@
 
 // aeyae:
 #include "../api/yae_plugin_interface.h"
-#include "../api/yae_shared_ptr.h"
 
 
 namespace yae
@@ -29,19 +28,15 @@ namespace yae
     // return an instance of each plugin of a given type
     template <typename TPlugin>
     bool
-    find(std::list<yae::shared_ptr<TPlugin,
-                                   IPlugin,
-                                   IPlugin::Deallocator> > & plugins) const
+    find(std::list<boost::shared_ptr<TPlugin> > & plugins) const
     {
-      typedef yae::shared_ptr<TPlugin,
-                              IPlugin,
-                              IPlugin::Deallocator> TPluginPtr;
-
+      typedef boost::shared_ptr<TPlugin> TPluginPtr;
       bool found = false;
 
       for (const_iterator i = this->begin(), end = this->end(); i != end; ++i)
       {
-        TPluginPtr plugin = i->second;
+        TPluginPtr plugin =
+          boost::dynamic_pointer_cast<TPlugin, IPlugin>(i->second);
 
         if (plugin)
         {

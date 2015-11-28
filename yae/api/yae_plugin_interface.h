@@ -13,10 +13,12 @@
 #include <cstddef>
 #include <limits>
 
+// boost library:
+#include <boost/shared_ptr.hpp>
+
 // aeyae:
 #include "yae_api.h"
 #include "yae_settings_interface.h"
-#include "yae_shared_ptr.h"
 
 
 namespace yae
@@ -64,20 +66,24 @@ namespace yae
     //
     struct Deallocator
     {
-      inline static void destroy(IPlugin * plugin)
+      inline static void destroy(IPlugin *& plugin)
       {
         if (plugin)
         {
           plugin->destroy();
+          plugin = NULL;
         }
       }
+
+      inline void operator()(IPlugin *& plugin)
+      { this->destroy(plugin); }
     };
   };
 
   //----------------------------------------------------------------
   // IPluginPtr
   //
-  typedef yae::shared_ptr<IPlugin, IPlugin, IPlugin::Deallocator> IPluginPtr;
+  typedef boost::shared_ptr<IPlugin> IPluginPtr;
 
   //----------------------------------------------------------------
   // TPluginFactory
