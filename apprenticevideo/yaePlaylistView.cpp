@@ -3630,7 +3630,7 @@ namespace yae
 
     QImage img(iw, ih, QImage::Format_ARGB32);
     {
-      img.fill(QColor(0x7f, 0x7f, 0x7f, 0));
+      img.fill(QColor(0x7f, 0x7f, 0x7f, 0).rgba());
 
       QPainter painter(&img);
       QFont font = item.font_;
@@ -3713,7 +3713,9 @@ namespace yae
     supersample_(kSupersampleText),
     color_(ColorRef::constant(Color(0xffffff, 1.0)))
   {
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
     font_.setHintingPreference(QFont::PreferFullHinting);
+#endif
     font_.setStyleStrategy((QFont::StyleStrategy)
                            (QFont::PreferOutline |
                             QFont::PreferAntialias |
