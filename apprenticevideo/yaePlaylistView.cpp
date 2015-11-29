@@ -3027,7 +3027,6 @@ namespace yae
       playing.visible_ = playing.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-      playing.font_.setBold(false);
       playing.fontSize_ = ItemRef::scale(fontSize,
                                          kPropertyHeight,
                                          0.8 * kDpiScale);
