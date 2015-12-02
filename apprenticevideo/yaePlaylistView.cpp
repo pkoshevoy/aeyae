@@ -3725,19 +3725,13 @@ namespace yae
       QFontInfo(QFont("impact")).family().
       contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
 
-    static bool hasCharcoal =
-      QFontInfo(QFont("charcoal")).family().
-      contains(QString::fromUtf8("charcoal"), Qt::CaseInsensitive);
-
     if (hasImpact)
     {
       font_.setFamily("impact");
     }
-    else if (hasCharcoal)
-    {
-      font_.setFamily("charcoal");
-    }
+#ifndef __APPLE__
     else
+#endif
     {
       font_.setStretch(QFont::Condensed);
       font_.setWeight(QFont::Black);
