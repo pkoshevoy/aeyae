@@ -3719,12 +3719,9 @@ namespace yae
                            (QFont::PreferOutline |
                             QFont::PreferAntialias |
                             QFont::OpenGLCompatible));
-#if defined(_WIN32) || defined(__APPLE__)
-    font_.setFamily("Impact, Charcoal, sans-serif");
-#else
     font_.setStretch(QFont::Condensed);
     font_.setWeight(QFont::Black);
-#endif
+    font_.setFamily("Impact, Charcoal, sans-serif");
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(*this));
@@ -4719,6 +4716,9 @@ namespace yae
         et != QEvent::WindowActivate &&
         et != QEvent::FocusOut &&
         et != QEvent::FocusIn &&
+#ifdef YAE_USE_QT5
+        et != QEvent::UpdateRequest &&
+#endif
         et != QEvent::ShortcutOverride)
     {
 #ifndef NDEBUG
