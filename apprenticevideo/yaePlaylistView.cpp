@@ -3715,13 +3715,33 @@ namespace yae
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
     font_.setHintingPreference(QFont::PreferFullHinting);
 #endif
+    font_.setStyleHint(QFont::SansSerif);
     font_.setStyleStrategy((QFont::StyleStrategy)
                            (QFont::PreferOutline |
                             QFont::PreferAntialias |
                             QFont::OpenGLCompatible));
-    font_.setStretch(QFont::Condensed);
-    font_.setWeight(QFont::Black);
-    font_.setFamily("Impact, Charcoal, sans-serif");
+
+    static bool hasImpact =
+      QFontInfo(QFont("impact")).family().
+      contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
+
+    static bool hasCharcoal =
+      QFontInfo(QFont("charcoal")).family().
+      contains(QString::fromUtf8("charcoal"), Qt::CaseInsensitive);
+
+    if (hasImpact)
+    {
+      font_.setFamily("impact");
+    }
+    else if (hasCharcoal)
+    {
+      font_.setFamily("charcoal");
+    }
+    else
+    {
+      font_.setStretch(QFont::Condensed);
+      font_.setWeight(QFont::Black);
+    }
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(*this));
