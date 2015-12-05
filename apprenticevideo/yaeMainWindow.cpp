@@ -2946,7 +2946,7 @@ namespace yae
     }
     else
     {
-      playback();
+      playback(index);
     }
 
     if (!playlistModel_.hasItems())
@@ -3273,10 +3273,20 @@ namespace yae
   void
   MainWindow::playback(bool forward)
   {
+    QModelIndex current = playlistModel_.playingItem();
+    playback(current, forward);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playback
+  //
+  void
+  MainWindow::playback(const QModelIndex & startHere, bool forward)
+  {
     // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    QModelIndex current = playlistModel_.playingItem();
+    QModelIndex current = startHere;
     TPlaylistItemPtr item;
     bool ok = false;
 
@@ -3298,8 +3308,6 @@ namespace yae
       {
         current = playlistModel_.prevItem(current);
       }
-
-      playlistModel_.setPlayingItem(current);
     }
 
     fixupNextPrev();
@@ -3307,6 +3315,10 @@ namespace yae
     if (!ok && !forward)
     {
       playback(true);
+    }
+    else
+    {
+      playlistModel_.setPlayingItem(current);
     }
   }
 
@@ -3363,8 +3375,7 @@ namespace yae
     QModelIndex index = playlistModel_.playingItem();
     QModelIndex iNext = playlistModel_.nextItem(index);
 
-    playlistModel_.setPlayingItem(iNext);
-    playback(true);
+    playback(iNext, true);
   }
 
   //----------------------------------------------------------------
@@ -3382,8 +3393,7 @@ namespace yae
       playlistModel_.prevItem(index) :
       playlistModel_.lastItem();
 
-    playlistModel_.setPlayingItem(iPrev);
-    playback(false);
+    playback(iPrev, false);
   }
 
   //----------------------------------------------------------------

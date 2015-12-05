@@ -238,6 +238,7 @@ namespace yae
     void playbackFinished(const SharedClock & c);
     void playbackStop();
     void playback(bool forward = true);
+    void playback(const QModelIndex & index, bool forward = true);
     void scrollWheelTimerExpired();
     void fixupNextPrev();
     void adjustCanvasHeight();

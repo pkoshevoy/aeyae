@@ -1338,7 +1338,7 @@ namespace yae
   Playlist::setPlayingItem(std::size_t index, const TPlaylistItemPtr & prev)
   {
 #if 0
-    std::cerr << "Playlist::setPlayingItem" << std::endl;
+    std::cerr << "Playlist::setPlayingItem: " << index << std::endl;
 #endif
 
     std::size_t indexOld = playing_;
