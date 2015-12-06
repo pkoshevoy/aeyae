@@ -820,8 +820,13 @@ DeployAppBundle()
 	rm -f "${DONELIST}"
 }
 
-# NOTE: for debugging only: skip deploying the bundle dependencies:
-# exit 0
+SKIP_DEPLOYMENT=false
+
+if [ "${SKIP_DEPLOYMENT}" = true ]; then
+	# NOTE: for debugging only: skip deploying the bundle dependencies:
+	echo "SKIPPING macdeployqt"
+	exit 0
+fi
 
 #---------------------------------------------------------------------
 if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then

@@ -275,6 +275,9 @@ namespace yae
 
     inline double & x() { return TBase::coord_[0]; }
     inline double & y() { return TBase::coord_[1]; }
+
+    inline void set_x(double v) { TBase::coord_[0] = v; }
+    inline void set_y(double v) { TBase::coord_[1] = v; }
   };
 
   //----------------------------------------------------------------
@@ -319,6 +322,10 @@ namespace yae
     void clear();
     bool isEmpty() const;
     void expand(const Segment & seg);
+
+    // compute fractional pixel overlap over a segment
+    // where 1 == full overlap, 0 == no overlap:
+    double pixelOverlap(double p) const;
 
     inline bool disjoint(const Segment & b) const
     { return this->start() > b.end() || b.start() > this->end(); }
@@ -449,6 +456,29 @@ namespace yae
       argb_(rgb)
     {
       this->a() = (unsigned char)(std::max(0.0, std::min(255.0, 255.0 * a)));
+    }
+
+    Color(const Vec<double, 4> & v)
+    {
+      YAE_ASSERT(v.coord_[0] >= 0.0 && v.coord_[0] <= 1.0);
+      YAE_ASSERT(v.coord_[1] >= 0.0 && v.coord_[1] <= 1.0);
+      YAE_ASSERT(v.coord_[2] >= 0.0 && v.coord_[2] <= 1.0);
+      YAE_ASSERT(v.coord_[3] >= 0.0 && v.coord_[3] <= 1.0);
+
+      this->operator[](0) = (unsigned char)(v.coord_[0] * 255.0);
+      this->operator[](1) = (unsigned char)(v.coord_[1] * 255.0);
+      this->operator[](2) = (unsigned char)(v.coord_[2] * 255.0);
+      this->operator[](3) = (unsigned char)(v.coord_[3] * 255.0);
+    }
+
+    inline operator Vec<double, 4>() const
+    {
+      Vec<double, 4> v;
+      v.coord_[0] = double(this->operator[](0)) / 255.0;
+      v.coord_[1] = double(this->operator[](1)) / 255.0;
+      v.coord_[2] = double(this->operator[](2)) / 255.0;
+      v.coord_[3] = double(this->operator[](3)) / 255.0;
+      return v;
     }
 
     inline const unsigned char & a() const { return this->operator[](0); }
@@ -1467,7 +1497,6 @@ namespace yae
     TPrivate * p_;
   };
 
-
   //----------------------------------------------------------------
   // Image
   //
@@ -1574,6 +1603,36 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+
+    // border width:
+    ItemRef border_;
+
+    ColorRef color_;
+    ColorRef colorBorder_;
+  };
+
+  //----------------------------------------------------------------
+  // RoundRect
+  //
+  class RoundRect : public Item
+  {
+    RoundRect(const RoundRect &);
+    RoundRect & operator = (const RoundRect &);
+
+  public:
+    RoundRect(const char * id);
+    ~RoundRect();
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+    void unpaintContent() const;
+
+    // keep implementation details private:
+    struct TPrivate;
+    TPrivate * p_;
 
     // corner radius:
     ItemRef radius_;

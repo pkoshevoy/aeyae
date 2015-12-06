@@ -976,7 +976,7 @@ namespace yae
                                data));
     yae_assert_gl_no_error();
 
-    if (ih < heightPowerOfTwo)
+    if (ih < (unsigned int)heightPowerOfTwo)
     {
       // copy the padding row:
       YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
@@ -996,7 +996,7 @@ namespace yae
                                  data));
     }
 
-    if (iw < widthPowerOfTwo)
+    if (iw < (unsigned int)widthPowerOfTwo)
     {
       // copy the padding column:
       YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, iw - 1));
@@ -1016,7 +1016,8 @@ namespace yae
                                  data));
     }
 
-    if (ih < heightPowerOfTwo && iw < widthPowerOfTwo)
+    if (ih < (unsigned int)heightPowerOfTwo &&
+        iw < (unsigned int)widthPowerOfTwo)
     {
       // copy the bottom-right padding corner:
       YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, ih - 1));
@@ -1143,6 +1144,24 @@ namespace yae
         length_ = e - origin_;
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // Segment::pixelOverlap
+  //
+  double
+  Segment::pixelOverlap(double p) const
+  {
+    int64 s0 = int64(0.5 + 1000.0 * origin_);
+    int64 s1 = int64(0.5 + 1000.0 * (origin_ + length_));
+    int64 p0 = int64(0.5 + 1000.0 * p);
+    int64 p1 = p0 + 1000;
+
+    int64 a = std::max<int64>(p0, s0);
+    int64 b = std::min<int64>(p1, s1);
+    int64 o = std::max<int64>(0, b - a);
+    YAE_ASSERT(o <= 1000);
+    return double(o) * 1e-3;
   }
 
 
@@ -2159,7 +2178,7 @@ namespace yae
     filterShadow.color_[0.42] = Color(0x1f1f1f, 0.9);
     filterShadow.color_[1.0] = Color(0x1f1f1f, 0.0);
 
-    Rectangle & filter = item.addNew<Rectangle>("bg");
+    RoundRect & filter = item.addNew<RoundRect>("bg");
     filter.anchors_.fill(item, 2);
     filter.anchors_.bottom_.reset();
     filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
@@ -2774,7 +2793,7 @@ namespace yae
       maScrollbar.anchors_.fill(scrollbar);
 
       // configure scrollbar slider:
-      Rectangle & slider = scrollbar.addNew<Rectangle>("slider");
+      RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
       slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
       slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
       slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
@@ -3016,7 +3035,6 @@ namespace yae
 
       labelBg.anchors_.inset(label, -3, -1);
       labelBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
-      labelBg.radius_ = ItemRef::constant(3.0);
 
       Item & rm = cell.addNew<Item>("remove item");
 
@@ -3034,7 +3052,6 @@ namespace yae
       playingBg.anchors_.inset(playing, -3, -1);
       playingBg.visible_ = BoolRef::reference(playing, kPropertyVisible);
       playingBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
-      playingBg.radius_ = ItemRef::constant(3.0);
 
       rm.width_ = ItemRef::reference(playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(playing, kPropertyHeight);
@@ -3729,7 +3746,7 @@ namespace yae
     {
       font_.setFamily("impact");
     }
-#ifndef __APPLE__
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
     else
 #endif
     {
@@ -3937,7 +3954,6 @@ namespace yae
   //
   Rectangle::Rectangle(const char * id):
     Item(id),
-    radius_(ItemRef::constant(0.0)),
     border_(ItemRef::constant(0.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
@@ -3989,111 +4005,12 @@ namespace yae
     }
   }
 
-
-  //----------------------------------------------------------------
-  // paintRect
-  //
-  static void
-  paintRoundedRect(const BBox & bbox,
-                   double radius,
-                   double border,
-                   const Color & color,
-                   const Color & colorBorder)
-  {
-    radius = std::min(radius, 0.5 * std::min(bbox.w_, bbox.h_));
-    double r0 = radius - border;
-
-    double cx[2];
-    cx[0] = bbox.x_ + bbox.w_ - radius;
-    cx[1] = bbox.x_ + radius;
-
-    double cy[2];
-    cy[0] = bbox.y_ + radius;
-    cy[1] = bbox.y_ + bbox.h_ - radius;
-
-    std::vector<TVec2D> triangleFan;
-    std::vector<TVec2D> triangleStrip;
-
-    // start the fan:
-    TVec2D center(bbox.x_ + 0.5 * bbox.w_,
-                  bbox.y_ + 0.5 * bbox.h_);
-    triangleFan.push_back(center);
-
-    unsigned int ix[] = { 0, 1, 1, 0 };
-    unsigned int iy[] = { 0, 0, 1, 1 };
-
-    unsigned int nsteps = (unsigned int)std::ceil(radius);
-    for (unsigned int i = 0; i < 4; i++)
-    {
-      double ox = cx[ix[i]];
-      double oy = cy[iy[i]];
-
-      for (unsigned int j = 0; j <= nsteps; j++)
-      {
-        double t = double(i * nsteps + j) / double(nsteps * 2);
-        double a = M_PI * t;
-        double tcos = std::cos(a);
-        double tsin = std::sin(a);
-
-        triangleFan.push_back(TVec2D(ox + tcos * radius,
-                                     oy - tsin * radius));
-
-        triangleStrip.push_back(triangleFan.back());
-        triangleStrip.push_back(TVec2D(ox + tcos * r0,
-                                       oy - tsin * r0));
-      }
-    }
-
-    // close the loop:
-    TVec2D f1 = triangleFan[1];
-    TVec2D s1 = triangleStrip[0];
-    TVec2D s2 = triangleStrip[1];
-    triangleFan.push_back(f1);
-    triangleStrip.push_back(s1);
-    triangleStrip.push_back(s2);
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
-                          color.g(),
-                          color.b(),
-                          color.a()));
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
-    {
-      for (std::vector<TVec2D>::const_iterator i = triangleFan.begin(),
-             end = triangleFan.end(); i != end; ++i)
-      {
-        const TVec2D & v = *i;
-        YAE_OGL_11(glVertex2dv(v.coord_));
-      }
-    }
-    YAE_OGL_11(glEnd());
-
-    if (border > 0.0)
-    {
-      YAE_OGL_11(glColor4ub(colorBorder.r(),
-                            colorBorder.g(),
-                            colorBorder.b(),
-                            colorBorder.a()));
-      YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-      {
-        for (std::vector<TVec2D>::const_iterator i = triangleStrip.begin(),
-               end = triangleStrip.end(); i != end; ++i)
-        {
-          const TVec2D & v = *i;
-          YAE_OGL_11(glVertex2dv(v.coord_));
-        }
-      }
-      YAE_OGL_11(glEnd());
-    }
-  }
-
   //----------------------------------------------------------------
   // Rectangle::uncache
   //
   void
   Rectangle::uncache()
   {
-    radius_.uncache();
     border_.uncache();
     color_.uncache();
     colorBorder_.uncache();
@@ -4109,26 +4026,312 @@ namespace yae
     BBox bbox;
     this->get(kPropertyBBox, bbox);
 
-    double radius = radius_.get();
     double border = border_.get();
     const Color & color = color_.get();
     const Color & colorBorder = colorBorder_.get();
 
-    if (radius > 0.0)
+    paintRect(bbox,
+              border,
+              color,
+              colorBorder);
+  }
+
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate
+  //
+  struct RoundRect::TPrivate
+  {
+    TPrivate();
+    ~TPrivate();
+
+    void uncache();
+    bool uploadTexture(const RoundRect & item);
+    void paint(const RoundRect & item);
+
+    GLuint texId_;
+    GLuint iw_;
+    BoolRef ready_;
+  };
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate::TPrivate
+  //
+  RoundRect::TPrivate::TPrivate():
+    texId_(0),
+    iw_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate::~TPrivate
+  //
+  RoundRect::TPrivate::~TPrivate()
+  {
+    uncache();
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate::uncache
+  //
+  void
+  RoundRect::TPrivate::uncache()
+  {
+    ready_.uncache();
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    texId_ = 0;
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate::uploadTexture
+  //
+  bool
+  RoundRect::TPrivate::uploadTexture(const RoundRect & item)
+  {
+    // get the corner radius:
+    double r = item.radius_.get();
+
+    // get the border width:
+    double b = item.border_.get();
+
+    // make sure radius is not less than border width:
+    r = std::max<double>(r, b);
+
+    // inner radius:
+    double r0 = r - b;
+
+    // we'll be comparing against radius values,
+    Segment outerSegment(0.0, r);
+    Segment innerSegment(0.0, r0);
+
+    // make sure image is at least 2 pixels wide:
+    iw_ = (int)std::ceil(std::max<double>(2.0, 2.0 * r));
+
+    // make sure texture size is even:
+    iw_ = (iw_ & 1) ? (iw_ + 1) : iw_;
+
+    // put origin at the center:
+    double w2 = iw_ / 2;
+
+    // supersample each pixel:
+#if 1
+    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+#else
+    static const TVec2D sp[] = { TVec2D(0.5, 0.5) };
+#endif
+    static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
+
+    QImage img(iw_, iw_, QImage::Format_ARGB32);
     {
-      paintRoundedRect(bbox,
-                       radius,
-                       border,
-                       color,
-                       colorBorder);
+      Vec<double, 4> outerColor(item.colorBorder_.get());
+      Vec<double, 4> innerColor(item.color_.get());
+      TVec2D samplePoint;
+
+      for (int j = 0; j < int(iw_); j++)
+      {
+        uchar *	row = img.scanLine(j);
+        uchar * dst = row;
+        samplePoint.set_y(double(j - w2));
+
+        for (int i = 0; i < int(iw_); i++, dst += sizeof(int))
+        {
+          samplePoint.set_x(double(i - w2));
+
+          double outer = 0.0;
+          double inner = 0.0;
+
+          for (unsigned int k = 0; k < supersample; k++)
+          {
+            double p =
+              std::max<double>(0.0, (samplePoint + sp[k]).norm() - 1.0);
+
+            double outerOverlap = outerSegment.pixelOverlap(p);
+            double innerOverlap =
+              (r0 < r) ? innerSegment.pixelOverlap(p) : outerOverlap;
+
+            outerOverlap = std::max<double>(0.0, outerOverlap - innerOverlap);
+            outer += outerOverlap;
+            inner += innerOverlap;
+          }
+
+          double outerWeight = outer / double(supersample);
+          double innerWeight = inner / double(supersample);
+          Color c(outerColor * outerWeight + innerColor * innerWeight);
+          memcpy(dst, &(c.argb_), sizeof(c.argb_));
+        }
+      }
     }
-    else
+
+    bool ok = yae::uploadTexture2D(img, texId_, iw_, iw_, GL_NEAREST);
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::TPrivate::paint
+  //
+  void
+  RoundRect::TPrivate::paint(const RoundRect & item)
+  {
+    BBox bbox;
+    item.get(kPropertyBBox, bbox);
+
+    // avoid rendering at fractional pixel coordinates:
+    double w = double(iw_);
+    double dw = bbox.w_ < w ? (w - bbox.w_) : 0.0;
+    double dh = bbox.h_ < w ? (w - bbox.h_) : 0.0;
+    bbox.x_ -= dw * 0.5;
+    bbox.y_ -= dh * 0.5;
+    bbox.w_ += dw;
+    bbox.h_ += dh;
+
+    // get the corner radius:
+    double r = item.radius_.get();
+
+    // get the border width:
+    double b = item.border_.get();
+
+    // make sure radius is not less than border width:
+    r = std::max<double>(r, b);
+
+    // texture width:
+    double wt = double(powerOfTwoGEQ<GLsizei>(iw_));
+
+    double t[4];
+    t[0] = 0.0;
+    t[1] = (double(iw_ / 2)) / wt;
+    t[2] = t[1];
+    t[3] = w / wt;
+
+    double x[4];
+    x[0] = bbox.x_;
+    x[1] = x[0] + iw_ / 2;
+    x[3] = x[0] + bbox.w_;
+    x[2] = x[3] - iw_ / 2;
+
+    double y[4];
+    y[0] = bbox.y_;
+    y[1] = y[0] + iw_ / 2;
+    y[3] = y[0] + bbox.h_;
+    y[2] = y[3] - iw_ / 2;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    YAE_OPENGL_HERE();
+    if (glActiveTexture)
     {
-      paintRect(bbox,
-                border,
-                color,
-                colorBorder);
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
     }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+    for (int j = 0; j < 3; j++)
+    {
+      if (y[j] == y[j + 1])
+      {
+        continue;
+      }
+
+      for (int i = 0; i < 3; i++)
+      {
+        if (x[i] == x[i + 1])
+        {
+          continue;
+        }
+
+        YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+        {
+          YAE_OGL_11(glTexCoord2d(t[i], t[j]));
+          YAE_OGL_11(glVertex2d(x[i], y[j]));
+
+          YAE_OGL_11(glTexCoord2d(t[i], t[j + 1]));
+          YAE_OGL_11(glVertex2d(x[i], y[j + 1]));
+
+          YAE_OGL_11(glTexCoord2d(t[i + 1], t[j]));
+          YAE_OGL_11(glVertex2d(x[i + 1], y[j]));
+
+          YAE_OGL_11(glTexCoord2d(t[i + 1], t[j + 1]));
+          YAE_OGL_11(glVertex2d(x[i + 1], y[j + 1]));
+        }
+        YAE_OGL_11(glEnd());
+      }
+    }
+
+    // un-bind:
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::RoundRect
+  //
+  RoundRect::RoundRect(const char * id):
+    Item(id),
+    p_(new RoundRect::TPrivate()),
+    radius_(ItemRef::constant(0.0)),
+    border_(ItemRef::constant(0.0)),
+    color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
+    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
+  {
+    p_->ready_ = addExpr(new UploadTexture<RoundRect>(*this));
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::~RoundRect
+  //
+  RoundRect::~RoundRect()
+  {
+    delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::uncache
+  //
+  void
+  RoundRect::uncache()
+  {
+    radius_.uncache();
+    border_.uncache();
+    color_.uncache();
+    colorBorder_.uncache();
+    p_->uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::paint
+  //
+  void
+  RoundRect::paintContent() const
+  {
+    if (p_->ready_.get())
+    {
+      p_->paint(*this);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::unpaintContent
+  //
+  void
+  RoundRect::unpaintContent() const
+  {
+    p_->uncache();
   }
 
 
