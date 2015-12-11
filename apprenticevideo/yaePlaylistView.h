@@ -565,7 +565,8 @@ namespace yae
     kPropertyYExtent,
     kPropertyBBoxContent,
     kPropertyBBox,
-    kPropertyVisible
+    kPropertyVisible,
+    kPropertyColor
   };
 
   //----------------------------------------------------------------
@@ -617,9 +618,19 @@ namespace yae
   typedef IProperties<bool> TBoolProp;
 
   //----------------------------------------------------------------
+  // TColorProp
+  //
+  typedef IProperties<Color> TColorProp;
+
+  //----------------------------------------------------------------
   // TVarProp
   //
   typedef IProperties<TVar> TVarProp;
+
+  //----------------------------------------------------------------
+  // TVec2DProp
+  //
+  typedef IProperties<TVec2D> TVec2DProp;
 
   //----------------------------------------------------------------
   // Expression
@@ -666,6 +677,11 @@ namespace yae
   // TVarExpr
   //
   typedef Expression<TVar> TVarExpr;
+
+  //----------------------------------------------------------------
+  // TVec2DExpr
+  //
+  typedef Expression<TVec2D> TVec2DExpr;
 
   //----------------------------------------------------------------
   // DataRef
@@ -912,6 +928,11 @@ namespace yae
   typedef DataRef<Color> ColorRef;
 
   //----------------------------------------------------------------
+  // TVec2DRef
+  //
+  typedef DataRef<TVec2D> TVec2DRef;
+
+  //----------------------------------------------------------------
   // Margins
   //
   struct Margins
@@ -980,7 +1001,8 @@ namespace yae
   struct Item : public TDoubleProp,
                 public TSegmentProp,
                 public TBBoxProp,
-                public TBoolProp
+                public TBoolProp,
+                public TColorProp
   {
 
     //----------------------------------------------------------------
@@ -1073,6 +1095,9 @@ namespace yae
 
     // virtual:
     void get(Property property, bool & value) const;
+
+    // virtual:
+    void get(Property property, Color & value) const;
 
     const Segment & xContent() const;
     const Segment & yContent() const;
@@ -1210,21 +1235,21 @@ namespace yae
     ItemRef width_;
     ItemRef height_;
 
-    // storage of expressions associated with this Item:
-    std::list<TPropertiesBasePtr> expr_;
-
-    // 1D bounding segments of this items content:
-    const SegmentRef xContent_;
-    const SegmentRef yContent_;
-
-    // 1D bounding segments of this item:
-    const SegmentRef xExtent_;
-    const SegmentRef yExtent_;
-
     // flag indicating whether this item and its children are visible:
     BoolRef visible_;
 
   protected:
+    // storage of expressions associated with this Item:
+    std::list<TPropertiesBasePtr> expr_;
+
+    // 1D bounding segments of this items content:
+    SegmentRef xContent_;
+    SegmentRef yContent_;
+
+    // 1D bounding segments of this item:
+    SegmentRef xExtent_;
+    SegmentRef yExtent_;
+
     mutable bool painted_;
 
   private:
@@ -1664,6 +1689,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // PlusButton
+  //
+  struct PlusButton : public Item
+  {
+    PlusButton(const char * id);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+
+    ColorRef color_;
+  };
+
+  //----------------------------------------------------------------
   // XButton
   //
   struct XButton : public Item
@@ -1674,27 +1715,54 @@ namespace yae
     void uncache();
 
     // virtual:
-    void paintContent() const;
+    void get(Property property, Color & value) const;
 
-    ItemRef border_;
     ColorRef color_;
-    ColorRef colorBorder_;
   };
 
   //----------------------------------------------------------------
-  // FilterIcon
+  // Transform
   //
-  struct FilterIcon : public Item
+  struct Transform : public Item
   {
-    FilterIcon(const char * id);
+    friend struct TransformedXContent;
+    friend struct TransformedYContent;
+
+    Transform(const char * id);
 
     // virtual:
     void uncache();
+    bool paint(const Segment & xregion, const Segment & yregion) const;
 
     // virtual:
-    void paintContent() const;
+    void getInputHandlers(// coordinate system origin of
+                          // the input area, expressed in the
+                          // coordinate system of the root item:
+                          const TVec2D & itemCSysOrigin,
 
-    ColorRef color_;
+                          // point expressed in the coord. system of the item,
+                          // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                          const TVec2D & itemCSysPoint,
+
+                          // pass back input areas overlapping above point,
+                          // along with its coord. system origin expressed
+                          // in the coordinate system of the root item:
+                          std::list<InputHandler> & inputHandlers);
+
+    // helper:
+    void getCSys(TVec2D & origin, TVec2D & uAxis, TVec2D & vAxis) const;
+
+    // nested item coordinate system rotation angle
+    // relative to this items local coordinate system,
+    // expressed in radians:
+    ItemRef rotation_;
+
+  protected:
+    SegmentRef xContentLocal_;
+    SegmentRef yContentLocal_;
+
+    // local coordinate system u-axis (v-axis is derived from u-axis):
+    TVec2DRef uAxis_;
   };
 
   //----------------------------------------------------------------

@@ -463,6 +463,121 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // wcs_to_lcs
+  //
+  static TVec2D
+  wcs_to_lcs(const TVec2D & origin,
+             const TVec2D & u_axis,
+             const TVec2D & v_axis,
+             const TVec2D & wcs_pt)
+  {
+    TVec2D wcs_vec = wcs_pt - origin;
+    double u = (u_axis * wcs_vec) / (u_axis * u_axis);
+    double v = (v_axis * wcs_vec) / (v_axis * v_axis);
+    return TVec2D(u, v);
+  }
+
+  //----------------------------------------------------------------
+  // lcs_to_wcs
+  //
+  inline static TVec2D
+  lcs_to_wcs(const TVec2D & origin,
+             const TVec2D & u_axis,
+             const TVec2D & v_axis,
+             const TVec2D & lcs_pt)
+  {
+    return origin + u_axis * lcs_pt.x() + v_axis * lcs_pt.y();
+  }
+
+  //----------------------------------------------------------------
+  // TransformedXContent
+  //
+  struct TransformedXContent : public TSegmentExpr
+  {
+    TransformedXContent(const Transform & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      Segment xcontent = item_.xContentLocal_.get();
+      Segment ycontent = item_.yContentLocal_.get();
+
+      TVec2D origin;
+      TVec2D u_axis;
+      TVec2D v_axis;
+      item_.getCSys(origin, u_axis, v_axis);
+
+      TVec2D p00 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.start(), ycontent.start()));
+
+      TVec2D p01 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.start(), ycontent.end()));
+
+      TVec2D p10 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.end(), ycontent.start()));
+
+      TVec2D p11 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.end(), ycontent.end()));
+
+      double x0 = std::min<double>(std::min<double>(p00.x(), p01.x()),
+                                   std::min<double>(p10.x(), p11.x()));
+
+      double x1 = std::max<double>(std::max<double>(p00.x(), p01.x()),
+                                   std::max<double>(p10.x(), p11.x()));
+
+      result = Segment(x0, x1 - x0);
+    }
+
+    const Transform & item_;
+  };
+
+  //----------------------------------------------------------------
+  // TransformedYContent
+  //
+  struct TransformedYContent : public TSegmentExpr
+  {
+    TransformedYContent(const Transform & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(Segment & result) const
+    {
+      Segment xcontent = item_.xContentLocal_.get();
+      Segment ycontent = item_.yContentLocal_.get();
+
+      TVec2D origin;
+      TVec2D u_axis;
+      TVec2D v_axis;
+      item_.getCSys(origin, u_axis, v_axis);
+
+      TVec2D p00 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.start(), ycontent.start()));
+
+      TVec2D p01 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.start(), ycontent.end()));
+
+      TVec2D p10 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.end(), ycontent.start()));
+
+      TVec2D p11 = lcs_to_wcs(origin, u_axis, v_axis,
+                              TVec2D(xcontent.end(), ycontent.end()));
+
+      double y0 = std::min<double>(std::min<double>(p00.y(), p01.y()),
+                                   std::min<double>(p10.y(), p11.y()));
+
+      double y1 = std::max<double>(std::max<double>(p00.y(), p01.y()),
+                                   std::max<double>(p10.y(), p11.y()));
+
+      result = Segment(y0, y1 - y0);
+    }
+
+    const Transform & item_;
+  };
+
+  //----------------------------------------------------------------
   // itemHeightDueToItemContent
   //
   static double
@@ -1326,11 +1441,11 @@ namespace yae
   //
   Item::Item(const char * id):
     parent_(NULL),
+    visible_(BoolRef::constant(true)),
     xContent_(addExpr(new CalcXContent(*this))),
     yContent_(addExpr(new CalcYContent(*this))),
     xExtent_(addExpr(new CalcXExtent(*this))),
     yExtent_(addExpr(new CalcYExtent(*this))),
-    visible_(BoolRef::constant(true)),
     painted_(false)
   {
     if (id)
@@ -1509,6 +1624,17 @@ namespace yae
       throw std::runtime_error("unsupported item property of type <bool>");
       value = false;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  void
+  Item::get(Property property, Color & value) const
+  {
+    YAE_ASSERT(false);
+    throw std::runtime_error("unsupported item property of type <Color>");
+    value = Color();
   }
 
   //----------------------------------------------------------------
@@ -2182,14 +2308,32 @@ namespace yae
     filter.anchors_.fill(item, 2);
     filter.anchors_.bottom_.reset();
     filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
-    filter.radius_ = ItemRef::constant(3);
+    filter.radius_ = ItemRef::scale(filter, kPropertyHeight, 0.1);
 
-    FilterIcon & icon = filter.addNew<FilterIcon>("filter_icon");
-    icon.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
-    icon.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
-    icon.width_ = ItemRef::reference(filter, kPropertyHeight);
-    icon.height_ = ItemRef::reference(filter, kPropertyHeight);
-    icon.color_ = ColorRef::constant(Color(0x9f9f9f, 1.0));
+    Item & icon = filter.addNew<Item>("filter_icon");
+    {
+      RoundRect & circle = icon.addNew<RoundRect>("circle");
+      circle.anchors_.hcenter_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
+      circle.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+      circle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
+      circle.height_ = circle.width_;
+      circle.radius_ = ItemRef::scale(circle, kPropertyWidth, 0.5);
+      circle.border_ = ItemRef::scale(circle, kPropertyWidth, 0.1);
+
+      Transform & xform = icon.addNew<Transform>("xform");
+      xform.anchors_.hcenter_ = circle.anchors_.hcenter_;
+      xform.anchors_.vcenter_ = circle.anchors_.vcenter_;
+      xform.rotation_ = ItemRef::constant(M_PI * 0.25);
+
+      Rectangle & handle = xform.addNew<Rectangle>("handle");
+      handle.anchors_.left_ = ItemRef::scale(filter, kPropertyHeight, 0.25);
+      handle.anchors_.vcenter_ = ItemRef::constant(0.0);
+      handle.width_ = handle.anchors_.left_;
+      handle.height_ = ItemRef::scale(handle, kPropertyWidth, 0.25);
+
+      icon.anchors_.left_ = ItemRef::reference(circle, kPropertyLeft);
+      icon.anchors_.top_ = ItemRef::reference(circle, kPropertyTop);
+    }
 
     // FIXME: this should be a text edit item:
     Text & text = filter.addNew<Text>("filter_text");
@@ -4429,14 +4573,111 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PlusButton::PlusButton
+  //
+  PlusButton::PlusButton(const char * id):
+    Item(id),
+    color_(ColorRef::constant(Color(0xffffff, 0.5)))
+  {}
+
+  //----------------------------------------------------------------
+  // PlusButton::uncache
+  //
+  void
+  PlusButton::uncache()
+  {
+    color_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // PlusButton::paintContent
+  //
+  void
+  PlusButton::paintContent() const
+  {
+    static const TVec2D xaxis(1.0, 0.0);
+    static const TVec2D yaxis(0.0, 1.0);
+
+    const Color & color = color_.get();
+    const Segment & xseg = this->xExtent();
+    const Segment & yseg = this->yExtent();
+    TVec2D center(xseg.center(), yseg.center());
+
+    double s = (yseg.length_ < xseg.length_ ?
+                yseg.length_ :
+                xseg.length_);
+    double t = s * 0.2;
+    double hs = s * 0.5;
+    double ht = t * 0.5;
+
+    TVec2D p[12];
+    p[0]  = center - ht * xaxis - hs * yaxis;
+    p[1]  = center - ht * xaxis + hs * yaxis;
+    p[2]  = center + ht * xaxis - hs * yaxis;
+    p[3]  = center + ht * xaxis + hs * yaxis;
+
+    p[4]  = center + ht * (xaxis - yaxis);
+    p[5]  = center + ht * (xaxis + yaxis);
+    p[6]  = center + hs * xaxis - ht * yaxis;
+    p[7]  = center + hs * xaxis + ht * yaxis;
+
+    p[8]  = center - hs * xaxis - ht * yaxis;
+    p[9]  = center - hs * xaxis + ht * yaxis;
+    p[10] = center - ht * (xaxis + yaxis);
+    p[11] = center - ht * (xaxis - yaxis);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glColor4ub(color.r(), color.g(), color.b(), color.a()));
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glVertex2dv(p[0].coord_));
+      YAE_OGL_11(glVertex2dv(p[1].coord_));
+      YAE_OGL_11(glVertex2dv(p[2].coord_));
+      YAE_OGL_11(glVertex2dv(p[3].coord_));
+    }
+    YAE_OGL_11(glEnd());
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glVertex2dv(p[4].coord_));
+      YAE_OGL_11(glVertex2dv(p[5].coord_));
+      YAE_OGL_11(glVertex2dv(p[6].coord_));
+      YAE_OGL_11(glVertex2dv(p[7].coord_));
+    }
+    YAE_OGL_11(glEnd());
+
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glVertex2dv(p[8].coord_));
+      YAE_OGL_11(glVertex2dv(p[9].coord_));
+      YAE_OGL_11(glVertex2dv(p[10].coord_));
+      YAE_OGL_11(glVertex2dv(p[11].coord_));
+    }
+    YAE_OGL_11(glEnd());
+  }
+
+
+  //----------------------------------------------------------------
   // XButton::XButton
   //
   XButton::XButton(const char * id):
     Item(id),
-    border_(ItemRef::constant(0.0)),
-    color_(ColorRef::constant(Color(0xffffff, 0.5))),
-    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
-  {}
+    color_(ColorRef::constant(Color(0xffffff, 0.5)))
+  {
+    Transform & xform = addNew<Transform>("xform");
+    xform.anchors_.hcenter_ = ItemRef::reference(*this, kPropertyHCenter);
+    xform.anchors_.vcenter_ = ItemRef::reference(*this, kPropertyVCenter);
+    xform.rotation_ = ItemRef::constant(M_PI * 0.25);
+
+    PlusButton & pb = xform.addNew<PlusButton>("plus_button");
+    pb.anchors_.vcenter_ = ItemRef::constant(0.0);
+    pb.anchors_.hcenter_ = ItemRef::constant(0.0);
+    pb.width_ = ItemRef::scale(*this, kPropertyWidth, 1.3);
+    pb.height_ = pb.width_;
+    pb.color_ = ColorRef::reference(*this, kPropertyColor);
+  }
 
   //----------------------------------------------------------------
   // XButton::uncache
@@ -4444,229 +4685,255 @@ namespace yae
   void
   XButton::uncache()
   {
-    border_.uncache();
     color_.uncache();
-    colorBorder_.uncache();
     Item::uncache();
   }
 
   //----------------------------------------------------------------
-  // XButton::paintContent
+  // Item::get
   //
   void
-  XButton::paintContent() const
+  XButton::get(Property property, Color & value) const
   {
-    static const double cos_45 = 0.707106781186548;
-
-    const Color & color = color_.get();
-    const Segment & xseg = this->xExtent();
-    const Segment & yseg = this->yExtent();
-
-    double radius = 0.5 * (yseg.length_ < xseg.length_ ?
-                           yseg.length_ :
-                           xseg.length_);
-
-    TVec2D dx(0.33 * radius, 0.0);
-    TVec2D dy(0.0, 0.33 * radius);
-    TVec2D center(xseg.center(), yseg.center());
-
-    TVec2D v[4] = {
-      TVec2D(cos_45, -cos_45),
-      TVec2D(-cos_45, -cos_45),
-      TVec2D(-cos_45, cos_45),
-      TVec2D(cos_45, cos_45)
-    };
-
-    TVec2D p[12];
-    p[0]  = center + dx;
-    p[1]  = center + dx + radius * v[0];
-    p[2]  = center - dy + radius * v[0];
-    p[3]  = center - dy;
-    p[4]  = center - dy + radius * v[1];
-    p[5]  = center - dx + radius * v[1];
-    p[6]  = center - dx;
-    p[7]  = center - dx + radius * v[2];
-    p[8]  = center + dy + radius * v[2];
-    p[9]  = center + dy;
-    p[10] = center + dy + radius * v[3];
-    p[11] = center + dx + radius * v[3];
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
-                          color.g(),
-                          color.b(),
-                          color.a()));
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
+    if (property == kPropertyColor)
     {
-      YAE_OGL_11(glVertex2dv(center.coord_));
-      YAE_OGL_11(glVertex2dv(p[0].coord_));
-      YAE_OGL_11(glVertex2dv(p[1].coord_));
-      YAE_OGL_11(glVertex2dv(p[2].coord_));
-      YAE_OGL_11(glVertex2dv(p[3].coord_));
-      YAE_OGL_11(glVertex2dv(p[4].coord_));
-      YAE_OGL_11(glVertex2dv(p[5].coord_));
-      YAE_OGL_11(glVertex2dv(p[6].coord_));
-      YAE_OGL_11(glVertex2dv(p[7].coord_));
-      YAE_OGL_11(glVertex2dv(p[8].coord_));
-      YAE_OGL_11(glVertex2dv(p[9].coord_));
-      YAE_OGL_11(glVertex2dv(p[10].coord_));
-      YAE_OGL_11(glVertex2dv(p[11].coord_));
-      YAE_OGL_11(glVertex2dv(p[0].coord_));
+      value = this->color_.get();
     }
-    YAE_OGL_11(glEnd());
-
-    double border = border_.get();
-    if (border > 0.0)
+    else
     {
-      const Color & colorBorder = colorBorder_.get();
-      YAE_OGL_11(glColor4ub(colorBorder.r(),
-                            colorBorder.g(),
-                            colorBorder.b(),
-                            colorBorder.a()));
-      YAE_OGL_11(glLineWidth(border));
-      YAE_OGL_11(glBegin(GL_LINE_LOOP));
-      {
-        YAE_OGL_11(glVertex2dv(p[0].coord_));
-        YAE_OGL_11(glVertex2dv(p[1].coord_));
-        YAE_OGL_11(glVertex2dv(p[2].coord_));
-        YAE_OGL_11(glVertex2dv(p[3].coord_));
-        YAE_OGL_11(glVertex2dv(p[4].coord_));
-        YAE_OGL_11(glVertex2dv(p[5].coord_));
-        YAE_OGL_11(glVertex2dv(p[6].coord_));
-        YAE_OGL_11(glVertex2dv(p[7].coord_));
-        YAE_OGL_11(glVertex2dv(p[8].coord_));
-        YAE_OGL_11(glVertex2dv(p[9].coord_));
-        YAE_OGL_11(glVertex2dv(p[10].coord_));
-        YAE_OGL_11(glVertex2dv(p[11].coord_));
-        YAE_OGL_11(glVertex2dv(p[0].coord_));
-      }
-      YAE_OGL_11(glEnd());
+      // let the base class handle it:
+      Item::get(property, value);
     }
   }
 
 
   //----------------------------------------------------------------
-  // FilterIcon::FilterIcon
+  // GetUAxis
   //
-  FilterIcon::FilterIcon(const char * id):
+  struct GetUAxis : public TVec2DExpr
+  {
+    GetUAxis(const ItemRef & rotation):
+      rotation_(rotation)
+    {}
+
+    // virtual:
+    void evaluate(TVec2D & result) const
+    {
+      double angle = rotation_.get();
+      double sin_a = sin(angle);
+      double cos_a = cos(angle);
+      result.set_x(cos_a);
+      result.set_y(sin_a);
+    }
+
+    const ItemRef & rotation_;
+  };
+
+  //----------------------------------------------------------------
+  // getVAxis
+  //
+  inline static TVec2D
+  getVAxis(const TVec2D & u_axis)
+  {
+    // v-axis is orthogonal to u-axis,
+    // meaning it is at a 90 degree angle to u-axis;
+    //
+    // cos(a + pi/2) == -sin(a)
+    // sin(a + pi/2) ==  cos(a)
+    //
+    return TVec2D(-u_axis.y(), u_axis.x());
+  }
+
+  //----------------------------------------------------------------
+  // SameExpression
+  //
+  struct SameExpression
+  {
+    SameExpression(const IPropertiesBase * ref = NULL):
+      ref_(ref)
+    {}
+
+    inline bool operator()(const TPropertiesBasePtr & expression) const
+    {
+      if (expression.get() == ref_)
+      {
+        return true;
+      }
+
+      return false;
+    }
+
+    const IPropertiesBase * ref_;
+  };
+
+  //----------------------------------------------------------------
+  // Transform::Transform
+  //
+  Transform::Transform(const char * id):
     Item(id),
-    color_(ColorRef::constant(Color(0xffffff, 0.5)))
-  {}
+    rotation_(ItemRef::constant(0.0))
+  {
+    // override base class content and extent calculation
+    // in order to handle coordinate system transformations:
+    xContentLocal_ = Item::xContent_;
+    yContentLocal_ = Item::yContent_;
+    Item::xContent_ = addExpr(new TransformedXContent(*this));
+    Item::yContent_ = addExpr(new TransformedYContent(*this));
+
+    // get rid of base implementation of xExtent and yExtent:
+    Item::expr_.remove_if(SameExpression(Item::xExtent_.ref_));
+    Item::expr_.remove_if(SameExpression(Item::yExtent_.ref_));
+
+    Item::xExtent_ = Item::xContent_;
+    Item::yExtent_ = Item::yContent_;
+
+    uAxis_ = addExpr(new GetUAxis(rotation_));
+  }
 
   //----------------------------------------------------------------
-  // FilterIcon::uncache
+  // Transform::uncache
   //
   void
-  FilterIcon::uncache()
+  Transform::uncache()
   {
-    color_.uncache();
+    rotation_.uncache();
+    xContentLocal_.uncache();
+    yContentLocal_.uncache();
+    uAxis_.uncache();
     Item::uncache();
   }
 
   //----------------------------------------------------------------
-  // FilterIcon::paintContent
+  // Transform::getInputHandlers
   //
   void
-  FilterIcon::paintContent() const
+  Transform::getInputHandlers(// coordinate system origin of
+                              // the input area, expressed in the
+                              // coordinate system of the root item:
+                              const TVec2D & itemCSysOrigin,
+
+                              // point expressed in the coord.sys. of the item,
+                              // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                              const TVec2D & itemCSysPoint,
+
+                              // pass back input areas overlapping above point,
+                              // along with its coord. system origin expressed
+                              // in the coordinate system of the root item:
+                              std::list<InputHandler> & inputHandlers)
   {
-    static const double circle[][2] = {
-      { 1, 0 },
-      { 0.9914448613738104, 0.13052619222005157 },
-      { 0.9659258262890683, 0.25881904510252074 },
-      { 0.9238795325112867, 0.3826834323650898 },
-      { 0.8660254037844387, 0.5 },
-      { 0.7933533402912352, 0.6087614290087207 },
-      { 0.7071067811865476, 0.7071067811865475 },
-      { 0.6087614290087207, 0.7933533402912352 },
-      { 0.5, 0.8660254037844386 },
-      { 0.38268343236508984, 0.9238795325112867 },
-      { 0.25881904510252074, 0.9659258262890683 },
-      { 0.1305261922200517, 0.9914448613738104 },
-      { 0, 1 },
-      { -0.13052619222005138, 0.9914448613738105 },
-      { -0.25881904510252085, 0.9659258262890683 },
-      { -0.3826834323650897, 0.9238795325112867 },
-      { -0.5, 0.8660254037844387 },
-      { -0.6087614290087207, 0.7933533402912352 },
-      { -0.7071067811865475, 0.7071067811865476 },
-      { -0.7933533402912349, 0.6087614290087209 },
-      { -0.8660254037844387, 0.5 },
-      { -0.9238795325112867, 0.3826834323650899 },
-      { -0.9659258262890682, 0.258819045102521 },
-      { -0.9914448613738104, 0.13052619222005157 },
-      { -1, 0 },
-      { -0.9914448613738104, -0.13052619222005177 },
-      { -0.9659258262890684, -0.25881904510252035 },
-      { -0.9238795325112868, -0.38268343236508967 },
-      { -0.8660254037844386, -0.5 },
-      { -0.7933533402912354, -0.6087614290087203 },
-      { -0.7071067811865477, -0.7071067811865475 },
-      { -0.6087614290087209, -0.7933533402912349 },
-      { -0.5, -0.8660254037844384 },
-      { -0.38268343236509034, -0.9238795325112865 },
-      { -0.25881904510252063, -0.9659258262890683 },
-      { -0.13052619222005163, -0.9914448613738104 },
-      { 0, -1 },
-      { 0.13052619222005127, -0.9914448613738105 },
-      { 0.2588190451025203, -0.9659258262890684 },
-      { 0.38268343236509, -0.9238795325112866 },
-      { 0.5, -0.8660254037844386 },
-      { 0.6087614290087205, -0.7933533402912352 },
-      { 0.7071067811865474, -0.7071067811865477 },
-      { 0.7933533402912349, -0.6087614290087209 },
-      { 0.8660254037844384, -0.5 },
-      { 0.9238795325112865, -0.3826834323650904 },
-      { 0.9659258262890683, -0.2588190451025207 },
-      { 0.9914448613738104, -0.13052619222005168 }
-    };
+    if (!Item::overlaps(itemCSysPoint))
+    {
+      return;
+    }
 
-    const Color & color = color_.get();
-    const Segment & xseg = this->xExtent();
-    const Segment & yseg = this->yExtent();
+    TVec2D origin;
+    TVec2D u_axis;
+    TVec2D v_axis;
+    getCSys(origin, u_axis, v_axis);
 
-    TVec2D center(xseg.center(), yseg.center());
-    double radius = 0.5 * (yseg.length_ < xseg.length_ ?
-                           yseg.length_ :
-                           xseg.length_);
+    // transform point to local coordinate system:
+    TVec2D localCSysOffset = itemCSysOrigin + origin;
+    TVec2D ptInLocalCoords = wcs_to_lcs(origin, u_axis, v_axis, itemCSysPoint);
 
+    for (std::vector<ItemPtr>::const_iterator i = Item::children_.begin();
+         i != Item::children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->getInputHandlers(localCSysOffset, ptInLocalCoords, inputHandlers);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Transform::paint
+  //
+  bool
+  Transform::paint(const Segment & xregion, const Segment & yregion) const
+  {
+    if (!Item::visible())
+    {
+      unpaint();
+      return false;
+    }
+
+    const Segment & yfootprint = this->yExtent();
+    if (yregion.disjoint(yfootprint))
+    {
+      unpaint();
+      return false;
+    }
+
+    const Segment & xfootprint = this->xExtent();
+    if (xregion.disjoint(xfootprint))
+    {
+      unpaint();
+      return false;
+    }
+
+    this->paintContent();
+    painted_ = true;
+
+    // transform x,y-region to local coordinate system u,v-region:
+    TVec2D origin;
+    TVec2D u_axis;
+    TVec2D v_axis;
+    getCSys(origin, u_axis, v_axis);
+
+    double angle = rotation_.get();
+    double degrees = 180.0 * (angle / M_PI);
+
+    TVec2D p00 = wcs_to_lcs(origin, u_axis, v_axis,
+                            TVec2D(xregion.start(), yregion.start()));
+
+    TVec2D p01 = wcs_to_lcs(origin, u_axis, v_axis,
+                            TVec2D(xregion.start(), yregion.end()));
+
+    TVec2D p10 = wcs_to_lcs(origin, u_axis, v_axis,
+                            TVec2D(xregion.end(), yregion.start()));
+
+    TVec2D p11 = wcs_to_lcs(origin, u_axis, v_axis,
+                            TVec2D(xregion.end(), yregion.end()));
+
+    double u0 = std::min<double>(std::min<double>(p00.x(), p01.x()),
+                                 std::min<double>(p10.x(), p11.x()));
+
+    double u1 = std::max<double>(std::max<double>(p00.x(), p01.x()),
+                                 std::max<double>(p10.x(), p11.x()));
+
+    double v0 = std::min<double>(std::min<double>(p00.y(), p01.y()),
+                                 std::min<double>(p10.y(), p11.y()));
+
+    double v1 = std::max<double>(std::max<double>(p00.y(), p01.y()),
+                                 std::max<double>(p10.y(), p11.y()));
+
+    Segment uregion(u0, u1 - u0);
+    Segment vregion(v0, v1 - v0);
+
+    TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
-                          color.g(),
-                          color.b(),
-                          color.a()));
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
+    YAE_OGL_11(glRotated(degrees, 0.0, 0.0, 1.0));
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
     {
-      for (unsigned int i = 0; i < 49; i++)
-      {
-        unsigned int j = i % 48;
-        TVec2D v(circle[j][0], -circle[j][1]);
-        TVec2D p0 = center + (0.32 * radius) * v;
-        TVec2D p1 = center + (0.45 * radius) * v;
-        YAE_OGL_11(glVertex2dv(p0.coord_));
-        YAE_OGL_11(glVertex2dv(p1.coord_));
-      }
+      const ItemPtr & child = *i;
+      child->paint(uregion, vregion);
     }
-    YAE_OGL_11(glEnd());
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      TVec2D u(circle[6][0], -circle[6][1]);
-      TVec2D v(circle[42][0], -circle[42][1]);
+    return true;
+  }
 
-      double w = 0.085 * radius;
-      double r0 = 0.45 * radius;
-      double r1 = 0.75 * radius;
-
-      TVec2D p0 = center + (r0 * v + w * u).resized(r0);
-      TVec2D p1 = center + (r1 * v + w * u).resized(r1);
-      TVec2D p2 = center + (r0 * v - w * u).resized(r0);
-      TVec2D p3 = center + (r1 * v - w * u).resized(r1);
-      YAE_OGL_11(glVertex2dv(p0.coord_));
-      YAE_OGL_11(glVertex2dv(p1.coord_));
-      YAE_OGL_11(glVertex2dv(p2.coord_));
-      YAE_OGL_11(glVertex2dv(p3.coord_));
-    }
-    YAE_OGL_11(glEnd());
+  //----------------------------------------------------------------
+  // Transform::getCSys
+  //
+  void
+  Transform::getCSys(TVec2D & origin, TVec2D & uAxis, TVec2D & vAxis) const
+  {
+    YAE_ASSERT(anchors_.hcenter_.isValid() && anchors_.vcenter_.isValid());
+    origin.set_x(anchors_.hcenter_.get());
+    origin.set_y(anchors_.vcenter_.get());
+    uAxis = uAxis_.get();
+    vAxis = getVAxis(uAxis);
   }
 
 
@@ -4694,9 +4961,9 @@ namespace yae
   //
   static void
   getContentView(const Scrollview & sview,
-                   TVec2D & origin,
-                   Segment & xView,
-                   Segment & yView)
+                 TVec2D & origin,
+                 Segment & xView,
+                 Segment & yView)
   {
     double sceneHeight = sview.content_.height();
     double viewHeight = sview.height();
