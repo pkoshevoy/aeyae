@@ -2688,7 +2688,7 @@ namespace yae
 
     if (k > 0.1)
     {
-      p_->timer_.start(42);
+      p_->timer_.start(16);
       onTimeout();
     }
 
