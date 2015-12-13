@@ -1139,6 +1139,15 @@ namespace yae
     }
 
     template <typename TItem>
+    inline TItem & addHidden(TItem * newItem)
+    {
+      YAE_ASSERT(newItem);
+      children_.push_back(ItemPtr(newItem));
+      newItem->visible_ = BoolRef::constant(false);
+      return *newItem;
+    }
+
+    template <typename TItem>
     inline TItem & addNewHidden(const char * id)
     {
       TItem & item = addNew<TItem>(id);
@@ -1523,6 +1532,43 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Texture
+  //
+  class Texture : public Item
+  {
+    Texture(const Texture &);
+    Texture & operator = (const Texture &);
+
+  public:
+    Texture(const char * id, const QImage & image);
+    ~Texture();
+
+    bool bind(double & uMax, double & vMax) const;
+    void unbind() const;
+
+    // keep implementation details private:
+    struct TPrivate;
+    TPrivate * p_;
+  };
+
+  //----------------------------------------------------------------
+  // TexturedRect
+  //
+  class TexturedRect : public Item
+  {
+    TexturedRect(const TexturedRect &);
+    TexturedRect & operator = (const TexturedRect &);
+
+  public:
+    TexturedRect(const char * id, const Texture & texture);
+
+    // virtual:
+    void paintContent() const;
+
+    const Texture & texture_;
+  };
+
+  //----------------------------------------------------------------
   // Image
   //
   class Image : public Item
@@ -1689,38 +1735,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // PlusButton
-  //
-  struct PlusButton : public Item
-  {
-    PlusButton(const char * id);
-
-    // virtual:
-    void uncache();
-
-    // virtual:
-    void paintContent() const;
-
-    ColorRef color_;
-  };
-
-  //----------------------------------------------------------------
-  // XButton
-  //
-  struct XButton : public Item
-  {
-    XButton(const char * id);
-
-    // virtual:
-    void uncache();
-
-    // virtual:
-    void get(Property property, Color & value) const;
-
-    ColorRef color_;
-  };
-
-  //----------------------------------------------------------------
   // Transform
   //
   struct Transform : public Item
@@ -1775,7 +1789,7 @@ namespace yae
     // virtual:
     void uncache();
     bool paint(const Segment & xregion, const Segment & yregion) const;
-    void unpaint();
+    void unpaint() const;
 
     // virtual:
     void getInputHandlers(// coordinate system origin of

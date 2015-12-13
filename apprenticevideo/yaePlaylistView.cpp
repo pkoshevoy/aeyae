@@ -578,6 +578,28 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // InscribedCircleDiameterFor
+  //
+  struct InscribedCircleDiameterFor : public TDoubleExpr
+  {
+    InscribedCircleDiameterFor(const Item & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double w = 0.0;
+      double h = 0.0;
+      item_.get(kPropertyWidth, w);
+      item_.get(kPropertyHeight, h);
+      result = std::min<double>(w, h);
+    }
+
+    const Item & item_;
+  };
+
+  //----------------------------------------------------------------
   // itemHeightDueToItemContent
   //
   static double
@@ -974,7 +996,8 @@ namespace yae
                   GLuint & texId,
                   GLuint & iw,
                   GLuint & ih,
-                  GLenum textureFilter)
+                  GLenum textureFilterMin,
+                  GLenum textureFilterMag = GL_LINEAR)
   {
     QImage::Format imgFormat = img.format();
 
@@ -1011,6 +1034,11 @@ namespace yae
       return false;
     }
 
+    GLint mipmap =
+      (textureFilterMin == GL_LINEAR_MIPMAP_LINEAR) ? GL_TRUE : GL_FALSE;
+    GLint mipmapLevels =
+      mipmap ? floor_log2(std::min<GLuint>(iw, ih)) : 0;
+
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_GENERATE_MIPMAP,
@@ -1028,15 +1056,21 @@ namespace yae
                                0));
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_TEXTURE_MAX_LEVEL,
-                               0));
+                               mipmapLevels));
 
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_TEXTURE_MAG_FILTER,
-                               textureFilter));
+                               textureFilterMag));
     YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D,
                                GL_TEXTURE_MIN_FILTER,
-                               textureFilter));
+                               textureFilterMin));
     yae_assert_gl_no_error();
+
+    if (mipmap)
+    {
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, mipmap));
+      yae_assert_gl_no_error();
+    }
 
     GLint internalFormat = 0;
     GLenum pixelFormatGL = 0;
@@ -1218,6 +1252,69 @@ namespace yae
 
     YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
     YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+  }
+
+  //----------------------------------------------------------------
+  // xbuttonImage
+  //
+  static QImage
+  xbuttonImage(unsigned int w, const Color & color)
+  {
+    QImage img(w, w, QImage::Format_ARGB32);
+
+    // supersample each pixel:
+    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+
+    static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
+
+    int w2 = w / 2;
+    double diameter = double(w);
+    double center = diameter * 0.5;
+    Segment sa(-center, diameter);
+    Segment sb(-diameter * 0.1, diameter * 0.2);
+
+    TVec2D origin(0.0, 0.0);
+    TVec2D u_axis(0.707106781186548, 0.707106781186548);
+    TVec2D v_axis(-0.707106781186548, 0.707106781186548);
+
+    Vec<double, 4> outerColor(Color(0, 0.0));
+    Vec<double, 4> innerColor(color);
+    TVec2D samplePoint;
+
+    for (int y = 0; y < int(w); y++)
+    {
+      unsigned char * dst = img.scanLine(y);
+      samplePoint.set_y(double(y - w2));
+
+      for (int x = 0; x < int(w); x++, dst += 4)
+      {
+        samplePoint.set_x(double(x - w2));
+
+        double outer = 0.0;
+        double inner = 0.0;
+
+        for (unsigned int k = 0; k < supersample; k++)
+        {
+          TVec2D wcs_pt = samplePoint + sp[k];
+          TVec2D pt = wcs_to_lcs(origin, u_axis, v_axis, wcs_pt);
+          double oh = sa.pixelOverlap(pt.x()) * sb.pixelOverlap(pt.y());
+          double ov = sb.pixelOverlap(pt.x()) * sa.pixelOverlap(pt.y());
+          double innerOverlap = std::max<double>(oh, ov);
+          double outerOverlap = 1.0 - innerOverlap;
+
+          outer += outerOverlap;
+          inner += innerOverlap;
+        }
+
+        double outerWeight = outer / double(supersample);
+        double innerWeight = inner / double(supersample);
+        Color c(outerColor * outerWeight + innerColor * innerWeight);
+        memcpy(dst, &(c.argb_), sizeof(c.argb_));
+      }
+    }
+
+    return img;
   }
 
 
@@ -2822,6 +2919,12 @@ namespace yae
       titleHeight.height_ =
         titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
 
+      // generate an x-button texture:
+      {
+        QImage img = xbuttonImage(32, Color(0xffffff, 0.5));
+        playlist.addHidden<Texture>(new Texture("xbutton_texture", img));
+      }
+
       Rectangle & background = root.addNew<Rectangle>("background");
       background.anchors_.fill(root);
       background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
@@ -3032,8 +3135,12 @@ namespace yae
       const Item & cellWidth = playlist["cell_width"];
       const Item & cellHeight = playlist["cell_height"];
       const Item & titleHeight = playlist["title_height"];
+
       const Text & nowPlaying =
         dynamic_cast<const Text &>(playlist["now_playing"]);
+
+      const Texture & xbuttonTexture =
+        dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
 
       Item & spacer = group.addNew<Item>("spacer");
       spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
@@ -3050,7 +3157,8 @@ namespace yae
       Triangle & collapsed = chevron.addNew<Triangle>("collapse");
       Text & text = title.addNew<Text>("text");
       Item & rm = title.addNew<Item>("rm");
-      XButton & xbutton = rm.addNew<XButton>("xbutton");
+      TexturedRect & xbutton =
+        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
       ItemRef fontDescent =
         xbutton.addExpr(new GetFontDescent(text));
       ItemRef fontDescentNowPlaying =
@@ -3082,8 +3190,10 @@ namespace yae
       rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
       rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
 
-      xbutton.anchors_.fill(rm);
+      xbutton.anchors_.center(rm);
       xbutton.margins_.set(fontDescentNowPlaying);
+      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+      xbutton.height_ = xbutton.width_;
 
       Rectangle & separator = group.addNew<Rectangle>("separator");
       separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
@@ -3156,6 +3266,9 @@ namespace yae
       const Item & playlist = *(view.root());
       const Item & fontSize = playlist["font_size"];
 
+      const Texture & xbuttonTexture =
+        dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
+
       Rectangle & frame = cell.addNew<Rectangle>("frame");
       frame.anchors_.fill(cell);
 
@@ -3202,10 +3315,13 @@ namespace yae
       rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
       rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
 
-      XButton & xbutton = rm.addNew<XButton>("xbutton");
+      TexturedRect & xbutton =
+        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
       ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
-      xbutton.anchors_.fill(rm);
+      xbutton.anchors_.center(rm);
       xbutton.margins_.set(fontDescent);
+      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+      xbutton.height_ = xbutton.width_;
 
       Rectangle & underline = cell.addNew<Rectangle>("underline");
       underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
@@ -3406,6 +3522,223 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Texture::TPrivate
+  //
+  struct Texture::TPrivate
+  {
+    TPrivate(const QImage & image);
+    ~TPrivate();
+
+    bool uploadTexture(const Texture & item);
+    bool bind(double & uMax, double & vMax) const;
+    void unbind() const;
+
+    BoolRef ready_;
+    QImage image_;
+    GLuint texId_;
+    GLuint iw_;
+    GLuint ih_;
+    double u1_;
+    double v1_;
+  };
+
+  //----------------------------------------------------------------
+  // Texture::TPrivate::TPrivate
+  //
+  Texture::TPrivate::TPrivate(const QImage & image):
+    image_(image),
+    texId_(0),
+    iw_(0),
+    ih_(0),
+    u1_(0.0),
+    v1_(0.0)
+  {}
+
+  //----------------------------------------------------------------
+  // Texture::TPrivate::~TPrivate
+  //
+  Texture::TPrivate::~TPrivate()
+  {
+    if (texId_)
+    {
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glDeleteTextures(1, &texId_));
+      texId_ = 0;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Texture::TPrivate::uploadTexture
+  //
+  bool
+  Texture::TPrivate::uploadTexture(const Texture & item)
+  {
+    bool ok = yae::uploadTexture2D(image_, texId_, iw_, ih_,
+                                   // should this be a user option?
+                                   GL_LINEAR_MIPMAP_LINEAR);
+
+    if (ok)
+    {
+      // no need to keep the image around once the texture is ready:
+      image_ = QImage();
+
+      GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
+      GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
+
+      u1_ = double(iw_) / double(widthPowerOfTwo);
+      v1_ = double(ih_) / double(heightPowerOfTwo);
+    }
+
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // Texture::TPrivate::bind
+  //
+  bool
+  Texture::TPrivate::bind(double & uMax, double & vMax) const
+  {
+    if (!ready_.get())
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    uMax = u1_;
+    vMax = v1_;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    YAE_OPENGL_HERE();
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Texture::TPrivate::unbind
+  //
+  void
+  Texture::TPrivate::unbind() const
+  {
+    if (!texId_)
+    {
+      return;
+    }
+
+    YAE_OPENGL_HERE();
+    YAE_OGL_11_HERE();
+
+    if (glActiveTexture)
+    {
+      YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
+      yae_assert_gl_no_error();
+    }
+
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+  }
+
+  //----------------------------------------------------------------
+  // Texture::Texture
+  //
+  Texture::Texture(const char * id, const QImage & image):
+    Item(id),
+    p_(new TPrivate(image))
+  {
+    p_->ready_ = addExpr(new UploadTexture<Texture>(*this));
+  }
+
+  //----------------------------------------------------------------
+  // Texture::~Texture
+  //
+  Texture::~Texture()
+  {
+    delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // Texture::bind
+  //
+  bool
+  Texture::bind(double & uMax, double & vMax) const
+  {
+    return p_->bind(uMax, vMax);
+  }
+
+  //----------------------------------------------------------------
+  // Texture::unbind
+  //
+  void
+  Texture::unbind() const
+  {
+    p_->unbind();
+  }
+
+
+  //----------------------------------------------------------------
+  // TexturedRect::TexturedRect
+  //
+  TexturedRect::TexturedRect(const char * id, const Texture & texture):
+    Item(id),
+    texture_(texture)
+  {}
+
+  //----------------------------------------------------------------
+  // TexturedRect::paintContent
+  //
+  void
+  TexturedRect::paintContent() const
+  {
+    double u1 = 0.0;
+    double v1 = 0.0;
+    if (!texture_.bind(u1, v1))
+    {
+      return;
+    }
+
+    BBox bbox;
+    this->get(kPropertyBBox, bbox);
+
+    double x0 = bbox.x_;
+    double y0 = bbox.y_;
+    double x1 = x0 + bbox.w_;
+    double y1 = y0 + bbox.h_;
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    {
+      YAE_OGL_11(glTexCoord2d(0.0, 0.0));
+      YAE_OGL_11(glVertex2d(x0, y0));
+
+      YAE_OGL_11(glTexCoord2d(0.0, v1));
+      YAE_OGL_11(glVertex2d(x0, y1));
+
+      YAE_OGL_11(glTexCoord2d(u1, 0.0));
+      YAE_OGL_11(glVertex2d(x1, y0));
+
+      YAE_OGL_11(glTexCoord2d(u1, v1));
+      YAE_OGL_11(glVertex2d(x1, y1));
+    }
+    YAE_OGL_11(glEnd());
+
+    texture_.unbind();
+  }
+
+
+  //----------------------------------------------------------------
   // ImagePrivate
   //
   struct ImagePrivate : public ThumbnailProvider::ICallback
@@ -3509,10 +3842,10 @@ namespace yae
     void paint(const Image & item);
 
     boost::shared_ptr<ImagePrivate> image_;
+    BoolRef ready_;
     GLuint texId_;
     GLuint iw_;
     GLuint ih_;
-    BoolRef ready_;
   };
 
   //----------------------------------------------------------------
@@ -3641,7 +3974,6 @@ namespace yae
       return;
     }
 
-    // FIXME: write me!
     BBox bbox;
     item.get(kPropertyBBox, bbox);
 
@@ -3734,10 +4066,10 @@ namespace yae
     bool uploadTexture(const Text & item);
     void paint(const Text & item);
 
+    BoolRef ready_;
     GLuint texId_;
     GLuint iw_;
     GLuint ih_;
-    BoolRef ready_;
   };
 
   //----------------------------------------------------------------
@@ -4193,9 +4525,9 @@ namespace yae
     bool uploadTexture(const RoundRect & item);
     void paint(const RoundRect & item);
 
+    BoolRef ready_;
     GLuint texId_;
     GLuint iw_;
-    BoolRef ready_;
   };
 
   //----------------------------------------------------------------
@@ -4259,12 +4591,9 @@ namespace yae
     double w2 = iw_ / 2;
 
     // supersample each pixel:
-#if 1
     static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
                                  TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
-#else
-    static const TVec2D sp[] = { TVec2D(0.5, 0.5) };
-#endif
+
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
 
     QImage img(iw_, iw_, QImage::Format_ARGB32);
@@ -4349,15 +4678,15 @@ namespace yae
     t[3] = w / wt;
 
     double x[4];
-    x[0] = bbox.x_;
+    x[0] = floor(bbox.x_ + 0.5);
     x[1] = x[0] + iw_ / 2;
-    x[3] = x[0] + bbox.w_;
+    x[3] = x[0] + floor(bbox.w_ + 0.5);
     x[2] = x[3] - iw_ / 2;
 
     double y[4];
-    y[0] = bbox.y_;
+    y[0] = floor(bbox.y_ + 0.5);
     y[1] = y[0] + iw_ / 2;
-    y[3] = y[0] + bbox.h_;
+    y[3] = y[0] + floor(bbox.h_ + 0.5);
     y[2] = y[3] - iw_ / 2;
 
     YAE_OGL_11_HERE();
@@ -4568,141 +4897,6 @@ namespace yae
         YAE_OGL_11(glVertex2dv(p[2].coord_));
       }
       YAE_OGL_11(glEnd());
-    }
-  }
-
-
-  //----------------------------------------------------------------
-  // PlusButton::PlusButton
-  //
-  PlusButton::PlusButton(const char * id):
-    Item(id),
-    color_(ColorRef::constant(Color(0xffffff, 0.5)))
-  {}
-
-  //----------------------------------------------------------------
-  // PlusButton::uncache
-  //
-  void
-  PlusButton::uncache()
-  {
-    color_.uncache();
-    Item::uncache();
-  }
-
-  //----------------------------------------------------------------
-  // PlusButton::paintContent
-  //
-  void
-  PlusButton::paintContent() const
-  {
-    static const TVec2D xaxis(1.0, 0.0);
-    static const TVec2D yaxis(0.0, 1.0);
-
-    const Color & color = color_.get();
-    const Segment & xseg = this->xExtent();
-    const Segment & yseg = this->yExtent();
-    TVec2D center(xseg.center(), yseg.center());
-
-    double s = (yseg.length_ < xseg.length_ ?
-                yseg.length_ :
-                xseg.length_);
-    double t = s * 0.2;
-    double hs = s * 0.5;
-    double ht = t * 0.5;
-
-    TVec2D p[12];
-    p[0]  = center - ht * xaxis - hs * yaxis;
-    p[1]  = center - ht * xaxis + hs * yaxis;
-    p[2]  = center + ht * xaxis - hs * yaxis;
-    p[3]  = center + ht * xaxis + hs * yaxis;
-
-    p[4]  = center + ht * (xaxis - yaxis);
-    p[5]  = center + ht * (xaxis + yaxis);
-    p[6]  = center + hs * xaxis - ht * yaxis;
-    p[7]  = center + hs * xaxis + ht * yaxis;
-
-    p[8]  = center - hs * xaxis - ht * yaxis;
-    p[9]  = center - hs * xaxis + ht * yaxis;
-    p[10] = center - ht * (xaxis + yaxis);
-    p[11] = center - ht * (xaxis - yaxis);
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(), color.g(), color.b(), color.a()));
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      YAE_OGL_11(glVertex2dv(p[0].coord_));
-      YAE_OGL_11(glVertex2dv(p[1].coord_));
-      YAE_OGL_11(glVertex2dv(p[2].coord_));
-      YAE_OGL_11(glVertex2dv(p[3].coord_));
-    }
-    YAE_OGL_11(glEnd());
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      YAE_OGL_11(glVertex2dv(p[4].coord_));
-      YAE_OGL_11(glVertex2dv(p[5].coord_));
-      YAE_OGL_11(glVertex2dv(p[6].coord_));
-      YAE_OGL_11(glVertex2dv(p[7].coord_));
-    }
-    YAE_OGL_11(glEnd());
-
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    {
-      YAE_OGL_11(glVertex2dv(p[8].coord_));
-      YAE_OGL_11(glVertex2dv(p[9].coord_));
-      YAE_OGL_11(glVertex2dv(p[10].coord_));
-      YAE_OGL_11(glVertex2dv(p[11].coord_));
-    }
-    YAE_OGL_11(glEnd());
-  }
-
-
-  //----------------------------------------------------------------
-  // XButton::XButton
-  //
-  XButton::XButton(const char * id):
-    Item(id),
-    color_(ColorRef::constant(Color(0xffffff, 0.5)))
-  {
-    Transform & xform = addNew<Transform>("xform");
-    xform.anchors_.hcenter_ = ItemRef::reference(*this, kPropertyHCenter);
-    xform.anchors_.vcenter_ = ItemRef::reference(*this, kPropertyVCenter);
-    xform.rotation_ = ItemRef::constant(M_PI * 0.25);
-
-    PlusButton & pb = xform.addNew<PlusButton>("plus_button");
-    pb.anchors_.vcenter_ = ItemRef::constant(0.0);
-    pb.anchors_.hcenter_ = ItemRef::constant(0.0);
-    pb.width_ = ItemRef::scale(*this, kPropertyWidth, 1.3);
-    pb.height_ = pb.width_;
-    pb.color_ = ColorRef::reference(*this, kPropertyColor);
-  }
-
-  //----------------------------------------------------------------
-  // XButton::uncache
-  //
-  void
-  XButton::uncache()
-  {
-    color_.uncache();
-    Item::uncache();
-  }
-
-  //----------------------------------------------------------------
-  // Item::get
-  //
-  void
-  XButton::get(Property property, Color & value) const
-  {
-    if (property == kPropertyColor)
-    {
-      value = this->color_.get();
-    }
-    else
-    {
-      // let the base class handle it:
-      Item::get(property, value);
     }
   }
 
@@ -5043,7 +5237,7 @@ namespace yae
   // Scrollview::unpaint
   //
   void
-  Scrollview::unpaint()
+  Scrollview::unpaint() const
   {
     Item::unpaint();
     content_.unpaint();
