@@ -3670,6 +3670,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Texture::get
+  //
+  void
+  Texture::get(Property property, double & value) const
+  {
+    if (property == kPropertyWidth)
+    {
+      value = double(p_->iw_);
+    }
+    else if (property == kPropertyHeight)
+    {
+      value = double(p_->ih_);
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
   // Texture::bind
   //
   bool

@@ -1543,6 +1543,9 @@ namespace yae
     Texture(const char * id, const QImage & image);
     ~Texture();
 
+    // virtual:
+    void get(Property property, double & value) const;
+
     bool bind(double & uMax, double & vMax) const;
     void unbind() const;
 
