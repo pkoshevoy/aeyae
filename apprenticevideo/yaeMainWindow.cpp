@@ -449,6 +449,7 @@ namespace yae
     playerWidget_ = new TPlayerWidget(contextFormat);
 #elif defined(YAE_USE_QT5)
     playerWidget_ = new TPlayerWidget(this);
+    playerWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #endif
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);

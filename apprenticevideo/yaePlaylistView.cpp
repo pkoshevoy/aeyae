@@ -2798,6 +2798,7 @@ namespace yae
   void
   FlickableArea::onTimeout()
   {
+    TMakeCurrentContext currentContext(*(p_->canvasLayer_.context()));
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     double sh = scrollview.height();
     double ch = scrollview.content_.height();
@@ -5311,6 +5312,7 @@ namespace yae
         dynamic_cast<RequestRepaintEvent *>(event);
       if (repaintEvent)
       {
+        TMakeCurrentContext currentContext(*context());
         Item & root = *root_;
         root.uncache();
         Canvas::ILayer::delegate_->requestRepaint();
@@ -5432,12 +5434,14 @@ namespace yae
         et == QEvent::MouseButtonDblClick ||
         et == QEvent::MouseMove)
     {
+      TMakeCurrentContext currentContext(*context());
       QMouseEvent * e = static_cast<QMouseEvent *>(event);
       return processMouseEvent(canvas, e);
     }
 
     if (et == QEvent::Wheel)
     {
+      TMakeCurrentContext currentContext(*context());
       QWheelEvent * e = static_cast<QWheelEvent *>(event);
       return processWheelEvent(canvas, e);
     }

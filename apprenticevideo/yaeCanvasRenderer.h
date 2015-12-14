@@ -199,10 +199,10 @@ namespace yae
     IOpenGLContext(): n_(0) {}
     virtual ~IOpenGLContext() {}
 
-    inline bool lock(bool callMakeCurrent = true)
+    inline bool lock()
     {
       mutex_.lock();
-      n_ += callMakeCurrent ? 1 : 2;
+      n_++;
 
       if (n_ == 1)
       {
@@ -239,10 +239,10 @@ namespace yae
   //
   struct TMakeCurrentContext
   {
-    TMakeCurrentContext(IOpenGLContext & context, bool makeCurrent = true):
+    TMakeCurrentContext(IOpenGLContext & context):
       context_(context)
     {
-      context_.lock(makeCurrent);
+      context_.lock();
     }
 
     ~TMakeCurrentContext()

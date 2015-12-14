@@ -629,25 +629,12 @@ namespace yae
   void
   Canvas::refresh()
   {
-    if (!delegate_)
+    if (!delegate_ || !delegate_->isVisible())
     {
-#if 0
-      YAE_ASSERT(false);
-
-      // FIXME: must implement buffer swapping
-      TMakeCurrentContext current(context());
-      paintCanvas();
-#endif
+      return;
     }
-    else
-    {
-      if (!delegate_->isVisible())
-      {
-        return;
-      }
 
-      delegate_->repaint();
-    }
+    delegate_->repaint();
   }
 
   //----------------------------------------------------------------
@@ -1009,7 +996,7 @@ namespace yae
   Canvas::paintCanvas()
   {
     // this is just to prevent concurrent OpenGL access to the same context:
-    TMakeCurrentContext lock(context(), false);
+    TMakeCurrentContext lock(context());
 
 #ifndef YAE_USE_QT5
     // initialize OpenGL GLEW wrapper:
