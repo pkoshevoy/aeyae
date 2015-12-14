@@ -1494,16 +1494,18 @@ namespace yae
         (double(native_.visibleWidth_) /
          double(native_.visibleHeight_));
 
+      double dar_scale = native_dar / envelope_par;
+
       if (native_dar < envelope_dar)
       {
         if (transposeAngle)
         {
-          output_.visibleWidth_ = override_.visibleWidth_ * native_dar + 0.5;
+          output_.visibleWidth_ = override_.visibleWidth_ * dar_scale + 0.5;
           output_.visibleHeight_ = override_.visibleWidth_;
         }
         else
         {
-          output_.visibleWidth_ = override_.visibleHeight_ * native_dar + 0.5;
+          output_.visibleWidth_ = override_.visibleHeight_ * dar_scale + 0.5;
           output_.visibleHeight_ = override_.visibleHeight_;
         }
 
@@ -1517,12 +1519,12 @@ namespace yae
         if (transposeAngle)
         {
           output_.visibleWidth_ = override_.visibleHeight_;
-          output_.visibleHeight_ = override_.visibleHeight_ / native_dar + 0.5;
+          output_.visibleHeight_ = override_.visibleHeight_ / dar_scale + 0.5;
         }
         else
         {
           output_.visibleWidth_ = override_.visibleWidth_;
-          output_.visibleHeight_ = override_.visibleWidth_ / native_dar + 0.5;
+          output_.visibleHeight_ = override_.visibleWidth_ / dar_scale + 0.5;
         }
 
         output_.offsetLeft_ = 0;
