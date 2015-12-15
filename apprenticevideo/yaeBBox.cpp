@@ -7,7 +7,7 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // local interfaces:
-#include "yaeBbox.h"
+#include "yaeBBox.h"
 
 
 namespace yae
