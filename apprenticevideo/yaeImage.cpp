@@ -9,6 +9,7 @@
 // Qt library:
 #include <QImage>
 #include <QString>
+#include <QUrl>
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"

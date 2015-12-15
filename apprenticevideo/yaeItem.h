@@ -11,6 +11,11 @@
 
 // standard libraries:
 #include <cmath>
+#include <iostream>
+#include <list>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // boost includes:
 #include <boost/shared_ptr.hpp>

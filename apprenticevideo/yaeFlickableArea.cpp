@@ -11,6 +11,7 @@
 
 // Qt library:
 #include <QApplication>
+#include <QTimer>
 
 // local interfaces:
 #include "yaeCanvas.h"
