@@ -20,7 +20,7 @@ namespace yae
 {
 
   // forward declarations:
-  struct Text;
+  class Text;
 
 
   //----------------------------------------------------------------
