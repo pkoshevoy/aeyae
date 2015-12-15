@@ -79,6 +79,7 @@ find_library(GLEW_LIBRARY GLEW
 
 set(project_moc_hxx
   yaeCanvasWidget.h
+  yaeFlickableArea.h
   yaeMainWindow.h
   yaePlaylist.h
   yaePlaylistModel.h
@@ -107,6 +108,8 @@ set(project_uis
 set(project_sources
   yaeAudioRendererPortaudio.h
   yaeAudioRendererPortaudio.cpp
+  yaeBBox.cpp
+  yaeBBox.h
   yaeBookmarks.h
   yaeBookmarks.cpp
   yaeCanvas.h
@@ -116,6 +119,19 @@ set(project_sources
   yaeCanvasQPainterUtils.cpp
   yaeCanvasRenderer.h
   yaeCanvasRenderer.cpp
+  yaeColor.h
+  yaeExpression.h
+  yaeFlickableArea.cpp
+  yaeFlickableArea.h
+  yaeGradient.cpp
+  yaeGradient.h
+  yaeImage.cpp
+  yaeImage.h
+  yaeInputArea.cpp
+  yaeInputArea.h
+  yaeItem.cpp
+  yaeItem.h
+  yaeItemRef.h
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
@@ -131,10 +147,30 @@ set(project_sources
   yaePlaylistModelProxy.cpp
   yaePlaylistView.h
   yaePlaylistView.cpp
+  yaeProperty.h
+  yaeRectangle.cpp
+  yaeRectangle.h
+  yaeRoundRect.cpp
+  yaeRoundRect.h
   yaeScreenSaverInhibitor.h
   yaeScreenSaverInhibitor.cpp
+  yaeScrollview.cpp
+  yaeScrollview.h
+  yaeSegment.cpp
+  yaeSegment.h
+  yaeText.cpp
+  yaeText.h
+  yaeTexture.cpp
+  yaeTexture.h
+  yaeTexturedRect.cpp
+  yaeTexturedRect.h
+  yaeTransform.cpp
+  yaeTransform.h
+  yaeTriangle.cpp
+  yaeTriangle.h
   yaeUtilsQt.h
   yaeUtilsQt.cpp
+  yaeVec.h
   yaeVersion.cpp
   )
 
