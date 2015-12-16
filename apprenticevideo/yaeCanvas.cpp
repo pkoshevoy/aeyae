@@ -1193,8 +1193,8 @@ namespace yae
                      double & scaled_h,
                      bool fit_to_height = false)
   {
-    double bbox_ar = double(bbox_w) / double(bbox_h);
-    double frame_ar = double(frame_w) / double(frame_h);
+    double bbox_ar = bbox_h > 0.0 ? double(bbox_w) / double(bbox_h) : 0.0;
+    double frame_ar = frame_h > 0.0 ? double(frame_w) / double(frame_h) : 0.0;
 
     offset_x = 0;
     offset_y = 0;
@@ -1299,13 +1299,13 @@ namespace yae
     int iw = int(fw);
     int ih = int(fh);
 
-    TPainterWrapper wrapper(iw, ih);
+    TPainterWrapper wrapper((int)w, (int)h);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
 
-    QRect canvasBBox(16, 16, iw - 32, ih - 32);
+    QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
     TVideoFramePtr frame = currentFrame();
 
     for (std::list<TSubsFrame>::const_iterator i = subs_.begin();
@@ -1556,8 +1556,8 @@ namespace yae
     vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
     vtts.offsetTop_ = 0;
     vtts.offsetLeft_ = 0;
-    vtts.visibleWidth_ = iw;
-    vtts.visibleHeight_ = ih;
+    vtts.visibleWidth_ = (int)w;
+    vtts.visibleHeight_ = (int)h;
     vtts.pixelAspectRatio_ = 1.0;
     vtts.isUpsideDown_ = false;
 
