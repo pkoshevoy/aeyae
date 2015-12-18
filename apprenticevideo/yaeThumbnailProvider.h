@@ -9,6 +9,9 @@
 #ifndef YAE_THUMBNAIL_PROVIDER_H_
 #define YAE_THUMBNAIL_PROVIDER_H_
 
+// standard libraries:
+#include <map>
+
 // boost includes:
 #include <boost/shared_ptr.hpp>
 
@@ -75,6 +78,25 @@ namespace yae
     struct TPrivate;
     TPrivate * private_;
   };
+
+  //----------------------------------------------------------------
+  // TImageProviderPtr
+  //
+  typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
+
+  //----------------------------------------------------------------
+  // TImageProviders
+  //
+  typedef std::map<QString, TImageProviderPtr> TImageProviders;
+
+  //----------------------------------------------------------------
+  // lookupImageProvider
+  //
+  TImageProviderPtr
+  lookupImageProvider(const TImageProviders & providers,
+                      const QString & resourceUrl,
+                      QString & imageId);
+
 }
 
 

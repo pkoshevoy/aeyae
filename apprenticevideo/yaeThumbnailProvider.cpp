@@ -17,6 +17,7 @@
 // Qt headers:
 #include <QtGlobal>
 #include <QFileInfo>
+#include <QUrl>
 
 // yae includes:
 #include "yae/api/yae_settings.h"
@@ -694,4 +695,36 @@ namespace yae
   {
     private_->cancelRequest(id);
   }
+
+  //----------------------------------------------------------------
+  // lookupImageProvider
+  //
+  TImageProviderPtr
+  lookupImageProvider(const TImageProviders & providers,
+                      const QString & resource,
+                      QString & imageId)
+  {
+    static const QString kImage = QString::fromUtf8("image");
+
+    QUrl url(resource);
+    if (url.scheme() != kImage)
+    {
+      return TImageProviderPtr();
+    }
+
+    QString host = url.host();
+    TImageProviders::const_iterator found = providers.find(host);
+    if (found == providers.end())
+    {
+      return TImageProviderPtr();
+    }
+
+    imageId = url.path();
+
+    // trim the leading '/' character:
+    imageId = imageId.right(imageId.size() - 1);
+
+    return found->second;
+  }
+
 }

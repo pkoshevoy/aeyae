@@ -1819,7 +1819,7 @@ namespace yae
   //
   void
   PlaylistView::addImageProvider(const QString & providerId,
-                                 const PlaylistView::TImageProviderPtr & p)
+                                 const TImageProviderPtr & p)
   {
     imageProviders_[providerId] = p;
   }

@@ -29,6 +29,7 @@
 
 // local includes:
 #include "yaeCanvasRenderer.h"
+#include "yaeThumbnailProvider.h"
 
 
 namespace yae
@@ -148,6 +149,10 @@ namespace yae
       virtual void resizeTo(const Canvas * canvas) = 0;
       virtual void paint(Canvas * canvas) = 0;
       virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
+
+      // lookup image provider for a given resource URL:
+      virtual TImageProviderPtr
+      getImageProvider(const QString & imageUrl, QString & imageId) const = 0;
 
     protected:
       boost::shared_ptr<IOpenGLContext> context_;

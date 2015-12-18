@@ -97,9 +97,6 @@ namespace yae
     typedef PlaylistModel::LayoutHint TLayoutHint;
     typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
 
-    typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
-    typedef std::map<QString, TImageProviderPtr> TImageProviders;
-
     //----------------------------------------------------------------
     // RequestRepaintEvent
     //
@@ -142,6 +139,11 @@ namespace yae
 
     inline const ItemPtr & root() const
     { return root_; }
+
+    // virtual:
+    TImageProviderPtr
+    getImageProvider(const QString & imageUrl, QString & imageId) const
+    { return lookupImageProvider(imageProviders(), imageUrl, imageId); }
 
   public slots:
 

@@ -10,13 +10,13 @@
 #define YAE_IMAGE_H_
 
 // local interfaces:
+#include "yaeCanvas.h"
 #include "yaeItem.h"
+#include "yaeThumbnailProvider.h"
 
 
 namespace yae
 {
-  // forward declarations:
-  class PlaylistView;
 
   //----------------------------------------------------------------
   // Image
@@ -31,7 +31,7 @@ namespace yae
     ~Image();
 
     // for thumbnail providers, repaint requests, etc...
-    void setContext(PlaylistView & view);
+    void setContext(const Canvas::ILayer & view);
 
     // virtual:
     void uncache();

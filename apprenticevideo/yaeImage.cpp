@@ -9,7 +9,6 @@
 // Qt library:
 #include <QImage>
 #include <QString>
-#include <QUrl>
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"
@@ -27,8 +26,6 @@ namespace yae
   //
   struct ImagePrivate : public ThumbnailProvider::ICallback
   {
-    typedef PlaylistView::TImageProviderPtr TImageProviderPtr;
-
     enum Status
     {
       kImageNotReady,
@@ -41,7 +38,7 @@ namespace yae
       status_(kImageNotReady)
     {}
 
-    inline void setContext(PlaylistView & view)
+    inline void setContext(const Canvas::ILayer & view)
     { view_ = &view; }
 
     // virtual:
@@ -94,7 +91,7 @@ namespace yae
       return img_;
     }
 
-    const PlaylistView * view_;
+    const Canvas::ILayer * view_;
     TImageProviderPtr provider_;
     QString resource_;
     QString id_;
@@ -110,12 +107,10 @@ namespace yae
   //
   struct Image::TPrivate
   {
-    typedef PlaylistView::TImageProviders TImageProviders;
-
     TPrivate();
     ~TPrivate();
 
-    inline void setContext(PlaylistView & view)
+    inline void setContext(const Canvas::ILayer & view)
     {
       image_->setContext(view);
     }
@@ -190,31 +185,18 @@ namespace yae
       }
     }
 
-    static const QString kImage = QString::fromUtf8("image");
-    QUrl url(resource);
-    if (url.scheme() != kImage || !image.view_)
+    QString imageId;
+    TImageProviderPtr imageProvider =
+      image.view_->getImageProvider(resource, imageId);
+    if (!imageProvider)
     {
       YAE_ASSERT(false);
       return false;
     }
 
-    QString host = url.host();
-    const TImageProviders & providers = image.view_->imageProviders();
-    TImageProviders::const_iterator found = providers.find(host);
-    if (found == providers.end())
-    {
-      YAE_ASSERT(false);
-      return false;
-    }
-
-    QString id = url.path();
-
-    // trim the leading '/' character:
-    id = id.right(id.size() - 1);
-
-    image.provider_ = found->second;
+    image.provider_ = imageProvider;
     image.resource_ = resource;
-    image.id_ = id;
+    image.id_ = imageId;
     image.clearImage();
     image.setImageStatusImageRequested();
 
@@ -305,7 +287,7 @@ namespace yae
   // Image::setContext
   //
   void
-  Image::setContext(PlaylistView & view)
+  Image::setContext(const Canvas::ILayer & view)
   {
     p_->setContext(view);
   }
