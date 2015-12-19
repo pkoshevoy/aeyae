@@ -11,11 +11,7 @@
 #include <iomanip>
 #include <sstream>
 
-// Qt library:
-#include <QApplication>
-
 // local interfaces:
-#include "yaeCanvasRenderer.h"
 #include "yaeColor.h"
 #include "yaeExpression.h"
 #include "yaeFlickableArea.h"
@@ -272,26 +268,26 @@ namespace yae
     const Item & grid_;
   };
 
+
   //----------------------------------------------------------------
-  // CalcTitleHeight
+  // CalcTitleHeight::CalcTitleHeight
   //
-  struct CalcTitleHeight : public TDoubleExpr
+  CalcTitleHeight::CalcTitleHeight(const Item & titleContainer,
+                                   double minHeight):
+    titleContainer_(titleContainer),
+    minHeight_(minHeight)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcTitleHeight::evaluate
+  //
+  void
+  CalcTitleHeight::evaluate(double & result) const
   {
-    CalcTitleHeight(const Item & titleContainer, double minHeight):
-      titleContainer_(titleContainer),
-      minHeight_(minHeight)
-    {}
+    double titleContainerWidth = titleContainer_.width();
+    result = calcTitleHeight(minHeight_, titleContainerWidth);
+  }
 
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double titleContainerWidth = titleContainer_.width();
-      result = calcTitleHeight(minHeight_, titleContainerWidth);
-    }
-
-    const Item & titleContainer_;
-    double minHeight_;
-  };
 
   //----------------------------------------------------------------
   // GetFontSize

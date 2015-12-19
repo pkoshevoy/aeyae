@@ -39,7 +39,11 @@ namespace yae
     h_(0.0),
     pressed_(NULL),
     dragged_(NULL)
-  {}
+  {
+    Item & root = *root_;
+    root.anchors_.left_ = ItemRef::constant(0.0);
+    root.anchors_.top_ = ItemRef::constant(0.0);
+  }
 
   //----------------------------------------------------------------
   // ItemView::event

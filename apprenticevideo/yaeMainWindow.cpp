@@ -2421,6 +2421,8 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
+    bool showTimeline = actionShowTimeline->isChecked();
+
 #if (YAE_USE_PLAYER_QUICK_WIDGET)
     QQuickItem * playerItem = playerWidget_->rootObject();
     if (!playerItem)
@@ -2433,12 +2435,10 @@ namespace yae
 
     if (timeline)
     {
-      bool showTimeline = actionShowTimeline->isChecked();
       timeline->setVisible(showTimeline);
     }
 #else
-    // FIXME: write me!
-    std::cerr << "FIXME: pkoshevoy: show timeline!" << std::endl;
+    timelineView_.setEnabled(showTimeline);
 #endif
   }
 

@@ -38,6 +38,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // CalcTitleHeight
+  //
+  struct CalcTitleHeight : public TDoubleExpr
+  {
+    CalcTitleHeight(const Item & titleContainer, double minHeight);
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    const Item & titleContainer_;
+    double minHeight_;
+  };
+
+  //----------------------------------------------------------------
   // ILayoutDelegate
   //
   template <typename TView, typename Model>
