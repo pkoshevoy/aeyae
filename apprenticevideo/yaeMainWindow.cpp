@@ -51,6 +51,7 @@
 #include "yaeUtilsQml.h"
 #endif
 #include "yaeMainWindow.h"
+#include "yaeTimelineControls.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 #include "yaeVersion.h"
@@ -454,12 +455,14 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playlistView_.setModel(&playlistModel_);
+    // timelineView_.setTimelineControls(timelineControls_);
 
     // add image://thumbnails/... provider:
     boost::shared_ptr<ThumbnailProvider>
       imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
     playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
                                    imageProvider);
+
 #else
     playerWidget_ = new TPlayerWidget(this);
     playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);

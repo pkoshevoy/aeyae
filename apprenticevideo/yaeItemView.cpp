@@ -1,0 +1,397 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created      : Fri Dec 18 22:52:30 PST 2015
+// Copyright    : Pavel Koshevoy
+// License      : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+// standard C++:
+#include <iostream>
+#include <list>
+
+// Qt library:
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QTabletEvent>
+#include <QTouchEvent>
+#include <QWheelEvent>
+
+// local interfaces:
+#include "yaeCanvasRenderer.h"
+#include "yaeInputArea.h"
+#include "yaeItemRef.h"
+#include "yaeItemView.h"
+#include "yaeSegment.h"
+#include "yaeUtilsQt.h"
+
+
+namespace yae
+{
+
+  //----------------------------------------------------------------
+  // ItemView::ItemView
+  //
+  ItemView::ItemView(const char * name):
+    Canvas::ILayer(),
+    root_(new Item(name)),
+    w_(0.0),
+    h_(0.0),
+    pressed_(NULL),
+    dragged_(NULL)
+  {}
+
+  //----------------------------------------------------------------
+  // ItemView::event
+  //
+  bool
+  ItemView::event(QEvent * event)
+  {
+    QEvent::Type et = event->type();
+    if (et == QEvent::User)
+    {
+      RequestRepaintEvent * repaintEvent =
+        dynamic_cast<RequestRepaintEvent *>(event);
+
+      if (repaintEvent)
+      {
+        TMakeCurrentContext currentContext(*context());
+        Item & root = *root_;
+        root.uncache();
+        Canvas::ILayer::delegate_->requestRepaint();
+
+        repaintEvent->payload_.setDelivered(true);
+        repaintEvent->accept();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::requestRepaint
+  //
+  void
+  ItemView::requestRepaint()
+  {
+    bool postThePayload = requestRepaintEvent_.setDelivered(false);
+    if (postThePayload)
+    {
+      // send an event:
+      qApp->postEvent(this, new RequestRepaintEvent(requestRepaintEvent_));
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::resize
+  //
+  void
+  ItemView::resizeTo(const Canvas * canvas)
+  {
+    w_ = canvas->canvasWidth();
+    h_ = canvas->canvasHeight();
+
+    Item & root = *root_;
+    root.width_ = ItemRef::constant(w_);
+    root.height_ = ItemRef::constant(h_);
+
+    TMakeCurrentContext currentContext(*context());
+    root.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::paint
+  //
+  void
+  ItemView::paint(Canvas * canvas)
+  {
+    double x = 0.0;
+    double y = 0.0;
+    double w = double(canvas->canvasWidth());
+    double h = double(canvas->canvasHeight());
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
+                          GLsizei(w + 0.5), GLsizei(h + 0.5)));
+
+    TGLSaveMatrixState pushMatrix0(GL_MODELVIEW);
+    YAE_OGL_11(glLoadIdentity());
+    TGLSaveMatrixState pushMatrix1(GL_PROJECTION);
+    YAE_OGL_11(glLoadIdentity());
+    YAE_OGL_11(glOrtho(0.0, w, h, 0.0, -1.0, 1.0));
+
+    YAE_OGL_11(glDisable(GL_LIGHTING));
+    YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+    YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
+    YAE_OGL_11(glDisable(GL_POLYGON_SMOOTH));
+    YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
+    YAE_OGL_11(glLineWidth(1.0));
+
+    YAE_OGL_11(glEnable(GL_BLEND));
+    YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    YAE_OGL_11(glShadeModel(GL_SMOOTH));
+
+    const Segment & xregion = root_->xExtent();
+    const Segment & yregion = root_->yExtent();
+    root_->paint(xregion, yregion);
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::processEvent
+  //
+  bool
+  ItemView::processEvent(Canvas * canvas, QEvent * event)
+  {
+    QEvent::Type et = event->type();
+    if (et != QEvent::Paint &&
+        et != QEvent::Wheel &&
+        et != QEvent::MouseButtonPress &&
+        et != QEvent::MouseButtonRelease &&
+        et != QEvent::MouseButtonDblClick &&
+        et != QEvent::MouseMove &&
+        et != QEvent::CursorChange &&
+        et != QEvent::Resize &&
+        et != QEvent::MacGLWindowChange &&
+        et != QEvent::Leave &&
+        et != QEvent::Enter &&
+        et != QEvent::WindowDeactivate &&
+        et != QEvent::WindowActivate &&
+        et != QEvent::FocusOut &&
+        et != QEvent::FocusIn &&
+#ifdef YAE_USE_QT5
+        et != QEvent::UpdateRequest &&
+#endif
+        et != QEvent::ShortcutOverride)
+    {
+#ifndef NDEBUG
+      std::cerr
+        << "ItemView::processEvent: "
+        << yae::toString(et)
+        << std::endl;
+#endif
+    }
+
+    if (et == QEvent::MouseButtonPress ||
+        et == QEvent::MouseButtonRelease ||
+        et == QEvent::MouseButtonDblClick ||
+        et == QEvent::MouseMove)
+    {
+      TMakeCurrentContext currentContext(*context());
+      QMouseEvent * e = static_cast<QMouseEvent *>(event);
+      return processMouseEvent(canvas, e);
+    }
+
+    if (et == QEvent::Wheel)
+    {
+      TMakeCurrentContext currentContext(*context());
+      QWheelEvent * e = static_cast<QWheelEvent *>(event);
+      return processWheelEvent(canvas, e);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::processMouseEvent
+  //
+  bool
+  ItemView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
+  {
+    if (!e)
+    {
+      return false;
+    }
+
+    QEvent::Type et = e->type();
+    if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
+          (e->button() == Qt::LeftButton)))
+    {
+      return false;
+    }
+
+    QPoint pos = e->pos();
+    TVec2D pt(pos.x(), pos.y());
+
+    if (et == QEvent::MouseButtonPress)
+    {
+      pressed_ = NULL;
+      dragged_ = NULL;
+      startPt_ = pt;
+
+      if (!root_->getInputHandlers(pt, inputHandlers_))
+      {
+        return false;
+      }
+
+      for (TInputHandlerRIter i = inputHandlers_.rbegin();
+           i != inputHandlers_.rend(); ++i)
+      {
+        InputHandler & handler = *i;
+        if (handler.input_->onPress(handler.csysOrigin_, pt))
+        {
+          pressed_ = &handler;
+          return true;
+        }
+      }
+
+      return false;
+    }
+    else if (et == QEvent::MouseMove)
+    {
+      if (inputHandlers_.empty())
+      {
+        std::list<InputHandler> handlers;
+        if (!root_->getInputHandlers(pt, handlers))
+        {
+          return false;
+        }
+
+        for (TInputHandlerRIter i = handlers.rbegin();
+             i != handlers.rend(); ++i)
+        {
+          InputHandler & handler = *i;
+          if (handler.input_->onMouseOver(handler.csysOrigin_, pt))
+          {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      // FIXME: must add DPI-aware drag threshold to avoid triggering
+      // spurious drag events:
+      for (TInputHandlerRIter i = inputHandlers_.rbegin();
+           i != inputHandlers_.rend(); ++i)
+      {
+        InputHandler & handler = *i;
+
+        if (!dragged_ && pressed_ != &handler &&
+            handler.input_->onPress(handler.csysOrigin_, startPt_))
+        {
+          // previous handler didn't handle the drag event, try another:
+          pressed_->input_->onCancel();
+          pressed_ = &handler;
+        }
+
+        if (handler.input_->onDrag(handler.csysOrigin_, startPt_, pt))
+        {
+          dragged_ = &handler;
+          return true;
+        }
+      }
+
+      return false;
+    }
+    else if (et == QEvent::MouseButtonRelease)
+    {
+      bool accept = false;
+      if (pressed_)
+      {
+        if (dragged_)
+        {
+          accept = dragged_->input_->onDragEnd(dragged_->csysOrigin_,
+                                               startPt_,
+                                               pt);
+        }
+        else
+        {
+          accept = pressed_->input_->onClick(pressed_->csysOrigin_, pt);
+        }
+      }
+
+      pressed_ = NULL;
+      dragged_ = NULL;
+      inputHandlers_.clear();
+
+      return accept;
+    }
+    else if (et == QEvent::MouseButtonDblClick)
+    {
+      pressed_ = NULL;
+      dragged_ = NULL;
+      inputHandlers_.clear();
+
+      std::list<InputHandler> handlers;
+      if (!root_->getInputHandlers(pt, handlers))
+      {
+        return false;
+      }
+
+      for (TInputHandlerRIter i = handlers.rbegin();
+           i != handlers.rend(); ++i)
+      {
+        InputHandler & handler = *i;
+        if (handler.input_->onDoubleClick(handler.csysOrigin_, pt))
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::processWheelEvent
+  //
+  bool
+  ItemView::processWheelEvent(Canvas * canvas, QWheelEvent * e)
+  {
+    if (!e)
+    {
+      return false;
+    }
+
+    QPoint pos = e->pos();
+    TVec2D pt(pos.x(), pos.y());
+
+    std::list<InputHandler> handlers;
+    if (!root_->getInputHandlers(pt, handlers))
+    {
+      return false;
+    }
+
+    // Quoting from QWheelEvent docs:
+    //
+    //  " Most mouse types work in steps of 15 degrees,
+    //    in which case the delta value is a multiple of 120;
+    //    i.e., 120 units * 1/8 = 15 degrees. "
+    //
+    int delta = e->delta();
+    double degrees = double(delta) * 0.125;
+
+#if 0
+    std::cerr
+      << "FIXME: wheel: delta: " << delta
+      << ", degrees: " << degrees
+      << std::endl;
+#endif
+
+    for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
+    {
+      InputHandler & handler = *i;
+      if (handler.input_->onScroll(handler.csysOrigin_, pt, degrees))
+      {
+        break;
+      }
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::addImageProvider
+  //
+  void
+  ItemView::addImageProvider(const QString & providerId,
+                                 const TImageProviderPtr & p)
+  {
+    imageProviders_[providerId] = p;
+  }
+
+
+}

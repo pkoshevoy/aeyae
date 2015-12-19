@@ -9,6 +9,7 @@
 #ifndef YAE_MAIN_WINDOW_H_
 #define YAE_MAIN_WINDOW_H_
 
+// FIXME: this would be better as a CMake OPTION:
 #ifdef YAE_USE_QT5
 #define YAE_USE_PLAYER_QUICK_WIDGET 0
 #else
@@ -45,7 +46,6 @@
 #if (YAE_USE_PLAYER_QUICK_WIDGET)
 #include "yaeQuickWidget.h"
 #endif
-#include "yaeTimelineControls.h"
 
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
@@ -56,6 +56,8 @@
 
 namespace yae
 {
+  // forward declarations:
+  class TimelineControls;
 
   //----------------------------------------------------------------
   // TPlayerWidget

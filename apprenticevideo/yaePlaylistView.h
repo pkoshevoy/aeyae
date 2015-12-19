@@ -10,48 +10,16 @@
 #define YAE_PLAYLIST_VIEW_H_
 
 // standard libraries:
-#include <cmath>
-#include <list>
 #include <map>
-#include <vector>
 
 // boost includes:
 #include <boost/shared_ptr.hpp>
 
-// Qt interfaces:
-#include <QFont>
-#include <QFontMetricsF>
-#include <QMouseEvent>
-#include <QObject>
-#include <QPersistentModelIndex>
-#include <QString>
-#include <QTimer>
-#include <QVariant>
-
 // local interfaces:
-#include "yaeBBox.h"
-#include "yaeCanvas.h"
-#include "yaeColor.h"
-#include "yaeExpression.h"
-#include "yaeFlickableArea.h"
-#include "yaeGradient.h"
-#include "yaeImage.h"
 #include "yaeInputArea.h"
-#include "yaeItem.h"
-#include "yaeItemRef.h"
+#include "yaeItemView.h"
+#include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
-#include "yaeProperty.h"
-#include "yaeRectangle.h"
-#include "yaeRoundRect.h"
-#include "yaeScrollview.h"
-#include "yaeSegment.h"
-#include "yaeText.h"
-#include "yaeTexture.h"
-#include "yaeTexturedRect.h"
-#include "yaeThumbnailProvider.h"
-#include "yaeTransform.h"
-#include "yaeTriangle.h"
-#include "yaeVec.h"
 
 
 namespace yae
@@ -86,8 +54,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistView
   //
-  class YAE_API PlaylistView : public QObject,
-                               public Canvas::ILayer
+  class YAE_API PlaylistView : public ItemView
   {
     Q_OBJECT;
 
@@ -97,56 +64,16 @@ namespace yae
     typedef PlaylistModel::LayoutHint TLayoutHint;
     typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
 
-    //----------------------------------------------------------------
-    // RequestRepaintEvent
-    //
-    enum { kRequestRepaintEvent };
-    typedef BufferedEvent<kRequestRepaintEvent> RequestRepaintEvent;
-
     PlaylistView();
-
-    // virtual:
-    bool event(QEvent * event);
-
-    // virtual:
-    void requestRepaint();
-
-    // virtual:
-    void resizeTo(const Canvas * canvas);
-
-    // virtual:
-    void paint(Canvas * canvas);
-
-    // virtual:
-    bool processEvent(Canvas * canvas, QEvent * event);
-
-    // helpers:
-    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
-    bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
 
     // data source:
     void setModel(PlaylistModelProxy * model);
 
-    void addImageProvider(const QString & providerId,
-                          const TImageProviderPtr & p);
-
     // accessors:
-    inline const TImageProviders & imageProviders() const
-    { return imageProviders_; }
-
     inline const TLayoutDelegates & layouts() const
     { return layoutDelegates_; }
 
-    inline const ItemPtr & root() const
-    { return root_; }
-
-    // virtual:
-    TImageProviderPtr
-    getImageProvider(const QString & imageUrl, QString & imageId) const
-    { return lookupImageProvider(imageProviders(), imageUrl, imageId); }
-
   public slots:
-
     void dataChanged(const QModelIndex & topLeft,
                      const QModelIndex & bottomRight);
 
@@ -163,23 +90,8 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
-    RequestRepaintEvent::TPayload requestRepaintEvent_;
     PlaylistModelProxy * model_;
     TLayoutDelegates layoutDelegates_;
-    TImageProviders imageProviders_;
-    ItemPtr root_;
-    double w_;
-    double h_;
-
-    // input handlers corresponding to the point where a mouse
-    // button press occurred, will be cleared if layout changes
-    // or mouse button release occurs:
-    std::list<InputHandler> inputHandlers_;
-
-    // mouse event handling house keeping helpers:
-    InputHandler * pressed_;
-    InputHandler * dragged_;
-    TVec2D startPt_;
   };
 
 }

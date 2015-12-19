@@ -29,6 +29,9 @@
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_synchronous.h"
 
+// local includes:
+#include "yaeMainWindow.h"
+
 
 namespace yae
 {
@@ -37,20 +40,20 @@ namespace yae
   // TimelineControls
   //
   class TimelineControls :
-#ifdef YAE_USE_QT5
-    public QQuickItem,
-#else
+#if YAE_USE_PLAYER_QUICK_WIDGET
     public QObject,
+#else
+    public QQuickItem,
 #endif
     public IClockObserver
   {
     //----------------------------------------------------------------
     // TQtBase
     //
-#ifdef YAE_USE_QT5
-    typedef QQuickItem TQtBase;
-#else
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
     typedef QObject TQtBase;
+#else
+    typedef QQuickItem TQtBase;
 #endif
 
     Q_OBJECT;
