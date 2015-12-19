@@ -46,6 +46,7 @@
 #if (YAE_USE_PLAYER_QUICK_WIDGET)
 #include "yaeQuickWidget.h"
 #endif
+#include "yaeTimelineView.h"
 
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
@@ -363,6 +364,7 @@ namespace yae
     TPlayerWidget * playerWidget_;
     Canvas * canvas_;
     PlaylistView playlistView_;
+    TimelineView timelineView_;
     TimelineControls * timelineControls_;
     TPlaylistModel playlistModel_;
 

@@ -495,7 +495,7 @@ namespace yae
     timecode = timecode.simplified();
     timecode.replace(' ', separator);
 
-    QStringList	hh_mm_ss_ff = timecode.split(':', QString::SkipEmptyParts);
+    QStringList hh_mm_ss_ff = timecode.split(':', QString::SkipEmptyParts);
     int nc = hh_mm_ss_ff.size();
 
     if (!nc)

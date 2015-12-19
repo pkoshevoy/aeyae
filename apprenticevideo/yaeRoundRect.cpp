@@ -109,7 +109,7 @@ namespace yae
 
       for (int j = 0; j < int(iw_); j++)
       {
-        uchar *	row = img.scanLine(j);
+        uchar * row = img.scanLine(j);
         uchar * dst = row;
         samplePoint.set_y(double(j - w2));
 

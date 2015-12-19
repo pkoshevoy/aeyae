@@ -88,6 +88,7 @@ set(project_moc_hxx
   yaePlaylistView.h
   yaeScreenSaverInhibitor.h
   yaeTimelineControls.h
+  yaeTimelineView.h
   )
 
 if (Qt5_FOUND)
@@ -138,10 +139,6 @@ set(project_sources
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
-  yaeThumbnailProvider.h
-  yaeThumbnailProvider.cpp
-  yaeTimelineControls.h
-  yaeTimelineControls.cpp
   yaePlaylist.h
   yaePlaylist.cpp
   yaePlaylistModel.h
@@ -167,6 +164,12 @@ set(project_sources
   yaeTexture.h
   yaeTexturedRect.cpp
   yaeTexturedRect.h
+  yaeThumbnailProvider.h
+  yaeThumbnailProvider.cpp
+  yaeTimelineControls.h
+  yaeTimelineControls.cpp
+  yaeTimelineView.h
+  yaeTimelineView.cpp
   yaeTransform.cpp
   yaeTransform.h
   yaeTriangle.cpp

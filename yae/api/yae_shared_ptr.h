@@ -277,13 +277,13 @@ namespace yae
     inline bool operator == (std::size_t value) const YAE_NOEXCEPT
     { return (get() == reinterpret_cast<TData *>(value)); }
 
-    inline bool	operator != (std::size_t value) const YAE_NOEXCEPT
+    inline bool operator != (std::size_t value) const YAE_NOEXCEPT
     { return (!operator == (value)); }
 
-    inline bool	operator == (int value) const YAE_NOEXCEPT
+    inline bool operator == (int value) const YAE_NOEXCEPT
     { return (operator == (std::size_t(value))); }
 
-    inline bool	operator != (int value) const YAE_NOEXCEPT
+    inline bool operator != (int value) const YAE_NOEXCEPT
     { return (!operator == (std::size_t(value))); }
 
     inline bool operator == (const shared_ptr & other) const YAE_NOEXCEPT
