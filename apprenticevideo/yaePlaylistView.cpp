@@ -885,57 +885,6 @@ namespace yae
     sortOrderDesc.anchors_.fill(orDesc);
   }
 
-
-  //----------------------------------------------------------------
-  // SliderDrag
-  //
-  struct SliderDrag : public InputArea
-  {
-    SliderDrag(const char * id,
-               const Canvas::ILayer & canvasLayer,
-               Scrollview & scrollview,
-               Item & scrollbar):
-      InputArea(id),
-      canvasLayer_(canvasLayer),
-      scrollview_(scrollview),
-      scrollbar_(scrollbar),
-      startPos_(0.0)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      startPos_ = scrollview_.position_;
-      return true;
-    }
-
-    // virtual:
-    bool onDrag(const TVec2D & itemCSysOrigin,
-                const TVec2D & rootCSysDragStart,
-                const TVec2D & rootCSysDragEnd)
-    {
-      double bh = scrollbar_.height();
-      double sh = this->height();
-      double yRange = bh - sh;
-
-      double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
-      double ds = dy / yRange;
-      double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + ds));
-      scrollview_.position_ = t;
-
-      parent_->uncache();
-      canvasLayer_.delegate()->requestRepaint();
-
-      return true;
-    }
-
-    const Canvas::ILayer & canvasLayer_;
-    Scrollview & scrollview_;
-    Item & scrollbar_;
-    double startPos_;
-  };
-
   //----------------------------------------------------------------
   // GroupListLayout
   //

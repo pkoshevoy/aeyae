@@ -10,6 +10,9 @@
 #define YAE_SCROLLVIEW_H_
 
 // local interfaces:
+#include "yaeCanvas.h"
+#include "yaeExpression.h"
+#include "yaeInputArea.h"
 #include "yaeItem.h"
 
 
@@ -89,6 +92,31 @@ namespace yae
     // where 0 corresponds to the beginning of content
     // and 1 corresponds to the end of content
     double position_;
+  };
+
+  //----------------------------------------------------------------
+  // SliderDrag
+  //
+  struct SliderDrag : public InputArea
+  {
+    SliderDrag(const char * id,
+               const Canvas::ILayer & canvasLayer,
+               Scrollview & scrollview,
+               Item & scrollbar);
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint);
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd);
+
+    const Canvas::ILayer & canvasLayer_;
+    Scrollview & scrollview_;
+    Item & scrollbar_;
+    double startPos_;
   };
 
 }
