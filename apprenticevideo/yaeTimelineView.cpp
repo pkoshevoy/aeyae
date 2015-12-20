@@ -586,8 +586,6 @@ namespace yae
 
     timecodeFont.setStyleHint(QFont::Monospace);
     timecodeFont.setFixedPitch(true);
-    timecodeFont.setWeight(QFont::Thin);
-    timecodeFont.setBold(false);
     timecodeFont.setStyleStrategy(QFont::OpenGLCompatible);
 
     Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
