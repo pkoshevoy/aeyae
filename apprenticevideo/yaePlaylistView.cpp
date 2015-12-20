@@ -36,16 +36,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kDpiScale
-  //
-#ifdef __APPLE__
-  static const double kDpiScale = 1.0;
-#else
-  static const double kDpiScale = 72.0 / 96.0;
-#endif
-
-
-  //----------------------------------------------------------------
   // toString
   //
   static std::string
@@ -743,7 +733,7 @@ namespace yae
 #endif
 
     // layout sort-and-order:
-    ColorRef underlineColor = ColorRef::constant(Color(0xff0000, 1.0));
+    ColorRef underlineColor = ColorRef::constant(Color(0xf12b24, 1.0));
     ColorRef sortColor = ColorRef::constant(Color(0xffffff, 0.5));
     ItemRef smallFontSize = ItemRef::scale(fontSize,
                                            kPropertyHeight,
@@ -991,7 +981,7 @@ namespace yae
         footer.anchors_.right_ =
           ItemRef::reference(sview.content_, kPropertyRight);
         footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
-        footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+        footer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
 
         Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
         separator.anchors_.fill(footer);
@@ -1005,10 +995,12 @@ namespace yae
                                                0.7 * kDpiScale);
 
         Text & footNote = footer.addNew<Text>("footNote");
-        footNote.anchors_.vcenter_ =
-          ItemRef::reference(footer, kPropertyVCenter);
+        footNote.anchors_.top_ =
+          ItemRef::reference(footer, kPropertyTop);
         footNote.anchors_.right_ =
           ItemRef::reference(footer, kPropertyRight);
+        footNote.margins_.top_ =
+          ItemRef::scale(fontSize, kPropertyHeight, 0.5 * kDpiScale);
         footNote.margins_.right_ =
           ItemRef::scale(fontSize, kPropertyHeight, 0.8 * kDpiScale);
 
@@ -1314,7 +1306,7 @@ namespace yae
       underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
       underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
       underline.height_ = ItemRef::constant(2);
-      underline.color_ = ColorRef::constant(Color(0xff0000));
+      underline.color_ = ColorRef::constant(Color(0xf12b24));
       underline.visible_ = underline.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
@@ -1323,7 +1315,7 @@ namespace yae
       sel.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
       sel.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
       sel.height_ = ItemRef::constant(2);
-      sel.color_ = ColorRef::constant(Color(0xff0000));
+      sel.color_ = ColorRef::constant(Color(0xf12b24));
       sel.visible_ = sel.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
 

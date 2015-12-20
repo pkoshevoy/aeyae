@@ -29,6 +29,15 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kDpiScale
+  //
+#ifdef __APPLE__
+  static const double kDpiScale = 1.0;
+#else
+  static const double kDpiScale = 72.0 / 96.0;
+#endif
+
+  //----------------------------------------------------------------
   // TVar
   //
   struct TVar : public QVariant

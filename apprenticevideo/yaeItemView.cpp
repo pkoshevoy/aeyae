@@ -8,6 +8,7 @@
 
 // standard C++:
 #include <iostream>
+#include <limits>
 #include <list>
 
 // Qt library:
@@ -174,6 +175,13 @@ namespace yae
         << yae::toString(et)
         << std::endl;
 #endif
+    }
+
+    if (et == QEvent::Leave)
+    {
+      mousePt_.set_x(std::numeric_limits<double>::max());
+      mousePt_.set_y(std::numeric_limits<double>::max());
+      this->mouseTracking(mousePt_);
     }
 
     if (et == QEvent::MouseButtonPress ||

@@ -56,36 +56,13 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TimelineVCenter
-  //
-  struct TimelineVCenter : public TDoubleExpr
-  {
-    TimelineVCenter(const Item & shadow):
-      shadow_(shadow)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double bottom = 0.0;
-      shadow_.get(kPropertyBottom, bottom);
-
-      double height = 0.0;
-      shadow_.get(kPropertyHeight, height);
-
-      result = bottom - height * 0.33333333;
-    }
-
-    const Item & shadow_;
-  };
-
-  //----------------------------------------------------------------
   // TimelineHeight
   //
   struct TimelineHeight : public TDoubleExpr
   {
-    TimelineHeight(TimelineView & view, Item & timeline):
+    TimelineHeight(TimelineView & view, Item & container, Item & timeline):
       view_(view),
+      container_(container),
       timeline_(timeline)
     {}
 
@@ -95,7 +72,7 @@ namespace yae
       int h = std::max<int>(2, ~1 & (int(0.5 + timeline_.height()) / 4));
 
       const TVec2D & pt = view_.mousePt();
-      if (timeline_.overlaps(pt))
+      if (container_.overlaps(pt))
       {
         h *= 2;
       }
@@ -104,6 +81,7 @@ namespace yae
     }
 
     TimelineView & view_;
+    Item & container_;
     Item & timeline_;
   };
 
@@ -217,6 +195,57 @@ namespace yae
     TimelineView & view_;
     Item & timeline_;
   };
+
+  //----------------------------------------------------------------
+  // GetPlayheadAux
+  //
+  struct GetPlayheadAux : public TVarExpr
+  {
+    GetPlayheadAux(TimelineView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (!view_.model())
+      {
+        result = QVariant(QObject::tr("00:00:00:00"));
+        return;
+      }
+
+      TimelineModel & model = *(view_.model());
+      result = QVariant(model.auxPlayhead());
+    }
+
+    TimelineView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetDurationAux
+  //
+  struct GetDurationAux : public TVarExpr
+  {
+    GetDurationAux(TimelineView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (!view_.model())
+      {
+        result = QVariant(QObject::tr("00:00:00:00"));
+        return;
+      }
+
+      TimelineModel & model = *(view_.model());
+      result = QVariant(model.auxDuration());
+    }
+
+    TimelineView & view_;
+  };
+
 
   //----------------------------------------------------------------
   // TimelineSeek
@@ -414,14 +443,13 @@ namespace yae
     // setup an invisible item so its height property expression
     // could be computed once and the result reused in other places
     // that need to compute the same property expression:
-    Item & titleHeight = root.addNewHidden<Item>("title_height");
-    titleHeight.height_ =
-      titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
+    Item & title = root.addNewHidden<Item>("title_height");
+    title.height_ = title.addExpr(new CalcTitleHeight(root, 24.0));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);
     shadow.anchors_.top_.reset();
-    shadow.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
+    shadow.height_ = ItemRef::scale(title, kPropertyHeight, 4.5);
 
     shadow.color_[0.000000] = Color(0x000000, 0.004);
     shadow.color_[0.135417] = Color(0x000000, 0.016);
@@ -432,15 +460,18 @@ namespace yae
     shadow.color_[0.500000] = Color(0x000000, 0.192);
     shadow.color_[1.000000] = Color(0x000000, 0.690);
 
+    Item & container = root.addNew<Item>("container");
+    container.anchors_.fill(root);
+    container.anchors_.top_.reset();
+    container.height_ = ItemRef::scale(title, kPropertyHeight, 1.5);
+
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     timeline.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-    timeline.anchors_.vcenter_ =
-      timeline.addExpr(new TimelineVCenter(shadow));
-    timeline.margins_.left_ =
-      ItemRef::scale(titleHeight, kPropertyHeight, 0.5);
+    timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
+    timeline.margins_.left_ = ItemRef::scale(title, kPropertyHeight, 0.5);
     timeline.margins_.right_ = timeline.margins_.left_;
-    timeline.height_ = timeline.addExpr(new OddRoundUp(titleHeight,
+    timeline.height_ = timeline.addExpr(new OddRoundUp(title,
                                                        kPropertyHeight,
                                                        0.33333333), 1, 1);
 
@@ -448,11 +479,13 @@ namespace yae
     seek.anchors_.fill(timeline);
 
     ColorRef colorExcluded = ColorRef::constant(Color(0xFFFFFF, 0.2));
-    ColorRef colorIncluded = ColorRef::constant(Color(0xFFFFFF, 0.52));
+    ColorRef colorIncluded = ColorRef::constant(Color(0xFFFFFF, 0.5));
     ColorRef colorPlayed = ColorRef::constant(Color(0xf12b24, 1.0));
     ColorRef colorOutPt = ColorRef::constant(Color(0xe6e6e6, 1.0));
     ColorRef colorPlayedBg = ColorRef::constant(Color(0xf12b24, 0.0));
     ColorRef colorOutPtBg = ColorRef::constant(Color(0xe6e6e6, 0.0));
+    ColorRef colorTextBg = ColorRef::constant(Color(0x7f7f7f, 0.25));
+    ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.5));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -461,7 +494,7 @@ namespace yae
     timelineIn.anchors_.vcenter_ =
       ItemRef::reference(timeline, kPropertyVCenter);
     timelineIn.height_ =
-      timelineIn.addExpr(new TimelineHeight(*this, timeline));
+      timelineIn.addExpr(new TimelineHeight(*this, container, timeline));
     timelineIn.color_ = colorExcluded;
 
     Rectangle & timelinePlayhead =
@@ -502,7 +535,7 @@ namespace yae
     inPoint.radius_ = ItemRef::scale(inPoint, kPropertyHeight, 0.5);
     inPoint.color_ = colorPlayed;
     inPoint.background_ = colorPlayedBg;
-    inPoint.visible_ = inPoint.addExpr(new MarkerVisible(*this, timeline));
+    inPoint.visible_ = inPoint.addExpr(new MarkerVisible(*this, container));
 
     RoundRect & playhead = root.addNew<RoundRect>("playhead");
     playhead.anchors_.hcenter_ =
@@ -538,6 +571,52 @@ namespace yae
       root.add(new SliderOutPoint(*this, timeline));
     sliderOutPoint.anchors_.offset(outPoint, -1, 0, -1, 0);
 
+    QFont timecodeFont("");
+#if 1
+    timecodeFont.setFamily("Menlo, "
+                           "Monaco, "
+                           "Droid Sans Mono, "
+                           "DejaVu Sans Mono, "
+                           "Bitstream Vera Sans Mono, "
+                           "Consolas, "
+                           "Lucida Sans Typewriter, "
+                           "Lucida Console, "
+                           "Courier New");
+#endif
+
+    timecodeFont.setStyleHint(QFont::Monospace);
+    timecodeFont.setFixedPitch(true);
+    timecodeFont.setWeight(QFont::Thin);
+    timecodeFont.setBold(false);
+    timecodeFont.setStyleStrategy(QFont::OpenGLCompatible);
+
+    Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
+    Text & playheadAux = container.addNew<Text>("playheadAux");
+    playheadAux.anchors_.left_ =
+      ItemRef::offset(timeline, kPropertyLeft, 3);
+    playheadAux.anchors_.vcenter_ =
+      ItemRef::reference(container, kPropertyVCenter);
+    playheadAux.color_ = colorTextFg;
+    playheadAux.text_ = playheadAux.addExpr(new GetPlayheadAux(*this));
+    playheadAux.font_ = timecodeFont;
+    playheadAux.fontSize_ =
+      ItemRef::scale(container, kPropertyHeight, 0.33333333 * kDpiScale);
+    playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
+    playheadAuxBg.color_ = colorTextBg;
+
+    Rectangle & durationAuxBg = container.addNew<Rectangle>("durationAuxBg");
+    Text & durationAux = container.addNew<Text>("durationAux");
+    durationAux.anchors_.right_ =
+      ItemRef::offset(timeline, kPropertyRight, -3);
+    durationAux.anchors_.vcenter_ =
+      ItemRef::reference(container, kPropertyVCenter);
+    durationAux.color_ = colorTextFg;
+    durationAux.text_ = durationAux.addExpr(new GetDurationAux(*this));
+    durationAux.font_ = playheadAux.font_;
+    durationAux.fontSize_ = playheadAux.fontSize_;
+    durationAuxBg.anchors_.offset(durationAux, -3, 3, -3, 3);
+    durationAuxBg.color_ = colorTextBg;
+
     /*
     Rectangle & fixme = root.addNew<Rectangle>("fixme");
     fixme.anchors_.fill(sliderPlayhead);
@@ -551,7 +630,12 @@ namespace yae
   void
   TimelineView::mouseTracking(const TVec2D & mousePt)
   {
-    this->requestRepaint();
+    (void)mousePt;
+
+    if (this->isEnabled())
+    {
+      this->requestRepaint();
+    }
   }
 
   //----------------------------------------------------------------
@@ -592,7 +676,10 @@ namespace yae
   void
   TimelineView::modelChanged()
   {
-    this->requestRepaint();
+    if (this->isEnabled())
+    {
+      this->requestRepaint();
+    }
   }
 
 }
