@@ -93,10 +93,16 @@ namespace yae
   {
     void uncache();
 
+    void offset(const TDoubleProp & reference,
+                double ox0, double ox1,
+                double oy0, double oy1);
+
     inline void fill(const TDoubleProp & reference, double offset = 0.0)
     { inset(reference, offset, offset); }
 
-    void inset(const TDoubleProp & reference, double ox, double oy);
+    inline void inset(const TDoubleProp & reference, double ox, double oy)
+    { offset(reference, ox, -ox, oy, -oy); }
+
     void center(const TDoubleProp & reference);
     void topLeft(const TDoubleProp & reference, double offset = 0.0);
     void topRight(const TDoubleProp & reference, double offset = 0.0);

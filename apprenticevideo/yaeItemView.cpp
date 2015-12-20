@@ -207,15 +207,21 @@ namespace yae
       return false;
     }
 
+    QPoint pos = e->pos();
+    TVec2D pt(pos.x(), pos.y());
+    mousePt_ = pt;
+
     QEvent::Type et = e->type();
     if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
           (e->button() == Qt::LeftButton)))
     {
+      if (!e->buttons())
+      {
+        this->mouseTracking(pt);
+      }
+
       return false;
     }
-
-    QPoint pos = e->pos();
-    TVec2D pt(pos.x(), pos.y());
 
     if (et == QEvent::MouseButtonPress)
     {

@@ -105,6 +105,7 @@ namespace yae
     {
       Vec<double, 4> outerColor(item.colorBorder_.get());
       Vec<double, 4> innerColor(item.color_.get());
+      Vec<double, 4> bgColor(item.background_.get());
       TVec2D samplePoint;
 
       for (int j = 0; j < int(iw_); j++)
@@ -136,7 +137,13 @@ namespace yae
 
           double outerWeight = outer / double(supersample);
           double innerWeight = inner / double(supersample);
-          Color c(outerColor * outerWeight + innerColor * innerWeight);
+          double backgroundWeight =
+            std::max<double>(0.0, 1.0 - (outerWeight + innerWeight));
+
+          Color c(outerColor * outerWeight +
+                  innerColor * innerWeight +
+                  bgColor * backgroundWeight);
+
           memcpy(dst, &(c.argb_), sizeof(c.argb_));
         }
       }
@@ -264,7 +271,8 @@ namespace yae
     radius_(ItemRef::constant(0.0)),
     border_(ItemRef::constant(0.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
-    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
+    colorBorder_(ColorRef::constant(Color(0xffffff, 0.25))),
+    background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
     p_->ready_ = addExpr(new UploadTexture<RoundRect>(*this));
   }

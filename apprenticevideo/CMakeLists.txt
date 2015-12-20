@@ -23,14 +23,22 @@ add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-D__STDC_CONSTANT_MACROS)
 add_definitions(-D__STDC_LIMIT_MACROS)
 
-# add_definitions(-DQT_QML_DEBUG)
-
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
 find_package(Qt5 COMPONENTS Core Gui Widgets Quick QuickWidgets Qml OpenGL)
 if (Qt5_FOUND)
-  find_package(Qt5DBus)
+
+  if (NOT (APPLE OR WIN32))
+    find_package(Qt5DBus)
+  endif ()
+
+  option(YAE_USE_PLAYER_QUICK_WIDGET "Alternative implementation with QML" OFF)
+  if (YAE_USE_PLAYER_QUICK_WIDGET)
+    add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
+    # add_definitions(-DQT_QML_DEBUG)
+  endif (YAE_USE_PLAYER_QUICK_WIDGET)
+
 else (Qt5_FOUND)
   find_package(Qt4 REQUIRED)
 endif (Qt5_FOUND)
@@ -87,7 +95,7 @@ set(project_moc_hxx
   yaePlaylistModelProxy.h
   yaePlaylistView.h
   yaeScreenSaverInhibitor.h
-  yaeTimelineControls.h
+  yaeTimelineModel.h
   yaeTimelineView.h
   )
 
@@ -166,8 +174,8 @@ set(project_sources
   yaeTexturedRect.h
   yaeThumbnailProvider.h
   yaeThumbnailProvider.cpp
-  yaeTimelineControls.h
-  yaeTimelineControls.cpp
+  yaeTimelineModel.h
+  yaeTimelineModel.cpp
   yaeTimelineView.h
   yaeTimelineView.cpp
   yaeTransform.cpp

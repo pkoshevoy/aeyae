@@ -19,7 +19,7 @@
 namespace yae
 {
   // forward declarations:
-  class TimelineControls;
+  class TimelineModel;
 
   //----------------------------------------------------------------
   // TimelineView
@@ -31,11 +31,20 @@ namespace yae
   public:
     TimelineView();
 
+    // virtual:
+    void mouseTracking(const TVec2D & mousePt);
+
     // data source:
-    void setModel(TimelineControls * model);
+    void setModel(TimelineModel * model);
+
+    inline TimelineModel * model() const
+    { return model_; }
+
+  public slots:
+    void modelChanged();
 
   protected:
-    TimelineControls * model_;
+    TimelineModel * model_;
   };
 
 }

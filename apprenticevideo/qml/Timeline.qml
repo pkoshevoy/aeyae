@@ -189,7 +189,7 @@ Item
         // Utils.dump_properties(mouseArea);
         var padding = (parent.height / 3.0)
         var t = (mouse.x - padding) / (this.width - padding * 2.0);
-        yae_timeline_controls.markerPlayhead = t;
+        yae_timeline_model.markerPlayhead = t;
         mouse.accepted = true;
       }
     }
@@ -202,7 +202,7 @@ Item
       y: -this.height / 2.0
       anchors.left: parent.left
       height: container.timeline_height();
-      width: parent.width * yae_timeline_controls.markerTimeIn;
+      width: parent.width * yae_timeline_model.markerTimeIn;
     }
 
     Rectangle
@@ -213,8 +213,8 @@ Item
       y: -this.height / 2.0
       anchors.left: timelineIn.right
       height: timelineIn.height
-      width: parent.width * (yae_timeline_controls.markerPlayhead -
-                             yae_timeline_controls.markerTimeIn);
+      width: parent.width * (yae_timeline_model.markerPlayhead -
+                             yae_timeline_model.markerTimeIn);
     }
 
     Rectangle
@@ -225,8 +225,8 @@ Item
       y: -this.height / 2.0
       anchors.left: timelinePlayhead.right
       height: timelineIn.height
-      width: parent.width * (yae_timeline_controls.markerTimeOut -
-                             yae_timeline_controls.markerPlayhead);
+      width: parent.width * (yae_timeline_model.markerTimeOut -
+                             yae_timeline_model.markerPlayhead);
     }
 
     Rectangle
@@ -258,7 +258,7 @@ Item
       visible: mouseArea.containsMouse
 
       moveMarker: function(t) {
-        yae_timeline_controls.markerTimeIn = t;
+        yae_timeline_model.markerTimeIn = t;
       }
     }
 
@@ -274,7 +274,7 @@ Item
       visible: mouseArea.containsMouse
 
       moveMarker: function(t) {
-        yae_timeline_controls.markerTimeOut = t;
+        yae_timeline_model.markerTimeOut = t;
       }
     }
 
@@ -290,7 +290,7 @@ Item
       visible: mouseArea.containsMouse
 
       moveMarker: function(t) {
-        yae_timeline_controls.markerPlayhead = t;
+        yae_timeline_model.markerPlayhead = t;
       }
     }
 
@@ -299,14 +299,14 @@ Item
       id: playheadAux
       objectName: "playheadAux"
 
-      property var timestamp: yae_timeline_controls.auxPlayhead
+      property var timestamp: yae_timeline_model.auxPlayhead
 
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       anchors.leftMargin: 3
       anchors.rightMargin: 3
 
-      text: (activeFocus ? timestamp : yae_timeline_controls.auxPlayhead)
+      text: (activeFocus ? timestamp : yae_timeline_model.auxPlayhead)
 
       font.family: ("Droid Sans Mono, DejaVu Sans Mono, " +
                     "Bitstream Vera Sans Mono, Consolas, " +
@@ -321,14 +321,14 @@ Item
       selectByMouse: true
 
       onFocusChanged: if (activeFocus) {
-        timestamp = yae_timeline_controls.auxPlayhead;
+        timestamp = yae_timeline_model.auxPlayhead;
       }
 
       KeyNavigation.tab: timeline.parent
       KeyNavigation.backtab: timeline.parent
 
       onAccepted: {
-        yae_timeline_controls.auxPlayhead = text;
+        yae_timeline_model.auxPlayhead = text;
         timeline.parent.focus = true;
       }
 
@@ -355,7 +355,7 @@ Item
       anchors.leftMargin: 3
       anchors.rightMargin: 3
 
-      text: yae_timeline_controls.auxDuration
+      text: yae_timeline_model.auxDuration
       color: color_text_fg
       font: playheadAux.font
 

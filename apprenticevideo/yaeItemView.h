@@ -78,6 +78,15 @@ namespace yae
     getImageProvider(const QString & imageUrl, QString & imageId) const
     { return lookupImageProvider(imageProviders(), imageUrl, imageId); }
 
+    // override this to receive mouse movement notification
+    // regardless whether any mouse buttons are pressed:
+    virtual void mouseTracking(const TVec2D & mousePt)
+    { (void)mousePt; }
+
+    // accessor to last-known mouse position:
+    inline const TVec2D & mousePt() const
+    { return mousePt_; }
+
   protected:
     RequestRepaintEvent::TPayload requestRepaintEvent_;
     TImageProviders imageProviders_;
@@ -94,6 +103,7 @@ namespace yae
     InputHandler * pressed_;
     InputHandler * dragged_;
     TVec2D startPt_;
+    TVec2D mousePt_;
   };
 
 }

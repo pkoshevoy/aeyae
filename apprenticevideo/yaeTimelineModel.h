@@ -6,8 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_TIMELINE_CONTROLS_H_
-#define YAE_TIMELINE_CONTROLS_H_
+#ifndef YAE_TIMELINE_MODEL_H_
+#define YAE_TIMELINE_MODEL_H_
 
 // boost includes:
 #ifndef Q_MOC_RUN
@@ -29,21 +29,18 @@
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_synchronous.h"
 
-// local includes:
-#include "yaeMainWindow.h"
-
 
 namespace yae
 {
 
   //----------------------------------------------------------------
-  // TimelineControls
+  // TimelineModel
   //
-  class TimelineControls :
-#if YAE_USE_PLAYER_QUICK_WIDGET
-    public QObject,
-#else
+  class TimelineModel :
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
     public QQuickItem,
+#else
+    public QObject,
 #endif
     public IClockObserver
   {
@@ -51,9 +48,9 @@ namespace yae
     // TQtBase
     //
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
-    typedef QObject TQtBase;
-#else
     typedef QQuickItem TQtBase;
+#else
+    typedef QObject TQtBase;
 #endif
 
     Q_OBJECT;
@@ -83,10 +80,10 @@ namespace yae
                NOTIFY markerPlayheadChanged);
 
   public:
-    TimelineControls();
-    ~TimelineControls();
+    TimelineModel();
+    ~TimelineModel();
 
-    // NOTE: this instance of TimelineControls will register itself
+    // NOTE: this instance of TimelineModel will register itself
     // as an observer of the given shared clock; it will unregister
     // itself as the observer of previous shared clock.
     void observe(const SharedClock & sharedClock);
@@ -284,4 +281,4 @@ namespace yae
 }
 
 
-#endif // YAE_TIMELINE_CONTROLS_H_
+#endif // YAE_TIMELINE_MODEL_H_

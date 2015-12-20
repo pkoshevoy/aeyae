@@ -47,6 +47,7 @@ namespace yae
 
     ColorRef color_;
     ColorRef colorBorder_;
+    ColorRef background_;
   };
 
 }

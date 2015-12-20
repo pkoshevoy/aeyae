@@ -264,15 +264,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Anchors::inset
+  // Anchors::offset
   //
   void
-  Anchors::inset(const TDoubleProp & ref, double ox, double oy)
+  Anchors::offset(const TDoubleProp & ref,
+                  double ox0, double ox1,
+                  double oy0, double oy1)
   {
-    left_ = ItemRef::offset(ref, kPropertyLeft, ox);
-    right_ = ItemRef::offset(ref, kPropertyRight, -ox);
-    top_ = ItemRef::offset(ref, kPropertyTop, oy);
-    bottom_ = ItemRef::offset(ref, kPropertyBottom, -oy);
+    left_ = ItemRef::offset(ref, kPropertyLeft, ox0);
+    right_ = ItemRef::offset(ref, kPropertyRight, ox1);
+    top_ = ItemRef::offset(ref, kPropertyTop, oy0);
+    bottom_ = ItemRef::offset(ref, kPropertyBottom, oy1);
   }
 
   //----------------------------------------------------------------

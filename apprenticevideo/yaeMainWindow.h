@@ -9,13 +9,6 @@
 #ifndef YAE_MAIN_WINDOW_H_
 #define YAE_MAIN_WINDOW_H_
 
-// FIXME: this would be better as a CMake OPTION:
-#ifdef YAE_USE_QT5
-#define YAE_USE_PLAYER_QUICK_WIDGET 0
-#else
-#define YAE_USE_PLAYER_QUICK_WIDGET 0
-#endif
-
 // Qt includes:
 #include <QDialog>
 #include <QMainWindow>
@@ -36,16 +29,17 @@
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeBookmarks.h"
-#if !(YAE_USE_PLAYER_QUICK_WIDGET)
+#ifndef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasWidget.h"
 #endif
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
 #include "yaePlaylistView.h"
-#if (YAE_USE_PLAYER_QUICK_WIDGET)
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeQuickWidget.h"
 #endif
+#include "yaeTimelineModel.h"
 #include "yaeTimelineView.h"
 
 // Qt uic generated files:
@@ -57,13 +51,10 @@
 
 namespace yae
 {
-  // forward declarations:
-  class TimelineControls;
-
   //----------------------------------------------------------------
   // TPlayerWidget
   //
-#if (YAE_USE_PLAYER_QUICK_WIDGET)
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
   typedef TQuickWidget TPlayerWidget;
 #elif defined(YAE_USE_QT5)
   typedef CanvasWidget<QOpenGLWidget> TPlayerWidget;
@@ -365,7 +356,7 @@ namespace yae
     Canvas * canvas_;
     PlaylistView playlistView_;
     TimelineView timelineView_;
-    TimelineControls * timelineControls_;
+    TimelineModel timelineModel_;
     TPlaylistModel playlistModel_;
 
     // audio device:

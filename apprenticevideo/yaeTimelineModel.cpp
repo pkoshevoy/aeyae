@@ -24,7 +24,7 @@
 #include <QTime>
 
 // yae includes:
-#include <yaeTimelineControls.h>
+#include <yaeTimelineModel.h>
 
 
 namespace yae
@@ -110,9 +110,9 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::TimelineControls
+  // TimelineModel::TimelineModel
   //
-  TimelineControls::TimelineControls():
+  TimelineModel::TimelineModel():
     ignoreClockStopped_(false),
     unknownDuration_(false),
     timelineStart_(0.0),
@@ -134,7 +134,7 @@ namespace yae
     markerPlayhead_ = timelineStart_;
 
     // current state of playback controls:
-    currentState_ = TimelineControls::kIdle;
+    currentState_ = TimelineModel::kIdle;
 
     slideshowTimer_.setSingleShot(true);
     slideshowTimer_.setInterval(1000);
@@ -145,65 +145,65 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::~TimelineControls
+  // TimelineModel::~TimelineModel
   //
-  TimelineControls::~TimelineControls()
+  TimelineModel::~TimelineModel()
   {}
 
   //----------------------------------------------------------------
-  // TimelineControls::timelineStart
+  // TimelineModel::timelineStart
   //
   double
-  TimelineControls::timelineStart() const
+  TimelineModel::timelineStart() const
   {
     return timelineStart_;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::timelineDuration
+  // TimelineModel::timelineDuration
   //
   double
-  TimelineControls::timelineDuration() const
+  TimelineModel::timelineDuration() const
   {
     return timelineDuration_;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::timeIn
+  // TimelineModel::timeIn
   //
   double
-  TimelineControls::timeIn() const
+  TimelineModel::timeIn() const
   {
     double seconds = markerTimeIn_ * timelineDuration_ + timelineStart_;
     return seconds;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::timeOut
+  // TimelineModel::timeOut
   //
   double
-  TimelineControls::timeOut() const
+  TimelineModel::timeOut() const
   {
     double seconds = markerTimeOut_ * timelineDuration_ + timelineStart_;
     return seconds;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::currentTime
+  // TimelineModel::currentTime
   //
   double
-  TimelineControls::currentTime() const
+  TimelineModel::currentTime() const
   {
       double seconds = markerPlayhead_ * timelineDuration_ + timelineStart_;
       return seconds;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::noteCurrentTimeChanged
+  // TimelineModel::noteCurrentTimeChanged
   //
   void
-  TimelineControls::noteCurrentTimeChanged(const SharedClock & c,
-                                           const TTime & currentTime)
+  TimelineModel::noteCurrentTimeChanged(const SharedClock & c,
+                                        const TTime & currentTime)
   {
     (void) c;
 
@@ -216,10 +216,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::noteTheClockHasStopped
+  // TimelineModel::noteTheClockHasStopped
   //
   void
-  TimelineControls::noteTheClockHasStopped(const SharedClock & c)
+  TimelineModel::noteTheClockHasStopped(const SharedClock & c)
   {
     if (!ignoreClockStopped_)
     {
@@ -228,19 +228,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::ignoreClockStoppedEvent
+  // TimelineModel::ignoreClockStoppedEvent
   //
   void
-  TimelineControls::ignoreClockStoppedEvent(bool ignore)
+  TimelineModel::ignoreClockStoppedEvent(bool ignore)
   {
     ignoreClockStopped_ = ignore;
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::observe
+  // TimelineModel::observe
   //
   void
-  TimelineControls::observe(const SharedClock & sharedClock)
+  TimelineModel::observe(const SharedClock & sharedClock)
   {
     sharedClock_.setObserver(NULL);
     sharedClock_ = sharedClock;
@@ -248,10 +248,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::resetFor
+  // TimelineModel::resetFor
   //
   void
-  TimelineControls::resetFor(IReader * reader)
+  TimelineModel::resetFor(IReader * reader)
   {
     TTime start;
     TTime duration;
@@ -299,10 +299,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::adjustTo
+  // TimelineModel::adjustTo
   //
   void
-  TimelineControls::adjustTo(IReader * reader)
+  TimelineModel::adjustTo(IReader * reader)
   {
     // get current in/out/playhead positions in seconds:
     double t0 = timeIn();
@@ -352,19 +352,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setAuxPlayhead
+  // TimelineModel::setAuxPlayhead
   //
   void
-  TimelineControls::setAuxPlayhead(const QString & playhead)
+  TimelineModel::setAuxPlayhead(const QString & playhead)
   {
     seekTo(playhead);
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setMarkerTimeIn
+  // TimelineModel::setMarkerTimeIn
   //
   void
-  TimelineControls::setMarkerTimeIn(double marker)
+  TimelineModel::setMarkerTimeIn(double marker)
   {
     if (updateMarkerTimeIn(marker))
     {
@@ -379,10 +379,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setMarkerTimeOut
+  // TimelineModel::setMarkerTimeOut
   //
   void
-  TimelineControls::setMarkerTimeOut(double marker)
+  TimelineModel::setMarkerTimeOut(double marker)
   {
     if (updateMarkerTimeOut(marker))
     {
@@ -397,10 +397,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setMarkerPlayhead
+  // TimelineModel::setMarkerPlayhead
   //
   void
-  TimelineControls::setMarkerPlayhead(double marker)
+  TimelineModel::setMarkerPlayhead(double marker)
   {
     if (!timelineDuration_ || unknownDuration_)
     {
@@ -415,10 +415,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setInPoint
+  // TimelineModel::setInPoint
   //
   void
-  TimelineControls::setInPoint()
+  TimelineModel::setInPoint()
   {
     if (!unknownDuration_ && currentState_ == kIdle)
     {
@@ -427,10 +427,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::setOutPoint
+  // TimelineModel::setOutPoint
   //
   void
-  TimelineControls::setOutPoint()
+  TimelineModel::setOutPoint()
   {
     if (!unknownDuration_ && currentState_ == kIdle)
     {
@@ -439,10 +439,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::seekFromCurrentTime
+  // TimelineModel::seekFromCurrentTime
   //
   void
-  TimelineControls::seekFromCurrentTime(double secOffset)
+  TimelineModel::seekFromCurrentTime(double secOffset)
   {
     double t0 = currentTime();
     if (t0 > 1e-1)
@@ -459,10 +459,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::seekTo
+  // TimelineModel::seekTo
   //
   void
-  TimelineControls::seekTo(double seconds)
+  TimelineModel::seekTo(double seconds)
   {
     if (!timelineDuration_ || unknownDuration_)
     {
@@ -531,10 +531,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::seekTo
+  // TimelineModel::seekTo
   //
   bool
-  TimelineControls::seekTo(const QString & hhmmssff)
+  TimelineModel::seekTo(const QString & hhmmssff)
   {
     int hh = 0;
     int mm = 0;
@@ -555,10 +555,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::slideshowTimerExpired
+  // TimelineModel::slideshowTimerExpired
   //
   void
-  TimelineControls::slideshowTimerExpired()
+  TimelineModel::slideshowTimerExpired()
   {
     while (!stoppedClock_.empty())
     {
@@ -586,10 +586,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::event
+  // TimelineModel::event
   //
   bool
-  TimelineControls::event(QEvent * e)
+  TimelineModel::event(QEvent * e)
   {
     if (e->type() == QEvent::User)
     {
@@ -655,10 +655,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::updateAuxPlayhead
+  // TimelineModel::updateAuxPlayhead
   //
   bool
-  TimelineControls::updateAuxPlayhead(const QString & playhead)
+  TimelineModel::updateAuxPlayhead(const QString & playhead)
   {
     if (playhead == auxPlayhead_)
     {
@@ -672,10 +672,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::updateAuxDuration
+  // TimelineModel::updateAuxDuration
   //
   bool
-  TimelineControls::updateAuxDuration(const QString & duration)
+  TimelineModel::updateAuxDuration(const QString & duration)
   {
     if (duration == auxDuration_)
     {
@@ -689,10 +689,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::updateMarkerTimeIn
+  // TimelineModel::updateMarkerTimeIn
   //
   bool
-  TimelineControls::updateMarkerTimeIn(double marker)
+  TimelineModel::updateMarkerTimeIn(double marker)
   {
     double t = std::min(1.0, std::max(0.0, marker));
     if (t == markerTimeIn_)
@@ -707,10 +707,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::updateMarkerTimeOut
+  // TimelineModel::updateMarkerTimeOut
   //
   bool
-  TimelineControls::updateMarkerTimeOut(double marker)
+  TimelineModel::updateMarkerTimeOut(double marker)
   {
     double t = std::min(1.0, std::max(0.0, marker));
     if (t == markerTimeOut_)
@@ -725,10 +725,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineControls::updateMarkerPlayhead
+  // TimelineModel::updateMarkerPlayhead
   //
   bool
-  TimelineControls::updateMarkerPlayhead(double marker)
+  TimelineModel::updateMarkerPlayhead(double marker)
   {
     double t = std::min(1.0, std::max(0.0, marker));
     if (t == markerPlayhead_)
