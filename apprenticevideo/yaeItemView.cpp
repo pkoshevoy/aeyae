@@ -11,6 +11,7 @@
 #include <list>
 
 // Qt library:
+#include <QApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QTabletEvent>
