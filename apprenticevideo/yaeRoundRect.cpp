@@ -295,6 +295,7 @@ namespace yae
     border_.uncache();
     color_.uncache();
     colorBorder_.uncache();
+    background_.uncache();
     p_->uncache();
     Item::uncache();
   }

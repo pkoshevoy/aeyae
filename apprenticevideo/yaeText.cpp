@@ -251,6 +251,11 @@ namespace yae
     int iw = (int)ceil(bboxContent.w_ * item.supersample_);
     int ih = (int)ceil(bboxContent.h_ * item.supersample_);
 
+    if (!(iw && ih))
+    {
+      return;
+    }
+
     QImage img(iw, ih, QImage::Format_ARGB32);
     {
       img.fill(QColor(0x7f, 0x7f, 0x7f, 0).rgba());

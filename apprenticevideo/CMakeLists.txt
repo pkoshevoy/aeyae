@@ -95,6 +95,7 @@ set(project_moc_hxx
   yaePlaylistModelProxy.h
   yaePlaylistView.h
   yaeScreenSaverInhibitor.h
+  yaeTextInput.h
   yaeTimelineModel.h
   yaeTimelineView.h
   )
@@ -168,6 +169,8 @@ set(project_sources
   yaeSegment.h
   yaeText.cpp
   yaeText.h
+  yaeTextInput.cpp
+  yaeTextInput.h
   yaeTexture.cpp
   yaeTexture.h
   yaeTexturedRect.cpp
