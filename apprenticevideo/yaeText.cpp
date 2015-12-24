@@ -253,7 +253,7 @@ namespace yae
 
     if (!(iw && ih))
     {
-      return;
+      return true;
     }
 
     QImage img(iw, ih, QImage::Format_ARGB32);
