@@ -15,7 +15,9 @@
 #include <QObject>
 
 // local interfaces:
+#include "yaeInputArea.h"
 #include "yaeItem.h"
+#include "yaeText.h"
 
 
 namespace yae
@@ -40,6 +42,12 @@ namespace yae
                       Canvas * canvas,
                       QEvent * event);
 
+    // helpers for use with focus proxy:
+    void onPress(const TVec2D & lcsClickPt);
+    void onDoubleClick(const TVec2D & lcsClickPt);
+    void onDrag(const TVec2D & lcsDragStart,
+                const TVec2D & lcsDragEnd);
+
     // virtual:
     void uncache();
 
@@ -51,9 +59,16 @@ namespace yae
     QString text() const;
     void setText(const QString & text);
 
+    // when finished editing it is better to clear focus
+    // which most likely belongs to a proxy:
+    void setFocusProxyId(const std::string & proxyId);
+
   signals:
     void textEdited(const QString & text);
-    void editingFinished();
+    void editingFinished(const QString & text);
+
+  public slots:
+    void onEditingFinished();
 
   public:
     struct TPrivate;
@@ -61,11 +76,48 @@ namespace yae
 
     QFont font_;
     ItemRef fontSize_; // in points
+    ItemRef cursorWidth_; // in pixels
 
     ColorRef color_;
     ColorRef cursorColor_;
     ColorRef selectionFg_;
     ColorRef selectionBg_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TextInputProxy
+  //
+  struct TextInputProxy : public InputArea
+  {
+    TextInputProxy(const char * id, Text & view, TextInput & edit);
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint);
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint);
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd);
+
+    // virtual:
+    void onFocus();
+
+    // virtual:
+    void onFocusOut();
+
+    // virtual:
+    bool processEvent(Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * event);
+
+    Text & view_;
+    TextInput & edit_;
   };
 
 }

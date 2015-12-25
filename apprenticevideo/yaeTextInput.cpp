@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard libraries:
+#include <algorithm>
+
 // Qt library:
 #include <QApplication>
 #include <QImage>
@@ -36,25 +39,38 @@ namespace yae
                       Canvas * canvas,
                       QEvent * e);
 
+    void onPress(TextInput & item, const TVec2D & lcsPt);
+
+    void onDoubleClick(TextInput & item, const TVec2D & lcsPt);
+
+    void onDrag(TextInput & item,
+                const TVec2D & lcsDragStart,
+                const TVec2D & lcsDragEnd);
+
     void uncache();
+    void layoutText(const TextInput & item);
     bool uploadTexture(const TextInput & item);
     void paint(const TextInput & item);
 
-    QWidget * parent_;
     QLineEdit lineEdit_;
+    QTextLayout textLayout_;
+    QTextLine textLine_;
+    QFont font_;
 
     BoolRef ready_;
     qreal offset_;
     GLuint texId_;
     GLuint iw_;
     GLuint ih_;
+
+    // optional id of focus proxy item that manages this text input;
+    std::string proxyId_;
   };
 
   //----------------------------------------------------------------
   // TextInput::TPrivate::TPrivate
   //
   TextInput::TPrivate::TPrivate():
-    parent_(QApplication::topLevelWidgets().front()),
     offset_(0),
     texId_(0),
     iw_(0),
@@ -153,6 +169,60 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextInput::TPrivate::onPress
+  //
+  void
+  TextInput::TPrivate::onPress(TextInput & item, const TVec2D & lcsPt)
+  {
+    // update cursor position here:
+    int cursorPos = textLine_.xToCursor(lcsPt.x() + offset_,
+                                        QTextLine::CursorOnCharacter);
+    lineEdit_.setCursorPosition(cursorPos);
+    lineEdit_.setSelection(cursorPos, 0);
+    item.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::TPrivate::onDoubleClick
+  //
+  void
+  TextInput::TPrivate::onDoubleClick(TextInput & item, const TVec2D & lcsPt)
+  {
+    // select all:
+    int selLength = lineEdit_.text().length();
+    lineEdit_.setSelection(0, selLength);
+    item.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::TPrivate::onDrag
+  //
+  void
+  TextInput::TPrivate::onDrag(TextInput & item,
+                              const TVec2D & lcsDragStart,
+                              const TVec2D & lcsDragEnd)
+  {
+    // update selection here:
+    int selStart = textLine_.xToCursor(lcsDragStart.x() + offset_,
+                                       QTextLine::CursorOnCharacter);
+    int selEnd = textLine_.xToCursor(lcsDragEnd.x() + offset_,
+                                     QTextLine::CursorOnCharacter);
+    if (selStart > selEnd)
+    {
+      std::swap(selStart, selEnd);
+    }
+
+    int selLength = selEnd - selStart;
+    if (selLength < 1)
+    {
+      return;
+    }
+
+    lineEdit_.setSelection(selStart, selLength);
+    item.uncache();
+  }
+
+  //----------------------------------------------------------------
   // TextInput::TPrivate::uncache
   //
   void
@@ -166,10 +236,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TextInput::TPrivate::uploadTexture
+  // TextInput::TPrivate::layoutText
   //
-  bool
-  TextInput::TPrivate::uploadTexture(const TextInput & item)
+  void
+  TextInput::TPrivate::layoutText(const TextInput & item)
   {
     BBox bbox;
     item.get(kPropertyBBox, bbox);
@@ -177,36 +247,41 @@ namespace yae
     iw_ = (int)std::ceil(bbox.w_);
     ih_ = (int)std::ceil(bbox.h_);
 
-    QImage img(iw_, ih_, QImage::Format_ARGB32);
-    img.fill(0);
-
     QString text = lineEdit_.text();
     int textLength = text.length();
+
+    font_ = item.font_;
+    double fontSize = item.fontSize_.get();
+    font_.setPointSizeF(fontSize);
+
+    textLayout_.clearLayout();
+    textLayout_.setText(text);
+    textLayout_.setFont(font_);
+    textLayout_.beginLayout();
+
+    textLine_ = textLayout_.createLine();
+    textLine_.setNumColumns(textLength);
+    textLine_.setPosition(QPointF(0, 0));
+
+    QTextLine endLine = textLayout_.createLine();
+    YAE_ASSERT(!endLine.isValid());
+    textLayout_.endLayout();
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::TPrivate::uploadTexture
+  //
+  bool
+  TextInput::TPrivate::uploadTexture(const TextInput & item)
+  {
+    layoutText(item);
+
     int selStart = lineEdit_.selectionStart();
     int selLength = lineEdit_.selectedText().length();
     int cursorPos = lineEdit_.cursorPosition();
+    int cursorWidth = std::max<int>(1, int(ceil(item.cursorWidth_.get())));
 
-    QFont font = item.font_;
-    double fontSize = item.fontSize_.get();
-    font.setPointSizeF(fontSize);
-
-    QFontMetricsF fm(font, &img);
-    qreal cursorWidth = 1;
-
-    QTextLayout textLayout(text, font, &img);
-    textLayout.beginLayout();
-
-    QTextLine textLine = textLayout.createLine();
-    textLine.setNumColumns(textLength + 1);
-    textLine.setPosition(QPointF(0, 0));
-    qreal lineHeight = textLine.height();
-    YAE_ASSERT(lineHeight <= qreal(ih_));
-
-    QTextLine endLine = textLayout.createLine();
-    YAE_ASSERT(!endLine.isValid());
-    textLayout.endLayout();
-
-    qreal cx0 = textLine.cursorToX(cursorPos);
+    qreal cx0 = textLine_.cursorToX(cursorPos);
     qreal cx1 = cx0 + cursorWidth;
     qreal x1 = offset_ + qreal(iw_);
 
@@ -219,33 +294,36 @@ namespace yae
       offset_ = cx1 - qreal(iw_);
     }
 
-    // paint text:
+    QImage img(iw_, ih_, QImage::Format_ARGB32);
+    img.fill(0);
+
+    QVector<QTextLayout::FormatRange> selections;
+    if (selLength > 0)
     {
-      QVector<QTextLayout::FormatRange> selections;
-      if (selLength > 0)
-      {
-        selections.push_back(QTextLayout::FormatRange());
-        QTextLayout::FormatRange & sel = selections.back();
-        sel.start = selStart;
-        sel.length = selLength;
-        sel.format.setFont(font);
-        sel.format.setBackground(QColor(item.selectionBg_.get()));
-        sel.format.setForeground(QColor(item.selectionFg_.get()));
-      }
-
-      qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
-      QPointF offset(-offset_, yoffset);
-      QRectF clip(offset, QSizeF(iw_, ih_));
-      QPainter painter(&img);
-
-      const Color & color = item.color_.get();
-      painter.setPen(QColor(color));
-      textLayout.draw(&painter, offset, selections, clip);
-
-      const Color & cursorColor = item.cursorColor_.get();
-      painter.setPen(QColor(cursorColor));
-      textLayout.drawCursor(&painter, offset, cursorPos);
+      selections.push_back(QTextLayout::FormatRange());
+      QTextLayout::FormatRange & sel = selections.back();
+      sel.start = selStart;
+      sel.length = selLength;
+      sel.format.setFont(font_);
+      sel.format.setBackground(QColor(item.selectionBg_.get()));
+      sel.format.setForeground(QColor(item.selectionFg_.get()));
     }
+
+    qreal lineHeight = textLine_.height();
+    YAE_ASSERT(lineHeight <= qreal(ih_));
+
+    qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
+    QPointF offset(-offset_, yoffset);
+    QRectF clip(offset, QSizeF(iw_, ih_));
+    QPainter painter(&img);
+
+    const Color & color = item.color_.get();
+    painter.setPen(QColor(color));
+    textLayout_.draw(&painter, offset, selections, clip);
+
+    const Color & cursorColor = item.cursorColor_.get();
+    painter.setPen(QColor(cursorColor));
+    textLayout_.drawCursor(&painter, offset, cursorPos, cursorWidth);
 
     bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_, GL_NEAREST);
     return ok;
@@ -310,13 +388,15 @@ namespace yae
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     p_->ready_ = addExpr(new UploadTexture<TextInput>(*this));
 
+    cursorWidth_ = ItemRef::constant(1);
+
     bool ok = true;
     ok = connect(&(p_->lineEdit_), SIGNAL(textEdited(const QString &)),
                  this, SIGNAL(textEdited(const QString &)));
     YAE_ASSERT(ok);
 
     ok = connect(&(p_->lineEdit_), SIGNAL(editingFinished()),
-                 this, SIGNAL(editingFinished()));
+                 this, SLOT(onEditingFinished()));
     YAE_ASSERT(ok);
   }
 
@@ -340,12 +420,38 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextInput::onPress
+  //
+  void
+  TextInput::onPress(const TVec2D & lcsPt)
+  {
+    p_->onPress(*this, lcsPt);
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::onDoubleClick
+  //
+  void
+  TextInput::onDoubleClick(const TVec2D & lcsPt)
+  {
+    p_->onDoubleClick(*this, lcsPt);
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::onDrag
+  //
+  void
+  TextInput::onDrag(const TVec2D & lcsDragStart, const TVec2D & lcsDragEnd)
+  {
+    p_->onDrag(*this, lcsDragStart, lcsDragEnd);
+  }
+
+  //----------------------------------------------------------------
   // TextInput::uncache
   //
   void
   TextInput::uncache()
   {
-    // FIXME: p_->uncache()?
     color_.uncache();
     fontSize_.uncache();
     p_->uncache();
@@ -386,6 +492,126 @@ namespace yae
   TextInput::setText(const QString & text)
   {
     p_->lineEdit_.setText(text);
+    p_->layoutText(*this);
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::setFocusProxyId
+  //
+  void
+  TextInput::setFocusProxyId(const std::string & proxyId)
+  {
+    p_->proxyId_ = proxyId;
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::onEditingFinished
+  //
+  void
+  TextInput::onEditingFinished()
+  {
+    QString payload = text();
+    emit editingFinished(payload);
+
+    if (!p_->proxyId_.empty())
+    {
+      ItemFocus::singleton().clearFocus(p_->proxyId_);
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // TextInputProxy::TextInputProxy
+  //
+  TextInputProxy::TextInputProxy(const char * id,
+                                 Text & view,
+                                 TextInput & edit):
+    InputArea(id),
+    view_(view),
+    edit_(edit)
+  {
+    edit_.setFocusProxyId(id_);
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::onPress
+  //
+  bool
+  TextInputProxy::onPress(const TVec2D & itemCSysOrigin,
+                          const TVec2D & rootCSysPoint)
+  {
+    if (!ItemFocus::singleton().hasFocus(id_))
+    {
+      ItemFocus::singleton().setFocus(id_);
+    }
+
+    TVec2D originEdit(edit_.left(), edit_.top());
+    TVec2D lcsPt = (rootCSysPoint - itemCSysOrigin) - originEdit;
+    edit_.onPress(lcsPt);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::onDoubleClick
+  //
+  bool
+  TextInputProxy::onDoubleClick(const TVec2D & itemCSysOrigin,
+                                const TVec2D & rootCSysPoint)
+  {
+    TVec2D originEdit(edit_.left(), edit_.top());
+    TVec2D lcsPt = (rootCSysPoint - itemCSysOrigin) - originEdit;
+    edit_.onDoubleClick(lcsPt);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::onDrag
+  //
+  bool
+  TextInputProxy::onDrag(const TVec2D & itemCSysOrigin,
+                         const TVec2D & rootCSysDragStart,
+                         const TVec2D & rootCSysDragEnd)
+  {
+    TVec2D originEdit(edit_.left(), edit_.top());
+    TVec2D lcsDragStart = (rootCSysDragStart - itemCSysOrigin) - originEdit;
+    TVec2D lcsDragEnd = (rootCSysDragEnd - itemCSysOrigin) - originEdit;
+    edit_.onDrag(lcsDragStart, lcsDragEnd);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::onFocus
+  //
+  void
+  TextInputProxy::onFocus()
+  {
+    edit_.setText(view_.text());
+    view_.uncache();
+    edit_.uncache();
+    edit_.onFocus();
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::onFocusOut
+  //
+  void
+  TextInputProxy::onFocusOut()
+  {
+    view_.uncache();
+    edit_.uncache();
+    edit_.onFocusOut();
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::processEvent
+  //
+  bool
+  TextInputProxy::processEvent(Canvas::ILayer & canvasLayer,
+                               Canvas * canvas,
+                               QEvent * event)
+  {
+    TMakeCurrentContext currentContext(*canvasLayer.context());
+    return edit_.processEvent(canvasLayer, canvas, event);
   }
 
 }

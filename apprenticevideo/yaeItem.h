@@ -267,6 +267,13 @@ namespace yae
     Item & operator[](const char * id);
 
     template <typename TItem>
+    inline TItem & get(const char * id)
+    {
+      Item & found = this->operator[](id);
+      return dynamic_cast<TItem &>(found);
+    }
+
+    template <typename TItem>
     inline TItem & add(TItem * newItem)
     {
       YAE_ASSERT(newItem);

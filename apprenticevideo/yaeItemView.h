@@ -80,8 +80,8 @@ namespace yae
 
     // override this to receive mouse movement notification
     // regardless whether any mouse buttons are pressed:
-    virtual void mouseTracking(const TVec2D & mousePt)
-    { (void)mousePt; }
+    virtual bool processMouseTracking(const TVec2D & mousePt)
+    { (void)mousePt; return false; }
 
     // accessor to last-known mouse position:
     inline const TVec2D & mousePt() const

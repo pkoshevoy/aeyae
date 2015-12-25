@@ -497,56 +497,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // PlayheadFocusProxy
-  //
-  struct PlayheadFocusProxy : public InputArea
-  {
-    PlayheadFocusProxy(Text & view, TextInput & edit):
-      InputArea("playhead_focus"),
-      view_(view),
-      edit_(edit)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      ItemFocus::singleton().setFocus(id_);
-      return true;
-    }
-
-    // virtual:
-    void onFocus()
-    {
-      edit_.setText(view_.text());
-      view_.uncache();
-      edit_.uncache();
-      edit_.onFocus();
-    }
-
-    // virtual:
-    void onFocusOut()
-    {
-      view_.uncache();
-      edit_.uncache();
-      edit_.onFocusOut();
-    }
-
-    // virtual:
-    bool processEvent(Canvas::ILayer & canvasLayer,
-                      Canvas * canvas,
-                      QEvent * event)
-    {
-      TMakeCurrentContext currentContext(*canvasLayer.context());
-      return edit_.processEvent(canvasLayer, canvas, event);
-    }
-
-    Text & view_;
-    TextInput & edit_;
-  };
-
-
-  //----------------------------------------------------------------
   // TimelineView::TimelineView
   //
   TimelineView::TimelineView():
@@ -603,6 +553,8 @@ namespace yae
     ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.5));
     ColorRef colorFocusBg = ColorRef::constant(Color(0x7f7f7f, 0.5));
     ColorRef colorFocusFg = ColorRef::constant(Color(0xFFFFFF, 1.0));
+    ColorRef colorHighlightBg = ColorRef::constant(Color(0xFFFFFF, 1.0));
+    ColorRef colorHighlightFg = ColorRef::constant(Color(0x000000, 1.0));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -712,8 +664,8 @@ namespace yae
     Rectangle & durationAuxBg = container.addNew<Rectangle>("durationAuxBg");
     Text & durationAux = container.addNew<Text>("durationAux");
 
-    PlayheadFocusProxy & playheadFocus =
-      root.add(new PlayheadFocusProxy(playheadAux, playheadEdit));
+    TextInputProxy & playheadFocus =
+      root.add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
     ItemFocus::singleton().setFocusable(playheadFocus, 2);
 
     playheadAux.anchors_.left_ =
@@ -755,30 +707,20 @@ namespace yae
     playheadEdit.cursorColor_ = colorPlayed;
     playheadEdit.font_ = playheadAux.font_;
     playheadEdit.fontSize_ = playheadAux.fontSize_;
-
-    QPalette palette;
-    playheadEdit.selectionBg_ =
-      ColorRef::constant(Color(palette.color(QPalette::Normal,
-                                             QPalette::Highlight)));
-    playheadEdit.selectionFg_ =
-      ColorRef::constant(Color(palette.color(QPalette::Normal,
-                                             QPalette::HighlightedText)));
+    playheadEdit.selectionBg_ = colorHighlightBg;
+    playheadEdit.selectionFg_ = colorHighlightFg;
 
     playheadFocus.anchors_.fill(playheadAuxBg);
   }
 
   //----------------------------------------------------------------
-  // TimelineView::mouseTracking
+  // TimelineView::processMouseTracking
   //
-  void
-  TimelineView::mouseTracking(const TVec2D & mousePt)
+  bool
+  TimelineView::processMouseTracking(const TVec2D & mousePt)
   {
     (void)mousePt;
-
-    if (this->isEnabled())
-    {
-      this->requestRepaint();
-    }
+    return isEnabled();
   }
 
   //----------------------------------------------------------------
@@ -797,6 +739,9 @@ namespace yae
 
     model_ = model;
 
+    Item & root = *root_;
+    TextInput & playheadEdit = root.get<TextInput>("playheadEdit");
+
     // connect new model:
     bool ok = true;
 
@@ -810,6 +755,10 @@ namespace yae
 
     ok = connect(model_, SIGNAL(markerPlayheadChanged()),
                  this, SLOT(modelChanged()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playheadEdit, SIGNAL(editingFinished(const QString &)),
+                 model_, SLOT(seekTo(const QString &)));
     YAE_ASSERT(ok);
   }
 

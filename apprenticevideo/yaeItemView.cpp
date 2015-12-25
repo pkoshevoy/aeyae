@@ -183,7 +183,10 @@ namespace yae
     {
       mousePt_.set_x(std::numeric_limits<double>::max());
       mousePt_.set_y(std::numeric_limits<double>::max());
-      this->mouseTracking(mousePt_);
+      if (processMouseTracking(mousePt_))
+      {
+        requestRepaint();
+      }
     }
 
     if (et == QEvent::MouseButtonPress ||
@@ -193,14 +196,27 @@ namespace yae
     {
       TMakeCurrentContext currentContext(*context());
       QMouseEvent * e = static_cast<QMouseEvent *>(event);
-      return processMouseEvent(canvas, e);
+
+      if (processMouseEvent(canvas, e))
+      {
+        requestRepaint();
+        return true;
+      }
+
+      return false;
     }
 
     if (et == QEvent::Wheel)
     {
       TMakeCurrentContext currentContext(*context());
       QWheelEvent * e = static_cast<QWheelEvent *>(event);
-      return processWheelEvent(canvas, e);
+      if (processWheelEvent(canvas, e))
+      {
+        requestRepaint();
+        return true;
+      }
+
+      return false;
     }
 
     if (et == QEvent::KeyPress)
@@ -279,7 +295,7 @@ namespace yae
     {
       if (!e->buttons())
       {
-        this->mouseTracking(pt);
+        processMouseTracking(pt);
       }
 
       return false;

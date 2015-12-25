@@ -32,7 +32,7 @@ namespace yae
     TimelineView();
 
     // virtual:
-    void mouseTracking(const TVec2D & mousePt);
+    bool processMouseTracking(const TVec2D & mousePt);
 
     // data source:
     void setModel(TimelineModel * model);
