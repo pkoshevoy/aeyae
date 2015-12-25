@@ -17,7 +17,9 @@
 #include <boost/shared_ptr.hpp>
 
 // local interfaces:
+#include "yaeExpression.h"
 #include "yaeInputArea.h"
+#include "yaeItem.h"
 
 
 namespace yae
@@ -48,6 +50,52 @@ namespace yae
     std::map<std::string, std::pair<Item *, int> > item_;
     std::map<int, std::string> priority_;
     std::string focus_;
+  };
+
+  //----------------------------------------------------------------
+  // ShowWhenFocused
+  //
+  struct ShowWhenFocused : public TBoolExpr
+  {
+    ShowWhenFocused(Item & focusProxy, bool show):
+      focusProxy_(focusProxy),
+      show_(show)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+      result = hasFocus ? show_ : !show_;
+    }
+
+    Item & focusProxy_;
+    bool show_;
+  };
+
+  //----------------------------------------------------------------
+  // ColorWhenFocused
+  //
+  struct ColorWhenFocused : public TColorExpr
+  {
+    ColorWhenFocused(Item & focusProxy,
+                     const ColorRef & noFocus,
+                     const ColorRef & focused):
+      focusProxy_(focusProxy),
+      noFocus_(noFocus),
+      focused_(focused)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+      result = hasFocus ? focused_.get() : noFocus_.get();
+    }
+
+    Item & focusProxy_;
+    ColorRef noFocus_;
+    ColorRef focused_;
   };
 
 }

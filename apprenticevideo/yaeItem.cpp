@@ -426,6 +426,46 @@ namespace yae
     {
       value = this->vcenter();
     }
+    else if (property == kPropertyAnchorLeft)
+    {
+      value = anchors_.left_.get();
+    }
+    else if (property == kPropertyAnchorRight)
+    {
+      value = anchors_.right_.get();
+    }
+    else if (property == kPropertyAnchorTop)
+    {
+      value = anchors_.top_.get();
+    }
+    else if (property == kPropertyAnchorBottom)
+    {
+      value = anchors_.bottom_.get();
+    }
+    else if (property == kPropertyAnchorHCenter)
+    {
+      value = anchors_.hcenter_.get();
+    }
+    else if (property == kPropertyAnchorVCenter)
+    {
+      value = anchors_.vcenter_.get();
+    }
+    else if (property == kPropertyMarginLeft)
+    {
+      value = margins_.left_.get();
+    }
+    else if (property == kPropertyMarginRight)
+    {
+      value = margins_.right_.get();
+    }
+    else if (property == kPropertyMarginTop)
+    {
+      value = margins_.top_.get();
+    }
+    else if (property == kPropertyMarginBottom)
+    {
+      value = margins_.bottom_.get();
+    }
     else
     {
       YAE_ASSERT(false);
@@ -527,6 +567,17 @@ namespace yae
     YAE_ASSERT(false);
     throw std::runtime_error("unsupported item property of type <Color>");
     value = Color();
+  }
+
+  //----------------------------------------------------------------
+  // Item::get
+  //
+  void
+  Item::get(Property property, TVar & value) const
+  {
+    YAE_ASSERT(false);
+    throw std::runtime_error("unsupported item property of type <TVar>");
+    value = TVar();
   }
 
   //----------------------------------------------------------------
@@ -1000,15 +1051,8 @@ namespace yae
   void
   Item::dump(std::ostream & os, const std::string & indent) const
   {
-    BBox bbox;
-    this->get(kPropertyBBox, bbox);
-
     os << indent
-       << "x: " << bbox.x_
-       << ", y: " << bbox.y_
-       << ", w: " << bbox.w_
-       << ", h: " << bbox.h_
-       << ", id: " << id_
+       << "id: " << id_
        << std::endl;
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();

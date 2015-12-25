@@ -99,7 +99,10 @@ namespace yae
     void unpaintContent() const;
 
     // accessors to current text payload:
-    inline QString text() const { return text_.get().toString(); }
+    QString text() const;
+
+    // virtual:
+    void get(Property property, TVar & value) const;
 
     struct TPrivate;
     TPrivate * p_;

@@ -73,6 +73,16 @@ namespace yae
     kPropertyUnspecified,
     kPropertyConstant,
     kPropertyExpression,
+    kPropertyAnchorLeft,
+    kPropertyAnchorRight,
+    kPropertyAnchorTop,
+    kPropertyAnchorBottom,
+    kPropertyAnchorHCenter,
+    kPropertyAnchorVCenter,
+    kPropertyMarginLeft,
+    kPropertyMarginRight,
+    kPropertyMarginTop,
+    kPropertyMarginBottom,
     kPropertyWidth,
     kPropertyHeight,
     kPropertyLeft,
@@ -88,7 +98,9 @@ namespace yae
     kPropertyBBoxContent,
     kPropertyBBox,
     kPropertyVisible,
-    kPropertyColor
+    kPropertyColor,
+    kPropertyCursorWidth,
+    kPropertyText
   };
 
   //----------------------------------------------------------------

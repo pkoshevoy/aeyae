@@ -113,8 +113,16 @@ namespace yae
     }
 
     bool ok = false;
-    QString before;
-    QString after;
+
+    int beforeCursor = -1;
+    int beforeSelStart = -1;
+    QString beforeSelection;
+    QString beforeText;
+
+    int afterCursor = -1;
+    int afterSelStart = -1;
+    QString afterSelection;
+    QString afterText;
 
     if (/* et == QEvent::MouseButtonPress ||
         et == QEvent::MouseButtonRelease ||
@@ -137,29 +145,36 @@ namespace yae
         et == QEvent::ApplicationLayoutDirectionChange ||
         et == QEvent::ThreadChange)
     {
-      before = lineEdit_.text();
+      beforeText = lineEdit_.text();
+      beforeCursor = lineEdit_.cursorPosition();
+      beforeSelStart = lineEdit_.selectionStart();
+      beforeSelection = lineEdit_.selectedText();
+
       ok = lineEdit_.event(e);
-      after = lineEdit_.text();
+
+      afterText = lineEdit_.text();
+      afterCursor = lineEdit_.cursorPosition();
+      afterSelStart = lineEdit_.selectionStart();
+      afterSelection = lineEdit_.selectedText();
     }
+#if 0 // ndef NDEBUG
     else
     {
-#ifndef NDEBUG
       std::cerr
         << "TextInput::TPrivate::event: "
         << yae::toString(et)
         << std::endl;
-#endif
     }
 
-#ifndef NDEBUG
     std::cerr
       << "FIXME: line edit: " << lineEdit_.text().toUtf8().constData()
       << std::endl;
 #endif
 
-    // FIXME: should also check whether cursor position changed,
-    //        or selection changed
-    if (before != after)
+    if (beforeText != afterText ||
+        beforeCursor != afterCursor ||
+        beforeSelStart != afterSelStart ||
+        beforeSelection != afterSelection)
     {
       this->uncache();
       return true;
@@ -174,6 +189,11 @@ namespace yae
   void
   TextInput::TPrivate::onPress(TextInput & item, const TVec2D & lcsPt)
   {
+    if (!textLine_.isValid())
+    {
+      return;
+    }
+
     // update cursor position here:
     int cursorPos = textLine_.xToCursor(lcsPt.x() + offset_,
                                         QTextLine::CursorOnCharacter);
@@ -202,6 +222,11 @@ namespace yae
                               const TVec2D & lcsDragStart,
                               const TVec2D & lcsDragEnd)
   {
+    if (!textLine_.isValid())
+    {
+      return;
+    }
+
     // update selection here:
     int selStart = textLine_.xToCursor(lcsDragStart.x() + offset_,
                                        QTextLine::CursorOnCharacter);
@@ -242,7 +267,7 @@ namespace yae
   TextInput::TPrivate::layoutText(const TextInput & item)
   {
     BBox bbox;
-    item.get(kPropertyBBox, bbox);
+    item.Item::get(kPropertyBBox, bbox);
 
     iw_ = (int)std::ceil(bbox.w_);
     ih_ = (int)std::ceil(bbox.h_);
@@ -342,7 +367,7 @@ namespace yae
     }
 
     BBox bbox;
-    item.get(kPropertyBBox, bbox);
+    item.Item::get(kPropertyBBox, bbox);
 
     bbox.x_ = floor(bbox.x_ + 0.5);
     bbox.y_ = floor(bbox.y_ + 0.5);
@@ -409,6 +434,38 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextInput::get
+  //
+  void
+  TextInput::get(Property property, double & value) const
+  {
+    if (property == kPropertyCursorWidth)
+    {
+      value = cursorWidth_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::get
+  //
+  void
+  TextInput::get(Property property, TVar & value) const
+  {
+    if (property == kPropertyText)
+    {
+      value = TVar(text());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
   // TextInput::processEvent
   //
   bool
@@ -452,8 +509,12 @@ namespace yae
   void
   TextInput::uncache()
   {
-    color_.uncache();
     fontSize_.uncache();
+    cursorWidth_.uncache();
+    color_.uncache();
+    cursorColor_.uncache();
+    selectionFg_.uncache();
+    selectionBg_.uncache();
     p_->uncache();
     Item::uncache();
   }
@@ -528,9 +589,21 @@ namespace yae
                                  TextInput & edit):
     InputArea(id),
     view_(view),
-    edit_(edit)
+    edit_(edit),
+    copyViewToEdit_(false)
   {
     edit_.setFocusProxyId(id_);
+    placeholder_ = TVarRef::constant(TVar(QObject::tr("")));
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::uncache
+  //
+  void
+  TextInputProxy::uncache()
+  {
+    placeholder_.uncache();
+    InputArea::uncache();
   }
 
   //----------------------------------------------------------------
@@ -585,7 +658,11 @@ namespace yae
   void
   TextInputProxy::onFocus()
   {
-    edit_.setText(view_.text());
+    if (copyViewToEdit_)
+    {
+      edit_.setText(view_.text());
+    }
+
     view_.uncache();
     edit_.uncache();
     edit_.onFocus();
@@ -612,6 +689,29 @@ namespace yae
   {
     TMakeCurrentContext currentContext(*canvasLayer.context());
     return edit_.processEvent(canvasLayer, canvas, event);
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::get
+  //
+  void
+  TextInputProxy::get(Property property, TVar & value) const
+  {
+    if (property == kPropertyText)
+    {
+      QString text = edit_.text();
+
+      if (text.isEmpty())
+      {
+        text = placeholder_.get().toString();
+      }
+
+      value = TVar(text);
+    }
+    else
+    {
+      InputArea::get(property, value);
+    }
   }
 
 }

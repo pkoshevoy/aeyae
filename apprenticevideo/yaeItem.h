@@ -148,7 +148,8 @@ namespace yae
                 public TSegmentProp,
                 public TBBoxProp,
                 public TBoolProp,
-                public TColorProp
+                public TColorProp,
+                public TVarProp
   {
 
     //----------------------------------------------------------------
@@ -244,6 +245,9 @@ namespace yae
 
     // virtual:
     void get(Property property, Color & value) const;
+
+    // virtual:
+    void get(Property property, TVar & value) const;
 
     const Segment & xContent() const;
     const Segment & yContent() const;

@@ -38,6 +38,12 @@ namespace yae
     ~TextInput();
 
     // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
+    void get(Property property, TVar & value) const;
+
+    // virtual:
     bool processEvent(Canvas::ILayer & canvasLayer,
                       Canvas * canvas,
                       QEvent * event);
@@ -93,6 +99,9 @@ namespace yae
     TextInputProxy(const char * id, Text & view, TextInput & edit);
 
     // virtual:
+    void uncache();
+
+    // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint);
 
@@ -116,8 +125,14 @@ namespace yae
                       Canvas * canvas,
                       QEvent * event);
 
+    // virtual:
+    void get(Property property, TVar & value) const;
+
     Text & view_;
     TextInput & edit_;
+
+    TVarRef placeholder_;
+    bool copyViewToEdit_;
   };
 
 }

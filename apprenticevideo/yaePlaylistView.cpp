@@ -26,6 +26,7 @@
 #include "yaeScrollview.h"
 #include "yaeSegment.h"
 #include "yaeText.h"
+#include "yaeTextInput.h"
 #include "yaeTexture.h"
 #include "yaeTexturedRect.h"
 #include "yaeTransform.h"
@@ -666,17 +667,26 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // layoutFilterItem
+  // layoutPlaylistFilter
   //
   static void
-  layoutFilterItem(Item & item,
-                   PlaylistView & view,
-                   PlaylistModelProxy & model,
-                   const QModelIndex & itemIndex)
+  layoutPlaylistFilter(Item & item,
+                       PlaylistView & view,
+                       PlaylistModelProxy & model,
+                       const QModelIndex & itemIndex)
   {
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
     const Item & fontSize = playlist["font_size"];
+
+    ColorRef underlineColor = ColorRef::constant(Color(0xf12b24, 1.0));
+    ColorRef sortColor = ColorRef::constant(Color(0xffffff, 0.5));
+    ColorRef colorTextBg = ColorRef::constant(Color(0x7f7f7f, 0.25));
+    ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.25));
+    ColorRef colorFocusBg = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    ColorRef colorFocusFg = ColorRef::constant(Color(0xFFFFFF, 1.0));
+    ColorRef colorHighlightBg = ColorRef::constant(Color(0xFFFFFF, 1.0));
+    ColorRef colorHighlightFg = ColorRef::constant(Color(0x000000, 1.0));
 
     Gradient & filterShadow = item.addNew<Gradient>("filterShadow");
     filterShadow.anchors_.fill(item);
@@ -717,25 +727,44 @@ namespace yae
       icon.anchors_.top_ = ItemRef::reference(circle, kPropertyTop);
     }
 
-    // FIXME: this should be a text edit item:
     Text & text = filter.addNew<Text>("filter_text");
+    TextInput & edit = filter.addNew<TextInput>("filter_edit");
+
+    TextInputProxy & editProxy =
+      filter.add(new TextInputProxy("filter_focus", text, edit));
+    ItemFocus::singleton().setFocusable(editProxy, 1);
+    editProxy.anchors_.fill(filter);
+    editProxy.placeholder_ =
+      TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
+
+    filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy,
+                                                        colorTextBg,
+                                                        colorFocusBg));
+
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
     text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+    text.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.5);
+    text.margins_.bottom_ = text.addExpr(new GetFontDescent(text), -0.25);
+    text.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, false));
     text.elide_ = Qt::ElideLeft;
-    text.color_ = ColorRef::constant(Color(0xffffff, 0.25));
-    text.text_ = TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
+    text.color_ = colorTextFg;
+    text.text_ = TVarRef::reference(editProxy, kPropertyText);
     text.fontSize_ =
       ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
-#if 0
-    text.font_ = QFont("Sans Serif");
-    text.font_.setBold(true);
-    // text.margins_.top_ = text.addExpr(new GetFontDescent(text), 0, 1);
-#endif
+
+    edit.anchors_.fill(text);
+    edit.margins_.left_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
+    edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
+    edit.color_ = colorFocusFg;
+    edit.cursorColor_ = underlineColor;
+    edit.font_ = text.font_;
+    edit.fontSize_ = text.fontSize_;
+    edit.selectionBg_ = colorHighlightBg;
+    edit.selectionFg_ = colorHighlightFg;
+
 
     // layout sort-and-order:
-    ColorRef underlineColor = ColorRef::constant(Color(0xf12b24, 1.0));
-    ColorRef sortColor = ColorRef::constant(Color(0xffffff, 0.5));
     ItemRef smallFontSize = ItemRef::scale(fontSize,
                                            kPropertyHeight,
                                            0.7 * kDpiScale);
@@ -878,91 +907,60 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // layoutPlaylistFooter
+  //
+  static void
+  layoutPlaylistFooter(Item & footer,
+                       PlaylistView & view,
+                       PlaylistModelProxy & model,
+                       const QModelIndex & itemIndex)
+  {
+    const Item & playlist = *(view.root());
+    const Item & fontSize = playlist["font_size"];
+
+    Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
+    separator.anchors_.fill(footer);
+    separator.anchors_.bottom_.reset();
+    separator.height_ = ItemRef::constant(2.0);
+
+    QFont smallFont;
+    smallFont.setBold(true);
+    ItemRef smallFontSize = ItemRef::scale(fontSize,
+                                           kPropertyHeight,
+                                           0.7 * kDpiScale);
+
+    Text & footNote = footer.addNew<Text>("footNote");
+    footNote.anchors_.top_ =
+      ItemRef::reference(footer, kPropertyTop);
+    footNote.anchors_.right_ =
+      ItemRef::reference(footer, kPropertyRight);
+    footNote.margins_.top_ =
+      ItemRef::scale(fontSize, kPropertyHeight, 0.5 * kDpiScale);
+    footNote.margins_.right_ =
+      ItemRef::scale(fontSize, kPropertyHeight, 0.8 * kDpiScale);
+
+    footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
+    footNote.font_ = smallFont;
+    footNote.fontSize_ = smallFontSize;
+    footNote.color_ = ColorRef::constant(Color(0xffffff, 0.5));
+  }
+
+  //----------------------------------------------------------------
   // GroupListLayout
   //
   struct GroupListLayout : public PlaylistView::TLayoutDelegate
   {
-    void layout(Item & root,
+    void layout(Item & groups,
                 PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & rootIndex)
     {
-      Item & playlist = *(view.root());
-
-      // setup an invisible item so its height property expression
-      // could be computed once and the result reused in other places
-      // that need to compute the same property expression:
-      Item & titleHeight = playlist.addNewHidden<Item>("title_height");
-      titleHeight.height_ =
-        titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
-
-      // generate an x-button texture:
-      {
-        QImage img = xbuttonImage(32, Color(0xffffff, 0.5));
-        playlist.addHidden<Texture>(new Texture("xbutton_texture", img));
-      }
-
-      Rectangle & background = root.addNew<Rectangle>("background");
-      background.anchors_.fill(root);
-      background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
-
-      Scrollview & sview = root.addNew<Scrollview>("scrollview");
-
-      Item & filterItem = root.addNew<Item>("filterItem");
-      filterItem.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-      filterItem.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-      filterItem.width_ = ItemRef::reference(root, kPropertyWidth);
-      filterItem.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
-
-
-      Item & scrollbar = root.addNew<Item>("scrollbar");
-      scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-      scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
-      scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
-      scrollbar.width_ =
-        scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
-
-      sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-      sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
-      sview.anchors_.top_ = ItemRef::reference(filterItem, kPropertyBottom);
-      sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
-      sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
-
-      sview.content_.anchors_.left_ = ItemRef::constant(0.0);
-      sview.content_.anchors_.top_ = ItemRef::constant(0.0);
-      sview.content_.width_ = ItemRef::reference(sview, kPropertyWidth);
-
-      Item & groups = sview.content_.addNew<Item>("groups");
-      groups.anchors_.fill(sview.content_);
-      groups.anchors_.bottom_.reset();
-
-      Item & cellWidth = playlist.addNewHidden<Item>("cell_width");
-      cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(groups));
-
-      Item & cellHeight = playlist.addNewHidden<Item>("cell_height");
-      cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(groups));
-
-      Item & fontSize = playlist.addNewHidden<Item>("font_size");
-      fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
-                                                          cellHeight, 0.15));
-
-      layoutFilterItem(filterItem, view, model, rootIndex);
-
-      Text & nowPlaying = playlist.addNewHidden<Text>("now_playing");
-      nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
-      nowPlaying.anchors_.left_ = ItemRef::constant(0.0);
-      nowPlaying.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-      nowPlaying.font_.setBold(false);
-      nowPlaying.fontSize_ = ItemRef::scale(fontSize,
-                                            kPropertyHeight,
-                                            0.8 * kDpiScale);
-
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
       {
         QModelIndex childIndex = model.index(i, 0, rootIndex);
-        TPlaylistModelItem & group = groups.
-          add(new TPlaylistModelItem("group", childIndex));
+        TPlaylistModelItem & group =
+          groups.add(new TPlaylistModelItem("group", childIndex));
         group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
         group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
         group.anchors_.top_ = group.addExpr(new GroupTop(group));
@@ -973,62 +971,6 @@ namespace yae
           childLayout->layout(group, view, model, childIndex);
         }
       }
-
-      // add a footer:
-      {
-        Item & footer = sview.content_.addNew<Item>("footer");
-        footer.anchors_.left_ =
-          ItemRef::offset(sview.content_, kPropertyLeft, 2);
-        footer.anchors_.right_ =
-          ItemRef::reference(sview.content_, kPropertyRight);
-        footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
-        footer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
-
-        Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
-        separator.anchors_.fill(footer);
-        separator.anchors_.bottom_.reset();
-        separator.height_ = ItemRef::constant(2.0);
-
-        QFont smallFont;
-        smallFont.setBold(true);
-        ItemRef smallFontSize = ItemRef::scale(fontSize,
-                                               kPropertyHeight,
-                                               0.7 * kDpiScale);
-
-        Text & footNote = footer.addNew<Text>("footNote");
-        footNote.anchors_.top_ =
-          ItemRef::reference(footer, kPropertyTop);
-        footNote.anchors_.right_ =
-          ItemRef::reference(footer, kPropertyRight);
-        footNote.margins_.top_ =
-          ItemRef::scale(fontSize, kPropertyHeight, 0.5 * kDpiScale);
-        footNote.margins_.right_ =
-          ItemRef::scale(fontSize, kPropertyHeight, 0.8 * kDpiScale);
-
-        footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
-        footNote.font_ = smallFont;
-        footNote.fontSize_ = smallFontSize;
-        footNote.color_ = ColorRef::constant(Color(0xffffff, 0.5));
-     }
-
-      FlickableArea & maScrollview =
-        sview.add(new FlickableArea("ma_sview", view, scrollbar));
-      maScrollview.anchors_.fill(sview);
-
-      InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
-      maScrollbar.anchors_.fill(scrollbar);
-
-      // configure scrollbar slider:
-      RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
-      slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
-      slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
-      slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-      slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
-      slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
-
-      SliderDrag & maSlider =
-        slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
-      maSlider.anchors_.fill(slider);
     }
   };
 
@@ -1343,6 +1285,103 @@ namespace yae
 
     layoutDelegates_[PlaylistModel::kLayoutHintItemGridCell] =
       TLayoutPtr(new ItemGridCellLayout());
+
+    root_.reset(new Item("playlist"));
+    Item & root = *root_;
+
+    // setup an invisible item so its height property expression
+    // could be computed once and the result reused in other places
+    // that need to compute the same property expression:
+    Item & titleHeight = root.addNewHidden<Item>("title_height");
+    titleHeight.height_ =
+      titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
+
+    // generate an x-button texture:
+    {
+      QImage img = xbuttonImage(32, Color(0xffffff, 0.5));
+      root.addHidden<Texture>(new Texture("xbutton_texture", img));
+    }
+
+    Rectangle & background = root.addNew<Rectangle>("background");
+    background.anchors_.fill(root);
+    background.color_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
+
+    Scrollview & sview = root.addNew<Scrollview>("scrollview");
+
+    Item & filterItem = root.addNew<Item>("filterItem");
+    filterItem.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+    filterItem.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+    filterItem.width_ = ItemRef::reference(root, kPropertyWidth);
+    filterItem.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
+
+
+    Item & scrollbar = root.addNew<Item>("scrollbar");
+    scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+    scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
+    scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
+    scrollbar.width_ =
+      scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
+
+    sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+    sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
+    sview.anchors_.top_ = ItemRef::reference(filterItem, kPropertyBottom);
+    sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+    sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
+
+    sview.content_.anchors_.left_ = ItemRef::constant(0.0);
+    sview.content_.anchors_.top_ = ItemRef::constant(0.0);
+    sview.content_.width_ = ItemRef::reference(sview, kPropertyWidth);
+
+    Item & groups = sview.content_.addNew<Item>("groups");
+    groups.anchors_.fill(sview.content_);
+    groups.anchors_.bottom_.reset();
+
+    Item & cellWidth = root.addNewHidden<Item>("cell_width");
+    cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(groups));
+
+    Item & cellHeight = root.addNewHidden<Item>("cell_height");
+    cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(groups));
+
+    Item & fontSize = root.addNewHidden<Item>("font_size");
+    fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
+                                                          cellHeight, 0.15));
+
+    Text & nowPlaying = root.addNewHidden<Text>("now_playing");
+    nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
+    nowPlaying.anchors_.left_ = ItemRef::constant(0.0);
+    nowPlaying.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+    nowPlaying.font_.setBold(false);
+    nowPlaying.fontSize_ = ItemRef::scale(fontSize,
+                                          kPropertyHeight,
+                                          0.8 * kDpiScale);
+
+    // add a footer:
+    Item & footer = sview.content_.addNew<Item>("footer");
+    footer.anchors_.left_ =
+      ItemRef::offset(sview.content_, kPropertyLeft, 2);
+    footer.anchors_.right_ =
+      ItemRef::reference(sview.content_, kPropertyRight);
+    footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
+    footer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
+
+    FlickableArea & maScrollview =
+      sview.add(new FlickableArea("ma_sview", *this, scrollbar));
+    maScrollview.anchors_.fill(sview);
+
+    InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
+    maScrollbar.anchors_.fill(scrollbar);
+
+    // configure scrollbar slider:
+    RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
+    slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
+    slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
+    slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
+    slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
+    slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
+
+    SliderDrag & maSlider =
+      slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
+    maSlider.anchors_.fill(slider);
   }
 
   //----------------------------------------------------------------
@@ -1409,6 +1448,24 @@ namespace yae
                  this, SLOT(rowsRemoved(const QModelIndex &,
                                         int, int)));
     YAE_ASSERT(ok);
+
+    Item & root = *root_;
+    Item & filterItem = root["filterItem"];
+    filterItem.children_.clear();
+
+    QModelIndex rootIndex = model_->index(-1, -1);
+    layoutPlaylistFilter(filterItem, *this, *model_, rootIndex);
+
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & footer = sview.content_["footer"];
+    layoutPlaylistFooter(footer, *this, *model_, rootIndex);
+
+    TextInput & filterEdit =
+      root["filterItem"]["bg"].get<TextInput>("filter_edit");
+
+    ok = connect(&filterEdit, SIGNAL(textEdited(const QString &)),
+                 model_, SLOT(setItemFilter(const QString &)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -1470,17 +1527,19 @@ namespace yae
     }
     inputHandlers_.clear();
 
-    root_.reset(new Item("playlist"));
     Item & root = *root_;
-
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
-    delegate->layout(root, *this, *model_, rootIndex);
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & groups = sview.content_["groups"];
+    groups.children_.clear();
 
-#if 0 // ndef NDEBUG
+    delegate->layout(groups, *this, *model_, rootIndex);
+
+#if 1 // ndef NDEBUG
     root.dump(std::cerr);
 #endif
   }
@@ -1552,7 +1611,7 @@ namespace yae
 #endif
 
     Item & root = *root_;
-    Scrollview & sview = dynamic_cast<Scrollview &>(root["scrollview"]);
+    Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & groups = sview.content_["groups"];
 
     if (parent.isValid())

@@ -252,67 +252,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // ShowPlayheadAux
-  //
-  struct ShowPlayheadAux : public TBoolExpr
-  {
-    ShowPlayheadAux(Item & focusProxy):
-      focusProxy_(focusProxy)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = !ItemFocus::singleton().hasFocus(focusProxy_.id_);
-    }
-
-    Item & focusProxy_;
-  };
-
-  //----------------------------------------------------------------
-  // ShowPlayheadEdit
-  //
-  struct ShowPlayheadEdit : public TBoolExpr
-  {
-    ShowPlayheadEdit(Item & focusProxy):
-      focusProxy_(focusProxy)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = ItemFocus::singleton().hasFocus(focusProxy_.id_);
-    }
-
-    Item & focusProxy_;
-  };
-
-  //----------------------------------------------------------------
-  // PlayheadAuxBg
-  //
-  struct PlayheadAuxBg : public TColorExpr
-  {
-    PlayheadAuxBg(Item & focusProxy,
-                  const ColorRef & noFocus,
-                  const ColorRef & focused):
-      focusProxy_(focusProxy),
-      noFocus_(noFocus),
-      focused_(focused)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
-      result = hasFocus ? focused_.get() : noFocus_.get();
-    }
-
-    Item & focusProxy_;
-    ColorRef noFocus_;
-    ColorRef focused_;
-  };
-
-  //----------------------------------------------------------------
   // TimelineSeek
   //
   struct TimelineSeek : public InputArea
@@ -667,13 +606,14 @@ namespace yae
     TextInputProxy & playheadFocus =
       root.add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
     ItemFocus::singleton().setFocusable(playheadFocus, 2);
+    playheadFocus.copyViewToEdit_ = true;
 
     playheadAux.anchors_.left_ =
       ItemRef::offset(timeline, kPropertyLeft, 3);
     playheadAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     playheadAux.visible_ =
-      playheadAux.addExpr(new ShowPlayheadAux(playheadFocus));
+      playheadAux.addExpr(new ShowWhenFocused(playheadFocus, false));
     playheadAux.color_ = colorTextFg;
     playheadAux.text_ = playheadAux.addExpr(new GetPlayheadAux(*this));
     playheadAux.font_ = timecodeFont;
@@ -682,9 +622,9 @@ namespace yae
 
     playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
     playheadAuxBg.color_ =
-      playheadAuxBg.addExpr(new PlayheadAuxBg(playheadFocus,
-                                              colorTextBg,
-                                              colorFocusBg));
+      playheadAuxBg.addExpr(new ColorWhenFocused(playheadFocus,
+                                                 colorTextBg,
+                                                 colorFocusBg));
 
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);
@@ -699,10 +639,10 @@ namespace yae
     durationAuxBg.color_ = colorTextBg;
 
     playheadEdit.anchors_.fill(playheadAux);
-    // add a margin to account for cursor width:
-    playheadEdit.margins_.left_ = ItemRef::constant(-1);
+    playheadEdit.margins_.left_ =
+      ItemRef::scale(playheadEdit, kPropertyCursorWidth, -1.0);
     playheadEdit.visible_ =
-      playheadEdit.addExpr(new ShowPlayheadEdit(playheadFocus));
+      playheadEdit.addExpr(new ShowWhenFocused(playheadFocus, true));
     playheadEdit.color_ = colorFocusFg;
     playheadEdit.cursorColor_ = colorPlayed;
     playheadEdit.font_ = playheadAux.font_;

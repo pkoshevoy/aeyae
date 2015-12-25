@@ -246,7 +246,7 @@ namespace yae
     maxRect.setHeight(maxRect.height() * item.supersample_);
 
     BBox bboxContent;
-    item.get(kPropertyBBoxContent, bboxContent);
+    item.Item::get(kPropertyBBoxContent, bboxContent);
 
     int iw = (int)ceil(bboxContent.w_ * item.supersample_);
     int ih = (int)ceil(bboxContent.h_ * item.supersample_);
@@ -318,7 +318,7 @@ namespace yae
   Text::TPrivate::paint(const Text & item)
   {
     BBox bbox;
-    item.get(kPropertyBBoxContent, bbox);
+    item.Item::get(kPropertyBBoxContent, bbox);
 
     // avoid rendering at fractional pixel coordinates:
     bbox.x_ = std::floor(bbox.x_);
@@ -500,6 +500,31 @@ namespace yae
   Text::unpaintContent() const
   {
     p_->uncache();
+  }
+
+  //----------------------------------------------------------------
+  // Text::text
+  //
+  QString
+  Text::text() const
+  {
+    return text_.get().toString();
+  }
+
+  //----------------------------------------------------------------
+  // Text::get
+  //
+  void
+  Text::get(Property property, TVar & value) const
+  {
+    if (property == kPropertyText)
+    {
+      value = TVar(text());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
   }
 
 }
