@@ -1539,7 +1539,7 @@ namespace yae
 
     delegate->layout(groups, *this, *model_, rootIndex);
 
-#if 1 // ndef NDEBUG
+#if 0 // ndef NDEBUG
     root.dump(std::cerr);
 #endif
   }
