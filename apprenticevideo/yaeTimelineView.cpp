@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// Qt includes:
+#include <QPalette>
+
 // local includes:
 #include "yaeColor.h"
 #include "yaeGradient.h"
