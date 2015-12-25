@@ -744,6 +744,8 @@ namespace yae
     durationAuxBg.color_ = colorTextBg;
 
     playheadEdit.anchors_.fill(playheadAux);
+    // add a margin to account for cursor width:
+    playheadEdit.margins_.left_ = ItemRef::constant(-1);
     playheadEdit.visible_ =
       playheadEdit.addExpr(new ShowPlayheadEdit(playheadFocus));
     playheadEdit.color_ = colorFocusFg;

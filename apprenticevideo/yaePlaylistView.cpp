@@ -1477,7 +1477,6 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
-    ItemFocus::singleton().setFocusable(root, 0);
 
     delegate->layout(root, *this, *model_, rootIndex);
 

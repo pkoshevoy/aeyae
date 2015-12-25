@@ -14,6 +14,7 @@
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"
+#include "yaeItemFocus.h"
 #include "yaeTextInput.h"
 #include "yaeTexture.h"
 #include "yaeUtilsQt.h"
@@ -83,6 +84,16 @@ namespace yae
     if (et == QEvent::Paint)
     {
       return false;
+    }
+
+    if (et == QEvent::KeyPress)
+    {
+      QKeyEvent & ke = *(static_cast<QKeyEvent *>(e));
+      if (ke.key() == Qt::Key_Escape)
+      {
+        ItemFocus::singleton().clearFocus();
+        return true;
+      }
     }
 
     bool ok = false;
