@@ -30,7 +30,11 @@ namespace yae
     TPrivate();
    ~TPrivate();
 
-    bool event(QEvent * e);
+    bool processEvent(TextInput & item,
+                      Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * e);
+
     void uncache();
     bool uploadTexture(const TextInput & item);
     void paint(const TextInput & item);
@@ -67,10 +71,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TextInput::TPrivate::event
+  // TextInput::TPrivate::processEvent
   //
   bool
-  TextInput::TPrivate::event(QEvent * e)
+  TextInput::TPrivate::processEvent(TextInput & item,
+                                    Canvas::ILayer & canvasLayer,
+                                    Canvas * canvas,
+                                    QEvent * e)
   {
     QEvent::Type et = e->type();
     if (et == QEvent::Paint)
@@ -173,7 +180,6 @@ namespace yae
     font.setPointSizeF(fontSize);
 
     QFontMetricsF fm(font, &img);
-    qreal textWidth = fm.width(text);
     qreal cursorWidth = 1;
 
     QTextLayout textLayout(text, font, &img);
@@ -189,7 +195,6 @@ namespace yae
     YAE_ASSERT(!endLine.isValid());
     textLayout.endLayout();
 
-    qreal layoutWidth = textLayout.maximumWidth();
     qreal cx0 = textLine.cursorToX(cursorPos);
     qreal cx1 = cx0 + cursorWidth;
     qreal x1 = offset_ + qreal(iw_);
@@ -212,28 +217,22 @@ namespace yae
         QTextLayout::FormatRange & sel = selections.back();
         sel.start = selStart;
         sel.length = selLength;
-
-        QPalette palette;
-        palette.setCurrentColorGroup(QPalette::Normal);
-
-        sel.format.setBackground(palette.highlight());
-        sel.format.setForeground(palette.highlightedText());
         sel.format.setFont(font);
+        sel.format.setBackground(QColor(item.selectionBg_.get()));
+        sel.format.setForeground(QColor(item.selectionFg_.get()));
       }
 
-      QPointF offset(-offset_, 0.5 * (qreal(ih_) - lineHeight));
+      qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
+      QPointF offset(-offset_, yoffset);
       QRectF clip(offset, QSizeF(iw_, ih_));
       QPainter painter(&img);
 
       const Color & color = item.color_.get();
-      painter.setPen(QColor(color.r(),
-                            color.g(),
-                            color.b(),
-                            color.a()));
-
+      painter.setPen(QColor(color));
       textLayout.draw(&painter, offset, selections, clip);
 
-      painter.setPen(Qt::red);
+      const Color & cursorColor = item.cursorColor_.get();
+      painter.setPen(QColor(cursorColor));
       textLayout.drawCursor(&painter, offset, cursorPos);
     }
 
@@ -299,6 +298,15 @@ namespace yae
 
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     p_->ready_ = addExpr(new UploadTexture<TextInput>(*this));
+
+    bool ok = true;
+    ok = connect(&(p_->lineEdit_), SIGNAL(textEdited(const QString &)),
+                 this, SIGNAL(textEdited(const QString &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(p_->lineEdit_), SIGNAL(editingFinished()),
+                 this, SIGNAL(editingFinished()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -310,12 +318,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TextInput::event
+  // TextInput::processEvent
   //
   bool
-  TextInput::event(QEvent * e)
+  TextInput::processEvent(Canvas::ILayer & canvasLayer,
+                          Canvas * canvas,
+                          QEvent * e)
   {
-    return p_->event(e);
+    return p_->processEvent(*this, canvasLayer, canvas, e);
   }
 
   //----------------------------------------------------------------
@@ -356,6 +366,15 @@ namespace yae
   TextInput::text() const
   {
     return p_->lineEdit_.text();
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::setText
+  //
+  void
+  TextInput::setText(const QString & text)
+  {
+    p_->lineEdit_.setText(text);
   }
 
 }

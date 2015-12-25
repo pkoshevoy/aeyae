@@ -17,6 +17,7 @@
 #include "yaeFlickableArea.h"
 #include "yaeGradient.h"
 #include "yaeImage.h"
+#include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaePlaylistView.h"
 #include "yaeProperty.h"
@@ -1476,6 +1477,7 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
+    ItemFocus::singleton().setFocusable(root, 0);
 
     delegate->layout(root, *this, *model_, rootIndex);
 

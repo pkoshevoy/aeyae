@@ -142,6 +142,8 @@ set(project_sources
   yaeInputArea.h
   yaeItem.cpp
   yaeItem.h
+  yaeItemFocus.cpp
+  yaeItemFocus.h
   yaeItemRef.h
   yaeItemView.cpp
   yaeItemView.h

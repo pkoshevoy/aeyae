@@ -12,6 +12,9 @@
 // standard libraries:
 #include <algorithm>
 
+// Qt library:
+#include <QColor>
+
 // yae includes:
 #include "yae/api/yae_api.h"
 
@@ -56,6 +59,19 @@ namespace yae
       return v;
     }
 
+    Color(const QColor & c)
+    {
+      set_a((unsigned char)(c.alpha()));
+      set_r((unsigned char)(c.red()));
+      set_g((unsigned char)(c.green()));
+      set_b((unsigned char)(c.blue()));
+    }
+
+    inline operator QColor() const
+    {
+      return QColor(r(), g(), b(), a());
+    }
+
     inline const unsigned char & a() const { return this->operator[](0); }
     inline const unsigned char & r() const { return this->operator[](1); }
     inline const unsigned char & g() const { return this->operator[](2); }
@@ -65,6 +81,16 @@ namespace yae
     inline unsigned char & r() { return this->operator[](1); }
     inline unsigned char & g() { return this->operator[](2); }
     inline unsigned char & b() { return this->operator[](3); }
+
+    inline Color & set_a(unsigned char v) { a() = v; return *this; }
+    inline Color & set_r(unsigned char v) { r() = v; return *this; }
+    inline Color & set_g(unsigned char v) { g() = v; return *this; }
+    inline Color & set_b(unsigned char v) { b() = v; return *this; }
+
+    inline Color & set_a(double v) { return set_a((unsigned char)(v * 255)); }
+    inline Color & set_r(double v) { return set_r((unsigned char)(v * 255)); }
+    inline Color & set_g(double v) { return set_g((unsigned char)(v * 255)); }
+    inline Color & set_b(double v) { return set_b((unsigned char)(v * 255)); }
 
     inline const unsigned char & operator[] (unsigned int i) const
     {

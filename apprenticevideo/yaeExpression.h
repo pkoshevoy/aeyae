@@ -69,6 +69,11 @@ namespace yae
   typedef Expression<TVar> TVarExpr;
 
   //----------------------------------------------------------------
+  // TColorExpr
+  //
+  typedef Expression<Color> TColorExpr;
+
+  //----------------------------------------------------------------
   // TVec2DExpr
   //
   typedef Expression<TVec2D> TVec2DExpr;

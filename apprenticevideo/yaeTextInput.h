@@ -36,7 +36,9 @@ namespace yae
     ~TextInput();
 
     // virtual:
-    bool event(QEvent * event);
+    bool processEvent(Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * event);
 
     // virtual:
     void uncache();
@@ -45,15 +47,25 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
-    // accessor to current text payload:
+    // accessors to current text payload:
     QString text() const;
+    void setText(const QString & text);
 
+  signals:
+    void textEdited(const QString & text);
+    void editingFinished();
+
+  public:
     struct TPrivate;
     TPrivate * p_;
 
     QFont font_;
     ItemRef fontSize_; // in points
+
     ColorRef color_;
+    ColorRef cursorColor_;
+    ColorRef selectionFg_;
+    ColorRef selectionBg_;
   };
 
 }

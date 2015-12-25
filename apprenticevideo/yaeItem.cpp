@@ -919,6 +919,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::processEvent
+  //
+  bool
+  Item::processEvent(Canvas::ILayer & canvasLayer,
+                     Canvas * canvas,
+                     QEvent * event)
+  {
+    (void) canvasLayer;
+    (void) canvas;
+    (void) event;
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Item::paint
   //
   bool

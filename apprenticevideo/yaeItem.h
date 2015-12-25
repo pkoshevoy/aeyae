@@ -21,9 +21,11 @@
 #include <boost/shared_ptr.hpp>
 
 // Qt interfaces:
+#include <QEvent>
 #include <QPersistentModelIndex>
 
 // local interfaces:
+#include "yaeCanvas.h"
 #include "yaeItemRef.h"
 
 
@@ -347,6 +349,18 @@ namespace yae
       this->getInputHandlers(TVec2D(0.0, 0.0), itemCSysPoint, inputHandlers);
       return !inputHandlers.empty();
     }
+
+    virtual void onFocus() {}
+    virtual void onFocusOut() {}
+
+    // NOTE: default implementation does not process the event
+    //       and does not propagate it to nested items;
+    //
+    // NOTE: this will be envoked for currently focused item;
+    //
+    virtual bool processEvent(Canvas::ILayer & canvasLayer,
+                              Canvas * canvas,
+                              QEvent * event);
 
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}

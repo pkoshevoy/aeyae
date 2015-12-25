@@ -9,6 +9,7 @@
 // local includes:
 #include "yaeColor.h"
 #include "yaeGradient.h"
+#include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaePlaylistView.h"
 #include "yaeProperty.h"
@@ -16,6 +17,7 @@
 #include "yaeRoundRect.h"
 #include "yaeSegment.h"
 #include "yaeText.h"
+#include "yaeTextInput.h"
 #include "yaeTimelineModel.h"
 #include "yaeTimelineView.h"
 
@@ -246,6 +248,66 @@ namespace yae
     TimelineView & view_;
   };
 
+  //----------------------------------------------------------------
+  // ShowPlayheadAux
+  //
+  struct ShowPlayheadAux : public TBoolExpr
+  {
+    ShowPlayheadAux(Item & focusProxy):
+      focusProxy_(focusProxy)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = !ItemFocus::singleton().hasFocus(focusProxy_.id_);
+    }
+
+    Item & focusProxy_;
+  };
+
+  //----------------------------------------------------------------
+  // ShowPlayheadEdit
+  //
+  struct ShowPlayheadEdit : public TBoolExpr
+  {
+    ShowPlayheadEdit(Item & focusProxy):
+      focusProxy_(focusProxy)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+    }
+
+    Item & focusProxy_;
+  };
+
+  //----------------------------------------------------------------
+  // PlayheadAuxBg
+  //
+  struct PlayheadAuxBg : public TColorExpr
+  {
+    PlayheadAuxBg(Item & focusProxy,
+                  const ColorRef & noFocus,
+                  const ColorRef & focused):
+      focusProxy_(focusProxy),
+      noFocus_(noFocus),
+      focused_(focused)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+      result = hasFocus ? focused_.get() : noFocus_.get();
+    }
+
+    Item & focusProxy_;
+    ColorRef noFocus_;
+    ColorRef focused_;
+  };
 
   //----------------------------------------------------------------
   // TimelineSeek
@@ -432,6 +494,56 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PlayheadFocusProxy
+  //
+  struct PlayheadFocusProxy : public InputArea
+  {
+    PlayheadFocusProxy(Text & view, TextInput & edit):
+      InputArea("playhead_focus"),
+      view_(view),
+      edit_(edit)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      ItemFocus::singleton().setFocus(id_);
+      return true;
+    }
+
+    // virtual:
+    void onFocus()
+    {
+      edit_.setText(view_.text());
+      view_.uncache();
+      edit_.uncache();
+      edit_.onFocus();
+    }
+
+    // virtual:
+    void onFocusOut()
+    {
+      view_.uncache();
+      edit_.uncache();
+      edit_.onFocusOut();
+    }
+
+    // virtual:
+    bool processEvent(Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * event)
+    {
+      TMakeCurrentContext currentContext(*canvasLayer.context());
+      return edit_.processEvent(canvasLayer, canvas, event);
+    }
+
+    Text & view_;
+    TextInput & edit_;
+  };
+
+
+  //----------------------------------------------------------------
   // TimelineView::TimelineView
   //
   TimelineView::TimelineView():
@@ -486,6 +598,8 @@ namespace yae
     ColorRef colorOutPtBg = ColorRef::constant(Color(0xe6e6e6, 0.0));
     ColorRef colorTextBg = ColorRef::constant(Color(0x7f7f7f, 0.25));
     ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.5));
+    ColorRef colorFocusBg = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    ColorRef colorFocusFg = ColorRef::constant(Color(0xFFFFFF, 1.0));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -590,20 +704,33 @@ namespace yae
 
     Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
     Text & playheadAux = container.addNew<Text>("playheadAux");
+    TextInput & playheadEdit = root.addNew<TextInput>("playheadEdit");
+
+    Rectangle & durationAuxBg = container.addNew<Rectangle>("durationAuxBg");
+    Text & durationAux = container.addNew<Text>("durationAux");
+
+    PlayheadFocusProxy & playheadFocus =
+      root.add(new PlayheadFocusProxy(playheadAux, playheadEdit));
+    ItemFocus::singleton().setFocusable(playheadFocus, 2);
+
     playheadAux.anchors_.left_ =
       ItemRef::offset(timeline, kPropertyLeft, 3);
     playheadAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
+    playheadAux.visible_ =
+      playheadAux.addExpr(new ShowPlayheadAux(playheadFocus));
     playheadAux.color_ = colorTextFg;
     playheadAux.text_ = playheadAux.addExpr(new GetPlayheadAux(*this));
     playheadAux.font_ = timecodeFont;
     playheadAux.fontSize_ =
       ItemRef::scale(container, kPropertyHeight, 0.33333333 * kDpiScale);
-    playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
-    playheadAuxBg.color_ = colorTextBg;
 
-    Rectangle & durationAuxBg = container.addNew<Rectangle>("durationAuxBg");
-    Text & durationAux = container.addNew<Text>("durationAux");
+    playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
+    playheadAuxBg.color_ =
+      playheadAuxBg.addExpr(new PlayheadAuxBg(playheadFocus,
+                                              colorTextBg,
+                                              colorFocusBg));
+
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);
     durationAux.anchors_.vcenter_ =
@@ -612,14 +739,27 @@ namespace yae
     durationAux.text_ = durationAux.addExpr(new GetDurationAux(*this));
     durationAux.font_ = playheadAux.font_;
     durationAux.fontSize_ = playheadAux.fontSize_;
+
     durationAuxBg.anchors_.offset(durationAux, -3, 3, -3, 3);
     durationAuxBg.color_ = colorTextBg;
 
-    /*
-    Rectangle & fixme = root.addNew<Rectangle>("fixme");
-    fixme.anchors_.fill(sliderPlayhead);
-    fixme.color_ = ColorRef::constant(Color(0xFFFFFF, 0.25));
-    */
+    playheadEdit.anchors_.fill(playheadAux);
+    playheadEdit.visible_ =
+      playheadEdit.addExpr(new ShowPlayheadEdit(playheadFocus));
+    playheadEdit.color_ = colorFocusFg;
+    playheadEdit.cursorColor_ = colorPlayed;
+    playheadEdit.font_ = playheadAux.font_;
+    playheadEdit.fontSize_ = playheadAux.fontSize_;
+
+    QPalette palette;
+    playheadEdit.selectionBg_ =
+      ColorRef::constant(Color(palette.color(QPalette::Normal,
+                                             QPalette::Highlight)));
+    playheadEdit.selectionFg_ =
+      ColorRef::constant(Color(palette.color(QPalette::Normal,
+                                             QPalette::HighlightedText)));
+
+    playheadFocus.anchors_.fill(playheadAuxBg);
   }
 
   //----------------------------------------------------------------

@@ -22,6 +22,7 @@
 // local interfaces:
 #include "yaeCanvasRenderer.h"
 #include "yaeInputArea.h"
+#include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaeItemView.h"
 #include "yaeSegment.h"
@@ -202,6 +203,58 @@ namespace yae
       return processWheelEvent(canvas, e);
     }
 
+    if (et == QEvent::KeyPress)
+    {
+      QKeyEvent & ke = *(static_cast<QKeyEvent *>(event));
+
+      if (ke.key() == Qt::Key_Tab && !ke.modifiers())
+      {
+        TMakeCurrentContext currentContext(*context());
+        if (ItemFocus::singleton().focusNext())
+        {
+          requestRepaint();
+          return true;
+        }
+      }
+      else if (ke.key() == Qt::Key_Backtab ||
+               (ke.key() == Qt::Key_Tab &&
+                ke.modifiers() == Qt::Key_Shift))
+      {
+        TMakeCurrentContext currentContext(*context());
+        if (ItemFocus::singleton().focusPrevious())
+        {
+          requestRepaint();
+          return true;
+        }
+      }
+    }
+
+    Item * focus = ItemFocus::singleton().focusedItem();
+    if (focus && focus->processEvent(*this, canvas, event))
+    {
+      requestRepaint();
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // has
+  //
+  static bool
+  has(const std::list<InputHandler> & handlers, const Item * item)
+  {
+    for (std::list<InputHandler>::const_iterator
+           i = handlers.begin(), end = handlers.end(); i != end; ++i)
+    {
+      const InputHandler & handler = *i;
+      if (handler.input_ == item)
+      {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -238,7 +291,17 @@ namespace yae
       dragged_ = NULL;
       startPt_ = pt;
 
-      if (!root_->getInputHandlers(pt, inputHandlers_))
+      bool foundHandlers = root_->getInputHandlers(pt, inputHandlers_);
+
+      // check for focus loss/transfer:
+      Item * focus = ItemFocus::singleton().focusedItem();
+      if (focus && !has(inputHandlers_, focus))
+      {
+        ItemFocus::singleton().clearFocus(focus->id_);
+        requestRepaint();
+      }
+
+      if (!foundHandlers)
       {
         return false;
       }
