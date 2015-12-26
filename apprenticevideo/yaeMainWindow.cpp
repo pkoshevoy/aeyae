@@ -3580,7 +3580,7 @@ namespace yae
             }
             else
             {
-              playbackShowTimeline();
+              actionShowTimeline->trigger();
             }
           }
         }
