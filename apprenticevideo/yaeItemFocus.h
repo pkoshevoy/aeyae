@@ -11,6 +11,7 @@
 
 // standard libraries:
 #include <algorithm>
+#include <limits>
 #include <map>
 
 // boost includes:
@@ -32,10 +33,31 @@ namespace yae
   {
     static ItemFocus & singleton();
 
-    // register item that will be allowed to receive focus:
-    void setFocusable(Item & item, int priority);
+    //----------------------------------------------------------------
+    // Target
+    //
+    struct Target
+    {
+      Target(Canvas::ILayer * view = NULL,
+             Item * item = NULL,
+             int index = std::numeric_limits<int>::max());
 
-    void clearFocus(const std::string & id = std::string());
+      Canvas::ILayer * view_;
+      Item * item_;
+      int index_;
+    };
+
+    ItemFocus();
+
+    // register item that will be allowed to receive focus:
+    void setFocusable(Canvas::ILayer & view, Item & item, int index);
+
+    // clears focus from a given item, or any item if the id is empty:
+    bool clearFocus(const std::string & id = std::string());
+
+    // NOTE: these three will return true even if focus doesn't change
+    // in case there is no other suitable focusable item available;
+    // false is returned when no focusable items are available at all:
     bool setFocus(const std::string & id);
     bool focusNext();
     bool focusPrevious();
@@ -46,10 +68,14 @@ namespace yae
     // retrieve focused item:
     Item * focusedItem() const;
 
+    // retrieve focused item:
+    inline const Target * focus() const
+    { return focus_; }
+
   protected:
-    std::map<std::string, std::pair<Item *, int> > item_;
-    std::map<int, std::string> priority_;
-    std::string focus_;
+    std::map<int, Target> index_;
+    std::map<std::string, const Target *> idMap_;
+    const Target * focus_;
   };
 
   //----------------------------------------------------------------

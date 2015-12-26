@@ -49,6 +49,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemView::setEnabled
+  //
+  void
+  ItemView::setEnabled(bool enable)
+  {
+    Canvas::ILayer::setEnabled(enable);
+
+    if (!enable)
+    {
+      // remove item focus for this view:
+      const ItemFocus::Target * focus = ItemFocus::singleton().focus();
+
+      if (focus && focus->view_ == this)
+      {
+        TMakeCurrentContext currentContext(*context());
+        ItemFocus::singleton().clearFocus(focus->item_->id_);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // ItemView::event
   //
   bool
@@ -295,7 +316,10 @@ namespace yae
     {
       if (!e->buttons())
       {
-        processMouseTracking(pt);
+        if (processMouseTracking(pt))
+        {
+          requestRepaint();
+        }
       }
 
       return false;

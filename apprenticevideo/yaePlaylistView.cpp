@@ -734,7 +734,7 @@ namespace yae
 
     TextInputProxy & editProxy =
       filter.add(new TextInputProxy("filter_focus", text, edit));
-    ItemFocus::singleton().setFocusable(editProxy, 1);
+    ItemFocus::singleton().setFocusable(view, editProxy, 1);
     editProxy.anchors_.fill(filter);
     editProxy.placeholder_ =
       TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));

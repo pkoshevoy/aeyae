@@ -45,6 +45,9 @@ namespace yae
     ItemView(const char * name);
 
     // virtual:
+    void setEnabled(bool enable);
+
+    // virtual:
     bool event(QEvent * event);
 
     // virtual:

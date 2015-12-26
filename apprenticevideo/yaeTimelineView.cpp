@@ -605,7 +605,7 @@ namespace yae
 
     TextInputProxy & playheadFocus =
       root.add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
-    ItemFocus::singleton().setFocusable(playheadFocus, 2);
+    ItemFocus::singleton().setFocusable(*this, playheadFocus, 2);
     playheadFocus.copyViewToEdit_ = true;
 
     playheadAux.anchors_.left_ =

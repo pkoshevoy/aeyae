@@ -15,6 +15,28 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // lookup
+  //
+  static const ItemFocus::Target *
+  lookup(const std::map<std::string, const ItemFocus::Target *> & items,
+         const std::string & id)
+  {
+    std::map<std::string, const ItemFocus::Target *>::const_iterator
+      found = items.find(id);
+
+    return found != items.end() ? found->second : NULL;
+  }
+
+  //----------------------------------------------------------------
+  // ItemFocus::Target::Target
+  //
+  ItemFocus::Target::Target(Canvas::ILayer * view, Item * item, int index):
+    view_(view),
+    item_(item),
+    index_(index)
+  {}
+
+  //----------------------------------------------------------------
   // ItemFocus::singleton
   //
   ItemFocus &
@@ -25,71 +47,54 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemFocus::ItemFocus
+  //
+  ItemFocus::ItemFocus():
+    focus_(NULL)
+  {}
+
+  //----------------------------------------------------------------
   // ItemFocus::setFocusable
   //
   void
-  ItemFocus::setFocusable(Item & item, int priority)
+  ItemFocus::setFocusable(Canvas::ILayer & view, Item & item, int index)
   {
-    std::map<int, std::string>::iterator
-      found = priority_.lower_bound(priority);
+    Target target(&view, &item, index);
 
-    if (found == priority_.end() ||
-        priority_.key_comp()(priority, found->first))
+    std::map<int, Target>::iterator found = index_.lower_bound(index);
+    if (found == index_.end() ||
+        index_.key_comp()(index, found->first))
     {
       // not found:
-      found = priority_.insert(found, std::make_pair(priority, item.id_));
+      found = index_.insert(found, std::make_pair(index, target));
     }
-    else if (found->second != item.id_)
+    else if (found->second.item_->id_ != target.item_->id_)
     {
       YAE_ASSERT(false);
-      throw std::runtime_error("another item with equal priority exists");
+      throw std::runtime_error("another item with same index already exists");
     }
 
-    item_[item.id_] = std::make_pair(&item, priority);
-  }
-
-  //----------------------------------------------------------------
-  // lookup
-  //
-  static const std::pair<Item *, int> *
-  lookup(const std::map<std::string, std::pair<Item *, int> > & items,
-         const std::string & id)
-  {
-    std::map<std::string, std::pair<Item *, int> >::const_iterator
-      found = items.find(id);
-
-    return (found == items.end()) ? NULL : &(found->second);
-  }
-
-  //----------------------------------------------------------------
-  // lookupItem
-  //
-  static Item *
-  lookupItem(const std::map<std::string, std::pair<Item *, int> > & items,
-             const std::string & id)
-  {
-    const std::pair<Item *, int> * found = lookup(items, id);
-    return found ? found->first : NULL;
+    idMap_[item.id_] = &(found->second);
   }
 
   //----------------------------------------------------------------
   // ItemFocus::clearFocus
   //
-  void
+  bool
   ItemFocus::clearFocus(const std::string & id)
   {
-    if (id != focus_ && !id.empty())
+    if (!(id.empty() || hasFocus(id)))
     {
-      return;
+      return false;
     }
 
-    Item * prev = lookupItem(item_, focus_);
-    if (prev)
+    if (focus_)
     {
-      prev->onFocusOut();
+      focus_->item_->onFocusOut();
     }
 
-    focus_.clear();
+    focus_ = NULL;
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -98,27 +103,72 @@ namespace yae
   bool
   ItemFocus::setFocus(const std::string & id)
   {
-    if (id == focus_)
+    if (hasFocus(id))
     {
+      // already focused:
       return true;
     }
 
-    Item * prev = lookupItem(item_, focus_);
-    if (prev)
-    {
-      prev->onFocusOut();
-    }
-
-    Item * item = lookupItem(item_, id);
-    if (!item)
+    const Target * target = lookup(idMap_, id);
+    if (!target)
     {
       YAE_ASSERT(false);
-      throw std::runtime_error("can not set focus to unknown item");
+      throw std::runtime_error("can not give focus to unknown item");
     }
 
-    focus_ = id;
-    item->onFocus();
+    // Hmm, not sure whether to allow setting focus to an item
+    // in a disabled layer...
+    //
+    // So, allow it, but trigger an assertion in case it happens
+    // unintentionally so this could be revisited then:
+    YAE_ASSERT(target->view_->isEnabled());
+
+    if (focus_)
+    {
+      focus_->item_->onFocusOut();
+    }
+
+    focus_ = target;
+    focus_->item_->onFocus();
+
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // advance
+  //
+  template <typename TKey, typename TData>
+  static void
+  advance(const std::map<TKey, TData> & index,
+          typename std::map<TKey, TData>::const_iterator & iter,
+          int n)
+  {
+    while (n > 0)
+    {
+      n--;
+
+      if (iter != index.end())
+      {
+        ++iter;
+      }
+
+      if (iter == index.end())
+      {
+        iter = index.begin();
+      }
+    }
+
+    while (n < 0)
+    {
+      n++;
+
+      if (iter == index.begin())
+      {
+        iter = index.end();
+      }
+
+      --iter;
+    }
   }
 
   //----------------------------------------------------------------
@@ -127,34 +177,31 @@ namespace yae
   bool
   ItemFocus::focusNext()
   {
-    if (priority_.empty())
+    std::map<int, Target>::const_iterator iter =
+      focus_ ? index_.find(focus_->index_) : index_.end();
+
+    const Target * nextTarget = NULL;
+    std::size_t numTargets = index_.size();
+
+    for (std::size_t i = 0; i < numTargets; i++)
     {
-      return false;
-    }
+      advance(index_, iter, 1);
 
-    bool unfocused = focus_.empty();
-    if (!unfocused && priority_.size() < 2)
-    {
-      return !unfocused;
-    }
-
-    std::string id = priority_.begin()->second;
-    const std::pair<Item *, int> * found = lookup(item_, focus_);
-
-    if (found)
-    {
-      int priority = found->second;
-
-      std::map<int, std::string>::iterator
-        next = priority_.upper_bound(priority);
-
-      if (next != priority_.end())
+      const Target & target = iter->second;
+      if (target.view_->isEnabled())
       {
-        id = next->second;
+        nextTarget = &target;
+        break;
       }
     }
 
-    return setFocus(id);
+    if (nextTarget)
+    {
+      return setFocus(nextTarget->item_->id_);
+    }
+
+    focus_ = nextTarget;
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -163,38 +210,31 @@ namespace yae
   bool
   ItemFocus::focusPrevious()
   {
-    if (priority_.empty())
+    std::map<int, Target>::const_iterator iter =
+      focus_ ? index_.find(focus_->index_) : index_.begin();
+
+    const Target * nextTarget = NULL;
+    std::size_t numTargets = index_.size();
+
+    for (std::size_t i = 0; i < numTargets; i++)
     {
-      return false;
-    }
+      advance(index_, iter, -1);
 
-    bool unfocused = focus_.empty();
-    if (!unfocused && priority_.size() < 2)
-    {
-      return !unfocused;
-    }
-
-    std::string id = priority_.begin()->second;
-    const std::pair<Item *, int> * found = lookup(item_, focus_);
-
-    if (found)
-    {
-      int priority = found->second;
-
-      std::map<int, std::string>::iterator next = priority_.find(priority);
-
-      if (next != priority_.begin())
+      const Target & target = iter->second;
+      if (target.view_->isEnabled())
       {
-        --next;
-        id = next->second;
-      }
-      else
-      {
-        id = priority_.rbegin()->second;
+        nextTarget = &target;
+        break;
       }
     }
 
-    return setFocus(id);
+    if (nextTarget)
+    {
+      return setFocus(nextTarget->item_->id_);
+    }
+
+    focus_ = nextTarget;
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -203,7 +243,7 @@ namespace yae
   bool
   ItemFocus::hasFocus(const std::string & id) const
   {
-    return focus_ == id;
+    return focus_ && focus_->item_->id_ == id;
   }
 
   //----------------------------------------------------------------
@@ -212,7 +252,7 @@ namespace yae
   Item *
   ItemFocus::focusedItem() const
   {
-    return lookupItem(item_, focus_);
+    return focus_ ? focus_->item_ : NULL;
   }
 
 }
