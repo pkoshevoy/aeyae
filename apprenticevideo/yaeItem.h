@@ -278,6 +278,15 @@ namespace yae
     }
 
     template <typename TItem>
+    inline TItem & insert(int i, TItem * newItem)
+    {
+      YAE_ASSERT(newItem);
+      children_.insert(children_.begin() + i, ItemPtr(newItem));
+      newItem->Item::setParent(this);
+      return *newItem;
+    }
+
+    template <typename TItem>
     inline TItem & add(TItem * newItem)
     {
       YAE_ASSERT(newItem);
@@ -474,7 +483,6 @@ namespace yae
   protected:
     QPersistentModelIndex modelIndex_;
   };
-
 
 }
 

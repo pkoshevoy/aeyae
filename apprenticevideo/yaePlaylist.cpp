@@ -385,12 +385,12 @@ namespace yae
           if (episode.isEmpty())
           {
             key = timestamp + " " + program;
-            keys.push_front(PlaylistKey(key, QString()));
+            keys.push_front(PlaylistKey(key, kExtEyetv));
           }
           else
           {
             key = timestamp + " " + episode;
-            keys.push_front(PlaylistKey(key, QString()));
+            keys.push_front(PlaylistKey(key, kExtEyetv));
           }
 
           key = program;

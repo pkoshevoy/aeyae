@@ -171,7 +171,7 @@ namespace yae
 #endif
         et != QEvent::ShortcutOverride)
     {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       std::cerr
         << "ItemView::processEvent: "
         << yae::toString(et)

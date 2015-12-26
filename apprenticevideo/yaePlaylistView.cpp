@@ -146,7 +146,9 @@ namespace yae
   {
     GroupTop(const TPlaylistModelItem & item):
       item_(item)
-    {}
+    {
+      YAE_ASSERT(item_.modelIndex().isValid());
+    }
 
     // virtual:
     void evaluate(double & result) const
@@ -946,6 +948,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // layoutPlaylistGroup
+  //
+  static void
+  layoutPlaylistGroup(Item & groups,
+                      TPlaylistModelItem & group,
+                      PlaylistView & view,
+                      PlaylistModelProxy & model,
+                      const QModelIndex & groupIndex)
+  {
+    group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
+    group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
+    group.anchors_.top_ = group.addExpr(new GroupTop(group));
+
+    TLayoutPtr childLayout = findLayoutDelegate(view, model, groupIndex);
+    if (childLayout)
+    {
+      childLayout->layout(group, view, model, groupIndex);
+    }
+  }
+
+  //----------------------------------------------------------------
   // GroupListLayout
   //
   struct GroupListLayout : public PlaylistView::TLayoutDelegate
@@ -961,15 +984,7 @@ namespace yae
         QModelIndex childIndex = model.index(i, 0, rootIndex);
         TPlaylistModelItem & group =
           groups.add(new TPlaylistModelItem("group", childIndex));
-        group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
-        group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
-        group.anchors_.top_ = group.addExpr(new GroupTop(group));
-
-        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
-        if (childLayout)
-        {
-          childLayout->layout(group, view, model, childIndex);
-        }
+        layoutPlaylistGroup(groups, group, view, model, childIndex);
       }
     }
   };
@@ -1039,6 +1054,33 @@ namespace yae
       return true;
     }
   };
+
+  //----------------------------------------------------------------
+  // layoutPlaylistItem
+  //
+  static void
+  layoutPlaylistItem(Item & grid,
+                     TPlaylistModelItem & cell,
+                     const Item & cellWidth,
+                     const Item & cellHeight,
+                     PlaylistView & view,
+                     PlaylistModelProxy & model,
+                     const QModelIndex & itemIndex)
+  {
+    cell.anchors_.left_ = cell.addExpr(new GridCellLeft(cell));
+    cell.anchors_.top_ = cell.addExpr(new GridCellTop(cell));
+    cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
+    cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
+
+    ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
+    maPlay.anchors_.fill(cell);
+
+    TLayoutPtr childLayout = findLayoutDelegate(view, model, itemIndex);
+    if (childLayout)
+    {
+      childLayout->layout(cell, view, model, itemIndex);
+    }
+  }
 
   //----------------------------------------------------------------
   // ItemGridLayout
@@ -1149,21 +1191,15 @@ namespace yae
       for (int i = 0; i < numCells; i++)
       {
         QModelIndex childIndex = model.index(i, 0, groupIndex);
-        TPlaylistModelItem & cell = grid.
-          add(new TPlaylistModelItem("cell", childIndex));
-        cell.anchors_.left_ = cell.addExpr(new GridCellLeft(cell));
-        cell.anchors_.top_ = cell.addExpr(new GridCellTop(cell));
-        cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
-        cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
-
-        ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
-        maPlay.anchors_.fill(cell);
-
-        TLayoutPtr childLayout = findLayoutDelegate(view, model, childIndex);
-        if (childLayout)
-        {
-          childLayout->layout(cell, view, model, childIndex);
-        }
+        TPlaylistModelItem & cell =
+          grid.add(new TPlaylistModelItem("cell", childIndex));
+        layoutPlaylistItem(grid,
+                           cell,
+                           cellWidth,
+                           cellHeight,
+                           view,
+                           model,
+                           childIndex);
       }
 
       Item & footer = payload.addNew<Item>("footer");
@@ -1190,6 +1226,9 @@ namespace yae
       const Texture & xbuttonTexture =
         dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
 
+      ColorRef badgeTextFg = ColorRef::constant(Color(0xffffff, 0.5));
+      ColorRef badgeTextBg = ColorRef::constant(Color(0x3f3f3f, 0.25));
+
       Rectangle & frame = cell.addNew<Rectangle>("frame");
       frame.anchors_.fill(cell);
 
@@ -1201,11 +1240,24 @@ namespace yae
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
 
+      Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
+      Text & badge = cell.addNew<Text>("badge");
+      badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
+      badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
+      badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
+      badge.color_ = badgeTextFg;
+      badge.text_ = badge.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
+      badge.fontSize_ = ItemRef::scale(fontSize,
+                                       kPropertyHeight,
+                                       0.8 * kDpiScale);
+
+      badgeBg.anchors_.inset(badge, -3, 0);
+      badgeBg.color_ = badgeTextBg;
+
       Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
       Text & label = cell.addNew<Text>("label");
-      label.anchors_.bottomLeft(cell);
-      label.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
-      label.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -7);
+      label.anchors_.bottomLeft(cell, 7);
       label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
@@ -1267,7 +1319,6 @@ namespace yae
       maRmItem.anchors_.fill(xbutton);
     }
   };
-
 
 
   //----------------------------------------------------------------
@@ -1491,7 +1542,7 @@ namespace yae
   void
   PlaylistView::layoutAboutToBeChanged()
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr << "PlaylistView::layoutAboutToBeChanged" << std::endl;
 #endif
   }
@@ -1502,9 +1553,10 @@ namespace yae
   void
   PlaylistView::layoutChanged()
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
 #endif
+
     QModelIndex rootIndex = model_->index(-1, -1);
     TLayoutPtr delegate = findLayoutDelegate(*this, *model_, rootIndex);
     if (!delegate)
@@ -1550,7 +1602,7 @@ namespace yae
   void
   PlaylistView::modelAboutToBeReset()
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr << "PlaylistView::modelAboutToBeReset" << std::endl;
 #endif
   }
@@ -1561,7 +1613,7 @@ namespace yae
   void
   PlaylistView::modelReset()
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr << "PlaylistView::modelReset" << std::endl;
 #endif
     layoutChanged();
@@ -1594,6 +1646,65 @@ namespace yae
       << ", start: " << start << ", end: " << end
       << std::endl;
 #endif
+
+    TMakeCurrentContext currentContext(*context());
+    Item & root = *root_;
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & groups = sview.content_["groups"];
+
+    if (parent.isValid())
+    {
+      // adding group items:
+      const Item & cellWidth = root["cell_width"];
+      const Item & cellHeight = root["cell_height"];
+
+      int groupIndex = parent.row();
+
+      TPlaylistModelItem & group =
+        dynamic_cast<TPlaylistModelItem &>(*(groups.children_[groupIndex]));
+
+      Item & grid = group["payload"]["grid"];
+
+#ifndef NDEBUG
+      // FIXME: just double checking that I am not inserting duplicates:
+      {
+        int nitems = grid.children_.size();
+        for (int i = 0; i < nitems; i++)
+        {
+          TPlaylistModelItem & cell =
+            dynamic_cast<TPlaylistModelItem &>(*(grid.children_[i]));
+
+          int rowIndex = cell.modelIndex().row();
+          YAE_ASSERT(rowIndex < start || rowIndex > end);
+        }
+      }
+#endif
+
+      for (int i = start; i <= end; i++)
+      {
+        QModelIndex childIndex = model_->index(i, 0, parent);
+        TPlaylistModelItem & cell =
+          grid.insert(i, new TPlaylistModelItem("cell", childIndex));
+        layoutPlaylistItem(grid,
+                           cell,
+                           cellWidth,
+                           cellHeight,
+                           *this,
+                           *model_,
+                           childIndex);
+      }
+    }
+    else
+    {
+      // adding item groups:
+      for (int i = start; i <= end; i++)
+      {
+        QModelIndex childIndex = model_->index(i, 0, parent);
+        TPlaylistModelItem & group =
+          groups.insert(i, new TPlaylistModelItem("group", childIndex));
+        layoutPlaylistGroup(groups, group, *this, *model_, childIndex);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -1610,6 +1721,7 @@ namespace yae
       << std::endl;
 #endif
 
+    TMakeCurrentContext currentContext(*context());
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & groups = sview.content_["groups"];
