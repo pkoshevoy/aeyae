@@ -196,7 +196,7 @@ namespace yae
 
     // update cursor position here:
     int cursorPos = textLine_.xToCursor(lcsPt.x() + offset_,
-                                        QTextLine::CursorOnCharacter);
+                                        QTextLine::CursorBetweenCharacters);
     lineEdit_.setCursorPosition(cursorPos);
     lineEdit_.setSelection(cursorPos, 0);
     item.uncache();
@@ -229,9 +229,9 @@ namespace yae
 
     // update selection here:
     int selStart = textLine_.xToCursor(lcsDragStart.x() + offset_,
-                                       QTextLine::CursorOnCharacter);
+                                       QTextLine::CursorBetweenCharacters);
     int selEnd = textLine_.xToCursor(lcsDragEnd.x() + offset_,
-                                     QTextLine::CursorOnCharacter);
+                                     QTextLine::CursorBetweenCharacters);
     if (selStart > selEnd)
     {
       std::swap(selStart, selEnd);
