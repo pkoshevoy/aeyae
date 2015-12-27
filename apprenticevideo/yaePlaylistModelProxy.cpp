@@ -181,7 +181,11 @@ namespace yae
 
       for (int groupRow = groupRows[0]; groupRow <= groupRows[1]; groupRow++)
       {
-        for (int itemRow = itemRows[0]; itemRow <= itemRows[1]; itemRow++)
+        int groupSize = rowCount(makeModelIndex(groupRow, -1));
+        int i0 = (groupRow == groupRows[0]) ? itemRows[0] : 0;
+        int i1 = (groupRow == groupRows[1]) ? itemRows[1] : groupSize - 1;
+
+        for (int itemRow = i0; itemRow <= i1; itemRow++)
         {
           QModelIndex proxyModelIndex = makeModelIndex(groupRow, itemRow);
           QModelIndex sourceModelIndex = mapToSource(proxyModelIndex);
