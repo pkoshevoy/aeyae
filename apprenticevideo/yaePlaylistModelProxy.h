@@ -113,6 +113,9 @@ namespace yae
     // return proxy model index of the currently playing item:
     QModelIndex playingItem() const;
 
+    // return proxy model index of the current item:
+    QModelIndex currentItem() const;
+
     // return index of the item closest to a given index
     // in the specified traversal direction:
     QModelIndex nextItem(const QModelIndex & index,

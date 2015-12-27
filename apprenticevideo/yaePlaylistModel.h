@@ -151,6 +151,9 @@ namespace yae
     QModelIndex playingItem() const
     { return mapToModelIndex(playlist_.playingItem()); }
 
+    QModelIndex currentItem() const
+    { return mapToModelIndex(playlist_.currentItem()); }
+
     // return index of the item closest to a given index
     // in the specified traversal direction:
     QModelIndex nextItem(const QModelIndex & index,

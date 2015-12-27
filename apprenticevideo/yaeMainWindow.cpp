@@ -3548,7 +3548,7 @@ namespace yae
       if (rc)
       {
         rc->accept();
-#if 0
+#if 0 // ndef NDEBUG
         std::cerr << "remote control: " << rc->buttonId_
                   << ", down: " << rc->pressedDown_
                   << ", clicks: " << rc->clickCount_
@@ -3727,7 +3727,18 @@ namespace yae
     int key = event->key();
     if (key == Qt::Key_Escape)
     {
-      exitFullScreen();
+      if (actionShowPlaylist->isChecked())
+      {
+        actionShowPlaylist->trigger();
+      }
+      else if (actionShowTimeline->isChecked())
+      {
+        actionShowTimeline->trigger();
+      }
+      else
+      {
+        exitFullScreen();
+      }
     }
     else if (key == Qt::Key_I)
     {

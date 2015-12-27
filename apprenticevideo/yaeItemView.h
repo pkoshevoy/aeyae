@@ -63,8 +63,9 @@ namespace yae
     bool processEvent(Canvas * canvas, QEvent * event);
 
     // helpers:
-    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
-    bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
+    virtual bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
+    virtual bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
+    virtual bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
 
     void addImageProvider(const QString & providerId,
                           const TImageProviderPtr & p);

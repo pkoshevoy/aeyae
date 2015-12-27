@@ -11,6 +11,9 @@
 #include <iomanip>
 #include <sstream>
 
+// Qt library:
+#include <QItemSelectionModel>
+
 // local interfaces:
 #include "yaeColor.h"
 #include "yaeExpression.h"
@@ -731,7 +734,6 @@ namespace yae
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
     const Item & fontSize = playlist["font_size"];
-    const Item & titleHeight = playlist["title_height"];
     const Item & scrollbar = playlist["scrollbar"];
 
     const Text & nowPlaying =
@@ -1602,6 +1604,310 @@ namespace yae
     ok = connect(&filterEdit, SIGNAL(textChanged(const QString &)),
                  model_, SLOT(setItemFilter(const QString &)));
     YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // SelectionFlags
+  //
+  typedef QItemSelectionModel::SelectionFlags SelectionFlags;
+
+  //----------------------------------------------------------------
+  // select_items
+  //
+  static void
+  select_items(PlaylistModelProxy & model,
+               int groupRow,
+               int itemRow,
+               SelectionFlags selectionFlags)
+  {
+    model.selectItems(groupRow, itemRow, selectionFlags);
+    model.setCurrentItem(groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // ensure_visible
+  //
+  void
+  ensure_visible(PlaylistView & view, int groupRow, int itemRow)
+  {
+    YAE_ASSERT(!(groupRow < 0 || itemRow < 0));
+
+    Item & root = *(view.root());
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & scrollbar = root["scrollbar"];
+    Item & footer = sview.content_["footer"];
+    Item & groups = sview.content_["groups"];
+    Item & group = *(groups.children_[groupRow]);
+    Item & grid = group["payload"]["grid"];
+    Item & cell = *(grid.children_[itemRow]);
+
+    double h_footer = footer.height();
+    double h_scene = sview.content_.height();
+    double h_view = sview.height();
+
+    double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
+    double view_y0 = range * sview.position_;
+    double view_y1 = view_y0 + h_view - h_footer;
+
+    double h_item = cell.height();
+    double item_y0 = cell.top();
+    double item_y1 = item_y0 + h_item;
+
+    if (item_y0 < view_y0)
+    {
+      sview.position_ = item_y0 / range;
+    }
+    else if (item_y1 > view_y1)
+    {
+      sview.position_ = (item_y1 - (h_view - h_footer)) / range;
+    }
+    else
+    {
+      return;
+    }
+
+    scrollbar.uncache();
+    view.delegate()->requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // TMoveCursor
+  //
+  typedef void(*TMoveCursor)(PlaylistView & view,
+                             PlaylistModelProxy & model,
+                             int & groupRow,
+                             int & itemRow);
+
+  //----------------------------------------------------------------
+  // move_cursor
+  //
+  static void
+  move_cursor(PlaylistView & view,
+              SelectionFlags selectionFlags,
+              TMoveCursor funcMoveCursor)
+  {
+    PlaylistModelProxy * model = view.model();
+    if (!model)
+    {
+      return;
+    }
+
+    QModelIndex currentIndex = model->currentItem();
+    int groupRow = -1;
+    int itemRow = -1;
+    PlaylistModelProxy::mapToGroupRowItemRow(currentIndex, groupRow, itemRow);
+
+    if (itemRow < 0)
+    {
+      return;
+    }
+
+    if (selectionFlags == QItemSelectionModel::SelectCurrent)
+    {
+      // set the selection anchor, if not already set:
+      select_items(*model, groupRow, itemRow, selectionFlags);
+    }
+
+    funcMoveCursor(view, *model, groupRow, itemRow);
+
+    currentIndex = model->makeModelIndex(groupRow, itemRow);
+    model->setCurrentItem(currentIndex);
+
+    // scroll to current item:
+    ensure_visible(view, groupRow, itemRow);
+
+    select_items(*model, groupRow, itemRow, selectionFlags);
+  }
+
+  //----------------------------------------------------------------
+  // move_cursor_left
+  //
+  static void
+  move_cursor_left(PlaylistView & view,
+                   PlaylistModelProxy & model,
+                   int & groupRow,
+                   int & itemRow)
+  {
+    if (itemRow > 0)
+    {
+      itemRow--;
+    }
+    else if (groupRow > 0)
+    {
+      groupRow--;
+      const int groupSize = model.rowCount(model.makeModelIndex(groupRow, -1));
+      itemRow = groupSize - 1;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // move_cursor_right
+  //
+  static void
+  move_cursor_right(PlaylistView & view,
+                    PlaylistModelProxy & model,
+                    int & groupRow,
+                    int & itemRow)
+  {
+    const int groupSize = model.rowCount(model.makeModelIndex(groupRow, -1));
+    const int numGroups = model.rowCount(model.makeModelIndex(-1, -1));
+
+    if (itemRow + 1 < groupSize)
+    {
+      itemRow++;
+    }
+    else if (groupRow + 1 < numGroups)
+    {
+      groupRow++;
+      itemRow = 0;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_items_per_row
+  //
+  static int
+  get_items_per_row(PlaylistView & view)
+  {
+    Item & root = *(view.root());
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    double gridWidth = sview.width();
+    return calcItemsPerRow(gridWidth);
+  }
+
+  //----------------------------------------------------------------
+  // move_cursor_up
+  //
+  static void
+  move_cursor_up(PlaylistView & view,
+                 PlaylistModelProxy & model,
+                 int & groupRow,
+                 int & itemRow)
+  {
+    const int itemsPerRow = get_items_per_row(view);
+
+    if (itemRow >= itemsPerRow)
+    {
+      itemRow -= itemsPerRow;
+    }
+    else if (itemRow > 0)
+    {
+      itemRow = 0;
+    }
+    else if (groupRow > 0)
+    {
+      groupRow--;
+      const int groupSize = model.rowCount(model.makeModelIndex(groupRow, -1));
+      itemRow = groupSize - 1;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // move_cursor_down
+  //
+  static void
+  move_cursor_down(PlaylistView & view,
+                   PlaylistModelProxy & model,
+                   int & groupRow,
+                   int & itemRow)
+  {
+    const int groupSize = model.rowCount(model.makeModelIndex(groupRow, -1));
+    const int numGroups = model.rowCount(model.makeModelIndex(-1, -1));
+    const int itemsPerRow = get_items_per_row(view);
+
+    if (itemRow + itemsPerRow < groupSize)
+    {
+      itemRow += itemsPerRow;
+    }
+    else if (itemRow + 1 < groupSize)
+    {
+      itemRow = groupSize - 1;
+    }
+    else if (groupRow + 1 < numGroups)
+    {
+      groupRow++;
+      itemRow = 0;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_selection_flags
+  //
+  static SelectionFlags
+  get_selection_flags(QInputEvent * e)
+  {
+    SelectionFlags f = QItemSelectionModel::ClearAndSelect;
+
+    if (e->modifiers() & Qt::ControlModifier)
+    {
+      f = QItemSelectionModel::ToggleCurrent;
+    }
+    else if (e->modifiers() & Qt::ShiftModifier)
+    {
+      f = QItemSelectionModel::SelectCurrent;
+    }
+
+    return f;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::processKeyEvent
+  //
+  bool
+  PlaylistView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
+  {
+    e->ignore();
+
+    if (!model_)
+    {
+      return false;
+    }
+
+    QEvent::Type et = e->type();
+    if (et == QEvent::KeyPress)
+    {
+      int key = e->key();
+
+      if (key == Qt::Key_Left ||
+          key == Qt::Key_Right ||
+          key == Qt::Key_Up ||
+          key == Qt::Key_Down ||
+          key == Qt::Key_PageUp ||
+          key == Qt::Key_PageDown ||
+          key == Qt::Key_Home ||
+          key == Qt::Key_End)
+      {
+        SelectionFlags selectionFlags = get_selection_flags(e);
+
+        if (key == Qt::Key_Left)
+        {
+          move_cursor(*this, selectionFlags, &move_cursor_left);
+        }
+        else if (key == Qt::Key_Right)
+        {
+          move_cursor(*this, selectionFlags, &move_cursor_right);
+        }
+        else if (key == Qt::Key_Up)
+        {
+          move_cursor(*this, selectionFlags, &move_cursor_up);
+        }
+        else if (key == Qt::Key_Down)
+        {
+          move_cursor(*this, selectionFlags, &move_cursor_down);
+        }
+
+        e->accept();
+      }
+      else if (key == Qt::Key_Return ||
+               key == Qt::Key_Enter)
+      {
+        QModelIndex currentIndex = model_->currentItem();
+        model_->setPlayingItem(currentIndex);
+        e->accept();
+      }
+    }
+
+    return e->isAccepted();
   }
 
   //----------------------------------------------------------------

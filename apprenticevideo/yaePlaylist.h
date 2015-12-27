@@ -184,6 +184,9 @@ namespace yae
     // return index of the playing item:
     std::size_t playingItem() const;
 
+    // return index of the current item:
+    std::size_t currentItem() const;
+
     // return number of items in the playlist:
     inline std::size_t numItems() const
     { return numItems_; }
@@ -262,6 +265,7 @@ namespace yae
     // returns true if current index has changed:
     bool setCurrentItem(std::size_t index);
     bool setCurrentItem(int groupRow, int itemRow);
+    void getCurrentItem(int & groupRow, int & itemRow) const;
 
     // return true if selected status has changed:
     bool toggleSelectedItem(std::size_t index);

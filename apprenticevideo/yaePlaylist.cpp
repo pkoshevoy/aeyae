@@ -599,6 +599,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Playlist::currentItem
+  //
+  std::size_t
+  Playlist::currentItem() const
+  {
+    return current_;
+  }
+
+  //----------------------------------------------------------------
   // Playlist::closestGroup
   //
   TPlaylistGroupPtr
@@ -992,6 +1001,18 @@ namespace yae
     index = closestItem(index);
 
     return setCurrentItem(index);
+  }
+
+  //----------------------------------------------------------------
+  // Playlist::getCurrentItem
+  //
+  void
+  Playlist::getCurrentItem(int & groupRow, int & itemRow) const
+  {
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = lookup(current_, &group);
+    groupRow = group ? group->row_ : -1;
+    itemRow = item ? item->row_ : -1;
   }
 
   //----------------------------------------------------------------

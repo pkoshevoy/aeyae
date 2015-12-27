@@ -273,6 +273,30 @@ namespace yae
       return true;
     }
 
+    if (et == QEvent::KeyPress ||
+        et == QEvent::KeyRelease)
+    {
+      TMakeCurrentContext currentContext(*context());
+      QKeyEvent * e = static_cast<QKeyEvent *>(event);
+      if (processKeyEvent(canvas, e))
+      {
+        requestRepaint();
+        return true;
+      }
+
+      return false;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::processKeyEvent
+  //
+  bool
+  ItemView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
+  {
+    e->ignore();
     return false;
   }
 

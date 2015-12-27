@@ -83,9 +83,15 @@ namespace yae
     // data source:
     void setModel(PlaylistModelProxy * model);
 
+    inline PlaylistModelProxy * model() const
+    { return model_; }
+
     // accessors:
     inline const TLayoutDelegates & layouts() const
     { return layoutDelegates_; }
+
+    // virtual:
+    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
   public slots:
     void dataChanged(const QModelIndex & topLeft,

@@ -410,6 +410,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistModelProxy::currentItem
+  //
+  QModelIndex
+  PlaylistModelProxy::currentItem() const
+  {
+    QModelIndex sourceIndex = model_.currentItem();
+    QModelIndex proxyIndex = mapFromSource(sourceIndex);
+    return proxyIndex;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModelProxy::nextItem
   //
   QModelIndex
