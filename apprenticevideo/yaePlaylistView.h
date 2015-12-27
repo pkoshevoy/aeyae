@@ -93,7 +93,13 @@ namespace yae
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
+    // virtual:
+    void resizeTo(const Canvas * canvas);
+
   public slots:
+    // adjust scrollview position to ensure a given item is visible:
+    void ensureVisible(const QModelIndex & itemIndex);
+
     void dataChanged(const QModelIndex & topLeft,
                      const QModelIndex & bottomRight);
 

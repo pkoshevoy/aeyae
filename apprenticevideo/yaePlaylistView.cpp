@@ -1630,36 +1630,57 @@ namespace yae
   void
   ensure_visible(PlaylistView & view, int groupRow, int itemRow)
   {
-    YAE_ASSERT(!(groupRow < 0 || itemRow < 0));
+    if (groupRow < 0)
+    {
+      // nothing to do:
+      return;
+    }
 
     Item & root = *(view.root());
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & scrollbar = root["scrollbar"];
     Item & footer = sview.content_["footer"];
     Item & groups = sview.content_["groups"];
+
+    if (groups.children_.size() <= groupRow)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
     Item & group = *(groups.children_[groupRow]);
     Item & grid = group["payload"]["grid"];
-    Item & cell = *(grid.children_[itemRow]);
+
+    bool groupOnly = (itemRow < 0 || grid.children_.size() <= itemRow);
+    Item & item = groupOnly ? group : *(grid.children_[itemRow]);
 
     double h_footer = footer.height();
     double h_scene = sview.content_.height();
     double h_view = sview.height();
 
     double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
+    if (range <= 0.0)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
     double view_y0 = range * sview.position_;
     double view_y1 = view_y0 + h_view - h_footer;
 
-    double h_item = cell.height();
-    double item_y0 = cell.top();
+    double h_item = groupOnly ? (h_view - h_footer) : item.height();
+    double item_y0 = item.top();
     double item_y1 = item_y0 + h_item;
 
     if (item_y0 < view_y0)
     {
       sview.position_ = item_y0 / range;
+      sview.position_ = std::min<double>(1.0, sview.position_);
     }
     else if (item_y1 > view_y1)
     {
       sview.position_ = (item_y1 - (h_view - h_footer)) / range;
+      sview.position_ = std::max<double>(0.0, sview.position_);
     }
     else
     {
@@ -1911,6 +1932,34 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistView::resizeTo
+  //
+  void
+  PlaylistView::resizeTo(const Canvas * canvas)
+  {
+    ItemView::resizeTo(canvas);
+
+    if (model_)
+    {
+      QModelIndex currentIndex = model_->currentItem();
+      ensureVisible(currentIndex);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::ensureVisible
+  //
+  void
+  PlaylistView::ensureVisible(const QModelIndex & itemIndex)
+  {
+    TMakeCurrentContext currentContext(*context());
+    int groupRow = -1;
+    int itemRow = -1;
+    PlaylistModelProxy::mapToGroupRowItemRow(itemIndex, groupRow, itemRow);
+    ensure_visible(*this, groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
   // PlaylistView::dataChanged
   //
   void
@@ -1977,8 +2026,12 @@ namespace yae
     root.height_ = ItemRef::constant(h_);
 
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & scrollbar = root["scrollbar"];
     Item & groups = sview.content_["groups"];
     groups.children_.clear();
+    sview.content_.uncache();
+    sview.uncache();
+    scrollbar.uncache();
 
     delegate->layout(groups, *this, *model_, rootIndex);
 
@@ -2041,6 +2094,7 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & scrollbar = root["scrollbar"];
     Item & groups = sview.content_["groups"];
 
     if (parent.isValid())
@@ -2096,6 +2150,10 @@ namespace yae
         layoutPlaylistGroup(groups, group, *this, *model_, childIndex);
       }
     }
+
+    sview.content_.uncache();
+    sview.uncache();
+    scrollbar.uncache();
   }
 
   //----------------------------------------------------------------
@@ -2115,6 +2173,7 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & scrollbar = root["scrollbar"];
     Item & groups = sview.content_["groups"];
 
     if (parent.isValid())
@@ -2143,6 +2202,10 @@ namespace yae
         groups.children_.erase(groups.children_.begin() + i);
       }
     }
+
+    sview.content_.uncache();
+    sview.uncache();
+    scrollbar.uncache();
   }
 
   //----------------------------------------------------------------

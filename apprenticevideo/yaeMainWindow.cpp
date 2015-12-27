@@ -1262,6 +1262,9 @@ namespace yae
     }
 
     playback();
+
+    QModelIndex playingIndex = playlistModel_.playingItem();
+    playlistView_.ensureVisible(playingIndex);
   }
 
   //----------------------------------------------------------------
@@ -3479,6 +3482,11 @@ namespace yae
     {
       playlistModel_.setPlayingItem(index);
       item->failed_ = !load(item->path_, &bookmark);
+
+      if (!item->failed_)
+      {
+        playlistView_.ensureVisible(index);
+      }
     }
 
     fixupNextPrev();
