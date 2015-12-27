@@ -100,6 +100,7 @@ namespace yae
     kPropertyVisible,
     kPropertyColor,
     kPropertyCursorWidth,
+    kPropertyHasText,
     kPropertyText
   };
 

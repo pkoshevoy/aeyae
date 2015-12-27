@@ -13,6 +13,8 @@
 #include <cmath>
 #include <iostream>
 #include <list>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -370,8 +372,8 @@ namespace yae
       return !inputHandlers.empty();
     }
 
-    virtual void onFocus() {}
-    virtual void onFocusOut() {}
+    virtual void onFocus();
+    virtual void onFocusOut();
 
     // NOTE: default implementation does not process the event
     //       and does not propagate it to nested items;
@@ -398,6 +400,44 @@ namespace yae
     // NOTE: this will call unpaintContent,
     // followed by a call to unpaint each nested item:
     virtual void unpaint() const;
+
+    //----------------------------------------------------------------
+    // Event
+    //
+    enum Event
+    {
+      kOnUncache,
+      kOnFocus,
+      kOnFocusOut,
+      kOnPaint,
+      kOnUnpaint
+    };
+
+    //----------------------------------------------------------------
+    // Observer
+    //
+    struct Observer
+    {
+      virtual ~Observer() {}
+      virtual void observe(const Item & item, Event e) = 0;
+    };
+
+    //----------------------------------------------------------------
+    // TObserverPtr
+    //
+    typedef boost::shared_ptr<Observer> TObserverPtr;
+
+    //----------------------------------------------------------------
+    // TEventObservers
+    //
+    typedef std::map<Event, std::set<TObserverPtr> > TEventObservers;
+
+    // add an event observer:
+    inline void addObserver(Event e, const TObserverPtr & o)
+    { eo_[e].insert(o); }
+
+    // helper:
+    void notifyObservers(Event e) const;
 
 #ifndef NDEBUG
     // FIXME: for debugging only:
@@ -428,6 +468,9 @@ namespace yae
   protected:
     // storage of expressions associated with this Item:
     std::list<TPropertiesBasePtr> expr_;
+
+    // storage of event observers associated with this Item:
+    TEventObservers eo_;
 
     // 1D bounding segments of this items content:
     SegmentRef xContent_;

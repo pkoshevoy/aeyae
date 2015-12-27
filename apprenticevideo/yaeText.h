@@ -102,6 +102,9 @@ namespace yae
     QString text() const;
 
     // virtual:
+    void get(Property property, bool & value) const;
+
+    // virtual:
     void get(Property property, TVar & value) const;
 
     struct TPrivate;

@@ -669,6 +669,57 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ClearTextInput
+  //
+  struct ClearTextInput : public InputArea
+  {
+    ClearTextInput(const char * id, TextInput & edit, Text & view):
+      InputArea(id),
+      edit_(edit),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      edit_.setText(QString());
+      edit_.uncache();
+      view_.uncache();
+      return true;
+    }
+
+    TextInput & edit_;
+    Text & view_;
+  };
+
+  //----------------------------------------------------------------
+  // Uncache
+  //
+  struct Uncache : public Item::Observer
+  {
+    Uncache(Item & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      if (e == Item::kOnUncache)
+      {
+        item_.uncache();
+      }
+    }
+
+    Item & item_;
+  };
+
+  //----------------------------------------------------------------
   // layoutPlaylistFilter
   //
   static void
@@ -680,11 +731,20 @@ namespace yae
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
     const Item & fontSize = playlist["font_size"];
+    const Item & titleHeight = playlist["title_height"];
+    const Item & scrollbar = playlist["scrollbar"];
+
+    const Text & nowPlaying =
+      dynamic_cast<const Text &>(playlist["now_playing"]);
+
+    const Texture & xbuttonTexture =
+      dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
 
     ColorRef underlineColor = ColorRef::constant(Color(0xf12b24, 1.0));
     ColorRef sortColor = ColorRef::constant(Color(0xffffff, 0.5));
     ColorRef colorTextBg = ColorRef::constant(Color(0x7f7f7f, 0.25));
     ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.25));
+    ColorRef colorEditBg = ColorRef::constant(Color(0x7f7f7f, 0.0));
     ColorRef colorFocusBg = ColorRef::constant(Color(0x7f7f7f, 0.5));
     ColorRef colorFocusFg = ColorRef::constant(Color(0xFFFFFF, 1.0));
     ColorRef colorHighlightBg = ColorRef::constant(Color(0xFFFFFF, 1.0));
@@ -732,6 +792,18 @@ namespace yae
     Text & text = filter.addNew<Text>("filter_text");
     TextInput & edit = filter.addNew<TextInput>("filter_edit");
 
+    Item & rm = filter.addNew<Item>("rm");
+
+    TexturedRect & xbutton =
+      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+
+    ItemRef fontDescentNowPlaying =
+      xbutton.addExpr(new GetFontDescent(nowPlaying));
+
+    ClearTextInput & maRmFilter =
+      item.add(new ClearTextInput("ma_clear_filter", edit, text));
+    maRmFilter.anchors_.fill(xbutton);
+
     TextInputProxy & editProxy =
       filter.add(new TextInputProxy("filter_focus", text, edit));
     ItemFocus::singleton().setFocusable(view, editProxy, 1);
@@ -745,7 +817,7 @@ namespace yae
 
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
-    text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+    text.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
     text.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.5);
     text.margins_.bottom_ = text.addExpr(new GetFontDescent(text), -0.25);
     text.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, false));
@@ -758,13 +830,26 @@ namespace yae
     edit.anchors_.fill(text);
     edit.margins_.left_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
     edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
+    edit.background_ = colorEditBg;
     edit.color_ = colorFocusFg;
     edit.cursorColor_ = underlineColor;
     edit.font_ = text.font_;
     edit.fontSize_ = text.fontSize_;
     edit.selectionBg_ = colorHighlightBg;
     edit.selectionFg_ = colorHighlightFg;
+    edit.addObserver(Item::kOnUncache, Item::TObserverPtr(new Uncache(rm)));
 
+    // remove filter [x] button:
+    rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+    rm.height_ = ItemRef::reference(text, kPropertyHeight);
+    rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    rm.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyLeft, -5);
+    rm.visible_ = BoolRef::reference(editProxy, kPropertyHasText);
+
+    xbutton.anchors_.center(rm);
+    xbutton.margins_.set(fontDescentNowPlaying);
+    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.height_ = xbutton.width_;
 
     // layout sort-and-order:
     ItemRef smallFontSize = ItemRef::scale(fontSize,
@@ -1514,7 +1599,7 @@ namespace yae
     TextInput & filterEdit =
       root["filterItem"]["bg"].get<TextInput>("filter_edit");
 
-    ok = connect(&filterEdit, SIGNAL(textEdited(const QString &)),
+    ok = connect(&filterEdit, SIGNAL(textChanged(const QString &)),
                  model_, SLOT(setItemFilter(const QString &)));
     YAE_ASSERT(ok);
   }

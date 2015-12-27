@@ -176,7 +176,7 @@ namespace yae
         beforeSelStart != afterSelStart ||
         beforeSelection != afterSelection)
     {
-      this->uncache();
+      item.uncache();
       return true;
     }
 
@@ -294,6 +294,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // addFormatRange
+  //
+  static void
+  addFormatRange(QVector<QTextLayout::FormatRange> & ranges,
+                 int start,
+                 int length,
+                 const QFont & font,
+                 const Color & fg,
+                 const Color & bg)
+  {
+    if (length < 1)
+    {
+      return;
+    }
+
+    ranges.push_back(QTextLayout::FormatRange());
+    QTextLayout::FormatRange & range = ranges.back();
+    range.start = start;
+    range.length = length;
+    range.format.setFont(font);
+    range.format.setBackground(QColor(bg));
+    range.format.setForeground(QColor(fg));
+  }
+
+  //----------------------------------------------------------------
   // TextInput::TPrivate::uploadTexture
   //
   bool
@@ -303,6 +328,8 @@ namespace yae
 
     int selStart = lineEdit_.selectionStart();
     int selLength = lineEdit_.selectedText().length();
+    int selEnd = (selLength < 1) ? 0 : selStart + selLength;
+    int textLen = lineEdit_.text().length();
     int cursorPos = lineEdit_.cursorPosition();
     int cursorWidth = std::max<int>(1, int(ceil(item.cursorWidth_.get())));
 
@@ -322,29 +349,23 @@ namespace yae
     QImage img(iw_, ih_, QImage::Format_ARGB32);
     img.fill(0);
 
-    QVector<QTextLayout::FormatRange> selections;
-    if (selLength > 0)
-    {
-      selections.push_back(QTextLayout::FormatRange());
-      QTextLayout::FormatRange & sel = selections.back();
-      sel.start = selStart;
-      sel.length = selLength;
-      sel.format.setFont(font_);
-      sel.format.setBackground(QColor(item.selectionBg_.get()));
-      sel.format.setForeground(QColor(item.selectionFg_.get()));
-    }
+    const QColor & fg = item.color_.get();
+    const QColor & bg = item.background_.get();
+    const QColor & selFg = item.selectionFg_.get();
+    const QColor & selBg = item.selectionBg_.get();
+
+    QVector<QTextLayout::FormatRange> ranges;
+    addFormatRange(ranges, 0, selStart, font_, fg, bg);
+    addFormatRange(ranges, selStart, selLength, font_, selFg, selBg);
+    addFormatRange(ranges, selEnd, textLen - selEnd, font_, fg, bg);
 
     qreal lineHeight = textLine_.height();
     YAE_ASSERT(lineHeight <= qreal(ih_));
 
     qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
     QPointF offset(-offset_, yoffset);
-    QRectF clip(offset, QSizeF(iw_, ih_));
     QPainter painter(&img);
-
-    const Color & color = item.color_.get();
-    painter.setPen(QColor(color));
-    textLayout_.draw(&painter, offset, selections, clip);
+    textLayout_.draw(&painter, offset, ranges);
 
     const Color & cursorColor = item.cursorColor_.get();
     painter.setPen(QColor(cursorColor));
@@ -383,7 +404,8 @@ namespace yae
   TextInput::TextInput(const char * id):
     Item(id),
     p_(new TextInput::TPrivate()),
-    color_(ColorRef::constant(Color(0x7f7f7f, 0.5)))
+    color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
+    background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
     font_.setHintingPreference(QFont::PreferFullHinting);
@@ -416,6 +438,10 @@ namespace yae
     cursorWidth_ = ItemRef::constant(1);
 
     bool ok = true;
+    ok = connect(&(p_->lineEdit_), SIGNAL(textChanged(const QString &)),
+                 this, SIGNAL(textChanged(const QString &)));
+    YAE_ASSERT(ok);
+
     ok = connect(&(p_->lineEdit_), SIGNAL(textEdited(const QString &)),
                  this, SIGNAL(textEdited(const QString &)));
     YAE_ASSERT(ok);
@@ -442,6 +468,22 @@ namespace yae
     if (property == kPropertyCursorWidth)
     {
       value = cursorWidth_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::get
+  //
+  void
+  TextInput::get(Property property, bool & value) const
+  {
+    if (property == kPropertyHasText)
+    {
+      value = !(text().isEmpty());
     }
     else
     {
@@ -689,6 +731,22 @@ namespace yae
   {
     TMakeCurrentContext currentContext(*canvasLayer.context());
     return edit_.processEvent(canvasLayer, canvas, event);
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::get
+  //
+  void
+  TextInputProxy::get(Property property, bool & value) const
+  {
+    if (property == kPropertyHasText)
+    {
+      value = !(edit_.text().isEmpty());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
   }
 
   //----------------------------------------------------------------

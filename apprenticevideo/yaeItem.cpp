@@ -386,6 +386,8 @@ namespace yae
     xExtent_.uncache();
     yExtent_.uncache();
     visible_.uncache();
+
+    notifyObservers(kOnUncache);
   }
 
   //----------------------------------------------------------------
@@ -970,6 +972,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::onFocus
+  //
+  void
+  Item::onFocus()
+  {
+    notifyObservers(kOnFocus);
+  }
+
+  //----------------------------------------------------------------
+  // Item::onFocusOut
+  //
+  void
+  Item::onFocusOut()
+  {
+    notifyObservers(kOnFocusOut);
+  }
+
+  //----------------------------------------------------------------
   // Item::processEvent
   //
   bool
@@ -1019,6 +1039,7 @@ namespace yae
       child->paint(xregion, yregion);
     }
 
+    notifyObservers(kOnPaint);
     return true;
   }
 
@@ -1041,6 +1062,29 @@ namespace yae
     {
       const ItemPtr & child = *i;
       child->unpaint();
+    }
+
+    notifyObservers(kOnUnpaint);
+  }
+
+  //----------------------------------------------------------------
+  // Item::notifyObservers
+  //
+  void
+  Item::notifyObservers(Item::Event e) const
+  {
+    TEventObservers::const_iterator found = eo_.find(e);
+    if (found == eo_.end())
+    {
+      return;
+    }
+
+    const std::set<TObserverPtr> & observers = found->second;
+    for (std::set<TObserverPtr>::const_iterator i = observers.begin();
+         i != observers.end(); ++i)
+    {
+      TObserverPtr observer = *i;
+      observer->observe(*this, e);
     }
   }
 

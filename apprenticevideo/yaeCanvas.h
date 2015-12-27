@@ -135,7 +135,7 @@ namespace yae
       inline bool isEnabled() const
       { return enabled_; }
 
-      virtual void setEnabled(bool enable = true)
+      virtual void setEnabled(bool enable)
       {
         enabled_ = enable;
 

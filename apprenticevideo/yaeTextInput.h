@@ -41,6 +41,9 @@ namespace yae
     void get(Property property, double & value) const;
 
     // virtual:
+    void get(Property property, bool & value) const;
+
+    // virtual:
     void get(Property property, TVar & value) const;
 
     // virtual:
@@ -70,6 +73,7 @@ namespace yae
     void setFocusProxyId(const std::string & proxyId);
 
   signals:
+    void textChanged(const QString & text);
     void textEdited(const QString & text);
     void editingFinished(const QString & text);
 
@@ -85,6 +89,7 @@ namespace yae
     ItemRef cursorWidth_; // in pixels
 
     ColorRef color_;
+    ColorRef background_;
     ColorRef cursorColor_;
     ColorRef selectionFg_;
     ColorRef selectionBg_;
@@ -124,6 +129,9 @@ namespace yae
     bool processEvent(Canvas::ILayer & canvasLayer,
                       Canvas * canvas,
                       QEvent * event);
+
+    // virtual:
+    void get(Property property, bool & value) const;
 
     // virtual:
     void get(Property property, TVar & value) const;

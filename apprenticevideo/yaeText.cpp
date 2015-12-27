@@ -515,6 +515,22 @@ namespace yae
   // Text::get
   //
   void
+  Text::get(Property property, bool & value) const
+  {
+    if (property == kPropertyHasText)
+    {
+      value = !(text().isEmpty());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Text::get
+  //
+  void
   Text::get(Property property, TVar & value) const
   {
     if (property == kPropertyText)
