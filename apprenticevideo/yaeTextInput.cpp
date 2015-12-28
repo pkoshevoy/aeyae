@@ -347,7 +347,9 @@ namespace yae
     }
 
     QImage img(iw_, ih_, QImage::Format_ARGB32);
-    img.fill(0);
+
+    const Color & background = item.background_.get();
+    img.fill(QColor(background).rgba());
 
     const QColor & fg = item.color_.get();
     const QColor & bg = item.background_.get();
@@ -484,6 +486,38 @@ namespace yae
     if (property == kPropertyHasText)
     {
       value = !(text().isEmpty());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TextInput::get
+  //
+  void
+  TextInput::get(Property property, Color & value) const
+  {
+    if (property == kPropertyColor)
+    {
+      value = color_.get();
+    }
+    else if (property == kPropertyColorBg)
+    {
+      value = background_.get();
+    }
+    else if (property == kPropertyColorCursor)
+    {
+      value = cursorColor_.get();
+    }
+    else if (property == kPropertyColorSelFg)
+    {
+      value = selectionFg_.get();
+    }
+    else if (property == kPropertyColorSelBg)
+    {
+      value = selectionBg_.get();
     }
     else
     {

@@ -99,6 +99,11 @@ namespace yae
     kPropertyBBox,
     kPropertyVisible,
     kPropertyColor,
+    kPropertyColorBorder,
+    kPropertyColorBg,
+    kPropertyColorCursor,
+    kPropertyColorSelFg,
+    kPropertyColorSelBg,
     kPropertyCursorWidth,
     kPropertyHasText,
     kPropertyText

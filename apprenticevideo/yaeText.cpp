@@ -258,7 +258,8 @@ namespace yae
 
     QImage img(iw, ih, QImage::Format_ARGB32);
     {
-      img.fill(QColor(0x7f, 0x7f, 0x7f, 0).rgba());
+      const Color & background = item.background_.get();
+      img.fill(QColor(background).rgba());
 
       QPainter painter(&img);
       QFont font = item.font_;
@@ -339,7 +340,8 @@ namespace yae
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
     supersample_(kSupersampleText),
-    color_(ColorRef::constant(Color(0xffffff, 1.0)))
+    color_(ColorRef::constant(Color(0xffffff, 1.0))),
+    background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
     font_.setHintingPreference(QFont::PreferFullHinting);
@@ -520,6 +522,26 @@ namespace yae
     if (property == kPropertyHasText)
     {
       value = !(text().isEmpty());
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Text::get
+  //
+  void
+  Text::get(Property property, Color & value) const
+  {
+    if (property == kPropertyColor)
+    {
+      value = color_.get();
+    }
+    else if (property == kPropertyColorBg)
+    {
+      value = background_.get();
     }
     else
     {

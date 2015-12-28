@@ -91,7 +91,7 @@ namespace yae
   Rectangle::paintContent() const
   {
     BBox bbox;
-    this->get(kPropertyBBox, bbox);
+    Item::get(kPropertyBBox, bbox);
 
     double border = border_.get();
     const Color & color = color_.get();
@@ -101,6 +101,26 @@ namespace yae
               border,
               color,
               colorBorder);
+  }
+
+  //----------------------------------------------------------------
+  // Rectangle::get
+  //
+  void
+  Rectangle::get(Property property, Color & value) const
+  {
+    if (property == kPropertyColor)
+    {
+      value = color_.get();
+    }
+    else if (property == kPropertyColorBorder)
+    {
+      value = colorBorder_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
   }
 
 }

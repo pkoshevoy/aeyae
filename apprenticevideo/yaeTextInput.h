@@ -44,6 +44,9 @@ namespace yae
     void get(Property property, bool & value) const;
 
     // virtual:
+    void get(Property property, Color & value) const;
+
+    // virtual:
     void get(Property property, TVar & value) const;
 
     // virtual:

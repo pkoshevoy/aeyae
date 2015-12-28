@@ -160,7 +160,7 @@ namespace yae
   RoundRect::TPrivate::paint(const RoundRect & item)
   {
     BBox bbox;
-    item.get(kPropertyBBox, bbox);
+    item.Item::get(kPropertyBBox, bbox);
 
     // avoid rendering at fractional pixel coordinates:
     double w = double(iw_);
@@ -319,6 +319,30 @@ namespace yae
   RoundRect::unpaintContent() const
   {
     p_->uncache();
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::get
+  //
+  void
+  RoundRect::get(Property property, Color & value) const
+  {
+    if (property == kPropertyColor)
+    {
+      value = color_.get();
+    }
+    else if (property == kPropertyColorBorder)
+    {
+      value = colorBorder_.get();
+    }
+    else if (property == kPropertyColorBg)
+    {
+      value = background_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
   }
 
 }

@@ -174,7 +174,7 @@ namespace yae
         std::swap(groupRows[0], groupRows[1]);
         std::swap(itemRows[0], itemRows[1]);
       }
-      else if (itemRows[1] < itemRows[0])
+      else if (groupRows[0] == groupRows[1] && itemRows[1] < itemRows[0])
       {
         std::swap(itemRows[0], itemRows[1]);
       }

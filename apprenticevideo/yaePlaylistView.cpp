@@ -471,6 +471,41 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ItemHighlightColor
+  //
+  struct ItemHighlightColor : public TColorExpr
+  {
+    ItemHighlightColor(const PlaylistModelProxy & model,
+                       const QModelIndex & index,
+                       const Color & colorDefault,
+                       const Color & colorSelected):
+      model_(model),
+      index_(index),
+      colorDefault_(colorDefault),
+      colorSelected_(colorSelected)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      bool isSelected =
+        model_.data(index_, PlaylistModel::kRoleSelected).value<bool>();
+      if (isSelected)
+      {
+        result = colorSelected_;
+        return;
+      }
+
+      result = colorDefault_;
+    }
+
+    const PlaylistModelProxy & model_;
+    QPersistentModelIndex index_;
+    Color colorDefault_;
+    Color colorSelected_;
+  };
+
+  //----------------------------------------------------------------
   // xbuttonImage
   //
   static QImage
@@ -1313,11 +1348,22 @@ namespace yae
       const Texture & xbuttonTexture =
         dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
 
-      ColorRef badgeTextFg = ColorRef::constant(Color(0xffffff, 0.5));
-      ColorRef badgeTextBg = ColorRef::constant(Color(0x3f3f3f, 0.25));
+      Color colorDefaultBg = Color(0x7f7f7f, 0.5);
+      Color colorSelectedBg = Color(0xFFFFFF, 0.75);
+      Color colorSelectedFg = Color(0x3f3f3f, 0.75);
+      Color colorLabelBg = Color(0x3f3f3f, 0.5);
+      Color colorLabelFg = Color(0xFFFFFF, 1.0);
+      Color colorBadgeFg = Color(0xffffff, 0.5);
+      Color colorBadgeBg = Color(0x3f3f3f, 0.25);
+      Color colorUnderline = Color(0xf12b24, 1.0);
 
       Rectangle & frame = cell.addNew<Rectangle>("frame");
       frame.anchors_.fill(cell);
+      frame.color_ = frame.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       colorDefaultBg,
+                                       colorSelectedBg));
 
       Image & thumbnail = cell.addNew<Image>("thumbnail");
       thumbnail.setContext(view);
@@ -1332,7 +1378,12 @@ namespace yae
       badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
       badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-      badge.color_ = badgeTextFg;
+      badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
+      badge.color_ = badge.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       colorBadgeFg,
+                                       colorSelectedFg));
       badge.text_ = badge.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
       badge.fontSize_ = ItemRef::scale(fontSize,
@@ -1340,7 +1391,11 @@ namespace yae
                                        0.8 * kDpiScale);
 
       badgeBg.anchors_.inset(badge, -3, 0);
-      badgeBg.color_ = badgeTextBg;
+      badgeBg.color_ = badge.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       colorBadgeBg,
+                                       colorSelectedBg));
 
       Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
       Text & label = cell.addNew<Text>("label");
@@ -1349,9 +1404,19 @@ namespace yae
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
+      label.background_ = ColorRef::transparent(labelBg, kPropertyColor);
+      label.color_ = label.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       colorLabelFg,
+                                       colorSelectedFg));
 
       labelBg.anchors_.inset(label, -3, -1);
-      labelBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
+      labelBg.color_ = labelBg.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       colorLabelBg,
+                                       colorSelectedBg));
 
       Item & rm = cell.addNew<Item>("remove item");
 
@@ -1362,13 +1427,15 @@ namespace yae
       playing.visible_ = playing.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+      playing.color_ = ColorRef::reference(label, kPropertyColor);
+      playing.background_ = ColorRef::reference(label, kPropertyColorBg);
       playing.fontSize_ = ItemRef::scale(fontSize,
                                          kPropertyHeight,
                                          0.8 * kDpiScale);
 
       playingBg.anchors_.inset(playing, -3, -1);
       playingBg.visible_ = BoolRef::reference(playing, kPropertyVisible);
-      playingBg.color_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
+      playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
 
       rm.width_ = ItemRef::reference(playing, kPropertyHeight);
       rm.height_ = ItemRef::reference(playing, kPropertyHeight);
@@ -1388,18 +1455,18 @@ namespace yae
       underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
       underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
       underline.height_ = ItemRef::constant(2);
-      underline.color_ = ColorRef::constant(Color(0xf12b24));
+      underline.color_ = ColorRef::constant(colorUnderline);
       underline.visible_ = underline.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
-      Rectangle & sel = cell.addNew<Rectangle>("selected");
-      sel.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
-      sel.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
-      sel.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
-      sel.height_ = ItemRef::constant(2);
-      sel.color_ = ColorRef::constant(Color(0xf12b24));
-      sel.visible_ = sel.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRoleSelected));
+      Rectangle & cur = cell.addNew<Rectangle>("current");
+      cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
+      cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
+      cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
+      cur.height_ = ItemRef::constant(2);
+      cur.color_ = ColorRef::constant(colorUnderline);
+      cur.visible_ = cur.addExpr
+        (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
 
       RemoveModelItems & maRmItem = xbutton.
         add(new RemoveModelItems("ma_remove_item"));

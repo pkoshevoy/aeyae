@@ -35,6 +35,9 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
+    // virtual:
+    void get(Property property, Color & value) const;
+
     // keep implementation details private:
     struct TPrivate;
     TPrivate * p_;

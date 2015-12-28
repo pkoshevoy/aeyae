@@ -105,6 +105,9 @@ namespace yae
     void get(Property property, bool & value) const;
 
     // virtual:
+    void get(Property property, Color & value) const;
+
+    // virtual:
     void get(Property property, TVar & value) const;
 
     struct TPrivate;
@@ -120,6 +123,7 @@ namespace yae
     ItemRef maxWidth_;
     ItemRef maxHeight_;
     ColorRef color_;
+    ColorRef background_;
   };
 
 }

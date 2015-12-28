@@ -94,6 +94,16 @@ namespace yae
       return result;
     }
 
+    inline TVec & operator *= (const TVec & other)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] *= other.coord_[i];
+      }
+
+      return *this;
+    }
+
     inline TVec & operator += (const TVec & other)
     {
       for (unsigned int i = 0; i < Cardinality; i++)
@@ -205,6 +215,17 @@ namespace yae
       }
 
       return true;
+    }
+
+    inline TVec & clamp(const TData & min, const TData & max)
+    {
+      for (unsigned int i = 0; i < Cardinality; i++)
+      {
+        coord_[i] =
+          std::min<TData>(TData(1), std::max<TData>(TData(0), coord_[i]));
+      }
+
+      return *this;
     }
   };
 

@@ -338,6 +338,15 @@ namespace yae
       return ItemRef::expression(*e, scale, translate);
     }
 
+    inline ColorRef
+    addExpr(TColorExpr * e,
+            const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+            const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
+    {
+      expr_.push_back(TPropertiesBasePtr(e));
+      return ColorRef::expression(*e, scale, translate);
+    }
+
     // helper:
     bool overlaps(const TVec2D & pt) const;
 

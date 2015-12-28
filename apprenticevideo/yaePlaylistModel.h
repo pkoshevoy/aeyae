@@ -44,6 +44,7 @@ namespace yae
       kRoleItemHash,
       kRoleThumbnail,
       kRoleCollapsed,
+      kRoleCurrent,
       kRoleSelected,
       kRolePlaying,
       kRoleFailed,

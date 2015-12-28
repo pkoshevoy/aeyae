@@ -189,8 +189,11 @@ namespace yae
 
     // constructor helpers:
     inline static ItemRef
-    reference(const TDataProperties & ref, Property prop)
-    { return ItemRef(&ref, prop); }
+    reference(const TDataProperties & ref,
+              Property prop,
+              double s = 1.0,
+              double t = 0.0)
+    { return ItemRef(&ref, prop, s, t); }
 
     inline static ItemRef
     constant(const double & t)
@@ -266,14 +269,115 @@ namespace yae
   typedef DataRef<TVar> TVarRef;
 
   //----------------------------------------------------------------
-  // ColorRef
-  //
-  typedef DataRef<Color> ColorRef;
-
-  //----------------------------------------------------------------
   // TVec2DRef
   //
   typedef DataRef<TVec2D> TVec2DRef;
+
+  //----------------------------------------------------------------
+  // ColorRef
+  //
+  struct ColorRef : public DataRef<Color>
+  {
+    typedef DataRef<Color> TDataRef;
+    typedef IProperties<Color> TDataProperties;
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const TDataProperties * reference = NULL,
+             Property property = kPropertyUnspecified,
+             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0),
+             const Color & defaultValue = Color()):
+      TDataRef(reference, property, defaultValue),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const Color & constantValue):
+      TDataRef(constantValue),
+      scale_(1.0, 1.0, 1.0, 1.0),
+      translate_(0.0, 0.0, 0.0, 0.0)
+    {}
+
+    inline void reset()
+    {
+      ref_ = NULL;
+      property_ = kPropertyUnspecified;
+    }
+
+    // constructor helpers:
+    inline static ColorRef
+    constant(const Color & t)
+    { return ColorRef(t); }
+
+    inline static ColorRef
+    reference(const TDataProperties & ref,
+              Property prop,
+              const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+              const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0))
+    { return ColorRef(&ref, prop, s, t); }
+
+    inline static ColorRef
+    expression(const TDataProperties & ref,
+               const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+               const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0))
+    { return ColorRef(&ref, kPropertyExpression, s, t); }
+
+    inline static ColorRef
+    scale(const TDataProperties & ref, Property prop, const TVec4D & s)
+    { return ColorRef(&ref, prop, s); }
+
+    inline static ColorRef
+    offset(const TDataProperties & ref, Property prop, const TVec4D & t)
+    { return ColorRef(&ref, prop, TVec4D(1.0, 1.0, 1.0, 1.0), t); }
+
+    inline static ColorRef
+    transparent(const TDataProperties & ref, Property prop, double s = 0.0)
+    { return ColorRef(&ref, prop, TVec4D(s, 1.0, 1.0, 1.0)); }
+
+    const Color & get() const
+    {
+      if (TDataRef::cached_)
+      {
+        return TDataRef::value_;
+      }
+
+      if (!TDataRef::ref_)
+      {
+        YAE_ASSERT(TDataRef::property_ == kPropertyConstant);
+      }
+      else if (TDataRef::visited_)
+      {
+        // cycle detected:
+        YAE_ASSERT(false);
+        throw std::runtime_error("property reference cycle detected");
+      }
+      else
+      {
+        TDataRef::visited_ = true;
+
+        Color color;
+        ref_->get(TDataRef::property_, color);
+
+        TVec4D v(color);
+        v *= scale_;
+        v += translate_;
+        v.clamp(0.0, 1.0);
+
+        TDataRef::value_ = Color(v);
+      }
+
+      TDataRef::cached_ = true;
+      return TDataRef::value_;
+    }
+
+    TVec4D scale_;
+    TVec4D translate_;
+  };
 
 }
 

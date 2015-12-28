@@ -26,6 +26,59 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TVec4D
+  //
+  struct TVec4D : public Vec<double, 4>
+  {
+    typedef Vec<double, 4> TBase;
+
+    inline TVec4D(double a = 0.0,
+                  double r = 0.0,
+                  double g = 0.0,
+                  double b = 0.0)
+    {
+      TBase::coord_[0] = a;
+      TBase::coord_[1] = r;
+      TBase::coord_[2] = g;
+      TBase::coord_[3] = b;
+    }
+
+    inline TVec4D(const TBase & v): TBase(v) {}
+    inline TVec4D & operator = (const TBase & v)
+    {
+      TBase::operator = (v);
+      return *this;
+    }
+
+    inline const double & a() const { return TBase::coord_[0]; }
+    inline const double & r() const { return TBase::coord_[1]; }
+    inline const double & g() const { return TBase::coord_[2]; }
+    inline const double & b() const { return TBase::coord_[3]; }
+
+    inline double & a() { return TBase::coord_[0]; }
+    inline double & r() { return TBase::coord_[1]; }
+    inline double & g() { return TBase::coord_[2]; }
+    inline double & b() { return TBase::coord_[3]; }
+
+    inline TVec4D & set_a(double v) { TBase::coord_[0] = v; return *this; }
+    inline TVec4D & set_r(double v) { TBase::coord_[1] = v; return *this; }
+    inline TVec4D & set_g(double v) { TBase::coord_[2] = v; return *this; }
+    inline TVec4D & set_b(double v) { TBase::coord_[3] = v; return *this; }
+
+    inline TVec4D & operator *= (const TVec4D & scale)
+    {
+      TBase::operator *= (scale);
+      return *this;
+    }
+
+    inline TVec4D & operator += (const TVec4D & translate)
+    {
+      TBase::operator += (translate);
+      return *this;
+    }
+  };
+
+  //----------------------------------------------------------------
   // Color
   //
   struct Color
@@ -36,7 +89,7 @@ namespace yae
       this->a() = (unsigned char)(std::max(0.0, std::min(255.0, 255.0 * a)));
     }
 
-    Color(const Vec<double, 4> & v)
+    Color(const TVec4D & v)
     {
       YAE_ASSERT(v.coord_[0] >= 0.0 && v.coord_[0] <= 1.0);
       YAE_ASSERT(v.coord_[1] >= 0.0 && v.coord_[1] <= 1.0);
@@ -49,9 +102,9 @@ namespace yae
       this->operator[](3) = (unsigned char)(v.coord_[3] * 255.0);
     }
 
-    inline operator Vec<double, 4>() const
+    inline operator TVec4D() const
     {
-      Vec<double, 4> v;
+      TVec4D v;
       v.coord_[0] = double(this->operator[](0)) / 255.0;
       v.coord_[1] = double(this->operator[](1)) / 255.0;
       v.coord_[2] = double(this->operator[](2)) / 255.0;
@@ -139,6 +192,13 @@ namespace yae
         (std::max(0.0, std::min(255.0, double(argb[3]) + translate)));
 
       return *this;
+    }
+
+    Color transparent() const
+    {
+      Color result(*this);
+      result.set_a(0.0);
+      return result;
     }
 
     unsigned int argb_;

@@ -29,6 +29,9 @@ namespace yae
     // virtual:
     void paintContent() const;
 
+    // virtual:
+    void get(Property property, Color & value) const;
+
     // border width:
     ItemRef border_;
 

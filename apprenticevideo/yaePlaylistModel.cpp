@@ -149,6 +149,7 @@ namespace yae
     roles[kRoleItemHash] = "itemHash";
     roles[kRoleThumbnail] = "thumbnail";
     roles[kRoleCollapsed] = "collapsed";
+    roles[kRoleCurrent] = "current";
     roles[kRoleSelected] = "selected";
     roles[kRolePlaying] = "playing";
     roles[kRoleFailed] = "failed";
@@ -318,6 +319,15 @@ namespace yae
             << '/'
             << item->hash_;
         return QVariant(QString::fromUtf8(oss.str().c_str()));
+      }
+
+      if (role == kRoleCurrent)
+      {
+        int groupRow = -1;
+        int itemRow = -1;
+        playlist_.getCurrentItem(groupRow, itemRow);
+        return QVariant(parentGroup->row_ == groupRow &&
+                        item->row_ == itemRow);
       }
 
       if (role == kRoleSelected)
