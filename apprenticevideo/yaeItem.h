@@ -142,6 +142,11 @@ namespace yae
   //
   typedef std::list<InputHandler>::reverse_iterator TInputHandlerRIter;
 
+  //----------------------------------------------------------------
+  // TInputHandlerCRIter
+  //
+  typedef std::list<InputHandler>::const_reverse_iterator TInputHandlerCRIter;
+
 
   //----------------------------------------------------------------
   // Item

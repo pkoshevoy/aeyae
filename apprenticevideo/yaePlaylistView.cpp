@@ -1999,6 +1999,62 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // findModelInputArea
+  //
+  static const TModelInputArea *
+  findModelInputArea(const std::list<InputHandler> & inputHandlers)
+  {
+    for (TInputHandlerCRIter i = inputHandlers.rbegin();
+         i != inputHandlers.rend(); ++i)
+    {
+      const InputHandler & handler = *i;
+
+      const TModelInputArea * modelInput =
+        dynamic_cast<const TModelInputArea *>(handler.input_);
+
+      if (modelInput)
+      {
+        return modelInput;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::processMouseEvent
+  //
+  bool
+  PlaylistView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
+  {
+    bool processed = ItemView::processMouseEvent(canvas, e);
+
+    QEvent::Type et = e->type();
+    if (et == QEvent::MouseButtonPress &&
+        (e->button() == Qt::LeftButton) &&
+        !inputHandlers_.empty())
+    {
+      const TModelInputArea * ia = findModelInputArea(inputHandlers_);
+      if (ia)
+      {
+        QModelIndex index = ia->modelIndex();
+        int groupRow = -1;
+        int itemRow = -1;
+        PlaylistModelProxy::mapToGroupRowItemRow(index, groupRow, itemRow);
+
+        if (!(groupRow < 0 || itemRow < 0))
+        {
+          // update selection:
+          SelectionFlags selectionFlags = get_selection_flags(e);
+          select_items(*model_, groupRow, itemRow, selectionFlags);
+        }
+      }
+    }
+
+    return processed;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistView::resizeTo
   //
   void

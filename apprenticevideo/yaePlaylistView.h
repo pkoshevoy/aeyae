@@ -30,6 +30,10 @@ namespace yae
   //
   typedef ModelItem<PlaylistModelProxy> TPlaylistModelItem;
 
+  //----------------------------------------------------------------
+  // TModelInputArea
+  //
+  typedef ModelInputArea<PlaylistModelProxy> TModelInputArea;
 
   //----------------------------------------------------------------
   // TClickablePlaylistModelItem
@@ -92,6 +96,7 @@ namespace yae
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
+    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 
     // virtual:
     void resizeTo(const Canvas * canvas);
