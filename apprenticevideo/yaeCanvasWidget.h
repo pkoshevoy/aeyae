@@ -12,7 +12,7 @@
 // standard C++:
 #include <iostream>
 
-#if defined(YAE_USE_QT4)
+#ifndef YAE_USE_QOPENGL_WIDGET
 // GLEW includes:
 #include <GL/glew.h>
 #endif
@@ -22,10 +22,10 @@
 #include <QCursor>
 #include <QDragEnterEvent>
 #include <QDropEvent>
-#if defined(YAE_USE_QT4)
-#include <QGLWidget>
-#elif defined(YAE_USE_QT5)
+#ifdef YAE_USE_QOPENGL_WIDGET
 #include <QOpenGLWidget>
+#else
+#include <QGLWidget>
 #endif
 #include <QTimer>
 
@@ -132,11 +132,11 @@ namespace yae
         // this is just to prevent concurrent OpenGL access to the same context:
         TMakeCurrentContext lock(canvas_.Canvas::context());
 
-#if defined(YAE_USE_QT4)
+#ifdef YAE_USE_QOPENGL_WIDGET
+        canvas_.TWidget::update();
+#else
         canvas_.paintGL();
         canvas_.TWidget::swapBuffers();
-#else
-        canvas_.TWidget::update();
 #endif
      }
 

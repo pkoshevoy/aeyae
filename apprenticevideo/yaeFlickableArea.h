@@ -60,7 +60,7 @@ namespace yae
                    const TVec2D & rootCSysDragStart,
                    const TVec2D & rootCSysDragEnd);
 
-  protected slots:
+  public slots:
     void onTimeout();
 
   protected:

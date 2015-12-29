@@ -6,6 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+
 // standard C++ includes:
 #include <list>
 
@@ -248,3 +250,6 @@ namespace yae
   }
 
 }
+
+
+#endif // YAE_USE_PLAYER_QUICK_WIDGET

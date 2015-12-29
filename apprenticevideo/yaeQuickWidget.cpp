@@ -6,6 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+
 // Qt includes:
 #include <QCursor>
 
@@ -87,3 +89,6 @@ namespace yae
     QQuickWidget::mouseMoveEvent(e);
   }
 }
+
+
+#endif // YAE_USE_PLAYER_QUICK_WIDGET

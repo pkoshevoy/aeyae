@@ -1674,6 +1674,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistView::paint
+  //
+  void
+  PlaylistView::paint(Canvas * canvas)
+  {
+    // avoid stalling flickable animation:
+    {
+      Item & root = *root_;
+      Scrollview & sview = root.get<Scrollview>("scrollview");
+      FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
+      ma_sview.onTimeout();
+    }
+
+    ItemView::paint(canvas);
+  }
+
+  //----------------------------------------------------------------
   // SelectionFlags
   //
   typedef QItemSelectionModel::SelectionFlags SelectionFlags;
@@ -1692,9 +1709,55 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // scroll
+  //
+  static void
+  scroll(PlaylistView & view, int key)
+  {
+    Item & root = *(view.root());
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & scrollbar = root["scrollbar"];
+
+    double h_scene = sview.content_.height();
+    double h_view = sview.height();
+
+    double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
+    if (range <= 0.0)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    double y_view = range * sview.position_;
+
+    if (key == Qt::Key_PageUp)
+    {
+      y_view -= h_view;
+      y_view = std::max<double>(y_view, 0.0);
+    }
+    else if (key == Qt::Key_PageDown)
+    {
+      y_view += h_view;
+      y_view = std::min<double>(y_view, range);
+    }
+    else if (key == Qt::Key_Home)
+    {
+      y_view = 0.0;
+    }
+    else if (key == Qt::Key_End)
+    {
+      y_view = range;
+    }
+
+    sview.position_ = y_view / range;
+    scrollbar.uncache();
+    view.delegate()->requestRepaint();
+  }
+
+  //----------------------------------------------------------------
   // ensure_visible
   //
-  void
+  static void
   ensure_visible(PlaylistView & view, int groupRow, int itemRow)
   {
     if (groupRow < 0)
@@ -1711,7 +1774,6 @@ namespace yae
 
     if (groups.children_.size() <= groupRow)
     {
-      YAE_ASSERT(false);
       return;
     }
 
@@ -1720,6 +1782,15 @@ namespace yae
 
     bool groupOnly = (itemRow < 0 || grid.children_.size() <= itemRow);
     Item & item = groupOnly ? group : *(grid.children_[itemRow]);
+
+    Item & spacer = group["spacer"];
+    double h_header = spacer.height();
+
+    if (!groupOnly)
+    {
+      Item & title = group["title"];
+      h_header += title.height();
+    }
 
     double h_footer = footer.height();
     double h_scene = sview.content_.height();
@@ -1739,9 +1810,9 @@ namespace yae
     double item_y0 = item.top();
     double item_y1 = item_y0 + h_item;
 
-    if (item_y0 < view_y0)
+    if (item_y0 < view_y0 + h_header)
     {
-      sview.position_ = item_y0 / range;
+      sview.position_ = (item_y0 - h_header) / range;
       sview.position_ = std::min<double>(1.0, sview.position_);
     }
     else if (item_y1 > view_y1)
@@ -1982,6 +2053,13 @@ namespace yae
         else if (key == Qt::Key_Down)
         {
           move_cursor(*this, selectionFlags, &move_cursor_down);
+        }
+        else if (key == Qt::Key_PageUp ||
+                 key == Qt::Key_PageDown ||
+                 key == Qt::Key_Home ||
+                 key == Qt::Key_End)
+        {
+          scroll(*this, key);
         }
 
         e->accept();

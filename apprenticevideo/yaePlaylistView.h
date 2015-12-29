@@ -95,6 +95,9 @@ namespace yae
     { return layoutDelegates_; }
 
     // virtual:
+    void paint(Canvas * canvas);
+
+    // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 

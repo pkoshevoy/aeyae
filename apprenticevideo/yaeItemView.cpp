@@ -73,13 +73,13 @@ namespace yae
   // ItemView::event
   //
   bool
-  ItemView::event(QEvent * event)
+  ItemView::event(QEvent * e)
   {
-    QEvent::Type et = event->type();
+    QEvent::Type et = e->type();
     if (et == QEvent::User)
     {
       RequestRepaintEvent * repaintEvent =
-        dynamic_cast<RequestRepaintEvent *>(event);
+        dynamic_cast<RequestRepaintEvent *>(e);
 
       if (repaintEvent)
       {
@@ -88,13 +88,12 @@ namespace yae
         root.uncache();
         Canvas::ILayer::delegate_->requestRepaint();
 
-        repaintEvent->payload_.setDelivered(true);
         repaintEvent->accept();
         return true;
       }
     }
 
-    return false;
+    return QObject::event(e);
   }
 
   //----------------------------------------------------------------
@@ -134,6 +133,8 @@ namespace yae
   void
   ItemView::paint(Canvas * canvas)
   {
+    requestRepaintEvent_.setDelivered(true);
+
     double x = 0.0;
     double y = 0.0;
     double w = double(canvas->canvasWidth());
@@ -162,7 +163,9 @@ namespace yae
 
     const Segment & xregion = root_->xExtent();
     const Segment & yregion = root_->yExtent();
-    root_->paint(xregion, yregion);
+
+    Item & root = *root_;
+    root.paint(xregion, yregion);
   }
 
   //----------------------------------------------------------------

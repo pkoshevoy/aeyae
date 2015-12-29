@@ -33,11 +33,16 @@ if (Qt5_FOUND)
     find_package(Qt5DBus)
   endif ()
 
-  option(YAE_USE_PLAYER_QUICK_WIDGET "Alternative implementation with QML" OFF)
-  if (YAE_USE_PLAYER_QUICK_WIDGET)
-    add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
-    # add_definitions(-DQT_QML_DEBUG)
-  endif (YAE_USE_PLAYER_QUICK_WIDGET)
+  option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
+  if (YAE_USE_QOPENGL_WIDGET)
+    add_definitions(-DYAE_USE_QOPENGL_WIDGET)
+
+    option(YAE_USE_PLAYER_QUICK_WIDGET "Use QML implementation" OFF)
+    if (YAE_USE_PLAYER_QUICK_WIDGET)
+      add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
+      # add_definitions(-DQT_QML_DEBUG)
+    endif (YAE_USE_PLAYER_QUICK_WIDGET)
+  endif (YAE_USE_QOPENGL_WIDGET)
 
 else (Qt5_FOUND)
   find_package(Qt4 REQUIRED)
@@ -100,14 +105,14 @@ set(project_moc_hxx
   yaeTimelineView.h
   )
 
-if (Qt5_FOUND)
+if (YAE_USE_PLAYER_QUICK_WIDGET)
   set(project_moc_hxx
     ${project_moc_hxx}
     yaeCanvasQuickFbo.h
     yaeQuickWidget.h
     yaeUtilsQml.h
     )
-endif (Qt5_FOUND)
+endif (YAE_USE_PLAYER_QUICK_WIDGET)
 
 set(project_uis
   yaeAbout.ui

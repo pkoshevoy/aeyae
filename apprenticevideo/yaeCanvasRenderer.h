@@ -20,14 +20,14 @@
 #endif
 
 // Qt includes:
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
 #include <QOpenGLFunctions_1_0>
 #include <QOpenGLFunctions_1_1>
 #include <QOpenGLFunctions_1_4>
 #include <QOpenGLFunctions_2_0>
-#elif defined(YAE_USE_QT4)
+#else
 // GLEW includes:
 #include <GL/glew.h>
 #endif
@@ -77,7 +77,7 @@ namespace yae
   struct TModernCanvas;
   struct TFragmentShader;
 
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
   //----------------------------------------------------------------
   // TProgramStringARB
   //

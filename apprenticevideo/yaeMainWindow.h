@@ -56,7 +56,7 @@ namespace yae
   //
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
   typedef TQuickWidget TPlayerWidget;
-#elif defined(YAE_USE_QT5)
+#elif defined(YAE_USE_QOPENGL_WIDGET)
   typedef CanvasWidget<QOpenGLWidget> TPlayerWidget;
 #else
   typedef CanvasWidget<QGLWidget> TPlayerWidget;

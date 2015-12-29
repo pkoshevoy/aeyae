@@ -218,6 +218,7 @@ namespace yae
       onTimeout();
     }
 
+    p_->nsamples_ = 0;
     return true;
   }
 
@@ -227,7 +228,12 @@ namespace yae
   void
   FlickableArea::onTimeout()
   {
-    TMakeCurrentContext currentContext(*(p_->canvasLayer_.context()));
+    if (!p_->timer_.isActive())
+    {
+      // do not interfere with velocity estimation:
+      return;
+    }
+
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     double sh = scrollview.height();
     double ch = scrollview.content_.height();
@@ -247,7 +253,11 @@ namespace yae
 
     scrollview.position_ = s;
     p_->tStart_ = tNow;
-    p_->scrollbar_.uncache();
+    {
+      TMakeCurrentContext currentContext(*(p_->canvasLayer_.context()));
+      p_->scrollbar_.uncache();
+    }
+
     p_->canvasLayer_.delegate()->requestRepaint();
 
     if (s == 0.0 || s == 1.0 || v0 == 0.0)

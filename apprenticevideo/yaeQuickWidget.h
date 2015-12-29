@@ -8,6 +8,7 @@
 
 #ifndef YAE_QUICK_WIDGET_H_
 #define YAE_QUICK_WIDGET_H_
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 
 // Qt includes:
 #include <QQuickWidget>
@@ -47,4 +48,5 @@ namespace yae
 }
 
 
+#endif // YAE_USE_PLAYER_QUICK_WIDGET
 #endif // YAE_QUICK_WIDGET_H_

@@ -8,6 +8,7 @@
 
 #ifndef YAE_UTILS_QML_H_
 #define YAE_UTILS_QML_H_
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 
 // Qt includes:
 #include <QObject>
@@ -39,4 +40,5 @@ namespace yae
 }
 
 
+#endif // YAE_USE_PLAYER_QUICK_WIDGET
 #endif // YAE_UTILS_QML_H_

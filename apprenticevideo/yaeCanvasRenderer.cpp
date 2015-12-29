@@ -874,7 +874,7 @@ yae_assert_gl_no_error()
   return false;
 }
 
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
 namespace yae
 {
   //----------------------------------------------------------------
@@ -925,7 +925,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL_HERE();
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
   YAE_OPENGL(glBindBuffer(GL_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
 
@@ -938,7 +938,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OGL_11(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs));
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
   for (int i = 0; i < maxAttribs; ++i)
   {
     YAE_OPENGL(glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0));
@@ -1015,7 +1015,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL(glBlendFunc(GL_ONE, GL_ZERO));
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
   YAE_OPENGL(glUseProgram(0));
   yae_assert_gl_no_error();
 #endif

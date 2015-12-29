@@ -8,6 +8,7 @@
 
 #ifndef YAE_CANVAS_QUICK_FBO_H_
 #define YAE_CANVAS_QUICK_FBO_H_
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 
 // apprenticevideo includes:
 #include <yaeCanvas.h>
@@ -37,4 +38,5 @@ namespace yae
 }
 
 
+#endif // YAE_USE_PLAYER_QUICK_WIDGET
 #endif // YAE_CANVAS_QUICK_FBO_H_

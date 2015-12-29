@@ -18,7 +18,7 @@
 #include <boost/thread.hpp>
 
 // Qt includes:
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_QOPENGL_WIDGET
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
 #else
@@ -59,7 +59,7 @@ extern "C"
 namespace yae
 {
 
-#ifndef YAE_USE_QT5
+#ifndef YAE_USE_QOPENGL_WIDGET
   //----------------------------------------------------------------
   // initializeGlew
   //
@@ -527,7 +527,7 @@ namespace yae
   {
     TMakeCurrentContext currentContext(context());
 
-#ifndef YAE_USE_QT5
+#ifndef YAE_USE_QOPENGL_WIDGET
     // initialize OpenGL GLEW wrapper:
     static bool initialized = initializeGlew();
 #endif
@@ -998,7 +998,7 @@ namespace yae
     // this is just to prevent concurrent OpenGL access to the same context:
     TMakeCurrentContext lock(context());
 
-#ifndef YAE_USE_QT5
+#ifndef YAE_USE_QOPENGL_WIDGET
     // initialize OpenGL GLEW wrapper:
     static bool initialized = initializeGlew();
 #endif
@@ -1008,7 +1008,6 @@ namespace yae
 
     if (!private_ || (!overlay_ && (showTheGreeting_ || subsInOverlay_)))
     {
-      // qApp->postEvent(&eventReceiver_, new InitializeBackendEvent());
       initializePrivateBackend();
       updateOverlay(true);
     }

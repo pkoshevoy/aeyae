@@ -28,7 +28,7 @@
 #include <QMenu>
 #include <QMimeData>
 #include <QProcess>
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQmlContext>
 #include <QQuickItem>
 #endif
@@ -46,7 +46,7 @@
 
 // local includes:
 #include "yaeAudioRendererPortaudio.h"
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasQuickFbo.h"
 #include "yaeUtilsQml.h"
 #endif
@@ -438,15 +438,15 @@ namespace yae
 #endif
          "explore the menus for more options");
 
-#if defined(YAE_USE_QT4)
+#ifdef YAE_USE_QOPENGL_WIDGET
+    playerWidget_ = new TPlayerWidget(this);
+    playerWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
+#else
     // request vsync if available:
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
     contextFormat.setSampleBuffers(false);
     playerWidget_ = new TPlayerWidget(contextFormat);
-#elif defined(YAE_USE_QT5)
-    playerWidget_ = new TPlayerWidget(this);
-    playerWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #endif
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
@@ -2952,6 +2952,9 @@ namespace yae
     else
     {
       playback(index);
+
+      QModelIndex playingIndex = playlistModel_.playingItem();
+      playlistView_.ensureVisible(playingIndex);
     }
 
     if (!playlistModel_.hasItems())
@@ -2965,9 +2968,6 @@ namespace yae
         // show the welcome screen:
         playerItem->setState(QString::fromUtf8("welcome"));
       }
-#else
-    // FIXME: write me!
-    std::cerr << "FIXME: pkoshevoy: playlist item changed!" << std::endl;
 #endif
     }
   }
@@ -4896,10 +4896,12 @@ namespace yae
                                          bool heldDown)
   {
     MainWindow * mainWindow = (MainWindow *)observerContext;
-    qApp->postEvent(mainWindow, new RemoteControlEvent(buttonId,
-                                                       pressedDown,
-                                                       clickCount,
-                                                       heldDown));
+    qApp->postEvent(mainWindow,
+                    new RemoteControlEvent(buttonId,
+                                           pressedDown,
+                                           clickCount,
+                                           heldDown),
+                    Qt::HighEventPriority);
   }
 #endif
 };
