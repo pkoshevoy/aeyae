@@ -474,11 +474,13 @@ namespace yae
   void
   Text::uncache()
   {
-    fontSize_.uncache();
-    maxWidth_.uncache();
     bboxText_.uncache();
     text_.uncache();
+    fontSize_.uncache();
+    maxWidth_.uncache();
+    maxHeight_.uncache();
     color_.uncache();
+    background_.uncache();
     p_->uncache();
     Item::uncache();
   }

@@ -588,6 +588,7 @@ namespace yae
     fontSize_.uncache();
     cursorWidth_.uncache();
     color_.uncache();
+    background_.uncache();
     cursorColor_.uncache();
     selectionFg_.uncache();
     selectionBg_.uncache();
