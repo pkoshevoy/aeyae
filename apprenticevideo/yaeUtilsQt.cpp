@@ -10,18 +10,24 @@
 #include <set>
 
 // yae includes:
-#include <yaeAPI.h>
+#include "yae/video/yae_video.h"
+
+// local includes:
 #include <yaeUtilsQt.h>
 
 // Qt includes:
 #include <QDateTime>
 #include <QDirIterator>
+#include <QEvent>
 #include <QFile>
+#include <QMetaEnum>
 #include <QPainter>
 #include <QStringList>
 #include <QSettings>
+#include <QTextStream>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
 
 namespace yae
 {
@@ -901,8 +907,8 @@ namespace yae
 
     QRect bbox(bboxBig.x() + shadowOffset,
                bboxBig.y() + shadowOffset,
-               bboxBig.width() - shadowOffset,
-               bboxBig.height() - shadowOffset);
+               bboxBig.width() - shadowOffset * 2,
+               bboxBig.height() - shadowOffset * 2);
 
     QString textLeft;
     QString textRight;
@@ -968,17 +974,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // readNextXmlLineAndStripNullBytes
+  //
+  inline static bool
+  readNextXmlLineAndStripNullBytes(QTextStream & xml,
+                                   QXmlStreamReader & parser)
+  {
+    if (xml.atEnd())
+    {
+      return false;
+    }
+
+    QString line = xml.readLine();
+
+    // try to work around a real-life example of malformed XML
+    // produced by EyeTV:
+    //
+    // Agatha Christie's Poirot - Yellow Iris.eyetv/000000001b11d82d.eyetvr
+    //
+    line.remove(QChar(0));
+    parser.addData(line);
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // readNextValidToken
   //
   static QXmlStreamReader::TokenType
-  readNextValidToken(QXmlStreamReader & xml)
+  readNextValidToken(QTextStream & xml, QXmlStreamReader & parser)
   {
-    QXmlStreamReader::TokenType tt = xml.tokenType();
+    QXmlStreamReader::TokenType tt = parser.tokenType();
 
     for (int i = 0; i < 10; i++)
     {
-      xml.readNext();
-      tt = xml.tokenType();
+      parser.readNext();
+      tt = parser.tokenType();
 
       if (tt != QXmlStreamReader::NoToken &&
           tt != QXmlStreamReader::Invalid)
@@ -986,10 +1017,22 @@ namespace yae
         break;
       }
 
-      QXmlStreamReader::Error xerr = xml.error();
-      if (xml.atEnd() && xerr == QXmlStreamReader::NoError)
+      if (parser.atEnd())
       {
-        break;
+        QXmlStreamReader::Error xerr = parser.error();
+
+        if (xerr == QXmlStreamReader::NoError)
+        {
+          // EOF:
+          break;
+        }
+
+        if (xerr == QXmlStreamReader::PrematureEndOfDocumentError &&
+            !readNextXmlLineAndStripNullBytes(xml, parser))
+        {
+          // EOF, probably malformed:
+          break;
+        }
       }
     }
 
@@ -1000,21 +1043,22 @@ namespace yae
   // parseXmlTag
   //
   static bool
-  parseXmlTag(QXmlStreamReader & xml,
+  parseXmlTag(QTextStream & xml,
+              QXmlStreamReader & parser,
               std::string & name,
               QString & value)
   {
     name.clear();
     value.clear();
 
-    QXmlStreamReader::TokenType tt = xml.tokenType();
-    while (!xml.atEnd())
+    QXmlStreamReader::TokenType tt = parser.tokenType();
+    while (!parser.atEnd())
     {
       if (tt == QXmlStreamReader::StartElement)
       {
-        name = xml.name().toString().toLower().toUtf8().constData();
+        name = parser.name().toString().toLower().toUtf8().constData();
 
-        tt = readNextValidToken(xml);
+        tt = readNextValidToken(xml, parser);
         if (tt == QXmlStreamReader::StartElement)
         {
           return false;
@@ -1022,8 +1066,8 @@ namespace yae
 
         if (tt == QXmlStreamReader::Characters)
         {
-          value = xml.text().toString();
-          tt = readNextValidToken(xml);
+          value = parser.text().toString();
+          tt = readNextValidToken(xml, parser);
         }
 
         if (tt == QXmlStreamReader::StartElement)
@@ -1041,18 +1085,19 @@ namespace yae
           return false;
         }
 
-        tt = readNextValidToken(xml);
+        tt = readNextValidToken(xml, parser);
         if (tt == QXmlStreamReader::Characters)
         {
-          std::string t = xml.text().toString().trimmed().toUtf8().constData();
+          std::string t =
+            parser.text().toString().trimmed().toUtf8().constData();
           YAE_ASSERT(t.empty());
-          tt = readNextValidToken(xml);
+          tt = readNextValidToken(xml, parser);
         }
 
         return true;
       }
 
-      tt = readNextValidToken(xml);
+      tt = readNextValidToken(xml, parser);
     }
 
     return false;
@@ -1131,82 +1176,87 @@ namespace yae
         {
           return false;
         }
+
+        QTextStream xml(&xmlFile);
+
         std::string filename = fn.toUtf8().constData();
         std::string name;
         QString value;
         std::list<std::string> nodePath;
 
-        QXmlStreamReader xml(&xmlFile);
-        while (!xml.atEnd())
+        QXmlStreamReader parser;
+        bool done = false;
+
+        while (!done && readNextXmlLineAndStripNullBytes(xml, parser))
         {
-          bool nameValue = parseXmlTag(xml, name, value);
-          if (!nameValue)
+          while (!done && !parser.atEnd())
           {
-            if (name.empty())
+            bool nameValue = parseXmlTag(xml, parser, name, value);
+            if (!nameValue)
             {
-              break;
+              if (name.empty())
+              {
+                break;
+              }
+
+              nodePath.push_back(name);
             }
 
-            nodePath.push_back(name);
-          }
-
-          if (nameValue && name == "key")
-          {
-            std::string v = value.toLower().toUtf8().constData();
-
-            if (v == "recording title" && same(nodePath, "plist/dict/dict"))
+            if (nameValue && name == "key")
             {
-              if (!parseXmlTag(xml, name, value))
+              std::string v = value.toLower().toUtf8().constData();
+
+              if (v == "recording title" && same(nodePath, "plist/dict/dict"))
+              {
+                if (!parseXmlTag(xml, parser, name, value))
+                {
+                  YAE_ASSERT(false);
+                  return false;
+                }
+
+                program = value;
+              }
+              else if (v == "episode title" &&
+                       same(nodePath, "plist/dict/dict"))
+              {
+                if (!parseXmlTag(xml, parser, name, value))
+                {
+                  YAE_ASSERT(false);
+                  return false;
+                }
+
+                episode = value;
+              }
+              else if (v == "start" && same(nodePath, "plist/dict/dict"))
+              {
+                if (!parseXmlTag(xml, parser, name, value))
+                {
+                  YAE_ASSERT(false);
+                  return false;
+                }
+
+                QDateTime t = QDateTime::fromString(value, Qt::ISODate);
+                timestamp = t.toLocalTime().toString("yyyyMMdd hhmm");
+              }
+            }
+
+            QXmlStreamReader::TokenType tt = parser.tokenType();
+            if (tt == QXmlStreamReader::EndElement)
+            {
+              const std::string & top = nodePath.back();
+              name = parser.name().toString().toLower().toUtf8().constData();
+              if (top != name)
               {
                 YAE_ASSERT(false);
                 return false;
               }
 
-              program = value;
-            }
-            else if (v == "episode title" && same(nodePath, "plist/dict/dict"))
-            {
-              if (!parseXmlTag(xml, name, value))
-              {
-                YAE_ASSERT(false);
-                return false;
-              }
-
-              episode = value;
-            }
-            else if (v == "start" && same(nodePath, "plist/dict/dict"))
-            {
-              if (!parseXmlTag(xml, name, value))
-              {
-                YAE_ASSERT(false);
-                return false;
-              }
-
-              QDateTime t = QDateTime::fromString(value, Qt::ISODate);
-              timestamp = t.toLocalTime().toString("yyyyMMdd hhmm");
-            }
-          }
-
-          QXmlStreamReader::TokenType tt = xml.tokenType();
-          if (tt == QXmlStreamReader::EndElement)
-          {
-            const std::string & top = nodePath.back();
-            name = xml.name().toString().toLower().toUtf8().constData();
-            if (top != name)
-            {
-              YAE_ASSERT(false);
-              return false;
+              nodePath.pop_back();
             }
 
-            nodePath.pop_back();
-          }
-
-          if (!program.isEmpty() &&
-              !episode.isEmpty() &&
-              !timestamp.isEmpty())
-          {
-            // done:
-            break;
+            done = !(program.isEmpty() ||
+                     episode.isEmpty() ||
+                     timestamp.isEmpty());
           }
         }
       }
@@ -1717,6 +1767,131 @@ namespace yae
 
     playlist.push_back(path);
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // kNormalizationForm
+  //
+  static const QString::NormalizationForm kNormalizationForm[] =
+  {
+    QString::NormalizationForm_D,
+    QString::NormalizationForm_C,
+    QString::NormalizationForm_KD,
+    QString::NormalizationForm_KC
+  };
+
+  //----------------------------------------------------------------
+  // kNumNormalizationForms
+  //
+  static const std::size_t kNumNormalizationForms =
+    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
+
+  //----------------------------------------------------------------
+  // openFile
+  //
+  IReaderPtr
+  openFile(const yae::IReaderPtr & readerPrototype, const QString & path)
+  {
+    QString fn = path;
+    QFileInfo fi(fn);
+
+    if (fi.suffix() == kExtEyetv)
+    {
+      std::list<QString> found;
+      findFiles(found, path, false);
+
+      if (!found.empty())
+      {
+        fn = found.front();
+      }
+    }
+
+    IReaderPtr reader(readerPrototype->clone());
+
+    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
+    {
+      // find UNICODE NORMALIZATION FORM that works
+      // http://www.unicode.org/reports/tr15/
+      QString tmp = fn.normalized(kNormalizationForm[i]);
+      std::string filename = tmp.toUtf8().constData();
+
+      if (reader->open(filename.c_str()))
+      {
+        return reader;
+      }
+    }
+
+    reader.reset();
+    return reader;
+  }
+
+  //----------------------------------------------------------------
+  // testEachFile
+  //
+  bool
+  testEachFile(const yae::IReaderPtr & readerPrototype,
+               const std::list<QString> & playlist)
+  {
+    std::size_t numOpened = 0;
+    std::size_t numTotal = 0;
+
+    for (std::list<QString>::const_iterator j = playlist.begin();
+         j != playlist.end(); ++j)
+    {
+      const QString & fn = *j;
+      numTotal++;
+
+      IReaderPtr reader = yae::openFile(readerPrototype, fn);
+      if (reader)
+      {
+        numOpened++;
+      }
+    }
+
+    bool ok = (numOpened == numTotal);
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // toString
+  //
+  std::string
+  toString(QEvent::Type et)
+  {
+    static int eventEnumIndex =
+      QEvent::staticMetaObject.indexOfEnumerator("Type");
+
+    std::string name =
+      QEvent::staticMetaObject.
+      enumerator(eventEnumIndex).
+      valueToKey(et);
+
+    return name;
+  }
+
+  //----------------------------------------------------------------
+  // pixelFormatIdFor
+  //
+  TPixelFormatId
+  pixelFormatIdFor(QImage::Format qimageFormat)
+  {
+    TPixelFormatId pixelFormat =
+#ifdef _BIG_ENDIAN
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatARGB :
+#else
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatBGRA :
+#endif
+      (qimageFormat == QImage::Format_RGB888) ? kPixelFormatRGB24 :
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+      (qimageFormat == QImage::Format_Indexed8) ? kPixelFormatGRAY8 :
+#else
+      (qimageFormat == QImage::Format_Grayscale8) ? kPixelFormatGRAY8 :
+#endif
+      kInvalidPixelFormat;
+
+    return pixelFormat;
   }
 
 }

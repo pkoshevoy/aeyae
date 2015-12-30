@@ -23,8 +23,9 @@
 #include <iostream>
 #include <stdexcept>
 
-// GLEW includes:
-#include <GL/glew.h>
+// boost:
+#include <boost/locale.hpp>
+#include <boost/filesystem/path.hpp>
 
 // APPLE includes:
 #ifdef __APPLE__
@@ -37,9 +38,15 @@
 
 // Qt includes:
 #include <QApplication>
+#include <QDir>
 #include <QFileOpenEvent>
 
 // yae includes:
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_reader.h"
+#include "yae/utils/yae_utils.h"
+
+// local includes:
 #include <yaeMainWindow.h>
 #include <yaeUtilsQt.h>
 
@@ -60,7 +67,13 @@ namespace yae
   public:
     Application(int & argc, char ** argv):
       QApplication(argc, argv)
-    {}
+    {
+#ifdef __APPLE__
+      QString appDir = QApplication::applicationDirPath();
+      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
+      QApplication::addLibraryPath(plugInsDir);
+#endif
+    }
 
   protected:
     bool event(QEvent * e)
@@ -82,11 +95,22 @@ namespace yae
 }
 
 //----------------------------------------------------------------
+// plugins
+//
+yae::TPluginRegistry plugins;
+
+//----------------------------------------------------------------
 // mainMayThrowException
 //
 int
 mainMayThrowException(int argc, char ** argv)
 {
+  // Create and install global locale (UTF-8)
+  std::locale::global(boost::locale::generator().generate(""));
+
+  // Make boost.filesystem use it
+  boost::filesystem::path::imbue(std::locale());
+
 #if defined(_WIN32) && !defined(NDEBUG)
   // restore console stdio:
   {
@@ -142,6 +166,22 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setApplicationName("ApprenticeVideo");
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
+
+#ifdef YAE_USE_QT5
+  // setup opengl:
+  {
+    QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
+                       QSurfaceFormat::DeprecatedFunctions);
+    fmt.setAlphaBufferSize(0);
+    fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
+    fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    QSurfaceFormat::setDefaultFormat(fmt);
+  }
+  // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+  // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
+  // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
+#endif
+
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
@@ -162,9 +202,35 @@ mainMayThrowException(int argc, char ** argv)
     }
   }
 
+  //----------------------------------------------------------------
+  // readerPrototype
+  //
+  yae::IReaderPtr readerPrototype;
+
+  // load plugins:
+  std::string exeFolderPath;
+  if (yae::getCurrentExecutableFolder(exeFolderPath) &&
+      plugins.load(exeFolderPath.c_str()))
+  {
+    std::list<yae::IReaderPtr> readers;
+    if (plugins.find<yae::IReader>(readers))
+    {
+      readerPrototype = readers.front();
+    }
+  }
+
+  if (!readerPrototype)
+  {
+    std::cerr
+      << "ERROR: failed to find IReader plugin here: "
+      << exeFolderPath
+      << std::endl;
+    return -1;
+  }
+
   if (canary)
   {
-    yae::MainWindow::testEachFile(playlist);
+    yae::testEachFile(readerPrototype, playlist);
 
     // if it didn't crash, then it's all good:
     return 0;
@@ -176,18 +242,11 @@ mainMayThrowException(int argc, char ** argv)
   TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 #endif
 
-  yae::mainWindow = new yae::MainWindow();
+  yae::mainWindow = new yae::MainWindow(readerPrototype);
   yae::mainWindow->show();
 
-  // initialize OpenGL GLEW wrapper:
-  GLenum err = glewInit();
-  if (err != GLEW_OK)
-  {
-    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
-    YAE_ASSERT(false);
-  }
-
-  // initialize the canvas:
+  // initialize the player widget canvas, connect additional signals/slots:
+  yae::mainWindow->initPlayerWidget();
   yae::mainWindow->canvas()->initializePrivateBackend();
 
   yae::mainWindow->setPlaylist(playlist);

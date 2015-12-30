@@ -6,9 +6,11 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// yae includes:
+#include "yae/api/yae_api.h"
+
 // local includes:
 #include "yaeLineEdit.h"
-#include "yaeAPI.h"
 
 // Qt includes:
 #include <QToolButton>

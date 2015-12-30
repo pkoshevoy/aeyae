@@ -17,38 +17,68 @@
 
 // Qt includes:
 #include <QEvent>
-#include <QKeyEvent>
-#include <QMouseEvent>
-#include <QGLWidget>
-#include <QTimer>
-#include <QList>
-#include <QUrl>
+#include <QObject>
+#include <QString>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeAutoCrop.h>
-#include <yaeVideoCanvas.h>
-#include <yaeSynchronous.h>
-#include <yaeThreading.h>
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_auto_crop.h"
+#include "yae/video/yae_video_canvas.h"
+#include "yae/video/yae_synchronous.h"
+#include "yae/thread/yae_threading.h"
 
+// local includes:
+#include "yaeCanvasRenderer.h"
+#include "yaeThumbnailProvider.h"
 
-//----------------------------------------------------------------
-// yae_to_opengl
-//
-// returns number of sample planes supported by OpenGL,
-// passes back parameters to use with glTexImage2D
-//
-YAE_API unsigned int
-yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
-              GLint & internalFormat,
-              GLenum & format,
-              GLenum & dataType,
-              GLint & shouldSwapBytes);
 
 namespace yae
 {
-  class Canvas;
+  // forward declarations:
   class TLibass;
+  struct Canvas;
+
+  //----------------------------------------------------------------
+  // BufferedEvent
+  //
+  template <int EventId>
+  struct BufferedEvent : public QEvent
+  {
+    //----------------------------------------------------------------
+    // kId
+    //
+    enum { kId = EventId };
+
+    //----------------------------------------------------------------
+    // TPayload
+    //
+    struct TPayload
+    {
+      TPayload():
+        delivered_(true)
+      {}
+
+      bool setDelivered(bool delivered)
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        bool postThePayload = delivered_;
+        delivered_ = delivered;
+        return postThePayload;
+      }
+
+    private:
+      mutable boost::mutex mutex_;
+      bool delivered_;
+    };
+
+    BufferedEvent(TPayload & payload):
+      QEvent(QEvent::User),
+      payload_(payload)
+    {}
+
+    TPayload & payload_;
+  };
+
 
   //----------------------------------------------------------------
   // TFontAttachment
@@ -65,75 +95,97 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TFragmentShaderProgram
-  //
-  struct YAE_API TFragmentShaderProgram
-  {
-    TFragmentShaderProgram(const char * code = NULL);
-
-    // delete the program:
-    void destroy();
-
-    // helper:
-    inline bool loaded() const
-    { return code_ && handle_; }
-
-    // GL_ARB_fragment_program source code:
-    const char * code_;
-
-    // GL_ARB_fragment_program handle:
-    GLuint handle_;
-  };
-
-  //----------------------------------------------------------------
-  // TFragmentShader
-  //
-  struct YAE_API TFragmentShader
-  {
-    TFragmentShader(const TFragmentShaderProgram * program = NULL,
-                    TPixelFormatId format = kInvalidPixelFormat);
-
-    // pointer to the shader program:
-    const TFragmentShaderProgram * program_;
-
-    // number of texture objects required for this pixel format:
-    unsigned char numPlanes_;
-
-    // sample stride per texture object:
-    unsigned char stride_[4];
-
-    // sample plane (sub)sampling per texture object:
-    unsigned char subsample_x_[4];
-    unsigned char subsample_y_[4];
-
-    GLint internalFormatGL_[4];
-    GLenum pixelFormatGL_[4];
-    GLenum dataTypeGL_[4];
-    GLenum magFilterGL_[4];
-    GLenum minFilterGL_[4];
-    GLint shouldSwapBytes_[4];
-  };
-
-  //----------------------------------------------------------------
   // Canvas
   //
-  class YAE_API Canvas : public QGLWidget,
-                         public IVideoCanvas
+  struct YAE_API Canvas : public IVideoCanvas
   {
-    Q_OBJECT;
+    //----------------------------------------------------------------
+    // IDelegate
+    //
+    struct YAE_API IDelegate
+    {
+      virtual ~IDelegate() {}
 
-  public:
-    class TPrivate;
+      virtual bool isVisible() = 0;
+      virtual void repaint() = 0;
+      virtual void requestRepaint() = 0;
+      virtual void inhibitScreenSaver() = 0;
+    };
 
-    Canvas(const QGLFormat & format,
-           QWidget * parent = 0,
-           const QGLWidget * shareWidget = 0,
-           Qt::WindowFlags f = 0);
+    //----------------------------------------------------------------
+    // ILayer
+    //
+    struct YAE_API ILayer
+    {
+      ILayer(): enabled_(true) {}
+      virtual ~ILayer() {}
+
+      inline void setContext(const boost::shared_ptr<IOpenGLContext> & context)
+      { context_ = context; }
+
+      inline const boost::shared_ptr<IOpenGLContext> & context() const
+      { return context_; }
+
+      inline void setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+      { delegate_ = delegate; }
+
+      inline const boost::shared_ptr<IDelegate> & delegate() const
+      { return delegate_; }
+
+      inline bool isEnabled() const
+      { return enabled_; }
+
+      virtual void setEnabled(bool enable)
+      {
+        enabled_ = enable;
+
+        if (delegate_)
+        {
+          delegate_->requestRepaint();
+        }
+      }
+
+      virtual void requestRepaint() = 0;
+      virtual void resizeTo(const Canvas * canvas) = 0;
+      virtual void paint(Canvas * canvas) = 0;
+      virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
+
+      // lookup image provider for a given resource URL:
+      virtual TImageProviderPtr
+      getImageProvider(const QString & imageUrl, QString & imageId) const = 0;
+
+    protected:
+      boost::shared_ptr<IOpenGLContext> context_;
+      boost::shared_ptr<IDelegate> delegate_;
+      bool enabled_;
+    };
+
+    Canvas(const boost::shared_ptr<IOpenGLContext> & context);
     ~Canvas();
+
+    inline int canvasWidth() const
+    { return w_; }
+
+    inline int canvasHeight() const
+    { return h_; }
+
+    inline IOpenGLContext & context()
+    { return *context_; }
+
+    void setDelegate(const boost::shared_ptr<IDelegate> & delegate);
+
+    inline const boost::shared_ptr<IDelegate> & delegate() const
+    { return delegate_; }
 
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
+
+    // generic mechanism for delegating canvas painting and event processing:
+    // NOTE: 1. the last appended layer is front-most
+    //       2. painting -- back-to-front, for all layers
+    //       3. event handling -- front-to-back, until handled
+    void append(ILayer * layer);
 
     // lookup a fragment shader for a given pixel format, if one exits:
     const TFragmentShader * fragmentShaderFor(const VideoTraits & vtts) const;
@@ -154,6 +206,10 @@ namespace yae
 
     // helper:
     void refresh();
+
+    // NOTE: thread safe, will post a PaintCanvasEvent if there isn't one
+    // already posted-but-not-delivered (to avoid flooding the event queue):
+    void requestRepaint();
 
     // virtual: this will be called from a secondary thread:
     bool render(const TVideoFramePtr & frame);
@@ -233,26 +289,18 @@ namespace yae
     // once it is done updating fontconfig cache for libass:
     static void libassInitDoneCallback(void * canvas, TLibass * libass);
 
-  signals:
-    void toggleFullScreen();
-
-  public slots:
-    void hideCursor();
-    void wakeScreenSaver();
-
-  protected:
     TLibass * asyncInitLibass(const unsigned char * header = NULL,
                               const std::size_t headerSize = 0);
 
-    // virtual:
-    bool event(QEvent * event);
-    void mouseMoveEvent(QMouseEvent * event);
-    void mouseDoubleClickEvent(QMouseEvent * event);
-    void resizeEvent(QResizeEvent * event);
+    // helper:
+    void resize(int w, int h);
+    void paintCanvas();
 
-    // virtual: Qt/OpenGL stuff:
-    void initializeGL();
-    void paintGL();
+    //----------------------------------------------------------------
+    // PaintCanvasEvent
+    //
+    enum { kPaintCanvasEvent };
+    typedef BufferedEvent<kPaintCanvasEvent> PaintCanvasEvent;
 
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -309,19 +357,50 @@ namespace yae
       TPayload & payload_;
     };
 
-    RenderFrameEvent::TPayload payload_;
-    TPrivate * private_;
-    TPrivate * overlay_;
+  protected:
+    // NOTE: events will be delivered on the main thread:
+    bool processEvent(QEvent * event);
+
+    //----------------------------------------------------------------
+    // TEventReceiver
+    //
+    struct TEventReceiver : public QObject
+    {
+      TEventReceiver(Canvas & canvas):
+        canvas_(canvas)
+      {}
+
+      // virtual:
+      bool event(QEvent * event)
+      {
+        if (canvas_.processEvent(event))
+        {
+          return true;
+        }
+
+        return QObject::event(event);
+      }
+
+      Canvas & canvas_;
+    };
+
+    friend struct TEventReceiver;
+    TEventReceiver eventReceiver_;
+
+    boost::shared_ptr<IOpenGLContext> context_;
+    boost::shared_ptr<IDelegate> delegate_;
+    PaintCanvasEvent::TPayload paintCanvasEvent_;
+    RenderFrameEvent::TPayload renderFrameEvent_;
+    CanvasRenderer * private_;
+    CanvasRenderer * overlay_;
     TLibass * libass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
     TRenderMode renderMode_;
 
-    // a single shot timer for hiding the cursor:
-    QTimer timerHideCursor_;
-
-    // a single shot timer for preventing screen saver:
-    QTimer timerScreenSaver_;
+    // canvas size:
+    int w_;
+    int h_;
 
     // keep track of previously displayed subtitles
     // in order to avoid re-rendering the same subtitles with every frame:
@@ -336,6 +415,11 @@ namespace yae
 
     // extra fonts embedded in the video file, will be passed along to libass:
     std::list<TFontAttachment> customFonts_;
+
+    // a list of painting and event handling delegates,
+    // traversed front-to-back for painting
+    // and back-to-front for event processing:
+    std::list<ILayer *> layers_;
   };
 }
 

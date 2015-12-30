@@ -21,8 +21,15 @@
 #include <vector>
 #include <list>
 
+// boost:
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
+
 // local imports:
 #include <yaeVersion.h>
+
+// namespace shortcut:
+namespace fs = boost::filesystem;
 
 
 //----------------------------------------------------------------
@@ -143,7 +150,7 @@ main(int argc, char ** argv)
   }
 
   std::string dependsLog("depends-exe-log.txt");
-  std::string module(argv[1]);
+  std::string module = fs::path(argv[1]).make_preferred().string();
   std::string iconFile(argv[2]);
   std::string helpLink(argv[3]);
   std::string dependsExe(argv[4]);
@@ -288,7 +295,7 @@ main(int argc, char ** argv)
   std::string installerName;
   {
     std::ostringstream os;
-    os << "apprenticevideo-r" << YAE_REVISION;
+    os << "apprenticevideo-r" << YAE_REVISION_TIMESTAMP;
 #ifdef _WIN64
     os << "-win32-x64";
 #else
@@ -309,11 +316,16 @@ main(int argc, char ** argv)
   std::string guidProduct = makeGuidStr();
   std::string guidUpgrade = "a4a297db-1d6c-4320-b015-80add2a8d07c";
 
+  unsigned int major = 0;
+  unsigned int minor = 0;
+  unsigned int patch = 0;
+  yae_version(&major, &minor, &patch);
+
   out << " <Product Name='Apprentice Video' "
       << "Id='" << guidProduct << "' "
       << "UpgradeCode='" << guidUpgrade << "' "
       << "Language='1033' Codepage='1252' "
-      << "Version='0.0.0." << YAE_REVISION << "' "
+      << "Version='" << major << '.' << minor << '.' << patch << "' "
       << "Manufacturer='Pavel Koshevoy'>"
       << std::endl;
 

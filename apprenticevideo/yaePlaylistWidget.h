@@ -22,8 +22,11 @@
 #include <QTimer>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeTree.h>
+#include "yae/video/yae_video.h"
+#include "yae/utils/yae_tree.h"
+
+// local includes:
+#include "yaeBookmarks.h"
 
 
 namespace yae
@@ -119,15 +122,6 @@ namespace yae
 
     // a hash string identifying this group:
     std::string bookmarkHash_;
-  };
-
-  //----------------------------------------------------------------
-  // BookmarkHashInfo
-  //
-  struct BookmarkHashInfo
-  {
-    std::string groupHash_;
-    std::list<std::string> itemHash_;
   };
 
   //----------------------------------------------------------------

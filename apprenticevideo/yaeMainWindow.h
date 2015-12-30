@@ -18,18 +18,31 @@
 #include <QTimer>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeBookmarks.h>
-#include <yaeCanvas.h>
-#include <yaeReader.h>
-#include <yaeAudioRenderer.h>
-#include <yaeVideoRenderer.h>
-#include <yaeTimelineControls.h>
-#ifdef __APPLE__
-#include <yaeAppleRemoteControl.h>
-#endif
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_audio_renderer.h"
+#include "yae/video/yae_video_renderer.h"
 
 // local includes:
+#ifdef __APPLE__
+#include "yaeAppleRemoteControl.h"
+#include "yaeAppleUtils.h"
+#endif
+#include "yaeBookmarks.h"
+#ifndef YAE_USE_PLAYER_QUICK_WIDGET
+#include "yaeCanvasWidget.h"
+#endif
+#include "yaePlaylist.h"
+#include "yaePlaylistModel.h"
+#include "yaePlaylistModelProxy.h"
+#include "yaePlaylistView.h"
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+#include "yaeQuickWidget.h"
+#endif
+#include "yaeTimelineModel.h"
+#include "yaeTimelineView.h"
+
+// Qt uic generated files:
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
 #include "ui_yaeMainWindow.h"
@@ -38,6 +51,16 @@
 
 namespace yae
 {
+  //----------------------------------------------------------------
+  // TPlayerWidget
+  //
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+  typedef TQuickWidget TPlayerWidget;
+#elif defined(YAE_USE_QOPENGL_WIDGET)
+  typedef CanvasWidget<QOpenGLWidget> TPlayerWidget;
+#else
+  typedef CanvasWidget<QGLWidget> TPlayerWidget;
+#endif
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -84,7 +107,7 @@ namespace yae
   {
     PlaylistBookmark();
 
-    std::size_t itemIndex_;
+    TPlaylistItemPtr item_;
     QAction * action_;
   };
 
@@ -97,14 +120,13 @@ namespace yae
     Q_OBJECT;
 
   public:
-    MainWindow();
+    MainWindow(const IReaderPtr & readerPrototype);
     ~MainWindow();
+
+    void initPlayerWidget();
 
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
-
-    static IReader * openFile(const QString & fn);
-    static bool testEachFile(const std::list<QString> & playlist);
 
   protected:
     // open a movie file for playback:
@@ -166,10 +188,17 @@ namespace yae
     void playbackSetTempo(int percent);
 
     // helper:
+    void requestToggleFullScreen();
     void toggleFullScreen();
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
+    void exitPlaylist();
     void togglePlayback();
+    void skipToInPoint();
+    void skipToOutPoint();
+    void skipToNextFrame();
+    void skipForward();
+    void skipBack();
 
     // audio/video menus:
     void audioDownmixToStereo();
@@ -177,7 +206,7 @@ namespace yae
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
-    void playlistItemChanged(std::size_t index);
+    void playlistPlayingItemChanged(const QModelIndex & index);
 
     // window menu:
     void windowHalfSize();
@@ -203,8 +232,8 @@ namespace yae
     void playbackFinished(const SharedClock & c);
     void playbackStop();
     void playback(bool forward = true);
+    void playback(const QModelIndex & index, bool forward = true);
     void scrollWheelTimerExpired();
-    void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
     void adjustCanvasHeight();
     void canvasSizeBackup();
@@ -215,7 +244,7 @@ namespace yae
     bool findBookmark(const std::string & groupHash,
                       PlaylistBookmark & bookmark) const;
 
-    bool findBookmark(std::size_t itemIndex,
+    bool findBookmark(const TPlaylistItemPtr & item,
                       PlaylistBookmark & bookmark) const;
 
   protected:
@@ -247,7 +276,6 @@ namespace yae
     void adjustMenuActions();
     void adjustMenus(IReader * reader);
     void swapShortcuts();
-    void skipToNextFrame();
 
     unsigned int adjustAudioTraitsOverride(IReader * reader);
 
@@ -316,12 +344,20 @@ namespace yae
     QSignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
 
+    // file reader prototype factory instance:
+    IReaderPtr readerPrototype_;
+
     // file reader:
-    IReader * reader_;
+    IReaderPtr reader_;
     unsigned int readerId_;
 
     // frame canvas:
+    TPlayerWidget * playerWidget_;
     Canvas * canvas_;
+    PlaylistView playlistView_;
+    TimelineView timelineView_;
+    TimelineModel timelineModel_;
+    TPlaylistModel playlistModel_;
 
     // audio device:
     std::string audioDevice_;

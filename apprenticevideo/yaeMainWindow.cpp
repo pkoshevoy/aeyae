@@ -12,9 +12,6 @@
 #include <list>
 #include <math.h>
 
-// GLEW includes:
-#include <GL/glew.h>
-
 // boost includes:
 #include <boost/algorithm/string.hpp>
 
@@ -22,32 +19,42 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
-#include <QWheelEvent>
-#include <QDragEnterEvent>
-#include <QVBoxLayout>
-#include <QFileDialog>
-#include <QMimeData>
-#include <QUrl>
-#include <QSpacerItem>
-#include <QDesktopWidget>
-#include <QMenu>
-#include <QShortcut>
-#include <QFileInfo>
-#include <QProcess>
 #include <QDesktopServices>
+#include <QDesktopWidget>
 #include <QDirIterator>
+#include <QDragEnterEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QMenu>
+#include <QMimeData>
+#include <QProcess>
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+#include <QQmlContext>
+#include <QQuickItem>
+#endif
+#include <QShortcut>
+#include <QSpacerItem>
+#include <QUrl>
+#include <QVBoxLayout>
+#include <QWheelEvent>
 
 // yae includes:
-#include <yaeReaderFFMPEG.h>
-#include <yaePixelFormats.h>
-#include <yaePixelFormatTraits.h>
-#include <yaeAudioRendererPortaudio.h>
-#include <yaeVideoRenderer.h>
-#include <yaeVersion.h>
-#include <yaeUtilsQt.h>
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video_renderer.h"
 
 // local includes:
-#include <yaeMainWindow.h>
+#include "yaeAudioRendererPortaudio.h"
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+#include "yaeCanvasQuickFbo.h"
+#include "yaeUtilsQml.h"
+#endif
+#include "yaeMainWindow.h"
+#include "yaeTimelineModel.h"
+#include "yaeThumbnailProvider.h"
+#include "yaeUtilsQt.h"
+#include "yaeVersion.h"
 
 
 namespace yae
@@ -148,7 +155,6 @@ namespace yae
   //
   PlaylistBookmark::PlaylistBookmark():
     TBookmark(),
-    itemIndex_(std::numeric_limits<std::size_t>::max()),
     action_(NULL)
   {}
 
@@ -224,7 +230,7 @@ namespace yae
     bool heldDown_;
   };
 #endif
-
+#if 0
   //----------------------------------------------------------------
   // setTimelineCss
   //
@@ -310,11 +316,66 @@ namespace yae
   {
     setTimelineCss(timeline, true);
   }
+#endif
+
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+  //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(QQuickItem * item)
+  {
+    if (!item)
+    {
+      return NULL;
+    }
+
+    yae::CanvasQuickFbo * fbo = qobject_cast<yae::CanvasQuickFbo *>(item);
+    if (fbo)
+    {
+      return &fbo->canvas_;
+    }
+
+    QList<QQuickItem *> children = item->childItems();
+    for (QList<QQuickItem *>::iterator
+           i = children.begin(), end = children.end(); i != end; ++i)
+    {
+      yae::Canvas * found = getCanvas(*i);
+      if (found)
+      {
+        return found;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(TPlayerWidget * playerWidget)
+  {
+    // shortcut to the root QML item:
+    QQuickItem * item = playerWidget->rootObject();
+    return getCanvas(item);
+  }
+#else
+
+  //----------------------------------------------------------------
+  // getCanvas
+  //
+  static yae::Canvas *
+  getCanvas(TPlayerWidget * playerWidget)
+  {
+    return playerWidget;
+  }
+#endif
 
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
-  MainWindow::MainWindow():
+  MainWindow::MainWindow(const IReaderPtr & readerPrototype):
     QMainWindow(NULL, 0),
     audioDeviceGroup_(NULL),
     audioDeviceMapper_(NULL),
@@ -329,8 +390,9 @@ namespace yae
     bookmarksGroup_(NULL),
     bookmarksMapper_(NULL),
     bookmarksMenuSeparator_(NULL),
-    reader_(NULL),
+    readerPrototype_(readerPrototype),
     readerId_(0),
+    playerWidget_(NULL),
     canvas_(NULL),
     audioRenderer_(NULL),
     videoRenderer_(NULL),
@@ -351,8 +413,6 @@ namespace yae
 
     setupUi(this);
     setAcceptDrops(true);
-    setFocusPolicy(Qt::StrongFocus);
-    setFocusProxy(playlistWidget_);
     actionPlay->setText(tr("Pause"));
 
     contextMenu_ = new QMenu(this);
@@ -363,33 +423,58 @@ namespace yae
     this->setWindowIcon(QIcon(fnIcon));
 #endif
 
-    timelineControls_->setAuxWidgets(lineEditPlayhead_,
-                                     lineEditDuration_,
-                                     this);
-
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
 
+    // setup the canvas widget (QML quick widget):
+#ifndef YAE_USE_PLAYER_QUICK_WIDGET
+    QString greeting =
+      tr("drop videos/music here\n\n"
+         "press spacebar to pause/resume\n\n"
+         "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+         "use apple remote for volume and seeking\n\n"
+#endif
+         "explore the menus for more options");
+
+#ifdef YAE_USE_QOPENGL_WIDGET
+    playerWidget_ = new TPlayerWidget(this);
+    playerWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
+#else
     // request vsync if available:
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
+    contextFormat.setSampleBuffers(false);
+    playerWidget_ = new TPlayerWidget(contextFormat);
+#endif
+    playerWidget_->setGreeting(greeting);
+    playerWidget_->append(&playlistView_);
+    playerWidget_->append(&timelineView_);
+    playlistView_.setModel(&playlistModel_);
+    timelineView_.setModel(&timelineModel_);
 
-    canvas_ = new Canvas(contextFormat);
-    canvasLayout->addWidget(canvas_);
+    // add image://thumbnails/... provider:
+    boost::shared_ptr<ThumbnailProvider>
+      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
+    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
+                                   imageProvider);
 
-    reader_ = ReaderFFMPEG::create();
+#else
+    playerWidget_ = new TPlayerWidget(this);
+    playerWidget_->setResizeMode(QQuickWidget::SizeRootObjectToView);
+#endif
+    playerWidget_->setFocusPolicy(Qt::StrongFocus);
+    playerWidget_->setAcceptDrops(true);
+
+    // insert player widget into the main window layout:
+    canvasLayout->addWidget(playerWidget_);
+
+    YAE_ASSERT(readerPrototype_);
+    reader_.reset(readerPrototype_->clone());
+
     audioRenderer_ = AudioRendererPortaudio::create();
     videoRenderer_ = VideoRenderer::create();
-
-    // show the timeline:
-    setTimelineCssForVideo(timelineWidgets_);
-    actionShowTimeline->setChecked(true);
-    timelineWidgets_->show();
-
-    // hide the playlist:
-    actionShowPlaylist->setChecked(false);
-    playlistDock_->hide();
 
     // setup the Open URL dialog:
     {
@@ -462,6 +547,12 @@ namespace yae
     {
       audioDevice_ = audioDevice.toUtf8().constData();
     }
+
+#ifdef __APPLE__
+    actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
+#else
+    actionFullScreen->setShortcut(tr("F11"));
+#endif
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -784,24 +875,30 @@ namespace yae
                  this, SIGNAL(setOutPoint()));
     YAE_ASSERT(ok);
 
+    ok = connect(&playlistModel_, SIGNAL(itemCountChanged()),
+                 this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionRemove_, SIGNAL(triggered()),
-                 playlistWidget_, SLOT(removeSelected()));
+                 &playlistModel_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSelectAll_, SIGNAL(triggered()),
-                 playlistWidget_, SLOT(selectAll()));
+                 &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutRemove_, SIGNAL(activated()),
-                 playlistWidget_, SLOT(removeSelected()));
+                 &playlistModel_, SLOT(removeSelected()));
     YAE_ASSERT(ok);
 
     ok = connect(shortcutSelectAll_, SIGNAL(activated()),
-                 playlistWidget_, SLOT(selectAll()));
+                 &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
-    ok = connect(playlistWidget_, SIGNAL(currentItemChanged(std::size_t)),
-                 this, SLOT(playlistItemChanged(std::size_t)));
+    ok = connect(&playlistModel_,
+                 SIGNAL(playingItemChanged(const QModelIndex &)),
+                 this,
+                 SLOT(playlistPlayingItemChanged(const QModelIndex &)));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -824,7 +921,7 @@ namespace yae
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowPlaylist, SIGNAL(triggered()),
+    ok = connect(actionShowPlaylist, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowPlaylist()));
     YAE_ASSERT(ok);
 
@@ -832,7 +929,7 @@ namespace yae
                  actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowTimeline, SIGNAL(triggered()),
+     ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
 
@@ -860,9 +957,11 @@ namespace yae
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
 
-    ok = connect(canvas_, SIGNAL(toggleFullScreen()),
+#ifndef YAE_USE_PLAYER_QUICK_WIDGET
+    ok = connect(&(playerWidget_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
+#endif
 
     ok = connect(actionHalfSize, SIGNAL(triggered()),
                  this, SLOT(windowHalfSize()));
@@ -885,30 +984,30 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setInPoint()),
-                 timelineControls_, SLOT(setInPoint()));
+                 &timelineModel_, SLOT(setInPoint()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setOutPoint()),
-                 timelineControls_, SLOT(setOutPoint()));
+                 &timelineModel_, SLOT(setOutPoint()));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(userIsSeeking(bool)),
+    ok = connect(&timelineModel_, SIGNAL(userIsSeeking(bool)),
                  this, SLOT(userIsSeeking(bool)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(moveTimeIn(double)),
+    ok = connect(&timelineModel_, SIGNAL(moveTimeIn(double)),
                  this, SLOT(moveTimeIn(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(moveTimeOut(double)),
+    ok = connect(&timelineModel_, SIGNAL(moveTimeOut(double)),
                  this, SLOT(moveTimeOut(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(movePlayHead(double)),
+    ok = connect(&timelineModel_, SIGNAL(movePlayHead(double)),
                  this, SLOT(movePlayHead(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(clockStopped(const SharedClock &)),
+    ok = connect(&timelineModel_, SIGNAL(clockStopped(const SharedClock &)),
                  this, SLOT(playbackFinished(const SharedClock &)));
     YAE_ASSERT(ok);
 
@@ -922,18 +1021,6 @@ namespace yae
 
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
                  this, SLOT(scrollWheelTimerExpired()));
-    YAE_ASSERT(ok);
-
-    ok = connect(playlistDock_, SIGNAL(visibilityChanged(bool)),
-                 this, SLOT(playlistVisibilityChanged(bool)));
-    YAE_ASSERT(ok);
-
-    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
-                 playlistWidget_, SLOT(filterChanged(const QString &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
-                 this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
 
     ok = connect(&autocropTimer_, SIGNAL(timeout()),
@@ -977,7 +1064,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     adjustMenuActions();
-    adjustMenus(reader_);
+    adjustMenus(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -997,7 +1084,7 @@ namespace yae
     videoRenderer_->destroy();
 
     canvas_->cropAutoDetectStop();
-    delete canvas_;
+    delete playerWidget_;
   }
 
   //----------------------------------------------------------------
@@ -1010,18 +1097,131 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::initPlayerWidget
+  //
+  void
+  MainWindow::initPlayerWidget()
+  {
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+    QString greeting =
+      tr("drop videos/music here\n\n"
+         "press spacebar to pause/resume\n\n"
+         "alt-left/alt-right to navigate playlist\n\n"
+#ifdef __APPLE__
+         "use apple remote for volume and seeking\n\n"
+#endif
+         "explore the menus for more options");
+
+    qmlRegisterType<yae::CanvasQuickFbo>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "CanvasQuickFbo");
+
+    qmlRegisterType<yae::TPlaylistModel>("com.aragog.apprenticevideo",
+                                         1, // major
+                                         0, // minor
+                                         "TPlaylistModel");
+
+    qmlRegisterType<yae::TimelineModel>("com.aragog.apprenticevideo",
+                                        1, // major
+                                        0, // minor
+                                        "TimelineModel");
+
+    qmlRegisterType<yae::UtilsQml>("com.aragog.apprenticevideo",
+                                   1, // major
+                                   0, // minor
+                                   "UtilsQml");
+
+    // add image://thumbnails/... provider:
+    QQmlEngine * qmlEngine = playerWidget_->engine();
+    ThumbnailProvider * imageProvider =
+      new ThumbnailProvider(readerPrototype_, playlistModel_);
+    qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
+                                imageProvider);
+
+    // set playlist model:
+    QQmlContext * qmlContext = playerWidget_->rootContext();
+    qmlContext->setContextProperty("yae_playlist_model", &playlistModel_);
+    qmlContext->setContextProperty("yae_timeline_model", &timelineModel_);
+    qmlContext->setContextProperty("yae_qml_utils", UtilsQml::singleton());
+
+    // start the widget:
+    playerWidget_->setSource(QUrl("qrc:///qml/Player.qml"));
+
+    // shortcut to the root QML item:
+    QQuickItem * playerItem = playerWidget_->rootObject();
+
+    // set playlist-footer greeting message:
+    {
+      QQuickItem * item = playerItem->findChild<QQuickItem *>("greeting");
+      if (item)
+      {
+        item->setProperty("text", greeting);
+      }
+    }
+
+    bool ok = true;
+    ok = connect(playerItem, SIGNAL(toggleFullScreen()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(exitFullScreen()),
+                 this, SLOT(exitFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(exitPlaylist()),
+                 this, SLOT(exitPlaylist()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(togglePlayback()),
+                 this, SLOT(togglePlayback()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipToInPoint()),
+                 this, SLOT(skipToInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipToOutPoint()),
+                 this, SLOT(skipToOutPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipForward()),
+                 this, SLOT(skipForward()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(skipBack()),
+                 this, SLOT(skipBack()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerItem, SIGNAL(stepOneFrameForward()),
+                 this, SLOT(skipToNextFrame()));
+    YAE_ASSERT(ok);
+#endif
+
+    // get a shortcut to the Canvas (owned by the QML canvas widget):
+    canvas_ = yae::getCanvas(playerWidget_);
+    YAE_ASSERT(canvas_);
+
+    // show the timeline:
+    actionShowTimeline->setChecked(true);
+
+    // hide the playlist:
+    actionShowPlaylist->setChecked(false);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::setPlaylist
   //
   void
   MainWindow::setPlaylist(const std::list<QString> & playlist,
                           bool beginPlaybackImmediately)
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
 
     bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
-    playlistWidget_->add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+    playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
 
     if (!beginPlaybackImmediately)
     {
@@ -1032,7 +1232,7 @@ namespace yae
     {
       // look for a matching bookmark, resume playback if a bookmark exist:
       PlaylistBookmark bookmark;
-      const PlaylistItem * found = NULL;
+      TPlaylistItemPtr found;
 
       for (std::list<BookmarkHashInfo>::const_iterator i = hashInfo.begin();
            !found && i != hashInfo.end(); ++i)
@@ -1053,13 +1253,9 @@ namespace yae
           const std::string & itemHash = *j;
           if (itemHash == bookmark.itemHash_)
           {
-            found = playlistWidget_->lookup(bookmark.groupHash_,
-                                            bookmark.itemHash_,
-                                            &bookmark.itemIndex_);
-            if (found->excluded_)
-            {
-              found = NULL;
-            }
+            found = playlistModel_.lookup(bookmark.groupHash_,
+                                          bookmark.itemHash_);
+            bookmark.item_ = found;
           }
         }
       }
@@ -1072,6 +1268,9 @@ namespace yae
     }
 
     playback();
+
+    QModelIndex playingIndex = playlistModel_.playingItem();
+    playlistView_.ensureVisible(playingIndex);
   }
 
   //----------------------------------------------------------------
@@ -1211,75 +1410,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // kNormalizationForm
-  //
-  static const QString::NormalizationForm kNormalizationForm[] =
-  {
-    QString::NormalizationForm_D,
-    QString::NormalizationForm_C,
-    QString::NormalizationForm_KD,
-    QString::NormalizationForm_KC
-  };
-
-  //----------------------------------------------------------------
-  // kNumNormalizationForms
-  //
-  static const std::size_t kNumNormalizationForms =
-    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
-
-  //----------------------------------------------------------------
-  // MainWindow::openFile
-  //
-  IReader *
-  MainWindow::openFile(const QString & fn)
-  {
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
-
-    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
-    {
-      // find UNICODE NORMALIZATION FORM that works
-      // http://www.unicode.org/reports/tr15/
-      QString tmp = fn.normalized(kNormalizationForm[i]);
-      std::string filename = tmp.toUtf8().constData();
-
-      if (reader->open(filename.c_str()))
-      {
-        return reader;
-      }
-    }
-
-    reader->destroy();
-    return NULL;
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::testEachFile
-  //
-  bool
-  MainWindow::testEachFile(const std::list<QString> & playlist)
-  {
-    std::size_t numOpened = 0;
-    std::size_t numTotal = 0;
-
-    for (std::list<QString>::const_iterator j = playlist.begin();
-         j != playlist.end(); ++j)
-    {
-      const QString & fn = *j;
-      numTotal++;
-
-      IReader * reader = MainWindow::openFile(fn);
-      if (reader)
-      {
-        numOpened++;
-        reader->destroy();
-      }
-    }
-
-    bool ok = (numOpened == numTotal);
-    return ok;
-  }
-
-  //----------------------------------------------------------------
   // hasFileExt
   //
   inline static bool
@@ -1358,27 +1488,16 @@ namespace yae
   bool
   MainWindow::load(const QString & path, const TBookmark * bookmark)
   {
-    QString fn = path;
-    QFileInfo fi(fn);
-    if (fi.suffix() == kExtEyetv)
-    {
-      std::list<QString> found;
-      findFiles(found, path, false);
-
-      if (!found.empty())
-      {
-        fn = found.front();
-      }
-    }
-
     actionPlay->setEnabled(false);
 
-    IReader * reader = canaryTest(fn) ? MainWindow::openFile(fn) : NULL;
+    IReaderPtr reader =
+      canaryTest(path) ? yae::openFile(readerPrototype_, path) : IReaderPtr();
+
     if (!reader)
     {
 #if 0
       std::cerr
-        << "ERROR: could not open file: " << fn.toUtf8().constData()
+        << "ERROR: could not open file: " << path.toUtf8().constData()
         << std::endl;
 #endif
       return false;
@@ -1391,7 +1510,7 @@ namespace yae
     canvas_->acceptFramesWithReaderId(readerId_);
 
     // disconnect timeline from renderers:
-    timelineControls_->observe(SharedClock());
+    timelineModel_.observe(SharedClock());
 
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
@@ -1415,7 +1534,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader,
+    adjustMenuActions(reader.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,
@@ -1461,7 +1580,7 @@ namespace yae
       }
     }
 
-    selectVideoTrack(reader, vtrack);
+    selectVideoTrack(reader.get(), vtrack);
     videoTrackGroup_->actions().at((int)vtrack)->setChecked(true);
 
     if (rememberSelectedVideoTrack)
@@ -1470,7 +1589,7 @@ namespace yae
       reader->getVideoTraits(selVideoTraits_);
     }
 
-    selectAudioTrack(reader, atrack);
+    selectAudioTrack(reader.get(), atrack);
     audioTrackGroup_->actions().at((int)atrack)->setChecked(true);
 
     if (rememberSelectedAudioTrack)
@@ -1499,7 +1618,7 @@ namespace yae
       }
     }
 
-    selectSubsTrack(reader, strack);
+    selectSubsTrack(reader.get(), strack);
     subsTrackGroup_->actions().at((int)strack)->setChecked(true);
 
     if (rememberSelectedSubtitlesTrack)
@@ -1507,7 +1626,7 @@ namespace yae
       selSubsFormat_ = reader->subsInfo(strack, selSubs_);
     }
 
-    adjustMenus(reader);
+    adjustMenus(reader.get());
 
     reader_->close();
     videoRenderer_->close();
@@ -1516,8 +1635,20 @@ namespace yae
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
 
+    // hide the welcome screen:
+    {
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+      QQuickItem * playerItem = playerWidget_->rootObject();
+      std::string playerState = playerItem->state().toUtf8().constData();
+      if (playerState == "welcome")
+      {
+        playerItem->setState(QString::fromUtf8("playback"));
+      }
+#endif
+    }
+
     // reset timeline start, duration, playhead, in/out points:
-    timelineControls_->resetFor(reader);
+    timelineModel_.resetFor(reader.get());
 
     if (bookmark)
     {
@@ -1585,14 +1716,13 @@ namespace yae
     // too late if the reader already started the decoding loops;
     // renderers are started paused, so after the reader is started
     // the rendrers have to be resumed:
-    prepareReaderAndRenderers(reader, playbackPaused_);
+    prepareReaderAndRenderers(reader.get(), playbackPaused_);
 
     // this opens the output frame queues for renderers
     // and starts the decoding loops:
     reader->threadStart();
 
     // replace the previous reader:
-    reader_->destroy();
     reader_ = reader;
 
     // allow renderers to read from output frame queues:
@@ -1791,44 +1921,40 @@ namespace yae
 
     bookmarks_.clear();
 
-    std::size_t itemIndexNowPlaying = playlistWidget_->currentItem();
-    std::size_t itemIndex = 0;
+    QModelIndex itemIndexNowPlaying = playlistModel_.playingItem();
     std::size_t playingBookmarkIndex = std::numeric_limits<std::size_t>::max();
 
-    while (true)
+    QModelIndex rootIndex = playlistModel_.makeModelIndex(-1, -1);
+    const int numGroups = playlistModel_.rowCount(rootIndex);
+
+    for (int i = 0; i < numGroups; i++)
     {
-      PlaylistGroup * group = playlistWidget_->lookupGroup(itemIndex);
-      std::size_t groupSize = group ? group->items_.size() : 0;
-      if (!groupSize)
-      {
-        break;
-      }
+      QModelIndex groupIndex = playlistModel_.makeModelIndex(i, -1);
 
-      itemIndex += groupSize;
-
-      if (group->excluded_)
-      {
-        continue;
-      }
+      TPlaylistGroupPtr group;
+      playlistModel_.lookup(groupIndex, &group);
 
       // check whether there is a bookmark for an item in this group:
       PlaylistBookmark bookmark;
-      if (!yae::loadBookmark(group->bookmarkHash_, bookmark))
+      if (!yae::loadBookmark(group->hash_, bookmark))
       {
         continue;
       }
 
       // check whether the item hash matches a group item:
-      for (std::size_t i = 0; i < groupSize; i++)
+      const int groupSize = playlistModel_.rowCount(groupIndex);
+      for (int j = 0; j < groupSize; j++)
       {
-        const PlaylistItem & item = group->items_[i];
-        if (item.excluded_ || item.bookmarkHash_ != bookmark.itemHash_)
+        QModelIndex itemIndex = playlistModel_.makeModelIndex(i, j);
+        TPlaylistItemPtr item = playlistModel_.lookup(itemIndex);
+
+        if (!item || item->hash_ != bookmark.itemHash_)
         {
           continue;
         }
 
         // found a match, add it to the bookmarks menu:
-        bookmark.itemIndex_ = group->offset_ + i;
+        bookmark.item_ = item;
 
         std::string ts = TTime(bookmark.positionInSeconds_).to_hhmmss(":");
 
@@ -1853,13 +1979,13 @@ namespace yae
 #else
           QString::fromUtf8("\t") +
 #endif
-          escapeAmpersand(item.name_) +
+          escapeAmpersand(item->name_) +
           QString::fromUtf8(", ") +
           QString::fromUtf8(ts.c_str());
 
         bookmark.action_ = new QAction(name, this);
 
-        bool nowPlaying = (itemIndexNowPlaying == bookmark.itemIndex_);
+        bool nowPlaying = (itemIndexNowPlaying == itemIndex);
         if (nowPlaying)
         {
           playingBookmarkIndex = bookmarks_.size();
@@ -1894,9 +2020,9 @@ namespace yae
   void
   MainWindow::bookmarksRemoveNowPlaying()
   {
-    std::size_t itemIndex = playlistWidget_->currentItem();
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    QModelIndex itemIndex = playlistModel_.playingItem();
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
     if (!item || !group)
     {
       return;
@@ -1906,8 +2032,8 @@ namespace yae
          i != bookmarks_.end(); ++i)
     {
       PlaylistBookmark & bookmark = *i;
-      if (bookmark.groupHash_ != group->bookmarkHash_ ||
-          bookmark.itemHash_ != item->bookmarkHash_)
+      if (bookmark.groupHash_ != group->hash_ ||
+          bookmark.itemHash_ != item->hash_)
       {
         continue;
       }
@@ -2155,13 +2281,13 @@ namespace yae
   //
   struct TIgnoreClockStop
   {
-    TIgnoreClockStop(TimelineControls * tc):
-      tc_(tc)
+    TIgnoreClockStop(TimelineModel & timeline):
+      timeline_(timeline)
     {
       count_++;
       if (count_ < 2)
       {
-        tc_->ignoreClockStoppedEvent(true);
+        timeline_.ignoreClockStoppedEvent(true);
       }
     }
 
@@ -2170,7 +2296,7 @@ namespace yae
       count_--;
       if (!count_)
       {
-        tc_->ignoreClockStoppedEvent(false);
+        timeline_.ignoreClockStoppedEvent(false);
       }
     }
 
@@ -2179,7 +2305,7 @@ namespace yae
     TIgnoreClockStop & operator = (const TIgnoreClockStop &);
 
     static int count_;
-    TimelineControls * tc_;
+    TimelineModel & timeline_;
   };
 
   //----------------------------------------------------------------
@@ -2201,15 +2327,15 @@ namespace yae
     bool skipColorConverter = actionSkipColorConverter->isChecked();
     saveBooleanSetting(kSkipColorConverter, skipColorConverter);
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
     stopRenderers();
 
     std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
-    selectVideoTrack(reader_, videoTrack);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    selectVideoTrack(reader_.get(), videoTrack);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2276,19 +2402,23 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
-    SignalBlocker blockSignals(actionShowPlaylist);
-    canvasSizeBackup();
+    bool showPlaylist = actionShowPlaylist->isChecked();
 
-    if (playlistDock_->isVisible())
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+    QQuickItem * playerItem = playerWidget_->rootObject();
+    if (!playerItem)
     {
-      actionShowPlaylist->setChecked(false);
-      playlistDock_->hide();
+      return;
     }
-    else
-    {
-      actionShowPlaylist->setChecked(true);
-      playlistDock_->show();
-    }
+
+    const char * state =
+      showPlaylist ? "playlist" :
+      playlistModel_.hasItems() ? "playback" :
+      "welcome";
+    playerItem->setState(QString::fromUtf8(state));
+#else
+    playlistView_.setEnabled(showPlaylist);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2297,33 +2427,25 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
-    SignalBlocker blockSignals(actionShowTimeline);
+    bool showTimeline = actionShowTimeline->isChecked();
 
-    QRect mainGeom = geometry();
-    int ctrlHeight = timelineWidgets_->height();
-    bool fullScreen = this->isFullScreen();
-
-    if (timelineWidgets_->isVisible())
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+    QQuickItem * playerItem = playerWidget_->rootObject();
+    if (!playerItem)
     {
-      actionShowTimeline->setChecked(false);
-      timelineWidgets_->hide();
-
-      if (!fullScreen)
-      {
-        resize(width(), mainGeom.height() - ctrlHeight);
-      }
+      return;
     }
-    else
+
+    QQuickItem * timeline =
+      playerItem->findChild<QQuickItem *>("timeline");
+
+    if (timeline)
     {
-      actionShowTimeline->setChecked(true);
-
-      if (!fullScreen)
-      {
-        resize(width(), mainGeom.height() + ctrlHeight);
-      }
-
-      timelineWidgets_->show();
+      timeline->setVisible(showTimeline);
     }
+#else
+    timelineView_.setEnabled(showTimeline);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2386,6 +2508,24 @@ namespace yae
     yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);
     yae::swapShortcuts(shortcutAspectRatio1_33_, actionAspectRatio1_33);
     yae::swapShortcuts(shortcutAspectRatio1_78_, actionAspectRatio1_78);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::requestToggleFullScreen
+  //
+  void
+  MainWindow::requestToggleFullScreen()
+  {
+    // all this to work-around apparent QML bug where
+    // toggling full-screen on double-click leaves Flickable in
+    // a state where it never receives the button-up event
+    // and ends up interpreting all mouse movement as dragging,
+    // very annoying...
+    //
+    // The workaround is to delay fullscreen toggle to allow
+    // Flickable time to receive the button-up event
+
+    QTimer::singleShot(150, this, SLOT(toggleFullScreen()));
   }
 
   //----------------------------------------------------------------
@@ -2498,6 +2638,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::exitPlaylist
+  //
+  void
+  MainWindow::exitPlaylist()
+  {
+    actionShowPlaylist->setChecked(false);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::togglePlayback
   //
   void
@@ -2516,7 +2665,7 @@ namespace yae
     if (!playbackPaused_)
     {
       actionPlay->setText(tr("Pause"));
-      prepareReaderAndRenderers(reader_, playbackPaused_);
+      prepareReaderAndRenderers(reader_.get(), playbackPaused_);
       resumeRenderers();
 
       bookmarkTimer_.start();
@@ -2524,13 +2673,49 @@ namespace yae
     else
     {
       actionPlay->setText(tr("Play"));
-      TIgnoreClockStop ignoreClockStop(timelineControls_);
+      TIgnoreClockStop ignoreClockStop(timelineModel_);
       stopRenderers();
-      prepareReaderAndRenderers(reader_, playbackPaused_);
+      prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
       bookmarkTimer_.stop();
       saveBookmark();
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToInPoint
+  //
+  void
+  MainWindow::skipToInPoint()
+  {
+    timelineModel_.seekTo(timelineModel_.timeIn());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipToOutPoint
+  //
+  void
+  MainWindow::skipToOutPoint()
+  {
+    timelineModel_.seekTo(timelineModel_.timeOut());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipForward
+  //
+  void
+  MainWindow::skipForward()
+  {
+    timelineModel_.seekFromCurrentTime(7.0);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::skipBack
+  //
+  void
+  MainWindow::skipBack()
+  {
+    timelineModel_.seekFromCurrentTime(-3.0);
   }
 
   //----------------------------------------------------------------
@@ -2542,13 +2727,13 @@ namespace yae
     saveBooleanSetting(kDownmixToStereo, actionDownmixToStereo->isChecked());
 
     // reset reader:
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
 
     stopRenderers();
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2568,14 +2753,14 @@ namespace yae
 
     saveSetting(kAudioDevice, audioDevice);
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
     stopRenderers();
 
     audioDevice_.assign(audioDevice.toUtf8().constData());
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2592,16 +2777,16 @@ namespace yae
     std::cerr << "audioSelectTrack: " << index << std::endl;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
     stopRenderers();
 
-    selectAudioTrack(reader_, index);
+    selectAudioTrack(reader_.get(), index);
     reader_->getSelectedAudioTrackInfo(selAudio_);
     reader_->getAudioTraits(selAudioTraits_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2618,16 +2803,16 @@ namespace yae
     std::cerr << "videoSelectTrack: " << index << std::endl;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
     stopRenderers();
 
-    selectVideoTrack(reader_, index);
+    selectVideoTrack(reader_.get(), index);
     reader_->getSelectedVideoTrackInfo(selVideo_);
     reader_->getVideoTraits(selVideoTraits_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2644,15 +2829,15 @@ namespace yae
     std::cerr << "subsSelectTrack: " << index << std::endl;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
     reader_->threadStop();
     stopRenderers();
 
-    selectSubsTrack(reader_, index);
+    selectSubsTrack(reader_.get(), index);
     selSubsFormat_ = reader_->subsInfo(index, selSubs_);
-    prepareReaderAndRenderers(reader_, playbackPaused_);
+    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineModel_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2665,7 +2850,7 @@ namespace yae
   void
   MainWindow::updateChaptersMenu()
   {
-    const double playheadInSeconds = timelineControls_->currentTime();
+    const double playheadInSeconds = timelineModel_.currentTime();
     QList<QAction *> actions = chaptersGroup_->actions();
 
     const std::size_t numActions = actions.size();
@@ -2714,7 +2899,7 @@ namespace yae
   void
   MainWindow::skipToNextChapter()
   {
-    const double playheadInSeconds = timelineControls_->currentTime();
+    const double playheadInSeconds = timelineModel_.currentTime();
     const std::size_t numChapters = reader_->countChapters();
 
     for (std::size_t i = 0; i < numChapters; i++)
@@ -2724,7 +2909,7 @@ namespace yae
       {
         if (playheadInSeconds < ch.start_)
         {
-          timelineControls_->seekTo(ch.start_);
+          timelineModel_.seekTo(ch.start_);
           return;
         }
       }
@@ -2748,28 +2933,48 @@ namespace yae
     bool ok = reader_->getChapterInfo(index, ch);
     YAE_ASSERT(ok);
 
-    timelineControls_->seekTo(ch.start_);
+    timelineModel_.seekTo(ch.start_);
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playlistItemChanged
+  // MainWindow::playlistPlayingItemChanged
   //
   void
-  MainWindow::playlistItemChanged(std::size_t index)
+  MainWindow::playlistPlayingItemChanged(const QModelIndex & index)
   {
     playbackStop();
 
-    PlaylistItem * item = playlistWidget_->lookup(index);
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (!item)
     {
       canvas_->clear();
+#ifndef YAE_USE_PLAYER_QUICK_WIDGET
+      // FIXME: this could be handled as a playlist view state instead:
       canvas_->setGreeting(canvas_->greeting());
+#endif
       actionPlay->setEnabled(false);
       fixupNextPrev();
     }
     else
     {
-      playback();
+      playback(index);
+
+      QModelIndex playingIndex = playlistModel_.playingItem();
+      playlistView_.ensureVisible(playingIndex);
+    }
+
+    if (!playlistModel_.hasItems())
+    {
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
+      QQuickItem * playerItem = playerWidget_->rootObject();
+      std::string playerState = playerItem->state().toUtf8().constData();
+
+      if (playerState == "playback")
+      {
+        // show the welcome screen:
+        playerItem->setState(QString::fromUtf8("welcome"));
+      }
+#endif
     }
   }
 
@@ -2810,7 +3015,7 @@ namespace yae
     if (!about)
     {
       about = new AboutDialog(this);
-      about->setWindowTitle(tr("Apprentice Video (revision %1)").
+      about->setWindowTitle(tr("Apprentice Video (%1)").
                             arg(QString::fromUtf8(YAE_REVISION)));
     }
 
@@ -2826,11 +3031,22 @@ namespace yae
     std::list<QString> playlist;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
-      QString fullpath = QFileInfo(i->toLocalFile()).canonicalFilePath();
+      QUrl url = *i;
+
+#ifdef __APPLE__
+      if (url.toString().startsWith("file:///.file/id="))
+      {
+        std::string strUrl = url.toString().toUtf8().constData();
+        strUrl = yae::absoluteUrlFrom(strUrl.c_str());
+        url = QUrl::fromEncoded(QByteArray(strUrl.c_str()));
+      }
+#endif
+
+      QString fullpath = QFileInfo(url.toLocalFile()).canonicalFilePath();
       if (!addToPlaylist(playlist, fullpath))
       {
-        QString url = i->toString();
-        addToPlaylist(playlist, url);
+        QString strUrl = url.toString();
+        addToPlaylist(playlist, strUrl);
       }
     }
 
@@ -2985,7 +3201,7 @@ namespace yae
   void
   MainWindow::playbackFinished(const SharedClock & c)
   {
-    if (!timelineControls_->sharedClock().sharesCurrentTimeWith(c))
+    if (!timelineModel_.sharedClock().sharesCurrentTimeWith(c))
     {
 #ifndef NDEBUG
       std::cerr
@@ -2998,35 +3214,29 @@ namespace yae
     // remove current bookmark:
     bookmarkTimer_.stop();
 
-    std::size_t itemIndex = playlistWidget_->currentItem();
-    std::size_t nNext = playlistWidget_->countItemsAhead();
-    std::size_t iNext = playlistWidget_->closestItem(itemIndex + 1);
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
-    PlaylistItem * next =
-      nNext && iNext > itemIndex ? playlistWidget_->lookup(iNext) : NULL;
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
+    TPlaylistItemPtr next = playlistModel_.lookup(iNext);
 
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
-
-    if (item && group)
+    if (item && next && (&(item->group_) != &(next->group_)))
     {
-      PlaylistGroup * nextGroup = NULL;
-      playlistWidget_->closestItem(itemIndex + 1,
-                                   PlaylistWidget::kAhead,
-                                   &nextGroup);
+      const PlaylistGroup * itemGroup = &(item->group_);
+      const PlaylistGroup * nextGroup = &(next->group_);
 
-      if (group != nextGroup)
+      if (itemGroup != nextGroup)
       {
         PlaylistBookmark bookmark;
 
         // if current item was bookmarked, then remove it from bookmarks:
-        if (findBookmark(itemIndex, bookmark))
+        if (findBookmark(item, bookmark))
         {
-          yae::removeBookmark(group->bookmarkHash_);
+          yae::removeBookmark(itemGroup->hash_);
         }
 
         // if a bookmark exists for the next item group, then use it:
-        if (nextGroup && findBookmark(nextGroup->bookmarkHash_, bookmark))
+        if (nextGroup && findBookmark(nextGroup->hash_, bookmark))
         {
           gotoBookmark(bookmark);
           return;
@@ -3037,8 +3247,8 @@ namespace yae
     if (!next && actionRepeatPlaylist->isChecked())
     {
       // repeat the playlist:
-      std::size_t first = playlistWidget_->closestItem(0);
-      playlistWidget_->setCurrentItem(first, true);
+      QModelIndex first = playlistModel_.firstItem();
+      playlistModel_.setPlayingItem(first);
       return;
     }
 
@@ -3052,23 +3262,20 @@ namespace yae
   void
   MainWindow::playbackStop()
   {
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
-    timelineControls_->observe(SharedClock());
-    timelineControls_->resetFor(reader);
+    IReaderPtr reader(readerPrototype_->clone());
+    timelineModel_.observe(SharedClock());
+    timelineModel_.resetFor(reader.get());
 
     reader_->close();
     videoRenderer_->close();
     audioRenderer_->close();
 
-    reader_->destroy();
     reader_ = reader;
-
-    timelineControls_->update();
 
     this->setWindowTitle(tr("Apprentice Video"));
 
     adjustMenuActions();
-    adjustMenus(reader_);
+    adjustMenus(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -3077,14 +3284,24 @@ namespace yae
   void
   MainWindow::playback(bool forward)
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    QModelIndex current = playlistModel_.playingItem();
+    playback(current, forward);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playback
+  //
+  void
+  MainWindow::playback(const QModelIndex & startHere, bool forward)
+  {
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t current = playlistWidget_->currentItem();
-    PlaylistItem * item = NULL;
+    QModelIndex current = startHere;
+    TPlaylistItemPtr item;
     bool ok = false;
 
-    while ((item = playlistWidget_->lookup(current)))
+    while ((item = playlistModel_.lookup(current)))
     {
       item->failed_ = !load(item->path_);
 
@@ -3096,15 +3313,12 @@ namespace yae
 
       if (forward)
       {
-        current = playlistWidget_->closestItem(current + 1);
+        current = playlistModel_.nextItem(current);
       }
       else
       {
-        current = playlistWidget_->closestItem(current - 1,
-                                               PlaylistWidget::kBehind);
+        current = playlistModel_.prevItem(current);
       }
-
-      playlistWidget_->setCurrentItem(current);
     }
 
     fixupNextPrev();
@@ -3112,6 +3326,10 @@ namespace yae
     if (!ok && !forward)
     {
       playback(true);
+    }
+    else
+    {
+      playlistModel_.setPlayingItem(current);
     }
   }
 
@@ -3121,28 +3339,19 @@ namespace yae
   void
   MainWindow::fixupNextPrev()
   {
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t nNext = playlistWidget_->countItemsAhead();
-    std::size_t nPrev = playlistWidget_->countItemsBehind();
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
-    std::size_t iNext =
-      nNext ?
-      playlistWidget_->closestItem(index + 1) :
-      index;
+    QModelIndex iPrev =
+      index.isValid() ?
+      playlistModel_.prevItem(index) :
+      playlistModel_.lastItem();
 
-    std::size_t iPrev =
-      nPrev ?
-      playlistWidget_->closestItem(index - 1, PlaylistWidget::kBehind) :
-      index;
+    TPlaylistItemPtr prev = playlistModel_.lookup(iPrev);
+    TPlaylistItemPtr next = playlistModel_.lookup(iNext);
 
-    PlaylistItem * prev =
-      nPrev && iPrev < index ? playlistWidget_->lookup(iPrev) : NULL;
-
-    PlaylistItem * next =
-      nNext && iNext > index ? playlistWidget_->lookup(iNext) : NULL;
-
-    actionPrev->setEnabled(iPrev < index);
-    actionNext->setEnabled(iNext > index);
+    actionPrev->setEnabled(!!prev);
+    actionNext->setEnabled(index.isValid());
 
     if (prev)
     {
@@ -3171,17 +3380,13 @@ namespace yae
   {
     playbackStop();
 
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t iNext = playlistWidget_->closestItem(index + 1);
-    if (iNext > index)
-    {
-      playlistWidget_->setCurrentItem(iNext);
-    }
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iNext = playlistModel_.nextItem(index);
 
-    playback(true);
+    playback(iNext, true);
   }
 
   //----------------------------------------------------------------
@@ -3190,18 +3395,16 @@ namespace yae
   void
   MainWindow::playbackPrev()
   {
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    std::size_t index = playlistWidget_->currentItem();
-    std::size_t iPrev = playlistWidget_->closestItem(index - 1,
-                                                     PlaylistWidget::kBehind);
-    if (iPrev < index)
-    {
-      playlistWidget_->setCurrentItem(iPrev);
-    }
+    QModelIndex index = playlistModel_.playingItem();
+    QModelIndex iPrev =
+      index.isValid() ?
+      playlistModel_.prevItem(index) :
+      playlistModel_.lastItem();
 
-    playback(false);
+    playback(iPrev, false);
   }
 
   //----------------------------------------------------------------
@@ -3225,26 +3428,12 @@ namespace yae
     bool isLooping = actionLoop->isChecked();
     if (isLooping)
     {
-      double t0 = timelineControls_->timelineStart();
-      double dt = timelineControls_->timelineDuration();
+      double t0 = timelineModel_.timelineStart();
+      double dt = timelineModel_.timelineDuration();
       seconds = t0 + fmod(seconds - t0, dt);
     }
 
-    timelineControls_->seekTo(seconds);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::playlistVisibilityChanged
-  //
-  void
-  MainWindow::playlistVisibilityChanged(bool visible)
-  {
-    if (actionShowPlaylist->isEnabled())
-    {
-      actionShowPlaylist->setChecked(visible);
-    }
-
-    QTimer::singleShot(1, this, SLOT(canvasSizeRestore()));
+    timelineModel_.seekTo(seconds);
   }
 
   //----------------------------------------------------------------
@@ -3263,16 +3452,16 @@ namespace yae
       return;
     }
 
-    std::size_t itemIndex = playlistWidget_->currentItem();
-    PlaylistGroup * group = NULL;
-    PlaylistItem * item = playlistWidget_->lookup(itemIndex, &group);
+    QModelIndex itemIndex = playlistModel_.playingItem();
+    TPlaylistGroupPtr group;
+    TPlaylistItemPtr item = playlistModel_.lookup(itemIndex, &group);
 
     if (group && item)
     {
-      double positionInSeconds = timelineControls_->currentTime();
-      yae::saveBookmark(group->bookmarkHash_,
-                        item->bookmarkHash_,
-                        reader_,
+      double positionInSeconds = timelineModel_.currentTime();
+      yae::saveBookmark(group->hash_,
+                        item->hash_,
+                        reader_.get(),
                         positionInSeconds);
 
       // refresh the bookmarks list:
@@ -3288,15 +3477,22 @@ namespace yae
   {
     playbackStop();
 
-    SignalBlocker blockSignals(playlistWidget_);
+    // SignalBlocker blockSignals(&playlistModel_);
     actionPlay->setEnabled(false);
 
-    playlistWidget_->setCurrentItem(bookmark.itemIndex_);
-    PlaylistItem * item = playlistWidget_->lookup(bookmark.itemIndex_);
+    QModelIndex index = playlistModel_.lookupModelIndex(bookmark.groupHash_,
+                                                        bookmark.itemHash_);
 
+    TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (item)
     {
+      playlistModel_.setPlayingItem(index);
       item->failed_ = !load(item->path_, &bookmark);
+
+      if (!item->failed_)
+      {
+        playlistView_.ensureVisible(index);
+      }
     }
 
     fixupNextPrev();
@@ -3306,14 +3502,14 @@ namespace yae
   // MainWindow::findBookmark
   //
   bool
-  MainWindow::findBookmark(std::size_t itemIndex,
+  MainWindow::findBookmark(const TPlaylistItemPtr & item,
                            PlaylistBookmark & found) const
   {
     for (std::vector<PlaylistBookmark>::const_iterator i = bookmarks_.begin();
          i != bookmarks_.end(); ++i)
     {
       const PlaylistBookmark & bookmark = *i;
-      if (bookmark.itemIndex_ == itemIndex)
+      if (bookmark.item_ == item)
       {
         found = bookmark;
         return true;
@@ -3366,7 +3562,7 @@ namespace yae
       if (rc)
       {
         rc->accept();
-#if 0
+#if 0 // ndef NDEBUG
         std::cerr << "remote control: " << rc->buttonId_
                   << ", down: " << rc->pressedDown_
                   << ", clicks: " << rc->clickCount_
@@ -3398,7 +3594,7 @@ namespace yae
             }
             else
             {
-              playbackShowTimeline();
+              actionShowTimeline->trigger();
             }
           }
         }
@@ -3454,7 +3650,7 @@ namespace yae
             double offset =
               (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
 
-            timelineControls_->seekFromCurrentTime(offset);
+            timelineModel_.seekFromCurrentTime(offset);
           }
         }
 
@@ -3472,7 +3668,7 @@ namespace yae
   void
   MainWindow::wheelEvent(QWheelEvent * e)
   {
-    double tNow = timelineControls_->currentTime();
+    double tNow = timelineModel_.currentTime();
     if (tNow <= 1e-1)
     {
       // ignore it:
@@ -3545,7 +3741,18 @@ namespace yae
     int key = event->key();
     if (key == Qt::Key_Escape)
     {
-      exitFullScreen();
+      if (actionShowPlaylist->isChecked())
+      {
+        actionShowPlaylist->trigger();
+      }
+      else if (actionShowTimeline->isChecked())
+      {
+        actionShowTimeline->trigger();
+      }
+      else
+      {
+        exitFullScreen();
+      }
     }
     else if (key == Qt::Key_I)
     {
@@ -3563,13 +3770,13 @@ namespace yae
              key == Qt::Key_Period ||
              key == Qt::Key_Greater)
     {
-      timelineControls_->seekFromCurrentTime(7.0);
+      skipForward();
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
              key == Qt::Key_Less)
     {
-      timelineControls_->seekFromCurrentTime(-3.0);
+      skipBack();
     }
     else if (key == Qt::Key_MediaPlay ||
 #if QT_VERSION >= 0x040700
@@ -3609,8 +3816,8 @@ namespace yae
     std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
     bool hasAudio = audioTrackIndex < numAudioTracks;
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
-    const IReader * reader = reader_;
+    TIgnoreClockStop ignoreClockStop(timelineModel_);
+    IReaderPtr reader = reader_;
 
     QTime startTime = QTime::currentTime();
     bool done = false;
@@ -3623,7 +3830,7 @@ namespace yae
         // to push new packets into audio/video queues:
 
         TTime dt(1001, 60000);
-        audioRenderer_->skipForward(dt, reader_);
+        audioRenderer_->skipForward(dt, reader_.get());
       }
 
       TTime t;
@@ -3643,7 +3850,7 @@ namespace yae
       if (hasAudio)
       {
         // attempt to nudge the audio reader to the same position:
-        audioRenderer_->skipToTime(t, reader_);
+        audioRenderer_->skipToTime(t, reader_.get());
       }
     }
   }
@@ -3683,8 +3890,7 @@ namespace yae
       contextMenu_->addAction(actionShowPlaylist);
       contextMenu_->addAction(actionRepeatPlaylist);
 
-      if (playlistWidget_->underMouse() &&
-          playlistWidget_->countItems())
+      if (playlistModel_.hasItems())
       {
         contextMenu_->addSeparator();
         contextMenu_->addAction(actionRemove_);
@@ -3751,7 +3957,7 @@ namespace yae
       return;
     }
 
-    QRect rectCanvas = canvas_->geometry();
+    QRect rectCanvas = playerWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3802,7 +4008,7 @@ namespace yae
     int ww = rectWindow.width();
     int wh = rectWindow.height();
 
-    QRect rectCanvas = canvas_->geometry();
+    QRect rectCanvas = playerWidget_->geometry();
     int cw = rectCanvas.width();
     int ch = rectCanvas.height();
 
@@ -3874,8 +4080,10 @@ namespace yae
     // repaint the frame:
     canvas_->refresh();
 
+#if 0 // FIXME: write me!
     // avoid hiding the highlighted item:
-    playlistWidget_->makeSureHighlightedItemIsVisible();
+    playlistModel_.makeSureHighlightedItemIsVisible();
+#endif
   }
 
   //----------------------------------------------------------------
@@ -3892,7 +4100,7 @@ namespace yae
 
       if (dar)
       {
-        double s = double(canvas_->width()) / w;
+        double s = double(playerWidget_->width()) / w;
         canvasSizeSet(s, s);
       }
     }
@@ -3927,7 +4135,7 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
-    timelineControls_->observe(sharedClock);
+    timelineModel_.observe(sharedClock);
     reader->setSharedClock(sharedClock);
 
     if (audioTrack < numAudioTracks &&
@@ -3972,7 +4180,7 @@ namespace yae
 
     if (!frameStepping)
     {
-      timelineControls_->adjustTo(reader);
+      timelineModel_.adjustTo(reader);
 
       // request playback at currently selected playback rate:
       reader->setTempo(tempo_);
@@ -4093,7 +4301,7 @@ namespace yae
           else if ((ptts->flags_ & pixelFormat::kColor) ||
                    (ptts->flags_ & pixelFormat::kPaletted))
           {
-            if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
+            if (yae_is_opengl_extension_supported("GL_APPLE_ycbcr_422"))
             {
               vtts.pixelFormat_ = kPixelFormatYUYV422;
             }
@@ -4103,6 +4311,13 @@ namespace yae
             }
           }
         }
+
+        // NOTE: overriding frame size implies scaling, so don't do it
+        // unless you really want to scale the images in the reader;
+        // In general, leave scaling to OpenGL:
+        vtts.encodedWidth_ = 0;
+        vtts.encodedHeight_ = 0;
+        vtts.pixelAspectRatio_ = 0.0;
 
         reader->setVideoTraitsOverride(vtts);
       }
@@ -4470,7 +4685,6 @@ namespace yae
     bool isSeekable = reader->isSeekable();
     actionSetInPoint->setEnabled(isSeekable);
     actionSetOutPoint->setEnabled(isSeekable);
-    lineEditPlayhead_->setReadOnly(!isSeekable);
   }
 
   //----------------------------------------------------------------
@@ -4486,7 +4700,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader_,
+    adjustMenuActions(reader_.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,
@@ -4543,47 +4757,50 @@ namespace yae
     {
       menubar->removeAction(menuChapters->menuAction());
     }
-
+#if 0
     if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
     {
       if (actionShowPlaylist->isEnabled())
       {
-        setTimelineCssForAudio(timelineWidgets_);
-        shortcutShowPlaylist_->setEnabled(false);
+        // setTimelineCssForAudio(timelineWidgets_);
         actionShowPlaylist->setEnabled(false);
 
         if (actionShowPlaylist->isChecked())
         {
+#if 0
           playlistDock_->hide();
+#endif
         }
 
         swapLayouts(canvasContainer_, playlistContainer_);
 
-        playlistWidget_->show();
-        playlistWidget_->update();
-        playlistWidget_->setFocus();
+        playlistModel_.show();
+        playlistModel_.update();
+        playlistModel_.setFocus();
       }
     }
     else if (numVideoTracks || !numAudioTracks)
     {
       if (!actionShowPlaylist->isEnabled())
       {
-        setTimelineCssForVideo(timelineWidgets_);
+        // setTimelineCssForVideo(timelineWidgets_);
         swapLayouts(canvasContainer_, playlistContainer_);
 
         if (actionShowPlaylist->isChecked())
         {
+#if 0
           playlistDock_->show();
+#endif
         }
 
-        shortcutShowPlaylist_->setEnabled(true);
         actionShowPlaylist->setEnabled(true);
 
-        playlistWidget_->show();
-        playlistWidget_->update();
+        playlistModel_.show();
+        playlistModel_.update();
         this->setFocus();
       }
     }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -4592,8 +4809,8 @@ namespace yae
   void
   MainWindow::selectAudioTrack(IReader * reader, std::size_t audioTrackIndex)
   {
-     reader->selectAudioTrack(audioTrackIndex);
-     adjustAudioTraitsOverride(reader);
+    reader->selectAudioTrack(audioTrackIndex);
+    adjustAudioTraitsOverride(reader);
   }
 
   //----------------------------------------------------------------
@@ -4618,35 +4835,35 @@ namespace yae
   unsigned int
   MainWindow::adjustAudioTraitsOverride(IReader * reader)
   {
-     unsigned int numDevices = audioRenderer_->countAvailableDevices();
-     unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
-     if (deviceIndex >= numDevices)
-     {
-       deviceIndex = audioRenderer_->getDefaultDeviceIndex();
-       audioRenderer_->getDeviceName(deviceIndex, audioDevice_);
-     }
+    unsigned int numDevices = audioRenderer_->countAvailableDevices();
+    unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
+    if (deviceIndex >= numDevices)
+    {
+      deviceIndex = audioRenderer_->getDefaultDeviceIndex();
+      audioRenderer_->getDeviceName(deviceIndex, audioDevice_);
+    }
 
-     AudioTraits native;
-     if (reader->getAudioTraits(native))
-     {
-       if (getNumberOfChannels(native.channelLayout_) > 2 &&
-           actionDownmixToStereo->isChecked())
-       {
-         native.channelLayout_ = kAudioStereo;
-       }
+    AudioTraits native;
+    if (reader->getAudioTraits(native))
+    {
+      if (getNumberOfChannels(native.channelLayout_) > 2 &&
+          actionDownmixToStereo->isChecked())
+      {
+        native.channelLayout_ = kAudioStereo;
+      }
 
-       AudioTraits supported;
-       audioRenderer_->match(deviceIndex, native, supported);
+      AudioTraits supported;
+      audioRenderer_->match(deviceIndex, native, supported);
 
 #if 0
-       std::cerr << "supported: " << supported.channelLayout_ << std::endl
-                 << "required:  " << native.channelLayout_ << std::endl;
+      std::cerr << "supported: " << supported.channelLayout_ << std::endl
+                << "required:  " << native.channelLayout_ << std::endl;
 #endif
 
-       reader->setAudioTraitsOverride(supported);
-     }
+      reader->setAudioTraitsOverride(supported);
+    }
 
-     return deviceIndex;
+    return deviceIndex;
   }
 
   //----------------------------------------------------------------
@@ -4685,10 +4902,12 @@ namespace yae
                                          bool heldDown)
   {
     MainWindow * mainWindow = (MainWindow *)observerContext;
-    qApp->postEvent(mainWindow, new RemoteControlEvent(buttonId,
-                                                       pressedDown,
-                                                       clickCount,
-                                                       heldDown));
+    qApp->postEvent(mainWindow,
+                    new RemoteControlEvent(buttonId,
+                                           pressedDown,
+                                           clickCount,
+                                           heldDown),
+                    Qt::HighEventPriority);
   }
 #endif
 };

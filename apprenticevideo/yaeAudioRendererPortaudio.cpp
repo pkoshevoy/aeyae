@@ -270,7 +270,8 @@ namespace yae
       outAtts = srcAtts;
     }
 
-    if (outAtts.sampleFormat_ == kAudioInvalidFormat)
+    if (outAtts.sampleFormat_ == kAudioInvalidFormat ||
+        deviceIndex >= outputDevices_.size())
     {
       return;
     }
@@ -363,7 +364,8 @@ namespace yae
     }
 
     AudioTraits atts;
-    if (!reader_->getAudioTraitsOverride(atts))
+    if (!reader_->getAudioTraitsOverride(atts) ||
+        deviceIndex >= outputDevices_.size())
     {
       return false;
     }

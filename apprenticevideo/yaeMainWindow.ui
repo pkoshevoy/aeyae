@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>814</width>
     <height>600</height>
    </rect>
   </property>
@@ -35,121 +35,6 @@
       </property>
      </widget>
     </item>
-    <item>
-     <widget class="QWidget" name="timelineWidgets_" native="true">
-      <layout class="QGridLayout" name="gridLayout">
-       <property name="margin">
-        <number>0</number>
-       </property>
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <item row="1" column="0">
-        <widget class="QWidget" name="playheadContainer_" native="true">
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <property name="leftMargin">
-           <number>8</number>
-          </property>
-          <property name="topMargin">
-           <number>3</number>
-          </property>
-          <property name="rightMargin">
-           <number>4</number>
-          </property>
-          <property name="bottomMargin">
-           <number>4</number>
-          </property>
-          <item>
-           <widget class="QLineEdit" name="lineEditPlayhead_">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::ClickFocus</enum>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="yae::TimelineControls" name="timelineControls_" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QWidget" name="durationContainer_" native="true">
-         <layout class="QVBoxLayout" name="verticalLayout_4">
-          <property name="spacing">
-           <number>0</number>
-          </property>
-          <property name="leftMargin">
-           <number>4</number>
-          </property>
-          <property name="topMargin">
-           <number>3</number>
-          </property>
-          <property name="rightMargin">
-           <number>8</number>
-          </property>
-          <property name="bottomMargin">
-           <number>4</number>
-          </property>
-          <item>
-           <widget class="QLineEdit" name="lineEditDuration_">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="3">
-        <widget class="QWidget" name="timelineSeparator_" native="true">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>1</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>1</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -157,8 +42,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>21</height>
+     <width>814</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -308,129 +193,6 @@
    <addaction name="menuChapters"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QDockWidget" name="playlistDock_">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="acceptDrops">
-    <bool>true</bool>
-   </property>
-   <property name="features">
-    <set>QDockWidget::DockWidgetFeatureMask</set>
-   </property>
-   <property name="allowedAreas">
-    <set>Qt::AllDockWidgetAreas</set>
-   </property>
-   <property name="windowTitle">
-    <string>Playlist</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="playlistContainer_">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="margin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QWidget" name="playlistFilterContainer_" native="true">
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <property name="margin">
-         <number>4</number>
-        </property>
-        <item>
-         <widget class="yae::LineEdit" name="playlistFilter_">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>22</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>22</height>
-           </size>
-          </property>
-          <property name="focusPolicy">
-           <enum>Qt::StrongFocus</enum>
-          </property>
-          <property name="toolTip">
-           <string>Search the playlist for keywords and show only those items which match</string>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">QLineEdit	{
-	background-image: url(:/images/search.png);
-	background-repeat:no-repeat;
-	background-position: center left;
-	padding-left: 19px;
-}
-
-QLineEdit QToolButton#clear_ {
-    margin: 1px;
-	border: 0px;
-	border-radius: 3px;
-	background-color: #b9b9b9;
-	color: #ffffff;
-}
-
-QLineEdit QToolButton#clear_:pressed {
-    background-color: #878787;
-}
-</string>
-          </property>
-          <property name="placeholderText">
-           <string>Search And Filter</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="yae::PlaylistWidget" name="playlistWidget_">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>250</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="focusPolicy">
-        <enum>Qt::StrongFocus</enum>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">#playlistWidget_ {
-    margin: 0px;
-    padding: 0px;
-    background-color: #f0f0f0;
-    border: 0px solid #1d1d1d;
-    border-width: 0px 0px 0px 0px;
-}
-</string>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-  </widget>
   <action name="actionOpen">
    <property name="text">
     <string>&amp;Open</string>
@@ -469,7 +231,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>16:9</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+6</string>
+    <string>Ctrl+Alt+6</string>
    </property>
   </action>
   <action name="actionAspectRatio1_33">
@@ -480,7 +242,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>4:3</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+4</string>
+    <string>Ctrl+Alt+4</string>
    </property>
   </action>
   <action name="actionAspectRatioAuto">
@@ -491,7 +253,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>Automatic</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+X</string>
+    <string>Ctrl+Alt+X</string>
    </property>
   </action>
   <action name="actionFullScreen">
@@ -500,9 +262,6 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="text">
     <string>&amp;Full Screen (letterbox)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+F</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
@@ -1019,29 +778,6 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
   </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>yae::PlaylistWidget</class>
-   <extends>QFrame</extends>
-   <header>yaePlaylistWidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>yae::LineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>yaeLineEdit.h</header>
-  </customwidget>
-  <customwidget>
-   <class>yae::TimelineControls</class>
-   <extends>QWidget</extends>
-   <header>yaeTimelineControls.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
- <tabstops>
-  <tabstop>playlistWidget_</tabstop>
-  <tabstop>playlistFilter_</tabstop>
- </tabstops>
  <resources>
   <include location="apprenticevideo.qrc"/>
  </resources>
