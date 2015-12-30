@@ -548,6 +548,12 @@ namespace yae
       audioDevice_ = audioDevice.toUtf8().constData();
     }
 
+#ifdef __APPLE__
+    actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
+#else
+    actionFullScreen->setShortcut(tr("F11"));
+#endif
+
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
