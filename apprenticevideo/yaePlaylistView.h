@@ -56,6 +56,47 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // IPlaylistViewStyle
+  //
+  struct YAE_API IPlaylistViewStyle
+  {
+    virtual ~IPlaylistViewStyle() {}
+
+    Color bg_;
+    Color fg_;
+
+    Color cursor_;
+    Color separator_;
+
+    Color bg_focus_;
+    Color fg_focus_;
+
+    Color bg_edit_selected_;
+    Color fg_edit_selected_;
+
+    Color bg_hint_;
+    Color fg_hint_;
+
+    Color bg_badge_;
+    Color fg_badge_;
+
+    Color bg_label_;
+    Color fg_label_;
+
+    Color bg_label_selected_;
+    Color fg_label_selected_;
+
+    Color bg_item_;
+    Color bg_item_playing_;
+    Color bg_item_selected_;
+
+    QFont font_;
+    QFont font_small_;
+
+    std::map<double, Color> filter_shadow_;
+  };
+
+  //----------------------------------------------------------------
   // ILayoutDelegate
   //
   template <typename TView, typename Model>
@@ -66,7 +107,8 @@ namespace yae
     virtual void layout(Item & item,
                         TView & view,
                         Model & model,
-                        const QModelIndex & itemIndex) = 0;
+                        const QModelIndex & itemIndex,
+                        const IPlaylistViewStyle & style) = 0;
   };
 
   //----------------------------------------------------------------
@@ -77,10 +119,12 @@ namespace yae
     Q_OBJECT;
 
   public:
+    typedef PlaylistModel::LayoutHint TLayoutHint;
+
     typedef ILayoutDelegate<PlaylistView, PlaylistModelProxy> TLayoutDelegate;
     typedef boost::shared_ptr<TLayoutDelegate> TLayoutPtr;
-    typedef PlaylistModel::LayoutHint TLayoutHint;
     typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
+    typedef boost::shared_ptr<IPlaylistViewStyle> TStylePtr;
 
     PlaylistView();
 
@@ -126,6 +170,7 @@ namespace yae
   protected:
     PlaylistModelProxy * model_;
     TLayoutDelegates layoutDelegates_;
+    TStylePtr style_;
   };
 
 }

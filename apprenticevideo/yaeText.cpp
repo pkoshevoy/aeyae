@@ -343,31 +343,6 @@ namespace yae
     color_(ColorRef::constant(Color(0xffffff, 1.0))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-    font_.setStyleHint(QFont::SansSerif);
-    font_.setStyleStrategy((QFont::StyleStrategy)
-                           (QFont::PreferOutline |
-                            QFont::PreferAntialias |
-                            QFont::OpenGLCompatible));
-
-    static bool hasImpact =
-      QFontInfo(QFont("impact")).family().
-      contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
-
-    if (hasImpact)
-    {
-      font_.setFamily("impact");
-    }
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
-    else
-#endif
-    {
-      font_.setStretch(QFont::Condensed);
-      font_.setWeight(QFont::Black);
-    }
-
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     bboxText_ = addExpr(new CalcTextBBox(*this));
     p_->ready_ = addExpr(new UploadTexture<Text>(*this));

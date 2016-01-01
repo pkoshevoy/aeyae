@@ -194,11 +194,17 @@ namespace yae
       return *this;
     }
 
-    Color transparent() const
+    Color scale_a(double s) const
     {
       Color result(*this);
-      result.set_a(0.0);
+      double sa = s * double(this->a());
+      result.set_a((unsigned char)(std::max(0.0, std::min(255.0, sa))));
       return result;
+    }
+
+    inline Color transparent() const
+    {
+      return scale_a(0.0);
     }
 
     unsigned int argb_;
