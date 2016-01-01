@@ -211,9 +211,7 @@ namespace yae
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(this,
-                      new TimelineEvent(payload_),
-                      Qt::LowEventPriority);
+      qApp->postEvent(this, new TimelineEvent(payload_));
     }
   }
 

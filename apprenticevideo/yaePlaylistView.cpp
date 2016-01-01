@@ -1799,7 +1799,6 @@ namespace yae
     double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
     if (range <= 0.0)
     {
-      YAE_ASSERT(false);
       return;
     }
 
