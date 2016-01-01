@@ -336,8 +336,8 @@ namespace yae
     { return ColorRef(&ref, prop, TVec4D(1.0, 1.0, 1.0, 1.0), t); }
 
     inline static ColorRef
-    transparent(const TDataProperties & ref, Property prop, double s = 0.0)
-    { return ColorRef(&ref, prop, TVec4D(s, 1.0, 1.0, 1.0)); }
+    transparent(const TDataProperties & ref, Property prop, double sa = 0.0)
+    { return ColorRef(&ref, prop, TVec4D(sa, 1.0, 1.0, 1.0)); }
 
     const Color & get() const
     {

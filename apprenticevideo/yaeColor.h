@@ -207,6 +207,17 @@ namespace yae
       return scale_a(0.0);
     }
 
+    Color bw_contrast() const
+    {
+      TVec4D v(*this);
+      double m = std::max(std::max(v.r(), v.g()), v.b());
+      double c = (m < 0.5) ? 1.0 : 0.0;
+      v.set_r(c);
+      v.set_g(c);
+      v.set_b(c);
+      return Color(v);
+    }
+
     unsigned int argb_;
   };
 }

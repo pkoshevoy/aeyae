@@ -519,6 +519,32 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ContrastColor
+  //
+  struct ContrastColor : public TColorExpr
+  {
+    ContrastColor(const Item & item, Property prop, double scaleAlpha):
+      scaleAlpha_(scaleAlpha),
+      item_(item),
+      prop_(prop)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      Color c0;
+      item_.get(prop_, c0);
+      result = c0.bw_contrast();
+      double a = scaleAlpha_ * double(result.a());
+      result.set_a((unsigned char)(std::min(255.0, std::max(0.0, a))));
+    }
+
+    double scaleAlpha_;
+    const Item & item_;
+    Property prop_;
+  };
+
+  //----------------------------------------------------------------
   // xbuttonImage
   //
   static QImage
@@ -1498,7 +1524,8 @@ namespace yae
       badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
       badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-      badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
+      badge.background_ = badge.
+        addExpr(new ContrastColor(badge, kPropertyColor, 0.0));
       badge.color_ = badge.
         addExpr(new ItemHighlightColor(model,
                                        index,
@@ -1527,7 +1554,8 @@ namespace yae
       label.text_ = label.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
       label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
-      label.background_ = ColorRef::transparent(labelBg, kPropertyColor);
+      label.background_ = label.
+        addExpr(new ContrastColor(label, kPropertyColor, 0.0));
       label.color_ = label.
         addExpr(new ItemHighlightColor(model,
                                        index,
