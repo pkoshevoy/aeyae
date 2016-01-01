@@ -165,7 +165,7 @@ namespace yae
     const Segment & yregion = root_->yExtent();
 
     Item & root = *root_;
-    root.paint(xregion, yregion);
+    root.paint(xregion, yregion, canvas);
   }
 
   //----------------------------------------------------------------

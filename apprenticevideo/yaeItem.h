@@ -404,7 +404,8 @@ namespace yae
     // NOTE: this will call paintContent,
     // followed by a call to paint each nested item:
     virtual bool paint(const Segment & xregion,
-                       const Segment & yregion) const;
+                       const Segment & yregion,
+                       Canvas * canvas) const;
 
     // NOTE: unpaint will be called for an off-screen item
     // to give it an opportunity to release unneeded resources

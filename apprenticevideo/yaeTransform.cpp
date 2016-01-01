@@ -157,7 +157,9 @@ namespace yae
   // Transform::paint
   //
   bool
-  Transform::paint(const Segment & xregion, const Segment & yregion) const
+  Transform::paint(const Segment & xregion,
+                   const Segment & yregion,
+                   Canvas * canvas) const
   {
     if (!Item::visible())
     {
@@ -227,7 +229,7 @@ namespace yae
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
-      child->paint(uregion, vregion);
+      child->paint(uregion, vregion, canvas);
     }
 
     return true;

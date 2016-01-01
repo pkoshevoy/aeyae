@@ -181,6 +181,12 @@ namespace yae
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
 
+    inline CanvasRenderer * canvasRenderer() const
+    { return private_; }
+
+    inline CanvasRenderer * overlayRenderer() const
+    { return overlay_; }
+
     // generic mechanism for delegating canvas painting and event processing:
     // NOTE: 1. the last appended layer is front-most
     //       2. painting -- back-to-front, for all layers

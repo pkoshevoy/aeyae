@@ -158,9 +158,11 @@ namespace yae
   // Scrollview::paint
   //
   bool
-  Scrollview::paint(const Segment & xregion, const Segment & yregion) const
+  Scrollview::paint(const Segment & xregion,
+                    const Segment & yregion,
+                    Canvas * canvas) const
   {
-    if (!Item::paint(xregion, yregion))
+    if (!Item::paint(xregion, yregion, canvas))
     {
       content_.unpaint();
       return false;
@@ -174,7 +176,7 @@ namespace yae
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
-    content_.paint(xView, yView);
+    content_.paint(xView, yView, canvas);
 
     return true;
   }

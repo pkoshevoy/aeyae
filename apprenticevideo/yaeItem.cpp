@@ -1007,7 +1007,9 @@ namespace yae
   // Item::paint
   //
   bool
-  Item::paint(const Segment & xregion, const Segment & yregion) const
+  Item::paint(const Segment & xregion,
+              const Segment & yregion,
+              Canvas * canvas) const
   {
     if (!Item::visible())
     {
@@ -1036,7 +1038,7 @@ namespace yae
          i != children_.end(); ++i)
     {
       const ItemPtr & child = *i;
-      child->paint(xregion, yregion);
+      child->paint(xregion, yregion, canvas);
     }
 
     notifyObservers(kOnPaint);

@@ -28,7 +28,9 @@ namespace yae
 
     // virtual:
     void uncache();
-    bool paint(const Segment & xregion, const Segment & yregion) const;
+    bool paint(const Segment & xregion,
+               const Segment & yregion,
+               Canvas * canvas) const;
 
     // virtual:
     void getInputHandlers(// coordinate system origin of

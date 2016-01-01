@@ -478,11 +478,13 @@ namespace yae
     ItemHighlightColor(const PlaylistModelProxy & model,
                        const QModelIndex & index,
                        const Color & colorDefault,
-                       const Color & colorSelected):
+                       const Color & colorSelected,
+                       const Color & colorPlaying):
       model_(model),
       index_(index),
       colorDefault_(colorDefault),
-      colorSelected_(colorSelected)
+      colorSelected_(colorSelected),
+      colorPlaying_(colorPlaying)
     {}
 
     // virtual:
@@ -490,9 +492,19 @@ namespace yae
     {
       bool isSelected =
         model_.data(index_, PlaylistModel::kRoleSelected).value<bool>();
+
       if (isSelected)
       {
         result = colorSelected_;
+        return;
+      }
+
+      bool isPlaying =
+        model_.data(index_, PlaylistModel::kRolePlaying).value<bool>();
+
+      if (isPlaying)
+      {
+        result = colorPlaying_;
         return;
       }
 
@@ -503,6 +515,7 @@ namespace yae
     QPersistentModelIndex index_;
     Color colorDefault_;
     Color colorSelected_;
+    Color colorPlaying_;
   };
 
   //----------------------------------------------------------------
@@ -1333,6 +1346,95 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ImageLive
+  //
+  struct ImageLive : public Item
+  {
+    mutable Canvas * canvas_;
+
+    ImageLive(const char * id):
+      Item(id),
+      canvas_(NULL)
+    {}
+
+    // virtual:
+    bool paint(const Segment & xregion,
+               const Segment & yregion,
+               Canvas * canvas) const
+    {
+      canvas_ = canvas;
+      return Item::paint(xregion, yregion, canvas);
+    }
+
+    // virtual:
+    void paintContent() const
+    {
+      if (!canvas_)
+      {
+        return;
+      }
+
+      CanvasRenderer * renderer = canvas_->canvasRenderer();
+      double croppedWidth = 0.0;
+      double croppedHeight = 0.0;
+      int cameraRotation = 0;
+      renderer->imageWidthHeightRotated(croppedWidth,
+                                        croppedHeight,
+                                        cameraRotation);
+      if (!croppedWidth || !croppedHeight)
+      {
+        return;
+      }
+
+      double x = this->left();
+      double y = this->top();
+      double w_max = this->width();
+      double h_max = this->height();
+      double w = w_max;
+      double h = h_max;
+      double car = w / h;
+      double dar = croppedWidth / croppedHeight;
+
+      if (dar < car)
+      {
+        w = h_max * dar;
+        x += 0.5 * (w_max - w);
+      }
+      else
+      {
+        h = w_max / dar;
+        y += 0.5 * (h_max - h);
+      }
+
+      TGLSaveMatrixState pushViewMatrix(GL_MODELVIEW);
+
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glTranslated(x, y, 0.0));
+      YAE_OGL_11(glScaled(w / croppedWidth, h / croppedHeight, 1.0));
+
+      if (cameraRotation && cameraRotation % 90 == 0)
+      {
+        YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
+        YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
+
+        if (cameraRotation % 180 != 0)
+        {
+          YAE_OGL_11(glTranslated(-0.5 * croppedHeight,
+                                  -0.5 * croppedWidth, 0));
+        }
+        else
+        {
+          YAE_OGL_11(glTranslated(-0.5 * croppedWidth,
+                                  -0.5 * croppedHeight, 0));
+        }
+      }
+
+      renderer->draw();
+      yae_assert_gl_no_error();
+    }
+  };
+
+  //----------------------------------------------------------------
   // ItemGridCellLayout
   //
   struct ItemGridCellLayout : public PlaylistView::TLayoutDelegate
@@ -1349,6 +1451,7 @@ namespace yae
         dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
 
       Color colorDefaultBg = Color(0x7f7f7f, 0.5);
+      Color colorPlayingBg = Color(0x1f1f1f, 0.5);
       Color colorSelectedBg = Color(0xFFFFFF, 0.75);
       Color colorSelectedFg = Color(0x3f3f3f, 0.75);
       Color colorLabelBg = Color(0x3f3f3f, 0.5);
@@ -1363,7 +1466,8 @@ namespace yae
         addExpr(new ItemHighlightColor(model,
                                        index,
                                        colorDefaultBg,
-                                       colorSelectedBg));
+                                       colorSelectedBg,
+                                       colorPlayingBg));
 
       Image & thumbnail = cell.addNew<Image>("thumbnail");
       thumbnail.setContext(view);
@@ -1372,6 +1476,13 @@ namespace yae
       thumbnail.height_ = ItemRef::scale(cell, kPropertyHeight, 0.75);
       thumbnail.url_ = thumbnail.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
+      thumbnail.visible_ = thumbnail.addExpr
+        (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
+
+      ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
+      liveImage.anchors_.fill(thumbnail);
+      liveImage.visible_ = thumbnail.addExpr
+        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
       Text & badge = cell.addNew<Text>("badge");
@@ -1383,7 +1494,8 @@ namespace yae
         addExpr(new ItemHighlightColor(model,
                                        index,
                                        colorBadgeFg,
-                                       colorSelectedFg));
+                                       colorSelectedFg,
+                                       colorBadgeFg));
       badge.text_ = badge.addExpr
         (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
       badge.fontSize_ = ItemRef::scale(fontSize,
@@ -1395,7 +1507,8 @@ namespace yae
         addExpr(new ItemHighlightColor(model,
                                        index,
                                        colorBadgeBg,
-                                       colorSelectedBg));
+                                       colorSelectedBg,
+                                       colorBadgeBg));
 
       Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
       Text & label = cell.addNew<Text>("label");
@@ -1409,14 +1522,16 @@ namespace yae
         addExpr(new ItemHighlightColor(model,
                                        index,
                                        colorLabelFg,
-                                       colorSelectedFg));
+                                       colorSelectedFg,
+                                       colorLabelFg));
 
       labelBg.anchors_.inset(label, -3, -1);
       labelBg.color_ = labelBg.
         addExpr(new ItemHighlightColor(model,
                                        index,
                                        colorLabelBg,
-                                       colorSelectedBg));
+                                       colorSelectedBg,
+                                       colorLabelBg));
 
       Item & rm = cell.addNew<Item>("remove item");
 
@@ -1424,8 +1539,7 @@ namespace yae
       Text & playing = cell.addNew<Text>("now playing");
       playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
-      playing.visible_ = playing.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+      playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
       playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
       playing.color_ = ColorRef::reference(label, kPropertyColor);
       playing.background_ = ColorRef::reference(label, kPropertyColorBg);
@@ -1434,7 +1548,7 @@ namespace yae
                                          0.8 * kDpiScale);
 
       playingBg.anchors_.inset(playing, -3, -1);
-      playingBg.visible_ = BoolRef::reference(playing, kPropertyVisible);
+      playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
       playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
 
       rm.width_ = ItemRef::reference(playing, kPropertyHeight);
@@ -1456,8 +1570,7 @@ namespace yae
       underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
       underline.height_ = ItemRef::constant(2);
       underline.color_ = ColorRef::constant(colorUnderline);
-      underline.visible_ = underline.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+      underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
 
       Rectangle & cur = cell.addNew<Rectangle>("current");
       cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
