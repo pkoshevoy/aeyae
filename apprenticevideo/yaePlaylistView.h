@@ -15,6 +15,9 @@
 // boost includes:
 #include <boost/shared_ptr.hpp>
 
+// Qt library:
+#include <QFont>
+
 // local interfaces:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
