@@ -77,6 +77,12 @@ namespace yae
     inline const ItemPtr & root() const
     { return root_; }
 
+    inline double width() const
+    { return w_; }
+
+    inline double height() const
+    { return h_; }
+
     // virtual:
     TImageProviderPtr
     getImageProvider(const QString & imageUrl, QString & imageId) const
@@ -108,6 +114,27 @@ namespace yae
     InputHandler * dragged_;
     TVec2D startPt_;
     TVec2D mousePt_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcTitleHeight
+  //
+  struct CalcTitleHeight : public TDoubleExpr
+  {
+    CalcTitleHeight(const ItemView & itemView, double minHeight):
+      itemView_(itemView),
+      minHeight_(minHeight)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double w = itemView_.width();
+      result = std::max<double>(minHeight_, 24.0 * w / 800.0);
+    }
+
+    const ItemView & itemView_;
+    double minHeight_;
   };
 
 }

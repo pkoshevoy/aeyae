@@ -143,6 +143,8 @@ set(project_sources
   yaeGradient.h
   yaeImage.cpp
   yaeImage.h
+  yaeImageLive.cpp
+  yaeImageLive.h
   yaeInputArea.cpp
   yaeInputArea.h
   yaeItem.cpp

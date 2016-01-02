@@ -20,6 +20,7 @@
 #include "yaeFlickableArea.h"
 #include "yaeGradient.h"
 #include "yaeImage.h"
+#include "yaeImageLive.h"
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaePlaylistView.h"
@@ -92,33 +93,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // calcCellWidth
-  //
-  inline static double
-  calcCellWidth(double rowWidth)
-  {
-    double n = std::min<double>(5.0, std::floor(rowWidth / 160.0));
-    return (n < 1.0) ? rowWidth : (rowWidth / n);
-  }
-
-  //----------------------------------------------------------------
-  // calcCellHeight
-  //
-  inline static double
-  calcCellHeight(double cellWidth)
-  {
-    double h = std::floor(cellWidth * 9.0 / 16.0);
-    return h;
-  }
-
-  //----------------------------------------------------------------
   // calcItemsPerRow
   //
   inline static unsigned int
-  calcItemsPerRow(double rowWidth)
+  calcItemsPerRow(double rowWidth, double cellWidth)
   {
-    double c = calcCellWidth(rowWidth);
-    double n = std::floor(rowWidth / c);
+    double n = std::max(1.0, std::floor(rowWidth / cellWidth));
     return (unsigned int)n;
   }
 
@@ -126,20 +106,11 @@ namespace yae
   // calcRows
   //
   inline static unsigned int
-  calcRows(double viewWidth, double cellWidth, unsigned int numItems)
+  calcRows(double rowWidth, double cellWidth, unsigned int numItems)
   {
-    double cellsPerRow = std::floor(viewWidth / cellWidth);
+    double cellsPerRow = std::floor(rowWidth / cellWidth);
     double n = std::max(1.0, std::ceil(double(numItems) / cellsPerRow));
     return n;
-  }
-
-  //----------------------------------------------------------------
-  // calcTitleHeight
-  //
-  inline static double
-  calcTitleHeight(double minHeight, double w)
-  {
-    return std::max<double>(minHeight, 24.0 * w / 800.0);
   }
 
   //----------------------------------------------------------------
@@ -178,8 +149,10 @@ namespace yae
   //
   struct GridCellLeft : public TDoubleExpr
   {
-    GridCellLeft(const TPlaylistModelItem & item):
-      item_(item)
+    GridCellLeft(const TPlaylistModelItem & item,
+                 const Item & cellWidth):
+      item_(item),
+      cellWidth_(cellWidth)
     {}
 
     // virtual:
@@ -187,7 +160,11 @@ namespace yae
     {
       Item & grid = item_.parent<Item>();
       double gridWidth = grid.width();
-      unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
+
+      double cellWidth = 0.0;
+      cellWidth_.get(kPropertyWidth, cellWidth);
+
+      unsigned int cellsPerRow = std::floor(gridWidth / cellWidth);
       unsigned int cellIndex = item_.modelIndex().row();
       std::size_t cellCol = cellIndex % cellsPerRow;
       double ox = grid.left() + 2;
@@ -195,6 +172,7 @@ namespace yae
     }
 
     const TPlaylistModelItem & item_;
+    const Item & cellWidth_;
   };
 
   //----------------------------------------------------------------
@@ -202,8 +180,12 @@ namespace yae
   //
   struct GridCellTop : public TDoubleExpr
   {
-    GridCellTop(const TPlaylistModelItem & item):
-      item_(item)
+    GridCellTop(const TPlaylistModelItem & item,
+                const Item & cellWidth,
+                const Item & cellHeight):
+      item_(item),
+      cellWidth_(cellWidth),
+      cellHeight_(cellHeight)
     {}
 
     // virtual:
@@ -212,9 +194,14 @@ namespace yae
       Item & grid = item_.parent<Item>();
       std::size_t numCells = grid.children_.size();
       double gridWidth = grid.width();
-      double cellWidth = calcCellWidth(gridWidth);
-      double cellHeight = cellWidth; // calcCellHeight(cellWidth);
-      unsigned int cellsPerRow = calcItemsPerRow(gridWidth);
+
+      double cellWidth = 0.0;
+      cellWidth_.get(kPropertyWidth, cellWidth);
+
+      double cellHeight = 0.0;
+      cellHeight_.get(kPropertyHeight, cellHeight);
+
+      unsigned int cellsPerRow = std::floor(gridWidth / cellWidth);
       unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
       double gridHeight = cellHeight * double(rowsOfCells);
       unsigned int cellIndex = item_.modelIndex().row();
@@ -224,6 +211,8 @@ namespace yae
     }
 
     const TPlaylistModelItem & item_;
+    const Item & cellWidth_;
+    const Item & cellHeight_;
   };
 
   //----------------------------------------------------------------
@@ -231,59 +220,53 @@ namespace yae
   //
   struct GridCellWidth : public TDoubleExpr
   {
-    GridCellWidth(const Item & grid):
-      grid_(grid)
+    GridCellWidth(const PlaylistView & playlist,
+                  unsigned int maxCells = 5,
+                  double minWidth = 160):
+      playlist_(playlist),
+      maxCells_(maxCells),
+      minWidth_(minWidth)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_.width();
-      result = calcCellWidth(gridWidth) - 2;
+      Item & root = *(playlist_.root());
+      Scrollview & sview = root.get<Scrollview>("scrollview");
+
+      double rowWidth = 0.0;
+      sview.get(kPropertyWidth, rowWidth);
+
+      unsigned int numCells =
+        std::min(maxCells_, calcItemsPerRow(rowWidth, minWidth_));
+
+      result = (numCells < 2) ? rowWidth : (rowWidth / double(numCells));
     }
 
-    const Item & grid_;
+    const PlaylistView & playlist_;
+    unsigned int maxCells_;
+    double minWidth_;
   };
 
   //----------------------------------------------------------------
-  // GridCellHeight
+  // GetScrollviewWidth
   //
-  struct GridCellHeight : public TDoubleExpr
+  struct GetScrollviewWidth : public TDoubleExpr
   {
-    GridCellHeight(const Item & grid):
-      grid_(grid)
+    GetScrollviewWidth(const PlaylistView & playlist):
+      playlist_(playlist)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
-      double gridWidth = grid_.width();
-      double cellWidth = calcCellWidth(gridWidth);
-      result = cellWidth - 2; // calcCellHeight(cellWidth) - 2;
+      Item & root = *(playlist_.root());
+      Scrollview & sview = root.get<Scrollview>("scrollview");
+      sview.get(kPropertyWidth, result);
     }
 
-    const Item & grid_;
+    const PlaylistView & playlist_;
   };
-
-
-  //----------------------------------------------------------------
-  // CalcTitleHeight::CalcTitleHeight
-  //
-  CalcTitleHeight::CalcTitleHeight(const Item & titleContainer,
-                                   double minHeight):
-    titleContainer_(titleContainer),
-    minHeight_(minHeight)
-  {}
-
-  //----------------------------------------------------------------
-  // CalcTitleHeight::evaluate
-  //
-  void
-  CalcTitleHeight::evaluate(double & result) const
-  {
-    double titleContainerWidth = titleContainer_.width();
-    result = calcTitleHeight(minHeight_, titleContainerWidth);
-  }
 
 
   //----------------------------------------------------------------
@@ -542,6 +525,63 @@ namespace yae
     double scaleAlpha_;
     const Item & item_;
     Property prop_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleColorBg
+  //
+  struct StyleColorBg : public TColorExpr
+  {
+    StyleColorBg(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.bg_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleColorSeparator
+  //
+  struct StyleColorSeparator : public TColorExpr
+  {
+    StyleColorSeparator(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.separator_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleTitleHeight
+  //
+  struct StyleTitleHeight : public TDoubleExpr
+  {
+    StyleTitleHeight(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      style.title_height_.get(kPropertyHeight, result);
+    }
+
+    const PlaylistView & playlist_;
   };
 
   //----------------------------------------------------------------
@@ -804,18 +844,14 @@ namespace yae
                        PlaylistView & view,
                        PlaylistModelProxy & model,
                        const QModelIndex & itemIndex,
-                       const IPlaylistViewStyle & style)
+                       const PlaylistViewStyle & style)
   {
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
-    const Item & fontSize = playlist["font_size"];
+    const Item & fontSize = style.font_size_;
     const Item & scrollbar = playlist["scrollbar"];
-
-    const Text & nowPlaying =
-      dynamic_cast<const Text &>(playlist["now_playing"]);
-
-    const Texture & xbuttonTexture =
-      dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
+    const Text & nowPlaying = style.now_playing_;
+    const Texture & xbuttonTexture = style.xbutton_;
 
     ColorRef underlineColor = ColorRef::constant(style.cursor_);
     ColorRef sortColor = ColorRef::constant(style.fg_hint_);
@@ -862,17 +898,17 @@ namespace yae
       handle.anchors_.vcenter_ = ItemRef::constant(0.0);
       handle.width_ = handle.anchors_.left_;
       handle.height_ = ItemRef::scale(handle, kPropertyWidth, 0.25);
-      handle.color_ = colorFocusBg;
+      handle.color_ = ColorRef::reference(circle, kPropertyColorBorder);
 
       icon.anchors_.left_ = ItemRef::reference(circle, kPropertyLeft);
       icon.anchors_.top_ = ItemRef::reference(circle, kPropertyTop);
     }
 
     Text & text = filter.addNew<Text>("filter_text");
-    text.font_ = style.font_;
+    text.font_ = style.font_large_;
 
     TextInput & edit = filter.addNew<TextInput>("filter_edit");
-    edit.font_ = style.font_;
+    edit.font_ = text.font_;
 
     Item & rm = filter.addNew<Item>("rm");
 
@@ -1082,10 +1118,10 @@ namespace yae
                        PlaylistView & view,
                        PlaylistModelProxy & model,
                        const QModelIndex & itemIndex,
-                       const IPlaylistViewStyle & style)
+                       const PlaylistViewStyle & style)
   {
     const Item & playlist = *(view.root());
-    const Item & fontSize = playlist["font_size"];
+    const Item & fontSize = style.font_size_;
 
     Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
     separator.anchors_.fill(footer);
@@ -1125,7 +1161,7 @@ namespace yae
                       PlaylistView & view,
                       PlaylistModelProxy & model,
                       const QModelIndex & groupIndex,
-                      const IPlaylistViewStyle & style)
+                      const PlaylistViewStyle & style)
   {
     group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
     group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
@@ -1147,7 +1183,7 @@ namespace yae
                 PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & rootIndex,
-                const IPlaylistViewStyle & style)
+                const PlaylistViewStyle & style)
     {
       const int numGroups = model.rowCount(rootIndex);
       for (int i = 0; i < numGroups; i++)
@@ -1237,12 +1273,16 @@ namespace yae
                      PlaylistView & view,
                      PlaylistModelProxy & model,
                      const QModelIndex & itemIndex,
-                     const IPlaylistViewStyle & style)
+                     const PlaylistViewStyle & style)
   {
-    cell.anchors_.left_ = cell.addExpr(new GridCellLeft(cell));
-    cell.anchors_.top_ = cell.addExpr(new GridCellTop(cell));
     cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
     cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
+
+    cell.anchors_.left_ =
+      cell.addExpr(new GridCellLeft(cell, cellWidth));
+
+    cell.anchors_.top_ =
+      cell.addExpr(new GridCellTop(cell, cellWidth, cellHeight));
 
     ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
     maPlay.anchors_.fill(cell);
@@ -1263,28 +1303,23 @@ namespace yae
                 PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & groupIndex,
-                const IPlaylistViewStyle & style)
+                const PlaylistViewStyle & style)
     {
       // reuse pre-computed properties:
-      const Item & playlist = *(view.root());
-      const Item & fontSize = playlist["font_size"];
-      const Item & cellWidth = playlist["cell_width"];
-      const Item & cellHeight = playlist["cell_height"];
-      const Item & titleHeight = playlist["title_height"];
+      const Item & fontSize = style.font_size_;
+      const Item & cellWidth = style.cell_width_;
+      const Item & cellHeight = style.cell_height_;
+      const Item & titleHeight = style.title_height_;
+      const Text & nowPlaying = style.now_playing_;
+      const Texture & xbuttonTexture = style.xbutton_;
 
-      const Text & nowPlaying =
-        dynamic_cast<const Text &>(playlist["now_playing"]);
-
-      const Texture & xbuttonTexture =
-        dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
-
-      Item & spacer = group.addNew<Item>("spacer");
+      Item & spacer = group.addNew<Item>("group_spacer");
       spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
       spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
       spacer.width_ = ItemRef::reference(group, kPropertyWidth);
       spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
 
-      Item & title = group.addNew<Item>("title");
+      Item & title = group.addNew<Item>("group_title");
       title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
       title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
       title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
@@ -1293,7 +1328,7 @@ namespace yae
       Triangle & collapsed = chevron.addNew<Triangle>("collapse");
 
       Text & text = title.addNew<Text>("text");
-      text.font_ = style.font_;
+      text.font_ = style.font_large_;
 
       Item & rm = title.addNew<Item>("rm");
       TexturedRect & xbutton =
@@ -1322,6 +1357,8 @@ namespace yae
       text.fontSize_ =
         ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
       text.elide_ = Qt::ElideMiddle;
+      text.color_ = ColorRef::constant(style.fg_group_);
+      text.background_ = ColorRef::constant(style.bg_group_);
 
       // remove group [x] button:
       rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
@@ -1387,7 +1424,7 @@ namespace yae
       footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
     }
   };
-
+#if 0
   //----------------------------------------------------------------
   // ImageLive
   //
@@ -1476,7 +1513,7 @@ namespace yae
       yae_assert_gl_no_error();
     }
   };
-
+#endif
   //----------------------------------------------------------------
   // ItemGridCellLayout
   //
@@ -1486,13 +1523,10 @@ namespace yae
                 PlaylistView & view,
                 PlaylistModelProxy & model,
                 const QModelIndex & index,
-                const IPlaylistViewStyle & style)
+                const PlaylistViewStyle & style)
     {
-      const Item & playlist = *(view.root());
-      const Item & fontSize = playlist["font_size"];
-
-      const Texture & xbuttonTexture =
-        dynamic_cast<const Texture &>(playlist["xbutton_texture"]);
+      const Item & fontSize = style.font_size_;
+      const Texture & xbuttonTexture = style.xbutton_;
 
       Rectangle & frame = cell.addNew<Rectangle>("frame");
       frame.anchors_.fill(cell);
@@ -1515,12 +1549,12 @@ namespace yae
 
       ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
       liveImage.anchors_.fill(thumbnail);
-      liveImage.visible_ = thumbnail.addExpr
+      liveImage.visible_ = liveImage.addExpr
         (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
       Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
       Text & badge = cell.addNew<Text>("badge");
-      badge.font_ = style.font_;
+      badge.font_ = style.font_large_;
       badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
       badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
@@ -1575,7 +1609,7 @@ namespace yae
 
       Rectangle & playingBg = cell.addNew<Rectangle>("playingBg");
       Text & playing = cell.addNew<Text>("now playing");
-      playing.font_ = style.font_;
+      playing.font_ = style.font_large_;
       playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
       playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
       playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
@@ -1629,16 +1663,17 @@ namespace yae
   //----------------------------------------------------------------
   // GridViewStyle
   //
-  struct GridViewStyle : public IPlaylistViewStyle
+  struct GridViewStyle : public PlaylistViewStyle
   {
-    GridViewStyle()
+    GridViewStyle(const char * id, PlaylistView & playlist):
+      PlaylistViewStyle(id, playlist)
     {
       // main font:
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-      font_.setHintingPreference(QFont::PreferFullHinting);
+      font_large_.setHintingPreference(QFont::PreferFullHinting);
 #endif
-      font_.setStyleHint(QFont::SansSerif);
-      font_.setStyleStrategy((QFont::StyleStrategy)
+      font_large_.setStyleHint(QFont::SansSerif);
+      font_large_.setStyleStrategy((QFont::StyleStrategy)
                              (QFont::PreferOutline |
                               QFont::PreferAntialias |
                               QFont::OpenGLCompatible));
@@ -1649,15 +1684,17 @@ namespace yae
 
       if (hasImpact)
       {
-        font_.setFamily("impact");
+        font_large_.setFamily("impact");
       }
 #if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
       else
 #endif
       {
-        font_.setStretch(QFont::Condensed);
-        font_.setWeight(QFont::Black);
+        font_large_.setStretch(QFont::Condensed);
+        font_large_.setWeight(QFont::Black);
       }
+
+      font_ = font_large_;
 
       // filter shadow gradient:
       filter_shadow_[0.0] = Color(0x1f1f1f, 1.0);
@@ -1689,22 +1726,447 @@ namespace yae
       bg_label_selected_ = Color(0xffffff, 0.75);
       fg_label_selected_ = Color(0x3f3f3f, 0.75);
 
+      bg_group_ = Color(0x1f1f1f, 0.0);
+      fg_group_ = Color(0xffffff, 1.0);
+
       bg_item_ = Color(0x7f7f7f, 0.5);
       bg_item_playing_ = Color(0x1f1f1f, 0.5);
       bg_item_selected_ = Color(0xffffff, 0.75);
+
+      // configure common style attributes:
+      title_height_.height_ =
+        title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
+
+      // generate an x-button texture:
+      QImage img = xbuttonImage(32, fg_hint_);
+      xbutton_.setImage(img);
+
+      cell_width_.width_ = cell_width_.
+        addExpr(new GridCellWidth(playlist_), 1.0, -2.0);
+
+      cell_height_.height_ =
+        ItemRef::reference(cell_width_, kPropertyWidth);
+
+      font_size_.height_ = font_size_.
+        addExpr(new GetFontSize(title_height_, 0.52,
+                                cell_height_, 0.15));
+
+      now_playing_.anchors_.top_ = ItemRef::constant(0.0);
+      now_playing_.anchors_.left_ = ItemRef::constant(0.0);
+      now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+      now_playing_.font_ = font_large_;
+      now_playing_.font_.setBold(false);
+      now_playing_.fontSize_ = ItemRef::scale(font_size_,
+                                              kPropertyHeight,
+                                              0.8 * kDpiScale);
+
+      eyetv_badge_.font_ = font_large_;
+      eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
+      eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
+      eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
+      eyetv_badge_.font_.setBold(false);
+      eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
+                                              kPropertyHeight,
+                                              0.8 * kDpiScale);
     }
   };
+
+
+  //----------------------------------------------------------------
+  // ItemListLayout
+  //
+  struct ItemListLayout : public PlaylistView::TLayoutDelegate
+  {
+    void layout(Item & group,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & groupIndex,
+                const PlaylistViewStyle & style)
+    {
+      // reuse pre-computed properties:
+      const Item & fontSize = style.font_size_;
+      const Item & cellWidth = style.cell_width_;
+      const Item & cellHeight = style.cell_height_;
+      const Item & titleHeight = style.title_height_;
+      const Text & nowPlaying = style.now_playing_;
+      const Texture & xbuttonTexture = style.xbutton_;
+
+      Item & spacer = group.addNew<Item>("group_spacer");
+      spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
+      spacer.width_ = ItemRef::reference(group, kPropertyWidth);
+      spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+
+      Rectangle & title = group.addNew<Rectangle>("group_title");
+      title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
+      title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+      title.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.2);
+      title.color_ = ColorRef::constant(style.bg_group_);
+
+      Item & chevron = title.addNew<Item>("chevron");
+      Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+
+      Text & text = title.addNew<Text>("group_title_text");
+      text.font_ = style.font_large_;
+
+      Item & rm = title.addNew<Item>("rm");
+      TexturedRect & xbutton =
+        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      ItemRef fontDescent =
+        xbutton.addExpr(new GetFontDescent(text));
+      ItemRef fontDescentNowPlaying =
+        xbutton.addExpr(new GetFontDescent(nowPlaying));
+
+      // open/close disclosure [>] button:
+      chevron.width_ = ItemRef::reference(text, kPropertyHeight);
+      chevron.height_ = ItemRef::reference(text, kPropertyHeight);
+      chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+      chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+
+      collapsed.anchors_.fill(chevron);
+      collapsed.margins_.set(fontDescent);
+      collapsed.collapsed_ = collapsed.addExpr
+        (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
+      text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+      text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
+      text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
+      text.text_ = text.addExpr
+        (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
+      text.fontSize_ =
+        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+      text.elide_ = Qt::ElideMiddle;
+      text.color_ = ColorRef::constant(style.fg_group_);
+      text.background_ = ColorRef::transparent(title, kPropertyColor);
+
+      // remove group [x] button:
+      rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+      rm.height_ = ItemRef::reference(text, kPropertyHeight);
+      rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+      rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+
+      xbutton.anchors_.center(rm);
+      xbutton.margins_.set(fontDescentNowPlaying);
+      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+      xbutton.height_ = xbutton.width_;
+
+      Item & payload = group.addNew<Item>("payload");
+      payload.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
+      payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+      payload.visible_ = payload.addExpr
+        (new QueryBoolInverse(model,
+                              groupIndex,
+                              PlaylistModel::kRoleCollapsed));
+      payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+
+      GroupCollapse & maCollapse = collapsed.
+        add(new GroupCollapse("ma_collapse", view));
+      maCollapse.anchors_.fill(collapsed);
+
+      RemoveModelItems & maRmGroup = xbutton.
+        add(new RemoveModelItems("ma_remove_group"));
+      maRmGroup.anchors_.fill(xbutton);
+
+      Item & grid = payload.addNew<Item>("grid");
+      grid.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
+      grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+
+      const int numCells = model.rowCount(groupIndex);
+      for (int i = 0; i < numCells; i++)
+      {
+        QModelIndex childIndex = model.index(i, 0, groupIndex);
+        TPlaylistModelItem & cell =
+          grid.add(new TPlaylistModelItem("cell", childIndex));
+        layoutPlaylistItem(grid,
+                           cell,
+                           cellWidth,
+                           cellHeight,
+                           view,
+                           model,
+                           childIndex,
+                           style);
+      }
+
+      Item & footer = payload.addNew<Item>("footer");
+      footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+      footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
+      footer.width_ = ItemRef::reference(group, kPropertyWidth);
+      footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+    }
+  };
+
+  //----------------------------------------------------------------
+  // ItemListRowLayout
+  //
+  struct ItemListRowLayout : public PlaylistView::TLayoutDelegate
+  {
+    void layout(Item & cell,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & index,
+                const PlaylistViewStyle & style)
+    {
+      const Item & fontSize = style.font_size_;
+      const Text & nowPlaying = style.now_playing_;
+      const Text & eyetvBadge = style.eyetv_badge_;
+      const Texture & xbuttonTexture = style.xbutton_;
+
+      Rectangle & frame = cell.addNew<Rectangle>("frame");
+      frame.anchors_.fill(cell);
+      frame.color_ = frame.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       style.bg_item_,
+                                       style.bg_item_selected_,
+                                       style.bg_item_playing_));
+
+      Item & badgeItem = cell.addNew<Item>("badge_item");
+      badgeItem.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
+      badgeItem.anchors_.top_ = ItemRef::reference(cell, kPropertyTop);
+      badgeItem.width_ = ItemRef::offset(eyetvBadge, kPropertyWidth, 6);
+      badgeItem.height_ = ItemRef::reference(cell, kPropertyHeight);
+
+      Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
+      Text & badge = cell.addNew<Text>("badge");
+      badge.font_ = style.font_large_;
+      badge.anchors_.center(badgeItem);
+      badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
+      badge.color_ = badge.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       style.fg_badge_,
+                                       style.bg_item_selected_.opaque(),
+                                       style.bg_item_playing_.opaque()));
+      badge.elide_ = Qt::ElideRight;
+      badge.text_ = badge.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
+      badge.fontSize_ = ItemRef::scale(fontSize,
+                                       kPropertyHeight,
+                                       0.7 * kDpiScale);
+
+      badgeBg.anchors_.inset(badge, -3, 0);
+      badgeBg.color_ = badge.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       style.bg_badge_,
+                                       style.fg_badge_,
+                                       style.fg_badge_));
+
+      Text & label = cell.addNew<Text>("label");
+      Item & rm = cell.addNew<Item>("remove item");
+
+      label.font_ = style.font_;
+      label.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
+      label.anchors_.left_ = ItemRef::offset(badgeItem, kPropertyRight, 5);
+      label.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
+      label.text_ = label.addExpr
+        (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
+      label.elide_ = Qt::ElideMiddle;
+      label.fontSize_ = ItemRef::scale(fontSize,
+                                       kPropertyHeight,
+                                       0.9 * kDpiScale);
+      label.background_ = ColorRef::transparent(frame, kPropertyColor);
+      label.color_ = label.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       style.fg_label_,
+                                       style.fg_label_selected_,
+                                       style.fg_label_selected_));
+
+      Text & playing = cell.addNew<Text>("now playing");
+      playing.copySettings(nowPlaying);
+      playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 0);
+      playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
+      playing.visible_ = playing.addExpr
+        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+      playing.color_ = ColorRef::reference(label, kPropertyColor);
+      playing.background_ = ColorRef::reference(label, kPropertyColorBg);
+
+      rm.width_ = ItemRef::reference(playing, kPropertyHeight);
+      rm.height_ = ItemRef::reference(playing, kPropertyHeight);
+      rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
+      rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
+
+      TexturedRect & xbutton =
+        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+      xbutton.anchors_.center(rm);
+      xbutton.margins_.set(fontDescent);
+      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+      xbutton.height_ = xbutton.width_;
+
+      Rectangle & underline = cell.addNew<Rectangle>("underline");
+      underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
+      underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
+      underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 1);
+      underline.height_ = ItemRef::constant(2);
+      underline.visible_ = BoolRef::reference(playing, kPropertyVisible);
+      underline.color_ = underline.
+        addExpr(new ItemHighlightColor(model,
+                                       index,
+                                       style.cursor_,
+                                       style.fg_badge_,
+                                       style.fg_badge_));
+
+      Rectangle & cur = cell.addNew<Rectangle>("current");
+      cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
+      cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
+      cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
+      cur.height_ = ItemRef::constant(2);
+      cur.color_ = ColorRef::constant(style.cursor_);
+      cur.visible_ = cur.addExpr
+        (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
+
+      RemoveModelItems & maRmItem = xbutton.
+        add(new RemoveModelItems("ma_remove_item"));
+      maRmItem.anchors_.fill(xbutton);
+    }
+  };
+
+  //----------------------------------------------------------------
+  // ListViewStyle
+  //
+  struct ListViewStyle : public PlaylistViewStyle
+  {
+    ListViewStyle(const char * id, PlaylistView & playlist):
+      PlaylistViewStyle(id, playlist)
+    {
+      // main font:
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
+      font_large_.setHintingPreference(QFont::PreferFullHinting);
+#endif
+      font_large_.setStyleHint(QFont::SansSerif);
+      font_large_.setStyleStrategy((QFont::StyleStrategy)
+                             (QFont::PreferOutline |
+                              QFont::PreferAntialias |
+                              QFont::OpenGLCompatible));
+
+      static bool hasImpact =
+        QFontInfo(QFont("impact")).family().
+        contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
+
+      if (hasImpact)
+      {
+        font_large_.setFamily("impact");
+      }
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
+      else
+#endif
+      {
+        font_large_.setStretch(QFont::Condensed);
+        font_large_.setWeight(QFont::Black);
+      }
+
+      // filter shadow gradient:
+      filter_shadow_[0.00] = Color(0xdfdfdf, 1.0);
+      filter_shadow_[0.42] = Color(0xdfdfdf, 0.9);
+      filter_shadow_[1.00] = Color(0xdfdfdf, 0.0);
+
+      // color palette:
+      bg_ = Color(0xffffff, 0.87);
+      fg_ = Color(0x000000, 1.0);
+
+      cursor_ = Color(0x3f7fff, 1.0);
+      separator_ = Color(0x7f7f7f, 0.5);
+
+      bg_focus_ = Color(0xffffff, 0.5);
+      fg_focus_ = Color(0x000000, 0.5);
+
+      bg_edit_selected_ = Color(0x3f7fff, 1.0);
+      fg_edit_selected_ = Color(0xffffff, 1.0);
+
+      bg_hint_ = Color(0xffffff, 0.0);
+      fg_hint_ = Color(0x1f1f1f, 0.5);
+
+      bg_badge_ = Color(0xff7f00, 1.0);
+      fg_badge_ = Color(0xffffff, 0.5);
+
+      bg_label_ = Color(0xffffff, 0.0);
+      fg_label_ = Color(0x000000, 1.0);
+
+      bg_label_selected_ = Color(0x3f7fff, 0.0);
+      fg_label_selected_ = Color(0xffffff, 1.0);
+
+      bg_group_ = Color(0x3f3f3f, 0.5);
+      fg_group_ = Color(0xffffff, 1.0);
+
+      bg_item_ = Color(0xffffff, 0.0);
+      bg_item_playing_ = Color(0xff7f00, 0.75);
+      bg_item_selected_ = Color(0x3f7fff, 1.0);
+
+      // configure common style attributes:
+      title_height_.height_ =
+        title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
+
+      // generate an x-button texture:
+      QImage img = xbuttonImage(32, fg_hint_);
+      xbutton_.setImage(img);
+
+      cell_width_.width_ = cell_width_.
+        addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
+
+      cell_height_.height_ =
+        ItemRef::scale(title_height_, kPropertyHeight, 1.0);
+
+      font_size_.height_ =
+        ItemRef::scale(title_height_, kPropertyHeight, 0.52);
+
+      now_playing_.anchors_.top_ = ItemRef::constant(0.0);
+      now_playing_.anchors_.left_ = ItemRef::constant(0.0);
+      now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("now playing")));
+      now_playing_.font_ = font_small_;
+      now_playing_.font_.setBold(true);
+      now_playing_.fontSize_ = ItemRef::scale(font_size_,
+                                              kPropertyHeight,
+                                              0.7 * kDpiScale);
+
+      eyetv_badge_.font_ = font_large_;
+      eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
+      eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
+      eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
+      eyetv_badge_.font_.setBold(false);
+      eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
+                                              kPropertyHeight,
+                                              0.7 * kDpiScale);
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // PlaylistViewStyle::PlaylistViewStyle
+  //
+  PlaylistViewStyle::PlaylistViewStyle(const char * id,
+                                       PlaylistView & playlist):
+    Item(id),
+    playlist_(playlist),
+    title_height_(Item::addNewHidden<Item>("title_height")),
+    xbutton_(Item::addHidden<Texture>(new Texture("xbutton", QImage()))),
+    cell_width_(Item::addNewHidden<Item>("cell_width")),
+    cell_height_(Item::addNewHidden<Item>("cell_height")),
+    font_size_(Item::addNewHidden<Item>("font_size")),
+    now_playing_(Item::addNewHidden<Text>("now_playing")),
+    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge"))
+  {}
+
 
   //----------------------------------------------------------------
   // PlaylistView::PlaylistView
   //
   PlaylistView::PlaylistView():
     ItemView("playlist"),
-    model_(NULL),
-    style_(new GridViewStyle())
+    model_(NULL)
   {
     layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
       TLayoutPtr(new GroupListLayout());
+
+    layoutDelegates_[PlaylistModel::kLayoutHintItemList] =
+      TLayoutPtr(new ItemListLayout());
+
+    layoutDelegates_[PlaylistModel::kLayoutHintItemListRow] =
+      TLayoutPtr(new ItemListRowLayout());
 
     layoutDelegates_[PlaylistModel::kLayoutHintItemGrid] =
       TLayoutPtr(new ItemGridLayout());
@@ -1714,24 +2176,17 @@ namespace yae
 
     root_.reset(new Item("playlist"));
     Item & root = *root_;
-    const IPlaylistViewStyle & style = *style_;
 
-    // setup an invisible item so its height property expression
-    // could be computed once and the result reused in other places
-    // that need to compute the same property expression:
-    Item & titleHeight = root.addNewHidden<Item>("title_height");
-    titleHeight.height_ =
-      titleHeight.addExpr(new CalcTitleHeight(root, 24.0));
+    root.addHidden(new GridViewStyle("grid_view_style", *this));
+    root.addHidden(new ListViewStyle("list_view_style", *this));
 
-    // generate an x-button texture:
-    {
-      QImage img = xbuttonImage(32, style.fg_hint_);
-      root.addHidden<Texture>(new Texture("xbutton_texture", img));
-    }
+    // FIXME: style id should be referenced, not hardcoded:
+    // styleId_ = "list_view_style";
+    styleId_ = "grid_view_style";
 
     Rectangle & background = root.addNew<Rectangle>("background");
     background.anchors_.fill(root);
-    background.color_ = ColorRef::constant(style.bg_);
+    background.color_ = background.addExpr(new StyleColorBg(*this));
 
     Scrollview & sview = root.addNew<Scrollview>("scrollview");
 
@@ -1739,15 +2194,14 @@ namespace yae
     filterItem.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     filterItem.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
     filterItem.width_ = ItemRef::reference(root, kPropertyWidth);
-    filterItem.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
-
+    filterItem.height_ = filterItem.addExpr(new StyleTitleHeight(*this), 4.5);
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
     scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
-    scrollbar.width_ =
-      scrollbar.addExpr(new CalcTitleHeight(root, 50.0), 0.2);
+    scrollbar.width_ = scrollbar.
+      addExpr(new CalcTitleHeight(*this, 50.0), 0.2);
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
@@ -1763,26 +2217,6 @@ namespace yae
     groups.anchors_.fill(sview.content_);
     groups.anchors_.bottom_.reset();
 
-    Item & cellWidth = root.addNewHidden<Item>("cell_width");
-    cellWidth.width_ = cellWidth.addExpr(new GridCellWidth(groups));
-
-    Item & cellHeight = root.addNewHidden<Item>("cell_height");
-    cellHeight.height_ = cellHeight.addExpr(new GridCellHeight(groups));
-
-    Item & fontSize = root.addNewHidden<Item>("font_size");
-    fontSize.height_ = fontSize.addExpr(new GetFontSize(titleHeight, 0.52,
-                                                          cellHeight, 0.15));
-
-    Text & nowPlaying = root.addNewHidden<Text>("now_playing");
-    nowPlaying.font_ = style.font_;
-    nowPlaying.anchors_.top_ = ItemRef::constant(0.0);
-    nowPlaying.anchors_.left_ = ItemRef::constant(0.0);
-    nowPlaying.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-    nowPlaying.font_.setBold(false);
-    nowPlaying.fontSize_ = ItemRef::scale(fontSize,
-                                          kPropertyHeight,
-                                          0.8 * kDpiScale);
-
     // add a footer:
     Item & footer = sview.content_.addNew<Item>("footer");
     footer.anchors_.left_ =
@@ -1790,7 +2224,7 @@ namespace yae
     footer.anchors_.right_ =
       ItemRef::reference(sview.content_, kPropertyRight);
     footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
-    footer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 4.5);
+    footer.height_ = ItemRef::reference(filterItem, kPropertyHeight);
 
     FlickableArea & maScrollview =
       sview.add(new FlickableArea("ma_sview", *this, scrollbar));
@@ -1806,7 +2240,8 @@ namespace yae
     slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
     slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
-    slider.color_ = ColorRef::constant(style.separator_);
+    slider.background_ = ColorRef::transparent(background, kPropertyColor);
+    slider.color_ = slider.addExpr(new StyleColorSeparator(*this));
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
@@ -1878,10 +2313,11 @@ namespace yae
                                         int, int)));
     YAE_ASSERT(ok);
 
-    const IPlaylistViewStyle & style = *style_;
     Item & root = *root_;
     Item & filterItem = root["filterItem"];
     filterItem.children_.clear();
+
+    const PlaylistViewStyle & style = playlistViewStyle();
 
     QModelIndex rootIndex = model_->index(-1, -1);
     layoutPlaylistFilter(filterItem, *this, *model_, rootIndex, style);
@@ -2008,12 +2444,12 @@ namespace yae
     bool groupOnly = (itemRow < 0 || grid.children_.size() <= itemRow);
     Item & item = groupOnly ? group : *(grid.children_[itemRow]);
 
-    Item & spacer = group["spacer"];
+    Item & spacer = group["group_spacer"];
     double h_header = spacer.height();
 
     if (!groupOnly)
     {
-      Item & title = group["title"];
+      Item & title = group["group_title"];
       h_header += title.height();
     }
 
@@ -2153,9 +2589,11 @@ namespace yae
   get_items_per_row(PlaylistView & view)
   {
     Item & root = *(view.root());
+    const PlaylistViewStyle & style = view.playlistViewStyle();
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    double gridWidth = sview.width();
-    return calcItemsPerRow(gridWidth);
+    double rowWidth = sview.width();
+    double cellWidth = style.cell_width_.width();
+    return calcItemsPerRow(rowWidth, cellWidth);
   }
 
   //----------------------------------------------------------------
@@ -2231,6 +2669,16 @@ namespace yae
     }
 
     return f;
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::processMouseTracking
+  //
+  bool
+  PlaylistView::processMouseTracking(const TVec2D & mousePt)
+  {
+    (void)mousePt;
+    return isEnabled();
   }
 
   //----------------------------------------------------------------
@@ -2444,7 +2892,6 @@ namespace yae
     }
     inputHandlers_.clear();
 
-    const IPlaylistViewStyle & style = *style_;
     Item & root = *root_;
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
@@ -2459,6 +2906,7 @@ namespace yae
     sview.uncache();
     scrollbar.uncache();
 
+    const PlaylistViewStyle & style = playlistViewStyle();
     delegate->layout(groups, *this, *model_, rootIndex, style);
 
 #if 0 // ndef NDEBUG
@@ -2518,11 +2966,11 @@ namespace yae
 #endif
 
     TMakeCurrentContext currentContext(*context());
-    const IPlaylistViewStyle & style = *style_;
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & scrollbar = root["scrollbar"];
     Item & groups = sview.content_["groups"];
+    const PlaylistViewStyle & style = playlistViewStyle();
 
     if (parent.isValid())
     {

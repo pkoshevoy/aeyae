@@ -207,6 +207,13 @@ namespace yae
       return scale_a(0.0);
     }
 
+    inline Color opaque(double alpha = 1.0) const
+    {
+      Color result(*this);
+      result.set_a(alpha);
+      return result;
+    }
+
     Color bw_contrast() const
     {
       TVec4D v(*this);

@@ -28,6 +28,12 @@
 namespace yae
 {
 
+  // forward declarations:
+  struct PlaylistViewStyle;
+  class PlaylistView;
+  class Texture;
+  class Text;
+
   //----------------------------------------------------------------
   // TPlaylistModelItem
   //
@@ -45,26 +51,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // CalcTitleHeight
+  // PlaylistViewStyle
   //
-  struct CalcTitleHeight : public TDoubleExpr
+  struct YAE_API PlaylistViewStyle : public Item
   {
-    CalcTitleHeight(const Item & titleContainer, double minHeight);
+    PlaylistViewStyle(const char * id, PlaylistView & playlist);
 
-    // virtual:
-    void evaluate(double & result) const;
+    // the view:
+    PlaylistView & playlist_;
 
-    const Item & titleContainer_;
-    double minHeight_;
-  };
+    // shared common properties:
+    Item & title_height_;
+    Texture & xbutton_;
+    Item & cell_width_;
+    Item & cell_height_;
+    Item & font_size_;
+    Text & now_playing_;
+    Text & eyetv_badge_;
 
-  //----------------------------------------------------------------
-  // IPlaylistViewStyle
-  //
-  struct YAE_API IPlaylistViewStyle
-  {
-    virtual ~IPlaylistViewStyle() {}
+    // font palette:
+    QFont font_;
+    QFont font_small_;
+    QFont font_large_;
 
+    // color palette:
     Color bg_;
     Color fg_;
 
@@ -89,15 +99,17 @@ namespace yae
     Color bg_label_selected_;
     Color fg_label_selected_;
 
+    Color bg_group_;
+    Color fg_group_;
+
     Color bg_item_;
     Color bg_item_playing_;
     Color bg_item_selected_;
 
-    QFont font_;
-    QFont font_small_;
-
+    // gradients:
     std::map<double, Color> filter_shadow_;
   };
+
 
   //----------------------------------------------------------------
   // ILayoutDelegate
@@ -111,8 +123,9 @@ namespace yae
                         TView & view,
                         Model & model,
                         const QModelIndex & itemIndex,
-                        const IPlaylistViewStyle & style) = 0;
+                        const PlaylistViewStyle & style) = 0;
   };
+
 
   //----------------------------------------------------------------
   // PlaylistView
@@ -123,11 +136,9 @@ namespace yae
 
   public:
     typedef PlaylistModel::LayoutHint TLayoutHint;
-
     typedef ILayoutDelegate<PlaylistView, PlaylistModelProxy> TLayoutDelegate;
     typedef boost::shared_ptr<TLayoutDelegate> TLayoutPtr;
     typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
-    typedef boost::shared_ptr<IPlaylistViewStyle> TStylePtr;
 
     PlaylistView();
 
@@ -141,8 +152,14 @@ namespace yae
     inline const TLayoutDelegates & layouts() const
     { return layoutDelegates_; }
 
+    inline const PlaylistViewStyle & playlistViewStyle() const
+    { return root_->get<PlaylistViewStyle>(styleId_.c_str()); }
+
     // virtual:
     void paint(Canvas * canvas);
+
+    // virtual:
+    bool processMouseTracking(const TVec2D & mousePt);
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
@@ -173,7 +190,7 @@ namespace yae
   protected:
     PlaylistModelProxy * model_;
     TLayoutDelegates layoutDelegates_;
-    TStylePtr style_;
+    std::string styleId_;
   };
 
 }

@@ -448,7 +448,7 @@ namespace yae
     // could be computed once and the result reused in other places
     // that need to compute the same property expression:
     Item & title = root.addNewHidden<Item>("title_height");
-    title.height_ = title.addExpr(new CalcTitleHeight(root, 24.0));
+    title.height_ = title.addExpr(new CalcTitleHeight(*this, 24.0));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);
