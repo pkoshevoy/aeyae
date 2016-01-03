@@ -137,6 +137,78 @@ namespace yae
     double minHeight_;
   };
 
+  //----------------------------------------------------------------
+  // OddRoundUp
+  //
+  struct OddRoundUp : public TDoubleExpr
+  {
+    OddRoundUp(const Item & item,
+               Property property,
+               double scale = 1.0,
+               double translate = 0.0):
+      item_(item),
+      property_(property),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double v = 0.0;
+      item_.get(property_, v);
+      v *= scale_;
+      v += translate_;
+
+      int i = 1 | int(ceil(v));
+      result = double(i);
+    }
+
+    const Item & item_;
+    Property property_;
+    double scale_;
+    double translate_;
+  };
+
+  //----------------------------------------------------------------
+  // Repaint
+  //
+  struct Repaint : public Item::Observer
+  {
+    Repaint(ItemView & timeline):
+      timeline_(timeline)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      (void) item;
+      (void) e;
+
+      timeline_.requestRepaint();
+    }
+
+    ItemView & timeline_;
+  };
+
+  //----------------------------------------------------------------
+  // Uncache
+  //
+  struct Uncache : public Item::Observer
+  {
+    Uncache(Item & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      item_.uncache();
+    }
+
+    Item & item_;
+  };
+
 }
 
 

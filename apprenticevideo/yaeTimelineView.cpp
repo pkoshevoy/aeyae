@@ -15,6 +15,7 @@
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaePlaylistView.h"
+#include "yaePlaylistViewStyle.h"
 #include "yaeProperty.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -28,36 +29,25 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // OddRoundUp
+  // TimelineShadowWidth
   //
-  struct OddRoundUp : public TDoubleExpr
+  struct TimelineShadowWidth : public GetScrollviewWidth
   {
-    OddRoundUp(const Item & item,
-               Property property,
-               double scale = 1.0,
-               double translate = 0.0):
-      item_(item),
-      property_(property),
-      scale_(scale),
-      translate_(translate)
+    TimelineShadowWidth(const PlaylistView & playlist):
+      GetScrollviewWidth(playlist)
     {}
 
-    // virtual:
     void evaluate(double & result) const
     {
-      double v = 0.0;
-      item_.get(property_, v);
-      v *= scale_;
-      v += translate_;
-
-      int i = 1 | int(ceil(v));
-      result = double(i);
+      if (playlist_.isEnabled())
+      {
+        GetScrollviewWidth::evaluate(result);
+      }
+      else
+      {
+        result = playlist_.width();
+      }
     }
-
-    const Item & item_;
-    Property property_;
-    double scale_;
-    double translate_;
   };
 
   //----------------------------------------------------------------
@@ -440,60 +430,93 @@ namespace yae
   //
   TimelineView::TimelineView():
     ItemView("timeline"),
-    model_(NULL)
+    model_(NULL),
+    playlist_(NULL)
+  {}
+
+  //----------------------------------------------------------------
+  // TimelineView::setPlaylistView
+  //
+  void
+  TimelineView::setPlaylistView(PlaylistView * playlist)
   {
+    if (!playlist)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    YAE_ASSERT(!playlist_);
+    playlist_ = playlist;
+
     Item & root = *root_;
 
-    // setup an invisible item so its height property expression
-    // could be computed once and the result reused in other places
-    // that need to compute the same property expression:
-    Item & title = root.addNewHidden<Item>("title_height");
-    title.height_ = title.addExpr(new CalcTitleHeight(*this, 24.0));
+    // re-apply style when playlist is enabled or disabled:
+    playlist_->root()->addObserver(Item::kOnToggleItemView,
+                                   Item::TObserverPtr(new Repaint(*this)));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);
     shadow.anchors_.top_.reset();
-    shadow.height_ = ItemRef::scale(title, kPropertyHeight, 4.5);
-
-    shadow.color_[0.000000] = Color(0x000000, 0.004);
-    shadow.color_[0.135417] = Color(0x000000, 0.016);
-    shadow.color_[0.208333] = Color(0x000000, 0.031);
-    shadow.color_[0.260417] = Color(0x000000, 0.047);
-    shadow.color_[0.354167] = Color(0x000000, 0.090);
-    shadow.color_[0.447917] = Color(0x000000, 0.149);
-    shadow.color_[0.500000] = Color(0x000000, 0.192);
-    shadow.color_[1.000000] = Color(0x000000, 0.690);
+    shadow.anchors_.right_.reset();
+    shadow.width_ = shadow.addExpr(new TimelineShadowWidth(*playlist));
+    shadow.height_ = shadow.addExpr(new StyleTitleHeight(*playlist), 4.5);
+    shadow.color_ = shadow.addExpr(new StyleTimelineShadow(*playlist));
 
     Item & container = root.addNew<Item>("container");
     container.anchors_.fill(root);
     container.anchors_.top_.reset();
-    container.height_ = ItemRef::scale(title, kPropertyHeight, 1.5);
+    container.height_ = container.addExpr(new StyleTitleHeight(*playlist), 1.5);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     timeline.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
-    timeline.margins_.left_ = ItemRef::scale(title, kPropertyHeight, 0.5);
+    timeline.margins_.left_ = timeline.
+      addExpr(new StyleTitleHeight(*playlist), 0.5);
     timeline.margins_.right_ = timeline.margins_.left_;
-    timeline.height_ = timeline.addExpr(new OddRoundUp(title,
+    timeline.height_ = timeline.addExpr(new OddRoundUp(container,
                                                        kPropertyHeight,
-                                                       0.33333333), 1, 1);
+                                                       0.22222222), 1, 1);
 
     TimelineSeek & seek = timeline.add(new TimelineSeek(*this));
     seek.anchors_.fill(timeline);
 
-    ColorRef colorExcluded = ColorRef::constant(Color(0xFFFFFF, 0.2));
-    ColorRef colorIncluded = ColorRef::constant(Color(0xFFFFFF, 0.5));
-    ColorRef colorPlayed = ColorRef::constant(Color(0xf12b24, 1.0));
-    ColorRef colorOutPt = ColorRef::constant(Color(0xe6e6e6, 1.0));
-    ColorRef colorPlayedBg = ColorRef::constant(Color(0xf12b24, 0.0));
-    ColorRef colorOutPtBg = ColorRef::constant(Color(0xe6e6e6, 0.0));
-    ColorRef colorTextBg = ColorRef::constant(Color(0x7f7f7f, 0.25));
-    ColorRef colorTextFg = ColorRef::constant(Color(0xFFFFFF, 0.5));
-    ColorRef colorFocusBg = ColorRef::constant(Color(0x7f7f7f, 0.5));
-    ColorRef colorFocusFg = ColorRef::constant(Color(0xFFFFFF, 1.0));
-    ColorRef colorHighlightBg = ColorRef::constant(Color(0xFFFFFF, 1.0));
-    ColorRef colorHighlightFg = ColorRef::constant(Color(0x000000, 1.0));
+    ColorRef colorExcluded = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineExcluded));
+
+    ColorRef colorOutPt = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded, 1, 1));
+
+    ColorRef colorOutPtBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded, 0));
+
+    ColorRef colorIncluded = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded));
+
+    ColorRef colorPlayed = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelinePlayed));
+
+    ColorRef colorPlayedBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kTimelinePlayed, 0));
+
+    ColorRef colorTextBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+
+    ColorRef colorTextFg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+
+    ColorRef colorFocusBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgFocus));
+
+    ColorRef colorFocusFg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgFocus));
+
+    ColorRef colorHighlightBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgEditSelected));
+
+    ColorRef colorHighlightFg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgEditSelected));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -607,6 +630,8 @@ namespace yae
       root.add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
     ItemFocus::singleton().setFocusable(*this, playheadFocus, 2);
     playheadFocus.copyViewToEdit_ = true;
+    playheadFocus.bgNoFocus_ = colorTextBg;
+    playheadFocus.bgOnFocus_ = colorFocusBg;
 
     playheadAux.anchors_.left_ =
       ItemRef::offset(timeline, kPropertyLeft, 3);
@@ -621,10 +646,8 @@ namespace yae
       ItemRef::scale(container, kPropertyHeight, 0.33333333 * kDpiScale);
 
     playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
-    playheadAuxBg.color_ =
-      playheadAuxBg.addExpr(new ColorWhenFocused(playheadFocus,
-                                                 colorTextBg,
-                                                 colorFocusBg));
+    playheadAuxBg.color_ = playheadAuxBg.
+      addExpr(new ColorWhenFocused(playheadFocus));
 
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);

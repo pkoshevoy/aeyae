@@ -87,7 +87,7 @@ namespace yae
     Segment innerSegment(0.0, r0);
 
     // make sure image is at least 2 pixels wide:
-    iw_ = (int)std::ceil(std::max<double>(2.0, 2.0 * r));
+    iw_ = (int)(1.0 + std::ceil(2.0 * r));
 
     // make sure texture size is even:
     iw_ = (iw_ & 1) ? (iw_ + 1) : iw_;

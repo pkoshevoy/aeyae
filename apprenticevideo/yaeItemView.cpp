@@ -67,6 +67,10 @@ namespace yae
         ItemFocus::singleton().clearFocus(focus->item_->id_);
       }
     }
+
+    Item & root = *root_;
+    TMakeCurrentContext currentContext(*context());
+    root.notifyObservers(Item::kOnToggleItemView);
   }
 
   //----------------------------------------------------------------

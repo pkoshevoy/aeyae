@@ -104,6 +104,8 @@ namespace yae
     kPropertyColorCursor,
     kPropertyColorSelFg,
     kPropertyColorSelBg,
+    kPropertyColorNoFocusBg,
+    kPropertyColorOnFocusBg,
     kPropertyCursorWidth,
     kPropertyHasText,
     kPropertyText
@@ -171,6 +173,7 @@ namespace yae
   // TVec2DProp
   //
   typedef IProperties<TVec2D> TVec2DProp;
+
 }
 
 

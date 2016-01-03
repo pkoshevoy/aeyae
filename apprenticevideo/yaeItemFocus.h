@@ -49,6 +49,9 @@ namespace yae
 
     ItemFocus();
 
+    // unregister focusable item so it would no longer receive focus:
+    void removeFocusable(Canvas::ILayer & view, const std::string & id);
+
     // register item that will be allowed to receive focus:
     void setFocusable(Canvas::ILayer & view, Item & item, int index);
 
@@ -104,24 +107,25 @@ namespace yae
   //
   struct ColorWhenFocused : public TColorExpr
   {
-    ColorWhenFocused(Item & focusProxy,
-                     const ColorRef & noFocus,
-                     const ColorRef & focused):
-      focusProxy_(focusProxy),
-      noFocus_(noFocus),
-      focused_(focused)
+    ColorWhenFocused(Item & focusProxy):
+      focusProxy_(focusProxy)
     {}
 
     // virtual:
     void evaluate(Color & result) const
     {
       bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
-      result = hasFocus ? focused_.get() : noFocus_.get();
+      if (hasFocus)
+      {
+        focusProxy_.get(kPropertyColorOnFocusBg, result);
+      }
+      else
+      {
+        focusProxy_.get(kPropertyColorNoFocusBg, result);
+      }
     }
 
     Item & focusProxy_;
-    ColorRef noFocus_;
-    ColorRef focused_;
   };
 
 }

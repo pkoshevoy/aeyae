@@ -654,6 +654,8 @@ namespace yae
   void
   TextInputProxy::uncache()
   {
+    bgNoFocus_.uncache();
+    bgOnFocus_.uncache();
     placeholder_.uncache();
     InputArea::uncache();
   }
@@ -755,7 +757,27 @@ namespace yae
     }
     else
     {
-      Item::get(property, value);
+      InputArea::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TextInputProxy::get
+  //
+  void
+  TextInputProxy::get(Property property, Color & value) const
+  {
+    if (property == kPropertyColorNoFocusBg)
+    {
+      value = bgNoFocus_.get();
+    }
+    else if (property == kPropertyColorOnFocusBg)
+    {
+      value = bgOnFocus_.get();
+    }
+    else
+    {
+      InputArea::get(property, value);
     }
   }
 

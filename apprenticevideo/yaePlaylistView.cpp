@@ -19,11 +19,14 @@
 #include "yaeExpression.h"
 #include "yaeFlickableArea.h"
 #include "yaeGradient.h"
+#include "yaeGridViewStyle.h"
 #include "yaeImage.h"
 #include "yaeImageLive.h"
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
+#include "yaeListViewStyle.h"
 #include "yaePlaylistView.h"
+#include "yaePlaylistViewStyle.h"
 #include "yaeProperty.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -40,6 +43,17 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // kGridViewStyleId
+  //
+  static const char * kGridViewStyleId = "grid_view_style";
+
+  //----------------------------------------------------------------
+  // kListViewStyleId
+  //
+  static const char * kListViewStyleId = "list_view_style";
+
 
   //----------------------------------------------------------------
   // toString
@@ -90,16 +104,6 @@ namespace yae
 #else
     return drand48();
 #endif
-  }
-
-  //----------------------------------------------------------------
-  // calcItemsPerRow
-  //
-  inline static unsigned int
-  calcItemsPerRow(double rowWidth, double cellWidth)
-  {
-    double n = std::max(1.0, std::floor(rowWidth / cellWidth));
-    return (unsigned int)n;
   }
 
   //----------------------------------------------------------------
@@ -200,6 +204,7 @@ namespace yae
 
       double cellHeight = 0.0;
       cellHeight_.get(kPropertyHeight, cellHeight);
+      cellHeight += 2;
 
       unsigned int cellsPerRow = std::floor(gridWidth / cellWidth);
       unsigned int rowsOfCells = calcRows(gridWidth, cellWidth, numCells);
@@ -213,94 +218,6 @@ namespace yae
     const TPlaylistModelItem & item_;
     const Item & cellWidth_;
     const Item & cellHeight_;
-  };
-
-  //----------------------------------------------------------------
-  // GridCellWidth
-  //
-  struct GridCellWidth : public TDoubleExpr
-  {
-    GridCellWidth(const PlaylistView & playlist,
-                  unsigned int maxCells = 5,
-                  double minWidth = 160):
-      playlist_(playlist),
-      maxCells_(maxCells),
-      minWidth_(minWidth)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      Item & root = *(playlist_.root());
-      Scrollview & sview = root.get<Scrollview>("scrollview");
-
-      double rowWidth = 0.0;
-      sview.get(kPropertyWidth, rowWidth);
-
-      unsigned int numCells =
-        std::min(maxCells_, calcItemsPerRow(rowWidth, minWidth_));
-
-      result = (numCells < 2) ? rowWidth : (rowWidth / double(numCells));
-    }
-
-    const PlaylistView & playlist_;
-    unsigned int maxCells_;
-    double minWidth_;
-  };
-
-  //----------------------------------------------------------------
-  // GetScrollviewWidth
-  //
-  struct GetScrollviewWidth : public TDoubleExpr
-  {
-    GetScrollviewWidth(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      Item & root = *(playlist_.root());
-      Scrollview & sview = root.get<Scrollview>("scrollview");
-      sview.get(kPropertyWidth, result);
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-
-  //----------------------------------------------------------------
-  // GetFontSize
-  //
-  struct GetFontSize : public TDoubleExpr
-  {
-    GetFontSize(const Item & titleHeight, double titleHeightScale,
-                const Item & cellHeight, double cellHeightScale):
-      titleHeight_(titleHeight),
-      cellHeight_(cellHeight),
-      titleHeightScale_(titleHeightScale),
-      cellHeightScale_(cellHeightScale)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double t = 0.0;
-      titleHeight_.get(kPropertyHeight, t);
-      t *= titleHeightScale_;
-
-      double c = 0.0;
-      cellHeight_.get(kPropertyHeight, c);
-      c *= cellHeightScale_;
-
-      result = std::min(t, c);
-    }
-
-    const Item & titleHeight_;
-    const Item & cellHeight_;
-
-    double titleHeightScale_;
-    double cellHeightScale_;
   };
 
 
@@ -501,213 +418,6 @@ namespace yae
     Color colorPlaying_;
   };
 
-  //----------------------------------------------------------------
-  // ContrastColor
-  //
-  struct ContrastColor : public TColorExpr
-  {
-    ContrastColor(const Item & item, Property prop, double scaleAlpha):
-      scaleAlpha_(scaleAlpha),
-      item_(item),
-      prop_(prop)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      Color c0;
-      item_.get(prop_, c0);
-      result = c0.bw_contrast();
-      double a = scaleAlpha_ * double(result.a());
-      result.set_a((unsigned char)(std::min(255.0, std::max(0.0, a))));
-    }
-
-    double scaleAlpha_;
-    const Item & item_;
-    Property prop_;
-  };
-
-  //----------------------------------------------------------------
-  // StyleColorBg
-  //
-  struct StyleColorBg : public TColorExpr
-  {
-    StyleColorBg(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.bg_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StyleColorSeparator
-  //
-  struct StyleColorSeparator : public TColorExpr
-  {
-    StyleColorSeparator(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.separator_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StyleTitleHeight
-  //
-  struct StyleTitleHeight : public TDoubleExpr
-  {
-    StyleTitleHeight(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      style.title_height_.get(kPropertyHeight, result);
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // xbuttonImage
-  //
-  static QImage
-  xbuttonImage(unsigned int w, const Color & color)
-  {
-    QImage img(w, w, QImage::Format_ARGB32);
-
-    // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
-
-    static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
-
-    int w2 = w / 2;
-    double diameter = double(w);
-    double center = diameter * 0.5;
-    Segment sa(-center, diameter);
-    Segment sb(-diameter * 0.1, diameter * 0.2);
-
-    TVec2D origin(0.0, 0.0);
-    TVec2D u_axis(0.707106781186548, 0.707106781186548);
-    TVec2D v_axis(-0.707106781186548, 0.707106781186548);
-
-    Vec<double, 4> outerColor(Color(0, 0.0));
-    Vec<double, 4> innerColor(color);
-    TVec2D samplePoint;
-
-    for (int y = 0; y < int(w); y++)
-    {
-      unsigned char * dst = img.scanLine(y);
-      samplePoint.set_y(double(y - w2));
-
-      for (int x = 0; x < int(w); x++, dst += 4)
-      {
-        samplePoint.set_x(double(x - w2));
-
-        double outer = 0.0;
-        double inner = 0.0;
-
-        for (unsigned int k = 0; k < supersample; k++)
-        {
-          TVec2D wcs_pt = samplePoint + sp[k];
-          TVec2D pt = wcs_to_lcs(origin, u_axis, v_axis, wcs_pt);
-          double oh = sa.pixelOverlap(pt.x()) * sb.pixelOverlap(pt.y());
-          double ov = sb.pixelOverlap(pt.x()) * sa.pixelOverlap(pt.y());
-          double innerOverlap = std::max<double>(oh, ov);
-          double outerOverlap = 1.0 - innerOverlap;
-
-          outer += outerOverlap;
-          inner += innerOverlap;
-        }
-
-        double outerWeight = outer / double(supersample);
-        double innerWeight = inner / double(supersample);
-        Color c(outerColor * outerWeight + innerColor * innerWeight);
-        memcpy(dst, &(c.argb_), sizeof(c.argb_));
-      }
-    }
-
-    return img;
-  }
-
-
-
-  //----------------------------------------------------------------
-  // TLayoutPtr
-  //
-  typedef PlaylistView::TLayoutPtr TLayoutPtr;
-
-  //----------------------------------------------------------------
-  // TLayoutHint
-  //
-  typedef PlaylistModel::LayoutHint TLayoutHint;
-
-  //----------------------------------------------------------------
-  // findLayoutDelegate
-  //
-  static TLayoutPtr
-  findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
-                     TLayoutHint layoutHint)
-  {
-    std::map<TLayoutHint, TLayoutPtr>::const_iterator found =
-      delegates.find(layoutHint);
-
-    if (found != delegates.end())
-    {
-      return found->second;
-    }
-
-    YAE_ASSERT(false);
-    return TLayoutPtr();
-  }
-
-  //----------------------------------------------------------------
-  // findLayoutDelegate
-  //
-  static TLayoutPtr
-  findLayoutDelegate(const std::map<TLayoutHint, TLayoutPtr> & delegates,
-                     const PlaylistModelProxy & model,
-                     const QModelIndex & modelIndex)
-  {
-    QVariant v = model.data(modelIndex, PlaylistModel::kRoleLayoutHint);
-
-    if (v.canConvert<TLayoutHint>())
-    {
-      TLayoutHint layoutHint = v.value<TLayoutHint>();
-      return findLayoutDelegate(delegates, layoutHint);
-    }
-
-    YAE_ASSERT(false);
-    return TLayoutPtr();
-  }
-
-  //----------------------------------------------------------------
-  // findLayoutDelegate
-  //
-  static TLayoutPtr
-  findLayoutDelegate(const PlaylistView & view,
-                     const PlaylistModelProxy & model,
-                     const QModelIndex & modelIndex)
-  {
-    return findLayoutDelegate(view.layouts(), model, modelIndex);
-  }
 
   //----------------------------------------------------------------
   // SetSortBy
@@ -816,27 +526,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // Uncache
-  //
-  struct Uncache : public Item::Observer
-  {
-    Uncache(Item & item):
-      item_(item)
-    {}
-
-    // virtual:
-    void observe(const Item & item, Item::Event e)
-    {
-      if (e == Item::kOnUncache)
-      {
-        item_.uncache();
-      }
-    }
-
-    Item & item_;
-  };
-
-  //----------------------------------------------------------------
   // layoutPlaylistFilter
   //
   static void
@@ -846,6 +535,9 @@ namespace yae
                        const QModelIndex & itemIndex,
                        const PlaylistViewStyle & style)
   {
+    // in-case of a re-layout:
+    item.children_.clear();
+
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
     const Item & fontSize = style.font_size_;
@@ -884,9 +576,12 @@ namespace yae
       circle.height_ = circle.width_;
       circle.radius_ = ItemRef::scale(circle, kPropertyWidth, 0.5);
       circle.border_ = ItemRef::scale(circle, kPropertyWidth, 0.1);
-      circle.background_ = ColorRef::transparent(filter, kPropertyColor);
+      // circle.background_ = ColorRef::transparent(filter, kPropertyColor);
+      // circle.background_ = ColorRef::constant(Color(0x000000, 0.0));
+      circle.background_ = circle.
+        addExpr(new PremultipliedTransparent(filter, kPropertyColor));
       circle.color_ = colorFocusBg;
-      circle.colorBorder_ = ColorRef::constant(style.fg_focus_.scale_a(0.25));
+      circle.colorBorder_ = ColorRef::constant(style.border_);
 
       Transform & xform = icon.addNew<Transform>("xform");
       xform.anchors_.hcenter_ = circle.anchors_.hcenter_;
@@ -924,14 +619,15 @@ namespace yae
 
     TextInputProxy & editProxy =
       filter.add(new TextInputProxy("filter_focus", text, edit));
+    ItemFocus::singleton().removeFocusable(view, editProxy.id_);
     ItemFocus::singleton().setFocusable(view, editProxy, 1);
     editProxy.anchors_.fill(filter);
+    editProxy.bgNoFocus_ = colorTextBg;
+    editProxy.bgOnFocus_ = colorFocusBg;
     editProxy.placeholder_ =
       TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
 
-    filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy,
-                                                        colorTextBg,
-                                                        colorFocusBg));
+    filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy));
 
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
@@ -1120,7 +816,9 @@ namespace yae
                        const QModelIndex & itemIndex,
                        const PlaylistViewStyle & style)
   {
-    const Item & playlist = *(view.root());
+    // in-case of a re-layout:
+    footer.children_.clear();
+
     const Item & fontSize = style.font_size_;
 
     Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
@@ -1166,35 +864,30 @@ namespace yae
     group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
     group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
     group.anchors_.top_ = group.addExpr(new GroupTop(group));
+    style.layout_group_->layout(group, view, model, groupIndex, style);
+  }
 
-    TLayoutPtr childLayout = findLayoutDelegate(view, model, groupIndex);
-    if (childLayout)
+
+  //----------------------------------------------------------------
+  // GroupListLayout::layout
+  //
+  void
+  GroupListLayout::layout(Item & groups,
+                          PlaylistView & view,
+                          PlaylistModelProxy & model,
+                          const QModelIndex & rootIndex,
+                          const PlaylistViewStyle & style)
+  {
+    const int numGroups = model.rowCount(rootIndex);
+    for (int i = 0; i < numGroups; i++)
     {
-      childLayout->layout(group, view, model, groupIndex, style);
+      QModelIndex childIndex = model.index(i, 0, rootIndex);
+      TPlaylistModelItem & group =
+        groups.add(new TPlaylistModelItem("group", childIndex));
+      layoutPlaylistGroup(groups, group, view, model, childIndex, style);
     }
   }
 
-  //----------------------------------------------------------------
-  // GroupListLayout
-  //
-  struct GroupListLayout : public PlaylistView::TLayoutDelegate
-  {
-    void layout(Item & groups,
-                PlaylistView & view,
-                PlaylistModelProxy & model,
-                const QModelIndex & rootIndex,
-                const PlaylistViewStyle & style)
-    {
-      const int numGroups = model.rowCount(rootIndex);
-      for (int i = 0; i < numGroups; i++)
-      {
-        QModelIndex childIndex = model.index(i, 0, rootIndex);
-        TPlaylistModelItem & group =
-          groups.add(new TPlaylistModelItem("group", childIndex));
-        layoutPlaylistGroup(groups, group, view, model, childIndex, style);
-      }
-    }
-  };
 
   //----------------------------------------------------------------
   // GroupCollapse
@@ -1287,869 +980,560 @@ namespace yae
     ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
     maPlay.anchors_.fill(cell);
 
-    TLayoutPtr childLayout = findLayoutDelegate(view, model, itemIndex);
-    if (childLayout)
-    {
-      childLayout->layout(cell, view, model, itemIndex, style);
-    }
+    style.layout_item_->layout(cell, view, model, itemIndex, style);
   }
 
+
   //----------------------------------------------------------------
-  // ItemGridLayout
+  // ItemGridLayout::layout
   //
-  struct ItemGridLayout : public PlaylistView::TLayoutDelegate
+  void
+  ItemGridLayout::layout(Item & group,
+                         PlaylistView & view,
+                         PlaylistModelProxy & model,
+                         const QModelIndex & groupIndex,
+                         const PlaylistViewStyle & style)
   {
-    void layout(Item & group,
-                PlaylistView & view,
-                PlaylistModelProxy & model,
-                const QModelIndex & groupIndex,
-                const PlaylistViewStyle & style)
+    // reuse pre-computed properties:
+    const Item & fontSize = style.font_size_;
+    const Item & cellWidth = style.cell_width_;
+    const Item & cellHeight = style.cell_height_;
+    const Item & titleHeight = style.title_height_;
+    const Text & nowPlaying = style.now_playing_;
+    const Texture & xbuttonTexture = style.xbutton_;
+
+    Item & spacer = group.addNew<Item>("group_spacer");
+    spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
+    spacer.width_ = ItemRef::reference(group, kPropertyWidth);
+    spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+
+    Item & title = group.addNew<Item>("group_title");
+    title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
+    title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+
+    Item & chevron = title.addNew<Item>("chevron");
+    Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+
+    Text & text = title.addNew<Text>("text");
+    text.font_ = style.font_large_;
+
+    Item & rm = title.addNew<Item>("rm");
+    TexturedRect & xbutton =
+      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+    ItemRef fontDescent =
+      xbutton.addExpr(new GetFontDescent(text));
+    ItemRef fontDescentNowPlaying =
+      xbutton.addExpr(new GetFontDescent(nowPlaying));
+
+    // open/close disclosure [>] button:
+    chevron.width_ = ItemRef::reference(text, kPropertyHeight);
+    chevron.height_ = ItemRef::reference(text, kPropertyHeight);
+    chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+
+    collapsed.anchors_.fill(chevron);
+    collapsed.margins_.set(fontDescent);
+    collapsed.collapsed_ = collapsed.addExpr
+      (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
+    text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
+    text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+    text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
+    text.text_ = text.addExpr
+      (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
+    text.fontSize_ =
+      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.elide_ = Qt::ElideMiddle;
+    text.color_ = ColorRef::constant(style.fg_group_);
+    text.background_ = ColorRef::constant(style.bg_group_);
+
+    // remove group [x] button:
+    rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+    rm.height_ = ItemRef::reference(text, kPropertyHeight);
+    rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+
+    xbutton.anchors_.center(rm);
+    xbutton.margins_.set(fontDescentNowPlaying);
+    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.height_ = xbutton.width_;
+
+    Rectangle & separator = group.addNew<Rectangle>("separator");
+    separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
+    separator.anchors_.left_ = ItemRef::offset(group, kPropertyLeft, 2);
+    separator.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+    separator.height_ = ItemRef::constant(2.0);
+    separator.color_ = style.separator_;
+
+    Item & payload = group.addNew<Item>("payload");
+    payload.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
+    payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+    payload.visible_ = payload.addExpr
+      (new QueryBoolInverse(model,
+                            groupIndex,
+                            PlaylistModel::kRoleCollapsed));
+    payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+
+    GroupCollapse & maCollapse = collapsed.
+      add(new GroupCollapse("ma_collapse", view));
+    maCollapse.anchors_.fill(collapsed);
+
+    RemoveModelItems & maRmGroup = xbutton.
+      add(new RemoveModelItems("ma_remove_group"));
+    maRmGroup.anchors_.fill(xbutton);
+
+    Item & grid = payload.addNew<Item>("grid");
+    grid.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
+    grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+
+    const int numCells = model.rowCount(groupIndex);
+    for (int i = 0; i < numCells; i++)
     {
-      // reuse pre-computed properties:
-      const Item & fontSize = style.font_size_;
-      const Item & cellWidth = style.cell_width_;
-      const Item & cellHeight = style.cell_height_;
-      const Item & titleHeight = style.title_height_;
-      const Text & nowPlaying = style.now_playing_;
-      const Texture & xbuttonTexture = style.xbutton_;
-
-      Item & spacer = group.addNew<Item>("group_spacer");
-      spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
-      spacer.width_ = ItemRef::reference(group, kPropertyWidth);
-      spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
-
-      Item & title = group.addNew<Item>("group_title");
-      title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
-      title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-
-      Item & chevron = title.addNew<Item>("chevron");
-      Triangle & collapsed = chevron.addNew<Triangle>("collapse");
-
-      Text & text = title.addNew<Text>("text");
-      text.font_ = style.font_large_;
-
-      Item & rm = title.addNew<Item>("rm");
-      TexturedRect & xbutton =
-        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
-      ItemRef fontDescent =
-        xbutton.addExpr(new GetFontDescent(text));
-      ItemRef fontDescentNowPlaying =
-        xbutton.addExpr(new GetFontDescent(nowPlaying));
-
-      // open/close disclosure [>] button:
-      chevron.width_ = ItemRef::reference(text, kPropertyHeight);
-      chevron.height_ = ItemRef::reference(text, kPropertyHeight);
-      chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-      chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
-
-      collapsed.anchors_.fill(chevron);
-      collapsed.margins_.set(fontDescent);
-      collapsed.collapsed_ = collapsed.addExpr
-        (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
-
-      text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
-      text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
-      text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
-      text.text_ = text.addExpr
-        (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-      text.fontSize_ =
-        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
-      text.elide_ = Qt::ElideMiddle;
-      text.color_ = ColorRef::constant(style.fg_group_);
-      text.background_ = ColorRef::constant(style.bg_group_);
-
-      // remove group [x] button:
-      rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
-      rm.height_ = ItemRef::reference(text, kPropertyHeight);
-      rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-      rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
-
-      xbutton.anchors_.center(rm);
-      xbutton.margins_.set(fontDescentNowPlaying);
-      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
-      xbutton.height_ = xbutton.width_;
-
-      Rectangle & separator = group.addNew<Rectangle>("separator");
-      separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
-      separator.anchors_.left_ = ItemRef::offset(group, kPropertyLeft, 2);
-      separator.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-      separator.height_ = ItemRef::constant(2.0);
-      separator.color_ = style.separator_;
-
-      Item & payload = group.addNew<Item>("payload");
-      payload.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
-      payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-      payload.visible_ = payload.addExpr
-        (new QueryBoolInverse(model,
-                              groupIndex,
-                              PlaylistModel::kRoleCollapsed));
-      payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
-
-      GroupCollapse & maCollapse = collapsed.
-        add(new GroupCollapse("ma_collapse", view));
-      maCollapse.anchors_.fill(collapsed);
-
-      RemoveModelItems & maRmGroup = xbutton.
-        add(new RemoveModelItems("ma_remove_group"));
-      maRmGroup.anchors_.fill(xbutton);
-
-      Item & grid = payload.addNew<Item>("grid");
-      grid.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
-      grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-
-      const int numCells = model.rowCount(groupIndex);
-      for (int i = 0; i < numCells; i++)
-      {
-        QModelIndex childIndex = model.index(i, 0, groupIndex);
-        TPlaylistModelItem & cell =
-          grid.add(new TPlaylistModelItem("cell", childIndex));
-        layoutPlaylistItem(grid,
-                           cell,
-                           cellWidth,
-                           cellHeight,
-                           view,
-                           model,
-                           childIndex,
-                           style);
-      }
-
-      Item & footer = payload.addNew<Item>("footer");
-      footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
-      footer.width_ = ItemRef::reference(group, kPropertyWidth);
-      footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
-    }
-  };
-#if 0
-  //----------------------------------------------------------------
-  // ImageLive
-  //
-  struct ImageLive : public Item
-  {
-    mutable Canvas * canvas_;
-
-    ImageLive(const char * id):
-      Item(id),
-      canvas_(NULL)
-    {}
-
-    // virtual:
-    bool paint(const Segment & xregion,
-               const Segment & yregion,
-               Canvas * canvas) const
-    {
-      canvas_ = canvas;
-      return Item::paint(xregion, yregion, canvas);
+      QModelIndex childIndex = model.index(i, 0, groupIndex);
+      TPlaylistModelItem & cell =
+        grid.add(new TPlaylistModelItem("cell", childIndex));
+      layoutPlaylistItem(grid,
+                         cell,
+                         cellWidth,
+                         cellHeight,
+                         view,
+                         model,
+                         childIndex,
+                         style);
     }
 
-    // virtual:
-    void paintContent() const
-    {
-      if (!canvas_)
-      {
-        return;
-      }
+    Item & footer = payload.addNew<Item>("footer");
+    footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
+    footer.width_ = ItemRef::reference(group, kPropertyWidth);
+    footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+  }
 
-      CanvasRenderer * renderer = canvas_->canvasRenderer();
-      double croppedWidth = 0.0;
-      double croppedHeight = 0.0;
-      int cameraRotation = 0;
-      renderer->imageWidthHeightRotated(croppedWidth,
-                                        croppedHeight,
-                                        cameraRotation);
-      if (!croppedWidth || !croppedHeight)
-      {
-        return;
-      }
 
-      double x = this->left();
-      double y = this->top();
-      double w_max = this->width();
-      double h_max = this->height();
-      double w = w_max;
-      double h = h_max;
-      double car = w / h;
-      double dar = croppedWidth / croppedHeight;
-
-      if (dar < car)
-      {
-        w = h_max * dar;
-        x += 0.5 * (w_max - w);
-      }
-      else
-      {
-        h = w_max / dar;
-        y += 0.5 * (h_max - h);
-      }
-
-      TGLSaveMatrixState pushViewMatrix(GL_MODELVIEW);
-
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glTranslated(x, y, 0.0));
-      YAE_OGL_11(glScaled(w / croppedWidth, h / croppedHeight, 1.0));
-
-      if (cameraRotation && cameraRotation % 90 == 0)
-      {
-        YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
-        YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
-
-        if (cameraRotation % 180 != 0)
-        {
-          YAE_OGL_11(glTranslated(-0.5 * croppedHeight,
-                                  -0.5 * croppedWidth, 0));
-        }
-        else
-        {
-          YAE_OGL_11(glTranslated(-0.5 * croppedWidth,
-                                  -0.5 * croppedHeight, 0));
-        }
-      }
-
-      renderer->draw();
-      yae_assert_gl_no_error();
-    }
-  };
-#endif
   //----------------------------------------------------------------
-  // ItemGridCellLayout
+  // ItemGridCellLayout::layout
   //
-  struct ItemGridCellLayout : public PlaylistView::TLayoutDelegate
+  void
+  ItemGridCellLayout::layout(Item & cell,
+                             PlaylistView & view,
+                             PlaylistModelProxy & model,
+                             const QModelIndex & index,
+                             const PlaylistViewStyle & style)
   {
-    void layout(Item & cell,
-                PlaylistView & view,
-                PlaylistModelProxy & model,
-                const QModelIndex & index,
-                const PlaylistViewStyle & style)
-    {
-      const Item & fontSize = style.font_size_;
-      const Texture & xbuttonTexture = style.xbutton_;
+    const Item & fontSize = style.font_size_;
+    const Texture & xbuttonTexture = style.xbutton_;
 
-      Rectangle & frame = cell.addNew<Rectangle>("frame");
-      frame.anchors_.fill(cell);
-      frame.color_ = frame.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.bg_item_,
-                                       style.bg_item_selected_,
-                                       style.bg_item_playing_));
+    Rectangle & frame = cell.addNew<Rectangle>("frame");
+    frame.anchors_.fill(cell);
+    frame.color_ = frame.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.bg_item_,
+                                     style.bg_item_selected_,
+                                     style.bg_item_playing_));
 
-      Image & thumbnail = cell.addNew<Image>("thumbnail");
-      thumbnail.setContext(view);
-      thumbnail.anchors_.fill(cell);
-      thumbnail.anchors_.bottom_.reset();
-      thumbnail.height_ = ItemRef::scale(cell, kPropertyHeight, 0.75);
-      thumbnail.url_ = thumbnail.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
-      thumbnail.visible_ = thumbnail.addExpr
-        (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
+    Image & thumbnail = cell.addNew<Image>("thumbnail");
+    thumbnail.setContext(view);
+    thumbnail.anchors_.fill(cell);
+    thumbnail.anchors_.bottom_.reset();
+    thumbnail.height_ = ItemRef::scale(cell, kPropertyHeight, 0.75);
+    thumbnail.url_ = thumbnail.addExpr
+      (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
+    thumbnail.visible_ = thumbnail.addExpr
+      (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
 
-      ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
-      liveImage.anchors_.fill(thumbnail);
-      liveImage.visible_ = liveImage.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+    ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
+    liveImage.anchors_.fill(thumbnail);
+    liveImage.visible_ = liveImage.addExpr
+      (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
 
-      Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
-      Text & badge = cell.addNew<Text>("badge");
-      badge.font_ = style.font_large_;
-      badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
-      badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
-      badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-      badge.background_ = badge.
-        addExpr(new ContrastColor(badge, kPropertyColor, 0.0));
-      badge.color_ = badge.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.fg_badge_,
-                                       style.fg_label_selected_,
-                                       style.fg_badge_));
-      badge.text_ = badge.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-      badge.fontSize_ = ItemRef::scale(fontSize,
+    Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
+    Text & badge = cell.addNew<Text>("badge");
+    badge.font_ = style.font_large_;
+    badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
+    badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
+    badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
+    badge.background_ = badge.
+      addExpr(new PremultipliedTransparent(badgeBg, kPropertyColor));
+    badge.color_ = badge.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.fg_badge_,
+                                     style.fg_label_selected_,
+                                     style.fg_badge_));
+    badge.text_ = badge.addExpr
+      (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
+    badge.fontSize_ = ItemRef::scale(fontSize,
+                                     kPropertyHeight,
+                                     0.8 * kDpiScale);
+
+    badgeBg.anchors_.inset(badge, -3, 0);
+    badgeBg.color_ = badge.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.bg_badge_,
+                                     style.bg_label_selected_,
+                                     style.bg_badge_));
+
+    Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
+    Text & label = cell.addNew<Text>("label");
+    label.font_ = style.font_;
+    label.anchors_.bottomLeft(cell, 7);
+    label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
+    label.text_ = label.addExpr
+      (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
+    label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
+    label.background_ = label.
+      addExpr(new PremultipliedTransparent(labelBg, kPropertyColor));
+    label.color_ = label.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.fg_label_,
+                                     style.fg_label_selected_,
+                                     style.fg_label_));
+
+    labelBg.anchors_.inset(label, -3, -1);
+    labelBg.color_ = labelBg.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.bg_label_,
+                                     style.bg_label_selected_,
+                                     style.bg_label_));
+
+    Item & rm = cell.addNew<Item>("remove item");
+
+    Rectangle & playingBg = cell.addNew<Rectangle>("playingBg");
+    Text & playing = cell.addNew<Text>("now playing");
+    playing.font_ = style.font_large_;
+    playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
+    playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
+    playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
+    playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
+    playing.color_ = ColorRef::reference(label, kPropertyColor);
+    playing.background_ = ColorRef::reference(label, kPropertyColorBg);
+    playing.fontSize_ = ItemRef::scale(fontSize,
                                        kPropertyHeight,
                                        0.8 * kDpiScale);
 
-      badgeBg.anchors_.inset(badge, -3, 0);
-      badgeBg.color_ = badge.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.bg_badge_,
-                                       style.bg_label_selected_,
-                                       style.bg_badge_));
+    playingBg.anchors_.inset(playing, -3, -1);
+    playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
+    playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
 
-      Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
-      Text & label = cell.addNew<Text>("label");
-      label.font_ = style.font_;
-      label.anchors_.bottomLeft(cell, 7);
-      label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-      label.text_ = label.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-      label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
-      label.background_ = label.
-        addExpr(new ContrastColor(label, kPropertyColor, 0.0));
-      label.color_ = label.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.fg_label_,
-                                       style.fg_label_selected_,
-                                       style.fg_label_));
+    rm.width_ = ItemRef::reference(playing, kPropertyHeight);
+    rm.height_ = ItemRef::reference(playing, kPropertyHeight);
+    rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
+    rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
 
-      labelBg.anchors_.inset(label, -3, -1);
-      labelBg.color_ = labelBg.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.bg_label_,
-                                       style.bg_label_selected_,
-                                       style.bg_label_));
+    TexturedRect & xbutton =
+      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+    ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+    xbutton.anchors_.center(rm);
+    xbutton.margins_.set(fontDescent);
+    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.height_ = xbutton.width_;
 
-      Item & rm = cell.addNew<Item>("remove item");
+    Rectangle & underline = cell.addNew<Rectangle>("underline");
+    underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
+    underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
+    underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
+    underline.height_ = ItemRef::constant(2);
+    underline.color_ = ColorRef::constant(style.cursor_);
+    underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
 
-      Rectangle & playingBg = cell.addNew<Rectangle>("playingBg");
-      Text & playing = cell.addNew<Text>("now playing");
-      playing.font_ = style.font_large_;
-      playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
-      playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
-      playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-      playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-      playing.color_ = ColorRef::reference(label, kPropertyColor);
-      playing.background_ = ColorRef::reference(label, kPropertyColorBg);
-      playing.fontSize_ = ItemRef::scale(fontSize,
-                                         kPropertyHeight,
-                                         0.8 * kDpiScale);
+    Rectangle & cur = cell.addNew<Rectangle>("current");
+    cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
+    cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
+    cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
+    cur.height_ = ItemRef::constant(2);
+    cur.color_ = ColorRef::constant(style.cursor_);
+    cur.visible_ = cur.addExpr
+      (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
 
-      playingBg.anchors_.inset(playing, -3, -1);
-      playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-      playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
+    RemoveModelItems & maRmItem = xbutton.
+      add(new RemoveModelItems("ma_remove_item"));
+    maRmItem.anchors_.fill(xbutton);
+  }
 
-      rm.width_ = ItemRef::reference(playing, kPropertyHeight);
-      rm.height_ = ItemRef::reference(playing, kPropertyHeight);
-      rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
-      rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
-
-      TexturedRect & xbutton =
-        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
-      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
-      xbutton.anchors_.center(rm);
-      xbutton.margins_.set(fontDescent);
-      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
-      xbutton.height_ = xbutton.width_;
-
-      Rectangle & underline = cell.addNew<Rectangle>("underline");
-      underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
-      underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
-      underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
-      underline.height_ = ItemRef::constant(2);
-      underline.color_ = ColorRef::constant(style.cursor_);
-      underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-
-      Rectangle & cur = cell.addNew<Rectangle>("current");
-      cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
-      cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
-      cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
-      cur.height_ = ItemRef::constant(2);
-      cur.color_ = ColorRef::constant(style.cursor_);
-      cur.visible_ = cur.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
-
-      RemoveModelItems & maRmItem = xbutton.
-        add(new RemoveModelItems("ma_remove_item"));
-      maRmItem.anchors_.fill(xbutton);
-    }
-  };
 
   //----------------------------------------------------------------
-  // GridViewStyle
+  // ItemListLayout::layout
   //
-  struct GridViewStyle : public PlaylistViewStyle
+  void
+  ItemListLayout::layout(Item & group,
+                         PlaylistView & view,
+                         PlaylistModelProxy & model,
+                         const QModelIndex & groupIndex,
+                         const PlaylistViewStyle & style)
   {
-    GridViewStyle(const char * id, PlaylistView & playlist):
-      PlaylistViewStyle(id, playlist)
+    // reuse pre-computed properties:
+    const Item & fontSize = style.font_size_;
+    const Item & cellWidth = style.cell_width_;
+    const Item & cellHeight = style.cell_height_;
+    const Item & titleHeight = style.title_height_;
+    const Text & nowPlaying = style.now_playing_;
+    const Texture & xbuttonTexture = style.xbutton_;
+
+    Item & spacer = group.addNew<Item>("group_spacer");
+    spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
+    spacer.width_ = ItemRef::reference(group, kPropertyWidth);
+    spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+
+    Rectangle & title = group.addNew<Rectangle>("group_title");
+    title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
+    title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+    title.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.2);
+    title.color_ = ColorRef::constant(style.bg_group_);
+
+    Item & chevron = title.addNew<Item>("chevron");
+    Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+
+    Text & text = title.addNew<Text>("group_title_text");
+    text.font_ = style.font_large_;
+
+    Item & rm = title.addNew<Item>("rm");
+    TexturedRect & xbutton =
+      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+    ItemRef fontDescent =
+      xbutton.addExpr(new GetFontDescent(text));
+    ItemRef fontDescentNowPlaying =
+      xbutton.addExpr(new GetFontDescent(nowPlaying));
+
+    // open/close disclosure [>] button:
+    chevron.width_ = ItemRef::reference(text, kPropertyHeight);
+    chevron.height_ = ItemRef::reference(text, kPropertyHeight);
+    chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+
+    collapsed.anchors_.fill(chevron);
+    collapsed.margins_.set(fontDescent);
+    collapsed.collapsed_ = collapsed.addExpr
+      (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
+    text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+    text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
+    text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
+    text.text_ = text.addExpr
+      (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
+    text.fontSize_ =
+      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.elide_ = Qt::ElideMiddle;
+    text.color_ = ColorRef::constant(style.fg_group_);
+    text.background_ = ColorRef::transparent(title, kPropertyColor);
+    // text.background_ = text.
+    //   addExpr(new PremultipliedTransparent(title, kPropertyColor));
+
+    // remove group [x] button:
+    rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
+    rm.height_ = ItemRef::reference(text, kPropertyHeight);
+    rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+
+    xbutton.anchors_.center(rm);
+    xbutton.margins_.set(fontDescentNowPlaying);
+    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.height_ = xbutton.width_;
+
+    Item & payload = group.addNew<Item>("payload");
+    payload.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
+    payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+    payload.visible_ = payload.addExpr
+      (new QueryBoolInverse(model,
+                            groupIndex,
+                            PlaylistModel::kRoleCollapsed));
+    payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+
+    GroupCollapse & maCollapse = collapsed.
+      add(new GroupCollapse("ma_collapse", view));
+    maCollapse.anchors_.fill(collapsed);
+
+    RemoveModelItems & maRmGroup = xbutton.
+      add(new RemoveModelItems("ma_remove_group"));
+    maRmGroup.anchors_.fill(xbutton);
+
+    Item & grid = payload.addNew<Item>("grid");
+    grid.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
+    grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
+
+    const int numCells = model.rowCount(groupIndex);
+    for (int i = 0; i < numCells; i++)
     {
-      // main font:
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-      font_large_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-      font_large_.setStyleHint(QFont::SansSerif);
-      font_large_.setStyleStrategy((QFont::StyleStrategy)
-                             (QFont::PreferOutline |
-                              QFont::PreferAntialias |
-                              QFont::OpenGLCompatible));
-
-      static bool hasImpact =
-        QFontInfo(QFont("impact")).family().
-        contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
-
-      if (hasImpact)
-      {
-        font_large_.setFamily("impact");
-      }
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
-      else
-#endif
-      {
-        font_large_.setStretch(QFont::Condensed);
-        font_large_.setWeight(QFont::Black);
-      }
-
-      font_ = font_large_;
-
-      // filter shadow gradient:
-      filter_shadow_[0.0] = Color(0x1f1f1f, 1.0);
-      filter_shadow_[0.42] = Color(0x1f1f1f, 0.9);
-      filter_shadow_[1.0] = Color(0x1f1f1f, 0.0);
-
-      // color palette:
-      bg_ = Color(0x1f1f1f, 0.87);
-      fg_ = Color(0xffffff, 1.0);
-
-      cursor_ = Color(0xf12b24, 1.0);
-      separator_ = Color(0x7f7f7f, 0.5);
-
-      bg_focus_ = Color(0x7f7f7f, 0.5);
-      fg_focus_ = Color(0xffffff, 1.0);
-
-      bg_edit_selected_ = Color(0xffffff, 1.0);
-      fg_edit_selected_ = Color(0x000000, 1.0);
-
-      bg_hint_ = Color(0x1f1f1f, 0.0);
-      fg_hint_ = Color(0xffffff, 0.5);
-
-      bg_badge_ = Color(0x3f3f3f, 0.25);
-      fg_badge_ = Color(0xffffff, 0.5);
-
-      bg_label_ = Color(0x3f3f3f, 0.5);
-      fg_label_ = Color(0xffffff, 1.0);
-
-      bg_label_selected_ = Color(0xffffff, 0.75);
-      fg_label_selected_ = Color(0x3f3f3f, 0.75);
-
-      bg_group_ = Color(0x1f1f1f, 0.0);
-      fg_group_ = Color(0xffffff, 1.0);
-
-      bg_item_ = Color(0x7f7f7f, 0.5);
-      bg_item_playing_ = Color(0x1f1f1f, 0.5);
-      bg_item_selected_ = Color(0xffffff, 0.75);
-
-      // configure common style attributes:
-      title_height_.height_ =
-        title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
-
-      // generate an x-button texture:
-      QImage img = xbuttonImage(32, fg_hint_);
-      xbutton_.setImage(img);
-
-      cell_width_.width_ = cell_width_.
-        addExpr(new GridCellWidth(playlist_), 1.0, -2.0);
-
-      cell_height_.height_ =
-        ItemRef::reference(cell_width_, kPropertyWidth);
-
-      font_size_.height_ = font_size_.
-        addExpr(new GetFontSize(title_height_, 0.52,
-                                cell_height_, 0.15));
-
-      now_playing_.anchors_.top_ = ItemRef::constant(0.0);
-      now_playing_.anchors_.left_ = ItemRef::constant(0.0);
-      now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
-      now_playing_.font_ = font_large_;
-      now_playing_.font_.setBold(false);
-      now_playing_.fontSize_ = ItemRef::scale(font_size_,
-                                              kPropertyHeight,
-                                              0.8 * kDpiScale);
-
-      eyetv_badge_.font_ = font_large_;
-      eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
-      eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
-      eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
-      eyetv_badge_.font_.setBold(false);
-      eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
-                                              kPropertyHeight,
-                                              0.8 * kDpiScale);
+      QModelIndex childIndex = model.index(i, 0, groupIndex);
+      TPlaylistModelItem & cell =
+        grid.add(new TPlaylistModelItem("cell", childIndex));
+      layoutPlaylistItem(grid,
+                         cell,
+                         cellWidth,
+                         cellHeight,
+                         view,
+                         model,
+                         childIndex,
+                         style);
     }
-  };
+
+    Item & footer = payload.addNew<Item>("footer");
+    footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
+    footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
+    footer.width_ = ItemRef::reference(group, kPropertyWidth);
+    footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+  }
 
 
   //----------------------------------------------------------------
-  // ItemListLayout
+  // ItemListRowLayout::layout
   //
-  struct ItemListLayout : public PlaylistView::TLayoutDelegate
+  void
+  ItemListRowLayout::layout(Item & cell,
+                            PlaylistView & view,
+                            PlaylistModelProxy & model,
+                            const QModelIndex & index,
+                            const PlaylistViewStyle & style)
   {
-    void layout(Item & group,
-                PlaylistView & view,
-                PlaylistModelProxy & model,
-                const QModelIndex & groupIndex,
-                const PlaylistViewStyle & style)
-    {
-      // reuse pre-computed properties:
-      const Item & fontSize = style.font_size_;
-      const Item & cellWidth = style.cell_width_;
-      const Item & cellHeight = style.cell_height_;
-      const Item & titleHeight = style.title_height_;
-      const Text & nowPlaying = style.now_playing_;
-      const Texture & xbuttonTexture = style.xbutton_;
+    const Item & fontSize = style.font_size_;
+    const Text & nowPlaying = style.now_playing_;
+    const Text & eyetvBadge = style.eyetv_badge_;
+    const Texture & xbuttonTexture = style.xbutton_;
 
-      Item & spacer = group.addNew<Item>("group_spacer");
-      spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
-      spacer.width_ = ItemRef::reference(group, kPropertyWidth);
-      spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+    Rectangle & frame = cell.addNew<Rectangle>("frame");
+    frame.anchors_.fill(cell);
+    frame.color_ = frame.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.bg_item_,
+                                     style.bg_item_selected_,
+                                     style.bg_item_playing_));
 
-      Rectangle & title = group.addNew<Rectangle>("group_title");
-      title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
-      title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-      title.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.2);
-      title.color_ = ColorRef::constant(style.bg_group_);
+    Item & badgeItem = cell.addNew<Item>("badge_item");
+    badgeItem.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
+    badgeItem.anchors_.top_ = ItemRef::reference(cell, kPropertyTop);
+    badgeItem.width_ = ItemRef::offset(eyetvBadge, kPropertyWidth, 6);
+    badgeItem.height_ = ItemRef::reference(cell, kPropertyHeight);
 
-      Item & chevron = title.addNew<Item>("chevron");
-      Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+    Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
+    Text & badge = cell.addNew<Text>("badge");
+    badge.font_ = style.font_large_;
+    badge.anchors_.center(badgeItem);
+    badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
+    badge.color_ = badge.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.fg_badge_,
+                                     style.bg_item_selected_.opaque(),
+                                     style.bg_item_playing_.opaque()));
+    badge.elide_ = Qt::ElideRight;
+    badge.text_ = badge.addExpr
+      (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
+    badge.fontSize_ = ItemRef::scale(fontSize,
+                                     kPropertyHeight,
+                                     0.7 * kDpiScale);
 
-      Text & text = title.addNew<Text>("group_title_text");
-      text.font_ = style.font_large_;
+    badgeBg.anchors_.inset(badge, -3, 0);
+    badgeBg.color_ = badge.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.bg_badge_,
+                                     style.fg_badge_,
+                                     style.fg_badge_));
 
-      Item & rm = title.addNew<Item>("rm");
-      TexturedRect & xbutton =
-        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
-      ItemRef fontDescent =
-        xbutton.addExpr(new GetFontDescent(text));
-      ItemRef fontDescentNowPlaying =
-        xbutton.addExpr(new GetFontDescent(nowPlaying));
+    Text & label = cell.addNew<Text>("label");
+    Item & rm = cell.addNew<Item>("remove item");
 
-      // open/close disclosure [>] button:
-      chevron.width_ = ItemRef::reference(text, kPropertyHeight);
-      chevron.height_ = ItemRef::reference(text, kPropertyHeight);
-      chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-      chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+    label.font_ = style.font_;
+    label.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
+    label.anchors_.left_ = ItemRef::offset(badgeItem, kPropertyRight, 5);
+    label.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
+    label.text_ = label.addExpr
+      (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
+    label.elide_ = Qt::ElideMiddle;
+    label.fontSize_ = ItemRef::scale(fontSize,
+                                     kPropertyHeight,
+                                     0.9 * kDpiScale);
+    label.background_ = ColorRef::transparent(frame, kPropertyColor);
+    // label.background_ = label.
+    //  addExpr(new PremultipliedTransparent(frame, kPropertyColor));
+    label.color_ = label.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.fg_label_,
+                                     style.fg_label_selected_,
+                                     style.fg_label_selected_));
 
-      collapsed.anchors_.fill(chevron);
-      collapsed.margins_.set(fontDescent);
-      collapsed.collapsed_ = collapsed.addExpr
-        (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
+    Text & playing = cell.addNew<Text>("now playing");
+    playing.copySettings(nowPlaying);
+    playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 0);
+    playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
+    playing.visible_ = playing.addExpr
+      (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+    playing.color_ = ColorRef::reference(label, kPropertyColor);
+    playing.background_ = ColorRef::reference(label, kPropertyColorBg);
 
-      text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
-      text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
-      text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
-      text.text_ = text.addExpr
-        (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-      text.fontSize_ =
-        ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
-      text.elide_ = Qt::ElideMiddle;
-      text.color_ = ColorRef::constant(style.fg_group_);
-      text.background_ = ColorRef::transparent(title, kPropertyColor);
+    rm.width_ = ItemRef::reference(playing, kPropertyHeight);
+    rm.height_ = ItemRef::reference(playing, kPropertyHeight);
+    rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
+    rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
 
-      // remove group [x] button:
-      rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
-      rm.height_ = ItemRef::reference(text, kPropertyHeight);
-      rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-      rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+    TexturedRect & xbutton =
+      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+    ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+    xbutton.anchors_.center(rm);
+    xbutton.margins_.set(fontDescent);
+    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.height_ = xbutton.width_;
 
-      xbutton.anchors_.center(rm);
-      xbutton.margins_.set(fontDescentNowPlaying);
-      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
-      xbutton.height_ = xbutton.width_;
+    Rectangle & underline = cell.addNew<Rectangle>("underline");
+    underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
+    underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
+    underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 1);
+    underline.height_ = ItemRef::constant(2);
+    underline.visible_ = BoolRef::reference(playing, kPropertyVisible);
+    underline.color_ = underline.
+      addExpr(new ItemHighlightColor(model,
+                                     index,
+                                     style.cursor_,
+                                     style.fg_badge_,
+                                     style.fg_badge_));
 
-      Item & payload = group.addNew<Item>("payload");
-      payload.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
-      payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-      payload.visible_ = payload.addExpr
-        (new QueryBoolInverse(model,
-                              groupIndex,
-                              PlaylistModel::kRoleCollapsed));
-      payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+    Rectangle & cur = cell.addNew<Rectangle>("current");
+    cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
+    cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
+    cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
+    cur.height_ = ItemRef::constant(2);
+    cur.color_ = ColorRef::constant(style.cursor_);
+    cur.visible_ = cur.addExpr
+      (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
 
-      GroupCollapse & maCollapse = collapsed.
-        add(new GroupCollapse("ma_collapse", view));
-      maCollapse.anchors_.fill(collapsed);
-
-      RemoveModelItems & maRmGroup = xbutton.
-        add(new RemoveModelItems("ma_remove_group"));
-      maRmGroup.anchors_.fill(xbutton);
-
-      Item & grid = payload.addNew<Item>("grid");
-      grid.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
-      grid.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      grid.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-
-      const int numCells = model.rowCount(groupIndex);
-      for (int i = 0; i < numCells; i++)
-      {
-        QModelIndex childIndex = model.index(i, 0, groupIndex);
-        TPlaylistModelItem & cell =
-          grid.add(new TPlaylistModelItem("cell", childIndex));
-        layoutPlaylistItem(grid,
-                           cell,
-                           cellWidth,
-                           cellHeight,
-                           view,
-                           model,
-                           childIndex,
-                           style);
-      }
-
-      Item & footer = payload.addNew<Item>("footer");
-      footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
-      footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
-      footer.width_ = ItemRef::reference(group, kPropertyWidth);
-      footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
-    }
-  };
+    RemoveModelItems & maRmItem = xbutton.
+      add(new RemoveModelItems("ma_remove_item"));
+    maRmItem.anchors_.fill(xbutton);
+  }
 
   //----------------------------------------------------------------
-  // ItemListRowLayout
+  // Relayout
   //
-  struct ItemListRowLayout : public PlaylistView::TLayoutDelegate
+  struct Relayout : public Item::Observer
   {
-    void layout(Item & cell,
-                PlaylistView & view,
-                PlaylistModelProxy & model,
-                const QModelIndex & index,
-                const PlaylistViewStyle & style)
+    Relayout(PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
     {
-      const Item & fontSize = style.font_size_;
-      const Text & nowPlaying = style.now_playing_;
-      const Text & eyetvBadge = style.eyetv_badge_;
-      const Texture & xbuttonTexture = style.xbutton_;
+      (void) item;
+      (void) e;
 
-      Rectangle & frame = cell.addNew<Rectangle>("frame");
-      frame.anchors_.fill(cell);
-      frame.color_ = frame.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.bg_item_,
-                                       style.bg_item_selected_,
-                                       style.bg_item_playing_));
-
-      Item & badgeItem = cell.addNew<Item>("badge_item");
-      badgeItem.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
-      badgeItem.anchors_.top_ = ItemRef::reference(cell, kPropertyTop);
-      badgeItem.width_ = ItemRef::offset(eyetvBadge, kPropertyWidth, 6);
-      badgeItem.height_ = ItemRef::reference(cell, kPropertyHeight);
-
-      Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
-      Text & badge = cell.addNew<Text>("badge");
-      badge.font_ = style.font_large_;
-      badge.anchors_.center(badgeItem);
-      badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
-      badge.color_ = badge.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.fg_badge_,
-                                       style.bg_item_selected_.opaque(),
-                                       style.bg_item_playing_.opaque()));
-      badge.elide_ = Qt::ElideRight;
-      badge.text_ = badge.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-      badge.fontSize_ = ItemRef::scale(fontSize,
-                                       kPropertyHeight,
-                                       0.7 * kDpiScale);
-
-      badgeBg.anchors_.inset(badge, -3, 0);
-      badgeBg.color_ = badge.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.bg_badge_,
-                                       style.fg_badge_,
-                                       style.fg_badge_));
-
-      Text & label = cell.addNew<Text>("label");
-      Item & rm = cell.addNew<Item>("remove item");
-
-      label.font_ = style.font_;
-      label.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
-      label.anchors_.left_ = ItemRef::offset(badgeItem, kPropertyRight, 5);
-      label.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
-      label.text_ = label.addExpr
-        (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-      label.elide_ = Qt::ElideMiddle;
-      label.fontSize_ = ItemRef::scale(fontSize,
-                                       kPropertyHeight,
-                                       0.9 * kDpiScale);
-      label.background_ = ColorRef::transparent(frame, kPropertyColor);
-      label.color_ = label.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.fg_label_,
-                                       style.fg_label_selected_,
-                                       style.fg_label_selected_));
-
-      Text & playing = cell.addNew<Text>("now playing");
-      playing.copySettings(nowPlaying);
-      playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 0);
-      playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
-      playing.visible_ = playing.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
-      playing.color_ = ColorRef::reference(label, kPropertyColor);
-      playing.background_ = ColorRef::reference(label, kPropertyColorBg);
-
-      rm.width_ = ItemRef::reference(playing, kPropertyHeight);
-      rm.height_ = ItemRef::reference(playing, kPropertyHeight);
-      rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
-      rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
-
-      TexturedRect & xbutton =
-        rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
-      ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
-      xbutton.anchors_.center(rm);
-      xbutton.margins_.set(fontDescent);
-      xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
-      xbutton.height_ = xbutton.width_;
-
-      Rectangle & underline = cell.addNew<Rectangle>("underline");
-      underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
-      underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
-      underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 1);
-      underline.height_ = ItemRef::constant(2);
-      underline.visible_ = BoolRef::reference(playing, kPropertyVisible);
-      underline.color_ = underline.
-        addExpr(new ItemHighlightColor(model,
-                                       index,
-                                       style.cursor_,
-                                       style.fg_badge_,
-                                       style.fg_badge_));
-
-      Rectangle & cur = cell.addNew<Rectangle>("current");
-      cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
-      cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
-      cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
-      cur.height_ = ItemRef::constant(2);
-      cur.color_ = ColorRef::constant(style.cursor_);
-      cur.visible_ = cur.addExpr
-        (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
-
-      RemoveModelItems & maRmItem = xbutton.
-        add(new RemoveModelItems("ma_remove_item"));
-      maRmItem.anchors_.fill(xbutton);
+      playlist_.layoutChanged();
     }
+
+    PlaylistView & playlist_;
   };
-
-  //----------------------------------------------------------------
-  // ListViewStyle
-  //
-  struct ListViewStyle : public PlaylistViewStyle
-  {
-    ListViewStyle(const char * id, PlaylistView & playlist):
-      PlaylistViewStyle(id, playlist)
-    {
-      // main font:
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-      font_large_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-      font_large_.setStyleHint(QFont::SansSerif);
-      font_large_.setStyleStrategy((QFont::StyleStrategy)
-                             (QFont::PreferOutline |
-                              QFont::PreferAntialias |
-                              QFont::OpenGLCompatible));
-
-      static bool hasImpact =
-        QFontInfo(QFont("impact")).family().
-        contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
-
-      if (hasImpact)
-      {
-        font_large_.setFamily("impact");
-      }
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
-      else
-#endif
-      {
-        font_large_.setStretch(QFont::Condensed);
-        font_large_.setWeight(QFont::Black);
-      }
-
-      // filter shadow gradient:
-      filter_shadow_[0.00] = Color(0xdfdfdf, 1.0);
-      filter_shadow_[0.42] = Color(0xdfdfdf, 0.9);
-      filter_shadow_[1.00] = Color(0xdfdfdf, 0.0);
-
-      // color palette:
-      bg_ = Color(0xffffff, 0.87);
-      fg_ = Color(0x000000, 1.0);
-
-      cursor_ = Color(0x3f7fff, 1.0);
-      separator_ = Color(0x7f7f7f, 0.5);
-
-      bg_focus_ = Color(0xffffff, 0.5);
-      fg_focus_ = Color(0x000000, 0.5);
-
-      bg_edit_selected_ = Color(0x3f7fff, 1.0);
-      fg_edit_selected_ = Color(0xffffff, 1.0);
-
-      bg_hint_ = Color(0xffffff, 0.0);
-      fg_hint_ = Color(0x1f1f1f, 0.5);
-
-      bg_badge_ = Color(0xff7f00, 1.0);
-      fg_badge_ = Color(0xffffff, 0.5);
-
-      bg_label_ = Color(0xffffff, 0.0);
-      fg_label_ = Color(0x000000, 1.0);
-
-      bg_label_selected_ = Color(0x3f7fff, 0.0);
-      fg_label_selected_ = Color(0xffffff, 1.0);
-
-      bg_group_ = Color(0x3f3f3f, 0.5);
-      fg_group_ = Color(0xffffff, 1.0);
-
-      bg_item_ = Color(0xffffff, 0.0);
-      bg_item_playing_ = Color(0xff7f00, 0.75);
-      bg_item_selected_ = Color(0x3f7fff, 1.0);
-
-      // configure common style attributes:
-      title_height_.height_ =
-        title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
-
-      // generate an x-button texture:
-      QImage img = xbuttonImage(32, fg_hint_);
-      xbutton_.setImage(img);
-
-      cell_width_.width_ = cell_width_.
-        addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
-
-      cell_height_.height_ =
-        ItemRef::scale(title_height_, kPropertyHeight, 1.0);
-
-      font_size_.height_ =
-        ItemRef::scale(title_height_, kPropertyHeight, 0.52);
-
-      now_playing_.anchors_.top_ = ItemRef::constant(0.0);
-      now_playing_.anchors_.left_ = ItemRef::constant(0.0);
-      now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("now playing")));
-      now_playing_.font_ = font_small_;
-      now_playing_.font_.setBold(true);
-      now_playing_.fontSize_ = ItemRef::scale(font_size_,
-                                              kPropertyHeight,
-                                              0.7 * kDpiScale);
-
-      eyetv_badge_.font_ = font_large_;
-      eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
-      eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
-      eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
-      eyetv_badge_.font_.setBold(false);
-      eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
-                                              kPropertyHeight,
-                                              0.7 * kDpiScale);
-    }
-  };
-
-
-  //----------------------------------------------------------------
-  // PlaylistViewStyle::PlaylistViewStyle
-  //
-  PlaylistViewStyle::PlaylistViewStyle(const char * id,
-                                       PlaylistView & playlist):
-    Item(id),
-    playlist_(playlist),
-    title_height_(Item::addNewHidden<Item>("title_height")),
-    xbutton_(Item::addHidden<Texture>(new Texture("xbutton", QImage()))),
-    cell_width_(Item::addNewHidden<Item>("cell_width")),
-    cell_height_(Item::addNewHidden<Item>("cell_height")),
-    font_size_(Item::addNewHidden<Item>("font_size")),
-    now_playing_(Item::addNewHidden<Text>("now_playing")),
-    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge"))
-  {}
 
 
   //----------------------------------------------------------------
@@ -2159,34 +1543,20 @@ namespace yae
     ItemView("playlist"),
     model_(NULL)
   {
-    layoutDelegates_[PlaylistModel::kLayoutHintGroupList] =
-      TLayoutPtr(new GroupListLayout());
-
-    layoutDelegates_[PlaylistModel::kLayoutHintItemList] =
-      TLayoutPtr(new ItemListLayout());
-
-    layoutDelegates_[PlaylistModel::kLayoutHintItemListRow] =
-      TLayoutPtr(new ItemListRowLayout());
-
-    layoutDelegates_[PlaylistModel::kLayoutHintItemGrid] =
-      TLayoutPtr(new ItemGridLayout());
-
-    layoutDelegates_[PlaylistModel::kLayoutHintItemGridCell] =
-      TLayoutPtr(new ItemGridCellLayout());
-
     root_.reset(new Item("playlist"));
     Item & root = *root_;
 
-    root.addHidden(new GridViewStyle("grid_view_style", *this));
-    root.addHidden(new ListViewStyle("list_view_style", *this));
+    root.addObserver(Item::kOnToggleItemView,
+                     Item::TObserverPtr(new Relayout(*this)));
 
-    // FIXME: style id should be referenced, not hardcoded:
-    // styleId_ = "list_view_style";
-    styleId_ = "grid_view_style";
+    root.addHidden(new GridViewStyle(kGridViewStyleId, *this));
+    root.addHidden(new ListViewStyle(kListViewStyleId, *this));
+    style_ = kGridViewStyleId;
 
     Rectangle & background = root.addNew<Rectangle>("background");
     background.anchors_.fill(root);
-    background.color_ = background.addExpr(new StyleColorBg(*this));
+    background.color_ = background.
+      addExpr(new StyleColor(*this, PlaylistViewStyle::kBg));
 
     Scrollview & sview = root.addNew<Scrollview>("scrollview");
 
@@ -2241,7 +1611,8 @@ namespace yae
     slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = ColorRef::transparent(background, kPropertyColor);
-    slider.color_ = slider.addExpr(new StyleColorSeparator(*this));
+    slider.color_ = slider.
+      addExpr(new StyleColor(*this, PlaylistViewStyle::kSeparator));
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
@@ -2315,7 +1686,6 @@ namespace yae
 
     Item & root = *root_;
     Item & filterItem = root["filterItem"];
-    filterItem.children_.clear();
 
     const PlaylistViewStyle & style = playlistViewStyle();
 
@@ -2332,6 +1702,59 @@ namespace yae
     ok = connect(&filterEdit, SIGNAL(textChanged(const QString &)),
                  model_, SLOT(setItemFilter(const QString &)));
     YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::setStyleId
+  //
+  void
+  PlaylistView::setStyleId(PlaylistView::StyleId styleId)
+  {
+    if (styleId == kListView && style_ != kListViewStyleId)
+    {
+      style_.assign(kListViewStyleId);
+    }
+    else if (styleId == kGridView && style_ != kGridViewStyleId)
+    {
+      style_.assign(kGridViewStyleId);
+    }
+    else
+    {
+      return;
+    }
+
+    if (!model_ || !root_)
+    {
+      return;
+    }
+
+    // force re-layout:
+    layoutChanged();
+
+    TMakeCurrentContext currentContext(*context());
+    Item & root = *root_;
+    Item & filterItem = root["filterItem"];
+
+    const PlaylistViewStyle & style = playlistViewStyle();
+    QModelIndex rootIndex = model_->index(-1, -1);
+    layoutPlaylistFilter(filterItem, *this, *model_, rootIndex, style);
+
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & footer = sview.content_["footer"];
+    layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
+
+    // update any layers that reference playlist view for style:
+    root.notifyObservers(Item::kOnToggleItemView);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::playlistViewStyle
+  //
+  const PlaylistViewStyle &
+  PlaylistView::playlistViewStyle() const
+  {
+    const char * style = isEnabled() ? style_.c_str() : kGridViewStyleId;
+    return root_->get<PlaylistViewStyle>(style);
   }
 
   //----------------------------------------------------------------
@@ -2870,13 +2293,6 @@ namespace yae
     std::cerr << "PlaylistView::layoutChanged" << std::endl;
 #endif
 
-    QModelIndex rootIndex = model_->index(-1, -1);
-    TLayoutPtr delegate = findLayoutDelegate(*this, *model_, rootIndex);
-    if (!delegate)
-    {
-      return;
-    }
-
     TMakeCurrentContext currentContext(*context());
 
     if (pressed_)
@@ -2897,17 +2313,15 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
+    root.uncache();
 
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    Item & scrollbar = root["scrollbar"];
     Item & groups = sview.content_["groups"];
     groups.children_.clear();
-    sview.content_.uncache();
-    sview.uncache();
-    scrollbar.uncache();
 
     const PlaylistViewStyle & style = playlistViewStyle();
-    delegate->layout(groups, *this, *model_, rootIndex, style);
+    QModelIndex rootIndex = model_->index(-1, -1);
+    style.layout_root_->layout(groups, *this, *model_, rootIndex, style);
 
 #if 0 // ndef NDEBUG
     root.dump(std::cerr);
@@ -2975,8 +2389,8 @@ namespace yae
     if (parent.isValid())
     {
       // adding group items:
-      const Item & cellWidth = root["cell_width"];
-      const Item & cellHeight = root["cell_height"];
+      const Item & cellWidth = style.cell_width_;
+      const Item & cellHeight = style.cell_height_;
 
       int groupIndex = parent.row();
 

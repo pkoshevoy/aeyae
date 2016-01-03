@@ -12,6 +12,9 @@
 // standard libraries:
 #include <algorithm>
 
+// boost includes:
+#include <boost/shared_ptr.hpp>
+
 // Qt library:
 #include <QColor>
 
@@ -194,10 +197,10 @@ namespace yae
       return *this;
     }
 
-    Color scale_a(double s) const
+    Color scale_a(double s, double t = 0.0) const
     {
       Color result(*this);
-      double sa = s * double(this->a());
+      double sa = s * double(this->a()) + t * 255.0;
       result.set_a((unsigned char)(std::max(0.0, std::min(255.0, sa))));
       return result;
     }
@@ -225,8 +228,30 @@ namespace yae
       return Color(v);
     }
 
+    Color premultiplied_transparent() const
+    {
+      TVec4D v(*this);
+      double a = v.a();
+      v.set_r(v.r() * a);
+      v.set_g(v.g() * a);
+      v.set_b(v.b() * a);
+      v.set_a(0.0);
+      return Color(v);
+    }
+
     unsigned int argb_;
   };
+
+  //----------------------------------------------------------------
+  // TGradient
+  //
+  typedef std::map<double, Color> TGradient;
+
+  //----------------------------------------------------------------
+  // TGradientPtr
+  //
+  typedef boost::shared_ptr<TGradient> TGradientPtr;
+
 }
 
 

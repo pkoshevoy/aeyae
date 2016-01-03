@@ -20,6 +20,7 @@ namespace yae
 {
   // forward declarations:
   class TimelineModel;
+  class PlaylistView;
 
   //----------------------------------------------------------------
   // TimelineView
@@ -40,11 +41,18 @@ namespace yae
     inline TimelineModel * model() const
     { return model_; }
 
+    // need to reference playlist view for common style info:
+    void setPlaylistView(PlaylistView * playlist);
+
+    inline PlaylistView * playlistView() const
+    { return playlist_; }
+
   public slots:
     void modelChanged();
 
   protected:
     TimelineModel * model_;
+    PlaylistView * playlist_;
   };
 
 }
