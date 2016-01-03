@@ -11,6 +11,7 @@
 
 // standard libraries:
 #include <algorithm>
+#include <map>
 
 // boost includes:
 #include <boost/shared_ptr.hpp>

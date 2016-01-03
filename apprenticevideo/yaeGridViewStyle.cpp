@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// Qt library:
+#include <QFontInfo>
+
 // local interfaces:
 #include "yaeGridViewStyle.h"
 #include "yaeText.h"
