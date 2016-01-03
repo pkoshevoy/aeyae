@@ -1521,11 +1521,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Relayout
+  // Restyle
   //
-  struct Relayout : public Item::Observer
+  struct Restyle : public Item::Observer
   {
-    Relayout(PlaylistView & playlist):
+    Restyle(PlaylistView & playlist):
       playlist_(playlist)
     {}
 
@@ -1535,7 +1535,7 @@ namespace yae
       (void) item;
       (void) e;
 
-      playlist_.layoutChanged();
+      playlist_.restyle();
     }
 
     PlaylistView & playlist_;
@@ -1553,7 +1553,7 @@ namespace yae
     Item & root = *root_;
 
     root.addObserver(Item::kOnToggleItemView,
-                     Item::TObserverPtr(new Relayout(*this)));
+                     Item::TObserverPtr(new Restyle(*this)));
 
     root.addHidden(new GridViewStyle(kGridViewStyleId, *this));
     root.addHidden(new ListViewStyle(kListViewStyleId, *this));
@@ -1727,6 +1727,30 @@ namespace yae
       return;
     }
 
+    restyle();
+
+    // update any layers that reference playlist view for style:
+    TMakeCurrentContext currentContext(*context());
+    Item & root = *root_;
+    root.notifyObservers(Item::kOnToggleItemView);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::playlistViewStyle
+  //
+  const PlaylistViewStyle &
+  PlaylistView::playlistViewStyle() const
+  {
+    const char * style = isEnabled() ? style_.c_str() : kGridViewStyleId;
+    return root_->get<PlaylistViewStyle>(style);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::restyle
+  //
+  void
+  PlaylistView::restyle()
+  {
     // force re-layout:
     layoutChanged();
 
@@ -1741,19 +1765,6 @@ namespace yae
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & footer = sview.content_["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
-
-    // update any layers that reference playlist view for style:
-    root.notifyObservers(Item::kOnToggleItemView);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistView::playlistViewStyle
-  //
-  const PlaylistViewStyle &
-  PlaylistView::playlistViewStyle() const
-  {
-    const char * style = isEnabled() ? style_.c_str() : kGridViewStyleId;
-    return root_->get<PlaylistViewStyle>(style);
   }
 
   //----------------------------------------------------------------

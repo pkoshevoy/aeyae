@@ -169,6 +169,9 @@ namespace yae
     // current style:
     const PlaylistViewStyle & playlistViewStyle() const;
 
+    // restyle the view according to current style:
+    void restyle();
+
     // virtual:
     void paint(Canvas * canvas);
 
