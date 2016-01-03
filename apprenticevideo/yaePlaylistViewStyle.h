@@ -70,7 +70,9 @@ namespace yae
       kFg,
       kBorder,
       kCursor,
+      kScrollbar,
       kSeparator,
+      kUnderline,
       kBgFocus,
       kFgFocus,
       kBgEditSelected,
@@ -103,7 +105,9 @@ namespace yae
 
     Color border_;
     Color cursor_;
+    Color scrollbar_;
     Color separator_;
+    Color underline_;
 
     Color bg_focus_;
     Color fg_focus_;

@@ -466,7 +466,13 @@ namespace yae
     Item & container = root.addNew<Item>("container");
     container.anchors_.fill(root);
     container.anchors_.top_.reset();
-    container.height_ = container.addExpr(new StyleTitleHeight(*playlist), 1.5);
+    container.height_ = container.
+      addExpr(new StyleTitleHeight(*playlist), 1.5);
+
+    Item & mouseTracker = root.addNew<Item>("mouseTracker");
+    mouseTracker.anchors_.fill(container);
+    mouseTracker.anchors_.top_.reset();
+    mouseTracker.height_ = ItemRef::scale(container, kPropertyHeight, 2.0);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
@@ -481,6 +487,9 @@ namespace yae
 
     TimelineSeek & seek = timeline.add(new TimelineSeek(*this));
     seek.anchors_.fill(timeline);
+
+    ColorRef colorCursor = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kCursor));
 
     ColorRef colorExcluded = timeline.addExpr
       (new StyleColor(*playlist, PlaylistViewStyle::kTimelineExcluded));
@@ -525,7 +534,7 @@ namespace yae
     timelineIn.anchors_.vcenter_ =
       ItemRef::reference(timeline, kPropertyVCenter);
     timelineIn.height_ =
-      timelineIn.addExpr(new TimelineHeight(*this, container, timeline));
+      timelineIn.addExpr(new TimelineHeight(*this, mouseTracker, timeline));
     timelineIn.color_ = colorExcluded;
 
     Rectangle & timelinePlayhead =
@@ -566,7 +575,7 @@ namespace yae
     inPoint.radius_ = ItemRef::scale(inPoint, kPropertyHeight, 0.5);
     inPoint.color_ = colorPlayed;
     inPoint.background_ = colorPlayedBg;
-    inPoint.visible_ = inPoint.addExpr(new MarkerVisible(*this, container));
+    inPoint.visible_ = inPoint.addExpr(new MarkerVisible(*this, mouseTracker));
 
     RoundRect & playhead = root.addNew<RoundRect>("playhead");
     playhead.anchors_.hcenter_ =
@@ -667,7 +676,7 @@ namespace yae
     playheadEdit.visible_ =
       playheadEdit.addExpr(new ShowWhenFocused(playheadFocus, true));
     playheadEdit.color_ = colorFocusFg;
-    playheadEdit.cursorColor_ = colorPlayed;
+    playheadEdit.cursorColor_ = colorCursor;
     playheadEdit.font_ = playheadAux.font_;
     playheadEdit.fontSize_ = playheadAux.fontSize_;
     playheadEdit.selectionBg_ = colorHighlightBg;

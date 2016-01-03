@@ -371,6 +371,36 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // IsCurrentNotSelected
+  //
+  struct IsCurrentNotSelected : public TBoolExpr
+  {
+    IsCurrentNotSelected(const PlaylistModelProxy & model,
+                         const QModelIndex & index):
+      model_(model),
+      index_(index)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool isSelected =
+        model_.data(index_, PlaylistModel::kRoleSelected).value<bool>();
+
+      if (isSelected)
+      {
+        result = false;
+        return;
+      }
+
+      result = model_.data(index_, PlaylistModel::kRoleCurrent).value<bool>();
+    }
+
+    const PlaylistModelProxy & model_;
+    QPersistentModelIndex index_;
+  };
+
+  //----------------------------------------------------------------
   // ItemHighlightColor
   //
   struct ItemHighlightColor : public TColorExpr
@@ -545,8 +575,8 @@ namespace yae
     const Text & nowPlaying = style.now_playing_;
     const Texture & xbuttonTexture = style.xbutton_;
 
-    ColorRef underlineColor = ColorRef::constant(style.cursor_);
-    ColorRef sortColor = ColorRef::constant(style.fg_hint_);
+    ColorRef colorCursor = ColorRef::constant(style.cursor_);
+    ColorRef colorSort = ColorRef::constant(style.fg_hint_);
     ColorRef colorTextBg = ColorRef::constant(style.bg_focus_.scale_a(0.5));
     ColorRef colorTextFg = ColorRef::constant(style.fg_focus_.scale_a(0.5));
     ColorRef colorEditBg = ColorRef::constant(style.bg_focus_.scale_a(0.0));
@@ -554,6 +584,7 @@ namespace yae
     ColorRef colorFocusFg = ColorRef::constant(style.fg_focus_);
     ColorRef colorHighlightBg = ColorRef::constant(style.bg_edit_selected_);
     ColorRef colorHighlightFg = ColorRef::constant(style.fg_edit_selected_);
+    ColorRef colorUnderline = ColorRef::constant(style.underline_);
 
     Gradient & filterShadow = item.addNew<Gradient>("filterShadow");
     filterShadow.anchors_.fill(item);
@@ -646,7 +677,7 @@ namespace yae
     edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
     edit.background_ = colorEditBg;
     edit.color_ = colorFocusFg;
-    edit.cursorColor_ = underlineColor;
+    edit.cursorColor_ = colorCursor;
     edit.fontSize_ = text.fontSize_;
     edit.selectionBg_ = colorHighlightBg;
     edit.selectionFg_ = colorHighlightFg;
@@ -685,7 +716,7 @@ namespace yae
     sortBy.anchors_.left_ = ItemRef::reference(sortAndOrder, kPropertyLeft);
     sortBy.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     sortBy.text_ = TVarRef::constant(TVar(QObject::tr("sort by ")));
-    sortBy.color_ = sortColor;
+    sortBy.color_ = colorSort;
     sortBy.font_ = smallFont;
     sortBy.fontSize_ = smallFontSize;
 
@@ -693,7 +724,7 @@ namespace yae
     byName.anchors_.left_ = ItemRef::reference(sortBy, kPropertyRight);
     byName.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     byName.text_ = TVarRef::constant(TVar(QObject::tr("name")));
-    byName.color_ = sortColor;
+    byName.color_ = colorSort;
     byName.font_ = smallFont;
     byName.fontSize_ = smallFontSize;
 
@@ -701,7 +732,7 @@ namespace yae
     nameOr.anchors_.left_ = ItemRef::reference(byName, kPropertyRight);
     nameOr.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     nameOr.text_ = TVarRef::constant(TVar(QObject::tr(" or ")));
-    nameOr.color_ = sortColor;
+    nameOr.color_ = colorSort;
     nameOr.font_ = smallFont;
     nameOr.fontSize_ = smallFontSize;
 
@@ -709,7 +740,7 @@ namespace yae
     orTime.anchors_.left_ = ItemRef::reference(nameOr, kPropertyRight);
     orTime.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     orTime.text_ = TVarRef::constant(TVar(QObject::tr("time")));
-    orTime.color_ = sortColor;
+    orTime.color_ = colorSort;
     orTime.font_ = smallFont;
     orTime.fontSize_ = smallFontSize;
 
@@ -717,7 +748,7 @@ namespace yae
     comma.anchors_.left_ = ItemRef::reference(orTime, kPropertyRight);
     comma.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     comma.text_ = TVarRef::constant(TVar(QObject::tr(", in ")));
-    comma.color_ = sortColor;
+    comma.color_ = colorSort;
     comma.font_ = smallFont;
     comma.fontSize_ = smallFontSize;
 
@@ -725,7 +756,7 @@ namespace yae
     inAsc.anchors_.left_ = ItemRef::reference(comma, kPropertyRight);
     inAsc.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     inAsc.text_ = TVarRef::constant(TVar(QObject::tr("ascending")));
-    inAsc.color_ = sortColor;
+    inAsc.color_ = colorSort;
     inAsc.font_ = smallFont;
     inAsc.fontSize_ = smallFontSize;
 
@@ -733,7 +764,7 @@ namespace yae
     ascOr.anchors_.left_ = ItemRef::reference(inAsc, kPropertyRight);
     ascOr.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     ascOr.text_ = TVarRef::constant(TVar(QObject::tr(" or ")));
-    ascOr.color_ = sortColor;
+    ascOr.color_ = colorSort;
     ascOr.font_ = smallFont;
     ascOr.fontSize_ = smallFontSize;
 
@@ -741,7 +772,7 @@ namespace yae
     orDesc.anchors_.left_ = ItemRef::reference(ascOr, kPropertyRight);
     orDesc.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     orDesc.text_ = TVarRef::constant(TVar(QObject::tr("descending")));
-    orDesc.color_ = sortColor;
+    orDesc.color_ = colorSort;
     orDesc.font_ = smallFont;
     orDesc.fontSize_ = smallFontSize;
 
@@ -749,7 +780,7 @@ namespace yae
     order.anchors_.left_ = ItemRef::reference(orDesc, kPropertyRight);
     order.anchors_.top_ = ItemRef::reference(sortAndOrder, kPropertyTop);
     order.text_ = TVarRef::constant(TVar(QObject::tr(" order")));
-    order.color_ = sortColor;
+    order.color_ = colorSort;
     order.font_ = smallFont;
     order.fontSize_ = smallFontSize;
 
@@ -757,7 +788,7 @@ namespace yae
     ulName.anchors_.right_ = ItemRef::offset(byName, kPropertyRight, 1);
     ulName.anchors_.top_ = ItemRef::offset(byName, kPropertyBottom, 0);
     ulName.height_ = ItemRef::constant(2);
-    ulName.color_ = underlineColor;
+    ulName.color_ = colorUnderline;
     ulName.visible_ = ulName.
       addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByName));
 
@@ -765,7 +796,7 @@ namespace yae
     ulTime.anchors_.right_ = ItemRef::offset(orTime, kPropertyRight, 1);
     ulTime.anchors_.top_ = ItemRef::offset(orTime, kPropertyBottom, 0);
     ulTime.height_ = ItemRef::constant(2);
-    ulTime.color_ = underlineColor;
+    ulTime.color_ = colorUnderline;
     ulTime.visible_ = ulTime.
       addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByTime));
 
@@ -773,7 +804,7 @@ namespace yae
     ulAsc.anchors_.right_ = ItemRef::offset(inAsc, kPropertyRight, 1);
     ulAsc.anchors_.top_ = ItemRef::offset(inAsc, kPropertyBottom, 0);
     ulAsc.height_ = ItemRef::constant(2);
-    ulAsc.color_ = underlineColor;
+    ulAsc.color_ = colorUnderline;
     ulAsc.visible_ = ulAsc.
       addExpr(new IsModelSortOrder(model, Qt::AscendingOrder));
 
@@ -781,7 +812,7 @@ namespace yae
     ulDesc.anchors_.right_ = ItemRef::offset(orDesc, kPropertyRight, 1);
     ulDesc.anchors_.top_ = ItemRef::offset(orDesc, kPropertyBottom, 0);
     ulDesc.height_ = ItemRef::constant(2);
-    ulDesc.color_ = underlineColor;
+    ulDesc.color_ = colorUnderline;
     ulDesc.visible_ = ulDesc.
       addExpr(new IsModelSortOrder(model, Qt::DescendingOrder));
 
@@ -1255,7 +1286,7 @@ namespace yae
     cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
-    cur.color_ = ColorRef::constant(style.cursor_);
+    cur.color_ = ColorRef::constant(style.underline_);
     cur.visible_ = cur.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
 
@@ -1511,9 +1542,9 @@ namespace yae
     cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
-    cur.color_ = ColorRef::constant(style.cursor_);
+    cur.color_ = ColorRef::constant(style.underline_);
     cur.visible_ = cur.addExpr
-      (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
+      (new IsCurrentNotSelected(model, index));
 
     RemoveModelItems & maRmItem = xbutton.
       add(new RemoveModelItems("ma_remove_item"));
@@ -1866,7 +1897,7 @@ namespace yae
     Item & footer = sview.content_["footer"];
     Item & groups = sview.content_["groups"];
 
-    if (groups.children_.size() <= groupRow)
+    if (groupRow < 0 || groups.children_.size() <= (std::size_t)groupRow)
     {
       return;
     }
@@ -1874,7 +1905,8 @@ namespace yae
     Item & group = *(groups.children_[groupRow]);
     Item & grid = group["payload"]["grid"];
 
-    bool groupOnly = (itemRow < 0 || grid.children_.size() <= itemRow);
+    bool groupOnly =
+      (itemRow < 0 || grid.children_.size() <= (std::size_t)itemRow);
     Item & item = groupOnly ? group : *(grid.children_[itemRow]);
 
     Item & spacer = group["group_spacer"];

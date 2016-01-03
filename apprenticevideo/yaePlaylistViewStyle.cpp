@@ -125,8 +125,14 @@ namespace yae
       case kCursor:
         return cursor_;
 
+      case kScrollbar:
+        return scrollbar_;
+
       case kSeparator:
         return separator_;
+
+      case kUnderline:
+        return underline_;
 
       case kBgFocus:
         return bg_focus_;

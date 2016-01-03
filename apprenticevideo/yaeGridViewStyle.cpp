@@ -149,7 +149,9 @@ namespace yae
 
     border_ = Color(0x7f7f7f, 1.0);
     cursor_ = Color(0xf12b24, 1.0);
-    separator_ = Color(0x7f7f7f, 0.5);
+    scrollbar_ = Color(0x7f7f7f, 0.5);
+    separator_ = scrollbar_;
+    underline_ = cursor_;
 
     bg_focus_ = Color(0x7f7f7f, 0.5);
     fg_focus_ = Color(0xffffff, 1.0);

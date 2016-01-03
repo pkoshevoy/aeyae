@@ -76,13 +76,15 @@ namespace yae
     fg_ = Color(0x000000, 1.0);
 
     border_ = Color(0xafafaf, 1.0);
-    cursor_ = Color(0x3f7fff, 1.0);
+    cursor_ = Color(0xff7f00, 1.0);
+    scrollbar_ = Color(0xafafaf, 0.75);
     separator_ = Color(0x7f7f7f, 0.25);
+    underline_ = Color(0x3f7fff, 1.0);;
 
     bg_focus_ = Color(0xffffff, 0.5);
     fg_focus_ = Color(0x000000, 0.5);
 
-    bg_edit_selected_ = Color(0x3f7fff, 1.0);
+    bg_edit_selected_ = underline_;
     fg_edit_selected_ = Color(0xffffff, 1.0);
 
     bg_timecode_ = Color(0xffffff, 0.5);
@@ -97,19 +99,19 @@ namespace yae
     bg_label_ = Color(0xffffff, 0.0);
     fg_label_ = Color(0x000000, 1.0);
 
-    bg_label_selected_ = Color(0x3f7fff, 0.0);
-    fg_label_selected_ = Color(0xffffff, 1.0);
-
-    bg_group_ = Color(0x3f3f3f, 0.5);
+    bg_group_ = Color(0xafafaf, 0.75);
     fg_group_ = Color(0xffffff, 1.0);
 
     bg_item_ = Color(0xffffff, 0.0);
-    bg_item_playing_ = Color(0xff7f00, 0.75);
-    bg_item_selected_ = Color(0x3f7fff, 1.0);
+    bg_item_playing_ = cursor_.scale_a(0.75);
+    bg_item_selected_ = underline_.scale_a(0.75);
 
+    bg_label_selected_ = bg_item_selected_.transparent();
+    fg_label_selected_ = Color(0xffffff, 1.0);
+
+    timeline_played_ = underline_;
+    timeline_included_ = timeline_played_.scale_a(0.5);
     timeline_excluded_ = Color(0x7f7f7f, 0.5);
-    timeline_included_ = cursor_.scale_a(0.5);
-    timeline_played_ = cursor_;
 
     // configure common style attributes:
     title_height_.height_ =
