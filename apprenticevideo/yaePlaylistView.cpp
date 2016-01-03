@@ -804,6 +804,12 @@ namespace yae
       add(new SetSortOrder("ma_order_desc", view, model, item,
                            Qt::DescendingOrder));
     sortOrderDesc.anchors_.fill(orDesc);
+
+
+    bool ok = true;
+    ok = QObject::connect(&edit, SIGNAL(textChanged(const QString &)),
+                          &model, SLOT(setItemFilter(const QString &)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -1695,13 +1701,6 @@ namespace yae
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & footer = sview.content_["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
-
-    TextInput & filterEdit =
-      root["filterItem"]["bg"].get<TextInput>("filter_edit");
-
-    ok = connect(&filterEdit, SIGNAL(textChanged(const QString &)),
-                 model_, SLOT(setItemFilter(const QString &)));
-    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
