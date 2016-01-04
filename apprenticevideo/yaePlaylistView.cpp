@@ -649,10 +649,6 @@ namespace yae
     ItemRef fontDescentNowPlaying =
       xbutton.addExpr(new GetFontDescent(nowPlaying));
 
-    ClearTextInput & maRmFilter =
-      item.add(new ClearTextInput("ma_clear_filter", edit, text));
-    maRmFilter.anchors_.fill(xbutton);
-
     TextInputProxy & editProxy =
       item.add(new TextInputProxy("filter_focus", text, edit));
     ItemFocus::singleton().removeFocusable(view, editProxy.id_);
@@ -689,6 +685,10 @@ namespace yae
     edit.addObserver(Item::kOnUncache, Item::TObserverPtr(new Uncache(rm)));
 
     // remove filter [x] button:
+    ClearTextInput & maRmFilter =
+      item.add(new ClearTextInput("ma_clear_filter", edit, text));
+    maRmFilter.anchors_.fill(xbutton);
+
     rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
     rm.height_ = ItemRef::reference(text, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
