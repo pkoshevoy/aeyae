@@ -654,7 +654,7 @@ namespace yae
     maRmFilter.anchors_.fill(xbutton);
 
     TextInputProxy & editProxy =
-      filter.add(new TextInputProxy("filter_focus", text, edit));
+      item.add(new TextInputProxy("filter_focus", text, edit));
     ItemFocus::singleton().removeFocusable(view, editProxy.id_);
     ItemFocus::singleton().setFocusable(view, editProxy, 1);
     editProxy.anchors_.fill(filter);
