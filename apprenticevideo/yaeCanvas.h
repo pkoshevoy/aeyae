@@ -138,11 +138,7 @@ namespace yae
       virtual void setEnabled(bool enable)
       {
         enabled_ = enable;
-
-        if (delegate_)
-        {
-          delegate_->requestRepaint();
-        }
+        requestRepaint();
       }
 
       virtual void requestRepaint() = 0;

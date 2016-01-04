@@ -79,7 +79,10 @@ namespace yae
     cursor_ = Color(0xff7f00, 1.0);
     scrollbar_ = Color(0xafafaf, 0.75);
     separator_ = Color(0x7f7f7f, 0.25);
-    underline_ = Color(0x3f7fff, 1.0);;
+    underline_ = Color(0x3f7fff, 1.0);
+
+    bg_xbutton_ = Color(0x000000, 0.0);
+    fg_xbutton_ = Color(0x000000, 0.25);
 
     bg_focus_ = Color(0xffffff, 0.5);
     fg_focus_ = Color(0x000000, 0.5);
@@ -118,7 +121,7 @@ namespace yae
       title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
 
     // generate an x-button texture:
-    QImage img = xbuttonImage(32, fg_hint_);
+    QImage img = xbuttonImage(32, fg_xbutton_, bg_xbutton_.transparent(), 0.1);
     xbutton_.setImage(img);
 
     cell_width_.width_ = cell_width_.

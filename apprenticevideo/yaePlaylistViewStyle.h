@@ -37,7 +37,10 @@ namespace yae
   // xbuttonImage
   //
   YAE_API QImage
-  xbuttonImage(unsigned int w, const Color & color);
+  xbuttonImage(unsigned int w,
+               const Color & color,
+               const Color & background = Color(0x000000, 0.0),
+               double thickness = 0.2);
 
 
   //----------------------------------------------------------------
@@ -73,6 +76,8 @@ namespace yae
       kScrollbar,
       kSeparator,
       kUnderline,
+      kBgXButton,
+      kFgXButton,
       kBgFocus,
       kFgFocus,
       kBgEditSelected,
@@ -108,6 +113,9 @@ namespace yae
     Color scrollbar_;
     Color separator_;
     Color underline_;
+
+    Color bg_xbutton_;
+    Color fg_xbutton_;
 
     Color bg_focus_;
     Color fg_focus_;

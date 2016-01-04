@@ -29,7 +29,10 @@ namespace yae
   // xbuttonImage
   //
   QImage
-  xbuttonImage(unsigned int w, const Color & color)
+  xbuttonImage(unsigned int w,
+               const Color & color,
+               const Color & background,
+               double thickness)
   {
     QImage img(w, w, QImage::Format_ARGB32);
 
@@ -43,13 +46,13 @@ namespace yae
     double diameter = double(w);
     double center = diameter * 0.5;
     Segment sa(-center, diameter);
-    Segment sb(-diameter * 0.1, diameter * 0.2);
+    Segment sb(-diameter * thickness * 0.5, diameter * thickness);
 
     TVec2D origin(0.0, 0.0);
     TVec2D u_axis(0.707106781186548, 0.707106781186548);
     TVec2D v_axis(-0.707106781186548, 0.707106781186548);
 
-    Vec<double, 4> outerColor(Color(0, 0.0));
+    Vec<double, 4> outerColor(background);
     Vec<double, 4> innerColor(color);
     TVec2D samplePoint;
 
@@ -133,6 +136,12 @@ namespace yae
 
       case kUnderline:
         return underline_;
+
+      case kBgXButton:
+        return bg_xbutton_;
+
+      case kFgXButton:
+        return fg_xbutton_;
 
       case kBgFocus:
         return bg_focus_;

@@ -402,6 +402,37 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // IsMouseOver
+  //
+  struct IsMouseOver : public TBoolExpr
+  {
+    IsMouseOver(const ItemView & view,
+                const Scrollview & sview,
+                const Item & item):
+      view_(view),
+      sview_(sview),
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      TVec2D origin;
+      Segment xView;
+      Segment yView;
+      sview_.getContentView(origin, xView, yView);
+
+      const TVec2D & pt = view_.mousePt();
+      TVec2D lcs_pt = pt - origin;
+      result = item_.overlaps(lcs_pt);
+    }
+
+    const ItemView & view_;
+    const Scrollview & sview_;
+    const Item & item_;
+   };
+
+  //----------------------------------------------------------------
   // ItemHighlightColor
   //
   struct ItemHighlightColor : public TColorExpr
@@ -1039,6 +1070,9 @@ namespace yae
                          const QModelIndex & groupIndex,
                          const PlaylistViewStyle & style)
   {
+    Item & root = *(view.root());
+    const Scrollview & sview = root.get<Scrollview>("scrollview");
+
     // reuse pre-computed properties:
     const Item & fontSize = style.font_size_;
     const Item & cellWidth = style.cell_width_;
@@ -1099,6 +1133,7 @@ namespace yae
     rm.height_ = ItemRef::reference(text, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1169,6 +1204,9 @@ namespace yae
                              const QModelIndex & index,
                              const PlaylistViewStyle & style)
   {
+    Item & root = *(view.root());
+    const Scrollview & sview = root.get<Scrollview>("scrollview");
+
     const Item & fontSize = style.font_size_;
     const Texture & xbuttonTexture = style.xbutton_;
 
@@ -1272,6 +1310,7 @@ namespace yae
     rm.height_ = ItemRef::reference(playing, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
+    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
@@ -1314,6 +1353,9 @@ namespace yae
                          const QModelIndex & groupIndex,
                          const PlaylistViewStyle & style)
   {
+    Item & root = *(view.root());
+    const Scrollview & sview = root.get<Scrollview>("scrollview");
+
     // reuse pre-computed properties:
     const Item & fontSize = style.font_size_;
     const Item & cellWidth = style.cell_width_;
@@ -1378,6 +1420,7 @@ namespace yae
     rm.height_ = ItemRef::reference(text, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
+    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1441,6 +1484,9 @@ namespace yae
                             const QModelIndex & index,
                             const PlaylistViewStyle & style)
   {
+    Item & root = *(view.root());
+    const Scrollview & sview = root.get<Scrollview>("scrollview");
+
     const Item & fontSize = style.font_size_;
     const Text & nowPlaying = style.now_playing_;
     const Text & eyetvBadge = style.eyetv_badge_;
@@ -1523,6 +1569,7 @@ namespace yae
     rm.height_ = ItemRef::reference(playing, kPropertyHeight);
     rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
+    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));

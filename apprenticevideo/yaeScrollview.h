@@ -59,6 +59,11 @@ namespace yae
   {
     Scrollview(const char * id);
 
+    // helper:
+    void getContentView(TVec2D & origin,
+                        Segment & xView,
+                        Segment & yView) const;
+
     // virtual:
     void uncache();
     bool paint(const Segment & xregion,
