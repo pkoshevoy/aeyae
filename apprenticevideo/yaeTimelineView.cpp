@@ -477,6 +477,7 @@ namespace yae
     // setup mouse trap to prevent unintended click-through to playlist:
     MouseTrap & mouseTrap = root.addNew<MouseTrap>("mouse_trap");
     mouseTrap.anchors_.fill(container);
+    mouseTrap.anchors_.right_ = ItemRef::reference(shadow, kPropertyRight);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
