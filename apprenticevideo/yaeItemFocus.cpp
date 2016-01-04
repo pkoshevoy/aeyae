@@ -54,6 +54,29 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // ItemFocus::removeFocusable
+  //
+  void
+  ItemFocus::removeFocusable(Canvas::ILayer & view, const std::string & id)
+  {
+    const Target * target = lookup(idMap_, id);
+    if (!target)
+    {
+      return;
+    }
+
+    if (focus_ == target)
+    {
+      focus_ = NULL;
+    }
+
+    idMap_.erase(id);
+
+    int index = target->index_;
+    index_.erase(index);
+  }
+
+  //----------------------------------------------------------------
   // ItemFocus::setFocusable
   //
   void

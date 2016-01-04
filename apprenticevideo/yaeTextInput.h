@@ -137,12 +137,18 @@ namespace yae
     void get(Property property, bool & value) const;
 
     // virtual:
+    void get(Property property, Color & value) const;
+
+    // virtual:
     void get(Property property, TVar & value) const;
 
     Text & view_;
     TextInput & edit_;
 
+    ColorRef bgNoFocus_;
+    ColorRef bgOnFocus_;
     TVarRef placeholder_;
+
     bool copyViewToEdit_;
   };
 

@@ -110,13 +110,15 @@ namespace yae
     // virtual:
     void get(Property property, TVar & value) const;
 
+    // helper:
+    void copySettings(const Text & src);
+
     struct TPrivate;
     TPrivate * p_;
 
     QFont font_;
     Qt::AlignmentFlag alignment_;
     Qt::TextElideMode elide_;
-    double supersample_;
 
     TVarRef text_;
     ItemRef fontSize_; // in points

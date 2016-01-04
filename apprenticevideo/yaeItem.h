@@ -28,6 +28,7 @@
 
 // local interfaces:
 #include "yaeCanvas.h"
+#include "yaeExpression.h"
 #include "yaeItemRef.h"
 
 
@@ -421,6 +422,7 @@ namespace yae
     //
     enum Event
     {
+      kOnToggleItemView,
       kOnUncache,
       kOnFocus,
       kOnFocusOut,

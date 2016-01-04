@@ -77,6 +77,12 @@ namespace yae
     inline const ItemPtr & root() const
     { return root_; }
 
+    inline double width() const
+    { return w_; }
+
+    inline double height() const
+    { return h_; }
+
     // virtual:
     TImageProviderPtr
     getImageProvider(const QString & imageUrl, QString & imageId) const
@@ -108,6 +114,99 @@ namespace yae
     InputHandler * dragged_;
     TVec2D startPt_;
     TVec2D mousePt_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcTitleHeight
+  //
+  struct CalcTitleHeight : public TDoubleExpr
+  {
+    CalcTitleHeight(const ItemView & itemView, double minHeight):
+      itemView_(itemView),
+      minHeight_(minHeight)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double w = itemView_.width();
+      result = std::max<double>(minHeight_, 24.0 * w / 800.0);
+    }
+
+    const ItemView & itemView_;
+    double minHeight_;
+  };
+
+  //----------------------------------------------------------------
+  // OddRoundUp
+  //
+  struct OddRoundUp : public TDoubleExpr
+  {
+    OddRoundUp(const Item & item,
+               Property property,
+               double scale = 1.0,
+               double translate = 0.0):
+      item_(item),
+      property_(property),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double v = 0.0;
+      item_.get(property_, v);
+      v *= scale_;
+      v += translate_;
+
+      int i = 1 | int(ceil(v));
+      result = double(i);
+    }
+
+    const Item & item_;
+    Property property_;
+    double scale_;
+    double translate_;
+  };
+
+  //----------------------------------------------------------------
+  // Repaint
+  //
+  struct Repaint : public Item::Observer
+  {
+    Repaint(ItemView & timeline):
+      timeline_(timeline)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      (void) item;
+      (void) e;
+
+      timeline_.requestRepaint();
+    }
+
+    ItemView & timeline_;
+  };
+
+  //----------------------------------------------------------------
+  // Uncache
+  //
+  struct Uncache : public Item::Observer
+  {
+    Uncache(Item & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      item_.uncache();
+    }
+
+    Item & item_;
   };
 
 }

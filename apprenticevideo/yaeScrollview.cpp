@@ -97,25 +97,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // getContentView
+  // Scrollview::getContentView
   //
-  static void
-  getContentView(const Scrollview & sview,
-                 TVec2D & origin,
-                 Segment & xView,
-                 Segment & yView)
+  void
+  Scrollview::getContentView(TVec2D & origin,
+                             Segment & xView,
+                             Segment & yView) const
   {
-    double sceneHeight = sview.content_.height();
-    double viewHeight = sview.height();
+    double sceneHeight = this->content_.height();
+    double viewHeight = this->height();
 
-    const Segment & xExtent = sview.xExtent();
-    const Segment & yExtent = sview.yExtent();
+    const Segment & xExtent = this->xExtent();
+    const Segment & yExtent = this->yExtent();
 
     double dy = 0.0;
     if (sceneHeight > viewHeight)
     {
       double range = sceneHeight - viewHeight;
-      dy = sview.position_ * range;
+      dy = this->position_ * range;
     }
 
     origin.x() = xExtent.origin_;
@@ -147,7 +146,7 @@ namespace yae
     TVec2D origin;
     Segment xView;
     Segment yView;
-    getContentView(*this, origin, xView, yView);
+    getContentView(origin, xView, yView);
 
     TVec2D ptInViewCoords = itemCSysPoint - origin;
     TVec2D offsetToView = itemCSysOrigin + origin;
@@ -171,7 +170,7 @@ namespace yae
     TVec2D origin;
     Segment xView;
     Segment yView;
-    getContentView(*this, origin, xView, yView);
+    getContentView(origin, xView, yView);
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();

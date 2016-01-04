@@ -25,12 +25,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kSupersampleText
-  //
-  static const double kSupersampleText = 1.0;
-
-
-  //----------------------------------------------------------------
   // GetFontAscent::GetFontAscent
   //
   GetFontAscent::GetFontAscent(const Text & item):
@@ -146,22 +140,20 @@ namespace yae
   {
     QFont font = item.font_;
     double fontSize = item.fontSize_.get();
-    font.setPointSizeF(fontSize * item.supersample_);
+    font.setPointSizeF(fontSize);
     QFontMetricsF fm(font);
 
-    QRectF maxRect(0.0, 0.0,
-                   maxWidth * item.supersample_,
-                   maxHeight * item.supersample_);
+    QRectF maxRect(0.0, 0.0, maxWidth, maxHeight);
 
     int flags = item.textFlags();
     QString text =
-      getElidedText(maxWidth * item.supersample_, item, fm, flags);
+      getElidedText(maxWidth, item, fm, flags);
 
     QRectF rect = fm.boundingRect(maxRect, flags, text);
-    bbox.x_ = rect.x() / item.supersample_;
-    bbox.y_ = rect.y() / item.supersample_;
-    bbox.w_ = rect.width() / item.supersample_;
-    bbox.h_ = rect.height() / item.supersample_;
+    bbox.x_ = rect.x();
+    bbox.y_ = rect.y();
+    bbox.w_ = rect.width();
+    bbox.h_ = rect.height();
   }
 
   //----------------------------------------------------------------
@@ -242,14 +234,14 @@ namespace yae
     QRectF maxRect;
     getMaxRect(item, maxRect);
 
-    maxRect.setWidth(maxRect.width() * item.supersample_);
-    maxRect.setHeight(maxRect.height() * item.supersample_);
+    maxRect.setWidth(maxRect.width());
+    maxRect.setHeight(maxRect.height());
 
     BBox bboxContent;
     item.Item::get(kPropertyBBoxContent, bboxContent);
 
-    int iw = (int)ceil(bboxContent.w_ * item.supersample_);
-    int ih = (int)ceil(bboxContent.h_ * item.supersample_);
+    int iw = (int)ceil(bboxContent.w_);
+    int ih = (int)ceil(bboxContent.h_);
 
     if (!(iw && ih))
     {
@@ -264,7 +256,7 @@ namespace yae
       QPainter painter(&img);
       QFont font = item.font_;
       double fontSize = item.fontSize_.get();
-      font.setPointSizeF(fontSize * item.supersample_);
+      font.setPointSizeF(fontSize);
       painter.setFont(font);
 
       QFontMetricsF fm(font);
@@ -283,8 +275,8 @@ namespace yae
       QRectF result;
       painter.drawText(maxRect, flags, text, &result);
 
-      if (result.width() / item.supersample_ != bboxContent.w_ ||
-          result.height() / item.supersample_ != bboxContent.h_)
+      if (result.width() != bboxContent.w_ ||
+          result.height() != bboxContent.h_)
       {
         YAE_ASSERT(false);
 
@@ -306,9 +298,7 @@ namespace yae
 #endif
     }
 
-    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_,
-                                   item.supersample_ == 1.0 ?
-                                   GL_NEAREST : GL_LINEAR);
+    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_, GL_NEAREST);
     return ok;
   }
 
@@ -339,7 +329,6 @@ namespace yae
     p_(new Text::TPrivate()),
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
-    supersample_(kSupersampleText),
     color_(ColorRef::constant(Color(0xffffff, 1.0))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
@@ -378,9 +367,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * supersample_);
+    font.setPointSizeF(fontSize);
     QFontMetricsF fm(font);
-    double ascent = fm.ascent() / supersample_;
+    double ascent = fm.ascent();
     return ascent;
   }
 
@@ -392,9 +381,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * supersample_);
+    font.setPointSizeF(fontSize);
     QFontMetricsF fm(font);
-    double descent = fm.descent() / supersample_;
+    double descent = fm.descent();
     return descent;
   }
 
@@ -406,9 +395,9 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * supersample_);
+    font.setPointSizeF(fontSize);
     QFontMetricsF fm(font);
-    double fh = fm.height() / supersample_;
+    double fh = fm.height();
     return fh;
   }
 
@@ -540,6 +529,24 @@ namespace yae
     {
       Item::get(property, value);
     }
+  }
+
+  //----------------------------------------------------------------
+  // Text::copySettings
+  //
+  void
+  Text::copySettings(const Text & src)
+  {
+    font_ = src.font_;
+    alignment_ = src.alignment_;
+    elide_ = src.elide_;
+
+    text_ = src.text_;
+    fontSize_ = src.fontSize_;
+    maxWidth_ = src.maxWidth_;
+    maxHeight_ = src.maxHeight_;
+    color_ = src.color_;
+    background_ = src.background_;
   }
 
 }

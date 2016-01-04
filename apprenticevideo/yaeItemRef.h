@@ -20,7 +20,6 @@
 
 // local interfaces:
 #include "yaeProperty.h"
-#include "yaeExpression.h"
 
 
 namespace yae
@@ -378,6 +377,11 @@ namespace yae
     TVec4D scale_;
     TVec4D translate_;
   };
+
+  //----------------------------------------------------------------
+  // TGradientRef
+  //
+  typedef DataRef<TGradientPtr> TGradientRef;
 
 }
 

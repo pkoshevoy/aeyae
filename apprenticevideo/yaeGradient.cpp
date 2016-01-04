@@ -29,13 +29,32 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // Gradient::uncache
+  //
+  void
+  Gradient::uncache()
+  {
+    color_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
   // Gradient::paintContent
   //
   void
   Gradient::paintContent() const
   {
-    if (color_.size() < 2)
+    const TGradientPtr & gradientPtr = color_.get();
+    if (!gradientPtr)
     {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const TGradient & gradient = *gradientPtr;
+    if (gradient.size() < 2)
+    {
+      YAE_ASSERT(false);
       return;
     }
 
@@ -49,13 +68,13 @@ namespace yae
     TVec2D u = (orientation_ == Gradient::kHorizontal) ? xvec : yvec;
     TVec2D v = (orientation_ == Gradient::kHorizontal) ? yvec : xvec;
 
-    std::map<double, Color>::const_iterator i = color_.begin();
+    TGradient::const_iterator i = gradient.begin();
     double t0 = i->first;
     const Color * c0 = &(i->second);
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
-    for (++i; i != color_.end(); ++i)
+    for (++i; i != gradient.end(); ++i)
     {
       double t1 = i->first;
       const Color * c1 = &(i->second);

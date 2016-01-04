@@ -910,6 +910,7 @@ namespace yae
 
     std::ostringstream oss;
     oss << id_ << ": item not found: " << id;
+    YAE_ASSERT(false);
     throw std::runtime_error(oss.str().c_str());
     return *this;
   }

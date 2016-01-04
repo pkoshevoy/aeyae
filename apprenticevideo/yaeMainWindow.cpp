@@ -451,6 +451,7 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
+    timelineView_.setPlaylistView(&playlistView_);
     playlistView_.setModel(&playlistModel_);
     timelineView_.setModel(&timelineModel_);
 
@@ -548,7 +549,9 @@ namespace yae
       audioDevice_ = audioDevice.toUtf8().constData();
     }
 
-#ifdef __APPLE__
+#if 1
+    actionFullScreen->setShortcut(tr("Ctrl+F"));
+#elif defined(__APPLE__)
     actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
 #else
     actionFullScreen->setShortcut(tr("F11"));
@@ -1488,7 +1491,7 @@ namespace yae
   bool
   MainWindow::load(const QString & path, const TBookmark * bookmark)
   {
-    actionPlay->setEnabled(false);
+    // actionPlay->setEnabled(false);
 
     IReaderPtr reader =
       canaryTest(path) ? yae::openFile(readerPrototype_, path) : IReaderPtr();
@@ -1730,7 +1733,7 @@ namespace yae
 
     this->setWindowTitle(tr("Apprentice Video: %1").
                          arg(QFileInfo(path).fileName()));
-    actionPlay->setEnabled(true);
+    // actionPlay->setEnabled(true);
 
     if (actionCropFrameAutoDetect->isChecked())
     {
@@ -2952,7 +2955,7 @@ namespace yae
       // FIXME: this could be handled as a playlist view state instead:
       canvas_->setGreeting(canvas_->greeting());
 #endif
-      actionPlay->setEnabled(false);
+      // actionPlay->setEnabled(false);
       fixupNextPrev();
     }
     else
@@ -3295,7 +3298,7 @@ namespace yae
   MainWindow::playback(const QModelIndex & startHere, bool forward)
   {
     // SignalBlocker blockSignals(&playlistModel_);
-    actionPlay->setEnabled(false);
+    // actionPlay->setEnabled(false);
 
     QModelIndex current = startHere;
     TPlaylistItemPtr item;
@@ -3381,7 +3384,7 @@ namespace yae
     playbackStop();
 
     // SignalBlocker blockSignals(&playlistModel_);
-    actionPlay->setEnabled(false);
+    // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.playingItem();
     QModelIndex iNext = playlistModel_.nextItem(index);
@@ -3396,7 +3399,7 @@ namespace yae
   MainWindow::playbackPrev()
   {
     // SignalBlocker blockSignals(&playlistModel_);
-    actionPlay->setEnabled(false);
+    // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.playingItem();
     QModelIndex iPrev =
@@ -3478,7 +3481,7 @@ namespace yae
     playbackStop();
 
     // SignalBlocker blockSignals(&playlistModel_);
-    actionPlay->setEnabled(false);
+    // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.lookupModelIndex(bookmark.groupHash_,
                                                         bookmark.itemHash_);
@@ -4757,50 +4760,25 @@ namespace yae
     {
       menubar->removeAction(menuChapters->menuAction());
     }
-#if 0
-    if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
+
+    if (canvas_)
     {
-      if (actionShowPlaylist->isEnabled())
+      VideoTraits vtts;
+      bool gotVideoTraits = reader && reader->getVideoTraits(vtts);
+
+      if ((videoTrackIndex >= numVideoTracks && numAudioTracks > 0) ||
+          // audio files with embeded album art poster frame
+          // typically show up with ridiculous frame rate,
+          // so I'll consider that as an audio file trait:
+          (gotVideoTraits && vtts.frameRate_ > 240.0))
       {
-        // setTimelineCssForAudio(timelineWidgets_);
-        actionShowPlaylist->setEnabled(false);
-
-        if (actionShowPlaylist->isChecked())
-        {
-#if 0
-          playlistDock_->hide();
-#endif
-        }
-
-        swapLayouts(canvasContainer_, playlistContainer_);
-
-        playlistModel_.show();
-        playlistModel_.update();
-        playlistModel_.setFocus();
+        playlistView_.setStyleId(PlaylistView::kListView);
+      }
+      else if (numVideoTracks || !numAudioTracks)
+      {
+        playlistView_.setStyleId(PlaylistView::kGridView);
       }
     }
-    else if (numVideoTracks || !numAudioTracks)
-    {
-      if (!actionShowPlaylist->isEnabled())
-      {
-        // setTimelineCssForVideo(timelineWidgets_);
-        swapLayouts(canvasContainer_, playlistContainer_);
-
-        if (actionShowPlaylist->isChecked())
-        {
-#if 0
-          playlistDock_->show();
-#endif
-        }
-
-        actionShowPlaylist->setEnabled(true);
-
-        playlistModel_.show();
-        playlistModel_.update();
-        this->setFocus();
-      }
-    }
-#endif
   }
 
   //----------------------------------------------------------------

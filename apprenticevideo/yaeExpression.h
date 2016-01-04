@@ -78,6 +78,11 @@ namespace yae
   //
   typedef Expression<TVec2D> TVec2DExpr;
 
+  //----------------------------------------------------------------
+  // TGradientExpr
+  //
+  typedef Expression<TGradientPtr> TGradientExpr;
+
 }
 
 

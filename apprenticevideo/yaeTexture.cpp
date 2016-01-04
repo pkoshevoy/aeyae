@@ -419,9 +419,9 @@ namespace yae
   //
   Texture::Texture(const char * id, const QImage & image):
     Item(id),
-    p_(new TPrivate(image))
+    p_(NULL)
   {
-    p_->ready_ = addExpr(new UploadTexture<Texture>(*this));
+    setImage(image);
   }
 
   //----------------------------------------------------------------
@@ -430,6 +430,17 @@ namespace yae
   Texture::~Texture()
   {
     delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // Texture::setImage
+  //
+  void
+  Texture::setImage(const QImage & image)
+  {
+    delete p_;
+    p_ = new TPrivate(image);
+    p_->ready_ = addExpr(new UploadTexture<Texture>(*this));
   }
 
   //----------------------------------------------------------------

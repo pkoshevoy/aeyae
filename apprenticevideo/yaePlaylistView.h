@@ -15,18 +15,22 @@
 // boost includes:
 #include <boost/shared_ptr.hpp>
 
-// Qt library:
-#include <QFont>
-
 // local interfaces:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
+#include "yaeScrollview.h"
 
 
 namespace yae
 {
+
+  // forward declarations:
+  struct PlaylistViewStyle;
+  class PlaylistView;
+  class Texture;
+  class Text;
 
   //----------------------------------------------------------------
   // TPlaylistModelItem
@@ -43,62 +47,6 @@ namespace yae
   //
   typedef ClickableItem<PlaylistModelProxy> TClickablePlaylistModelItem;
 
-
-  //----------------------------------------------------------------
-  // CalcTitleHeight
-  //
-  struct CalcTitleHeight : public TDoubleExpr
-  {
-    CalcTitleHeight(const Item & titleContainer, double minHeight);
-
-    // virtual:
-    void evaluate(double & result) const;
-
-    const Item & titleContainer_;
-    double minHeight_;
-  };
-
-  //----------------------------------------------------------------
-  // IPlaylistViewStyle
-  //
-  struct YAE_API IPlaylistViewStyle
-  {
-    virtual ~IPlaylistViewStyle() {}
-
-    Color bg_;
-    Color fg_;
-
-    Color cursor_;
-    Color separator_;
-
-    Color bg_focus_;
-    Color fg_focus_;
-
-    Color bg_edit_selected_;
-    Color fg_edit_selected_;
-
-    Color bg_hint_;
-    Color fg_hint_;
-
-    Color bg_badge_;
-    Color fg_badge_;
-
-    Color bg_label_;
-    Color fg_label_;
-
-    Color bg_label_selected_;
-    Color fg_label_selected_;
-
-    Color bg_item_;
-    Color bg_item_playing_;
-    Color bg_item_selected_;
-
-    QFont font_;
-    QFont font_small_;
-
-    std::map<double, Color> filter_shadow_;
-  };
-
   //----------------------------------------------------------------
   // ILayoutDelegate
   //
@@ -111,8 +59,83 @@ namespace yae
                         TView & view,
                         Model & model,
                         const QModelIndex & itemIndex,
-                        const IPlaylistViewStyle & style) = 0;
+                        const PlaylistViewStyle & style) = 0;
   };
+
+  //----------------------------------------------------------------
+  // TPlaylistViewLayout
+  //
+  typedef ILayoutDelegate<PlaylistView, PlaylistModelProxy> TPlaylistViewLayout;
+
+  //----------------------------------------------------------------
+  // TPlaylistViewLayoutPtr
+  //
+  typedef boost::shared_ptr<TPlaylistViewLayout> TPlaylistViewLayoutPtr;
+
+  //----------------------------------------------------------------
+  // GroupListLayout
+  //
+  struct GroupListLayout : public TPlaylistViewLayout
+  {
+    // virtual:
+    void layout(Item & groups,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & rootIndex,
+                const PlaylistViewStyle & style);
+  };
+
+  //----------------------------------------------------------------
+  // ItemGridLayout
+  //
+  struct ItemGridLayout : public TPlaylistViewLayout
+  {
+    // virtual:
+    void layout(Item & group,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & groupIndex,
+                const PlaylistViewStyle & style);
+  };
+
+  //----------------------------------------------------------------
+  // ItemGridCellLayout
+  //
+  struct ItemGridCellLayout : public TPlaylistViewLayout
+  {
+    // virtual:
+    void layout(Item & cell,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & index,
+                const PlaylistViewStyle & style);
+  };
+
+  //----------------------------------------------------------------
+  // ItemListLayout
+  //
+  struct ItemListLayout : public TPlaylistViewLayout
+  {
+    // virtual:
+    void layout(Item & group,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & groupIndex,
+                const PlaylistViewStyle & style);
+  };
+
+  //----------------------------------------------------------------
+  // ItemListRowLayout
+  //
+  struct ItemListRowLayout : public TPlaylistViewLayout
+  {
+    void layout(Item & cell,
+                PlaylistView & view,
+                PlaylistModelProxy & model,
+                const QModelIndex & index,
+                const PlaylistViewStyle & style);
+  };
+
 
   //----------------------------------------------------------------
   // PlaylistView
@@ -122,13 +145,6 @@ namespace yae
     Q_OBJECT;
 
   public:
-    typedef PlaylistModel::LayoutHint TLayoutHint;
-
-    typedef ILayoutDelegate<PlaylistView, PlaylistModelProxy> TLayoutDelegate;
-    typedef boost::shared_ptr<TLayoutDelegate> TLayoutPtr;
-    typedef std::map<TLayoutHint, TLayoutPtr> TLayoutDelegates;
-    typedef boost::shared_ptr<IPlaylistViewStyle> TStylePtr;
-
     PlaylistView();
 
     // data source:
@@ -137,12 +153,30 @@ namespace yae
     inline PlaylistModelProxy * model() const
     { return model_; }
 
-    // accessors:
-    inline const TLayoutDelegates & layouts() const
-    { return layoutDelegates_; }
+    //----------------------------------------------------------------
+    // StyleId
+    //
+    // currently only two styles are implemented:
+    //
+    enum StyleId
+    {
+      kGridView,
+      kListView
+    };
+
+    void setStyleId(StyleId styleId);
+
+    // current style:
+    const PlaylistViewStyle & playlistViewStyle() const;
+
+    // restyle the view according to current style:
+    void restyle();
 
     // virtual:
     void paint(Canvas * canvas);
+
+    // virtual:
+    bool processMouseTracking(const TVec2D & mousePt);
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
@@ -172,8 +206,76 @@ namespace yae
 
   protected:
     PlaylistModelProxy * model_;
-    TLayoutDelegates layoutDelegates_;
-    TStylePtr style_;
+    std::string style_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ContrastColor
+  //
+  struct ContrastColor : public TColorExpr
+  {
+    ContrastColor(const Item & item, Property prop, double scaleAlpha = 0.0):
+      scaleAlpha_(scaleAlpha),
+      item_(item),
+      prop_(prop)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      Color c0;
+      item_.get(prop_, c0);
+      result = c0.bw_contrast();
+      double a = scaleAlpha_ * double(result.a());
+      result.set_a((unsigned char)(std::min(255.0, std::max(0.0, a))));
+    }
+
+    double scaleAlpha_;
+    const Item & item_;
+    Property prop_;
+  };
+
+  //----------------------------------------------------------------
+  // PremultipliedTransparent
+  //
+  struct PremultipliedTransparent : public TColorExpr
+  {
+    PremultipliedTransparent(const Item & item, Property prop):
+      item_(item),
+      prop_(prop)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      Color c0;
+      item_.get(prop_, c0);
+      result = c0.premultiplied_transparent();
+    }
+
+    const Item & item_;
+    Property prop_;
+  };
+
+  //----------------------------------------------------------------
+  // GetScrollviewWidth
+  //
+  struct GetScrollviewWidth : public TDoubleExpr
+  {
+    GetScrollviewWidth(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      Item & root = *(playlist_.root());
+      Scrollview & sview = root.get<Scrollview>("scrollview");
+      sview.get(kPropertyWidth, result);
+    }
+
+    const PlaylistView & playlist_;
   };
 
 }

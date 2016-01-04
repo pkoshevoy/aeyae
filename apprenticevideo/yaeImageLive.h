@@ -2,12 +2,12 @@
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
 
-// Created      : Tue Oct 20 19:19:59 PDT 2015
+// Created      : Fri Jan  1 17:16:07 PST 2016
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_GRADIENT_H_
-#define YAE_GRADIENT_H_
+#ifndef YAE_IMAGE_LIVE_H_
+#define YAE_IMAGE_LIVE_H_
 
 // local interfaces:
 #include "yaeItem.h"
@@ -17,25 +17,24 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // Gradient
+  // ImageLive
   //
-  struct Gradient : public Item
+  struct ImageLive : public Item
   {
-    enum Orientation { kHorizontal, kVertical };
+    mutable Canvas * canvas_;
 
-    Gradient(const char * id);
+    ImageLive(const char * id);
 
     // virtual:
-    void uncache();
+    bool paint(const Segment & xregion,
+               const Segment & yregion,
+               Canvas * canvas) const;
 
     // virtual:
     void paintContent() const;
-
-    TGradientRef color_;
-    Orientation orientation_;
   };
 
 }
 
 
-#endif // YAE_GRADIENT_H_
+#endif // YAE_IMAGE_LIVE_H_

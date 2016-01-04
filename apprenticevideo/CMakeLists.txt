@@ -141,8 +141,12 @@ set(project_sources
   yaeFlickableArea.h
   yaeGradient.cpp
   yaeGradient.h
+  yaeGridViewStyle.h
+  yaeGridViewStyle.cpp
   yaeImage.cpp
   yaeImage.h
+  yaeImageLive.cpp
+  yaeImageLive.h
   yaeInputArea.cpp
   yaeInputArea.h
   yaeItem.cpp
@@ -152,6 +156,8 @@ set(project_sources
   yaeItemRef.h
   yaeItemView.cpp
   yaeItemView.h
+  yaeListViewStyle.h
+  yaeListViewStyle.cpp
   yaeMain.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
@@ -163,6 +169,8 @@ set(project_sources
   yaePlaylistModelProxy.cpp
   yaePlaylistView.h
   yaePlaylistView.cpp
+  yaePlaylistViewStyle.h
+  yaePlaylistViewStyle.cpp
   yaeProperty.h
   yaeRectangle.cpp
   yaeRectangle.h
