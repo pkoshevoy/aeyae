@@ -196,6 +196,46 @@ namespace yae
     { return true; }
   };
 
+  //----------------------------------------------------------------
+  // MouseTrap
+  //
+  // Consume mouse events to prevent them from
+  // propagating to a lower level:
+  //
+  struct MouseTrap : public InputArea
+  {
+    MouseTrap(const char * id):
+      InputArea(id)
+    {}
+
+    // virtual:
+    bool onScroll(const TVec2D & itemCSysOrigin,
+                  const TVec2D & rootCSysPoint,
+                  double degrees)
+    { return true; }
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    { return true; }
+  };
+
 }
 
 

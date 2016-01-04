@@ -22,6 +22,7 @@
 #include "yaeGridViewStyle.h"
 #include "yaeImage.h"
 #include "yaeImageLive.h"
+#include "yaeInputArea.h"
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaeListViewStyle.h"
@@ -630,6 +631,10 @@ namespace yae
       icon.anchors_.top_ = ItemRef::reference(circle, kPropertyTop);
     }
 
+    // setup mouse trap to prevent unintended click-through to playlist:
+    MouseTrap & mouseTrap = item.addNew<MouseTrap>("mouse_trap");
+    mouseTrap.anchors_.fill(item);
+
     Text & text = filter.addNew<Text>("filter_text");
     text.font_ = style.font_large_;
 
@@ -711,6 +716,9 @@ namespace yae
     Rectangle & ulTime = sortAndOrder.addNew<Rectangle>("underline_time");
     Rectangle & ulAsc = sortAndOrder.addNew<Rectangle>("underline_asc");
     Rectangle & ulDesc = sortAndOrder.addNew<Rectangle>("underline_desc");
+
+    // adjust mouse trap bbox so it doesn't extend down more than necessary:
+    mouseTrap.anchors_.bottom_ = ItemRef::reference(ulName, kPropertyBottom);
 
     Text & sortBy = sortAndOrder.addNew<Text>("sort_by");
     sortBy.anchors_.left_ = ItemRef::reference(sortAndOrder, kPropertyLeft);
@@ -2223,6 +2231,14 @@ namespace yae
          i != inputHandlers.rend(); ++i)
     {
       const InputHandler & handler = *i;
+
+      const MouseTrap * mouseTrap =
+        dynamic_cast<const MouseTrap *>(handler.input_);
+
+      if (mouseTrap)
+      {
+        return NULL;
+      }
 
       const TModelInputArea * modelInput =
         dynamic_cast<const TModelInputArea *>(handler.input_);
