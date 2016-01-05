@@ -206,7 +206,6 @@ namespace yae
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
-    void playlistPlayingItemChanged(const QModelIndex & index);
 
     // window menu:
     void windowHalfSize();
@@ -222,6 +221,7 @@ namespace yae
     void helpAbout();
 
     // helpers:
+    void setPlayingItem(const QModelIndex & index);
     void processDropEventUrls(const QList<QUrl> & urls);
     void userIsSeeking(bool seeking);
     void moveTimeIn(double seconds);

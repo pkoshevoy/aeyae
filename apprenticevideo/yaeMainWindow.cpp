@@ -898,10 +898,8 @@ namespace yae
                  &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playlistModel_,
-                 SIGNAL(playingItemChanged(const QModelIndex &)),
-                 this,
-                 SLOT(playlistPlayingItemChanged(const QModelIndex &)));
+    ok = connect(&playlistView_, SIGNAL(activated(const QModelIndex &)),
+                 this, SLOT(setPlayingItem(const QModelIndex &)));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -2940,10 +2938,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playlistPlayingItemChanged
+  // MainWindow::setPlayingItem
   //
   void
-  MainWindow::playlistPlayingItemChanged(const QModelIndex & index)
+  MainWindow::setPlayingItem(const QModelIndex & index)
   {
     playbackStop();
 

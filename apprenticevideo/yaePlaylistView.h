@@ -204,6 +204,9 @@ namespace yae
     void rowsAboutToBeRemoved(const QModelIndex & parent, int start, int end);
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
+  signals:
+    void activated(const QModelIndex & index);
+
   protected:
     PlaylistModelProxy * model_;
     std::string style_;

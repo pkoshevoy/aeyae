@@ -1016,8 +1016,9 @@ namespace yae
   //
   struct ItemPlay : public TClickablePlaylistModelItem
   {
-    ItemPlay(const char * id):
-      TClickablePlaylistModelItem(id)
+    ItemPlay(const char * id, PlaylistView & playlist):
+      TClickablePlaylistModelItem(id),
+      playlist_(playlist)
     {}
 
     // virtual:
@@ -1025,10 +1026,11 @@ namespace yae
                        const TVec2D & rootCSysPoint)
     {
       const QPersistentModelIndex & modelIndex = this->modelIndex();
-      TClickablePlaylistModelItem::TModel & model = this->model();
-      model.setPlayingItem(modelIndex);
+      playlist_.activated(modelIndex);
       return true;
     }
+
+    PlaylistView & playlist_;
   };
 
   //----------------------------------------------------------------
@@ -1053,7 +1055,7 @@ namespace yae
     cell.anchors_.top_ =
       cell.addExpr(new GridCellTop(cell, cellWidth, cellHeight));
 
-    ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
+    ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell", view));
     maPlay.anchors_.fill(cell);
 
     style.layout_item_->layout(cell, view, model, itemIndex, style);
@@ -2262,7 +2264,7 @@ namespace yae
                key == Qt::Key_Enter)
       {
         QModelIndex currentIndex = model_->currentItem();
-        model_->setPlayingItem(currentIndex);
+        emit activated(currentIndex);
         e->accept();
       }
     }
