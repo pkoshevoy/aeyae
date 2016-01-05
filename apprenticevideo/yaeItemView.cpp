@@ -317,7 +317,9 @@ namespace yae
            i = handlers.begin(), end = handlers.end(); i != end; ++i)
     {
       const InputHandler & handler = *i;
-      if (handler.input_ == item)
+      const InputArea * ia = handler.inputArea();
+
+      if (ia == item)
       {
         return true;
       }
@@ -381,7 +383,9 @@ namespace yae
            i != inputHandlers_.rend(); ++i)
       {
         InputHandler & handler = *i;
-        if (handler.input_->onPress(handler.csysOrigin_, pt))
+        InputArea * ia = handler.inputArea();
+
+        if (ia && ia->onPress(handler.csysOrigin_, pt))
         {
           pressed_ = &handler;
           return true;
@@ -404,7 +408,9 @@ namespace yae
              i != handlers.rend(); ++i)
         {
           InputHandler & handler = *i;
-          if (handler.input_->onMouseOver(handler.csysOrigin_, pt))
+          InputArea * ia = handler.inputArea();
+
+          if (ia && ia->onMouseOver(handler.csysOrigin_, pt))
           {
             return true;
           }
@@ -419,16 +425,22 @@ namespace yae
            i != inputHandlers_.rend(); ++i)
       {
         InputHandler & handler = *i;
+        InputArea * ia = handler.inputArea();
 
         if (!dragged_ && pressed_ != &handler &&
-            handler.input_->onPress(handler.csysOrigin_, startPt_))
+            ia && ia->onPress(handler.csysOrigin_, startPt_))
         {
           // previous handler didn't handle the drag event, try another:
-          pressed_->input_->onCancel();
+          InputArea * pi = pressed_->inputArea();
+          if (pi)
+          {
+            pi->onCancel();
+          }
+
           pressed_ = &handler;
         }
 
-        if (handler.input_->onDrag(handler.csysOrigin_, startPt_, pt))
+        if (ia && ia->onDrag(handler.csysOrigin_, startPt_, pt))
         {
           dragged_ = &handler;
           return true;
@@ -442,15 +454,19 @@ namespace yae
       bool accept = false;
       if (pressed_)
       {
-        if (dragged_)
+        InputArea * ia =
+          dragged_ ? dragged_->inputArea() : pressed_->inputArea();
+
+        if (ia)
         {
-          accept = dragged_->input_->onDragEnd(dragged_->csysOrigin_,
-                                               startPt_,
-                                               pt);
-        }
-        else
-        {
-          accept = pressed_->input_->onClick(pressed_->csysOrigin_, pt);
+          if (dragged_)
+          {
+            accept = ia->onDragEnd(dragged_->csysOrigin_, startPt_, pt);
+          }
+          else
+          {
+            accept = ia->onClick(pressed_->csysOrigin_, pt);
+          }
         }
       }
 
@@ -476,7 +492,9 @@ namespace yae
            i != handlers.rend(); ++i)
       {
         InputHandler & handler = *i;
-        if (handler.input_->onDoubleClick(handler.csysOrigin_, pt))
+        InputArea * ia = handler.inputArea();
+
+        if (ia && ia->onDoubleClick(handler.csysOrigin_, pt))
         {
           return true;
         }
@@ -527,7 +545,9 @@ namespace yae
     for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
     {
       InputHandler & handler = *i;
-      if (handler.input_->onScroll(handler.csysOrigin_, pt, degrees))
+      InputArea * ia = handler.inputArea();
+
+      if (ia && ia->onScroll(handler.csysOrigin_, pt, degrees))
       {
         break;
       }

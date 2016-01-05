@@ -122,6 +122,10 @@ namespace yae
     ItemRef vcenter_;
   };
 
+  //----------------------------------------------------------------
+  // InputAreaPtr
+  //
+  typedef boost::shared_ptr<InputArea> InputAreaPtr;
 
   //----------------------------------------------------------------
   // InputHandler
@@ -129,12 +133,13 @@ namespace yae
   struct InputHandler
   {
     InputHandler(InputArea * inputArea = NULL,
-                 const TVec2D & csysOrigin = TVec2D()):
-      input_(inputArea),
-      csysOrigin_(csysOrigin)
-    {}
+                 const TVec2D & csysOrigin = TVec2D());
 
-    InputArea * input_;
+    // shortcut:
+    inline InputArea * inputArea() const
+    { return input_.lock().get(); }
+
+    boost::weak_ptr<InputArea> input_;
     TVec2D csysOrigin_;
   };
 
@@ -171,8 +176,11 @@ namespace yae
     //----------------------------------------------------------------
     // setParent
     //
-    virtual void setParent(Item * parentItem)
-    { parent_ = parentItem; }
+    virtual void setParent(Item * parentItem, const ItemPtr & selfPtr)
+    {
+      parent_ = parentItem;
+      self_ = selfPtr;
+    }
 
     //----------------------------------------------------------------
     // isParent
@@ -289,8 +297,9 @@ namespace yae
     inline TItem & insert(int i, TItem * newItem)
     {
       YAE_ASSERT(newItem);
-      children_.insert(children_.begin() + i, ItemPtr(newItem));
-      newItem->Item::setParent(this);
+      ItemPtr itemPtr(newItem);
+      children_.insert(children_.begin() + i, itemPtr);
+      newItem->Item::setParent(this, itemPtr);
       return *newItem;
     }
 
@@ -298,17 +307,19 @@ namespace yae
     inline TItem & add(TItem * newItem)
     {
       YAE_ASSERT(newItem);
-      children_.push_back(ItemPtr(newItem));
-      newItem->Item::setParent(this);
+      ItemPtr itemPtr(newItem);
+      children_.push_back(itemPtr);
+      newItem->Item::setParent(this, itemPtr);
       return *newItem;
     }
 
     template <typename TItem>
     inline TItem & addNew(const char * id)
     {
-      children_.push_back(ItemPtr(new TItem(id)));
+      ItemPtr itemPtr(new TItem(id));
+      children_.push_back(itemPtr);
       Item & child = *(children_.back());
-      child.Item::setParent(this);
+      child.Item::setParent(this, itemPtr);
       return static_cast<TItem &>(child);
     }
 
@@ -316,7 +327,9 @@ namespace yae
     inline TItem & addHidden(TItem * newItem)
     {
       YAE_ASSERT(newItem);
-      children_.push_back(ItemPtr(newItem));
+      ItemPtr itemPtr(newItem);
+      children_.push_back(itemPtr);
+      newItem->Item::setParent(this, itemPtr);
       newItem->visible_ = BoolRef::constant(false);
       return *newItem;
     }
@@ -467,6 +480,9 @@ namespace yae
 
     // parent item:
     Item * parent_;
+
+    // weak reference to itself, provided by the parent:
+    boost::weak_ptr<Item> self_;
 
     // nested items:
     std::vector<ItemPtr> children_;

@@ -1115,7 +1115,6 @@ namespace yae
 
     if (index >= numItems_)
     {
-      YAE_ASSERT(index == numItems_);
       return TPlaylistGroupPtr();
     }
 

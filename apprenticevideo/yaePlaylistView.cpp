@@ -2278,9 +2278,10 @@ namespace yae
          i != inputHandlers.rend(); ++i)
     {
       const InputHandler & handler = *i;
+      const InputArea * ia = handler.inputArea();
 
       const MouseTrap * mouseTrap =
-        dynamic_cast<const MouseTrap *>(handler.input_);
+        dynamic_cast<const MouseTrap *>(ia);
 
       if (mouseTrap)
       {
@@ -2288,7 +2289,7 @@ namespace yae
       }
 
       const TModelInputArea * modelInput =
-        dynamic_cast<const TModelInputArea *>(handler.input_);
+        dynamic_cast<const TModelInputArea *>(ia);
 
       if (modelInput)
       {
@@ -2404,11 +2405,21 @@ namespace yae
     {
       if (dragged_)
       {
-        dragged_->input_->onCancel();
+        InputArea * ia = dragged_->inputArea();
+        if (ia)
+        {
+          ia->onCancel();
+        }
+
         dragged_ = NULL;
       }
 
-      pressed_->input_->onCancel();
+      InputArea * ia = pressed_->inputArea();
+      if (ia)
+      {
+        ia->onCancel();
+      }
+
       pressed_ = NULL;
     }
     inputHandlers_.clear();

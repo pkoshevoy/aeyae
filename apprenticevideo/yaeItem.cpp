@@ -26,6 +26,7 @@
 #include <QWheelEvent>
 
 // local interfaces:
+#include "yaeInputArea.h"
 #include "yaeItem.h"
 
 
@@ -325,6 +326,30 @@ namespace yae
   {
     bottom_ = ItemRef::offset(ref, kPropertyBottom, -offset);
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
+  }
+
+
+  //----------------------------------------------------------------
+  // InputHandler::InputHandler
+  //
+  InputHandler::InputHandler(InputArea * inputArea, const TVec2D & csysOrigin):
+    csysOrigin_(csysOrigin)
+  {
+    if (inputArea)
+    {
+      ItemPtr itemPtr = inputArea->self_.lock();
+      boost::shared_ptr<InputArea> inputAreaPtr =
+        boost::dynamic_pointer_cast<InputArea, Item>(itemPtr);
+
+      if (!inputAreaPtr)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("failed to acquire input area pointer");
+      }
+
+      // store a weak pointer:
+      input_ = inputAreaPtr;
+    }
   }
 
 
