@@ -1026,7 +1026,7 @@ namespace yae
                        const TVec2D & rootCSysPoint)
     {
       const QPersistentModelIndex & modelIndex = this->modelIndex();
-      playlist_.activated(modelIndex);
+      playlist_.emitActivated(modelIndex);
       return true;
     }
 

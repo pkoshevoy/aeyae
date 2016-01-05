@@ -207,6 +207,10 @@ namespace yae
   signals:
     void activated(const QModelIndex & index);
 
+  public:
+    inline void emitActivated(const QModelIndex & index)
+    { emit activated(index); }
+
   protected:
     PlaylistModelProxy * model_;
     std::string style_;
