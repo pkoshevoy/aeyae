@@ -1511,6 +1511,8 @@ namespace yae
     Text & badge = cell.addNew<Text>("badge");
     badge.font_ = style.font_large_;
     badge.anchors_.center(badgeItem);
+    badge.maxWidth_ = ItemRef::reference(eyetvBadge, kPropertyWidth);
+    badge.maxHeight_ = ItemRef::reference(eyetvBadge, kPropertyHeight);
     badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
     badge.color_ = badge.
       addExpr(new ItemHighlightColor(model,
