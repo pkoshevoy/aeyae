@@ -16,6 +16,7 @@
 #include <QMouseEvent>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -97,6 +98,9 @@ namespace yae
     inline const TVec2D & mousePt() const
     { return mousePt_; }
 
+  public slots:
+    void repaint();
+
   protected:
     RequestRepaintEvent::TPayload requestRepaintEvent_;
     TImageProviders imageProviders_;
@@ -114,6 +118,8 @@ namespace yae
     InputHandler * dragged_;
     TVec2D startPt_;
     TVec2D mousePt_;
+
+    QTimer repaintTimer_;
   };
 
   //----------------------------------------------------------------

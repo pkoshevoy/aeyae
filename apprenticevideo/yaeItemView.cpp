@@ -46,7 +46,11 @@ namespace yae
     Item & root = *root_;
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
-  }
+
+    repaintTimer_.setSingleShot(true);
+    bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
+                      this, SLOT(repaint()));
+   }
 
   //----------------------------------------------------------------
   // ItemView::setEnabled
@@ -105,6 +109,18 @@ namespace yae
   //
   void
   ItemView::requestRepaint()
+  {
+    if (!repaintTimer_.isActive())
+    {
+      repaintTimer_.start(17);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::repaint
+  //
+  void
+  ItemView::repaint()
   {
     bool postThePayload = requestRepaintEvent_.setDelivered(false);
     if (postThePayload)
