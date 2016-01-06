@@ -21,8 +21,9 @@
 
 // Qt includes:
 #include <QEvent>
-#include <QString>
+#include <QObject>
 #include <QPainter>
+#include <QString>
 
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
      QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
@@ -231,6 +232,76 @@ namespace yae
   //
   YAE_API TPixelFormatId
   pixelFormatIdFor(QImage::Format imgFormat);
+
+  //----------------------------------------------------------------
+  // SignalBlocker
+  //
+  struct SignalBlocker
+  {
+    SignalBlocker(QObject * qObj = NULL)
+    {
+      *this << qObj;
+    }
+
+    ~SignalBlocker()
+    {
+      while (!blocked_.empty())
+      {
+        QObject * qObj = blocked_.front();
+        blocked_.pop_front();
+
+        qObj->blockSignals(false);
+      }
+    }
+
+    SignalBlocker & operator << (QObject * qObj)
+    {
+      if (qObj && !qObj->signalsBlocked())
+      {
+        qObj->blockSignals(true);
+        blocked_.push_back(qObj);
+      }
+
+      return *this;
+    }
+
+    std::list<QObject *> blocked_;
+  };
+
+  //----------------------------------------------------------------
+  // BlockSignal
+  //
+  struct BlockSignal
+  {
+    BlockSignal(const QObject * sender, const char * senderSignal,
+                const QObject * receiver, const char * receiverSlot):
+      sender_(sender),
+      signal_(senderSignal),
+      receiver_(receiver),
+      slot_(receiverSlot),
+      reconnect_(false)
+    {
+      reconnect_ = QObject::disconnect(sender_, signal_, receiver_, slot_);
+    }
+
+    ~BlockSignal()
+    {
+      if (reconnect_)
+      {
+        bool ok = true;
+        ok = QObject::connect(sender_, signal_, receiver_, slot_);
+        YAE_ASSERT(ok);
+      }
+    }
+
+    const QObject * sender_;
+    const char * signal_;
+
+    const QObject * receiver_;
+    const char * slot_;
+
+    bool reconnect_;
+  };
 
 }
 

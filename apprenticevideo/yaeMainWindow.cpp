@@ -160,41 +160,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // SignalBlocker
-  //
-  struct SignalBlocker
-  {
-    SignalBlocker(QObject * qObj = NULL)
-    {
-      *this << qObj;
-    }
-
-    ~SignalBlocker()
-    {
-      while (!blocked_.empty())
-      {
-        QObject * qObj = blocked_.front();
-        blocked_.pop_front();
-
-        qObj->blockSignals(false);
-      }
-    }
-
-    SignalBlocker & operator << (QObject * qObj)
-    {
-      if (qObj && !qObj->signalsBlocked())
-      {
-        qObj->blockSignals(true);
-        blocked_.push_back(qObj);
-      }
-
-      return *this;
-    }
-
-    std::list<QObject *> blocked_;
-  };
-
-  //----------------------------------------------------------------
   // AutoCropEvent
   //
   struct AutoCropEvent : public QEvent
@@ -898,8 +863,10 @@ namespace yae
                  &playlistModel_, SLOT(selectAll()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playlistView_, SIGNAL(activated(const QModelIndex &)),
-                 this, SLOT(setPlayingItem(const QModelIndex &)));
+    ok = connect(&playlistModel_,
+                 SIGNAL(playingItemChanged(const QModelIndex &)),
+                 this,
+                 SLOT(setPlayingItem(const QModelIndex &)));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -1217,8 +1184,6 @@ namespace yae
   MainWindow::setPlaylist(const std::list<QString> & playlist,
                           bool beginPlaybackImmediately)
   {
-    // SignalBlocker blockSignals(&playlistModel_);
-
     bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
@@ -2943,8 +2908,6 @@ namespace yae
   void
   MainWindow::setPlayingItem(const QModelIndex & index)
   {
-    playbackStop();
-
     TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (!item)
     {
@@ -3295,7 +3258,6 @@ namespace yae
   void
   MainWindow::playback(const QModelIndex & startHere, bool forward)
   {
-    // SignalBlocker blockSignals(&playlistModel_);
     // actionPlay->setEnabled(false);
 
     QModelIndex current = startHere;
@@ -3322,15 +3284,27 @@ namespace yae
       }
     }
 
+    playlistView_.ensureVisible(current);
     fixupNextPrev();
 
     if (!ok && !forward)
     {
-      playback(true);
+      playback(startHere, true);
+      return;
     }
-    else
+
+    // update playlist model:
     {
+      BlockSignal block(&playlistModel_,
+                        SIGNAL(playingItemChanged(const QModelIndex &)),
+                        this,
+                        SLOT(setPlayingItem(const QModelIndex &)));
       playlistModel_.setPlayingItem(current);
+    }
+
+    if (!ok)
+    {
+      playbackStop();
     }
   }
 
@@ -3379,9 +3353,6 @@ namespace yae
   void
   MainWindow::playbackNext()
   {
-    playbackStop();
-
-    // SignalBlocker blockSignals(&playlistModel_);
     // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.playingItem();
@@ -3396,7 +3367,6 @@ namespace yae
   void
   MainWindow::playbackPrev()
   {
-    // SignalBlocker blockSignals(&playlistModel_);
     // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.playingItem();
@@ -3405,7 +3375,10 @@ namespace yae
       playlistModel_.prevItem(index) :
       playlistModel_.lastItem();
 
-    playback(iPrev, false);
+    if (iPrev.isValid())
+    {
+      playback(iPrev, false);
+    }
   }
 
   //----------------------------------------------------------------
@@ -3476,9 +3449,6 @@ namespace yae
   void
   MainWindow::gotoBookmark(const PlaylistBookmark & bookmark)
   {
-    playbackStop();
-
-    // SignalBlocker blockSignals(&playlistModel_);
     // actionPlay->setEnabled(false);
 
     QModelIndex index = playlistModel_.lookupModelIndex(bookmark.groupHash_,
@@ -3487,12 +3457,18 @@ namespace yae
     TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (item)
     {
-      playlistModel_.setPlayingItem(index);
       item->failed_ = !load(item->path_, &bookmark);
 
       if (!item->failed_)
       {
         playlistView_.ensureVisible(index);
+
+        // update playlist model:
+        BlockSignal block(&playlistModel_,
+                          SIGNAL(playingItemChanged(const QModelIndex &)),
+                          this,
+                          SLOT(setPlayingItem(const QModelIndex &)));
+        playlistModel_.setPlayingItem(index);
       }
     }
 
@@ -4377,7 +4353,7 @@ namespace yae
                                 std::vector<AudioTraits> & audioTraits,
                                 std::vector<TTrackInfo> &  videoInfo,
                                 std::vector<VideoTraits> & videoTraits,
-                                std::vector<TTrackInfo> & subsInfo,
+                                std::vector<TTrackInfo> &  subsInfo,
                                 std::vector<TSubsFormat> & subsFormat)
   {
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
@@ -4772,7 +4748,7 @@ namespace yae
       {
         playlistView_.setStyleId(PlaylistView::kListView);
       }
-      else if (numVideoTracks || !numAudioTracks)
+      else if (numVideoTracks)
       {
         playlistView_.setStyleId(PlaylistView::kGridView);
       }
