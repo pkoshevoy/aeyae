@@ -2908,6 +2908,8 @@ namespace yae
   void
   MainWindow::setPlayingItem(const QModelIndex & index)
   {
+    playbackStop();
+
     TPlaylistItemPtr item = playlistModel_.lookup(index);
     if (!item)
     {
@@ -3234,6 +3236,9 @@ namespace yae
     videoRenderer_->close();
     audioRenderer_->close();
 
+    ++readerId_;
+    canvas_->acceptFramesWithReaderId(readerId_);
+    reader->setReaderId(readerId_);
     reader_ = reader;
 
     this->setWindowTitle(tr("Apprentice Video"));

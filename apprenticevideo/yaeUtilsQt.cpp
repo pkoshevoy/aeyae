@@ -1577,7 +1577,9 @@ namespace yae
         "fon",
         "key",
         "license",
-        "ignore"
+        "ignore",
+        "itc",
+        "json"
       };
 
       const std::size_t nExt = sizeof(ext) / sizeof(const char *);
