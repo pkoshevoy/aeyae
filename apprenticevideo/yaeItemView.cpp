@@ -48,8 +48,11 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
 
     repaintTimer_.setSingleShot(true);
-    bool ok = connect(&repaintTimer_, SIGNAL(timeout()),
-                      this, SLOT(repaint()));
+
+    bool ok = true;
+    ok = connect(&repaintTimer_, SIGNAL(timeout()),
+                 this, SLOT(repaint()));
+    YAE_ASSERT(ok);
    }
 
   //----------------------------------------------------------------
@@ -58,6 +61,11 @@ namespace yae
   void
   ItemView::setEnabled(bool enable)
   {
+#if 0
+    std::cerr << "FIXME: ItemView::setEnabled " << root_->id_
+              << " " << enable << std::endl;
+#endif
+
     Canvas::ILayer::setEnabled(enable);
 
     if (!enable)
@@ -91,6 +99,13 @@ namespace yae
 
       if (repaintEvent)
       {
+        requestRepaintEvent_.setDelivered(true);
+
+#if 0
+        std::cerr << "FIXME: ItemView::repaintEvent " << root_->id_
+                  << std::endl;
+#endif
+
         TMakeCurrentContext currentContext(*context());
         Item & root = *root_;
         root.uncache();
@@ -110,7 +125,14 @@ namespace yae
   void
   ItemView::requestRepaint()
   {
-    if (!repaintTimer_.isActive())
+    bool alreadyRequested = repaintTimer_.isActive();
+
+#if 0
+    std::cerr << "FIXME: ItemView::requestRepaint " << root_->id_
+              << " " << !alreadyRequested << std::endl;
+#endif
+
+    if (!alreadyRequested)
     {
       repaintTimer_.start(17);
     }
@@ -123,6 +145,12 @@ namespace yae
   ItemView::repaint()
   {
     bool postThePayload = requestRepaintEvent_.setDelivered(false);
+
+#if 0
+    std::cerr << "FIXME: ItemView::repaint " << root_->id_
+              << " " << postThePayload << std::endl;
+#endif
+
     if (postThePayload)
     {
       // send an event:
@@ -153,7 +181,9 @@ namespace yae
   void
   ItemView::paint(Canvas * canvas)
   {
-    requestRepaintEvent_.setDelivered(true);
+#if 0
+    std::cerr << "FIXME: ItemView::paint " << root_->id_ << std::endl;
+#endif
 
     double x = 0.0;
     double y = 0.0;
