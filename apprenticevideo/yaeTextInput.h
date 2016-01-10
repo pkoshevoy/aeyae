@@ -34,7 +34,7 @@ namespace yae
     TextInput & operator = (const TextInput &);
 
   public:
-    TextInput(const char * id);
+    TextInput(const char * id, const QString & text = QString());
     ~TextInput();
 
     // virtual:

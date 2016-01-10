@@ -7,6 +7,9 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // yae includes:
+#include "yae/utils/yae_benchmark.h"
+
+// local includes:
 #include "yaePlaylistModelProxy.h"
 #include "yaeUtilsQt.h"
 
@@ -91,11 +94,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistModelProxy::itemFilter
+  //
+  const QString &
+  PlaylistModelProxy::itemFilter() const
+  {
+    return itemFilter_;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModelProxy::setItemFilter
   //
   void
   PlaylistModelProxy::setItemFilter(const QString & filter)
   {
+    if (itemFilter_ == filter)
+    {
+      return;
+    }
+
+    YAE_BENCHMARK(benchmark, "PlaylistModelProxy::setItemFilter");
+
+    itemFilter_ = filter;
+    emit itemFilterChanged();
+
     QString pattern;
 
     std::list<QString> keywords;

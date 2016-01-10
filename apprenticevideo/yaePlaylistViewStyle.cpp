@@ -106,7 +106,12 @@ namespace yae
     font_size_(Item::addNewHidden<Item>("font_size")),
     now_playing_(Item::addNewHidden<Text>("now_playing")),
     eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge"))
-  {}
+  {
+    anchors_.top_ = ItemRef::constant(0);
+    anchors_.left_ = ItemRef::constant(0);
+    width_ = ItemRef::constant(0);
+    height_ = ItemRef::constant(0);
+  }
 
   //----------------------------------------------------------------
   // PlaylistViewStyle::color

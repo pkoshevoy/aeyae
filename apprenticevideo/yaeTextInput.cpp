@@ -31,7 +31,7 @@ namespace yae
   //
   struct TextInput::TPrivate
   {
-    TPrivate();
+    TPrivate(const QString & text);
    ~TPrivate();
 
     bool processEvent(TextInput & item,
@@ -70,13 +70,14 @@ namespace yae
   //----------------------------------------------------------------
   // TextInput::TPrivate::TPrivate
   //
-  TextInput::TPrivate::TPrivate():
+  TextInput::TPrivate::TPrivate(const QString & text):
     offset_(0),
     texId_(0),
     iw_(0),
     ih_(0)
   {
     lineEdit_.hide();
+    lineEdit_.setText(text);
   }
 
   //----------------------------------------------------------------
@@ -403,9 +404,9 @@ namespace yae
   //----------------------------------------------------------------
   // TextInput::TextInput
   //
-  TextInput::TextInput(const char * id):
+  TextInput::TextInput(const char * id, const QString & text):
     Item(id),
-    p_(new TextInput::TPrivate()),
+    p_(new TextInput::TPrivate(text)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {

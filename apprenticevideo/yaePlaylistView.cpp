@@ -655,7 +655,8 @@ namespace yae
     Text & text = filter.addNew<Text>("filter_text");
     text.font_ = style.font_large_;
 
-    TextInput & edit = filter.addNew<TextInput>("filter_edit");
+    TextInput & edit =
+      filter.add(new TextInput("filter_edit", model.itemFilter()));
     edit.font_ = text.font_;
 
     Item & rm = filter.addNew<Item>("rm");
@@ -683,7 +684,7 @@ namespace yae
     text.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
     text.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.5);
     text.margins_.bottom_ = text.addExpr(new GetFontDescent(text), -0.25);
-    text.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, false));
+    text.visible_ = text.addExpr(new ShowWhenFocused(editProxy, false));
     text.elide_ = Qt::ElideLeft;
     text.color_ = colorTextFg;
     text.text_ = TVarRef::reference(editProxy, kPropertyText);

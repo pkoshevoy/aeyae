@@ -31,6 +31,11 @@ namespace yae
   {
     Q_OBJECT;
 
+    Q_PROPERTY(QString itemFilter
+               READ itemFilter
+               WRITE setItemFilter
+               NOTIFY itemFilterChanged);
+
     Q_PROPERTY(quint64 itemCount
                READ itemCount
                NOTIFY itemCountChanged);
@@ -77,6 +82,7 @@ namespace yae
                                             int & itemRow)
     { PlaylistModel::mapToGroupRowItemRow(proxyIndex, groupRow, itemRow); }
 
+    const QString & itemFilter() const;
     Q_INVOKABLE void setItemFilter(const QString & filter);
 
     Q_INVOKABLE void selectAll();
@@ -148,6 +154,7 @@ namespace yae
     QString lookupItemFilePath(const QString & id) const;
 
   signals:
+    void itemFilterChanged();
     void itemCountChanged();
     void sortByChanged();
     void sortOrderChanged();
@@ -171,6 +178,9 @@ namespace yae
 
     // reference to playlist model being proxied:
     PlaylistModel model_;
+
+    // item filter, as it was given to setItemFilter:
+    QString itemFilter_;
   };
 
   //----------------------------------------------------------------
