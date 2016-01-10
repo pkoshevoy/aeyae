@@ -27,8 +27,8 @@ namespace yae
   //
   struct FlickableArea::TPrivate
   {
-    TPrivate(const Canvas::ILayer & canvasLayer, Item & scrollbar):
-      canvasLayer_(canvasLayer),
+    TPrivate(const ItemView & itemView, Item & scrollbar):
+      itemView_(itemView),
       scrollbar_(scrollbar),
       startPos_(0.0),
       nsamples_(0),
@@ -78,9 +78,21 @@ namespace yae
       return estimateVelocity(i0, i1);
     }
 
-    const Canvas::ILayer & canvasLayer_;
+    void requestAnimate(FlickableArea & flickable, unsigned int msec_delay)
+    {
+      timer_.start(16);
+    }
+
+    void dontAnimate()
+    {
+      timer_.stop();
+      estimating_ = true;
+    }
+
+    const ItemView & itemView_;
     Item & scrollbar_;
     double startPos_;
+    bool estimating_;
 
     // flicking animation parameters:
     QTimer timer_;
@@ -99,13 +111,12 @@ namespace yae
   // FlickableArea::FlickableArea
   //
   FlickableArea::FlickableArea(const char * id,
-                               const Canvas::ILayer & canvasLayer,
+                               const ItemView & itemView,
                                Item & scrollbar):
     InputArea(id),
-    p_(new TPrivate(canvasLayer, scrollbar))
+    p_(new TPrivate(itemView, scrollbar))
   {
-    bool ok = connect(&p_->timer_, SIGNAL(timeout()),
-                      this, SLOT(onTimeout()));
+    bool ok = connect(&p_->timer_, SIGNAL(timeout()), this, SLOT(animate()));
     YAE_ASSERT(ok);
   }
 
@@ -125,18 +136,18 @@ namespace yae
                           const TVec2D & rootCSysPoint,
                           double degrees)
   {
-    p_->timer_.stop();
+    p_->dontAnimate();
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     double sh = scrollview.height();
-    double ch = scrollview.content_.height();
+    double ch = scrollview.content_->height();
     double yRange = sh - ch;
     double y = scrollview.position_ * yRange + sh * degrees / 360.0;
     double s = std::min<double>(1.0, std::max<double>(0.0, y / yRange));
     scrollview.position_ = s;
 
     p_->scrollbar_.uncache();
-    p_->canvasLayer_.delegate()->requestRepaint();
+    p_->itemView_.delegate()->requestRepaint();
 
     return true;
   }
@@ -148,7 +159,7 @@ namespace yae
   FlickableArea::onPress(const TVec2D & itemCSysOrigin,
                          const TVec2D & rootCSysPoint)
   {
-    p_->timer_.stop();
+    p_->dontAnimate();
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     p_->startPos_ = scrollview.position_;
@@ -167,11 +178,11 @@ namespace yae
                         const TVec2D & rootCSysDragStart,
                         const TVec2D & rootCSysDragEnd)
   {
-    p_->timer_.stop();
+    p_->dontAnimate();
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     double sh = scrollview.height();
-    double ch = scrollview.content_.height();
+    double ch = scrollview.content_->height();
     double yRange = sh - ch;
     double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
     double ds = dy / yRange;
@@ -180,7 +191,7 @@ namespace yae
     scrollview.position_ = s;
 
     p_->scrollbar_.uncache();
-    p_->canvasLayer_.delegate()->requestRepaint();
+    p_->itemView_.delegate()->requestRepaint();
 
     double secondsElapsed = boost::chrono::duration<double>
       (boost::chrono::steady_clock::now() - p_->tStart_).count();
@@ -214,8 +225,9 @@ namespace yae
 
     if (k > 0.1)
     {
-      p_->timer_.start(16);
-      onTimeout();
+      p_->estimating_ = false;
+      p_->requestAnimate(*this, 16);
+      animate();
     }
 
     p_->nsamples_ = 0;
@@ -223,12 +235,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FlickableArea::isAnimating
+  //
+  bool
+  FlickableArea::isAnimating() const
+  {
+    return p_->timer_.isActive();
+  }
+
+  //----------------------------------------------------------------
   // FlickableArea::onTimeout
   //
   void
-  FlickableArea::onTimeout()
+  FlickableArea::animate()
   {
-    if (!p_->timer_.isActive())
+    if (p_->estimating_)
     {
       // do not interfere with velocity estimation:
       return;
@@ -236,7 +257,7 @@ namespace yae
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
     double sh = scrollview.height();
-    double ch = scrollview.content_.height();
+    double ch = scrollview.content_->height();
     double yRange = sh - ch;
 
     boost::chrono::steady_clock::time_point tNow =
@@ -254,16 +275,16 @@ namespace yae
     scrollview.position_ = s;
     p_->tStart_ = tNow;
     {
-      TMakeCurrentContext currentContext(*(p_->canvasLayer_.context()));
+      TMakeCurrentContext currentContext(*(p_->itemView_.context()));
       p_->scrollbar_.uncache();
     }
 
-    p_->canvasLayer_.delegate()->requestRepaint();
+    p_->itemView_.delegate()->requestRepaint();
 
     if (s == 0.0 || s == 1.0 || v0 == 0.0)
     {
-      // stop the animation:
-      p_->timer_.stop();
+      // motion stopped, stop the animation:
+      p_->dontAnimate();
       return;
     }
 
@@ -274,7 +295,7 @@ namespace yae
     if (v0 * v1 < 0.0)
     {
       // bounce detected:
-      p_->timer_.stop();
+      p_->dontAnimate();
       return;
     }
 

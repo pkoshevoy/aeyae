@@ -93,7 +93,7 @@ namespace yae
 #endif
 
     // item container:
-    Item content_;
+    ItemPtr content_;
 
     // [0, 1] view position relative to content size
     // where 0 corresponds to the beginning of content

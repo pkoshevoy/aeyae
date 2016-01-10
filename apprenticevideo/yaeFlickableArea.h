@@ -16,8 +16,8 @@
 #include <QObject>
 
 // local interfaces:
-#include "yaeCanvas.h"
 #include "yaeInputArea.h"
+#include "yaeItemView.h"
 #include "yaeVec.h"
 
 
@@ -36,9 +36,7 @@ namespace yae
     FlickableArea & operator = (const FlickableArea &);
 
   public:
-    FlickableArea(const char * id,
-                  const Canvas::ILayer & canvasLayer,
-                  Item & scrollbar);
+    FlickableArea(const char * id, const ItemView & view, Item & scrollbar);
     ~FlickableArea();
 
     // virtual:
@@ -60,8 +58,11 @@ namespace yae
                    const TVec2D & rootCSysDragStart,
                    const TVec2D & rootCSysDragEnd);
 
+    // helper:
+    bool isAnimating() const;
+
   public slots:
-    void onTimeout();
+    void animate();
 
   protected:
     struct TPrivate;

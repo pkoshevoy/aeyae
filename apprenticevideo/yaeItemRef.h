@@ -49,6 +49,7 @@ namespace yae
             const TData & defaultValue = TData()):
       ref_(reference),
       property_(property),
+      cachingEnabled_(true),
       visited_(false),
       cached_(false),
       value_(defaultValue)
@@ -60,6 +61,7 @@ namespace yae
     DataRef(const TData & constantValue):
       ref_(NULL),
       property_(kPropertyConstant),
+      cachingEnabled_(true),
       visited_(false),
       cached_(false),
       value_(constantValue)
@@ -105,7 +107,7 @@ namespace yae
     // cache an externally computed value:
     void cache(const TData & value) const
     {
-      cached_ = true;
+      cached_ = cachingEnabled_;
       value_ = value;
     }
 
@@ -128,20 +130,23 @@ namespace yae
       }
       else
       {
-        visited_ = true;
+        // NOTE: reference cycles can not be detected
+        //       for items with disabled caching:
+        visited_ = cachingEnabled_;
 
         TData v;
         ref_->get(property_, v);
         value_ = v;
       }
 
-      cached_ = true;
+      cached_ = cachingEnabled_;
       return value_;
     }
 
     // reference properties:
     const TDataProperties * ref_;
     Property property_;
+    bool cachingEnabled_;
 
   protected:
     mutable bool visited_;

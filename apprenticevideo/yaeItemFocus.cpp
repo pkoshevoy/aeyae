@@ -32,7 +32,7 @@ namespace yae
   //
   ItemFocus::Target::Target(Canvas::ILayer * view, Item * item, int index):
     view_(view),
-    item_(item),
+    item_(item->self_),
     index_(index)
   {}
 
@@ -91,10 +91,15 @@ namespace yae
       // not found:
       found = index_.insert(found, std::make_pair(index, target));
     }
-    else if (found->second.item_->id_ != target.item_->id_)
+    else
     {
-      YAE_ASSERT(false);
-      throw std::runtime_error("another item with same index already exists");
+      ItemPtr prevPtr = found->second.item_.lock();
+      if (prevPtr && prevPtr->id_ != item.id_)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("another item with same index "
+                                 "already exists");
+      }
     }
 
     idMap_[item.id_] = &(found->second);
@@ -113,7 +118,13 @@ namespace yae
 
     if (focus_)
     {
-      focus_->item_->onFocusOut();
+      ItemPtr itemPtr = focus_->item_.lock();
+      if (itemPtr)
+      {
+        Item & item = *itemPtr;
+        item.onFocusOut();
+        item.uncache();
+      }
     }
 
     focus_ = NULL;
@@ -148,11 +159,25 @@ namespace yae
 
     if (focus_)
     {
-      focus_->item_->onFocusOut();
+      ItemPtr itemPtr = focus_->item_.lock();
+      if (itemPtr)
+      {
+        Item & item = *itemPtr;
+        item.onFocusOut();
+      }
+    }
+
+    ItemPtr itemPtr = target->item_.lock();
+    if (!itemPtr)
+    {
+      YAE_ASSERT(false);
+      clearFocus();
+      return false;
     }
 
     focus_ = target;
-    focus_->item_->onFocus();
+    Item & item = *itemPtr;
+    item.onFocus();
 
     return true;
   }
@@ -203,27 +228,26 @@ namespace yae
     std::map<int, Target>::const_iterator iter =
       focus_ ? index_.find(focus_->index_) : index_.end();
 
-    const Target * nextTarget = NULL;
     std::size_t numTargets = index_.size();
-
     for (std::size_t i = 0; i < numTargets; i++)
     {
       advance(index_, iter, 1);
 
       const Target & target = iter->second;
-      if (target.view_->isEnabled())
+      if (!target.view_->isEnabled())
       {
-        nextTarget = &target;
-        break;
+        continue;
+      }
+
+      ItemPtr itemPtr = target.item_.lock();
+      if (itemPtr)
+      {
+        Item & item = *itemPtr;
+        return setFocus(item.id_);
       }
     }
 
-    if (nextTarget)
-    {
-      return setFocus(nextTarget->item_->id_);
-    }
-
-    focus_ = nextTarget;
+    clearFocus();
     return false;
   }
 
@@ -236,27 +260,26 @@ namespace yae
     std::map<int, Target>::const_iterator iter =
       focus_ ? index_.find(focus_->index_) : index_.begin();
 
-    const Target * nextTarget = NULL;
-    std::size_t numTargets = index_.size();
-
+    const std::size_t numTargets = index_.size();
     for (std::size_t i = 0; i < numTargets; i++)
     {
       advance(index_, iter, -1);
 
       const Target & target = iter->second;
-      if (target.view_->isEnabled())
+      if (!target.view_->isEnabled())
       {
-        nextTarget = &target;
-        break;
+        continue;
+      }
+
+      ItemPtr itemPtr = target.item_.lock();
+      if (itemPtr)
+      {
+        Item & item = *itemPtr;
+        return setFocus(item.id_);
       }
     }
 
-    if (nextTarget)
-    {
-      return setFocus(nextTarget->item_->id_);
-    }
-
-    focus_ = nextTarget;
+    clearFocus();
     return false;
   }
 
@@ -266,16 +289,17 @@ namespace yae
   bool
   ItemFocus::hasFocus(const std::string & id) const
   {
-    return focus_ && focus_->item_->id_ == id;
+    ItemPtr item = focusedItem();
+    return item && (item->id_ == id);
   }
 
   //----------------------------------------------------------------
   // ItemFocus::focusedItem
   //
-  Item *
+  ItemPtr
   ItemFocus::focusedItem() const
   {
-    return focus_ ? focus_->item_ : NULL;
+    return focus_ ? focus_->item_.lock() : ItemPtr();
   }
 
 }

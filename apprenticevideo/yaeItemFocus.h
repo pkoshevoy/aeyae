@@ -43,7 +43,7 @@ namespace yae
              int index = std::numeric_limits<int>::max());
 
       Canvas::ILayer * view_;
-      Item * item_;
+      boost::weak_ptr<Item> item_;
       int index_;
     };
 
@@ -69,7 +69,7 @@ namespace yae
     bool hasFocus(const std::string & id) const;
 
     // retrieve focused item:
-    Item * focusedItem() const;
+    ItemPtr focusedItem() const;
 
     // retrieve focused item:
     inline const Target * focus() const

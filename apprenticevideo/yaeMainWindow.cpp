@@ -39,6 +39,7 @@
 #include <QWheelEvent>
 
 // yae includes:
+#include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/video/yae_pixel_formats.h"
 #include "yae/video/yae_pixel_format_traits.h"
@@ -101,20 +102,6 @@ namespace yae
   //
   static const QString kSkipNonReferenceFrames =
     QString::fromUtf8("SkipNonReferenceFrames");
-
-  //----------------------------------------------------------------
-  // swapLayouts
-  //
-  static void
-  swapLayouts(QWidget * a, QWidget * b)
-  {
-    QWidget tmp;
-    QLayout * la = a->layout();
-    QLayout * lb = b->layout();
-    tmp.setLayout(la);
-    a->setLayout(lb);
-    b->setLayout(la);
-  }
 
   //----------------------------------------------------------------
   // AboutDialog::AboutDialog
@@ -2383,6 +2370,12 @@ namespace yae
       "welcome";
     playerItem->setState(QString::fromUtf8(state));
 #else
+
+    YAE_LIFETIME_SHOW(std::cerr);
+    YAE_BENCHMARK_SHOW(std::cerr);
+    YAE_BENCHMARK_CLEAR();
+    YAE_LIFETIME_CLEAR();
+
     playlistView_.setEnabled(showPlaylist);
 #endif
   }
@@ -4835,7 +4828,9 @@ namespace yae
 
     if (detectionFinished)
     {
-      qApp->postEvent(mainWindow, new AutoCropEvent(cf));
+      qApp->postEvent(mainWindow,
+                      new AutoCropEvent(cf),
+                      Qt::HighEventPriority);
     }
     else if (mainWindow->playbackPaused_ ||
              mainWindow->videoRenderer_->isPaused())

@@ -33,7 +33,7 @@ namespace yae
   {
     result = view_.top();
 
-    double sceneHeight = view_.content_.height();
+    double sceneHeight = view_.content_->height();
     double viewHeight = view_.height();
     if (sceneHeight <= viewHeight)
     {
@@ -63,7 +63,7 @@ namespace yae
   void
   CalcSliderHeight::evaluate(double & result) const
   {
-    double sceneHeight = view_.content_.height();
+    double sceneHeight = view_.content_->height();
     double viewHeight = view_.height();
     if (sceneHeight <= viewHeight)
     {
@@ -82,9 +82,11 @@ namespace yae
   //
   Scrollview::Scrollview(const char * id):
     Item(id),
-    content_("content"),
+    content_(new Item("content")),
     position_(0.0)
-  {}
+  {
+    content_->self_ = content_;
+  }
 
   //----------------------------------------------------------------
   // Scrollview::uncache
@@ -93,7 +95,7 @@ namespace yae
   Scrollview::uncache()
   {
     Item::uncache();
-    content_.uncache();
+    content_->uncache();
   }
 
   //----------------------------------------------------------------
@@ -104,7 +106,7 @@ namespace yae
                              Segment & xView,
                              Segment & yView) const
   {
-    double sceneHeight = this->content_.height();
+    double sceneHeight = this->content_->height();
     double viewHeight = this->height();
 
     const Segment & xExtent = this->xExtent();
@@ -150,7 +152,7 @@ namespace yae
 
     TVec2D ptInViewCoords = itemCSysPoint - origin;
     TVec2D offsetToView = itemCSysOrigin + origin;
-    content_.getInputHandlers(offsetToView, ptInViewCoords, inputHandlers);
+    content_->getInputHandlers(offsetToView, ptInViewCoords, inputHandlers);
   }
 
   //----------------------------------------------------------------
@@ -161,9 +163,11 @@ namespace yae
                     const Segment & yregion,
                     Canvas * canvas) const
   {
+    const Item & content = *content_;
+
     if (!Item::paint(xregion, yregion, canvas))
     {
-      content_.unpaint();
+      content.unpaint();
       return false;
     }
 
@@ -175,7 +179,7 @@ namespace yae
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
-    content_.paint(xView, yView, canvas);
+    content.paint(xView, yView, canvas);
 
     return true;
   }
@@ -187,7 +191,7 @@ namespace yae
   Scrollview::unpaint() const
   {
     Item::unpaint();
-    content_.unpaint();
+    content_->unpaint();
   }
 
 #ifndef NDEBUG
@@ -198,7 +202,7 @@ namespace yae
   Scrollview::dump(std::ostream & os, const std::string & indent) const
   {
     Item::dump(os, indent);
-    content_.dump(os, indent + "  ");
+    content_->dump(os, indent + "  ");
   }
 #endif
 

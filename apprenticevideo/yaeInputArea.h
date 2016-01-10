@@ -140,25 +140,30 @@ namespace yae
     typedef ModelItem<Model> TModelItem;
 
     ModelInputArea(const char * id):
-      InputArea(id),
-      modelItem_(NULL)
+      InputArea(id)
     {}
 
     // lookup the closest ancestor model item associated with this input area:
     TModelItem & lookupModelItem() const
     {
-      if (!modelItem_)
+      boost::shared_ptr<TModelItem> modelItem = modelItem_.lock();
+      if (!modelItem)
       {
-        modelItem_ = this->hasAncestor<TModelItem>();
+        TModelItem * found = this->hasAncestor<TModelItem>();
+
+        if (!found)
+        {
+          YAE_ASSERT(false);
+          throw std::runtime_error("ModelInputArea requires "
+                                   "ModelItem ancestor");
+        }
+
+        // update weak reference:
+        modelItem = found->template sharedPtr<TModelItem>();
+        modelItem_ = modelItem;
       }
 
-      if (!modelItem_)
-      {
-        YAE_ASSERT(false);
-        throw std::runtime_error("ModelInputArea requires ModelItem ancestor");
-      }
-
-      return *modelItem_;
+      return *modelItem;
     }
 
     inline Model & model() const
@@ -167,16 +172,9 @@ namespace yae
     inline const QPersistentModelIndex & modelIndex() const
     { return lookupModelItem().modelIndex(); }
 
-    // virtual:
-    void uncache()
-    {
-      InputArea::uncache();
-      modelItem_ = NULL;
-    }
-
   protected:
     // cached model item associated with this input area:
-    mutable TModelItem * modelItem_;
+    mutable boost::weak_ptr<TModelItem> modelItem_;
   };
 
 

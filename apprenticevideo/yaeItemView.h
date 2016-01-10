@@ -18,6 +18,9 @@
 #include <QString>
 #include <QTimer>
 
+// yae includes:
+#include "yae/utils/yae_benchmark.h"
+
 // local interfaces:
 #include "yaeCanvas.h"
 #include "yaeItem.h"
@@ -40,8 +43,16 @@ namespace yae
     //----------------------------------------------------------------
     // RequestRepaintEvent
     //
-    enum { kRequestRepaintEvent };
-    typedef BufferedEvent<kRequestRepaintEvent> RequestRepaintEvent;
+    struct RequestRepaintEvent : public BufferedEvent
+    {
+      RequestRepaintEvent(TPayload & payload):
+        BufferedEvent(payload)
+      {
+        YAE_LIFETIME_START(lifetime, "02 -- RequestRepaintEvent");
+      }
+
+      YAE_LIFETIME(lifetime);
+    };
 
     ItemView(const char * name);
 
@@ -59,6 +70,13 @@ namespace yae
 
     // virtual:
     void paint(Canvas * canvas);
+
+    // helper: uncache a given item at the next repaint
+    //
+    // NOTE: avoid uncaching if possible due to
+    //       relatively expensive runtime cost O(N),
+    //       where N is the number of items below root:
+    void requestUncache(Item * root = NULL);
 
     // virtual:
     bool processEvent(Canvas * canvas, QEvent * event);
@@ -102,7 +120,9 @@ namespace yae
     void repaint();
 
   protected:
+    std::map<Item *, boost::weak_ptr<Item> > uncache_;
     RequestRepaintEvent::TPayload requestRepaintEvent_;
+
     TImageProviders imageProviders_;
     ItemPtr root_;
     double w_;

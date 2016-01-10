@@ -21,11 +21,12 @@
 #include <QString>
 
 // yae includes:
+#include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_benchmark.h"
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_auto_crop.h"
 #include "yae/video/yae_video_canvas.h"
 #include "yae/video/yae_synchronous.h"
-#include "yae/thread/yae_threading.h"
 
 // local includes:
 #include "yaeCanvasRenderer.h"
@@ -41,14 +42,8 @@ namespace yae
   //----------------------------------------------------------------
   // BufferedEvent
   //
-  template <int EventId>
   struct BufferedEvent : public QEvent
   {
-    //----------------------------------------------------------------
-    // kId
-    //
-    enum { kId = EventId };
-
     //----------------------------------------------------------------
     // TPayload
     //
@@ -301,8 +296,16 @@ namespace yae
     //----------------------------------------------------------------
     // PaintCanvasEvent
     //
-    enum { kPaintCanvasEvent };
-    typedef BufferedEvent<kPaintCanvasEvent> PaintCanvasEvent;
+    struct PaintCanvasEvent : public BufferedEvent
+    {
+      PaintCanvasEvent(TPayload & payload):
+        BufferedEvent(payload)
+      {
+        YAE_LIFETIME_START(lifetime, " 2 -- PaintCanvasEvent");
+      }
+
+      YAE_LIFETIME(lifetime);
+    };
 
     //----------------------------------------------------------------
     // RenderFrameEvent
@@ -354,9 +357,12 @@ namespace yae
       RenderFrameEvent(TPayload & payload):
         QEvent(QEvent::User),
         payload_(payload)
-      {}
+      {
+        YAE_LIFETIME_START(lifetime, " 4 -- RenderFrameEvent");
+      }
 
       TPayload & payload_;
+      YAE_LIFETIME(lifetime);
     };
 
   protected:

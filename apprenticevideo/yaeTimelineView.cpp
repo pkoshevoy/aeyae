@@ -747,6 +747,7 @@ namespace yae
   {
     if (this->isEnabled())
     {
+      this->requestUncache();
       this->requestRepaint();
     }
   }

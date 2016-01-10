@@ -183,6 +183,13 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // sharedPtr
+    //
+    template <typename TItem>
+    inline boost::shared_ptr<TItem> sharedPtr() const
+    { return boost::dynamic_pointer_cast<TItem, Item>(self_.lock()); }
+
+    //----------------------------------------------------------------
     // isParent
     //
     template <typename TParent>

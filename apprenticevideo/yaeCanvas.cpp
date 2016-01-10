@@ -647,7 +647,9 @@ namespace yae
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(&eventReceiver_, new PaintCanvasEvent(paintCanvasEvent_));
+      qApp->postEvent(&eventReceiver_,
+                      new PaintCanvasEvent(paintCanvasEvent_),
+                      Qt::HighEventPriority);
     }
   }
 
@@ -661,7 +663,9 @@ namespace yae
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(&eventReceiver_, new RenderFrameEvent(renderFrameEvent_));
+      qApp->postEvent(&eventReceiver_,
+                      new RenderFrameEvent(renderFrameEvent_),
+                      Qt::HighEventPriority);
     }
 
     if (autoCropThread_.isRunning())
@@ -677,7 +681,13 @@ namespace yae
   //
   struct InitializeBackendEvent : public QEvent
   {
-    InitializeBackendEvent(): QEvent(QEvent::User) {}
+    InitializeBackendEvent():
+      QEvent(QEvent::User)
+    {
+      YAE_LIFETIME_START(lifetime, " 0 -- InitializeBackendEvent");
+    }
+
+    YAE_LIFETIME(lifetime);
   };
 
   //----------------------------------------------------------------
@@ -685,7 +695,13 @@ namespace yae
   //
   struct UpdateOverlayEvent : public QEvent
   {
-    UpdateOverlayEvent(): QEvent(QEvent::User) {}
+    UpdateOverlayEvent():
+      QEvent(QEvent::User)
+    {
+      YAE_LIFETIME_START(lifetime, " 3 -- UpdateOverlayEvent");
+    }
+
+    YAE_LIFETIME(lifetime);
   };
 
   //----------------------------------------------------------------
@@ -696,9 +712,12 @@ namespace yae
     LibassInitDoneEvent(TLibass * libass):
       QEvent(QEvent::User),
       libass_(libass)
-    {}
+    {
+      YAE_LIFETIME_START(lifetime, " 1 -- LibassInitDoneEvent");
+    }
 
     TLibass * libass_;
+    YAE_LIFETIME(lifetime);
   };
 
   //----------------------------------------------------------------
@@ -726,7 +745,6 @@ namespace yae
         TVideoFramePtr frame;
         renderEvent->payload_.get(frame);
         loadFrame(frame);
-
         return true;
       }
 
@@ -995,6 +1013,8 @@ namespace yae
   void
   Canvas::paintCanvas()
   {
+    YAE_BENCHMARK(benchmark, "Canvas::paintCanvas");
+
     // this is just to prevent concurrent OpenGL access to the same context:
     TMakeCurrentContext lock(context());
 
@@ -1060,7 +1080,9 @@ namespace yae
       }
       else
       {
-        qApp->postEvent(&eventReceiver_, new UpdateOverlayEvent());
+        qApp->postEvent(&eventReceiver_,
+                        new UpdateOverlayEvent(),
+                        Qt::HighEventPriority);
       }
     }
 
@@ -1792,6 +1814,8 @@ namespace yae
   Canvas::libassInitDoneCallback(void * context, TLibass * libass)
   {
     Canvas * canvas = (Canvas *)context;
-    qApp->postEvent(&canvas->eventReceiver_, new LibassInitDoneEvent(libass));
+    qApp->postEvent(&canvas->eventReceiver_,
+                    new LibassInitDoneEvent(libass),
+                    Qt::HighEventPriority);
   }
 }

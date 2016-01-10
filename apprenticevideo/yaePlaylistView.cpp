@@ -94,20 +94,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // drand
-  //
-  inline static double
-  drand()
-  {
-#ifdef _WIN32
-    int r = rand();
-    return double(r) / double(RAND_MAX);
-#else
-    return drand48();
-#endif
-  }
-
-  //----------------------------------------------------------------
   // calcRows
   //
   inline static unsigned int
@@ -725,6 +711,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyLeft, -5);
     rm.visible_ = BoolRef::reference(editProxy, kPropertyHasText);
+    rm.visible_.cachingEnabled_ = false;
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -984,7 +971,10 @@ namespace yae
       int role = PlaylistModel::kRoleCollapsed;
       bool collapsed = modelIndex.data(role).toBool();
       model.setData(modelIndex, QVariant(!collapsed), role);
+
+      view_.requestUncache();
       view_.requestRepaint();
+
       return true;
     }
 
@@ -1134,6 +1124,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
+    rm.visible_.cachingEnabled_ = false;
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1228,11 +1219,13 @@ namespace yae
       (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
     thumbnail.visible_ = thumbnail.addExpr
       (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
+    thumbnail.visible_.cachingEnabled_ = false;
 
     ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
     liveImage.anchors_.fill(thumbnail);
     liveImage.visible_ = liveImage.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+    liveImage.visible_.cachingEnabled_ = false;
 
     Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
     Text & badge = cell.addNew<Text>("badge");
@@ -1295,6 +1288,7 @@ namespace yae
     playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
     playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
     playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
+    playing.visible_.cachingEnabled_ = false;
     playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
@@ -1304,6 +1298,7 @@ namespace yae
 
     playingBg.anchors_.inset(playing, -3, -1);
     playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
+    playingBg.visible_.cachingEnabled_ = false;
     playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
 
     rm.width_ = ItemRef::reference(playing, kPropertyHeight);
@@ -1311,6 +1306,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
+    rm.visible_.cachingEnabled_ = false;
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
@@ -1327,6 +1323,7 @@ namespace yae
     underline.height_ = ItemRef::constant(2);
     underline.color_ = ColorRef::constant(style.cursor_);
     underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
+    underline.visible_.cachingEnabled_ = false;
 
     Rectangle & cur = cell.addNew<Rectangle>("current");
     cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
@@ -1336,6 +1333,7 @@ namespace yae
     cur.color_ = ColorRef::constant(style.underline_);
     cur.visible_ = cur.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
+    cur.visible_.cachingEnabled_ = false;
 
     RemoveModelItems & maRmItem = xbutton.
       add(new RemoveModelItems("ma_remove_item"));
@@ -1421,6 +1419,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
+    rm.visible_.cachingEnabled_ = false;
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1564,6 +1563,7 @@ namespace yae
     playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
     playing.visible_ = playing.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
+    playing.visible_.cachingEnabled_ = false;
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
 
@@ -1572,6 +1572,7 @@ namespace yae
     rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
+    rm.visible_.cachingEnabled_ = false;
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
@@ -1587,6 +1588,7 @@ namespace yae
     underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 1);
     underline.height_ = ItemRef::constant(2);
     underline.visible_ = BoolRef::reference(playing, kPropertyVisible);
+    underline.visible_.cachingEnabled_ = false;
     underline.color_ = underline.
       addExpr(new ItemHighlightColor(model,
                                      index,
@@ -1602,6 +1604,7 @@ namespace yae
     cur.color_ = ColorRef::constant(style.underline_);
     cur.visible_ = cur.addExpr
       (new IsCurrentNotSelected(model, index));
+    cur.visible_.cachingEnabled_ = false;
 
     RemoveModelItems & maRmItem = xbutton.
       add(new RemoveModelItems("ma_remove_item"));
@@ -1637,7 +1640,6 @@ namespace yae
     ItemView("playlist"),
     model_(NULL)
   {
-    root_.reset(new Item("playlist"));
     Item & root = *root_;
 
     root.addObserver(Item::kOnToggleItemView,
@@ -1673,20 +1675,21 @@ namespace yae
     sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
     sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
 
-    sview.content_.anchors_.left_ = ItemRef::constant(0.0);
-    sview.content_.anchors_.top_ = ItemRef::constant(0.0);
-    sview.content_.width_ = ItemRef::reference(sview, kPropertyWidth);
+    Item & sviewContent = *(sview.content_);
+    sviewContent.anchors_.left_ = ItemRef::constant(0.0);
+    sviewContent.anchors_.top_ = ItemRef::constant(0.0);
+    sviewContent.width_ = ItemRef::reference(sview, kPropertyWidth);
 
-    Item & groups = sview.content_.addNew<Item>("groups");
-    groups.anchors_.fill(sview.content_);
+    Item & groups = sviewContent.addNew<Item>("groups");
+    groups.anchors_.fill(sviewContent);
     groups.anchors_.bottom_.reset();
 
     // add a footer:
-    Item & footer = sview.content_.addNew<Item>("footer");
+    Item & footer = sviewContent.addNew<Item>("footer");
     footer.anchors_.left_ =
-      ItemRef::offset(sview.content_, kPropertyLeft, 2);
+      ItemRef::offset(sviewContent, kPropertyLeft, 2);
     footer.anchors_.right_ =
-      ItemRef::reference(sview.content_, kPropertyRight);
+      ItemRef::reference(sviewContent, kPropertyRight);
     footer.anchors_.top_ = ItemRef::reference(groups, kPropertyBottom);
     footer.height_ = ItemRef::reference(filterItem, kPropertyHeight);
 
@@ -1787,7 +1790,8 @@ namespace yae
     layoutPlaylistFilter(filterItem, *this, *model_, rootIndex, style);
 
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    Item & footer = sview.content_["footer"];
+    Item & sviewContent = *(sview.content_);
+    Item & footer = sviewContent["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
   }
 
@@ -1851,7 +1855,8 @@ namespace yae
     layoutPlaylistFilter(filterItem, *this, *model_, rootIndex, style);
 
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    Item & footer = sview.content_["footer"];
+    Item & sviewContent = *(sview.content_);
+    Item & footer = sviewContent["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
   }
 
@@ -1866,7 +1871,7 @@ namespace yae
       Item & root = *root_;
       Scrollview & sview = root.get<Scrollview>("scrollview");
       FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
-      ma_sview.onTimeout();
+      ma_sview.animate();
     }
 
     ItemView::paint(canvas);
@@ -1900,7 +1905,7 @@ namespace yae
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & scrollbar = root["scrollbar"];
 
-    double h_scene = sview.content_.height();
+    double h_scene = sview.content_->height();
     double h_view = sview.height();
 
     double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
@@ -1950,9 +1955,10 @@ namespace yae
 
     Item & root = *(view.root());
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & sviewContent = *(sview.content_);
     Item & scrollbar = root["scrollbar"];
-    Item & footer = sview.content_["footer"];
-    Item & groups = sview.content_["groups"];
+    Item & footer = sviewContent["footer"];
+    Item & groups = sviewContent["groups"];
 
     if (groupRow < 0 || groups.children_.size() <= (std::size_t)groupRow)
     {
@@ -1976,7 +1982,7 @@ namespace yae
     }
 
     double h_footer = footer.height();
-    double h_scene = sview.content_.height();
+    double h_scene = sviewContent.height();
     double h_view = sview.height();
 
     double range = (h_view < h_scene) ? (h_scene - h_view) : 0.0;
@@ -2346,7 +2352,15 @@ namespace yae
     if (model_)
     {
       QModelIndex currentIndex = model_->currentItem();
-      ensureVisible(currentIndex);
+
+      Item & root = *root_;
+      Scrollview & sview = root.get<Scrollview>("scrollview");
+      FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
+
+      if (!ma_sview.isAnimating())
+      {
+        ensureVisible(currentIndex);
+      }
     }
   }
 
@@ -2377,6 +2391,7 @@ namespace yae
       << std::endl;
 #endif
 
+    requestUncache();
     requestRepaint();
   }
 
@@ -2432,9 +2447,11 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
     root.uncache();
+    uncache_.clear();
 
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    Item & groups = sview.content_["groups"];
+    Item & sviewContent = *(sview.content_);
+    Item & groups = sviewContent["groups"];
     groups.children_.clear();
 
     const PlaylistViewStyle & style = playlistViewStyle();
@@ -2500,8 +2517,9 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & sviewContent = *(sview.content_);
     Item & scrollbar = root["scrollbar"];
-    Item & groups = sview.content_["groups"];
+    Item & groups = sviewContent["groups"];
     const PlaylistViewStyle & style = playlistViewStyle();
 
     if (parent.isValid())
@@ -2559,9 +2577,8 @@ namespace yae
       }
     }
 
-    sview.content_.uncache();
-    sview.uncache();
-    scrollbar.uncache();
+    requestUncache(&sview);
+    requestUncache(&scrollbar);
   }
 
   //----------------------------------------------------------------
@@ -2581,8 +2598,9 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
+    Item & sviewContent = *(sview.content_);
     Item & scrollbar = root["scrollbar"];
-    Item & groups = sview.content_["groups"];
+    Item & groups = sviewContent["groups"];
 
     if (parent.isValid())
     {
@@ -2611,9 +2629,8 @@ namespace yae
       }
     }
 
-    sview.content_.uncache();
-    sview.uncache();
-    scrollbar.uncache();
+    requestUncache(&sview);
+    requestUncache(&scrollbar);
   }
 
   //----------------------------------------------------------------
@@ -2629,6 +2646,7 @@ namespace yae
       << std::endl;
 #endif
 
+    requestUncache();
     requestRepaint();
   }
 

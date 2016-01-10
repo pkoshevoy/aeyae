@@ -29,6 +29,12 @@
 #include "yaeUtilsQt.h"
 
 
+//----------------------------------------------------------------
+// YAE_DEBUG_ITEM_VIEW_REPAINT
+//
+#define YAE_DEBUG_ITEM_VIEW_REPAINT 0
+
+
 namespace yae
 {
 
@@ -43,6 +49,7 @@ namespace yae
     pressed_(NULL),
     dragged_(NULL)
   {
+    root_->self_ = root_;
     Item & root = *root_;
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
@@ -50,8 +57,7 @@ namespace yae
     repaintTimer_.setSingleShot(true);
 
     bool ok = true;
-    ok = connect(&repaintTimer_, SIGNAL(timeout()),
-                 this, SLOT(repaint()));
+    ok = connect(&repaintTimer_, SIGNAL(timeout()), this, SLOT(repaint()));
     YAE_ASSERT(ok);
    }
 
@@ -61,12 +67,10 @@ namespace yae
   void
   ItemView::setEnabled(bool enable)
   {
-#if 0
+#if YAE_DEBUG_ITEM_VIEW_REPAINT
     std::cerr << "FIXME: ItemView::setEnabled " << root_->id_
               << " " << enable << std::endl;
 #endif
-
-    Canvas::ILayer::setEnabled(enable);
 
     if (!enable)
     {
@@ -75,10 +79,24 @@ namespace yae
 
       if (focus && focus->view_ == this)
       {
+        std::string focusItemId;
+        ItemPtr itemPtr = focus->item_.lock();
+        if (itemPtr)
+        {
+          focusItemId = itemPtr->id_;
+        }
+
         TMakeCurrentContext currentContext(*context());
-        ItemFocus::singleton().clearFocus(focus->item_->id_);
+        ItemFocus::singleton().clearFocus(focusItemId);
       }
     }
+    else
+    {
+      // make sure next repaint request gets posted:
+      requestRepaintEvent_.setDelivered(true);
+    }
+
+    Canvas::ILayer::setEnabled(enable);
 
     Item & root = *root_;
     TMakeCurrentContext currentContext(*context());
@@ -99,16 +117,13 @@ namespace yae
 
       if (repaintEvent)
       {
-        requestRepaintEvent_.setDelivered(true);
+        YAE_BENCHMARK(benchmark, "ItemView::event repaintEvent");
 
-#if 0
+#if YAE_DEBUG_ITEM_VIEW_REPAINT
         std::cerr << "FIXME: ItemView::repaintEvent " << root_->id_
                   << std::endl;
 #endif
 
-        TMakeCurrentContext currentContext(*context());
-        Item & root = *root_;
-        root.uncache();
         Canvas::ILayer::delegate_->requestRepaint();
 
         repaintEvent->accept();
@@ -127,14 +142,14 @@ namespace yae
   {
     bool alreadyRequested = repaintTimer_.isActive();
 
-#if 0
+#if YAE_DEBUG_ITEM_VIEW_REPAINT
     std::cerr << "FIXME: ItemView::requestRepaint " << root_->id_
               << " " << !alreadyRequested << std::endl;
 #endif
 
     if (!alreadyRequested)
     {
-      repaintTimer_.start(17);
+      repaintTimer_.start(16);
     }
   }
 
@@ -146,7 +161,7 @@ namespace yae
   {
     bool postThePayload = requestRepaintEvent_.setDelivered(false);
 
-#if 0
+#if YAE_DEBUG_ITEM_VIEW_REPAINT
     std::cerr << "FIXME: ItemView::repaint " << root_->id_
               << " " << postThePayload << std::endl;
 #endif
@@ -154,7 +169,9 @@ namespace yae
     if (postThePayload)
     {
       // send an event:
-      qApp->postEvent(this, new RequestRepaintEvent(requestRepaintEvent_));
+      qApp->postEvent(this,
+                      new RequestRepaintEvent(requestRepaintEvent_),
+                      Qt::HighEventPriority);
     }
   }
 
@@ -171,8 +188,7 @@ namespace yae
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
-    TMakeCurrentContext currentContext(*context());
-    root.uncache();
+    requestUncache(&root);
   }
 
   //----------------------------------------------------------------
@@ -181,7 +197,27 @@ namespace yae
   void
   ItemView::paint(Canvas * canvas)
   {
-#if 0
+    YAE_BENCHMARK(benchmark, "ItemView::paint ");
+
+    requestRepaintEvent_.setDelivered(true);
+
+    // uncache prior to painting:
+    for (std::map<Item *, boost::weak_ptr<Item> >::iterator
+           i = uncache_.begin(); i != uncache_.end(); i = uncache_.erase(i))
+    {
+      ItemPtr itemPtr = i->second.lock();
+      if (!itemPtr)
+      {
+        continue;
+      }
+
+      Item & item = *itemPtr;
+
+      YAE_BENCHMARK(benchmark, (std::string("uncache ") + item.id_).c_str());
+      item.uncache();
+    }
+
+#if YAE_DEBUG_ITEM_VIEW_REPAINT
     std::cerr << "FIXME: ItemView::paint " << root_->id_ << std::endl;
 #endif
 
@@ -219,11 +255,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemView::requestUncache
+  //
+  void
+  ItemView::requestUncache(Item * root)
+  {
+    if (!root)
+    {
+      root = root_.get();
+    }
+
+    uncache_[root] = root->self_;
+  }
+
+  //----------------------------------------------------------------
   // ItemView::processEvent
   //
   bool
   ItemView::processEvent(Canvas * canvas, QEvent * event)
   {
+    YAE_BENCHMARK(benchmark, "ItemView::processEvent");
+
     QEvent::Type et = event->type();
     if (et != QEvent::Paint &&
         et != QEvent::Wheel &&
@@ -319,7 +371,7 @@ namespace yae
       }
     }
 
-    Item * focus = ItemFocus::singleton().focusedItem();
+    ItemPtr focus = ItemFocus::singleton().focusedItem();
     if (focus && focus->processEvent(*this, canvas, event))
     {
       requestRepaint();
@@ -413,8 +465,8 @@ namespace yae
       bool foundHandlers = root_->getInputHandlers(pt, inputHandlers_);
 
       // check for focus loss/transfer:
-      Item * focus = ItemFocus::singleton().focusedItem();
-      if (focus && !has(inputHandlers_, focus))
+      ItemPtr focus = ItemFocus::singleton().focusedItem();
+      if (focus && !has(inputHandlers_, focus.get()))
       {
         ItemFocus::singleton().clearFocus(focus->id_);
         requestRepaint();
@@ -607,10 +659,9 @@ namespace yae
   //
   void
   ItemView::addImageProvider(const QString & providerId,
-                                 const TImageProviderPtr & p)
+                             const TImageProviderPtr & p)
   {
     imageProviders_[providerId] = p;
   }
-
 
 }
