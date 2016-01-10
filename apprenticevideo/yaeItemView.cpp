@@ -202,10 +202,12 @@ namespace yae
     requestRepaintEvent_.setDelivered(true);
 
     // uncache prior to painting:
-    for (std::map<Item *, boost::weak_ptr<Item> >::iterator
-           i = uncache_.begin(); i != uncache_.end(); i = uncache_.erase(i))
+    while (!uncache_.empty())
     {
+      std::map<Item *, boost::weak_ptr<Item> >::iterator i = uncache_.begin();
       ItemPtr itemPtr = i->second.lock();
+      uncache_.erase(i);
+
       if (!itemPtr)
       {
         continue;
