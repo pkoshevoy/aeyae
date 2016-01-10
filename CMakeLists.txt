@@ -491,6 +491,8 @@ add_library(aeyae SHARED
 
   yae/thread/yae_queue.h
   yae/thread/yae_threading.h
+  yae/thread/yae_task_runner.cpp
+  yae/thread/yae_task_runner.h
 
   yae/utils/yae_benchmark.cpp
   yae/utils/yae_benchmark.h
