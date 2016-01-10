@@ -398,8 +398,9 @@ namespace yae
     {
       const PlaylistGroup * parentGroup =
         dynamic_cast<const PlaylistGroup *>(parentNode);
+      YAE_ASSERT(parentGroup);
 
-      if (role == kRolePlaying)
+      if (role == kRolePlaying && parentGroup)
       {
         setPlayingItem(parentGroup->offset_ + item->row_);
         return true;
