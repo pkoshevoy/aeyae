@@ -66,7 +66,7 @@ namespace yae
     struct Timesheet
     {
       Timesheet():
-        t0_(boost::chrono::system_clock::now()),
+        t0_(boost::chrono::steady_clock::now()),
         depth_(0),
         path_("/")
       {}
@@ -93,7 +93,7 @@ namespace yae
         uint64 t_; // total time spent, measured in microseconds
       };
 
-      boost::chrono::system_clock::time_point t0_;
+      boost::chrono::steady_clock::time_point t0_;
       std::map<std::string, Entry> entries_;
       std::size_t depth_;
       std::string path_;
@@ -106,7 +106,7 @@ namespace yae
     static std::map<boost::thread::id, Timesheet> tss_;
 
     std::string key_;
-    boost::chrono::system_clock::time_point t0_;
+    boost::chrono::steady_clock::time_point t0_;
   };
 
   //----------------------------------------------------------------
@@ -155,7 +155,7 @@ namespace yae
 
     // save timestamp last, so that the benchmark would
     // not be older than the timesheet that keeps its entry:
-    t0_ = boost::chrono::system_clock::now();
+    t0_ = boost::chrono::steady_clock::now();
   }
 
   //----------------------------------------------------------------
@@ -163,8 +163,8 @@ namespace yae
   //
   TBenchmark::Private::~Private()
   {
-    boost::chrono::system_clock::time_point
-      t1 = boost::chrono::system_clock::now();
+    boost::chrono::steady_clock::time_point
+      t1 = boost::chrono::steady_clock::now();
 
     uint64 dt =
       boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
@@ -326,10 +326,10 @@ namespace yae
       };
 
       Timesheet():
-        t0_(boost::chrono::system_clock::now())
+        t0_(boost::chrono::steady_clock::now())
       {}
 
-      boost::chrono::system_clock::time_point t0_;
+      boost::chrono::steady_clock::time_point t0_;
       std::map<std::string, Entry> entries_;
     };
 
@@ -341,7 +341,7 @@ namespace yae
     static Timesheet tss_;
 
     std::string key_;
-    boost::chrono::system_clock::time_point t0_;
+    boost::chrono::steady_clock::time_point t0_;
   };
 
   //----------------------------------------------------------------
@@ -371,7 +371,7 @@ namespace yae
   {
     YAE_ASSERT(description && *description);
 
-    t0_ = boost::chrono::system_clock::now();
+    t0_ = boost::chrono::steady_clock::now();
     key_.assign(description);
   }
 
@@ -383,8 +383,8 @@ namespace yae
   {
     YAE_ASSERT(key_.size() && key_[0]);
 
-    boost::chrono::system_clock::time_point
-      t1 = boost::chrono::system_clock::now();
+    boost::chrono::steady_clock::time_point
+      t1 = boost::chrono::steady_clock::now();
 
     uint64 dt =
       boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
@@ -407,8 +407,8 @@ namespace yae
 
     boost::lock_guard<boost::mutex> lock(mutex_);
 
-    boost::chrono::system_clock::time_point
-      t_now = boost::chrono::system_clock::now();
+    boost::chrono::steady_clock::time_point
+      t_now = boost::chrono::steady_clock::now();
 
     uint64 dt_usec =
       boost::chrono::duration_cast<boost::chrono::microseconds>
@@ -453,7 +453,7 @@ namespace yae
   TLifetime::Private::clear()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    tss_.t0_ = boost::chrono::system_clock::now();
+    tss_.t0_ = boost::chrono::steady_clock::now();
     tss_.entries_.clear();
   }
 
