@@ -452,8 +452,9 @@ namespace yae
     Item & root = *root_;
 
     // re-apply style when playlist is enabled or disabled:
-    playlist_->root()->addObserver(Item::kOnToggleItemView,
-                                   Item::TObserverPtr(new Repaint(*this)));
+    playlist_->root()->
+      addObserver(Item::kOnToggleItemView,
+                  Item::TObserverPtr(new Repaint(*this, true)));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);

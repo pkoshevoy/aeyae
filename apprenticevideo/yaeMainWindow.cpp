@@ -3283,7 +3283,6 @@ namespace yae
     }
 
     playlistView_.ensureVisible(current);
-    fixupNextPrev();
 
     if (!ok && !forward)
     {
@@ -3304,6 +3303,8 @@ namespace yae
     {
       playbackStop();
     }
+
+    fixupNextPrev();
   }
 
   //----------------------------------------------------------------

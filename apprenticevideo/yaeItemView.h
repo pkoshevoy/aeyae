@@ -201,8 +201,9 @@ namespace yae
   //
   struct Repaint : public Item::Observer
   {
-    Repaint(ItemView & timeline):
-      timeline_(timeline)
+    Repaint(ItemView & itemView, bool requestUncache = false):
+      itemView_(itemView),
+      requestUncache_(requestUncache)
     {}
 
     // virtual:
@@ -211,10 +212,16 @@ namespace yae
       (void) item;
       (void) e;
 
-      timeline_.requestRepaint();
+      if (requestUncache_)
+      {
+        itemView_.requestUncache();
+      }
+
+      itemView_.requestRepaint();
     }
 
-    ItemView & timeline_;
+    ItemView & itemView_;
+    bool requestUncache_;
   };
 
   //----------------------------------------------------------------
