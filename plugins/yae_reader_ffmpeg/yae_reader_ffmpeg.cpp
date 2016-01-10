@@ -3365,8 +3365,9 @@ namespace yae
       int channels = getNumberOfChannels(atraits.channelLayout_);
       YAE_ASSERT(channels > 0);
 
+      std::size_t bytesPerSample = channels * sampleSize;
       std::size_t frameSize = frame->data_->rowBytes(0);
-      std::size_t numSamples = frameSize / (channels * sampleSize);
+      std::size_t numSamples = bytesPerSample ? frameSize / bytesPerSample : 0;
 
       double t = frame->time_.toSeconds();
       double dt = double(numSamples) / double(atraits.sampleRate_);

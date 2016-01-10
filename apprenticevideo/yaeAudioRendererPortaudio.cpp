@@ -494,8 +494,11 @@ namespace yae
           getNumberOfChannels(audioFrame_->traits_.channelLayout_);
         YAE_ASSERT(srcChannels > 0);
 
+        std::size_t bytesPerSample = srcSampleSize * srcChannels;
         std::size_t srcFrameSize = audioFrame_->data_->rowBytes(0);
-        std::size_t numSamples = srcFrameSize / (srcSampleSize * srcChannels);
+        std::size_t numSamples = (bytesPerSample ?
+                                  srcFrameSize / bytesPerSample :
+                                  0);
         unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
 
         TTime frameDuration(numSamples * audioFrame_->tempo_, sampleRate);
@@ -765,19 +768,8 @@ namespace yae
       getNumberOfChannels(audioFrame_->traits_.channelLayout_);
     YAE_ASSERT(srcChannels > 0);
 
-    bool srcPlanar =
-      audioFrame_->traits_.channelFormat_ == kAudioChannelsPlanar;
-
     unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
     TTime frameDuration(samplesToRead, sampleRate);
-
-    bool detectedStaleFrame =
-      (outputParams_.channelCount != srcChannels ||
-       sampleSize_ != srcSampleSize ||
-       dstPlanar != srcPlanar);
-
-    std::size_t srcStride =
-      srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
 
     while (dstChunkSize)
     {
@@ -799,14 +791,15 @@ namespace yae
       srcChannels = getNumberOfChannels(t.channelLayout_);
       YAE_ASSERT(srcChannels > 0);
 
-      srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
+      bool srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
 
-      detectedStaleFrame =
+      bool detectedStaleFrame =
         (outputParams_.channelCount != srcChannels ||
          sampleSize_ != srcSampleSize ||
          dstPlanar != srcPlanar);
 
-      srcStride = srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
+      std::size_t srcStride =
+        srcPlanar ? srcSampleSize : srcSampleSize * srcChannels;
 
       clock_.waitForOthers();
 
@@ -882,7 +875,7 @@ namespace yae
 
         if (chunkSize < srcChunkSize)
         {
-          std::size_t samplesConsumed = chunkSize / srcStride;
+          std::size_t samplesConsumed = srcStride ? chunkSize / srcStride : 0;
           audioFrameOffset_ += samplesConsumed;
         }
         else

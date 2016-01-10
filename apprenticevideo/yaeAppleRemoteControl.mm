@@ -83,6 +83,7 @@
                       observer: (yae::TRemoteControlObserver) observer
                observerContext: (void *) observerContext
 {
+  self = [super init];
   AppleRemote * newRemoteControl = [[[AppleRemote alloc] initWithDelegate: self] autorelease];
   [newRemoteControl setDelegate: self];
 

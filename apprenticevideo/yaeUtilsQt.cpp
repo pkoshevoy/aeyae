@@ -1091,7 +1091,7 @@ namespace yae
           std::string t =
             parser.text().toString().trimmed().toUtf8().constData();
           YAE_ASSERT(t.empty());
-          tt = readNextValidToken(xml, parser);
+          readNextValidToken(xml, parser);
         }
 
         return true;

@@ -171,15 +171,6 @@ namespace yae
     bbox.w_ += dw;
     bbox.h_ += dh;
 
-    // get the corner radius:
-    double r = item.radius_.get();
-
-    // get the border width:
-    double b = item.border_.get();
-
-    // make sure radius is not less than border width:
-    r = std::max<double>(r, b);
-
     // texture width:
     double wt = double(powerOfTwoGEQ<GLsizei>(iw_));
 
