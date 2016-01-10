@@ -40,7 +40,6 @@ namespace yae
   };
 }
 
-
 #ifndef YAE_BENCHMARK
 # ifndef NDEBUG
 #  define YAE_BENCHMARK(varname, desc) yae::TBenchmark varname(desc)
@@ -62,6 +61,61 @@ namespace yae
 #  define YAE_BENCHMARK_CLEAR() yae::TBenchmark::clear()
 # else
 #  define YAE_BENCHMARK_CLEAR()
+# endif
+#endif
+
+
+namespace yae
+{
+
+  //----------------------------------------------------------------
+  // TLifetime
+  //
+  struct YAE_API TLifetime
+  {
+    TLifetime();
+    ~TLifetime();
+
+    void start(const char * description);
+    void finish();
+
+    static void show(std::ostream & os);
+    static void clear();
+
+  private:
+    TLifetime(const TLifetime &);
+    TLifetime & operator = (const TLifetime &);
+
+    struct Private;
+    Private * private_;
+  };
+}
+
+#ifndef YAE_LIFETIME
+# ifndef NDEBUG
+#  define YAE_LIFETIME(varname) yae::TLifetime varname
+#  define YAE_LIFETIME_START(varname, desc) varname.start(desc)
+#  define YAE_LIFETIME_FINISH(varname) varname.finish()
+# else
+#  define YAE_LIFETIME(varname)
+#  define YAE_LIFETIME_START(varname, desc)
+#  define YAE_LIFETIME_FINISH(varname)
+# endif
+#endif
+
+#ifndef YAE_LIFETIME_SHOW
+# ifndef NDEBUG
+#  define YAE_LIFETIME_SHOW(ostream) yae::TLifetime::show(ostream)
+# else
+#  define YAE_LIFETIME_SHOW(ostream)
+# endif
+#endif
+
+#ifndef YAE_LIFETIME_CLEAR
+# ifndef NDEBUG
+#  define YAE_LIFETIME_CLEAR() yae::TLifetime::clear()
+# else
+#  define YAE_LIFETIME_CLEAR()
 # endif
 #endif
 

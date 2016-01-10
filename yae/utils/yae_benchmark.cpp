@@ -65,7 +65,11 @@ namespace yae
     //
     struct Timesheet
     {
-      Timesheet();
+      Timesheet():
+        t0_(boost::chrono::system_clock::now()),
+        depth_(0),
+        path_("/")
+      {}
 
       //----------------------------------------------------------------
       // Entry
@@ -74,7 +78,13 @@ namespace yae
       {
         Entry(std::size_t depth = 0,
               const std::string & path = std::string("/"),
-              const char * name = "");
+              const char * name = ""):
+          depth_(depth),
+          path_(path),
+          name_(name),
+          n_(0),
+          t_(0)
+        {}
 
         std::size_t depth_;
         std::string path_;
@@ -83,6 +93,7 @@ namespace yae
         uint64 t_; // total time spent, measured in microseconds
       };
 
+      boost::chrono::system_clock::time_point t0_;
       std::map<std::string, Entry> entries_;
       std::size_t depth_;
       std::string path_;
@@ -95,7 +106,7 @@ namespace yae
     static std::map<boost::thread::id, Timesheet> tss_;
 
     std::string key_;
-    boost::chrono::time_point<boost::chrono::steady_clock> t0_;
+    boost::chrono::system_clock::time_point t0_;
   };
 
   //----------------------------------------------------------------
@@ -111,31 +122,9 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TBenchmark::Private::Timesheet::Entry::Entry
-  //
-  TBenchmark::Private::Timesheet::Entry::Entry(std::size_t depth,
-                                               const std::string & path,
-                                               const char * name):
-    depth_(depth),
-    path_(path),
-    name_(name),
-    n_(0),
-    t_(0)
-  {}
-
-  //----------------------------------------------------------------
-  // TBenchmark::Private::Timesheet::Timesheet
-  //
-  TBenchmark::Private::Timesheet::Timesheet():
-    depth_(0),
-    path_("/")
-  {}
-
-  //----------------------------------------------------------------
   // TBenchmark::Private::Private
   //
-  TBenchmark::Private::Private(const char * description):
-    t0_(boost::chrono::steady_clock::now())
+  TBenchmark::Private::Private(const char * description)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
 
@@ -163,6 +152,10 @@ namespace yae
     }
 
     ts.depth_++;
+
+    // save timestamp last, so that the benchmark would
+    // not be older than the timesheet that keeps its entry:
+    t0_ = boost::chrono::system_clock::now();
   }
 
   //----------------------------------------------------------------
@@ -170,8 +163,8 @@ namespace yae
   //
   TBenchmark::Private::~Private()
   {
-    boost::chrono::time_point<boost::chrono::steady_clock>
-      t1 = boost::chrono::steady_clock::now();
+    boost::chrono::system_clock::time_point
+      t1 = boost::chrono::system_clock::now();
 
     uint64 dt =
       boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
@@ -183,14 +176,22 @@ namespace yae
     boost::thread::id threadId = boost::this_thread::get_id();
     Timesheet & ts = tss_[threadId];
 
+    if (t0_ < ts.t0_)
+    {
+      // this benchmark was created before timesheet was cleared, ignore it:
+      return;
+    }
+
     // lookup this benchmark timesheet entry:
     Timesheet::Entry & entry = ts.entries_[key_];
+    YAE_ASSERT(entry.name_.size() && entry.name_[0]);
 
     entry.n_++;
     entry.t_ += dt;
 
-    ts.path_ = entry.path_;
+    YAE_ASSERT(ts.depth_ > 0);
     ts.depth_--;
+    ts.path_ = entry.path_;
   }
 
   //----------------------------------------------------------------
@@ -287,6 +288,227 @@ namespace yae
   //
   void
   TBenchmark::clear()
+  {
+    Private::clear();
+  }
+
+
+  //----------------------------------------------------------------
+  // TLifetime::Private
+  //
+  struct TLifetime::Private
+  {
+    ~Private();
+
+    void start(const char * description);
+    void finish();
+
+    static void show(std::ostream & os);
+    static void clear();
+
+    //----------------------------------------------------------------
+    // Timesheet
+    //
+    struct Timesheet
+    {
+      //----------------------------------------------------------------
+      // Entry
+      //
+      struct Entry
+      {
+        Entry():
+          n_(0),
+          t_(0)
+        {}
+
+        uint64 n_; // total number of occurrances
+        uint64 t_; // total time spent, measured in microseconds
+      };
+
+      Timesheet():
+        t0_(boost::chrono::system_clock::now())
+      {}
+
+      boost::chrono::system_clock::time_point t0_;
+      std::map<std::string, Entry> entries_;
+    };
+
+  protected:
+    static boost::mutex mutex_;
+
+    // since lifetime may start on one thread and end on another
+    // all lifetimes are tracked on one timesheet:
+    static Timesheet tss_;
+
+    std::string key_;
+    boost::chrono::system_clock::time_point t0_;
+  };
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::mutex_
+  //
+  boost::mutex TLifetime::Private::mutex_;
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::tss_
+  //
+  TLifetime::Private::Timesheet TLifetime::Private::tss_;
+
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::~Private
+  //
+  TLifetime::Private::~Private()
+  {
+    finish();
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::start
+  //
+  void
+  TLifetime::Private::start(const char * description)
+  {
+    YAE_ASSERT(description && *description);
+
+    t0_ = boost::chrono::system_clock::now();
+    key_.assign(description);
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::finish
+  //
+  void
+  TLifetime::Private::finish()
+  {
+    YAE_ASSERT(key_.size() && key_[0]);
+
+    boost::chrono::system_clock::time_point
+      t1 = boost::chrono::system_clock::now();
+
+    uint64 dt =
+      boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
+      count();
+
+    // lookup/create timesheet entry for this lifetime:
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    Timesheet::Entry & entry = tss_.entries_[key_];
+    entry.n_++;
+    entry.t_ += dt;
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::show
+  //
+  void
+  TLifetime::Private::show(std::ostream & os)
+  {
+    static const uint64 timebase = 1000000;
+
+    boost::lock_guard<boost::mutex> lock(mutex_);
+
+    boost::chrono::system_clock::time_point
+      t_now = boost::chrono::system_clock::now();
+
+    uint64 dt_usec =
+      boost::chrono::duration_cast<boost::chrono::microseconds>
+      (t_now - tss_.t0_).count();
+
+    std::ostringstream oss;
+    oss <<  "\nLifetime timesheet over the last "
+        << double(dt_usec) * 1e-6 << " seconds:\n";
+
+    for (std::map<std::string, Timesheet::Entry>::const_iterator
+           i = tss_.entries_.begin(); i != tss_.entries_.end(); ++i)
+    {
+      const std::string & key = i->first;
+      const Timesheet::Entry & entry = i->second;
+
+      oss
+        << "  "
+        << std::left << std::setw(40) << std::setfill(' ')
+        << key.c_str()
+        << " : "
+
+        << std::right << std::setw(8) << std::setfill(' ')
+        << entry.n_
+        << ", "
+
+        << std::fixed << std::setprecision(3) << std::setw(13)
+        << double(entry.t_ * 1000) / double(timebase)
+        << " msec total, "
+
+        << std::fixed << std::setprecision(3) << std::setw(13)
+        << double(entry.t_ * 1000000) / double(entry.n_ * timebase)
+        << " usec avg\n";
+    }
+
+    os << oss.str().c_str() << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::Private::clear
+  //
+  void
+  TLifetime::Private::clear()
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    tss_.t0_ = boost::chrono::system_clock::now();
+    tss_.entries_.clear();
+  }
+
+
+  //----------------------------------------------------------------
+  // TLifetime::TLifetime
+  //
+  TLifetime::TLifetime():
+    private_(new TLifetime::Private())
+  {}
+
+  //----------------------------------------------------------------
+  // TLifetime::~TLifetime
+  //
+  TLifetime::~TLifetime()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::start
+  //
+  void
+  TLifetime::start(const char * description)
+  {
+    if (private_)
+    {
+      private_->start(description);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::finish
+  //
+  void
+  TLifetime::finish()
+  {
+    delete private_;
+    private_ = NULL;
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::show
+  //
+  void
+  TLifetime::show(std::ostream & os)
+  {
+    Private::show(os);
+  }
+
+  //----------------------------------------------------------------
+  // TLifetime::clear
+  //
+  void
+  TLifetime::clear()
   {
     Private::clear();
   }
