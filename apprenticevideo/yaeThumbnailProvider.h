@@ -13,7 +13,9 @@
 #include <map>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // Qt includes:
 #include <QImage>

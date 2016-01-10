@@ -10,7 +10,9 @@
 #define YAE_FLICKABLE_AREA_H_
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // Qt interfaces:
 #include <QObject>

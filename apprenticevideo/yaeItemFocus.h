@@ -15,7 +15,9 @@
 #include <map>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // local interfaces:
 #include "yaeExpression.h"

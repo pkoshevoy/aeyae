@@ -18,7 +18,9 @@
 #include <string>
 
 // boost library:
+#ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
+#endif
 
 
 namespace yae

@@ -20,7 +20,9 @@
 #include <vector>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // Qt interfaces:
 #include <QEvent>

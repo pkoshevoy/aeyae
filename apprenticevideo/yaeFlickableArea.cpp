@@ -7,7 +7,9 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // boost library:
+#ifndef Q_MOC_RUN
 #include <boost/chrono.hpp>
+#endif
 
 // Qt library:
 #include <QApplication>

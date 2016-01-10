@@ -13,7 +13,9 @@
 #include <stdexcept>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // yae includes:
 #include "yae/api/yae_api.h"
