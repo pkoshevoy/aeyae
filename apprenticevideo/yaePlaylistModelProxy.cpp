@@ -55,6 +55,8 @@ namespace yae
   PlaylistModelProxy::add(const std::list<QString> & playlist,
                           std::list<BookmarkHashInfo> * returnAddedHashes)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::add");
+
     model_.add(playlist, returnAddedHashes);
     Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
     QSortFilterProxyModel::sort(0, so);
@@ -69,6 +71,8 @@ namespace yae
   QModelIndex
   PlaylistModelProxy::makeModelIndex(int groupRow, int itemRow) const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::makeModelIndex");
+
     QModelIndex rootIndex = QSortFilterProxyModel::index(-1, -1);
     const int numGroups = rowCount(rootIndex);
 
@@ -113,32 +117,15 @@ namespace yae
       return;
     }
 
-    YAE_BENCHMARK(benchmark, "PlaylistModelProxy::setItemFilter");
+    YAE_BENCHMARK(benchmark, "... Proxy::setItemFilter");
 
     itemFilter_ = filter;
     emit itemFilterChanged();
 
-    QString pattern;
+    keywords_.clear();
+    splitIntoWords(filter, keywords_);
 
-    std::list<QString> keywords;
-    splitIntoWords(filter, keywords);
-
-    if (!keywords.empty())
-    {
-      for (std::list<QString>::const_iterator i = keywords.begin();
-           i != keywords.end(); ++i)
-      {
-        pattern += QString::fromUtf8("(?=.*");
-        pattern += *i;
-        pattern += QString::fromUtf8(")");
-      }
-      pattern += QString::fromUtf8(".+");
-    }
-
-    QRegExp rx(pattern, Qt::CaseInsensitive, QRegExp::RegExp2);
-    QSortFilterProxyModel::setFilterRegExp(rx);
     QSortFilterProxyModel::invalidate();
-
     emit itemCountChanged();
   }
 
@@ -148,6 +135,8 @@ namespace yae
   void
   PlaylistModelProxy::selectAll()
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::selectAll");
+
     QModelIndex rootIndex = makeModelIndex(-1, -1);
     const int numGroups = rowCount(rootIndex);
 
@@ -173,6 +162,8 @@ namespace yae
   void
   PlaylistModelProxy::selectItems(int groupRow, int itemRow, int selFlags)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::selectItems");
+
     QModelIndex proxyIndex = makeModelIndex(groupRow, itemRow);
 
     if (selFlags == QItemSelectionModel::SelectCurrent)
@@ -240,6 +231,8 @@ namespace yae
   void
   PlaylistModelProxy::unselectAll()
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::unselectAll");
+
     QModelIndex rootIndex = makeModelIndex(-1, -1);
     const int numGroups = rowCount(rootIndex);
 
@@ -265,6 +258,8 @@ namespace yae
   void
   PlaylistModelProxy::setCurrentItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setCurrentItem");
+
     QModelIndex proxyIndex = makeModelIndex(groupRow, itemRow);
     setCurrentItem(proxyIndex);
   }
@@ -275,6 +270,8 @@ namespace yae
   void
   PlaylistModelProxy::setCurrentItem(const QModelIndex & proxyIndex)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setCurrentItem index");
+
     QModelIndex sourceIndex = mapToSource(proxyIndex);
     model_.setCurrentItem(sourceIndex);
   }
@@ -285,6 +282,8 @@ namespace yae
   void
   PlaylistModelProxy::setPlayingItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setPlayingItem");
+
     QModelIndex proxyIndex = makeModelIndex(groupRow, itemRow);
     setPlayingItem(proxyIndex);
   }
@@ -295,6 +294,8 @@ namespace yae
   void
   PlaylistModelProxy::setPlayingItem(const QModelIndex & proxyIndex)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setPlayingItem index");
+
     QModelIndex sourceIndex = mapToSource(proxyIndex);
     model_.setPlayingItem(sourceIndex);
   }
@@ -305,6 +306,8 @@ namespace yae
   void
   PlaylistModelProxy::removeItems(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::removeItems");
+
     QModelIndex proxyIndex = makeModelIndex(groupRow, itemRow);
     removeItems(proxyIndex);
   }
@@ -315,6 +318,8 @@ namespace yae
   void
   PlaylistModelProxy::removeItems(const QModelIndex & proxyIndex)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::removeItems index");
+
     QModelIndex sourceIndex = mapToSource(proxyIndex);
     model_.removeItems(sourceIndex);
   }
@@ -325,6 +330,8 @@ namespace yae
   void
   PlaylistModelProxy::removeSelected()
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::removeSelected");
+
     model_.playlist_.removeSelected();
   }
 
@@ -350,6 +357,8 @@ namespace yae
   void
   PlaylistModelProxy::setSortBy(PlaylistModelProxy::SortBy sb)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setSortBy");
+
     const int sr = QSortFilterProxyModel::sortRole();
 
     int srNew =
@@ -376,6 +385,8 @@ namespace yae
   void
   PlaylistModelProxy::setSortOrder(Qt::SortOrder soNew)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::setSortOrder");
+
     const Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
 
     if (so == soNew)
@@ -395,6 +406,8 @@ namespace yae
   quint64
   PlaylistModelProxy::itemCount() const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::itemCount");
+
     quint64 numShown = 0;
 
     const int numGroups = rowCount(makeModelIndex(-1, -1));
@@ -413,6 +426,8 @@ namespace yae
   QModelIndex
   PlaylistModelProxy::lastItem() const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::lastItem");
+
     int numGroups = rowCount(makeModelIndex(-1, -1));
     if (!numGroups)
     {
@@ -430,6 +445,8 @@ namespace yae
   QModelIndex
   PlaylistModelProxy::playingItem() const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::playingItem");
+
     QModelIndex sourceIndex = model_.playingItem();
     QModelIndex proxyIndex = mapFromSource(sourceIndex);
     return proxyIndex;
@@ -441,6 +458,8 @@ namespace yae
   QModelIndex
   PlaylistModelProxy::currentItem() const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::currentItem");
+
     QModelIndex sourceIndex = model_.currentItem();
     QModelIndex proxyIndex = mapFromSource(sourceIndex);
     return proxyIndex;
@@ -453,6 +472,8 @@ namespace yae
   PlaylistModelProxy::nextItem(const QModelIndex & index,
                                Playlist::TDirection where) const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::nextItem");
+
     int groupRow = -1;
     int itemRow = -1;
     mapToGroupRowItemRow(index, groupRow, itemRow);
@@ -504,6 +525,8 @@ namespace yae
   PlaylistModelProxy::lookupModelIndex(const std::string & groupHash,
                                        const std::string & itemHash) const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::lookupModelIndex");
+
     QModelIndex sourceIndex = model_.lookupModelIndex(groupHash, itemHash);
     QModelIndex proxyIndex = mapFromSource(sourceIndex);
     return proxyIndex;
@@ -516,6 +539,8 @@ namespace yae
   PlaylistModelProxy::lookup(const QModelIndex & proxyIndex,
                              TPlaylistGroupPtr * returnGroup) const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::lookup");
+
     QModelIndex sourceIndex = mapToSource(proxyIndex);
     return model_.lookup(sourceIndex, returnGroup);
   }
@@ -526,6 +551,8 @@ namespace yae
   QString
   PlaylistModelProxy::lookupItemFilePath(const QString & id) const
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::lookupItemFilePath");
+
     return model_.playlist_.lookupItemFilePath(id);
   }
 
@@ -535,6 +562,8 @@ namespace yae
   void
   PlaylistModelProxy::onSourcePlayingChanged(const QModelIndex & sourceIndex)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::onSourcePlayingChanged");
+
     QModelIndex proxyIndex = mapFromSource(sourceIndex);
     emit playingItemChanged(proxyIndex);
   }
@@ -545,6 +574,8 @@ namespace yae
   void
   PlaylistModelProxy::onSourceCurrentChanged(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Proxy::onSourceCurrentChanged");
+
     QModelIndex sourceIndex = model_.makeModelIndex(groupRow, itemRow);
     QModelIndex proxyIndex = mapFromSource(sourceIndex);
 
@@ -555,17 +586,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // keywordsMatch
+  //
+  static bool
+  keywordsMatch(const std::list<QString> & keywords, const QString  & text)
+  {
+    for (std::list<QString>::const_iterator i = keywords.begin();
+         i != keywords.end(); ++i)
+    {
+      const QString & keyword = *i;
+      if (!text.contains(keyword, Qt::CaseInsensitive))
+      {
+        return false;
+      }
+    }
+
+#if 0
+    std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
+#endif
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModelProxy::filterAcceptsRow
   //
   bool
   PlaylistModelProxy::filterAcceptsRow(int sourceRow,
                                        const QModelIndex & sourceParent) const
   {
-    bool acceptable = QSortFilterProxyModel::filterAcceptsRow(sourceRow,
-                                                              sourceParent);
+    YAE_BENCHMARK(benchmark, "... Proxy::filterAcceptsRow");
 
     if (sourceParent.isValid())
     {
+      QModelIndex sourceIndex = model_.index(sourceRow, 0, sourceParent);
+
+      QString filterKey =
+        model_.data(sourceIndex, PlaylistModel::kRoleFilterKey).toString();
+
+      bool acceptable = keywordsMatch(keywords_, filterKey);
       return acceptable;
     }
 

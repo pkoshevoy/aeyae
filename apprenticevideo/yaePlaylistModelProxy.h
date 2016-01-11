@@ -9,6 +9,10 @@
 #ifndef YAE_PLAYLIST_MODEL_PROXY_H_
 #define YAE_PLAYLIST_MODEL_PROXY_H_
 
+// standard libraries:
+#include <list>
+#include <map>
+
 // Qt includes:
 #include <QSortFilterProxyModel>
 
@@ -181,6 +185,9 @@ namespace yae
 
     // item filter, as it was given to setItemFilter:
     QString itemFilter_;
+
+    // playlist filter keywords:
+    std::list<QString> keywords_;
   };
 
   //----------------------------------------------------------------

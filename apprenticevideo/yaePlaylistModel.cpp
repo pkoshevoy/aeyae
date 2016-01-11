@@ -7,6 +7,9 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // yae includes:
+#include "yae/utils/yae_benchmark.h"
+
+// local includes:
 #include "yaePlaylistModel.h"
 
 // Qt includes:
@@ -79,6 +82,8 @@ namespace yae
   QModelIndex
   PlaylistModel::index(int row, int column, const QModelIndex & parent) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::index");
+
     if (row < 0 || column < 0)
     {
       return QModelIndex();
@@ -113,6 +118,8 @@ namespace yae
   QModelIndex
   PlaylistModel::parent(const QModelIndex & child) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::parent");
+
     PlaylistNode * parent =
       static_cast<PlaylistNode *>(child.internalPointer());
 
@@ -139,6 +146,8 @@ namespace yae
   QHash<int, QByteArray>
   PlaylistModel::roleNames() const
   {
+    YAE_BENCHMARK(benchmark, "... Model::roleNames");
+
     QHash<int, QByteArray> roles;
 
     roles[kRoleType] = "type";
@@ -167,6 +176,8 @@ namespace yae
   int
   PlaylistModel::rowCount(const QModelIndex & parent) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::rowCount");
+
     const PlaylistNode * parentNode = NULL;
     const PlaylistNode * node = getNode(parent, parentNode);
 
@@ -201,6 +212,8 @@ namespace yae
   bool
   PlaylistModel::hasChildren(const QModelIndex & parent) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::hasChildren");
+
     const PlaylistNode * parentNode = NULL;
     const PlaylistNode * node = getNode(parent, parentNode);
 
@@ -226,6 +239,8 @@ namespace yae
   QVariant
   PlaylistModel::data(const QModelIndex & index, int role) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::data");
+
     const PlaylistNode * parentNode = NULL;
     const PlaylistNode * node = getNode(index, parentNode);
 
@@ -377,6 +392,8 @@ namespace yae
                          const QVariant & value,
                          int role)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setData");
+
     const PlaylistNode * parentNode = NULL;
     PlaylistNode * node = getNode(index, parentNode);
     PlaylistGroup * group = dynamic_cast<PlaylistGroup *>(node);
@@ -429,6 +446,8 @@ namespace yae
   PlaylistModel::add(const std::list<QString> & playlist,
                      std::list<BookmarkHashInfo> * returnAddedHashes)
   {
+    YAE_BENCHMARK(benchmark, "... Model::add");
+
     emit currentItemChanged(-1, -1);
 
     playlist_.add(playlist, returnAddedHashes);
@@ -440,6 +459,8 @@ namespace yae
   QModelIndex
   PlaylistModel::makeModelIndex(int groupRow, int itemRow) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::makeModelIndex");
+
     TPlaylistGroupPtr group;
     TPlaylistItemPtr item = playlist_.lookup(group, groupRow, itemRow);
 
@@ -466,6 +487,8 @@ namespace yae
                                       int & groupRow,
                                       int & itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::mapToGroupRowItemRow");
+
     groupRow = -1;
     itemRow = -1;
 
@@ -492,6 +515,8 @@ namespace yae
   void
   PlaylistModel::setItemFilter(const QString & filter)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setItemFilter");
+
     std::cerr
       << "PlaylistModel::setItemFilter("
       << filter.toUtf8().constData()
@@ -505,6 +530,8 @@ namespace yae
   void
   PlaylistModel::selectAll()
   {
+    YAE_BENCHMARK(benchmark, "... Model::selectAll");
+
     playlist_.selectAll();
   }
 
@@ -514,6 +541,8 @@ namespace yae
   void
   PlaylistModel::selectItems(int groupRow, int itemRow, int selectionFlags)
   {
+    YAE_BENCHMARK(benchmark, "... Model::selectItems");
+
     std::size_t itemIndex = playlist_.lookupIndex(groupRow, itemRow);
 
     if (selectionFlags == QItemSelectionModel::SelectCurrent)
@@ -544,6 +573,8 @@ namespace yae
   void
   PlaylistModel::unselectAll()
   {
+    YAE_BENCHMARK(benchmark, "... Model::unselectAll");
+
     playlist_.unselectAll();
   }
 
@@ -553,6 +584,8 @@ namespace yae
   void
   PlaylistModel::setCurrentItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setCurrentItem");
+
     playlist_.setCurrentItem(groupRow, itemRow);
   }
 
@@ -562,6 +595,8 @@ namespace yae
   void
   PlaylistModel::setCurrentItem(const QModelIndex & index)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setCurrentItem index");
+
     int groupRow = -1;
     int itemRow = -1;
     mapToGroupRowItemRow(index, groupRow, itemRow);
@@ -574,6 +609,8 @@ namespace yae
   void
   PlaylistModel::setPlayingItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setPlayingItem");
+
     QModelIndex index = makeModelIndex(groupRow, itemRow);
     setData(index, QVariant(true), kRolePlaying);
 
@@ -587,6 +624,8 @@ namespace yae
   void
   PlaylistModel::setPlayingItem(const QModelIndex & index)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setPlayingItem index");
+
     int groupRow = -1;
     int itemRow = -1;
     mapToGroupRowItemRow(index, groupRow, itemRow);
@@ -599,6 +638,8 @@ namespace yae
   void
   PlaylistModel::removeItems(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::removeItems");
+
     playlist_.removeItems(groupRow, itemRow);
   }
 
@@ -608,6 +649,8 @@ namespace yae
   void
   PlaylistModel::removeItems(const QModelIndex & index)
   {
+    YAE_BENCHMARK(benchmark, "... Model::removeItems index");
+
     int groupRow = -1;
     int itemRow = -1;
     mapToGroupRowItemRow(index, groupRow, itemRow);
@@ -620,6 +663,8 @@ namespace yae
   void
   PlaylistModel::removeSelected()
   {
+    YAE_BENCHMARK(benchmark, "... Model::removeSelected");
+
     playlist_.removeSelected();
   }
 
@@ -630,6 +675,8 @@ namespace yae
   PlaylistModel::nextItem(const QModelIndex & index,
                           Playlist::TDirection where) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::nextItem");
+
     std::size_t itemIndex = mapToItemIndex(index);
     if (itemIndex >= playlist_.numItems())
     {
@@ -656,6 +703,8 @@ namespace yae
   PlaylistModel::lookupModelIndex(const std::string & groupHash,
                                   const std::string & itemHash) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::lookupModelIndex");
+
     TPlaylistGroupPtr group;
     TPlaylistItemPtr found = lookup(groupHash, itemHash, &group);
 
@@ -680,6 +729,8 @@ namespace yae
   PlaylistModel::lookup(const QModelIndex & modelIndex,
                         TPlaylistGroupPtr * returnGroup) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::lookup");
+
     int groupRow = -1;
     int itemRow = -1;
     mapToGroupRowItemRow(modelIndex, groupRow, itemRow);
@@ -714,6 +765,8 @@ namespace yae
   QString
   PlaylistModel::lookupItemFilePath(const QString & id) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::lookupItemFilePath");
+
     return playlist_.lookupItemFilePath(id);
   }
 
@@ -723,6 +776,8 @@ namespace yae
   std::size_t
   PlaylistModel::mapToItemIndex(const QModelIndex & modelIndex) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::mapToItemIndex");
+
     if (!modelIndex.isValid())
     {
       return std::numeric_limits<std::size_t>::max();
@@ -770,6 +825,8 @@ namespace yae
   QModelIndex
   PlaylistModel::mapToModelIndex(std::size_t itemIndex) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::mapToModelIndex");
+
     TPlaylistGroupPtr group;
     TPlaylistItemPtr item = playlist_.lookup(itemIndex, &group);
 
@@ -788,6 +845,8 @@ namespace yae
   void
   PlaylistModel::onAddingGroup(int groupRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onAddingGroup");
+
 #if 0
     std::cerr
       << "PlaylistModel::onAddingGroup, groupRow: " << groupRow
@@ -803,6 +862,8 @@ namespace yae
   void
   PlaylistModel::onAddedGroup(int groupRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onAddedGroup");
+
 #if 0
     std::cerr
       << "PlaylistModel::onAddedGroup, groupRow: " << groupRow
@@ -817,6 +878,8 @@ namespace yae
   void
   PlaylistModel::onAddingItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onAddingItem");
+
 #if 0
     std::cerr
       << "PlaylistModel::onAddingItem, groupRow: " << groupRow
@@ -833,6 +896,8 @@ namespace yae
   void
   PlaylistModel::onAddedItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onAddedItem");
+
 #if 0
     std::cerr
       << "PlaylistModel::onAddedItem, groupRow: " << groupRow
@@ -848,6 +913,8 @@ namespace yae
   void
   PlaylistModel::onRemovingGroup(int groupRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onRemovingGroup");
+
 #if 0
     std::cerr
       << "PlaylistModel::onRemovingGroup, groupRow: " << groupRow
@@ -863,6 +930,8 @@ namespace yae
   void
   PlaylistModel::onRemovedGroup(int groupRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onRemovedGroup");
+
 #if 0
     std::cerr
       << "PlaylistModel::onRemovedGroup, groupRow: " << groupRow
@@ -877,6 +946,8 @@ namespace yae
   void
   PlaylistModel::onRemovingItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onRemovingItem");
+
 #if 0
     std::cerr
       << "PlaylistModel::onRemovingItem, groupRow: " << groupRow
@@ -893,6 +964,8 @@ namespace yae
   void
   PlaylistModel::onRemovedItem(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onRemovedItem");
+
 #if 0
     std::cerr
       << "PlaylistModel::onRemovedItem, groupRow: " << groupRow
@@ -908,6 +981,8 @@ namespace yae
   void
   PlaylistModel::onPlayingChanged(std::size_t now, std::size_t prev)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onPlayingChanged");
+
 #if 0
     std::cerr
       << "PlaylistModel::onPlayingChanged: " << now
@@ -927,6 +1002,8 @@ namespace yae
   void
   PlaylistModel::onCurrentChanged(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onCurrentChanged");
+
 #if 0
     std::cerr
       << "PlaylistModel::onCurrentChanged: ("
@@ -942,6 +1019,8 @@ namespace yae
   void
   PlaylistModel::onSelectedChanged(int groupRow, int itemRow)
   {
+    YAE_BENCHMARK(benchmark, "... Model::onSelectedChanged");
+
 #if 0
     std::cerr
       << "PlaylistModel::onSelectedChanged: ("
@@ -959,6 +1038,8 @@ namespace yae
   PlaylistModel::getNode(const QModelIndex & index,
                          const PlaylistNode *& parentNode) const
   {
+    YAE_BENCHMARK(benchmark, "... Model::getNode");
+
     if (!index.isValid())
     {
       parentNode = NULL;
@@ -995,6 +1076,8 @@ namespace yae
   void
   PlaylistModel::setPlayingItem(std::size_t itemIndex)
   {
+    YAE_BENCHMARK(benchmark, "... Model::setPlayingItem");
+
     playlist_.setPlayingItem(itemIndex, true);
   }
 
@@ -1004,6 +1087,8 @@ namespace yae
   void
   PlaylistModel::emitDataChanged(Roles role, const QModelIndex & index)
   {
+    YAE_BENCHMARK(benchmark, "... Model::emitDataChanged");
+
     if (!index.isValid())
     {
       return;
@@ -1025,6 +1110,8 @@ namespace yae
                                  const QModelIndex & first,
                                  const QModelIndex & last)
   {
+    YAE_BENCHMARK(benchmark, "... Model::emitDataChanged 2");
+
 #ifdef YAE_USE_QT5
     emit dataChanged(first, last, QVector<int>(1, role));
 #else
