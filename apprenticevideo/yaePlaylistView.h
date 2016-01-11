@@ -167,7 +167,7 @@ namespace yae
     void setStyleId(StyleId styleId);
 
     // current style:
-    const PlaylistViewStyle & playlistViewStyle() const;
+    PlaylistViewStyle & playlistViewStyle() const;
 
     // restyle the view according to current style:
     void restyle();
@@ -183,7 +183,7 @@ namespace yae
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 
     // virtual:
-    void resizeTo(const Canvas * canvas);
+    bool resizeTo(const Canvas * canvas);
 
   public slots:
     // adjust scrollview position to ensure a given item is visible:

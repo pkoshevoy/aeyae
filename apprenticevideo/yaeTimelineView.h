@@ -32,6 +32,15 @@ namespace yae
   public:
     TimelineView();
 
+    // need to reference playlist view for common style info:
+    void setPlaylistView(PlaylistView * playlist);
+
+    inline PlaylistView * playlistView() const
+    { return playlist_; }
+
+    // virtual: returns false if size didn't change
+    bool resizeTo(const Canvas * canvas);
+
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
 
@@ -40,12 +49,6 @@ namespace yae
 
     inline TimelineModel * model() const
     { return model_; }
-
-    // need to reference playlist view for common style info:
-    void setPlaylistView(PlaylistView * playlist);
-
-    inline PlaylistView * playlistView() const
-    { return playlist_; }
 
   public slots:
     void modelChanged();

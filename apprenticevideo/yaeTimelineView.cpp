@@ -692,6 +692,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TimelineView::resizeTo
+  //
+  bool
+  TimelineView::resizeTo(const Canvas * canvas)
+  {
+    if (!ItemView::resizeTo(canvas))
+    {
+      return false;
+    }
+
+    if (playlist_)
+    {
+      PlaylistViewStyle & style = playlist_->playlistViewStyle();
+      requestUncache(&style);
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // TimelineView::processMouseTracking
   //
   bool

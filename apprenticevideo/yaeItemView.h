@@ -65,8 +65,8 @@ namespace yae
     // virtual:
     void requestRepaint();
 
-    // virtual:
-    void resizeTo(const Canvas * canvas);
+    // virtual: returns false if size didn't change
+    bool resizeTo(const Canvas * canvas);
 
     // virtual:
     void paint(Canvas * canvas);

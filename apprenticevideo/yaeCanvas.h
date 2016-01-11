@@ -137,7 +137,7 @@ namespace yae
       }
 
       virtual void requestRepaint() = 0;
-      virtual void resizeTo(const Canvas * canvas) = 0;
+      virtual bool resizeTo(const Canvas * canvas) = 0;
       virtual void paint(Canvas * canvas) = 0;
       virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
 

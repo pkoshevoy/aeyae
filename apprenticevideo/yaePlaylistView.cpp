@@ -1831,7 +1831,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistView::playlistViewStyle
   //
-  const PlaylistViewStyle &
+  PlaylistViewStyle &
   PlaylistView::playlistViewStyle() const
   {
     const char * style = isEnabled() ? style_.c_str() : kGridViewStyleId;
@@ -2345,10 +2345,13 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistView::resizeTo
   //
-  void
+  bool
   PlaylistView::resizeTo(const Canvas * canvas)
   {
-    ItemView::resizeTo(canvas);
+    if (!ItemView::resizeTo(canvas))
+    {
+      return false;
+    }
 
     if (model_)
     {
@@ -2363,6 +2366,8 @@ namespace yae
         ensureVisible(currentIndex);
       }
     }
+
+    return true;
   }
 
   //----------------------------------------------------------------

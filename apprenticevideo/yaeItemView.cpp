@@ -180,17 +180,26 @@ namespace yae
   //----------------------------------------------------------------
   // ItemView::resize
   //
-  void
+  bool
   ItemView::resizeTo(const Canvas * canvas)
   {
-    w_ = canvas->canvasWidth();
-    h_ = canvas->canvasHeight();
+    int w = canvas->canvasWidth();
+    int h = canvas->canvasHeight();
+
+    if (w == w_ && h_ == h)
+    {
+      return false;
+    }
+
+    w_ = w;
+    h_ = h;
 
     Item & root = *root_;
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
 
     requestUncache(&root);
+    return true;
   }
 
   //----------------------------------------------------------------
