@@ -718,7 +718,37 @@ namespace yae
   TimelineView::processMouseTracking(const TVec2D & mousePt)
   {
     (void)mousePt;
-    return isEnabled();
+
+    if (!this->isEnabled())
+    {
+      return false;
+    }
+
+    Item & root = *root_;
+    Item & timeline = root["timeline"];
+
+    Item & timelineIn = timeline["timelineIn"];
+    requestUncache(&timelineIn);
+
+    Item & timelinePlayhead = timeline["timelinePlayhead"];
+    requestUncache(&timelinePlayhead);
+
+    Item & timelineOut = timeline["timelineOut"];
+    requestUncache(&timelineOut);
+
+    Item & timelineEnd = timeline["timelineEnd"];
+    requestUncache(&timelineEnd);
+
+    Item & inPoint = root["inPoint"];
+    requestUncache(&inPoint);
+
+    Item & playhead = root["playhead"];
+    requestUncache(&playhead);
+
+    Item & outPoint = root["outPoint"];
+    requestUncache(&outPoint);
+
+    return true;
   }
 
   //----------------------------------------------------------------

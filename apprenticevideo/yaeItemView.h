@@ -86,6 +86,19 @@ namespace yae
     virtual bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
     virtual bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
 
+    // override this to receive mouse movement notification
+    // regardless whether any mouse buttons are pressed:
+    virtual bool processMouseTracking(const TVec2D & mousePt);
+
+    // accessor to last-known mouse position:
+    inline const TVec2D & mousePt() const
+    { return mousePt_; }
+
+    // virtual:
+    TImageProviderPtr
+    getImageProvider(const QString & imageUrl, QString & imageId) const
+    { return lookupImageProvider(imageProviders(), imageUrl, imageId); }
+
     void addImageProvider(const QString & providerId,
                           const TImageProviderPtr & p);
 
@@ -101,20 +114,6 @@ namespace yae
 
     inline double height() const
     { return h_; }
-
-    // virtual:
-    TImageProviderPtr
-    getImageProvider(const QString & imageUrl, QString & imageId) const
-    { return lookupImageProvider(imageProviders(), imageUrl, imageId); }
-
-    // override this to receive mouse movement notification
-    // regardless whether any mouse buttons are pressed:
-    virtual bool processMouseTracking(const TVec2D & mousePt)
-    { (void)mousePt; return false; }
-
-    // accessor to last-known mouse position:
-    inline const TVec2D & mousePt() const
-    { return mousePt_; }
 
   public slots:
     void repaint();

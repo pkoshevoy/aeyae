@@ -668,6 +668,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemView::processMouseTracking
+  //
+  bool
+  ItemView::processMouseTracking(const TVec2D & mousePt)
+  {
+    (void)mousePt;
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // ItemView::addImageProvider
   //
   void
