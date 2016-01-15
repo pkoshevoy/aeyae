@@ -328,7 +328,7 @@ namespace yae
 
     if (testStream)
     {
-      Pa_StopStream(testStream);
+      // boost::this_thread::sleep(boost::posix_time::milliseconds(16));
       Pa_CloseStream(testStream);
       testStream = NULL;
     }
