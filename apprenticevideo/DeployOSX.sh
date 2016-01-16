@@ -776,7 +776,7 @@ DeployAppBundle()
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 
-	find Plug-ins -type f -print 2>/dev/null | grep MacOS | while read i; do
+	find PlugIns -type f -name 'aeyae-plugin-*.yae' -print 2>/dev/null |  while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
 		if [ $EXITCODE != 0 ]; then
@@ -786,7 +786,17 @@ DeployAppBundle()
 	done
 	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
 
-	find Plug-ins -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
+	find PlugIns -type f -print 2>/dev/null | grep MacOS | while read i; do
+		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
+		EXITCODE=$?
+		if [ $EXITCODE != 0 ]; then
+			rm -f "${DONELIST}"
+			exit $EXITCODE;
+		fi
+	done
+	EXITCODE=$?; if [ $EXITCODE != 0 ]; then exit $EXITCODE; fi
+
+	find PlugIns -type f -path '*/Versions/*/*' -print 2>/dev/null | grep -v Resources | while read i; do
 		DeployFileOnce "${BASE}" "${i}" "${DONELIST}"
 		EXITCODE=$?
 		if [ $EXITCODE != 0 ]; then
