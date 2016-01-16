@@ -618,6 +618,9 @@ namespace yae
     sliderOutPoint.anchors_.offset(outPoint, -1, 0, -1, 0);
 
     QFont timecodeFont("");
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
+    timecodeFont.setHintingPreference(QFont::PreferFullHinting);
+#endif
 #if 1
     timecodeFont.setFamily("Menlo, "
                            "Monaco, "
@@ -632,7 +635,10 @@ namespace yae
 
     timecodeFont.setStyleHint(QFont::Monospace);
     timecodeFont.setFixedPitch(true);
-    timecodeFont.setStyleStrategy(QFont::OpenGLCompatible);
+    timecodeFont.setStyleStrategy((QFont::StyleStrategy)
+                                  (QFont::PreferOutline |
+                                   QFont::PreferAntialias |
+                                   QFont::OpenGLCompatible));
 
     Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
     Text & playheadAux = container.addNew<Text>("playheadAux");
