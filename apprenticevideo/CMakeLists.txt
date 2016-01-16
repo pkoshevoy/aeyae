@@ -651,14 +651,16 @@ if (WIN32)
   add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
     COMMAND wixWrapper
     ARGS
-    $<TARGET_FILE:${PROGNAME}>
-    "${NATIVE_PROGRAM_ICON}"
-    "http://sourceforge.net/projects/apprenticevideo/"
-    "${NATIVE_DEPENDS_EXE}"
-    "${NATIVE_ALLOWED_PATHS}"
-    "${NATIVE_CANDLE_EXE}"
-    "${NATIVE_LIGHT_EXE}"
-    "${NATIVE_VC_CRT_MSM}"
+    "-dep-walker" "${NATIVE_DEPENDS_EXE}"
+    "-allow" "$<TARGET_FILE_DIR:${PROGNAME}>;${NATIVE_ALLOWED_PATHS}"
+    "-wix-candle" "${NATIVE_CANDLE_EXE}"
+    "-wix-light" "${NATIVE_LIGHT_EXE}"
+    "-vc-redist" "${NATIVE_VC_CRT_MSM}"
+    "-icon" "${NATIVE_PROGRAM_ICON}"
+    "-url" "http://sourceforge.net/projects/apprenticevideo/"
+    "-deploy" $<TARGET_FILE:${PROGNAME}>
+    "-deploy" $<TARGET_FILE:yae_reader_ffmpeg>
+    "-deploy" $<TARGET_FILE:aeyae>
     DEPENDS ${PROGNAME} wixWrapper
     COMMENT "create installer package"
     )

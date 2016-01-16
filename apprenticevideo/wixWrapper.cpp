@@ -127,56 +127,29 @@ tolower(const std::string & src)
 }
 
 //----------------------------------------------------------------
-// main
+// has
 //
-int
-main(int argc, char ** argv)
+template <typename TDataContainer, typename TData>
+bool
+has(const TDataContainer & container, const TData & value)
 {
-  for (int i = 0; i < argc; i++)
-  {
-    std::cerr << i << '\t' << argv[i] << std::endl;
-  }
+  typename TDataContainer::const_iterator found =
+    std::find(container.begin(), container.end(), value);
 
-  // get runtime parameters:
-  if (argc != 9)
-  {
-    std::cerr << "USAGE: " << argv[0]
-              << " module pathToIconFile helpLinkURL"
-              << " pathToDependsExe dlls;allowed;search;path;list"
-              << " pathWixCandleExe pathWixLightExe "
-              << " pathVCRedistMsm"
-              << std::endl;
-    return 1;
-  }
+  return found != container.end();
+}
 
+//----------------------------------------------------------------
+// parse_depends_log
+//
+static void
+get_dependencies(std::vector<std::string> & deps,
+                 const std::string & dependsExe,
+                 const std::list<std::string> & allowed,
+                 const std::string & module)
+{
   std::string dependsLog("depends-exe-log.txt");
-  std::string module = fs::path(argv[1]).make_preferred().string();
-  std::string iconFile(argv[2]);
-  std::string helpLink(argv[3]);
-  std::string dependsExe(argv[4]);
-  std::string allowedPaths(argv[5]);
-  std::string wixCandleExe(argv[6]);
-  std::string wixLightExe(argv[7]);
-  std::string vcRedistMsm(argv[8]);
-
-  // call depends.exe:
   {
-    std::string path;
-    const char * pathEnv = getenv("PATH");
-    if (pathEnv)
-    {
-      path = pathEnv;
-    }
-
-    std::size_t pathSize = path.size();
-    if (pathSize && path[pathSize - 1] != ';')
-    {
-      path += ';';
-    }
-
-    path += allowedPaths;
-    _putenv((std::string("PATH=") + path).c_str());
-
     std::ostringstream os;
     os << dependsExe << " /c /a:0 /f:1 /ot:" << dependsLog << " " << module;
 
@@ -187,36 +160,18 @@ main(int argc, char ** argv)
     std::cerr << dependsExe << " returned: " << r << std::endl;
   }
 
-  // parse allowed paths:
-  std::string head;
-  std::string tail;
-
-  std::list<std::string> allowed;
-  while (allowedPaths.size())
-  {
-    if (detect(";", allowedPaths, head, tail))
-    {
-      if (head.size() > 1)
-      {
-        allowed.push_back(tolower(head.substr(0, head.size() - 1)));
-      }
-
-      allowedPaths = tail;
-    }
-    else
-    {
-      allowed.push_back(tolower(allowedPaths));
-      break;
-    }
-  }
-
   // parse depends.exe log:
   FILE * in = fopen(dependsLog.c_str(), "rb");
-  std::vector<std::string> deps;
-  deps.push_back(module);
+  if (!has(deps, module))
+  {
+    deps.push_back(module);
+  }
 
+  std::string head;
+  std::string tail;
   std::list<char> tmpAcc;
   TState state = kParsing;
+
   while (in)
   {
     char ch = 0;
@@ -276,8 +231,12 @@ main(int argc, char ** argv)
             const std::string & pfx = *i;
             if (detect(pfx.c_str(), path, head, tail))
             {
-              std::cerr << "depends: " << path << std::endl;
-              deps.push_back(path);
+              if (!has(deps, path))
+              {
+                std::cerr << "depends: " << path << std::endl;
+                deps.push_back(path);
+              }
+
               break;
             }
           }
@@ -291,11 +250,245 @@ main(int argc, char ** argv)
     fclose(in);
     in = NULL;
   }
+}
+
+//----------------------------------------------------------------
+// append_path
+//
+static void
+append_path(std::string & paths, const std::string & path)
+{
+  if (!paths.empty())
+  {
+    paths += ';';
+  }
+
+  paths += path;
+}
+
+//----------------------------------------------------------------
+// usage
+//
+static void
+usage(char ** argv, const char * message = NULL)
+{
+  std::cerr
+    << "USAGE: " << argv[0]
+    << " -dep-walker pathToDependsExe"
+    << " -allow dlls;allowed;search;path;list"
+    << " -wix-candle pathWixCandleExe"
+    << " -wix-light pathWixLightExe"
+    << " -vc-redist pathVCRedistMsm"
+    << " -icon pathToIconFile"
+    << " -url helpLinkURL"
+    << " -deploy pathto.exe [pathto.dll]*"
+    << std::endl;
+
+  if (message != NULL)
+  {
+    std::cerr << "ERROR: " << message << std::endl;
+  }
+
+  std::cerr << "VERSION: " << YAE_REVISION_TIMESTAMP
+            << std::endl;
+  ::exit(1);
+}
+
+//----------------------------------------------------------------
+// main
+//
+int
+main(int argc, char ** argv)
+{
+  // dump command line to stderr, for easier troubleshooting:
+  {
+    for (int i = 0; i < argc; i++)
+    {
+      std::cerr << argv[i] << ' ';
+    }
+    std::cerr << std::endl;
+  }
+
+  // get runtime parameters:
+  std::string dependsExe;
+  std::string allowedPaths;
+  std::string vcRedistMsm;
+  std::string wixCandleExe;
+  std::string wixLightExe;
+  std::string iconFile;
+  std::string helpLink;
+  std::list<std::string> deploy;
+
+  for (int i = 1; i < argc; i++)
+  {
+    if (strcmp(argv[i], "-dep-walker") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -dep-walker parameter");
+      i++;
+      dependsExe.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-allow") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -allow parameter");
+      i++;
+      allowedPaths.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-vc-redist") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -vc-redist parameter");
+      i++;
+      vcRedistMsm.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-wix-candle") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -wix-candle parameter");
+      i++;
+      wixCandleExe.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-wix-light") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -wix-light parameter");
+      i++;
+      wixLightExe.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-icon") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -icon parameter");
+      i++;
+      iconFile.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-url") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -url parameter");
+      i++;
+      helpLink.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-deploy") == 0)
+    {
+      if ((argc - i) <= 1) usage(argv, "malformed -deploy parameter");
+      i++;
+      std::string path = tolower(fs::path(argv[i]).make_preferred().string());
+      if (!has(deploy, path))
+      {
+        deploy.push_back(path);
+      }
+    }
+    else if (!(deploy.empty() || argv[i][0] == '-'))
+    {
+      std::string path = tolower(fs::path(argv[i]).make_preferred().string());
+      if (!has(deploy, path))
+      {
+        deploy.push_back(path);
+      }
+    }
+    else
+    {
+      usage(argv, argv[i]);
+    }
+  }
+
+  if (deploy.empty())
+  {
+    usage(argv, "missing -deploy parameter");
+  }
+
+  if (dependsExe.empty())
+  {
+    usage(argv, "missing -dep-walker parameter");
+  }
+
+  if (vcRedistMsm.empty())
+  {
+    usage(argv, "missing -vc-redist parameter");
+  }
+
+  if (wixCandleExe.empty())
+  {
+    usage(argv, "missing -wix-candle parameter");
+  }
+
+  if (wixLightExe.empty())
+  {
+    usage(argv, "missing -wix-light parameter");
+  }
+
+  if (iconFile.empty())
+  {
+    usage(argv, "missing -icon parameter");
+  }
+
+  if (helpLink.empty())
+  {
+    usage(argv, "missing -url parameter");
+  }
+
+  // parse allowed paths:
+  std::list<std::string> allowed;
+  {
+    std::string nativePaths;
+    std::string paths = allowedPaths;
+    std::string head;
+    std::string tail;
+
+    while (paths.size())
+    {
+      if (detect(";", paths, head, tail))
+      {
+        if (head.size() > 1)
+        {
+          std::string path = tolower(head.substr(0, head.size() - 1));
+          path = fs::path(path).make_preferred().string();
+          allowed.push_back(path);
+          append_path(nativePaths, path);
+        }
+
+        paths = tail;
+      }
+      else
+      {
+        std::string path = tolower(paths);
+        path = fs::path(path).make_preferred().string();
+        allowed.push_back(path);
+        append_path(nativePaths, path);
+        break;
+      }
+    }
+
+    allowedPaths = nativePaths;
+  }
+
+  // add allowed paths to env PATH, so Dependency Walker would search there:
+  {
+    std::string path;
+    const char * pathEnv = getenv("PATH");
+    if (pathEnv)
+    {
+      path = pathEnv;
+    }
+
+    std::size_t pathSize = path.size();
+    if (pathSize && path[pathSize - 1] != ';')
+    {
+      path += ';';
+    }
+
+    path += allowedPaths;
+    _putenv((std::string("PATH=") + path).c_str());
+  }
+
+  // call depends.exe:
+  std::vector<std::string> deps;
+  for (std::list<std::string>::iterator
+         i = deploy.begin(); i != deploy.end(); ++i)
+  {
+    const std::string & module = *i;
+    get_dependencies(deps, dependsExe, allowed, module);
+  }
 
   std::string installerName;
   {
     std::ostringstream os;
-    os << "apprenticevideo-r" << YAE_REVISION_TIMESTAMP;
+    os << "apprenticevideo-" << YAE_REVISION;
 #ifdef _WIN64
     os << "-win32-x64";
 #else
