@@ -96,6 +96,12 @@ namespace yae
   getCurrentExecutableFolder(std::string & exeFolderPathUtf8);
 
   //----------------------------------------------------------------
+  // getCurrentExecutablePluginsFolder
+  //
+  YAE_API bool
+  getCurrentExecutablePluginsFolder(std::string & pluginsFolderPathUtf8);
+
+  //----------------------------------------------------------------
   // loadLibrary
   //
   YAE_API void *

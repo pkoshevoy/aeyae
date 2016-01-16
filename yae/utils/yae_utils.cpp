@@ -454,6 +454,34 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getCurrentExecutablePluginsFolder
+  //
+  bool
+  getCurrentExecutablePluginsFolder(std::string & pluginPathUtf8)
+  {
+    std::string exeFolderUtf8;
+    if (!getCurrentExecutableFolder(exeFolderUtf8))
+    {
+      return false;
+    }
+
+#ifdef __APPLE__
+    std::string macos;
+    if (!parseFilePath(exeFolderUtf8, pluginPathUtf8, macos) ||
+        macos != "MacOS")
+    {
+      return false;
+    }
+
+    pluginPathUtf8 += "/PlugIns";
+#else
+    pluginPathUtf8 = exeFolderUtf8;
+#endif
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // loadLibrary
   //
   void *

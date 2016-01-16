@@ -208,9 +208,9 @@ mainMayThrowException(int argc, char ** argv)
   yae::IReaderPtr readerPrototype;
 
   // load plugins:
-  std::string exeFolderPath;
-  if (yae::getCurrentExecutableFolder(exeFolderPath) &&
-      plugins.load(exeFolderPath.c_str()))
+  std::string pluginsFolderPath;
+  if (yae::getCurrentExecutablePluginsFolder(pluginsFolderPath) &&
+      plugins.load(pluginsFolderPath.c_str()))
   {
     std::list<yae::IReaderPtr> readers;
     if (plugins.find<yae::IReader>(readers))
@@ -223,7 +223,7 @@ mainMayThrowException(int argc, char ** argv)
   {
     std::cerr
       << "ERROR: failed to find IReader plugin here: "
-      << exeFolderPath
+      << pluginsFolderPath
       << std::endl;
     return -1;
   }

@@ -307,11 +307,14 @@ PrepForDeployment()
 	shift 1
 
 	# deploy Qt plugins manually:
-	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
-		pwd
-
+	mkdir -p "${BUNDLE_PATH}"/Contents/PlugIns
+	quiet_pushd "${BUNDLE_PATH}"/Contents/PlugIns
 		echo $CP "${PWD}/../../../aeyae-plugin-reader-ffmpeg.yae" .
 		$CP "${PWD}/../../../aeyae-plugin-reader-ffmpeg.yae" . || exit -1
+	quiet_popd
+
+	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
+		pwd
 
 		find . -type f -print | while read i; do
 
@@ -839,8 +842,9 @@ if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
 	IS_QT4=$(./qmake -query | grep "QT_VERSION:4")
 
 	if [ -n "${IS_QT4}" ]; then
-		./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
-		  -no-strip
+		#./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		#  -no-strip
+		echo "Qt4 macdeploy breaks codesigning, skipping it..."
 	else
 		./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
 		  -no-strip \
