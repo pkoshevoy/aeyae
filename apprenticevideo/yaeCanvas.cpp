@@ -1074,7 +1074,7 @@ namespace yae
       if (overlay_ && overlay_->pixelTraits())
       {
         YAE_OGL_11(glEnable(GL_BLEND));
-        YAE_OGL_11(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+        YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
         paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
         YAE_OGL_11(glDisable(GL_BLEND));
       }
