@@ -3717,17 +3717,17 @@ namespace yae
     int key = event->key();
     if (key == Qt::Key_Escape)
     {
-      if (actionShowPlaylist->isChecked())
+      if (isFullScreen())
+      {
+        exitFullScreen();
+      }
+      else if (actionShowPlaylist->isChecked())
       {
         actionShowPlaylist->trigger();
       }
       else if (actionShowTimeline->isChecked())
       {
         actionShowTimeline->trigger();
-      }
-      else
-      {
-        exitFullScreen();
       }
     }
     else if (key == Qt::Key_I)
