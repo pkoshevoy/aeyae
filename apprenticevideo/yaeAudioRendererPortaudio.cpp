@@ -276,6 +276,12 @@ namespace yae
       return;
     }
 
+    if (output_)
+    {
+      YAE_ASSERT(!output_);
+      return;
+    }
+
     if (srcAtts.channelFormat_ == kAudioChannelsPlanar)
     {
       // packed sample format is preferred:

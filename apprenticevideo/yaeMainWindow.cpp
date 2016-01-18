@@ -1174,7 +1174,14 @@ namespace yae
     bool resumeFromBookmark = actionResumeFromBookmark->isChecked();
 
     std::list<BookmarkHashInfo> hashInfo;
-    playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+    {
+      BlockSignal block(&playlistModel_,
+                        SIGNAL(playingItemChanged(const QModelIndex &)),
+                        this,
+                        SLOT(setPlayingItem(const QModelIndex &)));
+
+      playlistModel_.add(playlist, resumeFromBookmark ? &hashInfo : NULL);
+    }
 
     if (!beginPlaybackImmediately)
     {
@@ -1465,6 +1472,12 @@ namespace yae
     // disconnect timeline from renderers:
     timelineModel_.observe(SharedClock());
 
+    // shut down the audio renderer before calling adjustAudioTraitsOverride,
+    // hopefully that will avoid triggering the portaudio deadlock:
+    reader_->close();
+    videoRenderer_->close();
+    audioRenderer_->close();
+
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     std::size_t subsCount = reader->subsCount();
@@ -1580,10 +1593,6 @@ namespace yae
     }
 
     adjustMenus(reader.get());
-
-    reader_->close();
-    videoRenderer_->close();
-    audioRenderer_->close();
 
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
