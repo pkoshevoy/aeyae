@@ -166,11 +166,14 @@ namespace yae
     if (reader->isSeekable() && reader->getVideoDuration(start, duration))
     {
       double t0 = start.toSeconds();
-      // double offset = std::min<double>(duration.toSeconds() * 2e-2, 90.0);
       double offset = std::min<double>(duration.toSeconds() * 8e-2, 288.0);
 
-      // FIXME: check for a bookmark, seek to the bookmarked position:
-      reader->seek(t0 + offset);
+      // avoid seeking very short files (.jpg):
+      if (offset >= 0.016)
+      {
+        // FIXME: check for a bookmark, seek to the bookmarked position:
+        reader->seek(t0 + offset);
+      }
     }
 
     ISettingGroup * readerSettings = reader->settings();
