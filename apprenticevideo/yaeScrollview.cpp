@@ -120,7 +120,7 @@ namespace yae
     }
 
     origin.x() = xExtent.origin_;
-    origin.y() = yExtent.origin_ - dy;
+    origin.y() = floor(yExtent.origin_ - dy);
     xView = Segment(0.0, xExtent.length_);
     yView = Segment(dy, yExtent.length_);
   }
