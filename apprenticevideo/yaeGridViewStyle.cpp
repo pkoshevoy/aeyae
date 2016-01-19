@@ -92,15 +92,16 @@ namespace yae
   GridViewStyle::GridViewStyle(const char * id, PlaylistView & playlist):
     PlaylistViewStyle(id, playlist)
   {
-    // main font:
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_large_.setHintingPreference(QFont::PreferFullHinting);
+    font_small_.setHintingPreference(QFont::PreferFullHinting);
 #endif
-    font_large_.setStyleHint(QFont::SansSerif);
-    font_large_.setStyleStrategy((QFont::StyleStrategy)
+    font_small_.setStyleHint(QFont::SansSerif);
+    font_small_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |
                                   QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
+    // main font:
+    font_large_ = font_small_;
 
     static bool hasImpact =
       QFontInfo(QFont("impact")).family().

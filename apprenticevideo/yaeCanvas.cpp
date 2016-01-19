@@ -1641,19 +1641,18 @@ namespace yae
     painter.setPen(QColor(0x7f, 0x7f, 0x7f, 0x7f));
 
     QFont ft;
+    ft.setStyleHint(QFont::SansSerif);
+    ft.setStyleStrategy((QFont::StyleStrategy)
+                        (QFont::PreferOutline |
+                         QFont::PreferAntialias |
+                         QFont::OpenGLCompatible));
     int px = std::max<int>(12, 56.0 * std::min<double>(w / max_w, h / max_h));
     ft.setPixelSize(px);
     painter.setFont(ft);
 
     int textAlignment = Qt::TextWordWrap | Qt::AlignCenter;
     QRect canvasBBox = subsFrm.rect();
-
-    std::string text(greeting_.toUtf8().constData());
-    if (!drawPlainText(text, painter, canvasBBox, textAlignment))
-    {
-      return false;
-    }
-
+    drawTextToFit(painter, canvasBBox, textAlignment, greeting_);
     painter.end();
 
     VideoTraits & vtts = vf->traits_;
