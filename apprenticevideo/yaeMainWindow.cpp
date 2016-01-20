@@ -3216,7 +3216,7 @@ namespace yae
     {
       // repeat the playlist:
       QModelIndex first = playlistModel_.firstItem();
-      playlistModel_.setPlayingItem(first);
+      playback(first);
       return;
     }
 
