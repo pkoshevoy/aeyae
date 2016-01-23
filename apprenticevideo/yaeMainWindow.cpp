@@ -403,9 +403,11 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
+    playerWidget_->append(&controlsView_);
     timelineView_.setPlaylistView(&playlistView_);
     playlistView_.setModel(&playlistModel_);
     timelineView_.setModel(&timelineModel_);
+    controlsView_.setup(this, &playlistView_);
 
     // add image://thumbnails/... provider:
     boost::shared_ptr<ThumbnailProvider>

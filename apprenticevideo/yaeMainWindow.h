@@ -32,6 +32,7 @@
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasWidget.h"
 #endif
+#include "yaeControlsView.h"
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
@@ -136,6 +137,9 @@ namespace yae
     // specify a playlist of files to load:
     void setPlaylist(const std::list<QString> & playlist,
                      bool beginPlaybackImmediately = true);
+
+    inline bool isPlaybackPaused() const
+    { return playbackPaused_; }
 
   signals:
     void setInPoint();
@@ -356,6 +360,7 @@ namespace yae
     Canvas * canvas_;
     PlaylistView playlistView_;
     TimelineView timelineView_;
+    ControlsView controlsView_;
     TimelineModel timelineModel_;
     TPlaylistModel playlistModel_;
 

@@ -19,18 +19,17 @@ namespace yae
   //----------------------------------------------------------------
   // TexturedRect
   //
-  class TexturedRect : public Item
+  struct TexturedRect : public Item
   {
-    TexturedRect(const TexturedRect &);
-    TexturedRect & operator = (const TexturedRect &);
+    TexturedRect(const char * id);
 
-  public:
-    TexturedRect(const char * id, const Texture & texture);
+    // virtual:
+    void uncache();
 
     // virtual:
     void paintContent() const;
 
-    const Texture & texture_;
+    TTextureRef texture_;
   };
 
 }

@@ -19,10 +19,19 @@ namespace yae
   //----------------------------------------------------------------
   // TexturedRect::TexturedRect
   //
-  TexturedRect::TexturedRect(const char * id, const Texture & texture):
-    Item(id),
-    texture_(texture)
+  TexturedRect::TexturedRect(const char * id):
+    Item(id)
   {}
+
+  //----------------------------------------------------------------
+  // TexturedRect::uncache
+  //
+  void
+  TexturedRect::uncache()
+  {
+    texture_.uncache();
+    Item::uncache();
+  }
 
   //----------------------------------------------------------------
   // TexturedRect::paintContent
@@ -30,9 +39,17 @@ namespace yae
   void
   TexturedRect::paintContent() const
   {
+    const TTexturePtr & texturePtr = texture_.get();
+    if (!texturePtr)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const Texture & texture = *texturePtr;
     double u1 = 0.0;
     double v1 = 0.0;
-    if (!texture_.bind(u1, v1))
+    if (!texture.bind(u1, v1))
     {
       return;
     }
@@ -62,6 +79,6 @@ namespace yae
     }
     YAE_OGL_11(glEnd());
 
-    texture_.unbind();
+    texture.unbind();
   }
 }

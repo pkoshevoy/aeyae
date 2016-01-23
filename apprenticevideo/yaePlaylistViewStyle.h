@@ -16,6 +16,7 @@
 // local interfaces:
 #include "yaeColor.h"
 #include "yaePlaylistView.h"
+#include "yaeTexture.h"
 
 
 namespace yae
@@ -23,7 +24,6 @@ namespace yae
 
   // forward declarations:
   class PlaylistView;
-  class Texture;
   class Text;
 
 
@@ -42,6 +42,18 @@ namespace yae
                const Color & background = Color(0x000000, 0.0),
                double thickness = 0.2);
 
+  //----------------------------------------------------------------
+  // triangleImage
+  //
+  // create an image of an equilateral triangle inscribed within
+  // an invisible circle of diameter w, and rotated about the center
+  // of the circle by a given rotation angle (expressed in degrees):
+  //
+  YAE_API QImage
+  triangleImage(unsigned int w,
+                const Color & color,
+                const Color & background = Color(0x0000000, 0.0),
+                double rotateAngle = 0.0);
 
   //----------------------------------------------------------------
   // PlaylistViewStyle
@@ -55,7 +67,6 @@ namespace yae
 
     // shared common properties:
     Item & title_height_;
-    Texture & xbutton_;
     Item & cell_width_;
     Item & cell_height_;
     Item & font_size_;
@@ -153,6 +164,11 @@ namespace yae
     TGradientPtr filter_shadow_;
     TGradientPtr timeline_shadow_;
 
+    // textures:
+    TTexturePtr xbutton_;
+    TTexturePtr collapsed_;
+    TTexturePtr expanded_;
+
     // layout delegates:
     TPlaylistViewLayoutPtr layout_root_;
     TPlaylistViewLayoutPtr layout_group_;
@@ -194,6 +210,63 @@ namespace yae
     {
       const PlaylistViewStyle & style = playlist_.playlistViewStyle();
       result = style.timeline_shadow_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleXbuttonTexture
+  //
+  struct StyleXbuttonTexture : public TTextureExpr
+  {
+    StyleXbuttonTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.xbutton_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleCollapsedTexture
+  //
+  struct StyleCollapsedTexture : public TTextureExpr
+  {
+    StyleCollapsedTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.collapsed_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleExpandedTexture
+  //
+  struct StyleExpandedTexture : public TTextureExpr
+  {
+    StyleExpandedTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.expanded_;
     }
 
     const PlaylistView & playlist_;

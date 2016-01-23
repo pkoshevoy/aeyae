@@ -197,8 +197,25 @@ namespace yae
       title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
 
     // generate an x-button texture:
-    QImage img = xbuttonImage(32, fg_xbutton_, bg_xbutton_.transparent());
-    xbutton_.setImage(img);
+    {
+      QImage img =
+        xbuttonImage(128, fg_xbutton_, bg_xbutton_.transparent());
+      xbutton_->setImage(img);
+    }
+
+    // generate collapsed group button texture:
+    {
+      QImage img =
+        triangleImage(128, fg_xbutton_, bg_xbutton_.transparent(), 90.0);
+      collapsed_->setImage(img);
+    }
+
+    // generate expanded group button texture:
+    {
+      QImage img =
+        triangleImage(128, fg_xbutton_, bg_xbutton_.transparent(), 180.0);
+      expanded_->setImage(img);
+    }
 
     cell_width_.width_ = cell_width_.
       addExpr(new GridCellWidth(playlist_), 1.0, -2.0);

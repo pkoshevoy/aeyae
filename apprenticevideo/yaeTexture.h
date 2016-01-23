@@ -84,6 +84,21 @@ namespace yae
     TPrivate * p_;
   };
 
+  //----------------------------------------------------------------
+  // TTexturePtr
+  //
+  typedef boost::shared_ptr<Texture> TTexturePtr;
+
+  //----------------------------------------------------------------
+  // TTextureRef
+  //
+  typedef DataRef<TTexturePtr> TTextureRef;
+
+  //----------------------------------------------------------------
+  // TTextureExpr
+  //
+  typedef Expression<TTexturePtr> TTextureExpr;
+
 }
 
 
