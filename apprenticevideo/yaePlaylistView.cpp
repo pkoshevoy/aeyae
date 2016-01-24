@@ -618,7 +618,8 @@ namespace yae
     Item & icon = filter.addNew<Item>("filter_icon");
     {
       RoundRect & circle = icon.addNew<RoundRect>("circle");
-      circle.anchors_.hcenter_ = ItemRef::scale(filter, kPropertyHeight, 1.5);
+      circle.anchors_.hcenter_ =
+        ItemRef::reference(filter, kPropertyHeight, 1.5, -4);
       circle.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
       circle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
       circle.height_ = circle.width_;
