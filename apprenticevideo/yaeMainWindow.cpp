@@ -2399,6 +2399,8 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
+    controlsView_.controlsChanged();
+
     bool showTimeline = actionShowTimeline->isChecked();
 
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET

@@ -816,7 +816,7 @@ namespace yae
     if (anchors_.bottom_.isValid())
     {
       double b = anchors_.bottom_.get();
-      b += margins_.bottom_.get();
+      b -= margins_.bottom_.get();
       return b;
     }
 

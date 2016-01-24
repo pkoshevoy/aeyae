@@ -144,6 +144,9 @@ namespace yae
     inline bool isPlaylistVisible() const
     { return actionShowPlaylist->isChecked(); }
 
+    inline bool isTimelineVisible() const
+    { return actionShowTimeline->isChecked(); }
+
   signals:
     void setInPoint();
     void setOutPoint();

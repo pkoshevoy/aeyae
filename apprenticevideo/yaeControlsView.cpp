@@ -27,24 +27,72 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // ControlsVisible
+  // ExposePlaylist
   //
-  struct ControlsVisible : public TBoolExpr
+  struct ExposePlaylist : public TBoolExpr
   {
-    ControlsVisible(ControlsView & view, Item & controls):
+    ExposePlaylist(ControlsView & view, Item & item):
       view_(view),
-      controls_(controls)
+      item_(item)
     {}
 
     // virtual:
     void evaluate(bool & result) const
     {
       const TVec2D & pt = view_.mousePt();
-      result = controls_.overlaps(pt);
+      result = (view_.mainWindow_ == NULL ||
+                view_.mainWindow_->isPlaylistVisible() ||
+                view_.mainWindow_->isTimelineVisible() ||
+                item_.overlaps(pt));
     }
 
     ControlsView & view_;
-    Item & controls_;
+    Item & item_;
+  };
+
+  //----------------------------------------------------------------
+  // ExposeControls
+  //
+  struct ExposeControls : public TBoolExpr
+  {
+    ExposeControls(ControlsView & view, Item & item):
+      view_(view),
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      const TVec2D & pt = view_.mousePt();
+      result = (view_.mainWindow_ == NULL ||
+                (!view_.mainWindow_->isPlaylistVisible() &&
+                 item_.overlaps(pt)));
+    }
+
+    ControlsView & view_;
+    Item & item_;
+  };
+
+  //----------------------------------------------------------------
+  // OnTimelineVisible
+  //
+  struct OnTimelineVisible : public TBoolExpr
+  {
+    OnTimelineVisible(ControlsView & view, bool result):
+      view_(view),
+      result_(result)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool visible = (view_.mainWindow_ == NULL ||
+                      view_.mainWindow_->isPlaylistVisible());
+      result = visible ? result_ : !result_;
+    }
+
+    ControlsView & view_;
+    bool result_;
   };
 
   //----------------------------------------------------------------
@@ -93,7 +141,6 @@ namespace yae
 
     ControlsView & view_;
   };
-
 
   //----------------------------------------------------------------
   // OnPlaylistVisible
@@ -147,7 +194,7 @@ namespace yae
   // ControlsView::ControlsView
   //
   ControlsView::ControlsView():
-    ItemView("controls"),
+    ItemView("controls_view"),
     mainWindow_(NULL),
     playlist_(NULL)
   {}
@@ -186,13 +233,15 @@ namespace yae
 
 
     Item & playlistButton = root.addNew<Item>("playlistButton");
+    TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));
     {
+      playlistButton.visible_ = playlistButton.
+        addExpr(new ExposePlaylist(*this, playlistToggle));
+      playlistButton.visible_.cachingEnabled_ = false;
       playlistButton.anchors_.top_ =
         ItemRef::offset(root, kPropertyTop, 2);
-
       playlistButton.anchors_.left_ =
         ItemRef::reference(root, kPropertyLeft);
-
       playlistButton.width_ = playlistButton.
         addExpr(new StyleTitleHeight(*playlist), 1.5);
       playlistButton.height_ = playlistButton.width_;
@@ -210,31 +259,32 @@ namespace yae
                                           0.2));
       gridOff.visible_ = gridOff.addExpr(new OnPlaylistVisible(*this, false));
       gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(*playlist));
+
+      playlistToggle.anchors_.fill(playlistButton);
     }
 
-    TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));
-    playlistToggle.anchors_.fill(playlistButton);
 
-
-    Item & container = root.addNew<Item>("container");
-    container.anchors_.fill(root);
-    container.anchors_.top_.reset();
-    container.height_ = container.
-      addExpr(new StyleTitleHeight(*playlist), 1.5);
-
-    Rectangle & controls = root.addNew<Rectangle>("controls");
-    controls.anchors_.hcenter_ =
-      ItemRef::reference(container, kPropertyHCenter);
+    RoundRect & controls = root.addNew<RoundRect>("controls");
+    Item & mouseDetect = root.addNew<Item>("mouse_detect");
+    MouseTrap & mouseTrap = controls.addNew<MouseTrap>("mouse_trap");
     controls.anchors_.vcenter_ =
-      ItemRef::reference(container, kPropertyVCenter);
+      ItemRef::reference(root, kPropertyVCenter);
+    controls.anchors_.hcenter_ =
+      ItemRef::reference(root, kPropertyHCenter);
     controls.height_ = controls.
-      addExpr(new StyleTitleHeight(*playlist, 0.8, 0.0, true));
+      addExpr(new StyleTitleHeight(*playlist), 3.0);
+    controls.visible_ = controls.
+      addExpr(new ExposeControls(*this, mouseDetect));
+    controls.visible_.cachingEnabled_ = false;
+    mouseTrap.anchors_.fill(controls);
 
-    double cells = 6.0;
+    double cells = 2.0;
     controls.width_ = ItemRef::scale(controls, kPropertyHeight, cells);
+    controls.radius_ = ItemRef::scale(controls, kPropertyHeight, 0.1);
     controls.color_ = colorControlsBg;
 
     Item & playbackButton = controls.addNew<Item>("playbackButton");
+    TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));
     {
       playbackButton.anchors_.vcenter_ =
         ItemRef::reference(controls, kPropertyVCenter);
@@ -243,7 +293,7 @@ namespace yae
         ItemRef::reference(controls, kPropertyLeft);
 
       playbackButton.margins_.left_ =
-        ItemRef::scale(controls, kPropertyWidth, 2.5 / cells);
+        ItemRef::scale(controls, kPropertyWidth, 0.5 / cells);
 
       playbackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
       playbackButton.height_ = playbackButton.width_;
@@ -259,10 +309,10 @@ namespace yae
       pause.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.2));
       pause.visible_ = pause.addExpr(new OnPlaybackPaused(*this, false));
       pause.texture_ = pause.addExpr(new StylePauseTexture(*playlist));
-    }
 
-    TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));
-    playbackToggle.anchors_.fill(playbackButton);
+      playbackToggle.anchors_.fill(playbackButton);
+      mouseDetect.anchors_.fill(controls);
+    }
   }
 
   //----------------------------------------------------------------
@@ -299,10 +349,13 @@ namespace yae
     }
 
     Item & root = *root_;
+#if 0
     Item & controls = root["controls"];
-
     Item & playbackButton = controls["playbackButton"];
     requestUncache(&playbackButton);
+#else
+    // requestUncache(&root);
+#endif
 
     return true;
   }
