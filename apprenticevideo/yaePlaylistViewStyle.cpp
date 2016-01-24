@@ -7,6 +7,7 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard C++ library:
+#include <algorithm>
 #include <cmath>
 
 // local interfaces:
@@ -35,7 +36,8 @@ namespace yae
   xbuttonImage(unsigned int w,
                const Color & color,
                const Color & background,
-               double thickness)
+               double thickness,
+               double rotateAngle)
   {
     QImage img(w, w, QImage::Format_ARGB32);
 
@@ -51,9 +53,10 @@ namespace yae
     Segment sa(-center, diameter);
     Segment sb(-diameter * thickness * 0.5, diameter * thickness);
 
+    double rotate = M_PI * (1.0 + (rotateAngle / 180.0));
+    TVec2D u_axis(std::cos(rotate), std::sin(rotate));
+    TVec2D v_axis(-u_axis.y(), u_axis.x());
     TVec2D origin(0.0, 0.0);
-    TVec2D u_axis(0.707106781186548, 0.707106781186548);
-    TVec2D v_axis(-0.707106781186548, 0.707106781186548);
 
     Vec<double, 4> outerColor(background);
     Vec<double, 4> innerColor(color);
@@ -113,7 +116,7 @@ namespace yae
     static const double sqrt_3 = 1.732050807568877;
 
     int w2 = w / 2;
-    double diameter = double((w & 1) ? w : w - 1);
+    double diameter = double(w);
     double radius = diameter * 0.5;
     double half_r = diameter * 0.25;
     double base_w = radius * sqrt_3;
@@ -123,7 +126,7 @@ namespace yae
     double rotate = M_PI * (1.0 + (rotateAngle / 180.0));
     TVec2D u_axis(std::cos(rotate), std::sin(rotate));
     TVec2D v_axis(-u_axis.y(), u_axis.x());
-    TVec2D origin(double(w) - diameter, double(w) - diameter);
+    TVec2D origin(0.0, 0.0);
 
     Vec<double, 4> outerColor(background);
     Vec<double, 4> innerColor(color);
@@ -151,6 +154,83 @@ namespace yae
           double tb = (t > 1.0) ? 0.0 : (t * half_b);
           double tx = (tb <= 0.0) ? -1.0 : (1.0 - fabs(pt.x()) / tb);
           double innerOverlap = (tx >= 0.0);
+          double outerOverlap = 1.0 - innerOverlap;
+
+          outer += outerOverlap;
+          inner += innerOverlap;
+        }
+
+        double outerWeight = outer / double(supersample);
+        double innerWeight = inner / double(supersample);
+        Color c(outerColor * outerWeight + innerColor * innerWeight);
+        memcpy(dst, &(c.argb_), sizeof(c.argb_));
+      }
+    }
+
+    return img;
+  }
+
+  //----------------------------------------------------------------
+  // twobarsImage
+  //
+  QImage
+  barsImage(unsigned int w,
+            const Color & color,
+            const Color & background,
+            unsigned int nbars,
+            double thickness,
+            double rotateAngle)
+  {
+    QImage img(w, w, QImage::Format_ARGB32);
+
+    // supersample each pixel:
+    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+
+    static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
+
+    YAE_ASSERT(nbars > 0 && nbars < w && thickness < 1.0);
+
+    int w2 = w / 2;
+    double diameter = double(w);
+    double radius = diameter * 0.5;
+    Segment sv(-radius, diameter);
+    double band_w = diameter / double(nbars);
+    double bar_w = thickness * band_w;
+    double spacing = band_w - bar_w;
+    Segment sh(0.5 * spacing, bar_w);
+    double offset = diameter + ((nbars & 1) ? (0.5 * band_w) : 0.0);
+
+    double rotate = M_PI * (1.0 + (rotateAngle / 180.0));
+    TVec2D u_axis(std::cos(rotate), std::sin(rotate));
+    TVec2D v_axis(-u_axis.y(), u_axis.x());
+    TVec2D origin(0.0, 0.0);
+
+    Vec<double, 4> outerColor(background);
+    Vec<double, 4> innerColor(color);
+    TVec2D samplePoint;
+
+    for (int y = 0; y < int(w); y++)
+    {
+      unsigned char * dst = img.scanLine(y);
+      samplePoint.set_y(double(y - w2));
+
+      for (int x = 0; x < int(w); x++, dst += 4)
+      {
+        samplePoint.set_x(double(x - w2));
+
+        double outer = 0.0;
+        double inner = 0.0;
+
+        for (unsigned int k = 0; k < supersample; k++)
+        {
+          TVec2D wcs_pt = samplePoint + sp[k];
+          TVec2D pt = wcs_to_lcs(origin, u_axis, v_axis, wcs_pt);
+
+          // the image is periodic and symmetric:
+          double px = fmod(pt.x() + offset, band_w);
+          double py = fabs(pt.y());
+          double innerOverlap = sh.pixelOverlap(px) * sv.pixelOverlap(py);
           double outerOverlap = 1.0 - innerOverlap;
 
           outer += outerOverlap;
@@ -195,6 +275,18 @@ namespace yae
 
     expanded_ = Item::addHidden<Texture>
       (new Texture("expanded", QImage())).sharedPtr<Texture>();
+
+    pause_ = Item::addHidden<Texture>
+      (new Texture("pause", QImage())).sharedPtr<Texture>();
+
+    play_ = Item::addHidden<Texture>
+      (new Texture("play", QImage())).sharedPtr<Texture>();
+
+    grid_on_ = Item::addHidden<Texture>
+      (new Texture("grid_on", QImage())).sharedPtr<Texture>();
+
+    grid_off_ = Item::addHidden<Texture>
+      (new Texture("grid_off", QImage())).sharedPtr<Texture>();
   }
 
   //----------------------------------------------------------------
@@ -225,6 +317,12 @@ namespace yae
 
       case kUnderline:
         return underline_;
+
+      case kBgControls:
+        return bg_controls_;
+
+      case kFgControls:
+        return fg_controls_;
 
       case kBgXButton:
         return bg_xbutton_;

@@ -886,7 +886,7 @@ namespace yae
                  actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-     ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
+    ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
 
@@ -2366,6 +2366,8 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
+    controlsView_.controlsChanged();
+
     bool showPlaylist = actionShowPlaylist->isChecked();
 
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
@@ -2617,6 +2619,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::togglePlaylist
+  //
+  void
+  MainWindow::togglePlaylist()
+  {
+    actionShowPlaylist->trigger();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::togglePlayback
   //
   void
@@ -2650,6 +2661,8 @@ namespace yae
       bookmarkTimer_.stop();
       saveBookmark();
     }
+
+    controlsView_.controlsChanged();
   }
 
   //----------------------------------------------------------------

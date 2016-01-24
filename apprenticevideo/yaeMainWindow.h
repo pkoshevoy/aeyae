@@ -141,6 +141,9 @@ namespace yae
     inline bool isPlaybackPaused() const
     { return playbackPaused_; }
 
+    inline bool isPlaylistVisible() const
+    { return actionShowPlaylist->isChecked(); }
+
   signals:
     void setInPoint();
     void setOutPoint();
@@ -197,6 +200,7 @@ namespace yae
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
     void exitPlaylist();
+    void togglePlaylist();
     void togglePlayback();
     void skipToInPoint();
     void skipToOutPoint();

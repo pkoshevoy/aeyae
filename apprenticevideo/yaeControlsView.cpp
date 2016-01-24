@@ -83,7 +83,59 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      std::cerr << "FIXME: TogglePlayback" << std::endl;
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->togglePlayback();
+      }
+
+      return true;
+    }
+
+    ControlsView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // OnPlaylistVisible
+  //
+  struct OnPlaylistVisible : public TBoolExpr
+  {
+    OnPlaylistVisible(ControlsView & view, bool result):
+      view_(view),
+      result_(result)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool visible = (view_.mainWindow_ == NULL ||
+                      view_.mainWindow_->isPlaylistVisible());
+      result = visible ? result_ : !result_;
+    }
+
+    ControlsView & view_;
+    bool result_;
+  };
+
+  //----------------------------------------------------------------
+  // TogglePlaylist
+  //
+  struct TogglePlaylist : public ClickableItem
+  {
+    TogglePlaylist(ControlsView & view):
+      ClickableItem("toggle_playlist"),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->togglePlaylist();
+      }
+
       return true;
     }
 
@@ -121,13 +173,48 @@ namespace yae
 
     Item & root = *root_;
 
-    ColorRef color = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFg, 0, 0.5));
+    ColorRef colorControlsBg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+
+    ColorRef colorControlsFg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
 
     // re-apply style when playlist is enabled or disabled:
     playlist_->root()->
       addObserver(Item::kOnToggleItemView,
                   Item::TObserverPtr(new Repaint(*this, true)));
+
+
+    Item & playlistButton = root.addNew<Item>("playlistButton");
+    {
+      playlistButton.anchors_.top_ =
+        ItemRef::offset(root, kPropertyTop, 2);
+
+      playlistButton.anchors_.left_ =
+        ItemRef::reference(root, kPropertyLeft);
+
+      playlistButton.width_ = playlistButton.
+        addExpr(new StyleTitleHeight(*playlist), 1.5);
+      playlistButton.height_ = playlistButton.width_;
+
+      TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
+      gridOn.anchors_.fill(playlistButton);
+      gridOn.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
+                                         0.2));
+      gridOn.visible_ = gridOn.addExpr(new OnPlaylistVisible(*this, true));
+      gridOn.texture_ = gridOn.addExpr(new StyleGridOnTexture(*playlist));
+
+      TexturedRect & gridOff = playlistButton.add(new TexturedRect("gridOff"));
+      gridOff.anchors_.fill(playlistButton);
+      gridOff.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
+                                          0.2));
+      gridOff.visible_ = gridOff.addExpr(new OnPlaylistVisible(*this, false));
+      gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(*playlist));
+    }
+
+    TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));
+    playlistToggle.anchors_.fill(playlistButton);
+
 
     Item & container = root.addNew<Item>("container");
     container.anchors_.fill(root);
@@ -135,58 +222,47 @@ namespace yae
     container.height_ = container.
       addExpr(new StyleTitleHeight(*playlist), 1.5);
 
-    Item & controls = root.addNew<Item>("controls");
+    Rectangle & controls = root.addNew<Rectangle>("controls");
     controls.anchors_.hcenter_ =
       ItemRef::reference(container, kPropertyHCenter);
     controls.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     controls.height_ = controls.
-      addExpr(new StyleTitleHeight(*playlist), 0.67);
-    controls.width_ = ItemRef::scale(controls, kPropertyHeight, 1.0);
+      addExpr(new StyleTitleHeight(*playlist, 0.8, 0.0, true));
+
+    double cells = 6.0;
+    controls.width_ = ItemRef::scale(controls, kPropertyHeight, cells);
+    controls.color_ = colorControlsBg;
 
     Item & playbackButton = controls.addNew<Item>("playbackButton");
     {
-      playbackButton.anchors_.top_ =
-        ItemRef::reference(controls, kPropertyTop);
+      playbackButton.anchors_.vcenter_ =
+        ItemRef::reference(controls, kPropertyVCenter);
 
       playbackButton.anchors_.left_ =
         ItemRef::reference(controls, kPropertyLeft);
 
-      playbackButton.height_ = playbackButton.addExpr
-        (new OddRoundUp(controls, kPropertyHeight));
+      playbackButton.margins_.left_ =
+        ItemRef::scale(controls, kPropertyWidth, 2.5 / cells);
 
-      playbackButton.width_ =
-        ItemRef::reference(playbackButton, kPropertyHeight);
+      playbackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
+      playbackButton.height_ = playbackButton.width_;
 
       TexturedRect & play = playbackButton.add(new TexturedRect("play"));
       play.anchors_.fill(playbackButton);
+      play.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.15));
       play.visible_ = play.addExpr(new OnPlaybackPaused(*this, true));
-      play.texture_ = play.addExpr(new StyleCollapsedTexture(*playlist));
+      play.texture_ = play.addExpr(new StylePlayTexture(*playlist));
 
-      Item & pause = playbackButton.addNew<Item>("pause");
+      TexturedRect & pause = playbackButton.add(new TexturedRect("pause"));
       pause.anchors_.fill(playbackButton);
+      pause.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.2));
       pause.visible_ = pause.addExpr(new OnPlaybackPaused(*this, false));
-      {
-        Rectangle & p1 = pause.addNew<Rectangle>("p1");
-        p1.anchors_.left_ = ItemRef::reference(pause, kPropertyLeft);
-        p1.anchors_.top_ = ItemRef::reference(pause, kPropertyTop);
-        p1.width_ = ItemRef::scale(pause, kPropertyWidth, 0.3);
-        p1.height_ = ItemRef::reference(pause, kPropertyHeight);
-        p1.margins_.left_ = p1.width_;
-        p1.color_ = color;
-
-        Rectangle & p2 = pause.addNew<Rectangle>("p2");
-        p2.anchors_.left_ = ItemRef::reference(p1, kPropertyRight);
-        p2.anchors_.top_ = ItemRef::reference(pause, kPropertyTop);
-        p2.width_ = p1.width_;
-        p2.height_ = ItemRef::reference(pause, kPropertyHeight);
-        p2.margins_.left_ = p1.width_;
-        p2.color_ = color;
-      }
+      pause.texture_ = pause.addExpr(new StylePauseTexture(*playlist));
     }
 
-    TogglePlayback & playback = controls.add(new TogglePlayback(*this));
-    playback.anchors_.fill(playbackButton);
+    TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));
+    playbackToggle.anchors_.fill(playbackButton);
   }
 
   //----------------------------------------------------------------
