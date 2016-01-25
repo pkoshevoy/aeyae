@@ -1605,13 +1605,13 @@ namespace yae
   bool
   Canvas::updateGreeting()
   {
-    if (!overlay_)
+    double w = this->canvasWidth();
+    double h = this->canvasHeight();
+
+    if (!(overlay_ && w && h))
     {
       return false;
     }
-
-    double w = this->canvasWidth();
-    double h = this->canvasHeight();
 
     double max_w = 1920.0;
     double max_h = 1080.0;
