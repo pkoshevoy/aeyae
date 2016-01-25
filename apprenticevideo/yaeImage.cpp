@@ -213,8 +213,11 @@ namespace yae
   bool
   Image::TPrivate::uploadTexture(const Image & item)
   {
-    bool ok = yae::uploadTexture2D(image_->getImage(), texId_, iw_, ih_,
-                                   GL_LINEAR);
+    // upload texture:
+    QImage image = image_->getImage();
+    bool ok = yae::uploadTexture2D(image, texId_, GL_LINEAR);
+    iw_ = image.width();
+    ih_ = image.height();
 
     // no need to keep a duplicate image around once the texture is ready:
     image_->clearImage();

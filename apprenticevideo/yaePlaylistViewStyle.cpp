@@ -260,8 +260,28 @@ namespace yae
     cell_height_(Item::addNewHidden<Item>("cell_height")),
     font_size_(Item::addNewHidden<Item>("font_size")),
     now_playing_(Item::addNewHidden<Text>("now_playing")),
-    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge"))
+    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge")),
+    font_fixed_("")
   {
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
+    font_fixed_.setHintingPreference(QFont::PreferFullHinting);
+#endif
+    font_fixed_.setFamily("Menlo, "
+                          "Monaco, "
+                          "Droid Sans Mono, "
+                          "DejaVu Sans Mono, "
+                          "Bitstream Vera Sans Mono, "
+                          "Consolas, "
+                          "Lucida Sans Typewriter, "
+                          "Lucida Console, "
+                          "Courier New");
+    font_fixed_.setStyleHint(QFont::Monospace);
+    font_fixed_.setFixedPitch(true);
+    font_fixed_.setStyleStrategy((QFont::StyleStrategy)
+                                 (QFont::PreferOutline |
+                                  QFont::PreferAntialias |
+                                  QFont::OpenGLCompatible));
+
     anchors_.top_ = ItemRef::constant(0);
     anchors_.left_ = ItemRef::constant(0);
     width_ = ItemRef::constant(0);

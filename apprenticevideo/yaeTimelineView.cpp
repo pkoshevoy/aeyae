@@ -617,28 +617,8 @@ namespace yae
       root.add(new SliderOutPoint(*this, timeline));
     sliderOutPoint.anchors_.offset(outPoint, -1, 0, -1, 0);
 
-    QFont timecodeFont("");
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    timecodeFont.setHintingPreference(QFont::PreferFullHinting);
-#endif
-#if 1
-    timecodeFont.setFamily("Menlo, "
-                           "Monaco, "
-                           "Droid Sans Mono, "
-                           "DejaVu Sans Mono, "
-                           "Bitstream Vera Sans Mono, "
-                           "Consolas, "
-                           "Lucida Sans Typewriter, "
-                           "Lucida Console, "
-                           "Courier New");
-#endif
-
-    timecodeFont.setStyleHint(QFont::Monospace);
-    timecodeFont.setFixedPitch(true);
-    timecodeFont.setStyleStrategy((QFont::StyleStrategy)
-                                  (QFont::PreferOutline |
-                                   QFont::PreferAntialias |
-                                   QFont::OpenGLCompatible));
+    const PlaylistViewStyle & style = playlist->playlistViewStyle();
+    QFont timecodeFont = style.font_fixed_;
 
     Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
     Text & playheadAux = container.addNew<Text>("playheadAux");

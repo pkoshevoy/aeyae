@@ -89,6 +89,7 @@ namespace yae
     QFont font_;
     QFont font_small_;
     QFont font_large_;
+    QFont font_fixed_;
 
     enum ColorId
     {

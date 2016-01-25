@@ -19,13 +19,38 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // downsampleImage
+  //
+  unsigned int
+  downsampleImage(QImage & img, double supersampled)
+  {
+    unsigned int n = 1;
+
+    while (supersampled >= 2.0)
+    {
+      n *= 2;
+      supersampled /= 2.0;
+    }
+
+    if (n > 1)
+    {
+      int iw = img.width();
+      int ih = img.height();
+      img = img.scaled(iw / n,
+                       ih / n,
+                       Qt::IgnoreAspectRatio,
+                       Qt::SmoothTransformation);
+    }
+
+    return n;
+  }
+
+  //----------------------------------------------------------------
   // uploadTexture2D
   //
   bool
   uploadTexture2D(const QImage & img,
                   GLuint & texId,
-                  GLuint & iw,
-                  GLuint & ih,
                   GLenum textureFilterMin,
                   GLenum textureFilterMag)
   {
@@ -47,8 +72,8 @@ namespace yae
       return false;
     }
 
-    iw = img.width();
-    ih = img.height();
+    GLuint iw = img.width();
+    GLuint ih = img.height();
     GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
     GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
 
@@ -311,8 +336,8 @@ namespace yae
   Texture::TPrivate::TPrivate(const QImage & image):
     image_(image),
     texId_(0),
-    iw_(0),
-    ih_(0),
+    iw_(image.width()),
+    ih_(image.height()),
     u1_(0.0),
     v1_(0.0)
   {}
@@ -336,7 +361,7 @@ namespace yae
   bool
   Texture::TPrivate::uploadTexture(const Texture & item)
   {
-    bool ok = yae::uploadTexture2D(image_, texId_, iw_, ih_,
+    bool ok = yae::uploadTexture2D(image_, texId_,
                                    // should this be a user option?
                                    GL_LINEAR_MIPMAP_LINEAR);
 

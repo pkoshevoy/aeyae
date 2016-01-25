@@ -89,6 +89,7 @@ namespace yae
 
     QFont font_;
     ItemRef fontSize_; // in points
+    ItemRef supersample_;
     ItemRef cursorWidth_; // in pixels
 
     ColorRef color_;

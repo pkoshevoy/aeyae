@@ -66,6 +66,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Supersample
+  //
+  template <typename TFontSizeItem>
+  struct Supersample : public TDoubleExpr
+  {
+    Supersample(const TFontSizeItem & item, double minFontSize = 72.0):
+      item_(item),
+      minFontSize_(minFontSize)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double fontSize = item_.fontSize_.get();
+      result = std::max<double>(1.0, minFontSize_ / fontSize);
+      result = std::min<double>(8.0, result);
+    }
+
+    const TFontSizeItem & item_;
+    double minFontSize_;
+  };
+
+
+  //----------------------------------------------------------------
   // Text
   //
   class Text : public Item
@@ -122,6 +146,7 @@ namespace yae
 
     TVarRef text_;
     ItemRef fontSize_; // in points
+    ItemRef supersample_;
     ItemRef maxWidth_;
     ItemRef maxHeight_;
     ColorRef color_;

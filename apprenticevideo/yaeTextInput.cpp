@@ -62,6 +62,8 @@ namespace yae
     GLuint texId_;
     GLuint iw_;
     GLuint ih_;
+    GLuint downsample_;
+    int cursorDragStart_;
 
     // optional id of focus proxy item that manages this text input;
     std::string proxyId_;
@@ -74,7 +76,9 @@ namespace yae
     offset_(0),
     texId_(0),
     iw_(0),
-    ih_(0)
+    ih_(0),
+    downsample_(1),
+    cursorDragStart_(0)
   {
     lineEdit_.hide();
     lineEdit_.setText(text);
@@ -196,10 +200,11 @@ namespace yae
     }
 
     // update cursor position here:
-    int cursorPos = textLine_.xToCursor(lcsPt.x() + offset_,
-                                        QTextLine::CursorBetweenCharacters);
-    lineEdit_.setCursorPosition(cursorPos);
-    lineEdit_.setSelection(cursorPos, 0);
+    double supersample = item.supersample_.get();
+    cursorDragStart_ = textLine_.xToCursor(lcsPt.x() * supersample + offset_,
+                                           QTextLine::CursorBetweenCharacters);
+    lineEdit_.setCursorPosition(cursorDragStart_);
+    lineEdit_.setSelection(cursorDragStart_, 0);
     item.uncache();
   }
 
@@ -229,22 +234,18 @@ namespace yae
     }
 
     // update selection here:
-    int selStart = textLine_.xToCursor(lcsDragStart.x() + offset_,
-                                       QTextLine::CursorBetweenCharacters);
-    int selEnd = textLine_.xToCursor(lcsDragEnd.x() + offset_,
-                                     QTextLine::CursorBetweenCharacters);
-    if (selStart > selEnd)
-    {
-      std::swap(selStart, selEnd);
-    }
+    double supersample = item.supersample_.get();
 
-    int selLength = selEnd - selStart;
-    if (selLength < 1)
+    double x1 = offset_ + supersample * lcsDragEnd.x();
+    int selEnd = textLine_.xToCursor(x1, QTextLine::CursorBetweenCharacters);
+
+    int selLength = selEnd - cursorDragStart_;
+    if (!selLength)
     {
       return;
     }
 
-    lineEdit_.setSelection(selStart, selLength);
+    lineEdit_.setSelection(cursorDragStart_, selLength);
     item.uncache();
   }
 
@@ -270,15 +271,16 @@ namespace yae
     BBox bbox;
     item.Item::get(kPropertyBBox, bbox);
 
-    iw_ = (int)std::ceil(bbox.w_);
-    ih_ = (int)std::ceil(bbox.h_);
+    double supersample = item.supersample_.get();
+    iw_ = (int)std::ceil(bbox.w_ * supersample);
+    ih_ = (int)std::ceil(bbox.h_ * supersample);
 
     QString text = lineEdit_.text();
     int textLength = text.length();
 
     font_ = item.font_;
     double fontSize = item.fontSize_.get();
-    font_.setPointSizeF(fontSize);
+    font_.setPointSizeF(fontSize * supersample);
 
     textLayout_.clearLayout();
     textLayout_.setText(text);
@@ -327,12 +329,14 @@ namespace yae
   {
     layoutText(item);
 
+    double supersample = item.supersample_.get();
     int selStart = lineEdit_.selectionStart();
     int selLength = lineEdit_.selectedText().length();
     int selEnd = (selLength < 1) ? 0 : selStart + selLength;
     int textLen = lineEdit_.text().length();
     int cursorPos = lineEdit_.cursorPosition();
-    int cursorWidth = std::max<int>(1, int(ceil(item.cursorWidth_.get())));
+    int cursorWidth = int(ceil(std::max<double>(1.0, supersample *
+                                                item.cursorWidth_.get())));
 
     qreal cx0 = textLine_.cursorToX(cursorPos);
     qreal cx1 = cx0 + cursorWidth;
@@ -340,41 +344,54 @@ namespace yae
 
     if (cx0 < offset_)
     {
-      offset_ = std::max<qreal>(0.0, cx1 - qreal(iw_));
+      offset_ = cx0;
     }
     else if (cx1 > x1)
     {
       offset_ = cx1 - qreal(iw_);
     }
 
-    QImage img(iw_, ih_, QImage::Format_ARGB32);
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
+    QImage img(widthPowerOfTwo, heightPowerOfTwo, QImage::Format_ARGB32);
+    {
+      const Color & fg = item.color_.get();
 
-    const Color & background = item.background_.get();
-    img.fill(QColor(background).rgba());
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      Color bg = fg.transparent();
+#else
+      const Color & bg = item.background_.get();
+#endif
+      img.fill(QColor(bg).rgba());
 
-    const QColor & fg = item.color_.get();
-    const QColor & bg = item.background_.get();
-    const QColor & selFg = item.selectionFg_.get();
-    const QColor & selBg = item.selectionBg_.get();
+      const Color & selFg = item.selectionFg_.get();
+      const Color & selBg = item.selectionBg_.get();
 
-    QVector<QTextLayout::FormatRange> ranges;
-    addFormatRange(ranges, 0, selStart, font_, fg, bg);
-    addFormatRange(ranges, selStart, selLength, font_, selFg, selBg);
-    addFormatRange(ranges, selEnd, textLen - selEnd, font_, fg, bg);
+      QVector<QTextLayout::FormatRange> ranges;
+      addFormatRange(ranges, 0, selStart, font_, fg, bg);
+      addFormatRange(ranges, selStart, selLength, font_, selFg, selBg);
+      addFormatRange(ranges, selEnd, textLen - selEnd, font_, fg, bg);
 
-    qreal lineHeight = textLine_.height();
-    YAE_ASSERT(lineHeight <= qreal(ih_));
+      qreal lineHeight = textLine_.height();
+      YAE_ASSERT(lineHeight <= qreal(ih_));
 
-    qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
-    QPointF offset(-offset_, yoffset);
-    QPainter painter(&img);
-    textLayout_.draw(&painter, offset, ranges);
+      qreal yoffset = 0.5 * (qreal(ih_) - lineHeight);
+      QPointF offset(-offset_, yoffset);
 
-    const Color & cursorColor = item.cursorColor_.get();
-    painter.setPen(QColor(cursorColor));
-    textLayout_.drawCursor(&painter, offset, cursorPos, cursorWidth);
+      QPainter painter(&img);
+      textLayout_.draw(&painter, offset, ranges);
 
-    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_, GL_NEAREST);
+      const Color & cursorColor = item.cursorColor_.get();
+      painter.setPen(QColor(cursorColor));
+      textLayout_.drawCursor(&painter, offset, cursorPos, cursorWidth);
+    }
+
+    // do not upload supersampled texture at full size, scale down first:
+    downsample_ = downsampleImage(img, supersample);
+
+    bool ok = yae::uploadTexture2D(img, texId_,
+                                   supersample == 1.0 ?
+                                   GL_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
     return ok;
   }
 
@@ -395,10 +412,14 @@ namespace yae
 
     bbox.x_ = floor(bbox.x_ + 0.5);
     bbox.y_ = floor(bbox.y_ + 0.5);
-    bbox.w_ = iw_;
-    bbox.h_ = ih_;
 
-    paintTexture2D(bbox, texId_, iw_, ih_);
+    double supersample = item.supersample_.get();
+    bbox.w_ = double(iw_) / supersample;
+    bbox.h_ = double(ih_) / supersample;
+
+    int iw = iw_ / downsample_;
+    int ih = ih_ / downsample_;
+    paintTexture2D(bbox, texId_, iw, ih);
   }
 
   //----------------------------------------------------------------
@@ -411,6 +432,7 @@ namespace yae
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
     fontSize_ = ItemRef::constant(font_.pointSizeF());
+    supersample_ = ItemRef::constant(1.0);
     p_->ready_ = addExpr(new UploadTexture<TextInput>(*this));
 
     cursorWidth_ = ItemRef::constant(1);
@@ -562,6 +584,7 @@ namespace yae
   TextInput::uncache()
   {
     fontSize_.uncache();
+    supersample_.uncache();
     cursorWidth_.uncache();
     color_.uncache();
     background_.uncache();

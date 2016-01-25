@@ -30,19 +30,11 @@ namespace yae
     font_small_.setStyleHint(QFont::SansSerif);
     font_small_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |
-#if 0 // (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
-                                  QFont::NoSubpixelAntialias |
-#endif
                                   QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
 
     // main font:
     font_ = font_small_;
-
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-    font_.setWeight(78);
-#endif
-
     font_large_ = font_small_;
 
     static bool hasImpact =
