@@ -357,7 +357,7 @@ namespace yae
     {
       const Color & fg = item.color_.get();
 
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) && defined(__APPLE__)
       Color bg = fg.transparent();
 #else
       const Color & bg = item.background_.get();

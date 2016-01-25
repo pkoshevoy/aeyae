@@ -1129,7 +1129,9 @@ namespace yae
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
     text.fontSize_ =
       ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) && defined(__APPLE__)
     text.supersample_ = text.addExpr(new Supersample<Text>(text));
+#endif
     text.elide_ = Qt::ElideMiddle;
     text.color_ = ColorRef::constant(style.fg_group_);
     text.background_ = ColorRef::constant(style.bg_group_);
@@ -1279,7 +1281,9 @@ namespace yae
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) && defined(__APPLE__)
     label.supersample_ = label.addExpr(new Supersample<Text>(label));
+#endif
     label.background_ = label.
       addExpr(new PremultipliedTransparent(labelBg, kPropertyColor));
     label.color_ = label.
