@@ -32,6 +32,7 @@
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasWidget.h"
 #endif
+#include "yaeControlsView.h"
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
@@ -137,6 +138,15 @@ namespace yae
     void setPlaylist(const std::list<QString> & playlist,
                      bool beginPlaybackImmediately = true);
 
+    inline bool isPlaybackPaused() const
+    { return playbackPaused_; }
+
+    inline bool isPlaylistVisible() const
+    { return actionShowPlaylist->isChecked(); }
+
+    inline bool isTimelineVisible() const
+    { return actionShowTimeline->isChecked(); }
+
   signals:
     void setInPoint();
     void setOutPoint();
@@ -193,6 +203,7 @@ namespace yae
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
     void exitPlaylist();
+    void togglePlaylist();
     void togglePlayback();
     void skipToInPoint();
     void skipToOutPoint();
@@ -356,6 +367,7 @@ namespace yae
     Canvas * canvas_;
     PlaylistView playlistView_;
     TimelineView timelineView_;
+    ControlsView controlsView_;
     TimelineModel timelineModel_;
     TPlaylistModel playlistModel_;
 

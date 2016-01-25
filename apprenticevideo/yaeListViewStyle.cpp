@@ -30,19 +30,11 @@ namespace yae
     font_small_.setStyleHint(QFont::SansSerif);
     font_small_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |
-#if 0 // (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
-                                  QFont::NoSubpixelAntialias |
-#endif
                                   QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
 
     // main font:
     font_ = font_small_;
-
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-    font_.setWeight(78);
-#endif
-
     font_large_ = font_small_;
 
     static bool hasImpact =
@@ -105,6 +97,9 @@ namespace yae
     bg_timecode_ = Color(0xffffff, 0.5);
     fg_timecode_ = Color(0x3f3f3f, 0.5);
 
+    bg_controls_ = bg_timecode_;
+    fg_controls_ = fg_timecode_;
+
     bg_hint_ = Color(0xffffff, 0.0);
     fg_hint_ = Color(0x1f1f1f, 0.5);
 
@@ -133,8 +128,57 @@ namespace yae
       title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
 
     // generate an x-button texture:
-    QImage img = xbuttonImage(32, fg_xbutton_, bg_xbutton_.transparent(), 0.1);
-    xbutton_.setImage(img);
+    {
+      QImage img =
+        xbuttonImage(128, fg_xbutton_, bg_xbutton_.transparent(), 0.1);
+      xbutton_->setImage(img);
+    }
+
+    // generate collapsed group button texture:
+    {
+      QImage img =
+        triangleImage(128, fg_group_, bg_group_.transparent(), 90.0);
+      collapsed_->setImage(img);
+    }
+
+    // generate expanded group button texture:
+    {
+      QImage img =
+        triangleImage(128, fg_group_, bg_group_.transparent(), 180.0);
+      expanded_->setImage(img);
+    }
+
+    // generate pause button texture:
+    {
+      QImage img =
+        barsImage(128, fg_controls_, bg_controls_.transparent(), 2, 0.8);
+      pause_->setImage(img);
+    }
+
+    // generate play button texture:
+    {
+      QImage img =
+        triangleImage(128, fg_controls_, bg_controls_.transparent(), 90.0);
+      play_->setImage(img);
+    }
+
+    // generate playlist grid on button texture:
+    {
+      QImage img = barsImage(128,
+                             fg_controls_,
+                             bg_controls_.transparent(),
+                             3, 0.7, 90);
+      grid_on_->setImage(img);
+    }
+
+    // generate playlist grid off button texture:
+    {
+      QImage img = barsImage(128,
+                             fg_controls_.scale_a(0.3),
+                             bg_controls_.transparent(),
+                             3, 0.7, 90);
+      grid_off_->setImage(img);
+    }
 
     cell_width_.width_ = cell_width_.
       addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);

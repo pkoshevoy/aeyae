@@ -16,6 +16,7 @@
 // local interfaces:
 #include "yaeColor.h"
 #include "yaePlaylistView.h"
+#include "yaeTexture.h"
 
 
 namespace yae
@@ -23,7 +24,6 @@ namespace yae
 
   // forward declarations:
   class PlaylistView;
-  class Texture;
   class Text;
 
 
@@ -40,8 +40,32 @@ namespace yae
   xbuttonImage(unsigned int w,
                const Color & color,
                const Color & background = Color(0x000000, 0.0),
-               double thickness = 0.2);
+               double thickness = 0.2,
+               double rotateAngle = 45.0);
 
+  //----------------------------------------------------------------
+  // triangleImage
+  //
+  // create an image of an equilateral triangle inscribed within
+  // an invisible circle of diameter w, and rotated about the center
+  // of the circle by a given rotation angle (expressed in degrees):
+  //
+  YAE_API QImage
+  triangleImage(unsigned int w,
+                const Color & color,
+                const Color & background = Color(0x0000000, 0.0),
+                double rotateAngle = 0.0);
+
+  //----------------------------------------------------------------
+  // barsImage
+  //
+  YAE_API QImage
+  barsImage(unsigned int w,
+            const Color & color,
+            const Color & background = Color(0x0000000, 0.0),
+            unsigned int nbars = 2,
+            double thickness = 0.8,
+            double rotateAngle = 0.0);
 
   //----------------------------------------------------------------
   // PlaylistViewStyle
@@ -55,7 +79,6 @@ namespace yae
 
     // shared common properties:
     Item & title_height_;
-    Texture & xbutton_;
     Item & cell_width_;
     Item & cell_height_;
     Item & font_size_;
@@ -66,6 +89,7 @@ namespace yae
     QFont font_;
     QFont font_small_;
     QFont font_large_;
+    QFont font_fixed_;
 
     enum ColorId
     {
@@ -76,6 +100,8 @@ namespace yae
       kScrollbar,
       kSeparator,
       kUnderline,
+      kBgControls,
+      kFgControls,
       kBgXButton,
       kFgXButton,
       kBgFocus,
@@ -113,6 +139,9 @@ namespace yae
     Color scrollbar_;
     Color separator_;
     Color underline_;
+
+    Color bg_controls_;
+    Color fg_controls_;
 
     Color bg_xbutton_;
     Color fg_xbutton_;
@@ -152,6 +181,15 @@ namespace yae
     // gradients:
     TGradientPtr filter_shadow_;
     TGradientPtr timeline_shadow_;
+
+    // textures:
+    TTexturePtr xbutton_;
+    TTexturePtr collapsed_;
+    TTexturePtr expanded_;
+    TTexturePtr pause_;
+    TTexturePtr play_;
+    TTexturePtr grid_on_;
+    TTexturePtr grid_off_;
 
     // layout delegates:
     TPlaylistViewLayoutPtr layout_root_;
@@ -199,6 +237,139 @@ namespace yae
     const PlaylistView & playlist_;
   };
 
+  //----------------------------------------------------------------
+  // StyleXbuttonTexture
+  //
+  struct StyleXbuttonTexture : public TTextureExpr
+  {
+    StyleXbuttonTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.xbutton_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleCollapsedTexture
+  //
+  struct StyleCollapsedTexture : public TTextureExpr
+  {
+    StyleCollapsedTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.collapsed_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleExpandedTexture
+  //
+  struct StyleExpandedTexture : public TTextureExpr
+  {
+    StyleExpandedTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.expanded_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StylePauseTexture
+  //
+  struct StylePauseTexture : public TTextureExpr
+  {
+    StylePauseTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.pause_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StylePlayTexture
+  //
+  struct StylePlayTexture : public TTextureExpr
+  {
+    StylePlayTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.play_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleGridOnTexture
+  //
+  struct StyleGridOnTexture : public TTextureExpr
+  {
+    StyleGridOnTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.grid_on_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleGridOffTexture
+  //
+  struct StyleGridOffTexture : public TTextureExpr
+  {
+    StyleGridOffTexture(const PlaylistView & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
+      result = style.grid_off_;
+    }
+
+    const PlaylistView & playlist_;
+  };
+
 
   //----------------------------------------------------------------
   // StyleColor
@@ -234,18 +405,39 @@ namespace yae
   //
   struct StyleTitleHeight : public TDoubleExpr
   {
-    StyleTitleHeight(const PlaylistView & playlist):
-      playlist_(playlist)
+    StyleTitleHeight(const PlaylistView & playlist,
+                     double s = 1.0,
+                     double t = 0.0,
+                     bool oddRoundUp = false):
+      playlist_(playlist),
+      scale_(s),
+      translate_(t),
+      oddRoundUp_(oddRoundUp)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
       const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      style.title_height_.get(kPropertyHeight, result);
+
+      double v = 0.0;
+      style.title_height_.get(kPropertyHeight, v);
+      v *= scale_;
+      v += translate_;
+
+      if (oddRoundUp_)
+      {
+        int i = 1 | int(ceil(v));
+        v = double(i);
+      }
+
+      result = v;
     }
 
     const PlaylistView & playlist_;
+    double scale_;
+    double translate_;
+    bool oddRoundUp_;
   };
 
 }

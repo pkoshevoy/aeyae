@@ -45,7 +45,7 @@ namespace yae
   //----------------------------------------------------------------
   // TClickablePlaylistModelItem
   //
-  typedef ClickableItem<PlaylistModelProxy> TClickablePlaylistModelItem;
+  typedef ClickableModelItem<PlaylistModelProxy> TClickablePlaylistModelItem;
 
   //----------------------------------------------------------------
   // ILayoutDelegate

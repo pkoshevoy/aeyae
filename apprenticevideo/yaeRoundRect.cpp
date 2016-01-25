@@ -149,7 +149,7 @@ namespace yae
       }
     }
 
-    bool ok = yae::uploadTexture2D(img, texId_, iw_, iw_, GL_NEAREST);
+    bool ok = yae::uploadTexture2D(img, texId_, GL_NEAREST);
     return ok;
   }
 

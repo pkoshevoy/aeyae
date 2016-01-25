@@ -133,6 +133,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ClickableItem
+  //
+  struct ClickableItem : public InputArea
+  {
+    ClickableItem(const char * id):
+      InputArea(id)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+  };
+
+
+  //----------------------------------------------------------------
   // ModelInputArea
   //
   template <typename Model>
@@ -181,12 +197,12 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ClickableItem
+  // ClickableModelItem
   //
   template <typename Model>
-  struct ClickableItem : public ModelInputArea<Model>
+  struct ClickableModelItem : public ModelInputArea<Model>
   {
-    ClickableItem(const char * id):
+    ClickableModelItem(const char * id):
       ModelInputArea<Model>(id)
     {}
 

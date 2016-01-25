@@ -21,11 +21,6 @@
 #include "yaeUtilsQt.h"
 
 
-//----------------------------------------------------------------
-// kSupersampleText
-//
-#define kSupersampleText 1.0
-
 namespace yae
 {
 
@@ -145,22 +140,23 @@ namespace yae
   {
     QFont font = item.font_;
     double fontSize = item.fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    double supersample = item.supersample_.get();
+
+    font.setPointSizeF(fontSize * supersample);
     QFontMetricsF fm(font);
 
     QRectF maxRect(0.0, 0.0,
-                   maxWidth * kSupersampleText,
-                   maxHeight * kSupersampleText);
+                   maxWidth * supersample,
+                   maxHeight * supersample);
 
     int flags = item.textFlags();
-    QString text =
-      getElidedText(maxWidth * kSupersampleText, item, fm, flags);
+    QString text = getElidedText(maxWidth * supersample, item, fm, flags);
 
     QRectF rect = fm.boundingRect(maxRect, flags, text);
-    bbox.x_ = rect.x() / kSupersampleText;
-    bbox.y_ = rect.y() / kSupersampleText;
-    bbox.w_ = rect.width() / kSupersampleText;
-    bbox.h_ = rect.height() / kSupersampleText;
+    bbox.x_ = rect.x() / supersample;
+    bbox.y_ = rect.y() / supersample;
+    bbox.w_ = rect.width() / supersample;
+    bbox.h_ = rect.height() / supersample;
   }
 
   //----------------------------------------------------------------
@@ -200,6 +196,7 @@ namespace yae
     GLuint texId_;
     GLuint iw_;
     GLuint ih_;
+    GLuint downsample_;
   };
 
   //----------------------------------------------------------------
@@ -208,7 +205,8 @@ namespace yae
   Text::TPrivate::TPrivate():
     texId_(0),
     iw_(0),
-    ih_(0)
+    ih_(0),
+    downsample_(1)
   {}
 
   //----------------------------------------------------------------
@@ -241,46 +239,53 @@ namespace yae
     QRectF maxRect;
     getMaxRect(item, maxRect);
 
-    maxRect.setWidth(maxRect.width() * kSupersampleText);
-    maxRect.setHeight(maxRect.height() * kSupersampleText);
+    double supersample = item.supersample_.get();
+    maxRect.setWidth(maxRect.width() * supersample);
+    maxRect.setHeight(maxRect.height() * supersample);
 
     BBox bboxContent;
     item.Item::get(kPropertyBBoxContent, bboxContent);
 
-    int iw = (int)ceil(bboxContent.w_ * kSupersampleText);
-    int ih = (int)ceil(bboxContent.h_ * kSupersampleText);
+    iw_ = (int)ceil(bboxContent.w_ * supersample);
+    ih_ = (int)ceil(bboxContent.h_ * supersample);
 
-    if (!(iw && ih))
+    if (!(iw_ && ih_))
     {
       return true;
     }
 
-    QImage img(iw, ih, QImage::Format_ARGB32);
+    GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw_);
+    GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih_);
+    QImage img(widthPowerOfTwo, heightPowerOfTwo, QImage::Format_ARGB32);
     {
-      const Color & background = item.background_.get();
-      img.fill(QColor(background).rgba());
+      const Color & color = item.color_.get();
+
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      Color bg = color.transparent();
+#else
+      const Color & bg = item.background_.get();
+#endif
+      img.fill(QColor(bg).rgba());
 
       QPainter painter(&img);
       QFont font = item.font_;
       double fontSize = item.fontSize_.get();
-      font.setPointSizeF(fontSize * kSupersampleText);
+      font.setPointSizeF(fontSize * supersample);
       painter.setFont(font);
 
       QFontMetricsF fm(font);
       int flags = item.textFlags();
       QString text = getElidedText(maxRect.width(), item, fm, flags);
 
-      const Color & color = item.color_.get();
-      painter.setPen(QColor(color.r(),
-                            color.g(),
-                            color.b(),
-                            color.a()));
-
+      painter.setPen(QColor(color));
       painter.drawText(maxRect, flags, text);
     }
 
-    bool ok = yae::uploadTexture2D(img, texId_, iw_, ih_,
-                                   kSupersampleText == 1.0 ?
+    // do not upload supersampled texture at full size, scale down first:
+    downsample_ = downsampleImage(img, supersample);
+
+    bool ok = yae::uploadTexture2D(img, texId_,
+                                   supersample == 1.0 ?
                                    GL_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
     return ok;
   }
@@ -300,7 +305,9 @@ namespace yae
     bbox.w_ = std::ceil(bbox.w_);
     bbox.h_ = std::ceil(bbox.h_);
 
-    paintTexture2D(bbox, texId_, iw_, ih_);
+    int iw = iw_ / downsample_;
+    int ih = ih_ / downsample_;
+    paintTexture2D(bbox, texId_, iw, ih);
   }
 
 
@@ -316,6 +323,7 @@ namespace yae
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
     fontSize_ = ItemRef::constant(font_.pointSizeF());
+    supersample_ = ItemRef::constant(1.0);
     bboxText_ = addExpr(new CalcTextBBox(*this));
     p_->ready_ = addExpr(new UploadTexture<Text>(*this));
   }
@@ -350,9 +358,12 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    double supersample = supersample_.get();
+
+    font.setPointSizeF(fontSize * supersample);
     QFontMetricsF fm(font);
-    double ascent = fm.ascent() / kSupersampleText;
+
+    double ascent = fm.ascent() / supersample;
     return ascent;
   }
 
@@ -364,9 +375,12 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    double supersample = supersample_.get();
+
+    font.setPointSizeF(fontSize * supersample);
     QFontMetricsF fm(font);
-    double descent = fm.descent() / kSupersampleText;
+
+    double descent = fm.descent() / supersample;
     return descent;
   }
 
@@ -378,9 +392,12 @@ namespace yae
   {
     QFont font = font_;
     double fontSize = fontSize_.get();
-    font.setPointSizeF(fontSize * kSupersampleText);
+    double supersample = supersample_.get();
+
+    font.setPointSizeF(fontSize * supersample);
     QFontMetricsF fm(font);
-    double fh = fm.height() / kSupersampleText;
+
+    double fh = fm.height() / supersample;
     return fh;
   }
 
@@ -424,6 +441,7 @@ namespace yae
     bboxText_.uncache();
     text_.uncache();
     fontSize_.uncache();
+    supersample_.uncache();
     maxWidth_.uncache();
     maxHeight_.uncache();
     color_.uncache();

@@ -21,13 +21,23 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // downsampleImage
+  //
+  // Supersampled texture should not be uploaded at full resolution,
+  // it should be scaled down first:
+  //
+  // returns power-of-two factor that was used to scale down
+  // given supersampled image
+  //
+  unsigned int
+  downsampleImage(QImage & img, double supersampled);
+
+  //----------------------------------------------------------------
   // uploadTexture2D
   //
   bool
   uploadTexture2D(const QImage & img,
                   GLuint & texId,
-                  GLuint & iw,
-                  GLuint & ih,
                   GLenum textureFilterMin,
                   GLenum textureFilterMag = GL_LINEAR);
 
@@ -83,6 +93,21 @@ namespace yae
     struct TPrivate;
     TPrivate * p_;
   };
+
+  //----------------------------------------------------------------
+  // TTexturePtr
+  //
+  typedef boost::shared_ptr<Texture> TTexturePtr;
+
+  //----------------------------------------------------------------
+  // TTextureRef
+  //
+  typedef DataRef<TTexturePtr> TTextureRef;
+
+  //----------------------------------------------------------------
+  // TTextureExpr
+  //
+  typedef Expression<TTexturePtr> TTextureExpr;
 
 }
 

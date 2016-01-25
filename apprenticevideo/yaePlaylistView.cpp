@@ -38,7 +38,6 @@
 #include "yaeTexture.h"
 #include "yaeTexturedRect.h"
 #include "yaeTransform.h"
-#include "yaeTriangle.h"
 #include "yaeUtilsQt.h"
 
 
@@ -591,7 +590,6 @@ namespace yae
     const Item & fontSize = style.font_size_;
     const Item & scrollbar = playlist["scrollbar"];
     const Text & nowPlaying = style.now_playing_;
-    const Texture & xbuttonTexture = style.xbutton_;
 
     ColorRef colorCursor = ColorRef::constant(style.cursor_);
     ColorRef colorSort = ColorRef::constant(style.fg_hint_);
@@ -615,11 +613,13 @@ namespace yae
     filter.anchors_.bottom_.reset();
     filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
     filter.radius_ = ItemRef::scale(filter, kPropertyHeight, 0.1);
+    filter.margins_.left_ = ItemRef::offset(filter, kPropertyHeight, -4);
 
     Item & icon = filter.addNew<Item>("filter_icon");
     {
       RoundRect & circle = icon.addNew<RoundRect>("circle");
-      circle.anchors_.hcenter_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
+      circle.anchors_.hcenter_ =
+        ItemRef::reference(filter, kPropertyHeight, 1.5, -4);
       circle.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
       circle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
       circle.height_ = circle.width_;
@@ -662,7 +662,7 @@ namespace yae
     Item & rm = filter.addNew<Item>("rm");
 
     TexturedRect & xbutton =
-      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      rm.add<TexturedRect>(new TexturedRect("xbutton"));
 
     ItemRef fontDescentNowPlaying =
       xbutton.addExpr(new GetFontDescent(nowPlaying));
@@ -718,6 +718,7 @@ namespace yae
     xbutton.margins_.set(fontDescentNowPlaying);
     xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
+    xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     // layout sort-and-order:
     ItemRef smallFontSize = ItemRef::scale(fontSize,
@@ -1070,7 +1071,6 @@ namespace yae
     const Item & cellHeight = style.cell_height_;
     const Item & titleHeight = style.title_height_;
     const Text & nowPlaying = style.now_playing_;
-    const Texture & xbuttonTexture = style.xbutton_;
 
     Item & spacer = group.addNew<Item>("group_spacer");
     spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
@@ -1083,38 +1083,53 @@ namespace yae
     title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
 
-    Item & chevron = title.addNew<Item>("chevron");
-    Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+    Item & toggle = title.addNew<Item>("toggle");
+    TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
+    TexturedRect & expanded = toggle.addNew<TexturedRect>("expanded");
 
     Text & text = title.addNew<Text>("text");
     text.font_ = style.font_large_;
 
     Item & rm = title.addNew<Item>("rm");
     TexturedRect & xbutton =
-      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      rm.add<TexturedRect>(new TexturedRect("xbutton"));
     ItemRef fontDescent =
       xbutton.addExpr(new GetFontDescent(text));
     ItemRef fontDescentNowPlaying =
       xbutton.addExpr(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
-    chevron.width_ = ItemRef::reference(text, kPropertyHeight);
-    chevron.height_ = ItemRef::reference(text, kPropertyHeight);
-    chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-    chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+    toggle.width_ = ItemRef::reference(text, kPropertyHeight);
+    toggle.height_ = ItemRef::reference(text, kPropertyHeight);
+    toggle.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    toggle.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
-    collapsed.anchors_.fill(chevron);
+    collapsed.texture_ = TTextureRef::constant(style.collapsed_);
     collapsed.margins_.set(fontDescent);
-    collapsed.collapsed_ = collapsed.addExpr
+    collapsed.anchors_.left_ = ItemRef::reference(toggle, kPropertyLeft);
+    collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    collapsed.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
+    collapsed.height_ = ItemRef::reference(collapsed, kPropertyWidth);
+    collapsed.visible_ = collapsed.addExpr
       (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
+    expanded.texture_ = TTextureRef::constant(style.expanded_);
+    expanded.margins_.set(fontDescent);
+    expanded.anchors_.left_ = ItemRef::reference(toggle, kPropertyLeft);
+    expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    expanded.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
+    expanded.height_ = ItemRef::reference(expanded, kPropertyWidth);
+    expanded.visible_ = expanded.addExpr
+      (new QueryBoolInverse(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
     text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
-    text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+    text.anchors_.left_ = ItemRef::reference(toggle, kPropertyRight);
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
     text.text_ = text.addExpr
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
     text.fontSize_ =
       ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.supersample_ = text.addExpr(new Supersample<Text>(text));
     text.elide_ = Qt::ElideMiddle;
     text.color_ = ColorRef::constant(style.fg_group_);
     text.background_ = ColorRef::constant(style.bg_group_);
@@ -1131,6 +1146,7 @@ namespace yae
     xbutton.margins_.set(fontDescentNowPlaying);
     xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
+    xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     Rectangle & separator = group.addNew<Rectangle>("separator");
     separator.anchors_.top_ = ItemRef::offset(title, kPropertyBottom, 5);
@@ -1149,9 +1165,9 @@ namespace yae
                             PlaylistModel::kRoleCollapsed));
     payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
 
-    GroupCollapse & maCollapse = collapsed.
+    GroupCollapse & maCollapse = toggle.
       add(new GroupCollapse("ma_collapse", view));
-    maCollapse.anchors_.fill(collapsed);
+    maCollapse.anchors_.fill(toggle);
 
     RemoveModelItems & maRmGroup = xbutton.
       add(new RemoveModelItems("ma_remove_group"));
@@ -1200,7 +1216,6 @@ namespace yae
     const Scrollview & sview = root.get<Scrollview>("scrollview");
 
     const Item & fontSize = style.font_size_;
-    const Texture & xbuttonTexture = style.xbutton_;
 
     Rectangle & frame = cell.addNew<Rectangle>("frame");
     frame.anchors_.fill(cell);
@@ -1264,6 +1279,7 @@ namespace yae
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
+    label.supersample_ = label.addExpr(new Supersample<Text>(label));
     label.background_ = label.
       addExpr(new PremultipliedTransparent(labelBg, kPropertyColor));
     label.color_ = label.
@@ -1310,12 +1326,13 @@ namespace yae
     rm.visible_.cachingEnabled_ = false;
 
     TexturedRect & xbutton =
-      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      rm.add<TexturedRect>(new TexturedRect("xbutton"));
     ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescent);
     xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
+    xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     Rectangle & underline = cell.addNew<Rectangle>("underline");
     underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
@@ -1361,7 +1378,6 @@ namespace yae
     const Item & cellHeight = style.cell_height_;
     const Item & titleHeight = style.title_height_;
     const Text & nowPlaying = style.now_playing_;
-    const Texture & xbuttonTexture = style.xbutton_;
 
     Item & spacer = group.addNew<Item>("group_spacer");
     spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
@@ -1376,32 +1392,46 @@ namespace yae
     title.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.2);
     title.color_ = ColorRef::constant(style.bg_group_);
 
-    Item & chevron = title.addNew<Item>("chevron");
-    Triangle & collapsed = chevron.addNew<Triangle>("collapse");
+    Item & toggle = title.addNew<Item>("toggle");
+    TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
+    TexturedRect & expanded = toggle.addNew<TexturedRect>("expanded");
 
     Text & text = title.addNew<Text>("group_title_text");
     text.font_ = style.font_large_;
 
     Item & rm = title.addNew<Item>("rm");
     TexturedRect & xbutton =
-      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      rm.add<TexturedRect>(new TexturedRect("xbutton"));
     ItemRef fontDescent =
       xbutton.addExpr(new GetFontDescent(text));
     ItemRef fontDescentNowPlaying =
       xbutton.addExpr(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
-    chevron.width_ = ItemRef::reference(text, kPropertyHeight);
-    chevron.height_ = ItemRef::reference(text, kPropertyHeight);
-    chevron.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
-    chevron.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
+    toggle.width_ = ItemRef::reference(text, kPropertyHeight);
+    toggle.height_ = ItemRef::reference(text, kPropertyHeight);
+    toggle.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    toggle.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
-    collapsed.anchors_.fill(chevron);
+    collapsed.texture_ = TTextureRef::constant(style.collapsed_);
     collapsed.margins_.set(fontDescent);
-    collapsed.collapsed_ = collapsed.addExpr
+    collapsed.anchors_.left_ = ItemRef::reference(toggle, kPropertyLeft);
+    collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    collapsed.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
+    collapsed.height_ = ItemRef::reference(collapsed, kPropertyWidth);
+    collapsed.visible_ = collapsed.addExpr
       (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
-    text.anchors_.left_ = ItemRef::reference(chevron, kPropertyRight);
+    expanded.texture_ = TTextureRef::constant(style.expanded_);
+    expanded.margins_.set(fontDescent);
+    expanded.anchors_.left_ = ItemRef::reference(toggle, kPropertyLeft);
+    expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    expanded.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
+    expanded.height_ = ItemRef::reference(expanded, kPropertyWidth);
+    expanded.visible_ = expanded.addExpr
+      (new QueryBoolInverse(model, groupIndex, PlaylistModel::kRoleCollapsed));
+
+    text.anchors_.left_ = ItemRef::reference(toggle, kPropertyRight);
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
     text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
     text.text_ = text.addExpr
@@ -1426,6 +1456,7 @@ namespace yae
     xbutton.margins_.set(fontDescentNowPlaying);
     xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
+    xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     Item & payload = group.addNew<Item>("payload");
     payload.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
@@ -1437,9 +1468,9 @@ namespace yae
                             PlaylistModel::kRoleCollapsed));
     payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
 
-    GroupCollapse & maCollapse = collapsed.
+    GroupCollapse & maCollapse = toggle.
       add(new GroupCollapse("ma_collapse", view));
-    maCollapse.anchors_.fill(collapsed);
+    maCollapse.anchors_.fill(toggle);
 
     RemoveModelItems & maRmGroup = xbutton.
       add(new RemoveModelItems("ma_remove_group"));
@@ -1490,7 +1521,6 @@ namespace yae
     const Item & fontSize = style.font_size_;
     const Text & nowPlaying = style.now_playing_;
     const Text & eyetvBadge = style.eyetv_badge_;
-    const Texture & xbuttonTexture = style.xbutton_;
 
     Rectangle & frame = cell.addNew<Rectangle>("frame");
     frame.anchors_.fill(cell);
@@ -1576,12 +1606,13 @@ namespace yae
     rm.visible_.cachingEnabled_ = false;
 
     TexturedRect & xbutton =
-      rm.add<TexturedRect>(new TexturedRect("xbutton", xbuttonTexture));
+      rm.add<TexturedRect>(new TexturedRect("xbutton"));
     ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescent);
     xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
+    xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     Rectangle & underline = cell.addNew<Rectangle>("underline");
     underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
