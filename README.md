@@ -8,10 +8,10 @@ OpenGL is used for frame rendering, so make sure you have OpenGL drivers for you
 CMake is used to configure the build (to generate projects, or makefiles).
 
 ###### Qt 4.7.4 or later - [https://download.qt.io/archive/qt/4.7/](https://download.qt.io/archive/qt/4.7/)
-Qt is the cross platform C++ UI toolkit.
+Qt is the cross platform C++ UI toolkit.  Use Qt 4.7+ for OSX 10.5 and OSX 10.6.  Use Qt 5.5+ for newer versions of OSX.
 
 ###### boost 1.47.0 or later - [http://www.boost.org/](http://www.boost.org/)
-Boost is used for its shared pointer and threading facilities.
+Boost is used for its shared pointer and threading libraries.
 
 ###### GLEW 1.5 or later - [http://glew.sourceforge.net/](http://glew.sourceforge.net/)
 GLEW is an OpenGL extension wrangler library.
