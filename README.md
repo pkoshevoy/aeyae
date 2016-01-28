@@ -1,5 +1,4 @@
-##### Pre-built binaries:
-See [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/) for Apprentice Video mac/windows binaries.
+This is a short summary of development environment requirements for building Apprentice Video for Mac/Windows/Linux. For pre-built Mac/Windows binaries see [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/).
 
 ##### All Platforms:
 ###### OpenGL 1.2 or later
@@ -61,3 +60,4 @@ sudo port install ffmpeg
 
 ##### Linux:
 Use the package management mechanism provided by your Linux distribution (apt, yast, yum, etc...) to install required tools and development libraries (git, cmake, Qt 4, boost, glew, portaudio, yasm).  Use of the latest FFmpeg pulled from git is recommended, because compilation against libav fork is not tested and may not work.
+
