@@ -28,12 +28,9 @@ libass is used for high quality subtitle rendering.
 ###### FontConfig 2.10+ - [http://www.freedesktop.org/wiki/Software/fontconfig/](http://www.freedesktop.org/wiki/Software/fontconfig/)
 FontConfig is required by libass for accessing system fonts.
 
-##### Optional (any platform):
-If you would like to enable MOD file playback (MOD, XM, S3M, IT, etc...), compile libmodplug and make sure to enable modplug support when configuring ffmpeg build.
-
 ##### Windows:
 ###### Dependency Walker 2.2 - [http://www.dependencywalker.com/](http://www.dependencywalker.com/)
-`depends.exe` is used for automatic external dependency detection by wixWrapper (instead of wix harvester tool).
+`depends.exe` is used for automatic external dependency detection by wixWrapper (instead of wix harvester tool).  When building `x86` version of Apprentice Video you'll need the 32-bit version of depends.exe; for `x64` build you'll need the 64-bit version...
 
 ###### WiX 3.5 - [http://wix.sourceforge.net/](http://wix.sourceforge.net/)
 WiX is used to build the installer package.  I've only used/tested WiX 3.5 and do not know whether later versions work as well.
@@ -60,4 +57,7 @@ sudo port install ffmpeg
 
 ##### Linux:
 Use the package management mechanism provided by your Linux distribution (apt, yast, yum, etc...) to install required tools and development libraries (git, cmake, Qt 4, boost, glew, portaudio, yasm).  Use of the latest FFmpeg pulled from git is recommended, because compilation against libav fork is not tested and may not work.
+
+##### Optional (any platform):
+If you would like to enable MOD file playback (MOD, XM, S3M, IT, etc...), compile libmodplug and make sure to enable modplug support when configuring ffmpeg build.
 
