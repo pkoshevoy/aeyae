@@ -93,7 +93,6 @@ find_library(GLEW_LIBRARY GLEW
 set(project_moc_hxx
   yaeCanvasWidget.h
   yaeControlsView.h
-  yaeFlickableArea.h
   yaeItemView.h
   yaeMainWindow.h
   yaePlaylist.h
@@ -201,8 +200,6 @@ set(project_sources
   yaeTimelineView.cpp
   yaeTransform.cpp
   yaeTransform.h
-  yaeTriangle.cpp
-  yaeTriangle.h
   yaeUtilsQt.h
   yaeUtilsQt.cpp
   yaeVec.h

@@ -20,7 +20,8 @@ namespace yae
   // TexturedRect::TexturedRect
   //
   TexturedRect::TexturedRect(const char * id):
-    Item(id)
+    Item(id),
+    opacity_(ItemRef::constant(1.0))
   {}
 
   //----------------------------------------------------------------
@@ -29,6 +30,7 @@ namespace yae
   void
   TexturedRect::uncache()
   {
+    opacity_.uncache();
     texture_.uncache();
     Item::uncache();
   }
@@ -63,6 +65,11 @@ namespace yae
     double y1 = y0 + bbox.h_;
 
     YAE_OGL_11_HERE();
+
+    double opacity = opacity_.get();
+    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {
       YAE_OGL_11(glTexCoord2d(0.0, 0.0));

@@ -265,7 +265,8 @@ namespace yae
       bbox.h_ = h;
     }
 
-    paintTexture2D(bbox, texId_, iw_, ih_);
+    double opacity = item.opacity_.get();
+    paintTexture2D(bbox, texId_, iw_, ih_, opacity);
   }
 
   //----------------------------------------------------------------
@@ -273,7 +274,8 @@ namespace yae
   //
   Image::Image(const char * id):
     Item(id),
-    p_(new Image::TPrivate())
+    p_(new Image::TPrivate()),
+    opacity_(ItemRef::constant(1.0))
   {
     p_->ready_ = addExpr(new UploadTexture<Image>(*this));
   }
@@ -302,6 +304,7 @@ namespace yae
   Image::uncache()
   {
     url_.uncache();
+    opacity_.uncache();
     Item::uncache();
   }
 

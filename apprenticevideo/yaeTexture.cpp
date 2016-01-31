@@ -249,7 +249,11 @@ namespace yae
   // paintTexture2D
   //
   void
-  paintTexture2D(const BBox & bbox, GLuint texId, GLuint iw, GLuint ih)
+  paintTexture2D(const BBox & bbox,
+                 GLuint texId,
+                 GLuint iw,
+                 GLuint ih,
+                 double opacity)
   {
     GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
     GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
@@ -279,8 +283,8 @@ namespace yae
 
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
     YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
 
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {

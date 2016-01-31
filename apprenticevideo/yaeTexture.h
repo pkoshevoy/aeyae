@@ -45,7 +45,11 @@ namespace yae
   // paintTexture2D
   //
   void
-  paintTexture2D(const BBox & bbox, GLuint texId, GLuint iw, GLuint ih);
+  paintTexture2D(const BBox & bbox,
+                 GLuint texId,
+                 GLuint iw,
+                 GLuint ih,
+                 double opacity);
 
 
   //----------------------------------------------------------------

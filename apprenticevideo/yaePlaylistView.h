@@ -173,9 +173,6 @@ namespace yae
     void restyle();
 
     // virtual:
-    void paint(Canvas * canvas);
-
-    // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
 
     // virtual:

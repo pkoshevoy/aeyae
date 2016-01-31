@@ -29,6 +29,7 @@ namespace yae
     // virtual:
     void paintContent() const;
 
+    ItemRef opacity_;
     TTextureRef texture_;
   };
 

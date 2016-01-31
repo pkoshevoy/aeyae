@@ -91,6 +91,7 @@ namespace yae
     ItemRef fontSize_; // in points
     ItemRef supersample_;
     ItemRef cursorWidth_; // in pixels
+    ItemRef opacity_;
 
     ColorRef color_;
     ColorRef background_;

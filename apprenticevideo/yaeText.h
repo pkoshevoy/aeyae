@@ -149,6 +149,7 @@ namespace yae
     ItemRef supersample_;
     ItemRef maxWidth_;
     ItemRef maxHeight_;
+    ItemRef opacity_;
     ColorRef color_;
     ColorRef background_;
   };

@@ -1023,6 +1023,26 @@ namespace yae
     static bool initialized = initializeGlew();
 #endif
 
+    YAE_OPENGL_HERE();
+    yae_assert_gl_no_error();
+
+    if (glCheckFramebufferStatus)
+    {
+      GLenum s = YAE_OPENGL(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+      if (s != GL_FRAMEBUFFER_COMPLETE)
+      {
+#ifndef NDEBUG
+        // this happens on startup on the mac, where
+        // QGLWidget::paintGL is called before the window
+        // is actually created, just ignore it:
+        std::cerr
+          << "Canvas::paintCanvas: frambuffer incomplete, skipping..."
+          << std::endl;
+#endif
+        return;
+      }
+    }
+
     // reset OpenGL to default/initial state:
     yae_reset_opengl_to_initial_state();
 
@@ -1032,7 +1052,10 @@ namespace yae
       updateOverlay(true);
     }
 
-    if (canvasWidth() == 0 || canvasHeight() == 0)
+    int canvasWidth = this->canvasWidth();
+    int canvasHeight = this->canvasHeight();
+
+    if (!(canvasWidth && canvasHeight))
     {
       return;
     }
@@ -1043,9 +1066,6 @@ namespace yae
 
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
-
-    int canvasWidth = this->canvasWidth();
-    int canvasHeight = this->canvasHeight();
 
     // draw a checkerboard to help visualize the alpha channel:
     if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
@@ -1061,6 +1081,9 @@ namespace yae
       YAE_OGL_11(glClearColor(0, 0, 0, 1));
       YAE_OGL_11(glClear(GL_COLOR_BUFFER_BIT));
     }
+
+    // sanity check:
+    yae_assert_gl_no_error();
 
     if (ptts)
     {

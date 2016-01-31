@@ -206,7 +206,9 @@ namespace yae
 
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glColor3f(1.f, 1.f, 1.f));
+
+    double opacity = item.opacity_.get();
+    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
     YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
 
     for (int j = 0; j < 3; j++)
@@ -261,6 +263,7 @@ namespace yae
     p_(new RoundRect::TPrivate()),
     radius_(ItemRef::constant(0.0)),
     border_(ItemRef::constant(0.0)),
+    opacity_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     colorBorder_(ColorRef::constant(Color(0xffffff, 0.25))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
@@ -284,6 +287,7 @@ namespace yae
   {
     radius_.uncache();
     border_.uncache();
+    opacity_.uncache();
     color_.uncache();
     colorBorder_.uncache();
     background_.uncache();

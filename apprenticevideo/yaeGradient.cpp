@@ -25,6 +25,7 @@ namespace yae
   //
   Gradient::Gradient(const char * id):
     Item(id),
+    opacity_(ItemRef::constant(1.0)),
     orientation_(Gradient::kVertical)
   {}
 
@@ -34,6 +35,7 @@ namespace yae
   void
   Gradient::uncache()
   {
+    opacity_.uncache();
     color_.uncache();
     Item::uncache();
   }
@@ -71,6 +73,8 @@ namespace yae
     TGradient::const_iterator i = gradient.begin();
     double t0 = i->first;
     const Color * c0 = &(i->second);
+    const double opacity = opacity_.get();
+    unsigned char a0 = Color::transform(c0->a(), opacity);
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
@@ -78,20 +82,22 @@ namespace yae
     {
       double t1 = i->first;
       const Color * c1 = &(i->second);
+      unsigned char a1 = Color::transform(c1->a(), opacity);
 
       TVec2D p0 = (o + u * t0);
       TVec2D p1 = (o + u * t1);
 
-      YAE_OGL_11(glColor4ub(c0->r(), c0->g(), c0->b(), c0->a()));
+      YAE_OGL_11(glColor4ub(c0->r(), c0->g(), c0->b(), a0));
       YAE_OGL_11(glVertex2dv(p0.coord_));
       YAE_OGL_11(glVertex2dv((p0 + v).coord_));
 
-      YAE_OGL_11(glColor4ub(c1->r(), c1->g(), c1->b(), c1->a()));
+      YAE_OGL_11(glColor4ub(c1->r(), c1->g(), c1->b(), a1));
       YAE_OGL_11(glVertex2dv(p1.coord_));
       YAE_OGL_11(glVertex2dv((p1 + v).coord_));
 
       std::swap(t0, t1);
       std::swap(c0, c1);
+      std::swap(a0, a1);
     }
     YAE_OGL_11(glEnd());
   }

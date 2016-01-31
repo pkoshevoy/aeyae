@@ -417,9 +417,10 @@ namespace yae
     bbox.w_ = double(iw_) / supersample;
     bbox.h_ = double(ih_) / supersample;
 
-    int iw = iw_ / downsample_;
-    int ih = ih_ / downsample_;
-    paintTexture2D(bbox, texId_, iw, ih);
+    int iw = (iw_ + downsample_ - 1) / downsample_;
+    int ih = (ih_ + downsample_ - 1) / downsample_;
+    double opacity = item.opacity_.get();
+    paintTexture2D(bbox, texId_, iw, ih, opacity);
   }
 
   //----------------------------------------------------------------
@@ -428,6 +429,7 @@ namespace yae
   TextInput::TextInput(const char * id, const QString & text):
     Item(id),
     p_(new TextInput::TPrivate(text)),
+    opacity_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
@@ -586,6 +588,7 @@ namespace yae
     fontSize_.uncache();
     supersample_.uncache();
     cursorWidth_.uncache();
+    opacity_.uncache();
     color_.uncache();
     background_.uncache();
     cursorColor_.uncache();

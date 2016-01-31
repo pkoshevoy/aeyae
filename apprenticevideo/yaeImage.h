@@ -46,6 +46,8 @@ namespace yae
 
     // what to load, requires a matching image provider:
     TVarRef url_;
+
+    ItemRef opacity_;
   };
 
 }

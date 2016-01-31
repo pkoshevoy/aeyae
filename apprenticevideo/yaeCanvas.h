@@ -139,6 +139,20 @@ namespace yae
       virtual void requestRepaint() = 0;
       virtual bool resizeTo(const Canvas * canvas) = 0;
       virtual void paint(Canvas * canvas) = 0;
+
+      //----------------------------------------------------------------
+      // IAnimator
+      //
+      struct IAnimator
+      {
+        virtual ~IAnimator() {}
+        virtual void animate(ILayer & layer) = 0;
+      };
+
+      // NOTE: the layer may retain a (weak) pointer for the given animator:
+      virtual void addAnimator(const boost::shared_ptr<IAnimator> & a) = 0;
+      virtual void delAnimator(const boost::shared_ptr<IAnimator> & a) = 0;
+
       virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
 
       // lookup image provider for a given resource URL:

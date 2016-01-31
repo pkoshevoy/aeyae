@@ -305,9 +305,10 @@ namespace yae
     bbox.w_ = std::ceil(bbox.w_);
     bbox.h_ = std::ceil(bbox.h_);
 
-    int iw = iw_ / downsample_;
-    int ih = ih_ / downsample_;
-    paintTexture2D(bbox, texId_, iw, ih);
+    int iw = (iw_ + downsample_ - 1) / downsample_;
+    int ih = (ih_ + downsample_ - 1) / downsample_;
+    double opacity = item.opacity_.get();
+    paintTexture2D(bbox, texId_, iw, ih, opacity);
   }
 
 
@@ -319,6 +320,7 @@ namespace yae
     p_(new Text::TPrivate()),
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
+    opacity_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0xffffff, 1.0))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
@@ -444,6 +446,7 @@ namespace yae
     supersample_.uncache();
     maxWidth_.uncache();
     maxHeight_.uncache();
+    opacity_.uncache();
     color_.uncache();
     background_.uncache();
     p_->uncache();
@@ -546,6 +549,7 @@ namespace yae
     fontSize_ = src.fontSize_;
     maxWidth_ = src.maxWidth_;
     maxHeight_ = src.maxHeight_;
+    opacity_ = src.opacity_;
     color_ = src.color_;
     background_ = src.background_;
   }

@@ -406,7 +406,7 @@ namespace yae
     virtual bool loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame) = 0;
 
-    virtual void draw() = 0;
+    virtual void draw(double opacity) = 0;
 
     // helper:
     const pixelFormat::Traits * pixelTraits() const;
@@ -488,7 +488,7 @@ namespace yae
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
-    void draw();
+    void draw(double opacity);
 
   protected:
     std::vector<GLuint> texId_;
@@ -557,7 +557,7 @@ namespace yae
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
-    void draw();
+    void draw(double opacity);
 
   protected:
     // unpadded image dimensions:
@@ -598,7 +598,7 @@ namespace yae
 
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
-    void draw();
+    void draw(double opacity = 1.0);
 
     const pixelFormat::Traits * pixelTraits() const;
 

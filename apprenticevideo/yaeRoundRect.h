@@ -48,6 +48,7 @@ namespace yae
     // border width:
     ItemRef border_;
 
+    ItemRef opacity_;
     ColorRef color_;
     ColorRef colorBorder_;
     ColorRef background_;

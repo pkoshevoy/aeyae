@@ -593,9 +593,9 @@ namespace yae
 
     ColorRef colorCursor = ColorRef::constant(style.cursor_);
     ColorRef colorSort = ColorRef::constant(style.fg_hint_);
-    ColorRef colorTextBg = ColorRef::constant(style.bg_focus_.scale_a(0.5));
-    ColorRef colorTextFg = ColorRef::constant(style.fg_focus_.scale_a(0.5));
-    ColorRef colorEditBg = ColorRef::constant(style.bg_focus_.scale_a(0.0));
+    ColorRef colorTextBg = ColorRef::constant(style.bg_focus_.a_scaled(0.5));
+    ColorRef colorTextFg = ColorRef::constant(style.fg_focus_.a_scaled(0.5));
+    ColorRef colorEditBg = ColorRef::constant(style.bg_focus_.a_scaled(0.0));
     ColorRef colorFocusBg = ColorRef::constant(style.bg_focus_);
     ColorRef colorFocusFg = ColorRef::constant(style.fg_focus_);
     ColorRef colorHighlightBg = ColorRef::constant(style.bg_edit_selected_);
@@ -912,7 +912,7 @@ namespace yae
     footNote.font_ = smallFont;
     footNote.fontSize_ = smallFontSize;
     footNote.color_ = ColorRef::constant(style.fg_hint_);
-    footNote.background_ = ColorRef::constant(style.bg_.scale_a(0.0));
+    footNote.background_ = ColorRef::constant(style.bg_.a_scaled(0.0));
   }
 
   //----------------------------------------------------------------
@@ -1894,23 +1894,6 @@ namespace yae
     Item & sviewContent = *(sview.content_);
     Item & footer = sviewContent["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistView::paint
-  //
-  void
-  PlaylistView::paint(Canvas * canvas)
-  {
-    // avoid stalling flickable animation:
-    {
-      Item & root = *root_;
-      Scrollview & sview = root.get<Scrollview>("scrollview");
-      FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
-      ma_sview.animate();
-    }
-
-    ItemView::paint(canvas);
   }
 
   //----------------------------------------------------------------

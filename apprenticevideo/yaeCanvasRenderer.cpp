@@ -75,7 +75,9 @@ yae_show_program_listing(std::ostream & ostr,
 //
 static const char * yae_gl_arb_passthrough_2d =
   "!!ARBfp1.0\n"
-  "TEX result.color, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEMP rgba;\n"
+  "TEX rgba, fragment.texcoord[0], texture[0], 2D;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -90,10 +92,12 @@ static const char * yae_gl_arb_yuv_to_rgb_2d =
   "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
   "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
   "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
-  "MOV result.color.a, 1.0;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -108,11 +112,13 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
   "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
   "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
   "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
   "TEX yuv.x, fragment.texcoord[0], texture[3], 2D;\n"
-  "MOV result.color.a, yuv.x;\n"
+  "MOV rgba.a, yuv.x;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -120,7 +126,9 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
 //
 static const char * yae_gl_arb_passthrough =
   "!!ARBfp1.0\n"
-  "TEX result.color, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEMP rgba;\n"
+  "TEX rgba, fragment.texcoord[0], texture[0], RECT;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -138,10 +146,12 @@ static const char * yae_gl_arb_yuv_to_rgb =
   "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
   "TEX yuv.y, coord_uv, texture[1], RECT;\n"
   "TEX yuv.z, coord_uv, texture[2], RECT;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
-  "MOV result.color.a, 1.0;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -159,11 +169,13 @@ static const char * yae_gl_arb_yuva_to_rgba =
   "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
   "TEX yuv.y, coord_uv, texture[1], RECT;\n"
   "TEX yuv.z, coord_uv, texture[2], RECT;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
   "TEX yuv.x, fragment.texcoord[0], texture[3], RECT;\n"
-  "MOV result.color.a, yuv.x;\n"
+  "MOV rgba.a, yuv.x;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -182,10 +194,12 @@ static const char * yae_gl_arb_yuv_p10_to_rgb =
   "TEX yuv.y, coord_uv, texture[1], RECT;\n"
   "TEX yuv.z, coord_uv, texture[2], RECT;\n"
   "MUL yuv, yuv, 64.0;\n"
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
-  "MOV result.color.a, 1.0;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -270,11 +284,13 @@ static const char * yae_gl_arb_yuyv_to_rgb_antialias =
   "MAD yuv, tmp, www, yuv;\n"
 
   // convert to RGB:
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
 
-  "MOV result.color.a, 1.0;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -359,11 +375,13 @@ static const char * yae_gl_arb_uyvy_to_rgb_antialias =
   "MAD yuv, tmp, www, yuv;\n"
 
   // convert to RGB:
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
 
-  "MOV result.color.a, 1.0;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -409,11 +427,13 @@ static const char * yae_gl_arb_yuyv_to_rgb =
   "MAD yuv.z, q01.a, t1.x, yuv.z;\n"
 
   // convert to RGB:
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
 
-  "MOV result.color.a, 1.0;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -459,11 +479,13 @@ static const char * yae_gl_arb_uyvy_to_rgb =
   "MAD yuv.z, q01.x, t1.x, yuv.z;\n"
 
   // convert to RGB:
-  "DPH result.color.r, yuv, vr;\n"
-  "DPH result.color.g, yuv, vg;\n"
-  "DPH result.color.b, yuv, vb;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
 
-  "MOV result.color.a, 1.0;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
 //----------------------------------------------------------------
@@ -867,7 +889,12 @@ yae_assert_gl_no_error()
     return true;
   }
 
-  std::cerr << "glGetError: " << err << std::endl;
+  do
+  {
+    std::cerr << "glGetError: " << err << std::endl;
+    err = YAE_OGL_11(glGetError());
+  } while (err != GL_NO_ERROR);
+
   YAE_ASSERT(false);
   // char *crash = NULL;
   // *crash = *crash;
@@ -2052,7 +2079,7 @@ namespace yae
   // TModernCanvas::draw
   //
   void
-  TModernCanvas::draw()
+  TModernCanvas::draw(double opacity)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty())
@@ -2078,7 +2105,8 @@ namespace yae
     YAE_OGL_11(glEnable(GL_TEXTURE_RECTANGLE_ARB));
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
 
     if (shader_)
     {
@@ -2657,7 +2685,7 @@ namespace yae
   // TLegacyCanvas::draw
   //
   void
-  TLegacyCanvas::draw()
+  TLegacyCanvas::draw(double opacity)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty() || !frame_)
@@ -2684,7 +2712,8 @@ namespace yae
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE));
+    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
 
     if (shader_)
     {
@@ -2901,9 +2930,9 @@ namespace yae
   // CanvasRenderer::draw
   //
   void
-  CanvasRenderer::draw()
+  CanvasRenderer::draw(double opacity)
   {
-    renderer_->draw();
+    renderer_->draw(opacity);
   }
 
   //----------------------------------------------------------------

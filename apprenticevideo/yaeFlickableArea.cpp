@@ -29,13 +29,36 @@ namespace yae
   //
   struct FlickableArea::TPrivate
   {
-    TPrivate(const ItemView & itemView, Item & scrollbar):
+    //----------------------------------------------------------------
+    // Animator
+    //
+    struct Animator : public ItemView::IAnimator
+    {
+      Animator(FlickableArea & flickable):
+        flickable_(flickable)
+      {}
+
+      // virtual:
+      void animate(Canvas::ILayer & layer)
+      {
+        flickable_.animate();
+      }
+
+      FlickableArea & flickable_;
+    };
+
+    TPrivate(ItemView & itemView,
+             FlickableArea & flickable,
+             Item & scrollbar):
       itemView_(itemView),
+      flickable_(flickable),
       scrollbar_(scrollbar),
       startPos_(0.0),
       nsamples_(0),
       v0_(0.0)
-    {}
+    {
+      animator_.reset(new Animator(flickable));
+    }
 
     void addSample(double dt, double y)
     {
@@ -80,24 +103,25 @@ namespace yae
       return estimateVelocity(i0, i1);
     }
 
-    void requestAnimate(FlickableArea & flickable, unsigned int msec_delay)
+    void requestAnimate()
     {
-      timer_.start(16);
+      itemView_.addAnimator(animator_);
     }
 
     void dontAnimate()
     {
-      timer_.stop();
+      itemView_.delAnimator(animator_);
       estimating_ = true;
     }
 
-    const ItemView & itemView_;
+    ItemView & itemView_;
+    FlickableArea & flickable_;
     Item & scrollbar_;
     double startPos_;
     bool estimating_;
 
     // flicking animation parameters:
-    QTimer timer_;
+    ItemView::TAnimatorPtr animator_;
     boost::chrono::steady_clock::time_point tStart_;
 
     // for each sample point: x = t - tStart, y = dragEnd(t)
@@ -113,13 +137,12 @@ namespace yae
   // FlickableArea::FlickableArea
   //
   FlickableArea::FlickableArea(const char * id,
-                               const ItemView & itemView,
+                               ItemView & itemView,
                                Item & scrollbar):
     InputArea(id),
-    p_(new TPrivate(itemView, scrollbar))
+    p_(NULL)
   {
-    bool ok = connect(&p_->timer_, SIGNAL(timeout()), this, SLOT(animate()));
-    YAE_ASSERT(ok);
+    p_ = new TPrivate(itemView, *this, scrollbar);
   }
 
   //----------------------------------------------------------------
@@ -228,7 +251,7 @@ namespace yae
     if (k > 0.1)
     {
       p_->estimating_ = false;
-      p_->requestAnimate(*this, 16);
+      p_->requestAnimate();
       animate();
     }
 
@@ -242,7 +265,7 @@ namespace yae
   bool
   FlickableArea::isAnimating() const
   {
-    return p_->timer_.isActive();
+    return p_->estimating_ == false;
   }
 
   //----------------------------------------------------------------
@@ -280,8 +303,6 @@ namespace yae
       TMakeCurrentContext currentContext(*(p_->itemView_.context()));
       p_->scrollbar_.uncache();
     }
-
-    p_->itemView_.delegate()->requestRepaint();
 
     if (s == 0.0 || s == 1.0 || v0 == 0.0)
     {

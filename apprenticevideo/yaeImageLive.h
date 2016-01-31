@@ -21,9 +21,10 @@ namespace yae
   //
   struct ImageLive : public Item
   {
-    mutable Canvas * canvas_;
-
     ImageLive(const char * id);
+
+    // virtual:
+    void uncache();
 
     // virtual:
     bool paint(const Segment & xregion,
@@ -32,6 +33,9 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+
+    mutable Canvas * canvas_;
+    ItemRef opacity_;
   };
 
 }

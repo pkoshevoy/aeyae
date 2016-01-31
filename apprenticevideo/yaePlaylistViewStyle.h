@@ -390,7 +390,7 @@ namespace yae
     void evaluate(Color & result) const
     {
       const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.color(id_).scale_a(alphaScale_, alphaTranslate_);
+      result = style.color(id_).a_scaled(alphaScale_, alphaTranslate_);
     }
 
     const PlaylistView & playlist_;

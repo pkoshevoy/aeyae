@@ -19,8 +19,19 @@ namespace yae
   //
   ImageLive::ImageLive(const char * id):
     Item(id),
-    canvas_(NULL)
+    canvas_(NULL),
+    opacity_(ItemRef::constant(1.0))
   {}
+
+  //----------------------------------------------------------------
+  // ImageLive::uncache
+  //
+  void
+  ImageLive::uncache()
+  {
+    opacity_.uncache();
+    Item::uncache();
+  }
 
   //----------------------------------------------------------------
   // ImageLive::paint
@@ -100,7 +111,8 @@ namespace yae
       }
     }
 
-    renderer->draw();
+    double opacity = opacity_.get();
+    renderer->draw(opacity);
     yae_assert_gl_no_error();
   }
 

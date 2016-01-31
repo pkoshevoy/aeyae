@@ -57,9 +57,13 @@ namespace yae
     root.height_ = ItemRef::constant(h_);
 
     repaintTimer_.setSingleShot(true);
+    animateTimer_.setInterval(16);
 
     bool ok = true;
     ok = connect(&repaintTimer_, SIGNAL(timeout()), this, SLOT(repaint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&animateTimer_, SIGNAL(timeout()), this, SLOT(repaint()));
     YAE_ASSERT(ok);
    }
 
@@ -212,6 +216,8 @@ namespace yae
 
     requestRepaintEvent_.setDelivered(true);
 
+    animate();
+
     // uncache prior to painting:
     while (!uncache_.empty())
     {
@@ -265,6 +271,59 @@ namespace yae
 
     Item & root = *root_;
     root.paint(xregion, yregion, canvas);
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::addAnimator
+  //
+  void
+  ItemView::addAnimator(const ItemView::TAnimatorPtr & animator)
+  {
+    animators_.insert(animator);
+
+    if (!animateTimer_.isActive())
+    {
+      animateTimer_.start();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::delAnimator
+  //
+  void
+  ItemView::delAnimator(const ItemView::TAnimatorPtr & animator)
+  {
+    if (animators_.erase(animator) && animators_.empty())
+    {
+      animateTimer_.stop();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::animate
+  //
+  void
+  ItemView::animate()
+  {
+    typedef std::set<boost::weak_ptr<IAnimator> >::iterator TIter;
+    TIter i = animators_.begin();
+    while (i != animators_.end())
+    {
+      TIter i0 = i;
+      ++i;
+
+      TAnimatorPtr animatorPtr = i0->lock();
+      if (animatorPtr)
+      {
+        IAnimator & animator = *animatorPtr;
+        animator.animate(*this);
+      }
+      else
+      {
+        // remove expired animators:
+        animators_.erase(i0);
+      }
+    }
   }
 
   //----------------------------------------------------------------

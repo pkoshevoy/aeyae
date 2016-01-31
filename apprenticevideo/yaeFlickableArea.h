@@ -14,9 +14,6 @@
 #include <boost/shared_ptr.hpp>
 #endif
 
-// Qt interfaces:
-#include <QObject>
-
 // local interfaces:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
@@ -29,16 +26,13 @@ namespace yae
   //----------------------------------------------------------------
   // FlickableArea
   //
-  class FlickableArea : public QObject,
-                        public InputArea
+  class FlickableArea : public InputArea
   {
-    Q_OBJECT;
-
     FlickableArea(const FlickableArea &);
     FlickableArea & operator = (const FlickableArea &);
 
   public:
-    FlickableArea(const char * id, const ItemView & view, Item & scrollbar);
+    FlickableArea(const char * id, ItemView & view, Item & scrollbar);
     ~FlickableArea();
 
     // virtual:
@@ -60,10 +54,8 @@ namespace yae
                    const TVec2D & rootCSysDragStart,
                    const TVec2D & rootCSysDragEnd);
 
-    // helper:
+    // helpers:
     bool isAnimating() const;
-
-  public slots:
     void animate();
 
   protected:

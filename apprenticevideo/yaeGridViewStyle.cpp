@@ -246,7 +246,7 @@ namespace yae
     // generate playlist grid off button texture:
     {
       QImage img = barsImage(128,
-                             fg_controls_.scale_a(0.5),
+                             fg_controls_.a_scaled(0.5),
                              bg_controls_.transparent(),
                              3, 0.7, 90);
       grid_off_->setImage(img);

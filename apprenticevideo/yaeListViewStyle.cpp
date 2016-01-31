@@ -113,14 +113,14 @@ namespace yae
     fg_group_ = Color(0xffffff, 1.0);
 
     bg_item_ = Color(0xffffff, 0.0);
-    bg_item_playing_ = cursor_.scale_a(0.75);
-    bg_item_selected_ = underline_.scale_a(0.75);
+    bg_item_playing_ = cursor_.a_scaled(0.75);
+    bg_item_selected_ = underline_.a_scaled(0.75);
 
     bg_label_selected_ = bg_item_selected_.transparent();
     fg_label_selected_ = Color(0xffffff, 1.0);
 
     timeline_played_ = underline_;
-    timeline_included_ = timeline_played_.scale_a(0.5);
+    timeline_included_ = timeline_played_.a_scaled(0.5);
     timeline_excluded_ = Color(0x7f7f7f, 0.5);
 
     // configure common style attributes:
@@ -174,7 +174,7 @@ namespace yae
     // generate playlist grid off button texture:
     {
       QImage img = barsImage(128,
-                             fg_controls_.scale_a(0.3),
+                             fg_controls_.a_scaled(0.3),
                              bg_controls_.transparent(),
                              3, 0.7, 90);
       grid_off_->setImage(img);

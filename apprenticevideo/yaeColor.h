@@ -198,17 +198,30 @@ namespace yae
       return *this;
     }
 
-    Color scale_a(double s, double t = 0.0) const
+    inline static unsigned char
+    transform(unsigned char c, double s, double t = 0.0)
+    {
+      double v = s * double(c) + t * 255.0;
+      return (unsigned char)(std::max(0.0, std::min(255.0, v)));
+    }
+
+    inline Color & scale_alpha(double s, double t = 0.0)
+    {
+      unsigned char sa = Color::transform(this->a(), s, t);
+      this->set_a(sa);
+      return *this;
+    }
+
+    inline Color a_scaled(double s, double t = 0.0) const
     {
       Color result(*this);
-      double sa = s * double(this->a()) + t * 255.0;
-      result.set_a((unsigned char)(std::max(0.0, std::min(255.0, sa))));
+      result.scale_alpha(s, t);
       return result;
     }
 
     inline Color transparent() const
     {
-      return scale_a(0.0);
+      return a_scaled(0.0);
     }
 
     inline Color opaque(double alpha = 1.0) const

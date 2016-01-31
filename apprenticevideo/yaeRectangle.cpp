@@ -22,6 +22,7 @@ namespace yae
   Rectangle::Rectangle(const char * id):
     Item(id),
     border_(ItemRef::constant(0.0)),
+    opacity_(ItemRef::constant(1.0)),
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     colorBorder_(ColorRef::constant(Color(0xffffff, 0.25)))
   {}
@@ -32,6 +33,7 @@ namespace yae
   static void
   paintRect(const BBox & bbox,
             double border,
+            double opacity,
             const Color & color,
             const Color & colorBorder)
   {
@@ -44,7 +46,7 @@ namespace yae
     YAE_OGL_11(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
-                          color.a()));
+                          Color::transform(color.a(), opacity)));
     YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {
       YAE_OGL_11(glVertex2d(x0, y0));
@@ -59,7 +61,7 @@ namespace yae
       YAE_OGL_11(glColor4ub(colorBorder.r(),
                             colorBorder.g(),
                             colorBorder.b(),
-                            colorBorder.a()));
+                            Color::transform(colorBorder.a(), opacity)));
       YAE_OGL_11(glLineWidth(border));
       YAE_OGL_11(glBegin(GL_LINE_LOOP));
       {
@@ -79,6 +81,7 @@ namespace yae
   Rectangle::uncache()
   {
     border_.uncache();
+    opacity_.uncache();
     color_.uncache();
     colorBorder_.uncache();
     Item::uncache();
@@ -94,11 +97,13 @@ namespace yae
     Item::get(kPropertyBBox, bbox);
 
     double border = border_.get();
+    double opacity = opacity_.get();
     const Color & color = color_.get();
     const Color & colorBorder = colorBorder_.get();
 
     paintRect(bbox,
               border,
+              opacity,
               color,
               colorBorder);
   }

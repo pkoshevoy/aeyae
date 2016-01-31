@@ -71,6 +71,22 @@ namespace yae
     // virtual:
     void paint(Canvas * canvas);
 
+    //----------------------------------------------------------------
+    // IAnimator
+    //
+    typedef Canvas::ILayer::IAnimator IAnimator;
+
+    //----------------------------------------------------------------
+    // TAnimatorPtr
+    //
+    typedef boost::shared_ptr<Canvas::ILayer::IAnimator> TAnimatorPtr;
+
+    // virtual:
+    void addAnimator(const boost::shared_ptr<IAnimator> & a);
+
+    // virtual:
+    void delAnimator(const boost::shared_ptr<IAnimator> & a);
+
     // helper: uncache a given item at the next repaint
     //
     // NOTE: avoid uncaching if possible due to
@@ -117,6 +133,7 @@ namespace yae
 
   public slots:
     void repaint();
+    void animate();
 
   protected:
     std::map<Item *, boost::weak_ptr<Item> > uncache_;
@@ -138,7 +155,14 @@ namespace yae
     TVec2D startPt_;
     TVec2D mousePt_;
 
+    // on-demand repaint timer:
     QTimer repaintTimer_;
+
+    // ~60 fps animation timer, runs as long as the animators set is not empty:
+    QTimer animateTimer_;
+
+    // a set of animators, referenced by the animation timer:
+    std::set<boost::weak_ptr<IAnimator> > animators_;
   };
 
   //----------------------------------------------------------------
