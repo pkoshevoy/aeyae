@@ -61,7 +61,7 @@ namespace yae
     }
 
     BBox bbox;
-    this->get(kPropertyBBox, bbox);
+    this->Item::get(kPropertyBBox, bbox);
 
     TVec2D xvec(bbox.w_, 0.0);
     TVec2D yvec(0.0, bbox.h_);
@@ -102,4 +102,19 @@ namespace yae
     YAE_OGL_11(glEnd());
   }
 
+  //----------------------------------------------------------------
+  // Gradient::get
+  //
+  void
+  Gradient::get(Property property, double & value) const
+  {
+    if (property == kPropertyOpacity)
+    {
+      value = opacity_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
 }

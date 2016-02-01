@@ -86,7 +86,6 @@
     <addaction name="actionLoop"/>
     <addaction name="actionSetInPoint"/>
     <addaction name="actionSetOutPoint"/>
-    <addaction name="actionShowTimeline"/>
     <addaction name="separator"/>
     <addaction name="actionShrinkWrap"/>
     <addaction name="actionFullScreen"/>
@@ -380,23 +379,6 @@
    </property>
    <property name="shortcut">
     <string>Alt+X</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
-  <action name="actionShowTimeline">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show &amp;Timeline</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+T</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>

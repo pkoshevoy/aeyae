@@ -48,10 +48,11 @@ namespace yae
     //
     DataRef(const TDataProperties * reference = NULL,
             Property property = kPropertyUnspecified,
-            const TData & defaultValue = TData()):
+            const TData & defaultValue = TData(),
+            bool cachingEnabled = true):
       ref_(reference),
       property_(property),
-      cachingEnabled_(true),
+      cachingEnabled_(cachingEnabled),
       visited_(false),
       cached_(false),
       value_(defaultValue)
@@ -171,8 +172,9 @@ namespace yae
             Property property = kPropertyUnspecified,
             double scale = 1.0,
             double translate = 0.0,
-            const double & defaultValue = 0.0):
-      TDataRef(reference, property, defaultValue),
+            const double & defaultValue = 0.0,
+            bool cachingEnabled = true):
+      TDataRef(reference, property, defaultValue, cachingEnabled),
       scale_(scale),
       translate_(translate)
     {}
@@ -200,6 +202,13 @@ namespace yae
               double s = 1.0,
               double t = 0.0)
     { return ItemRef(&ref, prop, s, t); }
+
+    inline static ItemRef
+    uncacheable(const TDataProperties & ref,
+                Property prop,
+                double s = 1.0,
+                double t = 0.0)
+    { return ItemRef(&ref, prop, s, t, 0.0, false); }
 
     inline static ItemRef
     constant(const double & t)
@@ -236,7 +245,7 @@ namespace yae
       }
       else
       {
-        TDataRef::visited_ = true;
+        TDataRef::visited_ = cachingEnabled_;
 
         double v;
         ref_->get(TDataRef::property_, v);
@@ -245,7 +254,7 @@ namespace yae
         TDataRef::value_ = v;
       }
 
-      TDataRef::cached_ = true;
+      TDataRef::cached_ = cachingEnabled_;
       return TDataRef::value_;
     }
 
@@ -364,7 +373,7 @@ namespace yae
       }
       else
       {
-        TDataRef::visited_ = true;
+        TDataRef::visited_ = cachingEnabled_;
 
         Color color;
         ref_->get(TDataRef::property_, color);
@@ -377,7 +386,7 @@ namespace yae
         TDataRef::value_ = Color(v);
       }
 
-      TDataRef::cached_ = true;
+      TDataRef::cached_ = cachingEnabled_;
       return TDataRef::value_;
     }
 

@@ -14,6 +14,7 @@
 #include "yaeGradient.h"
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
+#include "yaeMainWindow.h"
 #include "yaePlaylistView.h"
 #include "yaePlaylistViewStyle.h"
 #include "yaeProperty.h"
@@ -22,6 +23,7 @@
 #include "yaeSegment.h"
 #include "yaeText.h"
 #include "yaeTextInput.h"
+#include "yaeTexturedRect.h"
 #include "yaeTimelineModel.h"
 #include "yaeTimelineView.h"
 
@@ -424,51 +426,299 @@ namespace yae
     double startPos_;
   };
 
+  //----------------------------------------------------------------
+  // ExposeControls
+  //
+  struct ExposeControls : public TBoolExpr
+  {
+    ExposeControls(TimelineView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      const TVec2D & pt = view_.mousePt();
+      result = (view_.mainWindow_ == NULL ||
+                !view_.mainWindow_->isPlaylistVisible());
+    }
+
+    TimelineView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // OnPlaybackPaused
+  //
+  struct OnPlaybackPaused : public TBoolExpr
+  {
+    OnPlaybackPaused(TimelineView & view, bool result):
+      view_(view),
+      result_(result)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool paused = (view_.mainWindow_ == NULL ||
+                     view_.mainWindow_->isPlaybackPaused());
+      result = paused ? result_ : !result_;
+    }
+
+    TimelineView & view_;
+    bool result_;
+  };
+
+  //----------------------------------------------------------------
+  // TogglePlayback
+  //
+  struct TogglePlayback : public ClickableItem
+  {
+    TogglePlayback(TimelineView & view):
+      ClickableItem("toggle_playback"),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->togglePlayback();
+      }
+
+      return true;
+    }
+
+    TimelineView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // OnPlaylistVisible
+  //
+  struct OnPlaylistVisible : public TBoolExpr
+  {
+    OnPlaylistVisible(TimelineView & view, bool result):
+      view_(view),
+      result_(result)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool visible = (view_.mainWindow_ == NULL ||
+                      view_.mainWindow_->isPlaylistVisible());
+      result = visible ? result_ : !result_;
+    }
+
+    TimelineView & view_;
+    bool result_;
+  };
+
+  //----------------------------------------------------------------
+  // TogglePlaylist
+  //
+  struct TogglePlaylist : public ClickableItem
+  {
+    TogglePlaylist(TimelineView & view):
+      ClickableItem("toggle_playlist"),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->togglePlaylist();
+      }
+
+      return true;
+    }
+
+    TimelineView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Animator
+  //
+  struct Animator : public ItemView::IAnimator
+  {
+    Animator(const PlaylistView & playlist,
+             TimelineView & timeline,
+             Item & controlsContainer):
+      playlist_(playlist),
+      timeline_(timeline),
+      controlsContainer_(controlsContainer)
+    {}
+
+    bool needToPause() const
+    {
+      const ItemFocus::Target * focus = ItemFocus::singleton().focus();
+      const TVec2D & pt = timeline_.mousePt();
+      Item & root = *(timeline_.root());
+
+      bool shouldPause = (playlist_.isEnabled() ||
+                          controlsContainer_.overlaps(pt) ||
+                          (focus && focus->view_ == &timeline_));
+      return shouldPause;
+    }
+
+    // virtual:
+    void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animatorPtr)
+    {
+      Item & root = *(timeline_.root());
+      TransitionItem & opacity = root.get<TransitionItem>("opacity");
+
+      if (needToPause() && opacity.transition().is_steady())
+      {
+        opacity.pause(ItemRef::constant(opacity.transition().get_value()));
+        timeline_.delAnimator(animatorPtr);
+      }
+      else if (opacity.transition().is_done())
+      {
+        timeline_.delAnimator(animatorPtr);
+      }
+
+      opacity.uncache();
+    }
+
+    const PlaylistView & playlist_;
+    TimelineView & timeline_;
+    Item & controlsContainer_;
+  };
+
+
+  //----------------------------------------------------------------
+  // AnimatorForControls
+  //
+  struct AnimatorForControls : public ItemView::IAnimator
+  {
+    AnimatorForControls(const PlaylistView & playlist,
+                        TimelineView & timeline,
+                        Item & controlsContainer):
+      playlist_(playlist),
+      timeline_(timeline),
+      controlsContainer_(controlsContainer)
+    {}
+
+    bool needToPause() const
+    {
+#if 0
+      bool playbackPaused = (timeline_.mainWindow_ == NULL ||
+                             timeline_.mainWindow_->isPlaybackPaused());
+#endif
+      const TVec2D & pt = timeline_.mousePt();
+      bool shouldPause = (playlist_.isEnabled() ||
+                          controlsContainer_.overlaps(pt));
+
+      return shouldPause;
+    }
+
+    // virtual:
+    void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animatorPtr)
+    {
+      Item & root = *(timeline_.root());
+      TransitionItem & opacity =
+        root.get<TransitionItem>("opacity_for_controls");
+
+      if (needToPause() && opacity.transition().is_steady())
+      {
+        opacity.pause(ItemRef::constant(opacity.transition().get_value()));
+        timeline_.delAnimator(animatorPtr);
+      }
+      else if (opacity.transition().is_done())
+      {
+        timeline_.delAnimator(animatorPtr);
+      }
+
+      opacity.uncache();
+    }
+
+    const PlaylistView & playlist_;
+    TimelineView & timeline_;
+    Item & controlsContainer_;
+  };
+
+
+  //----------------------------------------------------------------
+  // AnimateOpacity
+  //
+  struct AnimateOpacity : public Item::Observer
+  {
+    AnimateOpacity(TimelineView & timeline):
+      timeline_(timeline)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      timeline_.maybeAnimateOpacity();
+      timeline_.forceAnimateControls();
+    }
+
+    TimelineView & timeline_;
+  };
+
 
   //----------------------------------------------------------------
   // TimelineView::TimelineView
   //
   TimelineView::TimelineView():
     ItemView("timeline"),
-    model_(NULL),
-    playlist_(NULL)
+    mainWindow_(NULL),
+    playlist_(NULL),
+    model_(NULL)
   {}
 
   //----------------------------------------------------------------
   // TimelineView::setPlaylistView
   //
   void
-  TimelineView::setPlaylistView(PlaylistView * playlist)
+  TimelineView::setup(MainWindow * mainWindow, PlaylistView * playlist)
   {
-    if (!playlist)
+    if (!(mainWindow && playlist))
     {
       YAE_ASSERT(false);
       return;
     }
+
+    YAE_ASSERT(!mainWindow_);
+    mainWindow_ = mainWindow;
 
     YAE_ASSERT(!playlist_);
     playlist_ = playlist;
 
     Item & root = *root_;
 
-    // re-apply style when playlist is enabled or disabled:
-    playlist_->root()->
-      addObserver(Item::kOnToggleItemView,
-                  Item::TObserverPtr(new Repaint(*this, true)));
+    // setup opacity caching item:
+    typedef Transition::Polyline TPolyline;
+    TransitionItem & opacity = root.
+      addHidden(new TransitionItem("opacity",
+                                   TPolyline(0.25, 0.0, 1.0, 10),
+                                   TPolyline(1.75, 1.0, 1.0),
+                                   TPolyline(1.0, 1.0, 0.0, 10)));
+
+    ExpressionItem & titleHeight = root.
+      addHidden(new ExpressionItem("style_title_height"));
+    titleHeight.expression_ = titleHeight.
+      addExpr(new StyleTitleHeight(*playlist));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);
     shadow.anchors_.top_.reset();
     shadow.anchors_.right_.reset();
     shadow.width_ = shadow.addExpr(new TimelineShadowWidth(*playlist));
-    shadow.height_ = shadow.addExpr(new StyleTitleHeight(*playlist), 4.5);
+    shadow.height_ = ItemRef::scale(titleHeight, kPropertyExpression, 4.5);
     shadow.color_ = shadow.addExpr(new StyleTimelineShadow(*playlist));
+    shadow.opacity_ = ItemRef::uncacheable(opacity, kPropertyTransition);
 
     Item & container = root.addNew<Item>("container");
     container.anchors_.fill(root);
     container.anchors_.top_.reset();
-    container.height_ = container.
-      addExpr(new StyleTitleHeight(*playlist), 1.5);
+    container.height_ = ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
 
     Item & mouseDetect = root.addNew<Item>("mouse_detect");
     mouseDetect.anchors_.fill(container);
@@ -484,8 +734,8 @@ namespace yae
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     timeline.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
-    timeline.margins_.left_ = timeline.
-      addExpr(new StyleTitleHeight(*playlist), 0.5);
+    timeline.margins_.left_ =
+      ItemRef::scale(titleHeight, kPropertyExpression, 0.5);
     timeline.margins_.right_ = timeline.margins_.left_;
     timeline.height_ = timeline.addExpr(new OddRoundUp(container,
                                                        kPropertyHeight,
@@ -542,6 +792,7 @@ namespace yae
     timelineIn.height_ =
       timelineIn.addExpr(new TimelineHeight(*this, mouseDetect, timeline));
     timelineIn.color_ = colorExcluded;
+    timelineIn.opacity_ = shadow.opacity_;
 
     Rectangle & timelinePlayhead =
       timeline.addNew<Rectangle>("timelinePlayhead");
@@ -552,6 +803,7 @@ namespace yae
     timelinePlayhead.anchors_.vcenter_ = timelineIn.anchors_.vcenter_;
     timelinePlayhead.height_ = timelineIn.height_;
     timelinePlayhead.color_ = colorPlayed;
+    timelinePlayhead.opacity_ = shadow.opacity_;
 
     Rectangle & timelineOut =
       timeline.addNew<Rectangle>("timelineOut");
@@ -562,6 +814,7 @@ namespace yae
     timelineOut.anchors_.vcenter_ = timelineIn.anchors_.vcenter_;
     timelineOut.height_ = timelineIn.height_;
     timelineOut.color_ = colorIncluded;
+    timelineOut.opacity_ = shadow.opacity_;
 
     Rectangle & timelineEnd =
       timeline.addNew<Rectangle>("timelineEnd");
@@ -571,6 +824,7 @@ namespace yae
     timelineEnd.anchors_.vcenter_ = timelineIn.anchors_.vcenter_;
     timelineEnd.height_ = timelineIn.height_;
     timelineEnd.color_ = colorExcluded;
+    timelineEnd.opacity_ = shadow.opacity_;
 
     RoundRect & inPoint = root.addNew<RoundRect>("inPoint");
     inPoint.anchors_.hcenter_ =
@@ -582,6 +836,7 @@ namespace yae
     inPoint.color_ = colorPlayed;
     inPoint.background_ = colorPlayedBg;
     inPoint.visible_ = inPoint.addExpr(new MarkerVisible(*this, mouseDetect));
+    inPoint.opacity_ = shadow.opacity_;
 
     RoundRect & playhead = root.addNew<RoundRect>("playhead");
     playhead.anchors_.hcenter_ =
@@ -593,6 +848,7 @@ namespace yae
     playhead.color_ = colorPlayed;
     playhead.background_ = colorPlayedBg;
     playhead.visible_ = inPoint.visible_;
+    playhead.opacity_ = shadow.opacity_;
 
     RoundRect & outPoint = root.addNew<RoundRect>("outPoint");
     outPoint.anchors_.hcenter_ =
@@ -604,6 +860,7 @@ namespace yae
     outPoint.color_ = colorOutPt;
     outPoint.background_ = colorOutPtBg;
     outPoint.visible_ = inPoint.visible_;
+    outPoint.opacity_ = shadow.opacity_;
 
     SliderInPoint & sliderInPoint =
       root.add(new SliderInPoint(*this, timeline));
@@ -623,9 +880,14 @@ namespace yae
     Rectangle & playheadAuxBg = container.addNew<Rectangle>("playheadAuxBg");
     Text & playheadAux = container.addNew<Text>("playheadAux");
     TextInput & playheadEdit = root.addNew<TextInput>("playheadEdit");
+    playheadAuxBg.opacity_ = shadow.opacity_;
+    playheadAux.opacity_ = shadow.opacity_;
+    playheadEdit.opacity_ = shadow.opacity_;
 
     Rectangle & durationAuxBg = container.addNew<Rectangle>("durationAuxBg");
     Text & durationAux = container.addNew<Text>("durationAux");
+    durationAuxBg.opacity_ = shadow.opacity_;
+    durationAux.opacity_ = shadow.opacity_;
 
     TextInputProxy & playheadFocus =
       root.add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
@@ -675,6 +937,139 @@ namespace yae
     playheadEdit.selectionFg_ = colorHighlightFg;
 
     playheadFocus.anchors_.fill(playheadAuxBg);
+
+    // add other player controls:
+    ColorRef colorControlsBg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+
+    Item & playlistButton = root.addNew<Item>("playlistButton");
+    TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));
+    {
+      playlistButton.anchors_.top_ =
+        ItemRef::offset(root, kPropertyTop, 2);
+      playlistButton.anchors_.left_ =
+        ItemRef::reference(root, kPropertyLeft);
+      playlistButton.width_ =
+        ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
+      playlistButton.height_ = playlistButton.width_;
+
+      TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
+      gridOn.anchors_.fill(playlistButton);
+      gridOn.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
+                                         0.2));
+      gridOn.visible_ = gridOn.addExpr(new OnPlaylistVisible(*this, true));
+      gridOn.texture_ = gridOn.addExpr(new StyleGridOnTexture(*playlist));
+      gridOn.opacity_ = shadow.opacity_;
+
+      TexturedRect & gridOff = playlistButton.add(new TexturedRect("gridOff"));
+      gridOff.anchors_.fill(playlistButton);
+      gridOff.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
+                                          0.2));
+      gridOff.visible_ = gridOff.addExpr(new OnPlaylistVisible(*this, false));
+      gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(*playlist));
+      gridOff.opacity_ = shadow.opacity_;
+
+      playlistToggle.anchors_.fill(playlistButton);
+    }
+
+    TransitionItem & opacityForControls = root.
+      addHidden(new TransitionItem("opacity_for_controls",
+                                   TPolyline(0.25, 0.0, 1.0, 10),
+                                   TPolyline(1.75, 1.0, 1.0),
+                                   TPolyline(1.0, 1.0, 0.0, 10)));
+
+    RoundRect & controls = root.addNew<RoundRect>("controls");
+    Item & mouseDetectForControls =
+      root.addNew<Item>("mouse_detect_for_controls");
+    MouseTrap & mouseTrapForControls =
+      controls.addNew<MouseTrap>("mouse_trap_for_controls");
+    controls.anchors_.vcenter_ =
+      ItemRef::reference(root, kPropertyVCenter);
+    controls.anchors_.hcenter_ =
+      ItemRef::reference(root, kPropertyHCenter);
+    controls.height_ =
+      ItemRef::scale(titleHeight, kPropertyExpression, 3.0);
+    controls.visible_ = controls.
+      addExpr(new ExposeControls(*this));
+    controls.visible_.cachingEnabled_ = false;
+    mouseTrapForControls.anchors_.fill(controls);
+
+    double cells = 2.0;
+    controls.width_ = ItemRef::scale(controls, kPropertyHeight, cells);
+    controls.radius_ = ItemRef::scale(controls, kPropertyHeight, 0.1);
+    controls.color_ = colorControlsBg;
+    controls.opacity_ =
+      ItemRef::uncacheable(opacityForControls, kPropertyTransition);
+
+    Item & playbackButton = controls.addNew<Item>("playbackButton");
+    TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));
+    {
+      playbackButton.anchors_.vcenter_ =
+        ItemRef::reference(controls, kPropertyVCenter);
+
+      playbackButton.anchors_.left_ =
+        ItemRef::reference(controls, kPropertyLeft);
+
+      playbackButton.margins_.left_ =
+        ItemRef::scale(controls, kPropertyWidth, 0.5 / cells);
+
+      playbackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
+      playbackButton.height_ = playbackButton.width_;
+
+      TexturedRect & play = playbackButton.add(new TexturedRect("play"));
+      play.anchors_.fill(playbackButton);
+      play.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.15));
+      play.visible_ = play.addExpr(new OnPlaybackPaused(*this, true));
+      play.texture_ = play.addExpr(new StylePlayTexture(*playlist));
+      play.opacity_ = controls.opacity_;
+
+      TexturedRect & pause = playbackButton.add(new TexturedRect("pause"));
+      pause.anchors_.fill(playbackButton);
+      pause.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.2));
+      pause.visible_ = pause.addExpr(new OnPlaybackPaused(*this, false));
+      pause.texture_ = pause.addExpr(new StylePauseTexture(*playlist));
+      pause.opacity_ = controls.opacity_;
+
+#if 1
+      // while there is only one button in the controls container
+      // use the entire container area for mouse clicks:
+      playbackToggle.anchors_.fill(controls);
+#else
+      playbackToggle.anchors_.fill(playbackButton);
+#endif
+
+      mouseDetectForControls.anchors_.fill(controls);
+    }
+
+    animator_.reset(new Animator(*playlist, *this, mouseDetect));
+    maybeAnimateOpacity();
+
+    animatorForControls_.reset
+      (new AnimatorForControls(*playlist, *this, mouseDetectForControls));
+    forceAnimateControls();
+
+    // re-apply style when playlist is enabled or disabled:
+    Item::TObserverPtr repaintTimeline(new Repaint(*this, true));
+    playlist_->root()->addObserver(Item::kOnToggleItemView, repaintTimeline);
+
+    Item::TObserverPtr animateOpacity(new AnimateOpacity(*this));
+    playlist_->root()->addObserver(Item::kOnToggleItemView, animateOpacity);
+    playheadFocus.addObserver(Item::kOnFocus, animateOpacity);
+    playheadFocus.addObserver(Item::kOnFocusOut, animateOpacity);
+  }
+
+  //----------------------------------------------------------------
+  // TimelineView::setEnabled
+  //
+  void
+  TimelineView::setEnabled(bool enable)
+  {
+    ItemView::setEnabled(enable);
+
+    if (enable)
+    {
+      maybeAnimateOpacity();
+    }
   }
 
   //----------------------------------------------------------------
@@ -703,8 +1098,6 @@ namespace yae
   bool
   TimelineView::processMouseTracking(const TVec2D & mousePt)
   {
-    (void)mousePt;
-
     if (!this->isEnabled())
     {
       return false;
@@ -733,6 +1126,10 @@ namespace yae
 
     Item & outPoint = root["outPoint"];
     requestUncache(&outPoint);
+
+    // update the opacity transitions:
+    maybeAnimateOpacity();
+    maybeAnimateControls();
 
     return true;
   }
@@ -787,6 +1184,78 @@ namespace yae
       this->requestUncache();
       this->requestRepaint();
     }
+  }
+
+  //----------------------------------------------------------------
+  // TimelineView::maybeAnimateOpacity
+  //
+  void
+  TimelineView::maybeAnimateOpacity()
+  {
+    Item & root = *root_;
+    TransitionItem & opacity = root.get<TransitionItem>("opacity");
+    Animator & animator = dynamic_cast<Animator &>(*(animator_.get()));
+
+    if (animator.needToPause() && opacity.transition().is_steady())
+    {
+      opacity.pause(ItemRef::constant(opacity.transition().get_value()));
+      delAnimator(animator_);
+    }
+    else
+    {
+      opacity.start();
+      addAnimator(animator_);
+    }
+
+    opacity.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineView::maybeAnimateControls
+  //
+  void
+  TimelineView::maybeAnimateControls()
+  {
+    Item & root = *root_;
+    TransitionItem & opacity =
+      root.get<TransitionItem>("opacity_for_controls");
+    AnimatorForControls & animator =
+      dynamic_cast<AnimatorForControls &>(*(animatorForControls_.get()));
+
+    Item & mouseDetectForControls = root["mouse_detect_for_controls"];
+    const TVec2D & pt = mousePt();
+
+    bool playbackPaused = (mainWindow_ == NULL ||
+                           mainWindow_->isPlaybackPaused());
+
+    bool needToPause = animator.needToPause();
+    if (needToPause && opacity.transition().is_steady())
+    {
+      opacity.pause(ItemRef::constant(opacity.transition().get_value()));
+      delAnimator(animatorForControls_);
+    }
+    else if ((!needToPause && opacity.is_paused()) ||
+             mouseDetectForControls.overlaps(pt) ||
+             playbackPaused)
+    {
+      opacity.start();
+      addAnimator(animatorForControls_);
+    }
+
+    opacity.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineView::forceAnimateControls
+  //
+  void
+  TimelineView::forceAnimateControls()
+  {
+    Item & root = *root_;
+    TransitionItem & opacity =
+      root.get<TransitionItem>("opacity_for_controls");
+    opacity.pause(ItemRef::constant(opacity.transition().get_spinup_value()));
+    maybeAnimateControls();
   }
 
 }

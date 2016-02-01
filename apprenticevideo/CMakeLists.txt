@@ -92,7 +92,6 @@ find_library(GLEW_LIBRARY GLEW
 
 set(project_moc_hxx
   yaeCanvasWidget.h
-  yaeControlsView.h
   yaeItemView.h
   yaeMainWindow.h
   yaePlaylist.h
@@ -136,8 +135,6 @@ set(project_sources
   yaeCanvasRenderer.h
   yaeCanvasRenderer.cpp
   yaeColor.h
-  yaeControlsView.cpp
-  yaeControlsView.h
   yaeExpression.h
   yaeFlickableArea.cpp
   yaeFlickableArea.h

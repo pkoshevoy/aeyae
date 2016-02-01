@@ -320,6 +320,22 @@ namespace yae
   // RoundRect::get
   //
   void
+  RoundRect::get(Property property, double & value) const
+  {
+    if (property == kPropertyOpacity)
+    {
+      value = opacity_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // RoundRect::get
+  //
+  void
   RoundRect::get(Property property, Color & value) const
   {
     if (property == kPropertyColor)

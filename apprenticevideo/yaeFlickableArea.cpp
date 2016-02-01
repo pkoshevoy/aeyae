@@ -39,7 +39,7 @@ namespace yae
       {}
 
       // virtual:
-      void animate(Canvas::ILayer & layer)
+      void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animatorPtr)
       {
         flickable_.animate();
       }

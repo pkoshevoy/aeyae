@@ -11,6 +11,13 @@
 
 // standard libraries:
 #include <list>
+#include <map>
+#include <set>
+
+// boost libraries:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#endif
 
 // Qt interfaces:
 #include <QMouseEvent>

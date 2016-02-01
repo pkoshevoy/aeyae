@@ -19,6 +19,7 @@
 namespace yae
 {
   // forward declarations:
+  class MainWindow;
   class TimelineModel;
   class PlaylistView;
 
@@ -33,10 +34,10 @@ namespace yae
     TimelineView();
 
     // need to reference playlist view for common style info:
-    void setPlaylistView(PlaylistView * playlist);
+    void setup(MainWindow * mainWindow, PlaylistView * playlist);
 
-    inline PlaylistView * playlistView() const
-    { return playlist_; }
+    // virtual:
+    void setEnabled(bool enable);
 
     // virtual: returns false if size didn't change
     bool resizeTo(const Canvas * canvas);
@@ -44,18 +45,35 @@ namespace yae
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
 
-    // data source:
+    // timeline data source:
     void setModel(TimelineModel * model);
 
+    // accessors:
     inline TimelineModel * model() const
     { return model_; }
+
+    inline MainWindow * mainWindow() const
+    { return mainWindow_; }
+
+    inline PlaylistView * playlistView() const
+    { return playlist_; }
 
   public slots:
     void modelChanged();
 
+  public:
+    // helpers:
+    void maybeAnimateOpacity();
+    void maybeAnimateControls();
+    void forceAnimateControls();
+
+    MainWindow * mainWindow_;
+    PlaylistView * playlist_;
+
   protected:
     TimelineModel * model_;
-    PlaylistView * playlist_;
+    TAnimatorPtr animator_;
+    TAnimatorPtr animatorForControls_;
   };
 
 }

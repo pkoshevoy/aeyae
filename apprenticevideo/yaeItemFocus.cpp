@@ -119,6 +119,8 @@ namespace yae
     if (focus_)
     {
       ItemPtr itemPtr = focus_->item_.lock();
+      focus_ = NULL;
+
       if (itemPtr)
       {
         Item & item = *itemPtr;
@@ -127,7 +129,6 @@ namespace yae
       }
     }
 
-    focus_ = NULL;
     return true;
   }
 
@@ -160,6 +161,8 @@ namespace yae
     if (focus_)
     {
       ItemPtr itemPtr = focus_->item_.lock();
+      focus_ = NULL;
+
       if (itemPtr)
       {
         Item & item = *itemPtr;

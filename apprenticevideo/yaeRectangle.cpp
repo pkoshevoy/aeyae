@@ -112,6 +112,22 @@ namespace yae
   // Rectangle::get
   //
   void
+  Rectangle::get(Property property, double & value) const
+  {
+    if (property == kPropertyOpacity)
+    {
+      value = opacity_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Rectangle::get
+  //
+  void
   Rectangle::get(Property property, Color & value) const
   {
     if (property == kPropertyColor)

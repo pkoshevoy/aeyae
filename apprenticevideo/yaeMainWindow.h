@@ -32,7 +32,6 @@
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasWidget.h"
 #endif
-#include "yaeControlsView.h"
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
@@ -144,9 +143,6 @@ namespace yae
     inline bool isPlaylistVisible() const
     { return actionShowPlaylist->isChecked(); }
 
-    inline bool isTimelineVisible() const
-    { return actionShowTimeline->isChecked(); }
-
   signals:
     void setInPoint();
     void setOutPoint();
@@ -191,7 +187,6 @@ namespace yae
     void playbackLoopFilter();
     void playbackNonReferenceFrames();
     void playbackShowPlaylist();
-    void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
     void playbackFillScreen();
@@ -312,7 +307,6 @@ namespace yae
     QShortcut * shortcutFullScreen_;
     QShortcut * shortcutFillScreen_;
     QShortcut * shortcutShowPlaylist_;
-    QShortcut * shortcutShowTimeline_;
     QShortcut * shortcutPlay_;
     QShortcut * shortcutNext_;
     QShortcut * shortcutPrev_;
@@ -367,7 +361,6 @@ namespace yae
     Canvas * canvas_;
     PlaylistView playlistView_;
     TimelineView timelineView_;
-    ControlsView controlsView_;
     TimelineModel timelineModel_;
     TPlaylistModel playlistModel_;
 

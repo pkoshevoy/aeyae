@@ -146,7 +146,7 @@ namespace yae
       struct IAnimator
       {
         virtual ~IAnimator() {}
-        virtual void animate(ILayer & layer) = 0;
+        virtual void animate(ILayer &, boost::shared_ptr<IAnimator> a) = 0;
       };
 
       // NOTE: the layer may retain a (weak) pointer for the given animator:

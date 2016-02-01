@@ -182,93 +182,6 @@ namespace yae
     bool heldDown_;
   };
 #endif
-#if 0
-  //----------------------------------------------------------------
-  // setTimelineCss
-  //
-  static void
-  setTimelineCss(QWidget * timeline, bool noVideo = false)
-  {
-    static const char * cssVideo =
-      "QWidget#timelineSeparator_ {\n"
-      "  background-color: #000000;\n"
-      "}\n"
-      "\n"
-      "QWidget {\n"
-      "    background-color: #000000;\n"
-      "}\n"
-      "\n"
-      "QLineEdit {\n"
-      "    color: #e0e0e0;\n"
-      "    border: 0px solid #404040;\n"
-      "    border-radius: 3px;\n"
-      "    background-color: #000000;\n"
-      "}\n"
-      "\n"
-      "QLineEdit:disabled {\n"
-      "    color: #404040;\n"
-      "}\n";
-
-    static const char * cssAudio =
-      "QWidget#timelineSeparator_ {\n"
-      "  background-color: %1;\n"
-      "}\n"
-      "\n"
-      "QWidget {\n"
-      "    background-color: %2;\n"
-      "}\n"
-      "\n"
-      "QLineEdit {\n"
-      "    color: %3;\n"
-      "    border: 0px solid %2;\n"
-      "    border-radius: 3px;\n"
-      "    background-color: %2;\n"
-      "}\n"
-      "\n"
-      "QLineEdit:disabled {\n"
-      "    color: %4;\n"
-      "}\n";
-
-    QString css;
-
-    if (noVideo)
-    {
-      QPalette palette;
-
-      css =
-        QString::fromUtf8(cssAudio).
-        arg(palette.color(QPalette::Mid).name(),
-            palette.color(QPalette::Window).name(),
-            palette.color(QPalette::WindowText).name(),
-            palette.color(QPalette::Disabled,
-                          QPalette::WindowText).name());
-    }
-    else
-    {
-      css = QString::fromUtf8(cssVideo);
-    }
-
-    timeline->setStyleSheet(css);
-  }
-
-  //----------------------------------------------------------------
-  // setTimelineCssForVideo
-  //
-  static void
-  setTimelineCssForVideo(QWidget * timeline)
-  {
-    setTimelineCss(timeline, false);
-  }
-
-  //----------------------------------------------------------------
-  // setTimelineCssForAudio
-  //
-  static void
-  setTimelineCssForAudio(QWidget * timeline)
-  {
-    setTimelineCss(timeline, true);
-  }
-#endif
 
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
   //----------------------------------------------------------------
@@ -403,11 +316,9 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
-    playerWidget_->append(&controlsView_);
-    timelineView_.setPlaylistView(&playlistView_);
+    timelineView_.setup(this, &playlistView_);
     playlistView_.setModel(&playlistModel_);
     timelineView_.setModel(&timelineModel_);
-    controlsView_.setup(this, &playlistView_);
 
     // add image://thumbnails/... provider:
     boost::shared_ptr<ThumbnailProvider>
@@ -518,7 +429,6 @@ namespace yae
     shortcutFullScreen_ = new QShortcut(this);
     shortcutFillScreen_ = new QShortcut(this);
     shortcutShowPlaylist_ = new QShortcut(this);
-    shortcutShowTimeline_ = new QShortcut(this);
     shortcutPlay_ = new QShortcut(this);
     shortcutNext_ = new QShortcut(this);
     shortcutPrev_ = new QShortcut(this);
@@ -540,7 +450,6 @@ namespace yae
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
     shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
     shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
-    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
     shortcutPlay_->setContext(Qt::ApplicationShortcut);
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
@@ -886,14 +795,6 @@ namespace yae
                  actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionShowTimeline, SIGNAL(toggled(bool)),
-                 this, SLOT(playbackShowTimeline()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
-                 actionShowTimeline, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
@@ -1158,9 +1059,6 @@ namespace yae
     // get a shortcut to the Canvas (owned by the QML canvas widget):
     canvas_ = yae::getCanvas(playerWidget_);
     YAE_ASSERT(canvas_);
-
-    // show the timeline:
-    actionShowTimeline->setChecked(true);
 
     // hide the playlist:
     actionShowPlaylist->setChecked(false);
@@ -2366,7 +2264,7 @@ namespace yae
   void
   MainWindow::playbackShowPlaylist()
   {
-    controlsView_.controlsChanged();
+    timelineView_.modelChanged();
 
     bool showPlaylist = actionShowPlaylist->isChecked();
 
@@ -2392,14 +2290,14 @@ namespace yae
     playlistView_.setEnabled(showPlaylist);
 #endif
   }
-
+#if 0
   //----------------------------------------------------------------
   // MainWindow::playbackShowTimeline
   //
   void
   MainWindow::playbackShowTimeline()
   {
-    controlsView_.controlsChanged();
+    timelineView_.modelChanged();
 
     bool showTimeline = actionShowTimeline->isChecked();
 
@@ -2421,7 +2319,7 @@ namespace yae
     timelineView_.setEnabled(showTimeline);
 #endif
   }
-
+#endif
   //----------------------------------------------------------------
   // MainWindow::playbackShrinkWrap
   //
@@ -2467,7 +2365,6 @@ namespace yae
     yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
     yae::swapShortcuts(shortcutFillScreen_, actionFillScreen);
     yae::swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
-    yae::swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
     yae::swapShortcuts(shortcutPlay_, actionPlay);
     yae::swapShortcuts(shortcutNext_, actionNext);
     yae::swapShortcuts(shortcutPrev_, actionPrev);
@@ -2664,7 +2561,17 @@ namespace yae
       saveBookmark();
     }
 
-    controlsView_.controlsChanged();
+    timelineView_.modelChanged();
+    timelineView_.maybeAnimateOpacity();
+
+    if (!playbackPaused_)
+    {
+      timelineView_.forceAnimateControls();
+    }
+    else
+    {
+      timelineView_.maybeAnimateControls();
+    }
   }
 
   //----------------------------------------------------------------
@@ -2692,6 +2599,7 @@ namespace yae
   MainWindow::skipForward()
   {
     timelineModel_.seekFromCurrentTime(7.0);
+    timelineView_.maybeAnimateOpacity();
   }
 
   //----------------------------------------------------------------
@@ -2701,6 +2609,7 @@ namespace yae
   MainWindow::skipBack()
   {
     timelineModel_.seekFromCurrentTime(-3.0);
+    timelineView_.maybeAnimateOpacity();
   }
 
   //----------------------------------------------------------------
@@ -3596,7 +3505,7 @@ namespace yae
             }
             else
             {
-              actionShowTimeline->trigger();
+              timelineView_.maybeAnimateOpacity();
             }
           }
         }
@@ -3653,6 +3562,7 @@ namespace yae
               (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
 
             timelineModel_.seekFromCurrentTime(offset);
+            timelineView_.maybeAnimateOpacity();
           }
         }
 
@@ -3750,10 +3660,6 @@ namespace yae
       else if (actionShowPlaylist->isChecked())
       {
         actionShowPlaylist->trigger();
-      }
-      else if (actionShowTimeline->isChecked())
-      {
-        actionShowTimeline->trigger();
       }
     }
     else if (key == Qt::Key_I)
@@ -3903,7 +3809,6 @@ namespace yae
       contextMenu_->addAction(actionLoop);
       contextMenu_->addAction(actionSetInPoint);
       contextMenu_->addAction(actionSetOutPoint);
-      contextMenu_->addAction(actionShowTimeline);
 
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionShrinkWrap);

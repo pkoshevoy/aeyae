@@ -316,7 +316,7 @@ namespace yae
       if (animatorPtr)
       {
         IAnimator & animator = *animatorPtr;
-        animator.animate(*this);
+        animator.animate(*this, animatorPtr);
       }
       else
       {

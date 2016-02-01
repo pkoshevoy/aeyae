@@ -218,6 +218,274 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Transition::Polyline::Polyline
+  //
+  Transition::Polyline::Polyline(double duration_sec,
+                                 double v0,
+                                 double v1,
+                                 unsigned int n):
+    duration_ns_(duration_sec * 1e+9)
+  {
+    pt_[0.0] = v0;
+    pt_[1.0] = v1;
+    tween_smooth(n);
+  }
+
+  //----------------------------------------------------------------
+  // Transition::Polyline::tween_smooth
+  //
+  Transition::Polyline &
+  Transition::Polyline::tween_smooth(unsigned int n)
+  {
+    if (n < 1 || pt_.size() != 2)
+    {
+      YAE_ASSERT(n < 1);
+      return *this;
+    }
+
+    const Point & p0 = *(pt_.begin());
+    double t0 = p0.first;
+    double v0 = p0.second;
+
+    const Point & p1 = *(pt_.rbegin());
+    double t1 = p1.first;
+    double v1 = p1.second;
+
+    double dv = (v1 - v0);
+    if (dv == 0.0)
+    {
+      // no need to blend between identical values, skip it
+      return *this;
+    }
+
+    double dt = t1 - t0;
+    for (unsigned int i = 0; i < n; i++)
+    {
+      double s = double(i + 1) / double(n + 1);
+      double c = cos(M_PI * (1.0 + s));
+      double v = v0 + dv * 0.5 * (1.0 + c);
+      pt_[t0 + dt * s] = v;
+    }
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::evaluate
+  //
+  double
+  Transition::Polyline::evaluate(double t) const
+  {
+    YAE_ASSERT(duration_ns_ && !pt_.empty());
+
+    // get iterator to the first element that is greater than given key (t);
+    std::map<double, double>::const_iterator i = pt_.upper_bound(t);
+
+    if (i == pt_.begin())
+    {
+      // clamp to start:
+      return i->second;
+    }
+
+    if (i == pt_.end())
+    {
+      // clamp to end:
+      return pt_.rbegin()->second;
+    }
+
+    // interpolate:
+    double t1 = i->first;
+    double v1 = i->second;
+    --i;
+    double t0 = i->first;
+    double v0 = i->second;
+
+    double dt = (t1 - t0);
+    double s = (t - t0) / dt;
+    double v = s * v1 + (1.0 - s) * v0;
+
+    return v;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::Transition
+  //
+  Transition::Transition(const Polyline & spinup,
+                         const Polyline & steady,
+                         const Polyline & spindown):
+    spinup_(spinup),
+    steady_(steady),
+    spindown_(spindown),
+    duration_ns_(0.0)
+  {
+    if (spinup.duration_ns_ > 0.0)
+    {
+      segment_[duration_ns_] = &spinup_;
+      duration_ns_ += spinup.duration_ns_;
+    }
+
+    if (steady.duration_ns_ > 0.0)
+    {
+      segment_[duration_ns_] = &steady_;
+      duration_ns_ += steady.duration_ns_;
+    }
+
+    if (spindown.duration_ns_ > 0.0)
+    {
+      segment_[duration_ns_] = &spindown_;
+      duration_ns_ += spindown.duration_ns_;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Transition::is_done
+  //
+  bool
+  Transition::is_done() const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    if (now < t0_)
+    {
+      return false;
+    }
+
+    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::uint64_t t = ns.count();
+    bool done = (duration_ns_ < t);
+    return done;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::is_steady
+  //
+  bool
+  Transition::is_steady() const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    if (now < t0_)
+    {
+      return false;
+    }
+
+    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::uint64_t t = ns.count();
+    if (t < spinup_.duration_ns_)
+    {
+      return false;
+    }
+
+    t -= spinup_.duration_ns_;
+    bool steady = (t < steady_.duration_ns_);
+    return steady;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::get_state
+  //
+  Transition::State
+  Transition::get_state(const TimePoint & now,
+                        const Polyline *& seg,
+                        double & seg_pos) const
+  {
+    if (now < t0_)
+    {
+      seg = segment_.begin()->second;
+      seg_pos = 0.0;
+      return Transition::kPending;
+    }
+
+    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::uint64_t t = ns.count();
+
+    boost::uint64_t t1 = spinup_.duration_ns_;
+    if (t < t1)
+    {
+      seg = &spinup_;
+      seg_pos = double(t) / double(spinup_.duration_ns_);
+      return Transition::kSpinup;
+    }
+
+    boost::uint64_t t0 = t1;
+    t1 += steady_.duration_ns_;
+    if (t < t1)
+    {
+      seg = &steady_;
+      seg_pos = double(t - t0) / double(steady_.duration_ns_);
+      return Transition::kSteady;
+    }
+
+    t0 = t1;
+    t1 += spindown_.duration_ns_;
+    if (t < t1)
+    {
+      seg = &spindown_;
+      seg_pos = double(t - t0) / double(spindown_.duration_ns_);
+      return Transition::kSpindown;
+    }
+
+    seg = segment_.rbegin()->second;
+    seg_pos = 1.0;
+    return Transition::kDone;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::start
+  //
+  void
+  Transition::start()
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    const Polyline * seg = NULL;
+    double seg_pos = 0.0;
+    Transition::State current_state = get_state(now, seg, seg_pos);
+
+    if (current_state == Transition::kSteady)
+    {
+      t0_ = now - boost::chrono::steady_clock::duration(spinup_.duration_ns_);
+    }
+    else if (current_state == Transition::kSpindown)
+    {
+      boost::uint64_t skip_spinup_ns =
+        boost::uint64_t(double(spinup_.duration_ns_) * (1.0 - seg_pos));
+      t0_ = now - boost::chrono::steady_clock::duration(skip_spinup_ns);
+    }
+    else if (current_state != Transition::kSpinup)
+    {
+      t0_ = now;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Transition::start_from_steady
+  //
+  void
+  Transition::start_from_steady()
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    t0_ = now - boost::chrono::steady_clock::duration(spinup_.duration_ns_);
+  }
+
+  //----------------------------------------------------------------
+  // Transition::evaluate
+  //
+  void
+  Transition::evaluate(double & result) const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    const Polyline * seg = NULL;
+    double seg_pos = 0.0;
+
+    get_state(now, seg, seg_pos);
+    YAE_ASSERT(seg);
+
+    if (seg)
+    {
+      result = seg->evaluate(seg_pos);
+    }
+  }
+
+
+  //----------------------------------------------------------------
   // Margins::Margins
   //
   Margins::Margins()
@@ -1135,5 +1403,129 @@ namespace yae
     }
   }
 #endif
+
+
+  //----------------------------------------------------------------
+  // ExpressionItem::ExpressionItem
+  //
+  ExpressionItem::ExpressionItem(const char * id):
+    Item(id)
+  {}
+
+  //----------------------------------------------------------------
+  // ExpressionItem::get
+  //
+  void
+  ExpressionItem::get(Property property, double & value) const
+  {
+    if (property == kPropertyExpression)
+    {
+      value = expression_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ExpressionItem::uncache
+  //
+  void
+  ExpressionItem::uncache()
+  {
+    expression_.uncache();
+    Item::uncache();
+  }
+
+
+  //----------------------------------------------------------------
+  // TransitionItem::TransitionItem
+  //
+  TransitionItem::TransitionItem(const char * id,
+                                 const Transition::Polyline & spinup,
+                                 const Transition::Polyline & steady,
+                                 const Transition::Polyline & spindown):
+    Item(id),
+    expression_(Item::addExpr(new Transition(spinup, steady, spindown))),
+    transition_(*(dynamic_cast<Transition *>
+                  (const_cast<IProperties<double> *>(expression_.ref_))))
+  {
+    override_ = expression_;
+  }
+
+  //----------------------------------------------------------------
+  // TransitionItem::pause
+  //
+  void
+  TransitionItem::pause(const ItemRef & v)
+  {
+    override_ = v;
+  }
+
+  //----------------------------------------------------------------
+  // TransitionItem::is_paused
+  //
+  bool
+  TransitionItem::is_paused() const
+  {
+    bool paused = (override_.ref_ != expression_.ref_);
+    return paused;
+  }
+
+  //----------------------------------------------------------------
+  // TransitionItem::start
+  //
+  void
+  TransitionItem::start()
+  {
+    bool paused = is_paused();
+    if (paused)
+    {
+      if (override_.get() == transition_.get_steady_value())
+      {
+        // skip the intro:
+        transition_.start_from_steady();
+      }
+      else
+      {
+        // start from the beginning:
+        transition_.start();
+      }
+
+      override_ = expression_;
+    }
+    else
+    {
+      transition_.start();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TransitionItem::get
+  //
+  void
+  TransitionItem::get(Property property, double & value) const
+  {
+    if (property == kPropertyTransition)
+    {
+      value = override_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TransitionItem::uncache
+  //
+  void
+  TransitionItem::uncache()
+  {
+    override_.uncache();
+    expression_.uncache();
+    Item::uncache();
+  }
 
 }

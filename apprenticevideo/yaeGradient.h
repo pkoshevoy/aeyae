@@ -31,6 +31,9 @@ namespace yae
     // virtual:
     void paintContent() const;
 
+    // virtual:
+    void get(Property property, double & value) const;
+
     ItemRef opacity_;
     TGradientRef color_;
     Orientation orientation_;

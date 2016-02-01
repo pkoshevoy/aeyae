@@ -471,6 +471,10 @@ namespace yae
     {
       value = cursorWidth_.get();
     }
+    else if (property == kPropertyOpacity)
+    {
+      value = opacity_.get();
+    }
     else
     {
       Item::get(property, value);
@@ -747,6 +751,7 @@ namespace yae
     view_.uncache();
     edit_.uncache();
     edit_.onFocus();
+    InputArea::onFocus();
   }
 
   //----------------------------------------------------------------
@@ -758,6 +763,7 @@ namespace yae
     view_.uncache();
     edit_.uncache();
     edit_.onFocusOut();
+    InputArea::onFocusOut();
   }
 
   //----------------------------------------------------------------

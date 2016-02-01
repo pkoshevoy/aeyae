@@ -21,6 +21,7 @@
 
 // boost includes:
 #ifndef Q_MOC_RUN
+#include <boost/chrono/chrono.hpp>
 #include <boost/shared_ptr.hpp>
 #endif
 
@@ -73,6 +74,95 @@ namespace yae
     void evaluate(double & result) const;
 
     const Item & item_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Transition
+  //
+  struct Transition : public TDoubleExpr
+  {
+    //----------------------------------------------------------------
+    // TimePoint
+    //
+    typedef boost::chrono::steady_clock::time_point TimePoint;
+
+    //----------------------------------------------------------------
+    // Polyline
+    //
+    // domain: [0, 1]
+    //
+    struct Polyline
+    {
+      Polyline(double duration_sec = 1.0,
+               double v0 = 0.0,
+               double v1 = 1.0,
+               unsigned int n = 0);
+
+      // generate intermediate smooth interpolation points
+      // by sampling the cos(t) function over the [Pi, 2Pi] interval:
+      Polyline & tween_smooth(unsigned int n);
+
+      double evaluate(double pos) const;
+
+      typedef std::map<double, double>::value_type Point;
+      std::map<double, double> pt_;
+      boost::uint64_t duration_ns_;
+    };
+
+    Transition(const Polyline & spinup,
+               const Polyline & steady,
+               const Polyline & spindown);
+
+    // quick check whether transition is done or steady:
+    bool is_done() const;
+    bool is_steady() const;
+
+    enum State
+    {
+      kPending,
+      kSpinup,
+      kSteady,
+      kSpindown,
+      kDone
+    };
+
+    // check whether transition is in a particular state right now:
+    State get_state(const TimePoint & now,
+                    const Polyline *& seg,
+                    double & seg_pos) const;
+
+    // (re)set the start time:
+    void start();
+    void start_from_steady();
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    // acessor to the current value:
+    inline double get_value() const
+    {
+      double v = 0.0;
+      evaluate(v);
+      return v;
+    }
+
+    inline double get_spinup_value() const
+    { return segment_.begin()->second->evaluate(0.0); }
+
+    inline double get_steady_value() const
+    { return steady_.evaluate(0.5); }
+
+    inline double get_spindown_value() const
+    { return segment_.rbegin()->second->evaluate(1.0); }
+
+  protected:
+    TimePoint t0_;
+    Polyline spinup_;
+    Polyline steady_;
+    Polyline spindown_;
+    std::map<double, const Polyline *> segment_;
+    double duration_ns_;
   };
 
 
@@ -567,6 +657,59 @@ namespace yae
 
   protected:
     QPersistentModelIndex modelIndex_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ExpressionItem
+  //
+  struct ExpressionItem : public Item
+  {
+    ExpressionItem(const char * id);
+
+    // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
+    void uncache();
+
+    ItemRef expression_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TransitionItem
+  //
+  struct TransitionItem : public Item
+  {
+    TransitionItem(const char * id,
+                   const Transition::Polyline & spinup,
+                   const Transition::Polyline & steady,
+                   const Transition::Polyline & spindown);
+
+    // override transition value with another (until start):
+    void pause(const ItemRef & v);
+
+    // check whether the transition has been paused:
+    bool is_paused() const;
+
+    // start the transition, remove pause override:
+    void start();
+
+    // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
+    void uncache();
+
+    // accessor:
+    inline const Transition & transition() const
+    { return transition_; }
+
+  protected:
+    ItemRef override_;
+    ItemRef expression_;
+    Transition & transition_;
   };
 
 }

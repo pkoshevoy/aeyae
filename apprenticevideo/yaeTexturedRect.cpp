@@ -57,7 +57,7 @@ namespace yae
     }
 
     BBox bbox;
-    this->get(kPropertyBBox, bbox);
+    this->Item::get(kPropertyBBox, bbox);
 
     double x0 = bbox.x_;
     double y0 = bbox.y_;
@@ -87,5 +87,21 @@ namespace yae
     YAE_OGL_11(glEnd());
 
     texture.unbind();
+  }
+
+  //----------------------------------------------------------------
+  // TexturedRect::get
+  //
+  void
+  TexturedRect::get(Property property, double & value) const
+  {
+    if (property == kPropertyOpacity)
+    {
+      value = opacity_.get();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
   }
 }

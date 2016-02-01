@@ -36,6 +36,9 @@ namespace yae
     void unpaintContent() const;
 
     // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
     void get(Property property, Color & value) const;
 
     // keep implementation details private:

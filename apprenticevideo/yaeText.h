@@ -129,6 +129,9 @@ namespace yae
     void get(Property property, bool & value) const;
 
     // virtual:
+    void get(Property property, double & value) const;
+
+    // virtual:
     void get(Property property, Color & value) const;
 
     // virtual:
