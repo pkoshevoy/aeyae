@@ -292,8 +292,9 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
-    timelineView_.setup(this, &playlistView_);
+    playlistView_.setup(this);
     playlistView_.setModel(&playlistModel_);
+    timelineView_.setup(this, &playlistView_);
     timelineView_.setModel(&timelineModel_);
 
     // add image://thumbnails/... provider:
@@ -3459,9 +3460,16 @@ namespace yae
 
         if (rc->buttonId_ == kRemoteControlPlayButton)
         {
-          if (rc->pressedDown_ && !rc->heldDown_)
+          if (rc->pressedDown_)
           {
-            togglePlayback();
+            if (rc->heldDown_)
+            {
+              toggleFullScreen();
+            }
+            else
+            {
+              togglePlayback();
+            }
           }
         }
         else if (rc->buttonId_ == kRemoteControlMenuButton)

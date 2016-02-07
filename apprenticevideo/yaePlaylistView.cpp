@@ -26,6 +26,7 @@
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaeListViewStyle.h"
+#include "yaeMainWindow.h"
 #include "yaePlaylistView.h"
 #include "yaePlaylistViewStyle.h"
 #include "yaeProperty.h"
@@ -1674,6 +1675,7 @@ namespace yae
   //
   PlaylistView::PlaylistView():
     ItemView("playlist"),
+    mainWindow_(NULL),
     model_(NULL)
   {
     Item & root = *root_;
@@ -1750,6 +1752,15 @@ namespace yae
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
     maSlider.anchors_.fill(slider);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::setup
+  //
+  void
+  PlaylistView::setup(MainWindow * mainWindow)
+  {
+    mainWindow_ = mainWindow;
   }
 
   //----------------------------------------------------------------
@@ -2222,10 +2233,83 @@ namespace yae
   // PlaylistView::processMouseTracking
   //
   bool
-  PlaylistView::processMouseTracking(const TVec2D & mousePt)
+  PlaylistView::processEvent(Canvas * canvas, QEvent * event)
   {
-    (void)mousePt;
-    return isEnabled();
+#ifdef __APPLE__
+    QEvent::Type et = event->type();
+    if (et == QEvent::User && mainWindow_)
+    {
+      bool playbackPaused = mainWindow_->isPlaybackPaused();
+      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(event);
+      if (rc && playbackPaused)
+      {
+#if 0 // ndef NDEBUG
+        std::cerr
+          << "remote control: " << rc->buttonId_
+          << ", down: " << rc->pressedDown_
+          << ", clicks: " << rc->clickCount_
+          << ", held down: " << rc->heldDown_
+          << std::endl;
+#endif
+        SelectionFlags selectionFlags = QItemSelectionModel::ClearAndSelect;
+
+        if (rc->buttonId_ == kRemoteControlPlayButton)
+        {
+          if (rc->pressedDown_ && !rc->heldDown_)
+          {
+            QModelIndex currentIndex = model_->currentItem();
+            QModelIndex playingIndex = model_->playingItem();
+
+            if (currentIndex != playingIndex)
+            {
+              model_->setPlayingItem(currentIndex);
+              rc->accept();
+            }
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeUp)
+        {
+          if (rc->pressedDown_)
+          {
+            move_cursor(*this, selectionFlags, &move_cursor_up);
+          }
+
+          rc->accept();
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeDown)
+        {
+          if (rc->pressedDown_)
+          {
+            move_cursor(*this, selectionFlags, &move_cursor_down);
+          }
+
+          rc->accept();
+        }
+        else if (rc->buttonId_ == kRemoteControlLeftButton)
+        {
+          if (rc->pressedDown_)
+          {
+            move_cursor(*this, selectionFlags, &move_cursor_left);
+          }
+
+          rc->accept();
+        }
+        else if (rc->buttonId_ == kRemoteControlRightButton)
+        {
+          if (rc->pressedDown_)
+          {
+            move_cursor(*this, selectionFlags, &move_cursor_right);
+          }
+
+          rc->accept();
+        }
+
+        return rc->isAccepted();
+      }
+    }
+#endif
+
+    return ItemView::processEvent(canvas, event);
   }
 
   //----------------------------------------------------------------

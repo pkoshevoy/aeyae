@@ -733,7 +733,7 @@ namespace yae
   ItemView::processMouseTracking(const TVec2D & mousePt)
   {
     (void)mousePt;
-    return false;
+    return isEnabled();
   }
 
   //----------------------------------------------------------------
