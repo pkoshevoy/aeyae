@@ -726,7 +726,9 @@ namespace yae
   bool
   Canvas::processEvent(QEvent * event)
   {
-    if (event->type() == QEvent::User)
+    QEvent::Type et = event->type();
+
+    if (et == QEvent::User)
     {
       PaintCanvasEvent * repaintEvent = dynamic_cast<PaintCanvasEvent *>(event);
       if (repaintEvent)
@@ -797,6 +799,7 @@ namespace yae
 
       if (layer->processEvent(this, event))
       {
+        event->accept();
         return true;
       }
     }

@@ -111,6 +111,30 @@ namespace yae
     QAction * action_;
   };
 
+#ifdef __APPLE__
+  //----------------------------------------------------------------
+  // RemoteControlEvent
+  //
+  struct RemoteControlEvent : public QEvent
+  {
+    RemoteControlEvent(TRemoteControlButtonId buttonId,
+                       bool pressedDown,
+                       unsigned int clickCount,
+                       bool heldDown):
+      QEvent(QEvent::User),
+      buttonId_(buttonId),
+      pressedDown_(pressedDown),
+      clickCount_(clickCount),
+      heldDown_(heldDown)
+    {}
+
+    TRemoteControlButtonId buttonId_;
+    bool pressedDown_;
+    unsigned int clickCount_;
+    bool heldDown_;
+  };
+#endif
+
   //----------------------------------------------------------------
   // MainWindow
   //

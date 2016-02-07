@@ -159,30 +159,6 @@ namespace yae
     TCropFrame cropFrame_;
   };
 
-#ifdef __APPLE__
-  //----------------------------------------------------------------
-  // RemoteControlEvent
-  //
-  struct RemoteControlEvent : public QEvent
-  {
-    RemoteControlEvent(TRemoteControlButtonId buttonId,
-                       bool pressedDown,
-                       unsigned int clickCount,
-                       bool heldDown):
-      QEvent(QEvent::User),
-      buttonId_(buttonId),
-      pressedDown_(pressedDown),
-      clickCount_(clickCount),
-      heldDown_(heldDown)
-    {}
-
-    TRemoteControlButtonId buttonId_;
-    bool pressedDown_;
-    unsigned int clickCount_;
-    bool heldDown_;
-  };
-#endif
-
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
   //----------------------------------------------------------------
   // getCanvas
@@ -3505,7 +3481,7 @@ namespace yae
             }
             else
             {
-              timelineView_.maybeAnimateOpacity();
+              actionShowPlaylist->trigger();
             }
           }
         }
@@ -4786,7 +4762,7 @@ namespace yae
                                          bool heldDown)
   {
     MainWindow * mainWindow = (MainWindow *)observerContext;
-    qApp->postEvent(mainWindow,
+    qApp->postEvent(mainWindow->playerWidget_,
                     new RemoteControlEvent(buttonId,
                                            pressedDown,
                                            clickCount,

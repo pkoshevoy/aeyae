@@ -75,6 +75,32 @@ namespace yae
 #endif
     }
 
+    // virtual: overridden to propagate custom events to the parent:
+    bool notify(QObject * receiver, QEvent * e)
+    {
+      YAE_ASSERT(receiver && e);
+      bool result = false;
+
+      QEvent::Type et = e ? e->type() : QEvent::None;
+      if (et >= QEvent::User)
+      {
+        e->ignore();
+      }
+
+      while (receiver)
+      {
+        result = QApplication::notify(receiver, e);
+        if (et < QEvent::User || (result && e->isAccepted()))
+        {
+          break;
+        }
+
+        receiver = receiver->parent();
+      }
+
+      return result;
+    }
+
   protected:
     bool event(QEvent * e)
     {
