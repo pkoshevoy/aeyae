@@ -794,7 +794,7 @@ namespace yae
 
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
     ok = connect(&(playerWidget_->sigs_), SIGNAL(toggleFullScreen()),
-                 this, SLOT(toggleFullScreen()));
+                 this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 #endif
 

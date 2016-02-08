@@ -196,6 +196,8 @@ namespace yae
         if (et == QEvent::MouseButtonDblClick)
         {
           sigs_.emitToggleFullScreen();
+          event->accept();
+          return true;
         }
 
         return TWidget::event(event);
