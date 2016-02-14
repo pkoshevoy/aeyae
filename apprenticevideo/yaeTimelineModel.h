@@ -92,6 +92,10 @@ namespace yae
     inline const SharedClock & sharedClock() const
     { return sharedClock_; }
 
+  protected:
+    void reset(IReader * reader);
+
+  public:
     void resetFor(IReader * reader);
     void adjustTo(IReader * reader);
 

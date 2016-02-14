@@ -56,6 +56,11 @@ namespace yae
   static QString
   getTimeStamp(double seconds, double frameRate, const char * frameNumSep)
   {
+    if (seconds == std::numeric_limits<double>::max())
+    {
+      return kUnknownDuration;
+    }
+
     // round to nearest frame:
     double fpsWhole = ceil(frameRate);
     seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
@@ -248,10 +253,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineModel::resetFor
+  // TimelineModel::reset
   //
   void
-  TimelineModel::resetFor(IReader * reader)
+  TimelineModel::reset(IReader * reader)
   {
     TTime start;
     TTime duration;
@@ -273,25 +278,34 @@ namespace yae
 
     timelineStart_ = start.toSeconds();
     timelinePosition_ = timelineStart_;
-
-    unknownDuration_ = (!reader->isSeekable() ||
-                        duration.time_ == std::numeric_limits<int64>::max());
+    unknownDuration_ =
+      duration.time_ == std::numeric_limits<int64>::max() ||
+      !reader->isSeekable();
 
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :
                          duration.toSeconds());
+  }
 
-    QString ts = getTimeStamp(timelineStart_,
-                              frameRate_,
-                              frameNumberSeparator_);
-    updateAuxPlayhead(ts);
+  //----------------------------------------------------------------
+  // TimelineModel::resetFor
+  //
+  void
+  TimelineModel::resetFor(IReader * reader)
+  {
+    reset(reader);
 
-    ts =
-      unknownDuration_ ? kUnknownDuration :
-      getTimeStamp(timelineStart_ + timelineDuration_,
-                   frameRate_,
-                   frameNumberSeparator_);
-    updateAuxDuration(ts);
+    double T1 = (unknownDuration_ ?
+                 std::numeric_limits<double>::max() :
+                 timelineStart_ + timelineDuration_);
+
+    QString ts_p = getTimeStamp(timelineStart_,
+                                frameRate_,
+                                frameNumberSeparator_);
+    updateAuxPlayhead(ts_p);
+
+    QString ts_d = getTimeStamp(T1, frameRate_, frameNumberSeparator_);
+    updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(0.0);
     updateMarkerTimeIn(0.0);
@@ -309,32 +323,14 @@ namespace yae
     double t1 = timeOut();
     double t = currentTime();
 
-    TTime start;
-    TTime duration;
-    if (!reader->getAudioDuration(start, duration))
-    {
-      reader->getVideoDuration(start, duration);
-    }
-
-    frameRate_ = 100.0;
-    frameNumberSeparator_ = kSeparatorForCentiSeconds;
-
-    VideoTraits videoTraits;
-    if (reader->getVideoTraits(videoTraits) &&
-        videoTraits.frameRate_ < 100.0)
-    {
-      frameRate_ = videoTraits.frameRate_;
-      frameNumberSeparator_ = kSeparatorForFrameNumber;
-    }
-
-    timelineStart_ = start.toSeconds();
-    timelineDuration_ = duration.toSeconds();
-    timelinePosition_ = timelineStart_;
+    reset(reader);
 
     // shortcuts:
     double dT = timelineDuration_;
     double T0 = timelineStart_;
-    double T1 = T0 + dT;
+    double T1 = (unknownDuration_ ?
+                 std::numeric_limits<double>::max() :
+                 T0 + dT);
 
     t0 = std::max<double>(T0, std::min<double>(T1, t0));
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
@@ -346,9 +342,9 @@ namespace yae
     QString ts_d = getTimeStamp(T1, frameRate_, frameNumberSeparator_);
     updateAuxDuration(ts_d);
 
-    updateMarkerPlayhead((t - T0) / dT);
-    updateMarkerTimeIn((t0 - T0) / dT);
-    updateMarkerTimeOut((t1 - T0) / dT);
+    updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
+    updateMarkerTimeIn(unknownDuration_ ? 0.0 : (t0 - T0) / dT);
+    updateMarkerTimeOut(unknownDuration_ ? 1.0 : (t1 - T0) / dT);
   }
 
   //----------------------------------------------------------------
