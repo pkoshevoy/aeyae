@@ -1426,12 +1426,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // is_framerate_valid
+  //
+  static inline bool
+  is_framerate_valid(const AVRational & r)
+  {
+    return r.num > 0 && r.den > 0;
+  }
+
+  //----------------------------------------------------------------
+  // is_frame_duration_plausible
+  //
+  static bool
+  is_frame_duration_plausible(const TTime & dt, const AVRational & frame_rate)
+  {
+    int64 d = dt.getTime(frame_rate.num) / frame_rate.den;
+    int64 err = d - frame_rate.den;
+
+    if (frame_rate.den < std::abs(d))
+    {
+      // error is more than the expected frame duration:
+      return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // verifyPTS
   //
   // verify that presentation timestamps are monotonically increasing
   //
   static inline bool
-  verifyPTS(bool hasPrevPTS, const TTime & prevPTS, const TTime & nextPTS,
+  verifyPTS(bool hasPrevPTS,
+            const TTime & prevPTS,
+            const TTime & nextPTS,
+            const AVStream * stream,
             const char * debugMessage = NULL)
   {
     bool ok = (nextPTS.time_ != AV_NOPTS_VALUE &&
@@ -1451,7 +1481,70 @@ namespace yae
 #else
     (void)debugMessage;
 #endif
-    return ok;
+
+    if (!ok || !stream)
+    {
+      return ok;
+    }
+
+    // sanity check -- verify the timestamp difference
+    // is close to frame duration:
+    if (hasPrevPTS)
+    {
+      bool has_avg_frame_rate = is_framerate_valid(stream->avg_frame_rate);
+      bool has_r_frame_rate = is_framerate_valid(stream->r_frame_rate);
+
+      if (has_avg_frame_rate || has_r_frame_rate)
+      {
+        TTime dt = nextPTS - prevPTS;
+
+        if (!((has_avg_frame_rate &&
+               is_frame_duration_plausible(dt, stream->avg_frame_rate)) ||
+              (has_r_frame_rate &&
+               is_frame_duration_plausible(dt, stream->r_frame_rate))))
+        {
+          // error is more than the expected and estimated frame duration:
+#ifndef NDEBUG
+          std::cerr
+            << "\nNOTE: detected large error in frame duration, dt: "
+            << dt.toSeconds() << " sec";
+
+          if (has_avg_frame_rate)
+          {
+            std::cerr
+              << ", expected (avg): "
+              << TTime(stream->avg_frame_rate.den,
+                       stream->avg_frame_rate.num).toSeconds()
+              << " sec";
+          }
+
+          if (has_r_frame_rate)
+          {
+            std::cerr
+              << ", expected (r): "
+              << TTime(stream->r_frame_rate.den,
+                       stream->r_frame_rate.num).toSeconds()
+              << " sec";
+          }
+
+          if (debugMessage)
+          {
+            std::cerr << ", " << debugMessage;
+          }
+
+          std::cerr << std::endl;
+#endif
+          return false;
+        }
+      }
+    }
+
+    // another possible sanity check -- verify that timestamp is
+    // within [start, end] range, although that might be too strict
+    // because duration is often estimated from bitrate
+    // and is therefore inaccurate
+
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -1855,13 +1948,13 @@ namespace yae
         vf.time_.base_ = stream_->time_base.den;
         vf.time_.time_ = (stream_->time_base.num *
                           av_frame_get_best_effort_timestamp(avFrame));
-        bool gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t");
+        bool gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, stream_, "t");
 
         if (!gotPTS && !hasPrevPTS_)
         {
           ptsBestEffort_ = 0;
           vf.time_.time_ = stream_->time_base.num * startTime_;
-          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t0");
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, stream_, "t0");
         }
 
         if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
@@ -1869,7 +1962,8 @@ namespace yae
           // increment by average frame duration:
           vf.time_ = prevPTS_;
           vf.time_ += TTime(frameRate_.den, frameRate_.num);
-          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t += 1/fps");
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, stream_,
+                             "t += 1/fps");
         }
 
         YAE_ASSERT(gotPTS);
@@ -1878,13 +1972,13 @@ namespace yae
           vf.time_ = prevPTS_;
           vf.time_.time_++;
 
-          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, "t++");
+          gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, vf.time_, stream_, "t++");
         }
 
         YAE_ASSERT(gotPTS);
         if (gotPTS)
         {
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
           if (hasPrevPTS_)
           {
             double ta = prevPTS_.toSeconds();
@@ -2900,14 +2994,16 @@ namespace yae
           packet.pts != AV_NOPTS_VALUE)
       {
         af.time_.time_ = stream_->time_base.num * packet.pts;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, "packet.pts");
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, stream_,
+                           "packet.pts");
       }
 
       if (!gotPTS &&
           packet.dts != AV_NOPTS_VALUE)
       {
         af.time_.time_ = stream_->time_base.num * packet.dts;
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, "packet.dts");
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, stream_,
+                           "packet.dts");
       }
 
       if (!gotPTS)
@@ -2916,7 +3012,7 @@ namespace yae
         af.time_.time_ = samplesDecoded_ - numOutputSamples;
         af.time_ += TTime(startTime_, stream_->time_base.den);
 
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, stream_);
       }
 
       if (!gotPTS && hasPrevPTS_)
@@ -2924,7 +3020,7 @@ namespace yae
         af.time_ = prevPTS_;
         af.time_ += TTime(prevNumSamples_, output_.sampleRate_);
 
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, stream_);
       }
 
       YAE_ASSERT(gotPTS);
@@ -2933,13 +3029,13 @@ namespace yae
         af.time_ = prevPTS_;
         af.time_.time_++;
 
-        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_);
+        gotPTS = verifyPTS(hasPrevPTS_, prevPTS_, af.time_, stream_);
       }
 
       YAE_ASSERT(gotPTS);
       if (gotPTS)
       {
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
         if (hasPrevPTS_)
         {
           double ta = prevPTS_.toSeconds();
