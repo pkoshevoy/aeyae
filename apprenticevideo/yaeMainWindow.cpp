@@ -14,6 +14,7 @@
 
 // boost includes:
 #include <boost/algorithm/string.hpp>
+#include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 
 // Qt includes:
 #include <QActionGroup>
@@ -3449,14 +3450,16 @@ namespace yae
       RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
       if (rc)
       {
-        rc->accept();
-#if 0 // ndef NDEBUG
-        std::cerr << "remote control: " << rc->buttonId_
-                  << ", down: " << rc->pressedDown_
-                  << ", clicks: " << rc->clickCount_
-                  << ", held down: " << rc->heldDown_
-                  << std::endl;
+#ifndef NDEBUG
+        std::cerr
+          << "received remote control event(" << rc
+          << "), buttonId: " << rc->buttonId_
+          << ", down: " << rc->pressedDown_
+          << ", clicks: " << rc->clickCount_
+          << ", held down: " << rc->heldDown_
+          << std::endl;
 #endif
+        rc->accept();
 
         if (rc->buttonId_ == kRemoteControlPlayButton)
         {
@@ -4770,11 +4773,24 @@ namespace yae
                                          bool heldDown)
   {
     MainWindow * mainWindow = (MainWindow *)observerContext;
+
+    boost::interprocess::unique_ptr<RemoteControlEvent>
+      rc(new RemoteControlEvent(buttonId,
+                                pressedDown,
+                                clickCount,
+                                heldDown));
+#ifndef NDEBUG
+    std::cerr
+      << "posting remote control event(" << rc.get()
+      << "), buttonId: " << buttonId
+      << ", down: " << pressedDown
+      << ", clicks: " << clickCount
+      << ", held down: " << heldDown
+      << std::endl;
+#endif
+
     qApp->postEvent(mainWindow->playerWidget_,
-                    new RemoteControlEvent(buttonId,
-                                           pressedDown,
-                                           clickCount,
-                                           heldDown),
+                    rc.release(),
                     Qt::HighEventPriority);
   }
 #endif

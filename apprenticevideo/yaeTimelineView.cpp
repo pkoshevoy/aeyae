@@ -611,8 +611,8 @@ namespace yae
                              timeline_.mainWindow_->isPlaybackPaused());
 #endif
       const TVec2D & pt = timeline_.mousePt();
-      bool shouldPause = (playlist_.isEnabled() ||
-                          controlsContainer_.overlaps(pt));
+      bool shouldPause = (// controlsContainer_.overlaps(pt) ||
+                          playlist_.isEnabled());
 
       return shouldPause;
     }
