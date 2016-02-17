@@ -34,7 +34,7 @@ namespace yae
   //
   struct InputArea : public Item
   {
-    InputArea(const char * id);
+    InputArea(const char * id, bool draggable = true);
 
     // virtual:
     void getInputHandlers(// coordinate system origin of
@@ -51,30 +51,33 @@ namespace yae
                           // in the coordinate system of the root item:
                           std::list<InputHandler> & inputHandlers);
 
-    // NOTE: default implementation will simply call the onXxx_ delegate
-    // if one is provided, otherwise it will return false:
-
     virtual void onCancel();
 
     virtual bool onMouseOver(const TVec2D & itemCSysOrigin,
-                             const TVec2D & rootCSysPoint);
+                             const TVec2D & rootCSysPoint)
+    { return false; }
 
     virtual bool onScroll(const TVec2D & itemCSysOrigin,
                           const TVec2D & rootCSysPoint,
-                          double degrees);
+                          double degrees)
+    { return false; }
 
     virtual bool onPress(const TVec2D & itemCSysOrigin,
-                         const TVec2D & rootCSysPoint);
+                         const TVec2D & rootCSysPoint)
+    { return false; }
 
     virtual bool onClick(const TVec2D & itemCSysOrigin,
-                         const TVec2D & rootCSysPoint);
+                         const TVec2D & rootCSysPoint)
+    { return false; }
 
     virtual bool onDoubleClick(const TVec2D & itemCSysOrigin,
-                               const TVec2D & rootCSysPoint);
+                               const TVec2D & rootCSysPoint)
+    { return false; }
 
     virtual bool onDrag(const TVec2D & itemCSysOrigin,
                         const TVec2D & rootCSysDragStart,
-                        const TVec2D & rootCSysDragEnd);
+                        const TVec2D & rootCSysDragEnd)
+    { return false; }
 
     // NOTE: default implementation of onDragEnd will call onDragEnd_
     // if one is provided, otherwise it will call onDrag(...):
@@ -82,54 +85,13 @@ namespace yae
                            const TVec2D & rootCSysDragStart,
                            const TVec2D & rootCSysDragEnd);
 
-    struct OnCancel
-    {
-      virtual ~OnCancel() {}
-      virtual void process(Item & inputAreaParent) = 0;
-    };
+    // whether an item is draggable affects how the mouse-up
+    // event is handled -- a draggable item will receive onDragEnd,
+    // a non-draggable item will receive onClick:
+    virtual bool draggable() const
+    { return draggable_; }
 
-    struct OnScroll
-    {
-      virtual ~OnScroll() {}
-      virtual bool process(Item & inputAreaParent,
-                           const TVec2D & itemCSysOrigin,
-                           const TVec2D & rootCSysPoint,
-                           double degrees) = 0;
-    };
-
-    struct OnInput
-    {
-      virtual ~OnInput() {}
-      virtual bool process(Item & inputAreaParent,
-                           const TVec2D & itemCSysOrigin,
-                           const TVec2D & rootCSysPoint) = 0;
-    };
-
-    struct OnDrag
-    {
-      virtual ~OnDrag() {}
-      virtual bool process(Item & inputAreaParent,
-                           const TVec2D & itemCSysOrigin,
-                           const TVec2D & rootCSysDragStart,
-                           const TVec2D & rootCSysDragEnd) = 0;
-    };
-
-    typedef boost::shared_ptr<OnCancel> TOnCancel;
-    typedef boost::shared_ptr<OnScroll> TOnScroll;
-    typedef boost::shared_ptr<OnInput> TOnInput;
-    typedef boost::shared_ptr<OnDrag> TOnDrag;
-
-    // one does not have to subclass the InputArea to override
-    // default behavior -- simply provide a delegate for
-    // the behavior that should be customized:
-    TOnCancel onCancel_;
-    TOnInput onMouseOver_;
-    TOnScroll onScroll_;
-    TOnInput onPress_;
-    TOnInput onClick_;
-    TOnInput onDoubleClick_;
-    TOnDrag onDrag_;
-    TOnDrag onDragEnd_;
+    bool draggable_;
   };
 
   //----------------------------------------------------------------
@@ -137,13 +99,19 @@ namespace yae
   //
   struct ClickableItem : public InputArea
   {
-    ClickableItem(const char * id):
-      InputArea(id)
+    ClickableItem(const char * id, bool draggable = false):
+      InputArea(id, draggable)
     {}
 
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
     { return true; }
   };
 

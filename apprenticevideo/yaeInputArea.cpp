@@ -16,8 +16,9 @@ namespace yae
   //----------------------------------------------------------------
   // InputArea::InputArea
   //
-  InputArea::InputArea(const char * id):
-    Item(id)
+  InputArea::InputArea(const char * id, bool draggable):
+    Item(id),
+    draggable_(draggable)
   {}
 
   //----------------------------------------------------------------
@@ -51,118 +52,7 @@ namespace yae
   //
   void
   InputArea::onCancel()
-  {
-    if (onCancel_)
-    {
-      onCancel_->process(parent<Item>());
-    }
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onMouseOver
-  //
-  bool
-  InputArea::onMouseOver(const TVec2D & itemCSysOrigin,
-                         const TVec2D & rootCSysPoint)
-  {
-    if (onMouseOver_)
-    {
-      return onMouseOver_->process(parent<Item>(),
-                                   itemCSysOrigin,
-                                   rootCSysPoint);
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onScroll
-  //
-  bool
-  InputArea::onScroll(const TVec2D & itemCSysOrigin,
-                      const TVec2D & rootCSysPoint,
-                      double degrees)
-  {
-    if (onScroll_)
-    {
-      return onScroll_->process(parent<Item>(),
-                                itemCSysOrigin,
-                                rootCSysPoint,
-                                degrees);
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onPress
-  //
-  bool
-  InputArea::onPress(const TVec2D & itemCSysOrigin,
-                     const TVec2D & rootCSysPoint)
-  {
-    if (onPress_)
-    {
-      return onPress_->process(parent<Item>(),
-                               itemCSysOrigin,
-                               rootCSysPoint);
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onClick
-  //
-  bool
-  InputArea::onClick(const TVec2D & itemCSysOrigin,
-                     const TVec2D & rootCSysPoint)
-  {
-    if (onClick_)
-    {
-      return onClick_->process(parent<Item>(),
-                               itemCSysOrigin,
-                               rootCSysPoint);
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onDoubleClick
-  //
-  bool
-  InputArea::onDoubleClick(const TVec2D & itemCSysOrigin,
-                           const TVec2D & rootCSysPoint)
-  {
-    if (onDoubleClick_)
-    {
-      return onDoubleClick_->process(parent<Item>(),
-                                     itemCSysOrigin,
-                                     rootCSysPoint);
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // InputArea::onDrag
-  //
-  bool
-  InputArea::onDrag(const TVec2D & itemCSysOrigin,
-                    const TVec2D & rootCSysDragStart,
-                    const TVec2D & rootCSysDragEnd)
-  {
-    if (onDrag_)
-    {
-      return onDrag_->process(parent<Item>(),
-                              itemCSysOrigin,
-                              rootCSysDragStart,
-                              rootCSysDragEnd);
-    }
-
-    return false;
-  }
+  {}
 
   //----------------------------------------------------------------
   // InputArea::onDragEnd
@@ -172,14 +62,6 @@ namespace yae
                        const TVec2D & rootCSysDragStart,
                        const TVec2D & rootCSysDragEnd)
   {
-    if (onDragEnd_)
-    {
-      return onDragEnd_->process(parent<Item>(),
-                                 itemCSysOrigin,
-                                 rootCSysDragStart,
-                                 rootCSysDragEnd);
-    }
-
     return this->onDrag(itemCSysOrigin,
                         rootCSysDragStart,
                         rootCSysDragEnd);

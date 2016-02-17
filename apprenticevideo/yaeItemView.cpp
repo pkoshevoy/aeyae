@@ -629,7 +629,7 @@ namespace yae
 
         if (ia)
         {
-          if (dragged_)
+          if (dragged_ && ia->draggable())
           {
             accept = ia->onDragEnd(dragged_->csysOrigin_, startPt_, pt);
           }
