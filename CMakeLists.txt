@@ -533,3 +533,8 @@ target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
 add_subdirectory(plugins/yae_reader_ffmpeg)
 add_subdirectory(apprenticevideo)
 add_subdirectory(tests)
+
+install(TARGETS
+  aeyae
+  DESTINATION lib
+  )

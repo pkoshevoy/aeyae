@@ -476,6 +476,17 @@ namespace yae
     pluginPathUtf8 += "/PlugIns";
 #else
     pluginPathUtf8 = exeFolderUtf8;
+
+    std::string parent;
+    std::string bin;
+    if (parseFilePath(exeFolderUtf8, parent, bin) && bin == "bin")
+    {
+      std::string lib = (fs::path(parent) / "lib").string();
+      if (fs::is_directory(lib))
+      {
+        pluginPathUtf8 = lib;
+      }
+    }
 #endif
 
     return true;
