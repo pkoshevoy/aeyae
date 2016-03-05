@@ -135,10 +135,23 @@ namespace yae
                           QRect * bboxText = NULL);
 
   //----------------------------------------------------------------
+  // join
+  //
+  // returns:
+  //  a if b is empty
+  //  b if a is empty
+  //  (a + separator + b) otherwise
+  //
+  YAE_API QString
+  join(const QString & a, const QString & separator, const QString & b);
+
+  //----------------------------------------------------------------
   // parseEyetvInfo
   //
   YAE_API bool
   parseEyetvInfo(const QString & eyetvPath,
+                 QString & channelNumber,
+                 QString & channelName,
                  QString & program,
                  QString & episode,
                  QString & timestamp);

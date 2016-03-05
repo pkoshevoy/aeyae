@@ -374,10 +374,12 @@ namespace yae
         if (keys.empty() && ext.compare(kExtEyetv, Qt::CaseInsensitive) == 0)
         {
           // handle Eye TV archive more gracefully:
+          QString chNo;
+          QString chName;
           QString program;
           QString episode;
           QString timestamp;
-          if (!parseEyetvInfo(path, program, episode, timestamp))
+          if (!parseEyetvInfo(path, chNo, chName, program, episode, timestamp))
           {
             break;
           }
@@ -385,13 +387,19 @@ namespace yae
           if (episode.isEmpty())
           {
             key = timestamp + " " + program;
-            keys.push_front(PlaylistKey(key, kExtEyetv));
           }
           else
           {
             key = timestamp + " " + episode;
-            keys.push_front(PlaylistKey(key, kExtEyetv));
           }
+
+          if (!(chNo.isEmpty() && chName.isEmpty()))
+          {
+            QString ch = join(chNo, QString::fromUtf8(" "), chName);
+            key += " (" + ch + ")";
+          }
+
+          keys.push_front(PlaylistKey(key, kExtEyetv));
 
           key = program;
           keys.push_front(PlaylistKey(key, QString()));

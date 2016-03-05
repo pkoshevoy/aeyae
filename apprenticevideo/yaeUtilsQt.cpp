@@ -1143,10 +1143,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // join
+  //
+  QString
+  join(const QString & a, const QString & separator, const QString & b)
+  {
+    return (a.isEmpty() ? b :
+            b.isEmpty() ? a :
+            a + separator + b);
+  }
+
+  //----------------------------------------------------------------
   // parseEyetvInfo
   //
   bool
   parseEyetvInfo(const QString & eyetvPath,
+                 QString & channelNumber,
+                 QString & channelName,
                  QString & program,
                  QString & episode,
                  QString & timestamp)
@@ -1206,7 +1219,31 @@ namespace yae
             {
               std::string v = value.toLower().toUtf8().constData();
 
-              if (v == "recording title" && same(nodePath, "plist/dict/dict"))
+              if (v == "channel number" &&
+                  same(nodePath, "plist/dict"))
+              {
+                if (!parseXmlTag(xml, parser, name, value))
+                {
+                  YAE_ASSERT(false);
+                  return false;
+                }
+
+                value.replace('-', '.');
+                channelNumber = value;
+              }
+              else if (v == "channel name" &&
+                  same(nodePath, "plist/dict"))
+              {
+                if (!parseXmlTag(xml, parser, name, value))
+                {
+                  YAE_ASSERT(false);
+                  return false;
+                }
+
+                channelName = value;
+              }
+              else if (v == "recording title" &&
+                       same(nodePath, "plist/dict/dict"))
               {
                 if (!parseXmlTag(xml, parser, name, value))
                 {

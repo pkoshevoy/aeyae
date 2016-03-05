@@ -334,7 +334,10 @@ namespace yae
 
     if (testStream)
     {
-      // boost::this_thread::sleep(boost::posix_time::milliseconds(16));
+      // this is a work-around for apparent race condition deadlock
+      // of portaudio on openSUSE 42.1
+      boost::this_thread::sleep(boost::posix_time::milliseconds(16));
+
       Pa_CloseStream(testStream);
       testStream = NULL;
     }
