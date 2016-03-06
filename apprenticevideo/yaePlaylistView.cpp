@@ -1019,6 +1019,14 @@ namespace yae
     {
       const QPersistentModelIndex & modelIndex = this->modelIndex();
       TClickablePlaylistModelItem::TModel & model = this->model();
+      QModelIndex playingIndex = model.playingItem();
+
+      if (playingIndex == modelIndex)
+      {
+        // let someone else handle the event:
+        return false;
+      }
+
       model.setPlayingItem(modelIndex);
       return true;
     }

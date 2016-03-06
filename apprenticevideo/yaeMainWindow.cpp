@@ -2374,7 +2374,7 @@ namespace yae
     // The workaround is to delay fullscreen toggle to allow
     // Flickable time to receive the button-up event
 
-    QTimer::singleShot(150, this, SLOT(toggleFullScreen()));
+    QTimer::singleShot(178, this, SLOT(toggleFullScreen()));
   }
 
   //----------------------------------------------------------------
