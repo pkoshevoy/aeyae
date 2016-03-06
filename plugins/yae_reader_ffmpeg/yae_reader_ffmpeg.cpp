@@ -296,15 +296,23 @@ namespace yae
       rect.h_ = r->h;
       rect.numColors_ = r->nb_colors;
 
-      std::size_t nsrc = sizeof(r->data) / sizeof(r->data[0]);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 5, 0)
+#define get_rect(field) (r->field)
+#else
+#define get_rect(field) (r->pict.field)
+#endif
+
+      std::size_t nsrc = sizeof(get_rect(data)) / sizeof(get_rect(data)[0]);
       std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
       YAE_ASSERT(nsrc == ndst);
 
       for (std::size_t j = 0; j < ndst && j < nsrc; j++)
       {
-        rect.data_[j] = r->data[j];
-        rect.rowBytes_[j] = r->linesize[j];
+        rect.data_[j] = get_rect(data)[j];
+        rect.rowBytes_[j] = get_rect(linesize)[j];
       }
+
+#undef get_rect
 
       for (std::size_t j = nsrc; j < ndst; j++)
       {
