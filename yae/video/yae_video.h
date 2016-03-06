@@ -531,8 +531,8 @@ namespace yae
       int h_;
       int numColors_;
 
-      const unsigned char * data_[8];
-      int rowBytes_[8];
+      const unsigned char * data_[4];
+      int rowBytes_[4];
 
       const char * text_;
       const char * assa_;

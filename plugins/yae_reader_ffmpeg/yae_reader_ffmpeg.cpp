@@ -153,14 +153,12 @@ namespace yae
 
     ~Packet()
     {
-      av_free_packet(&ffmpeg_);
+      av_packet_unref(&ffmpeg_);
     }
 
     bool set(const AVPacket & packet)
     {
-      ffmpeg_ = packet;
-
-      int err = av_dup_packet(&ffmpeg_);
+      int err = av_packet_ref(&ffmpeg_, &packet);
       if (err)
       {
         memset(&ffmpeg_, 0, sizeof(AVPacket));
@@ -298,14 +296,14 @@ namespace yae
       rect.h_ = r->h;
       rect.numColors_ = r->nb_colors;
 
-      std::size_t nsrc = sizeof(r->pict.data) / sizeof(r->pict.data[0]);
+      std::size_t nsrc = sizeof(r->data) / sizeof(r->data[0]);
       std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
       YAE_ASSERT(nsrc == ndst);
 
       for (std::size_t j = 0; j < ndst && j < nsrc; j++)
       {
-        rect.data_[j] = r->pict.data[j];
-        rect.rowBytes_[j] = r->pict.linesize[j];
+        rect.data_[j] = r->data[j];
+        rect.rowBytes_[j] = r->linesize[j];
       }
 
       for (std::size_t j = nsrc; j < ndst; j++)
@@ -831,6 +829,12 @@ namespace yae
 
         if (s0 < v1 && v0 < s1)
         {
+#if 0
+          std::cerr
+            << "FIXME: subs(" << s0 << ", " << s1 << ") = " << s1 - s0
+            << " overlaps frame (" << v0 << ", " << v1 << ")"
+            << std::endl;
+#endif
           subs.push_back(sf);
         }
       }
@@ -4107,6 +4111,18 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Rational
+  //
+  struct Rational : public AVRational
+  {
+    Rational(int n = 0, int d = 1)
+    {
+      AVRational::num = n;
+      AVRational::den = d;
+    }
+  };
+
+  //----------------------------------------------------------------
   // Movie::threadLoop
   //
   void
@@ -4204,7 +4220,7 @@ namespace yae
             dump_averror(std::cerr, err);
           }
 #endif
-          av_free_packet(&ffmpeg);
+          av_packet_unref(&ffmpeg);
 
           if (demuxerInterrupted)
           {
@@ -4315,9 +4331,7 @@ namespace yae
             if (videoTrack &&
                 (subs = subsLookup(ffmpeg.stream_index)))
             {
-              AVRational tb;
-              tb.num = 1;
-              tb.den = AV_TIME_BASE;
+              static const Rational tb(1, AV_TIME_BASE);
 
               TSubsFrame sf;
               sf.time_.time_ = av_rescale_q(ffmpeg.pts,
@@ -4391,30 +4405,32 @@ namespace yae
                                                                  headerSize),
                                                 &TSubsPrivate::deallocator);
 
+                  static const Rational tb_msec(1, 1000);
+
                   if (ffmpeg.pts != AV_NOPTS_VALUE)
                   {
-                    sf.time_.time_ = av_rescale_q(ffmpeg.pts +
-                                                  sub.start_display_time,
+                    sf.time_.time_ = av_rescale_q(ffmpeg.pts,
                                                   subs->stream_->time_base,
                                                   tb);
+
+                    sf.time_.time_ += av_rescale_q(sub.start_display_time,
+                                                   tb_msec,
+                                                   tb);
                   }
 
                   if (ffmpeg.pts != AV_NOPTS_VALUE &&
                       sub.end_display_time > sub.start_display_time)
                   {
                     double dt =
-                      double(sub.end_display_time -
-                             sub.start_display_time) *
-                      double(subs->stream_->time_base.num) /
-                      double(subs->stream_->time_base.den);
+                      double(sub.end_display_time - sub.start_display_time) *
+                      double(tb_msec.num) /
+                      double(tb_msec.den);
 
                     // avoid subs that are visible for more than 5 seconds:
                     if (dt > 0.5 && dt < 5.0)
                     {
-                      sf.tEnd_.time_ = av_rescale_q(ffmpeg.pts +
-                                                    sub.end_display_time,
-                                                    subs->stream_->time_base,
-                                                    tb);
+                      sf.tEnd_ = sf.time_;
+                      sf.tEnd_ += dt;
                     }
                   }
                 }
@@ -4428,7 +4444,7 @@ namespace yae
         }
         else
         {
-          av_free_packet(&ffmpeg);
+          av_packet_unref(&ffmpeg);
         }
       }
     }
