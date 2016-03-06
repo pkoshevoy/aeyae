@@ -1,0 +1,9 @@
+#!/bin/sh
+
+BIN_DIR=$(dirname $0)
+LIB_DIR=$(realpath "${BIN_DIR}"/../lib)
+APP_NAME=$(basename -s .sh $0)
+
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}":"${LIB_DIR}":"@QT_LIBRARIES_DIR@"
+
+exec "${BIN_DIR}"/"${APP_NAME}" $@

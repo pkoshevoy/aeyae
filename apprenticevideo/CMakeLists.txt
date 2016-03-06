@@ -555,6 +555,25 @@ target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
   )
 
+if (Qt4_FOUND)
+  get_filename_component(QT_QMAKE_EXECUTABLE_DIR
+    ${QT_QMAKE_EXECUTABLE} DIRECTORY)
+  # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
+endif (Qt4_FOUND)
+
+if (Qt5_FOUND)
+  get_filename_component(QT_QMAKE_EXECUTABLE_DIR
+    ${Qt5_DIR}/../../../bin ABSOLUTE)
+  # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
+endif (Qt5_FOUND)
+
+if (Qt5_FOUND)
+  find_program(QT_QMAKE_EXECUTABLE NAMES qmake
+    HINTS ${QT_QMAKE_EXECUTABLE_DIR}
+    DOC
+    "qmake - Qt build configuration utility")
+endif ()
+
 if (APPLE)
   set_target_properties(${PROGNAME}
     PROPERTIES
@@ -567,18 +586,6 @@ if (APPLE)
   set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources/en.lproj)
-
-  if (Qt4_FOUND)
-    get_filename_component(QT_QMAKE_EXECUTABLE_DIR
-      ${QT_QMAKE_EXECUTABLE} DIRECTORY)
-    # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
-  endif (Qt4_FOUND)
-
-  if (Qt5_FOUND)
-    get_filename_component(QT_QMAKE_EXECUTABLE_DIR
-      ${Qt5_DIR}/../../../bin ABSOLUTE)
-    # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
-  endif (Qt5_FOUND)
 
   find_program(MACDEPLOYQT NAMES macdeployqt
     HINTS ${QT_QMAKE_EXECUTABLE_DIR}
@@ -664,22 +671,38 @@ if (WIN32)
 
 endif (WIN32)
 
-install(TARGETS
-  ${PROGNAME}
-  DESTINATION bin
-  )
+if (NOT (WIN32 OR APPLE))
+  install(TARGETS ${PROGNAME} DESTINATION bin)
 
-install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-256.png"
-  DESTINATION share/icons
-  RENAME "${PROGNAME}.png"
-  )
+  # qmake -query QT_INSTALL_LIBS
+  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
+    OUTPUT_VARIABLE QT_LIBRARIES_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-configure_file(
-  "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
-  "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop")
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.sh.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.sh"
+    @ONLY
+    )
 
-install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
-  DESTINATION share/applications
-  )
+  install(PROGRAMS "${PROJECT_BINARY_DIR}/${PROGNAME}.sh"
+    DESTINATION bin
+    )
+
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
+    @ONLY
+    )
+
+  install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
+    DESTINATION share/applications
+    )
+
+  install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-256.png"
+    DESTINATION share/icons
+    RENAME "${PROGNAME}.png"
+    )
+endif()
 
 add_dependencies(${PROGNAME} aeyae yae_reader_ffmpeg)

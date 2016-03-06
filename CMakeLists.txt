@@ -534,7 +534,6 @@ add_subdirectory(plugins/yae_reader_ffmpeg)
 add_subdirectory(apprenticevideo)
 add_subdirectory(tests)
 
-install(TARGETS
-  aeyae
-  DESTINATION lib
-  )
+if (NOT (WIN32 OR APPLE))
+  install(TARGETS aeyae DESTINATION lib)
+endif()

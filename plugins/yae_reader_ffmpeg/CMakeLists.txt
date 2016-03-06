@@ -35,7 +35,6 @@ set_property(TARGET yae_reader_ffmpeg PROPERTY CXX_STANDARD 98)
 
 add_dependencies(yae_reader_ffmpeg aeyae)
 
-install(TARGETS
-  yae_reader_ffmpeg
-  DESTINATION lib
-  )
+if (NOT (WIN32 OR APPLE))
+  install(TARGETS yae_reader_ffmpeg DESTINATION lib)
+endif()
