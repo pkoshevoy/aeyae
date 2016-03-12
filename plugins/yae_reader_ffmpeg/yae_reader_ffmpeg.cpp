@@ -144,31 +144,18 @@ namespace yae
   //----------------------------------------------------------------
   // Packet
   //
-  struct Packet
+  struct Packet : public AVPacket
   {
     Packet()
     {
-      memset(&ffmpeg_, 0, sizeof(AVPacket));
+      memset(this, 0, sizeof(AVPacket));
+      av_init_packet(this);
     }
 
     ~Packet()
     {
-      av_packet_unref(&ffmpeg_);
+      av_packet_unref(this);
     }
-
-    bool set(const AVPacket & packet)
-    {
-      int err = av_packet_ref(&ffmpeg_, &packet);
-      if (err)
-      {
-        memset(&ffmpeg_, 0, sizeof(AVPacket));
-      }
-
-      return !err;
-    }
-
-    // raw ffmpeg packet:
-    AVPacket ffmpeg_;
 
   private:
     // intentionally disabled:
@@ -1789,7 +1776,7 @@ namespace yae
       if (packetPtr)
       {
         // make a local shallow copy of the packet:
-        packet = packetPtr->ffmpeg_;
+        packet = *packetPtr;
       }
       else
       {
@@ -2858,7 +2845,7 @@ namespace yae
       if (packetPtr)
       {
         // make a local shallow copy of the packet:
-        packet = packetPtr->ffmpeg_;
+        packet = *packetPtr;
       }
       else
       {
@@ -4074,26 +4061,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // copyPacket
-  //
-  static TPacketPtr
-  copyPacket(const AVPacket & ffmpeg)
-  {
-    try
-    {
-      TPacketPtr p(new Packet());
-      if (p->set(ffmpeg))
-      {
-        return p;
-      }
-    }
-    catch (...)
-    {}
-
-    return TPacketPtr();
-  }
-
-  //----------------------------------------------------------------
   // PacketQueueCloseOnExit
   //
   struct PacketQueueCloseOnExit
@@ -4151,13 +4118,11 @@ namespace yae
     PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
     PacketQueueCloseOnExit audioCloseOnExit(audioTrack);
 
-    AVPacket ffmpeg;
     try
     {
       int err = 0;
       while (!err)
       {
-        av_init_packet(&ffmpeg);
         boost::this_thread::interruption_point();
 
         // check whether it's time to rewind to the in-point:
@@ -4185,6 +4150,8 @@ namespace yae
         }
 
         // service seek request, read a packet:
+        TPacketPtr packetPtr(new Packet());
+        AVPacket & packet = *packetPtr;
         bool demuxerInterrupted = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
@@ -4203,7 +4170,7 @@ namespace yae
 
           if (!err)
           {
-            err = av_read_frame(context_, &ffmpeg);
+            err = av_read_frame(context_, &packet);
 
             if (interruptDemuxer_)
             {
@@ -4228,8 +4195,6 @@ namespace yae
             dump_averror(std::cerr, err);
           }
 #endif
-          av_packet_unref(&ffmpeg);
-
           if (demuxerInterrupted)
           {
             boost::this_thread::yield();
@@ -4305,154 +4270,146 @@ namespace yae
           break;
         }
 
-        if (ffmpeg.dts != AV_NOPTS_VALUE)
+        if (packet.dts != AV_NOPTS_VALUE)
         {
           // keep track of current DTS, so that we would know which way to seek
           // relative to the current position (back/forth)
-          dts_ = ffmpeg.dts;
-          dtsBytePos_ = ffmpeg.pos;
-          dtsStreamIndex_ = ffmpeg.stream_index;
+          dts_ = packet.dts;
+          dtsBytePos_ = packet.pos;
+          dtsStreamIndex_ = packet.stream_index;
         }
 
-        TPacketPtr packet = copyPacket(ffmpeg);
-        if (packet)
+        if (videoTrack &&
+            videoTrack->streamIndex() == packet.stream_index)
         {
-          if (videoTrack &&
-              videoTrack->streamIndex() == ffmpeg.stream_index)
+          if (!videoTrack->packetQueue().push(packetPtr, &outputTerminator_))
           {
-            if (!videoTrack->packetQueue().push(packet, &outputTerminator_))
-            {
-              break;
-            }
+            break;
           }
-          else if (audioTrack &&
-                   audioTrack->streamIndex() == ffmpeg.stream_index)
+        }
+        else if (audioTrack &&
+                 audioTrack->streamIndex() == packet.stream_index)
+        {
+          if (!audioTrack->packetQueue().push(packetPtr, &outputTerminator_))
           {
-            if (!audioTrack->packetQueue().push(packet, &outputTerminator_))
-            {
-              break;
-            }
-          }
-          else
-          {
-            SubtitlesTrack * subs = NULL;
-            if (videoTrack &&
-                (subs = subsLookup(ffmpeg.stream_index)))
-            {
-              static const Rational tb(1, AV_TIME_BASE);
-
-              TSubsFrame sf;
-              sf.time_.time_ = av_rescale_q(ffmpeg.pts,
-                                            subs->stream_->time_base,
-                                            tb);
-              sf.time_.base_ = AV_TIME_BASE;
-              sf.tEnd_ = TTime(std::numeric_limits<int64>::max(),
-                               AV_TIME_BASE);
-
-              sf.render_ = subs->render_;
-              sf.traits_ = subs->format_;
-              sf.index_ = subs->index_;
-              sf.extraData_ = subs->extraData_;
-
-              // copy the reference frame size:
-              if (subs->stream_->codec)
-              {
-                sf.rw_ = subs->stream_->codec->width;
-                sf.rh_ = subs->stream_->codec->height;
-              }
-
-              if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
-              {
-                sf.rw_ = subs->vobsub_.w_;
-                sf.rh_ = subs->vobsub_.h_;
-              }
-
-              if (ffmpeg.data && ffmpeg.size)
-              {
-                TPlanarBufferPtr buffer(new TPlanarBuffer(1),
-                                        &IPlanarBuffer::deallocator);
-                buffer->resize(0, ffmpeg.size, 1);
-                unsigned char * dst = buffer->data(0);
-                memcpy(dst, ffmpeg.data, ffmpeg.size);
-
-                sf.data_ = buffer;
-              }
-
-              if (ffmpeg.side_data &&
-                  ffmpeg.side_data->data &&
-                  ffmpeg.side_data->size)
-              {
-                TPlanarBufferPtr buffer(new TPlanarBuffer(1),
-                                        &IPlanarBuffer::deallocator);
-                buffer->resize(0, ffmpeg.side_data->size, 1, 1);
-                unsigned char * dst = buffer->data(0);
-                memcpy(dst, ffmpeg.side_data->data, ffmpeg.side_data->size);
-
-                sf.sideData_ = buffer;
-              }
-
-              if (subs->codec_)
-              {
-                // decode the subtitle:
-                int gotSub = 0;
-                AVSubtitle sub;
-                err = avcodec_decode_subtitle2(subs->stream_->codec,
-                                               &sub,
-                                               &gotSub,
-                                               &ffmpeg);
-                if (err >= 0 && gotSub)
-                {
-                  const unsigned char * header =
-                    subs->stream_->codec->subtitle_header;
-
-                  std::size_t headerSize =
-                    subs->stream_->codec->subtitle_header_size;
-
-                  sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
-                                                                 header,
-                                                                 headerSize),
-                                                &TSubsPrivate::deallocator);
-
-                  static const Rational tb_msec(1, 1000);
-
-                  if (ffmpeg.pts != AV_NOPTS_VALUE)
-                  {
-                    sf.time_.time_ = av_rescale_q(ffmpeg.pts,
-                                                  subs->stream_->time_base,
-                                                  tb);
-
-                    sf.time_.time_ += av_rescale_q(sub.start_display_time,
-                                                   tb_msec,
-                                                   tb);
-                  }
-
-                  if (ffmpeg.pts != AV_NOPTS_VALUE &&
-                      sub.end_display_time > sub.start_display_time)
-                  {
-                    double dt =
-                      double(sub.end_display_time - sub.start_display_time) *
-                      double(tb_msec.num) /
-                      double(tb_msec.den);
-
-                    // avoid subs that are visible for more than 5 seconds:
-                    if (dt > 0.5 && dt < 5.0)
-                    {
-                      sf.tEnd_ = sf.time_;
-                      sf.tEnd_ += dt;
-                    }
-                  }
-                }
-
-                err = 0;
-              }
-
-              subs->queue_.push(sf, &outputTerminator_);
-            }
+            break;
           }
         }
         else
         {
-          av_packet_unref(&ffmpeg);
+          SubtitlesTrack * subs = NULL;
+          if (videoTrack &&
+              (subs = subsLookup(packet.stream_index)))
+          {
+            static const Rational tb(1, AV_TIME_BASE);
+
+            TSubsFrame sf;
+            sf.time_.time_ = av_rescale_q(packet.pts,
+                                          subs->stream_->time_base,
+                                          tb);
+            sf.time_.base_ = AV_TIME_BASE;
+            sf.tEnd_ = TTime(std::numeric_limits<int64>::max(),
+                             AV_TIME_BASE);
+
+            sf.render_ = subs->render_;
+            sf.traits_ = subs->format_;
+            sf.index_ = subs->index_;
+            sf.extraData_ = subs->extraData_;
+
+            // copy the reference frame size:
+            if (subs->stream_->codec)
+            {
+              sf.rw_ = subs->stream_->codec->width;
+              sf.rh_ = subs->stream_->codec->height;
+            }
+
+            if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
+            {
+              sf.rw_ = subs->vobsub_.w_;
+              sf.rh_ = subs->vobsub_.h_;
+            }
+
+            if (packet.data && packet.size)
+            {
+              TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                      &IPlanarBuffer::deallocator);
+              buffer->resize(0, packet.size, 1);
+              unsigned char * dst = buffer->data(0);
+              memcpy(dst, packet.data, packet.size);
+
+              sf.data_ = buffer;
+            }
+
+            if (packet.side_data &&
+                packet.side_data->data &&
+                packet.side_data->size)
+            {
+              TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                      &IPlanarBuffer::deallocator);
+              buffer->resize(0, packet.side_data->size, 1, 1);
+              unsigned char * dst = buffer->data(0);
+              memcpy(dst, packet.side_data->data, packet.side_data->size);
+
+              sf.sideData_ = buffer;
+            }
+
+            if (subs->codec_)
+            {
+              // decode the subtitle:
+              int gotSub = 0;
+              AVSubtitle sub;
+              err = avcodec_decode_subtitle2(subs->stream_->codec,
+                                             &sub,
+                                             &gotSub,
+                                             &packet);
+              if (err >= 0 && gotSub)
+              {
+                const unsigned char * header =
+                  subs->stream_->codec->subtitle_header;
+
+                std::size_t headerSize =
+                  subs->stream_->codec->subtitle_header_size;
+
+                sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
+                                                               header,
+                                                               headerSize),
+                                              &TSubsPrivate::deallocator);
+
+                static const Rational tb_msec(1, 1000);
+
+                if (packet.pts != AV_NOPTS_VALUE)
+                {
+                  sf.time_.time_ = av_rescale_q(packet.pts,
+                                                subs->stream_->time_base,
+                                                tb);
+
+                  sf.time_.time_ += av_rescale_q(sub.start_display_time,
+                                                 tb_msec,
+                                                 tb);
+                }
+
+                if (packet.pts != AV_NOPTS_VALUE &&
+                    sub.end_display_time > sub.start_display_time)
+                {
+                  double dt =
+                    double(sub.end_display_time - sub.start_display_time) *
+                    double(tb_msec.num) /
+                    double(tb_msec.den);
+
+                  // avoid subs that are visible for more than 5 seconds:
+                  if (dt > 0.5 && dt < 5.0)
+                  {
+                    sf.tEnd_ = sf.time_;
+                    sf.tEnd_ += dt;
+                  }
+                }
+              }
+
+              err = 0;
+            }
+
+            subs->queue_.push(sf, &outputTerminator_);
+          }
         }
       }
     }
