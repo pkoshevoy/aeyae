@@ -2268,36 +2268,7 @@ namespace yae
     playlistView_.setEnabled(showPlaylist);
 #endif
   }
-#if 0
-  //----------------------------------------------------------------
-  // MainWindow::playbackShowTimeline
-  //
-  void
-  MainWindow::playbackShowTimeline()
-  {
-    timelineView_.modelChanged();
 
-    bool showTimeline = actionShowTimeline->isChecked();
-
-#ifdef YAE_USE_PLAYER_QUICK_WIDGET
-    QQuickItem * playerItem = playerWidget_->rootObject();
-    if (!playerItem)
-    {
-      return;
-    }
-
-    QQuickItem * timeline =
-      playerItem->findChild<QQuickItem *>("timeline");
-
-    if (timeline)
-    {
-      timeline->setVisible(showTimeline);
-    }
-#else
-    timelineView_.setEnabled(showTimeline);
-#endif
-  }
-#endif
   //----------------------------------------------------------------
   // MainWindow::playbackShrinkWrap
   //
@@ -3320,6 +3291,7 @@ namespace yae
     }
 
     timelineModel_.seekTo(seconds);
+    timelineView_.maybeAnimateOpacity();
   }
 
   //----------------------------------------------------------------

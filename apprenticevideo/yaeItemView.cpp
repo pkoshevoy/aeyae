@@ -712,6 +712,7 @@ namespace yae
       << std::endl;
 #endif
 
+    bool processed = false;
     for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
     {
       InputHandler & handler = *i;
@@ -719,11 +720,12 @@ namespace yae
 
       if (ia && ia->onScroll(handler.csysOrigin_, pt, degrees))
       {
+        processed = true;
         break;
       }
     }
 
-    return true;
+    return processed;
   }
 
   //----------------------------------------------------------------

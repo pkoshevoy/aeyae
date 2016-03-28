@@ -189,35 +189,46 @@ namespace yae
   struct MouseTrap : public InputArea
   {
     MouseTrap(const char * id):
-      InputArea(id)
+      InputArea(id),
+      onScroll_(true),
+      onPress_(true),
+      onClick_(true),
+      onDoubleClick_(true),
+      onDrag_(true)
     {}
 
     // virtual:
     bool onScroll(const TVec2D & itemCSysOrigin,
                   const TVec2D & rootCSysPoint,
                   double degrees)
-    { return true; }
+    { return onScroll_; }
 
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
-    { return true; }
+    { return onPress_; }
 
     // virtual:
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
-    { return true; }
+    { return onClick_; }
 
     // virtual:
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
-    { return true; }
+    { return onDoubleClick_; }
 
     // virtual:
     bool onDrag(const TVec2D & itemCSysOrigin,
                 const TVec2D & rootCSysDragStart,
                 const TVec2D & rootCSysDragEnd)
-    { return true; }
+    { return onDrag_; }
+
+    bool onScroll_;
+    bool onPress_;
+    bool onClick_;
+    bool onDoubleClick_;
+    bool onDrag_;
   };
 
 }

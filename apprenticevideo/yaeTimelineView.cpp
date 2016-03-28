@@ -727,6 +727,7 @@ namespace yae
 
     // setup mouse trap to prevent unintended click-through to playlist:
     MouseTrap & mouseTrap = root.addNew<MouseTrap>("mouse_trap");
+    mouseTrap.onScroll_ = false;
     mouseTrap.anchors_.fill(container);
     mouseTrap.anchors_.right_ = ItemRef::reference(shadow, kPropertyRight);
 
@@ -992,6 +993,7 @@ namespace yae
     controls.visible_ = controls.
       addExpr(new ExposeControls(*this));
     controls.visible_.cachingEnabled_ = false;
+    mouseTrapForControls.onScroll_ = false;
     mouseTrapForControls.anchors_.fill(controls);
 
     double cells = 2.0;
