@@ -941,7 +941,7 @@ namespace yae
 
     // add other player controls:
     ColorRef colorControlsBg = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgControls));
 
     Item & playlistButton = root.addNew<Item>("playlistButton");
     TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));
@@ -953,6 +953,15 @@ namespace yae
       playlistButton.width_ =
         ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
       playlistButton.height_ = playlistButton.width_;
+
+      RoundRect & bg = playlistButton.addNew<RoundRect>("bg");
+      bg.anchors_.fill(playlistButton);
+      bg.margins_.set(ItemRef::reference(playlistButton, kPropertyHeight,
+                                         0.1, -1.0));
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+      bg.visible_ = bg.addExpr(new OnPlaylistVisible(*this, false));
 
       TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
       gridOn.anchors_.fill(playlistButton);
@@ -998,10 +1007,11 @@ namespace yae
 
     double cells = 2.0;
     controls.width_ = ItemRef::scale(controls, kPropertyHeight, cells);
-    controls.radius_ = ItemRef::scale(controls, kPropertyHeight, 0.1);
-    controls.color_ = colorControlsBg;
+    controls.radius_ =
+      ItemRef::reference(controls, kPropertyHeight, 0.05, 0.5);
     controls.opacity_ =
       ItemRef::uncacheable(opacityForControls, kPropertyTransition);
+    controls.color_ = colorControlsBg;
 
     Item & playbackButton = controls.addNew<Item>("playbackButton");
     TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));

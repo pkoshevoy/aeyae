@@ -111,6 +111,9 @@ namespace yae
     if (hasImpact)
     {
       font_large_.setFamily("impact");
+#if !(defined(__APPLE__) || defined(_WIN32))
+      font_large_.setStretch(QFont::Condensed);
+#endif
     }
 #if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
     else
@@ -170,7 +173,7 @@ namespace yae
     fg_timecode_ = Color(0xFFFFFF, 0.5);
 
     bg_controls_ = bg_timecode_;
-    fg_controls_ = fg_timecode_;
+    fg_controls_ = fg_timecode_.opaque(0.75);
 
     bg_hint_ = Color(0x1f1f1f, 0.0);
     fg_hint_ = Color(0xffffff, 0.5);
@@ -230,7 +233,7 @@ namespace yae
     // generate play button texture:
     {
       QImage img =
-        triangleImage(128, fg_controls_, bg_controls_.transparent(), 90.0);
+        triangleImage(256, fg_controls_, bg_controls_.transparent(), 90.0);
       play_->setImage(img);
     }
 
@@ -246,7 +249,7 @@ namespace yae
     // generate playlist grid off button texture:
     {
       QImage img = barsImage(128,
-                             fg_controls_.a_scaled(0.5),
+                             fg_controls_.a_scaled(0.75),
                              bg_controls_.transparent(),
                              3, 0.7, 90);
       grid_off_->setImage(img);

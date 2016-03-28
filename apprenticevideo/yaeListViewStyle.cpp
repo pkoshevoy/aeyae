@@ -109,15 +109,15 @@ namespace yae
     bg_label_ = Color(0xffffff, 0.0);
     fg_label_ = Color(0x000000, 1.0);
 
+    bg_label_selected_ = bg_item_selected_.transparent();
+    fg_label_selected_ = Color(0xffffff, 1.0);
+
     bg_group_ = Color(0xafafaf, 0.75);
     fg_group_ = Color(0xffffff, 1.0);
 
     bg_item_ = Color(0xffffff, 0.0);
     bg_item_playing_ = cursor_.a_scaled(0.75);
     bg_item_selected_ = underline_.a_scaled(0.75);
-
-    bg_label_selected_ = bg_item_selected_.transparent();
-    fg_label_selected_ = Color(0xffffff, 1.0);
 
     timeline_played_ = underline_;
     timeline_included_ = timeline_played_.a_scaled(0.5);
