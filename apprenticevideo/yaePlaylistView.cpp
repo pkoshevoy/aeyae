@@ -1627,20 +1627,6 @@ namespace yae
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
-    Rectangle & underline = cell.addNew<Rectangle>("underline");
-    underline.anchors_.left_ = ItemRef::offset(playing, kPropertyLeft, -1);
-    underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
-    underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 1);
-    underline.height_ = ItemRef::constant(2);
-    underline.visible_ = BoolRef::reference(playing, kPropertyVisible);
-    underline.visible_.cachingEnabled_ = false;
-    underline.color_ = underline.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.cursor_,
-                                     style.fg_badge_,
-                                     style.fg_badge_));
-
     Rectangle & cur = cell.addNew<Rectangle>("current");
     cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
     cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);

@@ -111,7 +111,10 @@ namespace yae
     if (hasImpact)
     {
       font_large_.setFamily("impact");
-#if !(defined(__APPLE__) || defined(_WIN32))
+
+#if !(defined(_WIN32) ||                        \
+      defined(__APPLE__) ||                     \
+      QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
       font_large_.setStretch(QFont::Condensed);
 #endif
     }
