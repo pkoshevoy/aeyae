@@ -1899,6 +1899,8 @@ namespace yae
     Item & sviewContent = *(sview.content_);
     Item & footer = sviewContent["footer"];
     layoutPlaylistFooter(footer, *this, *model_, rootIndex, style);
+
+    ensureCurrentItemIsVisible();
   }
 
   //----------------------------------------------------------------
@@ -2477,6 +2479,26 @@ namespace yae
     int itemRow = -1;
     PlaylistModelProxy::mapToGroupRowItemRow(itemIndex, groupRow, itemRow);
     ensure_visible(*this, groupRow, itemRow);
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistView::ensureCurrentItemIsVisible
+  //
+  void
+  PlaylistView::ensureCurrentItemIsVisible()
+  {
+    if (!model_)
+    {
+      return;
+    }
+
+    Item & root = *root_;
+    Scrollview & sview = root.get<Scrollview>("scrollview");
+    FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
+    ma_sview.stopAnimating();
+
+    QModelIndex currentIndex = model_->currentItem();
+    ensureVisible(currentIndex);
   }
 
   //----------------------------------------------------------------

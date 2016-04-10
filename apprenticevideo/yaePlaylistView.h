@@ -190,6 +190,9 @@ namespace yae
     // adjust scrollview position to ensure a given item is visible:
     void ensureVisible(const QModelIndex & itemIndex);
 
+    // shortcut:
+    void ensureCurrentItemIsVisible();
+
     void dataChanged(const QModelIndex & topLeft,
                      const QModelIndex & bottomRight);
 

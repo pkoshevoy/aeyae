@@ -56,6 +56,7 @@ namespace yae
 
     // helpers:
     bool isAnimating() const;
+    void stopAnimating();
     void animate();
 
   protected:

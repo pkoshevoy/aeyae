@@ -269,6 +269,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FlickableArea::stopAnimating
+  //
+  void
+  FlickableArea::stopAnimating()
+  {
+    p_->dontAnimate();
+  }
+
+  //----------------------------------------------------------------
   // FlickableArea::onTimeout
   //
   void
