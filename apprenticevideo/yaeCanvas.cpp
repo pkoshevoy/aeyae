@@ -487,6 +487,7 @@ namespace yae
     showTheGreeting_(true),
     subsInOverlay_(false),
     renderMode_(Canvas::kScaleToFit),
+    devicePixelRatio_(1.0),
     w_(0),
     h_(0)
   {}
@@ -811,15 +812,16 @@ namespace yae
   // Canvas::resize
   //
   void
-  Canvas::resize(int w, int h)
+  Canvas::resize(double devicePixelRatio, int w, int h)
   {
-    if (w_ == w && h_ == h)
+    if (devicePixelRatio_ == devicePixelRatio && w_ == w && h_ == h)
     {
       return;
     }
 
-    w_ = w;
-    h_ = h;
+    devicePixelRatio_ = devicePixelRatio;
+    w_ = w * devicePixelRatio;
+    h_ = h * devicePixelRatio;
 
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {

@@ -44,6 +44,7 @@ namespace yae
   ItemView::ItemView(const char * name):
     Canvas::ILayer(),
     root_(new Item(name)),
+    devicePixelRatio_(1.0),
     w_(0.0),
     h_(0.0),
     pressed_(NULL),
@@ -187,14 +188,16 @@ namespace yae
   bool
   ItemView::resizeTo(const Canvas * canvas)
   {
+    double devicePixelRatio = canvas->devicePixelRatio();
     int w = canvas->canvasWidth();
     int h = canvas->canvasHeight();
 
-    if (w == w_ && h_ == h)
+    if (devicePixelRatio == devicePixelRatio_ && w == w_ && h_ == h)
     {
       return false;
     }
 
+    devicePixelRatio_ = devicePixelRatio;
     w_ = w;
     h_ = h;
 
@@ -509,8 +512,7 @@ namespace yae
       return false;
     }
 
-    QPoint pos = e->pos();
-    TVec2D pt(pos.x(), pos.y());
+    TVec2D pt = device_pixel_pos(canvas, e);
     mousePt_ = pt;
 
     QEvent::Type et = e->type();
@@ -687,9 +689,7 @@ namespace yae
       return false;
     }
 
-    QPoint pos = e->pos();
-    TVec2D pt(pos.x(), pos.y());
-
+    TVec2D pt = device_pixel_pos(canvas, e);
     std::list<InputHandler> handlers;
     if (!root_->getInputHandlers(pt, handlers))
     {

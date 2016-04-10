@@ -168,6 +168,9 @@ namespace yae
     Canvas(const boost::shared_ptr<IOpenGLContext> & context);
     ~Canvas();
 
+    inline double devicePixelRatio() const
+    { return devicePixelRatio_; }
+
     inline int canvasWidth() const
     { return w_; }
 
@@ -304,7 +307,7 @@ namespace yae
                               const std::size_t headerSize = 0);
 
     // helper:
-    void resize(int w, int h);
+    void resize(double devicePixelRatio, int w, int h);
     void paintCanvas();
 
     //----------------------------------------------------------------
@@ -421,6 +424,7 @@ namespace yae
     TRenderMode renderMode_;
 
     // canvas size:
+    double devicePixelRatio_;
     int w_;
     int h_;
 

@@ -86,5 +86,9 @@
 	<string>@PROJ_WC_REVISION@</string>
 	<key>NSAppleScriptEnabled</key>
 	<string>YES</string>
+        <key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+        <key>NSHighResolutionCapable</key>
+	<string>YES</string>
 </dict>
 </plist>

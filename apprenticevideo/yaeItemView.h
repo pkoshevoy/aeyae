@@ -38,6 +38,18 @@
 namespace yae
 {
 
+  // helper: convert from device independent "pixels" to device pixels:
+  template <typename TEvent>
+  TVec2D
+  device_pixel_pos(Canvas * canvas, const TEvent * e)
+  {
+    QPoint pos = e->pos();
+    double devicePixelRatio = canvas->devicePixelRatio();
+    double x = devicePixelRatio * pos.x();
+    double y = devicePixelRatio * pos.y();
+    return TVec2D(x, y);
+  }
+
   //----------------------------------------------------------------
   // ItemView
   //
@@ -132,6 +144,9 @@ namespace yae
     inline const ItemPtr & root() const
     { return root_; }
 
+    inline double devicePixelRatio() const
+    { return devicePixelRatio_; }
+
     inline double width() const
     { return w_; }
 
@@ -148,6 +163,7 @@ namespace yae
 
     TImageProviders imageProviders_;
     ItemPtr root_;
+    double devicePixelRatio_;
     double w_;
     double h_;
 
@@ -186,7 +202,8 @@ namespace yae
     void evaluate(double & result) const
     {
       double w = itemView_.width();
-      result = std::max<double>(minHeight_, 24.0 * w / 800.0);
+      double s = itemView_.devicePixelRatio();
+      result = std::max<double>(minHeight_ * s, 24.0 * w / 800.0);
     }
 
     const ItemView & itemView_;
