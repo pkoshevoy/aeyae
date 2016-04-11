@@ -189,7 +189,7 @@ namespace yae
 #if QT_VERSION < 0x050000
           double devicePixelRatio = 1.0;
 #else
-          double devicePixelRatio = TWidget::devicePixelRatio()
+          double devicePixelRatio = TWidget::devicePixelRatio();
 #endif
 
           Canvas::resize(devicePixelRatio,
