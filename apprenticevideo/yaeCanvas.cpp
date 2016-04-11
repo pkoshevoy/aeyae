@@ -812,16 +812,18 @@ namespace yae
   // Canvas::resize
   //
   void
-  Canvas::resize(double devicePixelRatio, int w, int h)
+  Canvas::resize(double devicePixelRatio, int logical_w, int logical_h)
   {
-    if (devicePixelRatio_ == devicePixelRatio && w_ == w && h_ == h)
+    int new_w = logical_w * devicePixelRatio;
+    int new_h = logical_h * devicePixelRatio;
+    if (devicePixelRatio_ == devicePixelRatio && w_ == new_w && h_ == new_h)
     {
       return;
     }
 
     devicePixelRatio_ = devicePixelRatio;
-    w_ = w * devicePixelRatio;
-    h_ = h * devicePixelRatio;
+    w_ = new_w;
+    h_ = new_h;
 
     if (overlay_ && (subsInOverlay_ || showTheGreeting_))
     {
