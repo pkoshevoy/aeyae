@@ -185,7 +185,14 @@ namespace yae
         else if (et == QEvent::Resize)
         {
           TWidget::resizeEvent((QResizeEvent *)event);
-          Canvas::resize(TWidget::devicePixelRatio(),
+
+#if QT_VERSION < 0x050000
+          double devicePixelRatio = 1.0;
+#else
+          double devicePixelRatio = TWidget::devicePixelRatio()
+#endif
+
+          Canvas::resize(devicePixelRatio,
                          TWidget::width(),
                          TWidget::height());
         }
