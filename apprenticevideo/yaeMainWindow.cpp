@@ -278,8 +278,9 @@ namespace yae
 #ifdef __APPLE__
          "use apple remote for volume and seeking\n\n"
 #endif
-         "tap \xE2""\x98""\xB0"" for playlist, double-tap for fullscreen\n\n"
-         "explore the menus for more options");
+         "tap %1 for playlist, double-tap for fullscreen\n\n"
+         "explore the menus for more options").
+      arg(QString::fromUtf8("\xE2""\x98""\xB0"));
 
 #ifdef YAE_USE_QOPENGL_WIDGET
     playerWidget_ = new TPlayerWidget(this);
