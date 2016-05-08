@@ -74,6 +74,39 @@ namespace yae
     TPayload & payload_;
   };
 
+  //----------------------------------------------------------------
+  // CancelableEvent
+  //
+  struct CancelableEvent : public QEvent
+  {
+    //----------------------------------------------------------------
+    // Ticket
+    //
+    struct Ticket
+    {
+      Ticket():
+        canceled_(false)
+      {}
+
+      inline void cancel()
+      { canceled_ = true; }
+
+      inline bool isCanceled() const
+      { return canceled_; }
+
+    protected:
+      bool canceled_;
+    };
+
+    CancelableEvent(const boost::shared_ptr<Ticket> & ticket):
+      QEvent(QEvent::User),
+      ticket_(ticket)
+    {}
+
+    virtual bool execute() = 0;
+
+    boost::shared_ptr<Ticket> ticket_;
+  };
 
   //----------------------------------------------------------------
   // TFontAttachment
@@ -308,6 +341,12 @@ namespace yae
 
     // helper:
     void resize(double devicePixelRatio, int w, int h);
+
+    // helper:
+    inline bool overlayHasContent() const
+    { return subsInOverlay_ || showTheGreeting_; }
+
+    // helper: paint everything (greeting, video, subtitles)
     void paintCanvas();
 
     //----------------------------------------------------------------

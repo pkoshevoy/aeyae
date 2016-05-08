@@ -46,17 +46,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ImageLive::paintContent
+  // paintImage
   //
-  void
-  ImageLive::paintContent() const
+  static void
+  paintImage(CanvasRenderer * renderer,
+             double opacity,
+             double x,
+             double y,
+             double w_max,
+             double h_max)
   {
-    if (!canvas_)
-    {
-      return;
-    }
-
-    CanvasRenderer * renderer = canvas_->canvasRenderer();
     double croppedWidth = 0.0;
     double croppedHeight = 0.0;
     int cameraRotation = 0;
@@ -68,13 +67,9 @@ namespace yae
       return;
     }
 
-    double x = this->left();
-    double y = this->top();
-    double w_max = this->width();
-    double h_max = this->height();
     double w = w_max;
     double h = h_max;
-    double car = w / h;
+    double car = w_max / h_max;
     double dar = croppedWidth / croppedHeight;
 
     if (dar < car)
@@ -111,9 +106,35 @@ namespace yae
       }
     }
 
-    double opacity = opacity_.get();
     renderer->draw(opacity);
     yae_assert_gl_no_error();
+  }
+
+  //----------------------------------------------------------------
+  // ImageLive::paintContent
+  //
+  void
+  ImageLive::paintContent() const
+  {
+    if (!canvas_)
+    {
+      return;
+    }
+
+    double x = this->left();
+    double y = this->top();
+    double w_max = this->width();
+    double h_max = this->height();
+    double opacity = opacity_.get();
+
+    CanvasRenderer * renderer = canvas_->canvasRenderer();
+    paintImage(renderer, opacity, x, y, w_max, h_max);
+
+    CanvasRenderer * overlay = canvas_->overlayRenderer();
+    if (overlay && overlay->pixelTraits() && canvas_->overlayHasContent())
+    {
+      paintImage(overlay, opacity, x, y, w_max, h_max);
+    }
   }
 
 }

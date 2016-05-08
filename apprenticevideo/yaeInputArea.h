@@ -28,6 +28,7 @@
 
 namespace yae
 {
+  class PostponeEvent;
 
   //----------------------------------------------------------------
   // InputArea
@@ -70,6 +71,10 @@ namespace yae
                          const TVec2D & rootCSysPoint)
     { return false; }
 
+    virtual bool onSingleClick(const TVec2D & itemCSysOrigin,
+                               const TVec2D & rootCSysPoint)
+    { return false; }
+
     virtual bool onDoubleClick(const TVec2D & itemCSysOrigin,
                                const TVec2D & rootCSysPoint)
     { return false; }
@@ -91,7 +96,50 @@ namespace yae
     virtual bool draggable() const
     { return draggable_; }
 
+    // helper:
+    boost::shared_ptr<CancelableEvent::Ticket>
+    postponeSingleClickEvent(PostponeEvent & postponeEvent,
+                             int msec,
+                             QObject * view,
+                             const TVec2D & itemCSysOrigin,
+                             const TVec2D & rootCSysPoint) const;
+
     bool draggable_;
+  };
+
+  //----------------------------------------------------------------
+  // SingleClickEvent
+  //
+  struct SingleClickEvent : public CancelableEvent
+  {
+    SingleClickEvent(const boost::shared_ptr<CancelableEvent::Ticket> & ticket,
+                     const boost::weak_ptr<InputArea> & inputArea,
+                     const TVec2D & itemCSysOrigin,
+                     const TVec2D & rootCSysPoint):
+      CancelableEvent(ticket),
+      inputArea_(inputArea),
+      itemCSysOrigin_(itemCSysOrigin),
+      rootCSysPoint_(rootCSysPoint)
+    {
+      YAE_LIFETIME_START(lifetime, "03 -- SingleClickEvent");
+    }
+
+    // virtual:
+    bool execute()
+    {
+      boost::shared_ptr<InputArea> ia = inputArea_.lock();
+      if (!ia)
+      {
+        return false;
+      }
+
+      return ia->onSingleClick(itemCSysOrigin_, rootCSysPoint_);
+    }
+
+    boost::weak_ptr<InputArea> inputArea_;
+    TVec2D itemCSysOrigin_;
+    TVec2D rootCSysPoint_;
+    YAE_LIFETIME(lifetime);
   };
 
   //----------------------------------------------------------------

@@ -870,8 +870,8 @@ namespace yae
   //
   static void
   paintImage(CanvasRenderer * canvas,
-             int canvasWidth,
-             int canvasHeight,
+             double canvasWidth,
+             double canvasHeight,
              Canvas::TRenderMode renderMode)
   {
     double croppedWidth = 0.0;
@@ -886,37 +886,37 @@ namespace yae
     }
 
     double dar = croppedWidth / croppedHeight;
-    double car = double(canvasWidth) / double(canvasHeight);
+    double car = canvasWidth / canvasHeight;
 
     double x = 0.0;
     double y = 0.0;
-    double w = double(canvasWidth);
-    double h = double(canvasHeight);
+    double w = canvasWidth;
+    double h = canvasHeight;
 
     if (renderMode == Canvas::kScaleToFit)
     {
       if (dar < car)
       {
-        w = double(canvasHeight) * dar;
-        x = 0.5 * (double(canvasWidth) - w);
+        w = canvasHeight * dar;
+        x = 0.5 * (canvasWidth - w);
       }
       else
       {
-        h = double(canvasWidth) / dar;
-        y = 0.5 * (double(canvasHeight) - h);
+        h = canvasWidth / dar;
+        y = 0.5 * (canvasHeight - h);
       }
     }
     else
     {
       if (dar < car)
       {
-        h = double(canvasWidth) / dar;
-        y = 0.5 * (double(canvasHeight) - h);
+        h = canvasWidth / dar;
+        y = 0.5 * (canvasHeight - h);
       }
       else
       {
-        w = double(canvasHeight) * dar;
-        x = 0.5 * (double(canvasWidth) - w);
+        w = canvasHeight * dar;
+        x = 0.5 * (canvasWidth - w);
       }
     }
 
@@ -1095,17 +1095,23 @@ namespace yae
     if (ptts)
     {
       // draw the frame:
-      paintImage(private_, canvasWidth, canvasHeight, renderMode_);
+      paintImage(private_,
+                 double(canvasWidth),
+                 double(canvasHeight),
+                 renderMode_);
     }
 
     // draw the overlay:
-    if (subsInOverlay_ || showTheGreeting_)
+    if (overlayHasContent())
     {
       if (overlay_ && overlay_->pixelTraits())
       {
         YAE_OGL_11(glEnable(GL_BLEND));
         YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-        paintImage(overlay_, canvasWidth, canvasHeight, kScaleToFit);
+        paintImage(overlay_,
+                   double(canvasWidth),
+                   double(canvasHeight),
+                   kScaleToFit);
         YAE_OGL_11(glDisable(GL_BLEND));
       }
       else

@@ -438,7 +438,6 @@ namespace yae
     // virtual:
     void evaluate(bool & result) const
     {
-      const TVec2D & pt = view_.mousePt();
       result = (view_.mainWindow_ == NULL ||
                 !view_.mainWindow_->isPlaylistVisible());
     }
@@ -529,6 +528,19 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
+      singleClickEventTicket_ =
+        postponeSingleClickEvent(postpone_,
+                                 qApp->doubleClickInterval(),
+                                 &view_,
+                                 itemCSysOrigin,
+                                 rootCSysPoint);
+      return true;
+    }
+
+    // virtual:
+    bool onSingleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
       if (view_.mainWindow_)
       {
         view_.mainWindow_->togglePlaylist();
@@ -537,7 +549,26 @@ namespace yae
       return true;
     }
 
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
+      if (singleClickEventTicket_)
+      {
+        singleClickEventTicket_->cancel();
+      }
+
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->requestToggleFullScreen();
+      }
+
+      return true;
+    }
+
     TimelineView & view_;
+    PostponeEvent postpone_;
+    boost::shared_ptr<CancelableEvent::Ticket> singleClickEventTicket_;
   };
 
 

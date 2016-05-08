@@ -51,6 +51,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PostponeEvent
+  //
+  class PostponeEvent : public QObject
+  {
+    Q_OBJECT
+
+  public:
+    PostponeEvent();
+    virtual ~PostponeEvent();
+
+    void postpone(int msec, QObject * target, QEvent * event);
+
+  protected slots:
+    void onTimeout();
+
+  protected:
+    struct TPrivate;
+    TPrivate * private_;
+
+  private:
+    PostponeEvent(const PostponeEvent &);
+    PostponeEvent & operator = (const PostponeEvent &);
+  };
+
+  //----------------------------------------------------------------
   // ItemView
   //
   class YAE_API ItemView : public QObject,

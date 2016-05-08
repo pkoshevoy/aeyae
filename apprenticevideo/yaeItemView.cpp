@@ -39,6 +39,88 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // PostponeEvent::TPrivate
+  //
+  struct PostponeEvent::TPrivate
+  {
+    //----------------------------------------------------------------
+    // TPrivate
+    //
+    TPrivate():
+      target_(NULL),
+      event_(NULL)
+    {}
+
+    //----------------------------------------------------------------
+    // ~PostponeEvent
+    //
+    ~TPrivate()
+    {
+      delete event_;
+    }
+
+    //----------------------------------------------------------------
+    // postpone
+    //
+    void
+    postpone(QObject * target, QEvent * event)
+    {
+      delete event_;
+      target_ = target;
+      event_ = event;
+    }
+
+    //----------------------------------------------------------------
+    // onTimeout
+    //
+    void
+    onTimeout()
+    {
+      qApp->postEvent(target_, event_, Qt::HighEventPriority);
+      target_ = NULL;
+      event_ = NULL;
+    }
+
+    QObject * target_;
+    QEvent * event_;
+  };
+
+  //----------------------------------------------------------------
+  // PostponeEvent::PostponeEvent
+  //
+  PostponeEvent::PostponeEvent():
+    private_(new TPrivate())
+  {}
+
+  //----------------------------------------------------------------
+  // PostponeEvent::~PostponeEvent
+  //
+  PostponeEvent::~PostponeEvent()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // PostponeEvent::postpone
+  //
+  void
+  PostponeEvent::postpone(int msec, QObject * target, QEvent * event)
+  {
+    private_->postpone(target, event);
+    QTimer::singleShot(msec, this, SLOT(onTimeout()));
+  }
+
+  //----------------------------------------------------------------
+  // PostponeEvent::onTimeout
+  //
+  void
+  PostponeEvent::onTimeout()
+  {
+    private_->onTimeout();
+  }
+
+
+  //----------------------------------------------------------------
   // ItemView::ItemView
   //
   ItemView::ItemView(const char * name):
@@ -135,6 +217,16 @@ namespace yae
 
         repaintEvent->accept();
         return true;
+      }
+
+      CancelableEvent * cancelableEvent =
+        dynamic_cast<CancelableEvent *>(e);
+
+      if (cancelableEvent)
+      {
+        cancelableEvent->accept();
+        return (!cancelableEvent->ticket_->isCanceled() &&
+                cancelableEvent->execute());
       }
     }
 
@@ -397,8 +489,22 @@ namespace yae
     {
       TMakeCurrentContext currentContext(*context());
       QMouseEvent * e = static_cast<QMouseEvent *>(event);
+      bool processed = processMouseEvent(canvas, e);
 
-      if (processMouseEvent(canvas, e))
+#if 0 // ndef NDEBUG
+      if (et != QEvent::MouseMove)
+      {
+        std::cerr
+          << root_->id_ << ": "
+          << "processed mouse event == " << processed << ", "
+          << e->button() << " button, "
+          << e->buttons() << " buttons, "
+          << yae::toString(et)
+          << std::endl;
+      }
+#endif
+
+      if (processed)
       {
         requestRepaint();
         return true;
