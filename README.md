@@ -1,4 +1,4 @@
-This is a short summary of development environment requirements for building Apprentice Video player for Mac/Windows/Linux. For pre-built Mac/Windows binaries see [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/).
+This is a short summary of development environment requirements for building Apprentice Video player for Mac/Windows/Linux. Download Mac/Windows binaries here: [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/).
 
 ##### All Platforms:
 ###### OpenGL 1.2 or later
