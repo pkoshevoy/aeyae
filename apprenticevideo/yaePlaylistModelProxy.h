@@ -177,6 +177,10 @@ namespace yae
 
   protected:
     // virtual:
+    bool lessThan(const QModelIndex & sourceLeft,
+                  const QModelIndex & sourceRight) const;
+
+    // virtual:
     bool filterAcceptsRow(int sourceRow,
                           const QModelIndex & sourceParent) const;
 

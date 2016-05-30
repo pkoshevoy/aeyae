@@ -608,6 +608,71 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getFlatIndex
+  //
+  inline static void
+  getRoleFlatIndex(const QModelIndex & left,
+                   const QModelIndex & right,
+                   std::size_t & l_ix,
+                   std::size_t & r_ix)
+  {
+    l_ix = left.data(PlaylistModel::kRoleFlatIndex).value<std::size_t>();
+    r_ix = right.data(PlaylistModel::kRoleFlatIndex).value<std::size_t>();
+  }
+
+  //----------------------------------------------------------------
+  // getRoleTimestamp
+  //
+  inline static void
+  getRoleTimestamp(const QModelIndex & left,
+                   const QModelIndex & right,
+                   qint64 & l_ts,
+                   qint64 & r_ts)
+  {
+    l_ts = left.data(PlaylistModel::kRoleTimestamp).value<qint64>();
+    r_ts = right.data(PlaylistModel::kRoleTimestamp).value<qint64>();
+  }
+
+  //----------------------------------------------------------------
+  // PlaylistModelProxy::PlaylistModelProxy::lessThan
+  //
+  bool
+  PlaylistModelProxy::lessThan(const QModelIndex & sourceLeft,
+                               const QModelIndex & sourceRight) const
+  {
+    // make it a stable sort!
+    const bool sortByName = (this->sortBy() == PlaylistModelProxy::SortByName);
+    if (sortByName)
+    {
+      std::size_t l_ix, r_ix;
+      yae::getRoleFlatIndex(sourceLeft, sourceRight, l_ix, r_ix);
+
+      if (l_ix != r_ix)
+      {
+        return l_ix < r_ix;
+      }
+
+      qint64 l_ts, r_ts;
+      yae::getRoleTimestamp(sourceLeft, sourceRight, l_ts, r_ts);
+
+      return l_ts < r_ts;
+    }
+
+    qint64 l_ts, r_ts;
+    yae::getRoleTimestamp(sourceLeft, sourceRight, l_ts, r_ts);
+
+    if (l_ts != r_ts)
+    {
+      return l_ts < r_ts;
+    }
+
+    std::size_t l_ix, r_ix;
+    yae::getRoleFlatIndex(sourceLeft, sourceRight, l_ix, r_ix);
+
+    return l_ix < r_ix;
+  }
+
+  //----------------------------------------------------------------
   // PlaylistModelProxy::filterAcceptsRow
   //
   bool

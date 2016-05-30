@@ -496,6 +496,7 @@ namespace yae
       view_.delegate()->requestRepaint();
       filter_.uncache();
       model_.setSortBy(sortBy_);
+      view_.ensureCurrentItemIsVisible();
       return true;
     }
 
@@ -534,6 +535,7 @@ namespace yae
       view_.delegate()->requestRepaint();
       filter_.uncache();
       model_.setSortOrder(sortOrder_);
+      view_.ensureCurrentItemIsVisible();
       return true;
     }
 
