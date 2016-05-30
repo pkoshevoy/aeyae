@@ -59,8 +59,8 @@ namespace yae
 
     model_.add(playlist, returnAddedHashes);
     Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
-    QSortFilterProxyModel::sort(0, so);
     QSortFilterProxyModel::invalidate();
+    QSortFilterProxyModel::sort(0, so);
 
     emit itemCountChanged();
   }
@@ -125,7 +125,7 @@ namespace yae
     keywords_.clear();
     splitIntoWords(filter, keywords_);
 
-    QSortFilterProxyModel::invalidate();
+    QSortFilterProxyModel::invalidateFilter();
     emit itemCountChanged();
   }
 
@@ -371,10 +371,10 @@ namespace yae
       return;
     }
 
+    QSortFilterProxyModel::invalidate();
     QSortFilterProxyModel::setSortRole(srNew);
     Qt::SortOrder so = QSortFilterProxyModel::sortOrder();
     QSortFilterProxyModel::sort(0, so);
-    QSortFilterProxyModel::invalidate();
 
     emit sortByChanged();
   }
@@ -394,8 +394,8 @@ namespace yae
       return;
     }
 
-    QSortFilterProxyModel::sort(0, soNew);
     QSortFilterProxyModel::invalidate();
+    QSortFilterProxyModel::sort(0, soNew);
 
     emit sortOrderChanged();
   }
