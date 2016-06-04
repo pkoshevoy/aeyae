@@ -493,6 +493,53 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // OnFullscreen
+  //
+  struct OnFullscreen : public TBoolExpr
+  {
+    OnFullscreen(TimelineView & view, bool result):
+      view_(view),
+      result_(result)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      bool fullscreen = (view_.mainWindow_ == NULL ||
+                         view_.mainWindow_->isFullScreen());
+      result = fullscreen ? result_ : !result_;
+    }
+
+    TimelineView & view_;
+    bool result_;
+  };
+
+  //----------------------------------------------------------------
+  // ToggleFullscreen
+  //
+  struct ToggleFullscreen : public ClickableItem
+  {
+    ToggleFullscreen(TimelineView & view):
+      ClickableItem("toggle_fullscreen"),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (view_.mainWindow_)
+      {
+        view_.mainWindow_->requestToggleFullScreen();
+      }
+
+      return true;
+    }
+
+    TimelineView & view_;
+  };
+
+  //----------------------------------------------------------------
   // OnPlaylistVisible
   //
   struct OnPlaylistVisible : public TBoolExpr
@@ -528,39 +575,9 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      singleClickEventTicket_ =
-        postponeSingleClickEvent(postpone_,
-                                 qApp->doubleClickInterval(),
-                                 &view_,
-                                 itemCSysOrigin,
-                                 rootCSysPoint);
-      return true;
-    }
-
-    // virtual:
-    bool onSingleClick(const TVec2D & itemCSysOrigin,
-                       const TVec2D & rootCSysPoint)
-    {
       if (view_.mainWindow_)
       {
         view_.mainWindow_->togglePlaylist();
-      }
-
-      return true;
-    }
-
-    // virtual:
-    bool onDoubleClick(const TVec2D & itemCSysOrigin,
-                       const TVec2D & rootCSysPoint)
-    {
-      if (singleClickEventTicket_)
-      {
-        singleClickEventTicket_->cancel();
-      }
-
-      if (view_.mainWindow_)
-      {
-        view_.mainWindow_->requestToggleFullScreen();
       }
 
       return true;
@@ -815,6 +832,12 @@ namespace yae
     ColorRef colorHighlightFg = timeline.addExpr
       (new StyleColor(*playlist, PlaylistViewStyle::kFgEditSelected));
 
+    ColorRef colorFullscreenToggleBg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode, 0.64));
+
+    ColorRef colorFullscreenToggleFg = timeline.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
     timelineIn.anchors_.right_ =
@@ -927,9 +950,10 @@ namespace yae
     playheadFocus.copyViewToEdit_ = true;
     playheadFocus.bgNoFocus_ = colorTextBg;
     playheadFocus.bgOnFocus_ = colorFocusBg;
-
     playheadAux.anchors_.left_ =
       ItemRef::offset(timeline, kPropertyLeft, 3);
+    playheadAux.margins_.left_ =
+      ItemRef::reference(container, kPropertyHeight);
     playheadAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     playheadAux.visible_ =
@@ -946,6 +970,8 @@ namespace yae
 
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);
+    durationAux.margins_.right_ =
+      ItemRef::reference(container, kPropertyHeight);
     durationAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     durationAux.color_ = colorTextFg;
@@ -969,6 +995,112 @@ namespace yae
     playheadEdit.selectionFg_ = colorHighlightFg;
 
     playheadFocus.anchors_.fill(playheadAuxBg);
+
+    TogglePlayback & playbackToggle =
+      root.add(new TogglePlayback(*this));
+    Item & playbackBtn = container.addNew<Item>("playback_btn");
+    {
+      playbackBtn.anchors_.vcenter_ =
+        ItemRef::reference(container, kPropertyVCenter);
+
+      playbackBtn.anchors_.left_ =
+        ItemRef::reference(root, kPropertyLeft);
+
+      playbackBtn.anchors_.right_ =
+        ItemRef::offset(playheadAuxBg, kPropertyLeft);
+
+      playbackBtn.height_ =
+        ItemRef::reference(playheadAuxBg, kPropertyHeight);
+
+      playbackBtn.margins_.left_ = timeline.margins_.left_;
+      playbackBtn.margins_.right_ = timeline.margins_.left_;
+
+      Item & square = playbackBtn.addNew<Item>("square");
+      square.anchors_.vcenter_ = ItemRef::reference(playbackBtn,
+                                                    kPropertyVCenter);
+      square.anchors_.hcenter_ = ItemRef::reference(playbackBtn,
+                                                    kPropertyHCenter);
+      square.width_ = ItemRef::reference(playheadAuxBg, kPropertyHeight);
+      square.height_ = square.width_;
+
+      TexturedRect & play = square.add(new TexturedRect("play"));
+      play.anchors_.fill(square);
+      play.visible_ = play.addExpr(new OnPlaybackPaused(*this, true));
+      play.texture_ = play.addExpr(new StylePlayTexture(*playlist));
+      play.opacity_ = shadow.opacity_;
+
+      TexturedRect & pause = square.add(new TexturedRect("pause"));
+      pause.anchors_.fill(square);
+      pause.margins_.set(ItemRef::scale(square, kPropertyHeight, 0.05));
+      pause.visible_ = pause.addExpr(new OnPlaybackPaused(*this, false));
+      pause.texture_ = pause.addExpr(new StylePauseTexture(*playlist));
+      pause.opacity_ = shadow.opacity_;
+
+      playbackToggle.anchors_.fill(playbackBtn);
+    }
+
+    ToggleFullscreen & fullscreenToggle =
+      root.add(new ToggleFullscreen(*this));
+    Item & fullscreenBtn = container.addNew<Item>("fullscreen_btn");
+    {
+      fullscreenBtn.anchors_.vcenter_ =
+        ItemRef::reference(container, kPropertyVCenter);
+
+      fullscreenBtn.anchors_.left_ =
+        ItemRef::reference(durationAuxBg, kPropertyRight);
+
+      fullscreenBtn.anchors_.right_ =
+        ItemRef::reference(root, kPropertyRight);
+
+      fullscreenBtn.height_ = playbackBtn.height_;
+
+      fullscreenBtn.margins_.left_ = timeline.margins_.left_;
+      fullscreenBtn.margins_.right_ = timeline.margins_.left_;
+
+      Item & square = fullscreenBtn.addNew<Item>("square");
+      square.anchors_.vcenter_ = ItemRef::reference(fullscreenBtn,
+                                                    kPropertyVCenter);
+      square.anchors_.hcenter_ = ItemRef::reference(fullscreenBtn,
+                                                    kPropertyHCenter);
+      square.width_ = ItemRef::reference(playheadAuxBg, kPropertyHeight);
+      square.height_ = square.width_;
+
+      // fullscreen:
+      Rectangle & bl_small = square.add(new Rectangle("bl_small"));
+      bl_small.anchors_.bottomLeft(square);
+      bl_small.width_ = ItemRef::scale(square, kPropertyWidth, 0.6);
+      bl_small.height_ = ItemRef::scale(square, kPropertyHeight, 0.5);
+      bl_small.visible_ = bl_small.addExpr(new OnFullscreen(*this, false));
+      bl_small.opacity_ = shadow.opacity_;
+      bl_small.color_ = colorFullscreenToggleBg;
+
+      Rectangle & tr_large = square.add(new Rectangle("tr_large"));
+      tr_large.anchors_.topRight(square);
+      tr_large.width_ = ItemRef::scale(square, kPropertyWidth, 0.8);
+      tr_large.height_ = ItemRef::scale(square, kPropertyHeight, 0.7);
+      tr_large.visible_ = bl_small.visible_;
+      tr_large.opacity_ = shadow.opacity_;
+      tr_large.color_ = colorFullscreenToggleFg;
+
+      // windowed:
+      Rectangle & bl_large = square.add(new Rectangle("bl_large"));
+      bl_large.anchors_.bottomLeft(square);
+      bl_large.width_ = tr_large.width_;
+      bl_large.height_ = tr_large.height_;
+      bl_large.visible_ = bl_large.addExpr(new OnFullscreen(*this, true));
+      bl_large.opacity_ = shadow.opacity_;
+      bl_large.color_ = bl_small.color_;
+
+      Rectangle & tr_small = square.add(new Rectangle("tr_small"));
+      tr_small.anchors_.topRight(square);
+      tr_small.width_ = bl_small.width_;
+      tr_small.height_ = bl_small.height_;
+      tr_small.visible_ = bl_large.visible_;
+      tr_small.opacity_ = shadow.opacity_;
+      tr_small.color_ = tr_large.color_;
+
+      fullscreenToggle.anchors_.fill(fullscreenBtn);
+    }
 
     // add other player controls:
     ColorRef colorControlsBg = root.addExpr
@@ -1044,31 +1176,37 @@ namespace yae
       ItemRef::uncacheable(opacityForControls, kPropertyTransition);
     controls.color_ = colorControlsBg;
 
-    Item & playbackButton = controls.addNew<Item>("playbackButton");
-    TogglePlayback & playbackToggle = controls.add(new TogglePlayback(*this));
+
+    TogglePlayback & bigPlaybackToggle =
+      controls.add(new TogglePlayback(*this));
+    Item & bigPlaybackButton = controls.addNew<Item>("bigPlaybackButton");
     {
-      playbackButton.anchors_.vcenter_ =
+      bigPlaybackButton.anchors_.vcenter_ =
         ItemRef::reference(controls, kPropertyVCenter);
 
-      playbackButton.anchors_.left_ =
+      bigPlaybackButton.anchors_.left_ =
         ItemRef::reference(controls, kPropertyLeft);
 
-      playbackButton.margins_.left_ =
+      bigPlaybackButton.margins_.left_ =
         ItemRef::scale(controls, kPropertyWidth, 0.5 / cells);
 
-      playbackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
-      playbackButton.height_ = playbackButton.width_;
+      bigPlaybackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
+      bigPlaybackButton.height_ = bigPlaybackButton.width_;
 
-      TexturedRect & play = playbackButton.add(new TexturedRect("play"));
-      play.anchors_.fill(playbackButton);
-      play.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.15));
+      TexturedRect & play = bigPlaybackButton.add(new TexturedRect("play"));
+      play.anchors_.fill(bigPlaybackButton);
+      play.margins_.set(ItemRef::scale(bigPlaybackButton,
+                                       kPropertyHeight,
+                                       0.15));
       play.visible_ = play.addExpr(new OnPlaybackPaused(*this, true));
       play.texture_ = play.addExpr(new StylePlayTexture(*playlist));
       play.opacity_ = controls.opacity_;
 
-      TexturedRect & pause = playbackButton.add(new TexturedRect("pause"));
-      pause.anchors_.fill(playbackButton);
-      pause.margins_.set(ItemRef::scale(playbackButton, kPropertyHeight, 0.2));
+      TexturedRect & pause = bigPlaybackButton.add(new TexturedRect("pause"));
+      pause.anchors_.fill(bigPlaybackButton);
+      pause.margins_.set(ItemRef::scale(bigPlaybackButton,
+                                        kPropertyHeight,
+                                        0.2));
       pause.visible_ = pause.addExpr(new OnPlaybackPaused(*this, false));
       pause.texture_ = pause.addExpr(new StylePauseTexture(*playlist));
       pause.opacity_ = controls.opacity_;
@@ -1076,13 +1214,14 @@ namespace yae
 #if 1
       // while there is only one button in the controls container
       // use the entire container area for mouse clicks:
-      playbackToggle.anchors_.fill(controls);
+      bigPlaybackToggle.anchors_.fill(controls);
 #else
-      playbackToggle.anchors_.fill(playbackButton);
+      bigPlaybackToggle.anchors_.fill(bigPlaybackButton);
 #endif
 
       mouseDetectForControls.anchors_.fill(controls);
     }
+
 
     animator_.reset(new Animator(*playlist, *this, mouseDetect));
     maybeAnimateOpacity();
