@@ -1781,6 +1781,7 @@ namespace yae
     hasPrevPTS_ = false;
     ptsBestEffort_ = 0;
     frameQueue_.close();
+    packetQueue_.close();
     return true;
   }
 
@@ -2270,9 +2271,9 @@ namespace yae
           while (decode(packetPtr))
             ;
         }
-        else if (!decode(packetPtr))
+        else
         {
-          break;
+          decode(packetPtr);
         }
       }
       catch (...)
@@ -2905,6 +2906,7 @@ namespace yae
     frameAutoCleanup_.reset();
 
     frameQueue_.close();
+    packetQueue_.close();
     return true;
   }
 
@@ -3285,9 +3287,9 @@ namespace yae
           while (decode(packetPtr))
             ;
         }
-        else if (!decode(packetPtr))
+        else
         {
-          break;
+          decode(packetPtr);
         }
       }
       catch (...)
