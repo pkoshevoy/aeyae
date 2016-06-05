@@ -54,6 +54,7 @@ namespace yae
       flickable_(flickable),
       scrollbar_(scrollbar),
       startPos_(0.0),
+      estimating_(false),
       nsamples_(0),
       v0_(0.0)
     {

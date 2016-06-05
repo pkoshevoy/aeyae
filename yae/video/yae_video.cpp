@@ -378,12 +378,14 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTraits::AudioTraits
   //
-  AudioTraits::AudioTraits():
-    sampleRate_(0),
-    sampleFormat_(kAudioInvalidFormat),
-    channelFormat_(kAudioChannelFormatInvalid),
-    channelLayout_(kAudioChannelLayoutInvalid)
-  {}
+  AudioTraits::AudioTraits()
+  {
+    memset(this, 0, sizeof(AudioTraits));
+
+    sampleFormat_ = kAudioInvalidFormat;
+    channelFormat_ = kAudioChannelFormatInvalid;
+    channelLayout_ = kAudioChannelLayoutInvalid;
+  }
 
   //----------------------------------------------------------------
   // AudioTraits::operator
@@ -397,22 +399,15 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTraits::VideoTraits
   //
-  VideoTraits::VideoTraits():
-    frameRate_(0.0),
-    pixelFormat_(kInvalidPixelFormat),
-    colorSpace_(kColorSpaceUnspecified),
-    colorRange_(kColorRangeUnspecified),
-    initAbcToRgbMatrix_(NULL),
-    encodedWidth_(0),
-    encodedHeight_(0),
-    offsetTop_(0),
-    offsetLeft_(0),
-    visibleWidth_(0),
-    visibleHeight_(0),
-    pixelAspectRatio_(1.0),
-    cameraRotation_(0),
-    isUpsideDown_(false)
-  {}
+  VideoTraits::VideoTraits()
+  {
+    memset(this, 0, sizeof(VideoTraits));
+
+    pixelFormat_ = kInvalidPixelFormat;
+    colorSpace_ = kColorSpaceUnspecified;
+    colorRange_ = kColorRangeUnspecified;
+    pixelAspectRatio_ = 1.0;
+  }
 
   //----------------------------------------------------------------
   // VideoTraits::sameFrameSizeAndFormat
