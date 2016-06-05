@@ -654,6 +654,7 @@ namespace yae
     SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0):
       stream_(stream),
       codec_(NULL),
+      codecContext_(NULL),
       render_(false),
       format_(kSubsNone),
       index_(index)
@@ -677,38 +678,46 @@ namespace yae
     {
       if (stream_)
       {
-        format_ = getSubsFormat(stream_->codec->codec_id);
-        codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+        format_ = getSubsFormat(stream_->codecpar->codec_id);
+        codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
         active_.clear();
 
         if (codec_)
         {
-          av_opt_set(stream_->codec, "threads", "auto", 0);
-          av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
-          int err = avcodec_open2(stream_->codec, codec_, NULL);
+          YAE_ASSERT(!codecContext_);
+          codecContext_ = avcodec_alloc_context3(codec_);
+
+          AVDictionary * opts = NULL;
+          av_dict_set(&opts, "threads", "auto", 0);
+          av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+          avcodec_parameters_to_context(codecContext_, stream_->codecpar);
+          codecContext_->time_base = stream_->time_base;
+
+          int err = avcodec_open2(codecContext_, codec_, &opts);
           if (err < 0)
           {
             // unsupported codec:
+            avcodec_free_context(&codecContext_);
             codec_ = NULL;
           }
-          else if (stream_->codec->extradata &&
-                   stream_->codec->extradata_size)
+          else if (codecContext_->extradata &&
+                   codecContext_->extradata_size)
           {
             TPlanarBufferPtr buffer(new TPlanarBuffer(1),
                                     &IPlanarBuffer::deallocator);
-            buffer->resize(0, stream_->codec->extradata_size, 1, 1);
+            buffer->resize(0, codecContext_->extradata_size, 1, 1);
 
             unsigned char * dst = buffer->data(0);
             memcpy(dst,
-                   stream_->codec->extradata,
-                   stream_->codec->extradata_size);
+                   codecContext_->extradata,
+                   codecContext_->extradata_size);
 
             extraData_ = buffer;
 
             if (format_ == kSubsDVD)
             {
-              vobsub_.init(stream_->codec->extradata,
-                           stream_->codec->extradata_size);
+              vobsub_.init(codecContext_->extradata,
+                           codecContext_->extradata_size);
             }
           }
         }
@@ -741,9 +750,10 @@ namespace yae
     {
       clear();
 
-      if (stream_ && codec_)
+      if (stream_ && codecContext_)
       {
-        avcodec_close(stream_->codec);
+        avcodec_close(codecContext_);
+        avcodec_free_context(&codecContext_);
         codec_ = NULL;
       }
     }
@@ -842,6 +852,7 @@ namespace yae
   public:
     AVStream * stream_;
     AVCodec * codec_;
+    AVCodecContext * codecContext_;
 
     bool render_;
     TSubsFormat format_;
@@ -869,6 +880,9 @@ namespace yae
     // NOTE: constructor does not open the stream:
     Track(AVFormatContext * context, AVStream * stream);
 
+    // not-quiet a "move" constructor:
+    Track(Track & track);
+
     // NOTE: destructor will close the stream:
     virtual ~Track();
 
@@ -888,7 +902,7 @@ namespace yae
 
     // accessor to the codec context:
     inline AVCodecContext * codecContext() const
-    { return stream_->codec; }
+    { return codecContext_; }
 
     // accessor to the codec:
     inline AVCodec * codec() const
@@ -937,6 +951,7 @@ namespace yae
     AVFormatContext * context_;
     AVStream * stream_;
     AVCodec * codec_;
+    AVCodecContext * codecContext_;
     TPacketQueue packetQueue_;
 
     double timeIn_;
@@ -965,6 +980,7 @@ namespace yae
     context_(context),
     stream_(stream),
     codec_(NULL),
+    codecContext_(NULL),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -977,6 +993,29 @@ namespace yae
     {
       YAE_ASSERT(context_->streams[stream_->index] == stream_);
     }
+  }
+
+  //----------------------------------------------------------------
+  // Track::Track
+  //
+  Track::Track(Track & track):
+    thread_(this),
+    context_(NULL),
+    stream_(NULL),
+    codec_(NULL),
+    codecContext_(NULL),
+    packetQueue_(kQueueSizeLarge),
+    timeIn_(0.0),
+    timeOut_(kMaxDouble),
+    playbackEnabled_(false),
+    startTime_(0),
+    tempo_(1.0),
+    discarded_(0)
+  {
+    std::swap(context_, track.context_);
+    std::swap(stream_, track.stream_);
+    std::swap(codec_, track.codec_);
+    std::swap(codecContext_, track.codecContext_);
   }
 
   //----------------------------------------------------------------
@@ -1002,8 +1041,8 @@ namespace yae
     threadStop();
     close();
 
-    codec_ = avcodec_find_decoder(stream_->codec->codec_id);
-    if (!codec_ && stream_->codec->codec_id != AV_CODEC_ID_TEXT)
+    codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
+    if (!codec_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
       return false;
@@ -1012,14 +1051,21 @@ namespace yae
     int err = 0;
     if (codec_)
     {
-      av_opt_set(stream_->codec, "threads", "auto", 0);
-      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
-      err = avcodec_open2(stream_->codec, codec_, NULL);
+      YAE_ASSERT(!codecContext_);
+      codecContext_ = avcodec_alloc_context3(codec_);
+
+      AVDictionary * opts = NULL;
+      av_dict_set(&opts, "threads", "auto", 0);
+      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
+
+      err = avcodec_open2(codecContext_, codec_, &opts);
     }
 
     if (err < 0)
     {
       // unsupported codec:
+      avcodec_free_context(&codecContext_);
       codec_ = NULL;
       return false;
     }
@@ -1033,9 +1079,10 @@ namespace yae
   void
   Track::close()
   {
-    if (stream_ && codec_)
+    if (stream_ && codecContext_)
     {
-      avcodec_close(stream_->codec);
+      avcodec_close(codecContext_);
+      avcodec_free_context(&codecContext_);
       codec_ = NULL;
     }
   }
@@ -1120,12 +1167,12 @@ namespace yae
       return true;
     }
 
-    if (context_->nb_streams == 1 && stream_->codec->bit_rate)
+    if (context_->nb_streams == 1 && codecContext_->bit_rate)
     {
       double t =
-        double(fileBits / stream_->codec->bit_rate) +
-        double(fileBits % stream_->codec->bit_rate) /
-        double(stream_->codec->bit_rate);
+        double(fileBits / codecContext_->bit_rate) +
+        double(fileBits % codecContext_->bit_rate) /
+        double(codecContext_->bit_rate);
 
       duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
       duration.base_ = AV_TIME_BASE;
@@ -1229,7 +1276,7 @@ namespace yae
   //
   struct VideoTrack : public Track
   {
-    VideoTrack(AVFormatContext * context, AVStream * stream);
+    VideoTrack(Track & track);
 
     // virtual:
     bool open();
@@ -1247,6 +1294,9 @@ namespace yae
     bool decoderStartup();
     bool decoderShutdown();
     bool decode(const TPacketPtr & packetPtr);
+
+    // helper:
+    bool decodePull();
 
     // virtual:
     void threadLoop();
@@ -1332,8 +1382,8 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::VideoTrack
   //
-  VideoTrack::VideoTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream),
+  VideoTrack::VideoTrack(Track & track):
+    Track(track),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     deinterlace_(false),
@@ -1343,7 +1393,7 @@ namespace yae
     framesDecoded_(0),
     subs_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_VIDEO);
+    YAE_ASSERT(stream_->codecpar->codec_type == AVMEDIA_TYPE_VIDEO);
 
     // make sure the frames are sorted from oldest to newest:
     frameQueue_.setSortFunc(&aFollowsB);
@@ -1388,17 +1438,17 @@ namespace yae
   {
     skipLoopFilter_ = skip;
 
-    if (stream_->codec)
+    if (codecContext_)
     {
       if (skipLoopFilter_)
       {
-        stream_->codec->skip_loop_filter = AVDISCARD_ALL;
-        stream_->codec->flags2 |= CODEC_FLAG2_FAST;
+        codecContext_->skip_loop_filter = AVDISCARD_ALL;
+        codecContext_->flags2 |= CODEC_FLAG2_FAST;
       }
       else
       {
-        stream_->codec->skip_loop_filter = AVDISCARD_DEFAULT;
-        stream_->codec->flags2 &= ~(CODEC_FLAG2_FAST);
+        codecContext_->skip_loop_filter = AVDISCARD_DEFAULT;
+        codecContext_->flags2 &= ~(CODEC_FLAG2_FAST);
       }
     }
   }
@@ -1411,15 +1461,15 @@ namespace yae
   {
     skipNonReferenceFrames_ = skip;
 
-    if (stream_->codec)
+    if (codecContext_)
     {
       if (skipNonReferenceFrames_)
       {
-        stream_->codec->skip_frame = AVDISCARD_NONREF;
+        codecContext_->skip_frame = AVDISCARD_NONREF;
       }
       else
       {
-        stream_->codec->skip_frame = AVDISCARD_DEFAULT;
+        codecContext_->skip_frame = AVDISCARD_DEFAULT;
       }
     }
   }
@@ -1769,33 +1819,57 @@ namespace yae
   bool
   VideoTrack::decode(const TPacketPtr & packetPtr)
   {
+    AVCodecContext * codecContext = this->codecContext();
+    AVPacket packet;
+
+    if (packetPtr)
+    {
+      // make a local shallow copy of the packet:
+      packet = *packetPtr;
+    }
+    else
+    {
+      // flush out buffered frames with an empty packet:
+      memset(&packet, 0, sizeof(packet));
+      av_init_packet(&packet);
+    }
+
+    int err = AVERROR(EAGAIN);
+    while (err == AVERROR(EAGAIN))
+    {
+      err = avcodec_send_packet(codecContext, &packet);
+
+      if (!this->decodePull())
+      {
+        return false;
+      }
+    }
+
+#ifndef NDEBUG
+    if (err)
+    {
+      dump_averror(std::cerr, err);
+    }
+#endif
+    return !err;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::decodePull
+  //
+  bool
+  VideoTrack::decodePull()
+  {
     try
     {
-      AVPacket packet;
-
-      if (packetPtr)
-      {
-        // make a local shallow copy of the packet:
-        packet = *packetPtr;
-      }
-      else
-      {
-        // flush out buffered frames with an empty packet:
-        memset(&packet, 0, sizeof(packet));
-        av_init_packet(&packet);
-      }
-
       // Decode video frame
-      int gotFrame = 0;
-      AVFrame * avFrame = frameAutoCleanup_.reset();
       AVCodecContext * codecContext = this->codecContext();
-      avcodec_decode_video2(codecContext,
-                            avFrame,
-                            &gotFrame,
-                            &packet);
-      if (!gotFrame)
+      AVFrame * avFrame = frameAutoCleanup_.reset();
+      int err_recv = avcodec_receive_frame(codecContext, avFrame);
+      if (err_recv)
       {
-        return packetPtr ? true : false;
+        bool ok = (err_recv == AVERROR(EAGAIN));
+        return ok;
       }
 
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
@@ -2230,13 +2304,13 @@ namespace yae
   bool
   VideoTrack::getTraits(VideoTraits & t) const
   {
-    if (!stream_)
+    // shortcut:
+    const AVCodecContext * context = this->codecContext_;
+
+    if (!(stream_ && context))
     {
       return false;
     }
-
-    // shortcut:
-    const AVCodecContext * context = stream_->codec;
 
     //! pixel format:
     t.pixelFormat_ = ffmpeg_to_yae(context->pix_fmt);
@@ -2503,16 +2577,18 @@ namespace yae
     startNewSequence(frameQueue_, dropPendingFrames);
 
     int err = 0;
-    if (stream_ && stream_->codec)
+    if (stream_ && codecContext_)
     {
-      avcodec_flush_buffers(stream_->codec);
+      avcodec_flush_buffers(codecContext_);
 #if 1
-      avcodec_close(stream_->codec);
-      codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+      avcodec_close(codecContext_);
 
-      av_opt_set(stream_->codec, "threads", "auto", 0);
-      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
-      err = avcodec_open2(stream_->codec, codec_, NULL);
+      AVDictionary * opts = NULL;
+      av_dict_set(&opts, "threads", "auto", 0);
+      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
+
+      err = avcodec_open2(codecContext_, codec_, &opts);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -2661,7 +2737,7 @@ namespace yae
   //
   struct AudioTrack : public Track
   {
-    AudioTrack(AVFormatContext * context, AVStream * stream);
+    AudioTrack(Track & track);
 
     // virtual:
     ~AudioTrack();
@@ -2734,8 +2810,8 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTrack::AudioTrack
   //
-  AudioTrack::AudioTrack(AVFormatContext * context, AVStream * stream):
-    Track(context, stream),
+  AudioTrack::AudioTrack(Track & track):
+    Track(track),
     frameQueue_(kQueueSizeMedium),
     nativeChannels_(0),
     outputChannels_(0),
@@ -2746,7 +2822,7 @@ namespace yae
     samplesDecoded_(0),
     tempoFilter_(NULL)
   {
-    YAE_ASSERT(stream->codec->codec_type == AVMEDIA_TYPE_AUDIO);
+    YAE_ASSERT(stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO);
 
     // match output queue size to input queue size:
     frameQueue_.setMaxSize(packetQueue_.getMaxSize());
@@ -2838,6 +2914,9 @@ namespace yae
   bool
   AudioTrack::decode(const TPacketPtr & packetPtr)
   {
+    int err_send = AVERROR(EAGAIN);
+    int err_recv = 0;
+
     try
     {
       AVPacket packet;
@@ -2870,22 +2949,24 @@ namespace yae
       while (!packetPtr || packet.size)
       {
         // Decode audio frame
-        int gotFrame = 0;
-        AVFrame * avFrame = frameAutoCleanup_.reset();
-
-        int bytesUsed = avcodec_decode_audio4(codecContext,
-                                              avFrame,
-                                              &gotFrame,
-                                              &packet);
-
-        if (bytesUsed < 0)
+        err_send = avcodec_send_packet(codecContext, &packet);
+        if (err_send < 0 &&
+            err_send != AVERROR(EAGAIN) &&
+            err_send != AVERROR_EOF)
         {
           break;
         }
 
+        int bytesUsed = (err_send == 0 ? packet.size :
+                         err_send > 0 ? err_send : 0);
+
         // adjust the packet (the copy, not the original):
         packet.size -= bytesUsed;
         packet.data += bytesUsed;
+
+        AVFrame * avFrame = frameAutoCleanup_.reset();
+        err_recv = avcodec_receive_frame(codecContext, avFrame);
+        bool gotFrame = err_recv >= 0;
 
         if (!gotFrame || !avFrame->nb_samples)
         {
@@ -2920,6 +3001,12 @@ namespace yae
 #endif
             hasPrevPTS_ = false;
           }
+        }
+
+        if (!avFrame->channel_layout)
+        {
+          avFrame->channel_layout =
+            av_get_default_channel_layout(avFrame->channels);
         }
 
         const char * filterChain = NULL;
@@ -3286,13 +3373,13 @@ namespace yae
   bool
   AudioTrack::getTraits(AudioTraits & t) const
   {
-    if (!stream_)
+    // shortcut:
+    const AVCodecContext * context = this->codecContext_;
+
+    if (!(stream_ && context))
     {
       return false;
     }
-
-    // shortcut:
-    const AVCodecContext * context = stream_->codec;
 
     switch (context->sample_fmt)
     {
@@ -3545,16 +3632,18 @@ namespace yae
     startNewSequence(frameQueue_, dropPendingFrames);
 
     int err = 0;
-    if (stream_ && stream_->codec)
+    if (stream_ && codecContext_)
     {
-      avcodec_flush_buffers(stream_->codec);
+      avcodec_flush_buffers(codecContext_);
 #if 1
-      avcodec_close(stream_->codec);
-      codec_ = avcodec_find_decoder(stream_->codec->codec_id);
+      avcodec_close(codecContext_);
 
-      av_opt_set(stream_->codec, "threads", "auto", 0);
-      av_opt_set_int(stream_->codec, "refcounted_frames", 1, 0);
-      err = avcodec_open2(stream_->codec, codec_, NULL);
+      AVDictionary * opts = NULL;
+      av_dict_set(&opts, "threads", "auto", 0);
+      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
+
+      err = avcodec_open2(codecContext_, codec_, &opts);
       YAE_ASSERT(err >= 0);
 #endif
     }
@@ -3877,10 +3966,10 @@ namespace yae
       AVStream * stream = context_->streams[i];
 
       // extract attachments:
-      if (stream->codec->codec_type == AVMEDIA_TYPE_ATTACHMENT)
+      if (stream->codecpar->codec_type == AVMEDIA_TYPE_ATTACHMENT)
       {
-        attachments_.push_back(TAttachment(stream->codec->extradata,
-                                           stream->codec->extradata_size));
+        attachments_.push_back(TAttachment(stream->codecpar->extradata,
+                                           stream->codecpar->extradata_size));
         TAttachment & att = attachments_.back();
 
         const AVDictionaryEntry * prev = NULL;
@@ -3905,19 +3994,18 @@ namespace yae
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
 
-      TrackPtr track(new Track(context_, stream));
-
-      if (!track->open())
+      TrackPtr baseTrack(new Track(context_, stream));
+      if (!baseTrack->open())
       {
         // unsupported codec, ignore it:
-        stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
+        stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
         continue;
       }
 
-      const AVMediaType codecType = stream->codec->codec_type;
+      const AVMediaType codecType = stream->codecpar->codec_type;
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
-        VideoTrackPtr track(new VideoTrack(context_, stream));
+        VideoTrackPtr track(new VideoTrack(*baseTrack));
         VideoTraits traits;
         if (track->getTraits(traits) &&
             // avfilter does not support these pixel formats:
@@ -3929,12 +4017,12 @@ namespace yae
         else
         {
           // unsupported codec, ignore it:
-          stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
+          stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
         }
       }
       else if (codecType == AVMEDIA_TYPE_AUDIO)
       {
-        AudioTrackPtr track(new AudioTrack(context_, stream));
+        AudioTrackPtr track(new AudioTrack(*baseTrack));
         AudioTraits traits;
         if (track->getTraits(traits))
         {
@@ -3944,14 +4032,14 @@ namespace yae
         else
         {
           // unsupported codec, ignore it:
-          stream->codec->codec_type = AVMEDIA_TYPE_UNKNOWN;
+          stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
         }
       }
       else if (codecType == AVMEDIA_TYPE_SUBTITLE)
       {
         // avoid codec instance sharing between a temporary Track object
         // and SubtitlesTrack object:
-        track = TrackPtr();
+        baseTrack = TrackPtr();
 
         subsIdx_[i] = subs_.size();
         stream->discard = AVDISCARD_DEFAULT;
@@ -4308,8 +4396,7 @@ namespace yae
                                           subs->stream_->time_base,
                                           tb);
             sf.time_.base_ = AV_TIME_BASE;
-            sf.tEnd_ = TTime(std::numeric_limits<int64>::max(),
-                             AV_TIME_BASE);
+            sf.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
 
             sf.render_ = subs->render_;
             sf.traits_ = subs->format_;
@@ -4317,10 +4404,10 @@ namespace yae
             sf.extraData_ = subs->extraData_;
 
             // copy the reference frame size:
-            if (subs->stream_->codec)
+            if (subs->codecContext_)
             {
-              sf.rw_ = subs->stream_->codec->width;
-              sf.rh_ = subs->stream_->codec->height;
+              sf.rw_ = subs->codecContext_->width;
+              sf.rh_ = subs->codecContext_->height;
             }
 
             if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
@@ -4358,17 +4445,17 @@ namespace yae
               // decode the subtitle:
               int gotSub = 0;
               AVSubtitle sub;
-              err = avcodec_decode_subtitle2(subs->stream_->codec,
+              err = avcodec_decode_subtitle2(subs->codecContext_,
                                              &sub,
                                              &gotSub,
                                              &packet);
               if (err >= 0 && gotSub)
               {
                 const unsigned char * header =
-                  subs->stream_->codec->subtitle_header;
+                  subs->codecContext_->subtitle_header;
 
                 std::size_t headerSize =
-                  subs->stream_->codec->subtitle_header_size;
+                  subs->codecContext_->subtitle_header_size;
 
                 sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
                                                                header,
@@ -5846,6 +5933,9 @@ extern "C"
   {
     if (i == 0)
     {
+#ifndef NDEBUG
+      av_log_set_level(AV_LOG_DEBUG);
+#endif
       return yae::ReaderFFMPEG::create();
     }
 
