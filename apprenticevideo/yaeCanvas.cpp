@@ -250,8 +250,21 @@ namespace yae
       header_.clear();
       if (codecPrivate && codecPrivateSize)
       {
-        const char * header = (const char *)codecPrivate;
-        header_.assign(header, header + codecPrivateSize);
+        std::string tmp((const char *)codecPrivate,
+                        (const char *)codecPrivate + codecPrivateSize);
+
+        std::string badStyle("Style: Default,(null),0,");
+        std::string::size_type found = tmp.find(badStyle);
+        if (found != std::string::npos)
+        {
+          std::ostringstream oss;
+          oss << tmp.substr(0, found)
+              << "Style: Default,,12,"
+              << tmp.substr(found + badStyle.size());
+          tmp = oss.str().c_str();
+        }
+
+        header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
       }
     }
 
@@ -281,7 +294,9 @@ namespace yae
         return;
       }
 
-      // std::cerr << "ass_process_data: " << line.data_ << std::endl;
+#ifndef NDEBUG
+      std::cerr << "ass_process_data: " << line.data_ << std::endl;
+#endif
 
       if (bufferSize_)
       {
@@ -295,7 +310,7 @@ namespace yae
         }
       }
 
-      if (bufferSize_ < 10)
+      if (bufferSize_ < 1)
       {
         bufferSize_++;
       }
