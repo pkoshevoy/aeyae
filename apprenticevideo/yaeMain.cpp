@@ -40,6 +40,9 @@
 #include <QApplication>
 #include <QDir>
 #include <QFileOpenEvent>
+#ifdef YAE_USE_QT5
+#include <QSurfaceFormat>
+#endif
 
 // yae includes:
 #include "yae/utils/yae_plugin_registry.h"
