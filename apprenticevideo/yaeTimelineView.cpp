@@ -608,7 +608,11 @@ namespace yae
       const TVec2D & pt = timeline_.mousePt();
       Item & root = *(timeline_.root());
 
-      bool shouldPause = (playlist_.isEnabled() ||
+      bool alwaysShowTimeline = (timeline_.mainWindow_ &&
+                                 timeline_.mainWindow_->isTimelineVisible());
+
+      bool shouldPause = (alwaysShowTimeline ||
+                          playlist_.isEnabled() ||
                           controlsContainer_.overlaps(pt) ||
                           (focus && focus->view_ == &timeline_));
       return shouldPause;

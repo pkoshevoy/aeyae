@@ -409,6 +409,7 @@ namespace yae
     shortcutFullScreen_ = new QShortcut(this);
     shortcutFillScreen_ = new QShortcut(this);
     shortcutShowPlaylist_ = new QShortcut(this);
+    shortcutShowTimeline_ = new QShortcut(this);
     shortcutPlay_ = new QShortcut(this);
     shortcutNext_ = new QShortcut(this);
     shortcutPrev_ = new QShortcut(this);
@@ -430,6 +431,7 @@ namespace yae
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
     shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
     shortcutShowPlaylist_->setContext(Qt::ApplicationShortcut);
+    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
     shortcutPlay_->setContext(Qt::ApplicationShortcut);
     shortcutNext_->setContext(Qt::ApplicationShortcut);
     shortcutPrev_->setContext(Qt::ApplicationShortcut);
@@ -775,6 +777,14 @@ namespace yae
                  actionShowPlaylist, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionShowTimeline, SIGNAL(triggered()),
+                 this, SLOT(playbackShowTimeline()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
+                 actionShowTimeline, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionSkipColorConverter, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
@@ -1042,6 +1052,9 @@ namespace yae
 
     // hide the playlist:
     actionShowPlaylist->setChecked(false);
+
+    // hide the timeline:
+    actionShowTimeline->setChecked(false);
   }
 
   //----------------------------------------------------------------
@@ -2272,6 +2285,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackShowTimeline
+  //
+  void
+  MainWindow::playbackShowTimeline()
+  {
+    timelineView_.maybeAnimateOpacity();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackShrinkWrap
   //
   void
@@ -2316,6 +2338,7 @@ namespace yae
     yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
     yae::swapShortcuts(shortcutFillScreen_, actionFillScreen);
     yae::swapShortcuts(shortcutShowPlaylist_, actionShowPlaylist);
+    yae::swapShortcuts(shortcutShowTimeline_, actionShowTimeline);
     yae::swapShortcuts(shortcutPlay_, actionPlay);
     yae::swapShortcuts(shortcutNext_, actionNext);
     yae::swapShortcuts(shortcutPrev_, actionPrev);
@@ -3770,6 +3793,7 @@ namespace yae
       contextMenu_->addAction(actionLoop);
       contextMenu_->addAction(actionSetInPoint);
       contextMenu_->addAction(actionSetOutPoint);
+      contextMenu_->addAction(actionShowTimeline);
 
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionShrinkWrap);

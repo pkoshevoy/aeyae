@@ -167,6 +167,9 @@ namespace yae
     inline bool isPlaylistVisible() const
     { return actionShowPlaylist->isChecked(); }
 
+    inline bool isTimelineVisible() const
+    { return actionShowTimeline->isChecked(); }
+
   signals:
     void setInPoint();
     void setOutPoint();
@@ -211,6 +214,7 @@ namespace yae
     void playbackLoopFilter();
     void playbackNonReferenceFrames();
     void playbackShowPlaylist();
+    void playbackShowTimeline();
     void playbackShrinkWrap();
     void playbackFullScreen();
     void playbackFillScreen();
@@ -331,6 +335,7 @@ namespace yae
     QShortcut * shortcutFullScreen_;
     QShortcut * shortcutFillScreen_;
     QShortcut * shortcutShowPlaylist_;
+    QShortcut * shortcutShowTimeline_;
     QShortcut * shortcutPlay_;
     QShortcut * shortcutNext_;
     QShortcut * shortcutPrev_;
