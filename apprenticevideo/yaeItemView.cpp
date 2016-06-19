@@ -130,7 +130,11 @@ namespace yae
     w_(0.0),
     h_(0.0),
     pressed_(NULL),
-    dragged_(NULL)
+    dragged_(NULL),
+    startPt_(std::numeric_limits<double>::max(),
+             std::numeric_limits<double>::max()),
+    mousePt_(std::numeric_limits<double>::max(),
+             std::numeric_limits<double>::max())
   {
     root_->self_ = root_;
     Item & root = *root_;

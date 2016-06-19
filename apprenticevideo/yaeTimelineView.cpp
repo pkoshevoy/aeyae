@@ -613,7 +613,6 @@ namespace yae
 
       bool shouldPause = (alwaysShowTimeline ||
                           playlist_.isEnabled() ||
-                          controlsContainer_.overlaps(pt) ||
                           (focus && focus->view_ == &timeline_));
       return shouldPause;
     }
