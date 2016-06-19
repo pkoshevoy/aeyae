@@ -105,6 +105,12 @@ namespace yae
     QString::fromUtf8("SkipNonReferenceFrames");
 
   //----------------------------------------------------------------
+  // kShowTimeline
+  //
+  static const QString kShowTimeline =
+    QString::fromUtf8("ShowTimeline");
+
+  //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   //
   AboutDialog::AboutDialog(QWidget * parent):
@@ -297,6 +303,7 @@ namespace yae
     playerWidget_->append(&timelineView_);
     playlistView_.setup(this);
     playlistView_.setModel(&playlistModel_);
+    playlistView_.setEnabled(false);
     timelineView_.setup(this, &playlistView_);
     timelineView_.setModel(&timelineModel_);
 
@@ -1053,8 +1060,9 @@ namespace yae
     // hide the playlist:
     actionShowPlaylist->setChecked(false);
 
-    // hide the timeline:
-    actionShowTimeline->setChecked(false);
+    // restore timeline preference (default == hide):
+    bool showTimeline = loadBooleanSettingOrDefault(kShowTimeline, false);
+    actionShowTimeline->setChecked(showTimeline);
   }
 
   //----------------------------------------------------------------
@@ -2290,6 +2298,7 @@ namespace yae
   void
   MainWindow::playbackShowTimeline()
   {
+    saveBooleanSetting(kShowTimeline, actionShowTimeline->isChecked());
     timelineView_.maybeAnimateOpacity();
   }
 
