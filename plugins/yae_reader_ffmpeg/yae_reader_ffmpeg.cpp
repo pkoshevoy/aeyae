@@ -2208,33 +2208,6 @@ namespace yae
         }
 
         // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
-
-        // put repeated output frames into frame queue:
-        for (int i = 0; i < avFrame->repeat_pict; i++)
-        {
-          TVideoFramePtr rvfPtr(new TVideoFrame(vf));
-          TVideoFrame & rvf = *rvfPtr;
-
-          if (frameRate_.num && frameRate_.den)
-          {
-            rvf.time_ += TTime((i + 1) * frameRate_.den, frameRate_.num);
-          }
-          else
-          {
-            rvf.time_.time_++;
-          }
-
-#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-          std::cerr
-            << "frame repeated at: " << to_hhmmss_usec(rvfPtr)
-            << std::endl;
-#endif
-
-          if (!frameQueue_.push(rvfPtr, &terminator_))
-          {
-            return false;
-          }
-        }
       }
     }
     catch (...)
