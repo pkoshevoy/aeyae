@@ -753,9 +753,8 @@ namespace yae
                                    TPolyline(1.0, 1.0, 0.0, 10)));
 
     ExpressionItem & titleHeight = root.
-      addHidden(new ExpressionItem("style_title_height"));
-    titleHeight.expression_ = titleHeight.
-      addExpr(new StyleTitleHeight(*playlist));
+      addHidden(new ExpressionItem("style_title_height",
+                                   new StyleTitleHeight(*playlist)));
 
     Gradient & shadow = root.addNew<Gradient>("shadow");
     shadow.anchors_.fill(root);

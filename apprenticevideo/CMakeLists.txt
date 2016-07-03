@@ -92,6 +92,7 @@ find_library(GLEW_LIBRARY GLEW
 
 set(project_moc_hxx
   yaeCanvasWidget.h
+  yaeFrameCropView.h
   yaeItemView.h
   yaeMainWindow.h
   yaePlaylist.h
@@ -116,6 +117,7 @@ endif (YAE_USE_PLAYER_QUICK_WIDGET)
 set(project_uis
   yaeAbout.ui
   yaeAspectRatioDialog.ui
+  yaeFrameCropDialog.ui
   yaeMainWindow.ui
   yaeOpenUrlDialog.ui
   )
@@ -135,9 +137,15 @@ set(project_sources
   yaeCanvasRenderer.h
   yaeCanvasRenderer.cpp
   yaeColor.h
+  yaeDashedRect.cpp
+  yaeDashedRect.h
+  yaeDonutRect.cpp
+  yaeDonutRect.h
   yaeExpression.h
   yaeFlickableArea.cpp
   yaeFlickableArea.h
+  yaeFrameCropView.cpp
+  yaeFrameCropView.h
   yaeGradient.cpp
   yaeGradient.h
   yaeGridViewStyle.h

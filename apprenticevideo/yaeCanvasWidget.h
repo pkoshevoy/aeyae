@@ -156,11 +156,27 @@ namespace yae
     };
 
 
-    template <typename TWidgetInitParam>
-    CanvasWidget(const TWidgetInitParam & initParam):
-      TWidget(initParam),
+    template <typename TArg1>
+    CanvasWidget(TArg1 arg1):
+      TWidget(arg1),
       Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
       sigs_(*this)
+    {
+      init();
+    }
+
+    template <typename TArg1, typename TArg2, typename TArg3>
+    CanvasWidget(TArg1 arg1, TArg2 arg2, TArg3 arg3):
+      TWidget(arg1, arg2, arg3),
+      Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
+      sigs_(*this)
+    {
+      init();
+    }
+
+  protected:
+    // helper:
+    void init()
     {
       TWidget::setAttribute(Qt::WA_NoSystemBackground);
       TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
@@ -169,7 +185,6 @@ namespace yae
       Canvas::setDelegate(boost::shared_ptr<TDelegate>(new TDelegate(*this)));
     }
 
-  protected:
     // virtual:
     bool event(QEvent * event)
     {

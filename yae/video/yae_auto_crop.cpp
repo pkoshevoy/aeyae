@@ -169,10 +169,10 @@ namespace yae
     const unsigned char * data = frame->data_->data(0);
     const std::size_t rowBytes = frame->data_->rowBytes(0);
 
-    const unsigned int w = frame->traits_.visibleWidth_;
-    const unsigned int h = frame->traits_.visibleHeight_;
-    const unsigned int x0 = frame->traits_.offsetLeft_;
-    const unsigned int y0 = frame->traits_.offsetTop_;
+    const unsigned int w = vtts.visibleWidth_;
+    const unsigned int h = vtts.visibleHeight_;
+    const unsigned int x0 = vtts.offsetLeft_;
+    const unsigned int y0 = vtts.offsetTop_;
 
 #if 0
     std::vector<unsigned char> img(w * h);

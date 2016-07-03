@@ -663,18 +663,46 @@ namespace yae
   //----------------------------------------------------------------
   // ExpressionItem
   //
-  struct ExpressionItem : public Item
+  template <typename TDataRef>
+  struct ExprItem : public Item
   {
-    ExpressionItem(const char * id);
+    typedef TDataRef dataref_type;
+    typedef typename TDataRef::value_type value_type;
+    typedef Expression<value_type> expression_type;
+
+    ExprItem(const char * id, expression_type * expression):
+      Item(id)
+    {
+      expression_ = this->addExpr(expression);
+    }
 
     // virtual:
-    void get(Property property, double & value) const;
+    void get(Property property, value_type & value) const
+    {
+      if (property == kPropertyExpression)
+      {
+        value = expression_.get();
+      }
+      else
+      {
+        Item::get(property, value);
+      }
+   }
 
     // virtual:
-    void uncache();
+    void uncache()
+    {
+      expression_.uncache();
+      Item::uncache();
+    }
 
-    ItemRef expression_;
+    TDataRef expression_;
   };
+
+  //----------------------------------------------------------------
+  // ExpressionItem
+  //
+  typedef ExprItem<ItemRef> ExpressionItem;
 
 
   //----------------------------------------------------------------

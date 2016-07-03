@@ -134,6 +134,105 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // OnFrameLoaded
+  //
+  struct OnFrameLoaded : public Canvas::ILoadFrameObserver
+  {
+    OnFrameLoaded(CanvasRendererItem & rendererItem):
+      rendererItem_(rendererItem)
+    {}
+
+    // virtual:
+    void frameLoaded(Canvas * canvas, const TVideoFramePtr & frame)
+    {
+      rendererItem_.observe(canvas, frame);
+    }
+
+  protected:
+    CanvasRendererItem & rendererItem_;
+  };
+
+  //----------------------------------------------------------------
+  // FrameCropDialog::FrameCropDialog
+  //
+  FrameCropDialog::FrameCropDialog(MainWindow * parent):
+    QDialog(parent),
+    Ui::FrameCropDialog(),
+    main_(parent)
+  {
+    Ui::FrameCropDialog::setupUi(this);
+
+    TPlayerWidget * playerWidget = parent->playerWidget();
+
+#ifdef YAE_USE_QOPENGL_WIDGET
+    view_ = new TPlayerWidget(this);
+    view_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
+#else
+    // request vsync if available:
+    QGLFormat contextFormat;
+    contextFormat.setSwapInterval(1);
+    contextFormat.setSampleBuffers(false);
+    view_ = new TPlayerWidget(contextFormat, this, playerWidget);
+#endif
+
+    TMakeCurrentContext currentContext(view_->Canvas::context());
+    view_->append(&cropView_);
+    cropView_.init();
+
+    QVBoxLayout * layout = new QVBoxLayout(this->cropWidget);
+    layout->setMargin(0);
+    layout->setSpacing(0);
+    layout->addWidget(view_);
+
+    CanvasRendererItem & rendererItem =
+      cropView_.root()->get<CanvasRendererItem>("uncropped");
+
+    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
+    playerWidget->addLoadFrameObserver(onLoadFrame_);
+
+    bool ok = true;
+    ok = connect(&cropView_,
+                 SIGNAL(cropped(const Segment &, const Segment &)),
+                 this,
+                 SLOT(cropped(const Segment &, const Segment &)));
+    YAE_ASSERT(ok);
+
+  }
+
+  //----------------------------------------------------------------
+  // FrameCropDialog::cropped
+  //
+  void
+  FrameCropDialog::cropped(const Segment & xCrop, const Segment & yCrop)
+  {
+    TCropFrame crop;
+
+    CanvasRendererItem & rendererItem =
+      cropView_.root()->get<CanvasRendererItem>("uncropped");
+
+    if (!rendererItem.frame_)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const VideoTraits & vtts = rendererItem.frame_->traits_;
+    const unsigned int w = vtts.visibleWidth_;
+    const unsigned int h = vtts.visibleHeight_;
+    const unsigned int x0 = vtts.offsetLeft_;
+    const unsigned int y0 = vtts.offsetTop_;
+
+    crop.x_ = xCrop.origin_ * w;
+    crop.y_ = yCrop.origin_ * h;
+    crop.w_ = xCrop.length_ * w;
+    crop.h_ = yCrop.length_ * h;
+
+    main_->canvas()->cropFrame(crop);
+    main_->adjustCanvasHeight();
+  }
+
+
+  //----------------------------------------------------------------
   // OpenUrlDialog::OpenUrlDialog
   //
   OpenUrlDialog::OpenUrlDialog(QWidget * parent):
@@ -296,7 +395,7 @@ namespace yae
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
     contextFormat.setSampleBuffers(false);
-    playerWidget_ = new TPlayerWidget(contextFormat);
+    playerWidget_ = new TPlayerWidget(contextFormat, this, playerWidget_);
 #endif
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
@@ -426,6 +525,7 @@ namespace yae
     shortcutCrop1_78_ = new QShortcut(this);
     shortcutCrop1_85_ = new QShortcut(this);
     shortcutCrop2_40_ = new QShortcut(this);
+    shortcutCropOther_ = new QShortcut(this);
     shortcutAutoCrop_ = new QShortcut(this);
     shortcutNextChapter_ = new QShortcut(this);
     shortcutRemove_ = new QShortcut(this);
@@ -448,6 +548,7 @@ namespace yae
     shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
     shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
     shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
+    shortcutCropOther_->setContext(Qt::ApplicationShortcut);
     shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
     shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
     shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
@@ -491,6 +592,7 @@ namespace yae
     cropFrameGroup->addAction(actionCropFrame1_85);
     cropFrameGroup->addAction(actionCropFrame2_35);
     cropFrameGroup->addAction(actionCropFrame2_40);
+    cropFrameGroup->addAction(actionCropFrameOther);
     cropFrameGroup->addAction(actionCropFrameAutoDetect);
     actionCropFrameNone->setChecked(true);
 
@@ -680,6 +782,10 @@ namespace yae
 
     ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
                  actionCropFrame2_40, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionCropFrameOther, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameOther()));
     YAE_ASSERT(ok);
 
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
@@ -2131,6 +2237,49 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::playbackCropFrameOther
+  //
+  void
+  MainWindow::playbackCropFrameOther()
+  {
+    static FrameCropDialog * dialog = NULL;
+    if (!dialog)
+    {
+      dialog = new FrameCropDialog(this);
+    }
+
+    CanvasRenderer * renderer = canvas_->canvasRenderer();
+
+    TVideoFramePtr frame;
+    renderer->getFrame(frame);
+    if (!frame)
+    {
+      return;
+    }
+
+    const VideoTraits & vtts = frame->traits_;
+    const unsigned int w = vtts.visibleWidth_;
+    const unsigned int h = vtts.visibleHeight_;
+    const unsigned int x0 = vtts.offsetLeft_;
+    const unsigned int y0 = vtts.offsetTop_;
+
+    TCropFrame crop;
+    renderer->getCroppedFrame(crop);
+
+    Segment xCrop(double(crop.x_) / double(w),
+                  double(crop.w_) / double(w));
+    Segment yCrop(double(crop.y_) / double(h),
+                  double(crop.h_) / double(h));
+    {
+      SignalBlocker blockSignals;
+      blockSignals << &(dialog->cropView_);
+      dialog->cropView_.setCrop(xCrop, yCrop);
+    }
+
+    dialog->show();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackCropFrameAutoDetect
   //
   void
@@ -2357,6 +2506,7 @@ namespace yae
     yae::swapShortcuts(shortcutCrop1_78_, actionCropFrame1_78);
     yae::swapShortcuts(shortcutCrop1_85_, actionCropFrame1_85);
     yae::swapShortcuts(shortcutCrop2_40_, actionCropFrame2_40);
+    yae::swapShortcuts(shortcutCropOther_, actionCropFrameOther);
     yae::swapShortcuts(shortcutAutoCrop_, actionCropFrameAutoDetect);
     yae::swapShortcuts(shortcutNextChapter_, actionNextChapter);
     yae::swapShortcuts(shortcutAspectRatioNone_, actionAspectRatioAuto);

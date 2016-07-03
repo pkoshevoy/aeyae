@@ -78,6 +78,14 @@ namespace yae
       return *this;
     }
 
+    inline TVec2D topLeft() const
+    {
+      TVec2D pt;
+      pt.coord_[0] = x_;
+      pt.coord_[1] = y_;
+      return pt;
+    }
+
     inline TVec2D center() const
     {
       TVec2D pt;

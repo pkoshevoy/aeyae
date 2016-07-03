@@ -413,6 +413,9 @@ namespace yae
 
     void skipColorConverter(IOpenGLContext & context, bool enable);
 
+    inline bool skipColorConverter() const
+    { return skipColorConverter_; }
+
     void enableVerticalScaling(bool enable);
 
     bool getCroppedFrame(TCropFrame & crop) const;
@@ -421,6 +424,9 @@ namespace yae
     bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
 
     void overrideDisplayAspectRatio(double dar);
+
+    inline double overrideDisplayAspectRatio() const
+    { return dar_; }
 
     void cropFrame(double darCropped);
     void cropFrame(const TCropFrame & crop);
@@ -598,11 +604,14 @@ namespace yae
 
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
-    void draw(double opacity = 1.0);
+    void draw(double opacity = 1.0) const;
 
     const pixelFormat::Traits * pixelTraits() const;
 
     void skipColorConverter(IOpenGLContext & context, bool enable);
+
+    inline bool skipColorConverter() const
+    { return legacy_->skipColorConverter(); }
 
     void enableVerticalScaling(bool enable);
 
@@ -613,6 +622,9 @@ namespace yae
 
     void overrideDisplayAspectRatio(double dar);
 
+    inline double overrideDisplayAspectRatio() const
+    { return legacy_->overrideDisplayAspectRatio(); }
+
     void cropFrame(double darCropped);
     void cropFrame(const TCropFrame & crop);
 
@@ -620,6 +632,13 @@ namespace yae
 
     const TFragmentShader *
     fragmentShaderFor(const VideoTraits & vtts) const;
+
+    // helper:
+    void paintImage(double x,
+                    double y,
+                    double w_max,
+                    double h_max,
+                    double opacity = 1.0) const;
   };
 }
 

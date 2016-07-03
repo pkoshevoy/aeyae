@@ -46,71 +46,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // paintImage
-  //
-  static void
-  paintImage(CanvasRenderer * renderer,
-             double opacity,
-             double x,
-             double y,
-             double w_max,
-             double h_max)
-  {
-    double croppedWidth = 0.0;
-    double croppedHeight = 0.0;
-    int cameraRotation = 0;
-    renderer->imageWidthHeightRotated(croppedWidth,
-                                      croppedHeight,
-                                      cameraRotation);
-    if (!croppedWidth || !croppedHeight)
-    {
-      return;
-    }
-
-    double w = w_max;
-    double h = h_max;
-    double car = w_max / h_max;
-    double dar = croppedWidth / croppedHeight;
-
-    if (dar < car)
-    {
-      w = h_max * dar;
-      x += 0.5 * (w_max - w);
-    }
-    else
-    {
-      h = w_max / dar;
-      y += 0.5 * (h_max - h);
-    }
-
-    TGLSaveMatrixState pushViewMatrix(GL_MODELVIEW);
-
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(x, y, 0.0));
-    YAE_OGL_11(glScaled(w / croppedWidth, h / croppedHeight, 1.0));
-
-    if (cameraRotation && cameraRotation % 90 == 0)
-    {
-      YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
-      YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
-
-      if (cameraRotation % 180 != 0)
-      {
-        YAE_OGL_11(glTranslated(-0.5 * croppedHeight,
-                                -0.5 * croppedWidth, 0));
-      }
-      else
-      {
-        YAE_OGL_11(glTranslated(-0.5 * croppedWidth,
-                                -0.5 * croppedHeight, 0));
-      }
-    }
-
-    renderer->draw(opacity);
-    yae_assert_gl_no_error();
-  }
-
-  //----------------------------------------------------------------
   // ImageLive::paintContent
   //
   void
@@ -128,12 +63,12 @@ namespace yae
     double opacity = opacity_.get();
 
     CanvasRenderer * renderer = canvas_->canvasRenderer();
-    paintImage(renderer, opacity, x, y, w_max, h_max);
+    renderer->paintImage(x, y, w_max, h_max, opacity);
 
     CanvasRenderer * overlay = canvas_->overlayRenderer();
     if (overlay && overlay->pixelTraits() && canvas_->overlayHasContent())
     {
-      paintImage(overlay, opacity, x, y, w_max, h_max);
+      overlay->paintImage(x, y, w_max, h_max, opacity);
     }
   }
 

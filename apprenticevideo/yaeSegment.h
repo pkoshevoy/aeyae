@@ -31,6 +31,9 @@ namespace yae
       length_(length)
     {}
 
+    inline bool operator == (const Segment & s) const
+    { return origin_ == s.origin_ && length_ == s.length_; }
+
     void clear();
     bool isEmpty() const;
     void expand(const Segment & seg);

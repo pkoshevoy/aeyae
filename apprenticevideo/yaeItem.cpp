@@ -1406,40 +1406,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ExpressionItem::ExpressionItem
-  //
-  ExpressionItem::ExpressionItem(const char * id):
-    Item(id)
-  {}
-
-  //----------------------------------------------------------------
-  // ExpressionItem::get
-  //
-  void
-  ExpressionItem::get(Property property, double & value) const
-  {
-    if (property == kPropertyExpression)
-    {
-      value = expression_.get();
-    }
-    else
-    {
-      Item::get(property, value);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // ExpressionItem::uncache
-  //
-  void
-  ExpressionItem::uncache()
-  {
-    expression_.uncache();
-    Item::uncache();
-  }
-
-
-  //----------------------------------------------------------------
   // TransitionItem::TransitionItem
   //
   TransitionItem::TransitionItem(const char * id,

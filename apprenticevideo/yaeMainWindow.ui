@@ -130,6 +130,7 @@
      <addaction name="actionCropFrame1_85"/>
      <addaction name="actionCropFrame2_35"/>
      <addaction name="actionCropFrame2_40"/>
+     <addaction name="actionCropFrameOther"/>
      <addaction name="actionCropFrameAutoDetect"/>
     </widget>
     <widget class="QMenu" name="menuAspectRatio">
@@ -655,6 +656,17 @@
    </property>
    <property name="shortcut">
     <string>O</string>
+   </property>
+  </action>
+  <action name="actionCropFrameOther">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Other</string>
+   </property>
+   <property name="toolTip">
+    <string>Specify custom frame crop margins</string>
    </property>
   </action>
   <action name="actionCropFrameAutoDetect">

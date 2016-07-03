@@ -118,6 +118,10 @@ namespace yae
     {
       value = opacity_.get();
     }
+    else if (property == kPropertyBorderWidth)
+    {
+      value = border_.get();
+    }
     else
     {
       Item::get(property, value);

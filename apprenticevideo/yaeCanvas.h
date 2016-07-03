@@ -9,6 +9,10 @@
 #ifndef YAE_CANVAS_H_
 #define YAE_CANVAS_H_
 
+// standard libraries:
+#include <list>
+#include <set>
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
@@ -261,6 +265,18 @@ namespace yae
     // virtual: this will be called from a secondary thread:
     bool render(const TVideoFramePtr & frame);
 
+    //----------------------------------------------------------------
+    // ILoadFrameObserver
+    //
+    struct YAE_API ILoadFrameObserver
+    {
+      virtual ~ILoadFrameObserver() {}
+      virtual void frameLoaded(Canvas * c, const TVideoFramePtr & f) = 0;
+    };
+
+    void addLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> &);
+    void delLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> &);
+
     // helpers:
     bool loadFrame(const TVideoFramePtr & frame);
     TVideoFramePtr currentFrame() const;
@@ -485,6 +501,9 @@ namespace yae
     // traversed front-to-back for painting
     // and back-to-front for event processing:
     std::list<ILayer *> layers_;
+
+    // observers notified when loadFrame is called:
+    std::set<boost::weak_ptr<ILoadFrameObserver> > loadFrameObservers_;
   };
 }
 

@@ -884,7 +884,7 @@ namespace yae
   // paintImage
   //
   static void
-  paintImage(CanvasRenderer * canvas,
+  paintImage(CanvasRenderer * renderer,
              double canvasWidth,
              double canvasHeight,
              Canvas::TRenderMode renderMode)
@@ -892,9 +892,9 @@ namespace yae
     double croppedWidth = 0.0;
     double croppedHeight = 0.0;
     int cameraRotation = 0;
-    canvas->imageWidthHeightRotated(croppedWidth,
-                                    croppedHeight,
-                                    cameraRotation);
+    renderer->imageWidthHeightRotated(croppedWidth,
+                                      croppedHeight,
+                                      cameraRotation);
     if (!croppedWidth || !croppedHeight)
     {
       return;
@@ -959,7 +959,7 @@ namespace yae
       }
     }
 
-    canvas->draw();
+    renderer->draw();
     yae_assert_gl_no_error();
 
 #if 0
@@ -1152,6 +1152,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::addLoadFrameObserver
+  //
+  void
+  Canvas::addLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> & o)
+  {
+    loadFrameObservers_.insert(o);
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::delLoadFrameObserver
+  //
+  void
+  Canvas::delLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> & o)
+  {
+    loadFrameObservers_.erase(o);
+  }
+
+  //----------------------------------------------------------------
   // Canvas::loadFrame
   //
   bool
@@ -1171,6 +1189,26 @@ namespace yae
     if (ok && delegate_)
     {
       delegate_->inhibitScreenSaver();
+    }
+
+    typedef std::set<boost::weak_ptr<ILoadFrameObserver> >::iterator TIter;
+    TIter i = loadFrameObservers_.begin();
+    while (i != loadFrameObservers_.end())
+    {
+      TIter i0 = i;
+      ++i;
+
+      boost::shared_ptr<ILoadFrameObserver> observerPtr = i0->lock();
+      if (observerPtr)
+      {
+        ILoadFrameObserver & observer = *observerPtr;
+        observer.frameLoaded(this, frame);
+      }
+      else
+      {
+        // remove expired observers:
+        loadFrameObservers_.erase(i0);
+      }
     }
 
     return ok;

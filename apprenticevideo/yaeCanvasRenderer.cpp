@@ -2930,7 +2930,7 @@ namespace yae
   // CanvasRenderer::draw
   //
   void
-  CanvasRenderer::draw(double opacity)
+  CanvasRenderer::draw(double opacity) const
   {
     renderer_->draw(opacity);
   }
@@ -3062,4 +3062,67 @@ namespace yae
     return renderer->fragmentShaderFor(vtts.pixelFormat_);
   }
 
+  //----------------------------------------------------------------
+  // CanvasRenderer::paintImage
+  //
+  void
+  CanvasRenderer::paintImage(double x,
+                             double y,
+                             double w_max,
+                             double h_max,
+                             double opacity) const
+  {
+    double croppedWidth = 0.0;
+    double croppedHeight = 0.0;
+    int cameraRotation = 0;
+    this->imageWidthHeightRotated(croppedWidth,
+                                  croppedHeight,
+                                  cameraRotation);
+    if (!croppedWidth || !croppedHeight)
+    {
+      return;
+    }
+
+    double w = w_max;
+    double h = h_max;
+    double car = w_max / h_max;
+    double dar = croppedWidth / croppedHeight;
+
+    if (dar < car)
+    {
+      w = h_max * dar;
+      x += 0.5 * (w_max - w);
+    }
+    else
+    {
+      h = w_max / dar;
+      y += 0.5 * (h_max - h);
+    }
+
+    TGLSaveMatrixState pushViewMatrix(GL_MODELVIEW);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glTranslated(x, y, 0.0));
+    YAE_OGL_11(glScaled(w / croppedWidth, h / croppedHeight, 1.0));
+
+    if (cameraRotation && cameraRotation % 90 == 0)
+    {
+      YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
+      YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
+
+      if (cameraRotation % 180 != 0)
+      {
+        YAE_OGL_11(glTranslated(-0.5 * croppedHeight,
+                                -0.5 * croppedWidth, 0));
+      }
+      else
+      {
+        YAE_OGL_11(glTranslated(-0.5 * croppedWidth,
+                                -0.5 * croppedHeight, 0));
+      }
+    }
+
+    this->draw(opacity);
+    yae_assert_gl_no_error();
+  }
 }

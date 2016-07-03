@@ -32,6 +32,7 @@
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasWidget.h"
 #endif
+#include "yaeFrameCropView.h"
 #include "yaePlaylist.h"
 #include "yaePlaylistModel.h"
 #include "yaePlaylistModelProxy.h"
@@ -45,12 +46,16 @@
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
+#include "ui_yaeFrameCropDialog.h"
 #include "ui_yaeMainWindow.h"
 #include "ui_yaeOpenUrlDialog.h"
 
 
 namespace yae
 {
+  // forward declarations:
+  class MainWindow;
+
   //----------------------------------------------------------------
   // TPlayerWidget
   //
@@ -85,6 +90,28 @@ namespace yae
 
   public:
     AspectRatioDialog(QWidget * parent = 0);
+  };
+
+
+  //----------------------------------------------------------------
+  // FrameCropDialog
+  //
+  class FrameCropDialog : public QDialog,
+                          public Ui::FrameCropDialog
+  {
+    Q_OBJECT;
+
+  public:
+    FrameCropDialog(MainWindow * parent = 0);
+
+  public slots:
+    void cropped(const Segment & xCrop, const Segment & yCrop);
+
+  public:
+    MainWindow * main_;
+    TPlayerWidget * view_;
+    FrameCropView cropView_;
+    boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
   };
 
 
@@ -149,6 +176,10 @@ namespace yae
 
     void initPlayerWidget();
 
+    // accessor to the player widget:
+    inline TPlayerWidget * playerWidget() const
+    { return playerWidget_; }
+
     // accessor to the OpenGL rendering canvas:
     Canvas * canvas() const;
 
@@ -205,6 +236,7 @@ namespace yae
     void playbackCropFrame1_78();
     void playbackCropFrame1_60();
     void playbackCropFrame1_33();
+    void playbackCropFrameOther();
     void playbackCropFrameAutoDetect();
     void playbackNext();
     void playbackPrev();
@@ -346,6 +378,7 @@ namespace yae
     QShortcut * shortcutCrop1_78_;
     QShortcut * shortcutCrop1_85_;
     QShortcut * shortcutCrop2_40_;
+    QShortcut * shortcutCropOther_;
     QShortcut * shortcutNextChapter_;
     QShortcut * shortcutAspectRatioNone_;
     QShortcut * shortcutAspectRatio1_33_;
