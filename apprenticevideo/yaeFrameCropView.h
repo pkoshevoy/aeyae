@@ -86,14 +86,20 @@ namespace yae
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
+    // NOTE: crop region is applied to the un-rotated image:
+    void setCrop(const TVideoFramePtr & frame, const TCropFrame & crop);
+
+    // NOTE: xCrop and yCrop are expressed in the rotated coordinate system:
     void setCrop(const Segment & xCrop, const Segment & yCrop);
 
     inline void emitDone()
     { emit done(); }
 
   signals:
-    void cropped(const Segment & xCrop, const Segment & yCrop);
     void done();
+
+    // NOTE: crop region to be applied to the un-rotated image:
+    void cropped(const TVideoFramePtr & frame, const TCropFrame & crop);
 
   protected:
     PlaylistView * playlist_;

@@ -41,7 +41,8 @@ namespace yae
   {
     bbox = BBox();
 
-    if (!renderer_.imageWidthHeight(bbox.w_, bbox.h_) ||
+    int rotate = 0;
+    if (!renderer_.imageWidthHeightRotated(bbox.w_, bbox.h_, rotate) ||
         bbox.w_ == 0.0 ||
         bbox.h_ == 0.0)
     {
@@ -657,6 +658,52 @@ namespace yae
   // FrameCropView::setCrop
   //
   void
+  FrameCropView::setCrop(const TVideoFramePtr & frame, const TCropFrame & crop)
+  {
+    const VideoTraits & vtts = frame->traits_;
+    double w = double(vtts.visibleWidth_);
+    double h = double(vtts.visibleHeight_);
+
+    double ct = cos(M_PI * double(vtts.cameraRotation_) / 180.0);
+    double st = sin(M_PI * double(vtts.cameraRotation_) / 180.0);
+    TVec2D u_axis(ct, -st);
+    TVec2D v_axis(st, ct);
+
+    Segment xCrop(double(crop.x_) / w, double(crop.w_) / w);
+    Segment yCrop(double(crop.y_) / h, double(crop.h_) / h);
+
+    TVec2D p00(xCrop.start(), yCrop.start());
+    TVec2D p10(xCrop.end(), yCrop.start());
+    TVec2D p01(xCrop.start(), yCrop.end());
+    TVec2D p11(xCrop.end(), yCrop.end());
+
+    TVec2D center(0.5, 0.5);
+    TVec2D q00 = center + wcs_to_lcs(center, u_axis, v_axis, p00);
+    TVec2D q01 = center + wcs_to_lcs(center, u_axis, v_axis, p01);
+    TVec2D q10 = center + wcs_to_lcs(center, u_axis, v_axis, p10);
+    TVec2D q11 = center + wcs_to_lcs(center, u_axis, v_axis, p11);
+
+    double u0 = std::min<double>(std::min<double>(q00.x(), q01.x()),
+                                 std::min<double>(q10.x(), q11.x()));
+
+    double u1 = std::max<double>(std::max<double>(q00.x(), q01.x()),
+                                 std::max<double>(q10.x(), q11.x()));
+
+    double v0 = std::min<double>(std::min<double>(q00.y(), q01.y()),
+                                 std::min<double>(q10.y(), q11.y()));
+
+    double v1 = std::max<double>(std::max<double>(q00.y(), q01.y()),
+                                 std::max<double>(q10.y(), q11.y()));
+
+    Segment u(u0, u1 - u0);
+    Segment v(v0, v1 - v0);
+    this->setCrop(u, v);
+  }
+
+  //----------------------------------------------------------------
+  // FrameCropView::setCrop
+  //
+  void
   FrameCropView::setCrop(const Segment & xCrop, const Segment & yCrop)
   {
     Item & root = *root_;
@@ -674,7 +721,51 @@ namespace yae
     donut.uncache();
     this->requestRepaint();
 
-    emit cropped(donut.xHole_, donut.yHole_);
+    if (!uncropped.frame_)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const VideoTraits & vtts = uncropped.frame_->traits_;
+    double ct = cos(M_PI * double(vtts.cameraRotation_) / 180.0);
+    double st = sin(M_PI * double(vtts.cameraRotation_) / 180.0);
+    TVec2D u_axis(ct, st);
+    TVec2D v_axis(-st, ct);
+
+    TVec2D p00(xCrop.start(), yCrop.start());
+    TVec2D p10(xCrop.end(), yCrop.start());
+    TVec2D p01(xCrop.start(), yCrop.end());
+    TVec2D p11(xCrop.end(), yCrop.end());
+
+    TVec2D center(0.5, 0.5);
+    TVec2D q00 = center + wcs_to_lcs(center, u_axis, v_axis, p00);
+    TVec2D q01 = center + wcs_to_lcs(center, u_axis, v_axis, p01);
+    TVec2D q10 = center + wcs_to_lcs(center, u_axis, v_axis, p10);
+    TVec2D q11 = center + wcs_to_lcs(center, u_axis, v_axis, p11);
+
+    double u0 = std::min<double>(std::min<double>(q00.x(), q01.x()),
+                                 std::min<double>(q10.x(), q11.x()));
+
+    double u1 = std::max<double>(std::max<double>(q00.x(), q01.x()),
+                                 std::max<double>(q10.x(), q11.x()));
+
+    double v0 = std::min<double>(std::min<double>(q00.y(), q01.y()),
+                                 std::min<double>(q10.y(), q11.y()));
+
+    double v1 = std::max<double>(std::max<double>(q00.y(), q01.y()),
+                                 std::max<double>(q10.y(), q11.y()));
+
+    Segment u(u0, u1 - u0);
+    Segment v(v0, v1 - v0);
+
+    TCropFrame crop;
+    crop.x_ = u.origin_ * vtts.visibleWidth_;
+    crop.y_ = v.origin_ * vtts.visibleHeight_;
+    crop.w_ = u.length_ * vtts.visibleWidth_;
+    crop.h_ = v.length_ * vtts.visibleHeight_;
+
+    emit cropped(uncropped.frame_, crop);
   }
 
 }

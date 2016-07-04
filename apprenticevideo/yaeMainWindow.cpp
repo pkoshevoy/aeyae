@@ -952,9 +952,9 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(&frameCropView_,
-                 SIGNAL(cropped(const Segment &, const Segment &)),
+                 SIGNAL(cropped(const TVideoFramePtr &, const TCropFrame &)),
                  this,
-                 SLOT(cropped(const Segment &, const Segment &)));
+                 SLOT(cropped(const TVideoFramePtr &, const TCropFrame &)));
     YAE_ASSERT(ok);
 
     ok = connect(&frameCropView_, SIGNAL(done()),
@@ -2205,25 +2205,19 @@ namespace yae
       return;
     }
 
-    const VideoTraits & vtts = frame->traits_;
-    const unsigned int w = vtts.visibleWidth_;
-    const unsigned int h = vtts.visibleHeight_;
-    const unsigned int x0 = vtts.offsetLeft_;
-    const unsigned int y0 = vtts.offsetTop_;
-
-    TCropFrame crop;
-    renderer->getCroppedFrame(crop);
-
-    Segment xCrop(double(crop.x_) / double(w), double(crop.w_) / double(w));
-    Segment yCrop(double(crop.y_) / double(h), double(crop.h_) / double(h));
+    // pass current frame crop info to the view:
     {
+      TCropFrame crop;
+      renderer->getCroppedFrame(crop);
+
       SignalBlocker blockSignals;
       blockSignals << &frameCropView_;
-      frameCropView_.setCrop(xCrop, yCrop);
+      frameCropView_.setCrop(frame, crop);
     }
 
     timelineView_.setEnabled(false);
     frameCropView_.setEnabled(true);
+    onLoadFrame_->frameLoaded(canvas_, frame);
   }
 
   //----------------------------------------------------------------
@@ -3536,29 +3530,9 @@ namespace yae
   // MainWindow::cropped
   //
   void
-  MainWindow::cropped(const Segment & xCrop, const Segment & yCrop)
+  MainWindow::cropped(const TVideoFramePtr & frame, const TCropFrame & crop)
   {
-    CanvasRendererItem & rendererItem =
-      frameCropView_.root()->get<CanvasRendererItem>("uncropped");
-
-    if (!rendererItem.frame_)
-    {
-      YAE_ASSERT(false);
-      return;
-    }
-
-    const VideoTraits & vtts = rendererItem.frame_->traits_;
-    const unsigned int w = vtts.visibleWidth_;
-    const unsigned int h = vtts.visibleHeight_;
-    const unsigned int x0 = vtts.offsetLeft_;
-    const unsigned int y0 = vtts.offsetTop_;
-
-    TCropFrame crop;
-    crop.x_ = xCrop.origin_ * w;
-    crop.y_ = yCrop.origin_ * h;
-    crop.w_ = xCrop.length_ * w;
-    crop.h_ = yCrop.length_ * h;
-
+    (void) frame;
     canvas_->cropFrame(crop);
   }
 

@@ -291,7 +291,7 @@ namespace yae
     bool findBookmark(const TPlaylistItemPtr & item,
                       PlaylistBookmark & bookmark) const;
 
-    void cropped(const Segment & xCrop, const Segment & yCrop);
+    void cropped(const TVideoFramePtr & frame, const TCropFrame & crop);
     void dismissFrameCropView();
 
   protected:
