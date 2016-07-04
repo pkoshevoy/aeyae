@@ -85,6 +85,9 @@ namespace yae
 
     void setCrop(const Segment & xCrop, const Segment & yCrop);
 
+    inline void emitDone()
+    { emit done(); }
+
   signals:
     void cropped(const Segment & xCrop, const Segment & yCrop);
     void done();

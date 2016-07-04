@@ -122,7 +122,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      emit view_.done();
+      view_.emitDone();
       return true;
     }
 
