@@ -152,85 +152,6 @@ namespace yae
     CanvasRendererItem & rendererItem_;
   };
 
-  //----------------------------------------------------------------
-  // FrameCropDialog::FrameCropDialog
-  //
-  FrameCropDialog::FrameCropDialog(MainWindow * parent):
-    QDialog(parent),
-    Ui::FrameCropDialog(),
-    main_(parent)
-  {
-    Ui::FrameCropDialog::setupUi(this);
-
-    TPlayerWidget * playerWidget = parent->playerWidget();
-
-#ifdef YAE_USE_QOPENGL_WIDGET
-    view_ = new TPlayerWidget(this);
-    view_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
-#else
-    // request vsync if available:
-    QGLFormat contextFormat;
-    contextFormat.setSwapInterval(1);
-    contextFormat.setSampleBuffers(false);
-    view_ = new TPlayerWidget(contextFormat, this, playerWidget);
-#endif
-
-    TMakeCurrentContext currentContext(view_->Canvas::context());
-    view_->append(&cropView_);
-    cropView_.init();
-
-    QVBoxLayout * layout = new QVBoxLayout(this->cropWidget);
-    layout->setMargin(0);
-    layout->setSpacing(0);
-    layout->addWidget(view_);
-
-    CanvasRendererItem & rendererItem =
-      cropView_.root()->get<CanvasRendererItem>("uncropped");
-
-    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
-    playerWidget->addLoadFrameObserver(onLoadFrame_);
-
-    bool ok = true;
-    ok = connect(&cropView_,
-                 SIGNAL(cropped(const Segment &, const Segment &)),
-                 this,
-                 SLOT(cropped(const Segment &, const Segment &)));
-    YAE_ASSERT(ok);
-
-  }
-
-  //----------------------------------------------------------------
-  // FrameCropDialog::cropped
-  //
-  void
-  FrameCropDialog::cropped(const Segment & xCrop, const Segment & yCrop)
-  {
-    TCropFrame crop;
-
-    CanvasRendererItem & rendererItem =
-      cropView_.root()->get<CanvasRendererItem>("uncropped");
-
-    if (!rendererItem.frame_)
-    {
-      YAE_ASSERT(false);
-      return;
-    }
-
-    const VideoTraits & vtts = rendererItem.frame_->traits_;
-    const unsigned int w = vtts.visibleWidth_;
-    const unsigned int h = vtts.visibleHeight_;
-    const unsigned int x0 = vtts.offsetLeft_;
-    const unsigned int y0 = vtts.offsetTop_;
-
-    crop.x_ = xCrop.origin_ * w;
-    crop.y_ = yCrop.origin_ * h;
-    crop.w_ = xCrop.length_ * w;
-    crop.h_ = yCrop.length_ * h;
-
-    main_->canvas()->cropFrame(crop);
-    main_->adjustCanvasHeight();
-  }
-
 
   //----------------------------------------------------------------
   // OpenUrlDialog::OpenUrlDialog
@@ -400,11 +321,13 @@ namespace yae
     playerWidget_->setGreeting(greeting);
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
+    playerWidget_->append(&frameCropView_);
     playlistView_.setup(this);
     playlistView_.setModel(&playlistModel_);
     playlistView_.setEnabled(false);
     timelineView_.setup(this, &playlistView_);
     timelineView_.setModel(&timelineModel_);
+    frameCropView_.setEnabled(false);
 
     // add image://thumbnails/... provider:
     boost::shared_ptr<ThumbnailProvider>
@@ -1024,6 +947,16 @@ namespace yae
                  actionNextChapter, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    ok = connect(&frameCropView_,
+                 SIGNAL(cropped(const Segment &, const Segment &)),
+                 this,
+                 SLOT(cropped(const Segment &, const Segment &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&frameCropView_, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropView()));
+    YAE_ASSERT(ok);
+
     adjustMenuActions();
     adjustMenus(reader_.get());
   }
@@ -1169,6 +1102,23 @@ namespace yae
     // restore timeline preference (default == hide):
     bool showTimeline = loadBooleanSettingOrDefault(kShowTimeline, false);
     actionShowTimeline->setChecked(showTimeline);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::initItemViews
+  //
+  void
+  MainWindow::initItemViews()
+  {
+    // initialize frame crop view:
+    TMakeCurrentContext currentContext(canvas_->context());
+    frameCropView_.init(&playlistView_);
+
+    CanvasRendererItem & rendererItem =
+      frameCropView_.root()->get<CanvasRendererItem>("uncropped");
+
+    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
+    playerWidget_->addLoadFrameObserver(onLoadFrame_);
   }
 
   //----------------------------------------------------------------
@@ -2242,12 +2192,6 @@ namespace yae
   void
   MainWindow::playbackCropFrameOther()
   {
-    static FrameCropDialog * dialog = NULL;
-    if (!dialog)
-    {
-      dialog = new FrameCropDialog(this);
-    }
-
     CanvasRenderer * renderer = canvas_->canvasRenderer();
 
     TVideoFramePtr frame;
@@ -2266,17 +2210,16 @@ namespace yae
     TCropFrame crop;
     renderer->getCroppedFrame(crop);
 
-    Segment xCrop(double(crop.x_) / double(w),
-                  double(crop.w_) / double(w));
-    Segment yCrop(double(crop.y_) / double(h),
-                  double(crop.h_) / double(h));
+    Segment xCrop(double(crop.x_) / double(w), double(crop.w_) / double(w));
+    Segment yCrop(double(crop.y_) / double(h), double(crop.h_) / double(h));
     {
       SignalBlocker blockSignals;
-      blockSignals << &(dialog->cropView_);
-      dialog->cropView_.setCrop(xCrop, yCrop);
+      blockSignals << &frameCropView_;
+      frameCropView_.setCrop(xCrop, yCrop);
     }
 
-    dialog->show();
+    timelineView_.setEnabled(false);
+    frameCropView_.setEnabled(true);
   }
 
   //----------------------------------------------------------------
@@ -3586,6 +3529,47 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::cropped
+  //
+  void
+  MainWindow::cropped(const Segment & xCrop, const Segment & yCrop)
+  {
+    CanvasRendererItem & rendererItem =
+      frameCropView_.root()->get<CanvasRendererItem>("uncropped");
+
+    if (!rendererItem.frame_)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const VideoTraits & vtts = rendererItem.frame_->traits_;
+    const unsigned int w = vtts.visibleWidth_;
+    const unsigned int h = vtts.visibleHeight_;
+    const unsigned int x0 = vtts.offsetLeft_;
+    const unsigned int y0 = vtts.offsetTop_;
+
+    TCropFrame crop;
+    crop.x_ = xCrop.origin_ * w;
+    crop.y_ = yCrop.origin_ * h;
+    crop.w_ = xCrop.length_ * w;
+    crop.h_ = yCrop.length_ * h;
+
+    canvas_->cropFrame(crop);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::dismissFrameCropView
+  //
+  void
+  MainWindow::dismissFrameCropView()
+  {
+    frameCropView_.setEnabled(false);
+    timelineView_.setEnabled(true);
+    adjustCanvasHeight();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::event
   //
   bool
@@ -4154,6 +4138,11 @@ namespace yae
         double s = double(playerWidget_->width()) / w;
         canvasSizeSet(s, s);
       }
+    }
+
+    if (frameCropView_.isEnabled())
+    {
+      playbackCropFrameOther();
     }
   }
 

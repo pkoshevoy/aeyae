@@ -18,6 +18,8 @@
 
 namespace yae
 {
+  // forward declarations:
+  class PlaylistView;
 
   //----------------------------------------------------------------
   // LetterBoxExpr
@@ -73,12 +75,22 @@ namespace yae
   public:
     FrameCropView();
 
-    void init();
+    void init(PlaylistView * playlist);
+
+    // virtual: returns false if size didn't change
+    bool resizeTo(const Canvas * canvas);
+
+    // virtual:
+    bool processMouseTracking(const TVec2D & mousePt);
 
     void setCrop(const Segment & xCrop, const Segment & yCrop);
 
   signals:
     void cropped(const Segment & xCrop, const Segment & yCrop);
+    void done();
+
+  protected:
+    PlaylistView * playlist_;
   };
 }
 

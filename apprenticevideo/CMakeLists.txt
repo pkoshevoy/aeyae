@@ -117,7 +117,6 @@ endif (YAE_USE_PLAYER_QUICK_WIDGET)
 set(project_uis
   yaeAbout.ui
   yaeAspectRatioDialog.ui
-  yaeFrameCropDialog.ui
   yaeMainWindow.ui
   yaeOpenUrlDialog.ui
   )

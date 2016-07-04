@@ -278,6 +278,7 @@ mainMayThrowException(int argc, char ** argv)
   // initialize the player widget canvas, connect additional signals/slots:
   yae::mainWindow->initPlayerWidget();
   yae::mainWindow->canvas()->initializePrivateBackend();
+  yae::mainWindow->initItemViews();
 
   yae::mainWindow->setPlaylist(playlist);
 

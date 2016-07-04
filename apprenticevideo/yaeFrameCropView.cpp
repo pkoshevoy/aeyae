@@ -7,13 +7,18 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // local includes:
-#include "yaeItemRef.h"
-#include "yaeMainWindow.h"
-#include "yaeProperty.h"
+#include "yaeColor.h"
 #include "yaeDashedRect.h"
 #include "yaeDonutRect.h"
 #include "yaeFrameCropView.h"
+#include "yaeItemRef.h"
+#include "yaeMainWindow.h"
+#include "yaePlaylistView.h"
+#include "yaePlaylistViewStyle.h"
+#include "yaeProperty.h"
 #include "yaeRectangle.h"
+#include "yaeRoundRect.h"
+#include "yaeText.h"
 
 
 namespace yae
@@ -101,6 +106,55 @@ namespace yae
       Item::get(property, value);
     }
   }
+
+
+  //----------------------------------------------------------------
+  // Dismiss
+  //
+  struct Dismiss : public ClickableItem
+  {
+    Dismiss(FrameCropView & view):
+      ClickableItem("dismiss"),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      emit view_.done();
+      return true;
+    }
+
+    FrameCropView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // BorderWidth
+  //
+  struct BorderWidth : public TDoubleExpr
+  {
+    BorderWidth(FrameCropView & view, Item & item, double w0, double w1):
+      view_(view),
+      item_(item),
+      w0_(w0),
+      w1_(w1)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      const TVec2D & pt = view_.mousePt();
+      bool overlaps = item_.overlaps(pt);
+      result = overlaps ? w1_ : w0_;
+    }
+
+    FrameCropView & view_;
+    Item & item_;
+    double w0_;
+    double w1_;
+  };
 
 
   //----------------------------------------------------------------
@@ -377,16 +431,33 @@ namespace yae
   // FrameCropView::FrameCropView
   //
   FrameCropView::FrameCropView():
-    ItemView("frameCrop")
+    ItemView("frameCrop"),
+    playlist_(NULL)
   {}
 
   //----------------------------------------------------------------
   // FrameCropView::init
   //
   void
-  FrameCropView::init()
+  FrameCropView::init(PlaylistView * playlist)
   {
+    playlist_ = playlist;
     Item & root = *root_;
+
+    ExpressionItem & titleHeight = root.
+      addHidden(new ExpressionItem("style_title_height",
+                                   new StyleTitleHeight(*playlist)));
+
+    ColorRef colorControlsBg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgControls));
+
+    ColorRef colorTextBg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+
+    ColorRef colorTextFg = root.addExpr
+      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+
+    const PlaylistViewStyle & style = playlist->playlistViewStyle();
 
     // setup mouse trap to prevent unintended click-through to playlist:
     MouseTrap & mouseTrap = root.addNew<MouseTrap>("mouse_trap");
@@ -480,13 +551,82 @@ namespace yae
     outline.width_ = ItemRef::offset(donut, kPropertyDonutHoleWidth, -2);
     outline.height_ = ItemRef::offset(donut, kPropertyDonutHoleHeight, -2);
 
+    RoundRect & doneBg = donut.addNew<RoundRect>("done_bg");
+    Text & done = donut.addNew<Text>("done");
+    done.anchors_.right_ = ItemRef::offset(d22, kPropertyLeft);
+    done.anchors_.bottom_ = ItemRef::offset(d22, kPropertyTop);
+    done.margins_.right_ =
+      ItemRef::reference(titleHeight, kPropertyExpression, 2.0);
+    done.margins_.bottom_ =
+      ItemRef::reference(titleHeight, kPropertyExpression, 1.0);
+    done.color_ = colorTextFg;
+    done.text_ = TVarRef::constant(QVariant(tr("Done")));
+    done.font_ = style.font_small_;
+    done.fontSize_ =
+      ItemRef::scale(titleHeight, kPropertyExpression, 0.5 * kDpiScale);
+
+    doneBg.color_ = colorTextBg; // colorControlsBg;
+    doneBg.anchors_.fill(done);
+    doneBg.margins_.left_ =
+      ItemRef::scale(titleHeight, kPropertyExpression, -0.9);
+    doneBg.margins_.top_ =
+      ItemRef::scale(titleHeight, kPropertyExpression, -0.3);
+    doneBg.margins_.right_ = doneBg.margins_.left_;
+    doneBg.margins_.bottom_ = doneBg.margins_.top_;
+    doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 2.5);
+    doneBg.border_ = doneBg.addExpr(new BorderWidth(*this, doneBg, 0.0, 2.0));
+
     RegionSelect & selector = root.add(new RegionSelect(*this,
                                                         donut,
                                                         d00, d01, d02,
                                                         d10,      d12,
                                                         d20, d21, d22));
     selector.anchors_.fill(root);
+
+    Dismiss & dismiss = root.add(new Dismiss(*this));
+    dismiss.anchors_.fill(doneBg);
+    doneBg.addObserver(Item::kOnUncache,
+                       Item::TObserverPtr(new Uncache(dismiss)));
   }
+
+  //----------------------------------------------------------------
+  // FrameCropView::resizeTo
+  //
+  bool
+  FrameCropView::resizeTo(const Canvas * canvas)
+  {
+    if (!ItemView::resizeTo(canvas))
+    {
+      return false;
+    }
+
+    if (playlist_)
+    {
+      PlaylistViewStyle & style = playlist_->playlistViewStyle();
+      requestUncache(&style);
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // FrameCropView::processMouseTracking
+  //
+  bool
+  FrameCropView::processMouseTracking(const TVec2D & mousePt)
+  {
+    if (!this->isEnabled())
+    {
+      return false;
+    }
+
+    Item & root = *root_;
+    CanvasRendererItem & uncropped = root.get<CanvasRendererItem>("uncropped");
+    DonutRect & donut = uncropped.get<DonutRect>("donut");
+    requestUncache(&donut);
+
+    return true;
+ }
 
   //----------------------------------------------------------------
   // FrameCropView::setCrop

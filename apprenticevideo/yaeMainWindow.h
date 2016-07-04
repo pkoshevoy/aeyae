@@ -46,7 +46,6 @@
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
-#include "ui_yaeFrameCropDialog.h"
 #include "ui_yaeMainWindow.h"
 #include "ui_yaeOpenUrlDialog.h"
 
@@ -90,28 +89,6 @@ namespace yae
 
   public:
     AspectRatioDialog(QWidget * parent = 0);
-  };
-
-
-  //----------------------------------------------------------------
-  // FrameCropDialog
-  //
-  class FrameCropDialog : public QDialog,
-                          public Ui::FrameCropDialog
-  {
-    Q_OBJECT;
-
-  public:
-    FrameCropDialog(MainWindow * parent = 0);
-
-  public slots:
-    void cropped(const Segment & xCrop, const Segment & yCrop);
-
-  public:
-    MainWindow * main_;
-    TPlayerWidget * view_;
-    FrameCropView cropView_;
-    boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
   };
 
 
@@ -175,6 +152,7 @@ namespace yae
     ~MainWindow();
 
     void initPlayerWidget();
+    void initItemViews();
 
     // accessor to the player widget:
     inline TPlayerWidget * playerWidget() const
@@ -313,6 +291,9 @@ namespace yae
     bool findBookmark(const TPlaylistItemPtr & item,
                       PlaylistBookmark & bookmark) const;
 
+    void cropped(const Segment & xCrop, const Segment & yCrop);
+    void dismissFrameCropView();
+
   protected:
     // virtual:
     bool event(QEvent * e);
@@ -425,6 +406,10 @@ namespace yae
     TimelineView timelineView_;
     TimelineModel timelineModel_;
     TPlaylistModel playlistModel_;
+
+    // frame editing view:
+    FrameCropView frameCropView_;
+    boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
     // audio device:
     std::string audioDevice_;
