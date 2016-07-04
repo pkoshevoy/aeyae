@@ -83,6 +83,9 @@ namespace yae
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
 
+    // virtual:
+    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
+
     void setCrop(const Segment & xCrop, const Segment & yCrop);
 
     inline void emitDone()

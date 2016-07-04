@@ -711,6 +711,10 @@ namespace yae
                  this, SLOT(playbackCropFrameOther()));
     YAE_ASSERT(ok);
 
+    ok = connect(shortcutCropOther_, SIGNAL(activated()),
+                 actionCropFrameOther, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionCropFrameAutoDetect, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameAutoDetect()));
     YAE_ASSERT(ok);

@@ -666,7 +666,13 @@
     <string>Other</string>
    </property>
    <property name="toolTip">
-    <string>Specify custom frame crop margins</string>
+    <string>Edit crop region manually</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Z</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="actionCropFrameAutoDetect">
