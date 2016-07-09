@@ -689,7 +689,8 @@ namespace yae
 
           AVDictionary * opts = NULL;
           av_dict_set(&opts, "threads", "auto", 0);
-          av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+          av_dict_set(&opts, "refcounted_frames", "1", 0);
+
           avcodec_parameters_to_context(codecContext_, stream_->codecpar);
           codecContext_->time_base = stream_->time_base;
 
@@ -1056,7 +1057,8 @@ namespace yae
 
       AVDictionary * opts = NULL;
       av_dict_set(&opts, "threads", "auto", 0);
-      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
+      av_dict_set(&opts, "refcounted_frames", "1", 0);
+      // av_dict_set(&opts, "drc_scale", "1.0", AV_OPT_SEARCH_CHILDREN);
       avcodec_parameters_to_context(codecContext_, stream_->codecpar);
 
       err = avcodec_open2(codecContext_, codec_, &opts);

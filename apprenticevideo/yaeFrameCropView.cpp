@@ -132,29 +132,32 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // BorderWidth
+  // ColorOnHover
   //
-  struct BorderWidth : public TDoubleExpr
+  struct ColorOnHover : public TColorExpr
   {
-    BorderWidth(FrameCropView & view, Item & item, double w0, double w1):
+    ColorOnHover(FrameCropView & view,
+                 Item & item,
+                 const Color & c0,
+                 const Color & c1):
       view_(view),
       item_(item),
-      w0_(w0),
-      w1_(w1)
+      c0_(c0),
+      c1_(c1)
     {}
 
     // virtual:
-    void evaluate(double & result) const
+    void evaluate(Color & result) const
     {
       const TVec2D & pt = view_.mousePt();
       bool overlaps = item_.overlaps(pt);
-      result = overlaps ? w1_ : w0_;
+      result = overlaps ? c1_ : c0_;
     }
 
     FrameCropView & view_;
     Item & item_;
-    double w0_;
-    double w1_;
+    Color c0_;
+    Color c1_;
   };
 
 
@@ -489,16 +492,16 @@ namespace yae
     // d10     d12
     // d20 d21 d22
     Rectangle & d00 = donut.addNew<Rectangle>("d00");
-    d00.anchors_.left_ = ItemRef::offset(donut, kPropertyDonutHoleLeft, -10);
-    d00.anchors_.top_ = ItemRef::offset(donut, kPropertyDonutHoleTop, -10);
-    d00.width_ = ItemRef::constant(20);
-    d00.height_ = ItemRef::constant(20);
+    d00.anchors_.left_ = ItemRef::offset(donut, kPropertyDonutHoleLeft, -20);
+    d00.anchors_.top_ = ItemRef::offset(donut, kPropertyDonutHoleTop, -20);
+    d00.width_ = ItemRef::constant(40);
+    d00.height_ = ItemRef::constant(40);
     d00.color_ = ColorRef::constant(Color(0x7f7f7f, 0.3));
 
     Rectangle & d01 = donut.addNew<Rectangle>("d01");
-    d01.anchors_.left_ = ItemRef::offset(donut, kPropertyDonutHoleLeft, 10);
+    d01.anchors_.left_ = ItemRef::offset(donut, kPropertyDonutHoleLeft, 20);
     d01.anchors_.right_ =
-      ItemRef::offset(donut, kPropertyDonutHoleRight, -10);
+      ItemRef::offset(donut, kPropertyDonutHoleRight, -20);
     d01.anchors_.top_ = d00.anchors_.top_;
     d01.height_ = d00.height_;
     d01.color_ = d00.color_;
@@ -512,9 +515,9 @@ namespace yae
 
     Rectangle & d10 = donut.addNew<Rectangle>("d10");
     d10.anchors_.left_ = d00.anchors_.left_;
-    d10.anchors_.top_ = ItemRef::offset(donut, kPropertyDonutHoleTop, 10);
+    d10.anchors_.top_ = ItemRef::offset(donut, kPropertyDonutHoleTop, 20);
     d10.anchors_.bottom_ =
-      ItemRef::offset(donut, kPropertyDonutHoleBottom, -10);
+      ItemRef::offset(donut, kPropertyDonutHoleBottom, -20);
     d10.width_ = d00.width_;
     d10.color_ = d00.color_;
 
@@ -560,13 +563,16 @@ namespace yae
       ItemRef::reference(titleHeight, kPropertyExpression, 2.0);
     done.margins_.bottom_ =
       ItemRef::reference(titleHeight, kPropertyExpression, 1.0);
-    done.color_ = colorTextFg;
+    done.color_ = ColorRef::constant(Color(0x000000, 1.0));
     done.text_ = TVarRef::constant(QVariant(tr("Done")));
     done.font_ = style.font_small_;
     done.fontSize_ =
       ItemRef::scale(titleHeight, kPropertyExpression, 0.5 * kDpiScale);
 
-    doneBg.color_ = colorTextBg; // colorControlsBg;
+    doneBg.color_ = doneBg.addExpr(new ColorOnHover(*this, doneBg,
+                                                    Color(0xffffff, 0.7),
+                                                    Color(0xffffff, 1.0)));
+    doneBg.colorBorder_ = ColorRef::constant(Color(0x000000, 1.0));
     doneBg.anchors_.fill(done);
     doneBg.margins_.left_ =
       ItemRef::scale(titleHeight, kPropertyExpression, -0.9);
@@ -574,8 +580,8 @@ namespace yae
       ItemRef::scale(titleHeight, kPropertyExpression, -0.3);
     doneBg.margins_.right_ = doneBg.margins_.left_;
     doneBg.margins_.bottom_ = doneBg.margins_.top_;
-    doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 2.5);
-    doneBg.border_ = doneBg.addExpr(new BorderWidth(*this, doneBg, 0.0, 2.0));
+    doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 3.0);
+    doneBg.border_ = ItemRef::constant(1.0);
 
     RegionSelect & selector = root.add(new RegionSelect(*this,
                                                         donut,
