@@ -1918,7 +1918,7 @@ namespace yae
         // when non-reference frames are discarded deinterlacing filter
         // loses ability to detect interlaced frames, therefore
         // it is better to simply drop a field:
-        filters << (skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:0:1");
+        filters << (skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:-1:0");
       }
 
       int transposeAngle =
