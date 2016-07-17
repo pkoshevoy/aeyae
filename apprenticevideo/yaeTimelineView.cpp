@@ -613,6 +613,7 @@ namespace yae
 
       bool shouldPause = (alwaysShowTimeline ||
                           playlist_.isEnabled() ||
+                          controlsContainer_.overlaps(pt) ||
                           (focus && focus->view_ == &timeline_));
       return shouldPause;
     }
@@ -1223,7 +1224,6 @@ namespace yae
 
       mouseDetectForControls.anchors_.fill(controls);
     }
-
 
     animator_.reset(new Animator(*playlist, *this, mouseDetect));
     maybeAnimateOpacity();
