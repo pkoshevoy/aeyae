@@ -22,6 +22,8 @@
 // Qt includes:
 #include <QEvent>
 #include <QObject>
+#include <QPoint>
+#include <QRect>
 #include <QString>
 
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
