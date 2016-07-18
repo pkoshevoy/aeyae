@@ -22,7 +22,6 @@
 // Qt includes:
 #include <QEvent>
 #include <QObject>
-#include <QPainter>
 #include <QString>
 
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
@@ -99,40 +98,6 @@ namespace yae
   //
   YAE_API bool
   overlapExists(const QRect & a, const QPoint & b);
-
-  //----------------------------------------------------------------
-  // shortenTextToFit
-  //
-  YAE_API bool
-  shortenTextToFit(QPainter & painter,
-                   const QRect & bbox,
-                   int textAlignment,
-                   const QString & text,
-                   QString & textLeft,
-                   QString & textRight);
-
-  //----------------------------------------------------------------
-  // drawTextToFit
-  //
-  YAE_API void
-  drawTextToFit(QPainter & painter,
-                const QRect & bbox,
-                int textAlignment,
-                const QString & text,
-                QRect * bboxText = NULL);
-
-  //----------------------------------------------------------------
-  // drawTextWithShadowToFit
-  //
-  YAE_API void
-  drawTextWithShadowToFit(QPainter & painter,
-                          const QRect & bboxBig,
-                          int textAlignment,
-                          const QString & text,
-                          const QPen & bgPen,
-                          bool outlineShadow = true,
-                          int shadowOffset = 1,
-                          QRect * bboxText = NULL);
 
   //----------------------------------------------------------------
   // join
@@ -239,12 +204,6 @@ namespace yae
   //
   YAE_API std::string
   toString(QEvent::Type et);
-
-  //----------------------------------------------------------------
-  // pixelFormatIdFor
-  //
-  YAE_API TPixelFormatId
-  pixelFormatIdFor(QImage::Format imgFormat);
 
   //----------------------------------------------------------------
   // SignalBlocker

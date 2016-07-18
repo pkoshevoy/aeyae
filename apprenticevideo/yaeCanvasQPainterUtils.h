@@ -21,6 +21,46 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // pixelFormatIdFor
+  //
+  YAE_API TPixelFormatId
+  pixelFormatIdFor(QImage::Format imgFormat);
+
+  //----------------------------------------------------------------
+  // shortenTextToFit
+  //
+  YAE_API bool
+  shortenTextToFit(QPainter & painter,
+                   const QRect & bbox,
+                   int textAlignment,
+                   const QString & text,
+                   QString & textLeft,
+                   QString & textRight);
+
+  //----------------------------------------------------------------
+  // drawTextToFit
+  //
+  YAE_API void
+  drawTextToFit(QPainter & painter,
+                const QRect & bbox,
+                int textAlignment,
+                const QString & text,
+                QRect * bboxText = NULL);
+
+  //----------------------------------------------------------------
+  // drawTextWithShadowToFit
+  //
+  YAE_API void
+  drawTextWithShadowToFit(QPainter & painter,
+                          const QRect & bboxBig,
+                          int textAlignment,
+                          const QString & text,
+                          const QPen & bgPen,
+                          bool outlineShadow = true,
+                          int shadowOffset = 1,
+                          QRect * bboxText = NULL);
+
+  //----------------------------------------------------------------
   // TQImageBuffer
   //
   struct TQImageBuffer : public IPlanarBuffer

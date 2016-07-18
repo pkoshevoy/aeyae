@@ -15,6 +15,277 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // pixelFormatIdFor
+  //
+  TPixelFormatId
+  pixelFormatIdFor(QImage::Format qimageFormat)
+  {
+    TPixelFormatId pixelFormat =
+#ifdef _BIG_ENDIAN
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatARGB :
+#else
+      (qimageFormat == QImage::Format_ARGB32_Premultiplied ||
+       qimageFormat == QImage::Format_ARGB32) ? kPixelFormatBGRA :
+#endif
+      (qimageFormat == QImage::Format_RGB888) ? kPixelFormatRGB24 :
+#if (QT_VERSION < QT_VERSION_CHECK(5, 5, 0))
+      (qimageFormat == QImage::Format_Indexed8) ? kPixelFormatGRAY8 :
+#else
+      (qimageFormat == QImage::Format_Grayscale8) ? kPixelFormatGRAY8 :
+#endif
+      kInvalidPixelFormat;
+
+    return pixelFormat;
+  }
+
+  //----------------------------------------------------------------
+  // shortenTextToFit
+  //
+  bool
+  shortenTextToFit(QPainter & painter,
+                   const QRect & bbox,
+                   int textAlignment,
+                   const QString & text,
+                   QString & textLeft,
+                   QString & textRight)
+  {
+    static const QString ellipsis("...");
+
+    // in case style sheet is used, get fontmetrics from painter:
+    QFontMetrics fm = painter.fontMetrics();
+
+    const int bboxWidth = bbox.width();
+
+    textLeft.clear();
+    textRight.clear();
+
+    QSize sz = fm.size(Qt::TextSingleLine, text);
+    int textWidth = sz.width();
+    if (textWidth <= bboxWidth || bboxWidth <= 0)
+    {
+      // text fits, nothing to do:
+      if (textAlignment & Qt::AlignLeft)
+      {
+        textLeft = text;
+      }
+      else
+      {
+        textRight = text;
+      }
+
+      return false;
+    }
+
+    // scale back the estimate to avoid cutting out too much of text,
+    // because not all characters have the same width:
+    const double stepScale = 0.78;
+    const int textLen = text.size();
+
+    int numToRemove = 0;
+    int currLen = textLen - numToRemove;
+    int aLen = currLen / 2;
+    int bLen = currLen - aLen;
+
+    while (currLen > 1)
+    {
+      // estimate (conservatively) how much text to remove:
+      double excess = double(textWidth) / double(bboxWidth) - 1.0;
+      if (excess <= 0.0)
+      {
+        break;
+      }
+
+      double excessLen =
+        std::max<double>(1.0,
+                         stepScale * double(currLen) *
+                         excess / (excess + 1.0));
+
+      numToRemove += int(excessLen);
+      currLen = textLen - numToRemove;
+
+      aLen = currLen / 2;
+      bLen = currLen - aLen;
+      QString tmp = text.left(aLen) + ellipsis + text.right(bLen);
+
+      sz = fm.size(Qt::TextSingleLine, tmp);
+      textWidth = sz.width();
+    }
+
+    if (currLen < 2)
+    {
+      // too short, give up:
+      aLen = 0;
+      bLen = 0;
+    }
+
+    if (textAlignment & Qt::AlignLeft)
+    {
+      textLeft = text.left(aLen) + ellipsis;
+      textRight = text.right(bLen);
+    }
+    else
+    {
+      textLeft = text.left(aLen);
+      textRight = ellipsis + text.right(bLen);
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // drawTextToFit
+  //
+  void
+  drawTextToFit(QPainter & painter,
+                const QRect & bbox,
+                int textAlignment,
+                const QString & text,
+                QRect * bboxText)
+  {
+    QString textLeft;
+    QString textRight;
+
+    if ((textAlignment & Qt::TextWordWrap) ||
+        !shortenTextToFit(painter,
+                          bbox,
+                          textAlignment,
+                          text,
+                          textLeft,
+                          textRight))
+    {
+      // text fits:
+      painter.drawText(bbox, textAlignment, text, bboxText);
+      return;
+    }
+
+    // one part will have ... added to it
+    int vertAlignment = textAlignment & Qt::AlignVertical_Mask;
+
+    QRect bboxLeft;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignLeft,
+                     textLeft,
+                     &bboxLeft);
+
+    QRect bboxRight;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignRight,
+                     textRight,
+                     &bboxRight);
+
+    if (bboxText)
+    {
+      *bboxText = bboxRight;
+      *bboxText |= bboxLeft;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // drawTextShadow
+  //
+  static void
+  drawTextShadow(QPainter & painter,
+                 const QRect & bbox,
+                 int textAlignment,
+                 const QString & text,
+                 bool outline,
+                 int offset)
+  {
+    if (outline)
+    {
+      painter.drawText(bbox.translated(-offset, 0), textAlignment, text);
+      painter.drawText(bbox.translated(offset, 0), textAlignment, text);
+      painter.drawText(bbox.translated(0, -offset), textAlignment, text);
+    }
+
+    painter.drawText(bbox.translated(0, offset), textAlignment, text);
+  }
+
+  //----------------------------------------------------------------
+  // drawTextWithShadowToFit
+  //
+  void
+  drawTextWithShadowToFit(QPainter & painter,
+                          const QRect & bboxBig,
+                          int textAlignment,
+                          const QString & text,
+                          const QPen & bgPen,
+                          bool outlineShadow,
+                          int shadowOffset,
+                          QRect * bboxText)
+  {
+    QPen fgPen = painter.pen();
+
+    QRect bbox(bboxBig.x() + shadowOffset,
+               bboxBig.y() + shadowOffset,
+               bboxBig.width() - shadowOffset * 2,
+               bboxBig.height() - shadowOffset * 2);
+
+    QString textLeft;
+    QString textRight;
+
+    if ((textAlignment & Qt::TextWordWrap) ||
+        !shortenTextToFit(painter,
+                          bbox,
+                          textAlignment,
+                          text,
+                          textLeft,
+                          textRight))
+    {
+      // text fits:
+      painter.setPen(bgPen);
+      drawTextShadow(painter,
+                     bbox,
+                     textAlignment,
+                     text,
+                     outlineShadow,
+                     shadowOffset);
+
+      painter.setPen(fgPen);
+      painter.drawText(bbox, textAlignment, text, bboxText);
+      return;
+    }
+
+    // one part will have ... added to it
+    int vertAlignment = textAlignment & Qt::AlignVertical_Mask;
+
+    painter.setPen(bgPen);
+    drawTextShadow(painter,
+                   bbox,
+                   vertAlignment | Qt::AlignLeft,
+                   textLeft,
+                   outlineShadow,
+                   shadowOffset);
+
+    drawTextShadow(painter,
+                   bbox,
+                   vertAlignment | Qt::AlignRight,
+                   textRight,
+                   outlineShadow,
+                   shadowOffset);
+
+    painter.setPen(fgPen);
+    QRect bboxLeft;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignLeft,
+                     textLeft,
+                     &bboxLeft);
+
+    QRect bboxRight;
+    painter.drawText(bbox,
+                     vertAlignment | Qt::AlignRight,
+                     textRight,
+                     &bboxRight);
+
+    if (bboxText)
+    {
+      *bboxText = bboxRight;
+      *bboxText |= bboxLeft;
+    }
+  }
+
+  //----------------------------------------------------------------
   // TQImageBuffer::TQImageBuffer
   //
   TQImageBuffer::TQImageBuffer(int w, int h, QImage::Format fmt):

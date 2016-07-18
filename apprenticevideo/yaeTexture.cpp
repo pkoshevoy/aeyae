@@ -10,6 +10,7 @@
 #include <QImage>
 
 // local interfaces:
+#include "yaeCanvasQPainterUtils.h"
 #include "yaeCanvasRenderer.h"
 #include "yaeTexture.h"
 #include "yaeUtilsQt.h"

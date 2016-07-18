@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QImage>
 #include <QLineEdit>
+#include <QPainter>
 #include <QTextLayout>
 
 // local interfaces:

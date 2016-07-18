@@ -17,7 +17,9 @@
 #include <boost/shared_ptr.hpp>
 
 // Qt library:
+#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5)
 #include <QColor>
+#endif
 
 // yae includes:
 #include "yae/api/yae_api.h"
@@ -116,6 +118,7 @@ namespace yae
       return v;
     }
 
+#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5)
     Color(const QColor & c)
     {
       set_a((unsigned char)(c.alpha()));
@@ -128,6 +131,7 @@ namespace yae
     {
       return QColor(r(), g(), b(), a());
     }
+#endif
 
     inline const unsigned char & a() const { return this->operator[](0); }
     inline const unsigned char & r() const { return this->operator[](1); }
