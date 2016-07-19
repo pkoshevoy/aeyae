@@ -531,8 +531,9 @@ target_compile_definitions(aeyae PRIVATE -DYAE_DLL_EXPORTS)
 target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
 
 add_subdirectory(plugins/yae_reader_ffmpeg)
-add_subdirectory(apprenticevideo)
 add_subdirectory(tests)
+add_subdirectory(apprenticevideo)
+add_subdirectory(yamka)
 
 if (NOT (WIN32 OR APPLE))
   install(TARGETS aeyae DESTINATION lib)

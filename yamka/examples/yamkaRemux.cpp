@@ -1915,7 +1915,7 @@ usage(char ** argv, const char * message = NULL)
     std::cerr << "ERROR: " << message << std::endl;
   }
 
-  std::cerr << "VERSION: r" << YAMKA_REVISION
+  std::cerr << "VERSION: " << YAMKA_REVISION
             << std::endl;
 
   ::exit(1);
@@ -3085,7 +3085,7 @@ main(int argc, char ** argv)
 
     segInfo = segInfoIn;
     segInfo.muxingApp_.payload_.set(segInfo.muxingApp_.payload_.getDefault());
-    segInfo.writingApp_.payload_.set("yamkaRemux r" YAMKA_REVISION);
+    segInfo.writingApp_.payload_.set("yamkaRemux " YAMKA_REVISION);
 
     // segment timecode scale, such that
     // timeInNanosec := timecodeScale * (clusterTime + blockTime):

@@ -21,7 +21,7 @@ endif (WIN32)
 
 set (YAMKA_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yamkaVersion.h")
 
-add_custom_target("update_revision" ALL
+add_custom_target("update_revision_yamka" ALL
   DEPENDS
   "${PROJECT_BINARY_DIR}/yamkaVersion.h.tmp"
 )
@@ -69,7 +69,7 @@ add_library(yamka STATIC
   ${YAMKA_VERSIONED_FILES}
   )
 
-add_dependencies(yamka "update_revision")
+add_dependencies(yamka "update_revision_yamka")
 
 add_executable(yamkaTest
   examples/yamkaTest.cpp

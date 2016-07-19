@@ -312,7 +312,7 @@ if (APPLE)
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif (APPLE)
 
-add_custom_target("update_revision" ALL
+add_custom_target("update_revision_apprenticevideo" ALL
   DEPENDS
 #  ${YAE_VERSIONED_FILES}
   "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
@@ -375,7 +375,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "update_revision")
+add_dependencies(${PROGNAME} "update_revision_apprenticevideo")
 
 set(TARGET_LIBS
   ${TARGET_LIBS}
@@ -619,7 +619,7 @@ if (WIN32)
     ${Boost_LIBRARIES}
     )
 
-  add_dependencies(wixWrapper "update_revision")
+  add_dependencies(wixWrapper "update_revision_apprenticevideo")
 
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")
