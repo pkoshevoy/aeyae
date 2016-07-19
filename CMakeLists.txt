@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1.0)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 project(aeyae)
@@ -534,6 +534,7 @@ add_subdirectory(plugins/yae_reader_ffmpeg)
 add_subdirectory(tests)
 add_subdirectory(apprenticevideo)
 add_subdirectory(yamka)
+add_subdirectory(replay)
 
 if (NOT (WIN32 OR APPLE))
   install(TARGETS aeyae DESTINATION lib)
