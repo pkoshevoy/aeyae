@@ -1840,6 +1840,8 @@ namespace yae
     int err = AVERROR(EAGAIN);
     while (err == AVERROR(EAGAIN))
     {
+      boost::this_thread::interruption_point();
+
       err = avcodec_send_packet(codecContext, &packet);
 
       if (!this->decodePull())
@@ -2925,6 +2927,8 @@ namespace yae
 
       while (!packetPtr || packet.size)
       {
+        boost::this_thread::interruption_point();
+
         // Decode audio frame
         err_send = avcodec_send_packet(codecContext, &packet);
         if (err_send < 0 &&
