@@ -154,6 +154,65 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   yae::IReaderPtr reader = yae::openFile(readerPrototype, fn);
+  if (!reader)
+  {
+    std::cerr
+      << "ERROR: file open failed for " << fn.toUtf8().constData()
+      << std::endl;
+    return -2;
+  }
+
+  bool hasVideo = reader->getNumberOfVideoTracks() > 0;
+  yae::VideoTraits vtts;
+  if (hasVideo)
+  {
+    reader->selectVideoTrack(0);
+    reader->getVideoTraits(vtts);
+  }
+
+  bool hasAudio = reader->getNumberOfAudioTracks() > 0;
+  yae::AudioTraits atts;
+  if (hasAudio)
+  {
+    reader->selectAudioTrack(0);
+    reader->getAudioTraits(atts);
+  }
+
+  yae::TVideoFramePtr v0;
+  yae::TVideoFramePtr v1;
+  yae::TAudioFramePtr af;
+  yae::QueueWaitMgr terminator;
+
+  reader->threadStart();
+
+  while (hasVideo && hasAudio)
+  {
+    // assemble audio/video pairs,
+    // 1 image paired with samplerate/fps worth of audio samples
+    if (hasVideo && !v1)
+    {
+      hasVideo = reader->readVideo(v1, &terminator);
+      if (!v0)
+      {
+        v0.swap(v1);
+        continue;
+      }
+    }
+
+    if (hasAudio && !af)
+    {
+      hasAudio = reader->readAudio(af, &terminator);
+    }
+
+    // given v0 and v1 -- calculate exat frame duration of v0,
+    // and consume corresponding number of audio samples;
+    // push the resulting audio/video pair to output queue
+
+    // FIXME:
+    break;
+  }
+
+  reader->threadStop();
   return 0;
 }
 

@@ -50,7 +50,7 @@ endif ()
 
 
 set(project_sources
-  yaeMain.cpp
+  yaeReplay.cpp
     ../apprenticevideo/yaeUtilsQt.h
     ../apprenticevideo/yaeUtilsQt.cpp
   )
