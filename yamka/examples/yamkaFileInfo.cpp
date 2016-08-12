@@ -274,8 +274,8 @@ struct Examiner : public IElementCrawler
             std::cout << ", discardable";
           }
 
-          std::cout << ", " << block.getNumberOfFrames()
-                    << " frames";
+          std::size_t n = block.getNumberOfFrames();
+          std::cout << ", " << (n == 1 ? "frame" : "frames");
         }
         else
         {
@@ -285,6 +285,21 @@ struct Examiner : public IElementCrawler
           {
             std::cout << ", size " << binSize;
           }
+        }
+
+        static const char * hex = "0123456789abcdef";
+        HodgePodgeConstIter blockDataIter(vBinary->data_);
+        const uint64 nbytes = vBinary->data_.numBytes();
+        uint64 n = std::min<uint64>(nbytes, 16);
+        for (std::size_t i = 0; i < n; i++)
+        {
+          unsigned char b = blockDataIter[i];
+          std::cout << ' ' << hex[b >> 4] << hex[b & 0xf];
+        }
+
+        if (n < nbytes)
+        {
+          std::cout << " ...";
         }
       }
       else if (vEltPos)
