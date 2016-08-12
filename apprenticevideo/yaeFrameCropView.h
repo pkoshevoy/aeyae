@@ -44,6 +44,8 @@ namespace yae
 
     // virtual:
     void get(Property property, double & value) const;
+
+    using ExprItem<BBoxRef>::get;
   };
 
   //----------------------------------------------------------------
