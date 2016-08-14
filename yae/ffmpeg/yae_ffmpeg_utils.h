@@ -11,6 +11,7 @@
 
 // aeyae:
 #include "../api/yae_api.h"
+#include "../video/yae_video.h"
 
 // standard C++ library:
 #include <string>
@@ -74,6 +75,33 @@ namespace yae
   //
   YAE_API AVFilterContext *
   lookup_sink(AVFilterContext * filter, const char * name);
+
+  //----------------------------------------------------------------
+  // ffmpeg_to_yae
+  //
+  YAE_API bool
+  ffmpeg_to_yae(enum AVSampleFormat givenFormat,
+                TAudioSampleFormat & sampleFormat,
+                TAudioChannelFormat & channelFormat);
+
+  //----------------------------------------------------------------
+  // yae_to_ffmpeg
+  //
+  YAE_API enum AVSampleFormat
+  yae_to_ffmpeg(TAudioSampleFormat sampleFormat,
+                TAudioChannelFormat channelFormat);
+
+  //----------------------------------------------------------------
+  // getTrackLang
+  //
+  YAE_API const char *
+  getTrackLang(const AVDictionary * metadata);
+
+  //----------------------------------------------------------------
+  // getTrackName
+  //
+  YAE_API const char *
+  getTrackName(const AVDictionary * metadata);
 
 }
 

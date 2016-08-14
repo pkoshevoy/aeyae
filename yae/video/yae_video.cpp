@@ -7,9 +7,10 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard C++ library:
-#include <new>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <new>
 #include <sstream>
 #include <stdlib.h>
 #include <string.h>
@@ -299,6 +300,80 @@ namespace yae
        << std::setw(2) << std::setfill('0') << frameNo;
 
     ts = std::string(os.str().c_str());
+  }
+
+
+  //----------------------------------------------------------------
+  // standardFrameRates
+  //
+  static const double standardFrameRates[] = {
+    24000.0 / 1001.0,
+    24.0,
+    25.0,
+    30000.0 / 1001.0,
+    30.0,
+    50.0,
+    60000.0 / 1001.0,
+    60.0,
+    120.0,
+    120000.0 / 1001.0,
+    240.0,
+    240000.0 / 1001.0,
+    480.0,
+    480000.0 / 1001.0
+  };
+
+  //----------------------------------------------------------------
+  // closestStandardFrameRate
+  //
+  double
+  closestStandardFrameRate(double fps)
+  {
+    const std::size_t n = sizeof(standardFrameRates) / sizeof(double);
+    double bestErr = std::numeric_limits<double>::max();
+    double closest = fps;
+    for (std::size_t i = 0; i < n; i++)
+    {
+      double err = fabs(fps - standardFrameRates[i]);
+      if (err <= bestErr)
+      {
+        bestErr = err;
+        closest = standardFrameRates[i];
+      }
+    }
+
+    return (bestErr < 1e-3) ? closest : fps;
+  }
+
+  //----------------------------------------------------------------
+  // timeBaseForFrameRate
+  //
+  // base_ -- ticks per second
+  // time_ -- frame duration expressed per base_
+  //
+  TTime
+  frameDurationForFrameRate(double fps)
+  {
+    double frameDuration = 1000000.0;
+
+    double frac = ceil(fps) - fps;
+    if (frac == 0.0)
+    {
+      frameDuration = 1000.0;
+    }
+    else
+    {
+      double stdFps = closestStandardFrameRate(fps);
+      double fpsErr = fabs(stdFps - fps);
+      if (fpsErr < 1e-3)
+      {
+        frac = ceil(stdFps) - stdFps;
+        frameDuration = (frac > 0) ? 1001.0 : 1000.0;
+        fps = stdFps;
+      }
+    }
+
+    return TTime(int64(frameDuration), uint64(frameDuration * fps));
   }
 
   //----------------------------------------------------------------
@@ -757,6 +832,26 @@ namespace yae
 
     return same;
   }
+
+
+  //----------------------------------------------------------------
+  // TAudioFrame::numSamples
+  //
+  std::size_t
+  TAudioFrame::numSamples() const
+  {
+    unsigned int sampleSize = getBitsPerSample(traits_.sampleFormat_) / 8;
+    YAE_ASSERT(sampleSize > 0);
+
+    int channels = getNumberOfChannels(traits_.channelLayout_);
+    YAE_ASSERT(channels > 0);
+
+    std::size_t bytesPerSample = channels * sampleSize;
+    std::size_t frameSize = data_->rowBytes(0);
+    std::size_t samples = bytesPerSample ? (frameSize / bytesPerSample) : 0;
+    return samples;
+  }
+
 
   //----------------------------------------------------------------
   // TTrackInfo::TTrackInfo

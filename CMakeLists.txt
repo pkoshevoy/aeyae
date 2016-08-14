@@ -480,6 +480,8 @@ add_library(aeyae SHARED
 
   yae/ffmpeg/yae_audio_fragment.h
   yae/ffmpeg/yae_audio_tempo_filter.h
+  yae/ffmpeg/yae_audio_track.cpp
+  yae/ffmpeg/yae_audio_track.h
   yae/ffmpeg/yae_pixel_format_ffmpeg.cpp
   yae/ffmpeg/yae_pixel_format_ffmpeg.h
   yae/ffmpeg/yae_ffmpeg_audio_filter_graph.cpp
@@ -488,6 +490,14 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_ffmpeg_utils.h
   yae/ffmpeg/yae_ffmpeg_video_filter_graph.cpp
   yae/ffmpeg/yae_ffmpeg_video_filter_graph.h
+  yae/ffmpeg/yae_movie.cpp
+  yae/ffmpeg/yae_movie.h
+  yae/ffmpeg/yae_subtitles_track.cpp
+  yae/ffmpeg/yae_subtitles_track.h
+  yae/ffmpeg/yae_track.cpp
+  yae/ffmpeg/yae_track.h
+  yae/ffmpeg/yae_video_track.cpp
+  yae/ffmpeg/yae_video_track.h
 
   yae/thread/yae_queue.h
   yae/thread/yae_threading.h

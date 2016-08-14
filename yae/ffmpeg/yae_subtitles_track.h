@@ -1,0 +1,112 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created   : Thu May 27 21:03:47 MDT 2010
+// Copyright : Pavel Koshevoy
+// License   : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+#ifndef YAE_SUBTITLES_TRACK_H_
+#define YAE_SUBTITLES_TRACK_H_
+
+// system includes:
+#include <vector>
+
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#endif
+
+// ffmpeg includes:
+extern "C"
+{
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+}
+
+// yae includes:
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/video/yae_video.h"
+
+
+namespace yae
+{
+
+  //----------------------------------------------------------------
+  // TVobSubSpecs
+  //
+  struct TVobSubSpecs
+  {
+    TVobSubSpecs();
+
+    void init(const unsigned char * extraData, std::size_t size);
+
+    // reference frame origin and dimensions:
+    int x_;
+    int y_;
+    int w_;
+    int h_;
+
+    double scalex_;
+    double scaley_;
+    double alpha_;
+
+    // color palette:
+    std::vector<std::string> palette_;
+  };
+
+  //----------------------------------------------------------------
+  // TSubsFrameQueue
+  //
+  typedef Queue<TSubsFrame> TSubsFrameQueue;
+
+
+  //----------------------------------------------------------------
+  // SubtitlesTrack
+  //
+  struct SubtitlesTrack
+  {
+    SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0);
+    ~SubtitlesTrack();
+
+    void clear();
+    void open();
+    void close();
+
+    void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next);
+    void fixupEndTimes(double v1, const TSubsFrame & last);
+    void expungeOldSubs(double v0);
+    void get(double v0, double v1, std::list<TSubsFrame> & subs);
+
+  private:
+    SubtitlesTrack(const SubtitlesTrack & given);
+    SubtitlesTrack & operator = (const SubtitlesTrack & given);
+
+  public:
+    AVStream * stream_;
+    AVCodec * codec_;
+    AVCodecContext * codecContext_;
+
+    bool render_;
+    TSubsFormat format_;
+    std::string name_;
+    std::string lang_;
+    std::size_t index_;
+
+    TIPlanarBufferPtr extraData_;
+    TSubsFrameQueue queue_;
+    std::list<TSubsFrame> active_;
+
+    TVobSubSpecs vobsub_;
+  };
+
+  //----------------------------------------------------------------
+  // TSubsTrackPtr
+  //
+  typedef boost::shared_ptr<SubtitlesTrack> TSubsTrackPtr;
+
+}
+
+
+#endif // YAE_SUBTITLES_TRACK_H_

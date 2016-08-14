@@ -100,12 +100,27 @@ namespace yae
     inline double toSeconds() const
     { return double(time_) / double(base_); }
 
+    inline double perSecond() const
+    { return double(base_) / double(time_); }
+
     inline bool operator == (const TTime & t) const
     { return time_ == t.time_ && base_ == t.base_; }
 
     int64 time_;
     uint64 base_;
   };
+
+  //----------------------------------------------------------------
+  // closestStandardFrameRate
+  //
+  YAE_API double
+  closestStandardFrameRate(double fps);
+
+  //----------------------------------------------------------------
+  // frameDurationForFrameRate
+  //
+  YAE_API TTime
+  frameDurationForFrameRate(double fps);
 
   //----------------------------------------------------------------
   // TAudioSampleFormat
@@ -597,7 +612,11 @@ namespace yae
   //----------------------------------------------------------------
   // TAudioFrame
   //
-  typedef TFrame<AudioTraits> TAudioFrame;
+  struct YAE_API TAudioFrame : public TFrame<AudioTraits>
+  {
+    // helper:
+    std::size_t numSamples() const;
+  };
 
   //----------------------------------------------------------------
   // TAudioFramePtr

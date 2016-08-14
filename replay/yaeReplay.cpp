@@ -21,6 +21,7 @@
 #endif
 
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 // boost:
@@ -43,6 +44,7 @@
 // yae includes:
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
 #include "yae/utils/yae_utils.h"
 
 // local includes:
@@ -162,6 +164,10 @@ mainMayThrowException(int argc, char ** argv)
     return -2;
   }
 
+  std::cerr
+    << "file opened: " << fn.toUtf8().constData()
+    << std::endl;
+
   bool hasVideo = reader->getNumberOfVideoTracks() > 0;
   yae::VideoTraits vtts;
   if (hasVideo)
@@ -170,13 +176,32 @@ mainMayThrowException(int argc, char ** argv)
     reader->getVideoTraits(vtts);
   }
 
+  yae::TTime frameDuration = yae::frameDurationForFrameRate(vtts.frameRate_);
+  double fps = frameDuration.perSecond();
+  std::cerr
+    << "output fps: " << fps << ", original " << vtts.frameRate_ << '\n'
+    << "frame duration: " << frameDuration.time_
+    << " / " << frameDuration.base_
+    << std::endl;
+
   bool hasAudio = reader->getNumberOfAudioTracks() > 0;
   yae::AudioTraits atts;
   if (hasAudio)
   {
     reader->selectAudioTrack(0);
     reader->getAudioTraits(atts);
+
+    // override audio traits for something more palettable:
+    atts.channelFormat_ = yae::kAudioChannelsPacked;
+    atts.sampleFormat_ = yae::kAudio16BitNative;
+    bool ok = reader->setAudioTraitsOverride(atts);
+    YAE_ASSERT(ok);
   }
+
+  double samplesPerFrame = atts.sampleRate_ / fps;
+  std::cerr
+    << "audio samples per frame: " << samplesPerFrame
+    << std::endl;
 
   yae::TVideoFramePtr v0;
   yae::TVideoFramePtr v1;
@@ -185,31 +210,73 @@ mainMayThrowException(int argc, char ** argv)
 
   reader->threadStart();
 
+  yae::int64 v_t0 = 0;
+  yae::int64 v_t1 = 0;
+  yae::int64 v_dt = 0;
+
+  yae::int64 a_t0 = 0;
+  yae::int64 a_t1 = 0;
+  yae::int64 a_dt = 0;
+
   while (hasVideo && hasAudio)
   {
     // assemble audio/video pairs,
     // 1 image paired with samplerate/fps worth of audio samples
-    if (hasVideo && !v1)
+    while (hasVideo)
     {
+      std::swap(v_t1, v_t0);
+      v0.swap(v1);
+
       hasVideo = reader->readVideo(v1, &terminator);
-      if (!v0)
+      if (!(v1 && v1->data_))
       {
-        v0.swap(v1);
-        continue;
+        hasVideo = false;
+        v_t1 = v_t0;
+        v_dt = 0;
+        break;
+      }
+
+      v_t1 = v1->time_.getTime(atts.sampleRate_);
+      v_dt = v_t1 - v_t0;
+
+      if (v0)
+      {
+        break;
       }
     }
 
-    if (hasAudio && !af)
+    // frame duration, nsamples:
+    std::cerr
+      << "video frame duration: " << v_dt << " / " << atts.sampleRate_
+      << " @ " << v0->time_.to_hhmmss_usec()
+      << std::endl;
+
+    while (hasAudio && (a_t1 < v_t1))
     {
       hasAudio = reader->readAudio(af, &terminator);
+      if (!(af && af->data_))
+      {
+        a_t0 = a_t1;
+        a_dt = 0;
+        break;
+      }
+
+      a_dt = af->numSamples();
+      a_t0 = af->time_.getTime(atts.sampleRate_);
+      a_t1 = a_t0 + a_dt;
+
+      std::cerr
+        << "audio frame duration: " << a_dt << " / " << atts.sampleRate_
+        << " @ " << af->time_.to_hhmmss_usec()
+        << std::endl;
     }
 
-    // given v0 and v1 -- calculate exat frame duration of v0,
+    // given v0 and v1 -- calculate exact frame duration of v0,
     // and consume corresponding number of audio samples;
     // push the resulting audio/video pair to output queue
 
     // FIXME:
-    break;
+    // break;
   }
 
   reader->threadStop();

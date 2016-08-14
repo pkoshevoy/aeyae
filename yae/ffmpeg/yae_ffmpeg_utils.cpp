@@ -95,4 +95,149 @@ namespace yae
     return NULL;
   }
 
+  //----------------------------------------------------------------
+  // ffmpeg_to_yae
+  //
+  bool
+  ffmpeg_to_yae(enum AVSampleFormat givenFormat,
+                TAudioSampleFormat & sampleFormat,
+                TAudioChannelFormat & channelFormat)
+  {
+    channelFormat =
+      (givenFormat == AV_SAMPLE_FMT_U8  ||
+       givenFormat == AV_SAMPLE_FMT_S16 ||
+       givenFormat == AV_SAMPLE_FMT_S32 ||
+       givenFormat == AV_SAMPLE_FMT_FLT ||
+       givenFormat == AV_SAMPLE_FMT_DBL) ?
+      kAudioChannelsPacked : kAudioChannelsPlanar;
+
+    switch (givenFormat)
+    {
+      case AV_SAMPLE_FMT_U8:
+      case AV_SAMPLE_FMT_U8P:
+        sampleFormat = kAudio8BitOffsetBinary;
+        break;
+
+      case AV_SAMPLE_FMT_S16:
+      case AV_SAMPLE_FMT_S16P:
+#ifdef __BIG_ENDIAN__
+        sampleFormat = kAudio16BitBigEndian;
+#else
+        sampleFormat = kAudio16BitLittleEndian;
+#endif
+        break;
+
+      case AV_SAMPLE_FMT_S32:
+      case AV_SAMPLE_FMT_S32P:
+#ifdef __BIG_ENDIAN__
+        sampleFormat = kAudio32BitBigEndian;
+#else
+        sampleFormat = kAudio32BitLittleEndian;
+#endif
+        break;
+
+      case AV_SAMPLE_FMT_FLT:
+      case AV_SAMPLE_FMT_FLTP:
+        sampleFormat = kAudio32BitFloat;
+        break;
+
+      case AV_SAMPLE_FMT_DBL:
+      case AV_SAMPLE_FMT_DBLP:
+        sampleFormat = kAudio64BitDouble;
+        break;
+
+      default:
+        channelFormat = kAudioChannelFormatInvalid;
+        sampleFormat = kAudioInvalidFormat;
+        return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // yae_to_ffmpeg
+  //
+  enum AVSampleFormat
+  yae_to_ffmpeg(TAudioSampleFormat sampleFormat,
+                TAudioChannelFormat channelFormat)
+  {
+    bool planar = channelFormat == kAudioChannelsPlanar;
+
+    switch (sampleFormat)
+    {
+      case kAudio8BitOffsetBinary:
+        return (planar ? AV_SAMPLE_FMT_U8P : AV_SAMPLE_FMT_U8);
+
+      case kAudio16BitBigEndian:
+      case kAudio16BitLittleEndian:
+        YAE_ASSERT(sampleFormat == kAudio16BitNative);
+        return (planar ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16);
+
+      case kAudio32BitBigEndian:
+      case kAudio32BitLittleEndian:
+        YAE_ASSERT(sampleFormat == kAudio32BitNative);
+        return (planar ? AV_SAMPLE_FMT_S32P : AV_SAMPLE_FMT_S32);
+
+      case kAudio32BitFloat:
+        return (planar ? AV_SAMPLE_FMT_FLTP : AV_SAMPLE_FMT_FLT);
+
+      case kAudio64BitDouble:
+        return (planar ? AV_SAMPLE_FMT_DBLP : AV_SAMPLE_FMT_DBL);
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return AV_SAMPLE_FMT_NONE;
+  }
+
+
+  //----------------------------------------------------------------
+  // getTrackLang
+  //
+  const char *
+  getTrackLang(const AVDictionary * metadata)
+  {
+    const AVDictionaryEntry * lang = av_dict_get(metadata,
+                                                 "language",
+                                                 NULL,
+                                                 0);
+
+    if (lang)
+    {
+      return lang->value;
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // getTrackName
+  //
+  const char *
+  getTrackName(const AVDictionary * metadata)
+  {
+    const AVDictionaryEntry * name = av_dict_get(metadata,
+                                                 "name",
+                                                 NULL,
+                                                 0);
+    if (name)
+    {
+      return name->value;
+    }
+
+    const AVDictionaryEntry * title = av_dict_get(metadata,
+                                                  "title",
+                                                  NULL,
+                                                  0);
+    if (title)
+    {
+      return title->value;
+    }
+
+    return NULL;
+  }
+
 }
