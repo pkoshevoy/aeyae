@@ -54,7 +54,7 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack
   //
-  struct VideoTrack : public Track
+  struct YAE_API VideoTrack : public Track
   {
     VideoTrack(Track & track);
 

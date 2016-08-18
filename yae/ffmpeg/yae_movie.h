@@ -44,7 +44,7 @@ namespace yae
   //----------------------------------------------------------------
   // Movie
   //
-  struct Movie
+  struct YAE_API Movie
   {
     Movie();
 

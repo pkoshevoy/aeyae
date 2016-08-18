@@ -36,7 +36,7 @@ namespace yae
   //----------------------------------------------------------------
   // TVobSubSpecs
   //
-  struct TVobSubSpecs
+  struct YAE_API TVobSubSpecs
   {
     TVobSubSpecs();
 
@@ -65,7 +65,7 @@ namespace yae
   //----------------------------------------------------------------
   // SubtitlesTrack
   //
-  struct SubtitlesTrack
+  struct YAE_API SubtitlesTrack
   {
     SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0);
     ~SubtitlesTrack();
