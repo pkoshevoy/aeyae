@@ -46,13 +46,15 @@
 // boost:
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 // aeyae:
 #include "yae_utils.h"
 #include "../video/yae_video.h"
 
-// namespace shortcut:
+// namespace shortcuts:
 namespace fs = boost::filesystem;
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -317,13 +319,13 @@ namespace yae
 
     if (indexName != std::string::npos)
     {
-      folder = filePath.substr(0, indexName);
       name = filePath.substr(indexName + 1, filePath.size());
+      folder = filePath.substr(0, indexName);
       return true;
     }
 
-    folder = std::string();
     name = filePath;
+    folder = std::string();
     return false;
   }
 
@@ -485,6 +487,18 @@ namespace yae
       if (fs::is_directory(lib))
       {
         pluginPathUtf8 = lib;
+      }
+    }
+    else if (bin != "bin" && al::ends_with(parent, "bin"))
+    {
+      std::string subFolder = bin;
+      if (parseFilePath(parent, parent, bin))
+      {
+        std::string lib = (fs::path(parent) / "lib" / subFolder).string();
+        if (fs::is_directory(lib))
+        {
+          pluginPathUtf8 = lib;
+        }
       }
     }
 #endif
