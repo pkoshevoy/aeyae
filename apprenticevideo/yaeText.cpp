@@ -260,7 +260,7 @@ namespace yae
     {
       const Color & color = item.color_.get();
 
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) && defined(__APPLE__)
+#ifndef _WIN32
       Color bg = color.transparent();
 #else
       const Color & bg = item.background_.get();

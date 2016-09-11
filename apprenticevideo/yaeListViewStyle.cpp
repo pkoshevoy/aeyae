@@ -63,8 +63,8 @@ namespace yae
     filter_shadow_.reset(new TGradient());
     {
       TGradient & gradient = *filter_shadow_;
-      gradient[0.000] = Color(0xdfdfdf, 1.0);
-      gradient[0.519] = Color(0xdfdfdf, 0.9);
+      gradient[0.000] = Color(0x1f1f1f, 1.0);
+      gradient[0.519] = Color(0x1f1f1f, 0.9);
       gradient[0.520] = Color(0x000000, 0.5);
       gradient[0.570] = Color(0x000000, 0.0);
       gradient[1.000] = Color(0x000000, 0.0);
@@ -77,57 +77,57 @@ namespace yae
       gradient[0.000] = Color(0x000000, 0.0);
       gradient[0.580] = Color(0x000000, 0.0);
       gradient[0.634] = Color(0x000000, 0.5);
-      gradient[0.635] = Color(0xdfdfdf, 0.9);
-      gradient[1.000] = Color(0xdfdfdf, 1.0);
+      gradient[0.635] = Color(0x000000, 0.9);
+      gradient[1.000] = Color(0x000000, 1.0);
     }
 
     // color palette:
-    bg_ = Color(0xffffff, 0.87);
-    fg_ = Color(0x000000, 1.0);
+    bg_ = Color(0x1f1f1f, 0.87);
+    fg_ = Color(0xffffff, 1.0);
 
-    border_ = Color(0xafafaf, 1.0);
-    cursor_ = Color(0xff7f00, 1.0);
-    scrollbar_ = Color(0xafafaf, 0.75);
-    separator_ = Color(0x7f7f7f, 0.25);
-    underline_ = Color(0x3f7fff, 1.0);
+    border_ = Color(0x7f7f7f, 1.0);
+    cursor_ = Color(0xf12b24, 1.0);
+    scrollbar_ = Color(0x7f7f7f, 0.5);
+    separator_ = scrollbar_;
+    underline_ = cursor_;
 
     bg_xbutton_ = Color(0x000000, 0.0);
-    fg_xbutton_ = Color(0x000000, 0.25);
+    fg_xbutton_ = Color(0xffffff, 0.5);
 
-    bg_focus_ = Color(0xffffff, 0.5);
-    fg_focus_ = Color(0x000000, 0.5);
+    bg_focus_ = Color(0x7f7f7f, 0.5);
+    fg_focus_ = Color(0xffffff, 1.0);
 
-    bg_edit_selected_ = underline_;
-    fg_edit_selected_ = Color(0xffffff, 1.0);
+    bg_edit_selected_ = Color(0xffffff, 1.0);
+    fg_edit_selected_ = Color(0x000000, 1.0);
 
-    bg_timecode_ = Color(0xffffff, 0.5);
-    fg_timecode_ = Color(0x3f3f3f, 0.5);
+    bg_timecode_ = Color(0x7f7f7f, 0.25);
+    fg_timecode_ = Color(0xFFFFFF, 0.5);
 
     bg_controls_ = bg_timecode_;
-    fg_controls_ = fg_timecode_;
+    fg_controls_ = fg_timecode_.opaque(0.75);
 
-    bg_hint_ = Color(0xffffff, 0.0);
-    fg_hint_ = Color(0x1f1f1f, 0.5);
+    bg_hint_ = Color(0x1f1f1f, 0.0);
+    fg_hint_ = Color(0xffffff, 0.5);
 
-    bg_badge_ = Color(0xff7f00, 1.0);
-    fg_badge_ = Color(0xffffff, 0.5);
+    bg_badge_ = Color(0x7f7f7f, 0.5);
+    fg_badge_ = Color(0xffffff, 1.0);
 
-    bg_label_ = Color(0xffffff, 0.0);
-    fg_label_ = Color(0x000000, 1.0);
+    bg_group_ = Color(0x7f7f7f, 0.75);
+    fg_group_ = Color(0xffffff, 1.0);
+
+    bg_item_ = Color(0x000000, 0.0);
+    bg_item_playing_ = Color(0x7f7f7f, 0.1);
+    bg_item_selected_ = Color(0x7f7f7f, 0.2);
+
+    bg_label_ = Color(0x3f3f3f, 0.5);
+    fg_label_ = Color(0xffffff, 1.0);
 
     bg_label_selected_ = bg_item_selected_.transparent();
     fg_label_selected_ = Color(0xffffff, 1.0);
 
-    bg_group_ = Color(0xafafaf, 0.75);
-    fg_group_ = Color(0xffffff, 1.0);
-
-    bg_item_ = Color(0xffffff, 0.0);
-    bg_item_playing_ = cursor_.a_scaled(0.75);
-    bg_item_selected_ = underline_.a_scaled(0.75);
-
-    timeline_played_ = underline_;
-    timeline_included_ = timeline_played_.a_scaled(0.5);
-    timeline_excluded_ = Color(0x7f7f7f, 0.5);
+    timeline_played_ = cursor_;
+    timeline_included_ = Color(0xFFFFFF, 0.5);
+    timeline_excluded_ = Color(0xFFFFFF, 0.2);
 
     // configure common style attributes:
     title_height_.height_ =
@@ -136,7 +136,7 @@ namespace yae
     // generate an x-button texture:
     {
       QImage img =
-        xbuttonImage(128, fg_xbutton_, bg_xbutton_.transparent(), 0.1);
+        xbuttonImage(128, fg_xbutton_, fg_xbutton_.transparent(), 0.1);
       xbutton_->setImage(img);
     }
 
@@ -190,10 +190,10 @@ namespace yae
       addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
 
     cell_height_.height_ =
-      ItemRef::scale(title_height_, kPropertyHeight, 1.0);
+      ItemRef::scale(title_height_, kPropertyHeight, 0.84);
 
     font_size_.height_ =
-      ItemRef::scale(title_height_, kPropertyHeight, 0.52);
+      ItemRef::scale(title_height_, kPropertyHeight, 0.46);
 
     now_playing_.anchors_.top_ = ItemRef::constant(0.0);
     now_playing_.anchors_.left_ = ItemRef::constant(0.0);
@@ -211,7 +211,7 @@ namespace yae
     eyetv_badge_.font_.setBold(false);
     eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
                                             kPropertyHeight,
-                                            0.7 * kDpiScale);
+                                            1.0 * kDpiScale);
 
     layout_root_.reset(new GroupListLayout());
     layout_group_.reset(new ItemListLayout());
