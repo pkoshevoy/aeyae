@@ -1294,10 +1294,9 @@ namespace the
   //----------------------------------------------------------------
   // open_folder_t::open_folder_t
   //
-  // NOTE: the constructor may throw exceptions if the folder
-  //       doesn't exist, or is inaccessible.
-  // NOTE: the constructor parses the first item in the folder,
-  //       it may throw an exception if it can parse the item,
+  // NOTE: the constructor may throw exceptions if the folder doesn't
+  // exist, is inaccessible, or an error occurs when parsing first item.
+  //
   open_folder_t::open_folder_t(const std::string & folder_path):
     private_(new open_folder_t::private_t(folder_path))
   {}
