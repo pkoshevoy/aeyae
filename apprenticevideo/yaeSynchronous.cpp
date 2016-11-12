@@ -24,7 +24,7 @@ using boost::posix_time::to_simple_string;
 //----------------------------------------------------------------
 // YAE_DEBUG_SHARED_CLOCK
 //
-#define YAE_DEBUG_SHARED_CLOCK 1
+#define YAE_DEBUG_SHARED_CLOCK 0
 
 
 namespace yae
@@ -218,14 +218,17 @@ namespace yae
 
       return true;
     }
-    else if (notifyObserver &&
-             timeSegment.observer_ &&
-             !masterClockIsAccurate)
+
+    if (notifyObserver && !masterClockIsAccurate)
     {
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
+      if (timeSegment.observer_)
+      {
 #ifdef YAE_DEBUG_SHARED_CLOCK
-      std::cerr << "MASTER CLOCK IS NOT ACCURATE" << std::endl;
+        std::cerr << "MASTER CLOCK IS NOT ACCURATE" << std::endl;
 #endif
-      timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+        timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+      }
     }
 
     return false;
@@ -470,6 +473,7 @@ namespace yae
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
+
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
     timeSegment.observer_ = observer;
   }
@@ -484,8 +488,8 @@ namespace yae
     {
       TTimeSegmentPtr keepAlive(shared_);
       TimeSegment & timeSegment = *keepAlive;
-      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
 
+      boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       if (timeSegment.observer_)
       {
         timeSegment.observer_->noteTheClockHasStopped(*this);

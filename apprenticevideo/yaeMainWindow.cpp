@@ -1231,8 +1231,22 @@ namespace yae
   // MainWindow::openFile
   //
   IReader *
-  MainWindow::openFile(const QString & fn)
+  MainWindow::openFile(const QString & path)
   {
+    QString fn = path;
+    QFileInfo fi(fn);
+
+    if (fi.suffix() == kExtEyetv)
+    {
+      std::list<QString> found;
+      findFiles(found, path, false);
+
+      if (!found.empty())
+      {
+        fn = found.front();
+      }
+    }
+
     ReaderFFMPEG * reader = ReaderFFMPEG::create();
 
     for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
@@ -2826,11 +2840,22 @@ namespace yae
     std::list<QString> playlist;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
-      QString fullpath = QFileInfo(i->toLocalFile()).canonicalFilePath();
+      QUrl url = *i;
+
+#ifdef __APPLE__
+      if (url.toString().startsWith("file:///.file/id="))
+      {
+        std::string strUrl = url.toString().toUtf8().constData();
+        strUrl = yae::absoluteUrlFrom(strUrl.c_str());
+        url = QUrl::fromEncoded(QByteArray(strUrl.c_str()));
+      }
+#endif
+
+      QString fullpath = QFileInfo(url.toLocalFile()).canonicalFilePath();
       if (!addToPlaylist(playlist, fullpath))
       {
-        QString url = i->toString();
-        addToPlaylist(playlist, url);
+        QString strUrl = url.toString();
+        addToPlaylist(playlist, strUrl);
       }
     }
 

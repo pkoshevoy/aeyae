@@ -271,6 +271,8 @@ if (APPLE)
 
   set(project_sources
     ${project_sources}
+    yaeAppleUtils.h
+    yaeAppleUtils.mm
     yaeAppleRemoteControl.h
     yaeAppleRemoteControl.mm
     martinkahr-apple_remote_control/AppleRemote.h
@@ -757,8 +759,6 @@ if (Qt5DBus_FOUND)
     Qt5::DBus
     )
 endif (Qt5DBus_FOUND)
-
-set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}

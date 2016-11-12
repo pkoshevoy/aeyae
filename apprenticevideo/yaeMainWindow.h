@@ -26,7 +26,8 @@
 #include <yaeVideoRenderer.h>
 #include <yaeTimelineControls.h>
 #ifdef __APPLE__
-#include <yaeAppleRemoteControl.h>
+#include "yaeAppleRemoteControl.h"
+#include "yaeAppleUtils.h"
 #endif
 
 // local includes:

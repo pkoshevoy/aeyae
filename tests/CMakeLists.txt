@@ -10,8 +10,8 @@ include_directories(AFTER
 add_executable(aeyae-tests
   aeyae_tests.cxx
   aeyae_settings_tests.cxx
-  aeyae_shared_ptr_tests.cxx
-  aeyae_benchmark_tests.cxx
+  # aeyae_shared_ptr_tests.cxx
+  # aeyae_benchmark_tests.cxx
   # aeyae_frame_observer_tests.cxx
   # aeyae_log_tests.cxx
   )

@@ -3265,13 +3265,20 @@ namespace yae
     timerScreenSaver_.setSingleShot(true);
     timerScreenSaver_.setInterval(29000);
 
+    timerScreenSaverUnInhibit_.setSingleShot(true);
+    timerScreenSaverUnInhibit_.setInterval(59000);
+
     bool ok = true;
     ok = connect(&timerHideCursor_, SIGNAL(timeout()),
                  this, SLOT(hideCursor()));
     YAE_ASSERT(ok);
 
     ok = connect(&timerScreenSaver_, SIGNAL(timeout()),
-                 this, SLOT(wakeScreenSaver()));
+                 this, SLOT(screenSaverInhibit()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&timerScreenSaverUnInhibit_, SIGNAL(timeout()),
+                 this, SLOT(screenSaverUnInhibit()));
     YAE_ASSERT(ok);
 
     greeting_ = tr("drop videos/music here\n\n"
@@ -3632,7 +3639,7 @@ namespace yae
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(left, right, bottom, top);
+    glOrtho(left, right, bottom, top, -1.0, 1.0);
 
     if (cameraRotation && cameraRotation % 90 == 0)
     {
@@ -3693,7 +3700,7 @@ namespace yae
 
       glMatrixMode(GL_PROJECTION);
       glLoadIdentity();
-      gluOrtho2D(0, canvasWidth, canvasHeight, 0);
+      glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0);
 
       float zebra[2][3] = {
         { 1.0f, 1.0f, 1.0f },
@@ -4588,10 +4595,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Canvas::wakeScreenSaver
+  // screenSaverUnInhibitCookie
+  //
+  static unsigned int screenSaverUnInhibitCookie = 0;
+
+  //----------------------------------------------------------------
+  // Canvas::screenSaverInhibit
   //
   void
-  Canvas::wakeScreenSaver()
+  Canvas::screenSaverInhibit()
   {
 #ifdef __APPLE__
     UpdateSystemActivity(UsrActivity);
@@ -4634,7 +4646,31 @@ namespace yae
                                  "/ScreenSaver");
       if (screensaver.isValid())
       {
+        // apparently SimulateUserActivity is not enough to keep Ubuntu
+        // from starting the screensaver
         screensaver.call(QDBus::NoBlock, "SimulateUserActivity");
+
+        // try to inhibit the screensaver as well:
+        if (!screenSaverUnInhibitCookie)
+        {
+          QDBusMessage out =
+            screensaver.call(QDBus::Block,
+                             "Inhibit",
+                             QVariant(QApplication::applicationName()),
+                             QVariant("video playback"));
+
+          if (out.type() == QDBusMessage::ReplyMessage &&
+              !out.arguments().empty())
+          {
+            screenSaverUnInhibitCookie = out.arguments().front().toUInt();
+          }
+        }
+
+        if (screenSaverUnInhibitCookie)
+        {
+          timerScreenSaverUnInhibit_.start();
+        }
+
         done = true;
       }
     }
@@ -4642,9 +4678,31 @@ namespace yae
     if (!done)
     {
       // FIXME: not sure how to do this yet
-      std::cerr << "wakeScreenSaver" << std::endl;
+      std::cerr << "screenSaverInhibit" << std::endl;
     }
 #endif
   }
 
+  //----------------------------------------------------------------
+  // Canvas::screenSaverUnInhibit
+  //
+  void
+  Canvas::screenSaverUnInhibit()
+  {
+#if !defined(__APPLE__) && !defined(_WIN32)
+    if (screenSaverUnInhibitCookie &&
+        QDBusConnection::sessionBus().isConnected())
+    {
+      QDBusInterface screensaver("org.freedesktop.ScreenSaver",
+                                 "/ScreenSaver");
+      if (screensaver.isValid())
+      {
+        screensaver.call(QDBus::NoBlock,
+                         "UnInhibit",
+                         QVariant(screenSaverUnInhibitCookie));
+        screenSaverUnInhibitCookie = 0;
+      }
+    }
+#endif
+  }
 }

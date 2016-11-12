@@ -1,25 +1,4 @@
-#find_package(Subversion)
-#if(Subversion_FOUND)
-#  Subversion_WC_INFO("${PROJECT_SOURCE_DIR}" PROJ)
-#else(Subversion_FOUND)
-#  set(PROJ_WC_REVISION "0")
-#endif(Subversion_FOUND)
-
-# FIXME: must figure out how to map git short hash or git tag
-# to a revision number
-find_package(Git)
-if(GIT_FOUND)
-  message("git found: ${GIT_EXECUTABLE}")
-  execute_process(COMMAND ${GIT_EXECUTABLE} log -1
-    --pretty=format:git-%cd-%h
-    --date=short
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    OUTPUT_VARIABLE PROJ_WC_REVISION)
-  message("PROJ_WC_REVISION: ${PROJ_WC_REVISION}")
-else()
-  set(PROJ_WC_REVISION "0")
-endif()
-
+set(PROJ_WC_REVISION "r656")
 
 configure_file(
   "${PROJECT_SOURCE_DIR}/yaeVersion.h.in"

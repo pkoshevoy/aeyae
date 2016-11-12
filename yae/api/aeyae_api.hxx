@@ -11,8 +11,11 @@
 
 // standard C++ library:
 #include <assert.h>
-#include <cstdint>
 
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/cstdint.hpp>
+#endif
 
 //----------------------------------------------------------------
 // YAE_API
@@ -72,12 +75,12 @@ namespace yae
   //----------------------------------------------------------------
   // uint64
   //
-  typedef std::uint64_t uint64;
+  typedef boost::uint64_t uint64;
 
   //----------------------------------------------------------------
   // int64
   //
-  typedef std::int64_t int64;
+  typedef boost::int64_t int64;
 }
 
 
