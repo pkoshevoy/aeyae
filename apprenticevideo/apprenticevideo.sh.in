@@ -6,4 +6,4 @@ APP_NAME=$(basename -s .sh $0)
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}":"${LIB_DIR}":"@QT_LIBRARIES_DIR@"
 
-exec "${BIN_DIR}"/"${APP_NAME}" $@
+exec "${BIN_DIR}"/"${APP_NAME}" "${@}"
