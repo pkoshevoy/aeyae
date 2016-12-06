@@ -114,7 +114,8 @@ if (APPLE)
   set(project_sources
     ${project_sources}
     ${PROGNAME}.icns
-    InfoPlist.strings)
+    #InfoPlist.strings
+    )
 endif ()
 
 add_executable(${PROGNAME}
@@ -322,22 +323,22 @@ if (APPLE)
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
 
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
-    PROPERTIES
-    MACOSX_PACKAGE_LOCATION Resources/en.lproj)
+#  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
+#    PROPERTIES
+#    MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 
   find_program(MACDEPLOYQT NAMES macdeployqt
     HINTS ${QT_QMAKE_EXECUTABLE_DIR}
     DOC
     "macdeployqt - Qt utility used to include frameworks required by the application into its bundle")
 
-  add_custom_command(TARGET ${PROGNAME} POST_BUILD
-    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
-    ARGS
-    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
-    ${MACDEPLOYQT}
-    COMMENT "pull in external dependencies"
-    )
+#  add_custom_command(TARGET ${PROGNAME} POST_BUILD
+#    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
+#    ARGS
+#    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+#    ${MACDEPLOYQT}
+#    COMMENT "pull in external dependencies"
+#    )
 endif ()
 
 if (NOT (WIN32 OR APPLE))

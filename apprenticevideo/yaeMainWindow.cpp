@@ -595,6 +595,10 @@ namespace yae
                  playRateMapper, SLOT(map()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionNewWindow, SIGNAL(triggered()),
+                 this, SLOT(fileNewWindow()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
     YAE_ASSERT(ok);
@@ -1796,6 +1800,21 @@ namespace yae
     audioRenderer_->close();
     MainWindow::close();
     qApp->quit();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::fileNewWindow
+  //
+  void
+  MainWindow::fileNewWindow()
+  {
+    QString exePath = QCoreApplication::applicationFilePath();
+    QStringList args;
+
+    if (!QProcess::startDetached(exePath, args))
+    {
+      actionNewWindow->setEnabled(false);
+    }
   }
 
   //----------------------------------------------------------------

@@ -50,6 +50,8 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionNewWindow"/>
+    <addaction name="separator1"/>
     <addaction name="actionOpen"/>
     <addaction name="actionOpenURL"/>
     <addaction name="actionOpenFolder"/>
@@ -793,6 +795,14 @@
    </property>
    <property name="toolTip">
     <string>Repeat playlist from the beginning once the last playlist item completes playback</string>
+   </property>
+  </action>
+  <action name="actionNewWindow">
+   <property name="text">
+    <string>New Window</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
  </widget>

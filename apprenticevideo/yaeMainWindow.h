@@ -185,6 +185,7 @@ namespace yae
 
   public slots:
     // file menu:
+    void fileNewWindow();
     void fileOpen();
     void fileOpenURL();
     void fileOpenFolder();
