@@ -1,6 +1,7 @@
 #!/bin/sh
 
-BIN_DIR=$(dirname $0)
+SCRIPT_PATH=$(realpath $0)
+BIN_DIR=$(dirname ${SCRIPT_PATH})
 LIB_DIR=$(realpath "${BIN_DIR}"/../lib)
 APP_NAME=$(basename -s .sh $0)
 

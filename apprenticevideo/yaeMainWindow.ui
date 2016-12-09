@@ -51,7 +51,6 @@
      <string>&amp;File</string>
     </property>
     <addaction name="actionNewWindow"/>
-    <addaction name="separator1"/>
     <addaction name="actionOpen"/>
     <addaction name="actionOpenURL"/>
     <addaction name="actionOpenFolder"/>
