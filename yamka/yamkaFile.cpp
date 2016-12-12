@@ -12,6 +12,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #include <io.h>
 #endif
 
@@ -39,16 +40,6 @@
 #define ftello _ftelli64
 #define ftruncate _chsize_s
 #define fileno _fileno
-
-//----------------------------------------------------------------
-// __wgetmainargs
-//
-extern "C" void __wgetmainargs(int * argc,
-                               wchar_t *** argv,
-                               wchar_t *** env,
-                               int doWildCard,
-                               int * startInfo);
-
 #endif // _WIN32
 
 namespace Yamka
@@ -86,17 +77,13 @@ namespace Yamka
   get_main_args_utf8(int & argc, char **& argv)
   {
     argc = 0;
-    wchar_t ** wenpv = NULL;
-    wchar_t ** wargv = NULL;
-    int startupInfo = 0;
-
-    __wgetmainargs(&argc, &wargv, &wenpv, 1, &startupInfo);
-
-    argv = (char **)malloc(argc * sizeof(char *));
+    wchar_t * cmd = GetCommandLineW();
+    wchar_t ** wargv = CommandLineToArgvW(cmd, &argc);
     for (int i = 0; i < argc; i++)
     {
         argv[i] = utf16_to_utf8(wargv[i]);
     }
+    LocalFree(wargv);
   }
 #endif
 

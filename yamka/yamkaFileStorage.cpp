@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#include <algorithm>
 #include <sstream>
 
 // yamka includes:
