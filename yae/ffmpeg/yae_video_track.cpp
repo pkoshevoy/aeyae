@@ -599,6 +599,7 @@ namespace yae
         return true;
       }
 
+      avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
       if (!filterGraph_.push(avFrame))
       {
         YAE_ASSERT(false);
@@ -613,8 +614,8 @@ namespace yae
         TVideoFrame & vf = *vfPtr;
 
         vf.time_.base_ = stream_->time_base.den;
-        vf.time_.time_ = (stream_->time_base.num *
-                          av_frame_get_best_effort_timestamp(avFrame));
+        vf.time_.time_ = stream_->time_base.num * avFrame->pts;
+
         bool gotPTS = verify_pts(hasPrevPTS_, prevPTS_, vf.time_, stream_,
                                  "t");
 

@@ -169,6 +169,14 @@ namespace yae
     }
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    // some filters (yadif) may change the timebase,
+    // so it might be a good idea to rescale PTS back
+    // to the source time base to avoid confusing the caller:
+    frame->pts = av_rescale_q(frame->pts,
+                              sink_->inputs[0]->time_base,
+                              srcTimeBase_);
+
     return true;
   }
 
