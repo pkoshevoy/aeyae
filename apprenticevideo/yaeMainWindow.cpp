@@ -297,16 +297,26 @@ namespace yae
 
     // setup the canvas widget (QML quick widget):
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
-    QString greeting =
-      tr("drop videos/music here\n\n"
-         "press spacebar to pause/resume\n\n"
-         "alt-left/alt-right to navigate playlist\n\n"
+
 #ifdef __APPLE__
-         "use apple remote for volume and seeking\n\n"
+    QString clickOrTap = tr("click");
+#else
+    QString clickOrTap = tr("tap");
 #endif
-         "tap %1 for playlist, double-tap for fullscreen\n\n"
+
+    QString greeting =
+      tr("drop video/music files here\n\n"
+         "press Spacebar to pause/resume playback\n\n"
+         "%1 %2 to toggle the playlist view\n\n"
+         "press Alt %3, Alt %4 to skip through the playlist\n\n"
+#ifdef __APPLE__
+         "use Apple Remote to change volume or skip along the timeline\n\n"
+#endif
          "explore the menus for more options").
-      arg(QString::fromUtf8("\xE2""\x98""\xB0"));
+      arg(clickOrTap).
+      arg(QString::fromUtf8("\xE2""\x98""\xB0")). // hamburger
+      arg(QString::fromUtf8("\xE2""\x86""\x90")). // left arrow
+      arg(QString::fromUtf8("\xE2""\x86""\x92")); // right arrow
 
 #ifdef YAE_USE_QOPENGL_WIDGET
     playerWidget_ = new TPlayerWidget(this);
