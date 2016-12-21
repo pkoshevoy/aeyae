@@ -169,6 +169,36 @@ mainMayThrowException(int argc, char ** argv)
   signal(SIGPIPE, SIG_IGN);
 #endif
 
+  // check for canary invocation:
+  bool canary = false;
+  {
+    char ** src = argv + 1;
+    char ** end = argv + argc;
+    char ** dst = src;
+    for (; src < end; src++)
+    {
+      if (strcmp(*src, "--canary") == 0)
+      {
+        canary = true;
+        argc--;
+      }
+      else
+      {
+        *dst = *src;
+        dst++;
+      }
+    }
+  }
+
+#ifdef __APPLE__
+  if (!canary)
+  {
+    // show the Dock icon:
+    ProcessSerialNumber psn = { 0, kCurrentProcess };
+    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+  }
+#endif
+
   /*
   std::cout.precision(4);
   std::cerr.precision(4);
@@ -216,20 +246,12 @@ mainMayThrowException(int argc, char ** argv)
   QStringList args = app.arguments();
 
   // check for canary invocation:
-  bool canary = false;
   std::list<QString> playlist;
 
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
     const QString & arg = *i;
-    if (arg == QString::fromUtf8("--canary"))
-    {
-      canary = true;
-    }
-    else
-    {
-      yae::addToPlaylist(playlist, arg);
-    }
+    yae::addToPlaylist(playlist, arg);
   }
 
   //----------------------------------------------------------------
@@ -265,12 +287,6 @@ mainMayThrowException(int argc, char ** argv)
     // if it didn't crash, then it's all good:
     return 0;
   }
-
-#ifdef __APPLE__
-  // show the Dock icon:
-  ProcessSerialNumber psn = { 0, kCurrentProcess };
-  TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-#endif
 
   yae::mainWindow = new yae::MainWindow(readerPrototype);
   yae::mainWindow->show();

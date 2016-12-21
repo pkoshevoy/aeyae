@@ -852,11 +852,15 @@ if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
 	IS_QT4=$(./qmake -query | grep "QT_VERSION:4")
 
 	if [ -n "${IS_QT4}" ]; then
-		#./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		#"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
 		#  -no-strip
 		echo "Qt4 macdeploy breaks codesigning, skipping it..."
 	else
-		./"${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -no-strip \
+		  -qmldir="${QML_SRC_DIR}" \
+		  -always-overwrite
+		"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
 		  -no-strip \
 		  -qmldir="${QML_SRC_DIR}" \
 		  -always-overwrite
