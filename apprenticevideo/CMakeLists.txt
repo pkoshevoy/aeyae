@@ -16,6 +16,7 @@ find_package(Boost
   system
   filesystem
   locale
+  regex
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
@@ -609,6 +610,16 @@ if (APPLE)
 endif ()
 
 if (WIN32)
+  if (Qt5_FOUND)
+    execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_PLUGINS
+      OUTPUT_VARIABLE QT_PLUGINS_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(DEPLOY_QT_PLUGINS
+      "-deploy-to" "platforms" "${QT_PLUGINS_DIR}/platforms" "qwindows\.dll"
+      "-deploy-to" "imageformats" "${QT_PLUGINS_DIR}/imageformats" ".*\.dll"
+      )
+  endif ()
+
   add_executable(wixWrapper
     wixWrapper.cpp
     yaeVersion.cpp
@@ -672,6 +683,7 @@ if (WIN32)
     "-deploy" $<TARGET_FILE:${PROGNAME}>
     "-deploy" $<TARGET_FILE:yae_reader_ffmpeg>
     "-deploy" $<TARGET_FILE:aeyae>
+    ${DEPLOY_QT_PLUGINS}
     DEPENDS ${PROGNAME} wixWrapper
     COMMENT "create installer package"
     )

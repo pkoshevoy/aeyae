@@ -19,6 +19,7 @@ find_package(Boost
   locale
   chrono
   atomic
+  regex
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)

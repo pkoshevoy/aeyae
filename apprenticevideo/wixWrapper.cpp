@@ -20,16 +20,22 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <set>
 
 // boost:
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
 
 // local imports:
 #include <yaeVersion.h>
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
+namespace al = boost::algorithm;
 
 
 //----------------------------------------------------------------
@@ -282,6 +288,7 @@ usage(char ** argv, const char * message = NULL)
     << " -icon pathToIconFile"
     << " -url helpLinkURL"
     << " -deploy pathto.exe [pathto.dll]*"
+    << " -deploy-to targetSubFolder sourceFolder regex"
     << std::endl;
 
   if (message != NULL)
@@ -293,6 +300,126 @@ usage(char ** argv, const char * message = NULL)
             << std::endl;
   ::exit(1);
 }
+
+//----------------------------------------------------------------
+// TOpenFolder
+//
+struct TOpenFolder
+{
+  TOpenFolder(const std::string & folderPathUtf8):
+    path_(fs::absolute(fs::path(folderPathUtf8))),
+    iter_(path_)
+  {
+    if (iter_ == fs::directory_iterator())
+    {
+      std::ostringstream oss;
+      oss << "\"" << path_.string() << "\" folder is empty";
+      throw std::runtime_error(oss.str().c_str());
+    }
+  }
+
+  bool parseNextItem()
+  {
+    ++iter_;
+    bool ok = iter_ != fs::directory_iterator();
+    return ok;
+  }
+
+  inline std::string folderPath() const
+  {
+    return path_.string();
+  }
+
+  inline bool itemIsFolder() const
+  {
+    return
+      (iter_ != fs::directory_iterator()) &&
+      (fs::is_directory(iter_->path()));
+  }
+
+  inline std::string itemName() const
+  {
+    return iter_->path().filename().string();
+  }
+
+  inline std::string itemPath() const
+  {
+    return iter_->path().string();
+  }
+
+protected:
+  fs::path path_;
+  fs::directory_iterator iter_;
+};
+
+//----------------------------------------------------------------
+// forEachFileAt
+//
+template <typename TVisitor>
+static void
+forEachFileAt(const std::string & pathUtf8, TVisitor & callback)
+{
+  try
+  {
+    TOpenFolder folder(pathUtf8);
+    while (folder.parseNextItem())
+    {
+      std::string name = folder.itemName();
+      std::string path = folder.itemPath();
+      bool isSubFolder = folder.itemIsFolder();
+
+      if (isSubFolder)
+      {
+        if (name == "." || name == "..")
+        {
+          continue;
+        }
+      }
+
+      if (!callback(isSubFolder, name, path))
+      {
+        return;
+      }
+
+      if (isSubFolder)
+      {
+        forEachFileAt(path, callback);
+      }
+    }
+  }
+  catch (...)
+  {
+    std::string name = fs::path(pathUtf8).filename().string();
+    callback(false, name, pathUtf8);
+  }
+}
+
+//----------------------------------------------------------------
+// CollectMatchingFiles
+//
+struct CollectMatchingFiles
+{
+  CollectMatchingFiles(std::set<std::string> & dst, const std::string & regex):
+    pattern_(regex, boost::regex::icase),
+    files_(dst)
+  {}
+
+  bool operator()(bool isFolder,
+                  const std::string & name,
+                  const std::string & path)
+  {
+    if (!isFolder && boost::regex_match(name, pattern_))
+    {
+      files_.insert(path);
+    }
+
+    return true;
+  }
+
+protected:
+  boost::regex pattern_;
+  std::set<std::string> & files_;
+};
 
 //----------------------------------------------------------------
 // main
@@ -318,6 +445,8 @@ main(int argc, char ** argv)
   std::string iconFile;
   std::string helpLink;
   std::list<std::string> deploy;
+  std::map<std::string, std::set<std::string> > deployTo;
+  std::map<std::string, std::string> deployFrom;
 
   for (int i = 1; i < argc; i++)
   {
@@ -362,6 +491,21 @@ main(int argc, char ** argv)
       if ((argc - i) <= 1) usage(argv, "malformed -url parameter");
       i++;
       helpLink.assign(argv[i]);
+    }
+    else if (strcmp(argv[i], "-deploy-to") == 0)
+    {
+      if ((argc - i) <= 3) usage(argv, "malformed -deploy-to parameters");
+      i++;
+      std::string dst = tolower(fs::path(argv[i]).make_preferred().string());
+      i++;
+      std::string src = tolower(fs::path(argv[i]).make_preferred().string());
+      i++;
+      std::string regex = tolower(fs::path(argv[i]).make_preferred().string());
+
+      deployFrom[dst] = src;
+      deployTo[dst] = std::set<std::string>();
+      CollectMatchingFiles visitor(deployTo[dst], regex);
+      forEachFileAt(src, visitor);
     }
     else if (strcmp(argv[i], "-deploy") == 0)
     {
@@ -563,14 +707,16 @@ main(int argc, char ** argv)
 
 
   std::string icon = getFileName(iconFile);
+  std::size_t fileIndex = 0;
 
-  for (std::size_t i = 0; i < deps.size(); i++)
+  for (std::size_t i = 0; i < deps.size(); i++, fileIndex++)
   {
     const std::string & path = deps[i];
     std::string name = getFileName(path);
     std::string guid = makeGuidStr();
 
-    out << "     <Component Id='Component" << i << "' Guid='" << guid << "'"
+    out << "     <Component Id='Component" << fileIndex
+        << "' Guid='" << guid << "'"
 #ifdef _WIN64
         << " Win64='yes'"
 #else
@@ -578,10 +724,10 @@ main(int argc, char ** argv)
 #endif
         << ">" << std::endl;
 
-    if (i == 0)
+    if (fileIndex == 0)
     {
       // executable:
-      out << "      <File Id='File" << i << "' "
+      out << "      <File Id='File" << fileIndex << "' "
           << "Name='" << name << "' DiskId='1' "
           << "Source='" << path << "' "
           << "KeyPath='yes'>"
@@ -636,13 +782,51 @@ main(int argc, char ** argv)
     else
     {
       // dlls:
-      out << "      <File Id='File" << i << "' "
+      out << "      <File Id='File" << fileIndex << "' "
           << "Name='" << name << "' DiskId='1' "
           << "Source='" << path << "' "
           << "KeyPath='yes' />\n";
     }
 
     out << "     </Component>\n"
+        << std::endl;
+  }
+
+  typedef std::map<std::string, std::set<std::string> > TDeployTo;
+  for (TDeployTo::const_iterator
+         i = deployTo.begin(); i != deployTo.end(); ++i)
+  {
+    const std::string & dst = i->first;
+    const std::string & src = deployFrom[dst];
+    const std::set<std::string> & files = i->second;
+
+    out << "     <Directory Id='" << dst << "' Name='" << dst << "'>"
+        << std::endl;
+
+    for (std::set<std::string>::const_iterator
+           j = files.begin(); j != files.end(); ++j, fileIndex++)
+    {
+      const std::string & path = *j;
+      std::string name = fs::path(path).filename().string();
+      std::string guid = makeGuidStr();
+
+      out << "      <Component Id='Component" << fileIndex
+          << "' Guid='" << guid << "'"
+#ifdef _WIN64
+          << " Win64='yes'"
+#else
+          << " Win64='no'"
+#endif
+          << ">\n"
+          << "       <File Id='File" << fileIndex << "' "
+          << "Name='" << name << "' DiskId='1' "
+          << "Source='" << path << "' "
+          << "KeyPath='yes' />\n"
+          << "      </Component>\n"
+          << std::endl;
+    }
+
+    out << "     </Directory>"
         << std::endl;
   }
 
@@ -667,7 +851,7 @@ main(int argc, char ** argv)
       << std::endl;
 
   out << "  <Feature Id='Complete' Title='Apprentice Video' Level='1'>\n";
-  for (std::size_t i = 0; i < deps.size(); ++i)
+  for (std::size_t i = 0; i < fileIndex; ++i)
   {
     out << "   <ComponentRef Id='Component" << i << "' />\n";
   }
@@ -696,6 +880,11 @@ main(int argc, char ** argv)
 
     int r = system(cmd.c_str());
     std::cerr << wixCandleExe << " returned: " << r << std::endl;
+
+    if (r != 0)
+    {
+      return r;
+    }
   }
 
   // call light.exe:
@@ -708,6 +897,11 @@ main(int argc, char ** argv)
 
     int r = system(cmd.c_str());
     std::cerr << wixLightExe << " returned: " << r << std::endl;
+
+    if (r != 0)
+    {
+      return r;
+    }
   }
 
   return 0;
