@@ -51,7 +51,9 @@ namespace yae
                bool * frameTraitsChanged = NULL);
 
     bool push(AVFrame * in);
-    bool pull(AVFrame * out);
+
+    // NOTE: a filter (yadif) may change the timebase of the output frame:
+    bool pull(AVFrame * out, AVRational & outTimeBase);
 
   protected:
     std::string filterChain_;

@@ -160,7 +160,7 @@ namespace yae
   // VideoFilterGraph::pull
   //
   bool
-  VideoFilterGraph::pull(AVFrame * frame)
+  VideoFilterGraph::pull(AVFrame * frame, AVRational & outTimeBase)
   {
     int err = av_buffersink_get_frame(sink_, frame);
     if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
@@ -170,12 +170,8 @@ namespace yae
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
-    // some filters (yadif) may change the timebase,
-    // so it might be a good idea to rescale PTS back
-    // to the source time base to avoid confusing the caller:
-    frame->pts = av_rescale_q(frame->pts,
-                              sink_->inputs[0]->time_base,
-                              srcTimeBase_);
+    // some filters (yadif) may change the timebase:
+    outTimeBase = sink_->inputs[0]->time_base;
 
     return true;
   }

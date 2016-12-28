@@ -101,7 +101,6 @@ namespace yae
     skipNonReferenceFrames_(false),
     deinterlace_(false),
     frameQueue_(kQueueSizeSmall),
-    ptsBestEffort_(0),
     hasPrevPTS_(false),
     framesDecoded_(0),
     subs_(NULL)
@@ -351,7 +350,6 @@ namespace yae
 
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
-    ptsBestEffort_ = 0;
 
     frameQueue_.open();
     return true;
@@ -370,7 +368,6 @@ namespace yae
     filterGraph_.reset();
     frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
-    ptsBestEffort_ = 0;
     frameQueue_.close();
     packetQueue_.close();
     return true;
@@ -600,79 +597,90 @@ namespace yae
       }
 
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+
+      TTime t0(stream_->time_base.num * avFrame->pts,
+               stream_->time_base.den);
+
+      TTime t(t0);
+
+      bool gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t");
+
+      if (!gotPTS && !hasPrevPTS_)
+      {
+        t.time_ = stream_->time_base.num * startTime_;
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t0");
+      }
+
+      if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
+      {
+        // increment by average frame duration:
+        t = prevPTS_;
+        t += TTime(frameRate_.den, frameRate_.num);
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t += 1/fps");
+      }
+
+      YAE_ASSERT(gotPTS);
+      if (!gotPTS && hasPrevPTS_)
+      {
+        t = prevPTS_;
+        t.time_++;
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t++");
+      }
+
+      YAE_ASSERT(gotPTS);
+      if (gotPTS)
+      {
+#ifndef NDEBUG
+        if (hasPrevPTS_)
+        {
+          double ta = prevPTS_.toSeconds();
+          double tb = t.toSeconds();
+          // std::cerr << "video pts: " << tb << std::endl;
+          double dt = tb - ta;
+          double fd = 1.0 / native_.frameRate_;
+          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+          if (dt > 2.01 * fd)
+          {
+            std::cerr
+              << "\nNOTE: detected large PTS jump: " << std::endl
+              << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
+              << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
+              << "difference " << dt << " seconds, equivalent to "
+              << dt / fd << " frames" << std::endl
+              << std::endl;
+          }
+        }
+#endif
+
+        hasPrevPTS_ = true;
+        prevPTS_ = t;
+
+        if (t != t0)
+        {
+          // update AVFrame.pts to match:
+          AVRational timeBase;
+          timeBase.num = 1;
+          timeBase.den = t.base_;
+          avFrame->pts = av_rescale_q(t.time_, timeBase, stream_->time_base);
+        }
+      }
+
       if (!filterGraph_.push(avFrame))
       {
         YAE_ASSERT(false);
         return true;
       }
 
-      while (filterGraph_.pull(avFrame))
+      AVRational filterGraphOutputTimeBase;
+      while (filterGraph_.pull(avFrame, filterGraphOutputTimeBase))
       {
         FrameAutoUnref autoUnref(avFrame);
 
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
-        vf.time_.base_ = stream_->time_base.den;
-        vf.time_.time_ = stream_->time_base.num * avFrame->pts;
-
-        bool gotPTS = verify_pts(hasPrevPTS_, prevPTS_, vf.time_, stream_,
-                                 "t");
-
-        if (!gotPTS && !hasPrevPTS_)
-        {
-          ptsBestEffort_ = 0;
-          vf.time_.time_ = stream_->time_base.num * startTime_;
-          gotPTS = verify_pts(hasPrevPTS_, prevPTS_, vf.time_, stream_,
-                              "t0");
-        }
-
-        if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
-        {
-          // increment by average frame duration:
-          vf.time_ = prevPTS_;
-          vf.time_ += TTime(frameRate_.den, frameRate_.num);
-          gotPTS = verify_pts(hasPrevPTS_, prevPTS_, vf.time_, stream_,
-                             "t += 1/fps");
-        }
-
-        YAE_ASSERT(gotPTS);
-        if (!gotPTS && hasPrevPTS_)
-        {
-          vf.time_ = prevPTS_;
-          vf.time_.time_++;
-
-          gotPTS = verify_pts(hasPrevPTS_, prevPTS_, vf.time_, stream_, "t++");
-        }
-
-        YAE_ASSERT(gotPTS);
-        if (gotPTS)
-        {
-#ifndef NDEBUG
-          if (hasPrevPTS_)
-          {
-            double ta = prevPTS_.toSeconds();
-            double tb = vf.time_.toSeconds();
-            // std::cerr << "video pts: " << tb << std::endl;
-            double dt = tb - ta;
-            double fd = 1.0 / native_.frameRate_;
-            // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-            if (dt > 2.01 * fd)
-            {
-              std::cerr
-                << "\nNOTE: detected large PTS jump: " << std::endl
-                << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
-                << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
-                << "difference " << dt << " seconds, equivalent to "
-                << dt / fd << " frames" << std::endl
-                << std::endl;
-            }
-          }
-#endif
-
-          hasPrevPTS_ = true;
-          prevPTS_ = vf.time_;
-        }
+        vf.time_.base_ = filterGraphOutputTimeBase.den;
+        vf.time_.time_ = filterGraphOutputTimeBase.num * avFrame->pts;
 
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)
@@ -1166,7 +1174,6 @@ namespace yae
     setPlaybackInterval(seekTime, timeOut_, playbackEnabled_);
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     hasPrevPTS_ = false;
-    ptsBestEffort_ = 0;
     framesDecoded_ = 0;
 
     return err;

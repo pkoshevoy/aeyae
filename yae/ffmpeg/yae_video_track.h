@@ -121,7 +121,6 @@ namespace yae
 
     AVRational frameRate_;
 
-    int64 ptsBestEffort_;
     TTime prevPTS_;
     bool hasPrevPTS_;
 

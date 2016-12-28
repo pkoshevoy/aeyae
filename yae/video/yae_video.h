@@ -106,6 +106,9 @@ namespace yae
     inline bool operator == (const TTime & t) const
     { return time_ == t.time_ && base_ == t.base_; }
 
+    inline bool operator != (const TTime & t) const
+    { return time_ != t.time_ || base_ != t.base_; }
+
     int64 time_;
     uint64 base_;
   };
