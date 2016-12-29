@@ -163,6 +163,13 @@ namespace yae
                           const AVStream * stream,
                           const char * debugMessage = NULL);
 
+  //----------------------------------------------------------------
+  // find_best_decoder_for
+  //
+  // this will return a Nvidia CUVID or Intel QSV decoder when available
+  //
+  YAE_API const AVCodec *
+  find_best_decoder_for(AVCodecID codecId);
 
   //----------------------------------------------------------------
   // Track
@@ -197,7 +204,7 @@ namespace yae
     { return codecContext_; }
 
     // accessor to the codec:
-    inline AVCodec * codec() const
+    inline const AVCodec * codec() const
     { return codec_; }
 
     // get track duration:
@@ -242,7 +249,7 @@ namespace yae
 
     AVFormatContext * context_;
     AVStream * stream_;
-    AVCodec * codec_;
+    const AVCodec * codec_;
     AVCodecContext * codecContext_;
     TPacketQueue packetQueue_;
 

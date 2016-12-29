@@ -6,9 +6,20 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <map>
+#include <set>
+
+// boost:
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
 // yae includes:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_track.h"
+
+// namespace shortcuts:
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -254,6 +265,76 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TDecoderMap
+  //
+  typedef std::map<AVCodecID, std::set<const AVCodec *> > TDecoderMap;
+
+  //----------------------------------------------------------------
+  // TDecoders
+  //
+  struct TDecoders : public TDecoderMap
+  {
+    TDecoders()
+    {
+      for (const AVCodec * c = av_codec_next(NULL); c; c = av_codec_next(c))
+      {
+        if (av_codec_is_decoder(c))
+        {
+          TDecoderMap::operator[](c->id).insert(c);
+        }
+      }
+    }
+
+    const AVCodec * find(AVCodecID codecId) const
+    {
+      TDecoderMap::const_iterator found = TDecoderMap::find(codecId);
+      if (found == TDecoderMap::end())
+      {
+        return NULL;
+      }
+
+      const AVCodec * experimental = NULL;
+      const AVCodec * software = NULL;
+      const AVCodec * hardware = NULL;
+
+      typedef std::set<const AVCodec *> TCodecs;
+      const TCodecs & codecs = found->second;
+      for (TCodecs::const_iterator i = codecs.begin(); i != codecs.end(); ++i)
+      {
+        const AVCodec * c = *i;
+        if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
+        {
+          experimental || (experimental = c);
+        }
+        else if (al::ends_with(c->name, "_cuvid") ||
+                 al::ends_with(c->name, "_qsv"))
+        {
+          hardware || (hardware = c);
+        }
+        else
+        {
+          software || (software = c);
+        }
+      }
+
+      return (hardware ? hardware :
+              software ? software :
+              experimental);
+    }
+  };
+
+  //----------------------------------------------------------------
+  // find_best_decoder_for
+  //
+  const AVCodec *
+  find_best_decoder_for(AVCodecID codecId)
+  {
+    static const TDecoders decoders;
+    return decoders.find(codecId);
+  }
+
+
+  //----------------------------------------------------------------
   // Track::open
   //
   bool
@@ -267,7 +348,7 @@ namespace yae
     threadStop();
     close();
 
-    codec_ = avcodec_find_decoder(stream_->codecpar->codec_id);
+    codec_ = find_best_decoder_for(stream_->codecpar->codec_id);
     if (!codec_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:

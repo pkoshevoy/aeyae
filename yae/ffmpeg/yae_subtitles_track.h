@@ -85,7 +85,7 @@ namespace yae
 
   public:
     AVStream * stream_;
-    AVCodec * codec_;
+    const AVCodec * codec_;
     AVCodecContext * codecContext_;
 
     bool render_;
