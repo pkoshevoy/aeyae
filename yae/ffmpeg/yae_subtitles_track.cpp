@@ -233,7 +233,7 @@ namespace yae
     if (stream_)
     {
       format_ = getSubsFormat(stream_->codecpar->codec_id);
-      codec_ = find_best_decoder_for(stream_->codecpar->codec_id);
+      codec_ = find_best_decoder_for(*(stream_->codecpar));
       active_.clear();
 
       if (codec_)

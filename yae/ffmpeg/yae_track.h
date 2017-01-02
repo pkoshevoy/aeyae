@@ -166,10 +166,10 @@ namespace yae
   //----------------------------------------------------------------
   // find_best_decoder_for
   //
-  // this will return a Nvidia CUVID or Intel QSV decoder when available
+  // this will return a Nvidia CUVID decoder when available
   //
   YAE_API const AVCodec *
-  find_best_decoder_for(AVCodecID codecId);
+  find_best_decoder_for(const AVCodecParameters & params);
 
   //----------------------------------------------------------------
   // Track

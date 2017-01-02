@@ -274,6 +274,10 @@ namespace yae
   //
   struct TDecoders : public TDecoderMap
   {
+
+    //----------------------------------------------------------------
+    // TDecoders
+    //
     TDecoders()
     {
       for (const AVCodec * c = av_codec_next(NULL); c; c = av_codec_next(c))
@@ -285,9 +289,25 @@ namespace yae
       }
     }
 
-    const AVCodec * find(AVCodecID codecId) const
+    //----------------------------------------------------------------
+    // AVCodecContextDeallocator
+    //
+    struct AVCodecContextDeallocator
     {
-      TDecoderMap::const_iterator found = TDecoderMap::find(codecId);
+      inline static void destroy(AVCodecContext * ctx)
+      {
+        avcodec_close(ctx);
+        avcodec_free_context(&ctx);
+      }
+    };
+
+    //----------------------------------------------------------------
+    // find
+    //
+    const AVCodec *
+    find(const AVCodecParameters & params) const
+    {
+      TDecoderMap::const_iterator found = TDecoderMap::find(params.codec_id);
       if (found == TDecoderMap::end())
       {
         return NULL;
@@ -306,10 +326,25 @@ namespace yae
         {
           experimental || (experimental = c);
         }
-        else if (al::ends_with(c->name, "_cuvid") ||
-                 al::ends_with(c->name, "_qsv"))
+        else if (al::ends_with(c->name, "_cuvid"))
         {
-          hardware || (hardware = c);
+          if (hardware)
+          {
+            continue;
+          }
+
+          // verify that the GPU can handle this stream:
+          boost::shared_ptr<AVCodecContext>
+            ctx(avcodec_alloc_context3(c), AVCodecContextDeallocator::destroy);
+          avcodec_parameters_to_context(ctx.get(), &params);
+
+          int err = avcodec_open2(ctx.get(), c, NULL);
+          if (err)
+          {
+            continue;
+          }
+
+          hardware = c;
         }
         else
         {
@@ -327,10 +362,10 @@ namespace yae
   // find_best_decoder_for
   //
   const AVCodec *
-  find_best_decoder_for(AVCodecID codecId)
+  find_best_decoder_for(const AVCodecParameters & params)
   {
     static const TDecoders decoders;
-    return decoders.find(codecId);
+    return decoders.find(params);
   }
 
 
@@ -348,7 +383,7 @@ namespace yae
     threadStop();
     close();
 
-    codec_ = find_best_decoder_for(stream_->codecpar->codec_id);
+    codec_ = find_best_decoder_for(*(stream_->codecpar));
     if (!codec_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
