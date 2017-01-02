@@ -101,6 +101,50 @@ static const char * yae_gl_arb_yuv_to_rgb_2d =
   "END\n";
 
 //----------------------------------------------------------------
+// yae_gl_arb_nv12_to_rgb_2d
+//
+static const char * yae_gl_arb_nv12_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEMP uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX uv, fragment.texcoord[0], texture[1], 2D;\n"
+  "MOV yuv.y, uv.r;\n"
+  "MOV yuv.z, uv.a;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_nv21_to_rgb_2d
+//
+static const char * yae_gl_arb_nv21_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEMP uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX uv, fragment.texcoord[0], texture[1], 2D;\n"
+  "MOV yuv.y, uv.a;\n"
+  "MOV yuv.z, uv.r;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
 // yae_gl_arb_yuva_to_rgba_2d
 //
 static const char * yae_gl_arb_yuva_to_rgba_2d =
@@ -201,6 +245,13 @@ static const char * yae_gl_arb_yuv_p10_to_rgb =
   "MOV rgba.a, 1.0;\n"
   "MUL result.color, fragment.color, rgba;\n"
   "END\n";
+
+
+// FIXME: pkoshevoy:
+//
+// YUYV and UYVY could be handled far simpler using one RGBA texture,
+// and it wouldn't require NEAREST sampling and manual anti-aliasing
+// either...
 
 //----------------------------------------------------------------
 // yae_gl_arb_yuyv_to_rgb_antialias
@@ -487,6 +538,57 @@ static const char * yae_gl_arb_uyvy_to_rgb =
   "MOV rgba.a, 1.0;\n"
   "MUL result.color, fragment.color, rgba;\n"
   "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_nv12_to_rgb
+//
+static const char * yae_gl_arb_nv12_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "PARAM subsample_uv = program.local[3];\n"
+  "TEMP yuv;\n"
+  "TEMP uv;\n"
+  "TEMP coord_uv;\n"
+  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX uv, coord_uv, texture[1], RECT;\n"
+  "MOV yuv.y, uv.r;\n"
+  "MOV yuv.z, uv.a;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_nv21_to_rgb
+//
+static const char * yae_gl_arb_nv21_to_rgb =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "PARAM subsample_uv = program.local[3];\n"
+  "TEMP yuv;\n"
+  "TEMP uv;\n"
+  "TEMP coord_uv;\n"
+  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], RECT;\n"
+  "TEX uv, coord_uv, texture[1], RECT;\n"
+  "MOV yuv.y, uv.a;\n"
+  "MOV yuv.z, uv.r;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
 
 //----------------------------------------------------------------
 // yae_is_opengl_extension_supported
@@ -1272,9 +1374,9 @@ namespace yae
           YAE_ASSERT(supportedChannels == nchannels[i]);
         }
 
-        if (ptts->flags_ & pixelFormat::kYUV && nchannels[i] > 1)
+        if (ptts->flags_ & pixelFormat::kYUV && nchannels[i] > 2)
         {
-          // YUYV, UYVY, NV12, NV21 should avoid linear filtering,
+          // YUYV, UYVY, should avoid linear filtering,
           // it blends U and V channels inappropriately;
           // the fragment shader should perform the antialising
           // instead, after YUV -> RGB conversion:
@@ -1848,6 +1950,22 @@ namespace yae
                                yae_gl_arb_uyvy_to_rgb);
     }
 
+    // for NV12 formats:
+    static const TPixelFormatId nv12[] = {
+      kPixelFormatNV12
+    };
+
+    createFragmentShadersFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
+                             yae_gl_arb_nv12_to_rgb);
+
+    // for NV21 formats:
+    static const TPixelFormatId nv21[] = {
+      kPixelFormatNV21
+    };
+
+    createFragmentShadersFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
+                             yae_gl_arb_nv21_to_rgb);
+
     // for natively supported formats:
     createBuiltinFragmentShader(yae_gl_arb_passthrough);
   }
@@ -2234,6 +2352,22 @@ namespace yae
 
     createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
                              yae_gl_arb_yuva_to_rgba_2d);
+
+    // for NV12 formats:
+    static const TPixelFormatId nv12[] = {
+      kPixelFormatNV12
+    };
+
+    createFragmentShadersFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
+                             yae_gl_arb_nv12_to_rgb_2d);
+
+    // for NV21 formats:
+    static const TPixelFormatId nv21[] = {
+      kPixelFormatNV21
+    };
+
+    createFragmentShadersFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
+                             yae_gl_arb_nv21_to_rgb_2d);
 
     // for natively supported formats:
     createBuiltinFragmentShader(yae_gl_arb_passthrough_2d);
