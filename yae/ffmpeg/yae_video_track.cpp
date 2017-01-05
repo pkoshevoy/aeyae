@@ -105,6 +105,10 @@ namespace yae
     framesDecoded_(0),
     subs_(NULL)
   {
+#ifndef NDEBUG
+    fps_ = 0.0;
+#endif
+
     YAE_ASSERT(stream_->codecpar->codec_type == AVMEDIA_TYPE_VIDEO);
 
     // make sure the frames are sorted from oldest to newest:
@@ -336,6 +340,11 @@ namespace yae
 
     refreshTraits();
 
+    framesDecoded_ = 0;
+#ifndef NDEBUG
+    this->t0_ = boost::chrono::steady_clock::now();
+#endif
+
     startTime_ = stream_->start_time;
     if (startTime_ == AV_NOPTS_VALUE)
     {
@@ -465,6 +474,23 @@ namespace yae
 
       avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
       framesDecoded_++;
+
+#ifndef NDEBUG
+      {
+        t1_ = boost::chrono::steady_clock::now();
+
+        uint64 dt =
+          boost::chrono::duration_cast<boost::chrono::microseconds>(t1_ - t0_).
+          count();
+
+        fps_ = double(framesDecoded_) / (1e-6 * double(dt));
+
+        std::cerr
+          << "frames decoded: " << framesDecoded_
+          << ", elapsed time: " << dt << " usec, decoder fps: " << fps_
+          << std::endl;
+      }
+#endif
 
       enum AVPixelFormat ffmpegPixelFormat =
         yae_to_ffmpeg(output_.pixelFormat_);
@@ -1175,6 +1201,9 @@ namespace yae
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     hasPrevPTS_ = false;
     framesDecoded_ = 0;
+#ifndef NDEBUG
+    this->t0_ = boost::chrono::steady_clock::now();
+#endif
 
     return err;
   }

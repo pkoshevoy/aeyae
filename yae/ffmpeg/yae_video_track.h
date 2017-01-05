@@ -9,6 +9,9 @@
 #ifndef YAE_VIDEO_TRACK_H_
 #define YAE_VIDEO_TRACK_H_
 
+// boost library:
+#include <boost/chrono/chrono.hpp>
+
 // yae includes:
 #include "yae/ffmpeg/yae_ffmpeg_video_filter_graph.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
@@ -133,6 +136,13 @@ namespace yae
     VideoFilterGraph filterGraph_;
 
     std::vector<unsigned char> temp_;
+
+#ifndef NDEBUG
+    // for estimating decoder fps:
+    boost::chrono::steady_clock::time_point t0_;
+    boost::chrono::steady_clock::time_point t1_;
+    double fps_;
+#endif
   };
 
   //----------------------------------------------------------------
