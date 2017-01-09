@@ -641,7 +641,7 @@ namespace yae
                                        const TPlaylistModel & playlist,
                                        const QSize & envelopeSize,
                                        std::size_t cacheCapacity):
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
     QQuickImageProvider(QQmlImageProviderBase::Image,
                         QQmlImageProviderBase::ForceAsynchronousImageLoading),
 #endif

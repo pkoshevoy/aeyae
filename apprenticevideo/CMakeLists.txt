@@ -27,7 +27,7 @@ add_definitions(-D__STDC_LIMIT_MACROS)
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets Quick QuickWidgets Qml OpenGL)
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
 if (Qt5_FOUND)
 
   if (NOT (APPLE OR WIN32))
@@ -40,6 +40,7 @@ if (Qt5_FOUND)
 
     option(YAE_USE_PLAYER_QUICK_WIDGET "Use QML implementation" OFF)
     if (YAE_USE_PLAYER_QUICK_WIDGET)
+      find_package(Qt5 COMPONENTS Quick QuickWidgets Qml)
       add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
       # add_definitions(-DQT_QML_DEBUG)
     endif ()
@@ -544,10 +545,14 @@ if (Qt5_FOUND)
     Qt5::Gui
     Qt5::OpenGL
     Qt5::Widgets
-    Qt5::Quick
-    Qt5::QuickWidgets
-    Qt5::Qml
     )
+  if (YAE_USE_PLAYER_QUICK_WIDGET)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      Qt5::Quick
+      Qt5::QuickWidgets
+      Qt5::Qml
+      )
+  endif ()
 endif ()
 
 if (Qt5DBus_FOUND)

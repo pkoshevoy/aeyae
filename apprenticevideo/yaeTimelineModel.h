@@ -15,7 +15,7 @@
 #endif
 
 // Qt includes:
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQuickItem>
 #else
 #include <QObject>

@@ -19,7 +19,7 @@
 
 // Qt includes:
 #include <QImage>
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQuickImageProvider>
 #endif
 #include <QSize>
@@ -39,7 +39,7 @@ namespace yae
   // ThumbnailProvider
   //
   struct ThumbnailProvider
-#ifdef YAE_USE_QT5
+#ifdef YAE_USE_PLAYER_QUICK_WIDGET
     : public QQuickImageProvider
 #endif
   {

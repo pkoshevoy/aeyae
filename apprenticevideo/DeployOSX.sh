@@ -857,13 +857,14 @@ if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
 		echo "Qt4 macdeploy breaks codesigning, skipping it..."
 	else
 		echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -always-overwrite \
 		  -no-strip \
-		  -qmldir="${QML_SRC_DIR}" \
-		  -always-overwrite
+		  #-qmldir="${QML_SRC_DIR}" \
+
 		"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -always-overwrite \
 		  -no-strip \
-		  -qmldir="${QML_SRC_DIR}" \
-		  -always-overwrite
+		  #-qmldir="${QML_SRC_DIR}" \
 	fi
 
 	quiet_popd
