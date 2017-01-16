@@ -20,6 +20,7 @@
 #include <wchar.h>
 #endif
 
+#include <stdlib.h>
 #include <iostream>
 #include <stdexcept>
 
@@ -135,9 +136,33 @@ int
 mainMayThrowException(int argc, char ** argv)
 {
   // Create and install global locale (UTF-8)
-  std::locale::global(boost::locale::generator().generate(""));
+  {
+    const char * lc_type = getenv("LC_TYPE");
+    const char * lc_all = getenv("LC_ALL");
+    const char * lang = getenv("LANG");
 
-  // Make boost.filesystem use it
+#ifndef _WIN32
+    if (!(lc_type || lc_all || lang))
+    {
+      // avoid crasing in boost+libiconv:
+      setenv("LANG", "en_US.UTF-8", 1);
+    }
+#endif
+
+#ifndef NDEBUG
+    lang || (lang = "");
+    lc_all || (lc_all = "");
+    lc_type || (lc_type = "");
+
+    std::cerr << "LC_TYPE: " << lc_type << std::endl
+              << "LC_ALL: " << lc_all << std::endl
+              << "LANG: " << lang << std::endl;
+#endif
+
+    std::locale::global(boost::locale::generator().generate(""));
+  }
+
+  // Make boost.filesystem use global locale:
   boost::filesystem::path::imbue(std::locale());
 
 #if defined(_WIN32) && !defined(NDEBUG)

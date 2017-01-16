@@ -19,6 +19,18 @@ else
 	QT_MACDEPLOY="macdeployqt"
 fi
 
+CMAKE_INSTALL_PREFIX="${3}"
+CMAKE_CURRENT_BINARY_DIR="${4}"
+CMAKE_RUNTIME_OUTPUT_DIRECTORY="${5}"
+CMAKE_CFG_INTDIR="${6}"
+
+echo CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}"
+echo CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+echo CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+echo CMAKE_CFG_INTDIR "${CMAKE_CFG_INTDIR}"
+echo DYLD_LIBRARY_PATH "${DYLD_LIBRARY_PATH}"
+
+
 QT_INSTALL_DIR=$(dirname "${QT_MACDEPLOY}")
 QT_MACDEPLOY=$(basename "${QT_MACDEPLOY}")
 
@@ -383,7 +395,7 @@ resolve_library()
 	fi
 
 	NAME=$(basename "${NAME}")
-	SRCH_HERE="${BINARIES_DIR}":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
+	SRCH_HERE="${BINARIES_DIR}":"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}":"${CMAKE_INSTALL_PREFIX}":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
 
 	if [ -n "${3}" ]; then
@@ -856,15 +868,22 @@ if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
 		#  -no-strip
 		echo "Qt4 macdeploy breaks codesigning, skipping it..."
 	else
-		echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
-		  -always-overwrite \
-		  -no-strip \
-		  #-qmldir="${QML_SRC_DIR}" \
+		#echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		#  -always-overwrite \
+		#  -no-strip \
+		#  #-qmldir="${QML_SRC_DIR}" \
 
-		"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
-		  -always-overwrite \
-		  -no-strip \
-		  #-qmldir="${QML_SRC_DIR}" \
+		#"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		#  -always-overwrite \
+		#  -no-strip \
+		#  #-qmldir="${QML_SRC_DIR}" \
+		QT_PLUGINS_DIR=$(./qmake -query | grep QT_INSTALL_PLUGINS: | cut -d: -f2)
+
+		mkdir -p "${BUNDLE_PATH}/Contents/PlugIns/" || exit 1
+		for i in platforms imageformats printsupport; do
+			echo $CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/"
+			$CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/" || exit 2
+		done
 	fi
 
 	quiet_popd
