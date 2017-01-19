@@ -4134,6 +4134,19 @@ namespace yae
   void
   MainWindow::adjustCanvasHeight()
   {
+    bool showPlaylist = actionShowPlaylist->isChecked();
+    if (showPlaylist)
+    {
+      return;
+    }
+
+    std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+    if (videoTrack >= numVideoTracks)
+    {
+      return;
+    }
+
     if (!isFullScreen())
     {
       double w = 1.0;
@@ -4897,6 +4910,9 @@ namespace yae
                                bool detectionFinished)
   {
     MainWindow * mainWindow = (MainWindow *)callbackContext;
+    IReaderPtr reader = mainWindow->reader_;
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
 
     if (detectionFinished)
     {
@@ -4905,7 +4921,8 @@ namespace yae
                       Qt::HighEventPriority);
     }
     else if (mainWindow->playbackPaused_ ||
-             mainWindow->videoRenderer_->isPaused())
+             mainWindow->videoRenderer_->isPaused() ||
+             videoTrack >= numVideoTracks)
     {
       // use the same frame again:
       return mainWindow->canvas_->currentFrame();
