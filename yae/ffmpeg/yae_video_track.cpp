@@ -22,16 +22,7 @@ namespace yae
   TAVFrameBuffer::TAVFrameBuffer(AVFrame * src)
   {
     // this is a shallow reference counted copy:
-    frame_ = av_frame_clone(src);
-  }
-
-  //----------------------------------------------------------------
-  // TAVFrameBuffer::~TAVFrameBuffer
-  //
-  TAVFrameBuffer::~TAVFrameBuffer()
-  {
-    av_frame_unref(frame_);
-    av_freep(&frame_);
+    av_frame_ref(&frame_, src);
   }
 
   //----------------------------------------------------------------
@@ -49,7 +40,7 @@ namespace yae
   std::size_t
   TAVFrameBuffer::planes() const
   {
-    enum AVPixelFormat pix_fmt = (enum AVPixelFormat)frame_->format;
+    enum AVPixelFormat pix_fmt = (enum AVPixelFormat)frame_.format;
     int n = av_pix_fmt_count_planes(pix_fmt);
     YAE_ASSERT(n >= 0);
     return (std::size_t)n;
@@ -61,7 +52,7 @@ namespace yae
   unsigned char *
   TAVFrameBuffer::data(std::size_t plane) const
   {
-    return frame_->data[plane];
+    return frame_.data[plane];
   }
 
   //----------------------------------------------------------------
@@ -70,7 +61,7 @@ namespace yae
   std::size_t
   TAVFrameBuffer::rowBytes(std::size_t plane) const
   {
-    return frame_->linesize[plane];
+    return frame_.linesize[plane];
   }
 
 
@@ -357,7 +348,6 @@ namespace yae
       stream_->avg_frame_rate :
       av_stream_get_r_frame_rate(stream_);
 
-    frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
 
     frameQueue_.open();
@@ -375,7 +365,6 @@ namespace yae
 #endif
 
     filterGraph_.reset();
-    frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
     frameQueue_.close();
     packetQueue_.close();
@@ -464,15 +453,15 @@ namespace yae
     {
       // Decode video frame
       AVCodecContext * codecContext = this->codecContext();
-      AVFrame * avFrame = frameAutoCleanup_.reset();
-      int err_recv = avcodec_receive_frame(codecContext, avFrame);
+      AvFrm decoded;
+      int err_recv = avcodec_receive_frame(codecContext, &decoded);
       if (err_recv)
       {
         bool ok = (err_recv == AVERROR(EAGAIN));
         return ok;
       }
 
-      avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+      decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
       framesDecoded_++;
 
 #ifndef NDEBUG
@@ -603,11 +592,11 @@ namespace yae
 
       std::string filterChain(filters.str().c_str());
       bool frameTraitsChanged = false;
-      if (!filterGraph_.setup(avFrame->width,
-                              avFrame->height,
+      if (!filterGraph_.setup(decoded.width,
+                              decoded.height,
                               stream_->time_base,
-                              avFrame->sample_aspect_ratio,
-                              (AVPixelFormat)avFrame->format,
+                              decoded.sample_aspect_ratio,
+                              (AVPixelFormat)decoded.format,
                               ffmpegPixelFormat,
                               filterChain.c_str(),
                               &frameTraitsChanged))
@@ -622,9 +611,9 @@ namespace yae
         return true;
       }
 
-      avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+      decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
 
-      TTime t0(stream_->time_base.num * avFrame->pts,
+      TTime t0(stream_->time_base.num * decoded.pts,
                stream_->time_base.den);
 
       TTime t(t0);
@@ -687,26 +676,31 @@ namespace yae
           AVRational timeBase;
           timeBase.num = 1;
           timeBase.den = t.base_;
-          avFrame->pts = av_rescale_q(t.time_, timeBase, stream_->time_base);
+          decoded.pts = av_rescale_q(t.time_, timeBase, stream_->time_base);
         }
       }
 
-      if (!filterGraph_.push(avFrame))
+      if (!filterGraph_.push(&decoded))
       {
         YAE_ASSERT(false);
         return true;
       }
 
-      AVRational filterGraphOutputTimeBase;
-      while (filterGraph_.pull(avFrame, filterGraphOutputTimeBase))
+      while (true)
       {
-        FrameAutoUnref autoUnref(avFrame);
+        AVRational filterGraphOutputTimeBase;
+        AvFrm output;
+
+        if (!filterGraph_.pull(&output, filterGraphOutputTimeBase))
+        {
+          break;
+        }
 
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
         vf.time_.base_ = filterGraphOutputTimeBase.den;
-        vf.time_.time_ = filterGraphOutputTimeBase.num * avFrame->pts;
+        vf.time_.time_ = filterGraphOutputTimeBase.num * output.pts;
 
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)
@@ -734,7 +728,7 @@ namespace yae
         YAE_ASSERT(output_.initAbcToRgbMatrix_);
         vf.traits_ = output_;
 
-        if (avFrame->linesize[0] < 0)
+        if (output.linesize[0] < 0)
         {
           // upside-down frame, actually flip it around (unlike vflip):
           const pixelFormat::Traits * ptts =
@@ -753,13 +747,13 @@ namespace yae
 
           for (unsigned char i = 0; i < numSamplePlanes; i++)
           {
-            std::size_t rows = avFrame->height;
+            std::size_t rows = output.height;
             if (i != lumaPlane && i != alphaPlane)
             {
               rows /= ptts->chromaBoxH_;
             }
 
-            int rowBytes = -avFrame->linesize[i];
+            int rowBytes = -output.linesize[i];
             if (rowBytes <= 0)
             {
               continue;
@@ -767,11 +761,11 @@ namespace yae
 
             temp_.resize(rowBytes);
             unsigned char * temp = &temp_[0];
-            unsigned char * tail = avFrame->data[i];
-            unsigned char * head = tail + avFrame->linesize[i] * (rows - 1);
+            unsigned char * tail = output.data[i];
+            unsigned char * head = tail + output.linesize[i] * (rows - 1);
 
-            avFrame->data[i] = head;
-            avFrame->linesize[i] = rowBytes;
+            output.data[i] = head;
+            output.linesize[i] = rowBytes;
 
             while (head < tail)
             {
@@ -786,10 +780,10 @@ namespace yae
         }
 
         // use AVFrame directly:
-        TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(avFrame),
+        TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(&output),
                                        &IPlanarBuffer::deallocator);
-        vf.traits_.visibleWidth_ = avFrame->width;
-        vf.traits_.visibleHeight_ = avFrame->height;
+        vf.traits_.visibleWidth_ = output.width;
+        vf.traits_.visibleHeight_ = output.height;
         vf.traits_.encodedWidth_ = vf.traits_.visibleWidth_;
         vf.traits_.encodedHeight_ = vf.traits_.visibleHeight_;
         vf.data_ = sampleBuffer;
@@ -908,6 +902,10 @@ namespace yae
   bool
   VideoTrack::getTraits(VideoTraits & t) const
   {
+    // FIXME: pkoshevoy: maybe reference AVStream.codecpar
+    // instead of codecContext_, and possibly check AVStream.parser
+    // too for the latest...
+
     // shortcut:
     const AVCodecContext * context = this->codecContext_;
 

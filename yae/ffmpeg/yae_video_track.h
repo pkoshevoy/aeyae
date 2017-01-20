@@ -36,9 +36,6 @@ namespace yae
     TAVFrameBuffer(AVFrame * src);
 
     // virtual:
-    ~TAVFrameBuffer();
-
-    // virtual:
     void destroy();
 
     // virtual:
@@ -50,7 +47,7 @@ namespace yae
     // virtual:
     std::size_t rowBytes(std::size_t plane) const;
 
-    AVFrame * frame_;
+    AvFrm frame_;
   };
 
 
@@ -128,8 +125,6 @@ namespace yae
     bool hasPrevPTS_;
 
     uint64 framesDecoded_;
-
-    FrameWithAutoCleanup frameAutoCleanup_;
 
     std::vector<TSubsTrackPtr> * subs_;
 

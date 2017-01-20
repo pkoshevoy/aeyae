@@ -26,62 +26,78 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // Packet::Packet
+  // AvPkt::AvPkt
   //
-  Packet::Packet()
+  AvPkt::AvPkt()
   {
     memset(this, 0, sizeof(AVPacket));
     av_init_packet(this);
   }
 
   //----------------------------------------------------------------
-  // Packet::~Packet
+  // AvPkt::AvPkt
   //
-  Packet::~Packet()
+  AvPkt::AvPkt(const AvPkt & pkt)
+  {
+    memset(this, 0, sizeof(AVPacket));
+    av_packet_ref(this, &pkt);
+  }
+
+  //----------------------------------------------------------------
+  // AvPkt::~AvPkt
+  //
+  AvPkt::~AvPkt()
   {
     av_packet_unref(this);
   }
 
-
   //----------------------------------------------------------------
-  // FrameWithAutoCleanup::FrameWithAutoCleanup
+  // AvPkt::operator =
   //
-  FrameWithAutoCleanup::FrameWithAutoCleanup():
-    frame_(av_frame_alloc())
-  {}
-
-  //----------------------------------------------------------------
-  // FrameWithAutoCleanup::~FrameWithAutoCleanup
-  //
-  FrameWithAutoCleanup::~FrameWithAutoCleanup()
+  AvPkt &
+  AvPkt::operator = (const AvPkt & pkt)
   {
-    av_frame_free(&frame_);
-  }
-
-  //----------------------------------------------------------------
-  // FrameWithAutoCleanup::reset
-  //
-  AVFrame *
-  FrameWithAutoCleanup::reset()
-  {
-    av_frame_unref(frame_);
-    return frame_;
+    av_packet_unref(this);
+    av_packet_ref(this, &pkt);
+    return *this;
   }
 
 
   //----------------------------------------------------------------
-  // FrameAutoUnref::FrameAutoUnref
+  // AvFrm::AvFrm
   //
-  FrameAutoUnref::FrameAutoUnref(AVFrame * frame):
-    frame_(frame)
-  {}
+  AvFrm::AvFrm()
+  {
+    memset(this, 0, sizeof(AVFrame));
+    av_frame_unref(this);
+  }
 
   //----------------------------------------------------------------
-  // FrameAutoUnref::~FrameAutoUnref
+  // AvFrm::AvFrm
   //
-  FrameAutoUnref::~FrameAutoUnref()
+  AvFrm::AvFrm(const AvFrm & frame)
   {
-    av_frame_unref(frame_);
+    memset(this, 0, sizeof(AVFrame));
+    av_frame_ref(this, &frame);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::~AvFrm
+  //
+  AvFrm::~AvFrm()
+  {
+    av_frame_unref(this);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::operator
+  //
+  AvFrm &
+  AvFrm::operator = (const AvFrm & frame)
+  {
+    av_frame_unref(this);
+    av_frame_ref(this, &frame);
+    return *this;
   }
 
 
@@ -333,6 +349,14 @@ namespace yae
             continue;
           }
 
+          if (params.format != AV_PIX_FMT_YUV420P &&
+              params.codec_id != AV_CODEC_ID_MJPEG)
+          {
+            // 4:2:0 is the only one that works with h264_cuvud and mpeg2_cuvid
+            // however, 4:2:2 and 4:4:4 work with mjpeg_cuvid
+            continue;
+          }
+
           // verify that the GPU can handle this stream:
           boost::shared_ptr<AVCodecContext>
             ctx(avcodec_alloc_context3(c), AVCodecContextDeallocator::destroy);
@@ -390,19 +414,16 @@ namespace yae
       return false;
     }
 
+    // maybe try opening the decoder on-demand when we have a packet
     int err = 0;
     if (codec_)
     {
       YAE_ASSERT(!codecContext_);
       codecContext_ = avcodec_alloc_context3(codec_);
 
-      AVDictionary * opts = NULL;
-      av_dict_set(&opts, "threads", "auto", 0);
-      av_dict_set(&opts, "refcounted_frames", "1", 0);
-      // av_dict_set(&opts, "drc_scale", "1.0", AV_OPT_SEARCH_CHILDREN);
       avcodec_parameters_to_context(codecContext_, stream_->codecpar);
 
-      err = avcodec_open2(codecContext_, codec_, &opts);
+      err = avcodec_open2(codecContext_, codec_, NULL);
     }
 
     if (err < 0)

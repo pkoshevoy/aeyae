@@ -94,7 +94,6 @@ namespace yae
       startTime_ = 0;
     }
 
-    frameAutoCleanup_.reset();
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
     samplesDecoded_ = 0;
@@ -109,8 +108,6 @@ namespace yae
   bool
   AudioTrack::decoderShutdown()
   {
-    frameAutoCleanup_.reset();
-
     frameQueue_.close();
     packetQueue_.close();
     return true;
@@ -174,11 +171,11 @@ namespace yae
         packet.size -= bytesUsed;
         packet.data += bytesUsed;
 
-        AVFrame * avFrame = frameAutoCleanup_.reset();
-        err_recv = avcodec_receive_frame(codecContext, avFrame);
+        AvFrm decoded;
+        err_recv = avcodec_receive_frame(codecContext, &decoded);
         bool gotFrame = err_recv >= 0;
 
-        if (!gotFrame || !avFrame->nb_samples)
+        if (!gotFrame || !decoded.nb_samples)
         {
           if (packetPtr)
           {
@@ -191,12 +188,12 @@ namespace yae
           }
         }
 
-        avFrame->pts = av_frame_get_best_effort_timestamp(avFrame);
+        decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
 
-        if (hasPrevPTS_ && avFrame->pts != AV_NOPTS_VALUE)
+        if (hasPrevPTS_ && decoded.pts != AV_NOPTS_VALUE)
         {
           // check for broken non-monotonically increasing timestamps:
-          TTime nextPTS(stream_->time_base.num * avFrame->pts,
+          TTime nextPTS(stream_->time_base.num * decoded.pts,
                         stream_->time_base.den);
 
           if (nextPTS < prevPTS_)
@@ -213,19 +210,19 @@ namespace yae
           }
         }
 
-        if (!avFrame->channel_layout)
+        if (!decoded.channel_layout)
         {
-          avFrame->channel_layout =
-            av_get_default_channel_layout(avFrame->channels);
+          decoded.channel_layout =
+            av_get_default_channel_layout(decoded.channels);
         }
 
         const char * filterChain = NULL;
         bool frameTraitsChanged = false;
         if (!filterGraph_.setup(// input format:
                                 stream_->time_base,
-                                (enum AVSampleFormat)avFrame->format,
-                                avFrame->sample_rate,
-                                avFrame->channel_layout,
+                                (enum AVSampleFormat)decoded.format,
+                                decoded.sample_rate,
+                                decoded.channel_layout,
 
                                 // output format:
                                 outputFormat,
@@ -252,20 +249,24 @@ namespace yae
           noteNativeTraitsChanged();
         }
 
-        if (!filterGraph_.push(avFrame))
+        if (!filterGraph_.push(&decoded))
         {
           YAE_ASSERT(false);
           return true;
         }
 
-        while (filterGraph_.pull(avFrame))
+        while (true)
         {
-          FrameAutoUnref autoUnref(avFrame);
+          AvFrm output;
+          if (!filterGraph_.pull(&output))
+          {
+            break;
+          }
 
-          const int bufferSize = avFrame->nb_samples * outputBytesPerSample_;
+          const int bufferSize = output.nb_samples * outputBytesPerSample_;
           chunks.push_back(std::vector<unsigned char>
-                           (avFrame->data[0],
-                            avFrame->data[0] + bufferSize));
+                           (output.data[0],
+                            output.data[0] + bufferSize));
           outputBytes += bufferSize;
         }
       }

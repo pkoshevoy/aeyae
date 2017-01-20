@@ -87,8 +87,6 @@ namespace yae
     uint64 prevNumSamples_;
     uint64 samplesDecoded_;
 
-    FrameWithAutoCleanup frameAutoCleanup_;
-
     // for adjusting audio frame duration:
     std::vector<unsigned char> tempoBuffer_;
     IAudioTempoFilter * tempoFilter_;

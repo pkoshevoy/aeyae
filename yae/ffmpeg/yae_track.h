@@ -93,23 +93,26 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Packet
+  // AvPkt
   //
-  struct YAE_API Packet : public AVPacket
+  struct YAE_API AvPkt : public AVPacket
   {
-    Packet();
-    ~Packet();
+    AvPkt();
+    AvPkt(const AvPkt & pkt);
+    ~AvPkt();
+
+    AvPkt & operator = (const AvPkt & pkt);
 
   private:
     // intentionally disabled:
-    Packet(const Packet &);
-    Packet & operator = (const Packet &);
+    AvPkt(const AVPacket &);
+    AvPkt & operator = (const AVPacket &);
   };
 
   //----------------------------------------------------------------
   // TPacketPtr
   //
-  typedef boost::shared_ptr<Packet> TPacketPtr;
+  typedef boost::shared_ptr<AvPkt> TPacketPtr;
 
   //----------------------------------------------------------------
   // TPacketQueue
@@ -118,39 +121,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // FrameWithAutoCleanup
+  // AvFrm
   //
-  struct YAE_API FrameWithAutoCleanup
+  struct AvFrm : public AVFrame
   {
-    FrameWithAutoCleanup();
-    ~FrameWithAutoCleanup();
+    AvFrm();
+    AvFrm(const AvFrm & frame);
+    ~AvFrm();
 
-    inline AVFrame * get() const
-    {
-      return frame_;
-    }
-
-    AVFrame * reset();
-
-  protected:
-    AVFrame * frame_;
+    AvFrm & operator = (const AvFrm & frame);
 
   private:
     // intentionally disabled:
-    FrameWithAutoCleanup(const FrameWithAutoCleanup &);
-    FrameWithAutoCleanup & operator = (const FrameWithAutoCleanup &);
-  };
-
-
-  //----------------------------------------------------------------
-  // FrameAutoUnref
-  //
-  struct YAE_API FrameAutoUnref
-  {
-    FrameAutoUnref(AVFrame * frame);
-    ~FrameAutoUnref();
-
-    AVFrame * frame_;
+    AvFrm(const AVFrame &);
+    AvFrm & operator = (const AVFrame &);
   };
 
 

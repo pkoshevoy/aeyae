@@ -614,7 +614,7 @@ namespace yae
         }
 
         // service seek request, read a packet:
-        TPacketPtr packetPtr(new Packet());
+        TPacketPtr packetPtr(new AvPkt());
         AVPacket & packet = *packetPtr;
         bool demuxerInterrupted = false;
         {
