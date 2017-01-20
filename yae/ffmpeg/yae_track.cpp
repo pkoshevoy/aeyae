@@ -389,7 +389,17 @@ namespace yae
   find_best_decoder_for(const AVCodecParameters & params)
   {
     static const TDecoders decoders;
-    return decoders.find(params);
+    const AVCodec * c = decoders.find(params);
+
+#ifdef NDEBUG
+    if (c)
+    {
+      std::cerr << "\n\nUSING DECODER: " << c->name << "\n\n"
+                << std::endl;
+    }
+#endif
+
+    return c;
   }
 
 

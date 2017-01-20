@@ -369,13 +369,16 @@ namespace yae
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
 
-      TrackPtr baseTrack(new Track(context_, stream));
-      if (!baseTrack->open())
+      // verify that we have a decoder for this codec:
+      AVCodec * decoder = avcodec_find_decoder(stream->codecpar->codec_id);
+      if (!decoder)
       {
         // unsupported codec, ignore it:
         stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
         continue;
       }
+
+      TrackPtr baseTrack(new Track(context_, stream));
 
       const AVMediaType codecType = stream->codecpar->codec_type;
       if (codecType == AVMEDIA_TYPE_VIDEO)

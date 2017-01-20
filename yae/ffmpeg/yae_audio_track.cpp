@@ -584,15 +584,15 @@ namespace yae
   bool
   AudioTrack::getTraits(AudioTraits & t) const
   {
-    // shortcut:
-    const AVCodecContext * context = this->codecContext_;
-
-    if (!(stream_ && context))
+    if (!stream_)
     {
       return false;
     }
 
-    switch (context->sample_fmt)
+    const AVCodecParameters & codecParams = *(stream_->codecpar);
+    AVSampleFormat sampleFormat = (AVSampleFormat)(codecParams.format);
+
+    switch (sampleFormat)
     {
       case AV_SAMPLE_FMT_U8:
       case AV_SAMPLE_FMT_U8P:
@@ -627,7 +627,7 @@ namespace yae
         break;
     }
 
-    switch (context->channels)
+    switch (codecParams.channels)
     {
       case 1:
         t.channelLayout_ = kAudioMono;
@@ -667,10 +667,10 @@ namespace yae
     }
 
     //! audio sample rate, Hz:
-    t.sampleRate_ = context->sample_rate;
+    t.sampleRate_ = codecParams.sample_rate;
 
     //! packed, planar:
-    switch (context->sample_fmt)
+    switch (sampleFormat)
     {
       case AV_SAMPLE_FMT_U8P:
       case AV_SAMPLE_FMT_S16P:

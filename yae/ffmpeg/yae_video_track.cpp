@@ -902,24 +902,20 @@ namespace yae
   bool
   VideoTrack::getTraits(VideoTraits & t) const
   {
-    // FIXME: pkoshevoy: maybe reference AVStream.codecpar
-    // instead of codecContext_, and possibly check AVStream.parser
-    // too for the latest...
-
-    // shortcut:
-    const AVCodecContext * context = this->codecContext_;
-
-    if (!(stream_ && context))
+    if (!stream_)
     {
       return false;
     }
 
+    const AVCodecParameters & codecParams = *(stream_->codecpar);
+    AVPixelFormat pixelFormat = (AVPixelFormat)(codecParams.format);
+
     //! pixel format:
-    t.pixelFormat_ = ffmpeg_to_yae(context->pix_fmt);
+    t.pixelFormat_ = ffmpeg_to_yae(pixelFormat);
 
     //! for the color conversion coefficients:
-    t.colorSpace_ = to_yae_color_space(context->colorspace);
-    t.colorRange_ = to_yae_color_range(context->color_range);
+    t.colorSpace_ = to_yae_color_space(codecParams.color_space);
+    t.colorRange_ = to_yae_color_range(codecParams.color_range);
     t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
 
     //! frame rate:
@@ -976,28 +972,25 @@ namespace yae
     }
 
     //! encoded frame size (including any padding):
-    t.encodedWidth_ =
-      context->coded_width ? context->coded_width : context->width;
-
-    t.encodedHeight_ =
-      context->coded_height ? context->coded_height : context->height;
+    t.encodedWidth_ = codecParams.width;
+    t.encodedHeight_ = codecParams.height;
 
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
     t.offsetLeft_ = 0;
 
     //! dimensions of the visible portion of the encoded frame:
-    t.visibleWidth_ = context->width;
-    t.visibleHeight_ = context->height;
+    t.visibleWidth_ = codecParams.width;
+    t.visibleHeight_ = codecParams.height;
 
     //! pixel aspect ration, used to calculate visible frame dimensions:
     t.pixelAspectRatio_ = 1.0;
 
-    if (context->sample_aspect_ratio.num &&
-        context->sample_aspect_ratio.den)
+    if (codecParams.sample_aspect_ratio.num &&
+        codecParams.sample_aspect_ratio.den)
     {
-      t.pixelAspectRatio_ = (double(context->sample_aspect_ratio.num) /
-                             double(context->sample_aspect_ratio.den));
+      t.pixelAspectRatio_ = (double(codecParams.sample_aspect_ratio.num) /
+                             double(codecParams.sample_aspect_ratio.den));
     }
 
     if (stream_->sample_aspect_ratio.num &&
