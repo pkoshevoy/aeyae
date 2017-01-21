@@ -319,10 +319,15 @@ namespace yae
               const AVCodecParameters & params,
               const AvPkt & pkt)
     {
+      unsigned int nthreads = boost::thread::hardware_concurrency();
+
       AvCodecContextPtr ctx(avcodec_alloc_context3(c));
       avcodec_parameters_to_context(ctx.get(), &params);
 
-      int err = avcodec_open2(ctx.get(), c, NULL);
+      AVDictionary * opts = NULL;
+      av_dict_set_int(&opts, "threads", nthreads, 0);
+
+      int err = avcodec_open2(ctx.get(), c, &opts);
       if (err < 0)
       {
         return AvCodecContextPtr();
