@@ -110,31 +110,45 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::open
+  // VideoTrack::initTraits
   //
   bool
-  VideoTrack::open()
+  VideoTrack::initTraits()
   {
-    if (Track::open())
+    if (!getTraits(override_))
     {
-      framesDecoded_ = 0;
-
-      skipLoopFilter(skipLoopFilter_);
-      skipNonReferenceFrames(skipNonReferenceFrames_);
-
-      bool ok = getTraits(override_);
-      native_ = override_;
-      output_ = override_;
-
-      // do not override width/height/sar unintentionally:
-      override_.visibleWidth_ = 0;
-      override_.visibleHeight_ = 0;
-      override_.pixelAspectRatio_ = 0.0;
-
-      return ok;
+      return false;
     }
 
-    return false;
+    native_ = override_;
+    output_ = override_;
+
+    // do not override width/height/sar unintentionally:
+    override_.visibleWidth_ = 0;
+    override_.visibleHeight_ = 0;
+    override_.pixelAspectRatio_ = 0.0;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::open
+  //
+  AVCodecContext *
+  VideoTrack::open(const TPacketPtr & packetPtr)
+  {
+    if (codecContext_)
+    {
+      return codecContext_.get();
+    }
+
+    AVCodecContext * ctx = Track::open(packetPtr);
+    if (ctx)
+    {
+      framesDecoded_ = 0;
+      skipLoopFilter(skipLoopFilter_);
+      skipNonReferenceFrames(skipNonReferenceFrames_);
+    }
+
+    return ctx;
   }
 
   //----------------------------------------------------------------
@@ -406,9 +420,14 @@ namespace yae
   bool
   VideoTrack::decode(const TPacketPtr & packetPtr)
   {
-    AVCodecContext * codecContext = this->codecContext();
-    AVPacket packet;
+    AVCodecContext * codecContext = this->open(packetPtr);
+    if (!codecContext)
+    {
+      // don't give up trying to find a decoder that works:
+      return true;
+    }
 
+    AVPacket packet;
     if (packetPtr)
     {
       // make a local shallow copy of the packet:
@@ -1174,16 +1193,14 @@ namespace yae
     int err = 0;
     if (stream_ && codecContext_)
     {
-      avcodec_flush_buffers(codecContext_);
+      const AVCodec * codec = codecContext_->codec;
+      AVCodecContext * ctx = codecContext_.get();
+
+      avcodec_flush_buffers(ctx);
 #if 1
-      avcodec_close(codecContext_);
-
-      AVDictionary * opts = NULL;
-      av_dict_set(&opts, "threads", "auto", 0);
-      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
-      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
-
-      err = avcodec_open2(codecContext_, codec_, &opts);
+      avcodec_close(ctx);
+      avcodec_parameters_to_context(ctx, stream_->codecpar);
+      err = avcodec_open2(ctx, codec, NULL);
       YAE_ASSERT(err >= 0);
 #endif
     }

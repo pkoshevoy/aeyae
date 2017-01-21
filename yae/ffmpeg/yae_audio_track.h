@@ -37,7 +37,10 @@ namespace yae
     ~AudioTrack();
 
     // virtual:
-    bool open();
+    bool initTraits();
+
+    // virtual:
+    AVCodecContext * open(const TPacketPtr & packetPtr);
 
     // virtual:
     bool decoderStartup();

@@ -45,27 +45,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioTrack::open
+  // AudioTrack::initTraits
   //
   bool
-  AudioTrack::open()
+  AudioTrack::initTraits()
   {
-    if (Track::open())
+    return getTraits(override_);
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::open
+  //
+  AVCodecContext *
+  AudioTrack::open(const TPacketPtr & packetPtr)
+  {
+    if (codecContext_)
     {
-      bool ok = getTraits(override_);
-      samplesDecoded_ = 0;
-
-      AVCodecContext * context = this->codecContext();
-      if (!context->channel_layout)
-      {
-        context->channel_layout =
-          av_get_default_channel_layout(context->channels);
-      }
-
-      return ok;
+      return codecContext_.get();
     }
 
-    return false;
+    AVCodecContext * ctx = Track::open(packetPtr);
+    if (ctx)
+    {
+      samplesDecoded_ = 0;
+
+      if (!ctx->channel_layout)
+      {
+        ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
+      }
+    }
+
+    return ctx;
   }
 
   //----------------------------------------------------------------
@@ -119,6 +129,13 @@ namespace yae
   bool
   AudioTrack::decode(const TPacketPtr & packetPtr)
   {
+    AVCodecContext * codecContext = this->open(packetPtr);
+    if (!codecContext)
+    {
+      // don't give up trying to find a decoder that works:
+      return true;
+    }
+
     int err_send = AVERROR(EAGAIN);
     int err_recv = 0;
 
@@ -137,8 +154,6 @@ namespace yae
         memset(&packet, 0, sizeof(packet));
         av_init_packet(&packet);
       }
-
-      AVCodecContext * codecContext = this->codecContext();
 
       // Decode audio frame, piecewise:
       std::list<std::vector<unsigned char> > chunks;
@@ -845,16 +860,14 @@ namespace yae
     int err = 0;
     if (stream_ && codecContext_)
     {
-      avcodec_flush_buffers(codecContext_);
+      const AVCodec * codec = codecContext_->codec;
+      AVCodecContext * ctx = codecContext_.get();
+
+      avcodec_flush_buffers(ctx);
 #if 1
-      avcodec_close(codecContext_);
-
-      AVDictionary * opts = NULL;
-      av_dict_set(&opts, "threads", "auto", 0);
-      av_dict_set_int(&opts, "refcounted_frames", 1, 0);
-      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
-
-      err = avcodec_open2(codecContext_, codec_, &opts);
+      avcodec_close(ctx);
+      avcodec_parameters_to_context(ctx, stream_->codecpar);
+      err = avcodec_open2(ctx, codec, NULL);
       YAE_ASSERT(err >= 0);
 #endif
     }

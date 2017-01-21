@@ -496,7 +496,7 @@ namespace yae
     track->setSubs(&subs_);
     track->frameQueue_.setMaxSize(videoQueueSize_.traits().value());
 
-    return track->open();
+    return track->initTraits();
   }
 
   //----------------------------------------------------------------
@@ -523,7 +523,7 @@ namespace yae
     track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
     track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
 
-    return track->open();
+    return track->initTraits();
   }
 
 
@@ -819,7 +819,7 @@ namespace yae
               sf.sideData_ = buffer;
             }
 
-            if (subs->codec_)
+            if (subs->codecContext_)
             {
               // decode the subtitle:
               int gotSub = 0;

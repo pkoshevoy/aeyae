@@ -59,7 +59,10 @@ namespace yae
     VideoTrack(Track & track);
 
     // virtual:
-    bool open();
+    bool initTraits();
+
+    // virtual:
+    AVCodecContext * open(const TPacketPtr & packetPtr);
 
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);

@@ -139,6 +139,19 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AvCodecContextPtr
+  //
+  struct AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
+  {
+    AvCodecContextPtr(AVCodecContext * ctx = NULL):
+      boost::shared_ptr<AVCodecContext>(ctx, &AvCodecContextPtr::destroy)
+    {}
+
+    static void destroy(AVCodecContext * ctx);
+  };
+
+
+  //----------------------------------------------------------------
   // verify_pts
   //
   YAE_API bool verify_pts(bool hasPrevPTS,
@@ -150,10 +163,12 @@ namespace yae
   //----------------------------------------------------------------
   // find_best_decoder_for
   //
-  // this will return a Nvidia CUVID decoder when available
+  // this will return an instance of Nvidia CUVID decoder when available
+  // or any decoder compatible with given codec parameters
+  // and capable of decoding a given packet.
   //
-  YAE_API const AVCodec *
-  find_best_decoder_for(const AVCodecParameters & params);
+  YAE_API AvCodecContextPtr
+  find_best_decoder_for(const AVCodecParameters & params, const AvPkt & pkt);
 
   //----------------------------------------------------------------
   // Track
@@ -169,8 +184,11 @@ namespace yae
     // NOTE: destructor will close the stream:
     virtual ~Track();
 
+    // initialize track traits, but do not open the decoder:
+    virtual bool initTraits();
+
     // open the stream for decoding:
-    bool open();
+    virtual AVCodecContext * open(const TPacketPtr & packetPtr);
 
     // close the stream:
     virtual void close();
@@ -185,11 +203,7 @@ namespace yae
 
     // accessor to the codec context:
     inline AVCodecContext * codecContext() const
-    { return codecContext_; }
-
-    // accessor to the codec:
-    inline const AVCodec * codec() const
-    { return codec_; }
+    { return codecContext_.get(); }
 
     // get track duration:
     bool getDuration(TTime & start, TTime & duration) const;
@@ -233,8 +247,7 @@ namespace yae
 
     AVFormatContext * context_;
     AVStream * stream_;
-    const AVCodec * codec_;
-    AVCodecContext * codecContext_;
+    AvCodecContextPtr codecContext_;
     TPacketQueue packetQueue_;
 
     double timeIn_;

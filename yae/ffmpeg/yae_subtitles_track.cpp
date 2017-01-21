@@ -196,7 +196,6 @@ namespace yae
   //
   SubtitlesTrack::SubtitlesTrack(AVStream * stream, std::size_t index):
     stream_(stream),
-    codec_(NULL),
     codecContext_(NULL),
     render_(false),
     format_(kSubsNone),
@@ -232,28 +231,24 @@ namespace yae
   {
     if (stream_)
     {
-      format_ = getSubsFormat(stream_->codecpar->codec_id);
-      codec_ = find_best_decoder_for(*(stream_->codecpar));
+      const AVCodecParameters & codecParams = *(stream_->codecpar);
+      format_ = getSubsFormat(codecParams.codec_id);
+      const AVCodec * codec = avcodec_find_decoder(codecParams.codec_id);
       active_.clear();
 
-      if (codec_)
+      if (codec)
       {
         YAE_ASSERT(!codecContext_);
-        codecContext_ = avcodec_alloc_context3(codec_);
-
-        AVDictionary * opts = NULL;
-        av_dict_set(&opts, "threads", "auto", 0);
-        av_dict_set(&opts, "refcounted_frames", "1", 0);
+        codecContext_ = avcodec_alloc_context3(codec);
 
         avcodec_parameters_to_context(codecContext_, stream_->codecpar);
         codecContext_->time_base = stream_->time_base;
 
-        int err = avcodec_open2(codecContext_, codec_, &opts);
+        int err = avcodec_open2(codecContext_, codec, NULL);
         if (err < 0)
         {
           // unsupported codec:
           avcodec_free_context(&codecContext_);
-          codec_ = NULL;
         }
         else if (codecContext_->extradata &&
                  codecContext_->extradata_size)
@@ -313,7 +308,6 @@ namespace yae
     {
       avcodec_close(codecContext_);
       avcodec_free_context(&codecContext_);
-      codec_ = NULL;
     }
   }
 

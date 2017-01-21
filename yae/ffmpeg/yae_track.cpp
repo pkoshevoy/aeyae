@@ -102,6 +102,17 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AvCodecContextPtr::destroy
+  //
+  void
+  AvCodecContextPtr::destroy(AVCodecContext * ctx)
+  {
+    avcodec_close(ctx);
+    avcodec_free_context(&ctx);
+  }
+
+
+  //----------------------------------------------------------------
   // is_framerate_valid
   //
   static inline bool
@@ -232,8 +243,6 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
-    codec_(NULL),
-    codecContext_(NULL),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -255,8 +264,6 @@ namespace yae
     thread_(this),
     context_(NULL),
     stream_(NULL),
-    codec_(NULL),
-    codecContext_(NULL),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -267,7 +274,6 @@ namespace yae
   {
     std::swap(context_, track.context_);
     std::swap(stream_, track.stream_);
-    std::swap(codec_, track.codec_);
     std::swap(codecContext_, track.codecContext_);
   }
 
@@ -306,22 +312,41 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // AVCodecContextDeallocator
+    // tryToOpen
     //
-    struct AVCodecContextDeallocator
+    static AvCodecContextPtr
+    tryToOpen(const AVCodec * c,
+              const AVCodecParameters & params,
+              const AvPkt & pkt)
     {
-      inline static void destroy(AVCodecContext * ctx)
+      AvCodecContextPtr ctx(avcodec_alloc_context3(c));
+      avcodec_parameters_to_context(ctx.get(), &params);
+
+      int err = avcodec_open2(ctx.get(), c, NULL);
+      if (err < 0)
       {
-        avcodec_close(ctx);
-        avcodec_free_context(&ctx);
+        return AvCodecContextPtr();
       }
-    };
+
+      // try feeding it a packet to see if it will choke on it:
+      err = avcodec_send_packet(ctx.get(), &pkt);
+      if (err < 0)
+      {
+        return AvCodecContextPtr();
+      }
+
+      return ctx;
+    }
+
 
     //----------------------------------------------------------------
     // find
     //
-    const AVCodec *
-    find(const AVCodecParameters & params) const
+    // FIXME: perhaps should also include a list of acceptable
+    // output pixel formats (or sample formats)
+    //
+    AvCodecContextPtr
+    find(const AVCodecParameters & params, const AvPkt & pkt) const
     {
       TDecoderMap::const_iterator found = TDecoderMap::find(params.codec_id);
       if (found == TDecoderMap::end())
@@ -329,9 +354,9 @@ namespace yae
         return NULL;
       }
 
-      const AVCodec * experimental = NULL;
-      const AVCodec * software = NULL;
-      const AVCodec * hardware = NULL;
+      AvCodecContextPtr experimental;
+      AvCodecContextPtr software;
+      AvCodecContextPtr hardware;
 
       typedef std::set<const AVCodec *> TCodecs;
       const TCodecs & codecs = found->second;
@@ -340,7 +365,7 @@ namespace yae
         const AVCodec * c = *i;
         if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
         {
-          experimental || (experimental = c);
+          experimental || (experimental = tryToOpen(c, params, pkt));
         }
         else if (al::ends_with(c->name, "_cuvid"))
         {
@@ -358,21 +383,11 @@ namespace yae
           }
 
           // verify that the GPU can handle this stream:
-          boost::shared_ptr<AVCodecContext>
-            ctx(avcodec_alloc_context3(c), AVCodecContextDeallocator::destroy);
-          avcodec_parameters_to_context(ctx.get(), &params);
-
-          int err = avcodec_open2(ctx.get(), c, NULL);
-          if (err)
-          {
-            continue;
-          }
-
-          hardware = c;
+          hardware = tryToOpen(c, params, pkt);
         }
         else
         {
-          software || (software = c);
+          software || (software = tryToOpen(c, params, pkt));
         }
       }
 
@@ -385,66 +400,61 @@ namespace yae
   //----------------------------------------------------------------
   // find_best_decoder_for
   //
-  const AVCodec *
-  find_best_decoder_for(const AVCodecParameters & params)
+  AvCodecContextPtr
+  find_best_decoder_for(const AVCodecParameters & params, const AvPkt & pkt)
   {
     static const TDecoders decoders;
-    const AVCodec * c = decoders.find(params);
+    AvCodecContextPtr ctx = decoders.find(params, pkt);
 
-#ifdef NDEBUG
-    if (c)
+#ifndef NDEBUG
+    if (ctx)
     {
-      std::cerr << "\n\nUSING DECODER: " << c->name << "\n\n"
+      std::cerr << "\n\nUSING DECODER: " << ctx->codec->name << "\n\n"
                 << std::endl;
     }
 #endif
 
-    return c;
+    return ctx;
   }
 
 
   //----------------------------------------------------------------
-  // Track::open
+  // Track::initTraits
   //
   bool
-  Track::open()
+  Track::initTraits()
   {
+    YAE_ASSERT(false);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Track::open
+  //
+  AVCodecContext *
+  Track::open(const TPacketPtr & packetPtr)
+  {
+    if (codecContext_)
+    {
+      return codecContext_.get();
+    }
+
     if (!stream_)
     {
-      return false;
+      return NULL;
     }
 
-    threadStop();
-    close();
+    const AVCodecParameters & codecParams = *(stream_->codecpar);
+    const AvPkt & pkt = *packetPtr;
 
-    codec_ = find_best_decoder_for(*(stream_->codecpar));
-    if (!codec_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
+    codecContext_ = find_best_decoder_for(codecParams, pkt);
+    if (!codecContext_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
-      return false;
+      return NULL;
     }
 
-    // maybe try opening the decoder on-demand when we have a packet
-    int err = 0;
-    if (codec_)
-    {
-      YAE_ASSERT(!codecContext_);
-      codecContext_ = avcodec_alloc_context3(codec_);
-
-      avcodec_parameters_to_context(codecContext_, stream_->codecpar);
-
-      err = avcodec_open2(codecContext_, codec_, NULL);
-    }
-
-    if (err < 0)
-    {
-      // unsupported codec:
-      avcodec_free_context(&codecContext_);
-      codec_ = NULL;
-      return false;
-    }
-
-    return true;
+    return codecContext_.get();
   }
 
   //----------------------------------------------------------------
@@ -455,9 +465,7 @@ namespace yae
   {
     if (stream_ && codecContext_)
     {
-      avcodec_close(codecContext_);
-      avcodec_free_context(&codecContext_);
-      codec_ = NULL;
+      codecContext_.reset();
     }
   }
 
@@ -541,12 +549,13 @@ namespace yae
       return true;
     }
 
-    if (context_->nb_streams == 1 && codecContext_->bit_rate)
+    const AVCodecParameters & codecParams = *(stream_->codecpar);
+    if (context_->nb_streams == 1 && codecParams.bit_rate)
     {
       double t =
-        double(fileBits / codecContext_->bit_rate) +
-        double(fileBits % codecContext_->bit_rate) /
-        double(codecContext_->bit_rate);
+        double(fileBits / codecParams.bit_rate) +
+        double(fileBits % codecParams.bit_rate) /
+        double(codecParams.bit_rate);
 
       duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
       duration.base_ = AV_TIME_BASE;
