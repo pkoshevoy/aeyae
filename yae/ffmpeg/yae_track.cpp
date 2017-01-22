@@ -361,7 +361,8 @@ namespace yae
 
       AvCodecContextPtr experimental;
       AvCodecContextPtr software;
-      AvCodecContextPtr hardware;
+      AvCodecContextPtr cuvid;
+      AvCodecContextPtr intel;
 
       typedef std::set<const AVCodec *> TCodecs;
       const TCodecs & codecs = found->second;
@@ -374,7 +375,7 @@ namespace yae
         }
         else if (al::ends_with(c->name, "_cuvid"))
         {
-          if (hardware)
+          if (cuvid)
           {
             continue;
           }
@@ -388,7 +389,17 @@ namespace yae
           }
 
           // verify that the GPU can handle this stream:
-          hardware = tryToOpen(c, params, pkt);
+          cuvid = tryToOpen(c, params, pkt);
+        }
+        else if (al::ends_with(c->name, "_qsv"))
+        {
+          if (intel)
+          {
+            continue;
+          }
+
+          // verify that the GPU can handle this stream:
+          intel = tryToOpen(c, params, pkt);
         }
         else
         {
@@ -396,7 +407,8 @@ namespace yae
         }
       }
 
-      return (hardware ? hardware :
+      return (cuvid ? cuvid :
+              intel ? intel :
               software ? software :
               experimental);
     }
