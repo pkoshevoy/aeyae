@@ -123,7 +123,7 @@ namespace yae
   //----------------------------------------------------------------
   // AvFrm
   //
-  struct AvFrm : public AVFrame
+  struct YAE_API AvFrm : public AVFrame
   {
     AvFrm();
     AvFrm(const AvFrm & frame);
@@ -141,7 +141,7 @@ namespace yae
   //----------------------------------------------------------------
   // AvCodecContextPtr
   //
-  struct AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
+  struct YAE_API AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
   {
     AvCodecContextPtr(AVCodecContext * ctx = NULL):
       boost::shared_ptr<AVCodecContext>(ctx, &AvCodecContextPtr::destroy)
