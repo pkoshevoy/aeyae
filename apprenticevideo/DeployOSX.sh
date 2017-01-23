@@ -868,22 +868,21 @@ if [ -e "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" ]; then
 		#  -no-strip
 		echo "Qt4 macdeploy breaks codesigning, skipping it..."
 	else
-		#echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
-		#  -always-overwrite \
-		#  -no-strip \
-		#  #-qmldir="${QML_SRC_DIR}" \
+		echo "${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -always-overwrite \
+		  -no-strip \
+		  #-qmldir="${QML_SRC_DIR}" \
 
-		#"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
-		#  -always-overwrite \
-		#  -no-strip \
-		#  #-qmldir="${QML_SRC_DIR}" \
-		QT_PLUGINS_DIR=$(./qmake -query | grep QT_INSTALL_PLUGINS: | cut -d: -f2)
-
-		mkdir -p "${BUNDLE_PATH}/Contents/PlugIns/" || exit 1
-		for i in platforms imageformats printsupport; do
-			echo $CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/"
-			$CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/" || exit 2
-		done
+		"${QT_INSTALL_DIR}/${QT_MACDEPLOY}" "${BUNDLE_PATH}" \
+		  -always-overwrite \
+		  -no-strip \
+		  #-qmldir="${QML_SRC_DIR}" \
+		#QT_PLUGINS_DIR=$(./qmake -query | grep QT_INSTALL_PLUGINS: | cut -d: -f2)
+		#mkdir -p "${BUNDLE_PATH}/Contents/PlugIns/" || exit 1
+		#for i in platforms imageformats printsupport; do
+		#	echo $CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/"
+		#	$CP "${QT_PLUGINS_DIR}/${i}" "${BUNDLE_PATH}/Contents/PlugIns/" || exit 2
+		#done
 	fi
 
 	quiet_popd
