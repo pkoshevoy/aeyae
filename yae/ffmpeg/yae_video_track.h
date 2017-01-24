@@ -62,7 +62,7 @@ namespace yae
     bool initTraits();
 
     // virtual:
-    AVCodecContext * open(const TPacketPtr & packetPtr);
+    AVCodecContext * open();
 
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);
@@ -76,13 +76,9 @@ namespace yae
     // virtual:
     bool decoderStartup();
     bool decoderShutdown();
-    bool decode(const TPacketPtr & packetPtr);
-
-    // helper:
-    bool decodePull();
+    void handle(const AvFrm & decodedFrame);
 
     // virtual:
-    void threadLoop();
     bool threadStop();
 
     // video traits, not overridden:

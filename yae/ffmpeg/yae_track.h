@@ -168,7 +168,8 @@ namespace yae
   // and capable of decoding a given packet.
   //
   YAE_API AvCodecContextPtr
-  find_best_decoder_for(const AVCodecParameters & params, const AvPkt & pkt);
+  find_best_decoder_for(const AVCodecParameters & params,
+                        std::list<AvCodecContextPtr> & candidates);
 
   //----------------------------------------------------------------
   // Track
@@ -188,7 +189,7 @@ namespace yae
     virtual bool initTraits();
 
     // open the stream for decoding:
-    virtual AVCodecContext * open(const TPacketPtr & packetPtr);
+    virtual AVCodecContext * open();
 
     // close the stream:
     virtual void close();
@@ -215,18 +216,20 @@ namespace yae
     inline TPacketQueue & packetQueue()
     { return packetQueue_; }
 
-    // decode a given packet:
+    // decoder spin-up/spin-down points:
     virtual bool decoderStartup()
     { return false; }
 
     virtual bool decoderShutdown()
     { return false; }
 
-    virtual bool decode(const TPacketPtr & packetPtr)
-    { return false; }
+    // audio/video tracks will handled decoded frames differently,
+    // but the interface is the same:
+    virtual void handle(const AvFrm & decodedFrame)
+    {}
 
     // packet decoding thread:
-    virtual void threadLoop() {}
+    virtual void threadLoop();
     virtual bool threadStart();
     virtual bool threadStop();
 
@@ -248,6 +251,8 @@ namespace yae
     AVFormatContext * context_;
     AVStream * stream_;
     AvCodecContextPtr codecContext_;
+    std::list<AvCodecContextPtr> candidates_;
+    std::list<TPacketPtr> packets_;
     TPacketQueue packetQueue_;
 
     double timeIn_;

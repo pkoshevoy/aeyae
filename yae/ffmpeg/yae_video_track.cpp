@@ -133,14 +133,14 @@ namespace yae
   // VideoTrack::open
   //
   AVCodecContext *
-  VideoTrack::open(const TPacketPtr & packetPtr)
+  VideoTrack::open()
   {
     if (codecContext_)
     {
       return codecContext_.get();
     }
 
-    AVCodecContext * ctx = Track::open(packetPtr);
+    AVCodecContext * ctx = Track::open();
     if (ctx)
     {
       framesDecoded_ = 0;
@@ -403,84 +403,15 @@ namespace yae
     double now_;
   };
 
-#if LIBAVUTIL_VERSION_INT <= AV_VERSION_INT(54, 3, 0)
   //----------------------------------------------------------------
-  // av_frame_get_best_effort_timestamp
+  // VideoTrack::handle
   //
-  inline int64_t
-  av_frame_get_best_effort_timestamp(const AVFrame * frame)
-  {
-    return frame->pkt_pts;
-  }
-#endif
-
-  //----------------------------------------------------------------
-  // VideoTrack::decode
-  //
-  bool
-  VideoTrack::decode(const TPacketPtr & packetPtr)
-  {
-    AVCodecContext * codecContext = this->open(packetPtr);
-    if (!codecContext)
-    {
-      // don't give up trying to find a decoder that works:
-      return true;
-    }
-
-    AVPacket packet;
-    if (packetPtr)
-    {
-      // make a local shallow copy of the packet:
-      packet = *packetPtr;
-    }
-    else
-    {
-      // flush out buffered frames with an empty packet:
-      memset(&packet, 0, sizeof(packet));
-      av_init_packet(&packet);
-    }
-
-    int err = AVERROR(EAGAIN);
-    while (err == AVERROR(EAGAIN))
-    {
-      boost::this_thread::interruption_point();
-
-      err = avcodec_send_packet(codecContext, &packet);
-
-      if (!this->decodePull())
-      {
-        return false;
-      }
-    }
-
-#ifndef NDEBUG
-    if (err)
-    {
-      dump_averror(std::cerr, err);
-    }
-#endif
-    return !err;
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::decodePull
-  //
-  bool
-  VideoTrack::decodePull()
+  void
+  VideoTrack::handle(const AvFrm & decodedFrame)
   {
     try
     {
-      // Decode video frame
-      AVCodecContext * codecContext = this->codecContext();
-      AvFrm decoded;
-      int err_recv = avcodec_receive_frame(codecContext, &decoded);
-      if (err_recv)
-      {
-        bool ok = (err_recv == AVERROR(EAGAIN));
-        return ok;
-      }
-
-      decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
+      AvFrm decoded(decodedFrame);
       framesDecoded_++;
 
 #ifndef NDEBUG
@@ -621,13 +552,13 @@ namespace yae
                               &frameTraitsChanged))
       {
         YAE_ASSERT(false);
-        return true;
+        return;
       }
 
       if (frameTraitsChanged && !reconfigure())
       {
         YAE_ASSERT(false);
-        return true;
+        return;
       }
 
       decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
@@ -673,7 +604,7 @@ namespace yae
           double dt = tb - ta;
           double fd = 1.0 / native_.frameRate_;
           // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
-          if (dt > 2.01 * fd)
+          if (dt > 3.01 * fd)
           {
             std::cerr
               << "\nNOTE: detected large PTS jump: " << std::endl
@@ -702,7 +633,7 @@ namespace yae
       if (!filterGraph_.push(&decoded))
       {
         YAE_ASSERT(false);
-        return true;
+        return;
       }
 
       while (true)
@@ -738,7 +669,7 @@ namespace yae
                       << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
                       << std::endl;
 #endif
-            return true;
+            return;
           }
 
           discarded_ = 0;
@@ -847,58 +778,14 @@ namespace yae
         // put the output frame into frame queue:
         if (!frameQueue_.push(vfPtr, &terminator_))
         {
-          return false;
+          return;
         }
 
         // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
       }
     }
     catch (...)
-    {
-      return false;
-    }
-
-    return true;
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::threadLoop
-  //
-  void
-  VideoTrack::threadLoop()
-  {
-    decoderStartup();
-
-    while (true)
-    {
-      try
-      {
-        boost::this_thread::interruption_point();
-
-        TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr, &terminator_))
-        {
-          break;
-        }
-
-        if (!packetPtr)
-        {
-          // flush out buffered frames with an empty packet:
-          while (decode(packetPtr))
-            ;
-        }
-        else
-        {
-          decode(packetPtr);
-        }
-      }
-      catch (...)
-      {
-        break;
-      }
-    }
-
-    decoderShutdown();
+    {}
   }
 
   //----------------------------------------------------------------

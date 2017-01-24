@@ -57,14 +57,14 @@ namespace yae
   // AudioTrack::open
   //
   AVCodecContext *
-  AudioTrack::open(const TPacketPtr & packetPtr)
+  AudioTrack::open()
   {
     if (codecContext_)
     {
       return codecContext_.get();
     }
 
-    AVCodecContext * ctx = Track::open(packetPtr);
+    AVCodecContext * ctx = Track::open();
     if (ctx)
     {
       samplesDecoded_ = 0;
@@ -126,36 +126,14 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTrack::decode
   //
-  bool
-  AudioTrack::decode(const TPacketPtr & packetPtr)
+  void
+  AudioTrack::handle(const AvFrm & decodedFrame)
   {
-    AVCodecContext * codecContext = this->open(packetPtr);
-    if (!codecContext)
-    {
-      // don't give up trying to find a decoder that works:
-      return true;
-    }
-
-    int err_send = AVERROR(EAGAIN);
-    int err_recv = 0;
-
     try
     {
-      AVPacket packet;
+      boost::this_thread::interruption_point();
 
-      if (packetPtr)
-      {
-        // make a local shallow copy of the packet:
-        packet = *packetPtr;
-      }
-      else
-      {
-        // flush out buffered frames with an empty packet:
-        memset(&packet, 0, sizeof(packet));
-        av_init_packet(&packet);
-      }
-
-      // Decode audio frame, piecewise:
+      // assemble audio frame, piecewise:
       std::list<std::vector<unsigned char> > chunks;
       std::size_t outputBytes = 0;
 
@@ -166,44 +144,10 @@ namespace yae
       int64 outputChannelLayout =
         av_get_default_channel_layout(outputChannels_);
 
-      while (!packetPtr || packet.size)
+      // assemble output audio frame
+      if (decodedFrame.nb_samples)
       {
-        boost::this_thread::interruption_point();
-
-        // Decode audio frame
-        err_send = avcodec_send_packet(codecContext, &packet);
-        if (err_send < 0 &&
-            err_send != AVERROR(EAGAIN) &&
-            err_send != AVERROR_EOF)
-        {
-          break;
-        }
-
-        int bytesUsed = (err_send == 0 ? packet.size :
-                         err_send > 0 ? err_send : 0);
-
-        // adjust the packet (the copy, not the original):
-        packet.size -= bytesUsed;
-        packet.data += bytesUsed;
-
-        AvFrm decoded;
-        err_recv = avcodec_receive_frame(codecContext, &decoded);
-        bool gotFrame = err_recv >= 0;
-
-        if (!gotFrame || !decoded.nb_samples)
-        {
-          if (packetPtr)
-          {
-            continue;
-          }
-          else
-          {
-            // done flushing:
-            return false;
-          }
-        }
-
-        decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
+        AvFrm decoded(decodedFrame);
 
         if (hasPrevPTS_ && decoded.pts != AV_NOPTS_VALUE)
         {
@@ -248,7 +192,7 @@ namespace yae
                                 &frameTraitsChanged))
         {
           YAE_ASSERT(false);
-          return true;
+          return;
         }
 
         if (frameTraitsChanged)
@@ -258,7 +202,7 @@ namespace yae
           // prepare to remix or resample accordingly:
           if (!getTraits(native_))
           {
-            return false;
+            return;
           }
 
           noteNativeTraitsChanged();
@@ -267,7 +211,7 @@ namespace yae
         if (!filterGraph_.push(&decoded))
         {
           YAE_ASSERT(false);
-          return true;
+          return;
         }
 
         while (true)
@@ -288,7 +232,7 @@ namespace yae
 
       if (!outputBytes)
       {
-        return true;
+        return;
       }
 
       std::size_t numOutputSamples = outputBytes / outputBytesPerSample_;
@@ -302,20 +246,11 @@ namespace yae
 
       bool gotPTS = false;
 
-      if (!gotPTS &&
-          packet.pts != AV_NOPTS_VALUE)
+      if (!gotPTS && decodedFrame.pts != AV_NOPTS_VALUE)
       {
-        af.time_.time_ = stream_->time_base.num * packet.pts;
+        af.time_.time_ = stream_->time_base.num * decodedFrame.pts;
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
-                            "packet.pts");
-      }
-
-      if (!gotPTS &&
-          packet.dts != AV_NOPTS_VALUE)
-      {
-        af.time_.time_ = stream_->time_base.num * packet.dts;
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
-                            "packet.dts");
+                            "decodedFrame.pts");
       }
 
       if (!gotPTS)
@@ -387,7 +322,7 @@ namespace yae
                     << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
                     << std::endl;
 #endif
-          return true;
+          return;
         }
 
         discarded_ = 0;
@@ -469,60 +404,15 @@ namespace yae
       // put the decoded frame into frame queue:
       if (!frameQueue_.push(afPtr, &terminator_))
       {
-        return false;
+        return;
       }
 
       // std::cerr << "A: " << af.time_.toSeconds() << std::endl;
     }
     catch (...)
-    {
-      return false;
-    }
+    {}
 
-    return true;
-  }
-
-  //----------------------------------------------------------------
-  // AudioTrack::threadLoop
-  //
-  void
-  AudioTrack::threadLoop()
-  {
-    if (!decoderStartup())
-    {
-      return;
-    }
-
-    while (true)
-    {
-      try
-      {
-        boost::this_thread::interruption_point();
-
-        TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr, &terminator_))
-        {
-          break;
-        }
-
-        if (!packetPtr)
-        {
-          // flush out buffered frames with an empty packet:
-          while (decode(packetPtr))
-            ;
-        }
-        else
-        {
-          decode(packetPtr);
-        }
-      }
-      catch (...)
-      {
-        break;
-      }
-    }
-
-    decoderShutdown();
+    return;
   }
 
   //----------------------------------------------------------------

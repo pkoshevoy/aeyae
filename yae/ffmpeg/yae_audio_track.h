@@ -40,15 +40,14 @@ namespace yae
     bool initTraits();
 
     // virtual:
-    AVCodecContext * open(const TPacketPtr & packetPtr);
+    AVCodecContext * open();
 
     // virtual:
     bool decoderStartup();
     bool decoderShutdown();
-    bool decode(const TPacketPtr & packetPtr);
+    void handle(const AvFrm & decodedFrame);
 
     // virtual:
-    void threadLoop();
     bool threadStop();
 
     // flush and reset filter graph if native traits change during decoding:

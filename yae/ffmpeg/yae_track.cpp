@@ -315,9 +315,7 @@ namespace yae
     // tryToOpen
     //
     static AvCodecContextPtr
-    tryToOpen(const AVCodec * c,
-              const AVCodecParameters & params,
-              const AvPkt & pkt)
+    tryToOpen(const AVCodec * c, const AVCodecParameters & params)
     {
       unsigned int nthreads = boost::thread::hardware_concurrency();
 
@@ -333,13 +331,6 @@ namespace yae
         return AvCodecContextPtr();
       }
 
-      // try feeding it a packet to see if it will choke on it:
-      err = avcodec_send_packet(ctx.get(), &pkt);
-      if (err < 0)
-      {
-        return AvCodecContextPtr();
-      }
-
       return ctx;
     }
 
@@ -350,19 +341,22 @@ namespace yae
     // FIXME: perhaps should also include a list of acceptable
     // output pixel formats (or sample formats)
     //
-    AvCodecContextPtr
-    find(const AVCodecParameters & params, const AvPkt & pkt) const
+    void
+    find(const AVCodecParameters & params,
+         std::list<AvCodecContextPtr> & decoders) const
     {
+      decoders.clear();
+
       TDecoderMap::const_iterator found = TDecoderMap::find(params.codec_id);
       if (found == TDecoderMap::end())
       {
-        return NULL;
+        return;
       }
 
-      AvCodecContextPtr experimental;
-      AvCodecContextPtr software;
       AvCodecContextPtr cuvid;
       AvCodecContextPtr intel;
+      std::list<AvCodecContextPtr> software;
+      std::list<AvCodecContextPtr> experimental;
 
       typedef std::set<const AVCodec *> TCodecs;
       const TCodecs & codecs = found->second;
@@ -371,15 +365,14 @@ namespace yae
         const AVCodec * c = *i;
         if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
         {
-          experimental || (experimental = tryToOpen(c, params, pkt));
+          AvCodecContextPtr ctx = tryToOpen(c, params);
+          if (ctx)
+          {
+            experimental.push_back(ctx);
+          }
         }
         else if (al::ends_with(c->name, "_cuvid"))
         {
-          if (cuvid)
-          {
-            continue;
-          }
-
           if (params.format != AV_PIX_FMT_YUV420P &&
               params.codec_id != AV_CODEC_ID_MJPEG)
           {
@@ -389,28 +382,35 @@ namespace yae
           }
 
           // verify that the GPU can handle this stream:
-          cuvid = tryToOpen(c, params, pkt);
+          cuvid = tryToOpen(c, params);
         }
         else if (al::ends_with(c->name, "_qsv"))
         {
-          if (intel)
-          {
-            continue;
-          }
-
           // verify that the GPU can handle this stream:
-          intel = tryToOpen(c, params, pkt);
+          intel = tryToOpen(c, params);
         }
         else
         {
-          software || (software = tryToOpen(c, params, pkt));
+          AvCodecContextPtr ctx = tryToOpen(c, params);
+          if (ctx)
+          {
+            software.push_back(ctx);
+          }
         }
       }
 
-      return (cuvid ? cuvid :
-              intel ? intel :
-              software ? software :
-              experimental);
+      if (cuvid)
+      {
+        decoders.push_back(cuvid);
+      }
+
+      if (intel)
+      {
+        decoders.push_back(intel);
+      }
+
+      decoders.splice(decoders.end(), software);
+      decoders.splice(decoders.end(), experimental);
     }
   };
 
@@ -418,10 +418,18 @@ namespace yae
   // find_best_decoder_for
   //
   AvCodecContextPtr
-  find_best_decoder_for(const AVCodecParameters & params, const AvPkt & pkt)
+  find_best_decoder_for(const AVCodecParameters & params,
+                        std::list<AvCodecContextPtr> & untried)
   {
     static const TDecoders decoders;
-    AvCodecContextPtr ctx = decoders.find(params, pkt);
+
+    if (untried.empty())
+    {
+      decoders.find(params, untried);
+    }
+
+    AvCodecContextPtr ctx = untried.front();
+    untried.pop_front();
 
 #ifndef NDEBUG
     if (ctx)
@@ -449,7 +457,7 @@ namespace yae
   // Track::open
   //
   AVCodecContext *
-  Track::open(const TPacketPtr & packetPtr)
+  Track::open()
   {
     if (codecContext_)
     {
@@ -462,9 +470,8 @@ namespace yae
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
-    const AvPkt & pkt = *packetPtr;
 
-    codecContext_ = find_best_decoder_for(codecParams, pkt);
+    codecContext_ = find_best_decoder_for(codecParams, candidates_);
     if (!codecContext_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
@@ -594,6 +601,180 @@ namespace yae
     terminator_.stopWaiting(false);
     packetQueue_.open();
     return thread_.run();
+  }
+
+#if LIBAVUTIL_VERSION_INT <= AV_VERSION_INT(54, 3, 0)
+  //----------------------------------------------------------------
+  // av_frame_get_best_effort_timestamp
+  //
+  inline int64_t
+  av_frame_get_best_effort_timestamp(const AVFrame * frame)
+  {
+    return frame->pkt_pts;
+  }
+#endif
+
+  //----------------------------------------------------------------
+  // decoderPull
+  //
+  static int
+  decoderPull(AVCodecContext * ctx, Track & track)
+  {
+    int err = 0;
+    while (true)
+    {
+      AvFrm decodedFrame;
+      err = avcodec_receive_frame(ctx, &decodedFrame);
+      if (err < 0)
+      {
+        break;
+      }
+
+      // FIXME: perhaps it may be useful to keep track of the number
+      // of frames decoded successfully?
+
+      decodedFrame.pts = av_frame_get_best_effort_timestamp(&decodedFrame);
+      track.handle(decodedFrame);
+    }
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // decode
+  //
+  static int
+  decode(AVCodecContext * ctx, Track & track, const AvPkt & pkt)
+  {
+    int errSend = AVERROR(EAGAIN);
+    int errRecv = AVERROR(EAGAIN);
+
+    while (errSend == AVERROR(EAGAIN))
+    {
+      boost::this_thread::interruption_point();
+
+      errSend = avcodec_send_packet(ctx, &pkt);
+      if (errSend < 0 && errSend != AVERROR(EAGAIN))
+      {
+#ifndef NDEBUG
+        if (errSend)
+        {
+          dump_averror(std::cerr, errSend);
+        }
+#endif
+        return errSend;
+      }
+
+      errRecv = decoderPull(ctx, track);
+      if (errRecv < 0 && errRecv != AVERROR(EAGAIN))
+      {
+#ifndef NDEBUG
+        if (errRecv)
+        {
+          dump_averror(std::cerr, errRecv);
+        }
+#endif
+        break;
+      }
+    }
+
+    return errRecv;
+  }
+
+  //----------------------------------------------------------------
+  // switchDecoder
+  //
+  static bool
+  switchDecoder(Track & track,
+                AvCodecContextPtr & codecContext,
+                std::list<AvCodecContextPtr> & candidates,
+                const std::list<TPacketPtr> & packets)
+  {
+    while (!candidates.empty())
+    {
+      codecContext.reset();
+      AVCodecContext * ctx = track.open();
+
+      int err = AVERROR(EAGAIN);
+      for (std::list<TPacketPtr>::const_iterator
+             i = packets.begin(), end = packets.end(); i != end; ++i)
+      {
+        const AvPkt & pkt = *(*i);
+        int err = decode(ctx, track, pkt);
+        if (err < 0 && err != AVERROR(EAGAIN))
+        {
+          break;
+        }
+      }
+
+      if (err != 0 || err == AVERROR(EAGAIN))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::threadLoop
+  //
+  void
+  Track::threadLoop()
+  {
+    decoderStartup();
+
+    while (true)
+    {
+      try
+      {
+        boost::this_thread::interruption_point();
+
+        TPacketPtr packetPtr;
+        if (!packetQueue_.pop(packetPtr, &terminator_))
+        {
+          break;
+        }
+
+        if (!packetPtr && codecContext_)
+        {
+          // flush out buffered frames with an empty packet:
+          AVCodecContext * ctx = codecContext_.get();
+          AvPkt pkt;
+          decode(ctx, *this, pkt);
+        }
+        else
+        {
+          AVCodecContext * ctx = open();
+          if (!ctx)
+          {
+            // codec is not supported
+            break;
+          }
+
+          if (!candidates_.empty())
+          {
+            packets_.push_back(packetPtr);
+          }
+
+          const AvPkt & pkt = *packetPtr;
+          int err = decode(ctx, *this, pkt);
+
+          if (err < 0 && err != AVERROR(EAGAIN) && !candidates_.empty() &&
+              switchDecoder(*this, codecContext_, candidates_, packets_))
+          {
+            packets_.clear();
+            candidates_.clear();
+          }
+        }
+      }
+      catch (...)
+      {
+        break;
+      }
+    }
+
+    decoderShutdown();
   }
 
   //----------------------------------------------------------------
