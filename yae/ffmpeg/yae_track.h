@@ -242,6 +242,10 @@ namespace yae
     Track & operator = (const Track &);
 
   protected:
+    int decoderPull(AVCodecContext * ctx);
+    int decode(AVCodecContext * ctx, const AvPkt & pkt);
+    bool switchDecoder();
+
     // worker thread:
     Thread<Track> thread_;
 
@@ -253,6 +257,8 @@ namespace yae
     AvCodecContextPtr codecContext_;
     std::list<AvCodecContextPtr> candidates_;
     std::list<TPacketPtr> packets_;
+    uint64_t sent_;
+    uint64_t received_;
     TPacketQueue packetQueue_;
 
     double timeIn_;

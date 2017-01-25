@@ -243,6 +243,8 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
+    sent_(0),
+    received_(0),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -478,6 +480,8 @@ namespace yae
       return NULL;
     }
 
+    sent_ = 0;
+    received_ = 0;
     return codecContext_.get();
   }
 
@@ -615,10 +619,10 @@ namespace yae
 #endif
 
   //----------------------------------------------------------------
-  // decoderPull
+  // Track::decoderPull
   //
-  static int
-  decoderPull(AVCodecContext * ctx, Track & track)
+  int
+  Track::decoderPull(AVCodecContext * ctx)
   {
     int err = 0;
     while (true)
@@ -633,18 +637,19 @@ namespace yae
       // FIXME: perhaps it may be useful to keep track of the number
       // of frames decoded successfully?
 
+      received_++;
       decodedFrame.pts = av_frame_get_best_effort_timestamp(&decodedFrame);
-      track.handle(decodedFrame);
+      handle(decodedFrame);
     }
 
     return err;
   }
 
   //----------------------------------------------------------------
-  // decode
+  // Track::decode
   //
-  static int
-  decode(AVCodecContext * ctx, Track & track, const AvPkt & pkt)
+  int
+  Track::decode(AVCodecContext * ctx, const AvPkt & pkt)
   {
     int errSend = AVERROR(EAGAIN);
     int errRecv = AVERROR(EAGAIN);
@@ -664,8 +669,12 @@ namespace yae
 #endif
         return errSend;
       }
+      else if (errSend >= 0)
+      {
+        sent_++;
+      }
 
-      errRecv = decoderPull(ctx, track);
+      errRecv = decoderPull(ctx);
       if (errRecv < 0 && errRecv != AVERROR(EAGAIN))
       {
 #ifndef NDEBUG
@@ -682,34 +691,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // switchDecoder
+  // Track::switchDecoder
   //
-  static bool
-  switchDecoder(Track & track,
-                AvCodecContextPtr & codecContext,
-                std::list<AvCodecContextPtr> & candidates,
-                const std::list<TPacketPtr> & packets)
+  bool
+  Track::switchDecoder()
   {
-    while (!candidates.empty())
+    while (!candidates_.empty())
     {
-      codecContext.reset();
-      AVCodecContext * ctx = track.open();
+      codecContext_.reset();
+      AVCodecContext * ctx = open();
 
       int err = AVERROR(EAGAIN);
       for (std::list<TPacketPtr>::const_iterator
-             i = packets.begin(), end = packets.end(); i != end; ++i)
+             i = packets_.begin(), end = packets_.end(); i != end; ++i)
       {
         const AvPkt & pkt = *(*i);
-        int err = decode(ctx, track, pkt);
+        int err = decode(ctx, pkt);
         if (err < 0 && err != AVERROR(EAGAIN))
         {
           break;
         }
       }
 
-      if (err != 0 || err == AVERROR(EAGAIN))
+      if (err == 0)
       {
         return true;
+      }
+
+      if (err == AVERROR(EAGAIN))
+      {
+        break;
       }
     }
 
@@ -741,7 +752,7 @@ namespace yae
           // flush out buffered frames with an empty packet:
           AVCodecContext * ctx = codecContext_.get();
           AvPkt pkt;
-          decode(ctx, *this, pkt);
+          decode(ctx, pkt);
         }
         else
         {
@@ -755,16 +766,27 @@ namespace yae
           if (!candidates_.empty())
           {
             packets_.push_back(packetPtr);
+
+            if (sent_ > 30)
+            {
+              packets_.pop_front();
+            }
           }
 
           const AvPkt & pkt = *packetPtr;
-          int err = decode(ctx, *this, pkt);
+          int err = decode(ctx, pkt);
 
-          if (err < 0 && err != AVERROR(EAGAIN) && !candidates_.empty() &&
-              switchDecoder(*this, codecContext_, candidates_, packets_))
+          if (!candidates_.empty())
           {
-            packets_.clear();
-            candidates_.clear();
+            if (received_ > 0)
+            {
+              candidates_.clear();
+              packets_.clear();
+            }
+            else if (err < 0 && err != AVERROR(EAGAIN))
+            {
+              switchDecoder();
+            }
           }
         }
       }
