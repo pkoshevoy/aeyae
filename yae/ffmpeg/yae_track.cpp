@@ -245,6 +245,7 @@ namespace yae
     stream_(stream),
     sent_(0),
     received_(0),
+    errors_(0),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -482,6 +483,7 @@ namespace yae
 
     sent_ = 0;
     received_ = 0;
+    errors_ = 0;
     return codecContext_.get();
   }
 
@@ -631,6 +633,11 @@ namespace yae
       err = avcodec_receive_frame(ctx, &decodedFrame);
       if (err < 0)
       {
+        if (err != AVERROR(EAGAIN) && err != AVERROR_EOF)
+        {
+          errors_++;
+        }
+
         break;
       }
 
@@ -659,14 +666,12 @@ namespace yae
       boost::this_thread::interruption_point();
 
       errSend = avcodec_send_packet(ctx, &pkt);
-      if (errSend < 0 && errSend != AVERROR(EAGAIN))
+      if (errSend < 0 && errSend != AVERROR(EAGAIN) && errSend != AVERROR_EOF)
       {
 #ifndef NDEBUG
-        if (errSend)
-        {
-          dump_averror(std::cerr, errSend);
-        }
+        dump_averror(std::cerr, errSend);
 #endif
+        errors_++;
         return errSend;
       }
       else if (errSend >= 0)
@@ -675,10 +680,10 @@ namespace yae
       }
 
       errRecv = decoderPull(ctx);
-      if (errRecv < 0 && errRecv != AVERROR(EAGAIN))
+      if (errRecv < 0)
       {
 #ifndef NDEBUG
-        if (errRecv)
+        if (errRecv != AVERROR(EAGAIN) && errRecv != AVERROR_EOF)
         {
           dump_averror(std::cerr, errRecv);
         }
@@ -696,7 +701,7 @@ namespace yae
   bool
   Track::switchDecoder()
   {
-    while (!candidates_.empty())
+    // while (!candidates_.empty())
     {
       codecContext_.reset();
       AVCodecContext * ctx = open();
@@ -720,7 +725,7 @@ namespace yae
 
       if (err == AVERROR(EAGAIN))
       {
-        break;
+        return false;
       }
     }
 
@@ -763,30 +768,26 @@ namespace yae
             break;
           }
 
-          if (!candidates_.empty())
+          if (sent_ > 60)
           {
-            packets_.push_back(packetPtr);
-
-            if (sent_ > 30)
-            {
-              packets_.pop_front();
-            }
+            packets_.pop_front();
           }
+          packets_.push_back(packetPtr);
 
           const AvPkt & pkt = *packetPtr;
+          int receivedPrior = received_;
           int err = decode(ctx, pkt);
 
-          if (!candidates_.empty())
+          if (received_ > receivedPrior)
           {
-            if (received_ > 0)
-            {
-              candidates_.clear();
-              packets_.clear();
-            }
-            else if (err < 0 && err != AVERROR(EAGAIN))
-            {
-              switchDecoder();
-            }
+            packets_.clear();
+            sent_ = 0;
+            errors_ = 0;
+          }
+          else if (err < 0 && err != AVERROR(EAGAIN) &&
+                   (!received_ || errors_ >= 6))
+          {
+            switchDecoder();
           }
         }
       }

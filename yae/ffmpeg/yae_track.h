@@ -259,6 +259,7 @@ namespace yae
     std::list<TPacketPtr> packets_;
     uint64_t sent_;
     uint64_t received_;
+    uint64_t errors_;
     TPacketQueue packetQueue_;
 
     double timeIn_;
