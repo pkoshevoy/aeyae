@@ -113,6 +113,33 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // tryToOpen
+  //
+  AvCodecContextPtr
+  tryToOpen(const AVCodec * c, const AVCodecParameters * params)
+  {
+    unsigned int nthreads = boost::thread::hardware_concurrency();
+
+    AvCodecContextPtr ctx(avcodec_alloc_context3(c));
+    if (params)
+    {
+      avcodec_parameters_to_context(ctx.get(), params);
+    }
+
+    AVDictionary * opts = NULL;
+    av_dict_set_int(&opts, "threads", nthreads, 0);
+
+    int err = avcodec_open2(ctx.get(), c, &opts);
+    if (err < 0)
+    {
+      return AvCodecContextPtr();
+    }
+
+    return ctx;
+  }
+
+
+  //----------------------------------------------------------------
   // is_framerate_valid
   //
   static inline bool
@@ -315,30 +342,6 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // tryToOpen
-    //
-    static AvCodecContextPtr
-    tryToOpen(const AVCodec * c, const AVCodecParameters & params)
-    {
-      unsigned int nthreads = boost::thread::hardware_concurrency();
-
-      AvCodecContextPtr ctx(avcodec_alloc_context3(c));
-      avcodec_parameters_to_context(ctx.get(), &params);
-
-      AVDictionary * opts = NULL;
-      av_dict_set_int(&opts, "threads", nthreads, 0);
-
-      int err = avcodec_open2(ctx.get(), c, &opts);
-      if (err < 0)
-      {
-        return AvCodecContextPtr();
-      }
-
-      return ctx;
-    }
-
-
-    //----------------------------------------------------------------
     // find
     //
     // FIXME: perhaps should also include a list of acceptable
@@ -368,7 +371,7 @@ namespace yae
         const AVCodec * c = *i;
         if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
         {
-          AvCodecContextPtr ctx = tryToOpen(c, params);
+          AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
           {
             experimental.push_back(ctx);
@@ -385,16 +388,16 @@ namespace yae
           }
 
           // verify that the GPU can handle this stream:
-          cuvid = tryToOpen(c, params);
+          cuvid = tryToOpen(c, &params);
         }
         else if (al::ends_with(c->name, "_qsv"))
         {
           // verify that the GPU can handle this stream:
-          intel = tryToOpen(c, params);
+          intel = tryToOpen(c, &params);
         }
         else
         {
-          AvCodecContextPtr ctx = tryToOpen(c, params);
+          AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
           {
             software.push_back(ctx);

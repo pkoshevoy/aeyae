@@ -152,6 +152,13 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // tryToOpen
+  //
+  YAE_API AvCodecContextPtr
+  tryToOpen(const AVCodec * c, const AVCodecParameters * params = NULL);
+
+
+  //----------------------------------------------------------------
   // verify_pts
   //
   YAE_API bool verify_pts(bool hasPrevPTS,
