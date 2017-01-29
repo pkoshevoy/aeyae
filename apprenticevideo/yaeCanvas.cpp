@@ -291,6 +291,9 @@ namespace yae
       TLine line(pts, data, size);
       if (has(buffer_, line))
       {
+#if 0 // ndef NDEBUG
+        std::cerr << "DROPPING DUPLICATE: " << line.data_ << std::endl;
+#endif
         return;
       }
 

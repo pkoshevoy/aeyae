@@ -505,7 +505,7 @@ namespace yae
       AvFrm decoded(decodedFrame);
       framesDecoded_++;
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       {
         t1_ = boost::chrono::steady_clock::now();
 
