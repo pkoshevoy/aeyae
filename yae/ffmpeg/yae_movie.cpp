@@ -752,7 +752,7 @@ namespace yae
               err = 0;
             }
 
-            subs->queue_.push(sf, &outputTerminator_);
+            subs->push(sf, &outputTerminator_);
           }
         }
       }

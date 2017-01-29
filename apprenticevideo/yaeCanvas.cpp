@@ -512,9 +512,7 @@ namespace yae
   //
   Canvas::~Canvas()
   {
-    stopAsyncInitLibassThread();
-    delete libass_;
-    libass_ = NULL;
+    uninitLibass();
 
     delete private_;
     delete overlay_;
@@ -548,9 +546,7 @@ namespace yae
     static bool initialized = initializeGlew();
 #endif
 
-    stopAsyncInitLibassThread();
-    delete libass_;
-    libass_ = NULL;
+    uninitLibass();
 
     delete private_;
     private_ = NULL;
@@ -629,14 +625,23 @@ namespace yae
   {
     overlay_->clear(context());
 
-    stopAsyncInitLibassThread();
-    delete libass_;
-    libass_ = NULL;
+    uninitLibass();
 
     showTheGreeting_ = false;
     subsInOverlay_ = false;
     subs_.clear();
     customFonts_.clear();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::uninitLibass
+  //
+  void
+  Canvas::uninitLibass()
+  {
+    stopAsyncInitLibassThread();
+    delete libass_;
+    libass_ = NULL;
   }
 
   //----------------------------------------------------------------

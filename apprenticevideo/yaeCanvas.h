@@ -255,6 +255,9 @@ namespace yae
     void clear();
     void clearOverlay();
 
+    // force libass to be re-initialized on demand:
+    void uninitLibass();
+
     // helper:
     void refresh();
 

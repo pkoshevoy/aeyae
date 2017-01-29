@@ -64,7 +64,7 @@ namespace yae
                    const char * separator = "") const;
 
     void to_hhmmss_frac(std::string & ts,
-                        unsigned int precision = 1000000,
+                        unsigned int precision = 100, // centiseconds
                         const char * separator = ":",
                         const char * remainder_separator = ".") const;
 
@@ -85,12 +85,19 @@ namespace yae
     }
 
     // return timestamp in hhmmss.uuuuuu format
+    inline std::string to_hhmmss_frac(unsigned int precision = 100,
+                                      const char * separator = "",
+                                      const char * frac_separator = ".") const
+    {
+      std::string ts;
+      to_hhmmss_frac(ts, precision, separator, frac_separator);
+      return ts;
+    }
+
     inline std::string to_hhmmss_usec(const char * separator = "",
                                       const char * usec_separator = ".") const
     {
-      std::string ts;
-      to_hhmmss_usec(ts, separator, usec_separator);
-      return ts;
+      return to_hhmmss_frac(1000000, separator, usec_separator);
     }
 
     inline std::string to_hhmmss_frame(double frameRate = 29.97,

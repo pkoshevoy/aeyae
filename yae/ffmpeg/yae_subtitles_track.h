@@ -119,6 +119,7 @@ namespace yae
     void fixupEndTimes(double v1, const TSubsFrame & last);
     void expungeOldSubs(double v0);
     void get(double v0, double v1, std::list<TSubsFrame> & subs);
+    void push(const TSubsFrame & sf, QueueWaitMgr * terminator);
 
   private:
     SubtitlesTrack(const SubtitlesTrack & given);

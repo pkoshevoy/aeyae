@@ -529,7 +529,10 @@ namespace yae
         // instantiate the CC decoder on-demand:
         ccDec_ || (ccDec_ = openClosedCaptionsDecoder(*stream_, decodedFrame));
 
-        AVCodecContext * ccDec = ccDec_.get();
+        // prevent captions decoder from being destroyed while it is used:
+        AvCodecContextPtr keepAlive(ccDec_);
+
+        AVCodecContext * ccDec = keepAlive.get();
         if (ccDec)
         {
           AVSubtitle sub;
@@ -563,7 +566,6 @@ namespace yae
                                                            header,
                                                            headerSize),
                                           &TSubsPrivate::deallocator);
-            captions_.queue_.push(sf, &terminator_);
             captions_.last_ = sf;
           }
         }
@@ -580,12 +582,21 @@ namespace yae
 
         int64_t ptsNext = ptsNow + av_rescale_q(1, tb, AV_TIME_BASE_Q);
 
-        TSubsFrame & sf = captions_.last_;
-        if (sf.tEnd_.base_ == AV_TIME_BASE &&
-            sf.tEnd_.time_ < ptsNext)
+        TSubsFrame & last = captions_.last_;
+        if (last.tEnd_.base_ == AV_TIME_BASE &&
+            last.tEnd_.time_ < ptsNext &&
+
+            // avoid extending caption duration indefinitely:
+            last.tEnd_ < last.time_ + 12.0)
         {
-          sf.tEnd_.time_ = ptsNext;
-          captions_.queue_.push(sf, &terminator_);
+          int64_t ptsPrev = last.tEnd_.time_;
+          last.tEnd_.time_ = ptsNext;
+
+          // avoid creating overlapping ASS events,
+          // better to create short adjacent events instead:
+          TSubsFrame sf(last);
+          sf.time_.time_ = ptsPrev;
+          captions_.push(sf, &terminator_);
         }
       }
 
@@ -1224,6 +1235,10 @@ namespace yae
 
     // drop filtergraph contents:
     filterGraph_.reset();
+
+    // force the closed captions decoder to be re-created on demand:
+    ccDec_.reset();
+    captions_.clear();
 
     // push a special frame into frame queue to resetTimeCounters
     // down the line (the renderer):
