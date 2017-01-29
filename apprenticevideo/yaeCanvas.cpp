@@ -1478,7 +1478,7 @@ namespace yae
         }
         else if (r.type_ == kSubtitleASS)
         {
-          std::string assa(r.assa_);
+          std::string assa = r.assAdjustTimings(subs);
           bool done = false;
 
 #ifdef YAE_USE_LIBASS

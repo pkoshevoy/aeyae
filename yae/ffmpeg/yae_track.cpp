@@ -116,7 +116,9 @@ namespace yae
   // tryToOpen
   //
   AvCodecContextPtr
-  tryToOpen(const AVCodec * c, const AVCodecParameters * params)
+  tryToOpen(const AVCodec * c,
+            const AVCodecParameters * params,
+            AVDictionary * opts)
   {
     unsigned int nthreads = boost::thread::hardware_concurrency();
 
@@ -126,7 +128,6 @@ namespace yae
       avcodec_parameters_to_context(ctx.get(), params);
     }
 
-    AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);
 
     int err = avcodec_open2(ctx.get(), c, &opts);

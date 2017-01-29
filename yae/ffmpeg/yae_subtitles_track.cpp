@@ -291,9 +291,9 @@ namespace yae
       {
         lang_.clear();
       }
-
-      queue_.open();
     }
+
+    queue_.open();
   }
 
   //----------------------------------------------------------------
@@ -415,4 +415,132 @@ namespace yae
       }
     }
   }
+
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::~TSubsPrivate
+  //
+  TSubsPrivate::~TSubsPrivate()
+  {
+    avsubtitle_free(&sub_);
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::TSubsPrivate
+  //
+  TSubsPrivate::TSubsPrivate(const AVSubtitle & sub,
+                             const unsigned char * subsHeader,
+                             std::size_t subsHeaderSize):
+    sub_(sub),
+    header_(subsHeader, subsHeader + subsHeaderSize)
+  {}
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::destroy
+  //
+  void
+  TSubsPrivate::destroy()
+  {
+    delete this;
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::headerSize
+  //
+  std::size_t
+  TSubsPrivate::headerSize() const
+  {
+    return header_.size();
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::header
+  //
+  const unsigned char *
+  TSubsPrivate::header() const
+  {
+    return header_.empty() ? NULL : &header_[0];
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::numRects
+  //
+  unsigned int
+  TSubsPrivate::numRects() const
+  {
+    return sub_.num_rects;
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::getRect
+  //
+  void
+  TSubsPrivate::getRect(unsigned int i, TSubsFrame::TRect & rect) const
+  {
+    if (i >= sub_.num_rects)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    const AVSubtitleRect * r = sub_.rects[i];
+    rect.type_ = TSubsPrivate::getType(r);
+    rect.x_ = r->x;
+    rect.y_ = r->y;
+    rect.w_ = r->w;
+    rect.h_ = r->h;
+    rect.numColors_ = r->nb_colors;
+
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 5, 0)
+#define get_rect(field) (r->field)
+#else
+#define get_rect(field) (r->pict.field)
+#endif
+
+    std::size_t nsrc = sizeof(get_rect(data)) / sizeof(get_rect(data)[0]);
+    std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
+    YAE_ASSERT(nsrc == ndst);
+
+    for (std::size_t j = 0; j < ndst && j < nsrc; j++)
+    {
+      rect.data_[j] = get_rect(data)[j];
+      rect.rowBytes_[j] = get_rect(linesize)[j];
+    }
+
+#undef get_rect
+
+    for (std::size_t j = nsrc; j < ndst; j++)
+    {
+      rect.data_[j] = NULL;
+      rect.rowBytes_[j] = 0;
+    }
+
+    rect.text_ = r->text;
+    rect.assa_ = r->ass;
+  }
+
+  //----------------------------------------------------------------
+  // TSubsPrivate::getType
+  //
+  TSubtitleType
+  TSubsPrivate::getType(const AVSubtitleRect * r)
+  {
+    switch (r->type)
+    {
+      case SUBTITLE_BITMAP:
+        return kSubtitleBitmap;
+
+      case SUBTITLE_TEXT:
+        return kSubtitleText;
+
+      case SUBTITLE_ASS:
+        return kSubtitleASS;
+
+      default:
+        break;
+    }
+
+    return kSubtitleNone;
+  }
+
 }

@@ -34,6 +34,47 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TSubsPrivate
+  //
+  class YAE_API TSubsPrivate : public TSubsFrame::IPrivate
+  {
+    // virtual:
+    ~TSubsPrivate();
+
+  public:
+    TSubsPrivate(const AVSubtitle & sub,
+                 const unsigned char * subsHeader,
+                 std::size_t subsHeaderSize);
+
+    // virtual:
+    void destroy();
+
+    // virtual:
+    std::size_t headerSize() const;
+
+    // virtual:
+    const unsigned char * header() const;
+
+    // virtual:
+    unsigned int numRects() const;
+
+    // virtual:
+    void getRect(unsigned int i, TSubsFrame::TRect & rect) const;
+
+    // helper:
+    static TSubtitleType getType(const AVSubtitleRect * r);
+
+    AVSubtitle sub_;
+    std::vector<unsigned char> header_;
+  };
+
+  //----------------------------------------------------------------
+  // TSubsPrivatePtr
+  //
+  typedef boost::shared_ptr<TSubsPrivate> TSubsPrivatePtr;
+
+
+  //----------------------------------------------------------------
   // TVobSubSpecs
   //
   struct YAE_API TVobSubSpecs
@@ -96,6 +137,7 @@ namespace yae
     TIPlanarBufferPtr extraData_;
     TSubsFrameQueue queue_;
     std::list<TSubsFrame> active_;
+    TSubsFrame last_;
 
     TVobSubSpecs vobsub_;
   };

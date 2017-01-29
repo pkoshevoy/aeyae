@@ -125,6 +125,11 @@ namespace yae
 
     uint64 framesDecoded_;
 
+    // CEA-608 closed captions decoder:
+    AvCodecContextPtr ccDec_;
+    SubtitlesTrack captions_;
+
+    // subtitles:
     std::vector<TSubsTrackPtr> * subs_;
 
     VideoFilterGraph filterGraph_;

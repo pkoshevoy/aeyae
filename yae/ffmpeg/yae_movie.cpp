@@ -85,116 +85,6 @@ namespace yae
     }
   }
 
-  //----------------------------------------------------------------
-  // TSubsPrivate
-  //
-  class TSubsPrivate : public TSubsFrame::IPrivate
-  {
-    // virtual:
-    ~TSubsPrivate()
-    {
-      avsubtitle_free(&sub_);
-    }
-
-  public:
-    TSubsPrivate(const AVSubtitle & sub,
-                 const unsigned char * subsHeader,
-                 std::size_t subsHeaderSize):
-      sub_(sub),
-      header_(subsHeader, subsHeader + subsHeaderSize)
-    {}
-
-    // virtual:
-    void destroy()
-    { delete this; }
-
-    // virtual:
-    std::size_t headerSize() const
-    { return header_.size(); }
-
-    // virtual:
-    const unsigned char * header() const
-    { return header_.empty() ? NULL : &header_[0]; }
-
-    // virtual:
-    unsigned int numRects() const
-    { return sub_.num_rects; }
-
-    // virtual:
-    void getRect(unsigned int i, TSubsFrame::TRect & rect) const
-    {
-      if (i >= sub_.num_rects)
-      {
-        YAE_ASSERT(false);
-        return;
-      }
-
-      const AVSubtitleRect * r = sub_.rects[i];
-      rect.type_ = TSubsPrivate::getType(r);
-      rect.x_ = r->x;
-      rect.y_ = r->y;
-      rect.w_ = r->w;
-      rect.h_ = r->h;
-      rect.numColors_ = r->nb_colors;
-
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 5, 0)
-#define get_rect(field) (r->field)
-#else
-#define get_rect(field) (r->pict.field)
-#endif
-
-      std::size_t nsrc = sizeof(get_rect(data)) / sizeof(get_rect(data)[0]);
-      std::size_t ndst = sizeof(rect.data_) / sizeof(rect.data_[0]);
-      YAE_ASSERT(nsrc == ndst);
-
-      for (std::size_t j = 0; j < ndst && j < nsrc; j++)
-      {
-        rect.data_[j] = get_rect(data)[j];
-        rect.rowBytes_[j] = get_rect(linesize)[j];
-      }
-
-#undef get_rect
-
-      for (std::size_t j = nsrc; j < ndst; j++)
-      {
-        rect.data_[j] = NULL;
-        rect.rowBytes_[j] = 0;
-      }
-
-      rect.text_ = r->text;
-      rect.assa_ = r->ass;
-    }
-
-    // helper:
-    static TSubtitleType getType(const AVSubtitleRect * r)
-    {
-      switch (r->type)
-      {
-        case SUBTITLE_BITMAP:
-          return kSubtitleBitmap;
-
-        case SUBTITLE_TEXT:
-          return kSubtitleText;
-
-        case SUBTITLE_ASS:
-          return kSubtitleASS;
-
-        default:
-          break;
-      }
-
-      return kSubtitleNone;
-    }
-
-    AVSubtitle sub_;
-    std::vector<unsigned char> header_;
-  };
-
-  //----------------------------------------------------------------
-  // TSubsPrivatePtr
-  //
-  typedef boost::shared_ptr<TSubsPrivate> TSubsPrivatePtr;
-
 
   //----------------------------------------------------------------
   // Movie::Movie
@@ -549,18 +439,6 @@ namespace yae
       {
         track_->packetQueue().close();
       }
-    }
-  };
-
-  //----------------------------------------------------------------
-  // Rational
-  //
-  struct Rational : public AVRational
-  {
-    Rational(int n = 0, int d = 1)
-    {
-      AVRational::num = n;
-      AVRational::den = d;
     }
   };
 

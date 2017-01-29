@@ -93,6 +93,19 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Rational
+  //
+  struct YAE_API Rational : public AVRational
+  {
+    Rational(int n = 0, int d = 1)
+    {
+      AVRational::num = n;
+      AVRational::den = d;
+    }
+  };
+
+
+  //----------------------------------------------------------------
   // AvPkt
   //
   struct YAE_API AvPkt : public AVPacket
@@ -155,7 +168,9 @@ namespace yae
   // tryToOpen
   //
   YAE_API AvCodecContextPtr
-  tryToOpen(const AVCodec * c, const AVCodecParameters * params = NULL);
+  tryToOpen(const AVCodec * c,
+            const AVCodecParameters * params = NULL,
+            AVDictionary * opts = NULL);
 
 
   //----------------------------------------------------------------

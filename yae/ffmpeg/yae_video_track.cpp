@@ -404,6 +404,97 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // makeCcPkt
+  //
+  static bool
+  makeCcPkt(const AVStream & stream, const AvFrm & frame, AvPkt & pkt)
+  {
+    int found = 0;
+
+    for (int i = 0; i < frame.nb_side_data; i++)
+    {
+      const AVFrameSideData * s = frame.side_data[i];
+      if (!s || s->type != AV_FRAME_DATA_A53_CC)
+      {
+        continue;
+      }
+
+      found++;
+
+      if (found > 1)
+      {
+        continue;
+      }
+
+      AvPkt tmp;
+
+      tmp.buf = av_buffer_ref(s->buf);
+      if (!tmp.buf)
+      {
+        continue;
+      }
+
+      tmp.data = s->data;
+      tmp.size = s->size;
+      tmp.pts = frame.pts;
+      pkt = tmp;
+    }
+
+    YAE_ASSERT(found <= 1);
+    return found > 0;
+  }
+
+  //----------------------------------------------------------------
+  // openClosedCaptionsDecoder
+  //
+  static AvCodecContextPtr
+  openClosedCaptionsDecoder(const AVStream & stream, const AvFrm & frame)
+  {
+    AvCodecContextPtr ccDec;
+
+    const AVCodec * codec = avcodec_find_decoder(AV_CODEC_ID_EIA_608);
+
+    if (codec)
+    {
+      AVDictionary * opts = NULL;
+      av_dict_set_int(&opts, "real_time", 1, 0);
+
+      ccDec = tryToOpen(codec, NULL, opts);
+      AVCodecContext * cc = ccDec.get();
+
+      if (cc)
+      {
+        av_codec_set_pkt_timebase(cc, stream.time_base);
+        cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
+      }
+    }
+
+    return ccDec;
+  }
+
+
+  //----------------------------------------------------------------
+  // gatherApplicableSubtitles
+  //
+  static void
+  gatherApplicableSubtitles(std::list<TSubsFrame> & subs,
+                            double v0, // frame start in seconds
+                            double v1, // frame end in seconds
+                            SubtitlesTrack & subTrack,
+                            QueueWaitMgr & terminator)
+  {
+    TSubsPredicate subSelector(v1);
+    subTrack.queue_.get(subSelector, subTrack.active_, &terminator);
+
+    TSubsFrame next;
+    subTrack.queue_.peek(next, &terminator);
+    subTrack.fixupEndTimes(v1, next);
+    subTrack.expungeOldSubs(v0);
+
+    subTrack.get(v0, v1, subs);
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::handle
   //
   void
@@ -430,6 +521,73 @@ namespace yae
           << std::endl;
       }
 #endif
+
+      // check for closed captions data:
+      AvPkt ccPkt;
+      if (makeCcPkt(*stream_, decodedFrame, ccPkt))
+      {
+        // instantiate the CC decoder on-demand:
+        ccDec_ || (ccDec_ = openClosedCaptionsDecoder(*stream_, decodedFrame));
+
+        AVCodecContext * ccDec = ccDec_.get();
+        if (ccDec)
+        {
+          AVSubtitle sub;
+
+          int gotSub = 0;
+          int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &ccPkt);
+
+          if (err >= 0 && gotSub)
+          {
+            TSubsFrame sf;
+            sf.traits_ = kSubsSSA;
+            sf.render_ = true;
+
+            sf.time_.base_ = AV_TIME_BASE;
+            sf.tEnd_.base_ = AV_TIME_BASE;
+            sf.tEnd_.time_ = std::numeric_limits<int64>::max();
+
+            if (ccPkt.pts != AV_NOPTS_VALUE)
+            {
+              int64_t ptsPkt = av_rescale_q(ccPkt.pts,
+                                            stream_->time_base,
+                                            AV_TIME_BASE_Q);
+              sf.time_.time_ = ptsPkt;
+              sf.tEnd_.time_ = ptsPkt;
+            }
+
+            const unsigned char * header = ccDec->subtitle_header;
+            std::size_t headerSize = ccDec->subtitle_header_size;
+
+            sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
+                                                           header,
+                                                           headerSize),
+                                          &TSubsPrivate::deallocator);
+            captions_.queue_.push(sf, &terminator_);
+            captions_.last_ = sf;
+          }
+        }
+      }
+
+      // extend the duration of the most recent caption to cover this frame:
+      {
+        Rational tb(stream_->r_frame_rate.den,
+                    stream_->r_frame_rate.num);
+
+        int64_t ptsNow = av_rescale_q(decodedFrame.pts,
+                                       stream_->time_base,
+                                       AV_TIME_BASE_Q);
+
+        int64_t ptsNext = ptsNow + av_rescale_q(1, tb, AV_TIME_BASE_Q);
+
+        TSubsFrame & sf = captions_.last_;
+        if (sf.tEnd_.base_ == AV_TIME_BASE &&
+            sf.tEnd_.time_ < ptsNext)
+        {
+          sf.tEnd_.time_ = ptsNext;
+          captions_.queue_.push(sf, &terminator_);
+        }
+      }
 
       enum AVPixelFormat ffmpegPixelFormat =
         yae_to_ffmpeg(output_.pixelFormat_);
@@ -751,21 +909,15 @@ namespace yae
                             1.0 / vf.traits_.frameRate_ :
                             0.042);
 
-          TSubsPredicate subSelector(v1);
-
           std::size_t nsubs = subs_ ? subs_->size() : 0;
           for (std::size_t i = 0; i < nsubs; i++)
           {
-            SubtitlesTrack & subs = *((*subs_)[i]);
-            subs.queue_.get(subSelector, subs.active_, &terminator_);
-
-            TSubsFrame next;
-            subs.queue_.peek(next, &terminator_);
-            subs.fixupEndTimes(v1, next);
-            subs.expungeOldSubs(v0);
-
-            subs.get(v0, v1, vf.subs_);
+            SubtitlesTrack & subTrack = *((*subs_)[i]);
+            gatherApplicableSubtitles(vf.subs_, v0, v1, subTrack, terminator_);
           }
+
+          // and closed captions also:
+          gatherApplicableSubtitles(vf.subs_, v0, v1, captions_, terminator_);
         }
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP

@@ -63,6 +63,11 @@ namespace yae
     void to_hhmmss(std::string & ts,
                    const char * separator = "") const;
 
+    void to_hhmmss_frac(std::string & ts,
+                        unsigned int precision = 1000000,
+                        const char * separator = ":",
+                        const char * remainder_separator = ".") const;
+
     void to_hhmmss_usec(std::string & ts,
                         const char * separator = "",
                         const char * usec_separator = ".") const;
@@ -541,6 +546,8 @@ namespace yae
 
     struct TRect
     {
+      std::string assAdjustTimings(const TSubsFrame & sf) const;
+
       TSubtitleType type_;
 
       int x_;

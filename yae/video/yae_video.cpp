@@ -214,7 +214,7 @@ namespace yae
       os << '-';
     }
 
-    os << std::setw(2) << std::setfill('0') << (int)(hours) << separator
+    os << std::setw(2) << std::setfill('0') << (int64)(hours) << separator
        << std::setw(2) << std::setfill('0') << (int)(minutes) << separator
        << std::setw(2) << std::setfill('0') << (int)(seconds);
 
@@ -233,6 +233,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::to_hhmmss_frac
+  //
+  void
+  TTime::to_hhmmss_frac(std::string & ts,
+                        unsigned int precision,
+                        const char * separator,
+                        const char * remainder_separator) const
+  {
+    bool negative = yae::to_hhmmss(time_, base_, ts, separator);
+
+    uint64 t = negative ? -time_ : time_;
+    uint64 remainder = t % base_;
+    uint64 frac = (precision * remainder) / base_;
+
+    // count number of digits required for given precision:
+    uint64 digits = 0;
+    for (unsigned int i = precision - 1; precision && i; i /= 10, digits++) ;
+
+    std::ostringstream os;
+
+    if (negative && (frac || t >= base_))
+    {
+      os << '-';
+    }
+
+    os << ts;
+
+    if (digits)
+    {
+      os << remainder_separator
+         << std::setw(digits) << std::setfill('0') << (int)(frac);
+    }
+
+    ts = std::string(os.str().c_str());
+  }
+
+  //----------------------------------------------------------------
   // TTime::to_hhmmss_usec
   //
   void
@@ -240,23 +277,7 @@ namespace yae
                         const char * separator,
                         const char * usec_separator) const
   {
-    bool negative = yae::to_hhmmss(time_, base_, ts, separator);
-
-    uint64 t = negative ? -time_ : time_;
-    uint64 remainder = t % base_;
-    uint64 usec = (1000000 * remainder) / base_;
-
-    std::ostringstream os;
-
-    if (negative && (usec || t >= base_))
-    {
-      os << '-';
-    }
-
-    os << ts << usec_separator
-       << std::setw(6) << std::setfill('0') << (int)(usec);
-
-    ts = std::string(os.str().c_str());
+    to_hhmmss_frac(ts, 1000000, separator, usec_separator);
   }
 
   //----------------------------------------------------------------
@@ -831,6 +852,39 @@ namespace yae
                  data_      == s.data_);
 
     return same;
+  }
+
+
+  //----------------------------------------------------------------
+  // TSubsFrame::TRect::assAdjustTimings
+  //
+  std::string
+  TSubsFrame::TRect::assAdjustTimings(const TSubsFrame & sf) const
+  {
+    // NOTE: must fix Start,End timestamps, they are made wrong by
+    // libavcodec/utils.c convert_sub_to_old_ass_form
+    std::string t0;
+    sf.time_.to_hhmmss_frac(t0, 100);
+
+    std::string t1;
+    sf.tEnd_.to_hhmmss_frac(t1, 100);
+
+    if (!(assa_ && strncmp(assa_, "Dialogue:", 9) == 0))
+    {
+      std::string();
+    }
+
+    // Dialogue: 0,24:25:00.98,24:25:01.98,Default,,0,0,0,,text here
+    std::string tmp(assa_);
+    std::string::size_type c0 = tmp.find(',', 9);
+    std::string::size_type c1 = tmp.find(',', c0 + 1);
+    std::string::size_type c2 = tmp.find(',', c1 + 1);
+
+    std::ostringstream oss;
+    oss << tmp.substr(0, c0) << ','
+        << t0 << ','
+        << t1 << tmp.substr(c2);
+    return std::string(oss.str().c_str());
   }
 
 
