@@ -138,6 +138,7 @@ namespace yae
     override_.visibleWidth_ = 0;
     override_.visibleHeight_ = 0;
     override_.pixelAspectRatio_ = 0.0;
+    return true;
   }
 
   //----------------------------------------------------------------
