@@ -264,6 +264,9 @@ namespace yae
           tmp = oss.str().c_str();
         }
 
+#ifndef NDEBUG
+        std::cerr << "libass header:\n" << tmp << std::endl;
+#endif
         header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
       }
     }
@@ -1602,19 +1605,23 @@ namespace yae
       libassSameSubs = !changeDetected;
       paintedSomeSubs = changeDetected;
 
-      unsigned char bgra[4];
+      unsigned char bgr[3];
       while (pic && changeDetected)
       {
+        double alpha = double(0xFF & (pic->color)) / 255.0;
+        if (alpha <= 0.0)
+        {
+          alpha = 1.0;
+        }
+
 #ifdef __BIG_ENDIAN__
-        bgra[3] = 0xFF & (pic->color >> 8);
-        bgra[2] = 0xFF & (pic->color >> 16);
-        bgra[1] = 0xFF & (pic->color >> 24);
-        bgra[0] = 0xFF & (pic->color);
+        bgr[2] = 0xFF & (pic->color >> 8);
+        bgr[1] = 0xFF & (pic->color >> 16);
+        bgr[0] = 0xFF & (pic->color >> 24);
 #else
-        bgra[0] = 0xFF & (pic->color >> 8);
-        bgra[1] = 0xFF & (pic->color >> 16);
-        bgra[2] = 0xFF & (pic->color >> 24);
-        bgra[3] = 0xFF & (pic->color);
+        bgr[0] = 0xFF & (pic->color >> 8);
+        bgr[1] = 0xFF & (pic->color >> 16);
+        bgr[2] = 0xFF & (pic->color >> 24);
 #endif
         QImage tmp(pic->w, pic->h, QImage::Format_ARGB32);
         int dstRowBytes = tmp.bytesPerLine();
@@ -1627,13 +1634,13 @@ namespace yae
 
           for (int x = 0; x < pic->w; x++, dstLine += 4, srcLine++)
           {
-            unsigned char alpha = *srcLine;
+            unsigned char a = (unsigned char)(alpha * double(*srcLine));
 #ifdef __BIG_ENDIAN__
-            dstLine[0] = alpha;
-            memcpy(dstLine + 1, bgra + 1, 3);
+            dstLine[0] = a;
+            memcpy(dstLine + 1, bgr, 3);
 #else
-            memcpy(dstLine, bgra, 3);
-            dstLine[3] = alpha;
+            memcpy(dstLine, bgr, 3);
+            dstLine[3] = a;
 #endif
           }
         }
