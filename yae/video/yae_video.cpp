@@ -826,6 +826,7 @@ namespace yae
   // TSubsFrame::TSubsFrame
   //
   TSubsFrame::TSubsFrame():
+    rewriteTimings_(false),
     render_(false),
     index_(~0),
     rh_(0),
@@ -838,31 +839,36 @@ namespace yae
   bool
   TSubsFrame::operator == (const TSubsFrame & s) const
   {
-    bool same = (render_    == s.render_ &&
-                 index_     == s.index_ &&
-                 rh_        == s.rh_ &&
-                 rw_        == s.rw_ &&
-                 extraData_ == s.extraData_ &&
-                 sideData_  == s.sideData_ &&
-                 tEnd_      == s.tEnd_ &&
-                 private_   == s.private_ &&
-                 time_      == s.time_ &&
-                 tempo_     == s.tempo_ &&
-                 traits_    == s.traits_ &&
-                 data_      == s.data_);
+    bool same = (rewriteTimings_ == s.rewriteTimings_ &&
+                 render_         == s.render_ &&
+                 index_          == s.index_ &&
+                 rh_             == s.rh_ &&
+                 rw_             == s.rw_ &&
+                 extraData_      == s.extraData_ &&
+                 sideData_       == s.sideData_ &&
+                 tEnd_           == s.tEnd_ &&
+                 private_        == s.private_ &&
+                 time_           == s.time_ &&
+                 tempo_          == s.tempo_ &&
+                 traits_         == s.traits_ &&
+                 data_           == s.data_);
 
     return same;
   }
 
 
   //----------------------------------------------------------------
-  // TSubsFrame::TRect::assAdjustTimings
+  // TSubsFrame::TRect::getAssScript
   //
   std::string
-  TSubsFrame::TRect::assAdjustTimings(const TSubsFrame & sf) const
+  TSubsFrame::TRect::getAssScript(const TSubsFrame & sf) const
   {
-    // NOTE: must fix Start,End timestamps, they are made wrong by
-    // libavcodec/utils.c convert_sub_to_old_ass_form
+    if (!sf.rewriteTimings_)
+    {
+      return std::string(assa_);
+    }
+
+    // must rewrite Start and End timestamps:
     std::string t0;
     sf.time_.to_hhmmss_frac(t0, 100);
 

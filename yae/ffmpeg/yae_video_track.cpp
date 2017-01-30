@@ -672,6 +672,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             sf.traits_ = kSubsSSA;
             sf.render_ = true;
 
+            sf.rewriteTimings_ = true;
             sf.time_.base_ = AV_TIME_BASE;
             sf.tEnd_.base_ = AV_TIME_BASE;
             sf.tEnd_.time_ = std::numeric_limits<int64>::max();

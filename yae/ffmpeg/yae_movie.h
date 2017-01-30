@@ -108,7 +108,8 @@ namespace yae
     // 2 - CC2
     // 3 - CC3
     // 4 - CC4
-    void enableClosedCaptions(unsigned int cc);
+    void setRenderCaptions(unsigned int cc);
+    unsigned int getRenderCaptions() const;
 
     std::size_t subsCount() const;
     TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;

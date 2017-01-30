@@ -119,7 +119,8 @@ namespace yae
     // 2 - CC2
     // 3 - CC3
     // 4 - CC4
-    virtual void enableClosedCaptions(unsigned int cc) = 0;
+    virtual void setRenderCaptions(unsigned int cc) = 0;
+    virtual unsigned int getRenderCaptions() const = 0;
 
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const = 0;

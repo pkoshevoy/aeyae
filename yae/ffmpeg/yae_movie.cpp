@@ -1329,10 +1329,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::enableClosedCaptions
+  // Movie::setRenderCaptions
   //
   void
-  Movie::enableClosedCaptions(unsigned int cc)
+  Movie::setRenderCaptions(unsigned int cc)
   {
     try
     {
@@ -1349,6 +1349,15 @@ namespace yae
     }
     catch (...)
     {}
+  }
+
+  //----------------------------------------------------------------
+  // Movie::getRenderCaptions
+  //
+  unsigned int
+  Movie::getRenderCaptions() const
+  {
+    return enableClosedCaptions_;
   }
 
   //----------------------------------------------------------------

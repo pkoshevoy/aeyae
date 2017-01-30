@@ -31,6 +31,7 @@ namespace yae
     std::size_t atrack_;
     std::size_t vtrack_;
     std::list<std::size_t> subs_;
+    unsigned int cc_;
     double positionInSeconds_;
   };
 

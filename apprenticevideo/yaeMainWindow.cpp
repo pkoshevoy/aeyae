@@ -1438,6 +1438,9 @@ namespace yae
       return false;
     }
 
+    // keep track of current closed caption selection:
+    unsigned int cc = reader_->getRenderCaptions();
+
     ++readerId_;
     reader->setReaderId(readerId_);
 
@@ -1557,17 +1560,29 @@ namespace yae
         strack = subsCount;
         rememberSelectedSubtitlesTrack = true;
       }
+
+      if (bookmark->cc_)
+      {
+        cc = bookmark->cc_;
+      }
     }
 
-    selectSubsTrack(reader.get(), strack);
-    if (strack == subsCount)
+    selectSubsTrack(reader.get(),
+                    strack < subsCount ? strack : subsCount + cc);
+
+    if (strack < subsCount)
     {
-      // skip the closed captions entry:
-      subsTrackGroup_->actions().at((int)strack + 1)->setChecked(true);
+      subsTrackGroup_->actions().at((int)strack)->setChecked(true);
+    }
+    else if (cc)
+    {
+      int index = (int)subsCount + cc - 1;
+      subsTrackGroup_->actions().at(index)->setChecked(true);
     }
     else
     {
-      subsTrackGroup_->actions().at((int)strack)->setChecked(true);
+      int index = subsTrackGroup_->actions().size() - 1;
+      subsTrackGroup_->actions().at(index)->setChecked(true);
     }
 
     if (rememberSelectedSubtitlesTrack)
@@ -4882,7 +4897,7 @@ namespace yae
   {
     const std::size_t nsubs = reader->subsCount();
     const std::size_t cc = nsubs < subsTrackIndex ? subsTrackIndex - nsubs : 0;
-    reader->enableClosedCaptions(cc);
+    reader->setRenderCaptions(cc);
 
     for (std::size_t i = 0; i < nsubs; i++)
     {

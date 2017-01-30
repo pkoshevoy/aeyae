@@ -562,7 +562,7 @@ namespace yae
 
       std::cerr
         << ", r("<< i << ") = "
-        << (r.assa_ ? r.assAdjustTimings(sf).c_str() :
+        << (r.assa_ ? r.getAssScript(sf).c_str() :
             r.text_ ? r.text_ : "BITMAP");
     }
 

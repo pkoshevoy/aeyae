@@ -575,12 +575,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::enableClosedCaptions
+  // ReaderFFMPEG::setRenderCaptions
   //
   void
-  ReaderFFMPEG::enableClosedCaptions(unsigned int cc)
+  ReaderFFMPEG::setRenderCaptions(unsigned int cc)
   {
-    private_->movie_.enableClosedCaptions(cc);
+    private_->movie_.setRenderCaptions(cc);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getRenderCaptions
+  //
+  unsigned int
+  ReaderFFMPEG::getRenderCaptions() const
+  {
+    return private_->movie_.getRenderCaptions();
   }
 
   //----------------------------------------------------------------

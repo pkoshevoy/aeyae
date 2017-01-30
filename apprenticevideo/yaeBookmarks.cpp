@@ -40,6 +40,7 @@ namespace yae
   TBookmark::TBookmark():
     atrack_(std::numeric_limits<std::size_t>::max()),
     vtrack_(std::numeric_limits<std::size_t>::max()),
+    cc_(0),
     positionInSeconds_(0)
   {}
 
@@ -72,6 +73,12 @@ namespace yae
   // kSubtitleTrackTag
   //
   static const char * kSubtitleTrackTag = "strack";
+
+  //----------------------------------------------------------------
+  // kClosedCaptionsTag
+  //
+  static const char * kClosedCaptionsTag = "cc";
+
 
   //----------------------------------------------------------------
   // saveBookmark
@@ -115,6 +122,13 @@ namespace yae
         QString strack = QString::number(i);
         xml.writeTextElement(kSubtitleTrackTag, strack);
       }
+    }
+
+    unsigned int cc = reader->getRenderCaptions();
+    if (cc)
+    {
+      QString captions = QString::number(cc);
+      xml.writeTextElement(kClosedCaptionsTag, captions);
     }
 
     xml.writeEndElement();
@@ -223,6 +237,14 @@ namespace yae
         {
           std::size_t i = toScalar<std::size_t, std::string>(val);
           bookmark.subs_.push_back(i);
+        }
+      }
+      else if (elemName == kClosedCaptionsTag)
+      {
+        std::string val;
+        if (getXmlElemText(xml, val))
+        {
+          bookmark.cc_ = toScalar<unsigned int, std::string>(val);
         }
       }
     }

@@ -553,7 +553,7 @@ namespace yae
 
     struct TRect
     {
-      std::string assAdjustTimings(const TSubsFrame & sf) const;
+      std::string getAssScript(const TSubsFrame & sf) const;
 
       TSubtitleType type_;
 
@@ -589,6 +589,10 @@ namespace yae
     TSubsFrame();
 
     bool operator == (const TSubsFrame & s) const;
+
+    // a flag indicating whether embedded start/end ASS timings
+    // must be rewritten prior to being passed to libass:
+    bool rewriteTimings_;
 
     // a flag indicating whether this subtitle frame should be rendered:
     bool render_;
