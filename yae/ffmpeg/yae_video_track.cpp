@@ -22,6 +22,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kAvTimeBase
+  //
+  static const Rational kAvTimeBase(1, AV_TIME_BASE);
+
+  //----------------------------------------------------------------
   // TAVFrameBuffer::TAVFrameBuffer
   //
   TAVFrameBuffer::TAVFrameBuffer(AVFrame * src)
@@ -681,7 +686,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             {
               int64_t ptsPkt = av_rescale_q(ccPkt.pts,
                                             stream_->time_base,
-                                            AV_TIME_BASE_Q);
+                                            kAvTimeBase);
               sf.time_.time_ = ptsPkt;
               sf.tEnd_.time_ = ptsPkt;
             }
@@ -708,9 +713,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         int64_t ptsNow = av_rescale_q(decodedFrame.pts,
                                        stream_->time_base,
-                                       AV_TIME_BASE_Q);
+                                       kAvTimeBase);
 
-        int64_t ptsNext = ptsNow + av_rescale_q(1, tb, AV_TIME_BASE_Q);
+        int64_t ptsNext = ptsNow + av_rescale_q(1, tb, kAvTimeBase);
 
         TSubsFrame & last = captions_.last_;
         if (last.tEnd_.base_ == AV_TIME_BASE &&

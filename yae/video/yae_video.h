@@ -551,7 +551,7 @@ namespace yae
   {
     typedef TFrame<TSubsFormat> TBase;
 
-    struct TRect
+    struct YAE_API TRect
     {
       std::string getAssScript(const TSubsFrame & sf) const;
 
