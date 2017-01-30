@@ -99,6 +99,7 @@ namespace yae
     frameQueue_(kQueueSizeSmall),
     hasPrevPTS_(false),
     framesDecoded_(0),
+    decodeClosedCaptions_(0),
     subs_(NULL)
   {
 #ifndef NDEBUG
@@ -648,7 +649,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       // check for closed captions data:
       AvPkt ccPkt;
-      if (makeCcPkt(*stream_, decodedFrame, ccPkt))
+      if (decodeClosedCaptions_ &&
+          makeCcPkt(*stream_, decodedFrame, ccPkt))
       {
         // instantiate the CC decoder on-demand:
         ccDec_ || (ccDec_ = openClosedCaptionsDecoder(*stream_, decodedFrame));
@@ -698,6 +700,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 
       // extend the duration of the most recent caption to cover this frame:
+      if (decodeClosedCaptions_)
       {
         Rational tb(stream_->r_frame_rate.den,
                     stream_->r_frame_rate.num);
@@ -724,6 +727,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           sf.time_.time_ = ptsPrev;
           captions_.push(sf, &terminator_);
         }
+      }
+      else if (ccDec_)
+      {
+        ccDec_.reset();
       }
 
       enum AVPixelFormat ffmpegPixelFormat =
@@ -1403,5 +1410,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   VideoTrack::setDeinterlacing(bool deint)
   {
     return setTraitsOverride(override_, deint);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::enableClosedCaptions
+  //
+  void
+  VideoTrack::enableClosedCaptions(unsigned int cc)
+  {
+    decodeClosedCaptions_ = cc;
   }
 }

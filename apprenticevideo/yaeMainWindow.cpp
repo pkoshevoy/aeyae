@@ -1560,7 +1560,15 @@ namespace yae
     }
 
     selectSubsTrack(reader.get(), strack);
-    subsTrackGroup_->actions().at((int)strack)->setChecked(true);
+    if (strack == subsCount)
+    {
+      // skip the closed captions entry:
+      subsTrackGroup_->actions().at((int)strack + 1)->setChecked(true);
+    }
+    else
+    {
+      subsTrackGroup_->actions().at((int)strack)->setChecked(true);
+    }
 
     if (rememberSelectedSubtitlesTrack)
     {
@@ -3969,7 +3977,7 @@ namespace yae
           addMenuCopyTo(contextMenu_, menuVideo);
         }
 
-        if (numSubtitles)
+        if (numSubtitles || true)
         {
           addMenuCopyTo(contextMenu_, menuSubs);
         }
@@ -4704,6 +4712,21 @@ namespace yae
       subsTrackMapper_->setMapping(trackAction, i);
     }
 
+    // add an option to show closed captions:
+    {
+      QAction * trackAction =
+        new QAction(tr("Show Closed Captions (CC1)"), this);
+      menuSubs->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, subsCount + 1);
+    }
+
     // add an option to disable subs:
     {
       QAction * trackAction = new QAction(tr("Disabled"), this);
@@ -4789,7 +4812,7 @@ namespace yae
       menubar->removeAction(menuVideo->menuAction());
     }
 
-    if (!numSubtitles)
+    if (!numVideoTracks)
     {
       menubar->removeAction(menuSubs->menuAction());
     }
@@ -4805,7 +4828,7 @@ namespace yae
       menubar->insertMenu(menuHelp->menuAction(), menuVideo);
     }
 
-    if (numSubtitles || !(numVideoTracks || numAudioTracks))
+    if (numVideoTracks || !(numVideoTracks || numAudioTracks))
     {
       menubar->removeAction(menuSubs->menuAction());
       menubar->insertMenu(menuHelp->menuAction(), menuSubs);
@@ -4858,6 +4881,9 @@ namespace yae
   MainWindow::selectSubsTrack(IReader * reader, std::size_t subsTrackIndex)
   {
     const std::size_t nsubs = reader->subsCount();
+    const std::size_t cc = nsubs < subsTrackIndex ? subsTrackIndex - nsubs : 0;
+    reader->enableClosedCaptions(cc);
+
     for (std::size_t i = 0; i < nsubs; i++)
     {
       bool enable = (i == subsTrackIndex);

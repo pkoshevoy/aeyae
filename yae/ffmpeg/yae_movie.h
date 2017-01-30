@@ -103,6 +103,13 @@ namespace yae
     bool setTempo(double tempo);
     bool setDeinterlacing(bool enabled);
 
+    // 0 - disabled
+    // 1 - CC1
+    // 2 - CC2
+    // 3 - CC3
+    // 4 - CC4
+    void enableClosedCaptions(unsigned int cc);
+
     std::size_t subsCount() const;
     TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;
     void setSubsRender(std::size_t i, bool render);
@@ -157,6 +164,13 @@ namespace yae
     // these are used to speed up video decoding:
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;
+
+    // 0 - disabled
+    // 1 - CC1
+    // 2 - CC2
+    // 3 - CC3
+    // 4 - CC4
+    unsigned int enableClosedCaptions_;
 
     // demuxer current position (DTS, stream index, and byte position):
     int dtsStreamIndex_;

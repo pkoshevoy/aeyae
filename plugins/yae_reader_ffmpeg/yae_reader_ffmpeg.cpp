@@ -575,6 +575,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderFFMPEG::enableClosedCaptions
+  //
+  void
+  ReaderFFMPEG::enableClosedCaptions(unsigned int cc)
+  {
+    private_->movie_.enableClosedCaptions(cc);
+  }
+
+  //----------------------------------------------------------------
   // ReaderFFMPEG::subsCount
   //
   std::size_t

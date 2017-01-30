@@ -123,6 +123,18 @@ namespace yae
     // enable/disable video deinterlacing:
     virtual bool setDeinterlacing(bool enabled);
 
+    // whether or not this will actually output any closed captions
+    // depends on the input stream (whether it carries closed captions)
+    // and the video decoder used (hardware decoders may not pass through
+    // the closed captions data for decoding):
+    //
+    // 0 - disabled
+    // 1 - CC1
+    // 2 - CC2
+    // 3 - CC3
+    // 4 - CC4
+    virtual void enableClosedCaptions(unsigned int cc);
+
     // query subtitles, enable/disable rendering...
     virtual std::size_t subsCount() const;
     virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const;

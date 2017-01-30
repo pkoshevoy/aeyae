@@ -104,6 +104,13 @@ namespace yae
     // adjust frame duration:
     bool setDeinterlacing(bool enabled);
 
+    // 0 - disabled
+    // 1 - CC1
+    // 2 - CC2
+    // 3 - CC3
+    // 4 - CC4
+    void enableClosedCaptions(unsigned int cc);
+
     void setSubs(std::vector<TSubsTrackPtr> * subs)
     { subs_ = subs; }
 
@@ -126,6 +133,7 @@ namespace yae
     uint64 framesDecoded_;
 
     // CEA-608 closed captions decoder:
+    unsigned int decodeClosedCaptions_;
     AvCodecContextPtr ccDec_;
     SubtitlesTrack captions_;
 

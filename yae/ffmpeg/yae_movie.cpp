@@ -96,6 +96,7 @@ namespace yae
     selectedAudioTrack_(0),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
+    enableClosedCaptions_(0),
     dtsStreamIndex_(-1),
     dtsBytePos_(0),
     dts_(AV_NOPTS_VALUE),
@@ -383,6 +384,7 @@ namespace yae
     track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
+    track->enableClosedCaptions(enableClosedCaptions_);
     track->setSubs(&subs_);
     track->frameQueue_.setMaxSize(videoQueueSize_.traits().value());
 
@@ -1324,6 +1326,29 @@ namespace yae
     {}
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::enableClosedCaptions
+  //
+  void
+  Movie::enableClosedCaptions(unsigned int cc)
+  {
+    try
+    {
+      boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
+      requestMutex(lock);
+
+      enableClosedCaptions_ = cc;
+
+      if (selectedVideoTrack_ < videoTracks_.size())
+      {
+        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack->enableClosedCaptions(cc);
+      }
+    }
+    catch (...)
+    {}
   }
 
   //----------------------------------------------------------------
