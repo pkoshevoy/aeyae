@@ -271,6 +271,7 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
+    switchDecoderToRecommended_(false),
     sent_(0),
     received_(0),
     errors_(0),
@@ -422,13 +423,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // get_decoders
+  //
+  static const TDecoders & get_decoders()
+  {
+    static const TDecoders decoders;
+    return decoders;
+  }
+
+  //----------------------------------------------------------------
   // find_best_decoder_for
   //
   AvCodecContextPtr
   find_best_decoder_for(const AVCodecParameters & params,
                         std::list<AvCodecContextPtr> & untried)
   {
-    static const TDecoders decoders;
+    const TDecoders & decoders = get_decoders();
 
     if (untried.empty())
     {
@@ -737,6 +747,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Track::tryToSwitchDecoder
+  //
+  void
+  Track::tryToSwitchDecoder(const std::string & name)
+  {
+    const TDecoders & decoders = get_decoders();
+    const AVCodecParameters & params = *(stream_->codecpar);
+
+    std::list<AvCodecContextPtr> candidates;
+    decoders.find(params, candidates);
+
+    std::list<AvCodecContextPtr> a;
+    std::list<AvCodecContextPtr> b;
+
+    for (std::list<AvCodecContextPtr>::const_iterator i = candidates.begin();
+         i != candidates.end(); ++i)
+    {
+      const AvCodecContextPtr & c = *i;
+      const AVCodecContext * ctx = c.get();
+
+      if (name == ctx->codec->name)
+      {
+        a.push_back(c);
+      }
+      else
+      {
+        b.push_back(c);
+      }
+    }
+
+    a.splice(a.end(), b);
+
+    recommended_ = a;
+    switchDecoderToRecommended_ = true;
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::threadLoop
   //
   void
@@ -756,15 +803,37 @@ namespace yae
           break;
         }
 
-        if (!packetPtr && codecContext_)
+        if (!packetPtr)
         {
-          // flush out buffered frames with an empty packet:
-          AVCodecContext * ctx = codecContext_.get();
-          AvPkt pkt;
-          decode(ctx, pkt);
+          if (codecContext_)
+          {
+            // flush out buffered frames with an empty packet:
+            AVCodecContext * ctx = codecContext_.get();
+            AvPkt pkt;
+            decode(ctx, pkt);
+          }
         }
         else
         {
+          const AvPkt & pkt = *packetPtr;
+
+          if (switchDecoderToRecommended_ && pkt.flags & AV_PKT_FLAG_KEY)
+          {
+            candidates_.clear();
+            candidates_.splice(candidates_.end(), recommended_);
+            switchDecoderToRecommended_ = false;
+
+            // flush any buffered frames:
+            if (codecContext_)
+            {
+              AvPkt flushPkt;
+              decode(codecContext_.get(), flushPkt);
+            }
+
+            // close the codec:
+            codecContext_.reset();
+          }
+
           AVCodecContext * ctx = open();
           if (!ctx)
           {
@@ -778,7 +847,6 @@ namespace yae
           }
           packets_.push_back(packetPtr);
 
-          const AvPkt & pkt = *packetPtr;
           int receivedPrior = received_;
           int err = decode(ctx, pkt);
 

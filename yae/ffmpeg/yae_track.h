@@ -267,6 +267,7 @@ namespace yae
     int decoderPull(AVCodecContext * ctx);
     int decode(AVCodecContext * ctx, const AvPkt & pkt);
     bool switchDecoder();
+    void tryToSwitchDecoder(const std::string & name);
 
     // worker thread:
     Thread<Track> thread_;
@@ -277,6 +278,8 @@ namespace yae
     AVFormatContext * context_;
     AVStream * stream_;
     AvCodecContextPtr codecContext_;
+    bool switchDecoderToRecommended_;
+    std::list<AvCodecContextPtr> recommended_;
     std::list<AvCodecContextPtr> candidates_;
     std::list<TPacketPtr> packets_;
     uint64_t sent_;

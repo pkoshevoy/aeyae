@@ -7,8 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // boost library:
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string.hpp>
 
 // yae includes:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
@@ -16,6 +15,9 @@
 #include "yae/ffmpeg/yae_video_track.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_pixel_format_traits.h"
+
+// namespace shortcuts:
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -1425,6 +1427,35 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   void
   VideoTrack::enableClosedCaptions(unsigned int cc)
   {
+    AvCodecContextPtr keepAlive(codecContext_);
+    AVCodecContext * ctx = keepAlive.get();
+
+    if (ctx && cc && !decodeClosedCaptions_)
+    {
+      // switch to a decoder that produces side-data:
+      std::size_t n = strlen(ctx->codec->name);
+      std::string name;
+
+      if (al::ends_with(ctx->codec->name, "_qsv"))
+      {
+        name = std::string(ctx->codec->name, ctx->codec->name + (n - 4));
+      }
+      else if (al::ends_with(ctx->codec->name, "_cuvid"))
+      {
+        name = std::string(ctx->codec->name, ctx->codec->name + (n - 6));
+      }
+
+      if (name == "mpeg2")
+      {
+        name = "mpeg2video";
+      }
+
+      if (name.size())
+      {
+        tryToSwitchDecoder(name);
+      }
+    }
+
     decodeClosedCaptions_ = cc;
   }
 }
