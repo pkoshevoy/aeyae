@@ -1430,6 +1430,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     AvCodecContextPtr keepAlive(codecContext_);
     AVCodecContext * ctx = keepAlive.get();
 
+    preferSoftwareDecoder_ = cc > 0;
+
     if (ctx && cc && !decodeClosedCaptions_)
     {
       // switch to a decoder that produces side-data:

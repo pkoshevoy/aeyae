@@ -191,7 +191,8 @@ namespace yae
   //
   YAE_API AvCodecContextPtr
   find_best_decoder_for(const AVCodecParameters & params,
-                        std::list<AvCodecContextPtr> & candidates);
+                        std::list<AvCodecContextPtr> & candidates,
+                        bool preferSoftwareDecoder = false);
 
   //----------------------------------------------------------------
   // Track
@@ -278,6 +279,7 @@ namespace yae
     AVFormatContext * context_;
     AVStream * stream_;
     AvCodecContextPtr codecContext_;
+    bool preferSoftwareDecoder_;
     bool switchDecoderToRecommended_;
     std::list<AvCodecContextPtr> recommended_;
     std::list<AvCodecContextPtr> candidates_;

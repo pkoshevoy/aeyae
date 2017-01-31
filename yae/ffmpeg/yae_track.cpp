@@ -271,6 +271,7 @@ namespace yae
     thread_(this),
     context_(context),
     stream_(stream),
+    preferSoftwareDecoder_(false),
     switchDecoderToRecommended_(false),
     sent_(0),
     received_(0),
@@ -351,7 +352,8 @@ namespace yae
     //
     void
     find(const AVCodecParameters & params,
-         std::list<AvCodecContextPtr> & decoders) const
+         std::list<AvCodecContextPtr> & decoders,
+         bool preferSoftwareDecoder) const
     {
       decoders.clear();
 
@@ -363,6 +365,7 @@ namespace yae
 
       AvCodecContextPtr cuvid;
       AvCodecContextPtr intel;
+      std::list<AvCodecContextPtr> hardware;
       std::list<AvCodecContextPtr> software;
       std::list<AvCodecContextPtr> experimental;
 
@@ -409,15 +412,25 @@ namespace yae
 
       if (cuvid)
       {
-        decoders.push_back(cuvid);
+        hardware.push_back(cuvid);
       }
 
       if (intel)
       {
-        decoders.push_back(intel);
+        hardware.push_back(intel);
       }
 
-      decoders.splice(decoders.end(), software);
+      if (preferSoftwareDecoder)
+      {
+        decoders.splice(decoders.end(), software);
+        decoders.splice(decoders.end(), hardware);
+      }
+      else
+      {
+        decoders.splice(decoders.end(), hardware);
+        decoders.splice(decoders.end(), software);
+      }
+
       decoders.splice(decoders.end(), experimental);
     }
   };
@@ -436,13 +449,14 @@ namespace yae
   //
   AvCodecContextPtr
   find_best_decoder_for(const AVCodecParameters & params,
-                        std::list<AvCodecContextPtr> & untried)
+                        std::list<AvCodecContextPtr> & untried,
+                        bool preferSoftwareDecoder)
   {
     const TDecoders & decoders = get_decoders();
 
     if (untried.empty())
     {
-      decoders.find(params, untried);
+      decoders.find(params, untried, preferSoftwareDecoder);
     }
 
     AvCodecContextPtr ctx = untried.front();
@@ -488,7 +502,9 @@ namespace yae
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
 
-    codecContext_ = find_best_decoder_for(codecParams, candidates_);
+    codecContext_ = find_best_decoder_for(codecParams,
+                                          candidates_,
+                                          preferSoftwareDecoder_);
     if (!codecContext_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
@@ -756,7 +772,7 @@ namespace yae
     const AVCodecParameters & params = *(stream_->codecpar);
 
     std::list<AvCodecContextPtr> candidates;
-    decoders.find(params, candidates);
+    decoders.find(params, candidates, preferSoftwareDecoder_);
 
     std::list<AvCodecContextPtr> a;
     std::list<AvCodecContextPtr> b;
