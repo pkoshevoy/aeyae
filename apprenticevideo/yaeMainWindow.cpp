@@ -3125,8 +3125,8 @@ namespace yae
 
     reader_->seek(seconds);
 
-    // this re-initializes libass, avoids weird non-rendering of subtitles:
-    canvas_->uninitLibass();
+    // this avoids weird non-rendering of subtitles:
+    canvas_->libassFlushTrack();
 
     resumeRenderers(true);
   }

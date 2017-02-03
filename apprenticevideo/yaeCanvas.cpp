@@ -24,25 +24,12 @@
 #else
 #include <GL/glew.h>
 #endif
-#include <QApplication>
-#include <QDir>
-#include <QFileInfo>
-#include <QTimer>
-#include <QTime>
+#include <QEvent>
 
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
 #elif !defined(_WIN32)
 #include <QtDBus/QtDBus>
-#endif
-
-// libass includes:
-// #undef YAE_USE_LIBASS
-#ifdef YAE_USE_LIBASS
-extern "C"
-{
-#include <ass/ass.h>
-}
 #endif
 
 // yae includes:
@@ -79,422 +66,6 @@ namespace yae
   }
 #endif
 
-#ifdef YAE_USE_LIBASS
-  //----------------------------------------------------------------
-  // getFontsConf
-  //
-  static bool
-  getFontsConf(std::string & fontsConf, bool & removeAfterUse)
-  {
-#if !defined(_WIN32)
-    fontsConf = "/etc/fonts/fonts.conf";
-
-    if (QFileInfo(QString::fromUtf8(fontsConf.c_str())).exists())
-    {
-      // use the system fontconfig file:
-      removeAfterUse = false;
-      return true;
-    }
-#endif
-
-#if defined(__APPLE__)
-    fontsConf = "/opt/local/etc/fonts/fonts.conf";
-
-    if (QFileInfo(QString::fromUtf8(fontsConf.c_str())).exists())
-    {
-      // use the macports fontconfig file:
-      removeAfterUse = false;
-      return true;
-    }
-#endif
-
-    removeAfterUse = true;
-    int64 appPid = QCoreApplication::applicationPid();
-
-    QString tempDir = YAE_STANDARD_LOCATION(TempLocation);
-    QString fontsDir = YAE_STANDARD_LOCATION(FontsLocation);
-    QString cacheDir = YAE_STANDARD_LOCATION(CacheLocation);
-
-    QString fontconfigCache =
-      cacheDir + QString::fromUtf8("/apprenticevideo-fontconfig-cache");
-
-    std::ostringstream os;
-    os << "<?xml version=\"1.0\"?>" << std::endl
-       << "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">" << std::endl
-       << "<fontconfig>" << std::endl
-       << "\t<dir>"
-       << QDir::toNativeSeparators(fontsDir).toUtf8().constData()
-       << "</dir>" << std::endl;
-
-#ifdef __APPLE__
-    os << "\t<dir>/Library/Fonts</dir>" << std::endl
-       << "\t<dir>~/Library/Fonts</dir>" << std::endl;
-#endif
-
-#ifndef _WIN32
-    const char * fontdir[] = {
-      "/usr/share/fonts",
-      "/usr/X11R6/lib/X11/fonts",
-      "/opt/kde3/share/fonts",
-      "/usr/local/share/fonts"
-    };
-
-    std::size_t nfontdir = sizeof(fontdir) / sizeof(fontdir[0]);
-    for (std::size_t i = 0; i < nfontdir; i++)
-    {
-      QString path = QString::fromUtf8(fontdir[i]);
-      if (QFileInfo(path).exists())
-      {
-        os << "\t<dir>" << fontdir[i] << "</dir>" << std::endl;
-      }
-    }
-#endif
-
-    os << "\t<cachedir>"
-       << QDir::toNativeSeparators(fontconfigCache).toUtf8().constData()
-       << "</cachedir>" << std::endl
-       << "</fontconfig>" << std::endl;
-
-    QString fn =
-      tempDir +
-      QString::fromUtf8("/apprenticevideo.fonts.conf.") +
-      QString::number(appPid);
-
-    fontsConf = QDir::toNativeSeparators(fn).toUtf8().constData();
-
-#if !defined(NDEBUG)
-    std::cerr << "fonts.conf: " << fontsConf << std::endl;
-#endif
-
-    std::FILE * fout = fopenUtf8(fontsConf.c_str(), "w");
-    if (!fout)
-    {
-      return false;
-    }
-
-    std::string xml = os.str().c_str();
-
-#if !defined(NDEBUG)
-    std::cerr << "fonts.conf content:\n" << xml << std::endl;
-#endif
-
-    std::size_t nout = fwrite(xml.c_str(), 1, xml.size(), fout);
-    fclose(fout);
-
-    return nout == xml.size();
-  }
-
-  //----------------------------------------------------------------
-  // TLibassInitDoneCallback
-  //
-  typedef void(*TLibassInitDoneCallback)(void *, TLibass *);
-#endif
-
-  //----------------------------------------------------------------
-  // TLibassInit
-  //
-  class TLibass
-  {
-  public:
-
-#ifdef YAE_USE_LIBASS
-    //----------------------------------------------------------------
-    // TLine
-    //
-    struct TLine
-    {
-      TLine(int64 pts = 0,
-            const unsigned char * data = NULL,
-            std::size_t size = 0):
-        pts_(pts),
-        data_((const char *)data, (const char *)data + size)
-      {}
-
-      bool operator == (const TLine & sub) const
-      {
-        return pts_ == sub.pts_ && data_ == sub.data_;
-      }
-
-      // presentation timestamp expressed in milliseconds:
-      int64 pts_;
-
-      // subtitle dialog line:
-      std::string data_;
-    };
-
-    TLibass():
-      callbackContext_(NULL),
-      callback_(NULL),
-      initialized_(false),
-      assLibrary_(NULL),
-      assRenderer_(NULL),
-      assTrack_(NULL),
-      bufferSize_(0)
-    {}
-
-    ~TLibass()
-    {
-      uninit();
-    }
-
-    void setCallback(void * context, TLibassInitDoneCallback callback)
-    {
-      YAE_ASSERT(!callback_ || !callback);
-      callbackContext_ = context;
-      callback_ = callback;
-    }
-
-    void setHeader(const unsigned char * codecPrivate = NULL,
-                   std::size_t codecPrivateSize = 0)
-    {
-      header_.clear();
-      if (codecPrivate && codecPrivateSize)
-      {
-        std::string tmp((const char *)codecPrivate,
-                        (const char *)codecPrivate + codecPrivateSize);
-
-        std::string badStyle("Style: Default,(null),0,");
-        std::string::size_type found = tmp.find(badStyle);
-        if (found != std::string::npos)
-        {
-          std::ostringstream oss;
-          oss << tmp.substr(0, found)
-              << "Style: Default,,12,"
-              << tmp.substr(found + badStyle.size());
-          tmp = oss.str().c_str();
-        }
-
-#ifndef NDEBUG
-        std::cerr << "libass header:\n" << tmp << std::endl;
-#endif
-        header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
-      }
-    }
-
-    void setCustomFonts(const std::list<TFontAttachment> & customFonts)
-    {
-      customFonts_ = customFonts;
-    }
-
-    inline bool isReady() const
-    {
-      return initialized_;
-    }
-
-    void setFrameSize(int w, int h)
-    {
-      ass_set_frame_size(assRenderer_, w, h);
-
-      double ar = double(w) / double(h);
-      ass_set_aspect_ratio(assRenderer_, ar, ar);
-    }
-
-    void processData(const unsigned char * data, std::size_t size, int64 pts)
-    {
-      TLine line(pts, data, size);
-      if (has(buffer_, line))
-      {
-#if 0 // ndef NDEBUG
-        std::cerr << "DROPPING DUPLICATE: " << line.data_ << std::endl;
-#endif
-        return;
-      }
-
-#ifndef NDEBUG
-      std::cerr << "ass_process_data: " << line.data_ << std::endl;
-#endif
-
-      if (bufferSize_)
-      {
-        const TLine & first = buffer_.front();
-        if (pts < first.pts_)
-        {
-          // user skipped back in time, purge cached subs:
-          ass_flush_events(assTrack_);
-          buffer_.clear();
-          bufferSize_ = 0;
-        }
-      }
-
-      if (bufferSize_ < 1)
-      {
-        bufferSize_++;
-      }
-      else
-      {
-        buffer_.pop_front();
-      }
-
-      buffer_.push_back(line);
-      ass_process_data(assTrack_, (char *)data, (int)size);
-    }
-
-    ASS_Image * renderFrame(int64 now, int * detectChange)
-    {
-      return ass_render_frame(assRenderer_,
-                              assTrack_,
-                              (long long)now,
-                              detectChange);
-    }
-
-    void init()
-    {
-      uninit();
-
-      assLibrary_ = ass_library_init();
-      assRenderer_ = ass_renderer_init(assLibrary_);
-      assTrack_ = ass_new_track(assLibrary_);
-
-      for (std::list<TFontAttachment>::const_iterator
-             i = customFonts_.begin(); i != customFonts_.end(); ++i)
-      {
-        const TFontAttachment & font = *i;
-        ass_add_font(assLibrary_,
-                     (char *)font.filename_,
-                     (char *)font.data_,
-                     (int)font.size_);
-      }
-
-      // lookup Fontconfig configuration file path:
-      std::string fontsConf;
-      bool removeAfterUse = false;
-      getFontsConf(fontsConf, removeAfterUse);
-
-      const char * defaultFont = NULL;
-      const char * defaultFamily = NULL;
-      int useFontconfig = 1;
-      int updateFontCache = 1;
-
-      ass_set_fonts(assRenderer_,
-                    defaultFont,
-                    defaultFamily,
-                    useFontconfig,
-                    fontsConf.size() ? fontsConf.c_str() : NULL,
-                    updateFontCache);
-
-      if (removeAfterUse)
-      {
-        // remove the temporary fontconfig file:
-        QFile::remove(QString::fromUtf8(fontsConf.c_str()));
-      }
-
-      if (assTrack_ && header_.size())
-      {
-        ass_process_codec_private(assTrack_,
-                                  &header_[0],
-                                  (int)(header_.size()));
-      }
-    }
-
-    void uninit()
-    {
-      if (assTrack_)
-      {
-        ass_free_track(assTrack_);
-        assTrack_ = NULL;
-
-        ass_renderer_done(assRenderer_);
-        assRenderer_ = NULL;
-
-        ass_library_done(assLibrary_);
-        assLibrary_ = NULL;
-      }
-    }
-
-    void threadLoop()
-    {
-      // begin:
-      initialized_ = false;
-
-      // this can take a while to rebuild the font cache:
-      init();
-
-      // done:
-      initialized_ = true;
-
-      if (callback_)
-      {
-        callback_(callbackContext_, this);
-      }
-    }
-
-    void * callbackContext_;
-    TLibassInitDoneCallback callback_;
-    bool initialized_;
-
-    ASS_Library * assLibrary_;
-    ASS_Renderer * assRenderer_;
-    ASS_Track * assTrack_;
-    std::vector<char> header_;
-    std::list<TFontAttachment> customFonts_;
-    std::list<TLine> buffer_;
-    std::size_t bufferSize_;
-#endif
-  };
-
-  //----------------------------------------------------------------
-  // libassInitThread
-  //
-#ifdef YAE_USE_LIBASS
-  static Thread<TLibass> libassInitThread;
-#endif
-
-  //----------------------------------------------------------------
-  // asyncInitLibass
-  //
-  TLibass *
-  Canvas::asyncInitLibass(const unsigned char * header,
-                          const std::size_t headerSize)
-  {
-    TLibass * libass = NULL;
-
-#ifdef YAE_USE_LIBASS
-    libass = new TLibass();
-    libass->setCallback(this, &Canvas::libassInitDoneCallback);
-    libass->setHeader(header, headerSize);
-    libass->setCustomFonts(customFonts_);
-
-    if (!libassInitThread.isRunning())
-    {
-      libassInitThread.setContext(libass);
-      libassInitThread.run();
-    }
-    else
-    {
-      YAE_ASSERT(false);
-      libassInitThread.stop();
-    }
-#endif
-
-    return libass;
-  }
-
-  //----------------------------------------------------------------
-  // stopAsyncInitLibassThread
-  //
-  static void
-  stopAsyncInitLibassThread()
-  {
-#ifdef YAE_USE_LIBASS
-    if (libassInitThread.isRunning())
-    {
-      libassInitThread.stop();
-      libassInitThread.wait();
-      libassInitThread.setContext(NULL);
-    }
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // TFontAttachment::TFontAttachment
-  //
-  TFontAttachment::TFontAttachment(const char * filename,
-                                   const unsigned char * data,
-                                   std::size_t size):
-    filename_(filename),
-    data_(data),
-    size_(size)
-  {}
 
   //----------------------------------------------------------------
   // Canvas::Canvas
@@ -504,22 +75,21 @@ namespace yae
     context_(ctx),
     private_(NULL),
     overlay_(NULL),
-    libass_(NULL),
     showTheGreeting_(true),
     subsInOverlay_(false),
     renderMode_(Canvas::kScaleToFit),
     devicePixelRatio_(1.0),
     w_(0),
     h_(0)
-  {}
+  {
+    libass_.asyncInit(&Canvas::libassInitDoneCallback, this);
+  }
 
   //----------------------------------------------------------------
   // Canvas::~Canvas
   //
   Canvas::~Canvas()
   {
-    uninitLibass();
-
     delete private_;
     delete overlay_;
   }
@@ -552,8 +122,6 @@ namespace yae
     static bool initialized = initializeGlew();
 #endif
 
-    uninitLibass();
-
     delete private_;
     private_ = NULL;
 
@@ -562,8 +130,6 @@ namespace yae
 
     private_ = new CanvasRenderer();
     overlay_ = new CanvasRenderer();
-
-    libass_ = asyncInitLibass();
   }
 
   //----------------------------------------------------------------
@@ -609,7 +175,7 @@ namespace yae
                         const unsigned char * data,
                         const std::size_t size)
   {
-    customFonts_.push_back(TFontAttachment(filename, data, size));
+    libass_.addCustomFont(TFontAttachment(filename, data, size));
   }
 
   //----------------------------------------------------------------
@@ -631,23 +197,25 @@ namespace yae
   {
     overlay_->clear(context());
 
-    uninitLibass();
+    ass_.reset();
 
     showTheGreeting_ = false;
     subsInOverlay_ = false;
     subs_.clear();
-    customFonts_.clear();
   }
 
   //----------------------------------------------------------------
-  // Canvas::uninitLibass
+  // Canvas::libassFlushTrack
   //
   void
-  Canvas::uninitLibass()
+  Canvas::libassFlushTrack()
   {
-    stopAsyncInitLibassThread();
-    delete libass_;
-    libass_ = NULL;
+    if (!ass_)
+    {
+      return;
+    }
+
+    ass_->flushEvents();
   }
 
   //----------------------------------------------------------------
@@ -757,7 +325,8 @@ namespace yae
 
     if (et == QEvent::User)
     {
-      PaintCanvasEvent * repaintEvent = dynamic_cast<PaintCanvasEvent *>(event);
+      PaintCanvasEvent * repaintEvent =
+        dynamic_cast<PaintCanvasEvent *>(event);
       if (repaintEvent)
       {
         refresh();
@@ -766,7 +335,8 @@ namespace yae
         return true;
       }
 
-      RenderFrameEvent * renderEvent = dynamic_cast<RenderFrameEvent *>(event);
+      RenderFrameEvent * renderEvent =
+        dynamic_cast<RenderFrameEvent *>(event);
       if (renderEvent)
       {
         event->accept();
@@ -806,7 +376,7 @@ namespace yae
         event->accept();
 
 #ifdef YAE_USE_LIBASS
-        stopAsyncInitLibassThread();
+        libass_.asyncInitStop();
         updateOverlay(true);
         refresh();
 #endif
@@ -1493,24 +1063,24 @@ namespace yae
           bool done = false;
 
 #ifdef YAE_USE_LIBASS
-          if (!libass_)
+          if (!ass_)
           {
             if (subs.traits_ == kSubsSSA && subs.extraData_)
             {
-              libass_ = asyncInitLibass(subs.extraData_->data(0),
-                                        subs.extraData_->rowBytes(0));
+              ass_ = libass_.track(subs.extraData_->data(0),
+                                   subs.extraData_->rowBytes(0));
             }
             else if (subExt->headerSize())
             {
-              libass_ = asyncInitLibass(subExt->header(),
-                                        subExt->headerSize());
+              ass_ = libass_.track(subExt->header(),
+                                   subExt->headerSize());
             }
           }
 
-          if (libass_ && libass_->isReady())
+          if (ass_ && libass_.isReady())
           {
             int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
-            libass_->processData((unsigned char *)&assa[0], assa.size(), pts);
+            ass_->processData((unsigned char *)&assa[0], assa.size(), pts);
             nrectsPainted++;
             done = true;
           }
@@ -1536,27 +1106,27 @@ namespace yae
       if (!nrectsPainted && subs.data_ &&
           (subs.traits_ == kSubsSSA))
       {
-        if (!libass_)
+        if (!ass_)
         {
           if (subs.traits_ == kSubsSSA && subs.extraData_)
           {
-            libass_ = asyncInitLibass(subs.extraData_->data(0),
-                                      subs.extraData_->rowBytes(0));
+            ass_ = libass_.track(subs.extraData_->data(0),
+                                 subs.extraData_->rowBytes(0));
           }
           else if (subExt && subExt->headerSize())
           {
-            libass_ = asyncInitLibass(subExt->header(),
-                                      subExt->headerSize());
+            ass_ = libass_.track(subExt->header(),
+                                 subExt->headerSize());
           }
         }
 
-        if (libass_ && libass_->isReady())
+        if (ass_ && libass_.isReady())
         {
           const unsigned char * ssa = subs.data_->data(0);
           const std::size_t ssaSize = subs.data_->rowBytes(0);
 
           int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
-          libass_->processData(ssa, ssaSize, pts);
+          ass_->processData(ssa, ssaSize, pts);
           nrectsPainted++;
         }
       }
@@ -1592,16 +1162,16 @@ namespace yae
     }
 
 #ifdef YAE_USE_LIBASS
-    if (libass_ && libass_->isReady() && frame)
+    if (ass_ && libass_.isReady() && frame)
     {
-      libass_->setFrameSize(iw, ih);
+      libass_.setFrameSize(iw, ih);
 
       // the list of images is owned by libass,
       // libass is responsible for their deallocation:
       int64 now = (int64)(frame->time_.toSeconds() * 1000.0 + 0.5);
 
       int changeDetected = 0;
-      ASS_Image * pic = libass_->renderFrame(now, &changeDetected);
+      ASS_Image * pic = ass_->renderFrame(now, &changeDetected);
       libassSameSubs = !changeDetected;
       paintedSomeSubs = changeDetected;
 

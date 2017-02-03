@@ -34,13 +34,13 @@
 
 // local includes:
 #include "yaeCanvasRenderer.h"
+#include "yaeLibass.h"
 #include "yaeThumbnailProvider.h"
 
 
 namespace yae
 {
   // forward declarations:
-  class TLibass;
   struct Canvas;
 
   //----------------------------------------------------------------
@@ -110,20 +110,6 @@ namespace yae
     virtual bool execute() = 0;
 
     boost::shared_ptr<Ticket> ticket_;
-  };
-
-  //----------------------------------------------------------------
-  // TFontAttachment
-  //
-  struct YAE_API TFontAttachment
-  {
-    TFontAttachment(const char * filename = NULL,
-                    const unsigned char * data = NULL,
-                    std::size_t size = 0);
-
-    const char * filename_;
-    const unsigned char * data_;
-    std::size_t size_;
   };
 
   //----------------------------------------------------------------
@@ -255,8 +241,8 @@ namespace yae
     void clear();
     void clearOverlay();
 
-    // force libass to be re-initialized on demand:
-    void uninitLibass();
+    // flush previously processed dialogue lines:
+    void libassFlushTrack();
 
     // helper:
     void refresh();
@@ -354,9 +340,6 @@ namespace yae
     // this will be called from a helper thread
     // once it is done updating fontconfig cache for libass:
     static void libassInitDoneCallback(void * canvas, TLibass * libass);
-
-    TLibass * asyncInitLibass(const unsigned char * header = NULL,
-                              const std::size_t headerSize = 0);
 
     // helper:
     void resize(double devicePixelRatio, int w, int h);
@@ -476,7 +459,8 @@ namespace yae
     RenderFrameEvent::TPayload renderFrameEvent_;
     CanvasRenderer * private_;
     CanvasRenderer * overlay_;
-    TLibass * libass_;
+    TLibass libass_;
+    TAssTrackPtr ass_;
     bool showTheGreeting_;
     bool subsInOverlay_;
     TRenderMode renderMode_;
@@ -496,9 +480,6 @@ namespace yae
     // automatic frame margin detection:
     TAutoCropDetect autoCrop_;
     Thread<TAutoCropDetect> autoCropThread_;
-
-    // extra fonts embedded in the video file, will be passed along to libass:
-    std::list<TFontAttachment> customFonts_;
 
     // a list of painting and event handling delegates,
     // traversed front-to-back for painting
