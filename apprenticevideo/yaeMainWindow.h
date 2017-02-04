@@ -224,6 +224,7 @@ namespace yae
     void playbackColorConverter();
     void playbackLoopFilter();
     void playbackNonReferenceFrames();
+    void playbackDeinterlacing();
     void playbackShowPlaylist();
     void playbackShowTimeline();
     void playbackShrinkWrap();

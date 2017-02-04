@@ -1268,17 +1268,17 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   bool
   VideoTrack::setTraitsOverride(const VideoTraits & override, bool deint)
   {
-    if (compare<VideoTraits>(override_, override) == 0 &&
-        deinterlace_ == deint)
+    bool sameTraits = compare<VideoTraits>(override_, override) == 0;
+    if (sameTraits && deinterlace_ == deint)
     {
       // nothing changed:
       return true;
     }
 
     bool alreadyDecoding = thread_.isRunning();
-    YAE_ASSERT(!alreadyDecoding);
+    YAE_ASSERT(sameTraits || !alreadyDecoding);
 
-    if (alreadyDecoding)
+    if (alreadyDecoding && !sameTraits)
     {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       std::cerr << "\n\t\t\t\tSET TRAITS OVERRIDE" << std::endl;
@@ -1293,7 +1293,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     override_ = override;
     deinterlace_ = deint;
 
-    if (alreadyDecoding)
+    if (alreadyDecoding && !sameTraits)
     {
       terminator_.stopWaiting(false);
       return thread_.run();

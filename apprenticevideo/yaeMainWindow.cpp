@@ -856,7 +856,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(actionDeinterlace, SIGNAL(triggered()),
-                 this, SLOT(playbackColorConverter()));
+                 this, SLOT(playbackDeinterlacing()));
     YAE_ASSERT(ok);
 
 #ifndef YAE_USE_PLAYER_QUICK_WIDGET
@@ -2377,6 +2377,16 @@ namespace yae
     saveBooleanSetting(kSkipNonReferenceFrames, skipNonReferenceFrames);
 
     reader_->skipNonReferenceFrames(skipNonReferenceFrames);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackDeinterlacing
+  //
+  void
+  MainWindow::playbackDeinterlacing()
+  {
+    bool deint = actionDeinterlace->isChecked();
+    reader_->setDeinterlacing(deint);
   }
 
   //----------------------------------------------------------------
