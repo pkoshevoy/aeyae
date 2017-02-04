@@ -187,7 +187,6 @@ namespace yae
   {
     ass_flush_events(track_);
     buffer_.clear();
-    bufferSize_ = 0;
   }
 
   //----------------------------------------------------------------
@@ -216,7 +215,7 @@ namespace yae
     std::cerr << "ass_process_data: " << line.data_ << std::endl;
 #endif
 
-    if (bufferSize_)
+    if (!buffer_.empty())
     {
       const Dialogue & first = buffer_.front();
       if (pts < first.pts_)
@@ -224,14 +223,7 @@ namespace yae
         // user skipped back in time, purge cached subs:
         flushEvents();
       }
-    }
 
-    if (bufferSize_ < 1)
-    {
-      bufferSize_++;
-    }
-    else
-    {
       buffer_.pop_front();
     }
 

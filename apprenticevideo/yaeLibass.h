@@ -115,7 +115,6 @@ namespace yae
     ASS_Track * track_;
     std::vector<char> header_;
     std::list<Dialogue> buffer_;
-    std::size_t bufferSize_;
   };
 
   //----------------------------------------------------------------
