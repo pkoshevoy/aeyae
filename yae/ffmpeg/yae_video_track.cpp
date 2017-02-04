@@ -562,12 +562,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         if (k == "Fontname")
         {
-#ifdef _WIN32
-          if (v == "Monospace")
-          {
-            v = "Lucida Console";
-          }
-#endif
+          v = "Lucida Console";
+        }
+        else if (k == "Fontsize")
+        {
+          v = "16";
         }
         else if (k == "PrimaryColour")
         {
@@ -584,14 +583,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         {
           // outline color, AABBGGRR:
           // v = "&H3f808080";
-          // v = "&H7f000000";
-          v = "&Hff000000";
+          v = "&H7f000000";
         }
         else if (k == "BackColour")
         {
           // shadow color:
-          // v = "&H3f000000";
-          v = "&Hff000000";
+          v = "&H3f000000";
         }
         else if (k == "BorderStyle")
         {
@@ -605,7 +602,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
         else if (k == "Shadow")
         {
-          v = "0";
+          v = "1";
         }
         else if (k == "Alignment")
         {

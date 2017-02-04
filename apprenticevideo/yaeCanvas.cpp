@@ -996,6 +996,7 @@ namespace yae
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
+    bool closedCaptions = false;
 
     QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
     TVideoFramePtr frame = currentFrame();
@@ -1004,6 +1005,8 @@ namespace yae
          i != subs_.end() && reparse; ++i)
     {
       const TSubsFrame & subs = *i;
+      closedCaptions || (closedCaptions = (subs.index_ == ~0));
+
       const TSubsFrame::IPrivate * subExt = subs.private_.get();
       const unsigned int nrects = subExt ? subExt->numRects() : 0;
       unsigned int nrectsPainted = 0;
@@ -1085,7 +1088,7 @@ namespace yae
             nrectsPainted++;
             done = true;
           }
-#endif
+#else
           if (!done)
           {
             std::string text = assaToPlainText(assa);
@@ -1100,6 +1103,7 @@ namespace yae
               nrectsPainted++;
             }
           }
+#endif
         }
       }
 
@@ -1131,7 +1135,7 @@ namespace yae
           nrectsPainted++;
         }
       }
-#endif
+#else
 
       if (!nrectsPainted && subs.data_ &&
           (subs.traits_ == kSubsSSA ||
@@ -1160,6 +1164,7 @@ namespace yae
           paintedSomeSubs = true;
         }
       }
+#endif
     }
 
 #ifdef YAE_USE_LIBASS
@@ -1216,11 +1221,23 @@ namespace yae
           }
         }
 
-        wrapper.getPainter().drawImage(QRect(pic->dst_x + ix,
-                                             pic->dst_y + iy,
-                                             pic->w,
-                                             pic->h),
-                                       tmp, tmp.rect());
+        QPainter::CompositionMode cm = QPainter::CompositionMode_SourceOver;
+        if (closedCaptions && alpha < 1.0 &&
+            (pic->type == ass_image::IMAGE_TYPE_SHADOW ||
+             pic->type == ass_image::IMAGE_TYPE_OUTLINE))
+        {
+          // avoid painting semi-transparent background/shadow
+          // over adjacent semi-transparent background/shadow,
+          cm = QPainter::RasterOp_SourceOrDestination;
+        }
+
+        QPainter & painter = wrapper.getPainter();
+        painter.setCompositionMode(cm);
+        painter.drawImage(QRect(pic->dst_x + ix,
+                                pic->dst_y + iy,
+                                pic->w,
+                                pic->h),
+                          tmp, tmp.rect());
 
         pic = pic->next;
       }
