@@ -76,6 +76,11 @@ namespace yae
     // virtual:
     bool decoderStartup();
     bool decoderShutdown();
+
+    // helper:
+    void decodeClosedCaptions(const AvFrm & decodedFrame);
+
+    // virtual:
     void handle(const AvFrm & decodedFrame);
 
     // virtual:
