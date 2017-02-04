@@ -562,11 +562,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         if (k == "Fontname")
         {
+#ifdef _WIN32
           v = "Lucida Console";
+#endif
         }
         else if (k == "Fontsize")
         {
+#ifdef _WIN32
           v = "16";
+#endif
         }
         else if (k == "PrimaryColour")
         {
