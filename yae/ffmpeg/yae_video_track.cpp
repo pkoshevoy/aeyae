@@ -667,93 +667,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 #endif
 
-      // check for closed captions data:
-      AvPkt ccPkt;
-      if (decodeClosedCaptions_ &&
-          makeCcPkt(*stream_, decodedFrame, ccPkt))
-      {
-        // instantiate the CC decoder on-demand:
-        ccDec_ || (ccDec_ = openClosedCaptionsDecoder(*stream_, decodedFrame));
-
-        // prevent captions decoder from being destroyed while it is used:
-        AvCodecContextPtr keepAlive(ccDec_);
-
-        AVCodecContext * ccDec = keepAlive.get();
-        if (ccDec)
-        {
-          AVSubtitle sub;
-
-          int gotSub = 0;
-          int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &ccPkt);
-
-          if (err >= 0 && gotSub)
-          {
-            TSubsFrame sf;
-            sf.traits_ = kSubsSSA;
-            sf.render_ = true;
-
-            sf.rewriteTimings_ = true;
-            sf.time_.base_ = AV_TIME_BASE;
-            sf.tEnd_.base_ = AV_TIME_BASE;
-            sf.tEnd_.time_ = std::numeric_limits<int64>::max();
-
-            if (ccPkt.pts != AV_NOPTS_VALUE)
-            {
-              int64_t ptsPkt = av_rescale_q(ccPkt.pts,
-                                            stream_->time_base,
-                                            kAvTimeBase);
-              sf.time_.time_ = ptsPkt;
-              sf.tEnd_.time_ = ptsPkt;
-            }
-
-            std::string header((const char *)ccDec->subtitle_header,
-                               (const char *)ccDec->subtitle_header +
-                               ccDec->subtitle_header_size);
-            header = adjustAssHeader(header);
-
-            const unsigned char * hdr = (const unsigned char *)(&header[0]);
-            std::size_t sz = header.size();
-            sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
-                                          &TSubsPrivate::deallocator);
-            captions_.last_ = sf;
-          }
-        }
-      }
-
-      // extend the duration of the most recent caption to cover this frame:
-      if (decodeClosedCaptions_)
-      {
-        Rational tb(stream_->r_frame_rate.den,
-                    stream_->r_frame_rate.num);
-
-        int64_t ptsNow = av_rescale_q(decodedFrame.pts,
-                                       stream_->time_base,
-                                       kAvTimeBase);
-
-        int64_t ptsNext = ptsNow + av_rescale_q(1, tb, kAvTimeBase);
-
-        TSubsFrame & last = captions_.last_;
-        if (last.tEnd_.base_ == AV_TIME_BASE &&
-            last.tEnd_.time_ < ptsNext &&
-
-            // avoid extending caption duration indefinitely:
-            last.tEnd_ < last.time_ + 12.0)
-        {
-          int64_t ptsPrev = last.tEnd_.time_;
-          last.tEnd_.time_ = ptsNext;
-
-          // avoid creating overlapping ASS events,
-          // better to create short adjacent events instead:
-          TSubsFrame sf(last);
-          sf.time_.time_ = ptsPrev;
-          captions_.push(sf, &terminator_);
-        }
-      }
-      else if (ccDec_)
-      {
-        ccDec_.reset();
-      }
-
       enum AVPixelFormat ffmpegPixelFormat =
         yae_to_ffmpeg(output_.pixelFormat_);
 
@@ -951,6 +864,93 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           timeBase.den = t.base_;
           decoded.pts = av_rescale_q(t.time_, timeBase, stream_->time_base);
         }
+      }
+
+      // check for closed captions data:
+      AvPkt ccPkt;
+      if (decodeClosedCaptions_ &&
+          makeCcPkt(*stream_, decodedFrame, ccPkt))
+      {
+        // instantiate the CC decoder on-demand:
+        ccDec_ || (ccDec_ = openClosedCaptionsDecoder(*stream_, decodedFrame));
+
+        // prevent captions decoder from being destroyed while it is used:
+        AvCodecContextPtr keepAlive(ccDec_);
+
+        AVCodecContext * ccDec = keepAlive.get();
+        if (ccDec)
+        {
+          AVSubtitle sub;
+
+          int gotSub = 0;
+          int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &ccPkt);
+
+          if (err >= 0 && gotSub)
+          {
+            TSubsFrame sf;
+            sf.traits_ = kSubsSSA;
+            sf.render_ = true;
+
+            sf.rewriteTimings_ = true;
+            sf.time_.base_ = AV_TIME_BASE;
+            sf.tEnd_.base_ = AV_TIME_BASE;
+            sf.tEnd_.time_ = std::numeric_limits<int64>::max();
+
+            if (ccPkt.pts != AV_NOPTS_VALUE)
+            {
+              int64_t ptsPkt = av_rescale_q(ccPkt.pts,
+                                            stream_->time_base,
+                                            kAvTimeBase);
+              sf.time_.time_ = ptsPkt;
+              sf.tEnd_.time_ = ptsPkt;
+            }
+
+            std::string header((const char *)ccDec->subtitle_header,
+                               (const char *)ccDec->subtitle_header +
+                               ccDec->subtitle_header_size);
+            header = adjustAssHeader(header);
+
+            const unsigned char * hdr = (const unsigned char *)(&header[0]);
+            std::size_t sz = header.size();
+            sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
+                                          &TSubsPrivate::deallocator);
+            captions_.last_ = sf;
+          }
+        }
+      }
+
+      // extend the duration of the most recent caption to cover this frame:
+      if (decodeClosedCaptions_)
+      {
+        Rational tb(stream_->r_frame_rate.den,
+                    stream_->r_frame_rate.num);
+
+        int64_t ptsNow = av_rescale_q(decodedFrame.pts,
+                                      stream_->time_base,
+                                      kAvTimeBase);
+
+        int64_t ptsNext = ptsNow + av_rescale_q(1, tb, kAvTimeBase);
+
+        TSubsFrame & last = captions_.last_;
+        if (last.tEnd_.base_ == AV_TIME_BASE &&
+            last.tEnd_.time_ < ptsNext &&
+
+            // avoid extending caption duration indefinitely:
+            last.tEnd_ < last.time_ + 12.0)
+        {
+          int64_t ptsPrev = last.tEnd_.time_;
+          last.tEnd_.time_ = ptsNext;
+
+          // avoid creating overlapping ASS events,
+          // better to create short adjacent events instead:
+          TSubsFrame sf(last);
+          sf.time_.time_ = ptsPrev;
+          captions_.push(sf, &terminator_);
+        }
+      }
+      else if (ccDec_)
+      {
+        ccDec_.reset();
       }
 
       if (!filterGraph_.push(&decoded))
