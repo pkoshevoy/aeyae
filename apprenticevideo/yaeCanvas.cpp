@@ -24,6 +24,7 @@
 #else
 #include <GL/glew.h>
 #endif
+#include <QApplication>
 #include <QEvent>
 
 #ifdef __APPLE__
