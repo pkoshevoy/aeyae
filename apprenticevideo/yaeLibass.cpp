@@ -223,8 +223,10 @@ namespace yae
         // user skipped back in time, purge cached subs:
         flushEvents();
       }
-
-      buffer_.pop_front();
+      else
+      {
+        buffer_.pop_front();
+      }
     }
 
     buffer_.push_back(line);

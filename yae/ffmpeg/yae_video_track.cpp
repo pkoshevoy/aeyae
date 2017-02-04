@@ -560,33 +560,44 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         const std::string & k = field[i];
         std::string & v = value[i];
 
-        if (k == "PrimaryColour")
+        if (k == "Fontname")
+        {
+#ifdef _WIN32
+          if (v == "Monospace")
+          {
+            v = "Lucida Console";
+          }
+#endif
+        }
+        else if (k == "PrimaryColour")
         {
           // &hAABBGGRR:
-          // v = "&Hff00ffff";
-          v = "&Hffffffff";
+          v = "&Hff00ffff";
+          // v = "&Hffffffff";
         }
         else if (k == "SecondaryColour")
         {
-          // v = "&Hffffffff";
-          v = "&Hff00ffff";
+          v = "&Hffffffff";
+          // v = "&Hff00ffff";
         }
         else if (k == "OutlineColour")
         {
           // outline color, AABBGGRR:
           // v = "&H3f808080";
-          v = "&H7f000000";
+          // v = "&H7f000000";
+          v = "&Hff000000";
         }
         else if (k == "BackColour")
         {
           // shadow color:
-          v = "&H3f000000";
+          // v = "&H3f000000";
+          v = "&Hff000000";
         }
         else if (k == "BorderStyle")
         {
           // 1: outline + drop shadow
           // 3: opaque box
-          v = "1";
+          v = "3";
         }
         else if (k == "Outline")
         {
@@ -594,7 +605,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
         else if (k == "Shadow")
         {
-          v = "1";
+          v = "0";
         }
         else if (k == "Alignment")
         {
