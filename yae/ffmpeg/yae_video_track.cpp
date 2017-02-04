@@ -569,7 +569,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         else if (k == "Fontsize")
         {
 #ifdef _WIN32
-          v = "16";
+          v = "13";
 #endif
         }
         else if (k == "PrimaryColour")
@@ -705,8 +705,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       // due to small-error timestamp mismatch between PTS and libass timestamp
 
       // set timebase at twice the actual framerate:
-      Rational tb(stream_->r_frame_rate.den,
-                  stream_->r_frame_rate.num * 2);
+      Rational tb(1001, 60000);
 
       int64_t ptsNow =
         av_rescale_q(decodedFrame.pts, stream_->time_base, kAvTimeBase) -
