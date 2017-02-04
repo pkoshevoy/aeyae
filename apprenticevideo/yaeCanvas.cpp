@@ -1223,8 +1223,8 @@ namespace yae
 
         QPainter::CompositionMode cm = QPainter::CompositionMode_SourceOver;
         if (closedCaptions && alpha < 1.0 &&
-            (pic->type == ass_image::IMAGE_TYPE_SHADOW ||
-             pic->type == ass_image::IMAGE_TYPE_OUTLINE))
+            (pic->type == ASS_Image::IMAGE_TYPE_SHADOW ||
+             pic->type == ASS_Image::IMAGE_TYPE_OUTLINE))
         {
           // avoid painting semi-transparent background/shadow
           // over adjacent semi-transparent background/shadow,
