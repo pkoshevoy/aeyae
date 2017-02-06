@@ -1091,8 +1091,6 @@ namespace yae
           }
         }
       }
-
-      YAE_ASSERT(nrectsPainted);
     }
 
     TAssTrackPtr assTracks[2];
