@@ -555,15 +555,18 @@ namespace yae
       << sf.time_.to_hhmmss_frac(1000) << ", "
       << sf.tEnd_.to_hhmmss_frac(1000) << ")";
 
-    for (unsigned int i = 0, n = sf.private_->numRects(); i < n; i++)
+    if (sf.private_)
     {
-      TSubsFrame::TRect r;
-      sf.private_->getRect(i, r);
+      for (unsigned int i = 0, n = sf.private_->numRects(); i < n; i++)
+      {
+        TSubsFrame::TRect r;
+        sf.private_->getRect(i, r);
 
-      std::cerr
-        << ", r("<< i << ") = "
-        << (r.assa_ ? r.getAssScript(sf).c_str() :
-            r.text_ ? r.text_ : "BITMAP");
+        std::cerr
+          << ", r("<< i << ") = "
+          << (r.assa_ ? r.getAssScript(sf).c_str() :
+              r.text_ ? r.text_ : "BITMAP");
+      }
     }
 
     std::cerr << std::endl;
