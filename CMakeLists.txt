@@ -483,6 +483,8 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_audio_tempo_filter.h
   yae/ffmpeg/yae_audio_track.cpp
   yae/ffmpeg/yae_audio_track.h
+  yae/ffmpeg/yae_closed_captions.cpp
+  yae/ffmpeg/yae_closed_captions.h
   yae/ffmpeg/yae_pixel_format_ffmpeg.cpp
   yae/ffmpeg/yae_pixel_format_ffmpeg.h
   yae/ffmpeg/yae_ffmpeg_audio_filter_graph.cpp

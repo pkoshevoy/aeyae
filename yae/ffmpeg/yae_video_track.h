@@ -139,8 +139,11 @@ namespace yae
 
     // CEA-608 closed captions decoder:
     unsigned int decodeClosedCaptions_;
-    AvCodecContextPtr ccDec_;
-    SubtitlesTrack captions_;
+    AvCodecContextPtr cc_[4];
+    SubtitlesTrack captions_[4];
+
+    // for keeping track of previous/current CEA-608 data channel:
+    unsigned char dataChannel_[2];
 
     // subtitles:
     std::vector<TSubsTrackPtr> * subs_;

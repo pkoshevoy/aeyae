@@ -198,7 +198,8 @@ namespace yae
   {
     overlay_->clear(context());
 
-    ass_.reset();
+    subtitles_.reset();
+    captions_.reset();
 
     showTheGreeting_ = false;
     subsInOverlay_ = false;
@@ -211,12 +212,15 @@ namespace yae
   void
   Canvas::libassFlushTrack()
   {
-    if (!ass_)
+    if (subtitles_)
     {
-      return;
+      subtitles_->flushEvents();
     }
 
-    ass_->flushEvents();
+    if (captions_)
+    {
+      captions_->flushEvents();
+    }
   }
 
   //----------------------------------------------------------------
@@ -376,11 +380,9 @@ namespace yae
       {
         event->accept();
 
-#ifdef YAE_USE_LIBASS
         libass_.asyncInitStop();
         updateOverlay(true);
         refresh();
-#endif
         return true;
       }
     }
@@ -996,7 +998,6 @@ namespace yae
     int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
-    bool closedCaptions = false;
 
     QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
     TVideoFramePtr frame = currentFrame();
@@ -1005,8 +1006,6 @@ namespace yae
          i != subs_.end() && reparse; ++i)
     {
       const TSubsFrame & subs = *i;
-      closedCaptions || (closedCaptions = (subs.index_ == ~0));
-
       const TSubsFrame::IPrivate * subExt = subs.private_.get();
       const unsigned int nrects = subExt ? subExt->numRects() : 0;
       unsigned int nrectsPainted = 0;
@@ -1066,118 +1065,61 @@ namespace yae
           std::string assa = r.getAssScript(subs);
           bool done = false;
 
-#ifdef YAE_USE_LIBASS
-          if (!ass_)
+          TAssTrackPtr & assTrack = (subs.traits_ == kSubsCEA608 ?
+                                     captions_ : subtitles_);
+
+          if (!assTrack)
           {
             if (subs.traits_ == kSubsSSA && subs.extraData_)
             {
-              ass_ = libass_.track(subs.extraData_->data(0),
-                                   subs.extraData_->rowBytes(0));
+              assTrack = libass_.track(subs.extraData_->data(0),
+                                       subs.extraData_->rowBytes(0));
             }
             else if (subExt->headerSize())
             {
-              ass_ = libass_.track(subExt->header(),
-                                   subExt->headerSize());
+              assTrack = libass_.track(subExt->header(),
+                                       subExt->headerSize());
             }
           }
 
-          if (ass_ && libass_.isReady())
+          if (assTrack && libass_.isReady())
           {
             int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
-            ass_->processData((unsigned char *)&assa[0], assa.size(), pts);
+            assTrack->processData((unsigned char *)&assa[0], assa.size(), pts);
             nrectsPainted++;
             done = true;
           }
-#else
-          if (!done)
-          {
-            std::string text = assaToPlainText(assa);
-            text = convertEscapeCodes(text);
-
-            if (drawPlainText(text,
-                              wrapper.getPainter(),
-                              canvasBBox,
-                              textAlignment))
-            {
-              paintedSomeSubs = true;
-              nrectsPainted++;
-            }
-          }
-#endif
         }
       }
 
-#ifdef YAE_USE_LIBASS
-      if (!nrectsPainted && subs.data_ &&
-          (subs.traits_ == kSubsSSA))
-      {
-        if (!ass_)
-        {
-          if (subs.traits_ == kSubsSSA && subs.extraData_)
-          {
-            ass_ = libass_.track(subs.extraData_->data(0),
-                                 subs.extraData_->rowBytes(0));
-          }
-          else if (subExt && subExt->headerSize())
-          {
-            ass_ = libass_.track(subExt->header(),
-                                 subExt->headerSize());
-          }
-        }
-
-        if (ass_ && libass_.isReady())
-        {
-          const unsigned char * ssa = subs.data_->data(0);
-          const std::size_t ssaSize = subs.data_->rowBytes(0);
-
-          int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
-          ass_->processData(ssa, ssaSize, pts);
-          nrectsPainted++;
-        }
-      }
-#else
-
-      if (!nrectsPainted && subs.data_ &&
-          (subs.traits_ == kSubsSSA ||
-           subs.traits_ == kSubsText ||
-           subs.traits_ == kSubsSUBRIP))
-      {
-        const unsigned char * str = subs.data_->data(0);
-        const unsigned char * end = str + subs.data_->rowBytes(0);
-
-        std::string text(str, end);
-        if (subs.traits_ == kSubsSSA)
-        {
-          text = assaToPlainText(text);
-        }
-        else
-        {
-          text = stripHtmlTags(text);
-        }
-
-        text = convertEscapeCodes(text);
-        if (drawPlainText(text,
-                          wrapper.getPainter(),
-                          canvasBBox,
-                          textAlignment))
-        {
-          paintedSomeSubs = true;
-        }
-      }
-#endif
+      YAE_ASSERT(nrectsPainted);
     }
 
-#ifdef YAE_USE_LIBASS
-    if (ass_ && libass_.isReady() && frame)
+    TAssTrackPtr assTracks[2];
+    assTracks[0] = subtitles_;
+    assTracks[1] = captions_;
+
+    bool readyToRender = libass_.isReady() && frame;
+    if (readyToRender)
     {
       libass_.setFrameSize(iw, ih);
+    }
+
+    for (unsigned int i = 0; readyToRender && i < 2; i++)
+    {
+      TAssTrackPtr & assTrack = assTracks[i];
+      if (!assTrack)
+      {
+        continue;
+      }
 
       // the list of images is owned by libass,
       // libass is responsible for their deallocation:
+      const bool closedCaptions = (i == 1);
       int64 now = (int64)(frame->time_.toSeconds() * 1000.0 + 0.5);
 
       int changeDetected = 0;
-      ASS_Image * pic = ass_->renderFrame(now, &changeDetected);
+      ASS_Image * pic = assTrack->renderFrame(now, &changeDetected);
       libassSameSubs = !changeDetected;
       paintedSomeSubs = changeDetected;
 
@@ -1242,7 +1184,6 @@ namespace yae
         pic = pic->next;
       }
     }
-#endif
 
     wrapper.painterEnd();
 

@@ -460,7 +460,8 @@ namespace yae
     CanvasRenderer * private_;
     CanvasRenderer * overlay_;
     TLibass libass_;
-    TAssTrackPtr ass_;
+    TAssTrackPtr subtitles_;
+    TAssTrackPtr captions_;
     bool showTheGreeting_;
     bool subsInOverlay_;
     TRenderMode renderMode_;

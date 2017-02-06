@@ -4738,9 +4738,10 @@ namespace yae
     }
 
     // add an option to show closed captions:
+    for (unsigned int i = 0; i < 4; i++)
     {
       QAction * trackAction =
-        new QAction(tr("Show Closed Captions (CC1)"), this);
+        new QAction(tr("Show Closed Captions (CC%1)").arg(i + 1), this);
       menuSubs->addAction(trackAction);
 
       trackAction->setCheckable(true);
@@ -4749,7 +4750,7 @@ namespace yae
       ok = connect(trackAction, SIGNAL(triggered()),
                    subsTrackMapper_, SLOT(map()));
       YAE_ASSERT(ok);
-      subsTrackMapper_->setMapping(trackAction, subsCount + 1);
+      subsTrackMapper_->setMapping(trackAction, subsCount + i + 1);
     }
 
     // add an option to disable subs:

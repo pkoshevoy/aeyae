@@ -6,12 +6,13 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// yae incudes:
+#include "yae_closed_captions.h"
 #include "yae_movie.h"
 
 
 namespace yae
 {
-
 
   //----------------------------------------------------------------
   // lockManager
@@ -498,7 +499,7 @@ namespace yae
 
         // service seek request, read a packet:
         TPacketPtr packetPtr(new AvPkt());
-        AVPacket & packet = *packetPtr;
+        AvPkt & packet = *packetPtr;
         bool demuxerInterrupted = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
@@ -650,6 +651,9 @@ namespace yae
           {
             static const Rational tb(1, AV_TIME_BASE);
 
+            // shortcut:
+            AVCodecContext * subsDec = subs->codecContext_;
+
             TSubsFrame sf;
             sf.time_.time_ = av_rescale_q(packet.pts,
                                           subs->stream_->time_base,
@@ -663,10 +667,10 @@ namespace yae
             sf.extraData_ = subs->extraData_;
 
             // copy the reference frame size:
-            if (subs->codecContext_)
+            if (subsDec)
             {
-              sf.rw_ = subs->codecContext_->width;
-              sf.rh_ = subs->codecContext_->height;
+              sf.rw_ = subsDec->width;
+              sf.rh_ = subsDec->height;
             }
 
             if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
@@ -699,26 +703,62 @@ namespace yae
               sf.sideData_ = buffer;
             }
 
-            if (subs->codecContext_)
+            if (subsDec)
             {
               // decode the subtitle:
               int gotSub = 0;
               AVSubtitle sub;
-              err = avcodec_decode_subtitle2(subs->codecContext_,
+
+              const AVStream * stream = context_->streams[packet.stream_index];
+              if (context_->iformat &&
+                  (packet.size & 0x1) == 0 &&
+                  stream->codecpar->codec_id == AV_CODEC_ID_EIA_608 &&
+                  strcmp(context_->iformat->long_name, "QuickTime / MOV") == 0)
+              {
+                // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
+                // it's what the decoder expects:
+
+                std::vector<cc_data_pkt_t> cc;
+                const unsigned char * end = packet.data + packet.size;
+                for (const unsigned char * b = packet.data + 8;
+                     b < end; b += 2)
+                {
+                  cc_data_pkt_t pkt;
+                  pkt.cc = 0xFC; // valid, NTSC_CC_FIELD_1
+                  pkt.b0 = parity_lut[b[0]] ? b[0] : (b[0] ^ 0x80);
+                  pkt.b1 = parity_lut[b[1]] ? b[1] : (b[1] ^ 0x80);
+                  cc.push_back(pkt);
+                }
+
+                const std::size_t nbytes = cc.size() * sizeof(cc_data_pkt_t);
+                if (nbytes)
+                {
+                  const cc_data_pkt_t * p = &(cc[0]);
+                  av_grow_packet(&packet, nbytes);
+                  memcpy(packet.data, p, nbytes);
+                }
+              }
+
+              err = avcodec_decode_subtitle2(subsDec,
                                              &sub,
                                              &gotSub,
                                              &packet);
               if (err >= 0 && gotSub)
               {
-                const unsigned char * header =
-                  subs->codecContext_->subtitle_header;
+                std::string header((const char *)subsDec->subtitle_header,
+                                   (const char *)subsDec->subtitle_header +
+                                   subsDec->subtitle_header_size);
 
-                std::size_t headerSize =
-                  subs->codecContext_->subtitle_header_size;
+                if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608)
+                {
+                  header = adjust_ass_header(header);
+                }
 
-                sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub,
-                                                               header,
-                                                               headerSize),
+                const unsigned char * hdr =
+                  (const unsigned char *)(&header[0]);
+                const std::size_t sz = header.size();
+
+                sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
                                               &TSubsPrivate::deallocator);
 
                 static const Rational tb_msec(1, 1000);
