@@ -14,8 +14,15 @@
 #include <string>
 
 // yae includes:
-#include "../api/yae_api.h"
-#include "../ffmpeg/yae_track.h"
+#include "yae/api/yae_api.h"
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/ffmpeg/yae_subtitles_track.h"
+
+// ffmpeg includes:
+extern "C"
+{
+#include <libavcodec/avcodec.h>
+}
 
 
 namespace yae
@@ -43,24 +50,69 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // split_cc_packets_by_channel
+  // convert_quicktime_c608
   //
-  // split data into separate packets based on field and data channel,
-  // and convert CC2, CC3, CC4 into CC1 (because that's the only one
-  // supported by the ffmpeg captions decoder).
+  // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
+  // it's what the ffmpeg closed captions decoder expects:
   //
-  YAE_API bool
-  split_cc_packets_by_channel(int64_t pts,
-                              const cc_data_pkt_t * cc_data_pkt,
-                              const cc_data_pkt_t * cc_data_end,
-                              unsigned char dataChannel[2],
-                              std::map<unsigned char, AvPkt> & pkt);
+  YAE_API void
+  convert_quicktime_c608(AVPacket & pkt);
 
   //----------------------------------------------------------------
-  // adjust_ass_header
+  // CaptionsDecoder
   //
-  YAE_API std::string
-  adjust_ass_header(const std::string & header);
+  struct YAE_API CaptionsDecoder
+  {
+    CaptionsDecoder();
+
+    void reset();
+
+    // 0 - disabled
+    // 1 - CC1
+    // 2 - CC2
+    // 3 - CC3
+    // 4 - CC4
+    void enableClosedCaptions(unsigned int cc);
+
+    // helpers:
+    void decode(const AVRational & timeBase,
+                const AVFrame & frame,
+                QueueWaitMgr * terminator);
+
+    void decode(const AVRational & timeBase,
+                const AVPacket & packet,
+                QueueWaitMgr * terminator);
+
+    void decode(int64_t pts,
+                const AVRational & timeBase,
+                std::map<unsigned char, AvPkt> & cc,
+                QueueWaitMgr * terminator);
+
+    // is decoding enabled for any of the channels:
+    inline unsigned int enabled() const
+    { return decode_ < 5 ? decode_ : 0; }
+
+    // accessor to the selected captions channel:
+    inline SubtitlesTrack * captions()
+    { return enabled() ? &(captions_[decode_ - 1]) : NULL; }
+
+  protected:
+    // which channel to decode:
+    unsigned int decode_;
+
+    // decoded captions will go here:
+    SubtitlesTrack captions_[4];
+
+    // CEA-608 closed captions decoders, one per channel:
+    AvCodecContextPtr cc_[4];
+
+    // for keeping track of previous/current CEA-608 data channel:
+    unsigned char dataChannel_[2];
+
+    // for keeping track of prior byte pairs (for error correction),
+    // per field:
+    unsigned char prior_[2][2];
+  };
 
 }
 

@@ -549,7 +549,7 @@ namespace yae
   void
   SubtitlesTrack::push(const TSubsFrame & sf, QueueWaitMgr * terminator)
   {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::cerr
       << "SubtitlesTrack::push -- ["
       << sf.time_.to_hhmmss_frac(1000) << ", "

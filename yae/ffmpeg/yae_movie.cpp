@@ -311,10 +311,18 @@ namespace yae
         // and SubtitlesTrack object:
         baseTrack = TrackPtr();
 
-        subsIdx_[i] = subs_.size();
+        // don't discard closed captions packets:
         stream->discard = AVDISCARD_DEFAULT;
-        TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
-        subs_.push_back(subsTrk);
+
+        // don't add CEA-608 as a single track...
+        // because it's actually 4 channels
+        // and it makes a poor user experience
+        if (stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
+        {
+          subsIdx_[i] = subs_.size();
+          TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
+          subs_.push_back(subsTrk);
+        }
       }
     }
 
@@ -645,26 +653,45 @@ namespace yae
         }
         else
         {
+          AVStream * stream =
+            packet.stream_index < context_->nb_streams ?
+            context_->streams[packet.stream_index] :
+            NULL;
+
+          bool closedCaptions =
+            (stream &&
+             stream->codecpar &&
+             stream->codecpar->codec_id == AV_CODEC_ID_EIA_608);
+
           SubtitlesTrack * subs = NULL;
-          if (videoTrack &&
-              (subs = subsLookup(packet.stream_index)))
+          if (stream && videoTrack &&
+              (closedCaptions ||
+               (subs = subsLookup(packet.stream_index))))
           {
             static const Rational tb(1, AV_TIME_BASE);
 
             // shortcut:
-            AVCodecContext * subsDec = subs->codecContext_;
+            AVCodecContext * subsDec = subs ? subs->codecContext_ : NULL;
 
             TSubsFrame sf;
             sf.time_.time_ = av_rescale_q(packet.pts,
-                                          subs->stream_->time_base,
+                                          stream->time_base,
                                           tb);
             sf.time_.base_ = AV_TIME_BASE;
             sf.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
 
-            sf.render_ = subs->render_;
-            sf.traits_ = subs->format_;
-            sf.index_ = subs->index_;
-            sf.extraData_ = subs->extraData_;
+            if (subs)
+            {
+              sf.render_ = subs->render_;
+              sf.traits_ = subs->format_;
+              sf.index_ = subs->index_;
+              sf.extraData_ = subs->extraData_;
+            }
+            else
+            {
+              sf.traits_ = kSubsCEA608;
+              sf.index_ = packet.stream_index;
+            }
 
             // copy the reference frame size:
             if (subsDec)
@@ -673,7 +700,7 @@ namespace yae
               sf.rh_ = subsDec->height;
             }
 
-            if (subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
+            if (subs && subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
             {
               sf.rw_ = subs->vobsub_.w_;
               sf.rh_ = subs->vobsub_.h_;
@@ -708,56 +735,15 @@ namespace yae
               // decode the subtitle:
               int gotSub = 0;
               AVSubtitle sub;
-
-              const AVStream * stream = context_->streams[packet.stream_index];
-              if (context_->iformat &&
-                  (packet.size & 0x1) == 0 &&
-                  stream->codecpar->codec_id == AV_CODEC_ID_EIA_608 &&
-                  strcmp(context_->iformat->long_name, "QuickTime / MOV") == 0)
-              {
-                // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
-                // it's what the decoder expects:
-
-                std::vector<cc_data_pkt_t> cc;
-                const unsigned char * end = packet.data + packet.size;
-                for (const unsigned char * b = packet.data + 8;
-                     b < end; b += 2)
-                {
-                  cc_data_pkt_t pkt;
-                  pkt.cc = 0xFC; // valid, NTSC_CC_FIELD_1
-                  pkt.b0 = parity_lut[b[0]] ? b[0] : (b[0] ^ 0x80);
-                  pkt.b1 = parity_lut[b[1]] ? b[1] : (b[1] ^ 0x80);
-                  cc.push_back(pkt);
-                }
-
-                const std::size_t nbytes = cc.size() * sizeof(cc_data_pkt_t);
-                if (nbytes)
-                {
-                  const cc_data_pkt_t * p = &(cc[0]);
-                  av_grow_packet(&packet, nbytes);
-                  memcpy(packet.data, p, nbytes);
-                }
-              }
-
               err = avcodec_decode_subtitle2(subsDec,
                                              &sub,
                                              &gotSub,
                                              &packet);
+
               if (err >= 0 && gotSub)
               {
-                std::string header((const char *)subsDec->subtitle_header,
-                                   (const char *)subsDec->subtitle_header +
-                                   subsDec->subtitle_header_size);
-
-                if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608)
-                {
-                  header = adjust_ass_header(header);
-                }
-
-                const unsigned char * hdr =
-                  (const unsigned char *)(&header[0]);
-                const std::size_t sz = header.size();
-
+                const uint8_t * hdr = subsDec->subtitle_header;
+                const std::size_t sz = subsDec->subtitle_header_size;
                 sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
                                               &TSubsPrivate::deallocator);
 
@@ -766,7 +752,7 @@ namespace yae
                 if (packet.pts != AV_NOPTS_VALUE)
                 {
                   sf.time_.time_ = av_rescale_q(packet.pts,
-                                                subs->stream_->time_base,
+                                                stream->time_base,
                                                 tb);
 
                   sf.time_.time_ += av_rescale_q(sub.start_display_time,
@@ -793,8 +779,25 @@ namespace yae
 
               err = 0;
             }
+            else if (sf.traits_ == kSubsCEA608)
+            {
+              // let the captions decoder handle it:
+              if (strcmp(context_->iformat->long_name, "QuickTime / MOV") == 0)
+              {
+                // convert to CEA708 packets wrapping CEA608 data, it's
+                // the only format ffmpeg captions decoder understands:
+                convert_quicktime_c608(packet);
+              }
 
-            subs->push(sf, &outputTerminator_);
+              videoTrack->cc_.decode(stream->time_base,
+                                     packet,
+                                     &outputTerminator_);
+            }
+
+            if (subs)
+            {
+              subs->push(sf, &outputTerminator_);
+            }
           }
         }
       }

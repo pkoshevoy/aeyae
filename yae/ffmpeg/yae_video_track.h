@@ -13,6 +13,7 @@
 #include <boost/chrono/chrono.hpp>
 
 // yae includes:
+#include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_ffmpeg_video_filter_graph.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/ffmpeg/yae_track.h"
@@ -77,9 +78,6 @@ namespace yae
     bool decoderStartup();
     bool decoderShutdown();
 
-    // helper:
-    void decodeClosedCaptions(const AvFrm & decodedFrame);
-
     // virtual:
     void handle(const AvFrm & decodedFrame);
 
@@ -138,12 +136,7 @@ namespace yae
     uint64 framesDecoded_;
 
     // CEA-608 closed captions decoder:
-    unsigned int decodeClosedCaptions_;
-    AvCodecContextPtr cc_[4];
-    SubtitlesTrack captions_[4];
-
-    // for keeping track of previous/current CEA-608 data channel:
-    unsigned char dataChannel_[2];
+    CaptionsDecoder cc_;
 
     // subtitles:
     std::vector<TSubsTrackPtr> * subs_;

@@ -24,6 +24,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kAvTimeBase
+  //
+  static const Rational kAvTimeBase(1, AV_TIME_BASE);
+
+  //----------------------------------------------------------------
   // cc_data_channel
   //
   // figure out CEA-608 captions data channel based on the first
@@ -42,12 +47,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // contains
+  // byte_pair_in_range
   //
   static inline bool
-  contains(unsigned short low, unsigned short high, unsigned short v)
+  byte_pair_in_range(unsigned short v, unsigned short low, unsigned short high)
   {
-    return (v <= high && v >= low);
+    unsigned char a0 = 0xFF & (low >> 8);
+    unsigned char a1 = 0xFF & low;
+    unsigned char z0 = 0xFF & (high >> 8);
+    unsigned char z1 = 0xFF & high;
+    unsigned char v0 = 0xFF & (v >> 8);
+    unsigned char v1 = 0xFF & v;
+    return (v0 <= z0 && v0 >= a0 && v1 <= z1 && v1 >= a1);
   }
 
   //----------------------------------------------------------------
@@ -60,12 +71,186 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // set_odd_parity
+  //
+  static inline unsigned char
+  set_odd_parity(unsigned char b)
+  {
+    return parity_lut[b] ? b : (b ^ 0x80);
+  }
+
+  //----------------------------------------------------------------
+  // clear_odd_parity
+  //
+  static inline unsigned char
+  clear_odd_parity(unsigned char b)
+  {
+    return (b & 0x80) ? (b ^ 0x80) : b;
+  }
+
+  //----------------------------------------------------------------
+  // qt_atom_t
+  //
+  struct qt_atom_t
+  {
+    const uint8_t * fourcc_;
+    const uint8_t * data_;
+    std::size_t size_;
+  };
+
+  //----------------------------------------------------------------
+  // parse_qt_atom
+  //
+  static bool
+  parse_qt_atom(const uint8_t * data,
+                const std::size_t size,
+                qt_atom_t & atom)
+  {
+    if (size < 8)
+    {
+      return false;
+    }
+
+    uint64_t sz_hdr = 8;
+    uint64_t sz =
+      ((uint64_t)(data[0])) << 24 |
+      ((uint64_t)(data[1])) << 16 |
+      ((uint64_t)(data[2])) << 8 |
+      ((uint64_t)(data[3]));
+
+    if (sz == 0)
+    {
+      if (size < 16)
+      {
+        return false;
+      }
+
+      sz_hdr = 16;
+      sz =
+        ((uint64_t)(data[0])) << 56 |
+        ((uint64_t)(data[1])) << 48 |
+        ((uint64_t)(data[2])) << 40 |
+        ((uint64_t)(data[3])) << 32 |
+        ((uint64_t)(data[4])) << 24 |
+        ((uint64_t)(data[5])) << 16 |
+        ((uint64_t)(data[6])) << 8 |
+        ((uint64_t)(data[7]));
+    }
+
+    if (sz > size)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    atom.fourcc_ = data + (sz_hdr - 4);
+    atom.data_ = data + sz_hdr;
+    atom.size_ = sz - sz_hdr;
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // convert_quicktime_c608
+  //
+  // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
+  // it's what the ffmpeg closed captions decoder expects:
+  //
+  void
+  convert_quicktime_c608(AVPacket & pkt)
+  {
+    std::vector<cc_data_pkt_t> cc;
+    const uint8_t * data = pkt.data;
+    const uint8_t * end = pkt.data + pkt.size;
+
+    while (data < end)
+    {
+      qt_atom_t atom;
+      if (!parse_qt_atom(data, end - data, atom))
+      {
+        return;
+      }
+
+      unsigned char field =
+        memcmp(atom.fourcc_, "cdat", 4) == 0 ? 1 :
+        memcmp(atom.fourcc_, "cdt2", 4) == 0 ? 2 :
+        0;
+
+      if (!field)
+      {
+        return;
+      }
+
+      if (atom.size_ & 0x1)
+      {
+        YAE_ASSERT(false);
+        return;
+      }
+
+      const uint8_t * head = atom.data_;
+      const uint8_t * tail = atom.data_ + atom.size_;
+      for (; head < tail; head += 2)
+      {
+        cc_data_pkt_t pkt;
+        pkt.cc = 0xFC | (field == 1 ? 0 : 1);
+
+        uint8_t b0 = clear_odd_parity(head[0]);
+        uint8_t b1 = clear_odd_parity(head[1]);
+        uint8_t b01 = byte_pair(b0, b1);
+
+        if (field == 1 && byte_pair_in_range(b01, 0x1520, 0x152f))
+        {
+          // for field 1 these control codes should start with 0x14
+          // according to CEA-608 spec:
+          b0 = 0x14;
+        }
+
+        if (field == 2 && byte_pair_in_range(b01, 0x1420, 0x142f))
+        {
+          // for field 1 these control codes should start with 0x14
+          // according to CEA-608 spec:
+          b0 = 0x15;
+        }
+
+        pkt.b0 = set_odd_parity(b0);
+        pkt.b1 = set_odd_parity(b1);
+        cc.push_back(pkt);
+      }
+
+      data = tail;
+    }
+
+    const std::size_t nbytes = cc.size() * sizeof(cc_data_pkt_t);
+    if (nbytes)
+    {
+      YAE_ASSERT(nbytes % sizeof(cc_data_pkt_t) == 0);
+      const cc_data_pkt_t * p = &(cc[0]);
+
+      if (pkt.size < nbytes)
+      {
+        av_grow_packet(&pkt, nbytes - pkt.size);
+      }
+      else
+      {
+        av_shrink_packet(&pkt, nbytes);
+      }
+
+      memcpy(pkt.data, p, nbytes);
+    }
+  }
+
+  //----------------------------------------------------------------
   // split_cc_packets_by_channel
   //
-  bool
+  // split data into separate packets based on field and data channel,
+  // and convert CC2, CC3, CC4 into CC1 (because that's the only one
+  // supported by the ffmpeg captions decoder).
+  //
+  static bool
   split_cc_packets_by_channel(int64_t pts,
                               const cc_data_pkt_t * cc_data_pkt,
                               const cc_data_pkt_t * cc_data_end,
+                              unsigned char prior[2][2],
                               unsigned char dataChannel[2],
                               std::map<unsigned char, AvPkt> & pkt)
   {
@@ -88,21 +273,64 @@ namespace yae
         continue;
       }
 
-      // shortcut:
+      // shortcuts:
       unsigned char field_number = 1 + (unsigned char)cc_type;
+      unsigned char & prior_c0 = prior[cc_type][0];
+      unsigned char & prior_c1 = prior[cc_type][1];
 
-      // both bytes in the byte-pair are supposed to have odd parity,
-      // although I've seen QuickTime c608 where that's not the case
-      if (!(parity_lut[pkt.b0] &&
-            parity_lut[pkt.b1]))
+      const bool odd_parity_b0 = parity_lut[pkt.b0];
+      const bool odd_parity_b1 = parity_lut[pkt.b1];
+
+      if (!odd_parity_b0 && !odd_parity_b1)
       {
-        // YAE_ASSERT(false);
-        // continue;
+        // uncorrectable parity error:
+        continue;
       }
 
-      unsigned char b0 = (pkt.b0 & 0x80) ? (pkt.b0 ^ 0x80) : pkt.b0;
-      unsigned char b1 = (pkt.b1 & 0x80) ? (pkt.b1 ^ 0x80) : pkt.b1;
+      unsigned char b0 = clear_odd_parity(pkt.b0);
+      unsigned char b1 = clear_odd_parity(pkt.b1);
       unsigned short b01 = byte_pair(b0, b1);
+
+      if (byte_pair_in_range(b01, 0x1020, 0x1f7f))
+      {
+        if (!odd_parity_b1)
+        {
+          // if the second byte of the control code fails parity
+          // then ignore the control code:
+          continue;
+        }
+
+        if (prior_c0 == pkt.b0 && prior_c1 == pkt.b1)
+        {
+          // ignore the redundant control code:
+          continue;
+        }
+
+        if (!odd_parity_b0 && prior_c1 == pkt.b1)
+        {
+          // ignore failed redundant control code:
+          continue;
+        }
+      }
+
+      if (!odd_parity_b0)
+      {
+        b0 = 0x7f;
+      }
+
+      if (!odd_parity_b1)
+      {
+        b1 = 0x7f;
+      }
+
+      b01 = byte_pair(b0, b1);
+
+      if (b01)
+      {
+        // update prior control codes:
+        prior_c0 = pkt.b0;
+        prior_c1 = pkt.b1;
+      }
 
       unsigned int data_channel = cc_data_channel(b0);
       if (data_channel > 0 && data_channel < 2)
@@ -124,17 +352,18 @@ namespace yae
       if (field_number == 2)
       {
         // convert from field number 2 to field number 1:
-        if (contains(0x1520, 0x152f, b01))
+        if (byte_pair_in_range(b01, 0x1520, 0x152f))
         {
           b0 = 0x14;
           b01 = byte_pair(b0, b1);
         }
 
-        pkt.cc &= ~((int)NTSC_CC_FIELD_2);
+        pkt.cc ^= (unsigned char)NTSC_CC_FIELD_2;
       }
 
       unsigned int n = 2 * (field_number - 1) + (data_channel - 1);
-      pkt.b0 = parity_lut[b0] ? b0 : (b0 ^ 0x80);
+      pkt.b0 = set_odd_parity(b0);
+      pkt.b1 = set_odd_parity(b1);
       cc[n].push_back(pkt);
     }
 
@@ -159,11 +388,48 @@ namespace yae
     return !pkt.empty();
   }
 
+  //----------------------------------------------------------------
+  // split_cc_packets_by_channel
+  //
+  // split data into separate packets based on field and data channel,
+  // and convert CC2, CC3, CC4 into CC1 (because that's the only one
+  // supported by the ffmpeg captions decoder).
+  //
+  static bool
+  split_cc_packets_by_channel(const AVPacket & packet,
+                              unsigned char prior[2][2],
+                              unsigned char dataChannel[2],
+                              std::map<unsigned char, AvPkt> & cc)
+  {
+    YAE_ASSERT(packet.size % sizeof(cc_data_pkt_t) == 0);
+    const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(packet.data);
+    const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(packet.data +
+                                                                packet.size);
+
+    if (!split_cc_packets_by_channel(packet.pts,
+                                     cc_data_pkt,
+                                     cc_data_end,
+                                     prior,
+                                     dataChannel,
+                                     cc))
+    {
+      return false;
+    }
+
+    for (std::map<unsigned char, AvPkt>::iterator
+           i = cc.begin(), end = cc.end(); i != end; ++i)
+    {
+      AvPkt & pkt = i->second;
+      av_packet_copy_props(&pkt, &packet);
+    }
+
+    return true;
+  }
 
   //----------------------------------------------------------------
   // adjust_ass_header
   //
-  std::string
+  static std::string
   adjust_ass_header(const std::string & header)
   {
     /*
@@ -290,4 +556,260 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     return header;
   }
+
+
+  //----------------------------------------------------------------
+  // openClosedCaptionsDecoder
+  //
+  static AvCodecContextPtr
+  openClosedCaptionsDecoder(const AVRational & timeBase)
+  {
+    AvCodecContextPtr ccDec;
+
+    const AVCodec * codec = avcodec_find_decoder(AV_CODEC_ID_EIA_608);
+
+    if (codec)
+    {
+      AVDictionary * opts = NULL;
+      av_dict_set_int(&opts, "real_time", 1, 0);
+
+      ccDec = tryToOpen(codec, NULL, opts);
+      AVCodecContext * cc = ccDec.get();
+
+      if (cc)
+      {
+        av_codec_set_pkt_timebase(cc, timeBase);
+        cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
+      }
+    }
+
+    return ccDec;
+  }
+
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::CaptionsDecoder
+  //
+  CaptionsDecoder::CaptionsDecoder():
+    decode_(0)
+  {
+    reset();
+  }
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::reset
+  //
+  void
+  CaptionsDecoder::reset()
+  {
+    // for each channel:
+    for (unsigned char i = 0; i < 4; i++)
+    {
+      cc_[i].reset();
+      captions_[i].clear();
+    }
+
+    // for each field:
+    for (unsigned char i = 0; i < 2; i++)
+    {
+      prior_[i][0] = 0;
+      prior_[i][1] = 0;
+      dataChannel_[i] = 1;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::enableClosedCaptions
+  //
+  void
+  CaptionsDecoder::enableClosedCaptions(unsigned int cc)
+  {
+    if (cc < 5)
+    {
+      decode_ = cc;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // makeCcPkt
+  //
+  static bool
+  makeCcPkt(const AVFrame & frame,
+            unsigned char prior[2][2],
+            unsigned char dataChannel[2],
+            std::map<unsigned char, AvPkt> & pkt)
+  {
+    int found = 0;
+
+    for (int i = 0; i < frame.nb_side_data; i++)
+    {
+      const AVFrameSideData * s = frame.side_data[i];
+      if (!s || s->type != AV_FRAME_DATA_A53_CC)
+      {
+        continue;
+      }
+
+      found++;
+
+      if (found > 1)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      // s->data consists of CEA-708 cc_data_pkt's
+      const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(s->data);
+      const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(s->data +
+                                                                  s->size);
+      split_cc_packets_by_channel(frame.pts,
+                                  cc_data_pkt,
+                                  cc_data_end,
+                                  prior,
+                                  dataChannel,
+                                  pkt);
+    }
+
+    YAE_ASSERT(found <= 1);
+    return !pkt.empty();
+  }
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::decode
+  //
+  void
+  CaptionsDecoder::decode(const AVRational & timeBase,
+                          const AVFrame & frame,
+                          QueueWaitMgr * terminator)
+  {
+    std::map<unsigned char, AvPkt> cc;
+    makeCcPkt(frame, prior_, dataChannel_, cc);
+    decode(frame.pts, timeBase, cc, terminator);
+  }
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::decode
+  //
+  void
+  CaptionsDecoder::decode(const AVRational & timeBase,
+                          const AVPacket & packet,
+                          QueueWaitMgr * terminator)
+  {
+    std::map<unsigned char, AvPkt> cc;
+    split_cc_packets_by_channel(packet, prior_, dataChannel_, cc);
+    decode(packet.pts, timeBase, cc, terminator);
+  }
+
+  //----------------------------------------------------------------
+  // CaptionsDecoder::decode
+  //
+  void
+  CaptionsDecoder::decode(int64_t pts,
+                          const AVRational & timeBase,
+                          std::map<unsigned char, AvPkt> & cc,
+                          QueueWaitMgr * terminator)
+  {
+    for (std::map<unsigned char, AvPkt>::iterator
+           i = cc.begin(), end = cc.end(); i != end; ++i)
+    {
+      // shortcuts:
+      const unsigned char n = i->first;
+      AvPkt & pkt = i->second;
+
+      // this shouldn't be necessary -- it's fine to decode all caption
+      // channels all the time, because it makes switching between
+      // them more seamless.  However, I have no sources to test with
+      // that contain anything besides CC1, so I'll limit it to CC1
+      // for now:
+      if (n + 1 != decode_)
+      {
+        continue;
+      }
+
+      // instantiate the CC decoder on-demand:
+      cc_[n] || (cc_[n] = openClosedCaptionsDecoder(timeBase));
+
+      // prevent captions decoder from being destroyed while it is used:
+      AvCodecContextPtr keepAlive(cc_[n]);
+      AVCodecContext * ccDec = keepAlive.get();
+      if (!ccDec)
+      {
+        continue;
+      }
+
+      AVSubtitle sub;
+      int gotSub = 0;
+      int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &pkt);
+      if (err < 0 || !gotSub)
+      {
+        continue;
+      }
+
+      TSubsFrame sf;
+      sf.traits_ = kSubsCEA608;
+      sf.render_ = true;
+      sf.rewriteTimings_ = true;
+      sf.time_.base_ = AV_TIME_BASE;
+      sf.tEnd_.base_ = AV_TIME_BASE;
+      sf.tEnd_.time_ = std::numeric_limits<int64>::max();
+
+      if (pkt.pts != AV_NOPTS_VALUE)
+      {
+        int64_t ptsPkt = av_rescale_q(pkt.pts, timeBase, kAvTimeBase);
+        sf.time_.time_ = ptsPkt;
+        sf.tEnd_.time_ = ptsPkt;
+      }
+
+      std::string header((const char *)(ccDec->subtitle_header),
+                         (const char *)(ccDec->subtitle_header +
+                                        ccDec->subtitle_header_size));
+      header = adjust_ass_header(header);
+
+      const unsigned char * hdr = (const unsigned char *)(&header[0]);
+      std::size_t sz = header.size();
+      sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
+                                    &TSubsPrivate::deallocator);
+      captions_[n].last_ = sf;
+    }
+
+    // extend the duration of the most recent caption to cover current frame:
+    for (unsigned int i = 0; i < 4; i++)
+    {
+      if (!cc_[i])
+      {
+        continue;
+      }
+
+      // shortcut:
+      SubtitlesTrack & captions = captions_[i];
+
+      // set timebase at twice the actual framerate:
+      Rational tb(1001, 60000);
+
+      // shift back by half a frame duration to avoid flickering captions
+      // due to small-error timestamp mismatch between PTS and libass timestamp
+      int64_t ptsNow =
+        av_rescale_q(pts, timeBase, kAvTimeBase) -
+        av_rescale_q(1, tb, kAvTimeBase);
+
+      int64_t ptsNext = ptsNow + av_rescale_q(2, tb, kAvTimeBase);
+
+      TSubsFrame & last = captions.last_;
+      if (last.tEnd_.base_ == AV_TIME_BASE &&
+          last.tEnd_.time_ < ptsNext &&
+
+          // avoid extending caption duration indefinitely:
+          last.tEnd_ < last.time_ + 12.0)
+      {
+        int64_t ptsPrev = last.tEnd_.time_;
+        last.tEnd_.time_ = ptsNext;
+
+        // avoid creating overlapping ASS events,
+        // better to create short adjacent events instead:
+        TSubsFrame sf(last);
+        sf.time_.time_ = ptsPrev;
+        captions.push(sf, terminator);
+      }
+    }
+  }
+
 }

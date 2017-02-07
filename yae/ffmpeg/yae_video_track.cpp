@@ -25,11 +25,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kAvTimeBase
-  //
-  static const Rational kAvTimeBase(1, AV_TIME_BASE);
-
-  //----------------------------------------------------------------
   // TAVFrameBuffer::TAVFrameBuffer
   //
   TAVFrameBuffer::TAVFrameBuffer(AVFrame * src)
@@ -107,7 +102,6 @@ namespace yae
     frameQueue_(kQueueSizeSmall),
     hasPrevPTS_(false),
     framesDecoded_(0),
-    decodeClosedCaptions_(0),
     subs_(NULL)
   {
 #ifndef NDEBUG
@@ -121,9 +115,6 @@ namespace yae
 
     frameRate_.num = 1;
     frameRate_.den = AV_TIME_BASE;
-
-    dataChannel_[0] = 1;
-    dataChannel_[1] = 1;
   }
 
   //----------------------------------------------------------------
@@ -421,76 +412,6 @@ namespace yae
     double now_;
   };
 
-  //----------------------------------------------------------------
-  // makeCcPkt
-  //
-  static bool
-  makeCcPkt(const AvFrm & frame,
-            unsigned char dataChannel[2],
-            std::map<unsigned char, AvPkt> & pkt)
-  {
-    int found = 0;
-
-    for (int i = 0; i < frame.nb_side_data; i++)
-    {
-      const AVFrameSideData * s = frame.side_data[i];
-      if (!s || s->type != AV_FRAME_DATA_A53_CC)
-      {
-        continue;
-      }
-
-      found++;
-
-      if (found > 1)
-      {
-        YAE_ASSERT(false);
-        continue;
-      }
-
-      // s->data consists of CEA-708 cc_data_pkt's
-      const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(s->data);
-      const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(s->data +
-                                                                  s->size);
-
-      split_cc_packets_by_channel(frame.pts,
-                                  cc_data_pkt,
-                                  cc_data_end,
-                                  dataChannel,
-                                  pkt);
-    }
-
-    YAE_ASSERT(found <= 1);
-    return !pkt.empty();
-  }
-
-  //----------------------------------------------------------------
-  // openClosedCaptionsDecoder
-  //
-  static AvCodecContextPtr
-  openClosedCaptionsDecoder(const AVStream & stream, const AvFrm & frame)
-  {
-    AvCodecContextPtr ccDec;
-
-    const AVCodec * codec = avcodec_find_decoder(AV_CODEC_ID_EIA_608);
-
-    if (codec)
-    {
-      AVDictionary * opts = NULL;
-      av_dict_set_int(&opts, "real_time", 1, 0);
-
-      ccDec = tryToOpen(codec, NULL, opts);
-      AVCodecContext * cc = ccDec.get();
-
-      if (cc)
-      {
-        av_codec_set_pkt_timebase(cc, stream.time_base);
-        cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
-      }
-    }
-
-    return ccDec;
-  }
-
 
   //----------------------------------------------------------------
   // gatherApplicableSubtitles
@@ -511,114 +432,6 @@ namespace yae
     subTrack.expungeOldSubs(v0);
 
     subTrack.get(v0, v1, subs);
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::decodeClosedCaptions
-  //
-  void
-  VideoTrack::decodeClosedCaptions(const AvFrm & decodedFrame)
-  {
-    if (!decodeClosedCaptions_)
-    {
-      cc_[0].reset();
-      cc_[1].reset();
-      cc_[2].reset();
-      cc_[3].reset();
-      return;
-    }
-
-    // shortcut:
-    const unsigned char n = decodeClosedCaptions_ - 1;
-    SubtitlesTrack & captions = captions_[n];
-
-    // check for closed captions data:
-    std::map<unsigned char, AvPkt> ccPkt;
-    std::map<unsigned char, AvPkt>::iterator found;
-    if (makeCcPkt(decodedFrame, dataChannel_, ccPkt) &&
-        (found = ccPkt.find(n)) != ccPkt.end())
-    {
-      // instantiate the CC decoder on-demand:
-      cc_[n] || (cc_[n] = openClosedCaptionsDecoder(*stream_, decodedFrame));
-
-      // prevent captions decoder from being destroyed while it is used:
-      AvCodecContextPtr keepAlive(cc_[n]);
-
-      AVCodecContext * ccDec = keepAlive.get();
-      if (ccDec)
-      {
-        // shortcut:
-        AvPkt & pkt = found->second;
-
-        AVSubtitle sub;
-        int gotSub = 0;
-        int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &pkt);
-
-        if (err >= 0 && gotSub)
-        {
-          TSubsFrame sf;
-          sf.traits_ = kSubsCEA608;
-          sf.render_ = true;
-
-          sf.rewriteTimings_ = true;
-          sf.time_.base_ = AV_TIME_BASE;
-          sf.tEnd_.base_ = AV_TIME_BASE;
-          sf.tEnd_.time_ = std::numeric_limits<int64>::max();
-
-          if (pkt.pts != AV_NOPTS_VALUE)
-          {
-            int64_t ptsPkt = av_rescale_q(pkt.pts,
-                                          stream_->time_base,
-                                          kAvTimeBase);
-            sf.time_.time_ = ptsPkt;
-            sf.tEnd_.time_ = ptsPkt;
-          }
-
-          std::string header((const char *)ccDec->subtitle_header,
-                             (const char *)ccDec->subtitle_header +
-                             ccDec->subtitle_header_size);
-          header = adjust_ass_header(header);
-
-          const unsigned char * hdr = (const unsigned char *)(&header[0]);
-          std::size_t sz = header.size();
-          sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
-                                        &TSubsPrivate::deallocator);
-          captions.last_ = sf;
-        }
-      }
-    }
-
-    // extend the duration of the most recent caption to cover current frame:
-    {
-      // shift back by half a frame duration to avoid flickering captions
-      // due to small-error timestamp mismatch between PTS and libass timestamp
-
-      // set timebase at twice the actual framerate:
-      Rational tb(1001, 60000);
-
-      int64_t ptsNow =
-        av_rescale_q(decodedFrame.pts, stream_->time_base, kAvTimeBase) -
-        av_rescale_q(1, tb, kAvTimeBase);
-
-      int64_t ptsNext = ptsNow + av_rescale_q(2, tb, kAvTimeBase);
-
-      TSubsFrame & last = captions.last_;
-      if (last.tEnd_.base_ == AV_TIME_BASE &&
-          last.tEnd_.time_ < ptsNext &&
-
-          // avoid extending caption duration indefinitely:
-          last.tEnd_ < last.time_ + 12.0)
-      {
-        int64_t ptsPrev = last.tEnd_.time_;
-        last.tEnd_.time_ = ptsNext;
-
-        // avoid creating overlapping ASS events,
-        // better to create short adjacent events instead:
-        TSubsFrame sf(last);
-        sf.time_.time_ = ptsPrev;
-        captions.push(sf, &terminator_);
-      }
-    }
   }
 
   //----------------------------------------------------------------
@@ -849,7 +662,7 @@ namespace yae
       }
 
       // decode CEA-608 packets, if there are any:
-      decodeClosedCaptions(decoded);
+      cc_.decode(stream_->time_base, decoded, &terminator_);
 
       if (!filterGraph_.push(&decoded))
       {
@@ -980,10 +793,10 @@ namespace yae
           }
 
           // and closed captions also:
-          if (decodeClosedCaptions_)
+          SubtitlesTrack * cc = cc_.captions();
+          if (cc)
           {
-            SubtitlesTrack & captions = captions_[decodeClosedCaptions_ - 1];
-            gatherApplicableSubtitles(vf.subs_, v0, v1, captions, terminator_);
+            gatherApplicableSubtitles(vf.subs_, v0, v1, *cc, terminator_);
           }
         }
 
@@ -1293,11 +1106,7 @@ namespace yae
     filterGraph_.reset();
 
     // force the closed captions decoder to be re-created on demand:
-    for (unsigned char i = 0; i < 4; i++)
-    {
-      cc_[i].reset();
-      captions_[i].clear();
-    }
+    cc_.reset();
 
     // push a special frame into frame queue to resetTimeCounters
     // down the line (the renderer):
@@ -1351,7 +1160,7 @@ namespace yae
     candidates_.clear();
     preferSoftwareDecoder_ = cc > 0;
 
-    if (ctx && cc && !decodeClosedCaptions_)
+    if (ctx && cc && !cc_.enabled())
     {
       // switch to a decoder that produces side-data:
       std::size_t n = strlen(ctx->codec->name);
@@ -1377,6 +1186,6 @@ namespace yae
       }
     }
 
-    decodeClosedCaptions_ = cc;
+    cc_.enableClosedCaptions(cc);
   }
 }
