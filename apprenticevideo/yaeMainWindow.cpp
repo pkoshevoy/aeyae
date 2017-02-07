@@ -4738,7 +4738,7 @@ namespace yae
     }
 
     // add an option to show closed captions:
-    for (unsigned int i = 0; i < 4; i++)
+    for (unsigned int i = 0; i < 1 /* 4 */; i++)
     {
       QAction * trackAction =
         new QAction(tr("Show Closed Captions (CC%1)").arg(i + 1), this);
