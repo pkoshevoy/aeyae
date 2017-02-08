@@ -4741,7 +4741,7 @@ namespace yae
     for (unsigned int i = 0; i < 1 /* 4 */; i++)
     {
       QAction * trackAction =
-        new QAction(tr("Show Closed Captions (CC%1)").arg(i + 1), this);
+        new QAction(tr("Closed Captions (CC%1)").arg(i + 1), this);
       menuSubs->addAction(trackAction);
 
       trackAction->setCheckable(true);
