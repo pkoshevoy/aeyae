@@ -50,13 +50,37 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // qt_atom_t
+  //
+  struct YAE_API qt_atom_t
+  {
+    const uint8_t * fourcc_;
+    const uint8_t * data_;
+    std::size_t size_;
+  };
+
+  //----------------------------------------------------------------
+  // parse_qt_atom
+  //
+  YAE_API bool
+  parse_qt_atom(const uint8_t * data,
+                const std::size_t size,
+                qt_atom_t & atom);
+
+  //----------------------------------------------------------------
   // convert_quicktime_c608
   //
   // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
   // it's what the ffmpeg closed captions decoder expects:
   //
-  YAE_API void
+  YAE_API bool
   convert_quicktime_c608(AVPacket & pkt);
+
+  //----------------------------------------------------------------
+  // convert_quicktime_c708
+  //
+  YAE_API bool
+  convert_quicktime_c708(AVPacket & pkt);
 
   //----------------------------------------------------------------
   // CaptionsDecoder

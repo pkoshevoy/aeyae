@@ -89,19 +89,9 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // qt_atom_t
-  //
-  struct qt_atom_t
-  {
-    const uint8_t * fourcc_;
-    const uint8_t * data_;
-    std::size_t size_;
-  };
-
-  //----------------------------------------------------------------
   // parse_qt_atom
   //
-  static bool
+  bool
   parse_qt_atom(const uint8_t * data,
                 const std::size_t size,
                 qt_atom_t & atom)
@@ -156,7 +146,7 @@ namespace yae
   // wrap CEA-608 in CEA-708 cc_data_pkt wrappers,
   // it's what the ffmpeg closed captions decoder expects:
   //
-  void
+  bool
   convert_quicktime_c608(AVPacket & pkt)
   {
     std::vector<cc_data_pkt_t> cc;
@@ -168,7 +158,7 @@ namespace yae
       qt_atom_t atom;
       if (!parse_qt_atom(data, end - data, atom))
       {
-        return;
+        return false;
       }
 
       unsigned char field =
@@ -178,13 +168,13 @@ namespace yae
 
       if (!field)
       {
-        return;
+        return false;
       }
 
       if (atom.size_ & 0x1)
       {
         YAE_ASSERT(false);
-        return;
+        return false;
       }
 
       const uint8_t * head = atom.data_;
@@ -218,6 +208,74 @@ namespace yae
       }
 
       data = tail;
+    }
+
+    const std::size_t nbytes = cc.size() * sizeof(cc_data_pkt_t);
+    if (nbytes)
+    {
+      YAE_ASSERT(nbytes % sizeof(cc_data_pkt_t) == 0);
+      const cc_data_pkt_t * p = &(cc[0]);
+
+      if (pkt.size < nbytes)
+      {
+        av_grow_packet(&pkt, nbytes - pkt.size);
+      }
+      else
+      {
+        av_shrink_packet(&pkt, nbytes);
+      }
+
+      memcpy(pkt.data, p, nbytes);
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // convert_quicktime_c708
+  //
+  //
+  bool
+  convert_quicktime_c708(AVPacket & pkt)
+  {
+    std::vector<cc_data_pkt_t> cc;
+    const uint8_t * data = pkt.data;
+    const uint8_t * end = pkt.data + pkt.size;
+
+    while (data < end)
+    {
+      qt_atom_t atom;
+      if (!parse_qt_atom(data, end - data, atom))
+      {
+        return false;
+      }
+
+      if (memcmp(atom.fourcc_, "ccdp", 4) != 0)
+      {
+        return false;
+      }
+
+      const std::size_t num_cc_pkts = (atom.data_[8] & 0x1f);
+      const std::size_t cc_pkt_bytes = num_cc_pkts * 3;;
+
+      if (atom.size_ < cc_pkt_bytes + 9)
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      const cc_data_pkt_t * cc_data_pkt =
+        (const cc_data_pkt_t *)(atom.data_ + 9);
+
+      const cc_data_pkt_t * cc_data_end =
+        (const cc_data_pkt_t *)(atom.data_ + 9 + cc_pkt_bytes);
+
+      for (; cc_data_pkt < cc_data_end; ++cc_data_pkt)
+      {
+        cc.push_back(*cc_data_pkt);
+      }
+
+      data = atom.data_ + atom.size_;
     }
 
     const std::size_t nbytes = cc.size() * sizeof(cc_data_pkt_t);

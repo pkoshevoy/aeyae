@@ -257,13 +257,16 @@ namespace yae
         continue;
       }
 
+      // shortcut:
+      const AVMediaType codecType = stream->codecpar->codec_type;
+
       // assume codec is unsupported,
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
 
-      // verify that we have a decoder for this codec:
+      // check whether we have a decoder for this codec:
       AVCodec * decoder = avcodec_find_decoder(stream->codecpar->codec_id);
-      if (!decoder)
+      if (!decoder && codecType != AVMEDIA_TYPE_SUBTITLE)
       {
         // unsupported codec, ignore it:
         stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
@@ -272,7 +275,6 @@ namespace yae
 
       TrackPtr baseTrack(new Track(context_, stream));
 
-      const AVMediaType codecType = stream->codecpar->codec_type;
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
         VideoTrackPtr track(new VideoTrack(*baseTrack));
@@ -317,7 +319,8 @@ namespace yae
         // don't add CEA-608 as a single track...
         // because it's actually 4 channels
         // and it makes a poor user experience
-        if (stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
+        if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
+            stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
           subsIdx_[i] = subs_.size();
           TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
@@ -658,15 +661,28 @@ namespace yae
             context_->streams[packet.stream_index] :
             NULL;
 
-          bool closedCaptions =
-            (stream &&
-             stream->codecpar &&
-             stream->codecpar->codec_id == AV_CODEC_ID_EIA_608);
+          bool closedCaptions = false;
+          if (stream)
+          {
+            if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608 &&
+                memcmp(&stream->codec->codec_tag, "c608", 4) == 0)
+            {
+              // convert to CEA708 packets wrapping CEA608 data, it's
+              // the only format ffmpeg captions decoder understands:
+              closedCaptions = convert_quicktime_c608(packet);
+            }
+            else if (stream->codecpar->codec_id == AV_CODEC_ID_NONE &&
+                     memcmp(&stream->codec->codec_tag, "c708", 4) == 0)
+            {
+              // convert to CEA708 packets wrapping CEA608 data, it's
+              // the only format ffmpeg captions decoder understands:
+              closedCaptions = convert_quicktime_c708(packet);
+            }
+          }
 
           SubtitlesTrack * subs = NULL;
           if (stream && videoTrack &&
-              (closedCaptions ||
-               (subs = subsLookup(packet.stream_index))))
+              (closedCaptions || (subs = subsLookup(packet.stream_index))))
           {
             static const Rational tb(1, AV_TIME_BASE);
 
@@ -779,16 +795,9 @@ namespace yae
 
               err = 0;
             }
-            else if (sf.traits_ == kSubsCEA608)
+            else if (closedCaptions)
             {
               // let the captions decoder handle it:
-              if (strcmp(context_->iformat->long_name, "QuickTime / MOV") == 0)
-              {
-                // convert to CEA708 packets wrapping CEA608 data, it's
-                // the only format ffmpeg captions decoder understands:
-                convert_quicktime_c608(packet);
-              }
-
               videoTrack->cc_.decode(stream->time_base,
                                      packet,
                                      &outputTerminator_);
