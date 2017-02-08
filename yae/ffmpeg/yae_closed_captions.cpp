@@ -754,9 +754,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       if (pkt.pts != AV_NOPTS_VALUE)
       {
-        int64_t ptsPkt = av_rescale_q(pkt.pts, timeBase, kAvTimeBase);
+        int64_t ptsPkt = av_rescale_q(pkt.pts,
+                                      timeBase,
+                                      kAvTimeBase);
         sf.time_.time_ = ptsPkt;
-        sf.tEnd_.time_ = ptsPkt;
+
+        int64_t endPkt = av_rescale_q(pkt.pts + pkt.duration,
+                                      timeBase,
+                                      kAvTimeBase);
+        sf.tEnd_.time_ = endPkt;
       }
 
       std::string header((const char *)(ccDec->subtitle_header),
@@ -769,6 +775,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
                                     &TSubsPrivate::deallocator);
       captions_[n].last_ = sf;
+
+      if (pkt.duration)
+      {
+        captions_[n].push(sf, terminator);
+      }
     }
 
     // extend the duration of the most recent caption to cover current frame:
