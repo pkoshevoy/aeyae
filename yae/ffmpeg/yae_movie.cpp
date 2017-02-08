@@ -15,6 +15,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // c608
+  //
+  const unsigned int c608 = MKTAG('c', '6', '0', '8');
+
+  //----------------------------------------------------------------
+  // c708
+  //
+  const unsigned int c708 = MKTAG('c', '7', '0', '8');
+
+  //----------------------------------------------------------------
   // lockManager
   //
   static int
@@ -664,15 +674,13 @@ namespace yae
           bool closedCaptions = false;
           if (stream)
           {
-            if (stream->codecpar->codec_id == AV_CODEC_ID_EIA_608 &&
-                memcmp(&stream->codec->codec_tag, "c608", 4) == 0)
+            if (stream->codec->codec_tag == c608)
             {
               // convert to CEA708 packets wrapping CEA608 data, it's
               // the only format ffmpeg captions decoder understands:
               closedCaptions = convert_quicktime_c608(packet);
             }
-            else if (stream->codecpar->codec_id == AV_CODEC_ID_NONE &&
-                     memcmp(&stream->codec->codec_tag, "c708", 4) == 0)
+            else if (stream->codec->codec_tag == c708)
             {
               // convert to CEA708 packets wrapping CEA608 data, it's
               // the only format ffmpeg captions decoder understands:
