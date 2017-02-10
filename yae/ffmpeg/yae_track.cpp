@@ -363,8 +363,6 @@ namespace yae
         return;
       }
 
-      AvCodecContextPtr cuvid;
-      AvCodecContextPtr intel;
       std::list<AvCodecContextPtr> hardware;
       std::list<AvCodecContextPtr> software;
       std::list<AvCodecContextPtr> experimental;
@@ -382,7 +380,7 @@ namespace yae
             experimental.push_back(ctx);
           }
         }
-        else if (al::ends_with(c->name, "_cuvid"))
+        else if (al::ends_with(c->name, "_vda"))
         {
           if (params.format != AV_PIX_FMT_YUV420P &&
               params.codec_id != AV_CODEC_ID_MJPEG)
@@ -393,12 +391,21 @@ namespace yae
           }
 
           // verify that the GPU can handle this stream:
-          cuvid = tryToOpen(c, &params);
+          AvCodecContextPtr ctx = tryToOpen(c, &params);
+          if (ctx)
+          {
+            hardware.push_front(ctx);
+          }
         }
-        else if (al::ends_with(c->name, "_qsv"))
+        else if (al::ends_with(c->name, "_qsv") ||
+                 al::ends_with(c->name, "_vda"))
         {
           // verify that the GPU can handle this stream:
-          intel = tryToOpen(c, &params);
+          AvCodecContextPtr ctx = tryToOpen(c, &params);
+          if (ctx)
+          {
+            hardware.push_back(ctx);
+          }
         }
         else
         {
@@ -408,16 +415,6 @@ namespace yae
             software.push_back(ctx);
           }
         }
-      }
-
-      if (cuvid)
-      {
-        hardware.push_back(cuvid);
-      }
-
-      if (intel)
-      {
-        hardware.push_back(intel);
       }
 
       if (preferSoftwareDecoder)
