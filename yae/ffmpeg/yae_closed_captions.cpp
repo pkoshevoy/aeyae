@@ -295,6 +295,8 @@ namespace yae
 
       memcpy(pkt.data, p, nbytes);
     }
+
+    return true;
   }
 
   //----------------------------------------------------------------

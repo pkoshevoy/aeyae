@@ -674,13 +674,13 @@ namespace yae
           bool closedCaptions = false;
           if (stream)
           {
-            if (stream->codec->codec_tag == c608)
+            if (stream->codecpar->codec_tag == c608)
             {
               // convert to CEA708 packets wrapping CEA608 data, it's
               // the only format ffmpeg captions decoder understands:
               closedCaptions = convert_quicktime_c608(packet);
             }
-            else if (stream->codec->codec_tag == c708)
+            else if (stream->codecpar->codec_tag == c708)
             {
               // convert to CEA708 packets wrapping CEA608 data, it's
               // the only format ffmpeg captions decoder understands:
