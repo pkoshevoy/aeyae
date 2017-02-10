@@ -380,7 +380,7 @@ namespace yae
             experimental.push_back(ctx);
           }
         }
-        else if (al::ends_with(c->name, "_vda"))
+        else if (al::ends_with(c->name, "_cuvid"))
         {
           if (params.format != AV_PIX_FMT_YUV420P &&
               params.codec_id != AV_CODEC_ID_MJPEG)
