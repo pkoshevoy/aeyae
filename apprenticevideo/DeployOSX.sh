@@ -321,8 +321,8 @@ PrepForDeployment()
 	# deploy Qt plugins manually:
 	mkdir -p "${BUNDLE_PATH}"/Contents/PlugIns
 	quiet_pushd "${BUNDLE_PATH}"/Contents/PlugIns
-		echo $CP "${PWD}/../../../../lib/aeyae-plugin-reader-ffmpeg.yae" .
-		$CP "${PWD}/../../../../lib/aeyae-plugin-reader-ffmpeg.yae" . || exit -1
+		echo $CP "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib/${CMAKE_CFG_INTDIR}/aeyae-plugin-reader-ffmpeg.yae" .
+		$CP "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib/${CMAKE_CFG_INTDIR}/aeyae-plugin-reader-ffmpeg.yae" . || exit -1
 	quiet_popd
 
 	quiet_pushd "${BUNDLE_PATH}"/Contents/MacOS
