@@ -400,6 +400,14 @@ namespace yae
         else if (al::ends_with(c->name, "_qsv") ||
                  al::ends_with(c->name, "_vda"))
         {
+          if (al::ends_with(c->name, "_vda"))
+          {
+            // h264_vda decoder output is corrupted on 2010 macmini,
+            // even though there are no decoder errors reported,
+            // therefore it cannot be trusted and is explicitly disbaled:
+            continue;
+          }
+
           // verify that the GPU can handle this stream:
           AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
