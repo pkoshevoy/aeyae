@@ -37,13 +37,17 @@ namespace yae
   static inline int
   cc_data_channel(unsigned char b0)
   {
+    // Data Channel 1, C1
+    // Data Channel 2, C2
+    // Data Channel 3, XDS
     return
       (b0 == 0x10 || b0 == 0x11 || b0 == 0x12 || b0 == 0x13 ||
        b0 == 0x14 || b0 == 0x15 || b0 == 0x16 || b0 == 0x17) ?
       1 :
       (b0 == 0x18 || b0 == 0x19 || b0 == 0x1A || b0 == 0x1B ||
        b0 == 0x1C || b0 == 0x1D || b0 == 0x1E || b0 == 0x1F) ?
-      2 : 0;
+      2 : (b0 < 0x10) ?
+      3 : 0;
   }
 
   //----------------------------------------------------------------
@@ -393,7 +397,7 @@ namespace yae
       }
 
       unsigned int data_channel = cc_data_channel(b0);
-      if (data_channel > 0 && data_channel < 2)
+      if (data_channel > 0)
       {
         dataChannel[field_number - 1] = data_channel;
       }
@@ -407,6 +411,12 @@ namespace yae
         // convert data channel 2 into data channel 1:
         b0 -= 8;
         b01 = byte_pair(b0, b1);
+      }
+
+      if (data_channel == 3)
+      {
+        // XDS, ignore until normal captioning resumes:
+        continue;
       }
 
       if (field_number == 2)
