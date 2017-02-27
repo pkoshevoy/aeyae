@@ -2822,7 +2822,7 @@ namespace yae
     if (reader_->getProgramInfo(selAudio_.program_, program))
     {
       if (selVideo_.program_ != selAudio_.program_ &&
-          selVideo_.isValid())
+          selVideo_.isValid() && selAudio_.isValid())
       {
         // select another video track:
         std::size_t i = program.video_.empty() ? 0 : program.video_.front();
@@ -2835,7 +2835,7 @@ namespace yae
       }
 
       if (selSubs_.program_ != selAudio_.program_ &&
-          selSubs_.isValid())
+          selSubs_.isValid() && selAudio_.isValid())
       {
         // select another subtitle track:
         std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
@@ -2849,7 +2849,7 @@ namespace yae
 
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    if (prevProgram == selAudio_.program_)
+    if (prevProgram == selAudio_.program_ && selAudio_.isValid())
     {
       double t = timelineModel_.currentTime();
       reader_->seek(t);
@@ -2889,7 +2889,7 @@ namespace yae
     if (reader_->getProgramInfo(selVideo_.program_, program))
     {
       if (selAudio_.program_ != selVideo_.program_ &&
-          selAudio_.isValid())
+          selAudio_.isValid() && selVideo_.isValid())
       {
         // select another audio track:
         std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
@@ -2902,7 +2902,7 @@ namespace yae
       }
 
       if (selSubs_.program_ != selVideo_.program_ &&
-          selSubs_.isValid())
+          selSubs_.isValid() && selVideo_.isValid())
       {
         // select another subtitle track:
         std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
@@ -2916,7 +2916,7 @@ namespace yae
 
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    if (prevProgram == selVideo_.program_)
+    if (prevProgram == selVideo_.program_ && selVideo_.isValid())
     {
       double t = timelineModel_.currentTime();
       reader_->seek(t);
@@ -2955,7 +2955,7 @@ namespace yae
     if (reader_->getProgramInfo(selSubs_.program_, program))
     {
       if (selVideo_.program_ != selSubs_.program_ &&
-          selVideo_.isValid())
+          selVideo_.isValid() && selSubs_.isValid())
       {
         // select another video track:
         std::size_t i = program.video_.empty() ? 0 : program.video_.front();
@@ -2968,7 +2968,7 @@ namespace yae
       }
 
       if (selAudio_.program_ != selSubs_.program_ &&
-          selAudio_.isValid())
+          selAudio_.isValid() && selSubs_.isValid())
       {
         // select another audio track:
         std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
@@ -2983,7 +2983,7 @@ namespace yae
 
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    if (prevProgram == selSubs_.program_)
+    if (prevProgram == selSubs_.program_ && selSubs_.isValid())
     {
       double t = timelineModel_.currentTime();
       reader_->seek(t);

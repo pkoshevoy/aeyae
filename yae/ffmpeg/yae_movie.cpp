@@ -463,6 +463,7 @@ namespace yae
   void
   Movie::getVideoTrackInfo(std::size_t i, TTrackInfo & info) const
   {
+    info.program_ = context_->nb_programs;
     info.ntracks_ = videoTracks_.size();
     info.index_ = i;
     info.lang_.clear();
@@ -483,6 +484,7 @@ namespace yae
   void
   Movie::getAudioTrackInfo(std::size_t i, TTrackInfo & info) const
   {
+    info.program_ = context_->nb_programs;
     info.ntracks_ = audioTracks_.size();
     info.index_ = i;
     info.lang_.clear();
@@ -1550,6 +1552,7 @@ namespace yae
   TSubsFormat
   Movie::subsInfo(std::size_t i, TTrackInfo & info) const
   {
+    info.program_ = context_->nb_programs;
     info.ntracks_ = subs_.size();
     info.index_ = i;
     info.lang_.clear();
