@@ -59,6 +59,9 @@ namespace yae
     bool open(const char * resourcePath);
     void close();
 
+    inline const std::vector<TProgramInfo> & getPrograms() const
+    { return programs_; }
+
     inline const std::vector<VideoTrackPtr> & getVideoTracks() const
     { return videoTracks_; }
 
@@ -70,6 +73,9 @@ namespace yae
 
     inline std::size_t getSelectedAudioTrack() const
     { return selectedAudioTrack_; }
+
+    void getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
+    void getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
 
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);
@@ -153,10 +159,12 @@ namespace yae
     AVFormatContext * context_;
 
     std::vector<TAttachment> attachments_;
+    std::vector<TProgramInfo> programs_;
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
     std::vector<TSubsTrackPtr> subs_;
     std::map<unsigned int, std::size_t> subsIdx_;
+    std::map<int, int> streamIndexToProgramIndex_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;

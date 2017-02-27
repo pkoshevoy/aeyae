@@ -914,9 +914,23 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TProgramInfo::TProgramInfo
+  //
+  TProgramInfo::TProgramInfo():
+    id_(0),
+    program_(0),
+    pmt_pid_(0),
+    pcr_pid_(0)
+  {}
+
+
+  //----------------------------------------------------------------
   // TTrackInfo::TTrackInfo
   //
-  TTrackInfo::TTrackInfo(std::size_t index, std::size_t ntracks):
+  TTrackInfo::TTrackInfo(std::size_t program,
+                         std::size_t ntracks,
+                         std::size_t index):
+    program_(program),
     ntracks_(ntracks),
     index_(index)
   {}

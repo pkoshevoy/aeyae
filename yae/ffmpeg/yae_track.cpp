@@ -564,16 +564,28 @@ namespace yae
       return false;
     }
 
-    if (stream_->duration != int64_t(AV_NOPTS_VALUE))
+    bool got_start = false;
+    bool got_duration = false;
+
+    if (stream_->start_time != int64_t(AV_NOPTS_VALUE))
     {
       // return track duration:
       start.base_ = stream_->time_base.den;
       start.time_ =
         stream_->start_time != int64_t(AV_NOPTS_VALUE) ?
         stream_->time_base.num * stream_->start_time : 0;
+      got_start = true;
+    }
 
+    if (stream_->duration != int64_t(AV_NOPTS_VALUE))
+    {
       duration.time_ = stream_->time_base.num * stream_->duration;
       duration.base_ = stream_->time_base.den;
+      got_duration = true;
+    }
+
+    if (got_start && got_duration)
+    {
       return true;
     }
 
@@ -583,16 +595,25 @@ namespace yae
       return false;
     }
 
-    if (context_->duration != int64_t(AV_NOPTS_VALUE))
+    if (!got_start && context_->start_time != int64_t(AV_NOPTS_VALUE))
     {
       // track duration is unknown, return movie duration instead:
       start.base_ = AV_TIME_BASE;
       start.time_ =
         context_->start_time != int64_t(AV_NOPTS_VALUE) ?
         context_->start_time : 0;
+      got_start = true;
+    }
 
+    if (!got_duration && context_->duration != int64_t(AV_NOPTS_VALUE))
+    {
       duration.time_ = context_->duration;
       duration.base_ = AV_TIME_BASE;
+      got_duration = true;
+    }
+
+    if (got_start && got_duration)
+    {
       return true;
     }
 

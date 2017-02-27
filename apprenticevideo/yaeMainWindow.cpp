@@ -2811,13 +2811,54 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    int prevProgram = selAudio_.program_;
     selectAudioTrack(reader_.get(), index);
     reader_->getSelectedAudioTrackInfo(selAudio_);
     reader_->getAudioTraits(selAudioTraits_);
+
+    // if the audio program is not the same as the video program
+    // then change the video track to a matching audio program:
+    TProgramInfo program;
+    if (reader_->getProgramInfo(selAudio_.program_, program))
+    {
+      if (selVideo_.program_ != selAudio_.program_ &&
+          selVideo_.isValid())
+      {
+        // select another video track:
+        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        selectVideoTrack(reader_.get(), i);
+        reader_->getSelectedVideoTrackInfo(selVideo_);
+        reader_->getVideoTraits(selVideoTraits_);
+
+        QList<QAction *> actions = videoTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+
+      if (selSubs_.program_ != selAudio_.program_ &&
+          selSubs_.isValid())
+      {
+        // select another subtitle track:
+        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        selectSubsTrack(reader_.get(), i);
+        reader_->subsInfo(i, selSubs_);
+
+        QList<QAction *> actions = subsTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+    }
+
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineModel_.currentTime();
-    reader_->seek(t);
+    if (prevProgram == selAudio_.program_)
+    {
+      double t = timelineModel_.currentTime();
+      reader_->seek(t);
+    }
+    else
+    {
+      timelineModel_.resetFor(reader_.get());
+    }
+
     reader_->threadStart();
 
     resumeRenderers();
@@ -2837,13 +2878,54 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    int prevProgram = selVideo_.program_;
     selectVideoTrack(reader_.get(), index);
     reader_->getSelectedVideoTrackInfo(selVideo_);
     reader_->getVideoTraits(selVideoTraits_);
+
+    // if the video program is not the same as the audio program
+    // then change the audio track to a matching video program:
+    TProgramInfo program;
+    if (reader_->getProgramInfo(selVideo_.program_, program))
+    {
+      if (selAudio_.program_ != selVideo_.program_ &&
+          selAudio_.isValid())
+      {
+        // select another audio track:
+        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        selectAudioTrack(reader_.get(), i);
+        reader_->getSelectedAudioTrackInfo(selAudio_);
+        reader_->getAudioTraits(selAudioTraits_);
+
+        QList<QAction *> actions = audioTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+
+      if (selSubs_.program_ != selVideo_.program_ &&
+          selSubs_.isValid())
+      {
+        // select another subtitle track:
+        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        selectSubsTrack(reader_.get(), i);
+        reader_->subsInfo(i, selSubs_);
+
+        QList<QAction *> actions = subsTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+    }
+
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineModel_.currentTime();
-    reader_->seek(t);
+    if (prevProgram == selVideo_.program_)
+    {
+      double t = timelineModel_.currentTime();
+      reader_->seek(t);
+    }
+    else
+    {
+      timelineModel_.resetFor(reader_.get());
+    }
+
     reader_->threadStart();
 
     resumeRenderers(true);
@@ -2863,12 +2945,54 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    int prevProgram = selSubs_.program_;
     selectSubsTrack(reader_.get(), index);
     selSubsFormat_ = reader_->subsInfo(index, selSubs_);
+
+    // if the subtitles program is not the same as the audio/video program
+    // then change the audio/video track to a matching subtitles program:
+    TProgramInfo program;
+    if (reader_->getProgramInfo(selSubs_.program_, program))
+    {
+      if (selVideo_.program_ != selSubs_.program_ &&
+          selVideo_.isValid())
+      {
+        // select another video track:
+        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        selectVideoTrack(reader_.get(), i);
+        reader_->getSelectedVideoTrackInfo(selVideo_);
+        reader_->getVideoTraits(selVideoTraits_);
+
+        QList<QAction *> actions = videoTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+
+      if (selAudio_.program_ != selSubs_.program_ &&
+          selAudio_.isValid())
+      {
+        // select another audio track:
+        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        selectAudioTrack(reader_.get(), i);
+        reader_->getSelectedAudioTrackInfo(selAudio_);
+        reader_->getAudioTraits(selAudioTraits_);
+
+        QList<QAction *> actions = audioTrackGroup_->actions();
+        actions[i]->setChecked(true);
+      }
+    }
+
     prepareReaderAndRenderers(reader_.get(), playbackPaused_);
 
-    double t = timelineModel_.currentTime();
-    reader_->seek(t);
+    if (prevProgram == selSubs_.program_)
+    {
+      double t = timelineModel_.currentTime();
+      reader_->seek(t);
+    }
+    else
+    {
+      timelineModel_.resetFor(reader_.get());
+    }
+
     reader_->threadStart();
 
     resumeRenderers();
@@ -4464,6 +4588,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // getProgramName
+  //
+  static std::string
+  getProgramName(const IReader & reader, std::size_t program)
+  {
+    TProgramInfo info;
+
+    if (reader.getProgramInfo(program, info))
+    {
+      return get(info.metadata_, std::string("service_name"));
+    }
+
+    return std::string();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::adjustMenuActions
   //
   void
@@ -4475,6 +4615,7 @@ namespace yae
                                 std::vector<TTrackInfo> &  subsInfo,
                                 std::vector<TSubsFormat> & subsFormat)
   {
+    std::size_t numPrograms = reader->getNumberOfPrograms();
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     std::size_t subsCount = reader->subsCount();
@@ -4606,6 +4747,12 @@ namespace yae
           arg(int(traits.channelLayout_));
       }
 
+      std::string serviceName = getProgramName(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuAudio->addAction(trackAction);
 
@@ -4672,6 +4819,12 @@ namespace yae
         }
       }
 
+      std::string serviceName = getProgramName(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuVideo->addAction(trackAction);
 
@@ -4725,6 +4878,12 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(label));
       }
 
+      std::string serviceName = getProgramName(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuSubs->addAction(trackAction);
 
@@ -4738,7 +4897,7 @@ namespace yae
     }
 
     // add an option to show closed captions:
-    for (unsigned int i = 0; i < 1 /* 4 */; i++)
+    for (unsigned int i = 0; i < 4; i++)
     {
       QAction * trackAction =
         new QAction(tr("Closed Captions (CC%1)").arg(i + 1), this);

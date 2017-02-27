@@ -167,6 +167,35 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderFFMPEG::getNumberOfPrograms
+  //
+  std::size_t
+  ReaderFFMPEG::getNumberOfPrograms() const
+  {
+    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
+    const std::size_t nprogs = progs.size();
+    return nprogs;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getProgramInfo
+  //
+  bool
+  ReaderFFMPEG::getProgramInfo(std::size_t i, TProgramInfo & info) const
+  {
+    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
+    const std::size_t nprogs = progs.size();
+
+    if (nprogs <= i)
+    {
+      return false;
+    }
+
+    info = progs[i];
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // ReaderFFMPEG::getNumberOfVideoTracks
   //
   std::size_t
@@ -226,17 +255,8 @@ namespace yae
   void
   ReaderFFMPEG::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
-    info.ntracks_ = private_->movie_.getVideoTracks().size();
-    info.index_ = private_->movie_.getSelectedVideoTrack();
-    info.lang_.clear();
-    info.name_.clear();
-
-    if (info.index_ < info.ntracks_)
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
-    }
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    private_->movie_.getVideoTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------
@@ -245,17 +265,8 @@ namespace yae
   void
   ReaderFFMPEG::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
-    info.ntracks_ = private_->movie_.getAudioTracks().size();
-    info.index_ = private_->movie_.getSelectedAudioTrack();
-    info.lang_.clear();
-    info.name_.clear();
-
-    if (info.index_ < info.ntracks_)
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
-    }
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    private_->movie_.getAudioTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------

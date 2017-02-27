@@ -11,6 +11,7 @@
 
 // std includes:
 #include <list>
+#include <map>
 #include <string.h>
 #include <cstdio>
 #include <sstream>
@@ -185,6 +186,19 @@ namespace yae
   protected:
     TOpenable & something_;
   };
+
+  //----------------------------------------------------------------
+  // get
+  //
+  template <typename TKey, typename TValue>
+  static TValue
+  get(const std::map<TKey, TValue> & lut,
+      const TKey & key,
+      const TValue & defaultValue = TValue())
+  {
+    typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
+    return found == lut.end() ? defaultValue : found->second;
+  }
 
   //----------------------------------------------------------------
   // isSizeOne

@@ -12,6 +12,7 @@
 // standard C++ library:
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -657,11 +658,30 @@ namespace yae
   { return af->time_.to_hhmmss_usec(":"); }
 
   //----------------------------------------------------------------
+  // TProgramInfo
+  //
+  struct YAE_API TProgramInfo
+  {
+    TProgramInfo();
+
+    int id_;
+    int program_;
+    int pmt_pid_;
+    int pcr_pid_;
+    std::map<std::string, std::string> metadata_;
+    std::list<std::size_t> video_;
+    std::list<std::size_t> audio_;
+    std::list<std::size_t> subs_;
+  };
+
+  //----------------------------------------------------------------
   // TTrackInfo
   //
   struct YAE_API TTrackInfo
   {
-    TTrackInfo(std::size_t index = 0, std::size_t ntracks = 0);
+    TTrackInfo(std::size_t program = 0,
+               std::size_t ntracks = 0,
+               std::size_t index = 0);
 
     bool isValid() const;
     bool hasLang() const;
@@ -673,6 +693,7 @@ namespace yae
     void setLang(const char * lang);
     void setName(const char * name);
 
+    std::size_t program_;
     std::size_t ntracks_;
     std::size_t index_;
     std::string lang_;

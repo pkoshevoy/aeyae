@@ -258,11 +258,20 @@ namespace yae
   void
   TimelineModel::reset(IReader * reader)
   {
-    TTime start;
-    TTime duration;
-    if (!reader->getAudioDuration(start, duration))
+    TTime audioStart;
+    TTime audioDuration;
+    bool audioOk = reader->getAudioDuration(audioStart, audioDuration);
+
+    TTime videoStart;
+    TTime videoDuration;
+    bool videoOk = reader->getVideoDuration(videoStart, videoDuration);
+
+    TTime start = audioOk ? audioStart : videoStart;
+    TTime duration = audioOk ? audioDuration : videoDuration;
+    if (audioOk && videoOk && videoStart < audioStart)
     {
-      reader->getVideoDuration(start, duration);
+      start = videoStart;
+      duration = videoDuration;
     }
 
     frameRate_ = 100.0;

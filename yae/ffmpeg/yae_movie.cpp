@@ -208,11 +208,11 @@ namespace yae
 
     AVDictionary * options = NULL;
 
-    // set probesize to 64 MiB:
-    av_dict_set(&options, "probesize", "67108864", 0);
+    // set probesize to 256 MiB:
+    av_dict_set(&options, "probesize", "268435456", 0);
 
-    // set analyze duration to 10 seconds:
-    av_dict_set(&options, "analyzeduration", "10000000", 0);
+    // set analyze duration to 30 seconds:
+    av_dict_set(&options, "analyzeduration", "30000000", 0);
 
     // set genpts:
     av_dict_set(&options, "fflags", "genpts", 0);
@@ -238,9 +238,67 @@ namespace yae
       return false;
     }
 
+    // get the programs:
+    for (unsigned int i = 0; i < context_->nb_programs; i++)
+    {
+      const AVProgram * p = context_->programs[i];
+      programs_.push_back(TProgramInfo());
+      TProgramInfo & info = programs_.back();
+      info.id_ = p->id;
+      info.program_ = p->program_num;
+      info.pmt_pid_ = p->pmt_pid;
+      info.pcr_pid_ = p->pcr_pid;
+
+      const AVDictionaryEntry * start = NULL;
+      while (true)
+      {
+        AVDictionaryEntry * found =
+          av_dict_get(p->metadata, "", start, AV_DICT_IGNORE_SUFFIX);
+
+        if (!found)
+        {
+          break;
+        }
+
+        info.metadata_[std::string(found->key)] = std::string(found->value);
+        start = found;
+      }
+
+      for (unsigned int j = 0; j < p->nb_stream_indexes; j++)
+      {
+        unsigned int streamIndex = p->stream_index[j];
+        streamIndexToProgramIndex_[streamIndex] = i;
+      }
+    }
+
+    if (context_->nb_programs < 1)
+    {
+      // there must be at least 1 implied program:
+      programs_.push_back(TProgramInfo());
+
+      for (unsigned int i = 0; i < context_->nb_streams; i++)
+      {
+        streamIndexToProgramIndex_[i] = 0;
+      }
+    }
+
     for (unsigned int i = 0; i < context_->nb_streams; i++)
     {
       AVStream * stream = context_->streams[i];
+
+      // lookup which program this stream belongs to:
+      TProgramInfo * program = NULL;
+      {
+        std::map<int, int>::const_iterator
+          found = streamIndexToProgramIndex_.find(i);
+
+        if (found != streamIndexToProgramIndex_.end())
+        {
+          program = &programs_[found->second];
+        }
+
+        YAE_ASSERT(program);
+      }
 
       // extract attachments:
       if (stream->codecpar->codec_type == AVMEDIA_TYPE_ATTACHMENT)
@@ -293,6 +351,11 @@ namespace yae
             // avfilter does not support these pixel formats:
             traits.pixelFormat_ != kPixelFormatUYYVYY411)
         {
+          if (program)
+          {
+            program->video_.push_back(videoTracks_.size());
+          }
+
           stream->discard = AVDISCARD_DEFAULT;
           videoTracks_.push_back(track);
         }
@@ -308,6 +371,11 @@ namespace yae
         AudioTraits traits;
         if (track->getTraits(traits))
         {
+          if (program)
+          {
+            program->audio_.push_back(audioTracks_.size());
+          }
+
           stream->discard = AVDISCARD_DEFAULT;
           audioTracks_.push_back(track);
         }
@@ -332,6 +400,11 @@ namespace yae
         if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
             stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
+          if (program)
+          {
+            program->subs_.push_back(subs_.size());
+          }
+
           subsIdx_[i] = subs_.size();
           TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
           subs_.push_back(subsTrk);
@@ -378,8 +451,50 @@ namespace yae
     audioTracks_.clear();
     subs_.clear();
     subsIdx_.clear();
+    programs_.clear();
+    streamIndexToProgramIndex_.clear();
 
     avformat_close_input(&context_);
+  }
+
+  //----------------------------------------------------------------
+  // Movie::getVideoTrackInfo
+  //
+  void
+  Movie::getVideoTrackInfo(std::size_t i, TTrackInfo & info) const
+  {
+    info.ntracks_ = videoTracks_.size();
+    info.index_ = i;
+    info.lang_.clear();
+    info.name_.clear();
+
+    if (info.index_ < info.ntracks_)
+    {
+      VideoTrackPtr t = videoTracks_[info.index_];
+      info.setLang(t->getLang());
+      info.setName(t->getName());
+      info.program_ = get(streamIndexToProgramIndex_, t->stream().index);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Movie::getAudioTrackInfo
+  //
+  void
+  Movie::getAudioTrackInfo(std::size_t i, TTrackInfo & info) const
+  {
+    info.ntracks_ = audioTracks_.size();
+    info.index_ = i;
+    info.lang_.clear();
+    info.name_.clear();
+
+    if (info.index_ < info.ntracks_)
+    {
+      AudioTrackPtr t = audioTracks_[info.index_];
+      info.setLang(t->getLang());
+      info.setName(t->getName());
+      info.program_ = get(streamIndexToProgramIndex_, t->stream().index);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1445,6 +1560,7 @@ namespace yae
       const SubtitlesTrack & subs = *(subs_[i]);
       info.lang_ = subs.lang_;
       info.name_ = subs.name_;
+      info.program_ = get(streamIndexToProgramIndex_, subs.stream_->index);
       return subs.format_;
     }
 

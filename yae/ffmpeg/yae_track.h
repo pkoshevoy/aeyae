@@ -259,6 +259,10 @@ namespace yae
     // adjust frame duration:
     virtual bool setTempo(double tempo);
 
+    // accessors:
+    inline const AVStream & stream() const
+    { return *stream_; }
+
   private:
     // intentionally disabled:
     Track(const Track &);

@@ -70,6 +70,9 @@ namespace yae
     //! close currently open resource:
     virtual void close();
 
+    virtual std::size_t getNumberOfPrograms() const;
+    virtual bool getProgramInfo(std::size_t i, TProgramInfo & info) const;
+
     virtual std::size_t getNumberOfVideoTracks() const;
     virtual std::size_t getNumberOfAudioTracks() const;
 
