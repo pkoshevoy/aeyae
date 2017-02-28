@@ -296,8 +296,6 @@ namespace yae
         {
           program = &programs_[found->second];
         }
-
-        YAE_ASSERT(program);
       }
 
       // extract attachments:
@@ -341,6 +339,12 @@ namespace yae
         continue;
       }
 
+      if (!program)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
       TrackPtr baseTrack(new Track(context_, stream));
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
@@ -351,11 +355,7 @@ namespace yae
             // avfilter does not support these pixel formats:
             traits.pixelFormat_ != kPixelFormatUYYVYY411)
         {
-          if (program)
-          {
-            program->video_.push_back(videoTracks_.size());
-          }
-
+          program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
           videoTracks_.push_back(track);
         }
@@ -371,11 +371,7 @@ namespace yae
         AudioTraits traits;
         if (track->getTraits(traits))
         {
-          if (program)
-          {
-            program->audio_.push_back(audioTracks_.size());
-          }
-
+          program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
           audioTracks_.push_back(track);
         }
@@ -400,11 +396,7 @@ namespace yae
         if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
             stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
-          if (program)
-          {
-            program->subs_.push_back(subs_.size());
-          }
-
+          program->subs_.push_back(subs_.size());
           subsIdx_[i] = subs_.size();
           TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
           subs_.push_back(subsTrk);
