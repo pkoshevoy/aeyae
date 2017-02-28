@@ -99,6 +99,12 @@ namespace yae
 #endif
 
   //----------------------------------------------------------------
+  // get_duration
+  //
+  extern bool
+  get_duration(const IReader * reader, TTime & start, TTime & duration);
+
+  //----------------------------------------------------------------
   // getThumbnail
   //
   static TVideoFramePtr
@@ -161,21 +167,6 @@ namespace yae
       return frame;
     }
 
-    TTime start;
-    TTime duration;
-    if (reader->isSeekable() && reader->getVideoDuration(start, duration))
-    {
-      double t0 = start.toSeconds();
-      double offset = std::min<double>(duration.toSeconds() * 8e-2, 288.0);
-
-      // avoid seeking very short files (.jpg):
-      if (offset >= 0.016)
-      {
-        // FIXME: check for a bookmark, seek to the bookmarked position:
-        reader->seek(t0 + offset);
-      }
-    }
-
     ISettingGroup * readerSettings = reader->settings();
     if (readerSettings)
     {
@@ -188,11 +179,31 @@ namespace yae
       }
     }
 
+    QueueWaitMgr waitMgr;
+    TTime start;
+    TTime duration;
+    if (reader->isSeekable() && get_duration(reader.get(), start, duration))
+    {
+      double offset = std::min<double>(duration.toSeconds() * 8e-2, 288.0);
+
+      // avoid seeking very short files (.jpg):
+      if (offset >= 0.016 && reader->readVideo(frame, &waitMgr))
+      {
+        if (frame)
+        {
+          start = frame->time_;
+        }
+
+        // FIXME: check for a bookmark, seek to the bookmarked position:
+        double t0 = start.toSeconds();
+        reader->seek(t0 + offset);
+      }
+    }
+
     reader->setPlaybackEnabled(true);
     reader->threadStart();
 
-    QueueWaitMgr waitMgr_;
-    while (reader->readVideo(frame, &waitMgr_) &&
+    while (reader->readVideo(frame, &waitMgr) &&
            (!frame || !frame->data_ ||
             yae::resetTimeCountersIndicated(frame.get())))
     {}

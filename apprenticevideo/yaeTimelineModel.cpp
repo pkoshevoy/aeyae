@@ -253,10 +253,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimelineModel::reset
+  // get_duration
   //
-  void
-  TimelineModel::reset(IReader * reader)
+  bool
+  get_duration(const IReader * reader, TTime & start, TTime & duration)
   {
     TTime audioStart;
     TTime audioDuration;
@@ -266,13 +266,27 @@ namespace yae
     TTime videoDuration;
     bool videoOk = reader->getVideoDuration(videoStart, videoDuration);
 
-    TTime start = audioOk ? audioStart : videoStart;
-    TTime duration = audioOk ? audioDuration : videoDuration;
+    start = audioOk ? audioStart : videoStart;
+    duration = audioOk ? audioDuration : videoDuration;
+
     if (audioOk && videoOk && videoStart < audioStart)
     {
       start = videoStart;
       duration = videoDuration;
     }
+
+    return videoOk || audioOk;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::reset
+  //
+  void
+  TimelineModel::reset(IReader * reader)
+  {
+    TTime start;
+    TTime duration;
+    get_duration(reader, start, duration);
 
     frameRate_ = 100.0;
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
