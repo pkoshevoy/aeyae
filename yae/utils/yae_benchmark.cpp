@@ -83,14 +83,18 @@ namespace yae
           path_(path),
           name_(name),
           n_(0),
-          t_(0)
-        {}
+          t_(0),
+          fresh_(true)
+        {
+          YAE_ASSERT(*name);
+        }
 
         std::size_t depth_;
         std::string path_;
         std::string name_;
         uint64 n_; // total number of occurrances
         uint64 t_; // total time spent, measured in microseconds
+        bool fresh_;
       };
 
       boost::chrono::steady_clock::time_point t0_;
@@ -150,6 +154,10 @@ namespace yae
       Timesheet::Entry newEntry(ts.depth_, entryPath, description);
       entries.insert(lower_bound, std::make_pair(key_, newEntry));
     }
+    else
+    {
+      lower_bound->second.fresh_ = true;
+    }
 
     ts.depth_++;
 
@@ -176,22 +184,28 @@ namespace yae
     boost::thread::id threadId = boost::this_thread::get_id();
     Timesheet & ts = tss_[threadId];
 
-    if (t0_ < ts.t0_)
+    std::map<std::string, Timesheet::Entry>::iterator
+      found = ts.entries_.find(key_);
+
+    if (found == ts.entries_.end())
     {
       // this benchmark was created before timesheet was cleared, ignore it:
       return;
     }
 
     // lookup this benchmark timesheet entry:
-    Timesheet::Entry & entry = ts.entries_[key_];
+    Timesheet::Entry & entry = found->second;
     YAE_ASSERT(entry.name_.size() && entry.name_[0]);
 
     entry.n_++;
     entry.t_ += dt;
 
-    YAE_ASSERT(ts.depth_ > 0);
-    ts.depth_--;
-    ts.path_ = entry.path_;
+    if (entry.fresh_)
+    {
+      YAE_ASSERT(ts.depth_ > 0);
+      ts.depth_--;
+      ts.path_ = entry.path_;
+    }
   }
 
   //----------------------------------------------------------------
@@ -220,6 +234,10 @@ namespace yae
              i = entries.begin(); i != entries.end(); ++i)
       {
         const Timesheet::Entry & entry = i->second;
+        if (entry.n_ < 1)
+        {
+          continue;
+        }
 
         oss
           << "  "
@@ -255,7 +273,47 @@ namespace yae
   TBenchmark::Private::clear()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
-    tss_.clear();
+
+    for (std::map<boost::thread::id, Timesheet>::iterator
+           j = tss_.begin(), j1; j != tss_.end(); )
+    {
+      j1 = j; ++j1;
+
+      // shortcuts:
+      Timesheet & ts = j->second;
+      std::map<std::string, Timesheet::Entry> & entries = ts.entries_;
+
+      for (std::map<std::string, Timesheet::Entry>::iterator
+             i = entries.begin(), i1; i != entries.end(); )
+      {
+        i1 = i; ++i1;
+
+        Timesheet::Entry & entry = i->second;
+        if (entry.n_ > 0)
+        {
+          entries.erase(i);
+        }
+        else
+        {
+          entry.fresh_ = false;
+        }
+
+        i = i1;
+      }
+
+      if (entries.empty())
+      {
+        tss_.erase(j);
+      }
+      else
+      {
+        ts.depth_ = 0;
+        ts.path_ = "/";
+        ts.t0_ = boost::chrono::steady_clock::now();
+      }
+
+      j = j1;
+    }
   }
 
 
