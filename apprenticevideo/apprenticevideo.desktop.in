@@ -1,6 +1,6 @@
 [Desktop Entry]
 Comment=https://sourceforge.net/projects/apprenticevideo/
-Exec=@CMAKE_INSTALL_PREFIX@/bin/apprenticevideo.sh %U
+Exec=@CMAKE_INSTALL_PREFIX@/bin/apprenticevideo %U
 GenericName=Media Player
 Categories=Qt;AudioVideo;Video;Player;
 Icon=@CMAKE_INSTALL_PREFIX@/share/icons/apprenticevideo.png
