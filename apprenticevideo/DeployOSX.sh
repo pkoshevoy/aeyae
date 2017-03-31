@@ -774,7 +774,7 @@ DeployAppBundle()
 	fi
 
 	# create a temp file to keep the list of deployed files:
-	DONELIST=$(mktemp -t DeployOSX.sh) || exit 12
+	DONELIST=$(mktemp -t DeployOSX.sh.XXXXXX) || exit 12
 
 	quiet_pushd "${BUNDLE_PATH}"/Contents
 	BASE=$(pwd)
