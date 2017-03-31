@@ -709,16 +709,6 @@ if (NOT (WIN32 OR APPLE))
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   configure_file(
-    "${PROJECT_SOURCE_DIR}/${PROGNAME}.sh.in"
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.sh"
-    @ONLY
-    )
-
-  install(PROGRAMS "${PROJECT_BINARY_DIR}/${PROGNAME}.sh"
-    DESTINATION bin
-    )
-
-  configure_file(
     "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
     "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
     @ONLY
