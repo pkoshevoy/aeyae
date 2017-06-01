@@ -231,6 +231,8 @@ get_dependencies(std::vector<std::string> & deps,
           }
 
           // check if the path is allowed:
+          bool allow = false;
+
           for (std::list<std::string>::const_iterator i = allowed.begin();
                i != allowed.end(); ++i)
           {
@@ -243,8 +245,14 @@ get_dependencies(std::vector<std::string> & deps,
                 deps.push_back(path);
               }
 
+              allow = true;
               break;
             }
+          }
+
+          if (!allow)
+          {
+            std::cerr << "NOT ALLOWED: " << path << std::endl;
           }
         }
       }

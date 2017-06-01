@@ -179,6 +179,9 @@ namespace yae
       }
     }
 
+    reader->setPlaybackEnabled(true);
+    reader->threadStart();
+
     QueueWaitMgr waitMgr;
     TTime start;
     TTime duration;
@@ -199,9 +202,6 @@ namespace yae
         reader->seek(t0 + offset);
       }
     }
-
-    reader->setPlaybackEnabled(true);
-    reader->threadStart();
 
     while (reader->readVideo(frame, &waitMgr) &&
            (!frame || !frame->data_ ||
