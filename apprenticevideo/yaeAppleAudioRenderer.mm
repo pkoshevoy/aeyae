@@ -1,3 +1,4 @@
+#if 0
 // -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
@@ -16,11 +17,17 @@
 // boost includes:
 #include <boost/thread.hpp>
 
-// portaudio includes:
-#include <portaudio.h>
+// apple includes:
+#import <Cocoa/Cocoa.h>
+#import <CoreAudio/CoreAudio.h>
+#import <CoreServices/CoreServices.h>
+#import <AudioUnit/AudioUnit.h>
+#import <AudioToolbox/AudioToolbox.h>
 
 // yae includes:
-#include <yaeAudioRendererPortaudio.h>
+#include "yaeAppleAudioRenderer.h"
+#include "yae/utils/yae_utils.h"
+
 
 //----------------------------------------------------------------
 // YAE_DEBUG_AUDIO_RENDERER
@@ -31,9 +38,9 @@
 namespace yae
 {
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate
+  // AppleAudioRenderer::TPrivate
   //
-  class AudioRendererPortaudio::TPrivate
+  class AppleAudioRenderer::TPrivate
   {
   public:
     TPrivate(SharedClock & sharedClock);
@@ -59,7 +66,7 @@ namespace yae
                            PaStreamCallback streamCallback,
                            void * userData);
 
-    // portaudio stream callback:
+    // apple stream callback:
     static int callback(const void * input,
                         void * output,
                         unsigned long frameCount,
@@ -67,7 +74,7 @@ namespace yae
                         PaStreamCallbackFlags statusFlags,
                         void * userData);
 
-    // a helper used by the portaudio stream callback:
+    // a helper used by the apple stream callback:
     int serviceTheCallback(const void * input,
                            void * output,
                            unsigned long frameCount,
@@ -103,9 +110,9 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::TPrivate
+  // AppleAudioRenderer::TPrivate::TPrivate
   //
-  AudioRendererPortaudio::TPrivate::TPrivate(SharedClock & sharedClock):
+  AppleAudioRenderer::TPrivate::TPrivate(SharedClock & sharedClock):
     initErr_(Pa_Initialize()),
     reader_(NULL),
     output_(NULL),
@@ -125,9 +132,9 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::~TPrivate
+  // AppleAudioRenderer::TPrivate::~TPrivate
   //
-  AudioRendererPortaudio::TPrivate::~TPrivate()
+  AppleAudioRenderer::TPrivate::~TPrivate()
   {
     if (initErr_ == paNoError)
     {
@@ -136,10 +143,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::match
+  // AppleAudioRenderer::TPrivate::match
   //
   void
-  AudioRendererPortaudio::TPrivate::match(const AudioTraits & srcAtts,
+  AppleAudioRenderer::TPrivate::match(const AudioTraits & srcAtts,
                                           AudioTraits & outAtts) const
   {
     if (&outAtts != &srcAtts)
@@ -216,10 +223,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::open
+  // AppleAudioRenderer::TPrivate::open
   //
   bool
-  AudioRendererPortaudio::TPrivate::open(IReader * reader)
+  AppleAudioRenderer::TPrivate::open(IReader * reader)
   {
     stop();
 
@@ -260,10 +267,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::stop
+  // AppleAudioRenderer::TPrivate::stop
   //
   void
-  AudioRendererPortaudio::TPrivate::stop()
+  AppleAudioRenderer::TPrivate::stop()
   {
     pause_ = false;
     terminator_.stopWaiting(true);
@@ -277,28 +284,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::close
+  // AppleAudioRenderer::TPrivate::close
   //
   void
-  AudioRendererPortaudio::TPrivate::close()
+  AppleAudioRenderer::TPrivate::close()
   {
     open(NULL);
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::pause
+  // AppleAudioRenderer::TPrivate::pause
   //
   void
-  AudioRendererPortaudio::TPrivate::pause(bool paused)
+  AppleAudioRenderer::TPrivate::pause(bool paused)
   {
     pause_ = paused;
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::maybeReadOneFrame
+  // AppleAudioRenderer::TPrivate::maybeReadOneFrame
   //
   void
-  AudioRendererPortaudio::TPrivate::maybeReadOneFrame(IReader * reader,
+  AppleAudioRenderer::TPrivate::maybeReadOneFrame(IReader * reader,
                                                       TTime & framePosition)
   {
     while (!audioFrame_)
@@ -344,10 +351,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::skipToTime
+  // AppleAudioRenderer::TPrivate::skipToTime
   //
   void
-  AudioRendererPortaudio::TPrivate::skipToTime(const TTime & t,
+  AppleAudioRenderer::TPrivate::skipToTime(const TTime & t,
                                                IReader * reader)
   {
     terminator_.stopWaiting(true);
@@ -433,10 +440,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::skipForward
+  // AppleAudioRenderer::TPrivate::skipForward
   //
   void
-  AudioRendererPortaudio::TPrivate::skipForward(const TTime & dt,
+  AppleAudioRenderer::TPrivate::skipForward(const TTime & dt,
                                                 IReader * reader)
   {
     TTime framePosition;
@@ -449,10 +456,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::openStream
+  // AppleAudioRenderer::TPrivate::openStream
   //
   bool
-  AudioRendererPortaudio::TPrivate::
+  AppleAudioRenderer::TPrivate::
   openStream(const AudioTraits & atts,
              PaStream ** outputStream,
              PaStreamParameters * outputParams,
@@ -531,10 +538,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::callback
+  // AppleAudioRenderer::TPrivate::callback
   //
   int
-  AudioRendererPortaudio::TPrivate::
+  AppleAudioRenderer::TPrivate::
   callback(const void * input,
            void * output,
            unsigned long samplesToRead, // per channel
@@ -555,7 +562,7 @@ namespace yae
     {
 #ifndef NDEBUG
       std::cerr
-        << "AudioRendererPortaudio::TPrivate::callback: "
+        << "AppleAudioRenderer::TPrivate::callback: "
         << "abort due to exception: " << e.what()
         << std::endl;
 #endif
@@ -564,7 +571,7 @@ namespace yae
     {
 #ifndef NDEBUG
       std::cerr
-        << "AudioRendererPortaudio::TPrivate::callback: "
+        << "AppleAudioRenderer::TPrivate::callback: "
         << "abort due to unexpected exception"
         << std::endl;
 #endif
@@ -596,10 +603,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::serviceTheCallback
+  // AppleAudioRenderer::TPrivate::serviceTheCallback
   //
   int
-  AudioRendererPortaudio::TPrivate::
+  AppleAudioRenderer::TPrivate::
   serviceTheCallback(const void * /* input */,
                      void * output,
                      unsigned long samplesToRead, // per channel
@@ -779,108 +786,109 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::AudioRendererPortaudio
+  // AppleAudioRenderer::AppleAudioRenderer
   //
-  AudioRendererPortaudio::AudioRendererPortaudio():
+  AppleAudioRenderer::AppleAudioRenderer():
     private_(new TPrivate(ISynchronous::clock_))
   {}
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::~AudioRendererPortaudio
+  // AppleAudioRenderer::~AppleAudioRenderer
   //
-  AudioRendererPortaudio::~AudioRendererPortaudio()
+  AppleAudioRenderer::~AppleAudioRenderer()
   {
     delete private_;
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::create
+  // AppleAudioRenderer::create
   //
-  AudioRendererPortaudio *
-  AudioRendererPortaudio::create()
+  AppleAudioRenderer *
+  AppleAudioRenderer::create()
   {
-    return new AudioRendererPortaudio();
+    return new AppleAudioRenderer();
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::destroy
+  // AppleAudioRenderer::destroy
   //
   void
-  AudioRendererPortaudio::destroy()
+  AppleAudioRenderer::destroy()
   {
     delete this;
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::getName
+  // AppleAudioRenderer::getName
   //
   const char *
-  AudioRendererPortaudio::getName() const
+  AppleAudioRenderer::getName() const
   {
     return typeid(*this).name();
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::match
+  // AppleAudioRenderer::match
   //
   void
-  AudioRendererPortaudio::match(const AudioTraits & source,
+  AppleAudioRenderer::match(const AudioTraits & source,
                                 AudioTraits & output) const
   {
     return private_->match(source, output);
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::open
+  // AppleAudioRenderer::open
   //
   bool
-  AudioRendererPortaudio::open(IReader * reader)
+  AppleAudioRenderer::open(IReader * reader)
   {
     return private_->open(reader);
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::stop
+  // AppleAudioRenderer::stop
   //
   void
-  AudioRendererPortaudio::stop()
+  AppleAudioRenderer::stop()
   {
     private_->stop();
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::close
+  // AppleAudioRenderer::close
   //
   void
-  AudioRendererPortaudio::close()
+  AppleAudioRenderer::close()
   {
     private_->close();
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::pause
+  // AppleAudioRenderer::pause
   //
   void
-  AudioRendererPortaudio::pause(bool paused)
+  AppleAudioRenderer::pause(bool paused)
   {
     private_->pause(paused);
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::skipToTime
+  // AppleAudioRenderer::skipToTime
   //
   void
-  AudioRendererPortaudio::skipToTime(const TTime & t, IReader * reader)
+  AppleAudioRenderer::skipToTime(const TTime & t, IReader * reader)
   {
     private_->skipToTime(t, reader);
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::skipForward
+  // AppleAudioRenderer::skipForward
   //
   void
-  AudioRendererPortaudio::skipForward(const TTime & dt, IReader * reader)
+  AppleAudioRenderer::skipForward(const TTime & dt, IReader * reader)
   {
     private_->skipForward(dt, reader);
   }
 }
+#endif // 0

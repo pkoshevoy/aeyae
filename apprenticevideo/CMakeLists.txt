@@ -124,8 +124,8 @@ set(project_uis
   )
 
 set(project_sources
-  yaeAudioRendererPortaudio.h
-  yaeAudioRendererPortaudio.cpp
+  yaeAudioRendererInput.h
+  yaeAudioRendererInput.cpp
   yaeBBox.cpp
   yaeBBox.h
   yaeBookmarks.h
@@ -181,6 +181,8 @@ set(project_sources
   yaePlaylistView.cpp
   yaePlaylistViewStyle.h
   yaePlaylistViewStyle.cpp
+  yaePortaudioRenderer.h
+  yaePortaudioRenderer.cpp
   yaeProperty.h
   yaeRectangle.cpp
   yaeRectangle.h
@@ -249,6 +251,8 @@ if (APPLE)
 
   set(project_sources
     ${project_sources}
+    yaeAppleAudioRenderer.h
+    yaeAppleAudioRenderer.mm
     yaeAppleRemoteControl.h
     yaeAppleRemoteControl.mm
     yaeAppleUtils.h

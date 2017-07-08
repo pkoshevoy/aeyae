@@ -47,12 +47,12 @@
 #include "yae/video/yae_video_renderer.h"
 
 // local includes:
-#include "yaeAudioRendererPortaudio.h"
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasQuickFbo.h"
 #include "yaeUtilsQml.h"
 #endif
 #include "yaeMainWindow.h"
+#include "yaePortaudioRenderer.h"
 #include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
@@ -350,7 +350,7 @@ namespace yae
     YAE_ASSERT(readerPrototype_);
     reader_.reset(readerPrototype_->clone());
 
-    audioRenderer_ = AudioRendererPortaudio::create();
+    audioRenderer_ = PortaudioRenderer::create();
     videoRenderer_ = VideoRenderer::create();
 
     // setup the Open URL dialog:

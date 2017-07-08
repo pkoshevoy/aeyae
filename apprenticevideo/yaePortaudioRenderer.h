@@ -6,8 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_AUDIO_RENDERER_PORTAUDIO_H_
-#define YAE_AUDIO_RENDERER_PORTAUDIO_H_
+#ifndef YAE_PORTAUDIO_RENDERER_H_
+#define YAE_PORTAUDIO_RENDERER_H_
 
 // system includes:
 #include <string>
@@ -23,23 +23,23 @@ namespace yae
   //----------------------------------------------------------------
   // AudioRenderer
   //
-  struct YAE_API AudioRendererPortaudio : public IAudioRenderer
+  struct YAE_API PortaudioRenderer : public IAudioRenderer
   {
   private:
     //! intentionally disabled:
-    AudioRendererPortaudio(const AudioRendererPortaudio &);
-    AudioRendererPortaudio & operator = (const AudioRendererPortaudio &);
+    PortaudioRenderer(const PortaudioRenderer &);
+    PortaudioRenderer & operator = (const PortaudioRenderer &);
 
     //! private implementation details:
     class TPrivate;
     TPrivate * private_;
 
   protected:
-    AudioRendererPortaudio();
-    ~AudioRendererPortaudio();
+    PortaudioRenderer();
+    ~PortaudioRenderer();
 
   public:
-    static AudioRendererPortaudio * create();
+    static PortaudioRenderer * create();
     virtual void destroy();
 
     //! return a human readable name for this renderer (preferably unique):
@@ -71,4 +71,4 @@ namespace yae
 }
 
 
-#endif // YAE_AUDIO_RENDERER_PORTAUDIO_H_
+#endif // YAE_PORTAUDIO_RENDERER_H_
