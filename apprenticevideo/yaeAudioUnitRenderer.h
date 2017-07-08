@@ -1,14 +1,13 @@
-#if 0
 // -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
 // NOTE: the first line of this file sets up source code indentation rules
 // for Emacs; it is also a hint to anyone modifying this file.
 
-// Created      : Sat Feb  5 21:57:57 MST 2011
+// Created      : Sat Jul  8 13:10:51 MDT 2017
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_APPLE_AUDIO_RENDERER_H_
-#define YAE_APPLE_AUDIO_RENDERER_H_
+#ifndef YAE_AUDIOUNIT_RENDERER_H_
+#define YAE_AUDIOUNIT_RENDERER_H_
 
 // system includes:
 #include <string>
@@ -24,23 +23,23 @@ namespace yae
   //----------------------------------------------------------------
   // AudioRenderer
   //
-  struct YAE_API AppleAudioRenderer : public IAudioRenderer
+  struct YAE_API AudioUnitRenderer : public IAudioRenderer
   {
   private:
     //! intentionally disabled:
-    AppleAudioRenderer(const AppleAudioRenderer &);
-    AppleAudioRenderer & operator = (const AppleAudioRenderer &);
+    AudioUnitRenderer(const AudioUnitRenderer &);
+    AudioUnitRenderer & operator = (const AudioUnitRenderer &);
 
     //! private implementation details:
     class TPrivate;
     TPrivate * private_;
 
   protected:
-    AppleAudioRenderer();
-    ~AppleAudioRenderer();
+    AudioUnitRenderer();
+    ~AudioUnitRenderer();
 
   public:
-    static AppleAudioRenderer * create();
+    static AudioUnitRenderer * create();
     virtual void destroy();
 
     //! return a human readable name for this renderer (preferably unique):
@@ -72,5 +71,4 @@ namespace yae
 }
 
 
-#endif // YAE_APPLE_AUDIO_RENDERER_H_
-#endif // 0
+#endif // YAE_AUDIOUNIT_RENDERER_H_

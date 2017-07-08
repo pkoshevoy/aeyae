@@ -78,13 +78,6 @@ endif ()
 
 
 
-set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
-  CACHE
-  PATH "root path for portaudio lib/ and include/ folders")
-find_library(PORTAUDIO_LIBRARY portaudio
-  PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "portaudio library")
-
 set(GLEW_DIR "$ENV{GLEW_DIR}"
   CACHE
   PATH "root path for GLEW lib/ and include/ folders")
@@ -181,8 +174,6 @@ set(project_sources
   yaePlaylistView.cpp
   yaePlaylistViewStyle.h
   yaePlaylistViewStyle.cpp
-  yaePortaudioRenderer.h
-  yaePortaudioRenderer.cpp
   yaeProperty.h
   yaeRectangle.cpp
   yaeRectangle.h
@@ -251,12 +242,12 @@ if (APPLE)
 
   set(project_sources
     ${project_sources}
-    yaeAppleAudioRenderer.h
-    yaeAppleAudioRenderer.mm
     yaeAppleRemoteControl.h
     yaeAppleRemoteControl.mm
     yaeAppleUtils.h
     yaeAppleUtils.mm
+    yaeAudioUnitRenderer.h
+    yaeAudioUnitRenderer.mm
     martinkahr-apple_remote_control/AppleRemote.h
     martinkahr-apple_remote_control/AppleRemote.m
     martinkahr-apple_remote_control/HIDRemoteControlDevice.h
@@ -265,6 +256,11 @@ if (APPLE)
     martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
     martinkahr-apple_remote_control/RemoteControl.h
     martinkahr-apple_remote_control/RemoteControl.m)
+else ()
+  set(project_sources
+    ${project_sources}
+    yaePortaudioRenderer.h
+    yaePortaudioRenderer.cpp)
 endif ()
 
 find_path(LIBASS_INCLUDE_DIR
@@ -280,18 +276,28 @@ if (LIBASS_INCLUDE_DIR)
   include_directories(AFTER ${LIBASS_INCLUDE_DIR})
 endif ()
 
-find_path(PORTAUDIO_INCLUDE_DIR
-  portaudio.h
-  PATHS
-  ${PORTAUDIO_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
+if (NOT (APPLE))
+  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
+    CACHE
+    PATH "root path for portaudio lib/ and include/ folders")
 
-if (PORTAUDIO_INCLUDE_DIR)
-  include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
-endif ()
+  find_library(PORTAUDIO_LIBRARY portaudio
+    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
+    DOC "portaudio library")
+
+  find_path(PORTAUDIO_INCLUDE_DIR
+    portaudio.h
+    PATHS
+    ${PORTAUDIO_DIR}/include
+    ${FFMPEG_HEADERS_PATH}
+    /usr/include
+    /usr/local/include
+    /opt/local/include)
+
+  if (PORTAUDIO_INCLUDE_DIR)
+    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
+  endif ()
+endif()
 
 find_path(GLEW_INCLUDE_DIR
   GL/glew.h
@@ -401,24 +407,25 @@ endif ()
 
 if (PORTAUDIO_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
-  if (APPLE)
-    find_library(CORE_AUDIO_FRAMEWORK CoreAudio)
-    mark_as_advanced(CORE_AUDIO_FRAMEWORK)
-    if (CORE_AUDIO_FRAMEWORK)
-      set(TARGET_LIBS ${TARGET_LIBS} ${CORE_AUDIO_FRAMEWORK})
-    endif ()
+endif ()
 
-    find_library(AUDIO_TOOLBOX_FRAMEWORK AudioToolbox)
-    mark_as_advanced(AUDIO_TOOLBOX_FRAMEWORK)
-    if (AUDIO_TOOLBOX_FRAMEWORK)
-      set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_TOOLBOX_FRAMEWORK})
-    endif ()
+if (APPLE)
+  find_library(CORE_AUDIO_FRAMEWORK CoreAudio)
+  mark_as_advanced(CORE_AUDIO_FRAMEWORK)
+  if (CORE_AUDIO_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${CORE_AUDIO_FRAMEWORK})
+  endif ()
 
-    find_library(AUDIO_UNIT_FRAMEWORK AudioUnit)
-    mark_as_advanced(AUDIO_UNIT_FRAMEWORK)
-    if (AUDIO_UNIT_FRAMEWORK)
-      set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_UNIT_FRAMEWORK})
-    endif ()
+  find_library(AUDIO_TOOLBOX_FRAMEWORK AudioToolbox)
+  mark_as_advanced(AUDIO_TOOLBOX_FRAMEWORK)
+  if (AUDIO_TOOLBOX_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_TOOLBOX_FRAMEWORK})
+  endif ()
+
+  find_library(AUDIO_UNIT_FRAMEWORK AudioUnit)
+  mark_as_advanced(AUDIO_UNIT_FRAMEWORK)
+  if (AUDIO_UNIT_FRAMEWORK)
+    set(TARGET_LIBS ${TARGET_LIBS} ${AUDIO_UNIT_FRAMEWORK})
   endif ()
 endif ()
 

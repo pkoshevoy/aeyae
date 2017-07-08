@@ -47,6 +47,9 @@
 #include "yae/video/yae_video_renderer.h"
 
 // local includes:
+#ifdef __APPLE__
+#include "yaeAudioUnitRenderer.h"
+#endif
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include "yaeCanvasQuickFbo.h"
 #include "yaeUtilsQml.h"
@@ -350,7 +353,11 @@ namespace yae
     YAE_ASSERT(readerPrototype_);
     reader_.reset(readerPrototype_->clone());
 
+#ifdef __APPLE__
+    audioRenderer_ = AudioUnitRenderer::create();
+#else
     audioRenderer_ = PortaudioRenderer::create();
+#endif
     videoRenderer_ = VideoRenderer::create();
 
     // setup the Open URL dialog:

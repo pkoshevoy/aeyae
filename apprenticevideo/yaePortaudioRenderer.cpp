@@ -24,12 +24,6 @@
 #include "yaePortaudioRenderer.h"
 
 
-//----------------------------------------------------------------
-// YAE_DEBUG_AUDIO_RENDERER
-//
-#define YAE_DEBUG_AUDIO_RENDERER 0
-
-
 namespace yae
 {
   //----------------------------------------------------------------
