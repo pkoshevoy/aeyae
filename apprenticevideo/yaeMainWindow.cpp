@@ -75,12 +75,6 @@ namespace yae
     QString::fromUtf8("ResumePlaybackFromBookmark");
 
   //----------------------------------------------------------------
-  // kAudioDevice
-  //
-  static const QString kAudioDevice =
-    QString::fromUtf8("AudioDevice");
-
-  //----------------------------------------------------------------
   // kDownmixToStereo
   //
   static const QString kDownmixToStereo =
@@ -245,8 +239,6 @@ namespace yae
   //
   MainWindow::MainWindow(const IReaderPtr & readerPrototype):
     QMainWindow(NULL, 0),
-    audioDeviceGroup_(NULL),
-    audioDeviceMapper_(NULL),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),
@@ -426,12 +418,6 @@ namespace yae
     bool skipNonReferenceFrames =
       loadBooleanSettingOrDefault(kSkipNonReferenceFrames, false);
     actionSkipNonReferenceFrames->setChecked(skipNonReferenceFrames);
-
-    QString audioDevice;
-    if (loadSetting(kAudioDevice, audioDevice))
-    {
-      audioDevice_ = audioDevice.toUtf8().constData();
-    }
 
 #if 1
     actionFullScreen->setShortcut(tr("Ctrl+F"));
@@ -911,10 +897,6 @@ namespace yae
 
     ok = connect(&timelineModel_, SIGNAL(clockStopped(const SharedClock &)),
                  this, SLOT(playbackFinished(const SharedClock &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(menuAudioDevice, SIGNAL(aboutToShow()),
-                 this, SLOT(populateAudioDeviceMenu()));
     YAE_ASSERT(ok);
 
     ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
@@ -2771,33 +2753,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::audioSelectDevice
-  //
-  void
-  MainWindow::audioSelectDevice(const QString & audioDevice)
-  {
-#if 0
-    std::cerr << "audioSelectDevice: "
-              << audioDevice.toUtf8().constData() << std::endl;
-#endif
-
-    saveSetting(kAudioDevice, audioDevice);
-
-    TIgnoreClockStop ignoreClockStop(timelineModel_);
-    reader_->threadStop();
-    stopRenderers();
-
-    audioDevice_.assign(audioDevice.toUtf8().constData());
-    prepareReaderAndRenderers(reader_.get(), playbackPaused_);
-
-    double t = timelineModel_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
-
-    resumeRenderers();
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::audioSelectTrack
   //
   void
@@ -3263,59 +3218,6 @@ namespace yae
     canvas_->libassFlushTrack();
 
     resumeRenderers(true);
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::populateAudioDeviceMenu
-  //
-  void
-  MainWindow::populateAudioDeviceMenu()
-  {
-    menuAudioDevice->clear();
-    if (!audioRenderer_)
-    {
-      return;
-    }
-
-    // update the UI:
-    delete audioDeviceGroup_;
-    audioDeviceGroup_ = new QActionGroup(this);
-
-    delete audioDeviceMapper_;
-    audioDeviceMapper_ = new QSignalMapper(this);
-
-    bool ok = connect(audioDeviceMapper_, SIGNAL(mapped(const QString &)),
-                      this, SLOT(audioSelectDevice(const QString &)));
-    YAE_ASSERT(ok);
-
-    std::string devName;
-    unsigned int defaultDev = audioRenderer_->getDefaultDeviceIndex();
-    audioRenderer_->getDeviceName(defaultDev, devName);
-
-    std::size_t numDevices = audioRenderer_->countAvailableDevices();
-    unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
-    if (deviceIndex >= numDevices)
-    {
-      // select new default output in case original has disappeared:
-      audioRenderer_->getDeviceName(defaultDev, audioDevice_);
-    }
-
-    for (std::size_t i = 0; i < numDevices; i++)
-    {
-      audioRenderer_->getDeviceName((unsigned int)i, devName);
-
-      QString device = QString::fromUtf8(devName.c_str());
-      QAction * deviceAction = new QAction(device, this);
-      menuAudioDevice->addAction(deviceAction);
-      deviceAction->setCheckable(true);
-      deviceAction->setChecked(devName == audioDevice_);
-      audioDeviceGroup_->addAction(deviceAction);
-
-      ok = connect(deviceAction, SIGNAL(triggered()),
-                   audioDeviceMapper_, SLOT(map()));
-      YAE_ASSERT(ok);
-      audioDeviceMapper_->setMapping(deviceAction, device);
-    }
   }
 
   //----------------------------------------------------------------
@@ -4388,8 +4290,8 @@ namespace yae
     // update the renderers:
     if (!frameStepping)
     {
-      unsigned int audioDeviceIndex = adjustAudioTraitsOverride(reader);
-      if (!audioRenderer_->open(audioDeviceIndex, reader))
+      adjustAudioTraitsOverride(reader);
+      if (!audioRenderer_->open(reader))
       {
         videoRenderer_->takeThisClock(sharedClock);
         videoRenderer_->obeyThisClock(videoRenderer_->clock());
@@ -5081,17 +4983,9 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::adjustAudioTraitsOverride
   //
-  unsigned int
+  void
   MainWindow::adjustAudioTraitsOverride(IReader * reader)
   {
-    unsigned int numDevices = audioRenderer_->countAvailableDevices();
-    unsigned int deviceIndex = audioRenderer_->getDeviceIndex(audioDevice_);
-    if (deviceIndex >= numDevices)
-    {
-      deviceIndex = audioRenderer_->getDefaultDeviceIndex();
-      audioRenderer_->getDeviceName(deviceIndex, audioDevice_);
-    }
-
     AudioTraits native;
     if (reader->getAudioTraits(native))
     {
@@ -5102,7 +4996,7 @@ namespace yae
       }
 
       AudioTraits supported;
-      audioRenderer_->match(deviceIndex, native, supported);
+      audioRenderer_->match(native, supported);
 
 #if 0
       std::cerr << "supported: " << supported.channelLayout_ << std::endl
@@ -5111,8 +5005,6 @@ namespace yae
 
       reader->setAudioTraitsOverride(supported);
     }
-
-    return deviceIndex;
   }
 
   //----------------------------------------------------------------

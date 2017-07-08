@@ -39,19 +39,10 @@ namespace yae
     TPrivate(SharedClock & sharedClock);
     ~TPrivate();
 
-    unsigned int countAvailableDevices() const;
-    unsigned int getDefaultDeviceIndex() const;
-
-    bool getDeviceName(unsigned int deviceIndex,
-                       std::string & deviceName) const;
-
-    unsigned int getDeviceIndex(const std::string & audioDevice) const;
-
-    void match(unsigned int deviceIndex,
-               const AudioTraits & source,
+    void match(const AudioTraits & source,
                AudioTraits & output) const;
 
-    bool open(unsigned int deviceIndex, IReader * reader);
+    bool open(IReader * reader);
     void stop();
     void close();
 
@@ -62,8 +53,7 @@ namespace yae
     void skipForward(const TTime & dt, IReader * reader);
 
   private:
-    static bool openStream(PaDeviceIndex outputDevice,
-                           const AudioTraits & atts,
+    static bool openStream(const AudioTraits & atts,
                            PaStream ** outputStream,
                            PaStreamParameters * outputParams,
                            PaStreamCallback streamCallback,
@@ -86,10 +76,6 @@ namespace yae
 
     // status code returned by Pa_Initialize:
     PaError initErr_;
-
-    // a mapping from output device enumeration to portaudio device index:
-    std::vector<PaDeviceIndex> outputDevices_;
-    unsigned int defaultDevice_;
 
     // audio source:
     IReader * reader_;
@@ -121,7 +107,6 @@ namespace yae
   //
   AudioRendererPortaudio::TPrivate::TPrivate(SharedClock & sharedClock):
     initErr_(Pa_Initialize()),
-    defaultDevice_(0),
     reader_(NULL),
     output_(NULL),
     sampleSize_(0),
@@ -133,29 +118,9 @@ namespace yae
 
     if (initErr_ != paNoError)
     {
-      std::string err("Pa_Initialize did not succeed: ");
+      std::string err("Pa_Initialize failed: ");
       err += Pa_GetErrorText(initErr_);
       throw std::runtime_error(err);
-    }
-
-    // enumerate available output devices:
-    const PaDeviceIndex defaultDev = Pa_GetDefaultOutputDevice();
-    const PaDeviceIndex nDevsTotal = Pa_GetDeviceCount();
-
-    for (PaDeviceIndex i = 0; i < nDevsTotal; i++)
-    {
-      const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
-      if (devInfo->maxOutputChannels < 1)
-      {
-        continue;
-      }
-
-      if (defaultDev == i)
-      {
-        defaultDevice_ = (unsigned int)outputDevices_.size();
-      }
-
-      outputDevices_.push_back(i);
     }
   }
 
@@ -171,98 +136,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::countAvailableDevices
-  //
-  unsigned int
-  AudioRendererPortaudio::TPrivate::countAvailableDevices() const
-  {
-    return (unsigned int)outputDevices_.size();
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::getDefaultDeviceIndex
-  //
-  unsigned int
-  AudioRendererPortaudio::TPrivate::getDefaultDeviceIndex() const
-  {
-    return defaultDevice_;
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::getDeviceName
-  //
-  bool
-  AudioRendererPortaudio::TPrivate::
-  getDeviceName(unsigned int deviceIndex,
-                std::string & deviceName) const
-  {
-    if (deviceIndex >= countAvailableDevices())
-    {
-      return false;
-    }
-
-    const PaDeviceIndex i = outputDevices_[deviceIndex];
-    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(i);
-    if (!devInfo)
-    {
-      return false;
-    }
-
-    const PaHostApiInfo * apiInfo = Pa_GetHostApiInfo(devInfo->hostApi);
-    if (!apiInfo)
-    {
-      return false;
-    }
-
-    std::ostringstream oss;
-    oss << apiInfo->name << ": " << devInfo->name;
-    deviceName.assign(oss.str().c_str());
-
-    return true;
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::TPrivate::getDeviceIndex
-  //
-  unsigned int
-  AudioRendererPortaudio::TPrivate::
-  getDeviceIndex(const std::string & audioDevice) const
-  {
-    unsigned int numDevs = (unsigned int)outputDevices_.size();
-    for (unsigned int i = 0; i < numDevs; i++)
-    {
-      std::string devName;
-      if (getDeviceName(i, devName))
-      {
-        if (devName == audioDevice)
-        {
-          return i;
-        }
-      }
-    }
-
-    return numDevs;
-  }
-
-  //----------------------------------------------------------------
-  // testCallback
-  //
-  static int testCallback(const void * input,
-                          void * output,
-                          unsigned long samplesToRead, // per channel
-                          const PaStreamCallbackTimeInfo * timeInfo,
-                          PaStreamCallbackFlags statusFlags,
-                          void * userData)
-  {
-    return paAbort;
-  }
-
-  //----------------------------------------------------------------
   // AudioRendererPortaudio::TPrivate::match
   //
   void
-  AudioRendererPortaudio::TPrivate::match(unsigned int deviceIndex,
-                                          const AudioTraits & srcAtts,
+  AudioRendererPortaudio::TPrivate::match(const AudioTraits & srcAtts,
                                           AudioTraits & outAtts) const
   {
     if (&outAtts != &srcAtts)
@@ -270,8 +147,7 @@ namespace yae
       outAtts = srcAtts;
     }
 
-    if (outAtts.sampleFormat_ == kAudioInvalidFormat ||
-        deviceIndex >= outputDevices_.size())
+    if (outAtts.sampleFormat_ == kAudioInvalidFormat)
     {
       return;
     }
@@ -288,8 +164,8 @@ namespace yae
       outAtts.channelFormat_ = kAudioChannelsPacked;
     }
 
-    PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
-    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputDevice);
+    const PaHostApiInfo * host = Pa_GetHostApiInfo(Pa_GetDefaultHostApi());
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(host->defaultOutputDevice);
 
     int sourceChannels = getNumberOfChannels(srcAtts.channelLayout_);
     if (devInfo->maxOutputChannels < sourceChannels)
@@ -303,11 +179,10 @@ namespace yae
 
     while (true)
     {
-      if (openStream(outputDevice,
-                     outAtts,
+      if (openStream(outAtts,
                      &testStream,
                      &testStreamParams,
-                     &testCallback,
+                     NULL, // no callback, blocking mode
                      NULL))
       {
         break;
@@ -334,10 +209,7 @@ namespace yae
 
     if (testStream)
     {
-      // this is a work-around for apparent race condition deadlock
-      // of portaudio on openSUSE 42.1
-      boost::this_thread::sleep(boost::posix_time::milliseconds(16));
-
+      Pa_StopStream(testStream);
       Pa_CloseStream(testStream);
       testStream = NULL;
     }
@@ -347,8 +219,7 @@ namespace yae
   // AudioRendererPortaudio::TPrivate::open
   //
   bool
-  AudioRendererPortaudio::TPrivate::open(unsigned int deviceIndex,
-                                         IReader * reader)
+  AudioRendererPortaudio::TPrivate::open(IReader * reader)
   {
     stop();
 
@@ -373,18 +244,15 @@ namespace yae
     }
 
     AudioTraits atts;
-    if (!reader_->getAudioTraitsOverride(atts) ||
-        deviceIndex >= outputDevices_.size())
+    if (!reader_->getAudioTraitsOverride(atts))
     {
       return false;
     }
 
     sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
 
-    PaDeviceIndex outputDevice = outputDevices_[deviceIndex];
     terminator_.stopWaiting(false);
-    return openStream(outputDevice,
-                      atts,
+    return openStream(atts,
                       &output_,
                       &outputParams_,
                       &callback,
@@ -414,7 +282,7 @@ namespace yae
   void
   AudioRendererPortaudio::TPrivate::close()
   {
-    open(0, NULL);
+    open(NULL);
   }
 
   //----------------------------------------------------------------
@@ -585,8 +453,7 @@ namespace yae
   //
   bool
   AudioRendererPortaudio::TPrivate::
-  openStream(PaDeviceIndex outputDevice,
-             const AudioTraits & atts,
+  openStream(const AudioTraits & atts,
              PaStream ** outputStream,
              PaStreamParameters * outputParams,
              PaStreamCallback streamCallback,
@@ -597,9 +464,9 @@ namespace yae
       return false;
     }
 
-    outputParams->device = outputDevice;
+    const PaHostApiInfo * host = Pa_GetHostApiInfo(Pa_GetDefaultHostApi());
+    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(host->defaultOutputDevice);
 
-    const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(outputParams->device);
     outputParams->suggestedLatency = devInfo->defaultHighOutputLatency;
 
     outputParams->hostApiSpecificStreamInfo = NULL;
@@ -638,14 +505,14 @@ namespace yae
       outputParams->sampleFormat |= paNonInterleaved;
     }
 
-    PaError errCode = Pa_OpenStream(outputStream,
-                                    NULL,
-                                    outputParams,
-                                    double(atts.sampleRate_),
-                                    paFramesPerBufferUnspecified,
-                                    paNoFlag, // paClipOff,
-                                    streamCallback,
-                                    userData);
+    PaError errCode = Pa_OpenDefaultStream(outputStream,
+                                           0,
+                                           outputParams->channelCount,
+                                           outputParams->sampleFormat,
+                                           double(atts.sampleRate_),
+                                           paFramesPerBufferUnspecified,
+                                           streamCallback,
+                                           userData);
     if (errCode != paNoError)
     {
       *outputStream = NULL;
@@ -954,60 +821,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioRendererPortaudio::countAvailableDevices
-  //
-  unsigned int
-  AudioRendererPortaudio::countAvailableDevices() const
-  {
-    return private_->countAvailableDevices();
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::getDefaultDeviceIndex
-  //
-  unsigned int
-  AudioRendererPortaudio::getDefaultDeviceIndex() const
-  {
-    return private_->getDefaultDeviceIndex();
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::getDeviceName
-  //
-  bool
-  AudioRendererPortaudio::getDeviceName(unsigned int deviceIndex,
-                                        std::string & deviceName) const
-  {
-    return private_->getDeviceName(deviceIndex, deviceName);
-  }
-
-  //----------------------------------------------------------------
-  // AudioRendererPortaudio::getDeviceIndex
-  //
-  unsigned int
-  AudioRendererPortaudio::getDeviceIndex(const std::string & devName) const
-  {
-    return private_->getDeviceIndex(devName);
-  }
-
-  //----------------------------------------------------------------
   // AudioRendererPortaudio::match
   //
   void
-  AudioRendererPortaudio::match(unsigned int deviceIndex,
-                                const AudioTraits & source,
+  AudioRendererPortaudio::match(const AudioTraits & source,
                                 AudioTraits & output) const
   {
-    return private_->match(deviceIndex, source, output);
+    return private_->match(source, output);
   }
 
   //----------------------------------------------------------------
   // AudioRendererPortaudio::open
   //
   bool
-  AudioRendererPortaudio::open(unsigned int deviceIndex, IReader * reader)
+  AudioRendererPortaudio::open(IReader * reader)
   {
-    return private_->open(deviceIndex, reader);
+    return private_->open(reader);
   }
 
   //----------------------------------------------------------------

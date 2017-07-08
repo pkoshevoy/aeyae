@@ -248,7 +248,6 @@ namespace yae
 
     // audio/video menus:
     void audioDownmixToStereo();
-    void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
@@ -273,7 +272,6 @@ namespace yae
     void moveTimeIn(double seconds);
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
-    void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished(const SharedClock & c);
     void playbackStop();
@@ -326,7 +324,7 @@ namespace yae
     void adjustMenus(IReader * reader);
     void swapShortcuts();
 
-    unsigned int adjustAudioTraitsOverride(IReader * reader);
+    void adjustAudioTraitsOverride(IReader * reader);
 
     static TVideoFramePtr autoCropCallback(void * context,
                                            const TCropFrame & detected,
@@ -373,10 +371,6 @@ namespace yae
     QShortcut * shortcutRemove_;
     QShortcut * shortcutSelectAll_;
 
-    // audio device selection widget:
-    QActionGroup * audioDeviceGroup_;
-    QSignalMapper * audioDeviceMapper_;
-
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
@@ -412,9 +406,6 @@ namespace yae
     // frame editing view:
     FrameCropView frameCropView_;
     boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
-
-    // audio device:
-    std::string audioDevice_;
 
     // audio renderer:
     IAudioRenderer * audioRenderer_;

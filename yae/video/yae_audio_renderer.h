@@ -46,28 +46,14 @@ namespace yae
     //! return a human readable name for this renderer (preferably unique):
     virtual const char * getName() const = 0;
 
-    //! there may be multiple audio rendering devices available:
-    virtual unsigned int countAvailableDevices() const = 0;
-
-    //! return index of the system default audio rendering device:
-    virtual unsigned int getDefaultDeviceIndex() const = 0;
-
-    //! get device name and max audio resolution capabilities:
-    virtual bool getDeviceName(unsigned int deviceIndex,
-                               std::string & deviceName) const = 0;
-
-    //! get device index of the device specified by name:
-    virtual unsigned int getDeviceIndex(const std::string & devName) const = 0;
-
-    //! get output device audio traits matched to source audio traits,
+    //! get default output device audio traits matched to source audio traits,
     //! however output device audio traits may not be exactly the same
     //! as the source traits due to hardware constraints:
-    virtual void match(unsigned int deviceIndex,
-                       const AudioTraits & source,
+    virtual void match(const AudioTraits & source,
                        AudioTraits & output) const = 0;
 
     //! initialize a given audio rendering device:
-    virtual bool open(unsigned int deviceIndex, IReader * reader) = 0;
+    virtual bool open(IReader * reader) = 0;
 
     //! terminate audio rendering:
     virtual void stop() = 0;
