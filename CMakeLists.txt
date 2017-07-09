@@ -521,6 +521,8 @@ add_library(aeyae SHARED
 
   yae/video/yae_audio_renderer.cpp
   yae/video/yae_audio_renderer.h
+  yae/video/yae_audio_renderer_input.cpp
+  yae/video/yae_audio_renderer_input.h
   yae/video/yae_auto_crop.cpp
   yae/video/yae_auto_crop.h
   yae/video/yae_pixel_format_traits.cpp

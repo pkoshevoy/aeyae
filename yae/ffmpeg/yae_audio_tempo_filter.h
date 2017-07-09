@@ -613,10 +613,10 @@ namespace yae
       TAudioFragment &       frag = currFrag();
 
       const double prevOutputPosition =
-        (double)(prev.position_[1] - origin_[1] + window_ / 2);
+        (double)(prev.position_[1] - origin_[1] + window_ / 2) * tempo_;
 
       const double idealOutputPosition =
-        (double)(prev.position_[0] - origin_[0] + window_ / 2) / tempo_;
+        (double)(prev.position_[0] - origin_[0] + window_ / 2);
 
       const int drift = (int)(prevOutputPosition - idealOutputPosition);
 

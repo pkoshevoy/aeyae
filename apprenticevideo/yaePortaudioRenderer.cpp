@@ -20,7 +20,9 @@
 #include <portaudio.h>
 
 // yae includes:
-#include "yaeAudioRendererInput.h"
+#include "yae/video/yae_audio_renderer_input.h"
+
+// local:
 #include "yaePortaudioRenderer.h"
 
 

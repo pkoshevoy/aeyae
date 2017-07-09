@@ -154,7 +154,7 @@ namespace yae
       terminator.stopWaiting(true);
 
       double frameDuration = 0.0;
-      double f0 = double(framePosition_.time_) / double(framePosition_.base_);
+      double f0 = framePosition_.toSeconds();
       double df = frameDuration;
       double tempo = 1.0;
       double drift = 0.0;
@@ -225,7 +225,7 @@ namespace yae
 
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
-      double f0 = double(framePosition_.time_) / double(framePosition_.base_);
+      double f0 = framePosition_.toSeconds();
       double f1 = f0 + frameDuration;
       double df = f1 - playheadPosition;
 

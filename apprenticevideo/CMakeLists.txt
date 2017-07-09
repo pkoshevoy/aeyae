@@ -117,8 +117,6 @@ set(project_uis
   )
 
 set(project_sources
-  yaeAudioRendererInput.h
-  yaeAudioRendererInput.cpp
   yaeBBox.cpp
   yaeBBox.h
   yaeBookmarks.h

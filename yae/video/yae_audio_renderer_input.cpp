@@ -17,7 +17,8 @@
 #include <boost/thread.hpp>
 
 // yae includes:
-#include <yaeAudioRendererInput.h>
+#include "yae_audio_renderer_input.h"
+
 
 //----------------------------------------------------------------
 // YAE_DEBUG_AUDIO_RENDERER
