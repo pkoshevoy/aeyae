@@ -55,32 +55,32 @@ namespace yae
                            void * userData);
 
     // AudioUnit stream callback:
-    static int callback(// The client data that is provided either
-                        // with the AURenderCallbackStruct
-                        // or as specified with the Add API call
-                        void * inRefCon,
+    static OSStatus callback(// The client data that is provided either
+                             // with the AURenderCallbackStruct
+                             // or as specified with the Add API call
+                             void * inRefCon,
 
-                        // Flags used to describe more about the
-                        // context of this call (pre or post in the
-                        // notify case for instance)
-                        AudioUnitRenderActionFlags * ioActionFlags,
+                             // Flags used to describe more about the
+                             // context of this call (pre or post in the
+                             // notify case for instance)
+                             AudioUnitRenderActionFlags * ioActionFlags,
 
-                        // The times stamp associated with
-                        // this call of audio unit render
-                        const AudioTimeStamp * inTimeStamp,
+                             // The times stamp associated with
+                             // this call of audio unit render
+                             const AudioTimeStamp * inTimeStamp,
 
-                        // The bus numbeer associated with this call
-                        // of audio unit render
-                        UInt32 inBusNumber,
+                             // The bus numbeer associated with this call
+                             // of audio unit render
+                             UInt32 inBusNumber,
 
-                        // The number of sample frames that will be
-                        // represented in the audio data in the
-                        // provided ioData parameter
-                        UInt32 inNumberFrames,
+                             // The number of sample frames that will be
+                             // represented in the audio data in the
+                             // provided ioData parameter
+                             UInt32 inNumberFrames,
 
-                        // The AudioBufferList that will be used to
-                        // contain the rendered or provided audio data
-                        AudioBufferList * ioData);
+                             // The AudioBufferList that will be used to
+                             // contain the rendered or provided audio data
+                             AudioBufferList * ioData);
 
     void au_render_cb(// Flags used to describe more about the
                       // context of this call (pre or post in the
@@ -313,7 +313,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioUnitRenderer::TPrivate::callback
   //
-  int
+  OSStatus
   AudioUnitRenderer::TPrivate::
   callback(// The client data that is provided either
            // with the AURenderCallbackStruct
