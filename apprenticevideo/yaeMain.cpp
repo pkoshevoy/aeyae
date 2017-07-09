@@ -196,6 +196,7 @@ mainMayThrowException(int argc, char ** argv)
 
   // check for canary invocation:
   bool canary = false;
+  int percentTempo = 100;
   {
     char ** src = argv + 1;
     char ** end = argv + argc;
@@ -205,6 +206,13 @@ mainMayThrowException(int argc, char ** argv)
       if (strcmp(*src, "--canary") == 0)
       {
         canary = true;
+        argc--;
+      }
+      else if (strcmp(*src, "--tempo") == 0)
+      {
+        src++;
+        argc--;
+        percentTempo = yae::toScalar<int, const char *>(*src);
         argc--;
       }
       else
@@ -322,6 +330,7 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow->initItemViews();
 
   yae::mainWindow->setPlaylist(playlist);
+  yae::mainWindow->playbackSetTempo(percentTempo);
 
   app.exec();
   return 0;
