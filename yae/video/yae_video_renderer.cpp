@@ -486,7 +486,7 @@ namespace yae
 #endif
       TTime t = frame_a_->time_;
       double ta = frame_a_->time_.toSeconds();
-      double tb = frame_b_->time_.toSeconds();
+      double tb = frame_b_ ? frame_b_->time_.toSeconds() : ta;
       double dt = (tb - ta) / tempo;
       t += dt;
 
