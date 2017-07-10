@@ -239,8 +239,7 @@ namespace yae
           << "AUDIO (s) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
           << std::endl;
 #endif
-        clock_.setCurrentTime(framePosition,
-                              outputLatency_);
+        clock_.setCurrentTime(framePosition, -0.016);
       }
     }
   }
@@ -455,8 +454,7 @@ namespace yae
         << "AUDIO (c) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
         << std::endl;
 #endif
-      clock_.setCurrentTime(framePosition,
-                            outputLatency_);
+      clock_.setCurrentTime(framePosition, -0.016);
     }
 
     return;
