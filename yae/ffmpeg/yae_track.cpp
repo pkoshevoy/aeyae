@@ -141,33 +141,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // is_framerate_valid
-  //
-  static inline bool
-  is_framerate_valid(const AVRational & r)
-  {
-    return r.num > 0 && r.den > 0;
-  }
-
-  //----------------------------------------------------------------
-  // is_frame_duration_plausible
-  //
-  static bool
-  is_frame_duration_plausible(const TTime & dt, const AVRational & frame_rate)
-  {
-    int64 d = dt.getTime(frame_rate.num) / frame_rate.den;
-    int64 err = d - frame_rate.den;
-
-    if (frame_rate.den < std::abs(d))
-    {
-      // error is more than the expected frame duration:
-      return false;
-    }
-
-    return true;
-  }
-
-  //----------------------------------------------------------------
   // verify_pts
   //
   // verify that presentation timestamps are monotonically increasing
@@ -201,63 +174,6 @@ namespace yae
     {
       return ok;
     }
-
-    // sanity check -- verify the timestamp difference
-    // is close to frame duration:
-    if (hasPrevPTS)
-    {
-      bool has_avg_frame_rate = is_framerate_valid(stream->avg_frame_rate);
-      bool has_r_frame_rate = is_framerate_valid(stream->r_frame_rate);
-
-      if (has_avg_frame_rate || has_r_frame_rate)
-      {
-        TTime dt = nextPTS - prevPTS;
-
-        if (!((has_avg_frame_rate &&
-               is_frame_duration_plausible(dt, stream->avg_frame_rate)) ||
-              (has_r_frame_rate &&
-               is_frame_duration_plausible(dt, stream->r_frame_rate))))
-        {
-          // error is more than the expected and estimated frame duration:
-#ifndef NDEBUG
-          std::cerr
-            << "\nNOTE: detected large error in frame duration, dt: "
-            << dt.toSeconds() << " sec";
-
-          if (has_avg_frame_rate)
-          {
-            std::cerr
-              << ", expected (avg): "
-              << TTime(stream->avg_frame_rate.den,
-                       stream->avg_frame_rate.num).toSeconds()
-              << " sec";
-          }
-
-          if (has_r_frame_rate)
-          {
-            std::cerr
-              << ", expected (r): "
-              << TTime(stream->r_frame_rate.den,
-                       stream->r_frame_rate.num).toSeconds()
-              << " sec";
-          }
-
-          if (debugMessage)
-          {
-            std::cerr << ", " << debugMessage;
-          }
-
-          std::cerr << std::endl;
-#endif
-          return false;
-        }
-      }
-    }
-
-    // another possible sanity check -- verify that timestamp is
-    // within [start, end] range, although that might be too strict
-    // because duration is often estimated from bitrate
-    // and is therefore inaccurate
 
     return true;
   }
