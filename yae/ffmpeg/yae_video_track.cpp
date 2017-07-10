@@ -571,6 +571,30 @@ namespace yae
                     "transpose=dir=cclock");
       }
 
+#if 0
+      if (!filters.str().empty())
+      {
+        filters << ',';
+      }
+
+      filters <<
+        "boxblur="
+        "luma_radius=min(h\\,w)/8:"
+        "luma_power=1:"
+        "chroma_radius=min(cw\\,ch)/8:"
+        "chroma_power=1,"
+
+        "drawtext="
+        "fontfile=/usr/share/fonts/truetype/DroidSansMono.ttf:"
+        "fontcolor=white:"
+        "box=1:"
+        "boxcolor=black:"
+        "boxborderw=5:"
+        "x=(w-text_w)-5:"
+        "y=h-(max_glyph_h+10)*3:"
+        "text=%{n} %{pict_type} %{pts\\\\:hms}";
+#endif
+
       std::string filterChain(filters.str().c_str());
       bool frameTraitsChanged = false;
       if (!filterGraph_.setup(decoded.width,
