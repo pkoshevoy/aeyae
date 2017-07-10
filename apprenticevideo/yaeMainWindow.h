@@ -377,6 +377,7 @@ namespace yae
     QActionGroup * subsTrackGroup_;
     QActionGroup * chaptersGroup_;
 
+    QSignalMapper * playRateMapper_;
     QSignalMapper * audioTrackMapper_;
     QSignalMapper * videoTrackMapper_;
     QSignalMapper * subsTrackMapper_;

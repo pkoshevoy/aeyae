@@ -246,6 +246,7 @@ namespace yae
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),
     chaptersGroup_(NULL),
+    playRateMapper_(NULL),
     audioTrackMapper_(NULL),
     videoTrackMapper_(NULL),
     subsTrackMapper_(NULL),
@@ -536,66 +537,66 @@ namespace yae
     playRateGroup->addAction(actionTempo200);
     actionTempo100->setChecked(true);
 
-    QSignalMapper * playRateMapper = new QSignalMapper(this);
-    playRateMapper->setMapping(actionTempo50, 50);
-    playRateMapper->setMapping(actionTempo60, 60);
-    playRateMapper->setMapping(actionTempo70, 70);
-    playRateMapper->setMapping(actionTempo80, 80);
-    playRateMapper->setMapping(actionTempo90, 90);
-    playRateMapper->setMapping(actionTempo100, 100);
-    playRateMapper->setMapping(actionTempo111, 111);
-    playRateMapper->setMapping(actionTempo125, 125);
-    playRateMapper->setMapping(actionTempo143, 143);
-    playRateMapper->setMapping(actionTempo167, 167);
-    playRateMapper->setMapping(actionTempo200, 200);
+    playRateMapper_ = new QSignalMapper(this);
+    playRateMapper_->setMapping(actionTempo50, 50);
+    playRateMapper_->setMapping(actionTempo60, 60);
+    playRateMapper_->setMapping(actionTempo70, 70);
+    playRateMapper_->setMapping(actionTempo80, 80);
+    playRateMapper_->setMapping(actionTempo90, 90);
+    playRateMapper_->setMapping(actionTempo100, 100);
+    playRateMapper_->setMapping(actionTempo111, 111);
+    playRateMapper_->setMapping(actionTempo125, 125);
+    playRateMapper_->setMapping(actionTempo143, 143);
+    playRateMapper_->setMapping(actionTempo167, 167);
+    playRateMapper_->setMapping(actionTempo200, 200);
 
     bool ok = true;
-    ok = connect(playRateMapper, SIGNAL(mapped(int)),
+    ok = connect(playRateMapper_, SIGNAL(mapped(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo50, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo60, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo70, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo80, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo90, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo100, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo111, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo125, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo143, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo167, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionTempo200, SIGNAL(triggered()),
-                 playRateMapper, SLOT(map()));
+                 playRateMapper_, SLOT(map()));
     YAE_ASSERT(ok);
 
     ok = connect(actionNewWindow, SIGNAL(triggered()),
@@ -2396,8 +2397,19 @@ namespace yae
   void
   MainWindow::playbackSetTempo(int percent)
   {
-    tempo_ = double(percent) / 100.0;
-    reader_->setTempo(tempo_);
+    QAction * found =
+      qobject_cast<QAction *>(playRateMapper_->mapping(percent));
+
+    if (found)
+    {
+      if (!found->isChecked())
+      {
+        found->setChecked(true);
+      }
+
+      tempo_ = double(percent) / 100.0;
+      reader_->setTempo(tempo_);
+    }
   }
 
   //----------------------------------------------------------------
