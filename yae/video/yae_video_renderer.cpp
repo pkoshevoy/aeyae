@@ -226,16 +226,17 @@ namespace yae
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
       double f0 = framePosition_.toSeconds();
-      double f1 = f0 + frameDuration;
-      double df = f1 - playheadPosition;
+      double f1 = f0 + frameDurationScaled;
+      double df = f0 + frameDurationScaled - playheadPosition;
 
 #if YAE_DEBUG_VIDEO_RENDERER
       std::cerr
         << "t:  " << TTime(playheadPosition).to_hhmmss_usec(":") << std::endl
-        << "dt: " << frameDuration << std::endl
+        << "dt: " << frameDurationScaled << std::endl
         << "f0: " << TTime(f0).to_hhmmss_usec(":") << std::endl
         << "f1: " << TTime(f1).to_hhmmss_usec(":") << std::endl
         << "df: " << df << std::endl
+        << "drift: " << drift << std::endl
         << std::endl;
 #endif
 
@@ -479,11 +480,17 @@ namespace yae
       tempo = frame_a_->tempo_;
 
 #if YAE_DEBUG_VIDEO_RENDERER
-        std::cerr
-          << "VIDEO (a) SET CLOCK: " << to_hhmmss_usec(frame_a_)
-          << std::endl;
+      std::cerr
+        << "VIDEO (a) SET CLOCK: " << to_hhmmss_usec(frame_a_)
+        << std::endl;
 #endif
-        clock_.setCurrentTime(frame_a_->time_, 0.0, true);
+      TTime t = frame_a_->time_;
+      double ta = frame_a_->time_.toSeconds();
+      double tb = frame_b_->time_.toSeconds();
+      double dt = (tb - ta) / tempo;
+      t += dt;
+
+      clock_.setCurrentTime(t, dt, true);
 
       if (clock_.allowsSettingTime())
       {
