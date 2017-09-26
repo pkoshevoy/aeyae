@@ -1544,7 +1544,7 @@ namespace yae
   TSubsFormat
   Movie::subsInfo(std::size_t i, TTrackInfo & info) const
   {
-    info.program_ = context_->nb_programs;
+    info.program_ = context_ ? context_->nb_programs : 0;
     info.ntracks_ = subs_.size();
     info.index_ = i;
     info.lang_.clear();
