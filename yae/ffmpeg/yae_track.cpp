@@ -307,14 +307,12 @@ namespace yae
             continue;
           }
 
-#ifdef _WIN32
           // verify that the GPU can handle this stream:
           AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
           {
             hardware.push_front(ctx);
           }
-#endif
         }
         else if (al::ends_with(c->name, "_qsv") ||
                  al::ends_with(c->name, "_vda") ||
