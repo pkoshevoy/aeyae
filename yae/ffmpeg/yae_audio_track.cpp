@@ -250,7 +250,7 @@ namespace yae
       {
         af.time_.time_ = stream_->time_base.num * decodedFrame.pts;
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
-                            "decodedFrame.pts");
+                            "audio decodedFrame.pts");
       }
 
       if (!gotPTS)
@@ -259,7 +259,8 @@ namespace yae
         af.time_.time_ = samplesDecoded_ - numOutputSamples;
         af.time_ += TTime(startTime_, stream_->time_base.den);
 
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_);
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
+                            "audio t + t_start");
       }
 
       if (!gotPTS && hasPrevPTS_)
@@ -267,7 +268,8 @@ namespace yae
         af.time_ = prevPTS_;
         af.time_ += TTime(prevNumSamples_, output_.sampleRate_);
 
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_);
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
+                            "audio t_prev + n_prev");
       }
 
       YAE_ASSERT(gotPTS);
@@ -276,7 +278,8 @@ namespace yae
         af.time_ = prevPTS_;
         af.time_.time_++;
 
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_);
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
+                            "audio t++");
       }
 
       YAE_ASSERT(gotPTS);

@@ -445,7 +445,7 @@ namespace yae
       AvFrm decoded(decodedFrame);
       framesDecoded_++;
 
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
       {
         t1_ = boost::chrono::steady_clock::now();
 
@@ -456,7 +456,8 @@ namespace yae
         fps_ = double(framesDecoded_) / (1e-6 * double(dt));
 
         std::cerr
-          << "frames decoded: " << framesDecoded_
+          << codecContext_->codec->name
+          << ", frames decoded: " << framesDecoded_
           << ", elapsed time: " << dt << " usec, decoder fps: " << fps_
           << std::endl;
       }
@@ -632,12 +633,12 @@ namespace yae
 
       TTime t(t0);
 
-      bool gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t");
+      bool gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "video t");
 
       if (!gotPTS && !hasPrevPTS_)
       {
         t.time_ = stream_->time_base.num * startTime_;
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t0");
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "video t0");
       }
 
       if (!gotPTS && hasPrevPTS_ && frameRate_.num && frameRate_.den)
@@ -645,7 +646,7 @@ namespace yae
         // increment by average frame duration:
         t = prevPTS_;
         t += TTime(frameRate_.den, frameRate_.num);
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t += 1/fps");
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "video t += 1/fps");
       }
 
       YAE_ASSERT(gotPTS);
@@ -653,7 +654,7 @@ namespace yae
       {
         t = prevPTS_;
         t.time_++;
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "t++");
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "video t++");
       }
 
       YAE_ASSERT(gotPTS);

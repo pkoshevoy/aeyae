@@ -164,6 +164,7 @@ namespace yae
     {
       std::cerr << "PTS OK: "
                 << nextPTS.time_ << "/" << nextPTS.base_
+                << " = " << nextPTS.to_hhmmss_frac(1000)
                 << ", " << debugMessage << std::endl;
     }
 #else
@@ -306,15 +307,18 @@ namespace yae
             continue;
           }
 
+#if 1 // def _WIN32
           // verify that the GPU can handle this stream:
           AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
           {
             hardware.push_front(ctx);
           }
+#endif
         }
         else if (al::ends_with(c->name, "_qsv") ||
-                 al::ends_with(c->name, "_vda"))
+                 al::ends_with(c->name, "_vda") ||
+                 al::ends_with(c->name, "_vdpau"))
         {
           if (al::ends_with(c->name, "_vda"))
           {

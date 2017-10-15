@@ -673,6 +673,14 @@ namespace yae
             dump_averror(std::cerr, err);
           }
 #endif
+
+          if (err != AVERROR_EOF)
+          {
+            // keep trying, it may be able recover:
+            err = 0;
+            continue;
+          }
+
           if (demuxerInterrupted)
           {
             boost::this_thread::yield();
