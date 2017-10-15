@@ -549,7 +549,7 @@ add_subdirectory(plugins/yae_reader_ffmpeg)
 add_subdirectory(tests)
 add_subdirectory(apprenticevideo)
 add_subdirectory(yamka)
-add_subdirectory(replay)
+#add_subdirectory(replay)
 
 if (NOT (WIN32 OR APPLE))
   install(TARGETS aeyae DESTINATION lib)
