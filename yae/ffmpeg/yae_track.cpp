@@ -307,7 +307,7 @@ namespace yae
             continue;
           }
 
-#if 1 // def _WIN32
+#ifdef _WIN32
           // verify that the GPU can handle this stream:
           AvCodecContextPtr ctx = tryToOpen(c, &params);
           if (ctx)
