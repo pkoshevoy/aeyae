@@ -59,6 +59,12 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // ensure_ffmpeg_initialized
+  //
+  YAE_API void
+  ensure_ffmpeg_initialized();
+
+  //----------------------------------------------------------------
   // dump_averror
   //
   YAE_API std::ostream &

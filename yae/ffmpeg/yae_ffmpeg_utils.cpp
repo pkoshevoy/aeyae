@@ -13,9 +13,92 @@
 #include <string>
 #include <cstring>
 
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
+
+// ffmpeg includes:
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
+
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // lockManager
+  //
+  static int
+  lockManager(void ** context, enum AVLockOp op)
+  {
+    try
+    {
+      switch (op)
+      {
+        case AV_LOCK_CREATE:
+        {
+          *context = new boost::mutex();
+        }
+        break;
+
+        case AV_LOCK_OBTAIN:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          mtx->lock();
+        }
+        break;
+
+        case AV_LOCK_RELEASE:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          mtx->unlock();
+        }
+        break;
+
+        case AV_LOCK_DESTROY:
+        {
+          boost::mutex * mtx = (boost::mutex *)(*context);
+          delete mtx;
+        }
+        break;
+
+        default:
+          YAE_ASSERT(false);
+          return -1;
+      }
+
+      return 0;
+    }
+    catch (...)
+    {}
+
+    return -1;
+  }
+
+  //----------------------------------------------------------------
+  // ensure_ffmpeg_initialized
+  //
+  void
+  ensure_ffmpeg_initialized()
+  {
+    // flag indicating whether av_register_all has been called already:
+    static bool ffmpeg_initialized = false;
+
+    if (!ffmpeg_initialized)
+    {
+      av_log_set_flags(AV_LOG_SKIP_REPEATED);
+      avfilter_register_all();
+      av_register_all();
+
+      avformat_network_init();
+
+      av_lockmgr_register(&lockManager);
+      ffmpeg_initialized = true;
+    }
+  }
 
   //----------------------------------------------------------------
   // dump_averror
