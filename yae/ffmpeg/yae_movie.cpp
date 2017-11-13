@@ -6,7 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae incudes:
+// yae includes:
 #include "yae_closed_captions.h"
 #include "yae_movie.h"
 
@@ -560,9 +560,9 @@ namespace yae
     PacketQueueCloseOnExit(TrackPtr track):
       track_(track)
     {
-      if (track_ && track_->packetQueue().isClosed())
+      if (track_ && track_->packetQueue_.isClosed())
       {
-        track_->packetQueue().open();
+        track_->packetQueue_.open();
       }
     }
 
@@ -570,7 +570,7 @@ namespace yae
     {
       if (track_)
       {
-        track_->packetQueue().close();
+        track_->packetQueue_.close();
       }
     }
   };
@@ -691,13 +691,13 @@ namespace yae
           if (audioTrack)
           {
             // flush out buffered frames with an empty packet:
-            audioTrack->packetQueue().push(TPacketPtr(), &outputTerminator_);
+            audioTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
           }
 
           if (videoTrack)
           {
             // flush out buffered frames with an empty packet:
-            videoTrack->packetQueue().push(TPacketPtr(), &outputTerminator_);
+            videoTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
           }
 
           if (!playbackEnabled_)
@@ -719,7 +719,7 @@ namespace yae
           // for all queues to empty:
           if (audioTrack)
           {
-            audioTrack->packetQueue().
+            audioTrack->packetQueue_.
               waitIndefinitelyForConsumerToBlock();
 
             audioTrack->frameQueue_.
@@ -728,7 +728,7 @@ namespace yae
 
           if (videoTrack)
           {
-            videoTrack->packetQueue().
+            videoTrack->packetQueue_.
               waitIndefinitelyForConsumerToBlock();
 
             videoTrack->frameQueue_.
@@ -768,7 +768,7 @@ namespace yae
         if (videoTrack &&
             videoTrack->streamIndex() == packet.stream_index)
         {
-          if (!videoTrack->packetQueue().push(packetPtr, &outputTerminator_))
+          if (!videoTrack->packetQueue_.push(packetPtr, &outputTerminator_))
           {
             break;
           }
@@ -776,7 +776,7 @@ namespace yae
         else if (audioTrack &&
                  audioTrack->streamIndex() == packet.stream_index)
         {
-          if (!audioTrack->packetQueue().push(packetPtr, &outputTerminator_))
+          if (!audioTrack->packetQueue_.push(packetPtr, &outputTerminator_))
           {
             break;
           }
@@ -985,14 +985,14 @@ namespace yae
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
       t->threadStart();
-      t->packetQueue().waitIndefinitelyForConsumerToBlock();
+      t->packetQueue_.waitIndefinitelyForConsumerToBlock();
     }
 
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
       t->threadStart();
-      t->packetQueue().waitIndefinitelyForConsumerToBlock();
+      t->packetQueue_.waitIndefinitelyForConsumerToBlock();
     }
 
     outputTerminator_.stopWaiting(false);
@@ -1099,9 +1099,9 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->packetQueue().clear();
+        videoTrack->packetQueue_.clear();
         do { videoTrack->frameQueue_.clear(); }
-        while (!videoTrack->packetQueue().waitForConsumerToBlock(1e-2));
+        while (!videoTrack->packetQueue_.waitForConsumerToBlock(1e-2));
         videoTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
@@ -1114,9 +1114,9 @@ namespace yae
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->packetQueue().clear();
+        audioTrack->packetQueue_.clear();
         do { audioTrack->frameQueue_.clear(); }
-        while (!audioTrack->packetQueue().waitForConsumerToBlock(1e-2));
+        while (!audioTrack->packetQueue_.waitForConsumerToBlock(1e-2));
         audioTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
@@ -1253,7 +1253,7 @@ namespace yae
     // wait for the the frame queues to empty out:
     if (audioTrack)
     {
-      audioTrack->packetQueue().
+      audioTrack->packetQueue_.
         waitIndefinitelyForConsumerToBlock();
 
       audioTrack->frameQueue_.
@@ -1262,7 +1262,7 @@ namespace yae
 
     if (videoTrack)
     {
-      videoTrack->packetQueue().
+      videoTrack->packetQueue_.
         waitIndefinitelyForConsumerToBlock();
 
       videoTrack->frameQueue_.
@@ -1665,8 +1665,8 @@ namespace yae
       return false;
     }
 
-    bool blocked = (a->packetQueue().producerIsBlocked() &&
-                    b->packetQueue().consumerIsBlocked());
+    bool blocked = (a->packetQueue_.producerIsBlocked() &&
+                    b->packetQueue_.consumerIsBlocked());
     return blocked;
   }
 

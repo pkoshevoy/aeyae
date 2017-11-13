@@ -215,7 +215,7 @@ namespace yae
     }
 
     // close the queue, abort any pending push/pop/etc... calls:
-    void close()
+    bool close()
     {
       // close the queue:
       {
@@ -223,7 +223,7 @@ namespace yae
         if (closed_)
         {
           // already closed:
-          return;
+          return true;
         }
 
 #if 0 // ndef NDEBUG
@@ -233,10 +233,11 @@ namespace yae
       }
 
       cond_.notify_all();
+      return true;
     }
 
     // open the queue allowing push/pop/etc... calls:
-    void open()
+    bool open()
     {
       // open the queue:
       {
@@ -244,7 +245,7 @@ namespace yae
         if (!closed_)
         {
           // already open:
-          return;
+          return true;
         }
 
 #if 0 // ndef NDEBUG
@@ -256,6 +257,7 @@ namespace yae
       }
 
       cond_.notify_all();
+      return true;
     }
 
     // remove all data from the queue:

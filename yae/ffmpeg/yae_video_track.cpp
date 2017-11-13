@@ -1117,7 +1117,7 @@ namespace yae
   int
   VideoTrack::resetTimeCounters(double seekTime, bool dropPendingFrames)
   {
-    packetQueue().clear();
+    packetQueue_.clear();
 
     if (dropPendingFrames)
     {
@@ -1126,7 +1126,7 @@ namespace yae
       // proper in-out point playback because some frames will be dropped
       // when the video is rewound to the in-point:
       do { frameQueue_.clear(); }
-      while (!packetQueue().waitForConsumerToBlock(1e-2));
+      while (!packetQueue_.waitForConsumerToBlock(1e-2));
       frameQueue_.clear();
     }
 

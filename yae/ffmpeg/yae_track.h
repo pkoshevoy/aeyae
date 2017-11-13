@@ -232,13 +232,6 @@ namespace yae
     // get track duration:
     bool getDuration(TTime & start, TTime & duration) const;
 
-    // accessor to the packet queue:
-    inline const TPacketQueue & packetQueue() const
-    { return packetQueue_; }
-
-    inline TPacketQueue & packetQueue()
-    { return packetQueue_; }
-
     // decoder spin-up/spin-down points:
     virtual bool decoderStartup()
     { return false; }
@@ -291,7 +284,6 @@ namespace yae
     uint64_t sent_;
     uint64_t received_;
     uint64_t errors_;
-    TPacketQueue packetQueue_;
 
     double timeIn_;
     double timeOut_;
@@ -304,6 +296,7 @@ namespace yae
 
   public:
     uint64_t discarded_;
+    TPacketQueue packetQueue_;
   };
 
   //----------------------------------------------------------------
