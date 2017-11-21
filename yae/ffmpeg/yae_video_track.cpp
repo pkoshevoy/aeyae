@@ -173,12 +173,12 @@ namespace yae
       if (skipLoopFilter_)
       {
         codecContext_->skip_loop_filter = AVDISCARD_ALL;
-        codecContext_->flags2 |= CODEC_FLAG2_FAST;
+        codecContext_->flags2 |= AV_CODEC_FLAG2_FAST;
       }
       else
       {
         codecContext_->skip_loop_filter = AVDISCARD_DEFAULT;
-        codecContext_->flags2 &= ~(CODEC_FLAG2_FAST);
+        codecContext_->flags2 &= ~(AV_CODEC_FLAG2_FAST);
       }
     }
   }
