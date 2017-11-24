@@ -214,6 +214,8 @@ namespace yae
     thread_(this),
     context_(NULL),
     stream_(NULL),
+    preferSoftwareDecoder_(track.preferSoftwareDecoder_),
+    switchDecoderToRecommended_(track.switchDecoderToRecommended_),
     packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
@@ -315,6 +317,7 @@ namespace yae
           }
         }
         else if (al::ends_with(c->name, "_qsv") ||
+                 al::ends_with(c->name, "_v4l2m2m") ||
                  al::ends_with(c->name, "_vda") ||
                  al::ends_with(c->name, "_vdpau"))
         {
@@ -428,16 +431,19 @@ namespace yae
     codecContext_ = find_best_decoder_for(codecParams,
                                           candidates_,
                                           preferSoftwareDecoder_);
-    if (!codecContext_ && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
+
+    AVCodecContext * ctx = codecContext_.get();
+    if (!ctx && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
       return NULL;
     }
 
+    ctx->pkt_timebase = stream_->time_base;
     sent_ = 0;
     received_ = 0;
     errors_ = 0;
-    return codecContext_.get();
+    return ctx;
   }
 
   //----------------------------------------------------------------
@@ -583,17 +589,6 @@ namespace yae
     return thread_.run();
   }
 
-#if LIBAVUTIL_VERSION_INT <= AV_VERSION_INT(54, 3, 0)
-  //----------------------------------------------------------------
-  // av_frame_get_best_effort_timestamp
-  //
-  inline int64_t
-  av_frame_get_best_effort_timestamp(const AVFrame * frame)
-  {
-    return frame->pkt_pts;
-  }
-#endif
-
   //----------------------------------------------------------------
   // Track::decoderPull
   //
@@ -619,7 +614,7 @@ namespace yae
       // of frames decoded successfully?
 
       received_++;
-      decodedFrame.pts = av_frame_get_best_effort_timestamp(&decodedFrame);
+      decodedFrame.pts = decodedFrame.best_effort_timestamp;
       handle(decodedFrame);
     }
 

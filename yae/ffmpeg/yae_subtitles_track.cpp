@@ -322,8 +322,7 @@ namespace yae
   // SubtitlesTrack::SubtitlesTrack
   //
   SubtitlesTrack::SubtitlesTrack(AVStream * stream, std::size_t index):
-    stream_(stream),
-    codecContext_(NULL),
+    Track(NULL, stream),
     render_(false),
     format_(kSubsNone),
     index_(index)
@@ -353,49 +352,39 @@ namespace yae
   //----------------------------------------------------------------
   // SubtitlesTrack::open
   //
-  void
+  AVCodecContext *
   SubtitlesTrack::open()
   {
+    if (codecContext_)
+    {
+      return codecContext_.get();
+    }
+
+    AVCodecContext * ctx = NULL;
     if (stream_)
     {
+      ctx = Track::open();
+
       const AVCodecParameters & codecParams = *(stream_->codecpar);
       format_ = getSubsFormat(codecParams.codec_id);
-      const AVCodec * codec = avcodec_find_decoder(codecParams.codec_id);
-      active_.clear();
 
-      if (codec)
+      if (ctx)
       {
-        YAE_ASSERT(!codecContext_);
-        codecContext_ = avcodec_alloc_context3(codec);
+        TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                &IPlanarBuffer::deallocator);
+        buffer->resize(0, ctx->extradata_size, 1, 1);
 
-        avcodec_parameters_to_context(codecContext_, stream_->codecpar);
-        codecContext_->time_base = stream_->time_base;
+        unsigned char * dst = buffer->data(0);
+        memcpy(dst,
+               ctx->extradata,
+               ctx->extradata_size);
 
-        int err = avcodec_open2(codecContext_, codec, NULL);
-        if (err < 0)
+        extraData_ = buffer;
+
+        if (format_ == kSubsDVD)
         {
-          // unsupported codec:
-          avcodec_free_context(&codecContext_);
-        }
-        else if (codecContext_->extradata &&
-                 codecContext_->extradata_size)
-        {
-          TPlanarBufferPtr buffer(new TPlanarBuffer(1),
-                                  &IPlanarBuffer::deallocator);
-          buffer->resize(0, codecContext_->extradata_size, 1, 1);
-
-          unsigned char * dst = buffer->data(0);
-          memcpy(dst,
-                 codecContext_->extradata,
-                 codecContext_->extradata_size);
-
-          extraData_ = buffer;
-
-          if (format_ == kSubsDVD)
-          {
-            vobsub_.init(codecContext_->extradata,
-                         codecContext_->extradata_size);
-          }
+          vobsub_.init(ctx->extradata,
+                       ctx->extradata_size);
         }
       }
 
@@ -418,9 +407,12 @@ namespace yae
       {
         lang_.clear();
       }
+
+      active_.clear();
     }
 
     queue_.open();
+    return ctx;
   }
 
   //----------------------------------------------------------------
@@ -430,12 +422,7 @@ namespace yae
   SubtitlesTrack::close()
   {
     clear();
-
-    if (stream_ && codecContext_)
-    {
-      avcodec_close(codecContext_);
-      avcodec_free_context(&codecContext_);
-    }
+    Track::close();
   }
 
   //----------------------------------------------------------------

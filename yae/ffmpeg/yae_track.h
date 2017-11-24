@@ -223,7 +223,10 @@ namespace yae
 
     // accessor to stream index of this track within AVFormatContext:
     inline int streamIndex() const
-    { return stream_->index; }
+    {
+      YAE_ASSERT(stream_);
+      return stream_ ? stream_->index : -1;
+    }
 
     // accessor to the codec context:
     inline AVCodecContext * codecContext() const
@@ -239,7 +242,7 @@ namespace yae
     virtual bool decoderShutdown()
     { return false; }
 
-    // audio/video tracks will handled decoded frames differently,
+    // audio/video tracks will handle decoded frames differently,
     // but the interface is the same:
     virtual void handle(const AvFrm & decodedFrame)
     {}

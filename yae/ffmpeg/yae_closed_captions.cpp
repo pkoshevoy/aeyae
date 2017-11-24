@@ -648,7 +648,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       if (cc)
       {
-        av_codec_set_pkt_timebase(cc, timeBase);
+        cc->pkt_timebase = timeBase;
         cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
       }
     }

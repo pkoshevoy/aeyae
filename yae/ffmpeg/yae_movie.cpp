@@ -740,7 +740,7 @@ namespace yae
             static const Rational tb(1, AV_TIME_BASE);
 
             // shortcut:
-            AVCodecContext * subsDec = subs ? subs->codecContext_ : NULL;
+            AVCodecContext * subsDec = subs ? subs->codecContext() : NULL;
 
             TSubsFrame sf;
             sf.time_.time_ = av_rescale_q(packet.pts,
@@ -1491,7 +1491,7 @@ namespace yae
       const SubtitlesTrack & subs = *(subs_[i]);
       info.lang_ = subs.lang_;
       info.name_ = subs.name_;
-      info.program_ = get(streamIndexToProgramIndex_, subs.stream_->index);
+      info.program_ = get(streamIndexToProgramIndex_, subs.streamIndex());
       return subs.format_;
     }
 

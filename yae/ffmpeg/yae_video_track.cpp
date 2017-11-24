@@ -331,17 +331,6 @@ namespace yae
     return true;
   }
 
-#if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(56, 1, 0)
-  //----------------------------------------------------------------
-  // av_stream_get_r_frame_rate
-  //
-  inline const AVRational &
-  av_stream_get_r_frame_rate(const AVStream * s)
-  {
-    return s->avg_frame_rate;
-  }
-#endif
-
   //----------------------------------------------------------------
   // VideoTrack::decoderStartup
   //
@@ -368,8 +357,7 @@ namespace yae
     // shortcut to the frame rate:
     frameRate_ =
       (stream_->avg_frame_rate.num && stream_->avg_frame_rate.den) ?
-      stream_->avg_frame_rate :
-      av_stream_get_r_frame_rate(stream_);
+      stream_->avg_frame_rate : stream_->r_frame_rate;
 
     hasPrevPTS_ = false;
 
@@ -619,13 +607,7 @@ namespace yae
 
       if (decoded.pts == AV_NOPTS_VALUE)
       {
-        decoded.pts = av_frame_get_best_effort_timestamp(&decoded);
-      }
-
-      if (decoded.pts == AV_NOPTS_VALUE &&
-          decoded.pkt_pts != AV_NOPTS_VALUE)
-      {
-        decoded.pts = decoded.pkt_pts;
+        decoded.pts = decoded.best_effort_timestamp;
       }
 
       TTime t0(stream_->time_base.num * decoded.pts,
@@ -891,7 +873,7 @@ namespace yae
     t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
 
     //! frame rate:
-    const AVRational & r_frame_rate = av_stream_get_r_frame_rate(stream_);
+    const AVRational & r_frame_rate = stream_->r_frame_rate;
 
     if (stream_->avg_frame_rate.num > 0 && stream_->avg_frame_rate.den > 0)
     {

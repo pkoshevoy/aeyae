@@ -106,13 +106,16 @@ namespace yae
   //----------------------------------------------------------------
   // SubtitlesTrack
   //
-  struct YAE_API SubtitlesTrack
+  struct YAE_API SubtitlesTrack : public Track
   {
     SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0);
     ~SubtitlesTrack();
 
     void clear();
-    void open();
+
+    // virtual:
+    AVCodecContext * open();
+
     void close();
 
     void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next);
@@ -126,9 +129,6 @@ namespace yae
     SubtitlesTrack & operator = (const SubtitlesTrack & given);
 
   public:
-    AVStream * stream_;
-    AVCodecContext * codecContext_;
-
     bool render_;
     TSubsFormat format_;
     std::string name_;
