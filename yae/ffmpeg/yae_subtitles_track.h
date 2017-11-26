@@ -108,7 +108,7 @@ namespace yae
   //
   struct YAE_API SubtitlesTrack : public Track
   {
-    SubtitlesTrack(AVStream * stream = NULL, std::size_t index = 0);
+    SubtitlesTrack(AVStream * stream = NULL);
     ~SubtitlesTrack();
 
     void clear();
@@ -131,9 +131,6 @@ namespace yae
   public:
     bool render_;
     TSubsFormat format_;
-    std::string name_;
-    std::string lang_;
-    std::size_t index_;
 
     TIPlanarBufferPtr extraData_;
     TSubsFrameQueue queue_;

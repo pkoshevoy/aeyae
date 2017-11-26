@@ -828,7 +828,6 @@ namespace yae
   TSubsFrame::TSubsFrame():
     rewriteTimings_(false),
     render_(false),
-    index_(~0),
     rh_(0),
     rw_(0)
   {}
@@ -841,7 +840,7 @@ namespace yae
   {
     bool same = (rewriteTimings_ == s.rewriteTimings_ &&
                  render_         == s.render_ &&
-                 index_          == s.index_ &&
+                 trackId_        == s.trackId_ &&
                  rh_             == s.rh_ &&
                  rw_             == s.rw_ &&
                  extraData_      == s.extraData_ &&
@@ -1030,5 +1029,16 @@ namespace yae
     data_(data),
     size_(size)
   {}
+
+  //----------------------------------------------------------------
+  // make_track_id
+  //
+  std::string
+  make_track_id(const char track_type, std::size_t track_index)
+  {
+    std::ostringstream oss;
+    oss << track_type << ':' << track_index;
+    return oss.str();
+  }
 
 }

@@ -321,11 +321,10 @@ namespace yae
   //----------------------------------------------------------------
   // SubtitlesTrack::SubtitlesTrack
   //
-  SubtitlesTrack::SubtitlesTrack(AVStream * stream, std::size_t index):
+  SubtitlesTrack::SubtitlesTrack(AVStream * stream):
     Track(NULL, stream),
     render_(false),
-    format_(kSubsNone),
-    index_(index)
+    format_(kSubsNone)
   {
     queue_.setMaxSizeUnlimited();
     open();
@@ -386,26 +385,6 @@ namespace yae
           vobsub_.init(ctx->extradata,
                        ctx->extradata_size);
         }
-      }
-
-      const char * name = getTrackName(stream_->metadata);
-      if (name)
-      {
-        name_.assign(name);
-      }
-      else
-      {
-        name_.clear();
-      }
-
-      const char * lang = getTrackLang(stream_->metadata);
-      if (lang)
-      {
-        lang_.assign(lang);
-      }
-      else
-      {
-        lang_.clear();
       }
 
       active_.clear();

@@ -116,6 +116,9 @@ namespace yae
 
     AvPkt & operator = (const AvPkt & pkt);
 
+    // an indication of the origin on this packet:
+    std::string trackId_;
+
   private:
     // intentionally disabled:
     AvPkt(const AVPacket &);
@@ -217,6 +220,19 @@ namespace yae
     // close the stream:
     virtual void close();
 
+    // accessors to the global track id of this track.
+    //
+    // track id is composed of track type: a, v, or s
+    // and global track index: i+
+    //
+    // examples: a:0, v:0, s:0, a:9, a:10, s:9, s:10
+    //
+    inline void setId(const std::string & id)
+    { id_ = id; }
+
+    inline const std::string & id() const
+    { return id_; }
+
     // get track name:
     const char * getName() const;
     const char * getLang() const;
@@ -269,6 +285,9 @@ namespace yae
     int decode(AVCodecContext * ctx, const AvPkt & pkt);
     bool switchDecoder();
     void tryToSwitchDecoder(const std::string & name);
+
+    // global track id:
+    std::string id_;
 
     // worker thread:
     Thread<Track> thread_;

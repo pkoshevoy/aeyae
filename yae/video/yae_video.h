@@ -506,6 +506,9 @@ namespace yae
     //! reader ID tag:
     unsigned int readerId_;
 
+    //! global track ID tag:
+    std::string trackId_;
+
     //! frame position:
     TTime time_;
 
@@ -597,9 +600,6 @@ namespace yae
 
     // a flag indicating whether this subtitle frame should be rendered:
     bool render_;
-
-    // track index:
-    std::size_t index_;
 
     // reference frame width and height, if known:
     int rh_;
@@ -728,6 +728,12 @@ namespace yae
     std::size_t size_;
     std::map<std::string, std::string> metadata_;
   };
+
+  //----------------------------------------------------------------
+  // make_track_id
+  //
+  YAE_API std::string
+  make_track_id(const char track_type, std::size_t track_index);
 
 }
 

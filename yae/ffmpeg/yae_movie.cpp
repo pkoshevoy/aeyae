@@ -31,6 +31,9 @@ namespace yae
   Movie::Movie():
     thread_(this),
     context_(NULL),
+    ato_(0),
+    vto_(0),
+    sto_(0),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
     skipLoopFilter_(false),
@@ -285,6 +288,7 @@ namespace yae
         {
           program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
+          track->setId(make_track_id('v', vto_ + videoTracks_.size()));
           videoTracks_.push_back(track);
         }
         else
@@ -301,6 +305,7 @@ namespace yae
         {
           program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
+          track->setId(make_track_id('a', ato_ + audioTracks_.size()));
           audioTracks_.push_back(track);
         }
         else
@@ -315,7 +320,8 @@ namespace yae
         // and SubtitlesTrack object:
         baseTrack = TrackPtr();
 
-        // don't discard closed captions packets:
+        // don't discard closed captions packets, though they don't
+        // get to have their own stand-alone subtitles track;
         stream->discard = AVDISCARD_DEFAULT;
 
         // don't add CEA-608 as a single track...
@@ -326,7 +332,8 @@ namespace yae
         {
           program->subs_.push_back(subs_.size());
           subsIdx_[i] = subs_.size();
-          TSubsTrackPtr subsTrk(new SubtitlesTrack(stream, subs_.size()));
+          TSubsTrackPtr subsTrk(new SubtitlesTrack(stream));
+          subsTrk->setId(make_track_id('s', sto_ + subs_.size()));
           subs_.push_back(subsTrk);
         }
       }
@@ -394,7 +401,7 @@ namespace yae
       VideoTrackPtr t = videoTracks_[info.index_];
       info.setLang(t->getLang());
       info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->stream().index);
+      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
 
@@ -415,7 +422,7 @@ namespace yae
       AudioTrackPtr t = audioTracks_[info.index_];
       info.setLang(t->getLang());
       info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->stream().index);
+      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
 
@@ -753,13 +760,11 @@ namespace yae
             {
               sf.render_ = subs->render_;
               sf.traits_ = subs->format_;
-              sf.index_ = subs->index_;
               sf.extraData_ = subs->extraData_;
             }
             else
             {
               sf.traits_ = kSubsCEA608;
-              sf.index_ = packet.stream_index;
             }
 
             // copy the reference frame size:
@@ -1488,11 +1493,11 @@ namespace yae
 
     if (info.index_ < info.ntracks_)
     {
-      const SubtitlesTrack & subs = *(subs_[i]);
-      info.lang_ = subs.lang_;
-      info.name_ = subs.name_;
-      info.program_ = get(streamIndexToProgramIndex_, subs.streamIndex());
-      return subs.format_;
+      TSubsTrackPtr t = subs_[i];
+      info.setLang(t->getLang());
+      info.setName(t->getName());
+      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      return t->format_;
     }
 
     return kSubsNone;
