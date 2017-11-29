@@ -172,7 +172,7 @@ namespace yae
     std::vector<TProgramInfo> programs_;
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
-    std::vector<TSubsTrackPtr> subs_;
+    std::vector<SubttTrackPtr> subs_;
     std::map<unsigned int, std::size_t> subsIdx_;
     std::map<int, int> streamIndexToProgramIndex_;
 

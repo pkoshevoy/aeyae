@@ -141,9 +141,9 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TSubsTrackPtr
+  // SubttTrackPtr
   //
-  typedef boost::shared_ptr<SubtitlesTrack> TSubsTrackPtr;
+  typedef boost::shared_ptr<SubtitlesTrack> SubttTrackPtr;
 
 }
 

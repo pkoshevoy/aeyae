@@ -114,7 +114,7 @@ namespace yae
     // 4 - CC4
     void enableClosedCaptions(unsigned int cc);
 
-    void setSubs(std::vector<TSubsTrackPtr> * subs)
+    void setSubs(std::vector<SubttTrackPtr> * subs)
     { subs_ = subs; }
 
     // these are used to speed up video decoding:
@@ -139,7 +139,7 @@ namespace yae
     CaptionsDecoder cc_;
 
     // subtitles:
-    std::vector<TSubsTrackPtr> * subs_;
+    std::vector<SubttTrackPtr> * subs_;
 
     VideoFilterGraph filterGraph_;
 

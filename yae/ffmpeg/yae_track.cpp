@@ -30,7 +30,7 @@ namespace yae
   //
   AvPkt::AvPkt()
   {
-    memset(this, 0, sizeof(AVPacket));
+    memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
     av_init_packet(this);
   }
 
@@ -39,8 +39,9 @@ namespace yae
   //
   AvPkt::AvPkt(const AvPkt & pkt)
   {
-    memset(this, 0, sizeof(AVPacket));
+    memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
     av_packet_ref(this, &pkt);
+    trackId_ = pkt.trackId_;
   }
 
   //----------------------------------------------------------------
@@ -59,6 +60,7 @@ namespace yae
   {
     av_packet_unref(this);
     av_packet_ref(this, &pkt);
+    trackId_ = pkt.trackId_;
     return *this;
   }
 

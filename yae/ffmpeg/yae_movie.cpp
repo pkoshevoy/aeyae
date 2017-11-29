@@ -332,7 +332,7 @@ namespace yae
         {
           program->subs_.push_back(subs_.size());
           subsIdx_[i] = subs_.size();
-          TSubsTrackPtr subsTrk(new SubtitlesTrack(stream));
+          SubttTrackPtr subsTrk(new SubtitlesTrack(stream));
           subsTrk->setId(make_track_id('s', sto_ + subs_.size()));
           subs_.push_back(subsTrk);
         }
@@ -1493,7 +1493,7 @@ namespace yae
 
     if (info.index_ < info.ntracks_)
     {
-      TSubsTrackPtr t = subs_[i];
+      SubttTrackPtr t = subs_[i];
       info.setLang(t->getLang());
       info.setName(t->getName());
       info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
