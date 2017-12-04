@@ -16,11 +16,11 @@ namespace yae
   //----------------------------------------------------------------
   // Demuxer::Demuxer
   //
-  Demuxer::Demuxer():
+  Demuxer::Demuxer(std::size_t ato, std::size_t vto, std::size_t sto):
     context_(NULL),
-    ato_(0),
-    vto_(0),
-    sto_(0),
+    ato_(ato),
+    vto_(vto),
+    sto_(sto),
     interruptDemuxer_(false)
   {
     ensure_ffmpeg_initialized();

@@ -25,6 +25,8 @@
 #include <stdexcept>
 
 // boost:
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/locale.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -42,13 +44,17 @@
 #include <QDir>
 
 // yae includes:
+#include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/utils/yae_plugin_registry.h"
+#include "yae/utils/yae_utils.h"
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_video.h"
-#include "yae/utils/yae_utils.h"
 
 // local includes:
 #include <yaeUtilsQt.h>
+
+// namespace shortcuts:
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -77,6 +83,25 @@ namespace yae
 // plugins
 //
 yae::TPluginRegistry plugins;
+
+
+//----------------------------------------------------------------
+// open_demuxer
+//
+static yae::TDemuxerPtr
+open_demuxer(const char * resourcePath, std::size_t track_offset = 0)
+{
+  yae::TDemuxerPtr demuxer(new yae::Demuxer(track_offset,
+                                            track_offset,
+                                            track_offset));
+  if (!demuxer->open(resourcePath))
+  {
+    return yae::TDemuxerPtr();
+  }
+
+  return demuxer;
+}
+
 
 //----------------------------------------------------------------
 // mainMayThrowException
@@ -122,164 +147,98 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
-  QString fn;
+  std::string filePath;
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
-    fn = *i;
+    filePath = i->toUtf8().constData();
     break;
   }
 
-  //----------------------------------------------------------------
-  // readerPrototype
-  //
-  yae::IReaderPtr readerPrototype;
-
-  // load plugins:
-  std::string pluginsFolderPath;
-  if (yae::getCurrentExecutablePluginsFolder(pluginsFolderPath) &&
-      plugins.load(pluginsFolderPath.c_str()))
+  std::list<yae::TDemuxerPtr> src;
   {
-    std::list<yae::IReaderPtr> readers;
-    if (plugins.find<yae::IReader>(readers))
+    std::string folderPath;
+    std::string fileName;
+    yae::parseFilePath(filePath, folderPath, fileName);
+
+    std::string baseName;
+    std::string ext;
+    yae::parseFileName(fileName, baseName, ext);
+
+    src.push_back(open_demuxer(filePath.c_str()));
+    if (!src.back())
     {
-      readerPrototype = readers.front();
+      // failed to open the primary resource:
+      return -3;
+    }
+
+    yae::Demuxer & primary = *(src.back().get());
+    std::cout
+      << "file opened: " << filePath
+      << ", programs: " << primary.programs().size()
+      << ", a: " << primary.audioTracks().size()
+      << ", v: " << primary.videoTracks().size()
+      << ", s: " << primary.subttTracks().size()
+      << std::endl;
+
+    if (primary.programs().size() < 2)
+    {
+      // add auxiliary resources:
+      std::size_t trackOffset = 100;
+      yae::TOpenFolder folder(folderPath);
+      while (folder.parseNextItem())
+      {
+        std::string nm = folder.itemName();
+        if (!al::starts_with(nm, baseName) || nm == fileName)
+        {
+          continue;
+        }
+
+        src.push_back(open_demuxer(folder.itemPath().c_str(), trackOffset));
+        if (!src.back())
+        {
+          src.pop_back();
+          continue;
+        }
+
+        yae::Demuxer & aux = *(src.back().get());
+        std::cout
+          << "file opened: " << nm
+          << ", programs: " << aux.programs().size()
+          << ", a: " << aux.audioTracks().size()
+          << ", v: " << aux.videoTracks().size()
+          << ", s: " << aux.subttTracks().size()
+          << std::endl;
+
+        trackOffset += 100;
+      }
     }
   }
 
-  if (!readerPrototype)
+  while (true)
   {
-    std::cerr
-      << "ERROR: failed to find IReader plugin here: "
-      << pluginsFolderPath
-      << std::endl;
-    return -1;
-  }
+    bool demuxed = false;
 
-  yae::IReaderPtr reader = yae::openFile(readerPrototype, fn);
-  if (!reader)
-  {
-    std::cerr
-      << "ERROR: file open failed for " << fn.toUtf8().constData()
-      << std::endl;
-    return -2;
-  }
-
-  std::cerr
-    << "file opened: " << fn.toUtf8().constData()
-    << std::endl;
-
-  bool hasVideo = reader->getNumberOfVideoTracks() > 0;
-  yae::VideoTraits vtts;
-  if (hasVideo)
-  {
-    reader->selectVideoTrack(0);
-    reader->getVideoTraits(vtts);
-  }
-
-  yae::TTime frameDuration = yae::frameDurationForFrameRate(vtts.frameRate_);
-  double fps = frameDuration.perSecond();
-  std::cerr
-    << "output fps: " << fps << ", original " << vtts.frameRate_ << '\n'
-    << "frame duration: " << frameDuration.time_
-    << " / " << frameDuration.base_
-    << std::endl;
-
-  bool hasAudio = reader->getNumberOfAudioTracks() > 0;
-  yae::AudioTraits atts;
-  if (hasAudio)
-  {
-    reader->selectAudioTrack(0);
-    reader->getAudioTraits(atts);
-
-    // override audio traits for something more palettable:
-    atts.channelFormat_ = yae::kAudioChannelsPacked;
-    atts.sampleFormat_ = yae::kAudio16BitNative;
-    bool ok = reader->setAudioTraitsOverride(atts);
-    YAE_ASSERT(ok);
-  }
-
-  double samplesPerFrame = atts.sampleRate_ / fps;
-  std::cerr
-    << "audio samples per frame: " << samplesPerFrame
-    << std::endl;
-
-  yae::TVideoFramePtr v0;
-  yae::TVideoFramePtr v1;
-  yae::TAudioFramePtr af;
-  yae::QueueWaitMgr terminator;
-
-  reader->threadStart();
-
-  yae::int64 v_t0 = 0;
-  yae::int64 v_t1 = 0;
-  yae::int64 v_dt = 0;
-
-  yae::int64 a_t0 = 0;
-  yae::int64 a_t1 = 0;
-  yae::int64 a_dt = 0;
-
-  while (hasVideo && hasAudio)
-  {
-    // assemble audio/video pairs,
-    // 1 image paired with samplerate/fps worth of audio samples
-    while (hasVideo)
+    for (std::list<yae::TDemuxerPtr>::const_iterator
+           i = src.begin(); i != src.end(); ++i)
     {
-      std::swap(v_t1, v_t0);
-      v0.swap(v1);
+      yae::Demuxer & demuxer = *(i->get());
 
-      hasVideo = reader->readVideo(v1, &terminator);
-      if (!(v1 && v1->data_))
+      yae::TPacketPtr packet(new yae::AvPkt());
+      yae::AvPkt & pkt = *packet;
+      int err = demuxer.demux(pkt);
+      if (!err)
       {
-        hasVideo = false;
-        v_t1 = v_t0;
-        v_dt = 0;
-        break;
-      }
-
-      v_t1 = v1->time_.getTime(atts.sampleRate_);
-      v_dt = v_t1 - v_t0;
-
-      if (v0)
-      {
-        break;
+        demuxed = true;
+        std::cout << pkt.trackId_ << std::endl;
       }
     }
 
-    // frame duration, nsamples:
-    std::cerr
-      << "video frame duration: " << v_dt << " / " << atts.sampleRate_
-      << " @ " << v0->time_.to_hhmmss_usec()
-      << std::endl;
-
-    while (hasAudio && (a_t1 < v_t1))
+    if (!demuxed)
     {
-      hasAudio = reader->readAudio(af, &terminator);
-      if (!(af && af->data_))
-      {
-        a_t0 = a_t1;
-        a_dt = 0;
-        break;
-      }
-
-      a_dt = af->numSamples();
-      a_t0 = af->time_.getTime(atts.sampleRate_);
-      a_t1 = a_t0 + a_dt;
-
-      std::cerr
-        << "audio frame duration: " << a_dt << " / " << atts.sampleRate_
-        << " @ " << af->time_.to_hhmmss_usec()
-        << std::endl;
+      break;
     }
-
-    // given v0 and v1 -- calculate exact frame duration of v0,
-    // and consume corresponding number of audio samples;
-    // push the resulting audio/video pair to output queue
-
-    // FIXME:
-    // break;
   }
 
-  reader->threadStop();
   return 0;
 }
 

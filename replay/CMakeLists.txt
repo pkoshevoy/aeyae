@@ -322,4 +322,4 @@ if (NOT (WIN32 OR APPLE))
   install(TARGETS ${PROGNAME} DESTINATION bin)
 endif ()
 
-add_dependencies(${PROGNAME} aeyae yae_reader_ffmpeg)
+add_dependencies(${PROGNAME} aeyae)

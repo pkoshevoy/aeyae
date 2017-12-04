@@ -84,6 +84,14 @@ namespace yae
                 std::string & name);
 
   //----------------------------------------------------------------
+  // parseFileName
+  //
+  YAE_API bool
+  parseFileName(const std::string & fileName,
+                std::string & name,
+                std::string & ext);
+
+  //----------------------------------------------------------------
   // getModuleFilename
   //
   YAE_API bool

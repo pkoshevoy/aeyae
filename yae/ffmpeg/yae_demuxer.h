@@ -43,7 +43,9 @@ namespace yae
   //
   struct YAE_API Demuxer
   {
-    Demuxer();
+    Demuxer(std::size_t ato = 0,
+            std::size_t vto = 0,
+            std::size_t sto = 0);
     ~Demuxer();
 
     bool open(const char * resourcePath);
@@ -126,6 +128,11 @@ namespace yae
     // this is used to interrupt blocking ffmpeg APIs:
     bool interruptDemuxer_;
   };
+
+  //----------------------------------------------------------------
+  // TDemuxerPtr
+  //
+  typedef boost::shared_ptr<Demuxer> TDemuxerPtr;
 
 }
 

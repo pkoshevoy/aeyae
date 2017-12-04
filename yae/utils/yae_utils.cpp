@@ -315,7 +315,7 @@ namespace yae
                 std::string & folder,
                 std::string & name)
   {
-    std::size_t	indexName = filePath.rfind(kDirSeparator);
+    std::size_t indexName = filePath.rfind(kDirSeparator);
 
     std::size_t	indexNameUnix =
       (kDirSeparator != '/') ?
@@ -339,6 +339,27 @@ namespace yae
 
     name = filePath;
     folder = std::string();
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // parseFileName
+  //
+  bool
+  parseFileName(const std::string & fileName,
+                std::string & name,
+                std::string & ext)
+  {
+    std::size_t indexExt = fileName.rfind('.');
+    if (indexExt != std::string::npos)
+    {
+      ext = fileName.substr(indexExt + 1, fileName.size());
+      name = fileName.substr(0, indexExt);
+      return true;
+    }
+
+    name = fileName;
+    ext = std::string();
     return false;
   }
 

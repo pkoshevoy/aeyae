@@ -1037,7 +1037,8 @@ namespace yae
   make_track_id(const char track_type, std::size_t track_index)
   {
     std::ostringstream oss;
-    oss << track_type << ':' << track_index;
+    oss << track_type << ':'
+        << std::setw(3) << std::setfill('0') << track_index;
     return oss.str();
   }
 
