@@ -73,6 +73,12 @@ namespace yae
     inline const std::vector<SubttTrackPtr> & subttTracks() const
     { return subttTracks_; }
 
+    // lookup a track by global track id:
+    TrackPtr getTrack(const std::string & trackId) const;
+
+    // lookup a track by native ffmpeg stream index:
+    TrackPtr getTrack(int streamIndex) const;
+
     void getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
     void getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
 
@@ -86,6 +92,10 @@ namespace yae
 
     void requestDemuxerInterrupt();
     static int demuxerInterruptCallback(void * context);
+
+    // accessor:
+    inline const AVFormatContext & getFormatContext() const
+    { return *context_; }
 
   private:
     // intentionally disabled:

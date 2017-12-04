@@ -20,6 +20,7 @@
 #include <wchar.h>
 #endif
 
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -228,8 +229,96 @@ mainMayThrowException(int argc, char ** argv)
       int err = demuxer.demux(pkt);
       if (!err)
       {
+        yae::TrackPtr track = demuxer.getTrack(pkt.trackId_);
+
         demuxed = true;
-        std::cout << pkt.trackId_ << std::endl;
+        std::cout
+          << pkt.trackId_
+          << ", pos: " << std::setw(12) << std::setfill(' ') << pkt.pos
+          << ", size: " << std::setw(6) << std::setfill(' ') << pkt.size;
+
+        YAE_ASSERT(track);
+        if (track)
+        {
+          const AVStream & stream = track->stream();
+
+          if (pkt.dts != AV_NOPTS_VALUE)
+          {
+            yae::TTime dts(stream.time_base.num * pkt.dts,
+                           stream.time_base.den);
+
+            std::string tc = dts.to_hhmmss_frac(1000, ":", ".");
+            std::cout << ", dts: " << tc;
+          }
+
+          if (pkt.pts != AV_NOPTS_VALUE)
+          {
+            yae::TTime pts(stream.time_base.num * pkt.pts,
+                           stream.time_base.den);
+
+            std::string tc = pts.to_hhmmss_frac(1000, ":", ".");
+            std::cout << ", pts: " << tc;
+          }
+
+          if (pkt.duration)
+          {
+            yae::TTime dur(stream.time_base.num * pkt.duration,
+                           stream.time_base.den);
+
+            std::string tc = dur.to_hhmmss_frac(1000, ":", ".");
+            std::cout << ", dur: " << tc;
+          }
+        }
+
+        const AVFormatContext & ctx = demuxer.getFormatContext();
+        const AVStream & stream = *(ctx.streams[pkt.stream_index]);
+        const AVMediaType codecType = stream.codecpar->codec_type;
+
+        int flags = pkt.flags;
+        if (codecType != AVMEDIA_TYPE_VIDEO)
+        {
+          flags &= ~(AV_PKT_FLAG_KEY);
+        }
+
+        if (flags)
+        {
+          std::cout << ", flags:";
+
+          if ((flags & AV_PKT_FLAG_KEY))
+          {
+            std::cout << " keyframe";
+          }
+
+          if ((flags & AV_PKT_FLAG_CORRUPT))
+          {
+            std::cout << " corrupt";
+          }
+
+          if ((flags & AV_PKT_FLAG_DISCARD))
+          {
+            std::cout << " discard";
+          }
+
+          if ((flags & AV_PKT_FLAG_TRUSTED))
+          {
+            std::cout << " trusted";
+          }
+
+          if ((flags & AV_PKT_FLAG_DISPOSABLE))
+          {
+            std::cout << " disposable";
+          }
+        }
+
+        for (int j = 0; j < pkt.side_data_elems; j++)
+        {
+          std::cout
+            << ", side_data[" << j << "] = { type: "
+            << pkt.side_data[j].type << ", size: "
+            << pkt.side_data[j].size << " }";
+        }
+
+        std::cout << std::endl;
       }
     }
 

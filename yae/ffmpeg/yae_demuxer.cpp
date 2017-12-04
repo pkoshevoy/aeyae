@@ -303,6 +303,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Demuxer::getTrack
+  //
+  TrackPtr
+  Demuxer::getTrack(const std::string & trackId) const
+  {
+    std::map<std::string, int>::const_iterator
+      found = trackIdToStreamIndex_.find(trackId);
+    if (found == trackIdToStreamIndex_.end())
+    {
+      return TrackPtr();
+    }
+
+    return getTrack(found->second);
+  }
+
+  //----------------------------------------------------------------
+  // Demuxer::getTrack
+  //
+  TrackPtr
+  Demuxer::getTrack(int streamIndex) const
+  {
+    std::map<int, TrackPtr>::const_iterator found = tracks_.find(streamIndex);
+    if (found == tracks_.end())
+    {
+      return TrackPtr();
+    }
+
+    return found->second;
+  }
+
+  //----------------------------------------------------------------
   // Demuxer::getVideoTrackInfo
   //
   void
