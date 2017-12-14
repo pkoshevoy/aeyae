@@ -610,6 +610,11 @@ namespace yae
         decoded.pts = decoded.best_effort_timestamp;
       }
 
+      if (decoded.pts == AV_NOPTS_VALUE)
+      {
+        decoded.pts = decoded.pkt_pts;
+      }
+
       TTime t0(stream_->time_base.num * decoded.pts,
                stream_->time_base.den);
 
