@@ -39,9 +39,11 @@ namespace yae
   const QString kExtPlugin = QString::fromUtf8("plugin");
   const QString kExtXcodeproj = QString::fromUtf8("xcodeproj");
   const QString kApplicationSupport = QString::fromUtf8("Application Support");
+  const QString kApplicationSupport2 = QString::fromUtf8("ApplicationSupport");
   const QString kDerivedData = QString::fromUtf8("DerivedData");
   const QString kMan = QString::fromUtf8("man");
   const QString kLocalStorage = QString::fromUtf8("Local Storage");
+  const QString kLocalStorage2 = QString::fromUtf8("LocalStorage");
   const QString kPlugins = QString::fromUtf8("plugins");
   const QString kWebKitCache = QString::fromUtf8("WebKitCache");
 
@@ -1796,6 +1798,23 @@ namespace yae
         return true;
       }
 
+      if (ext == kExtApp ||
+          ext == kExtBundle ||
+          ext == kExtFramework ||
+          ext == kExtPlugin ||
+          ext == kExtXcodeproj ||
+          fn == kApplicationSupport ||
+          fn == kApplicationSupport2 ||
+          fn == kDerivedData ||
+          fn == kLocalStorage ||
+          fn == kLocalStorage2 ||
+          fn == kMan ||
+          fn == kPlugins ||
+          fn == kWebKitCache)
+      {
+        return true;
+      }
+
       return false;
     }
 
@@ -1898,19 +1917,7 @@ namespace yae
     // find all files in the folder, sorted alphabetically
     if (!shouldIgnore(fi.fileName(), ext, fi))
     {
-      if (fi.isDir() &&
-          ext != kExtApp &&
-          ext != kExtBundle &&
-          ext != kExtEyetv &&
-          ext != kExtFramework &&
-          ext != kExtPlugin &&
-          ext != kExtXcodeproj &&
-          filename != kApplicationSupport &&
-          filename != kDerivedData &&
-          filename != kLocalStorage &&
-          filename != kMan &&
-          filename != kPlugins &&
-          filename != kWebKitCache)
+      if (fi.isDir() && ext != kExtEyetv)
       {
         return findFilesAndSort(playlist, folder, true);
       }
