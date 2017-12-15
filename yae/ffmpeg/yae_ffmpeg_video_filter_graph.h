@@ -42,6 +42,7 @@ namespace yae
 
     bool setup(int srcWidth,
                int srcHeight,
+               const AVRational & srcFrameRate,
                const AVRational & srcTimeBase,
                const AVRational & srcPAR,
                AVPixelFormat srcPixFmt,
@@ -58,6 +59,7 @@ namespace yae
     std::string filterChain_;
     int srcWidth_;
     int srcHeight_;
+    AVRational srcFrameRate_;
     AVRational srcTimeBase_;
     AVRational srcPAR_;
     AVPixelFormat srcPixFmt_;

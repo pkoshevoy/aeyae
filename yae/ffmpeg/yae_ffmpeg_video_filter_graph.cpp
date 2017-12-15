@@ -69,6 +69,7 @@ namespace yae
   bool
   VideoFilterGraph::setup(int srcWidth,
                           int srcHeight,
+                          const AVRational & srcFrameRate,
                           const AVRational & srcTimeBase,
                           const AVRational & srcPAR,
                           AVPixelFormat srcPixFmt,
@@ -100,6 +101,7 @@ namespace yae
     srcPixFmt_ = srcPixFmt;
     dstPixFmt_[0] = dstPixFmt;
 
+    srcFrameRate_ = srcFrameRate;
     srcTimeBase_ = srcTimeBase;
     srcPAR_ = srcPAR;
 
@@ -112,6 +114,7 @@ namespace yae
          << "=width=" << srcWidth_
          << ":height=" << srcHeight_
          << ":pix_fmt=" << srcPixFmtTxt
+         << ":frame_rate=" << srcFrameRate_.num << '/' << srcFrameRate_.den
          << ":time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
          << ":sar=" << srcPAR_.num << '/' << srcPAR_.den;
 

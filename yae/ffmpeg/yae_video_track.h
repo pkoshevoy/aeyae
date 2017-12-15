@@ -134,6 +134,7 @@ namespace yae
     bool hasPrevPTS_;
 
     uint64 framesDecoded_;
+    uint64 framesProduced_;
 
     // CEA-608 closed captions decoder:
     CaptionsDecoder cc_;
@@ -146,10 +147,8 @@ namespace yae
     std::vector<unsigned char> temp_;
 
 #ifndef NDEBUG
-    // for estimating decoder fps:
+    // for estimating decoder fps and output fps:
     boost::chrono::steady_clock::time_point t0_;
-    boost::chrono::steady_clock::time_point t1_;
-    double fps_;
 #endif
   };
 

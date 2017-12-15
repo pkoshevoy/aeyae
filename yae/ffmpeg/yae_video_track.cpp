@@ -102,12 +102,9 @@ namespace yae
     frameQueue_(kQueueSizeSmall),
     hasPrevPTS_(false),
     framesDecoded_(0),
+    framesProduced_(0),
     subs_(NULL)
   {
-#ifndef NDEBUG
-    fps_ = 0.0;
-#endif
-
     YAE_ASSERT(stream_->codecpar->codec_type == AVMEDIA_TYPE_VIDEO);
 
     // make sure the frames are sorted from oldest to newest:
@@ -153,6 +150,7 @@ namespace yae
     if (ctx)
     {
       framesDecoded_ = 0;
+      framesProduced_ = 0;
       skipLoopFilter(skipLoopFilter_);
       skipNonReferenceFrames(skipNonReferenceFrames_);
     }
@@ -344,6 +342,7 @@ namespace yae
     refreshTraits();
 
     framesDecoded_ = 0;
+    framesProduced_ = 0;
 #ifndef NDEBUG
     this->t0_ = boost::chrono::steady_clock::now();
 #endif
@@ -423,6 +422,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // add_to
+  //
+  static std::ostringstream &
+  add_to(std::ostringstream & filters, const char * filter = NULL)
+  {
+    if (!filters.str().empty())
+    {
+      filters << ',';
+    }
+
+    if (filter)
+    {
+      filters << filter;
+    }
+
+    return filters;
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::handle
   //
   void
@@ -435,18 +453,19 @@ namespace yae
 
 #ifndef NDEBUG
       {
-        t1_ = boost::chrono::steady_clock::now();
+        boost::chrono::steady_clock::time_point
+          t1 = boost::chrono::steady_clock::now();
 
         uint64 dt =
-          boost::chrono::duration_cast<boost::chrono::microseconds>(t1_ - t0_).
+          boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
           count();
 
-        fps_ = double(framesDecoded_) / (1e-6 * double(dt));
+        double fps = double(framesDecoded_) / (1e-6 * double(dt));
 
         std::cerr
           << codecContext_->codec->name
           << ", frames decoded: " << framesDecoded_
-          << ", elapsed time: " << dt << " usec, decoder fps: " << fps_
+          << ", elapsed time: " << dt << " usec, decoder fps: " << fps
           << std::endl;
       }
 #endif
@@ -483,16 +502,29 @@ namespace yae
 
       if (deinterlace_)
       {
-        if (!filters.str().empty())
+        if (skipNonReferenceFrames_)
         {
-          filters << ',';
+          // when non-reference frames are discarded deinterlacing filter
+          // loses ability to detect interlaced frames, therefore
+          // it is better to simply drop a field:
+          add_to(filters)
+            << "yadif=mode=send_frame_nospatial:parity=tff:deint=all";
         }
-
-        // when non-reference frames are discarded deinterlacing filter
-        // loses ability to detect interlaced frames, therefore
-        // it is better to simply drop a field:
-        filters << (skipNonReferenceFrames_ ? "yadif=2:0:0" : "yadif=0:-1:0");
+        else
+        {
+          add_to(filters)
+            << "yadif=mode=send_frame:parity=auto:deint=all";
+        }
       }
+#if 0
+      else // inverse telecine
+      {
+        add_to(filters)
+          << "fieldmatch=order=tff:combmatch=full, "
+          << "yadif=deint=interlaced, "
+          << "decimate";
+      }
+#endif
 
       int transposeAngle =
         (output_.cameraRotation_ - native_.cameraRotation_) % 180;
@@ -506,67 +538,42 @@ namespace yae
 
       if (toggleUpsideDown || flipAngle)
       {
-        if (!filters.str().empty())
-        {
-          filters << ',';
-        }
-
         if (toggleUpsideDown && flipAngle)
         {
           // cancel-out two vertical flips:
-          filters << "hflip";
+          add_to(filters, "hflip");
         }
         else if (flipAngle)
         {
-          filters << "hflip,vflip";
+          add_to(filters, "hflip, vflip");
         }
         else
         {
-          filters << "vflip";
+          add_to(filters, "vflip");
         }
       }
 
       if (outputNeedsScale)
       {
-        if (!filters.str().empty())
-        {
-          filters << ',';
-        }
-
-        filters
+        add_to(filters)
           << "scale=w=" << output_.visibleWidth_
           << ":h=" << output_.visibleHeight_;
       }
 
       if (override_.pixelAspectRatio_)
       {
-        if (!filters.str().empty())
-        {
-          filters << ',';
-        }
-
-        filters << "setsar=sar=" << output_.pixelAspectRatio_;
+        add_to(filters) << "setsar=sar=" << output_.pixelAspectRatio_;
       }
 
       if (transposeAngle)
       {
-        if (!filters.str().empty())
-        {
-          filters << ',';
-        }
-
-        filters << ((transposeAngle < 0) ?
-                    "transpose=dir=clock" :
-                    "transpose=dir=cclock");
+        add_to(filters) << ((transposeAngle < 0) ?
+                            "transpose=dir=clock" :
+                            "transpose=dir=cclock");
       }
 
 #if 0
-      if (!filters.str().empty())
-      {
-        filters << ',';
-      }
-
-      filters <<
+      add_to(filters) <<
         "boxblur="
         "luma_radius=min(h\\,w)/8:"
         "luma_power=1:"
@@ -588,6 +595,7 @@ namespace yae
       bool frameTraitsChanged = false;
       if (!filterGraph_.setup(decoded.width,
                               decoded.height,
+                              frameRate_,
                               stream_->time_base,
                               decoded.sample_aspect_ratio,
                               (AVPixelFormat)decoded.format,
@@ -820,6 +828,26 @@ namespace yae
             gatherApplicableSubtitles(vf.subs_, v0, v1, *cc, terminator_);
           }
         }
+
+#ifndef NDEBUG
+      {
+        boost::chrono::steady_clock::time_point
+          t1 = boost::chrono::steady_clock::now();
+
+        uint64 dt =
+          boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
+          count();
+
+        framesProduced_++;
+        double fps = double(framesProduced_) / (1e-6 * double(dt));
+
+        std::cerr
+          << Track::id_
+          << ", frames produced: " << framesProduced_
+          << ", elapsed time: " << dt << " usec, fps: " << fps
+          << std::endl;
+      }
+#endif
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         {
@@ -1152,6 +1180,7 @@ namespace yae
     startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
     hasPrevPTS_ = false;
     framesDecoded_ = 0;
+    framesProduced_ = 0;
 #ifndef NDEBUG
     this->t0_ = boost::chrono::steady_clock::now();
 #endif
