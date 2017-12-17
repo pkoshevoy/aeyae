@@ -23,7 +23,9 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <set>
 #include <stdexcept>
+#include <string>
 
 // boost:
 #include <boost/algorithm/string.hpp>
@@ -95,7 +97,21 @@ open_demuxer(const char * resourcePath, std::size_t track_offset = 0)
   yae::TDemuxerPtr demuxer(new yae::Demuxer(track_offset,
                                             track_offset,
                                             track_offset));
-  if (!demuxer->open(resourcePath))
+
+  std::string path(resourcePath);
+  if (al::ends_with(path, ".eyetv"))
+  {
+    std::set<std::string> mpg_path;
+    yae::CollectMatchingFiles visitor(mpg_path, "^.+\\.mpg$");
+    yae::for_each_file_at(path, visitor);
+
+    if (mpg_path.size() == 1)
+    {
+      path = *(mpg_path.begin());
+    }
+  }
+
+  if (!demuxer->open(path.c_str()))
   {
     return yae::TDemuxerPtr();
   }

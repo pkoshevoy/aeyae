@@ -124,13 +124,7 @@ detect(const char * pattern,
 static std::string
 tolower(const std::string & src)
 {
-  std::string dst = src;
-  for (std::size_t i = 0; i < src.size(); i++)
-  {
-    dst[i] = tolower(dst[i]);
-  }
-
-  return dst;
+  return yae::to_lower(src);
 }
 
 //----------------------------------------------------------------
