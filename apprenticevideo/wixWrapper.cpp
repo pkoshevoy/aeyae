@@ -31,7 +31,8 @@
 #include <boost/regex.hpp>
 
 // local imports:
-#include <yaeVersion.h>
+#include "yaeVersion.h"
+#include "yae/utils/yae_utils.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
@@ -310,126 +311,6 @@ usage(char ** argv, const char * message = NULL)
 }
 
 //----------------------------------------------------------------
-// TOpenFolder
-//
-struct TOpenFolder
-{
-  TOpenFolder(const std::string & folderPathUtf8):
-    path_(fs::absolute(fs::path(folderPathUtf8))),
-    iter_(path_)
-  {
-    if (iter_ == fs::directory_iterator())
-    {
-      std::ostringstream oss;
-      oss << "\"" << path_.string() << "\" folder is empty";
-      throw std::runtime_error(oss.str().c_str());
-    }
-  }
-
-  bool parseNextItem()
-  {
-    ++iter_;
-    bool ok = iter_ != fs::directory_iterator();
-    return ok;
-  }
-
-  inline std::string folderPath() const
-  {
-    return path_.string();
-  }
-
-  inline bool itemIsFolder() const
-  {
-    return
-      (iter_ != fs::directory_iterator()) &&
-      (fs::is_directory(iter_->path()));
-  }
-
-  inline std::string itemName() const
-  {
-    return iter_->path().filename().string();
-  }
-
-  inline std::string itemPath() const
-  {
-    return iter_->path().string();
-  }
-
-protected:
-  fs::path path_;
-  fs::directory_iterator iter_;
-};
-
-//----------------------------------------------------------------
-// forEachFileAt
-//
-template <typename TVisitor>
-static void
-forEachFileAt(const std::string & pathUtf8, TVisitor & callback)
-{
-  try
-  {
-    TOpenFolder folder(pathUtf8);
-    while (folder.parseNextItem())
-    {
-      std::string name = folder.itemName();
-      std::string path = folder.itemPath();
-      bool isSubFolder = folder.itemIsFolder();
-
-      if (isSubFolder)
-      {
-        if (name == "." || name == "..")
-        {
-          continue;
-        }
-      }
-
-      if (!callback(isSubFolder, name, path))
-      {
-        return;
-      }
-
-      if (isSubFolder)
-      {
-        forEachFileAt(path, callback);
-      }
-    }
-  }
-  catch (...)
-  {
-    std::string name = fs::path(pathUtf8).filename().string();
-    callback(false, name, pathUtf8);
-  }
-}
-
-//----------------------------------------------------------------
-// CollectMatchingFiles
-//
-struct CollectMatchingFiles
-{
-  CollectMatchingFiles(std::set<std::string> & dst, const std::string & regex):
-    pattern_(regex, boost::regex::icase),
-    files_(dst)
-  {}
-
-  bool operator()(bool isFolder,
-                  const std::string & name,
-                  const std::string & path)
-  {
-    if (!isFolder && boost::regex_match(name, pattern_))
-    {
-      files_.insert(path);
-    }
-
-    return true;
-  }
-
-protected:
-  boost::regex pattern_;
-  std::set<std::string> & files_;
-};
-
-//----------------------------------------------------------------
 // main
 //
 int
@@ -513,7 +394,7 @@ main(int argc, char ** argv)
       deployFrom[dst] = src;
       deployTo[dst] = std::set<std::string>();
       CollectMatchingFiles visitor(deployTo[dst], regex);
-      forEachFileAt(src, visitor);
+      for_each_file_at(src, visitor);
     }
     else if (strcmp(argv[i], "-deploy") == 0)
     {

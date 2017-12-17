@@ -43,18 +43,8 @@
 #include <vector>
 #include <math.h>
 
-// boost:
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-
 // aeyae:
 #include "yae_utils.h"
-#include "../video/yae_video.h"
-
-// namespace shortcuts:
-namespace fs = boost::filesystem;
-namespace al = boost::algorithm;
 
 
 namespace yae

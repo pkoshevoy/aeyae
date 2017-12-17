@@ -16,8 +16,19 @@
 #include <cstdio>
 #include <sstream>
 
+// boost:
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
+
 // yae includes:
-#include "../video/yae_video.h"
+#include "../api/yae_api.h"
+
+// namespace shortcut:
+namespace fs = boost::filesystem;
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -156,6 +167,79 @@ namespace yae
     struct Private;
     Private * private_;
   };
+
+
+  //----------------------------------------------------------------
+  // for_each_file_at
+  //
+  template <typename TVisitor>
+  static void
+  for_each_file_at(const std::string & pathUtf8, TVisitor & callback)
+  {
+    try
+    {
+      TOpenFolder folder(pathUtf8);
+      while (folder.parseNextItem())
+      {
+        std::string name = folder.itemName();
+        std::string path = folder.itemPath();
+        bool isSubFolder = folder.itemIsFolder();
+
+        if (isSubFolder)
+        {
+          if (name == "." || name == "..")
+          {
+            continue;
+          }
+        }
+
+        if (!callback(isSubFolder, name, path))
+        {
+          return;
+        }
+
+        if (isSubFolder)
+        {
+          forEachFileAt(path, callback);
+        }
+      }
+    }
+    catch (...)
+    {
+      std::string name = fs::path(pathUtf8).filename().string();
+      callback(false, name, pathUtf8);
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // CollectMatchingFiles
+  //
+  struct CollectMatchingFiles
+  {
+    CollectMatchingFiles(std::set<std::string> & dst,
+                         const std::string & regex):
+      pattern_(regex, boost::regex::icase),
+      files_(dst)
+    {}
+
+    bool operator()(bool isFolder,
+                    const std::string & name,
+                    const std::string & path)
+    {
+      if (!isFolder && boost::regex_match(name, pattern_))
+      {
+        files_.insert(path);
+      }
+
+      return true;
+    }
+
+  protected:
+    boost::regex pattern_;
+    std::set<std::string> & files_;
+  };
+
 
   //----------------------------------------------------------------
   // TOpenFile
