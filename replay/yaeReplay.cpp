@@ -36,6 +36,9 @@
 // APPLE includes:
 #ifdef __APPLE__
 #include <ApplicationServices/ApplicationServices.h>
+#ifdef check
+#undef check
+#endif
 #endif
 
 #ifndef _WIN32
