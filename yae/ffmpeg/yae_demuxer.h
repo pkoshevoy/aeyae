@@ -38,6 +38,33 @@ extern "C"
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // AvInputContextPtr
+  //
+  struct AvInputContextPtr : boost::shared_ptr<AVFormatContext>
+  {
+    AvInputContextPtr(AVFormatContext * ctx = NULL):
+      boost::shared_ptr<AVFormatContext>(ctx, &AvInputContextPtr::destroy)
+    {}
+
+    static void destroy(AVFormatContext * ctx);
+  };
+
+
+  //----------------------------------------------------------------
+  // AvOutputContextPtr
+  //
+  struct AvOutputContextPtr : boost::shared_ptr<AVFormatContext>
+  {
+    AvOutputContextPtr(AVFormatContext * ctx = NULL):
+      boost::shared_ptr<AVFormatContext>(ctx, &AvOutputContextPtr::destroy)
+    {}
+
+    static void destroy(AVFormatContext * ctx);
+  };
+
+
   //----------------------------------------------------------------
   // Demuxer
   //
@@ -73,6 +100,9 @@ namespace yae
     inline const std::vector<SubttTrackPtr> & subttTracks() const
     { return subttTracks_; }
 
+    inline const std::map<int, TrackPtr> & tracks() const
+    { return tracks_; }
+
     // lookup a track by global track id:
     TrackPtr getTrack(const std::string & trackId) const;
 
@@ -93,9 +123,12 @@ namespace yae
     void requestDemuxerInterrupt();
     static int demuxerInterruptCallback(void * context);
 
-    // accessor:
+    // accessors:
+    inline const std::string & resourcePath()
+    { return resourcePath_; }
+
     inline const AVFormatContext & getFormatContext() const
-    { return *context_; }
+    { return *(context_.get()); }
 
   private:
     // intentionally disabled:
@@ -103,7 +136,10 @@ namespace yae
     Demuxer & operator = (const Demuxer &);
 
   protected:
-    AVFormatContext * context_;
+    // a copy of the resource path passed to open(..):
+    std::string resourcePath_;
+
+    AvInputContextPtr context_;
 
     // track index offsets, to allow multiple demuxers
     // to output distiguishable packets of the same type
@@ -168,6 +204,58 @@ namespace yae
   YAE_API bool
   open_primary_and_aux_demuxers(const std::string & filePath,
                                 std::list<yae::TDemuxerPtr> & src);
+
+  //----------------------------------------------------------------
+  // get_dts
+  //
+  YAE_API bool
+  get_dts(TTime & dts, const AVStream * stream, const AVPacket & pkt);
+
+
+  //----------------------------------------------------------------
+  // PacketBuffer
+  //
+  struct PacketBuffer
+  {
+    PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
+
+    // refill the buffer:
+    int populate();
+
+    // select stream_index from which to pull the next packet:
+    int choose(TTime & dts_min) const;
+
+    // lookup next packet and its DTS:
+    TPacketPtr peek(TTime & dts_min) const;
+
+    // remove next packet, pass back its AVStream:
+    TPacketPtr get(AVStream *& src);
+
+  protected:
+    typedef std::map<int, std::list<TPacketPtr> > TPackets;
+
+    TDemuxerPtr demuxer_;
+    double buffer_sec_;
+    TPackets packets_;
+    std::size_t num_packets_;
+    TTime t0_;
+    TTime t1_;
+    std::map<int, TTime> next_dts_;
+  };
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer
+  //
+  struct YAE_API DemuxerBuffer
+  {
+    DemuxerBuffer(const std::list<TDemuxerPtr> & src);
+
+    // remove next packet, pass back its AVStream:
+    TPacketPtr get(AVStream *& src);
+
+  protected:
+    std::list<PacketBuffer> src_;
+  };
 
 }
 

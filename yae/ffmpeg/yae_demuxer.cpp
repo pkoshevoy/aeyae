@@ -6,6 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard lib:
+#include <limits>
+
 // yae includes:
 #include "yae_demuxer.h"
 #include "../utils/yae_utils.h"
@@ -13,6 +16,41 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // AvInputContextPtr::destroy
+  //
+  void
+  AvInputContextPtr::destroy(AVFormatContext * ctx)
+  {
+    if (!ctx)
+    {
+      return;
+    }
+
+    avformat_close_input(&ctx);
+  }
+
+
+  //----------------------------------------------------------------
+  // AvOutputContextPtr::destroy
+  //
+  void
+  AvOutputContextPtr::destroy(AVFormatContext * ctx)
+  {
+     for (unsigned int i = 0; i < ctx->nb_streams; i++)
+    {
+      av_freep(&(ctx->streams[i]));
+    }
+
+    if (ctx->pb)
+    {
+      avio_close(ctx->pb);
+    }
+
+    av_freep(&ctx);
+  }
+
 
   //----------------------------------------------------------------
   // Demuxer::Demuxer
@@ -70,11 +108,7 @@ namespace yae
     close();
 
     YAE_ASSERT(!context_);
-    context_ = avformat_alloc_context();
-
     YAE_ASSERT(!interruptDemuxer_);
-    context_->interrupt_callback.callback = &Demuxer::demuxerInterruptCallback;
-    context_->interrupt_callback.opaque = this;
 
     AVDictionary * options = NULL;
 
@@ -87,7 +121,8 @@ namespace yae
     // set genpts:
     av_dict_set(&options, "fflags", "genpts", 0);
 
-    int err = avformat_open_input(&context_,
+    AVFormatContext * ctx = NULL;
+    int err = avformat_open_input(&ctx,
                                   resourcePath,
                                   NULL, // AVInputFormat to force
                                   &options);
@@ -99,9 +134,15 @@ namespace yae
       return false;
     }
 
-    YAE_ASSERT(context_->flags & AVFMT_FLAG_GENPTS);
+    YAE_ASSERT(ctx->flags & AVFMT_FLAG_GENPTS);
 
-    err = avformat_find_stream_info(context_, NULL);
+    resourcePath_ = resourcePath;
+    context_.reset(ctx);
+
+    ctx->interrupt_callback.callback = &Demuxer::demuxerInterruptCallback;
+    ctx->interrupt_callback.opaque = this;
+
+    err = avformat_find_stream_info(ctx, NULL);
     if (err < 0)
     {
       close();
@@ -109,9 +150,9 @@ namespace yae
     }
 
     // get the programs:
-    for (unsigned int i = 0; i < context_->nb_programs; i++)
+    for (unsigned int i = 0; i < ctx->nb_programs; i++)
     {
-      const AVProgram * p = context_->programs[i];
+      const AVProgram * p = ctx->programs[i];
       programs_.push_back(TProgramInfo());
       TProgramInfo & info = programs_.back();
       info.id_ = p->id;
@@ -141,20 +182,20 @@ namespace yae
       }
     }
 
-    if (context_->nb_programs < 1)
+    if (ctx->nb_programs < 1)
     {
       // there must be at least 1 implied program:
       programs_.push_back(TProgramInfo());
 
-      for (unsigned int i = 0; i < context_->nb_streams; i++)
+      for (unsigned int i = 0; i < ctx->nb_streams; i++)
       {
         streamIndexToProgramIndex_[i] = 0;
       }
     }
 
-    for (unsigned int i = 0; i < context_->nb_streams; i++)
+    for (unsigned int i = 0; i < ctx->nb_streams; i++)
     {
-      AVStream * stream = context_->streams[i];
+      AVStream * stream = ctx->streams[i];
 
       // lookup which program this stream belongs to:
       TProgramInfo * program = NULL;
@@ -215,7 +256,7 @@ namespace yae
         continue;
       }
 
-      TrackPtr baseTrack(new Track(context_, stream));
+      TrackPtr baseTrack(new Track(ctx, stream));
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
@@ -286,7 +327,7 @@ namespace yae
   void
   Demuxer::close()
   {
-    if (context_ == NULL)
+    if (!context_)
     {
       return;
     }
@@ -300,7 +341,7 @@ namespace yae
     streamIndexToProgramIndex_.clear();
     trackIdToStreamIndex_.clear();
 
-    avformat_close_input(&context_);
+    context_.reset();
   }
 
   //----------------------------------------------------------------
@@ -406,7 +447,7 @@ namespace yae
   int
   Demuxer::demux(AvPkt & packet)
   {
-    int err = av_read_frame(context_, &packet);
+    int err = av_read_frame(context_.get(), &packet);
 
     if (interruptDemuxer_)
     {
@@ -431,7 +472,9 @@ namespace yae
   bool
   Demuxer::isSeekable() const
   {
-    if (!context_ || !context_->pb || !context_->pb->seekable)
+    const AVFormatContext * ctx = context_.get();
+
+    if (!ctx || !ctx->pb || !ctx->pb->seekable)
     {
       return false;
     }
@@ -447,7 +490,9 @@ namespace yae
                   const TTime & seekTime,
                   const std::string & trackId)
   {
-    if (!context_)
+    AVFormatContext * ctx = context_.get();
+
+    if (!ctx)
     {
       return AVERROR_UNKNOWN;
     }
@@ -483,7 +528,7 @@ namespace yae
         tb.num = 1;
         tb.den = seekTime.base_;
 
-        const AVStream * s = context_->streams[streamIndex];
+        const AVStream * s = ctx->streams[streamIndex];
         ts = av_rescale_q(seekTime.time_, tb, s->time_base);
       }
     }
@@ -492,7 +537,7 @@ namespace yae
       ts = seekTime.time_;
     }
 
-    int err = avformat_seek_file(context_,
+    int err = avformat_seek_file(ctx,
                                  streamIndex,
                                  kMinInt64,
                                  ts,
@@ -584,29 +629,29 @@ namespace yae
   //
   bool
   open_primary_and_aux_demuxers(const std::string & filePath,
-                                std::list<yae::TDemuxerPtr> & src)
+                                std::list<TDemuxerPtr> & src)
   {
     std::string folderPath;
     std::string fileName;
-    yae::parseFilePath(filePath, folderPath, fileName);
+    parseFilePath(filePath, folderPath, fileName);
 
     std::string baseName;
     std::string ext;
-    yae::parseFileName(fileName, baseName, ext);
+    parseFileName(fileName, baseName, ext);
 
     if (!ext.empty())
     {
       baseName += '.';
     }
 
-    src.push_back(yae::open_demuxer(filePath.c_str()));
+    src.push_back(open_demuxer(filePath.c_str()));
     if (!src.back())
     {
       // failed to open the primary resource:
       return false;
     }
 
-    yae::Demuxer & primary = *(src.back().get());
+    Demuxer & primary = *(src.back().get());
     std::cout
       << "file opened: " << filePath
       << ", programs: " << primary.programs().size()
@@ -619,7 +664,7 @@ namespace yae
     {
       // add auxiliary resources:
       std::size_t trackOffset = 100;
-      yae::TOpenFolder folder(folderPath);
+      TOpenFolder folder(folderPath);
       while (folder.parseNextItem())
       {
         std::string nm = folder.itemName();
@@ -628,15 +673,15 @@ namespace yae
           continue;
         }
 
-        src.push_back(yae::open_demuxer(folder.itemPath().c_str(),
-                                        trackOffset));
+        src.push_back(open_demuxer(folder.itemPath().c_str(),
+                                   trackOffset));
         if (!src.back())
         {
           src.pop_back();
           continue;
         }
 
-        yae::Demuxer & aux = *(src.back().get());
+        Demuxer & aux = *(src.back().get());
         std::cout
           << "file opened: " << nm
           << ", programs: " << aux.programs().size()
@@ -650,6 +695,271 @@ namespace yae
     }
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // get_dts
+  //
+  bool
+  get_dts(TTime & dts, const AVStream * stream, const AVPacket & pkt)
+  {
+    if (pkt.dts != AV_NOPTS_VALUE)
+    {
+      dts = TTime(stream->time_base.num * pkt.dts,
+                  stream->time_base.den);
+      return true;
+    }
+    else if (pkt.pts != AV_NOPTS_VALUE)
+    {
+      dts = TTime(stream->time_base.num * pkt.pts,
+                  stream->time_base.den);
+      return true;
+    }
+
+    return false;
+  }
+
+
+  //----------------------------------------------------------------
+  // PacketBuffer::PacketBuffer
+  //
+  PacketBuffer::PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec):
+    demuxer_(demuxer),
+    buffer_sec_(buffer_sec),
+    t0_(std::numeric_limits<int64_t>::max(), 1),
+    t1_(std::numeric_limits<int64_t>::min(), 1),
+    num_packets_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // PacketBuffer::populate
+  //
+  int
+  PacketBuffer::populate()
+  {
+    // shortcuts:
+    Demuxer & demuxer = *demuxer_;
+    const AVFormatContext & ctx = demuxer.getFormatContext();
+
+    while (true)
+    {
+      TTime dt = t1_ - t0_;
+      if (dt > buffer_sec_)
+      {
+        // maintain a time buffer:
+        break;
+      }
+
+      TPacketPtr packet(new AvPkt());
+      AvPkt & pkt = *packet;
+
+      int err = demuxer.demux(pkt);
+      if (err)
+      {
+        return err;
+      }
+
+      const AVStream * stream = ctx.streams[pkt.stream_index];
+      YAE_ASSERT(stream);
+      if (!stream)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      TTime dts = next_dts_[pkt.stream_index];
+      if (!get_dts(dts, stream, pkt))
+      {
+        YAE_ASSERT(false);
+        YAE_ASSERT(pkt.duration);
+        pkt.dts = dts.getTime(stream->time_base.den) / stream->time_base.num;
+      }
+
+      TTime dur(stream->time_base.num * pkt.duration,
+                stream->time_base.den);
+      next_dts_[pkt.stream_index] = dts + dur;
+
+      t0_ = std::min<TTime>(t0_, dts);
+      t1_ = std::max<TTime>(t1_, dts);
+
+      packets_[pkt.stream_index].push_back(packet);
+      num_packets_++;
+    }
+
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::choose
+  //
+  int
+  PacketBuffer::choose(TTime & dts_min) const
+  {
+    // shortcuts:
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    unsigned int stream_index = ctx.nb_streams;
+
+    for (TPackets::const_iterator
+           i = packets_.begin(); i != packets_.end(); ++i)
+    {
+      const std::list<TPacketPtr> & pkts = i->second;
+      if (pkts.empty())
+      {
+        continue;
+      }
+
+      const AvPkt & pkt = *(pkts.front());
+      const AVStream * stream = ctx.streams[pkt.stream_index];
+      if (!stream)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      TTime dts;
+      if (!get_dts(dts, stream, pkt))
+      {
+        YAE_ASSERT(false);
+        return pkt.stream_index;
+      }
+
+      if (dts < dts_min)
+      {
+        dts_min = dts;
+        stream_index = pkt.stream_index;
+      }
+    }
+
+    return stream_index;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::peek
+  //
+  // lookup next packet and its DTS:
+  //
+  TPacketPtr
+  PacketBuffer::peek(TTime & dts_min) const
+  {
+    // shortcut:
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+
+    unsigned int stream_index = choose(dts_min);
+    if (stream_index >= ctx.nb_streams)
+    {
+      return TPacketPtr();
+    }
+
+    TPackets::const_iterator found = packets_.find(stream_index);
+    if (found == packets_.end())
+    {
+      YAE_ASSERT(false);
+      return TPacketPtr();
+    }
+
+    const std::list<TPacketPtr> & pkts = found->second;
+    TPacketPtr pkt = pkts.front();
+    return pkt;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::get
+  //
+  // remove next packet, pass back its AVStream
+  //
+  TPacketPtr
+  PacketBuffer::get(AVStream *& src)
+  {
+    // shortcut:
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+
+    // refill the buffer:
+    populate();
+
+    TTime dts(std::numeric_limits<int64_t>::max(), 1);
+    TPacketPtr pkt = peek(dts);
+
+    if (pkt)
+    {
+      unsigned int stream_index = pkt->stream_index;
+      src = ctx.streams[stream_index];
+      std::list<TPacketPtr> & pkts = packets_[stream_index];
+      pkts.pop_front();
+      YAE_ASSERT(num_packets_ > 0);
+      num_packets_--;
+
+      if (!num_packets_)
+      {
+        // reset the timespan:
+        t0_ = TTime(std::numeric_limits<int64_t>::max(), 1);
+        t1_ = TTime(std::numeric_limits<int64_t>::min(), 1);
+      }
+
+      // adjust t0:
+      populate();
+
+      TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+      TPacketPtr next = peek(dts_min);
+      if (next)
+      {
+        const AVStream * stream = ctx.streams[next->stream_index];
+        get_dts(t0_, stream, *next);
+      }
+    }
+
+    return pkt;
+  }
+
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::DemuxerBuffer
+  //
+  DemuxerBuffer::DemuxerBuffer(const std::list<TDemuxerPtr> & src)
+  {
+    for (std::list<TDemuxerPtr>::const_iterator
+           i = src.begin(); i != src.end(); ++i)
+    {
+      src_.push_back(PacketBuffer(*i));
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::get
+  //
+  TPacketPtr
+  DemuxerBuffer::get(AVStream *& stream)
+  {
+    TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+    PacketBuffer * src = NULL;
+
+    for (std::list<PacketBuffer>::iterator
+           i = src_.begin(); i != src_.end(); ++i)
+    {
+      PacketBuffer & buffer = *i;
+
+      // refill the buffer, otherwise peek won't work:
+      buffer.populate();
+
+      TTime dts(std::numeric_limits<int64_t>::max(), 1);
+      TPacketPtr pkt = buffer.peek(dts);
+      if (!pkt)
+      {
+        continue;
+      }
+
+      if (dts < dts_min)
+      {
+        dts_min = dts;
+        src = &buffer;
+      }
+    }
+
+    if (!src)
+    {
+      return TPacketPtr();
+    }
+
+    return src->get(stream);
   }
 
 }
