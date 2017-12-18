@@ -184,6 +184,11 @@ mainMayThrowException(int argc, char ** argv)
     std::string ext;
     yae::parseFileName(fileName, baseName, ext);
 
+    if (!ext.empty())
+    {
+      baseName += '.';
+    }
+
     src.push_back(open_demuxer(filePath.c_str()));
     if (!src.back())
     {
