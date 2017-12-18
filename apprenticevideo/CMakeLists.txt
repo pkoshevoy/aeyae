@@ -644,6 +644,8 @@ if (WIN32)
     wixWrapper.cpp
     yaeVersion.cpp
     "${PROJECT_BINARY_DIR}/yaeVersion.h"
+    ../yae/utils/yae_utils.cpp
+    ../yae/utils/yae_utils.h
     )
 
   target_link_libraries(wixWrapper

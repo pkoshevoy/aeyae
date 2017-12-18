@@ -200,7 +200,7 @@ namespace yae
 
         if (isSubFolder)
         {
-          forEachFileAt(path, callback);
+          for_each_file_at(path, callback);
         }
       }
     }

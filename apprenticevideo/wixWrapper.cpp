@@ -393,8 +393,8 @@ main(int argc, char ** argv)
 
       deployFrom[dst] = src;
       deployTo[dst] = std::set<std::string>();
-      CollectMatchingFiles visitor(deployTo[dst], regex);
-      for_each_file_at(src, visitor);
+      yae::CollectMatchingFiles visitor(deployTo[dst], regex);
+      yae::for_each_file_at(src, visitor);
     }
     else if (strcmp(argv[i], "-deploy") == 0)
     {
