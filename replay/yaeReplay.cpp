@@ -143,7 +143,7 @@ mainMayThrowException(int argc, char ** argv)
     return -3;
   }
 
-  yae::DemuxerBuffer buffer(src);
+  yae::DemuxerBuffer buffer(src, 1.0);
   while (true)
   {
     AVStream * stream = NULL;
@@ -158,6 +158,8 @@ mainMayThrowException(int argc, char ** argv)
 
     std::cout
       << pkt.trackId_
+      << ", demuxer: " << pkt.demuxer_
+      << ", program: " << pkt.program_
       << ", pos: " << std::setw(12) << std::setfill(' ') << pkt.pos
       << ", size: " << std::setw(6) << std::setfill(' ') << pkt.size;
 

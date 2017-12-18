@@ -42,6 +42,8 @@ namespace yae
     memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
     av_packet_ref(this, &pkt);
     trackId_ = pkt.trackId_;
+    demuxer_ = pkt.demuxer_;
+    program_ = pkt.program_;
   }
 
   //----------------------------------------------------------------

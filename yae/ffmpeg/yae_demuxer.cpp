@@ -38,7 +38,7 @@ namespace yae
   void
   AvOutputContextPtr::destroy(AVFormatContext * ctx)
   {
-     for (unsigned int i = 0; i < ctx->nb_streams; i++)
+    for (unsigned int i = 0; i < ctx->nb_streams; i++)
     {
       av_freep(&(ctx->streams[i]));
     }
@@ -55,11 +55,15 @@ namespace yae
   //----------------------------------------------------------------
   // Demuxer::Demuxer
   //
-  Demuxer::Demuxer(std::size_t ato, std::size_t vto, std::size_t sto):
+  Demuxer::Demuxer(std::size_t ato,
+                   std::size_t vto,
+                   std::size_t sto,
+                   std::size_t idx):
     context_(NULL),
     ato_(ato),
     vto_(vto),
     sto_(sto),
+    idx_(idx),
     interruptDemuxer_(false)
   {
     ensure_ffmpeg_initialized();
@@ -376,6 +380,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Demuxer::getProgram
+  //
+  const TProgramInfo *
+  Demuxer::getProgram(int streamIndex) const
+  {
+    std::map<int, unsigned int>::const_iterator
+      found = streamIndexToProgramIndex_.find(streamIndex);
+
+    if (found == streamIndexToProgramIndex_.end())
+    {
+      return NULL;
+    }
+
+    const TProgramInfo * program = &programs_[found->second];
+    return program;
+  }
+
+  //----------------------------------------------------------------
   // Demuxer::getVideoTrackInfo
   //
   void
@@ -392,7 +414,7 @@ namespace yae
       VideoTrackPtr t = videoTracks_[info.index_];
       info.setLang(t->getLang());
       info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
 
@@ -413,7 +435,7 @@ namespace yae
       AudioTrackPtr t = audioTracks_[info.index_];
       info.setLang(t->getLang());
       info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
 
@@ -434,7 +456,7 @@ namespace yae
       SubttTrackPtr t = subttTracks_[i];
       info.setLang(t->getLang());
       info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
       return t->format_;
     }
 
@@ -456,10 +478,27 @@ namespace yae
 
     if (!err)
     {
-      TrackPtr track = get(tracks_, packet.stream_index);
+      TrackPtr track = yae::get(tracks_, packet.stream_index);
       if (track)
       {
         packet.trackId_ = track->id();
+      }
+
+      // make up a demuxer name for this packet:
+      {
+        std::ostringstream oss;
+        oss << std::setw(3) << std::setfill('0') << idx_;
+        packet.demuxer_ = oss.str();
+      }
+
+      // make up a program name for this packet:
+      {
+        const TProgramInfo * info = getProgram(packet.stream_index);
+        int program = info ? info->id_ : 0;
+
+        std::ostringstream oss;
+        oss << std::setw(3) << std::setfill('0') << program;
+        packet.program_ = oss.str();
       }
     }
 
@@ -507,7 +546,7 @@ namespace yae
 
     if (!trackId.empty())
     {
-      streamIndex = get(trackIdToStreamIndex_, trackId, -1);
+      streamIndex = yae::get(trackIdToStreamIndex_, trackId, -1);
       if (streamIndex == -1)
       {
         return AVERROR_STREAM_NOT_FOUND;
@@ -721,82 +760,55 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // PacketBuffer::PacketBuffer
+  // ProgramBuffer::ProgramBuffer
   //
-  PacketBuffer::PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec):
-    demuxer_(demuxer),
-    buffer_sec_(buffer_sec),
+  ProgramBuffer::ProgramBuffer():
     t0_(std::numeric_limits<int64_t>::max(), 1),
     t1_(std::numeric_limits<int64_t>::min(), 1),
     num_packets_(0)
   {}
 
   //----------------------------------------------------------------
-  // PacketBuffer::populate
+  // ProgramBuffer::push
   //
-  int
-  PacketBuffer::populate()
+  void
+  ProgramBuffer::push(const TPacketPtr & packet, const AVStream * stream)
   {
-    // shortcuts:
-    Demuxer & demuxer = *demuxer_;
-    const AVFormatContext & ctx = demuxer.getFormatContext();
-
-    while (true)
+    if (!(packet && stream))
     {
-      TTime dt = t1_ - t0_;
-      if (dt > buffer_sec_)
-      {
-        // maintain a time buffer:
-        break;
-      }
-
-      TPacketPtr packet(new AvPkt());
-      AvPkt & pkt = *packet;
-
-      int err = demuxer.demux(pkt);
-      if (err)
-      {
-        return err;
-      }
-
-      const AVStream * stream = ctx.streams[pkt.stream_index];
-      YAE_ASSERT(stream);
-      if (!stream)
-      {
-        YAE_ASSERT(false);
-        continue;
-      }
-
-      TTime dts = next_dts_[pkt.stream_index];
-      if (!get_dts(dts, stream, pkt))
-      {
-        YAE_ASSERT(false);
-        YAE_ASSERT(pkt.duration);
-        pkt.dts = dts.getTime(stream->time_base.den) / stream->time_base.num;
-      }
-
-      TTime dur(stream->time_base.num * pkt.duration,
-                stream->time_base.den);
-      next_dts_[pkt.stream_index] = dts + dur;
-
-      t0_ = std::min<TTime>(t0_, dts);
-      t1_ = std::max<TTime>(t1_, dts);
-
-      packets_[pkt.stream_index].push_back(packet);
-      num_packets_++;
+      YAE_ASSERT(false);
+      return;
     }
 
-    return 0;
+    // shortcut:
+    AvPkt & pkt = *packet;
+
+    TTime dts = next_dts_[pkt.stream_index];
+    if (!get_dts(dts, stream, pkt))
+    {
+      YAE_ASSERT(false);
+      YAE_ASSERT(pkt.duration);
+      pkt.dts = dts.getTime(stream->time_base.den) / stream->time_base.num;
+    }
+
+    TTime dur(stream->time_base.num * pkt.duration,
+              stream->time_base.den);
+    next_dts_[pkt.stream_index] = dts + dur;
+
+    t0_ = std::min<TTime>(t0_, dts);
+    t1_ = std::max<TTime>(t1_, dts);
+
+    packets_[pkt.stream_index].push_back(packet);
+    num_packets_++;
   }
 
   //----------------------------------------------------------------
-  // PacketBuffer::choose
+  // ProgramBuffer::choose
   //
   int
-  PacketBuffer::choose(TTime & dts_min) const
+  ProgramBuffer::choose(const AVFormatContext & ctx, TTime & dts_min) const
   {
-    // shortcuts:
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    // shortcut:
     unsigned int stream_index = ctx.nb_streams;
 
     for (TPackets::const_iterator
@@ -834,18 +846,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PacketBuffer::peek
+  // ProgramBuffer::peek
   //
   // lookup next packet and its DTS:
   //
   TPacketPtr
-  PacketBuffer::peek(TTime & dts_min) const
+  ProgramBuffer::peek(const AVFormatContext & ctx,
+                      TTime & dts_min,
+                      int stream_index) const
   {
-    // shortcut:
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    if (stream_index < 0)
+    {
+      stream_index = choose(ctx, dts_min);
+    }
 
-    unsigned int stream_index = choose(dts_min);
-    if (stream_index >= ctx.nb_streams)
+    if (stream_index < 0 || stream_index >= ctx.nb_streams)
     {
       return TPacketPtr();
     }
@@ -863,28 +878,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PacketBuffer::get
+  // ProgramBuffer::get
   //
   // remove next packet, pass back its AVStream
   //
   TPacketPtr
-  PacketBuffer::get(AVStream *& src)
+  ProgramBuffer::get(const AVFormatContext & ctx,
+                     AVStream *& src,
+                     int stream_index)
   {
-    // shortcut:
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
-
-    // refill the buffer:
-    populate();
-
     TTime dts(std::numeric_limits<int64_t>::max(), 1);
-    TPacketPtr pkt = peek(dts);
+    TPacketPtr pkt = peek(ctx, dts, stream_index);
 
     if (pkt)
     {
       unsigned int stream_index = pkt->stream_index;
       src = ctx.streams[stream_index];
+
       std::list<TPacketPtr> & pkts = packets_[stream_index];
       pkts.pop_front();
+
       YAE_ASSERT(num_packets_ > 0);
       num_packets_--;
 
@@ -894,17 +907,237 @@ namespace yae
         t0_ = TTime(std::numeric_limits<int64_t>::max(), 1);
         t1_ = TTime(std::numeric_limits<int64_t>::min(), 1);
       }
+    }
+
+    return pkt;
+  }
+
+  //----------------------------------------------------------------
+  // ProgramBuffer::update_duration
+  //
+  void
+  ProgramBuffer::update_duration(const AVFormatContext & ctx)
+  {
+    TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+    TPacketPtr next = peek(ctx, dts_min);
+    if (next)
+    {
+      const AVStream * stream = ctx.streams[next->stream_index];
 
       // adjust t0:
-      populate();
+      get_dts(t0_, stream, *next);
+    }
+  }
 
-      TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
-      TPacketPtr next = peek(dts_min);
-      if (next)
+
+  //----------------------------------------------------------------
+  // PacketBuffer::PacketBuffer
+  //
+  PacketBuffer::PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec):
+    demuxer_(demuxer),
+    buffer_sec_(buffer_sec)
+  {
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    for (unsigned int i = 0; i < ctx.nb_programs; i++)
+    {
+      TProgramBufferPtr buffer(new ProgramBuffer());
+
+      const AVProgram * p = ctx.programs[i];
+      if (!p)
       {
-        const AVStream * stream = ctx.streams[next->stream_index];
-        get_dts(t0_, stream, *next);
+        YAE_ASSERT(false);
+        continue;
       }
+
+      program_[p->id] = buffer;
+
+      for (unsigned int j = 0; j < p->nb_stream_indexes; j++)
+      {
+        unsigned int stream_index = p->stream_index[j];
+        stream_[stream_index] = buffer;
+      }
+    }
+
+    if (!ctx.nb_programs)
+    {
+      // since there are no explicitly defined programs,
+      // then all streams implicitly belong to one program:
+      TProgramBufferPtr buffer(new ProgramBuffer());
+      program_[0] = buffer;
+
+      for (unsigned int i = 0; i < ctx.nb_streams; i++)
+      {
+        const AVStream * s = ctx.streams[i];
+        if (!s)
+        {
+          YAE_ASSERT(false);
+          continue;
+        }
+
+        stream_[s->index] = buffer;
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::populate
+  //
+  int
+  PacketBuffer::populate()
+  {
+    // shortcuts:
+    Demuxer & demuxer = *demuxer_;
+    const AVFormatContext & ctx = demuxer.getFormatContext();
+
+    while (true)
+    {
+      // find min/max buffer duration across all programs:
+      double min_duration = std::numeric_limits<double>::max();
+      double max_duration = 0.0;
+      for (std::map<int, TProgramBufferPtr>::const_iterator
+             i = program_.begin(); i != program_.end(); ++i)
+      {
+        const ProgramBuffer & buffer = *(i->second);
+        double duration = buffer.duration_sec();
+        min_duration = std::min<double>(min_duration, duration);
+        max_duration = std::max<double>(max_duration, duration);
+      }
+
+      if (buffer_sec_ < min_duration)
+      {
+        // buffer is sufficiently filled:
+        break;
+      }
+
+      if (buffer_sec_ * 60.0 < max_duration)
+      {
+        std::cerr
+          << "excessive buffer duration: " << max_duration
+          // << ", giving up"
+          << std::endl;
+        // break;
+
+        // FIXME: detect when a program has ended, don't try to refill it
+      }
+
+      TPacketPtr packet(new AvPkt());
+      AvPkt & pkt = *packet;
+
+      int err = demuxer.demux(pkt);
+      if (err)
+      {
+        return err;
+      }
+
+      const AVStream * stream = ctx.streams[pkt.stream_index];
+      if (!stream)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      TProgramBufferPtr program = yae::get(stream_, pkt.stream_index);
+      if (!program)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      program->push(packet, stream);
+    }
+
+    return 0;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::choose
+  //
+  TProgramBufferPtr
+  PacketBuffer::choose(TTime & dts_min, int & next_stream_index) const
+  {
+    // shortcut:
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+
+    TTime next_dts(std::numeric_limits<int64_t>::max(), 1);
+    TProgramBufferPtr next;
+    next_stream_index = -1;
+
+    for (std::map<int, TProgramBufferPtr>::const_iterator
+           i = program_.begin(); i != program_.end(); ++i)
+    {
+      const TProgramBufferPtr & buffer = i->second;
+      TTime dts = dts_min;
+      int stream_index = buffer->choose(ctx, dts);
+
+      if (dts < next_dts)
+      {
+        next_dts = dts;
+        next = buffer;
+        next_stream_index = stream_index;
+      }
+    }
+
+    dts_min = next_dts;
+    return next;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::peek
+  //
+  // lookup next packet and its DTS:
+  //
+  TPacketPtr
+  PacketBuffer::peek(TTime & dts_min,
+                    TProgramBufferPtr buffer,
+                    int stream_index) const
+  {
+    if (!buffer || stream_index < 0)
+    {
+      buffer = choose(dts_min, stream_index);
+
+      if (!buffer)
+      {
+        return TPacketPtr();
+      }
+    }
+
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    TPacketPtr pkt = buffer->peek(ctx, dts_min, stream_index);
+    return pkt;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::get
+  //
+  // remove next packet, pass back its AVStream
+  //
+  TPacketPtr
+  PacketBuffer::get(AVStream *& src,
+                    TProgramBufferPtr buffer,
+                    int stream_index)
+  {
+    // refill the buffer:
+    populate();
+
+    if (!buffer || stream_index < 0)
+    {
+      TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+      buffer = choose(dts_min, stream_index);
+
+      if (!buffer)
+      {
+        return TPacketPtr();
+      }
+    }
+
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    TPacketPtr pkt = buffer->get(ctx, src, stream_index);
+
+    if (pkt)
+    {
+      // refill the buffer:
+      populate();
+      buffer->update_duration(ctx);
     }
 
     return pkt;
@@ -914,12 +1147,13 @@ namespace yae
   //----------------------------------------------------------------
   // DemuxerBuffer::DemuxerBuffer
   //
-  DemuxerBuffer::DemuxerBuffer(const std::list<TDemuxerPtr> & src)
+  DemuxerBuffer::DemuxerBuffer(const std::list<TDemuxerPtr> & src,
+                               double buffer_sec)
   {
     for (std::list<TDemuxerPtr>::const_iterator
            i = src.begin(); i != src.end(); ++i)
     {
-      src_.push_back(PacketBuffer(*i));
+      src_.push_back(PacketBuffer(*i, buffer_sec));
     }
   }
 
@@ -929,8 +1163,10 @@ namespace yae
   TPacketPtr
   DemuxerBuffer::get(AVStream *& stream)
   {
-    TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
-    PacketBuffer * src = NULL;
+    TTime best_dts(std::numeric_limits<int64_t>::max(), 1);
+    PacketBuffer * best_src = NULL;
+    TProgramBufferPtr best_program;
+    int best_stream_index = -1;
 
     for (std::list<PacketBuffer>::iterator
            i = src_.begin(); i != src_.end(); ++i)
@@ -940,26 +1176,29 @@ namespace yae
       // refill the buffer, otherwise peek won't work:
       buffer.populate();
 
+      int stream_index = -1;
       TTime dts(std::numeric_limits<int64_t>::max(), 1);
-      TPacketPtr pkt = buffer.peek(dts);
-      if (!pkt)
+      TProgramBufferPtr program = buffer.choose(dts, stream_index);
+      if (!program)
       {
         continue;
       }
 
-      if (dts < dts_min)
+      if (dts < best_dts)
       {
-        dts_min = dts;
-        src = &buffer;
+        best_dts = dts;
+        best_src = &buffer;
+        best_program = program;
+        best_stream_index = stream_index;
       }
     }
 
-    if (!src)
+    if (!best_src)
     {
       return TPacketPtr();
     }
 
-    return src->get(stream);
+    return best_src->get(stream, best_program, best_stream_index);
   }
 
 }

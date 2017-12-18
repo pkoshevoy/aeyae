@@ -72,7 +72,8 @@ namespace yae
   {
     Demuxer(std::size_t ato = 0,
             std::size_t vto = 0,
-            std::size_t sto = 0);
+            std::size_t sto = 0,
+            std::size_t idx = 0);
     ~Demuxer();
 
     bool open(const char * resourcePath);
@@ -109,6 +110,9 @@ namespace yae
     // lookup a track by native ffmpeg stream index:
     TrackPtr getTrack(int streamIndex) const;
 
+    // lookup program by native ffmpeg stream index:
+    const TProgramInfo * getProgram(int streamIndex) const;
+
     void getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
     void getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
 
@@ -130,6 +134,18 @@ namespace yae
     inline const AVFormatContext & getFormatContext() const
     { return *(context_.get()); }
 
+    inline std::size_t ato() const
+    { return ato_; }
+
+    inline std::size_t vto() const
+    { return vto_; }
+
+    inline std::size_t sto() const
+    { return sto_; }
+
+    inline std::size_t idx() const
+    { return idx_; }
+
   private:
     // intentionally disabled:
     Demuxer(const Demuxer &);
@@ -150,6 +166,9 @@ namespace yae
     std::size_t ato_;
     std::size_t vto_;
     std::size_t sto_;
+
+    // demuxer index:
+    std::size_t idx_;
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
@@ -213,29 +232,44 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // PacketBuffer
+  // ProgramBuffer
   //
-  struct PacketBuffer
+  struct ProgramBuffer
   {
-    PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
+    ProgramBuffer();
 
     // refill the buffer:
-    int populate();
+    void push(const TPacketPtr & pkt, const AVStream * stream);
 
     // select stream_index from which to pull the next packet:
-    int choose(TTime & dts_min) const;
+    int choose(const AVFormatContext & ctx, TTime & dts_min) const;
 
     // lookup next packet and its DTS:
-    TPacketPtr peek(TTime & dts_min) const;
+    TPacketPtr peek(const AVFormatContext & ctx,
+                    TTime & dts_min,
+                    int stream_index = -1) const;
 
     // remove next packet, pass back its AVStream:
-    TPacketPtr get(AVStream *& src);
+    TPacketPtr get(const AVFormatContext & ctx,
+                   AVStream *& src,
+                   int stream_index = -1);
+
+    // need to do this after a call to get which removes a packet:
+    void update_duration(const AVFormatContext & ctx);
+
+    // get buffer duration in seconds:
+    inline double duration_sec() const
+    { return (t0_ < t1_) ? (t1_ - t0_).toSeconds() : 0.0; }
+
+    inline bool empty() const
+    { return num_packets_ < 1; }
+
+    // accessors:
+    inline std::size_t num_packets() const
+    { return num_packets_; }
 
   protected:
     typedef std::map<int, std::list<TPacketPtr> > TPackets;
-
-    TDemuxerPtr demuxer_;
-    double buffer_sec_;
     TPackets packets_;
     std::size_t num_packets_;
     TTime t0_;
@@ -244,11 +278,51 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TProgramBufferPtr
+  //
+  typedef boost::shared_ptr<ProgramBuffer> TProgramBufferPtr;
+
+
+  //----------------------------------------------------------------
+  // ProgramBuffer
+  //
+  struct PacketBuffer
+  {
+    PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
+
+    // refill the buffer:
+    int populate();
+
+    // select program and stream_index from which to pull the next packet:
+    TProgramBufferPtr choose(TTime & dts_min, int & next_stream_index) const;
+
+    // lookup next packet and its DTS:
+    TPacketPtr peek(TTime & dts_min,
+                    TProgramBufferPtr buffer = TProgramBufferPtr(),
+                    int stream_index = -1) const;
+
+    // remove next packet, pass back its AVStream:
+    TPacketPtr get(AVStream *& src,
+                   TProgramBufferPtr buffer = TProgramBufferPtr(),
+                   int stream_index = -1);
+
+  protected:
+    TDemuxerPtr demuxer_;
+    double buffer_sec_;
+
+    // map native ffmpeg AVProgram id to ProgramBuffer:
+    std::map<int, TProgramBufferPtr> program_;
+
+    // map native ffmpeg stream_index to ProgramBuffer:
+    std::map<int, TProgramBufferPtr> stream_;
+  };
+
+  //----------------------------------------------------------------
   // DemuxerBuffer
   //
   struct YAE_API DemuxerBuffer
   {
-    DemuxerBuffer(const std::list<TDemuxerPtr> & src);
+    DemuxerBuffer(const std::list<TDemuxerPtr> & src, double buffer_sec = 1.0);
 
     // remove next packet, pass back its AVStream:
     TPacketPtr get(AVStream *& src);

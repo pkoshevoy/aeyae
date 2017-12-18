@@ -118,6 +118,8 @@ namespace yae
 
     // an indication of the origin on this packet:
     std::string trackId_;
+    std::string demuxer_;
+    std::string program_;
 
   private:
     // intentionally disabled:
