@@ -86,44 +86,6 @@ namespace yae
 
 
 //----------------------------------------------------------------
-// plugins
-//
-yae::TPluginRegistry plugins;
-
-
-//----------------------------------------------------------------
-// open_demuxer
-//
-static yae::TDemuxerPtr
-open_demuxer(const char * resourcePath, std::size_t track_offset = 0)
-{
-  yae::TDemuxerPtr demuxer(new yae::Demuxer(track_offset,
-                                            track_offset,
-                                            track_offset));
-
-  std::string path(resourcePath);
-  if (al::ends_with(path, ".eyetv"))
-  {
-    std::set<std::string> mpg_path;
-    yae::CollectMatchingFiles visitor(mpg_path, "^.+\\.mpg$");
-    yae::for_each_file_at(path, visitor);
-
-    if (mpg_path.size() == 1)
-    {
-      path = *(mpg_path.begin());
-    }
-  }
-
-  if (!demuxer->open(path.c_str()))
-  {
-    return yae::TDemuxerPtr();
-  }
-
-  return demuxer;
-}
-
-
-//----------------------------------------------------------------
 // mainMayThrowException
 //
 int
@@ -189,7 +151,7 @@ mainMayThrowException(int argc, char ** argv)
       baseName += '.';
     }
 
-    src.push_back(open_demuxer(filePath.c_str()));
+    src.push_back(yae::open_demuxer(filePath.c_str()));
     if (!src.back())
     {
       // failed to open the primary resource:
@@ -218,7 +180,8 @@ mainMayThrowException(int argc, char ** argv)
           continue;
         }
 
-        src.push_back(open_demuxer(folder.itemPath().c_str(), trackOffset));
+        src.push_back(yae::open_demuxer(folder.itemPath().c_str(),
+                                        trackOffset));
         if (!src.back())
         {
           src.pop_back();

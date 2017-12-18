@@ -144,6 +144,12 @@ namespace yae
   //
   typedef boost::shared_ptr<Demuxer> TDemuxerPtr;
 
+  //----------------------------------------------------------------
+  // open_demuxer
+  //
+  TDemuxerPtr
+  open_demuxer(const char * resourcePath, std::size_t track_offset = 0);
+
 }
 
 

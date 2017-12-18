@@ -8,6 +8,7 @@
 
 // yae includes:
 #include "yae_demuxer.h"
+#include "../utils/yae_utils.h"
 
 
 namespace yae
@@ -547,4 +548,34 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // open_demuxer
+  //
+  TDemuxerPtr
+  open_demuxer(const char * resourcePath, std::size_t track_offset)
+  {
+    TDemuxerPtr demuxer(new Demuxer(track_offset,
+                                    track_offset,
+                                    track_offset));
+
+    std::string path(resourcePath);
+    if (al::ends_with(path, ".eyetv"))
+    {
+      std::set<std::string> mpg_path;
+      CollectMatchingFiles visitor(mpg_path, "^.+\\.mpg$");
+      for_each_file_at(path, visitor);
+
+      if (mpg_path.size() == 1)
+      {
+        path = *(mpg_path.begin());
+      }
+    }
+
+    if (!demuxer->open(path.c_str()))
+    {
+      return TDemuxerPtr();
+    }
+
+    return demuxer;
+  }
 }
