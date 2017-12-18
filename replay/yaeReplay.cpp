@@ -137,69 +137,10 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   std::list<yae::TDemuxerPtr> src;
+  if (!yae::open_primary_and_aux_demuxers(filePath, src))
   {
-    std::string folderPath;
-    std::string fileName;
-    yae::parseFilePath(filePath, folderPath, fileName);
-
-    std::string baseName;
-    std::string ext;
-    yae::parseFileName(fileName, baseName, ext);
-
-    if (!ext.empty())
-    {
-      baseName += '.';
-    }
-
-    src.push_back(yae::open_demuxer(filePath.c_str()));
-    if (!src.back())
-    {
-      // failed to open the primary resource:
-      return -3;
-    }
-
-    yae::Demuxer & primary = *(src.back().get());
-    std::cout
-      << "file opened: " << filePath
-      << ", programs: " << primary.programs().size()
-      << ", a: " << primary.audioTracks().size()
-      << ", v: " << primary.videoTracks().size()
-      << ", s: " << primary.subttTracks().size()
-      << std::endl;
-
-    if (primary.programs().size() < 2)
-    {
-      // add auxiliary resources:
-      std::size_t trackOffset = 100;
-      yae::TOpenFolder folder(folderPath);
-      while (folder.parseNextItem())
-      {
-        std::string nm = folder.itemName();
-        if (!al::starts_with(nm, baseName) || nm == fileName)
-        {
-          continue;
-        }
-
-        src.push_back(yae::open_demuxer(folder.itemPath().c_str(),
-                                        trackOffset));
-        if (!src.back())
-        {
-          src.pop_back();
-          continue;
-        }
-
-        yae::Demuxer & aux = *(src.back().get());
-        std::cout
-          << "file opened: " << nm
-          << ", programs: " << aux.programs().size()
-          << ", a: " << aux.audioTracks().size()
-          << ", v: " << aux.videoTracks().size()
-          << ", s: " << aux.subttTracks().size()
-          << std::endl;
-
-        trackOffset += 100;
-      }
-    }
+    // failed to open the primary resource:
+    return -3;
   }
 
   while (true)

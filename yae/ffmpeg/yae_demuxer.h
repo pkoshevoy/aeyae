@@ -147,8 +147,27 @@ namespace yae
   //----------------------------------------------------------------
   // open_demuxer
   //
-  TDemuxerPtr
+  YAE_API TDemuxerPtr
   open_demuxer(const char * resourcePath, std::size_t track_offset = 0);
+
+  //----------------------------------------------------------------
+  // open_primary_and_aux_demuxers
+  //
+  // this will open a primary demuxer for the given path,
+  // and any additional auxiliary demuxers for matching files
+  //
+  // example:
+  // given /tmp/dr.flv this will open /tmp/dr.flv
+  // and /tmp/dr.srt (if present)
+  // and /tmp/dr.aac (if present)
+  // and /tmp/dr.foo.avi (if present)
+  //
+  // all successfully opened demuxers are passed back via the src list,
+  // and the primary demuxer is the first item in the src list
+  //
+  YAE_API bool
+  open_primary_and_aux_demuxers(const std::string & filePath,
+                                std::list<yae::TDemuxerPtr> & src);
 
 }
 
