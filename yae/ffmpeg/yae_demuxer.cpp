@@ -487,7 +487,7 @@ namespace yae
       // make up a demuxer name for this packet:
       {
         std::ostringstream oss;
-        oss << std::setw(3) << std::setfill('0') << ix_;
+        oss << std::setw(1) << std::setfill('0') << ix_;
         packet.demuxer_ = oss.str();
       }
 
