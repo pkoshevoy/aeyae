@@ -70,10 +70,8 @@ namespace yae
   //
   struct YAE_API Demuxer
   {
-    Demuxer(std::size_t ato = 0,
-            std::size_t vto = 0,
-            std::size_t sto = 0,
-            std::size_t idx = 0);
+    Demuxer(std::size_t demuxer_index = 0,
+            std::size_t track_offset = 0);
     ~Demuxer();
 
     bool open(const char * resourcePath);
@@ -134,17 +132,11 @@ namespace yae
     inline const AVFormatContext & getFormatContext() const
     { return *(context_.get()); }
 
-    inline std::size_t ato() const
-    { return ato_; }
+    inline std::size_t track_offset() const
+    { return to_; }
 
-    inline std::size_t vto() const
-    { return vto_; }
-
-    inline std::size_t sto() const
-    { return sto_; }
-
-    inline std::size_t idx() const
-    { return idx_; }
+    inline std::size_t demuxer_index() const
+    { return ix_; }
 
   private:
     // intentionally disabled:
@@ -163,12 +155,10 @@ namespace yae
     //
     // global track index = local track index + track index offset
     //
-    std::size_t ato_;
-    std::size_t vto_;
-    std::size_t sto_;
+    std::size_t to_;
 
     // demuxer index:
-    std::size_t idx_;
+    std::size_t ix_;
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;

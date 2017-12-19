@@ -55,15 +55,11 @@ namespace yae
   //----------------------------------------------------------------
   // Demuxer::Demuxer
   //
-  Demuxer::Demuxer(std::size_t ato,
-                   std::size_t vto,
-                   std::size_t sto,
-                   std::size_t idx):
+  Demuxer::Demuxer(std::size_t demuxer_index,
+                   std::size_t track_offset):
     context_(NULL),
-    ato_(ato),
-    vto_(vto),
-    sto_(sto),
-    idx_(idx),
+    ix_(demuxer_index),
+    to_(track_offset),
     interruptDemuxer_(false)
   {
     ensure_ffmpeg_initialized();
@@ -272,7 +268,7 @@ namespace yae
         {
           program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('v', vto_ + videoTracks_.size()));
+          track->setId(make_track_id('v', to_ + videoTracks_.size()));
           videoTracks_.push_back(track);
           tracks_[stream->index] = track;
           trackIdToStreamIndex_[track->id()] = stream->index;
@@ -291,7 +287,7 @@ namespace yae
         {
           program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('a', ato_ + audioTracks_.size()));
+          track->setId(make_track_id('a', to_ + audioTracks_.size()));
           audioTracks_.push_back(track);
           tracks_[stream->index] = track;
           trackIdToStreamIndex_[track->id()] = stream->index;
@@ -314,7 +310,7 @@ namespace yae
           stream->discard = AVDISCARD_DEFAULT;
 
           SubttTrackPtr track(new SubtitlesTrack(stream));
-          track->setId(make_track_id('s', sto_ + subttTracks_.size()));
+          track->setId(make_track_id('s', to_ + subttTracks_.size()));
           subttTracks_.push_back(track);
           tracks_[stream->index] = track;
           trackIdToStreamIndex_[track->id()] = stream->index;
@@ -483,11 +479,15 @@ namespace yae
       {
         packet.trackId_ = track->id();
       }
+      else
+      {
+        packet.trackId_ = make_track_id('_', packet.stream_index);
+      }
 
       // make up a demuxer name for this packet:
       {
         std::ostringstream oss;
-        oss << std::setw(3) << std::setfill('0') << idx_;
+        oss << std::setw(3) << std::setfill('0') << ix_;
         packet.demuxer_ = oss.str();
       }
 
@@ -638,9 +638,8 @@ namespace yae
   TDemuxerPtr
   open_demuxer(const char * resourcePath, std::size_t track_offset)
   {
-    TDemuxerPtr demuxer(new Demuxer(track_offset,
-                                    track_offset,
-                                    track_offset));
+    YAE_ASSERT(!(track_offset % 100));
+    TDemuxerPtr demuxer(new Demuxer(track_offset / 100, track_offset));
 
     std::string path(resourcePath);
     if (al::ends_with(path, ".eyetv"))
@@ -994,30 +993,45 @@ namespace yae
       // find min/max buffer duration across all programs:
       double min_duration = std::numeric_limits<double>::max();
       double max_duration = 0.0;
+      int min_id = -1;
+      int max_id = -1;
+
+      std::size_t num_packets = 0;
       for (std::map<int, TProgramBufferPtr>::const_iterator
              i = program_.begin(); i != program_.end(); ++i)
       {
         const ProgramBuffer & buffer = *(i->second);
         double duration = buffer.duration_sec();
-        min_duration = std::min<double>(min_duration, duration);
-        max_duration = std::max<double>(max_duration, duration);
+        num_packets += buffer.num_packets();
+
+        if (duration < min_duration)
+        {
+          min_duration = duration;
+          min_id = i->first;
+        }
+
+        if (duration > max_duration)
+        {
+          max_duration = duration;
+          max_id = i->first;
+        }
       }
 
-      if (buffer_sec_ < min_duration)
+      if (min_duration > buffer_sec_)
       {
         // buffer is sufficiently filled:
         break;
       }
 
-      if (buffer_sec_ * 60.0 < max_duration)
+      if (max_duration > buffer_sec_ * 5.0)
       {
         std::cerr
-          << "excessive buffer duration: " << max_duration
-          // << ", giving up"
+          << std::setw(3) << std::setfill('0') << min_id
+          << " min buffer duration: " << min_duration << '\n'
+          << std::setw(3) << std::setfill('0') << max_id
+          << " max buffer duration: " << max_duration << ", giving up"
           << std::endl;
-        // break;
-
-        // FIXME: detect when a program has ended, don't try to refill it
+        break;
       }
 
       TPacketPtr packet(new AvPkt());
@@ -1043,6 +1057,7 @@ namespace yae
         continue;
       }
 
+      YAE_ASSERT(!packet->trackId_.empty());
       program->push(packet, stream);
     }
 
@@ -1053,32 +1068,32 @@ namespace yae
   // PacketBuffer::choose
   //
   TProgramBufferPtr
-  PacketBuffer::choose(TTime & dts_min, int & next_stream_index) const
+  PacketBuffer::choose(TTime & dts_min, int & stream_index) const
   {
     // shortcut:
     const AVFormatContext & ctx = demuxer_->getFormatContext();
 
-    TTime next_dts(std::numeric_limits<int64_t>::max(), 1);
-    TProgramBufferPtr next;
-    next_stream_index = -1;
+    TProgramBufferPtr max_buffer;
+    double max_duration = 0;
 
     for (std::map<int, TProgramBufferPtr>::const_iterator
            i = program_.begin(); i != program_.end(); ++i)
     {
       const TProgramBufferPtr & buffer = i->second;
-      TTime dts = dts_min;
-      int stream_index = buffer->choose(ctx, dts);
-
-      if (dts < next_dts)
+      double duration = buffer->duration_sec();
+      if (max_duration < duration)
       {
-        next_dts = dts;
-        next = buffer;
-        next_stream_index = stream_index;
+        max_duration = duration;
+        max_buffer = buffer;
       }
     }
 
-    dts_min = next_dts;
-    return next;
+    if (max_buffer)
+    {
+      stream_index = max_buffer->choose(ctx, dts_min);
+    }
+
+    return max_buffer;
   }
 
   //----------------------------------------------------------------
