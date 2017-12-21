@@ -153,9 +153,29 @@ mainMayThrowException(int argc, char ** argv)
     src.push_back(buffer);
   }
 
+  bool rewind = false;
+  bool rewound = false;
+
   yae::ParallelDemuxer buffer(src);
   while (true)
   {
+    if (rewind)
+    {
+      if (rewound)
+      {
+        break;
+      }
+
+      std::cout
+        << "----------------------------------------------------------------"
+        << std::endl;
+
+      int seekFlags = AVSEEK_FLAG_BACKWARD;
+      yae::TTime seekTime(0, 1);
+      buffer.seek(seekFlags, seekTime);
+      rewound = true;
+    }
+
     AVStream * stream = NULL;
     yae::TPacketPtr packet = buffer.get(stream);
     if (!packet)
@@ -180,6 +200,8 @@ mainMayThrowException(int argc, char ** argv)
 
       std::string tc = dts.to_hhmmss_frac(1000, ":", ".");
       std::cout << ", dts: " << tc;
+
+      rewind = dts.toSeconds() > 120.0;
     }
 
     if (pkt.pts != AV_NOPTS_VALUE)

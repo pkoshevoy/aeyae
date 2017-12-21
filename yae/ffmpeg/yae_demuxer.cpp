@@ -567,7 +567,7 @@ namespace yae
                                  streamIndex,
                                  kMinInt64,
                                  ts,
-                                 ts, // kMaxInt64,
+                                 kMaxInt64,
                                  seekFlags);
 
     if (err < 0)
