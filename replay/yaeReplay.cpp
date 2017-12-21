@@ -136,14 +136,24 @@ mainMayThrowException(int argc, char ** argv)
     break;
   }
 
-  std::list<yae::TDemuxerPtr> src;
-  if (!yae::open_primary_and_aux_demuxers(filePath, src))
+  std::list<yae::TDemuxerPtr> demuxers;
+  if (!yae::open_primary_and_aux_demuxers(filePath, demuxers))
   {
     // failed to open the primary resource:
     return -3;
   }
 
-  yae::DemuxerBuffer buffer(src, 1.0);
+  // wrap each demuxer in a DemuxerBuffer:
+  double duration_sec = 1.0;
+  std::list<yae::TDemuxerInterfacePtr> src;
+  for (std::list<yae::TDemuxerPtr>::const_iterator
+         i = demuxers.begin(); i != demuxers.end(); ++i)
+  {
+    yae::TDemuxerInterfacePtr buffer(new yae::DemuxerBuffer(*i, duration_sec));
+    src.push_back(buffer);
+  }
+
+  yae::ParallelDemuxer buffer(src);
   while (true)
   {
     AVStream * stream = NULL;
@@ -158,8 +168,8 @@ mainMayThrowException(int argc, char ** argv)
 
     std::cout
       << pkt.trackId_
-      << ", demuxer: " << pkt.demuxer_
-      << ", program: " << pkt.program_
+      << ", demuxer: " << std::setw(2) << pkt.demuxer_->demuxer_index()
+      << ", program: " << std::setw(3) << pkt.program_
       << ", pos: " << std::setw(12) << std::setfill(' ') << pkt.pos
       << ", size: " << std::setw(6) << std::setfill(' ') << pkt.size;
 

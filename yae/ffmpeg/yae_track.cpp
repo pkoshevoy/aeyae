@@ -28,7 +28,10 @@ namespace yae
   //----------------------------------------------------------------
   // AvPkt::AvPkt
   //
-  AvPkt::AvPkt()
+  AvPkt::AvPkt():
+    demuxer_(NULL),
+    program_(0),
+    pbuffer_(NULL)
   {
     memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
     av_init_packet(this);
@@ -44,6 +47,7 @@ namespace yae
     trackId_ = pkt.trackId_;
     demuxer_ = pkt.demuxer_;
     program_ = pkt.program_;
+    pbuffer_ = pkt.pbuffer_;
   }
 
   //----------------------------------------------------------------
@@ -63,6 +67,9 @@ namespace yae
     av_packet_unref(this);
     av_packet_ref(this, &pkt);
     trackId_ = pkt.trackId_;
+    demuxer_ = pkt.demuxer_;
+    program_ = pkt.program_;
+    pbuffer_ = pkt.pbuffer_;
     return *this;
   }
 

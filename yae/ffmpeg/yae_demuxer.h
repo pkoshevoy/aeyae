@@ -105,6 +105,9 @@ namespace yae
     // lookup a track by global track id:
     TrackPtr getTrack(const std::string & trackId) const;
 
+    inline bool has(const std::string & trackId) const
+    { return !!this->getTrack(trackId); }
+
     // lookup a track by native ffmpeg stream index:
     TrackPtr getTrack(int streamIndex) const;
 
@@ -226,7 +229,13 @@ namespace yae
   //
   struct ProgramBuffer
   {
+    // key:   ffmpeg native stream_index
+    // value: a fifo list of buffered packets for that stream index
+    typedef std::map<int, std::list<TPacketPtr> > TPackets;
+
     ProgramBuffer();
+
+    void clear();
 
     // refill the buffer:
     void push(const TPacketPtr & pkt, const AVStream * stream);
@@ -244,6 +253,9 @@ namespace yae
                    AVStream *& src,
                    int stream_index = -1);
 
+    // remove a given packet only if it is the front packet:
+    bool pop(const TPacketPtr & pkt);
+
     // need to do this after a call to get which removes a packet:
     void update_duration(const AVFormatContext & ctx);
 
@@ -258,8 +270,10 @@ namespace yae
     inline std::size_t num_packets() const
     { return num_packets_; }
 
+    inline const TPackets & packets() const
+    { return packets_; }
+
   protected:
-    typedef std::map<int, std::list<TPacketPtr> > TPackets;
     TPackets packets_;
     std::size_t num_packets_;
     TTime t0_;
@@ -272,13 +286,18 @@ namespace yae
   //
   typedef boost::shared_ptr<ProgramBuffer> TProgramBufferPtr;
 
-
   //----------------------------------------------------------------
-  // ProgramBuffer
+  // PacketBuffer
   //
   struct PacketBuffer
   {
     PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
+
+    int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+             const TTime & seekTime,
+             const std::string & trackId = std::string());
+
+    void clear();
 
     // refill the buffer:
     int populate();
@@ -296,6 +315,19 @@ namespace yae
                    TProgramBufferPtr buffer = TProgramBufferPtr(),
                    int stream_index = -1);
 
+    bool pop(const TPacketPtr & pkt);
+
+    // accessors:
+    inline const TDemuxerPtr & demuxer() const
+    { return demuxer_; }
+
+    // helpers:
+    inline const AVFormatContext & context() const
+    { return demuxer_->getFormatContext(); }
+
+    AVStream * stream(const TPacketPtr & pkt) const;
+    AVStream * stream(int stream_index) const;
+
   protected:
     TDemuxerPtr demuxer_;
     double buffer_sec_;
@@ -307,20 +339,99 @@ namespace yae
     std::map<int, TProgramBufferPtr> stream_;
   };
 
+
+  //----------------------------------------------------------------
+  // DemuxerInterface
+  //
+  struct YAE_API DemuxerInterface
+  {
+    virtual ~DemuxerInterface() {}
+
+    virtual void populate() = 0;
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId = std::string()) = 0;
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const = 0;
+
+    // NOTE: pkt must have originated from
+    // an immediately prior peek call,
+    // as in the get function below:
+    bool pop(const TPacketPtr & pkt);
+
+    // helper:
+    TPacketPtr get(AVStream *& src);
+  };
+
+  //----------------------------------------------------------------
+  // TDemuxerInterfacePtr
+  //
+  typedef boost::shared_ptr<DemuxerInterface> TDemuxerInterfacePtr;
+
+
   //----------------------------------------------------------------
   // DemuxerBuffer
   //
-  struct YAE_API DemuxerBuffer
+  struct YAE_API DemuxerBuffer : DemuxerInterface
   {
-    DemuxerBuffer(const std::list<TDemuxerPtr> & src, double buffer_sec = 1.0);
+    DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec = 1.0);
 
-    // remove next packet, pass back its AVStream:
-    TPacketPtr get(AVStream *& src);
+    virtual void populate();
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId = std::string());
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const;
 
   protected:
-    std::list<PacketBuffer> src_;
+    PacketBuffer src_;
   };
 
+  //----------------------------------------------------------------
+  // ParallelDemuxer
+  //
+  struct YAE_API ParallelDemuxer : DemuxerInterface
+  {
+    ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+
+    virtual void populate();
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId = std::string());
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const;
+
+  protected:
+    std::list<TDemuxerInterfacePtr> src_;
+  };
+
+#if 0
+  //----------------------------------------------------------------
+  // SerialDemuxer
+  //
+  struct YAE_API SerialDemuxer : DemuxerInterface
+  {
+    SerialDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+
+    virtual void populate();
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId = std::string());
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const;
+
+  protected:
+    std::list<TDemuxerInterfacePtr> src_;
+  };
+#endif
 }
 
 

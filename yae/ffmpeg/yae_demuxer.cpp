@@ -484,22 +484,9 @@ namespace yae
         packet.trackId_ = make_track_id('_', packet.stream_index);
       }
 
-      // make up a demuxer name for this packet:
-      {
-        std::ostringstream oss;
-        oss << std::setw(1) << std::setfill('0') << ix_;
-        packet.demuxer_ = oss.str();
-      }
-
-      // make up a program name for this packet:
-      {
-        const TProgramInfo * info = getProgram(packet.stream_index);
-        int program = info ? info->id_ : 0;
-
-        std::ostringstream oss;
-        oss << std::setw(3) << std::setfill('0') << program;
-        packet.program_ = oss.str();
-      }
+      const TProgramInfo * info = getProgram(packet.stream_index);
+      packet.program_ = info ? info->id_ : 0;
+      packet.demuxer_ = this;
     }
 
     return err;
@@ -768,6 +755,19 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // ProgramBuffer::clear
+  //
+  void
+  ProgramBuffer::clear()
+  {
+    packets_.clear();
+    num_packets_ = 0;
+    t0_.reset(std::numeric_limits<int64_t>::max(), 1);
+    t1_.reset(std::numeric_limits<int64_t>::min(), 1);
+    next_dts_.clear();
+  }
+
+  //----------------------------------------------------------------
   // ProgramBuffer::push
   //
   void
@@ -912,6 +912,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ProgramBuffer::pop
+  //
+  bool
+  ProgramBuffer::pop(const TPacketPtr & pkt)
+  {
+    if (!pkt)
+    {
+      return true;
+    }
+
+    TPackets::iterator found = packets_.find(pkt->stream_index);
+    if (found != packets_.end())
+    {
+      std::list<TPacketPtr> & pkts = found->second;
+      if (!pkts.empty() && pkts.front() == pkt)
+      {
+        pkts.pop_front();
+
+        YAE_ASSERT(num_packets_ > 0);
+        num_packets_--;
+
+        if (!num_packets_)
+        {
+          // reset the timespan:
+          t0_ = TTime(std::numeric_limits<int64_t>::max(), 1);
+          t1_ = TTime(std::numeric_limits<int64_t>::min(), 1);
+        }
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // ProgramBuffer::update_duration
   //
   void
@@ -979,6 +1015,41 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PacketBuffer::seek
+  //
+  int
+  PacketBuffer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId)
+  {
+    // shortcuts:
+    Demuxer & demuxer = *demuxer_;
+
+    clear();
+
+    int err =
+      (trackId.empty() || demuxer.has(trackId)) ?
+      demuxer.seekTo(seekFlags, seekTime, trackId) :
+      demuxer.seekTo(seekFlags, seekTime);
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::clear
+  //
+  void
+  PacketBuffer::clear()
+  {
+    for (std::map<int, TProgramBufferPtr>::iterator
+           i = program_.begin(); i != program_.end(); ++i)
+    {
+      ProgramBuffer & buffer = *(i->second);
+      buffer.clear();
+    }
+  }
+
+  //----------------------------------------------------------------
   // PacketBuffer::populate
   //
   int
@@ -1036,6 +1107,7 @@ namespace yae
 
       TPacketPtr packet(new AvPkt());
       AvPkt & pkt = *packet;
+      pkt.pbuffer_ = this;
 
       int err = demuxer.demux(pkt);
       if (err)
@@ -1158,62 +1230,247 @@ namespace yae
     return pkt;
   }
 
+  //----------------------------------------------------------------
+  // PacketBuffer::pop
+  //
+  bool
+  PacketBuffer::pop(const TPacketPtr & pkt)
+  {
+    if (!pkt)
+    {
+      return true;
+    }
+
+    TProgramBufferPtr buffer = yae::get(stream_, pkt->stream_index);
+    if (buffer)
+    {
+      return buffer->pop(pkt);
+    }
+
+    YAE_ASSERT(buffer);
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::stream
+  //
+  AVStream *
+  PacketBuffer::stream(const TPacketPtr & pkt) const
+  {
+    if (!pkt)
+    {
+      return NULL;
+    }
+
+    int stream_index = pkt->stream_index;
+    return stream(stream_index);
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::stream
+  //
+  AVStream *
+  PacketBuffer::stream(int stream_index) const
+  {
+    const AVFormatContext & ctx = demuxer_->getFormatContext();
+
+    AVStream * s =
+      (stream_index >= 0 && stream_index < ctx.nb_streams) ?
+      ctx.streams[stream_index] :
+      NULL;
+
+    return s;
+  }
+
+
+  //----------------------------------------------------------------
+  // DemuxerInterface::pop
+  //
+  bool
+  DemuxerInterface::pop(const TPacketPtr & pkt)
+  {
+    if (!pkt)
+    {
+      return true;
+    }
+
+    PacketBuffer * buffer = pkt->pbuffer_;
+    YAE_ASSERT(buffer);
+
+    if (!buffer)
+    {
+      return false;
+    }
+
+    return buffer->pop(pkt);
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerInterface::get
+  //
+  TPacketPtr
+  DemuxerInterface::get(AVStream *& src)
+  {
+    // refill the buffer, otherwise peek won't work:
+    this->populate();
+
+    TPacketPtr pkt = this->peek(src);
+    bool removed = this->pop(pkt);
+    YAE_ASSERT(removed);
+
+    return pkt;
+  }
+
 
   //----------------------------------------------------------------
   // DemuxerBuffer::DemuxerBuffer
   //
-  DemuxerBuffer::DemuxerBuffer(const std::list<TDemuxerPtr> & src,
-                               double buffer_sec)
+  DemuxerBuffer::DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec):
+    src_(src, buffer_sec)
+  {}
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::populate
+  //
+  void
+  DemuxerBuffer::populate()
   {
-    for (std::list<TDemuxerPtr>::const_iterator
-           i = src.begin(); i != src.end(); ++i)
+    src_.populate();
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::seek
+  //
+  int
+  DemuxerBuffer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                      const TTime & seekTime,
+                      const std::string & trackId)
+  {
+    return src_.seek(seekFlags, seekTime, trackId);
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::peek
+  //
+  TPacketPtr
+  DemuxerBuffer::peek(AVStream *& src) const
+  {
+    TTime dts(std::numeric_limits<int64_t>::max(), 1);
+    int stream_index = -1;
+
+    TProgramBufferPtr program = src_.choose(dts, stream_index);
+    if (program)
     {
-      src_.push_back(PacketBuffer(*i, buffer_sec));
+      src = src_.stream(stream_index);
+      YAE_ASSERT(src);
+
+      if (src)
+      {
+        const ProgramBuffer::TPackets & packets = program->packets();
+
+        ProgramBuffer::TPackets::const_iterator found =
+          packets.find(stream_index);
+        YAE_ASSERT(found != packets.end());
+
+        if (found != packets.end())
+        {
+          const std::list<TPacketPtr> & stream = found->second;
+          YAE_ASSERT(!stream.empty());
+
+          if (!stream.empty())
+          {
+            TPacketPtr pkt = found->second.front();
+            return pkt;
+          }
+        }
+      }
+    }
+
+    return TPacketPtr();
+  }
+
+
+  //----------------------------------------------------------------
+  // ParallelDemuxer::ParallelDemuxer
+  //
+  ParallelDemuxer::ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & s):
+    src_(s)
+  {}
+
+  //----------------------------------------------------------------
+  // ParallelDemuxer::populate
+  //
+  void
+  ParallelDemuxer::populate()
+  {
+    for (std::list<TDemuxerInterfacePtr>::iterator
+           i = src_.begin(); i != src_.end(); ++i)
+    {
+      DemuxerInterface & demuxer = *(i->get());
+      demuxer.populate();
     }
   }
 
   //----------------------------------------------------------------
-  // DemuxerBuffer::get
+  // ParallelDemuxer::seek
+  //
+  int
+  ParallelDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                        const TTime & seekTime,
+                        const std::string & trackId)
+  {
+    int result = 0;
+
+    for (std::list<TDemuxerInterfacePtr>::iterator
+           i = src_.begin(); i != src_.end() && !result; ++i)
+    {
+      DemuxerInterface & demuxer = *(i->get());
+      int err = demuxer.seek(seekFlags, seekTime, trackId);
+
+      if (err < 0 && !result)
+      {
+        result = err;
+      }
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------
+  // ParallelDemuxer::peek
   //
   TPacketPtr
-  DemuxerBuffer::get(AVStream *& stream)
+  ParallelDemuxer::peek(AVStream *& src) const
   {
+    TDemuxerInterfacePtr best;
+    TPacketPtr best_pkt;
+    AVStream * best_stream = NULL;
     TTime best_dts(std::numeric_limits<int64_t>::max(), 1);
-    PacketBuffer * best_src = NULL;
-    TProgramBufferPtr best_program;
-    int best_stream_index = -1;
 
-    for (std::list<PacketBuffer>::iterator
+    for (std::list<TDemuxerInterfacePtr>::const_iterator
            i = src_.begin(); i != src_.end(); ++i)
     {
-      PacketBuffer & buffer = *i;
+      DemuxerInterface & demuxer = *(i->get());
+      AVStream * stream = NULL;
+      TPacketPtr pkt = demuxer.peek(stream);
 
-      // refill the buffer, otherwise peek won't work:
-      buffer.populate();
-
-      int stream_index = -1;
-      TTime dts(std::numeric_limits<int64_t>::max(), 1);
-      TProgramBufferPtr program = buffer.choose(dts, stream_index);
-      if (!program)
+      if (pkt && stream)
       {
-        continue;
-      }
+        TTime dts;
+        get_dts(dts, stream, *pkt);
 
-      if (dts < best_dts)
-      {
-        best_dts = dts;
-        best_src = &buffer;
-        best_program = program;
-        best_stream_index = stream_index;
+        if (dts < best_dts)
+        {
+          best = *i;
+          best_pkt = pkt;
+          best_dts = dts;
+          best_stream = stream;
+        }
       }
     }
 
-    if (!best_src)
-    {
-      return TPacketPtr();
-    }
-
-    return best_src->get(stream, best_program, best_stream_index);
+    src = best_stream;
+    return best_pkt;
   }
 
 }

@@ -59,6 +59,8 @@ namespace yae
     inline bool operator >= (const TTime & t) const
     { return t <= *this; }
 
+    void reset(int64 time = 0, uint64 base = 1001);
+
     int64 getTime(uint64 base) const;
 
     void to_hhmmss(std::string & ts,

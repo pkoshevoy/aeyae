@@ -34,6 +34,9 @@ extern "C"
 
 namespace yae
 {
+  // forward declarations:
+  struct Demuxer;
+  struct PacketBuffer;
 
   //----------------------------------------------------------------
   // kMaxDouble
@@ -117,9 +120,10 @@ namespace yae
     AvPkt & operator = (const AvPkt & pkt);
 
     // an indication of the origin on this packet:
+    Demuxer * demuxer_;
     std::string trackId_;
-    std::string demuxer_;
-    std::string program_;
+    int program_;
+    PacketBuffer * pbuffer_;
 
   private:
     // intentionally disabled:
