@@ -153,6 +153,35 @@ mainMayThrowException(int argc, char ** argv)
     src.push_back(buffer);
   }
 
+  // analyze the timelines:
+  {
+    double tolerance = 1.0 / 60.0;
+    std::map<int, yae::Timeline> programs;
+    for (std::list<yae::TDemuxerInterfacePtr>::const_iterator
+           i = src.begin(); i != src.end(); ++i)
+    {
+      yae::DemuxerInterface & demuxer = *(i->get());
+      analyze_timeline(demuxer, programs);
+
+      // rewind:
+      int seekFlags = AVSEEK_FLAG_BACKWARD;
+      yae::TTime seekTime(0, 1);
+      demuxer.seek(seekFlags, seekTime);
+    }
+
+    std::cout << std::endl;
+
+    for (std::map<int, yae::Timeline>::const_iterator
+           i = programs.begin(); i != programs.end(); ++i)
+    {
+      std::cout
+        << "program " << i->first
+        << ", " << i->second << std::endl;
+    }
+
+    std::cout << std::endl;
+  }
+
   bool rewind = false;
   bool rewound = false;
 

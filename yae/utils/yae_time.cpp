@@ -443,13 +443,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Timeline::extend
+  // Timeline::extend_track
   //
   bool
-  Timeline::extend(const std::string & track_id,
-                   const Timespan & s,
-                   double tolerance,
-                   bool fail_on_non_monotonically_increasing_time)
+  Timeline::extend_track(const std::string & track_id,
+                         const Timespan & s,
+                         double tolerance,
+                         bool fail_on_non_monotonically_increasing_time)
   {
     if (s.empty())
     {
@@ -466,15 +466,15 @@ namespace yae
 
     Timespan & prev = track.back();
     double gap = prev.diff(s.t0_);
-    if (gap == 0.0)
-    {
-      gap = prev.extend(s, tolerance);
-      return gap == 0.0;
-    }
-    else if (gap > tolerance)
+    if (gap > tolerance)
     {
       track.push_back(s);
       return true;
+    }
+    else if (gap >= 0.0)
+    {
+      gap = prev.extend(s, tolerance);
+      return gap == 0.0;
     }
 
     if (fail_on_non_monotonically_increasing_time)
@@ -485,6 +485,34 @@ namespace yae
 
     // time should be monotonically increasing, this is sub-optimal:
     merge(track, s, tolerance);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::extend
+  //
+  bool
+  Timeline::extend(const std::string & track_id,
+                   const Timespan & s,
+                   double tolerance,
+                   bool fail_on_non_monotonically_increasing_time)
+  {
+    if (!extend_track(track_id, s, tolerance,
+                      fail_on_non_monotonically_increasing_time))
+    {
+      return false;
+    }
+
+    if (bbox_.t0_ > s.t0_)
+    {
+      bbox_.t0_ = s.t0_;
+    }
+
+    if (bbox_.t1_ < s.t1_)
+    {
+      bbox_.t1_ = s.t1_;
+    }
+
     return true;
   }
 
@@ -506,6 +534,46 @@ namespace yae
     const Timespan & tail = track.back();
 
     return Timespan(head.t0_, tail.t1_);
+  }
+
+  //----------------------------------------------------------------
+  // operator
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const Timeline & timeline)
+  {
+    oss << "timeline bbox [" << timeline.bbox_.t0_.to_hhmmss_frac(1000, ":")
+        << ", " << timeline.bbox_.t1_.to_hhmmss_frac(1000, ":") << ")\n";
+
+    for (Timeline::TTracks::const_iterator
+           i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+    {
+      // shortcuts:
+      const std::string & track_id = i->first;
+      const std::list<Timespan> & track = i->second;
+
+      oss << "track " << track_id << ": ";
+
+      std::size_t size = 0;
+      for (std::list<Timespan>::const_iterator j = track.begin();
+           j != track.end(); ++j)
+      {
+        const Timespan & span = *j;
+        oss << " [" << span.t0_.to_hhmmss_frac(1000, ":") << ", "
+            << span.t1_.to_hhmmss_frac(1000, ":") << ")";
+        size++;
+      }
+
+      std::size_t num_gaps = size - 1;
+      if (num_gaps > 0)
+      {
+        oss << ", " << num_gaps << (num_gaps < 2 ? " gap" : " gaps");
+      }
+
+      oss << '\n';
+    }
+
+    return oss;
   }
 
 }

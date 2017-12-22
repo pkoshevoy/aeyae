@@ -1473,4 +1473,43 @@ namespace yae
     return best_pkt;
   }
 
+
+  //----------------------------------------------------------------
+  // analyze_timeline
+  //
+  void
+  analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<int, Timeline> & programs,
+                   double tolerance)
+  {
+    while (true)
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet = demuxer.get(src);
+      if (!packet)
+      {
+        break;
+      }
+
+      const AvPkt & pkt = *packet;
+      if (al::starts_with(pkt.trackId_, "_"))
+      {
+        continue;
+      }
+
+      Timeline & timeline = programs[pkt.program_];
+
+      TTime dts;
+      bool ok = get_dts(dts, src, pkt);
+      YAE_ASSERT(ok);
+
+      TTime dur(src->time_base.num * pkt.duration,
+                src->time_base.den);
+
+      Timespan s(dts, dts + dur);
+      ok = timeline.extend(pkt.trackId_, s, tolerance);
+      YAE_ASSERT(ok);
+    }
+  }
+
 }

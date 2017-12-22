@@ -10,6 +10,7 @@
 #define YAE_TIME_H_
 
 // system includes:
+#include <iostream>
 #include <limits>
 #include <list>
 #include <map>
@@ -170,6 +171,11 @@ namespace yae
   {
     typedef std::map<std::string, std::list<Timespan> > TTracks;
 
+    bool extend_track(const std::string & track_id,
+                      const Timespan & s,
+                      double tolerance,
+                      bool fail_on_non_monotonically_increasing_time);
+
     bool extend(const std::string & track_id,
                 const Timespan & s,
                 double tolerance = 0.0,
@@ -178,8 +184,18 @@ namespace yae
     // calculate the timeline bounding box for a given track:
     Timespan bbox(const std::string & track_id) const;
 
+    // bounding box for all tracks:
+    Timespan bbox_;
+
+    // time intervals for individual tracks:
     TTracks tracks_;
   };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const Timeline & timeline);
 
 }
 

@@ -411,6 +411,16 @@ namespace yae
     std::list<TDemuxerInterfacePtr> src_;
   };
 
+
+  //----------------------------------------------------------------
+  // analyze_timeline
+  //
+  YAE_API void
+  analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<int, Timeline> & programs,
+                   double tolerance = 0.016);
+
+
 #if 0
   //----------------------------------------------------------------
   // SerialDemuxer
