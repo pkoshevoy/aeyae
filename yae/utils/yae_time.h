@@ -197,6 +197,24 @@ namespace yae
   YAE_API std::ostream &
   operator << (std::ostream & oss, const Timeline & timeline);
 
+
+  //----------------------------------------------------------------
+  // FramerateEstimator
+  //
+  struct FramerateEstimator
+  {
+    FramerateEstimator(std::size_t buffer_size = 300);
+
+    void push(const TTime & dts);
+
+    double estimate() const;
+
+  protected:
+    std::list<TTime> fifo_;
+    std::size_t max_;
+    std::size_t num_;
+  };
+
 }
 
 

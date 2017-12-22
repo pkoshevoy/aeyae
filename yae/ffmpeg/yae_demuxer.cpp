@@ -749,9 +749,9 @@ namespace yae
   // ProgramBuffer::ProgramBuffer
   //
   ProgramBuffer::ProgramBuffer():
+    num_packets_(0),
     t0_(std::numeric_limits<int64_t>::max(), 1),
-    t1_(std::numeric_limits<int64_t>::min(), 1),
-    num_packets_(0)
+    t1_(std::numeric_limits<int64_t>::min(), 1)
   {}
 
   //----------------------------------------------------------------
@@ -859,7 +859,7 @@ namespace yae
       stream_index = choose(ctx, dts_min);
     }
 
-    if (stream_index < 0 || stream_index >= ctx.nb_streams)
+    if (((unsigned int)stream_index) >= ctx.nb_streams)
     {
       return TPacketPtr();
     }
@@ -1275,7 +1275,7 @@ namespace yae
     const AVFormatContext & ctx = demuxer_->getFormatContext();
 
     AVStream * s =
-      (stream_index >= 0 && stream_index < ctx.nb_streams) ?
+      (((unsigned int)stream_index) < ctx.nb_streams) ?
       ctx.streams[stream_index] :
       NULL;
 
@@ -1479,6 +1479,7 @@ namespace yae
   //
   void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
                    double tolerance)
   {
@@ -1492,7 +1493,7 @@ namespace yae
       }
 
       const AvPkt & pkt = *packet;
-      if (al::starts_with(pkt.trackId_, "_"))
+      if (al::starts_with(pkt.trackId_, "_:"))
       {
         continue;
       }
@@ -1502,6 +1503,11 @@ namespace yae
       TTime dts;
       bool ok = get_dts(dts, src, pkt);
       YAE_ASSERT(ok);
+
+      if (ok && al::starts_with(pkt.trackId_, "v:"))
+      {
+        fps[pkt.trackId_].push(dts);
+      }
 
       TTime dur(src->time_base.num * pkt.duration,
                 src->time_base.den);

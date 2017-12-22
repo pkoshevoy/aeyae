@@ -576,4 +576,46 @@ namespace yae
     return oss;
   }
 
+
+  //----------------------------------------------------------------
+  // FramerateEstimator::FramerateEstimator
+  //
+  FramerateEstimator::FramerateEstimator(std::size_t buffer_size):
+    max_(buffer_size),
+    num_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // FramerateEstimator::push
+  //
+  void
+  FramerateEstimator::push(const TTime & dts)
+  {
+    fifo_.push_back(dts);
+    if (num_ < max_)
+    {
+      num_++;
+    }
+    else
+    {
+      fifo_.pop_front();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // FramerateEstimator::estimate
+  //
+  double
+  FramerateEstimator::estimate() const
+  {
+    if (num_ < 2)
+    {
+      return 0.0;
+    }
+
+    double dt = (fifo_.back() - fifo_.front()).toSeconds();
+    double fps = double(num_ - 1) / dt;
+    return fps;
+  }
+
 }

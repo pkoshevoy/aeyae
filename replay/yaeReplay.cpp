@@ -155,13 +155,15 @@ mainMayThrowException(int argc, char ** argv)
 
   // analyze the timelines:
   {
-    double tolerance = 1.0 / 60.0;
+    double tolerance = 0.017;
     std::map<int, yae::Timeline> programs;
+    std::map<std::string, yae::FramerateEstimator> fps;
+
     for (std::list<yae::TDemuxerInterfacePtr>::const_iterator
            i = src.begin(); i != src.end(); ++i)
     {
       yae::DemuxerInterface & demuxer = *(i->get());
-      analyze_timeline(demuxer, programs);
+      analyze_timeline(demuxer, fps, programs, tolerance);
 
       // rewind:
       int seekFlags = AVSEEK_FLAG_BACKWARD;
@@ -177,6 +179,16 @@ mainMayThrowException(int argc, char ** argv)
       std::cout
         << "program " << i->first
         << ", " << i->second << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    for (std::map<std::string, yae::FramerateEstimator>::const_iterator
+           i = fps.begin(); i != fps.end(); ++i)
+    {
+      std::cout
+        << i->first << ", fps estimate: " << i->second.estimate()
+        << std::endl;
     }
 
     std::cout << std::endl;

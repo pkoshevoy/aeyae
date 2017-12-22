@@ -135,11 +135,11 @@ namespace yae
     inline const AVFormatContext & getFormatContext() const
     { return *(context_.get()); }
 
-    inline std::size_t track_offset() const
-    { return to_; }
-
     inline std::size_t demuxer_index() const
     { return ix_; }
+
+    inline std::size_t track_offset() const
+    { return to_; }
 
   private:
     // intentionally disabled:
@@ -152,6 +152,9 @@ namespace yae
 
     AvInputContextPtr context_;
 
+    // demuxer index:
+    std::size_t ix_;
+
     // track index offsets, to allow multiple demuxers
     // to output distiguishable packets of the same type
     // and the same local track index:
@@ -159,9 +162,6 @@ namespace yae
     // global track index = local track index + track index offset
     //
     std::size_t to_;
-
-    // demuxer index:
-    std::size_t ix_;
 
     std::vector<VideoTrackPtr> videoTracks_;
     std::vector<AudioTrackPtr> audioTracks_;
@@ -417,6 +417,7 @@ namespace yae
   //
   YAE_API void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
                    double tolerance = 0.016);
 
