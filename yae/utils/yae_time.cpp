@@ -449,7 +449,7 @@ namespace yae
   Timeline::extend(const std::string & track_id,
                    const Timespan & s,
                    double tolerance,
-                   bool enforce_monotonically_increasing_time)
+                   bool fail_on_non_monotonically_increasing_time)
   {
     if (s.empty())
     {
@@ -476,7 +476,7 @@ namespace yae
       return true;
     }
 
-    if (enforce_monotonically_increasing_time)
+    if (fail_on_non_monotonically_increasing_time)
     {
       // time should be monotonically increasing:
       return false;

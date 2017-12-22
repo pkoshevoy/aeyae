@@ -171,7 +171,7 @@ namespace yae
     bool extend(const std::string & track_id,
                 const Timespan & s,
                 double tolerance = 0.0,
-                bool enforce_monotonically_increasing_time = true);
+                bool fail_on_non_monotonically_increasing_time = true);
 
     std::map<std::string, std::list<Timespan> > track_;
   };
