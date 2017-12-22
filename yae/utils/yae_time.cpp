@@ -14,6 +14,7 @@
 
 // yae includes:
 #include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
 
 
 namespace yae
@@ -594,8 +595,15 @@ namespace yae
     if (!dts_.empty())
     {
       const TTime & prev = dts_.back();
-      int64 msec = (dts - prev).getTime(1000);
-      dur_[TTime(msec, 1000)]++;
+      TTime dt = dts - prev;
+      TTime msec(dt.getTime(1000), 1000);
+
+      uint64 & num = dur_[msec];
+      num++;
+
+      TTime & sum = sum_[msec];
+      dt.time_ += sum.getTime(dt.base_);
+      sum = dt;
     }
 
     dts_.push_back(dts);
@@ -626,6 +634,47 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FramerateEstimator::get
+  //
+  void
+  FramerateEstimator::get(FramerateEstimator::Framerate & stats) const
+  {
+    if (dur_.empty())
+    {
+      return;
+    }
+
+    std::map<uint64, TTime> occurrences;
+    for (std::map<TTime, uint64>::const_iterator
+           i = dur_.begin(); i != dur_.end(); ++i)
+    {
+      const TTime & dt = i->first;
+      occurrences[i->second] = dt;
+    }
+
+    const TTime & least_frequent = occurrences.begin()->second;
+    const TTime & most_frequent = occurrences.rbegin()->second;
+    const TTime & min_duration = dur_.begin()->first;
+    const TTime & max_duration = dur_.rbegin()->first;
+
+    stats.normal_ =
+      double(yae::get(dur_, most_frequent)) /
+      yae::get(sum_, most_frequent).toSeconds();
+
+    stats.outlier_ =
+      double(yae::get(dur_, least_frequent)) /
+      yae::get(sum_, least_frequent).toSeconds();
+
+    stats.min_ =
+      double(yae::get(dur_, max_duration)) /
+      yae::get(sum_, max_duration).toSeconds();
+
+    stats.max_ =
+      double(yae::get(dur_, min_duration)) /
+      yae::get(sum_, min_duration).toSeconds();
+  }
+
+  //----------------------------------------------------------------
   // operator
   //
   std::ostream &
@@ -636,11 +685,18 @@ namespace yae
            i = durations.begin(); i != durations.end(); ++i)
     {
       const TTime & dt = i->first;
-      const uint64 & ocurrences = i->second;
+      const uint64 & occurrences = i->second;
 
-      oss << dt.to_hhmmss_frac(1000, ":", ".") << ", " << ocurrences
+      oss << dt.to_hhmmss_frac(1000, ":", ".") << ", " << occurrences
           << std::endl;
     }
+
+    FramerateEstimator::Framerate stats;
+    estimator.get(stats);
+    oss << " normal fps: " << stats.normal_ << std::endl
+        << "outlier fps: " << stats.outlier_ << std::endl
+        << "    min fps: " << stats.min_ << std::endl
+        << "    max fps: " << stats.max_ << std::endl;
 
     return oss;
   }

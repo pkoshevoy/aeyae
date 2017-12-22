@@ -207,7 +207,25 @@ namespace yae
 
     void push(const TTime & dts);
 
+    // average fps calculated from a sliding window buffer of DTS:
     double estimate() const;
+
+    struct Framerate
+    {
+      // fps calculated from the most frequently occurring frame duration:
+      double normal_;
+
+      // fps calculated from the least frequently occurring frame duration:
+      double outlier_;
+
+      // fps calculated from the shortest frame duration observed:
+      double max_;
+
+      // fps calculated from the longest frame duration observed:
+      double min_;
+    };
+
+    void get(Framerate & stats) const;
 
     inline const std::map<TTime, uint64> & durations() const
     { return dur_; }
@@ -219,6 +237,7 @@ namespace yae
 
     // keep count of occurrences of various frame durations, msec:
     std::map<TTime, uint64> dur_;
+    std::map<TTime, TTime> sum_;
   };
 
   //----------------------------------------------------------------
