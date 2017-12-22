@@ -293,6 +293,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get
+  //
+  template <typename TValue>
+  static TValue
+  get(const std::map<std::string, TValue> & lut,
+      const char * key,
+      const TValue & defaultValue = TValue())
+  {
+    return get<std::string, TValue>(lut, std::string(key), defaultValue);
+  }
+
+  //----------------------------------------------------------------
   // isSizeOne
   //
   template <typename TContainer>

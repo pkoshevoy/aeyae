@@ -144,6 +144,8 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   // wrap each demuxer in a DemuxerBuffer:
+  std::map<int, yae::TProgramInfo> program_info;
+
   double duration_sec = 1.0;
   std::list<yae::TDemuxerInterfacePtr> src;
   for (std::list<yae::TDemuxerPtr>::const_iterator
@@ -151,6 +153,14 @@ mainMayThrowException(int argc, char ** argv)
   {
     yae::TDemuxerInterfacePtr buffer(new yae::DemuxerBuffer(*i, duration_sec));
     src.push_back(buffer);
+
+    const yae::Demuxer & demuxer = *(i->get());
+    const std::vector<yae::TProgramInfo> & programs = demuxer.programs();
+    for (std::size_t j = 0; j < programs.size(); j++)
+    {
+      const yae::TProgramInfo & info = programs[j];
+      program_info[info.id_] = info;
+    }
   }
 
   // analyze the timelines:
@@ -176,9 +186,14 @@ mainMayThrowException(int argc, char ** argv)
     for (std::map<int, yae::Timeline>::const_iterator
            i = programs.begin(); i != programs.end(); ++i)
     {
+      int prog_id = i->first;
+      const yae::Timeline & timeline = i->second;
+      const yae::TProgramInfo & info = program_info[prog_id];
+
       std::cout
-        << "program " << i->first
-        << ", " << i->second << std::endl;
+        << yae::get(info.metadata_, "service_name") << "\n"
+        << "program " << prog_id << ", " << timeline
+        << std::endl;
     }
 
     std::cout << std::endl;
