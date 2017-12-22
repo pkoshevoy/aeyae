@@ -201,8 +201,10 @@ mainMayThrowException(int argc, char ** argv)
     for (std::map<std::string, yae::FramerateEstimator>::const_iterator
            i = fps.begin(); i != fps.end(); ++i)
     {
+      const yae::FramerateEstimator & estimator = i->second;
       std::cout
-        << i->first << ", fps estimate: " << i->second.estimate()
+        << i->first << ", fps estimate: " << estimator.estimate() << "\n"
+        << estimator
         << std::endl;
     }
 

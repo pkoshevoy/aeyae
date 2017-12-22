@@ -591,14 +591,21 @@ namespace yae
   void
   FramerateEstimator::push(const TTime & dts)
   {
-    fifo_.push_back(dts);
+    if (!dts_.empty())
+    {
+      const TTime & prev = dts_.back();
+      int64 msec = (dts - prev).getTime(1000);
+      dur_[TTime(msec, 1000)]++;
+    }
+
+    dts_.push_back(dts);
     if (num_ < max_)
     {
       num_++;
     }
     else
     {
-      fifo_.pop_front();
+      dts_.pop_front();
     }
   }
 
@@ -613,9 +620,29 @@ namespace yae
       return 0.0;
     }
 
-    double dt = (fifo_.back() - fifo_.front()).toSeconds();
+    double dt = (dts_.back() - dts_.front()).toSeconds();
     double fps = double(num_ - 1) / dt;
     return fps;
+  }
+
+  //----------------------------------------------------------------
+  // operator
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const FramerateEstimator & estimator)
+  {
+    const std::map<TTime, uint64> & durations = estimator.durations();
+    for (std::map<TTime, uint64>::const_iterator
+           i = durations.begin(); i != durations.end(); ++i)
+    {
+      const TTime & dt = i->first;
+      const uint64 & ocurrences = i->second;
+
+      oss << dt.to_hhmmss_frac(1000, ":", ".") << ", " << ocurrences
+          << std::endl;
+    }
+
+    return oss;
   }
 
 }

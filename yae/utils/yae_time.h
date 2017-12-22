@@ -201,7 +201,7 @@ namespace yae
   //----------------------------------------------------------------
   // FramerateEstimator
   //
-  struct FramerateEstimator
+  struct YAE_API FramerateEstimator
   {
     FramerateEstimator(std::size_t buffer_size = 300);
 
@@ -209,11 +209,23 @@ namespace yae
 
     double estimate() const;
 
+    inline const std::map<TTime, uint64> & durations() const
+    { return dur_; }
+
   protected:
-    std::list<TTime> fifo_;
+    std::list<TTime> dts_;
     std::size_t max_;
     std::size_t num_;
+
+    // keep count of occurrences of various frame durations, msec:
+    std::map<TTime, uint64> dur_;
   };
+
+  //----------------------------------------------------------------
+  // operator
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const FramerateEstimator & estimator);
 
 }
 
