@@ -168,12 +168,17 @@ namespace yae
   //
   struct YAE_API Timeline
   {
+    typedef std::map<std::string, std::list<Timespan> > TTracks;
+
     bool extend(const std::string & track_id,
                 const Timespan & s,
                 double tolerance = 0.0,
                 bool fail_on_non_monotonically_increasing_time = true);
 
-    std::map<std::string, std::list<Timespan> > track_;
+    // calculate the timeline bounding box for a given track:
+    Timespan bbox(const std::string & track_id) const;
+
+    TTracks tracks_;
   };
 
 }

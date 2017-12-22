@@ -29,16 +29,16 @@ BOOST_AUTO_TEST_CASE(yae_timeline)
   TTime t6(600, 1000);
 
   Timespan s12(t1, t2);
-  Timespan s23(t1, t3);
+  Timespan s23(t2, t3);
   Timespan s46(t4, t6);
   Timespan s25(t2, t5);
 
   Timeline timeline;
   BOOST_CHECK(timeline.extend(track_id, s12));
-  BOOST_CHECK(timeline.track_[track_id].size() == 1);
+  BOOST_CHECK(timeline.tracks_[track_id].size() == 1);
 
   // shortcut:
-  const std::list<Timespan> & track = timeline.track_[track_id];
+  const std::list<Timespan> & track = timeline.tracks_[track_id];
 
   // this should extend the last timespan:
   BOOST_CHECK(timeline.extend(track_id, s23));
@@ -47,6 +47,10 @@ BOOST_AUTO_TEST_CASE(yae_timeline)
   // this should append a new timespan:
   BOOST_CHECK(timeline.extend(track_id, s46));
   BOOST_CHECK(track.size() == 2);
+
+  Timespan bbox = timeline.bbox(track_id);
+  BOOST_CHECK(bbox.t0_ == t1);
+  BOOST_CHECK(bbox.t1_ == t6);
 
   // non-monotonically increasing time is not allowed by default:
   BOOST_CHECK(!timeline.extend(track_id, s25));

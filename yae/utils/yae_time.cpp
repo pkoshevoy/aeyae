@@ -457,7 +457,7 @@ namespace yae
       return false;
     }
 
-    std::list<Timespan> & track = track_[track_id];
+    std::list<Timespan> & track = tracks_[track_id];
     if (track.empty())
     {
       track.push_back(s);
@@ -468,7 +468,8 @@ namespace yae
     double gap = prev.diff(s.t0_);
     if (gap == 0.0)
     {
-      return prev.extend(s, tolerance);
+      gap = prev.extend(s, tolerance);
+      return gap == 0.0;
     }
     else if (gap > tolerance)
     {
@@ -485,6 +486,26 @@ namespace yae
     // time should be monotonically increasing, this is sub-optimal:
     merge(track, s, tolerance);
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::bbox
+  //
+  Timespan
+  Timeline::bbox(const std::string & track_id) const
+  {
+    TTracks::const_iterator found = tracks_.find(track_id);
+    if (found == tracks_.end())
+    {
+      return Timespan();
+    }
+
+    // shortcuts:
+    const std::list<Timespan> & track = found->second;
+    const Timespan & head = track.front();
+    const Timespan & tail = track.back();
+
+    return Timespan(head.t0_, tail.t1_);
   }
 
 }
