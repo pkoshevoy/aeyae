@@ -542,7 +542,7 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const Timeline & timeline)
   {
-    oss << "timeline bbox [" << timeline.bbox_.t0_.to_hhmmss_frac(1000, ":")
+    oss << "[" << timeline.bbox_.t0_.to_hhmmss_frac(1000, ":")
         << ", " << timeline.bbox_.t1_.to_hhmmss_frac(1000, ":") << ")\n";
 
     for (Timeline::TTracks::const_iterator
@@ -559,7 +559,7 @@ namespace yae
            j != track.end(); ++j)
       {
         const Timespan & span = *j;
-        oss << " [" << span.t0_.to_hhmmss_frac(1000, ":") << ", "
+        oss << "[" << span.t0_.to_hhmmss_frac(1000, ":") << ", "
             << span.t1_.to_hhmmss_frac(1000, ":") << ")";
         size++;
       }

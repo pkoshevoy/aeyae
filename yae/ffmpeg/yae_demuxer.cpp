@@ -1094,7 +1094,7 @@ namespace yae
         break;
       }
 
-      if (max_duration > buffer_sec_ * 5.0)
+      if (max_duration > buffer_sec_ * 10.0)
       {
         std::cerr
           << std::setw(3) << std::setfill('0') << min_id
