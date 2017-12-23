@@ -645,11 +645,18 @@ namespace yae
     }
 
     std::map<uint64, TTime> occurrences;
+    uint64 num = 0;
+    TTime sum;
+
     for (std::map<TTime, uint64>::const_iterator
            i = dur_.begin(); i != dur_.end(); ++i)
     {
       const TTime & dt = i->first;
       occurrences[i->second] = dt;
+
+      TTime dur = yae::get(sum_, dt);
+      sum = TTime(dur.time_ + sum.getTime(dur.base_), dur.base_);
+      num += i->second;
     }
 
     const TTime & least_frequent = occurrences.begin()->second;
@@ -672,6 +679,8 @@ namespace yae
     stats.max_ =
       double(yae::get(dur_, min_duration)) /
       yae::get(sum_, min_duration).toSeconds();
+
+    stats.avg_ = double(num) / sum.toSeconds();
   }
 
   //----------------------------------------------------------------
@@ -696,7 +705,8 @@ namespace yae
     oss << " normal fps: " << stats.normal_ << std::endl
         << "outlier fps: " << stats.outlier_ << std::endl
         << "    min fps: " << stats.min_ << std::endl
-        << "    max fps: " << stats.max_ << std::endl;
+        << "    max fps: " << stats.max_ << std::endl
+        << "    avg fps: " << stats.avg_ << std::endl;
 
     return oss;
   }

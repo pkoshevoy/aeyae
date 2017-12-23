@@ -223,6 +223,9 @@ namespace yae
 
       // fps calculated from the longest frame duration observed:
       double min_;
+
+      // average fps:
+      double avg_;
     };
 
     void get(Framerate & stats) const;

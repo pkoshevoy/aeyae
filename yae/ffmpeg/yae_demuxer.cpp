@@ -1505,10 +1505,14 @@ namespace yae
       }
 
       const AvPkt & pkt = *packet;
+
+#if 0
       if (al::starts_with(pkt.trackId_, "_:"))
       {
+        // skip non audio/video/subtitle tracks:
         continue;
       }
+#endif
 
       Timeline & timeline = programs[pkt.program_];
 
