@@ -565,16 +565,101 @@ namespace yae
         size++;
       }
 
-      std::size_t num_gaps = size - 1;
-      if (num_gaps > 0)
+      if (size > 1)
       {
-        oss << ", " << num_gaps << (num_gaps < 2 ? " gap" : " gaps");
+        oss << ", " << size << " segments";
       }
 
       oss << '\n';
     }
 
     return oss;
+  }
+
+
+  //----------------------------------------------------------------
+  // frameDurationForFrameRate
+  //
+  TTime
+  frameDurationForFrameRate(double fps)
+  {
+    double frameDuration = 1000000.0;
+    double frac = ceil(fps) - fps;
+
+    if (frac == 0.0)
+    {
+      frameDuration = 1000.0;
+    }
+    else
+    {
+      double stdFps = closestStandardFrameRate(fps);
+      double fpsErr = fabs(stdFps - fps);
+
+      if (fpsErr < 1e-3)
+      {
+        frac = ceil(stdFps) - stdFps;
+        frameDuration = (frac > 0) ? 1001.0 : 1000.0;
+        fps = stdFps;
+      }
+    }
+
+    return TTime(int64(frameDuration), uint64(frameDuration * fps));
+  }
+
+  //----------------------------------------------------------------
+  // kStandardFrameRate
+  //
+  static const double kStandardFrameRate[] = {
+    24000.0 / 1001.0,
+    24.0,
+    25.0,
+    30000.0 / 1001.0,
+    30.0,
+    50.0,
+    60000.0 / 1001.0,
+    60.0,
+    120.0,
+    120000.0 / 1001.0,
+    240.0,
+    240000.0 / 1001.0,
+    480.0,
+    480000.0 / 1001.0
+  };
+
+  //----------------------------------------------------------------
+  // closeEnoughToStandardFrameRate
+  //
+  bool
+  closeEnoughToStandardFrameRate(double fps,
+                                 double & closest,
+                                 double tolerance)
+  {
+    const std::size_t n = sizeof(kStandardFrameRate) / sizeof(double);
+    double min_err = std::numeric_limits<double>::max();
+    closest = fps;
+
+    for (std::size_t i = 0; i < n; i++)
+    {
+      double err = fabs(fps - kStandardFrameRate[i]);
+      if (err <= min_err)
+      {
+        min_err = err;
+        closest = kStandardFrameRate[i];
+      }
+    }
+
+    return !(min_err > tolerance);
+  }
+
+  //----------------------------------------------------------------
+  // closestStandardFrameRate
+  //
+  double
+  closestStandardFrameRate(double fps, double tolerance)
+  {
+    double closest = fps;
+    bool found = closeEnoughToStandardFrameRate(fps, closest, tolerance);
+    return found ? closest : fps;
   }
 
 
@@ -618,10 +703,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // FramerateEstimator::estimate
+  // FramerateEstimator::window_avg
   //
   double
-  FramerateEstimator::estimate() const
+  FramerateEstimator::window_avg() const
   {
     if (num_ < 2)
     {
@@ -634,14 +719,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FramerateEstimator::best_guess
+  //
+  double
+  FramerateEstimator::best_guess() const
+  {
+    Framerate stats;
+    double fps = get(stats);
+    return fps;
+  }
+
+  //----------------------------------------------------------------
+  // FramerateEstimator::Framerate::Framerate
+  //
+  FramerateEstimator::Framerate::Framerate():
+    normal_(0.0),
+    outlier_(0.0),
+    max_(0.0),
+    min_(0.0),
+    avg_(0.0)
+  {}
+
+  //----------------------------------------------------------------
   // FramerateEstimator::get
   //
-  void
+  double
   FramerateEstimator::get(FramerateEstimator::Framerate & stats) const
   {
     if (dur_.empty())
     {
-      return;
+      return 0.0;
     }
 
     std::map<uint64, TTime> occurrences;
@@ -681,6 +788,20 @@ namespace yae
       yae::get(sum_, min_duration).toSeconds();
 
     stats.avg_ = double(num) / sum.toSeconds();
+
+    double avg = stats.avg_;
+    bool avg_ok = closeEnoughToStandardFrameRate(avg, avg);
+
+    double max = stats.max_;
+    bool max_ok = closeEnoughToStandardFrameRate(max, max);
+
+    double normal = stats.normal_;
+    bool normal_ok = closeEnoughToStandardFrameRate(normal, normal);
+
+    double fps = (max_ok ? max :
+                  normal_ok ? normal :
+                  avg);
+    return fps;
   }
 
   //----------------------------------------------------------------
@@ -702,12 +823,16 @@ namespace yae
     }
 
     FramerateEstimator::Framerate stats;
-    estimator.get(stats);
-    oss << " normal fps: " << stats.normal_ << std::endl
-        << "outlier fps: " << stats.outlier_ << std::endl
-        << "    min fps: " << stats.min_ << std::endl
-        << "    max fps: " << stats.max_ << std::endl
-        << "    avg fps: " << stats.avg_ << std::endl;
+    double window_avg_fps = estimator.window_avg();
+    double best_guess_fps = estimator.get(stats);
+
+    oss << " normal fps: " << stats.normal_ << '\n'
+        << "outlier fps: " << stats.outlier_ << '\n'
+        << "    min fps: " << stats.min_ << '\n'
+        << "    max fps: " << stats.max_ << '\n'
+        << "    avg fps: " << stats.avg_ << '\n'
+        << " window avg: " << window_avg_fps << '\n'
+        << " best guess: " << best_guess_fps << std::endl;
 
     return oss;
   }

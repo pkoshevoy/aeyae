@@ -31,18 +31,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // closestStandardFrameRate
-  //
-  YAE_API double
-  closestStandardFrameRate(double fps);
-
-  //----------------------------------------------------------------
-  // frameDurationForFrameRate
-  //
-  YAE_API TTime
-  frameDurationForFrameRate(double fps);
-
-  //----------------------------------------------------------------
   // TAudioSampleFormat
   //
   enum TAudioSampleFormat

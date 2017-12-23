@@ -199,6 +199,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // frameDurationForFrameRate
+  //
+  // pick an "ideal" frame duration and time base to minimize
+  // integer roundoff error buildup for a given framer rate:
+  //
+  YAE_API TTime
+  frameDurationForFrameRate(double fps);
+
+  //----------------------------------------------------------------
+  // closeEnoughToStandardFrameRate
+  //
+  YAE_API bool
+  closeEnoughToStandardFrameRate(double fps,
+                                 double & std_fps,
+                                 double tolerance = 1e-3);
+
+  //----------------------------------------------------------------
+  // closestStandardFrameRate
+  //
+  YAE_API double
+  closestStandardFrameRate(double fps, double tolerance = 1e-3);
+
+
+  //----------------------------------------------------------------
   // FramerateEstimator
   //
   struct YAE_API FramerateEstimator
@@ -208,10 +232,16 @@ namespace yae
     void push(const TTime & dts);
 
     // average fps calculated from a sliding window buffer of DTS:
-    double estimate() const;
+    double window_avg() const;
+
+    // best guess of the closest standard framerate
+    // that could represent the DTS that have occurred so far:
+    double best_guess() const;
 
     struct Framerate
     {
+      Framerate();
+
       // fps calculated from the most frequently occurring frame duration:
       double normal_;
 
@@ -228,7 +258,8 @@ namespace yae
       double avg_;
     };
 
-    void get(Framerate & stats) const;
+    // summarize framerate statistics, return best guess of the framerate:
+    double get(Framerate & stats) const;
 
     inline const std::map<TTime, uint64> & durations() const
     { return dur_; }

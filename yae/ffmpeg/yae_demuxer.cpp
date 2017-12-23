@@ -1638,10 +1638,9 @@ namespace yae
            i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
     {
       const FramerateEstimator & estimator = i->second;
-      oss
-        << i->first << ", fps estimate: " << estimator.estimate() << "\n"
-        << estimator
-        << std::endl;
+      oss << i->first << "\n"
+          << estimator
+          << std::endl;
     }
 
     return oss;
