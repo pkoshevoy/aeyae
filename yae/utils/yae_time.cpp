@@ -696,7 +696,8 @@ namespace yae
       const TTime & dt = i->first;
       const uint64 & occurrences = i->second;
 
-      oss << dt.to_hhmmss_frac(1000, ":", ".") << ", " << occurrences
+      oss << std::setw(6) << dt.time_ << " msec: " << occurrences
+          << (occurrences == 1 ? " occurrence" : " occurrences")
           << std::endl;
     }
 

@@ -102,10 +102,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // dump_averror
+  // av_strerr
   //
-  std::ostream &
-  dump_averror(std::ostream & os, int err)
+  std::string
+  av_strerr(int errnum)
   {
 #ifdef AV_ERROR_MAX_STRING_SIZE
     static const std::size_t buffer_size = AV_ERROR_MAX_STRING_SIZE;
@@ -114,8 +114,18 @@ namespace yae
 #endif
 
     char errbuf[buffer_size] = { 0 };
-    av_strerror(err, errbuf, sizeof(errbuf));
-    os << "AVERROR: " << errbuf << std::endl;
+    ::av_strerror(errnum, errbuf, sizeof(errbuf));
+
+    return std::string(errbuf);
+  }
+
+  //----------------------------------------------------------------
+  // dump_averror
+  //
+  std::ostream &
+  dump_averror(std::ostream & os, int err)
+  {
+    os << "AVERROR: " << yae::av_strerr(err) << std::endl;
     return os;
   }
 

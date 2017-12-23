@@ -331,6 +331,7 @@ namespace yae
   protected:
     TDemuxerPtr demuxer_;
     double buffer_sec_;
+    bool gave_up_;
 
     // map native ffmpeg AVProgram id to ProgramBuffer:
     std::map<int, TProgramBufferPtr> program_;

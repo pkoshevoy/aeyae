@@ -64,6 +64,11 @@ namespace yae
   ensure_ffmpeg_initialized();
 
   //----------------------------------------------------------------
+  // av_strerr
+  //
+  YAE_API std::string av_strerr(int errnum);
+
+  //----------------------------------------------------------------
   // dump_averror
   //
   YAE_API std::ostream &

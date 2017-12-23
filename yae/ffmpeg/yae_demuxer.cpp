@@ -9,6 +9,12 @@
 // standard lib:
 #include <limits>
 
+// ffmpeg libs:
+extern "C"
+{
+#include <libavutil/log.h>
+}
+
 // yae includes:
 #include "yae_demuxer.h"
 #include "../utils/yae_utils.h"
@@ -572,11 +578,9 @@ namespace yae
 
     if (err < 0)
     {
-#ifndef NDEBUG
-      std::cerr
-        << "avformat_seek_file (" << ts << ") returned " << err
-        << std::endl;
-#endif
+      av_log(NULL, AV_LOG_WARNING,
+             "avformat_seek_file(%"PRIi64") returned %i: \"%s\"\n",
+             ts, err, yae::av_strerr(err).c_str());
     }
 
     return err;
@@ -710,22 +714,21 @@ namespace yae
         if (!(primary.videoTracks().empty() || aux.videoTracks().empty()))
         {
           // if it has a video track -- it's probably not auxiliary:
-          std::cerr
-            << "NOTE: dropping auxiliary video \""
-            << aux.resourcePath() << "\""
-            << std::endl;
+          av_log(NULL, AV_LOG_WARNING,
+                 "skipping auxiliary video \"%s\"\n",
+                 aux.resourcePath().c_str());
 
           src.pop_back();
           continue;
         }
 
-        std::cout
-          << "file opened: " << nm
-          << ", programs: " << aux.programs().size()
-          << ", a: " << aux.audioTracks().size()
-          << ", v: " << aux.videoTracks().size()
-          << ", s: " << aux.subttTracks().size()
-          << std::endl;
+        av_log(NULL, AV_LOG_INFO,
+               "file opened: %s, programs: %i, a: %i, v: %i, s: %i\n",
+               nm.c_str(),
+               int(aux.programs().size()),
+               int(aux.audioTracks().size()),
+               int(aux.videoTracks().size()),
+               int(aux.subttTracks().size()));
 
         trackOffset += 100;
       }
@@ -982,7 +985,8 @@ namespace yae
   //
   PacketBuffer::PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec):
     demuxer_(demuxer),
-    buffer_sec_(buffer_sec)
+    buffer_sec_(buffer_sec),
+    gave_up_(false)
   {
     const AVFormatContext & ctx = demuxer_->getFormatContext();
     for (unsigned int i = 0; i < ctx.nb_programs; i++)
@@ -1059,6 +1063,8 @@ namespace yae
       ProgramBuffer & buffer = *(i->second);
       buffer.clear();
     }
+
+    gave_up_ = false;
   }
 
   //----------------------------------------------------------------
@@ -1103,17 +1109,22 @@ namespace yae
       if (min_duration > buffer_sec_)
       {
         // buffer is sufficiently filled:
+        gave_up_ = false;
         break;
       }
 
       if (max_duration > buffer_sec_ * 10.0)
       {
-        std::cerr
-          << std::setw(3) << std::setfill('0') << min_id
-          << " min buffer duration: " << min_duration << '\n'
-          << std::setw(3) << std::setfill('0') << max_id
-          << " max buffer duration: " << max_duration << ", giving up"
-          << std::endl;
+        if (!gave_up_)
+        {
+          gave_up_ = true;
+          av_log(NULL, AV_LOG_WARNING,
+                 "%03i min buffer duration: %.3f\n"
+                 "%03i max buffer duration: %.3f, giving up\n",
+                 min_id, min_duration,
+                 max_id, max_duration);
+        }
+
         break;
       }
 
