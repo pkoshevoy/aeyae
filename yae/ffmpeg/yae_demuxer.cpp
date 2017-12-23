@@ -9,12 +9,6 @@
 // standard lib:
 #include <limits>
 
-// ffmpeg libs:
-extern "C"
-{
-#include <libavutil/log.h>
-}
-
 // yae includes:
 #include "yae_demuxer.h"
 #include "../utils/yae_utils.h"
@@ -681,13 +675,15 @@ namespace yae
     }
 
     Demuxer & primary = *(src.back().get());
-    std::cout
-      << "file opened: " << filePath
-      << ", programs: " << primary.programs().size()
-      << ", a: " << primary.audioTracks().size()
-      << ", v: " << primary.videoTracks().size()
-      << ", s: " << primary.subttTracks().size()
-      << std::endl;
+#ifndef NDEBUG
+    av_log(NULL, AV_LOG_INFO,
+           "file opened: %s, programs: %i, a: %i, v: %i, s: %i\n",
+           filePath.c_str(),
+           int(primary.programs().size()),
+           int(primary.audioTracks().size()),
+           int(primary.videoTracks().size()),
+           int(primary.subttTracks().size()));
+#endif
 
     if (primary.programs().size() < 2)
     {
@@ -714,14 +710,17 @@ namespace yae
         if (!(primary.videoTracks().empty() || aux.videoTracks().empty()))
         {
           // if it has a video track -- it's probably not auxiliary:
+#ifndef NDEBUG
           av_log(NULL, AV_LOG_WARNING,
                  "skipping auxiliary video \"%s\"\n",
                  aux.resourcePath().c_str());
+#endif
 
           src.pop_back();
           continue;
         }
 
+#ifndef NDEBUG
         av_log(NULL, AV_LOG_INFO,
                "file opened: %s, programs: %i, a: %i, v: %i, s: %i\n",
                nm.c_str(),
@@ -729,7 +728,7 @@ namespace yae
                int(aux.audioTracks().size()),
                int(aux.videoTracks().size()),
                int(aux.subttTracks().size()));
-
+#endif
         trackOffset += 100;
       }
     }
@@ -1353,6 +1352,15 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // DemuxerBuffer::programs
+  //
+ const std::vector<TProgramInfo> &
+ DemuxerBuffer::programs() const
+ {
+   return src_.programs();
+ }
+
+  //----------------------------------------------------------------
   // DemuxerBuffer::populate
   //
   void
@@ -1419,6 +1427,15 @@ namespace yae
   ParallelDemuxer::ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & s):
     src_(s)
   {}
+
+  //----------------------------------------------------------------
+  // ParallelDemuxer::programs
+  //
+  const std::vector<TProgramInfo> &
+  ParallelDemuxer::programs() const
+  {
+    return src_.front()->programs();
+  }
 
   //----------------------------------------------------------------
   // ParallelDemuxer::populate
@@ -1543,6 +1560,91 @@ namespace yae
       ok = timeline.extend(pkt.trackId_, s, tolerance);
       YAE_ASSERT(ok);
     }
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::summarize
+  //
+  void
+  DemuxerSummary::summarize(const TDemuxerInterfacePtr & demuxer_ptr,
+                            double tolerance)
+  {
+    // shortcut:
+    DemuxerInterface & demuxer = *demuxer_ptr;
+
+    // setup the program lookup table:
+    {
+      const std::vector<TProgramInfo> & programs = demuxer.programs();
+      for (std::size_t j = 0; j < programs.size(); j++)
+      {
+        const TProgramInfo & info = programs[j];
+        info_[info.id_] = &info;
+      }
+    }
+
+    // get current time position:
+    TTime next_dts;
+    {
+      AVStream * src = NULL;
+      TPacketPtr pkt = demuxer.peek(src);
+      if (src && pkt)
+      {
+        get_dts(next_dts, src, *pkt);
+      }
+    }
+
+    // analyze from the start:
+    demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
+    analyze_timeline(demuxer, fps_, timeline_, tolerance);
+
+    // restore previous time position:
+    demuxer.seek(AVSEEK_FLAG_BACKWARD, next_dts);
+  }
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const DemuxerSummary & summary)
+  {
+    for (std::map<int, Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      // shortcuts:
+      const int & prog_id = i->first;
+      const Timeline & timeline = i->second;
+
+      const TProgramInfo * info = yae::get(summary.info_, prog_id);
+      YAE_ASSERT(info);
+
+      std::string service_name;
+      if (info)
+      {
+        service_name = yae::get(info->metadata_, "service_name");
+      }
+
+      if (!service_name.empty())
+      {
+        oss << service_name << "\n";
+      }
+
+      oss << "program " << std::setw(3) << prog_id << ", " << timeline
+          << std::endl;
+    }
+
+    oss << std::endl;
+
+    for (std::map<std::string, FramerateEstimator>::const_iterator
+           i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
+    {
+      const FramerateEstimator & estimator = i->second;
+      oss
+        << i->first << ", fps estimate: " << estimator.estimate() << "\n"
+        << estimator
+        << std::endl;
+    }
+
+    return oss;
   }
 
 }

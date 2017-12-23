@@ -25,6 +25,7 @@
 extern "C"
 {
 #include <libavformat/avformat.h>
+#include <libavutil/log.h>
 }
 
 // yae includes:
@@ -293,6 +294,9 @@ namespace yae
   {
     PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
 
+    inline const std::vector<TProgramInfo> & programs() const
+    { return demuxer_->programs(); }
+
     int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
              const TTime & seekTime,
              const std::string & trackId = std::string());
@@ -348,6 +352,8 @@ namespace yae
   {
     virtual ~DemuxerInterface() {}
 
+    virtual const std::vector<TProgramInfo> & programs() const = 0;
+
     virtual void populate() = 0;
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -379,6 +385,8 @@ namespace yae
   {
     DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec = 1.0);
 
+    virtual const std::vector<TProgramInfo> & programs() const;
+
     virtual void populate();
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -398,6 +406,8 @@ namespace yae
   struct YAE_API ParallelDemuxer : DemuxerInterface
   {
     ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+
+    virtual const std::vector<TProgramInfo> & programs() const;
 
     virtual void populate();
 
@@ -422,6 +432,29 @@ namespace yae
                    std::map<int, Timeline> & programs,
                    double tolerance = 0.016);
 
+  //----------------------------------------------------------------
+  // DemuxerSummary
+  //
+  struct YAE_API DemuxerSummary
+  {
+    void summarize(const TDemuxerInterfacePtr & demuxer_ptr,
+                   double tolerance = 0.017);
+
+    // a mapping from program id to program info:
+    std::map<int, const yae::TProgramInfo *> info_;
+
+    // a mapping from program id to program timeline:
+    std::map<int, yae::Timeline> timeline_;
+
+    // a mapping from video track id to framerate estimator:
+    std::map<std::string, yae::FramerateEstimator> fps_;
+  };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const DemuxerSummary & summary);
 
 #if 0
   //----------------------------------------------------------------
@@ -430,6 +463,8 @@ namespace yae
   struct YAE_API SerialDemuxer : DemuxerInterface
   {
     SerialDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+
+    virtual const std::vector<TProgramInfo> & programs() const;
 
     virtual void populate();
 

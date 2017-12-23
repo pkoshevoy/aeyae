@@ -143,78 +143,40 @@ mainMayThrowException(int argc, char ** argv)
     return -3;
   }
 
-  // wrap each demuxer in a DemuxerBuffer:
-  std::map<int, yae::TProgramInfo> program_info;
-
-  double duration_sec = 1.0;
+  // wrap each demuxer in a DemuxerBuffer, build a summary:
   std::list<yae::TDemuxerInterfacePtr> src;
-  for (std::list<yae::TDemuxerPtr>::const_iterator
-         i = demuxers.begin(); i != demuxers.end(); ++i)
   {
-    yae::TDemuxerInterfacePtr buffer(new yae::DemuxerBuffer(*i, duration_sec));
-    src.push_back(buffer);
+    // target buffer duration, expressed in seconds:
+    double duration = 1.0;
 
-    const yae::Demuxer & demuxer = *(i->get());
-    const std::vector<yae::TProgramInfo> & programs = demuxer.programs();
-    for (std::size_t j = 0; j < programs.size(); j++)
+    for (std::list<yae::TDemuxerPtr>::const_iterator
+           i = demuxers.begin(); i != demuxers.end(); ++i)
     {
-      const yae::TProgramInfo & info = programs[j];
-      program_info[info.id_] = info;
+      yae::TDemuxerInterfacePtr buffer(new yae::DemuxerBuffer(*i, duration));
+      src.push_back(buffer);
     }
   }
 
-  // analyze the timelines:
+  // summarize the demuxer(s):
+  yae::DemuxerSummary summary;
   {
     double tolerance = 0.017;
-    std::map<int, yae::Timeline> programs;
-    std::map<std::string, yae::FramerateEstimator> fps;
-
     for (std::list<yae::TDemuxerInterfacePtr>::const_iterator
            i = src.begin(); i != src.end(); ++i)
     {
-      yae::DemuxerInterface & demuxer = *(i->get());
-      analyze_timeline(demuxer, fps, programs, tolerance);
-
-      // rewind:
-      int seekFlags = AVSEEK_FLAG_BACKWARD;
-      yae::TTime seekTime(0, 1);
-      demuxer.seek(seekFlags, seekTime);
+      const yae::TDemuxerInterfacePtr & demuxer = *i;
+      summary.summarize(demuxer, tolerance);
     }
 
-    std::cout << std::endl;
-
-    for (std::map<int, yae::Timeline>::const_iterator
-           i = programs.begin(); i != programs.end(); ++i)
-    {
-      int prog_id = i->first;
-      const yae::Timeline & timeline = i->second;
-      const yae::TProgramInfo & info = program_info[prog_id];
-
-      std::cout
-        << yae::get(info.metadata_, "service_name") << "\n"
-        << "program " << prog_id << ", " << timeline
-        << std::endl;
-    }
-
-    std::cout << std::endl;
-
-    for (std::map<std::string, yae::FramerateEstimator>::const_iterator
-           i = fps.begin(); i != fps.end(); ++i)
-    {
-      const yae::FramerateEstimator & estimator = i->second;
-      std::cout
-        << i->first << ", fps estimate: " << estimator.estimate() << "\n"
-        << estimator
-        << std::endl;
-    }
-
-    std::cout << std::endl;
+    // show the summary:
+    std::cout << "\n" << summary << std::endl;
   }
 
   bool rewind = false;
   bool rewound = false;
 
   yae::ParallelDemuxer buffer(src);
+  std::map<int, yae::TTime> prog_dts;
   while (true)
   {
     if (rewind)
@@ -251,15 +213,35 @@ mainMayThrowException(int argc, char ** argv)
       << ", pos: " << std::setw(12) << std::setfill(' ') << pkt.pos
       << ", size: " << std::setw(6) << std::setfill(' ') << pkt.size;
 
-    if (pkt.dts != AV_NOPTS_VALUE)
+    yae::TTime dts;
+    if (yae::get_dts(dts, stream, pkt))
     {
-      yae::TTime dts(stream->time_base.num * pkt.dts,
-                     stream->time_base.den);
-
       std::string tc = dts.to_hhmmss_frac(1000, ":", ".");
       std::cout << ", dts: " << tc;
 
-      rewind = dts.toSeconds() > 120.0;
+      yae::TTime prev_dts =
+        yae::get(prog_dts, pkt.program_,
+                 yae::TTime(std::numeric_limits<int64_t>::min(), dts.base_));
+
+      if (dts < prev_dts)
+      {
+        av_log(NULL, AV_LOG_ERROR,
+               "non-monotonically increasing DTS detected, "
+               "program %03i, prev DTS %s, curr DTS %s",
+               pkt.program_,
+               prev_dts.to_hhmmss_frac(1000, ":", ".").c_str(),
+               dts.to_hhmmss_frac(1000, ":", ".").c_str());
+
+        // the demuxer should always provide monotonically increasing DTS:
+        YAE_ASSERT(false);
+      }
+
+      // rewind = dts.toSeconds() > 120.0;
+    }
+    else
+    {
+      // the demuxer should always provide a DTS:
+      YAE_ASSERT(false);
     }
 
     if (pkt.pts != AV_NOPTS_VALUE)

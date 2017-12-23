@@ -244,7 +244,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // operator
+  // operator <<
   //
   YAE_API std::ostream &
   operator << (std::ostream & oss, const FramerateEstimator & estimator);
