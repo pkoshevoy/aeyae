@@ -693,7 +693,7 @@ namespace yae
       while (folder.parseNextItem())
       {
         std::string nm = folder.itemName();
-        if (!al::starts_with(nm, baseName) || nm == fileName)
+        if (nm == fileName || !al::starts_with(nm, baseName))
         {
           continue;
         }
@@ -707,6 +707,18 @@ namespace yae
         }
 
         Demuxer & aux = *(src.back().get());
+        if (!(primary.videoTracks().empty() || aux.videoTracks().empty()))
+        {
+          // if it has a video track -- it's probably not auxiliary:
+          std::cerr
+            << "NOTE: dropping auxiliary video \""
+            << aux.resourcePath() << "\""
+            << std::endl;
+
+          src.pop_back();
+          continue;
+        }
+
         std::cout
           << "file opened: " << nm
           << ", programs: " << aux.programs().size()
