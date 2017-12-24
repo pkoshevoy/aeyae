@@ -7,8 +7,10 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard lib:
+#include <inttypes.h>
 #include <iterator>
 #include <limits>
+#include <stdio.h>
 
 // yae includes:
 #include "yae_demuxer.h"

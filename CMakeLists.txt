@@ -25,6 +25,7 @@ add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 
 add_definitions(-D__STDC_CONSTANT_MACROS)
+add_definitions(-D__STDC_FORMAT_MACROS)
 add_definitions(-D__STDC_LIMIT_MACROS)
 
 if (WIN32)
