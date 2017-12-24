@@ -280,6 +280,23 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // at
+  //
+  template <typename TKey, typename TValue>
+  static const TValue &
+  at(const std::map<TKey, TValue> & lut, const TKey & key)
+  {
+    typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
+
+    if (found == lut.end())
+    {
+      throw std::runtime_error("key not found");
+    }
+
+    return found->second;
+  }
+
+  //----------------------------------------------------------------
   // get
   //
   template <typename TKey, typename TValue>

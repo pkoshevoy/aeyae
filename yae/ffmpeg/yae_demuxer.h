@@ -224,6 +224,12 @@ namespace yae
   YAE_API bool
   get_dts(TTime & dts, const AVStream * stream, const AVPacket & pkt);
 
+  //----------------------------------------------------------------
+  // get_pts
+  //
+  YAE_API bool
+  get_pts(TTime & pts, const AVStream * stream, const AVPacket & pkt);
+
 
   //----------------------------------------------------------------
   // ProgramBuffer
@@ -260,7 +266,9 @@ namespace yae
     // need to do this after a call to get which removes a packet:
     void update_duration(const AVFormatContext & ctx);
 
-    // get buffer duration in seconds:
+    // get least buffered track duration, in seconds:
+    double shortest_track_duration_sec(const AVFormatContext & ctx) const;
+
     inline double duration_sec() const
     { return (t0_ < t1_) ? (t1_ - t0_).toSeconds() : 0.0; }
 
@@ -463,7 +471,7 @@ namespace yae
   //----------------------------------------------------------------
   // remux
   //
-  void
+  int
   remux(const char * output_path,
         const DemuxerSummary & summary,
         DemuxerInterface & demuxer);

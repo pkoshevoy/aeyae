@@ -180,7 +180,17 @@ mainMayThrowException(int argc, char ** argv)
   // FIXME: debugging only:
   if (summary.timeline_.size() == 1)
   {
-    yae::remux("/tmp/replay.mkv", summary, buffer);
+    int err = yae::remux("/tmp/replay.mkv", summary, buffer);
+    if (err < 0)
+    {
+      buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+      err = yae::remux("/tmp/replay.nut", summary, buffer);
+      if (err < 0)
+      {
+        buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+        err = yae::remux("/tmp/replay.mov", summary, buffer);
+      }
+    }
   }
   else
   {

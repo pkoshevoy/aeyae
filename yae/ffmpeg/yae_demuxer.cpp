@@ -756,9 +756,24 @@ namespace yae
     {
       dts = TTime(stream->time_base.num * pkt.pts,
                   stream->time_base.den);
-      return true;
     }
 #endif
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // get_pts
+  //
+  bool
+  get_pts(TTime & pts, const AVStream * stream, const AVPacket & pkt)
+  {
+    if (pkt.pts != AV_NOPTS_VALUE)
+    {
+      pts = TTime(stream->time_base.num * pkt.pts,
+                  stream->time_base.den);
+      return true;
+    }
+
     return false;
   }
 
@@ -874,6 +889,13 @@ namespace yae
         pkt.pts = pkt.dts + cts;
       }
     }
+    else if (!has_dts)
+    {
+      dts = next_dts;
+      pkt.dts = av_rescale_q(dts.time_,
+                             Rational(1, dts.base_),
+                             stream->time_base);
+    }
 
     std::list<TPacketPtr> & packets = packets_[pkt.stream_index];
     bool ok = append(packets, packet);
@@ -897,7 +919,7 @@ namespace yae
   // ProgramBuffer::choose
   //
   int
-  ProgramBuffer::choose(const AVFormatContext & ctx, TTime & dts_min) const
+  ProgramBuffer::choose(const AVFormatContext & ctx, TTime & ts_min) const
   {
     // shortcut:
     unsigned int stream_index = ctx.nb_streams;
@@ -919,16 +941,17 @@ namespace yae
         continue;
       }
 
-      TTime dts;
-      if (!get_dts(dts, stream, pkt))
+      TTime ts;
+      if (!get_dts(ts, stream, pkt) &&
+          !get_pts(ts, stream, pkt))
       {
         YAE_ASSERT(false);
         return pkt.stream_index;
       }
 
-      if (dts < dts_min)
+      if (ts < ts_min)
       {
-        dts_min = dts;
+        ts_min = ts;
         stream_index = pkt.stream_index;
       }
     }
@@ -1052,8 +1075,56 @@ namespace yae
       const AVStream * stream = ctx.streams[next->stream_index];
 
       // adjust t0:
-      get_dts(t0_, stream, *next);
+      get_dts(t0_, stream, *next) || get_pts(t0_, stream, *next);
     }
+  }
+
+  //----------------------------------------------------------------
+  // ProgramBuffer::shortest_track_duration_sec
+  //
+  double
+  ProgramBuffer::shortest_track_duration_sec(const AVFormatContext & ctx) const
+  {
+    bool ok = false;
+    double min_dt = std::numeric_limits<double>::max();
+
+    for (TPackets::const_iterator
+           i = packets_.begin(); i != packets_.end(); ++i)
+    {
+      const std::list<TPacketPtr> & pkts = i->second;
+      if (pkts.empty())
+      {
+        return 0.0;
+      }
+
+      const AvPkt & head = *(pkts.front());
+      const AvPkt & tail = *(pkts.back());
+      const AVStream * stream = ctx.streams[head.stream_index];
+      if (!stream)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      TTime t0;
+      ok = get_dts(t0, stream, head) || get_pts(t0, stream, head);
+      YAE_ASSERT(ok);
+
+      if (ok)
+      {
+        TTime t1;
+        ok = get_dts(t1, stream, tail) || get_pts(t1, stream, tail);
+        YAE_ASSERT(ok);
+
+        if (ok)
+        {
+          double dt = (t1 - t0).toSeconds();
+          min_dt = std::min(dt, min_dt);
+        }
+      }
+    }
+
+    return ok ? min_dt : 0.0;
   }
 
 
@@ -1167,7 +1238,7 @@ namespace yae
              i = program_.begin(); i != program_.end(); ++i)
       {
         const ProgramBuffer & buffer = *(i->second);
-        double duration = buffer.duration_sec();
+        double duration = buffer.shortest_track_duration_sec(ctx);
         num_packets += buffer.num_packets();
 
         if (duration < min_duration)
@@ -1575,7 +1646,7 @@ namespace yae
       if (pkt && stream)
       {
         TTime dts;
-        get_dts(dts, stream, *pkt);
+        get_dts(dts, stream, *pkt) || get_pts(dts, stream, *pkt);
 
         if (dts < best_dts)
         {
@@ -1629,7 +1700,7 @@ namespace yae
       Timeline & timeline = programs[pkt.program_];
 
       TTime dts;
-      bool ok = get_dts(dts, src, pkt);
+      bool ok = get_dts(dts, src, pkt) || get_pts(dts, src, pkt);
       YAE_ASSERT(ok);
 
       if (ok && al::starts_with(pkt.trackId_, "v:"))
@@ -1680,7 +1751,7 @@ namespace yae
       TPacketPtr pkt = demuxer.peek(src);
       if (src && pkt)
       {
-        get_dts(next_dts, src, *pkt);
+        get_dts(next_dts, src, *pkt) || get_pts(next_dts, src, *pkt);
       }
     }
 
@@ -1740,7 +1811,7 @@ namespace yae
   //----------------------------------------------------------------
   // remux
   //
-  void
+  int
   remux(const char * output_path,
         const DemuxerSummary & summary,
         DemuxerInterface & demuxer)
@@ -1756,6 +1827,7 @@ namespace yae
     for (std::map<std::string, const AVStream *>::const_iterator
            i = summary.stream_.begin(); i != summary.stream_.end(); ++i)
     {
+      const std::string & track_id = i->first;
       const AVStream * src = i->second;
       AVStream * dst = avformat_new_stream(muxer,
                                            src->codec ?
@@ -1769,8 +1841,12 @@ namespace yae
 
       if (dst->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
       {
-        dst->avg_frame_rate.num = dst->time_base.den;
-        dst->avg_frame_rate.den = dst->time_base.num;
+        const FramerateEstimator & fps = yae::at(summary.fps_, track_id);
+        double estimated = fps.best_guess();
+        TTime frame_dur = frameDurationForFrameRate(estimated);
+
+        dst->avg_frame_rate.num = frame_dur.base_;
+        dst->avg_frame_rate.den = frame_dur.time_;
       }
     }
 
@@ -1813,11 +1889,23 @@ namespace yae
                          AVIO_FLAG_WRITE,
                          NULL,
                          &options);
-    YAE_ASSERT(err >= 0);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avio_open2(%s) returned %i: \"%s\"\n",
+             output_path, err, yae::av_strerr(err).c_str());
+      return err;
+    }
 
     // write the header:
     err = avformat_write_header(muxer, NULL);
-    YAE_ASSERT(err >= 0);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avformat_write_header(%s) returned %i: \"%s\"\n",
+             output_path, err, yae::av_strerr(err).c_str());
+      return err;
+    }
 
     while (true)
     {
@@ -1841,12 +1929,26 @@ namespace yae
                                    dst->time_base);
 
       err = av_interleaved_write_frame(muxer, tmp);
-      YAE_ASSERT(err >= 0);
+      if (err < 0)
+      {
+        av_log(NULL, AV_LOG_ERROR,
+               "av_interleaved_write_frame(%s) returned %i: \"%s\"\n",
+               output_path, err, yae::av_strerr(err).c_str());
+      }
     }
 
     err = av_write_trailer(muxer);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avformat_write_trailer(%s) returned %i: \"%s\"\n",
+             output_path, err, yae::av_strerr(err).c_str());
+    }
+
     muxer_ptr.reset();
     lut.clear();
+
+    return err;
   }
 
 }

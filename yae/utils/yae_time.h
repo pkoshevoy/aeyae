@@ -245,9 +245,6 @@ namespace yae
       // fps calculated from the most frequently occurring frame duration:
       double normal_;
 
-      // fps calculated from the least frequently occurring frame duration:
-      double outlier_;
-
       // fps calculated from the shortest frame duration observed:
       double max_;
 
@@ -256,6 +253,14 @@ namespace yae
 
       // average fps:
       double avg_;
+
+      // average fps calculated by excluding occurrences
+      // that happen less than 25% of the most frequent occurrence:
+      double inlier_;
+
+      // average fps calculated by including occurrences
+      // that happen less than 25% of the most frequent occurrence:
+      double outlier_;
     };
 
     // summarize framerate statistics, return best guess of the framerate:

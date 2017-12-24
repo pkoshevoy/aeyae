@@ -680,7 +680,11 @@ namespace yae
     if (!dts_.empty())
     {
       const TTime & prev = dts_.back();
-      TTime dt = dts - prev;
+
+      bool monotonically_increasing = !(prev > dts);
+      YAE_ASSERT(monotonically_increasing);
+
+      TTime dt = monotonically_increasing ? dts - prev : prev - dts;
       TTime msec(dt.getTime(1000), 1000);
 
       uint64 & num = dur_[msec];
@@ -758,26 +762,56 @@ namespace yae
     for (std::map<TTime, uint64>::const_iterator
            i = dur_.begin(); i != dur_.end(); ++i)
     {
+      const uint64 & n = i->second;
       const TTime & dt = i->first;
       occurrences[i->second] = dt;
 
       TTime dur = yae::get(sum_, dt);
       sum = TTime(dur.time_ + sum.getTime(dur.base_), dur.base_);
-      num += i->second;
+      num += n;
     }
 
-    const TTime & least_frequent = occurrences.begin()->second;
     const TTime & most_frequent = occurrences.rbegin()->second;
     const TTime & min_duration = dur_.begin()->first;
     const TTime & max_duration = dur_.rbegin()->first;
 
+    // calculate a inlier average by excluding occurrences
+    // that happen less than 25% of the most frequent occurrence:
+    TTime inlier_sum;
+    uint64 inlier_num = 0;
+
+    // calculate an inlier average by including occurrences
+    // that happen less than 25% of the most frequent occurrence:
+    TTime outlier_sum;
+    uint64 outlier_num = 0;
+    {
+      uint64 max_occurrences = occurrences.rbegin()->first;
+      for (std::map<TTime, uint64>::const_iterator
+             i = dur_.begin(); i != dur_.end(); ++i)
+      {
+        const uint64 & n = i->second;
+        const TTime & dt = i->first;
+        TTime dur = yae::get(sum_, dt);
+        double r = double(n) / double(max_occurrences);
+
+        if (r < 0.25)
+        {
+          outlier_sum = TTime(dur.time_ + outlier_sum.getTime(dur.base_),
+                              dur.base_);
+          outlier_num += n;
+        }
+        else
+        {
+          inlier_sum = TTime(dur.time_ + inlier_sum.getTime(dur.base_),
+                             dur.base_);
+          inlier_num += n;
+        }
+      }
+    }
+
     stats.normal_ =
       double(yae::get(dur_, most_frequent)) /
       yae::get(sum_, most_frequent).toSeconds();
-
-    stats.outlier_ =
-      double(yae::get(dur_, least_frequent)) /
-      yae::get(sum_, least_frequent).toSeconds();
 
     stats.min_ =
       double(yae::get(dur_, max_duration)) /
@@ -787,20 +821,30 @@ namespace yae
       double(yae::get(dur_, min_duration)) /
       yae::get(sum_, min_duration).toSeconds();
 
+    stats.outlier_ = outlier_num ?
+      double(outlier_num) / outlier_sum.toSeconds() :
+      0.0;
+
+    stats.inlier_ = double(inlier_num) / inlier_sum.toSeconds();
     stats.avg_ = double(num) / sum.toSeconds();
 
     double avg = stats.avg_;
-    bool avg_ok = closeEnoughToStandardFrameRate(avg, avg);
+    bool avg_ok = closeEnoughToStandardFrameRate(avg, avg, 0.01);
+
+    double inlier = stats.inlier_;
+    bool inlier_ok = closeEnoughToStandardFrameRate(inlier, inlier, 0.01);
 
     double max = stats.max_;
-    bool max_ok = closeEnoughToStandardFrameRate(max, max);
+    bool max_ok = closeEnoughToStandardFrameRate(max, max, 0.01);
 
     double normal = stats.normal_;
-    bool normal_ok = closeEnoughToStandardFrameRate(normal, normal);
+    bool normal_ok = closeEnoughToStandardFrameRate(normal, normal, 0.01);
 
     double fps = (max_ok ? max :
-                  avg_ok && avg > normal ? avg :
-                  normal_ok && normal > avg ? normal :
+                  inlier_ok ? inlier :
+                  (avg_ok && avg > normal) ? avg :
+                  normal_ok ? normal :
+                  (max / avg < 2.5) ? max :
                   avg);
     return fps;
   }
@@ -828,10 +872,11 @@ namespace yae
     double best_guess_fps = estimator.get(stats);
 
     oss << " normal fps: " << stats.normal_ << '\n'
-        << "outlier fps: " << stats.outlier_ << '\n'
         << "    min fps: " << stats.min_ << '\n'
         << "    max fps: " << stats.max_ << '\n'
         << "    avg fps: " << stats.avg_ << '\n'
+        << " inlier fps: " << stats.inlier_ << '\n'
+        << "outlier fps: " << stats.outlier_ << '\n'
         << " window avg: " << window_avg_fps << '\n'
         << " best guess: " << best_guess_fps << std::endl;
 
