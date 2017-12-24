@@ -176,6 +176,10 @@ mainMayThrowException(int argc, char ** argv)
   bool rewound = false;
 
   yae::ParallelDemuxer buffer(src);
+
+  // FIXME: debugging only:
+  yae::remux("/tmp/replay.mkv", summary, buffer);
+
   std::map<int, yae::TTime> prog_dts;
   while (true)
   {
@@ -223,11 +227,14 @@ mainMayThrowException(int argc, char ** argv)
         yae::get(prog_dts, pkt.program_,
                  yae::TTime(std::numeric_limits<int64_t>::min(), dts.base_));
 
+      // keep dts for reference:
+      prog_dts[pkt.program_] = dts;
+
       if (dts < prev_dts)
       {
         av_log(NULL, AV_LOG_ERROR,
                "non-monotonically increasing DTS detected, "
-               "program %03i, prev DTS %s, curr DTS %s",
+               "program %03i, prev %s, curr %s\n",
                pkt.program_,
                prev_dts.to_hhmmss_frac(1000, ":", ".").c_str(),
                dts.to_hhmmss_frac(1000, ":", ".").c_str());

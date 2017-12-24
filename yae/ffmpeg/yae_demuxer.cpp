@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard lib:
+#include <iterator>
 #include <limits>
 
 // yae includes:
@@ -748,13 +749,14 @@ namespace yae
                   stream->time_base.den);
       return true;
     }
+#if 0
     else if (pkt.pts != AV_NOPTS_VALUE)
     {
       dts = TTime(stream->time_base.num * pkt.pts,
                   stream->time_base.den);
       return true;
     }
-
+#endif
     return false;
   }
 
@@ -782,6 +784,53 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // append
+  //
+  static bool
+  append(std::list<TPacketPtr> & packets, const TPacketPtr & pkt_ptr)
+  {
+    int64 pkt_dts = pkt_ptr->dts;
+
+    if (packets.empty() || packets.back()->dts <= pkt_dts)
+    {
+      packets.push_back(pkt_ptr);
+      return true;
+    }
+
+    return false;
+  }
+
+#if 0
+  //----------------------------------------------------------------
+  // insert
+  //
+  static void
+  insert(std::list<TPacketPtr> & packets, const TPacketPtr & pkt_ptr)
+  {
+    int64 pkt_dts = pkt_ptr->dts;
+
+    if (packets.empty() || packets.back()->dts <= pkt_dts)
+    {
+      packets.push_back(pkt_ptr);
+      return;
+    }
+
+    for (std::list<TPacketPtr>::reverse_iterator
+           i = packets.rbegin(); i != packets.rend(); ++i)
+    {
+      const AvPkt & pkt = *(i->get());
+      if (pkt.dts <= pkt_dts)
+      {
+        packets.insert(i.base(), pkt_ptr);
+        return;
+      }
+    }
+
+    packets.push_front(pkt_ptr);
+  }
+#endif
+
+  //----------------------------------------------------------------
   // ProgramBuffer::push
   //
   void
@@ -796,23 +845,50 @@ namespace yae
     // shortcut:
     AvPkt & pkt = *packet;
 
-    TTime dts = next_dts_[pkt.stream_index];
-    if (!get_dts(dts, stream, pkt))
+    TTime next_dts = yae::get(next_dts_, pkt.stream_index,
+                              TTime(-stream->codecpar->video_delay *
+                                    stream->avg_frame_rate.den,
+                                    stream->avg_frame_rate.num));
+
+    next_dts.time_ = (av_rescale_q(next_dts.time_,
+                                  Rational(1, next_dts.base_),
+                                  stream->time_base) *
+                      stream->time_base.num);
+    next_dts.base_ = stream->time_base.den;
+
+    TTime dts = next_dts;
+    bool has_dts = get_dts(dts, stream, pkt);
+
+    if (has_dts && dts < next_dts)
     {
-      YAE_ASSERT(false);
-      YAE_ASSERT(pkt.duration);
-      pkt.dts = dts.getTime(stream->time_base.den) / stream->time_base.num;
+      int64 cts = (pkt.pts != AV_NOPTS_VALUE) ? pkt.pts - pkt.dts : 0;
+
+      dts = next_dts;
+      pkt.dts = av_rescale_q(dts.time_,
+                             Rational(1, dts.base_),
+                             stream->time_base);
+      if (pkt.pts != AV_NOPTS_VALUE)
+      {
+        pkt.pts = pkt.dts + cts;
+      }
     }
 
-    TTime dur(stream->time_base.num * pkt.duration,
-              stream->time_base.den);
-    next_dts_[pkt.stream_index] = dts + dur;
+    std::list<TPacketPtr> & packets = packets_[pkt.stream_index];
+    bool ok = append(packets, packet);
+    YAE_ASSERT(ok);
+    if (!ok)
+    {
+      return;
+    }
+
+    num_packets_++;
 
     t0_ = std::min<TTime>(t0_, dts);
     t1_ = std::max<TTime>(t1_, dts);
 
-    packets_[pkt.stream_index].push_back(packet);
-    num_packets_++;
+    TTime dur(stream->time_base.num * pkt.duration,
+              stream->time_base.den);
+    next_dts_[pkt.stream_index] = dts + dur;
   }
 
   //----------------------------------------------------------------
@@ -1519,6 +1595,7 @@ namespace yae
   //
   void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
                    double tolerance)
@@ -1533,6 +1610,11 @@ namespace yae
       }
 
       const AvPkt & pkt = *packet;
+
+      if (!yae::get(streams, pkt.trackId_))
+      {
+        streams[pkt.trackId_] = src;
+      }
 
 #if 0
       if (al::starts_with(pkt.trackId_, "_:"))
@@ -1559,6 +1641,13 @@ namespace yae
       Timespan s(dts, dts + dur);
       ok = timeline.extend(pkt.trackId_, s, tolerance);
       YAE_ASSERT(ok);
+
+      if (!ok)
+      {
+        // non-monotonically increasing DTS:
+        ok = timeline.extend(pkt.trackId_, s, tolerance, false);
+        YAE_ASSERT(ok);
+      }
     }
   }
 
@@ -1595,7 +1684,7 @@ namespace yae
 
     // analyze from the start:
     demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
-    analyze_timeline(demuxer, fps_, timeline_, tolerance);
+    analyze_timeline(demuxer, stream_, fps_, timeline_, tolerance);
 
     // restore previous time position:
     demuxer.seek(AVSEEK_FLAG_BACKWARD, next_dts);
@@ -1644,6 +1733,86 @@ namespace yae
     }
 
     return oss;
+  }
+
+  //----------------------------------------------------------------
+  // remux
+  //
+  void
+  remux(const char * output_path,
+        const DemuxerSummary & summary,
+        DemuxerInterface & demuxer)
+  {
+    AvOutputContextPtr muxer_ptr(avformat_alloc_context());
+
+    // setup output format:
+    AVFormatContext * muxer = muxer_ptr.get();
+    muxer->oformat = av_guess_format(NULL, output_path, NULL);
+
+    // setup output streams:
+    std::map<std::string, AVStream *> lut;
+    for (std::map<std::string, const AVStream *>::const_iterator
+           i = summary.stream_.begin(); i != summary.stream_.end(); ++i)
+    {
+      const AVStream * src = i->second;
+      AVStream * dst = avformat_new_stream(muxer,
+                                           src->codec ?
+                                           src->codec->codec :
+                                           NULL);
+      lut[i->first] = dst;
+
+      avcodec_parameters_copy(dst->codecpar, src->codecpar);
+      dst->time_base = src->time_base;
+      dst->duration = src->duration;
+
+      if (dst->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+      {
+        dst->avg_frame_rate.num = dst->time_base.den;
+        dst->avg_frame_rate.den = dst->time_base.num;
+      }
+    }
+
+    // open the muxer:
+    AVDictionary * options = NULL;
+    int err = avio_open2(&(muxer->pb),
+                         output_path,
+                         AVIO_FLAG_WRITE,
+                         NULL,
+                         &options);
+    YAE_ASSERT(err >= 0);
+
+    // write the header:
+    err = avformat_write_header(muxer, NULL);
+    YAE_ASSERT(err >= 0);
+
+    while (true)
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet = demuxer.get(src);
+      if (!packet)
+      {
+        break;
+      }
+
+      const AvPkt & pkt = *packet;
+      AVPacket * tmp = av_packet_clone(&pkt);
+
+      AVStream * dst = get(lut, pkt.trackId_);
+      tmp->stream_index = dst->index;
+
+      tmp->dts = av_rescale_q(pkt.dts, src->time_base, dst->time_base);
+      tmp->pts = av_rescale_q(pkt.pts, src->time_base, dst->time_base);
+      tmp->duration = av_rescale_q(pkt.duration,
+                                   src->time_base,
+                                   dst->time_base);
+
+      err = av_interleaved_write_frame(muxer, tmp);
+      YAE_ASSERT(err >= 0);
+    }
+
+    err = av_write_trailer(muxer);
+    muxer_ptr.reset();
+    lut.clear();
   }
 
 }

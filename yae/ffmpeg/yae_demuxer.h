@@ -428,6 +428,7 @@ namespace yae
   //
   YAE_API void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
                    double tolerance = 0.016);
@@ -439,6 +440,9 @@ namespace yae
   {
     void summarize(const TDemuxerInterfacePtr & demuxer_ptr,
                    double tolerance = 0.017);
+
+    // a mapping from track id to native ffmpeg stream:
+    std::map<std::string, const AVStream *> stream_;
 
     // a mapping from program id to program info:
     std::map<int, const yae::TProgramInfo *> info_;
@@ -455,6 +459,14 @@ namespace yae
   //
   YAE_API std::ostream &
   operator << (std::ostream & oss, const DemuxerSummary & summary);
+
+  //----------------------------------------------------------------
+  // remux
+  //
+  void
+  remux(const char * output_path,
+        const DemuxerSummary & summary,
+        DemuxerInterface & demuxer);
 
 #if 0
   //----------------------------------------------------------------

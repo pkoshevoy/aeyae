@@ -799,7 +799,8 @@ namespace yae
     bool normal_ok = closeEnoughToStandardFrameRate(normal, normal);
 
     double fps = (max_ok ? max :
-                  normal_ok ? normal :
+                  avg_ok && avg > normal ? avg :
+                  normal_ok && normal > avg ? normal :
                   avg);
     return fps;
   }
