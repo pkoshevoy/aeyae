@@ -178,7 +178,14 @@ mainMayThrowException(int argc, char ** argv)
   yae::ParallelDemuxer buffer(src);
 
   // FIXME: debugging only:
-  yae::remux("/tmp/replay.mkv", summary, buffer);
+  if (summary.timeline_.size() == 1)
+  {
+    yae::remux("/tmp/replay.mkv", summary, buffer);
+  }
+  else
+  {
+    yae::remux("/tmp/replay.ts", summary, buffer);
+  }
 
   std::map<int, yae::TTime> prog_dts;
   while (true)
