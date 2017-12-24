@@ -1774,6 +1774,38 @@ namespace yae
       }
     }
 
+    // setup output programs:
+    for (std::map<int, Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      const int prog_id = i->first;
+      const Timeline & timeline = i->second;
+      const TProgramInfo * info = yae::get(summary.info_, prog_id);
+
+      AVProgram * p = av_new_program(muxer, info->id_);
+      YAE_ASSERT(p->id == info->id_);
+      p->pmt_pid = info->pmt_pid_;
+      p->pcr_pid = info->pcr_pid_;
+
+      for (Timeline::TTracks::const_iterator
+             i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+      {
+        const std::string & track_id = i->first;
+        AVStream * dst = yae::get(lut, track_id);
+        YAE_ASSERT(dst);
+
+        av_program_add_stream_index(muxer, prog_id, dst->index);
+      }
+
+      for (std::map<std::string, std::string>::const_iterator
+             i = info->metadata_.begin(); i != info->metadata_.end(); ++i)
+      {
+        const std::string & k = i->first;
+        const std::string & v = i->second;
+        av_dict_set(&(p->metadata), k.c_str(), v.c_str(), 0);
+      }
+    }
+
     // open the muxer:
     AVDictionary * options = NULL;
     int err = avio_open2(&(muxer->pb),
