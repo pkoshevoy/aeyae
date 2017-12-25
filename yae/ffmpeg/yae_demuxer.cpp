@@ -1075,39 +1075,52 @@ namespace yae
       const AVStream * stream = ctx.streams[next->stream_index];
 
       // adjust t0:
-      get_dts(t0_, stream, *next) || get_pts(t0_, stream, *next);
+      bool ok = get_dts(t0_, stream, *next) || get_pts(t0_, stream, *next);
+      YAE_ASSERT(ok);
     }
   }
 
   //----------------------------------------------------------------
-  // ProgramBuffer::shortest_track_duration_sec
+  // ProgramBuffer::avg_track_duration
   //
   double
-  ProgramBuffer::shortest_track_duration_sec(const AVFormatContext & ctx) const
+  ProgramBuffer::avg_track_duration(const AVFormatContext & ctx) const
   {
-    bool ok = false;
-    double min_dt = std::numeric_limits<double>::max();
+    std::size_t num = 0;
+    double sum = 0.0;
 
     for (TPackets::const_iterator
            i = packets_.begin(); i != packets_.end(); ++i)
     {
-      const std::list<TPacketPtr> & pkts = i->second;
-      if (pkts.empty())
-      {
-        return 0.0;
-      }
-
-      const AvPkt & head = *(pkts.front());
-      const AvPkt & tail = *(pkts.back());
-      const AVStream * stream = ctx.streams[head.stream_index];
+      const int & stream_index = i->first;
+      const AVStream * stream = ctx.streams[stream_index];
       if (!stream)
       {
         YAE_ASSERT(false);
         continue;
       }
 
+      const AVMediaType codecType = stream->codecpar->codec_type;
+      if (codecType != AVMEDIA_TYPE_VIDEO &&
+          codecType != AVMEDIA_TYPE_AUDIO)
+      {
+        // if it's not audio or video -- ignore it:
+        continue;
+      }
+
+      num++;
+
+      const std::list<TPacketPtr> & pkts = i->second;
+      if (pkts.empty())
+      {
+        continue;
+      }
+
+      const AvPkt & head = *(pkts.front());
+      const AvPkt & tail = *(pkts.back());
+
       TTime t0;
-      ok = get_dts(t0, stream, head) || get_pts(t0, stream, head);
+      bool ok = get_dts(t0, stream, head) || get_pts(t0, stream, head);
       YAE_ASSERT(ok);
 
       if (ok)
@@ -1119,12 +1132,13 @@ namespace yae
         if (ok)
         {
           double dt = (t1 - t0).toSeconds();
-          min_dt = std::min(dt, min_dt);
+          sum += dt;
         }
       }
     }
 
-    return ok ? min_dt : 0.0;
+    double avg = num ? sum / double(num) : 0.0;
+    return avg;
   }
 
 
@@ -1233,13 +1247,12 @@ namespace yae
       int min_id = -1;
       int max_id = -1;
 
-      std::size_t num_packets = 0;
       for (std::map<int, TProgramBufferPtr>::const_iterator
              i = program_.begin(); i != program_.end(); ++i)
       {
         const ProgramBuffer & buffer = *(i->second);
-        double duration = buffer.shortest_track_duration_sec(ctx);
-        num_packets += buffer.num_packets();
+        // double duration = buffer.duration();
+        double duration = buffer.avg_track_duration(ctx);
 
         if (duration < min_duration)
         {
@@ -1268,7 +1281,7 @@ namespace yae
           gave_up_ = true;
           av_log(NULL, AV_LOG_WARNING,
                  "%03i min buffer duration: %.3f\n"
-                 "%03i max buffer duration: %.3f, giving up\n",
+                 "%03i max buffer duration: %.3f, gave up\n",
                  min_id, min_duration,
                  max_id, max_duration);
         }
@@ -1318,22 +1331,31 @@ namespace yae
 
     TProgramBufferPtr max_buffer;
     double max_duration = 0;
+    int prog_id = -1;
 
     for (std::map<int, TProgramBufferPtr>::const_iterator
            i = program_.begin(); i != program_.end(); ++i)
     {
       const TProgramBufferPtr & buffer = i->second;
-      double duration = buffer->duration_sec();
+      // double duration = buffer->duration();
+      double duration = buffer->avg_track_duration(ctx);
+
       if (max_duration < duration)
       {
         max_duration = duration;
         max_buffer = buffer;
+        prog_id = i->first;
       }
     }
 
     if (max_buffer)
     {
       stream_index = max_buffer->choose(ctx, dts_min);
+#if 0 // ndef NDEBUG
+      av_log(NULL, AV_LOG_INFO,
+             "next stream %02i, program %03i (avg track duration %f)\n",
+             stream_index, prog_id, max_duration);
+#endif
     }
 
     return max_buffer;

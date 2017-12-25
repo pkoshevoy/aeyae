@@ -840,10 +840,10 @@ namespace yae
     double normal = stats.normal_;
     bool normal_ok = closeEnoughToStandardFrameRate(normal, normal, 0.01);
 
-    double fps = (max_ok ? max :
-                  inlier_ok ? inlier :
+    double fps = (inlier_ok ? inlier :
                   (avg_ok && avg > normal) ? avg :
                   normal_ok ? normal :
+                  max_ok ? max :
                   (max / avg < 2.5) ? max :
                   avg);
     return fps;

@@ -189,6 +189,11 @@ mainMayThrowException(int argc, char ** argv)
       {
         buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
         err = yae::remux("/tmp/replay.mov", summary, buffer);
+        if (err < 0)
+        {
+          buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+          err = yae::remux("/tmp/replay.mp4", summary, buffer);
+        }
       }
     }
   }

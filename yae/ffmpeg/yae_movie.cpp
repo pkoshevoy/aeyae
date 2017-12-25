@@ -139,8 +139,8 @@ namespace yae
 
     AVDictionary * options = NULL;
 
-    // set probesize to 64 MiB:
-    av_dict_set(&options, "probesize", "67108864", 0);
+    // set probesize to 128 MiB:
+    av_dict_set(&options, "probesize", "134217728", 0);
 
     // set analyze duration to 10 seconds:
     av_dict_set(&options, "analyzeduration", "10000000", 0);

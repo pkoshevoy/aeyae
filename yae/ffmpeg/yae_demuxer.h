@@ -266,14 +266,18 @@ namespace yae
     // need to do this after a call to get which removes a packet:
     void update_duration(const AVFormatContext & ctx);
 
-    // get least buffered track duration, in seconds:
-    double shortest_track_duration_sec(const AVFormatContext & ctx) const;
+    // calculate average track duation, a sum of track durations
+    // divided by number of tracks (only audio & video tracks):
+    double avg_track_duration(const AVFormatContext & ctx) const;
 
-    inline double duration_sec() const
+    inline double duration() const
     { return (t0_ < t1_) ? (t1_ - t0_).toSeconds() : 0.0; }
 
     inline bool empty() const
     { return num_packets_ < 1; }
+
+    inline std::size_t num_tracks() const
+    { return packets_.size(); }
 
     // accessors:
     inline std::size_t num_packets() const
