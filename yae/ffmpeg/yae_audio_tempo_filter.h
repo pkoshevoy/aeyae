@@ -374,8 +374,8 @@ namespace yae
       // shortcuts:
       TAudioFragment & frag = currFrag();
 
-      if (position_[0] == frag.position_[0] + frag.numSamples_ &&
-          position_[1] == frag.position_[1] + frag.numSamples_)
+      if (position_[0] == frag.position_[0] + int64(frag.numSamples_) &&
+          position_[1] == frag.position_[1] + int64(frag.numSamples_))
       {
         // the current fragment is already flushed:
         return true;

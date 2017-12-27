@@ -738,10 +738,11 @@ namespace yae
   //
   FramerateEstimator::Framerate::Framerate():
     normal_(0.0),
-    outlier_(0.0),
     max_(0.0),
     min_(0.0),
-    avg_(0.0)
+    avg_(0.0),
+    inlier_(0.0),
+    outlier_(0.0)
   {}
 
   //----------------------------------------------------------------

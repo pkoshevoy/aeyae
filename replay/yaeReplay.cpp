@@ -224,24 +224,25 @@ mainMayThrowException(int argc, char ** argv)
     }
 
     AVStream * stream = NULL;
-    yae::TPacketPtr packet = serial_demuxer->get(stream);
-    if (!packet)
+    yae::TPacketPtr packet_ptr = serial_demuxer->get(stream);
+    if (!packet_ptr)
     {
       break;
     }
 
-    // shortcut:
-    yae::AvPkt & pkt = *packet;
+    // shortcuts:
+    yae::AvPkt & pkt = *packet_ptr;
+    AVPacket & packet = pkt.get();
 
     std::cout
       << pkt.trackId_
       << ", demuxer: " << std::setw(2) << pkt.demuxer_->demuxer_index()
       << ", program: " << std::setw(3) << pkt.program_
-      << ", pos: " << std::setw(12) << std::setfill(' ') << pkt.pos
-      << ", size: " << std::setw(6) << std::setfill(' ') << pkt.size;
+      << ", pos: " << std::setw(12) << std::setfill(' ') << packet.pos
+      << ", size: " << std::setw(6) << std::setfill(' ') << packet.size;
 
     yae::TTime dts;
-    if (yae::get_dts(dts, stream, pkt))
+    if (yae::get_dts(dts, stream, packet))
     {
       std::string tc = dts.to_hhmmss_frac(1000, ":", ".");
       std::cout << ", dts: " << tc;
@@ -274,18 +275,18 @@ mainMayThrowException(int argc, char ** argv)
       YAE_ASSERT(false);
     }
 
-    if (pkt.pts != AV_NOPTS_VALUE)
+    if (packet.pts != AV_NOPTS_VALUE)
     {
-      yae::TTime pts(stream->time_base.num * pkt.pts,
+      yae::TTime pts(stream->time_base.num * packet.pts,
                      stream->time_base.den);
 
       std::string tc = pts.to_hhmmss_frac(1000, ":", ".");
       std::cout << ", pts: " << tc;
     }
 
-    if (pkt.duration)
+    if (packet.duration)
     {
-      yae::TTime dur(stream->time_base.num * pkt.duration,
+      yae::TTime dur(stream->time_base.num * packet.duration,
                      stream->time_base.den);
 
       std::string tc = dur.to_hhmmss_frac(1000, ":", ".");
@@ -294,7 +295,7 @@ mainMayThrowException(int argc, char ** argv)
 
     const AVMediaType codecType = stream->codecpar->codec_type;
 
-    int flags = pkt.flags;
+    int flags = packet.flags;
     if (codecType != AVMEDIA_TYPE_VIDEO)
     {
       flags &= ~(AV_PKT_FLAG_KEY);
@@ -330,12 +331,12 @@ mainMayThrowException(int argc, char ** argv)
       }
     }
 
-    for (int j = 0; j < pkt.side_data_elems; j++)
+    for (int j = 0; j < packet.side_data_elems; j++)
     {
       std::cout
         << ", side_data[" << j << "] = { type: "
-        << pkt.side_data[j].type << ", size: "
-        << pkt.side_data[j].size << " }";
+        << packet.side_data[j].type << ", size: "
+        << packet.side_data[j].size << " }";
     }
 
     std::cout << std::endl;

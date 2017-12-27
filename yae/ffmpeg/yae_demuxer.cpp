@@ -466,8 +466,9 @@ namespace yae
   // Demuxer::demux
   //
   int
-  Demuxer::demux(AvPkt & packet)
+  Demuxer::demux(AvPkt & pkt)
   {
+    AVPacket & packet = pkt.get();
     int err = av_read_frame(context_.get(), &packet);
 
     if (interruptDemuxer_)
@@ -480,16 +481,16 @@ namespace yae
       TrackPtr track = yae::get(tracks_, packet.stream_index);
       if (track)
       {
-        packet.trackId_ = track->id();
+        pkt.trackId_ = track->id();
       }
       else
       {
-        packet.trackId_ = make_track_id('_', packet.stream_index);
+        pkt.trackId_ = make_track_id('_', packet.stream_index);
       }
 
       const TProgramInfo * info = getProgram(packet.stream_index);
-      packet.program_ = info ? info->id_ : 0;
-      packet.demuxer_ = this;
+      pkt.program_ = info ? info->id_ : 0;
+      pkt.demuxer_ = this;
     }
 
     return err;
@@ -743,18 +744,18 @@ namespace yae
   // get_dts
   //
   bool
-  get_dts(TTime & dts, const AVStream * stream, const AVPacket & pkt)
+  get_dts(TTime & dts, const AVStream * stream, const AVPacket & packet)
   {
-    if (pkt.dts != AV_NOPTS_VALUE)
+    if (packet.dts != AV_NOPTS_VALUE)
     {
-      dts = TTime(stream->time_base.num * pkt.dts,
+      dts = TTime(stream->time_base.num * packet.dts,
                   stream->time_base.den);
       return true;
     }
 #if 0
-    else if (pkt.pts != AV_NOPTS_VALUE)
+    else if (packet.pts != AV_NOPTS_VALUE)
     {
-      dts = TTime(stream->time_base.num * pkt.pts,
+      dts = TTime(stream->time_base.num * packet.pts,
                   stream->time_base.den);
     }
 #endif
@@ -765,11 +766,11 @@ namespace yae
   // get_pts
   //
   bool
-  get_pts(TTime & pts, const AVStream * stream, const AVPacket & pkt)
+  get_pts(TTime & pts, const AVStream * stream, const AVPacket & packet)
   {
-    if (pkt.pts != AV_NOPTS_VALUE)
+    if (packet.pts != AV_NOPTS_VALUE)
     {
-      pts = TTime(stream->time_base.num * pkt.pts,
+      pts = TTime(stream->time_base.num * packet.pts,
                   stream->time_base.den);
       return true;
     }
@@ -804,13 +805,13 @@ namespace yae
   // append
   //
   static bool
-  append(std::list<TPacketPtr> & packets, const TPacketPtr & pkt_ptr)
+  append(std::list<TPacketPtr> & packets, const TPacketPtr & packet_ptr)
   {
-    int64 pkt_dts = pkt_ptr->dts;
+    const AVPacket & packet = packet_ptr->get();
 
-    if (packets.empty() || packets.back()->dts <= pkt_dts)
+    if (packets.empty() || packets.back()->get().dts <= packet.dts)
     {
-      packets.push_back(pkt_ptr);
+      packets.push_back(packet_ptr);
       return true;
     }
 
@@ -822,28 +823,28 @@ namespace yae
   // insert
   //
   static void
-  insert(std::list<TPacketPtr> & packets, const TPacketPtr & pkt_ptr)
+  insert(std::list<TPacketPtr> & packets, const TPacketPtr & packet_ptr)
   {
-    int64 pkt_dts = pkt_ptr->dts;
+    int64 packet_dts = packet_ptr->dts;
 
-    if (packets.empty() || packets.back()->dts <= pkt_dts)
+    if (packets.empty() || packets.back()->get().dts <= packet_dts)
     {
-      packets.push_back(pkt_ptr);
+      packets.push_back(packet_ptr);
       return;
     }
 
     for (std::list<TPacketPtr>::reverse_iterator
            i = packets.rbegin(); i != packets.rend(); ++i)
     {
-      const AvPkt & pkt = *(i->get());
-      if (pkt.dts <= pkt_dts)
+      const AVPacket & packet = (*i)->get();
+      if (packet.dts <= packet_dts)
       {
-        packets.insert(i.base(), pkt_ptr);
+        packets.insert(i.base(), packet_ptr);
         return;
       }
     }
 
-    packets.push_front(pkt_ptr);
+    packets.push_front(packet_ptr);
   }
 #endif
 
@@ -851,54 +852,55 @@ namespace yae
   // ProgramBuffer::push
   //
   void
-  ProgramBuffer::push(const TPacketPtr & packet, const AVStream * stream)
+  ProgramBuffer::push(const TPacketPtr & packet_ptr, const AVStream * stream)
   {
-    if (!(packet && stream))
+    if (!(packet_ptr && stream))
     {
       YAE_ASSERT(false);
       return;
     }
 
     // shortcut:
-    AvPkt & pkt = *packet;
+    AvPkt & pkt = *packet_ptr;
+    AVPacket & packet = pkt.get();
 
-    TTime next_dts = yae::get(next_dts_, pkt.stream_index,
+    TTime next_dts = yae::get(next_dts_, packet.stream_index,
                               TTime(-stream->codecpar->video_delay *
                                     stream->avg_frame_rate.den,
                                     stream->avg_frame_rate.num));
 
     next_dts.time_ = (av_rescale_q(next_dts.time_,
-                                  Rational(1, next_dts.base_),
-                                  stream->time_base) *
+                                   Rational(1, next_dts.base_),
+                                   stream->time_base) *
                       stream->time_base.num);
     next_dts.base_ = stream->time_base.den;
 
     TTime dts = next_dts;
-    bool has_dts = get_dts(dts, stream, pkt);
+    bool has_dts = get_dts(dts, stream, packet);
 
     if (has_dts && dts < next_dts)
     {
-      int64 cts = (pkt.pts != AV_NOPTS_VALUE) ? pkt.pts - pkt.dts : 0;
+      int64 cts = (packet.pts != AV_NOPTS_VALUE) ? packet.pts - packet.dts : 0;
 
       dts = next_dts;
-      pkt.dts = av_rescale_q(dts.time_,
-                             Rational(1, dts.base_),
-                             stream->time_base);
-      if (pkt.pts != AV_NOPTS_VALUE)
+      packet.dts = av_rescale_q(dts.time_,
+                                Rational(1, dts.base_),
+                                stream->time_base);
+      if (packet.pts != AV_NOPTS_VALUE)
       {
-        pkt.pts = pkt.dts + cts;
+        packet.pts = packet.dts + cts;
       }
     }
     else if (!has_dts)
     {
       dts = next_dts;
-      pkt.dts = av_rescale_q(dts.time_,
-                             Rational(1, dts.base_),
-                             stream->time_base);
+      packet.dts = av_rescale_q(dts.time_,
+                                Rational(1, dts.base_),
+                                stream->time_base);
     }
 
-    std::list<TPacketPtr> & packets = packets_[pkt.stream_index];
-    bool ok = append(packets, packet);
+    std::list<TPacketPtr> & packets = packets_[packet.stream_index];
+    bool ok = append(packets, packet_ptr);
     YAE_ASSERT(ok);
     if (!ok)
     {
@@ -910,9 +912,9 @@ namespace yae
     t0_ = std::min<TTime>(t0_, dts);
     t1_ = std::max<TTime>(t1_, dts);
 
-    TTime dur(stream->time_base.num * pkt.duration,
+    TTime dur(stream->time_base.num * packet.duration,
               stream->time_base.den);
-    next_dts_[pkt.stream_index] = dts + dur;
+    next_dts_[packet.stream_index] = dts + dur;
   }
 
   //----------------------------------------------------------------
@@ -934,7 +936,8 @@ namespace yae
       }
 
       const AvPkt & pkt = *(pkts.front());
-      const AVStream * stream = ctx.streams[pkt.stream_index];
+      const AVPacket & packet = pkt.get();
+      const AVStream * stream = ctx.streams[packet.stream_index];
       if (!stream)
       {
         YAE_ASSERT(false);
@@ -942,17 +945,17 @@ namespace yae
       }
 
       TTime ts;
-      if (!get_dts(ts, stream, pkt) &&
-          !get_pts(ts, stream, pkt))
+      if (!get_dts(ts, stream, packet) &&
+          !get_pts(ts, stream, packet))
       {
         YAE_ASSERT(false);
-        return pkt.stream_index;
+        return packet.stream_index;
       }
 
       if (ts < ts_min)
       {
         ts_min = ts;
-        stream_index = pkt.stream_index;
+        stream_index = packet.stream_index;
       }
     }
 
@@ -987,8 +990,8 @@ namespace yae
     }
 
     const std::list<TPacketPtr> & pkts = found->second;
-    TPacketPtr pkt = pkts.front();
-    return pkt;
+    TPacketPtr packet_ptr = pkts.front();
+    return packet_ptr;
   }
 
   //----------------------------------------------------------------
@@ -1002,11 +1005,12 @@ namespace yae
                      int stream_index)
   {
     TTime dts(std::numeric_limits<int64_t>::max(), 1);
-    TPacketPtr pkt = peek(ctx, dts, stream_index);
+    TPacketPtr packet_ptr = peek(ctx, dts, stream_index);
 
-    if (pkt)
+    if (packet_ptr)
     {
-      unsigned int stream_index = pkt->stream_index;
+      const AVPacket & packet = packet_ptr->get();
+      unsigned int stream_index = packet.stream_index;
       src = ctx.streams[stream_index];
 
       std::list<TPacketPtr> & pkts = packets_[stream_index];
@@ -1023,25 +1027,26 @@ namespace yae
       }
     }
 
-    return pkt;
+    return packet_ptr;
   }
 
   //----------------------------------------------------------------
   // ProgramBuffer::pop
   //
   bool
-  ProgramBuffer::pop(const TPacketPtr & pkt)
+  ProgramBuffer::pop(const TPacketPtr & packet_ptr)
   {
-    if (!pkt)
+    if (!packet_ptr)
     {
       return true;
     }
 
-    TPackets::iterator found = packets_.find(pkt->stream_index);
+    const AVPacket & packet = packet_ptr->get();
+    TPackets::iterator found = packets_.find(packet.stream_index);
     if (found != packets_.end())
     {
       std::list<TPacketPtr> & pkts = found->second;
-      if (!pkts.empty() && pkts.front() == pkt)
+      if (!pkts.empty() && pkts.front() == packet_ptr)
       {
         pkts.pop_front();
 
@@ -1072,10 +1077,11 @@ namespace yae
     TPacketPtr next = peek(ctx, dts_min);
     if (next)
     {
-      const AVStream * stream = ctx.streams[next->stream_index];
+      const AVPacket & packet = next->get();
+      const AVStream * stream = ctx.streams[packet.stream_index];
 
       // adjust t0:
-      bool ok = get_dts(t0_, stream, *next) || get_pts(t0_, stream, *next);
+      bool ok = get_dts(t0_, stream, packet) || get_pts(t0_, stream, packet);
       YAE_ASSERT(ok);
     }
   }
@@ -1116,8 +1122,8 @@ namespace yae
         continue;
       }
 
-      const AvPkt & head = *(pkts.front());
-      const AvPkt & tail = *(pkts.back());
+      const AVPacket & head = pkts.front()->get();
+      const AVPacket & tail = pkts.back()->get();
 
       TTime t0;
       bool ok = get_dts(t0, stream, head) || get_pts(t0, stream, head);
@@ -1289,32 +1295,33 @@ namespace yae
         break;
       }
 
-      TPacketPtr packet(new AvPkt());
-      AvPkt & pkt = *packet;
+      TPacketPtr packet_ptr(new AvPkt());
+      AvPkt & pkt = *packet_ptr;
       pkt.pbuffer_ = this;
 
+      AVPacket & packet = pkt.get();
       int err = demuxer.demux(pkt);
       if (err)
       {
         return err;
       }
 
-      const AVStream * stream = ctx.streams[pkt.stream_index];
+      const AVStream * stream = ctx.streams[packet.stream_index];
       if (!stream)
       {
         YAE_ASSERT(false);
         continue;
       }
 
-      TProgramBufferPtr program = yae::get(stream_, pkt.stream_index);
+      TProgramBufferPtr program = yae::get(stream_, packet.stream_index);
       if (!program)
       {
         YAE_ASSERT(false);
         continue;
       }
 
-      YAE_ASSERT(!packet->trackId_.empty());
-      program->push(packet, stream);
+      YAE_ASSERT(!pkt.trackId_.empty());
+      program->push(packet_ptr, stream);
     }
 
     return 0;
@@ -1382,8 +1389,8 @@ namespace yae
     }
 
     const AVFormatContext & ctx = demuxer_->getFormatContext();
-    TPacketPtr pkt = buffer->peek(ctx, dts_min, stream_index);
-    return pkt;
+    TPacketPtr packet_ptr = buffer->peek(ctx, dts_min, stream_index);
+    return packet_ptr;
   }
 
   //----------------------------------------------------------------
@@ -1411,33 +1418,34 @@ namespace yae
     }
 
     const AVFormatContext & ctx = demuxer_->getFormatContext();
-    TPacketPtr pkt = buffer->get(ctx, src, stream_index);
+    TPacketPtr packet_ptr = buffer->get(ctx, src, stream_index);
 
-    if (pkt)
+    if (packet_ptr)
     {
       // refill the buffer:
       populate();
       buffer->update_duration(ctx);
     }
 
-    return pkt;
+    return packet_ptr;
   }
 
   //----------------------------------------------------------------
   // PacketBuffer::pop
   //
   bool
-  PacketBuffer::pop(const TPacketPtr & pkt)
+  PacketBuffer::pop(const TPacketPtr & packet_ptr)
   {
-    if (!pkt)
+    if (!packet_ptr)
     {
       return true;
     }
 
-    TProgramBufferPtr buffer = yae::get(stream_, pkt->stream_index);
+    const AVPacket & packet = packet_ptr->get();
+    TProgramBufferPtr buffer = yae::get(stream_, packet.stream_index);
     if (buffer)
     {
-      return buffer->pop(pkt);
+      return buffer->pop(packet_ptr);
     }
 
     YAE_ASSERT(buffer);
@@ -1448,14 +1456,15 @@ namespace yae
   // PacketBuffer::stream
   //
   AVStream *
-  PacketBuffer::stream(const TPacketPtr & pkt) const
+  PacketBuffer::stream(const TPacketPtr & packet_ptr) const
   {
-    if (!pkt)
+    if (!packet_ptr)
     {
       return NULL;
     }
 
-    int stream_index = pkt->stream_index;
+    const AVPacket & packet = packet_ptr->get();
+    int stream_index = packet.stream_index;
     return stream(stream_index);
   }
 
@@ -1480,14 +1489,15 @@ namespace yae
   // DemuxerInterface::pop
   //
   bool
-  DemuxerInterface::pop(const TPacketPtr & pkt)
+  DemuxerInterface::pop(const TPacketPtr & packet_ptr)
   {
-    if (!pkt)
+    if (!packet_ptr)
     {
       return true;
     }
 
-    PacketBuffer * buffer = pkt->pbuffer_;
+    const AvPkt & pkt = *packet_ptr;
+    PacketBuffer * buffer = pkt.pbuffer_;
     YAE_ASSERT(buffer);
 
     if (!buffer)
@@ -1495,7 +1505,7 @@ namespace yae
       return false;
     }
 
-    return buffer->pop(pkt);
+    return buffer->pop(packet_ptr);
   }
 
   //----------------------------------------------------------------
@@ -1663,17 +1673,19 @@ namespace yae
     {
       DemuxerInterface & demuxer = *(i->get());
       AVStream * stream = NULL;
-      TPacketPtr pkt = demuxer.peek(stream);
+      TPacketPtr packet_ptr = demuxer.peek(stream);
 
-      if (pkt && stream)
+      if (packet_ptr && stream)
       {
+        const AVPacket & packet = packet_ptr->get();
+
         TTime dts;
-        get_dts(dts, stream, *pkt) || get_pts(dts, stream, *pkt);
+        get_dts(dts, stream, packet) || get_pts(dts, stream, packet);
 
         if (dts < best_dts)
         {
           best = *i;
-          best_pkt = pkt;
+          best_pkt = packet_ptr;
           best_dts = dts;
           best_stream = stream;
         }
@@ -1699,13 +1711,14 @@ namespace yae
     while (true)
     {
       AVStream * src = NULL;
-      TPacketPtr packet = demuxer.get(src);
-      if (!packet)
+      TPacketPtr packet_ptr = demuxer.get(src);
+      if (!packet_ptr)
       {
         break;
       }
 
-      const AvPkt & pkt = *packet;
+      const AvPkt & pkt = *packet_ptr;
+      const AVPacket & packet = pkt.get();
 
       if (!yae::get(streams, pkt.trackId_))
       {
@@ -1723,7 +1736,7 @@ namespace yae
       Timeline & timeline = programs[pkt.program_];
 
       TTime dts;
-      bool ok = get_dts(dts, src, pkt) || get_pts(dts, src, pkt);
+      bool ok = get_dts(dts, src, packet) || get_pts(dts, src, packet);
       YAE_ASSERT(ok);
 
       if (ok)
@@ -1740,7 +1753,7 @@ namespace yae
         }
       }
 
-      TTime dur(src->time_base.num * pkt.duration,
+      TTime dur(src->time_base.num * packet.duration,
                 src->time_base.den);
 
       Timespan s(dts, dts + dur);
@@ -1780,10 +1793,11 @@ namespace yae
     TTime next_dts;
     {
       AVStream * src = NULL;
-      TPacketPtr pkt = demuxer.peek(src);
-      if (src && pkt)
+      TPacketPtr packet_ptr = demuxer.peek(src);
+      if (src && packet_ptr)
       {
-        get_dts(next_dts, src, *pkt) || get_pts(next_dts, src, *pkt);
+        const AVPacket & packet = packet_ptr->get();
+        get_dts(next_dts, src, packet) || get_pts(next_dts, src, packet);
       }
     }
 
@@ -1862,8 +1876,10 @@ namespace yae
       const std::string & track_id = i->first;
       const AVStream * src = i->second;
       AVStream * dst = avformat_new_stream(muxer,
+#if 0
                                            src->codec ?
                                            src->codec->codec :
+#endif
                                            NULL);
       lut[i->first] = dst;
 
@@ -1942,21 +1958,22 @@ namespace yae
     while (true)
     {
       AVStream * src = NULL;
-      TPacketPtr packet = demuxer.get(src);
-      if (!packet)
+      TPacketPtr packet_ptr = demuxer.get(src);
+      if (!packet_ptr)
       {
         break;
       }
 
-      const AvPkt & pkt = *packet;
-      AVPacket * tmp = av_packet_clone(&pkt);
+      const AvPkt & pkt = *packet_ptr;
+      const AVPacket & packet = pkt.get();
+      AVPacket * tmp = av_packet_clone(&packet);
 
       AVStream * dst = get(lut, pkt.trackId_);
       tmp->stream_index = dst->index;
 
-      tmp->dts = av_rescale_q(pkt.dts, src->time_base, dst->time_base);
-      tmp->pts = av_rescale_q(pkt.pts, src->time_base, dst->time_base);
-      tmp->duration = av_rescale_q(pkt.duration,
+      tmp->dts = av_rescale_q(packet.dts, src->time_base, dst->time_base);
+      tmp->pts = av_rescale_q(packet.pts, src->time_base, dst->time_base);
+      tmp->duration = av_rescale_q(packet.duration,
                                    src->time_base,
                                    dst->time_base);
 
@@ -2085,20 +2102,21 @@ namespace yae
     while (curr_ < src_.size())
     {
       const DemuxerInterface & curr = *(src_[curr_]);
-      TPacketPtr packet = curr.peek(src);
-      if (packet)
+      TPacketPtr packet_ptr = curr.peek(src);
+      if (packet_ptr)
       {
         // adjust pts/dts:
-        AvPkt & pkt = *packet;
+        AvPkt & pkt = *packet_ptr;
+        AVPacket & packet = pkt.get();
         const std::vector<TTime> & offsets = yae::at(offset_, pkt.program_);
         const TTime & offset = offsets[curr_];
 
         int64_t shift = av_rescale_q(-offset.time_,
                                      Rational(1, offset.base_),
                                      src->time_base);
-        pkt.pts += shift;
-        pkt.dts += shift;
-        return packet;
+        packet.pts += shift;
+        packet.dts += shift;
+        return packet_ptr;
       }
 
       curr_++;

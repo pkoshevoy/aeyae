@@ -138,6 +138,8 @@ namespace yae
       std::size_t outputBytes = 0;
 
       // shortcuts:
+      const AVFrame & decoded = decodedFrame.get();
+
       enum AVSampleFormat outputFormat =
         yae_to_ffmpeg(output_.sampleFormat_, output_.channelFormat_);
 
@@ -145,14 +147,15 @@ namespace yae
         av_get_default_channel_layout(outputChannels_);
 
       // assemble output audio frame
-      if (decodedFrame.nb_samples)
+      if (decoded.nb_samples)
       {
-        AvFrm decoded(decodedFrame);
+        AvFrm copiedFrame(decodedFrame);
+        AVFrame & copied = copiedFrame.get();
 
-        if (hasPrevPTS_ && decoded.pts != AV_NOPTS_VALUE)
+        if (hasPrevPTS_ && copied.pts != AV_NOPTS_VALUE)
         {
           // check for broken non-monotonically increasing timestamps:
-          TTime nextPTS(stream_->time_base.num * decoded.pts,
+          TTime nextPTS(stream_->time_base.num * copied.pts,
                         stream_->time_base.den);
 
           if (nextPTS < prevPTS_)
@@ -169,19 +172,19 @@ namespace yae
           }
         }
 
-        if (!decoded.channel_layout)
+        if (!copied.channel_layout)
         {
-          decoded.channel_layout =
-            av_get_default_channel_layout(decoded.channels);
+          copied.channel_layout =
+            av_get_default_channel_layout(copied.channels);
         }
 
         const char * filterChain = NULL;
         bool frameTraitsChanged = false;
         if (!filterGraph_.setup(// input format:
                                 stream_->time_base,
-                                (enum AVSampleFormat)decoded.format,
-                                decoded.sample_rate,
-                                decoded.channel_layout,
+                                (enum AVSampleFormat)copied.format,
+                                copied.sample_rate,
+                                copied.channel_layout,
 
                                 // output format:
                                 outputFormat,
@@ -208,7 +211,7 @@ namespace yae
           noteNativeTraitsChanged();
         }
 
-        if (!filterGraph_.push(&decoded))
+        if (!filterGraph_.push(&copied))
         {
           YAE_ASSERT(false);
           return;
@@ -216,7 +219,8 @@ namespace yae
 
         while (true)
         {
-          AvFrm output;
+          AvFrm frm;
+          AVFrame & output = frm.get();
           if (!filterGraph_.pull(&output))
           {
             break;
@@ -246,11 +250,11 @@ namespace yae
 
       bool gotPTS = false;
 
-      if (!gotPTS && decodedFrame.pts != AV_NOPTS_VALUE)
+      if (!gotPTS && decoded.pts != AV_NOPTS_VALUE)
       {
-        af.time_.time_ = stream_->time_base.num * decodedFrame.pts;
+        af.time_.time_ = stream_->time_base.num * decoded.pts;
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
-                            "audio decodedFrame.pts");
+                            "audio decoded.pts");
       }
 
       if (!gotPTS)

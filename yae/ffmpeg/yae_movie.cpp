@@ -564,7 +564,7 @@ namespace yae
 
         // service seek request, read a packet:
         TPacketPtr packetPtr(new AvPkt());
-        AvPkt & packet = *packetPtr;
+        AVPacket & packet = packetPtr->get();
         bool demuxerInterrupted = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
@@ -719,7 +719,7 @@ namespace yae
         else
         {
           AVStream * stream =
-            packet.stream_index < context_->nb_streams ?
+            packet.stream_index < int(context_->nb_streams) ?
             context_->streams[packet.stream_index] :
             NULL;
 

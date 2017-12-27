@@ -220,7 +220,7 @@ namespace yae
       YAE_ASSERT(nbytes % sizeof(cc_data_pkt_t) == 0);
       const cc_data_pkt_t * p = &(cc[0]);
 
-      if (pkt.size < nbytes)
+      if (((std::size_t)(pkt.size)) < nbytes)
       {
         av_grow_packet(&pkt, nbytes - pkt.size);
       }
@@ -288,7 +288,7 @@ namespace yae
       YAE_ASSERT(nbytes % sizeof(cc_data_pkt_t) == 0);
       const cc_data_pkt_t * p = &(cc[0]);
 
-      if (pkt.size < nbytes)
+      if (((std::size_t)(pkt.size)) < nbytes)
       {
         av_grow_packet(&pkt, nbytes - pkt.size);
       }
@@ -449,9 +449,10 @@ namespace yae
       const std::size_t nbytes = n * sizeof(*p);
 
       AvPkt tmp;
-      av_new_packet(&tmp, nbytes);
-      memcpy(tmp.data, p, nbytes);
-      tmp.pts = pts;
+      AVPacket & packet = tmp.get();
+      av_new_packet(&packet, nbytes);
+      memcpy(packet.data, p, nbytes);
+      packet.pts = pts;
       pkt[i] = tmp;
     }
 
@@ -466,17 +467,17 @@ namespace yae
   // supported by the ffmpeg captions decoder).
   //
   static bool
-  split_cc_packets_by_channel(const AVPacket & packet,
+  split_cc_packets_by_channel(const AVPacket & src,
                               unsigned char prior[2][2],
                               unsigned char dataChannel[2],
                               std::map<unsigned char, AvPkt> & cc)
   {
-    YAE_ASSERT(packet.size % sizeof(cc_data_pkt_t) == 0);
-    const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(packet.data);
-    const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(packet.data +
-                                                                packet.size);
+    YAE_ASSERT(src.size % sizeof(cc_data_pkt_t) == 0);
+    const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(src.data);
+    const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(src.data +
+                                                                src.size);
 
-    if (!split_cc_packets_by_channel(packet.pts,
+    if (!split_cc_packets_by_channel(src.pts,
                                      cc_data_pkt,
                                      cc_data_end,
                                      prior,
@@ -489,8 +490,8 @@ namespace yae
     for (std::map<unsigned char, AvPkt>::iterator
            i = cc.begin(), end = cc.end(); i != end; ++i)
     {
-      AvPkt & pkt = i->second;
-      av_packet_copy_props(&pkt, &packet);
+      AVPacket & dst = i->second.get();
+      av_packet_copy_props(&dst, &src);
     }
 
     return true;
@@ -784,13 +785,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       // shortcuts:
       const unsigned char n = i->first;
       AvPkt & pkt = i->second;
+      AVPacket & packet = pkt.get();
 
       // this shouldn't be necessary -- it's fine to decode all caption
       // channels all the time, because it makes switching between
       // them more seamless.  However, I have no sources to test with
       // that contain anything besides CC1, so I'll limit it to CC1
       // for now:
-      if (n + 1 != decode_)
+      if (((unsigned int)(n)) + 1 != decode_)
       {
         continue;
       }
@@ -808,7 +810,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       AVSubtitle sub;
       int gotSub = 0;
-      int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &pkt);
+      int err = avcodec_decode_subtitle2(ccDec, &sub, &gotSub, &packet);
       if (err < 0 || !gotSub)
       {
         continue;
@@ -822,14 +824,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       sf.tEnd_.base_ = AV_TIME_BASE;
       sf.tEnd_.time_ = std::numeric_limits<int64>::max();
 
-      if (pkt.pts != AV_NOPTS_VALUE)
+      if (packet.pts != AV_NOPTS_VALUE)
       {
-        int64_t ptsPkt = av_rescale_q(pkt.pts,
+        int64_t ptsPkt = av_rescale_q(packet.pts,
                                       timeBase,
                                       kAvTimeBase);
         sf.time_.time_ = ptsPkt;
 
-        int64_t endPkt = av_rescale_q(pkt.pts + pkt.duration,
+        int64_t endPkt = av_rescale_q(packet.pts + packet.duration,
                                       timeBase,
                                       kAvTimeBase);
         sf.tEnd_.time_ = endPkt;
@@ -846,7 +848,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                                     &TSubsPrivate::deallocator);
       captions_[n].last_ = sf;
 
-      if (pkt.duration)
+      if (packet.duration)
       {
         captions_[n].push(sf, terminator);
       }

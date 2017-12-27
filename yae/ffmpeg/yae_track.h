@@ -111,24 +111,30 @@ namespace yae
   //----------------------------------------------------------------
   // AvPkt
   //
-  struct YAE_API AvPkt : public AVPacket
+  struct YAE_API AvPkt
   {
-    AvPkt();
+    AvPkt(const AVPacket * pkt = NULL);
     AvPkt(const AvPkt & pkt);
     ~AvPkt();
 
     AvPkt & operator = (const AvPkt & pkt);
 
-    // an indication of the origin on this packet:
-    Demuxer * demuxer_;
-    std::string trackId_;
-    int program_;
-    PacketBuffer * pbuffer_;
+    inline const AVPacket & get() const
+    { return *packet_; }
 
-  private:
-    // intentionally disabled:
-    AvPkt(const AVPacket &);
-    AvPkt & operator = (const AVPacket &);
+    inline AVPacket & get()
+    { return *packet_; }
+
+  protected:
+    // the packet:
+    AVPacket * packet_;
+
+  public:
+    // an indication of the origin on this packet:
+    PacketBuffer * pbuffer_;
+    Demuxer * demuxer_;
+    int program_;
+    std::string trackId_;
   };
 
   //----------------------------------------------------------------
@@ -145,18 +151,22 @@ namespace yae
   //----------------------------------------------------------------
   // AvFrm
   //
-  struct YAE_API AvFrm : public AVFrame
+  struct YAE_API AvFrm
   {
-    AvFrm();
+    AvFrm(const AVFrame * frame = NULL);
     AvFrm(const AvFrm & frame);
     ~AvFrm();
 
     AvFrm & operator = (const AvFrm & frame);
 
-  private:
-    // intentionally disabled:
-    AvFrm(const AVFrame &);
-    AvFrm & operator = (const AVFrame &);
+    inline const AVFrame & get() const
+    { return *frame_; }
+
+    inline AVFrame & get()
+    { return *frame_; }
+
+  protected:
+    AVFrame * frame_;
   };
 
 

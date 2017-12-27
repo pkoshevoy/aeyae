@@ -30,7 +30,7 @@ namespace yae
   TAVFrameBuffer::TAVFrameBuffer(AVFrame * src)
   {
     // this is a shallow reference counted copy:
-    av_frame_ref(&frame_, src);
+    frame_ = AvFrm(src);
   }
 
   //----------------------------------------------------------------
@@ -48,7 +48,8 @@ namespace yae
   std::size_t
   TAVFrameBuffer::planes() const
   {
-    enum AVPixelFormat pix_fmt = (enum AVPixelFormat)frame_.format;
+    const AVFrame & frame = frame_.get();
+    enum AVPixelFormat pix_fmt = (enum AVPixelFormat)frame.format;
     int n = av_pix_fmt_count_planes(pix_fmt);
     YAE_ASSERT(n >= 0);
     return (std::size_t)n;
@@ -60,7 +61,8 @@ namespace yae
   unsigned char *
   TAVFrameBuffer::data(std::size_t plane) const
   {
-    return frame_.data[plane];
+    const AVFrame & frame = frame_.get();
+    return frame.data[plane];
   }
 
   //----------------------------------------------------------------
@@ -69,7 +71,8 @@ namespace yae
   std::size_t
   TAVFrameBuffer::rowBytes(std::size_t plane) const
   {
-    return frame_.linesize[plane];
+    const AVFrame & frame = frame_.get();
+    return frame.linesize[plane];
   }
 
 
@@ -448,7 +451,8 @@ namespace yae
   {
     try
     {
-      AvFrm decoded(decodedFrame);
+      AvFrm decodedFrameCopy(decodedFrame);
+      AVFrame & decoded = decodedFrameCopy.get();
       framesDecoded_++;
 
 #ifndef NDEBUG
@@ -702,7 +706,8 @@ namespace yae
       while (true)
       {
         AVRational filterGraphOutputTimeBase;
-        AvFrm output;
+        AvFrm frm;
+        AVFrame & output = frm.get();
 
         if (!filterGraph_.pull(&output, filterGraphOutputTimeBase))
         {

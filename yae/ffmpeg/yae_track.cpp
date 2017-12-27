@@ -28,26 +28,33 @@ namespace yae
   //----------------------------------------------------------------
   // AvPkt::AvPkt
   //
-  AvPkt::AvPkt():
+  AvPkt::AvPkt(const AVPacket * pkt):
+    packet_(av_packet_alloc()),
+    pbuffer_(NULL),
     demuxer_(NULL),
-    program_(0),
-    pbuffer_(NULL)
+    program_(0)
   {
-    memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
-    av_init_packet(this);
+    if (pkt)
+    {
+      av_packet_ref(packet_, pkt);
+    }
+    else
+    {
+      av_init_packet(packet_);
+    }
   }
 
   //----------------------------------------------------------------
   // AvPkt::AvPkt
   //
-  AvPkt::AvPkt(const AvPkt & pkt)
+  AvPkt::AvPkt(const AvPkt & pkt):
+    packet_(av_packet_alloc()),
+    pbuffer_(pkt.pbuffer_),
+    demuxer_(pkt.demuxer_),
+    program_(pkt.program_),
+    trackId_(pkt.trackId_)
   {
-    memset(static_cast<AVPacket *>(this), 0, sizeof(AVPacket));
-    av_packet_ref(this, &pkt);
-    trackId_ = pkt.trackId_;
-    demuxer_ = pkt.demuxer_;
-    program_ = pkt.program_;
-    pbuffer_ = pkt.pbuffer_;
+    av_packet_ref(packet_, pkt.packet_);
   }
 
   //----------------------------------------------------------------
@@ -55,7 +62,7 @@ namespace yae
   //
   AvPkt::~AvPkt()
   {
-    av_packet_unref(this);
+    av_packet_free(&packet_);
   }
 
   //----------------------------------------------------------------
@@ -64,12 +71,17 @@ namespace yae
   AvPkt &
   AvPkt::operator = (const AvPkt & pkt)
   {
-    av_packet_unref(this);
-    av_packet_ref(this, &pkt);
-    trackId_ = pkt.trackId_;
-    demuxer_ = pkt.demuxer_;
-    program_ = pkt.program_;
-    pbuffer_ = pkt.pbuffer_;
+    if (this != &pkt)
+    {
+      av_packet_unref(packet_);
+      av_packet_ref(packet_, pkt.packet_);
+
+      demuxer_ = pkt.demuxer_;
+      trackId_ = pkt.trackId_;
+      program_ = pkt.program_;
+      pbuffer_ = pkt.pbuffer_;
+    }
+
     return *this;
   }
 
@@ -77,19 +89,22 @@ namespace yae
   //----------------------------------------------------------------
   // AvFrm::AvFrm
   //
-  AvFrm::AvFrm()
+  AvFrm::AvFrm(const AVFrame * frame):
+    frame_(av_frame_alloc())
   {
-    memset(this, 0, sizeof(AVFrame));
-    av_frame_unref(this);
+    if (frame)
+    {
+      av_frame_ref(frame_, frame);
+    }
   }
 
   //----------------------------------------------------------------
   // AvFrm::AvFrm
   //
-  AvFrm::AvFrm(const AvFrm & frame)
+  AvFrm::AvFrm(const AvFrm & frame):
+    frame_(av_frame_alloc())
   {
-    memset(this, 0, sizeof(AVFrame));
-    av_frame_ref(this, &frame);
+    av_frame_ref(frame_, frame.frame_);
   }
 
   //----------------------------------------------------------------
@@ -97,17 +112,21 @@ namespace yae
   //
   AvFrm::~AvFrm()
   {
-    av_frame_unref(this);
+    av_frame_free(&frame_);
   }
 
   //----------------------------------------------------------------
-  // AvFrm::operator
+  // AvFrm::operator =
   //
   AvFrm &
   AvFrm::operator = (const AvFrm & frame)
   {
-    av_frame_unref(this);
-    av_frame_ref(this, &frame);
+    if (this != &frame)
+    {
+      av_frame_unref(frame_);
+      av_frame_ref(frame_, frame.frame_);
+    }
+
     return *this;
   }
 
@@ -163,8 +182,8 @@ namespace yae
              const AVStream * stream,
              const char * debugMessage)
   {
-    bool ok = (nextPTS.time_ != AV_NOPTS_VALUE &&
-               nextPTS.base_ != AV_NOPTS_VALUE &&
+    bool ok = (int64_t(nextPTS.time_) != AV_NOPTS_VALUE &&
+               int64_t(nextPTS.base_) != AV_NOPTS_VALUE &&
                nextPTS.base_ != 0 &&
                (!hasPrevPTS ||
                 (prevPTS.base_ == nextPTS.base_ ?
@@ -204,13 +223,13 @@ namespace yae
     sent_(0),
     received_(0),
     errors_(0),
-    packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
-    discarded_(0)
+    discarded_(0),
+    packetQueue_(kQueueSizeLarge)
   {
     if (context_ && stream_)
     {
@@ -227,13 +246,13 @@ namespace yae
     stream_(NULL),
     preferSoftwareDecoder_(track.preferSoftwareDecoder_),
     switchDecoderToRecommended_(track.switchDecoderToRecommended_),
-    packetQueue_(kQueueSizeLarge),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
-    discarded_(0)
+    discarded_(0),
+    packetQueue_(kQueueSizeLarge)
   {
     std::swap(context_, track.context_);
     std::swap(stream_, track.stream_);
@@ -609,7 +628,8 @@ namespace yae
     int err = 0;
     while (true)
     {
-      AvFrm decodedFrame;
+      AvFrm frm;
+      AVFrame & decodedFrame = frm.get();
       err = avcodec_receive_frame(ctx, &decodedFrame);
       if (err < 0)
       {
@@ -626,7 +646,7 @@ namespace yae
 
       received_++;
       decodedFrame.pts = decodedFrame.best_effort_timestamp;
-      handle(decodedFrame);
+      handle(frm);
     }
 
     return err;
@@ -645,7 +665,8 @@ namespace yae
     {
       boost::this_thread::interruption_point();
 
-      errSend = avcodec_send_packet(ctx, &pkt);
+      const AVPacket & packet = pkt.get();
+      errSend = avcodec_send_packet(ctx, &packet);
       if (errSend < 0 && errSend != AVERROR(EAGAIN) && errSend != AVERROR_EOF)
       {
 #ifndef NDEBUG
@@ -782,8 +803,9 @@ namespace yae
         else
         {
           const AvPkt & pkt = *packetPtr;
+          const AVPacket & packet = pkt.get();
 
-          if (switchDecoderToRecommended_ && pkt.flags & AV_PKT_FLAG_KEY)
+          if (switchDecoderToRecommended_ && packet.flags & AV_PKT_FLAG_KEY)
           {
             candidates_.clear();
             candidates_.splice(candidates_.end(), recommended_);
@@ -813,7 +835,7 @@ namespace yae
           }
           packets_.push_back(packetPtr);
 
-          int receivedPrior = received_;
+          uint64_t receivedPrior = received_;
           int err = decode(ctx, pkt);
 
           if (received_ > receivedPrior)
