@@ -129,78 +129,79 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
-  std::string filePath;
+  yae::SerialDemuxer * serial_demuxer = new yae::SerialDemuxer();
+  yae::TDemuxerInterfacePtr src(serial_demuxer);
+  std::string output_path;
+
+  // these are expressed in seconds:
+  const double buffer_duration = 1.0;
+  const double discont_tolerance = 0.017;
+
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
-    filePath = i->toUtf8().constData();
-    break;
-  }
+    std::string arg = i->toUtf8().constData();
 
-  std::list<yae::TDemuxerPtr> demuxers;
-  if (!yae::open_primary_and_aux_demuxers(filePath, demuxers))
-  {
-    // failed to open the primary resource:
-    return -3;
-  }
-
-  // wrap each demuxer in a DemuxerBuffer, build a summary:
-  std::list<yae::TDemuxerInterfacePtr> src;
-  {
-    // target buffer duration, expressed in seconds:
-    double duration = 1.0;
-
-    for (std::list<yae::TDemuxerPtr>::const_iterator
-           i = demuxers.begin(); i != demuxers.end(); ++i)
+    if (arg == "-i")
     {
-      yae::TDemuxerInterfacePtr buffer(new yae::DemuxerBuffer(*i, duration));
-      src.push_back(buffer);
+      ++i;
+      std::string filePath = i->toUtf8().constData();
+
+      std::list<yae::TDemuxerPtr> demuxers;
+      if (!yae::open_primary_and_aux_demuxers(filePath, demuxers))
+      {
+        // failed to open the primary resource:
+        continue;
+      }
+
+      // wrap each demuxer in a DemuxerBuffer, build a summary:
+      std::list<yae::TDemuxerInterfacePtr> buffers;
+      {
+        // target buffer duration, expressed in seconds:
+
+        for (std::list<yae::TDemuxerPtr>::const_iterator
+               i = demuxers.begin(); i != demuxers.end(); ++i)
+        {
+          yae::TDemuxerInterfacePtr
+            buffer(new yae::DemuxerBuffer(*i, buffer_duration));
+          buffers.push_back(buffer);
+        }
+      }
+
+      yae::TDemuxerInterfacePtr
+        demuxer(new yae::ParallelDemuxer(buffers));
+
+      // summarize the demuxer:
+      yae::DemuxerSummary summary;
+      summary.summarize(demuxer, discont_tolerance);
+
+      // show the summary:
+      std::cout << "\n" << summary << std::endl;
+
+      serial_demuxer->append(demuxer, summary);
+    }
+    else if (arg == "-o")
+    {
+      ++i;
+      output_path = i->toUtf8().constData();
     }
   }
 
-  // summarize the demuxer(s):
-  yae::DemuxerSummary summary;
-  {
-    double tolerance = 0.017;
-    for (std::list<yae::TDemuxerInterfacePtr>::const_iterator
-           i = src.begin(); i != src.end(); ++i)
-    {
-      const yae::TDemuxerInterfacePtr & demuxer = *i;
-      summary.summarize(demuxer, tolerance);
-    }
+  // summarize the source:
+  yae::DemuxerSummary src_summary;
+  src_summary.summarize(src, discont_tolerance);
 
-    // show the summary:
-    std::cout << "\n" << summary << std::endl;
+  // show the summary:
+  std::cout << "\n" << src_summary << std::endl;
+
+  if (!output_path.empty())
+  {
+    src->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+    int err = yae::remux(output_path.c_str(), src_summary, *src);
+    return err;
   }
 
   bool rewind = false;
   bool rewound = false;
-
-  yae::ParallelDemuxer buffer(src);
-
-  // FIXME: debugging only:
-  if (summary.timeline_.size() == 1)
-  {
-    int err = yae::remux("/tmp/replay.mkv", summary, buffer);
-    if (err < 0)
-    {
-      buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
-      err = yae::remux("/tmp/replay.nut", summary, buffer);
-      if (err < 0)
-      {
-        buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
-        err = yae::remux("/tmp/replay.mov", summary, buffer);
-        if (err < 0)
-        {
-          buffer.seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
-          err = yae::remux("/tmp/replay.mp4", summary, buffer);
-        }
-      }
-    }
-  }
-  else
-  {
-    yae::remux("/tmp/replay.ts", summary, buffer);
-  }
 
   std::map<int, yae::TTime> prog_dts;
   while (true)
@@ -218,12 +219,12 @@ mainMayThrowException(int argc, char ** argv)
 
       int seekFlags = AVSEEK_FLAG_BACKWARD;
       yae::TTime seekTime(0, 1);
-      buffer.seek(seekFlags, seekTime);
+      serial_demuxer->seek(seekFlags, seekTime);
       rewound = true;
     }
 
     AVStream * stream = NULL;
-    yae::TPacketPtr packet = buffer.get(stream);
+    yae::TPacketPtr packet = serial_demuxer->get(stream);
     if (!packet)
     {
       break;

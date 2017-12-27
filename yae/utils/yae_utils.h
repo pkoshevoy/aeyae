@@ -290,6 +290,7 @@ namespace yae
 
     if (found == lut.end())
     {
+      YAE_ASSERT(false);
       throw std::runtime_error("key not found");
     }
 

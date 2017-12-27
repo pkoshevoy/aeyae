@@ -1690,6 +1690,7 @@ namespace yae
   //
   void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::pair<std::string, TTime> & rewind,
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
@@ -1725,9 +1726,18 @@ namespace yae
       bool ok = get_dts(dts, src, pkt) || get_pts(dts, src, pkt);
       YAE_ASSERT(ok);
 
-      if (ok && al::starts_with(pkt.trackId_, "v:"))
+      if (ok)
       {
-        fps[pkt.trackId_].push(dts);
+        if (al::starts_with(pkt.trackId_, "v:"))
+        {
+          fps[pkt.trackId_].push(dts);
+        }
+
+        if (rewind.first.empty())
+        {
+          rewind.first = pkt.trackId_;
+          rewind.second = dts;
+        }
       }
 
       TTime dur(src->time_base.num * pkt.duration,
@@ -1779,7 +1789,7 @@ namespace yae
 
     // analyze from the start:
     demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
-    analyze_timeline(demuxer, stream_, fps_, timeline_, tolerance);
+    analyze_timeline(demuxer, rewind_, stream_, fps_, timeline_, tolerance);
 
     // restore previous time position:
     demuxer.seek(AVSEEK_FLAG_BACKWARD, next_dts);
@@ -1971,6 +1981,165 @@ namespace yae
     lut.clear();
 
     return err;
+  }
+
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::append
+  //
+  void
+  SerialDemuxer::append(const TDemuxerInterfacePtr & src,
+                        const DemuxerSummary & summary)
+  {
+    for (std::map<int, yae::Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      const int & prog_id = i->first;
+      const Timeline & timeline = i->second;
+
+      for (Timeline::TTracks::const_iterator
+             j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        prog_lut_[track_id] = prog_id;
+      }
+
+      std::vector<TTime> & t1 = t1_[prog_id];
+      std::vector<TTime> & offset = offset_[prog_id];
+
+      TTime src_dt = timeline.bbox_.t1_ - timeline.bbox_.t0_;
+      TTime src_t0 = t1.empty() ? TTime(0, src_dt.base_) : t1.back();
+      TTime src_t1 = src_t0 + src_dt;
+      TTime src_offset = timeline.bbox_.t0_ - src_t0;
+
+      t1.push_back(src_t1);
+      offset.push_back(src_offset);
+
+      std::map<TTime, std::size_t> & t0 = t0_[prog_id];
+      t0[src_t0] = src_.size();
+    }
+
+    src_.push_back(src);
+    summary_.push_back(summary);
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::programs
+  //
+  const std::vector<TProgramInfo> &
+  SerialDemuxer::programs() const
+  {
+    return src_[0]->programs();
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::populate
+  //
+  void
+  SerialDemuxer::populate()
+  {
+    if (curr_ >= src_.size())
+    {
+      return;
+    }
+
+    DemuxerInterface & src = *(src_[curr_].get());
+    src.populate();
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::seek
+  //
+  int
+  SerialDemuxer::seek(int seek_flags, // AVSEEK_FLAG_* bitmask
+                      const TTime & seek_time,
+                      const std::string & track_id)
+  {
+    int prog_id = track_id.empty() ? 0 : yae::at(prog_lut_, track_id);
+    std::size_t i = find(seek_time, prog_id);
+
+    if (i >= src_.size())
+    {
+      return AVERROR(ERANGE);
+    }
+
+    const std::vector<TTime> & offset = yae::at(offset_, prog_id);
+    TTime t = seek_time + offset[i];
+    DemuxerInterface & src = *(src_[i]);
+
+    int err = src.seek(seek_flags, t, track_id);
+    if (err >= 0)
+    {
+      curr_ = i;
+    }
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::peek
+  //
+  TPacketPtr
+  SerialDemuxer::peek(AVStream *& src) const
+  {
+    while (curr_ < src_.size())
+    {
+      const DemuxerInterface & curr = *(src_[curr_]);
+      TPacketPtr packet = curr.peek(src);
+      if (packet)
+      {
+        // adjust pts/dts:
+        AvPkt & pkt = *packet;
+        const std::vector<TTime> & offsets = yae::at(offset_, pkt.program_);
+        const TTime & offset = offsets[curr_];
+
+        int64_t shift = av_rescale_q(-offset.time_,
+                                     Rational(1, offset.base_),
+                                     src->time_base);
+        pkt.pts += shift;
+        pkt.dts += shift;
+        return packet;
+      }
+
+      curr_++;
+
+      if (curr_ < src_.size())
+      {
+        DemuxerInterface & next = const_cast<DemuxerInterface &>(*src_[curr_]);
+        const DemuxerSummary & summary = summary_[curr_];
+
+        // rewind the source:
+        int err = next.seek(AVSEEK_FLAG_BACKWARD,
+                            summary.rewind_.second,
+                            summary.rewind_.first);
+        YAE_ASSERT(err >= 0);
+        next.populate();
+      }
+    }
+
+    return TPacketPtr();
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::find
+  //
+  std::size_t
+  SerialDemuxer::find(const TTime & seek_time, int prog_id) const
+  {
+    const std::map<TTime, std::size_t> & t0 = yae::at(t0_, prog_id);
+
+    std::map<TTime, std::size_t>::const_iterator
+      found = t0.lower_bound(seek_time);
+
+    if (found == t0.end())
+    {
+      return 0;
+    }
+
+    std::size_t i = found->second;
+    const std::vector<TTime> & t1 = yae::at(t1_, prog_id);
+    const TTime & end_time = t1[i];
+    return (seek_time < end_time) ? i : src_.size();
   }
 
 }

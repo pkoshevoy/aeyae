@@ -464,6 +464,10 @@ namespace yae
 
     // a mapping from video track id to framerate estimator:
     std::map<std::string, yae::FramerateEstimator> fps_;
+
+    // track_id and DTS of the first packet,
+    // so we know what to pass to seek(..) to rewind:
+    std::pair<std::string, yae::TTime> rewind_;
   };
 
   //----------------------------------------------------------------
@@ -475,18 +479,18 @@ namespace yae
   //----------------------------------------------------------------
   // remux
   //
-  int
+  YAE_API int
   remux(const char * output_path,
         const DemuxerSummary & summary,
         DemuxerInterface & demuxer);
 
-#if 0
   //----------------------------------------------------------------
   // SerialDemuxer
   //
   struct YAE_API SerialDemuxer : DemuxerInterface
   {
-    SerialDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+    void append(const TDemuxerInterfacePtr & src,
+                const DemuxerSummary & summary);
 
     virtual const std::vector<TProgramInfo> & programs() const;
 
@@ -500,9 +504,18 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const;
 
   protected:
-    std::list<TDemuxerInterfacePtr> src_;
+    // find the source corresponding to the given program/time:
+    std::size_t find(const TTime & seek_time, int prog_id) const;
+
+    std::vector<TDemuxerInterfacePtr> src_;
+    std::vector<DemuxerSummary> summary_;
+    std::map<int, std::vector<TTime> > t1_;
+    std::map<int, std::vector<TTime> > offset_;
+    std::map<std::string, int> prog_lut_;
+    std::map<int, std::map<TTime, std::size_t> > t0_;
+    mutable std::size_t curr_;
   };
-#endif
+
 }
 
 
