@@ -28,6 +28,7 @@ extern "C"
 namespace yae
 {
 
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   //----------------------------------------------------------------
   // lockManager
   //
@@ -77,6 +78,7 @@ namespace yae
 
     return -1;
   }
+#endif
 
   //----------------------------------------------------------------
   // ensure_ffmpeg_initialized
@@ -96,7 +98,10 @@ namespace yae
 
       avformat_network_init();
 
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
       av_lockmgr_register(&lockManager);
+#endif
+
       ffmpeg_initialized = true;
     }
   }
