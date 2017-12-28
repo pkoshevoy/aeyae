@@ -469,7 +469,11 @@ namespace yae
       return NULL;
     }
 
-    ctx->pkt_timebase = stream_->time_base;
+    if (ctx)
+    {
+      ctx->pkt_timebase = stream_->time_base;
+    }
+
     sent_ = 0;
     received_ = 0;
     errors_ = 0;

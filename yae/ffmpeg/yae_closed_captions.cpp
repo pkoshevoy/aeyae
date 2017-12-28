@@ -426,6 +426,7 @@ namespace yae
         {
           b0 = 0x14;
           b01 = byte_pair(b0, b1);
+          (void)b01;
         }
 
         pkt.cc ^= (unsigned char)NTSC_CC_FIELD_2;

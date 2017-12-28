@@ -1338,7 +1338,6 @@ namespace yae
 
     TProgramBufferPtr max_buffer;
     double max_duration = 0;
-    int prog_id = -1;
 
     for (std::map<int, TProgramBufferPtr>::const_iterator
            i = program_.begin(); i != program_.end(); ++i)
@@ -1351,18 +1350,12 @@ namespace yae
       {
         max_duration = duration;
         max_buffer = buffer;
-        prog_id = i->first;
       }
     }
 
     if (max_buffer)
     {
       stream_index = max_buffer->choose(ctx, dts_min);
-#if 0 // ndef NDEBUG
-      av_log(NULL, AV_LOG_INFO,
-             "next stream %02i, program %03i (avg track duration %f)\n",
-             stream_index, prog_id, max_duration);
-#endif
     }
 
     return max_buffer;
