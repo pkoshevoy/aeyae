@@ -358,6 +358,35 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DemuxerSummary
+  //
+  struct YAE_API DemuxerSummary
+  {
+    // a mapping from track id to native ffmpeg stream:
+    std::map<std::string, const AVStream *> stream_;
+
+    // a mapping from program id to program info:
+    std::map<int, const yae::TProgramInfo *> info_;
+
+    // a mapping from program id to program timeline:
+    std::map<int, yae::Timeline> timeline_;
+
+    // a mapping from video track id to framerate estimator:
+    std::map<std::string, yae::FramerateEstimator> fps_;
+
+    // track_id and DTS of the first packet,
+    // so we know what to pass to seek(..) to rewind:
+    std::pair<std::string, yae::TTime> rewind_;
+  };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const DemuxerSummary & summary);
+
+
+  //----------------------------------------------------------------
   // DemuxerInterface
   //
   struct YAE_API DemuxerInterface
@@ -374,6 +403,9 @@ namespace yae
 
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const = 0;
+
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.017);
 
     // NOTE: pkt must have originated from
     // an immediately prior peek call,
@@ -440,41 +472,11 @@ namespace yae
   //
   YAE_API void
   analyze_timeline(DemuxerInterface & demuxer,
+                   std::pair<std::string, TTime> & rewind,
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
                    double tolerance = 0.016);
-
-  //----------------------------------------------------------------
-  // DemuxerSummary
-  //
-  struct YAE_API DemuxerSummary
-  {
-    void summarize(const TDemuxerInterfacePtr & demuxer_ptr,
-                   double tolerance = 0.017);
-
-    // a mapping from track id to native ffmpeg stream:
-    std::map<std::string, const AVStream *> stream_;
-
-    // a mapping from program id to program info:
-    std::map<int, const yae::TProgramInfo *> info_;
-
-    // a mapping from program id to program timeline:
-    std::map<int, yae::Timeline> timeline_;
-
-    // a mapping from video track id to framerate estimator:
-    std::map<std::string, yae::FramerateEstimator> fps_;
-
-    // track_id and DTS of the first packet,
-    // so we know what to pass to seek(..) to rewind:
-    std::pair<std::string, yae::TTime> rewind_;
-  };
-
-  //----------------------------------------------------------------
-  // operator <<
-  //
-  YAE_API std::ostream &
-  operator << (std::ostream & oss, const DemuxerSummary & summary);
 
   //----------------------------------------------------------------
   // remux

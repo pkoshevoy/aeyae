@@ -1479,6 +1479,93 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const DemuxerSummary & summary)
+  {
+    for (std::map<int, Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      // shortcuts:
+      const int & prog_id = i->first;
+      const Timeline & timeline = i->second;
+
+      const TProgramInfo * info = yae::get(summary.info_, prog_id);
+      YAE_ASSERT(info);
+
+      std::string service_name;
+      if (info)
+      {
+        service_name = yae::get(info->metadata_, "service_name");
+      }
+
+      if (!service_name.empty())
+      {
+        oss << service_name << "\n";
+      }
+
+      oss << "program " << std::setw(3) << prog_id << ", " << timeline
+          << std::endl;
+    }
+
+    oss << std::endl;
+
+    for (std::map<std::string, FramerateEstimator>::const_iterator
+           i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
+    {
+      const FramerateEstimator & estimator = i->second;
+      oss << i->first << "\n"
+          << estimator
+          << std::endl;
+    }
+
+    return oss;
+  }
+
+
+  //----------------------------------------------------------------
+  // DemuxerInterface::summarize
+  //
+  void
+  DemuxerInterface::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    // setup the program lookup table:
+    {
+      const std::vector<TProgramInfo> & programs = this->programs();
+      for (std::size_t j = 0; j < programs.size(); j++)
+      {
+        const TProgramInfo & info = programs[j];
+        summary.info_[info.id_] = &info;
+      }
+    }
+
+    // get current time position:
+    TTime next_dts;
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet_ptr = this->peek(src);
+      if (src && packet_ptr)
+      {
+        const AVPacket & packet = packet_ptr->get();
+        get_dts(next_dts, src, packet) || get_pts(next_dts, src, packet);
+      }
+    }
+
+    // analyze from the start:
+    this->seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
+    analyze_timeline(*this,
+                     summary.rewind_,
+                     summary.stream_,
+                     summary.fps_,
+                     summary.timeline_,
+                     tolerance);
+
+    // restore previous time position:
+    this->seek(AVSEEK_FLAG_BACKWARD, next_dts);
+  }
+
+  //----------------------------------------------------------------
   // DemuxerInterface::pop
   //
   bool
@@ -1760,91 +1847,6 @@ namespace yae
         YAE_ASSERT(ok);
       }
     }
-  }
-
-  //----------------------------------------------------------------
-  // DemuxerSummary::summarize
-  //
-  void
-  DemuxerSummary::summarize(const TDemuxerInterfacePtr & demuxer_ptr,
-                            double tolerance)
-  {
-    // shortcut:
-    DemuxerInterface & demuxer = *demuxer_ptr;
-
-    // setup the program lookup table:
-    {
-      const std::vector<TProgramInfo> & programs = demuxer.programs();
-      for (std::size_t j = 0; j < programs.size(); j++)
-      {
-        const TProgramInfo & info = programs[j];
-        info_[info.id_] = &info;
-      }
-    }
-
-    // get current time position:
-    TTime next_dts;
-    {
-      AVStream * src = NULL;
-      TPacketPtr packet_ptr = demuxer.peek(src);
-      if (src && packet_ptr)
-      {
-        const AVPacket & packet = packet_ptr->get();
-        get_dts(next_dts, src, packet) || get_pts(next_dts, src, packet);
-      }
-    }
-
-    // analyze from the start:
-    demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
-    analyze_timeline(demuxer, rewind_, stream_, fps_, timeline_, tolerance);
-
-    // restore previous time position:
-    demuxer.seek(AVSEEK_FLAG_BACKWARD, next_dts);
-  }
-
-  //----------------------------------------------------------------
-  // operator <<
-  //
-  std::ostream &
-  operator << (std::ostream & oss, const DemuxerSummary & summary)
-  {
-    for (std::map<int, Timeline>::const_iterator
-           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
-    {
-      // shortcuts:
-      const int & prog_id = i->first;
-      const Timeline & timeline = i->second;
-
-      const TProgramInfo * info = yae::get(summary.info_, prog_id);
-      YAE_ASSERT(info);
-
-      std::string service_name;
-      if (info)
-      {
-        service_name = yae::get(info->metadata_, "service_name");
-      }
-
-      if (!service_name.empty())
-      {
-        oss << service_name << "\n";
-      }
-
-      oss << "program " << std::setw(3) << prog_id << ", " << timeline
-          << std::endl;
-    }
-
-    oss << std::endl;
-
-    for (std::map<std::string, FramerateEstimator>::const_iterator
-           i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
-    {
-      const FramerateEstimator & estimator = i->second;
-      oss << i->first << "\n"
-          << estimator
-          << std::endl;
-    }
-
-    return oss;
   }
 
   //----------------------------------------------------------------

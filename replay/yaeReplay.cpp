@@ -172,7 +172,7 @@ mainMayThrowException(int argc, char ** argv)
 
       // summarize the demuxer:
       yae::DemuxerSummary summary;
-      summary.summarize(demuxer, discont_tolerance);
+      demuxer->summarize(summary, discont_tolerance);
 
       // show the summary:
       std::cout << "\n" << summary << std::endl;
@@ -188,7 +188,7 @@ mainMayThrowException(int argc, char ** argv)
 
   // summarize the source:
   yae::DemuxerSummary src_summary;
-  src_summary.summarize(src, discont_tolerance);
+  src->summarize(src_summary, discont_tolerance);
 
   // show the summary:
   std::cout << "\n" << src_summary << std::endl;
