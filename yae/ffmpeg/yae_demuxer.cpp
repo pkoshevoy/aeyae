@@ -1882,6 +1882,11 @@ namespace yae
         if (al::starts_with(pkt.trackId_, "v:"))
         {
           fps[pkt.trackId_].push(dts);
+
+          if ((packet.flags & AV_PKT_FLAG_KEY))
+          {
+            timeline.add_keyframe(pkt.trackId_, dts);
+          }
         }
 
         if (rewind.first.empty())

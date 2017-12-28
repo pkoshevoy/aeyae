@@ -456,11 +456,36 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Timeline::add_keyframe
+  //
+  void
+  Timeline::add_keyframe(const std::string & track_id, const TTime & dts)
+  {
+    std::set<TTime> & track = keyframes_[track_id];
+    track.insert(dts);
+  }
+
+  //----------------------------------------------------------------
   // Timeline::operator +=
   //
   Timeline &
   Timeline::operator += (const TTime & offset)
   {
+    for (std::map<std::string, std::set<TTime> >::iterator
+           i = keyframes_.begin(); i != keyframes_.end(); ++i)
+    {
+      std::set<TTime> & keyframes = i->second;
+      std::set<TTime> tmp;
+
+      for (std::set<TTime>::const_iterator j =
+             keyframes.begin(); j != keyframes.end(); ++j)
+      {
+        tmp.insert(*j + offset);
+      }
+
+      keyframes.swap(tmp);
+    }
+
     for (TTracks::iterator i = tracks_.begin(); i != tracks_.end(); ++i)
     {
       std::list<Timespan> & tt = i->second;
@@ -483,8 +508,23 @@ namespace yae
                    const TTime & offset,
                    double tolerance)
   {
-    for (TTracks::const_iterator
-           i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+    for (std::map<std::string, std::set<TTime> >::const_iterator i =
+           timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const std::set<TTime> & keyframes = i->second;
+      std::set<TTime> & track = keyframes_[track_id];
+
+        for (std::set<TTime>::const_iterator
+             j = keyframes.begin(); j != keyframes.end(); ++j)
+      {
+        TTime keyframe = (*j + offset);
+        track.insert(keyframe);
+      }
+    }
+
+    for (TTracks::const_iterator i =
+           timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
     {
       const std::string & track_id = i->first;
       const std::list<Timespan> & track = i->second;
@@ -623,6 +663,23 @@ namespace yae
       if (size > 1)
       {
         oss << ", " << size << " segments";
+      }
+
+      oss << '\n';
+    }
+
+    for (std::map<std::string, std::set<TTime> >::const_iterator i =
+           timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const std::set<TTime> & keyframes = i->second;
+      oss << "keyframes " << track_id << ": ";
+
+      for (std::set<TTime>::const_iterator j =
+             keyframes.begin(); j != keyframes.end(); ++j)
+      {
+        const TTime & t = *j;
+        oss << t.to_hhmmss_frac(1000, ":") << ' ';
       }
 
       oss << '\n';

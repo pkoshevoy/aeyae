@@ -14,6 +14,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 
 // yae includes:
@@ -182,6 +183,8 @@ namespace yae
   {
     typedef std::map<std::string, std::list<Timespan> > TTracks;
 
+    void add_keyframe(const std::string & track_id, const TTime & dts);
+
     // translate this timeline by a given offset:
     Timeline & operator += (const TTime & offset);
 
@@ -209,6 +212,9 @@ namespace yae
 
     // time intervals for individual tracks:
     TTracks tracks_;
+
+    // time stamps of keyframes, per track:
+    std::map<std::string, std::set<TTime> > keyframes_;
   };
 
   //----------------------------------------------------------------
