@@ -362,21 +362,25 @@ namespace yae
   //
   struct YAE_API DemuxerSummary
   {
+    void extend(const DemuxerSummary & s,
+                const std::map<int, TTime> & prog_offset,
+                double tolerance);
+
     // a mapping from track id to native ffmpeg stream:
     std::map<std::string, const AVStream *> stream_;
 
     // a mapping from program id to program info:
-    std::map<int, const yae::TProgramInfo *> info_;
+    std::map<int, const TProgramInfo *> info_;
 
     // a mapping from program id to program timeline:
-    std::map<int, yae::Timeline> timeline_;
+    std::map<int, Timeline> timeline_;
 
     // a mapping from video track id to framerate estimator:
-    std::map<std::string, yae::FramerateEstimator> fps_;
+    std::map<std::string, FramerateEstimator> fps_;
 
     // track_id and DTS of the first packet,
     // so we know what to pass to seek(..) to rewind:
-    std::pair<std::string, yae::TTime> rewind_;
+    std::pair<std::string, TTime> rewind_;
   };
 
   //----------------------------------------------------------------
@@ -504,6 +508,9 @@ namespace yae
 
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
+
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.017);
 
   protected:
     // find the source corresponding to the given program/time:

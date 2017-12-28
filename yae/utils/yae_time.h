@@ -122,6 +122,12 @@ namespace yae
     uint64 base_;
   };
 
+  //----------------------------------------------------------------
+  // operator
+  //
+  inline TTime operator - (const TTime & t)
+  { return TTime(-t.time_, t.base_); }
+
 
   //----------------------------------------------------------------
   // Timespan
@@ -130,6 +136,11 @@ namespace yae
   {
     Timespan(const TTime & t0 = TTime(std::numeric_limits<int64>::max(), 1),
              const TTime & t1 = TTime(std::numeric_limits<int64>::min(), 1));
+
+    Timespan & operator += (const TTime & offset);
+
+    inline Timespan operator + (const TTime & offset) const
+    { return Timespan(t0_ + offset, t1_ + offset); }
 
     inline bool empty() const
     { return t1_ < t0_; }
@@ -170,6 +181,15 @@ namespace yae
   struct YAE_API Timeline
   {
     typedef std::map<std::string, std::list<Timespan> > TTracks;
+
+    // translate this timeline by a given offset:
+    Timeline & operator += (const TTime & offset);
+
+    // extend this timeline via a union with
+    // a given timeline translated by a given offset:
+    void extend(const Timeline & timeline,
+                const TTime & offset,
+                double tolerace);
 
     bool extend_track(const std::string & track_id,
                       const Timespan & s,
@@ -229,6 +249,8 @@ namespace yae
   {
     FramerateEstimator(std::size_t buffer_size = 300);
 
+    FramerateEstimator & operator += (const FramerateEstimator & s);
+
     void push(const TTime & dts);
 
     // average fps calculated from a sliding window buffer of DTS:
@@ -270,12 +292,15 @@ namespace yae
     { return dur_; }
 
   protected:
+    // a sliding window, for calculating a window average:
     std::list<TTime> dts_;
     std::size_t max_;
     std::size_t num_;
 
     // keep count of occurrences of various frame durations, msec:
     std::map<TTime, uint64> dur_;
+
+    // keep an accurate sum of frame durations, per frame duration:
     std::map<TTime, TTime> sum_;
   };
 

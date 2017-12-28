@@ -339,6 +339,17 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // Timespan::operator +=
+  //
+  Timespan &
+  Timespan::operator += (const TTime & offset)
+  {
+    t0_ += offset;
+    t1_ += offset;
+    return *this;
+  }
+
+  //----------------------------------------------------------------
   // Timespan::extend
   //
   double
@@ -382,7 +393,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Timespan::gap
+  // Timespan::diff
   //
   // calculate the gap between t and this time interval:
   //
@@ -441,6 +452,50 @@ namespace yae
     tmp.push_back(span);
     tmp.splice(tmp.end(), track);
     track.splice(track.end(), tmp);
+  }
+
+
+  //----------------------------------------------------------------
+  // Timeline::operator +=
+  //
+  Timeline &
+  Timeline::operator += (const TTime & offset)
+  {
+    for (TTracks::iterator i = tracks_.begin(); i != tracks_.end(); ++i)
+    {
+      std::list<Timespan> & tt = i->second;
+      for (std::list<Timespan>::iterator j = tt.begin(); j != tt.end(); ++j)
+      {
+        Timespan & t = *j;
+        t += offset;
+      }
+    }
+
+    bbox_ += offset;
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::extend
+  //
+  void
+  Timeline::extend(const Timeline & timeline,
+                   const TTime & offset,
+                   double tolerance)
+  {
+    for (TTracks::const_iterator
+           i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const std::list<Timespan> & track = i->second;
+
+      for (std::list<Timespan>::const_iterator
+             j = track.begin(); j != track.end(); ++j)
+      {
+        Timespan s = (*j + offset);
+        extend(track_id, s, tolerance, false);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -670,6 +725,46 @@ namespace yae
     max_(buffer_size),
     num_(0)
   {}
+
+  //----------------------------------------------------------------
+  // FramerateEstimator::operator +=
+  //
+  FramerateEstimator &
+  FramerateEstimator::operator += (const FramerateEstimator & src)
+  {
+    max_ = std::max(max_, src.max_);
+
+    for (std::list<TTime>::const_iterator
+           i = src.dts_.begin(); i != src.dts_.end(); ++i)
+    {
+      const TTime & dts = *i;
+      dts_.push_back(dts);
+
+      if (num_ < max_)
+      {
+        num_++;
+      }
+      else
+      {
+        dts_.pop_front();
+      }
+    }
+
+    for (std::map<TTime, uint64>::const_iterator
+           i = src.dur_.begin(); i != src.dur_.end(); ++i)
+    {
+      const TTime & msec = i->first;
+      const uint64 & num = i->second;
+      dur_[msec] += num;
+
+      const TTime & src_sum = yae::get(src.sum_, msec);
+      TTime & dst_sum = sum_[msec];
+      dst_sum = TTime(src_sum.time_ + dst_sum.getTime(src_sum.base_),
+                      src_sum.base_);
+    }
+
+    return *this;
+  }
 
   //----------------------------------------------------------------
   // FramerateEstimator::push

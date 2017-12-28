@@ -1479,6 +1479,64 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DemuxerSummary::extend
+  //
+  void
+  DemuxerSummary::extend(const DemuxerSummary & s,
+                         const std::map<int, TTime> & prog_offset,
+                         double tolerance)
+  {
+    for (std::map<std::string, const AVStream *>::const_iterator
+           i = s.stream_.begin(); i != s.stream_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const AVStream * stream = i->second;
+      if (yae::get(stream_, track_id))
+      {
+        continue;
+      }
+
+      stream_[track_id] = stream;
+    }
+
+    for (std::map<int, const TProgramInfo *>::const_iterator
+           i = s.info_.begin(); i != s.info_.end(); ++i)
+    {
+      const int & prog_id = i->first;
+      const TProgramInfo * info = i->second;
+      if (yae::get(info_, prog_id))
+      {
+        continue;
+      }
+
+      info_[prog_id] = info;
+    }
+
+    for (std::map<std::string, FramerateEstimator>::const_iterator
+           i = s.fps_.begin(); i != s.fps_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const FramerateEstimator & src = i->second;
+      fps_[track_id] += src;
+    }
+
+    for (std::map<int, Timeline>::const_iterator
+           i = s.timeline_.begin(); i != s.timeline_.end(); ++i)
+    {
+      const int & prog_id = i->first;
+      const Timeline & timeline = i->second;
+      TTime offset = -yae::at(prog_offset, prog_id);
+      timeline_[prog_id].extend(timeline, offset, tolerance);
+    }
+
+    if (rewind_.first.empty())
+    {
+      rewind_.first = s.rewind_.first;
+      rewind_.second = TTime(0, s.rewind_.second.base_);
+    }
+  }
+
+  //----------------------------------------------------------------
   // operator <<
   //
   std::ostream &
@@ -2153,6 +2211,28 @@ namespace yae
     const std::vector<TTime> & t1 = yae::at(t1_, prog_id);
     const TTime & end_time = t1[i];
     return (seek_time < end_time) ? i : src_.size();
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::summarize
+  //
+  void
+  SerialDemuxer::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    for (std::size_t i = 0; i < summary_.size(); i++)
+    {
+      std::map<int, TTime> prog_offset;
+      for (std::map<int, std::vector<TTime> >::const_iterator
+             j = offset_.begin(); j != offset_.end(); ++j)
+      {
+        const int & prog_id = j->first;
+        const std::vector<TTime> & offsets = j->second;
+        prog_offset[prog_id] = offsets[i];
+      }
+
+      const DemuxerSummary & src = summary_[i];
+      summary.extend(src, prog_offset, tolerance);
+    }
   }
 
 }
