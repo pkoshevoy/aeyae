@@ -692,13 +692,13 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const std::set<TTime> & keyframes = i->second;
-      oss << "keyframes " << track_id << ": ";
+      oss << "keyframes " << track_id << ':';
 
       for (std::set<TTime>::const_iterator j =
              keyframes.begin(); j != keyframes.end(); ++j)
       {
         const TTime & t = *j;
-        oss << t << ' ';
+        oss << ' ' << t;
       }
 
       oss << '\n';

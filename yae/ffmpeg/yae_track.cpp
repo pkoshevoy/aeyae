@@ -418,11 +418,12 @@ namespace yae
     AvCodecContextPtr ctx = untried.front();
     untried.pop_front();
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     if (ctx)
     {
-      std::cerr << "\n\nUSING DECODER: " << ctx->codec->name << "\n\n"
-                << std::endl;
+      av_log(NULL, AV_LOG_INFO,
+             "\n\nUSING DECODER: %s\n\n\n",
+             ctx->codec->name);
     }
 #endif
 
