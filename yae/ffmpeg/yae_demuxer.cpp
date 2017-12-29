@@ -1776,14 +1776,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DemuxerBuffer::summarize
+  // summarize
   //
   void
-  DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
+  summarize(DemuxerInterface & demuxer,
+            DemuxerSummary & summary,
+            double tolerance)
   {
     // setup the program lookup table:
     {
-      const std::vector<TProgramInfo> & programs = this->programs();
+      const std::vector<TProgramInfo> & programs = demuxer.programs();
       for (std::size_t j = 0; j < programs.size(); j++)
       {
         const TProgramInfo & info = programs[j];
@@ -1795,7 +1797,7 @@ namespace yae
     TTime saved_pos;
     {
       AVStream * src = NULL;
-      TPacketPtr packet_ptr = this->peek(src);
+      TPacketPtr packet_ptr = demuxer.peek(src);
       if (src && packet_ptr)
       {
         const AVPacket & packet = packet_ptr->get();
@@ -1804,18 +1806,27 @@ namespace yae
     }
 
     // analyze from the start:
-    this->seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
-    analyze_timeline(*this,
+    demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
+    analyze_timeline(demuxer,
                      summary.stream_,
                      summary.fps_,
                      summary.timeline_,
                      tolerance);
 
     // restore previous time position:
-    this->seek(AVSEEK_FLAG_BACKWARD, saved_pos);
+    demuxer.seek(AVSEEK_FLAG_BACKWARD, saved_pos);
 
     // get the track id and time position of the "first" packet:
-    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+    get_rewind_info(demuxer, summary.rewind_.first, summary.rewind_.second);
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::summarize
+  //
+  void
+  DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    yae::summarize(*this, summary, tolerance);
   }
 
 
@@ -1919,6 +1930,9 @@ namespace yae
   void
   ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
+#if 0
+    yae::summarize(*this, summary, tolerance);
+#else
     for (std::list<TDemuxerInterfacePtr>::iterator i =
            src_.begin(); i != src_.end(); ++i)
     {
@@ -1928,6 +1942,7 @@ namespace yae
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+#endif
   }
 
 

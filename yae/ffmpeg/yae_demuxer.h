@@ -427,6 +427,21 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // summarize
+  //
+  // NOTE: this is always slow, because it demuxes the source
+  // from start to finish to build the summary.
+  //
+  // DemuxerInterface::summarize is not necessarily as slow,
+  // so use it instead.
+  //
+  YAE_API void
+  summarize(DemuxerInterface & demuxer,
+            DemuxerSummary & summary,
+            double tolerance = 0.017);
+
+
+  //----------------------------------------------------------------
   // DemuxerBuffer
   //
   struct YAE_API DemuxerBuffer : DemuxerInterface
