@@ -339,4 +339,34 @@ namespace yae
     return NULL;
   }
 
+  //----------------------------------------------------------------
+  // getDictionary
+  //
+  void
+  getDictionary(TDictionary & dict, const AVDictionary * av_dict)
+  {
+    const AVDictionaryEntry * iter = NULL;
+    while ((iter = av_dict_get(av_dict, "", iter, AV_DICT_IGNORE_SUFFIX)))
+    {
+      std::string key(iter->key);
+      std::string value(iter->value);
+      dict[key] = value;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // setDictionary
+  //
+  void
+  setDictionary(AVDictionary *& av_dict, const TDictionary & dict)
+  {
+    for (TDictionary::const_iterator
+           i = dict.begin(); i != dict.end(); ++i)
+    {
+      const std::string & k = i->first;
+      const std::string & v = i->second;
+      av_dict_set(&av_dict, k.c_str(), v.c_str(), 0);
+    }
+  }
+
 }

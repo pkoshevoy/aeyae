@@ -163,20 +163,7 @@ namespace yae
       info.pmt_pid_ = p->pmt_pid;
       info.pcr_pid_ = p->pcr_pid;
 
-      const AVDictionaryEntry * start = NULL;
-      while (true)
-      {
-        AVDictionaryEntry * found =
-          av_dict_get(p->metadata, "", start, AV_DICT_IGNORE_SUFFIX);
-
-        if (!found)
-        {
-          break;
-        }
-
-        info.metadata_[std::string(found->key)] = std::string(found->value);
-        start = found;
-      }
+      getDictionary(info.metadata_, p->metadata);
 
       for (unsigned int j = 0; j < p->nb_stream_indexes; j++)
       {
@@ -199,6 +186,7 @@ namespace yae
     for (unsigned int i = 0; i < ctx->nb_streams; i++)
     {
       AVStream * stream = ctx->streams[i];
+      trackId_[stream->index] = make_track_id('_', to_ + stream->index);
 
       // lookup which program this stream belongs to:
       TProgramInfo * program = NULL;
@@ -218,22 +206,7 @@ namespace yae
         attachments_.push_back(TAttachment(stream->codecpar->extradata,
                                            stream->codecpar->extradata_size));
         TAttachment & att = attachments_.back();
-
-        const AVDictionaryEntry * prev = NULL;
-        while (true)
-        {
-          AVDictionaryEntry * found =
-            av_dict_get(stream->metadata, "", prev, AV_DICT_IGNORE_SUFFIX);
-
-          if (!found)
-          {
-            break;
-          }
-
-          att.metadata_[std::string(found->key)] = std::string(found->value);
-          prev = found;
-        }
-
+        getDictionary(att.metadata_, stream->metadata);
         continue;
       }
 
@@ -271,10 +244,13 @@ namespace yae
         {
           program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
+
           track->setId(make_track_id('v', to_ + videoTracks_.size()));
+          streamIndex_[track->id()] = stream->index;
+          trackId_[stream->index] = track->id();
+
           videoTracks_.push_back(track);
           tracks_[stream->index] = track;
-          trackIdToStreamIndex_[track->id()] = stream->index;
         }
         else
         {
@@ -290,10 +266,13 @@ namespace yae
         {
           program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
+
           track->setId(make_track_id('a', to_ + audioTracks_.size()));
+          streamIndex_[track->id()] = stream->index;
+          trackId_[stream->index] = track->id();
+
           audioTracks_.push_back(track);
           tracks_[stream->index] = track;
-          trackIdToStreamIndex_[track->id()] = stream->index;
         }
         else
         {
@@ -314,9 +293,11 @@ namespace yae
 
           SubttTrackPtr track(new SubtitlesTrack(stream));
           track->setId(make_track_id('s', to_ + subttTracks_.size()));
+          streamIndex_[track->id()] = stream->index;
+          trackId_[stream->index] = track->id();
+
           subttTracks_.push_back(track);
           tracks_[stream->index] = track;
-          trackIdToStreamIndex_[track->id()] = stream->index;
         }
       }
     }
@@ -342,7 +323,7 @@ namespace yae
     tracks_.clear();
     programs_.clear();
     streamIndexToProgramIndex_.clear();
-    trackIdToStreamIndex_.clear();
+    streamIndex_.clear();
 
     context_.reset();
   }
@@ -354,8 +335,8 @@ namespace yae
   Demuxer::getTrack(const std::string & trackId) const
   {
     std::map<std::string, int>::const_iterator
-      found = trackIdToStreamIndex_.find(trackId);
-    if (found == trackIdToStreamIndex_.end())
+      found = streamIndex_.find(trackId);
+    if (found == streamIndex_.end())
     {
       return TrackPtr();
     }
@@ -494,7 +475,7 @@ namespace yae
       }
       else
       {
-        pkt.trackId_ = make_track_id('_', packet.stream_index);
+        pkt.trackId_ = make_track_id('_', to_ + packet.stream_index);
       }
 
       const TProgramInfo * info = getProgram(packet.stream_index);
@@ -546,7 +527,7 @@ namespace yae
 
     if (!trackId.empty())
     {
-      streamIndex = yae::get(trackIdToStreamIndex_, trackId, -1);
+      streamIndex = yae::get(streamIndex_, trackId, -1);
       if (streamIndex == -1)
       {
         return AVERROR_STREAM_NOT_FOUND;
@@ -613,26 +594,19 @@ namespace yae
       return false;
     }
 
-    std::ostringstream os;
-    os << "Chapter " << i + 1;
+    std::ostringstream oss;
+    oss << "Chapter " << i + 1;
 
     const AVChapter * av = context_->chapters[i];
-    AVDictionaryEntry * name = av_dict_get(av->metadata, "title", NULL, 0);
-    c.name_ = name ? name->value : os.str().c_str();
+
+    getDictionary(c.metadata_, av->metadata);
+    c.name_ = yae::get(c.metadata_, "title", oss.str());
 
     c.span_.t0_.reset(av->time_base.num * av->start,
                       av->time_base.den);
 
     c.span_.t1_.reset(av->time_base.num * av->end,
                       av->time_base.den);
-
-    const AVDictionaryEntry * iter = NULL;
-    while ((iter = av_dict_get(av->metadata, "", iter, AV_DICT_IGNORE_SUFFIX)))
-    {
-      std::string key(iter->key);
-      std::string value(iter->value);
-      c.metadata_[key] = value;
-    }
 
     return true;
   }
@@ -641,7 +615,7 @@ namespace yae
   // Demuxer::getChapters
   //
   void
-  Demuxer::getChapters(std::map<int, std::map<TTime, TChapter> > & pc) const
+  Demuxer::getChapters(std::map<TTime, TChapter> & chapters) const
   {
     const std::size_t num_chapters = countChapters();
     if (num_chapters < 1)
@@ -649,15 +623,66 @@ namespace yae
       return;
     }
 
-    // avformat does not keep separate chapters per-program,
-    // so we'll have to assume the implicit program:
-    std::map<TTime, TChapter> & chapters = pc[0];
-
     for (std::size_t i = 0; i < num_chapters; i++)
     {
       TChapter c;
       getChapterInfo(i, c);
       chapters[c.span_.t0_] = c;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Demuxer::getMetadata
+  //
+  void
+  Demuxer::getMetadata(std::map<std::string, TDictionary> & track_meta,
+                       TDictionary & metadata) const
+  {
+    const AVFormatContext & ctx = getFormatContext();
+    getDictionary(metadata, ctx.metadata);
+
+    for (unsigned int i = 0; i < ctx.nb_streams; i++)
+    {
+      const AVStream * stream = ctx.streams[i];
+      std::string track_id = yae::get(trackId_, stream->index);
+
+      if (track_id.empty())
+      {
+        YAE_ASSERT(false);
+        track_id = make_track_id('_', to_ + stream->index);
+      }
+
+      getDictionary(track_meta[track_id], stream->metadata);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Demuxer::getPrograms
+  //
+  void
+  Demuxer::getPrograms(std::map<int, TProgramInfo> & programs) const
+  {
+    const std::size_t num_progs = programs_.size();
+    for (std::size_t i = 0; i < num_progs; i++)
+    {
+      const TProgramInfo & program = programs_[i];
+      programs[program.id_] = program;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Demuxer::getDecoders
+  //
+  void
+  Demuxer::getDecoders(std::map<std::string, TrackPtr> & decoders) const
+  {
+    for (std::map<std::string, int>::const_iterator i =
+           streamIndex_.begin(); i != streamIndex_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const int & stream_index = i->second;
+      TrackPtr decoder = yae::get(tracks_, stream_index);
+      decoders[track_id] = decoder;
     }
   }
 
@@ -1238,14 +1263,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PacketBuffer::get_metadata
+  //
+  void
+  PacketBuffer::get_metadata(std::map<std::string, TDictionary> & track_meta,
+                             TDictionary & metadata) const
+  {
+    const Demuxer & demuxer = *demuxer_;
+    demuxer.getMetadata(track_meta, metadata);
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::get_decoders
+  //
+  void
+  PacketBuffer::get_decoders(std::map<std::string, TrackPtr> & decoders) const
+  {
+    const Demuxer & demuxer = *demuxer_;
+    demuxer.getDecoders(decoders);
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::get_programs
+  //
+  void
+  PacketBuffer::get_programs(std::map<int, TProgramInfo> & programs) const
+  {
+    const Demuxer & demuxer = *demuxer_;
+    demuxer.getPrograms(programs);
+  }
+
+  //----------------------------------------------------------------
   // PacketBuffer::get_chapters
   //
   void
-  PacketBuffer::
-  get_chapters(std::map<int, std::map<TTime, TChapter> > & ch) const
+  PacketBuffer::get_chapters(std::map<TTime, TChapter> & chapters) const
   {
-    Demuxer & demuxer = *demuxer_;
-    demuxer.getChapters(ch);
+    const Demuxer & demuxer = *demuxer_;
+    demuxer.getChapters(chapters);
   }
 
   //----------------------------------------------------------------
@@ -1541,30 +1596,62 @@ namespace yae
                          const std::map<int, TTime> & prog_offset,
                          double tolerance)
   {
+    yae::extend(metadata_, s.metadata_);
+
+    for (std::map<std::string, TDictionary>::const_iterator
+           i = s.trk_meta_.begin(); i != s.trk_meta_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const TDictionary & metadata = i->second;
+
+      if (metadata.empty())
+      {
+        continue;
+      }
+
+      yae::extend(trk_meta_[track_id], metadata);
+    }
+
     for (std::map<std::string, const AVStream *>::const_iterator
-           i = s.stream_.begin(); i != s.stream_.end(); ++i)
+           i = s.streams_.begin(); i != s.streams_.end(); ++i)
     {
       const std::string & track_id = i->first;
       const AVStream * stream = i->second;
-      if (yae::get(stream_, track_id))
+      if (yae::get(streams_, track_id))
       {
         continue;
       }
 
-      stream_[track_id] = stream;
+      streams_[track_id] = stream;
     }
 
-    for (std::map<int, const TProgramInfo *>::const_iterator
-           i = s.info_.begin(); i != s.info_.end(); ++i)
+    for (std::map<std::string, TrackPtr>::const_iterator
+           i = s.decoders_.begin(); i != s.decoders_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const TrackPtr & decoder = i->second;
+
+      TrackPtr found = yae::get(decoders_, track_id);
+      if (found)
+      {
+        YAE_ASSERT(same_codec(found, decoder));
+        continue;
+      }
+
+      decoders_[track_id] = decoder;
+    }
+
+    for (std::map<int, TProgramInfo>::const_iterator
+           i = s.programs_.begin(); i != s.programs_.end(); ++i)
     {
       const int & prog_id = i->first;
-      const TProgramInfo * info = i->second;
-      if (yae::get(info_, prog_id))
+      const TProgramInfo & info = i->second;
+      if (yae::has(programs_, prog_id))
       {
         continue;
       }
 
-      info_[prog_id] = info;
+      programs_[prog_id] = info;
     }
 
     for (std::map<std::string, FramerateEstimator>::const_iterator
@@ -1584,18 +1671,17 @@ namespace yae
       timeline_[prog_id].extend(timeline, offset, tolerance);
     }
 
-    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
-           i = s.chapters_.begin(); i != s.chapters_.end(); ++i)
+    if (!s.chapters_.empty())
     {
-      // shortcuts:
-      const int & prog_id = i->first;
+      // chapters aren't stored per-program, so use any available program id.,
+      // but there should only be 1:
+      YAE_ASSERT(prog_offset.size() < 2);
+
+      int prog_id = prog_offset.empty() ? 0 : prog_offset.begin()->first;
       TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
 
-      const std::map<TTime, TChapter> & src = i->second;
-      std::map<TTime, TChapter> & dst = chapters_[prog_id];
-
       for (std::map<TTime, TChapter>::const_iterator j =
-             src.begin(); j != src.end(); ++j)
+             s.chapters_.begin(); j != s.chapters_.end(); ++j)
       {
         TTime t0 = j->first;
         TChapter ch = j->second;
@@ -1605,7 +1691,7 @@ namespace yae
         ch.span_ += offset;
         YAE_ASSERT(t0 == ch.span_.t0_);
 
-        dst[t0] = ch;
+        chapters_[t0] = ch;
       }
     }
 
@@ -1622,37 +1708,42 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const DemuxerSummary & summary)
   {
-    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
-           i = summary.chapters_.begin(); i != summary.chapters_.end(); ++i)
+    if (!summary.metadata_.empty())
     {
-      // shortcuts:
-      const int & prog_id = i->first;
-      const std::map<TTime, TChapter> & chapters = i->second;
+      oss << "global metadata: " << summary.metadata_.size()
+          << '\n' << summary.metadata_ << std::endl;
+    }
 
-      for (std::map<TTime, TChapter>::const_iterator j =
-             chapters.begin(); j != chapters.end(); ++j)
+    for (std::map<std::string, TDictionary>::const_iterator
+           i = summary.trk_meta_.begin(); i != summary.trk_meta_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const TDictionary & metadata = i->second;
+      if (metadata.empty())
       {
-        const TTime & t0 = j->first;
-        const TChapter & ch = j->second;
-        YAE_ASSERT(t0 == ch.span_.t0_);
-
-        oss << std::setw(3) << prog_id << ' '
-            << ch.span_ << ": " << ch.name_;
-
-        if (!ch.metadata_.empty())
-        {
-          oss << ", metadata:";
-          for (std::map<std::string, std::string>::const_iterator k =
-                 ch.metadata_.begin(); k != ch.metadata_.end(); ++k)
-          {
-            const std::string & key = k->first;
-            const std::string & value = k->second;
-            oss << ' ' << key << '=' << value;
-          }
-        }
-
-        oss << std::endl;
+        continue;
       }
+
+      oss << track_id << " metadata: " << summary.metadata_.size()
+          << '\n' << metadata << std::endl;
+    }
+
+    for (std::map<TTime, TChapter>::const_iterator j =
+           summary.chapters_.begin(); j != summary.chapters_.end(); ++j)
+    {
+      const TTime & t0 = j->first;
+      const TChapter & ch = j->second;
+      YAE_ASSERT(t0 == ch.span_.t0_);
+
+      oss << ch.span_ << ": " << ch.name_;
+
+      if (!ch.metadata_.empty())
+      {
+        oss << ", metadata: " << ch.metadata_.size()
+            << '\n' << ch.metadata_ << std::endl;
+      }
+
+      oss << std::endl;
     }
 
     for (std::map<int, Timeline>::const_iterator
@@ -1662,15 +1753,8 @@ namespace yae
       const int & prog_id = i->first;
       const Timeline & timeline = i->second;
 
-      const TProgramInfo * info = yae::get(summary.info_, prog_id);
-      YAE_ASSERT(info);
-
-      std::string service_name;
-      if (info)
-      {
-        service_name = yae::get(info->metadata_, "service_name");
-      }
-
+      const TProgramInfo & info = yae::at(summary.programs_, prog_id);
+      std::string service_name = yae::get(info.metadata_, "service_name");
       if (!service_name.empty())
       {
         oss << service_name << "\n";
@@ -1745,15 +1829,6 @@ namespace yae
   DemuxerBuffer::DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec):
     src_(src, buffer_sec)
   {}
-
-  //----------------------------------------------------------------
-  // DemuxerBuffer::programs
-  //
- const std::vector<TProgramInfo> &
- DemuxerBuffer::programs() const
- {
-   return src_.programs();
- }
 
   //----------------------------------------------------------------
   // DemuxerBuffer::populate
@@ -1896,16 +1971,6 @@ namespace yae
             DemuxerSummary & summary,
             double tolerance)
   {
-    // setup the program lookup table:
-    {
-      const std::vector<TProgramInfo> & programs = demuxer.programs();
-      for (std::size_t j = 0; j < programs.size(); j++)
-      {
-        const TProgramInfo & info = programs[j];
-        summary.info_[info.id_] = &info;
-      }
-    }
-
     // get current time position:
     TTime saved_pos;
     {
@@ -1921,7 +1986,7 @@ namespace yae
     // analyze from the start:
     demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
     analyze_timeline(demuxer,
-                     summary.stream_,
+                     summary.streams_,
                      summary.fps_,
                      summary.timeline_,
                      tolerance);
@@ -1940,7 +2005,12 @@ namespace yae
   DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
   {
     yae::summarize(*this, summary, tolerance);
+
+    src_.get_decoders(summary.decoders_);
     src_.get_chapters(summary.chapters_);
+    src_.get_programs(summary.programs_);
+    src_.get_metadata(summary.trk_meta_,
+                      summary.metadata_);
   }
 
 
@@ -1953,15 +2023,6 @@ namespace yae
   {
     src_.push_back(src);
     summary_.push_back(summary);
-  }
-
-  //----------------------------------------------------------------
-  // ParallelDemuxer::programs
-  //
-  const std::vector<TProgramInfo> &
-  ParallelDemuxer::programs() const
-  {
-    return src_.front()->programs();
   }
 
   //----------------------------------------------------------------
@@ -2148,7 +2209,7 @@ namespace yae
     // setup output streams:
     std::map<std::string, AVStream *> lut;
     for (std::map<std::string, const AVStream *>::const_iterator
-           i = summary.stream_.begin(); i != summary.stream_.end(); ++i)
+           i = summary.streams_.begin(); i != summary.streams_.end(); ++i)
     {
       const std::string & track_id = i->first;
       const AVStream * src = i->second;
@@ -2181,12 +2242,12 @@ namespace yae
     {
       const int prog_id = i->first;
       const Timeline & timeline = i->second;
-      const TProgramInfo * info = yae::get(summary.info_, prog_id);
+      const TProgramInfo & info = yae::at(summary.programs_, prog_id);
 
-      AVProgram * p = av_new_program(muxer, info->id_);
-      YAE_ASSERT(p->id == info->id_);
-      p->pmt_pid = info->pmt_pid_;
-      p->pcr_pid = info->pcr_pid_;
+      AVProgram * p = av_new_program(muxer, info.id_);
+      YAE_ASSERT(p->id == info.id_);
+      p->pmt_pid = info.pmt_pid_;
+      p->pcr_pid = info.pcr_pid_;
 
       for (Timeline::TTracks::const_iterator
              i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
@@ -2198,21 +2259,12 @@ namespace yae
         av_program_add_stream_index(muxer, prog_id, dst->index);
       }
 
-      for (std::map<std::string, std::string>::const_iterator
-             i = info->metadata_.begin(); i != info->metadata_.end(); ++i)
-      {
-        const std::string & k = i->first;
-        const std::string & v = i->second;
-        av_dict_set(&(p->metadata), k.c_str(), v.c_str(), 0);
-      }
+      setDictionary(p->metadata, info.metadata_);
     }
 
     // setup chapters:
-    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
-           i = summary.chapters_.begin(); i != summary.chapters_.end(); ++i)
     {
-      // shortcuts:
-      const std::map<TTime, TChapter> & chapters = i->second;
+      const std::map<TTime, TChapter> & chapters = summary.chapters_;
 
       muxer->nb_chapters = chapters.size();
       muxer->chapters = (AVChapter **)av_malloc_array(muxer->nb_chapters,
@@ -2232,19 +2284,25 @@ namespace yae
         av->time_base.den = ch.span_.t0_.base_;
         av->start = ch.span_.t0_.getTime(ch.span_.t1_.base_);
         av->end = ch.span_.t1_.time_;
+        setDictionary(av->metadata, ch.metadata_);
+      }
+    }
 
-        for (std::map<std::string, std::string>::const_iterator k =
-               ch.metadata_.begin(); k != ch.metadata_.end(); ++k)
-        {
-          const std::string & key = k->first;
-          const std::string & value = k->second;
-          av_dict_set(&(av->metadata), key.c_str(), value.c_str(), 0);
-        }
+    // setup metadata:
+    setDictionary(muxer->metadata, summary.metadata_);
+    for (std::map<std::string, TDictionary>::const_iterator
+           i = summary.trk_meta_.begin(); i != summary.trk_meta_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const TDictionary & metadata = i->second;
+
+      if (metadata.empty())
+      {
+        continue;
       }
 
-      // can't setup chapters for more than one program
-      // with the current avformat api:
-      break;
+      AVStream * dst = yae::get(lut, track_id);
+      setDictionary(dst->metadata, metadata);
     }
 
     // open the muxer:
@@ -2355,15 +2413,6 @@ namespace yae
 
     src_.push_back(src);
     summary_.push_back(summary);
-  }
-
-  //----------------------------------------------------------------
-  // SerialDemuxer::programs
-  //
-  const std::vector<TProgramInfo> &
-  SerialDemuxer::programs() const
-  {
-    return src_[0]->programs();
   }
 
   //----------------------------------------------------------------

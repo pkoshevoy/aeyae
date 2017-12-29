@@ -298,6 +298,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // has
+  //
+  template <typename TKey, typename TValue>
+  static bool
+  has(const std::map<TKey, TValue> & lut,
+      const TKey & key,
+      const TValue & defaultValue = TValue())
+  {
+    typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
+    return found != lut.end();
+  }
+
+  //----------------------------------------------------------------
   // get
   //
   template <typename TKey, typename TValue>
@@ -464,6 +477,23 @@ namespace yae
   //
   YAE_API std::string
   to_lower(const std::string & in);
+
+  //----------------------------------------------------------------
+  // TDictionary
+  //
+  typedef std::map<std::string, std::string> TDictionary;
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const TDictionary & dict);
+
+  //----------------------------------------------------------------
+  // extend
+  //
+  YAE_API void
+  extend(TDictionary & dst, const TDictionary & src);
 
 }
 

@@ -342,6 +342,11 @@ namespace yae
   //
   typedef boost::shared_ptr<Track> TrackPtr;
 
+  //----------------------------------------------------------------
+  // same_codec
+  //
+  YAE_API bool same_codec(const TrackPtr & a, const TrackPtr & b);
+
 }
 
 

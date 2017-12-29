@@ -25,6 +25,7 @@
 #include "yae_pixel_formats.h"
 #include "../api/yae_api.h"
 #include "../utils/yae_time.h"
+#include "../utils/yae_utils.h"
 
 
 namespace yae
@@ -560,7 +561,7 @@ namespace yae
     int program_;
     int pmt_pid_;
     int pcr_pid_;
-    std::map<std::string, std::string> metadata_;
+    TDictionary metadata_;
     std::list<std::size_t> video_;
     std::list<std::size_t> audio_;
     std::list<std::size_t> subs_;
@@ -616,7 +617,7 @@ namespace yae
     Timespan span_;
 
     // chapter metadata:
-    std::map<std::string, std::string> metadata_;
+    TDictionary metadata_;
   };
 
   //----------------------------------------------------------------
@@ -628,7 +629,7 @@ namespace yae
 
     const unsigned char * data_;
     std::size_t size_;
-    std::map<std::string, std::string> metadata_;
+    TDictionary metadata_;
   };
 
   //----------------------------------------------------------------

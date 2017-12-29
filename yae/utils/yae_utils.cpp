@@ -1114,6 +1114,44 @@ namespace yae
     boost::algorithm::to_lower(out);
     return out;
   }
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const TDictionary & dict)
+  {
+    for (TDictionary::const_iterator i = dict.begin(); i != dict.end(); ++i)
+    {
+      const std::string & key = i->first;
+      const std::string & value = i->second;
+      oss << key << ": " << value << '\n';
+    }
+
+    return oss;
+  }
+
+  //----------------------------------------------------------------
+  // extend
+  //
+  void
+  extend(TDictionary & dst, const TDictionary & src)
+  {
+    for (TDictionary::const_iterator i = src.begin(); i != src.end(); ++i)
+    {
+      const std::string & key = i->first;
+      const std::string & value = i->second;
+
+      TDictionary::const_iterator found = dst.find(key);
+      if (found != dst.end())
+      {
+        continue;
+      }
+
+      dst[key] = value;
+    }
+  }
+
 }
 
 #if defined(_WIN32) && !defined(__MINGW32__)

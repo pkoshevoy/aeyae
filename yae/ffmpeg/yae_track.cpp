@@ -887,4 +887,28 @@ namespace yae
     tempo_ = tempo;
     return true;
   }
+
+
+  //----------------------------------------------------------------
+  // same_codec
+  //
+  bool
+  same_codec(const TrackPtr & a, const TrackPtr & b)
+  {
+    if (a == b)
+    {
+      return true;
+    }
+
+    if (!(a && b))
+    {
+      return false;
+    }
+
+    const AVStream & sa = a->stream();
+    const AVStream & sb = b->stream();
+    bool same = (sa.codecpar->codec_id == sb.codecpar->codec_id);
+
+    return same;
+  }
 }

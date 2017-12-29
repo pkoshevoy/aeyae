@@ -113,6 +113,18 @@ namespace yae
   YAE_API const char *
   getTrackName(const AVDictionary * metadata);
 
+  //----------------------------------------------------------------
+  // getDictionary
+  //
+  YAE_API void
+  getDictionary(TDictionary & dict, const AVDictionary * avdict);
+
+  //----------------------------------------------------------------
+  // setDictionary
+  //
+  YAE_API void
+  setDictionary(AVDictionary *& avdict, const TDictionary & dict);
+
 }
 
 

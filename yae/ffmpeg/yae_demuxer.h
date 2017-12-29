@@ -123,8 +123,18 @@ namespace yae
     std::size_t countChapters() const;
     bool getChapterInfo(std::size_t i, TChapter & c) const;
 
-    // get program chapters, indexed by start time:
-    void getChapters(std::map<int, std::map<TTime, TChapter> > & ch) const;
+    // get chapters, indexed by start time:
+    void getChapters(std::map<TTime, TChapter> & chapters) const;
+
+    // get metadata indexed by track id, and global metadata:
+    void getMetadata(std::map<std::string, TDictionary> & track_meta,
+                     TDictionary & metadata) const;
+
+    // get programs indexed by program id:
+    void getPrograms(std::map<int, TProgramInfo> & programs) const;
+
+    // get decoders indexed by track id:
+    void getDecoders(std::map<std::string, TrackPtr> & decoders) const;
 
     inline const std::vector<TAttachment> & attachments() const
     { return attachments_; }
@@ -174,8 +184,11 @@ namespace yae
     // same tracks as above, but indexed by native ffmpeg stream index:
     std::map<int, TrackPtr> tracks_;
 
+    // map native ffmpeg stream_index to track id:
+    std::map<int, std::string> trackId_;
+
     // map global track IDs to native ffmpeg stream index:
-    std::map<std::string, int> trackIdToStreamIndex_;
+    std::map<std::string, int> streamIndex_;
 
     // a set of local audio, video, subtitle track indexes, for each program:
     std::vector<TProgramInfo> programs_;
@@ -309,10 +322,14 @@ namespace yae
   {
     PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
 
-    inline const std::vector<TProgramInfo> & programs() const
-    { return demuxer_->programs(); }
+    void get_metadata(std::map<std::string, TDictionary> & stream_metadata,
+                      TDictionary & metadata) const;
 
-    void get_chapters(std::map<int, std::map<TTime, TChapter> > & ch) const;
+    void get_decoders(std::map<std::string, TrackPtr> & decoders) const;
+    void get_programs(std::map<int, TProgramInfo> & programs) const;
+
+    // these are global, not per-program (avformat API doesn't it):
+    void get_chapters(std::map<TTime, TChapter> & chapters) const;
 
     int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
              const TTime & seekTime,
@@ -371,14 +388,23 @@ namespace yae
                 const std::map<int, TTime> & prog_offset,
                 double tolerance);
 
-    // program chapters, indexed by start time:
-    std::map<int, std::map<TTime, TChapter> > chapters_;
+    // global metadata:
+    TDictionary metadata_;
 
-    // a mapping from track id to native ffmpeg stream:
-    std::map<std::string, const AVStream *> stream_;
+    // per-track metadata:
+    std::map<std::string, TDictionary> trk_meta_;
 
-    // a mapping from program id to program info:
-    std::map<int, const TProgramInfo *> info_;
+    // streams, indexed by track id:
+    std::map<std::string, const AVStream *> streams_;
+
+    // decoders, indexed by track id:
+    std::map<std::string, TrackPtr> decoders_;
+
+    // chapters, indexed by start time:
+    std::map<TTime, TChapter> chapters_;
+
+    // program metadata, indexed by program id:
+    std::map<int, TProgramInfo> programs_;
 
     // a mapping from program id to program timeline:
     std::map<int, Timeline> timeline_;
@@ -404,8 +430,6 @@ namespace yae
   struct YAE_API DemuxerInterface
   {
     virtual ~DemuxerInterface() {}
-
-    virtual const std::vector<TProgramInfo> & programs() const = 0;
 
     virtual void populate() = 0;
 
@@ -456,8 +480,6 @@ namespace yae
   {
     DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec = 1.0);
 
-    virtual const std::vector<TProgramInfo> & programs() const;
-
     virtual void populate();
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -481,8 +503,6 @@ namespace yae
   {
     void append(const TDemuxerInterfacePtr & src,
                 const DemuxerSummary & summary);
-
-    virtual const std::vector<TProgramInfo> & programs() const;
 
     virtual void populate();
 
@@ -527,8 +547,6 @@ namespace yae
   {
     void append(const TDemuxerInterfacePtr & src,
                 const DemuxerSummary & summary);
-
-    virtual const std::vector<TProgramInfo> & programs() const;
 
     virtual void populate();
 
