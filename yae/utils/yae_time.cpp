@@ -668,14 +668,14 @@ namespace yae
       const std::string & track_id = i->first;
       const std::list<Timespan> & track = i->second;
 
-      oss << "track " << track_id << ": ";
+      oss << "track " << track_id << ':';
 
       std::size_t size = 0;
       for (std::list<Timespan>::const_iterator j = track.begin();
            j != track.end(); ++j)
       {
         const Timespan & span = *j;
-        oss << span;
+        oss << ' ' << span;
         size++;
       }
 

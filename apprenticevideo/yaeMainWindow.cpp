@@ -2998,13 +2998,14 @@ namespace yae
       TChapter ch;
       if (reader_->getChapterInfo(i, ch))
       {
-        double chEnd = ch.start_ + ch.duration_;
+        double t0_sec = ch.t0_sec();
+        double t1_sec = ch.t1_sec();
 
-        if ((playheadInSeconds >= ch.start_ &&
-             playheadInSeconds < chEnd) ||
-            (playheadInSeconds < ch.start_ && i > 0))
+        if ((playheadInSeconds >= t0_sec &&
+             playheadInSeconds < t1_sec) ||
+            (playheadInSeconds < t0_sec && i > 0))
         {
-          std::size_t index = (playheadInSeconds >= ch.start_) ? i : i - 1;
+          std::size_t index = (playheadInSeconds >= t0_sec) ? i : i - 1;
 
           QAction * chapterAction = actions[(int)index];
           chapterAction->setChecked(true);
@@ -3035,9 +3036,11 @@ namespace yae
       TChapter ch;
       if (reader_->getChapterInfo(i, ch))
       {
-        if (playheadInSeconds < ch.start_)
+        double t0_sec = ch.t0_sec();
+
+        if (playheadInSeconds < t0_sec)
         {
-          timelineModel_.seekTo(ch.start_);
+          timelineModel_.seekTo(t0_sec);
           return;
         }
       }
@@ -3061,7 +3064,8 @@ namespace yae
     bool ok = reader_->getChapterInfo(index, ch);
     YAE_ASSERT(ok);
 
-    timelineModel_.seekTo(ch.start_);
+    double t0_sec = ch.t0_sec();
+    timelineModel_.seekTo(t0_sec);
   }
 
   //----------------------------------------------------------------
@@ -4855,7 +4859,8 @@ namespace yae
       ok = reader->getChapterInfo(i, ch);
       YAE_ASSERT(ok);
 
-      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + ch.start_ * 1000.0));
+      double t0_sec = ch.t0_sec();
+      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + t0_sec * 1000.0));
 
       QString name =
         tr("%1   %2").

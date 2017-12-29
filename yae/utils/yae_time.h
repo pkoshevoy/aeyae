@@ -161,6 +161,9 @@ namespace yae
     inline bool contains(const Timespan & s) const
     { return t0_ <= s.t0_ && s.t1_ <= t1_; }
 
+    inline double duration_sec() const
+    { return empty() ? 0.0 : (t1_ - t0_).toSeconds(); }
+
     // returns non-zero value if interval s
     // and this interval are disjoint beyond given tolerance;
     //

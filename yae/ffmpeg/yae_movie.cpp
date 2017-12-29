@@ -1577,12 +1577,11 @@ namespace yae
     AVDictionaryEntry * name = av_dict_get(av->metadata, "title", NULL, 0);
     c.name_ = name ? name->value : os.str().c_str();
 
-    double timebase = (double(av->time_base.num) /
-                       double(av->time_base.den));
-    c.start_ = double(av->start) * timebase;
+    c.span_.t0_.reset(av->time_base.num * av->start,
+                      av->time_base.den);
 
-    double end = double(av->end) * timebase;
-    c.duration_ = end - c.start_;
+    c.span_.t1_.reset(av->time_base.num * av->end,
+                      av->time_base.den);
 
     return true;
   }

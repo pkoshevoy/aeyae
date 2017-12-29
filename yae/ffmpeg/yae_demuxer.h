@@ -123,6 +123,9 @@ namespace yae
     std::size_t countChapters() const;
     bool getChapterInfo(std::size_t i, TChapter & c) const;
 
+    // get program chapters, indexed by start time:
+    void getChapters(std::map<int, std::map<TTime, TChapter> > & ch) const;
+
     inline const std::vector<TAttachment> & attachments() const
     { return attachments_; }
 
@@ -309,6 +312,8 @@ namespace yae
     inline const std::vector<TProgramInfo> & programs() const
     { return demuxer_->programs(); }
 
+    void get_chapters(std::map<int, std::map<TTime, TChapter> > & ch) const;
+
     int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
              const TTime & seekTime,
              const std::string & trackId = std::string());
@@ -365,6 +370,9 @@ namespace yae
     void extend(const DemuxerSummary & s,
                 const std::map<int, TTime> & prog_offset,
                 double tolerance);
+
+    // program chapters, indexed by start time:
+    std::map<int, std::map<TTime, TChapter> > chapters_;
 
     // a mapping from track id to native ffmpeg stream:
     std::map<std::string, const AVStream *> stream_;

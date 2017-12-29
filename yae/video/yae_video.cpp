@@ -641,10 +641,9 @@ namespace yae
   //----------------------------------------------------------------
   // TChapter::TChapter
   //
-  TChapter::TChapter(const std::string & n, double t, double dt):
+  TChapter::TChapter(const std::string & n, const Timespan & s):
     name_(n),
-    start_(t),
-    duration_(dt)
+    span_(s)
   {}
 
 

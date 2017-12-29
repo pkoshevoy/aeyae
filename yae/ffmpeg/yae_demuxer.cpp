@@ -611,15 +611,47 @@ namespace yae
     AVDictionaryEntry * name = av_dict_get(av->metadata, "title", NULL, 0);
     c.name_ = name ? name->value : os.str().c_str();
 
-    double timebase = (double(av->time_base.num) /
-                       double(av->time_base.den));
-    c.start_ = double(av->start) * timebase;
+    c.span_.t0_.reset(av->time_base.num * av->start,
+                      av->time_base.den);
 
-    double end = double(av->end) * timebase;
-    c.duration_ = end - c.start_;
+    c.span_.t1_.reset(av->time_base.num * av->end,
+                      av->time_base.den);
+
+    const AVDictionaryEntry * iter = NULL;
+    while ((iter = av_dict_get(av->metadata, "", iter, AV_DICT_IGNORE_SUFFIX)))
+    {
+      std::string key(iter->key);
+      std::string value(iter->value);
+      c.metadata_[key] = value;
+    }
 
     return true;
   }
+
+  //----------------------------------------------------------------
+  // Demuxer::getChapters
+  //
+  void
+  Demuxer::getChapters(std::map<int, std::map<TTime, TChapter> > & pc) const
+  {
+    const std::size_t num_chapters = countChapters();
+    if (num_chapters < 1)
+    {
+      return;
+    }
+
+    // avformat does not keep separate chapters per-program,
+    // so we'll have to assume the implicit program:
+    std::map<TTime, TChapter> & chapters = pc[0];
+
+    for (std::size_t i = 0; i < num_chapters; i++)
+    {
+      TChapter c;
+      getChapterInfo(i, c);
+      chapters[c.span_.t0_] = c;
+    }
+  }
+
 
   //----------------------------------------------------------------
   // open_demuxer
@@ -1199,6 +1231,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PacketBuffer::get_chapters
+  //
+  void
+  PacketBuffer::
+  get_chapters(std::map<int, std::map<TTime, TChapter> > & ch) const
+  {
+    Demuxer & demuxer = *demuxer_;
+    demuxer.getChapters(ch);
+  }
+
+  //----------------------------------------------------------------
   // PacketBuffer::seek
   //
   int
@@ -1529,6 +1572,31 @@ namespace yae
       timeline_[prog_id].extend(timeline, offset, tolerance);
     }
 
+    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
+           i = s.chapters_.begin(); i != s.chapters_.end(); ++i)
+    {
+      // shortcuts:
+      const int & prog_id = i->first;
+      TTime offset = -yae::at(prog_offset, prog_id);
+
+      const std::map<TTime, TChapter> & src = i->second;
+      std::map<TTime, TChapter> & dst = chapters_[prog_id];
+
+      for (std::map<TTime, TChapter>::const_iterator j =
+             src.begin(); j != src.end(); ++j)
+      {
+        TTime t0 = j->first;
+        TChapter ch = j->second;
+        YAE_ASSERT(t0 == ch.span_.t0_);
+
+        t0 += offset;
+        ch.span_ += offset;
+        YAE_ASSERT(t0 == ch.span_.t0_);
+
+        dst[t0] = ch;
+      }
+    }
+
     if (rewind_.first.empty())
     {
       rewind_.first = s.rewind_.first;
@@ -1542,6 +1610,39 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const DemuxerSummary & summary)
   {
+    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
+           i = summary.chapters_.begin(); i != summary.chapters_.end(); ++i)
+    {
+      // shortcuts:
+      const int & prog_id = i->first;
+      const std::map<TTime, TChapter> & chapters = i->second;
+
+      for (std::map<TTime, TChapter>::const_iterator j =
+             chapters.begin(); j != chapters.end(); ++j)
+      {
+        const TTime & t0 = j->first;
+        const TChapter & ch = j->second;
+        YAE_ASSERT(t0 == ch.span_.t0_);
+
+        oss << std::setw(3) << prog_id << ' '
+            << ch.span_ << ": " << ch.name_;
+
+        if (!ch.metadata_.empty())
+        {
+          oss << ", metadata:";
+          for (std::map<std::string, std::string>::const_iterator k =
+                 ch.metadata_.begin(); k != ch.metadata_.end(); ++k)
+          {
+            const std::string & key = k->first;
+            const std::string & value = k->second;
+            oss << ' ' << key << '=' << value;
+          }
+        }
+
+        oss << std::endl;
+      }
+    }
+
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
@@ -1827,6 +1928,7 @@ namespace yae
   DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
   {
     yae::summarize(*this, summary, tolerance);
+    src_.get_chapters(summary.chapters_);
   }
 
 
@@ -1930,9 +2032,6 @@ namespace yae
   void
   ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-#if 0
-    yae::summarize(*this, summary, tolerance);
-#else
     for (std::list<TDemuxerInterfacePtr>::iterator i =
            src_.begin(); i != src_.end(); ++i)
     {
@@ -1942,7 +2041,6 @@ namespace yae
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
-#endif
   }
 
 
@@ -2090,6 +2188,46 @@ namespace yae
         const std::string & v = i->second;
         av_dict_set(&(p->metadata), k.c_str(), v.c_str(), 0);
       }
+    }
+
+    // setup chapters:
+    for (std::map<int, std::map<TTime, TChapter> >::const_iterator
+           i = summary.chapters_.begin(); i != summary.chapters_.end(); ++i)
+    {
+      // shortcuts:
+      const std::map<TTime, TChapter> & chapters = i->second;
+
+      muxer->nb_chapters = chapters.size();
+      muxer->chapters = (AVChapter **)av_malloc_array(muxer->nb_chapters,
+                                                      sizeof(AVChapter *));
+
+
+      std::size_t ix = 0;
+      for (std::map<TTime, TChapter>::const_iterator j =
+             chapters.begin(); j != chapters.end(); ++j, ix++)
+      {
+        const TChapter & ch = j->second;
+
+        AVChapter * av = (AVChapter *)av_mallocz(sizeof(AVChapter));
+        muxer->chapters[ix] = av;
+        av->id = ix;
+        av->time_base.num = 1;
+        av->time_base.den = ch.span_.t0_.base_;
+        av->start = ch.span_.t0_.getTime(ch.span_.t1_.base_);
+        av->end = ch.span_.t1_.time_;
+
+        for (std::map<std::string, std::string>::const_iterator k =
+               ch.metadata_.begin(); k != ch.metadata_.end(); ++k)
+        {
+          const std::string & key = k->first;
+          const std::string & value = k->second;
+          av_dict_set(&(av->metadata), key.c_str(), value.c_str(), 0);
+        }
+      }
+
+      // can't setup chapters for more than one program
+      // with the current avformat api:
+      break;
     }
 
     // open the muxer:

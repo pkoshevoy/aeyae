@@ -597,16 +597,26 @@ namespace yae
   //
   struct YAE_API TChapter
   {
-    TChapter(const std::string & n = std::string(),
-             double t = 0.0,
-             double dt = 0.0);
+    TChapter(const std::string & name = std::string(),
+             const Timespan & span = Timespan());
+
+    inline double t0_sec() const
+    { return span_.t0_.toSeconds(); }
+
+    inline double t1_sec() const
+    { return span_.t1_.toSeconds(); }
+
+    inline double dt_sec() const
+    { return span_.duration_sec(); }
 
     // chapter name:
     std::string name_;
 
-    // expressed in seconds:
-    double start_;
-    double duration_;
+    // chapter time span:
+    Timespan span_;
+
+    // chapter metadata:
+    std::map<std::string, std::string> metadata_;
   };
 
   //----------------------------------------------------------------
