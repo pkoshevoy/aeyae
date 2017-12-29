@@ -508,7 +508,7 @@ namespace yae
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
-                   double tolerance = 0.016);
+                   double tolerance = 0.017);
 
   //----------------------------------------------------------------
   // remux
