@@ -329,6 +329,16 @@ namespace yae
     ts = std::string(os.str().c_str());
   }
 
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const TTime & t)
+  {
+    oss << t.to_hhmmss_frac(1000, ":");
+    return oss;
+  }
+
 
   //----------------------------------------------------------------
   // Timespan::Timespan
@@ -419,6 +429,17 @@ namespace yae
 
     return gap;
   }
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & oss, const Timespan & s)
+  {
+    oss << '[' << s.t0_ << ", " << s.t1_ << ')';
+    return oss;
+  }
+
 
   //----------------------------------------------------------------
   // merge
@@ -638,8 +659,7 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const Timeline & timeline)
   {
-    oss << "[" << timeline.bbox_.t0_.to_hhmmss_frac(1000, ":")
-        << ", " << timeline.bbox_.t1_.to_hhmmss_frac(1000, ":") << ")\n";
+    oss << timeline.bbox_ << "\n";
 
     for (Timeline::TTracks::const_iterator
            i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
@@ -655,8 +675,7 @@ namespace yae
            j != track.end(); ++j)
       {
         const Timespan & span = *j;
-        oss << "[" << span.t0_.to_hhmmss_frac(1000, ":") << ", "
-            << span.t1_.to_hhmmss_frac(1000, ":") << ")";
+        oss << span;
         size++;
       }
 
@@ -679,7 +698,7 @@ namespace yae
              keyframes.begin(); j != keyframes.end(); ++j)
       {
         const TTime & t = *j;
-        oss << t.to_hhmmss_frac(1000, ":") << ' ';
+        oss << t << ' ';
       }
 
       oss << '\n';

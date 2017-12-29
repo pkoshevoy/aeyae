@@ -1578,50 +1578,13 @@ namespace yae
           << std::endl;
     }
 
+    oss << "rewind: " << summary.rewind_.first
+        << " to " << summary.rewind_.second
+        << std::endl;
+
     return oss;
   }
 
-
-  //----------------------------------------------------------------
-  // DemuxerInterface::summarize
-  //
-  void
-  DemuxerInterface::summarize(DemuxerSummary & summary, double tolerance)
-  {
-    // setup the program lookup table:
-    {
-      const std::vector<TProgramInfo> & programs = this->programs();
-      for (std::size_t j = 0; j < programs.size(); j++)
-      {
-        const TProgramInfo & info = programs[j];
-        summary.info_[info.id_] = &info;
-      }
-    }
-
-    // get current time position:
-    TTime next_dts;
-    {
-      AVStream * src = NULL;
-      TPacketPtr packet_ptr = this->peek(src);
-      if (src && packet_ptr)
-      {
-        const AVPacket & packet = packet_ptr->get();
-        get_dts(next_dts, src, packet) || get_pts(next_dts, src, packet);
-      }
-    }
-
-    // analyze from the start:
-    this->seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
-    analyze_timeline(*this,
-                     summary.rewind_,
-                     summary.stream_,
-                     summary.fps_,
-                     summary.timeline_,
-                     tolerance);
-
-    // restore previous time position:
-    this->seek(AVSEEK_FLAG_BACKWARD, next_dts);
-  }
 
   //----------------------------------------------------------------
   // DemuxerInterface::pop
@@ -1741,6 +1704,122 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // get_rewind_info
+  //
+  static bool
+  get_rewind_info(DemuxerInterface & demuxer,
+                  std::string & track_id,
+                  TTime & dts)
+  {
+    // if the buffer is not populated 'peek' won't work:
+    demuxer.populate();
+
+    // get current time position:
+    TTime saved_pos(kMinInt64, 1);
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet_ptr = demuxer.peek(src);
+      if (src && packet_ptr)
+      {
+        const AVPacket & packet = packet_ptr->get();
+        if (!get_dts(saved_pos, src, packet) &&
+            !get_pts(saved_pos, src, packet))
+        {
+          YAE_ASSERT(false);
+          return false;
+        }
+      }
+    }
+
+    TTime min_dts(kMinInt64, saved_pos.base_);
+    int err = demuxer.seek(AVSEEK_FLAG_BACKWARD, min_dts);
+    if (err < 0)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    demuxer.populate();
+
+    bool found = false;
+    while (!found)
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet_ptr = demuxer.peek(src);
+      if (!(src && packet_ptr))
+      {
+        break;
+      }
+
+      const AvPkt & pkt = *packet_ptr;
+      const AVPacket & packet = pkt.get();
+      if (get_dts(dts, src, packet) || get_pts(dts, src, packet))
+      {
+        track_id = pkt.trackId_;
+        found = true;
+        break;
+      }
+
+      // this probably won't happen, but I'd like to know if it does:
+      YAE_ASSERT(false);
+      demuxer.pop(packet_ptr);
+    }
+
+    // restore demuxer position:
+    err = demuxer.seek(AVSEEK_FLAG_BACKWARD, saved_pos);
+    YAE_ASSERT(err >= 0);
+
+    demuxer.populate();
+
+    YAE_ASSERT(found);
+    return found;
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::summarize
+  //
+  void
+  DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    // setup the program lookup table:
+    {
+      const std::vector<TProgramInfo> & programs = this->programs();
+      for (std::size_t j = 0; j < programs.size(); j++)
+      {
+        const TProgramInfo & info = programs[j];
+        summary.info_[info.id_] = &info;
+      }
+    }
+
+    // get current time position:
+    TTime saved_pos;
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet_ptr = this->peek(src);
+      if (src && packet_ptr)
+      {
+        const AVPacket & packet = packet_ptr->get();
+        get_dts(saved_pos, src, packet) || get_pts(saved_pos, src, packet);
+      }
+    }
+
+    // analyze from the start:
+    this->seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
+    analyze_timeline(*this,
+                     summary.stream_,
+                     summary.fps_,
+                     summary.timeline_,
+                     tolerance);
+
+    // restore previous time position:
+    this->seek(AVSEEK_FLAG_BACKWARD, saved_pos);
+
+    // get the track id and time position of the "first" packet:
+    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+  }
+
+
+  //----------------------------------------------------------------
   // ParallelDemuxer::ParallelDemuxer
   //
   ParallelDemuxer::ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & s):
@@ -1834,13 +1913,29 @@ namespace yae
     return best_pkt;
   }
 
+  //----------------------------------------------------------------
+  // ParallelDemuxer::summarize
+  //
+  void
+  ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    for (std::list<TDemuxerInterfacePtr>::iterator i =
+           src_.begin(); i != src_.end(); ++i)
+    {
+      DemuxerInterface & demuxer = *(i->get());
+      demuxer.summarize(summary, tolerance);
+    }
+
+    // get the track id and time position of the "first" packet:
+    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+  }
+
 
   //----------------------------------------------------------------
   // analyze_timeline
   //
   void
   analyze_timeline(DemuxerInterface & demuxer,
-                   std::pair<std::string, TTime> & rewind,
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
@@ -1887,12 +1982,6 @@ namespace yae
           {
             timeline.add_keyframe(pkt.trackId_, dts);
           }
-        }
-
-        if (rewind.first.empty())
-        {
-          rewind.first = pkt.trackId_;
-          rewind.second = dts;
         }
       }
 
@@ -2238,6 +2327,9 @@ namespace yae
       const DemuxerSummary & src = summary_[i];
       summary.extend(src, prog_offset, tolerance);
     }
+
+    // get the track id and time position of the "first" packet:
+    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
   }
 
 }

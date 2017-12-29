@@ -244,8 +244,7 @@ mainMayThrowException(int argc, char ** argv)
     yae::TTime dts;
     if (yae::get_dts(dts, stream, packet))
     {
-      std::string tc = dts.to_hhmmss_frac(1000, ":", ".");
-      std::cout << ", dts: " << tc;
+      std::cout << ", dts: " << dts;
 
       yae::TTime prev_dts =
         yae::get(prog_dts, pkt.program_,
@@ -280,8 +279,7 @@ mainMayThrowException(int argc, char ** argv)
       yae::TTime pts(stream->time_base.num * packet.pts,
                      stream->time_base.den);
 
-      std::string tc = pts.to_hhmmss_frac(1000, ":", ".");
-      std::cout << ", pts: " << tc;
+      std::cout << ", pts: " << pts;
     }
 
     if (packet.duration)
@@ -289,8 +287,7 @@ mainMayThrowException(int argc, char ** argv)
       yae::TTime dur(stream->time_base.num * packet.duration,
                      stream->time_base.den);
 
-      std::string tc = dur.to_hhmmss_frac(1000, ":", ".");
-      std::cout << ", dur: " << tc;
+      std::cout << ", dur: " << dur;
     }
 
     const AVMediaType codecType = stream->codecpar->codec_type;

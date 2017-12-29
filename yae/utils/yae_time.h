@@ -129,6 +129,12 @@ namespace yae
   inline TTime operator - (const TTime & t)
   { return TTime(-t.time_, t.base_); }
 
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const TTime & t);
+
 
   //----------------------------------------------------------------
   // Timespan
@@ -174,6 +180,12 @@ namespace yae
     TTime t0_;
     TTime t1_;
   };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & oss, const Timespan & s);
 
 
   //----------------------------------------------------------------

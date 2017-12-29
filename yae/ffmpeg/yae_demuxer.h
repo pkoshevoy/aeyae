@@ -409,7 +409,7 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const = 0;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017);
+                           double tolerance = 0.017) = 0;
 
     // NOTE: pkt must have originated from
     // an immediately prior peek call,
@@ -444,6 +444,9 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.017);
+
   protected:
     PacketBuffer src_;
   };
@@ -466,6 +469,9 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.017);
+
   protected:
     std::list<TDemuxerInterfacePtr> src_;
   };
@@ -476,7 +482,6 @@ namespace yae
   //
   YAE_API void
   analyze_timeline(DemuxerInterface & demuxer,
-                   std::pair<std::string, TTime> & rewind,
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
