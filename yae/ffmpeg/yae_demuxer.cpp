@@ -476,7 +476,16 @@ namespace yae
       interruptDemuxer_ = false;
     }
 
-    if (!err)
+    if (err < 0)
+    {
+      if (err != AVERROR_EOF)
+      {
+        av_log(NULL, AV_LOG_ERROR,
+               "av_read_frame(%s) returned %i: \"%s\"\n",
+               resourcePath_.c_str(), err, yae::av_strerr(err).c_str());
+      }
+    }
+    else
     {
       TrackPtr track = yae::get(tracks_, packet.stream_index);
       if (track)
@@ -1138,11 +1147,9 @@ namespace yae
         continue;
       }
 
-      const AVMediaType codecType = stream->codecpar->codec_type;
-      if (codecType != AVMEDIA_TYPE_VIDEO &&
-          codecType != AVMEDIA_TYPE_AUDIO)
+      if (stream->discard == AVDISCARD_ALL)
       {
-        // if it's not audio or video -- ignore it:
+        // ignore it:
         continue;
       }
 
@@ -1344,9 +1351,14 @@ namespace yae
 
       AVPacket & packet = pkt.get();
       int err = demuxer.demux(pkt);
-      if (err)
+      if (err == AVERROR_EOF)
       {
         return err;
+      }
+      else if (err < 0)
+      {
+        // we may be able to recover if we keep demuxing:
+        continue;
       }
 
       const AVStream * stream = ctx.streams[packet.stream_index];
@@ -1568,7 +1580,7 @@ namespace yae
     {
       const int & prog_id = i->first;
       const Timeline & timeline = i->second;
-      TTime offset = -yae::at(prog_offset, prog_id);
+      TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
       timeline_[prog_id].extend(timeline, offset, tolerance);
     }
 
@@ -1577,7 +1589,7 @@ namespace yae
     {
       // shortcuts:
       const int & prog_id = i->first;
-      TTime offset = -yae::at(prog_offset, prog_id);
+      TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
 
       const std::map<TTime, TChapter> & src = i->second;
       std::map<TTime, TChapter> & dst = chapters_[prog_id];
@@ -1933,11 +1945,15 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ParallelDemuxer::ParallelDemuxer
+  // ParallelDemuxer::append
   //
-  ParallelDemuxer::ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & s):
-    src_(s)
-  {}
+  void
+  ParallelDemuxer::append(const TDemuxerInterfacePtr & src,
+                          const DemuxerSummary & summary)
+  {
+    src_.push_back(src);
+    summary_.push_back(summary);
+  }
 
   //----------------------------------------------------------------
   // ParallelDemuxer::programs
@@ -2032,11 +2048,12 @@ namespace yae
   void
   ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    for (std::list<TDemuxerInterfacePtr>::iterator i =
-           src_.begin(); i != src_.end(); ++i)
+    for (std::list<DemuxerSummary>::const_iterator
+           i = summary_.begin(); i != summary_.end(); ++i)
     {
-      DemuxerInterface & demuxer = *(i->get());
-      demuxer.summarize(summary, tolerance);
+      const DemuxerSummary & src = *i;
+      std::map<int, TTime> prog_offset;
+      summary.extend(src, prog_offset, tolerance);
     }
 
     // get the track id and time position of the "first" packet:
@@ -2372,7 +2389,11 @@ namespace yae
                       const TTime & seek_time,
                       const std::string & track_id)
   {
-    int prog_id = track_id.empty() ? 0 : yae::at(prog_lut_, track_id);
+    int prog_id =
+      !track_id.empty() ? yae::at(prog_lut_, track_id) :
+      !prog_lut_.empty() ? prog_lut_.begin()->second :
+      0;
+
     std::size_t i = find(seek_time, prog_id);
 
     if (i >= src_.size())

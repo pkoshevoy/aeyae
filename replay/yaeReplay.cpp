@@ -129,8 +129,8 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
-  yae::SerialDemuxer * serial_demuxer = new yae::SerialDemuxer();
-  yae::TDemuxerInterfacePtr src(serial_demuxer);
+  boost::shared_ptr<yae::SerialDemuxer>
+    serial_demuxer(new yae::SerialDemuxer());
   std::string output_path;
 
   // these are expressed in seconds:
@@ -153,31 +153,36 @@ mainMayThrowException(int argc, char ** argv)
         continue;
       }
 
+      boost::shared_ptr<yae::ParallelDemuxer>
+        parallel_demuxer(new yae::ParallelDemuxer());
+
       // wrap each demuxer in a DemuxerBuffer, build a summary:
-      std::list<yae::TDemuxerInterfacePtr> buffers;
+      for (std::list<yae::TDemuxerPtr>::const_iterator
+             i = demuxers.begin(); i != demuxers.end(); ++i)
       {
-        // target buffer duration, expressed in seconds:
+        const yae::TDemuxerPtr & demuxer = *i;
 
-        for (std::list<yae::TDemuxerPtr>::const_iterator
-               i = demuxers.begin(); i != demuxers.end(); ++i)
-        {
-          yae::TDemuxerInterfacePtr
-            buffer(new yae::DemuxerBuffer(*i, buffer_duration));
-          buffers.push_back(buffer);
-        }
+        yae::TDemuxerInterfacePtr
+          buffer(new yae::DemuxerBuffer(demuxer, buffer_duration));
+
+        yae::DemuxerSummary summary;
+        buffer->summarize(summary, discont_tolerance);
+
+        std::cout
+          << "\n" << demuxer->resourcePath() << ":\n"
+          << summary << std::endl;
+
+        parallel_demuxer->append(buffer, summary);
       }
-
-      yae::TDemuxerInterfacePtr
-        demuxer(new yae::ParallelDemuxer(buffers));
 
       // summarize the demuxer:
       yae::DemuxerSummary summary;
-      demuxer->summarize(summary, discont_tolerance);
+      parallel_demuxer->summarize(summary, discont_tolerance);
 
       // show the summary:
-      std::cout << "\n" << summary << std::endl;
+      std::cout << "\nparallel:\n" << summary << std::endl;
 
-      serial_demuxer->append(demuxer, summary);
+      serial_demuxer->append(parallel_demuxer, summary);
     }
     else if (arg == "-o")
     {
@@ -187,16 +192,16 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   // summarize the source:
-  yae::DemuxerSummary src_summary;
-  src->summarize(src_summary, discont_tolerance);
+  yae::DemuxerSummary summary;
+  serial_demuxer->summarize(summary, discont_tolerance);
 
   // show the summary:
-  std::cout << "\n" << src_summary << std::endl;
+  std::cout << "\nserial:\n" << summary << std::endl;
 
   if (!output_path.empty())
   {
-    src->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
-    int err = yae::remux(output_path.c_str(), src_summary, *src);
+    serial_demuxer->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+    int err = yae::remux(output_path.c_str(), summary, *serial_demuxer);
     return err;
   }
 

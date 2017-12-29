@@ -133,7 +133,7 @@ namespace yae
     static int demuxerInterruptCallback(void * context);
 
     // accessors:
-    inline const std::string & resourcePath()
+    inline const std::string & resourcePath() const
     { return resourcePath_; }
 
     inline const AVFormatContext & getFormatContext() const
@@ -479,7 +479,8 @@ namespace yae
   //
   struct YAE_API ParallelDemuxer : DemuxerInterface
   {
-    ParallelDemuxer(const std::list<TDemuxerInterfacePtr> & src);
+    void append(const TDemuxerInterfacePtr & src,
+                const DemuxerSummary & summary);
 
     virtual const std::vector<TProgramInfo> & programs() const;
 
@@ -497,6 +498,7 @@ namespace yae
 
   protected:
     std::list<TDemuxerInterfacePtr> src_;
+    std::list<DemuxerSummary> summary_;
   };
 
 
