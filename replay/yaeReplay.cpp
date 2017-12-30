@@ -150,6 +150,9 @@ mainMayThrowException(int argc, char ** argv)
       if (!yae::open_primary_and_aux_demuxers(filePath, demuxers))
       {
         // failed to open the primary resource:
+        av_log(NULL, AV_LOG_WARNING,
+               "failed to open %s, skipping...",
+               filePath.c_str());
         continue;
       }
 
@@ -189,6 +192,12 @@ mainMayThrowException(int argc, char ** argv)
       ++i;
       output_path = i->toUtf8().constData();
     }
+  }
+
+  if (serial_demuxer->empty())
+  {
+    av_log(NULL, AV_LOG_ERROR, "failed to open any input files, done.");
+    return 1;
   }
 
   // summarize the source:

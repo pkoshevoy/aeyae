@@ -1000,24 +1000,39 @@ namespace yae
     stats.inlier_ = double(inlier_num) / inlier_sum.toSeconds();
     stats.avg_ = double(num) / sum.toSeconds();
 
+    std::set<double> std_fps;
+
     double avg = stats.avg_;
-    bool avg_ok = closeEnoughToStandardFrameRate(avg, avg, 0.01);
+    if (closeEnoughToStandardFrameRate(avg, avg, 0.01))
+    {
+      std_fps.insert(avg);
+    }
 
     double inlier = stats.inlier_;
-    bool inlier_ok = closeEnoughToStandardFrameRate(inlier, inlier, 0.01);
+    if (closeEnoughToStandardFrameRate(inlier, inlier, 0.01))
+    {
+      std_fps.insert(inlier);
+    }
+
+    double outlier = stats.outlier_;
+    if (closeEnoughToStandardFrameRate(outlier, outlier, 0.01))
+    {
+      std_fps.insert(outlier);
+    }
 
     double max = stats.max_;
-    bool max_ok = closeEnoughToStandardFrameRate(max, max, 0.01);
+    if (closeEnoughToStandardFrameRate(max, max, 0.01))
+    {
+      std_fps.insert(max);
+    }
 
     double normal = stats.normal_;
-    bool normal_ok = closeEnoughToStandardFrameRate(normal, normal, 0.01);
+    if (closeEnoughToStandardFrameRate(normal, normal, 0.01))
+    {
+      std_fps.insert(normal);
+    }
 
-    double fps = (inlier_ok ? inlier :
-                  (avg_ok && avg > normal) ? avg :
-                  normal_ok ? normal :
-                  max_ok ? max :
-                  (max / avg < 2.5) ? max :
-                  avg);
+    double fps = std_fps.empty() ? avg : *(std_fps.rbegin());
     return fps;
   }
 
@@ -1028,6 +1043,15 @@ namespace yae
   operator << (std::ostream & oss, const FramerateEstimator & estimator)
   {
     const std::map<TTime, uint64> & durations = estimator.durations();
+
+    uint64 total_occurrences = 0;
+    for (std::map<TTime, uint64>::const_iterator
+           i = durations.begin(); i != durations.end(); ++i)
+    {
+      const uint64 & occurrences = i->second;
+      total_occurrences += occurrences;
+    }
+
     for (std::map<TTime, uint64>::const_iterator
            i = durations.begin(); i != durations.end(); ++i)
     {
@@ -1036,6 +1060,7 @@ namespace yae
 
       oss << std::setw(6) << dt.time_ << " msec: " << occurrences
           << (occurrences == 1 ? " occurrence" : " occurrences")
+          << ", " << double(occurrences) / double(total_occurrences)
           << std::endl;
     }
 

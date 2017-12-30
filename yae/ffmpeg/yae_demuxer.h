@@ -504,6 +504,9 @@ namespace yae
     void append(const TDemuxerInterfacePtr & src,
                 const DemuxerSummary & summary);
 
+    inline bool empty() const
+    { return src_.empty(); }
+
     virtual void populate();
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -547,6 +550,9 @@ namespace yae
   {
     void append(const TDemuxerInterfacePtr & src,
                 const DemuxerSummary & summary);
+
+    inline bool empty() const
+    { return src_.empty(); }
 
     virtual void populate();
 
