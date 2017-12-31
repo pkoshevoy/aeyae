@@ -15,7 +15,9 @@
 #include <iostream>
 
 // boost library:
+#ifndef Q_MOC_RUN
 #include <boost/atomic.hpp>
+#endif
 
 // aeyae:
 #include "../api/yae_api.h"

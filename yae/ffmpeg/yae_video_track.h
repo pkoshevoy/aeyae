@@ -10,7 +10,10 @@
 #define YAE_VIDEO_TRACK_H_
 
 // boost library:
+#ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
+#include <boost/shared_ptr.hpp>
+#endif
 
 // yae includes:
 #include "yae/ffmpeg/yae_closed_captions.h"

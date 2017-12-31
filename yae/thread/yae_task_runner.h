@@ -12,6 +12,7 @@
 // boost libraries:
 #ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 

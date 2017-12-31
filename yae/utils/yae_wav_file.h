@@ -14,8 +14,8 @@
 #include <stdio.h>
 
 // yae includes:
-#include <yaeAPI.h>
-#include <yaeUtils.h>
+#include "../api/yae_api.h"
+#include "../utils/yae_utils.h"
 
 
 namespace yae

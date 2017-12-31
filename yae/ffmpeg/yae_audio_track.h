@@ -9,6 +9,11 @@
 #ifndef YAE_AUDIO_TRACK_H_
 #define YAE_AUDIO_TRACK_H_
 
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#endif
+
 // yae includes:
 #include "yae/ffmpeg/yae_audio_tempo_filter.h"
 #include "yae/ffmpeg/yae_ffmpeg_audio_filter_graph.h"

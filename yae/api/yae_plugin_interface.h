@@ -14,7 +14,9 @@
 #include <limits>
 
 // boost library:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
+#endif
 
 // aeyae:
 #include "yae_api.h"
