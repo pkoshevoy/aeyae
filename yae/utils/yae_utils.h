@@ -304,9 +304,7 @@ namespace yae
   //
   template <typename TKey, typename TValue>
   static bool
-  has(const std::map<TKey, TValue> & lut,
-      const TKey & key,
-      const TValue & defaultValue = TValue())
+  has(const std::map<TKey, TValue> & lut, const TKey & key)
   {
     typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
     return found != lut.end();
