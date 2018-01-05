@@ -2591,6 +2591,9 @@ namespace yae
 
     dst.colorspace = to_ffmpeg_color_space(vf.traits_.colorSpace_);
     dst.color_range = to_ffmpeg_color_range(vf.traits_.colorRange_);
+    dst.sample_aspect_ratio.num = int(1000000 * vf.traits_.pixelAspectRatio_ +
+                                      0.5);
+    dst.sample_aspect_ratio.den = 1000000;
 
     err = av_frame_get_buffer(&dst, 32);
     if (!err)
@@ -2624,7 +2627,8 @@ namespace yae
                 const VideoTrackPtr & decoder_ptr,
                 const TPacketPtr & packet_ptr,
                 unsigned int envelope_w,
-                unsigned int envelope_h)
+                unsigned int envelope_h,
+                double pixel_aspect_ratio)
   {
     if (!(decoder_ptr && packet_ptr))
     {
@@ -2664,7 +2668,7 @@ namespace yae
       traits.offsetLeft_ = 0;
       traits.visibleWidth_ = envelope_w;
       traits.visibleHeight_ = envelope_h;
-      traits.pixelAspectRatio_ = 1.0;
+      traits.pixelAspectRatio_ = pixel_aspect_ratio;
       traits.cameraRotation_ = 0;
       traits.isUpsideDown_ = false;
       decoder.setTraitsOverride(traits);
@@ -2745,6 +2749,7 @@ namespace yae
     encoder.gop_size = 1; // expressed as number of frames
     encoder.max_b_frames = 0;
     encoder.pix_fmt = (AVPixelFormat)(frame.format);
+    encoder.sample_aspect_ratio = frame.sample_aspect_ratio;
 
     AVDictionary * encoder_opts = NULL;
     err = avcodec_open2(&encoder, codec, &encoder_opts);
@@ -2765,6 +2770,7 @@ namespace yae
     dst->avg_frame_rate.num = frame_dur.base_;
     dst->avg_frame_rate.den = frame_dur.time_;
     dst->duration = 1;
+    dst->sample_aspect_ratio = frame.sample_aspect_ratio;
 
     err = avcodec_parameters_from_context(dst->codecpar, &encoder);
     if (err < 0)
@@ -2823,13 +2829,6 @@ namespace yae
 
     while (!err)
     {
-      // flush-out the encoder:
-      err = avcodec_send_frame(&encoder, NULL);
-      if (err)
-      {
-        break;
-      }
-
       AvPkt out_pkt;
       AVPacket & out = out_pkt.get();
       err = avcodec_receive_packet(&encoder, &out);
@@ -2861,6 +2860,9 @@ namespace yae
                path.c_str(), err, yae::av_strerr(err).c_str());
         return false;
       }
+
+      // flush-out the encoder:
+      err = avcodec_send_frame(&encoder, NULL);
     }
 
     err = av_write_trailer(muxer);

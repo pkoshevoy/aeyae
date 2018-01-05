@@ -346,12 +346,12 @@ mainMayThrowException(int argc, char ** argv)
                          boost::replace_all_copy(pkt.trackId_, ":", "_"));
       fs::create_directories(folder);
 
-      std::string path((folder / (dts.to_hhmmss_frac(1000, "", ".") + ".jpg")).
+      std::string path((folder / (dts.to_hhmmss_frac(1000, "", ".") + ".png")).
                        string());
       yae::TrackPtr track_ptr = yae::get(summary.decoders_, pkt.trackId_);
       yae::VideoTrackPtr decoder_ptr =
         boost::dynamic_pointer_cast<yae::VideoTrack, yae::Track>(track_ptr);
-      if (!yae::save_keyframe(path, decoder_ptr, packet_ptr))
+      if (!yae::save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 2.0))
       {
         break;
       }

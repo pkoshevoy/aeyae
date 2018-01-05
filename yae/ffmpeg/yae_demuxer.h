@@ -587,7 +587,8 @@ namespace yae
                 const VideoTrackPtr & decoder_ptr,
                 const TPacketPtr & packet_ptr,
                 unsigned int envelope_w = 256,
-                unsigned int envelope_h = 256);
+                unsigned int envelope_h = 256,
+                double pixel_aspect_ratio = 1.0);
 
 }
 

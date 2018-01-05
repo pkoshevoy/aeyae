@@ -292,6 +292,14 @@ namespace yae
       output_.offsetTop_ = native_.offsetTop_;
       output_.visibleWidth_ = native_.visibleWidth_;
       output_.visibleHeight_ = native_.visibleHeight_;
+
+      if (override_.pixelAspectRatio_ > 0.0 &&
+          override_.pixelAspectRatio_ != native_.pixelAspectRatio_)
+      {
+        output_.visibleWidth_ = int(native_.visibleWidth_ *
+                                    native_.pixelAspectRatio_ /
+                                    override_.pixelAspectRatio_ + 0.5);
+      }
     }
 
     if (override_.pixelAspectRatio_)
@@ -481,7 +489,9 @@ namespace yae
       std::ostringstream filters;
 
       bool outputNeedsScale =
-        (override_.visibleWidth_ || override_.visibleHeight_) &&
+        (override_.visibleWidth_ || override_.visibleHeight_ ||
+         (override_.pixelAspectRatio_ > 0.0 &&
+          override_.pixelAspectRatio_ != native_.pixelAspectRatio_)) &&
         (native_.visibleWidth_ != output_.visibleWidth_ ||
          native_.visibleHeight_ != output_.visibleHeight_);
 
