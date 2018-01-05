@@ -284,6 +284,10 @@ namespace yae
     virtual bool threadStart();
     virtual bool threadStop();
 
+    // helper:
+    inline bool threadIsRunning() const
+    { return thread_.isRunning(); }
+
     // adjust frame duration:
     virtual bool setTempo(double tempo);
 

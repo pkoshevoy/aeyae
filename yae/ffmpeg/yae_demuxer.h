@@ -579,6 +579,16 @@ namespace yae
     mutable std::size_t curr_;
   };
 
+  //----------------------------------------------------------------
+  // save_keyframe
+  //
+  YAE_API bool
+  save_keyframe(const std::string & path,
+                const VideoTrackPtr & decoder_ptr,
+                const TPacketPtr & packet_ptr,
+                unsigned int envelope_w = 256,
+                unsigned int envelope_h = 256);
+
 }
 
 

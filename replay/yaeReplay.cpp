@@ -61,6 +61,7 @@
 
 // namespace shortcuts:
 namespace al = boost::algorithm;
+namespace fs = boost::filesystem;
 
 
 namespace yae
@@ -131,7 +132,10 @@ mainMayThrowException(int argc, char ** argv)
 
   boost::shared_ptr<yae::SerialDemuxer>
     serial_demuxer(new yae::SerialDemuxer());
+
+  // output parameters:
   std::string output_path;
+  bool save_keyframes = false;
 
   // these are expressed in seconds:
   const double buffer_duration = 1.0;
@@ -192,6 +196,10 @@ mainMayThrowException(int argc, char ** argv)
       ++i;
       output_path = i->toUtf8().constData();
     }
+    else if (arg == "-w")
+    {
+      save_keyframes = true;
+    }
   }
 
   if (serial_demuxer->empty())
@@ -207,36 +215,16 @@ mainMayThrowException(int argc, char ** argv)
   // show the summary:
   std::cout << "\nserial:\n" << summary << std::endl;
 
-  if (!output_path.empty())
+  if (!output_path.empty() && !save_keyframes)
   {
     serial_demuxer->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
     int err = yae::remux(output_path.c_str(), summary, *serial_demuxer);
     return err;
   }
 
-  bool rewind = false;
-  bool rewound = false;
-
   std::map<int, yae::TTime> prog_dts;
   while (true)
   {
-    if (rewind)
-    {
-      if (rewound)
-      {
-        break;
-      }
-
-      std::cout
-        << "----------------------------------------------------------------"
-        << std::endl;
-
-      int seekFlags = AVSEEK_FLAG_BACKWARD;
-      yae::TTime seekTime(0, 1);
-      serial_demuxer->seek(seekFlags, seekTime);
-      rewound = true;
-    }
-
     AVStream * stream = NULL;
     yae::TPacketPtr packet_ptr = serial_demuxer->get(stream);
     if (!packet_ptr)
@@ -279,8 +267,6 @@ mainMayThrowException(int argc, char ** argv)
         // the demuxer should always provide monotonically increasing DTS:
         YAE_ASSERT(false);
       }
-
-      // rewind = dts.toSeconds() > 120.0;
     }
     else
     {
@@ -312,6 +298,7 @@ mainMayThrowException(int argc, char ** argv)
       flags &= ~(AV_PKT_FLAG_KEY);
     }
 
+    bool is_keyframe = false;
     if (flags)
     {
       std::cout << ", flags:";
@@ -319,6 +306,7 @@ mainMayThrowException(int argc, char ** argv)
       if ((flags & AV_PKT_FLAG_KEY))
       {
         std::cout << " keyframe";
+        is_keyframe = true;
       }
 
       if ((flags & AV_PKT_FLAG_CORRUPT))
@@ -351,6 +339,22 @@ mainMayThrowException(int argc, char ** argv)
     }
 
     std::cout << std::endl;
+
+    if (is_keyframe && save_keyframes)
+    {
+      fs::path folder = (fs::path(output_path) /
+                         boost::replace_all_copy(pkt.trackId_, ":", "_"));
+      bool ok = fs::create_directories(folder);
+      // YAE_ASSERT(ok);
+
+      std::string path((folder / (dts.to_hhmmss_frac(1000, "", ".") + ".jpg")).
+                       string());
+      yae::TrackPtr track_ptr = yae::get(summary.decoders_, pkt.trackId_);
+      yae::VideoTrackPtr decoder_ptr =
+        boost::dynamic_pointer_cast<yae::VideoTrack, yae::Track>(track_ptr);
+      ok = yae::save_keyframe(path, decoder_ptr, packet_ptr);
+      YAE_ASSERT(ok);
+    }
   }
 
   return 0;

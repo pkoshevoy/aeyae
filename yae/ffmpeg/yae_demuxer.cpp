@@ -14,8 +14,17 @@
 
 // yae includes:
 #include "yae_demuxer.h"
+#include "../ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "../utils/yae_utils.h"
+#include "../video/yae_pixel_format_traits.h"
 
+// ffmpeg:
+extern "C"
+{
+#include <libavutil/avstring.h>
+#include <libavutil/frame.h>
+#include <libavutil/imgutils.h>
+}
 
 namespace yae
 {
@@ -462,7 +471,7 @@ namespace yae
       if (err != AVERROR_EOF)
       {
         av_log(NULL, AV_LOG_ERROR,
-               "av_read_frame(%s) returned %i: \"%s\"\n",
+               "av_read_frame(%s) error %i: \"%s\"\n",
                resourcePath_.c_str(), err, yae::av_strerr(err).c_str());
       }
     }
@@ -567,7 +576,7 @@ namespace yae
     if (err < 0)
     {
       av_log(NULL, AV_LOG_WARNING,
-             "avformat_seek_file(%"PRIi64") returned %i: \"%s\"\n",
+             "avformat_seek_file(%"PRIi64") error %i: \"%s\"\n",
              ts, err, yae::av_strerr(err).c_str());
     }
 
@@ -2315,7 +2324,7 @@ namespace yae
     if (err < 0)
     {
       av_log(NULL, AV_LOG_ERROR,
-             "avio_open2(%s) returned %i: \"%s\"\n",
+             "avio_open2(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
       return err;
     }
@@ -2325,7 +2334,7 @@ namespace yae
     if (err < 0)
     {
       av_log(NULL, AV_LOG_ERROR,
-             "avformat_write_header(%s) returned %i: \"%s\"\n",
+             "avformat_write_header(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
       return err;
     }
@@ -2356,7 +2365,7 @@ namespace yae
       if (err < 0)
       {
         av_log(NULL, AV_LOG_ERROR,
-               "av_interleaved_write_frame(%s) returned %i: \"%s\"\n",
+               "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
                output_path, err, yae::av_strerr(err).c_str());
       }
     }
@@ -2365,7 +2374,7 @@ namespace yae
     if (err < 0)
     {
       av_log(NULL, AV_LOG_ERROR,
-             "avformat_write_trailer(%s) returned %i: \"%s\"\n",
+             "avformat_write_trailer(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
     }
 
@@ -2553,6 +2562,318 @@ namespace yae
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+  }
+
+  //----------------------------------------------------------------
+  // convert_to
+  //
+  static int
+  convert_to(AvFrm & frame, const TVideoFramePtr & vf_ptr)
+  {
+    int err = 0;
+    AVFrame & dst = frame.get();
+    TVideoFrame & vf = *(vf_ptr.get());
+
+    boost::shared_ptr<TAVFrameBuffer> avfb =
+      boost::dynamic_pointer_cast<TAVFrameBuffer, IPlanarBuffer>(vf.data_);
+
+    if (false && avfb)
+    {
+      const AVFrame & src = avfb->frame_.get();
+      return av_frame_ref(&dst, &src);
+    }
+
+    dst.width = vf.traits_.encodedWidth_;
+    dst.height = vf.traits_.encodedHeight_;
+
+    AVPixelFormat src_format = yae_to_ffmpeg(vf.traits_.pixelFormat_);
+    dst.format = src_format;
+
+    dst.colorspace = to_ffmpeg_color_space(vf.traits_.colorSpace_);
+    dst.color_range = to_ffmpeg_color_range(vf.traits_.colorRange_);
+
+    err = av_frame_get_buffer(&dst, 32);
+    if (!err)
+    {
+      const IPlanarBuffer & buffer = *(vf.data_.get());
+      const uint8_t * src_data[4] = { NULL };
+      int src_linesize[4] = { 0 };
+      for (std::size_t i = 0; i < buffer.planes(); i++)
+      {
+        src_data[i] = buffer.data(i);
+        src_linesize[i] = buffer.rowBytes(i);
+      }
+
+      av_image_copy(dst.data,
+                    dst.linesize,
+                    src_data,
+                    src_linesize,
+                    src_format,
+                    dst.width,
+                    dst.height);
+    }
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // save_keyframe
+  //
+  bool
+  save_keyframe(const std::string & path,
+                const VideoTrackPtr & decoder_ptr,
+                const TPacketPtr & packet_ptr,
+                unsigned int envelope_w,
+                unsigned int envelope_h)
+  {
+    if (!(decoder_ptr && packet_ptr))
+    {
+      return false;
+    }
+
+    const AvPkt & pkt = *packet_ptr;
+    const AVPacket & packet = pkt.get();
+    if (!(packet.flags & AV_PKT_FLAG_KEY))
+    {
+      return false;
+    }
+    // setup output format:
+    AvOutputContextPtr muxer_ptr(avformat_alloc_context());
+    AVFormatContext * muxer = muxer_ptr.get();
+    av_strlcpy(muxer->filename, path.c_str(), sizeof(muxer->filename));
+    muxer->oformat = av_guess_format(NULL, path.c_str(), NULL);
+
+    const AVCodec * codec = avcodec_find_encoder(muxer->oformat->video_codec);
+    if (!codec)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_find_encoder(%i) failed, %s\n",
+             muxer->oformat->video_codec, path.c_str());
+      return false;
+    }
+
+    // decode the keyframe packet:
+    VideoTrack & decoder = *decoder_ptr;
+    if (!decoder.threadIsRunning())
+    {
+      VideoTraits traits;
+      decoder.getTraits(traits);
+
+      traits.pixelFormat_ = ffmpeg_to_yae(codec->pix_fmts[0]);
+      traits.offsetTop_ = 0;
+      traits.offsetLeft_ = 0;
+      traits.visibleWidth_ = envelope_w;
+      traits.visibleHeight_ = envelope_h;
+      traits.pixelAspectRatio_ = 1.0;
+      traits.cameraRotation_ = 0;
+      traits.isUpsideDown_ = false;
+      decoder.setTraitsOverride(traits);
+
+      const pixelFormat::Traits * ptts = NULL;
+      if (!decoder.getTraitsOverride(traits) ||
+          !(ptts = pixelFormat::getTraits(traits.pixelFormat_)))
+      {
+        return false;
+      }
+
+      decoder.threadStart();
+      decoder.packetQueue_.waitIndefinitelyForConsumerToBlock();
+    }
+
+    // feed the decoder:
+    decoder.packetQueue_.push(packet_ptr);
+
+    // flush, so we don't get stuck:
+    decoder.packetQueue_.push(TPacketPtr());
+
+    TVideoFramePtr vf_ptr;
+    decoder.frameQueue_.pop(vf_ptr);
+
+    // once the decoder is flushed it can't be used again
+    // so shut it down so it can be restarted the next time:
+    decoder.threadStop();
+    decoder.close();
+
+    if (!vf_ptr)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // convert TVideoFramePtr to AVFrame:
+    AvFrm frm;
+    int err = convert_to(frm, vf_ptr);
+    if (err)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "convert_to(..) failed %i: \"%s\"\n",
+             err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // feed it to the encoder:
+    TVideoFrame & vf = *vf_ptr;
+    AVFrame & frame = frm.get();
+
+    VideoTraits traits;
+    decoder.getTraitsOverride(traits);
+
+    // for configuring timebase, etc...
+    TTime frame_dur = frameDurationForFrameRate(traits.frameRate_);
+
+    // setup the encoder:
+    AvCodecContextPtr encoder_ptr(avcodec_alloc_context3(codec));
+    if (!encoder_ptr)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_alloc_context3(%i) failed, %s\n",
+             muxer->oformat->video_codec, path.c_str());
+      return false;
+    }
+
+    AVCodecContext & encoder = *encoder_ptr;
+    encoder.bit_rate = frame.width * frame.height * 8;
+    // encoder.rc_max_rate = encoder.bit_rate * 2;
+    encoder.width = frame.width;
+    encoder.height = frame.height;
+    encoder.time_base.num = 1;
+    encoder.time_base.den = frame_dur.base_;
+    encoder.ticks_per_frame = frame_dur.time_;
+    encoder.framerate.num = frame_dur.base_;
+    encoder.framerate.den = frame_dur.time_;
+    encoder.gop_size = 1; // expressed as number of frames
+    encoder.max_b_frames = 0;
+    encoder.pix_fmt = (AVPixelFormat)(frame.format);
+
+    AVDictionary * encoder_opts = NULL;
+    err = avcodec_open2(&encoder, codec, &encoder_opts);
+    av_dict_free(&encoder_opts);
+
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_open2 error %i: \"%s\"\n",
+             err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    // setup output streams:
+    AVStream * dst = avformat_new_stream(muxer, NULL);
+    dst->time_base.num = 1;
+    dst->time_base.den = frame_dur.base_;
+    dst->avg_frame_rate.num = frame_dur.base_;
+    dst->avg_frame_rate.den = frame_dur.time_;
+    dst->duration = 1;
+
+    err = avcodec_parameters_from_context(dst->codecpar, &encoder);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_parameters_from_context error %i: \"%s\"\n",
+             err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    // open the muxer:
+    AVDictionary * io_opts = NULL;
+    err = avio_open2(&(muxer->pb),
+                     path.c_str(),
+                     AVIO_FLAG_WRITE,
+                     NULL,
+                     &io_opts);
+    av_dict_free(&io_opts);
+
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avio_open2(%s) error %i: \"%s\"\n",
+             path.c_str(), err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    // write the header:
+    AVDictionary * muxer_opts = NULL;
+    av_dict_set_int(&muxer_opts, "update", 1, 0);
+    err = avformat_write_header(muxer, &muxer_opts);
+    av_dict_free(&muxer_opts);
+
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avformat_write_header(%s) error %i: \"%s\"\n",
+             path.c_str(), err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    // send the frame to the encoder:
+    frame.key_frame = 1;
+    frame.pict_type = AV_PICTURE_TYPE_I;
+    frame.pts = av_rescale_q(vf.time_.time_,
+                             Rational(1, vf.time_.base_),
+                             dst->time_base);
+    err = avcodec_send_frame(&encoder, &frame);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_send_frame error %i: \"%s\"\n",
+             err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    while (!err)
+    {
+      // flush-out the encoder:
+      err = avcodec_send_frame(&encoder, NULL);
+      if (err)
+      {
+        break;
+      }
+
+      AvPkt out_pkt;
+      AVPacket & out = out_pkt.get();
+      err = avcodec_receive_packet(&encoder, &out);
+      if (err)
+      {
+        if (err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF)
+        {
+          av_log(NULL, AV_LOG_ERROR,
+                 "avcodec_receive_packet error %i: \"%s\"\n",
+                 err, yae::av_strerr(err).c_str());
+          YAE_ASSERT(false);
+        }
+
+        break;
+      }
+
+      out.stream_index = dst->index;
+      out.dts = av_rescale_q(out.dts, encoder.time_base, dst->time_base);
+      out.pts = av_rescale_q(out.pts, encoder.time_base, dst->time_base);
+      out.duration = av_rescale_q(packet.duration,
+                                  encoder.time_base,
+                                  dst->time_base);
+
+      err = av_interleaved_write_frame(muxer, &out);
+      if (err < 0)
+      {
+        av_log(NULL, AV_LOG_ERROR,
+               "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
+               path.c_str(), err, yae::av_strerr(err).c_str());
+        return false;
+      }
+    }
+
+    err = av_write_trailer(muxer);
+    if (err < 0)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avformat_write_trailer(%s) error %i: \"%s\"\n",
+             path.c_str(), err, yae::av_strerr(err).c_str());
+      return false;
+    }
+
+    muxer_ptr.reset();
+    return true;
   }
 
 }

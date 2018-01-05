@@ -960,7 +960,7 @@ namespace yae
   //----------------------------------------------------------------
   // to_ffmpeg_color_space
   //
-  static AVColorSpace
+  AVColorSpace
   to_ffmpeg_color_space(TColorSpaceId c)
   {
     switch (c)
@@ -1028,11 +1028,10 @@ namespace yae
     return kColorRangeUnspecified;
   }
 
-#if 0
   //----------------------------------------------------------------
   // to_ffmpeg_color_range
   //
-  static AVColorRange
+  AVColorRange
   to_ffmpeg_color_range(TColorRangeId r)
   {
     switch (r)
@@ -1053,7 +1052,6 @@ namespace yae
     YAE_ASSERT(false);
     return AVCOL_RANGE_UNSPECIFIED;
   }
-#endif
 
   //----------------------------------------------------------------
   // fixed16_to_double
