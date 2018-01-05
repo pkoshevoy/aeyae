@@ -91,11 +91,11 @@ namespace yae
     bool getTraits(VideoTraits & traits) const;
 
     // use this for video frame conversion (pixel format and size)
-    bool setTraitsOverride(const VideoTraits & override, bool deint);
-    bool getTraitsOverride(VideoTraits & override) const;
+    bool setTraitsOverride(const VideoTraits & traits, bool deint);
+    bool getTraitsOverride(VideoTraits & traits) const;
 
-    inline bool setTraitsOverride(const VideoTraits & override)
-    { return setTraitsOverride(override, deinterlace_); }
+    inline bool setTraitsOverride(const VideoTraits & traits)
+    { return setTraitsOverride(traits, deinterlace_); }
 
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator);

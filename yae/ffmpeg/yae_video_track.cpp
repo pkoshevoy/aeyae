@@ -1021,9 +1021,9 @@ namespace yae
   // VideoTrack::setTraitsOverride
   //
   bool
-  VideoTrack::setTraitsOverride(const VideoTraits & override, bool deint)
+  VideoTrack::setTraitsOverride(const VideoTraits & traits, bool deint)
   {
-    bool sameTraits = compare<VideoTraits>(override_, override) == 0;
+    bool sameTraits = compare<VideoTraits>(override_, traits) == 0;
     if (sameTraits && deinterlace_ == deint)
     {
       // nothing changed:
@@ -1045,7 +1045,7 @@ namespace yae
       thread_.wait();
     }
 
-    override_ = override;
+    override_ = traits;
     deinterlace_ = deint;
 
     if (alreadyDecoding && !sameTraits)
@@ -1061,9 +1061,9 @@ namespace yae
   // VideoTrack::getTraitsOverride
   //
   bool
-  VideoTrack::getTraitsOverride(VideoTraits & override) const
+  VideoTrack::getTraitsOverride(VideoTraits & traits) const
   {
-    override = override_;
+    traits = override_;
     return true;
   }
 

@@ -133,36 +133,36 @@ namespace yae
     const pixelFormat::Traits * ptts =
       pixelFormat::getTraits(vtts.pixelFormat_);
 
-    VideoTraits override = vtts;
-    override.pixelFormat_ = kPixelFormatGRAY8;
+    VideoTraits traits = vtts;
+    traits.pixelFormat_ = kPixelFormatGRAY8;
 
     if (ptts)
     {
       if ((ptts->flags_ & pixelFormat::kAlpha) &&
           (ptts->flags_ & pixelFormat::kColor))
       {
-        override.pixelFormat_ = kPixelFormatBGRA;
+        traits.pixelFormat_ = kPixelFormatBGRA;
       }
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
       {
-        override.pixelFormat_ = kPixelFormatRGB24;
+        traits.pixelFormat_ = kPixelFormatRGB24;
       }
     }
 
     // crop, deinterlace, flip, rotate, scale, color-convert:
-    override.offsetTop_ = 0;
-    override.offsetLeft_ = 0;
-    override.visibleWidth_ = envelope.width();
-    override.visibleHeight_ = envelope.height();
-    override.pixelAspectRatio_ = 1.0;
-    override.cameraRotation_ = 0;
-    override.isUpsideDown_ = false;
+    traits.offsetTop_ = 0;
+    traits.offsetLeft_ = 0;
+    traits.visibleWidth_ = envelope.width();
+    traits.visibleHeight_ = envelope.height();
+    traits.pixelAspectRatio_ = 1.0;
+    traits.cameraRotation_ = 0;
+    traits.isUpsideDown_ = false;
 
-    reader->setVideoTraitsOverride(override);
+    reader->setVideoTraitsOverride(traits);
 
-    if (!reader->getVideoTraitsOverride(override) ||
-        !(ptts = pixelFormat::getTraits(override.pixelFormat_)))
+    if (!reader->getVideoTraitsOverride(traits) ||
+        !(ptts = pixelFormat::getTraits(traits.pixelFormat_)))
     {
       return frame;
     }
