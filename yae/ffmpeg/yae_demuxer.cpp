@@ -2577,7 +2577,7 @@ namespace yae
     boost::shared_ptr<TAVFrameBuffer> avfb =
       boost::dynamic_pointer_cast<TAVFrameBuffer, IPlanarBuffer>(vf.data_);
 
-    if (false && avfb)
+    if (avfb)
     {
       const AVFrame & src = avfb->frame_.get();
       return av_frame_ref(&dst, &src);
