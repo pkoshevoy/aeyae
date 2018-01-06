@@ -216,6 +216,7 @@ namespace yae
 
     // frame size may have changed, so update output traits accordingly:
     output_ = override_;
+    output_.pixelAspectRatio_ = native_.pixelAspectRatio_;
 
     int transposeAngle =
       (override_.cameraRotation_ - native_.cameraRotation_) % 180;
@@ -227,62 +228,43 @@ namespace yae
       // NOTE: the override provides a scale-to-fit frame envelope,
       // not the actual frame size:
 
-      const double envelope_par =
-        (override_.pixelAspectRatio_ ?
-         override_.pixelAspectRatio_ :
-         native_.pixelAspectRatio_);
+      int src_w = native_.visibleWidth_ * native_.pixelAspectRatio_ + 0.5;
+      int src_h = native_.visibleHeight_;
+
+      int envelope_w =
+        override_.visibleWidth_ ?
+        override_.visibleWidth_ :
+        transposeAngle ? src_h : src_w;
+
+      int envelope_h =
+        override_.visibleHeight_ ?
+        override_.visibleHeight_ :
+        transposeAngle ? src_w : src_h;
 
       const double envelope_dar =
-        envelope_par *
-        (transposeAngle ?
-         (double(override_.visibleHeight_) /
-          double(override_.visibleWidth_)) :
-         (double(override_.visibleWidth_) /
-          double(override_.visibleHeight_)));
+        double(envelope_w) / double(envelope_h);
 
       const double native_dar =
-        native_.pixelAspectRatio_ *
-        (double(native_.visibleWidth_) /
-         double(native_.visibleHeight_));
+        transposeAngle ?
+        double(src_h) / double(src_w) :
+        double(src_w) / double(src_h);
 
-      double dar_scale = native_dar / envelope_par;
-
-      if (native_dar < envelope_dar)
+      if (native_dar <= envelope_dar)
       {
-        if (transposeAngle)
-        {
-          output_.visibleWidth_ = override_.visibleWidth_ * dar_scale + 0.5;
-          output_.visibleHeight_ = override_.visibleWidth_;
-        }
-        else
-        {
-          output_.visibleWidth_ = override_.visibleHeight_ * dar_scale + 0.5;
-          output_.visibleHeight_ = override_.visibleHeight_;
-        }
-
-        output_.offsetLeft_ = 0;
-        output_.offsetTop_ = 0;
-        output_.encodedWidth_ = output_.visibleWidth_;
-        output_.encodedHeight_ = output_.visibleHeight_;
+        output_.visibleWidth_ = envelope_h * native_dar;
+        output_.visibleHeight_ = envelope_h;
       }
       else
       {
-        if (transposeAngle)
-        {
-          output_.visibleWidth_ = override_.visibleHeight_;
-          output_.visibleHeight_ = override_.visibleHeight_ / dar_scale + 0.5;
-        }
-        else
-        {
-          output_.visibleWidth_ = override_.visibleWidth_;
-          output_.visibleHeight_ = override_.visibleWidth_ / dar_scale + 0.5;
-        }
-
-        output_.offsetLeft_ = 0;
-        output_.offsetTop_ = 0;
-        output_.encodedWidth_ = output_.visibleWidth_;
-        output_.encodedHeight_ = output_.visibleHeight_;
+        output_.visibleWidth_ = envelope_w;
+        output_.visibleHeight_ = envelope_w / native_dar;
       }
+
+      output_.offsetLeft_ = 0;
+      output_.offsetTop_ = 0;
+      output_.encodedWidth_ = output_.visibleWidth_;
+      output_.encodedHeight_ = output_.visibleHeight_;
+      output_.pixelAspectRatio_ = 1.0;
     }
     else
     {
@@ -295,20 +277,13 @@ namespace yae
     }
 
     if (override_.pixelAspectRatio_ > 0.0 &&
-        override_.pixelAspectRatio_ != native_.pixelAspectRatio_)
+        override_.pixelAspectRatio_ != output_.pixelAspectRatio_)
     {
-      output_.visibleWidth_ = int(native_.visibleWidth_ *
-                                  native_.pixelAspectRatio_ /
+      output_.visibleWidth_ = int(output_.visibleWidth_ *
+                                  output_.pixelAspectRatio_ /
                                   override_.pixelAspectRatio_ + 0.5);
-    }
-
-    if (override_.pixelAspectRatio_)
-    {
+      output_.encodedWidth_ = output_.visibleWidth_;
       output_.pixelAspectRatio_ = override_.pixelAspectRatio_;
-    }
-    else
-    {
-      output_.pixelAspectRatio_ = native_.pixelAspectRatio_;
     }
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
@@ -569,14 +544,18 @@ namespace yae
 
       if (outputNeedsScale)
       {
-        add_to(filters)
-          << "scale=w=" << output_.visibleWidth_
-          << ":h=" << output_.visibleHeight_;
-      }
-
-      if (override_.pixelAspectRatio_)
-      {
-        add_to(filters) << "setsar=sar=" << output_.pixelAspectRatio_;
+        if (transposeAngle)
+        {
+          add_to(filters)
+            << "scale=w=" << output_.visibleHeight_
+            << ":h=" << output_.visibleWidth_;
+        }
+        else
+        {
+          add_to(filters)
+            << "scale=w=" << output_.visibleWidth_
+            << ":h=" << output_.visibleHeight_;
+        }
       }
 
       if (transposeAngle)
@@ -584,6 +563,11 @@ namespace yae
         add_to(filters) << ((transposeAngle < 0) ?
                             "transpose=dir=clock" :
                             "transpose=dir=cclock");
+      }
+
+      if (override_.pixelAspectRatio_)
+      {
+        add_to(filters) << "setsar=sar=" << output_.pixelAspectRatio_;
       }
 
 #if 0

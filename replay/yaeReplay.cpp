@@ -343,7 +343,7 @@ mainMayThrowException(int argc, char ** argv)
     if (is_keyframe && save_keyframes)
     {
       fs::path folder = (fs::path(output_path) /
-                         boost::replace_all_copy(pkt.trackId_, ":", "_"));
+                         boost::replace_all_copy(pkt.trackId_, ":", "."));
       fs::create_directories(folder);
 
       std::string path((folder / (dts.to_hhmmss_frac(1000, "", ".") + ".png")).
@@ -351,7 +351,7 @@ mainMayThrowException(int argc, char ** argv)
       yae::TrackPtr track_ptr = yae::get(summary.decoders_, pkt.trackId_);
       yae::VideoTrackPtr decoder_ptr =
         boost::dynamic_pointer_cast<yae::VideoTrack, yae::Track>(track_ptr);
-      if (!yae::save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 2.0))
+      if (!yae::save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 1))
       {
         break;
       }

@@ -14,7 +14,7 @@
 
 // yae includes:
 #include "yae_demuxer.h"
-#include "../ffmpeg/yae_pixel_format_ffmpeg.h"
+#include "yae_pixel_format_ffmpeg.h"
 #include "../utils/yae_utils.h"
 #include "../video/yae_pixel_format_traits.h"
 
