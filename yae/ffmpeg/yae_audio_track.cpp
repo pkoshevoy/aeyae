@@ -247,6 +247,7 @@ namespace yae
 
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
+      af.trackId_ = Track::id();
 
       bool gotPTS = false;
 

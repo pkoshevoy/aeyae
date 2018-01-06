@@ -713,6 +713,7 @@ namespace yae
 
         vf.time_.base_ = filterGraphOutputTimeBase.den;
         vf.time_.time_ = filterGraphOutputTimeBase.num * output.pts;
+        vf.trackId_ = Track::id();
 
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)

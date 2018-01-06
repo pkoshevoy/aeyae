@@ -863,6 +863,7 @@ namespace yae
 
             if (subs)
             {
+              sf.trackId_ = subs->Track::id();
               subs->push(sf, &outputTerminator_);
             }
           }
