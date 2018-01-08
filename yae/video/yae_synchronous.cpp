@@ -418,7 +418,7 @@ namespace yae
       }
 
       long msecSleep = std::min<long>(msecToWait - msecElapsed, 20);
-      boost::this_thread::sleep(boost::posix_time::milliseconds(msecSleep));
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(msecSleep));
 
       // check whether the request has changed or was cancelled:
       {

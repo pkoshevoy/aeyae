@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <limits>
 
+// boost libraries:
+#include <boost/thread/thread.hpp>
+
 // yae includes:
 #include "yae_video_renderer.h"
 #include "../thread/yae_threading.h"
@@ -202,16 +205,15 @@ namespace yae
     static const double secondsToPause = 0.1;
 
     bool ok = true;
-    while (ok && !boost::this_thread::interruption_requested() && !stop_)
+    while (ok)
     {
-      while (pause_ && !boost::this_thread::interruption_requested() && !stop_)
+      while (pause_)
       {
-        boost::this_thread::sleep(boost::posix_time::microseconds
-                                  (long(secondsToPause * 1e+6)));
+        boost::this_thread::sleep_for(boost::chrono::microseconds
+                                      (long(secondsToPause * 1e+6)));
       }
 
       boost::this_thread::interruption_point();
-
       clock_.waitForOthers();
 
       // get the time segment we are supposed to render for,
@@ -280,9 +282,8 @@ namespace yae
         std::cerr << "sleep for: " << secondsToSleep << std::endl;
 #endif
 
-        boost::this_thread::sleep(boost::posix_time::microseconds
-                                  (long(secondsToSleep * 1e+6)));
-
+        boost::this_thread::sleep_for(boost::chrono::microseconds
+                                      (long(secondsToSleep * 1e+6)));
         if (clockIsAccurate)
         {
           continue;

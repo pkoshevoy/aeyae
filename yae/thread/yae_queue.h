@@ -147,16 +147,10 @@ namespace yae
 
     ~Queue()
     {
-      try
-      {
-        boost::this_thread::disable_interruption disableInterruption;
-        boost::lock_guard<boost::mutex> lock(mutex_);
-        sequences_.clear();
-        size_ = 0;
-        closed_ = true;
-      }
-      catch (...)
-      {}
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      sequences_.clear();
+      size_ = 0;
+      closed_ = true;
     }
 
     void setSortFunc(TSortFunc sortFunc)
