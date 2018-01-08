@@ -1418,7 +1418,8 @@ namespace yae
 
     if (private_)
     {
-      dar = private_->imageWidthHeight(w, h) ? w / h : 0.0;
+      int rotated = 0;
+      dar = private_->imageWidthHeightRotated(w, h, rotated) ? w / h : 0.0;
     }
 
     return dar;

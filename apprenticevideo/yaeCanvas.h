@@ -318,6 +318,10 @@ namespace yae
     // return width/height image aspect ration
     // and pass back image width and height
     //
+    // NOTE: the image rotation angle is accounted for
+    // (width <-> height are swapped as necessary)
+    // before calculating the aspect ratio.
+    //
     // NOTE: width and height are preprocessed according to current
     // frame crop and aspect ratio settings.
     //

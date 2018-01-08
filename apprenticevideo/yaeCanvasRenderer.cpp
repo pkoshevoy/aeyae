@@ -1659,7 +1659,18 @@ namespace yae
   void
   TBaseCanvas::overrideDisplayAspectRatio(double dar)
   {
-    dar_ = dar;
+    if (frame_ && dar > 0.0)
+    {
+      const VideoTraits & vtts = frame_->traits_;
+      if (vtts.cameraRotation_ % 180 != 0)
+      {
+        dar_ = 1.0 / dar;
+      }
+    }
+    else
+    {
+      dar_ = dar;
+    }
   }
 
   //----------------------------------------------------------------
