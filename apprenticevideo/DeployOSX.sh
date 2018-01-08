@@ -395,7 +395,7 @@ resolve_library()
 	fi
 
 	NAME=$(basename "${NAME}")
-	SRCH_HERE="${BINARIES_DIR}":"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}":"${CMAKE_INSTALL_PREFIX}/lib":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
+	SRCH_HERE="${BINARIES_DIR}":"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib/${CMAKE_CFG_INTDIR}":"${CMAKE_INSTALL_PREFIX}/lib":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
 
 	if [ -n "${3}" ]; then
