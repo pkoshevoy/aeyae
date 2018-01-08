@@ -60,7 +60,6 @@ namespace yae
     IVideoCanvas * canvas_;
     IReader * reader_;
     bool pause_;
-    bool stop_;
     TTime framePosition_;
 
     TVideoFramePtr frame_a_;
@@ -74,8 +73,7 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
-    pause_(true),
-    stop_(false)
+    pause_(true)
   {
     thread_.setContext(this);
   }
@@ -93,7 +91,6 @@ namespace yae
     canvas_ = canvas;
     reader_ = reader;
     pause_ = true;
-    stop_ = false;
     return true;
   }
 
@@ -105,7 +102,6 @@ namespace yae
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     pause_ = false;
-    stop_ = true;
     terminator_.stopWaiting(true);
     thread_.stop();
     thread_.wait();
@@ -135,7 +131,6 @@ namespace yae
 
     if (reader_ && canvas_ && !pause_ && !thread_.isRunning())
     {
-      stop_ = false;
       terminator_.stopWaiting(false);
       thread_.run();
     }
