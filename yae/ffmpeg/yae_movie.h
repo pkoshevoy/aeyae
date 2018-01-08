@@ -158,16 +158,6 @@ namespace yae
 
     AVFormatContext * context_;
 
-    // track index offsets, to allow multiple demuxers
-    // to output distiguishable packets of the same type
-    // and the same local track index:
-    //
-    // global track index = local track index + track index offset
-    //
-    std::size_t ato_;
-    std::size_t vto_;
-    std::size_t sto_;
-
     std::vector<TAttachment> attachments_;
     std::vector<TProgramInfo> programs_;
     std::vector<VideoTrackPtr> videoTracks_;

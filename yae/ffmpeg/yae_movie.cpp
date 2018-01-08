@@ -31,9 +31,6 @@ namespace yae
   Movie::Movie():
     thread_(this),
     context_(NULL),
-    ato_(0),
-    vto_(0),
-    sto_(0),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
     skipLoopFilter_(false),
@@ -288,7 +285,7 @@ namespace yae
         {
           program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('v', vto_ + videoTracks_.size()));
+          track->setId(make_track_id('v', videoTracks_.size()));
           videoTracks_.push_back(track);
         }
         else
@@ -305,7 +302,7 @@ namespace yae
         {
           program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('a', ato_ + audioTracks_.size()));
+          track->setId(make_track_id('a', audioTracks_.size()));
           audioTracks_.push_back(track);
         }
         else
@@ -333,7 +330,7 @@ namespace yae
           program->subs_.push_back(subs_.size());
           subsIdx_[i] = subs_.size();
           SubttTrackPtr subsTrk(new SubtitlesTrack(stream));
-          subsTrk->setId(make_track_id('s', sto_ + subs_.size()));
+          subsTrk->setId(make_track_id('s', subs_.size()));
           subs_.push_back(subsTrk);
         }
       }
