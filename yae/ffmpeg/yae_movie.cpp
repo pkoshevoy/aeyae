@@ -593,7 +593,7 @@ namespace yae
             // avoid constantly rewinding when playback is paused,
             // slow down a little:
             boost::this_thread::interruption_point();
-            boost::this_thread::sleep(boost::posix_time::milliseconds(333));
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(333));
           }
 #ifndef NDEBUG
           else

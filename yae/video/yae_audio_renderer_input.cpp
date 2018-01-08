@@ -292,11 +292,10 @@ namespace yae
                               bool dstPlanar)
   {
     static const double secondsToPause = 0.1;
-    while (pause_ && !boost::this_thread::interruption_requested())
+    while (pause_)
     {
-      boost::this_thread::disable_interruption here;
-      boost::this_thread::sleep(boost::posix_time::milliseconds
-                                (long(secondsToPause * 1000.0)));
+      boost::this_thread::sleep_for(boost::chrono::milliseconds
+                                    (long(secondsToPause * 1000.0)));
     }
 
     boost::this_thread::interruption_point();
