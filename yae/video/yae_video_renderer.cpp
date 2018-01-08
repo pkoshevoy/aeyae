@@ -57,6 +57,7 @@ namespace yae
     IVideoCanvas * canvas_;
     IReader * reader_;
     bool pause_;
+    bool stop_;
     TTime framePosition_;
 
     TVideoFramePtr frame_a_;
@@ -70,7 +71,8 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
-    pause_(true)
+    pause_(true),
+    stop_(false)
   {
     thread_.setContext(this);
   }
@@ -88,6 +90,7 @@ namespace yae
     canvas_ = canvas;
     reader_ = reader;
     pause_ = true;
+    stop_ = false;
     return true;
   }
 
@@ -99,6 +102,7 @@ namespace yae
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     pause_ = false;
+    stop_ = true;
     terminator_.stopWaiting(true);
     thread_.stop();
     thread_.wait();
@@ -128,6 +132,7 @@ namespace yae
 
     if (reader_ && canvas_ && !pause_ && !thread_.isRunning())
     {
+      stop_ = false;
       terminator_.stopWaiting(false);
       thread_.run();
     }
@@ -197,11 +202,10 @@ namespace yae
     static const double secondsToPause = 0.1;
 
     bool ok = true;
-    while (ok && !boost::this_thread::interruption_requested())
+    while (ok && !boost::this_thread::interruption_requested() && !stop_)
     {
-      while (pause_ && !boost::this_thread::interruption_requested())
+      while (pause_ && !boost::this_thread::interruption_requested() && !stop_)
       {
-        boost::this_thread::disable_interruption here;
         boost::this_thread::sleep(boost::posix_time::microseconds
                                   (long(secondsToPause * 1e+6)));
       }
@@ -276,7 +280,6 @@ namespace yae
         std::cerr << "sleep for: " << secondsToSleep << std::endl;
 #endif
 
-        boost::this_thread::disable_interruption here;
         boost::this_thread::sleep(boost::posix_time::microseconds
                                   (long(secondsToSleep * 1e+6)));
 
