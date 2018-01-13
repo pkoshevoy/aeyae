@@ -576,7 +576,7 @@ namespace yae
     if (err < 0)
     {
       av_log(NULL, AV_LOG_WARNING,
-             "avformat_seek_file(%"PRIi64") error %i: \"%s\"\n",
+             "avformat_seek_file(%" PRId64 ") error %i: \"%s\"\n",
              ts, err, yae::av_strerr(err).c_str());
     }
 
