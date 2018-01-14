@@ -89,8 +89,8 @@ BOOST_AUTO_TEST_CASE(yae_lru_cache)
   cache.get(0, &factory);
   BOOST_CHECK(false);
 #else
-  refs.clear();
+  refs.pop_back();
   cache.get(0, &factory);
-  BOOST_CHECK(factory_call_count[0] == 2);
+  BOOST_CHECK(factory_call_count[0] == 3);
 #endif
 }
