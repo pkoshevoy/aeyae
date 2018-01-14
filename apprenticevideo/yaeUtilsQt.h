@@ -188,6 +188,12 @@ namespace yae
   addToPlaylist(std::list<QString> & playlist, const QString & path);
 
   //----------------------------------------------------------------
+  // convert_path_to_utf8
+  //
+  YAE_API bool
+  convert_path_to_utf8(const QString & path, std::string & path_utf8);
+
+  //----------------------------------------------------------------
   // openFile
   //
   YAE_API IReaderPtr

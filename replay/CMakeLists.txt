@@ -6,6 +6,8 @@ set(PROGNAME "replay")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
+find_package(OpenGL REQUIRED)
+
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS
@@ -24,12 +26,27 @@ add_definitions(-D__STDC_LIMIT_MACROS)
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
-find_package(Qt5 COMPONENTS Core)
-if (NOT (Qt5_FOUND))
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+if (Qt5_FOUND)
+
+  if (NOT (APPLE OR WIN32))
+    find_package(Qt5DBus)
+  endif ()
+
+  option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
+  if (YAE_USE_QOPENGL_WIDGET)
+    add_definitions(-DYAE_USE_QOPENGL_WIDGET)
+  endif ()
+else (Qt5_FOUND)
   find_package(Qt4 REQUIRED)
 endif ()
 
 if (QT4_FOUND)
+  if (QT_QTDBUS_FOUND)
+    set(QT_USE_QTDBUS TRUE)
+  endif ()
+
+  set(QT_USE_QTOPENGL TRUE)
   set(QT_USE_QTMAIN TRUE)
   include(${QT_USE_FILE})
 endif ()
@@ -40,8 +57,11 @@ include_directories(AFTER
   ..
   ../apprenticevideo
   ${PROJECT_BINARY_DIR}
+  ${PROJECT_BINARY_DIR}/../apprenticevideo
   ${Boost_INCLUDE_DIR}
+  ${OPENGL_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
+  ${QT_QTOPENGL_INCLUDE_DIR}
   )
 
 if (WIN32 AND NOT (MINGW OR MSYS))
@@ -49,18 +69,129 @@ if (WIN32 AND NOT (MINGW OR MSYS))
 endif ()
 
 
+set(GLEW_DIR "$ENV{GLEW_DIR}"
+  CACHE
+  PATH "root path for GLEW lib/ and include/ folders")
+find_library(GLEW_LIBRARY GLEW
+  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
+  DOC "GLEW library"
+  )
+
+
+set(project_moc_hxx
+  yaeMainWindow.h
+
+  ../apprenticevideo/yaeCanvasWidget.h
+  ../apprenticevideo/yaeItemView.h
+  ../apprenticevideo/yaePlaylist.h
+  ../apprenticevideo/yaePlaylistModel.h
+  ../apprenticevideo/yaePlaylistModelProxy.h
+  ../apprenticevideo/yaeScreenSaverInhibitor.h
+  ../apprenticevideo/yaeTextInput.h
+  ../apprenticevideo/yaeTimelineModel.h
+  )
+
+set(project_uis
+  yaeAbout.ui
+  yaeMainWindow.ui
+  )
+
 set(project_sources
+  yaeMain.cpp
+  yaeMainWindow.h
+  yaeMainWindow.cpp
+  yaeReplay.h
   yaeReplay.cpp
-    ../apprenticevideo/yaeUtilsQt.h
-    ../apprenticevideo/yaeUtilsQt.cpp
+
+  ../apprenticevideo/yaeBBox.cpp
+  ../apprenticevideo/yaeBBox.h
+  ../apprenticevideo/yaeCanvas.h
+  ../apprenticevideo/yaeCanvas.cpp
+  ../apprenticevideo/yaeCanvasWidget.h
+  ../apprenticevideo/yaeCanvasQPainterUtils.h
+  ../apprenticevideo/yaeCanvasQPainterUtils.cpp
+  ../apprenticevideo/yaeCanvasRenderer.h
+  ../apprenticevideo/yaeCanvasRenderer.cpp
+  ../apprenticevideo/yaeColor.h
+  ../apprenticevideo/yaeDashedRect.cpp
+  ../apprenticevideo/yaeDashedRect.h
+  ../apprenticevideo/yaeDonutRect.cpp
+  ../apprenticevideo/yaeDonutRect.h
+  ../apprenticevideo/yaeExpression.h
+  ../apprenticevideo/yaeFlickableArea.cpp
+  ../apprenticevideo/yaeFlickableArea.h
+  #../apprenticevideo/yaeFrameCropView.cpp
+  #../apprenticevideo/yaeFrameCropView.h
+  ../apprenticevideo/yaeGradient.cpp
+  ../apprenticevideo/yaeGradient.h
+  #../apprenticevideo/yaeGridViewStyle.h
+  #../apprenticevideo/yaeGridViewStyle.cpp
+  #../apprenticevideo/yaeImage.cpp
+  #../apprenticevideo/yaeImage.h
+  #../apprenticevideo/yaeImageLive.cpp
+  #../apprenticevideo/yaeImageLive.h
+  ../apprenticevideo/yaeInputArea.cpp
+  ../apprenticevideo/yaeInputArea.h
+  ../apprenticevideo/yaeItem.cpp
+  ../apprenticevideo/yaeItem.h
+  ../apprenticevideo/yaeItemFocus.cpp
+  ../apprenticevideo/yaeItemFocus.h
+  ../apprenticevideo/yaeItemRef.h
+  ../apprenticevideo/yaeItemView.cpp
+  ../apprenticevideo/yaeItemView.h
+  #../apprenticevideo/yaeListViewStyle.h
+  #../apprenticevideo/yaeListViewStyle.cpp
+  ../apprenticevideo/yaePlaylist.h
+  ../apprenticevideo/yaePlaylist.cpp
+  ../apprenticevideo/yaePlaylistModel.h
+  ../apprenticevideo/yaePlaylistModel.cpp
+  ../apprenticevideo/yaePlaylistModelProxy.h
+  ../apprenticevideo/yaePlaylistModelProxy.cpp
+  #../apprenticevideo/yaePlaylistView.h
+  #../apprenticevideo/yaePlaylistView.cpp
+  #../apprenticevideo/yaePlaylistViewStyle.h
+  #../apprenticevideo/yaePlaylistViewStyle.cpp
+  ../apprenticevideo/yaeProperty.h
+  ../apprenticevideo/yaeRectangle.cpp
+  ../apprenticevideo/yaeRectangle.h
+  ../apprenticevideo/yaeRoundRect.cpp
+  ../apprenticevideo/yaeRoundRect.h
+  ../apprenticevideo/yaeScreenSaverInhibitor.h
+  ../apprenticevideo/yaeScreenSaverInhibitor.cpp
+  ../apprenticevideo/yaeScrollview.cpp
+  ../apprenticevideo/yaeScrollview.h
+  ../apprenticevideo/yaeSegment.cpp
+  ../apprenticevideo/yaeSegment.h
+  ../apprenticevideo/yaeText.cpp
+  ../apprenticevideo/yaeText.h
+  ../apprenticevideo/yaeTextInput.cpp
+  ../apprenticevideo/yaeTextInput.h
+  ../apprenticevideo/yaeTexture.cpp
+  ../apprenticevideo/yaeTexture.h
+  ../apprenticevideo/yaeTexturedRect.cpp
+  ../apprenticevideo/yaeTexturedRect.h
+  ../apprenticevideo/yaeThumbnailProvider.h
+  ../apprenticevideo/yaeThumbnailProvider.cpp
+  ../apprenticevideo/yaeTimelineModel.h
+  ../apprenticevideo/yaeTimelineModel.cpp
+  #../apprenticevideo/yaeTimelineView.h
+  #../apprenticevideo/yaeTimelineView.cpp
+  ../apprenticevideo/yaeTransform.cpp
+  ../apprenticevideo/yaeTransform.h
+  ../apprenticevideo/yaeUtilsQt.h
+  ../apprenticevideo/yaeUtilsQt.cpp
+  ../apprenticevideo/yaeVec.h
+  ../apprenticevideo/yaeVersion.cpp
   )
 
 if (QT4_FOUND)
   add_definitions(-DYAE_USE_QT4)
+  qt4_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
 if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
+  qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
 if (APPLE)
@@ -71,20 +202,59 @@ if (APPLE)
     )
 endif ()
 
-set (YAE_VERSIONED_FILES
-  "${PROJECT_BINARY_DIR}/${PROGNAME}.rc"
-  "${PROJECT_BINARY_DIR}/${PROGNAME}.plist"
-  )
+
+find_path(LIBASS_INCLUDE_DIR
+  ass/ass.h
+  PATHS
+  ${LIBASS_DIR}/include
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (LIBASS_INCLUDE_DIR)
+  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
+endif ()
+
+if (LIBASS_LIBRARY)
+  add_definitions(-DYAE_USE_LIBASS)
+  set(project_sources
+    ${project_sources}
+    ../apprenticevideo/yaeLibass.h
+    ../apprenticevideo/yaeLibass.cpp
+    )
+endif ()
+
+
+find_path(GLEW_INCLUDE_DIR
+  GL/glew.h
+  PATHS
+  ${GLEW_DIR}/include
+  ${FFMPEG_HEADERS_PATH}
+  /usr/include
+  /usr/local/include
+  /opt/local/include)
+
+if (GLEW_INCLUDE_DIR)
+  include_directories(AFTER ${GLEW_INCLUDE_DIR})
+endif ()
+
+
+if (WIN32)
+  set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
+endif ()
+
+if (APPLE)
+  set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
+endif ()
 
 add_custom_target("update_revision_replay" ALL
   DEPENDS
-#  ${YAE_VERSIONED_FILES}
-  "${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp"
+  "${YAE_VERSIONED_FILE}.tmp"
   )
 
 add_custom_command(OUTPUT
-#  ${YAE_VERSIONED_FILES}
-  "${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp"
+  "${YAE_VERSIONED_FILE}.tmp"
   COMMAND "${CMAKE_COMMAND}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
@@ -93,7 +263,7 @@ add_custom_command(OUTPUT
   -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
   -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
-set(project_sources ${project_sources})
+set(project_sources ${project_sources} ${YAE_VERSIONED_FILE})
 
 # Set some Win32 Specific Settings
 if (WIN32)
@@ -114,9 +284,26 @@ if (APPLE)
   set(project_sources
     ${project_sources}
     ${PROGNAME}.icns
-    #InfoPlist.strings
+    InfoPlist.strings
     )
 endif ()
+
+if (QT4_FOUND)
+  qt4_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+  qt4_wrap_ui(project_uis_hxx ${project_uis})
+endif ()
+
+if (Qt5_FOUND)
+  qt5_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+  qt5_wrap_ui(project_uis_hxx ${project_uis})
+endif ()
+
+set(project_sources
+  ${project_sources}
+  ${project_moc_cxx}
+  ${project_uis_hxx}
+  ${project_qrc_cxx}
+  )
 
 add_executable(${PROGNAME}
   ${GUI_TYPE}
@@ -128,13 +315,12 @@ add_dependencies(${PROGNAME} "update_revision_replay")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  ${GLEW_LIBRARY}
+  ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
+  ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   )
-
-if (LIBASS_LIBRARY)
-  add_definitions(-DYAE_USE_LIBASS)
-endif ()
 
 if (WIN32)
 
@@ -262,7 +448,16 @@ endif ()
 if (Qt5_FOUND)
   set(TARGET_LIBS ${TARGET_LIBS}
     Qt5::Core
+    Qt5::Gui
+    Qt5::OpenGL
+    Qt5::Widgets
     )
+
+  if (Qt5DBus_FOUND)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      Qt5::DBus
+      )
+  endif ()
 endif ()
 
 set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
@@ -300,22 +495,26 @@ if (APPLE)
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
 
-#  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
-#    PROPERTIES
-#    MACOSX_PACKAGE_LOCATION Resources/en.lproj)
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
+    PROPERTIES
+    MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 
   find_program(MACDEPLOYQT NAMES macdeployqt
     HINTS ${QT_QMAKE_EXECUTABLE_DIR}
     DOC
     "macdeployqt - Qt utility used to include frameworks required by the application into its bundle")
 
-#  add_custom_command(TARGET ${PROGNAME} POST_BUILD
-#    COMMAND ${PROJECT_SOURCE_DIR}/DeployOSX.sh
-#    ARGS
-#    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
-#    ${MACDEPLOYQT}
-#    COMMENT "pull in external dependencies"
-#    )
+  add_custom_command(TARGET ${PROGNAME} POST_BUILD
+    COMMAND ${PROJECT_SOURCE_DIR}/../apprenticevideo/DeployOSX.sh
+    ARGS
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/${PROGNAME}.app
+    ${MACDEPLOYQT}
+    ${CMAKE_INSTALL_PREFIX}
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    ${CMAKE_CFG_INTDIR}
+    COMMENT "pull in external dependencies"
+    )
 endif ()
 
 if (NOT (WIN32 OR APPLE))

@@ -1975,6 +1975,32 @@ namespace yae
     sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
 
   //----------------------------------------------------------------
+  // convert_path_to_utf8
+  //
+  bool
+  convert_path_to_utf8(const QString & path, std::string & path_utf8)
+  {
+    for (std::size_t i = 0; i < kNumNormalizationForms; i++)
+    {
+      // find UNICODE NORMALIZATION FORM that works
+      // http://www.unicode.org/reports/tr15/
+      QString tmp = path.normalized(kNormalizationForm[i]);
+      path_utf8 = tmp.toUtf8().constData();
+
+      try
+      {
+        TOpenFile f(path_utf8.c_str(), "rb");
+        return true;
+      }
+      catch (...)
+      {}
+    }
+
+    YAE_ASSERT(false);
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // openFile
   //
   IReaderPtr
@@ -1995,18 +2021,12 @@ namespace yae
     }
 
     IReaderPtr reader(readerPrototype->clone());
+    std::string path_utf8;
 
-    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
+    if (convert_path_to_utf8(fn, path_utf8) &&
+        reader->open(path_utf8.c_str()))
     {
-      // find UNICODE NORMALIZATION FORM that works
-      // http://www.unicode.org/reports/tr15/
-      QString tmp = fn.normalized(kNormalizationForm[i]);
-      std::string filename = tmp.toUtf8().constData();
-
-      if (reader->open(filename.c_str()))
-      {
-        return reader;
-      }
+      return reader;
     }
 
     reader.reset();

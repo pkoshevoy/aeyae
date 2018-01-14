@@ -21,12 +21,12 @@ BEGIN
         BEGIN
             VALUE "Comments", "https://github.com/pkoshevoy/aeyae"
             VALUE "CompanyName", "Pavel Koshevoy"
-            VALUE "FileDescription", "Apprentice Video Replay, @PROJ_WC_REVISION@"
+            VALUE "FileDescription", "Apprentice Video Remux, @PROJ_WC_REVISION@"
             VALUE "FileVersion", "@PROJ_YY_MM_DD_HHMM@"
             VALUE "InternalName", "replay"
             VALUE "LegalCopyright", "Copyright © 2016 Pavel Koshevoy"
             VALUE "OriginalFilename", "replay.exe"
-            VALUE "ProductName", "Apprentice Video Replay"
+            VALUE "ProductName", "Apprentice Video Remux"
             VALUE "ProductVersion", "@PROJ_YY_MM_DD_HHMM@"
         END
     END

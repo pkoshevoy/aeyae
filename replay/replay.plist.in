@@ -67,15 +67,15 @@
 	<key>CFBundleExecutable</key>
 	<string>replay</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Apprentice Video Replay by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
+	<string>Apprentice Video Remux by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
 	<string>replay</string>
 	<key>CFBundleIdentifier</key>
-	<string>koshevoy.pavel.replay</string>
+	<string>apprentice.video.remux</string>
 	<key>CFBundleName</key>
-	<string>replay</string>
+	<string>Apprentice Video Remux</string>
 	<key>CFBundleDisplayName</key>
-	<string>replay</string>
+	<string>Apprentice Video Remux</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
