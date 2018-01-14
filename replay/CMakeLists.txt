@@ -83,12 +83,12 @@ set(project_moc_hxx
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
-  ../apprenticevideo/yaePlaylist.h
-  ../apprenticevideo/yaePlaylistModel.h
-  ../apprenticevideo/yaePlaylistModelProxy.h
+#  ../apprenticevideo/yaePlaylist.h
+#  ../apprenticevideo/yaePlaylistModel.h
+#  ../apprenticevideo/yaePlaylistModelProxy.h
   ../apprenticevideo/yaeScreenSaverInhibitor.h
   ../apprenticevideo/yaeTextInput.h
-  ../apprenticevideo/yaeTimelineModel.h
+#  ../apprenticevideo/yaeTimelineModel.h
   )
 
 set(project_uis
@@ -130,6 +130,8 @@ set(project_sources
   #../apprenticevideo/yaeImage.h
   #../apprenticevideo/yaeImageLive.cpp
   #../apprenticevideo/yaeImageLive.h
+  ../apprenticevideo/yaeImageProvider.cpp
+  ../apprenticevideo/yaeImageProvider.h
   ../apprenticevideo/yaeInputArea.cpp
   ../apprenticevideo/yaeInputArea.h
   ../apprenticevideo/yaeItem.cpp
@@ -141,12 +143,12 @@ set(project_sources
   ../apprenticevideo/yaeItemView.h
   #../apprenticevideo/yaeListViewStyle.h
   #../apprenticevideo/yaeListViewStyle.cpp
-  ../apprenticevideo/yaePlaylist.h
-  ../apprenticevideo/yaePlaylist.cpp
-  ../apprenticevideo/yaePlaylistModel.h
-  ../apprenticevideo/yaePlaylistModel.cpp
-  ../apprenticevideo/yaePlaylistModelProxy.h
-  ../apprenticevideo/yaePlaylistModelProxy.cpp
+#  ../apprenticevideo/yaePlaylist.h
+#  ../apprenticevideo/yaePlaylist.cpp
+#  ../apprenticevideo/yaePlaylistModel.h
+#  ../apprenticevideo/yaePlaylistModel.cpp
+#  ../apprenticevideo/yaePlaylistModelProxy.h
+#  ../apprenticevideo/yaePlaylistModelProxy.cpp
   #../apprenticevideo/yaePlaylistView.h
   #../apprenticevideo/yaePlaylistView.cpp
   #../apprenticevideo/yaePlaylistViewStyle.h
@@ -170,10 +172,10 @@ set(project_sources
   ../apprenticevideo/yaeTexture.h
   ../apprenticevideo/yaeTexturedRect.cpp
   ../apprenticevideo/yaeTexturedRect.h
-  ../apprenticevideo/yaeThumbnailProvider.h
-  ../apprenticevideo/yaeThumbnailProvider.cpp
-  ../apprenticevideo/yaeTimelineModel.h
-  ../apprenticevideo/yaeTimelineModel.cpp
+#  ../apprenticevideo/yaeThumbnailProvider.h
+#  ../apprenticevideo/yaeThumbnailProvider.cpp
+#  ../apprenticevideo/yaeTimelineModel.h
+#  ../apprenticevideo/yaeTimelineModel.cpp
   #../apprenticevideo/yaeTimelineView.h
   #../apprenticevideo/yaeTimelineView.cpp
   ../apprenticevideo/yaeTransform.cpp

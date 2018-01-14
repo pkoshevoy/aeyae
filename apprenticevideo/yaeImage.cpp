@@ -201,8 +201,8 @@ namespace yae
     image.setImageStatusImageRequested();
 
     static const QSize kDefaultSize(256, 256);
-    ThumbnailProvider & provider = *(image.provider_);
-    boost::weak_ptr<ThumbnailProvider::ICallback> callback(image_);
+    ImageProvider & provider = *(image.provider_);
+    boost::weak_ptr<ImageProvider::ICallback> callback(image_);
     provider.requestImageAsync(image.id_, kDefaultSize, callback);
     return false;
   }

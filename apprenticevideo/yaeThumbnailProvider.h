@@ -29,6 +29,7 @@
 #include "yae/video/yae_reader.h"
 
 // local includes:
+#include "yaeImageProvider.h"
 #include "yaePlaylistModelProxy.h"
 
 
@@ -38,10 +39,7 @@ namespace yae
   //----------------------------------------------------------------
   // ThumbnailProvider
   //
-  struct ThumbnailProvider
-#ifdef YAE_USE_PLAYER_QUICK_WIDGET
-    : public QQuickImageProvider
-#endif
+  struct ThumbnailProvider : public ImageProvider
   {
     ThumbnailProvider(const IReaderPtr & readerPrototype,
                       const TPlaylistModel & playlist,
@@ -55,49 +53,21 @@ namespace yae
     virtual ~ThumbnailProvider();
 
     // limit how many images to keep in memory:
-    void setCacheCapacity(std::size_t cacheCapacity);
+    virtual void setCacheCapacity(std::size_t cacheCapacity);
 
-    // virtual:
-    QImage requestImage(const QString & id,
-                        QSize * size,
-                        const QSize & requestedSize);
+    virtual QImage requestImage(const QString & id,
+                                QSize * size,
+                                const QSize & requestedSize);
 
-    //----------------------------------------------------------------
-    // ICallback
-    //
-    struct ICallback
-    {
-      virtual ~ICallback() {}
-      virtual void imageReady(const QImage & image) = 0;
-    };
+    virtual void requestImageAsync(const QString & id,
+                                   const QSize & requestedSize,
+                                   const boost::weak_ptr<ICallback> & cb);
 
-    void requestImageAsync(const QString & id,
-                           const QSize & requestedSize,
-                           const boost::weak_ptr<ICallback> & callback);
-
-    void cancelRequest(const QString & id);
+    virtual void cancelRequest(const QString & id);
 
     struct TPrivate;
     TPrivate * private_;
   };
-
-  //----------------------------------------------------------------
-  // TImageProviderPtr
-  //
-  typedef boost::shared_ptr<ThumbnailProvider> TImageProviderPtr;
-
-  //----------------------------------------------------------------
-  // TImageProviders
-  //
-  typedef std::map<QString, TImageProviderPtr> TImageProviders;
-
-  //----------------------------------------------------------------
-  // lookupImageProvider
-  //
-  TImageProviderPtr
-  lookupImageProvider(const TImageProviders & providers,
-                      const QString & resourceUrl,
-                      QString & imageId);
 
 }
 

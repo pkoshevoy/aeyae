@@ -652,10 +652,7 @@ namespace yae
                                        const TPlaylistModel & playlist,
                                        const QSize & envelopeSize,
                                        std::size_t cacheCapacity):
-#ifdef YAE_USE_PLAYER_QUICK_WIDGET
-    QQuickImageProvider(QQmlImageProviderBase::Image,
-                        QQmlImageProviderBase::ForceAsynchronousImageLoading),
-#endif
+    ImageProvider(),
     private_(new TPrivate(readerPrototype,
                           playlist,
                           envelopeSize,
@@ -708,37 +705,6 @@ namespace yae
   ThumbnailProvider::cancelRequest(const QString & id)
   {
     private_->cancelRequest(id);
-  }
-
-  //----------------------------------------------------------------
-  // lookupImageProvider
-  //
-  TImageProviderPtr
-  lookupImageProvider(const TImageProviders & providers,
-                      const QString & resource,
-                      QString & imageId)
-  {
-    static const QString kImage = QString::fromUtf8("image");
-
-    QUrl url(resource);
-    if (url.scheme() != kImage)
-    {
-      return TImageProviderPtr();
-    }
-
-    QString host = url.host();
-    TImageProviders::const_iterator found = providers.find(host);
-    if (found == providers.end())
-    {
-      return TImageProviderPtr();
-    }
-
-    imageId = url.path();
-
-    // trim the leading '/' character:
-    imageId = imageId.right(imageId.size() - 1);
-
-    return found->second;
   }
 
 }

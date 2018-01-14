@@ -146,6 +146,8 @@ set(project_sources
   yaeImage.h
   yaeImageLive.cpp
   yaeImageLive.h
+  yaeImageProvider.cpp
+  yaeImageProvider.h
   yaeInputArea.cpp
   yaeInputArea.h
   yaeItem.cpp

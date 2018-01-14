@@ -31,7 +31,7 @@
 // local interfaces:
 #include "yaeCanvas.h"
 #include "yaeItem.h"
-#include "yaeThumbnailProvider.h"
+#include "yaeImageProvider.h"
 #include "yaeVec.h"
 
 
