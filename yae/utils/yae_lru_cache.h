@@ -182,7 +182,7 @@ namespace yae
         }
         catch (...)
         {
-          // assignment failed:
+          // something failed:
           cache_[key].referenced_.pop_back();
           throw;
         }
