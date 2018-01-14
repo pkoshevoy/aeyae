@@ -513,6 +513,7 @@ add_library(aeyae SHARED
   yae/utils/yae_benchmark.cpp
   yae/utils/yae_benchmark.h
   yae/utils/yae_log.h
+  yae/utils/yae_lru_cache.h
   yae/utils/yae_pgm_file.h
   yae/utils/yae_plugin_registry.cpp
   yae/utils/yae_plugin_registry.h

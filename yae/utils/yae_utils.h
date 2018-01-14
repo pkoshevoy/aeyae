@@ -390,6 +390,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // remove_one
+  //
+  template <typename TData>
+  void
+  remove_one(std::list<TData> & c, const TData & v)
+  {
+    typename std::list<TData>::iterator
+      found = std::find(c.begin(), c.end(), v);
+
+    if (found != c.end())
+    {
+      c.erase(found);
+    }
+  }
+
+  //----------------------------------------------------------------
   // compare
   //
   template <typename TData>
