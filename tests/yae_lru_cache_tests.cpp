@@ -78,6 +78,7 @@ BOOST_AUTO_TEST_CASE(yae_lru_cache)
     BOOST_CHECK(factory_call_count[i] == 2);
   }
 
+  // cache 0..16 and hold on to the references:
   std::list<TCache::TRefPtr> refs;
   for (int i = 0; i < cache.capacity(); i++)
   {
@@ -89,8 +90,43 @@ BOOST_AUTO_TEST_CASE(yae_lru_cache)
   cache.get(0, &factory);
   BOOST_CHECK(false);
 #else
+  // purge 15 to make room for another 0:
   refs.pop_back();
   cache.get(0, &factory);
   BOOST_CHECK(factory_call_count[0] == 3);
 #endif
+
+  // release all references:
+  refs.clear();
+
+  // cache 16 instances of 100 and hold on to the references:
+  for (int i = 0; i < cache.capacity(); i++)
+  {
+    refs.push_back(cache.get(100, &factory));
+  }
+  BOOST_CHECK_EQUAL(factory_call_count[100], cache.capacity());
+
+  // release all references:
+  refs.clear();
+
+  // cache 16 instances of 100, hold on to the references:
+  for (int i = 0; i < cache.capacity(); i++)
+  {
+    refs.push_back(cache.get(100, &factory));
+  }
+
+  // verify that unreferenced instances were reused:
+  BOOST_CHECK_EQUAL(factory_call_count[100], cache.capacity());
+
+  // release all references:
+  refs.clear();
+
+  // access 16 instances of 200, releasing reference immediately:
+  for (int i = 0; i < cache.capacity(); i++)
+  {
+    cache.get(200, &factory);
+  }
+
+  // verify that 200 was instantiated only once:
+  BOOST_CHECK_EQUAL(factory_call_count[200], 1);
 }

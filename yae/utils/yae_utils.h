@@ -10,10 +10,11 @@
 #define YAE_UTILS_H_
 
 // std includes:
+#include <cstdio>
 #include <list>
 #include <map>
+#include <stdexcept>
 #include <string.h>
-#include <cstdio>
 #include <sstream>
 
 // boost:
@@ -293,7 +294,25 @@ namespace yae
     if (found == lut.end())
     {
       YAE_ASSERT(false);
-      throw std::runtime_error("key not found");
+      throw std::out_of_range("key not found");
+    }
+
+    return found->second;
+  }
+
+  //----------------------------------------------------------------
+  // at
+  //
+  template <typename TKey, typename TValue>
+  static TValue &
+  at(std::map<TKey, TValue> & lut, const TKey & key)
+  {
+    typename std::map<TKey, TValue>::iterator found = lut.find(key);
+
+    if (found == lut.end())
+    {
+      YAE_ASSERT(false);
+      throw std::out_of_range("key not found");
     }
 
     return found->second;

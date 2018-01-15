@@ -10,10 +10,13 @@
 #define YAE_LRU_CACHE_H_
 
 // standard:
+#include <algorithm>
+#include <list>
 #include <map>
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
@@ -46,7 +49,8 @@ namespace yae
     LRUCache():
       capacity_(0),
       referenced_(0),
-      unreferenced_(0)
+      unreferenced_(0),
+      revision_(0)
     {}
 
     //----------------------------------------------------------------
@@ -147,13 +151,17 @@ namespace yae
         if (!cache.unreferenced_.empty())
         {
           TValue value = cache.unreferenced_.front();
-          yae::remove_one(lru_, key);
-
           cache.referenced_.push_back(value);
           referenced_++;
 
           cache.unreferenced_.pop_front();
           unreferenced_--;
+
+          // update LRU:
+          std::list<boost::uint64_t> & revisions = yae::at(revisions_, key);
+          uint64_t revision = revisions.front();
+          revisions.pop_front();
+          lru_.erase(revision);
 
           return TCache::TRefPtr(new TCache::Ref(*this, key, value));
         }
@@ -206,19 +214,35 @@ namespace yae
         cond_.wait(lock);
       }
 
-      for (typename std::list<TKey>::iterator
+      for (typename std::map<boost::uint64_t, TKey>::iterator
              i = lru_.begin(); i != lru_.end(); ++i)
       {
-        const TKey & key = *i;
+        const boost::uint64_t & revision = i->first;
+        const TKey & key = i->second;
         Cache & cache = cache_[key];
 
-        if (!cache.unreferenced_.empty())
+        if (cache.unreferenced_.empty())
         {
-          cache.unreferenced_.pop_front();
-          unreferenced_--;
-          lru_.erase(i);
-          break;
+          YAE_ASSERT(false);
+          continue;
         }
+
+        cache.unreferenced_.pop_front();
+        unreferenced_--;
+
+        // update LRU:
+        std::list<boost::uint64_t> & revisions = yae::at(revisions_, key);
+        YAE_ASSERT(revisions.front() == revision);
+        revisions.pop_front();
+        lru_.erase(i);
+
+        // remove unused keys from the lookup table:
+        if (revisions.empty())
+        {
+          revisions_.erase(key);
+        }
+
+        return;
       }
     }
 
@@ -240,13 +264,16 @@ namespace yae
 
       if (found != cache.referenced_.end())
       {
-        lru_.push_back(key);
-
         cache.unreferenced_.push_back(value);
         unreferenced_++;
 
         cache.referenced_.erase(found);
         referenced_--;
+
+        // update LRU, increment revision number:
+        revisions_[key].push_back(revision_);
+        lru_[revision_] = key;
+        revision_++;
 
         cond_.notify_all();
       }
@@ -272,8 +299,14 @@ namespace yae
     // referenced and unreferenced values:
     std::map<TKey, Cache> cache_;
 
-    // least recently used at the front, most recently used at the back:
-    std::list<TKey> lru_;
+    // cache revision number, incremented when a reference is released:
+    boost::uint64_t revision_;
+
+    // a list of cache revision numbers per key, indexed by key:
+    std::map<TKey, std::list<boost::uint64_t> > revisions_;
+
+    // a list of keys indexed by cache revision number:
+    std::map<uint64_t, TKey> lru_;
   };
 
 }
