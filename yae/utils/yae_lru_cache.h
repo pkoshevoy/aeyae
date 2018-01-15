@@ -77,7 +77,7 @@ namespace yae
     //
     struct Ref
     {
-      friend TCache;
+      friend struct LRUCache;
 
       ~Ref()
       {
@@ -223,7 +223,7 @@ namespace yae
     }
 
   protected:
-    friend TCache::Ref;
+    friend struct TCache::Ref;
 
     //----------------------------------------------------------------
     // release

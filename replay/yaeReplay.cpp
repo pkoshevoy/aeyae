@@ -31,15 +31,14 @@ namespace yae
   //----------------------------------------------------------------
   // load
   //
-  boost::shared_ptr<SerialDemuxer>
-  load(const std::list<std::string> & sources,
+  TDemuxerInterfacePtr
+  load(DemuxerSummary & summary,
+       const std::list<std::string> & sources,
        // these are expressed in seconds:
        const double buffer_duration,
        const double discont_tolerance)
   {
-
-    boost::shared_ptr<SerialDemuxer>
-      serial_demuxer(new SerialDemuxer());
+    boost::shared_ptr<SerialDemuxer> serial_demuxer(new SerialDemuxer());
 
     for (std::list<std::string>::const_iterator i = sources.begin();
          i != sources.end(); ++i)
@@ -87,6 +86,26 @@ namespace yae
 
       serial_demuxer->append(parallel_demuxer, summary);
     }
+
+    if (serial_demuxer->empty())
+    {
+      av_log(NULL, AV_LOG_ERROR, "failed to open any input files, gave up");
+      return TDemuxerInterfacePtr();
+    }
+
+    // unwrap serial demuxer if there is just 1 source:
+    if (serial_demuxer->num_sources() == 1)
+    {
+      summary = serial_demuxer->summaries().front();
+      return serial_demuxer->sources().front();
+    }
+
+    serial_demuxer->summarize(summary, discont_tolerance);
+
+    // show the summary:
+    std::cout << "\nserial:\n" << summary << std::endl;
+
+    return serial_demuxer;
   }
 
   //----------------------------------------------------------------

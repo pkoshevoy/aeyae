@@ -507,6 +507,12 @@ namespace yae
     inline bool empty() const
     { return src_.empty(); }
 
+    inline const std::list<TDemuxerInterfacePtr> & sources() const
+    { return src_; }
+
+    inline const std::list<DemuxerSummary> & summaries() const
+    { return summary_; }
+
     virtual void populate();
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -553,6 +559,15 @@ namespace yae
 
     inline bool empty() const
     { return src_.empty(); }
+
+    inline std::size_t num_sources() const
+    { return src_.size(); }
+
+    inline const std::vector<TDemuxerInterfacePtr> & sources() const
+    { return src_; }
+
+    inline const std::vector<DemuxerSummary> & summaries() const
+    { return summary_; }
 
     virtual void populate();
 

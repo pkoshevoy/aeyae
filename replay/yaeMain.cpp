@@ -243,35 +243,29 @@ mainMayThrowException(int argc, char ** argv)
   const double discont_tolerance = 0.017;
 
   // load the sources:
-  boost::shared_ptr<yae::SerialDemuxer> serial_demuxer =
-    yae::load(sources, buffer_duration, discont_tolerance);
+  yae::DemuxerSummary summary;
+  yae::TDemuxerInterfacePtr demuxer =
+    yae::load(summary, sources, buffer_duration, discont_tolerance);
 
   if (!output_path.empty())
   {
-    if (serial_demuxer->empty())
+    if (!demuxer)
     {
-      av_log(NULL, AV_LOG_ERROR, "failed to open any input files, done.");
       return 1;
     }
 
-    yae::DemuxerSummary summary;
-    serial_demuxer->summarize(summary, discont_tolerance);
-
-    // show the summary:
-    std::cout << "\nserial:\n" << summary << std::endl;
-
     if (!save_keyframes)
     {
-      serial_demuxer->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
-      int err = yae::remux(output_path.c_str(), summary, *serial_demuxer);
+      demuxer->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+      int err = yae::remux(output_path.c_str(), summary, *demuxer);
       return err;
     }
 
     // save the keyframes:
-    yae::demux(serial_demuxer, summary, output_path, save_keyframes);
+    yae::demux(demuxer, summary, output_path, save_keyframes);
   }
 
-  yae::mainWindow = new yae::MainWindow(serial_demuxer);
+  yae::mainWindow = new yae::MainWindow(demuxer);
   yae::mainWindow->show();
 
   // initialize the player widget canvas, connect additional signals/slots:

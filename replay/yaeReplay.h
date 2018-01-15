@@ -25,8 +25,9 @@ namespace yae
   //----------------------------------------------------------------
   // load
   //
-  boost::shared_ptr<SerialDemuxer>
-  load(const std::list<std::string> & sources,
+  TDemuxerInterfacePtr
+  load(DemuxerSummary & summary,
+       const std::list<std::string> & sources,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
        const double discont_tolerance = 0.017);
