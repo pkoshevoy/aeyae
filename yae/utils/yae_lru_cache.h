@@ -129,11 +129,14 @@ namespace yae
     //
     typedef bool(*TFactoryCallback)(void *, const TKey &, TValue &);
 
-    // Return an existing unreferenced cached value, or create
-    // a new cached value on demand via the supplied callback:
+    //----------------------------------------------------------------
+    // get
+    //
+    // Reuse an existing unreferenced cached value, or create
+    // a new cached value on demand via the supplied callback.
     //
     // NOTE: if the cache is full this will wait for an
-    // existing referenced instance to become unrefernced:
+    // existing referenced instance to become unreferenced.
     //
     TRefPtr
     get(const TKey & key, TFactoryCallback assign = NULL, void * ctx = NULL)
