@@ -1438,7 +1438,7 @@ namespace yae
   //----------------------------------------------------------------
   // TBaseCanvas::TBaseCanvas
   //
-  TBaseCanvas::TBaseCanvas():
+  TBaseCanvas::TBaseCanvas(const ShaderPrograms & shaders):
     dar_(0.0),
     darCropped_(0.0),
     skipColorConverter_(false),
@@ -1452,6 +1452,20 @@ namespace yae
     };
 
     memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
+
+    typedef std::map<TPixelFormatId, const TFragmentShaderProgram *> TProgs;
+    for (TProgs::const_iterator i = shaders.lut_.begin();
+         i != shaders.lut_.end(); ++i)
+    {
+      const TPixelFormatId & format = i->first;
+      const TFragmentShaderProgram * program = i->second;
+      shaders_[format] = TFragmentShader(program, format);
+    }
+
+    if (shaders.builtin_.handle_)
+    {
+      builtinShader_.program_ = &(shaders.builtin_);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1459,8 +1473,8 @@ namespace yae
   //
   TBaseCanvas::~TBaseCanvas()
   {
-    destroyFragmentShaders();
-    builtinShaderProgram_.destroy();
+    shader_ = NULL;
+    shaders_.clear();
   }
 
   //----------------------------------------------------------------
@@ -1762,67 +1776,61 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TBaseCanvas::destroyFragmentShaders
+  // ShaderPrograms::~ShaderPrograms
   //
-  void
-  TBaseCanvas::destroyFragmentShaders()
+  ShaderPrograms::~ShaderPrograms()
   {
-    shader_ = NULL;
-    shaders_.clear();
-
-    while (!shaderPrograms_.empty())
+    while (!programs_.empty())
     {
-      TFragmentShaderProgram & program = shaderPrograms_.front();
-      program.destroy();
-      shaderPrograms_.pop_front();
+      programs_.front().destroy();
+      programs_.pop_front();
     }
+
+    builtin_.destroy();
   }
 
   //----------------------------------------------------------------
-  // TBaseCanvas::createBuiltinFragmentShader
+  // ShaderPrograms::createBuiltinShaderProgram
   //
   bool
-  TBaseCanvas::createBuiltinFragmentShader(const char * code)
+  ShaderPrograms::createBuiltinShaderProgram(const char * code)
   {
     YAE_OPENGL_HERE();
     YAE_OGL_11_HERE();
 
     bool ok = false;
-    builtinShaderProgram_.destroy();
-    builtinShaderProgram_.code_ = code;
+    builtin_.destroy();
+    builtin_.code_ = code;
 
     YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
 
-    YAE_OPENGL(glGenProgramsARB(1, &builtinShaderProgram_.handle_));
+    YAE_OPENGL(glGenProgramsARB(1, &builtin_.handle_));
     YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
-                                builtinShaderProgram_.handle_));
+                                builtin_.handle_));
 
     if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
-                                  builtinShaderProgram_.code_))
+                                  builtin_.code_))
     {
-      builtinShader_.program_ = &builtinShaderProgram_;
       ok = true;
     }
     else
     {
-      YAE_OPENGL(glDeleteProgramsARB(1, &builtinShaderProgram_.handle_));
-      builtinShaderProgram_.handle_ = 0;
-      builtinShader_.program_ = NULL;
+      YAE_OPENGL(glDeleteProgramsARB(1, &builtin_.handle_));
+      builtin_.handle_ = 0;
     }
     YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     return ok;
   }
 
   //----------------------------------------------------------------
-  // TBaseCanvas::createFragmentShadersFor
+  // ShaderPrograms::createShaderProgramsFor
   //
   bool
-  TBaseCanvas::createFragmentShadersFor(const TPixelFormatId * formats,
-                                        const std::size_t numFormats,
-                                        const char * code)
+  ShaderPrograms::createShaderProgramsFor(const TPixelFormatId * formats,
+                                          const std::size_t numFormats,
+                                          const char * code)
   {
     YAE_OPENGL_HERE();
-
     YAE_OGL_11_HERE();
 
     bool ok = false;
@@ -1835,15 +1843,13 @@ namespace yae
     if (load_arb_program_natively(GL_FRAGMENT_PROGRAM_ARB,
                                   program.code_))
     {
-      shaderPrograms_.push_back(program);
-
-      const TFragmentShaderProgram *
-        shaderProgram = &(shaderPrograms_.back());
+      programs_.push_back(program);
+      const TFragmentShaderProgram * p = &(programs_.back());
 
       for (std::size_t i = 0; i < numFormats; i++)
       {
         TPixelFormatId format = formats[i];
-        shaders_[format] = TFragmentShader(shaderProgram, format);
+        lut_[format] = p;
       }
 
       ok = true;
@@ -1886,16 +1892,53 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TModernCanvas::createFragmentShaders
+  // fragment_shaders_supported
   //
-  void
-  TModernCanvas::createFragmentShaders()
+  static bool
+  fragment_shaders_supported()
   {
-    if (!shaderPrograms_.empty())
+    if (yae_is_opengl_extension_supported("GL_ARB_fragment_program"))
     {
-      // avoid re-creating duplicate shaders:
-      YAE_ASSERT(false);
-      return;
+      GLint numTextureUnits = 0;
+      YAE_OGL_11(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,
+                               &numTextureUnits));
+      if (numTextureUnits > 2)
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // TModernCanvas::TModernCanvas
+  //
+  TModernCanvas::TModernCanvas():
+    TBaseCanvas(TModernCanvas::shaders())
+  {}
+
+  //----------------------------------------------------------------
+  // TModernCanvas::createShaderPrograms
+  //
+  const ShaderPrograms &
+  TModernCanvas::shaders()
+  {
+    static boost::mutex mutex;
+    boost::lock_guard<boost::mutex> lock(mutex);
+
+    static ShaderPrograms s;
+    static bool initialized = false;
+
+    if (initialized)
+    {
+      return s;
+    }
+
+    if (!fragment_shaders_supported())
+    {
+      initialized = true;
+      return s;
     }
 
     // for YUV formats:
@@ -1912,16 +1955,16 @@ namespace yae
       kPixelFormatYUVJ440P
     };
 
-    createFragmentShadersFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
-                             yae_gl_arb_yuv_to_rgb);
+    s.createShaderProgramsFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
+                              yae_gl_arb_yuv_to_rgb);
 
     // for YUVA formats:
     static const TPixelFormatId yuva[] = {
       kPixelFormatYUVA420P
     };
 
-    createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
-                             yae_gl_arb_yuva_to_rgba);
+    s.createShaderProgramsFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
+                              yae_gl_arb_yuva_to_rgba);
 
     // for YUVP10 formats:
     static const TPixelFormatId yuv_p10[] = {
@@ -1930,21 +1973,21 @@ namespace yae
       kPixelFormatYUV444P10
     };
 
-    createFragmentShadersFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
-                             yae_gl_arb_yuv_p10_to_rgb);
+    s.createShaderProgramsFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
+                              yae_gl_arb_yuv_p10_to_rgb);
 
     // for YUYV formats:
     static const TPixelFormatId yuyv[] = {
       kPixelFormatYUYV422
     };
 
-    if (!createFragmentShadersFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
-                                  yae_gl_arb_yuyv_to_rgb_antialias))
+    if (!s.createShaderProgramsFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
+                                   yae_gl_arb_yuyv_to_rgb_antialias))
     {
       // perhaps the anti-aliased program was too much for this GPU,
       // try one witnout anti-aliasing:
-      createFragmentShadersFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
-                               yae_gl_arb_yuyv_to_rgb);
+      s.createShaderProgramsFor(yuyv, sizeof(yuyv) / sizeof(yuyv[0]),
+                                yae_gl_arb_yuyv_to_rgb);
     }
 
     // for UYVY formats:
@@ -1952,13 +1995,13 @@ namespace yae
       kPixelFormatUYVY422
     };
 
-    if (!createFragmentShadersFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
-                                  yae_gl_arb_uyvy_to_rgb_antialias))
+    if (!s.createShaderProgramsFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
+                                   yae_gl_arb_uyvy_to_rgb_antialias))
     {
       // perhaps the anti-aliased program was too much for this GPU,
       // try one witnout anti-aliasing:
-      createFragmentShadersFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
-                               yae_gl_arb_uyvy_to_rgb);
+      s.createShaderProgramsFor(uyvy, sizeof(uyvy) / sizeof(uyvy[0]),
+                                yae_gl_arb_uyvy_to_rgb);
     }
 
     // for NV12 formats:
@@ -1966,19 +2009,22 @@ namespace yae
       kPixelFormatNV12
     };
 
-    createFragmentShadersFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
-                             yae_gl_arb_nv12_to_rgb);
+    s.createShaderProgramsFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
+                              yae_gl_arb_nv12_to_rgb);
 
     // for NV21 formats:
     static const TPixelFormatId nv21[] = {
       kPixelFormatNV21
     };
 
-    createFragmentShadersFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
-                             yae_gl_arb_nv21_to_rgb);
+    s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
+                              yae_gl_arb_nv21_to_rgb);
 
     // for natively supported formats:
-    createBuiltinFragmentShader(yae_gl_arb_passthrough);
+    s.createBuiltinShaderProgram(yae_gl_arb_passthrough);
+
+    initialized = true;
+    return s;
   }
 
   //----------------------------------------------------------------
@@ -2321,22 +2367,32 @@ namespace yae
   // TLegacyCanvas::TLegacyCanvas
   //
   TLegacyCanvas::TLegacyCanvas():
-    TBaseCanvas(),
+    TBaseCanvas(TLegacyCanvas::shaders()),
     w_(0),
     h_(0)
   {}
 
   //----------------------------------------------------------------
-  // TLegacyCanvas::createFragmentShaders
+  // TLegacyCanvas::shaders
   //
-  void
-  TLegacyCanvas::createFragmentShaders()
+  const ShaderPrograms &
+  TLegacyCanvas::shaders()
   {
-    if (!shaderPrograms_.empty())
+    static boost::mutex mutex;
+    boost::lock_guard<boost::mutex> lock(mutex);
+
+    static ShaderPrograms s;
+    static bool initialized = false;
+
+    if (initialized)
     {
-      // avoid re-creating duplicate shaders:
-      YAE_ASSERT(false);
-      return;
+      return s;
+    }
+
+    if (!fragment_shaders_supported())
+    {
+      initialized = true;
+      return s;
     }
 
     // for YUV formats:
@@ -2353,35 +2409,38 @@ namespace yae
       kPixelFormatYUVJ440P
     };
 
-    createFragmentShadersFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
-                             yae_gl_arb_yuv_to_rgb_2d);
+    s.createShaderProgramsFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
+                              yae_gl_arb_yuv_to_rgb_2d);
 
     // for YUVA formats:
     static const TPixelFormatId yuva[] = {
       kPixelFormatYUVA420P
     };
 
-    createFragmentShadersFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
-                             yae_gl_arb_yuva_to_rgba_2d);
+    s.createShaderProgramsFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
+                              yae_gl_arb_yuva_to_rgba_2d);
 
     // for NV12 formats:
     static const TPixelFormatId nv12[] = {
       kPixelFormatNV12
     };
 
-    createFragmentShadersFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
-                             yae_gl_arb_nv12_to_rgb_2d);
+    s.createShaderProgramsFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
+                              yae_gl_arb_nv12_to_rgb_2d);
 
     // for NV21 formats:
     static const TPixelFormatId nv21[] = {
       kPixelFormatNV21
     };
 
-    createFragmentShadersFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
-                             yae_gl_arb_nv21_to_rgb_2d);
+    s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
+                              yae_gl_arb_nv21_to_rgb_2d);
 
     // for natively supported formats:
-    createBuiltinFragmentShader(yae_gl_arb_passthrough_2d);
+    s.createBuiltinShaderProgram(yae_gl_arb_passthrough_2d);
+
+    initialized = true;
+    return s;
   }
 
   //----------------------------------------------------------------
@@ -2981,23 +3040,6 @@ namespace yae
         !virtualBoxVM)
     {
       modern_ = new TModernCanvas();
-    }
-
-    if (yae_is_opengl_extension_supported("GL_ARB_fragment_program"))
-    {
-      GLint numTextureUnits = 0;
-      YAE_OGL_11(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,
-                               &numTextureUnits));
-
-      if (numTextureUnits > 2)
-      {
-        legacy_->createFragmentShaders();
-
-        if (modern_)
-        {
-          modern_->createFragmentShaders();
-        }
-      }
     }
 
     renderer_ = legacy_;

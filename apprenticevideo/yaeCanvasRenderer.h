@@ -360,6 +360,23 @@ namespace yae
     GLuint handle_;
   };
 
+  //----------------------------------------------------------------
+  // ShaderPrograms
+  //
+  struct YAE_API ShaderPrograms
+  {
+    ~ShaderPrograms();
+
+    bool createBuiltinShaderProgram(const char * code);
+    bool createShaderProgramsFor(const TPixelFormatId * formats,
+                                 const std::size_t numFormats,
+                                 const char * code);
+
+    TFragmentShaderProgram builtin_;
+    std::list<TFragmentShaderProgram> programs_;
+    std::map<TPixelFormatId, const TFragmentShaderProgram *> lut_;
+  };
+
 
   //----------------------------------------------------------------
   // TFragmentShader
@@ -396,10 +413,8 @@ namespace yae
   //
   struct TBaseCanvas
   {
-    TBaseCanvas();
+    TBaseCanvas(const ShaderPrograms & shaders);
     virtual ~TBaseCanvas();
-
-    virtual void createFragmentShaders() = 0;
 
     virtual void clear(IOpenGLContext & context) = 0;
 
@@ -443,17 +458,6 @@ namespace yae
     findSomeShaderFor(TPixelFormatId format) const;
 
     // helper:
-    void destroyFragmentShaders();
-
-    // helper:
-    bool createBuiltinFragmentShader(const char * code);
-
-    // helper:
-    bool createFragmentShadersFor(const TPixelFormatId * formats,
-                                  const std::size_t numFormats,
-                                  const char * code);
-
-    // helper:
     bool setFrame(const TVideoFramePtr & frame,
                   bool & colorSpaceOrRangeChanged);
 
@@ -465,10 +469,7 @@ namespace yae
     bool skipColorConverter_;
     bool verticalScalingEnabled_;
 
-    TFragmentShaderProgram builtinShaderProgram_;
     TFragmentShader builtinShader_;
-
-    std::list<TFragmentShaderProgram> shaderPrograms_;
     std::map<TPixelFormatId, TFragmentShader> shaders_;
 
     // shader selected for current frame:
@@ -484,8 +485,10 @@ namespace yae
   //
   struct TModernCanvas : public TBaseCanvas
   {
-    // virtual:
-    void createFragmentShaders();
+    TModernCanvas();
+
+    // singleton:
+    static const ShaderPrograms & shaders();
 
     // virtual:
     void clear(IOpenGLContext & context);
@@ -553,8 +556,8 @@ namespace yae
   {
     TLegacyCanvas();
 
-    // virtual:
-    void createFragmentShaders();
+    // singleton:
+    static const ShaderPrograms & shaders();
 
     // virtual:
     void clear(IOpenGLContext & context);
