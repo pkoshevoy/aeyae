@@ -443,6 +443,8 @@ namespace yae
     inline double overrideDisplayAspectRatio() const
     { return dar_; }
 
+    double displayAspectRatioFor(int cameraRotation) const;
+
     void cropFrame(double darCropped);
     void cropFrame(const TCropFrame & crop);
 

@@ -135,6 +135,8 @@ namespace yae
     override_.visibleWidth_ = 0;
     override_.visibleHeight_ = 0;
     override_.pixelAspectRatio_ = 0.0;
+    overrideSourcePAR_ = 0.0;
+
     return true;
   }
 
@@ -216,7 +218,14 @@ namespace yae
 
     // frame size may have changed, so update output traits accordingly:
     output_ = override_;
-    output_.pixelAspectRatio_ = native_.pixelAspectRatio_;
+
+    double sourcePixelAspectRatio =
+      overrideSourcePAR_ ? overrideSourcePAR_ :  native_.pixelAspectRatio_;
+
+    double overridePixelAspectRatio =
+      override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
+
+    output_.pixelAspectRatio_ = sourcePixelAspectRatio;
 
     int transposeAngle =
       (override_.cameraRotation_ - native_.cameraRotation_) % 180;
@@ -228,7 +237,7 @@ namespace yae
       // NOTE: the override provides a scale-to-fit frame envelope,
       // not the actual frame size:
 
-      int src_w = native_.visibleWidth_ * native_.pixelAspectRatio_ + 0.5;
+      int src_w = native_.visibleWidth_ * sourcePixelAspectRatio + 0.5;
       int src_h = native_.visibleHeight_;
 
       int envelope_w =
@@ -276,14 +285,14 @@ namespace yae
       output_.visibleHeight_ = native_.visibleHeight_;
     }
 
-    if (override_.pixelAspectRatio_ > 0.0 &&
-        override_.pixelAspectRatio_ != output_.pixelAspectRatio_)
+    if (overridePixelAspectRatio > 0.0 &&
+        overridePixelAspectRatio != output_.pixelAspectRatio_)
     {
       output_.visibleWidth_ = int(output_.visibleWidth_ *
                                   output_.pixelAspectRatio_ /
-                                  override_.pixelAspectRatio_ + 0.5);
+                                  overridePixelAspectRatio + 0.5);
       output_.encodedWidth_ = output_.visibleWidth_;
-      output_.pixelAspectRatio_ = override_.pixelAspectRatio_;
+      output_.pixelAspectRatio_ = overridePixelAspectRatio;
     }
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
@@ -457,6 +466,12 @@ namespace yae
       }
 #endif
 
+      double sourcePixelAspectRatio =
+        overrideSourcePAR_ ? overrideSourcePAR_ :  native_.pixelAspectRatio_;
+
+      double overridePixelAspectRatio =
+        override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
+
       enum AVPixelFormat ffmpegPixelFormat =
         yae_to_ffmpeg(output_.pixelFormat_);
 
@@ -465,8 +480,8 @@ namespace yae
 
       bool outputNeedsScale =
         (override_.visibleWidth_ || override_.visibleHeight_ ||
-         (override_.pixelAspectRatio_ > 0.0 &&
-          override_.pixelAspectRatio_ != native_.pixelAspectRatio_)) &&
+         (overridePixelAspectRatio > 0.0 &&
+          overridePixelAspectRatio != sourcePixelAspectRatio)) &&
         (native_.visibleWidth_ != output_.visibleWidth_ ||
          native_.visibleHeight_ != output_.visibleHeight_);
 
@@ -565,7 +580,7 @@ namespace yae
                             "transpose=dir=cclock");
       }
 
-      if (override_.pixelAspectRatio_)
+      if (overridePixelAspectRatio)
       {
         add_to(filters) << "setsar=sar=" << output_.pixelAspectRatio_;
       }
@@ -1016,7 +1031,9 @@ namespace yae
   // VideoTrack::setTraitsOverride
   //
   bool
-  VideoTrack::setTraitsOverride(const VideoTraits & traits, bool deint)
+  VideoTrack::setTraitsOverride(const VideoTraits & traits,
+                                bool deint,
+                                double sourcePixelAspectRatio)
   {
     bool sameTraits = compare<VideoTraits>(override_, traits) == 0;
     if (sameTraits && deinterlace_ == deint)
@@ -1042,6 +1059,7 @@ namespace yae
 
     override_ = traits;
     deinterlace_ = deint;
+    overrideSourcePAR_ = sourcePixelAspectRatio;
 
     if (alreadyDecoding && !sameTraits)
     {

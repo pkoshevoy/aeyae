@@ -248,7 +248,7 @@ namespace yae
         VideoTrackPtr decoder_ptr =
           boost::dynamic_pointer_cast<VideoTrack, Track>(track_ptr);
 
-        if (!save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 1))
+        if (!save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 0.0, 1.0))
         {
           break;
         }

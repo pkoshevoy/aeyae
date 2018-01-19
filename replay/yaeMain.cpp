@@ -263,6 +263,7 @@ mainMayThrowException(int argc, char ** argv)
 
     // save the keyframes:
     yae::demux(demuxer, summary, output_path, save_keyframes);
+    return 0;
   }
 
   yae::mainWindow = new yae::MainWindow(demuxer);

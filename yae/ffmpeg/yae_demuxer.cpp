@@ -2628,7 +2628,8 @@ namespace yae
                 const TPacketPtr & packet_ptr,
                 unsigned int envelope_w,
                 unsigned int envelope_h,
-                double pixel_aspect_ratio)
+                double source_dar,
+                double output_par)
   {
     if (!(decoder_ptr && packet_ptr))
     {
@@ -2663,15 +2664,23 @@ namespace yae
       VideoTraits traits;
       decoder.getTraits(traits);
 
+      double native_dar =
+        double(traits.visibleWidth_) / double(traits.visibleHeight_);
+
+      double source_par =
+        source_dar ? (source_dar / native_dar) : 0.0;
+
       traits.pixelFormat_ = ffmpeg_to_yae(codec->pix_fmts[0]);
       traits.offsetTop_ = 0;
       traits.offsetLeft_ = 0;
       traits.visibleWidth_ = envelope_w;
       traits.visibleHeight_ = envelope_h;
-      traits.pixelAspectRatio_ = pixel_aspect_ratio;
+      traits.pixelAspectRatio_ = output_par;
       traits.cameraRotation_ = 0;
       traits.isUpsideDown_ = false;
-      decoder.setTraitsOverride(traits);
+
+      bool deint = false;
+      decoder.setTraitsOverride(traits, deint, source_par);
 
       const pixelFormat::Traits * ptts = NULL;
       if (!decoder.getTraitsOverride(traits) ||

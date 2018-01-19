@@ -91,7 +91,10 @@ namespace yae
     bool getTraits(VideoTraits & traits) const;
 
     // use this for video frame conversion (pixel format and size)
-    bool setTraitsOverride(const VideoTraits & traits, bool deint);
+    bool setTraitsOverride(const VideoTraits & traits,
+                           bool deint,
+                           double overrideSourcePAR = 0.0);
+
     bool getTraitsOverride(VideoTraits & traits) const;
 
     inline bool setTraitsOverride(const VideoTraits & traits)
@@ -125,6 +128,9 @@ namespace yae
     bool skipNonReferenceFrames_;
 
     bool deinterlace_;
+
+    // override input (native) pixel aspect ratio (in case it's wrong):
+    double overrideSourcePAR_;
 
     TVideoFrameQueue frameQueue_;
     VideoTraits override_;

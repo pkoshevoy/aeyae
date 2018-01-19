@@ -603,7 +603,8 @@ namespace yae
                 const TPacketPtr & packet_ptr,
                 unsigned int envelope_w = 256,
                 unsigned int envelope_h = 256,
-                double pixel_aspect_ratio = 1.0);
+                double source_dar = 0.0,
+                double output_par = 1.0);
 
 }
 
