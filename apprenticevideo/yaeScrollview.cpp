@@ -6,9 +6,6 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt library:
-#include <QImage>
-
 // local interfaces:
 #include "yaeCanvasRenderer.h"
 #include "yaeScrollview.h"
