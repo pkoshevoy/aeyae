@@ -214,55 +214,6 @@ namespace yae
     std::string style_;
   };
 
-
-  //----------------------------------------------------------------
-  // ContrastColor
-  //
-  struct ContrastColor : public TColorExpr
-  {
-    ContrastColor(const Item & item, Property prop, double scaleAlpha = 0.0):
-      scaleAlpha_(scaleAlpha),
-      item_(item),
-      prop_(prop)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      Color c0;
-      item_.get(prop_, c0);
-      result = c0.bw_contrast();
-      double a = scaleAlpha_ * double(result.a());
-      result.set_a((unsigned char)(std::min(255.0, std::max(0.0, a))));
-    }
-
-    double scaleAlpha_;
-    const Item & item_;
-    Property prop_;
-  };
-
-  //----------------------------------------------------------------
-  // PremultipliedTransparent
-  //
-  struct PremultipliedTransparent : public TColorExpr
-  {
-    PremultipliedTransparent(const Item & item, Property prop):
-      item_(item),
-      prop_(prop)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      Color c0;
-      item_.get(prop_, c0);
-      result = c0.premultiplied_transparent();
-    }
-
-    const Item & item_;
-    Property prop_;
-  };
-
   //----------------------------------------------------------------
   // GetScrollviewWidth
   //
