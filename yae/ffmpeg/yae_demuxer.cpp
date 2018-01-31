@@ -2169,7 +2169,22 @@ namespace yae
       Timeline & timeline = programs[pkt.program_];
 
       TTime dts;
-      bool ok = get_dts(dts, src, packet) || get_pts(dts, src, packet);
+      bool dts_ok = get_dts(dts, src, packet);
+
+      TTime pts;
+      bool pts_ok = get_pts(pts, src, packet);
+
+      if (!dts_ok)
+      {
+        dts = pts;
+      }
+
+      if (!pts_ok)
+      {
+        pts = dts;
+      }
+
+      bool ok = dts_ok || pts_ok;
       YAE_ASSERT(ok);
 
       if (ok)
@@ -2180,7 +2195,7 @@ namespace yae
 
           if ((packet.flags & AV_PKT_FLAG_KEY))
           {
-            timeline.add_keyframe(pkt.trackId_, dts);
+            timeline.add_keyframe(pkt.trackId_, dts, pts);
           }
         }
       }
@@ -2311,7 +2326,10 @@ namespace yae
       }
 
       AVStream * dst = yae::get(lut, track_id);
-      setDictionary(dst->metadata, metadata);
+      if (dst)
+      {
+        setDictionary(dst->metadata, metadata);
+      }
     }
 
     // open the muxer:
@@ -2409,7 +2427,7 @@ namespace yae
       std::vector<TTime> & offset = offset_[prog_id];
 
       TTime src_dt = timeline.bbox_.t1_ - timeline.bbox_.t0_;
-      TTime src_t0 = t1.empty() ? TTime(0, src_dt.base_) : t1.back();
+      TTime src_t0 = t1.empty() ? timeline.bbox_.t0_ : t1.back();
       TTime src_t1 = src_t0 + src_dt;
       TTime src_offset = timeline.bbox_.t0_ - src_t0;
 

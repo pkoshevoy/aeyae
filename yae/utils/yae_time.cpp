@@ -480,10 +480,12 @@ namespace yae
   // Timeline::add_keyframe
   //
   void
-  Timeline::add_keyframe(const std::string & track_id, const TTime & dts)
+  Timeline::add_keyframe(const std::string & track_id,
+                         const TTime & dts,
+                         const TTime & pts)
   {
-    std::set<TTime> & track = keyframes_[track_id];
-    track.insert(dts);
+    TTimeMap & track = keyframes_[track_id];
+    track[dts] = pts;
   }
 
   //----------------------------------------------------------------
@@ -492,16 +494,18 @@ namespace yae
   Timeline &
   Timeline::operator += (const TTime & offset)
   {
-    for (std::map<std::string, std::set<TTime> >::iterator
+    for (std::map<std::string, TTimeMap>::iterator
            i = keyframes_.begin(); i != keyframes_.end(); ++i)
     {
-      std::set<TTime> & keyframes = i->second;
-      std::set<TTime> tmp;
+      TTimeMap & keyframes = i->second;
+      TTimeMap tmp;
 
-      for (std::set<TTime>::const_iterator j =
+      for (TTimeMap::const_iterator j =
              keyframes.begin(); j != keyframes.end(); ++j)
       {
-        tmp.insert(*j + offset);
+        const TTime & dts = j->first;
+        const TTime & pts = j->second;
+        tmp[dts + offset] = pts + offset;
       }
 
       keyframes.swap(tmp);
@@ -529,18 +533,19 @@ namespace yae
                    const TTime & offset,
                    double tolerance)
   {
-    for (std::map<std::string, std::set<TTime> >::const_iterator i =
+    for (std::map<std::string, TTimeMap>::const_iterator i =
            timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
     {
       const std::string & track_id = i->first;
-      const std::set<TTime> & keyframes = i->second;
-      std::set<TTime> & track = keyframes_[track_id];
+      const TTimeMap & keyframes = i->second;
+      TTimeMap & track = keyframes_[track_id];
 
-        for (std::set<TTime>::const_iterator
+        for (TTimeMap::const_iterator
              j = keyframes.begin(); j != keyframes.end(); ++j)
       {
-        TTime keyframe = (*j + offset);
-        track.insert(keyframe);
+        const TTime & dts = j->first;
+        const TTime & pts = j->second;
+        track[dts + offset] = pts + offset;
       }
     }
 
@@ -687,18 +692,18 @@ namespace yae
       oss << '\n';
     }
 
-    for (std::map<std::string, std::set<TTime> >::const_iterator i =
+    for (std::map<std::string, TTimeMap>::const_iterator i =
            timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
     {
       const std::string & track_id = i->first;
-      const std::set<TTime> & keyframes = i->second;
+      const TTimeMap & keyframes = i->second;
       oss << "keyframes " << track_id << ':';
 
-      for (std::set<TTime>::const_iterator j =
+      for (TTimeMap::const_iterator j =
              keyframes.begin(); j != keyframes.end(); ++j)
       {
-        const TTime & t = *j;
-        oss << ' ' << t;
+        const TTime & pts = j->second;
+        oss << ' ' << pts;
       }
 
       oss << '\n';

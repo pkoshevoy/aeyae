@@ -256,7 +256,9 @@ mainMayThrowException(int argc, char ** argv)
 
     if (!save_keyframes)
     {
-      demuxer->seek(AVSEEK_FLAG_BACKWARD, yae::TTime(0, 1));
+      demuxer->seek(AVSEEK_FLAG_BACKWARD,
+                    summary.rewind_.second,
+                    summary.rewind_.first);
       int err = yae::remux(output_path.c_str(), summary, *demuxer);
       return err;
     }

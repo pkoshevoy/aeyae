@@ -192,13 +192,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TTimeMap
+  //
+  typedef std::map<TTime, TTime> TTimeMap;
+
+  //----------------------------------------------------------------
   // Timeline
   //
   struct YAE_API Timeline
   {
     typedef std::map<std::string, std::list<Timespan> > TTracks;
 
-    void add_keyframe(const std::string & track_id, const TTime & dts);
+    void add_keyframe(const std::string & track_id,
+                      const TTime & dts,
+                      const TTime & pts);
 
     // translate this timeline by a given offset:
     Timeline & operator += (const TTime & offset);
@@ -228,8 +235,8 @@ namespace yae
     // time intervals for individual tracks:
     TTracks tracks_;
 
-    // time stamps of keyframes, per track:
-    std::map<std::string, std::set<TTime> > keyframes_;
+    // time stamps of keyframes, per track, where key = dts and value = pts:
+    std::map<std::string, TTimeMap> keyframes_;
   };
 
   //----------------------------------------------------------------
