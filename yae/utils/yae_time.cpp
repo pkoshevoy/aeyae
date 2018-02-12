@@ -444,7 +444,7 @@ namespace yae
   //----------------------------------------------------------------
   // merge
   //
-  static void
+  void
   merge(std::list<Timespan> & track, Timespan span, double tolerance)
   {
     std::list<Timespan> tmp;
@@ -475,103 +475,14 @@ namespace yae
     track.splice(track.end(), tmp);
   }
 
-
   //----------------------------------------------------------------
-  // Timeline::add_keyframe
-  //
-  void
-  Timeline::add_keyframe(const std::string & track_id,
-                         const TTime & dts,
-                         const TTime & pts)
-  {
-    TTimeMap & track = keyframes_[track_id];
-    track[dts] = pts;
-  }
-
-  //----------------------------------------------------------------
-  // Timeline::operator +=
-  //
-  Timeline &
-  Timeline::operator += (const TTime & offset)
-  {
-    for (std::map<std::string, TTimeMap>::iterator
-           i = keyframes_.begin(); i != keyframes_.end(); ++i)
-    {
-      TTimeMap & keyframes = i->second;
-      TTimeMap tmp;
-
-      for (TTimeMap::const_iterator j =
-             keyframes.begin(); j != keyframes.end(); ++j)
-      {
-        const TTime & dts = j->first;
-        const TTime & pts = j->second;
-        tmp[dts + offset] = pts + offset;
-      }
-
-      keyframes.swap(tmp);
-    }
-
-    for (TTracks::iterator i = tracks_.begin(); i != tracks_.end(); ++i)
-    {
-      std::list<Timespan> & tt = i->second;
-      for (std::list<Timespan>::iterator j = tt.begin(); j != tt.end(); ++j)
-      {
-        Timespan & t = *j;
-        t += offset;
-      }
-    }
-
-    bbox_ += offset;
-    return *this;
-  }
-
-  //----------------------------------------------------------------
-  // Timeline::extend
-  //
-  void
-  Timeline::extend(const Timeline & timeline,
-                   const TTime & offset,
-                   double tolerance)
-  {
-    for (std::map<std::string, TTimeMap>::const_iterator i =
-           timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
-    {
-      const std::string & track_id = i->first;
-      const TTimeMap & keyframes = i->second;
-      TTimeMap & track = keyframes_[track_id];
-
-        for (TTimeMap::const_iterator
-             j = keyframes.begin(); j != keyframes.end(); ++j)
-      {
-        const TTime & dts = j->first;
-        const TTime & pts = j->second;
-        track[dts + offset] = pts + offset;
-      }
-    }
-
-    for (TTracks::const_iterator i =
-           timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
-    {
-      const std::string & track_id = i->first;
-      const std::list<Timespan> & track = i->second;
-
-      for (std::list<Timespan>::const_iterator
-             j = track.begin(); j != track.end(); ++j)
-      {
-        Timespan s = (*j + offset);
-        extend(track_id, s, tolerance, false);
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Timeline::extend_track
+  // extend
   //
   bool
-  Timeline::extend_track(const std::string & track_id,
-                         const Timespan & s,
-                         double tolerance,
-                         bool fail_on_non_monotonically_increasing_time)
+  extend(std::list<Timespan> & track,
+         const Timespan & s,
+         double tolerance,
+         bool fail_on_non_monotonically_increasing_time)
   {
     if (s.empty())
     {
@@ -579,7 +490,6 @@ namespace yae
       return false;
     }
 
-    std::list<Timespan> & track = tracks_[track_id];
     if (track.empty())
     {
       track.push_back(s);
@@ -611,38 +521,228 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Timeline::extend
+  // bbox
   //
-  bool
-  Timeline::extend(const std::string & track_id,
-                   const Timespan & s,
-                   double tolerance,
-                   bool fail_on_non_monotonically_increasing_time)
+  Timespan
+  bbox(const std::list<Timespan> & track)
   {
-    if (!extend_track(track_id, s, tolerance,
-                      fail_on_non_monotonically_increasing_time))
-    {
-      return false;
-    }
-
-    if (bbox_.t0_ > s.t0_)
-    {
-      bbox_.t0_ = s.t0_;
-    }
-
-    if (bbox_.t1_ < s.t1_)
-    {
-      bbox_.t1_ = s.t1_;
-    }
-
-    return true;
+    const Timespan & head = track.front();
+    const Timespan & tail = track.back();
+    return Timespan(head.t0_, tail.t1_);
   }
 
   //----------------------------------------------------------------
-  // Timeline::bbox
+  // expand_bbox
+  //
+  void
+  expand_bbox(Timespan & bbox, const Timespan & s)
+  {
+    if (bbox.t0_ > s.t0_)
+    {
+      bbox.t0_ = s.t0_;
+    }
+
+    if (bbox.t1_ < s.t1_)
+    {
+      bbox.t1_ = s.t1_;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::add_frame
+  //
+  void
+  Timeline::add_frame(const std::string & track_id,
+                      bool keyframe,
+                      const TTime & dts,
+                      const TTime & pts,
+                      const TTime & dur,
+                      double tolerance)
+  {
+    Track & track = tracks_[track_id];
+
+    if (keyframe)
+    {
+      track.keyframes_[dts] = pts;
+    }
+
+    track.dts_.push_back(dts);
+    track.pts_.push_back(pts);
+    track.dur_.push_back(dur);
+
+    Timespan s(dts, dts + dur);
+    if (!yae::extend(track.dts_span_, s, tolerance))
+    {
+      // non-monotonically increasing DTS:
+      YAE_ASSERT(false);
+
+      if (!yae::extend(track.dts_span_, s, tolerance, false))
+      {
+        YAE_ASSERT(false);
+      }
+    }
+
+    expand_bbox(bbox_dts_, s);
+
+    // PTS may be non-monotonically increasing due to B-frames, allow it:
+    Timespan t(pts, pts + dur);
+    if (!yae::extend(track.pts_span_, t, tolerance, false))
+    {
+      YAE_ASSERT(false);
+    }
+
+    expand_bbox(bbox_pts_, t);
+  }
+
+  //----------------------------------------------------------------
+  // translate
+  //
+  static void
+  translate(TTimeMap & keyframes, const TTime & offset)
+  {
+    TTimeMap tmp;
+    for (TTimeMap::const_iterator j =
+           keyframes.begin(); j != keyframes.end(); ++j)
+    {
+      const TTime & dts = j->first;
+      const TTime & pts = j->second;
+      tmp[dts + offset] = pts + offset;
+    }
+
+    keyframes.swap(tmp);
+  }
+
+  //----------------------------------------------------------------
+  // translate
+  //
+  static void
+  translate(std::list<Timespan> & tt, const TTime & offset)
+  {
+    for (std::list<Timespan>::iterator j = tt.begin(); j != tt.end(); ++j)
+    {
+      Timespan & t = *j;
+      t += offset;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // translate
+  //
+  static void
+  translate(std::vector<TTime> & tt, const TTime & offset)
+  {
+    for (std::vector<TTime>::iterator i = tt.begin(); i != tt.end(); ++i)
+    {
+      TTime & t = *i;
+      t += offset;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::operator +=
+  //
+  Timeline &
+  Timeline::operator += (const TTime & offset)
+  {
+    for (std::map<std::string, Track>::iterator
+           i = tracks_.begin(); i != tracks_.end(); ++i)
+    {
+      Track & track = i->second;
+      translate(track.keyframes_, offset);
+      translate(track.dts_span_, offset);
+      translate(track.pts_span_, offset);
+      translate(track.dts_, offset);
+      translate(track.pts_, offset);
+    }
+
+    bbox_dts_ += offset;
+    bbox_pts_ += offset;
+    return *this;
+  }
+
+
+  //----------------------------------------------------------------
+  // extend
+  //
+  static void
+  extend(TTimeMap & dst, const TTimeMap & src, const TTime & offset)
+  {
+    for (TTimeMap::const_iterator j = src.begin(); j != src.end(); ++j)
+    {
+      const TTime & dts = j->first;
+      const TTime & pts = j->second;
+      dst[dts + offset] = pts + offset;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // extend
+  //
+  static void
+  extend(std::vector<TTime> & dst,
+         const std::vector<TTime> & src,
+         const TTime & offset)
+  {
+    for (std::vector<TTime>::const_iterator
+           i = src.begin(); i != src.end(); ++i)
+    {
+      const TTime & t = *i;
+      dst.push_back(t + offset);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::extend
+  //
+  void
+  Timeline::extend(const Timeline & timeline,
+                   const TTime & offset,
+                   double tolerance)
+  {
+    for (std::map<std::string, Track>::const_iterator i =
+           timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const Track & src = i->second;
+      Track & dst = tracks_[track_id];
+
+      // update keyframes:
+      yae::extend(dst.keyframes_, src.keyframes_, offset);
+
+      // update DTS timeline:
+      for (std::list<Timespan>::const_iterator
+             j = src.dts_span_.begin(); j != src.dts_span_.end(); ++j)
+      {
+        Timespan s = (*j + offset);
+        yae::extend(dst.dts_span_, s, tolerance, false);
+      }
+
+      // update PTS timeline:
+      for (std::list<Timespan>::const_iterator
+             j = src.pts_span_.begin(); j != src.pts_span_.end(); ++j)
+      {
+        Timespan s = (*j + offset);
+        yae::extend(dst.pts_span_, s, tolerance, false);
+      }
+
+      // must offset additional pts, dts:
+      yae::extend(dst.dts_, src.dts_, offset);
+      yae::extend(dst.pts_, src.pts_, offset);
+
+      // simply append additional frame durations:
+      dst.dur_.insert(dst.dur_.end(), src.dur_.begin(), src.dur_.end());
+    }
+
+    // update overall bounding box:
+    expand_bbox(bbox_dts_, timeline.bbox_dts_ + offset);
+    expand_bbox(bbox_pts_, timeline.bbox_pts_ + offset);
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::bbox_dts
   //
   Timespan
-  Timeline::bbox(const std::string & track_id) const
+  Timeline::bbox_dts(const std::string & track_id) const
   {
     TTracks::const_iterator found = tracks_.find(track_id);
     if (found == tracks_.end())
@@ -650,12 +750,24 @@ namespace yae
       return Timespan();
     }
 
-    // shortcuts:
-    const std::list<Timespan> & track = found->second;
-    const Timespan & head = track.front();
-    const Timespan & tail = track.back();
+    const Track & track = found->second;
+    return yae::bbox(track.dts_span_);
+  }
 
-    return Timespan(head.t0_, tail.t1_);
+  //----------------------------------------------------------------
+  // Timeline::bbox_pts
+  //
+  Timespan
+  Timeline::bbox_pts(const std::string & track_id) const
+  {
+    TTracks::const_iterator found = tracks_.find(track_id);
+    if (found == tracks_.end())
+    {
+      return Timespan();
+    }
+
+    const Track & track = found->second;
+    return yae::bbox(track.pts_span_);
   }
 
   //----------------------------------------------------------------
@@ -664,20 +776,21 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const Timeline & timeline)
   {
-    oss << timeline.bbox_ << "\n";
+    oss << "DTS: " << timeline.bbox_dts_ << ", PTS: " << timeline.bbox_pts_
+        << "\n";
 
     for (Timeline::TTracks::const_iterator
            i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
     {
       // shortcuts:
       const std::string & track_id = i->first;
-      const std::list<Timespan> & track = i->second;
+      const Timeline::Track & track = i->second;
 
-      oss << "track " << track_id << ':';
-
+      // DTS timeline:
+      oss << "track " << track_id << " DTS:";
       std::size_t size = 0;
-      for (std::list<Timespan>::const_iterator j = track.begin();
-           j != track.end(); ++j)
+      for (std::list<Timespan>::const_iterator
+             j = track.dts_span_.begin(); j != track.dts_span_.end(); ++j)
       {
         const Timespan & span = *j;
         oss << ' ' << span;
@@ -688,25 +801,41 @@ namespace yae
       {
         oss << ", " << size << " segments";
       }
-
       oss << '\n';
-    }
 
-    for (std::map<std::string, TTimeMap>::const_iterator i =
-           timeline.keyframes_.begin(); i != timeline.keyframes_.end(); ++i)
-    {
-      const std::string & track_id = i->first;
-      const TTimeMap & keyframes = i->second;
-      oss << "keyframes " << track_id << ':';
-
-      for (TTimeMap::const_iterator j =
-             keyframes.begin(); j != keyframes.end(); ++j)
+      // PTS timeline:
+      oss << "track " << track_id << " PTS:";
+      size = 0;
+      for (std::list<Timespan>::const_iterator
+             j = track.pts_span_.begin(); j != track.pts_span_.end(); ++j)
       {
-        const TTime & pts = j->second;
-        oss << ' ' << pts;
+        const Timespan & span = *j;
+        oss << ' ' << span;
+        size++;
       }
 
+      if (size > 1)
+      {
+        oss << ", " << size << " segments";
+      }
       oss << '\n';
+
+      oss << "frames " << track_id << ": " << track.dts_.size() << '\n';
+
+      // keyframes, if any:
+      if (!track.keyframes_.empty())
+      {
+        oss << "keyframes " << track_id << ':';
+
+        for (TTimeMap::const_iterator j =
+               track.keyframes_.begin(); j != track.keyframes_.end(); ++j)
+        {
+          const TTime & dts = j->first;
+          const TTime & pts = j->second;
+          oss << ' ' << pts << "(cts " << (pts - dts).getTime(1000) << "ms)";
+        }
+        oss << '\n';
+      }
     }
 
     return oss;

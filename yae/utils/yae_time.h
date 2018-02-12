@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 // yae includes:
 #include "yae/api/yae_api.h"
@@ -192,6 +193,34 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // merge
+  //
+  YAE_API void
+  merge(std::list<Timespan> & track, Timespan span, double tolerance = 0.0);
+
+  //----------------------------------------------------------------
+  // extend
+  //
+  YAE_API bool
+  extend(std::list<Timespan> & track,
+         const Timespan & s,
+         double tolerance = 0.0,
+         bool fail_on_non_monotonically_increasing_time = true);
+
+  //----------------------------------------------------------------
+  // bbox
+  //
+  YAE_API Timespan
+  bbox(const std::list<Timespan> & track);
+
+  //----------------------------------------------------------------
+  // expand_bbox
+  //
+  YAE_API void
+  expand_bbox(Timespan & bbox, const Timespan & s);
+
+
+  //----------------------------------------------------------------
   // TTimeMap
   //
   typedef std::map<TTime, TTime> TTimeMap;
@@ -201,11 +230,41 @@ namespace yae
   //
   struct YAE_API Timeline
   {
-    typedef std::map<std::string, std::list<Timespan> > TTracks;
 
-    void add_keyframe(const std::string & track_id,
-                      const TTime & dts,
-                      const TTime & pts);
+    //----------------------------------------------------------------
+    // Track
+    //
+    struct Track
+    {
+      // timespan built-up in [dts, dts + dur) increments,
+      // should be quick due to monotonically increasing dts:
+      std::list<Timespan> dts_span_;
+
+      // timespan built-up in [pts, pts + dur) increments,
+      // potentially slower due to non-monotonically increasing pts:
+      std::list<Timespan> pts_span_;
+
+      // frame dts, pts, and duration in order of appearance:
+      std::vector<TTime> dts_;
+      std::vector<TTime> pts_;
+      std::vector<TTime> dur_;
+
+      // time stamps of keyframes, per track, where key = dts and value = pts:
+      std::map<TTime, TTime> keyframes_;
+    };
+
+    //----------------------------------------------------------------
+    // TTracks
+    //
+    typedef std::map<std::string, Track> TTracks;
+
+    // update time spans:
+    void add_frame(const std::string & track_id,
+                   bool keyframe,
+                   const TTime & dts,
+                   const TTime & pts,
+                   const TTime & dur,
+                   double tolerance);
 
     // translate this timeline by a given offset:
     Timeline & operator += (const TTime & offset);
@@ -216,27 +275,16 @@ namespace yae
                 const TTime & offset,
                 double tolerace);
 
-    bool extend_track(const std::string & track_id,
-                      const Timespan & s,
-                      double tolerance,
-                      bool fail_on_non_monotonically_increasing_time);
-
-    bool extend(const std::string & track_id,
-                const Timespan & s,
-                double tolerance = 0.0,
-                bool fail_on_non_monotonically_increasing_time = true);
-
     // calculate the timeline bounding box for a given track:
-    Timespan bbox(const std::string & track_id) const;
+    Timespan bbox_dts(const std::string & track_id) const;
+    Timespan bbox_pts(const std::string & track_id) const;
 
     // bounding box for all tracks:
-    Timespan bbox_;
+    Timespan bbox_dts_;
+    Timespan bbox_pts_;
 
-    // time intervals for individual tracks:
+    // time data for individual tracks:
     TTracks tracks_;
-
-    // time stamps of keyframes, per track, where key = dts and value = pts:
-    std::map<std::string, TTimeMap> keyframes_;
   };
 
   //----------------------------------------------------------------

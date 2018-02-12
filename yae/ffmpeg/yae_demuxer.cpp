@@ -2187,31 +2187,23 @@ namespace yae
       bool ok = dts_ok || pts_ok;
       YAE_ASSERT(ok);
 
+      TTime dur(src->time_base.num * packet.duration,
+                src->time_base.den);
+
       if (ok)
       {
+        bool keyframe = false;
         if (al::starts_with(pkt.trackId_, "v:"))
         {
           fps[pkt.trackId_].push(dts);
 
           if ((packet.flags & AV_PKT_FLAG_KEY))
           {
-            timeline.add_keyframe(pkt.trackId_, dts, pts);
+            keyframe = true;
           }
         }
-      }
 
-      TTime dur(src->time_base.num * packet.duration,
-                src->time_base.den);
-
-      Timespan s(dts, dts + dur);
-      ok = timeline.extend(pkt.trackId_, s, tolerance);
-      YAE_ASSERT(ok);
-
-      if (!ok)
-      {
-        // non-monotonically increasing DTS:
-        ok = timeline.extend(pkt.trackId_, s, tolerance, false);
-        YAE_ASSERT(ok);
+        timeline.add_frame(pkt.trackId_, keyframe, dts, pts, dur, tolerance);
       }
     }
   }
@@ -2426,10 +2418,10 @@ namespace yae
       std::vector<TTime> & t1 = t1_[prog_id];
       std::vector<TTime> & offset = offset_[prog_id];
 
-      TTime src_dt = timeline.bbox_.t1_ - timeline.bbox_.t0_;
-      TTime src_t0 = t1.empty() ? timeline.bbox_.t0_ : t1.back();
+      TTime src_dt = timeline.bbox_dts_.t1_ - timeline.bbox_dts_.t0_;
+      TTime src_t0 = t1.empty() ? timeline.bbox_dts_.t0_ : t1.back();
       TTime src_t1 = src_t0 + src_dt;
-      TTime src_offset = timeline.bbox_.t0_ - src_t0;
+      TTime src_offset = timeline.bbox_dts_.t0_ - src_t0;
 
       t1.push_back(src_t1);
       offset.push_back(src_offset);
@@ -2660,6 +2652,7 @@ namespace yae
     {
       return false;
     }
+
     // setup output format:
     AvOutputContextPtr muxer_ptr(avformat_alloc_context());
     AVFormatContext * muxer = muxer_ptr.get();
