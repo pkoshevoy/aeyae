@@ -1,13 +1,20 @@
 find_package(Threads REQUIRED)
+
+set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS
   atomic
   chrono
   date_time
+  filesystem
+  locale
+  regex
   system
   thread
   unit_test_framework
   REQUIRED)
+add_definitions(-DBOOST_ALL_DYN_LINK)
+add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 
 include_directories(AFTER
   .
